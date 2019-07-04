@@ -70,7 +70,7 @@ struct ITarget : ICastable
     // compare using settings
     // remove?
     virtual bool operator==(const TargetSettings &) const = 0;
-    virtual bool operator<(const TargetSettings &) const = 0;
+    //virtual bool operator<(const TargetSettings &) const = 0;
 };
 
 // shared_ptr for vector storage

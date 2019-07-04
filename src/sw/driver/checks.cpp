@@ -567,12 +567,12 @@ Build Check::setupSolution(const path &f) const
     s.use_separate_target_map = true;
     s.DryRun = false;
 
-    auto ss = check_set->t->getSettings();
+    auto ss = check_set->t->getTargetSettings();
 
     // some checks may fail in msvc release (functions become intrinsics (mem*) etc.)
     if (check_set->t->getCompilerType() == CompilerType::MSVC ||
         check_set->t->getCompilerType() == CompilerType::ClangCl)
-        ss.Native.ConfigurationType = ConfigurationType::Debug;
+        ss["native"]["configuration"] = "debug";
 
     // settings may contain more than one elements
     s.settings.clear();

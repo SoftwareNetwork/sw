@@ -8,7 +8,7 @@
 
 #include "command.h"
 #include "file_storage.h"
-#include "program_version_storage.h"
+//#include "program_version_storage.h"
 #include "sw_context.h"
 
 #include <sw/manager/storage.h>
@@ -38,7 +38,7 @@ Program::Program(const Program &rhs)
     return *this;
 }*/
 
-const Version &Program::getVersion() const
+/*const Version &Program::getVersion() const
 {
     return const_cast<Program&>(*this).getVersion();
 }
@@ -100,6 +100,6 @@ Version Program::gatherVersion(const path &program, const String &arg, const Str
             V = { std::stoi(m[1].str()), std::stoi(m[2].str()), std::stoi(m[3].str()) };
     }
     return V;
-}
+}*/
 
 }

@@ -28,8 +28,11 @@ struct SW_CORE_API SwCoreContext : SwBuilderContext
     TargetMap &getTargets() { return targets; }
     const TargetMap &getTargets() const { return targets; }
 
+    const TargetSettings &getHostSettings() const;
+
 private:
     TargetMap targets;
+    TargetSettings host_settings;
 };
 
 // public context

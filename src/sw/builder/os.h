@@ -252,6 +252,38 @@ struct SW_BUILDER_API OS
     bool operator==(const OS &rhs) const;
 };
 
+struct SW_BUILDER_API OsSdk
+{
+    // root to sdks
+    //  example: c:\\Program Files (x86)\\Windows Kits
+    path Root;
+
+    // sdk dir in root
+    // win: 7.0 7.0A, 7.1, 7.1A, 8, 8.1, 10 ...
+    // osx: 10.12, 10.13, 10.14 ...
+    // android: 1, 2, 3, ..., 28
+    path Version; // make string?
+
+                  // windows10:
+                  // 10.0.10240.0, 10.0.17763.0 ...
+    path BuildNumber;
+
+    OsSdk() = default;
+    OsSdk(const OS &);
+    OsSdk(const OsSdk &) = default;
+    OsSdk &operator=(const OsSdk &) = default;
+
+    path getPath(const path &subdir = {}) const;
+    String getWindowsTargetPlatformVersion() const;
+    void setAndroidApiVersion(int v);
+
+    //bool operator<(const SDK &) const;
+    //bool operator==(const SDK &) const;
+};
+
+SW_BUILDER_API
+String getWin10KitDirName();
+
 SW_BUILDER_API
 const OS &getHostOS();
 

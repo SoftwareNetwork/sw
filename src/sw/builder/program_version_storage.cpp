@@ -33,7 +33,7 @@ ProgramVersionStorage::ProgramVersionStorage(FileStorage &service_fs, const path
 ProgramVersionStorage::~ProgramVersionStorage()
 {
     std::ofstream ofile(fn);
-    for (auto &[p, v] : versions)
+    for (auto &[p, v] : std::map{ versions.begin(), versions.end() })
         ofile << p << " " << v.toString() << "\n";
 }
 

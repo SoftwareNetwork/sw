@@ -152,7 +152,7 @@ SUBCOMMAND_DECL2(fetch)
     //opts.apply_version_to_source = true;
 
     auto &i = swctx.addInput(fs::current_path());
-    auto ts = toTargetSettings(swctx.getHostOs());
+    auto ts = swctx.getHostSettings();
     //ts["name-prefix"] = "true";
     ts["dry-run"] = "true";
     i.addSettings(ts);

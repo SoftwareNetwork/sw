@@ -73,6 +73,7 @@ TargetSetting &TargetSetting::operator=(const TargetSetting &rhs)
 {
     key = rhs.key;
     value = rhs.value;
+    array = rhs.array;
     if (rhs.settings)
         settings = std::make_unique<TargetSettings>(*rhs.settings);
     return *this;
@@ -104,13 +105,13 @@ bool TargetSetting::operator<(const TargetSetting &rhs) const
 {
     if (settings && rhs.settings)
         return std::tie(value, *settings) < std::tie(rhs.value, *rhs.settings);
-    return std::tie(value) < std::tie(rhs.value);
+    return std::tie(value, array) < std::tie(rhs.value, rhs.array);
 }
 
 const String &TargetSetting::getValue() const
 {
     if (!value)
-        throw SW_RUNTIME_ERROR("empty value");
+        throw SW_RUNTIME_ERROR("empty value for key: " + key);
     return *value;
 }
 
@@ -126,9 +127,13 @@ const TargetSettings &TargetSetting::getSettings() const
 
 bool TargetSetting::operator==(const TargetSetting &rhs) const
 {
-    if (!value || !rhs.value)
+    if ((!value || !rhs.value) && (!array || !rhs.array))
         return false;
-    return value == rhs.value;
+    if (value && rhs.value)
+        return value == rhs.value;
+    if (array && rhs.array)
+        return array == rhs.array;
+    SW_UNIMPLEMENTED;
 }
 
 bool TargetSetting::operator!=(const TargetSetting &rhs) const
@@ -139,12 +144,29 @@ bool TargetSetting::operator!=(const TargetSetting &rhs) const
 void TargetSetting::merge(const TargetSetting &rhs)
 {
     value = rhs.value;
+    array = rhs.array;
     if (!rhs.settings)
         return;
     if (!settings)
         settings = std::make_unique<TargetSettings>();
     settings->merge(*rhs.settings);
 }
+
+void TargetSetting::push_back(const TargetSettingValue &v)
+{
+    array.emplace();
+    array->push_back(v);
+}
+
+TargetSetting::operator bool() const
+{
+    return !!value;
+}
+
+/*bool TargetSetting::hasValue() const
+{
+    return !!value;
+}*/
 
 String TargetSettings::getConfig() const
 {

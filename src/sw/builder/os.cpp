@@ -6,6 +6,8 @@
 
 #include "os.h"
 
+#include <sw/manager/version.h>
+
 #include <primitives/command.h>
 #include <primitives/templates.h>
 #include <primitives/sw/settings.h>
@@ -16,6 +18,9 @@
 #ifdef CPPAN_OS_WINDOWS_NO_CYGWIN
 #include <windows.h>
 #endif
+
+#include <primitives/log.h>
+DECLARE_STATIC_LOGGER(logger, "os");
 
 static cl::opt<bool> allow_cygwin_hosts("host-cygwin", cl::desc("When on cygwin, allow it as host"));
 
@@ -100,6 +105,15 @@ OS detectOS()
     //#include <sys/utsname.h>
     //int uname(struct utsname *buf);
 
+    if (os.Type == OSType::Android)
+    {
+        if (os.Arch == ArchType::arm)
+        {
+            if (os.SubArch == SubArchType::NoSubArch)
+                os.SubArch = SubArchType::ARMSubArch_v7;
+        }
+    }
+
     if (os.Type == OSType::UnknownOS)
         throw SW_RUNTIME_ERROR("Unknown OS");
 
@@ -110,6 +124,69 @@ const OS &getHostOS()
 {
     static const auto os = detectOS();
     return os;
+}
+
+path getProgramFilesX86()
+{
+    auto e = getenv("programfiles(x86)");
+    if (!e)
+        throw SW_RUNTIME_ERROR("Cannot get 'programfiles(x86)' env. var.");
+    return e;
+}
+
+static path getWindowsKitRoot()
+{
+    auto p = getProgramFilesX86() / "Windows Kits";
+    if (fs::exists(p))
+        return p;
+    throw SW_RUNTIME_ERROR("No Windows Kits available");
+}
+
+static Strings listWindowsKits()
+{
+    Strings kits;
+    auto kr = getWindowsKitRoot();
+    for (auto &k : Strings{ getWin10KitDirName(), "8.1", "8.0", "7.1A", "7.0A", "6.0A" })
+    {
+        auto d = kr / k;
+        if (fs::exists(d))
+            kits.push_back(k);
+    }
+    return kits;
+}
+
+static path getLatestWindowsKit()
+{
+    auto allkits = listWindowsKits();
+    if (allkits.empty())
+        throw SW_RUNTIME_ERROR("No Windows Kits available");
+    return allkits[0];
+}
+
+static path getWin10KitInspectionDir()
+{
+    auto kr = getWindowsKitRoot();
+    auto dir = kr / getWin10KitDirName() / "Include";
+    return dir;
+}
+
+static std::set<path> listWindows10Kits()
+{
+    std::set<path> kits;
+    auto dir = getWin10KitInspectionDir();
+    for (auto &i : fs::directory_iterator(dir))
+    {
+        if (fs::is_directory(i))
+        {
+            auto d = i.path().filename().u8string();
+            Version v = d;
+            if (v.isVersion())
+                kits.insert(d);
+        }
+    }
+    if (kits.empty())
+        throw SW_RUNTIME_ERROR("No Windows 10 Kits available");
+    return kits;
 }
 
 bool OS::canRunTargetExecutables(const OS &TargetOS) const
@@ -225,6 +302,100 @@ bool OS::operator==(const OS &rhs) const
 {
     return std::tie(Type, Arch, SubArch, Version) ==
         std::tie(rhs.Type, rhs.Arch, rhs.SubArch, rhs.Version);
+}
+
+OsSdk::OsSdk(const OS &TargetOS)
+{
+    if (TargetOS.is(OSType::Windows))
+    {
+        if (Root.empty())
+            Root = getWindowsKitRoot();
+        if (Version.empty())
+            Version = getLatestWindowsKit();
+        if (BuildNumber.empty())
+        {
+            if (TargetOS.Version >= ::sw::Version(10) && Version == getWin10KitDirName())
+            {
+                // take current or the latest version!
+                // sometimes current does not work:
+                //  on appveyor we have win10.0.14393.0, but no sdk
+                //  but we have the latest sdk there: win10.0.17763.0
+                auto dir = getWin10KitInspectionDir();
+                path cursdk = TargetOS.Version.toString(4);
+                path curdir = dir / cursdk;
+                // also check for some executable inside our dir
+                if (fs::exists(curdir) &&
+                    (fs::exists(getPath("bin") / cursdk / "x64" / "rc.exe") ||
+                        fs::exists(getPath("bin") / cursdk / "x86" / "rc.exe")))
+                    BuildNumber = curdir.filename();
+                else
+                    BuildNumber = *listWindows10Kits().rbegin();
+            }
+        }
+    }
+    else if (TargetOS.is(OSType::Macos) || TargetOS.is(OSType::IOS))
+    {
+        if (Root.empty())
+        {
+            String sdktype = "macosx";
+            if (TargetOS.is(OSType::IOS))
+                sdktype = "iphoneos";
+
+            primitives::Command c;
+            c.setProgram("xcrun");
+            c.arguments.push_back("--sdk");
+            c.arguments.push_back(sdktype);
+            c.arguments.push_back("--show-sdk-path");
+            error_code ec;
+            c.execute(ec);
+            if (ec)
+            {
+                LOG_DEBUG(logger, "cannot find " + sdktype + " sdk path using xcrun");
+            }
+            else
+            {
+                Root = boost::trim_copy(c.out.text);
+            }
+        }
+    }
+}
+
+path OsSdk::getPath(const path &subdir) const
+{
+    if (Root.empty())
+        throw SW_RUNTIME_ERROR("empty sdk root");
+    //if (Version.empty())
+    //throw SW_RUNTIME_ERROR("empty sdk version, root is: " + normalize_path(Root));
+    if (subdir.empty())
+        return Root / Version;
+    return Root / Version / subdir / BuildNumber;
+}
+
+String OsSdk::getWindowsTargetPlatformVersion() const
+{
+    if (Version != getWin10KitDirName())
+        return Version.u8string();
+    return BuildNumber.u8string();
+}
+
+void OsSdk::setAndroidApiVersion(int v)
+{
+    Version = std::to_string(v);
+}
+
+/*bool OsSdk::operator<(const SDK &rhs) const
+{
+    return std::tie(Root, Version, BuildNumber) < std::tie(rhs.Root, rhs.Version, rhs.BuildNumber);
+}
+
+bool OsSdk::operator==(const SDK &rhs) const
+{
+    return std::tie(Root, Version, BuildNumber) == std::tie(rhs.Root, rhs.Version, rhs.BuildNumber);
+}*/
+
+String getWin10KitDirName()
+{
+    return "10";
 }
 
 String toString(OSType e)

@@ -6,7 +6,7 @@ void configure(Build &s)
 {
     auto ss = s.createSettings();
     ss.Native.LibrariesType = LibraryType::Static;
-    s.addSettings(ss);
+    //s.addSettings(ss);
 
     s.registerCallback([](auto &t, auto cbt)
     {

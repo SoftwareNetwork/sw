@@ -294,7 +294,7 @@ public:
     Files getSourceFiles() const override;
     std::vector<IDependency *> getDependencies() const override;
     bool operator==(const TargetSettings &) const override;
-    bool operator<(const TargetSettings &) const override;
+    //bool operator<(const TargetSettings &) const override;
     void setSettingsComparator(std::unique_ptr<SettingsComparator>);
 
     //

@@ -44,51 +44,18 @@ static void add_args(driver::Command &c, const Strings &args)
         c.arguments.push_back(a);
 }
 
-path NativeToolchain::SDK::getPath(const path &subdir) const
-{
-    if (Root.empty())
-        throw SW_RUNTIME_ERROR("empty sdk root");
-    //if (Version.empty())
-        //throw SW_RUNTIME_ERROR("empty sdk version, root is: " + normalize_path(Root));
-    if (subdir.empty())
-        return Root / Version;
-    return Root / Version / subdir / BuildNumber;
-}
-
-String getWin10KitDirName();
-
-String NativeToolchain::SDK::getWindowsTargetPlatformVersion() const
-{
-    if (Version != getWin10KitDirName())
-        return Version.u8string();
-    return BuildNumber.u8string();
-}
-
-void NativeToolchain::SDK::setAndroidApiVersion(int v)
-{
-    Version = std::to_string(v);
-}
-
-bool NativeToolchain::SDK::operator<(const SDK &rhs) const
-{
-    return std::tie(Root, Version, BuildNumber) < std::tie(rhs.Root, rhs.Version, rhs.BuildNumber);
-}
-
-bool NativeToolchain::SDK::operator==(const SDK &rhs) const
-{
-    return std::tie(Root, Version, BuildNumber) == std::tie(rhs.Root, rhs.Version, rhs.BuildNumber);
-}
-
 bool NativeToolchain::operator<(const NativeToolchain &rhs) const
 {
-    return std::tie(/*CompilerType, */LibrariesType, ConfigurationType, MT, SDK) <
-        std::tie(/*rhs.CompilerType, */rhs.LibrariesType, rhs.ConfigurationType, rhs.MT, rhs.SDK);
+    SW_UNIMPLEMENTED;
+    //return std::tie(/*CompilerType, */LibrariesType, ConfigurationType, MT, SDK) <
+        //std::tie(/*rhs.CompilerType, */rhs.LibrariesType, rhs.ConfigurationType, rhs.MT, rhs.SDK);
 }
 
 bool NativeToolchain::operator==(const NativeToolchain &rhs) const
 {
-    return std::tie(/*CompilerType, */LibrariesType, ConfigurationType, MT, SDK) ==
-        std::tie(/*rhs.CompilerType, */rhs.LibrariesType, rhs.ConfigurationType, rhs.MT, rhs.SDK);
+    SW_UNIMPLEMENTED;
+    //return std::tie(/*CompilerType, */LibrariesType, ConfigurationType, MT, SDK) ==
+        //std::tie(/*rhs.CompilerType, */rhs.LibrariesType, rhs.ConfigurationType, rhs.MT, rhs.SDK);
 }
 
 CompilerBaseProgram::CompilerBaseProgram(const CompilerBaseProgram &rhs)
@@ -342,8 +309,9 @@ void ClangCompiler::prepareCommand1(const ::sw::Target &t)
 
     add_args(*cmd, getCStdOption(CStandard(), dynamic_cast<const NativeCompiledTarget&>(t).CExtensions));
     CStandard.skip = true;
-    add_args(*cmd, getCppStdOption(CPPStandard(), dynamic_cast<const NativeCompiledTarget&>(t).CPPExtensions,
-        true, getVersion()));
+    SW_UNIMPLEMENTED;
+    //add_args(*cmd, getCppStdOption(CPPStandard(), dynamic_cast<const NativeCompiledTarget&>(t).CPPExtensions,
+        //true, getVersion()));
     CPPStandard.skip = true;
 
     getCommandLineOptions<ClangOptions>(cmd.get(), *this);
@@ -402,8 +370,9 @@ void ClangClCompiler::prepareCommand1(const Target &t)
 
     add_args(*cmd, getCStdOption(dynamic_cast<const NativeCompiledTarget&>(t).CVersion,
         dynamic_cast<const NativeCompiledTarget&>(t).CExtensions));
-    add_args(*cmd, getCppStdOption(CPPStandard(), dynamic_cast<const NativeCompiledTarget&>(t).CPPExtensions,
-        true, getVersion()));
+    SW_UNIMPLEMENTED;
+    //add_args(*cmd, getCppStdOption(CPPStandard(), dynamic_cast<const NativeCompiledTarget&>(t).CPPExtensions,
+        //true, getVersion()));
     CPPStandard.skip = true;
 
     getCommandLineOptions<VisualStudioCompilerOptions>(cmd.get(), *this);
@@ -500,8 +469,9 @@ void GNUCompiler::prepareCommand1(const Target &t)
 
     add_args(*cmd, getCStdOption(CStandard(), dynamic_cast<const NativeCompiledTarget&>(t).CExtensions));
     CStandard.skip = true;
-    add_args(*cmd, getCppStdOption(CPPStandard(), dynamic_cast<const NativeCompiledTarget&>(t).CPPExtensions,
-        false, getVersion()));
+    SW_UNIMPLEMENTED;
+    //add_args(*cmd, getCppStdOption(CPPStandard(), dynamic_cast<const NativeCompiledTarget&>(t).CPPExtensions,
+        //false, getVersion()));
     CPPStandard.skip = true;
 
     getCommandLineOptions<GNUOptions>(cmd.get(), *this);

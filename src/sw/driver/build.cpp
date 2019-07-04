@@ -372,8 +372,7 @@ static String gn2suffix(PackageVersionGroupNumber gn)
 Build::Build(SwCoreContext &swctx, const driver::cpp::Driver &driver)
     : swctx(swctx), driver(driver), checker(*this)
 {
-    auto hs = createSettings();
-    host_settings = hs.getTargetSettings();
+    host_settings = swctx.getHostSettings();
 
     // canonical makes disk letter uppercase on windows
     setSourceDirectory(swctx.source_dir);
@@ -410,11 +409,11 @@ BuildSettings Build::createSettings() const
 {
     BuildSettings ss;
     ss.TargetOS = getHostOs();
-    ss.init();
+    //ss.init();
     return ss;
 }
 
-void Build::addSettings(const BuildSettings &ss)
+void Build::addSettings(const TargetSettings &ss)
 {
     auto i = std::find(settings.begin(), settings.end(), ss);
     if (i == settings.end())
@@ -568,11 +567,13 @@ void Build::prepareStep(Executor &e, Futures<void> &fs, std::atomic_bool &next_p
 
 void Build::addFirstConfig()
 {
+    SW_UNIMPLEMENTED;
+
     if (!settings.empty())
         return;
 
     auto ss = createSettings();
-    addSettings(ss);
+    addSettings(ss.getTargetSettings());
 }
 
 /*void Build::findCompiler()
@@ -1055,7 +1056,8 @@ private:
             lib.Definitions["SW_PACKAGE_API"] = "__attribute__ ((visibility (\"default\")))";
         }
 
-        if (b.settings[0].TargetOS.is(OSType::Windows))
+        BuildSettings bs(b.settings[0]);
+        if (bs.TargetOS.is(OSType::Windows))
             lib.NativeLinkerOptions::System.LinkLibraries.insert("Delayimp.lib");
 
         if (auto L = lib.Linker->template as<VisualStudioLinker*>())
@@ -1077,6 +1079,16 @@ private:
         b.TargetsToBuild[i->first] = i->second;
 
         out = lib.getOutputFile();
+    }
+
+    // many input files to many dlls
+    void many2many(const Files &files)
+    {
+        for (auto &fn : files)
+        {
+            one2one(fn);
+            r[fn] = out;
+        }
     }
 
     // many input files into one dll
@@ -1184,16 +1196,6 @@ private:
         commonActions2(lib);
     }
 
-    // many input files to many dlls
-    void many2many(const Files &files)
-    {
-        for (auto &fn : files)
-        {
-            one2one(fn);
-            r[fn] = out;
-        }
-    }
-
     // one input file to one dll
     void one2one(const path &fn)
     {
@@ -1270,16 +1272,18 @@ private:
 template <class T>
 std::shared_ptr<PrepareConfigEntryPoint> Build::build_configs1(const T &objs)
 {
-    addFirstConfig();
+    addSettings(host_settings);
 
-    settings[0].Native.LibrariesType = LibraryType::Static;
+    //settings[0].Native.LibrariesType = LibraryType::Static;
+    settings[0]["native"]["library"] = "static";
     if (debug_configs)
-        settings[0].Native.ConfigurationType = ConfigurationType::Debug;
+        settings[0]["native"]["configuration"] = "debug";
+        //settings[0].Native.ConfigurationType = ConfigurationType::Debug;
 
     detectCompilers();
 
     auto ep = std::make_shared<PrepareConfigEntryPoint>(*this, objs);
-    ep->loadPackages(settings[0].getTargetSettings());
+    ep->loadPackages(settings[0]);
 
     execute();
 
@@ -2413,9 +2417,9 @@ void Build::createSolutions(const path &dll, bool usedll)
         }
 
         // one more time, if generator did not add solution or whatever
-        addFirstConfig();
+        //addFirstConfig();
 
-        auto times = [this](int n)
+        /*auto times = [this](int n)
         {
             if (n <= 1)
                 return;
@@ -2543,7 +2547,7 @@ void Build::createSolutions(const path &dll, bool usedll)
         mult_and_action(target_os.size(), [&set_tos](auto &s, int i)
         {
             set_tos(s, target_os[i]);
-        });
+        });*/
 
         // libc
         //auto set_libc = [](auto &s, const String &libc)
@@ -2562,7 +2566,7 @@ void Build::createSolutions(const path &dll, bool usedll)
     }*/
 
     // one more time, if generator did not add solution or whatever
-    addFirstConfig();
+    //addFirstConfig();
 
     // finally
     detectCompilers();
@@ -2627,7 +2631,7 @@ void Build::load_dll(const path &dll)
 
     auto ep = std::make_shared<NativeModuleTargetEntryPoint>(*this, driver.getModuleStorage().get(dll));
     for (auto &s : settings)
-        ep->loadPackages(s.getTargetSettings());
+        ep->loadPackages(s);
 
     // check
     /*{

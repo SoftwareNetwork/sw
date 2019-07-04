@@ -174,7 +174,7 @@ struct SW_DRIVER_CPP_API Build : SimpleBuild
     // most important
     SwCoreContext &swctx;
     const driver::cpp::Driver &driver;
-    std::vector<BuildSettings> settings; // initial settings
+    std::vector<TargetSettings> settings; // initial settings
 private:
     TargetSettings host_settings;
 public:
@@ -227,7 +227,7 @@ public:
     void detectCompilers();
     PackageDescriptionMap getPackages() const;
     BuildSettings createSettings() const;
-    void addSettings(const BuildSettings &);
+    void addSettings(const TargetSettings &);
     const ModuleSwappableData &getModuleData() const;
     PackageVersionGroupNumber getCurrentGroupNumber() const;
     const String &getCurrentModule() const;

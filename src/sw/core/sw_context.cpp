@@ -27,10 +27,41 @@ SwCoreContext::SwCoreContext(const path &local_storage_root_dir)
 {
     source_dir = fs::canonical(fs::current_path());
     detectCompilers(*this);
+
+    host_settings = toTargetSettings(getHostOs());
+
+    auto &ts = host_settings;
+    ts["native"]["configuration"] = "release";
+    ts["native"]["library"] = "shared";
+
+    if (getHostOs().is(OSType::Windows))
+    {
+        ts["native"]["lib"]["c"] = "com.Microsoft.Windows.SDK.ucrt";
+        ts["native"]["lib"]["c++"] = "com.Microsoft.VisualStudio.VC.libcpp";
+
+        ts["native"]["rc"] = "com.Microsoft.Windows.rc";
+
+        if (!getTargets()["com.Microsoft.VisualStudio.VC.cl"].empty_releases())
+        {
+            ts["native"]["cl"] = "com.Microsoft.VisualStudio.VC.cl";
+            ts["native"]["ml"] = "com.Microsoft.VisualStudio.VC.ml";
+            ts["native"]["lib"] = "com.Microsoft.VisualStudio.VC.lib";
+            ts["native"]["link"] = "com.Microsoft.VisualStudio.VC.link";
+        }
+
+        //ts["native"]["cl.c"] = "com.Microsoft.VisualStudio.VC.cl";
+        //ts["native"]["extensions"s][".c"] = "com.Microsoft.VisualStudio.VC.cl";
+        //ts["native"]["cl.cpp"] = "com.Microsoft.VisualStudio.VC.cl";
+    }
 }
 
 SwCoreContext::~SwCoreContext()
 {
+}
+
+const TargetSettings &SwCoreContext::getHostSettings() const
+{
+    return host_settings;
 }
 
 SwContext::SwContext(const path &local_storage_root_dir)

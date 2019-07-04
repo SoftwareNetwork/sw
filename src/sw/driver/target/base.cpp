@@ -451,12 +451,12 @@ bool Target::operator==(const TargetSettings &s) const
     return ts == s;
 }
 
-bool Target::operator<(const TargetSettings &s) const
+/*bool Target::operator<(const TargetSettings &s) const
 {
     if (scmp)
         return scmp->less(ts, s);
     return ts < s;
-}
+}*/
 
 void Target::setSettingsComparator(std::unique_ptr<SettingsComparator> cmp)
 {

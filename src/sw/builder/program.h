@@ -43,16 +43,16 @@ struct SW_BUILDER_API Program : ICastable, File, detail::Executable
     virtual ~Program() = default;
 
     virtual std::shared_ptr<Program> clone() const = 0;
-    virtual Version &getVersion();
+    //virtual Version &getVersion();
 
-    const Version &getVersion() const;
+    //const Version &getVersion() const;
 
 protected:
-    virtual Version gatherVersion() const { return gatherVersion(file); }
-    virtual Version gatherVersion(const path &program, const String &arg = "--version", const String &in_regex = {}) const;
+    //virtual Version gatherVersion() const { return gatherVersion(file); }
+    //virtual Version gatherVersion(const path &program, const String &arg = "--version", const String &in_regex = {}) const;
 
 private:
-    std::optional<Version> version;
+    //std::optional<Version> version;
 };
 
 using ProgramPtr = std::shared_ptr<Program>;

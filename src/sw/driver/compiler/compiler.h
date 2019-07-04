@@ -12,6 +12,7 @@
 #include "../program.h"
 #include "../types.h"
 
+#include <sw/builder/os.h>
 #include <sw/manager/version.h>
 
 #include <primitives/exceptions.h>
@@ -71,7 +72,7 @@ SW_DRIVER_CPP_API
 bool isCppSourceFileExtensions(const String &);
 
 // maybe add Object type?
-struct VSInstance : ProgramGroup
+/*struct VSInstance : ProgramGroup
 {
     path root;
     Version version;
@@ -86,37 +87,13 @@ struct VSInstance : ProgramGroup
     Version &getVersion() override { return version; }
 
     void activate(Build &s) const override;
-};
+};*/
 
 // toolchain
 
 struct SW_DRIVER_CPP_API NativeToolchain
 {
-    struct SW_DRIVER_CPP_API SDK
-    {
-        // root to sdks
-        //  example: c:\\Program Files (x86)\\Windows Kits
-        path Root;
-
-        // sdk dir in root
-        // win: 7.0 7.0A, 7.1, 7.1A, 8, 8.1, 10 ...
-        // osx: 10.12, 10.13, 10.14 ...
-        // android: 1, 2, 3, ..., 28
-        path Version; // make string?
-
-        // windows10:
-        // 10.0.10240.0, 10.0.17763.0 ...
-        path BuildNumber;
-
-        path getPath(const path &subdir = {}) const;
-        String getWindowsTargetPlatformVersion() const;
-        void setAndroidApiVersion(int v);
-
-        bool operator<(const SDK &) const;
-        bool operator==(const SDK &) const;
-    };
-
-    struct SDK SDK;
+    struct OsSdk SDK;
 
     // libc, libcpp
     // OS SDK (win sdk, macos sdk, linux headers etc.)
@@ -233,7 +210,7 @@ protected:
     std::shared_ptr<driver::Command> createCommand1(const SwBuilderContext &swctx) const override;
 
 private:
-    Version gatherVersion() const override { return Program::gatherVersion(file, "/?"); }
+    //Version gatherVersion() const override { return Program::gatherVersion(file, "/?"); }
 };
 
 struct SW_DRIVER_CPP_API VisualStudioASMCompiler : VisualStudio, NativeCompiler,
@@ -254,7 +231,7 @@ protected:
     std::shared_ptr<driver::Command> createCommand1(const SwBuilderContext &swctx) const override;
 
 private:
-    Version gatherVersion() const override { return Program::gatherVersion(file, "/?"); }
+    //Version gatherVersion() const override { return Program::gatherVersion(file, "/?"); }
 };
 
 struct SW_DRIVER_CPP_API Clang
@@ -394,7 +371,7 @@ protected:
     void prepareCommand1(const Target &t) override;
 
 private:
-    Version gatherVersion() const override { return Program::gatherVersion(file, "/?"); }
+    //Version gatherVersion() const override { return Program::gatherVersion(file, "/?"); }
 };
 
 struct SW_DRIVER_CPP_API VisualStudioLinker : VisualStudioLibraryTool,
@@ -471,7 +448,7 @@ struct SW_DRIVER_CPP_API GNULibrarian : GNULibraryTool,
     SW_COMMON_COMPILER_API;
 
 protected:
-    Version gatherVersion() const override { return Program::gatherVersion(file, "-V"); }
+    //Version gatherVersion() const override { return Program::gatherVersion(file, "-V"); }
 };
 
 // other tools
@@ -492,7 +469,7 @@ struct SW_DRIVER_CPP_API RcTool :
     String getObjectExtension(const OS &) const { return ".res"; }
 
 protected:
-    Version gatherVersion() const override { return Program::gatherVersion(file, "/?"); }
+    //Version gatherVersion() const override { return Program::gatherVersion(file, "/?"); }
 
 private:
     std::shared_ptr<SourceFile> createSourceFile(const Target &t, const path &input) const override;
@@ -521,7 +498,7 @@ struct SW_DRIVER_CPP_API VisualStudioCSharpCompiler :
     void addSourceFile(const path &input_file) override;
 
 protected:
-    Version gatherVersion() const override { return Program::gatherVersion(file, "/?"); }
+    //Version gatherVersion() const override { return Program::gatherVersion(file, "/?"); }
 };
 
 struct SW_DRIVER_CPP_API RustCompiler : Compiler,
@@ -546,7 +523,7 @@ struct SW_DRIVER_CPP_API GoCompiler : Compiler,
     void setSourceFile(const path &input_file);
 
 private:
-    Version gatherVersion() const override { return Program::gatherVersion(file, "version"); }
+    //Version gatherVersion() const override { return Program::gatherVersion(file, "version"); }
 };
 
 struct SW_DRIVER_CPP_API FortranCompiler : Compiler,
@@ -571,7 +548,7 @@ struct SW_DRIVER_CPP_API JavaCompiler : Compiler,
     void setSourceFile(const path &input_file);
 
 private:
-    Version gatherVersion() const override { return Program::gatherVersion(file, "-version", "(\\d+)\\.(\\d+)\\.(\\d+)(_(\\d+))?"); }
+    //Version gatherVersion() const override { return Program::gatherVersion(file, "-version", "(\\d+)\\.(\\d+)\\.(\\d+)(_(\\d+))?"); }
 };
 
 struct SW_DRIVER_CPP_API KotlinCompiler : Compiler,
@@ -585,7 +562,7 @@ struct SW_DRIVER_CPP_API KotlinCompiler : Compiler,
     void setSourceFile(const path &input_file);
 
 private:
-    Version gatherVersion() const override { return Program::gatherVersion(file, "-version"); }
+    //Version gatherVersion() const override { return Program::gatherVersion(file, "-version"); }
 };
 
 struct SW_DRIVER_CPP_API DCompiler : Compiler,

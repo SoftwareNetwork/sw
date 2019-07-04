@@ -167,6 +167,28 @@ void NativeCompiledTarget::setOutputDir(const path &dir)
 
 void NativeCompiledTarget::findCompiler()
 {
+    // libc
+    auto add_libc = [this](const PackagePath &pp)
+    {
+        auto &cld = getSolution().getChildren();
+        auto i = cld.find(pp, getTargetSettings());
+        if (!i)
+            return false;
+        if (!(*i).second)
+            return false;
+        if (auto t = (*i).second->as<NativeCompiledTarget*>())
+        {
+            (*this + *t)->sw_pushed = true;
+            return true;
+        }
+        return false;
+    };
+
+    if (!add_libc(ts["native"]["lib"]["c"].getValue()))
+        throw SW_RUNTIME_ERROR("no libc");
+    if (!add_libc(ts["native"]["lib"]["c++"].getValue()))
+        throw SW_RUNTIME_ERROR("no libc++");
+
     struct CompilerDesc
     {
         PackagePath id;
@@ -438,29 +460,6 @@ void NativeCompiledTarget::findCompiler()
         if (!activate_one(rc))
             throw SW_RUNTIME_ERROR("Resource compiler was not found in Windows SDK");
     }
-
-    // libc
-    auto add_libc = [this](const auto &pp)
-    {
-        auto &cld = getSolution().getChildren();
-        auto i = cld.find(pp, getTargetSettings());
-        if (!i)
-            return false;
-        if (!(*i).second)
-            return false;
-        if (auto t = (*i).second->as<NativeCompiledTarget*>())
-        {
-            (*this + *t)->sw_pushed = true;
-            return true;
-        }
-        return false;
-    };
-    auto add_libc_libs =
-        add_libc("com.Microsoft.VisualStudio.VC.libcpp")
-        && add_libc("com.Microsoft.Windows.SDK.ucrt");
-    // FIXME: uncomment later
-    //if (!add_libc_libs)
-        //throw SW_RUNTIME_ERROR("No libc activated");
 }
 
 bool NativeCompiledTarget::init()

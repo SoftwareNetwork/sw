@@ -59,3 +59,36 @@ void CDriver::load(const std::set<Input> &)
 }
 
 }
+
+// memory
+
+void *sw_malloc(size_t size)
+{
+    return malloc(size);
+}
+
+void sw_free(void *ptr)
+{
+    free(ptr);
+}
+
+void *sw_realloc(void *ptr, size_t size)
+{
+    return realloc(ptr, size);
+}
+
+void *sw_calloc(size_t num, size_t size)
+{
+    return calloc(num, size);
+}
+
+void *sw_aligned_alloc(size_t alignment, size_t size)
+{
+#ifdef _MSC_VER
+    // must be freed with _aligned_free
+    return _aligned_malloc(alignment, size);
+#else
+    // must be freed with free/realloc
+    return aligned_alloc(alignment, size);
+#endif
+}

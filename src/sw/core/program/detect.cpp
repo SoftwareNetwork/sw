@@ -9,8 +9,11 @@
 #include "misc/cmVSSetupHelper.h"
 
 #include <sw/builder/program.h>
+#include <sw/builder/program_version_storage.h>
 
 #include <boost/algorithm/string.hpp>
+#include <boost/thread/shared_mutex.hpp>
+#include <boost/thread/lock_types.hpp>
 
 #include <regex>
 #include <string>
@@ -20,17 +23,6 @@ DECLARE_STATIC_LOGGER(logger, "compiler.detect");
 
 namespace sw
 {
-
-std::string getVsToolset(const Version &v);
-
-void detectNativeCompilers(SwCoreContext &s);
-void detectCSharpCompilers(SwCoreContext &s);
-void detectRustCompilers(SwCoreContext &s);
-void detectGoCompilers(SwCoreContext &s);
-void detectFortranCompilers(SwCoreContext &s);
-void detectJavaCompilers(SwCoreContext &s);
-void detectKotlinCompilers(SwCoreContext &s);
-void detectDCompilers(SwCoreContext &s);
 
 const StringSet &getCppHeaderFileExtensions()
 {
@@ -70,6 +62,65 @@ const StringSet &getCppSourceFileExtensions()
         ".mm",
     };
     return cpp_source_file_extensions;
+}
+
+std::string getVsToolset(const Version &v);
+
+void detectNativeCompilers(SwCoreContext &s);
+void detectCSharpCompilers(SwCoreContext &s);
+void detectRustCompilers(SwCoreContext &s);
+void detectGoCompilers(SwCoreContext &s);
+void detectFortranCompilers(SwCoreContext &s);
+void detectJavaCompilers(SwCoreContext &s);
+void detectKotlinCompilers(SwCoreContext &s);
+void detectDCompilers(SwCoreContext &s);
+
+static Version gatherVersion(const path &program, const String &arg = "--version", const String &in_regex = {})
+{
+    static std::regex r_default("(\\d+)\\.(\\d+)\\.(\\d+)(\\.(\\d+))?");
+
+    std::regex r_in;
+    if (!in_regex.empty())
+        r_in.assign(in_regex);
+
+    auto &r = in_regex.empty() ? r_default : r_in;
+
+    Version V;
+    builder::detail::ResolvableCommand c; // for nice program resolving
+    c.setProgram(program);
+    if (!arg.empty())
+        c.arguments = { arg };
+    error_code ec;
+    c.execute(ec);
+
+    if (c.pid == -1)
+        throw SW_RUNTIME_ERROR(normalize_path(program) + ": " + ec.message());
+
+    std::smatch m;
+    if (std::regex_search(c.err.text.empty() ? c.out.text : c.err.text, m, r))
+    {
+        if (m[5].matched)
+            V = { std::stoi(m[1].str()), std::stoi(m[2].str()), std::stoi(m[3].str()), std::stoi(m[5].str()) };
+        else
+            V = { std::stoi(m[1].str()), std::stoi(m[2].str()), std::stoi(m[3].str()) };
+    }
+    return V;
+}
+
+static Version getVersion(SwCoreContext &swctx, const path &program, const String &arg = "--version", const String &in_regex = {})
+{
+    auto &vs = swctx.getVersionStorage();
+    static boost::upgrade_mutex m;
+
+    boost::upgrade_lock lk(m);
+    auto i = vs.versions.find(program);
+    if (i != vs.versions.end())
+        return i->second;
+
+    boost::upgrade_to_unique_lock lk2(lk);
+
+    vs.versions[program] = gatherVersion(program, arg, in_regex);
+    return vs.versions[program];
 }
 
 bool isCppHeaderFileExtension(const String &e)
@@ -119,39 +170,13 @@ void detectCompilers(SwCoreContext &s)
     detectDCompilers(s);*/
 }
 
-/*struct SomeSettingsSettingsComparator : SettingsComparator
-{
-    void addSetting(const String &in) { return s.push_back(in); }
-
-    bool equal(const TargetSettings &s1, const TargetSettings &s2) const override
-    {
-        return all_of(s.begin(), s.end(), [&s1, &s2](auto &s)
-        {
-            return s1[s] == s2[s];
-        });
-    }
-
-private:
-    Strings s;
-};
-
-struct LinkerSettingsComparator : SomeSettingsSettingsComparator
-{
-    LinkerSettingsComparator()
-    {
-        addSetting("os.kernel");
-        addSetting("os.arch");
-    }
-};
-
-using CompilerSettingsComparator = LinkerSettingsComparator;*/
-
 // left join comparator
 
-struct PredefinedTarget : ITarget, PredefinedProgram
+struct PredefinedTarget : ITarget
 {
     PackageId id;
     TargetSettings ts;
+    TargetSettings public_ts;
 
     PredefinedTarget(const PackageId &id) :id(id) {}
     virtual ~PredefinedTarget() {}
@@ -168,30 +193,40 @@ struct PredefinedTarget : ITarget, PredefinedProgram
     Commands getCommands() const override { SW_UNIMPLEMENTED; }
 
     bool operator==(const TargetSettings &s) const override { return ts == s; }
-    bool operator<(const TargetSettings &s) const override { return ts == s; }
+    //bool operator<(const TargetSettings &s) const override { return ts < s; }
 };
 
-template <class T = PredefinedTarget>
-static T &addProgramNoFile(SwCoreContext &s, const PackagePath &pp, const std::shared_ptr<Program> &p)
+struct PredefinedProgramTarget : PredefinedTarget, PredefinedProgram
 {
-    PackageId id(pp, p->getVersion());
+    using PredefinedTarget::PredefinedTarget;
+};
 
+template <class T>
+static T &addTarget(SwCoreContext &s, const PackageId &id)
+{
     auto t = std::make_shared<T>(id);
 
     auto &cld = s.getTargets();
     cld[id].push_back(t);
 
-    t->setProgram(p);
     //t.sw_provided = true;
     return *t;
 }
 
-template <class T = PredefinedTarget>
-static T &addProgram(SwCoreContext &s, const PackagePath &pp, const std::shared_ptr<Program> &p)
+template <class T = PredefinedProgramTarget>
+static T &addProgramNoFile(SwCoreContext &s, const PackageId &id, const std::shared_ptr<Program> &p)
+{
+    auto &t = addTarget<T>(s, id);
+    t.setProgram(p);
+    return t;
+}
+
+template <class T = PredefinedProgramTarget>
+static T &addProgram(SwCoreContext &s, const PackageId &id, const std::shared_ptr<Program> &p)
 {
     //if (!fs::exists(p->file))
         //throw SW_RUNTIME_ERROR("Program does not exist: " + normalize_path(p->file));
-    return addProgramNoFile(s, pp, p);
+    return addProgramNoFile(s, id, p);
 }
 
 void detectDCompilers(SwCoreContext &s)
@@ -406,13 +441,21 @@ void detectWindowsCompilers(SwCoreContext &s)
     // but what if we're on Wine?
     // reconsider later
 
+    // https://docs.microsoft.com/en-us/cpp/c-runtime-library/crt-library-features?view=vs-2019
+
     auto &instances = gatherVSInstances(s);
     const auto host = toStringWindows(s.getHostOs().Arch);
+    OsSdk sdk(s.getHostOs());
+    auto new_settings = s.getHostOs();
 
     for (auto target_arch : {ArchType::x86_64,ArchType::x86,ArchType::arm,ArchType::aarch64})
     {
-        auto new_settings = s.getHostOs();
         new_settings.Arch = target_arch;
+
+        auto ts1 = toTargetSettings(new_settings);
+        TargetSettings ts;
+        ts["os.kernel"] = ts1["os.kernel"];
+        ts["os.arch"] = ts1["os.arch"];
 
         for (auto &[_, instance] : instances)
         {
@@ -431,31 +474,22 @@ void detectWindowsCompilers(SwCoreContext &s)
             if (v.getMajor() >= 15)
             {
                 // always use host tools and host arch for building config files
-                compiler /= path("Host" + host) / target / "cl.exe";
+                compiler /= path("Host" + host) / target;
             }
-            else
-            {
-                // but we won't detect host&arch stuff on older versions
-                compiler /= "cl.exe";
-            }
-
-            // create programs
+            // but we won't detect host&arch stuff on older versions
 
             // lib, link
             {
-                //auto Linker = std::make_shared<VisualStudioLinker>(s.swctx);
-                //Linker->Type = LinkerType::MSVC;
-                //Linker->file = compiler.parent_path() / "link.exe";
-                //Linker->Extension = s.getBuildSettings().TargetOS.getExecutableExtension();
                 auto p = std::make_shared<SimpleProgram>(s);
-                p->file = compiler.parent_path() / "link.exe";
-                if (instance.version.isPreRelease())
-                    p->getVersion().getExtra() = instance.version.getExtra();
-                auto &link = addProgram(s, "com.Microsoft.VisualStudio.VC.link", p);
-
-                //link.ts = new_settings.getTargetSettings();
-                //link.setSettingsComparator(std::make_unique<LinkerSettingsComparator>());
-                //instance.link_versions.insert(Linker->getVersion());
+                p->file = compiler / "link.exe";
+                if (fs::exists(p->file))
+                {
+                    Version v = getVersion(s, p->file, {});
+                    if (instance.version.isPreRelease())
+                        v.getExtra() = instance.version.getExtra();
+                    auto &link = addProgram(s, PackageId("com.Microsoft.VisualStudio.VC.link", v), p);
+                    link.ts = ts;
+                }
 
                 if (s.getHostOs().Arch != target_arch)
                 {
@@ -463,68 +497,90 @@ void detectWindowsCompilers(SwCoreContext &s)
                     c->addPathDirectory(host_root);
                 }
 
-                //
-                /*auto Librarian = std::make_shared<VisualStudioLibrarian>(s.swctx);
-                Librarian->Type = LinkerType::MSVC;
-                Librarian->file = compiler.parent_path() / "lib.exe";
-                Librarian->Extension = s.getBuildSettings().TargetOS.getStaticLibraryExtension();
-
-                if (instance.version.isPreRelease())
-                    Librarian->getVersion().getExtra() = instance.version.getExtra();
-                auto &lib = addProgram(s, "com.Microsoft.VisualStudio.VC.lib", Librarian);
-                lib.ts = new_settings.getTargetSettings();
-                lib.setSettingsComparator(std::make_unique<LinkerSettingsComparator>());
-                instance.link_versions.insert(Librarian->getVersion());
+                p = std::make_shared<SimpleProgram>(s);
+                p->file = compiler / "lib.exe";
+                if (fs::exists(p->file))
+                {
+                    Version v = getVersion(s, p->file, {});
+                    if (instance.version.isPreRelease())
+                        v.getExtra() = instance.version.getExtra();
+                    auto &lib = addProgram(s, PackageId("com.Microsoft.VisualStudio.VC.lib", v), p);
+                    lib.ts = ts;
+                }
 
                 if (s.getHostOs().Arch != target_arch)
                 {
-                    auto c = Librarian->createCommand(s.swctx);
+                    auto c = p->getCommand();
                     c->addPathDirectory(host_root);
-                }*/
+                }
             }
 
             // ASM
-            /*if (target_arch == ArchType::x86_64 || target_arch == ArchType::x86)
+            if (target_arch == ArchType::x86_64 || target_arch == ArchType::x86)
             {
-                auto C = std::make_shared<VisualStudioASMCompiler>(s.swctx);
-                C->Type = CompilerType::MSVC;
-                C->file = target_arch == ArchType::x86_64 ?
-                    (compiler.parent_path() / "ml64.exe") :
-                    (compiler.parent_path() / "ml.exe");
-
-                if (instance.version.isPreRelease())
-                    C->getVersion().getExtra() = instance.version.getExtra();
-                auto &ml = addProgram(s, "com.Microsoft.VisualStudio.VC.ml", C);
-                ml.ts = new_settings.getTargetSettings();
-                ml.setSettingsComparator(std::make_unique<CompilerSettingsComparator>());
+                auto p = std::make_shared<SimpleProgram>(s);
+                p->file = compiler / (target_arch == ArchType::x86_64 ? "ml64.exe" : "ml.exe");
+                if (fs::exists(p->file))
+                {
+                    Version v = getVersion(s, p->file, {});
+                    if (instance.version.isPreRelease())
+                        v.getExtra() = instance.version.getExtra();
+                    auto &ml = addProgram(s, PackageId("com.Microsoft.VisualStudio.VC.ml", v), p);
+                    ml.ts = ts;
+                }
             }
 
             // C, C++
             {
-                auto exts = getCppSourceFileExtensions();
-                exts.insert(".c");
-
-                auto C = std::make_shared<VisualStudioCompiler>(s.swctx);
-                C->Type = CompilerType::MSVC;
-                C->file = compiler;
-
-                if (instance.version.isPreRelease())
-                    C->getVersion().getExtra() = instance.version.getExtra();
-                //C->input_extensions = exts;
-                auto &cl = addProgram(s, "com.Microsoft.VisualStudio.VC.cl", C);
-                cl.ts = new_settings.getTargetSettings();
-                cl.setSettingsComparator(std::make_unique<CompilerSettingsComparator>());
-                instance.cl_versions.insert(C->getVersion());
+                auto p = std::make_shared<SimpleProgram>(s);
+                p->file = compiler / "cl.exe";
+                if (fs::exists(p->file))
+                {
+                    Version v = getVersion(s, p->file, {});
+                    if (instance.version.isPreRelease())
+                        v.getExtra() = instance.version.getExtra();
+                    auto &cl = addProgram(s, PackageId("com.Microsoft.VisualStudio.VC.cl", v), p);
+                    cl.ts = ts;
+                }
 
                 if (s.getHostOs().Arch != target_arch)
                 {
-                    auto c = C->createCommand(s.swctx);
+                    auto c = p->getCommand();
                     c->addPathDirectory(host_root);
                 }
-            }*/
+            }
 
-            // now register
-            //addProgramNoFile(s, "com.Microsoft.VisualStudio", std::make_shared<VSInstance>(instance));
+            // libs
+            {
+                auto &libcpp = addTarget<PredefinedTarget>(s, PackageId("com.Microsoft.VisualStudio.VC.libcpp", v));
+                libcpp.ts = ts;
+                libcpp.public_ts["system-include-directories"].push_back(normalize_path(root / "include"));
+
+                if (v.getMajor() >= 15)
+                {
+                    libcpp.public_ts["system-link-directories"].push_back(normalize_path(root / "lib" / target));
+                }
+                else
+                {
+                    SW_UNIMPLEMENTED;
+                }
+
+                if (fs::exists(root / "ATLMFC" / "include"))
+                {
+                    auto &atlmfc = addTarget<PredefinedTarget>(s, PackageId("com.Microsoft.VisualStudio.VC.ATLMFC", v));
+                    atlmfc.ts = ts;
+                    atlmfc.public_ts["system-include-directories"].push_back(normalize_path(root / "ATLMFC" / "include"));
+
+                    if (v.getMajor() >= 15)
+                    {
+                        atlmfc.public_ts["system-link-directories"].push_back(normalize_path(root / "ATLMFC" / "lib" / target));
+                    }
+                    else
+                    {
+                        SW_UNIMPLEMENTED;
+                    }
+                }
+            }
 
             continue;
 
@@ -622,101 +678,38 @@ void detectWindowsCompilers(SwCoreContext &s)
                 addProgram(s, "org.LLVM.clangpp", C);
             }*/
         }
+
+        // rename to libc? to crt?
+        auto &ucrt = addTarget<PredefinedTarget>(s, PackageId("com.Microsoft.Windows.SDK.ucrt", sdk.getWindowsTargetPlatformVersion()));
+        ucrt.ts = ts;
+        ucrt.ts["os.version"] = ts1["os.version"];
+
+        // add kits include dirs
+        for (auto &i : fs::directory_iterator(sdk.getPath("Include")))
+        {
+            if (fs::is_directory(i))
+                ucrt.public_ts["system-include-directories"].push_back(normalize_path(i));
+        }
+        for (auto &i : fs::directory_iterator(sdk.getPath("Lib")))
+        {
+            if (fs::is_directory(i))
+                ucrt.public_ts["system-link-directories"].push_back(normalize_path(i / toStringWindows(target_arch)));
+        }
     }
 
     // .rc
-    /*{
-        auto C = std::make_shared<RcTool>(s.swctx);
-        C->file = s.getBuildSettings().Native.SDK.getPath("bin") / toStringWindows(s.getHostOs().Arch) / "rc.exe";
+    {
+        auto p = std::make_shared<SimpleProgram>(s);
+        p->file = sdk.getPath("bin") / toStringWindows(s.getHostOs().Arch) / "rc.exe";
+        if (fs::exists(p->file))
+        {
+            Version v = getVersion(s, p->file, "/?");
+            auto &rc = addProgram(s, PackageId("com.Microsoft.Windows.rc", v), p);
+            auto ts1 = toTargetSettings(new_settings);
+            rc.ts["os.kernel"] = ts1["os.kernel"];
+        }
         //for (auto &idir : COpts.System.IncludeDirectories)
             //C->system_idirs.push_back(idir);
-
-        //C->input_extensions = { ".rc", };
-        auto &rc = addProgram(s, "com.Microsoft.Windows.rc", C);
-        rc.setSettingsComparator(std::make_unique<CompilerSettingsComparator>());
-    }*/
-
-    // https://docs.microsoft.com/en-us/cpp/c-runtime-library/crt-library-features?view=vs-2019
-    for (auto target_arch : { ArchType::x86_64,ArchType::x86,ArchType::arm,ArchType::aarch64 })
-    {
-        /*auto new_settings = s.getBuildSettings();
-        new_settings.TargetOS.Arch = target_arch;
-
-        for (auto &[_, instance] : instances)
-        {
-            auto root = instance.root / "VC";
-            auto &v = instance.version;
-
-            if (v.getMajor() >= 15)
-                root = root / "Tools" / "MSVC" / boost::trim_copy(read_file(root / "Auxiliary" / "Build" / "Microsoft.VCToolsVersion.default.txt"));
-
-            //auto &vcruntime = s.addLibrary("com.Microsoft.VisualStudio.VC.vcruntime", v);
-
-            auto libcppt = s.make<LibraryTarget>("com.Microsoft.VisualStudio.VC.libcpp", v);
-            libcppt->HeaderOnly = true;
-            libcppt->ts = new_settings.getTargetSettings();
-            while (libcppt->init());
-            auto &libcpp = s.registerTarget(libcppt);
-            libcpp.AutoDetectOptions = false;
-            libcpp.sw_provided = true;
-            libcpp.setSettingsComparator(std::make_unique<CompilerSettingsComparator>());
-            libcpp.Public.NativeCompilerOptions::System.IncludeDirectories.push_back(root / "include");
-
-            auto &atlmfct = s.make<LibraryTarget>("com.Microsoft.VisualStudio.VC.ATLMFC", v);
-            atlmfct->HeaderOnly = true;
-            atlmfct->ts = new_settings.getTargetSettings();
-            while (atlmfct->init());
-            auto &atlmfc = s.registerTarget(atlmfct);
-            atlmfc.AutoDetectOptions = false;
-            atlmfc.sw_provided = true;
-            atlmfc.setSettingsComparator(std::make_unique<CompilerSettingsComparator>());
-            if (fs::exists(root / "ATLMFC" / "include"))
-                atlmfc.Public.NativeCompilerOptions::System.IncludeDirectories.push_back(root / "ATLMFC" / "include");
-
-            // get suffix
-            auto target = toStringWindows(target_arch);
-
-            if (v.getMajor() >= 15)
-            {
-                libcpp.Public += LinkDirectory(root / "lib" / target);
-                if (fs::exists(root / "ATLMFC" / "lib" / target))
-                    atlmfc.Public += LinkDirectory(root / "ATLMFC" / "lib" / target);
-            }
-            else
-            {
-                SW_UNIMPLEMENTED;
-            }
-
-            // early prepare
-            while (libcpp.prepare());
-            while (atlmfc.prepare());
-        }
-
-        // rename to libc? to crt?
-        auto &ucrtt = s.make<LibraryTarget>("com.Microsoft.Windows.SDK.ucrt", s.getBuildSettings().Native.SDK.getWindowsTargetPlatformVersion());
-        ucrtt->HeaderOnly = true;
-        ucrtt->ts = new_settings.getTargetSettings();
-        while (ucrtt->init());
-        auto &ucrt = s.registerTarget(ucrtt);
-        ucrt.AutoDetectOptions = false;
-        ucrt.sw_provided = true;
-        auto ucmp = std::make_unique<CompilerSettingsComparator>();
-        ucmp->addSetting("os.version");
-        ucrt.setSettingsComparator(std::move(ucmp));
-
-        // add kits include dirs
-        for (auto &i : fs::directory_iterator(s.getBuildSettings().Native.SDK.getPath("Include")))
-        {
-            if (fs::is_directory(i))
-                ucrt.Public.NativeCompilerOptions::System.IncludeDirectories.insert(i);
-        }
-        for (auto &i : fs::directory_iterator(s.getBuildSettings().Native.SDK.getPath("Lib")))
-        {
-            if (fs::is_directory(i))
-                ucrt.Public.NativeLinkerOptions::System.LinkDirectories.insert(i / toStringWindows(target_arch));
-        }
-        // early prepare
-        while (ucrt.prepare());*/
     }
 
     return;

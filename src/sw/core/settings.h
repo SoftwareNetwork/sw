@@ -67,18 +67,20 @@ struct SW_CORE_API TargetSetting
     }
 
     bool operator<(const TargetSetting &) const;
-    operator bool() const { return !!value; }
+    explicit operator bool() const;
+    //bool hasValue() const;
     const String &getValue() const;
     const TargetSettings &getSettings() const;
     void merge(const TargetSetting &);
+    void push_back(const TargetSettingValue &);
 
 private:
     TargetSettingKey key;
     std::optional<TargetSettingValue> value;
+    std::optional<std::vector<TargetSettingValue>> array;
     mutable std::unique_ptr<TargetSettings> settings;
 };
 
-// make map internal?
 struct SW_CORE_API TargetSettings
 {
     enum StringType : int
