@@ -20,7 +20,7 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "db_file");
 
-#define FILE_DB_FORMAT_VERSION 3
+#define FILE_DB_FORMAT_VERSION 4
 #define COMMAND_DB_FORMAT_VERSION 2
 
 namespace sw
@@ -82,23 +82,25 @@ static void load(FileStorage &fs, const path &fn,
         if (!b.has(sz))
             break; // record is in bad shape
 
-        size_t h;
-        b.read(h);
+        //size_t h;
+        //b.read(h);
 
         String p;
         b.read(p);
+
+        auto h = std::hash<String>()(p);
 
         auto kv = files.insert(h);
         kv.first->file = p;
         kv.first->data = fs.registerFile(p)->data;
 
-        decltype(kv.first->data->last_write_time) lwt;
+        /*decltype(kv.first->data->last_write_time) lwt;
         b.read(lwt);
 
         if (kv.first->data->last_write_time < lwt)
         {
             kv.first->data->last_write_time = lwt;
-        }
+        }*/
 
         kv.first->data->refreshed = FileData::RefreshType::Unrefreshed;
 
@@ -233,9 +235,9 @@ void FileDb::write(std::vector<uint8_t> &v, const FileRecord &f) const
 {
     v.clear();
 
-    write_int(v, std::hash<path>()(f.file));
+    //write_int(v, std::hash<path>()(f.file));
     write_str(v, normalize_path(f.file));
-    write_int(v, f.data->last_write_time.time_since_epoch().count());
+    //write_int(v, f.data->last_write_time.time_since_epoch().count());
     //write_int(v, f.data->size);
     //write_int(v, f.data->flags.to_ullong());
 
@@ -243,7 +245,7 @@ void FileDb::write(std::vector<uint8_t> &v, const FileRecord &f) const
     write_int(v, n);
 
     for (auto &[f, d] : f.implicit_dependencies)
-        write_int(v, std::hash<path>()(d->file));
+        write_int(v, std::hash<String>()(normalize_path(d->file)));
 }
 
 static void load(const path &fn, ConcurrentCommandStorage &commands)
