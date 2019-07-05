@@ -1903,9 +1903,9 @@ static Build::CommandExecutionPlan load(const SwContext &swctx, const path &fn, 
         while (n--)
             c->addInput(read_string());
 
-        ctx.read(n);
+        /*ctx.read(n);
         while (n--)
-            c->addIntermediate(read_string());
+            c->addIntermediate(read_string());*/
 
         ctx.read(n);
         while (n--)
@@ -2008,9 +2008,9 @@ void save(const path &fn, const Build::CommandExecutionPlan &p)
         for (auto &f : c->inputs)
             print_string(f.u8string());
 
-        ctx.write(c->intermediate.size());
+        /*ctx.write(c->intermediate.size());
         for (auto &f : c->intermediate)
-            print_string(f.u8string());
+            print_string(f.u8string());*/
 
         ctx.write(c->outputs.size());
         for (auto &f : c->outputs)

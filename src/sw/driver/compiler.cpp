@@ -1975,7 +1975,7 @@ void JavaCompiler::prepareCommand1(const Target &t)
     for (auto &f : InputFiles())
     {
         auto o = OutputDir() / (f.filename().stem() += ".class");
-        File(o, *fs).addImplicitDependency(f);
+        //File(o, *fs).addImplicitDependency(f);
         cmd->addOutput(o);
     }
 }

@@ -39,8 +39,8 @@ DECLARE_OPTION_SPECIALIZATION(path)
 {
     if (input_dependency)
         c->addInput(value());
-    if (intermediate_file)
-        c->addIntermediate(value());
+    //if (intermediate_file)
+        //c->addIntermediate(value());
     if (output_dependency)
         c->addOutput(value());
     if (create_directory)
@@ -57,8 +57,8 @@ DECLARE_OPTION_SPECIALIZATION(FilesOrdered)
     {
         if (input_dependency)
             c->addInput(v);
-        if (intermediate_file)
-            c->addIntermediate(v);
+        //if (intermediate_file)
+            //c->addIntermediate(v);
         if (output_dependency)
             c->addOutput(v);
         if (cmd_flag_before_each_value)
@@ -84,8 +84,8 @@ DECLARE_OPTION_SPECIALIZATION(Files)
     {
         if (input_dependency)
             c->addInput(v);
-        if (intermediate_file)
-            c->addIntermediate(v);
+        //if (intermediate_file)
+            //c->addIntermediate(v);
         if (output_dependency)
             c->addOutput(v);
         if (cmd_flag_before_each_value)

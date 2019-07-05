@@ -6,7 +6,6 @@
 
 #include "file_storage.h"
 
-#include "db_file.h"
 #include "sw_context.h"
 
 #include <primitives/debug.h>
@@ -20,145 +19,13 @@ DECLARE_STATIC_LOGGER(logger, "file_storage");
 namespace sw
 {
 
-FileStorage::file_holder::file_holder(const path &fn)
-    : f(fn, "ab"), fn(fn)
+FileStorage::FileStorage(const SwBuilderContext &swctx)
+    : swctx(swctx)
 {
-    // goes first
-    // but maybe remove?
-    //if (setvbuf(f.getHandle(), NULL, _IONBF, 0) != 0)
-        //throw RUNTIME_EXCEPTION("Cannot disable log buffering");
-
-    // Opening a file in append mode doesn't set the file pointer to the file's
-    // end on Windows. Do that explicitly.
-    fseek(f.getHandle(), 0, SEEK_END);
-}
-
-FileStorage::file_holder::~file_holder()
-{
-    f.close();
-
-    error_code ec; // remove ec? but multiple processes may be writing into this log? or not?
-    fs::remove(fn, ec);
-}
-
-FileStorage::FileStorage(const SwBuilderContext &swctx, const String &config)
-    : swctx(swctx), config(config)
-{
-    //if (config.empty())
-        //throw SW_RUNTIME_ERROR("Empty config");
-    load();
-}
-
-FileStorage::file_holder *FileStorage::getFileLog()
-{
-    if (!async_file_log_)
-        async_file_log_ = std::make_unique<file_holder>(getFilesLogFileName(swctx, config, fs_local));
-    return async_file_log_.get();
-}
-
-path getCommandsLogFileName(const SwBuilderContext &swctx, bool local);
-
-FileStorage::file_holder *FileStorage::getCommandLog(bool local)
-{
-    if (local)
-    {
-        if (!async_command_log_local_)
-            async_command_log_local_ = std::make_unique<file_holder>(getCommandsLogFileName(swctx, local));
-        return async_command_log_local_.get();
-    }
-
-    if (!async_command_log_)
-        async_command_log_ = std::make_unique<file_holder>(getCommandsLogFileName(swctx, local));
-    return async_command_log_.get();
 }
 
 FileStorage::~FileStorage()
 {
-    try
-    {
-        closeLogs();
-        save();
-    }
-    catch (std::exception &e)
-    {
-        LOG_ERROR(logger, "Error during file db save: " << e.what());
-    }
-}
-
-void FileStorage::closeLogs()
-{
-    async_file_log_.reset();
-    async_command_log_.reset();
-    async_command_log_local_.reset();
-}
-
-#ifdef _WIN32
-#define USE_EXECUTOR 1
-#else
-#define USE_EXECUTOR 1
-#endif
-
-void FileStorage::async_file_log(const FileRecord *r)
-{
-#if !USE_EXECUTOR
-    static std::mutex m;
-    std::unique_lock lk(m);
-#endif
-
-    static std::vector<uint8_t> v;
-#if USE_EXECUTOR
-    swctx.getFileStorageExecutor().push([this, r = *r] {
-#endif
-        // write record to vector v
-        swctx.getDb().write(v, r);
-
-        //fseek(f.f, 0, SEEK_END);
-        auto l = getFileLog();
-        auto sz = v.size();
-        fwrite(&sz, sizeof(sz), 1, l->f.getHandle());
-        fwrite(&v[0], sz, 1, l->f.getHandle());
-        fflush(l->f.getHandle());
-#if USE_EXECUTOR
-    });
-#endif
-}
-
-void FileStorage::async_command_log(size_t hash, size_t lwt, bool local)
-{
-#if !USE_EXECUTOR
-    static std::mutex m;
-    std::unique_lock lk(m);
-#endif
-
-#if USE_EXECUTOR
-    swctx.getFileStorageExecutor().push([this, hash, lwt, local] {
-#endif
-        auto l = getCommandLog(local);
-        fwrite(&hash, sizeof(hash), 1, l->f.getHandle());
-        fwrite(&lwt, sizeof(lwt), 1, l->f.getHandle());
-        fflush(l->f.getHandle());
-#if USE_EXECUTOR
-    });
-#endif
-}
-
-void FileStorage::load()
-{
-    swctx.getDb().load(*this, files, fs_local);
-
-    for (auto i = files.getIterator(); i.isValid(); i.next())
-    {
-        auto &f = *i.getValue();
-        f.fs = this;
-    }
-
-    //for (auto &[_, f] : files)
-        //f->fs = this;
-}
-
-void FileStorage::save()
-{
-    swctx.getDb().save(*this, files, fs_local);
 }
 
 void FileStorage::clear()
@@ -168,20 +35,11 @@ void FileStorage::clear()
 
 void FileStorage::reset()
 {
-    /*save();
-    // we have some vars (files) not dumped or something like this
-    // do not remove!
-    files.clear();
-    load();*/
-
     for (auto i = files.getIterator(); i.isValid(); i.next())
     {
         auto &f = *i.getValue();
         f.reset();
     }
-
-    //for (auto &[_, f] : files)
-        //f->reset();
 }
 
 FileRecord *FileStorage::registerFile(const File &in_f)

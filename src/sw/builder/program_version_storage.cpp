@@ -13,7 +13,7 @@
 namespace sw
 {
 
-ProgramVersionStorage::ProgramVersionStorage(FileStorage &service_fs, const path &fn)
+ProgramVersionStorage::ProgramVersionStorage(const path &fn)
     : fn(fn)
 {
     path p;
@@ -25,8 +25,8 @@ ProgramVersionStorage::ProgramVersionStorage(FileStorage &service_fs, const path
         if (!ifile)
             break;
         ifile >> s;
-        if (!File(p, service_fs).isChanged())
-            versions[p] = s;
+        //if (!File(p, service_fs).isChanged())
+            //versions[p] = s;
     }
 }
 

@@ -18,7 +18,7 @@ struct ProgramVersionStorage
     path fn;
     std::unordered_map<path, Version> versions;
 
-    ProgramVersionStorage(FileStorage &service_fs, const path &fn);
+    ProgramVersionStorage(const path &fn);
     ~ProgramVersionStorage();
 };
 

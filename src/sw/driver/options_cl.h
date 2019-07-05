@@ -113,7 +113,7 @@ struct InputDependency : CommandLineOptionBaseValue {};
 /**
 * \brief File that is created during command but won't be used by anyone.
 */
-struct IntermediateFile : CommandLineOptionBaseValue {};
+//struct IntermediateFile : CommandLineOptionBaseValue {};
 
 /**
 * \brief Adds this file parameter as an output dependency to command.
@@ -139,6 +139,11 @@ struct Skip : CommandLineOptionBaseValue {};
 * \brief Separate prefix from argument.
 */
 struct SeparatePrefix : CommandLineOptionBaseValue {};
+
+/**
+* \brief Create directory for specified file
+*/
+struct CreateDirectory : CommandLineOptionBaseValue {};
 
 /**
 * \brief Adds this file parameter as an output dependency to command.
@@ -177,7 +182,7 @@ public:
     unsigned config_variable : 1;
     unsigned cmd_flag_before_each_value : 1;
     unsigned input_dependency : 1;
-    unsigned intermediate_file : 1;
+    //unsigned intermediate_file : 1;
     unsigned output_dependency : 1;
     unsigned manual_handling : 1;
     unsigned place_at_the_end : 1;
@@ -311,12 +316,13 @@ private:
     void init(const cl::ConfigVariable &) { config_variable = true; }
     void init(const cl::CommandFlagBeforeEachValue &) { cmd_flag_before_each_value = true; }
     void init(const cl::InputDependency &) { input_dependency = true; }
-    void init(const cl::IntermediateFile &) { intermediate_file = true; }
+    //void init(const cl::IntermediateFile &) { intermediate_file = true; }
     void init(const cl::OutputDependency &) { output_dependency = true; }
     void init(const cl::ManualHandling &) { manual_handling = true; }
     void init(const cl::PlaceAtTheEnd &) { place_at_the_end = true; }
     void init(const cl::Skip &) { skip = true; }
     void init(const cl::SeparatePrefix &) { separate_prefix = true; }
+    void init(const cl::CreateDirectory &) { create_directory = true; }
     void init(const T &v) { assign_value(v); }
     void init(const CommandLineOption1 &v) { assign(v); }
 
@@ -325,7 +331,7 @@ private:
         config_variable = false;
         cmd_flag_before_each_value = false;
         input_dependency = false;
-        intermediate_file = false;
+        //intermediate_file = false;
         output_dependency = false;
         manual_handling = false;
         place_at_the_end = false;
@@ -344,12 +350,13 @@ private:
         config_variable = v.config_variable;
         cmd_flag_before_each_value = v.cmd_flag_before_each_value;
         input_dependency = v.input_dependency;
-        intermediate_file = v.intermediate_file;
+        //intermediate_file = v.intermediate_file;
         output_dependency = v.output_dependency;
         manual_handling = v.manual_handling;
         place_at_the_end = v.place_at_the_end;
         skip = v.skip;
         separate_prefix = v.separate_prefix;
+        create_directory = v.create_directory;
         function = v.function;
     }
 

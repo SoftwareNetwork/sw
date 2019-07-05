@@ -7,7 +7,6 @@
 #include "sw_context.h"
 
 #include "command_storage.h"
-#include "db_file.h"
 #include "file_storage.h"
 #include "program_version_storage.h"
 
@@ -24,7 +23,6 @@ SwBuilderContext::SwBuilderContext(const path &local_storage_root_dir)
     HostOS = getHostOS();
 
     //
-    db = std::make_unique<FileDb>(*this);
     cs = std::make_unique<CommandStorage>(*this);
 
     //
@@ -34,10 +32,12 @@ SwBuilderContext::SwBuilderContext(const path &local_storage_root_dir)
     file_storage_executor = std::make_unique<Executor>("async log writer", 1);
 
     //
-    pvs = std::make_unique<ProgramVersionStorage>(getServiceFileStorage(), getLocalStorage().storage_dir_tmp / "db" / "program_versions.txt");
+    pvs = std::make_unique<ProgramVersionStorage>(getLocalStorage().storage_dir_tmp / "db" / "program_versions.txt");
 }
 
-SwBuilderContext::~SwBuilderContext() = default;
+SwBuilderContext::~SwBuilderContext()
+{
+}
 
 Executor &SwBuilderContext::getFileStorageExecutor() const
 {
@@ -46,21 +46,9 @@ Executor &SwBuilderContext::getFileStorageExecutor() const
 
 FileStorage &SwBuilderContext::getFileStorage(const String &config, bool local) const
 {
-    {
-        std::shared_lock lk(file_storages_mutex);
-        auto i = file_storages.find({ local, config });
-        if (i != file_storages.end())
-            return *i->second;
-    }
-    std::lock_guard lk(file_storages_mutex);
-
-    // double check
-    auto i = file_storages.find({ local, config });
-    if (i != file_storages.end())
-        return *i->second;
-
-    file_storages[{ local, config }] = std::make_unique<FileStorage>(*this, config);
-    return *file_storages[{ local, config }];
+    if (!file_storage)
+        file_storage = std::make_unique<FileStorage>(*this);
+    return *file_storage;
 }
 
 FileStorage &SwBuilderContext::getServiceFileStorage() const
@@ -71,11 +59,6 @@ FileStorage &SwBuilderContext::getServiceFileStorage() const
 SwBuilderContext::FileDataHashMap &SwBuilderContext::getFileData() const
 {
     return *fshm;
-}
-
-FileDb &SwBuilderContext::getDb() const
-{
-    return *db;
 }
 
 CommandStorage &SwBuilderContext::getCommandStorage() const
@@ -90,7 +73,7 @@ ProgramVersionStorage &SwBuilderContext::getVersionStorage() const
 
 void SwBuilderContext::clearFileStorages()
 {
-    file_storages.clear();
+    file_storage.reset();
 }
 
 }
