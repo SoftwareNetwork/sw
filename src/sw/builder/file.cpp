@@ -75,7 +75,7 @@ void File::registerSelf() const
     fs->registerFile(*this);
 }
 
-std::unordered_set<std::shared_ptr<sw::builder::Command>> File::gatherDependentGenerators() const
+/*std::unordered_set<std::shared_ptr<sw::builder::Command>> File::gatherDependentGenerators() const
 {
     registerSelf();
     std::unordered_set<std::shared_ptr<sw::builder::Command>> deps;
@@ -85,11 +85,6 @@ std::unordered_set<std::shared_ptr<sw::builder::Command>> File::gatherDependentG
             deps.insert(d->getGenerator());
     }
     return deps;
-}
-
-path File::getPath() const
-{
-    return file;
 }
 
 void File::addImplicitDependency(const path &p)
@@ -111,6 +106,11 @@ void File::clearImplicitDependencies()
 {
     registerSelf();
     r->implicit_dependencies.clear();
+}*/
+
+path File::getPath() const
+{
+    return file;
 }
 
 FileRecord &File::getFileRecord()
@@ -177,7 +177,7 @@ FileRecord &FileRecord::operator=(const FileRecord &rhs)
     file = rhs.file;
     data = rhs.data;
 
-    implicit_dependencies = rhs.implicit_dependencies;
+    //implicit_dependencies = rhs.implicit_dependencies;
 
     return *this;
 }
@@ -245,7 +245,7 @@ void FileRecord::refresh()
     }
 
     // register!
-    writeToLog();
+    //writeToLog();
 
     data->refreshed = changed ? FileData::RefreshType::Changed : FileData::RefreshType::NotChanged;
 }
@@ -254,12 +254,9 @@ bool FileRecord::isChanged()
 {
     if (data->refreshed == FileData::RefreshType::Unrefreshed)
         refresh();
-    else if (data->refreshed == FileData::RefreshType::InProcess)
-    {
-        // spinning
-        while (data->refreshed == FileData::RefreshType::InProcess)
-            ;
-    }
+    // spinning
+    while (data->refreshed == FileData::RefreshType::InProcess)
+        ;
     return data->refreshed == FileData::RefreshType::Changed;
 }
 
@@ -267,8 +264,8 @@ bool FileRecord::isChangedWithDeps()
 {
     // refresh all first, also find first changed
     bool deps_changed = false;
-    for (auto &[f, d] : implicit_dependencies)
-        deps_changed |= d->isChanged();
+    //for (auto &[f, d] : implicit_dependencies)
+        //deps_changed |= d->isChanged();
 
     // explain inside
     if (isChanged() || deps_changed)
@@ -292,24 +289,24 @@ std::optional<String> FileRecord::isChanged(const fs::file_time_type &in, bool t
     }
 
     // on missing implicit depedency we run command anyways
-    for (auto &[f, d] : implicit_dependencies)
+    /*for (auto &[f, d] : implicit_dependencies)
     {
         if (d->data->last_write_time.time_since_epoch().count() == 0)
             return "dependency " + normalize_path(d->file) + " is missing";
-    }
+    }*/
 
     if (data->last_write_time > in)
     {
         return "file is newer";
     }
 
-    for (auto &[f, d] : implicit_dependencies)
+    /*for (auto &[f, d] : implicit_dependencies)
     {
         if (d->data->last_write_time > in)
         {
             return "dependency " + normalize_path(d->file) + " is newer";
         }
-    }
+    }*/
     return {};
 }
 
@@ -360,7 +357,7 @@ bool FileRecord::isGenerated() const
 fs::file_time_type FileRecord::getMaxTime() const
 {
     auto m = data->last_write_time;
-    for (auto &[f, d] : implicit_dependencies)
+    /*for (auto &[f, d] : implicit_dependencies)
     {
         if (d == this)
             continue;
@@ -369,14 +366,14 @@ fs::file_time_type FileRecord::getMaxTime() const
         {
             m = dm;
         }
-    }
+    }*/
     return m;
 }
 
-void FileRecord::writeToLog() const
+/*void FileRecord::writeToLog() const
 {
     fs->async_file_log(this);
-}
+}*/
 
 /*fs::file_time_type FileRecord::updateLwt()
 {

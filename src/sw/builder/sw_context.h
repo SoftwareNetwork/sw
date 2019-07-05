@@ -20,7 +20,6 @@ namespace sw
 
 struct CommandStorage;
 struct FileData;
-struct FileDb;
 struct FileStorage;
 struct ProgramVersionStorage;
 
@@ -38,24 +37,18 @@ struct SW_BUILDER_API SwBuilderContext : SwManagerContext
     FileStorage &getServiceFileStorage() const;
     Executor &getFileStorageExecutor() const;
     FileDataHashMap &getFileData() const;
-    FileDb &getDb() const;
     CommandStorage &getCommandStorage() const;
     const OS &getHostOs() const { return HostOS; }
 
     void clearFileStorages();
 
 private:
-    using FileStorages = std::map<std::pair<bool, String>, std::unique_ptr<FileStorage>>;
-
     // keep order
     std::unique_ptr<ProgramVersionStorage> pvs;
-    std::unique_ptr<FileDb> db; // before CommandStorage and FileStorages
     std::unique_ptr<CommandStorage> cs;
     std::unique_ptr<FileDataHashMap> fshm; // before FileStorages!
-    mutable FileStorages file_storages;
+    mutable std::unique_ptr<FileStorage> file_storage;
     std::unique_ptr<Executor> file_storage_executor; // after everything!
-
-    mutable std::shared_mutex file_storages_mutex;
 };
 
 } // namespace sw

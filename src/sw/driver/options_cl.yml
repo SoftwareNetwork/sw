@@ -293,8 +293,7 @@ types:
                 flag: Fd
                 type: path
                 properties:
-                    #- create_directory
-                    - intermediate_file # this will create output dir, maybe add separate flag
+                    - create_directory
 
             pchfn:
                 name: PrecompiledHeaderFilename

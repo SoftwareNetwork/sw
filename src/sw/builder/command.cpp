@@ -10,7 +10,6 @@
 #include "command.h"
 
 #include "command_storage.h"
-#include "db_file.h"
 #include "file_storage.h"
 #include "jumppad.h"
 #include "os.h"
@@ -47,41 +46,6 @@ namespace sw
 static ConcurrentCommandStorage &getCommandStorage(const SwBuilderContext &swctx, bool local)
 {
     return swctx.getCommandStorage().getStorage(local);
-}
-
-CommandStorage::CommandStorage(const SwBuilderContext &swctx)
-    : swctx(swctx)
-{
-    load();
-}
-
-CommandStorage::~CommandStorage()
-{
-    try
-    {
-        save();
-    }
-    catch (std::exception &e)
-    {
-        LOG_ERROR(logger, "Error during command db save: " << e.what());
-    }
-}
-
-void CommandStorage::load()
-{
-    swctx.getDb().load(commands_local, true);
-    swctx.getDb().load(commands_global, false);
-}
-
-void CommandStorage::save()
-{
-    swctx.getDb().save(commands_local, true);
-    swctx.getDb().save(commands_global, false);
-}
-
-ConcurrentCommandStorage &CommandStorage::getStorage(bool local)
-{
-    return local ? commands_local : commands_global;
 }
 
 namespace builder
@@ -148,7 +112,7 @@ bool Command::isOutdated() const
     }
 
     auto k = getHash();
-    auto r = getCommandStorage(swctx, command_storage == CS_LOCAL).insert_ptr(k, 0);
+    auto r = getCommandStorage(swctx, command_storage == CS_LOCAL).insert(k);
     if (r.second)
     {
         // we have insertion, no previous value available
@@ -159,7 +123,8 @@ bool Command::isOutdated() const
     }
     else
     {
-        *((int64_t*)&mtime) = *r.first;
+        *((int64_t*)&mtime) = r.first->mtime;
+        ((Command*)(this))->implicit_inputs = r.first->implicit_inputs;
         return isTimeChanged();
     }
 }
@@ -168,12 +133,14 @@ bool Command::isTimeChanged() const
 {
     try
     {
-        return
-               std::any_of(inputs.begin(), inputs.end(), [this](const auto &i) {
+        return std::any_of(inputs.begin(), inputs.end(), [this](const auto &i) {
                    return check_if_file_newer(i, "input", true);
                }) ||
                std::any_of(outputs.begin(), outputs.end(), [this](const auto &i) {
                    return check_if_file_newer(i, "output", false);
+               }) ||
+               std::any_of(implicit_inputs.begin(), implicit_inputs.end(), [this](const auto &i) {
+                   return check_if_file_newer(i, "implicit input", true);
                });
     }
     catch (std::exception &e)
@@ -240,16 +207,16 @@ void Command::updateCommandTime() const
 {
     auto k = getHash();
     auto c = mtime.time_since_epoch().count();
-    auto r = getCommandStorage(swctx, command_storage == CS_LOCAL).insert_ptr(k, c);
-    if (!r.second)
-        *r.first = c;
+    auto r = getCommandStorage(swctx, command_storage == CS_LOCAL).insert(k);
+    r.first->mtime = c;
+    r.first->implicit_inputs = implicit_inputs;
 }
 
 void Command::clean() const
 {
     error_code ec;
-    for (auto &o : intermediate)
-        fs::remove(o, ec);
+    //for (auto &o : intermediate)
+        //fs::remove(o, ec);
     for (auto &o : outputs)
         fs::remove(o, ec);
 }
@@ -261,12 +228,37 @@ void Command::addInput(const path &p)
     inputs.insert(p);
 }
 
-void Command::addIntermediate(const path &p)
+void Command::addInput(const Files &files)
+{
+    for (auto &f : files)
+        addInput(f);
+}
+
+void Command::addImplicitInput(const path &p)
+{
+    if (p.empty())
+        return;
+    implicit_inputs.insert(p);
+}
+
+void Command::addImplicitInput(const Files &files)
+{
+    for (auto &f : files)
+        addImplicitInput(f);
+}
+
+/*void Command::addIntermediate(const path &p)
 {
     if (p.empty())
         return;
     intermediate.insert(p);
 }
+
+void Command::addIntermediate(const Files &files)
+{
+    for (auto &f : files)
+        addIntermediate(f);
+}*/
 
 void Command::addOutput(const path &p)
 {
@@ -275,18 +267,6 @@ void Command::addOutput(const path &p)
     outputs.insert(p);
     auto &r = File(p, *fs).getFileRecord();
     r.setGenerator(shared_from_this(), true);
-}
-
-void Command::addInput(const Files &files)
-{
-    for (auto &f : files)
-        addInput(f);
-}
-
-void Command::addIntermediate(const Files &files)
-{
-    for (auto &f : files)
-        addIntermediate(f);
 }
 
 void Command::addOutput(const Files &files)
@@ -450,7 +430,7 @@ void Command::afterCommand()
         auto &fr = f.getFileRecord();
         fr.data->refreshed = FileData::RefreshType::Unrefreshed;
         fr.isChangedWithDeps();
-        fs->async_file_log(&fr);
+        //fs->async_file_log(&fr);
         //fr.writeToLog();
         //fr.updateLwt();
         if (!fs::exists(i))
@@ -486,7 +466,13 @@ void Command::afterCommand()
     // On the next run command times won't be compared with missing deps,
     // so outdated command wil not be re-runned
 
-    fs->async_command_log(getHash(), mtime.time_since_epoch().count(), command_storage == CS_LOCAL);
+    auto k = getHash();
+    auto &cs = swctx.getCommandStorage();
+    auto &r = *getCommandStorage(swctx, command_storage == CS_LOCAL).insert(k).first;
+    r.hash = getHash();
+    r.mtime = mtime.time_since_epoch().count();
+    r.implicit_inputs = implicit_inputs;
+    cs.async_command_log(r, command_storage == CS_LOCAL);
 }
 
 path Command::getResponseFilename() const
@@ -788,12 +774,12 @@ path Command::writeCommand(const path &p) const
 void Command::postProcess(bool ok)
 {
     // clear deps, otherwise they will stack up
-    for (auto &f : outputs)
+    /*for (auto &f : outputs)
     {
         File f2(f, *fs);
         f2.clearImplicitDependencies();
         f2.addImplicitDependency(inputs);
-    }
+    }*/
 
     postProcess1(ok);
 }
@@ -907,8 +893,8 @@ Files Command::getGeneratedDirs() const
     };
 
     Files dirs;
-    for (auto &d : intermediate)
-        dirs.insert(get_parent(d));
+    //for (auto &d : intermediate)
+        //dirs.insert(get_parent(d));
     for (auto &d : outputs)
         dirs.insert(get_parent(d));
     for (auto &d : output_dirs)

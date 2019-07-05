@@ -203,8 +203,8 @@ struct ExecutionPlan
             }
             for (auto &f : c->inputs)
                 insert(f.u8string());
-            for (auto &f : c->intermediate)
-                insert(f.u8string());
+            //for (auto &f : c->intermediate)
+                //insert(f.u8string());
             for (auto &f : c->outputs)
                 insert(f.u8string());
         }

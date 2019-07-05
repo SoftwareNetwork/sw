@@ -41,10 +41,10 @@ struct SW_BUILDER_API File
     File &operator=(const path &rhs);
 
     path getPath() const;
-    void addImplicitDependency(const path &f); // not thread safe
+    /*void addImplicitDependency(const path &f); // not thread safe
     void addImplicitDependency(const Files &f); // not thread safe
     void clearImplicitDependencies();
-    std::unordered_set<std::shared_ptr<builder::Command>> gatherDependentGenerators() const;
+    std::unordered_set<std::shared_ptr<builder::Command>> gatherDependentGenerators() const;*/
 
     FileRecord &getFileRecord();
     const FileRecord &getFileRecord() const;
@@ -83,7 +83,7 @@ struct FileData
 
     // downloaded etc.
     // we cut DAG below commands with all such outputs
-    bool provided = false;
+    //bool provided = false;
 
     // if file info is updated during this run
     std::atomic<RefreshType> refreshed{ RefreshType::Unrefreshed };
@@ -97,13 +97,8 @@ struct FileData
 struct SW_BUILDER_API FileRecord
 {
     FileStorage *fs = nullptr;
-
     path file;
     FileData *data = nullptr;
-
-    // make sets?
-    std::unordered_map<path, FileRecord *> implicit_dependencies;
-    // return back expl. deps?
 
     FileRecord() = default;
     FileRecord(const FileRecord &);
@@ -135,12 +130,10 @@ struct SW_BUILDER_API FileRecord
     /// also loades information
     void refresh();
 
-    void writeToLog() const;
+    //void writeToLog() const;
 
     //fs::file_time_type updateLwt();
 };
-
-path getFilesLogFileName(const struct SwBuilderContext &swctx, const String &config, bool local);
 
 #define EXPLAIN_OUTDATED(subject, outdated, reason, name) \
     explainMessage(subject, outdated, reason, name)

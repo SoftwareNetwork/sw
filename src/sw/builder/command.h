@@ -154,11 +154,12 @@ struct SW_BUILDER_API Command : ICastable, std::enable_shared_from_this<Command>
     Files inputs;
     // byproducts
     // used only to clean files and pre-create dirs
-    Files intermediate;
+    //Files intermediate;
     // if some commands accept pairs of args, and specific outputs depend on specific inputs
     // C I1 O1 I2 O2
     // then split that command!
     Files outputs;
+    Files implicit_inputs;
 
     // additional create dirs
     Files output_dirs;
@@ -217,8 +218,10 @@ struct SW_BUILDER_API Command : ICastable, std::enable_shared_from_this<Command>
     void setProgram(std::shared_ptr<Program> p);
     void addInput(const path &p);
     void addInput(const Files &p);
-    void addIntermediate(const path &p);
-    void addIntermediate(const Files &p);
+    void addImplicitInput(const path &p);
+    void addImplicitInput(const Files &p);
+    //void addIntermediate(const path &p);
+    //void addIntermediate(const Files &p);
     void addOutput(const path &p);
     void addOutput(const Files &p);
     path redirectStdin(const path &p);

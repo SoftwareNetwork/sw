@@ -126,11 +126,34 @@ struct ConcurrentMap
         return typename MapType::Iterator(*map);
     }
 
-    auto begin() { return map->begin(); }
-    auto end() { return map->end(); }
+    struct end_iterator {};
+    struct iterator
+    {
+        typename MapType::Iterator i;
 
-    auto begin() const { return map->begin(); }
-    auto end() const { return map->end(); }
+        iterator(typename MapType::Iterator i) : i(i) {}
+
+        bool operator!=(const end_iterator &e) const { return i.isValid(); }
+        std::pair<K, V&> operator*() { return { i.getKey(), *i.getValue() }; }
+        void operator++() { i.next(); }
+    };
+
+    iterator begin() { return getIterator(); }
+    end_iterator end() { return {}; }
+
+    // for usual maps
+    //iterator begin() { return map->begin(); }
+    //iterator end() { return map->end(); }
+
+    //auto begin() const { return map->begin(); }
+    //auto end() const { return map->end(); }
+
+
+    /*for (auto i = getIterator(); i.isValid(); i.next())
+    {
+        b.write(i.getKey());
+        b.write(*i.getValue()->mtime);
+    }*/
 
 private:
     std::unique_ptr<MapType> map;

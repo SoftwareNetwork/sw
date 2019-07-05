@@ -59,8 +59,8 @@ void Flag::printDecl(primitives::CppEmitter &ctx) const
         if (0);
         else if (p == "input_dependency")
             ctx.addLine("cl::InputDependency{},");
-        else if (p == "intermediate_file")
-            ctx.addLine("cl::IntermediateFile{},");
+        //else if (p == "intermediate_file")
+            //ctx.addLine("cl::IntermediateFile{},");
         else if (p == "output_dependency")
             ctx.addLine("cl::OutputDependency{},");
         else if (p == "flag_before_each_value")
@@ -69,6 +69,8 @@ void Flag::printDecl(primitives::CppEmitter &ctx) const
             ctx.addLine("cl::ConfigVariable{},");
         else if (p == "separate_prefix")
             ctx.addLine("cl::SeparatePrefix{},");
+        else if (p == "create_directory")
+            ctx.addLine("cl::CreateDirectory{},");
         else
             throw SW_RUNTIME_ERROR("unknown property: " + p);
     }

@@ -53,11 +53,6 @@ static path getCommandsLogFileName(const SwBuilderContext &swctx, bool local)
     return getDir(swctx, local) / std::to_string(COMMAND_DB_FORMAT_VERSION) / ("cmd_log_" + cfg + ".bin");
 }
 
-static path getFilesLogFileName(const SwBuilderContext &swctx, bool local)
-{
-    return getCommandsLogFileName(swctx, local) += ".deps";
-}
-
 FileDb::FileDb(const SwBuilderContext &swctx)
     : swctx(swctx)
 {
@@ -80,7 +75,7 @@ static void write_str(std::vector<uint8_t> &vec, const String &val)
     memcpy(&vec[vsz], &val[0], sz);
 }
 
-void FileDb::write(std::vector<uint8_t> &v, const CommandRecord &f) const
+void FileDb::write(std::vector<uint8_t> &v, const CommandRecord &f)
 {
     v.clear();
 
@@ -93,60 +88,117 @@ void FileDb::write(std::vector<uint8_t> &v, const CommandRecord &f) const
         write_int(v, std::hash<String>()(normalize_path(i)));
 }
 
-static void load(const path &fn, ConcurrentCommandStorage &commands)
+static String getFilesSuffix()
 {
-    if (!fs::exists(fn))
-        return;
-    primitives::BinaryStream b;
-    b.load(fn);
-    while (!b.eof())
-    {
-        size_t sz; // record size
-        b.read(sz);
-        if (!b.has(sz))
-            break; // record is in bad shape
+    return ".files";
+}
 
-        size_t k;
-        b.read(k);
-        size_t h;
-        b.read(h);
-        auto r = commands.insert(k);
-        r.first->mtime = h;
-        size_t n;
-        b.read(n);
-        while (n--)
+static void load(const path &fn, Files &files, ConcurrentCommandStorage &commands)
+{
+    std::unordered_map<size_t, path> files2;
+
+    // files
+    if (fs::exists(path(fn) += getFilesSuffix()))
+    {
+        primitives::BinaryStream b;
+        b.load(path(fn) += getFilesSuffix());
+        while (!b.eof())
         {
+            size_t sz; // record size
+            b.read(sz);
+            if (!b.has(sz))
+                break; // record is in bad shape
+
+            String s;
+            b.read(s);
+            files.insert(s);
+
+            files2[std::hash<String>()(s)] = s;
+        }
+    }
+
+    // commands
+    if (fs::exists(fn))
+    {
+        primitives::BinaryStream b;
+        b.load(fn);
+        while (!b.eof())
+        {
+            size_t sz; // record size
+            b.read(sz);
+            if (!b.has(sz))
+                break; // record is in bad shape
+
+            size_t h;
             b.read(h);
-            //r.first->implicit_inputs.insert(f);
+
+            auto r = commands.insert(h);
+            r.first->hash = h;
+
+            size_t m;
+            b.read(m);
+            r.first->mtime = m;
+
+            size_t n;
+            b.read(n);
+            while (n--)
+            {
+                b.read(h);
+                auto &f = files2[h];
+                if (!f.empty())
+                    r.first->implicit_inputs.insert(files2[h]);
+            }
         }
     }
 }
 
-void FileDb::load(ConcurrentCommandStorage &commands, bool local) const
+void FileDb::load(Files &files, ConcurrentCommandStorage &commands, bool local) const
 {
-    sw::load(getCommandsDbFilename(swctx, local), commands);
-    //try {
-        sw::load(getCommandsLogFileName(swctx, local), commands);
-    //} catch (...) {}
+    sw::load(getCommandsDbFilename(swctx, local), files, commands);
+    sw::load(getCommandsLogFileName(swctx, local), files, commands);
     error_code ec;
     fs::remove(getCommandsLogFileName(swctx, local), ec);
 }
 
-void FileDb::save(ConcurrentCommandStorage &commands, bool local) const
+void FileDb::save(Files &files, ConcurrentCommandStorage &commands, bool local) const
 {
     std::vector<uint8_t> v;
 
-    primitives::BinaryStream b(10'000'000); // reserve amount
-    for (auto &[k, r] : commands)
+    // files
     {
-        write(v, r);
-        b.write(v.data(), v.size());
+        primitives::BinaryStream b(10'000'000); // reserve amount
+        for (auto &f : files)
+        {
+            auto s = normalize_path(f);
+            auto sz = s.size() + 1;
+            b.write(sz);
+            b.write(s);
+        }
+        if (!b.empty())
+        {
+            auto p = getCommandsDbFilename(swctx, local) += getFilesSuffix();
+            fs::create_directories(p.parent_path());
+            b.save(p);
+        }
     }
-    if (b.empty())
-        return;
-    auto p = getCommandsDbFilename(swctx, local);
-    fs::create_directories(p.parent_path());
-    b.save(p);
+
+    // commands
+    {
+        primitives::BinaryStream b(10'000'000); // reserve amount
+        for (auto &[k, r] : commands)
+        {
+            write(v, r);
+            auto sz = v.size();
+            b.write(sz);
+            b.write(v.data(), v.size());
+        }
+        if (!b.empty())
+        {
+            auto p = getCommandsDbFilename(swctx, local);
+            fs::create_directories(p.parent_path());
+            b.save(p);
+        }
+    }
 }
 
 CommandStorage::FileHolder::FileHolder(const path &fn)
@@ -228,7 +280,7 @@ void CommandStorage::async_command_log(const CommandRecord &r, bool local)
                 if (!r.second)
                     continue;
                 auto s = normalize_path(f);
-                auto sz = s.size();
+                auto sz = s.size() + 1;
                 fwrite(&sz, sizeof(sz), 1, l.f.getHandle());
                 fwrite(&s[0], sz, 1, l.f.getHandle());
                 //fflush(l.f.getHandle());
@@ -261,20 +313,20 @@ CommandStorage::FileHolder &CommandStorage::Storage::getCommandLog(const SwBuild
 CommandStorage::FileHolder &CommandStorage::Storage::getFileLog(const SwBuilderContext &swctx, bool local)
 {
     if (!files)
-        files = std::make_unique<FileHolder>(getFilesLogFileName(swctx, local));
+        files = std::make_unique<FileHolder>(getCommandsLogFileName(swctx, local) += getFilesSuffix());
     return *files;
 }
 
 void CommandStorage::load()
 {
-    fdb.load(local.storage, true);
-    fdb.load(global.storage, false);
+    fdb.load(local.file_storage, local.storage, true);
+    fdb.load(global.file_storage, global.storage, false);
 }
 
 void CommandStorage::save()
 {
-    fdb.save(local.storage, true);
-    fdb.save(global.storage, false);
+    fdb.save(local.file_storage, local.storage, true);
+    fdb.save(global.file_storage, global.storage, false);
 }
 
 ConcurrentCommandStorage &CommandStorage::getStorage(bool local)

@@ -393,8 +393,8 @@ private:
         addLine("build ");
         for (auto &o : c.outputs)
             addText(prepareString(b, getShortName(o)) + " ");
-        for (auto &o : c.intermediate)
-            addText(prepareString(b, getShortName(o)) + " ");
+        //for (auto &o : c.intermediate)
+            //addText(prepareString(b, getShortName(o)) + " ");
         addText(": c" + std::to_string(c.getHash()) + " ");
         for (auto &i : c.inputs)
             addText(prepareString(b, getShortName(i)) + " ");
