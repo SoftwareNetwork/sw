@@ -169,8 +169,6 @@ struct SW_BUILDER_API Command : ICastable, std::enable_shared_from_this<Command>
     bool remove_outputs_before_execution = false; // was true
     bool protect_args_with_quotes = true;
     bool always = false;
-    // used when command may not update outputs based on some factors
-    bool record_inputs_mtime = false;
     bool do_not_save_command = false;
     bool silent = false; // no log record
     bool show_output = false; // no command output
@@ -230,7 +228,7 @@ struct SW_BUILDER_API Command : ICastable, std::enable_shared_from_this<Command>
     void updateCommandTime() const;
     void addPathDirectory(const path &p);
     Files getGeneratedDirs() const; // used by generators
-    virtual void addInputOutputDeps();
+    void addInputOutputDeps();
     path writeCommand(const path &basename) const;
 
     bool lessDuringExecution(const Command &rhs) const;
@@ -270,7 +268,7 @@ private:
 
     bool beforeCommand();
     void afterCommand();
-    virtual bool isTimeChanged() const;
+    bool isTimeChanged() const;
     void printLog() const;
     size_t getHashAndSave() const;
     String makeErrorString(const String &e);
@@ -301,8 +299,6 @@ private:
     void execute1(std::error_code *ec = nullptr) override;
     size_t getHash1() const override;
     void prepare() override;
-    void addInputOutputDeps() override;
-    bool isTimeChanged() const override;
 };
 
 // remove? probably no, just don't use it much
@@ -323,8 +319,6 @@ struct SW_BUILDER_API ExecuteBuiltinCommand : Command
     using Command::push_back;
     void push_back(const Strings &strings);
     void push_back(const Files &files);
-
-    bool isTimeChanged() const override;
 
 private:
     void execute1(std::error_code *ec = nullptr) override;

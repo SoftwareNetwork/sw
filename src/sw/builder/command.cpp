@@ -168,7 +168,7 @@ bool Command::isTimeChanged() const
 {
     try
     {
-        return check_if_file_newer(getProgram(), "program", true) ||
+        return
                std::any_of(inputs.begin(), inputs.end(), [this](const auto &i) {
                    return check_if_file_newer(i, "input", true);
                }) ||
@@ -320,9 +320,6 @@ path Command::redirectStderr(const path &p, bool append)
 
 void Command::addInputOutputDeps()
 {
-    if (File(getProgram(), *fs).isGenerated())
-        dependencies.insert(File(getProgram(), *fs).getFileRecord().getGenerator());
-
     for (auto &p : inputs)
     {
         File f(p, *fs);
@@ -355,6 +352,9 @@ void Command::prepare()
     // extra check
     //if (!program)
         //throw SW_RUNTIME_ERROR("empty program: " + getCommandId(*this));
+
+    // program is an input!
+    inputs.insert(getProgram());
 
     getHashAndSave();
 
@@ -463,14 +463,12 @@ void Command::afterCommand()
         mtime = std::max(mtime, fr.getMaxTime());
     };
 
-    if (record_inputs_mtime)
+    for (auto &i : inputs)
     {
-        mtime = std::max(mtime, File(getProgram(), *fs).getFileRecord().getMaxTime());
-        for (auto &i : inputs)
-            update_time(i);
+        File f(i, *fs);
+        auto &fr = f.getFileRecord();
+        mtime = std::max(mtime, fr.getMaxTime());
     }
-    //for (auto &i : intermediate)
-        //update_time(i);
     for (auto &i : outputs)
         update_time(i);
 
@@ -1047,36 +1045,6 @@ void CommandSequence::prepare()
         c->prepare();
 }
 
-void CommandSequence::addInputOutputDeps()
-{
-    for (auto &p : inputs)
-    {
-        File f(p, *fs);
-        if (f.isGenerated())
-            dependencies.insert(f.getFileRecord().getGenerator());
-    }
-}
-
-bool CommandSequence::isTimeChanged() const
-{
-    try
-    {
-        return
-            std::any_of(inputs.begin(), inputs.end(), [this](const auto &i) {
-            return check_if_file_newer(i, "input", true);
-                }) ||
-            std::any_of(outputs.begin(), outputs.end(), [this](const auto &i) {
-                    return check_if_file_newer(i, "output", false);
-                });
-    }
-    catch (std::exception &e)
-    {
-        String s = "Command: " + getName() + "\n";
-        s += e.what();
-        throw SW_RUNTIME_ERROR(s);
-    }
-}
-
 ExecuteBuiltinCommand::ExecuteBuiltinCommand(const SwBuilderContext &swctx)
     : Command(swctx)
 {
@@ -1121,25 +1089,6 @@ void ExecuteBuiltinCommand::execute1(std::error_code *ec)
         sa[start + 1],
         std::stoi(sa[start + 2]),
         Strings{ sa.begin() + start + 3, sa.end() });
-}
-
-bool ExecuteBuiltinCommand::isTimeChanged() const
-{
-    try
-    {
-        return std::any_of(inputs.begin(), inputs.end(), [this](const auto &i) {
-            return check_if_file_newer(i, "input", true);
-            }) ||
-            std::any_of(outputs.begin(), outputs.end(), [this](const auto &i) {
-                return check_if_file_newer(i, "output", false);
-                });
-    }
-    catch (std::exception &e)
-    {
-        String s = "Command: " + getName() + "\n";
-        s += e.what();
-        throw SW_RUNTIME_ERROR(s);
-    }
 }
 
 size_t ExecuteBuiltinCommand::getHash1() const
