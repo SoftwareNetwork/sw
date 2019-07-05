@@ -1037,7 +1037,7 @@ void ProjectEmitter::printProject(
 
                 //beginBlockWithConfiguration("ObjectFileName", s.Settings);
                 beginBlock("ObjectFileName");
-                addText("$(IntDir)/" + nsf->output.file.filename().u8string());
+                addText("$(IntDir)/" + nsf->output.filename().u8string());
                 endBlock(true);
             };
 

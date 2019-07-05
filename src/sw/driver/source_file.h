@@ -24,8 +24,9 @@ struct Target;
 // other files can be source files, but not compiled files
 // they'll be processed with other tools
 // so we cannot replace or inherit SourceFile from Compiler
-struct SW_DRIVER_CPP_API SourceFile : File
+struct SW_DRIVER_CPP_API SourceFile : Node
 {
+    path file;
     bool created = true;
     bool skip = false;
     bool postponed = false; // remove later?
@@ -34,7 +35,7 @@ struct SW_DRIVER_CPP_API SourceFile : File
     Strings args; // additional args to job, move to native?
     String fancy_name; // for output
 
-    SourceFile(const Target &t, const path &input);
+    SourceFile(const path &input);
     SourceFile(const SourceFile &) = default;
     virtual ~SourceFile() = default;
 
@@ -58,13 +59,13 @@ struct SW_DRIVER_CPP_API NativeSourceFile : SourceFile
         CPP,
     };
 
-    File output; // object file
+    path output; // object file
     std::shared_ptr<NativeCompiler> compiler;
     std::unordered_set<SourceFile*> dependencies; // explicit file deps? currently used for pchs
     BuildAsType BuildAs = BuildAsType::BasedOnExtension;
     bool skip_linking = false; // produce object file only
 
-    NativeSourceFile(const Target &t, const NativeCompiler &c, const path &input, const path &output);
+    NativeSourceFile(const NativeCompiler &c, const path &input, const path &output);
     NativeSourceFile(const NativeSourceFile &rhs);
     virtual ~NativeSourceFile();
 
@@ -91,10 +92,10 @@ struct PrecompiledHeader
 
 struct SW_DRIVER_CPP_API RcToolSourceFile : SourceFile
 {
-    File output;
+    path output;
     std::shared_ptr<RcTool> compiler;
 
-    RcToolSourceFile(const Target &t, const RcTool &c, const path &input, const path &output);
+    RcToolSourceFile(const RcTool &c, const path &input, const path &output);
 
     std::shared_ptr<builder::Command> getCommand(const Target &t) const override;
 };

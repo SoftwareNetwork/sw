@@ -494,7 +494,7 @@ const BuildSettings &Target::getSettings() const
 
 FileStorage &Target::getFs() const
 {
-    return getSolution().swctx.getFileStorage(getConfig(), Local);
+    return getSolution().swctx.getFileStorage();
 }
 
 bool Target::init()

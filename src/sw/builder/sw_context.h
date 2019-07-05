@@ -33,8 +33,7 @@ struct SW_BUILDER_API SwBuilderContext : SwManagerContext
     virtual ~SwBuilderContext();
 
     ProgramVersionStorage &getVersionStorage() const;
-    FileStorage &getFileStorage(const String &config, bool local) const;
-    FileStorage &getServiceFileStorage() const;
+    FileStorage &getFileStorage() const;
     Executor &getFileStorageExecutor() const;
     FileDataHashMap &getFileData() const;
     CommandStorage &getCommandStorage() const;

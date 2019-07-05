@@ -775,10 +775,10 @@ Files NativeCompiledTarget::gatherObjectFilesWithoutLibraries() const
     {
         if (f->skip_linking)
             continue;
-        if (f->output.file.extension() != ".gch" &&
-            f->output.file.extension() != ".pch"
+        if (f->output.extension() != ".gch" &&
+            f->output.extension() != ".pch"
             )
-            obj.insert(f->output.file);
+            obj.insert(f->output);
     }
     for (auto &[f, sf] : *this)
     {
@@ -2363,7 +2363,7 @@ bool NativeCompiledTarget::prepare()
             const path def = NATIVE_TARGET_DEF_SYMBOLS_FILE;
             Files objs;
             for (auto &f : files)
-                objs.insert(f->output.file);
+                objs.insert(f->output);
             SW_MAKE_EXECUTE_BUILTIN_COMMAND_AND_ADD(c, *this, "sw_create_def_file", nullptr);
             //c->record_inputs_mtime = true;
             c->arguments.push_back(def.u8string());
@@ -2478,7 +2478,7 @@ bool NativeCompiledTarget::prepare()
         if (!HeaderOnly.value() && getSelectedTool() != Librarian.get())
         {
             for (auto &f : ::sw::gatherSourceFiles<RcToolSourceFile>(*this))
-                obj.insert(f->output.file);
+                obj.insert(f->output);
         }
 
         // circular and windows rpath processing

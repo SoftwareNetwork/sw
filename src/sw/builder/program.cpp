@@ -28,15 +28,9 @@ Program::Program(const SwBuilderContext &swctx)
 }
 
 Program::Program(const Program &rhs)
-    : File(rhs), swctx(rhs.swctx)
+    : swctx(rhs.swctx), file(rhs.file)
 {
 }
-
-/*Program &Program::operator=(const Program &rhs)
-{
-    //swctx = rhs.swctx;
-    return *this;
-}*/
 
 const Version &Program::getVersion() const
 {

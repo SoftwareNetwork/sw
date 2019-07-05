@@ -1713,8 +1713,9 @@ path Build::build(const path &fn)
         b.is_config_build = true;
         auto r = b.build_configs_separate({ fn });
         auto dll = r.begin()->second;
-        if (do_not_rebuild_config &&
-            (File(fn, swctx.getServiceFileStorage()).isChanged() || File(dll, swctx.getServiceFileStorage()).isChanged()))
+        if (do_not_rebuild_config
+            && (File(fn, swctx.getFileStorage()).isChanged() || File(dll, swctx.getFileStorage()).isChanged())
+            )
         {
             remove_ide_explans = true;
             do_not_rebuild_config = false;
@@ -1854,7 +1855,7 @@ static Build::CommandExecutionPlan load(const SwContext &swctx, const path &fn, 
                 break;
             }
             commands[id] = c;
-            c->fs = &swctx.getServiceFileStorage();
+            c->fs = &swctx.getFileStorage();
             return c;
         }
         return it->second;
@@ -2058,7 +2059,7 @@ void Build::execute()
         if (fs::exists(fn))
         {
             // prevent double assign generators
-            swctx.getServiceFileStorage().reset();
+            swctx.getFileStorage().reset();
 
             auto p = ::sw::load(swctx, fn, *this);
             execute(p);
@@ -2465,7 +2466,7 @@ void Build::load_packages(const StringSet &pkgs)
         {
             auto files = read_lines(gIdeFastPath);
             if (std::none_of(files.begin(), files.end(), [this](auto &f) {
-                return File(f, swctx.getFileStorage(ide_fs, true)).isChanged();
+                return File(f, swctx.getFileStorage()).isChanged();
                 }))
             {
                 fast_path_exit = true;
@@ -2610,7 +2611,7 @@ void Build::build_packages(const StringSet &pkgs)
         for (auto &f : files)
         {
             s += normalize_path(f) + "\n";
-            File(f, swctx.getFileStorage(ide_fs, true)).isChanged();
+            File(f, swctx.getFileStorage()).isChanged();
         }
         write_file(gIdeFastPath, s);
     }
@@ -3268,7 +3269,7 @@ Test Build::addTest()
 
 Test Build::addTest(const String &name)
 {
-    Test cb(swctx, swctx.getServiceFileStorage());
+    Test cb(swctx, swctx.getFileStorage());
     addTest(cb, name);
     return cb;
 }

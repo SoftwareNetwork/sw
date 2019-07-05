@@ -1082,7 +1082,7 @@ SW_CREATE_COMPILER_COMMAND(CompilerBaseProgram, driver::Command)
 
 std::shared_ptr<SourceFile> CompilerBaseProgram::createSourceFile(const Target &t, const path &input) const
 {
-    return std::make_shared<SourceFile>(t, input);
+    return std::make_shared<SourceFile>(input);
 }
 
 static Strings getCStdOption(CLanguageStandard std, bool gnuext)
@@ -1150,7 +1150,7 @@ static path getOutputFile(const Target &t, const C &c, const path &input)
 
 std::shared_ptr<SourceFile> NativeCompiler::createSourceFile(const Target &t, const path &input) const
 {
-    return std::make_shared<NativeSourceFile>(t, *this, input, ::sw::getOutputFile(t, *this, input));
+    return std::make_shared<NativeSourceFile>(*this, input, ::sw::getOutputFile(t, *this, input));
 }
 
 SW_CREATE_COMPILER_COMMAND(VisualStudioCompiler, driver::VSCommand)
@@ -1895,7 +1895,7 @@ void RcTool::setSourceFile(const path &input_file)
 
 std::shared_ptr<SourceFile> RcTool::createSourceFile(const Target &t, const path &input) const
 {
-    return std::make_shared<RcToolSourceFile>(t, *this, input, ::sw::getOutputFile(t, *this, input));
+    return std::make_shared<RcToolSourceFile>(*this, input, ::sw::getOutputFile(t, *this, input));
 }
 
 SW_DEFINE_PROGRAM_CLONE(VisualStudioCSharpCompiler)
