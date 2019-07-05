@@ -44,16 +44,11 @@ Executor &SwBuilderContext::getFileStorageExecutor() const
     return *file_storage_executor;
 }
 
-FileStorage &SwBuilderContext::getFileStorage(const String &config, bool local) const
+FileStorage &SwBuilderContext::getFileStorage() const
 {
     if (!file_storage)
         file_storage = std::make_unique<FileStorage>(*this);
     return *file_storage;
-}
-
-FileStorage &SwBuilderContext::getServiceFileStorage() const
-{
-    return getFileStorage("service", true);
 }
 
 SwBuilderContext::FileDataHashMap &SwBuilderContext::getFileData() const

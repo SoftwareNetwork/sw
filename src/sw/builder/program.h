@@ -6,7 +6,6 @@
 
 #pragma once
 
-#include "file.h"
 #include "node.h"
 
 #include <sw/manager/version.h>
@@ -33,9 +32,10 @@ namespace sw
 
 struct SwBuilderContext;
 
-struct SW_BUILDER_API Program : ICastable, File, detail::Executable
+struct SW_BUILDER_API Program : ICastable, detail::Executable
 {
     const SwBuilderContext &swctx;
+    path file;
 
     Program(const SwBuilderContext &swctx);
     Program(const Program &);

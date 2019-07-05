@@ -113,7 +113,7 @@ void SourceFileStorage::add_unchecked(const path &file_in, bool skip)
     auto ho = nt && nt->HeaderOnly && nt->HeaderOnly.value();
     if (!target->hasExtension(ext) || ho)
     {
-        f = this->SourceFileMapThis::operator[](file) = std::make_shared<SourceFile>(*target, file);
+        f = this->SourceFileMapThis::operator[](file) = std::make_shared<SourceFile>(file);
         f->created = false;
     }
     else
@@ -125,7 +125,7 @@ void SourceFileStorage::add_unchecked(const path &file_in, bool skip)
                 // only unresolved dep for now
                 //if (f && f->postponed)
                     //throw SW_RUNTIME_ERROR("Postponing postponed file");
-                f = this->SourceFileMapThis::operator[](file) = std::make_shared<SourceFile>(*target, file);
+                f = this->SourceFileMapThis::operator[](file) = std::make_shared<SourceFile>(file);
                 f->postponed = true;
             }
             else
@@ -315,7 +315,7 @@ size_t SourceFileStorage::sizeSkipped() const
 
 SourceFile &SourceFileStorage::operator[](path F)
 {
-    static SourceFile sf(*target, "static_source_file");
+    static SourceFile sf("static_source_file");
     if (target->DryRun)
         return sf;
     check_absolute(F);
@@ -457,8 +457,8 @@ void SourceFileStorage::clearGlobCache()
     files_cache.clear();
 }
 
-SourceFile::SourceFile(const Target &t, const path &input)
-    : File(input, t.getFs())
+SourceFile::SourceFile(const path &input)
+    : file(input)
 {
 }
 
@@ -476,12 +476,12 @@ bool SourceFile::isActive() const
     return created && !skip /* && !isRemoved(f.first)*/;
 }
 
-NativeSourceFile::NativeSourceFile(const Target &t, const NativeCompiler &c, const path &input, const path &o)
-    : SourceFile(t, input)
+NativeSourceFile::NativeSourceFile(const NativeCompiler &c, const path &input, const path &o)
+    : SourceFile(input)
     , compiler(std::static_pointer_cast<NativeCompiler>(c.clone()))
-    , output(o, t.getFs())
+    , output(o)
 {
-    compiler->setSourceFile(input, output.file);
+    compiler->setSourceFile(input, output);
 }
 
 NativeSourceFile::NativeSourceFile(const NativeSourceFile &rhs)
@@ -497,8 +497,8 @@ NativeSourceFile::~NativeSourceFile()
 
 void NativeSourceFile::setOutputFile(const path &o)
 {
-    output.file = o;
-    compiler->setSourceFile(file, output.file);
+    output = o;
+    compiler->setSourceFile(file, output);
 }
 
 void NativeSourceFile::setOutputFile(const Target &t, const path &input, const path &output_dir)
@@ -522,13 +522,13 @@ std::shared_ptr<builder::Command> NativeSourceFile::getCommand(const Target &t) 
     return cmd;
 }
 
-RcToolSourceFile::RcToolSourceFile(const Target &t, const RcTool &c, const path &input, const path &o)
-    : SourceFile(t, input)
+RcToolSourceFile::RcToolSourceFile(const RcTool &c, const path &input, const path &o)
+    : SourceFile(input)
     , compiler(std::static_pointer_cast<RcTool>(c.clone()))
-    , output(o, t.getFs())
+    , output(o)
 {
     compiler->setSourceFile(input);
-    compiler->setOutputFile(output.file);
+    compiler->setOutputFile(output);
 }
 
 std::shared_ptr<builder::Command> RcToolSourceFile::getCommand(const Target &t) const

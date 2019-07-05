@@ -41,10 +41,6 @@ struct SW_BUILDER_API File
     File &operator=(const path &rhs);
 
     path getPath() const;
-    /*void addImplicitDependency(const path &f); // not thread safe
-    void addImplicitDependency(const Files &f); // not thread safe
-    void clearImplicitDependencies();
-    std::unordered_set<std::shared_ptr<builder::Command>> gatherDependentGenerators() const;*/
 
     FileRecord &getFileRecord();
     const FileRecord &getFileRecord() const;
