@@ -645,9 +645,9 @@ void NativeCompiledTarget::setOutputFile()
 
     // set generated early
     if (auto f = getOutputFile(); !f.empty())
-        File(f, getFs()).getFileRecord().setGenerated(true);
+        File(f, getFs()).setGenerated(true);
     if (auto f = getOutputFile(); !f.empty())
-        File(f, getFs()).getFileRecord().setGenerated(true);
+        File(f, getFs()).setGenerated(true);
 }
 
 path Target::getOutputFileName() const
@@ -1114,7 +1114,7 @@ Commands NativeCompiledTarget::getGeneratedCommands() const
             continue;
         if (f == def)
             continue;
-        auto c = p.getFileRecord().getGenerator();
+        auto c = p.getGenerator();
         if (c->strict_order > 0)
             order[c->strict_order].push_back(c);
         else
@@ -1288,7 +1288,7 @@ Commands NativeCompiledTarget::getCommands1() const
         File d(def, getFs());
         if (d.isGenerated())
         {
-            auto g = d.getFileRecord().getGenerator();
+            auto g = d.getGenerator();
             c->dependencies.insert(g);
             for (auto &c1 : cmds)
                 g->dependencies.insert(c1);
@@ -2281,7 +2281,7 @@ bool NativeCompiledTarget::prepare()
             write_file_if_different(p, ctx.getText());
 
             // more info for generators
-            File(p, getFs()).getFileRecord().setGenerated(true);
+            File(p, getFs()).setGenerated(true);
 
             operator+=(p);
         }
@@ -2788,7 +2788,7 @@ void NativeCompiledTarget::configureFile(path from, path to, ConfigureFlags flag
     // before resolving
     if (!to.is_absolute())
         to = BinaryDir / to;
-    File(to, getFs()).getFileRecord().setGenerated();
+    File(to, getFs()).setGenerated();
 
     if (DryRun)
         return;
@@ -3002,7 +3002,7 @@ void NativeCompiledTarget::writeFileOnce(const path &fn, const String &content) 
     if (!source_dir)
     {
         File f(p, getFs());
-        f.getFileRecord().setGenerated();
+        f.setGenerated();
     }
 
     if (DryRun)

@@ -25,8 +25,6 @@ struct ProgramVersionStorage;
 
 struct SW_BUILDER_API SwBuilderContext : SwManagerContext
 {
-    using FileDataHashMap = ConcurrentHashMap<path, FileData>;
-
     OS HostOS;
 
     SwBuilderContext(const path &local_storage_root_dir);
@@ -35,7 +33,6 @@ struct SW_BUILDER_API SwBuilderContext : SwManagerContext
     ProgramVersionStorage &getVersionStorage() const;
     FileStorage &getFileStorage() const;
     Executor &getFileStorageExecutor() const;
-    FileDataHashMap &getFileData() const;
     CommandStorage &getCommandStorage() const;
 
     void clearFileStorages();
@@ -44,7 +41,6 @@ private:
     // keep order
     std::unique_ptr<ProgramVersionStorage> pvs;
     std::unique_ptr<CommandStorage> cs;
-    std::unique_ptr<FileDataHashMap> fshm; // before FileStorages!
     mutable std::unique_ptr<FileStorage> file_storage;
     std::unique_ptr<Executor> file_storage_executor; // after everything!
 };

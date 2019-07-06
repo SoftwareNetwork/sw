@@ -823,7 +823,7 @@ void ProjectEmitter::printProject(
             for (auto &[p, sf] : nt)
             {
                 File ff(p, nt.getFs());
-                auto gen = ff.getFileRecord().getGenerator();
+                auto gen = ff.getGenerator();
 
                 if (auto dc = gen->as<ExecuteBuiltinCommand>())
                 {
@@ -1049,7 +1049,7 @@ void ProjectEmitter::printProject(
             (const path &p, const std::shared_ptr<SourceFile> &sf)
             {
                 File ff(p, nt.getFs());
-                auto gen = ff.getFileRecord().getGenerator();
+                auto gen = ff.getGenerator();
 
                 if (auto dc = gen->as<ExecuteBuiltinCommand>())
                 {

@@ -7,21 +7,11 @@
 #include "file.h"
 
 #include "command.h"
-#include "concurrent_map.h"
 #include "file_storage.h"
 
-#include <sw/manager/settings.h>
-#include <sw/support/hash.h>
-
-#include <boost/algorithm/string.hpp>
-#include <boost/dll.hpp>
 #include <primitives/executor.h>
-#include <primitives/hash.h>
-#include <primitives/templates.h>
-#include <primitives/debug.h>
-#include <primitives/sw/settings.h>
 
-#include <sstream>
+#include <fstream>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "file");
@@ -49,70 +39,6 @@ void explainMessage(const String &subject, bool outdated, const String &reason, 
     });
 }
 
-File::File(const path &p, FileStorage &s)
-    : fs(&s), file(p)
-{
-    if (file.empty())
-        throw SW_RUNTIME_ERROR("Empty file");
-    if (!fs)
-        throw SW_RUNTIME_ERROR("Empty file storage when loading file: " + normalize_path(file));
-    registerSelf();
-    r->setFile(file);
-}
-
-File &File::operator=(const path &rhs)
-{
-    file = rhs;
-    registerSelf();
-    return *this;
-}
-
-void File::registerSelf() const
-{
-    if (r)
-        return;
-    fs->registerFile(*this);
-}
-
-path File::getPath() const
-{
-    return file;
-}
-
-FileRecord &File::getFileRecord()
-{
-    registerSelf();
-    return *r;
-}
-
-const FileRecord &File::getFileRecord() const
-{
-    return ((File*)this)->getFileRecord();
-}
-
-bool File::isChanged() const
-{
-    registerSelf();
-    return r->isChanged();
-}
-
-std::optional<String> File::isChanged(const fs::file_time_type &t, bool throw_on_missing)
-{
-    return getFileRecord().isChanged(t, throw_on_missing);
-}
-
-bool File::isGenerated() const
-{
-    registerSelf();
-    return r->isGenerated();
-}
-
-bool File::isGeneratedAtAll() const
-{
-    registerSelf();
-    return r->isGeneratedAtAll();
-}
-
 FileData::FileData(const FileData &rhs)
 {
     *this = rhs;
@@ -130,48 +56,49 @@ FileData &FileData::operator=(const FileData &rhs)
     return *this;
 }
 
-FileRecord::FileRecord(const FileRecord &rhs)
+void FileData::reset()
 {
-    operator=(rhs);
+    generator.reset();
+    refreshed = FileData::RefreshType::Unrefreshed;
 }
 
-FileRecord &FileRecord::operator=(const FileRecord &rhs)
-{
-    file = rhs.file;
-    data = rhs.data;
-    return *this;
-}
-
-void FileRecord::setFile(const path &p)
+File::File(const path &p, FileStorage &fs)
+    : file(p)
 {
     if (file.empty())
-    {
-        std::unique_lock lk(m);
-        if (file.empty())
-            file = p;
-    }
+        throw SW_RUNTIME_ERROR("Empty file");
+    data = &fs.registerFile(file);
 }
 
-void FileRecord::reset()
+path File::getPath() const
 {
-    data->generator.reset();
-    if (data)
-        data->refreshed = FileData::RefreshType::Unrefreshed;
+    return file;
 }
 
-void FileRecord::refresh()
+FileData &File::getFileData()
 {
-    if (data->refreshed >= FileData::RefreshType::NotChanged)
+    return *data;
+}
+
+const FileData &File::getFileData() const
+{
+    return *data;
+}
+
+void FileData::refresh(const path &file)
+{
+    /*if (refreshed >= FileData::RefreshType::NotChanged)
         return;
 
     std::unique_lock lk(m);
 
-    if (data->refreshed >= FileData::RefreshType::NotChanged)
-        return;
-
-    /*FileData::RefreshType r = FileData::RefreshType::Unrefreshed;
-    if (!data || !data->refreshed.compare_exchange_strong(r, FileData::RefreshType::InProcess))
+    // double check
+    if (refreshed >= FileData::RefreshType::NotChanged)
         return;*/
+
+    FileData::RefreshType r = FileData::RefreshType::Unrefreshed;
+    if (!refreshed.compare_exchange_strong(r, FileData::RefreshType::InProcess))
+        return;
 
     bool changed = false;
     auto s = fs::status(file);
@@ -180,34 +107,30 @@ void FileRecord::refresh()
         if (s.type() != fs::file_type::not_found)
             LOG_TRACE(logger, "checking for non-regular file: " << file);
         // we skip non regular files at the moment
-        data->last_write_time = decltype(data->last_write_time)();
+        last_write_time = decltype(last_write_time)();
         changed = true;
     }
     else
     {
         auto t = fs::last_write_time(file);
-        if (t > data->last_write_time)
+        if (t > last_write_time)
         {
-            data->last_write_time = t;
+            last_write_time = t;
             changed = true;
         }
     }
 
-    data->refreshed = changed ? FileData::RefreshType::Changed : FileData::RefreshType::NotChanged;
+    refreshed = changed ? FileData::RefreshType::Changed : FileData::RefreshType::NotChanged;
 }
 
-bool FileRecord::isChanged()
+bool File::isChanged() const
 {
-    refresh();
-
-    // spin
-    //while (data->refreshed < FileData::RefreshType::NotChanged)
-        //;
-
+    while (data->refreshed < FileData::RefreshType::NotChanged)
+        data->refresh(file);
     return data->refreshed == FileData::RefreshType::Changed;
 }
 
-std::optional<String> FileRecord::isChanged(const fs::file_time_type &in, bool throw_on_missing)
+std::optional<String> File::isChanged(const fs::file_time_type &in, bool throw_on_missing)
 {
     // we call this as refresh of all deps
     // explain inside
@@ -228,7 +151,22 @@ std::optional<String> FileRecord::isChanged(const fs::file_time_type &in, bool t
     return {};
 }
 
-void FileRecord::setGenerator(const std::shared_ptr<builder::Command> &g, bool ignore_errors)
+bool File::isGenerated() const
+{
+    return !!data->generator.lock();
+}
+
+bool File::isGeneratedAtAll() const
+{
+    return data->generated;
+}
+
+void File::setGenerated(bool g)
+{
+    data->generated = g;
+}
+
+void File::setGenerator(const std::shared_ptr<builder::Command> &g, bool ignore_errors)
 {
     if (!g)
         return;
@@ -262,19 +200,14 @@ void FileRecord::setGenerator(const std::shared_ptr<builder::Command> &g, bool i
     data->generated = true;
 }
 
-std::shared_ptr<builder::Command> FileRecord::getGenerator() const
+std::shared_ptr<builder::Command> File::getGenerator() const
 {
     return data->generator.lock();
 }
 
-bool FileRecord::isGenerated() const
-{
-    return !!data->generator.lock();
-}
-
-bool FileRecord::operator<(const FileRecord &r) const
+/*bool File::operator<(const File &r) const
 {
     return data->last_write_time < r.data->last_write_time;
-}
+}*/
 
 }

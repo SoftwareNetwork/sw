@@ -7,30 +7,25 @@
 #pragma once
 
 #include "concurrent_map.h"
-#include "file.h"
 
-#include <primitives/templates.h>
+#include <primitives/filesystem.h>
 
 namespace sw
 {
 
+struct FileData;
 struct SwBuilderContext;
 
 struct SW_BUILDER_API FileStorage
 {
-    const SwBuilderContext &swctx;
-    ConcurrentHashMap<path, FileRecord> files;
+    using FileDataHashMap = ConcurrentHashMap<path, FileData>;
 
-    FileStorage(const SwBuilderContext &swctx);
-    FileStorage(FileStorage &&) = default;
-    FileStorage &operator=(FileStorage &&) = default;
-    ~FileStorage();
+    FileDataHashMap files;
 
-    void clear();
-    void reset();
+    void clear(); // remove?
+    void reset(); // remove?
 
-    FileRecord *registerFile(const File &f);
-    FileRecord *registerFile(const path &f);
+    FileData &registerFile(const path &f);
 };
 
 }

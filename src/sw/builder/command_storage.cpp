@@ -80,6 +80,9 @@ void FileDb::write(std::vector<uint8_t> &v, const CommandRecord &f)
 {
     v.clear();
 
+    if (f.hash == 0)
+        throw SW_RUNTIME_ERROR("Empty hash");
+
     write_int(v, f.hash);
     write_int(v, f.mtime);
 
@@ -132,6 +135,9 @@ static void load(const path &fn, Files &files, ConcurrentCommandStorage &command
 
             size_t h;
             b.read(h);
+
+            if (h == 0)
+                continue;
 
             auto r = commands.insert(h);
             r.first->hash = h;

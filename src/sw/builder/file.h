@@ -8,8 +8,6 @@
 
 #include "node.h"
 
-//#include <sw/manager/enums.h>
-
 #include <primitives/filesystem.h>
 
 #include <atomic>
@@ -26,39 +24,7 @@ struct Command;
 
 }
 
-struct FileRecord;
 struct FileStorage;
-
-struct SW_BUILDER_API File : virtual Node
-{
-    FileStorage *fs = nullptr;
-    path file;
-
-    File() = default;
-    File(const path &p, FileStorage &s);
-    virtual ~File() = default;
-
-    File &operator=(const path &rhs);
-
-    path getPath() const;
-
-    FileRecord &getFileRecord();
-    const FileRecord &getFileRecord() const;
-
-    bool empty() const { return file.empty(); }
-    bool isChanged() const;
-    std::optional<String> isChanged(const fs::file_time_type &t, bool throw_on_missing);
-    bool isGenerated() const;
-    bool isGeneratedAtAll() const;
-
-private:
-    mutable FileRecord *r = nullptr;
-
-    void registerSelf() const;
-
-    friend struct FileDataStorage;
-    friend struct FileStorage;
-};
 
 struct FileData
 {
@@ -83,43 +49,44 @@ struct FileData
 
     // if file info is updated during this run
     std::atomic<RefreshType> refreshed{ RefreshType::Unrefreshed };
+    //mutable std::mutex m;
 
     FileData() = default;
     FileData(const FileData &);
     FileData &operator=(const FileData &rhs);
-};
-
-// config specific
-struct SW_BUILDER_API FileRecord
-{
-    path file;
-    FileData *data = nullptr;
-    std::mutex m;
-
-    FileRecord() = default;
-    FileRecord(const FileRecord &);
-    FileRecord &operator=(const FileRecord &);
-
-    void setFile(const path &p);
 
     void reset();
+    void refresh(const path &file);
+};
 
-    // only lwt change since the last run
-    bool isChanged();
+struct SW_BUILDER_API File : virtual Node
+{
+    path file;
 
-    // check using lwt
+    File() = default;
+    File(const path &p, FileStorage &s);
+    virtual ~File() = default;
+
+    path getPath() const;
+
+    FileData &getFileData();
+    const FileData &getFileData() const;
+
+    bool empty() const { return file.empty(); }
+
+    bool isChanged() const;
     std::optional<String> isChanged(const fs::file_time_type &t, bool throw_on_missing);
 
     bool isGenerated() const;
-    bool isGeneratedAtAll() const { return data->generated; }
+    bool isGeneratedAtAll() const;
     void setGenerator(const std::shared_ptr<builder::Command> &, bool ignore_errors);
-    void setGenerated(bool g = true) { data->generated = g; }
+    void setGenerated(bool g = true);
     std::shared_ptr<builder::Command> getGenerator() const;
 
-    bool operator<(const FileRecord &r) const;
+    //bool operator<(const File &r) const;
 
-    /// loads information
-    void refresh();
+private:
+    mutable FileData *data = nullptr;
 };
 
 #define EXPLAIN_OUTDATED(subject, outdated, reason, name) \
