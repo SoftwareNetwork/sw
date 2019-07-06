@@ -56,11 +56,6 @@ Command::Command(const SwBuilderContext &swctx)
 {
 }
 
-Command::Command(const SwBuilderContext &swctx, ::sw::FileStorage &fs)
-    : swctx(swctx), fs(&fs)
-{
-}
-
 Command::~Command()
 {
 }
@@ -89,7 +84,7 @@ static String getCommandId(const Command &c)
 
 bool Command::check_if_file_newer(const path &p, const String &what, bool throw_on_missing) const
 {
-    auto s = File(p, *fs).isChanged(mtime, throw_on_missing);
+    auto s = File(p, swctx.getFileStorage()).isChanged(mtime, throw_on_missing);
     if (s && isExplainNeeded())
         EXPLAIN_OUTDATED("command", true, what + " changed " + normalize_path(p) + ": " + *s, getCommandId(*this));
     return !!s;
@@ -265,7 +260,7 @@ void Command::addOutput(const path &p)
     if (p.empty())
         return;
     outputs.insert(p);
-    auto &r = File(p, *fs).getFileRecord();
+    auto &r = File(p, swctx.getFileStorage()).getFileRecord();
     r.setGenerator(shared_from_this(), true);
 }
 
@@ -302,7 +297,7 @@ void Command::addInputOutputDeps()
 {
     for (auto &p : inputs)
     {
-        File f(p, *fs);
+        File f(p, swctx.getFileStorage());
         if (f.isGenerated())
             dependencies.insert(f.getFileRecord().getGenerator());
     }
@@ -320,7 +315,7 @@ void Command::prepare()
 
     // user entered commands may be in form 'git'
     // so, it is not empty, not generated and does not exist
-    if (!getProgram().empty() && !File(getProgram(), *fs).isGeneratedAtAll() &&
+    if (!getProgram().empty() && !File(getProgram(), swctx.getFileStorage()).isGeneratedAtAll() &&
         !path(getProgram()).is_absolute() && !fs::exists(getProgram()))
     {
         auto new_prog = resolveExecutable(getProgram());
@@ -344,7 +339,7 @@ void Command::prepare()
     // late add real generator
     for (auto &p : outputs)
     {
-        auto &r = File(p, *fs).getFileRecord();
+        auto &r = File(p, swctx.getFileStorage()).getFileRecord();
         r.setGenerator(shared_from_this(), false);
     }
 
@@ -426,10 +421,10 @@ void Command::afterCommand()
 
     auto update_time = [this](const auto &i)
     {
-        File f(i, *fs);
+        File f(i, swctx.getFileStorage());
         auto &fr = f.getFileRecord();
         fr.data->refreshed = FileData::RefreshType::Unrefreshed;
-        fr.isChangedWithDeps();
+        fr.isChanged();
         //fs->async_file_log(&fr);
         //fr.writeToLog();
         //fr.updateLwt();
@@ -440,14 +435,14 @@ void Command::afterCommand()
         }
         //if (fr.data->last_write_time < start_time)
             //err
-        mtime = std::max(mtime, fr.getMaxTime());
+        mtime = std::max(mtime, fr.data->last_write_time);
     };
 
     for (auto &i : inputs)
     {
-        File f(i, *fs);
+        File f(i, swctx.getFileStorage());
         auto &fr = f.getFileRecord();
-        mtime = std::max(mtime, fr.getMaxTime());
+        mtime = std::max(mtime, fr.data->last_write_time);
     }
     for (auto &i : outputs)
         update_time(i);
@@ -774,12 +769,7 @@ path Command::writeCommand(const path &p) const
 void Command::postProcess(bool ok)
 {
     // clear deps, otherwise they will stack up
-    /*for (auto &f : outputs)
-    {
-        File f2(f, *fs);
-        f2.clearImplicitDependencies();
-        f2.addImplicitDependency(inputs);
-    }*/
+    implicit_inputs.clear();
 
     postProcess1(ok);
 }

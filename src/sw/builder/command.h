@@ -14,18 +14,11 @@
 #include <condition_variable>
 #include <mutex>
 
-#define SW_INTERNAL_INIT_COMMAND(name, target) \
-    name->fs = &(target).getFs();
-
-    // this is performed later
-    //(target).setupCommand(*name)
-
 #define SW_INTERNAL_ADD_COMMAND(name, target) \
     (target).Storage.push_back(name)
 
 #define SW_MAKE_CUSTOM_COMMAND(type, name, target, ...) \
-    auto name = std::make_shared<type>((target).getSolution().swctx, __VA_ARGS__);    \
-    SW_INTERNAL_INIT_COMMAND(name, target)
+    auto name = std::make_shared<type>((target).getSolution().swctx, __VA_ARGS__)
 
 #ifdef _MSC_VER
 #define SW_MAKE_CUSTOM_COMMAND_AND_ADD(type, name, target, ...) \
@@ -146,7 +139,6 @@ struct SW_BUILDER_API Command : ICastable, std::enable_shared_from_this<Command>
     using Clock = std::chrono::high_resolution_clock;
 
     const SwBuilderContext &swctx;
-    FileStorage *fs = nullptr;
 
     String name;
     String name_short;
@@ -199,7 +191,6 @@ struct SW_BUILDER_API Command : ICastable, std::enable_shared_from_this<Command>
     int command_storage = 0;
 
     Command(const SwBuilderContext &swctx);
-    Command(const SwBuilderContext &swctx, ::sw::FileStorage &fs);
     virtual ~Command();
 
     void prepare() override;
@@ -289,7 +280,6 @@ struct SW_BUILDER_API CommandSequence : Command
     std::shared_ptr<C> addCommand(Args && ... args)
     {
         auto c = std::make_shared<C>(swctx, std::forward<Args>(args)...);
-        c->fs = fs;
         commands.push_back(c);
         return c;
     }

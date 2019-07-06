@@ -18,8 +18,9 @@
 
 #include "generator.h"
 
-#include <sw/builder/file.h>
-#include <sw/core/sw_context.h>
+#include <sw/builder/execution_plan.h>
+#include <sw/builder/sw_context.h>
+#include <sw/support/filesystem.h>
 
 #include <primitives/sw/cl.h>
 #include <primitives/win32helpers.h>
@@ -421,6 +422,34 @@ struct MakeEmitter : primitives::Emitter
         : Emitter("\t")
     {}
 
+    void gatherPrograms(const Build::CommandExecutionPlan::Vec &commands)
+    {
+        // gather programs
+        for (auto &c : commands)
+        {
+            auto prog = c->getProgram();
+            auto &progs = File(prog, c->swctx.getFileStorage()).isGeneratedAtAll() ? generated_programs : programs;
+
+            auto n = progs.size() + 1;
+            if (progs.find(prog) == progs.end())
+                progs[prog] = n;
+        }
+
+        auto print_progs = [this](auto &a, bool gen = false)
+        {
+            std::map<int, path> r;
+            for (auto &[k, v] : a)
+                r[v] = k;
+            for (auto &[v, k] : r)
+                addKeyValue(program_name(v, gen), k);
+        };
+
+        // print programs
+        print_progs(programs);
+        addLine();
+        print_progs(generated_programs, true);
+    }
+
     void addKeyValue(const String &key, const String &value)
     {
         addLine(key + " = " + value);
@@ -484,7 +513,7 @@ struct MakeEmitter : primitives::Emitter
         //addText(printFiles(c.inputs));
         for (auto &i : c.inputs)
         {
-            if (File(i, *c.fs).isGeneratedAtAll())
+            if (File(i, c.swctx.getFileStorage()).isGeneratedAtAll())
             {
                 addText(printFile(i));
                 addText(" ");

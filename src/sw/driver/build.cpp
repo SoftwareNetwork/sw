@@ -1584,7 +1584,6 @@ static Build::CommandExecutionPlan load(const SwBuilderContext &swctx, const pat
                 break;
             }
             commands[id] = c;
-            c->fs = &swctx.getFileStorage();
             return c;
         }
         return it->second;
@@ -2864,7 +2863,7 @@ Test Build::addTest()
 
 Test Build::addTest(const String &name)
 {
-    Test cb(swctx, swctx.getFileStorage());
+    Test cb(swctx);
     addTest(cb, name);
     return cb;
 }

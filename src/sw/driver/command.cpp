@@ -23,31 +23,6 @@ DECLARE_STATIC_LOGGER(logger, "cpp.command");
 namespace sw::driver
 {
 
-namespace detail
-{
-
-Command::Command(const SwBuilderContext &swctx)
-    : Base::Command(swctx)
-{
-}
-
-Command::Command(const SwBuilderContext &swctx, ::sw::FileStorage &fs)
-    : Base::Command(swctx, fs)
-{
-}
-
-}
-
-Command::Command(const SwBuilderContext &swctx)
-    : Base::Command(swctx)
-{
-}
-
-Command::Command(const SwBuilderContext &swctx, ::sw::FileStorage &fs)
-    : Base::Command(swctx, fs)
-{
-}
-
 std::shared_ptr<Command> Command::clone() const
 {
     return std::make_shared<Command>(*this);
@@ -79,13 +54,13 @@ void Command::prepare()
             if (auto nt = t.as<NativeCompiledTarget*>())
             {
                 p = nt->getOutputFile();
-                if (!p.empty() && !File(p, *fs).isGenerated())
+                if (!p.empty() && !File(p, swctx.getFileStorage()).isGenerated())
                 {
                     if (*nt->HeaderOnly)
-                        throw SW_RUNTIME_ERROR("Program is used from package: " + t.getPackage().toString() + " which is header only");
-                    if (!File(p, *fs).isGeneratedAtAll())
-                        throw SW_RUNTIME_ERROR("Program from package: " + t.getPackage().toString() + " is not generated at all: " + normalize_path(p));
-                    throw SW_RUNTIME_ERROR("Program from package: " + t.getPackage().toString() + " is not generated: " + normalize_path(p));
+                        throw SW_RUNTIME_ERROR("Program is used from package: " + t->getPackage().toString() + " which is header only");
+                    if (!File(p, swctx.getFileStorage()).isGeneratedAtAll())
+                        throw SW_RUNTIME_ERROR("Program from package: " + t->getPackage().toString() + " is not generated at all: " + normalize_path(p));
+                    throw SW_RUNTIME_ERROR("Program from package: " + t->getPackage().toString() + " is not generated: " + normalize_path(p));
                 }
             }
             else if (auto nt = t.as<NativeTarget*>())
@@ -255,12 +230,6 @@ CommandBuilder::CommandBuilder(const SwBuilderContext &swctx)
     c = std::make_shared<Command>(swctx);
 }
 
-CommandBuilder::CommandBuilder(const SwBuilderContext &swctx, ::sw::FileStorage &fs)
-    : CommandBuilder(swctx)
-{
-    c->fs = &fs;
-}
-
 CommandBuilder &CommandBuilder::operator|(CommandBuilder &c2)
 {
     operator|(*c2.c);
@@ -278,8 +247,6 @@ CommandBuilder &operator<<(CommandBuilder &cb, const NativeCompiledTarget &t)
     auto nt = (NativeCompiledTarget*)&t;
     cb.targets.push_back(nt);
     nt->Storage.push_back(cb.c);
-    if (!cb.c->fs)
-        cb.c->fs = &nt->getFs();
     return cb;
 }
 
