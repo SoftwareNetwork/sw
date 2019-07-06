@@ -59,7 +59,7 @@ struct FileData
     void refresh(const path &file);
 };
 
-struct SW_BUILDER_API File : virtual Node
+struct SW_BUILDER_API File : virtual ICastable
 {
     path file;
 

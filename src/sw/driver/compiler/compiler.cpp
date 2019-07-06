@@ -94,7 +94,6 @@ std::shared_ptr<builder::Command> CompilerBaseProgram::prepareCommand(const Targ
     if (prepared)
         return cmd;
     createCommand(t.getSolution().swctx); // do some init
-    cmd->fs = &t.getFs();
     prepareCommand1(t);
     prepared = true;
     return cmd;
@@ -104,7 +103,7 @@ SW_CREATE_COMPILER_COMMAND(CompilerBaseProgram, driver::Command)
 
 std::shared_ptr<SourceFile> CompilerBaseProgram::createSourceFile(const Target &t, const path &input) const
 {
-    return std::make_shared<SourceFile>(t, input);
+    return std::make_shared<SourceFile>(input);
 }
 
 static Strings getCStdOption(CLanguageStandard std, bool gnuext)
@@ -172,7 +171,7 @@ static path getOutputFile(const Target &t, const C &c, const path &input)
 
 std::shared_ptr<SourceFile> NativeCompiler::createSourceFile(const Target &t, const path &input) const
 {
-    return std::make_shared<NativeSourceFile>(t, *this, input, ::sw::getOutputFile(t, *this, input));
+    return std::make_shared<NativeSourceFile>(*this, input, ::sw::getOutputFile(t, *this, input));
 }
 
 SW_CREATE_COMPILER_COMMAND(VisualStudioCompiler, driver::VSCommand)
@@ -920,7 +919,7 @@ void RcTool::setSourceFile(const path &input_file)
 
 std::shared_ptr<SourceFile> RcTool::createSourceFile(const Target &t, const path &input) const
 {
-    return std::make_shared<RcToolSourceFile>(t, *this, input, ::sw::getOutputFile(t, *this, input));
+    return std::make_shared<RcToolSourceFile>(*this, input, ::sw::getOutputFile(t, *this, input));
 }
 
 SW_DEFINE_PROGRAM_CLONE(VisualStudioCSharpCompiler)
@@ -1000,7 +999,7 @@ void JavaCompiler::prepareCommand1(const Target &t)
     for (auto &f : InputFiles())
     {
         auto o = OutputDir() / (f.filename().stem() += ".class");
-        File(o, *fs).addImplicitDependency(f);
+        //File(o, *fs).addImplicitDependency(f);
         cmd->addOutput(o);
     }
 }

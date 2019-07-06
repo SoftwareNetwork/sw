@@ -57,10 +57,10 @@ void Command::prepare()
                 if (!p.empty() && !File(p, swctx.getFileStorage()).isGenerated())
                 {
                     if (*nt->HeaderOnly)
-                        throw SW_RUNTIME_ERROR("Program is used from package: " + t->getPackage().toString() + " which is header only");
+                        throw SW_RUNTIME_ERROR("Program is used from package: " + t.getPackage().toString() + " which is header only");
                     if (!File(p, swctx.getFileStorage()).isGeneratedAtAll())
-                        throw SW_RUNTIME_ERROR("Program from package: " + t->getPackage().toString() + " is not generated at all: " + normalize_path(p));
-                    throw SW_RUNTIME_ERROR("Program from package: " + t->getPackage().toString() + " is not generated: " + normalize_path(p));
+                        throw SW_RUNTIME_ERROR("Program from package: " + t.getPackage().toString() + " is not generated at all: " + normalize_path(p));
+                    throw SW_RUNTIME_ERROR("Program from package: " + t.getPackage().toString() + " is not generated: " + normalize_path(p));
                 }
             }
             else if (auto nt = t.as<NativeTarget*>())

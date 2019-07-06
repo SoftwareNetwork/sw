@@ -18,8 +18,9 @@
 
 #include "generator.h"
 
+#include <sw/builder/file.h>
 #include <sw/builder/execution_plan.h>
-#include <sw/builder/sw_context.h>
+#include <sw/core/sw_context.h>
 #include <sw/support/filesystem.h>
 
 #include <primitives/sw/cl.h>
@@ -177,7 +178,7 @@ struct ProgramShortCutter
 
     String getProgramName(const String &in, const builder::Command &c)
     {
-        bool gen = File(c.getProgram(), *c.fs).isGeneratedAtAll();
+        bool gen = File(c.getProgram(), c.swctx.getFileStorage()).isGeneratedAtAll();
         auto &progs = gen ? sc_generated : sc;
         return progs.getProgramName(in);
     }
@@ -421,34 +422,6 @@ struct MakeEmitter : primitives::Emitter
     MakeEmitter()
         : Emitter("\t")
     {}
-
-    void gatherPrograms(const Build::CommandExecutionPlan::Vec &commands)
-    {
-        // gather programs
-        for (auto &c : commands)
-        {
-            auto prog = c->getProgram();
-            auto &progs = File(prog, c->swctx.getFileStorage()).isGeneratedAtAll() ? generated_programs : programs;
-
-            auto n = progs.size() + 1;
-            if (progs.find(prog) == progs.end())
-                progs[prog] = n;
-        }
-
-        auto print_progs = [this](auto &a, bool gen = false)
-        {
-            std::map<int, path> r;
-            for (auto &[k, v] : a)
-                r[v] = k;
-            for (auto &[v, k] : r)
-                addKeyValue(program_name(v, gen), k);
-        };
-
-        // print programs
-        print_progs(programs);
-        addLine();
-        print_progs(generated_programs, true);
-    }
 
     void addKeyValue(const String &key, const String &value)
     {
