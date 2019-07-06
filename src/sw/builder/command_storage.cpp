@@ -81,7 +81,7 @@ void FileDb::write(std::vector<uint8_t> &v, const CommandRecord &f)
     v.clear();
 
     if (f.hash == 0)
-        throw SW_RUNTIME_ERROR("Empty hash");
+        return;
 
     write_int(v, f.hash);
     write_int(v, f.mtime);
@@ -111,7 +111,13 @@ static void load(const path &fn, Files &files, ConcurrentCommandStorage &command
             size_t sz; // record size
             b.read(sz);
             if (!b.has(sz))
+            {
+                fs::resize_file(path(fn) += getFilesSuffix(), b.index() - sizeof(sz));
                 break; // record is in bad shape
+            }
+
+            if (sz == 0)
+                continue;
 
             String s;
             b.read(s);
@@ -131,13 +137,16 @@ static void load(const path &fn, Files &files, ConcurrentCommandStorage &command
             size_t sz; // record size
             b.read(sz);
             if (!b.has(sz))
+            {
+                fs::resize_file(path(fn) += getFilesSuffix(), b.index() - sizeof(sz));
                 break; // record is in bad shape
+            }
+
+            if (sz == 0)
+                continue;
 
             size_t h;
             b.read(h);
-
-            if (h == 0)
-                continue;
 
             auto r = commands.insert(h);
             r.first->hash = h;
@@ -163,8 +172,6 @@ void FileDb::load(Files &files, ConcurrentCommandStorage &commands, bool local) 
 {
     sw::load(getCommandsDbFilename(swctx, local), files, commands);
     sw::load(getCommandsLogFileName(swctx, local), files, commands);
-    error_code ec;
-    fs::remove(getCommandsLogFileName(swctx, local), ec);
 }
 
 void FileDb::save(Files &files, ConcurrentCommandStorage &commands, bool local) const
@@ -206,6 +213,10 @@ void FileDb::save(Files &files, ConcurrentCommandStorage &commands, bool local) 
             b.save(p);
         }
     }
+
+    error_code ec;
+    fs::remove(getCommandsLogFileName(swctx, local), ec);
+    fs::remove(getCommandsLogFileName(swctx, local) += getFilesSuffix(), ec);
 }
 
 CommandStorage::FileHolder::FileHolder(const path &fn)
@@ -264,7 +275,8 @@ void CommandStorage::async_command_log(const CommandRecord &r, bool local)
     static std::vector<uint8_t> v;
 
 #if USE_EXECUTOR
-    swctx.getFileStorageExecutor().push([this, local, &r] {
+    swctx.getFileStorageExecutor().push([this, local, &r]
+    {
 #endif
         auto &s = getStorage1(local);
 
@@ -276,7 +288,7 @@ void CommandStorage::async_command_log(const CommandRecord &r, bool local)
             auto sz = v.size();
             fwrite(&sz, sizeof(sz), 1, l.f.getHandle());
             fwrite(&v[0], sz, 1, l.f.getHandle());
-            //fflush(l.f.getHandle());
+            fflush(l.f.getHandle());
         }
 
         {
@@ -290,7 +302,7 @@ void CommandStorage::async_command_log(const CommandRecord &r, bool local)
                 auto sz = s.size() + 1;
                 fwrite(&sz, sizeof(sz), 1, l.f.getHandle());
                 fwrite(&s[0], sz, 1, l.f.getHandle());
-                //fflush(l.f.getHandle());
+                fflush(l.f.getHandle());
             }
         }
 #if USE_EXECUTOR
