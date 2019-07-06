@@ -2397,11 +2397,22 @@ void Build::load_configless(const path &file_or_dir)
         {
             //exe += file_or_dir;
 
+            std::exception_ptr eptr;
             for (auto &c : comments)
             {
-                auto root = YAML::Load(c);
-                cppan_load(root, file_or_dir.stem().u8string());
+                try
+                {
+                    auto root = YAML::Load(c);
+                    cppan_load(root, file_or_dir.stem().u8string());
+                    break;
+                }
+                catch (...)
+                {
+                    eptr = std::current_exception();
+                }
             }
+            if (eptr)
+                std::rethrow_exception(eptr);
 
             // count non sw targets
             /*if (getChildren().size() == 1)
