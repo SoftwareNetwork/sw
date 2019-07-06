@@ -1365,6 +1365,8 @@ void Project::addDependency(const Package &p)
     i.first->second.createNames();
 }
 
+#endif
+
 OptionsMap loadOptionsMap(const yaml &root)
 {
     OptionsMap options;
@@ -1417,6 +1419,8 @@ OptionsMap loadOptionsMap(const yaml &root)
     });
     return options;
 }
+
+#if 0
 
 void saveOptionsMap(yaml &node, const OptionsMap &m)
 {

@@ -1,7 +1,13 @@
+// Copyright (C) 2017-2019 Egor Pugin <egor.pugin@gmail.com>
+//
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
 #include "native.h"
 
 #include "sw/driver/bazel/bazel.h"
-//#include "sw/driver/generator/generator.h"
+#include "sw/driver/frontend/cppan/project.h"
 #include "sw/driver/functions.h"
 #include "sw/driver/build.h"
 
@@ -3595,9 +3601,7 @@ void NativeCompiledTarget::cppan_load_project(const yaml &root)
         }
     }
 
-
-#if 0
-    YAML_EXTRACT_AUTO(output_name);
+    /*YAML_EXTRACT_AUTO(output_name);
     YAML_EXTRACT_AUTO(condition);
     YAML_EXTRACT_AUTO(include_script);
     license = get_scalar<String>(root, "license");
@@ -3610,10 +3614,12 @@ void NativeCompiledTarget::cppan_load_project(const yaml &root)
     if (output_directory.empty())
         YAML_EXTRACT_VAR(root, output_directory, "output_dir", String);
 
-    bs_insertions.load(root);
-    options = loadOptionsMap(root);
+    bs_insertions.load(root);*/
+    auto options = cppan::loadOptionsMap(root);
+    for (auto &[k, v] : options["any"].system_definitions["win32"])
+        add(Definition(v));
 
-    read_sources(public_headers, "public_headers");
+    /*read_sources(public_headers, "public_headers");
     include_hints = get_sequence_set<String>(root, "include_hints");
 
     aliases = get_sequence_set<String>(root, "aliases");
@@ -3625,8 +3631,7 @@ void NativeCompiledTarget::cppan_load_project(const yaml &root)
 
     const auto &patch_node = root["patch"];
     if (patch_node.IsDefined())
-        patch.load(patch_node);
-#endif
+        patch.load(patch_node);*/
 }
 
 #define STD(x)                                          \

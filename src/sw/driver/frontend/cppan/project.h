@@ -46,6 +46,45 @@ struct BuildSystemConfigInsertions
     static Strings getStrings();
 };
 
+struct Options
+{
+public:
+    using ValueContainer = std::set<std::pair<String, String>>;
+
+    using Definitions = ValueContainer;
+    using IncludeDirectories = ValueContainer;
+    using CompileOptions = ValueContainer;
+    using LinkOptions = ValueContainer;
+    using LinkLibraries = ValueContainer;
+
+    using SystemDefinitions = std::map<String, Definitions>;
+    using SystemIncludeDirectories = std::map<String, IncludeDirectories>;
+    using SystemCompileOptions = std::map<String, CompileOptions>;
+    using SystemLinkOptions = std::map<String, LinkOptions>;
+    using SystemLinkLibraries = std::map<String, LinkLibraries>;
+
+public:
+    Definitions definitions;
+    IncludeDirectories include_directories;
+    CompileOptions compile_options;
+    LinkOptions link_options;
+    LinkLibraries link_libraries;
+
+    SystemDefinitions system_definitions;
+    SystemIncludeDirectories system_include_directories;
+    SystemCompileOptions system_compile_options;
+    SystemLinkOptions system_link_options;
+    SystemLinkLibraries system_link_libraries;
+
+    StringSet link_directories;
+
+    BuildSystemConfigInsertions bs_insertions;
+};
+
+using OptionsMap = std::map<String, Options>;
+
+OptionsMap loadOptionsMap(const yaml &root);
+
 #if 0
 
 using Sources = std::set<String>;
@@ -142,44 +181,6 @@ struct IncludeDirectories
     }
 };
 
-struct Options
-{
-public:
-    using ValueContainer = std::set<std::pair<String, String>>;
-
-    using Definitions = ValueContainer;
-    using IncludeDirectories = ValueContainer;
-    using CompileOptions = ValueContainer;
-    using LinkOptions = ValueContainer;
-    using LinkLibraries = ValueContainer;
-
-    using SystemDefinitions = std::map<String, Definitions>;
-    using SystemIncludeDirectories = std::map<String, IncludeDirectories>;
-    using SystemCompileOptions = std::map<String, CompileOptions>;
-    using SystemLinkOptions = std::map<String, LinkOptions>;
-    using SystemLinkLibraries = std::map<String, LinkLibraries>;
-
-public:
-    Definitions definitions;
-    IncludeDirectories include_directories;
-    CompileOptions compile_options;
-    LinkOptions link_options;
-    LinkLibraries link_libraries;
-
-    SystemDefinitions system_definitions;
-    SystemIncludeDirectories system_include_directories;
-    SystemCompileOptions system_compile_options;
-    SystemLinkOptions system_link_options;
-    SystemLinkLibraries system_link_libraries;
-
-    StringSet link_directories;
-
-    BuildSystemConfigInsertions bs_insertions;
-};
-
-using OptionsMap = std::map<String, Options>;
-
-OptionsMap loadOptionsMap(const yaml &root);
 void saveOptionsMap(yaml &root, const OptionsMap &m);
 
 using ReplaceInFiles = std::vector<std::pair<String, String>>;
