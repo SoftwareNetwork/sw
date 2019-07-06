@@ -57,8 +57,7 @@ File::File(const path &p, FileStorage &s)
     if (!fs)
         throw SW_RUNTIME_ERROR("Empty file storage when loading file: " + normalize_path(file));
     registerSelf();
-    if (r->file.empty())
-        r->file = file;
+    r->setFile(file);
 }
 
 File &File::operator=(const path &rhs)
@@ -74,39 +73,6 @@ void File::registerSelf() const
         return;
     fs->registerFile(*this);
 }
-
-/*std::unordered_set<std::shared_ptr<sw::builder::Command>> File::gatherDependentGenerators() const
-{
-    registerSelf();
-    std::unordered_set<std::shared_ptr<sw::builder::Command>> deps;
-    for (auto &[f, d] : r->implicit_dependencies)
-    {
-        if (d->isGenerated())
-            deps.insert(d->getGenerator());
-    }
-    return deps;
-}
-
-void File::addImplicitDependency(const path &p)
-{
-    if (p.empty())
-        return;
-    registerSelf();
-    File f(p, *fs);
-    r->implicit_dependencies.emplace(p, f.r);
-}
-
-void File::addImplicitDependency(const Files &files)
-{
-    for (auto &p : files)
-        addImplicitDependency(p);
-}
-
-void File::clearImplicitDependencies()
-{
-    registerSelf();
-    r->implicit_dependencies.clear();
-}*/
 
 path File::getPath() const
 {
@@ -166,20 +132,24 @@ FileData &FileData::operator=(const FileData &rhs)
 
 FileRecord::FileRecord(const FileRecord &rhs)
 {
-    *this = rhs;
+    operator=(rhs);
 }
 
 FileRecord &FileRecord::operator=(const FileRecord &rhs)
 {
-    if (rhs.fs)
-        fs = rhs.fs;
-
     file = rhs.file;
     data = rhs.data;
-
-    //implicit_dependencies = rhs.implicit_dependencies;
-
     return *this;
+}
+
+void FileRecord::setFile(const path &p)
+{
+    if (file.empty())
+    {
+        std::unique_lock lk(m);
+        if (file.empty())
+            file = p;
+    }
 }
 
 void FileRecord::reset()
@@ -189,40 +159,19 @@ void FileRecord::reset()
         data->refreshed = FileData::RefreshType::Unrefreshed;
 }
 
-static auto get_lwt(const path &file)
-{
-    auto m = fs::last_write_time(file);
-    return m;
-
-    // C++20 does not have this issue
-#if defined(_MSC_VER) && _MSVC_LANG <= 201703
-    static const decltype(m) now = []
-    {
-        auto p = get_temp_filename();
-        write_file(p, "");
-        auto m = fs::last_write_time(p);
-        fs::remove(p);
-        return m;
-    }();
-#else
-    static const auto now = decltype(m)::clock::now();
-#endif
-    if (m > now)
-    {
-        // file is changed during program execution
-        // TODO: handle this case - use non static now()
-        //auto d = std::chrono::duration_cast<std::chrono::milliseconds>(m - now).count();
-        //LOG_WARN(logger, "File " + normalize_path(file) + " is from future, diff = +" + std::to_string(d) + " ms.");
-    }
-
-    return m;
-}
-
 void FileRecord::refresh()
 {
-    FileData::RefreshType r = FileData::RefreshType::Unrefreshed;
-    if (!data || !data->refreshed.compare_exchange_strong(r, FileData::RefreshType::InProcess))
+    if (data->refreshed >= FileData::RefreshType::NotChanged)
         return;
+
+    std::unique_lock lk(m);
+
+    if (data->refreshed >= FileData::RefreshType::NotChanged)
+        return;
+
+    /*FileData::RefreshType r = FileData::RefreshType::Unrefreshed;
+    if (!data || !data->refreshed.compare_exchange_strong(r, FileData::RefreshType::InProcess))
+        return;*/
 
     bool changed = false;
     auto s = fs::status(file);
@@ -236,7 +185,7 @@ void FileRecord::refresh()
     }
     else
     {
-        auto t = get_lwt(file);
+        auto t = fs::last_write_time(file);
         if (t > data->last_write_time)
         {
             data->last_write_time = t;
@@ -244,45 +193,25 @@ void FileRecord::refresh()
         }
     }
 
-    // register!
-    //writeToLog();
-
     data->refreshed = changed ? FileData::RefreshType::Changed : FileData::RefreshType::NotChanged;
 }
 
 bool FileRecord::isChanged()
 {
-    if (data->refreshed == FileData::RefreshType::Unrefreshed)
-        refresh();
-    // spinning
-    while (data->refreshed == FileData::RefreshType::InProcess)
-        ;
+    refresh();
+
+    // spin
+    //while (data->refreshed < FileData::RefreshType::NotChanged)
+        //;
+
     return data->refreshed == FileData::RefreshType::Changed;
-}
-
-bool FileRecord::isChangedWithDeps()
-{
-    // refresh all first, also find first changed
-    bool deps_changed = false;
-    //for (auto &[f, d] : implicit_dependencies)
-        //deps_changed |= d->isChanged();
-
-    // explain inside
-    if (isChanged())
-        return true;
-
-    // explain inside
-    if (isChanged() || deps_changed)
-        return true;
-
-    return getMaxTime() > data->last_write_time;
 }
 
 std::optional<String> FileRecord::isChanged(const fs::file_time_type &in, bool throw_on_missing)
 {
     // we call this as refresh of all deps
     // explain inside
-    isChangedWithDeps();
+    isChanged();
 
     // on missing direct file we fail immediately
     if (data->last_write_time.time_since_epoch().count() == 0)
@@ -292,25 +221,10 @@ std::optional<String> FileRecord::isChanged(const fs::file_time_type &in, bool t
         return "file is missing";
     }
 
-    // on missing implicit depedency we run command anyways
-    /*for (auto &[f, d] : implicit_dependencies)
-    {
-        if (d->data->last_write_time.time_since_epoch().count() == 0)
-            return "dependency " + normalize_path(d->file) + " is missing";
-    }*/
-
     if (data->last_write_time > in)
     {
         return "file is newer";
     }
-
-    /*for (auto &[f, d] : implicit_dependencies)
-    {
-        if (d->data->last_write_time > in)
-        {
-            return "dependency " + normalize_path(d->file) + " is newer";
-        }
-    }*/
     return {};
 }
 
@@ -357,34 +271,6 @@ bool FileRecord::isGenerated() const
 {
     return !!data->generator.lock();
 }
-
-fs::file_time_type FileRecord::getMaxTime() const
-{
-    auto m = data->last_write_time;
-    /*for (auto &[f, d] : implicit_dependencies)
-    {
-        if (d == this)
-            continue;
-        auto dm = d->data->last_write_time;
-        if (dm > m)
-        {
-            m = dm;
-        }
-    }*/
-    return m;
-}
-
-/*void FileRecord::writeToLog() const
-{
-    fs->async_file_log(this);
-}*/
-
-/*fs::file_time_type FileRecord::updateLwt()
-{
-    if (data->last_write_time.time_since_epoch().count() == 0)
-        const_cast<FileRecord*>(this)->load(file);
-    return data->last_write_time;
-}*/
 
 bool FileRecord::operator<(const FileRecord &r) const
 {

@@ -35,27 +35,18 @@ void FileStorage::clear()
 
 void FileStorage::reset()
 {
-    for (auto i = files.getIterator(); i.isValid(); i.next())
-    {
-        auto &f = *i.getValue();
+    for (auto &[k, f] : files)
         f.reset();
-    }
 }
 
 FileRecord *FileStorage::registerFile(const File &in_f)
 {
-    // fs path hash on windows differs for lower and upper cases
-#ifdef CPPAN_OS_WINDOWS
-    // very slow
-    //((File*)&in_f)->file = boost::to_lower_copy(normalize_path(in_f.file));
     ((File*)&in_f)->file = normalize_path(in_f.file);
-#endif
 
     auto d = swctx.getFileData().insert(in_f.file);
     auto r = files.insert(in_f.file);
     in_f.r = r.first;
     r.first->data = d.first;
-    r.first->fs = this;
 
     return r.first;
 }
@@ -64,7 +55,6 @@ FileRecord *FileStorage::registerFile(const path &in_f)
 {
     auto p = normalize_path(in_f);
     auto r = files.insert(p);
-    r.first->fs = this;
     auto d = swctx.getFileData().insert(p);
     r.first->data = d.first;
     //if (!d.first)

@@ -92,21 +92,20 @@ struct FileData
 // config specific
 struct SW_BUILDER_API FileRecord
 {
-    FileStorage *fs = nullptr;
     path file;
     FileData *data = nullptr;
+    std::mutex m;
 
     FileRecord() = default;
     FileRecord(const FileRecord &);
     FileRecord &operator=(const FileRecord &);
 
+    void setFile(const path &p);
+
     void reset();
 
     // only lwt change since the last run
     bool isChanged();
-
-    // check if file or any deps changed
-    bool isChangedWithDeps();
 
     // check using lwt
     std::optional<String> isChanged(const fs::file_time_type &t, bool throw_on_missing);
@@ -119,16 +118,8 @@ struct SW_BUILDER_API FileRecord
 
     bool operator<(const FileRecord &r) const;
 
-    /// get last write time of this file and all deps
-    fs::file_time_type getMaxTime() const;
-
-    /// returns true if file was changed
-    /// also loades information
+    /// loads information
     void refresh();
-
-    //void writeToLog() const;
-
-    //fs::file_time_type updateLwt();
 };
 
 #define EXPLAIN_OUTDATED(subject, outdated, reason, name) \

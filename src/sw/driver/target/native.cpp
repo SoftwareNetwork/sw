@@ -525,7 +525,7 @@ void NativeCompiledTarget::setupCommand(builder::Command &c) const
 
 driver::CommandBuilder NativeCompiledTarget::addCommand() const
 {
-    driver::CommandBuilder cb(getSolution().swctx, getFs());
+    driver::CommandBuilder cb(getSolution().swctx);
     // set as default
     // source dir contains more files than bdir?
     // sdir or bdir?

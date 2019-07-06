@@ -14,6 +14,7 @@
 #include "sw/driver/target/native.h"
 
 #include <sw/builder/execution_plan.h>
+#include <sw/builder/sw_context.h>
 #include <sw/support/filesystem.h>
 
 #include <primitives/sw/cl.h>
@@ -268,7 +269,7 @@ struct MakeEmitter : primitives::Emitter
         for (auto &c : commands)
         {
             auto prog = c->getProgram();
-            auto &progs = File(prog, *c->fs).isGeneratedAtAll() ? generated_programs : programs;
+            auto &progs = File(prog, c->swctx.getFileStorage()).isGeneratedAtAll() ? generated_programs : programs;
 
             auto n = progs.size() + 1;
             if (progs.find(prog) == progs.end())
@@ -352,7 +353,7 @@ struct MakeEmitter : primitives::Emitter
         //addText(printFiles(c.inputs));
         for (auto &i : c.inputs)
         {
-            if (File(i, *c.fs).isGeneratedAtAll())
+            if (File(i, c.swctx.getFileStorage()).isGeneratedAtAll())
             {
                 addText(printFile(i));
                 addText(" ");
@@ -384,7 +385,7 @@ struct MakeEmitter : primitives::Emitter
         }
 
         auto prog = c.getProgram();
-        bool gen = File(prog, *c.fs).isGeneratedAtAll();
+        bool gen = File(prog, c.swctx.getFileStorage()).isGeneratedAtAll();
         auto &progs = gen ? generated_programs : programs;
         s += "$(" + program_name(progs[prog], gen) + ") ";
 

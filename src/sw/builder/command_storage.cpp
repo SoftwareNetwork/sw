@@ -6,6 +6,7 @@
 
 #include "command_storage.h"
 
+#include "file_storage.h"
 #include "sw_context.h"
 
 #include <sw/manager/storage.h>

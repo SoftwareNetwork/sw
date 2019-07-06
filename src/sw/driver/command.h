@@ -321,8 +321,7 @@ struct SW_DRIVER_CPP_API Command : ::sw::builder::Command
 
     bool ignore_deps_generated_commands = false;
 
-    Command(const SwBuilderContext &swctx);
-    Command(const SwBuilderContext &swctx, ::sw::FileStorage &fs);
+    using Base::Base;
 };
 
 }
@@ -335,8 +334,7 @@ struct SW_DRIVER_CPP_API Command : detail::Command
 
     std::weak_ptr<Dependency> dependency;
 
-    Command(const SwBuilderContext &swctx);
-    Command(const SwBuilderContext &swctx, ::sw::FileStorage &fs);
+    using Base::Base;
     virtual ~Command() = default;
 
     virtual std::shared_ptr<Command> clone() const;
@@ -384,7 +382,6 @@ struct SW_DRIVER_CPP_API CommandBuilder
     bool stopped = false;
 
     CommandBuilder(const SwBuilderContext &swctx);
-    CommandBuilder(const SwBuilderContext &swctx, ::sw::FileStorage &fs);
     CommandBuilder(const CommandBuilder &) = default;
     CommandBuilder &operator=(const CommandBuilder &) = default;
 

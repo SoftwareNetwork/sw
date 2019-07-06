@@ -15,7 +15,6 @@
 #include <mutex>
 
 #define SW_INTERNAL_INIT_COMMAND(name, target) \
-    name->fs = &(target).getFs();              \
     (target).setupCommand(*name)
 
 #define SW_INTERNAL_ADD_COMMAND(name, target) \
@@ -144,7 +143,6 @@ struct SW_BUILDER_API Command : Node, std::enable_shared_from_this<Command>,
     using Clock = std::chrono::high_resolution_clock;
 
     const SwBuilderContext &swctx;
-    FileStorage *fs = nullptr;
 
     String name;
     String name_short;
@@ -197,7 +195,6 @@ struct SW_BUILDER_API Command : Node, std::enable_shared_from_this<Command>,
     int command_storage = 0;
 
     Command(const SwBuilderContext &swctx);
-    Command(const SwBuilderContext &swctx, ::sw::FileStorage &fs);
     virtual ~Command();
 
     void prepare() override;
@@ -287,7 +284,6 @@ struct SW_BUILDER_API CommandSequence : Command
     std::shared_ptr<C> addCommand(Args && ... args)
     {
         auto c = std::make_shared<C>(swctx, std::forward<Args>(args)...);
-        c->fs = fs;
         commands.push_back(c);
         return c;
     }
