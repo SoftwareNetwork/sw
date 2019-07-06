@@ -132,22 +132,11 @@ bool File::isChanged() const
 
 std::optional<String> File::isChanged(const fs::file_time_type &in, bool throw_on_missing)
 {
-    // we call this as refresh of all deps
-    // explain inside
     isChanged();
-
-    // on missing direct file we fail immediately
     if (data->last_write_time.time_since_epoch().count() == 0)
-    {
-        if (throw_on_missing)
-            throw SW_RUNTIME_ERROR("file " + normalize_path(file) + " is missing");
         return "file is missing";
-    }
-
     if (data->last_write_time > in)
-    {
         return "file is newer";
-    }
     return {};
 }
 
