@@ -23,9 +23,6 @@ SwBuilderContext::SwBuilderContext(const path &local_storage_root_dir)
     HostOS = getHostOS();
 
     //
-    fshm = std::make_unique<FileDataHashMap>();
-
-    //
     cs = std::make_unique<CommandStorage>(*this);
 
     //
@@ -47,13 +44,8 @@ Executor &SwBuilderContext::getFileStorageExecutor() const
 FileStorage &SwBuilderContext::getFileStorage() const
 {
     if (!file_storage)
-        file_storage = std::make_unique<FileStorage>(*this);
+        file_storage = std::make_unique<FileStorage>();
     return *file_storage;
-}
-
-SwBuilderContext::FileDataHashMap &SwBuilderContext::getFileData() const
-{
-    return *fshm;
 }
 
 CommandStorage &SwBuilderContext::getCommandStorage() const

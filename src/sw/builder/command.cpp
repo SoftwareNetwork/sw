@@ -10,6 +10,7 @@
 #include "command.h"
 
 #include "command_storage.h"
+#include "file.h"
 #include "file_storage.h"
 #include "jumppad.h"
 #include "os.h"
@@ -260,8 +261,7 @@ void Command::addOutput(const path &p)
     if (p.empty())
         return;
     outputs.insert(p);
-    auto &r = File(p, swctx.getFileStorage()).getFileRecord();
-    r.setGenerator(shared_from_this(), true);
+    File(p, swctx.getFileStorage()).setGenerator(shared_from_this(), true);
 }
 
 void Command::addOutput(const Files &files)
@@ -299,7 +299,7 @@ void Command::addInputOutputDeps()
     {
         File f(p, swctx.getFileStorage());
         if (f.isGenerated())
-            dependencies.insert(f.getFileRecord().getGenerator());
+            dependencies.insert(f.getGenerator());
     }
 }
 
@@ -339,8 +339,7 @@ void Command::prepare()
     // late add real generator
     for (auto &p : outputs)
     {
-        auto &r = File(p, swctx.getFileStorage()).getFileRecord();
-        r.setGenerator(shared_from_this(), false);
+        File(p, swctx.getFileStorage()).setGenerator(shared_from_this(), false);
     }
 
     prepared = true;
@@ -422,9 +421,9 @@ void Command::afterCommand()
     auto update_time = [this](const auto &i)
     {
         File f(i, swctx.getFileStorage());
-        auto &fr = f.getFileRecord();
-        fr.data->refreshed = FileData::RefreshType::Unrefreshed;
-        fr.isChanged();
+        auto &fr = f.getFileData();
+        fr.refreshed = FileData::RefreshType::Unrefreshed;
+        f.isChanged();
         //fs->async_file_log(&fr);
         //fr.writeToLog();
         //fr.updateLwt();
@@ -435,14 +434,14 @@ void Command::afterCommand()
         }
         //if (fr.data->last_write_time < start_time)
             //err
-        mtime = std::max(mtime, fr.data->last_write_time);
+        mtime = std::max(mtime, fr.last_write_time);
     };
 
     for (auto &i : inputs)
     {
         File f(i, swctx.getFileStorage());
-        auto &fr = f.getFileRecord();
-        mtime = std::max(mtime, fr.data->last_write_time);
+        auto &fr = f.getFileData();
+        mtime = std::max(mtime, fr.last_write_time);
     }
     for (auto &i : outputs)
         update_time(i);
