@@ -23,9 +23,6 @@ SwBuilderContext::SwBuilderContext(const path &local_storage_root_dir)
     HostOS = getHostOS();
 
     //
-    cs = std::make_unique<CommandStorage>(*this);
-
-    //
     file_storage_executor = std::make_unique<Executor>("async log writer", 1);
 
     //
@@ -50,6 +47,8 @@ FileStorage &SwBuilderContext::getFileStorage() const
 
 CommandStorage &SwBuilderContext::getCommandStorage() const
 {
+    if (!cs)
+        cs = std::make_unique<CommandStorage>(*this);
     return *cs;
 }
 

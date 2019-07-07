@@ -2475,13 +2475,20 @@ void Build::load_packages(const StringSet &pkgs)
         if (fs::exists(gIdeFastPath))
         {
             auto files = read_lines(gIdeFastPath);
-            if (std::none_of(files.begin(), files.end(), [this](auto &f) {
-                return File(f, swctx.getFileStorage()).isChanged();
-                }))
+            uint64_t mtime = 0;
+            for (auto &f : files)
+            {
+                File f2(f, swctx.getFileStorage());
+                f2.isChanged(); // load lwt
+                mtime ^= f2.getFileData().last_write_time.time_since_epoch().count();
+            }
+            auto fmtime = path(gIdeFastPath) += ".t";
+            if (fs::exists(fmtime) && mtime == std::stoull(read_file(fmtime)))
             {
                 fast_path_exit = true;
                 return;
             }
+            write_file(fmtime, std::to_string(mtime));
             settings.clear();
         }
         e = std::make_unique<Executor>(select_number_of_threads(gNumberOfJobs));
