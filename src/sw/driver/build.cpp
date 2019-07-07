@@ -2182,6 +2182,11 @@ static const auto ide_fs = "ide_vs";
 static std::unique_ptr<Executor> e;
 static bool fast_path_exit;
 
+static auto get_fmtime_fn(const path &gIdeFastPath)
+{
+    return path(gIdeFastPath) += ".t";
+}
+
 void Build::load_packages(const StringSet &pkgs)
 {
     if (pkgs.empty())
@@ -2199,7 +2204,7 @@ void Build::load_packages(const StringSet &pkgs)
                 f2.isChanged(); // load lwt
                 mtime ^= f2.getFileData().last_write_time.time_since_epoch().count();
             }
-            auto fmtime = path(gIdeFastPath) += ".t";
+            auto fmtime = get_fmtime_fn(gIdeFastPath);
             if (fs::exists(fmtime) && mtime == std::stoull(read_file(fmtime)))
             {
                 fast_path_exit = true;
@@ -2345,12 +2350,16 @@ void Build::build_packages(const StringSet &pkgs)
         getExecutionPlan(cmds).execute(getExecutor());
 
         String s;
+        uint64_t mtime = 0;
         for (auto &f : files)
         {
             s += normalize_path(f) + "\n";
-            File(f, swctx.getFileStorage()).isChanged();
+            File f2(f, swctx.getFileStorage());
+            f2.isChanged();
+            mtime ^= f2.getFileData().last_write_time.time_since_epoch().count();
         }
         write_file(gIdeFastPath, s);
+        write_file(get_fmtime_fn(gIdeFastPath), std::to_string(mtime));
     }
 }
 
