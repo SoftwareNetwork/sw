@@ -284,7 +284,7 @@ struct SW_DRIVER_CPP_API NativeLinkerOptions : NativeLinkerOptionsData
     void add(const PackageId &t);
     void remove(const PackageId &t);
 
-    DependencyPtr operator+(const Target &t);
+    DependencyPtr operator+(const ITarget &t);
     DependencyPtr operator+(const DependencyPtr &d);
     DependencyPtr operator+(const PackageId &d);
 

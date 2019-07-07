@@ -353,6 +353,7 @@ static auto build_configs(SwCoreContext &swctx, const driver::cpp::Driver &drive
     b.file_storage_local = false;
     b.is_config_build = true;
     b.use_separate_target_map = true;
+    b.getChildren() = swctx.getPredefinedTargets();
     return b.build_configs(pkgs);
 }
 
@@ -1319,6 +1320,7 @@ Module Build::loadModule(const path &p) const
     b.file_storage_local = false;
     b.is_config_build = true;
     b.use_separate_target_map = true;
+    b.getChildren() = swctx.getPredefinedTargets();
     path dll;
     //if (File(fn2, *b.solutions[0].fs).isChanged() || File(dll, *b.solutions[0].fs).isChanged())
     {
@@ -1350,6 +1352,7 @@ path Build::build(const path &fn)
         b.file_storage_local = false;
         b.is_config_build = true;
         b.use_separate_target_map = true;
+        b.getChildren() = swctx.getPredefinedTargets();
         auto r = b.build_configs_separate({ fn });
         return r.begin()->second;
     }

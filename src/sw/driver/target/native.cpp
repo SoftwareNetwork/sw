@@ -182,12 +182,8 @@ void NativeCompiledTarget::findCompiler()
             return false;
         if (!(*i).second)
             return false;
-        if (auto t = (*i).second->as<NativeCompiledTarget*>())
-        {
-            (*this + *t)->sw_pushed = true;
-            return true;
-        }
-        return false;
+        (*this + *((*i).second))->sw_pushed = true;
+        return true;
     };
 
     if (!add_libc(ts["native"]["lib"]["c"].getValue()))
@@ -228,6 +224,16 @@ void NativeCompiledTarget::findCompiler()
         }
         return true;
     };
+
+    if (getSettings().TargetOS.is(OSType::Windows))
+    {
+        static const CompilerDesc rc
+        {
+            ts["native"]["rc"].getValue(), { ".rc" },
+        };
+        if (!activate_one(rc))
+            throw SW_RUNTIME_ERROR("Resource compiler was not found in Windows SDK");
+    }
 
     auto activate_all = [this, &activate_one](const CompilerVector &a)
     {
@@ -455,16 +461,6 @@ void NativeCompiledTarget::findCompiler()
             // cygwin alternative, remove?
             {{"com.Microsoft.VisualStudio.VC.link"},LinkerType::MSVC},
             }, "Try to add more linkers", true);
-    }
-
-    if (getSettings().TargetOS.is(OSType::Windows))
-    {
-        static const CompilerDesc rc
-        {
-            "com.Microsoft.Windows.rc", { ".rc" },
-        };
-        if (!activate_one(rc))
-            throw SW_RUNTIME_ERROR("Resource compiler was not found in Windows SDK");
     }
 }
 

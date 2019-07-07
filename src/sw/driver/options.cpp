@@ -485,7 +485,7 @@ FilesOrdered NativeLinkerOptions::gatherLinkLibraries() const
     return llib;
 }
 
-DependencyPtr NativeLinkerOptions::operator+(const Target &t)
+DependencyPtr NativeLinkerOptions::operator+(const ITarget &t)
 {
     auto d = std::make_shared<Dependency>(t);
     add(d);

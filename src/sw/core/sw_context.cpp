@@ -26,7 +26,9 @@ SwCoreContext::SwCoreContext(const path &local_storage_root_dir)
     : SwBuilderContext(local_storage_root_dir)
 {
     source_dir = fs::canonical(fs::current_path());
+
     detectCompilers(*this);
+    predefined_targets = targets; // save
 
     host_settings = toTargetSettings(getHostOs());
 
@@ -41,7 +43,8 @@ SwCoreContext::SwCoreContext(const path &local_storage_root_dir)
 
         ts["native"]["rc"] = "com.Microsoft.Windows.rc";
 
-        if (!getTargets()["com.Microsoft.VisualStudio.VC.cl"].empty_releases())
+        //if (!getTargets()["com.Microsoft.VisualStudio.VC.cl"].empty_releases())
+        if (!getTargets()["com.Microsoft.VisualStudio.VC.cl"].empty())
         {
             ts["native"]["cl"] = "com.Microsoft.VisualStudio.VC.cl";
             ts["native"]["ml"] = "com.Microsoft.VisualStudio.VC.ml";
