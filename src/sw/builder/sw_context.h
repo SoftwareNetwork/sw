@@ -41,7 +41,7 @@ struct SW_BUILDER_API SwBuilderContext : SwManagerContext
 private:
     // keep order
     std::unique_ptr<ProgramVersionStorage> pvs;
-    std::unique_ptr<CommandStorage> cs;
+    mutable std::unique_ptr<CommandStorage> cs;
     mutable std::unique_ptr<FileStorage> file_storage;
     std::unique_ptr<Executor> file_storage_executor; // after everything!
 };
