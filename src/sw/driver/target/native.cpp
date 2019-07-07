@@ -195,7 +195,6 @@ void NativeCompiledTarget::findCompiler()
     {
         PackagePath id;
         StringSet exts;
-        ::sw::CompilerType type;
     };
 
     using CompilerVector = std::vector<CompilerDesc>;
@@ -225,6 +224,43 @@ void NativeCompiledTarget::findCompiler()
         return true;
     };
 
+    auto activate_all = [this, &activate_one](const CompilerVector &a)
+    {
+        return std::all_of(a.begin(), a.end(), [this, &activate_one](const auto &v)
+        {
+            auto r = activate_one(v);
+            if (r)
+            {
+                if (v.id == "com.Microsoft.VisualStudio.VC.cl")
+                    ct = CompilerType::MSVC;
+                else
+                    throw SW_RUNTIME_ERROR("Unknown compiler");
+            }
+            return r;
+        });
+    };
+
+    static const CompilerVector c_cpp =
+    {
+        {{ts["native"]["cl"].getValue()}, getCppSourceFileExtensions()},
+        {{ts["native"]["cl"].getValue()}, { ".c" }},
+    };
+
+    if (!activate_all(c_cpp))
+        throw SW_RUNTIME_ERROR("Missing native toolchain");
+
+    // .asm
+    if (ts["native"]["asm"])
+    {
+        static const CompilerDesc rc
+        {
+            ts["native"]["asm"].getValue(), { ".asm" },
+        };
+        if (!activate_one(rc))
+            throw SW_RUNTIME_ERROR("Resource compiler was not found in Windows SDK");
+    }
+
+    // .rc
     if (getSettings().TargetOS.is(OSType::Windows))
     {
         static const CompilerDesc rc
@@ -233,119 +269,6 @@ void NativeCompiledTarget::findCompiler()
         };
         if (!activate_one(rc))
             throw SW_RUNTIME_ERROR("Resource compiler was not found in Windows SDK");
-    }
-
-    auto activate_all = [this, &activate_one](const CompilerVector &a)
-    {
-        return std::all_of(a.begin(), a.end(), [this, &activate_one](const auto &v)
-        {
-            auto r = activate_one(v);
-            if (r)
-            {
-                switch (v.type)
-                {
-                case CompilerType::MSVC:
-                    ts["compiler.c"] = "msvc-version";
-                    break;
-                default:
-                    SW_UNIMPLEMENTED;
-                }
-                ct = v.type;
-            }
-            return r;
-        });
-    };
-
-    auto activate_array = [&activate_all](const std::vector<CompilerVector> &a)
-    {
-        return std::any_of(a.begin(), a.end(), [&activate_all](const auto &v)
-        {
-            auto r = activate_all(v);
-            for (auto &v2 : v)
-            {
-                if (r)
-                    ;
-                    //LOG_TRACE(logger, "activated " << v2.id.toString() << " successfully");
-                else
-                    LOG_TRACE(logger, "activate " << v2.id.toString() << " failed");
-            }
-            return r;
-        });
-    };
-
-    auto activate_array_or_throw = [&activate_array](const std::vector<CompilerVector> &a, const auto &e)
-    {
-        if (!activate_array(a))
-            throw SW_RUNTIME_ERROR(e);
-    };
-
-    static const CompilerVector msvc =
-    {
-        {{"com.Microsoft.VisualStudio.VC.cl"}, getCppSourceFileExtensions(), CompilerType::MSVC},
-        {{"com.Microsoft.VisualStudio.VC.cl"}, { ".c" }, CompilerType::MSVC},
-        {{"com.Microsoft.VisualStudio.VC.ml"}, { ".asm" }, CompilerType::MSVC},
-        {{"com.Microsoft.Windows.rc"}, { ".rc" }, CompilerType::MSVC},
-    };
-
-    static const CompilerVector gnu =
-    {
-        {{"org.gnu.gcc.gpp"}, getCppSourceFileExtensions(), CompilerType::GNU},
-        {{"org.gnu.gcc.gcc"}, { ".c" }, CompilerType::GNU},
-        //{{"org.gnu.gcc.as"}, CompilerType::GNU},
-    };
-
-    static const CompilerVector clang =
-    {
-        {{"org.LLVM.clangpp"}, getCppSourceFileExtensions(), CompilerType::Clang },
-        {{"org.LLVM.clang"}, { ".c" }, CompilerType::Clang},
-    };
-
-    static const CompilerVector clangcl =
-    {
-        {{"org.LLVM.clangcl"},getCppSourceFileExtensions(),CompilerType::ClangCl },
-        {{"org.LLVM.clangcl"}, { ".c" },CompilerType::ClangCl },
-    };
-
-    static const CompilerVector appleclang =
-    {
-        {{"com.apple.LLVM.clangpp"}, getCppSourceFileExtensions(), CompilerType::AppleClang },
-        {{"com.apple.LLVM.clang"}, { ".c" }, CompilerType::AppleClang},
-    };
-
-    switch (getCompilerType())
-    {
-    case CompilerType::MSVC:
-        activate_array_or_throw({ msvc }, "Cannot find msvc toolchain");
-        break;
-    case CompilerType::Clang:
-        activate_array_or_throw({ clang }, "Cannot find clang toolchain");
-        break;
-    case CompilerType::ClangCl:
-        activate_array_or_throw({ clangcl }, "Cannot find clang-cl toolchain");
-        break;
-    case CompilerType::AppleClang:
-        activate_array_or_throw({ appleclang }, "Cannot find clang toolchain");
-        break;
-    case CompilerType::GNU:
-        activate_array_or_throw({ gnu }, "Cannot find gnu toolchain");
-        break;
-    case CompilerType::UnspecifiedCompiler:
-        switch (getSolution().getHostOs().Type)
-        {
-        case OSType::Windows:
-            activate_array_or_throw({ msvc, /*clangcl, clang,*/ }, "Try to add more compilers");
-            break;
-        case OSType::Cygwin:
-        case OSType::Linux:
-            activate_array_or_throw({ gnu, clang, }, "Try to add more compilers");
-            break;
-        case OSType::Macos:
-            activate_array_or_throw({ clang, appleclang, gnu, }, "Try to add more compilers");
-            break;
-        }
-        break;
-    default:
-        throw SW_RUNTIME_ERROR("unknown compiler");
     }
 
     // before linkers
@@ -370,40 +293,39 @@ void NativeCompiledTarget::findCompiler()
     }
 
     // lib/link
-    auto activate_lib_link_or_throw = [this](const std::vector<std::tuple<PackagePath, LinkerType>> &a, const auto &e, bool link = false)
+    auto activate_lib_link_or_throw = [this](const PackagePath &p, bool link = false)
     {
-        if (!std::any_of(a.begin(), a.end(), [this, &link](const auto &in) -> bool
+        auto &cld = getSolution().getChildren();
+
+        auto i = cld.find(p, getTargetSettings());
+        if (!i)
+            return false;
+        if (!(*i).second)
+            return false;
+        auto t = (*i).second->as<PredefinedProgram*>();
+        if (t)
         {
-            auto &cld = getSolution().getChildren();
-
-            auto i = cld.find(std::get<0>(in), getTargetSettings());
-            if (!i)
-                return false;
-            if (!(*i).second)
-                return false;
-            auto t = (*i).second->as<PredefinedProgram*>();
-            if (!t)
-                return false;
-
             auto set_arch = [this](auto in)
             {
-                auto L = in->as<VisualStudioLibraryTool*>();
-                switch (getSettings().TargetOS.Arch)
+                if (auto L = in->as<VisualStudioLibraryTool *>())
                 {
-                case ArchType::x86_64:
-                    L->Machine = vs::MachineType::X64;
-                    break;
-                case ArchType::x86:
-                    L->Machine = vs::MachineType::X86;
-                    break;
-                case ArchType::arm:
-                    L->Machine = vs::MachineType::ARM;
-                    break;
-                case ArchType::aarch64:
-                    L->Machine = vs::MachineType::ARM64;
-                    break;
-                default:
-                    SW_UNIMPLEMENTED;
+                    switch (getSettings().TargetOS.Arch)
+                    {
+                    case ArchType::x86_64:
+                        L->Machine = vs::MachineType::X64;
+                        break;
+                    case ArchType::x86:
+                        L->Machine = vs::MachineType::X86;
+                        break;
+                    case ArchType::arm:
+                        L->Machine = vs::MachineType::ARM;
+                        break;
+                    case ArchType::aarch64:
+                        L->Machine = vs::MachineType::ARM64;
+                        break;
+                    default:
+                        SW_UNIMPLEMENTED;
+                    }
                 }
             };
 
@@ -414,54 +336,15 @@ void NativeCompiledTarget::findCompiler()
                 this->Librarian = nl;
             set_arch(nl);
             return true;
-        }))
-        {
-            throw SW_RUNTIME_ERROR(e);
         }
+
+        return false;
     };
 
-    if (getSettings().TargetOS.is(OSType::Windows))
-    {
-        activate_lib_link_or_throw({
-            {{"com.Microsoft.VisualStudio.VC.lib"},LinkerType::MSVC},
-            {{"org.gnu.binutils.ar"},LinkerType::GNU},
-            {{"org.LLVM.ar"},LinkerType::GNU},
-            }, "Try to add more librarians");
-        activate_lib_link_or_throw({
-            {{"com.Microsoft.VisualStudio.VC.link"},LinkerType::MSVC},
-            {{"org.gnu.gcc.ld"},LinkerType::GNU},
-            {{"org.LLVM.ld"},LinkerType::GNU},
-            }, "Try to add more linkers", true);
-    }
-    else if (getSettings().TargetOS.is(OSType::Macos))
-    {
-        activate_lib_link_or_throw({
-            {{"org.LLVM.ar"},LinkerType::GNU},
-            {{"org.gnu.binutils.ar"},LinkerType::GNU},
-            }, "Try to add more librarians");
-        activate_lib_link_or_throw({
-            {{"org.LLVM.ld"},LinkerType::GNU},
-            {{"com.apple.LLVM.ld"},LinkerType::GNU},
-            {{"org.gnu.gcc.ld"},LinkerType::GNU},
-            }, "Try to add more linkers", true);
-    }
-    else
-    {
-        activate_lib_link_or_throw({
-            // base
-            {{"org.gnu.binutils.ar"},LinkerType::GNU},
-            {{"org.LLVM.ar"},LinkerType::GNU},
-            // cygwin alternative, remove?
-            {{"com.Microsoft.VisualStudio.VC.lib"},LinkerType::MSVC},
-            }, "Try to add more librarians");
-        activate_lib_link_or_throw({
-            // base
-            {{"org.gnu.gcc.ld"},LinkerType::GNU},
-            {{"org.LLVM.ld"},LinkerType::GNU},
-            // cygwin alternative, remove?
-            {{"com.Microsoft.VisualStudio.VC.link"},LinkerType::MSVC},
-            }, "Try to add more linkers", true);
-    }
+    if (!activate_lib_link_or_throw(ts["native"]["lib"].getValue()))
+        throw SW_RUNTIME_ERROR("Try to add more librarians");
+    if (!activate_lib_link_or_throw(ts["native"]["link"].getValue(), true))
+        throw SW_RUNTIME_ERROR("Try to add more linkers");
 }
 
 bool NativeCompiledTarget::init()

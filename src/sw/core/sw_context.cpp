@@ -47,7 +47,7 @@ SwCoreContext::SwCoreContext(const path &local_storage_root_dir)
         if (!getTargets()["com.Microsoft.VisualStudio.VC.cl"].empty())
         {
             ts["native"]["cl"] = "com.Microsoft.VisualStudio.VC.cl";
-            ts["native"]["ml"] = "com.Microsoft.VisualStudio.VC.ml";
+            ts["native"]["asm"] = "com.Microsoft.VisualStudio.VC.ml";
             ts["native"]["lib"] = "com.Microsoft.VisualStudio.VC.lib";
             ts["native"]["link"] = "com.Microsoft.VisualStudio.VC.link";
         }
