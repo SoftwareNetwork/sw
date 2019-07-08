@@ -58,11 +58,7 @@ struct ITarget : ICastable
 
     // get settings()?
 
-    /*
-    virtual
-    map<string key, arguments> get public settings()?
-    get interface settings?
-    */
+    virtual const TargetSettings &getInterfaceSettings() const = 0;
 
     // String get package settings(); // json coded or whatever via interface?
     // String getDescription()

@@ -188,9 +188,11 @@ struct PredefinedTarget : ITarget
 
     const Source &getSource() const override { SW_UNIMPLEMENTED; }
     Files getSourceFiles() const override { SW_UNIMPLEMENTED; }
-    std::vector<IDependency *> getDependencies() const override { SW_UNIMPLEMENTED; }
-    bool prepare() override { SW_UNIMPLEMENTED; }
-    Commands getCommands() const override { SW_UNIMPLEMENTED; }
+    std::vector<IDependency *> getDependencies() const override { return {}; }
+    bool prepare() override { return false; }
+    Commands getCommands() const override { return {}; }
+
+    const TargetSettings &getInterfaceSettings() const override { return public_ts; }
 
     bool operator==(const TargetSettings &s) const override { return ts == s; }
     //bool operator<(const TargetSettings &s) const override { return ts < s; }
@@ -454,8 +456,8 @@ void detectWindowsCompilers(SwCoreContext &s)
 
         auto ts1 = toTargetSettings(new_settings);
         TargetSettings ts;
-        ts["os.kernel"] = ts1["os.kernel"];
-        ts["os.arch"] = ts1["os.arch"];
+        ts["os"]["kernel"] = ts1["os"]["kernel"];
+        ts["os"]["arch"] = ts1["os"]["arch"];
 
         for (auto &[_, instance] : instances)
         {
@@ -682,7 +684,7 @@ void detectWindowsCompilers(SwCoreContext &s)
         // rename to libc? to crt?
         auto &ucrt = addTarget<PredefinedTarget>(s, PackageId("com.Microsoft.Windows.SDK.ucrt", sdk.getWindowsTargetPlatformVersion()));
         ucrt.ts = ts;
-        ucrt.ts["os.version"] = ts1["os.version"];
+        ucrt.ts["os"]["version"] = ts1["os"]["version"];
 
         // add kits include dirs
         for (auto &i : fs::directory_iterator(sdk.getPath("Include")))
@@ -706,7 +708,7 @@ void detectWindowsCompilers(SwCoreContext &s)
             Version v = getVersion(s, p->file, "/?");
             auto &rc = addProgram(s, PackageId("com.Microsoft.Windows.rc", v), p);
             auto ts1 = toTargetSettings(new_settings);
-            rc.ts["os.kernel"] = ts1["os.kernel"];
+            rc.ts["os"]["kernel"] = ts1["os"]["kernel"];
         }
         //for (auto &idir : COpts.System.IncludeDirectories)
             //C->system_idirs.push_back(idir);

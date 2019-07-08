@@ -37,7 +37,7 @@ function(find_flag in_flags f out)
 endfunction(find_flag)
 
 ########################################
-# FUNCTION sw_add_dependency
+# FUNCTION sw_add_package
 ########################################
 
 function(sw_add_package)

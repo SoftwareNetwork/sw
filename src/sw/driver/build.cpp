@@ -396,7 +396,7 @@ Build::Build(const Build &rhs)
     , command_storage(rhs.command_storage)
     , is_config_build(rhs.is_config_build)
     , checker(*this)
-    , module_data(rhs.module_data)
+    //, module_data(rhs.module_data)
     , host_settings(rhs.host_settings)
 {
 }

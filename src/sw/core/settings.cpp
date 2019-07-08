@@ -20,26 +20,26 @@ TargetSettings toTargetSettings(const OS &o)
     switch (o.Type)
     {
     case OSType::Windows:
-        s["os.kernel"] = "com.Microsoft.Windows.NT";
+        s["os"]["kernel"] = "com.Microsoft.Windows.NT";
         break;
     default:
         SW_UNIMPLEMENTED;
     }
-    s["os.version"] = o.Version.toString();
+    s["os"]["version"] = o.Version.toString();
 
     switch (o.Arch)
     {
     case ArchType::x86:
-        s["os.arch"] = "x86";
+        s["os"]["arch"] = "x86";
         break;
     case ArchType::x86_64:
-        s["os.arch"] = "x86_64";
+        s["os"]["arch"] = "x86_64";
         break;
     case ArchType::arm:
-        s["os.arch"] = "arm";
+        s["os"]["arch"] = "arm";
         break;
     case ArchType::aarch64:
-        s["os.arch"] = "aarch64";
+        s["os"]["arch"] = "aarch64";
         break;
     default:
         SW_UNIMPLEMENTED;
@@ -48,7 +48,7 @@ TargetSettings toTargetSettings(const OS &o)
     /*switch (o.SubArch)
     {
     case SubArchType:::
-    s["os.subarch"] = "";
+    s["os"]["subarch"] = "";
     break;
     default:
     SW_UNIMPLEMENTED;
@@ -115,6 +115,13 @@ const String &TargetSetting::getValue() const
     return *value;
 }
 
+const std::vector<TargetSettingValue> &TargetSetting::getArray() const
+{
+    if (!array)
+        throw SW_RUNTIME_ERROR("empty array for key: " + key);
+    return *array;
+}
+
 const TargetSettings &TargetSetting::getSettings() const
 {
     if (!settings)
@@ -154,13 +161,14 @@ void TargetSetting::merge(const TargetSetting &rhs)
 
 void TargetSetting::push_back(const TargetSettingValue &v)
 {
-    array.emplace();
+    if (!array)
+        array.emplace();
     array->push_back(v);
 }
 
 TargetSetting::operator bool() const
 {
-    return !!value;
+    return !!value || !!array;// || settings;
 }
 
 /*bool TargetSetting::hasValue() const
@@ -170,13 +178,7 @@ TargetSetting::operator bool() const
 
 String TargetSettings::getConfig() const
 {
-    String c;
-    for (auto &[k, v] : *this)
-    {
-        if (v)
-            c += k + v.getValue();
-    }
-    return c;
+    return toString();
 }
 
 String TargetSettings::getHash() const
@@ -188,27 +190,43 @@ String TargetSettings::toString(int type) const
 {
     switch (type)
     {
-    case Simple:
-        return toStringKeyValue();
+    //case Simple:
+        //return toStringKeyValue();
     case Json:
-        return toJsonString();
+        return toJson().dump();
     default:
         SW_UNIMPLEMENTED;
     }
 }
 
-String TargetSettings::toJsonString() const
+nlohmann::json TargetSetting::toJson() const
+{
+    nlohmann::json j;
+    if (value)
+        return getValue();
+    else if (array)
+    {
+        for (auto &v2 : *array)
+            j.push_back(v2);
+    }
+    if (settings)
+        return settings->toJson();
+    return j;
+}
+
+nlohmann::json TargetSettings::toJson() const
 {
     nlohmann::json j;
     for (auto &[k, v] : *this)
     {
-        if (v)
-            j[k] = v.getValue();
+        auto j2 = v.toJson();
+        if (!j2.is_null())
+            j[k] = j2;
     }
-    return j.dump();
+    return j;
 }
 
-String TargetSettings::toStringKeyValue() const
+/*String TargetSettings::toStringKeyValue() const
 {
     String c;
     for (auto &[k, v] : *this)
@@ -217,7 +235,7 @@ String TargetSettings::toStringKeyValue() const
             c += k + ": " + v.getValue() + "\n";
     }
     return c;
-}
+}*/
 
 TargetSetting &TargetSettings::operator[](const TargetSettingKey &k)
 {

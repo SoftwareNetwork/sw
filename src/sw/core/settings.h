@@ -6,7 +6,7 @@
 
 #pragma once
 
-//#include <nlohmann/json.hpp>
+#include <nlohmann/json_fwd.hpp>
 #include <primitives/string.h>
 
 #include <memory>
@@ -29,7 +29,47 @@ namespace sw
 
 using TargetSettingKey = String;
 using TargetSettingValue = String;
+struct TargetSetting;
 struct TargetSettings;
+
+struct SW_CORE_API TargetSettings
+{
+    enum StringType : int
+    {
+        KeyValue    = 0,
+
+        Json,
+        // yml
+
+        Simple      = KeyValue,
+    };
+
+    TargetSetting &operator[](const TargetSettingKey &);
+    const TargetSetting &operator[](const TargetSettingKey &) const;
+
+    void merge(const TargetSettings &);
+    void erase(const TargetSettingKey &);
+
+    String getConfig() const; // getShortConfig()?
+    String toString(int type = Json) const;
+    String getHash() const;
+
+    bool operator==(const TargetSettings &) const;
+    bool operator<(const TargetSettings &) const;
+
+    auto begin() { return settings.begin(); }
+    auto end() { return settings.end(); }
+    auto begin() const { return settings.begin(); }
+    auto end() const { return settings.end(); }
+
+private:
+    mutable std::map<TargetSettingKey, TargetSetting> settings;
+
+    //String toStringKeyValue() const;
+    nlohmann::json toJson() const;
+
+    friend struct TargetSetting;
+};
 
 struct SW_CORE_API TargetSetting
 {
@@ -70,52 +110,22 @@ struct SW_CORE_API TargetSetting
     explicit operator bool() const;
     //bool hasValue() const;
     const String &getValue() const;
+    const std::vector<TargetSettingValue> &getArray() const;
     const TargetSettings &getSettings() const;
     void merge(const TargetSetting &);
     void push_back(const TargetSettingValue &);
+
+    //String toString(int type = TargetSettings::Simple) const;
 
 private:
     TargetSettingKey key;
     std::optional<TargetSettingValue> value;
     std::optional<std::vector<TargetSettingValue>> array;
     mutable std::unique_ptr<TargetSettings> settings;
-};
 
-struct SW_CORE_API TargetSettings
-{
-    enum StringType : int
-    {
-        KeyValue    = 0,
+    nlohmann::json toJson() const;
 
-        Json,
-        // yml
-
-        Simple      = KeyValue,
-    };
-
-    TargetSetting &operator[](const TargetSettingKey &);
-    const TargetSetting &operator[](const TargetSettingKey &) const;
-
-    void merge(const TargetSettings &);
-    void erase(const TargetSettingKey &);
-
-    String getConfig() const; // getShortConfig()?
-    String getHash() const;
-    String toString(int type = Simple) const;
-
-    bool operator==(const TargetSettings &) const;
-    bool operator<(const TargetSettings &) const;
-
-    auto begin() { return settings.begin(); }
-    auto end() { return settings.end(); }
-    auto begin() const { return settings.begin(); }
-    auto end() const { return settings.end(); }
-
-private:
-    mutable std::map<TargetSettingKey, TargetSetting> settings;
-
-    String toStringKeyValue() const;
-    String toJsonString() const;
+    friend struct TargetSettings;
 };
 
 SW_CORE_API

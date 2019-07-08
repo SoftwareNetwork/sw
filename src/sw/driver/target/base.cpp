@@ -709,6 +709,11 @@ DependencyPtr Target::getDependency() const
     return d;
 }
 
+const TargetSettings &Target::getInterfaceSettings() const
+{
+    SW_UNIMPLEMENTED;
+}
+
 void TargetOptions::add(const IncludeDirectory &i)
 {
     path idir = i.i;
@@ -798,13 +803,13 @@ void Target::addDummyDependency(const DependencyPtr &t)
     bool use_current_settings =
         (
             // same os & arch can run apps
-            ts["os.kernel"] == hs["os.kernel"] && ts["os.arch"] == hs["os.arch"]
+            ts["os"]["kernel"] == hs["os"]["kernel"] && ts["os"]["arch"] == hs["os"]["arch"]
         )
         ||
         (
             // 64-bit windows can run 32-bit apps
-            hs["os.kernel"] == "com.Microsoft.Windows.NT" && hs["os.arch"] == "x86_64" &&
-            ts["os.arch"] == "x86"
+            hs["os"]["kernel"] == "com.Microsoft.Windows.NT" && hs["os"]["arch"] == "x86_64" &&
+            ts["os"]["arch"] == "x86"
         )
         ;
     ds.merge(use_current_settings ? ts : hs);
@@ -817,14 +822,16 @@ void Target::addDummyDependency(const Target &t)
 
 void Target::addSourceDependency(const DependencyPtr &t)
 {
-    SW_UNIMPLEMENTED;
-    //SourceDependencies.insert(dep);
+    SourceDependencies.push_back(t);
+
+    auto &hs = getSolution().getHostSettings();
+    auto &ds = SourceDependencies.back()->settings;
+    ds = {}; // accept everything
 }
 
 void Target::addSourceDependency(const Target &t)
 {
-    SW_UNIMPLEMENTED;
-    //SourceDependencies.insert(dep);
+    addSourceDependency(std::make_shared<Dependency>(t));
 }
 
 path Target::getFile(const Target &dep, const path &fn)

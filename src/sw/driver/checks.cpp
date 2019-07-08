@@ -272,8 +272,7 @@ int main() { return IsBigEndian(); }
         prepareChecksForUse();
         if (print_checks)
         {
-            SW_UNIMPLEMENTED;
-            /*std::ofstream o(fn.parent_path() / (std::to_string(checker.build.current_gn) + "." + name + ".checks.txt"));
+            std::ofstream o(fn.parent_path() / (std::to_string(checker.build.getCurrentGroupNumber()) + "." + name + ".checks.txt"));
             if (!o)
                 return;
             std::map<String, CheckPtr> check_values(check_values.begin(), check_values.end());
@@ -281,7 +280,7 @@ int main() { return IsBigEndian(); }
             {
                 if (c->Value)
                     o << d << " " << c->Value.value() << " " << c->getHash() << "\n";
-            }*/
+            }
         }
         // cleanup
         for (auto &[h, c] : checks)
@@ -660,12 +659,30 @@ int main(int ac, char* av[])
     return src;
 }
 
+struct DummyCheckEntryPoint : NativeTargetEntryPoint
+{
+    DummyCheckEntryPoint(Build &b)
+        : NativeTargetEntryPoint(b)
+    {
+    }
+
+private:
+    void loadPackages1() override {}
+};
+
+#define SETUP_SOLUTION()                                 \
+    auto s = setupSolution(f);                           \
+    auto ep = std::make_shared<DummyCheckEntryPoint>(s); \
+    ep->module_data.current_settings = s.settings[0];    \
+    ep->module_data.ntep = ep;                           \
+    s.module_data = &ep->module_data
+
 void FunctionExists::run() const
 {
     auto f = getOutputFilename();
     write_file(f, getSourceFileContents());
 
-    auto s = setupSolution(f);
+    SETUP_SOLUTION();
 
     auto &e = s.addTarget<ExecutableTarget>(getTargetName(f));
     e.Definitions["CHECK_FUNCTION_EXISTS"] = data; // before setup, because it is changed later for LibraryFunctionExists
@@ -736,7 +753,7 @@ void IncludeExists::run() const
     auto f = getOutputFilename();
     write_file(f, getSourceFileContents());
 
-    auto s = setupSolution(f);
+    SETUP_SOLUTION();
 
     auto &e = s.addTarget<ExecutableTarget>(getTargetName(f));
     setupTarget(e);
@@ -790,7 +807,7 @@ void TypeSize::run() const
     auto f = getOutputFilename();
     write_file(f, getSourceFileContents());
 
-    auto s = setupSolution(f);
+    SETUP_SOLUTION();
 
     auto &e = s.addTarget<ExecutableTarget>(getTargetName(f));
     setupTarget(e);
@@ -865,7 +882,7 @@ void TypeAlignment::run() const
     auto f = getOutputFilename();
     write_file(f, getSourceFileContents());
 
-    auto s = setupSolution(f);
+    SETUP_SOLUTION();
 
     auto &e = s.addTarget<ExecutableTarget>(getTargetName(f));
     setupTarget(e);
@@ -939,7 +956,7 @@ void SymbolExists::run() const
     auto f = getOutputFilename();
     write_file(f, getSourceFileContents());
 
-    auto s = setupSolution(f);
+    SETUP_SOLUTION();
 
     auto &e = s.addTarget<ExecutableTarget>(getTargetName(f));
     setupTarget(e);
@@ -997,7 +1014,7 @@ void DeclarationExists::run() const
     auto f = getOutputFilename();
     write_file(f, getSourceFileContents());
 
-    auto s = setupSolution(f);
+    SETUP_SOLUTION();
 
     auto &e = s.addTarget<ExecutableTarget>(getTargetName(f));
     setupTarget(e);
@@ -1052,7 +1069,7 @@ void StructMemberExists::run() const
     auto f = getOutputFilename();
     write_file(f, getSourceFileContents());
 
-    auto s = setupSolution(f);
+    SETUP_SOLUTION();
 
     auto &e = s.addTarget<ExecutableTarget>(getTargetName(f));
     setupTarget(e);
@@ -1114,7 +1131,7 @@ void SourceCompiles::run() const
     auto f = getOutputFilename();
     write_file(f, getSourceFileContents());
 
-    auto s = setupSolution(f);
+    SETUP_SOLUTION();
 
     auto &e = s.addTarget<ExecutableTarget>(getTargetName(f));
     setupTarget(e);
@@ -1150,7 +1167,7 @@ void SourceLinks::run() const
     auto f = getOutputFilename();
     write_file(f, getSourceFileContents());
 
-    auto s = setupSolution(f);
+    SETUP_SOLUTION();
 
     auto &e = s.addTarget<ExecutableTarget>(getTargetName(f));
     setupTarget(e);
@@ -1181,7 +1198,7 @@ void SourceRuns::run() const
     auto f = getOutputFilename();
     write_file(f, getSourceFileContents());
 
-    auto s = setupSolution(f);
+    SETUP_SOLUTION();
 
     auto &e = s.addTarget<ExecutableTarget>(getTargetName(f));
     setupTarget(e);

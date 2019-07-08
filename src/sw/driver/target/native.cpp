@@ -349,6 +349,7 @@ void NativeCompiledTarget::findCompiler()
                     nl = std::make_shared<VisualStudioLinker>(getSolution().swctx);
                 else
                     nl = std::make_shared<VisualStudioLibrarian>(getSolution().swctx);
+                nl->Type = LinkerType::MSVC;
                 (Program&)*nl = t->getProgram();
             }
             if (link)
@@ -1703,9 +1704,23 @@ void NativeCompiledTarget::merge1()
         s.include_directories_only = d->IncludeDirectoriesOnly;
         //s.merge_to_self = false;
         auto t = d->getTarget().as<const NativeCompiledTarget*>();
-        if (!t)
+        if (t)
+        {
+            merge(*t, s);
             continue;
-        merge(*t, s);
+        }
+
+        const auto &is = d->getTarget().getInterfaceSettings();
+        if (is["system-include-directories"])
+        {
+            for (auto &v : is["system-include-directories"].getArray())
+                NativeCompilerOptions::System.IncludeDirectories.push_back(v);
+        }
+        if (is["system-link-directories"])
+        {
+            for (auto &v : is["system-link-directories"].getArray())
+                NativeLinkerOptions::System.LinkDirectories.push_back(v);
+        }
     }
 }
 
@@ -3082,7 +3097,7 @@ void NativeCompiledTarget::pushBackToFileOnce(const path &fn, const String &text
 
 CompilerType NativeCompiledTarget::getCompilerType() const
 {
-    return getSettings().Native.CompilerType1;
+    return ct;
 }
 
 static std::unique_ptr<Source> load_source_and_version(const yaml &root, Version &version)

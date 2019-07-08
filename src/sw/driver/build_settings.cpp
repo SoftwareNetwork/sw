@@ -29,18 +29,18 @@ static OS fromTargetSettings(const TargetSettings &ts)
         if (v) {
 #define IF_END }}
 
-    IF_KEY("os.kernel")
+    IF_KEY("os"]["kernel")
         if (0);
         IF_SETTING("com.Microsoft.Windows.NT", os.Type, OSType::Windows);
         else
             SW_UNIMPLEMENTED;
     IF_END
 
-    IF_KEY("os.version")
+    IF_KEY("os"]["version")
         os.Version = v.getValue();
     IF_END
 
-    IF_KEY("os.arch")
+    IF_KEY("os"]["arch")
         if (0);
         IF_SETTING("x86", os.Arch, ArchType::x86);
         IF_SETTING("x86_64", os.Arch, ArchType::x86_64);
@@ -57,14 +57,7 @@ BuildSettings::BuildSettings(const TargetSettings &ts)
 {
     TargetOS = fromTargetSettings(ts);
 
-    IF_KEY("compiler.c")
-        if (0);
-        IF_SETTING("msvc-version", Native.CompilerType1, CompilerType::MSVC);
-        else
-            SW_UNIMPLEMENTED;
-    IF_END
-
-    IF_KEY("library")
+    IF_KEY("native"]["library")
         if (0);
         IF_SETTING("static", Native.LibrariesType, LibraryType::Static);
         IF_SETTING("shared", Native.LibrariesType, LibraryType::Shared);
@@ -72,11 +65,13 @@ BuildSettings::BuildSettings(const TargetSettings &ts)
             SW_UNIMPLEMENTED;
     IF_END
 
-    IF_KEY("configuration")
+    IF_KEY("native"]["configuration")
         if (0);
         IF_SETTING("Debug", Native.ConfigurationType, ConfigurationType::Debug);
+        IF_SETTING("debug", Native.ConfigurationType, ConfigurationType::Debug);
         IF_SETTING("MinimalSizeRelease", Native.ConfigurationType, ConfigurationType::Debug);
         IF_SETTING("Release", Native.ConfigurationType, ConfigurationType::Release);
+        IF_SETTING("release", Native.ConfigurationType, ConfigurationType::Release);
         IF_SETTING("ReleaseWithDebugInformation", Native.ConfigurationType, ConfigurationType::ReleaseWithDebugInformation);
         else
             SW_UNIMPLEMENTED;
@@ -150,9 +145,6 @@ TargetSettings BuildSettings::getTargetSettings() const
     {
     case CompilerType::UnspecifiedCompiler:
         break;
-    case CompilerType::MSVC:
-        s["compiler.c"] = "msvc-version";
-        break;
     default:
         SW_UNIMPLEMENTED;
     }
@@ -160,10 +152,10 @@ TargetSettings BuildSettings::getTargetSettings() const
     switch (Native.LibrariesType)
     {
     case LibraryType::Static:
-        s["library"] = "static";
+        s["native"]["library"] = "static";
         break;
     case LibraryType::Shared:
-        s["library"] = "shared";
+        s["native"]["library"] = "shared";
         break;
     default:
         SW_UNIMPLEMENTED;
@@ -172,16 +164,16 @@ TargetSettings BuildSettings::getTargetSettings() const
     switch (Native.ConfigurationType)
     {
     case ConfigurationType::Debug:
-        s["configuration"] = "Debug";
+        s["native"]["configuration"] = "Debug";
         break;
     case ConfigurationType::MinimalSizeRelease:
-        s["configuration"] = "MinimalSizeRelease";
+        s["native"]["configuration"] = "MinimalSizeRelease";
         break;
     case ConfigurationType::Release:
-        s["configuration"] = "Release";
+        s["native"]["configuration"] = "Release";
         break;
     case ConfigurationType::ReleaseWithDebugInformation:
-        s["configuration"] = "ReleaseWithDebugInformation";
+        s["native"]["configuration"] = "ReleaseWithDebugInformation";
         break;
     default:
         SW_UNIMPLEMENTED;
