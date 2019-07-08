@@ -127,6 +127,8 @@ SUBCOMMAND_DECL(integrate)
                     t->getType() == sw::TargetType::NativeSharedLibrary ||
                     s.Native.LibrariesType == sw::LibraryType::Shared)
                     st = "SHARED";
+                if (*nt.HeaderOnly)
+                    st = "INTERFACE";
                 ctx.addLine("add_library(" + pkg.toString() + " " + st + " IMPORTED GLOBAL)");
 
                 // props
@@ -162,15 +164,18 @@ SUBCOMMAND_DECL(integrate)
                 idirs += "\"";
                 ctx.addLine("INTERFACE_INCLUDE_DIRECTORIES " + idirs);
 
-                // libs
-                String libs;
-                libs += "\"";
-                for (auto &d : nt.Public.LinkLibraries)
-                    libs += normalize_path(d) + ";";
-                for (auto &d : nt.Interface.LinkLibraries)
-                    libs += normalize_path(d) + ";";
-                libs += "\"";
-                ctx.addLine("INTERFACE_LINK_LIBRARIES " + libs);
+                if (!*nt.HeaderOnly)
+                {
+                    // libs
+                    String libs;
+                    libs += "\"";
+                    for (auto &d : nt.Public.LinkLibraries2)
+                        libs += normalize_path(d) + ";";
+                    for (auto &d : nt.Interface.LinkLibraries2)
+                        libs += normalize_path(d) + ";";
+                    libs += "\"";
+                    ctx.addLine("INTERFACE_LINK_LIBRARIES " + libs);
+                }
 
                 ctx.decreaseIndent(")");
                 ctx.emptyLines();
@@ -181,6 +186,8 @@ SUBCOMMAND_DECL(integrate)
                 {
                     auto t = b.getChildren().find(pkg)->second.find(sw::TargetSettings{ s })->second;
                     if (t->skip || t->sw_provided)
+                        continue;
+                    if (*nt.HeaderOnly)
                         continue;
                     auto &nt = *t->as<sw::NativeCompiledTarget>();
 
@@ -246,7 +253,8 @@ SUBCOMMAND_DECL(integrate)
                         auto t = b.getChildren().find(d->getResolvedPackage())->second.find(sw::TargetSettings{ s })->second;
                         if (t->skip || t->sw_provided)
                             continue;
-                        ctx.addLine("target_link_libraries(" + pkg.toString() + " INTERFACE " + d->getResolvedPackage().toString() + ")");
+                        if (!t->as<sw::ExecutableTarget>())
+                            ctx.addLine("target_link_libraries(" + pkg.toString() + " INTERFACE " + d->getResolvedPackage().toString() + ")");
                     }
                 };
                 add_deps(nt.Public.Dependencies);
@@ -337,9 +345,9 @@ SUBCOMMAND_DECL(integrate)
                         ctx.addLine("ctx.parse_flags('-I" + normalize_path(d) + "', lib)");
 
                     // libs
-                    for (auto &d : nt.Public.LinkLibraries)
+                    for (auto &d : nt.Public.LinkLibraries2)
                         ctx.addLine("ctx.parse_flags('-l" + normalize_path(remove_ext(d)) + "', lib)");
-                    for (auto &d : nt.Interface.LinkLibraries)
+                    for (auto &d : nt.Interface.LinkLibraries2)
                         ctx.addLine("ctx.parse_flags('-l" + normalize_path(remove_ext(d)) + "', lib)");
 
                     // deps
