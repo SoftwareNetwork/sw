@@ -214,8 +214,21 @@ void NativeCompiledTarget::findCompiler()
         }
         if (auto t = (*i).second->as<PredefinedProgram*>())
         {
+            auto c = std::dynamic_pointer_cast<CompilerBaseProgram>(t->getProgram().clone());
+            if (!c)
+            {
+                if (v.id == "com.Microsoft.VisualStudio.VC.cl")
+                    c = std::make_shared<VisualStudioCompiler>(getSolution().swctx);
+                else if (v.id == "com.Microsoft.VisualStudio.VC.ml")
+                    c = std::make_shared<VisualStudioASMCompiler>(getSolution().swctx);
+                else if (v.id == "com.Microsoft.Windows.rc")
+                    c = std::make_shared<RcTool>(getSolution().swctx);
+                else
+                    throw SW_RUNTIME_ERROR("Unknown compiler");
+                (Program&)*c = t->getProgram();
+            }
             for (auto &e : v.exts)
-                setExtensionProgram(e, t->getProgram().clone());
+                setExtensionProgram(e, c->clone());
         }
         else
         {
@@ -330,6 +343,14 @@ void NativeCompiledTarget::findCompiler()
             };
 
             auto nl = std::dynamic_pointer_cast<NativeLinker>(t->getProgram().clone());
+            if (!nl)
+            {
+                if (link)
+                    nl = std::make_shared<VisualStudioLinker>(getSolution().swctx);
+                else
+                    nl = std::make_shared<VisualStudioLibrarian>(getSolution().swctx);
+                (Program&)*nl = t->getProgram();
+            }
             if (link)
                 this->Linker = nl;
             else
@@ -410,6 +431,8 @@ void NativeCompiledTarget::setupCommand(builder::Command &c) const
             }
 
             auto nt = d->getTarget().as<NativeCompiledTarget*>();
+            if (!nt)
+                continue;
             if (!*nt->HeaderOnly && nt->getSelectedTool() == nt->Linker.get())
             {
                 a(nt);
@@ -670,7 +693,9 @@ NativeCompiledTarget::TargetsSet NativeCompiledTarget::gatherAllRelatedDependenc
         auto sz = libs.size();
         for (auto &d : libs)
         {
-            auto dt = ((NativeCompiledTarget*)d);
+            auto dt = d->as<NativeCompiledTarget*>();
+            if (!dt)
+                continue;
             auto libs2 = dt->gatherDependenciesTargets();
 
             auto sz2 = libs.size();
@@ -1677,7 +1702,10 @@ void NativeCompiledTarget::merge1()
         GroupSettings s;
         s.include_directories_only = d->IncludeDirectoriesOnly;
         //s.merge_to_self = false;
-        merge((const NativeCompiledTarget&)d->getTarget(), s);
+        auto t = d->getTarget().as<const NativeCompiledTarget*>();
+        if (!t)
+            continue;
+        merge(*t, s);
     }
 }
 
@@ -1832,7 +1860,10 @@ bool NativeCompiledTarget::prepare()
             for (auto &[d, _] : deps2)
             {
                 // iterate over child deps
-                for (auto &dep : ((const NativeCompiledTarget&)d->getTarget()).getActiveDependencies())
+                auto t = d->getTarget().as<const NativeCompiledTarget*>();
+                if (!t)
+                    continue;
+                for (auto &dep : t->getActiveDependencies())
                 {
                     auto Inheritance = dep.inhtype;
                     auto d2 = dep.dep;
@@ -2370,6 +2401,8 @@ bool NativeCompiledTarget::prepare()
                     continue;
 
                 auto nt = d->getTarget().template as<NativeCompiledTarget*>();
+                if (!nt)
+                    continue;
 
                 // circular deps detection
                 if (L)
@@ -2584,6 +2617,8 @@ void NativeCompiledTarget::gatherStaticLinkLibraries(
             continue;
 
         auto dt = d->getTarget().template as<const NativeCompiledTarget*>();
+        if (!dt)
+            continue;
 
         // here we must gather all static (and header only?) lib deps in recursive manner
         if (dt->getSelectedTool() == dt->Librarian.get() || *dt->HeaderOnly)
@@ -2621,6 +2656,8 @@ void NativeCompiledTarget::gatherStaticLinkLibraries(
                     continue;
 
                 auto dt2 = d2->getTarget().template as<const NativeCompiledTarget*>();
+                if (!dt2)
+                    continue;
                 if (!*dt2->HeaderOnly)
                     add(dt2, dt2->getImportLibrary(), system);
                 dt2->gatherStaticLinkLibraries(ll, added, targets, system);

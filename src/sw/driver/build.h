@@ -105,9 +105,11 @@ struct SW_DRIVER_CPP_API Test : driver::CommandBuilder
     }
 };
 
+struct NativeTargetEntryPoint;
+
 struct ModuleSwappableData
 {
-    //std::weak_ptr<TargetEntryPoint> ep;
+    std::weak_ptr<NativeTargetEntryPoint> ntep;
     PackagePath NamePrefix;
     String current_module;
     PackageVersionGroupNumber current_gn = 0;
@@ -184,7 +186,6 @@ public:
     std::vector<TargetBaseTypePtr> dummy_children;
     int command_storage = 0;
     const ModuleSwappableData *module_data = nullptr;
-    std::weak_ptr<NativeTargetEntryPoint> ntep;
     SourceDirMap source_dirs_by_source;
     int execute_jobs = 0;
     bool file_storage_local = true;

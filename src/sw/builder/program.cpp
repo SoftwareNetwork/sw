@@ -32,4 +32,10 @@ Program::Program(const Program &rhs)
 {
 }
 
+Program &Program::operator=(const Program &rhs)
+{
+    file = rhs.file;
+    return *this;
+}
+
 }

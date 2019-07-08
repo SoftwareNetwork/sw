@@ -39,7 +39,7 @@ struct SW_BUILDER_API Program : ICastable, detail::Executable
 
     Program(const SwBuilderContext &swctx);
     Program(const Program &);
-    //Program &operator=(const Program &);
+    Program &operator=(const Program &);
     virtual ~Program() = default;
 
     virtual std::shared_ptr<Program> clone() const = 0;

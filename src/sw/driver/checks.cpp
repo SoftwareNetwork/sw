@@ -566,6 +566,7 @@ Build Check::setupSolution(const path &f) const
     s.NamePrefix.clear();
     s.use_separate_target_map = true;
     s.DryRun = false;
+    s.getChildren() = s.swctx.getPredefinedTargets();
 
     auto ss = check_set->t->getTargetSettings();
 

@@ -201,7 +201,10 @@ String TargetSettings::toJsonString() const
 {
     nlohmann::json j;
     for (auto &[k, v] : *this)
-        j[k] = v.getValue();
+    {
+        if (v)
+            j[k] = v.getValue();
+    }
     return j.dump();
 }
 
@@ -209,7 +212,10 @@ String TargetSettings::toStringKeyValue() const
 {
     String c;
     for (auto &[k, v] : *this)
-        c += k + ": " + v.getValue() + "\n";
+    {
+        if (v)
+            c += k + ": " + v.getValue() + "\n";
+    }
     return c;
 }
 

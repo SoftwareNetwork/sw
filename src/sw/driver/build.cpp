@@ -106,8 +106,7 @@ NativeTargetEntryPoint::NativeTargetEntryPoint(Build &b)
 
 void NativeTargetEntryPoint::loadPackages(const TargetSettings &s, const PackageIdSet &pkgs)
 {
-    //module_data.ep = shared_from_this();
-    b.ntep = shared_from_this();
+    module_data.ntep = shared_from_this();
     SwapAndRestore sr1(module_data.known_targets, pkgs);
     if (pkgs.empty())
         sr1.restoreNow(true);
@@ -392,7 +391,7 @@ Build::Build(const Build &rhs)
     , ide_solution_name(rhs.ide_solution_name)
     , disable_compiler_lookup(rhs.disable_compiler_lookup)
     , config_file_or_dir(rhs.config_file_or_dir)
-    , events(rhs.events)
+    //, events(rhs.events)
     , file_storage_local(rhs.file_storage_local)
     , command_storage(rhs.command_storage)
     , is_config_build(rhs.is_config_build)
@@ -468,6 +467,9 @@ UnresolvedDependenciesType Build::gatherUnresolvedDependencies(int n_runs)
         {
             for (auto &tgt : tgts)
             {
+                if (!tgt->isReal())
+                    continue;
+
                 auto t = tgt->as<Target *>();
                 if (t->skip)
                     continue;
@@ -492,7 +494,7 @@ UnresolvedDependenciesType Build::gatherUnresolvedDependencies(int n_runs)
                                     " with current settings: " + dptr->settings.toString());
                             again = true;
                         }
-                        dptr->setTarget((*k)->as<NativeTarget>());
+                        dptr->setTarget(**k);
                         known2.insert(up);
                         continue;
                     }
@@ -554,6 +556,9 @@ void Build::prepareStep(Executor &e, Futures<void> &fs, std::atomic_bool &next_p
     {
         for (auto &tgt : tgts)
         {
+            if (!tgt->isReal())
+                continue;
+
             auto t = tgt->as<Target*>();
             if (t->skip || t->DryRun)
                 continue;
@@ -968,7 +973,7 @@ const String &Build::getCurrentModule() const
 
 void Build::addChild(const TargetBaseTypePtr &t)
 {
-    auto p = ntep.lock();
+    auto p = getModuleData().ntep.lock();
     if (!p)
         throw SW_RUNTIME_ERROR("Entry point was not set");
     p->addChild(t);
@@ -1946,6 +1951,9 @@ Commands Build::getCommands() const
     {
         for (auto &tgt : tgts)
         {
+            if (!tgt->isReal())
+                continue;
+
             auto t = tgt->as<Target*>();
             if (t->skip)
                 continue;
