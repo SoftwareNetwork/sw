@@ -38,23 +38,18 @@ SwCoreContext::SwCoreContext(const path &local_storage_root_dir)
 
     if (getHostOs().is(OSType::Windows))
     {
-        ts["native"]["lib"]["c"] = "com.Microsoft.Windows.SDK.ucrt";
-        ts["native"]["lib"]["c++"] = "com.Microsoft.VisualStudio.VC.libcpp";
-
-        ts["native"]["rc"] = "com.Microsoft.Windows.rc";
+        ts["native"]["stdlib"]["c"] = "com.Microsoft.Windows.SDK.ucrt";
+        ts["native"]["stdlib"]["c++"] = "com.Microsoft.VisualStudio.VC.libcpp";
 
         //if (!getTargets()["com.Microsoft.VisualStudio.VC.cl"].empty_releases())
         if (!getTargets()["com.Microsoft.VisualStudio.VC.cl"].empty())
         {
-            ts["native"]["cl"] = "com.Microsoft.VisualStudio.VC.cl";
-            ts["native"]["asm"] = "com.Microsoft.VisualStudio.VC.ml";
-            ts["native"]["lib"] = "com.Microsoft.VisualStudio.VC.lib";
-            ts["native"]["link"] = "com.Microsoft.VisualStudio.VC.link";
+            ts["native"]["program"]["c"] = "com.Microsoft.VisualStudio.VC.cl";
+            ts["native"]["program"]["cpp"] = "com.Microsoft.VisualStudio.VC.cl";
+            ts["native"]["program"]["asm"] = "com.Microsoft.VisualStudio.VC.ml";
+            ts["native"]["program"]["lib"] = "com.Microsoft.VisualStudio.VC.lib";
+            ts["native"]["program"]["link"] = "com.Microsoft.VisualStudio.VC.link";
         }
-
-        //ts["native"]["cl.c"] = "com.Microsoft.VisualStudio.VC.cl";
-        //ts["native"]["extensions"s][".c"] = "com.Microsoft.VisualStudio.VC.cl";
-        //ts["native"]["cl.cpp"] = "com.Microsoft.VisualStudio.VC.cl";
     }
 }
 

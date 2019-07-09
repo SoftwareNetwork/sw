@@ -48,7 +48,11 @@ FileStorage &SwBuilderContext::getFileStorage() const
 CommandStorage &SwBuilderContext::getCommandStorage() const
 {
     if (!cs)
-        cs = std::make_unique<CommandStorage>(*this);
+    {
+        std::unique_lock lk(csm);
+        if (!cs)
+            cs = std::make_unique<CommandStorage>(*this);
+    }
     return *cs;
 }
 

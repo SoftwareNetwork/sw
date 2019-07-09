@@ -39,8 +39,8 @@ static String getCurrentModuleNameHash()
 static path getDir(const SwBuilderContext &swctx, bool local)
 {
     if (local)
-        return path(SW_BINARY_DIR) / "db";
-    return swctx.getLocalStorage().storage_dir_tmp / "db";
+        return path(SW_BINARY_DIR) / "db" / "0.3.1";
+    return swctx.getLocalStorage().storage_dir_tmp / "db" / "0.3.1";
 }
 
 static path getCommandsDbFilename(const SwBuilderContext &swctx, bool local)

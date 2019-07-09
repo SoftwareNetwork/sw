@@ -186,9 +186,9 @@ void NativeCompiledTarget::findCompiler()
         return true;
     };
 
-    if (!add_libc(ts["native"]["lib"]["c"].getValue()))
+    if (!add_libc(ts["native"]["stdlib"]["c"].getValue()))
         throw SW_RUNTIME_ERROR("no libc");
-    if (!add_libc(ts["native"]["lib"]["c++"].getValue()))
+    if (!add_libc(ts["native"]["stdlib"]["c++"].getValue()))
         throw SW_RUNTIME_ERROR("no libc++");
 
     struct CompilerDesc
@@ -255,19 +255,19 @@ void NativeCompiledTarget::findCompiler()
 
     static const CompilerVector c_cpp =
     {
-        {{ts["native"]["cl"].getValue()}, getCppSourceFileExtensions()},
-        {{ts["native"]["cl"].getValue()}, { ".c" }},
+        {{ts["native"]["program"]["cpp"].getValue()}, getCppSourceFileExtensions()},
+        {{ts["native"]["program"]["c"].getValue()}, { ".c" }},
     };
 
     if (!activate_all(c_cpp))
         throw SW_RUNTIME_ERROR("Missing native toolchain");
 
     // .asm
-    if (ts["native"]["asm"])
+    if (ts["native"]["program"]["asm"])
     {
         static const CompilerDesc rc
         {
-            ts["native"]["asm"].getValue(), { ".asm" },
+            ts["native"]["program"]["asm"].getValue(), { ".asm" },
         };
         if (!activate_one(rc))
             throw SW_RUNTIME_ERROR("Resource compiler was not found in Windows SDK");
@@ -278,7 +278,7 @@ void NativeCompiledTarget::findCompiler()
     {
         static const CompilerDesc rc
         {
-            ts["native"]["rc"].getValue(), { ".rc" },
+            "com.Microsoft.Windows.rc", { ".rc" },
         };
         if (!activate_one(rc))
             throw SW_RUNTIME_ERROR("Resource compiler was not found in Windows SDK");
@@ -363,9 +363,9 @@ void NativeCompiledTarget::findCompiler()
         return false;
     };
 
-    if (!activate_lib_link_or_throw(ts["native"]["lib"].getValue()))
+    if (!activate_lib_link_or_throw(ts["native"]["program"]["lib"].getValue()))
         throw SW_RUNTIME_ERROR("Try to add more librarians");
-    if (!activate_lib_link_or_throw(ts["native"]["link"].getValue(), true))
+    if (!activate_lib_link_or_throw(ts["native"]["program"]["link"].getValue(), true))
         throw SW_RUNTIME_ERROR("Try to add more linkers");
 }
 
@@ -2766,6 +2766,7 @@ void NativeCompiledTarget::initLibrary(LibraryType Type)
     else
     {
         SelectedTool = Librarian.get();
+        Librarian->Extension = getSettings().TargetOS.getStaticLibraryExtension();
     }
 }
 
