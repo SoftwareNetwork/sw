@@ -11,6 +11,7 @@
 
 #include <memory>
 #include <optional>
+#include <variant>
 
 namespace sw
 {
@@ -63,7 +64,7 @@ struct SW_CORE_API TargetSettings
     auto end() const { return settings.end(); }
 
 private:
-    mutable std::map<TargetSettingKey, TargetSetting> settings;
+    std::map<TargetSettingKey, TargetSetting> settings;
 
     //String toStringKeyValue() const;
     nlohmann::json toJson() const;
@@ -95,9 +96,13 @@ struct SW_CORE_API TargetSetting
     template <class U>
     bool operator==(const U &u) const
     {
-        if (!value.has_value())
+        /*if (!value.has_value())
             return false;
-        return *value == u;
+        return *value == u;*/
+        auto v = std::get_if<TargetSettingValue>(&value);
+        if (!v)
+            return false;
+        return *v == u;
     }
 
     template <class U>
@@ -119,9 +124,10 @@ struct SW_CORE_API TargetSetting
 
 private:
     TargetSettingKey key;
-    std::optional<TargetSettingValue> value;
+    std::variant<std::monostate, TargetSettingValue, std::vector<TargetSettingValue>, TargetSettings> value;
+    /*std::optional<TargetSettingValue> value;
     std::optional<std::vector<TargetSettingValue>> array;
-    mutable std::unique_ptr<TargetSettings> settings;
+    std::unique_ptr<TargetSettings> settings;*/
 
     nlohmann::json toJson() const;
 

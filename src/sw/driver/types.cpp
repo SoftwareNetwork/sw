@@ -153,47 +153,4 @@ String toString(LibraryType Type)
 #undef CASE
 }
 
-CompilerType compilerTypeFromStringCaseI(const String &compiler)
-{
-    if (0);
-    // exact
-    else if (boost::iequals(compiler, "clang"))
-        return CompilerType::Clang;
-    else if (boost::iequals(compiler, "clangcl") || boost::iequals(compiler, "clang-cl"))
-        return CompilerType::ClangCl;
-    // starts with
-    else if (boost::istarts_with(compiler, "appleclang") || boost::iequals(compiler, "apple-clang"))
-        return CompilerType::AppleClang;
-    else if (boost::istarts_with(compiler, "gnu") || boost::iequals(compiler, "gcc") || boost::iequals(compiler, "g++"))
-        return CompilerType::GNU;
-    else if (boost::istarts_with(compiler, "msvc") || boost::istarts_with(compiler, "vs"))
-        return CompilerType::MSVC;
-    //
-    else if (!compiler.empty())
-        throw SW_RUNTIME_ERROR("Unknown compiler: " + compiler);
-    return CompilerType::UnspecifiedCompiler;
-}
-
-ConfigurationType configurationTypeFromStringCaseI(const String &configuration)
-{
-    if (boost::iequals(configuration, "Debug") ||
-        boost::iequals(configuration, "d"))
-        return ConfigurationType::Debug;
-    else if (boost::iequals(configuration, "Release") ||
-        boost::iequals(configuration, "r"))
-        return ConfigurationType::Release;
-    else if (boost::iequals(configuration, "MinSizeRel") ||
-        boost::iequals(configuration, "msr") ||
-        boost::iequals(configuration, "MinimalSizeRelease"))
-        return ConfigurationType::MinimalSizeRelease;
-    else if (boost::iequals(configuration, "RelWithDebInfo") ||
-        boost::iequals(configuration, "ReleaseWithDebugInformation") ||
-        boost::iequals(configuration, "rwdi") ||
-        boost::iequals(configuration, "ReleaseWithDebInfo"))
-        return ConfigurationType::ReleaseWithDebugInformation;
-    else if (!configuration.empty())
-        throw SW_RUNTIME_ERROR("Unknown configuration: " + configuration);
-    return ConfigurationType::Unspecified;
-}
-
 } // namespace sw

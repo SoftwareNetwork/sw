@@ -44,34 +44,12 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "build");
 
-static cl::opt<bool> append_configs("append-configs", cl::desc("Append configs for generation"));
 String gGenerator;
 cl::opt<bool> dry_run("n", cl::desc("Dry run"));
 static cl::opt<bool> debug_configs("debug-configs", cl::desc("Build configs in debug mode"));
 static cl::opt<bool> fetch_sources("fetch", cl::desc("Fetch files in process"));
 
 static cl::opt<int> config_jobs("jc", cl::desc("Number of config jobs"));
-
-static cl::list<String> libc("libc", cl::CommaSeparated);
-//static cl::list<String> libcpp("libcpp", cl::CommaSeparated);
-static cl::list<String> target_os("target-os", cl::CommaSeparated);
-static cl::list<String> compiler("compiler", cl::desc("Set compiler"), cl::CommaSeparated);
-static cl::list<String> configuration("configuration", cl::desc("Set build configuration"), cl::CommaSeparated);
-cl::alias configuration2("config", cl::desc("Alias for -configuration"), cl::aliasopt(configuration));
-static cl::list<String> platform("platform", cl::desc("Set build platform"), cl::CommaSeparated);
-//static cl::opt<String> arch("arch", cl::desc("Set arch")/*, cl::sub(subcommand_ide)*/);
-
-// simple -static, -shared?
-static cl::opt<bool> static_build("static-build", cl::desc("Set static build"));
-cl::alias static_build2("static", cl::desc("Alias for -static-build"), cl::aliasopt(static_build));
-static cl::opt<bool> shared_build("shared-build", cl::desc("Set shared build (default)"));
-cl::alias shared_build2("shared", cl::desc("Alias for -shared-build"), cl::aliasopt(shared_build));
-
-// simple -mt, -md?
-static cl::opt<bool> win_mt("win-mt", cl::desc("Set /MT build"));
-cl::alias win_mt2("mt", cl::desc("Alias for -win-mt"), cl::aliasopt(win_mt));
-static cl::opt<bool> win_md("win-md", cl::desc("Set /MD build (default)"));
-cl::alias win_md2("md", cl::desc("Alias for -win-md"), cl::aliasopt(win_md));
 
 //static cl::opt<bool> hide_output("hide-output");
 static cl::opt<bool> cl_show_output("show-output");
@@ -405,30 +383,9 @@ Build::~Build()
 {
 }
 
-BuildSettings Build::createSettings() const
-{
-    BuildSettings ss;
-    ss.TargetOS = getHostOs();
-    //ss.init();
-    return ss;
-}
-
 void Build::addSettings(const TargetSettings &ss)
 {
-    auto i = std::find(settings.begin(), settings.end(), ss);
-    if (i == settings.end())
-        settings.push_back(ss);
-}
-
-void detectCompilers(Build &)
-{
-    //SW_UNIMPLEMENTED;
-}
-
-void Build::detectCompilers()
-{
-    auto ep = std::make_shared<NativeBuiltinTargetEntryPoint>(*this, ::sw::detectCompilers);
-    ep->loadPackages(getHostSettings());
+    settings.push_back(ss);
 }
 
 const OS &Build::getHostOs() const
@@ -569,17 +526,6 @@ void Build::prepareStep(Executor &e, Futures<void> &fs, std::atomic_bool &next_p
                 }));
         }
     }
-}
-
-void Build::addFirstConfig()
-{
-    SW_UNIMPLEMENTED;
-
-    if (!settings.empty())
-        return;
-
-    auto ss = createSettings();
-    addSettings(ss.getTargetSettings());
 }
 
 /*void Build::findCompiler()
@@ -865,11 +811,11 @@ static NativeCompiledTarget &getDriverTarget(Build &solution, NativeCompiledTarg
     auto i = solution.getChildren().find(UnresolvedPackage(SW_DRIVER_NAME));
     if (i == solution.getChildren().end())
         throw SW_RUNTIME_ERROR("no driver target");
-    auto k = i->second.find(lib.getSettings().getTargetSettings());
+    auto k = i->second.find(lib.getTargetSettings());
     if (k == i->second.end())
     {
         i->second.loadPackages(solution.getSettings(), solution.module_data->known_targets);
-        k = i->second.find(lib.getSettings().getTargetSettings());
+        k = i->second.find(lib.getTargetSettings());
         if (k == i->second.end())
         {
             //if (i->second.empty())
@@ -1285,8 +1231,6 @@ std::shared_ptr<PrepareConfigEntryPoint> Build::build_configs1(const T &objs)
     if (debug_configs)
         settings[0]["native"]["configuration"] = "debug";
         //settings[0].Native.ConfigurationType = ConfigurationType::Debug;
-
-    detectCompilers();
 
     auto ep = std::make_shared<PrepareConfigEntryPoint>(*this, objs);
     ep->loadPackages(settings[0]);
@@ -2399,34 +2343,6 @@ void Build::run_package(const String &s)
     run(nt->getPackage(), *cb.c);*/
 }
 
-static bool hasAnyUserProvidedInformation()
-{
-    return 0
-        || !configuration.empty()
-        || static_build
-        || shared_build
-        || win_mt
-        || win_md
-        || !platform.empty()
-        || !compiler.empty()
-        || !target_os.empty()
-        || !libc.empty()
-        ;
-
-    //|| (static_build && shared_build) // when both; but maybe ignore?
-    //|| (win_mt && win_md) // when both; but maybe ignore?
-
-}
-
-static bool hasUserProvidedInformationStrong()
-{
-    return 0
-        || !configuration.empty()
-        || !compiler.empty()
-        || !target_os.empty()
-        ;
-}
-
 void Build::createSolutions(const path &dll, bool usedll)
 {
     if (gWithTesting)
@@ -2443,9 +2359,9 @@ void Build::createSolutions(const path &dll, bool usedll)
     if (usedll && configure)
         Module(driver.getModuleStorage().get(dll)).configure(*this);
 
-    if (hasAnyUserProvidedInformation())
+    //if (hasAnyUserProvidedInformation())
     {
-        if (append_configs || !hasUserProvidedInformationStrong())
+        //if (append_configs || !hasUserProvidedInformationStrong())
         {
             /*if (auto g = getGenerator())
             {
@@ -2606,13 +2522,13 @@ void Build::createSolutions(const path &dll, bool usedll)
     //addFirstConfig();
 
     // finally
-    detectCompilers();
+    //detectCompilers();
 }
 
 void Build::load_dll(const path &dll)
 {
     //createSolutions(dll, false);
-    detectCompilers();
+    //detectCompilers();
 
     // add cc if needed
     //getHostSolution();
@@ -2715,7 +2631,9 @@ void Build::load_dll(const path &dll)
 
 bool Build::isConfigSelected(const String &s) const
 {
-    try
+    SW_UNIMPLEMENTED;
+
+    /*try
     {
         configurationTypeFromStringCaseI(s);
         return false; // conf is known and reserved!
@@ -2725,7 +2643,7 @@ bool Build::isConfigSelected(const String &s) const
     used_configs.insert(s);
 
     static const StringSet cfgs(configuration.begin(), configuration.end());
-    return cfgs.find(s) != cfgs.end();
+    return cfgs.find(s) != cfgs.end();*/
 }
 
 void Build::call_event(Target &t, CallbackType et)

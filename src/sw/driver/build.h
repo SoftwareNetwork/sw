@@ -224,10 +224,7 @@ public:
     CommandExecutionPlan getExecutionPlan() const;
     CommandExecutionPlan getExecutionPlan(const Commands &cmds) const;
     Commands getCommands() const;
-    void addFirstConfig();
-    void detectCompilers();
     PackageDescriptionMap getPackages() const;
-    BuildSettings createSettings() const;
     void addSettings(const TargetSettings &);
     const ModuleSwappableData &getModuleData() const;
     PackageVersionGroupNumber getCurrentGroupNumber() const;

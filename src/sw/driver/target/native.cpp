@@ -2037,8 +2037,9 @@ bool NativeCompiledTarget::prepare()
         if (getSettings().Native.ConfigurationType != ConfigurationType::Debug)
             *this += Definition("NDEBUG");
         // allow to other compilers?
-        else if (getCompilerType() == CompilerType::MSVC)
-            *this += Definition("_DEBUG");
+        // it is set automatically with /LDd, /MDd, or /MTd
+        //else if (getCompilerType() == CompilerType::MSVC)
+            //*this += Definition("_DEBUG");
 
         auto remove_bdirs = [this](auto *c)
         {

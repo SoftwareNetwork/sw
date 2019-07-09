@@ -227,8 +227,8 @@ String toString(ConfigurationType Type);
 //CompilerType compilerTypeFromString(const String &s);
 //ConfigurationType configurationTypeFromString(const String &s);
 
-CompilerType compilerTypeFromStringCaseI(const String &s);
-ConfigurationType configurationTypeFromStringCaseI(const String &s);
+//CompilerType compilerTypeFromStringCaseI(const String &s);
+//ConfigurationType configurationTypeFromStringCaseI(const String &s);
 
 struct Configuration : ConfigurationBase
 {

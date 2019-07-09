@@ -105,7 +105,6 @@ struct SW_DRIVER_CPP_API NativeToolchain
     // rc (resource compiler)
     // ar, more tools...
     // more native compilers (cuda etc.)
-    ::sw::CompilerType CompilerType1 = CompilerType::UnspecifiedCompiler;
     //LinkerType LinkerType; // rename - use type from selected tool
     BuildLibrariesAs LibrariesType = LibraryType::Shared;
     ::sw::ConfigurationType ConfigurationType = ConfigurationType::Release;

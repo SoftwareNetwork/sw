@@ -23,11 +23,11 @@ struct SW_CORE_API IDriver
 
     virtual bool canLoad(const Input &) const = 0;
     virtual void load(const std::set<Input> &) = 0;
+
     //virtual void execute() = 0;
     //virtual bool prepareStep() = 0;
-    // move to itarget
-    // prepare()
-    // getCommands()
+
+    // get features()?
 };
 
 //struct INativeDriver : IDriver {}; // ?

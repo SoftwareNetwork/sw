@@ -494,43 +494,4 @@ String toString(ObjectFormatType e)
     throw SW_RUNTIME_ERROR("not implemented");
 }
 
-OSType OSTypeFromStringCaseI(const String &target_os)
-{
-    if (boost::iequals(target_os, "linux"))
-        return OSType::Linux;
-    else if (boost::iequals(target_os, "macos"))
-        return OSType::Macos;
-    else if (boost::iequals(target_os, "windows") ||
-        boost::iequals(target_os, "win"))
-        return OSType::Windows;
-    else if (boost::iequals(target_os, "cygwin"))
-        return OSType::Cygwin;
-    else if (!target_os.empty())
-        throw SW_RUNTIME_ERROR("Unknown target_os: " + target_os);
-    return OSType::UnknownOS;
-}
-
-ArchType archTypeFromStringCaseI(const String &platform)
-{
-    if (boost::iequals(platform, "Win32") ||
-        boost::iequals(platform, "x86"))
-        return ArchType::x86;
-    else if (
-        boost::iequals(platform, "Win64") ||
-        boost::iequals(platform, "x64") ||
-        boost::iequals(platform, "x86_64") ||
-        boost::iequals(platform, "x64_86"))
-        return ArchType::x86_64;
-    else if (
-        boost::iequals(platform, "arm32") ||
-        boost::iequals(platform, "arm"))
-        return ArchType::arm;
-    else if (boost::iequals(platform, "arm64") ||
-        boost::iequals(platform, "aarch64"))
-        return ArchType::aarch64; // ?
-    else if (!platform.empty())
-        throw SW_RUNTIME_ERROR("Unknown platform: " + platform);
-    return ArchType::UnknownArch;
-}
-
 }

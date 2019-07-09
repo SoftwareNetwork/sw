@@ -578,7 +578,6 @@ Build Check::setupSolution(const path &f) const
     s.settings.clear();
 
     s.addSettings(ss);
-    s.detectCompilers();
 
     return s;
 }

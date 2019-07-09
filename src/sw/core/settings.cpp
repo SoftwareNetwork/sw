@@ -73,74 +73,92 @@ TargetSetting &TargetSetting::operator=(const TargetSetting &rhs)
 {
     key = rhs.key;
     value = rhs.value;
-    array = rhs.array;
+    /*array = rhs.array;
     if (rhs.settings)
-        settings = std::make_unique<TargetSettings>(*rhs.settings);
+        settings = std::make_unique<TargetSettings>(*rhs.settings);*/
     return *this;
 }
 
 TargetSetting &TargetSetting::operator=(const TargetSettings &u)
 {
-    if (!settings)
+    /*if (!settings)
         settings = std::make_unique<TargetSettings>();
-    *settings = u;
+    *settings = u;*/
+    value = u;
     return *this;
 }
 
 TargetSetting &TargetSetting::operator[](const TargetSettingKey &k)
 {
-    if (!settings)
+    /*if (!settings)
         settings = std::make_unique<TargetSettings>();
-    return (*settings)[k];
+    return (*settings)[k];*/
+    if (value.index() == 0)
+        value = TargetSettings();
+    return std::get<TargetSettings>(value)[k];
 }
 
 const TargetSetting &TargetSetting::operator[](const TargetSettingKey &k) const
 {
-    if (!settings)
-        settings = std::make_unique<TargetSettings>();
-    return (*settings)[k];
-}
-
-bool TargetSetting::operator<(const TargetSetting &rhs) const
-{
-    if (settings && rhs.settings)
-        return std::tie(value, *settings) < std::tie(rhs.value, *rhs.settings);
-    return std::tie(value, array) < std::tie(rhs.value, rhs.array);
+    /*if (!settings)
+    {
+        static TargetSetting s("");
+        return s;
+    }
+    return (*settings)[k];*/
+    return std::get<TargetSettings>(value)[k];
 }
 
 const String &TargetSetting::getValue() const
 {
-    if (!value)
+    /*if (!value)
         throw SW_RUNTIME_ERROR("empty value for key: " + key);
-    return *value;
+    return *value;*/
+    return std::get<TargetSettingValue>(value);
 }
 
 const std::vector<TargetSettingValue> &TargetSetting::getArray() const
 {
-    if (!array)
+    /*if (!array)
         throw SW_RUNTIME_ERROR("empty array for key: " + key);
-    return *array;
+    return *array;*/
+    return std::get<std::vector<TargetSettingValue>>(value);
 }
 
 const TargetSettings &TargetSetting::getSettings() const
 {
-    if (!settings)
+    /*if (!settings)
     {
         static const TargetSettings ts;
         return ts;
     }
-    return *settings;
+    return *settings;*/
+    auto s = std::get_if<TargetSettings>(&value);
+    if (!s)
+    {
+        static const TargetSettings ts;
+        return ts;
+    }
+    return *s;
+}
+
+bool TargetSetting::operator<(const TargetSetting &rhs) const
+{
+    /*if (settings && rhs.settings)
+    return std::tie(value, *settings) < std::tie(rhs.value, *rhs.settings);
+    return std::tie(value, array) < std::tie(rhs.value, rhs.array);*/
+    return value < rhs.value;
 }
 
 bool TargetSetting::operator==(const TargetSetting &rhs) const
 {
-    if ((!value || !rhs.value) && (!array || !rhs.array))
+    /*if ((!value || !rhs.value) && (!array || !rhs.array))
         return false;
     if (value && rhs.value)
         return value == rhs.value;
     if (array && rhs.array)
-        return array == rhs.array;
-    SW_UNIMPLEMENTED;
+        return array == rhs.array;*/
+    return value == rhs.value;
 }
 
 bool TargetSetting::operator!=(const TargetSetting &rhs) const
@@ -150,31 +168,37 @@ bool TargetSetting::operator!=(const TargetSetting &rhs) const
 
 void TargetSetting::merge(const TargetSetting &rhs)
 {
-    value = rhs.value;
+    /*value = rhs.value;
     array = rhs.array;
     if (!rhs.settings)
         return;
     if (!settings)
         settings = std::make_unique<TargetSettings>();
-    settings->merge(*rhs.settings);
+    settings->merge(*rhs.settings);*/
+    auto s = std::get_if<TargetSettings>(&value);
+    if (s)
+    {
+        s->merge(std::get<TargetSettings>(rhs.value));
+        return;
+    }
+    value = rhs.value;
 }
 
 void TargetSetting::push_back(const TargetSettingValue &v)
 {
-    if (!array)
+    /*if (!array)
         array.emplace();
-    array->push_back(v);
+    array->push_back(v);*/
+    if (value.index() == 0)
+        value = std::vector<TargetSettingValue>();
+    return std::get<std::vector<TargetSettingValue>>(value).push_back(v);
 }
 
 TargetSetting::operator bool() const
 {
-    return !!value || !!array;// || settings;
+    //return !!value || !!array;// || settings;
+    return value.index() != 0;
 }
-
-/*bool TargetSetting::hasValue() const
-{
-    return !!value;
-}*/
 
 String TargetSettings::getConfig() const
 {
@@ -190,8 +214,6 @@ String TargetSettings::toString(int type) const
 {
     switch (type)
     {
-    //case Simple:
-        //return toStringKeyValue();
     case Json:
         return toJson().dump();
     default:
@@ -202,15 +224,19 @@ String TargetSettings::toString(int type) const
 nlohmann::json TargetSetting::toJson() const
 {
     nlohmann::json j;
-    if (value)
-        return getValue();
-    else if (array)
+    switch (value.index())
     {
-        for (auto &v2 : *array)
+    case 0:
+        return j;
+    case 1:
+        return getValue();
+    case 2:
+        for (auto &v2 : std::get<std::vector<TargetSettingValue>>(value))
             j.push_back(v2);
+        break;
+    case 3:
+        return std::get<TargetSettings>(value).toJson();
     }
-    if (settings)
-        return settings->toJson();
     return j;
 }
 
@@ -226,17 +252,6 @@ nlohmann::json TargetSettings::toJson() const
     return j;
 }
 
-/*String TargetSettings::toStringKeyValue() const
-{
-    String c;
-    for (auto &[k, v] : *this)
-    {
-        if (v)
-            c += k + ": " + v.getValue() + "\n";
-    }
-    return c;
-}*/
-
 TargetSetting &TargetSettings::operator[](const TargetSettingKey &k)
 {
     return settings.try_emplace(k, k).first->second;
@@ -244,7 +259,13 @@ TargetSetting &TargetSettings::operator[](const TargetSettingKey &k)
 
 const TargetSetting &TargetSettings::operator[](const TargetSettingKey &k) const
 {
-    return settings.try_emplace(k, k).first->second;
+    auto i = settings.find(k);
+    if (i == settings.end())
+    {
+        static TargetSetting s("");
+        return s;
+    }
+    return i->second;
 }
 
 bool TargetSettings::operator==(const TargetSettings &rhs) const

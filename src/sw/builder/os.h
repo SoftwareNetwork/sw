@@ -211,12 +211,6 @@ String toTripletString(ArchType e);
 SW_BUILDER_API
 String toTripletString(SubArchType e);
 
-SW_BUILDER_API
-OSType OSTypeFromStringCaseI(const String &s);
-
-SW_BUILDER_API
-ArchType archTypeFromStringCaseI(const String &s);
-
 struct SW_BUILDER_API OS
 {
     OSType Type = OSType::UnknownOS;

@@ -67,17 +67,15 @@ BuildSettings::BuildSettings(const TargetSettings &ts)
 
     IF_KEY("native"]["configuration")
         if (0);
-        IF_SETTING("Debug", Native.ConfigurationType, ConfigurationType::Debug);
         IF_SETTING("debug", Native.ConfigurationType, ConfigurationType::Debug);
-        IF_SETTING("MinimalSizeRelease", Native.ConfigurationType, ConfigurationType::Debug);
-        IF_SETTING("Release", Native.ConfigurationType, ConfigurationType::Release);
+        IF_SETTING("minimalsizerelease", Native.ConfigurationType, ConfigurationType::Debug);
         IF_SETTING("release", Native.ConfigurationType, ConfigurationType::Release);
-        IF_SETTING("ReleaseWithDebugInformation", Native.ConfigurationType, ConfigurationType::ReleaseWithDebugInformation);
+        IF_SETTING("releasewithdebuginformation", Native.ConfigurationType, ConfigurationType::ReleaseWithDebugInformation);
         else
             SW_UNIMPLEMENTED;
     IF_END
 
-    IF_KEY("mt")
+    IF_KEY("native"]["mt")
         Native.MT = v == "true";
     IF_END
 
@@ -141,14 +139,6 @@ TargetSettings BuildSettings::getTargetSettings() const
     TargetSettings s;
     s.merge(toTargetSettings(TargetOS));
 
-    switch (Native.CompilerType1)
-    {
-    case CompilerType::UnspecifiedCompiler:
-        break;
-    default:
-        SW_UNIMPLEMENTED;
-    }
-
     switch (Native.LibrariesType)
     {
     case LibraryType::Static:
@@ -180,7 +170,7 @@ TargetSettings BuildSettings::getTargetSettings() const
     }
 
     if (TargetOS.is(OSType::Windows))
-        s["mt"] = Native.MT ? "true" : "false";
+        s["native"]["mt"] = Native.MT ? "true" : "false";
 
     // debug, release, ...
 
