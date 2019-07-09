@@ -13,6 +13,10 @@ ITarget::~ITarget() = default;
 TargetLoader::~TargetLoader() = default;
 IDependency::~IDependency() = default;
 
+TargetData::~TargetData()
+{
+}
+
 void TargetData::loadPackages(const TargetSettings &s, const PackageIdSet &whitelist)
 {
     if (!ep)
@@ -23,6 +27,16 @@ void TargetData::loadPackages(const TargetSettings &s, const PackageIdSet &white
 void TargetData::setEntryPoint(const std::shared_ptr<TargetLoader> &e)
 {
     ep = std::move(e);
+}
+
+void TargetData::push_back(const ITargetPtr &t)
+{
+    targets.push_back(t);
+}
+
+void TargetData::clear()
+{
+    targets.clear();
 }
 
 TargetData::Base::iterator TargetData::find(const TargetSettings &s)
@@ -39,6 +53,10 @@ TargetData::Base::const_iterator TargetData::find(const TargetSettings &s) const
     {
         return *t == s;
     });
+}
+
+TargetMap::~TargetMap()
+{
 }
 
 detail::SimpleExpected<TargetMap::Base::version_map_type::iterator> TargetMap::find_and_select_version(const PackagePath &pp)

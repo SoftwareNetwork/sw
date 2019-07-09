@@ -41,7 +41,7 @@ Driver::~Driver()
 {
     // do not clear modules on exception, because it may come from there
     // TODO: cleanup modules data first
-    if (std::uncaught_exceptions())
+    //if (std::uncaught_exceptions())
         module_storage.release();
 }
 

@@ -92,9 +92,11 @@ struct TargetLoader
 // it is impossible to keep targets in std::map<TargetSettings, ITargetPtr>,
 // because each target knows how to compare itself
 // also TargetSettings are mutable?
-struct TargetData : std::vector<ITargetPtr>
+struct SW_CORE_API TargetData
 {
     using Base = std::vector<ITargetPtr>;
+
+    ~TargetData();
 
     void loadPackages(const TargetSettings &, const PackageIdSet &allowed_packages = {});
     void setEntryPoint(const std::shared_ptr<TargetLoader> &);
@@ -102,7 +104,17 @@ struct TargetData : std::vector<ITargetPtr>
     Base::iterator find(const TargetSettings &s);
     Base::const_iterator find(const TargetSettings &s) const;
 
+    void push_back(const ITargetPtr &);
+    void clear();
+
+    auto begin() { return targets.begin(); }
+    auto end() { return targets.end(); }
+
+    auto begin() const { return targets.begin(); }
+    auto end() const { return targets.end(); }
+
 private:
+    std::vector<ITargetPtr> targets;
     // shared, because multiple pkgs has same entry point
     std::shared_ptr<TargetLoader> ep;
     // regex storage
@@ -149,7 +161,7 @@ struct SimpleExpected : std::variant<SimpleExpectedErrorCode, T, Args...>
 
 } // namespace detail
 
-struct TargetMap : PackageVersionMapBase<TargetData, std::unordered_map, primitives::version::VersionMap>
+struct SW_CORE_API TargetMap : PackageVersionMapBase<TargetData, std::unordered_map, primitives::version::VersionMap>
 {
     using Base = PackageVersionMapBase<TargetData, std::unordered_map, primitives::version::VersionMap>;
 
@@ -160,6 +172,8 @@ struct TargetMap : PackageVersionMapBase<TargetData, std::unordered_map, primiti
         PackageNotFound,
         TargetNotCreated, // by settings
     };
+
+    ~TargetMap();
 
     using Base::find;
 
