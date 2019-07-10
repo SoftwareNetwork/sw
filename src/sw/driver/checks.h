@@ -288,7 +288,7 @@ struct SW_DRIVER_CPP_API CheckSet
     }
 
     void prepareChecksForUse();
-    void performChecks(const String &config);
+    void performChecks(const TargetSettings &);
 
     FunctionExists &checkFunctionExists(const String &function, bool cpp = false);
     FunctionExists &checkFunctionExists(const String &function, const String &def, bool cpp = false);

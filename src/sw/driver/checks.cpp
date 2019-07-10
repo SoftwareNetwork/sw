@@ -191,7 +191,6 @@ CheckSet::CheckSet(Checker &checker)
 Checker::Checker(Build &build)
     : build(build)
 {
-    //checksStorage = std::make_unique<ChecksStorage>();
 }
 
 CheckSet &Checker::addSet(const String &name)
@@ -201,9 +200,11 @@ CheckSet &Checker::addSet(const String &name)
     return p.first->second;
 }
 
-void CheckSet::performChecks(const String &config)
+void CheckSet::performChecks(const TargetSettings &ts)
 {
     static const auto checks_dir = checker.build.swctx.getLocalStorage().storage_dir_etc / "sw" / "checks";
+
+    auto config = ts.getHash();
     auto fn = checks_dir / config / "checks.3.txt";
     auto &cs = checker.build.driver.getChecksStorage(config, fn);
 
@@ -566,6 +567,8 @@ Build Check::setupSolution(const path &f) const
     s.use_separate_target_map = true;
     s.DryRun = false;
     s.getChildren() = s.swctx.getPredefinedTargets();
+    // settings may contain more than one elements
+    s.settings.clear();
 
     auto ss = check_set->t->getTargetSettings();
 
@@ -573,9 +576,6 @@ Build Check::setupSolution(const path &f) const
     if (check_set->t->getCompilerType() == CompilerType::MSVC ||
         check_set->t->getCompilerType() == CompilerType::ClangCl)
         ss["native"]["configuration"] = "debug";
-
-    // settings may contain more than one elements
-    s.settings.clear();
 
     s.addSettings(ss);
 

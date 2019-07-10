@@ -20,7 +20,8 @@
 #include <boost/graph/graph_utility.hpp> // dumping graphs
 #include <boost/graph/graphviz.hpp>      // generating pictures
 
-namespace sw {
+namespace sw
+{
 
 // DAG
 template <class T>

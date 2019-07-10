@@ -28,7 +28,6 @@ namespace sw
 
 struct Build;
 namespace driver::cpp { struct Driver; }
-//struct Generator;
 struct Module;
 struct ModuleStorage;
 struct SwCoreContext;
@@ -161,16 +160,6 @@ struct SW_DRIVER_CPP_API Build : SimpleBuild
 {
     using Base = SimpleBuild;
 
-    // rename to preferences?
-    /*using TargetSettingsDataContainer = std::any; // or void*?
-    struct TargetSettingsData
-    {
-        std::regex r_ppath; // compiled and cached regex
-        VersionRange range;
-        // add deps, features? (target internal settings)
-        TargetSettingsDataContainer data;
-    };*/
-
     using CommandExecutionPlan = ExecutionPlan<builder::Command>;
 
     // most important
@@ -180,7 +169,6 @@ struct SW_DRIVER_CPP_API Build : SimpleBuild
 private:
     TargetSettings host_settings;
 public:
-    //std::map<String, std::vector<TargetSettingsData>> target_settings; // regex, some data
 
     //
     std::vector<TargetBaseTypePtr> dummy_children;
@@ -214,7 +202,6 @@ public:
     path getSourceDir(const LocalPackage &p) const;
     std::optional<path> getSourceDir(const Source &s, const Version &v) const;
     bool skipTarget(TargetScope Scope) const;
-    //bool exists(const PackageId &p) const;
     TargetMap &getChildren();
     const TargetMap &getChildren() const;
     path getChecksDir() const;
@@ -229,7 +216,6 @@ public:
     const ModuleSwappableData &getModuleData() const;
     PackageVersionGroupNumber getCurrentGroupNumber() const;
     const String &getCurrentModule() const;
-    //std::shared_ptr<TargetEntryPoint> getEntryPoint() const;
     void addChild(const TargetBaseTypePtr &t);
 
     // events
@@ -300,9 +286,6 @@ public:
 
 
     std::optional<path> config; // current config or empty in configless mode
-    // child solutions
-    //std::vector<Solution> solutions;
-    //Solution *current_solution = nullptr;
     bool configure = true;
     bool perform_checks = true;
     bool ide = false;
@@ -330,26 +313,13 @@ public:
     void prepare();
     bool prepareStep();
 
-    //Generator *getGenerator() { if (generator) return generator.get(); return nullptr; }
-    //const Generator *getGenerator() const { if (generator) return generator.get(); return nullptr; }
-
-    // helper
-    //Solution &addSolutionRaw();
-    //Solution &addSolution();
-    //Solution &addCustomSolution();
-
 private:
     bool remove_ide_explans = false;
-    //std::optional<const Solution *> host;
     mutable StringSet used_configs;
-    //std::shared_ptr<Generator> generator; // not unique - just allow us to copy builds
     std::vector<detail::EventCallback> events;
 
-    //std::optional<std::reference_wrapper<Solution>> addFirstSolution();
     void setupSolutionName(const path &file_or_dir);
     SharedLibraryTarget &createTarget(const Files &files);
-    //const Solution *getHostSolution();
-    //const Solution *getHostSolution() const;
 
     // basic frontends
     void load_dll(const path &dll);
