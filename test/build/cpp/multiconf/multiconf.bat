@@ -7,5 +7,4 @@ sw ^
     -mt -md ^
     build
 
-:: -platform win32,win64,arm,arm64
 :: -compiler msvc,clangcl

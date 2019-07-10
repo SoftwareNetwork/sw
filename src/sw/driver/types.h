@@ -224,23 +224,4 @@ String toString(LinkerType Type);
 String toString(LibraryType Type);
 String toString(ConfigurationType Type);
 
-//CompilerType compilerTypeFromString(const String &s);
-//ConfigurationType configurationTypeFromString(const String &s);
-
-//CompilerType compilerTypeFromStringCaseI(const String &s);
-//ConfigurationType configurationTypeFromStringCaseI(const String &s);
-
-struct Configuration : ConfigurationBase
-{
-    //
-    ConfigurationType Type = ConfigurationType::Release;
-
-    bool DebugInfo = false;
-    bool Optimized = false;
-    bool MinimalSize = false;
-    bool Analyze = false;
-    bool Sanitize = false;
-    bool Profile = false;
-};
-
 }

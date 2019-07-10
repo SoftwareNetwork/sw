@@ -35,6 +35,8 @@ private:
     TargetMap targets;
     TargetMap predefined_targets;
     TargetSettings host_settings;
+
+    void createHostSettings();
 };
 
 // public context
@@ -101,7 +103,7 @@ enum class InputType : int32_t
     Directory,
 };
 
-struct Input
+struct SW_CORE_API Input
 {
     Input(const path &, const SwContext &);
     Input(const PackageId &, const SwContext &);

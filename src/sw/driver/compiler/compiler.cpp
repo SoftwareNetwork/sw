@@ -306,11 +306,15 @@ void ClangCompiler::prepareCommand1(const ::sw::Target &t)
         cmd->working_directory = OutputFile().parent_path();
     }
 
+    // not available for msvc triple
+    // must be enabled on per target basis (when shared lib is built)?
+    if (t.getSettings().TargetOS.is(OSType::Windows))
+        PositionIndependentCode = false;
+
     add_args(*cmd, getCStdOption(CStandard(), dynamic_cast<const NativeCompiledTarget&>(t).CExtensions));
     CStandard.skip = true;
-    SW_UNIMPLEMENTED;
-    //add_args(*cmd, getCppStdOption(CPPStandard(), dynamic_cast<const NativeCompiledTarget&>(t).CPPExtensions,
-        //true, getVersion()));
+    add_args(*cmd, getCppStdOption(CPPStandard(), dynamic_cast<const NativeCompiledTarget&>(t).CPPExtensions,
+        true, getVersion(swctx, file)));
     CPPStandard.skip = true;
 
     getCommandLineOptions<ClangOptions>(cmd.get(), *this);
@@ -369,9 +373,8 @@ void ClangClCompiler::prepareCommand1(const Target &t)
 
     add_args(*cmd, getCStdOption(dynamic_cast<const NativeCompiledTarget&>(t).CVersion,
         dynamic_cast<const NativeCompiledTarget&>(t).CExtensions));
-    SW_UNIMPLEMENTED;
-    //add_args(*cmd, getCppStdOption(CPPStandard(), dynamic_cast<const NativeCompiledTarget&>(t).CPPExtensions,
-        //true, getVersion()));
+    add_args(*cmd, getCppStdOption(CPPStandard(), dynamic_cast<const NativeCompiledTarget&>(t).CPPExtensions,
+        true, getVersion(swctx, file)));
     CPPStandard.skip = true;
 
     getCommandLineOptions<VisualStudioCompilerOptions>(cmd.get(), *this);
@@ -468,9 +471,8 @@ void GNUCompiler::prepareCommand1(const Target &t)
 
     add_args(*cmd, getCStdOption(CStandard(), dynamic_cast<const NativeCompiledTarget&>(t).CExtensions));
     CStandard.skip = true;
-    SW_UNIMPLEMENTED;
-    //add_args(*cmd, getCppStdOption(CPPStandard(), dynamic_cast<const NativeCompiledTarget&>(t).CPPExtensions,
-        //false, getVersion()));
+    add_args(*cmd, getCppStdOption(CPPStandard(), dynamic_cast<const NativeCompiledTarget&>(t).CPPExtensions,
+        false, getVersion(swctx, file)));
     CPPStandard.skip = true;
 
     getCommandLineOptions<GNUOptions>(cmd.get(), *this);

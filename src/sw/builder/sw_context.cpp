@@ -12,7 +12,11 @@
 
 #include <sw/manager/storage.h>
 
+#include <boost/thread/lock_types.hpp>
+#include <boost/thread/shared_mutex.hpp>
 #include <primitives/executor.h>
+
+#include <regex>
 
 namespace sw
 {
@@ -64,6 +68,54 @@ ProgramVersionStorage &SwBuilderContext::getVersionStorage() const
 void SwBuilderContext::clearFileStorages()
 {
     file_storage.reset();
+}
+
+static Version gatherVersion(const path &program, const String &arg = "--version", const String &in_regex = {})
+{
+    static std::regex r_default("(\\d+)\\.(\\d+)\\.(\\d+)(\\.(\\d+))?");
+
+    std::regex r_in;
+    if (!in_regex.empty())
+        r_in.assign(in_regex);
+
+    auto &r = in_regex.empty() ? r_default : r_in;
+
+    Version V;
+    builder::detail::ResolvableCommand c; // for nice program resolving
+    c.setProgram(program);
+    if (!arg.empty())
+        c.arguments = { arg };
+    error_code ec;
+    c.execute(ec);
+
+    if (c.pid == -1)
+        throw SW_RUNTIME_ERROR(normalize_path(program) + ": " + ec.message());
+
+    std::smatch m;
+    if (std::regex_search(c.err.text.empty() ? c.out.text : c.err.text, m, r))
+    {
+        if (m[5].matched)
+            V = { std::stoi(m[1].str()), std::stoi(m[2].str()), std::stoi(m[3].str()), std::stoi(m[5].str()) };
+        else
+            V = { std::stoi(m[1].str()), std::stoi(m[2].str()), std::stoi(m[3].str()) };
+    }
+    return V;
+}
+
+Version getVersion(const SwBuilderContext &swctx, const path &program, const String &arg, const String &in_regex)
+{
+    auto &vs = swctx.getVersionStorage();
+    static boost::upgrade_mutex m;
+
+    boost::upgrade_lock lk(m);
+    auto i = vs.versions.find(program);
+    if (i != vs.versions.end())
+        return i->second;
+
+    boost::upgrade_to_unique_lock lk2(lk);
+
+    vs.versions[program] = gatherVersion(program, arg, in_regex);
+    return vs.versions[program];
 }
 
 }

@@ -186,10 +186,11 @@ void NativeCompiledTarget::findCompiler()
         return true;
     };
 
-    if (!add_libc(ts["native"]["stdlib"]["c"].getValue()))
-        throw SW_RUNTIME_ERROR("no libc");
+    // c++ goes first for correct include order
     if (!add_libc(ts["native"]["stdlib"]["c++"].getValue()))
         throw SW_RUNTIME_ERROR("no libc++");
+    if (!add_libc(ts["native"]["stdlib"]["c"].getValue()))
+        throw SW_RUNTIME_ERROR("no libc");
 
     struct CompilerDesc
     {
@@ -223,8 +224,44 @@ void NativeCompiledTarget::findCompiler()
                     c = std::make_shared<VisualStudioASMCompiler>(getSolution().swctx);
                 else if (v.id == "com.Microsoft.Windows.rc")
                     c = std::make_shared<RcTool>(getSolution().swctx);
+                else if (v.id == "org.LLVM.clang" || v.id == "org.LLVM.clangpp")
+                    c = std::make_shared<ClangCompiler>(getSolution().swctx);
+                else if (v.id == "org.LLVM.clangcl")
+                {
+                    auto C = std::make_shared<ClangClCompiler>(getSolution().swctx);
+                    c = C;
+                    (Program&)*c = t->getProgram();
+
+                    switch (getSettings().TargetOS.Arch)
+                    {
+                    case ArchType::x86_64:
+                        C->CommandLineOptions<ClangClOptions>::Arch = clang::ArchType::m64;
+                        break;
+                    case ArchType::x86:
+                        C->CommandLineOptions<ClangClOptions>::Arch = clang::ArchType::m32;
+                        break;
+                    case ArchType::arm:
+                    {
+                        SW_UNIMPLEMENTED;
+                        // not working atm
+                        auto c = C->createCommand(getSolution().swctx);
+                        c->push_back("-target=arm-pc-windows-msvc");
+                    }
+                        break;
+                    case ArchType::aarch64:
+                    {
+                        SW_UNIMPLEMENTED;
+                        // not working atm
+                        auto c = C->createCommand(getSolution().swctx);
+                        c->push_back("-target=aarch64-pc-windows-msvc");
+                    }
+                        break;
+                    default:
+                        throw SW_RUNTIME_ERROR("Unknown arch");
+                    }
+                }
                 else
-                    throw SW_RUNTIME_ERROR("Unknown compiler");
+                    throw SW_RUNTIME_ERROR("Unknown compiler: " + v.id.toString());
                 (Program&)*c = t->getProgram();
             }
             for (auto &e : v.exts)
@@ -244,16 +281,21 @@ void NativeCompiledTarget::findCompiler()
             auto r = activate_one(v);
             if (r)
             {
-                if (v.id == "com.Microsoft.VisualStudio.VC.cl")
+                if (0);
+                else if (v.id == "com.Microsoft.VisualStudio.VC.cl")
                     ct = CompilerType::MSVC;
+                else if (v.id == "org.LLVM.clang" || v.id == "org.LLVM.clangpp")
+                    ct = CompilerType::Clang;
+                else if (v.id == "org.LLVM.clangcl")
+                    ct = CompilerType::ClangCl;
                 else
-                    throw SW_RUNTIME_ERROR("Unknown compiler");
+                    throw SW_RUNTIME_ERROR("Unknown compiler: " + v.id.toString());
             }
             return r;
         });
     };
 
-    static const CompilerVector c_cpp =
+    const CompilerVector c_cpp =
     {
         {{ts["native"]["program"]["cpp"].getValue()}, getCppSourceFileExtensions()},
         {{ts["native"]["program"]["c"].getValue()}, { ".c" }},
@@ -265,7 +307,7 @@ void NativeCompiledTarget::findCompiler()
     // .asm
     if (ts["native"]["program"]["asm"])
     {
-        static const CompilerDesc rc
+        const CompilerDesc rc
         {
             ts["native"]["program"]["asm"].getValue(), { ".asm" },
         };

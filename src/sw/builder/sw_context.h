@@ -48,4 +48,9 @@ private:
     mutable std::mutex csm;
 };
 
+SW_BUILDER_API
+Version getVersion(
+    const SwBuilderContext &swctx, const path &program,
+    const String &arg = "--version", const String &in_regex = {});
+
 } // namespace sw

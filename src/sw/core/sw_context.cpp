@@ -30,6 +30,15 @@ SwCoreContext::SwCoreContext(const path &local_storage_root_dir)
     detectCompilers(*this);
     predefined_targets = targets; // save
 
+    createHostSettings();
+}
+
+SwCoreContext::~SwCoreContext()
+{
+}
+
+void SwCoreContext::createHostSettings()
+{
     host_settings = toTargetSettings(getHostOs());
 
     auto &ts = host_settings;
@@ -41,7 +50,6 @@ SwCoreContext::SwCoreContext(const path &local_storage_root_dir)
         ts["native"]["stdlib"]["c"] = "com.Microsoft.Windows.SDK.ucrt";
         ts["native"]["stdlib"]["c++"] = "com.Microsoft.VisualStudio.VC.libcpp";
 
-        //if (!getTargets()["com.Microsoft.VisualStudio.VC.cl"].empty_releases())
         if (!getTargets()["com.Microsoft.VisualStudio.VC.cl"].empty())
         {
             ts["native"]["program"]["c"] = "com.Microsoft.VisualStudio.VC.cl";
@@ -51,10 +59,6 @@ SwCoreContext::SwCoreContext(const path &local_storage_root_dir)
             ts["native"]["program"]["link"] = "com.Microsoft.VisualStudio.VC.link";
         }
     }
-}
-
-SwCoreContext::~SwCoreContext()
-{
 }
 
 const TargetSettings &SwCoreContext::getHostSettings() const

@@ -85,7 +85,6 @@ String toString(InheritanceType Type);
 struct GroupSettings
 {
     InheritanceType Inheritance = InheritanceType::Private;
-    //ConfigurationType Configuration = ConfigurationType::Release;
     bool has_same_parent = false;
     bool merge_to_self = true;
     bool include_directories_only = false;

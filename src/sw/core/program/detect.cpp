@@ -12,8 +12,6 @@
 #include <sw/builder/program_version_storage.h>
 
 #include <boost/algorithm/string.hpp>
-#include <boost/thread/shared_mutex.hpp>
-#include <boost/thread/lock_types.hpp>
 
 #include <regex>
 #include <string>
@@ -74,54 +72,6 @@ void detectFortranCompilers(SwCoreContext &s);
 void detectJavaCompilers(SwCoreContext &s);
 void detectKotlinCompilers(SwCoreContext &s);
 void detectDCompilers(SwCoreContext &s);
-
-static Version gatherVersion(const path &program, const String &arg = "--version", const String &in_regex = {})
-{
-    static std::regex r_default("(\\d+)\\.(\\d+)\\.(\\d+)(\\.(\\d+))?");
-
-    std::regex r_in;
-    if (!in_regex.empty())
-        r_in.assign(in_regex);
-
-    auto &r = in_regex.empty() ? r_default : r_in;
-
-    Version V;
-    builder::detail::ResolvableCommand c; // for nice program resolving
-    c.setProgram(program);
-    if (!arg.empty())
-        c.arguments = { arg };
-    error_code ec;
-    c.execute(ec);
-
-    if (c.pid == -1)
-        throw SW_RUNTIME_ERROR(normalize_path(program) + ": " + ec.message());
-
-    std::smatch m;
-    if (std::regex_search(c.err.text.empty() ? c.out.text : c.err.text, m, r))
-    {
-        if (m[5].matched)
-            V = { std::stoi(m[1].str()), std::stoi(m[2].str()), std::stoi(m[3].str()), std::stoi(m[5].str()) };
-        else
-            V = { std::stoi(m[1].str()), std::stoi(m[2].str()), std::stoi(m[3].str()) };
-    }
-    return V;
-}
-
-static Version getVersion(SwCoreContext &swctx, const path &program, const String &arg = "--version", const String &in_regex = {})
-{
-    auto &vs = swctx.getVersionStorage();
-    static boost::upgrade_mutex m;
-
-    boost::upgrade_lock lk(m);
-    auto i = vs.versions.find(program);
-    if (i != vs.versions.end())
-        return i->second;
-
-    boost::upgrade_to_unique_lock lk2(lk);
-
-    vs.versions[program] = gatherVersion(program, arg, in_regex);
-    return vs.versions[program];
-}
 
 bool isCppHeaderFileExtension(const String &e)
 {
@@ -437,12 +387,8 @@ void detectCSharpCompilers(SwCoreContext &s)
     }*/
 }
 
-void detectWindowsCompilers(SwCoreContext &s)
+void detectMsvc(SwCoreContext &s)
 {
-    // we need ifdef because of cmVSSetupAPIHelper
-    // but what if we're on Wine?
-    // reconsider later
-
     // https://docs.microsoft.com/en-us/cpp/c-runtime-library/crt-library-features?view=vs-2019
 
     auto &instances = gatherVSInstances(s);
@@ -583,102 +529,6 @@ void detectWindowsCompilers(SwCoreContext &s)
                     }
                 }
             }
-
-            continue;
-
-            // clang family
-
-            // create programs
-            const path base_llvm_path = path("c:") / "Program Files" / "LLVM";
-            const path bin_llvm_path = base_llvm_path / "bin";
-
-            // clang-cl
-
-            // C, C++
-            /*{
-                auto exts = getCppSourceFileExtensions();
-                exts.insert(".c");
-
-                auto C = std::make_shared<ClangClCompiler>(s.swctx);
-                C->Type = CompilerType::ClangCl;
-                C->file = bin_llvm_path / "clang-cl.exe";
-                //C->file = base_llvm_path / "msbuild-bin" / "cl.exe";
-                auto COpts2 = COpts;
-                // clangcl is able to find VC STL itself
-                // also we could provide command line arg -fms-compat...=19.16 19.20 or smth like that
-                //COpts2.System.IncludeDirectories.erase(root / "include");
-                //COpts2.System.IncludeDirectories.erase(root / "ATLMFC\\include");
-                COpts2.System.IncludeDirectories.insert(bin_llvm_path / "lib" / "clang" / C->getVersion().toString() / "include");
-                COpts2.System.CompileOptions.push_back("-Wno-everything");
-                *C = COpts2;
-                //C->input_extensions = exts;
-                addProgram(s, "org.LLVM.clangcl", C);
-
-                switch (target_arch)
-                {
-                case ArchType::x86_64:
-                    C->CommandLineOptions<ClangClOptions>::Arch = clang::ArchType::m64;
-                    break;
-                case ArchType::x86:
-                    C->CommandLineOptions<ClangClOptions>::Arch = clang::ArchType::m32;
-                    break;
-                default:
-                    break;
-                    //throw SW_RUNTIME_ERROR("Unknown arch");
-                }
-            }
-
-            // clang
-
-            auto Linker = std::make_shared<VisualStudioLinker>();
-            Linker->Type = LinkerType::LLD;
-            Linker->file = bin_llvm_path / "lld-link.exe";
-            Linker->vs_version = VSVersion;
-            *Linker = LOpts;
-
-            auto Librarian = std::make_shared<VisualStudioLibrarian>();
-            Librarian->Type = LinkerType::LLD;
-            Librarian->file = bin_llvm_path / "llvm-ar.exe"; // ?
-            Librarian->vs_version = VSVersion;
-            *Librarian = LOpts;
-
-            // C
-            {
-                auto C = std::make_shared<ClangCompiler>(s.swctx);
-                C->Type = CompilerType::Clang;
-                C->file = bin_llvm_path / "clang.exe";
-                // not available for msvc triple
-                // must be enabled on per target basis (when shared lib is built)?
-                C->PositionIndependentCode = false;
-                auto COpts2 = COpts;
-                // is it able to find VC STL itself?
-                //COpts2.System.IncludeDirectories.erase(root / "include");
-                //COpts2.System.IncludeDirectories.erase(root / "ATLMFC\\include");
-                COpts2.System.IncludeDirectories.insert(base_llvm_path / "lib" / "clang" / C->getVersion().toString() / "include");
-                COpts2.System.CompileOptions.push_back("-Wno-everything");
-                *C = COpts2;
-                //C->input_extensions = { ".c", };
-                addProgram(s, "org.LLVM.clang", C);
-            }
-
-            // C++
-            {
-                auto C = std::make_shared<ClangCompiler>(s.swctx);
-                C->Type = CompilerType::Clang;
-                C->file = bin_llvm_path / "clang++.exe";
-                // not available for msvc triple
-                // must be enabled on per target basis (when shared lib is built)?
-                C->PositionIndependentCode = false;
-                auto COpts2 = COpts;
-                // is it able to find VC STL itself?
-                //COpts2.System.IncludeDirectories.erase(root / "include");
-                //COpts2.System.IncludeDirectories.erase(root / "ATLMFC\\include");
-                COpts2.System.IncludeDirectories.insert(base_llvm_path / "lib" / "clang" / C->getVersion().toString() / "include");
-                COpts2.System.CompileOptions.push_back("-Wno-everything");
-                *C = COpts2;
-                //C->input_extensions = getCppSourceFileExtensions();
-                addProgram(s, "org.LLVM.clangpp", C);
-            }*/
         }
 
         // rename to libc? to crt?
@@ -711,8 +561,121 @@ void detectWindowsCompilers(SwCoreContext &s)
             rc.ts["os"]["kernel"] = ts1["os"]["kernel"];
         }
         //for (auto &idir : COpts.System.IncludeDirectories)
-            //C->system_idirs.push_back(idir);
+        //C->system_idirs.push_back(idir);
     }
+}
+
+void detectWindowsClang(SwCoreContext &s)
+{
+    // create programs
+    const path base_llvm_path = path("c:") / "Program Files" / "LLVM";
+    const path bin_llvm_path = base_llvm_path / "bin";
+
+    // clang-cl, move to msvc?
+
+    // C, C++
+    {
+        auto p = std::make_shared<SimpleProgram>(s);
+        p->file = bin_llvm_path / "clang-cl.exe";
+        //C->file = base_llvm_path / "msbuild-bin" / "cl.exe";
+        // clangcl is able to find VC STL itself
+        // also we could provide command line arg -fms-compat...=19.16 19.20 or smth like that
+        //COpts2.System.IncludeDirectories.insert(bin_llvm_path / "lib" / "clang" / C->getVersion().toString() / "include");
+        //COpts2.System.CompileOptions.push_back("-Wno-everything");
+        if (!fs::exists(p->file))
+        {
+            auto f = resolveExecutable("clang-cl");
+            if (fs::exists(f))
+                p->file = f;
+        }
+        if (fs::exists(p->file))
+        {
+            Version v = getVersion(s, p->file);
+            auto &c = addProgram(s, PackageId("org.LLVM.clangcl", v), p);
+        }
+    }
+
+    // clang
+
+    // link
+    {
+        auto p = std::make_shared<SimpleProgram>(s);
+        p->file = bin_llvm_path / "lld-link.exe";
+        if (!fs::exists(p->file))
+        {
+            auto f = resolveExecutable("lld-link");
+            if (fs::exists(f))
+                p->file = f;
+        }
+        if (fs::exists(p->file))
+        {
+            Version v = getVersion(s, p->file);
+            auto &c = addProgram(s, PackageId("org.LLVM.lld", v), p);
+        }
+    }
+
+    // ar
+    {
+        auto p = std::make_shared<SimpleProgram>(s);
+        p->file = bin_llvm_path / "llvm-ar.exe";
+        if (!fs::exists(p->file))
+        {
+            auto f = resolveExecutable("llvm-ar");
+            if (fs::exists(f))
+                p->file = f;
+        }
+        if (fs::exists(p->file))
+        {
+            Version v = getVersion(s, p->file);
+            auto &c = addProgram(s, PackageId("org.LLVM.ar", v), p);
+        }
+    }
+
+    // C
+    {
+        auto p = std::make_shared<SimpleProgram>(s);
+        p->file = bin_llvm_path / "clang.exe";
+        if (!fs::exists(p->file))
+        {
+            auto f = resolveExecutable("clang");
+            if (fs::exists(f))
+                p->file = f;
+        }
+        if (fs::exists(p->file))
+        {
+            Version v = getVersion(s, p->file);
+            auto &c = addProgram(s, PackageId("org.LLVM.clang", v), p);
+        }
+        // is it able to find VC STL itself?
+        //COpts2.System.IncludeDirectories.insert(base_llvm_path / "lib" / "clang" / C->getVersion().toString() / "include");
+        //COpts2.System.CompileOptions.push_back("-Wno-everything");
+    }
+
+    // C++
+    {
+        auto p = std::make_shared<SimpleProgram>(s);
+        p->file = bin_llvm_path / "clang++.exe";
+        if (!fs::exists(p->file))
+        {
+            auto f = resolveExecutable("clang++");
+            if (fs::exists(f))
+                p->file = f;
+        }
+        if (fs::exists(p->file))
+        {
+            Version v = getVersion(s, p->file);
+            auto &c = addProgram(s, PackageId("org.LLVM.clangpp", v), p);
+        }
+        // is it able to find VC STL itself?
+        //COpts2.System.IncludeDirectories.insert(base_llvm_path / "lib" / "clang" / C->getVersion().toString() / "include");
+        //COpts2.System.CompileOptions.push_back("-Wno-everything");
+    }
+}
+
+void detectWindowsCompilers(SwCoreContext &s)
+{
+    detectMsvc(s);
+    detectWindowsClang(s);
 
     return;
 

@@ -99,21 +99,32 @@ static sw::TargetSettings compilerTypeFromStringCaseI(const String &in)
     sw::TargetSettings ts;
 
     if (0);
-    // exact
-    /*else if (boost::iequals(compiler, "clang"))
-        return CompilerType::Clang;
-    else if (boost::iequals(compiler, "clangcl") || boost::iequals(compiler, "clang-cl"))
-        return CompilerType::ClangCl;
+    /*
     // starts with
     else if (boost::istarts_with(compiler, "appleclang") || boost::iequals(compiler, "apple-clang"))
         return CompilerType::AppleClang;
     else if (boost::istarts_with(compiler, "gnu") || boost::iequals(compiler, "gcc") || boost::iequals(compiler, "g++"))
         return CompilerType::GNU;*/
+    else if (compiler == "clang")
+    {
+        ts["native"]["program"]["c"] = "org.LLVM.clang";
+        ts["native"]["program"]["cpp"] = "org.LLVM.clangpp";
+    }
+    else if (compiler == "clangcl" || compiler == "clang-cl")
+    {
+        ts["native"]["program"]["c"] = "org.LLVM.clangcl";
+        ts["native"]["program"]["cpp"] = "org.LLVM.clangcl";
+    }
     else if (compiler == "msvc" || compiler == "vs")
     {
         ts["native"]["program"]["c"] = "com.Microsoft.VisualStudio.VC.cl";
         ts["native"]["program"]["cpp"] = "com.Microsoft.VisualStudio.VC.cl";
         ts["native"]["program"]["asm"] = "com.Microsoft.VisualStudio.VC.ml";
+    }
+    else
+    {
+        ts["native"]["program"]["c"] = compiler;
+        ts["native"]["program"]["cpp"] = compiler;
     }
     return ts;
 }

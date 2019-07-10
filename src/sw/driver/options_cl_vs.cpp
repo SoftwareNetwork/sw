@@ -332,6 +332,8 @@ DECLARE_OPTION_SPECIALIZATION(clang::ArchType)
     case clang::ArchType::m64:
         s.push_back("-m64");
         break;
+    default:
+        SW_UNIMPLEMENTED;
     }
     return { s };
 }

@@ -25,12 +25,9 @@
 namespace sw
 {
 
-struct Build;
 struct PackageId;
 struct SwContext;
 
-std::optional<String> read_config(const path &file_or_dir);
-std::unique_ptr<Build> load(const SwContext &swctx, const path &file_or_dir);
 void run(const SwContext &swctx, const PackageId &package);
 
 struct FetchOptions : SourceDownloadOptions
