@@ -351,8 +351,6 @@ private:
     //const Solution *getHostSolution();
     //const Solution *getHostSolution() const;
 
-    void generateBuildSystem();
-
     // basic frontends
     void load_dll(const path &dll);
     void load_configless(const path &file_or_dir);

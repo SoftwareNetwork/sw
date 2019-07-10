@@ -39,3 +39,40 @@
 
     return r;
 }*/
+
+namespace sw
+{
+
+std::optional<Version> VersionRange::getMinSatisfyingVersion(const VersionSet &s) const
+{
+    // add policies?
+
+    if (!s.empty_releases())
+    {
+        for (auto &v : s.releases())
+        {
+            if (hasVersion(v))
+                return v;
+        }
+    }
+
+    return Base::getMinSatisfyingVersion(s);
+}
+
+std::optional<Version> VersionRange::getMaxSatisfyingVersion(const VersionSet &s) const
+{
+    // add policies?
+
+    if (!s.empty_releases())
+    {
+        for (auto i = s.rbegin_releases(); i != s.rend_releases(); ++i)
+        {
+            if (hasVersion(*i))
+                return *i;
+        }
+    }
+
+    return Base::getMaxSatisfyingVersion(s);
+}
+
+}

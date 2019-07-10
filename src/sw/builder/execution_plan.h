@@ -322,59 +322,6 @@ struct ExecutionPlan
             cmds.insert(c.get());
 
         prepare(cmds);
-
-        // detect and eliminate duplicate commands
-        if constexpr (std::is_same_v<T, sw::builder::Command>)
-        {
-            std::unordered_map<size_t, Vec> dups;
-            for (const auto &c : cmds)
-            {
-                auto k = std::hash<T>()(*c);
-                dups[k].push_back(c);
-            }
-
-            // create replacements
-            std::unordered_map<PtrT /*dup*/, PtrT /*repl*/> repls;
-            for (auto &[h, v] : dups)
-            {
-                if (v.size() < 2)
-                    continue;
-                // we take back command as its easier to take
-                auto repl = v.back();
-                v.pop_back();
-                for (auto &c : v)
-                {
-                    repls[c] = repl;
-                    // remove dups from cmds
-                    cmds.erase(c);
-                }
-            }
-
-            if (!repls.empty())
-            {
-                // go through all command and its deps and do replacements
-                for (auto &c : cmds)
-                {
-                    USet to_rm, to_add;
-                    for (auto &d : c->dependencies)
-                    {
-                        auto i = repls.find(d.get());
-                        if (i == repls.end())
-                            continue;
-                        to_rm.insert(d.get());
-                        to_add.insert(i->second);
-                    }
-                    for (auto &rm : to_rm)
-                        c->dependencies.erase(rm->shared_from_this());
-                    for (auto &add : to_add)
-                        c->dependencies.insert(add->shared_from_this());
-                }
-            }
-
-            // we cannot remove outdated before execution
-            // because outdated property is changed while executing other commands
-        }
-
         return create(cmds);
     }
 

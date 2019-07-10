@@ -9,11 +9,15 @@
 #include <nlohmann/json.hpp>
 #include <primitives/executor.h>
 #include <primitives/pack.h>
+#include <primitives/sw/cl.h>
 
 #include <regex>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "context");
+
+cl::opt<int> skip_errors("k", cl::desc("Skip errors"));
+static cl::opt<bool> time_trace("time-trace", cl::desc("Record chrome time trace events"));
 
 namespace sw
 {
@@ -274,14 +278,14 @@ void SwContext::execute(CommandExecutionPlan &p) const
     for (int i = 0; i < 1000; i++)
     e.push([] {updateConcurrentContext(); });*/
 
-    //p.skip_errors = skip_errors.getValue();
+    p.skip_errors = skip_errors.getValue();
     p.execute(e);
     /*auto t2 = t.getTimeFloat();
     if (!silent && t2 > 0.15)
         LOG_INFO(logger, "Build time: " << t2 << " s.");*/
 
     // produce chrome tracing log
-    /*if (time_trace)
+    if (time_trace)
     {
         // calculate minimal time
         auto min = decltype (builder::Command::t_begin)::clock::now();
@@ -325,8 +329,8 @@ void SwContext::execute(CommandExecutionPlan &p) const
             events.push_back(e);
         }
         trace["traceEvents"] = events;
-        write_file(getServiceDir() / "time_trace.json", trace.dump(2));
-    }*/
+        write_file(source_dir / SW_BINARY_DIR / "misc" / "time_trace.json", trace.dump(2));
+    }
 
     // prevent memory leaks (high mem usage)
     /*updateConcurrentContext();

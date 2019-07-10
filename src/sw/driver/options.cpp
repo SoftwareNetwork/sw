@@ -505,6 +505,13 @@ DependencyPtr NativeLinkerOptions::operator+(const PackageId &pkg)
     return d;
 }
 
+DependencyPtr NativeLinkerOptions::operator+(const UnresolvedPackage &pkg)
+{
+    auto d = std::make_shared<Dependency>(pkg);
+    add(d);
+    return d;
+}
+
 void NativeLinkerOptions::add(const Target &t)
 {
     add(std::make_shared<Dependency>(t));

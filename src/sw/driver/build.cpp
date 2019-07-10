@@ -55,8 +55,6 @@ static cl::opt<int> config_jobs("jc", cl::desc("Number of config jobs"));
 static cl::opt<bool> cl_show_output("show-output");
 
 static cl::opt<bool> print_graph("print-graph", cl::desc("Print file with build graph"));
-cl::opt<int> skip_errors("k", cl::desc("Skip errors"));
-static cl::opt<bool> time_trace("time-trace", cl::desc("Record chrome time trace events"));
 
 bool gVerbose;
 bool gWithTesting;
@@ -1507,12 +1505,6 @@ void Build::execute()
             save(fn, p);
     }
 
-    /*if (getGenerator())
-    {
-        generateBuildSystem();
-        return;
-    }*/
-
     prepare();
     auto p = getExecutionPlan();
     execute(p);
@@ -1581,59 +1573,17 @@ void Build::execute(CommandExecutionPlan &p) const
         ex = std::make_unique<Executor>(execute_jobs);
     auto &e = execute_jobs > 0 ? *ex : getExecutor();
 
-    p.skip_errors = skip_errors.getValue();
+    //p.skip_errors = skip_errors.getValue();
     p.execute(e);
     auto t2 = t.getTimeFloat();
     if (!silent && t2 > 0.15)
         LOG_INFO(logger, "Build time: " << t2 << " s.");
 
     // produce chrome tracing log
-    if (time_trace)
+    /*if (time_trace)
     {
-        // calculate minimal time
-        auto min = decltype (builder::Command::t_begin)::clock::now();
-        for (auto &c : p.commands)
-        {
-            if (c->t_begin.time_since_epoch().count() == 0)
-                continue;
-            min = std::min(c->t_begin, min);
-        }
-
-        auto tid_to_ll = [](auto &id)
-        {
-            std::ostringstream ss;
-            ss << id;
-            return ss.str();
-        };
-
-        nlohmann::json trace;
-        nlohmann::json events;
-        for (auto &c : p.commands)
-        {
-            if (c->t_begin.time_since_epoch().count() == 0)
-                continue;
-
-            nlohmann::json b;
-            b["name"] = c->getName();
-            b["cat"] = "BUILD";
-            b["pid"] = 1;
-            b["tid"] = tid_to_ll(c->tid);
-            b["ts"] = std::chrono::duration_cast<std::chrono::microseconds>(c->t_begin - min).count();
-            b["ph"] = "B";
-            events.push_back(b);
-
-            nlohmann::json e;
-            e["name"] = c->getName();
-            e["cat"] = "BUILD";
-            e["pid"] = 1;
-            e["tid"] = tid_to_ll(c->tid);
-            e["ts"] = std::chrono::duration_cast<std::chrono::microseconds>(c->t_end - min).count();
-            e["ph"] = "E";
-            events.push_back(e);
-        }
-        trace["traceEvents"] = events;
-        write_file(getServiceDir() / "time_trace.json", trace.dump(2));
-    }
+        // ...
+    }*/
 }
 
 Commands Build::getCommands() const
@@ -1855,24 +1805,6 @@ void Build::load_configless(const path &file_or_dir)
             }
         }
     }
-}
-
-void Build::generateBuildSystem()
-{
-    SW_UNIMPLEMENTED;
-
-    //if (!getGenerator())
-        //return;
-
-    getCommands();
-    getExecutionPlan(); // also prepare commands
-
-    for (auto &s : settings)
-    {
-        //current_settings = &s;
-        fs::remove_all(getExecutionPlanFilename());
-    }
-    //getGenerator()->generate(*this);
 }
 
 static const auto ide_fs = "ide_vs";

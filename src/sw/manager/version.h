@@ -8,10 +8,7 @@
 
 #include <sw/support/hash.h>
 
-#define LOCAL_BRANCH_NAME "local"
-
-#include <primitives/version.h>
-#include <primitives/version_helpers.h>
+#include <primitives/version_range.h>
 
 namespace sw
 {
@@ -32,18 +29,15 @@ using primitives::version::VersionSet;
 using primitives::version::VersionMap;
 using primitives::version::UnorderedVersionMap;
 
-#pragma warning(push)
-#pragma warning(disable:4275) // warning C4275: non dll-interface struct 'primitives::Command' used as base for dll-interface struct 'sw::builder::Command'
-
 struct SW_MANAGER_API VersionRange : primitives::version::VersionRange
 {
 #pragma warning(pop)
-    using base = primitives::version::VersionRange;
+    using Base = primitives::version::VersionRange;
 
-    using base::base;
+    using Base::Base;
 
-    using base::getMinSatisfyingVersion;
-    using base::getMaxSatisfyingVersion;
+    std::optional<Version> getMinSatisfyingVersion(const VersionSet &) const;
+    std::optional<Version> getMaxSatisfyingVersion(const VersionSet &) const;
 };
 
 }

@@ -173,24 +173,9 @@ void NativeCompiledTarget::setOutputDir(const path &dir)
 
 void NativeCompiledTarget::findCompiler()
 {
-    // libc
-    auto add_libc = [this](const PackagePath &pp)
-    {
-        auto &cld = getSolution().getChildren();
-        auto i = cld.find(pp, getTargetSettings());
-        if (!i)
-            return false;
-        if (!(*i).second)
-            return false;
-        (*this + *((*i).second))->sw_pushed = true;
-        return true;
-    };
-
     // c++ goes first for correct include order
-    if (!add_libc(ts["native"]["stdlib"]["c++"].getValue()))
-        throw SW_RUNTIME_ERROR("no libc++");
-    if (!add_libc(ts["native"]["stdlib"]["c"].getValue()))
-        throw SW_RUNTIME_ERROR("no libc");
+    (*this + UnresolvedPackage(ts["native"]["stdlib"]["c++"].getValue()))->sw_pushed = true;
+    (*this + UnresolvedPackage(ts["native"]["stdlib"]["c"].getValue()))->sw_pushed = true;
 
     struct CompilerDesc
     {
