@@ -339,6 +339,7 @@ void Command::prepare()
     // late add real generator
     for (auto &p : outputs)
     {
+        // there must be no error, because previous generator == this
         File(p, swctx.getFileStorage()).setGenerator(shared_from_this(), false);
     }
 

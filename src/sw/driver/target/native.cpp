@@ -409,6 +409,9 @@ void NativeCompiledTarget::findCompiler()
         throw SW_RUNTIME_ERROR("Try to add more librarians");
     if (!activate_lib_link_or_throw(ts["native"]["program"]["link"].getValue(), true))
         throw SW_RUNTIME_ERROR("Try to add more linkers");
+
+    Librarian->Extension = getSettings().TargetOS.getStaticLibraryExtension();
+    Linker->Extension = getSettings().TargetOS.getSharedLibraryExtension();
 }
 
 bool NativeCompiledTarget::init()
@@ -2473,7 +2476,6 @@ bool NativeCompiledTarget::prepare()
                             continue;
 
                         circular_dependency = true;
-                        L->ImportLibrary.clear();
                         break;
                     }
                 }
@@ -2616,7 +2618,6 @@ void NativeCompiledTarget::processCircular(Files &obj)
         stream << std::setfill('0') << std::setw(symbol_len_len) << std::hex << sz;
         name = stream.str() + name;
         name.resize(symbol_len_max, 's');
-        link_exe->ImportLibrary.clear();
 
         path out;
         {
@@ -2638,8 +2639,9 @@ void NativeCompiledTarget::processCircular(Files &obj)
         outputfile = out;
     }
 
-    lib_exe->CreateImportLibrary = true;
+    lib_exe->CreateImportLibrary = true; // set def option = create .exp(ort) file
     lib_exe->DllName = name;
+    link_exe->ImportLibrary.clear(); // clear implib
 
     if (!link_exe->ModuleDefinitionFile)
     {
@@ -2790,8 +2792,6 @@ void NativeCompiledTarget::initLibrary(LibraryType Type)
         return;
     if (Type == LibraryType::Shared)
     {
-        // probably setting dll must affect .dll extension automatically
-        Linker->Extension = getSettings().TargetOS.getSharedLibraryExtension();
         if (Linker->Type == LinkerType::MSVC)
         {
             // set machine to target os arch
@@ -2809,7 +2809,6 @@ void NativeCompiledTarget::initLibrary(LibraryType Type)
     else
     {
         SelectedTool = Librarian.get();
-        Librarian->Extension = getSettings().TargetOS.getStaticLibraryExtension();
     }
 }
 

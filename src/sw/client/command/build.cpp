@@ -315,7 +315,6 @@ SUBCOMMAND_DECL2(build)
         auto &i = swctx.addInput(a);
         for (auto &s : create_settings(swctx))
             i.addSettings(s);
-        swctx.load();
     }
     swctx.build();
 }
