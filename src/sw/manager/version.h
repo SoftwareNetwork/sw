@@ -10,8 +10,7 @@
 
 #define LOCAL_BRANCH_NAME "local"
 
-#include <primitives/version.h>
-#include <primitives/version_helpers.h>
+#include <primitives/version_range.h>
 
 namespace sw
 {
@@ -38,12 +37,12 @@ using primitives::version::UnorderedVersionMap;
 struct SW_MANAGER_API VersionRange : primitives::version::VersionRange
 {
 #pragma warning(pop)
-    using base = primitives::version::VersionRange;
+    using Base = primitives::version::VersionRange;
 
-    using base::base;
+    using Base::Base;
 
-    using base::getMinSatisfyingVersion;
-    using base::getMaxSatisfyingVersion;
+    std::optional<Version> getMinSatisfyingVersion(const VersionSet &) const;
+    std::optional<Version> getMaxSatisfyingVersion(const VersionSet &) const;
 };
 
 }
