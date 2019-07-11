@@ -433,7 +433,7 @@ int sw_main(const Strings &args)
     {
         LOG_INFO(logger, "Delete override for sdir " + delete_overridden_package_dir.u8string());
 
-        auto d = fs::canonical(delete_overridden_package_dir);
+        auto d = primitives::filesystem::canonical(delete_overridden_package_dir);
 
         auto swctx = createSwContext();
         std::set<sw::LocalPackage> pkgs;

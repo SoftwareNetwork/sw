@@ -141,7 +141,7 @@ Directories::Directories(const path &p)
         auto a = fs::absolute(p);
         if (!fs::exists(a))
             fs::create_directories(a);
-        return fs::canonical(a);
+        return primitives::filesystem::canonical(a);
     };
 
     auto ap = make_canonical(p);
