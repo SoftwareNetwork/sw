@@ -15,7 +15,7 @@ namespace sw
 SwContext::SwContext(const path &local_storage_root_dir)
     : SwBuilderContext(local_storage_root_dir)
 {
-    source_dir = fs::canonical(fs::current_path());
+    source_dir = primitives::filesystem::canonical(fs::current_path());
     module_storage = std::make_unique<ModuleStorage>();
 }
 

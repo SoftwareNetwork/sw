@@ -1732,11 +1732,11 @@ path Build::build(const path &fn)
 
 void Build::setupSolutionName(const path &file_or_dir)
 {
-    config_file_or_dir = fs::canonical(file_or_dir);
+    config_file_or_dir = primitives::filesystem::canonical(file_or_dir);
 
     bool dir = fs::is_directory(file_or_dir);
     if (dir || isFrontendConfigFilename(file_or_dir))
-        ide_solution_name = fs::canonical(file_or_dir).parent_path().filename().u8string();
+        ide_solution_name = primitives::filesystem::canonical(file_or_dir).parent_path().filename().u8string();
     else
         ide_solution_name = file_or_dir.stem().u8string();
 }
