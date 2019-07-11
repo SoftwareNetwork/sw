@@ -55,6 +55,11 @@ TargetData::Base::const_iterator TargetData::find(const TargetSettings &s) const
     });
 }
 
+bool TargetData::empty() const
+{
+    return targets.empty();
+}
+
 TargetMap::~TargetMap()
 {
 }

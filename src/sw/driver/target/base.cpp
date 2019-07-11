@@ -331,16 +331,6 @@ LocalPackage &TargetBase::getPackageMutable()
     return *pkg;
 }
 
-/*Target::Target(const Target &rhs)
-    : TargetBase(rhs)
-    , ProgramStorage(rhs)
-    //, source(rhs.source ? rhs.source->clone() : nullptr)
-    , Scope(rhs.Scope)
-    , RootDirectory(rhs.RootDirectory)
-{
-    SW_UNIMPLEMENTED;
-}*/
-
 bool Target::isReal() const
 {
     return real && !sw_provided && !skip;
@@ -375,14 +365,14 @@ void Target::setSource(const Source &s)
         }
     }
 
-    if (auto sd = getSolution().getSourceDir(s, getPackage().version); sd)
+    if (auto sd = getSolution().getSourceDir(getSource(), getPackage().version); sd)
         setSourceDirectory(sd.value());
 
     auto d = getSolution().fetch_dir;
     if (d.empty() || !isLocal())
         return;
 
-    auto s2 = source->clone(); // make a copy!
+    auto s2 = getSource().clone(); // make a copy!
     s2->applyVersion(getPackage().getVersion());
     d /= s2->getHash();
 
@@ -465,7 +455,7 @@ void Target::setSettingsComparator(std::unique_ptr<SettingsComparator> cmp)
 
 Files Target::getSourceFiles() const
 {
-    SW_UNIMPLEMENTED;
+    return gatherAllFiles();
 }
 
 std::vector<IDependency *> Target::getDependencies() const

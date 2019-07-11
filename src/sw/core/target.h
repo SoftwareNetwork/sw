@@ -106,6 +106,7 @@ struct SW_CORE_API TargetData
 
     void push_back(const ITargetPtr &);
     void clear();
+    bool empty() const;
 
     auto begin() { return targets.begin(); }
     auto end() { return targets.end(); }

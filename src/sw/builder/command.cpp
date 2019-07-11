@@ -331,6 +331,8 @@ void Command::prepare()
     // program is an input!
     inputs.insert(getProgram());
 
+    // stable sort args by their positions
+
     getHashAndSave();
 
     // add more deps

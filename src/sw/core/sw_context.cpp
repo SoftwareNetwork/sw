@@ -29,7 +29,7 @@ IDriver::~IDriver() = default;
 SwCoreContext::SwCoreContext(const path &local_storage_root_dir)
     : SwBuilderContext(local_storage_root_dir)
 {
-    source_dir = fs::canonical(fs::current_path());
+    source_dir = primitives::filesystem::canonical(fs::current_path());
 
     detectCompilers(*this);
     predefined_targets = targets; // save
@@ -461,6 +461,15 @@ SwContext::CommandExecutionPlan SwContext::getExecutionPlan(const Commands &cmds
     throw SW_RUNTIME_ERROR(error);
 }
 
+String SwContext::getSpecification() const
+{
+    if (inputs.empty())
+        throw SW_RUNTIME_ERROR("Empty inputs");
+    if (inputs.size() > 1)
+        throw SW_RUNTIME_ERROR("More than 1 input");
+    return inputs.begin()->getDriver().getSpecification();
+}
+
 PackageDescriptionMap SwContext::getPackages() const
 {
     PackageDescriptionMap m;
@@ -468,6 +477,8 @@ PackageDescriptionMap SwContext::getPackages() const
     {
         // deps
         if (pkg.ppath.isAbsolute())
+            continue;
+        if (tgts.empty())
             continue;
 
         auto &t = *tgts.begin();

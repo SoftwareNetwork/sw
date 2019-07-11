@@ -63,10 +63,12 @@ struct SwBuilderContext;
 template <class T>
 struct CommandData
 {
-    std::unordered_set<std::shared_ptr<T>> dependencies;
+    using SPtr = std::shared_ptr<T>;
+
+    std::unordered_set<SPtr> dependencies;
 
     std::atomic_size_t dependencies_left = 0;
-    std::unordered_set<std::shared_ptr<T>> dependent_commands;
+    std::unordered_set<SPtr> dependent_commands;
 
     std::atomic_size_t *current_command = nullptr;
     std::atomic_size_t *total_commands = nullptr;
@@ -77,6 +79,7 @@ struct CommandData
 
     virtual void execute() = 0;
     virtual void prepare() = 0;
+    // virtual bool lessDuringExecution(const Command &rhs) const;
 
     void clear()
     {

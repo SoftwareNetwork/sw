@@ -32,8 +32,6 @@ Driver::Driver(SwCoreContext &swctx)
     : swctx(swctx)
 {
     build = std::make_unique<Build>(swctx, *this);
-
-    //source_dir = fs::canonical(fs::current_path());
     module_storage = std::make_unique<ModuleStorage>();
 }
 
@@ -74,6 +72,8 @@ bool Driver::canLoad(const Input &i) const
     return false;
 }
 
+static String spec;
+
 void Driver::load(const std::set<Input> &inputs)
 {
     PackageIdSet pkgsids;
@@ -93,17 +93,16 @@ void Driver::load(const std::set<Input> &inputs)
             build->settings.clear();
             for (auto s : i.getSettings())
             {
-                s.erase("name-prefix");
-                s.erase("dry-run");
-                s.erase("source-dir-for-source");
+                s.erase("driver");
                 build->addSettings(s);
             }
 
-            build->DryRun = (*i.getSettings().begin())["dry-run"] == "true";
+            build->DryRun = (*i.getSettings().begin())["driver"]["dry-run"] == "true";
 
-            for (auto &[h, d] : (*i.getSettings().begin())["source-dir-for-source"].getSettings())
+            for (auto &[h, d] : (*i.getSettings().begin())["driver"]["source-dir-for-source"].getSettings())
                 build->source_dirs_by_source[h] = d.getValue();
 
+            spec = read_file(p);
             build->load_spec_file(p);
             break;
         }
@@ -124,6 +123,11 @@ void Driver::execute()
 bool Driver::prepareStep()
 {
     return build->prepareStep();
+}
+
+String Driver::getSpecification() const
+{
+    return spec;
 }
 
 ChecksStorage &Driver::getChecksStorage(const String &config) const

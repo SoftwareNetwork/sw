@@ -143,18 +143,15 @@ SUBCOMMAND_DECL2(fetch)
 {
     using namespace sw;
 
-    sw::FetchOptions opts;
-    //opts.name_prefix = upload_prefix;
-    opts.dry_run = !build_after_fetch;
+    sw::SourceDownloadOptions opts;
     opts.root_dir = fs::current_path() / SW_BINARY_DIR;
     opts.ignore_existing_dirs = true;
     opts.existing_dirs_age = std::chrono::hours(1);
-    //opts.apply_version_to_source = true;
 
     auto &i = swctx.addInput(fs::current_path());
     auto ts = swctx.getHostSettings();
     //ts["name-prefix"] = "true";
-    ts["dry-run"] = "true";
+    ts["driver"]["dry-run"] = "true";
     i.addSettings(ts);
     swctx.load();
 
@@ -185,9 +182,9 @@ SUBCOMMAND_DECL2(fetch)
     download(sources, srcs, opts);
 
     i.clearSettings();
-    ts["dry-run"] = "false";
+    ts["driver"]["dry-run"] = "false";
     for (auto &[h, d] : srcs)
-        ts["source-dir-for-source"][h] = normalize_path(d);
+        ts["driver"]["source-dir-for-source"][h] = normalize_path(d);
     i.addSettings(ts);
     swctx.load();
 

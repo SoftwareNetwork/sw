@@ -44,10 +44,8 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "build");
 
-String gGenerator;
 cl::opt<bool> dry_run("n", cl::desc("Dry run"));
 static cl::opt<bool> debug_configs("debug-configs", cl::desc("Build configs in debug mode"));
-static cl::opt<bool> fetch_sources("fetch", cl::desc("Fetch files in process"));
 
 static cl::opt<int> config_jobs("jc", cl::desc("Number of config jobs"));
 
@@ -1132,11 +1130,6 @@ void Build::load_spec_file(const path &fn)
 {
     auto dll = build(fn);
 
-    if (fetch_sources)
-    {
-        fetch_dir = BinaryDir / "src";
-    }
-
     auto fe = selectFrontendByFilename(fn);
     if (!fe)
         throw SW_RUNTIME_ERROR("frontend was not found for file: " + normalize_path(fn));
@@ -1175,29 +1168,10 @@ void Build::load(const path &fn, bool configless)
     if (!fs::exists(fn))
         throw SW_RUNTIME_ERROR("path does not exists: " + normalize_path(fn));
 
-    /*if (!gGenerator.empty())
-    {
-        generator = Generator::create(gGenerator);
-
-        // set early, before prepare
-
-        // also add tests to solution
-        // protect with option
-        with_testing = true;
-    }*/
-
     if (configless)
         return load_configless(fn);
 
     auto dll = build(fn);
-
-    //fs->save(); // remove?
-    //fs->reset();
-
-    if (fetch_sources)
-    {
-        fetch_dir = BinaryDir / "src";
-    }
 
     auto fe = selectFrontendByFilename(fn);
     if (!fe)

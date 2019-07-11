@@ -106,6 +106,11 @@ const TargetSetting &TargetSetting::operator[](const TargetSettingKey &k) const
         return s;
     }
     return (*settings)[k];*/
+    if (value.index() != 3)
+    {
+        static TargetSetting s("");
+        return s;
+    }
     return std::get<TargetSettings>(value)[k];
 }
 

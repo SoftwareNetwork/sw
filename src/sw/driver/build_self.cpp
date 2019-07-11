@@ -40,6 +40,18 @@ void Build::build_self()
     for (auto &[u, p] : m)
     {
         auto &ep = epm[p.getData().group_number];
+        // may be empty when different versions is requested also
+        // example:
+        //  we request sqlite3-3.28.0
+        //  some lib requests sqlite3-*
+        //  now we got 3.28.0 and 3.29.0
+        //  for 3.29.0 we do not have ep
+        if (!ep)
+        {
+            continue;
+            // actually it's better throw here?
+            //throw SW_RUNTIME_ERROR();
+        }
         ep->module_data.known_targets.insert(p);
         getChildren()[p].setEntryPoint(ep);
     }
