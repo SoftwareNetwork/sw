@@ -32,3 +32,5 @@
 #undef SUBCOMMAND
 
 std::unique_ptr<sw::SwContext> createSwContext();
+sw::SourceDirMap fetch(sw::SwContext &swctx);
+sw::PackageDescriptionMap getPackages(const sw::SwContext &swctx, const sw::SourceDirMap &sources = {});

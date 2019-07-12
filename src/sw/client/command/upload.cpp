@@ -23,6 +23,9 @@
 #include <sw/manager/settings.h>
 #include <sw/manager/api.h>
 
+#include <nlohmann/json.hpp>
+#include <primitives/pack.h>
+
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "upload");
 
@@ -41,11 +44,84 @@ SUBCOMMAND_DECL(upload)
     cli_upload(*swctx);
 }
 
+sw::PackageDescriptionMap getPackages(const sw::SwContext &swctx, const sw::SourceDirMap &sources)
+{
+    using namespace sw;
+
+    PackageDescriptionMap m;
+    for (auto &[pkg, tgts] : swctx.getTargets())
+    {
+        // deps
+        if (pkg.ppath.isAbsolute())
+            continue;
+        if (tgts.empty())
+            continue;
+
+        auto &t = *tgts.begin();
+        if (!t->isReal())
+            continue;
+
+        nlohmann::json j;
+
+        // source, version, path
+        t->getSource().save(j["source"]);
+        j["version"] = pkg.getVersion().toString();
+        j["path"] = pkg.ppath.toString();
+
+        // find root dir
+        path rd;
+        if (!sources.empty())
+        {
+            auto src = t->getSource().clone(); // copy
+            src->applyVersion(pkg.version);
+            auto si = sources.find(src->getHash());
+            if (si == sources.end())
+                throw SW_RUNTIME_ERROR("no such source");
+            rd = si->second;
+        }
+        j["root_dir"] = normalize_path(rd);
+
+        // double check files (normalize them)
+        Files files;
+        for (auto &f : t->getSourceFiles())
+            files.insert(f.lexically_normal());
+
+        // we put files under SW_SDIR_NAME to keep space near it
+        // e.g. for patch dir or other dirs (server provided files)
+        // we might unpack to other dir, but server could push service files in neighbor dirs like gpg keys etc
+        nlohmann::json jm;
+        auto files_map1 = primitives::pack::prepare_files(files, rd.lexically_normal());
+        for (const auto &[f1, f2] : files_map1)
+        {
+            nlohmann::json jf;
+            jf["from"] = normalize_path(f1);
+            jf["to"] = normalize_path(f2);
+            j["files"].push_back(jf);
+        }
+
+        // deps
+        for (auto &d : t->getDependencies())
+        {
+            nlohmann::json jd;
+            jd["path"] = d->getUnresolvedPackage().ppath.toString();
+            jd["range"] = d->getUnresolvedPackage().range.toString();
+            j["dependencies"].push_back(jd);
+        }
+
+        auto s = j.dump();
+        m[pkg] = std::make_unique<JsonPackageDescription>(s);
+    }
+    return m;
+}
+
 SUBCOMMAND_DECL2(upload)
 {
-    cli_fetch(swctx);
+    auto sources = fetch(swctx);
+    if (sources.empty())
+        throw SW_RUNTIME_ERROR("Empty target sources");
 
-    auto m = swctx.getPackages();
+    auto m = getPackages(swctx, sources);
+
     // dbg purposes
     for (auto &[id, d] : m)
     {

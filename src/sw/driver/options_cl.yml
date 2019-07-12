@@ -334,7 +334,7 @@ types:
                 name: UTF8
                 flag: utf-8
                 type: bool
-                default: true
+                #default: true
 
             rtl:
                 name: RuntimeLibrary

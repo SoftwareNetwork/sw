@@ -1092,7 +1092,7 @@ void ProjectEmitter::printProject(
                     };
 
                     beginBlockWithConfiguration("AdditionalInputs", s);
-                    //addText(normalize_path_windows(gen->program) + ";");
+                    auto inputs = gen->inputs;
                     if (auto dc = gen->as<driver::Command *>())
                     {
                         auto d = dc->dependency.lock();
@@ -1112,15 +1112,18 @@ void ProjectEmitter::printProject(
                                     tdir /= d->getTarget().getPackage().toString() + ".exe";
                                     addText(normalize_path_windows(tdir) + ";");
 
+                                    // remove old program dep
+                                    inputs.erase(gen->getProgram());
+
                                     // fix program
-                                    gen->setProgram(tdir);
+                                    gen->setProgram(tdir); // remove this?
 
                                     deps.insert(d->getTarget().getPackage().toString());
                                 }
                             }
                         }
                     }
-                    for (auto &o : gen->inputs)
+                    for (auto &o : inputs)
                         addText(normalize_path_windows(o) + ";");
 
                     // fix commands arguments, env etc.
@@ -1137,7 +1140,13 @@ void ProjectEmitter::printProject(
                         for (auto &o : gen->outputs)
                             addText(normalize_path_windows(o) + ";");
                         if (gen->always)
-                            addText(normalize_path_windows("/sw/very/inexistent/file") + ";");
+                        {
+                            if (gen->outputs.empty())
+                                throw SW_RUNTIME_ERROR("empty outputs");
+                            path missing_file = *gen->outputs.begin();
+                            missing_file += ".missing.file";
+                            addText(normalize_path_windows(missing_file) + ";");
+                        }
                         endBlock(true);
                     }
 

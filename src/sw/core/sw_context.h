@@ -61,7 +61,6 @@ struct SW_CORE_API SwContext : SwCoreContext
     void configure();
 
     CommandExecutionPlan getExecutionPlan() const;
-    PackageDescriptionMap getPackages() const;
     String getSpecification() const;
 
     String getBuildHash() const;
