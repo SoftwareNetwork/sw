@@ -9,7 +9,6 @@
 #include "driver.h"
 #include "frontend/cppan/yaml.h"
 #include "functions.h"
-//#include "generator/generator.h"
 #include "inserts.h"
 #include "module.h"
 #include "run.h"
@@ -547,7 +546,6 @@ SharedLibraryTarget &Build::createTarget(const Files &files)
 }
 
 #define SW_DRIVER_NAME "org.sw.sw.client.driver.cpp-0.3.1"
-#define SW_DRIVER_NAME_DEP "org.sw.sw.client.driver.cpp-0.3.1"_dep
 #define SW_DRIVER_INCLUDE_DIR "src"
 
 static NativeCompiledTarget &getDriverTarget(Build &solution, NativeCompiledTarget &lib)

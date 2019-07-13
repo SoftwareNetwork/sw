@@ -10,13 +10,16 @@
 #include <sw/core/sw_context.h>
 #include <sw/core/target.h>
 
+#include <primitives/log.h>
+DECLARE_STATIC_LOGGER(logger, "build.self");
+
 // disable custom pragma warnings
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable : 4005) // warning C4005: 'XXX': macro redefinition
 #endif
 
-using TargetEntryPointMap = std::unordered_map<sw::PackageVersionGroupNumber, std::shared_ptr<sw::NativeBuiltinTargetEntryPoint>>;
+using TargetEntryPointMap = std::unordered_map<sw::PackageId, std::shared_ptr<sw::NativeBuiltinTargetEntryPoint>>;
 
 #include <build_self.generated.h>
 
@@ -34,9 +37,23 @@ void Build::build_self()
     //static UnresolvedPackages store; // tmp store
     //auto m = s.swctx.install(required_packages, store);
 
-    auto epm = build_self_generated(*this);
+    // create entry points by package
+    auto epm1 = build_self_generated(*this);
 
+    //
     auto m = swctx.install(required_packages);
+
+    // determine actual group numbers
+    // on dev system overridden gn may be different from actual (remote) one
+    std::unordered_map<sw::PackageVersionGroupNumber, std::shared_ptr<sw::NativeBuiltinTargetEntryPoint>> epm;
+    for (auto &[p, ep] : epm1)
+    {
+        auto gn = m.find(p)->second.getData().group_number;
+        epm[gn] = ep;
+        ep->module_data.current_gn = gn;
+    }
+
+    // spread entry points to other targets in group
     for (auto &[u, p] : m)
     {
         auto &ep = epm[p.getData().group_number];
@@ -48,6 +65,7 @@ void Build::build_self()
         //  for 3.29.0 we do not have ep
         if (!ep)
         {
+            LOG_WARN(logger, "Skipping package: " << p.toString());
             continue;
             // actually it's better throw here?
             //throw SW_RUNTIME_ERROR();
