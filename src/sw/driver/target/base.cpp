@@ -472,7 +472,14 @@ void Target::setSettingsComparator(std::unique_ptr<SettingsComparator> cmp)
 
 Files Target::getSourceFiles() const
 {
-    return gatherAllFiles();
+    Files files;
+    for (auto &f : gatherAllFiles())
+    {
+        if (File(f, getFs()).isGeneratedAtAll())
+            continue;
+        files.insert(f);
+    }
+    return files;
 }
 
 std::vector<IDependency *> Target::getDependencies() const
