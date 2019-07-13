@@ -63,6 +63,8 @@ struct SW_CORE_API TargetSettings
     auto begin() const { return settings.begin(); }
     auto end() const { return settings.end(); }
 
+    bool empty() const;
+
 private:
     std::map<TargetSettingKey, TargetSetting> settings;
 

@@ -301,4 +301,9 @@ void TargetSettings::erase(const TargetSettingKey &k)
     settings.erase(k);
 }
 
+bool TargetSettings::empty() const
+{
+    return settings.empty();
+}
+
 } // namespace sw

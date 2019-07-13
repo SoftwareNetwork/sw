@@ -58,7 +58,22 @@ struct SW_DRIVER_CPP_API SettingsComparator
     virtual bool less(const TargetSettings &s1, const TargetSettings &s2) const;
 };
 
-struct SW_DRIVER_CPP_API TargetBaseData : ProjectDirectories
+struct SW_DRIVER_CPP_API TargetEvent
+{
+    CallbackType t;
+    std::function<void()> cb;
+};
+
+struct SW_DRIVER_CPP_API TargetEvents
+{
+    void add(CallbackType t, const std::function<void()> &cb);
+    void call(CallbackType t) const;
+
+private:
+    std::vector<TargetEvent> events;
+};
+
+struct SW_DRIVER_CPP_API TargetBaseData : ProjectDirectories, TargetEvents
 {
     // flags
     bool IsConfig = false;

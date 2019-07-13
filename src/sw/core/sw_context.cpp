@@ -158,6 +158,10 @@ void SwContext::resolvePackages()
             break;
         for (auto &[s, d] : load)
         {
+            // empty settings mean we want dependency only to be present
+            if (s.empty())
+                continue;
+
             d->loadPackages(s);
             auto k = d->find(s);
             if (k == d->end())

@@ -99,6 +99,20 @@ bool SettingsComparator::less(const TargetSettings &s1, const TargetSettings &s2
     return s1 < s2;
 }
 
+void TargetEvents::add(CallbackType t, const std::function<void()> &cb)
+{
+    events.push_back({ t, cb });
+}
+
+void TargetEvents::call(CallbackType t) const
+{
+    for (auto &e : events)
+    {
+        if (e.t == t && e.cb)
+            e.cb();
+    }
+}
+
 TargetBase::TargetBase()
 {
 }
@@ -143,6 +157,7 @@ TargetBase &TargetBase::addTarget2(bool add, const TargetBaseTypePtr &t, const P
     setupTarget(t.get());
 
     getSolution().call_event(*t, CallbackType::CreateTarget);
+    t->call(CallbackType::CreateTarget);
 
     // try to guess whether it's local package or not
     // TODO: one more case is when config is not local
@@ -221,11 +236,13 @@ TargetBase &TargetBase::addTarget2(bool add, const TargetBaseTypePtr &t, const P
         ;
 
     getSolution().call_event(*t, CallbackType::CreateTargetInitialized);
+    t->call(CallbackType::CreateTargetInitialized);
 
     auto &ref = addChild(t);
     //t->ts = getSolution().getSettings();
     //t->bs = t->ts;
-    getSolution().call_event(*t, CallbackType::CreateTargetInitialized);
+    //getSolution().call_event(*t, CallbackType::CreateTargetInitialized);
+    //t->call(CallbackType::CreateTargetInitialized);
     return ref;
 }
 

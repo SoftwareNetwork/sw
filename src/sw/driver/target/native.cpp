@@ -415,14 +415,15 @@ bool NativeCompiledTarget::init()
             findCompiler();
 
         // early setup compilers after libc, libcpp
-        merge();
+        // but we don't have these early deps
+        /*merge();
         if (!isHeaderOnly())
         {
             if (auto c = findProgramByExtension(".c")->as<NativeCompiler *>())
                 c->merge(*this);
             if (auto c = findProgramByExtension(".cpp")->as<NativeCompiler *>())
                 c->merge(*this);
-        }
+        }*/
 
         // after compilers
         Target::init();
@@ -1770,6 +1771,7 @@ bool NativeCompiledTarget::prepare()
         LOG_TRACE(logger, "Preparing target: " + getPackage().ppath.toString());
 
         getSolution().call_event(*this, CallbackType::BeginPrepare);
+        call(CallbackType::BeginPrepare);
 
         if (UseModules)
         {
@@ -2519,6 +2521,7 @@ bool NativeCompiledTarget::prepare()
         }
 
         getSolution().call_event(*this, CallbackType::EndPrepare);
+        call(CallbackType::EndPrepare);
     }
     RETURN_PREPARE_MULTIPASS_NEXT_PASS;
     case 9:

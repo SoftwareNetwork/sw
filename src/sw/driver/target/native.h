@@ -74,6 +74,8 @@ private:
 public:
     using TargetsSet = std::unordered_set<const ITarget*>;
 
+    using TargetEvents::add;
+
     ASSIGN_TYPES(ApiNameType)
     void add(const ApiNameType &i);
     void remove(const ApiNameType &i);

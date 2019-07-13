@@ -665,6 +665,7 @@ path Command::writeCommand(const path &p) const
         return normalize_path(s);
     };
 
+    // start
     if (bat)
         pbat += ".bat";
     else
@@ -679,7 +680,7 @@ path Command::writeCommand(const path &p) const
         t += "#!/bin/sh";
     t += "\n\n";
 
-    if (bat)
+    /*if (bat)
         t += "::";
     else
         t += "#";
@@ -692,23 +693,40 @@ path Command::writeCommand(const path &p) const
         else
             t += "#";
         t += " short name: " + name_short + "\n\n";
-    }
+    }*/
 
+    // name
     t += "echo " + getName() + "\n\n";
 
-    for (auto &[k, v] : environment)
+    // env
+    auto print_env = [&t, &bat](const auto &env)
     {
-        if (bat)
-            t += "set ";
-        t += k + "=";
-        if (!bat)
-            t += "\"";
-        t += v;
-        if (!bat)
-            t += "\"";
-        t += "\n\n";
+        for (auto &[k, v] : env)
+        {
+            if (bat)
+                t += "set ";
+            t += k + "=";
+            if (!bat)
+                t += "\"";
+            t += v;
+            if (!bat)
+                t += "\"";
+            t += "\n";
+        }
+    };
+    if (auto p = getFirstCommand())
+    {
+        while (p)
+        {
+            print_env(p->environment);
+            p = p->next;
+        }
     }
+    else
+        print_env(environment);
+    t += "\n";
 
+    // wdir
     if (!working_directory.empty())
         t += "cd " + norm(working_directory) + "\n\n";
 
@@ -724,26 +742,55 @@ path Command::writeCommand(const path &p) const
     else
     {
         static const String bat_next_line = "^\n    ";
-        for (auto &a : arguments)
+
+        auto print_args = [&bat, &t](const auto &args)
         {
-            if (a->toString() == "-showIncludes")
-                continue;
-            auto a2 = a->quote(QuoteType::Escape);
-            if (bat)
-                boost::replace_all(a2, "%", "%%");
-            t += "\"" + a2 + "\" ";
-            if (bat)
-                t += bat_next_line;
-            else
-                t += "\\\n\t";
-        }
-        if (!arguments.empty())
+            for (auto &a : args)
+            {
+                if (a->toString() == "-showIncludes")
+                    continue;
+                auto a2 = a->quote(QuoteType::Escape);
+                if (bat)
+                {
+                    // move to quote with escape?
+                    // see https://www.robvanderwoude.com/escapechars.php
+                    boost::replace_all(a2, "%", "%%"); // remove? because we always have double quotes
+                }
+                t += "\"" + a2 + "\" ";
+                if (bat)
+                    t += bat_next_line;
+                else
+                    t += "\\\n\t";
+            }
+            if (!args.empty())
+            {
+                if (bat)
+                    t.resize(t.size() - bat_next_line.size());
+                else
+                    t.resize(t.size() - 3);
+            }
+        };
+
+        if (auto p = getFirstCommand())
         {
-            if (bat)
-                t.resize(t.size() - bat_next_line.size());
-            else
-                t.resize(t.size() - 3);
+            while (p)
+            {
+                print_args(p->arguments);
+                p = p->next;
+                if (p)
+                {
+                    if (bat)
+                        t += "^";
+                    else
+                        t += "\\";
+                    t += "\n | ";
+                    if (!bat)
+                        t += "\\\n";
+                }
+            }
         }
+        else
+            print_args(arguments);
     }
     if (bat)
         t += "%";
