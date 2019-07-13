@@ -74,6 +74,7 @@ private:
 public:
     using TargetsSet = std::unordered_set<Target*>;
 
+    using TargetEvents::add;
     SW_TARGET_USING_ASSIGN_OPS(NativeTargetOptionsGroup);
 
     std::optional<bool> HeaderOnly;

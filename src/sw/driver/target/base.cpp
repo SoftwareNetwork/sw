@@ -85,6 +85,20 @@ String TargetSettings::getConfig() const
     return ss.getConfig();
 }
 
+void TargetEvents::add(CallbackType t, const std::function<void()> &cb)
+{
+    events.push_back({ t, cb });
+}
+
+void TargetEvents::call(CallbackType t) const
+{
+    for (auto &e : events)
+    {
+        if (e.t == t && e.cb)
+            e.cb();
+    }
+}
+
 TargetBase::TargetBase()
 {
 }
@@ -123,6 +137,7 @@ TargetBase &TargetBase::addTarget2(const TargetBaseTypePtr &t, const PackagePath
     setupTarget(t.get());
 
     getSolution().call_event(*t, CallbackType::CreateTarget);
+    t->call(CallbackType::CreateTarget);
 
     // sdir
     if (!t->isLocal())
@@ -155,6 +170,7 @@ TargetBase &TargetBase::addTarget2(const TargetBaseTypePtr &t, const PackagePath
     addChild(t);
 
     getSolution().call_event(*t, CallbackType::CreateTargetInitialized);
+    t->call(CallbackType::CreateTargetInitialized);
 
     return *t;
 }

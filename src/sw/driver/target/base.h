@@ -48,6 +48,21 @@ struct LibraryTarget;
 struct StaticLibraryTarget;
 struct SharedLibraryTarget;
 
+struct SW_DRIVER_CPP_API TargetEvent
+{
+    CallbackType t;
+    std::function<void()> cb;
+};
+
+struct SW_DRIVER_CPP_API TargetEvents
+{
+    void add(CallbackType t, const std::function<void()> &cb);
+    void call(CallbackType t) const;
+
+private:
+    std::vector<TargetEvent> events;
+};
+
 struct TargetSettings
 {
     BuildSettings ss;
@@ -62,7 +77,7 @@ struct TargetSettings
 /**
 * \brief TargetBase
 */
-struct SW_DRIVER_CPP_API TargetBase : Node, ProjectDirectories
+struct SW_DRIVER_CPP_API TargetBase : Node, ProjectDirectories, TargetEvents
 {
     // flags
     bool Local = true; // local projects
