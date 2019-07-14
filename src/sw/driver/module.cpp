@@ -84,7 +84,17 @@ Module::Module(const Module::DynamicLibrary &dll, const String &suffix)
 
 path Module::getLocation() const
 {
-    return module.shared_lib().location();
+    try
+    {
+        // for some reason getLocation may fail on windows with
+        // GetLastError() == 126 (module not found)
+        // so we return this boost error instead
+        return module.shared_lib().location();
+    }
+    catch (std::exception &e)
+    {
+        return e.what();
+    }
 }
 
 void Module::build(Build &s) const

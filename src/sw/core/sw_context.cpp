@@ -15,6 +15,7 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "context");
 
+cl::opt<bool> build_always("B", cl::desc("Build always"));
 cl::opt<int> skip_errors("k", cl::desc("Skip errors"));
 static cl::opt<bool> time_trace("time-trace", cl::desc("Record chrome time trace events"));
 
@@ -269,6 +270,12 @@ void SwContext::execute(CommandExecutionPlan &p) const
 
     if (dry_run)
         return;*/
+
+    if (build_always)
+    {
+        for (auto &c : p.commands)
+            c->always = true;
+    }
 
     ScopedTime t;
     std::unique_ptr<Executor> ex;
