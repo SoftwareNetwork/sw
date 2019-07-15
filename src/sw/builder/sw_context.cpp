@@ -84,7 +84,7 @@ static Version gatherVersion(const path &program, const String &arg = "--version
     builder::detail::ResolvableCommand c; // for nice program resolving
     c.setProgram(program);
     if (!arg.empty())
-        c.arguments = { arg };
+        c.push_back(arg);
     error_code ec;
     c.execute(ec);
 

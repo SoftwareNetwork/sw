@@ -173,49 +173,65 @@ void NativeCompiledTarget::setOutputDir(const path &dir)
 
 void NativeCompiledTarget::findCompiler()
 {
-    // c++ goes first for correct include order
-    (*this + UnresolvedPackage(ts["native"]["stdlib"]["c++"].getValue()))->sw_pushed = true;
-    (*this + UnresolvedPackage(ts["native"]["stdlib"]["c"].getValue()))->sw_pushed = true;
+    bool libstdcppset = false;
 
     struct CompilerDesc
     {
-        PackagePath id;
+        UnresolvedPackage id;
         StringSet exts;
     };
 
     using CompilerVector = std::vector<CompilerDesc>;
 
-    auto activate_one = [this](const CompilerDesc &v)
+    auto activate_one = [this, &libstdcppset](const CompilerDesc &v)
     {
         auto &cld = getSolution().getChildren();
 
         auto i = cld.find(v.id, getTargetSettings());
         if (!i)
-            return false;
-        if (!(*i).second)
         {
             for (auto &e : v.exts)
-                setExtensionProgram(e, PackageId{ v.id, (*i).first });
+                setExtensionProgram(e, v.id);
             return true;
         }
-        if (auto t = (*i).second->as<PredefinedProgram*>())
+        if (auto t = i->as<PredefinedProgram*>())
         {
             auto c = std::dynamic_pointer_cast<CompilerBaseProgram>(t->getProgram().clone());
             if (!c)
             {
-                if (v.id == "com.Microsoft.VisualStudio.VC.cl")
+                bool created = false;
+                auto create_command = [this, &created, &t, &c, &libstdcppset]()
+                {
+                    if (created)
+                        return;
+                    (Program&)*c = t->getProgram();
+                    (primitives::Command&)*c->createCommand(getSolution().swctx) = *t->getProgram().getCommand();
+                    created = true;
+                };
+
+                if (v.id.ppath == "com.Microsoft.VisualStudio.VC.cl")
+                {
                     c = std::make_shared<VisualStudioCompiler>(getSolution().swctx);
-                else if (v.id == "com.Microsoft.VisualStudio.VC.ml")
+                    if (ts["native"]["stdlib"]["c++"].getValue() == "com.Microsoft.VisualStudio.VC.libcpp")
+                    {
+                        // take same ver as cl
+                        UnresolvedPackage up(ts["native"]["stdlib"]["c++"].getValue());
+                        up.range = v.id.range;
+                        (*this + up)->sw_pushed = true;
+                        libstdcppset = true;
+                    }
+                }
+                else if (v.id.ppath == "com.Microsoft.VisualStudio.VC.ml")
                     c = std::make_shared<VisualStudioASMCompiler>(getSolution().swctx);
-                else if (v.id == "com.Microsoft.Windows.rc")
+                else if (v.id.ppath == "com.Microsoft.Windows.rc")
                     c = std::make_shared<RcTool>(getSolution().swctx);
-                else if (v.id == "org.LLVM.clang" || v.id == "org.LLVM.clangpp")
+                else if (v.id.ppath == "org.LLVM.clang" || v.id.ppath == "org.LLVM.clangpp")
                     c = std::make_shared<ClangCompiler>(getSolution().swctx);
-                else if (v.id == "org.LLVM.clangcl")
+                else if (v.id.ppath == "org.LLVM.clangcl")
                 {
                     auto C = std::make_shared<ClangClCompiler>(getSolution().swctx);
                     c = C;
-                    (Program&)*c = t->getProgram();
+                    create_command();
 
                     switch (getSettings().TargetOS.Arch)
                     {
@@ -247,14 +263,14 @@ void NativeCompiledTarget::findCompiler()
                 }
                 else
                     throw SW_RUNTIME_ERROR("Unknown compiler: " + v.id.toString());
-                (Program&)*c = t->getProgram();
+                create_command();
             }
             for (auto &e : v.exts)
                 setExtensionProgram(e, c->clone());
         }
         else
         {
-            throw SW_RUNTIME_ERROR("Target without PredefinedProgram: " + (*i).first.toString());
+            throw SW_RUNTIME_ERROR("Target without PredefinedProgram: " + i->getPackage().toString());
         }
         return true;
     };
@@ -267,11 +283,11 @@ void NativeCompiledTarget::findCompiler()
             if (r)
             {
                 if (0);
-                else if (v.id == "com.Microsoft.VisualStudio.VC.cl")
+                else if (v.id.ppath == "com.Microsoft.VisualStudio.VC.cl")
                     ct = CompilerType::MSVC;
-                else if (v.id == "org.LLVM.clang" || v.id == "org.LLVM.clangpp")
+                else if (v.id.ppath == "org.LLVM.clang" || v.id.ppath == "org.LLVM.clangpp")
                     ct = CompilerType::Clang;
-                else if (v.id == "org.LLVM.clangcl")
+                else if (v.id.ppath == "org.LLVM.clangcl")
                     ct = CompilerType::ClangCl;
                 else
                     throw SW_RUNTIME_ERROR("Unknown compiler: " + v.id.toString());
@@ -397,6 +413,13 @@ void NativeCompiledTarget::findCompiler()
 
     Librarian->Extension = getSettings().TargetOS.getStaticLibraryExtension();
     Linker->Extension = getSettings().TargetOS.getSharedLibraryExtension();
+
+    // c++ goes first for correct include order
+    if (!libstdcppset)
+        (*this + UnresolvedPackage(ts["native"]["stdlib"]["c++"].getValue()))->sw_pushed = true;
+
+    // goes last
+    (*this + UnresolvedPackage(ts["native"]["stdlib"]["c"].getValue()))->sw_pushed = true;
 }
 
 bool NativeCompiledTarget::init()

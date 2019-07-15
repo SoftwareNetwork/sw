@@ -83,6 +83,13 @@ std::shared_ptr<builder::Command> CompilerBaseProgram::createCommand(const SwBui
     return cmd = createCommand1(swctx);
 }
 
+/*std::shared_ptr<builder::Command> CompilerBaseProgram::createCommand(const std::shared_ptr<builder::Command> &c)
+{
+    if (cmd)
+        throw SW_RUNTIME_ERROR("Command already created");
+    return cmd = c;
+}*/
+
 std::shared_ptr<builder::Command> CompilerBaseProgram::getCommand(const Target &t)
 {
     prepareCommand(t);

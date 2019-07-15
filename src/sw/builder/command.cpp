@@ -57,6 +57,19 @@ Command::Command(const SwBuilderContext &swctx)
 {
 }
 
+/*Command::Command(const Command &rhs)
+    : Base(rhs)
+    , swctx(rhs.swctx)
+{
+    SW_UNIMPLEMENTED;
+}
+
+Command &Command::operator=(const Command &rhs)
+{
+    SW_UNIMPLEMENTED;
+    return *this;
+}*/
+
 Command::~Command()
 {
 }

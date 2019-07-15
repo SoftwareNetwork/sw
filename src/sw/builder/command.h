@@ -194,6 +194,8 @@ struct SW_BUILDER_API Command : ICastable, std::enable_shared_from_this<Command>
     int command_storage = 0;
 
     Command(const SwBuilderContext &swctx);
+    //Command(const Command &);
+    //Command &operator=(const Command &);
     virtual ~Command();
 
     void prepare() override;

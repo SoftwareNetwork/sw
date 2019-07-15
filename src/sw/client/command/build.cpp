@@ -92,11 +92,19 @@ static bool hasUserProvidedInformationStrong()
         ;
 }
 
-static sw::TargetSettings compilerTypeFromStringCaseI(const String &in)
+static sw::TargetSettings compilerTypeFromStringCaseI(const sw::UnresolvedPackage &compiler)
 {
-    auto compiler = boost::to_lower_copy(in);
-
     sw::TargetSettings ts;
+
+    auto with_version = [&compiler](const auto &ppath)
+    {
+        return sw::UnresolvedPackage(ppath, compiler.range);
+    };
+
+    auto set_with_version = [&with_version](const auto &ppath)
+    {
+        return with_version(ppath).toString();
+    };
 
     if (0);
     /*
@@ -105,26 +113,28 @@ static sw::TargetSettings compilerTypeFromStringCaseI(const String &in)
         return CompilerType::AppleClang;
     else if (boost::istarts_with(compiler, "gnu") || boost::iequals(compiler, "gcc") || boost::iequals(compiler, "g++"))
         return CompilerType::GNU;*/
-    else if (compiler == "clang")
+    else if (compiler.ppath == "clang")
     {
-        ts["native"]["program"]["c"] = "org.LLVM.clang";
-        ts["native"]["program"]["cpp"] = "org.LLVM.clangpp";
+        ts["native"]["program"]["c"] = set_with_version("org.LLVM.clang");
+        ts["native"]["program"]["cpp"] = set_with_version("org.LLVM.clangpp");
     }
-    else if (compiler == "clangcl" || compiler == "clang-cl")
+    else if (compiler.ppath == "clangcl"/* || compiler.ppath == "clang-cl"*/)
     {
-        ts["native"]["program"]["c"] = "org.LLVM.clangcl";
-        ts["native"]["program"]["cpp"] = "org.LLVM.clangcl";
+        ts["native"]["program"]["c"] = set_with_version("org.LLVM.clangcl");
+        ts["native"]["program"]["cpp"] = set_with_version("org.LLVM.clangcl");
     }
-    else if (compiler == "msvc" || compiler == "vs")
+    else if (compiler.ppath == "msvc" || compiler.ppath == "vs")
     {
-        ts["native"]["program"]["c"] = "com.Microsoft.VisualStudio.VC.cl";
-        ts["native"]["program"]["cpp"] = "com.Microsoft.VisualStudio.VC.cl";
-        ts["native"]["program"]["asm"] = "com.Microsoft.VisualStudio.VC.ml";
+        ts["native"]["program"]["c"] = set_with_version("com.Microsoft.VisualStudio.VC.cl");
+        ts["native"]["program"]["cpp"] = set_with_version("com.Microsoft.VisualStudio.VC.cl");
+        ts["native"]["program"]["asm"] = set_with_version("com.Microsoft.VisualStudio.VC.ml");
     }
     else
     {
-        ts["native"]["program"]["c"] = compiler;
-        ts["native"]["program"]["cpp"] = compiler;
+        ts["native"]["program"]["c"] = compiler.toString();
+        ts["native"]["program"]["cpp"] = compiler.toString();
+        if (compiler.ppath == "com.Microsoft.VisualStudio.VC.cl")
+            ts["native"]["program"]["asm"] = set_with_version("com.Microsoft.VisualStudio.VC.ml");
     }
     return ts;
 }

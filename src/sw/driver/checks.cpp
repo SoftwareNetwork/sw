@@ -300,7 +300,8 @@ int main() { return IsBigEndian(); }
     auto ep = ExecutionPlan<Check>::createExecutionPlan(unchecked);
     if (ep)
     {
-        LOG_INFO(logger, "Performing " << unchecked.size() << " check(s): " << t->getPackage().toString());
+        LOG_INFO(logger, "Performing " << unchecked.size() << " check(s): "
+            << t->getPackage().toString() << " (" << name << ")");
 
         SCOPE_EXIT
         {

@@ -145,6 +145,7 @@ struct SW_DRIVER_CPP_API CompilerBaseProgram : FileToFileTransformProgram
     std::shared_ptr<builder::Command> getCommand(const Target &t);
     std::shared_ptr<builder::Command> getCommand() const override;
     std::shared_ptr<builder::Command> createCommand(const SwBuilderContext &swctx);
+    //std::shared_ptr<builder::Command> createCommand(const std::shared_ptr<builder::Command> &);
 
 protected:
     std::shared_ptr<driver::Command> cmd;

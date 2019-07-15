@@ -176,8 +176,6 @@ static T &addProgramNoFile(SwCoreContext &s, const PackageId &id, const std::sha
 template <class T = PredefinedProgramTarget>
 static T &addProgram(SwCoreContext &s, const PackageId &id, const std::shared_ptr<Program> &p)
 {
-    //if (!fs::exists(p->file))
-        //throw SW_RUNTIME_ERROR("Program does not exist: " + normalize_path(p->file));
     return addProgramNoFile(s, id, p);
 }
 
@@ -322,10 +320,16 @@ struct SimpleProgram : Program
     std::shared_ptr<Program> clone() const override { return std::make_shared<SimpleProgram>(*this); }
     std::shared_ptr<builder::Command> getCommand() const override
     {
-        auto c = std::make_shared<builder::Command>(swctx);
-        c->setProgram(file);
-        return c;
+        if (!cmd)
+        {
+            cmd = std::make_shared<builder::Command>(swctx);
+            cmd->setProgram(file);
+        }
+        return cmd;
     }
+
+private:
+    mutable std::shared_ptr<builder::Command> cmd;
 };
 
 VSInstances &gatherVSInstances(SwCoreContext &s)
@@ -408,7 +412,7 @@ void detectMsvc(SwCoreContext &s)
         for (auto &[_, instance] : instances)
         {
             auto root = instance.root / "VC";
-            auto &v = instance.version;
+            auto v = instance.version;
 
             if (v.getMajor() >= 15)
                 root = root / "Tools" / "MSVC" / boost::trim_copy(read_file(root / "Auxiliary" / "Build" / "Microsoft.VCToolsVersion.default.txt"));
@@ -426,15 +430,37 @@ void detectMsvc(SwCoreContext &s)
             }
             // but we won't detect host&arch stuff on older versions
 
+            // VS programs inherit cl.exe version (V)
+            // same for VS libs
+            // because ml,ml64,lib,link version (O) has O.Major = V.Major - 5
+            // e.g., V = 19.21..., O = 14.21.... (19 - 5 = 14)
+
+            // C, C++
+            {
+                auto p = std::make_shared<SimpleProgram>(s);
+                p->file = compiler / "cl.exe";
+                if (fs::exists(p->file))
+                {
+                    v = getVersion(s, p->file, {});
+                    if (instance.version.isPreRelease())
+                        v.getExtra() = instance.version.getExtra();
+                    auto &cl = addProgram(s, PackageId("com.Microsoft.VisualStudio.VC.cl", v), p);
+                    cl.ts = ts;
+                }
+
+                if (s.getHostOs().Arch != target_arch)
+                {
+                    auto c = p->getCommand();
+                    c->addPathDirectory(host_root);
+                }
+            }
+
             // lib, link
             {
                 auto p = std::make_shared<SimpleProgram>(s);
                 p->file = compiler / "link.exe";
                 if (fs::exists(p->file))
                 {
-                    Version v = getVersion(s, p->file, {});
-                    if (instance.version.isPreRelease())
-                        v.getExtra() = instance.version.getExtra();
                     auto &link = addProgram(s, PackageId("com.Microsoft.VisualStudio.VC.link", v), p);
                     link.ts = ts;
                 }
@@ -449,9 +475,6 @@ void detectMsvc(SwCoreContext &s)
                 p->file = compiler / "lib.exe";
                 if (fs::exists(p->file))
                 {
-                    Version v = getVersion(s, p->file, {});
-                    if (instance.version.isPreRelease())
-                        v.getExtra() = instance.version.getExtra();
                     auto &lib = addProgram(s, PackageId("com.Microsoft.VisualStudio.VC.lib", v), p);
                     lib.ts = ts;
                 }
@@ -470,31 +493,8 @@ void detectMsvc(SwCoreContext &s)
                 p->file = compiler / (target_arch == ArchType::x86_64 ? "ml64.exe" : "ml.exe");
                 if (fs::exists(p->file))
                 {
-                    Version v = getVersion(s, p->file, {});
-                    if (instance.version.isPreRelease())
-                        v.getExtra() = instance.version.getExtra();
                     auto &ml = addProgram(s, PackageId("com.Microsoft.VisualStudio.VC.ml", v), p);
                     ml.ts = ts;
-                }
-            }
-
-            // C, C++
-            {
-                auto p = std::make_shared<SimpleProgram>(s);
-                p->file = compiler / "cl.exe";
-                if (fs::exists(p->file))
-                {
-                    Version v = getVersion(s, p->file, {});
-                    if (instance.version.isPreRelease())
-                        v.getExtra() = instance.version.getExtra();
-                    auto &cl = addProgram(s, PackageId("com.Microsoft.VisualStudio.VC.cl", v), p);
-                    cl.ts = ts;
-                }
-
-                if (s.getHostOs().Arch != target_arch)
-                {
-                    auto c = p->getCommand();
-                    c->addPathDirectory(host_root);
                 }
             }
 
