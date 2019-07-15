@@ -23,6 +23,8 @@ struct FileData;
 struct FileStorage;
 struct ProgramVersionStorage;
 
+namespace builder::detail { struct ResolvableCommand; }
+
 struct SW_BUILDER_API SwBuilderContext : SwManagerContext
 {
     OS HostOS;
@@ -47,6 +49,11 @@ private:
 
     mutable std::mutex csm;
 };
+
+SW_BUILDER_API
+Version getVersion(
+    const SwBuilderContext &swctx, builder::detail::ResolvableCommand &c,
+    const String &in_regex = {});
 
 SW_BUILDER_API
 Version getVersion(

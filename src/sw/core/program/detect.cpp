@@ -87,25 +87,6 @@ bool isCppSourceFileExtensions(const String &e)
 
 path getProgramFilesX86();
 
-bool findDefaultVS(path &root, int &VSVersion)
-{
-    auto program_files_x86 = getProgramFilesX86();
-    for (auto &edition : { "Enterprise", "Professional", "Community" })
-    {
-        for (const auto &[y, v] : std::vector<std::pair<String, int>>{ {"2017", 15}, {"2019", 16} })
-        {
-            path p = program_files_x86 / ("Microsoft Visual Studio/"s + y + "/"s + edition + "/VC/Auxiliary/Build/vcvarsall.bat");
-            if (fs::exists(p))
-            {
-                root = p.parent_path().parent_path().parent_path();
-                VSVersion = v;
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
 void detectCompilers(SwCoreContext &s)
 {
     detectNativeCompilers(s);
@@ -156,6 +137,8 @@ struct PredefinedProgramTarget : PredefinedTarget, PredefinedProgram
 template <class T>
 static T &addTarget(SwCoreContext &s, const PackageId &id)
 {
+    LOG_TRACE(logger, "Detected target: " + id.toString());
+
     auto t = std::make_shared<T>(id);
 
     auto &cld = s.getTargets();
@@ -166,17 +149,12 @@ static T &addTarget(SwCoreContext &s, const PackageId &id)
 }
 
 template <class T = PredefinedProgramTarget>
-static T &addProgramNoFile(SwCoreContext &s, const PackageId &id, const std::shared_ptr<Program> &p)
+static T &addProgram(SwCoreContext &s, const PackageId &id, const std::shared_ptr<Program> &p)
 {
     auto &t = addTarget<T>(s, id);
     t.setProgram(p);
+    LOG_TRACE(logger, "Detected program: " + p->file.u8string());
     return t;
-}
-
-template <class T = PredefinedProgramTarget>
-static T &addProgram(SwCoreContext &s, const PackageId &id, const std::shared_ptr<Program> &p)
-{
-    return addProgramNoFile(s, id, p);
 }
 
 void detectDCompilers(SwCoreContext &s)
@@ -391,13 +369,12 @@ void detectCSharpCompilers(SwCoreContext &s)
     }*/
 }
 
-void detectMsvc(SwCoreContext &s)
+void detectMsvc15Plus(SwCoreContext &s)
 {
     // https://docs.microsoft.com/en-us/cpp/c-runtime-library/crt-library-features?view=vs-2019
 
     auto &instances = gatherVSInstances(s);
     const auto host = toStringWindows(s.getHostOs().Arch);
-    OsSdk sdk(s.getHostOs());
     auto new_settings = s.getHostOs();
 
     for (auto target_arch : {ArchType::x86_64,ArchType::x86,ArchType::arm,ArchType::aarch64})
@@ -414,8 +391,13 @@ void detectMsvc(SwCoreContext &s)
             auto root = instance.root / "VC";
             auto v = instance.version;
 
-            if (v.getMajor() >= 15)
-                root = root / "Tools" / "MSVC" / boost::trim_copy(read_file(root / "Auxiliary" / "Build" / "Microsoft.VCToolsVersion.default.txt"));
+            if (v.getMajor() < 15)
+            {
+                // continue; // instead of throw ?
+                throw SW_RUNTIME_ERROR("VS < 15 must be handled differently");
+            }
+
+            root = root / "Tools" / "MSVC" / boost::trim_copy(read_file(root / "Auxiliary" / "Build" / "Microsoft.VCToolsVersion.default.txt"));
 
             // get suffix
             auto target = toStringWindows(target_arch);
@@ -423,12 +405,7 @@ void detectMsvc(SwCoreContext &s)
             auto compiler = root / "bin";
             auto host_root = compiler / ("Host" + host) / host;
 
-            if (v.getMajor() >= 15)
-            {
-                // always use host tools and host arch for building config files
-                compiler /= path("Host" + host) / target;
-            }
-            // but we won't detect host&arch stuff on older versions
+            compiler /= path("Host" + host) / target;
 
             // VS programs inherit cl.exe version (V)
             // same for VS libs
@@ -441,17 +418,16 @@ void detectMsvc(SwCoreContext &s)
                 p->file = compiler / "cl.exe";
                 if (fs::exists(p->file))
                 {
-                    v = getVersion(s, p->file, {});
+                    auto c = p->getCommand();
+                    if (s.getHostOs().Arch != target_arch)
+                        c->addPathDirectory(host_root);
+                    // run getVersion via prepared command
+                    builder::detail::ResolvableCommand c2 = *c;
+                    v = getVersion(s, c2);
                     if (instance.version.isPreRelease())
                         v.getExtra() = instance.version.getExtra();
                     auto &cl = addProgram(s, PackageId("com.Microsoft.VisualStudio.VC.cl", v), p);
                     cl.ts = ts;
-                }
-
-                if (s.getHostOs().Arch != target_arch)
-                {
-                    auto c = p->getCommand();
-                    c->addPathDirectory(host_root);
                 }
             }
 
@@ -498,38 +474,213 @@ void detectMsvc(SwCoreContext &s)
                 }
             }
 
-            // libs
+            // libc++
             {
                 auto &libcpp = addTarget<PredefinedTarget>(s, PackageId("com.Microsoft.VisualStudio.VC.libcpp", v));
                 libcpp.ts = ts;
                 libcpp.public_ts["system-include-directories"].push_back(normalize_path(root / "include"));
-
-                if (v.getMajor() >= 15)
-                {
-                    libcpp.public_ts["system-link-directories"].push_back(normalize_path(root / "lib" / target));
-                }
-                else
-                {
-                    SW_UNIMPLEMENTED;
-                }
+                libcpp.public_ts["system-link-directories"].push_back(normalize_path(root / "lib" / target));
 
                 if (fs::exists(root / "ATLMFC" / "include"))
                 {
                     auto &atlmfc = addTarget<PredefinedTarget>(s, PackageId("com.Microsoft.VisualStudio.VC.ATLMFC", v));
                     atlmfc.ts = ts;
                     atlmfc.public_ts["system-include-directories"].push_back(normalize_path(root / "ATLMFC" / "include"));
-
-                    if (v.getMajor() >= 15)
-                    {
-                        atlmfc.public_ts["system-link-directories"].push_back(normalize_path(root / "ATLMFC" / "lib" / target));
-                    }
-                    else
-                    {
-                        SW_UNIMPLEMENTED;
-                    }
+                    atlmfc.public_ts["system-link-directories"].push_back(normalize_path(root / "ATLMFC" / "lib" / target));
                 }
             }
         }
+    }
+}
+
+void detectMsvc14AndOlder(SwCoreContext &s)
+{
+    auto find_comn_tools = [](const Version &v) -> path
+    {
+        auto n = std::to_string(v.getMajor()) + std::to_string(v.getMinor());
+        auto ver = "VS"s + n + "COMNTOOLS";
+        auto e = getenv(ver.c_str());
+        if (e)
+        {
+            String r = e;
+            while (!r.empty() && (r.back() == '/' || r.back() == '\\'))
+                r.pop_back();
+            path root = r;
+            root = root.parent_path().parent_path();
+            return root;
+        }
+        return {};
+    };
+
+    auto toStringWindows14AndOlder = [](ArchType e)
+    {
+        switch (e)
+        {
+        case ArchType::x86_64:
+            return "amd64";
+        case ArchType::x86:
+            return "x86";
+        case ArchType::arm:
+            return "arm";
+        default:
+            throw SW_RUNTIME_ERROR("Unknown Windows arch");
+        }
+    };
+
+    auto new_settings = s.getHostOs();
+
+    // no ArchType::aarch64?
+    for (auto target_arch : { ArchType::x86_64,ArchType::x86,ArchType::arm, })
+    {
+        // following code is written using VS2015
+        // older versions might need special handling
+
+        new_settings.Arch = target_arch;
+
+        auto ts1 = toTargetSettings(new_settings);
+        TargetSettings ts;
+        ts["os"]["kernel"] = ts1["os"]["kernel"];
+        ts["os"]["arch"] = ts1["os"]["arch"];
+
+        for (auto n : {14,12,11,10,9,8})
+        {
+            Version v(n);
+            auto root = find_comn_tools(v);
+            if (root.empty())
+                continue;
+
+            root /= "VC";
+
+            // get suffix
+            auto target = toStringWindows14AndOlder(target_arch);
+
+            auto compiler = root / "bin";
+            auto host_root = compiler;
+
+            path libdir = "lib";
+            libdir /= toStringWindows14AndOlder(target_arch);
+
+            // VC/bin/ ... x86 files
+            // VC/bin/amd64/ ... x86_64 files
+            // VC/bin/arm/ ... arm files
+            // so we need to add subdir for non x86 targets
+            if (!s.getHostOs().is(ArchType::x86))
+            {
+                host_root /= toStringWindows14AndOlder(s.getHostOs().Arch);
+            }
+
+            // now set to root
+            compiler = host_root;
+
+            // VC/bin/x86_amd64
+            // VC/bin/x86_arm
+            // VC/bin/amd64_x86
+            // VC/bin/amd64_arm
+            if (s.getHostOs().Arch != target_arch)
+            {
+                //if (!s.getHostOs().is(ArchType::x86))
+                compiler += "_"s + toStringWindows14AndOlder(target_arch);
+            }
+
+            // VS programs inherit cl.exe version (V)
+            // same for VS libs
+            // because ml,ml64,lib,link version (O) has O.Major = V.Major - 5
+            // e.g., V = 19.21..., O = 14.21.... (19 - 5 = 14)
+
+            // C, C++
+            {
+                auto p = std::make_shared<SimpleProgram>(s);
+                p->file = compiler / "cl.exe";
+                if (fs::exists(p->file))
+                {
+                    auto c = p->getCommand();
+                    if (s.getHostOs().Arch != target_arch)
+                        c->addPathDirectory(host_root);
+                    // run getVersion via prepared command
+                    builder::detail::ResolvableCommand c2 = *c;
+                    v = getVersion(s, c2);
+                    auto &cl = addProgram(s, PackageId("com.Microsoft.VisualStudio.VC.cl", v), p);
+                    cl.ts = ts;
+                }
+                else
+                    continue;
+            }
+
+            // lib, link
+            {
+                auto p = std::make_shared<SimpleProgram>(s);
+                p->file = compiler / "link.exe";
+                if (fs::exists(p->file))
+                {
+                    auto &link = addProgram(s, PackageId("com.Microsoft.VisualStudio.VC.link", v), p);
+                    link.ts = ts;
+                }
+
+                if (s.getHostOs().Arch != target_arch)
+                {
+                    auto c = p->getCommand();
+                    c->addPathDirectory(host_root);
+                }
+
+                p = std::make_shared<SimpleProgram>(s);
+                p->file = compiler / "lib.exe";
+                if (fs::exists(p->file))
+                {
+                    auto &lib = addProgram(s, PackageId("com.Microsoft.VisualStudio.VC.lib", v), p);
+                    lib.ts = ts;
+                }
+
+                if (s.getHostOs().Arch != target_arch)
+                {
+                    auto c = p->getCommand();
+                    c->addPathDirectory(host_root);
+                }
+            }
+
+            // ASM
+            if (target_arch == ArchType::x86_64 || target_arch == ArchType::x86)
+            {
+                auto p = std::make_shared<SimpleProgram>(s);
+                p->file = compiler / (target_arch == ArchType::x86_64 ? "ml64.exe" : "ml.exe");
+                if (fs::exists(p->file))
+                {
+                    auto &ml = addProgram(s, PackageId("com.Microsoft.VisualStudio.VC.ml", v), p);
+                    ml.ts = ts;
+                }
+            }
+
+            // libc++
+            {
+                auto &libcpp = addTarget<PredefinedTarget>(s, PackageId("com.Microsoft.VisualStudio.VC.libcpp", v));
+                libcpp.ts = ts;
+                libcpp.public_ts["system-include-directories"].push_back(normalize_path(root / "include"));
+                libcpp.public_ts["system-link-directories"].push_back(normalize_path(root / libdir));
+
+                if (fs::exists(root / "ATLMFC" / "include"))
+                {
+                    auto &atlmfc = addTarget<PredefinedTarget>(s, PackageId("com.Microsoft.VisualStudio.VC.ATLMFC", v));
+                    atlmfc.ts = ts;
+                    atlmfc.public_ts["system-include-directories"].push_back(normalize_path(root / "ATLMFC" / "include"));
+                    atlmfc.public_ts["system-link-directories"].push_back(normalize_path(root / "ATLMFC" / libdir));
+                }
+            }
+        }
+    }
+}
+
+void detectWindowsSdk(SwCoreContext &s)
+{
+    OsSdk sdk(s.getHostOs());
+    auto new_settings = s.getHostOs();
+
+    for (auto target_arch : {ArchType::x86_64,ArchType::x86,ArchType::arm,ArchType::aarch64})
+    {
+        new_settings.Arch = target_arch;
+
+        auto ts1 = toTargetSettings(new_settings);
+        TargetSettings ts;
+        ts["os"]["kernel"] = ts1["os"]["kernel"];
+        ts["os"]["arch"] = ts1["os"]["arch"];
 
         // rename to libc? to crt?
         auto &ucrt = addTarget<PredefinedTarget>(s, PackageId("com.Microsoft.Windows.SDK.ucrt", sdk.getWindowsTargetPlatformVersion()));
@@ -563,6 +714,13 @@ void detectMsvc(SwCoreContext &s)
         //for (auto &idir : COpts.System.IncludeDirectories)
         //C->system_idirs.push_back(idir);
     }
+}
+
+void detectMsvc(SwCoreContext &s)
+{
+    detectMsvc15Plus(s);
+    detectMsvc14AndOlder(s);
+    detectWindowsSdk(s);
 }
 
 void detectWindowsClang(SwCoreContext &s)
@@ -676,40 +834,6 @@ void detectWindowsCompilers(SwCoreContext &s)
 {
     detectMsvc(s);
     detectWindowsClang(s);
-
-    return;
-
-    throw SW_RUNTIME_ERROR("not implemented");
-
-    // move to gatherVSInstances
-    auto find_comn_tools = [](path root, const Version &v) -> std::optional<path>
-    {
-        auto n = std::to_string(v.getMajor());
-        auto ver = "VS"s + n + "COMNTOOLS";
-        auto e = getenv(ver.c_str());
-        if (e)
-        {
-            root = e;
-            root = root.parent_path().parent_path() / "VC";
-            return root;
-        }
-        return {};
-    };
-
-    //!find_comn_tools(VisualStudioVersion::VS16);
-    //!find_comn_tools(VisualStudioVersion::VS15);
-
-    path root;
-    int v;
-    if (findDefaultVS(root, v))
-    {
-        // find older versions
-        for (auto n : {16,15,14,12,11,10,9,8})
-        {
-            if (find_comn_tools(root, Version(n)))
-                break;
-        }
-    }
 }
 
 void detectNonWindowsCompilers(SwCoreContext &s)

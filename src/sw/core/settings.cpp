@@ -116,28 +116,22 @@ const TargetSetting &TargetSetting::operator[](const TargetSettingKey &k) const
 
 const String &TargetSetting::getValue() const
 {
-    /*if (!value)
+    auto v = std::get_if<TargetSettingValue>(&value);
+    if (!v)
         throw SW_RUNTIME_ERROR("empty value for key: " + key);
-    return *value;*/
-    return std::get<TargetSettingValue>(value);
+    return *v;
 }
 
 const std::vector<TargetSettingValue> &TargetSetting::getArray() const
 {
-    /*if (!array)
+    auto v = std::get_if<std::vector<TargetSettingValue>>(&value);
+    if (!v)
         throw SW_RUNTIME_ERROR("empty array for key: " + key);
-    return *array;*/
-    return std::get<std::vector<TargetSettingValue>>(value);
+    return *v;
 }
 
 const TargetSettings &TargetSetting::getSettings() const
 {
-    /*if (!settings)
-    {
-        static const TargetSettings ts;
-        return ts;
-    }
-    return *settings;*/
     auto s = std::get_if<TargetSettings>(&value);
     if (!s)
     {

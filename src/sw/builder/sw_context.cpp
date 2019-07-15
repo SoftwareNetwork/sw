@@ -70,8 +70,14 @@ void SwBuilderContext::clearFileStorages()
     file_storage.reset();
 }
 
-static Version gatherVersion(const path &program, const String &arg = "--version", const String &in_regex = {})
+static Version gatherVersion1(builder::detail::ResolvableCommand &c, const String &in_regex)
 {
+    error_code ec;
+    c.execute(ec);
+
+    if (c.pid == -1)
+        throw SW_RUNTIME_ERROR(normalize_path(c.getProgram()) + ": " + ec.message());
+
     static std::regex r_default("(\\d+)\\.(\\d+)\\.(\\d+)(\\.(\\d+))?");
 
     std::regex r_in;
@@ -81,16 +87,6 @@ static Version gatherVersion(const path &program, const String &arg = "--version
     auto &r = in_regex.empty() ? r_default : r_in;
 
     Version V;
-    builder::detail::ResolvableCommand c; // for nice program resolving
-    c.setProgram(program);
-    if (!arg.empty())
-        c.push_back(arg);
-    error_code ec;
-    c.execute(ec);
-
-    if (c.pid == -1)
-        throw SW_RUNTIME_ERROR(normalize_path(program) + ": " + ec.message());
-
     std::smatch m;
     if (std::regex_search(c.err.text.empty() ? c.out.text : c.err.text, m, r))
     {
@@ -100,6 +96,33 @@ static Version gatherVersion(const path &program, const String &arg = "--version
             V = { std::stoi(m[1].str()), std::stoi(m[2].str()), std::stoi(m[3].str()) };
     }
     return V;
+}
+
+static Version gatherVersion(const path &program, const String &arg, const String &in_regex)
+{
+    builder::detail::ResolvableCommand c; // for nice program resolving
+    c.setProgram(program);
+    if (!arg.empty())
+        c.push_back(arg);
+    return gatherVersion1(c, in_regex);
+}
+
+Version getVersion(const SwBuilderContext &swctx, builder::detail::ResolvableCommand &c, const String &in_regex)
+{
+    auto &vs = swctx.getVersionStorage();
+    static boost::upgrade_mutex m;
+
+    const auto program = c.getProgram();
+
+    boost::upgrade_lock lk(m);
+    auto i = vs.versions.find(program);
+    if (i != vs.versions.end())
+        return i->second;
+
+    boost::upgrade_to_unique_lock lk2(lk);
+
+    vs.versions[program] = gatherVersion1(c, in_regex);
+    return vs.versions[program];
 }
 
 Version getVersion(const SwBuilderContext &swctx, const path &program, const String &arg, const String &in_regex)
