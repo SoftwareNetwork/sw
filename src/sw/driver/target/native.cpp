@@ -394,6 +394,7 @@ void NativeCompiledTarget::findCompiler()
                     nl = std::make_shared<VisualStudioLibrarian>(getSolution().swctx);
                 nl->Type = LinkerType::MSVC;
                 (Program&)*nl = t->getProgram();
+                (primitives::Command&)*nl->createCommand(getSolution().swctx) = *t->getProgram().getCommand();
             }
             if (link)
                 this->Linker = nl;
