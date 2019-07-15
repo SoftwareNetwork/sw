@@ -41,32 +41,6 @@ namespace sql = sqlpp::sqlite3;
 
 #include "database_pps.h"
 
-namespace sw
-{
-
-Database::Database(const path &db_name, const String &schema)
-    : fn(db_name)
-{
-    if (!fs::exists(fn))
-    {
-        ScopedFileLock lock(fn);
-        if (!fs::exists(fn))
-        {
-            open();
-        }
-    }
-
-    if (!db)
-        open();
-
-    // create or update schema
-    fs::create_directories(db_name.parent_path());
-    primitives::db::sqlite3::SqliteDatabase db2(db->native_handle());
-    createOrUpdateSchema(db2, schema, true);
-}
-
-Database::~Database() = default;
-
 /*
 ** This function is used to load the contents of a database file on disk
 ** into the "main" database of open database connection pInMemory, or
@@ -135,6 +109,32 @@ static int loadOrSaveDb(sqlite3 *pInMemory, const char *zFilename, int isSave)
     return rc;
 }
 
+namespace sw
+{
+
+Database::Database(const path &db_name, const String &schema)
+    : fn(db_name)
+{
+    if (!fs::exists(fn))
+    {
+        ScopedFileLock lock(fn);
+        if (!fs::exists(fn))
+        {
+            open();
+        }
+    }
+
+    if (!db)
+        open();
+
+    // create or update schema
+    fs::create_directories(db_name.parent_path());
+    primitives::db::sqlite3::SqliteDatabase db2(db->native_handle());
+    createOrUpdateSchema(db2, schema, true);
+}
+
+Database::~Database() = default;
+
 void Database::open(bool read_only, bool in_memory)
 {
     sql::connection_config config;
@@ -162,8 +162,9 @@ void Database::open(bool read_only, bool in_memory)
     db->execute("PRAGMA foreign_keys = ON");
     if (!in_memory)
     {
-        db->execute("PRAGMA journal_mode = WAL");
-        db->execute("PRAGMA synchronous = NORMAL");
+        // disable for now
+        //db->execute("PRAGMA journal_mode = WAL");
+        //db->execute("PRAGMA synchronous = NORMAL");
     }
 }
 
