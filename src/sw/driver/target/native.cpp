@@ -421,6 +421,8 @@ void NativeCompiledTarget::findCompiler()
 
     // goes last
     (*this + UnresolvedPackage(ts["native"]["stdlib"]["c"].getValue()))->sw_pushed = true;
+    if (ts["native"]["stdlib"]["kernel"]) // sometimes may be missing
+        (*this + UnresolvedPackage(ts["native"]["stdlib"]["kernel"].getValue()))->sw_pushed = true;
 }
 
 bool NativeCompiledTarget::init()

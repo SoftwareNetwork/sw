@@ -30,8 +30,8 @@ struct SW_DRIVER_CPP_API BuildSettings
 
     TargetSettings getTargetSettings() const;
 
-    bool operator<(const BuildSettings &rhs) const;
-    bool operator==(const BuildSettings &rhs) const;
+    //bool operator<(const BuildSettings &rhs) const;
+    //bool operator==(const BuildSettings &rhs) const;
 };
 
 }

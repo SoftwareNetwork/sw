@@ -25,7 +25,8 @@ TargetSettings toTargetSettings(const OS &o)
     default:
         SW_UNIMPLEMENTED;
     }
-    s["os"]["version"] = o.Version.toString();
+    // do not specify, just takes max available
+    //s["os"]["version"] = o.Version.toString();
 
     switch (o.Arch)
     {

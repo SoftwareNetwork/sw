@@ -91,8 +91,8 @@ String BuildSettings::getConfig() const
     String c;
 
     addConfigElement(c, toString(TargetOS.Type));
-    if (TargetOS.Type == OSType::Android)
-        addConfigElement(c, Native.SDK.Version.string());
+    //if (TargetOS.Type == OSType::Android)
+        //addConfigElement(c, Native.SDK.Version.string());
     addConfigElement(c, toString(TargetOS.Arch));
     if (TargetOS.Arch == ArchType::arm || TargetOS.Arch == ArchType::aarch64)
         addConfigElement(c, toString(TargetOS.SubArch)); // concat with previous?
@@ -120,11 +120,14 @@ String BuildSettings::getTargetTriplet() const
     if (TargetOS.Arch == ArchType::arm)
         target += "eabi";
     if (TargetOS.Type == OSType::Android)
-        target += Native.SDK.Version.string();
+    {
+        SW_UNIMPLEMENTED;
+        //target += Native.SDK.Version.string();
+    }
     return target;
 }
 
-bool BuildSettings::operator<(const BuildSettings &rhs) const
+/*bool BuildSettings::operator<(const BuildSettings &rhs) const
 {
     return std::tie(TargetOS, Native) < std::tie(rhs.TargetOS, rhs.Native);
 }
@@ -132,7 +135,7 @@ bool BuildSettings::operator<(const BuildSettings &rhs) const
 bool BuildSettings::operator==(const BuildSettings &rhs) const
 {
     return std::tie(TargetOS, Native) == std::tie(rhs.TargetOS, rhs.Native);
-}
+}*/
 
 TargetSettings BuildSettings::getTargetSettings() const
 {

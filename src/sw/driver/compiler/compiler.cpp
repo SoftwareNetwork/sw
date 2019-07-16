@@ -44,19 +44,19 @@ static void add_args(driver::Command &c, const Strings &args)
         c.arguments.push_back(a);
 }
 
-bool NativeToolchain::operator<(const NativeToolchain &rhs) const
+/*bool NativeToolchain::operator<(const NativeToolchain &rhs) const
 {
     SW_UNIMPLEMENTED;
-    //return std::tie(/*CompilerType, */LibrariesType, ConfigurationType, MT, SDK) <
-        //std::tie(/*rhs.CompilerType, */rhs.LibrariesType, rhs.ConfigurationType, rhs.MT, rhs.SDK);
+    //return std::tie(LibrariesType, ConfigurationType, MT, SDK) <
+        //std::tie(rhs.LibrariesType, rhs.ConfigurationType, rhs.MT, rhs.SDK);
 }
 
 bool NativeToolchain::operator==(const NativeToolchain &rhs) const
 {
     SW_UNIMPLEMENTED;
-    //return std::tie(/*CompilerType, */LibrariesType, ConfigurationType, MT, SDK) ==
-        //std::tie(/*rhs.CompilerType, */rhs.LibrariesType, rhs.ConfigurationType, rhs.MT, rhs.SDK);
-}
+    //return std::tie(LibrariesType, ConfigurationType, MT, SDK) ==
+        //std::tie(rhs.LibrariesType, rhs.ConfigurationType, rhs.MT, rhs.SDK);
+}*/
 
 CompilerBaseProgram::CompilerBaseProgram(const CompilerBaseProgram &rhs)
     : FileToFileTransformProgram(rhs)

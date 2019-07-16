@@ -126,69 +126,6 @@ const OS &getHostOS()
     return os;
 }
 
-path getProgramFilesX86()
-{
-    auto e = getenv("programfiles(x86)");
-    if (!e)
-        throw SW_RUNTIME_ERROR("Cannot get 'programfiles(x86)' env. var.");
-    return e;
-}
-
-static path getWindowsKitRoot()
-{
-    auto p = getProgramFilesX86() / "Windows Kits";
-    if (fs::exists(p))
-        return p;
-    throw SW_RUNTIME_ERROR("No Windows Kits available");
-}
-
-static Strings listWindowsKits()
-{
-    Strings kits;
-    auto kr = getWindowsKitRoot();
-    for (auto &k : Strings{ getWin10KitDirName(), "8.1", "8.0", "7.1A", "7.0A", "6.0A" })
-    {
-        auto d = kr / k;
-        if (fs::exists(d))
-            kits.push_back(k);
-    }
-    return kits;
-}
-
-static path getLatestWindowsKit()
-{
-    auto allkits = listWindowsKits();
-    if (allkits.empty())
-        throw SW_RUNTIME_ERROR("No Windows Kits available");
-    return allkits[0];
-}
-
-static path getWin10KitInspectionDir()
-{
-    auto kr = getWindowsKitRoot();
-    auto dir = kr / getWin10KitDirName() / "Include";
-    return dir;
-}
-
-static std::set<path> listWindows10Kits()
-{
-    std::set<path> kits;
-    auto dir = getWin10KitInspectionDir();
-    for (auto &i : fs::directory_iterator(dir))
-    {
-        if (fs::is_directory(i))
-        {
-            auto d = i.path().filename().u8string();
-            Version v = d;
-            if (v.isVersion())
-                kits.insert(d);
-        }
-    }
-    if (kits.empty())
-        throw SW_RUNTIME_ERROR("No Windows 10 Kits available");
-    return kits;
-}
-
 bool OS::canRunTargetExecutables(const OS &TargetOS) const
 {
     auto cannotRunTargetExecutables = [this, &TargetOS]()
@@ -304,6 +241,35 @@ bool OS::operator==(const OS &rhs) const
         std::tie(rhs.Type, rhs.Arch, rhs.SubArch, rhs.Version);
 }
 
+/*struct SW_BUILDER_API OsSdk
+{
+    // root to sdks
+    //  example: c:\\Program Files (x86)\\Windows Kits
+    path Root;
+
+    // sdk dir in root
+    // win: 7.0 7.0A, 7.1, 7.1A, 8, 8.1, 10 ...
+    // osx: 10.12, 10.13, 10.14 ...
+    // android: 1, 2, 3, ..., 28
+    path Version; // make string?
+
+                  // windows10:
+                  // 10.0.10240.0, 10.0.17763.0 ...
+    path BuildNumber;
+
+    OsSdk() = default;
+    OsSdk(const OS &);
+    OsSdk(const OsSdk &) = default;
+    OsSdk &operator=(const OsSdk &) = default;
+
+    path getPath(const path &subdir = {}) const;
+    String getWindowsTargetPlatformVersion() const;
+    void setAndroidApiVersion(int v);
+
+    //bool operator<(const SDK &) const;
+    //bool operator==(const SDK &) const;
+};
+
 OsSdk::OsSdk(const OS &TargetOS)
 {
     if (TargetOS.is(OSType::Windows))
@@ -381,22 +347,7 @@ String OsSdk::getWindowsTargetPlatformVersion() const
 void OsSdk::setAndroidApiVersion(int v)
 {
     Version = std::to_string(v);
-}
-
-/*bool OsSdk::operator<(const SDK &rhs) const
-{
-    return std::tie(Root, Version, BuildNumber) < std::tie(rhs.Root, rhs.Version, rhs.BuildNumber);
-}
-
-bool OsSdk::operator==(const SDK &rhs) const
-{
-    return std::tie(Root, Version, BuildNumber) == std::tie(rhs.Root, rhs.Version, rhs.BuildNumber);
 }*/
-
-String getWin10KitDirName()
-{
-    return "10";
-}
 
 String toString(OSType e)
 {

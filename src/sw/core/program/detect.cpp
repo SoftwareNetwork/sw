@@ -85,8 +85,6 @@ bool isCppSourceFileExtensions(const String &e)
     return exts.find(e) != exts.end();
 }
 
-path getProgramFilesX86();
-
 void detectCompilers(SwCoreContext &s)
 {
     detectNativeCompilers(s);
@@ -668,51 +666,200 @@ void detectMsvc14AndOlder(SwCoreContext &s)
     }
 }
 
-void detectWindowsSdk(SwCoreContext &s)
+static path getProgramFilesX86()
 {
-    OsSdk sdk(s.getHostOs());
-    auto new_settings = s.getHostOs();
+    auto e = getenv("programfiles(x86)");
+    if (!e)
+        throw SW_RUNTIME_ERROR("Cannot get 'programfiles(x86)' env. var.");
+    return e;
+}
 
-    for (auto target_arch : {ArchType::x86_64,ArchType::x86,ArchType::arm,ArchType::aarch64})
+static path getWindowsKitRoot()
+{
+    // take from registry?
+    auto p = getProgramFilesX86() / "Windows Kits";
+    if (fs::exists(p))
+        return p;
+    throw SW_RUNTIME_ERROR("No Windows Kits available");
+}
+
+static String getWin10KitDirName()
+{
+    return "10";
+}
+
+static Strings listWindowsKits()
+{
+    // https://en.wikipedia.org/wiki/Microsoft_Windows_SDK
+    static const Strings known_kits{ getWin10KitDirName(), "8.1A", "8.1", "8.0", "7.1A", "7.1", "7.0A", "7.0A","6.0A" };
+
+    Strings kits;
+    auto kr = getWindowsKitRoot();
+    for (auto &k : known_kits)
     {
-        new_settings.Arch = target_arch;
+        auto d = kr / k;
+        if (fs::exists(d))
+            kits.push_back(k);
+    }
+    return kits;
+}
 
-        auto ts1 = toTargetSettings(new_settings);
-        TargetSettings ts;
-        ts["os"]["kernel"] = ts1["os"]["kernel"];
-        ts["os"]["arch"] = ts1["os"]["arch"];
+static path getWin10KitInspectionDir()
+{
+    auto kr = getWindowsKitRoot();
+    auto dir = kr / getWin10KitDirName() / "Include";
+    return dir;
+}
 
-        // rename to libc? to crt?
-        auto &ucrt = addTarget<PredefinedTarget>(s, PackageId("com.Microsoft.Windows.SDK.ucrt", sdk.getWindowsTargetPlatformVersion()));
-        ucrt.ts = ts;
-        ucrt.ts["os"]["version"] = ts1["os"]["version"];
-
-        // add kits include dirs
-        for (auto &i : fs::directory_iterator(sdk.getPath("Include")))
+static VersionSet listWindows10Kits()
+{
+    VersionSet kits;
+    auto dir = getWin10KitInspectionDir();
+    for (auto &i : fs::directory_iterator(dir))
+    {
+        if (fs::is_directory(i))
         {
-            if (fs::is_directory(i))
-                ucrt.public_ts["system-include-directories"].push_back(normalize_path(i));
-        }
-        for (auto &i : fs::directory_iterator(sdk.getPath("Lib")))
-        {
-            if (fs::is_directory(i))
-                ucrt.public_ts["system-link-directories"].push_back(normalize_path(i / toStringWindows(target_arch)));
+            auto d = i.path().filename().u8string();
+            Version v = d;
+            if (v.isVersion())
+                kits.insert(d);
         }
     }
+    return kits;
+}
 
-    // .rc
+void detectWindowsSdk(SwCoreContext &s)
+{
+    // ucrt - universal CRT
+    //
+    // um - user mode
+    // km - kernel mode
+    // shared - some of these and some of these
+    //
+
+    auto new_settings = s.getHostOs();
+
+    struct WinKit
     {
-        auto p = std::make_shared<SimpleProgram>(s);
-        p->file = sdk.getPath("bin") / toStringWindows(s.getHostOs().Arch) / "rc.exe";
-        if (fs::exists(p->file))
+        path kit_root;
+
+        String name;
+
+        String bdir_subversion;
+        String idir_subversion;
+        String ldir_subversion;
+
+        Strings idirs; // additional idirs
+
+        void add(SwCoreContext &s, OS &new_settings, const Version &v)
         {
-            Version v = getVersion(s, p->file, "/?");
-            auto &rc = addProgram(s, PackageId("com.Microsoft.Windows.rc", v), p);
-            auto ts1 = toTargetSettings(new_settings);
-            rc.ts["os"]["kernel"] = ts1["os"]["kernel"];
+            auto idir = kit_root / "Include" / idir_subversion;
+            if (!fs::exists(idir / name))
+                return;
+
+            for (auto target_arch : { ArchType::x86_64,ArchType::x86,ArchType::arm,ArchType::aarch64 })
+            {
+                new_settings.Arch = target_arch;
+
+                auto ts1 = toTargetSettings(new_settings);
+                TargetSettings ts;
+                ts["os"]["kernel"] = ts1["os"]["kernel"];
+                ts["os"]["arch"] = ts1["os"]["arch"];
+
+                auto libdir = kit_root / "Lib" / ldir_subversion / name / toStringWindows(target_arch);
+                if (fs::exists(libdir))
+                {
+                    auto &ucrt = addTarget<PredefinedTarget>(s, PackageId("com.Microsoft.Windows.SDK." + name, v));
+                    ucrt.ts = ts;
+                    ucrt.ts["os"]["version"] = v.toString(3); // use 3 numbers at the moment
+
+                    ucrt.public_ts["system-include-directories"].push_back(normalize_path(idir / name));
+                    for (auto &i : idirs)
+                        ucrt.public_ts["system-include-directories"].push_back(normalize_path(idir / i));
+                    ucrt.public_ts["system-link-directories"].push_back(normalize_path(libdir));
+                }
+            }
         }
-        //for (auto &idir : COpts.System.IncludeDirectories)
-        //C->system_idirs.push_back(idir);
+
+        void addTools(SwCoreContext &s, OS &new_settings)
+        {
+            // .rc
+            {
+                auto p = std::make_shared<SimpleProgram>(s);
+                p->file = kit_root / "bin" / bdir_subversion / toStringWindows(s.getHostOs().Arch) / "rc.exe";
+                if (fs::exists(p->file))
+                {
+                    Version v = getVersion(s, p->file, "/?");
+                    auto &rc = addProgram(s, PackageId("com.Microsoft.Windows.rc", v), p);
+                    auto ts1 = toTargetSettings(new_settings);
+                    rc.ts["os"]["kernel"] = ts1["os"]["kernel"];
+                }
+                // these are passed from compiler during merge?
+                //for (auto &idir : COpts.System.IncludeDirectories)
+                //C->system_idirs.push_back(idir);
+            }
+        }
+    };
+
+    for (auto &k : listWindowsKits())
+    {
+        auto kr = getWindowsKitRoot() /k;
+        if (k == getWin10KitDirName())
+        {
+            for (auto &v : listWindows10Kits())
+            {
+                // ucrt
+                {
+                    WinKit wk;
+                    wk.name = "ucrt";
+                    wk.kit_root = kr;
+                    wk.idir_subversion = v.toString();
+                    wk.ldir_subversion = v.toString();
+                    wk.add(s, new_settings, v);
+                }
+
+                // um + shared
+                {
+                    WinKit wk;
+                    wk.name = "um";
+                    wk.kit_root = kr;
+                    wk.idir_subversion = v.toString();
+                    wk.ldir_subversion = v.toString();
+                    wk.idirs.push_back("shared");
+                    wk.add(s, new_settings, v);
+                }
+
+                // tools
+                {
+                    WinKit wk;
+                    wk.kit_root = kr;
+                    wk.bdir_subversion = v.toString();
+                    wk.addTools(s, new_settings);
+                }
+            }
+        }
+        else
+        {
+            // um + shared
+            {
+                WinKit wk;
+                wk.name = "um";
+                wk.kit_root = kr;
+                if (k == "8.1")
+                    wk.ldir_subversion = "winv6.3";
+                else
+                    LOG_DEBUG(logger, "TODO: Windows Kit " + k + " is not implemented yet. Report to authors.");
+                wk.idirs.push_back("shared");
+                wk.add(s, new_settings, k);
+            }
+
+            // tools
+            {
+                WinKit wk;
+                wk.kit_root = kr;
+                wk.addTools(s, new_settings);
+            }
+        }
     }
 }
 

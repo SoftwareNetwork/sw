@@ -93,7 +93,7 @@ bool isCppSourceFileExtensions(const String &);
 
 struct SW_DRIVER_CPP_API NativeToolchain
 {
-    struct OsSdk SDK;
+    //struct OsSdk SDK;
 
     // libc, libcpp
     // OS SDK (win sdk, macos sdk, linux headers etc.)
@@ -127,8 +127,8 @@ struct SW_DRIVER_CPP_API NativeToolchain
     // members
     //String getConfig() const;
 
-    bool operator<(const NativeToolchain &) const;
-    bool operator==(const NativeToolchain &) const;
+    //bool operator<(const NativeToolchain &) const;
+    //bool operator==(const NativeToolchain &) const;
 };
 
 // compilers

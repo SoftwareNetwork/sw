@@ -439,11 +439,18 @@ UnresolvedDependenciesType Build::gatherUnresolvedDependencies(int n_runs)
                         auto k = i->second.find(dptr->settings);
                         if (k == i->second.end())
                         {
+                            if (dptr->sw_pushed)
+                            {
+                                throw SW_RUNTIME_ERROR(pkg.toString() + ": cannot load sw pushed package " + dptr->getPackage().toString() +
+                                    " with current settings: " + dptr->settings.toString());
+                            }
                             i->second.loadPackages(dptr->settings);
                             k = i->second.find(dptr->settings);
                             if (k == i->second.end())
+                            {
                                 throw SW_RUNTIME_ERROR(pkg.toString() + ": cannot load package " + dptr->getPackage().toString() +
                                     " with current settings: " + dptr->settings.toString());
+                            }
                             again = true;
                         }
                         dptr->setTarget(**k);
