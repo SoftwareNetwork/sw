@@ -43,6 +43,8 @@ private:
     mutable std::unique_ptr<CommandStorage> cs;
     mutable std::unique_ptr<FileStorage> file_storage;
     std::unique_ptr<Executor> file_storage_executor; // after everything!
+
+    mutable std::mutex csm;
 };
 
 } // namespace sw

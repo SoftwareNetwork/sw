@@ -81,7 +81,7 @@ Version Program::gatherVersion(const path &program, const String &arg, const Str
     Version V;
     builder::detail::ResolvableCommand c; // for nice program resolving
     c.setProgram(program);
-    c.arguments = { arg };
+    c.push_back(arg);
     error_code ec;
     c.execute(ec);
 
