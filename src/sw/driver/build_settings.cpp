@@ -32,6 +32,7 @@ static OS fromTargetSettings(const TargetSettings &ts)
     IF_KEY("os"]["kernel")
         if (0);
         IF_SETTING("com.Microsoft.Windows.NT", os.Type, OSType::Windows);
+        IF_SETTING("org.torvalds.linux", os.Type, OSType::Linux);
         else
             SW_UNIMPLEMENTED;
     IF_END

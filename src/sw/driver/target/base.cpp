@@ -826,6 +826,9 @@ void Target::addDummyDependency(const DependencyPtr &t)
             ts["os"]["arch"] == "x86"
         )
         ;
+
+    use_current_settings &= hs["native"]["program"]["c"] == ts["native"]["program"]["c"];
+
     ds.merge(use_current_settings ? ts : hs);
 }
 

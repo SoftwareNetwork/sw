@@ -550,22 +550,15 @@ void NativeLinkerOptions::add(const DependencyPtr &t)
 
 void NativeLinkerOptions::remove(const DependencyPtr &t)
 {
-    auto i = std::find_if(deps.begin(), deps.end(), [t](const auto &d) {
-        return d->getPackage() == t->getPackage();
-    });
-    if (i == deps.end())
+    t->Disabled = true;
+    for (auto &d : deps)
     {
-        t->Disabled = true;
-        deps.push_back(t);
+        if (d->getPackage() != t->getPackage())
+            continue;
+        d->Disabled = true;
     }
-    else
-    {
-        (*i)->Disabled = true;
-        deps.push_back(t);
-        /*auto d = &(*i)->getTarget();
-        if (d)
-            t->setTarget(*d);*/
-    }
+
+    deps.push_back(t);
 
     auto t2 = t;
     if (auto t = dynamic_cast<Target *>(this))

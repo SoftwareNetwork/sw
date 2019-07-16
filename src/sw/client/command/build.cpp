@@ -42,7 +42,8 @@ static cl::list<String> compiler("compiler", cl::desc("Set compiler"), cl::Comma
 static cl::list<String> configuration("configuration", cl::desc("Set build configuration"), cl::CommaSeparated);
 cl::alias configuration2("config", cl::desc("Alias for -configuration"), cl::aliasopt(configuration));
 static cl::list<String> platform("platform", cl::desc("Set build platform"), cl::CommaSeparated);
-//static cl::opt<String> arch("arch", cl::desc("Set arch")/*, cl::sub(subcommand_ide)*/);
+cl::alias platform2("arch", cl::desc("Alias for -platform"), cl::aliasopt(platform));
+static cl::list<String> os("os", cl::desc("Set build target os"), cl::CommaSeparated);
 
 // static/shared
 static cl::opt<bool> static_build("static-build", cl::desc("Set static build"));
@@ -117,6 +118,9 @@ static sw::TargetSettings compilerTypeFromStringCaseI(const sw::UnresolvedPackag
     {
         ts["native"]["program"]["c"] = set_with_version("org.LLVM.clang");
         ts["native"]["program"]["cpp"] = set_with_version("org.LLVM.clangpp");
+        ts["native"]["program"]["asm"] = set_with_version("org.LLVM.clang"); // llvm-as?
+        ts["native"]["program"]["lib"] = set_with_version("org.LLVM.ar");
+        ts["native"]["program"]["link"] = set_with_version("org.LLVM.lld");
     }
     else if (compiler.ppath == "clangcl"/* || compiler.ppath == "clang-cl"*/)
     {
@@ -181,6 +185,18 @@ static String archTypeFromStringCaseI(const String &in)
     else if (platform == "arm64")
         return "aarch64";
     return platform;
+}
+
+static String osTypeFromStringCaseI(const String &in)
+{
+    auto os = boost::to_lower_copy(in);
+    if (os == "win" || os == "windows")
+        return "com.Microsoft.Windows.NT";
+    else if (os == "linux")
+        return "org.torvalds.linux";
+    else if (os == "mac" || os == "macos")
+        return "com.Apple.Macos"; // XNU? Darwin?
+    return os;
 }
 
 std::vector<sw::TargetSettings> create_settings(const sw::SwCoreContext &swctx)
@@ -275,6 +291,12 @@ std::vector<sw::TargetSettings> create_settings(const sw::SwCoreContext &swctx)
     mult_and_action(platform.size(), [](auto &s, int i)
     {
         s["os"]["arch"] = archTypeFromStringCaseI(platform[i]);
+    });
+
+    // os
+    mult_and_action(os.size(), [](auto &s, int i)
+    {
+        s["os"]["kernel"] = osTypeFromStringCaseI(os[i]);
     });
 
     // compiler

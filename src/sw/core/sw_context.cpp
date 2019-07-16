@@ -52,7 +52,7 @@ void SwCoreContext::createHostSettings()
     if (getHostOs().is(OSType::Windows))
     {
         ts["native"]["stdlib"]["c"] = "com.Microsoft.Windows.SDK.ucrt";
-        ts["native"]["stdlib"]["c++"] = "com.Microsoft.VisualStudio.VC.libcpp";
+        ts["native"]["stdlib"]["cpp"] = "com.Microsoft.VisualStudio.VC.libcpp";
         ts["native"]["stdlib"]["kernel"] = "com.Microsoft.Windows.SDK.um";
 
         if (!getTargets()["com.Microsoft.VisualStudio.VC.cl"].empty())

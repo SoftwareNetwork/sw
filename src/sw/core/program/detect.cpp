@@ -905,10 +905,10 @@ void detectWindowsClang(SwCoreContext &s)
     // link
     {
         auto p = std::make_shared<SimpleProgram>(s);
-        p->file = bin_llvm_path / "lld-link.exe";
+        p->file = bin_llvm_path / "lld.exe";
         if (!fs::exists(p->file))
         {
-            auto f = resolveExecutable("lld-link");
+            auto f = resolveExecutable("lld");
             if (fs::exists(f))
                 p->file = f;
         }
