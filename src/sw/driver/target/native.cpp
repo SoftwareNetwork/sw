@@ -374,8 +374,10 @@ void NativeCompiledTarget::findCompiler()
         }
         else if (p.ppath == "org.LLVM.ar")
         {
-            c = std::make_shared<GNULibrarian>(getSolution().swctx);
+            auto C = std::make_shared<GNULibrarian>(getSolution().swctx);
+            c = C;
             c->Type = LinkerType::GNU;
+            C->Prefix = getSettings().TargetOS.getLibraryPrefix();
         }
         else if (p.ppath == "org.LLVM.lld")
         {
@@ -383,6 +385,8 @@ void NativeCompiledTarget::findCompiler()
             c = C;
             c->Type = LinkerType::GNU;
             C->PositionIndependentCode = false;
+            C->use_start_end_groups = false;
+            C->Prefix = getSettings().TargetOS.getLibraryPrefix();
 
             create_command();
 

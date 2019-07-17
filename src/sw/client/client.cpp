@@ -499,7 +499,10 @@ void setup_log(const std::string &log_level, bool simple)
 
 void override_package_perform(sw::SwContext &swctx)
 {
-    swctx.addInput(fs::current_path());
+    auto &i = swctx.addInput(fs::current_path());
+    auto ts = swctx.getHostSettings();
+    ts["driver"]["dry-run"] = "true";
+    i.addSettings(ts);
     swctx.load();
 
     // one prepare step will find sources

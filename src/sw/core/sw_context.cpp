@@ -63,7 +63,13 @@ void SwCoreContext::createHostSettings()
             ts["native"]["program"]["lib"] = "com.Microsoft.VisualStudio.VC.lib";
             ts["native"]["program"]["link"] = "com.Microsoft.VisualStudio.VC.link";
         }
+        // add more defaults
+        else
+            SW_UNIMPLEMENTED;
     }
+    // add more defaults
+    else
+        SW_UNIMPLEMENTED;
 }
 
 const TargetSettings &SwCoreContext::getHostSettings() const
