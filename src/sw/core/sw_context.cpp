@@ -113,10 +113,13 @@ void SwContext::resolvePackages()
         for (const auto &tgt : tgts)
         {
             auto deps = tgt->getDependencies();
-            // we filter out existing targets as they come from same module
             for (auto &d : deps)
             {
+                // filter out existing targets as they come from same module
                 if (auto id = d->getUnresolvedPackage().toPackageId(); id && getTargets().find(*id) != getTargets().end())
+                    continue;
+                // filter out predefined targets
+                if (getPredefinedTargets().find(d->getUnresolvedPackage().ppath) != getPredefinedTargets().end(d->getUnresolvedPackage().ppath))
                     continue;
                 upkgs.insert(d->getUnresolvedPackage());
             }
@@ -157,6 +160,12 @@ void SwContext::resolvePackages()
                             d->setTarget(**k);
                             continue;
                         }
+
+                        if (getPredefinedTargets().find(d->getUnresolvedPackage().ppath) != getPredefinedTargets().end(d->getUnresolvedPackage().ppath))
+                        {
+                            throw SW_LOGIC_ERROR(tgt->getPackage().toString() + ": predefined target is not resolved: " + d->getUnresolvedPackage().toString());
+                        }
+
                         load[d->getSettings()] = &i->second;
                     }
                 }
@@ -208,6 +217,8 @@ void SwContext::configure()
 {
     // mark existing targets as targets to build
     targets_to_build = getTargets();
+    for (auto &[pkg, d] : getPredefinedTargets())
+        targets_to_build.erase(pkg.ppath);
 
     resolvePackages();
     while (prepareStep())

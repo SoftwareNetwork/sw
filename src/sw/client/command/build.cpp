@@ -18,6 +18,8 @@
 
 #include "commands.h"
 
+#include <boost/algorithm/string.hpp>
+
 extern ::cl::opt<bool> build_after_fetch;
 
 ::cl::list<String> build_arg(::cl::Positional, ::cl::desc("Files or directories to build (paths to config)"), ::cl::sub(subcommand_build));
@@ -35,8 +37,6 @@ static ::cl::opt<bool> build_fetch("fetch", ::cl::desc("Fetch sources, then buil
 
 //static cl::opt<bool> append_configs("append-configs", cl::desc("Append configs for generation"));
 
-static cl::list<String> libc("libc", cl::CommaSeparated);
-static cl::list<String> libcpp("libcpp", cl::CommaSeparated);
 static cl::list<String> target_os("target-os", cl::CommaSeparated);
 static cl::list<String> compiler("compiler", cl::desc("Set compiler"), cl::CommaSeparated);
 static cl::list<String> configuration("configuration", cl::desc("Set build configuration"), cl::CommaSeparated);
@@ -44,6 +44,18 @@ cl::alias configuration2("config", cl::desc("Alias for -configuration"), cl::ali
 static cl::list<String> platform("platform", cl::desc("Set build platform"), cl::CommaSeparated);
 cl::alias platform2("arch", cl::desc("Alias for -platform"), cl::aliasopt(platform));
 static cl::list<String> os("os", cl::desc("Set build target os"), cl::CommaSeparated);
+// rename to stdc, stdcpp?
+static cl::list<String> libc("libc", cl::desc("Set build libc"), cl::CommaSeparated);
+static cl::list<String> libcpp("libcpp", cl::desc("Set build libcpp"), cl::CommaSeparated);
+
+// -setting k1=v1,k2=v2,k3="v3,v3" -setting k4=v4,k5,k6 etc.
+// settings in one setting applied simultaneosly
+// settings in different settings are multiplied
+// k=v assigns value to dot separated key
+// complex.key.k1 means s["complex"]["key"]["k1"]
+// k= or k="" means empty value
+// k means reseted value
+static cl::list<String> settings("setting", cl::desc("Set settings directly"), cl::ZeroOrMore);
 
 // static/shared
 static cl::opt<bool> static_build("static-build", cl::desc("Set static build"));
@@ -199,6 +211,36 @@ static String osTypeFromStringCaseI(const String &in)
     return os;
 }
 
+static void applySettings(sw::TargetSettings &s, const String &in_settings)
+{
+    Strings pairs;
+    boost::split(pairs, in_settings, boost::is_any_of(","));
+    for (auto &p : pairs)
+    {
+        auto pos = p.find("=");
+        if (pos == p.npos)
+        {
+            Strings key_parts;
+            boost::split(key_parts, p, boost::is_any_of("."));
+            auto *ts = &s;
+            for (int i = 0; i < key_parts.size() - 1; i++)
+                ts = &((*ts)[key_parts[i]].getSettings());
+            (*ts)[key_parts[key_parts.size() - 1]].reset();
+            continue;
+        }
+
+        auto key = p.substr(0, pos);
+        auto value = p.substr(pos + 1);
+
+        Strings key_parts;
+        boost::split(key_parts, key, boost::is_any_of("."));
+        auto *ts = &s;
+        for (int i = 0; i < key_parts.size() - 1; i++)
+            ts = &((*ts)[key_parts[i]].getSettings());
+        (*ts)[key_parts[key_parts.size() - 1]] = value;
+    }
+}
+
 std::vector<sw::TargetSettings> create_settings(const sw::SwCoreContext &swctx)
 {
     std::vector<sw::TargetSettings> settings;
@@ -299,6 +341,18 @@ std::vector<sw::TargetSettings> create_settings(const sw::SwCoreContext &swctx)
         s["os"]["kernel"] = osTypeFromStringCaseI(os[i]);
     });
 
+    // libc
+    mult_and_action(libc.size(), [](auto &s, int i)
+    {
+        s["native"]["stdlib"]["c"] = archTypeFromStringCaseI(libc[i]);
+    });
+
+    // libcpp
+    mult_and_action(libcpp.size(), [](auto &s, int i)
+    {
+        s["native"]["stdlib"]["cpp"] = archTypeFromStringCaseI(libcpp[i]);
+    });
+
     // compiler
     mult_and_action(compiler.size(), [](auto &s, int i)
     {
@@ -311,16 +365,11 @@ std::vector<sw::TargetSettings> create_settings(const sw::SwCoreContext &swctx)
         s["os"]["kernel"] = OSTypeFromStringCaseI(target_os[i]);
     });
 
-    // libc
-    //auto set_libc = [](auto &s, const String &libc)
-    //{
-    //    s.Settings.Native.libc = libc;
-    //};
-
-    //mult_and_action(libc.size(), [&set_libc](auto &s, int i)
-    //{
-    //    set_libc(s, libc[i]);
-    //});
+    // target_os
+    mult_and_action(::settings.size(), [](auto &s, int i)
+    {
+        applySettings(s, ::settings[i]);
+    });
 
     return settings;
 }

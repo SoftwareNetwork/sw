@@ -131,6 +131,17 @@ const std::vector<TargetSettingValue> &TargetSetting::getArray() const
     return *v;
 }
 
+TargetSettings &TargetSetting::getSettings()
+{
+    auto s = std::get_if<TargetSettings>(&value);
+    if (!s)
+    {
+        static TargetSettings ts;
+        return ts;
+    }
+    return *s;
+}
+
 const TargetSettings &TargetSetting::getSettings() const
 {
     auto s = std::get_if<TargetSettings>(&value);
@@ -192,6 +203,11 @@ void TargetSetting::push_back(const TargetSettingValue &v)
     if (value.index() == 0)
         value = std::vector<TargetSettingValue>();
     return std::get<std::vector<TargetSettingValue>>(value).push_back(v);
+}
+
+void TargetSetting::reset()
+{
+    value.swap(decltype(value){});
 }
 
 TargetSetting::operator bool() const

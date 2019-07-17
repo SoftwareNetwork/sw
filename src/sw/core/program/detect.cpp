@@ -829,6 +829,16 @@ void detectWindowsSdk(SwCoreContext &s)
                     wk.add(s, new_settings, v);
                 }
 
+                // km
+                {
+                    WinKit wk;
+                    wk.name = "km";
+                    wk.kit_root = kr;
+                    wk.idir_subversion = v.toString();
+                    wk.ldir_subversion = v.toString();
+                    wk.add(s, new_settings, v);
+                }
+
                 // tools
                 {
                     WinKit wk;
@@ -848,8 +858,20 @@ void detectWindowsSdk(SwCoreContext &s)
                 if (k == "8.1")
                     wk.ldir_subversion = "winv6.3";
                 else
-                    LOG_DEBUG(logger, "TODO: Windows Kit " + k + " is not implemented yet. Report to authors.");
+                    LOG_DEBUG(logger, "TODO: Windows Kit " + k + " is not implemented yet. Report this issue.");
                 wk.idirs.push_back("shared");
+                wk.add(s, new_settings, k);
+            }
+
+            // km
+            {
+                WinKit wk;
+                wk.name = "km";
+                wk.kit_root = kr;
+                if (k == "8.1")
+                    wk.ldir_subversion = "winv6.3";
+                else
+                    LOG_DEBUG(logger, "TODO: Windows Kit " + k + " is not implemented yet. Report this issue.");
                 wk.add(s, new_settings, k);
             }
 

@@ -486,20 +486,11 @@ std::vector<IDependency *> Target::getDependencies() const
 {
     std::vector<IDependency *> deps;
     for (auto &d : gatherDependencies())
-    {
-        if (!d->sw_pushed)
-            deps.push_back(d.get());
-    }
+        deps.push_back(d.get());
     for (auto &d : DummyDependencies)
-    {
-        if (!d->sw_pushed)
-            deps.push_back(d.get());
-    }
+        deps.push_back(d.get());
     for (auto &d : SourceDependencies)
-    {
-        if (!d->sw_pushed)
-            deps.push_back(d.get());
-    }
+        deps.push_back(d.get());
     return deps;
 }
 

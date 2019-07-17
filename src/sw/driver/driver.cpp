@@ -90,12 +90,9 @@ void Driver::load(const std::set<Input> &inputs)
         {
             auto p = *findConfig(i.getPath(), Build::getAvailableFrontendConfigFilenames());
 
-            build->settings.clear();
-            for (auto s : i.getSettings())
-            {
+            auto settings = i.getSettings();
+            for (auto s : settings)
                 s.erase("driver");
-                build->addSettings(s);
-            }
 
             build->DryRun = (*i.getSettings().begin())["driver"]["dry-run"] == "true";
 
@@ -103,7 +100,7 @@ void Driver::load(const std::set<Input> &inputs)
                 build->source_dirs_by_source[h] = d.getValue();
 
             spec = read_file(p);
-            build->load_spec_file(p);
+            build->load_spec_file(p, settings);
             break;
         }
         default:

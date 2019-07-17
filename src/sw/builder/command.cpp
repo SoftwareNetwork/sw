@@ -726,18 +726,24 @@ path Command::writeCommand(const path &p) const
                 t += "\"";
             t += "\n";
         }
+        return !env.empty();
     };
     if (auto p = getFirstCommand())
     {
+        bool e = false;
         while (p)
         {
-            print_env(p->environment);
+            e |= print_env(p->environment);
             p = p->next;
         }
+        if (e)
+            t += "\n";
     }
     else
-        print_env(environment);
-    t += "\n";
+    {
+        if (print_env(environment))
+            t += "\n";
+    }
 
     // wdir
     if (!working_directory.empty())

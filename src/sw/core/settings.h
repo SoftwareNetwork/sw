@@ -118,9 +118,11 @@ struct SW_CORE_API TargetSetting
     //bool hasValue() const;
     const String &getValue() const;
     const std::vector<TargetSettingValue> &getArray() const;
+    TargetSettings &getSettings();
     const TargetSettings &getSettings() const;
     void merge(const TargetSetting &);
     void push_back(const TargetSettingValue &);
+    void reset();
 
     //String toString(int type = TargetSettings::Simple) const;
 

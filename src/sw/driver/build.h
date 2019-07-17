@@ -165,7 +165,6 @@ struct SW_DRIVER_CPP_API Build : SimpleBuild
     // most important
     SwCoreContext &swctx;
     const driver::cpp::Driver &driver;
-    std::vector<TargetSettings> settings; // initial settings
 private:
     TargetSettings host_settings;
 public:
@@ -212,7 +211,6 @@ public:
     CommandExecutionPlan getExecutionPlan(const Commands &cmds) const;
     Commands getCommands() const;
     PackageDescriptionMap getPackages() const;
-    void addSettings(const TargetSettings &);
     const ModuleSwappableData &getModuleData() const;
     PackageVersionGroupNumber getCurrentGroupNumber() const;
     const String &getCurrentModule() const;
@@ -294,7 +292,7 @@ public:
     Build(const Build &);
     ~Build();
 
-    void load_spec_file(const path &);
+    void load_spec_file(const path &, const std::set<TargetSettings> &);
     void load_inline_spec(const path &);
     void load_dir(const path &);
 
@@ -322,7 +320,7 @@ private:
     SharedLibraryTarget &createTarget(const Files &files);
 
     // basic frontends
-    void load_dll(const path &dll);
+    void load_dll(const path &dll, const std::set<TargetSettings> &);
     void load_configless(const path &file_or_dir);
     void createSolutions(const path &dll, bool usedll = true);
 

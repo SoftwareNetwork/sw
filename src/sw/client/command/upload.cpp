@@ -102,6 +102,10 @@ sw::PackageDescriptionMap getPackages(const sw::SwContext &swctx, const sw::Sour
         // deps
         for (auto &d : t->getDependencies())
         {
+            // filter out predefined targets
+            if (swctx.getPredefinedTargets().find(d->getUnresolvedPackage().ppath) != swctx.getPredefinedTargets().end(d->getUnresolvedPackage().ppath))
+                continue;
+
             nlohmann::json jd;
             jd["path"] = d->getUnresolvedPackage().ppath.toString();
             jd["range"] = d->getUnresolvedPackage().range.toString();

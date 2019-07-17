@@ -127,6 +127,7 @@ protected:
     virtual void run() const {}
     path getOutputFilename() const;
     Build setupSolution(const path &f) const;
+    TargetSettings getSettings() const;
     virtual void setupTarget(NativeCompiledTarget &t) const;
 
     [[nodiscard]]

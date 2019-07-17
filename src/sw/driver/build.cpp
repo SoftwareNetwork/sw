@@ -378,11 +378,6 @@ Build::~Build()
 {
 }
 
-void Build::addSettings(const TargetSettings &ss)
-{
-    settings.push_back(ss);
-}
-
 const OS &Build::getHostOs() const
 {
     return swctx.HostOS;
@@ -439,11 +434,6 @@ UnresolvedDependenciesType Build::gatherUnresolvedDependencies(int n_runs)
                         auto k = i->second.find(dptr->settings);
                         if (k == i->second.end())
                         {
-                            if (dptr->sw_pushed)
-                            {
-                                throw SW_RUNTIME_ERROR(pkg.toString() + ": cannot load sw pushed package " + dptr->getPackage().toString() +
-                                    " with current settings: " + dptr->settings.toString());
-                            }
                             i->second.loadPackages(dptr->settings);
                             k = i->second.find(dptr->settings);
                             if (k == i->second.end())
@@ -757,7 +747,7 @@ private:
             lib.Definitions["SW_PACKAGE_API"] = "__attribute__ ((visibility (\"default\")))";
         }
 
-        BuildSettings bs(b.settings[0]);
+        BuildSettings bs(module_data.current_settings);
         if (bs.TargetOS.is(OSType::Windows))
             lib.NativeLinkerOptions::System.LinkLibraries.insert("Delayimp.lib");
 
@@ -973,16 +963,13 @@ private:
 template <class T>
 std::shared_ptr<PrepareConfigEntryPoint> Build::build_configs1(const T &objs)
 {
-    addSettings(host_settings);
-
-    //settings[0].Native.LibrariesType = LibraryType::Static;
-    settings[0]["native"]["library"] = "static";
+    TargetSettings ts = host_settings;
+    ts["native"]["library"] = "static";
     if (debug_configs)
-        settings[0]["native"]["configuration"] = "debug";
-        //settings[0].Native.ConfigurationType = ConfigurationType::Debug;
+        ts["native"]["configuration"] = "debug";
 
     auto ep = std::make_shared<PrepareConfigEntryPoint>(*this, objs);
-    ep->loadPackages(settings[0]);
+    ep->loadPackages(ts);
 
     execute();
 
@@ -1131,7 +1118,7 @@ void Build::load_packages(const PackageIdSet &pkgsids)
     b.build_configs_separate(files);*/
 }
 
-void Build::load_spec_file(const path &fn)
+void Build::load_spec_file(const path &fn, const std::set<TargetSettings> &settings)
 {
     auto dll = build(fn);
 
@@ -1143,7 +1130,7 @@ void Build::load_spec_file(const path &fn)
     switch (fe.value())
     {
     case FrontendType::Sw:
-        load_dll(dll);
+        load_dll(dll, settings);
         break;
     case FrontendType::Cppan:
         cppan_load();
@@ -1186,7 +1173,8 @@ void Build::load(const path &fn, bool configless)
     switch (fe.value())
     {
     case FrontendType::Sw:
-        load_dll(dll);
+        SW_UNIMPLEMENTED;
+        //load_dll(dll);
         break;
     case FrontendType::Cppan:
         cppan_load();
@@ -1734,7 +1722,7 @@ void Build::load_configless(const path &file_or_dir)
     }
 
     createSolutions("", false);
-    for (auto &s : settings)
+    /*for (auto &s : settings)
     {
         //current_settings = &s;
         if (!dir)
@@ -1759,11 +1747,11 @@ void Build::load_configless(const path &file_or_dir)
                 std::rethrow_exception(eptr);
 
             // count non sw targets
-            /*if (getChildren().size() == 1)
-            {
-                if (auto nt = getChildren().begin()->second.begin()->second->as<NativeCompiledTarget>())
-                    *nt += file_or_dir;
-            }*/
+            //if (getChildren().size() == 1)
+            //{
+                //if (auto nt = getChildren().begin()->second.begin()->second->as<NativeCompiledTarget>())
+                    //*nt += file_or_dir;
+            //}
 
             TargetsToBuild = getChildren();
         }
@@ -1783,7 +1771,7 @@ void Build::load_configless(const path &file_or_dir)
                 //}
             }
         }
-    }
+    }*/
 }
 
 static const auto ide_fs = "ide_vs";
@@ -1800,6 +1788,8 @@ static auto get_fmtime_fn(const path &gIdeFastPath)
 
 void Build::load_packages(const StringSet &pkgs)
 {
+    SW_UNIMPLEMENTED;
+
     if (pkgs.empty())
         return;
 
@@ -1822,7 +1812,8 @@ void Build::load_packages(const StringSet &pkgs)
                 return;
             }
             write_file(fmtime, std::to_string(mtime));
-            settings.clear();
+            SW_UNIMPLEMENTED;
+            //settings.clear();
         }
         e = std::make_unique<Executor>(select_number_of_threads(gNumberOfJobs));
         getExecutor(e.get());
@@ -1867,14 +1858,14 @@ void Build::load_packages(const StringSet &pkgs)
     {
         SW_UNIMPLEMENTED;
         sw_check_abi_version(Module(driver.getModuleStorage().get(dll), gn2suffix(gn)).sw_get_module_abi_version());
-        for (auto &s : settings)
+        /*for (auto &s : settings)
         {
             //current_settings = &s;
             Module(driver.getModuleStorage().get(dll), gn2suffix(gn)).check(*this, checker);
             // we can use new (clone of this) solution, then copy known targets
             // to allow multiple passes-builds
             Module(driver.getModuleStorage().get(dll), gn2suffix(gn)).build(*this);
-        }
+        }*/
     }
 
     // clear TargetsToBuild that is set before
@@ -2015,7 +2006,7 @@ void Build::createSolutions(const path &dll, bool usedll)
         Module(driver.getModuleStorage().get(dll)).configure(*this);
 }
 
-void Build::load_dll(const path &dll)
+void Build::load_dll(const path &dll, const std::set<TargetSettings> &settings)
 {
     auto ep = std::make_shared<NativeModuleTargetEntryPoint>(*this, driver.getModuleStorage().get(dll));
     for (auto &s : settings)

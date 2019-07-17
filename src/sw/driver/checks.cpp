@@ -568,9 +568,11 @@ Build Check::setupSolution(const path &f) const
     s.use_separate_target_map = true;
     s.DryRun = false;
     s.getChildren() = s.swctx.getPredefinedTargets();
-    // settings may contain more than one elements
-    s.settings.clear();
+    return s;
+}
 
+TargetSettings Check::getSettings() const
+{
     auto ss = check_set->t->getTargetSettings();
 
     // some checks may fail in msvc release (functions become intrinsics (mem*) etc.)
@@ -578,9 +580,7 @@ Build Check::setupSolution(const path &f) const
         check_set->t->getCompilerType() == CompilerType::ClangCl)
         ss["native"]["configuration"] = "debug";
 
-    s.addSettings(ss);
-
-    return s;
+    return ss;
 }
 
 void Check::setupTarget(NativeCompiledTarget &e) const
@@ -673,7 +673,7 @@ private:
 #define SETUP_SOLUTION()                                 \
     auto s = setupSolution(f);                           \
     auto ep = std::make_shared<DummyCheckEntryPoint>(s); \
-    ep->module_data.current_settings = s.settings[0];    \
+    ep->module_data.current_settings = getSettings();    \
     ep->module_data.ntep = ep;                           \
     s.module_data = &ep->module_data
 

@@ -22,11 +22,8 @@ struct ITarget;
 struct SW_DRIVER_CPP_API DependencyData : IDependency
 {
     UnresolvedPackage package;
-    //DependencyData dep;
     TargetSettings settings;
-    //InheritanceType type; // known in advance
     bool Disabled = false;
-    bool sw_pushed = false;
 
     DependencyData(const ITarget &t);
     DependencyData(const UnresolvedPackage &p);
@@ -37,9 +34,6 @@ struct SW_DRIVER_CPP_API DependencyData : IDependency
     const ITarget &getTarget() const;
 
     bool isDisabled() const { return Disabled; }
-
-    //bool operator==(const DependencyData &t) const;
-    //bool operator< (const DependencyData &t) const;
 
     operator bool() const { return target; }
     bool isResolved() const override { return operator bool(); }
@@ -55,45 +49,20 @@ private:
 struct SW_DRIVER_CPP_API Dependency : DependencyData
 {
     bool GenerateCommandsBefore = false; // do not make true by default
-
-    // cpp (native) options
     bool IncludeDirectoriesOnly = false;
 
-    // optional callback
-    // choose default value
-    //std::function<void(Target &)> optional;
-
     using DependencyData::DependencyData;
-
-    //Dependency &operator=(const Target &t);
-    //Dependency &operator=(const Package *p);
-    //bool operator==(const Dependency &t) const;
-    //bool operator< (const Dependency &t) const;
 
     // for backwards compat
     void setDummy(bool) {}
 };
 
 using DependencyPtr = std::shared_ptr<Dependency>;
-//using DependenciesType = std::unordered_set<Dependency>;
-//using DependenciesType = UniqueVector<DependencyPtr>;
 
 struct SW_DRIVER_CPP_API TargetDependency
 {
     DependencyPtr dep;
-    //TargetSettings settings;
     InheritanceType inhtype;
-
-    //bool operator==(const TargetDependency &t) const { return std::tie(dep, s) == std::tie(t.dep, t.s); }
-    //bool operator< (const TargetDependency &t) const { return std::tie(dep, s) <  std::tie(t.dep, t.s); }
-    //bool operator==(const TargetDependency &t) const { return std::tie(package) == std::tie(t.package); }
-    //bool operator< (const TargetDependency &t) const { return std::tie(package) <  std::tie(t.package); }
-
-    /*TargetDependency &operator|=(const TargetDependency &t)
-    {
-        type |= t.type;
-        return *this;
-    }*/
 };
 
 }

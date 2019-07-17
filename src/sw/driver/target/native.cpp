@@ -217,7 +217,7 @@ void NativeCompiledTarget::findCompiler()
                         // take same ver as cl
                         UnresolvedPackage up(ts["native"]["stdlib"]["cpp"].getValue());
                         up.range = v.id.range;
-                        (*this + up)->sw_pushed = true;
+                        *this += up;
                         libstdcppset = true;
                     }
                 }
@@ -434,13 +434,13 @@ void NativeCompiledTarget::findCompiler()
     Linker->Extension = getSettings().TargetOS.getSharedLibraryExtension();
 
     // c++ goes first for correct include order
-    if (!libstdcppset)
-        (*this + UnresolvedPackage(ts["native"]["stdlib"]["cpp"].getValue()))->sw_pushed = true;
+    if (!libstdcppset && ts["native"]["stdlib"]["cpp"])
+        *this += UnresolvedPackage(ts["native"]["stdlib"]["cpp"].getValue());
 
     // goes last
-    (*this + UnresolvedPackage(ts["native"]["stdlib"]["c"].getValue()))->sw_pushed = true;
+    *this += UnresolvedPackage(ts["native"]["stdlib"]["c"].getValue());
     if (ts["native"]["stdlib"]["kernel"]) // sometimes may be missing
-        (*this + UnresolvedPackage(ts["native"]["stdlib"]["kernel"].getValue()))->sw_pushed = true;
+        *this += UnresolvedPackage(ts["native"]["stdlib"]["kernel"].getValue());
 }
 
 bool NativeCompiledTarget::init()
@@ -1730,10 +1730,24 @@ void NativeCompiledTarget::detectLicenseFile()
 
 DependenciesType NativeCompiledTarget::gatherDependencies() const
 {
-    DependenciesType deps;
-    for (auto &d : ((NativeCompiledTarget*)this)->getActiveDependencies())
-        deps.insert(d.dep);
-    return deps;
+    // take all
+    // while getActiveDependencies() takes only active
+    ActiveDeps deps;
+    TargetOptionsGroup::iterate([this, &deps](auto &v, auto i)
+    {
+        for (auto &d : v.getRawDependencies())
+        {
+            TargetDependency td;
+            td.dep = d;
+            td.inhtype = i;
+            td.dep->settings = ts;
+            deps.push_back(td);
+        }
+    });
+    DependenciesType deps2;
+    for (auto &d : deps)
+        deps2.insert(d.dep);
+    return deps2;
 }
 
 NativeCompiledTarget::ActiveDeps &NativeCompiledTarget::getActiveDependencies()
