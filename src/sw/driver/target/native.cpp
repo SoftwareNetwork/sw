@@ -438,15 +438,14 @@ void NativeCompiledTarget::findCompiler()
         *this += UnresolvedPackage(ts["native"]["stdlib"]["cpp"].getValue());
 
     // goes last
-    *this += UnresolvedPackage(ts["native"]["stdlib"]["c"].getValue());
+    if (ts["native"]["stdlib"]["c"])
+        *this += UnresolvedPackage(ts["native"]["stdlib"]["c"].getValue());
 
     // compiler runtime
-    // sometimes may be missing
     if (ts["native"]["stdlib"]["compiler"])
         *this += UnresolvedPackage(ts["native"]["stdlib"]["compiler"].getValue());
 
     // kernel headers
-    // sometimes may be missing
     if (ts["native"]["stdlib"]["kernel"])
         *this += UnresolvedPackage(ts["native"]["stdlib"]["kernel"].getValue());
 }
