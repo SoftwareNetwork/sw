@@ -439,7 +439,15 @@ void NativeCompiledTarget::findCompiler()
 
     // goes last
     *this += UnresolvedPackage(ts["native"]["stdlib"]["c"].getValue());
-    if (ts["native"]["stdlib"]["kernel"]) // sometimes may be missing
+
+    // compiler runtime
+    // sometimes may be missing
+    if (ts["native"]["stdlib"]["compiler"])
+        *this += UnresolvedPackage(ts["native"]["stdlib"]["compiler"].getValue());
+
+    // kernel headers
+    // sometimes may be missing
+    if (ts["native"]["stdlib"]["kernel"])
         *this += UnresolvedPackage(ts["native"]["stdlib"]["kernel"].getValue());
 }
 
@@ -1777,7 +1785,7 @@ NativeCompiledTarget::ActiveDeps &NativeCompiledTarget::getActiveDependencies()
 const NativeCompiledTarget::ActiveDeps &NativeCompiledTarget::getActiveDependencies() const
 {
     if (!active_deps)
-        throw SW_RUNTIME_ERROR("no active deps calculated");
+        throw SW_RUNTIME_ERROR(getPackage().toString() + ": no active deps calculated");
     return *active_deps;
 }
 

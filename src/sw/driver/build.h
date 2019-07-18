@@ -128,7 +128,7 @@ struct SW_DRIVER_CPP_API NativeTargetEntryPoint : TargetLoader,
 
     NativeTargetEntryPoint(Build &b);
 
-    void loadPackages(const TargetSettings &, const PackageIdSet &pkgs = {}) override;
+    void loadPackages(const TargetSettings &, const PackageIdSet &pkgs) override;
     void addChild(const TargetBaseTypePtr &t);
 
 protected:

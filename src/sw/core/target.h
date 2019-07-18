@@ -86,7 +86,7 @@ struct TargetLoader
     virtual ~TargetLoader() = 0;
 
     // on zero input packages, load all
-    virtual void loadPackages(const TargetSettings &, const PackageIdSet &allowed_packages = {}) = 0;
+    virtual void loadPackages(const TargetSettings &, const PackageIdSet &allowed_packages) = 0;
 };
 
 // it is impossible to keep targets in std::map<TargetSettings, ITargetPtr>,
@@ -98,13 +98,16 @@ struct SW_CORE_API TargetData
 
     ~TargetData();
 
-    void loadPackages(const TargetSettings &, const PackageIdSet &allowed_packages = {});
+    void loadPackages(const TargetSettings &, const PackageIdSet &allowed_packages);
     void setEntryPoint(const std::shared_ptr<TargetLoader> &);
+    const ITarget *getAnyTarget() const;
 
     Base::iterator find(const TargetSettings &s);
     Base::const_iterator find(const TargetSettings &s) const;
 
     void push_back(const ITargetPtr &);
+    void push_back_inactive(const ITargetPtr &);
+
     void clear();
     bool empty() const;
 
@@ -116,6 +119,7 @@ struct SW_CORE_API TargetData
 
 private:
     std::vector<ITargetPtr> targets;
+    std::vector<ITargetPtr> targets_inactive;
     // shared, because multiple pkgs has same entry point
     std::shared_ptr<TargetLoader> ep;
     // regex storage

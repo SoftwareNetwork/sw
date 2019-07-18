@@ -55,7 +55,8 @@ static cl::list<String> libcpp("libcpp", cl::desc("Set build libcpp"), cl::Comma
 // complex.key.k1 means s["complex"]["key"]["k1"]
 // k= or k="" means empty value
 // k means reseted value
-static cl::list<String> settings("setting", cl::desc("Set settings directly"), cl::ZeroOrMore);
+static cl::list<String> settings("settings", cl::desc("Set settings directly"), cl::ZeroOrMore);
+static cl::list<String> settings_files("settings-file", cl::desc("Read settings from file"), cl::ZeroOrMore);
 
 // static/shared
 static cl::opt<bool> static_build("static-build", cl::desc("Set static build"));
@@ -241,7 +242,14 @@ static void applySettings(sw::TargetSettings &s, const String &in_settings)
     }
 }
 
-std::vector<sw::TargetSettings> create_settings(const sw::SwCoreContext &swctx)
+void applySettingsFromFile(sw::TargetSettings &s, const path &fn)
+{
+    SW_UNIMPLEMENTED;
+
+    //s.mergeFromString(read_file(fn));
+}
+
+static std::vector<sw::TargetSettings> create_settings(const sw::SwCoreContext &swctx)
 {
     std::vector<sw::TargetSettings> settings;
     settings.push_back(swctx.getHostSettings());
@@ -365,10 +373,16 @@ std::vector<sw::TargetSettings> create_settings(const sw::SwCoreContext &swctx)
         s["os"]["kernel"] = OSTypeFromStringCaseI(target_os[i]);
     });
 
-    // target_os
+    // settings
     mult_and_action(::settings.size(), [](auto &s, int i)
     {
         applySettings(s, ::settings[i]);
+    });
+
+    // settings-file
+    mult_and_action(settings_files.size(), [](auto &s, int i)
+    {
+        applySettingsFromFile(s, settings_files[i]);
     });
 
     return settings;

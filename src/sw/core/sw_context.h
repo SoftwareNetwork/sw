@@ -31,6 +31,10 @@ struct SW_CORE_API SwCoreContext : SwBuilderContext
 
     const TargetSettings &getHostSettings() const;
 
+    void loadPackages(); // load this targets with this predefined
+    void loadPackages(TargetMap &tm); // load tm with this predefined
+    static void loadPackages(TargetMap &tm, const TargetMap &predefined);
+
 private:
     TargetMap targets;
     TargetMap predefined_targets;

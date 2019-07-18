@@ -77,6 +77,72 @@ const TargetSettings &SwCoreContext::getHostSettings() const
     return host_settings;
 }
 
+void SwCoreContext::loadPackages()
+{
+    loadPackages(getTargets(), getPredefinedTargets());
+}
+
+void SwCoreContext::loadPackages(TargetMap &targets)
+{
+    loadPackages(targets, getPredefinedTargets());
+}
+
+void SwCoreContext::loadPackages(TargetMap &targets, const TargetMap &predefined)
+{
+    // load
+    while (1)
+    {
+        std::map<TargetSettings, std::pair<PackageId, TargetData *>> load;
+        auto &chld = targets; // take a ref, because it won't be changed in this loop
+        for (const auto &[pkg, tgts] : chld)
+        {
+            for (const auto &tgt : tgts)
+            {
+                auto deps = tgt->getDependencies();
+                for (auto &d : deps)
+                {
+                    if (d->isResolved())
+                        continue;
+
+                    auto i = chld.find(d->getUnresolvedPackage());
+                    if (i != chld.end())
+                    {
+                        auto k = i->second.find(d->getSettings());
+                        if (k != i->second.end())
+                        {
+                            d->setTarget(**k);
+                            continue;
+                        }
+
+                        if (predefined.find(d->getUnresolvedPackage().ppath) != predefined.end(d->getUnresolvedPackage().ppath))
+                        {
+                            throw SW_LOGIC_ERROR(tgt->getPackage().toString() + ": predefined target is not resolved: " + d->getUnresolvedPackage().toString());
+                        }
+
+                        load.insert({ d->getSettings(), { i->first, &i->second } });
+                    }
+                }
+            }
+        }
+        if (load.empty())
+            break;
+        for (auto &[s, d] : load)
+        {
+            // empty settings mean we want dependency only to be present
+            if (s.empty())
+                continue;
+
+            d.second->loadPackages(s, {}/* { d.first }*/ );
+            auto k = d.second->find(s);
+            if (k == d.second->end())
+            {
+                //throw SW_RUNTIME_ERROR("cannot load package with current settings:\n" + s.toString());
+                throw SW_RUNTIME_ERROR("cannot load package " + d.first.toString() + " with current settings\n" + s.toString());
+            }
+        }
+    }
+}
+
 SwContext::SwContext(const path &local_storage_root_dir)
     : SwCoreContext(local_storage_root_dir)
 {
@@ -136,59 +202,7 @@ void SwContext::resolvePackages()
         inputs.emplace(p, *this);
     load(inputs);
 
-    // load
-    while (1)
-    {
-        std::map<TargetSettings, TargetData *> load;
-        auto &chld = getTargets();
-        for (const auto &[pkg, tgts] : chld)
-        {
-            for (const auto &tgt : tgts)
-            {
-                auto deps = tgt->getDependencies();
-                for (auto &d : deps)
-                {
-                    if (d->isResolved())
-                        continue;
-
-                    auto i = chld.find(d->getUnresolvedPackage());
-                    if (i != chld.end())
-                    {
-                        auto k = i->second.find(d->getSettings());
-                        if (k != i->second.end())
-                        {
-                            d->setTarget(**k);
-                            continue;
-                        }
-
-                        if (getPredefinedTargets().find(d->getUnresolvedPackage().ppath) != getPredefinedTargets().end(d->getUnresolvedPackage().ppath))
-                        {
-                            throw SW_LOGIC_ERROR(tgt->getPackage().toString() + ": predefined target is not resolved: " + d->getUnresolvedPackage().toString());
-                        }
-
-                        load[d->getSettings()] = &i->second;
-                    }
-                }
-            }
-        }
-        if (load.empty())
-            break;
-        for (auto &[s, d] : load)
-        {
-            // empty settings mean we want dependency only to be present
-            if (s.empty())
-                continue;
-
-            d->loadPackages(s);
-            auto k = d->find(s);
-            if (k == d->end())
-            {
-                throw SW_RUNTIME_ERROR("cannot load package with current settings:\n" + s.toString());
-                //throw SW_RUNTIME_ERROR(pkg.toString() + ": cannot load package " + d->getUnresolvedPackage().toString() +
-                    //" with current settings\n" + d->getSettings().toString());
-            }
-        }
-    }
+    loadPackages();
 }
 
 bool SwContext::prepareStep()

@@ -29,9 +29,23 @@ void TargetData::setEntryPoint(const std::shared_ptr<TargetLoader> &e)
     ep = std::move(e);
 }
 
+const ITarget *TargetData::getAnyTarget() const
+{
+    if (!targets.empty())
+        return targets.begin()->get();
+    if (!targets_inactive.empty())
+        return targets_inactive.begin()->get();
+    return nullptr;
+}
+
 void TargetData::push_back(const ITargetPtr &t)
 {
     targets.push_back(t);
+}
+
+void TargetData::push_back_inactive(const ITargetPtr &t)
+{
+    targets_inactive.push_back(t);
 }
 
 void TargetData::clear()

@@ -49,15 +49,12 @@ sw::PackageDescriptionMap getPackages(const sw::SwContext &swctx, const sw::Sour
     using namespace sw;
 
     PackageDescriptionMap m;
-    for (auto &[pkg, tgts] : swctx.getTargets())
+    for (auto &[pkg, td] : swctx.getTargets())
     {
         // deps
         if (pkg.ppath.isAbsolute())
             continue;
-        if (tgts.empty())
-            continue;
-
-        auto &t = *tgts.begin();
+        auto t = td.getAnyTarget();
         if (!t->isReal())
             continue;
 

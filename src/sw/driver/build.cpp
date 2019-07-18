@@ -92,7 +92,10 @@ void NativeTargetEntryPoint::loadPackages(const TargetSettings &s, const Package
 
 void NativeTargetEntryPoint::addChild(const TargetBaseTypePtr &t)
 {
-    b.getChildren()[t->getPackage()].push_back(t);
+    if (t->DryRun)
+        b.getChildren()[t->getPackage()].push_back_inactive(t);
+    else
+        b.getChildren()[t->getPackage()].push_back(t);
     b.getChildren()[t->getPackage()].setEntryPoint(shared_from_this());
     module_data.added_targets.push_back(t.get());
 }
@@ -406,7 +409,7 @@ UnresolvedDependenciesType Build::gatherUnresolvedDependencies(int n_runs)
     UnresolvedDependenciesType deps;
 
     // make copy to not invalidate things
-    while (1)
+    /*while (1)
     {
         bool again = false;
         auto chld = getChildren();
@@ -434,7 +437,7 @@ UnresolvedDependenciesType Build::gatherUnresolvedDependencies(int n_runs)
                         auto k = i->second.find(dptr->settings);
                         if (k == i->second.end())
                         {
-                            i->second.loadPackages(dptr->settings);
+                            i->second.loadPackages(dptr->settings, { i->first });
                             k = i->second.find(dptr->settings);
                             if (k == i->second.end())
                             {
@@ -466,7 +469,10 @@ UnresolvedDependenciesType Build::gatherUnresolvedDependencies(int n_runs)
         }
         if (!again)
             break;
-    }
+    }*/
+
+    swctx.loadPackages(getChildren());
+
     return deps;
 }
 
@@ -969,7 +975,7 @@ std::shared_ptr<PrepareConfigEntryPoint> Build::build_configs1(const T &objs)
         ts["native"]["configuration"] = "debug";
 
     auto ep = std::make_shared<PrepareConfigEntryPoint>(*this, objs);
-    ep->loadPackages(ts);
+    ep->loadPackages(ts, {}); // load all
 
     execute();
 
@@ -2010,7 +2016,7 @@ void Build::load_dll(const path &dll, const std::set<TargetSettings> &settings)
 {
     auto ep = std::make_shared<NativeModuleTargetEntryPoint>(*this, driver.getModuleStorage().get(dll));
     for (auto &s : settings)
-        ep->loadPackages(s);
+        ep->loadPackages(s, {}); // load all
 
     for (auto t : ep->module_data.added_targets)
         TargetsToBuild[t->getPackage()].push_back(t->shared_from_this());
@@ -2140,11 +2146,9 @@ bool Build::skipTarget(TargetScope Scope) const
 
 bool Build::isKnownTarget(const LocalPackage &p) const
 {
-    if (!module_data)
-        throw SW_RUNTIME_ERROR("no module data set");
-    return module_data->known_targets.empty() ||
+    return getModuleData().known_targets.empty() ||
         p.ppath.is_loc() || // used by cfg targets and checks
-        module_data->known_targets.find(p) != module_data->known_targets.end();
+        getModuleData().known_targets.find(p) != getModuleData().known_targets.end();
 }
 
 path Build::getSourceDir(const LocalPackage &p) const
