@@ -43,7 +43,7 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "build");
 
-cl::opt<bool> dry_run("n", cl::desc("Dry run"));
+//cl::opt<bool> dry_run("n", cl::desc("Dry run"));
 static cl::opt<bool> debug_configs("debug-configs", cl::desc("Build configs in debug mode"));
 
 static cl::opt<int> config_jobs("jc", cl::desc("Number of config jobs"));
@@ -391,96 +391,11 @@ path Build::getChecksDir() const
     return getServiceDir() / "checks";
 }
 
-void Build::build_and_resolve(int n_runs)
-{
-    auto ud = gatherUnresolvedDependencies(n_runs);
-    if (ud.empty())
-        return;
-
-    String s;
-    for (auto &u : ud)
-        s += u.first.toString() + ", ";
-    s.resize(s.size() - 2);
-    throw SW_RUNTIME_ERROR("Missing config deps, check your self build script: " + s);
-}
-
-UnresolvedDependenciesType Build::gatherUnresolvedDependencies(int n_runs)
-{
-    UnresolvedDependenciesType deps;
-
-    // make copy to not invalidate things
-    /*while (1)
-    {
-        bool again = false;
-        auto chld = getChildren();
-        for (const auto &[pkg, tgts] : chld)
-        {
-            for (auto &tgt : tgts)
-            {
-                if (!tgt->isReal())
-                    continue;
-
-                auto t = tgt->as<Target *>();
-                if (t->skip)
-                    continue;
-
-                auto c = t->gatherUnresolvedDependencies();
-                if (c.empty())
-                    continue;
-
-                std::unordered_set<UnresolvedPackage> known2;
-                for (auto &[up, dptr] : c)
-                {
-                    auto i = getChildren().find(up);
-                    if (i != getChildren().end())
-                    {
-                        auto k = i->second.find(dptr->settings);
-                        if (k == i->second.end())
-                        {
-                            i->second.loadPackages(dptr->settings, { i->first });
-                            k = i->second.find(dptr->settings);
-                            if (k == i->second.end())
-                            {
-                                throw SW_RUNTIME_ERROR(pkg.toString() + ": cannot load package " + dptr->getPackage().toString() +
-                                    " with current settings: " + dptr->settings.toString());
-                            }
-                            again = true;
-                        }
-                        dptr->setTarget(**k);
-                        known2.insert(up);
-                        continue;
-                    }
-                }
-
-                for (auto &r : known2)
-                    c.erase(r);
-                deps.insert(c.begin(), c.end());
-
-                if (n_runs && !c.empty())
-                {
-                    String s;
-                    for (auto &u : c)
-                        s += u.first.toString() + ", ";
-                    s.resize(s.size() - 2);
-
-                    LOG_ERROR(logger, pkg.toString() + " unresolved deps on run " << n_runs << ": " + s);
-                }
-            }
-        }
-        if (!again)
-            break;
-    }*/
-
-    swctx.loadPackages(getChildren());
-
-    return deps;
-}
-
 void Build::prepare()
 {
     ScopedTime t;
 
-    build_and_resolve();
+    swctx.loadPackages(getChildren());
 
     // multipass prepare()
     // if we add targets inside this loop,
@@ -509,19 +424,13 @@ void Build::prepareStep(Executor &e, Futures<void> &fs, std::atomic_bool &next_p
 {
     for (const auto &[pkg, tgts] : getChildren())
     {
-        for (auto &tgt : tgts)
+        for (auto &t : tgts)
         {
-            if (!tgt->isReal())
-                continue;
-
-            auto t = tgt->as<Target*>();
-            if (t->skip || t->DryRun)
-                continue;
             fs.push_back(e.push([this, t, &next_pass]
-                {
-                    if (t->prepare())
-                        next_pass = true;
-                }));
+            {
+                if (t->prepare())
+                    next_pass = true;
+            }));
         }
     }
 }
@@ -1444,40 +1353,6 @@ path Build::getExecutionPlanFilename() const
 
 void Build::execute()
 {
-    DryRun = ::dry_run;
-
-    // read ex plan
-    if (ide)
-    {
-        if (remove_ide_explans)
-        {
-            // remove execution plans
-            fs::remove_all(getExecutionPlansDir());
-        }
-
-        auto fn = getExecutionPlanFilename();
-        if (fs::exists(fn))
-        {
-            // prevent double assign generators
-            swctx.getFileStorage().reset();
-
-            auto p = ::sw::load(swctx, fn, *this);
-            execute(p);
-            return;
-        }
-    }
-
-    prepare();
-
-    if (ide)
-    {
-        // write execution plans
-        auto p = getExecutionPlan();
-        auto fn = getExecutionPlanFilename();
-        if (!fs::exists(fn))
-            save(fn, p);
-    }
-
     prepare();
     auto p = getExecutionPlan();
     execute(p);
@@ -1564,14 +1439,8 @@ Commands Build::getCommands() const
     // calling this in any case to set proper command dependencies
     for (const auto &[pkg, tgts] : getChildren())
     {
-        for (auto &tgt : tgts)
+        for (auto &t : tgts)
         {
-            if (!tgt->isReal())
-                continue;
-
-            auto t = tgt->as<Target*>();
-            if (t->skip)
-                continue;
             for (auto &c : t->getCommands())
                 c->maybe_unused = builder::Command::MU_TRUE;
         }
@@ -1589,11 +1458,8 @@ Commands Build::getCommands() const
 
     for (auto &[p, tgts] : chldr)
     {
-        for (auto &tgt : tgts)
+        for (auto &t : tgts)
         {
-            auto t = tgt->as<Target*>();
-            if (t->skip)
-                continue;
             auto c = t->getCommands();
             for (auto &c2 : c)
                 c2->maybe_unused &= ~builder::Command::MU_TRUE;

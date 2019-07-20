@@ -105,22 +105,22 @@ void SwCoreContext::loadPackages(TargetMap &targets, const TargetMap &predefined
                         continue;
 
                     auto i = chld.find(d->getUnresolvedPackage());
-                    if (i != chld.end())
+                    if (i == chld.end())
+                        throw SW_RUNTIME_ERROR("No target loaded: " + d->getUnresolvedPackage().toString());
+
+                    auto k = i->second.find(d->getSettings());
+                    if (k != i->second.end())
                     {
-                        auto k = i->second.find(d->getSettings());
-                        if (k != i->second.end())
-                        {
-                            d->setTarget(**k);
-                            continue;
-                        }
-
-                        if (predefined.find(d->getUnresolvedPackage().ppath) != predefined.end(d->getUnresolvedPackage().ppath))
-                        {
-                            throw SW_LOGIC_ERROR(tgt->getPackage().toString() + ": predefined target is not resolved: " + d->getUnresolvedPackage().toString());
-                        }
-
-                        load.insert({ d->getSettings(), { i->first, &i->second } });
+                        d->setTarget(**k);
+                        continue;
                     }
+
+                    if (predefined.find(d->getUnresolvedPackage().ppath) != predefined.end(d->getUnresolvedPackage().ppath))
+                    {
+                        throw SW_LOGIC_ERROR(tgt->getPackage().toString() + ": predefined target is not resolved: " + d->getUnresolvedPackage().toString());
+                    }
+
+                    load.insert({ d->getSettings(), { i->first, &i->second } });
                 }
             }
         }

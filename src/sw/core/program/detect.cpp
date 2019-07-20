@@ -112,10 +112,7 @@ struct PredefinedTarget : ITarget
 
     const PackageId &getPackage() const override { return id; }
 
-    /// can be registered to software network
-    bool isReal() const override { return false; }
-
-    const Source &getSource() const override { SW_UNIMPLEMENTED; }
+    const Source &getSource() const override { static EmptySource es; return es; }
     Files getSourceFiles() const override { SW_UNIMPLEMENTED; }
     std::vector<IDependency *> getDependencies() const override { return {}; }
     bool prepare() override { return false; }

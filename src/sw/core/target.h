@@ -34,9 +34,6 @@ struct ITarget : ICastable
 
     virtual const PackageId &getPackage() const = 0;
 
-    /// can be registered to software network
-    virtual bool isReal() const = 0;
-
     ///
     virtual const Source &getSource() const = 0;
 

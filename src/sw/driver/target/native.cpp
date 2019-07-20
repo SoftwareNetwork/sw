@@ -1822,7 +1822,7 @@ void NativeCompiledTarget::merge1()
 
 bool NativeCompiledTarget::prepare()
 {
-    if (skip || DryRun)
+    if (DryRun)
         return false;
     if (getSolution().skipTarget(Scope))
         return false;

@@ -221,6 +221,7 @@ void build(Solution &s)
         client += "src/sw/client/.*"_rr;
         client.CPPVersion = CPPLanguageStandard::CPP17;
         client += core, cpp_driver,
+            //"org.sw.demo.microsoft.mimalloc"_dep,
             "pub.egorpugin.primitives.sw.main-master"_dep,
             "org.sw.demo.giovannidicanio.winreg-master"_dep;
         embed("pub.egorpugin.primitives.tools.embedder-master"_dep, client, "src/sw/client/inserts/inserts.cpp.in");

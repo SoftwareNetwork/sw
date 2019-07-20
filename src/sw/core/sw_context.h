@@ -69,6 +69,7 @@ struct SW_CORE_API SwContext : SwCoreContext
 
     String getBuildHash() const;
 
+    TargetMap &getTargetsToBuild() { return targets_to_build; }
     const TargetMap &getTargetsToBuild() const { return targets_to_build; }
 
 private:

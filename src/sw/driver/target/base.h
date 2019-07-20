@@ -278,7 +278,6 @@ struct SW_DRIVER_CPP_API Target : ITarget, TargetBase, ProgramStorage,
 
     // rename to information?
     TargetDescription Description; // or inherit?
-    bool skip = false;
     bool sw_provided = false;
     bool AllowEmptyRegexes = false;
 
@@ -305,7 +304,6 @@ public:
     // api
     const LocalPackage &getPackage() const override { return TargetBase::getPackage(); }
     const Source &getSource() const override;
-    bool isReal() const override;
     Files getSourceFiles() const override;
     std::vector<IDependency *> getDependencies() const override;
     bool operator==(const TargetSettings &) const override;
@@ -401,7 +399,6 @@ struct SW_DRIVER_CPP_API ProjDirBase : Target
     virtual ~ProjDirBase() = default;
 
     TargetType getType() const override { return TargetType::Directory; }
-    bool isReal() const { return false; }
 };
 
 struct SW_DRIVER_CPP_API DirectoryTarget : ProjDirBase

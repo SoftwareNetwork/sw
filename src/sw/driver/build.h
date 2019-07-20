@@ -252,8 +252,6 @@ public:
 
 private:
     void prepareStep(Executor &e, Futures<void> &fs, std::atomic_bool &next_pass) const;
-    UnresolvedDependenciesType gatherUnresolvedDependencies(int n_runs = 0);
-    void build_and_resolve(int n_runs = 0);
     void addTest(Test &cb, const String &name);
 
     template <class T>
@@ -286,7 +284,6 @@ public:
     std::optional<path> config; // current config or empty in configless mode
     bool configure = true;
     bool perform_checks = true;
-    bool ide = false;
 
     Build(SwCoreContext &swctx, const driver::cpp::Driver &driver);
     Build(const Build &);

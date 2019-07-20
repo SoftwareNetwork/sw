@@ -50,9 +50,13 @@ sw::SourceDirMap fetch(sw::SwContext &swctx)
     std::unordered_set<SourcePtr> sources;
     for (const auto &[pkg, tgts] : swctx.getTargets())
     {
-        auto &t = **tgts.begin();
-        if (!t.isReal())
+        // filter out predefined targets
+        if (swctx.getPredefinedTargets().find(pkg) != swctx.getPredefinedTargets().end())
             continue;
+        auto tgt = tgts.getAnyTarget();
+        if (!tgt)
+            throw SW_RUNTIME_ERROR("Empty target");
+        auto &t = *tgt;
 
         SCOPE_EXIT
         {

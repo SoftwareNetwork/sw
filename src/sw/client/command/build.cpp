@@ -56,7 +56,8 @@ static cl::list<String> libcpp("libcpp", cl::desc("Set build libcpp"), cl::Comma
 // k= or k="" means empty value
 // k means reseted value
 static cl::list<String> settings("settings", cl::desc("Set settings directly"), cl::ZeroOrMore);
-static cl::list<String> settings_files("settings-file", cl::desc("Read settings from file"), cl::ZeroOrMore);
+static cl::list<String> settings_file("settings-file", cl::desc("Read settings from file"), cl::ZeroOrMore);
+static cl::list<String> settings_json("settings-json", cl::desc("Read settings from json string"), cl::ZeroOrMore);
 
 // static/shared
 static cl::opt<bool> static_build("static-build", cl::desc("Set static build"));
@@ -242,11 +243,16 @@ static void applySettings(sw::TargetSettings &s, const String &in_settings)
     }
 }
 
-void applySettingsFromFile(sw::TargetSettings &s, const path &fn)
+static void applySettingsFromJson(sw::TargetSettings &s, const String &jsonstr)
 {
     SW_UNIMPLEMENTED;
 
-    //s.mergeFromString(read_file(fn));
+    //s.mergeFromJson(json parse (jsonstr));
+}
+
+static void applySettingsFromFile(sw::TargetSettings &s, const path &fn)
+{
+    applySettingsFromJson(s, read_file(fn));
 }
 
 static std::vector<sw::TargetSettings> create_settings(const sw::SwCoreContext &swctx)
@@ -380,9 +386,15 @@ static std::vector<sw::TargetSettings> create_settings(const sw::SwCoreContext &
     });
 
     // settings-file
-    mult_and_action(settings_files.size(), [](auto &s, int i)
+    mult_and_action(settings_file.size(), [](auto &s, int i)
     {
-        applySettingsFromFile(s, settings_files[i]);
+        applySettingsFromFile(s, settings_file[i]);
+    });
+
+    // settings-json
+    mult_and_action(settings_json.size(), [](auto &s, int i)
+    {
+        applySettingsFromJson(s, settings_json[i]);
     });
 
     return settings;

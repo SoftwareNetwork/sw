@@ -593,6 +593,50 @@ void Check::setupTarget(NativeCompiledTarget &e) const
 
 bool Check::execute(Build &s) const
 {
+    /*static std::mutex m;
+    std::unique_lock lk(m);
+
+    {
+        // copy stdlibs etc.
+        while (1)
+        {
+            UnresolvedPackages upkgs;
+            for (const auto &[pkg, tgts] : s.getChildren())
+            {
+                for (const auto &tgt : tgts)
+                {
+                    auto deps = tgt->getDependencies();
+                    for (auto &d : deps)
+                    {
+                        if (d->isResolved())
+                            continue;
+
+                        auto i = s.getChildren().find(d->getUnresolvedPackage());
+                        if (i == s.getChildren().end())
+                            upkgs.insert(d->getUnresolvedPackage());
+                        // else
+                        // swctx.install()? under mutex
+                    }
+                }
+            }
+
+            if (upkgs.empty())
+                break;
+
+            for (auto &u : upkgs)
+            {
+                auto i = s.swctx.getTargets().find(u);
+                if (i == s.swctx.getTargets().end())
+                    throw SW_RUNTIME_ERROR("missing check dependency");
+                s.getChildren()[i->first] = s.swctx.getTargets()[i->first];
+            }
+        }
+
+        // load stdlibs etc.
+        s.swctx.loadPackages(s.getChildren());
+    }*/
+
+    // go
     s.prepare();
     try
     {

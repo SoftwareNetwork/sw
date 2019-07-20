@@ -55,8 +55,6 @@ sw::PackageDescriptionMap getPackages(const sw::SwContext &swctx, const sw::Sour
         if (pkg.ppath.isAbsolute())
             continue;
         auto t = td.getAnyTarget();
-        if (!t->isReal())
-            continue;
 
         nlohmann::json j;
 

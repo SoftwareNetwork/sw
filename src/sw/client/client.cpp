@@ -319,8 +319,12 @@ int parse_main(int argc, char **argv)
     return setup_main(args);
 }
 
+//#include <mimalloc.h>
+
 int main(int argc, char **argv)
 {
+    //mi_version();
+
     int r = 0;
     String error;
     bool supress = false;

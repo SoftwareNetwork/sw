@@ -258,7 +258,6 @@ TargetBase &TargetBase::addChild(const TargetBaseTypePtr &t)
     if (/*!isLocal() && */!getSolution().isKnownTarget(t->getPackage()))
     {
         t->DryRun = true;
-        t->skip = true;
     }
 
     return addChild(t, t->getTargetSettings());
@@ -346,11 +345,6 @@ LocalPackage &TargetBase::getPackageMutable()
     if (!pkg)
         throw SW_LOGIC_ERROR("pkg not created");
     return *pkg;
-}
-
-bool Target::isReal() const
-{
-    return real && !sw_provided && !skip;
 }
 
 const Source &Target::getSource() const
