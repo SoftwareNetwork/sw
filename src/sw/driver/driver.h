@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include <sw/core/sw_context.h>
+#include <sw/core/driver.h>
 
 namespace sw
 {
@@ -14,6 +14,7 @@ namespace sw
 struct Build;
 struct ChecksStorage;
 struct ModuleStorage;
+struct SwCoreContext;
 
 namespace driver::cpp
 {

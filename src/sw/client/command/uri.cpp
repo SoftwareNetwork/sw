@@ -143,8 +143,9 @@ SUBCOMMAND_DECL(uri)
             auto d = swctx->getLocalStorage().storage_dir_tmp / "build";// / fs::unique_path();
             fs::create_directories(d);
             ScopedCurrentPath scp(d, CurrentPathScope::All);
-            swctx->addInput(p);
-            swctx->build();
+            auto b = swctx->createBuild();
+            b.addInput(p);
+            b.build();
             return;
         }
 

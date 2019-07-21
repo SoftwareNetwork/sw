@@ -125,8 +125,6 @@ static ::cl::opt<bool> trace("trace", ::cl::desc("Trace output"));
 extern int gNumberOfJobs;
 static ::cl::opt<int, true> jobs("j", ::cl::desc("Number of jobs"), ::cl::location(gNumberOfJobs));
 
-static ::cl::opt<int> sleep_seconds("sleep", ::cl::desc("Sleep on startup"), ::cl::Hidden);
-
 static ::cl::opt<bool> cl_self_upgrade("self-upgrade", ::cl::desc("Upgrade client"));
 static ::cl::opt<path> cl_self_upgrade_copy("internal-self-upgrade-copy", ::cl::desc("Upgrade client: copy file"), ::cl::ReallyHidden);
 
@@ -180,10 +178,6 @@ std::unique_ptr<sw::SwContext> createSwContext()
 int setup_main(const Strings &args)
 {
     // some initial stuff
-
-    if (sleep_seconds > 0)
-        std::this_thread::sleep_for(std::chrono::seconds(sleep_seconds));
-
     // try to do as less as possible before log init
 
     if (!working_directory.empty())
@@ -503,11 +497,12 @@ void setup_log(const std::string &log_level, bool simple)
 
 void override_package_perform(sw::SwContext &swctx)
 {
-    auto &i = swctx.addInput(fs::current_path());
+    auto b = swctx.createBuild();
+    auto &i = b.addInput(fs::current_path());
     auto ts = swctx.getHostSettings();
     ts["driver"]["dry-run"] = "true";
     i.addSettings(ts);
-    swctx.load();
+    b.load();
 
     // one prepare step will find sources
     // maybe add explicit enum value

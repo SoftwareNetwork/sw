@@ -19,9 +19,8 @@
 #include "commands.h"
 #include "../build.h"
 
-#include <sw/driver/build.h>
-#include <sw/manager/settings.h>
 #include <sw/manager/api.h>
+#include <sw/manager/settings.h>
 
 #include <nlohmann/json.hpp>
 #include <primitives/pack.h>
@@ -44,12 +43,12 @@ SUBCOMMAND_DECL(upload)
     cli_upload(*swctx);
 }
 
-sw::PackageDescriptionMap getPackages(const sw::SwContext &swctx, const sw::SourceDirMap &sources)
+sw::PackageDescriptionMap getPackages(const sw::SwBuild &b, const sw::SourceDirMap &sources)
 {
     using namespace sw;
 
     PackageDescriptionMap m;
-    for (auto &[pkg, td] : swctx.getTargets())
+    for (auto &[pkg, td] : b.getTargets())
     {
         // deps
         if (pkg.ppath.isAbsolute())
@@ -98,7 +97,7 @@ sw::PackageDescriptionMap getPackages(const sw::SwContext &swctx, const sw::Sour
         for (auto &d : t->getDependencies())
         {
             // filter out predefined targets
-            if (swctx.getPredefinedTargets().find(d->getUnresolvedPackage().ppath) != swctx.getPredefinedTargets().end(d->getUnresolvedPackage().ppath))
+            if (b.swctx.getPredefinedTargets().find(d->getUnresolvedPackage().ppath) != b.swctx.getPredefinedTargets().end(d->getUnresolvedPackage().ppath))
                 continue;
 
             nlohmann::json jd;
@@ -115,11 +114,12 @@ sw::PackageDescriptionMap getPackages(const sw::SwContext &swctx, const sw::Sour
 
 SUBCOMMAND_DECL2(upload)
 {
-    auto sources = fetch(swctx);
+    auto b = swctx.createBuild();
+    auto sources = fetch(b);
     if (sources.empty())
         throw SW_RUNTIME_ERROR("Empty target sources");
 
-    auto m = getPackages(swctx, sources);
+    auto m = getPackages(b, sources);
 
     // dbg purposes
     for (auto &[id, d] : m)
@@ -139,5 +139,5 @@ SUBCOMMAND_DECL2(upload)
     // send signatures (gpg)
     // -k KEY1 -k KEY2
     auto api = current_remote->getApi();
-    api->addVersion(gUploadPrefix, m, swctx.getSpecification());
+    api->addVersion(gUploadPrefix, m, b.getSpecification());
 }

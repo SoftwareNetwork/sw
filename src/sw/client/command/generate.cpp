@@ -19,6 +19,8 @@
 #include "commands.h"
 #include "../generator/generator.h"
 
+#include <sw/core/build.h>
+
 extern ::cl::list<String> build_arg;
 
 static ::cl::opt<String> build_arg_generate(::cl::Positional, ::cl::desc("File or directory to use to generate projects"), ::cl::init("."), ::cl::sub(subcommand_generate));
@@ -61,11 +63,12 @@ SUBCOMMAND_DECL2(generate)
     ((Strings&)build_arg).clear();
     build_arg.push_back(build_arg_generate.getValue());
 
+    auto b = swctx.createBuild();
     for (auto &a : build_arg)
-        swctx.addInput(a);
-    swctx.load();
-    swctx.configure();
+        b.addInput(a);
+    b.load();
+    b.configure();
 
-    auto generator = sw::Generator::create(gGenerator);
+    auto generator = Generator::create(gGenerator);
     generator->generate(swctx);
 }

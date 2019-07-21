@@ -27,7 +27,9 @@
 namespace sw
 {
 
-struct SwContext;
+struct SwBuild;
+
+}
 
 enum class GeneratorType
 {
@@ -55,7 +57,7 @@ struct Generator
 
     virtual ~Generator() = default;
 
-    virtual void generate(const SwContext &) = 0;
+    virtual void generate(const sw::SwBuild &) = 0;
     //void generate(const path &file, const Build &b);
     //virtual void createSolutions(Build &b) {}
     //virtual void initSolutions(Build &b) {}
@@ -65,47 +67,45 @@ struct Generator
 
 struct VSGenerator : Generator
 {
-	Version version;
+    sw::Version version;
     String cwd;
     path dir;
     const path projects_dir = "projects";
-    const InsecurePath deps_subdir = "Dependencies";
-    const InsecurePath overridden_deps_subdir = "Overridden Packages";
+    const sw::InsecurePath deps_subdir = "Dependencies";
+    const sw::InsecurePath overridden_deps_subdir = "Overridden Packages";
     const String predefined_targets_dir = ". SW Predefined Targets"s;
     const String all_build_name = "ALL_BUILD"s;
     const String build_dependencies_name = "BUILD_DEPENDENCIES"s;
 
     VSGenerator();
 
-    void generate(const SwContext &b) override;
+    void generate(const sw::SwBuild &b) override;
     //void createSolutions(Build &b) override;
     //void initSolutions(Build &b) override;
 };
 
 struct NinjaGenerator : Generator
 {
-    void generate(const SwContext &) override;
+    void generate(const sw::SwBuild &) override;
 };
 
 struct MakeGenerator : Generator
 {
-    void generate(const SwContext &b) override;
+    void generate(const sw::SwBuild &b) override;
 };
 
 struct ShellGenerator : Generator
 {
     bool batch = false;
 
-    void generate(const SwContext &b) override;
+    void generate(const sw::SwBuild &b) override;
 };
 
 struct CompilationDatabaseGenerator : Generator
 {
-    void generate(const SwContext &b) override;
+    void generate(const sw::SwBuild &b) override;
 };
 
 String toString(GeneratorType Type);
 String toPathString(GeneratorType Type);
 GeneratorType fromString(const String &ss);
-
-}

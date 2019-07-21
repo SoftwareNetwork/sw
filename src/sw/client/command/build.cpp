@@ -417,11 +417,12 @@ SUBCOMMAND_DECL2(build)
 
     // if -B specified, it is used as is
 
+    auto b = swctx.createBuild();
     for (auto &a : build_arg)
     {
-        auto &i = swctx.addInput(a);
+        auto &i = b.addInput(a);
         for (auto &s : create_settings(swctx))
             i.addSettings(s);
     }
-    swctx.build();
+    b.build();
 }

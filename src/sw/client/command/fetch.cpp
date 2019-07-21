@@ -29,7 +29,7 @@ SUBCOMMAND_DECL(fetch)
     cli_fetch(*swctx);
 }
 
-sw::SourceDirMap fetch(sw::SwContext &swctx)
+sw::SourceDirMap fetch(sw::SwBuild &b)
 {
     using namespace sw;
 
@@ -38,20 +38,20 @@ sw::SourceDirMap fetch(sw::SwContext &swctx)
     opts.ignore_existing_dirs = true;
     opts.existing_dirs_age = std::chrono::hours(1);
 
-    auto &i = swctx.addInput(fs::current_path());
-    auto ts = swctx.getHostSettings();
+    auto &i = b.addInput(fs::current_path());
+    auto ts = b.swctx.getHostSettings();
     ts["driver"]["dry-run"] = "true";
     i.addSettings(ts);
-    swctx.load();
+    b.load();
 
     auto d = fs::current_path() / SW_BINARY_DIR / "src";
 
     SourceDirMap srcs;
     std::unordered_set<SourcePtr> sources;
-    for (const auto &[pkg, tgts] : swctx.getTargets())
+    for (const auto &[pkg, tgts] : b.getTargets())
     {
         // filter out predefined targets
-        if (swctx.getPredefinedTargets().find(pkg) != swctx.getPredefinedTargets().end())
+        if (b.swctx.getPredefinedTargets().find(pkg) != b.swctx.getPredefinedTargets().end())
             continue;
         auto tgt = tgts.getAnyTarget();
         if (!tgt)
@@ -79,15 +79,16 @@ sw::SourceDirMap fetch(sw::SwContext &swctx)
     for (auto &[h, d] : srcs)
         ts["driver"]["source-dir-for-source"][h] = normalize_path(d);
     i.addSettings(ts);
-    swctx.load();
+    b.load();
 
     if (build_after_fetch)
-        swctx.execute();
+        b.execute();
 
     return srcs;
 }
 
 SUBCOMMAND_DECL2(fetch)
 {
-    fetch(swctx);
+    auto b = swctx.createBuild();
+    fetch(b);
 }

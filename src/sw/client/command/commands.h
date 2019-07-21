@@ -19,7 +19,10 @@
 #pragma once
 
 #include <primitives/sw/cl.h>
+
+#include <sw/core/build.h>
 #include <sw/core/sw_context.h>
+#include <sw/manager/package_data.h>
 
 #define SUBCOMMAND_DECL(n) void cli_##n()
 #define SUBCOMMAND_DECL2(n) void cli_##n(sw::SwContext &swctx)
@@ -32,5 +35,5 @@
 #undef SUBCOMMAND
 
 std::unique_ptr<sw::SwContext> createSwContext();
-sw::SourceDirMap fetch(sw::SwContext &swctx);
-sw::PackageDescriptionMap getPackages(const sw::SwContext &swctx, const sw::SourceDirMap &sources = {});
+sw::SourceDirMap fetch(sw::SwBuild &);
+sw::PackageDescriptionMap getPackages(const sw::SwBuild &, const sw::SourceDirMap & = {});

@@ -9,6 +9,8 @@
 #include "build.h"
 #include "module.h"
 
+#include <sw/core/input.h>
+
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "driver.cpp");
 

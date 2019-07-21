@@ -19,6 +19,8 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "compiler.detect");
 
+#define DETECT_ARGS SwCoreContext &s
+
 namespace sw
 {
 
@@ -64,14 +66,14 @@ const StringSet &getCppSourceFileExtensions()
 
 std::string getVsToolset(const Version &v);
 
-void detectNativeCompilers(SwCoreContext &s);
-void detectCSharpCompilers(SwCoreContext &s);
-void detectRustCompilers(SwCoreContext &s);
-void detectGoCompilers(SwCoreContext &s);
-void detectFortranCompilers(SwCoreContext &s);
-void detectJavaCompilers(SwCoreContext &s);
-void detectKotlinCompilers(SwCoreContext &s);
-void detectDCompilers(SwCoreContext &s);
+void detectNativeCompilers(DETECT_ARGS);
+void detectCSharpCompilers(DETECT_ARGS);
+void detectRustCompilers(DETECT_ARGS);
+void detectGoCompilers(DETECT_ARGS);
+void detectFortranCompilers(DETECT_ARGS);
+void detectJavaCompilers(DETECT_ARGS);
+void detectKotlinCompilers(DETECT_ARGS);
+void detectDCompilers(DETECT_ARGS);
 
 bool isCppHeaderFileExtension(const String &e)
 {
@@ -85,7 +87,7 @@ bool isCppSourceFileExtensions(const String &e)
     return exts.find(e) != exts.end();
 }
 
-void detectCompilers(SwCoreContext &s)
+void detectCompilers(DETECT_ARGS)
 {
     detectNativeCompilers(s);
 
@@ -136,7 +138,7 @@ static T &addTarget(SwCoreContext &s, const PackageId &id)
 
     auto t = std::make_shared<T>(id);
 
-    auto &cld = s.getTargets();
+    auto &cld = s.getPredefinedTargets();
     cld[id].push_back(t);
 
     //t.sw_provided = true;
@@ -152,7 +154,7 @@ static T &addProgram(SwCoreContext &s, const PackageId &id, const std::shared_pt
     return t;
 }
 
-void detectDCompilers(SwCoreContext &s)
+void detectDCompilers(DETECT_ARGS)
 {
     SW_UNIMPLEMENTED;
 
@@ -168,7 +170,7 @@ void detectDCompilers(SwCoreContext &s)
     addProgram(s, "org.dlang.dmd.dmd", C);*/
 }
 
-void detectKotlinCompilers(SwCoreContext &s)
+void detectKotlinCompilers(DETECT_ARGS)
 {
     SW_UNIMPLEMENTED;
 
@@ -183,7 +185,7 @@ void detectKotlinCompilers(SwCoreContext &s)
     //s.registerProgram("com.JetBrains.kotlin.kotlinc", C);*/
 }
 
-void detectJavaCompilers(SwCoreContext &s)
+void detectJavaCompilers(DETECT_ARGS)
 {
     SW_UNIMPLEMENTED;
 
@@ -199,7 +201,7 @@ void detectJavaCompilers(SwCoreContext &s)
     //s.registerProgram("com.oracle.java.javac", C);*/
 }
 
-void detectFortranCompilers(SwCoreContext &s)
+void detectFortranCompilers(DETECT_ARGS)
 {
     SW_UNIMPLEMENTED;
 
@@ -238,7 +240,7 @@ void detectFortranCompilers(SwCoreContext &s)
     //s.registerProgram("org.gnu.gcc.fortran", C);*/
 }
 
-void detectGoCompilers(SwCoreContext &s)
+void detectGoCompilers(DETECT_ARGS)
 {
     SW_UNIMPLEMENTED;
 
@@ -258,7 +260,7 @@ void detectGoCompilers(SwCoreContext &s)
 #endif
 }
 
-void detectRustCompilers(SwCoreContext &s)
+void detectRustCompilers(DETECT_ARGS)
 {
     SW_UNIMPLEMENTED;
 
@@ -305,7 +307,7 @@ private:
     mutable std::shared_ptr<builder::Command> cmd;
 };
 
-VSInstances &gatherVSInstances(SwCoreContext &s)
+VSInstances &gatherVSInstances(DETECT_ARGS)
 {
     static VSInstances instances = [&s]()
     {
@@ -333,7 +335,7 @@ VSInstances &gatherVSInstances(SwCoreContext &s)
     return instances;
 }
 
-void detectCSharpCompilers(SwCoreContext &s)
+void detectCSharpCompilers(DETECT_ARGS)
 {
     SW_UNIMPLEMENTED;
 
@@ -364,7 +366,7 @@ void detectCSharpCompilers(SwCoreContext &s)
     }*/
 }
 
-void detectMsvc15Plus(SwCoreContext &s)
+void detectMsvc15Plus(DETECT_ARGS)
 {
     // https://docs.microsoft.com/en-us/cpp/c-runtime-library/crt-library-features?view=vs-2019
 
@@ -488,7 +490,7 @@ void detectMsvc15Plus(SwCoreContext &s)
     }
 }
 
-void detectMsvc14AndOlder(SwCoreContext &s)
+void detectMsvc14AndOlder(DETECT_ARGS)
 {
     auto find_comn_tools = [](const Version &v) -> path
     {
@@ -725,7 +727,7 @@ static VersionSet listWindows10Kits()
     return kits;
 }
 
-void detectWindowsSdk(SwCoreContext &s)
+void detectWindowsSdk(DETECT_ARGS)
 {
     // ucrt - universal CRT
     //
@@ -882,14 +884,14 @@ void detectWindowsSdk(SwCoreContext &s)
     }
 }
 
-void detectMsvc(SwCoreContext &s)
+void detectMsvc(DETECT_ARGS)
 {
     detectMsvc15Plus(s);
     detectMsvc14AndOlder(s);
     detectWindowsSdk(s);
 }
 
-void detectWindowsClang(SwCoreContext &s)
+void detectWindowsClang(DETECT_ARGS)
 {
     // create programs
     const path base_llvm_path = path("c:") / "Program Files" / "LLVM";
@@ -996,13 +998,13 @@ void detectWindowsClang(SwCoreContext &s)
     }
 }
 
-void detectWindowsCompilers(SwCoreContext &s)
+void detectWindowsCompilers(DETECT_ARGS)
 {
     detectMsvc(s);
     detectWindowsClang(s);
 }
 
-void detectNonWindowsCompilers(SwCoreContext &s)
+void detectNonWindowsCompilers(DETECT_ARGS)
 {
     path p;
 
@@ -1280,7 +1282,7 @@ void detectNonWindowsCompilers(SwCoreContext &s)
     }
 }
 
-void detectNativeCompilers(SwCoreContext &s)
+void detectNativeCompilers(DETECT_ARGS)
 {
     auto &os = s.getHostOs();
     if (os.is(OSType::Windows) || os.is(OSType::Cygwin))

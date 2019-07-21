@@ -20,6 +20,7 @@
 
 #include <sw/builder/file.h>
 #include <sw/builder/execution_plan.h>
+#include <sw/core/build.h>
 #include <sw/core/sw_context.h>
 #include <sw/support/filesystem.h>
 
@@ -32,8 +33,7 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "generator");
 
-namespace sw
-{
+using namespace sw;
 
 int vsVersionFromString(const String &s);
 
@@ -248,16 +248,16 @@ std::unique_ptr<Generator> Generator::create(const String &s)
 
 struct NinjaEmitter : primitives::Emitter
 {
-    NinjaEmitter(const SwContext &swctx, const path &dir)
+    NinjaEmitter(const SwBuild &b, const path &dir)
     {
         const String commands_fn = "commands.ninja";
         addLine("include " + commands_fn);
         emptyLines(1);
 
-        auto ep = swctx.getExecutionPlan();
+        auto ep = b.getExecutionPlan();
 
         for (auto &c : ep.commands)
-            addCommand(swctx, *c);
+            addCommand(b, *c);
 
         primitives::Emitter ctx_progs;
         sc.printPrograms(ctx_progs, [](auto &ctx, auto &prog, auto &alias)
@@ -285,9 +285,9 @@ private:
 #endif
     }
 
-    String prepareString(const SwContext &b, const String &s, bool quotes = false)
+    String prepareString(const SwBuild &b, const String &s, bool quotes = false)
     {
-        if (b.getHostOs().Type != OSType::Windows)
+        if (b.swctx.getHostOs().Type != OSType::Windows)
             quotes = false;
 
         auto s2 = s;
@@ -298,7 +298,7 @@ private:
         return s2;
     }
 
-    void addCommand(const SwContext &b, const builder::Command &c)
+    void addCommand(const SwBuild &b, const builder::Command &c)
     {
         bool rsp = c.needsResponseFile();
         path rsp_dir = dir / "rsp";
@@ -313,7 +313,7 @@ private:
         increaseIndent();
         addLine("description = " + c.getName());
         addLine("command = ");
-        if (b.getHostOs().Type == OSType::Windows)
+        if (b.swctx.getHostOs().Type == OSType::Windows)
         {
             addText("cmd /S /C ");
             addText("\"");
@@ -324,10 +324,10 @@ private:
         // env
         for (auto &[k, v] : c.environment)
         {
-            if (b.getHostOs().Type == OSType::Windows)
+            if (b.swctx.getHostOs().Type == OSType::Windows)
                 addText("set ");
             addText(k + "=" + v + " ");
-            if (b.getHostOs().Type == OSType::Windows)
+            if (b.swctx.getHostOs().Type == OSType::Windows)
                 addText("&& ");
         }
 
@@ -335,7 +335,7 @@ private:
         if (!c.working_directory.empty())
         {
             addText("cd ");
-            if (b.getHostOs().Type == OSType::Windows)
+            if (b.swctx.getHostOs().Type == OSType::Windows)
                 addText("/D ");
             addText(prepareString(b, getShortName(c.working_directory), true) + " && ");
         }
@@ -370,7 +370,7 @@ private:
             addText("2> " + prepareString(b, getShortName(c.err.file), true) + " ");
 
         //
-        if (b.getHostOs().Type == OSType::Windows)
+        if (b.swctx.getHostOs().Type == OSType::Windows)
             addText("\"");
         if (prog.find("cl.exe") != prog.npos)
             addLine("deps = msvc");
@@ -404,11 +404,11 @@ private:
     }
 };
 
-void NinjaGenerator::generate(const SwContext &swctx)
+void NinjaGenerator::generate(const SwBuild &swctx)
 {
     // https://ninja-build.org/manual.html#_writing_your_own_ninja_files
 
-    const auto dir = path(SW_BINARY_DIR) / toPathString(type) / swctx.getBuildHash();
+    const auto dir = path(SW_BINARY_DIR) / toPathString(type) / swctx.getHash();
 
     NinjaEmitter ctx(swctx, dir);
     write_file(dir / "build.ninja", ctx.getText());
@@ -607,12 +607,12 @@ struct MakeEmitter : primitives::Emitter
     }
 };
 
-void MakeGenerator::generate(const SwContext &b)
+void MakeGenerator::generate(const SwBuild &b)
 {
     // https://www.gnu.org/software/make/manual/html_node/index.html
     // https://en.wikipedia.org/wiki/Make_(software)
 
-    const auto d = fs::absolute(path(SW_BINARY_DIR) / toPathString(type) / b.getBuildHash());
+    const auto d = fs::absolute(path(SW_BINARY_DIR) / toPathString(type) / b.getHash());
 
     auto ep = b.getExecutionPlan();
 
@@ -650,9 +650,9 @@ void MakeGenerator::generate(const SwContext &b)
     write_file(d / commands_fn, ctx.getText());
 }
 
-void ShellGenerator::generate(const SwContext &b)
+void ShellGenerator::generate(const SwBuild &b)
 {
-    const auto d = path(SW_BINARY_DIR) / toPathString(type) / b.getBuildHash();
+    const auto d = path(SW_BINARY_DIR) / toPathString(type) / b.getHash();
 
     auto ep = b.getExecutionPlan();
 
@@ -754,13 +754,13 @@ void ShellGenerator::generate(const SwContext &b)
     write_file(d / ("commands"s + (batch ? ".bat" : ".sh")), ctx.getText());
 }
 
-void CompilationDatabaseGenerator::generate(const SwContext &b)
+void CompilationDatabaseGenerator::generate(const SwBuild &b)
 {
     static const std::set<String> exts{
         ".c", ".cpp", ".cxx", ".c++", ".cc", ".CPP", ".C++", ".CXX", ".C", ".CC"
     };
 
-    const auto d = path(SW_BINARY_DIR) / toPathString(type) / b.getBuildHash();
+    const auto d = path(SW_BINARY_DIR) / toPathString(type) / b.getHash();
 
     auto p = b.getExecutionPlan();
 
@@ -790,6 +790,4 @@ void CompilationDatabaseGenerator::generate(const SwContext &b)
         }
     }
     write_file(d / "compile_commands.json", j.dump(2));
-}
-
 }

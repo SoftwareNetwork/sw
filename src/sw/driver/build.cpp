@@ -2083,12 +2083,14 @@ Test Build::addTest(const String &name)
 
 TargetMap &Build::getChildren()
 {
-    return use_separate_target_map ? internal_targets : swctx.getTargets();
+    SW_UNIMPLEMENTED;
+    //return use_separate_target_map ? internal_targets : swctx.getTargets();
 }
 
 const TargetMap &Build::getChildren() const
 {
-    return use_separate_target_map ? internal_targets : swctx.getTargets();
+    SW_UNIMPLEMENTED;
+    //return use_separate_target_map ? internal_targets : swctx.getTargets();
 }
 
 }

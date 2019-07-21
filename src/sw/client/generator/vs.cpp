@@ -44,18 +44,17 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "generator.vs");
 
+using namespace sw;
+
 //extern cl::SubCommand subcommand_ide;
 bool gPrintDependencies;
 bool gPrintOverriddenDependencies;
 bool gOutputNoConfigSubdir;
 
-static cl::opt<String> toolset("toolset", cl::desc("Set VS generator toolset"));
+static ::cl::opt<String> toolset("toolset", ::cl::desc("Set VS generator toolset"));
 
 extern std::map<sw::PackagePath, sw::Version> gUserSelectedPackages;
 static String vs_project_ext = ".vcxproj";
-
-namespace sw
-{
 
 static const std::map<ArchType, String> platforms
 {
@@ -1650,7 +1649,7 @@ void VSGenerator::initSolutions(Build &b)
     version = Version(16);
 }*/
 
-void VSGenerator::generate(const SwContext &b)
+void VSGenerator::generate(const SwBuild &b)
 {
     // add / b.getBuildHash()
     dir = path(SW_BINARY_DIR) / toPathString(type) / version.toString(1);
@@ -2030,5 +2029,3 @@ void VSGenerator::generate(const SwContext &b)
     lnk += ".lnk";
     ::create_link(dir / fn, lnk, "SW link");*/
 }
-
-} // namespace sw
