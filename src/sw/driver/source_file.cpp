@@ -234,6 +234,9 @@ void SourceFileStorage::remove_exclude(const FileRegex &r)
 
 void SourceFileStorage::remove_exclude(const path &root, const FileRegex &r)
 {
+    if (target->DryRun)
+        return;
+
     auto r2 = r;
     r2.dir = root / r2.dir;
     remove_full1(r2);
