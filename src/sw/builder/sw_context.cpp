@@ -37,6 +37,11 @@ SwBuilderContext::~SwBuilderContext()
 {
 }
 
+ModuleStorage &SwBuilderContext::getModuleStorage() const
+{
+    return *module_storage;
+}
+
 Executor &SwBuilderContext::getFileStorageExecutor() const
 {
     return *file_storage_executor;

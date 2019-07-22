@@ -7,6 +7,7 @@
 #pragma once
 
 #include "concurrent_map.h"
+#include "module_storage.h"
 #include "os.h"
 
 #include <sw/manager/sw_context.h>
@@ -36,11 +37,13 @@ struct SW_BUILDER_API SwBuilderContext : SwManagerContext
     FileStorage &getFileStorage() const;
     Executor &getFileStorageExecutor() const;
     CommandStorage &getCommandStorage() const;
+    ModuleStorage &getModuleStorage() const;
     const OS &getHostOs() const { return HostOS; }
 
     void clearFileStorages();
 
 private:
+    std::unique_ptr<ModuleStorage> module_storage;
     // keep order
     std::unique_ptr<ProgramVersionStorage> pvs;
     mutable std::unique_ptr<CommandStorage> cs;

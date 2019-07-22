@@ -154,11 +154,6 @@ ChecksStorage &Driver::getChecksStorage(const String &config, const path &fn) co
     return *i->second;
 }
 
-ModuleStorage &Driver::getModuleStorage() const
-{
-    return *module_storage;
-}
-
 }
 
 }

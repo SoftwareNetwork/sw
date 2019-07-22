@@ -43,10 +43,7 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "build");
 
-//cl::opt<bool> dry_run("n", cl::desc("Dry run"));
 static cl::opt<bool> debug_configs("debug-configs", cl::desc("Build configs in debug mode"));
-
-static cl::opt<int> config_jobs("jc", cl::desc("Number of config jobs"));
 
 bool gVerbose;
 bool gWithTesting;
@@ -347,7 +344,6 @@ Build::Build(const Build &rhs)
     , swctx(rhs.swctx)
     , main_build(rhs.main_build)
     , driver(rhs.driver)
-    , silent(rhs.silent)
     , source_dirs_by_source(rhs.source_dirs_by_source)
     , command_storage(rhs.command_storage)
     , checker(*this)
@@ -367,50 +363,6 @@ const OS &Build::getHostOs() const
 path Build::getChecksDir() const
 {
     return getServiceDir() / "checks";
-}
-
-void Build::prepare()
-{
-    ScopedTime t;
-
-    swctx.loadPackages(getChildren());
-
-    // multipass prepare()
-    // if we add targets inside this loop,
-    // it will automatically handle this situation
-    while (prepareStep())
-        ;
-
-    if (!silent)
-        LOG_DEBUG(logger, "Prepare time: " << t.getTimeFloat() << " s.");
-}
-
-// multi-solution, for crosscompilation
-bool Build::prepareStep()
-{
-    std::atomic_bool next_pass = false;
-
-    auto &e = getExecutor();
-    Futures<void> fs;
-    prepareStep(e, fs, next_pass);
-    waitAndGet(fs);
-
-    return next_pass;
-}
-
-void Build::prepareStep(Executor &e, Futures<void> &fs, std::atomic_bool &next_pass) const
-{
-    for (const auto &[pkg, tgts] : getChildren())
-    {
-        for (auto &t : tgts)
-        {
-            fs.push_back(e.push([this, t, &next_pass]
-            {
-                if (t->prepare())
-                    next_pass = true;
-            }));
-        }
-    }
 }
 
 static auto getFilesHash(const Files &files)
@@ -883,14 +835,13 @@ Module Build::loadModule(const path &p) const
 
     auto mb2 = swctx.createBuild();
     Build b(main_build.swctx, mb2, driver);
-    b.execute_jobs = config_jobs;
     b.getChildren() = swctx.getPredefinedTargets();
     path dll;
     {
         auto r = b.build_configs_separate({ fn2 });
         dll = r.begin()->second;
     }
-    return driver.getModuleStorage().get(dll);
+    return swctx.getModuleStorage().get(dll);
 }
 
 path Build::build(const path &fn)
@@ -909,7 +860,6 @@ path Build::build(const path &fn)
         // separate build
         auto mb2 = swctx.createBuild();
         Build b(main_build.swctx, mb2, driver);
-        b.execute_jobs = config_jobs;
         b.getChildren() = swctx.getPredefinedTargets();
         //auto r = b.build_configs_separate({ fn });
         auto ep = b.build_configs1(Files{ fn });
@@ -948,7 +898,6 @@ void Build::load_packages(const PackageIdSet &pkgsids)
     {
         auto mb2 = main_build.swctx.createBuild();
         Build b(main_build.swctx, mb2, driver); // cache?
-        b.execute_jobs = config_jobs;
         b.getChildren() = main_build.swctx.getPredefinedTargets();
         //dll = b.build_configs(pkgs);
         auto ep = b.build_configs1(pkgs);
@@ -965,7 +914,7 @@ void Build::load_packages(const PackageIdSet &pkgsids)
     for (auto &p : in_pkgs)
     {
         auto ep = std::make_shared<NativeModuleTargetEntryPoint>(*this,
-            Module(driver.getModuleStorage().get(dll), gn2suffix(p.getData().group_number)));
+            Module(swctx.getModuleStorage().get(dll), gn2suffix(p.getData().group_number)));
         ep->module_data.NamePrefix = p.ppath.slice(0, p.getData().prefix);
         ep->module_data.current_gn = p.getData().group_number;
         ep->module_data.current_module = p.toString();
@@ -1002,159 +951,6 @@ void Build::load_inline_spec(const path &fn)
 void Build::load_dir(const path &)
 {
     SW_UNIMPLEMENTED;
-}
-
-void Build::execute()
-{
-    prepare();
-    auto p = getExecutionPlan();
-    execute(p);
-}
-
-void Build::execute(CommandExecutionPlan &p) const
-{
-    for (auto &c : p.commands)
-        c->silent = silent;
-
-    ScopedTime t;
-    std::unique_ptr<Executor> ex;
-    if (execute_jobs > 0)
-        ex = std::make_unique<Executor>(execute_jobs);
-    auto &e = execute_jobs > 0 ? *ex : getExecutor();
-
-    p.execute(e);
-    auto t2 = t.getTimeFloat();
-    if (!silent && t2 > 0.15)
-        LOG_INFO(logger, "Build time: " << t2 << " s.");
-}
-
-Commands Build::getCommands() const
-{
-    // calling this in any case to set proper command dependencies
-    for (const auto &[pkg, tgts] : getChildren())
-    {
-        for (auto &t : tgts)
-        {
-            for (auto &c : t->getCommands())
-                c->maybe_unused = builder::Command::MU_TRUE;
-        }
-    }
-
-    // but checks sometimes has zero targets?
-    if (TargetsToBuild.empty())
-        throw SW_RUNTIME_ERROR("no targets were selected for building");
-
-    Commands cmds;
-    // FIXME: drop children from here, always build only precisely picked TargetsToBuild
-    auto &chldr = TargetsToBuild.empty() ? getChildren() : TargetsToBuild;
-    //if (TargetsToBuild.empty())
-        //LOG_WARN("logger", "empty TargetsToBuild");
-
-    for (auto &[p, tgts] : chldr)
-    {
-        for (auto &t : tgts)
-        {
-            auto c = t->getCommands();
-            for (auto &c2 : c)
-                c2->maybe_unused &= ~builder::Command::MU_TRUE;
-            cmds.insert(c.begin(), c.end());
-
-            // copy output dlls
-
-            auto nt = t->as<NativeCompiledTarget*>();
-            if (!nt)
-                continue;
-            if (*nt->HeaderOnly)
-                continue;
-            if (nt->getSelectedTool() == nt->Librarian.get())
-                continue;
-
-            // copy
-            if (nt->isLocal() && //getSettings().Native.CopySharedLibraries &&
-                nt->Scope == TargetScope::Build && nt->OutputDir.empty() && !nt->createWindowsRpath())
-            {
-                for (auto &l : nt->gatherAllRelatedDependencies())
-                {
-                    auto dt = l->as<NativeCompiledTarget*>();
-                    if (!dt)
-                        continue;
-                    if (dt->isLocal())
-                        continue;
-                    if (dt->HeaderOnly.value())
-                        continue;
-                    if (dt->getSettings().Native.LibrariesType != LibraryType::Shared && !dt->isSharedOnly())
-                        continue;
-                    if (dt->getSelectedTool() == dt->Librarian.get())
-                        continue;
-                    auto in = dt->getOutputFile();
-                    auto o = nt->getOutputDir() / dt->OutputDir;
-                    o /= in.filename();
-                    if (in == o)
-                        continue;
-
-                    SW_MAKE_EXECUTE_BUILTIN_COMMAND(copy_cmd, *nt, "sw_copy_file", nullptr);
-                    copy_cmd->arguments.push_back(in.u8string());
-                    copy_cmd->arguments.push_back(o.u8string());
-                    copy_cmd->addInput(dt->getOutputFile());
-                    copy_cmd->addOutput(o);
-                    copy_cmd->dependencies.insert(nt->getCommand());
-                    copy_cmd->name = "copy: " + normalize_path(o);
-                    copy_cmd->maybe_unused = builder::Command::MU_ALWAYS;
-                    copy_cmd->command_storage = builder::Command::CS_LOCAL;
-                    cmds.insert(copy_cmd);
-                }
-            }
-        }
-    }
-
-    return cmds;
-}
-
-Build::CommandExecutionPlan Build::getExecutionPlan() const
-{
-    return getExecutionPlan(getCommands());
-}
-
-Build::CommandExecutionPlan Build::getExecutionPlan(const Commands &cmds) const
-{
-    auto ep = CommandExecutionPlan::createExecutionPlan(cmds);
-    if (ep)
-        return ep;
-
-    // error!
-
-    auto d = getServiceDir();
-
-    auto [g, n, sc] = ep.getStrongComponents();
-
-    using Subgraph = boost::subgraph<CommandExecutionPlan::Graph>;
-
-    // fill copy of g
-    Subgraph root(g.m_vertices.size());
-    for (auto &e : g.m_edges)
-        boost::add_edge(e.m_source, e.m_target, root);
-
-    std::vector<Subgraph*> subs(n);
-    for (decltype(n) i = 0; i < n; i++)
-        subs[i] = &root.create_subgraph();
-    for (int i = 0; i < sc.size(); i++)
-        boost::add_vertex(i, *subs[sc[i]]);
-
-    auto cyclic_path = d / "cyclic";
-    fs::create_directories(cyclic_path);
-    for (decltype(n) i = 0; i < n; i++)
-    {
-        if (subs[i]->m_graph.m_vertices.size() > 1)
-            CommandExecutionPlan::printGraph(subs[i]->m_graph, cyclic_path / std::to_string(i));
-    }
-
-    ep.printGraph(ep.getGraph(), cyclic_path / "processed", ep.commands, true);
-    ep.printGraph(ep.getGraphUnprocessed(), cyclic_path / "unprocessed", ep.unprocessed_commands, true);
-
-    //String error = "Cannot create execution plan because of cyclic dependencies: strong components = " + std::to_string(n);
-    String error = "Cannot create execution plan because of cyclic dependencies";
-
-    throw SW_RUNTIME_ERROR(error);
 }
 
 void Build::load_configless(const path &file_or_dir)
@@ -1239,7 +1035,7 @@ void Build::load_configless(const path &file_or_dir)
 
 void Build::load_dll(const path &dll, const std::set<TargetSettings> &settings)
 {
-    auto ep = std::make_shared<NativeModuleTargetEntryPoint>(*this, driver.getModuleStorage().get(dll));
+    auto ep = std::make_shared<NativeModuleTargetEntryPoint>(*this, swctx.getModuleStorage().get(dll));
     for (auto &s : settings)
         ep->loadPackages(s, {}); // load all
 

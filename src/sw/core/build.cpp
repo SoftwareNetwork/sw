@@ -16,6 +16,8 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "build");
 
+//cl::opt<bool> dry_run("n", cl::desc("Dry run"));
+
 cl::opt<bool> build_always("B", cl::desc("Build always"));
 cl::opt<int> skip_errors("k", cl::desc("Skip errors"));
 static cl::opt<bool> time_trace("time-trace", cl::desc("Record chrome time trace events"));

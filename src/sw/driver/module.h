@@ -111,15 +111,4 @@ private:
     path getLocation() const;
 };
 
-struct SW_DRIVER_CPP_API ModuleStorage
-{
-    std::unordered_map<path, std::unique_ptr<Module::DynamicLibrary>> modules;
-    boost::upgrade_mutex m;
-
-    ModuleStorage() = default;
-    ModuleStorage(const ModuleStorage &) = delete;
-
-    const Module::DynamicLibrary &get(const path &dll);
-};
-
 }

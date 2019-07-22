@@ -564,7 +564,6 @@ Build Check::setupSolution(const path &f) const
     auto &mb2 = *b;
     Build s(check_set->checker.build.swctx, mb2, check_set->checker.build.driver);
     //auto s = check_set->checker.build;
-    s.silent = true;
     s.command_storage = builder::Command::CS_DO_NOT_SAVE;
     s.BinaryDir = f.parent_path();
     s.NamePrefix.clear();
@@ -609,24 +608,6 @@ bool Check::execute(Build &s) const
             c->silent = true;
 
         b->execute(p);
-    }
-    catch (std::exception &e)
-    {
-        Value = 0;
-        LOG_TRACE(logger, "Check " + data + ": check issue: " << e.what());
-        return false;
-    }
-    return true;
-
-    s.prepare();
-    try
-    {
-        // save commands for cleanup
-        auto p = s.getExecutionPlan();
-        for (auto &c : p.commands)
-            commands.push_back(c->shared_from_this());
-
-        s.execute(p);
     }
     catch (std::exception &e)
     {

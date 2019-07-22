@@ -176,11 +176,8 @@ public:
     int command_storage = 0;
     const ModuleSwappableData *module_data = nullptr;
     SourceDirMap source_dirs_by_source;
-    int execute_jobs = 0;
     Checker checker;
     mutable TargetMap TargetsToBuild;
-    // other data
-    bool silent = false; // some log messages
 
     const OS &getHostOs() const;
     const TargetSettings &getHostSettings() const;
@@ -193,9 +190,6 @@ public:
     TargetMap &getChildren();
     const TargetMap &getChildren() const;
     path getChecksDir() const;
-    CommandExecutionPlan getExecutionPlan() const;
-    CommandExecutionPlan getExecutionPlan(const Commands &cmds) const;
-    Commands getCommands() const;
     const ModuleSwappableData &getModuleData() const;
     PackageVersionGroupNumber getCurrentGroupNumber() const;
     const String &getCurrentModule() const;
@@ -254,10 +248,6 @@ public:
 
     path build(const path &fn);
     void load_packages(const PackageIdSet &pkgs);
-    void execute();
-    void execute(CommandExecutionPlan &p) const;
-    void prepare();
-    bool prepareStep();
     Module loadModule(const path &fn) const;
 
 private:
