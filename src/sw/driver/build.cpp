@@ -866,7 +866,7 @@ path Build::build(const path &fn)
         //b.execute();
         // set our main target
         mb2.getTargetsToBuild()[*ep->tgt] = mb2.getTargets()[*ep->tgt];
-        swctx.loadPackages(mb2.getTargets());
+        mb2.loadPackages();
         mb2.prepare();
         mb2.execute();
         //mb2.build();
@@ -904,7 +904,7 @@ void Build::load_packages(const PackageIdSet &pkgsids)
         //b.execute();
         // set our main target
         mb2.getTargetsToBuild()[*ep->tgt] = mb2.getTargets()[*ep->tgt];
-        swctx.loadPackages(mb2.getTargets());
+        mb2.loadPackages();
         mb2.prepare();
         mb2.execute();
         //mb2.build();

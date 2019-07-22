@@ -41,6 +41,7 @@ struct SwBuild
     void load();
     void setTargetsToBuild();
     void resolvePackages();
+    void loadPackages();
     void prepare();
     void execute();
 
@@ -49,6 +50,10 @@ struct SwBuild
     void execute(CommandExecutionPlan &p) const;
     CommandExecutionPlan getExecutionPlan(const Commands &cmds) const;
 
+    void loadPackages(TargetMap &tm) const; // load tm with predefined
+    static void loadPackages(TargetMap &tm, const TargetMap &predefined);
+
+    //
     CommandExecutionPlan getExecutionPlan() const;
     String getSpecification() const;
 
