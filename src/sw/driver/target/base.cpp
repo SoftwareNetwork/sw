@@ -378,23 +378,6 @@ void Target::setSource(const Source &s)
 
     if (auto sd = getSolution().getSourceDir(getSource(), getPackage().version); sd)
         setSourceDirectory(sd.value());
-
-    auto d = getSolution().fetch_dir;
-    if (d.empty() || !isLocal())
-        return;
-
-    auto s2 = getSource().clone(); // make a copy!
-    s2->applyVersion(getPackage().getVersion());
-    d /= s2->getHash();
-
-    if (!fs::exists(d))
-    {
-        LOG_INFO(logger, "Downloading source:\n" << s2->print());
-        s2->download(d);
-    }
-    d = d / findRootDirectory(d); // pass found regex or files for better root dir lookup
-    getSolution().source_dirs_by_source[s2->getHash()] = d;
-    setSourceDirectory(d);
 }
 
 Target &Target::operator+=(const Source &s)

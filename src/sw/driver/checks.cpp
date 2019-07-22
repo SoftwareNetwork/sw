@@ -560,12 +560,14 @@ static String getTargetName(const path &p)
 
 Build Check::setupSolution(const path &f) const
 {
-    auto s = check_set->checker.build;
+    auto mb21 = new SwBuild(check_set->checker.build.swctx.createBuild());
+    auto &mb2 = *mb21;
+    Build s(check_set->checker.build.swctx, mb2, check_set->checker.build.driver);
+    //auto s = check_set->checker.build;
     s.silent = true;
     s.command_storage = builder::Command::CS_DO_NOT_SAVE;
     s.BinaryDir = f.parent_path();
     s.NamePrefix.clear();
-    s.use_separate_target_map = true;
     s.DryRun = false;
     s.getChildren() = s.swctx.getPredefinedTargets();
     return s;
@@ -593,68 +595,20 @@ void Check::setupTarget(NativeCompiledTarget &e) const
 
 bool Check::execute(Build &s) const
 {
-    /*static std::mutex m;
-    std::unique_lock lk(m);
-
-    {
-        // copy stdlibs etc.
-        while (1)
-        {
-            UnresolvedPackages upkgs;
-            for (const auto &[pkg, tgts] : s.getChildren())
-            {
-                for (const auto &tgt : tgts)
-                {
-                    auto deps = tgt->getDependencies();
-                    for (auto &d : deps)
-                    {
-                        if (d->isResolved())
-                            continue;
-
-                        auto i = s.getChildren().find(d->getUnresolvedPackage());
-                        if (i == s.getChildren().end())
-                            upkgs.insert(d->getUnresolvedPackage());
-                        // else
-                        // swctx.install()? under mutex
-                    }
-                }
-            }
-
-            if (upkgs.empty())
-                break;
-
-            for (auto &u : upkgs)
-            {
-                auto i = s.swctx.getTargets().find(u);
-                if (i == s.swctx.getTargets().end())
-                    throw SW_RUNTIME_ERROR("missing check dependency");
-                s.getChildren()[i->first] = s.swctx.getTargets()[i->first];
-            }
-        }
-
-        // load stdlibs etc.
-        s.swctx.loadPackages(s.getChildren());
-    }*/
-
-    // go
     s.prepare();
     try
     {
+        // save commands for cleanup
         auto p = s.getExecutionPlan();
         for (auto &c : p.commands)
             commands.push_back(c->shared_from_this());
+
         s.execute(p);
     }
     catch (std::exception &e)
     {
         Value = 0;
         LOG_TRACE(logger, "Check " + data + ": check issue: " << e.what());
-        return false;
-    }
-    catch (...)
-    {
-        Value = 0;
-        LOG_TRACE(logger, "Check " + data + ": check unknown issue");
         return false;
     }
     return true;

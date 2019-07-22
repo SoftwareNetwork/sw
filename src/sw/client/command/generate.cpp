@@ -67,7 +67,9 @@ SUBCOMMAND_DECL2(generate)
     for (auto &a : build_arg)
         b.addInput(a);
     b.load();
-    b.configure();
+    b.setTargetsToBuild();
+    b.resolvePackages();
+    b.prepare();
 
     auto generator = Generator::create(gGenerator);
     generator->generate(swctx);

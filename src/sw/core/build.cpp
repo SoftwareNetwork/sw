@@ -39,13 +39,26 @@ void SwBuild::load()
 
 void SwBuild::build()
 {
-    load(inputs);
+    // this is all in one call
+
+    // load provided inputs
+    load();
+
+    //
+    setTargetsToBuild();
+
+    //
+    resolvePackages();
+
+    // prepare targets
+    prepare();
+
+    // create ex. plan and execute it
     execute();
 }
 
 void SwBuild::execute()
 {
-    configure();
     auto p = getExecutionPlan();
     execute(p);
 }
@@ -107,14 +120,18 @@ bool SwBuild::prepareStep()
     return next_pass;
 }
 
-void SwBuild::configure()
+void SwBuild::setTargetsToBuild()
 {
     // mark existing targets as targets to build
-    targets_to_build = getTargets();
+    // only in case if not present?
+    if (targets_to_build.empty())
+        targets_to_build = getTargets();
     for (auto &[pkg, d] : swctx.getPredefinedTargets())
         targets_to_build.erase(pkg.ppath);
+}
 
-    resolvePackages();
+void SwBuild::prepare()
+{
     while (prepareStep())
         ;
 }

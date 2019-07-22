@@ -316,16 +316,6 @@ static std::tuple<FilesOrdered, UnresolvedPackages> getFileDependencies(const Sw
     return getFileDependencies(swctx, in_config_file, gns);
 }
 
-static auto build_configs(SwBuild &in, const driver::cpp::Driver &driver, const std::unordered_set<LocalPackage> &pkgs)
-{
-    Build b(in.swctx, in, driver); // cache?
-    b.execute_jobs = config_jobs;
-    b.is_config_build = true;
-    b.use_separate_target_map = true;
-    b.getChildren() = in.swctx.getPredefinedTargets();
-    return b.build_configs(pkgs);
-}
-
 static void sw_check_abi_version(int v)
 {
     if (v > SW_MODULE_ABI_VERSION)
@@ -342,7 +332,6 @@ static String gn2suffix(PackageVersionGroupNumber gn)
 Build::Build(const SwContext &swctx, SwBuild &mb, const driver::cpp::Driver &driver)
     : swctx(swctx)
     , main_build(mb)
-    , b(swctx)
     , driver(driver)
     , checker(*this)
 {
@@ -357,13 +346,10 @@ Build::Build(const Build &rhs)
     : Base(rhs)
     , swctx(rhs.swctx)
     , main_build(rhs.main_build)
-    , b(swctx)
     , driver(rhs.driver)
     , silent(rhs.silent)
     , source_dirs_by_source(rhs.source_dirs_by_source)
-    , fetch_dir(rhs.fetch_dir)
     , command_storage(rhs.command_storage)
-    , is_config_build(rhs.is_config_build)
     , checker(*this)
     , host_settings(rhs.host_settings)
 {
@@ -563,6 +549,7 @@ struct PrepareConfigEntryPoint : NativeTargetEntryPoint
 
     path out;
     FilesMap r;
+    std::unique_ptr<PackageId> tgt;
 
     PrepareConfigEntryPoint(Build &b, const std::unordered_set<LocalPackage> &pkgs)
         : NativeTargetEntryPoint(b), pkgs_(pkgs)
@@ -590,6 +577,7 @@ private:
     {
         b.IsConfig = true;
         auto &lib = b.addTarget<SharedLibraryTarget>(getSelfTargetName(files), "local");
+        tgt = std::make_unique<PackageId>(lib.getPackage());
         b.IsConfig = false;
         return lib;
     }
@@ -864,7 +852,7 @@ std::shared_ptr<PrepareConfigEntryPoint> Build::build_configs1(const T &objs)
     auto ep = std::make_shared<PrepareConfigEntryPoint>(*this, objs);
     ep->loadPackages(ts, {}); // load all
 
-    execute();
+    //execute();
 
     return ep;
 }
@@ -893,10 +881,9 @@ Module Build::loadModule(const path &p) const
     if (!fn2.is_absolute())
         fn2 = SourceDir / fn2;
 
-    Build b(main_build.swctx, main_build, driver);
+    auto mb2 = swctx.createBuild();
+    Build b(main_build.swctx, mb2, driver);
     b.execute_jobs = config_jobs;
-    b.is_config_build = true;
-    b.use_separate_target_map = true;
     b.getChildren() = swctx.getPredefinedTargets();
     path dll;
     {
@@ -920,13 +907,20 @@ path Build::build(const path &fn)
     case FrontendType::Sw:
     {
         // separate build
-        Build b(main_build.swctx, main_build, driver);
+        auto mb2 = swctx.createBuild();
+        Build b(main_build.swctx, mb2, driver);
         b.execute_jobs = config_jobs;
-        b.is_config_build = true;
-        b.use_separate_target_map = true;
         b.getChildren() = swctx.getPredefinedTargets();
-        auto r = b.build_configs_separate({ fn });
-        return r.begin()->second;
+        //auto r = b.build_configs_separate({ fn });
+        auto ep = b.build_configs1(Files{ fn });
+        //b.execute();
+        // set our main target
+        mb2.getTargetsToBuild()[*ep->tgt] = mb2.getTargets()[*ep->tgt];
+        swctx.loadPackages(mb2.getTargets());
+        mb2.prepare();
+        mb2.execute();
+        //mb2.build();
+        return ep->r.begin()->second;
     }
     case FrontendType::Cppan:
         // no need to build
@@ -950,7 +944,23 @@ void Build::load_packages(const PackageIdSet &pkgsids)
     for (auto &[gn, p] : cfgs2)
         pkgs.insert(p);
 
-    auto dll = ::sw::build_configs(main_build, driver, pkgs);
+    path dll;
+    {
+        auto mb2 = main_build.swctx.createBuild();
+        Build b(main_build.swctx, mb2, driver); // cache?
+        b.execute_jobs = config_jobs;
+        b.getChildren() = main_build.swctx.getPredefinedTargets();
+        //dll = b.build_configs(pkgs);
+        auto ep = b.build_configs1(pkgs);
+        //b.execute();
+        // set our main target
+        mb2.getTargetsToBuild()[*ep->tgt] = mb2.getTargets()[*ep->tgt];
+        swctx.loadPackages(mb2.getTargets());
+        mb2.prepare();
+        mb2.execute();
+        //mb2.build();
+        dll = ep->out;
+    }
 
     for (auto &p : in_pkgs)
     {
@@ -1411,12 +1421,12 @@ Test Build::addTest(const String &name)
 
 TargetMap &Build::getChildren()
 {
-    return use_separate_target_map ? b.getTargets() : main_build.getTargets();
+    return main_build.getTargets();
 }
 
 const TargetMap &Build::getChildren() const
 {
-    return use_separate_target_map ? b.getTargets() : main_build.getTargets();
+    return main_build.getTargets();
 }
 
 }

@@ -177,18 +177,10 @@ public:
     const ModuleSwappableData *module_data = nullptr;
     SourceDirMap source_dirs_by_source;
     int execute_jobs = 0;
-    bool is_config_build = false;
     Checker checker;
     mutable TargetMap TargetsToBuild;
     // other data
     bool silent = false; // some log messages
-    bool show_output = false; // output from commands
-    path fetch_dir;
-    std::unordered_set<LocalPackage> known_cfgs;
-    bool use_separate_target_map = false; // check targets added to internal children map
-private:
-    SwBuild b;
-public:
 
     const OS &getHostOs() const;
     const TargetSettings &getHostSettings() const;

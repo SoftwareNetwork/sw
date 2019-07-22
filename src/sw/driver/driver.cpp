@@ -42,7 +42,7 @@ Driver::~Driver()
     // TODO: cleanup modules data first
     // copy exception here and pass further
     //if (std::uncaught_exceptions())
-        module_storage.release();
+        //module_storage.release();
 }
 
 PackageId Driver::getPackageId() const
