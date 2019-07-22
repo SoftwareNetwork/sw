@@ -560,8 +560,8 @@ static String getTargetName(const path &p)
 
 Build Check::setupSolution(const path &f) const
 {
-    auto mb21 = new SwBuild(check_set->checker.build.swctx.createBuild());
-    auto &mb2 = *mb21;
+    b = std::make_unique<SwBuild>(check_set->checker.build.swctx.createBuild());
+    auto &mb2 = *b;
     Build s(check_set->checker.build.swctx, mb2, check_set->checker.build.driver);
     //auto s = check_set->checker.build;
     s.silent = true;
@@ -595,6 +595,29 @@ void Check::setupTarget(NativeCompiledTarget &e) const
 
 bool Check::execute(Build &s) const
 {
+    b->setTargetsToBuild();
+    b->resolvePackages();
+    b->prepare();
+
+    try
+    {
+        // save commands for cleanup
+        auto p = b->getExecutionPlan();
+        for (auto &c : p.commands)
+            commands.push_back(c->shared_from_this());
+        for (auto &c : p.commands)
+            c->silent = true;
+
+        b->execute(p);
+    }
+    catch (std::exception &e)
+    {
+        Value = 0;
+        LOG_TRACE(logger, "Check " + data + ": check issue: " << e.what());
+        return false;
+    }
+    return true;
+
     s.prepare();
     try
     {

@@ -326,7 +326,6 @@ public:
 
     FileStorage &getFs() const;
 
-    path getBaseDir() const;
     path getTargetsDir() const;
     path getTargetDirShort(const path &root) const;
     path getTempDir() const;
@@ -376,8 +375,6 @@ protected:
     std::unique_ptr<SettingsComparator> scmp;
 
     //Target(const Target &);
-
-    path getOutputFileName() const;
 
 private:
     std::unique_ptr<Source> source;

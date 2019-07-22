@@ -34,13 +34,20 @@ struct SwBuild
     Input &addInput(const path &);
     Input &addInput(const PackageId &);
 
+    // complete
     void build();
 
+    // precise
     void load();
     void setTargetsToBuild();
     void resolvePackages();
     void prepare();
     void execute();
+
+    // tune
+    bool prepareStep();
+    void execute(CommandExecutionPlan &p) const;
+    CommandExecutionPlan getExecutionPlan(const Commands &cmds) const;
 
     CommandExecutionPlan getExecutionPlan() const;
     String getSpecification() const;
@@ -61,9 +68,6 @@ private:
     TargetMap targets_to_build;
 
     void load(ProcessedInputs &inputs);
-    bool prepareStep();
-    void execute(CommandExecutionPlan &p) const;
-    CommandExecutionPlan getExecutionPlan(const Commands &cmds) const;
     Commands getCommands() const;
 };
 

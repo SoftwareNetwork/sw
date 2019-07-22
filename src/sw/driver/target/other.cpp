@@ -7,6 +7,8 @@
 namespace sw
 {
 
+path getOutputFileName(const Target &t);
+
 bool CSharpTarget::init()
 {
     Target::init();
@@ -30,7 +32,7 @@ bool CSharpTarget::init()
     }
     else
     {
-        auto base = BinaryDir.parent_path() / "out" / getOutputFileName();
+        auto base = BinaryDir.parent_path() / "out" / ::sw::getOutputFileName(*this);
         compiler->setOutputFile(base);
     }
 
@@ -42,11 +44,11 @@ path CSharpTarget::getOutputFileName(const path &root) const
     path p;
     if (isLocal())
     {
-        p = getTargetsDir() / getOutputFileName();
+        p = getTargetsDir() / ::sw::getOutputFileName(*this);
     }
     else
     {
-        p = root / getConfig() / getOutputFileName();
+        p = root / getConfig() / ::sw::getOutputFileName(*this);
     }
     return p;
 }
@@ -87,7 +89,7 @@ bool RustTarget::init()
     }
     else
     {
-        auto base = BinaryDir.parent_path() / "out" / getOutputFileName();
+        auto base = BinaryDir.parent_path() / "out" / ::sw::getOutputFileName(*this);
         compiler->setOutputFile(base);
     }
 
@@ -99,11 +101,11 @@ path RustTarget::getOutputFileName(const path &root) const
     path p;
     if (isLocal())
     {
-        p = getTargetsDir() / getOutputFileName();
+        p = getTargetsDir() / ::sw::getOutputFileName(*this);
     }
     else
     {
-        p = root / getConfig() / getOutputFileName();
+        p = root / getConfig() / ::sw::getOutputFileName(*this);
     }
     return p;
 }
@@ -144,7 +146,7 @@ bool GoTarget::init()
     }
     else
     {
-        auto base = BinaryDir.parent_path() / "out" / getOutputFileName();
+        auto base = BinaryDir.parent_path() / "out" / ::sw::getOutputFileName(*this);
         compiler->setOutputFile(base);
     }
 
@@ -156,11 +158,11 @@ path GoTarget::getOutputFileName(const path &root) const
     path p;
     if (isLocal())
     {
-        p = getTargetsDir() / getOutputFileName();
+        p = getTargetsDir() / ::sw::getOutputFileName(*this);
     }
     else
     {
-        p = root / getConfig() / getOutputFileName();
+        p = root / getConfig() / ::sw::getOutputFileName(*this);
     }
     return p;
 }
@@ -201,7 +203,7 @@ bool FortranTarget::init()
     }
     else
     {
-        auto base = BinaryDir.parent_path() / "out" / getOutputFileName();
+        auto base = BinaryDir.parent_path() / "out" / ::sw::getOutputFileName(*this);
         compiler->setOutputFile(base);
     }
 
@@ -213,11 +215,11 @@ path FortranTarget::getOutputFileName(const path &root) const
     path p;
     if (isLocal())
     {
-        p = getTargetsDir() / getOutputFileName();
+        p = getTargetsDir() / ::sw::getOutputFileName(*this);
     }
     else
     {
-        p = root / getConfig() / getOutputFileName();
+        p = root / getConfig() / ::sw::getOutputFileName(*this);
     }
     return p;
 }
@@ -269,11 +271,11 @@ path JavaTarget::getOutputFileName(const path &root) const
     path p;
     if (isLocal())
     {
-        p = getTargetsDir() / getOutputFileName();
+        p = getTargetsDir() / ::sw::getOutputFileName(*this);
     }
     else
     {
-        p = root / getConfig() / getOutputFileName();
+        p = root / getConfig() / ::sw::getOutputFileName(*this);
     }
     return p;
 }
@@ -317,7 +319,7 @@ bool KotlinTarget::init()
     }
     else
     {
-        auto base = BinaryDir.parent_path() / "out" / getOutputFileName();
+        auto base = BinaryDir.parent_path() / "out" / ::sw::getOutputFileName(*this);
         compiler->setOutputFile(base);
     }
 
@@ -329,11 +331,11 @@ path KotlinTarget::getOutputFileName(const path &root) const
     path p;
     if (isLocal())
     {
-        p = getTargetsDir() / getOutputFileName();
+        p = getTargetsDir() / ::sw::getOutputFileName(*this);
     }
     else
     {
-        p = root / getConfig() / getOutputFileName();
+        p = root / getConfig() / ::sw::getOutputFileName(*this);
     }
     return p;
 }
@@ -374,7 +376,7 @@ bool DTarget::init()
     }
     else
     {
-        auto base = BinaryDir.parent_path() / "out" / getOutputFileName();
+        auto base = BinaryDir.parent_path() / "out" / ::sw::getOutputFileName(*this);
         compiler->setOutputFile(base);
     }
     compiler->setObjectDir(BinaryDir.parent_path() / "obj");
@@ -387,11 +389,11 @@ path DTarget::getOutputFileName(const path &root) const
     path p;
     if (isLocal())
     {
-        p = getTargetsDir() / getOutputFileName();
+        p = getTargetsDir() / ::sw::getOutputFileName(*this);
     }
     else
     {
-        p = root / getConfig() / getOutputFileName();
+        p = root / getConfig() / ::sw::getOutputFileName(*this);
     }
     return p;
 }

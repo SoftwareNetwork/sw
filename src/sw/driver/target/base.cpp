@@ -498,11 +498,6 @@ String Target::getConfig() const
     return ts.getHash();
 }
 
-path Target::getBaseDir() const
-{
-    return getSolution().BinaryDir / getConfig();
-}
-
 path Target::getTargetsDir() const
 {
     auto d = getSolution().BinaryDir / "out" / getConfig();
@@ -623,11 +618,7 @@ bool Target::init()
                                         //t->applyRootDirectory();
                                         //t->SourceDirBase = t->SourceDir;
 
-    if (isLocal())
-    {
-        BinaryDir = getTargetDirShort(getSolution().BinaryDir);
-    }
-    else if (auto d = getPackage().getOverriddenDir(); d)
+    if (auto d = getPackage().getOverriddenDir(); d)
     {
         // same as local for testing purposes?
         BinaryDir = getTargetDirShort(d.value() / SW_BINARY_DIR);
@@ -635,6 +626,10 @@ bool Target::init()
         //BinaryDir = d.value() / SW_BINARY_DIR;
         //BinaryDir /= sha256_short(getPackage().toString()); // getPackage() first
         //BinaryDir /= path(getConfig(true));
+    }
+    else if (isLocal())
+    {
+        BinaryDir = getTargetDirShort(getSolution().BinaryDir);
     }
     else /* package from network */
     {

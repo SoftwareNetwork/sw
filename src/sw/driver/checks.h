@@ -21,6 +21,7 @@ namespace sw
 {
 
 struct Build;
+struct SwBuild;
 struct Checker;
 struct CheckSet;
 struct ChecksStorage;
@@ -134,6 +135,7 @@ protected:
     bool execute(Build &s) const;
 
 private:
+    mutable std::unique_ptr<SwBuild> b;
     mutable std::vector<std::shared_ptr<builder::Command>> commands; // for cleanup
 };
 

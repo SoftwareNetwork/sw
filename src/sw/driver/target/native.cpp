@@ -158,6 +158,11 @@ SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD(sw_replace_dll_import, replace_dll_import)
 namespace sw
 {
 
+path getOutputFileName(const Target &t)
+{
+    return t.getPackage().toString();
+}
+
 NativeCompiledTarget::~NativeCompiledTarget()
 {
     // incomplete type cannot be in default dtor
@@ -680,7 +685,9 @@ void NativeCompiledTarget::setOutputFile()
     }
     else
     {
-        auto base = BinaryDir.parent_path() / "out" / getOutputFileName();
+        SW_UNIMPLEMENTED;
+
+        auto base = BinaryDir.parent_path() / "out" / ::sw::getOutputFileName(*this);
         getSelectedTool()->setOutputFile(base);
         if (getSelectedTool() != Librarian.get())
             getSelectedTool()->setImportLibrary(base);
@@ -693,36 +700,24 @@ void NativeCompiledTarget::setOutputFile()
         File(f, getFs()).setGenerated(true);
 }
 
-path Target::getOutputFileName() const
-{
-    return getPackage().toString();
-}
-
-/*String NativeCompiledTarget::getConfigRaw() const
-{
-    auto c = Target::getConfigRaw();
-    addConfigElement(c, toString(getCompilerType()));
-    auto p = findProgramByExtension(".cpp");
-    if (!p)
-        throw std::logic_error("no cpp compiler");
-    addConfigElement(c, p->getVersion().toString(2));
-    return c;
-}*/
-
 path NativeCompiledTarget::getOutputFileName(const path &root) const
 {
     path p;
     if (IsConfig)
     {
-        p = getSolution().BinaryDir / "cfg" / getConfig() / getOutputFileName();
+        p = getSolution().BinaryDir / "cfg" / getConfig() / ::sw::getOutputFileName(*this);
+    }
+    else if (auto d = getPackage().getOverriddenDir(); d)
+    {
+        p = *d / SW_BINARY_DIR / "out" / getConfig() / OutputDir / ::sw::getOutputFileName(*this);
     }
     else if (isLocal())
     {
-        p = getTargetsDir() / OutputDir / getOutputFileName();
+        p = getTargetsDir() / OutputDir / ::sw::getOutputFileName(*this);
     }
     else
     {
-        p = root / getConfig() / OutputDir / getOutputFileName();
+        p = root / getConfig() / OutputDir / ::sw::getOutputFileName(*this);
     }
     return p;
 }
@@ -738,7 +733,7 @@ path NativeCompiledTarget::getOutputFileName2(const path &subdir) const
         if (IsConfig)
             return getOutputFileName("");
         else
-            return BinaryDir.parent_path() / subdir / getOutputFileName();
+            return BinaryDir.parent_path() / subdir / ::sw::getOutputFileName(*this);
     }
 }
 

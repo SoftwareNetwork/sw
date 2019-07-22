@@ -215,7 +215,6 @@ private:
 
     Commands getCommands1() const override;
 
-    using Target::getOutputFileName;
     path getOutputFileName(const path &root) const;
     path getOutputFileName2(const path &subdir) const;
     Commands getGeneratedCommands() const;
