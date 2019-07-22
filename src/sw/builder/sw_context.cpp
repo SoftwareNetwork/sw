@@ -26,6 +26,8 @@ SwBuilderContext::SwBuilderContext(const path &local_storage_root_dir)
 {
     HostOS = getHostOS();
 
+    module_storage = std::make_unique<ModuleStorage>();
+
     //
     file_storage_executor = std::make_unique<Executor>("async log writer", 1);
 
@@ -35,6 +37,11 @@ SwBuilderContext::SwBuilderContext(const path &local_storage_root_dir)
 
 SwBuilderContext::~SwBuilderContext()
 {
+    // do not clear modules on exception, because it may come from there
+    // TODO: cleanup modules data first
+    // copy exception here and pass further?
+    //if (std::uncaught_exceptions())
+        //module_storage.release();
 }
 
 ModuleStorage &SwBuilderContext::getModuleStorage() const

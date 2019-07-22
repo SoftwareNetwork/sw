@@ -32,17 +32,10 @@ namespace driver::cpp
 
 Driver::Driver()
 {
-    //build = std::make_unique<Build>(b.swctx, b, *this);
-    module_storage = std::make_unique<ModuleStorage>();
 }
 
 Driver::~Driver()
 {
-    // do not clear modules on exception, because it may come from there
-    // TODO: cleanup modules data first
-    // copy exception here and pass further
-    //if (std::uncaught_exceptions())
-        //module_storage.release();
 }
 
 PackageId Driver::getPackageId() const
