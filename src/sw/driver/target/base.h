@@ -77,7 +77,6 @@ struct SW_DRIVER_CPP_API TargetBaseData : ProjectDirectories, TargetEvents
 {
     // flags
     bool IsConfig = false;
-    //bool ParallelSourceDownload = true;
     bool DryRun = false;
     PackagePath NamePrefix;
 

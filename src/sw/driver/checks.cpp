@@ -563,7 +563,6 @@ Build Check::setupSolution(const path &f) const
     auto s = check_set->checker.build;
     s.silent = true;
     s.command_storage = builder::Command::CS_DO_NOT_SAVE;
-    //s.throw_exceptions = false;
     s.BinaryDir = f.parent_path();
     s.NamePrefix.clear();
     s.use_separate_target_map = true;

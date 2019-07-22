@@ -21,7 +21,7 @@ struct SW_CORE_API CDriver : IDriver
 
     PackageId getPackageId() const override;
     bool canLoad(const Input &) const override;
-    void load(const std::set<Input> &) override;
+    void load(SwBuild &, const std::set<Input> &) override;
 
 private:
     sw_driver_t d;

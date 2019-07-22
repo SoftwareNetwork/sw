@@ -30,10 +30,9 @@ std::optional<path> findConfig(const path &dir, const FilesOrdered &fe_s)
 namespace driver::cpp
 {
 
-Driver::Driver(SwCoreContext &swctx)
-    : swctx(swctx)
+Driver::Driver()
 {
-    build = std::make_unique<Build>(swctx, *this);
+    //build = std::make_unique<Build>(b.swctx, b, *this);
     module_storage = std::make_unique<ModuleStorage>();
 }
 
@@ -76,8 +75,11 @@ bool Driver::canLoad(const Input &i) const
 
 static String spec;
 
-void Driver::load(const std::set<Input> &inputs)
+void Driver::load(SwBuild &b, const std::set<Input> &inputs)
 {
+    auto bb = new Build(b.swctx, b, *this);
+    auto &build = *bb;
+
     PackageIdSet pkgsids;
     for (auto &i : inputs)
     {
@@ -96,13 +98,13 @@ void Driver::load(const std::set<Input> &inputs)
             for (auto s : settings)
                 s.erase("driver");
 
-            build->DryRun = (*i.getSettings().begin())["driver"]["dry-run"] == "true";
+            build.DryRun = (*i.getSettings().begin())["driver"]["dry-run"] == "true";
 
             for (auto &[h, d] : (*i.getSettings().begin())["driver"]["source-dir-for-source"].getSettings())
-                build->source_dirs_by_source[h] = d.getValue();
+                build.source_dirs_by_source[h] = d.getValue();
 
             spec = read_file(p);
-            build->load_spec_file(p, settings);
+            build.load_spec_file(p, settings);
             break;
         }
         default:
@@ -111,10 +113,10 @@ void Driver::load(const std::set<Input> &inputs)
     }
 
     if (!pkgsids.empty())
-        build->load_packages(pkgsids);
+        build.load_packages(pkgsids);
 }
 
-void Driver::execute()
+/*void Driver::execute()
 {
     build->execute();
 }
@@ -122,7 +124,7 @@ void Driver::execute()
 bool Driver::prepareStep()
 {
     return build->prepareStep();
-}
+}*/
 
 String Driver::getSpecification() const
 {

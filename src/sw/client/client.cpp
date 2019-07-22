@@ -170,7 +170,7 @@ std::unique_ptr<sw::SwContext> createSwContext()
     httpSettings.proxy = Settings::get_local_settings().proxy;
 
     auto swctx = std::make_unique<sw::SwContext>(storage_dir_override.empty() ? sw::Settings::get_user_settings().storage_dir : storage_dir_override);
-    swctx->registerDriver(std::make_unique<sw::driver::cpp::Driver>(*swctx));
+    swctx->registerDriver(std::make_unique<sw::driver::cpp::Driver>());
     //swctx->registerDriver(std::make_unique<sw::CDriver>(sw_create_driver));
     return swctx;
 }

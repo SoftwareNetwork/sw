@@ -24,12 +24,12 @@ void configure(Build &s)
         }
     });
 
-    if (s.isConfigSelected("cygwin2macos"))
+    /*if (s.isConfigSelected("cygwin2macos"))
         s.loadModule("utils/cc/cygwin2macos.cpp").call<void(Solution&)>("configure", s);
     else if (s.isConfigSelected("win2macos"))
         s.loadModule("utils/cc/win2macos.cpp").call<void(Solution&)>("configure", s);
     else if (s.isConfigSelected("win2android"))
-        s.loadModule("utils/cc/win2android.cpp").call<void(Solution&)>("configure", s);
+        s.loadModule("utils/cc/win2android.cpp").call<void(Solution&)>("configure", s);*/
 
     //s.getSettings().Native.ConfigurationType = ConfigurationType::ReleaseWithDebugInformation;
     //s.getSettings().Native.CompilerType = CompilerType::ClangCl;

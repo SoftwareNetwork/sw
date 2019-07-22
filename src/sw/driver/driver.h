@@ -14,23 +14,23 @@ namespace sw
 struct Build;
 struct ChecksStorage;
 struct ModuleStorage;
-struct SwCoreContext;
+struct SwBuild;
 
 namespace driver::cpp
 {
 
 struct SW_DRIVER_CPP_API Driver : IDriver
 {
-    Driver(SwCoreContext &swctx);
+    Driver();
     virtual ~Driver();
 
     // driver api
     PackageId getPackageId() const override;
     bool canLoad(const Input &) const override;
-    void load(const std::set<Input> &) override;
+    void load(SwBuild &, const std::set<Input> &) override;
     String getSpecification() const override;
-    void execute();
-    bool prepareStep();
+    //void execute();
+    //bool prepareStep();
 
     // own
     ChecksStorage &getChecksStorage(const String &config) const;
@@ -38,10 +38,9 @@ struct SW_DRIVER_CPP_API Driver : IDriver
     ModuleStorage &getModuleStorage() const;
 
 private:
-    SwCoreContext &swctx;
     mutable std::unordered_map<String, std::unique_ptr<ChecksStorage>> checksStorages;
     std::unique_ptr<ModuleStorage> module_storage;
-    std::unique_ptr<Build> build;
+    //std::unique_ptr<Build> build;
 };
 
 } // namespace driver::cpp

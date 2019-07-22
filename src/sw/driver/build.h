@@ -12,6 +12,7 @@
 #include "target/base.h"
 
 #include <sw/builder/file_storage.h>
+#include <sw/core/build.h>
 #include <sw/core/target.h>
 #include <sw/manager/package_data.h>
 
@@ -30,7 +31,7 @@ struct Build;
 namespace driver::cpp { struct Driver; }
 struct Module;
 struct ModuleStorage;
-struct SwCoreContext;
+struct SwContext;
 
 template <class T>
 struct ExecutionPlan;
@@ -121,7 +122,7 @@ struct ModuleSwappableData
 struct PrepareConfigEntryPoint;
 
 // this driver ep
-struct SW_DRIVER_CPP_API NativeTargetEntryPoint : TargetLoader,
+struct SW_DRIVER_CPP_API NativeTargetEntryPoint : TargetEntryPoint,
     std::enable_shared_from_this<NativeTargetEntryPoint>
 {
     ModuleSwappableData module_data;
@@ -163,7 +164,8 @@ struct SW_DRIVER_CPP_API Build : SimpleBuild
     using CommandExecutionPlan = ExecutionPlan<builder::Command>;
 
     // most important
-    SwCoreContext &swctx;
+    const SwContext &swctx;
+    SwBuild &main_build;
     const driver::cpp::Driver &driver;
 private:
     TargetSettings host_settings;
@@ -175,22 +177,17 @@ public:
     const ModuleSwappableData *module_data = nullptr;
     SourceDirMap source_dirs_by_source;
     int execute_jobs = 0;
-    bool file_storage_local = true;
     bool is_config_build = false;
-    path config_file_or_dir; // original file or dir
-    String ide_solution_name;
-    bool disable_compiler_lookup = false;
     Checker checker;
     mutable TargetMap TargetsToBuild;
     // other data
     bool silent = false; // some log messages
     bool show_output = false; // output from commands
     path fetch_dir;
-    bool with_testing = false;
     std::unordered_set<LocalPackage> known_cfgs;
     bool use_separate_target_map = false; // check targets added to internal children map
 private:
-    TargetMap internal_targets;
+    SwBuild b;
 public:
 
     const OS &getHostOs() const;
@@ -204,13 +201,9 @@ public:
     TargetMap &getChildren();
     const TargetMap &getChildren() const;
     path getChecksDir() const;
-    path getIdeDir() const;
-    path getExecutionPlansDir() const;
-    path getExecutionPlanFilename() const;
     CommandExecutionPlan getExecutionPlan() const;
     CommandExecutionPlan getExecutionPlan(const Commands &cmds) const;
     Commands getCommands() const;
-    PackageDescriptionMap getPackages() const;
     const ModuleSwappableData &getModuleData() const;
     PackageVersionGroupNumber getCurrentGroupNumber() const;
     const String &getCurrentModule() const;
@@ -257,35 +250,9 @@ private:
     template <class T>
     std::shared_ptr<PrepareConfigEntryPoint> build_configs1(const T &objs);
 
-public:
-
     //
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    std::optional<path> config; // current config or empty in configless mode
-    bool configure = true;
-    bool perform_checks = true;
-
-    Build(SwCoreContext &swctx, const driver::cpp::Driver &driver);
+public:
+    Build(const SwContext &swctx, SwBuild &mb, const driver::cpp::Driver &driver);
     Build(const Build &);
     ~Build();
 
@@ -294,32 +261,19 @@ public:
     void load_dir(const path &);
 
     path build(const path &fn);
-    void load(const path &fn, bool configless = false);
     void load_packages(const PackageIdSet &pkgs);
-    void load_packages(const StringSet &pkgs);
-    void build_packages(const StringSet &pkgs);
-    void run_package(const String &pkg);
     void execute();
     void execute(CommandExecutionPlan &p) const;
-
-    bool isConfigSelected(const String &s) const;
-    Module loadModule(const path &fn) const;
-
     void prepare();
     bool prepareStep();
+    Module loadModule(const path &fn) const;
 
 private:
-    bool remove_ide_explans = false;
-    mutable StringSet used_configs;
     std::vector<detail::EventCallback> events;
-
-    void setupSolutionName(const path &file_or_dir);
-    SharedLibraryTarget &createTarget(const Files &files);
 
     // basic frontends
     void load_dll(const path &dll, const std::set<TargetSettings> &);
     void load_configless(const path &file_or_dir);
-    void createSolutions(const path &dll, bool usedll = true);
 
     // other frontends
     void cppan_load();

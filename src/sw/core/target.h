@@ -78,9 +78,9 @@ using ITargetPtr = std::shared_ptr<ITarget>;
     // get link args?
 };*/
 
-struct TargetLoader
+struct TargetEntryPoint
 {
-    virtual ~TargetLoader() = 0;
+    virtual ~TargetEntryPoint() = 0;
 
     // on zero input packages, load all
     virtual void loadPackages(const TargetSettings &, const PackageIdSet &allowed_packages) = 0;
@@ -96,7 +96,7 @@ struct SW_CORE_API TargetData
     ~TargetData();
 
     void loadPackages(const TargetSettings &, const PackageIdSet &allowed_packages);
-    void setEntryPoint(const std::shared_ptr<TargetLoader> &);
+    void setEntryPoint(const std::shared_ptr<TargetEntryPoint> &);
     const ITarget *getAnyTarget() const;
 
     Base::iterator find(const TargetSettings &s);
@@ -118,7 +118,7 @@ private:
     std::vector<ITargetPtr> targets;
     std::vector<ITargetPtr> targets_inactive;
     // shared, because multiple pkgs has same entry point
-    std::shared_ptr<TargetLoader> ep;
+    std::shared_ptr<TargetEntryPoint> ep;
     // regex storage
     // files cache
 };

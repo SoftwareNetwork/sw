@@ -20,6 +20,10 @@ cl::opt<bool> build_always("B", cl::desc("Build always"));
 cl::opt<int> skip_errors("k", cl::desc("Skip errors"));
 static cl::opt<bool> time_trace("time-trace", cl::desc("Record chrome time trace events"));
 
+//static cl::opt<bool> hide_output("hide-output");
+static cl::opt<bool> cl_show_output("show-output");
+static cl::opt<bool> print_graph("print-graph", cl::desc("Print file with build graph"));
+
 namespace sw
 {
 
@@ -402,7 +406,7 @@ void SwBuild::load(ProcessedInputs &inputs)
     for (auto &i : inputs)
         active_drivers[&i.getDriver()].insert(i);
     for (auto &[d, g] : active_drivers)
-        d->load(g);
+        d->load(*this, g);
 }
 
 Input &SwBuild::addInput(const String &i)

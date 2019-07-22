@@ -12,6 +12,7 @@ namespace sw
 {
 
 struct Input;
+struct SwBuild;
 
 struct SW_CORE_API IDriver
 {
@@ -22,7 +23,7 @@ struct SW_CORE_API IDriver
     //virtual PackageId getName() const = 0; // ?
 
     virtual bool canLoad(const Input &) const = 0;
-    virtual void load(const std::set<Input> &) = 0;
+    virtual void load(SwBuild &, const std::set<Input> &) = 0;
     virtual String getSpecification() const = 0;
 
     //virtual void execute() = 0;

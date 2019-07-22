@@ -27,6 +27,8 @@ struct SwBuild
     const SwContext &swctx;
 
     SwBuild(const SwContext &swctx);
+    //SwBuild(const SwBuild &) = default;
+    //SwBuild &operator=(const SwBuild &) = default;
 
     Input &addInput(const String &);
     Input &addInput(const path &);

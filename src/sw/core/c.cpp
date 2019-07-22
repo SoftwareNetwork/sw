@@ -53,8 +53,9 @@ bool CDriver::canLoad(const Input &) const
     return d.can_load(0);
 }
 
-void CDriver::load(const std::set<Input> &)
+void CDriver::load(SwBuild &, const std::set<Input> &)
 {
+    SW_UNIMPLEMENTED;
     d.load(0);
 }
 

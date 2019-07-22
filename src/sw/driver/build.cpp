@@ -48,11 +48,6 @@ static cl::opt<bool> debug_configs("debug-configs", cl::desc("Build configs in d
 
 static cl::opt<int> config_jobs("jc", cl::desc("Number of config jobs"));
 
-//static cl::opt<bool> hide_output("hide-output");
-static cl::opt<bool> cl_show_output("show-output");
-
-static cl::opt<bool> print_graph("print-graph", cl::desc("Print file with build graph"));
-
 bool gVerbose;
 bool gWithTesting;
 path gIdeFastPath;
@@ -321,14 +316,13 @@ static std::tuple<FilesOrdered, UnresolvedPackages> getFileDependencies(const Sw
     return getFileDependencies(swctx, in_config_file, gns);
 }
 
-static auto build_configs(SwCoreContext &swctx, const driver::cpp::Driver &driver, const std::unordered_set<LocalPackage> &pkgs)
+static auto build_configs(SwBuild &in, const driver::cpp::Driver &driver, const std::unordered_set<LocalPackage> &pkgs)
 {
-    Build b(swctx, driver); // cache?
+    Build b(in.swctx, in, driver); // cache?
     b.execute_jobs = config_jobs;
-    b.file_storage_local = false;
     b.is_config_build = true;
     b.use_separate_target_map = true;
-    b.getChildren() = swctx.getPredefinedTargets();
+    b.getChildren() = in.swctx.getPredefinedTargets();
     return b.build_configs(pkgs);
 }
 
@@ -345,8 +339,12 @@ static String gn2suffix(PackageVersionGroupNumber gn)
     return "_" + (gn > 0 ? std::to_string(gn) : ("_" + std::to_string(-gn)));
 }
 
-Build::Build(SwCoreContext &swctx, const driver::cpp::Driver &driver)
-    : swctx(swctx), driver(driver), checker(*this)
+Build::Build(const SwContext &swctx, SwBuild &mb, const driver::cpp::Driver &driver)
+    : swctx(swctx)
+    , main_build(mb)
+    , b(swctx)
+    , driver(driver)
+    , checker(*this)
 {
     host_settings = swctx.getHostSettings();
 
@@ -358,21 +356,15 @@ Build::Build(SwCoreContext &swctx, const driver::cpp::Driver &driver)
 Build::Build(const Build &rhs)
     : Base(rhs)
     , swctx(rhs.swctx)
+    , main_build(rhs.main_build)
+    , b(swctx)
     , driver(rhs.driver)
     , silent(rhs.silent)
-    //, show_output(rhs.show_output) // don't pass to checks
     , source_dirs_by_source(rhs.source_dirs_by_source)
     , fetch_dir(rhs.fetch_dir)
-    , with_testing(rhs.with_testing)
-    , ide_solution_name(rhs.ide_solution_name)
-    , disable_compiler_lookup(rhs.disable_compiler_lookup)
-    , config_file_or_dir(rhs.config_file_or_dir)
-    //, events(rhs.events)
-    , file_storage_local(rhs.file_storage_local)
     , command_storage(rhs.command_storage)
     , is_config_build(rhs.is_config_build)
     , checker(*this)
-    //, module_data(rhs.module_data)
     , host_settings(rhs.host_settings)
 {
 }
@@ -446,15 +438,6 @@ static auto getFilesHash(const Files &files)
 static PackagePath getSelfTargetName(const Files &files)
 {
     return "loc.sw.self." + getFilesHash(files);
-}
-
-SharedLibraryTarget &Build::createTarget(const Files &files)
-{
-    auto &solution = *this;
-    solution.IsConfig = true;
-    auto &lib = solution.addTarget<SharedLibraryTarget>(getSelfTargetName(files), "local");
-    solution.IsConfig = false;
-    return lib;
 }
 
 #define SW_DRIVER_NAME "org.sw.sw.client.driver.cpp-0.3.1"
@@ -565,11 +548,6 @@ const String &Build::getCurrentModule() const
 {
     return getModuleData().current_module;
 }
-
-/*std::shared_ptr<TargetEntryPoint> Build::getEntryPoint() const
-{
-    return getModuleData().ep.lock();
-}*/
 
 void Build::addChild(const TargetBaseTypePtr &t)
 {
@@ -915,14 +893,12 @@ Module Build::loadModule(const path &p) const
     if (!fn2.is_absolute())
         fn2 = SourceDir / fn2;
 
-    Build b(swctx, driver);
+    Build b(main_build.swctx, main_build, driver);
     b.execute_jobs = config_jobs;
-    b.file_storage_local = false;
     b.is_config_build = true;
     b.use_separate_target_map = true;
     b.getChildren() = swctx.getPredefinedTargets();
     path dll;
-    //if (File(fn2, *b.solutions[0].fs).isChanged() || File(dll, *b.solutions[0].fs).isChanged())
     {
         auto r = b.build_configs_separate({ fn2 });
         dll = r.begin()->second;
@@ -939,17 +915,13 @@ path Build::build(const path &fn)
     if (!fe)
         throw SW_RUNTIME_ERROR("Unknown frontend config: " + fn.u8string());
 
-    setupSolutionName(fn);
-    config = fn;
-
     switch (fe.value())
     {
     case FrontendType::Sw:
     {
         // separate build
-        Build b(swctx, driver);
+        Build b(main_build.swctx, main_build, driver);
         b.execute_jobs = config_jobs;
-        b.file_storage_local = false;
         b.is_config_build = true;
         b.use_separate_target_map = true;
         b.getChildren() = swctx.getPredefinedTargets();
@@ -961,17 +933,6 @@ path Build::build(const path &fn)
         break;
     }
     return {};
-}
-
-void Build::setupSolutionName(const path &file_or_dir)
-{
-    config_file_or_dir = primitives::filesystem::canonical(file_or_dir);
-
-    bool dir = fs::is_directory(file_or_dir);
-    if (dir || isFrontendConfigFilename(file_or_dir))
-        ide_solution_name = primitives::filesystem::canonical(file_or_dir).parent_path().filename().u8string();
-    else
-        ide_solution_name = file_or_dir.stem().u8string();
 }
 
 void Build::load_packages(const PackageIdSet &pkgsids)
@@ -989,7 +950,7 @@ void Build::load_packages(const PackageIdSet &pkgsids)
     for (auto &[gn, p] : cfgs2)
         pkgs.insert(p);
 
-    auto dll = ::sw::build_configs(swctx, driver, pkgs);
+    auto dll = ::sw::build_configs(main_build, driver, pkgs);
 
     for (auto &p : in_pkgs)
     {
@@ -1001,36 +962,6 @@ void Build::load_packages(const PackageIdSet &pkgsids)
         ep->module_data.known_targets = pkgsids;
         getChildren()[p].setEntryPoint(std::move(ep));
     }
-
-    /*auto get_package_config = [](const auto &pkg) -> path
-    {
-        if (pkg.getData().group_number)
-        {
-            auto d = findConfig(pkg.getDirSrc2(), Build::getAvailableFrontendConfigFilenames());
-            if (!d)
-                throw SW_RUNTIME_ERROR("cannot find config");
-            return *d;
-        }
-        auto p = pkg.getGroupLeader();
-        if (auto d = findConfig(p.getDirSrc2(), Build::getAvailableFrontendConfigFilenames()))
-            return *d;
-        auto d = findConfig(pkg.getDirSrc2(), Build::getAvailableFrontendConfigFilenames());
-        if (!d)
-            throw SW_RUNTIME_ERROR("cannot find config");
-        fs::create_directories(p.getDirSrc2());
-        fs::copy_file(*d, p.getDirSrc2() / d->filename());
-        return p.getDirSrc2() / d->filename();
-    };
-
-    Files files;
-    std::unordered_map<path, LocalPackage> output_names;
-    for (auto &pkg : pkgs)
-    {
-        auto p = get_package_config(pkg);
-        files.insert(p);
-        output_names.emplace(p, pkg);
-    }
-    b.build_configs_separate(files);*/
 }
 
 void Build::load_spec_file(const path &fn, const std::set<TargetSettings> &settings)
@@ -1051,9 +982,6 @@ void Build::load_spec_file(const path &fn, const std::set<TargetSettings> &setti
         cppan_load();
         break;
     }
-
-    // set show output setting
-    show_output = cl_show_output;
 }
 
 void Build::load_inline_spec(const path &fn)
@@ -1066,354 +994,17 @@ void Build::load_dir(const path &)
     SW_UNIMPLEMENTED;
 }
 
-void Build::load(const path &fn, bool configless)
-{
-    SW_UNIMPLEMENTED;
-
-    if (!fn.is_absolute())
-        throw SW_RUNTIME_ERROR("path must be absolute: " + normalize_path(fn));
-    if (!fs::exists(fn))
-        throw SW_RUNTIME_ERROR("path does not exists: " + normalize_path(fn));
-
-    if (configless)
-        return load_configless(fn);
-
-    auto dll = build(fn);
-
-    auto fe = selectFrontendByFilename(fn);
-    if (!fe)
-        throw SW_RUNTIME_ERROR("frontend was not found for file: " + normalize_path(fn));
-
-    LOG_TRACE(logger, "using " << toString(*fe) << " frontend");
-    switch (fe.value())
-    {
-    case FrontendType::Sw:
-        SW_UNIMPLEMENTED;
-        //load_dll(dll);
-        break;
-    case FrontendType::Cppan:
-        cppan_load();
-        break;
-    }
-
-    // set show output setting
-    show_output = cl_show_output;
-}
-
-static Build::CommandExecutionPlan load(const SwBuilderContext &swctx, const path &fn, const Build &s)
-{
-    primitives::BinaryStream ctx;
-    ctx.load(fn);
-
-    size_t sz;
-    ctx.read(sz);
-
-    size_t n_strings;
-    ctx.read(n_strings);
-
-    Strings strings(1);
-    while (n_strings--)
-    {
-        String s;
-        ctx.read(s);
-        strings.push_back(s);
-    }
-
-    auto read_string = [&strings, &ctx, &sz]() -> String
-    {
-        int n = 0;
-        ctx._read(&n, sz);
-        return strings[n];
-    };
-
-    std::map<size_t, std::shared_ptr<builder::Command>> commands;
-
-    auto add_command = [&swctx, &commands, &s, &read_string](size_t id, uint8_t type)
-    {
-        auto it = commands.find(id);
-        if (it == commands.end())
-        {
-            std::shared_ptr<builder::Command> c;
-            switch (type)
-            {
-            case 1:
-            {
-                auto c2 = std::make_shared<driver::VSCommand>(swctx);
-                //c2->file.fs = s.fs;
-                c = c2;
-                //c2->file.file = read_string();
-            }
-                break;
-            case 2:
-            {
-                auto c2 = std::make_shared<driver::GNUCommand>(swctx);
-                //c2->file.fs = s.fs;
-                c = c2;
-                //c2->file.file = read_string();
-                c2->deps_file = read_string();
-            }
-                break;
-            case 3:
-            {
-                auto c2 = std::make_shared<ExecuteBuiltinCommand>(swctx);
-                c = c2;
-            }
-                break;
-            default:
-                c = std::make_shared<builder::Command>(swctx);
-                break;
-            }
-            commands[id] = c;
-            return c;
-        }
-        return it->second;
-    };
-
-    std::unordered_map<builder::Command *, std::vector<size_t>> deps;
-    while (!ctx.eof())
-    {
-        size_t id;
-        ctx.read(id);
-
-        uint8_t type = 0;
-        ctx.read(type);
-
-        auto c = add_command(id, type);
-
-        c->name = read_string();
-
-        c->setProgram(read_string());
-        c->working_directory = read_string();
-
-        size_t n;
-        ctx.read(n);
-        while (n--)
-            c->arguments.push_back(read_string());
-
-        c->redirectStdin(read_string());
-        c->redirectStdout(read_string());
-        c->redirectStderr(read_string());
-
-        ctx.read(n);
-        while (n--)
-        {
-            auto k = read_string();
-            c->environment[k] = read_string();
-        }
-
-        ctx.read(n);
-        while (n--)
-        {
-            ctx.read(id);
-            deps[c.get()].push_back(id);
-        }
-
-        ctx.read(n);
-        while (n--)
-            c->addInput(read_string());
-
-        /*ctx.read(n);
-        while (n--)
-            c->addIntermediate(read_string());*/
-
-        ctx.read(n);
-        while (n--)
-            c->addOutput(read_string());
-    }
-
-    for (auto &[c, dep] : deps)
-    {
-        for (auto &d : dep)
-            c->dependencies.insert(commands[d]);
-    }
-
-    Commands commands2;
-    for (auto &[_, c] : commands)
-        commands2.insert(c);
-    return Build::CommandExecutionPlan::createExecutionPlan(commands2);
-}
-
-void save(const path &fn, const Build::CommandExecutionPlan &p)
-{
-    primitives::BinaryStream ctx;
-
-    auto strings = p.gatherStrings();
-
-    size_t sz;
-    if (strings.size() & 0xff000000)
-        sz = 4;
-    else if (strings.size() & 0xff0000)
-        sz = 3;
-    else if (strings.size() & 0xff00)
-        sz = 2;
-    else if (strings.size() & 0xff)
-        sz = 1;
-
-    ctx.write(sz);
-
-    ctx.write(strings.size());
-    std::map<int, String> strings2;
-    for (auto &[s, n] : strings)
-        strings2[n] = s;
-    for (auto &[_, s] : strings2)
-        ctx.write(s);
-
-    auto print_string = [&strings, &ctx, &sz](const String &in)
-    {
-        auto n = strings[in];
-        ctx._write(&n, sz);
-    };
-
-    for (auto &c : p.commands)
-    {
-        ctx.write(c);
-
-        uint8_t type = 0;
-        if (auto c2 = c->as<driver::VSCommand*>())
-        {
-            type = 1;
-            ctx.write(type);
-            //print_string(c2->file.file.u8string());
-        }
-        else if (auto c2 = c->as<driver::GNUCommand*>())
-        {
-            type = 2;
-            ctx.write(type);
-            //print_string(c2->file.file.u8string());
-            print_string(c2->deps_file.u8string());
-        }
-        else if (auto c2 = c->as<ExecuteBuiltinCommand*>())
-        {
-            type = 3;
-            ctx.write(type);
-        }
-        else
-            ctx.write(type);
-
-        print_string(c->getName());
-
-        print_string(c->working_directory.u8string());
-
-        ctx.write(c->arguments.size());
-        for (auto &a : c->arguments)
-            print_string(a->toString());
-
-        print_string(c->in.file.u8string());
-        print_string(c->out.file.u8string());
-        print_string(c->err.file.u8string());
-
-        ctx.write(c->environment.size());
-        for (auto &[k, v] : c->environment)
-        {
-            print_string(k);
-            print_string(v);
-        }
-
-        ctx.write(c->dependencies.size());
-        for (auto &d : c->dependencies)
-            ctx.write(d.get());
-
-        ctx.write(c->inputs.size());
-        for (auto &f : c->inputs)
-            print_string(f.u8string());
-
-        /*ctx.write(c->intermediate.size());
-        for (auto &f : c->intermediate)
-            print_string(f.u8string());*/
-
-        ctx.write(c->outputs.size());
-        for (auto &f : c->outputs)
-            print_string(f.u8string());
-    }
-
-    fs::create_directories(fn.parent_path());
-    ctx.save(fn);
-}
-
-path Build::getIdeDir() const
-{
-    //const auto compiler_name = boost::to_lower_copy(toString(getSettings().Native.CompilerType));
-    const auto compiler_name = "msvc";
-    return BinaryDir / "sln" / ide_solution_name / compiler_name;
-}
-
-path Build::getExecutionPlansDir() const
-{
-    return getIdeDir().parent_path() / "explans";
-}
-
-path Build::getExecutionPlanFilename() const
-{
-    String n;
-    for (auto &[pkg, _] : TargetsToBuild)
-        n += pkg.toString();
-    SW_UNIMPLEMENTED;
-    //return getExecutionPlansDir() / (getSettings().getConfig() + "_" + sha1(n).substr(0, 8) + ".explan");
-}
-
 void Build::execute()
 {
     prepare();
     auto p = getExecutionPlan();
     execute(p);
-
-    if (with_testing)
-    {
-        Commands cmds;
-        cmds.insert(tests.begin(), tests.end());
-        auto p = getExecutionPlan(cmds);
-        execute(p);
-    }
 }
 
 void Build::execute(CommandExecutionPlan &p) const
 {
-    auto print_graph = [](const auto &ep, const path &p, bool short_names = false)
-    {
-        String s;
-        s += "digraph G {\n";
-        for (auto &c : ep.commands)
-        {
-            s += c->getName(short_names) + ";\n";
-            for (auto &d : c->dependencies)
-                s += c->getName(short_names) + " -> " + d->getName(short_names) + ";\n";
-        }
-
-        s += "}";
-        write_file(p, s);
-    };
-
     for (auto &c : p.commands)
-    {
         c->silent = silent;
-        c->show_output = show_output;
-    }
-
-    // execute early to prevent commands expansion into response files
-    // print misc
-    if (::print_graph && !silent) // && !b console mode
-    {
-        auto d = getServiceDir();
-
-        //message_box(d.string());
-
-        // new graphs
-        //p.printGraph(p.getGraphSkeleton(), d / "build_skeleton");
-        p.printGraph(p.getGraph(), d / "build");
-
-        // old graphs
-        print_graph(p, d / "build_old.dot");
-
-        //if (auto b = this->template as<Build*>())
-        {
-            SW_UNIMPLEMENTED;
-            //for (const auto &[i, s] : enumerate(b->solutions))
-                //s.printGraph(d / ("solution." + std::to_string(i + 1) + ".dot"));
-        }
-    }
-
-    if (DryRun)
-        return;
 
     ScopedTime t;
     std::unique_ptr<Executor> ex;
@@ -1421,17 +1012,10 @@ void Build::execute(CommandExecutionPlan &p) const
         ex = std::make_unique<Executor>(execute_jobs);
     auto &e = execute_jobs > 0 ? *ex : getExecutor();
 
-    //p.skip_errors = skip_errors.getValue();
     p.execute(e);
     auto t2 = t.getTimeFloat();
     if (!silent && t2 > 0.15)
         LOG_INFO(logger, "Build time: " << t2 << " s.");
-
-    // produce chrome tracing log
-    /*if (time_trace)
-    {
-        // ...
-    }*/
 }
 
 Commands Build::getCommands() const
@@ -1565,18 +1149,16 @@ Build::CommandExecutionPlan Build::getExecutionPlan(const Commands &cmds) const
 
 void Build::load_configless(const path &file_or_dir)
 {
-    setupSolutionName(file_or_dir);
-
     SW_UNIMPLEMENTED;
     //load_dll({}, false);
 
-    bool dir = fs::is_directory(config_file_or_dir);
+    bool dir = fs::is_directory(file_or_dir);
 
     Strings comments;
     if (!dir)
     {
         // for generators
-        config = file_or_dir;
+        //config = file_or_dir;
 
         auto f = read_file(file_or_dir);
 
@@ -1593,7 +1175,6 @@ void Build::load_configless(const path &file_or_dir)
         }
     }
 
-    createSolutions("", false);
     /*for (auto &s : settings)
     {
         //current_settings = &s;
@@ -1646,238 +1227,6 @@ void Build::load_configless(const path &file_or_dir)
     }*/
 }
 
-static const auto ide_fs = "ide_vs";
-
-// on fast path we do not create a lot of threads in main()
-// we do it here
-static std::unique_ptr<Executor> e;
-static bool fast_path_exit;
-
-static auto get_fmtime_fn(const path &gIdeFastPath)
-{
-    return path(gIdeFastPath) += ".t";
-}
-
-void Build::load_packages(const StringSet &pkgs)
-{
-    SW_UNIMPLEMENTED;
-
-    if (pkgs.empty())
-        return;
-
-    if (!gIdeFastPath.empty())
-    {
-        if (fs::exists(gIdeFastPath))
-        {
-            auto files = read_lines(gIdeFastPath);
-            uint64_t mtime = 0;
-            for (auto &f : files)
-            {
-                File f2(f, swctx.getFileStorage());
-                f2.isChanged(); // load lwt
-                mtime ^= f2.getFileData().last_write_time.time_since_epoch().count();
-            }
-            auto fmtime = get_fmtime_fn(gIdeFastPath);
-            if (fs::exists(fmtime) && mtime == std::stoull(read_file(fmtime)))
-            {
-                fast_path_exit = true;
-                return;
-            }
-            write_file(fmtime, std::to_string(mtime));
-            SW_UNIMPLEMENTED;
-            //settings.clear();
-        }
-        e = std::make_unique<Executor>(select_number_of_threads(gNumberOfJobs));
-        getExecutor(e.get());
-    }
-
-    //
-    UnresolvedPackages upkgs;
-    for (auto &p : pkgs)
-        upkgs.insert(p);
-
-    // resolve only deps needed
-    auto m = swctx.install(upkgs);
-
-    SW_UNIMPLEMENTED;
-    //for (auto &[u, p] : m)
-        //knownTargets.insert(p);
-
-    std::unordered_map<PackageVersionGroupNumber, LocalPackage> cfgs2;
-    for (auto &[u, p] : m)
-    {
-        SW_UNIMPLEMENTED;
-        //knownTargets.insert(p);
-        // gather packages
-        cfgs2.emplace(p.getData().group_number, p);
-    }
-    std::unordered_set<LocalPackage> cfgs;
-    for (auto &[gn, s] : cfgs2)
-        cfgs.insert(s);
-
-    configure = false;
-
-    auto dll = ::sw::build_configs(swctx, driver, cfgs);
-    for (auto &[u, p] : m)
-    {
-        getChildren()[p].setEntryPoint(std::make_shared<NativeModuleTargetEntryPoint>(*this,
-            Module(driver.getModuleStorage().get(dll), gn2suffix(p.getData().group_number))));
-    }
-
-    createSolutions(dll, true);
-
-    for (auto &[gn, p] : cfgs2)
-    {
-        SW_UNIMPLEMENTED;
-        sw_check_abi_version(Module(driver.getModuleStorage().get(dll), gn2suffix(gn)).sw_get_module_abi_version());
-        /*for (auto &s : settings)
-        {
-            //current_settings = &s;
-            Module(driver.getModuleStorage().get(dll), gn2suffix(gn)).check(*this, checker);
-            // we can use new (clone of this) solution, then copy known targets
-            // to allow multiple passes-builds
-            Module(driver.getModuleStorage().get(dll), gn2suffix(gn)).build(*this);
-        }*/
-    }
-
-    // clear TargetsToBuild that is set before
-    TargetsToBuild.clear();
-
-    // now we set ours TargetsToBuild to this object
-    // execute() will propagate them to solutions
-    for (auto &[porig, p] : m)
-    {
-        SW_UNIMPLEMENTED;
-        //for (auto &s : settings)
-            //TargetsToBuild[p][s] = getChildren()[p].find(s);
-    }
-}
-
-void Build::build_packages(const StringSet &pkgs)
-{
-    if (pkgs.empty())
-        return;
-
-    load_packages(pkgs);
-    if (fast_path_exit)
-        return;
-    execute();
-
-    //
-    if (!gIdeFastPath.empty())
-    {
-        UnresolvedPackages upkgs;
-        for (auto &p : pkgs)
-            upkgs.insert(p);
-        auto pkgs2 = swctx.resolve(upkgs);
-
-        // at the moment we have one solution here
-        Files files;
-        Commands cmds;
-        for (auto &[u, p] : pkgs2)
-        {
-            auto i = getChildren().find(p);
-            if (i == getChildren().end())
-                throw SW_RUNTIME_ERROR("No such target in fast path: " + p.toString());
-            if (auto nt = (*i->second.begin())->as<NativeCompiledTarget*>())
-            {
-                if (auto c = nt->getCommand())
-                {
-                    files.insert(c->outputs.begin(), c->outputs.end());
-
-                    if (*nt->HeaderOnly)
-                        continue;
-                    if (nt->getSelectedTool() == nt->Librarian.get())
-                        continue;
-                    if (isExecutable(nt->getType()))
-                        continue;
-
-                    if (nt->Scope == TargetScope::Build)
-                    {
-                        auto dt = nt;
-                        if (dt->getSettings().Native.LibrariesType != LibraryType::Shared && !dt->isSharedOnly())
-                            continue;
-                        auto in = dt->getOutputFile();
-                        auto o = gIdeCopyToDir / dt->OutputDir;
-                        o /= in.filename();
-                        if (in == o)
-                            continue;
-
-                        SW_MAKE_EXECUTE_BUILTIN_COMMAND(copy_cmd, *nt, "sw_copy_file", nullptr);
-                        copy_cmd->arguments.push_back(in.u8string());
-                        copy_cmd->arguments.push_back(o.u8string());
-                        copy_cmd->addInput(dt->getOutputFile());
-                        copy_cmd->addOutput(o);
-                        //copy_cmd->dependencies.insert(nt->getCommand());
-                        copy_cmd->name = "copy: " + normalize_path(o);
-                        copy_cmd->maybe_unused = builder::Command::MU_ALWAYS;
-                        copy_cmd->command_storage = builder::Command::CS_LOCAL;
-                        cmds.insert(copy_cmd);
-
-                        files.insert(o);
-                    }
-                }
-            }
-        }
-
-        // perform copy
-        getExecutionPlan(cmds).execute(getExecutor());
-
-        String s;
-        uint64_t mtime = 0;
-        for (auto &f : files)
-        {
-            s += normalize_path(f) + "\n";
-            File f2(f, swctx.getFileStorage());
-            f2.isChanged();
-            mtime ^= f2.getFileData().last_write_time.time_since_epoch().count();
-        }
-        write_file(gIdeFastPath, s);
-        write_file(get_fmtime_fn(gIdeFastPath), std::to_string(mtime));
-    }
-}
-
-void Build::run_package(const String &s)
-{
-    SW_UNIMPLEMENTED;
-
-    /*build_packages({ s });
-
-    auto nt = solutions[0].getTargetPtr(swctx.resolve(extractFromString(s)))->as<NativeCompiledTarget>();
-    if (!nt || nt->getType() != TargetType::NativeExecutable)
-        throw SW_RUNTIME_ERROR("Unsupported package type");
-
-    auto cb = nt->addCommand();
-
-    cb.c->always = true;
-    cb.c->program = nt->getOutputFile();
-    cb.c->working_directory = nt->getPackage().getDirObjWdir();
-    fs::create_directories(cb.c->working_directory);
-    nt->setupCommandForRun(*cb.c);
-    //if (cb.c->create_new_console)
-    //{
-        //cb.c->inherit = true;
-        //cb.c->in.inherit = true;
-    //}
-    //else
-        cb.c->detached = true;
-
-    run(nt->getPackage(), *cb.c);*/
-}
-
-void Build::createSolutions(const path &dll, bool usedll)
-{
-    if (gWithTesting)
-        with_testing = true;
-
-    //if (usedll)
-        //sw_check_abi_version(Module(swctx.getModuleStorage().get(dll)).sw_get_module_abi_version());
-
-    // configure may change defaults, so we must care below
-    if (usedll && configure)
-        Module(driver.getModuleStorage().get(dll)).configure(*this);
-}
-
 void Build::load_dll(const path &dll, const std::set<TargetSettings> &settings)
 {
     auto ep = std::make_shared<NativeModuleTargetEntryPoint>(*this, driver.getModuleStorage().get(dll));
@@ -1886,23 +1235,6 @@ void Build::load_dll(const path &dll, const std::set<TargetSettings> &settings)
 
     for (auto t : ep->module_data.added_targets)
         TargetsToBuild[t->getPackage()].push_back(t->shared_from_this());
-}
-
-bool Build::isConfigSelected(const String &s) const
-{
-    SW_UNIMPLEMENTED;
-
-    /*try
-    {
-        configurationTypeFromStringCaseI(s);
-        return false; // conf is known and reserved!
-    }
-    catch (...) {}
-
-    used_configs.insert(s);
-
-    static const StringSet cfgs(configuration.begin(), configuration.end());
-    return cfgs.find(s) != cfgs.end();*/
 }
 
 void Build::call_event(Target &t, CallbackType et)
@@ -2003,10 +1335,6 @@ std::optional<FrontendType> Build::selectFrontendByFilename(const path &fn)
 
 bool Build::skipTarget(TargetScope Scope) const
 {
-    if (Scope == TargetScope::Test ||
-        Scope == TargetScope::UnitTest
-        )
-        return !with_testing;
     return false;
 }
 
@@ -2083,14 +1411,12 @@ Test Build::addTest(const String &name)
 
 TargetMap &Build::getChildren()
 {
-    SW_UNIMPLEMENTED;
-    //return use_separate_target_map ? internal_targets : swctx.getTargets();
+    return use_separate_target_map ? b.getTargets() : main_build.getTargets();
 }
 
 const TargetMap &Build::getChildren() const
 {
-    SW_UNIMPLEMENTED;
-    //return use_separate_target_map ? internal_targets : swctx.getTargets();
+    return use_separate_target_map ? b.getTargets() : main_build.getTargets();
 }
 
 }
