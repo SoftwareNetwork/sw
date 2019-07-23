@@ -1459,7 +1459,7 @@ void NativeCompiledTarget::findSources()
             }
         }
         if (bfn.empty())
-            throw SW_RUNTIME_ERROR("");
+            throw SW_RUNTIME_ERROR("No bazel file found");
 
         auto b = read_file(bfn);
         auto f = bazel::parse(b);

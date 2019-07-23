@@ -561,6 +561,8 @@ private:
 
     void commonActions2(SharedLibraryTarget &lib)
     {
+        lib += "SW_CPP_DRIVER_API_VERSION=1"_def;
+
         if (lib.getSettings().TargetOS.is(OSType::Windows))
         {
             lib.Definitions["SW_SUPPORT_API"] = "__declspec(dllimport)";
