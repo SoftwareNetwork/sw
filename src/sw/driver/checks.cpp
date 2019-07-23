@@ -589,7 +589,6 @@ void Check::setupTarget(NativeCompiledTarget &e) const
     e.GenerateWindowsResource = false;
     if (auto L = e.getSelectedTool()->as<VisualStudioLinker*>())
         L->DisableIncrementalLink = true;
-    e.getSolution().TargetsToBuild[e.getPackage()].push_back(e.shared_from_this());
 }
 
 bool Check::execute(Build &s) const
@@ -669,14 +668,14 @@ struct DummyCheckEntryPoint : NativeTargetEntryPoint
     }
 
 private:
-    void loadPackages1() override {}
+    void loadPackages1() const override {}
 };
 
 #define SETUP_SOLUTION()                                 \
     auto s = setupSolution(f);                           \
     auto ep = std::make_shared<DummyCheckEntryPoint>(s); \
     ep->module_data.current_settings = getSettings();    \
-    ep->module_data.ntep = ep;                           \
+    ep->module_data.ntep = ep.get();                     \
     s.module_data = &ep->module_data
 
 void FunctionExists::run() const

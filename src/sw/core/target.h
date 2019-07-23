@@ -13,6 +13,8 @@
 #include <sw/manager/package_version_map.h>
 #include <sw/manager/source.h>
 
+#include <any>
+
 namespace sw
 {
 
@@ -78,25 +80,10 @@ using ITargetPtr = std::shared_ptr<ITarget>;
     // get link args?
 };*/
 
-struct TargetEntryPoint
-{
-    virtual ~TargetEntryPoint() = 0;
-
-    // on zero input packages, load all
-    virtual void loadPackages(const TargetSettings &, const PackageIdSet &allowed_packages) = 0;
-};
-
-// it is impossible to keep targets in std::map<TargetSettings, ITargetPtr>,
-// because each target knows how to compare itself
-// also TargetSettings are mutable?
-struct SW_CORE_API TargetData
+struct SW_CORE_API TargetContainer
 {
     using Base = std::vector<ITargetPtr>;
 
-    ~TargetData();
-
-    void loadPackages(const TargetSettings &, const PackageIdSet &allowed_packages);
-    void setEntryPoint(const std::shared_ptr<TargetEntryPoint> &);
     const ITarget *getAnyTarget() const;
 
     Base::iterator find(const TargetSettings &s);
@@ -117,10 +104,6 @@ struct SW_CORE_API TargetData
 private:
     std::vector<ITargetPtr> targets;
     std::vector<ITargetPtr> targets_inactive;
-    // shared, because multiple pkgs has same entry point
-    std::shared_ptr<TargetEntryPoint> ep;
-    // regex storage
-    // files cache
 };
 
 namespace detail
@@ -163,9 +146,9 @@ struct SimpleExpected : std::variant<SimpleExpectedErrorCode, T, Args...>
 
 } // namespace detail
 
-struct SW_CORE_API TargetMap : PackageVersionMapBase<TargetData, std::unordered_map, primitives::version::VersionMap>
+struct SW_CORE_API TargetMap : PackageVersionMapBase<TargetContainer, std::unordered_map, primitives::version::VersionMap>
 {
-    using Base = PackageVersionMapBase<TargetData, std::unordered_map, primitives::version::VersionMap>;
+    using Base = PackageVersionMapBase<TargetContainer, std::unordered_map, primitives::version::VersionMap>;
 
     enum
     {
@@ -198,6 +181,51 @@ struct SW_CORE_API TargetMap : PackageVersionMapBase<TargetData, std::unordered_
 private:
     detail::SimpleExpected<Base::version_map_type::iterator> find_and_select_version(const PackagePath &pp);
     detail::SimpleExpected<Base::version_map_type::const_iterator> find_and_select_version(const PackagePath &pp) const;
+};
+
+struct TargetEntryPoint
+{
+    virtual ~TargetEntryPoint() = 0;
+
+    // on zero input packages, load all
+    virtual void loadPackages(TargetMap &, const TargetSettings &, const PackageIdSet &allowed_packages) const = 0;
+};
+
+struct TargetData
+{
+    ~TargetData();
+
+    // load targets into passed map
+    void loadPackages(TargetMap &, const TargetSettings &, const PackageIdSet &allowed_packages) const;
+
+    //
+    void setEntryPoint(const std::shared_ptr<TargetEntryPoint> &);
+
+    // create if empty
+    template <class U>
+    U &getData()
+    {
+        if (!data.has_value())
+            data = U();
+        return std::any_cast<U&>(data);
+    }
+
+    template <class U>
+    const U &getData() const
+    {
+        if (!data.has_value())
+            throw SW_RUNTIME_ERROR("No target data was set");
+        return std::any_cast<U&>(data);
+    }
+
+private:
+    // shared, because multiple pkgs has same entry point
+    std::shared_ptr<TargetEntryPoint> ep;
+
+    // regex storage
+    // files cache
+    // etc.
+    std::any data;
 };
 
 } // namespace sw

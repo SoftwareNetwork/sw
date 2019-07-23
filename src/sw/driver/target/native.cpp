@@ -1341,6 +1341,7 @@ Commands NativeCompiledTarget::getCommands1() const
             TargetsSet deps;
             for (auto &d : getAllDependencies())
             {
+                // this means that for idirs generated commands won't be used!
                 if (d->IncludeDirectoriesOnly && !d->GenerateCommandsBefore)
                     continue;
                 deps.insert(&d->getTarget());
@@ -1353,6 +1354,7 @@ Commands NativeCompiledTarget::getCommands1() const
         {
             if (auto nt = l->as<NativeCompiledTarget*>())
             {
+                // for idir deps generated commands won't be used!
                 auto cmds2 = nt->getGeneratedCommands();
                 for (auto &c : cmds)
                 {

@@ -358,8 +358,8 @@ public:
     static path getObjectDir(const LocalPackage &pkg, const String &cfg);
 
     // from other target
-    path getFile(const DependencyPtr &dep, const path &fn);
-    path getFile(const Target &dep, const path &fn);
+    path getFile(const DependencyPtr &dep, const path &fn = {});
+    path getFile(const Target &dep, const path &fn = {});
 
     //
     virtual TargetType getType() const { return TargetType::Unspecified; }

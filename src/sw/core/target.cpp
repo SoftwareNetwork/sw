@@ -17,19 +17,21 @@ TargetData::~TargetData()
 {
 }
 
-void TargetData::loadPackages(const TargetSettings &s, const PackageIdSet &whitelist)
+void TargetData::loadPackages(TargetMap &m, const TargetSettings &s, const PackageIdSet &whitelist) const
 {
     if (!ep)
         throw SW_RUNTIME_ERROR("No entry point provided");
-    ep->loadPackages(s, whitelist);
+    ep->loadPackages(m, s, whitelist);
 }
 
 void TargetData::setEntryPoint(const std::shared_ptr<TargetEntryPoint> &e)
 {
-    ep = std::move(e);
+    if (ep)
+        throw SW_RUNTIME_ERROR("Setting entry point twice");
+    ep = e;
 }
 
-const ITarget *TargetData::getAnyTarget() const
+const ITarget *TargetContainer::getAnyTarget() const
 {
     if (!targets.empty())
         return targets.begin()->get();
@@ -38,22 +40,22 @@ const ITarget *TargetData::getAnyTarget() const
     return nullptr;
 }
 
-void TargetData::push_back(const ITargetPtr &t)
+void TargetContainer::push_back(const ITargetPtr &t)
 {
     targets.push_back(t);
 }
 
-void TargetData::push_back_inactive(const ITargetPtr &t)
+void TargetContainer::push_back_inactive(const ITargetPtr &t)
 {
     targets_inactive.push_back(t);
 }
 
-void TargetData::clear()
+void TargetContainer::clear()
 {
     targets.clear();
 }
 
-TargetData::Base::iterator TargetData::find(const TargetSettings &s)
+TargetContainer::Base::iterator TargetContainer::find(const TargetSettings &s)
 {
     return std::find_if(begin(), end(), [&s](const auto &t)
     {
@@ -61,7 +63,7 @@ TargetData::Base::iterator TargetData::find(const TargetSettings &s)
     });
 }
 
-TargetData::Base::const_iterator TargetData::find(const TargetSettings &s) const
+TargetContainer::Base::const_iterator TargetContainer::find(const TargetSettings &s) const
 {
     return std::find_if(begin(), end(), [&s](const auto &t)
     {
@@ -69,7 +71,7 @@ TargetData::Base::const_iterator TargetData::find(const TargetSettings &s) const
     });
 }
 
-bool TargetData::empty() const
+bool TargetContainer::empty() const
 {
     return targets.empty();
 }

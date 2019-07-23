@@ -24,9 +24,9 @@ struct SwBuild
 {
     using CommandExecutionPlan = ExecutionPlan<builder::Command>;
 
-    const SwContext &swctx;
+    SwContext &swctx;
 
-    SwBuild(const SwContext &swctx);
+    SwBuild(SwContext &swctx);
     //SwBuild(const SwBuild &) = default;
     //SwBuild &operator=(const SwBuild &) = default;
 
@@ -49,9 +49,6 @@ struct SwBuild
     bool prepareStep();
     void execute(CommandExecutionPlan &p) const;
     CommandExecutionPlan getExecutionPlan(const Commands &cmds) const;
-
-    void loadPackages(TargetMap &tm) const; // load tm with predefined
-    static void loadPackages(TargetMap &tm, const TargetMap &predefined);
 
     //
     CommandExecutionPlan getExecutionPlan() const;

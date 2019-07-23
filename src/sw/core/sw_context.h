@@ -29,9 +29,16 @@ struct SW_CORE_API SwCoreContext : SwBuilderContext
     const TargetMap &getPredefinedTargets() const { return predefined_targets; }
     const TargetSettings &getHostSettings() const;
 
+    TargetData &getTargetData(const PackageId &);
+    const TargetData &getTargetData(const PackageId &) const;
+
+    void loadPackages(TargetMap &) const; // load tm with predefined
+    void loadPackages(TargetMap &, const TargetMap &predefined) const;
+
 private:
     TargetMap predefined_targets;
     TargetSettings host_settings;
+    std::unordered_map<PackageId, TargetData> target_data;
     // also target data: entry point + common data
 
     void createHostSettings();
@@ -48,7 +55,7 @@ struct SW_CORE_API SwContext : SwCoreContext
 
     void registerDriver(std::unique_ptr<IDriver> driver);
     const Drivers &getDrivers() const { return drivers; }
-    SwBuild createBuild() const;
+    SwBuild createBuild();
 
 private:
     Drivers drivers;

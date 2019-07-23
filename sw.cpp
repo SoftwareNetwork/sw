@@ -203,6 +203,8 @@ void build(Solution &s)
                 << cmd::out("options_cl.generated.cpp", cmd::Skip)
                 ;
             c.c->ignore_deps_generated_commands = true;
+            // make sure this is exported header, so we depend on it
+            //cpp_driver.Public += "options_cl.generated.h";
         }
         //if (!s.Variables["SW_SELF_BUILD"])
         {

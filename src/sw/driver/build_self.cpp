@@ -48,14 +48,21 @@ void Build::build_self()
     std::unordered_map<sw::PackageVersionGroupNumber, std::shared_ptr<sw::NativeBuiltinTargetEntryPoint>> epm;
     for (auto &[p, ep] : epm1)
     {
+        auto i = m.find(p);
+        if (i == m.end())
+            throw SW_RUNTIME_ERROR("Target not found: " + p.toString());
         auto gn = m.find(p)->second.getData().group_number;
         epm[gn] = ep;
         ep->module_data.current_gn = gn;
     }
 
     // spread entry points to other targets in group
+    std::unordered_set<PackageId> already_set;
     for (auto &[u, p] : m)
     {
+        if (already_set.find(p) != already_set.end())
+            continue;
+
         auto &ep = epm[p.getData().group_number];
         // may be empty when different versions is requested also
         // example:
@@ -71,7 +78,9 @@ void Build::build_self()
             //throw SW_RUNTIME_ERROR();
         }
         ep->module_data.known_targets.insert(p);
-        getChildren()[p].setEntryPoint(ep);
+        swctx.getTargetData(p).setEntryPoint(ep);
+
+        already_set.insert(p);
     }
 }
 

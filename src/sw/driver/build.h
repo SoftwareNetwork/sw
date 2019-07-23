@@ -109,7 +109,7 @@ struct NativeTargetEntryPoint;
 
 struct ModuleSwappableData
 {
-    std::weak_ptr<NativeTargetEntryPoint> ntep;
+    NativeTargetEntryPoint *ntep = nullptr;
     PackagePath NamePrefix;
     String current_module;
     PackageVersionGroupNumber current_gn = 0;
@@ -125,18 +125,18 @@ struct PrepareConfigEntryPoint;
 struct SW_DRIVER_CPP_API NativeTargetEntryPoint : TargetEntryPoint,
     std::enable_shared_from_this<NativeTargetEntryPoint>
 {
-    ModuleSwappableData module_data;
+    mutable ModuleSwappableData module_data;
 
     NativeTargetEntryPoint(Build &b);
 
-    void loadPackages(const TargetSettings &, const PackageIdSet &pkgs) override;
+    void loadPackages(TargetMap &, const TargetSettings &, const PackageIdSet &pkgs) const override;
     void addChild(const TargetBaseTypePtr &t);
 
 protected:
     Build &b;
 
 private:
-    virtual void loadPackages1() = 0;
+    virtual void loadPackages1() const = 0;
 };
 
 struct NativeBuiltinTargetEntryPoint : NativeTargetEntryPoint
@@ -150,7 +150,7 @@ struct NativeBuiltinTargetEntryPoint : NativeTargetEntryPoint
     NativeBuiltinTargetEntryPoint(Build &b, BuildFunction bf);
 
 private:
-    void loadPackages1() override;
+    void loadPackages1() const override;
 };
 
 struct SimpleBuild : TargetBase
@@ -164,7 +164,7 @@ struct SW_DRIVER_CPP_API Build : SimpleBuild
     using CommandExecutionPlan = ExecutionPlan<builder::Command>;
 
     // most important
-    const SwContext &swctx;
+    SwContext &swctx;
     SwBuild &main_build;
     const driver::cpp::Driver &driver;
 private:
@@ -177,7 +177,6 @@ public:
     const ModuleSwappableData *module_data = nullptr;
     SourceDirMap source_dirs_by_source;
     Checker checker;
-    mutable TargetMap TargetsToBuild;
 
     const OS &getHostOs() const;
     const TargetSettings &getHostSettings() const;
@@ -230,7 +229,6 @@ public:
     path build_configs(const std::unordered_set<LocalPackage> &pkgs);
 
 private:
-    void prepareStep(Executor &e, Futures<void> &fs, std::atomic_bool &next_pass) const;
     void addTest(Test &cb, const String &name);
 
     template <class T>
@@ -238,7 +236,7 @@ private:
 
     //
 public:
-    Build(const SwContext &swctx, SwBuild &mb, const driver::cpp::Driver &driver);
+    Build(SwContext &swctx, SwBuild &mb, const driver::cpp::Driver &driver);
     Build(const Build &);
     ~Build();
 

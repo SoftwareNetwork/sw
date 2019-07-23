@@ -69,9 +69,9 @@ NativeTargetEntryPoint::NativeTargetEntryPoint(Build &b)
 {
 }
 
-void NativeTargetEntryPoint::loadPackages(const TargetSettings &s, const PackageIdSet &pkgs)
+void NativeTargetEntryPoint::loadPackages(TargetMap &, const TargetSettings &s, const PackageIdSet &pkgs) const
 {
-    module_data.ntep = shared_from_this();
+    SwapAndRestore sr0(module_data.ntep, (NativeTargetEntryPoint*)this);
     SwapAndRestore sr1(module_data.known_targets, pkgs);
     if (pkgs.empty())
         sr1.restoreNow(true);
@@ -88,7 +88,7 @@ void NativeTargetEntryPoint::addChild(const TargetBaseTypePtr &t)
         b.getChildren()[t->getPackage()].push_back_inactive(t);
     else
         b.getChildren()[t->getPackage()].push_back(t);
-    b.getChildren()[t->getPackage()].setEntryPoint(shared_from_this());
+    //b.getChildren()[t->getPackage()].setEntryPoint(shared_from_this());
     module_data.added_targets.push_back(t.get());
 }
 
@@ -97,7 +97,7 @@ NativeBuiltinTargetEntryPoint::NativeBuiltinTargetEntryPoint(Build &b, BuildFunc
 {
 }
 
-void NativeBuiltinTargetEntryPoint::loadPackages1()
+void NativeBuiltinTargetEntryPoint::loadPackages1() const
 {
     if (cf)
         cf(b.checker);
@@ -116,7 +116,7 @@ struct SW_DRIVER_CPP_API NativeModuleTargetEntryPoint : NativeTargetEntryPoint
 private:
     Module m;
 
-    void loadPackages1() override
+    void loadPackages1() const override
     {
         m.check(b, b.checker);
         m.build(b);
@@ -326,7 +326,7 @@ static String gn2suffix(PackageVersionGroupNumber gn)
     return "_" + (gn > 0 ? std::to_string(gn) : ("_" + std::to_string(-gn)));
 }
 
-Build::Build(const SwContext &swctx, SwBuild &mb, const driver::cpp::Driver &driver)
+Build::Build(SwContext &swctx, SwBuild &mb, const driver::cpp::Driver &driver)
     : swctx(swctx)
     , main_build(mb)
     , driver(driver)
@@ -385,11 +385,16 @@ static NativeCompiledTarget &getDriverTarget(Build &solution, NativeCompiledTarg
 {
     auto i = solution.getChildren().find(UnresolvedPackage(SW_DRIVER_NAME));
     if (i == solution.getChildren().end())
-        throw SW_RUNTIME_ERROR("no driver target");
+    {
+        solution.swctx.getTargetData(PackageId(SW_DRIVER_NAME)).loadPackages(solution.getChildren(), solution.getSettings(), solution.module_data->known_targets);
+        i = solution.getChildren().find(UnresolvedPackage(SW_DRIVER_NAME));
+        if (i == solution.getChildren().end())
+            throw SW_RUNTIME_ERROR("no driver target");
+    }
     auto k = i->second.find(lib.getTargetSettings());
     if (k == i->second.end())
     {
-        i->second.loadPackages(solution.getSettings(), solution.module_data->known_targets);
+        solution.swctx.getTargetData(i->first).loadPackages(solution.getChildren(), solution.getSettings(), solution.module_data->known_targets);
         k = i->second.find(lib.getTargetSettings());
         if (k == i->second.end())
         {
@@ -399,6 +404,11 @@ static NativeCompiledTarget &getDriverTarget(Build &solution, NativeCompiledTarg
         }
     }
     return (*k)->as<NativeCompiledTarget>();
+}
+
+static auto getDriverDep()
+{
+    return std::make_shared<Dependency>(UnresolvedPackage(SW_DRIVER_NAME));
 }
 
 static void addDeps(Build &solution, NativeCompiledTarget &lib)
@@ -411,19 +421,23 @@ static void addDeps(Build &solution, NativeCompiledTarget &lib)
     //lib += "pub.egorpugin.primitives.command-master"_dep;
     //lib += "pub.egorpugin.primitives.filesystem-master"_dep;
 
+    //auto drv = getDriverDep();
     auto &drv = getDriverTarget(solution, lib);
     auto d = lib + drv;
     d->IncludeDirectoriesOnly = true;
+    //d->GenerateCommandsBefore = true;
 
     // generated file, because it won't build in IncludeDirectoriesOnly
     // FIXME: ^^^ this is wrong, generated header must be built in idirs only
+    //lib.getFile(drv)
     lib += drv.BinaryDir / "options_cl.generated.h";
 }
 
 // add Dirs?
 static path getDriverIncludeDir(Build &solution, NativeCompiledTarget &lib)
 {
-    return getDriverTarget(solution, lib).SourceDir / SW_DRIVER_INCLUDE_DIR;
+    return lib.getFile(getDriverDep()) / SW_DRIVER_INCLUDE_DIR;
+    //return getDriverTarget(solution, lib).SourceDir / SW_DRIVER_INCLUDE_DIR;
 }
 
 static path getMainPchFilename()
@@ -489,7 +503,7 @@ const String &Build::getCurrentModule() const
 
 void Build::addChild(const TargetBaseTypePtr &t)
 {
-    auto p = getModuleData().ntep.lock();
+    auto p = getModuleData().ntep;
     if (!p)
         throw SW_RUNTIME_ERROR("Entry point was not set");
     p->addChild(t);
@@ -499,9 +513,9 @@ struct PrepareConfigEntryPoint : NativeTargetEntryPoint
 {
     using NativeTargetEntryPoint::NativeTargetEntryPoint;
 
-    path out;
-    FilesMap r;
-    std::unique_ptr<PackageId> tgt;
+    mutable path out;
+    mutable FilesMap r;
+    mutable std::unique_ptr<PackageId> tgt;
 
     PrepareConfigEntryPoint(Build &b, const std::unordered_set<LocalPackage> &pkgs)
         : NativeTargetEntryPoint(b), pkgs_(pkgs)
@@ -513,11 +527,16 @@ struct PrepareConfigEntryPoint : NativeTargetEntryPoint
 
 private:
     const std::unordered_set<LocalPackage> pkgs_;
-    Files files_;
+    mutable Files files_;
 
-    void loadPackages1() override
+    void loadPackages1() const override
     {
-        b.build_self();
+        static bool once = false;
+        if (!once)
+        {
+            b.build_self();
+            once = true;
+        }
 
         if (files_.empty())
             many2one(pkgs_);
@@ -525,7 +544,7 @@ private:
             many2many(files_);
     }
 
-    SharedLibraryTarget &createTarget(const Files &files)
+    SharedLibraryTarget &createTarget(const Files &files) const
     {
         b.IsConfig = true;
         auto &lib = b.addTarget<SharedLibraryTarget>(getSelfTargetName(files), "local");
@@ -534,7 +553,7 @@ private:
         return lib;
     }
 
-    decltype(auto) commonActions(const Files &files)
+    decltype(auto) commonActions(const Files &files) const
     {
         auto &lib = createTarget(files);
 
@@ -559,7 +578,7 @@ private:
         return lib;
     }
 
-    void commonActions2(SharedLibraryTarget &lib)
+    void commonActions2(SharedLibraryTarget &lib) const
     {
         lib += "SW_CPP_DRIVER_API_VERSION=1"_def;
 
@@ -602,13 +621,12 @@ private:
         auto i = b.getChildren().find(lib.getPackage());
         if (i == b.getChildren().end())
             throw std::logic_error("config target not found");
-        b.TargetsToBuild[i->first] = i->second;
 
         out = lib.getOutputFile();
     }
 
     // many input files to many dlls
-    void many2many(const Files &files)
+    void many2many(const Files &files) const
     {
         for (auto &fn : files)
         {
@@ -618,7 +636,7 @@ private:
     }
 
     // many input files into one dll
-    void many2one(const std::unordered_set<LocalPackage> &pkgs)
+    void many2one(const std::unordered_set<LocalPackage> &pkgs) const
     {
         // make parallel?
         auto get_package_config = [](const auto &pkg) -> path
@@ -723,7 +741,7 @@ private:
     }
 
     // one input file to one dll
-    void one2one(const path &fn)
+    void one2one(const path &fn) const
     {
         auto &lib = commonActions({ fn });
 
@@ -804,7 +822,7 @@ std::shared_ptr<PrepareConfigEntryPoint> Build::build_configs1(const T &objs)
         ts["native"]["configuration"] = "debug";
 
     auto ep = std::make_shared<PrepareConfigEntryPoint>(*this, objs);
-    ep->loadPackages(ts, {}); // load all
+    ep->loadPackages(getChildren(), ts, {}); // load all
 
     //execute();
 
@@ -836,7 +854,7 @@ Module Build::loadModule(const path &p) const
         fn2 = SourceDir / fn2;
 
     auto mb2 = swctx.createBuild();
-    Build b(main_build.swctx, mb2, driver);
+    Build b(swctx, mb2, driver);
     b.getChildren() = swctx.getPredefinedTargets();
     path dll;
     {
@@ -861,7 +879,7 @@ path Build::build(const path &fn)
     {
         // separate build
         auto mb2 = swctx.createBuild();
-        Build b(main_build.swctx, mb2, driver);
+        Build b(swctx, mb2, driver);
         b.getChildren() = swctx.getPredefinedTargets();
         //auto r = b.build_configs_separate({ fn });
         auto ep = b.build_configs1(Files{ fn });
@@ -899,7 +917,7 @@ void Build::load_packages(const PackageIdSet &pkgsids)
     path dll;
     {
         auto mb2 = main_build.swctx.createBuild();
-        Build b(main_build.swctx, mb2, driver); // cache?
+        Build b(swctx, mb2, driver); // cache?
         b.getChildren() = main_build.swctx.getPredefinedTargets();
         //dll = b.build_configs(pkgs);
         auto ep = b.build_configs1(pkgs);
@@ -921,7 +939,7 @@ void Build::load_packages(const PackageIdSet &pkgsids)
         ep->module_data.current_gn = p.getData().group_number;
         ep->module_data.current_module = p.toString();
         ep->module_data.known_targets = pkgsids;
-        getChildren()[p].setEntryPoint(std::move(ep));
+        swctx.getTargetData(p).setEntryPoint(std::move(ep));
     }
 }
 
@@ -1039,10 +1057,7 @@ void Build::load_dll(const path &dll, const std::set<TargetSettings> &settings)
 {
     auto ep = std::make_shared<NativeModuleTargetEntryPoint>(*this, swctx.getModuleStorage().get(dll));
     for (auto &s : settings)
-        ep->loadPackages(s, {}); // load all
-
-    for (auto t : ep->module_data.added_targets)
-        TargetsToBuild[t->getPackage()].push_back(t->shared_from_this());
+        ep->loadPackages(getChildren(), s, {}); // load all
 }
 
 void Build::call_event(Target &t, CallbackType et)

@@ -816,14 +816,20 @@ void Target::addSourceDependency(const Target &t)
 
 path Target::getFile(const Target &dep, const path &fn)
 {
-    addSourceDependency(dep);
-    return dep.SourceDir / fn;
+    addSourceDependency(dep); // main trick is to add a dependency
+    auto p = dep.SourceDir;
+    if (!fn.empty())
+        p /= fn;
+    return p;
 }
 
 path Target::getFile(const DependencyPtr &dep, const path &fn)
 {
-    addSourceDependency(dep);
-    return getSolution().swctx.resolve(dep->getPackage()).getDirSrc2() / fn;
+    addSourceDependency(dep); // main trick is to add a dependency
+    auto p = getSolution().swctx.resolve(dep->getPackage()).getDirSrc2();
+    if (!fn.empty())
+        p /= fn;
+    return p;
 }
 
 bool ProjectTarget::init()
