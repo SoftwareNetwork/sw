@@ -69,7 +69,6 @@ struct ModuleSwappableData
 {
     NativeTargetEntryPoint *ntep = nullptr;
     PackagePath NamePrefix;
-    String current_module;
     PackageVersionGroupNumber current_gn = 0;
     TargetSettings current_settings;
     BuildSettings bs;
@@ -148,7 +147,6 @@ public:
     path getChecksDir() const;
     const ModuleSwappableData &getModuleData() const;
     PackageVersionGroupNumber getCurrentGroupNumber() const;
-    const String &getCurrentModule() const;
     void addChild(const TargetBaseTypePtr &t);
 
     // tests

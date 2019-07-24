@@ -116,11 +116,9 @@ void write_build_script(const std::unordered_map<UnresolvedPackage, LocalPackage
 
         build.beginBlock();
         build.addLine("auto ep = std::make_shared<sw::NativeBuiltinTargetEntryPoint>(b, build_" + r.getVariableName() + ");");
-        build.addLine("PackageId p = \"" + r.toString() + "\";");
         if (has_checks)
             build.addLine("ep->cf = check_" + r.getVariableName() + ";");
         build.addLine("ep->module_data.NamePrefix = \"" + r.ppath.slice(0, d.prefix).toString() + "\";");
-        build.addLine("ep->module_data.current_module = p.toString();");
         build.addLine("epm[\"" + r.toString() + "\"s] = ep;");
         build.endBlock();
         build.addLine();

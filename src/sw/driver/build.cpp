@@ -476,11 +476,6 @@ PackageVersionGroupNumber Build::getCurrentGroupNumber() const
     return getModuleData().current_gn;
 }
 
-const String &Build::getCurrentModule() const
-{
-    return getModuleData().current_module;
-}
-
 void Build::addChild(const TargetBaseTypePtr &t)
 {
     auto p = getModuleData().ntep;
@@ -917,7 +912,6 @@ void Build::load_packages(const PackageIdSet &pkgsids)
             Module(swctx.getModuleStorage().get(dll), gn2suffix(p.getData().group_number)));
         ep->module_data.NamePrefix = p.ppath.slice(0, p.getData().prefix);
         ep->module_data.current_gn = p.getData().group_number;
-        ep->module_data.current_module = p.toString();
         ep->module_data.known_targets = pkgsids;
         swctx.getTargetData(p).setEntryPoint(std::move(ep));
     }

@@ -50,8 +50,6 @@ struct SW_DRIVER_CPP_API Module
                     if (m)
                         err += " (" + normalize_path(m->getLocation()) + ")";
                     err += ": ";
-                    if (s && !s->getCurrentModule().empty())
-                        err += s->getCurrentModule() + ": ";
                     err += e.what();
                     throw SW_RUNTIME_ERROR(err);
                 }
@@ -61,8 +59,6 @@ struct SW_DRIVER_CPP_API Module
                     if (m)
                         err += " (" + normalize_path(m->getLocation()) + ")";
                     err += ": ";
-                    if (s && !s->getCurrentModule().empty())
-                        err += s->getCurrentModule() + ": ";
                     err += "unknown error";
                     throw SW_RUNTIME_ERROR(err);
                 }
@@ -75,8 +71,6 @@ struct SW_DRIVER_CPP_API Module
                 err += " is not present in the module";
                 if (m)
                     err += " (" + normalize_path(m->getLocation()) + ")";
-                if (s && !s->getCurrentModule().empty())
-                    err += ": " + s->getCurrentModule();
                 throw SW_RUNTIME_ERROR(err);
             }
             return typename std_function_type::result_type();
