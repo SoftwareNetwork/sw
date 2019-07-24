@@ -90,7 +90,7 @@ void write_build_script(const std::unordered_map<UnresolvedPackage, LocalPackage
     }
 
     primitives::CppEmitter build;
-    build.beginFunction("TargetEntryPointMap build_self_generated(Build &b)");
+    build.beginFunction("TargetEntryPointMap build_self_generated(sw::SwBuild &b)");
     build.addLine("TargetEntryPointMap epm;");
     build.addLine();
 

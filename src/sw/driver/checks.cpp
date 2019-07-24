@@ -63,6 +63,35 @@ static String toString(CheckType t)
     }
 }
 
+static std::unordered_map<String, std::unique_ptr<ChecksStorage>> &getChecksStorages()
+{
+    static std::unordered_map<String, std::unique_ptr<ChecksStorage>> checksStorages;
+    return checksStorages;
+}
+
+static ChecksStorage &getChecksStorage(const String &config)
+{
+    auto i = getChecksStorages().find(config);
+    if (i == getChecksStorages().end())
+    {
+        auto [i, _] = getChecksStorages().emplace(config, std::make_unique<ChecksStorage>());
+        return *i->second;
+    }
+    return *i->second;
+}
+
+static ChecksStorage &getChecksStorage(const String &config, const path &fn)
+{
+    auto i = getChecksStorages().find(config);
+    if (i == getChecksStorages().end())
+    {
+        auto [i, _] = getChecksStorages().emplace(config, std::make_unique<ChecksStorage>());
+        i->second->load(fn);
+        return *i->second;
+    }
+    return *i->second;
+}
+
 void ChecksStorage::load(const path &fn)
 {
     if (loaded)
@@ -204,11 +233,11 @@ CheckSet &Checker::addSet(const String &name)
 
 void CheckSet::performChecks(const TargetSettings &ts)
 {
-    static const auto checks_dir = checker.build.swctx.getLocalStorage().storage_dir_etc / "sw" / "checks";
+    static const auto checks_dir = checker.build.getContext().getLocalStorage().storage_dir_etc / "sw" / "checks";
 
     auto config = ts.getHash();
     auto fn = checks_dir / config / "checks.3.txt";
-    auto &cs = checker.build.driver.getChecksStorage(config, fn);
+    auto &cs = getChecksStorage(config, fn);
 
     // add common checks
     checkSourceRuns("WORDS_BIGENDIAN", R"(
@@ -559,17 +588,15 @@ static String getTargetName(const path &p)
     return "loc." + getUniquePath(p).string();
 }
 
-Build Check::setupSolution(const path &f) const
+Build Check::setupSolution(SwBuild &b, const path &f) const
 {
-    b = std::make_unique<SwBuild>(check_set->checker.build.swctx.createBuild());
-    auto &mb2 = *b;
-    Build s(check_set->checker.build.swctx, mb2, check_set->checker.build.driver);
+    Build s(b);
     //auto s = check_set->checker.build;
     s.command_storage = builder::Command::CS_DO_NOT_SAVE;
     s.BinaryDir = f.parent_path();
     s.NamePrefix.clear();
     s.DryRun = false;
-    s.getChildren() = s.swctx.getPredefinedTargets();
+    s.getChildren() = s.getContext().getPredefinedTargets();
     return s;
 }
 
@@ -592,22 +619,22 @@ void Check::setupTarget(NativeCompiledTarget &e) const
         L->DisableIncrementalLink = true;
 }
 
-bool Check::execute(Build &s) const
+bool Check::execute(SwBuild &b) const
 {
-    b->setTargetsToBuild();
-    b->resolvePackages();
-    b->prepare();
+    b.setTargetsToBuild();
+    b.resolvePackages();
+    b.prepare();
 
     try
     {
         // save commands for cleanup
-        auto p = b->getExecutionPlan();
+        auto p = b.getExecutionPlan();
         for (auto &c : p.commands)
             commands.push_back(c->shared_from_this());
         for (auto &c : p.commands)
             c->silent = true;
 
-        b->execute(p);
+        b.execute(p);
     }
     catch (std::exception &e)
     {
@@ -663,21 +690,26 @@ int main(int ac, char* av[])
 
 struct DummyCheckEntryPoint : NativeTargetEntryPoint
 {
-    DummyCheckEntryPoint(Build &b)
+    DummyCheckEntryPoint(SwBuild &b)
         : NativeTargetEntryPoint(b)
     {
     }
 
 private:
-    void loadPackages1() const override {}
+    void loadPackages1(Build &) const override {}
 };
 
-#define SETUP_SOLUTION()                                 \
-    auto s = setupSolution(f);                           \
-    auto ep = std::make_shared<DummyCheckEntryPoint>(s); \
-    ep->module_data.current_settings = getSettings();    \
-    ep->module_data.ntep = ep.get();                     \
+#define SETUP_SOLUTION()                                          \
+    auto b = check_set->checker.build.getContext().createBuild(); \
+    auto s = setupSolution(b, f);                                 \
+    auto ep = std::make_shared<DummyCheckEntryPoint>(b);          \
+    ep->module_data.current_settings = getSettings();             \
+    ep->module_data.ntep = ep.get();                              \
     s.module_data = &ep->module_data
+
+#define EXECUTE_SOLUTION() \
+    if (!execute(b))       \
+    return
 
 void FunctionExists::run() const
 {
@@ -691,8 +723,7 @@ void FunctionExists::run() const
     setupTarget(e);
     e += f;
 
-    if (!execute(s))
-        return;
+    EXECUTE_SOLUTION();
 
     auto cmd = e.getCommand();
     Value = (cmd && cmd->exit_code && cmd->exit_code.value() == 0) ? 1 : 0;
@@ -761,8 +792,7 @@ void IncludeExists::run() const
     setupTarget(e);
     e += f;
 
-    if (!execute(s))
-        return;
+    EXECUTE_SOLUTION();
 
     auto cmd = e.getCommand();
     Value = (cmd && cmd->exit_code && cmd->exit_code.value() == 0) ? 1 : 0;
@@ -815,8 +845,7 @@ void TypeSize::run() const
     setupTarget(e);
     e += f;
 
-    if (!execute(s))
-        return;
+    EXECUTE_SOLUTION();
 
     auto cmd = e.getCommand();
     if (!cmd)
@@ -890,8 +919,7 @@ void TypeAlignment::run() const
     setupTarget(e);
     e += f;
 
-    if (!execute(s))
-        return;
+    EXECUTE_SOLUTION();
 
     auto cmd = e.getCommand();
     if (!cmd)
@@ -964,8 +992,7 @@ void SymbolExists::run() const
     setupTarget(e);
     e += f;
 
-    if (!execute(s))
-        return;
+    EXECUTE_SOLUTION();
 
     Value = 1;
 }
@@ -1022,8 +1049,7 @@ void DeclarationExists::run() const
     setupTarget(e);
     e += f;
 
-    if (!execute(s))
-        return;
+    EXECUTE_SOLUTION();
 
     auto cmd = e.getCommand();
     Value = (cmd && cmd->exit_code && cmd->exit_code.value() == 0) ? 1 : 0;
@@ -1077,8 +1103,7 @@ void StructMemberExists::run() const
     setupTarget(e);
     e += f;
 
-    if (!execute(s))
-        return;
+    EXECUTE_SOLUTION();
 
     auto cmd = e.getCommand();
     Value = (cmd && cmd->exit_code && cmd->exit_code.value() == 0) ? 1 : 0;
@@ -1139,8 +1164,7 @@ void SourceCompiles::run() const
     setupTarget(e);
     e += f;
 
-    if (!execute(s))
-        return;
+    EXECUTE_SOLUTION();
 
     auto cmds = e.getCommands();
     cmds.erase(e.getCommand());
@@ -1175,8 +1199,7 @@ void SourceLinks::run() const
     setupTarget(e);
     e += f;
 
-    if (!execute(s))
-        return;
+    EXECUTE_SOLUTION();
 
     Value = 1;
 }
@@ -1206,8 +1229,7 @@ void SourceRuns::run() const
     setupTarget(e);
     e += f;
 
-    if (!execute(s))
-        return;
+    EXECUTE_SOLUTION();
 
     auto cmd = e.getCommand();
     if (!cmd)

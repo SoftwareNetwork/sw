@@ -61,20 +61,19 @@ struct SW_DRIVER_CPP_API Build : SimpleBuild
     using CommandExecutionPlan = ExecutionPlan<builder::Command>;
 
     // most important
-    SwContext &swctx;
     SwBuild &main_build;
-    const driver::cpp::Driver &driver;
 private:
     TargetSettings host_settings;
 public:
 
     //
     std::vector<TargetBaseTypePtr> dummy_children;
-    int command_storage = 0;
     const ModuleSwappableData *module_data = nullptr;
     SourceDirMap source_dirs_by_source;
+    int command_storage = 0;
     Checker checker;
 
+    SwContext &getContext() const;
     const OS &getHostOs() const;
     const TargetSettings &getHostSettings() const;
     const BuildSettings &getBuildSettings() const;
@@ -88,7 +87,6 @@ public:
     path getChecksDir() const;
     const ModuleSwappableData &getModuleData() const;
     PackageVersionGroupNumber getCurrentGroupNumber() const;
-    void addChild(const TargetBaseTypePtr &t);
 
     // tests
     // TODO: implement some of https://cmake.org/cmake/help/latest/manual/cmake-properties.7.html#properties-on-tests
@@ -99,9 +97,6 @@ public:
     Test addTest(const String &name);
     path getTestDir() const;
 
-    void build_self();
-    FilesMap build_configs_separate(const Files &files);
-    path build_configs(const std::unordered_set<LocalPackage> &pkgs);
     template <class T>
     std::shared_ptr<PrepareConfigEntryPoint> build_configs1(const T &objs);
 
@@ -110,7 +105,7 @@ private:
 
     //
 public:
-    Build(SwContext &swctx, SwBuild &mb, const driver::cpp::Driver &driver);
+    Build(SwBuild &);
     Build(const Build &);
     ~Build();
 

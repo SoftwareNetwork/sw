@@ -100,7 +100,7 @@ std::shared_ptr<builder::Command> CompilerBaseProgram::prepareCommand(const Targ
 {
     if (prepared)
         return cmd;
-    createCommand(t.getSolution().swctx); // do some init
+    createCommand(t.getSolution().getContext()); // do some init
     prepareCommand1(t);
     prepared = true;
     return cmd;

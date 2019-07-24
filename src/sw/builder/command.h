@@ -18,7 +18,7 @@
     (target).Storage.push_back(name)
 
 #define SW_MAKE_CUSTOM_COMMAND(type, name, target, ...) \
-    auto name = std::make_shared<type>((target).getSolution().swctx, __VA_ARGS__)
+    auto name = std::make_shared<type>((target).getSolution().getContext(), __VA_ARGS__)
 
 #ifdef _MSC_VER
 #define SW_MAKE_CUSTOM_COMMAND_AND_ADD(type, name, target, ...) \

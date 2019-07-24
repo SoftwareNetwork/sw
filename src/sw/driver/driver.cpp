@@ -85,7 +85,7 @@ static String spec;
 
 void Driver::load(SwBuild &b, const std::set<Input> &inputs)
 {
-    auto bb = new Build(b.getContext(), b, *this);
+    auto bb = new Build(b);
     auto &build = *bb;
 
     PackageIdSet pkgsids;
@@ -129,34 +129,11 @@ String Driver::getSpecification() const
     return spec;
 }
 
-ChecksStorage &Driver::getChecksStorage(const String &config) const
-{
-    auto i = checksStorages.find(config);
-    if (i == checksStorages.end())
-    {
-        auto [i, _] = checksStorages.emplace(config, std::make_unique<ChecksStorage>());
-        return *i->second;
-    }
-    return *i->second;
-}
-
-ChecksStorage &Driver::getChecksStorage(const String &config, const path &fn) const
-{
-    auto i = checksStorages.find(config);
-    if (i == checksStorages.end())
-    {
-        auto [i, _] = checksStorages.emplace(config, std::make_unique<ChecksStorage>());
-        i->second->load(fn);
-        return *i->second;
-    }
-    return *i->second;
-}
-
 path Driver::build_cpp_spec(SwContext &swctx, const path &fn)
 {
     // separate build
     auto mb2 = swctx.createBuild();
-    Build b(swctx, mb2, *this);
+    Build b(mb2);
     b.getChildren() = swctx.getPredefinedTargets();
     auto ep = b.build_configs1(Files{ fn });
     // set our main target
@@ -191,10 +168,9 @@ void Driver::load_spec_file(SwBuild &b, const path &fn, const std::set<TargetSet
 
 void Driver::load_dll(SwBuild &b, const path &dll, const std::set<TargetSettings> &settings)
 {
-    SW_UNIMPLEMENTED;
-    //auto ep = std::make_shared<NativeModuleTargetEntryPoint>(b, b.getContext().getModuleStorage().get(dll));
-    //for (auto &s : settings)
-        //ep->loadPackages(b.getTargets(), s, {}); // load all
+    auto ep = std::make_shared<NativeModuleTargetEntryPoint>(b, b.getContext().getModuleStorage().get(dll));
+    for (auto &s : settings)
+        ep->loadPackages(b.getTargets(), s, {}); // load all
 }
 
 const StringSet &Driver::getAvailableFrontendNames()

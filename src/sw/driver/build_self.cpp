@@ -29,7 +29,7 @@ using TargetEntryPointMap = std::unordered_map<sw::PackageId, std::shared_ptr<sw
 namespace sw
 {
 
-void Build::build_self()
+void build_self(SwBuild &b)
 {
     static UnresolvedPackages required_packages
     {
@@ -41,10 +41,10 @@ void Build::build_self()
     //auto m = s.swctx.install(required_packages, store);
 
     // create entry points by package
-    auto epm1 = build_self_generated(*this);
+    auto epm1 = build_self_generated(b);
 
     //
-    auto m = swctx.install(required_packages);
+    auto m = b.getContext().install(required_packages);
 
     // determine actual group numbers
     // on dev system overridden gn may be different from actual (remote) one
@@ -81,7 +81,7 @@ void Build::build_self()
             //throw SW_RUNTIME_ERROR();
         }
         ep->module_data.known_targets.insert(p);
-        swctx.getTargetData(p).setEntryPoint(ep);
+        b.getContext().getTargetData(p).setEntryPoint(ep);
 
         already_set.insert(p);
     }

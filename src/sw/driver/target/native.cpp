@@ -210,13 +210,13 @@ void NativeCompiledTarget::findCompiler()
                     if (created)
                         return;
                     (Program&)*c = t->getProgram();
-                    (primitives::Command&)*c->createCommand(getSolution().swctx) = *t->getProgram().getCommand();
+                    (primitives::Command&)*c->createCommand(getSolution().getContext()) = *t->getProgram().getCommand();
                     created = true;
                 };
 
                 if (v.id.ppath == "com.Microsoft.VisualStudio.VC.cl")
                 {
-                    c = std::make_shared<VisualStudioCompiler>(getSolution().swctx);
+                    c = std::make_shared<VisualStudioCompiler>(getSolution().getContext());
                     if (ts["native"]["stdlib"]["cpp"].getValue() == "com.Microsoft.VisualStudio.VC.libcpp")
                     {
                         // take same ver as cl
@@ -227,19 +227,19 @@ void NativeCompiledTarget::findCompiler()
                     }
                 }
                 else if (v.id.ppath == "com.Microsoft.VisualStudio.VC.ml")
-                    c = std::make_shared<VisualStudioASMCompiler>(getSolution().swctx);
+                    c = std::make_shared<VisualStudioASMCompiler>(getSolution().getContext());
                 else if (v.id.ppath == "com.Microsoft.Windows.rc")
-                    c = std::make_shared<RcTool>(getSolution().swctx);
+                    c = std::make_shared<RcTool>(getSolution().getContext());
                 else if (v.id.ppath == "org.LLVM.clang" || v.id.ppath == "org.LLVM.clangpp")
                 {
-                    auto C = std::make_shared<ClangCompiler>(getSolution().swctx);
+                    auto C = std::make_shared<ClangCompiler>(getSolution().getContext());
                     c = C;
                     create_command();
                     C->Target = getSettings().getTargetTriplet();
                 }
                 else if (v.id.ppath == "org.LLVM.clangcl")
                 {
-                    auto C = std::make_shared<ClangClCompiler>(getSolution().swctx);
+                    auto C = std::make_shared<ClangClCompiler>(getSolution().getContext());
                     c = C;
                     create_command();
 
@@ -255,7 +255,7 @@ void NativeCompiledTarget::findCompiler()
                     {
                         SW_UNIMPLEMENTED;
                         // not working atm
-                        auto c = C->createCommand(getSolution().swctx);
+                        auto c = C->createCommand(getSolution().getContext());
                         c->push_back("-target=arm-pc-windows-msvc");
                     }
                         break;
@@ -263,7 +263,7 @@ void NativeCompiledTarget::findCompiler()
                     {
                         SW_UNIMPLEMENTED;
                         // not working atm
-                        auto c = C->createCommand(getSolution().swctx);
+                        auto c = C->createCommand(getSolution().getContext());
                         c->push_back("-target=aarch64-pc-windows-msvc");
                     }
                         break;
@@ -363,30 +363,30 @@ void NativeCompiledTarget::findCompiler()
             if (created)
                 return;
             (Program&)*c = t->getProgram();
-            (primitives::Command&)*c->createCommand(getSolution().swctx) = *t->getProgram().getCommand();
+            (primitives::Command&)*c->createCommand(getSolution().getContext()) = *t->getProgram().getCommand();
             created = true;
         };
 
         if (p.ppath == "com.Microsoft.VisualStudio.VC.lib")
         {
-            c = std::make_shared<VisualStudioLibrarian>(getSolution().swctx);
+            c = std::make_shared<VisualStudioLibrarian>(getSolution().getContext());
             c->Type = LinkerType::MSVC;
         }
         else if (p.ppath == "com.Microsoft.VisualStudio.VC.link")
         {
-            c = std::make_shared<VisualStudioLinker>(getSolution().swctx);
+            c = std::make_shared<VisualStudioLinker>(getSolution().getContext());
             c->Type = LinkerType::MSVC;
         }
         else if (p.ppath == "org.LLVM.ar")
         {
-            auto C = std::make_shared<GNULibrarian>(getSolution().swctx);
+            auto C = std::make_shared<GNULibrarian>(getSolution().getContext());
             c = C;
             c->Type = LinkerType::GNU;
             C->Prefix = getSettings().TargetOS.getLibraryPrefix();
         }
         else if (p.ppath == "org.LLVM.lld")
         {
-            auto C = std::make_shared<GNULinker>(getSolution().swctx);
+            auto C = std::make_shared<GNULinker>(getSolution().getContext());
             c = C;
             c->Type = LinkerType::GNU;
             C->PositionIndependentCode = false;
@@ -395,7 +395,7 @@ void NativeCompiledTarget::findCompiler()
 
             create_command();
 
-            auto cmd = c->createCommand(getSolution().swctx);
+            auto cmd = c->createCommand(getSolution().getContext());
             //cmd->push_back("-fuse-ld=lld");
             cmd->push_back("-flavor");
             cmd->push_back("ld"); // for linux, TODO: add checks
@@ -538,7 +538,7 @@ void NativeCompiledTarget::setupCommand(builder::Command &c) const
     }
 
     // more under if (createWindowsRpath())?
-    c.addPathDirectory(getSolution().swctx.getLocalStorage().storage_dir);
+    c.addPathDirectory(getSolution().getContext().getLocalStorage().storage_dir);
 
     if (createWindowsRpath())
     {
@@ -553,7 +553,7 @@ void NativeCompiledTarget::setupCommand(builder::Command &c) const
 
 driver::CommandBuilder NativeCompiledTarget::addCommand() const
 {
-    driver::CommandBuilder cb(getSolution().swctx);
+    driver::CommandBuilder cb(getSolution().getContext());
     // set as default
     // source dir contains more files than bdir?
     // sdir or bdir?
@@ -989,8 +989,8 @@ void NativeCompiledTarget::addPrecompiledHeader(PrecompiledHeader &p)
     auto gch_fn = pch.parent_path() / (p.header.filename().string() + ".gch");
     auto gch_fn_clang = pch.parent_path() / (p.header.filename().string() + ".pch");
 #ifndef _WIN32
-    pch_dir = getSolution().swctx.getLocalStorage().storage_dir_tmp;
-    gch_fn = getSolution().swctx.getLocalStorage().storage_dir_tmp / "sw/driver/sw.h.gch";
+    pch_dir = getSolution().getContext().getLocalStorage().storage_dir_tmp;
+    gch_fn = getSolution().getContext().getLocalStorage().storage_dir_tmp / "sw/driver/sw.h.gch";
 #endif
 
     auto setup_use_vc = [&force_include_pch_header_to_target_source_files, &p, &pch_fn, &pdb_fn](auto &c)
@@ -1030,7 +1030,7 @@ void NativeCompiledTarget::addPrecompiledHeader(PrecompiledHeader &p)
                     c->ForcedIncludeFiles().push_back(p.header);
 
                 c->PrecompiledHeader = gch_fn_clang;
-                c->createCommand(getSolution().swctx)->addInput(gch_fn_clang);
+                c->createCommand(getSolution().getContext())->addInput(gch_fn_clang);
             }
             else if (auto c = sf->compiler->as<GNUCompiler*>())
             {
@@ -1039,7 +1039,7 @@ void NativeCompiledTarget::addPrecompiledHeader(PrecompiledHeader &p)
                 if (force_include_pch_header_to_target_source_files)
                     c->ForcedIncludeFiles().push_back(p.header);
 
-                c->createCommand(getSolution().swctx)->addInput(gch_fn);
+                c->createCommand(getSolution().getContext())->addInput(gch_fn);
             }
         }
     }
@@ -2051,34 +2051,6 @@ bool NativeCompiledTarget::prepare()
                 break;
             }
         }
-
-        // Here we check if some deps are not included in solution target set (children).
-        // They could be in dummy children, because of different target scope, not listed on software network,
-        // but still in use.
-        // We add them back to children.
-        // Example: helpers, small tools, code generators.
-        // TODO: maybe reconsider
-        {
-            // not implemented
-            /*auto &c = getSolution().children;
-            auto &dc = getSolution().dummy_children;
-            for (auto &d2 : Dependencies)
-            {
-                // only for tools?
-                if (d2->target &&
-                    //d2->target->Scope != TargetScope::Build &&
-                    d2->target->Scope == TargetScope::Tool &&
-                    c.find(d2->target->getPackage()) == c.end(d2->target->getPackage()) &&
-                    dc.find(d2->target->getPackage()) != dc.end(d2->target->getPackage()))
-                {
-                    c[d2->target->getPackage()] = dc[d2->target->getPackage()];
-
-                    // such packages are not completely independent
-                    // they share same source dir (but not binary?) with parent etc.
-                    d2->target->setSourceDir(SourceDir);
-                }
-            }*/
-        }
     }
     RETURN_PREPARE_MULTIPASS_NEXT_PASS;
     case 4:
@@ -2647,7 +2619,7 @@ void NativeCompiledTarget::processCircular(Files &obj)
                         ext = nt->getOutputFile().extension().u8string();
                         out = nt->getOutputFile().parent_path();
                     }
-                    out = out.lexically_relative(getSolution().swctx.getLocalStorage().storage_dir);
+                    out = out.lexically_relative(getSolution().getContext().getLocalStorage().storage_dir);
                     out /= nt->getPackage().toString() + ext + ".rp" + ext;
                     dlls.push_back(out.u8string()); // out
                 }
@@ -2680,7 +2652,7 @@ void NativeCompiledTarget::processCircular(Files &obj)
         c->arguments.push_back(out.u8string());
         c->addInput(Linker->getOutputFile());
         c->addOutput(out);
-        auto cmd = Linker->createCommand(getSolution().swctx);
+        auto cmd = Linker->createCommand(getSolution().getContext());
         cmd->dependent_commands.insert(c);
         c->push_back(dlls);
         cmds.insert(c);

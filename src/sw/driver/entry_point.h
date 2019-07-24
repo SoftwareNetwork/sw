@@ -35,16 +35,15 @@ struct NativeTargetEntryPoint : TargetEntryPoint,
 {
     mutable ModuleSwappableData module_data;
 
-    NativeTargetEntryPoint(Build &b);
+    NativeTargetEntryPoint(SwBuild &b);
 
     void loadPackages(TargetMap &, const TargetSettings &, const PackageIdSet &pkgs) const override;
-    void addChild(const std::shared_ptr<Target> &t);
 
 protected:
-    Build &b;
+    SwBuild &swb;
 
 private:
-    virtual void loadPackages1() const = 0;
+    virtual void loadPackages1(Build &) const = 0;
 };
 
 struct PrepareConfigEntryPoint : NativeTargetEntryPoint
@@ -55,29 +54,27 @@ struct PrepareConfigEntryPoint : NativeTargetEntryPoint
     mutable FilesMap r;
     mutable std::unique_ptr<PackageId> tgt;
 
-    PrepareConfigEntryPoint(Build &b, const std::unordered_set<LocalPackage> &pkgs);
-    PrepareConfigEntryPoint(Build &b, const Files &files);
+    PrepareConfigEntryPoint(SwBuild &b, const std::unordered_set<LocalPackage> &pkgs);
+    PrepareConfigEntryPoint(SwBuild &b, const Files &files);
 
 private:
     const std::unordered_set<LocalPackage> pkgs_;
     mutable Files files_;
 
-    void loadPackages1() const override;
+    void loadPackages1(Build &) const override;
 
-    SharedLibraryTarget &createTarget(const Files &files) const;
-
-    decltype(auto) commonActions(const Files &files) const;
-
-    void commonActions2(SharedLibraryTarget &lib) const;
+    SharedLibraryTarget &createTarget(Build &, const Files &files) const;
+    decltype(auto) commonActions(Build &, const Files &files) const;
+    void commonActions2(Build &, SharedLibraryTarget &lib) const;
 
     // many input files to many dlls
-    void many2many(const Files &files) const;
+    void many2many(Build &, const Files &files) const;
 
     // many input files into one dll
-    void many2one(const std::unordered_set<LocalPackage> &pkgs) const;
+    void many2one(Build &, const std::unordered_set<LocalPackage> &pkgs) const;
 
     // one input file to one dll
-    void one2one(const path &fn) const;
+    void one2one(Build &, const path &fn) const;
 };
 
 struct NativeBuiltinTargetEntryPoint : NativeTargetEntryPoint
@@ -88,20 +85,20 @@ struct NativeBuiltinTargetEntryPoint : NativeTargetEntryPoint
     BuildFunction bf = nullptr;
     CheckFunction cf = nullptr;
 
-    NativeBuiltinTargetEntryPoint(Build &b, BuildFunction bf);
+    NativeBuiltinTargetEntryPoint(SwBuild &b, BuildFunction bf);
 
 private:
-    void loadPackages1() const override;
+    void loadPackages1(Build &) const override;
 };
 
 struct NativeModuleTargetEntryPoint : NativeTargetEntryPoint
 {
-    NativeModuleTargetEntryPoint(Build &b, const Module &m);
+    NativeModuleTargetEntryPoint(SwBuild &b, const Module &m);
 
 private:
     Module m;
 
-    void loadPackages1() const override;
+    void loadPackages1(Build &) const override;
 };
 
 }

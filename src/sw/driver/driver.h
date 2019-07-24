@@ -46,9 +46,6 @@ struct SW_DRIVER_CPP_API Driver : IDriver
     void load(SwBuild &, const std::set<Input> &) override;
     String getSpecification() const override;
 
-    ChecksStorage &getChecksStorage(const String &config) const;
-    ChecksStorage &getChecksStorage(const String &config, const path &fn) const;
-
     // frontends
     using AvailableFrontends = boost::bimap<boost::bimaps::multiset_of<FrontendType>, path>;
     static const AvailableFrontends &getAvailableFrontends();
@@ -59,8 +56,6 @@ struct SW_DRIVER_CPP_API Driver : IDriver
     static std::optional<FrontendType> selectFrontendByFilename(const path &fn);
 
 private:
-    mutable std::unordered_map<String, std::unique_ptr<ChecksStorage>> checksStorages;
-
     // load things
     void load_spec_file(SwBuild &, const path &, const std::set<TargetSettings> &);
     path build_cpp_spec(SwContext &, const path &fn);

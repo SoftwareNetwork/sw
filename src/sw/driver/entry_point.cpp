@@ -205,13 +205,15 @@ static std::tuple<FilesOrdered, UnresolvedPackages> getFileDependencies(const Sw
     return getFileDependencies(swctx, in_config_file, gns);
 }
 
-NativeTargetEntryPoint::NativeTargetEntryPoint(Build &b)
-    : b(b)
+NativeTargetEntryPoint::NativeTargetEntryPoint(SwBuild &b)
+    : swb(b)
 {
 }
 
 void NativeTargetEntryPoint::loadPackages(TargetMap &, const TargetSettings &s, const PackageIdSet &pkgs) const
 {
+    auto mb = new Build(swb);
+    auto &b = *mb;
     SwapAndRestore sr0(module_data.ntep, (NativeTargetEntryPoint*)this);
     SwapAndRestore sr1(module_data.known_targets, pkgs);
     if (pkgs.empty())
@@ -220,23 +222,15 @@ void NativeTargetEntryPoint::loadPackages(TargetMap &, const TargetSettings &s, 
     SwapAndRestore sr3(b.NamePrefix, module_data.NamePrefix);
     SwapAndRestore sr4(module_data.current_settings, s);
     SwapAndRestore sr5(module_data.bs, BuildSettings(s));
-    loadPackages1();
+    loadPackages1(b);
 }
 
-void NativeTargetEntryPoint::addChild(const TargetBaseTypePtr &t)
-{
-    if (t->DryRun)
-        b.getChildren()[t->getPackage()].push_back_inactive(t);
-    else
-        b.getChildren()[t->getPackage()].push_back(t);
-}
-
-NativeBuiltinTargetEntryPoint::NativeBuiltinTargetEntryPoint(Build &b, BuildFunction bf/*, const BuildSettings &s*/)
+NativeBuiltinTargetEntryPoint::NativeBuiltinTargetEntryPoint(SwBuild &b, BuildFunction bf)
     : NativeTargetEntryPoint(b), bf(bf)
 {
 }
 
-void NativeBuiltinTargetEntryPoint::loadPackages1() const
+void NativeBuiltinTargetEntryPoint::loadPackages1(Build &b) const
 {
     if (cf)
         cf(b.checker);
@@ -245,12 +239,12 @@ void NativeBuiltinTargetEntryPoint::loadPackages1() const
     bf(b);
 }
 
-NativeModuleTargetEntryPoint::NativeModuleTargetEntryPoint(Build &b, const Module &m)
+NativeModuleTargetEntryPoint::NativeModuleTargetEntryPoint(SwBuild &b, const Module &m)
     : NativeTargetEntryPoint(b), m(m)
 {
 }
 
-void NativeModuleTargetEntryPoint::loadPackages1() const
+void NativeModuleTargetEntryPoint::loadPackages1(Build &b) const
 {
     m.check(b, b.checker);
     m.build(b);
@@ -277,7 +271,7 @@ static NativeCompiledTarget &getDriverTarget(Build &solution, NativeCompiledTarg
     auto i = solution.getChildren().find(UnresolvedPackage(SW_DRIVER_NAME));
     if (i == solution.getChildren().end())
     {
-        solution.swctx.getTargetData(PackageId(SW_DRIVER_NAME)).loadPackages(solution.getChildren(), solution.getSettings(), solution.module_data->known_targets);
+        solution.getContext().getTargetData(PackageId(SW_DRIVER_NAME)).loadPackages(solution.getChildren(), solution.getSettings(), solution.module_data->known_targets);
         i = solution.getChildren().find(UnresolvedPackage(SW_DRIVER_NAME));
         if (i == solution.getChildren().end())
             throw SW_RUNTIME_ERROR("no driver target");
@@ -285,7 +279,7 @@ static NativeCompiledTarget &getDriverTarget(Build &solution, NativeCompiledTarg
     auto k = i->second.find(lib.getTargetSettings());
     if (k == i->second.end())
     {
-        solution.swctx.getTargetData(i->first).loadPackages(solution.getChildren(), solution.getSettings(), solution.module_data->known_targets);
+        solution.getContext().getTargetData(i->first).loadPackages(solution.getChildren(), solution.getSettings(), solution.module_data->known_targets);
         k = i->second.find(lib.getTargetSettings());
         if (k == i->second.end())
         {
@@ -333,37 +327,45 @@ static void addDeps(Build &solution, NativeCompiledTarget &lib)
 
 static void write_pch(Build &solution)
 {
-    write_file_if_different(getImportPchFile(solution.swctx),
+    write_file_if_different(getImportPchFile(solution.getContext()),
         //"#include <" + normalize_path(getDriverIncludeDir(solution) / getMainPchFilename()) + ">\n\n" +
         //"#include <" + getDriverIncludePathString(solution, getMainPchFilename()) + ">\n\n" +
         //"#include <" + normalize_path(getMainPchFilename()) + ">\n\n" + // the last one
         cppan_cpp);
 }
 
-PrepareConfigEntryPoint::PrepareConfigEntryPoint(Build &b, const std::unordered_set<LocalPackage> &pkgs)
+PrepareConfigEntryPoint::PrepareConfigEntryPoint(SwBuild &b, const std::unordered_set<LocalPackage> &pkgs)
     : NativeTargetEntryPoint(b), pkgs_(pkgs)
 {}
 
-PrepareConfigEntryPoint::PrepareConfigEntryPoint(Build &b, const Files &files)
+PrepareConfigEntryPoint::PrepareConfigEntryPoint(SwBuild &b, const Files &files)
     : NativeTargetEntryPoint(b), files_(files)
 {}
 
-void PrepareConfigEntryPoint::loadPackages1() const
+void build_self(SwBuild &b);
+
+void PrepareConfigEntryPoint::loadPackages1(Build &b) const
 {
-    static bool once = false;
+    // with double check
+    static std::mutex m;
+    static std::atomic_bool once = false;
     if (!once)
     {
-        b.build_self();
-        once = true;
+        std::unique_lock lk(m);
+        if (!once)
+        {
+            build_self(swb);
+            once = true;
+        }
     }
 
     if (files_.empty())
-        many2one(pkgs_);
+        many2one(b, pkgs_);
     else
-        many2many(files_);
+        many2many(b, files_);
 }
 
-SharedLibraryTarget &PrepareConfigEntryPoint::createTarget(const Files &files) const
+SharedLibraryTarget &PrepareConfigEntryPoint::createTarget(Build &b, const Files &files) const
 {
     b.IsConfig = true;
     auto &lib = b.addTarget<SharedLibraryTarget>(getSelfTargetName(files), "local");
@@ -372,12 +374,12 @@ SharedLibraryTarget &PrepareConfigEntryPoint::createTarget(const Files &files) c
     return lib;
 }
 
-decltype(auto) PrepareConfigEntryPoint::commonActions(const Files &files) const
+decltype(auto) PrepareConfigEntryPoint::commonActions(Build &b, const Files &files) const
 {
-    auto &lib = createTarget(files);
+    auto &lib = createTarget(b, files);
 
     addDeps(b, lib);
-    addImportLibrary(b.swctx, lib);
+    addImportLibrary(b.getContext(), lib);
     lib.AutoDetectOptions = false;
     lib.CPPVersion = CPPLanguageStandard::CPP17;
 
@@ -389,7 +391,7 @@ decltype(auto) PrepareConfigEntryPoint::commonActions(const Files &files) const
     write_pch(b);
     PrecompiledHeader pch;
     pch.header = getDriverIncludeDir(b, lib) / getMainPchFilename();
-    pch.source = getImportPchFile(b.swctx);
+    pch.source = getImportPchFile(b.getContext());
     pch.force_include_pch = true;
     pch.force_include_pch_to_source = true;
     lib.addPrecompiledHeader(pch);
@@ -397,7 +399,7 @@ decltype(auto) PrepareConfigEntryPoint::commonActions(const Files &files) const
     return lib;
 }
 
-void PrepareConfigEntryPoint::commonActions2(SharedLibraryTarget &lib) const
+void PrepareConfigEntryPoint::commonActions2(Build &b, SharedLibraryTarget &lib) const
 {
     lib += "SW_CPP_DRIVER_API_VERSION=1"_def;
 
@@ -445,17 +447,17 @@ void PrepareConfigEntryPoint::commonActions2(SharedLibraryTarget &lib) const
 }
 
 // many input files to many dlls
-void PrepareConfigEntryPoint::many2many(const Files &files) const
+void PrepareConfigEntryPoint::many2many(Build &b, const Files &files) const
 {
     for (auto &fn : files)
     {
-        one2one(fn);
+        one2one(b, fn);
         r[fn] = out;
     }
 }
 
 // many input files into one dll
-void PrepareConfigEntryPoint::many2one(const std::unordered_set<LocalPackage> &pkgs) const
+void PrepareConfigEntryPoint::many2one(Build &b, const std::unordered_set<LocalPackage> &pkgs) const
 {
     // make parallel?
     auto get_package_config = [](const auto &pkg) -> path
@@ -487,7 +489,7 @@ void PrepareConfigEntryPoint::many2one(const std::unordered_set<LocalPackage> &p
         output_names.emplace(p, pkg);
     }
 
-    auto &lib = commonActions(files);
+    auto &lib = commonActions(b, files);
 
     // make fancy names
     for (auto &[fn, pkg] : output_names)
@@ -501,7 +503,7 @@ void PrepareConfigEntryPoint::many2one(const std::unordered_set<LocalPackage> &p
     }
 
     // file deps
-    auto gnu_setup = [this, &lib](auto *c, const auto &headers, const path &fn, LocalPackage &pkg)
+    auto gnu_setup = [&b, &lib](auto *c, const auto &headers, const path &fn, LocalPackage &pkg)
     {
         // we use pch, but cannot add more defs on CL
         // so we create a file with them
@@ -509,7 +511,7 @@ void PrepareConfigEntryPoint::many2one(const std::unordered_set<LocalPackage> &p
         auto hash = gn2suffix(gn);
         path h;
         // cannot create aux dir on windows; auxl = auxiliary
-        if (is_under_root(fn, b.swctx.getLocalStorage().storage_dir_pkg))
+        if (is_under_root(fn, b.getContext().getLocalStorage().storage_dir_pkg))
             h = fn.parent_path().parent_path() / "auxl" / ("defs" + hash + ".h");
         else
             h = fn.parent_path() / SW_BINARY_DIR / "auxl" / ("defs" + hash + ".h");
@@ -532,7 +534,7 @@ void PrepareConfigEntryPoint::many2one(const std::unordered_set<LocalPackage> &p
 
     for (auto &[fn, pkg] : output_names)
     {
-        auto [headers, udeps] = getFileDependencies(b.swctx, fn);
+        auto [headers, udeps] = getFileDependencies(b.getContext(), fn);
         if (auto sf = lib[fn].template as<NativeSourceFile*>())
         {
             if (auto c = sf->compiler->template as<VisualStudioCompiler*>())
@@ -556,13 +558,13 @@ void PrepareConfigEntryPoint::many2one(const std::unordered_set<LocalPackage> &p
             lib += std::make_shared<Dependency>(d);
     }
 
-    commonActions2(lib);
+    commonActions2(b, lib);
 }
 
 // one input file to one dll
-void PrepareConfigEntryPoint::one2one(const path &fn) const
+void PrepareConfigEntryPoint::one2one(Build &b, const path &fn) const
 {
-    auto &lib = commonActions({ fn });
+    auto &lib = commonActions(b, { fn });
 
     // turn on later again
     //if (lib.getSettings().TargetOS.is(OSType::Windows))
@@ -570,7 +572,7 @@ void PrepareConfigEntryPoint::one2one(const path &fn) const
 
     // file deps
     {
-        auto [headers, udeps] = getFileDependencies(b.swctx, fn);
+        auto [headers, udeps] = getFileDependencies(b.getContext(), fn);
         for (auto &h : headers)
         {
             // TODO: refactor this and same cases below
@@ -628,23 +630,7 @@ void PrepareConfigEntryPoint::one2one(const path &fn) const
         }
     }
 
-    commonActions2(lib);
-}
-
-template <class T>
-std::shared_ptr<PrepareConfigEntryPoint> Build::build_configs1(const T &objs)
-{
-    TargetSettings ts = host_settings;
-    ts["native"]["library"] = "static";
-    if (debug_configs)
-        ts["native"]["configuration"] = "debug";
-
-    auto ep = std::make_shared<PrepareConfigEntryPoint>(*this, objs);
-    ep->loadPackages(getChildren(), ts, {}); // load all
-
-    //execute();
-
-    return ep;
+    commonActions2(b, lib);
 }
 
 }

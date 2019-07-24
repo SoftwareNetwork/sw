@@ -6,7 +6,6 @@
 
 #include "build.h"
 
-#include "driver.h"
 #include "entry_point.h"
 #include "frontend/cppan/yaml.h"
 #include "functions.h"
@@ -77,24 +76,20 @@ static void sw_check_abi_version(int v)
         throw SW_RUNTIME_ERROR("Module ABI (" + std::to_string(v) + ") is less than binary ABI (" + std::to_string(SW_MODULE_ABI_VERSION) + "). Update sw driver headers (or ask driver maintainer).");
 }
 
-Build::Build(SwContext &swctx, SwBuild &mb, const driver::cpp::Driver &driver)
-    : swctx(swctx)
-    , main_build(mb)
-    , driver(driver)
+Build::Build(SwBuild &mb)
+    : main_build(mb)
     , checker(*this)
 {
-    host_settings = swctx.getHostSettings();
+    host_settings = getContext().getHostSettings();
 
     // canonical makes disk letter uppercase on windows
-    setSourceDirectory(swctx.source_dir);
+    setSourceDirectory(getContext().source_dir);
     BinaryDir = SourceDir / SW_BINARY_DIR;
 }
 
 Build::Build(const Build &rhs)
     : Base(rhs)
-    , swctx(rhs.swctx)
     , main_build(rhs.main_build)
-    , driver(rhs.driver)
     , command_storage(rhs.command_storage)
     , checker(*this)
     , host_settings(rhs.host_settings)
@@ -105,9 +100,14 @@ Build::~Build()
 {
 }
 
+SwContext &Build::getContext() const
+{
+    return main_build.getContext();
+}
+
 const OS &Build::getHostOs() const
 {
-    return swctx.HostOS;
+    return getContext().HostOS;
 }
 
 path Build::getChecksDir() const
@@ -142,14 +142,6 @@ PackageVersionGroupNumber Build::getCurrentGroupNumber() const
     return getModuleData().current_gn;
 }
 
-void Build::addChild(const TargetBaseTypePtr &t)
-{
-    auto p = getModuleData().ntep;
-    if (!p)
-        throw SW_RUNTIME_ERROR("Entry point was not set");
-    p->addChild(t);
-}
-
 template <class T>
 std::shared_ptr<PrepareConfigEntryPoint> Build::build_configs1(const T &objs)
 {
@@ -158,26 +150,10 @@ std::shared_ptr<PrepareConfigEntryPoint> Build::build_configs1(const T &objs)
     if (debug_configs)
         ts["native"]["configuration"] = "debug";
 
-    auto ep = std::make_shared<PrepareConfigEntryPoint>(*this, objs);
+    auto ep = std::make_shared<PrepareConfigEntryPoint>(main_build, objs);
     ep->loadPackages(getChildren(), ts, {}); // load all
 
-    //execute();
-
     return ep;
-}
-
-FilesMap Build::build_configs_separate(const Files &files)
-{
-    if (files.empty())
-        return {};
-    return build_configs1(files)->r;
-}
-
-path Build::build_configs(const std::unordered_set<LocalPackage> &pkgs)
-{
-    if (pkgs.empty())
-        return {};
-    return build_configs1(pkgs)->out;
 }
 
 // can be used in configs to load subdir configs
@@ -189,23 +165,15 @@ Module Build::loadModule(const path &p) const
     auto fn2 = p;
     if (!fn2.is_absolute())
         fn2 = SourceDir / fn2;
-
-    auto mb2 = swctx.createBuild();
-    Build b(swctx, mb2, driver);
-    b.getChildren() = swctx.getPredefinedTargets();
-    path dll;
-    {
-        auto r = b.build_configs_separate({ fn2 });
-        dll = r.begin()->second;
-    }
-    return swctx.getModuleStorage().get(dll);
+    // driver->build_cpp_spec(swctx, p);
+    //return getContext().getModuleStorage().get(dll);
 }
 
 void Build::load_packages(const PackageIdSet &pkgsids)
 {
     std::unordered_set<LocalPackage> in_pkgs;
     for (auto &p : pkgsids)
-        in_pkgs.emplace(swctx.getLocalStorage(), p);
+        in_pkgs.emplace(getContext().getLocalStorage(), p);
 
     // make pkgs unique
     std::unordered_map<PackageVersionGroupNumber, LocalPackage> cfgs2;
@@ -219,9 +187,8 @@ void Build::load_packages(const PackageIdSet &pkgsids)
     path dll;
     {
         auto mb2 = main_build.getContext().createBuild();
-        Build b(swctx, mb2, driver); // cache?
+        Build b(mb2); // cache?
         b.getChildren() = main_build.getContext().getPredefinedTargets();
-        //dll = b.build_configs(pkgs);
         auto ep = b.build_configs1(pkgs);
         //b.execute();
         // set our main target
@@ -234,12 +201,12 @@ void Build::load_packages(const PackageIdSet &pkgsids)
 
     for (auto &p : in_pkgs)
     {
-        auto ep = std::make_shared<NativeModuleTargetEntryPoint>(*this,
-            Module(swctx.getModuleStorage().get(dll), gn2suffix(p.getData().group_number)));
+        auto ep = std::make_shared<NativeModuleTargetEntryPoint>(main_build,
+            Module(getContext().getModuleStorage().get(dll), gn2suffix(p.getData().group_number)));
         ep->module_data.NamePrefix = p.ppath.slice(0, p.getData().prefix);
         ep->module_data.current_gn = p.getData().group_number;
         ep->module_data.known_targets = pkgsids;
-        swctx.getTargetData(p).setEntryPoint(std::move(ep));
+        getContext().getTargetData(p).setEntryPoint(std::move(ep));
     }
 }
 
@@ -404,7 +371,7 @@ Test Build::addTest()
 
 Test Build::addTest(const String &name)
 {
-    Test cb(swctx);
+    Test cb(getContext());
     addTest(cb, name);
     return cb;
 }

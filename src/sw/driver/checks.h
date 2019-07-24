@@ -127,15 +127,14 @@ struct SW_DRIVER_CPP_API Check : std::enable_shared_from_this<Check>, CommandDat
 protected:
     virtual void run() const {}
     path getOutputFilename() const;
-    Build setupSolution(const path &f) const;
+    Build setupSolution(SwBuild &b, const path &f) const;
     TargetSettings getSettings() const;
     virtual void setupTarget(NativeCompiledTarget &t) const;
 
     [[nodiscard]]
-    bool execute(Build &s) const;
+    bool execute(SwBuild &) const;
 
 private:
-    mutable std::unique_ptr<SwBuild> b;
     mutable std::vector<std::shared_ptr<builder::Command>> commands; // for cleanup
 };
 

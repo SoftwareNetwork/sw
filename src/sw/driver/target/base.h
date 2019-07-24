@@ -367,7 +367,6 @@ public:
     bool hasSameProject(const ITarget &t) const;
 
 protected:
-    bool real = true;
     path RootDirectory;
     SW_MULTIPASS_VARIABLE(prepare_pass);
     SW_MULTIPASS_VARIABLE(init_pass);

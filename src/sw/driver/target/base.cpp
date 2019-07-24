@@ -146,7 +146,7 @@ TargetBase &TargetBase::addTarget2(bool add, const TargetBaseTypePtr &t, const P
 {
     auto N = constructTargetName(Name);
 
-    t->pkg = std::make_unique<LocalPackage>(getSolution().swctx.getLocalStorage(), N, V);
+    t->pkg = std::make_unique<LocalPackage>(getSolution().getContext().getLocalStorage(), N, V);
 
     //TargetSettings tid{ getSolution().getSettings().getTargetSettings() };
     //t->ts = &tid;
@@ -165,7 +165,7 @@ TargetBase &TargetBase::addTarget2(bool add, const TargetBaseTypePtr &t, const P
         || IsConfig
 
         // if not under storage -> local
-        //|| !is_under_root(t->SourceDir, getSolution().swctx.getLocalStorage().storage_dir_pkg)
+        //|| !is_under_root(t->SourceDir, getSolution().getContext().getLocalStorage().storage_dir_pkg)
 
         // if under storage but without prefix -> local
         //|| t->NamePrefix.empty()
@@ -214,7 +214,7 @@ TargetBase &TargetBase::addTarget2(bool add, const TargetBaseTypePtr &t, const P
         || IsConfig
 
         // if not under storage -> local
-        || !is_under_root(t->SourceDir, getSolution().swctx.getLocalStorage().storage_dir_pkg)
+        || !is_under_root(t->SourceDir, getSolution().getContext().getLocalStorage().storage_dir_pkg)
 
         // if under storage but without prefix -> local
         //|| t->NamePrefix.empty()
@@ -262,8 +262,10 @@ TargetBase &TargetBase::addChild(const TargetBaseTypePtr &t)
 
 TargetBase &TargetBase::addChild(const TargetBaseTypePtr &t, const TargetSettings &tid)
 {
-    auto i = getSolution().getChildren().find(t->getPackage());
-    if (i != getSolution().getChildren().end())
+    auto &cld = getSolution().getChildren();
+
+    auto i = cld.find(t->getPackage());
+    if (i != cld.end())
     {
         auto j = i->second.find(tid);
         if (j != i->second.end())
@@ -272,7 +274,13 @@ TargetBase &TargetBase::addChild(const TargetBaseTypePtr &t, const TargetSetting
             //return (*j)->as<TargetBase>();
         }
     }
-    getSolution().addChild(t);
+
+    //
+    if (t->DryRun)
+        cld[t->getPackage()].push_back_inactive(t);
+    else
+        cld[t->getPackage()].push_back(t);
+
     return *t;
 }
 
@@ -400,7 +408,7 @@ void Target::fetch()
     if (DryRun)
         return;
 
-    // move to swctx?
+    // move to getContext()?
     static SourceDirMap fetched_dirs;
 
     auto s2 = getSource().clone(); // make a copy!
@@ -477,8 +485,8 @@ Program *Target::findProgramByExtension(const String &ext) const
     auto u = getExtPackage(ext);
     if (!u)
         return {};
-    // resolve via swctx because it might provide other version rather than cld.find(*u)
-    auto pkg = getSolution().swctx.resolve(*u);
+    // resolve via getContext() because it might provide other version rather than cld.find(*u)
+    auto pkg = getSolution().getContext().resolve(*u);
     auto &cld = getSolution().getChildren();
     auto tgt = cld.find(pkg, getSolution().getHostSettings());
     if (!tgt)
@@ -585,7 +593,7 @@ const BuildSettings &Target::getSettings() const
 
 FileStorage &Target::getFs() const
 {
-    return getSolution().swctx.getFileStorage();
+    return getSolution().getContext().getFileStorage();
 }
 
 bool Target::init()
@@ -823,7 +831,7 @@ path Target::getFile(const Target &dep, const path &fn)
 path Target::getFile(const DependencyPtr &dep, const path &fn)
 {
     addSourceDependency(dep); // main trick is to add a dependency
-    auto p = getSolution().swctx.resolve(dep->getPackage()).getDirSrc2();
+    auto p = getSolution().getContext().resolve(dep->getPackage()).getDirSrc2();
     if (!fn.empty())
         p /= fn;
     return p;
