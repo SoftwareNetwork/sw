@@ -24,11 +24,12 @@ struct SwBuild
 {
     using CommandExecutionPlan = ExecutionPlan<builder::Command>;
 
-    SwContext &swctx;
-
     SwBuild(SwContext &swctx);
     //SwBuild(const SwBuild &) = default;
     //SwBuild &operator=(const SwBuild &) = default;
+
+    SwContext &getContext() { return swctx; }
+    const SwContext &getContext() const { return swctx; }
 
     Input &addInput(const String &);
     Input &addInput(const path &);
@@ -65,6 +66,7 @@ struct SwBuild
 private:
     using ProcessedInputs = std::set<Input>;
 
+    SwContext &swctx;
     ProcessedInputs inputs;
     TargetMap targets;
     TargetMap targets_to_build;

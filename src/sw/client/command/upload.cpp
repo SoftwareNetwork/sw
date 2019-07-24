@@ -97,7 +97,7 @@ sw::PackageDescriptionMap getPackages(const sw::SwBuild &b, const sw::SourceDirM
         for (auto &d : t->getDependencies())
         {
             // filter out predefined targets
-            if (b.swctx.getPredefinedTargets().find(d->getUnresolvedPackage().ppath) != b.swctx.getPredefinedTargets().end(d->getUnresolvedPackage().ppath))
+            if (b.getContext().getPredefinedTargets().find(d->getUnresolvedPackage().ppath) != b.getContext().getPredefinedTargets().end(d->getUnresolvedPackage().ppath))
                 continue;
 
             nlohmann::json jd;

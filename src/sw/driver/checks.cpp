@@ -9,6 +9,7 @@
 #include "checks_storage.h"
 #include "build.h"
 #include "driver.h"
+#include "entry_point.h"
 #include "target/native.h"
 
 #include <sw/builder/execution_plan.h>

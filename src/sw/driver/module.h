@@ -6,13 +6,15 @@
 
 #pragma once
 
-#include "build.h"
+#include "checks.h"
 
 #include <boost/dll/smart_library.hpp>
 #include <boost/thread/shared_mutex.hpp>
 
 namespace sw
 {
+
+struct Build;
 
 struct SW_DRIVER_CPP_API Module
 {
@@ -36,45 +38,7 @@ struct SW_DRIVER_CPP_API Module
         }
 
         template <class ... Args>
-        typename std_function_type::result_type operator()(Args && ... args) const
-        {
-            if (f)
-            {
-                try
-                {
-                    return f(std::forward<Args>(args)...);
-                }
-                catch (const std::exception &e)
-                {
-                    String err = "error in module";
-                    if (m)
-                        err += " (" + normalize_path(m->getLocation()) + ")";
-                    err += ": ";
-                    err += e.what();
-                    throw SW_RUNTIME_ERROR(err);
-                }
-                catch (...)
-                {
-                    String err = "error in module";
-                    if (m)
-                        err += " (" + normalize_path(m->getLocation()) + ")";
-                    err += ": ";
-                    err += "unknown error";
-                    throw SW_RUNTIME_ERROR(err);
-                }
-            }
-            else if (Required)
-            {
-                String err = "Required function";
-                if (!name.empty())
-                    err += " '" + name + "'";
-                err += " is not present in the module";
-                if (m)
-                    err += " (" + normalize_path(m->getLocation()) + ")";
-                throw SW_RUNTIME_ERROR(err);
-            }
-            return typename std_function_type::result_type();
-        }
+        typename std_function_type::result_type operator()(Args &&... args) const;
     };
 
     Module(const Module::DynamicLibrary &, const String &suffix = {});

@@ -7,6 +7,8 @@
 #define SW_PACKAGE_API
 #include "sw.h"
 
+#include "entry_point.h"
+
 #include <sw/core/sw_context.h>
 #include <sw/core/target.h>
 

@@ -287,7 +287,7 @@ private:
 
     String prepareString(const SwBuild &b, const String &s, bool quotes = false)
     {
-        if (b.swctx.getHostOs().Type != OSType::Windows)
+        if (b.getContext().getHostOs().Type != OSType::Windows)
             quotes = false;
 
         auto s2 = s;
@@ -313,7 +313,7 @@ private:
         increaseIndent();
         addLine("description = " + c.getName());
         addLine("command = ");
-        if (b.swctx.getHostOs().Type == OSType::Windows)
+        if (b.getContext().getHostOs().Type == OSType::Windows)
         {
             addText("cmd /S /C ");
             addText("\"");
@@ -324,10 +324,10 @@ private:
         // env
         for (auto &[k, v] : c.environment)
         {
-            if (b.swctx.getHostOs().Type == OSType::Windows)
+            if (b.getContext().getHostOs().Type == OSType::Windows)
                 addText("set ");
             addText(k + "=" + v + " ");
-            if (b.swctx.getHostOs().Type == OSType::Windows)
+            if (b.getContext().getHostOs().Type == OSType::Windows)
                 addText("&& ");
         }
 
@@ -335,7 +335,7 @@ private:
         if (!c.working_directory.empty())
         {
             addText("cd ");
-            if (b.swctx.getHostOs().Type == OSType::Windows)
+            if (b.getContext().getHostOs().Type == OSType::Windows)
                 addText("/D ");
             addText(prepareString(b, getShortName(c.working_directory), true) + " && ");
         }
@@ -370,7 +370,7 @@ private:
             addText("2> " + prepareString(b, getShortName(c.err.file), true) + " ");
 
         //
-        if (b.swctx.getHostOs().Type == OSType::Windows)
+        if (b.getContext().getHostOs().Type == OSType::Windows)
             addText("\"");
         if (prog.find("cl.exe") != prog.npos)
             addLine("deps = msvc");

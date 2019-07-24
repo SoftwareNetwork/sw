@@ -39,7 +39,7 @@ sw::SourceDirMap fetch(sw::SwBuild &b)
     opts.existing_dirs_age = std::chrono::hours(1);
 
     auto &i = b.addInput(fs::current_path());
-    auto ts = b.swctx.getHostSettings();
+    auto ts = b.getContext().getHostSettings();
     ts["driver"]["dry-run"] = "true";
     i.addSettings(ts);
     b.load();
@@ -51,7 +51,7 @@ sw::SourceDirMap fetch(sw::SwBuild &b)
     for (const auto &[pkg, tgts] : b.getTargets())
     {
         // filter out predefined targets
-        if (b.swctx.getPredefinedTargets().find(pkg) != b.swctx.getPredefinedTargets().end())
+        if (b.getContext().getPredefinedTargets().find(pkg) != b.getContext().getPredefinedTargets().end())
             continue;
         auto tgt = tgts.getAnyTarget();
         if (!tgt)

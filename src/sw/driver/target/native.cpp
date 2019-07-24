@@ -2350,7 +2350,7 @@ bool NativeCompiledTarget::prepare()
             ctx.beginBlock("StringFileInfo");
             ctx.beginBlock("040904b0");
             //VALUE "CompanyName", "TODO: <Company name>"
-            ctx.addValueQuoted("FileDescription", { getPackage().ppath.back() + " - " + getConfig() });
+            ctx.addValueQuoted("FileDescription", { getPackage().ppath.back()/* + " - " + getConfig()*/ }); // remove config for now
             ctx.addValueQuoted("FileVersion", { getPackage().version.toString() });
             //VALUE "InternalName", "@PACKAGE@"
             ctx.addValueQuoted("LegalCopyright", { "Powered by Software Network" });
