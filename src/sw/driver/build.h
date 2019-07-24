@@ -36,48 +36,6 @@ struct SwContext;
 template <class T>
 struct ExecutionPlan;
 
-namespace detail
-{
-
-struct EventCallback
-{
-    using BasicEventCallback = std::function<void(Target &t, CallbackType e)>;
-    using TypedEventCallback = std::function<void(Target &t)>;
-
-    PackageIdSet pkgs;
-    std::set<CallbackType> types;
-    BasicEventCallback cb;
-    bool typed_cb = false;
-
-    void operator()(Target &t, CallbackType e);
-
-    template <class F, class ... Args>
-    void add(const F &a, Args &&... args)
-    {
-        if constexpr (std::is_same_v<F, BasicEventCallback> ||
-            std::is_convertible_v<F, BasicEventCallback>)
-            cb = a;
-        else if constexpr (std::is_same_v<F, TypedEventCallback> ||
-            std::is_convertible_v<F, TypedEventCallback>)
-        {
-            typed_cb = true;
-            cb = [a](Target &t, CallbackType)
-            {
-                a(t);
-            };
-        }
-        else if constexpr (std::is_same_v<F, CallbackType>)
-            types.insert(a);
-        else
-            pkgs.insert(String(a));
-
-        if constexpr (sizeof...(Args) > 0)
-            add(std::forward<Args>(args)...);
-    }
-};
-
-}
-
 using FilesMap = std::unordered_map<path, path>;
 
 enum class FrontendType
@@ -116,7 +74,6 @@ struct ModuleSwappableData
     TargetSettings current_settings;
     BuildSettings bs;
     PackageIdSet known_targets;
-    std::vector<Target*> added_targets;
 };
 
 struct PrepareConfigEntryPoint;
@@ -194,19 +151,6 @@ public:
     const String &getCurrentModule() const;
     void addChild(const TargetBaseTypePtr &t);
 
-    // events
-    template <class ... Args>
-    void registerCallback(Args &&... args)
-    {
-        static_assert(sizeof...(Args) != 0, "Missing callback");
-
-        detail::EventCallback c;
-        c.add(std::forward<Args>(args)...);
-        events.push_back(c);
-    }
-    void call_event(Target &t, CallbackType et);
-    //
-
     // tests
     // TODO: implement some of https://cmake.org/cmake/help/latest/manual/cmake-properties.7.html#properties-on-tests
     Commands tests;
@@ -249,8 +193,6 @@ public:
     Module loadModule(const path &fn) const;
 
 private:
-    std::vector<detail::EventCallback> events;
-
     // basic frontends
     void load_dll(const path &dll, const std::set<TargetSettings> &);
     void load_configless(const path &file_or_dir);

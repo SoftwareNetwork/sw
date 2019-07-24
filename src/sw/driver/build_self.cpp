@@ -21,6 +21,7 @@ DECLARE_STATIC_LOGGER(logger, "build.self");
 
 using TargetEntryPointMap = std::unordered_map<sw::PackageId, std::shared_ptr<sw::NativeBuiltinTargetEntryPoint>>;
 
+#define SW_CPP_DRIVER_API_VERSION 1
 #include <build_self.generated.h>
 
 namespace sw

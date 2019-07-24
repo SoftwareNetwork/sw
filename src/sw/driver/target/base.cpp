@@ -156,7 +156,6 @@ TargetBase &TargetBase::addTarget2(bool add, const TargetBaseTypePtr &t, const P
     // set some general settings, then init, then register
     setupTarget(t.get());
 
-    getSolution().call_event(*t, CallbackType::CreateTarget);
     t->call(CallbackType::CreateTarget);
 
     // try to guess whether it's local package or not
@@ -235,13 +234,11 @@ TargetBase &TargetBase::addTarget2(bool add, const TargetBaseTypePtr &t, const P
     while (t->init())
         ;
 
-    getSolution().call_event(*t, CallbackType::CreateTargetInitialized);
     t->call(CallbackType::CreateTargetInitialized);
 
     auto &ref = addChild(t);
     //t->ts = getSolution().getSettings();
     //t->bs = t->ts;
-    //getSolution().call_event(*t, CallbackType::CreateTargetInitialized);
     //t->call(CallbackType::CreateTargetInitialized);
     return ref;
 }

@@ -1832,7 +1832,6 @@ bool NativeCompiledTarget::prepare()
     {
         LOG_TRACE(logger, "Preparing target: " + getPackage().ppath.toString());
 
-        getSolution().call_event(*this, CallbackType::BeginPrepare);
         call(CallbackType::BeginPrepare);
 
         if (UseModules)
@@ -2582,7 +2581,6 @@ bool NativeCompiledTarget::prepare()
             getSelectedTool()->setInputLibraryDependencies(O1);
         }
 
-        getSolution().call_event(*this, CallbackType::EndPrepare);
         call(CallbackType::EndPrepare);
     }
     RETURN_PREPARE_MULTIPASS_NEXT_PASS;

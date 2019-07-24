@@ -158,7 +158,6 @@ void SwCoreContext::loadPackages(TargetMap &targets, const TargetMap &predefined
     }
 }
 
-
 SwContext::SwContext(const path &local_storage_root_dir)
     : SwCoreContext(local_storage_root_dir)
 {

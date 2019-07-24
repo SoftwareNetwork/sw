@@ -88,8 +88,6 @@ void NativeTargetEntryPoint::addChild(const TargetBaseTypePtr &t)
         b.getChildren()[t->getPackage()].push_back_inactive(t);
     else
         b.getChildren()[t->getPackage()].push_back(t);
-    //b.getChildren()[t->getPackage()].setEntryPoint(shared_from_this());
-    module_data.added_targets.push_back(t.get());
 }
 
 NativeBuiltinTargetEntryPoint::NativeBuiltinTargetEntryPoint(Build &b, BuildFunction bf/*, const BuildSettings &s*/)
@@ -122,24 +120,6 @@ private:
         m.build(b);
     }
 };
-
-namespace detail
-{
-
-void EventCallback::operator()(Target &t, CallbackType e)
-{
-    if (!pkgs.empty() && pkgs.find(t.getPackage()) == pkgs.end())
-        return;
-    if (!types.empty() && types.find(e) == types.end())
-        return;
-    if (types.empty() && typed_cb)
-        throw std::logic_error("Typed callback passed, but no types provided");
-    if (!cb)
-        throw std::logic_error("No callback provided");
-    cb(t, e);
-}
-
-}
 
 String toString(FrontendType t)
 {
@@ -1058,21 +1038,6 @@ void Build::load_dll(const path &dll, const std::set<TargetSettings> &settings)
     auto ep = std::make_shared<NativeModuleTargetEntryPoint>(*this, swctx.getModuleStorage().get(dll));
     for (auto &s : settings)
         ep->loadPackages(getChildren(), s, {}); // load all
-}
-
-void Build::call_event(Target &t, CallbackType et)
-{
-    for (auto &e : events)
-    {
-        try
-        {
-            e(t, et);
-        }
-        catch (const std::bad_cast &e)
-        {
-            LOG_DEBUG(logger, "bad cast in callback: " << e.what());
-        }
-    }
 }
 
 const StringSet &Build::getAvailableFrontendNames()
