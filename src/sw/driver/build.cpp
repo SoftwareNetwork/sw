@@ -581,6 +581,11 @@ void Build::detectCompilers()
     }
 }
 
+SwContext &Build::getContext() const
+{
+    return (SwContext &)swctx;
+}
+
 const OS &Build::getHostOs() const
 {
     return swctx.HostOS;

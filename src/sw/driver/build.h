@@ -274,6 +274,7 @@ struct SW_DRIVER_CPP_API Build : TargetBase
     bool with_testing = false;
     std::unordered_set<LocalPackage> known_cfgs;
 
+    SwContext &getContext() const;
     const OS &getHostOs() const;
     //const BuildSettings &getHostSettings() const { return *host_settings; }
     const BuildSettings &getSettings() const;
