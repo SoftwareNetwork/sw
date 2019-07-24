@@ -62,7 +62,7 @@ void SwBuild::build()
     execute();
 }
 
-void SwBuild::execute()
+void SwBuild::execute() const
 {
     auto p = getExecutionPlan();
     execute(p);
@@ -103,8 +103,69 @@ void SwBuild::resolvePackages()
 
 void SwBuild::loadPackages()
 {
-    swctx.loadPackages(getTargets());
+    loadPackages(swctx.getPredefinedTargets());
 }
+
+void SwBuild::loadPackages(const TargetMap &predefined)
+{
+    // first, we create all package ids with EPs in targets
+    for (auto &[p, _] : swctx.getTargetData())
+        targets[p];
+
+    // load
+    while (1)
+    {
+        std::map<TargetSettings, std::pair<PackageId, TargetContainer *>> load;
+        auto &chld = targets; // take a ref, because it won't be changed in this loop
+        for (const auto &[pkg, tgts] : chld)
+        {
+            for (const auto &tgt : tgts)
+            {
+                auto deps = tgt->getDependencies();
+                for (auto &d : deps)
+                {
+                    if (d->isResolved())
+                        continue;
+
+                    auto i = chld.find(d->getUnresolvedPackage());
+                    if (i == chld.end())
+                        throw SW_RUNTIME_ERROR("No target loaded: " + d->getUnresolvedPackage().toString());
+
+                    auto k = i->second.find(d->getSettings());
+                    if (k != i->second.end())
+                    {
+                        d->setTarget(**k);
+                        continue;
+                    }
+
+                    if (predefined.find(d->getUnresolvedPackage().ppath) != predefined.end(d->getUnresolvedPackage().ppath))
+                    {
+                        throw SW_LOGIC_ERROR(tgt->getPackage().toString() + ": predefined target is not resolved: " + d->getUnresolvedPackage().toString());
+                    }
+
+                    load.insert({ d->getSettings(), { i->first, &i->second } });
+                }
+            }
+        }
+        if (load.empty())
+            break;
+        for (auto &[s, d] : load)
+        {
+            // empty settings mean we want dependency only to be present
+            if (s.empty())
+                continue;
+
+            swctx.getTargetData(d.first).loadPackages(*this, s, {}/* { d.first }*/ );
+            auto k = d.second->find(s);
+            if (k == d.second->end())
+            {
+                //throw SW_RUNTIME_ERROR("cannot load package with current settings:\n" + s.toString());
+                throw SW_RUNTIME_ERROR("cannot load package " + d.first.toString() + " with current settings\n" + s.toString());
+            }
+        }
+    }
+}
+
 
 bool SwBuild::prepareStep()
 {

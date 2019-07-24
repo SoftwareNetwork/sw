@@ -29,11 +29,9 @@ struct SW_CORE_API SwCoreContext : SwBuilderContext
     const TargetMap &getPredefinedTargets() const { return predefined_targets; }
     const TargetSettings &getHostSettings() const;
 
+    const std::unordered_map<PackageId, TargetData> &getTargetData() const { return target_data; }
     TargetData &getTargetData(const PackageId &);
     const TargetData &getTargetData(const PackageId &) const;
-
-    void loadPackages(TargetMap &) const; // load tm with predefined
-    void loadPackages(TargetMap &, const TargetMap &predefined) const;
 
 private:
     TargetMap predefined_targets;

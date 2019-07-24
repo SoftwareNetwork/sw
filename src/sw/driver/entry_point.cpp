@@ -205,12 +205,7 @@ static std::tuple<FilesOrdered, UnresolvedPackages> getFileDependencies(const Sw
     return getFileDependencies(swctx, in_config_file, gns);
 }
 
-NativeTargetEntryPoint::NativeTargetEntryPoint(SwBuild &b)
-    : swb(b)
-{
-}
-
-void NativeTargetEntryPoint::loadPackages(TargetMap &, const TargetSettings &s, const PackageIdSet &pkgs) const
+void NativeTargetEntryPoint::loadPackages(SwBuild &swb, const TargetSettings &s, const PackageIdSet &pkgs) const
 {
     auto mb = new Build(swb);
     auto &b = *mb;
@@ -225,8 +220,8 @@ void NativeTargetEntryPoint::loadPackages(TargetMap &, const TargetSettings &s, 
     loadPackages1(b);
 }
 
-NativeBuiltinTargetEntryPoint::NativeBuiltinTargetEntryPoint(SwBuild &b, BuildFunction bf)
-    : NativeTargetEntryPoint(b), bf(bf)
+NativeBuiltinTargetEntryPoint::NativeBuiltinTargetEntryPoint(BuildFunction bf)
+    : bf(bf)
 {
 }
 
@@ -239,8 +234,8 @@ void NativeBuiltinTargetEntryPoint::loadPackages1(Build &b) const
     bf(b);
 }
 
-NativeModuleTargetEntryPoint::NativeModuleTargetEntryPoint(SwBuild &b, const Module &m)
-    : NativeTargetEntryPoint(b), m(m)
+NativeModuleTargetEntryPoint::NativeModuleTargetEntryPoint(const Module &m)
+    : m(m)
 {
 }
 
@@ -271,7 +266,7 @@ static NativeCompiledTarget &getDriverTarget(Build &solution, NativeCompiledTarg
     auto i = solution.getChildren().find(UnresolvedPackage(SW_DRIVER_NAME));
     if (i == solution.getChildren().end())
     {
-        solution.getContext().getTargetData(PackageId(SW_DRIVER_NAME)).loadPackages(solution.getChildren(), solution.getSettings(), solution.module_data->known_targets);
+        solution.getContext().getTargetData(PackageId(SW_DRIVER_NAME)).loadPackages(solution.main_build, solution.getSettings(), solution.module_data->known_targets);
         i = solution.getChildren().find(UnresolvedPackage(SW_DRIVER_NAME));
         if (i == solution.getChildren().end())
             throw SW_RUNTIME_ERROR("no driver target");
@@ -279,7 +274,7 @@ static NativeCompiledTarget &getDriverTarget(Build &solution, NativeCompiledTarg
     auto k = i->second.find(lib.getTargetSettings());
     if (k == i->second.end())
     {
-        solution.getContext().getTargetData(i->first).loadPackages(solution.getChildren(), solution.getSettings(), solution.module_data->known_targets);
+        solution.getContext().getTargetData(i->first).loadPackages(solution.main_build, solution.getSettings(), solution.module_data->known_targets);
         k = i->second.find(lib.getTargetSettings());
         if (k == i->second.end())
         {
@@ -334,12 +329,12 @@ static void write_pch(Build &solution)
         cppan_cpp);
 }
 
-PrepareConfigEntryPoint::PrepareConfigEntryPoint(SwBuild &b, const std::unordered_set<LocalPackage> &pkgs)
-    : NativeTargetEntryPoint(b), pkgs_(pkgs)
+PrepareConfigEntryPoint::PrepareConfigEntryPoint(const std::unordered_set<LocalPackage> &pkgs)
+    : pkgs_(pkgs)
 {}
 
-PrepareConfigEntryPoint::PrepareConfigEntryPoint(SwBuild &b, const Files &files)
-    : NativeTargetEntryPoint(b), files_(files)
+PrepareConfigEntryPoint::PrepareConfigEntryPoint(const Files &files)
+    : files_(files)
 {}
 
 void build_self(SwBuild &b);
@@ -354,7 +349,7 @@ void PrepareConfigEntryPoint::loadPackages1(Build &b) const
         std::unique_lock lk(m);
         if (!once)
         {
-            build_self(swb);
+            build_self(b.main_build);
             once = true;
         }
     }

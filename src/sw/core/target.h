@@ -19,6 +19,7 @@ namespace sw
 {
 
 struct ITarget;
+struct SwBuild;
 
 struct IDependency
 {
@@ -188,7 +189,7 @@ struct TargetEntryPoint
     virtual ~TargetEntryPoint() = 0;
 
     // on zero input packages, load all
-    virtual void loadPackages(TargetMap &, const TargetSettings &, const PackageIdSet &allowed_packages) const = 0;
+    virtual void loadPackages(SwBuild &, const TargetSettings &, const PackageIdSet &allowed_packages) const = 0;
 };
 
 struct TargetData
@@ -196,7 +197,7 @@ struct TargetData
     ~TargetData();
 
     // load targets into passed map
-    void loadPackages(TargetMap &, const TargetSettings &, const PackageIdSet &allowed_packages) const;
+    void loadPackages(SwBuild &, const TargetSettings &, const PackageIdSet &allowed_packages) const;
 
     //
     void setEntryPoint(const std::shared_ptr<TargetEntryPoint> &);

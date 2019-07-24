@@ -44,7 +44,7 @@ struct SwBuild
     void resolvePackages();
     void loadPackages();
     void prepare();
-    void execute();
+    void execute() const;
 
     // tune
     bool prepareStep();
@@ -73,6 +73,7 @@ private:
 
     void load(ProcessedInputs &inputs);
     Commands getCommands() const;
+    void loadPackages(const TargetMap &predefined);
 };
 
 } // namespace sw

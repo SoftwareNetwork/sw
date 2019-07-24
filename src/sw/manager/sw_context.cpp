@@ -20,7 +20,10 @@ namespace sw
 
 SwManagerContext::SwManagerContext(const path &local_storage_root_dir)
 {
-    // keep installed packages, but do not resolve from it
+    // first goes resolve cache
+    cache_storage_id = storages.size();
+    storages.emplace_back(std::make_unique<CachedStorage>());
+
     local_storage_id = storages.size();
     storages.emplace_back(std::make_unique<LocalStorage>(local_storage_root_dir));
 
@@ -36,6 +39,11 @@ SwManagerContext::SwManagerContext(const path &local_storage_root_dir)
 
 SwManagerContext::~SwManagerContext() = default;
 
+CachedStorage &SwManagerContext::getCachedStorage() const
+{
+    return dynamic_cast<CachedStorage&>(*storages[cache_storage_id]);
+}
+
 LocalStorage &SwManagerContext::getLocalStorage()
 {
     return static_cast<LocalStorage&>(*storages[local_storage_id]);
@@ -50,7 +58,7 @@ std::vector<Storage *> SwManagerContext::getRemoteStorages()
 {
     std::vector<Storage *> r;
     for (int i = first_remote_storage_id; i < storages.size(); i++)
-        r.push_back(storages[i].get());
+        r.push_back(static_cast<Storage*>(storages[i].get()));
     return r;
 }
 
@@ -58,20 +66,16 @@ std::vector<const Storage *> SwManagerContext::getRemoteStorages() const
 {
     std::vector<const Storage *> r;
     for (int i = first_remote_storage_id; i < storages.size(); i++)
-        r.push_back(storages[i].get());
+        r.push_back(static_cast<const Storage*>(storages[i].get()));
     return r;
 }
 
 std::unordered_map<UnresolvedPackage, Package> SwManagerContext::resolve(const UnresolvedPackages &pkgs) const
 {
-    std::lock_guard lk(resolve_mutex);
-    return resolve(pkgs, resolved_packages);
-}
-
-std::unordered_map<UnresolvedPackage, Package> SwManagerContext::resolve(const UnresolvedPackages &pkgs, std::unordered_map<UnresolvedPackage, Package> &resolved_packages) const
-{
     if (pkgs.empty())
         return {};
+
+    std::lock_guard lk(resolve_mutex);
 
     std::unordered_map<UnresolvedPackage, Package> resolved;
     auto pkgs2 = pkgs;
@@ -82,6 +86,10 @@ std::unordered_map<UnresolvedPackage, Package> SwManagerContext::resolve(const U
         resolved.merge(rpkgs);
         pkgs2 = std::move(unresolved);
     }
+
+    // save existing results
+    getCachedStorage().store(resolved);
+
     if (!pkgs2.empty())
     {
         String s;
@@ -124,10 +132,10 @@ LocalPackage SwManagerContext::install(const Package &p) const
     return getLocalStorage().install(p);
 }
 
-bool SwManagerContext::isResolved(const UnresolvedPackage &pkg) const
+/*bool SwManagerContext::isResolved(const UnresolvedPackage &pkg) const
 {
     return resolved_packages.find(pkg) != resolved_packages.end();
-}
+}*/
 
 LocalPackage SwManagerContext::resolve(const UnresolvedPackage &pkg) const
 {

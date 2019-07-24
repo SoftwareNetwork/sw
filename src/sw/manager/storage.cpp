@@ -438,4 +438,30 @@ bool OverriddenPackagesStorage::isPackageInstalled(const Package &p) const
     return getPackagesDatabase().getInstalledPackageId(p) != 0;
 }
 
+String CachedStorage::getName() const
+{
+    return "resolve-cache";
+}
+
+std::unordered_map<UnresolvedPackage, Package> CachedStorage::resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
+{
+    std::unordered_map<UnresolvedPackage, Package> r;
+    for (auto &u : pkgs)
+    {
+        auto i = resolved_packages.find(u);
+        if (i == resolved_packages.end())
+        {
+            unresolved_pkgs.insert(u);
+            continue;
+        }
+        r.emplace(u, i->second);
+    }
+    return r;
+}
+
+void CachedStorage::store(const std::unordered_map<UnresolvedPackage, Package> &r)
+{
+    resolved_packages.insert(r.begin(), r.end());
+}
+
 }

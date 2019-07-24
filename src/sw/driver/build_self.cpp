@@ -41,7 +41,7 @@ void build_self(SwBuild &b)
     //auto m = s.swctx.install(required_packages, store);
 
     // create entry points by package
-    auto epm1 = build_self_generated(b);
+    auto epm1 = build_self_generated();
 
     //
     auto m = b.getContext().install(required_packages);

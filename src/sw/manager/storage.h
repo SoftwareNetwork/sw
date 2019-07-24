@@ -86,11 +86,19 @@ String toUserString(StorageFileType);
 struct PackagesDatabase;
 struct ServiceDatabase;
 
-struct SW_MANAGER_API IStorage
+struct SW_MANAGER_API IResolvableStorage
 {
-    virtual ~IStorage() = default;
+    virtual ~IResolvableStorage() = default;
 
     virtual String getName() const = 0;
+
+    /// resolve packages from this storage
+    virtual std::unordered_map<UnresolvedPackage, Package> resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const = 0;
+};
+
+struct SW_MANAGER_API IStorage : IResolvableStorage
+{
+    virtual ~IStorage() = default;
 
     // storage schema/settings/capabilities/versions
 
@@ -104,9 +112,6 @@ struct SW_MANAGER_API IStorage
 
     /// load package data from this storage
     virtual const PackageData &loadData(const PackageId &) const = 0;
-
-    /// resolve packages from this storage
-    virtual std::unordered_map<UnresolvedPackage, Package> resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const = 0;
 
     /// get file from this storage
     virtual std::unique_ptr<vfs::File> getFile(const PackageId &id, StorageFileType) const = 0;
@@ -245,6 +250,19 @@ struct SW_MANAGER_API RemoteStorageWithFallbackToRemoteResolving : RemoteStorage
 
 private:
     mutable std::unordered_map<PackageId, PackageData> data;
+};
+
+struct CachedStorage : IResolvableStorage
+{
+    virtual ~CachedStorage() = default;
+
+    String getName() const override;
+    std::unordered_map<UnresolvedPackage, Package> resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const override;
+
+    void store(const std::unordered_map<UnresolvedPackage, Package> &);
+
+private:
+    mutable std::unordered_map<UnresolvedPackage, Package> resolved_packages;
 };
 
 SW_MANAGER_API

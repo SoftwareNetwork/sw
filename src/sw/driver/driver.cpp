@@ -19,6 +19,9 @@ DECLARE_STATIC_LOGGER(logger, "driver.cpp");
 namespace sw
 {
 
+extern template
+std::shared_ptr<PrepareConfigEntryPoint> Build::build_configs1<Files>(const Files &objs);
+
 namespace driver::cpp
 {
 
@@ -168,9 +171,9 @@ void Driver::load_spec_file(SwBuild &b, const path &fn, const std::set<TargetSet
 
 void Driver::load_dll(SwBuild &b, const path &dll, const std::set<TargetSettings> &settings)
 {
-    auto ep = std::make_shared<NativeModuleTargetEntryPoint>(b, b.getContext().getModuleStorage().get(dll));
+    auto ep = std::make_shared<NativeModuleTargetEntryPoint>(b.getContext().getModuleStorage().get(dll));
     for (auto &s : settings)
-        ep->loadPackages(b.getTargets(), s, {}); // load all
+        ep->loadPackages(b, s, {}); // load all
 }
 
 const StringSet &Driver::getAvailableFrontendNames()

@@ -17,11 +17,11 @@ TargetData::~TargetData()
 {
 }
 
-void TargetData::loadPackages(TargetMap &m, const TargetSettings &s, const PackageIdSet &whitelist) const
+void TargetData::loadPackages(SwBuild &b, const TargetSettings &s, const PackageIdSet &whitelist) const
 {
     if (!ep)
         throw SW_RUNTIME_ERROR("No entry point provided");
-    ep->loadPackages(m, s, whitelist);
+    ep->loadPackages(b, s, whitelist);
 }
 
 void TargetData::setEntryPoint(const std::shared_ptr<TargetEntryPoint> &e)

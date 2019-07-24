@@ -690,11 +690,6 @@ int main(int ac, char* av[])
 
 struct DummyCheckEntryPoint : NativeTargetEntryPoint
 {
-    DummyCheckEntryPoint(SwBuild &b)
-        : NativeTargetEntryPoint(b)
-    {
-    }
-
 private:
     void loadPackages1(Build &) const override {}
 };
@@ -702,7 +697,7 @@ private:
 #define SETUP_SOLUTION()                                          \
     auto b = check_set->checker.build.getContext().createBuild(); \
     auto s = setupSolution(b, f);                                 \
-    auto ep = std::make_shared<DummyCheckEntryPoint>(b);          \
+    auto ep = std::make_shared<DummyCheckEntryPoint>();           \
     ep->module_data.current_settings = getSettings();             \
     ep->module_data.ntep = ep.get();                              \
     s.module_data = &ep->module_data

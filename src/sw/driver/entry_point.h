@@ -35,12 +35,7 @@ struct NativeTargetEntryPoint : TargetEntryPoint,
 {
     mutable ModuleSwappableData module_data;
 
-    NativeTargetEntryPoint(SwBuild &b);
-
-    void loadPackages(TargetMap &, const TargetSettings &, const PackageIdSet &pkgs) const override;
-
-protected:
-    SwBuild &swb;
+    void loadPackages(SwBuild &, const TargetSettings &, const PackageIdSet &pkgs) const override;
 
 private:
     virtual void loadPackages1(Build &) const = 0;
@@ -54,8 +49,8 @@ struct PrepareConfigEntryPoint : NativeTargetEntryPoint
     mutable FilesMap r;
     mutable std::unique_ptr<PackageId> tgt;
 
-    PrepareConfigEntryPoint(SwBuild &b, const std::unordered_set<LocalPackage> &pkgs);
-    PrepareConfigEntryPoint(SwBuild &b, const Files &files);
+    PrepareConfigEntryPoint(const std::unordered_set<LocalPackage> &pkgs);
+    PrepareConfigEntryPoint(const Files &files);
 
 private:
     const std::unordered_set<LocalPackage> pkgs_;
@@ -85,7 +80,7 @@ struct NativeBuiltinTargetEntryPoint : NativeTargetEntryPoint
     BuildFunction bf = nullptr;
     CheckFunction cf = nullptr;
 
-    NativeBuiltinTargetEntryPoint(SwBuild &b, BuildFunction bf);
+    NativeBuiltinTargetEntryPoint(BuildFunction bf);
 
 private:
     void loadPackages1(Build &) const override;
@@ -93,7 +88,7 @@ private:
 
 struct NativeModuleTargetEntryPoint : NativeTargetEntryPoint
 {
-    NativeModuleTargetEntryPoint(SwBuild &b, const Module &m);
+    NativeModuleTargetEntryPoint(const Module &m);
 
 private:
     Module m;

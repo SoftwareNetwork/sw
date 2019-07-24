@@ -39,24 +39,22 @@ struct SW_MANAGER_API SwManagerContext : ISwContext
     std::vector<Storage *> getRemoteStorages();
     std::vector<const Storage *> getRemoteStorages() const;
 
-    std::unordered_map<UnresolvedPackage, Package> resolve(const UnresolvedPackages &) const override;
-
     // move to builder?
     std::unordered_map<UnresolvedPackage, LocalPackage> install(const UnresolvedPackages &) const;
     LocalPackage install(const Package &) const;
 
-    std::unordered_map<UnresolvedPackage, Package> resolve(const UnresolvedPackages &unresolved, std::unordered_map<UnresolvedPackage, Package> &resolved_packages) const;
-    bool isResolved(const UnresolvedPackage &pkg) const;
+    std::unordered_map<UnresolvedPackage, Package> resolve(const UnresolvedPackages &) const override;
     LocalPackage resolve(const UnresolvedPackage &) const;
 
-protected:
-    mutable std::mutex resolve_mutex;
-
 private:
+    int cache_storage_id;
     int local_storage_id;
     int first_remote_storage_id;
-    std::vector<std::unique_ptr<Storage>> storages;
-    mutable std::unordered_map<UnresolvedPackage, Package> resolved_packages;
+    std::vector<std::unique_ptr<IResolvableStorage>> storages;
+    mutable std::mutex resolve_mutex;
+
+    //bool isResolved(const UnresolvedPackage &pkg) const;
+    CachedStorage &getCachedStorage() const;
 };
 
 } // namespace sw

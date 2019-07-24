@@ -150,11 +150,14 @@ std::shared_ptr<PrepareConfigEntryPoint> Build::build_configs1(const T &objs)
     if (debug_configs)
         ts["native"]["configuration"] = "debug";
 
-    auto ep = std::make_shared<PrepareConfigEntryPoint>(main_build, objs);
-    ep->loadPackages(getChildren(), ts, {}); // load all
+    auto ep = std::make_shared<PrepareConfigEntryPoint>(objs);
+    ep->loadPackages(main_build, ts, {}); // load all
 
     return ep;
 }
+
+template
+std::shared_ptr<PrepareConfigEntryPoint> Build::build_configs1<Files>(const Files &objs);
 
 // can be used in configs to load subdir configs
 // s.build->loadModule("client/sw.cpp").call<void(Solution &)>("build", s);
@@ -178,7 +181,11 @@ void Build::load_packages(const PackageIdSet &pkgsids)
     // make pkgs unique
     std::unordered_map<PackageVersionGroupNumber, LocalPackage> cfgs2;
     for (auto &p : in_pkgs)
-        cfgs2.emplace(p.getData().group_number, p);
+    {
+        auto &td = getContext().getTargetData();
+        if (td.find(p) == td.end())
+            cfgs2.emplace(p.getData().group_number, p);
+    }
 
     std::unordered_set<LocalPackage> pkgs;
     for (auto &[gn, p] : cfgs2)
@@ -190,7 +197,6 @@ void Build::load_packages(const PackageIdSet &pkgsids)
         Build b(mb2); // cache?
         b.getChildren() = main_build.getContext().getPredefinedTargets();
         auto ep = b.build_configs1(pkgs);
-        //b.execute();
         // set our main target
         mb2.getTargetsToBuild()[*ep->tgt] = mb2.getTargets()[*ep->tgt];
         mb2.loadPackages();
@@ -201,7 +207,11 @@ void Build::load_packages(const PackageIdSet &pkgsids)
 
     for (auto &p : in_pkgs)
     {
-        auto ep = std::make_shared<NativeModuleTargetEntryPoint>(main_build,
+        auto &td = getContext().getTargetData();
+        if (td.find(p) != td.end())
+            continue;
+
+        auto ep = std::make_shared<NativeModuleTargetEntryPoint>(
             Module(getContext().getModuleStorage().get(dll), gn2suffix(p.getData().group_number)));
         ep->module_data.NamePrefix = p.ppath.slice(0, p.getData().prefix);
         ep->module_data.current_gn = p.getData().group_number;
