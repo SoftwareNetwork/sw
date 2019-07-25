@@ -342,9 +342,10 @@ int main() { return IsBigEndian(); }
         };
 
         //auto &e = getExecutor();
-        static Executor e(getExecutor().numberOfThreads()); // separate executor!
-                                                     //ep.throw_on_errors = false;
-                                                     //ep.skip_errors = ep.commands.size();
+        //static Executor e(getExecutor().numberOfThreads()); // separate executor!
+        static Executor e(1); // separate executor!
+        //ep.throw_on_errors = false;
+        //ep.skip_errors = ep.commands.size();
 
         try
         {
@@ -541,7 +542,8 @@ void Check::execute()
         }
         throw SW_RUNTIME_ERROR("Check " + *Definitions.begin() + ": value was not set");
     }
-    LOG_DEBUG(logger, "Checking " << toString(getType()) << " " << *Definitions.begin() << ": " << Value.value());
+    String log_string = "[" + std::to_string((*current_command)++) + "/" + std::to_string(total_commands->load()) + "] ";
+    LOG_DEBUG(logger, log_string + "Checking " << toString(getType()) << " " << *Definitions.begin() << ": " << Value.value());
 }
 
 std::vector<CheckPtr> Check::gatherDependencies()
@@ -623,6 +625,7 @@ bool Check::execute(SwBuild &b) const
 {
     b.setTargetsToBuild();
     b.resolvePackages();
+    b.loadPackages();
     b.prepare();
 
     try
@@ -690,17 +693,19 @@ int main(int ac, char* av[])
 
 struct DummyCheckEntryPoint : NativeTargetEntryPoint
 {
+    std::function<void()> f;
+
 private:
-    void loadPackages1(Build &) const override {}
+    void loadPackages1(Build &) const override { f(); }
 };
 
 #define SETUP_SOLUTION()                                          \
     auto b = check_set->checker.build.getContext().createBuild(); \
     auto s = setupSolution(b, f);                                 \
     auto ep = std::make_shared<DummyCheckEntryPoint>();           \
-    ep->module_data.current_settings = getSettings();             \
-    ep->module_data.ntep = ep.get();                              \
-    s.module_data = &ep->module_data
+    ModuleSwappableData msd;                                      \
+    msd.current_settings = getSettings();                         \
+    s.setModuleData(msd)
 
 #define EXECUTE_SOLUTION() \
     if (!execute(b))       \

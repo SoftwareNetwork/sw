@@ -85,6 +85,8 @@ std::unordered_map<UnresolvedPackage, Package> SwManagerContext::resolve(const U
         auto rpkgs = s->resolve(pkgs2, unresolved);
         resolved.merge(rpkgs);
         pkgs2 = std::move(unresolved);
+        if (pkgs2.empty())
+            break;
     }
 
     // save existing results

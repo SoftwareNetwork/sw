@@ -85,6 +85,7 @@ public:
     TargetMap &getChildren();
     const TargetMap &getChildren() const;
     path getChecksDir() const;
+    void setModuleData(const ModuleSwappableData &);
     const ModuleSwappableData &getModuleData() const;
     PackageVersionGroupNumber getCurrentGroupNumber() const;
 

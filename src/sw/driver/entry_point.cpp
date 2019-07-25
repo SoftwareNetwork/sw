@@ -209,14 +209,19 @@ void NativeTargetEntryPoint::loadPackages(SwBuild &swb, const TargetSettings &s,
 {
     auto mb = new Build(swb);
     auto &b = *mb;
-    SwapAndRestore sr0(module_data.ntep, (NativeTargetEntryPoint*)this);
-    SwapAndRestore sr1(module_data.known_targets, pkgs);
+
+    ModuleSwappableData module_data1;
+    module_data1.NamePrefix = module_data.NamePrefix;
+    module_data1.current_gn = module_data.current_gn;
+    module_data1.known_targets = module_data.known_targets;
+
+    SwapAndRestore sr1(module_data1.known_targets, pkgs);
     if (pkgs.empty())
         sr1.restoreNow(true);
-    SwapAndRestore sr2(b.module_data, &module_data);
+    SwapAndRestore sr2(b.module_data, &module_data1);
     SwapAndRestore sr3(b.NamePrefix, module_data.NamePrefix);
-    SwapAndRestore sr4(module_data.current_settings, s);
-    SwapAndRestore sr5(module_data.bs, BuildSettings(s));
+    SwapAndRestore sr4(module_data1.current_settings, s);
+    SwapAndRestore sr5(module_data1.bs, BuildSettings(s));
     loadPackages1(b);
 }
 
@@ -417,7 +422,7 @@ void PrepareConfigEntryPoint::commonActions2(Build &b, SharedLibraryTarget &lib)
         lib.Definitions["SW_PACKAGE_API"] = "__attribute__ ((visibility (\"default\")))";
     }
 
-    BuildSettings bs(module_data.current_settings);
+    BuildSettings bs(b.getModuleData().current_settings);
     if (bs.TargetOS.is(OSType::Windows))
         lib.NativeLinkerOptions::System.LinkLibraries.insert("Delayimp.lib");
 

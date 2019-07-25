@@ -19,21 +19,24 @@ struct Build;
 struct Checker;
 struct Module;
 
-struct ModuleSwappableData
+struct ModuleSwappableDataBase
 {
-    NativeTargetEntryPoint *ntep = nullptr;
     PackagePath NamePrefix;
     PackageVersionGroupNumber current_gn = 0;
+    PackageIdSet known_targets; // means installed targets and available to loading from this ep
+};
+
+struct ModuleSwappableData : ModuleSwappableDataBase
+{
     TargetSettings current_settings;
     BuildSettings bs;
-    PackageIdSet known_targets;
 };
 
 // this driver ep
 struct NativeTargetEntryPoint : TargetEntryPoint,
     std::enable_shared_from_this<NativeTargetEntryPoint>
 {
-    mutable ModuleSwappableData module_data;
+    ModuleSwappableDataBase module_data;
 
     void loadPackages(SwBuild &, const TargetSettings &, const PackageIdSet &pkgs) const override;
 

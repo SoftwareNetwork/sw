@@ -115,6 +115,11 @@ path Build::getChecksDir() const
     return getServiceDir() / "checks";
 }
 
+void Build::setModuleData(const ModuleSwappableData &d)
+{
+    module_data = &d;
+}
+
 const ModuleSwappableData &Build::getModuleData() const
 {
     if (!module_data)
@@ -190,6 +195,9 @@ void Build::load_packages(const PackageIdSet &pkgsids)
     std::unordered_set<LocalPackage> pkgs;
     for (auto &[gn, p] : cfgs2)
         pkgs.insert(p);
+
+    if (pkgs.empty())
+        return;
 
     path dll;
     {
