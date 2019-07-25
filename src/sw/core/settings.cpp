@@ -22,6 +22,12 @@ TargetSettings toTargetSettings(const OS &o)
     case OSType::Windows:
         s["os"]["kernel"] = "com.Microsoft.Windows.NT";
         break;
+    case OSType::Linux:
+        s["os"]["kernel"] = "org.torvalds.linux";
+        break;
+    case OSType::Macos:
+        s["os"]["kernel"] = "com.Apple.Macos";
+        break;
     default:
         SW_UNIMPLEMENTED;
     }

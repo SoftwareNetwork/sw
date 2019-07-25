@@ -70,6 +70,26 @@ void SwCoreContext::setHostPrograms()
         else
             SW_UNIMPLEMENTED;
     }
+    else if (getHostOs().is(OSType::Linux))
+    {
+        /*ts["native"]["stdlib"]["c"] = "com.Microsoft.Windows.SDK.ucrt";
+        ts["native"]["stdlib"]["cpp"] = "com.Microsoft.VisualStudio.VC.libcpp";
+        ts["native"]["stdlib"]["kernel"] = "com.Microsoft.Windows.SDK.um";*/
+
+        auto if_add = [this](auto &s, const auto &name)
+        {
+            if (getPredefinedTargets()[name].empty())
+                return false;
+            s = name;
+            return true;
+        };
+
+        if_add(ts["native"]["program"]["c"], "org.gnu.gcc");
+        if_add(ts["native"]["program"]["cpp"], "org.gnu.gpp");
+        if_add(ts["native"]["program"]["asm"], "org.gnu.gcc.as");
+        if_add(ts["native"]["program"]["lib"], "org.gnu.binutils.ar");
+        if_add(ts["native"]["program"]["link"], "org.gnu.gcc.ld");
+    }
     // add more defaults
     else
         SW_UNIMPLEMENTED;

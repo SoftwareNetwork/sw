@@ -231,6 +231,10 @@ void NativeCompiledTarget::findCompiler()
                     c = std::make_shared<VisualStudioASMCompiler>(getSolution().getContext());
                 else if (v.id.ppath == "com.Microsoft.Windows.rc")
                     c = std::make_shared<RcTool>(getSolution().getContext());
+                else if (v.id.ppath == "org.gnu.gcc.as")
+                    c = std::make_shared<GNUASMCompiler>(getSolution().getContext());
+                else if (v.id.ppath == "org.gnu.gcc" || v.id.ppath == "org.gnu.gpp")
+                    c = std::make_shared<GNUCompiler>(getSolution().getContext());
                 else if (v.id.ppath == "org.LLVM.clang" || v.id.ppath == "org.LLVM.clangpp")
                 {
                     auto C = std::make_shared<ClangCompiler>(getSolution().getContext());
@@ -296,6 +300,8 @@ void NativeCompiledTarget::findCompiler()
                 if (0);
                 else if (v.id.ppath == "com.Microsoft.VisualStudio.VC.cl")
                     ct = CompilerType::MSVC;
+                else if (v.id.ppath == "org.gnu.gcc" || v.id.ppath == "org.gnu.gpp")
+                    ct = CompilerType::GNU;
                 else if (v.id.ppath == "org.LLVM.clang" || v.id.ppath == "org.LLVM.clangpp")
                     ct = CompilerType::Clang;
                 else if (v.id.ppath == "org.LLVM.clangcl")
@@ -319,12 +325,12 @@ void NativeCompiledTarget::findCompiler()
     // .asm
     if (ts["native"]["program"]["asm"])
     {
-        const CompilerDesc rc
+        const CompilerDesc as
         {
             ts["native"]["program"]["asm"].getValue(), { ".asm" },
         };
-        if (!activate_one(rc))
-            throw SW_RUNTIME_ERROR("Resource compiler was not found in Windows SDK");
+        if (!activate_one(as))
+            throw SW_RUNTIME_ERROR("Assembler was not found");
     }
 
     // .rc
@@ -377,6 +383,20 @@ void NativeCompiledTarget::findCompiler()
         {
             c = std::make_shared<VisualStudioLinker>(getSolution().getContext());
             c->Type = LinkerType::MSVC;
+        }
+        else if (p.ppath == "org.gnu.binutils.ar")
+        {
+            auto C = std::make_shared<GNULibrarian>(getSolution().getContext());
+            c = C;
+            c->Type = LinkerType::GNU;
+            C->Prefix = getSettings().TargetOS.getLibraryPrefix();
+        }
+        else if (p.ppath == "org.gnu.gcc.ld")
+        {
+            auto C = std::make_shared<GNULinker>(getSolution().getContext());
+            c = C;
+            c->Type = LinkerType::GNU;
+            C->Prefix = getSettings().TargetOS.getLibraryPrefix();
         }
         else if (p.ppath == "org.LLVM.ar")
         {

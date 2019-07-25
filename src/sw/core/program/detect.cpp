@@ -1008,279 +1008,41 @@ void detectWindowsCompilers(DETECT_ARGS)
 
 void detectNonWindowsCompilers(DETECT_ARGS)
 {
-    path p;
-
-    SW_UNIMPLEMENTED;
-
-    /*NativeLinkerOptions LOpts;
-
-    //LOpts.System.LinkLibraries.push_back("pthread"); // remove and add to progs explicitly?
-    //LOpts.System.LinkLibraries.push_back("dl"); // remove and add to progs explicitly?
-    //LOpts.System.LinkLibraries.push_back("m"); // remove and add to progs explicitly?
-
-    auto resolve = [](const path &p)
+    auto resolve_and_add = [&s](const path &prog, const String &ppath)
     {
-        //if (do_not_resolve_compiler)
-            //return p;
-        return resolveExecutable(p);
+        auto p = std::make_shared<SimpleProgram>(s);
+        p->file = resolveExecutable(prog);
+        if (fs::exists(p->file))
+        {
+            Version v = getVersion(s, p->file);
+            auto &c = addProgram(s, PackageId(ppath, v), p);
+        }
     };
 
-    p = resolve("ar");
-    if (!p.empty())
+    resolve_and_add("ar", "org.gnu.binutils.ar");
+    resolve_and_add("as", "org.gnu.gcc.as");
+    resolve_and_add("ld", "org.gnu.gcc.ld");
+
+    resolve_and_add("gcc", "org.gnu.gcc");
+    resolve_and_add("g++", "org.gnu.gpp");
+
+    for (int i = 3; i < 12; i++)
     {
-        auto Librarian = std::make_shared<GNULibrarian>(s.swctx);
-        Librarian->Type = LinkerType::GNU;
-        Librarian->file = p;
-        SW_UNIMPLEMENTED;
-        //Librarian->Prefix = s.Settings.TargetOS.getLibraryPrefix();
-        //Librarian->Extension = s.Settings.TargetOS.getStaticLibraryExtension();
-        *Librarian = LOpts;
-        //s.registerProgram("org.gnu.binutils.ar", Librarian);
-        if (s.getHostOs().is(OSType::Macos))
-            Librarian->createCommand(s.swctx)->use_response_files = false;
+        resolve_and_add("gcc-" + std::to_string(i), "org.gnu.gcc");
+        resolve_and_add("g++-" + std::to_string(i), "org.gnu.gpp");
     }
-
-    FilesOrdered gcc_vers{ "gcc" };
-    FilesOrdered gccpp_vers{ "g++" };
-    for (int i = 4; i < 12; i++)
-    {
-        gcc_vers.push_back(path(gcc_vers[0]) += "-" + std::to_string(i));
-        gccpp_vers.push_back(path(gccpp_vers[0]) += "-" + std::to_string(i));
-    }
-    FilesOrdered clang_vers{ "clang" };
-    FilesOrdered clangpp_vers{ "clang++" };
-    for (int i = 3; i < 16; i++)
-    {
-        clang_vers.push_back(path(clang_vers[0]) += "-" + std::to_string(i));
-        clangpp_vers.push_back(path(clangpp_vers[0]) += "-" + std::to_string(i));
-    }
-    if (s.getHostOs().is(OSType::Macos))
-    {
-        // also detect brew
-        if (fs::exists("/usr/local/Cellar/llvm"))
-        for (auto &d : fs::directory_iterator("/usr/local/Cellar/llvm"))
-        {
-            clang_vers.push_back(d.path() / "bin/clang");
-            clangpp_vers.push_back(d.path() / "bin/clang++");
-        }
-    }*/
-
-    //p = resolve("ld.gold");
-    //for (auto &v : gcc_vers)
-    //for (auto &v : gccpp_vers) // this links correct c++ library
-    {
-        SW_UNIMPLEMENTED;
-
-        /*p = resolve(v);
-        if (!p.empty())
-        {
-            auto Linker = std::make_shared<GNULinker>(s.swctx);
-
-            if (s.getHostOs().is(OSType::Macos))
-                Linker->use_start_end_groups = false;
-            Linker->Type = LinkerType::GNU;
-            Linker->file = p;
-            SW_UNIMPLEMENTED;
-            //Linker->Prefix = s.Settings.TargetOS.getLibraryPrefix();
-            //Linker->Extension = s.Settings.TargetOS.getStaticLibraryExtension();
-
-            auto lopts2 = LOpts;
-            //lopts2.System.LinkLibraries.push_back("stdc++"); // remove and add to progs explicitly?
-            //lopts2.System.LinkLibraries.push_back("stdc++fs"); // remove and add to progs explicitly?
-
-            *Linker = lopts2;
-            //s.registerProgram("org.gnu.gcc.ld", Linker);
-        }*/
-    }
-
-    //NativeCompilerOptions COpts;
-
-    path macos_sdk_dir;
-    SW_UNIMPLEMENTED;
-    //if (s.Settings.TargetOS.is(OSType::Macos) || s.Settings.TargetOS.is(OSType::IOS))
-        //macos_sdk_dir = s.Settings.Native.SDK.getPath();
-
-    auto is_apple_clang = [](const path &p)
-    {
-        primitives::Command c;
-        c.setProgram(p);
-        c.arguments.push_back("--version");
-        error_code ec;
-        c.execute(ec);
-        if (ec)
-        {
-            LOG_TRACE(logger, "is_apple_clang: not resolved: " + p.u8string());
-            return false;
-        }
-        return c.out.text.find("Apple") != String::npos;
-    };
-
-    // ASM
-    /*{
-        p = resolve("as");
-
-        auto L = std::make_shared<NativeLanguage>();
-        //L->Type = LanguageType::ASM;
-        // .s - pure asm
-        // .S - with #define (accepts -D) and #include (accepts -I), also .sx
-        L->CompiledExtensions = { ".s", ".S", ".sx" };
-        //s.registerLanguage(L);
-
-        //auto L = (ASMLanguage*)s.languages[LanguageType::ASM].get();
-        auto C = std::make_shared<GNUASMCompiler>();
-        C->Type = CompilerType::GNU;
-        C->file = p;
-        *C = COpts;
-        L->compiler = C;
-        s.registerProgram("org.gnu.gcc.as", C);
-    }*/
-
-    /*for (auto &v : gcc_vers)
-    {
-        p = resolve(v);
-        if (!p.empty())
-        {
-            SW_UNIMPLEMENTED;
-
-            // C
-            {
-                auto C = std::make_shared<GNUCompiler>(s.swctx);
-                C->Type = CompilerType::GNU;
-                C->file = p;
-                *C = COpts;
-                // also with asm
-                // .s - pure asm
-                // .S - with #define (accepts -D) and #include (accepts -I), also .sx
-                //C->input_extensions = { ".c", ".s", ".S" };
-                //s.registerProgram("org.gnu.gcc.gcc", C);
-
-                if (!macos_sdk_dir.empty())
-                    C->IncludeSystemRoot = macos_sdk_dir;
-            }
-        }
-    }
-
-    for (auto &v : gccpp_vers)
-    {
-        p = resolve(v);
-        if (!p.empty())
-        {
-            SW_UNIMPLEMENTED;
-
-            // CPP
-            {
-                auto C = std::make_shared<GNUCompiler>(s.swctx);
-                C->Type = CompilerType::GNU;
-                C->file = p;
-                *C = COpts;
-                //C->input_extensions = getCppSourceFileExtensions();
-                //s.registerProgram("org.gnu.gcc.gpp", C);
-
-                if (!macos_sdk_dir.empty())
-                    C->IncludeSystemRoot = macos_sdk_dir;
-            }
-        }
-    }*/
 
     // llvm/clang
+    resolve_and_add("llvm-ar", "org.LLVM.ar");
+    resolve_and_add("lld", "org.LLVM.ld");
+
+    resolve_and_add("clang", "org.LLVM.clang");
+    resolve_and_add("clang++", "org.LLVM.clangpp");
+
+    for (int i = 3; i < 16; i++)
     {
-        SW_UNIMPLEMENTED;
-        //p = resolve("llvm-ar");
-        if (!p.empty())
-        {
-            SW_UNIMPLEMENTED;
-
-            /*auto Librarian = std::make_shared<GNULibrarian>(s.swctx);
-            Librarian->Type = LinkerType::GNU;
-            Librarian->file = p;
-            SW_UNIMPLEMENTED;
-            //Librarian->Prefix = s.Settings.TargetOS.getLibraryPrefix();
-            //Librarian->Extension = s.Settings.TargetOS.getStaticLibraryExtension();
-            *Librarian = LOpts;
-            //s.registerProgram("org.LLVM.ar", Librarian);
-            //if (s.getHostOs().is(OSType::Macos))
-            //Librarian->createCommand()->use_response_files = false;*/
-        }
-
-        ////p = resolve("ld.gold");
-        SW_UNIMPLEMENTED;
-        /*for (auto &v : clang_vers)
-        //for (auto &v : clangpp_vers) // this links correct c++ library
-        {
-            p = resolve(v);
-            if (!p.empty())
-            {
-                SW_UNIMPLEMENTED;
-
-                bool appleclang = is_apple_clang(p);
-
-                auto Linker = std::make_shared<GNULinker>(s.swctx);
-
-                if (s.getHostOs().is(OSType::Macos))
-                    Linker->use_start_end_groups = false;
-                Linker->Type = LinkerType::GNU;
-                Linker->file = p;
-                SW_UNIMPLEMENTED;
-                //Linker->Prefix = s.Settings.TargetOS.getLibraryPrefix();
-                //Linker->Extension = s.Settings.TargetOS.getStaticLibraryExtension();
-
-                auto lopts2 = LOpts;
-                //lopts2.System.LinkLibraries.push_back("c++"); // remove and add to progs explicitly?
-                //lopts2.System.LinkLibraries.push_back("c++fs"); // remove and add to progs explicitly?
-
-                *Linker = lopts2;
-                //s.registerProgram(appleclang ? "com.apple.LLVM.ld" : "org.LLVM.ld", Linker);
-
-                if (s.getHostOs().is(OSType::Macos))
-                {
-                    if (!appleclang)
-                        Linker->GNULinkerOptions::LinkDirectories().push_back(p.parent_path().parent_path() / "lib");
-                }
-
-                NativeCompilerOptions COpts;
-
-                // C
-                {
-                    bool appleclang = is_apple_clang(p);
-
-                    auto C = std::make_shared<ClangCompiler>(s.swctx);
-                    C->Type = appleclang ? CompilerType::AppleClang : CompilerType::Clang;
-                    C->file = p;
-                    *C = COpts;
-                    // also with asm
-                    // .s - pure asm
-                    // .S - with #define (accepts -D) and #include (accepts -I), also .sx
-                    //C->input_extensions = { ".c", ".s", ".S" };
-                    //s.registerProgram(appleclang ? "com.apple.LLVM.clang" : "org.LLVM.clang", C);
-
-                    if (!macos_sdk_dir.empty())
-                        C->IncludeSystemRoot = macos_sdk_dir;
-                }
-            }
-        }*/
-
-        SW_UNIMPLEMENTED;
-        /*for (auto &v : clangpp_vers)
-        {
-            p = resolve(v);
-            if (!p.empty())
-            {
-                // CPP
-                {
-                    bool appleclang = is_apple_clang(p);
-
-                    auto C = std::make_shared<ClangCompiler>(s.swctx);
-                    C->Type = appleclang ? CompilerType::AppleClang : CompilerType::Clang;
-                    C->file = p;
-                    *C = COpts;
-                    //C->input_extensions = getCppSourceFileExtensions();
-                    //s.registerProgram(appleclang ? "com.apple.LLVM.clangpp" : "org.LLVM.clangpp", C);
-
-                    if (!macos_sdk_dir.empty())
-                        C->IncludeSystemRoot = macos_sdk_dir;
-                }
-            }
-        }*/
+        resolve_and_add("clang-" + std::to_string(i), "org.LLVM.clang");
+        resolve_and_add("clang++-" + std::to_string(i), "org.LLVM.clangpp");
     }
 }
 
