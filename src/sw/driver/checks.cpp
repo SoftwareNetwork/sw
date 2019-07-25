@@ -414,6 +414,10 @@ int main() { return IsBigEndian(); }
 
         if (!cs.manual_checks.empty())
         {
+            // prevent multiple threads, but allow us to enter more than one time
+            static std::recursive_mutex m;
+            std::unique_lock lk(m);
+
             // save executables
             auto &os = checker.build.getBuildSettings().TargetOS;
             auto mfn = (path(fn) += MANUAL_CHECKS).filename().u8string();
@@ -525,8 +529,6 @@ Check::~Check()
 
 void Check::clean() const
 {
-    for (auto &c : commands)
-        c->clean();
     commands.clear();
 }
 
@@ -685,6 +687,7 @@ bool Check::execute(SwBuild &b) const
     {
         // save commands for cleanup
         auto p = b.getExecutionPlan();
+        // we must save comands here, because later we need to check results of specific commands
         for (auto &c : p.commands)
             commands.push_back(c->shared_from_this());
         for (auto &c : p.commands)
