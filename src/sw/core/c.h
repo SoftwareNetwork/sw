@@ -9,6 +9,8 @@
 #ifndef _SW_CORE_C_H_
 #define _SW_CORE_C_H_
 
+#include <malloc.h>
+
 /* memory allocations */
 
 SW_CORE_API

@@ -20,9 +20,9 @@
 #include "../inserts.h"
 
 #include <boost/dll.hpp>
-#include <primitives/win32helpers.h>
 
 #ifdef _WIN32
+#include <primitives/win32helpers.h>
 #include <WinReg.hpp>
 #endif
 
@@ -35,17 +35,18 @@ static void registerCmakePackage(sw::SwContext &swctx)
     icon.SetStringValue(L"", dir.wstring().c_str());
     write_file_if_different(dir / "SWConfig.cmake", sw_config_cmake);
 #else
-    auto cppan_cmake_dir = get_home_directory() / ".cmake" / "packages";
-    write_file_if_different(cppan_cmake_dir / "SW" / "1", cppan_cmake_dir.string());
-    write_file_if_different(cppan_cmake_dir / cppan_cmake_config_filename, cppan_cmake_config);
+    SW_UNIMPLEMENTED;
+    //auto cppan_cmake_dir = get_home_directory() / ".cmake" / "packages";
+    //write_file_if_different(cppan_cmake_dir / "SW" / "1", cppan_cmake_dir.string());
+    //write_file_if_different(cppan_cmake_dir / cppan_cmake_config_filename, cppan_cmake_config);
 #endif
 }
 
 SUBCOMMAND_DECL(setup)
 {
+#ifdef _WIN32
     elevate();
 
-#ifdef _WIN32
     auto prog = boost::dll::program_location().wstring();
 
     // set common environment variable

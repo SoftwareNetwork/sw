@@ -21,9 +21,9 @@
 #include <sw/support/filesystem.h>
 #include <primitives/http.h>
 #include <primitives/sw/settings_program_name.h>
-#include <primitives/win32helpers.h>
 
 #ifdef _WIN32
+#include <primitives/win32helpers.h>
 #include <windows.h>
 #include <shellapi.h>
 #include <Objbase.h>

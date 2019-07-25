@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <primitives/enums.h>
 #include <primitives/exceptions.h>
 #include <primitives/string.h>
 

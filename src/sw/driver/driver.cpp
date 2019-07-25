@@ -58,7 +58,7 @@ Driver::~Driver()
 
 PackageId Driver::getPackageId() const
 {
-    return "org.sw.sw.driver.cpp-0.3.0";
+    return "org.sw.sw.driver.cpp-0.3.0"s;
 }
 
 bool Driver::canLoad(const Input &i) const

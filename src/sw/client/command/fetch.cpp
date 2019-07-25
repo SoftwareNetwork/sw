@@ -58,10 +58,11 @@ sw::SourceDirMap fetch(sw::SwBuild &b)
             throw SW_RUNTIME_ERROR("Empty target");
         auto &t = *tgt;
 
+        auto &tgts2 = tgts;
         SCOPE_EXIT
         {
             // and clear targets
-            tgts.clear();
+            tgts2.clear();
         };
 
         auto s = t.getSource().clone(); // make a copy!

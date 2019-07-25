@@ -24,11 +24,9 @@
 #include <sw/core/sw_context.h>
 #include <sw/support/filesystem.h>
 
-#include <primitives/sw/cl.h>
-#include <primitives/win32helpers.h>
-
 #include <boost/algorithm/string.hpp>
 #include <nlohmann/json.hpp>
+#include <primitives/sw/cl.h>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "generator");
@@ -185,9 +183,9 @@ struct ProgramShortCutter
 
     void printPrograms(primitives::Emitter &ctx, F f) const
     {
-        auto print_progs = [&ctx, &f](auto &a)
+        auto print_progs = [&ctx, &f](const auto &a)
         {
-            for (auto &kv : a)
+            for (const auto &kv : a)
                 f(ctx, kv->first, kv->second);
         };
 
@@ -414,6 +412,11 @@ void NinjaGenerator::generate(const SwBuild &swctx)
     write_file(dir / "build.ninja", ctx.getText());
 }
 
+static bool should_print(const String &o)
+{
+    return o.find("showIncludes") == o.npos;
+}
+
 struct MakeEmitter : primitives::Emitter
 {
     bool nmake = false;
@@ -594,11 +597,6 @@ struct MakeEmitter : primitives::Emitter
         return s;
     }
 
-    static bool should_print(const String &o)
-    {
-        return o.find("showIncludes") == o.npos;
-    }
-
     String mkdir(const Files &p, bool gen = false)
     {
         if (nmake)
@@ -655,13 +653,6 @@ void ShellGenerator::generate(const SwBuild &b)
     const auto d = path(SW_BINARY_DIR) / toPathString(type) / b.getHash();
 
     auto ep = b.getExecutionPlan();
-
-    auto should_print = [](auto &o)
-    {
-        if (o.find("showIncludes") != o.npos)
-            return false;
-        return true;
-    };
 
     primitives::Emitter ctx, ctx_progs;
 

@@ -332,7 +332,7 @@ void NativeCompiledTarget::findCompiler()
     {
         static const CompilerDesc rc
         {
-            "com.Microsoft.Windows.rc", { ".rc" },
+            "com.Microsoft.Windows.rc"s, { ".rc" },
         };
         if (!activate_one(rc))
             throw SW_RUNTIME_ERROR("Resource compiler was not found in Windows SDK");
@@ -507,7 +507,7 @@ void NativeCompiledTarget::setupCommand(builder::Command &c) const
     NativeTarget::setupCommand(c);
 
     // perform this after prepare?
-    auto for_deps = [this](auto &a)
+    auto for_deps = [this](auto f)
     {
         for (auto &d : getAllDependencies())
         {
@@ -524,7 +524,7 @@ void NativeCompiledTarget::setupCommand(builder::Command &c) const
                 continue;
             if (!*nt->HeaderOnly && nt->getSelectedTool() == nt->Linker.get())
             {
-                a(nt);
+                f(nt);
             }
         }
     };

@@ -62,6 +62,8 @@
 *----------------------------------------------------------------------
 */
 
+#ifdef _WIN32
+
 #include <primitives/exceptions.h>
 #include <primitives/filesystem.h>
 
@@ -376,3 +378,5 @@ void createDefFile(const path &def, const Files &obj_files)
 
     write_file(def, str);
 }
+
+#endif

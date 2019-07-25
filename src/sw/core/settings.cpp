@@ -207,7 +207,8 @@ void TargetSetting::push_back(const TargetSettingValue &v)
 
 void TargetSetting::reset()
 {
-    value.swap(decltype(value){});
+    decltype(value) v;
+    value.swap(v);
 }
 
 TargetSetting::operator bool() const

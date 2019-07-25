@@ -45,7 +45,7 @@ CDriver::~CDriver() {}
 // driver api
 PackageId CDriver::getPackageId() const
 {
-    return d.get_package_id();
+    return String(d.get_package_id());
 }
 
 bool CDriver::canLoad(const Input &) const

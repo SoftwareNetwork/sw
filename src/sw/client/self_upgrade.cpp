@@ -23,6 +23,8 @@
 #include <boost/dll.hpp>
 #include <primitives/pack.h>
 
+#include <thread>
+
 #ifdef _WIN32
 #include <windows.h>
 #endif

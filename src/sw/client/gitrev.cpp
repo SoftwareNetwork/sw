@@ -25,7 +25,7 @@
 
 std::string getBuildTime()
 {
-    auto t = SW_BUILD_TIME_T;
+    time_t t = SW_BUILD_TIME_T;
     std::ostringstream ss2;
     ss2 << std::put_time(localtime(&t), "%d.%m.%Y %H:%M:%S %Z");
     return ss2.str();

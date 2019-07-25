@@ -30,7 +30,6 @@
 #include <sw/support/filesystem.h>
 
 #include <primitives/sw/cl.h>
-#include <primitives/win32helpers.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/uuid/uuid.hpp>

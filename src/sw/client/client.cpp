@@ -43,7 +43,6 @@
 #include <primitives/sw/settings_program_name.h>
 #include <primitives/sw/main.h>
 #include <primitives/thread.h>
-#include <primitives/win32helpers.h>
 
 #include <iostream>
 
@@ -51,6 +50,7 @@
 DECLARE_STATIC_LOGGER(logger, "main");
 
 #ifdef _WIN32
+#include <primitives/win32helpers.h>
 #include <windows.h>
 #include <shellapi.h>
 #include <Objbase.h>

@@ -33,7 +33,6 @@
 #include <primitives/pack.h>
 #include <primitives/symbol.h>
 #include <primitives/templates.h>
-#include <primitives/win32helpers.h>
 #include <primitives/sw/cl.h>
 #include <primitives/sw/settings_program_name.h>
 

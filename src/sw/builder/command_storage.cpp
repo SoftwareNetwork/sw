@@ -199,7 +199,7 @@ void FileDb::save(Files &files, ConcurrentCommandStorage &commands, bool local) 
     // commands
     {
         primitives::BinaryStream b(10'000'000); // reserve amount
-        for (auto &[k, r] : commands)
+        for (const auto &[k, r] : commands)
         {
             write(v, r);
             auto sz = v.size();
