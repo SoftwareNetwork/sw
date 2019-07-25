@@ -206,6 +206,7 @@ void Build::load_packages(const PackageIdSet &pkgsids)
         auto ep = b.build_configs1(pkgs);
         // set our main target
         mb2.getTargetsToBuild()[*ep->tgt] = mb2.getTargets()[*ep->tgt];
+        mb2.overrideBuildState(BuildState::PackagesResolved);
         mb2.loadPackages();
         mb2.prepare();
         mb2.execute();

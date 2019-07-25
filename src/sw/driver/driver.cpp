@@ -141,6 +141,7 @@ path Driver::build_cpp_spec(SwContext &swctx, const path &fn)
     auto ep = b.build_configs1(Files{ fn });
     // set our main target
     mb2.getTargetsToBuild()[*ep->tgt] = mb2.getTargets()[*ep->tgt];
+    mb2.overrideBuildState(BuildState::PackagesResolved);
     mb2.loadPackages();
     mb2.prepare();
     mb2.execute();

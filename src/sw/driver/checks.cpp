@@ -685,6 +685,7 @@ void Check::setupTarget(NativeCompiledTarget &e) const
 
 bool Check::execute(SwBuild &b) const
 {
+    b.overrideBuildState(BuildState::InputsLoaded);
     b.setTargetsToBuild();
     b.resolvePackages();
     b.loadPackages();
