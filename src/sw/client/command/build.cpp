@@ -255,7 +255,7 @@ static void applySettingsFromFile(sw::TargetSettings &s, const path &fn)
     applySettingsFromJson(s, read_file(fn));
 }
 
-static std::vector<sw::TargetSettings> create_settings(const sw::SwCoreContext &swctx)
+std::vector<sw::TargetSettings> create_settings(const sw::SwCoreContext &swctx)
 {
     std::vector<sw::TargetSettings> settings;
     settings.push_back(swctx.getHostSettings());

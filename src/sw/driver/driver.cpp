@@ -172,8 +172,21 @@ void Driver::load_spec_file(SwBuild &b, const path &fn, const std::set<TargetSet
 void Driver::load_dll(SwBuild &b, const path &dll, const std::set<TargetSettings> &settings)
 {
     auto ep = std::make_shared<NativeModuleTargetEntryPoint>(b.getContext().getModuleStorage().get(dll));
+
+    // find difference to set entry points
+    auto old = b.getTargets();
+
+    // load all
     for (auto &s : settings)
-        ep->loadPackages(b, s, {}); // load all
+        ep->loadPackages(b, s, {});
+
+    // don't forget to set EPs for loaded targets
+    for (const auto &[pkg, tgts] : b.getTargets())
+    {
+        if (old.find(pkg) != old.end())
+            continue;
+        b.getContext().getTargetData(pkg).setEntryPoint(ep);
+    }
 }
 
 const StringSet &Driver::getAvailableFrontendNames()

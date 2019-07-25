@@ -84,6 +84,7 @@ void build(Solution &s)
         manager.ExportIfStatic = true;
         manager.CPPVersion = CPPLanguageStandard::CPP17;
         manager.Public += "BOOST_DLL_USE_STD_FS"_def;
+
         manager.Public += support, protos,
             "pub.egorpugin.primitives.date_time-master"_dep,
             "pub.egorpugin.primitives.db.sqlite3-master"_dep,
@@ -92,13 +93,17 @@ void build(Solution &s)
             "pub.egorpugin.primitives.source-master"_dep,
             "pub.egorpugin.primitives.sw.settings-master"_dep,
             "pub.egorpugin.primitives.version-master"_dep,
-            "pub.egorpugin.primitives.win32helpers-master"_dep,
             "pub.egorpugin.primitives.yaml-master"_dep,
             "org.sw.demo.nlohmann.json-3"_dep,
             "org.sw.demo.boost.variant"_dep,
             "org.sw.demo.boost.dll"_dep,
             "org.sw.demo.rbock.sqlpp11_connector_sqlite3-develop"_dep
             ;
+
+        manager.Public -= "pub.egorpugin.primitives.win32helpers-master"_dep;
+        if (manager.getSettings().TargetOS.Type == OSType::Windows)
+            manager.Public += "pub.egorpugin.primitives.win32helpers-master"_dep;
+
         manager += "src/sw/manager/.*"_rr;
         manager.Public.Definitions["VERSION_MAJOR"] += std::to_string(manager.getPackage().version.getMajor());
         manager.Public.Definitions["VERSION_MINOR"] += std::to_string(manager.getPackage().version.getMinor());

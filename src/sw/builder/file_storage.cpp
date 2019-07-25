@@ -22,7 +22,7 @@ void FileStorage::clear()
 
 void FileStorage::reset()
 {
-    for (auto &[k, f] : files)
+    for (const auto &[k, f] : files)
         f.reset();
 }
 

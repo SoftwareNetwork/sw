@@ -14,6 +14,7 @@
 #include <sw/manager/source.h>
 
 #include <any>
+#include <variant>
 
 namespace sw
 {
@@ -137,7 +138,7 @@ struct SimpleExpected : std::variant<SimpleExpectedErrorCode, T, Args...>
         : Base(e)
     {}
 
-    operator bool() const { return index() == 1; }
+    operator bool() const { return Base::index() == 1; }
     T &operator*() { return std::get<1>(*this); }
     const T &operator*() const { return std::get<1>(*this); }
     T &operator->() { return std::get<1>(*this); }

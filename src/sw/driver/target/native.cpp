@@ -22,6 +22,7 @@
 #include <primitives/emitter.h>
 #include <primitives/debug.h>
 #include <primitives/sw/cl.h>
+#include <pystring.h>
 
 #include <charconv>
 
@@ -1760,20 +1761,23 @@ NativeCompiledTarget::ActiveDeps &NativeCompiledTarget::getActiveDependencies()
     if (!active_deps)
     {
         ActiveDeps deps;
-        TargetOptionsGroup::iterate([this, &deps](auto &v, auto i)
+        if (!DryRun)
         {
-            for (auto &d : v.getRawDependencies())
+            TargetOptionsGroup::iterate([this, &deps](auto &v, auto i)
             {
-                if (d->isDisabled())
-                    continue;
+                for (auto &d : v.getRawDependencies())
+                {
+                    if (d->isDisabled())
+                        continue;
 
-                TargetDependency td;
-                td.dep = d;
-                td.inhtype = i;
-                td.dep->settings = ts;
-                deps.push_back(td);
-            }
-        });
+                    TargetDependency td;
+                    td.dep = d;
+                    td.inhtype = i;
+                    td.dep->settings = ts;
+                    deps.push_back(td);
+                }
+            });
+        }
         active_deps = deps;
     }
     return *active_deps;
@@ -1821,7 +1825,11 @@ void NativeCompiledTarget::merge1()
 bool NativeCompiledTarget::prepare()
 {
     if (DryRun)
+    {
+        getActiveDependencies();
         return false;
+    }
+
     if (getSolution().skipTarget(Scope))
         return false;
 
@@ -3034,7 +3042,10 @@ void NativeCompiledTarget::setChecks(const String &name, bool check_definitions)
         {
             add(Definition{ d.value() });
         }
-        Variables[k] = v;
+        if (pystring::endswith(k, "_CODE"))
+            Variables[k] = "#define " + k.substr(0, k.size() - 5) + " " + std::to_string(v);
+        else
+            Variables[k] = v;
     }
 }
 

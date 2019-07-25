@@ -177,9 +177,9 @@ void ChecksStorage::add(const Check &c)
     all_checks[h] = c.Value.value();
 }
 
-static String make_function_var(const String &d, const String &prefix = "HAVE_")
+static String make_function_var(const String &d, const String &prefix = "HAVE_", const String &suffix = {})
 {
-    return prefix + boost::algorithm::to_upper_copy(d);
+    return prefix + boost::algorithm::to_upper_copy(d) + suffix;
 }
 
 static String make_include_var(const String &i)
@@ -193,9 +193,9 @@ static String make_include_var(const String &i)
     return v_def;
 }
 
-static String make_type_var(const String &t, const String &prefix = "HAVE_")
+static String make_type_var(const String &t, const String &prefix = "HAVE_", const String &suffix = {})
 {
-    String v_def = make_function_var(t, prefix);
+    String v_def = make_function_var(t, prefix, suffix);
     for (auto &c : v_def)
     {
         if (c == '*')
@@ -272,7 +272,7 @@ int main() { return IsBigEndian(); }
             // this path is used with wait_for_cc_checks
             auto i = cs.all_checks.find(h);
             if (i != cs.all_checks.end())
-                c->Value = i->second;
+                ic->second->Value = i->second;
 
             return std::pair{ false, ic->second };
         }
@@ -485,6 +485,13 @@ int main() { return IsBigEndian(); }
                 std::cout << "Run '" << normalize_path(out) << "' and press and key to continue...\n";
                 getchar();
                 cs.load_manual(fn);
+                for (auto &[h, c] : cs.manual_checks)
+                {
+                    if (cs.all_checks.find(h) == cs.all_checks.end())
+                        continue;
+                    c->requires_manual_setup = false;
+                }
+                cs.manual_checks.clear();
                 return performChecks(ts);
             }
 
@@ -862,6 +869,9 @@ TypeSize::TypeSize(const String &t, const String &def)
 
     Definitions.insert(make_type_var(data));
     Definitions.insert(make_type_var(data, "SIZEOF_"));
+    // some cmake new thing
+    // https://cmake.org/cmake/help/latest/module/CheckTypeSize.html
+    Definitions.insert(make_type_var(data, "SIZEOF_", "_CODE"));
     Definitions.insert(make_type_var(data, "SIZE_OF_"));
     // some libs want these
     Definitions.insert(make_type_var(data, "HAVE_SIZEOF_"));
