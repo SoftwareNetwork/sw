@@ -1199,7 +1199,8 @@ Commands NativeCompiledTarget::getCommands1() const
 {
     if (getSolution().skipTarget(Scope))
         return {};
-
+    if (DryRun)
+        return {};
     if (already_built)
         return {};
 

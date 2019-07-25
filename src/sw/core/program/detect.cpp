@@ -972,9 +972,10 @@ void detectWindowsClang(DETECT_ARGS)
             Version v = getVersion(s, p->file);
             auto &c = addProgram(s, PackageId("org.LLVM.clang", v), p);
         }
+        auto c = p->getCommand();
+        c->push_back("-Wno-everything");
         // is it able to find VC STL itself?
         //COpts2.System.IncludeDirectories.insert(base_llvm_path / "lib" / "clang" / C->getVersion().toString() / "include");
-        //COpts2.System.CompileOptions.push_back("-Wno-everything");
     }
 
     // C++
@@ -992,9 +993,10 @@ void detectWindowsClang(DETECT_ARGS)
             Version v = getVersion(s, p->file);
             auto &c = addProgram(s, PackageId("org.LLVM.clangpp", v), p);
         }
+        auto c = p->getCommand();
+        c->push_back("-Wno-everything");
         // is it able to find VC STL itself?
         //COpts2.System.IncludeDirectories.insert(base_llvm_path / "lib" / "clang" / C->getVersion().toString() / "include");
-        //COpts2.System.CompileOptions.push_back("-Wno-everything");
     }
 }
 

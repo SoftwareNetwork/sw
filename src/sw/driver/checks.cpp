@@ -18,12 +18,14 @@
 #include <sw/support/hash.h>
 
 #include <boost/algorithm/string.hpp>
+#include <primitives/emitter.h>
 #include <primitives/sw/cl.h>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "checks");
 
 static cl::opt<bool> print_checks("print-checks", cl::desc("Save extended checks info to file"));
+static cl::opt<bool> wait_for_cc_checks("wait-for-cc-checks", cl::desc("Do not exit on missing cc checks, wait for user input"));
 
 namespace sw
 {
@@ -111,9 +113,17 @@ void ChecksStorage::load(const path &fn)
         }
     }
 
+    load_manual(fn);
+
+    loaded = true;
+}
+
+void ChecksStorage::load_manual(const path &fn)
+{
 #define MANUAL_CHECKS ".manual.txt"
     auto mf = path(fn) += MANUAL_CHECKS;
-    if (fs::exists(mf))
+    if (!fs::exists(mf))
+        return;
     for (auto &l : read_lines(mf))
     {
         if (l[0] == '#')
@@ -121,15 +131,13 @@ void ChecksStorage::load(const path &fn)
         auto v = split_string(l, " ");
         if (v.size() != 2)
             continue;
-            //throw SW_RUNTIME_ERROR("bad manual checks line: " + l);
+        //throw SW_RUNTIME_ERROR("bad manual checks line: " + l);
         if (v[1] == "?")
             continue;
-            //throw SW_RUNTIME_ERROR("unset manual check: " + l);
+        //throw SW_RUNTIME_ERROR("unset manual check: " + l);
         all_checks[std::stoull(v[0])] = std::stoi(v[1]);
         new_manual_checks_loaded = true;
     }
-
-    loaded = true;
 }
 
 void ChecksStorage::save(const path &fn) const
@@ -259,6 +267,13 @@ int main() { return IsBigEndian(); }
             checks[h] = ic->second;
             ic->second->Definitions.insert(c->Definitions.begin(), c->Definitions.end());
             ic->second->Prefixes.insert(c->Prefixes.begin(), c->Prefixes.end());
+
+            // maybe we already know it?
+            // this path is used with wait_for_cc_checks
+            auto i = cs.all_checks.find(h);
+            if (i != cs.all_checks.end())
+                c->Value = i->second;
+
             return std::pair{ false, ic->second };
         }
         checks[h] = c;
@@ -289,7 +304,12 @@ int main() { return IsBigEndian(); }
                 check_values[p + d];
         }
     }
-    all.clear();
+
+    // remove this?
+    SCOPE_EXIT
+    {
+        this->all.clear();
+    };
 
     // perform
     std::unordered_set<CheckPtr> unchecked;
@@ -372,8 +392,11 @@ int main() { return IsBigEndian(); }
         // separate loop
         if (!cs.manual_checks.empty())
         {
-            fs::remove_all(cc_dir);
-            fs::create_directories(cc_dir);
+            std::error_code ec;
+            fs::remove_all(cc_dir, ec);
+            if (ec)
+                LOG_WARN(logger, "Cannot remove checks dir: " + cc_dir.u8string());
+            fs::create_directories(cc_dir, ec);
 
             for (auto &[h, c] : checks)
             {
@@ -397,10 +420,21 @@ int main() { return IsBigEndian(); }
 
             auto bat = os.getShellType() == ShellType::Batch;
 
-            String s;
+            primitives::Emitter ctx;
             if (!bat)
-                s += "#!/bin/sh\n\n";
-            s += "echo \"\" > " + mfn + "\n\n";
+            {
+                ctx.addLine("#!/bin/sh");
+                ctx.addLine();
+            }
+
+            ctx.addLine("OUTF=\"" + mfn + "\"");
+            ctx.addLine("OUT=\""s + (wait_for_cc_checks ? "../" : "") + "$OUTF\"");
+            ctx.addLine();
+
+            mfn = "$OUT";
+            ctx.addLine("echo \"\" > " + mfn);
+            ctx.addLine();
+
             for (auto &[h, c] : cs.manual_checks)
             {
                 String defs;
@@ -408,28 +442,47 @@ int main() { return IsBigEndian(); }
                     defs += d + " ";
                 defs.resize(defs.size() - 1);
 
-                s += bat ? "::" : "#";
-                s += " " + defs + "\n";
-                s += "echo ";
+                ctx.addLine((bat ? "::"s : "#"s) + " " + defs);
                 //if (!bat)
                 //s += "-n ";
-                s += "\"Checking: " + defs + "... \"\n";
-                s += "echo \"# " + defs + "\" >> " + mfn + "\n";
+
+                auto fn = std::to_string(c->getHash());
+
+                ctx.increaseIndent("if [ ! -f " + fn + " ]; then");
+                ctx.addLine("echo missing file: " + fn);
+                ctx.addLine("exit 1");
+                ctx.decreaseIndent("fi");
+
+                ctx.addLine("echo \"Checking: " + defs + "... \"");
+                ctx.addLine("echo \"# " + defs + "\" >> " + mfn);
+
                 if (!bat)
-                    s += "./";
-                s += std::to_string(c->getHash()) + checker.build.getBuildSettings().TargetOS.getExecutableExtension() + "\n";
-                s += "echo " + std::to_string(c->getHash()) + " ";
+                    ctx.addLine("./");
+                ctx.addText(fn + checker.build.getBuildSettings().TargetOS.getExecutableExtension());
+
+                ctx.addLine("echo " + std::to_string(c->getHash()) + " ");
                 if (!bat)
-                    s += "$? ";
+                    ctx.addText("$? ");
                 else
-                    s += "%errorlevel% ";
-                s += ">> " + mfn + "\n";
+                    ctx.addText("%errorlevel% ");
+                ctx.addText(">> " + mfn);
                 if (!bat)
-                    s += "echo ok\n";
-                s += "echo \"\" >> " + mfn + "\n";
-                s += "\n";
+                    ctx.addLine("echo ok");
+                ctx.addLine("echo \"\" >> " + mfn);
+                ctx.addLine();
+
             }
-            write_file((cc_dir / "run") += os.getShellExtension(), s);
+            path out = (cc_dir / "run") += os.getShellExtension();
+            write_file(out, ctx.getText());
+
+            if (wait_for_cc_checks)
+            {
+                std::cout << "Waiting for completing cc checks.\n";
+                std::cout << "Run '" << normalize_path(out) << "' and press and key to continue...\n";
+                getchar();
+                cs.load_manual(fn);
+                return performChecks(ts);
+            }
 
             throw SW_RUNTIME_ERROR("Some manual checks are missing, please set them in order to continue. "
                 "Manual checks file: " + (path(fn) += MANUAL_CHECKS).u8string() + ". "
@@ -526,23 +579,23 @@ void Check::execute()
         return;
     //Value = 0; // mark as checked
 
+    String log_string = "[" + std::to_string((*current_command)++) + "/" + std::to_string(total_commands->load()) + "] ";
     //LOG_TRACE(logger, "Checking " << data);
 
     // value must be set inside?
     run();
 
     if (Definitions.empty())
-        throw SW_RUNTIME_ERROR("Check " + data + ": definition was not set");
+        throw SW_RUNTIME_ERROR(log_string + "Check " + data + ": definition was not set");
     if (!Value)
     {
         if (requires_manual_setup)
         {
-            LOG_INFO(logger, "Check " << *Definitions.begin() << " requires to be set up manually");
+            LOG_INFO(logger, log_string + "Check " << *Definitions.begin() << " requires to be set up manually");
             return;
         }
-        throw SW_RUNTIME_ERROR("Check " + *Definitions.begin() + ": value was not set");
+        throw SW_RUNTIME_ERROR(log_string + "Check " + *Definitions.begin() + ": value was not set");
     }
-    String log_string = "[" + std::to_string((*current_command)++) + "/" + std::to_string(total_commands->load()) + "] ";
     LOG_DEBUG(logger, log_string + "Checking " << toString(getType()) << " " << *Definitions.begin() << ": " << Value.value());
 }
 

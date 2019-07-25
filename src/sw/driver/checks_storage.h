@@ -21,6 +21,7 @@ struct ChecksStorage
     bool new_manual_checks_loaded = false;
 
     void load(const path &fn);
+    void load_manual(const path &fn);
     void save(const path &fn) const;
 
     void add(const Check &c);
