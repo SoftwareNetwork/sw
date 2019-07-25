@@ -26,6 +26,15 @@ static cl::opt<bool> time_trace("time-trace", cl::desc("Record chrome time trace
 static cl::opt<bool> cl_show_output("show-output");
 static cl::opt<bool> print_graph("print-graph", cl::desc("Print file with build graph"));
 
+#define CHECK_STATE(from, to)                                                                 \
+    if (state != from)                                                                        \
+        throw SW_RUNTIME_ERROR("Unexpected build state = " + std::to_string(toIndex(state)) + \
+                               ", expected = " + std::to_string(toIndex(from)));              \
+    SCOPE_EXIT                                                                                \
+    {                                                                                         \
+        state = to;                                                                           \
+    }
+
 namespace sw
 {
 
@@ -36,40 +45,66 @@ SwBuild::SwBuild(SwContext &swctx)
 
 void SwBuild::load()
 {
+    CHECK_STATE(BuildState::NotStarted, BuildState::InputsLoaded);
+
     load(inputs);
 }
 
 void SwBuild::build()
 {
     // this is all in one call
+    while (step())
+        ;
+}
 
-    // load provided inputs
-    load();
+bool SwBuild::step()
+{
+    switch (state)
+    {
+    case BuildState::NotStarted:
+        // load provided inputs
+        load();
+        return true;
+    case BuildState::InputsLoaded:
+        setTargetsToBuild();
+        return true;
+    case BuildState::TargetsToBuildSet:
+        resolvePackages();
+        return true;
+    case BuildState::PackagesResolved:
+        loadPackages();
+        return true;
+    case BuildState::PackagesLoaded:
+        // prepare targets
+        prepare();
+        return true;
+    case BuildState::Prepared:
+        // create ex. plan and execute it
+        execute();
+        return true;
+    default:
+        break;
+    }
+    return false;
+}
 
-    //
-    setTargetsToBuild();
-
-    //
-    resolvePackages();
-
-    //
-    loadPackages();
-
-    // prepare targets
-    prepare();
-
-    // create ex. plan and execute it
-    execute();
+void SwBuild::overrideBuildState(BuildState s) const
+{
+    state = s;
 }
 
 void SwBuild::execute() const
 {
+    CHECK_STATE(BuildState::Prepared, BuildState::Executed);
+
     auto p = getExecutionPlan();
     execute(p);
 }
 
 void SwBuild::resolvePackages()
 {
+    CHECK_STATE(BuildState::TargetsToBuildSet, BuildState::PackagesResolved);
+
     // gather
     UnresolvedPackages upkgs;
     for (const auto &[pkg, tgts] : getTargets())
@@ -103,6 +138,8 @@ void SwBuild::resolvePackages()
 
 void SwBuild::loadPackages()
 {
+    CHECK_STATE(BuildState::PackagesResolved, BuildState::PackagesLoaded);
+
     loadPackages(swctx.getPredefinedTargets());
 }
 
@@ -166,7 +203,6 @@ void SwBuild::loadPackages(const TargetMap &predefined)
     }
 }
 
-
 bool SwBuild::prepareStep()
 {
     std::atomic_bool next_pass = false;
@@ -191,6 +227,8 @@ bool SwBuild::prepareStep()
 
 void SwBuild::setTargetsToBuild()
 {
+    CHECK_STATE(BuildState::InputsLoaded, BuildState::TargetsToBuildSet);
+
     // mark existing targets as targets to build
     // only in case if not present?
     if (targets_to_build.empty())
@@ -201,6 +239,8 @@ void SwBuild::setTargetsToBuild()
 
 void SwBuild::prepare()
 {
+    CHECK_STATE(BuildState::PackagesLoaded, BuildState::Prepared);
+
     while (prepareStep())
         ;
 }

@@ -19,6 +19,18 @@ struct IDriver;
 struct Input;
 struct SwContext;
 
+enum class BuildState
+{
+    NotStarted,
+
+    InputsLoaded,
+    TargetsToBuildSet,
+    PackagesResolved,
+    PackagesLoaded,
+    Prepared,
+    Executed,
+};
+
 // single build
 struct SwBuild
 {
@@ -50,11 +62,12 @@ struct SwBuild
     bool prepareStep();
     void execute(CommandExecutionPlan &p) const;
     CommandExecutionPlan getExecutionPlan(const Commands &cmds) const;
+    bool step();
+    void overrideBuildState(BuildState) const;
 
     //
     CommandExecutionPlan getExecutionPlan() const;
     String getSpecification() const;
-
     String getHash() const;
 
     TargetMap &getTargets() { return targets; }
@@ -70,6 +83,7 @@ private:
     ProcessedInputs inputs;
     TargetMap targets;
     TargetMap targets_to_build;
+    mutable BuildState state = BuildState::NotStarted;
 
     void load(ProcessedInputs &inputs);
     Commands getCommands() const;
