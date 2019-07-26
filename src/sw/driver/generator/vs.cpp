@@ -1205,6 +1205,12 @@ void ProjectEmitter::printProject(
 
             for (auto &[p, sf] : nt)
             {
+                if (p.extension() == ".natvis")
+                {
+                    parent->visualizers.insert(p);
+                    continue;
+                }
+
                 File ff(p, nt.getFs());
                 //if (sf->skip && !ff.isGenerated())
                     //continue;
@@ -1275,6 +1281,12 @@ void ProjectEmitter::printProject(
         auto bdp = normalize_path(nt.BinaryPrivateDir);
         for (auto &[f, sf] : nt)
         {
+            if (f.extension() == ".natvis")
+            {
+                parent->visualizers.insert(f);
+                continue;
+            }
+
             File ff(f, nt.getFs());
             //if (sf->skip && !ff.isGenerated())
                 //continue;
@@ -1378,12 +1390,12 @@ void SolutionEmitter::printVersion()
 	addLine("MinimumVisualStudioVersion = 10.0.40219.1");
 }
 
-void SolutionEmitter::addDirectory(const String &display_name)
+SolutionEmitter &SolutionEmitter::addDirectory(const String &display_name)
 {
-    addDirectory(display_name, display_name);
+    return addDirectory(display_name, display_name);
 }
 
-void SolutionEmitter::addDirectory(const InsecurePath &n, const String &display_name, const String &solution_dir)
+SolutionEmitter &SolutionEmitter::addDirectory(const InsecurePath &n, const String &display_name, const String &solution_dir)
 {
     auto s = n.toString();
     auto up = boost::uuids::name_generator_sha1(boost::uuids::ns::oid())(s);
@@ -1391,10 +1403,12 @@ void SolutionEmitter::addDirectory(const InsecurePath &n, const String &display_
 
     addLine("Project(\"" + project_type_uuids[VSProjectType::Directory] + "\") = \"" +
         display_name + "\", \"" + display_name + "\", \"{" + uuids[n] + "}\"");
+    auto &e = addEmitter<SolutionEmitter>();
     addLine("EndProject");
 
     if (!solution_dir.empty())
         nested_projects[s] = solution_dir;
+    return e;
 }
 
 SolutionEmitter::Project &SolutionEmitter::addProject(VSProjectType type, const String &n, const String &solution_dir)
@@ -1420,7 +1434,7 @@ void SolutionEmitter::beginProject(VSProjectType type, const String &n, const pa
     beginBlock("Project(\"" + project_type_uuids[type] + "\") = \"" +
         p.ppath.back() + (has_dash ? "-" + p.version.toString() : "") + "\", \"" + (dir / (n + vs_project_ext)).u8string() + "\", \"{" + uuids[n] + "}\"");
 
-    addLine(*projects[n].ctx);
+    projects[n].ctx = &addEmitter<SolutionEmitter>();
 
     if (!solution_dir.empty())
         nested_projects[n] = solution_dir;
@@ -2043,6 +2057,15 @@ void VSGenerator::generate(const Build &b)
 
         pctx.endProject();
         write_file_if_different(dir / projects_dir / (build_dependencies_name + ".vcxproj"), pctx.getText());
+    }
+
+    if (!ctx.visualizers.empty())
+    {
+        auto &nvctx = ctx.addDirectory(visualizers_dir, visualizers_dir, predefined_targets_dir);
+        nvctx.beginProjectSection("SolutionItems", "preProject");
+        for (auto &v : ctx.visualizers)
+            nvctx.addLine(normalize_path_windows(v) + " = " + normalize_path_windows(v));
+        nvctx.endProjectSection();
     }
 
     ctx.materialize(b, projects_dir, type);
