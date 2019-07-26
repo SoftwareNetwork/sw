@@ -776,6 +776,9 @@ void GNULinker::prepareCommand1(const Target &t)
         cmd->name_short = Output().filename().u8string();
     }
 
+    if (PositionIndependentCode)
+        SharedObject = true;
+
     //((GNULibraryTool*)this)->GNULibraryToolOptions::LinkDirectories() = gatherLinkDirectories();
 
     getCommandLineOptions<GNULinkerOptions>(cmd.get(), *this);
