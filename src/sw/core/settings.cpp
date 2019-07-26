@@ -11,6 +11,8 @@
 
 #include <nlohmann/json.hpp>
 
+#pragma optimize( "", off )
+
 namespace sw
 {
 
@@ -170,6 +172,46 @@ void TargetSetting::merge(const TargetSetting &rhs)
     value = rhs.value;
 }
 
+void TargetSetting::mergeFromJson(const nlohmann::json &j)
+{
+    if (j.is_object())
+    {
+        auto v = std::get_if<TargetSettings>(&value);
+        if (!v)
+            throw SW_RUNTIME_ERROR("not an object");
+        v->mergeFromJson(j);
+        return;
+    }
+
+    if (j.is_array())
+    {
+        auto v = std::get_if<std::vector<TargetSettingValue>>(&value);
+        if (!v)
+            throw SW_RUNTIME_ERROR("not an array");
+        v->clear();
+        for (auto &e : j)
+            v->push_back(e);
+        return;
+    }
+
+    if (j.is_string())
+    {
+        auto v = std::get_if<TargetSettingValue>(&value);
+        if (!v && value.index() != 0)
+            throw SW_RUNTIME_ERROR("not a value");
+        operator=(j.get<String>());
+        return;
+    }
+
+    if (j.is_null())
+    {
+        reset();
+        return;
+    }
+
+    throw SW_RUNTIME_ERROR("Bad json value. Only objects, arrays and strings are currently accepted.");
+}
+
 void TargetSetting::push_back(const TargetSettingValue &v)
 {
     if (value.index() == 0)
@@ -198,9 +240,19 @@ String TargetSettings::getHash() const
     return shorten_hash(blake2b_512(getConfig()), 6);
 }
 
-void TargetSettings::mergeFromString(const String &s, int type) const
+void TargetSettings::merge(const String &s, int type)
 {
-    SW_UNIMPLEMENTED;
+    switch (type)
+    {
+    case Json:
+    {
+        auto j = nlohmann::json::parse(s);
+        mergeFromJson(j);
+    }
+        break;
+    default:
+        SW_UNIMPLEMENTED;
+    }
 }
 
 String TargetSettings::toString(int type) const
@@ -282,6 +334,16 @@ void TargetSettings::merge(const TargetSettings &rhs)
 {
     for (auto &[k, v] : rhs)
         (*this)[k].merge(v);
+}
+
+void TargetSettings::mergeFromJson(const nlohmann::json &j)
+{
+    if (!j.is_object())
+        throw SW_RUNTIME_ERROR("Not an object");
+    for (auto it = j.begin(); it != j.end(); ++it)
+    {
+        (*this)[it.key()].mergeFromJson(it.value());
+    }
 }
 
 void TargetSettings::erase(const TargetSettingKey &k)

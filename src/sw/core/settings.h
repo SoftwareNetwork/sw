@@ -51,8 +51,11 @@ struct SW_CORE_API TargetSettings
     void merge(const TargetSettings &);
     void erase(const TargetSettingKey &);
 
+    // other merges
+    void merge(const String &s, int type = Json);
+    void mergeFromJson(const nlohmann::json &);
+
     String getConfig() const; // getShortConfig()?
-    void mergeFromString(const String &s, int type = Json) const;
     String toString(int type = Json) const;
     String getHash() const;
 
@@ -112,15 +115,20 @@ struct SW_CORE_API TargetSetting
     }
 
     bool operator<(const TargetSetting &) const;
+
     explicit operator bool() const;
     //bool hasValue() const;
+
     const String &getValue() const;
     const std::vector<TargetSettingValue> &getArray() const;
     TargetSettings &getSettings();
     const TargetSettings &getSettings() const;
-    void merge(const TargetSetting &);
+
     void push_back(const TargetSettingValue &);
     void reset();
+
+    void merge(const TargetSetting &);
+    void mergeFromJson(const nlohmann::json &);
 
 private:
     TargetSettingKey key;

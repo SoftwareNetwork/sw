@@ -226,8 +226,7 @@ static void applySettings(sw::TargetSettings &s, const String &in_settings)
 
 static void applySettingsFromJson(sw::TargetSettings &s, const String &jsonstr)
 {
-    auto j = nlohmann::json::parse(jsonstr);
-    s.mergeFromString(jsonstr);
+    s.merge(jsonstr);
 }
 
 static void applySettingsFromFile(sw::TargetSettings &s, const path &fn)
