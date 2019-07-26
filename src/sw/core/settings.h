@@ -99,9 +99,6 @@ struct SW_CORE_API TargetSetting
     template <class U>
     bool operator==(const U &u) const
     {
-        /*if (!value.has_value())
-            return false;
-        return *value == u;*/
         auto v = std::get_if<TargetSettingValue>(&value);
         if (!v)
             return false;
@@ -125,14 +122,9 @@ struct SW_CORE_API TargetSetting
     void push_back(const TargetSettingValue &);
     void reset();
 
-    //String toString(int type = TargetSettings::Simple) const;
-
 private:
     TargetSettingKey key;
     std::variant<std::monostate, TargetSettingValue, std::vector<TargetSettingValue>, TargetSettings> value;
-    /*std::optional<TargetSettingValue> value;
-    std::optional<std::vector<TargetSettingValue>> array;
-    std::unique_ptr<TargetSettings> settings;*/
 
     nlohmann::json toJson() const;
 

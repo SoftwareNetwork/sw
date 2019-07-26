@@ -80,26 +80,17 @@ TargetSetting &TargetSetting::operator=(const TargetSetting &rhs)
 {
     key = rhs.key;
     value = rhs.value;
-    /*array = rhs.array;
-    if (rhs.settings)
-        settings = std::make_unique<TargetSettings>(*rhs.settings);*/
     return *this;
 }
 
 TargetSetting &TargetSetting::operator=(const TargetSettings &u)
 {
-    /*if (!settings)
-        settings = std::make_unique<TargetSettings>();
-    *settings = u;*/
     value = u;
     return *this;
 }
 
 TargetSetting &TargetSetting::operator[](const TargetSettingKey &k)
 {
-    /*if (!settings)
-        settings = std::make_unique<TargetSettings>();
-    return (*settings)[k];*/
     if (value.index() == 0)
         value = TargetSettings();
     return std::get<TargetSettings>(value)[k];
@@ -107,12 +98,6 @@ TargetSetting &TargetSetting::operator[](const TargetSettingKey &k)
 
 const TargetSetting &TargetSetting::operator[](const TargetSettingKey &k) const
 {
-    /*if (!settings)
-    {
-        static TargetSetting s("");
-        return s;
-    }
-    return (*settings)[k];*/
     if (value.index() != 3)
     {
         static TargetSetting s("");
@@ -161,20 +146,11 @@ const TargetSettings &TargetSetting::getSettings() const
 
 bool TargetSetting::operator<(const TargetSetting &rhs) const
 {
-    /*if (settings && rhs.settings)
-    return std::tie(value, *settings) < std::tie(rhs.value, *rhs.settings);
-    return std::tie(value, array) < std::tie(rhs.value, rhs.array);*/
     return value < rhs.value;
 }
 
 bool TargetSetting::operator==(const TargetSetting &rhs) const
 {
-    /*if ((!value || !rhs.value) && (!array || !rhs.array))
-        return false;
-    if (value && rhs.value)
-        return value == rhs.value;
-    if (array && rhs.array)
-        return array == rhs.array;*/
     return value == rhs.value;
 }
 
@@ -185,13 +161,6 @@ bool TargetSetting::operator!=(const TargetSetting &rhs) const
 
 void TargetSetting::merge(const TargetSetting &rhs)
 {
-    /*value = rhs.value;
-    array = rhs.array;
-    if (!rhs.settings)
-        return;
-    if (!settings)
-        settings = std::make_unique<TargetSettings>();
-    settings->merge(*rhs.settings);*/
     auto s = std::get_if<TargetSettings>(&value);
     if (s)
     {
@@ -203,9 +172,6 @@ void TargetSetting::merge(const TargetSetting &rhs)
 
 void TargetSetting::push_back(const TargetSettingValue &v)
 {
-    /*if (!array)
-        array.emplace();
-    array->push_back(v);*/
     if (value.index() == 0)
         value = std::vector<TargetSettingValue>();
     return std::get<std::vector<TargetSettingValue>>(value).push_back(v);
@@ -219,7 +185,6 @@ void TargetSetting::reset()
 
 TargetSetting::operator bool() const
 {
-    //return !!value || !!array;// || settings;
     return value.index() != 0;
 }
 
@@ -233,7 +198,7 @@ String TargetSettings::getHash() const
     return shorten_hash(blake2b_512(getConfig()), 6);
 }
 
-void TargetSettings::mergeFromString(const String &s, int type = Json) const
+void TargetSettings::mergeFromString(const String &s, int type) const
 {
     SW_UNIMPLEMENTED;
 }
