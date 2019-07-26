@@ -420,6 +420,7 @@ void NativeCompiledTarget::findCompiler()
             //cmd->push_back("-fuse-ld=lld");
             cmd->push_back("-flavor");
             cmd->push_back("ld"); // for linux, TODO: add checks
+            cmd->push_back("-eh-frame-hdr"); // needed
             cmd->first_response_file_argument = 2;
             //cmd->push_back("-target");
             //cmd->push_back(getSettings().getTargetTriplet());
