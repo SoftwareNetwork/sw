@@ -207,8 +207,16 @@ static std::tuple<FilesOrdered, UnresolvedPackages> getFileDependencies(const Sw
 
 void NativeTargetEntryPoint::loadPackages(SwBuild &swb, const TargetSettings &s, const PackageIdSet &pkgs) const
 {
-    auto mb = new Build(swb);
-    auto &b = *mb;
+    auto nb = new Build(swb);
+    auto &b = *nb;
+
+    // we need to fix some settings before they go to targets
+    auto settings = s;
+
+    b.DryRun = settings["driver"]["dry-run"] == "true";
+    for (auto &[h, d] : settings["driver"]["source-dir-for-source"].getSettings())
+        b.source_dirs_by_source[h] = d.getValue();
+    settings.erase("driver");
 
     ModuleSwappableData module_data1;
     module_data1.NamePrefix = module_data.NamePrefix;
@@ -220,8 +228,8 @@ void NativeTargetEntryPoint::loadPackages(SwBuild &swb, const TargetSettings &s,
         sr1.restoreNow(true);
     SwapAndRestore sr2(b.module_data, &module_data1);
     SwapAndRestore sr3(b.NamePrefix, module_data.NamePrefix);
-    SwapAndRestore sr4(module_data1.current_settings, s);
-    SwapAndRestore sr5(module_data1.bs, BuildSettings(s));
+    SwapAndRestore sr4(module_data1.current_settings, settings);
+    SwapAndRestore sr5(module_data1.bs, BuildSettings(settings));
     loadPackages1(b);
 }
 

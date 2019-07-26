@@ -80,6 +80,7 @@ sw::SourceDirMap fetch(sw::SwBuild &b)
     for (auto &[h, d] : srcs)
         ts["driver"]["source-dir-for-source"][h] = normalize_path(d);
     i.addSettings(ts);
+    b.overrideBuildState(BuildState::NotStarted);
     b.load();
     b.setTargetsToBuild();
     b.resolvePackages();

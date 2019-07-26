@@ -6,8 +6,6 @@
 
 #pragma once
 
-#include "checks_storage.h"
-
 #include <sw/core/driver.h>
 
 #include <boost/bimap.hpp>
@@ -19,6 +17,8 @@ namespace sw
 struct Build;
 struct SwBuild;
 struct SwContext;
+struct PrepareConfigEntryPoint;
+struct TargetSettings;
 
 namespace driver::cpp
 {
@@ -59,7 +59,11 @@ private:
     // load things
     void load_spec_file(SwBuild &, const path &, const std::set<TargetSettings> &);
     path build_cpp_spec(SwContext &, const path &fn);
+    void load_packages(SwContext &, const PackageIdSet &pkgs);
     void load_dll(SwBuild &swctx, const path &dll, const std::set<TargetSettings> &);
+
+    template <class T>
+    std::shared_ptr<PrepareConfigEntryPoint> build_configs1(SwBuild &, const T &objs);
 };
 
 std::optional<path> findConfig(const path &dir, const FilesOrdered &fe_s);

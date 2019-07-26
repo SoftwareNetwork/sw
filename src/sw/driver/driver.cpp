@@ -13,14 +13,15 @@
 #include <sw/core/input.h>
 #include <sw/core/sw_context.h>
 
+#include <primitives/sw/cl.h>
+
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "driver.cpp");
 
+static cl::opt<bool> debug_configs("debug-configs", cl::desc("Build configs in debug mode"));
+
 namespace sw
 {
-
-extern template
-std::shared_ptr<PrepareConfigEntryPoint> Build::build_configs1<Files>(const Files &objs);
 
 namespace driver::cpp
 {
@@ -88,9 +89,6 @@ static String spec;
 
 void Driver::load(SwBuild &b, const std::set<Input> &inputs)
 {
-    auto bb = new Build(b);
-    auto &build = *bb;
-
     PackageIdSet pkgsids;
     for (auto &i : inputs)
     {
@@ -104,18 +102,8 @@ void Driver::load(SwBuild &b, const std::set<Input> &inputs)
         case InputType::DirectorySpecificationFile:
         {
             auto p = *findConfig(i.getPath(), getAvailableFrontendConfigFilenames());
-
-            auto settings = i.getSettings();
-            for (auto s : settings)
-                s.erase("driver");
-
-            build.DryRun = (*i.getSettings().begin())["driver"]["dry-run"] == "true";
-
-            for (auto &[h, d] : (*i.getSettings().begin())["driver"]["source-dir-for-source"].getSettings())
-                build.source_dirs_by_source[h] = d.getValue();
-
             spec = read_file(p);
-            load_spec_file(b, p, settings);
+            load_spec_file(b, p, i.getSettings());
             break;
         }
         default:
@@ -124,7 +112,7 @@ void Driver::load(SwBuild &b, const std::set<Input> &inputs)
     }
 
     if (!pkgsids.empty())
-        build.load_packages(pkgsids);
+        load_packages(b.getContext(), pkgsids);
 }
 
 String Driver::getSpecification() const
@@ -132,13 +120,25 @@ String Driver::getSpecification() const
     return spec;
 }
 
+template <class T>
+std::shared_ptr<PrepareConfigEntryPoint> Driver::build_configs1(SwBuild &b, const T &objs)
+{
+    TargetSettings ts = b.getContext().getHostSettings();
+    ts["native"]["library"] = "static";
+    if (debug_configs)
+        ts["native"]["configuration"] = "debug";
+
+    auto ep = std::make_shared<PrepareConfigEntryPoint>(objs);
+    ep->loadPackages(b, ts, {}); // load all
+
+    return ep;
+}
+
 path Driver::build_cpp_spec(SwContext &swctx, const path &fn)
 {
     // separate build
     auto mb2 = swctx.createBuild();
-    Build b(mb2);
-    b.getChildren() = swctx.getPredefinedTargets();
-    auto ep = b.build_configs1(Files{ fn });
+    auto ep = build_configs1(mb2, Files{ fn });
     // set our main target
     mb2.getTargetsToBuild()[*ep->tgt] = mb2.getTargets()[*ep->tgt];
     mb2.overrideBuildState(BuildState::PackagesResolved);
@@ -146,6 +146,56 @@ path Driver::build_cpp_spec(SwContext &swctx, const path &fn)
     mb2.prepare();
     mb2.execute();
     return ep->r.begin()->second;
+}
+
+void Driver::load_packages(SwContext &swctx, const PackageIdSet &pkgsids)
+{
+    std::unordered_set<LocalPackage> in_pkgs;
+    for (auto &p : pkgsids)
+        in_pkgs.emplace(swctx.getLocalStorage(), p);
+
+    // make pkgs unique
+    std::unordered_map<PackageVersionGroupNumber, LocalPackage> cfgs2;
+    for (auto &p : in_pkgs)
+    {
+        auto &td = swctx.getTargetData();
+        if (td.find(p) == td.end())
+            cfgs2.emplace(p.getData().group_number, p);
+    }
+
+    std::unordered_set<LocalPackage> pkgs;
+    for (auto &[gn, p] : cfgs2)
+        pkgs.insert(p);
+
+    if (pkgs.empty())
+        return;
+
+    path dll;
+    {
+        auto mb2 = swctx.createBuild();
+        auto ep = build_configs1(mb2, pkgs);
+        // set our main target
+        mb2.getTargetsToBuild()[*ep->tgt] = mb2.getTargets()[*ep->tgt];
+        mb2.overrideBuildState(BuildState::PackagesResolved);
+        mb2.loadPackages();
+        mb2.prepare();
+        mb2.execute();
+        dll = ep->out;
+    }
+
+    for (auto &p : in_pkgs)
+    {
+        auto &td = swctx.getTargetData();
+        if (td.find(p) != td.end())
+            continue;
+
+        auto ep = std::make_shared<NativeModuleTargetEntryPoint>(
+            Module(swctx.getModuleStorage().get(dll), gn2suffix(p.getData().group_number)));
+        ep->module_data.NamePrefix = p.ppath.slice(0, p.getData().prefix);
+        ep->module_data.current_gn = p.getData().group_number;
+        ep->module_data.known_targets = pkgsids;
+        swctx.getTargetData(p).setEntryPoint(std::move(ep));
+    }
 }
 
 void Driver::load_spec_file(SwBuild &b, const path &fn, const std::set<TargetSettings> &settings)

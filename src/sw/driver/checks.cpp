@@ -660,7 +660,6 @@ Build Check::setupSolution(SwBuild &b, const path &f) const
     s.BinaryDir = f.parent_path();
     s.NamePrefix.clear();
     s.DryRun = false;
-    s.getChildren() = s.getContext().getPredefinedTargets();
     return s;
 }
 

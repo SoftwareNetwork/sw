@@ -33,7 +33,6 @@
 #include <primitives/pack.h>
 #include <primitives/symbol.h>
 #include <primitives/templates.h>
-#include <primitives/sw/cl.h>
 #include <primitives/sw/settings_program_name.h>
 
 #include <boost/dll.hpp>
@@ -41,8 +40,6 @@
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "build");
-
-static cl::opt<bool> debug_configs("debug-configs", cl::desc("Build configs in debug mode"));
 
 bool gWithTesting;
 path gIdeFastPath;
@@ -146,23 +143,6 @@ PackageVersionGroupNumber Build::getCurrentGroupNumber() const
     return getModuleData().current_gn;
 }
 
-template <class T>
-std::shared_ptr<PrepareConfigEntryPoint> Build::build_configs1(const T &objs)
-{
-    TargetSettings ts = host_settings;
-    ts["native"]["library"] = "static";
-    if (debug_configs)
-        ts["native"]["configuration"] = "debug";
-
-    auto ep = std::make_shared<PrepareConfigEntryPoint>(objs);
-    ep->loadPackages(main_build, ts, {}); // load all
-
-    return ep;
-}
-
-template
-std::shared_ptr<PrepareConfigEntryPoint> Build::build_configs1<Files>(const Files &objs);
-
 // can be used in configs to load subdir configs
 // s.build->loadModule("client/sw.cpp").call<void(Solution &)>("build", s);
 Module Build::loadModule(const path &p) const
@@ -174,58 +154,6 @@ Module Build::loadModule(const path &p) const
         fn2 = SourceDir / fn2;
     // driver->build_cpp_spec(swctx, p);
     //return getContext().getModuleStorage().get(dll);
-}
-
-void Build::load_packages(const PackageIdSet &pkgsids)
-{
-    std::unordered_set<LocalPackage> in_pkgs;
-    for (auto &p : pkgsids)
-        in_pkgs.emplace(getContext().getLocalStorage(), p);
-
-    // make pkgs unique
-    std::unordered_map<PackageVersionGroupNumber, LocalPackage> cfgs2;
-    for (auto &p : in_pkgs)
-    {
-        auto &td = getContext().getTargetData();
-        if (td.find(p) == td.end())
-            cfgs2.emplace(p.getData().group_number, p);
-    }
-
-    std::unordered_set<LocalPackage> pkgs;
-    for (auto &[gn, p] : cfgs2)
-        pkgs.insert(p);
-
-    if (pkgs.empty())
-        return;
-
-    path dll;
-    {
-        auto mb2 = main_build.getContext().createBuild();
-        Build b(mb2); // cache?
-        b.getChildren() = main_build.getContext().getPredefinedTargets();
-        auto ep = b.build_configs1(pkgs);
-        // set our main target
-        mb2.getTargetsToBuild()[*ep->tgt] = mb2.getTargets()[*ep->tgt];
-        mb2.overrideBuildState(BuildState::PackagesResolved);
-        mb2.loadPackages();
-        mb2.prepare();
-        mb2.execute();
-        dll = ep->out;
-    }
-
-    for (auto &p : in_pkgs)
-    {
-        auto &td = getContext().getTargetData();
-        if (td.find(p) != td.end())
-            continue;
-
-        auto ep = std::make_shared<NativeModuleTargetEntryPoint>(
-            Module(getContext().getModuleStorage().get(dll), gn2suffix(p.getData().group_number)));
-        ep->module_data.NamePrefix = p.ppath.slice(0, p.getData().prefix);
-        ep->module_data.current_gn = p.getData().group_number;
-        ep->module_data.known_targets = pkgsids;
-        getContext().getTargetData(p).setEntryPoint(std::move(ep));
-    }
 }
 
 void Build::load_inline_spec(const path &fn)

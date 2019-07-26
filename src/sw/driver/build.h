@@ -98,9 +98,6 @@ public:
     Test addTest(const String &name);
     path getTestDir() const;
 
-    template <class T>
-    std::shared_ptr<PrepareConfigEntryPoint> build_configs1(const T &objs);
-
 private:
     void addTest(Test &cb, const String &name);
 
@@ -113,7 +110,6 @@ public:
     void load_inline_spec(const path &);
     void load_dir(const path &);
 
-    void load_packages(const PackageIdSet &pkgs);
     Module loadModule(const path &fn) const;
 
 private:
