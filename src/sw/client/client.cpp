@@ -509,7 +509,7 @@ void override_package_perform(sw::SwContext &swctx)
     //swctx.prepareStep();
 
     auto gn = swctx.getLocalStorage().getOverriddenPackagesStorage().getPackagesDatabase().getMaxGroupNumber() + 1;
-    for (auto &[pkg, desc] : getPackages(swctx))
+    for (auto &[pkg, desc] : getPackages(b))
     {
         sw::PackagePath prefix = override_package;
         sw::PackageId pkg2{ prefix / pkg.ppath, pkg.version };

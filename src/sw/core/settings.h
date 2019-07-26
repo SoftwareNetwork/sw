@@ -52,6 +52,7 @@ struct SW_CORE_API TargetSettings
     void erase(const TargetSettingKey &);
 
     String getConfig() const; // getShortConfig()?
+    void mergeFromString(const String &s, int type = Json) const;
     String toString(int type = Json) const;
     String getHash() const;
 

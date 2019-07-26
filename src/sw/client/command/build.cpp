@@ -79,25 +79,6 @@ SUBCOMMAND_DECL(build)
     cli_build(*swctx);
 }
 
-static bool hasAnyUserProvidedInformation()
-{
-    return 0
-        || !configuration.empty()
-        || static_build
-        || shared_build
-        || win_mt
-        || win_md
-        || !platform.empty()
-        || !compiler.empty()
-        || !target_os.empty()
-        || !libc.empty()
-        ;
-
-    //|| (static_build && shared_build) // when both; but maybe ignore?
-    //|| (win_mt && win_md) // when both; but maybe ignore?
-
-}
-
 static bool hasUserProvidedInformationStrong()
 {
     return 0
@@ -245,9 +226,8 @@ static void applySettings(sw::TargetSettings &s, const String &in_settings)
 
 static void applySettingsFromJson(sw::TargetSettings &s, const String &jsonstr)
 {
-    SW_UNIMPLEMENTED;
-
-    //s.mergeFromJson(json parse (jsonstr));
+    auto j = nlohmann::json::parse(jsonstr);
+    s.mergeFromString(jsonstr);
 }
 
 static void applySettingsFromFile(sw::TargetSettings &s, const path &fn)
@@ -259,9 +239,6 @@ std::vector<sw::TargetSettings> create_settings(const sw::SwCoreContext &swctx)
 {
     std::vector<sw::TargetSettings> settings;
     settings.push_back(swctx.getHostSettings());
-
-    if (!hasAnyUserProvidedInformation())
-        return settings;
 
     auto times = [&settings](int n)
     {

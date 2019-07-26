@@ -233,6 +233,11 @@ String TargetSettings::getHash() const
     return shorten_hash(blake2b_512(getConfig()), 6);
 }
 
+void TargetSettings::mergeFromString(const String &s, int type = Json) const
+{
+    SW_UNIMPLEMENTED;
+}
+
 String TargetSettings::toString(int type) const
 {
     switch (type)
