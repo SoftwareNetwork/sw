@@ -101,19 +101,9 @@ struct SolutionEmitter : primitives::Emitter
     struct Project
     {
         String name;
-        std::unique_ptr<SolutionEmitter> ctx;
+        SolutionEmitter *ctx = nullptr;
         ProjectEmitter pctx;
         String solution_dir;
-
-        Project()
-        {
-            ctx = std::make_unique<SolutionEmitter>();
-        }
-        ~Project()
-        {
-            if (ctx)
-                ctx->parent_ = nullptr;
-        }
     };
 
     using Base = primitives::Emitter;
@@ -125,13 +115,14 @@ struct SolutionEmitter : primitives::Emitter
     std::unordered_map<String, String> uuids;
     std::map<String, Project> projects;
     const Project *first_project = nullptr;
+    Files visualizers;
 
     SolutionEmitter();
 
     void printVersion();
 
-    void addDirectory(const String &display_name);
-    void addDirectory(const InsecurePath &n, const String &display_name, const String &solution_dir = {});
+    SolutionEmitter &addDirectory(const String &display_name);
+    SolutionEmitter &addDirectory(const InsecurePath &n, const String &display_name, const String &solution_dir = {});
 
     Project &addProject(VSProjectType type, const String &n, const String &solution_dir);
     void beginProject(VSProjectType type, const String &n, const path &dir, const String &solution_dir);

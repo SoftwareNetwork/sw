@@ -654,7 +654,7 @@ void ShellGenerator::generate(const SwBuild &b)
 
     auto ep = b.getExecutionPlan();
 
-    primitives::Emitter ctx, ctx_progs;
+    primitives::Emitter ctx;
 
     if (batch)
     {
@@ -667,7 +667,7 @@ void ShellGenerator::generate(const SwBuild &b)
     }
     ctx.addLine();
 
-    ctx.addEmitter(ctx_progs);
+    auto &ctx_progs = ctx.addEmitter();
 
     ProgramShortCutter sc;
 
