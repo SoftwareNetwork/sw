@@ -314,7 +314,7 @@ public:
     Commands getCommands() const;
     UnresolvedDependenciesType gatherUnresolvedDependencies() const;
     DependencyPtr getDependency() const; // returns current target as dependency
-    void registerCommand(builder::Command &cmd) const;
+    void registerCommand(builder::Command &cmd);
 
     String getConfig() const; // make api?
 
@@ -476,11 +476,6 @@ private:
 
 public:
     SW_TARGET_USING_ASSIGN_OPS(TargetOptions);
-
-    void inheritance(const TargetOptionsGroup &g, const GroupSettings &s = GroupSettings())
-    {
-        InheritanceGroup<TargetOptions>::inheritance(g, s);
-    }
 
     // self merge
     void merge(const GroupSettings &s = GroupSettings())

@@ -303,6 +303,7 @@ void TargetBase::setupTarget(TargetBaseType *t) const
 
     t->IsConfig = IsConfig; // TODO: inherit from reconsider
     t->DryRun = DryRun; // TODO: inherit from reconsider
+    t->current_project = current_project; // ok, take from here
 
     // inherit from solution
     //t->ParallelSourceDownload = getSolution().ParallelSourceDownload;
@@ -566,9 +567,10 @@ Commands Target::getCommands() const
     return cmds;
 }
 
-void Target::registerCommand(builder::Command &c) const
+void Target::registerCommand(builder::Command &c)
 {
     c.command_storage = getCommandStorageType();
+    Storage.push_back(c);
 }
 
 void Target::removeFile(const path &fn, bool binary_dir)

@@ -178,7 +178,10 @@ void TargetSetting::mergeFromJson(const nlohmann::json &j)
     {
         auto v = std::get_if<TargetSettings>(&value);
         if (!v)
-            throw SW_RUNTIME_ERROR("not an object");
+        {
+            operator=(TargetSettings());
+            v = std::get_if<TargetSettings>(&value);
+        }
         v->mergeFromJson(j);
         return;
     }
@@ -187,7 +190,10 @@ void TargetSetting::mergeFromJson(const nlohmann::json &j)
     {
         auto v = std::get_if<std::vector<TargetSettingValue>>(&value);
         if (!v)
-            throw SW_RUNTIME_ERROR("not an array");
+        {
+            operator=(std::vector<TargetSettingValue>());
+            v = std::get_if<std::vector<TargetSettingValue>>(&value);
+        }
         v->clear();
         for (auto &e : j)
             v->push_back(e);
@@ -196,9 +202,6 @@ void TargetSetting::mergeFromJson(const nlohmann::json &j)
 
     if (j.is_string())
     {
-        auto v = std::get_if<TargetSettingValue>(&value);
-        if (!v && value.index() != 0)
-            throw SW_RUNTIME_ERROR("not a value");
         operator=(j.get<String>());
         return;
     }
@@ -210,6 +213,21 @@ void TargetSetting::mergeFromJson(const nlohmann::json &j)
     }
 
     throw SW_RUNTIME_ERROR("Bad json value. Only objects, arrays and strings are currently accepted.");
+}
+
+bool TargetSetting::isValue() const
+{
+    return std::get_if<TargetSettingValue>(&value);
+}
+
+bool TargetSetting::isArray() const
+{
+    return std::get_if<std::vector<TargetSettingValue>>(&value);
+}
+
+bool TargetSetting::isObject() const
+{
+    return std::get_if<TargetSettings>(&value);
 }
 
 void TargetSetting::push_back(const TargetSettingValue &v)

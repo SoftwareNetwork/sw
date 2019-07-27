@@ -223,10 +223,13 @@ private:
     FilesOrdered gatherLinkDirectories() const;
     FilesOrdered gatherLinkLibraries() const;
     void merge1();
-    void findCompiler();
     void processCircular(Files &objs);
-
     path getPatchDir(bool binary_dir) const;
+
+    bool libstdcppset = false;
+    void findCompiler();
+    void activateCompiler(const TargetSetting &s, const StringSet &exts);
+    void activateCompiler(const TargetSetting &s, const UnresolvedPackage &id, const StringSet &exts, bool extended_desc);
 };
 
 /**

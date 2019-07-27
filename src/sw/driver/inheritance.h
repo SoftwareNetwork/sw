@@ -215,28 +215,6 @@ public:
         throw SW_RUNTIME_ERROR("unreachable code");
     }
 
-    template <class U>
-    void inheritance(const InheritanceGroup<U> &g, const GroupSettings &s = GroupSettings())
-    {
-        // Private
-        if (s.has_same_parent)
-            Private.merge(g.Protected);
-        Private.merge(g.Public);
-        Private.merge(g.Interface);
-
-        // Protected
-        if (s.has_same_parent)
-            Protected.merge(g.Protected);
-        Protected.merge(g.Public);
-        Protected.merge(g.Interface);
-
-        // Public
-        if (s.has_same_parent)
-            Protected.merge(g.Protected);
-        Public.merge(g.Public);
-        Public.merge(g.Interface);
-    }
-
     template <class F>
     void iterate(F &&f) const
     {
@@ -251,7 +229,8 @@ public:
     // merge to T, always w/o interface
     void merge(const GroupSettings &s = GroupSettings())
     {
-        T::merge(Protected, s);
+        if (s.has_same_parent)
+            T::merge(Protected, s);
         T::merge(Public, s);
     }
 
@@ -259,7 +238,8 @@ public:
     template <class U>
     void merge(const InheritanceGroup<U> &g, const GroupSettings &s = GroupSettings())
     {
-        T::merge(g.Protected, s);
+        if (s.has_same_parent)
+            T::merge(g.Protected, s);
         T::merge(g.Public, s);
         T::merge(g.Interface, s);
     }

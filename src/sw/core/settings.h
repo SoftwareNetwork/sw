@@ -130,6 +130,10 @@ struct SW_CORE_API TargetSetting
     void merge(const TargetSetting &);
     void mergeFromJson(const nlohmann::json &);
 
+    bool isValue() const;
+    bool isArray() const;
+    bool isObject() const;
+
 private:
     TargetSettingKey key;
     std::variant<std::monostate, TargetSettingValue, std::vector<TargetSettingValue>, TargetSettings> value;

@@ -178,171 +178,160 @@ void NativeCompiledTarget::setOutputDir(const path &dir)
     setOutputFile();
 }
 
-void NativeCompiledTarget::findCompiler()
+void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const StringSet &exts)
 {
-    bool libstdcppset = false;
+    bool extended_desc = s.isObject();
 
-    struct CompilerDesc
+    UnresolvedPackage id;
+    if (extended_desc)
+        id = s["command"]["program"].getValue();
+    else
+        id = s.getValue();
+
+    activateCompiler(s, id, exts, extended_desc);
+}
+
+void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const UnresolvedPackage &id, const StringSet &exts, bool extended_desc)
+{
+    auto &cld = getSolution().getChildren();
+
+    auto i = cld.find(id, getTargetSettings());
+    if (!i)
     {
-        UnresolvedPackage id;
-        StringSet exts;
+        for (auto &e : exts)
+            setExtensionProgram(e, id);
+        return;
+    }
+    auto t = i->as<PredefinedProgram *>();
+    if (!t)
+        throw SW_RUNTIME_ERROR("Target without PredefinedProgram: " + i->getPackage().toString());
+
+    auto set_compiler_type = [this, &id, &exts](const auto &c)
+    {
+        for (auto &e : exts)
+            setExtensionProgram(e, c->clone());
+
+        if (0);
+        else if (id.ppath == "com.Microsoft.VisualStudio.VC.cl")
+            ct = CompilerType::MSVC;
+        else if (id.ppath == "org.gnu.gcc" || id.ppath == "org.gnu.gpp")
+            ct = CompilerType::GNU;
+        else if (id.ppath == "org.LLVM.clang" || id.ppath == "org.LLVM.clangpp")
+            ct = CompilerType::Clang;
+        else if (id.ppath == "org.LLVM.clangcl")
+            ct = CompilerType::ClangCl;
     };
 
-    using CompilerVector = std::vector<CompilerDesc>;
-
-    auto activate_one = [this, &libstdcppset](const CompilerDesc &v)
+    auto c = std::dynamic_pointer_cast<CompilerBaseProgram>(t->getProgram().clone());
+    if (c)
     {
-        auto &cld = getSolution().getChildren();
-
-        auto i = cld.find(v.id, getTargetSettings());
-        if (!i)
-        {
-            for (auto &e : v.exts)
-                setExtensionProgram(e, v.id);
-            return true;
-        }
-        if (auto t = i->as<PredefinedProgram*>())
-        {
-            auto c = std::dynamic_pointer_cast<CompilerBaseProgram>(t->getProgram().clone());
-            if (!c)
-            {
-                bool created = false;
-                auto create_command = [this, &created, &t, &c, &libstdcppset]()
-                {
-                    if (created)
-                        return;
-                    (Program&)*c = t->getProgram();
-                    (primitives::Command&)*c->createCommand(getSolution().getContext()) = *t->getProgram().getCommand();
-                    created = true;
-                };
-
-                if (v.id.ppath == "com.Microsoft.VisualStudio.VC.cl")
-                {
-                    c = std::make_shared<VisualStudioCompiler>(getSolution().getContext());
-                    if (ts["native"]["stdlib"]["cpp"].getValue() == "com.Microsoft.VisualStudio.VC.libcpp")
-                    {
-                        // take same ver as cl
-                        UnresolvedPackage up(ts["native"]["stdlib"]["cpp"].getValue());
-                        up.range = v.id.range;
-                        *this += up;
-                        libstdcppset = true;
-                    }
-                }
-                else if (v.id.ppath == "com.Microsoft.VisualStudio.VC.ml")
-                    c = std::make_shared<VisualStudioASMCompiler>(getSolution().getContext());
-                else if (v.id.ppath == "com.Microsoft.Windows.rc")
-                    c = std::make_shared<RcTool>(getSolution().getContext());
-                else if (v.id.ppath == "org.gnu.gcc.as")
-                    c = std::make_shared<GNUASMCompiler>(getSolution().getContext());
-                else if (v.id.ppath == "org.gnu.gcc" || v.id.ppath == "org.gnu.gpp")
-                    c = std::make_shared<GNUCompiler>(getSolution().getContext());
-                else if (v.id.ppath == "org.LLVM.clang" || v.id.ppath == "org.LLVM.clangpp")
-                {
-                    auto C = std::make_shared<ClangCompiler>(getSolution().getContext());
-                    c = C;
-                    create_command();
-                    C->Target = getSettings().getTargetTriplet();
-                }
-                else if (v.id.ppath == "org.LLVM.clangcl")
-                {
-                    auto C = std::make_shared<ClangClCompiler>(getSolution().getContext());
-                    c = C;
-                    create_command();
-
-                    switch (getSettings().TargetOS.Arch)
-                    {
-                    case ArchType::x86_64:
-                        C->CommandLineOptions<ClangClOptions>::Arch = clang::ArchType::m64;
-                        break;
-                    case ArchType::x86:
-                        C->CommandLineOptions<ClangClOptions>::Arch = clang::ArchType::m32;
-                        break;
-                    case ArchType::arm:
-                    {
-                        SW_UNIMPLEMENTED;
-                        // not working atm
-                        auto c = C->createCommand(getSolution().getContext());
-                        c->push_back("-target=arm-pc-windows-msvc");
-                    }
-                        break;
-                    case ArchType::aarch64:
-                    {
-                        SW_UNIMPLEMENTED;
-                        // not working atm
-                        auto c = C->createCommand(getSolution().getContext());
-                        c->push_back("-target=aarch64-pc-windows-msvc");
-                    }
-                        break;
-                    default:
-                        throw SW_RUNTIME_ERROR("Unknown arch");
-                    }
-                }
-                else
-                    throw SW_RUNTIME_ERROR("Unknown compiler: " + v.id.toString());
-                create_command();
-            }
-            for (auto &e : v.exts)
-                setExtensionProgram(e, c->clone());
-        }
-        else
-        {
-            throw SW_RUNTIME_ERROR("Target without PredefinedProgram: " + i->getPackage().toString());
-        }
-        return true;
-    };
-
-    auto activate_all = [this, &activate_one](const CompilerVector &a)
-    {
-        return std::all_of(a.begin(), a.end(), [this, &activate_one](const auto &v)
-        {
-            auto r = activate_one(v);
-            if (r)
-            {
-                if (0);
-                else if (v.id.ppath == "com.Microsoft.VisualStudio.VC.cl")
-                    ct = CompilerType::MSVC;
-                else if (v.id.ppath == "org.gnu.gcc" || v.id.ppath == "org.gnu.gpp")
-                    ct = CompilerType::GNU;
-                else if (v.id.ppath == "org.LLVM.clang" || v.id.ppath == "org.LLVM.clangpp")
-                    ct = CompilerType::Clang;
-                else if (v.id.ppath == "org.LLVM.clangcl")
-                    ct = CompilerType::ClangCl;
-                else
-                    throw SW_RUNTIME_ERROR("Unknown compiler: " + v.id.toString());
-            }
-            return r;
-        });
-    };
-
-    const CompilerVector c_cpp =
-    {
-        {{ts["native"]["program"]["cpp"].getValue()}, getCppSourceFileExtensions()},
-        {{ts["native"]["program"]["c"].getValue()}, { ".c" }},
-    };
-
-    if (!activate_all(c_cpp))
-        throw SW_RUNTIME_ERROR("Missing native toolchain");
-
-    // .asm
-    if (ts["native"]["program"]["asm"])
-    {
-        const CompilerDesc as
-        {
-            ts["native"]["program"]["asm"].getValue(), { ".asm" },
-        };
-        if (!activate_one(as))
-            throw SW_RUNTIME_ERROR("Assembler was not found");
+        set_compiler_type(c);
+        return;
     }
 
-    // .rc
+    bool created = false;
+    auto create_command = [this, &created, &t, &c, &s, extended_desc]()
+    {
+        if (created)
+            return;
+        (Program&)*c = t->getProgram();
+        auto C = c->createCommand(getSolution().getContext());
+        (primitives::Command&)*C = *t->getProgram().getCommand();
+        created = true;
+
+        if (extended_desc && s["command"])
+        {
+            if (s["command"]["arguments"])
+            {
+                for (auto &a : s["command"]["arguments"].getArray())
+                    C->push_back(a);
+            }
+        }
+    };
+
+    if (id.ppath == "com.Microsoft.VisualStudio.VC.cl")
+    {
+        c = std::make_shared<VisualStudioCompiler>(getSolution().getContext());
+        if (ts["native"]["stdlib"]["cpp"].getValue() == "com.Microsoft.VisualStudio.VC.libcpp")
+        {
+            // take same ver as cl
+            UnresolvedPackage up(ts["native"]["stdlib"]["cpp"].getValue());
+            up.range = id.range;
+            *this += up;
+            libstdcppset = true;
+        }
+    }
+    else if (id.ppath == "com.Microsoft.VisualStudio.VC.ml")
+        c = std::make_shared<VisualStudioASMCompiler>(getSolution().getContext());
+    else if (id.ppath == "com.Microsoft.Windows.rc")
+        c = std::make_shared<RcTool>(getSolution().getContext());
+    else if (id.ppath == "org.gnu.gcc.as")
+        c = std::make_shared<GNUASMCompiler>(getSolution().getContext());
+    else if (id.ppath == "org.gnu.gcc" || id.ppath == "org.gnu.gpp")
+        c = std::make_shared<GNUCompiler>(getSolution().getContext());
+    else if (id.ppath == "org.LLVM.clang" || id.ppath == "org.LLVM.clangpp")
+    {
+        auto C = std::make_shared<ClangCompiler>(getSolution().getContext());
+        c = C;
+        create_command();
+        C->Target = getSettings().getTargetTriplet();
+    }
+    else if (id.ppath == "org.LLVM.clangcl")
+    {
+        auto C = std::make_shared<ClangClCompiler>(getSolution().getContext());
+        c = C;
+        create_command();
+
+        switch (getSettings().TargetOS.Arch)
+        {
+        case ArchType::x86_64:
+            C->CommandLineOptions<ClangClOptions>::Arch = clang::ArchType::m64;
+            break;
+        case ArchType::x86:
+            C->CommandLineOptions<ClangClOptions>::Arch = clang::ArchType::m32;
+            break;
+        case ArchType::arm:
+        {
+            SW_UNIMPLEMENTED;
+            // not working atm
+            auto c = C->createCommand(getSolution().getContext());
+            c->push_back("-target=arm-pc-windows-msvc");
+        }
+        break;
+        case ArchType::aarch64:
+        {
+            SW_UNIMPLEMENTED;
+            // not working atm
+            auto c = C->createCommand(getSolution().getContext());
+            c->push_back("-target=aarch64-pc-windows-msvc");
+        }
+        break;
+        default:
+            throw SW_RUNTIME_ERROR("Unknown arch");
+        }
+    }
+    else
+        throw SW_RUNTIME_ERROR("Unknown compiler: " + id.toString());
+
+    create_command();
+
+    set_compiler_type(c);
+}
+
+void NativeCompiledTarget::findCompiler()
+{
+    activateCompiler(ts["native"]["program"]["cpp"], getCppSourceFileExtensions());
+    activateCompiler(ts["native"]["program"]["c"], { ".c" });
+
+    if (ct == CompilerType::UnspecifiedCompiler)
+        throw SW_RUNTIME_ERROR("Unknown compiler: " + ts.toString());
+
+    activateCompiler(ts["native"]["program"]["asm"], { ".asm" });
+
     if (getSettings().TargetOS.is(OSType::Windows))
     {
-        static const CompilerDesc rc
-        {
-            "com.Microsoft.Windows.rc"s, { ".rc" },
-        };
-        if (!activate_one(rc))
-            throw SW_RUNTIME_ERROR("Resource compiler was not found in Windows SDK");
+        // actually a missing setting
+        activateCompiler(ts["native"]["program"]["rc"], "com.Microsoft.Windows.rc"s, { ".rc" }, false);
     }
 
     if (getSettings().TargetOS.Type != OSType::Macos)
@@ -1827,6 +1816,7 @@ void NativeCompiledTarget::merge1()
         auto t = d->getTarget().as<const NativeCompiledTarget*>();
         if (t)
         {
+            s.has_same_parent = hasSameProject(*t);
             merge(*t, s);
             continue;
         }
