@@ -76,8 +76,6 @@ Build::Build(SwBuild &mb)
     : main_build(mb)
     , checker(*this)
 {
-    host_settings = getContext().getHostSettings();
-
     // canonical makes disk letter uppercase on windows
     setSourceDirectory(getContext().source_dir);
     BinaryDir = SourceDir / SW_BINARY_DIR;
@@ -88,7 +86,6 @@ Build::Build(const Build &rhs)
     , main_build(rhs.main_build)
     , command_storage(rhs.command_storage)
     , checker(*this)
-    , host_settings(rhs.host_settings)
 {
 }
 
@@ -135,7 +132,7 @@ const BuildSettings &Build::getBuildSettings() const
 
 const TargetSettings &Build::getHostSettings() const
 {
-    return host_settings;
+    return getSettings()["host"].getSettings();
 }
 
 PackageVersionGroupNumber Build::getCurrentGroupNumber() const

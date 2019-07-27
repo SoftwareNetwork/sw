@@ -27,17 +27,19 @@ struct SW_CORE_API SwCoreContext : SwBuilderContext
 
     TargetMap &getPredefinedTargets() { return predefined_targets; }
     const TargetMap &getPredefinedTargets() const { return predefined_targets; }
-    const TargetSettings &getHostSettings() const;
 
     const std::unordered_map<PackageId, TargetData> &getTargetData() const { return target_data; }
     TargetData &getTargetData(const PackageId &);
     const TargetData &getTargetData(const PackageId &) const;
 
+    const TargetSettings &getHostSettings() const { return host_settings; }
+
 private:
+    // rename to detected?
+    // not only detected, but also predefined? do not rename?
     TargetMap predefined_targets;
-    TargetSettings host_settings;
     std::unordered_map<PackageId, TargetData> target_data;
-    // also target data: entry point + common data
+    TargetSettings host_settings;
 
     void createHostSettings();
     void setHostPrograms();
@@ -53,6 +55,7 @@ struct SW_CORE_API SwContext : SwCoreContext
 
     void registerDriver(std::unique_ptr<IDriver> driver);
     const Drivers &getDrivers() const { return drivers; }
+
     SwBuild createBuild();
 
 private:

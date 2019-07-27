@@ -123,7 +123,7 @@ String Driver::getSpecification() const
 template <class T>
 std::shared_ptr<PrepareConfigEntryPoint> Driver::build_configs1(SwBuild &b, const T &objs)
 {
-    TargetSettings ts = b.getContext().getHostSettings();
+    auto ts = b .getContext().getHostSettings();
     ts["native"]["library"] = "static";
     if (debug_configs)
         ts["native"]["configuration"] = "debug";

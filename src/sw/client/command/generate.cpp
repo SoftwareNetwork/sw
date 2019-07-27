@@ -67,7 +67,7 @@ SUBCOMMAND_DECL2(generate)
     for (auto &a : build_arg)
     {
         auto &i = b.addInput(a);
-        for (auto &s : create_settings(swctx))
+        for (auto &s : createSettings(b))
             i.addSettings(s);
     }
     b.load();

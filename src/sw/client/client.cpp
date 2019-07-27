@@ -499,7 +499,7 @@ void override_package_perform(sw::SwContext &swctx)
 {
     auto b = swctx.createBuild();
     auto &i = b.addInput(fs::current_path());
-    auto ts = swctx.getHostSettings();
+    auto ts = b.getContext().getHostSettings();
     ts["driver"]["dry-run"] = "true";
     i.addSettings(ts);
     b.load();

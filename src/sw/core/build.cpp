@@ -33,7 +33,8 @@ static cl::opt<bool> print_graph("print-graph", cl::desc("Print file with build 
     SCOPE_EXIT                                                                                \
     {                                                                                         \
         state = to;                                                                           \
-    }
+    };                                                                                        \
+    LOG_DEBUG(logger, "build id " << this << " performing " __FUNCTION__)
 
 namespace sw
 {
@@ -41,13 +42,6 @@ namespace sw
 SwBuild::SwBuild(SwContext &swctx)
     : swctx(swctx)
 {
-}
-
-void SwBuild::load()
-{
-    CHECK_STATE(BuildState::NotStarted, BuildState::InputsLoaded);
-
-    load(inputs);
 }
 
 void SwBuild::build()
@@ -91,6 +85,13 @@ bool SwBuild::step()
 void SwBuild::overrideBuildState(BuildState s) const
 {
     state = s;
+}
+
+void SwBuild::load()
+{
+    CHECK_STATE(BuildState::NotStarted, BuildState::InputsLoaded);
+
+    load(inputs);
 }
 
 void SwBuild::execute() const
@@ -150,8 +151,11 @@ void SwBuild::loadPackages(const TargetMap &predefined)
         targets[p];
 
     // load
+    int r = 1;
     while (1)
     {
+        LOG_TRACE(logger, "build id " << this << " " __FUNCTION__ << " round " << r++);
+
         std::map<TargetSettings, std::pair<PackageId, TargetContainer *>> load;
         auto &chld = targets; // take a ref, because it won't be changed in this loop
         for (const auto &[pkg, tgts] : chld)
@@ -186,12 +190,14 @@ void SwBuild::loadPackages(const TargetMap &predefined)
         }
         if (load.empty())
             break;
+        bool loaded = false;
         for (auto &[s, d] : load)
         {
             // empty settings mean we want dependency only to be present
             if (s.empty())
                 continue;
 
+            loaded = true;
             swctx.getTargetData(d.first).loadPackages(*this, s, {}/* { d.first }*/ );
             auto k = d.second->find(s);
             if (k == d.second->end())
@@ -200,6 +206,8 @@ void SwBuild::loadPackages(const TargetMap &predefined)
                 throw SW_RUNTIME_ERROR("cannot load package " + d.first.toString() + " with current settings\n" + s.toString());
             }
         }
+        if (!loaded)
+            break;
     }
 }
 

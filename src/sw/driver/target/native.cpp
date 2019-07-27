@@ -2492,7 +2492,7 @@ bool NativeCompiledTarget::prepare()
     case 6:
         // link libraries
     {
-        if (auto C = findProgramByExtension(".cpp")->as<VisualStudioCompiler*>())
+        /*if (auto C = findProgramByExtension(".cpp")->as<VisualStudioCompiler*>())
         {
             // for some reason link.exe does not add these libs automatically
             switch (C->RuntimeLibrary())
@@ -2510,7 +2510,7 @@ bool NativeCompiledTarget::prepare()
                 *this += "libucrtd.lib"_slib;
                 break;
             }
-        }
+        }*/
 
         // add link libraries from deps
         if (!*HeaderOnly && getSelectedTool() != Librarian.get())

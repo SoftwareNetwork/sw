@@ -58,13 +58,8 @@ struct SW_DRIVER_CPP_API Build : SimpleBuild
 {
     using Base = SimpleBuild;
 
-    using CommandExecutionPlan = ExecutionPlan<builder::Command>;
-
     // most important
     SwBuild &main_build;
-private:
-    TargetSettings host_settings;
-public:
 
     //
     std::vector<TargetBaseTypePtr> dummy_children;

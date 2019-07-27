@@ -95,11 +95,6 @@ void SwCoreContext::setHostPrograms()
         SW_UNIMPLEMENTED;
 }
 
-const TargetSettings &SwCoreContext::getHostSettings() const
-{
-    return host_settings;
-}
-
 TargetData &SwCoreContext::getTargetData(const PackageId &pkg)
 {
     return target_data[pkg];

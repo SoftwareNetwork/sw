@@ -129,8 +129,10 @@ TargetSettings &TargetSetting::getSettings()
     auto s = std::get_if<TargetSettings>(&value);
     if (!s)
     {
-        static TargetSettings ts;
-        return ts;
+        if (value.index() != 0)
+            throw SW_RUNTIME_ERROR("Not settings");
+        *this = TargetSettings();
+        s = std::get_if<TargetSettings>(&value);
     }
     return *s;
 }

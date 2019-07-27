@@ -56,8 +56,9 @@ static cl::list<String> libcpp("libcpp", cl::desc("Set build libcpp"), cl::Comma
 // k= or k="" means empty value
 // k means reseted value
 static cl::list<String> settings("settings", cl::desc("Set settings directly"), cl::ZeroOrMore);
-static cl::list<String> settings_file("settings-file", cl::desc("Read settings from file"), cl::ZeroOrMore);
+static cl::list<path> settings_file("settings-file", cl::desc("Read settings from file"), cl::ZeroOrMore);
 static cl::list<String> settings_json("settings-json", cl::desc("Read settings from json string"), cl::ZeroOrMore);
+static cl::opt<path> host_settings_file("host-settings-file", cl::desc("Read host settings from file"));
 
 // static/shared
 static cl::opt<bool> static_build("static-build", cl::desc("Set static build"));
@@ -234,10 +235,16 @@ static void applySettingsFromFile(sw::TargetSettings &s, const path &fn)
     applySettingsFromJson(s, read_file(fn));
 }
 
-std::vector<sw::TargetSettings> create_settings(const sw::SwCoreContext &swctx)
+std::vector<sw::TargetSettings> createSettings(const sw::SwBuild &b)
 {
+    auto initial_settings = b.getContext().getHostSettings();
+    if (host_settings_file.empty())
+        initial_settings["host"] = b.getContext().getHostSettings();
+    else
+        applySettingsFromFile(initial_settings["host"].getSettings(), host_settings_file);
+
     std::vector<sw::TargetSettings> settings;
-    settings.push_back(swctx.getHostSettings());
+    settings.push_back(initial_settings);
 
     auto times = [&settings](int n)
     {
@@ -397,7 +404,7 @@ SUBCOMMAND_DECL2(build)
     for (auto &a : build_arg)
     {
         auto &i = b.addInput(a);
-        for (auto &s : create_settings(swctx))
+        for (auto &s : createSettings(b))
             i.addSettings(s);
     }
     b.build();
