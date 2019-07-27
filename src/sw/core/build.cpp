@@ -84,6 +84,8 @@ bool SwBuild::step()
 
 void SwBuild::overrideBuildState(BuildState s) const
 {
+    LOG_DEBUG(logger, "build id " << this << " overriding state from " << toIndex(state) << " to " << toIndex(s));
+
     state = s;
 }
 
@@ -549,7 +551,7 @@ Input &SwBuild::addInput(const String &i)
     if (fs::exists(p))
         return addInput(p);
     else
-        return addInput(PackageId(i));
+        return addInput(getContext().resolve(i));
 }
 
 Input &SwBuild::addInput(const path &i)

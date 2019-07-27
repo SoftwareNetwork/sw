@@ -80,15 +80,6 @@ SUBCOMMAND_DECL(build)
     cli_build(*swctx);
 }
 
-static bool hasUserProvidedInformationStrong()
-{
-    return 0
-        || !configuration.empty()
-        || !compiler.empty()
-        || !target_os.empty()
-        ;
-}
-
 static sw::TargetSettings compilerTypeFromStringCaseI(const sw::UnresolvedPackage &compiler)
 {
     sw::TargetSettings ts;

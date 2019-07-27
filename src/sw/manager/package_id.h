@@ -17,16 +17,12 @@ struct SW_MANAGER_API PackageId
     PackagePath ppath;
     Version version;
 
-    //PackageId() = default;
     // try to extract from string
     PackageId(const String &);
     PackageId(const PackagePath &, const Version &);
 
     PackagePath getPath() const { return ppath; }
     Version getVersion() const { return version; }
-
-    //bool canBe(const PackageId &rhs) const;
-    //bool empty() const { return ppath.empty(); }
 
     bool isPublic() const { return ppath.isPublic(); }
     bool isPrivate() const { return ppath.isPrivate(); }
