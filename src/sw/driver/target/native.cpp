@@ -911,34 +911,39 @@ FilesOrdered NativeCompiledTarget::gatherLinkLibraries() const
 {
     FilesOrdered libs;
     const auto dirs = gatherLinkDirectories();
-    for (auto &l : LinkLibraries)
+    auto add = [this, &libs, &dirs](auto &ll)
     {
-        // reconsider
-        // remove resolving?
-
-        if (l.is_absolute())
+        for (auto &l : ll)
         {
-            libs.push_back(l);
-            continue;
-        }
+            // reconsider
+            // remove resolving?
 
-        if (std::none_of(dirs.begin(), dirs.end(), [&l, &libs](auto &d)
-        {
-            if (fs::exists(d / l))
+            if (l.is_absolute())
             {
-                libs.push_back(d / l);
-                return true;
+                libs.push_back(l);
+                continue;
             }
-            return false;
-        }))
-        {
-            //LOG_TRACE(logger, "Cannot resolve library: " << l);
-            throw SW_RUNTIME_ERROR(getPackage().toString() + ": Cannot resolve library: " + normalize_path(l));
-        }
 
-        //if (!getSettings().TargetOS.is(OSType::Windows))
-            //libs.push_back("-l" + l.u8string());
-    }
+            if (std::none_of(dirs.begin(), dirs.end(), [&l, &libs](auto &d)
+            {
+                if (fs::exists(d / l))
+                {
+                    libs.push_back(d / l);
+                    return true;
+                }
+                return false;
+            }))
+            {
+                //LOG_TRACE(logger, "Cannot resolve library: " << l);
+                throw SW_RUNTIME_ERROR(getPackage().toString() + ": Cannot resolve library: " + normalize_path(l));
+            }
+
+            //if (!getSettings().TargetOS.is(OSType::Windows))
+                //libs.push_back("-l" + l.u8string());
+        }
+    };
+    add(LinkLibraries);
+    add(NativeLinkerOptions::System.LinkLibraries);
     return libs;
 }
 
@@ -2492,25 +2497,67 @@ bool NativeCompiledTarget::prepare()
     case 6:
         // link libraries
     {
-        /*if (auto C = findProgramByExtension(".cpp")->as<VisualStudioCompiler*>())
+        auto c = findProgramByExtension(".c")->as<VisualStudioCompiler *>();
+        auto cpp = findProgramByExtension(".cpp")->as<VisualStudioCompiler *>();
+        if (c || cpp)
         {
-            // for some reason link.exe does not add these libs automatically
-            switch (C->RuntimeLibrary())
+            // https://docs.microsoft.com/en-us/cpp/c-runtime-library/crt-library-features?view=vs-2019
+
+            // sometimes link.exe fails to add libs (SDL-2.0.10)
+            // so we take full control here
+
+            // we add 5 libs and its variations for /MD /MDd /MT /MTd flags
+            // (listed in reverse order):
+            // 1. kernel (windows) library - kernel32.lib
+            // 2. libc - ucrt.lib
+            // 3. ms crt - msvcrt.lib
+            // 4. compiler (cl.exe) library - vcruntime.lib
+            // 5. ms std c++ library - msvcprt.lib
+
+            // TODO: push these libs from properties!
+
+            // TODO: libs may have further versions like
+            // libcpmt.lib
+            // libcpmt1.lib
+            //
+            // libcpmtd.lib
+            // libcpmtd0.lib
+            // libcpmtd1.lib
+
+            switch ((c ? c : cpp)->RuntimeLibrary())
             {
             case vs::RuntimeLibraryType::MultiThreadedDLL:
+                *this += "msvcprt.lib"_slib;
+                *this += "vcruntime.lib"_slib;
+                *this += "msvcrt.lib"_slib;
                 *this += "ucrt.lib"_slib;
                 break;
             case vs::RuntimeLibraryType::MultiThreadedDLLDebug:
+                *this += "msvcprtd.lib"_slib;
+                *this += "vcruntimed.lib"_slib;
+                *this += "msvcrtd.lib"_slib;
                 *this += "ucrtd.lib"_slib;
                 break;
             case vs::RuntimeLibraryType::MultiThreaded:
+                *this += "libcpmt.lib"_slib;
+                *this += "libvcruntime.lib"_slib;
+                *this += "libcmt.lib"_slib;
                 *this += "libucrt.lib"_slib;
                 break;
             case vs::RuntimeLibraryType::MultiThreadedDebug:
+                *this += "libcpmtd.lib"_slib;
+                *this += "libvcruntimed.lib"_slib;
+                *this += "libcmtd.lib"_slib;
                 *this += "libucrtd.lib"_slib;
                 break;
             }
-        }*/
+            *this += "kernel32.lib"_slib;
+            if (auto L = getSelectedTool()->as<VisualStudioLinker*>())
+            {
+                auto cmd = L->createCommand(getSolution().getContext());
+                cmd->push_back("-nodefaultlib");
+            }
+        }
 
         // add link libraries from deps
         if (!*HeaderOnly && getSelectedTool() != Librarian.get())
