@@ -2515,7 +2515,8 @@ bool NativeCompiledTarget::prepare()
             // 5. ms std c++ library - msvcprt.lib
             //
             // we also add some other libs needed by msvc
-            // 1. oldnames.lib - for backward compat
+            // 1. oldnames.lib - for backward compat - https://docs.microsoft.com/en-us/cpp/c-runtime-library/backward-compatibility?view=vs-2019
+            // 2. concrt.lib - concurrency crt
 
             // TODO: push these libs from properties!
 
@@ -2527,9 +2528,9 @@ bool NativeCompiledTarget::prepare()
             // libcpmtd0.lib
             // libcpmtd1.lib
 
-            // msvc backward compat
-            // https://docs.microsoft.com/en-us/cpp/c-runtime-library/backward-compatibility?view=vs-2019
+            // other libs
             *this += "oldnames.lib"_slib;
+            *this += "concrt.lib"_slib;
 
             switch ((c ? c : cpp)->RuntimeLibrary())
             {

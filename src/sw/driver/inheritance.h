@@ -226,11 +226,10 @@ public:
         }
     }
 
-    // merge to T, always w/o interface
+    // merge to T, always w/o interface and always merge protected to self!
     void merge(const GroupSettings &s = GroupSettings())
     {
-        if (s.has_same_parent)
-            T::merge(Protected, s);
+        T::merge(Protected, s);
         T::merge(Public, s);
     }
 
