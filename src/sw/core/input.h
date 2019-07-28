@@ -16,8 +16,6 @@ struct SwContext;
 
 enum class InputType : int32_t
 {
-    Unspecified = 0,
-
     /// drivers may use their own methods for better loading packages
     /// rather than when direct spec file provided
     InstalledPackage,
@@ -35,30 +33,50 @@ enum class InputType : int32_t
     Directory,
 };
 
-struct SW_CORE_API Input
+struct SW_CORE_API RawInput
+{
+    InputType getType() const { return type; }
+    path getPath() const;
+    PackageId getPackageId() const;
+
+    bool operator==(const RawInput &rhs) const;
+    bool operator<(const RawInput &rhs) const;
+
+protected:
+    std::variant<path, PackageId> data;
+    InputType type;
+
+    RawInput() = default;
+};
+
+struct SW_CORE_API InputWithSettings : RawInput
+{
+    const std::set<TargetSettings> &getSettings() const;
+    void addSettings(const TargetSettings &s);
+    void clearSettings() { settings.clear(); }
+    String getHash() const;
+
+protected:
+    std::set<TargetSettings> settings;
+
+    InputWithSettings() = default;
+};
+
+struct SW_CORE_API Input : InputWithSettings
 {
     Input(const path &, const SwContext &);
     Input(const PackageId &, const SwContext &);
 
     IDriver &getDriver() const { return *driver; }
 
-    InputType getType() const { return type; }
-    path getPath() const;
-    PackageId getPackageId() const;
-
     bool isChanged() const;
-    const std::set<TargetSettings> &getSettings() const;
-    void addSettings(const TargetSettings &s);
-    void clearSettings() { settings.clear(); }
-    String getHash() const;
-
-    bool operator<(const Input &rhs) const;
+    void addEntryPoint(const TargetEntryPointPtr &);
+    void load(SwBuild &);
+    String getSpecification() const;
 
 private:
-    std::variant<path, PackageId> data;
-    InputType type;
     IDriver *driver = nullptr;
-    std::set<TargetSettings> settings;
+    std::vector<TargetEntryPointPtr> eps;
 
     void init(const path &, const SwContext &);
     void init(const PackageId &, const SwContext &);

@@ -117,11 +117,11 @@ SwContext::~SwContext()
 {
 }
 
-SwBuild SwContext::createBuild()
+std::unique_ptr<SwBuild> SwContext::createBuild()
 {
-    SwBuild b(*this);
-    b.getTargets() = getPredefinedTargets();
-    return b;
+    auto b = std::make_unique<SwBuild>(*this);
+    b->getTargets() = getPredefinedTargets();
+    return std::move(b);
 }
 
 void SwContext::registerDriver(std::unique_ptr<IDriver> driver)
@@ -130,4 +130,3 @@ void SwContext::registerDriver(std::unique_ptr<IDriver> driver)
 }
 
 }
-

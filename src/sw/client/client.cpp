@@ -498,18 +498,18 @@ void setup_log(const std::string &log_level, bool simple)
 void override_package_perform(sw::SwContext &swctx)
 {
     auto b = swctx.createBuild();
-    auto &i = b.addInput(fs::current_path());
-    auto ts = b.getContext().getHostSettings();
+    auto &i = b->addInput(fs::current_path());
+    auto ts = b->getContext().getHostSettings();
     ts["driver"]["dry-run"] = "true";
     i.addSettings(ts);
-    b.load();
+    b->load();
 
     // one prepare step will find sources
     // maybe add explicit enum value
     //swctx.prepareStep();
 
     auto gn = swctx.getLocalStorage().getOverriddenPackagesStorage().getPackagesDatabase().getMaxGroupNumber() + 1;
-    for (auto &[pkg, desc] : getPackages(b))
+    for (auto &[pkg, desc] : getPackages(*b))
     {
         sw::PackagePath prefix = override_package;
         sw::PackageId pkg2{ prefix / pkg.ppath, pkg.version };

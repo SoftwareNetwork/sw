@@ -189,9 +189,11 @@ struct TargetEntryPoint
 {
     virtual ~TargetEntryPoint() = 0;
 
-    // on zero input packages, load all
+    // on zero allowed packages, load all
     virtual void loadPackages(SwBuild &, const TargetSettings &, const PackageIdSet &allowed_packages) const = 0;
 };
+
+using TargetEntryPointPtr = std::shared_ptr<TargetEntryPoint>;
 
 struct TargetData
 {
@@ -201,7 +203,8 @@ struct TargetData
     void loadPackages(SwBuild &, const TargetSettings &, const PackageIdSet &allowed_packages) const;
 
     //
-    void setEntryPoint(const std::shared_ptr<TargetEntryPoint> &);
+    TargetEntryPointPtr getEntryPoint() const;
+    void setEntryPoint(const TargetEntryPointPtr &);
 
     // create if empty
     template <class U>
@@ -222,7 +225,7 @@ struct TargetData
 
 private:
     // shared, because multiple pkgs has same entry point
-    std::shared_ptr<TargetEntryPoint> ep;
+    TargetEntryPointPtr ep;
 
     // regex storage
     // files cache

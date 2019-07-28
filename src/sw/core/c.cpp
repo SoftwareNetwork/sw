@@ -48,12 +48,12 @@ PackageId CDriver::getPackageId() const
     return String(d.get_package_id());
 }
 
-bool CDriver::canLoad(const Input &) const
+bool CDriver::canLoad(const RawInput &) const
 {
     return d.can_load(0);
 }
 
-void CDriver::load(SwBuild &, const std::set<Input> &)
+CDriver::EntryPontsVector CDriver::load(SwContext &, const std::vector<RawInput> &) const
 {
     SW_UNIMPLEMENTED;
     d.load(0);

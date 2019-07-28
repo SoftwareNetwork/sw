@@ -32,13 +32,13 @@ enum class BuildState
 };
 
 // single build
-struct SwBuild
+struct SW_CORE_API SwBuild
 {
     using CommandExecutionPlan = ExecutionPlan<builder::Command>;
 
     SwBuild(SwContext &swctx);
-    //SwBuild(const SwBuild &) = default;
-    //SwBuild &operator=(const SwBuild &) = default;
+    SwBuild(const SwBuild &) = delete;
+    SwBuild &operator=(const SwBuild &) = delete;
 
     SwContext &getContext() { return swctx; }
     const SwContext &getContext() const { return swctx; }
@@ -67,7 +67,6 @@ struct SwBuild
 
     //
     CommandExecutionPlan getExecutionPlan() const;
-    String getSpecification() const;
     String getHash() const;
 
     TargetMap &getTargets() { return targets; }
@@ -77,17 +76,20 @@ struct SwBuild
     const TargetMap &getTargetsToBuild() const { return targets_to_build; }
 
 private:
-    using ProcessedInputs = std::set<Input>;
+    using InputPtr = std::unique_ptr<Input>;
+    using Inputs = std::vector<InputPtr>;
 
     SwContext &swctx;
-    ProcessedInputs inputs;
+    Inputs inputs;
     TargetMap targets;
     TargetMap targets_to_build;
     mutable BuildState state = BuildState::NotStarted;
 
-    void load(ProcessedInputs &inputs);
+    void load(Inputs &inputs);
     Commands getCommands() const;
     void loadPackages(const TargetMap &predefined);
+    template <class I>
+    Input &addInput1(const I &);
 };
 
 } // namespace sw

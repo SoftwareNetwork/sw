@@ -11,27 +11,42 @@
 namespace sw
 {
 
-struct Input;
-struct SwBuild;
+struct RawInput;
+struct SwContext;
+struct TargetEntryPoint;
+using TargetEntryPointPtr = std::shared_ptr<TargetEntryPoint>;
 
 struct SW_CORE_API IDriver
 {
+    using EntryPontsVector1 = std::vector<TargetEntryPointPtr>;
+    using EntryPontsVector = std::vector<EntryPontsVector1>;
+
     virtual ~IDriver() = 0;
 
+    // get driver pkg id
     virtual PackageId getPackageId() const = 0;
     //virtual PackageId getPackage() const = 0; // no
     //virtual PackageId getName() const = 0; // ?
 
-    virtual bool canLoad(const Input &) const = 0;
-    virtual void load(SwBuild &, const std::set<Input> &) = 0;
-    virtual String getSpecification() const = 0;
+    /// test if driver is able to load this input
+    virtual bool canLoad(const RawInput &) const = 0;
 
-    //virtual void execute() = 0;
-    //virtual bool prepareStep() = 0;
+    // load entry points for inputs
+    // inputs are unique and non null
+    // inputs will receive their entry points
+    // result is number of vectors of entry points equal to inputs, in the same order
+    // one input may provide several entry points (yml)
+    // we return shared points because we cannot load them into context because package ids is not known in advance
+    // (in case of loading not installed package)
+    // if entry points were already loaded (like for installed packages), internal vector may be empty
+    virtual EntryPontsVector load(SwContext &, const std::vector<RawInput> &) const = 0;
+
+    // get raw spec
+    // complex return value?
+    // for example set of files
+    virtual String getSpecification(const RawInput &) const = 0;
 
     // get features()?
 };
-
-//struct INativeDriver : IDriver {}; // ?
 
 } // namespace sw

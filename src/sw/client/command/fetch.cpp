@@ -29,7 +29,7 @@ SUBCOMMAND_DECL(fetch)
     cli_fetch(*swctx);
 }
 
-sw::SourceDirMap fetch(sw::SwBuild &b)
+std::pair<sw::SourceDirMap, const sw::Input &> fetch(sw::SwBuild &b)
 {
     using namespace sw;
 
@@ -90,11 +90,11 @@ sw::SourceDirMap fetch(sw::SwBuild &b)
     if (build_after_fetch)
         b.execute();
 
-    return srcs;
+    return { srcs, i };
 }
 
 SUBCOMMAND_DECL2(fetch)
 {
     auto b = swctx.createBuild();
-    fetch(b);
+    fetch(*b);
 }

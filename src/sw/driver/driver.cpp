@@ -62,7 +62,7 @@ PackageId Driver::getPackageId() const
     return "org.sw.sw.driver.cpp-0.3.0"s;
 }
 
-bool Driver::canLoad(const Input &i) const
+bool Driver::canLoad(const RawInput &i) const
 {
     switch (i.getType())
     {
@@ -85,11 +85,10 @@ bool Driver::canLoad(const Input &i) const
     return false;
 }
 
-static String spec;
-
-void Driver::load(SwBuild &b, const std::set<Input> &inputs)
+Driver::EntryPontsVector Driver::load(SwContext &swctx, const std::vector<RawInput> &inputs) const
 {
     PackageIdSet pkgsids;
+    std::unordered_map<path, EntryPontsVector1> p_eps;
     for (auto &i : inputs)
     {
         switch (i.getType())
@@ -102,53 +101,73 @@ void Driver::load(SwBuild &b, const std::set<Input> &inputs)
         case InputType::DirectorySpecificationFile:
         {
             auto p = *findConfig(i.getPath(), getAvailableFrontendConfigFilenames());
-            spec = read_file(p);
-            load_spec_file(b, p, i.getSettings());
+            p_eps[i.getPath()] = load_spec_file(swctx, p);
             break;
         }
         default:
-            SW_UNREACHABLE;
+            SW_UNIMPLEMENTED;
         }
     }
 
+    std::unordered_map<PackageId, EntryPontsVector1> pkg_eps;
     if (!pkgsids.empty())
-        load_packages(b.getContext(), pkgsids);
+        pkg_eps = load_packages(swctx, pkgsids);
+
+    EntryPontsVector eps;
+    for (auto &i : inputs)
+    {
+        if (i.getType() == InputType::InstalledPackage)
+            eps.push_back(pkg_eps[i.getPackageId()]);
+        else
+            eps.push_back(p_eps[i.getPath()]);
+    }
+    return eps;
 }
 
-String Driver::getSpecification() const
+String Driver::getSpecification(const RawInput &i) const
 {
-    return spec;
+    switch (i.getType())
+    {
+    case InputType::InstalledPackage:
+    {
+        SW_UNIMPLEMENTED;
+        break;
+    }
+    case InputType::DirectorySpecificationFile:
+    {
+        auto p = *findConfig(i.getPath(), getAvailableFrontendConfigFilenames());
+        return read_file(p);
+    }
+    default:
+        SW_UNIMPLEMENTED;
+    }
 }
 
 template <class T>
-std::shared_ptr<PrepareConfigEntryPoint> Driver::build_configs1(SwBuild &b, const T &objs)
+std::shared_ptr<PrepareConfigEntryPoint> Driver::build_configs1(SwContext &swctx, const T &objs) const
 {
-    auto ts = b .getContext().getHostSettings();
+    // separate build
+    auto b = swctx.createBuild();
+
+    auto ts = swctx.getHostSettings();
     ts["native"]["library"] = "static";
     if (debug_configs)
         ts["native"]["configuration"] = "debug";
 
     auto ep = std::make_shared<PrepareConfigEntryPoint>(objs);
-    ep->loadPackages(b, ts, {}); // load all
+    ep->loadPackages(*b, ts, {}); // load all
+
+    // execute
+    b->getTargetsToBuild()[*ep->tgt] = b->getTargets()[*ep->tgt]; // set our main target
+    b->overrideBuildState(BuildState::PackagesResolved);
+    b->loadPackages();
+    b->prepare();
+    b->execute();
 
     return ep;
 }
 
-path Driver::build_cpp_spec(SwContext &swctx, const path &fn)
-{
-    // separate build
-    auto mb2 = swctx.createBuild();
-    auto ep = build_configs1(mb2, Files{ fn });
-    // set our main target
-    mb2.getTargetsToBuild()[*ep->tgt] = mb2.getTargets()[*ep->tgt];
-    mb2.overrideBuildState(BuildState::PackagesResolved);
-    mb2.loadPackages();
-    mb2.prepare();
-    mb2.execute();
-    return ep->r.begin()->second;
-}
-
-void Driver::load_packages(SwContext &swctx, const PackageIdSet &pkgsids)
+std::unordered_map<PackageId, Driver::EntryPontsVector1> Driver::load_packages(SwContext &swctx, const PackageIdSet &pkgsids) const
 {
     std::unordered_set<LocalPackage> in_pkgs;
     for (auto &p : pkgsids)
@@ -168,21 +187,10 @@ void Driver::load_packages(SwContext &swctx, const PackageIdSet &pkgsids)
         pkgs.insert(p);
 
     if (pkgs.empty())
-        return;
+        return {};
 
-    path dll;
-    {
-        auto mb2 = swctx.createBuild();
-        auto ep = build_configs1(mb2, pkgs);
-        // set our main target
-        mb2.getTargetsToBuild()[*ep->tgt] = mb2.getTargets()[*ep->tgt];
-        mb2.overrideBuildState(BuildState::PackagesResolved);
-        mb2.loadPackages();
-        mb2.prepare();
-        mb2.execute();
-        dll = ep->out;
-    }
-
+    auto dll = build_configs1(swctx, pkgs)->out;
+    std::unordered_map<PackageId, EntryPontsVector1> eps;
     for (auto &p : in_pkgs)
     {
         auto &td = swctx.getTargetData();
@@ -194,11 +202,13 @@ void Driver::load_packages(SwContext &swctx, const PackageIdSet &pkgsids)
         ep->module_data.NamePrefix = p.ppath.slice(0, p.getData().prefix);
         ep->module_data.current_gn = p.getData().group_number;
         ep->module_data.known_targets = pkgsids;
-        swctx.getTargetData(p).setEntryPoint(std::move(ep));
+        swctx.getTargetData(p).setEntryPoint(ep);
+        eps[p].push_back(ep);
     }
+    return eps;
 }
 
-void Driver::load_spec_file(SwBuild &b, const path &fn, const std::set<TargetSettings> &settings)
+Driver::EntryPontsVector1 Driver::load_spec_file(SwContext &swctx, const path &fn) const
 {
     auto fe = selectFrontendByFilename(fn);
     if (!fe)
@@ -209,34 +219,16 @@ void Driver::load_spec_file(SwBuild &b, const path &fn, const std::set<TargetSet
     {
     case FrontendType::Sw:
     {
-        auto dll = build_cpp_spec(b.getContext(), fn);
-        load_dll(b, dll, settings);
+        auto dll = build_configs1(swctx, Files{ fn })->r.begin()->second;
+        return { std::make_shared<NativeModuleTargetEntryPoint>(swctx.getModuleStorage().get(dll)) };
     }
         break;
     case FrontendType::Cppan:
         SW_UNIMPLEMENTED;
         //cppan_load();
         break;
-    }
-}
-
-void Driver::load_dll(SwBuild &b, const path &dll, const std::set<TargetSettings> &settings)
-{
-    auto ep = std::make_shared<NativeModuleTargetEntryPoint>(b.getContext().getModuleStorage().get(dll));
-
-    // find difference to set entry points
-    auto old = b.getTargets();
-
-    // load all
-    for (auto &s : settings)
-        ep->loadPackages(b, s, {});
-
-    // don't forget to set EPs for loaded targets
-    for (const auto &[pkg, tgts] : b.getTargets())
-    {
-        if (old.find(pkg) != old.end())
-            continue;
-        b.getContext().getTargetData(pkg).setEntryPoint(ep);
+    default:
+        SW_UNIMPLEMENTED;
     }
 }
 

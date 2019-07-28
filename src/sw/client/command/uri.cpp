@@ -144,8 +144,8 @@ SUBCOMMAND_DECL(uri)
             fs::create_directories(d);
             ScopedCurrentPath scp(d, CurrentPathScope::All);
             auto b = swctx->createBuild();
-            b.addInput(p);
-            b.build();
+            b->addInput(p);
+            b->build();
             return;
         }
 

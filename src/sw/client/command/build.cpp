@@ -394,9 +394,9 @@ SUBCOMMAND_DECL2(build)
     auto b = swctx.createBuild();
     for (auto &a : build_arg)
     {
-        auto &i = b.addInput(a);
-        for (auto &s : createSettings(b))
+        auto &i = b->addInput(a);
+        for (auto &s : createSettings(*b))
             i.addSettings(s);
     }
-    b.build();
+    b->build();
 }

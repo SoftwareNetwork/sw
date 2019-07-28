@@ -20,8 +20,8 @@ struct SW_CORE_API CDriver : IDriver
     virtual ~CDriver();
 
     PackageId getPackageId() const override;
-    bool canLoad(const Input &) const override;
-    void load(SwBuild &, const std::set<Input> &) override;
+    bool canLoad(const RawInput &) const override;
+    EntryPontsVector load(SwContext &, const std::vector<RawInput> &) const override;
 
 private:
     sw_driver_t d;

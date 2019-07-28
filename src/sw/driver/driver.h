@@ -30,9 +30,6 @@ enum class FrontendType
     Cppan = 2,
 };
 
-SW_DRIVER_CPP_API
-String toString(FrontendType T);
-
 struct SW_DRIVER_CPP_API Driver : IDriver
 {
     Driver();
@@ -42,9 +39,9 @@ struct SW_DRIVER_CPP_API Driver : IDriver
 
     // driver api
     PackageId getPackageId() const override;
-    bool canLoad(const Input &) const override;
-    void load(SwBuild &, const std::set<Input> &) override;
-    String getSpecification() const override;
+    bool canLoad(const RawInput &) const override;
+    EntryPontsVector load(SwContext &, const std::vector<RawInput> &) const override;
+    String getSpecification(const RawInput &) const override;
 
     // frontends
     using AvailableFrontends = boost::bimap<boost::bimaps::multiset_of<FrontendType>, path>;
@@ -57,16 +54,15 @@ struct SW_DRIVER_CPP_API Driver : IDriver
 
 private:
     // load things
-    void load_spec_file(SwBuild &, const path &, const std::set<TargetSettings> &);
-    path build_cpp_spec(SwContext &, const path &fn);
-    void load_packages(SwContext &, const PackageIdSet &pkgs);
-    void load_dll(SwBuild &swctx, const path &dll, const std::set<TargetSettings> &);
+    EntryPontsVector1 load_spec_file(SwContext &, const path &) const;
+    std::unordered_map<PackageId, EntryPontsVector1> load_packages(SwContext &, const PackageIdSet &pkgs) const;
 
     template <class T>
-    std::shared_ptr<PrepareConfigEntryPoint> build_configs1(SwBuild &, const T &objs);
+    std::shared_ptr<PrepareConfigEntryPoint> build_configs1(SwContext &, const T &objs) const;
 };
 
 std::optional<path> findConfig(const path &dir, const FilesOrdered &fe_s);
+String toString(FrontendType T);
 
 } // namespace driver::cpp
 

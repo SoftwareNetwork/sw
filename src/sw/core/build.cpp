@@ -93,7 +93,41 @@ void SwBuild::load()
 {
     CHECK_STATE(BuildState::NotStarted, BuildState::InputsLoaded);
 
+    // load entry points
     load(inputs);
+
+    // and load packages
+    for (auto &i : inputs)
+        i->load(*this);
+}
+
+void SwBuild::load(Inputs &inputs)
+{
+    std::map<IDriver *, std::vector<Input*>> active_drivers;
+    for (auto &i : inputs)
+        active_drivers[&i->getDriver()].push_back(i.get());
+    for (auto &[d, g] : active_drivers)
+    {
+        std::vector<RawInput> inputs;
+        for (auto &i : g)
+            inputs.push_back(*i);
+        auto eps = d->load(getContext(), inputs);
+        if (eps.size() != inputs.size())
+            throw SW_RUNTIME_ERROR("Incorrect number of returned entry points");
+        for (size_t i = 0; i < eps.size(); i++)
+        {
+            // when loading installed package, eps[i] may be empty
+            // so we take ep from context
+            if (eps[i].empty())
+            {
+                if (inputs[i].getType() != InputType::InstalledPackage)
+                    throw SW_RUNTIME_ERROR("unexpected input type");
+                g[i]->addEntryPoint(swctx.getTargetData(inputs[i].getPackageId()).getEntryPoint());
+            }
+            for (auto &ep : eps[i])
+                g[i]->addEntryPoint(ep);
+        }
+    }
 }
 
 void SwBuild::execute() const
@@ -133,9 +167,9 @@ void SwBuild::resolvePackages()
     auto m = swctx.install(upkgs);
 
     // now we know all drivers
-    ProcessedInputs inputs;
+    Inputs inputs;
     for (auto &[u, p] : m)
-        inputs.emplace(p, swctx);
+        inputs.push_back(std::make_unique<Input>(p, swctx));
     load(inputs);
 }
 
@@ -519,30 +553,12 @@ SwBuild::CommandExecutionPlan SwBuild::getExecutionPlan(const Commands &cmds) co
     throw SW_RUNTIME_ERROR(error);
 }
 
-String SwBuild::getSpecification() const
-{
-    if (inputs.empty())
-        throw SW_RUNTIME_ERROR("Empty inputs");
-    if (inputs.size() > 1)
-        throw SW_RUNTIME_ERROR("More than 1 input");
-    return inputs.begin()->getDriver().getSpecification();
-}
-
 String SwBuild::getHash() const
 {
     String s;
     for (auto &i : inputs)
-        s += i.getHash();
+        s += i->getHash();
     return shorten_hash(blake2b_512(s), 6);
-}
-
-void SwBuild::load(ProcessedInputs &inputs)
-{
-    std::map<IDriver *, ProcessedInputs> active_drivers;
-    for (auto &i : inputs)
-        active_drivers[&i.getDriver()].insert(i);
-    for (auto &[d, g] : active_drivers)
-        d->load(*this, g);
 }
 
 Input &SwBuild::addInput(const String &i)
@@ -556,14 +572,26 @@ Input &SwBuild::addInput(const String &i)
 
 Input &SwBuild::addInput(const path &i)
 {
-    auto p = inputs.emplace(i, swctx);
-    return (Input &)*p.first;
+    return addInput1(i);
 }
 
 Input &SwBuild::addInput(const PackageId &i)
 {
-    auto p = inputs.emplace(i, swctx);
-    return (Input &)*p.first;
+    return addInput1(i);
+}
+
+template <class I>
+Input &SwBuild::addInput1(const I &i)
+{
+    auto input = std::make_unique<Input>(i, swctx);
+    auto it = std::find_if(inputs.begin(), inputs.end(), [&i = *input](const auto &p)
+    {
+        return *p == i;
+    });
+    if (it != inputs.end())
+        return **it;
+    inputs.push_back(std::move(input));
+    return *inputs.back();
 }
 
 }

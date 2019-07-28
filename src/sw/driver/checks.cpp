@@ -764,14 +764,14 @@ private:
 
 #define SETUP_SOLUTION()                                          \
     auto b = check_set->checker.build.getContext().createBuild(); \
-    auto s = setupSolution(b, f);                                 \
+    auto s = setupSolution(*b, f);                                \
     auto ep = std::make_shared<DummyCheckEntryPoint>();           \
     ModuleSwappableData msd;                                      \
     msd.current_settings = getSettings();                         \
     s.setModuleData(msd)
 
 #define EXECUTE_SOLUTION() \
-    if (!execute(b))       \
+    if (!execute(*b))      \
     return
 
 void FunctionExists::run() const

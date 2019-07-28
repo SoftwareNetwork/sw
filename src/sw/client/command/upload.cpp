@@ -115,11 +115,11 @@ sw::PackageDescriptionMap getPackages(const sw::SwBuild &b, const sw::SourceDirM
 SUBCOMMAND_DECL2(upload)
 {
     auto b = swctx.createBuild();
-    auto sources = fetch(b);
+    auto [sources, i] = fetch(*b);
     if (sources.empty())
         throw SW_RUNTIME_ERROR("Empty target sources");
 
-    auto m = getPackages(b, sources);
+    auto m = getPackages(*b, sources);
 
     // dbg purposes
     for (auto &[id, d] : m)
@@ -139,5 +139,5 @@ SUBCOMMAND_DECL2(upload)
     // send signatures (gpg)
     // -k KEY1 -k KEY2
     auto api = current_remote->getApi();
-    api->addVersion(gUploadPrefix, m, b.getSpecification());
+    api->addVersion(gUploadPrefix, m, i.getSpecification());
 }

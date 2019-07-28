@@ -24,6 +24,13 @@ void TargetData::loadPackages(SwBuild &b, const TargetSettings &s, const Package
     ep->loadPackages(b, s, whitelist);
 }
 
+TargetEntryPointPtr TargetData::getEntryPoint() const
+{
+    if (!ep)
+        throw SW_RUNTIME_ERROR("No entry point provided");
+    return ep;
+}
+
 void TargetData::setEntryPoint(const std::shared_ptr<TargetEntryPoint> &e)
 {
     if (ep)

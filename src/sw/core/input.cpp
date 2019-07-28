@@ -17,29 +17,39 @@ DECLARE_STATIC_LOGGER(logger, "input");
 namespace sw
 {
 
-Input::Input(const path &p, const SwContext &swctx)
+path RawInput::getPath() const
 {
-    init(p, swctx);
+    return std::get<path>(data);
 }
 
-Input::Input(const PackageId &p, const SwContext &swctx)
+PackageId RawInput::getPackageId() const
 {
-    init(p, swctx);
+    return std::get<PackageId>(data);
 }
 
-const std::set<TargetSettings> &Input::getSettings() const
+bool RawInput::operator==(const RawInput &rhs) const
+{
+    return data == rhs.data;
+}
+
+bool RawInput::operator<(const RawInput &rhs) const
+{
+    return data < rhs.data;
+}
+
+const std::set<TargetSettings> &InputWithSettings::getSettings() const
 {
     if (settings.empty())
         throw SW_RUNTIME_ERROR("No input settings provided");
     return settings;
 }
 
-void Input::addSettings(const TargetSettings &s)
+void InputWithSettings::addSettings(const TargetSettings &s)
 {
     settings.insert(s);
 }
 
-String Input::getHash() const
+String InputWithSettings::getHash() const
 {
     String s;
     switch (getType())
@@ -54,6 +64,16 @@ String Input::getHash() const
     for (auto &ss : settings)
         s += ss.getHash();
     return s;
+}
+
+Input::Input(const path &p, const SwContext &swctx)
+{
+    init(p, swctx);
+}
+
+Input::Input(const PackageId &p, const SwContext &swctx)
+{
+    init(p, swctx);
 }
 
 void Input::init(const path &in, const SwContext &swctx)
@@ -126,23 +146,9 @@ void Input::init(const PackageId &p, const SwContext &swctx)
     driver = swctx.getDrivers().begin()->second.get();
 }
 
-path Input::getPath() const
-{
-    return std::get<path>(data);
-}
-
-PackageId Input::getPackageId() const
-{
-    return std::get<PackageId>(data);
-}
-
-bool Input::operator<(const Input &rhs) const
-{
-    return data < rhs.data;
-}
-
 bool Input::isChanged() const
 {
+    SW_UNIMPLEMENTED;
     return true;
 
     switch (getType())
@@ -154,5 +160,25 @@ bool Input::isChanged() const
     }
 }
 
+void Input::addEntryPoint(const TargetEntryPointPtr &e)
+{
+    eps.push_back(e);
 }
 
+void Input::load(SwBuild &b)
+{
+    if (eps.empty())
+        throw SW_RUNTIME_ERROR("No entry points set");
+    for (auto &s : settings)
+    {
+        for (auto &ep : eps)
+            ep->loadPackages(b, s, {});
+    }
+}
+
+String Input::getSpecification() const
+{
+    return driver->getSpecification(*this);
+}
+
+}
