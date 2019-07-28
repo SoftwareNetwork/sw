@@ -85,17 +85,13 @@ bool UnresolvedPackage::canBe(const PackageId &id) const
     return ppath == id.ppath && range.hasVersion(id.version);
 }
 
-/*ExtendedPackageData UnresolvedPackage::resolve() const
-{
-    return resolve_dependencies({*this})[*this];
-}*/
-
 PackageId::PackageId(const String &target)
 {
     auto [p, v] = split_package_string(target);
     ppath = p;
-    if (!v.empty())
-        version = v;
+    if (v.empty())
+        throw SW_RUNTIME_ERROR("Empty version when constructing package id '" + target + "', resolve first");
+    version = v;
 }
 
 PackageId::PackageId(const PackagePath &p, const Version &v)
@@ -110,13 +106,6 @@ String PackageId::getVariableName() const
     std::replace(vname.begin(), vname.end(), '.', '_');
     return vname;
 }
-
-/*bool PackageId::canBe(const PackageId &rhs) const
-{
-return ppath == rhs.ppath
-// && version.canBe(rhs.version)
-;
-}*/
 
 String PackageId::toString(const String &delim) const
 {
