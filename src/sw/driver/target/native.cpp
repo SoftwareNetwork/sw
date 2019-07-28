@@ -1,6 +1,5 @@
 #include "native.h"
 
-#include "../suffix.h"
 #include "sw/driver/bazel/bazel.h"
 #include "sw/driver/frontend/cppan/project.h"
 #include "sw/driver/functions.h"
@@ -2409,26 +2408,6 @@ bool NativeCompiledTarget::prepare()
     case 6:
         // link libraries
     {
-        if (auto C = findProgramByExtension(".cpp")->as<VisualStudioCompiler>())
-        {
-            // for some reason link.exe does not add these libs automatically
-            switch (C->RuntimeLibrary())
-            {
-            case vs::RuntimeLibraryType::MultiThreadedDLL:
-                *this += "ucrt.lib"_slib;
-                break;
-            case vs::RuntimeLibraryType::MultiThreadedDLLDebug:
-                *this += "ucrtd.lib"_slib;
-                break;
-            case vs::RuntimeLibraryType::MultiThreaded:
-                *this += "libucrt.lib"_slib;
-                break;
-            case vs::RuntimeLibraryType::MultiThreadedDebug:
-                *this += "libucrtd.lib"_slib;
-                break;
-            }
-        }
-
         auto L = Linker->as<VisualStudioLinker>();
 
         // add link libraries from deps
