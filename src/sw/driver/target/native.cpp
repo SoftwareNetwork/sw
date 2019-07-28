@@ -2506,13 +2506,16 @@ bool NativeCompiledTarget::prepare()
             // sometimes link.exe fails to add libs (SDL-2.0.10)
             // so we take full control here
 
-            // we add 5 libs and its variations for /MD /MDd /MT /MTd flags
+            // we add main 5 libs and its variations for /MD /MDd /MT /MTd flags
             // (listed in reverse order):
             // 1. kernel (windows) library - kernel32.lib
             // 2. libc - ucrt.lib
             // 3. ms crt - msvcrt.lib
             // 4. compiler (cl.exe) library - vcruntime.lib
             // 5. ms std c++ library - msvcprt.lib
+            //
+            // we also add some other libs needed by msvc
+            // 1. oldnames.lib - for backward compat
 
             // TODO: push these libs from properties!
 
@@ -2523,6 +2526,10 @@ bool NativeCompiledTarget::prepare()
             // libcpmtd.lib
             // libcpmtd0.lib
             // libcpmtd1.lib
+
+            // msvc backward compat
+            // https://docs.microsoft.com/en-us/cpp/c-runtime-library/backward-compatibility?view=vs-2019
+            *this += "oldnames.lib"_slib;
 
             switch ((c ? c : cpp)->RuntimeLibrary())
             {
