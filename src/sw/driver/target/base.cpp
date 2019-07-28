@@ -797,6 +797,7 @@ void Target::addDummyDependency(const DependencyPtr &t)
         )
         ;
 
+    // also compare compilers
     use_current_settings &= hs["native"]["program"]["c"] == ts["native"]["program"]["c"];
 
     ds.merge(use_current_settings ? ts : hs);

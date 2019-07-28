@@ -37,4 +37,5 @@
 std::unique_ptr<sw::SwContext> createSwContext();
 std::pair<sw::SourceDirMap, const sw::Input &> fetch(sw::SwBuild &);
 sw::PackageDescriptionMap getPackages(const sw::SwBuild &, const sw::SourceDirMap & = {});
+sw::TargetSettings createSettings(const sw::SwContext &);
 std::vector<sw::TargetSettings> createSettings(const sw::SwBuild &);

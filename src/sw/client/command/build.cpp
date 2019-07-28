@@ -226,12 +226,17 @@ static void applySettingsFromFile(sw::TargetSettings &s, const path &fn)
     applySettingsFromJson(s, read_file(fn));
 }
 
+sw::TargetSettings createSettings(const sw::SwContext &swctx)
+{
+    auto s = swctx.getHostSettings();
+    s["host"] = swctx.getHostSettings();
+    return s;
+}
+
 std::vector<sw::TargetSettings> createSettings(const sw::SwBuild &b)
 {
-    auto initial_settings = b.getContext().getHostSettings();
-    if (host_settings_file.empty())
-        initial_settings["host"] = b.getContext().getHostSettings();
-    else
+    auto initial_settings = createSettings(b.getContext());
+    if (!host_settings_file.empty())
         applySettingsFromFile(initial_settings["host"].getSettings(), host_settings_file);
 
     std::vector<sw::TargetSettings> settings;

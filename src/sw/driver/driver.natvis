@@ -7,6 +7,12 @@
         </DisplayString>
     </Type>
 
+    <Type Name="sw::DependencyData">
+        <DisplayString>
+            {package}
+        </DisplayString>
+    </Type>
+
     <Type Name="sw::Dependency">
         <DisplayString>
             {target->pkg}

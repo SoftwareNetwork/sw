@@ -918,7 +918,7 @@ FilesOrdered NativeCompiledTarget::gatherLinkLibraries() const
             // reconsider
             // remove resolving?
 
-            if (l.is_absolute())
+            //if (l.is_absolute())
             {
                 libs.push_back(l);
                 continue;
@@ -943,7 +943,7 @@ FilesOrdered NativeCompiledTarget::gatherLinkLibraries() const
         }
     };
     add(LinkLibraries);
-    add(NativeLinkerOptions::System.LinkLibraries);
+    //add(NativeLinkerOptions::System.LinkLibraries);
     return libs;
 }
 

@@ -39,7 +39,7 @@ std::pair<sw::SourceDirMap, const sw::Input &> fetch(sw::SwBuild &b)
     opts.existing_dirs_age = std::chrono::hours(1);
 
     auto &i = b.addInput(fs::current_path());
-    auto ts = b.getContext().getHostSettings();
+    auto ts = createSettings(b.getContext());
     ts["driver"]["dry-run"] = "true";
     i.addSettings(ts);
     b.load();
