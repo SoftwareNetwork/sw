@@ -72,6 +72,7 @@ struct SW_CORE_API Input : InputWithSettings
     bool isChanged() const;
     void addEntryPoint(const TargetEntryPointPtr &);
     void load(SwBuild &);
+    bool isLoaded() const;
     String getSpecification() const;
 
 private:

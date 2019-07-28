@@ -105,7 +105,10 @@ void SwBuild::load(Inputs &inputs)
 {
     std::map<IDriver *, std::vector<Input*>> active_drivers;
     for (auto &i : inputs)
-        active_drivers[&i->getDriver()].push_back(i.get());
+    {
+        if (!i->isLoaded())
+            active_drivers[&i->getDriver()].push_back(i.get());
+    }
     for (auto &[d, g] : active_drivers)
     {
         std::vector<RawInput> inputs;

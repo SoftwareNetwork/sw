@@ -165,6 +165,11 @@ void Input::addEntryPoint(const TargetEntryPointPtr &e)
     eps.push_back(e);
 }
 
+bool Input::isLoaded() const
+{
+    return !eps.empty();
+}
+
 void Input::load(SwBuild &b)
 {
     if (eps.empty())
