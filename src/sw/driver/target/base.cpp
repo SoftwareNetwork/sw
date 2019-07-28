@@ -356,7 +356,7 @@ LocalPackage &TargetBase::getPackageMutable()
 const Source &Target::getSource() const
 {
     if (!source)
-        throw SW_LOGIC_ERROR("source is undefined");
+        throw SW_LOGIC_ERROR(getPackage().toString() + ": source is undefined");
     return *source;
 }
 

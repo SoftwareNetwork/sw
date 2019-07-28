@@ -103,22 +103,26 @@ path Module::getLocation() const
 void Module::build(Build &s) const
 {
     build_.s = &s;
+    build_.m = this;
     build_(s);
 }
 
 void Module::configure(Build &s) const
 {
+    configure_.m = this;
     configure_(s);
 }
 
 void Module::check(Build &s, Checker &c) const
 {
     check_.s = &s;
+    check_.m = this;
     check_(c);
 }
 
 int Module::sw_get_module_abi_version() const
 {
+    sw_get_module_abi_version_.m = this;
     return sw_get_module_abi_version_();
 }
 

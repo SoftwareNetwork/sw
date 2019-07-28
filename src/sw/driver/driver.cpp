@@ -220,7 +220,7 @@ Driver::EntryPontsVector1 Driver::load_spec_file(SwContext &swctx, const path &f
     case FrontendType::Sw:
     {
         auto dll = build_configs1(swctx, Files{ fn })->r.begin()->second;
-        return { std::make_shared<NativeModuleTargetEntryPoint>(swctx.getModuleStorage().get(dll)) };
+        return { std::make_shared<NativeModuleTargetEntryPoint>(Module(swctx.getModuleStorage().get(dll))) };
     }
         break;
     case FrontendType::Cppan:
