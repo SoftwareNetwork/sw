@@ -53,8 +53,9 @@ struct SourceDownloadOptions
     bool adjust_root_dir = true;
 };
 
+// returns true if downloaded
 SW_MANAGER_API
-void download(const std::unordered_set<SourcePtr> &sources, SourceDirMap &source_dirs, const SourceDownloadOptions &opts = {});
+bool download(const std::unordered_set<SourcePtr> &sources, SourceDirMap &source_dirs, const SourceDownloadOptions &opts = {});
 
 SW_MANAGER_API
 SourceDirMap download(const std::unordered_set<SourcePtr> &sources, const SourceDownloadOptions &opts = {});

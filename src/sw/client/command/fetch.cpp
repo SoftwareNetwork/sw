@@ -73,7 +73,11 @@ std::pair<sw::SourceDirMap, const sw::Input &> fetch(sw::SwBuild &b)
         sources.emplace(std::move(s));
     }
 
-    download(sources, srcs, opts);
+    if (download(sources, srcs, opts))
+    {
+        // clear patch dir to make changes to files again
+        fs::remove_all(d.parent_path() / "patch");
+    }
 
     i.clearSettings();
     ts["driver"]["dry-run"] = "false";
