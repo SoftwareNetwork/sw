@@ -140,8 +140,9 @@ bool Target::hasSameProject(const ITarget &t) const
     auto t2 = t.as<const Target*>();
     if (!t2)
         return false;
-    return current_project && current_project == t2->current_project;
-    //return getPackage().ppath.hasSameParent(t.getPackage().ppath);
+    return
+        current_project && t2->current_project &&
+        current_project->getPackage() == t2->current_project->getPackage();
 }
 
 PackagePath TargetBase::constructTargetName(const PackagePath &Name) const

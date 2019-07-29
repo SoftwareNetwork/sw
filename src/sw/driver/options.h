@@ -201,7 +201,7 @@ struct SW_DRIVER_CPP_API NativeCompilerOptionsData
 
     PathOptionsType gatherIncludeDirectories() const;
     bool IsIncludeDirectoriesEmpty() const;
-    void merge(const NativeCompilerOptionsData &o, const GroupSettings &s = GroupSettings(), bool merge_to_system = false);
+    void merge(const NativeCompilerOptionsData &o, const GroupSettings &s = GroupSettings());
 
     void add(const Definition &d);
     void remove(const Definition &d);

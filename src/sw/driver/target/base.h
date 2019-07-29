@@ -90,8 +90,7 @@ protected:
 
     // projects and dirs go here
     std::vector<TargetBaseTypePtr> dummy_children;
-    // it is safe to use void* instead of ProjectTarget* here
-    const void *current_project = nullptr;
+    const ProjectTarget *current_project = nullptr;
 };
 
 struct SW_DRIVER_CPP_API TargetBase : TargetBaseData
@@ -477,27 +476,14 @@ template <class T>
 struct SW_DRIVER_CPP_API TargetOptionsGroup :
     InheritanceGroup<T>
 {
+    using Base = InheritanceGroup<T>;
+
 private:
     ASSIGN_WRAPPER(add, TargetOptionsGroup);
     ASSIGN_WRAPPER(remove, TargetOptionsGroup);
 
 public:
     SW_TARGET_USING_ASSIGN_OPS(TargetOptions);
-
-    // self merge
-    void merge(const GroupSettings &s = GroupSettings())
-    {
-        InheritanceGroup<TargetOptions>::merge(s); // goes last
-    }
-
-    // merge to others
-    void merge(const TargetOptionsGroup &g, const GroupSettings &s = GroupSettings())
-    {
-        auto s2 = s;
-        s2.merge_to_self = false;
-
-        InheritanceGroup<TargetOptions>::merge(g, s2);
-    }
 };
 
 struct SW_DRIVER_CPP_API NativeTargetOptionsGroup : TargetOptionsGroup<TargetOptions>

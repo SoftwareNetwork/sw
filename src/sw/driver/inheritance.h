@@ -181,38 +181,12 @@ public:
 
     T &get(InheritanceType Type)
     {
-        switch (Type)
-        {
-        case InheritanceType::Private:
-            return Private;
-        case InheritanceType::Protected:
-            return Protected;
-        case InheritanceType::Public:
-            return Public;
-        case InheritanceType::Interface:
-            return Interface;
-        default:
-            return data[Type];
-        }
-        throw SW_RUNTIME_ERROR("unreachable code");
+        return data[Type];
     }
 
     const T &get(InheritanceType Type) const
     {
-        switch (Type)
-        {
-        case InheritanceType::Private:
-            return Private;
-        case InheritanceType::Protected:
-            return Protected;
-        case InheritanceType::Public:
-            return Public;
-        case InheritanceType::Interface:
-            return Interface;
-        default:
-            return data[Type];
-        }
-        throw SW_RUNTIME_ERROR("unreachable code");
+        return data[Type];
     }
 
     template <class F>
@@ -226,17 +200,19 @@ public:
         }
     }
 
-    // merge to T, always w/o interface and always merge protected to self!
-    void merge(const GroupSettings &s = GroupSettings())
+    // merge self to self, always w/o interface and always merge protected to self!
+    void merge()
     {
-        T::merge(Protected, s);
-        T::merge(Public, s);
+        T::merge(Protected);
+        T::merge(Public);
     }
 
     // merge from other group, always w/ interface
     template <class U>
-    void merge(const InheritanceGroup<U> &g, const GroupSettings &s = GroupSettings())
+    void merge(const InheritanceGroup<U> &g, const GroupSettings &in)
     {
+        auto s = in;
+        s.merge_to_self = false;
         if (s.has_same_parent)
             T::merge(g.Protected, s);
         T::merge(g.Public, s);

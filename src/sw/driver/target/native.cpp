@@ -1804,12 +1804,10 @@ void NativeCompiledTarget::merge1()
     // merge deps' stuff
     for (auto &d : getAllDependencies())
     {
-        GroupSettings s;
-        s.include_directories_only = d->IncludeDirectoriesOnly;
-        //s.merge_to_self = false;
-        auto t = d->getTarget().as<const NativeCompiledTarget*>();
-        if (t)
+        if (auto t = d->getTarget().as<const NativeCompiledTarget*>())
         {
+            GroupSettings s;
+            s.include_directories_only = d->IncludeDirectoriesOnly;
             s.has_same_parent = hasSameProject(*t);
             merge(*t, s);
             continue;

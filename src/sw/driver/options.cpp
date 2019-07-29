@@ -292,7 +292,7 @@ bool NativeCompilerOptionsData::IsIncludeDirectoriesEmpty() const
            PostIncludeDirectories.empty();
 }
 
-void NativeCompilerOptionsData::merge(const NativeCompilerOptionsData &o, const GroupSettings &s, bool merge_to_system)
+void NativeCompilerOptionsData::merge(const NativeCompilerOptionsData &o, const GroupSettings &s)
 {
     // report conflicts?
 
@@ -306,7 +306,7 @@ void NativeCompilerOptionsData::merge(const NativeCompilerOptionsData &o, const 
         unique_merge_containers(IncludeDirectories, o.IncludeDirectories);
         unique_merge_containers(PostIncludeDirectories, o.PostIncludeDirectories);
     }
-    else // if (merge_to_system)
+    else
     {
         unique_merge_containers(IncludeDirectories, o.PreIncludeDirectories);
         unique_merge_containers(IncludeDirectories, o.IncludeDirectories);
@@ -317,14 +317,7 @@ void NativeCompilerOptionsData::merge(const NativeCompilerOptionsData &o, const 
 void NativeCompilerOptions::merge(const NativeCompilerOptions &o, const GroupSettings &s)
 {
     NativeCompilerOptionsData::merge(o, s);
-    System.merge(o.System, s, true);
-
-    /*if (!s.merge_to_self)
-    {
-        unique_merge_containers(System.IncludeDirectories, o.PreIncludeDirectories);
-        unique_merge_containers(System.IncludeDirectories, o.IncludeDirectories);
-        unique_merge_containers(System.IncludeDirectories, o.PostIncludeDirectories);
-    }*/
+    System.merge(o.System, s);
 }
 
 void NativeCompilerOptions::addDefinitions(builder::Command &c) const

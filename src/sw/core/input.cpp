@@ -182,7 +182,8 @@ void Input::load(SwBuild &b)
         {
             for (auto &s : settings)
             {
-                ep->loadPackages(b, s, {});
+                // load only this pkg
+                ep->loadPackages(b, s, { getPackageId() });
             }
         }
         return;
@@ -199,6 +200,7 @@ void Input::load(SwBuild &b)
 
         for (auto &s : settings)
         {
+            // load all packages here
             ep->loadPackages(b, s, {});
         }
 
