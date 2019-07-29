@@ -224,14 +224,14 @@ void NativeTargetEntryPoint::loadPackages(SwBuild &swb, const TargetSettings &s,
     module_data1.NamePrefix = module_data.NamePrefix;
     module_data1.current_gn = module_data.current_gn;
     module_data1.known_targets = module_data.known_targets;
+    if (!pkgs.empty())
+        module_data1.known_targets = pkgs;
+    module_data1.current_settings = settings;
+    module_data1.bs = BuildSettings(settings);
 
-    SwapAndRestore sr1(module_data1.known_targets, pkgs);
-    if (pkgs.empty())
-        sr1.restoreNow(true);
-    SwapAndRestore sr2(b.module_data, &module_data1);
-    SwapAndRestore sr3(b.NamePrefix, module_data.NamePrefix);
-    SwapAndRestore sr4(module_data1.current_settings, settings);
-    SwapAndRestore sr5(module_data1.bs, BuildSettings(settings));
+    b.module_data = &module_data1;
+    b.NamePrefix = module_data.NamePrefix;
+
     loadPackages1(b);
 }
 
@@ -463,6 +463,7 @@ void PrepareConfigEntryPoint::many2many(Build &b, const Files &files) const
 void PrepareConfigEntryPoint::many2one(Build &b, const std::unordered_set<LocalPackage> &pkgs) const
 {
     // make parallel?
+    //std::unordered_map<PackageVersionGroupNumber, path> gn_files;
     auto get_package_config = [](const auto &pkg) -> path
     {
         if (pkg.getData().group_number)
@@ -472,7 +473,8 @@ void PrepareConfigEntryPoint::many2one(Build &b, const std::unordered_set<LocalP
                 throw SW_RUNTIME_ERROR("cannot find config");
             return *d;
         }
-        auto p = pkg.getGroupLeader();
+        SW_UNIMPLEMENTED;
+        /*auto p = pkg.getGroupLeader();
         if (auto d = driver::cpp::findConfig(p.getDirSrc2(), driver::cpp::Driver::getAvailableFrontendConfigFilenames()))
             return *d;
         auto d = driver::cpp::findConfig(pkg.getDirSrc2(), driver::cpp::Driver::getAvailableFrontendConfigFilenames());
@@ -480,7 +482,7 @@ void PrepareConfigEntryPoint::many2one(Build &b, const std::unordered_set<LocalP
             throw SW_RUNTIME_ERROR("cannot find config");
         fs::create_directories(p.getDirSrc2());
         fs::copy_file(*d, p.getDirSrc2() / d->filename());
-        return p.getDirSrc2() / d->filename();
+        return p.getDirSrc2() / d->filename();*/
     };
 
     Files files;

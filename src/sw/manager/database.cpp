@@ -553,19 +553,6 @@ String PackagesDatabase::getPackagePath(db::PackageId id) const
     throw SW_RUNTIME_ERROR("No such package: " + std::to_string(id));
 }
 
-PackageId PackagesDatabase::getGroupLeader(PackageVersionGroupNumber n) const
-{
-    for (const auto &row : (*db)(select(pkgs.path, pkg_ver.version)
-        .from(pkg_ver.join(pkgs).on(pkg_ver.packageId == pkgs.packageId))
-        .where(pkg_ver.groupNumber == n)
-        .order_by(pkg_ver.groupNumber.asc()))
-        )
-    {
-        return { row.path.value(), row.version.value() };
-    }
-    throw SW_RUNTIME_ERROR("Group leader not found for group: " + std::to_string(n));
-}
-
 Packages PackagesDatabase::getDependentPackages(const PackageId &pkg)
 {
     Packages r;

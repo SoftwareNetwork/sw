@@ -179,12 +179,6 @@ String LocalPackage::getStampHash() const
     return hash;
 }
 
-LocalPackage LocalPackage::getGroupLeader() const
-{
-    auto id = getLocalStorage().getPackagesDatabase().getGroupLeader(getData().group_number);
-    return LocalPackage(getLocalStorage(), id);
-}
-
 path LocalPackage::getDirObjWdir(
 // version level, project level (app or project)
 ) const

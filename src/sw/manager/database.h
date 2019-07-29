@@ -92,7 +92,6 @@ struct SW_MANAGER_API PackagesDatabase : public Database
 
     db::PackageId getPackageId(const PackagePath &ppath) const;
     String getPackagePath(db::PackageId) const;
-    PackageId getGroupLeader(PackageVersionGroupNumber) const;
 
 private:
     std::mutex m;
