@@ -12,13 +12,6 @@ void both(primitives::CppEmitter &hctx, primitives::CppEmitter &cctx, Args && ..
     cctx.addLine(args...);
 };
 
-String EnumValue::getIdeName() const
-{
-    if (!ide_name.empty())
-        return ide_name;
-    return name;
-}
-
 String Flag::getTypeWithNs() const
 {
     String s = ns;
@@ -26,13 +19,6 @@ String Flag::getTypeWithNs() const
         s += "::";
     s += type;
     return s;
-}
-
-String Flag::getIdeName() const
-{
-    if (!ide_name.empty())
-        return ide_name;
-    return name;
 }
 
 void Flag::printDecl(primitives::CppEmitter &ctx) const
@@ -134,70 +120,6 @@ void Flag::printStructFunction(primitives::CppEmitter &ctx) const
     ctx.emptyLines(1);
 }
 
-void Flag::printToIde(primitives::CppEmitter &ctx) const
-{
-    if (disabled)
-        return;
-    if (!print_to_ide)
-        return;
-
-    if (!enum_vals.empty())
-    {
-        ctx.addLine("ctx.beginBlock(\"" + getIdeName() + "\");");
-        ctx.beginBlock("switch (" + name + ".value())");
-        for (auto &[e, ev] : enum_vals)
-        {
-            ctx.addLine("case ");
-            if (!ns.empty())
-                ctx.addText(ns + "::");
-            if (!enum_vals.empty())
-                ctx.addText(type + "::");
-            ctx.addText(e + ":");
-            ctx.increaseIndent();
-            ctx.addLine("ctx.addText(\"" + ev.getIdeName() + "\");");
-            ctx.addLine("break;");
-            ctx.decreaseIndent();
-        }
-        ctx.endBlock();
-        ctx.addLine("ctx.endBlock(true);");
-        ctx.emptyLines(1);
-        return;
-    }
-
-    if (default_ide_value.empty())
-        ctx.beginBlock("if (" + name + ")");
-    ctx.addLine("ctx.beginBlock(\"" + getIdeName() + "\");");
-    if (!default_ide_value.empty())
-        ctx.beginBlock("if (" + name + ")");
-    if (type == "bool")
-    {
-        if (ide_value.empty())
-            ctx.addLine("ctx.addText(" + name + ".value() ? \"true\" : \"false\");");
-        else
-            ctx.addLine("ctx.addText(" + name + ".value() ? \"" + ide_value + "\" : \"false\");");
-    }
-    else if (type == "path")
-        ctx.addLine("ctx.addText(" + name + ".value().u8string());");
-    else if (type == "String" || type == "std::string")
-        ctx.addLine("ctx.addText(" + name + ".value().u8string());");
-    else // numeric
-        ctx.addLine("ctx.addText(std::to_string(" + name + ".value()));");
-    if (!default_ide_value.empty())
-    {
-        ctx.endBlock();
-        ctx.beginBlock("else");
-        if (type == "bool")
-            ctx.addLine("ctx.addText(" + default_ide_value + " ? \"true\" : \"false\");");
-        else
-            ctx.addLine("ctx.addText(" + default_ide_value + "");
-        ctx.endBlock();
-    }
-    ctx.addLine("ctx.endBlock(true);");
-    if (default_ide_value.empty())
-        ctx.endBlock();
-    ctx.emptyLines(1);
-}
-
 void Flag::printCommandLine(primitives::CppEmitter &ctx) const
 {
     if (disabled)
@@ -260,7 +182,6 @@ void Type::printH(primitives::CppEmitter &h) const
     h.emptyLines(1);
 
     h.addLine("Strings getCommandLine(const ::sw::builder::Command &c);");
-    //h.addLine("void printIdeSettings(ProjectEmitter &);");
 
     h.endBlock(true);
     h.addLine("DECLARE_OPTION_SPECIALIZATION(" + name + ");");
@@ -283,19 +204,6 @@ void Type::printCpp(primitives::CppEmitter &cpp) const
     cpp.addLine("return s;");
     cpp.endBlock();
     cpp.emptyLines(1);
-
-    /*cpp.beginBlock("void " + name + "::printIdeSettings(ProjectEmitter &ctx)");
-
-    if (!parent.empty())
-    {
-        cpp.addLine(parent + "::printIdeSettings(ctx);");
-        cpp.emptyLines(1);
-    }
-
-    for (auto &v : flags2)
-        v->printToIde(cpp);
-    cpp.endBlock();
-    cpp.emptyLines(1);*/
 
     for (auto &v : flags2)
         v->printStructFunction(cpp);
@@ -330,8 +238,6 @@ void read_flags(const yaml &root, Flags &flags)
             fl.name = kv.second["name"].template as<String>();
         else
             throw SW_RUNTIME_ERROR("missing name field");
-        if (kv.second["ide_name"].IsDefined())
-            fl.ide_name = kv.second["ide_name"].template as<String>();
         if (kv.second["flag"].IsDefined())
             fl.flag = kv.second["flag"].template as<String>();
         if (kv.second["namespace"].IsDefined())
@@ -340,13 +246,6 @@ void read_flags(const yaml &root, Flags &flags)
             fl.type = kv.second["type"].template as<String>();
         if (kv.second["default"].IsDefined())
             fl.default_value = kv.second["default"].template as<String>();
-        if (kv.second["default_ide_value"].IsDefined())
-        {
-            fl.default_ide_value = kv.second["default_ide_value"].template as<String>();
-            fl.print_to_ide = true;
-        }
-        if (kv.second["ide_value"].IsDefined())
-            fl.ide_value = kv.second["ide_value"].template as<String>();
         if (kv.second["enum"].IsDefined())
         {
             if (!kv.second["enum"].IsSequence())
@@ -364,7 +263,6 @@ void read_flags(const yaml &root, Flags &flags)
                     {
                         auto u = kv2.first.template as<String>();
                         fl.enum_vals[u].name = u;
-                        fl.enum_vals[u].ide_name = kv2.second.template as<String>();
                     }
                 }
                 else
@@ -384,10 +282,7 @@ void read_flags(const yaml &root, Flags &flags)
         get_sequence_and_iterate(kv.second, "properties", [&fl](const auto &kv)
         {
             auto s = kv.template as<String>();
-            if (s == "print_to_ide")
-                fl.print_to_ide = true;
-            else
-                fl.properties.insert(s);
+            fl.properties.insert(s);
         });
         auto fn = kv.first.template as<String>();
         if (flags.find(fn) != flags.end())

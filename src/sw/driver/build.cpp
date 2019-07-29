@@ -48,14 +48,6 @@ int gNumberOfJobs = -1;
 
 std::map<sw::PackagePath, sw::Version> gUserSelectedPackages;
 
-// TODO: add '#pragma sw driver ...'
-
-// Note
-// We have separate Build for configs, because stored build scripts
-// may differ from remote ones (until we deny overriding package versions).
-// Later we may have these rules stored in memory in order to load and build subsequents requests.
-// But we also have overridden packages which breaks everything above.
-
 namespace sw
 {
 
@@ -73,9 +65,10 @@ static void sw_check_abi_version(int v)
 }
 
 Build::Build(SwBuild &mb)
-    : main_build(mb)
-    , checker(*this)
+    : checker(*this)
 {
+    main_build_ = &mb;
+
     // canonical makes disk letter uppercase on windows
     setSourceDirectory(getContext().source_dir);
     BinaryDir = SourceDir / SW_BINARY_DIR;
@@ -83,8 +76,6 @@ Build::Build(SwBuild &mb)
 
 Build::Build(const Build &rhs)
     : Base(rhs)
-    , main_build(rhs.main_build)
-    , command_storage(rhs.command_storage)
     , checker(*this)
 {
 }
@@ -95,7 +86,17 @@ Build::~Build()
 
 SwContext &Build::getContext() const
 {
-    return main_build.getContext();
+    return getMainBuild().getContext();
+}
+
+TargetMap &Build::getChildren()
+{
+    return getMainBuild().getTargets();
+}
+
+const TargetMap &Build::getChildren() const
+{
+    return getMainBuild().getTargets();
 }
 
 const OS &Build::getHostOs() const
@@ -317,16 +318,6 @@ Test Build::addTest(const String &name)
     Test cb(getContext());
     addTest(cb, name);
     return cb;
-}
-
-TargetMap &Build::getChildren()
-{
-    return main_build.getTargets();
-}
-
-const TargetMap &Build::getChildren() const
-{
-    return main_build.getTargets();
 }
 
 }

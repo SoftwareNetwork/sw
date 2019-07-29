@@ -269,6 +269,8 @@ struct SW_DRIVER_CPP_API CheckSet
     std::list<CheckPtr> all;
 
     CheckSet(Checker &checker);
+    CheckSet(const CheckSet &) = delete;
+    CheckSet &operator=(const CheckSet &) = delete;
 
     template <class T, class ... Args>
     std::shared_ptr<T> add(Args && ... args)
@@ -332,6 +334,9 @@ struct SW_DRIVER_CPP_API CheckSet
 private:
     // set's checks
     std::unordered_map<size_t /* hash */, CheckPtr> checks;
+    // prevents recursive checking on complex queries, complex settings
+    // in crosscompilation tasks and environments
+    //std::mutex m;
 
     friend struct Checker;
 };
@@ -341,7 +346,7 @@ struct SW_DRIVER_CPP_API Checker
     Build &build;
 
     /// child sets
-    std::unordered_map<PackageVersionGroupNumber, std::unordered_map<String /* set name */, CheckSet>> sets;
+    std::unordered_map<PackageVersionGroupNumber, std::unordered_map<String /* set name */, std::shared_ptr<CheckSet>>> sets;
 
     Checker(Build &build);
 

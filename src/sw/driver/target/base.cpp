@@ -113,6 +113,13 @@ void TargetEvents::call(CallbackType t) const
     }
 }
 
+SwBuild &TargetBaseData::getMainBuild() const
+{
+    if (!main_build_)
+        throw SW_LOGIC_ERROR("main_build is not set");
+    return *main_build_;
+}
+
 TargetBase::TargetBase()
 {
 }
@@ -247,7 +254,7 @@ TargetBase &TargetBase::addChild(const TargetBaseTypePtr &t)
 {
     if (t->getType() == TargetType::Directory || t->getType() == TargetType::Project)
     {
-        getSolution().dummy_children.push_back(t);
+        dummy_children.push_back(t);
         return *t;
     }
 
@@ -288,13 +295,6 @@ void TargetBase::setupTarget(TargetBaseType *t) const
 {
     // find automatic way of copying data?
 
-    // lang storage
-    //t->languages = languages;
-
-    // if parent target has new exts set up (e.g., .asm),
-    // maybe children also want those exts automatically?
-    //t->extensions = extensions;
-
     // inherit from this
     t->build = &getSolution();
 
@@ -303,13 +303,10 @@ void TargetBase::setupTarget(TargetBaseType *t) const
 
     t->IsConfig = IsConfig; // TODO: inherit from reconsider
     t->DryRun = DryRun; // TODO: inherit from reconsider
-    t->current_project = current_project; // ok, take from here
 
-    // inherit from solution
-    //t->ParallelSourceDownload = getSolution().ParallelSourceDownload;
-
-    //auto p = getSolution().getKnownTarget(t->getPackage().ppath);
-    //if (!p.toString().empty())
+    t->main_build_ = main_build_; // ok, take from here (this, parent)
+    t->current_project = current_project; // ok, take from here (this, parent)
+    t->command_storage = command_storage; // ok, take from here (this, parent)
 }
 
 Build &TargetBase::getSolution()

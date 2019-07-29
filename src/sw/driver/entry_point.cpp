@@ -114,6 +114,8 @@ static path getSwCheckAbiVersionHeader()
 
 static path getPackageHeader(const LocalPackage &p, const UnresolvedPackage &up)
 {
+    // TODO: add '#pragma sw driver ...' ?
+
     // depends on upkg, not on pkg!
     // because p is constant, but up might differ
     auto h = p.getDirSrc() / "gen" / ("pkg_header_" + shorten_hash(sha1(up.toString()), 6) + ".h");
@@ -279,7 +281,7 @@ static NativeCompiledTarget &getDriverTarget(Build &solution, NativeCompiledTarg
     auto i = solution.getChildren().find(UnresolvedPackage(SW_DRIVER_NAME));
     if (i == solution.getChildren().end())
     {
-        solution.getContext().getTargetData(PackageId(SW_DRIVER_NAME)).loadPackages(solution.main_build, solution.getSettings(), solution.module_data->known_targets);
+        solution.getContext().getTargetData(PackageId(SW_DRIVER_NAME)).loadPackages(solution.getMainBuild(), solution.getSettings(), solution.module_data->known_targets);
         i = solution.getChildren().find(UnresolvedPackage(SW_DRIVER_NAME));
         if (i == solution.getChildren().end())
             throw SW_RUNTIME_ERROR("no driver target");
@@ -287,7 +289,7 @@ static NativeCompiledTarget &getDriverTarget(Build &solution, NativeCompiledTarg
     auto k = i->second.find(lib.getTargetSettings());
     if (k == i->second.end())
     {
-        solution.getContext().getTargetData(i->first).loadPackages(solution.main_build, solution.getSettings(), solution.module_data->known_targets);
+        solution.getContext().getTargetData(i->first).loadPackages(solution.getMainBuild(), solution.getSettings(), solution.module_data->known_targets);
         k = i->second.find(lib.getTargetSettings());
         if (k == i->second.end())
         {
@@ -354,18 +356,11 @@ void build_self(SwBuild &b);
 
 void PrepareConfigEntryPoint::loadPackages1(Build &b) const
 {
-    // with double check
-    static std::mutex m;
-    static std::atomic_bool once = false;
-    if (!once)
+    static bool once = [&b]()
     {
-        std::unique_lock lk(m);
-        if (!once)
-        {
-            build_self(b.main_build);
-            once = true;
-        }
-    }
+        build_self(b.getMainBuild());
+        return true;
+    }();
 
     if (files_.empty())
         many2one(b, pkgs_);

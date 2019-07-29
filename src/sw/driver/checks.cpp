@@ -234,14 +234,17 @@ Checker::Checker(Build &build)
 
 CheckSet &Checker::addSet(const String &name)
 {
-    auto p = sets[build.getCurrentGroupNumber()].emplace(name, CheckSet(*this));
-    p.first->second.name = name;
-    return p.first->second;
+    auto cs = std::make_shared<CheckSet>(*this);
+    auto p = sets[build.getCurrentGroupNumber()].emplace(name, cs);
+    p.first->second->name = name;
+    return *p.first->second;
 }
 
 void CheckSet::performChecks(const TargetSettings &ts)
 {
     static const auto checks_dir = checker.build.getContext().getLocalStorage().storage_dir_etc / "sw" / "checks";
+
+    //std::unique_lock lk(m);
 
     auto config = ts.getHash();
     auto fn = checks_dir / config / "checks.3.txt";
@@ -362,8 +365,8 @@ int main() { return IsBigEndian(); }
         };
 
         //auto &e = getExecutor();
-        //static Executor e(getExecutor().numberOfThreads()); // separate executor!
-        static Executor e(1); // separate executor!
+        static Executor e(getExecutor().numberOfThreads()); // separate executor!
+        //static Executor e(1); // separate executor!
         //ep.throw_on_errors = false;
         //ep.skip_errors = ep.commands.size();
 

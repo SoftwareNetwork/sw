@@ -483,17 +483,6 @@ bool NativeCompiledTarget::init()
         if (!isHeaderOnly())
             findCompiler();
 
-        // early setup compilers after libc, libcpp
-        // but we don't have these early deps
-        /*merge();
-        if (!isHeaderOnly())
-        {
-            if (auto c = findProgramByExtension(".c")->as<NativeCompiler *>())
-                c->merge(*this);
-            if (auto c = findProgramByExtension(".cpp")->as<NativeCompiler *>())
-                c->merge(*this);
-        }*/
-
         // after compilers
         Target::init();
 
@@ -3110,7 +3099,7 @@ CheckSet &NativeCompiledTarget::getChecks(const String &name)
     auto i = i0->second.find(name);
     if (i == i0->second.end())
         throw SW_RUNTIME_ERROR("No such set: " + name);
-    return i->second;
+    return *i->second;
 }
 
 void NativeCompiledTarget::setChecks(const String &name, bool check_definitions)

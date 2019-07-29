@@ -52,20 +52,15 @@ struct SW_DRIVER_CPP_API Test : driver::CommandBuilder
 
 struct SimpleBuild : TargetBase
 {
+    // public functions for sw frontend
 };
 
 struct SW_DRIVER_CPP_API Build : SimpleBuild
 {
     using Base = SimpleBuild;
 
-    // most important
-    SwBuild &main_build;
-
-    //
-    std::vector<TargetBaseTypePtr> dummy_children;
     const ModuleSwappableData *module_data = nullptr;
     SourceDirMap source_dirs_by_source;
-    int command_storage = 0;
     Checker checker;
 
     SwContext &getContext() const;

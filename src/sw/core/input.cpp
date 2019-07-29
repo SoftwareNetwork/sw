@@ -6,6 +6,7 @@
 
 #include "input.h"
 
+#include "build.h"
 #include "driver.h"
 #include "sw_context.h"
 
@@ -174,10 +175,40 @@ void Input::load(SwBuild &b)
 {
     if (eps.empty())
         throw SW_RUNTIME_ERROR("No entry points set");
-    for (auto &s : settings)
+
+    if (getType() == InputType::InstalledPackage)
     {
         for (auto &ep : eps)
+        {
+            for (auto &s : settings)
+            {
+                ep->loadPackages(b, s, {});
+            }
+        }
+        return;
+    }
+
+    // for non installed packages we do special handling
+    // we register their entry points in swctx
+    // because up to this point this is not done
+
+    for (auto &ep : eps)
+    {
+        // find difference to set entry points
+        auto old = b.getTargets();
+
+        for (auto &s : settings)
+        {
             ep->loadPackages(b, s, {});
+        }
+
+        // don't forget to set EPs for loaded targets
+        for (const auto &[pkg, tgts] : b.getTargets())
+        {
+            if (old.find(pkg) != old.end())
+                continue;
+            b.getContext().getTargetData(pkg).setEntryPoint(ep);
+        }
     }
 }
 

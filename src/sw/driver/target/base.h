@@ -38,6 +38,7 @@ String toString(TargetType T);
 
 struct NativeCompiledTarget;
 struct Build;
+struct SwBuild;
 struct Target;
 struct ProjectTarget;
 struct DirectoryTarget;
@@ -75,16 +76,22 @@ private:
 
 struct SW_DRIVER_CPP_API TargetBaseData : ProjectDirectories, TargetEvents
 {
-    // flags
     bool IsConfig = false;
     bool DryRun = false;
     PackagePath NamePrefix;
+    int command_storage = 0;
 
     path getServiceDir() const;
+    SwBuild &getMainBuild() const;
 
 protected:
     const Build *build = nullptr;
-    const ProjectTarget *current_project = nullptr;
+    SwBuild *main_build_ = nullptr;
+
+    // projects and dirs go here
+    std::vector<TargetBaseTypePtr> dummy_children;
+    // it is safe to use void* instead of ProjectTarget* here
+    const void *current_project = nullptr;
 };
 
 struct SW_DRIVER_CPP_API TargetBase : TargetBaseData
