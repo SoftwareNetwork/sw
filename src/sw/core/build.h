@@ -6,14 +6,15 @@
 
 #pragma once
 
-#include "input.h"
 #include "target.h"
 
-#include <sw/builder/execution_plan.h>
 #include <sw/manager/package_data.h>
 
 namespace sw
 {
+
+template <class T>
+struct ExecutionPlan;
 
 struct IDriver;
 struct Input;
@@ -39,6 +40,7 @@ struct SW_CORE_API SwBuild
     SwBuild(SwContext &swctx);
     SwBuild(const SwBuild &) = delete;
     SwBuild &operator=(const SwBuild &) = delete;
+    ~SwBuild();
 
     SwContext &getContext() { return swctx; }
     const SwContext &getContext() const { return swctx; }

@@ -18,10 +18,8 @@
 
 #include "command/commands.h"
 
-#include <sw/builder/file.h>
 #include <sw/builder/jumppad.h>
-#include <sw/driver/command.h>
-#include <sw/driver/build.h>
+#include <sw/core/input.h>
 #include <sw/driver/driver.h>
 #include <sw/manager/api.h>
 #include <sw/manager/database.h>
@@ -574,11 +572,12 @@ SUBCOMMAND_DECL(ide)
     }*/
 }
 
+extern String gGenerator;
+
 SUBCOMMAND_DECL(configure)
 {
-    SW_UNIMPLEMENTED;
-
-    // generate execution plan
+    gGenerator = "swexplan";
+    cli_generate();
 }
 
 SUBCOMMAND_DECL(pack)

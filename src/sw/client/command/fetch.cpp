@@ -19,7 +19,8 @@
 #include "commands.h"
 #include "../build.h"
 
-#include <sw/driver/build.h>
+#include <sw/core/build.h>
+#include <sw/core/input.h>
 
 ::cl::opt<bool> build_after_fetch("build", ::cl::desc("Build after fetch"), ::cl::sub(subcommand_fetch));
 

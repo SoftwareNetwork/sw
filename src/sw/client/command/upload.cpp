@@ -19,6 +19,7 @@
 #include "commands.h"
 #include "../build.h"
 
+#include <sw/core/input.h>
 #include <sw/manager/api.h>
 #include <sw/manager/settings.h>
 

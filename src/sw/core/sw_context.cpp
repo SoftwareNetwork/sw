@@ -7,6 +7,7 @@
 #include "sw_context.h"
 
 #include "build.h"
+#include "input.h"
 #include "driver.h"
 
 #include <primitives/log.h>

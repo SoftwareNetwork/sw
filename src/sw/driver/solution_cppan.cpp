@@ -14,7 +14,6 @@
 #include "sw_abi_version.h"
 #include "target/native.h"
 
-#include <sw/builder/execution_plan.h>
 #include <sw/builder/file_storage.h>
 #include <sw/builder/program.h>
 #include <sw/manager/database.h>

@@ -59,8 +59,10 @@ String toPathString(GeneratorType t)
         return "shell";
     case GeneratorType::CompilationDatabase:
         return "compdb";
+    case GeneratorType::SwExecutionPlan:
+        return "swexplan";
     default:
-        throw std::logic_error("not implemented");
+        throw SW_LOGIC_ERROR("not implemented");
     }
 }
 
@@ -88,8 +90,10 @@ String toString(GeneratorType t)
         return "Shell";
     case GeneratorType::CompilationDatabase:
         return "CompDB";
+    case GeneratorType::SwExecutionPlan:
+        return "Sw Execution Plan";
     default:
-        throw std::logic_error("not implemented");
+        throw SW_LOGIC_ERROR("not implemented");
     }
 }
 
@@ -118,9 +122,11 @@ GeneratorType fromString(const String &s)
         return GeneratorType::Shell;
     else if (boost::iequals(s, "CompDb"))
         return GeneratorType::CompilationDatabase;
+    else if (boost::iequals(s, "SwExPlan"))
+        return GeneratorType::SwExecutionPlan;
     //else if (boost::iequals(s, "qtc"))
         //return GeneratorType::qtc;
-    return GeneratorType::UnspecifiedGenerator;
+    throw SW_RUNTIME_ERROR("Unknown generator: " + s);
 }
 
 struct ProgramShortCutter1
@@ -236,6 +242,9 @@ std::unique_ptr<Generator> Generator::create(const String &s)
         break;
     case GeneratorType::CompilationDatabase:
         g = std::make_unique<CompilationDatabaseGenerator>();
+        break;
+    case GeneratorType::SwExecutionPlan:
+        g = std::make_unique<SwExecutionPlan>();
         break;
     default:
         throw std::logic_error("not implemented");

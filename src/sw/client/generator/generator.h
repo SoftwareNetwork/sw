@@ -47,6 +47,8 @@ enum class GeneratorType
     VisualStudioNMake,
     VisualStudioUtility,
     VisualStudioNMakeAndUtility,
+
+    SwExecutionPlan,
 };
 
 struct Generator
@@ -102,6 +104,11 @@ struct ShellGenerator : Generator
 };
 
 struct CompilationDatabaseGenerator : Generator
+{
+    void generate(const sw::SwBuild &b) override;
+};
+
+struct SwExecutionPlan : Generator
 {
     void generate(const sw::SwBuild &b) override;
 };

@@ -18,6 +18,8 @@
 
 #include "commands.h"
 
+#include <sw/core/input.h>
+
 #include <boost/algorithm/string.hpp>
 
 extern ::cl::opt<bool> build_after_fetch;

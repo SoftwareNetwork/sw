@@ -52,7 +52,7 @@ struct ExecutionPlan
     {
         auto break_commands = [](auto &a)
         {
-            // FIXME: clear() may destroy our next pointer in a,
+            // FIXME: clear() may destroy our next pointer in 'a' variable,
             // so we make a copy of everything :(
             std::vector<SPtrT> copy;
             copy.reserve(a.size());

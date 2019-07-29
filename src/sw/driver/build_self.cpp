@@ -15,7 +15,6 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "build.self");
 
-// disable custom pragma warnings
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable : 4005) // warning C4005: 'XXX': macro redefinition

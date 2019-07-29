@@ -16,7 +16,7 @@ void deps_tests(Solution &s);
 
 void configure(Solution &s)
 {
-    for (auto LT : {
+    /*for (auto LT : {
         LibraryType::Static,
         LibraryType::Shared
         })
@@ -32,7 +32,7 @@ void configure(Solution &s)
             c1.Native.LibrariesType = LT;
             s.addSettings(c1);
         }
-    }
+    }*/
 }
 
 void build(Solution &s)

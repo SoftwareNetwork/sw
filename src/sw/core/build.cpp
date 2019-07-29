@@ -7,7 +7,10 @@
 #include "build.h"
 
 #include "driver.h"
+#include "input.h"
 #include "sw_context.h"
+
+#include <sw/builder/execution_plan.h>
 
 #include <nlohmann/json.hpp>
 #include <primitives/executor.h>
@@ -41,6 +44,10 @@ namespace sw
 
 SwBuild::SwBuild(SwContext &swctx)
     : swctx(swctx)
+{
+}
+
+SwBuild::~SwBuild()
 {
 }
 
@@ -131,14 +138,6 @@ void SwBuild::load(Inputs &inputs)
                 g[i]->addEntryPoint(ep);
         }
     }
-}
-
-void SwBuild::execute() const
-{
-    CHECK_STATE(BuildState::Prepared, BuildState::Executed);
-
-    auto p = getExecutionPlan();
-    execute(p);
 }
 
 void SwBuild::resolvePackages()
@@ -290,6 +289,14 @@ void SwBuild::prepare()
 
     while (prepareStep())
         ;
+}
+
+void SwBuild::execute() const
+{
+    CHECK_STATE(BuildState::Prepared, BuildState::Executed);
+
+    auto p = getExecutionPlan();
+    execute(p);
 }
 
 void SwBuild::execute(CommandExecutionPlan &p) const
