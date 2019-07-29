@@ -31,7 +31,8 @@ static ::cl::opt<String> build_source_dir("S", ::cl::desc("Explicitly specify a 
 static ::cl::opt<String> build_binary_dir("B", ::cl::desc("Explicitly specify a build directory."), ::cl::sub(subcommand_build), ::cl::init(SW_BINARY_DIR));
 
 static ::cl::opt<bool> build_fetch("fetch", ::cl::desc("Fetch sources, then build"), ::cl::sub(subcommand_build));
-static ::cl::opt<path> build_explan("e", ::cl::desc("Build execution plan"), ::cl::sub(subcommand_build));
+static ::cl::opt<path> build_explan("ef", ::cl::desc("Build execution plan from specified file"), ::cl::sub(subcommand_build));
+static ::cl::opt<bool> build_default_explan("e", ::cl::desc("Build execution plan"), ::cl::sub(subcommand_build));
 
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -383,6 +384,29 @@ std::vector<sw::TargetSettings> createSettings(const sw::SwBuild &b)
     return settings;
 }
 
+std::unique_ptr<sw::SwBuild> setBuildArgsAndCreateBuildAndPrepare(sw::SwContext &swctx, const Strings &build_args)
+{
+    ((Strings&)build_arg) = build_args;
+    return createBuildAndPrepare(swctx);
+}
+
+std::unique_ptr<sw::SwBuild> createBuildAndPrepare(sw::SwContext &swctx)
+{
+    auto b = swctx.createBuild();
+    for (auto &a : build_arg)
+    {
+        auto &i = b->addInput(a);
+        for (auto &s : createSettings(*b))
+            i.addSettings(s);
+    }
+    b->load();
+    b->setTargetsToBuild();
+    b->resolvePackages();
+    b->loadPackages();
+    b->prepare();
+    return std::move(b);
+}
+
 SUBCOMMAND_DECL2(build)
 {
     if (!build_explan.empty())
@@ -390,7 +414,7 @@ SUBCOMMAND_DECL2(build)
         auto b = swctx.createBuild();
         b->overrideBuildState(sw::BuildState::Prepared);
         sw::ExecutionPlan p;
-        p.load(build_explan);
+        p.load(build_explan, swctx);
         b->execute(p);
         return;
     }
@@ -416,6 +440,12 @@ SUBCOMMAND_DECL2(build)
         auto &i = b->addInput(a);
         for (auto &s : createSettings(*b))
             i.addSettings(s);
+    }
+    if (build_default_explan)
+    {
+        b->load();
+        b->runSavedExecutionPlan();
+        return;
     }
     b->build();
 }

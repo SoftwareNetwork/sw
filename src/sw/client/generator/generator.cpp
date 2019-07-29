@@ -182,7 +182,7 @@ struct ProgramShortCutter
 
     String getProgramName(const String &in, const builder::Command &c)
     {
-        bool gen = File(c.getProgram(), c.swctx.getFileStorage()).isGeneratedAtAll();
+        bool gen = File(c.getProgram(), c.getContext().getFileStorage()).isGeneratedAtAll();
         auto &progs = gen ? sc_generated : sc;
         return progs.getProgramName(in);
     }
@@ -498,7 +498,7 @@ struct MakeEmitter : primitives::Emitter
         //addText(printFiles(c.inputs));
         for (auto &i : c.inputs)
         {
-            if (File(i, c.swctx.getFileStorage()).isGeneratedAtAll())
+            if (File(i, c.getContext().getFileStorage()).isGeneratedAtAll())
             {
                 addText(printFile(i));
                 addText(" ");

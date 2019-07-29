@@ -307,7 +307,13 @@ void SwBuild::execute(ExecutionPlan &p) const
 
     p.build_always = build_always;
     p.skip_errors = skip_errors.getValue();
-    p.execute();
+
+    //ScopedTime t;
+    p.execute(getExecutor());
+    /*auto t2 = t.getTimeFloat();
+    if (!silent && t2 > 0.15)
+        LOG_INFO(logger, "Build time: " << t2 << " s.");*/
+
     if (time_trace)
         p.saveChromeTrace(swctx.source_dir / SW_BINARY_DIR / "misc" / "time_trace.json");
 }
@@ -494,7 +500,7 @@ void SwBuild::runSavedExecutionPlan() const
     CHECK_STATE(BuildState::InputsLoaded);
 
     ExecutionPlan p;
-    p.load(getExecutionPlanPath());
+    p.load(getExecutionPlanPath(), getContext());
 
     // change state
     overrideBuildState(BuildState::Prepared);

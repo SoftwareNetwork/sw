@@ -39,3 +39,5 @@ std::pair<sw::SourceDirMap, const sw::Input &> fetch(sw::SwBuild &);
 sw::PackageDescriptionMap getPackages(const sw::SwBuild &, const sw::SourceDirMap & = {});
 sw::TargetSettings createSettings(const sw::SwContext &);
 std::vector<sw::TargetSettings> createSettings(const sw::SwBuild &);
+std::unique_ptr<sw::SwBuild> setBuildArgsAndCreateBuildAndPrepare(sw::SwContext &, const Strings &build_args);
+std::unique_ptr<sw::SwBuild> createBuildAndPrepare(sw::SwContext &);

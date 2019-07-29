@@ -18,16 +18,11 @@
 
 #include "commands.h"
 
-extern ::cl::opt<bool> dry_run;
-::cl::opt<String> build_arg_update(::cl::Positional, ::cl::desc("Update lock"), ::cl::init("."), ::cl::sub(subcommand_update));
+::cl::opt<String> build_arg_configure(::cl::Positional, ::cl::desc("Configure"), ::cl::init("."), ::cl::sub(subcommand_configure));
 
-SUBCOMMAND_DECL(update)
+SUBCOMMAND_DECL(configure)
 {
-    SW_UNIMPLEMENTED;
-
     auto swctx = createSwContext();
-    dry_run = true;
-    /*((Strings&)build_arg).clear();
-    build_arg.push_back(build_arg_update.getValue());
-    cli_build(*swctx);*/
+    auto b = setBuildArgsAndCreateBuildAndPrepare(*swctx, { build_arg_configure.getValue() });
+    b->saveExecutionPlan();
 }

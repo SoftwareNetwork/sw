@@ -572,14 +572,6 @@ SUBCOMMAND_DECL(ide)
     }*/
 }
 
-extern String gGenerator;
-
-SUBCOMMAND_DECL(configure)
-{
-    gGenerator = "swexplan";
-    cli_generate();
-}
-
 SUBCOMMAND_DECL(pack)
 {
     // http://www.king-foo.com/2011/11/creating-debianubuntu-deb-packages/

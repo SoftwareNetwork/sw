@@ -19,6 +19,8 @@
 namespace sw
 {
 
+struct SwBuilderContext;
+
 // DAG
 struct SW_BUILDER_API ExecutionPlan
 {
@@ -50,53 +52,14 @@ struct SW_BUILDER_API ExecutionPlan
 
     void execute(Executor &e) const;
 
-    // functinos for builder::Command's
-    void execute() const;
-    void load(const path &, int type = 0);
+    // functions for builder::Command's
+    static ExecutionPlan load(const path &, const SwBuilderContext &, int type = 0);
     void save(const path &, int type = 0) const;
 
     void saveChromeTrace(const path &) const;
 
     const VecT &getCommands() const { return commands; }
     const USet &getUnprocessedCommandSet() const { return unprocessed_commands_set; }
-
-    /*StringHashMap<int> gatherStrings() const
-    {
-        StringHashMap<int> strings;
-        int i = 1;
-
-        auto insert = [&strings, &i](const auto &s)
-        {
-            auto &v = strings[s];
-            if (v)
-                return;
-            v = i++;
-        };
-
-        for (auto &c : commands)
-        {
-            insert(c->getName());
-            insert(c->working_directory.u8string());
-            for (auto &a : c->arguments)
-                insert(a->toString());
-            insert(c->in.file.u8string());
-            insert(c->out.file.u8string());
-            insert(c->err.file.u8string());
-            for (auto &[k, v] : c->environment)
-            {
-                insert(k);
-                insert(v);
-            }
-            for (auto &f : c->inputs)
-                insert(f.u8string());
-            //for (auto &f : c->intermediate)
-                //insert(f.u8string());
-            for (auto &f : c->outputs)
-                insert(f.u8string());
-        }
-
-        return strings;
-    }*/
 
     explicit operator bool() const;
 

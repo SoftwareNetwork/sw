@@ -209,6 +209,7 @@ static std::tuple<FilesOrdered, UnresolvedPackages> getFileDependencies(const Sw
 
 void NativeTargetEntryPoint::loadPackages(SwBuild &swb, const TargetSettings &s, const PackageIdSet &pkgs) const
 {
+    // TODO: memory leak
     auto nb = new Build(swb);
     auto &b = *nb;
 

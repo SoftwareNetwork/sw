@@ -34,12 +34,17 @@ ExecutionPlan::~ExecutionPlan()
 
 void ExecutionPlan::execute(Executor &e) const
 {
+    if (commands.empty())
+        return;
+
     std::mutex m;
     std::vector<Future<void>> fs;
     std::vector<Future<void>> all;
     std::atomic_bool stopped = false;
     std::atomic_int running = 0;
     std::atomic_int64_t askip_errors = skip_errors;
+
+    bool build_commands = dynamic_cast<builder::Command *>(*commands.begin());
 
     // set numbers
     std::atomic_size_t current_command = 1;
@@ -48,6 +53,12 @@ void ExecutionPlan::execute(Executor &e) const
     {
         c->total_commands = &total_commands;
         c->current_command = &current_command;
+        if (build_commands)
+        {
+            static_cast<builder::Command*>(c)->silent = silent;
+            static_cast<builder::Command*>(c)->show_output = show_output;
+            static_cast<builder::Command*>(c)->always |= build_always;
+        }
     }
 
     std::function<void(PtrT)> run;
@@ -139,28 +150,6 @@ void ExecutionPlan::execute(Executor &e) const
 
     if (i != sz/* && !stopped*/)
         throw SW_RUNTIME_ERROR("Executor did not perform all steps");
-}
-
-void ExecutionPlan::execute() const
-{
-    std::vector<builder::Command *> cmds;
-    cmds.reserve(commands.size());
-    for (auto &c : commands)
-        cmds.push_back(static_cast<builder::Command*>(c));
-
-    for (auto &c : cmds)
-    {
-        c->silent = silent;
-        c->show_output = show_output;
-        c->always |= build_always;
-    }
-
-    //ScopedTime t;
-    auto &e = getExecutor();
-    execute(e);
-    /*auto t2 = t.getTimeFloat();
-    if (!silent && t2 > 0.15)
-        LOG_INFO(logger, "Build time: " << t2 << " s.");*/
 }
 
 void ExecutionPlan::saveChromeTrace(const path &p) const

@@ -71,7 +71,7 @@ namespace builder
 {
 
 Command::Command(const SwBuilderContext &swctx)
-    : swctx(swctx)
+    : swctx(&swctx)
 {
 }
 
@@ -116,7 +116,7 @@ static String getCommandId(const Command &c)
 
 bool Command::check_if_file_newer(const path &p, const String &what, bool throw_on_missing) const
 {
-    auto s = File(p, swctx.getFileStorage()).isChanged(mtime, throw_on_missing);
+    auto s = File(p, getContext().getFileStorage()).isChanged(mtime, throw_on_missing);
     if (s && isExplainNeeded())
         EXPLAIN_OUTDATED("command", true, what + " changed " + normalize_path(p) + ": " + *s, getCommandId(*this));
     return !!s;
@@ -139,7 +139,7 @@ bool Command::isOutdated() const
     }
 
     auto k = getHash();
-    auto r = getCommandStorage(swctx, command_storage == CS_LOCAL).insert(k);
+    auto r = getCommandStorage(getContext(), command_storage == CS_LOCAL).insert(k);
     if (r.second)
     {
         // we have insertion, no previous value available
@@ -234,7 +234,7 @@ void Command::updateCommandTime() const
 {
     auto k = getHash();
     auto c = mtime.time_since_epoch().count();
-    auto r = getCommandStorage(swctx, command_storage == CS_LOCAL).insert(k);
+    auto r = getCommandStorage(getContext(), command_storage == CS_LOCAL).insert(k);
     r.first->mtime = c;
     r.first->implicit_inputs = implicit_inputs;
 }
@@ -292,7 +292,7 @@ void Command::addOutput(const path &p)
     if (p.empty())
         return;
     outputs.insert(p);
-    File(p, swctx.getFileStorage()).setGenerator(std::static_pointer_cast<Command>(shared_from_this()), true);
+    File(p, getContext().getFileStorage()).setGenerator(std::static_pointer_cast<Command>(shared_from_this()), true);
 }
 
 void Command::addOutput(const Files &files)
@@ -328,7 +328,7 @@ void Command::addInputOutputDeps()
 {
     for (auto &p : inputs)
     {
-        File f(p, swctx.getFileStorage());
+        File f(p, getContext().getFileStorage());
         if (f.isGenerated())
             dependencies.insert(f.getGenerator());
     }
@@ -346,7 +346,7 @@ void Command::prepare()
 
     // user entered commands may be in form 'git'
     // so, it is not empty, not generated and does not exist
-    if (!getProgram().empty() && !File(getProgram(), swctx.getFileStorage()).isGeneratedAtAll() &&
+    if (!getProgram().empty() && !File(getProgram(), getContext().getFileStorage()).isGeneratedAtAll() &&
         !path(getProgram()).is_absolute() && !fs::exists(getProgram()))
     {
         auto new_prog = resolveExecutable(getProgram());
@@ -373,7 +373,7 @@ void Command::prepare()
     for (auto &p : outputs)
     {
         // there must be no error, because previous generator == this
-        File(p, swctx.getFileStorage()).setGenerator(std::static_pointer_cast<Command>(shared_from_this()), false);
+        File(p, getContext().getFileStorage()).setGenerator(std::static_pointer_cast<Command>(shared_from_this()), false);
     }
 
     prepared = true;
@@ -454,7 +454,7 @@ void Command::afterCommand()
 
     auto update_time = [this](const auto &i)
     {
-        File f(i, swctx.getFileStorage());
+        File f(i, getContext().getFileStorage());
         auto &fr = f.getFileData();
         fr.refreshed = FileData::RefreshType::Unrefreshed;
         f.isChanged();
@@ -473,7 +473,7 @@ void Command::afterCommand()
 
     for (auto &i : inputs)
     {
-        File f(i, swctx.getFileStorage());
+        File f(i, getContext().getFileStorage());
         auto &fr = f.getFileData();
         mtime = std::max(mtime, fr.last_write_time);
     }
@@ -495,8 +495,8 @@ void Command::afterCommand()
     // so outdated command wil not be re-runned
 
     auto k = getHash();
-    auto &cs = swctx.getCommandStorage();
-    auto &r = *getCommandStorage(swctx, command_storage == CS_LOCAL).insert(k).first;
+    auto &cs = getContext().getCommandStorage();
+    auto &r = *getCommandStorage(getContext(), command_storage == CS_LOCAL).insert(k).first;
     r.hash = getHash();
     r.mtime = mtime.time_since_epoch().count();
     r.implicit_inputs = implicit_inputs;
@@ -1079,6 +1079,20 @@ Command &Command::operator|=(Command &c2)
 {
     operator|(c2);
     return *this;
+}
+
+const SwBuilderContext &Command::getContext() const
+{
+    if (!swctx)
+        throw SW_RUNTIME_ERROR("Empty sw context");
+    return *swctx;
+}
+
+void Command::setContext(const SwBuilderContext &in)
+{
+    if (swctx)
+        throw SW_RUNTIME_ERROR("Settings swctx twice");
+    swctx = &in;
 }
 
 void CommandSequence::addCommand(const std::shared_ptr<Command> &c)

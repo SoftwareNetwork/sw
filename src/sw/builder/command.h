@@ -141,8 +141,6 @@ struct SW_BUILDER_API Command : ICastable, CommandNode, detail::ResolvableComman
     using Base = detail::ResolvableCommand;
     using Clock = std::chrono::high_resolution_clock;
 
-    const SwBuilderContext &swctx;
-
     String name;
     String name_short;
 
@@ -193,6 +191,7 @@ struct SW_BUILDER_API Command : ICastable, CommandNode, detail::ResolvableComman
     };
     int command_storage = 0;
 
+    Command() = default;
     Command(const SwBuilderContext &swctx);
     //Command(const Command &);
     //Command &operator=(const Command &);
@@ -248,6 +247,9 @@ struct SW_BUILDER_API Command : ICastable, CommandNode, detail::ResolvableComman
     Command &operator|(Command &);
     Command &operator|=(Command &);
 
+    const SwBuilderContext &getContext() const;
+    void setContext(const SwBuilderContext &);
+
 protected:
     bool prepared = false;
     bool executed_ = false;
@@ -255,6 +257,7 @@ protected:
     virtual bool check_if_file_newer(const path &, const String &what, bool throw_on_missing) const;
 
 private:
+    const SwBuilderContext *swctx = nullptr;
     mutable size_t hash = 0;
     Arguments rsp_args;
     mutable String log_string;

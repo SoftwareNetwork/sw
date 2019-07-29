@@ -22,8 +22,6 @@
 #include <sw/core/build.h>
 #include <sw/core/input.h>
 
-extern ::cl::list<String> build_arg;
-
 static ::cl::opt<String> build_arg_generate(::cl::Positional, ::cl::desc("File or directory to use to generate projects"), ::cl::init("."), ::cl::sub(subcommand_generate));
 
 String gGenerator;
@@ -61,21 +59,8 @@ SUBCOMMAND_DECL2(generate)
         gGenerator = "vs";
 #endif
     }
-    ((Strings&)build_arg).clear();
-    build_arg.push_back(build_arg_generate.getValue());
 
-    auto b = swctx.createBuild();
-    for (auto &a : build_arg)
-    {
-        auto &i = b->addInput(a);
-        for (auto &s : createSettings(*b))
-            i.addSettings(s);
-    }
-    b->load();
-    b->setTargetsToBuild();
-    b->resolvePackages();
-    b->loadPackages();
-    b->prepare();
+    auto b = setBuildArgsAndCreateBuildAndPrepare(swctx, { build_arg_generate.getValue() });
 
     auto generator = Generator::create(gGenerator);
     generator->generate(*b);
