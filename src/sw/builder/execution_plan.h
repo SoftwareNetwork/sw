@@ -37,9 +37,11 @@ struct SW_BUILDER_API ExecutionPlan
     using GraphMapping = std::unordered_map<PtrT, VertexNode>;
     using StrongComponents = std::vector<size_t>;
 
-    USet unprocessed_commands_set;
     int64_t skip_errors = 0;
     bool throw_on_errors = true;
+    bool build_always = false;
+    bool silent = false;
+    bool show_output = false;
 
     ExecutionPlan() = default;
     ExecutionPlan(const ExecutionPlan &rhs) = delete;
@@ -48,17 +50,15 @@ struct SW_BUILDER_API ExecutionPlan
 
     void execute(Executor &e) const;
 
-    template <class U = T>
-    Vec<U*> &getCommands()
-    {
-        return (Vec<U*> &)commands;
-    }
+    // functinos for builder::Command's
+    void execute() const;
+    void load(const path &, int type = 0);
+    void save(const path &, int type = 0) const;
 
-    template <class U = T>
-    const Vec<U*> &getCommands() const
-    {
-        return (Vec<U*> &)commands;
-    }
+    void saveChromeTrace(const path &) const;
+
+    const VecT &getCommands() const { return commands; }
+    const USet &getUnprocessedCommandSet() const { return unprocessed_commands_set; }
 
     /*StringHashMap<int> gatherStrings() const
     {
@@ -131,6 +131,7 @@ private:
 
     VecT commands;
     VecT unprocessed_commands;
+    USet unprocessed_commands_set;
 
     void setup();
     static GraphMapping getGraphMapping(const VecT &v);

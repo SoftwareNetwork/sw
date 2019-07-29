@@ -29,14 +29,18 @@ static cl::opt<bool> time_trace("time-trace", cl::desc("Record chrome time trace
 static cl::opt<bool> cl_show_output("show-output");
 static cl::opt<bool> print_graph("print-graph", cl::desc("Print file with build graph"));
 
-#define CHECK_STATE(from, to)                                                                 \
-    if (state != from)                                                                        \
-        throw SW_RUNTIME_ERROR("Unexpected build state = " + std::to_string(toIndex(state)) + \
-                               ", expected = " + std::to_string(toIndex(from)));              \
-    SCOPE_EXIT                                                                                \
-    {                                                                                         \
-        state = to;                                                                           \
-    };                                                                                        \
+#define CHECK_STATE(from)                                                                 \
+    if (state != from)                                                                    \
+    throw SW_RUNTIME_ERROR("Unexpected build state = " + std::to_string(toIndex(state)) + \
+                           ", expected = " + std::to_string(toIndex(from)))
+
+#define CHECK_STATE_AND_CHANGE(from, to)     \
+    CHECK_STATE(from);                       \
+    SCOPE_EXIT                               \
+    {                                        \
+        if (std::uncaught_exceptions() == 0) \
+            state = to;                      \
+    };                                       \
     LOG_DEBUG(logger, "build id " << this << " performing " __FUNCTION__)
 
 namespace sw
@@ -98,7 +102,7 @@ void SwBuild::overrideBuildState(BuildState s) const
 
 void SwBuild::load()
 {
-    CHECK_STATE(BuildState::NotStarted, BuildState::InputsLoaded);
+    CHECK_STATE_AND_CHANGE(BuildState::NotStarted, BuildState::InputsLoaded);
 
     // load entry points
     load(inputs);
@@ -142,7 +146,7 @@ void SwBuild::load(Inputs &inputs)
 
 void SwBuild::resolvePackages()
 {
-    CHECK_STATE(BuildState::TargetsToBuildSet, BuildState::PackagesResolved);
+    CHECK_STATE_AND_CHANGE(BuildState::TargetsToBuildSet, BuildState::PackagesResolved);
 
     // gather
     UnresolvedPackages upkgs;
@@ -177,7 +181,7 @@ void SwBuild::resolvePackages()
 
 void SwBuild::loadPackages()
 {
-    CHECK_STATE(BuildState::PackagesResolved, BuildState::PackagesLoaded);
+    CHECK_STATE_AND_CHANGE(BuildState::PackagesResolved, BuildState::PackagesLoaded);
 
     loadPackages(swctx.getPredefinedTargets());
 }
@@ -273,7 +277,7 @@ bool SwBuild::prepareStep()
 
 void SwBuild::setTargetsToBuild()
 {
-    CHECK_STATE(BuildState::InputsLoaded, BuildState::TargetsToBuildSet);
+    CHECK_STATE_AND_CHANGE(BuildState::InputsLoaded, BuildState::TargetsToBuildSet);
 
     // mark existing targets as targets to build
     // only in case if not present?
@@ -285,7 +289,7 @@ void SwBuild::setTargetsToBuild()
 
 void SwBuild::prepare()
 {
-    CHECK_STATE(BuildState::PackagesLoaded, BuildState::Prepared);
+    CHECK_STATE_AND_CHANGE(BuildState::PackagesLoaded, BuildState::Prepared);
 
     while (prepareStep())
         ;
@@ -293,151 +297,19 @@ void SwBuild::prepare()
 
 void SwBuild::execute() const
 {
-    CHECK_STATE(BuildState::Prepared, BuildState::Executed);
-
     auto p = getExecutionPlan();
     execute(p);
 }
 
 void SwBuild::execute(ExecutionPlan &p) const
 {
-    auto print_graph = [](const auto &ep, const path &p, bool short_names = false)
-    {
-        String s;
-        s += "digraph G {\n";
-        for (auto &c : ep.commands)
-        {
-            {
-                s += c->getName(short_names) + ";\n";
-                for (auto &d : c->dependencies)
-                    s += c->getName(short_names) + " -> " + d->getName(short_names) + ";\n";
-            }
-            /*s += "{";
-            s += "rank = same;";
-            for (auto &c : level)
-            s += c->getName(short_names) + ";\n";
-            s += "};";*/
-        }
+    CHECK_STATE_AND_CHANGE(BuildState::Prepared, BuildState::Executed);
 
-        /*if (ep.Root)
-        {
-        const auto root_name = "all"s;
-        s += root_name + ";\n";
-        for (auto &d : ep.Root->dependencies)
-        s += root_name + " -> " + d->getName(short_names) + ";\n";
-        }*/
-
-        s += "}";
-        write_file(p, s);
-    };
-
-    /*for (auto &c : p.commands)
-    {
-        c->silent = silent;
-        c->show_output = show_output;
-    }*/
-
-    // execute early to prevent commands expansion into response files
-    // print misc
-    /*if (::print_graph && !silent) // && !b console mode
-    {
-        auto d = getServiceDir();
-
-        //message_box(d.string());
-
-        // new graphs
-        //p.printGraph(p.getGraphSkeleton(), d / "build_skeleton");
-        p.printGraph(p.getGraph(), d / "build");
-
-        // old graphs
-        print_graph(p, d / "build_old.dot");
-
-        if (auto b = this->template as<Build*>())
-        {
-            SW_UNIMPLEMENTED;
-            //for (const auto &[i, s] : enumerate(b->solutions))
-            //s.printGraph(d / ("solution." + std::to_string(i + 1) + ".dot"));
-        }
-    }
-
-    if (dry_run)
-        return;*/
-
-    if (build_always)
-    {
-        for (auto &c : p.getCommands<builder::Command>())
-            c->always = true;
-    }
-
-    ScopedTime t;
-    std::unique_ptr<Executor> ex;
-    //if (execute_jobs > 0)
-        //ex = std::make_unique<Executor>(execute_jobs);
-    auto &e = /*execute_jobs > 0 ? *ex : */getExecutor();
-
-    // prevent memory leaks (high mem usage)
-    /*updateConcurrentContext();
-    for (int i = 0; i < 1000; i++)
-    e.push([] {updateConcurrentContext(); });*/
-
+    p.build_always = build_always;
     p.skip_errors = skip_errors.getValue();
-    p.execute(e);
-    /*auto t2 = t.getTimeFloat();
-    if (!silent && t2 > 0.15)
-        LOG_INFO(logger, "Build time: " << t2 << " s.");*/
-
-    // produce chrome tracing log
-    /*if (time_trace)
-    {
-        // calculate minimal time
-        auto min = decltype (builder::Command::t_begin)::clock::now();
-        for (auto &c : p.commands)
-        {
-            if (c->t_begin.time_since_epoch().count() == 0)
-                continue;
-            min = std::min(c->t_begin, min);
-        }
-
-        auto tid_to_ll = [](auto &id)
-        {
-            std::ostringstream ss;
-            ss << id;
-            return ss.str();
-        };
-
-        nlohmann::json trace;
-        nlohmann::json events;
-        for (auto &c : p.commands)
-        {
-            if (c->t_begin.time_since_epoch().count() == 0)
-                continue;
-
-            nlohmann::json b;
-            b["name"] = c->getName();
-            b["cat"] = "BUILD";
-            b["pid"] = 1;
-            b["tid"] = tid_to_ll(c->tid);
-            b["ts"] = std::chrono::duration_cast<std::chrono::microseconds>(c->t_begin - min).count();
-            b["ph"] = "B";
-            events.push_back(b);
-
-            nlohmann::json e;
-            e["name"] = c->getName();
-            e["cat"] = "BUILD";
-            e["pid"] = 1;
-            e["tid"] = tid_to_ll(c->tid);
-            e["ts"] = std::chrono::duration_cast<std::chrono::microseconds>(c->t_end - min).count();
-            e["ph"] = "E";
-            events.push_back(e);
-        }
-        trace["traceEvents"] = events;
-        write_file(swctx.source_dir / SW_BINARY_DIR / "misc" / "time_trace.json", trace.dump(2));
-    }*/
-
-    // prevent memory leaks (high mem usage)
-    /*updateConcurrentContext();
-    for (int i = 0; i < 1000; i++)
-    e.push([] {updateConcurrentContext(); });*/
+    p.execute();
+    if (time_trace)
+        p.saveChromeTrace(swctx.source_dir / SW_BINARY_DIR / "misc" / "time_trace.json");
 }
 
 Commands SwBuild::getCommands() const
@@ -568,7 +440,7 @@ String SwBuild::getHash() const
     String s;
     for (auto &i : inputs)
         s += i->getHash();
-    return shorten_hash(blake2b_512(s), 6);
+    return shorten_hash(blake2b_512(s), 8);
 }
 
 Input &SwBuild::addInput(const String &i)
@@ -602,6 +474,37 @@ Input &SwBuild::addInput1(const I &i)
         return **it;
     inputs.push_back(std::move(input));
     return *inputs.back();
+}
+
+path SwBuild::getExecutionPlanPath() const
+{
+    return swctx.source_dir / SW_BINARY_DIR / "ep" / getHash() += ".ep";
+}
+
+void SwBuild::saveExecutionPlan() const
+{
+    CHECK_STATE(BuildState::Prepared);
+
+    auto p = getExecutionPlan();
+    p.save(getExecutionPlanPath());
+}
+
+void SwBuild::runSavedExecutionPlan() const
+{
+    CHECK_STATE(BuildState::InputsLoaded);
+
+    ExecutionPlan p;
+    p.load(getExecutionPlanPath());
+
+    // change state
+    overrideBuildState(BuildState::Prepared);
+    SCOPE_EXIT
+    {
+        // fallback
+        overrideBuildState(BuildState::InputsLoaded);
+    };
+
+    execute(p);
 }
 
 }

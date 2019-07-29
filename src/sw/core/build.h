@@ -62,10 +62,12 @@ struct SW_CORE_API SwBuild
     ExecutionPlan getExecutionPlan(const Commands &cmds) const;
     bool step();
     void overrideBuildState(BuildState) const;
-
-    //
+    // explans
+    void saveExecutionPlan() const;
+    void runSavedExecutionPlan() const;
     ExecutionPlan getExecutionPlan() const;
     String getHash() const;
+    path getExecutionPlanPath() const;
 
     TargetMap &getTargets() { return targets; }
     const TargetMap &getTargets() const { return targets; }

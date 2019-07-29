@@ -263,8 +263,8 @@ struct NinjaEmitter : primitives::Emitter
 
         auto ep = b.getExecutionPlan();
 
-        for (auto &c : ep.getCommands<builder::Command>())
-            addCommand(b, *c);
+        for (auto &c : ep.getCommands())
+            addCommand(b, *static_cast<builder::Command*>(c));
 
         primitives::Emitter ctx_progs;
         sc.printPrograms(ctx_progs, [](auto &ctx, auto &prog, auto &alias)
@@ -634,13 +634,13 @@ void MakeGenerator::generate(const SwBuild &b)
 
     // all
     Files outputs;
-    for (auto &c : ep.getCommands<builder::Command>())
-        outputs.insert(c->outputs.begin(), c->outputs.end());
+    for (auto &c : ep.getCommands())
+        outputs.insert(static_cast<builder::Command*>(c)->outputs.begin(), static_cast<builder::Command*>(c)->outputs.end());
     ctx.addTarget("all", outputs);
 
     // print commands
-    for (auto &c : ep.getCommands<builder::Command>())
-        ctx.addCommand(*c, d);
+    for (auto &c : ep.getCommands())
+        ctx.addCommand(*static_cast<builder::Command*>(c), d);
 
     // clean
     if (ctx.nmake)
@@ -682,8 +682,9 @@ void ShellGenerator::generate(const SwBuild &b)
 
     // print commands
     int i = 1;
-    for (auto &c : ep.getCommands<builder::Command>())
+    for (auto &c1 : ep.getCommands())
     {
+        auto c = static_cast<builder::Command *>(c1);
         ctx.addLine("echo [" + std::to_string(i++) + "/" + std::to_string(ep.getCommands().size()) + "] " + c->getName());
 
         // set new line
@@ -790,4 +791,14 @@ void CompilationDatabaseGenerator::generate(const SwBuild &b)
         }
     }
     write_file(d / "compile_commands.json", j.dump(2));
+}
+
+void SwExecutionPlan::generate(const sw::SwBuild &b)
+{
+    const auto d = path(SW_BINARY_DIR) / toPathString(type) / b.getHash();
+    auto fn = path(d) += ".explan";
+    fs::create_directories(d.parent_path());
+
+    auto ep = b.getExecutionPlan();
+    ep.save(fn);
 }

@@ -18,6 +18,7 @@
 
 #include "commands.h"
 
+#include <sw/builder/execution_plan.h>
 #include <sw/core/input.h>
 
 #include <boost/algorithm/string.hpp>
@@ -30,6 +31,7 @@ static ::cl::opt<String> build_source_dir("S", ::cl::desc("Explicitly specify a 
 static ::cl::opt<String> build_binary_dir("B", ::cl::desc("Explicitly specify a build directory."), ::cl::sub(subcommand_build), ::cl::init(SW_BINARY_DIR));
 
 static ::cl::opt<bool> build_fetch("fetch", ::cl::desc("Fetch sources, then build"), ::cl::sub(subcommand_build));
+static ::cl::opt<path> build_explan("e", ::cl::desc("Build execution plan"), ::cl::sub(subcommand_build));
 
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -383,6 +385,16 @@ std::vector<sw::TargetSettings> createSettings(const sw::SwBuild &b)
 
 SUBCOMMAND_DECL2(build)
 {
+    if (!build_explan.empty())
+    {
+        auto b = swctx.createBuild();
+        b->overrideBuildState(sw::BuildState::Prepared);
+        sw::ExecutionPlan p;
+        p.load(build_explan);
+        b->execute(p);
+        return;
+    }
+
     if (build_fetch)
     {
         build_after_fetch = true;

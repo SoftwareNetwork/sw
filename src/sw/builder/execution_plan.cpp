@@ -1,4 +1,4 @@
-// Copyright (C) 2017-2018 Egor Pugin <egor.pugin@gmail.com>
+// Copyright (C) 2017-2019 Egor Pugin <egor.pugin@gmail.com>
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -8,6 +8,7 @@
 
 #include <sw/support/exceptions.h>
 
+#include <nlohmann/json.hpp>
 #include <primitives/exceptions.h>
 
 namespace sw
@@ -138,6 +139,75 @@ void ExecutionPlan::execute(Executor &e) const
 
     if (i != sz/* && !stopped*/)
         throw SW_RUNTIME_ERROR("Executor did not perform all steps");
+}
+
+void ExecutionPlan::execute() const
+{
+    std::vector<builder::Command *> cmds;
+    cmds.reserve(commands.size());
+    for (auto &c : commands)
+        cmds.push_back(static_cast<builder::Command*>(c));
+
+    for (auto &c : cmds)
+    {
+        c->silent = silent;
+        c->show_output = show_output;
+        c->always |= build_always;
+    }
+
+    //ScopedTime t;
+    auto &e = getExecutor();
+    execute(e);
+    /*auto t2 = t.getTimeFloat();
+    if (!silent && t2 > 0.15)
+        LOG_INFO(logger, "Build time: " << t2 << " s.");*/
+}
+
+void ExecutionPlan::saveChromeTrace(const path &p) const
+{
+    // calculate minimal time
+    auto min = decltype (builder::Command::t_begin)::clock::now();
+    for (auto &c : commands)
+    {
+        if (static_cast<builder::Command*>(c)->t_begin.time_since_epoch().count() == 0)
+            continue;
+        min = std::min(static_cast<builder::Command*>(c)->t_begin, min);
+    }
+
+    auto tid_to_ll = [](auto &id)
+    {
+        std::ostringstream ss;
+        ss << id;
+        return ss.str();
+    };
+
+    nlohmann::json trace;
+    nlohmann::json events;
+    for (auto &c : commands)
+    {
+        if (static_cast<builder::Command*>(c)->t_begin.time_since_epoch().count() == 0)
+            continue;
+
+        nlohmann::json b;
+        b["name"] = c->getName();
+        b["cat"] = "BUILD";
+        b["pid"] = 1;
+        b["tid"] = tid_to_ll(static_cast<builder::Command*>(c)->tid);
+        b["ts"] = std::chrono::duration_cast<std::chrono::microseconds>(static_cast<builder::Command*>(c)->t_begin - min).count();
+        b["ph"] = "B";
+        events.push_back(b);
+
+        nlohmann::json e;
+        e["name"] = c->getName();
+        e["cat"] = "BUILD";
+        e["pid"] = 1;
+        e["tid"] = tid_to_ll(static_cast<builder::Command*>(c)->tid);
+        e["ts"] = std::chrono::duration_cast<std::chrono::microseconds>(static_cast<builder::Command*>(c)->t_end - min).count();
+        e["ph"] = "E";
+        events.push_back(e);
+    }
+    trace["traceEvents"] = events;
+    write_file(p, trace.dump(2));
 }
 
 ExecutionPlan::operator bool() const

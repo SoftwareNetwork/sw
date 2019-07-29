@@ -1,28 +1,13 @@
-/*
- * SW - Build System and Package Manager
- * Copyright (C) 2017-2019 Egor Pugin
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
+// Copyright (C) 2017-2019 Egor Pugin <egor.pugin@gmail.com>
+//
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include "generator.h"
+#include "execution_plan.h"
 
-#include <sw/builder/file.h>
-#include <sw/builder/execution_plan.h>
-#include <sw/core/build.h>
-#include <sw/core/sw_context.h>
-#include <sw/support/filesystem.h>
+#include <nlohmann/json.hpp>
+#include <primitives/exceptions.h>
 
 #include <boost/serialization/access.hpp>
 #include <boost/archive/binary_iarchive.hpp>
@@ -30,10 +15,14 @@
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
 
+#include <fstream>
+
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable : 4005) // warning C4005: 'XXX': macro redefinition
 #endif
+
+//#pragma optimize("", off)
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -61,26 +50,26 @@
 #define SERIALIZATION_TYPE ::path
 SERIALIZATION_BEGIN_SPLIT
     String s;
-    ar & s;
+    ar >> s;
     v = fs::u8path(s);
 SERIALIZATION_SPLIT_CONTINUE
-    ar & v.u8string();
+    ar << v.u8string();
 SERIALIZATION_SPLIT_END
 
 #define SERIALIZATION_TYPE StringMap<String>
 SERIALIZATION_BEGIN_SPLIT
     size_t sz;
-    ar & sz;
+    ar >> sz;
     while (sz--)
     {
         String k, v;
-        ar & k & v;
+        ar >> k >> v;
         p[k] = v;
     }
 SERIALIZATION_SPLIT_CONTINUE
-    ar & v.size();
+    ar << v.size();
     for (auto &[k, va] : v)
-        ar & k & va;
+        ar << k << va;
 SERIALIZATION_SPLIT_END
 
 namespace boost::serialization
@@ -89,16 +78,16 @@ namespace boost::serialization
 template<class Archive>
 void serialize(Archive &ar, ::sw::builder::Command::Argument &a, const unsigned int)
 {
-    ar & a.toString();
+    ar << a.toString();
 }
 
 template<class Archive>
 void serialize(Archive &ar, ::sw::builder::Command &c, const unsigned int)
 {
-    ar & c.working_directory;
-    ar & c.environment;
+    ar << c.working_directory;
+    ar << c.environment;
     for (auto &a : c.getArguments())
-        ar & *a;
+        ar << *a;
 }
 
 } // namespace boost::serialization
@@ -107,19 +96,29 @@ void serialize(Archive &ar, ::sw::builder::Command &c, const unsigned int)
 SERIALIZATION_BEGIN_SPLIT
     SW_UNIMPLEMENTED;
 SERIALIZATION_SPLIT_CONTINUE
-    for (auto &c : v.getCommands<::sw::builder::Command>())
-        ar & *c;
+    for (auto c : v.getCommands())
+        ar << *static_cast<::sw::builder::Command*>(c);
 SERIALIZATION_SPLIT_END
 
-void SwExecutionPlan::generate(const sw::SwBuild &b)
+namespace sw
 {
-    const auto d = path(SW_BINARY_DIR) / toPathString(type) / b.getHash();
-    fs::create_directories(d);
 
-    // create and open an archive for input
-    std::ofstream ofs(d / "1.txt");
+enum SerializationType
+{
+    BoostSerializationTextArchive =     0,
+    BoostSerializationBinaryArchive =   1,
+};
+
+void ExecutionPlan::load(const path &p, int type)
+{
+
+}
+
+void ExecutionPlan::save(const path &p, int type) const
+{
+    std::ofstream ofs(p);
     boost::archive::text_oarchive oa(ofs);
+    oa << *this;
+}
 
-    auto ep = b.getExecutionPlan();
-    oa & ep;
 }

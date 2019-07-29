@@ -514,11 +514,11 @@ int main() { return IsBigEndian(); }
     // print our deps graph
     String s;
     s += "digraph G {\n";
-    for (auto &c : ep.unprocessed_commands_set)
+    for (auto &c : ep.getUnprocessedCommandSet())
     {
         for (auto &d : c->dependencies)
         {
-            if (ep.unprocessed_commands_set.find(static_cast<Check*>(d.get())) == ep.unprocessed_commands_set.end())
+            if (ep.getUnprocessedCommandSet().find(static_cast<Check*>(d.get())) == ep.getUnprocessedCommandSet().end())
                 continue;
             s += *static_cast<Check*>(c)->Definitions.begin() + "->" + *std::static_pointer_cast<Check>(d)->Definitions.begin() + ";";
         }
@@ -708,10 +708,10 @@ bool Check::execute(SwBuild &b) const
         // save commands for cleanup
         auto p = b.getExecutionPlan();
         // we must save comands here, because later we need to check results of specific commands
-        for (auto &c : p.getCommands<builder::Command>())
+        for (auto &c : p.getCommands())
             commands.push_back(std::static_pointer_cast<builder::Command>(c->shared_from_this()));
-        for (auto &c : p.getCommands<builder::Command>())
-            c->silent = true;
+        for (auto &c : p.getCommands())
+            static_cast<builder::Command*>(c)->silent = true;
 
         b.execute(p);
     }

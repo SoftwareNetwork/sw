@@ -155,6 +155,7 @@ void build(Solution &s)
         builder += "src/sw/builder/.*"_rr;
         builder.Public += manager, "org.sw.demo.preshing.junction-master"_dep,
             "org.sw.demo.boost.graph"_dep,
+            "org.sw.demo.boost.serialization"_dep,
             "org.sw.demo.microsoft.gsl-*"_dep,
             "pub.egorpugin.primitives.emitter-master"_dep;
         //if (!s.Variables["SW_SELF_BUILD"])
@@ -231,7 +232,6 @@ void build(Solution &s)
         client.CPPVersion = CPPLanguageStandard::CPP17;
         client += core, cpp_driver,
             //"org.sw.demo.microsoft.mimalloc"_dep,
-            "org.sw.demo.boost.serialization"_dep,
             "pub.egorpugin.primitives.sw.main-master"_dep,
             "org.sw.demo.giovannidicanio.winreg-master"_dep;
         embed("pub.egorpugin.primitives.tools.embedder-master"_dep, client, "src/sw/client/inserts/inserts.cpp.in");
