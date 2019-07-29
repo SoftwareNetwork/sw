@@ -49,6 +49,7 @@ namespace sw
 SwBuild::SwBuild(SwContext &swctx)
     : swctx(swctx)
 {
+    binary_dir = fs::current_path() / SW_BINARY_DIR;
 }
 
 SwBuild::~SwBuild()
@@ -315,7 +316,7 @@ void SwBuild::execute(ExecutionPlan &p) const
         LOG_INFO(logger, "Build time: " << t2 << " s.");*/
 
     if (time_trace)
-        p.saveChromeTrace(swctx.source_dir / SW_BINARY_DIR / "misc" / "time_trace.json");
+        p.saveChromeTrace(getBinaryDirectory() / "misc" / "time_trace.json");
 }
 
 Commands SwBuild::getCommands() const
@@ -471,7 +472,7 @@ Input &SwBuild::addInput(const PackageId &i)
 template <class I>
 Input &SwBuild::addInput1(const I &i)
 {
-    auto input = std::make_unique<Input>(i, swctx);
+    auto input = std::make_unique<Input>(i, getContext());
     auto it = std::find_if(inputs.begin(), inputs.end(), [&i = *input](const auto &p)
     {
         return *p == i;
@@ -484,7 +485,7 @@ Input &SwBuild::addInput1(const I &i)
 
 path SwBuild::getExecutionPlanPath() const
 {
-    return swctx.source_dir / SW_BINARY_DIR / "ep" / getHash() += ".ep";
+    return getBinaryDirectory() / "ep" / getHash() += ".ep";
 }
 
 void SwBuild::saveExecutionPlan() const
@@ -499,8 +500,7 @@ void SwBuild::runSavedExecutionPlan() const
 {
     CHECK_STATE(BuildState::InputsLoaded);
 
-    ExecutionPlan p;
-    p.load(getExecutionPlanPath(), getContext());
+    auto p = ExecutionPlan::load(getExecutionPlanPath(), getContext());
 
     // change state
     overrideBuildState(BuildState::Prepared);

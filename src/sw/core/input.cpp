@@ -69,6 +69,8 @@ String InputWithSettings::getHash() const
 
 Input::Input(const path &p, const SwContext &swctx)
 {
+    if (p.empty())
+        throw SW_RUNTIME_ERROR("empty path");
     init(p, swctx);
 }
 
@@ -94,8 +96,6 @@ void Input::init(const path &in, const SwContext &swctx)
     };
 
     path p = in;
-    if (p.empty())
-        p = swctx.source_dir;
     if (!p.is_absolute())
         p = fs::absolute(p);
 

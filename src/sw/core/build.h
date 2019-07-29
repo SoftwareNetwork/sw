@@ -75,11 +75,14 @@ struct SW_CORE_API SwBuild
     TargetMap &getTargetsToBuild() { return targets_to_build; }
     const TargetMap &getTargetsToBuild() const { return targets_to_build; }
 
+    path getBinaryDirectory() const { return binary_dir; }
+
 private:
     using InputPtr = std::unique_ptr<Input>;
     using Inputs = std::vector<InputPtr>;
 
     SwContext &swctx;
+    path binary_dir;
     Inputs inputs;
     TargetMap targets;
     TargetMap targets_to_build;

@@ -413,8 +413,7 @@ SUBCOMMAND_DECL2(build)
     {
         auto b = swctx.createBuild();
         b->overrideBuildState(sw::BuildState::Prepared);
-        sw::ExecutionPlan p;
-        p.load(build_explan, swctx);
+        auto p = sw::ExecutionPlan::load(build_explan, swctx);
         b->execute(p);
         return;
     }
@@ -444,6 +443,7 @@ SUBCOMMAND_DECL2(build)
     if (build_default_explan)
     {
         b->load();
+        swctx.clearFileStorages();
         b->runSavedExecutionPlan();
         return;
     }

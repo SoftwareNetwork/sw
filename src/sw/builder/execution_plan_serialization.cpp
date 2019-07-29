@@ -24,7 +24,9 @@ enum SerializationType
 ExecutionPlan ExecutionPlan::load(const path &p, const SwBuilderContext &swctx, int type)
 {
     // TODO: memory leak
-    auto commands = new std::unordered_set<std::shared_ptr<builder::Command>>;
+    auto &commands = *new std::unordered_set<std::shared_ptr<builder::Command>>;
+
+    type = 1;
     if (type == 0)
     {
         std::ifstream ifs(p, std::ios_base::in | std::ios_base::binary);
@@ -37,15 +39,20 @@ ExecutionPlan ExecutionPlan::load(const path &p, const SwBuilderContext &swctx, 
         boost::archive::text_iarchive ia(ifs);
         ia >> commands;
     }
-    for (auto &c : *commands)
+
+    // some setup
+    for (auto &c : commands)
+    {
         c->setContext(swctx);
-    return createExecutionPlan(*commands);
+    }
+    return createExecutionPlan(commands);
 }
 
 void ExecutionPlan::save(const path &p, int type) const
 {
     fs::create_directories(p.parent_path());
 
+    type = 1;
     if (type == 0)
     {
         std::ofstream ofs(p, std::ios_base::out | std::ios_base::binary);

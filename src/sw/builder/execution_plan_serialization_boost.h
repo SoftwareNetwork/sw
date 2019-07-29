@@ -117,11 +117,20 @@ SERIALIZATION_BEGIN_SPLIT
     ar >> v.command_storage;
     ar >> v.working_directory;
     ar >> v.environment;
+    ar >> v.first_response_file_argument;
+    ar >> v.always;
+    ar >> v.remove_outputs_before_execution;
+    ar >> v.strict_order;
+    ar >> v.output_dirs;
+
     size_t sz;
     ar >> sz;
+    String s;
+    ar >> s;
+    sz--;
+    v.setProgram(s);
     while (sz--)
     {
-        String s;
         ar >> s;
         v.push_back(s);
     }
@@ -132,6 +141,12 @@ SERIALIZATION_SPLIT_CONTINUE
     ar << v.command_storage;
     ar << v.working_directory;
     ar << v.environment;
+    ar << v.first_response_file_argument;
+    ar << v.always;
+    ar << v.remove_outputs_before_execution;
+    ar << v.strict_order;
+    ar << v.output_dirs;
+
     ar << v.arguments.size();
     for (auto &a : v.arguments)
         ar << a->toString();

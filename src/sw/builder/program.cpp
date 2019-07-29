@@ -8,7 +8,6 @@
 
 #include "command.h"
 #include "file_storage.h"
-//#include "program_version_storage.h"
 #include "sw_context.h"
 
 #include <sw/manager/storage.h>

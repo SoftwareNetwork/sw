@@ -10,7 +10,6 @@ void build(Solution &s)
 {
     auto &t1 = s.add<Executable>("test");
     t1 += "src/main.cpp";
-    //t1 += "org.sw.demo.boost.log-develop"_dep;
 
     auto &t2 = s.addExecutable("test2");
     t2 += "src/main2.cpp";

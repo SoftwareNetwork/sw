@@ -17,16 +17,19 @@ ProgramVersionStorage::ProgramVersionStorage(const path &fn)
     : fn(fn)
 {
     path p;
-    String s;
+    String v;
+    time_t t;
     std::ifstream ifile(fn);
-    while (ifile)
+    while (1)
     {
         ifile >> p;
         if (!ifile)
             break;
-        ifile >> s;
-        //if (!File(p, service_fs).isChanged())
-            //versions[p] = s;
+        ifile >> v;
+        ifile >> t;
+        auto lwt = fs::last_write_time(p).time_since_epoch().count();
+        if (t && lwt <= t)
+            versions[p] = {v,lwt};
     }
 }
 
@@ -34,7 +37,7 @@ ProgramVersionStorage::~ProgramVersionStorage()
 {
     std::ofstream ofile(fn);
     for (auto &[p, v] : std::map{ versions.begin(), versions.end() })
-        ofile << p << " " << v.toString() << "\n";
+        ofile << p << " " << v.v.toString() << " " << v.t << "\n";
 }
 
 }

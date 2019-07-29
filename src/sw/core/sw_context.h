@@ -19,9 +19,6 @@ struct SwBuild;
 // core context for drivers
 struct SW_CORE_API SwCoreContext : SwBuilderContext
 {
-    // move to drivers? remove?
-    path source_dir;
-
     SwCoreContext(const path &local_storage_root_dir);
     virtual ~SwCoreContext();
 

@@ -9,7 +9,6 @@
 #include "misc/cmVSSetupHelper.h"
 
 #include <sw/builder/program.h>
-#include <sw/builder/program_version_storage.h>
 
 #include <boost/algorithm/string.hpp>
 
@@ -63,8 +62,6 @@ const StringSet &getCppSourceFileExtensions()
     };
     return cpp_source_file_extensions;
 }
-
-std::string getVsToolset(const Version &v);
 
 void detectNativeCompilers(DETECT_ARGS);
 void detectCSharpCompilers(DETECT_ARGS);
@@ -788,7 +785,7 @@ void detectWindowsSdk(DETECT_ARGS)
                 p->file = kit_root / "bin" / bdir_subversion / toStringWindows(s.getHostOs().Arch) / "rc.exe";
                 if (fs::exists(p->file))
                 {
-                    Version v = getVersion(s, p->file, "/?");
+                    auto v = getVersion(s, p->file, "/?");
                     auto &rc = addProgram(s, PackageId("com.Microsoft.Windows.rc", v), p);
                     auto ts1 = toTargetSettings(new_settings);
                     rc.ts["os"]["kernel"] = ts1["os"]["kernel"];
@@ -916,7 +913,7 @@ void detectWindowsClang(DETECT_ARGS)
         }
         if (fs::exists(p->file))
         {
-            Version v = getVersion(s, p->file);
+            auto v = getVersion(s, p->file);
             auto &c = addProgram(s, PackageId("org.LLVM.clangcl", v), p);
         }
     }
@@ -935,7 +932,7 @@ void detectWindowsClang(DETECT_ARGS)
         }
         if (fs::exists(p->file))
         {
-            Version v = getVersion(s, p->file);
+            auto v = getVersion(s, p->file);
             auto &c = addProgram(s, PackageId("org.LLVM.lld", v), p);
         }
     }
@@ -952,7 +949,7 @@ void detectWindowsClang(DETECT_ARGS)
         }
         if (fs::exists(p->file))
         {
-            Version v = getVersion(s, p->file);
+            auto v = getVersion(s, p->file);
             auto &c = addProgram(s, PackageId("org.LLVM.ar", v), p);
         }
     }
@@ -969,7 +966,7 @@ void detectWindowsClang(DETECT_ARGS)
         }
         if (fs::exists(p->file))
         {
-            Version v = getVersion(s, p->file);
+            auto v = getVersion(s, p->file);
             auto &c = addProgram(s, PackageId("org.LLVM.clang", v), p);
         }
         auto c = p->getCommand();
@@ -990,7 +987,7 @@ void detectWindowsClang(DETECT_ARGS)
         }
         if (fs::exists(p->file))
         {
-            Version v = getVersion(s, p->file);
+            auto v = getVersion(s, p->file);
             auto &c = addProgram(s, PackageId("org.LLVM.clangpp", v), p);
         }
         auto c = p->getCommand();
@@ -1014,7 +1011,7 @@ void detectNonWindowsCompilers(DETECT_ARGS)
         p->file = resolveExecutable(prog);
         if (fs::exists(p->file))
         {
-            Version v = getVersion(s, p->file);
+            auto v = getVersion(s, p->file);
             auto &c = addProgram(s, PackageId(ppath, v), p);
         }
     };

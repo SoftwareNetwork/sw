@@ -75,19 +75,6 @@ Command::Command(const SwBuilderContext &swctx)
 {
 }
 
-/*Command::Command(const Command &rhs)
-    : Base(rhs)
-    , swctx(rhs.swctx)
-{
-    SW_UNIMPLEMENTED;
-}
-
-Command &Command::operator=(const Command &rhs)
-{
-    SW_UNIMPLEMENTED;
-    return *this;
-}*/
-
 Command::~Command()
 {
 }
@@ -273,19 +260,6 @@ void Command::addImplicitInput(const Files &files)
     for (auto &f : files)
         addImplicitInput(f);
 }
-
-/*void Command::addIntermediate(const path &p)
-{
-    if (p.empty())
-        return;
-    intermediate.insert(p);
-}
-
-void Command::addIntermediate(const Files &files)
-{
-    for (auto &f : files)
-        addIntermediate(f);
-}*/
 
 void Command::addOutput(const path &p)
 {
@@ -1058,16 +1032,6 @@ void Command::onEnd() noexcept
 {
     t_end = Clock::now();
 }
-
-/*void Command::load(BinaryContext &bctx)
-{
-
-}
-
-void Command::save(BinaryContext &bctx)
-{
-
-}*/
 
 Command &Command::operator|(Command &c2)
 {

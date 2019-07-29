@@ -133,7 +133,7 @@ Version getVersion(const SwBuilderContext &swctx, builder::detail::ResolvableCom
 
     boost::upgrade_to_unique_lock lk2(lk);
 
-    vs.versions[program] = gatherVersion1(c, in_regex);
+    vs.addVersion(program, gatherVersion1(c, in_regex));
     return vs.versions[program];
 }
 
@@ -149,7 +149,7 @@ Version getVersion(const SwBuilderContext &swctx, const path &program, const Str
 
     boost::upgrade_to_unique_lock lk2(lk);
 
-    vs.versions[program] = gatherVersion(program, arg, in_regex);
+    vs.addVersion(program, gatherVersion(program, arg, in_regex));
     return vs.versions[program];
 }
 

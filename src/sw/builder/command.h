@@ -193,8 +193,6 @@ struct SW_BUILDER_API Command : ICastable, CommandNode, detail::ResolvableComman
 
     Command() = default;
     Command(const SwBuilderContext &swctx);
-    //Command(const Command &);
-    //Command &operator=(const Command &);
     virtual ~Command();
 
     void prepare() override;
@@ -215,8 +213,6 @@ struct SW_BUILDER_API Command : ICastable, CommandNode, detail::ResolvableComman
     void addInput(const Files &p);
     void addImplicitInput(const path &p);
     void addImplicitInput(const Files &p);
-    //void addIntermediate(const path &p);
-    //void addIntermediate(const Files &p);
     void addOutput(const path &p);
     void addOutput(const Files &p);
     path redirectStdin(const path &p);
@@ -230,9 +226,6 @@ struct SW_BUILDER_API Command : ICastable, CommandNode, detail::ResolvableComman
     path writeCommand(const path &basename) const;
 
     bool lessDuringExecution(const CommandNode &rhs) const override;
-
-    //void load(BinaryContext &bctx);
-    //void save(BinaryContext &bctx);
 
     void onBeforeRun() noexcept override;
     void onEnd() noexcept override;
@@ -311,11 +304,6 @@ struct SW_BUILDER_API ExecuteBuiltinCommand : Command
     ExecuteBuiltinCommand(const SwBuilderContext &swctx);
     ExecuteBuiltinCommand(const SwBuilderContext &swctx, const String &cmd_name, void *f, int version = 0);
     virtual ~ExecuteBuiltinCommand() = default;
-
-    //path getProgram() const override { return "ExecuteBuiltinCommand"; };
-
-    //template <class T>
-    //auto push_back(T &&v) { args.push_back(v); }
 
     using Command::push_back;
     void push_back(const Strings &strings);

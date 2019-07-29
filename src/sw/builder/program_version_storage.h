@@ -15,11 +15,24 @@ struct FileStorage;
 
 struct ProgramVersionStorage
 {
+    struct ProgramInfo
+    {
+        Version v;
+        time_t t;
+
+        operator Version&() { return v; }
+    };
+
     path fn;
-    std::unordered_map<path, Version> versions;
+    std::unordered_map<path, ProgramInfo> versions;
 
     ProgramVersionStorage(const path &fn);
     ~ProgramVersionStorage();
+
+    void addVersion(const path &p, const Version &v)
+    {
+        versions[p] = {v,fs::last_write_time(p).time_since_epoch().count()};
+    }
 };
 
 }

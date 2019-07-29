@@ -23,8 +23,6 @@ IDriver::~IDriver() = default;
 SwCoreContext::SwCoreContext(const path &local_storage_root_dir)
     : SwBuilderContext(local_storage_root_dir)
 {
-    source_dir = primitives::filesystem::canonical(fs::current_path());
-
     // before detection
     createHostSettings();
     detectCompilers(*this);
