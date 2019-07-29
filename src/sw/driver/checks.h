@@ -71,7 +71,7 @@ struct SW_DRIVER_CPP_API CheckParameters
 //using CheckValue = int64_t;
 using CheckValue = int;
 
-struct SW_DRIVER_CPP_API Check : std::enable_shared_from_this<Check>, CommandData<Check>
+struct SW_DRIVER_CPP_API Check : CommandNode
 {
     // every check has its definition to be added to compilation process
     // e.g. HAVE_STDINT_H
@@ -111,6 +111,7 @@ struct SW_DRIVER_CPP_API Check : std::enable_shared_from_this<Check>, CommandDat
     // for comparison
     virtual size_t getHash() const;
 
+    String getName(bool short_name = false) const override;
     bool isChecked() const;
     std::vector<std::shared_ptr<Check>> gatherDependencies();
     void execute() override;
@@ -122,7 +123,7 @@ struct SW_DRIVER_CPP_API Check : std::enable_shared_from_this<Check>, CommandDat
     virtual CheckType getType() const = 0;
     void clean() const;
 
-    bool lessDuringExecution(const Check &rhs) const;
+    bool lessDuringExecution(const CommandNode &rhs) const override;
 
 protected:
     virtual void run() const {}

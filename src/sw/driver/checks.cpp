@@ -351,7 +351,7 @@ int main() { return IsBigEndian(); }
         return;
     }
 
-    auto ep = ExecutionPlan<Check>::createExecutionPlan(unchecked);
+    auto ep = ExecutionPlan::createExecutionPlan(unchecked);
     if (ep)
     {
         LOG_INFO(logger, "Performing " << unchecked.size() << " check(s): "
@@ -520,7 +520,7 @@ int main() { return IsBigEndian(); }
         {
             if (ep.unprocessed_commands_set.find(static_cast<Check*>(d.get())) == ep.unprocessed_commands_set.end())
                 continue;
-            s += *c->Definitions.begin() + "->" + *std::static_pointer_cast<Check>(d)->Definitions.begin() + ";";
+            s += *static_cast<Check*>(c)->Definitions.begin() + "->" + *std::static_pointer_cast<Check>(d)->Definitions.begin() + ";";
         }
     }
     s += "}";
@@ -540,6 +540,14 @@ Check::~Check()
 void Check::clean() const
 {
     commands.clear();
+}
+
+String Check::getName(bool short_name) const
+{
+    auto d = getDefinition();
+    if (d)
+        return *d;
+    return {};
 }
 
 std::optional<String> Check::getDefinition() const
@@ -619,10 +627,12 @@ std::vector<CheckPtr> Check::gatherDependencies()
     return deps;
 }
 
-bool Check::lessDuringExecution(const Check &rhs) const
+bool Check::lessDuringExecution(const CommandNode &in) const
 {
     // improve sorting! it's too stupid
     // simple "0 0 0 0 1 2 3 6 7 8 9 11" is not enough
+
+    auto &rhs = (const Check &)in;
 
     if (dependencies.size() != rhs.dependencies.size())
         return dependencies.size() < rhs.dependencies.size();
@@ -698,9 +708,9 @@ bool Check::execute(SwBuild &b) const
         // save commands for cleanup
         auto p = b.getExecutionPlan();
         // we must save comands here, because later we need to check results of specific commands
-        for (auto &c : p.commands)
-            commands.push_back(c->shared_from_this());
-        for (auto &c : p.commands)
+        for (auto &c : p.getCommands<builder::Command>())
+            commands.push_back(std::static_pointer_cast<builder::Command>(c->shared_from_this()));
+        for (auto &c : p.getCommands<builder::Command>())
             c->silent = true;
 
         b.execute(p);

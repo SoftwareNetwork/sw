@@ -299,7 +299,7 @@ void SwBuild::execute() const
     execute(p);
 }
 
-void SwBuild::execute(CommandExecutionPlan &p) const
+void SwBuild::execute(ExecutionPlan &p) const
 {
     auto print_graph = [](const auto &ep, const path &p, bool short_names = false)
     {
@@ -365,7 +365,7 @@ void SwBuild::execute(CommandExecutionPlan &p) const
 
     if (build_always)
     {
-        for (auto &c : p.commands)
+        for (auto &c : p.getCommands<builder::Command>())
             c->always = true;
     }
 
@@ -387,7 +387,7 @@ void SwBuild::execute(CommandExecutionPlan &p) const
         LOG_INFO(logger, "Build time: " << t2 << " s.");*/
 
     // produce chrome tracing log
-    if (time_trace)
+    /*if (time_trace)
     {
         // calculate minimal time
         auto min = decltype (builder::Command::t_begin)::clock::now();
@@ -432,7 +432,7 @@ void SwBuild::execute(CommandExecutionPlan &p) const
         }
         trace["traceEvents"] = events;
         write_file(swctx.source_dir / SW_BINARY_DIR / "misc" / "time_trace.json", trace.dump(2));
-    }
+    }*/
 
     // prevent memory leaks (high mem usage)
     /*updateConcurrentContext();
@@ -516,14 +516,14 @@ Commands SwBuild::getCommands() const
     return cmds;
 }
 
-SwBuild::CommandExecutionPlan SwBuild::getExecutionPlan() const
+ExecutionPlan SwBuild::getExecutionPlan() const
 {
     return getExecutionPlan(getCommands());
 }
 
-SwBuild::CommandExecutionPlan SwBuild::getExecutionPlan(const Commands &cmds) const
+ExecutionPlan SwBuild::getExecutionPlan(const Commands &cmds) const
 {
-    auto ep = CommandExecutionPlan::createExecutionPlan(cmds);
+    auto ep = ExecutionPlan::createExecutionPlan(cmds);
     if (ep)
         return ep;
 

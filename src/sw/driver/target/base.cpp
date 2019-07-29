@@ -568,7 +568,7 @@ Commands Target::getCommands() const
 void Target::registerCommand(builder::Command &c)
 {
     c.command_storage = getCommandStorageType();
-    Storage.push_back(c);
+    Storage.push_back(c.shared_from_this());
 }
 
 void Target::removeFile(const path &fn, bool binary_dir)

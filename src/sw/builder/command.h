@@ -60,10 +60,9 @@ struct FileStorage;
 struct Program;
 struct SwBuilderContext;
 
-template <class T>
-struct CommandData
+struct SW_BUILDER_API CommandNode : std::enable_shared_from_this<CommandNode>
 {
-    using SPtr = std::shared_ptr<T>;
+    using SPtr = std::shared_ptr<CommandNode>;
 
     std::unordered_set<SPtr> dependencies;
 
@@ -73,13 +72,15 @@ struct CommandData
     std::atomic_size_t *current_command = nullptr;
     std::atomic_size_t *total_commands = nullptr;
 
-    CommandData() = default;
-    CommandData(const CommandData &rhs) {}
-    virtual ~CommandData() = default;
+    CommandNode();
+    CommandNode(const CommandNode &);
+    CommandNode &operator=(const CommandNode &);
+    virtual ~CommandNode();
 
+    virtual String getName(bool short_name = false) const = 0;
     virtual void execute() = 0;
     virtual void prepare() = 0;
-    // virtual bool lessDuringExecution(const Command &rhs) const;
+    virtual bool lessDuringExecution(const CommandNode &) const = 0;
 
     void clear()
     {
@@ -135,8 +136,7 @@ struct SW_BUILDER_API ResolvableCommand : ::primitives::Command
 
 }
 
-struct SW_BUILDER_API Command : ICastable, std::enable_shared_from_this<Command>,
-    CommandData<::sw::builder::Command>, detail::ResolvableCommand // hide?
+struct SW_BUILDER_API Command : ICastable, CommandNode, detail::ResolvableCommand // hide?
 {
     using Base = detail::ResolvableCommand;
     using Clock = std::chrono::high_resolution_clock;
@@ -204,7 +204,7 @@ struct SW_BUILDER_API Command : ICastable, std::enable_shared_from_this<Command>
     void clean() const;
     bool isExecuted() const { return pid != -1 || executed_; }
 
-    String getName(bool short_name = false) const;
+    String getName(bool short_name = false) const override;
 
     virtual bool isOutdated() const;
     bool needsResponseFile() const;
@@ -230,7 +230,7 @@ struct SW_BUILDER_API Command : ICastable, std::enable_shared_from_this<Command>
     void addInputOutputDeps();
     path writeCommand(const path &basename) const;
 
-    bool lessDuringExecution(const Command &rhs) const;
+    bool lessDuringExecution(const CommandNode &rhs) const override;
 
     //void load(BinaryContext &bctx);
     //void save(BinaryContext &bctx);
@@ -331,16 +331,6 @@ String getInternalCallBuiltinFunctionName();
 
 using builder::ExecuteBuiltinCommand;
 using Commands = std::unordered_set<std::shared_ptr<builder::Command>>;
-
-#if defined(_WIN32)// || defined(__APPLE__)
-#if defined(__APPLE__)
-SW_BUILDER_API_EXTERN
-#endif
-template struct SW_BUILDER_API CommandData<builder::Command>;
-#elif defined(__APPLE__)
-#else
-template struct CommandData<builder::Command>;
-#endif
 
 /// return input when file not found
 SW_BUILDER_API

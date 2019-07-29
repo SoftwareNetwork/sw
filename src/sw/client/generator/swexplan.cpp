@@ -103,11 +103,11 @@ void serialize(Archive &ar, ::sw::builder::Command &c, const unsigned int)
 
 } // namespace boost::serialization
 
-#define SERIALIZATION_TYPE ::sw::SwBuild::CommandExecutionPlan
+#define SERIALIZATION_TYPE ::sw::ExecutionPlan
 SERIALIZATION_BEGIN_SPLIT
     SW_UNIMPLEMENTED;
 SERIALIZATION_SPLIT_CONTINUE
-    for (auto &c : v.commands)
+    for (auto &c : v.getCommands<::sw::builder::Command>())
         ar & *c;
 SERIALIZATION_SPLIT_END
 

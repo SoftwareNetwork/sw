@@ -263,7 +263,7 @@ struct NinjaEmitter : primitives::Emitter
 
         auto ep = b.getExecutionPlan();
 
-        for (auto &c : ep.commands)
+        for (auto &c : ep.getCommands<builder::Command>())
             addCommand(b, *c);
 
         primitives::Emitter ctx_progs;
@@ -634,12 +634,12 @@ void MakeGenerator::generate(const SwBuild &b)
 
     // all
     Files outputs;
-    for (auto &c : ep.commands)
+    for (auto &c : ep.getCommands<builder::Command>())
         outputs.insert(c->outputs.begin(), c->outputs.end());
     ctx.addTarget("all", outputs);
 
     // print commands
-    for (auto &c : ep.commands)
+    for (auto &c : ep.getCommands<builder::Command>())
         ctx.addCommand(*c, d);
 
     // clean
@@ -682,9 +682,9 @@ void ShellGenerator::generate(const SwBuild &b)
 
     // print commands
     int i = 1;
-    for (auto &c : ep.commands)
+    for (auto &c : ep.getCommands<builder::Command>())
     {
-        ctx.addLine("echo [" + std::to_string(i++) + "/" + std::to_string(ep.commands.size()) + "] " + c->getName());
+        ctx.addLine("echo [" + std::to_string(i++) + "/" + std::to_string(ep.getCommands().size()) + "] " + c->getName());
 
         // set new line
         ctx.addLine();

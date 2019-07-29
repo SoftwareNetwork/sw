@@ -13,9 +13,7 @@
 namespace sw
 {
 
-template <class T>
 struct ExecutionPlan;
-
 struct IDriver;
 struct Input;
 struct SwContext;
@@ -35,8 +33,6 @@ enum class BuildState
 // single build
 struct SW_CORE_API SwBuild
 {
-    using CommandExecutionPlan = ExecutionPlan<builder::Command>;
-
     SwBuild(SwContext &swctx);
     SwBuild(const SwBuild &) = delete;
     SwBuild &operator=(const SwBuild &) = delete;
@@ -62,13 +58,13 @@ struct SW_CORE_API SwBuild
 
     // tune
     bool prepareStep();
-    void execute(CommandExecutionPlan &p) const;
-    CommandExecutionPlan getExecutionPlan(const Commands &cmds) const;
+    void execute(ExecutionPlan &p) const;
+    ExecutionPlan getExecutionPlan(const Commands &cmds) const;
     bool step();
     void overrideBuildState(BuildState) const;
 
     //
-    CommandExecutionPlan getExecutionPlan() const;
+    ExecutionPlan getExecutionPlan() const;
     String getHash() const;
 
     TargetMap &getTargets() { return targets; }

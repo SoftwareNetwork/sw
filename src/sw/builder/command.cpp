@@ -49,6 +49,24 @@ static ConcurrentCommandStorage &getCommandStorage(const SwBuilderContext &swctx
     return swctx.getCommandStorage().getStorage(local);
 }
 
+CommandNode::CommandNode()
+{
+
+}
+
+CommandNode::CommandNode(const CommandNode &)
+{
+}
+
+CommandNode &CommandNode::operator=(const CommandNode &)
+{
+    return *this;
+}
+
+CommandNode::~CommandNode()
+{
+}
+
 namespace builder
 {
 
@@ -274,7 +292,7 @@ void Command::addOutput(const path &p)
     if (p.empty())
         return;
     outputs.insert(p);
-    File(p, swctx.getFileStorage()).setGenerator(shared_from_this(), true);
+    File(p, swctx.getFileStorage()).setGenerator(std::static_pointer_cast<Command>(shared_from_this()), true);
 }
 
 void Command::addOutput(const Files &files)
@@ -355,7 +373,7 @@ void Command::prepare()
     for (auto &p : outputs)
     {
         // there must be no error, because previous generator == this
-        File(p, swctx.getFileStorage()).setGenerator(shared_from_this(), false);
+        File(p, swctx.getFileStorage()).setGenerator(std::static_pointer_cast<Command>(shared_from_this()), false);
     }
 
     prepared = true;
@@ -913,7 +931,7 @@ void Command::printLog() const
     static Executor eprinter(1);
     if (current_command)
     {
-        eprinter.push([c = shared_from_this()]
+        eprinter.push([c = std::static_pointer_cast<const Command>(shared_from_this())]
         {
             c->log_string = "[" + std::to_string((*c->current_command)++) + "/" + std::to_string(c->total_commands->load()) + "] " + c->getName();
 
@@ -1012,10 +1030,12 @@ void Command::addPathDirectory(const path &p)
     environment[env] += delim + norm(p);
 }
 
-bool Command::lessDuringExecution(const Command &rhs) const
+bool Command::lessDuringExecution(const CommandNode &in) const
 {
     // improve sorting! it's too stupid
     // simple "0 0 0 0 1 2 3 6 7 8 9 11" is not enough
+
+    auto &rhs = (const Command &)in;
 
     if (dependencies.size() != rhs.dependencies.size())
         return dependencies.size() < rhs.dependencies.size();

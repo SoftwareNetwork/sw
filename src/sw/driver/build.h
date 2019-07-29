@@ -30,9 +30,6 @@ struct SwContext;
 struct ModuleSwappableData;
 struct PrepareConfigEntryPoint;
 
-template <class T>
-struct ExecutionPlan;
-
 using FilesMap = std::unordered_map<path, path>;
 
 struct SW_DRIVER_CPP_API Test : driver::CommandBuilder
