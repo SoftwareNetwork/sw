@@ -54,9 +54,12 @@ struct SW_CORE_API SwContext : SwCoreContext
     const Drivers &getDrivers() const { return drivers; }
 
     std::unique_ptr<SwBuild> createBuild();
+    void executeBuild(const path &);
 
 private:
     Drivers drivers;
+
+    std::unique_ptr<SwBuild> createBuild1();
 };
 
 } // namespace sw

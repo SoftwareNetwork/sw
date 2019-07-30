@@ -33,7 +33,7 @@ enum class BuildState
 // single build
 struct SW_CORE_API SwBuild
 {
-    SwBuild(SwContext &swctx);
+    SwBuild(SwContext &swctx, const path &build_dir);
     SwBuild(const SwBuild &) = delete;
     SwBuild &operator=(const SwBuild &) = delete;
     ~SwBuild();
@@ -65,6 +65,8 @@ struct SW_CORE_API SwBuild
     // explans
     void saveExecutionPlan() const;
     void runSavedExecutionPlan() const;
+    void saveExecutionPlan(const path &) const;
+    void runSavedExecutionPlan(const path &) const;
     ExecutionPlan getExecutionPlan() const;
     String getHash() const;
     path getExecutionPlanPath() const;
@@ -75,14 +77,14 @@ struct SW_CORE_API SwBuild
     TargetMap &getTargetsToBuild() { return targets_to_build; }
     const TargetMap &getTargetsToBuild() const { return targets_to_build; }
 
-    path getBinaryDirectory() const { return binary_dir; }
+    path getBuildDirectory() const;
 
 private:
     using InputPtr = std::unique_ptr<Input>;
     using Inputs = std::vector<InputPtr>;
 
     SwContext &swctx;
-    path binary_dir;
+    path build_dir;
     Inputs inputs;
     TargetMap targets;
     TargetMap targets_to_build;

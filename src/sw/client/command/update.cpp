@@ -18,7 +18,7 @@
 
 #include "commands.h"
 
-extern ::cl::opt<bool> dry_run;
+//extern ::cl::opt<bool> dry_run;
 ::cl::opt<String> build_arg_update(::cl::Positional, ::cl::desc("Update lock"), ::cl::init("."), ::cl::sub(subcommand_update));
 
 SUBCOMMAND_DECL(update)
@@ -26,7 +26,7 @@ SUBCOMMAND_DECL(update)
     SW_UNIMPLEMENTED;
 
     auto swctx = createSwContext();
-    dry_run = true;
+    //dry_run = true;
     /*((Strings&)build_arg).clear();
     build_arg.push_back(build_arg_update.getValue());
     cli_build(*swctx);*/

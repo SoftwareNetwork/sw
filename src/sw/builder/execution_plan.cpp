@@ -399,8 +399,12 @@ void ExecutionPlan::prepare(USet &cmds)
 
         // some commands get its i/o deps in wrong order,
         // so we explicitly call this once more
-        //for (auto &c : cmds)
-            //c->addInputOutputDeps();
+        // do not remove!
+        for (auto &c : cmds)
+        {
+            if (auto c1 = dynamic_cast<builder::Command*>(c))
+                c1->addInputOutputDeps();
+        }
 
         // separate loop for additional deps tracking (programs, inputs, outputs etc.)
         auto cmds2 = cmds;

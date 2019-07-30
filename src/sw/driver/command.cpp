@@ -20,6 +20,29 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "cpp.command");
 
+#include <sw/support/serialization.h>
+#include <boost/serialization/export.hpp>
+/*BOOST_CLASS_EXPORT_GUID(::sw::driver::detail::Command, "sw.driver.command.detail")
+BOOST_CLASS_EXPORT_GUID(::sw::driver::VSCommand, "sw.driver.command.vs")
+BOOST_CLASS_EXPORT_GUID(::sw::driver::GNUCommand, "sw.driver.command.gnu")*/
+
+//BOOST_CLASS_EXPORT_GUID(::sw::driver::Command, "sw.driver.command2")
+BOOST_CLASS_EXPORT_IMPLEMENT(::sw::driver::Command)
+
+/*#include <boost/serialization/type_info_implementation.hpp>
+#include <boost/serialization/extended_type_info_typeid.hpp>
+BOOST_CLASS_TYPE_INFO(
+    ::sw::driver::Command,
+    boost::serialization::extended_type_info_typeid<::sw::driver::Command>
+)*/
+
+#define SERIALIZATION_TYPE ::sw::driver::Command
+SERIALIZATION_BEGIN_SPLIT
+    SW_UNIMPLEMENTED;
+SERIALIZATION_SPLIT_CONTINUE
+    SW_UNIMPLEMENTED;
+SERIALIZATION_SPLIT_END
+
 namespace sw::driver
 {
 

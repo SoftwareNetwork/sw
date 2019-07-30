@@ -46,14 +46,21 @@ static cl::opt<bool> print_graph("print-graph", cl::desc("Print file with build 
 namespace sw
 {
 
-SwBuild::SwBuild(SwContext &swctx)
+SwBuild::SwBuild(SwContext &swctx, const path &build_dir)
     : swctx(swctx)
+    , build_dir(build_dir)
 {
-    binary_dir = fs::current_path() / SW_BINARY_DIR;
 }
 
 SwBuild::~SwBuild()
 {
+}
+
+path SwBuild::getBuildDirectory() const
+{
+    // use like this for now
+    return fs::current_path() / SW_BINARY_DIR;
+    //return build_dir;
 }
 
 void SwBuild::build()
@@ -316,7 +323,7 @@ void SwBuild::execute(ExecutionPlan &p) const
         LOG_INFO(logger, "Build time: " << t2 << " s.");*/
 
     if (time_trace)
-        p.saveChromeTrace(getBinaryDirectory() / "misc" / "time_trace.json");
+        p.saveChromeTrace(getBuildDirectory() / "misc" / "time_trace.json");
 }
 
 Commands SwBuild::getCommands() const
@@ -485,22 +492,33 @@ Input &SwBuild::addInput1(const I &i)
 
 path SwBuild::getExecutionPlanPath() const
 {
-    return getBinaryDirectory() / "ep" / getHash() += ".ep";
+    const auto ext = ".swb"; // sw build
+    return getBuildDirectory() / "ep" / getHash() += ext;
 }
 
 void SwBuild::saveExecutionPlan() const
 {
-    CHECK_STATE(BuildState::Prepared);
-
-    auto p = getExecutionPlan();
-    p.save(getExecutionPlanPath());
+    saveExecutionPlan(getExecutionPlanPath());
 }
 
 void SwBuild::runSavedExecutionPlan() const
 {
     CHECK_STATE(BuildState::InputsLoaded);
 
-    auto p = ExecutionPlan::load(getExecutionPlanPath(), getContext());
+    runSavedExecutionPlan(getExecutionPlanPath());
+}
+
+void SwBuild::saveExecutionPlan(const path &in) const
+{
+    CHECK_STATE(BuildState::Prepared);
+
+    auto p = getExecutionPlan();
+    p.save(in);
+}
+
+void SwBuild::runSavedExecutionPlan(const path &in) const
+{
+    auto p = ExecutionPlan::load(in, getContext());
 
     // change state
     overrideBuildState(BuildState::Prepared);

@@ -471,7 +471,7 @@ void PrepareConfigEntryPoint::many2one(Build &b, const std::unordered_set<LocalP
         {
             auto d = driver::cpp::findConfig(pkg.getDirSrc2(), driver::cpp::Driver::getAvailableFrontendConfigFilenames());
             if (!d)
-                throw SW_RUNTIME_ERROR("cannot find config");
+                throw SW_RUNTIME_ERROR("cannot find config for package: " + pkg.toString());
             return *d;
         }
         SW_UNIMPLEMENTED;

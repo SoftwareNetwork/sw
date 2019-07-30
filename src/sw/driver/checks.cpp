@@ -710,8 +710,7 @@ bool Check::execute(SwBuild &b) const
         // we must save comands here, because later we need to check results of specific commands
         for (auto &c : p.getCommands())
             commands.push_back(std::static_pointer_cast<builder::Command>(c->shared_from_this()));
-        for (auto &c : p.getCommands())
-            static_cast<builder::Command*>(c)->silent = true;
+        p.silent = true;
 
         b.execute(p);
     }

@@ -70,8 +70,8 @@ Build::Build(SwBuild &mb)
     main_build_ = &mb;
 
     // canonical makes disk letter uppercase on windows
-    setSourceDirectory(getContext().source_dir);
-    BinaryDir = mb.getBinaryDirectory();
+    setSourceDirectory(mb.getBuildDirectory().parent_path());
+    BinaryDir = mb.getBuildDirectory();
 }
 
 Build::Build(const Build &rhs)

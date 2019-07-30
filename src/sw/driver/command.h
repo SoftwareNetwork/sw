@@ -12,6 +12,8 @@
 #include <sw/builder/command.h>
 #include <sw/builder/file.h>
 
+#include <boost/serialization/export.hpp>
+
 #include <functional>
 
 namespace sw

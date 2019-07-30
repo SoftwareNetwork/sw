@@ -8,7 +8,7 @@ void configure(Solution &s)
 
 void build(Solution &s)
 {
-    auto &t1 = s.add<Executable>("test");
+    auto &t1 = s.addExecutable("test");
     t1 += "src/main.cpp";
 
     auto &t2 = s.addExecutable("test2");

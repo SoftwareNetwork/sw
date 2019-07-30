@@ -308,7 +308,7 @@ void LocalStorage::migrateStorage(int from, int to)
 bool LocalStorage::isPackageInstalled(const Package &pkg) const
 {
     LocalPackage p(*this, pkg);
-    return getPackagesDatabase().isPackageInstalled(pkg) && fs::exists(p.getDir());
+    return getPackagesDatabase().isPackageInstalled(pkg) && fs::exists(p.getDirSrc2());
 }
 
 bool LocalStorage::isPackageOverridden(const PackageId &pkg) const

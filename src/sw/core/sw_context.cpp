@@ -116,9 +116,14 @@ SwContext::~SwContext()
 {
 }
 
+std::unique_ptr<SwBuild> SwContext::createBuild1()
+{
+    return std::make_unique<SwBuild>(*this, fs::current_path() / SW_BINARY_DIR);
+}
+
 std::unique_ptr<SwBuild> SwContext::createBuild()
 {
-    auto b = std::make_unique<SwBuild>(*this);
+    auto b = createBuild1();
     b->getTargets() = getPredefinedTargets();
     return std::move(b);
 }
@@ -126,6 +131,13 @@ std::unique_ptr<SwBuild> SwContext::createBuild()
 void SwContext::registerDriver(std::unique_ptr<IDriver> driver)
 {
     drivers.insert_or_assign(driver->getPackageId(), std::move(driver));
+}
+
+void SwContext::executeBuild(const path &in)
+{
+    clearFileStorages();
+    auto b = createBuild1();
+    b->runSavedExecutionPlan(in);
 }
 
 }

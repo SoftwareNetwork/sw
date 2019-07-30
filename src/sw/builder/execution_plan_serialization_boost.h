@@ -4,12 +4,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include <boost/serialization/access.hpp>
-#include <boost/archive/binary_iarchive.hpp>
-#include <boost/archive/binary_oarchive.hpp>
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
-
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable : 4005) // warning C4005: 'XXX': macro redefinition
@@ -19,35 +13,13 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#define SERIALIZATION_BEGIN_LOAD(t) \
-    template <class Archive>        \
-    void load(Archive &ar, t &v, const unsigned)
-
-#define SERIALIZATION_BEGIN_SAVE(t) \
-    template <class Archive>        \
-    void save(Archive &ar, const t &v, const unsigned)
-
-#define SERIALIZATION_BEGIN_SPLIT                      \
-    BOOST_SERIALIZATION_SPLIT_FREE(SERIALIZATION_TYPE) \
-    namespace boost::serialization                     \
-    {                                                  \
-    SERIALIZATION_BEGIN_LOAD(SERIALIZATION_TYPE)       \
-    {
-
-#define SERIALIZATION_END }
-#define SERIALIZATION_SPLIT_CONTINUE } SERIALIZATION_BEGIN_SAVE(SERIALIZATION_TYPE) {
-#define SERIALIZATION_SPLIT_END } SERIALIZATION_END
-
-////////////////////////////////////////////////////////////////////////////////
-
 #define SERIALIZATION_TYPE ::path
 SERIALIZATION_BEGIN_SPLIT
     String s;
     ar >> s;
     v = fs::u8path(s);
 SERIALIZATION_SPLIT_CONTINUE
-    String s = v.u8string();
-    ar << s;
+    ar << v.u8string();
 SERIALIZATION_SPLIT_END
 
 ////////////////////////////////////////
@@ -88,40 +60,34 @@ SERIALIZATION_SPLIT_END
 
 ////////////////////////////////////////
 
-namespace boost::serialization
-{
-
-template<class Archive>
-void serialize(Archive &ar, ::sw::builder::Command::Argument &a, const unsigned)
-{
-    ar << a.toString();
-}
-
-} // namespace boost::serialization
-
-    /*StringHashMap<int> gatherStrings() const
-    {
-        for (auto &c : commands)
-        {
-            insert(c->in.file.u8string());
-            insert(c->out.file.u8string());
-            insert(c->err.file.u8string());
-        }
-    }*/
+#define SERIALIZATION_TYPE ::sw::builder::Command::Argument
+SERIALIZATION_BEGIN_UNIFIED
+    ar & a.toString();
+SERIALIZATION_UNIFIED_END
 
 ////////////////////////////////////////
 
-#define SERIALIZATION_TYPE ::sw::builder::Command
+#define SERIALIZATION_TYPE ::primitives::Command::Stream
+SERIALIZATION_BEGIN_UNIFIED
+    ar & v.text;
+    ar & v.file;
+    ar & v.append;
+SERIALIZATION_UNIFIED_END
+
+////////////////////////////////////////
+
+#define SERIALIZATION_TYPE ::primitives::Command
 SERIALIZATION_BEGIN_SPLIT
-    ar >> v.name;
-    ar >> v.command_storage;
-    ar >> v.working_directory;
-    ar >> v.environment;
-    ar >> v.first_response_file_argument;
-    ar >> v.always;
-    ar >> v.remove_outputs_before_execution;
-    ar >> v.strict_order;
-    ar >> v.output_dirs;
+    ar & v.working_directory;
+    ar & v.environment;
+
+    ar & v.in;
+    ar & v.out;
+    ar & v.err;
+
+    /*if (v.next)
+        throw SW_RUNTIME_ERROR("Some error");
+    ar & v.prev;*/
 
     size_t sz;
     ar >> sz;
@@ -134,24 +100,50 @@ SERIALIZATION_BEGIN_SPLIT
         ar >> s;
         v.push_back(s);
     }
-    ar >> v.inputs;
-    ar >> v.outputs;
 SERIALIZATION_SPLIT_CONTINUE
-    ar << v.getName();
-    ar << v.command_storage;
-    ar << v.working_directory;
-    ar << v.environment;
-    ar << v.first_response_file_argument;
-    ar << v.always;
-    ar << v.remove_outputs_before_execution;
-    ar << v.strict_order;
-    ar << v.output_dirs;
+    ar & v.working_directory;
+    ar & v.environment;
+
+    ar & v.in;
+    ar & v.out;
+    ar & v.err;
+
+    //ar & v.prev;
 
     ar << v.arguments.size();
     for (auto &a : v.arguments)
         ar << a->toString();
-    ar << v.inputs;
-    ar << v.outputs;
+SERIALIZATION_SPLIT_END
+
+////////////////////////////////////////
+
+#define SERIALIZATION_TYPE ::sw::builder::Command
+SERIALIZATION_BEGIN_SPLIT
+    ar & base_object<::primitives::Command>(v);
+
+    ar & v.name;
+    ar & v.command_storage;
+    ar & v.first_response_file_argument;
+    ar & v.always;
+    ar & v.remove_outputs_before_execution;
+    ar & v.strict_order;
+    ar & v.output_dirs;
+
+    ar & v.inputs;
+    ar & v.outputs;
+SERIALIZATION_SPLIT_CONTINUE
+    ar & base_object<::primitives::Command>(v);
+
+    ar & v.getName();
+    ar & v.command_storage;
+    ar & v.first_response_file_argument;
+    ar & v.always;
+    ar & v.remove_outputs_before_execution;
+    ar & v.strict_order;
+    ar & v.output_dirs;
+
+    ar & v.inputs;
+    ar & v.outputs;
 SERIALIZATION_SPLIT_END
 
 ////////////////////////////////////////
@@ -167,14 +159,14 @@ SERIALIZATION_BEGIN_SPLIT
         ar >> *c;
     }
 SERIALIZATION_SPLIT_CONTINUE
-    SW_UNIMPLEMENTED;
+    SW_UNREACHABLE;
 SERIALIZATION_SPLIT_END
 
 ////////////////////////////////////////
 
 #define SERIALIZATION_TYPE ::std::vector<::sw::ExecutionPlan::PtrT>
 SERIALIZATION_BEGIN_SPLIT
-    SW_UNIMPLEMENTED;
+    SW_UNREACHABLE;
 SERIALIZATION_SPLIT_CONTINUE
     ar << v.size();
     for (auto c : v)
