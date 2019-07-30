@@ -33,8 +33,6 @@ struct SwBuild;
 
 enum class GeneratorType
 {
-    UnspecifiedGenerator,
-
     Batch,
     CMake,
     CompilationDatabase,
@@ -53,10 +51,6 @@ enum class GeneratorType
 
 struct Generator
 {
-    GeneratorType type = GeneratorType::UnspecifiedGenerator;
-    //path dir;
-    //path file;
-
     virtual ~Generator() = default;
 
     virtual void generate(const sw::SwBuild &) = 0;
@@ -65,6 +59,11 @@ struct Generator
     //virtual void initSolutions(Build &b) {}
 
     static std::unique_ptr<Generator> create(const String &s);
+
+    GeneratorType getType() const { return type; }
+
+private:
+    GeneratorType type;
 };
 
 struct VSGenerator : Generator

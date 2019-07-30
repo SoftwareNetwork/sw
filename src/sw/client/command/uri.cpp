@@ -18,7 +18,9 @@
 
 #include "commands.h"
 
+#include <sw/manager/storage.h>
 #include <sw/support/filesystem.h>
+
 #include <primitives/http.h>
 #include <primitives/sw/settings_program_name.h>
 

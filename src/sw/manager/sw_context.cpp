@@ -79,14 +79,25 @@ std::unordered_map<UnresolvedPackage, Package> SwManagerContext::resolve(const U
 
     std::unordered_map<UnresolvedPackage, Package> resolved;
     auto pkgs2 = pkgs;
-    for (const auto &[i, s] : enumerate(storages))
+    // when there's new unresolved package available,
+    // we must start from the beginning of storages!!!
+    //while (1)
     {
-        UnresolvedPackages unresolved;
-        auto rpkgs = s->resolve(pkgs2, unresolved);
-        resolved.merge(rpkgs);
-        pkgs2 = std::move(unresolved);
-        if (pkgs2.empty())
+        bool again = false;
+        for (const auto &[i, s] : enumerate(storages))
+        {
+            UnresolvedPackages unresolved;
+            auto rpkgs = s->resolveWithDependencies(pkgs2, unresolved);
+            //again = pkgs2.size()
+            resolved.merge(rpkgs);
+            pkgs2 = std::move(unresolved);
+            if (pkgs2.empty())
+                break;
+        }
+        /*if (pkgs2.empty())
             break;
+        if (!again)
+            break;*/
     }
 
     // save existing results

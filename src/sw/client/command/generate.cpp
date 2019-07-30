@@ -60,8 +60,11 @@ SUBCOMMAND_DECL2(generate)
 #endif
     }
 
-    auto b = setBuildArgsAndCreateBuildAndPrepare(swctx, { build_arg_generate.getValue() });
-
     auto generator = Generator::create(gGenerator);
-    generator->generate(*b);
+    if (generator->getType() != GeneratorType::VisualStudio)
+    {
+        auto b = setBuildArgsAndCreateBuildAndPrepare(swctx, { build_arg_generate.getValue() });
+        generator->generate(*b);
+        return;
+    }
 }

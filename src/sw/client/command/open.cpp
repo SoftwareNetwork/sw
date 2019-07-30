@@ -18,6 +18,8 @@
 
 #include "commands.h"
 
+#include <sw/manager/storage.h>
+
 #ifdef _WIN32
 #include <windows.h>
 #include <shellapi.h>

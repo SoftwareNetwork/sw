@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include "storage.h"
+#include "package.h"
 
 #include <sw/support/filesystem.h>
 
@@ -17,25 +17,21 @@
 namespace sw
 {
 
-// sw_context_t
-struct SW_MANAGER_API ISwContext
-{
-    virtual ~ISwContext() = default;
+struct IResolvableStorage;
+struct Storage;
+struct CachedStorage;
+struct LocalStorage;
 
-    virtual Storage &getLocalStorage() = 0;
-    virtual const Storage &getLocalStorage() const = 0;
+// sw_context_t?
+//struct SW_MANAGER_API ISwContext
 
-    // rename to resolvePackages?
-    virtual std::unordered_map<UnresolvedPackage, Package> resolve(const UnresolvedPackages &) const = 0;
-};
-
-struct SW_MANAGER_API SwManagerContext : ISwContext
+struct SW_MANAGER_API SwManagerContext
 {
     SwManagerContext(const path &local_storage_root_dir);
     virtual ~SwManagerContext();
 
-    LocalStorage &getLocalStorage() override;
-    const LocalStorage &getLocalStorage() const override;
+    LocalStorage &getLocalStorage();
+    const LocalStorage &getLocalStorage() const;
     std::vector<Storage *> getRemoteStorages();
     std::vector<const Storage *> getRemoteStorages() const;
 
@@ -43,7 +39,7 @@ struct SW_MANAGER_API SwManagerContext : ISwContext
     std::unordered_map<UnresolvedPackage, LocalPackage> install(const UnresolvedPackages &) const;
     LocalPackage install(const Package &) const;
 
-    std::unordered_map<UnresolvedPackage, Package> resolve(const UnresolvedPackages &) const override;
+    std::unordered_map<UnresolvedPackage, Package> resolve(const UnresolvedPackages &) const;
     LocalPackage resolve(const UnresolvedPackage &) const;
 
 private:

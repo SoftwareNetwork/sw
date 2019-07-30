@@ -93,6 +93,7 @@ struct SW_MANAGER_API IResolvableStorage
     virtual String getName() const = 0;
 
     /// resolve packages from this storage
+    std::unordered_map<UnresolvedPackage, Package> resolveWithDependencies(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const;
     virtual std::unordered_map<UnresolvedPackage, Package> resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const = 0;
 };
 
@@ -157,8 +158,6 @@ private:
     std::unique_ptr<PackagesDatabase> pkgdb;
     mutable std::mutex m;
     mutable std::unordered_map<PackageId, PackageData> data;
-
-    std::unordered_map<UnresolvedPackage, Package> resolve_no_deps(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const;
 };
 
 struct SW_MANAGER_API LocalStorageBase : StorageWithPackagesDatabase
@@ -224,8 +223,8 @@ struct SW_MANAGER_API RemoteStorage : StorageWithPackagesDatabase
     int getHashPathFromHashSchemaVersion() const override;
     //LocalPackage download(const PackageId &) const override;
     //LocalPackage install(const Package &) const;
-    std::unordered_map<UnresolvedPackage, Package> resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const override;
     std::unique_ptr<vfs::File> getFile(const PackageId &id, StorageFileType) const override;
+    std::unordered_map<UnresolvedPackage, Package> resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const override;
 
 private:
     LocalStorage &ls;
@@ -245,8 +244,8 @@ struct SW_MANAGER_API RemoteStorageWithFallbackToRemoteResolving : RemoteStorage
     using RemoteStorage::RemoteStorage;
 
     const PackageData &loadData(const PackageId &) const override;
-    std::unordered_map<UnresolvedPackage, Package> resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const override;
     std::unordered_map<UnresolvedPackage, Package> resolveFromRemote(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const;
+    std::unordered_map<UnresolvedPackage, Package> resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const override;
 
 private:
     mutable std::unordered_map<PackageId, PackageData> data;
@@ -257,9 +256,8 @@ struct CachedStorage : IResolvableStorage
     virtual ~CachedStorage() = default;
 
     String getName() const override;
-    std::unordered_map<UnresolvedPackage, Package> resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const override;
-
     void store(const std::unordered_map<UnresolvedPackage, Package> &);
+    std::unordered_map<UnresolvedPackage, Package> resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const override;
 
 private:
     mutable std::unordered_map<UnresolvedPackage, Package> resolved_packages;

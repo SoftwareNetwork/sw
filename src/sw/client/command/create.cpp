@@ -18,6 +18,8 @@
 
 #include "commands.h"
 
+#include <sw/manager/storage.h>
+
 #include <boost/algorithm/string.hpp>
 #include <primitives/emitter.h>
 

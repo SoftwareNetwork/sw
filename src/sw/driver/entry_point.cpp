@@ -13,6 +13,7 @@
 #include "target/native.h"
 
 #include <sw/core/sw_context.h>
+#include <sw/manager/storage.h>
 
 #include <primitives/emitter.h>
 #include <primitives/sw/settings_program_name.h>

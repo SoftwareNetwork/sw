@@ -14,6 +14,7 @@
 
 #include <sw/builder/execution_plan.h>
 #include <sw/core/sw_context.h>
+#include <sw/manager/storage.h>
 #include <sw/support/filesystem.h>
 #include <sw/support/hash.h>
 

@@ -415,7 +415,7 @@ void NinjaGenerator::generate(const SwBuild &swctx)
 {
     // https://ninja-build.org/manual.html#_writing_your_own_ninja_files
 
-    const auto dir = path(SW_BINARY_DIR) / toPathString(type) / swctx.getHash();
+    const auto dir = path(SW_BINARY_DIR) / toPathString(getType()) / swctx.getHash();
 
     NinjaEmitter ctx(swctx, dir);
     write_file(dir / "build.ninja", ctx.getText());
@@ -619,12 +619,12 @@ void MakeGenerator::generate(const SwBuild &b)
     // https://www.gnu.org/software/make/manual/html_node/index.html
     // https://en.wikipedia.org/wiki/Make_(software)
 
-    const auto d = fs::absolute(path(SW_BINARY_DIR) / toPathString(type) / b.getHash());
+    const auto d = fs::absolute(path(SW_BINARY_DIR) / toPathString(getType()) / b.getHash());
 
     auto ep = b.getExecutionPlan();
 
     MakeEmitter ctx;
-    ctx.nmake = type == GeneratorType::NMake;
+    ctx.nmake = getType() == GeneratorType::NMake;
 
     const String commands_fn = "commands.mk";
     ctx.clear();
@@ -659,7 +659,7 @@ void MakeGenerator::generate(const SwBuild &b)
 
 void ShellGenerator::generate(const SwBuild &b)
 {
-    const auto d = path(SW_BINARY_DIR) / toPathString(type) / b.getHash();
+    const auto d = path(SW_BINARY_DIR) / toPathString(getType()) / b.getHash();
 
     auto ep = b.getExecutionPlan();
 
@@ -761,7 +761,7 @@ void CompilationDatabaseGenerator::generate(const SwBuild &b)
         ".c", ".cpp", ".cxx", ".c++", ".cc", ".CPP", ".C++", ".CXX", ".C", ".CC"
     };
 
-    const auto d = path(SW_BINARY_DIR) / toPathString(type) / b.getHash();
+    const auto d = path(SW_BINARY_DIR) / toPathString(getType()) / b.getHash();
 
     auto p = b.getExecutionPlan();
 
@@ -795,7 +795,7 @@ void CompilationDatabaseGenerator::generate(const SwBuild &b)
 
 void SwExecutionPlan::generate(const sw::SwBuild &b)
 {
-    const auto d = path(SW_BINARY_DIR) / toPathString(type) / b.getHash();
+    const auto d = path(SW_BINARY_DIR) / toPathString(getType()) / b.getHash();
     auto fn = path(d) += ".explan";
     fs::create_directories(d.parent_path());
 

@@ -220,7 +220,7 @@ void SwBuild::loadPackages(const TargetMap &predefined)
 
                     auto i = chld.find(d->getUnresolvedPackage());
                     if (i == chld.end())
-                        throw SW_RUNTIME_ERROR("No target loaded: " + d->getUnresolvedPackage().toString());
+                        throw SW_RUNTIME_ERROR(tgt->getPackage().toString() + ": No target loaded: " + d->getUnresolvedPackage().toString());
 
                     auto k = i->second.find(d->getSettings());
                     if (k != i->second.end())

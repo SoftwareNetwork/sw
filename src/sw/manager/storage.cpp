@@ -165,6 +165,22 @@ path Directories::getDatabaseRootDir() const
     return storage_dir_etc / "sw" / "database";
 }
 
+std::unordered_map<UnresolvedPackage, Package>
+IResolvableStorage::resolveWithDependencies(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
+{
+    auto r = resolve(pkgs, unresolved_pkgs);
+    while (1)
+    {
+        auto r2 = r;
+        auto sz = r.size();
+        for (auto &[u, p] : r2)
+            r.merge(resolve(p.getData().dependencies, unresolved_pkgs));
+        if (r.size() == sz)
+            break;
+    }
+    return r;
+}
+
 Storage::Storage(const String &name)
     : name(name)
 {
@@ -199,23 +215,6 @@ PackagesDatabase &StorageWithPackagesDatabase::getPackagesDatabase() const
 
 std::unordered_map<UnresolvedPackage, Package>
 StorageWithPackagesDatabase::resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
-{
-    auto r = resolve_no_deps(pkgs, unresolved_pkgs);
-    while (1)
-    {
-        // TODO: improve algorithm (check already resolved packages and do not resolve them again)
-        auto r2 = r;
-        auto sz = r.size();
-        for (auto &[u, p] : r2)
-            r.merge(resolve_no_deps(p.getData().dependencies, unresolved_pkgs));
-        if (r.size() == sz)
-            break;
-    }
-    return r;
-}
-
-std::unordered_map<UnresolvedPackage, Package>
-StorageWithPackagesDatabase::resolve_no_deps(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
 {
     std::unordered_map<UnresolvedPackage, Package> r;
     for (auto &[ud, pkg] : pkgdb->resolve(pkgs, unresolved_pkgs))
@@ -388,7 +387,8 @@ const OverriddenPackagesStorage &LocalStorage::getOverriddenPackagesStorage() co
     return ovs;
 }
 
-std::unordered_map<UnresolvedPackage, Package> LocalStorage::resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
+std::unordered_map<UnresolvedPackage, Package>
+LocalStorage::resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
 {
     return ovs.resolve(pkgs, unresolved_pkgs);
 }
@@ -443,7 +443,8 @@ String CachedStorage::getName() const
     return "resolve-cache";
 }
 
-std::unordered_map<UnresolvedPackage, Package> CachedStorage::resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
+std::unordered_map<UnresolvedPackage, Package>
+CachedStorage::resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
 {
     std::unordered_map<UnresolvedPackage, Package> r;
     for (auto &u : pkgs)

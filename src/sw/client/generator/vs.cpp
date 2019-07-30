@@ -1665,7 +1665,7 @@ void VSGenerator::initSolutions(Build &b)
 void VSGenerator::generate(const SwBuild &b)
 {
     // add / b.getBuildHash()
-    dir = path(SW_BINARY_DIR) / toPathString(type) / version.toString(1);
+    dir = path(SW_BINARY_DIR) / toPathString(getType()) / version.toString(1);
     PackagePathTree tree, local_tree, overridden_tree;
     PackagePathTree::Directories parents, local_parents;
 

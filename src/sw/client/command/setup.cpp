@@ -19,6 +19,8 @@
 #include "commands.h"
 #include "../inserts.h"
 
+#include <sw/manager/storage.h>
+
 #include <boost/dll.hpp>
 
 #ifdef _WIN32
