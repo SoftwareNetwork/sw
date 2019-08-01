@@ -175,7 +175,7 @@ struct ConcurrentHashMap : ConcurrentMapSimple<V>
 
     insert_type insert(const K &k, const V &v = V())
     {
-        return insert({ k, v });
+        return insert(value_type{ k, v });
     }
 
     insert_type insert(const value_type &v)

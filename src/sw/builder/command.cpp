@@ -1106,7 +1106,7 @@ ExecuteBuiltinCommand::ExecuteBuiltinCommand(const SwBuilderContext &swctx, cons
 void ExecuteBuiltinCommand::push_back(const Files &files)
 {
     arguments.push_back(std::to_string(files.size()));
-    for (auto &o : FilesSorted{ files.begin(), files.end() })
+    for (auto &o : FilesSorted(files.begin(), files.end()))
         arguments.push_back(normalize_path(o));
 }
 

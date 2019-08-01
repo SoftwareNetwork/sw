@@ -79,6 +79,10 @@ struct SW_CORE_API SwBuild
 
     path getBuildDirectory() const;
 
+    // install packages and add them to build
+    PackageIdSet known_packages;
+    std::unordered_map<UnresolvedPackage, LocalPackage> install(const UnresolvedPackages &pkgs);
+
 private:
     using InputPtr = std::unique_ptr<Input>;
     using Inputs = std::vector<InputPtr>;

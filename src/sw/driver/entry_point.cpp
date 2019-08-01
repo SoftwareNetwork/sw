@@ -225,9 +225,7 @@ void NativeTargetEntryPoint::loadPackages(SwBuild &swb, const TargetSettings &s,
     ModuleSwappableData module_data1;
     module_data1.NamePrefix = module_data.NamePrefix;
     module_data1.current_gn = module_data.current_gn;
-    module_data1.known_targets = getKnownPackages();
-    if (!pkgs.empty())
-        module_data1.known_targets = pkgs;
+    module_data1.known_targets = pkgs;
     module_data1.current_settings = settings;
     module_data1.bs = BuildSettings(settings);
 
@@ -354,16 +352,8 @@ PrepareConfigEntryPoint::PrepareConfigEntryPoint(const Files &files)
     : files_(files)
 {}
 
-void build_self(SwBuild &b);
-
 void PrepareConfigEntryPoint::loadPackages1(Build &b) const
 {
-    static bool once = [&b]()
-    {
-        build_self(b.getMainBuild());
-        return true;
-    }();
-
     if (files_.empty())
         many2one(b, pkgs_);
     else

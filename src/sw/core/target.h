@@ -192,13 +192,6 @@ struct TargetEntryPoint
 
     // on zero allowed packages, load all
     virtual void loadPackages(SwBuild &, const TargetSettings &, const PackageIdSet &allowed_packages) const = 0;
-
-    void addKnownPackage(const PackageId &);
-    const PackageIdSet &getKnownPackages() const;
-
-private:
-    // means installed packages and available to loading from this ep
-    PackageIdSet known_packages;
 };
 
 using TargetEntryPointPtr = std::shared_ptr<TargetEntryPoint>;

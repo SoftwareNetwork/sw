@@ -152,13 +152,13 @@ public:
 
     void writeFileOnce(const path &fn, const String &content = {}) const;
     void writeFileSafe(const path &fn, const String &content) const;
-    void replaceInFileOnce(const path &fn, const String &from, const String &to) const; // deprecate?
-    void patch(const path &fn, const String &from, const String &to) const;
-    void patch(const path &fn, const String &patch_str) const;
+    void replaceInFileOnce(const path &fn, const String &from, const String &to); // deprecate?
+    void patch(const path &fn, const String &from, const String &to);
+    void patch(const path &fn, const String &patch_str);
     //void patch(const path &fn, const path &patch_fn) const;
-    void deleteInFileOnce(const path &fn, const String &text) const;
-    void pushFrontToFileOnce(const path &fn, const String &text) const;
-    void pushBackToFileOnce(const path &fn, const String &text) const;
+    void deleteInFileOnce(const path &fn, const String &text);
+    void pushFrontToFileOnce(const path &fn, const String &text);
+    void pushBackToFileOnce(const path &fn, const String &text);
     void configureFile(path from, path to, ConfigureFlags flags = ConfigureFlags::Default);
 
     void addPrecompiledHeader(const path &h, const path &cpp = path());
@@ -225,6 +225,7 @@ private:
     void merge1();
     void processCircular(Files &objs);
     path getPatchDir(bool binary_dir) const;
+    void addFileSilently(const path &);
 
     bool libstdcppset = false;
     void findCompiler();

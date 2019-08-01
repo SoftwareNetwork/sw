@@ -23,6 +23,8 @@ static cl::opt<bool> debug_configs("debug-configs", cl::desc("Build configs in d
 namespace sw
 {
 
+PackageIdSet build_self(SwContext &);
+
 namespace driver::cpp
 {
 
@@ -143,6 +145,16 @@ String Driver::getSpecification(const RawInput &i) const
     }
 }
 
+// not in template, because it will have two copies there
+static PackageIdSet getBuiltinPackages(SwContext &swctx)
+{
+    static const auto pkgs = [&swctx]()
+    {
+        return build_self(swctx);
+    }();
+    return pkgs;
+}
+
 template <class T>
 std::shared_ptr<PrepareConfigEntryPoint> Driver::build_configs1(SwContext &swctx, const T &objs) const
 {
@@ -154,8 +166,11 @@ std::shared_ptr<PrepareConfigEntryPoint> Driver::build_configs1(SwContext &swctx
     if (debug_configs)
         ts["native"]["configuration"] = "debug";
 
+    // before load packages!
+    b->known_packages = getBuiltinPackages(swctx);
+
     auto ep = std::make_shared<PrepareConfigEntryPoint>(objs);
-    ep->loadPackages(*b, ts, {}); // load all
+    ep->loadPackages(*b, ts, b->known_packages); // load all our known targets
 
     // execute
     b->getTargetsToBuild()[*ep->tgt] = b->getTargets()[*ep->tgt]; // set our main target
@@ -201,8 +216,6 @@ std::unordered_map<PackageId, Driver::EntryPointsVector1> Driver::load_packages(
             Module(swctx.getModuleStorage().get(dll), gn2suffix(p.getData().group_number)));
         ep->module_data.NamePrefix = p.ppath.slice(0, p.getData().prefix);
         ep->module_data.current_gn = p.getData().group_number;
-        for (auto &p : pkgsids)
-            ep->addKnownPackage(p);
         swctx.getTargetData(p).setEntryPoint(ep);
         eps[p].push_back(ep);
     }

@@ -11,18 +11,7 @@ namespace sw
 
 ITarget::~ITarget() = default;
 IDependency::~IDependency() = default;
-
 TargetEntryPoint::~TargetEntryPoint() = default;
-
-void TargetEntryPoint::addKnownPackage(const PackageId &pkg)
-{
-    known_packages.insert(pkg);
-}
-
-const PackageIdSet &TargetEntryPoint::getKnownPackages() const
-{
-    return known_packages;
-}
 
 TargetData::~TargetData()
 {

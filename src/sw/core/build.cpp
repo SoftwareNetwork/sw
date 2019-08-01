@@ -172,13 +172,17 @@ void SwBuild::load(const std::vector<Input*> &inputs, bool set_eps)
                         continue;
                     swctx.getTargetData(p2).setEntryPoint(ep);
                 }
-                // and add known packages from resolve result!
-                // test: sw build org.sw.demo.gnome.pango.pangocairo-1.44
-                for (auto &[u, p] : m)
-                    ep->addKnownPackage(p);
             }
         }
     }
+}
+
+std::unordered_map<UnresolvedPackage, LocalPackage> SwBuild::install(const UnresolvedPackages &upkgs)
+{
+    auto m = swctx.install(upkgs);
+    for (auto &[_, p] : m)
+        known_packages.insert(p);
+    return m;
 }
 
 void SwBuild::resolvePackages()
@@ -187,6 +191,18 @@ void SwBuild::resolvePackages()
 
     // gather
     UnresolvedPackages upkgs;
+    for (const auto &[pkg, tgts] : getTargetsToBuild())
+    {
+        for (const auto &tgt : tgts)
+        {
+            // for package id inputs we also load themselves
+            auto pkg = tgt->getPackage();
+            //                                skip checks
+            if (pkg.getPath().isAbsolute() && !pkg.getPath().is_loc())
+                upkgs.insert(pkg);
+            break;
+        }
+    }
     for (const auto &[pkg, tgts] : getTargets())
     {
         for (const auto &tgt : tgts)
@@ -207,7 +223,7 @@ void SwBuild::resolvePackages()
     }
 
     // install
-    auto m = swctx.install(upkgs);
+    auto m = install(upkgs);
 
     // now we know all drivers
     std::vector<Input*> inputs;
@@ -282,9 +298,7 @@ void SwBuild::loadPackages(const TargetMap &predefined)
                 continue;
 
             loaded = true;
-            // we must pass here whole list of resolved pkgs
-            swctx.getTargetData(d.first).loadPackages(*this, s, {});
-            //swctx.getTargetData(d.first).loadPackages(*this, s, { d.first });
+            swctx.getTargetData(d.first).loadPackages(*this, s, known_packages);
             auto k = d.second->find(s);
             if (k == d.second->end())
             {

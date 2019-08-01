@@ -2922,7 +2922,7 @@ void NativeCompiledTarget::removeFile(const path &fn, bool binary_dir)
     Target::removeFile(fn, binary_dir);
 }
 
-void NativeCompiledTarget::configureFile(path from, path to, ConfigureFlags flags)
+void NativeCompiledTarget::addFileSilently(const path &from)
 {
     // add to target if not already added
     if (DryRun)
@@ -2934,6 +2934,11 @@ void NativeCompiledTarget::configureFile(path from, path to, ConfigureFlags flag
         if (find(fr) == end())
             operator-=(from);
     }
+}
+
+void NativeCompiledTarget::configureFile(path from, path to, ConfigureFlags flags)
+{
+    addFileSilently(from);
 
     // before resolving
     if (!to.is_absolute())
@@ -3182,13 +3187,15 @@ void NativeCompiledTarget::writeFileSafe(const path &fn, const String &content) 
     //f.getFileRecord().load();
 }
 
-void NativeCompiledTarget::replaceInFileOnce(const path &fn, const String &from, const String &to) const
+void NativeCompiledTarget::replaceInFileOnce(const path &fn, const String &from, const String &to)
 {
     patch(fn, from, to);
 }
 
-void NativeCompiledTarget::patch(const path &fn, const String &from, const String &to) const
+void NativeCompiledTarget::patch(const path &fn, const String &from, const String &to)
 {
+    addFileSilently(fn);
+
     if (DryRun)
         return;
 
@@ -3201,7 +3208,7 @@ void NativeCompiledTarget::patch(const path &fn, const String &from, const Strin
     //f.getFileRecord().load();
 }
 
-void NativeCompiledTarget::patch(const path &fn, const String &patch_str) const
+void NativeCompiledTarget::patch(const path &fn, const String &patch_str)
 {
     if (DryRun)
         return;
@@ -3212,13 +3219,15 @@ void NativeCompiledTarget::patch(const path &fn, const String &patch_str) const
     ::sw::patch(p, patch_str, getPatchDir(!source_dir));
 }
 
-void NativeCompiledTarget::deleteInFileOnce(const path &fn, const String &from) const
+void NativeCompiledTarget::deleteInFileOnce(const path &fn, const String &from)
 {
     replaceInFileOnce(fn, from, "");
 }
 
-void NativeCompiledTarget::pushFrontToFileOnce(const path &fn, const String &text) const
+void NativeCompiledTarget::pushFrontToFileOnce(const path &fn, const String &text)
 {
+    addFileSilently(fn);
+
     if (DryRun)
         return;
 
@@ -3231,8 +3240,10 @@ void NativeCompiledTarget::pushFrontToFileOnce(const path &fn, const String &tex
     //f.getFileRecord().load();
 }
 
-void NativeCompiledTarget::pushBackToFileOnce(const path &fn, const String &text) const
+void NativeCompiledTarget::pushBackToFileOnce(const path &fn, const String &text)
 {
+    addFileSilently(fn);
+
     if (DryRun)
         return;
 
