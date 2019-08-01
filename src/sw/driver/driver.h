@@ -40,7 +40,7 @@ struct SW_DRIVER_CPP_API Driver : IDriver
     // driver api
     PackageId getPackageId() const override;
     bool canLoad(const RawInput &) const override;
-    EntryPontsVector load(SwContext &, const std::vector<RawInput> &) const override;
+    EntryPointsVector load(SwContext &, const std::vector<RawInput> &) const override;
     String getSpecification(const RawInput &) const override;
 
     // frontends
@@ -54,8 +54,8 @@ struct SW_DRIVER_CPP_API Driver : IDriver
 
 private:
     // load things
-    EntryPontsVector1 load_spec_file(SwContext &, const path &) const;
-    std::unordered_map<PackageId, EntryPontsVector1> load_packages(SwContext &, const PackageIdSet &pkgs) const;
+    EntryPointsVector1 load_spec_file(SwContext &, const path &) const;
+    std::unordered_map<PackageId, EntryPointsVector1> load_packages(SwContext &, const PackageIdSet &pkgs) const;
 
     template <class T>
     std::shared_ptr<PrepareConfigEntryPoint> build_configs1(SwContext &, const T &objs) const;

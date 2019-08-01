@@ -10,8 +10,19 @@ namespace sw
 {
 
 ITarget::~ITarget() = default;
-TargetEntryPoint::~TargetEntryPoint() = default;
 IDependency::~IDependency() = default;
+
+TargetEntryPoint::~TargetEntryPoint() = default;
+
+void TargetEntryPoint::addKnownPackage(const PackageId &pkg)
+{
+    known_packages.insert(pkg);
+}
+
+const PackageIdSet &TargetEntryPoint::getKnownPackages() const
+{
+    return known_packages;
+}
 
 TargetData::~TargetData()
 {
@@ -33,7 +44,7 @@ TargetEntryPointPtr TargetData::getEntryPoint() const
 
 void TargetData::setEntryPoint(const std::shared_ptr<TargetEntryPoint> &e)
 {
-    if (ep)
+    if (ep && ep != e)
         throw SW_RUNTIME_ERROR("Setting entry point twice");
     ep = e;
 }

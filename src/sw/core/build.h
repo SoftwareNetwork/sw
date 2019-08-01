@@ -90,7 +90,8 @@ private:
     TargetMap targets_to_build;
     mutable BuildState state = BuildState::NotStarted;
 
-    void load(Inputs &inputs);
+    void load(const std::vector<Input*> &inputs, bool set_eps);
+    void load(Inputs &inputs, bool set_eps);
     Commands getCommands() const;
     void loadPackages(const TargetMap &predefined);
     template <class I>

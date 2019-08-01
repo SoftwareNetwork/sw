@@ -18,8 +18,8 @@ using TargetEntryPointPtr = std::shared_ptr<TargetEntryPoint>;
 
 struct SW_CORE_API IDriver
 {
-    using EntryPontsVector1 = std::vector<TargetEntryPointPtr>;
-    using EntryPontsVector = std::vector<EntryPontsVector1>;
+    using EntryPointsVector1 = std::vector<TargetEntryPointPtr>;
+    using EntryPointsVector = std::vector<EntryPointsVector1>;
 
     virtual ~IDriver() = 0;
 
@@ -39,7 +39,7 @@ struct SW_CORE_API IDriver
     // we return shared points because we cannot load them into context because package ids is not known in advance
     // (in case of loading not installed package)
     // if entry points were already loaded (like for installed packages), internal vector may be empty
-    virtual EntryPontsVector load(SwContext &, const std::vector<RawInput> &) const = 0;
+    virtual EntryPointsVector load(SwContext &, const std::vector<RawInput> &) const = 0;
 
     // get raw spec
     // complex return value?

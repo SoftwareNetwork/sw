@@ -225,7 +225,7 @@ void NativeTargetEntryPoint::loadPackages(SwBuild &swb, const TargetSettings &s,
     ModuleSwappableData module_data1;
     module_data1.NamePrefix = module_data.NamePrefix;
     module_data1.current_gn = module_data.current_gn;
-    module_data1.known_targets = module_data.known_targets;
+    module_data1.known_targets = getKnownPackages();
     if (!pkgs.empty())
         module_data1.known_targets = pkgs;
     module_data1.current_settings = settings;
@@ -283,7 +283,7 @@ static NativeCompiledTarget &getDriverTarget(Build &solution, NativeCompiledTarg
     auto i = solution.getChildren().find(UnresolvedPackage(SW_DRIVER_NAME));
     if (i == solution.getChildren().end())
     {
-        solution.getContext().getTargetData(PackageId(SW_DRIVER_NAME)).loadPackages(solution.getMainBuild(), solution.getSettings(), solution.module_data->known_targets);
+        solution.getContext().getTargetData(PackageId(SW_DRIVER_NAME)).loadPackages(solution.getMainBuild(), solution.getSettings(), solution.getModuleData().known_targets);
         i = solution.getChildren().find(UnresolvedPackage(SW_DRIVER_NAME));
         if (i == solution.getChildren().end())
             throw SW_RUNTIME_ERROR("no driver target");

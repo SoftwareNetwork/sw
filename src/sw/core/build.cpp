@@ -113,20 +113,28 @@ void SwBuild::load()
     CHECK_STATE_AND_CHANGE(BuildState::NotStarted, BuildState::InputsLoaded);
 
     // load entry points
-    load(inputs);
+    load(inputs, true);
 
     // and load packages
     for (auto &i : inputs)
         i->load(*this);
 }
 
-void SwBuild::load(Inputs &inputs)
+void SwBuild::load(Inputs &inputs, bool set_eps)
+{
+    std::vector<Input*> v;
+    for (auto &i : inputs)
+        v.push_back(i.get());
+    load(v, set_eps);
+}
+
+void SwBuild::load(const std::vector<Input*> &inputs, bool set_eps)
 {
     std::map<IDriver *, std::vector<Input*>> active_drivers;
     for (auto &i : inputs)
     {
         if (!i->isLoaded())
-            active_drivers[&i->getDriver()].push_back(i.get());
+            active_drivers[&i->getDriver()].push_back(i);
     }
     for (auto &[d, g] : active_drivers)
     {
@@ -147,7 +155,28 @@ void SwBuild::load(Inputs &inputs)
                 g[i]->addEntryPoint(swctx.getTargetData(inputs[i].getPackageId()).getEntryPoint());
             }
             for (auto &ep : eps[i])
+            {
                 g[i]->addEntryPoint(ep);
+                if (inputs[i].getType() != InputType::InstalledPackage)
+                    continue;
+                if (!set_eps)
+                    continue;
+                // for packages we must also register all other group packages
+                // which are located in this config AND which are deps of this input package id
+                auto m = getContext().resolve(UnresolvedPackages{ inputs[i].getPackageId() });
+                auto &p = m.find(inputs[i].getPackageId())->second;
+                for (auto &d : p.getData().dependencies)
+                {
+                    auto &p2 = m.find(d)->second;
+                    if (p2.getData().group_number != p.getData().group_number)
+                        continue;
+                    swctx.getTargetData(p2).setEntryPoint(ep);
+                }
+                // and add known packages from resolve result!
+                // test: sw build org.sw.demo.gnome.pango.pangocairo-1.44
+                for (auto &[u, p] : m)
+                    ep->addKnownPackage(p);
+            }
         }
     }
 }
@@ -181,10 +210,15 @@ void SwBuild::resolvePackages()
     auto m = swctx.install(upkgs);
 
     // now we know all drivers
-    Inputs inputs;
+    std::vector<Input*> inputs;
     for (auto &[u, p] : m)
-        inputs.push_back(std::make_unique<Input>(p, swctx));
-    load(inputs);
+    {
+        // use addInput to prevent doubling already existing and loaded inputs
+        // like when we loading dependency that is already loaded from the input
+        // test: sw build org.sw.demo.gnome.pango.pangocairo-1.44
+        inputs.push_back(&addInput(p));
+    }
+    load(inputs, false);
 }
 
 void SwBuild::loadPackages()
@@ -248,11 +282,12 @@ void SwBuild::loadPackages(const TargetMap &predefined)
                 continue;
 
             loaded = true;
-            swctx.getTargetData(d.first).loadPackages(*this, s, {}/* { d.first }*/ );
+            // we must pass here whole list of resolved pkgs
+            swctx.getTargetData(d.first).loadPackages(*this, s, {});
+            //swctx.getTargetData(d.first).loadPackages(*this, s, { d.first });
             auto k = d.second->find(s);
             if (k == d.second->end())
             {
-                //throw SW_RUNTIME_ERROR("cannot load package with current settings:\n" + s.toString());
                 throw SW_RUNTIME_ERROR("cannot load package " + d.first.toString() + " with current settings\n" + s.toString());
             }
         }

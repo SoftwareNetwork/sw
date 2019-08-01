@@ -85,10 +85,10 @@ bool Driver::canLoad(const RawInput &i) const
     return false;
 }
 
-Driver::EntryPontsVector Driver::load(SwContext &swctx, const std::vector<RawInput> &inputs) const
+Driver::EntryPointsVector Driver::load(SwContext &swctx, const std::vector<RawInput> &inputs) const
 {
     PackageIdSet pkgsids;
-    std::unordered_map<path, EntryPontsVector1> p_eps;
+    std::unordered_map<path, EntryPointsVector1> p_eps;
     for (auto &i : inputs)
     {
         switch (i.getType())
@@ -109,11 +109,11 @@ Driver::EntryPontsVector Driver::load(SwContext &swctx, const std::vector<RawInp
         }
     }
 
-    std::unordered_map<PackageId, EntryPontsVector1> pkg_eps;
+    std::unordered_map<PackageId, EntryPointsVector1> pkg_eps;
     if (!pkgsids.empty())
         pkg_eps = load_packages(swctx, pkgsids);
 
-    EntryPontsVector eps;
+    EntryPointsVector eps;
     for (auto &i : inputs)
     {
         if (i.getType() == InputType::InstalledPackage)
@@ -167,7 +167,7 @@ std::shared_ptr<PrepareConfigEntryPoint> Driver::build_configs1(SwContext &swctx
     return ep;
 }
 
-std::unordered_map<PackageId, Driver::EntryPontsVector1> Driver::load_packages(SwContext &swctx, const PackageIdSet &pkgsids) const
+std::unordered_map<PackageId, Driver::EntryPointsVector1> Driver::load_packages(SwContext &swctx, const PackageIdSet &pkgsids) const
 {
     std::unordered_set<LocalPackage> in_pkgs;
     for (auto &p : pkgsids)
@@ -190,7 +190,7 @@ std::unordered_map<PackageId, Driver::EntryPontsVector1> Driver::load_packages(S
         return {};
 
     auto dll = build_configs1(swctx, pkgs)->out;
-    std::unordered_map<PackageId, EntryPontsVector1> eps;
+    std::unordered_map<PackageId, EntryPointsVector1> eps;
     for (auto &p : in_pkgs)
     {
         auto &td = swctx.getTargetData();
@@ -201,14 +201,15 @@ std::unordered_map<PackageId, Driver::EntryPontsVector1> Driver::load_packages(S
             Module(swctx.getModuleStorage().get(dll), gn2suffix(p.getData().group_number)));
         ep->module_data.NamePrefix = p.ppath.slice(0, p.getData().prefix);
         ep->module_data.current_gn = p.getData().group_number;
-        ep->module_data.known_targets = pkgsids;
+        for (auto &p : pkgsids)
+            ep->addKnownPackage(p);
         swctx.getTargetData(p).setEntryPoint(ep);
         eps[p].push_back(ep);
     }
     return eps;
 }
 
-Driver::EntryPontsVector1 Driver::load_spec_file(SwContext &swctx, const path &fn) const
+Driver::EntryPointsVector1 Driver::load_spec_file(SwContext &swctx, const path &fn) const
 {
     auto fe = selectFrontendByFilename(fn);
     if (!fe)

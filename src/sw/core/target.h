@@ -185,12 +185,20 @@ private:
     detail::SimpleExpected<Base::version_map_type::const_iterator> find_and_select_version(const PackagePath &pp) const;
 };
 
+// equals to one group number in terms of non local packages
 struct TargetEntryPoint
 {
     virtual ~TargetEntryPoint() = 0;
 
     // on zero allowed packages, load all
     virtual void loadPackages(SwBuild &, const TargetSettings &, const PackageIdSet &allowed_packages) const = 0;
+
+    void addKnownPackage(const PackageId &);
+    const PackageIdSet &getKnownPackages() const;
+
+private:
+    // means installed packages and available to loading from this ep
+    PackageIdSet known_packages;
 };
 
 using TargetEntryPointPtr = std::shared_ptr<TargetEntryPoint>;

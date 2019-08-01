@@ -79,7 +79,7 @@ void build_self(SwBuild &b)
             // actually it's better throw here?
             //throw SW_RUNTIME_ERROR();
         }
-        ep->module_data.known_targets.insert(p);
+        ep->addKnownPackage(p);
         b.getContext().getTargetData(p).setEntryPoint(ep);
 
         already_set.insert(p);

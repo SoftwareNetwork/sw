@@ -23,11 +23,11 @@ struct ModuleSwappableDataBase
 {
     PackagePath NamePrefix;
     PackageVersionGroupNumber current_gn = 0;
-    PackageIdSet known_targets; // means installed targets and available to loading from this ep
 };
 
 struct ModuleSwappableData : ModuleSwappableDataBase
 {
+    PackageIdSet known_targets;
     TargetSettings current_settings;
     BuildSettings bs;
 };

@@ -53,7 +53,7 @@ bool CDriver::canLoad(const RawInput &) const
     return d.can_load(0);
 }
 
-CDriver::EntryPontsVector CDriver::load(SwContext &, const std::vector<RawInput> &) const
+CDriver::EntryPointsVector CDriver::load(SwContext &, const std::vector<RawInput> &) const
 {
     SW_UNIMPLEMENTED;
     d.load(0);
