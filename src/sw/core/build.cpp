@@ -181,8 +181,18 @@ std::unordered_map<UnresolvedPackage, LocalPackage> SwBuild::install(const Unres
 {
     auto m = swctx.install(upkgs);
     for (auto &[_, p] : m)
-        known_packages.insert(p);
+        addKnownPackage(p);
     return m;
+}
+
+const PackageIdSet &SwBuild::getKnownPackages() const
+{
+    return known_packages;
+}
+
+void SwBuild::addKnownPackage(const PackageId &id)
+{
+    known_packages.insert(id);
 }
 
 void SwBuild::resolvePackages()

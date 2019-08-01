@@ -80,8 +80,9 @@ struct SW_CORE_API SwBuild
     path getBuildDirectory() const;
 
     // install packages and add them to build
-    PackageIdSet known_packages;
     std::unordered_map<UnresolvedPackage, LocalPackage> install(const UnresolvedPackages &pkgs);
+    const PackageIdSet &getKnownPackages() const;
+    void addKnownPackage(const PackageId &);
 
 private:
     using InputPtr = std::unique_ptr<Input>;
@@ -92,6 +93,7 @@ private:
     Inputs inputs;
     TargetMap targets;
     TargetMap targets_to_build;
+    PackageIdSet known_packages;
     mutable BuildState state = BuildState::NotStarted;
 
     void load(const std::vector<Input*> &inputs, bool set_eps);

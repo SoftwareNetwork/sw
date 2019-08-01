@@ -167,10 +167,11 @@ std::shared_ptr<PrepareConfigEntryPoint> Driver::build_configs1(SwContext &swctx
         ts["native"]["configuration"] = "debug";
 
     // before load packages!
-    b->known_packages = getBuiltinPackages(swctx);
+    for (auto &p : getBuiltinPackages(swctx))
+        b->addKnownPackage(p);
 
     auto ep = std::make_shared<PrepareConfigEntryPoint>(objs);
-    ep->loadPackages(*b, ts, b->known_packages); // load all our known targets
+    ep->loadPackages(*b, ts, b->getKnownPackages()); // load all our known targets
 
     // execute
     b->getTargetsToBuild()[*ep->tgt] = b->getTargets()[*ep->tgt]; // set our main target
