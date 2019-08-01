@@ -30,7 +30,7 @@ bool Assigner::canProceed(TargetOptions &r) const
     if (LT == LibraryType::Unspecified)
         return true;
     auto t = r.target->getType();
-    if (t == TargetType::NativeLibrary && r.target->getSettings().Native.LibrariesType != LT)
+    if (t == TargetType::NativeLibrary && r.target->getBuildSettings().Native.LibrariesType != LT)
         return false;
     // executables are always shared objects
     if (t == TargetType::NativeExecutable && LT != LibraryType::Shared)

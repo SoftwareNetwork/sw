@@ -171,7 +171,7 @@ template <class C>
 static path getOutputFile(const Target &t, const C &c, const path &input)
 {
     auto o = t.BinaryDir.parent_path() / "obj" /
-        (SourceFile::getObjectFilename(t, input) + c.getObjectExtension(t.getSettings().TargetOS));
+        (SourceFile::getObjectFilename(t, input) + c.getObjectExtension(t.getBuildSettings().TargetOS));
     o = fs::absolute(o);
     return o;
 }
@@ -315,7 +315,7 @@ void ClangCompiler::prepareCommand1(const ::sw::Target &t)
 
     // not available for msvc triple
     // must be enabled on per target basis (when shared lib is built)?
-    if (t.getSettings().TargetOS.is(OSType::Windows))
+    if (t.getBuildSettings().TargetOS.is(OSType::Windows))
         PositionIndependentCode = false;
 
     add_args(*cmd, getCStdOption(CStandard(), dynamic_cast<const NativeCompiledTarget&>(t).CExtensions));

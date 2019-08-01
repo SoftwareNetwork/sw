@@ -49,16 +49,16 @@ struct ITarget : ICastable
     /// get all direct dependencies
     virtual std::vector<IDependency *> getDependencies() const = 0;
 
-    // get output config
-
     /// returns true if target is not fully prepared yet
     virtual bool prepare() = 0;
 
     ///
     virtual Commands getCommands() const = 0;
 
-    // get settings()?
+    // get output config?
+    // get input config?
 
+    virtual const TargetSettings &getSettings() const = 0;
     virtual const TargetSettings &getInterfaceSettings() const = 0;
 
     // String get package settings(); // json coded or whatever via interface?
@@ -66,8 +66,7 @@ struct ITarget : ICastable
 
     // compare using settings
     // remove?
-    virtual bool operator==(const TargetSettings &) const = 0;
-    //virtual bool operator<(const TargetSettings &) const = 0;
+    bool operator==(const TargetSettings &s) const { return getSettings() == s; }
 };
 
 // shared_ptr for vector storage

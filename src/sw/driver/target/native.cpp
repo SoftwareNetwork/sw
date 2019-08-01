@@ -274,7 +274,7 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
         auto C = std::make_shared<ClangCompiler>(getSolution().getContext());
         c = C;
         create_command();
-        C->Target = getSettings().getTargetTriplet();
+        C->Target = getBuildSettings().getTargetTriplet();
     }
     else if (id.ppath == "org.LLVM.clangcl")
     {
@@ -282,7 +282,7 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
         c = C;
         create_command();
 
-        switch (getSettings().TargetOS.Arch)
+        switch (getBuildSettings().TargetOS.Arch)
         {
         case ArchType::x86_64:
             C->CommandLineOptions<ClangClOptions>::Arch = clang::ArchType::m64;
@@ -328,13 +328,13 @@ void NativeCompiledTarget::findCompiler()
 
     activateCompiler(ts["native"]["program"]["asm"], { ".asm" });
 
-    if (getSettings().TargetOS.is(OSType::Windows))
+    if (getBuildSettings().TargetOS.is(OSType::Windows))
     {
         // actually a missing setting
         activateCompiler(ts["native"]["program"]["rc"], "com.Microsoft.Windows.rc"s, { ".rc" }, false);
     }
 
-    if (getSettings().TargetOS.Type != OSType::Macos)
+    if (getBuildSettings().TargetOS.Type != OSType::Macos)
     {
         removeExtension(".m");
         removeExtension(".mm");
@@ -379,14 +379,14 @@ void NativeCompiledTarget::findCompiler()
             auto C = std::make_shared<GNULibrarian>(getSolution().getContext());
             c = C;
             c->Type = LinkerType::GNU;
-            C->Prefix = getSettings().TargetOS.getLibraryPrefix();
+            C->Prefix = getBuildSettings().TargetOS.getLibraryPrefix();
         }
         else if (p.ppath == "org.gnu.gcc.ld")
         {
             auto C = std::make_shared<GNULinker>(getSolution().getContext());
             c = C;
             c->Type = LinkerType::GNU;
-            C->Prefix = getSettings().TargetOS.getLibraryPrefix();
+            C->Prefix = getBuildSettings().TargetOS.getLibraryPrefix();
             C->use_start_end_groups = false;
         }
         else if (p.ppath == "org.LLVM.ar")
@@ -394,7 +394,7 @@ void NativeCompiledTarget::findCompiler()
             auto C = std::make_shared<GNULibrarian>(getSolution().getContext());
             c = C;
             c->Type = LinkerType::GNU;
-            C->Prefix = getSettings().TargetOS.getLibraryPrefix();
+            C->Prefix = getBuildSettings().TargetOS.getLibraryPrefix();
         }
         else if (p.ppath == "org.LLVM.lld")
         {
@@ -403,7 +403,7 @@ void NativeCompiledTarget::findCompiler()
             c->Type = LinkerType::GNU;
             C->PositionIndependentCode = false;
             C->use_start_end_groups = false;
-            C->Prefix = getSettings().TargetOS.getLibraryPrefix();
+            C->Prefix = getBuildSettings().TargetOS.getLibraryPrefix();
 
             create_command();
 
@@ -414,14 +414,14 @@ void NativeCompiledTarget::findCompiler()
             cmd->push_back("-eh-frame-hdr"); // needed
             cmd->first_response_file_argument = 2;
             //cmd->push_back("-target");
-            //cmd->push_back(getSettings().getTargetTriplet());
+            //cmd->push_back(getBuildSettings().getTargetTriplet());
         }
 
         create_command();
 
         if (auto L = c->as<VisualStudioLibraryTool *>())
         {
-            switch (getSettings().TargetOS.Arch)
+            switch (getBuildSettings().TargetOS.Arch)
             {
             case ArchType::x86_64:
                 L->Machine = vs::MachineType::X64;
@@ -448,8 +448,8 @@ void NativeCompiledTarget::findCompiler()
     if (!(Linker = activate_lib_link_or_throw(ts["native"]["program"]["link"].getValue())))
         throw SW_RUNTIME_ERROR("Try to add more linkers");
 
-    Librarian->Extension = getSettings().TargetOS.getStaticLibraryExtension();
-    Linker->Extension = getSettings().TargetOS.getSharedLibraryExtension();
+    Librarian->Extension = getBuildSettings().TargetOS.getStaticLibraryExtension();
+    Linker->Extension = getBuildSettings().TargetOS.getSharedLibraryExtension();
 
     // c++ goes first for correct include order
     if (!libstdcppset && ts["native"]["stdlib"]["cpp"])
@@ -927,7 +927,7 @@ FilesOrdered NativeCompiledTarget::gatherLinkLibraries() const
                 throw SW_RUNTIME_ERROR(getPackage().toString() + ": Cannot resolve library: " + normalize_path(l));
             }
 
-            //if (!getSettings().TargetOS.is(OSType::Windows))
+            //if (!getBuildSettings().TargetOS.is(OSType::Windows))
                 //libs.push_back("-l" + l.u8string());
         }
     };
@@ -1251,9 +1251,9 @@ Commands NativeCompiledTarget::getCommands1() const
                 if (sd.size() < p.size() && p.find(sd) == 0)
                 {
                     String prefix;
-                    /*if (f->compiler == getSettings().Native.CCompiler)
+                    /*if (f->compiler == getBuildSettings().Native.CCompiler)
                         prefix = "Building C object ";
-                    else if (f->compiler == getSettings().Native.CPPCompiler)
+                    else if (f->compiler == getBuildSettings().Native.CPPCompiler)
                         prefix = "Building CXX object ";*/
                     auto n = p.substr(sd.size());
                     if (!n.empty() && n[0] != '/')
@@ -1447,7 +1447,7 @@ bool NativeCompiledTarget::createWindowsRpath() const
     return
         1
         && !IsConfig
-        && getSettings().TargetOS.is(OSType::Windows)
+        && getBuildSettings().TargetOS.is(OSType::Windows)
         && getSelectedTool() == Linker.get()
         //&& !getSolution().getGenerator()
         && !standalone
@@ -1917,7 +1917,7 @@ bool NativeCompiledTarget::prepare()
 
         // default macros
         // public to make sure integrations also take these
-        if (getSettings().TargetOS.Type == OSType::Windows)
+        if (getBuildSettings().TargetOS.Type == OSType::Windows)
         {
             Public.Definitions["SW_EXPORT"] = "__declspec(dllexport)";
             Public.Definitions["SW_IMPORT"] = "__declspec(dllimport)";
@@ -2113,7 +2113,7 @@ bool NativeCompiledTarget::prepare()
         }
 
         // before merge
-        if (getSettings().Native.ConfigurationType != ConfigurationType::Debug)
+        if (getBuildSettings().Native.ConfigurationType != ConfigurationType::Debug)
             *this += Definition("NDEBUG");
         // allow to other compilers?
         // it is set automatically with /LDd, /MDd, or /MTd
@@ -2130,14 +2130,14 @@ bool NativeCompiledTarget::prepare()
 
         auto vs_setup = [this, &remove_bdirs](auto *f, auto *c)
         {
-            if (getSettings().Native.MT)
+            if (getBuildSettings().Native.MT)
                 c->RuntimeLibrary = vs::RuntimeLibraryType::MultiThreaded;
 
-            switch (getSettings().Native.ConfigurationType)
+            switch (getBuildSettings().Native.ConfigurationType)
             {
             case ConfigurationType::Debug:
                 c->RuntimeLibrary =
-                    getSettings().Native.MT ?
+                    getBuildSettings().Native.MT ?
                     vs::RuntimeLibraryType::MultiThreadedDebug :
                     vs::RuntimeLibraryType::MultiThreadedDLLDebug;
                 c->Optimizations().Disable = true;
@@ -2164,8 +2164,8 @@ bool NativeCompiledTarget::prepare()
             // btw, VS is clever enough to take this info from .lib
 			/*if (getSelectedTool() == Librarian.get())
 			{
-				if ((getSettings().Native.ConfigurationType == ConfigurationType::Debug ||
-					getSettings().Native.ConfigurationType == ConfigurationType::ReleaseWithDebugInformation) &&
+				if ((getBuildSettings().Native.ConfigurationType == ConfigurationType::Debug ||
+					getBuildSettings().Native.ConfigurationType == ConfigurationType::ReleaseWithDebugInformation) &&
 					c->PDBFilename.empty())
 				{
 					auto f = getOutputFile();
@@ -2178,7 +2178,7 @@ bool NativeCompiledTarget::prepare()
 
         auto gnu_setup = [this](auto *f, auto *c)
         {
-            switch (getSettings().Native.ConfigurationType)
+            switch (getBuildSettings().Native.ConfigurationType)
             {
             case ConfigurationType::Debug:
                 c->GenerateDebugInformation = true;
@@ -2216,7 +2216,7 @@ bool NativeCompiledTarget::prepare()
                 if (UseModules)
                 {
                     c->UseModules = UseModules;
-                    //c->stdIfcDir = c->System.IncludeDirectories.begin()->parent_path() / "ifc" / (getSettings().TargetOS.Arch == ArchType::x86_64 ? "x64" : "x86");
+                    //c->stdIfcDir = c->System.IncludeDirectories.begin()->parent_path() / "ifc" / (getBuildSettings().TargetOS.Arch == ArchType::x86_64 ? "x64" : "x86");
                     c->stdIfcDir = c->System.IncludeDirectories.begin()->parent_path() / "ifc" / c->file.parent_path().filename();
                     c->UTF8 = false; // utf8 is not used in std modules and produce a warning
 
@@ -2269,7 +2269,7 @@ bool NativeCompiledTarget::prepare()
             && ::sw::gatherSourceFiles<RcToolSourceFile>(*this).empty()
             && getSelectedTool() == Linker.get()
             && !IsConfig
-            && getSettings().TargetOS.is(OSType::Windows)
+            && getBuildSettings().TargetOS.is(OSType::Windows)
             && Scope == TargetScope::Build
             )
         {
@@ -2401,8 +2401,8 @@ bool NativeCompiledTarget::prepare()
             {
                 if (!c->GenerateDebugInformation)
                 {
-                    if (getSettings().Native.ConfigurationType == ConfigurationType::Debug ||
-                        getSettings().Native.ConfigurationType == ConfigurationType::ReleaseWithDebugInformation)
+                    if (getBuildSettings().Native.ConfigurationType == ConfigurationType::Debug ||
+                        getBuildSettings().Native.ConfigurationType == ConfigurationType::ReleaseWithDebugInformation)
                     {
                         /*if (auto g = getSolution().getGenerator(); g && g->type == GeneratorType::VisualStudio)
                             c->GenerateDebugInformation = vs::link::Debug::FastLink;
@@ -2436,7 +2436,7 @@ bool NativeCompiledTarget::prepare()
         }
 
         // export all symbols
-        if (ExportAllSymbols && getSettings().TargetOS.Type == OSType::Windows && getSelectedTool() == Linker.get())
+        if (ExportAllSymbols && getBuildSettings().TargetOS.Type == OSType::Windows && getSelectedTool() == Linker.get())
         {
             const path def = NATIVE_TARGET_DEF_SYMBOLS_FILE;
             Files objs;
@@ -2841,7 +2841,7 @@ bool NativeCompiledTarget::prepareLibrary(LibraryType Type)
             if (api.empty())
                 return;
 
-            if (getSettings().TargetOS.Type == OSType::Windows)
+            if (getBuildSettings().TargetOS.Type == OSType::Windows)
             {
                 if (Type == LibraryType::Shared)
                 {
@@ -2907,7 +2907,7 @@ void NativeCompiledTarget::initLibrary(LibraryType Type)
             auto L = Linker->as<GNULinker*>();
             L->SharedObject = true;
         }
-        if (getSettings().TargetOS.Type == OSType::Windows)
+        if (getBuildSettings().TargetOS.Type == OSType::Windows)
             Definitions["_WINDLL"];
     }
     else
@@ -3769,7 +3769,7 @@ bool ExecutableTarget::init()
     case 2:
     {
         Linker->Prefix.clear();
-        Linker->Extension = getSettings().TargetOS.getExecutableExtension();
+        Linker->Extension = getBuildSettings().TargetOS.getExecutableExtension();
 
         if (getSelectedTool())
         {
@@ -3796,7 +3796,7 @@ bool ExecutableTarget::prepare()
         {
             if (api.empty())
                 return;
-            if (getSettings().TargetOS.Type == OSType::Windows)
+            if (getBuildSettings().TargetOS.Type == OSType::Windows)
             {
                 Private.Definitions[api] = "SW_EXPORT";
                 Interface.Definitions[api] = "SW_IMPORT";
@@ -3832,13 +3832,13 @@ void ExecutableTarget::cppan_load_project(const yaml &root)
 
 bool LibraryTarget::prepare()
 {
-    return prepareLibrary(getSettings().Native.LibrariesType);
+    return prepareLibrary(getBuildSettings().Native.LibrariesType);
 }
 
 bool LibraryTarget::init()
 {
     auto r = NativeCompiledTarget::init();
-    initLibrary(getSettings().Native.LibrariesType);
+    initLibrary(getBuildSettings().Native.LibrariesType);
     return r;
 }
 

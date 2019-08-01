@@ -311,8 +311,7 @@ public:
     const Source &getSource() const override;
     Files getSourceFiles() const override;
     std::vector<IDependency *> getDependencies() const override;
-    bool operator==(const TargetSettings &) const override;
-    //bool operator<(const TargetSettings &) const override;
+    const TargetSettings &getSettings() const override;
     const TargetSettings &getInterfaceSettings() const override;
     void setSettingsComparator(std::unique_ptr<SettingsComparator>);
 
@@ -339,7 +338,7 @@ public:
     void setRootDirectory(const path &);
 
     // driver settings
-    const BuildSettings &getSettings() const;
+    const BuildSettings &getBuildSettings() const;
     // general settings
     TargetSettings &getTargetSettings() { return ts; }
     const TargetSettings &getTargetSettings() const { return ts; }

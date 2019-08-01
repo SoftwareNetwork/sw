@@ -432,13 +432,6 @@ void Target::fetch()
     }
 }
 
-bool Target::operator==(const TargetSettings &s) const
-{
-    if (scmp)
-        return scmp->equal(ts, s);
-    return ts == s;
-}
-
 /*bool Target::operator<(const TargetSettings &s) const
 {
     if (scmp)
@@ -586,7 +579,7 @@ void Target::removeFile(const path &fn, bool binary_dir)
     fs::remove(p, ec);
 }
 
-const BuildSettings &Target::getSettings() const
+const BuildSettings &Target::getBuildSettings() const
 {
     return bs;
 }
@@ -689,6 +682,11 @@ DependencyPtr Target::getDependency() const
 {
     auto d = std::make_shared<Dependency>(*this);
     return d;
+}
+
+const TargetSettings &Target::getSettings() const
+{
+    return ts;
 }
 
 const TargetSettings &Target::getInterfaceSettings() const

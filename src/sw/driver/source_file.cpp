@@ -511,7 +511,7 @@ void NativeSourceFile::setOutputFile(const Target &t, const path &input, const p
 
 String NativeSourceFile::getObjectFilename(const Target &t, const path &p)
 {
-    return SourceFile::getObjectFilename(t, p) + compiler->getObjectExtension(t.getSettings().TargetOS);
+    return SourceFile::getObjectFilename(t, p) + compiler->getObjectExtension(t.getBuildSettings().TargetOS);
 }
 
 std::shared_ptr<builder::Command> NativeSourceFile::getCommand(const Target &t) const

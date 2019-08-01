@@ -307,8 +307,11 @@ void SwBuild::loadPackages(const TargetMap &predefined)
             if (s.empty())
                 continue;
 
+            LOG_TRACE(logger, "build id " << this << " " __FUNCTION__ << " loading " << d.first.toString());
+
             loaded = true;
             swctx.getTargetData(d.first).loadPackages(*this, s, known_packages);
+            //swctx.getTargetData(d.first).loadPackages(*this, s, { d.first });
             auto k = d.second->find(s);
             if (k == d.second->end())
             {
@@ -403,7 +406,13 @@ Commands SwBuild::getCommands() const
     Commands cmds;
     for (auto &[p, tgts] : targets_to_build)
     {
+        // one target may be loaded twice
+        // we take only the latest, because it is has correct set of command deps
+        std::map<TargetSettings, ITarget*> latest_targets;
         for (auto &tgt : tgts)
+            latest_targets[tgt->getSettings()] = tgt.get();
+
+        for (auto &[_, tgt] : latest_targets)
         {
             auto c = tgt->getCommands();
             for (auto &c2 : c)

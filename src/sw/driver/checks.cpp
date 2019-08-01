@@ -933,7 +933,7 @@ void TypeSize::run() const
         return;
     }
 
-    if (!check_set->t->getSolution().getHostOs().canRunTargetExecutables(check_set->t->getSettings().TargetOS))
+    if (!check_set->t->getSolution().getHostOs().canRunTargetExecutables(check_set->t->getBuildSettings().TargetOS))
     {
         requires_manual_setup = true;
         executable = e.getOutputFile();
@@ -1007,7 +1007,7 @@ void TypeAlignment::run() const
         return;
     }
 
-    if (!check_set->t->getSolution().getHostOs().canRunTargetExecutables(check_set->t->getSettings().TargetOS))
+    if (!check_set->t->getSolution().getHostOs().canRunTargetExecutables(check_set->t->getBuildSettings().TargetOS))
     {
         requires_manual_setup = true;
         executable = e.getOutputFile();
@@ -1317,7 +1317,7 @@ void SourceRuns::run() const
         return;
     }
 
-    if (!check_set->t->getSolution().getHostOs().canRunTargetExecutables(check_set->t->getSettings().TargetOS))
+    if (!check_set->t->getSolution().getHostOs().canRunTargetExecutables(check_set->t->getBuildSettings().TargetOS))
     {
         requires_manual_setup = true;
         executable = e.getOutputFile();

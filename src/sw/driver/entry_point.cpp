@@ -380,7 +380,10 @@ decltype(auto) PrepareConfigEntryPoint::commonActions(Build &b, const Files &fil
 
     // add files
     for (auto &fn : files)
+    {
         lib += fn;
+        lib[fn].args.push_back("-DgetSettings=getBuildSettings");
+    }
 
     //
     write_pch(b);
@@ -398,7 +401,7 @@ void PrepareConfigEntryPoint::commonActions2(Build &b, SharedLibraryTarget &lib)
 {
     lib += "SW_CPP_DRIVER_API_VERSION=1"_def;
 
-    if (lib.getSettings().TargetOS.is(OSType::Windows))
+    if (lib.getBuildSettings().TargetOS.is(OSType::Windows))
     {
         lib.Definitions["SW_SUPPORT_API"] = "__declspec(dllimport)";
         lib.Definitions["SW_MANAGER_API"] = "__declspec(dllimport)";

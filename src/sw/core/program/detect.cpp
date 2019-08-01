@@ -106,7 +106,7 @@ struct PredefinedTarget : ITarget
     TargetSettings ts;
     TargetSettings public_ts;
 
-    PredefinedTarget(const PackageId &id) :id(id) {}
+    PredefinedTarget(const PackageId &id) : id(id) {}
     virtual ~PredefinedTarget() {}
 
     const PackageId &getPackage() const override { return id; }
@@ -117,10 +117,8 @@ struct PredefinedTarget : ITarget
     bool prepare() override { return false; }
     Commands getCommands() const override { return {}; }
 
+    const TargetSettings &getSettings() const override{ return ts; }
     const TargetSettings &getInterfaceSettings() const override { return public_ts; }
-
-    bool operator==(const TargetSettings &s) const override { return ts == s; }
-    //bool operator<(const TargetSettings &s) const override { return ts < s; }
 };
 
 struct PredefinedProgramTarget : PredefinedTarget, PredefinedProgram
