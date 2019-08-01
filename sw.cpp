@@ -174,6 +174,8 @@ void build(Solution &s)
         core.CPPVersion = CPPLanguageStandard::CPP17;
         core.Public += builder;
         core += "src/sw/core/.*"_rr;
+        if (core.getSettings().TargetOS.Type == OSType::Windows)
+            core += "OleAut32.lib"_slib;
     }
 
     auto &cpp_driver = p.addTarget<LibraryTarget>("driver.cpp");
