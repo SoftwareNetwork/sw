@@ -208,7 +208,7 @@ static std::tuple<FilesOrdered, UnresolvedPackages> getFileDependencies(const Sw
     return getFileDependencies(swctx, in_config_file, gns);
 }
 
-void NativeTargetEntryPoint::loadPackages(SwBuild &swb, const TargetSettings &s, const PackageIdSet &pkgs) const
+std::vector<ITargetPtr> NativeTargetEntryPoint::loadPackages(SwBuild &swb, const TargetSettings &s, const PackageIdSet &pkgs) const
 {
     // TODO: memory leak
     auto nb = new Build(swb);
@@ -233,6 +233,8 @@ void NativeTargetEntryPoint::loadPackages(SwBuild &swb, const TargetSettings &s,
     b.NamePrefix = module_data.NamePrefix;
 
     loadPackages1(b);
+
+    return module_data1.added_targets;
 }
 
 NativeBuiltinTargetEntryPoint::NativeBuiltinTargetEntryPoint(BuildFunction bf)
@@ -310,7 +312,6 @@ static auto getDriverDep()
 static path getDriverIncludeDir(Build &solution, NativeCompiledTarget &lib)
 {
     return lib.getFile(getDriverDep()) / SW_DRIVER_INCLUDE_DIR;
-    //return getDriverTarget(solution, lib).SourceDir / SW_DRIVER_INCLUDE_DIR;
 }
 
 static void addDeps(Build &solution, NativeCompiledTarget &lib)
@@ -323,16 +324,18 @@ static void addDeps(Build &solution, NativeCompiledTarget &lib)
     //lib += "pub.egorpugin.primitives.command-master"_dep;
     //lib += "pub.egorpugin.primitives.filesystem-master"_dep;
 
-    //auto drv = getDriverDep();
-    auto &drv = getDriverTarget(solution, lib);
-    auto d = lib + drv;
+    auto d = lib + UnresolvedPackage(SW_DRIVER_NAME);
     d->IncludeDirectoriesOnly = true;
     //d->GenerateCommandsBefore = true;
 
+    //auto drv = getDriverDep();
+    //auto &drv = getDriverTarget(solution, lib);
     // generated file, because it won't build in IncludeDirectoriesOnly
     // FIXME: ^^^ this is wrong, generated header must be built in idirs only
+    // we depend only on this file, so others not needed and also they involve many unnecessary dependencies
+    // TODO: correct way to make dependencies on generated files is to add them to interface source files!
     //lib.getFile(drv)
-    lib += drv.BinaryDir / "options_cl.generated.h";
+    //lib += drv.BinaryDir / "options_cl.generated.h";
 }
 
 static void write_pch(Build &solution)
@@ -437,9 +440,9 @@ void PrepareConfigEntryPoint::commonActions2(Build &b, SharedLibraryTarget &lib)
                                             //L->IgnoreWarnings().insert(4088); // warning LNK4088: image being generated due to /FORCE option; image may not run
     }
 
-    auto i = b.getChildren().find(lib.getPackage());
+    /*auto i = b.getChildren().find(lib.getPackage());
     if (i == b.getChildren().end())
-        throw std::logic_error("config target not found");
+        throw std::logic_error("config target not found");*/
 
     out = lib.getOutputFile();
 }

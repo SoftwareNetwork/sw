@@ -21,7 +21,7 @@ struct SW_CORE_API CDriver : IDriver
 
     PackageId getPackageId() const override;
     bool canLoad(const RawInput &) const override;
-    EntryPointsVector load(SwContext &, const std::vector<RawInput> &) const override;
+    EntryPointsVector createEntryPoints(SwContext &, const std::vector<RawInput> &) const override;
 
 private:
     sw_driver_t d;

@@ -38,35 +38,6 @@ bool RawInput::operator<(const RawInput &rhs) const
     return data < rhs.data;
 }
 
-const std::set<TargetSettings> &InputWithSettings::getSettings() const
-{
-    if (settings.empty())
-        throw SW_RUNTIME_ERROR("No input settings provided");
-    return settings;
-}
-
-void InputWithSettings::addSettings(const TargetSettings &s)
-{
-    settings.insert(s);
-}
-
-String InputWithSettings::getHash() const
-{
-    String s;
-    switch (getType())
-    {
-    case InputType::InstalledPackage:
-        s = getPackageId().toString();
-        break;
-    default:
-        s = normalize_path(getPath());
-        break;
-    }
-    for (auto &ss : settings)
-        s += ss.getHash();
-    return s;
-}
-
 Input::Input(const path &p, const SwContext &swctx)
 {
     if (p.empty())
@@ -161,9 +132,13 @@ bool Input::isChanged() const
     }
 }
 
-void Input::addEntryPoint(const TargetEntryPointPtr &e)
+void Input::addEntryPoints(const std::vector<TargetEntryPointPtr> &e)
 {
-    eps.push_back(e);
+    if (isLoaded())
+        throw SW_RUNTIME_ERROR("Can add eps only once");
+    if (e.empty())
+        throw SW_RUNTIME_ERROR("Empty entry points");
+    eps = e;
 }
 
 bool Input::isLoaded() const
@@ -171,29 +146,71 @@ bool Input::isLoaded() const
     return !eps.empty();
 }
 
-void Input::load(SwBuild &b)
+String Input::getSpecification() const
 {
-    if (eps.empty())
-        throw SW_RUNTIME_ERROR("No entry points set");
+    return driver->getSpecification(*this);
+}
 
-    if (getType() == InputType::InstalledPackage)
+InputWithSettings::InputWithSettings(const Input &i)
+    : i(i)
+{
+}
+
+const std::set<TargetSettings> &InputWithSettings::getSettings() const
+{
+    if (settings.empty())
+        throw SW_RUNTIME_ERROR("No input settings provided");
+    return settings;
+}
+
+void InputWithSettings::addSettings(const TargetSettings &s)
+{
+    settings.insert(s);
+}
+
+String InputWithSettings::getHash() const
+{
+    String s;
+    switch (i.getType())
     {
-        for (auto &ep : eps)
+    case InputType::InstalledPackage:
+        s = i.getPackageId().toString();
+        break;
+    default:
+        s = normalize_path(i.getPath());
+        break;
+    }
+    for (auto &ss : settings)
+        s += ss.getHash();
+    return s;
+}
+
+std::vector<ITargetPtr> InputWithSettings::load(SwBuild &b) const
+{
+    if (!i.isLoaded())
+        throw SW_RUNTIME_ERROR("Input is not loaded");
+
+    std::vector<ITargetPtr> tgts;
+
+    if (i.getType() == InputType::InstalledPackage)
+    {
+        for (auto &ep : i.getEntryPoints())
         {
             for (auto &s : settings)
             {
                 // load only this pkg
-                ep->loadPackages(b, s, { getPackageId() });
+                auto t = ep->loadPackages(b, s, { i.getPackageId() });
+                tgts.insert(tgts.end(), t.begin(), t.end());
             }
         }
-        return;
+        return tgts;
     }
 
     // for non installed packages we do special handling
     // we register their entry points in swctx
     // because up to this point this is not done
 
-    for (auto &ep : eps)
+    for (auto &ep : i.getEntryPoints())
     {
         // find difference to set entry points
         auto old = b.getTargets();
@@ -201,7 +218,8 @@ void Input::load(SwBuild &b)
         for (auto &s : settings)
         {
             // load all packages here
-            ep->loadPackages(b, s, {});
+            auto t = ep->loadPackages(b, s, {});
+            tgts.insert(tgts.end(), t.begin(), t.end());
         }
 
         // don't forget to set EPs for loaded targets
@@ -212,11 +230,7 @@ void Input::load(SwBuild &b)
             b.getContext().getTargetData(pkg).setEntryPoint(ep);
         }
     }
-}
-
-String Input::getSpecification() const
-{
-    return driver->getSpecification(*this);
+    return tgts;
 }
 
 }

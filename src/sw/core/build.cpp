@@ -112,68 +112,22 @@ void SwBuild::load()
 {
     CHECK_STATE_AND_CHANGE(BuildState::NotStarted, BuildState::InputsLoaded);
 
-    // load entry points
-    load(inputs, true);
+    std::vector<Input *> iv;
+    for (auto &i : inputs)
+        iv.push_back((Input*)&i.getInput());
+    swctx.loadEntryPoints(iv, true);
 
     // and load packages
     for (auto &i : inputs)
-        i->load(*this);
-}
-
-void SwBuild::load(Inputs &inputs, bool set_eps)
-{
-    std::vector<Input*> v;
-    for (auto &i : inputs)
-        v.push_back(i.get());
-    load(v, set_eps);
-}
-
-void SwBuild::load(const std::vector<Input*> &inputs, bool set_eps)
-{
-    std::map<IDriver *, std::vector<Input*>> active_drivers;
-    for (auto &i : inputs)
     {
-        if (!i->isLoaded())
-            active_drivers[&i->getDriver()].push_back(i);
-    }
-    for (auto &[d, g] : active_drivers)
-    {
-        std::vector<RawInput> inputs;
-        for (auto &i : g)
-            inputs.push_back(*i);
-        auto eps = d->load(getContext(), inputs);
-        if (eps.size() != inputs.size())
-            throw SW_RUNTIME_ERROR("Incorrect number of returned entry points");
-        for (size_t i = 0; i < eps.size(); i++)
+        auto tgts = i.load(*this);
+        for (auto &tgt : tgts)
         {
-            // when loading installed package, eps[i] may be empty
-            // so we take ep from context
-            if (eps[i].empty())
-            {
-                if (inputs[i].getType() != InputType::InstalledPackage)
-                    throw SW_RUNTIME_ERROR("unexpected input type");
-                g[i]->addEntryPoint(swctx.getTargetData(inputs[i].getPackageId()).getEntryPoint());
-            }
-            for (auto &ep : eps[i])
-            {
-                g[i]->addEntryPoint(ep);
-                if (inputs[i].getType() != InputType::InstalledPackage)
-                    continue;
-                if (!set_eps)
-                    continue;
-                // for packages we must also register all other group packages
-                // which are located in this config AND which are deps of this input package id
-                auto m = getContext().resolve(UnresolvedPackages{ inputs[i].getPackageId() });
-                auto &p = m.find(inputs[i].getPackageId())->second;
-                for (auto &d : p.getData().dependencies)
-                {
-                    auto &p2 = m.find(d)->second;
-                    if (p2.getData().group_number != p.getData().group_number)
-                        continue;
-                    swctx.getTargetData(p2).setEntryPoint(ep);
-                }
-            }
+            if (tgt->getSettings()["dry-run"] == "true")
+                continue;
+            getTargets()[tgt->getPackage()].push_back(tgt);
         }
+
     }
 }
 
@@ -236,15 +190,15 @@ void SwBuild::resolvePackages()
     auto m = install(upkgs);
 
     // now we know all drivers
-    std::vector<Input*> inputs;
+    std::vector<Input *> iv;
     for (auto &[u, p] : m)
     {
         // use addInput to prevent doubling already existing and loaded inputs
         // like when we loading dependency that is already loaded from the input
         // test: sw build org.sw.demo.gnome.pango.pangocairo-1.44
-        inputs.push_back(&addInput(p));
+        iv.push_back(&swctx.addInput(p));
     }
-    load(inputs, false);
+    swctx.loadEntryPoints(iv, false);
 }
 
 void SwBuild::loadPackages()
@@ -310,8 +264,16 @@ void SwBuild::loadPackages(const TargetMap &predefined)
             LOG_TRACE(logger, "build id " << this << " " __FUNCTION__ << " loading " << d.first.toString());
 
             loaded = true;
-            swctx.getTargetData(d.first).loadPackages(*this, s, known_packages);
+
+            auto tgts = swctx.getTargetData(d.first).loadPackages(*this, s, known_packages);
             //swctx.getTargetData(d.first).loadPackages(*this, s, { d.first });
+            for (auto &tgt : tgts)
+            {
+                if (tgt->getSettings()["dry-run"] == "true")
+                    continue;
+                getTargets()[tgt->getPackage()].push_back(tgt);
+            }
+
             auto k = d.second->find(s);
             if (k == d.second->end())
             {
@@ -521,41 +483,13 @@ String SwBuild::getHash() const
 {
     String s;
     for (auto &i : inputs)
-        s += i->getHash();
+        s += i.getHash();
     return shorten_hash(blake2b_512(s), 8);
 }
 
-Input &SwBuild::addInput(const String &i)
+void SwBuild::addInput(const InputWithSettings &i)
 {
-    path p(i);
-    if (fs::exists(p))
-        return addInput(p);
-    else
-        return addInput(getContext().resolve(i));
-}
-
-Input &SwBuild::addInput(const path &i)
-{
-    return addInput1(i);
-}
-
-Input &SwBuild::addInput(const PackageId &i)
-{
-    return addInput1(i);
-}
-
-template <class I>
-Input &SwBuild::addInput1(const I &i)
-{
-    auto input = std::make_unique<Input>(i, getContext());
-    auto it = std::find_if(inputs.begin(), inputs.end(), [&i = *input](const auto &p)
-    {
-        return *p == i;
-    });
-    if (it != inputs.end())
-        return **it;
-    inputs.push_back(std::move(input));
-    return *inputs.back();
+    inputs.push_back(i);
 }
 
 path SwBuild::getExecutionPlanPath() const

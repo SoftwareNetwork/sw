@@ -18,6 +18,7 @@
 
 #include "commands.h"
 
+#include <sw/core/input.h>
 #include <sw/manager/storage.h>
 #include <sw/support/filesystem.h>
 
@@ -146,7 +147,8 @@ SUBCOMMAND_DECL(uri)
             fs::create_directories(d);
             ScopedCurrentPath scp(d, CurrentPathScope::All);
             auto b = swctx->createBuild();
-            b->addInput(p);
+            sw::InputWithSettings i(swctx->addInput(p));
+            b->addInput(i);
             b->build();
             return;
         }

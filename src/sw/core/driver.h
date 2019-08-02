@@ -31,7 +31,7 @@ struct SW_CORE_API IDriver
     /// test if driver is able to load this input
     virtual bool canLoad(const RawInput &) const = 0;
 
-    // load entry points for inputs
+    // create entry points for inputs
     // inputs are unique and non null
     // inputs will receive their entry points
     // result is number of vectors of entry points equal to inputs, in the same order
@@ -39,7 +39,8 @@ struct SW_CORE_API IDriver
     // we return shared points because we cannot load them into context because package ids is not known in advance
     // (in case of loading not installed package)
     // if entry points were already loaded (like for installed packages), internal vector may be empty
-    virtual EntryPointsVector load(SwContext &, const std::vector<RawInput> &) const = 0;
+    [[nodiscard]]
+    virtual EntryPointsVector createEntryPoints(SwContext &, const std::vector<RawInput> &) const = 0;
 
     // get raw spec
     // complex return value?

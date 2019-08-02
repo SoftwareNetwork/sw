@@ -214,7 +214,7 @@ void build(Solution &s)
                 ;
             c.c->ignore_deps_generated_commands = true;
             // make sure this is exported header, so we depend on it
-            //cpp_driver.Public += "options_cl.generated.h";
+            cpp_driver.Public += "options_cl.generated.h";
         }
         //if (!s.Variables["SW_SELF_BUILD"])
         {

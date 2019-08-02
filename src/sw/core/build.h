@@ -14,8 +14,8 @@ namespace sw
 {
 
 struct ExecutionPlan;
-struct IDriver;
 struct Input;
+struct InputWithSettings;
 struct SwContext;
 
 enum class BuildState
@@ -41,9 +41,7 @@ struct SW_CORE_API SwBuild
     SwContext &getContext() { return swctx; }
     const SwContext &getContext() const { return swctx; }
 
-    Input &addInput(const String &);
-    Input &addInput(const path &);
-    Input &addInput(const PackageId &);
+    void addInput(const InputWithSettings &);
 
     // complete
     void build();
@@ -85,23 +83,19 @@ struct SW_CORE_API SwBuild
     void addKnownPackage(const PackageId &);
 
 private:
-    using InputPtr = std::unique_ptr<Input>;
-    using Inputs = std::vector<InputPtr>;
+    using Inputs = std::vector<InputWithSettings>;
 
     SwContext &swctx;
     path build_dir;
-    Inputs inputs;
     TargetMap targets;
     TargetMap targets_to_build;
     PackageIdSet known_packages;
+    Inputs inputs;
     mutable BuildState state = BuildState::NotStarted;
 
-    void load(const std::vector<Input*> &inputs, bool set_eps);
-    void load(Inputs &inputs, bool set_eps);
+    void load(const Inputs &inputs, bool set_eps);
     Commands getCommands() const;
     void loadPackages(const TargetMap &predefined);
-    template <class I>
-    Input &addInput1(const I &);
 };
 
 } // namespace sw

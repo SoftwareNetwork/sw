@@ -39,7 +39,9 @@ std::pair<sw::SourceDirMap, const sw::Input &> fetch(sw::SwBuild &b)
     opts.ignore_existing_dirs = true;
     opts.existing_dirs_age = std::chrono::hours(1);
 
-    auto &i = b.addInput(fs::current_path());
+    auto &ii = b.getContext().addInput(fs::current_path());
+    sw::InputWithSettings i(ii);
+    b.addInput(i);
     auto ts = createSettings(b.getContext());
     ts["driver"]["dry-run"] = "true";
     i.addSettings(ts);
@@ -95,7 +97,7 @@ std::pair<sw::SourceDirMap, const sw::Input &> fetch(sw::SwBuild &b)
     if (build_after_fetch)
         b.execute();
 
-    return { srcs, i };
+    return { srcs, ii };
 }
 
 SUBCOMMAND_DECL2(fetch)

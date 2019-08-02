@@ -496,7 +496,8 @@ void setup_log(const std::string &log_level, bool simple)
 void override_package_perform(sw::SwContext &swctx)
 {
     auto b = swctx.createBuild();
-    auto &i = b->addInput(fs::current_path());
+    sw::InputWithSettings i(swctx.addInput(fs::current_path()));
+    b->addInput(i);
     auto ts = b->getContext().getHostSettings();
     ts["driver"]["dry-run"] = "true";
     i.addSettings(ts);

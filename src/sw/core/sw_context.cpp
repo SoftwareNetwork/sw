@@ -140,4 +140,96 @@ void SwContext::executeBuild(const path &in)
     b->runSavedExecutionPlan(in);
 }
 
+Input &SwContext::addInput(const String &i)
+{
+    path p(i);
+    if (fs::exists(p))
+        return addInput(p);
+    else
+        return addInput(resolve(i));
+}
+
+Input &SwContext::addInput(const path &i)
+{
+    return addInput1(i);
+}
+
+Input &SwContext::addInput(const PackageId &p)
+{
+    auto &i = addInput1(p);
+    if (i.isLoaded())
+        return i;
+    if (getTargetData().find(p) == getTargetData().end())
+        return i;
+    auto ep = getTargetData(p).getEntryPoint();
+    if (ep)
+        i.addEntryPoints({ ep });
+    return i;
+}
+
+template <class I>
+Input &SwContext::addInput1(const I &i)
+{
+    auto input = std::make_unique<Input>(i, *this);
+    auto it = std::find_if(inputs.begin(), inputs.end(), [&i = *input](const auto &p)
+    {
+        return *p == i;
+    });
+    if (it != inputs.end())
+        return **it;
+    inputs.push_back(std::move(input));
+    return *inputs.back();
+}
+
+void SwContext::loadEntryPoints(const std::vector<Input*> &inputs, bool set_eps)
+{
+    std::map<IDriver *, std::set<Input*>> active_drivers1;
+    for (auto &i : inputs)
+    {
+        if (!i->isLoaded())
+            active_drivers1[&i->getDriver()].insert(i);
+    }
+    std::map<IDriver *, std::vector<Input*>> active_drivers;
+    for (auto &[d, g] : active_drivers1)
+        active_drivers[d] = std::vector<Input*>(g.begin(), g.end());
+    for (auto &[d, g] : active_drivers)
+    {
+        std::vector<RawInput> inputs;
+        for (auto &i : g)
+            inputs.push_back(*i);
+        auto eps = d->createEntryPoints(*this, inputs);
+        if (eps.size() != inputs.size())
+            throw SW_RUNTIME_ERROR("Incorrect number of returned entry points");
+        for (size_t i = 0; i < eps.size(); i++)
+        {
+            // when loading installed package, eps[i] may be empty
+            // so we take ep from context
+            if (eps[i].empty())
+            {
+                if (inputs[i].getType() != InputType::InstalledPackage)
+                    throw SW_RUNTIME_ERROR("unexpected input type");
+            }
+            g[i]->addEntryPoints(eps[i]);
+            for (auto &ep : eps[i])
+            {
+                if (inputs[i].getType() != InputType::InstalledPackage)
+                    continue;
+                if (!set_eps)
+                    continue;
+                // for packages we must also register all other group packages
+                // which are located in this config AND which are deps of this input package id
+                auto m = resolve(UnresolvedPackages{ inputs[i].getPackageId() });
+                auto &p = m.find(inputs[i].getPackageId())->second;
+                for (auto &d : p.getData().dependencies)
+                {
+                    auto &p2 = m.find(d)->second;
+                    if (p2.getData().group_number != p.getData().group_number)
+                        continue;
+                    getTargetData(p2).setEntryPoint(ep);
+                }
+            }
+        }
+    }
+}
+
 }

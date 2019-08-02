@@ -395,9 +395,10 @@ std::unique_ptr<sw::SwBuild> createBuildAndPrepare(sw::SwContext &swctx)
     auto b = swctx.createBuild();
     for (auto &a : build_arg)
     {
-        auto &i = b->addInput(a);
+        sw::InputWithSettings i(swctx.addInput(a));
         for (auto &s : createSettings(*b))
             i.addSettings(s);
+        b->addInput(i);
     }
     b->load();
     b->setTargetsToBuild();
@@ -436,9 +437,10 @@ SUBCOMMAND_DECL2(build)
     auto b = swctx.createBuild();
     for (auto &a : build_arg)
     {
-        auto &i = b->addInput(a);
+        sw::InputWithSettings i(swctx.addInput(a));
         for (auto &s : createSettings(*b))
             i.addSettings(s);
+        b->addInput(i);
     }
     if (build_default_explan)
     {

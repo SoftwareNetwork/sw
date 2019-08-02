@@ -17,11 +17,11 @@ TargetData::~TargetData()
 {
 }
 
-void TargetData::loadPackages(SwBuild &b, const TargetSettings &s, const PackageIdSet &whitelist) const
+std::vector<ITargetPtr> TargetData::loadPackages(SwBuild &b, const TargetSettings &s, const PackageIdSet &whitelist) const
 {
     if (!ep)
         throw SW_RUNTIME_ERROR("No entry point provided");
-    ep->loadPackages(b, s, whitelist);
+    return ep->loadPackages(b, s, whitelist);
 }
 
 TargetEntryPointPtr TargetData::getEntryPoint() const

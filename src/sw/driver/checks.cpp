@@ -767,24 +767,17 @@ int main(int ac, char* av[])
     return src;
 }
 
-struct DummyCheckEntryPoint : NativeTargetEntryPoint
-{
-    std::function<void()> f;
-
-private:
-    void loadPackages1(Build &) const override { f(); }
-};
-
 #define SETUP_SOLUTION()                                          \
     auto b = check_set->checker.build.getContext().createBuild(); \
     auto s = setupSolution(*b, f);                                \
-    auto ep = std::make_shared<DummyCheckEntryPoint>();           \
     ModuleSwappableData msd;                                      \
     msd.current_settings = getSettings();                         \
     s.setModuleData(msd)
 
-#define EXECUTE_SOLUTION() \
-    if (!execute(*b))      \
+#define EXECUTE_SOLUTION()                             \
+    for (auto &t : msd.added_targets)                  \
+        b->getTargets()[t->getPackage()].push_back(t); \
+    if (!execute(*b))                                  \
     return
 
 void FunctionExists::run() const

@@ -6,8 +6,9 @@
 
 #include "base.h"
 
-#include "sw/driver/command.h"
-#include "sw/driver/build.h"
+#include "../entry_point.h"
+#include "../command.h"
+#include "../build.h"
 
 #include <sw/builder/jumppad.h>
 #include <sw/core/sw_context.h>
@@ -263,6 +264,7 @@ TargetBase &TargetBase::addChild(const TargetBaseTypePtr &t)
     if (/*!isLocal() && */!getSolution().isKnownTarget(t->getPackage()))
     {
         t->DryRun = true;
+        t->ts["dry-run"] = "true";
     }
 
     return addChild(t, t->getTargetSettings());
@@ -270,24 +272,13 @@ TargetBase &TargetBase::addChild(const TargetBaseTypePtr &t)
 
 TargetBase &TargetBase::addChild(const TargetBaseTypePtr &t, const TargetSettings &tid)
 {
-    auto &cld = getSolution().getChildren();
-
-    auto i = cld.find(t->getPackage());
-    if (i != cld.end())
-    {
-        auto j = i->second.find(tid);
-        if (j != i->second.end())
-        {
-            //throw SW_RUNTIME_ERROR("Target already exists: " + t->getPackage().toString());
-            //return (*j)->as<TargetBase>();
-        }
-    }
+    getSolution().getModuleData().added_targets.push_back(t);
 
     //
-    if (t->DryRun)
+    /*if (t->DryRun)
         cld[t->getPackage()].push_back_inactive(t);
     else
-        cld[t->getPackage()].push_back(t);
+        cld[t->getPackage()].push_back(t);*/
 
     return *t;
 }

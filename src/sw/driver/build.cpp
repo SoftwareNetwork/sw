@@ -109,12 +109,12 @@ path Build::getChecksDir() const
     return getServiceDir() / "checks";
 }
 
-void Build::setModuleData(const ModuleSwappableData &d)
+void Build::setModuleData(ModuleSwappableData &d)
 {
     module_data = &d;
 }
 
-const ModuleSwappableData &Build::getModuleData() const
+ModuleSwappableData &Build::getModuleData() const
 {
     if (!module_data)
         throw SW_LOGIC_ERROR("no module data was set");

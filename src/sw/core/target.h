@@ -189,8 +189,8 @@ struct TargetEntryPoint
 {
     virtual ~TargetEntryPoint() = 0;
 
-    // on zero allowed packages, load all
-    virtual void loadPackages(SwBuild &, const TargetSettings &, const PackageIdSet &allowed_packages) const = 0;
+    [[nodiscard]]
+    virtual std::vector<ITargetPtr> loadPackages(SwBuild &, const TargetSettings &, const PackageIdSet &allowed_packages) const = 0;
 };
 
 using TargetEntryPointPtr = std::shared_ptr<TargetEntryPoint>;
@@ -199,8 +199,9 @@ struct TargetData
 {
     ~TargetData();
 
-    // load targets into passed map
-    void loadPackages(SwBuild &, const TargetSettings &, const PackageIdSet &allowed_packages) const;
+    // load targets
+    [[nodiscard]]
+    std::vector<ITargetPtr> loadPackages(SwBuild &, const TargetSettings &, const PackageIdSet &allowed_packages) const;
 
     //
     TargetEntryPointPtr getEntryPoint() const;

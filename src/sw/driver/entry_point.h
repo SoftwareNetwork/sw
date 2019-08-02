@@ -30,15 +30,16 @@ struct ModuleSwappableData : ModuleSwappableDataBase
     PackageIdSet known_targets;
     TargetSettings current_settings;
     BuildSettings bs;
+    std::vector<ITargetPtr> added_targets;
 };
 
 // this driver ep
-struct NativeTargetEntryPoint : TargetEntryPoint,
-    std::enable_shared_from_this<NativeTargetEntryPoint>
+struct NativeTargetEntryPoint : TargetEntryPoint
 {
     ModuleSwappableDataBase module_data;
 
-    void loadPackages(SwBuild &, const TargetSettings &, const PackageIdSet &pkgs) const override;
+    [[nodiscard]]
+    std::vector<ITargetPtr> loadPackages(SwBuild &, const TargetSettings &, const PackageIdSet &pkgs) const override;
 
 private:
     virtual void loadPackages1(Build &) const = 0;

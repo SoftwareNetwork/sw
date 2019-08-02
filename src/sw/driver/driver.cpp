@@ -87,7 +87,7 @@ bool Driver::canLoad(const RawInput &i) const
     return false;
 }
 
-Driver::EntryPointsVector Driver::load(SwContext &swctx, const std::vector<RawInput> &inputs) const
+Driver::EntryPointsVector Driver::createEntryPoints(SwContext &swctx, const std::vector<RawInput> &inputs) const
 {
     PackageIdSet pkgsids;
     std::unordered_map<path, EntryPointsVector1> p_eps;
@@ -171,7 +171,12 @@ std::shared_ptr<PrepareConfigEntryPoint> Driver::build_configs1(SwContext &swctx
         b->addKnownPackage(p);
 
     auto ep = std::make_shared<PrepareConfigEntryPoint>(objs);
-    ep->loadPackages(*b, ts, b->getKnownPackages()); // load all our known targets
+    auto tgts = ep->loadPackages(*b, ts, b->getKnownPackages()); // load all our known targets
+    if (tgts.size() != 1)
+        throw SW_LOGIC_ERROR("something went wrong, only one lib target must be exported");
+
+    for (auto &tgt : tgts)
+        b->getTargets()[tgt->getPackage()].push_back(tgt);
 
     // execute
     b->getTargetsToBuild()[*ep->tgt] = b->getTargets()[*ep->tgt]; // set our main target

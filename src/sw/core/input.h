@@ -49,20 +49,7 @@ protected:
     RawInput() = default;
 };
 
-struct SW_CORE_API InputWithSettings : RawInput
-{
-    const std::set<TargetSettings> &getSettings() const;
-    void addSettings(const TargetSettings &s);
-    void clearSettings() { settings.clear(); }
-    String getHash() const;
-
-protected:
-    std::set<TargetSettings> settings;
-
-    InputWithSettings() = default;
-};
-
-struct SW_CORE_API Input : InputWithSettings
+struct SW_CORE_API Input : RawInput
 {
     Input(const path &, const SwContext &);
     Input(const PackageId &, const SwContext &);
@@ -70,17 +57,37 @@ struct SW_CORE_API Input : InputWithSettings
     IDriver &getDriver() const { return *driver; }
 
     bool isChanged() const;
-    void addEntryPoint(const TargetEntryPointPtr &);
-    void load(SwBuild &);
+    void addEntryPoints(const std::vector<TargetEntryPointPtr> &);
     bool isLoaded() const;
     String getSpecification() const;
+    const std::vector<TargetEntryPointPtr> &getEntryPoints() const { return eps; }
 
 private:
     IDriver *driver = nullptr;
+    // one input may have several eps
+    // example: .yml frontend - 1 document, but multiple eps, one per package
     std::vector<TargetEntryPointPtr> eps;
 
     void init(const path &, const SwContext &);
     void init(const PackageId &, const SwContext &);
+};
+
+struct SW_CORE_API InputWithSettings
+{
+    InputWithSettings(const Input &);
+
+    const std::set<TargetSettings> &getSettings() const;
+    void addSettings(const TargetSettings &s);
+    void clearSettings() { settings.clear(); }
+    String getHash() const;
+    const Input &getInput() const { return i; }
+
+    [[nodiscard]]
+    std::vector<ITargetPtr> load(SwBuild &) const;
+
+protected:
+    const Input &i;
+    std::set<TargetSettings> settings;
 };
 
 } // namespace sw

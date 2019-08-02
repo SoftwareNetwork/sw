@@ -56,7 +56,7 @@ struct SW_DRIVER_CPP_API Build : SimpleBuild
 {
     using Base = SimpleBuild;
 
-    const ModuleSwappableData *module_data = nullptr;
+    ModuleSwappableData *module_data = nullptr;
     SourceDirMap source_dirs_by_source;
     Checker checker;
 
@@ -72,8 +72,8 @@ struct SW_DRIVER_CPP_API Build : SimpleBuild
     TargetMap &getChildren();
     const TargetMap &getChildren() const;
     path getChecksDir() const;
-    void setModuleData(const ModuleSwappableData &);
-    const ModuleSwappableData &getModuleData() const;
+    void setModuleData(ModuleSwappableData &);
+    ModuleSwappableData &getModuleData() const;
     PackageVersionGroupNumber getCurrentGroupNumber() const;
 
     // tests
