@@ -285,31 +285,6 @@ static PackagePath getSelfTargetName(const Files &files)
 #define SW_DRIVER_NAME "org.sw.sw.client.driver.cpp-0.3.1"
 #define SW_DRIVER_INCLUDE_DIR "src"
 
-static NativeCompiledTarget &getDriverTarget(Build &solution, NativeCompiledTarget &lib)
-{
-    auto i = solution.getChildren().find(UnresolvedPackage(SW_DRIVER_NAME));
-    if (i == solution.getChildren().end())
-    {
-        solution.getContext().getTargetData(PackageId(SW_DRIVER_NAME)).loadPackages(solution.getMainBuild(), solution.getSettings(), solution.getModuleData().known_targets);
-        i = solution.getChildren().find(UnresolvedPackage(SW_DRIVER_NAME));
-        if (i == solution.getChildren().end())
-            throw SW_RUNTIME_ERROR("no driver target");
-    }
-    auto k = i->second.find(lib.getTargetSettings());
-    if (k == i->second.end())
-    {
-        solution.getContext().getTargetData(i->first).loadPackages(solution.getMainBuild(), solution.getSettings(), solution.module_data->known_targets);
-        k = i->second.find(lib.getTargetSettings());
-        if (k == i->second.end())
-        {
-            //if (i->second.empty())
-            throw SW_RUNTIME_ERROR("no driver target (by settings)");
-            //k = i->second.begin();
-        }
-    }
-    return (*k)->as<NativeCompiledTarget>();
-}
-
 static auto getDriverDep()
 {
     return std::make_shared<Dependency>(UnresolvedPackage(SW_DRIVER_NAME));
@@ -334,15 +309,6 @@ static void addDeps(Build &solution, NativeCompiledTarget &lib)
     auto d = lib + UnresolvedPackage(SW_DRIVER_NAME);
     d->IncludeDirectoriesOnly = true;
     //d->GenerateCommandsBefore = true;
-
-    //auto drv = getDriverDep();
-    //auto &drv = getDriverTarget(solution, lib);
-    // generated file, because it won't build in IncludeDirectoriesOnly
-    // FIXME: ^^^ this is wrong, generated header must be built in idirs only
-    // we depend only on this file, so others not needed and also they involve many unnecessary dependencies
-    // TODO: correct way to make dependencies on generated files is to add them to interface source files!
-    //lib.getFile(drv)
-    //lib += drv.BinaryDir / "options_cl.generated.h";
 }
 
 static void write_pch(Build &solution)

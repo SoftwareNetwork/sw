@@ -70,16 +70,6 @@ Build::Build(SwBuild &mb)
     main_build_ = &mb;
 }
 
-Build::Build(const Build &rhs)
-    : Base(rhs)
-    , checker(*this)
-{
-}
-
-Build::~Build()
-{
-}
-
 SwContext &Build::getContext() const
 {
     return getMainBuild().getContext();

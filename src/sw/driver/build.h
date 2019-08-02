@@ -91,8 +91,6 @@ private:
     //
 public:
     Build(SwBuild &);
-    Build(const Build &);
-    ~Build();
 
     void load_inline_spec(const path &);
     void load_dir(const path &);
