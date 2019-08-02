@@ -376,14 +376,6 @@ static ::cl::opt<String> target_build("target", ::cl::desc("Target to build")/*,
 static ::cl::opt<String> ide_rebuild("rebuild", ::cl::desc("Rebuild target"), ::cl::sub(subcommand_ide));
 static ::cl::opt<String> ide_clean("clean", ::cl::desc("Clean target"), ::cl::sub(subcommand_ide));
 
-//static ::cl::list<String> override_package("override-remote-package", ::cl::value_desc("prefix sdir"), ::cl::desc("Provide a local copy of remote package"), ::cl::multi_val(2));
-static ::cl::opt<String> override_package("override-remote-package", ::cl::value_desc("prefix"), ::cl::desc("Provide a local copy of remote package(s)"));
-static ::cl::alias override_package2("override", ::cl::desc("Alias for -override-remote-package"), ::cl::aliasopt(override_package));
-static ::cl::opt<bool> list_overridden_packages("list-overridden-remote-packages", ::cl::desc("List overridden packages"));
-static ::cl::opt<String> delete_overridden_package("delete-overridden-remote-package", ::cl::value_desc("package"), ::cl::desc("Delete overridden package from index"));
-static ::cl::opt<path> delete_overridden_package_dir("delete-overridden-remote-package-dir", ::cl::value_desc("sdir"), ::cl::desc("Delete overridden dir packages"));
-static ::cl::alias delete_overridden_package_dir2("delete-override", ::cl::desc("Alias for -delete-overridden-remote-package-dir"), ::cl::aliasopt(delete_overridden_package_dir));
-
 // uri commands
 extern bool gRunAppInContainer;
 static ::cl::opt<bool, true> run_app_in_container("in-container", ::cl::desc("Print file with build graph"), ::cl::location(gRunAppInContainer), ::cl::sub(subcommand_uri));
@@ -393,58 +385,8 @@ static ::cl::opt<bool, true> use_lock_file("l", ::cl::desc("Use lock file"), ::c
 
 //static ::cl::list<String> builtin_function(sw::builder::getInternalCallBuiltinFunctionName(), ::cl::desc("Call built-in function"), ::cl::Hidden);
 
-void override_package_perform(sw::SwContext &swctx);
-
 int sw_main(const Strings &args)
 {
-    if (list_overridden_packages)
-    {
-        auto swctx = createSwContext();
-        // sort
-        std::set<sw::LocalPackage> pkgs;
-        for (auto &p : swctx->getLocalStorage().getOverriddenPackagesStorage().getPackages())
-            pkgs.emplace(p);
-        for (auto &p : pkgs)
-            std::cout << p.toString() << " " << *p.getOverriddenDir() << "\n";
-        return 0;
-    }
-
-    if (!override_package.empty())
-    {
-        auto swctx = createSwContext();
-        override_package_perform(*swctx);
-        return 0;
-    }
-
-    if (!delete_overridden_package.empty())
-    {
-        auto swctx = createSwContext();
-        sw::PackageId pkg{ delete_overridden_package };
-        LOG_INFO(logger, "Delete override for " + pkg.toString());
-        swctx->getLocalStorage().getOverriddenPackagesStorage().deletePackage(pkg);
-        return 0;
-    }
-
-    if (!delete_overridden_package_dir.empty())
-    {
-        LOG_INFO(logger, "Delete override for sdir " + delete_overridden_package_dir.u8string());
-
-        auto d = primitives::filesystem::canonical(delete_overridden_package_dir);
-
-        auto swctx = createSwContext();
-        std::set<sw::LocalPackage> pkgs;
-        for (auto &p : swctx->getLocalStorage().getOverriddenPackagesStorage().getPackages())
-        {
-            if (*p.getOverriddenDir() == d)
-                pkgs.emplace(p);
-        }
-        for (auto &p : pkgs)
-            std::cout << "Deleting " << p.toString() << "\n";
-
-        swctx->getLocalStorage().getOverriddenPackagesStorage().deletePackageDir(d);
-        return 0;
-    }
-
     if (gUseLockFile && fs::exists(fs::current_path() / "sw.lock"))
     {
         SW_UNIMPLEMENTED;
@@ -491,46 +433,6 @@ void setup_log(const std::string &log_level, bool simple)
     // first trace message
     LOG_TRACE(logger, "----------------------------------------");
     LOG_TRACE(logger, "Starting sw...");
-}
-
-void override_package_perform(sw::SwContext &swctx)
-{
-    auto b = swctx.createBuild();
-    sw::InputWithSettings i(swctx.addInput(fs::current_path()));
-    b->addInput(i);
-    auto ts = b->getContext().getHostSettings();
-    ts["driver"]["dry-run"] = "true";
-    i.addSettings(ts);
-    b->load();
-
-    // one prepare step will find sources
-    // maybe add explicit enum value
-    //swctx.prepareStep();
-
-    auto gn = swctx.getLocalStorage().getOverriddenPackagesStorage().getPackagesDatabase().getMaxGroupNumber() + 1;
-    for (auto &[pkg, desc] : getPackages(*b))
-    {
-        sw::PackagePath prefix = override_package;
-        sw::PackageId pkg2{ prefix / pkg.ppath, pkg.version };
-        auto dir = fs::absolute(".");
-        LOG_INFO(logger, "Overriding " + pkg2.toString() + " to " + dir.u8string());
-        // fix deps' prefix
-        sw::UnresolvedPackages deps;
-        for (auto &d : desc->getData().dependencies)
-        {
-            if (d.ppath.isAbsolute())
-                deps.insert(d);
-            else
-                deps.insert({ prefix / d.ppath, d.range });
-        }
-        LocalPackage lp(swctx.getLocalStorage(), pkg2);
-        PackageData d;
-        d.sdir = dir;
-        d.dependencies = deps;
-        d.group_number = gn;
-        d.prefix = (int)prefix.size();
-        swctx.getLocalStorage().getOverriddenPackagesStorage().install(lp, d);
-    }
 }
 
 SUBCOMMAND_DECL(mirror)

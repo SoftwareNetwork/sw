@@ -18,7 +18,7 @@
 
 #include "commands.h"
 
-::cl::opt<String> build_arg_configure(::cl::Positional, ::cl::desc("Configure"), ::cl::init("."), ::cl::sub(subcommand_configure));
+static ::cl::opt<String> build_arg_configure(::cl::Positional, ::cl::desc("Configure"), ::cl::init("."), ::cl::sub(subcommand_configure));
 
 SUBCOMMAND_DECL(configure)
 {

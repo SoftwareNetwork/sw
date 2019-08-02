@@ -31,9 +31,7 @@ run file/dir/pkg - run the selected program or an executable package directly,
 run knows how to run pkg (e.g. if we run python package it will select py interpreter with correct version)
 
 update - update packages db
-
 upgrade - upgrade installed pkgs
-
 self-upgrade - upgrade the client. implement via upgrade?
 */
 
@@ -47,6 +45,7 @@ SUBCOMMAND(install, "Add package to lock.") COMMA
 SUBCOMMAND(integrate, "Integrate sw into different tools.") COMMA
 SUBCOMMAND(list, "List packages in database.") COMMA
 SUBCOMMAND(open, "Open package directory.") COMMA
+SUBCOMMAND(override, "Open package directory.") COMMA
 SUBCOMMAND(mirror, "Manage software mirrors.") COMMA
 SUBCOMMAND(pack, "Used to prepare distribution packages.") COMMA
 SUBCOMMAND(remote, "Manage remotes.") COMMA
