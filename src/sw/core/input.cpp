@@ -185,7 +185,7 @@ String InputWithSettings::getHash() const
     return s;
 }
 
-std::vector<ITargetPtr> InputWithSettings::load(SwBuild &b) const
+std::vector<ITargetPtr> InputWithSettings::loadTargets(SwBuild &b) const
 {
     if (!i.isLoaded())
         throw SW_RUNTIME_ERROR("Input is not loaded");

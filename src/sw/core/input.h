@@ -83,7 +83,7 @@ struct SW_CORE_API InputWithSettings
     const Input &getInput() const { return i; }
 
     [[nodiscard]]
-    std::vector<ITargetPtr> load(SwBuild &) const;
+    std::vector<ITargetPtr> loadTargets(SwBuild &) const;
 
 protected:
     const Input &i;

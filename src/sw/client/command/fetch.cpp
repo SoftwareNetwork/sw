@@ -30,27 +30,29 @@ SUBCOMMAND_DECL(fetch)
     cli_fetch(*swctx);
 }
 
-std::pair<sw::SourceDirMap, const sw::Input &> fetch(sw::SwBuild &b)
+decltype(auto) getInput(sw::SwBuild &b)
 {
-    using namespace sw;
+    return b.getContext().addInput(fs::current_path());
+}
 
-    sw::SourceDownloadOptions opts;
-    opts.root_dir = fs::current_path() / SW_BINARY_DIR;
-    opts.ignore_existing_dirs = true;
-    opts.existing_dirs_age = std::chrono::hours(1);
+auto getSources(sw::SwContext &swctx)
+{
+    auto b1 = swctx.createBuild();
+    auto &b = *b1;
 
-    auto &ii = b.getContext().addInput(fs::current_path());
-    sw::InputWithSettings i(ii);
-    b.addInput(i);
     auto ts = createSettings(b.getContext());
     ts["driver"]["dry-run"] = "true";
+
+    auto &ii = getInput(b);
+    sw::InputWithSettings i(ii);
     i.addSettings(ts);
+    b.addInput(i);
     b.load();
 
     auto d = fs::current_path() / SW_BINARY_DIR / "src";
 
-    SourceDirMap srcs;
-    std::unordered_set<SourcePtr> sources;
+    sw::SourceDirMap srcs;
+    std::unordered_set<sw::SourcePtr> sources;
     for (const auto &[pkg, tgts] : b.getTargets())
     {
         // filter out predefined targets
@@ -76,18 +78,32 @@ std::pair<sw::SourceDirMap, const sw::Input &> fetch(sw::SwBuild &b)
         sources.emplace(std::move(s));
     }
 
+    sw::SourceDownloadOptions opts;
+    opts.root_dir = fs::current_path() / SW_BINARY_DIR;
+    opts.ignore_existing_dirs = true;
+    opts.existing_dirs_age = std::chrono::hours(1);
+
     if (download(sources, srcs, opts))
     {
         // clear patch dir to make changes to files again
         fs::remove_all(d.parent_path() / "patch");
     }
+    return srcs;
+}
 
-    i.clearSettings();
-    ts["driver"]["dry-run"] = "false";
+std::pair<sw::SourceDirMap, const sw::Input &> fetch(sw::SwBuild &b)
+{
+    auto srcs = getSources(b.getContext());
+
+    auto ts = createSettings(b.getContext());
     for (auto &[h, d] : srcs)
         ts["driver"]["source-dir-for-source"][h] = normalize_path(d);
+
+    auto &ii = getInput(b);
+    sw::InputWithSettings i(ii);
     i.addSettings(ts);
-    b.overrideBuildState(BuildState::NotStarted);
+    b.addInput(i);
+    b.overrideBuildState(sw::BuildState::NotStarted);
     b.load();
     b.setTargetsToBuild();
     b.resolvePackages();
@@ -100,8 +116,12 @@ std::pair<sw::SourceDirMap, const sw::Input &> fetch(sw::SwBuild &b)
     return { srcs, ii };
 }
 
+std::pair<sw::SourceDirMap, const sw::Input &> fetch(sw::SwContext &swctx)
+{
+    return fetch(*swctx.createBuild());
+}
+
 SUBCOMMAND_DECL2(fetch)
 {
-    auto b = swctx.createBuild();
-    fetch(*b);
+    fetch(swctx);
 }

@@ -120,7 +120,7 @@ void SwBuild::load()
     // and load packages
     for (auto &i : inputs)
     {
-        auto tgts = i.load(*this);
+        auto tgts = i.loadTargets(*this);
         for (auto &tgt : tgts)
         {
             if (tgt->getSettings()["dry-run"] == "true")
