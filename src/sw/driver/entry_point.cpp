@@ -232,6 +232,13 @@ std::vector<ITargetPtr> NativeTargetEntryPoint::loadPackages(SwBuild &swb, const
     b.module_data = &module_data1;
     b.NamePrefix = module_data.NamePrefix;
 
+    // canonical makes disk letter uppercase on windows
+    if (!source_dir.empty())
+        b.setSourceDirectory(source_dir);
+    else
+        b.setSourceDirectory(swb.getBuildDirectory().parent_path());
+    b.BinaryDir = swb.getBuildDirectory();
+
     loadPackages1(b);
 
     return module_data1.added_targets;

@@ -37,6 +37,7 @@ struct ModuleSwappableData : ModuleSwappableDataBase
 struct NativeTargetEntryPoint : TargetEntryPoint
 {
     ModuleSwappableDataBase module_data;
+    path source_dir;
 
     [[nodiscard]]
     std::vector<ITargetPtr> loadPackages(SwBuild &, const TargetSettings &, const PackageIdSet &pkgs) const override;
@@ -47,8 +48,6 @@ private:
 
 struct PrepareConfigEntryPoint : NativeTargetEntryPoint
 {
-    using NativeTargetEntryPoint::NativeTargetEntryPoint;
-
     mutable path out;
     mutable FilesMap r;
     mutable std::unique_ptr<PackageId> tgt;
