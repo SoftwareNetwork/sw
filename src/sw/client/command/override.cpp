@@ -27,10 +27,10 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "override");
 
-static ::cl::opt<String> prefix(::cl::Positional, ::cl::value_desc("prefix"));
-static ::cl::opt<bool> list_overridden_packages("l", ::cl::desc("List overridden packages"));
-static ::cl::opt<bool> delete_overridden_package("d", ::cl::desc("Delete overridden packages from index"));
-static ::cl::opt<path> delete_overridden_package_dir("dd", ::cl::value_desc("sdir"), ::cl::desc("Delete overridden dir packages"));
+static ::cl::opt<String> prefix(::cl::Positional, ::cl::value_desc("prefix"), ::cl::sub(subcommand_override));
+static ::cl::opt<bool> list_overridden_packages("l", ::cl::desc("List overridden packages"), ::cl::sub(subcommand_override));
+static ::cl::opt<bool> delete_overridden_package("d", ::cl::desc("Delete overridden packages from index"), ::cl::sub(subcommand_override));
+static ::cl::opt<path> delete_overridden_package_dir("dd", ::cl::value_desc("sdir"), ::cl::desc("Delete overridden dir packages"), ::cl::sub(subcommand_override));
 
 void override_package_perform(sw::SwContext &swctx, const sw::PackagePath &prefix)
 {
