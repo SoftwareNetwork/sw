@@ -54,17 +54,25 @@ void write_build_script(const std::unordered_map<UnresolvedPackage, LocalPackage
     std::vector<LocalPackage> lpkgs;
 
     // some packages must be before others
-    std::vector<UnresolvedPackage> prepkgs{
+    std::vector<UnresolvedPackage> prepkgs
+    {
+        // goes before primitives
         {"org.sw.demo.ragel"},
         {"org.sw.demo.ragel-6"},
 
+        // goes before primitives
         {"org.sw.demo.lexxmark.winflexbison.bison-master"},
 
+        // goes before grpc
         {"org.sw.demo.google.protobuf.protobuf"},
         {"org.sw.demo.google.protobuf.protobuf-3"},
 
+        // goes before sw cpp driver (client)
         {"org.sw.demo.google.grpc.grpc_cpp_plugin"},
         {"org.sw.demo.google.grpc.grpc_cpp_plugin-1"},
+
+        // goes before sw cpp driver (client)
+        {"pub.egorpugin.primitives.filesystem-master"},
     };
 
     for (auto &u : prepkgs)
