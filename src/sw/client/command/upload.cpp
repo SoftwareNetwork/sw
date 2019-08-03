@@ -52,7 +52,7 @@ sw::PackageDescriptionMap getPackages(const sw::SwBuild &b, const sw::SourceDirM
     for (auto &[pkg, td] : b.getTargets())
     {
         // deps
-        if (pkg.ppath.isAbsolute())
+        if (pkg.getPath().isAbsolute())
             continue;
         auto t = td.getAnyTarget();
 
@@ -61,14 +61,14 @@ sw::PackageDescriptionMap getPackages(const sw::SwBuild &b, const sw::SourceDirM
         // source, version, path
         t->getSource().save(j["source"]);
         j["version"] = pkg.getVersion().toString();
-        j["path"] = pkg.ppath.toString();
+        j["path"] = pkg.getPath().toString();
 
         // find root dir
         path rd;
         if (!sources.empty())
         {
             auto src = t->getSource().clone(); // copy
-            src->applyVersion(pkg.version);
+            src->applyVersion(pkg.getVersion());
             auto si = sources.find(src->getHash());
             if (si == sources.end())
                 throw SW_RUNTIME_ERROR("no such source");
@@ -126,8 +126,7 @@ SUBCOMMAND_DECL2(upload)
     for (auto &[id, d] : m)
     {
         write_file(fs::current_path() / SW_BINARY_DIR / "upload" / id.toString() += ".json", d->getString());
-        auto id2 = id;
-        id2.ppath = sw::PackagePath(upload_prefix) / id2.ppath;
+        auto id2 = sw::PackageId(sw::PackagePath(upload_prefix) / id.getPath(), id.getVersion());
         LOG_INFO(logger, "Uploading " + id2.toString());
     }
 

@@ -58,7 +58,7 @@ UnresolvedPackage::UnresolvedPackage(const PackagePath &p, const VersionRange &r
 }
 
 UnresolvedPackage::UnresolvedPackage(const PackageId &pkg)
-    : UnresolvedPackage(pkg.ppath, pkg.version)
+    : UnresolvedPackage(pkg.getPath(), pkg.getVersion())
 {
 }
 
@@ -82,7 +82,7 @@ String UnresolvedPackage::toString(const String &delim) const
 
 bool UnresolvedPackage::canBe(const PackageId &id) const
 {
-    return ppath == id.ppath && range.hasVersion(id.version);
+    return ppath == id.getPath() && range.hasVersion(id.getVersion());
 }
 
 PackageId::PackageId(const String &target)

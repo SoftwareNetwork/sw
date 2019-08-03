@@ -308,7 +308,7 @@ int parse_main(int argc, char **argv)
     // post setup args
 
     for (sw::PackageId p : cl_activate)
-        gUserSelectedPackages[p.ppath] = p.version;
+        gUserSelectedPackages[p.getPath()] = p.getVersion();
 
     return setup_main(args);
 }

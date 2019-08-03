@@ -109,10 +109,10 @@ struct SW_DRIVER_CPP_API TargetBase : TargetBaseData
             if constexpr (std::is_convertible_v<std::tuple_element_t<0, std::tuple<Args...>>, Version>)
                 return addTarget1<T>(Name, std::forward<Args>(args)...);
             else
-                return addTarget1<T>(Name, pkg ? getPackage().version : Version(), std::forward<Args>(args)...);
+                return addTarget1<T>(Name, pkg ? getPackage().getVersion() : Version(), std::forward<Args>(args)...);
         }
         else
-            return addTarget1<T>(Name, pkg ? getPackage().version : Version(), std::forward<Args>(args)...);
+            return addTarget1<T>(Name, pkg ? getPackage().getVersion() : Version(), std::forward<Args>(args)...);
     }
 
     /**
@@ -135,10 +135,10 @@ struct SW_DRIVER_CPP_API TargetBase : TargetBaseData
             if constexpr (std::is_convertible_v<std::tuple_element_t<0, std::tuple<Args...>>, Version>)
                 return makeTarget1<T>(Name, std::forward<Args>(args)...);
             else
-                return makeTarget1<T>(Name, pkg ? getPackage().version : Version(), std::forward<Args>(args)...);
+                return makeTarget1<T>(Name, pkg ? getPackage().getVersion() : Version(), std::forward<Args>(args)...);
         }
         else
-            return makeTarget1<T>(Name, pkg ? getPackage().version : Version(), std::forward<Args>(args)...);
+            return makeTarget1<T>(Name, pkg ? getPackage().getVersion() : Version(), std::forward<Args>(args)...);
     }
 
     /**

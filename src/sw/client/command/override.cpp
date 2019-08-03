@@ -49,7 +49,7 @@ void override_package_perform(sw::SwContext &swctx, const sw::PackagePath &prefi
     auto gn = swctx.getLocalStorage().getOverriddenPackagesStorage().getPackagesDatabase().getMaxGroupNumber() + 1;
     for (auto &[pkg, desc] : getPackages(*b))
     {
-        sw::PackageId pkg2{ prefix / pkg.ppath, pkg.version };
+        sw::PackageId pkg2{ prefix / pkg.getPath(), pkg.getVersion() };
         auto dir = fs::absolute(".");
         LOG_INFO(logger, "Overriding " + pkg2.toString() + " to " + dir.u8string());
         // fix deps' prefix

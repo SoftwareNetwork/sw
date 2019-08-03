@@ -220,7 +220,7 @@ std::unordered_map<PackageId, Driver::EntryPointsVector1> Driver::load_packages(
 
         auto ep = std::make_shared<NativeModuleTargetEntryPoint>(
             Module(swctx.getModuleStorage().get(dll), gn2suffix(p.getData().group_number)));
-        ep->module_data.NamePrefix = p.ppath.slice(0, p.getData().prefix);
+        ep->module_data.NamePrefix = p.getPath().slice(0, p.getData().prefix);
         ep->module_data.current_gn = p.getData().group_number;
         swctx.getTargetData(p).setEntryPoint(ep);
         eps[p].push_back(ep);

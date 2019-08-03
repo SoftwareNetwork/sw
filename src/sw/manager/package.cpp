@@ -56,7 +56,7 @@ String Package::getHash() const
     switch (storage.getHashSchemaVersion())
     {
     case 1:
-        return blake2b_512(ppath.toStringLower() + "-" + version.toString());
+        return blake2b_512(getPath().toStringLower() + "-" + getVersion().toString());
     }
 
     throw SW_RUNTIME_ERROR("Unknown hash schema version: " + std::to_string(storage.getHashSchemaVersion()));

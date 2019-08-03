@@ -315,7 +315,7 @@ void SwBuild::setTargetsToBuild()
     if (targets_to_build.empty())
         targets_to_build = getTargets();
     for (auto &[pkg, d] : swctx.getPredefinedTargets())
-        targets_to_build.erase(pkg.ppath);
+        targets_to_build.erase(pkg.getPath());
 }
 
 void SwBuild::prepare()

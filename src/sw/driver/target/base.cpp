@@ -148,7 +148,7 @@ bool Target::hasSameProject(const ITarget &t) const
 
 PackagePath TargetBase::constructTargetName(const PackagePath &Name) const
 {
-    return NamePrefix / (pkg ? getPackage().ppath / Name : Name);
+    return NamePrefix / (pkg ? getPackage().getPath() / Name : Name);
 }
 
 TargetBase &TargetBase::addTarget2(bool add, const TargetBaseTypePtr &t, const PackagePath &Name, const Version &V)
@@ -167,26 +167,6 @@ TargetBase &TargetBase::addTarget2(bool add, const TargetBaseTypePtr &t, const P
 
     t->call(CallbackType::CreateTarget);
 
-    // try to guess whether it's local package or not
-    // TODO: one more case is when config is not local
-    /*t->Local = 0
-        // config -> local
-        || IsConfig
-
-        // if not under storage -> local
-        //|| !is_under_root(t->SourceDir, getSolution().getContext().getLocalStorage().storage_dir_pkg)
-
-        // if under storage but without prefix -> local
-        //|| t->NamePrefix.empty()
-
-        // absolute -> local
-        || !t->pkg->ppath.isAbsolute()
-
-        // local -> local
-        || t->pkg->ppath.is_loc()
-
-        ;*/
-
     t->Local = 0
         || getSolution().getCurrentGroupNumber() == 0
         || t->pkg->getOverriddenDir()
@@ -204,7 +184,7 @@ TargetBase &TargetBase::addTarget2(bool add, const TargetBaseTypePtr &t, const P
         // try to get solution provided source dir
         if (t->source)
         {
-            if (auto sd = getSolution().getSourceDir(t->getSource(), t->getPackage().version); sd)
+            if (auto sd = getSolution().getSourceDir(t->getSource(), t->getPackage().getVersion()); sd)
                 t->setSourceDirectory(sd.value());
         }
         if (t->SourceDir.empty())
@@ -215,27 +195,6 @@ TargetBase &TargetBase::addTarget2(bool add, const TargetBaseTypePtr &t, const P
         }
     }
 
-    // second try
-    // try to guess whether it's local package or not
-    // TODO: one more case is when config is not local
-    /*t->Local = 0
-        // config -> local
-        || IsConfig
-
-        // if not under storage -> local
-        || !is_under_root(t->SourceDir, getSolution().getContext().getLocalStorage().storage_dir_pkg)
-
-        // if under storage but without prefix -> local
-        //|| t->NamePrefix.empty()
-
-        // absolute -> local
-        || !t->pkg->ppath.isAbsolute()
-
-        // local -> local
-        || t->pkg->ppath.is_loc()
-
-        ;*/
-
     // before init
     if (!add)
         return *t;
@@ -245,11 +204,7 @@ TargetBase &TargetBase::addTarget2(bool add, const TargetBaseTypePtr &t, const P
 
     t->call(CallbackType::CreateTargetInitialized);
 
-    auto &ref = addChild(t);
-    //t->ts = getSolution().getSettings();
-    //t->bs = t->ts;
-    //t->call(CallbackType::CreateTargetInitialized);
-    return ref;
+    return addChild(t);
 }
 
 TargetBase &TargetBase::addChild(const TargetBaseTypePtr &t)
@@ -356,7 +311,7 @@ void Target::setSource(const Source &s)
     // apply some defaults
     if (auto g = dynamic_cast<Git*>(source.get()); g && !g->isValid())
     {
-        if (getPackage().version.isBranch())
+        if (getPackage().getVersion().isBranch())
         {
             if (g->branch.empty())
                 g->branch = "{v}";
@@ -371,7 +326,7 @@ void Target::setSource(const Source &s)
         }
     }
 
-    if (auto sd = getSolution().getSourceDir(getSource(), getPackage().version); sd)
+    if (auto sd = getSolution().getSourceDir(getSource(), getPackage().getVersion()); sd)
         setSourceDirectory(sd.value());
 }
 
@@ -409,7 +364,7 @@ void Target::fetch()
         d = BinaryDir / d;
         if (!fs::exists(d))
         {
-            s2->applyVersion(getPackage().version);
+            s2->applyVersion(getPackage().getVersion());
             s2->download(d);
         }
         d = d / findRootDirectory(d);

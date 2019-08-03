@@ -251,8 +251,8 @@ PackageData PackagesDatabase::getPackageData(const PackageId &p) const
     PackageData d;
 
     auto &pp = pps->packageVersionData;
-    pp.params.packageId = getPackageId(p.ppath);
-    pp.params.version = p.version.toString();
+    pp.params.packageId = getPackageId(p.getPath());
+    pp.params.version = p.getVersion().toString();
 
     auto q = (*db)(pp);
     if (q.empty())
@@ -282,7 +282,7 @@ int64_t PackagesDatabase::getInstalledPackageId(const PackageId &p) const
     auto q = (*db)(
         select(pkg_ver.packageVersionId, pkg_ver.hash, pkg_ver.flags, pkg_ver.updated, pkg_ver.groupNumber, pkg_ver.prefix)
         .from(pkg_ver)
-        .where(pkg_ver.packageId == getPackageId(p.ppath) && pkg_ver.version == p.version.toString()));
+        .where(pkg_ver.packageId == getPackageId(p.getPath()) && pkg_ver.version == p.getVersion().toString()));
     if (q.empty())
         return 0;
     return q.front().packageVersionId.value();
@@ -293,7 +293,7 @@ String PackagesDatabase::getInstalledPackageHash(const PackageId &p) const
     auto q = (*db)(
         select(pkg_ver.packageVersionId, pkg_ver.hash, pkg_ver.flags, pkg_ver.updated, pkg_ver.groupNumber, pkg_ver.prefix)
         .from(pkg_ver)
-        .where(pkg_ver.packageId == getPackageId(p.ppath) && pkg_ver.version == p.version.toString()));
+        .where(pkg_ver.packageId == getPackageId(p.getPath()) && pkg_ver.version == p.getVersion().toString()));
     if (q.empty())
         return {};
     return q.front().hash.value();
@@ -320,18 +320,18 @@ void PackagesDatabase::installPackage(const PackageId &p, const PackageData &d)
 
     // get package id
     auto q = (*db)(select(pkgs.packageId).from(pkgs).where(
-        pkgs.path == p.ppath.toString()
+        pkgs.path == p.getPath().toString()
         ));
     if (q.empty())
     {
         // add package
         (*db)(insert_into(pkgs).set(
-            pkgs.path = p.ppath.toString()
+            pkgs.path = p.getPath().toString()
         ));
 
         // get package id
         auto q = (*db)(select(pkgs.packageId).from(pkgs).where(
-            pkgs.path == p.ppath.toString()
+            pkgs.path == p.getPath().toString()
             ));
         package_id = q.front().packageId.value();
     }
@@ -342,7 +342,7 @@ void PackagesDatabase::installPackage(const PackageId &p, const PackageData &d)
         // remove existing version
         (*db)(remove_from(pkg_ver).where(
             pkg_ver.packageId == package_id &&
-            pkg_ver.version == p.version.toString()
+            pkg_ver.version == p.getVersion().toString()
             ));
     }
 
@@ -350,7 +350,7 @@ void PackagesDatabase::installPackage(const PackageId &p, const PackageData &d)
     (*db)(insert_into(pkg_ver).set(
         // basic data
         pkg_ver.packageId = package_id,
-        pkg_ver.version = p.version.toString(),
+        pkg_ver.version = p.getVersion().toString(),
 
         // extended
         pkg_ver.prefix = d.prefix,
@@ -369,7 +369,7 @@ void PackagesDatabase::installPackage(const PackageId &p, const PackageData &d)
     // get version id
     auto q2 = (*db)(select(pkg_ver.packageVersionId).from(pkg_ver).where(
         pkg_ver.packageId == package_id &&
-        pkg_ver.version == p.version.toString()
+        pkg_ver.version == p.getVersion().toString()
         ));
     for (auto &d : d.dependencies)
     {
@@ -423,7 +423,7 @@ std::optional<path> PackagesDatabase::getOverriddenDir(const Package &p) const
     auto q = (*db)(
         select(pkg_ver.sdir)
         .from(pkg_ver)
-        .where(pkg_ver.packageId == getPackageId(p.ppath) && pkg_ver.version == p.version.toString()));
+        .where(pkg_ver.packageId == getPackageId(p.getPath()) && pkg_ver.version == p.getVersion().toString()));
     if (q.empty() || q.front().sdir.is_null())
         return {};
     return q.front().sdir.value();
@@ -447,7 +447,7 @@ void PackagesDatabase::deletePackage(const PackageId &p) const
     (*db)(
         update(pkg_ver)
         .set(pkg_ver.sdir = sqlpp::null)
-        .where(pkg_ver.packageId == getPackageId(p.ppath) && pkg_ver.version == p.version.toString())
+        .where(pkg_ver.packageId == getPackageId(p.getPath()) && pkg_ver.version == p.getVersion().toString())
         );
 }
 
@@ -484,9 +484,9 @@ void PackagesDatabase::listPackages(const String &name) const
 
 Version PackagesDatabase::getExactVersionForPackage(const PackageId &p) const
 {
-    Version v = p.version;
+    Version v = p.getVersion();
     /*DownloadDependency d;
-    d.ppath = p.ppath;
+    d.getPath() = p.ppath;
     d.id = getPackageId(p.ppath);
 
     SomeFlags f;
@@ -558,7 +558,7 @@ Packages PackagesDatabase::getDependentPackages(const PackageId &pkg)
     Packages r;
 
     // 1. Find current project version id.
-    auto project_id = getPackageId(pkg.ppath);
+    auto project_id = getPackageId(pkg.getPath());
 
     // 2. Find project versions dependent on this version.
     std::set<std::pair<String, String>> pkgs_s;

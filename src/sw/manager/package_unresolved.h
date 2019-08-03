@@ -28,7 +28,7 @@ struct SW_MANAGER_API UnresolvedPackage
 
     UnresolvedPackage &operator=(const String &s);
 
-    PackagePath getPackagePath() const { return ppath; }
+    PackagePath getPath() const { return ppath; }
     VersionRange getRange() const { return range; }
 
     std::optional<PackageId> toPackageId() const;

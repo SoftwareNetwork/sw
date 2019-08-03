@@ -596,40 +596,40 @@ void NativeCompiledTarget::addPackageDefinitions(bool defs)
         String q;
         if (quotes)
             q = "\"";
-        a["PACKAGE"] = q + getPackage().ppath.toString() + q;
-        a["PACKAGE_NAME"] = q + getPackage().ppath.toString() + q;
-        a["PACKAGE_NAME_LAST"] = q + getPackage().ppath.back() + q;
-        a["PACKAGE_VERSION"] = q + getPackage().version.toString() + q;
+        a["PACKAGE"] = q + getPackage().getPath().toString() + q;
+        a["PACKAGE_NAME"] = q + getPackage().getPath().toString() + q;
+        a["PACKAGE_NAME_LAST"] = q + getPackage().getPath().back() + q;
+        a["PACKAGE_VERSION"] = q + getPackage().getVersion().toString() + q;
         a["PACKAGE_STRING"] = q + getPackage().toString() + q;
         a["PACKAGE_BUILD_CONFIG"] = q + getConfig() + q;
         a["PACKAGE_BUGREPORT"] = q + q;
         a["PACKAGE_URL"] = q + q;
-        a["PACKAGE_TARNAME"] = q + getPackage().ppath.toString() + q; // must be lowercase version of PACKAGE_NAME
-        a["PACKAGE_VENDOR"] = q + getPackage().ppath.getOwner() + q;
+        a["PACKAGE_TARNAME"] = q + getPackage().getPath().toString() + q; // must be lowercase version of PACKAGE_NAME
+        a["PACKAGE_VENDOR"] = q + getPackage().getPath().getOwner() + q;
         a["PACKAGE_YEAR"] = std::to_string(1900 + t.tm_year); // custom
         a["PACKAGE_COPYRIGHT_YEAR"] = std::to_string(1900 + t.tm_year);
 
-        a["PACKAGE_ROOT_DIR"] = q + normalize_path(getPackage().ppath.is_loc() ? RootDirectory : getPackage().getDirSrc()) + q;
-        a["PACKAGE_NAME_WITHOUT_OWNER"] = q/* + getPackage().ppath.slice(2).toString()*/ + q;
-        a["PACKAGE_NAME_CLEAN"] = q + (getPackage().ppath.is_loc() ? getPackage().ppath.slice(2).toString() : getPackage().ppath.toString()) + q;
+        a["PACKAGE_ROOT_DIR"] = q + normalize_path(getPackage().getPath().is_loc() ? RootDirectory : getPackage().getDirSrc()) + q;
+        a["PACKAGE_NAME_WITHOUT_OWNER"] = q/* + getPackage().getPath().slice(2).toString()*/ + q;
+        a["PACKAGE_NAME_CLEAN"] = q + (getPackage().getPath().is_loc() ? getPackage().getPath().slice(2).toString() : getPackage().getPath().toString()) + q;
 
         //"@PACKAGE_CHANGE_DATE@"
             //"@PACKAGE_RELEASE_DATE@"
 
-        a["PACKAGE_VERSION_MAJOR"] = std::to_string(getPackage().version.getMajor());
-        a["PACKAGE_VERSION_MINOR"] = std::to_string(getPackage().version.getMinor());
-        a["PACKAGE_VERSION_PATCH"] = std::to_string(getPackage().version.getPatch());
-        a["PACKAGE_VERSION_TWEAK"] = std::to_string(getPackage().version.getTweak());
-        a["PACKAGE_VERSION_NUM"] = "0x" + ver2hex(getPackage().version, 2) + "LL";
-        a["PACKAGE_VERSION_MAJOR_NUM"] = n2hex(getPackage().version.getMajor(), 2);
-        a["PACKAGE_VERSION_MINOR_NUM"] = n2hex(getPackage().version.getMinor(), 2);
-        a["PACKAGE_VERSION_PATCH_NUM"] = n2hex(getPackage().version.getPatch(), 2);
-        a["PACKAGE_VERSION_TWEAK_NUM"] = n2hex(getPackage().version.getTweak(), 2);
-        a["PACKAGE_VERSION_NUM2"] = "0x" + ver2hex(getPackage().version, 4) + "LL";
-        a["PACKAGE_VERSION_MAJOR_NUM2"] = n2hex(getPackage().version.getMajor(), 4);
-        a["PACKAGE_VERSION_MINOR_NUM2"] = n2hex(getPackage().version.getMinor(), 4);
-        a["PACKAGE_VERSION_PATCH_NUM2"] = n2hex(getPackage().version.getPatch(), 4);
-        a["PACKAGE_VERSION_TWEAK_NUM2"] = n2hex(getPackage().version.getTweak(), 4);
+        a["PACKAGE_VERSION_MAJOR"] = std::to_string(getPackage().getVersion().getMajor());
+        a["PACKAGE_VERSION_MINOR"] = std::to_string(getPackage().getVersion().getMinor());
+        a["PACKAGE_VERSION_PATCH"] = std::to_string(getPackage().getVersion().getPatch());
+        a["PACKAGE_VERSION_TWEAK"] = std::to_string(getPackage().getVersion().getTweak());
+        a["PACKAGE_VERSION_NUM"] = "0x" + ver2hex(getPackage().getVersion(), 2) + "LL";
+        a["PACKAGE_VERSION_MAJOR_NUM"] = n2hex(getPackage().getVersion().getMajor(), 2);
+        a["PACKAGE_VERSION_MINOR_NUM"] = n2hex(getPackage().getVersion().getMinor(), 2);
+        a["PACKAGE_VERSION_PATCH_NUM"] = n2hex(getPackage().getVersion().getPatch(), 2);
+        a["PACKAGE_VERSION_TWEAK_NUM"] = n2hex(getPackage().getVersion().getTweak(), 2);
+        a["PACKAGE_VERSION_NUM2"] = "0x" + ver2hex(getPackage().getVersion(), 4) + "LL";
+        a["PACKAGE_VERSION_MAJOR_NUM2"] = n2hex(getPackage().getVersion().getMajor(), 4);
+        a["PACKAGE_VERSION_MINOR_NUM2"] = n2hex(getPackage().getVersion().getMinor(), 4);
+        a["PACKAGE_VERSION_PATCH_NUM2"] = n2hex(getPackage().getVersion().getPatch(), 4);
+        a["PACKAGE_VERSION_TWEAK_NUM2"] = n2hex(getPackage().getVersion().getTweak(), 4);
     };
 
     // https://www.gnu.org/software/autoconf/manual/autoconf-2.67/html_node/Initializing-configure.html
@@ -1489,8 +1489,8 @@ void NativeCompiledTarget::findSources()
             f = &i->second;*/
 
         String project_name;
-        if (!getPackage().ppath.empty())
-            project_name = getPackage().ppath.back();
+        if (!getPackage().getPath().empty())
+            project_name = getPackage().getPath().back();
         auto add_files = [this, &f](const auto &n)
         {
             auto files = f.getFiles(BazelTargetName.empty() ? n : BazelTargetName, BazelTargetFunction);
@@ -1838,13 +1838,13 @@ bool NativeCompiledTarget::prepare()
     if (getSolution().skipTarget(Scope))
         return false;
 
-    //DEBUG_BREAK_IF_STRING_HAS(getPackage().ppath.toString(), "GDCM.gdcm");
+    //DEBUG_BREAK_IF_STRING_HAS(getPackage().getPath().toString(), "GDCM.gdcm");
 
     switch (prepare_pass)
     {
     case 1:
     {
-        LOG_TRACE(logger, "Preparing target: " + getPackage().ppath.toString());
+        LOG_TRACE(logger, "Preparing target: " + getPackage().getPath().toString());
 
         call(CallbackType::BeginPrepare);
 
@@ -2171,7 +2171,7 @@ bool NativeCompiledTarget::prepare()
 					auto f = getOutputFile();
 					f = f.parent_path() / f.filename().stem();
 					f += ".pdb";
-					c->PDBFilename = f;// BinaryDir.parent_path() / "obj" / (getPackage().ppath.toString() + ".pdb");
+					c->PDBFilename = f;// BinaryDir.parent_path() / "obj" / (getPackage().getPath().toString() + ".pdb");
 				}
 			}*/
         };
@@ -2330,19 +2330,19 @@ bool NativeCompiledTarget::prepare()
                 }
             };
 
-            RcEmitter ctx(getPackage().version, getPackage().version);
+            RcEmitter ctx(getPackage().getVersion(), getPackage().getVersion());
             ctx.begin();
 
             ctx.beginBlock("StringFileInfo");
             ctx.beginBlock("040904b0");
             //VALUE "CompanyName", "TODO: <Company name>"
-            ctx.addValueQuoted("FileDescription", { getPackage().ppath.back()/* + " - " + getConfig()*/ }); // remove config for now
-            ctx.addValueQuoted("FileVersion", { getPackage().version.toString() });
+            ctx.addValueQuoted("FileDescription", { getPackage().getPath().back()/* + " - " + getConfig()*/ }); // remove config for now
+            ctx.addValueQuoted("FileVersion", { getPackage().getVersion().toString() });
             //VALUE "InternalName", "@PACKAGE@"
             ctx.addValueQuoted("LegalCopyright", { "Powered by Software Network" });
             ctx.addValueQuoted("OriginalFilename", { getPackage().toString() });
-            ctx.addValueQuoted("ProductName", { getPackage().ppath.toString() });
-            ctx.addValueQuoted("ProductVersion", { getPackage().version.toString() });
+            ctx.addValueQuoted("ProductName", { getPackage().getPath().toString() });
+            ctx.addValueQuoted("ProductVersion", { getPackage().getVersion().toString() });
             ctx.endBlock();
             ctx.endBlock();
 
@@ -2420,7 +2420,7 @@ bool NativeCompiledTarget::prepare()
                     auto f = getOutputFile();
                     f = f.parent_path() / f.filename().stem();
                     f += ".pdb";
-                    c->PDBFilename = f;// BinaryDir.parent_path() / "obj" / (getPackage().ppath.toString() + ".pdb");
+                    c->PDBFilename = f;// BinaryDir.parent_path() / "obj" / (getPackage().getPath().toString() + ".pdb");
                 }
                 else
                     c->PDBFilename.output_dependency = false;
@@ -3274,7 +3274,7 @@ static std::unique_ptr<Source> load_source_and_version(const yaml &root, Version
 
 void NativeCompiledTarget::cppan_load_project(const yaml &root)
 {
-    *this += load_source_and_version(root, getPackageMutable().version);
+    *this += load_source_and_version(root, getPackageMutable().getVersion());
 
     YAML_EXTRACT_AUTO2(Empty, "empty");
     YAML_EXTRACT_VAR(root, HeaderOnly, "header_only", bool);
@@ -3397,8 +3397,8 @@ void NativeCompiledTarget::cppan_load_project(const yaml &root)
             // some code was removed here
             // check out original version (v1) if you encounter some errors
 
-            //auto nppath = dependency.ppath / v;
-            //dependency.ppath = nppath;
+            //auto nppath = dependency.getPath() / v;
+            //dependency.getPath() = nppath;
 
             dependency.range = v;
         };
@@ -3407,7 +3407,6 @@ void NativeCompiledTarget::cppan_load_project(const yaml &root)
         {
             // TODO
             PackagePath p(in);
-            //if (p.isAbsolute())
             return p;
             //throw SW_RUNTIME_ERROR("not implemented");
             //return in;
@@ -3419,7 +3418,7 @@ void NativeCompiledTarget::cppan_load_project(const yaml &root)
             if (d.IsScalar())
             {
                 auto p = extractFromString(d.template as<String>());
-                dependency.ppath = relative_name_to_absolute(p.ppath.toString());
+                dependency.ppath = relative_name_to_absolute(p.getPath().toString());
                 dependency.range = p.range;
             }
             else if (d.IsMap())

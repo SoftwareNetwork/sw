@@ -139,10 +139,10 @@ struct PackageVersionMapBase : PackagePathMap<PackagePath, VersionMap<T>>
 
     iterator find(const PackageId &pkg)
     {
-        auto ip = find(pkg.ppath);
-        if (ip == end(pkg.ppath))
+        auto ip = find(pkg.getPath());
+        if (ip == end(pkg.getPath()))
             return end();
-        auto iv = ip->second.find(pkg.version);
+        auto iv = ip->second.find(pkg.getVersion());
         if (iv == ip->second.end())
             return end();
         return { *this, ip, iv };
@@ -150,10 +150,10 @@ struct PackageVersionMapBase : PackagePathMap<PackagePath, VersionMap<T>>
 
     const_iterator find(const PackageId &pkg) const
     {
-        auto ip = find(pkg.ppath);
-        if (ip == end(pkg.ppath))
+        auto ip = find(pkg.getPath());
+        if (ip == end(pkg.getPath()))
             return end();
-        auto iv = ip->second.find(pkg.version);
+        auto iv = ip->second.find(pkg.getVersion());
         if (iv == ip->second.end())
             return end();
         return { *this, ip, iv };
@@ -161,8 +161,8 @@ struct PackageVersionMapBase : PackagePathMap<PackagePath, VersionMap<T>>
 
     iterator find(const UnresolvedPackage &u)
     {
-        auto ip = find(u.ppath);
-        if (ip == end(u.ppath))
+        auto ip = find(u.getPath());
+        if (ip == end(u.getPath()))
             return end();
         VersionSet versions;
         for (const auto &[v, t] : ip->second)
@@ -175,8 +175,8 @@ struct PackageVersionMapBase : PackagePathMap<PackagePath, VersionMap<T>>
 
     const_iterator find(const UnresolvedPackage &u) const
     {
-        auto ip = find(u.ppath);
-        if (ip == end(u.ppath))
+        auto ip = find(u.getPath());
+        if (ip == end(u.getPath()))
             return end();
         VersionSet versions;
         for (const auto &[v, t] : ip->second)
@@ -189,8 +189,8 @@ struct PackageVersionMapBase : PackagePathMap<PackagePath, VersionMap<T>>
 
     auto erase(const PackageId &pkg)
     {
-        auto &v = ((PackageVersionMapBase*)this)->operator[](pkg.ppath);
-        return v.erase(pkg.version);
+        auto &v = ((PackageVersionMapBase*)this)->operator[](pkg.getPath());
+        return v.erase(pkg.getVersion());
     }
 
     auto end(const PackageId &pkg)
@@ -215,8 +215,8 @@ struct PackageVersionMapBase : PackagePathMap<PackagePath, VersionMap<T>>
 
     auto emplace(const PackageId &pkg, const T &val)
     {
-        auto &v = ((PackageVersionMapBase*)this)->operator[](pkg.ppath);
-        return v.emplace(pkg.version, val);
+        auto &v = ((PackageVersionMapBase*)this)->operator[](pkg.getPath());
+        return v.emplace(pkg.getVersion(), val);
     }
 
     version_map_type &operator[](const PackagePath &p)
@@ -226,7 +226,7 @@ struct PackageVersionMapBase : PackagePathMap<PackagePath, VersionMap<T>>
 
     T &operator[](const PackageId &pkg)
     {
-        return Base::operator[](pkg.ppath)[pkg.version];
+        return Base::operator[](pkg.getPath())[pkg.getVersion()];
     }
 
     iterator begin()
@@ -248,11 +248,6 @@ struct PackageVersionMapBase : PackagePathMap<PackagePath, VersionMap<T>>
     {
         return { *this, Base::end() };
     }
-
-    /*const T &operator[](const PackageId &pkg) const
-    {
-        return Base::operator[](pkg.ppath)[pkg.version];
-    }*/
 };
 
 }

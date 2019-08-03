@@ -27,9 +27,9 @@ void detail::PackageData::applyPrefix(const PackagePath &prefix)
     for (auto &[p, r] : dependencies)
     {
         if (p.isAbsolute())
-            deps2.insert(UnresolvedPackage{p,r});
+            deps2.insert(UnresolvedPackage{ p, r });
         else
-            deps2.insert(UnresolvedPackage{ prefix / p,r });
+            deps2.insert(UnresolvedPackage{ prefix / p, r });
     }
     dependencies = deps2;
 }

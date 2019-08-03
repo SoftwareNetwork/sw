@@ -96,7 +96,7 @@ F(install)
     {
         SetupConsole();
         bUseSystemPause = true;
-        swctx.install(sw::UnresolvedPackages{ sw::UnresolvedPackage{p.ppath, p.version} });
+        swctx.install(sw::UnresolvedPackages{ sw::UnresolvedPackage{p.getPath(), p.getVersion()} });
     }
     else
     {
@@ -154,7 +154,7 @@ F(upload)
     url += normalize_path(pkg.getHashPath() / "sw.cpp");
     auto fn = sw::get_temp_filename("uploads") / "sw.cpp";
     auto spec_data = download_file(url);
-    boost::replace_all(spec_data, pkg.version.toString(), new_version.toString());
+    boost::replace_all(spec_data, pkg.getVersion().toString(), new_version.toString());
     write_file(fn, spec_data);
 
     // before scp
@@ -167,7 +167,7 @@ F(upload)
 
     // run secure as below?
     ScopedCurrentPath scp(fn.parent_path());
-    gUploadPrefix = pkg.ppath.slice(0, std::stoi(uri_args[3]));
+    gUploadPrefix = pkg.getPath().slice(0, std::stoi(uri_args[3]));
     cli_upload(swctx);
 
     /*primitives::Command c;

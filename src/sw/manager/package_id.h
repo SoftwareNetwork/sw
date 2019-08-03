@@ -14,9 +14,6 @@ namespace sw
 
 struct SW_MANAGER_API PackageId
 {
-    PackagePath ppath;
-    Version version;
-
     // try to extract from string
     PackageId(const String &);
     PackageId(const PackagePath &, const Version &);
@@ -37,6 +34,10 @@ struct SW_MANAGER_API PackageId
     String getVariableName() const;
 
     String toString(const String &delim = "-") const;
+
+private:
+    PackagePath ppath;
+    Version version;
 };
 
 using PackageIdSet = std::unordered_set<PackageId>;
@@ -56,8 +57,8 @@ template<> struct hash<::sw::PackageId>
 {
     size_t operator()(const ::sw::PackageId &p) const
     {
-        auto h = std::hash<::sw::PackagePath>()(p.ppath);
-        return hash_combine(h, std::hash<::sw::Version>()(p.version));
+        auto h = std::hash<::sw::PackagePath>()(p.getPath());
+        return hash_combine(h, std::hash<::sw::Version>()(p.getVersion()));
     }
 };
 

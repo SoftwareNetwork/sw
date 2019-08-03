@@ -27,6 +27,9 @@ namespace sw
 
 struct PackageId;
 struct BuildSettings;
+struct SwBuild;
+
+using Settings = std::set<BuildSettings>;
 
 enum class VSProjectType
 {
@@ -81,19 +84,23 @@ struct ProjectEmitter : XmlEmitter
     void beginProject();
     void endProject();
 
-    /*void addProjectConfigurations(const Build &b);
-    void addPropertyGroupConfigurationTypes(const Build &b);
-    void addPropertyGroupConfigurationTypes(const Build &b, const PackageId &p);
-    void addPropertyGroupConfigurationTypes(const Build &b, VSProjectType t);
+    void addProjectConfigurations(const SwBuild &b);
+    void addPropertyGroupConfigurationTypes(const SwBuild &b);
+    void addPropertyGroupConfigurationTypes(const SwBuild &b, const PackageId &p);
+    void addPropertyGroupConfigurationTypes(const SwBuild &b, VSProjectType t);
     void addConfigurationType(VSProjectType t);
 
-    void addPropertySheets(const Build &b);
+    void addPropertySheets(const SwBuild &b);
 
     void printProject(
-        const String &name, const PackageId &p, const Build &b, SolutionEmitter &ctx, Generator &g,
+        const String &name, const PackageId &p, const SwBuild &b, SolutionEmitter &ctx, Generator &g,
         PackagePathTree::Directories &parents, PackagePathTree::Directories &local_parents,
         const path &dir, const path &projects_dir
-    );*/
+    );
+
+private:
+    SolutionEmitter &getParent() const;
+    const Settings &getSettings() const;
 };
 
 struct SolutionEmitter : primitives::Emitter
@@ -116,10 +123,13 @@ struct SolutionEmitter : primitives::Emitter
     std::map<String, Project> projects;
     const Project *first_project = nullptr;
     Files visualizers;
+    Settings settings;
 
     SolutionEmitter();
 
     void printVersion();
+
+    const Settings &getSettings() const;
 
     SolutionEmitter &addDirectory(const String &display_name);
     SolutionEmitter &addDirectory(const InsecurePath &n, const String &display_name, const String &solution_dir = {});
@@ -137,8 +147,8 @@ struct SolutionEmitter : primitives::Emitter
     void beginGlobalSection(const String &name, const String &post);
     void endGlobalSection();
 
-    //void setSolutionConfigurationPlatforms(const Build &b);
-    //void addProjectConfigurationPlatforms(const Build &b, const String &prj, bool build = false);
+    void setSolutionConfigurationPlatforms(const SwBuild &b);
+    void addProjectConfigurationPlatforms(const SwBuild &b, const String &prj, bool build = false);
 
     void beginProjectSection(const String &n, const String &disposition);
     void endProjectSection();
@@ -146,7 +156,7 @@ struct SolutionEmitter : primitives::Emitter
     void addKeyValue(const String &k, const String &v);
     String getStringUuid(const String &k) const;
     Text getText() const override;
-    //void materialize(const Build &b, const path &dir, GeneratorType t);
+    void materialize(const SwBuild &b, const path &dir, GeneratorType t);
 
 private:
     std::map<String, String> nested_projects;

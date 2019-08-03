@@ -238,7 +238,7 @@ bool Build::skipTarget(TargetScope Scope) const
 bool Build::isKnownTarget(const LocalPackage &p) const
 {
     return getModuleData().known_targets.empty() ||
-        p.ppath.is_loc() || // used by cfg targets and checks
+        p.getPath().is_loc() || // used by cfg targets and checks
         getModuleData().known_targets.find(p) != getModuleData().known_targets.end();
 }
 
