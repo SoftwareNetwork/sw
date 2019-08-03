@@ -65,7 +65,7 @@ F(open_dir, const path &d)
     }
     else
     {
-        message_box(sw::getProgramName(), "Package '" + p.toString() + "' not installed");
+        message_box(sw::getProgramName(), "Package '" + p.toString() + "' is not installed");
     }
 #endif
 }
@@ -84,7 +84,7 @@ F(open_file, const path &f)
     }
     else
     {
-        message_box(sw::getProgramName(), "Package '" + p.toString() + "' not installed");
+        message_box(sw::getProgramName(), "Package '" + p.toString() + "' is not installed");
     }
 #endif
 }
@@ -107,12 +107,7 @@ F(install)
 
 F(remove)
 {
-    SW_UNIMPLEMENTED;
-
-    //sdb.removeInstalledPackage(p); // TODO: remove from db
-    error_code ec;
-    fs::remove_all(p.getDir(), ec);
-    return;
+    p.remove();
 }
 
 F(build)
@@ -218,9 +213,7 @@ SUBCOMMAND_DECL(uri)
 {
     fs::current_path(sw::temp_directory_path());
 
-    if (uri_args.empty())
-        return;
-    if (uri_args.size() == 1)
+    if (uri_args.size() <= 1)
         return;
 
     try

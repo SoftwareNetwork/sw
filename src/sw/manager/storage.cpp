@@ -393,6 +393,13 @@ LocalStorage::resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unreso
     return ovs.resolve(pkgs, unresolved_pkgs);
 }
 
+void LocalStorage::remove(const LocalPackage &p) const
+{
+    getPackagesDatabase().deletePackage(p);
+    error_code ec;
+    fs::remove_all(p.getDir(), ec);
+}
+
 OverriddenPackagesStorage::OverriddenPackagesStorage(const LocalStorage &ls, const path &db_dir)
     : LocalStorageBase("overridden", db_dir), ls(ls)
 {

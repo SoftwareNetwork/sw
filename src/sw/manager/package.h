@@ -90,6 +90,8 @@ struct SW_MANAGER_API LocalPackage : Package
     path getStampFilename() const;
     String getStampHash() const;
 
+    void remove() const;
+
 private:
     path getDir(const path &root) const;
     const LocalStorage &getLocalStorage() const;

@@ -195,6 +195,7 @@ struct SW_MANAGER_API LocalStorage : Directories, LocalStorageBase
     virtual ~LocalStorage();
 
     //LocalPackage download(const PackageId &) const override;
+    void remove(const LocalPackage &) const;
     LocalPackage install(const Package &) const override;
     void get(const IStorage &source, const PackageId &id, StorageFileType) const /* override*/;
     bool isPackageInstalled(const Package &id) const;

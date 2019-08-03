@@ -187,4 +187,9 @@ path LocalPackage::getDirObjWdir(
     return getDir() / "wd"; // working directory, was wdir
 }
 
+void LocalPackage::remove() const
+{
+    getLocalStorage().remove(*this);
+}
+
 }
