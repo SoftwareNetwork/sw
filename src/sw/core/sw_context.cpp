@@ -217,9 +217,11 @@ void SwContext::loadEntryPoints(const std::set<Input*> &inputs, bool set_eps)
             {
                 // for non installed packages we must create entry points in sw context
                 auto b = createBuild();
+                auto s = getHostSettings();
+                s["driver"]["dry-run"] = "true";
                 for (auto &ep : eps[i])
                 {
-                    auto tgts = ep->loadPackages(*b, getHostSettings(), {});
+                    auto tgts = ep->loadPackages(*b, s, {});
                     for (auto &tgt  : tgts)
                         getTargetData(tgt->getPackage()).setEntryPoint(ep);
                 }
