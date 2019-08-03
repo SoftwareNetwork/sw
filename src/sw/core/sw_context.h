@@ -61,7 +61,7 @@ struct SW_CORE_API SwContext : SwCoreContext
     Input &addInput(const path &);
     Input &addInput(const PackageId &);
 
-    void loadEntryPoints(const std::vector<Input*> &inputs, bool set_eps);
+    void loadEntryPoints(const std::set<Input*> &inputs, bool set_eps);
 
 private:
     using InputPtr = std::unique_ptr<Input>;

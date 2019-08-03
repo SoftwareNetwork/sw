@@ -181,17 +181,14 @@ Input &SwContext::addInput1(const I &i)
     return *inputs.back();
 }
 
-void SwContext::loadEntryPoints(const std::vector<Input*> &inputs, bool set_eps)
+void SwContext::loadEntryPoints(const std::set<Input*> &inputs, bool set_eps)
 {
-    std::map<IDriver *, std::set<Input*>> active_drivers1;
+    std::map<IDriver *, std::vector<Input*>> active_drivers;
     for (auto &i : inputs)
     {
         if (!i->isLoaded())
-            active_drivers1[&i->getDriver()].insert(i);
+            active_drivers[&i->getDriver()].push_back(i);
     }
-    std::map<IDriver *, std::vector<Input*>> active_drivers;
-    for (auto &[d, g] : active_drivers1)
-        active_drivers[d] = std::vector<Input*>(g.begin(), g.end());
     for (auto &[d, g] : active_drivers)
     {
         std::vector<RawInput> inputs;
@@ -203,19 +200,34 @@ void SwContext::loadEntryPoints(const std::vector<Input*> &inputs, bool set_eps)
         for (size_t i = 0; i < eps.size(); i++)
         {
             // when loading installed package, eps[i] may be empty
+            // (ep already exists in driver)
             // so we take ep from context
+            // test: sw build org.sw.demo.madler.zlib
             if (eps[i].empty())
             {
                 if (inputs[i].getType() != InputType::InstalledPackage)
                     throw SW_RUNTIME_ERROR("unexpected input type");
             }
             g[i]->addEntryPoints(eps[i]);
+
+            if (!set_eps)
+                continue;
+
+            if (inputs[i].getType() != InputType::InstalledPackage)
+            {
+                // for non installed packages we must create entry points in sw context
+                auto b = createBuild();
+                for (auto &ep : eps[i])
+                {
+                    auto tgts = ep->loadPackages(*b, getHostSettings(), {});
+                    for (auto &tgt  : tgts)
+                        getTargetData(tgt->getPackage()).setEntryPoint(ep);
+                }
+                continue;
+            }
+
             for (auto &ep : eps[i])
             {
-                if (inputs[i].getType() != InputType::InstalledPackage)
-                    continue;
-                if (!set_eps)
-                    continue;
                 // for packages we must also register all other group packages
                 // which are located in this config AND which are deps of this input package id
                 auto m = resolve(UnresolvedPackages{ inputs[i].getPackageId() });

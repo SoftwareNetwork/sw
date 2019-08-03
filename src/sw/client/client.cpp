@@ -153,9 +153,6 @@ static ::cl::list<path> internal_verify_file("internal-verify-file", ::cl::value
 static ::cl::opt<bool> curl_verbose("curl-verbose");
 static ::cl::opt<bool> ignore_ssl_checks("ignore-ssl-checks");
 
-extern ::cl::list<String> build_arg;
-extern ::cl::list<String> build_arg_test;
-
 #include <sw/core/c.hpp>
 
 sw_driver_t sw_create_driver(void);
@@ -299,11 +296,6 @@ int parse_main(int argc, char **argv)
     ::cl::ParseCommandLineOptions(args, overview);
 
     // post setup args
-
-    if (build_arg.empty())
-        build_arg.push_back(".");
-    if (build_arg_test.empty())
-        build_arg_test.push_back(".");
 
     for (sw::PackageId p : cl_activate)
         gUserSelectedPackages[p.ppath] = p.version;

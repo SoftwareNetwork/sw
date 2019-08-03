@@ -25,7 +25,7 @@
 
 extern ::cl::opt<bool> build_after_fetch;
 
-::cl::list<String> build_arg(::cl::Positional, ::cl::desc("Files or directories to build (paths to config)"), ::cl::sub(subcommand_build));
+static ::cl::list<String> build_arg(::cl::Positional, ::cl::desc("Files or directories to build (paths to config)"), ::cl::sub(subcommand_build));
 
 static ::cl::opt<String> build_source_dir("S", ::cl::desc("Explicitly specify a source directory."), ::cl::sub(subcommand_build), ::cl::init("."));
 static ::cl::opt<String> build_binary_dir("B", ::cl::desc("Explicitly specify a build directory."), ::cl::sub(subcommand_build), ::cl::init(SW_BINARY_DIR));
@@ -43,11 +43,11 @@ static ::cl::opt<bool> build_default_explan("e", ::cl::desc("Build execution pla
 //static cl::opt<bool> append_configs("append-configs", cl::desc("Append configs for generation"));
 
 static cl::list<String> target_os("target-os", cl::CommaSeparated);
-static cl::list<String> compiler("compiler", cl::desc("Set compiler"), cl::CommaSeparated);
-static cl::list<String> configuration("configuration", cl::desc("Set build configuration"), cl::CommaSeparated);
-cl::alias configuration2("config", cl::desc("Alias for -configuration"), cl::aliasopt(configuration));
+cl::list<String> compiler("compiler", cl::desc("Set compiler"), cl::CommaSeparated);
+cl::list<String> configuration("configuration", cl::desc("Set build configuration"), cl::CommaSeparated);
+static cl::alias configuration2("config", cl::desc("Alias for -configuration"), cl::aliasopt(configuration));
 static cl::list<String> platform("platform", cl::desc("Set build platform"), cl::CommaSeparated);
-cl::alias platform2("arch", cl::desc("Alias for -platform"), cl::aliasopt(platform));
+static cl::alias platform2("arch", cl::desc("Alias for -platform"), cl::aliasopt(platform));
 static cl::list<String> os("os", cl::desc("Set build target os"), cl::CommaSeparated);
 // rename to stdc, stdcpp?
 static cl::list<String> libc("libc", cl::desc("Set build libc"), cl::CommaSeparated);
@@ -67,20 +67,23 @@ static cl::opt<path> host_settings_file("host-settings-file", cl::desc("Read hos
 
 // static/shared
 static cl::opt<bool> static_build("static-build", cl::desc("Set static build"));
-cl::alias static_build2("static", cl::desc("Alias for -static-build"), cl::aliasopt(static_build));
+static cl::alias static_build2("static", cl::desc("Alias for -static-build"), cl::aliasopt(static_build));
 static cl::opt<bool> shared_build("shared-build", cl::desc("Set shared build (default)"));
-cl::alias shared_build2("shared", cl::desc("Alias for -shared-build"), cl::aliasopt(shared_build));
+static cl::alias shared_build2("shared", cl::desc("Alias for -shared-build"), cl::aliasopt(shared_build));
 
 //mt/md
 static cl::opt<bool> win_mt("win-mt", cl::desc("Set /MT build"));
-cl::alias win_mt2("mt", cl::desc("Alias for -win-mt"), cl::aliasopt(win_mt));
+static cl::alias win_mt2("mt", cl::desc("Alias for -win-mt"), cl::aliasopt(win_mt));
 static cl::opt<bool> win_md("win-md", cl::desc("Set /MD build (default)"));
-cl::alias win_md2("md", cl::desc("Alias for -win-md"), cl::aliasopt(win_md));
+static cl::alias win_md2("md", cl::desc("Alias for -win-md"), cl::aliasopt(win_md));
 
 ////////////////////////////////////////////////////////////////////////////////
 
 SUBCOMMAND_DECL(build)
 {
+    if (build_arg.empty())
+        build_arg.push_back(".");
+
     auto swctx = createSwContext();
     cli_build(*swctx);
 }

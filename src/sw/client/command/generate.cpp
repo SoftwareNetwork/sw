@@ -22,7 +22,7 @@
 #include <sw/core/build.h>
 #include <sw/core/input.h>
 
-static ::cl::opt<String> build_arg_generate(::cl::Positional, ::cl::desc("File or directory to use to generate projects"), ::cl::init("."), ::cl::sub(subcommand_generate));
+static ::cl::list<String> build_arg_generate(::cl::Positional, ::cl::desc("File or directory to use to generate projects"), ::cl::sub(subcommand_generate));
 
 String gGenerator;
 static ::cl::opt<String, true> cl_generator("G", ::cl::desc("Generator"), ::cl::location(gGenerator), ::cl::sub(subcommand_generate));
@@ -45,8 +45,14 @@ static ::cl::opt<bool, true> output_no_config_subdir("output-no-config-subdir", 
 // generated solution dir instead of .sw/...
 //static ::cl::opt<String> generate_binary_dir("B", ::cl::desc("Explicitly specify a build directory."), ::cl::sub(subcommand_build), ::cl::init(SW_BINARY_DIR));
 
+extern ::cl::list<String> compiler;
+extern ::cl::list<String> configuration;
+
 SUBCOMMAND_DECL(generate)
 {
+    if (build_arg_generate.empty())
+        build_arg_generate.push_back(".");
+
     auto swctx = createSwContext();
     cli_generate(*swctx);
 }
@@ -61,10 +67,18 @@ SUBCOMMAND_DECL2(generate)
     }
 
     auto generator = Generator::create(gGenerator);
-    if (generator->getType() != GeneratorType::VisualStudio)
+    if (generator->getType() == GeneratorType::VisualStudio)
     {
-        auto b = setBuildArgsAndCreateBuildAndPrepare(swctx, { build_arg_generate.getValue() });
-        generator->generate(*b);
-        return;
+        ((Strings&)compiler).clear();
+        compiler.push_back("msvc");
+        if (configuration.empty())
+        {
+            configuration.push_back("d");
+            configuration.push_back("rwdi");
+            configuration.push_back("r");
+        }
     }
+
+    auto b = setBuildArgsAndCreateBuildAndPrepare(swctx, (Strings&)build_arg_generate);
+    generator->generate(*b);
 }

@@ -112,9 +112,9 @@ void SwBuild::load()
 {
     CHECK_STATE_AND_CHANGE(BuildState::NotStarted, BuildState::InputsLoaded);
 
-    std::vector<Input *> iv;
+    std::set<Input *> iv;
     for (auto &i : inputs)
-        iv.push_back((Input*)&i.getInput());
+        iv.insert((Input*)&i.getInput());
     swctx.loadEntryPoints(iv, true);
 
     // and load packages
@@ -127,7 +127,6 @@ void SwBuild::load()
                 continue;
             getTargets()[tgt->getPackage()].push_back(tgt);
         }
-
     }
 }
 
@@ -190,13 +189,13 @@ void SwBuild::resolvePackages()
     auto m = install(upkgs);
 
     // now we know all drivers
-    std::vector<Input *> iv;
+    std::set<Input *> iv;
     for (auto &[u, p] : m)
     {
         // use addInput to prevent doubling already existing and loaded inputs
         // like when we loading dependency that is already loaded from the input
         // test: sw build org.sw.demo.gnome.pango.pangocairo-1.44
-        iv.push_back(&swctx.addInput(p));
+        iv.insert(&swctx.addInput(p));
     }
     swctx.loadEntryPoints(iv, false);
 }
