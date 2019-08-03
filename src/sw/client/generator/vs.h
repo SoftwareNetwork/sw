@@ -20,16 +20,19 @@
 
 #include "generator.h"
 
+#include <sw/core/target.h>
 #include <sw/manager/package.h>
 
 namespace sw
 {
 
 struct PackageId;
-struct BuildSettings;
 struct SwBuild;
+struct BuildSettings;
 
-using Settings = std::set<BuildSettings>;
+}
+
+using Settings = std::set<sw::TargetSettings>;
 
 enum class VSProjectType
 {
@@ -43,12 +46,12 @@ enum class VSProjectType
 
 struct PackagePathTree
 {
-    using Directories = std::set<PackagePath>;
+    using Directories = std::set<sw::PackagePath>;
 
     std::map<String, PackagePathTree> tree;
 
-    void add(const PackagePath &p);
-    Directories getDirectories(const PackagePath &p = {});
+    void add(const sw::PackagePath &p);
+    Directories getDirectories(const sw::PackagePath &p = {});
 };
 
 struct XmlEmitter : primitives::Emitter
@@ -58,7 +61,7 @@ struct XmlEmitter : primitives::Emitter
     XmlEmitter(bool print_version = true);
 
     void beginBlock(const String &n, const std::map<String, String> &params = {}, bool empty = false);
-    void beginBlockWithConfiguration(const String &n, const BuildSettings &s, std::map<String, String> params = {}, bool empty = false);
+    void beginBlockWithConfiguration(const String &n, const sw::BuildSettings &s, std::map<String, String> params = {}, bool empty = false);
     void endBlock(bool text = false);
     void addBlock(const String &n, const String &v, const std::map<String, String> &params = {});
 
@@ -84,16 +87,16 @@ struct ProjectEmitter : XmlEmitter
     void beginProject();
     void endProject();
 
-    void addProjectConfigurations(const SwBuild &b);
-    void addPropertyGroupConfigurationTypes(const SwBuild &b);
-    void addPropertyGroupConfigurationTypes(const SwBuild &b, const PackageId &p);
-    void addPropertyGroupConfigurationTypes(const SwBuild &b, VSProjectType t);
+    void addProjectConfigurations(const sw::SwBuild &b);
+    void addPropertyGroupConfigurationTypes(const sw::SwBuild &b);
+    void addPropertyGroupConfigurationTypes(const sw::SwBuild &b, const sw::PackageId &p);
+    void addPropertyGroupConfigurationTypes(const sw::SwBuild &b, VSProjectType t);
     void addConfigurationType(VSProjectType t);
 
-    void addPropertySheets(const SwBuild &b);
+    void addPropertySheets(const sw::SwBuild &b);
 
     void printProject(
-        const String &name, const PackageId &p, const SwBuild &b, SolutionEmitter &ctx, Generator &g,
+        const String &name, const sw::PackageId &p, const sw::SwBuild &b, SolutionEmitter &ctx, Generator &g,
         PackagePathTree::Directories &parents, PackagePathTree::Directories &local_parents,
         const path &dir, const path &projects_dir
     );
@@ -115,10 +118,10 @@ struct SolutionEmitter : primitives::Emitter
 
     using Base = primitives::Emitter;
 
-    Version version;
+    sw::Version version;
     String all_build_name;
     String build_dependencies_name;
-    PackageIdSet build_deps;
+    sw::PackageIdSet build_deps;
     std::unordered_map<String, String> uuids;
     std::map<String, Project> projects;
     const Project *first_project = nullptr;
@@ -132,7 +135,7 @@ struct SolutionEmitter : primitives::Emitter
     const Settings &getSettings() const;
 
     SolutionEmitter &addDirectory(const String &display_name);
-    SolutionEmitter &addDirectory(const InsecurePath &n, const String &display_name, const String &solution_dir = {});
+    SolutionEmitter &addDirectory(const sw::InsecurePath &n, const String &display_name, const String &solution_dir = {});
 
     Project &addProject(VSProjectType type, const String &n, const String &solution_dir);
     void beginProject(VSProjectType type, const String &n, const path &dir, const String &solution_dir);
@@ -147,8 +150,8 @@ struct SolutionEmitter : primitives::Emitter
     void beginGlobalSection(const String &name, const String &post);
     void endGlobalSection();
 
-    void setSolutionConfigurationPlatforms(const SwBuild &b);
-    void addProjectConfigurationPlatforms(const SwBuild &b, const String &prj, bool build = false);
+    void setSolutionConfigurationPlatforms(const sw::SwBuild &b);
+    void addProjectConfigurationPlatforms(const sw::SwBuild &b, const String &prj, bool build = false);
 
     void beginProjectSection(const String &n, const String &disposition);
     void endProjectSection();
@@ -156,7 +159,7 @@ struct SolutionEmitter : primitives::Emitter
     void addKeyValue(const String &k, const String &v);
     String getStringUuid(const String &k) const;
     Text getText() const override;
-    void materialize(const SwBuild &b, const path &dir, GeneratorType t);
+    void materialize(const sw::SwBuild &b, const path &dir, GeneratorType t);
 
 private:
     std::map<String, String> nested_projects;
@@ -164,4 +167,21 @@ private:
     void printNestedProjects();
 };
 
-}
+struct File
+{
+
+};
+
+struct Project
+{
+    Files files;
+    // settings
+    std::set<const Project *> dependencies;
+};
+
+struct Solution
+{
+    std::vector<Project> directories;
+    std::map<String, Project> projects;
+    const Project *first_project = nullptr;
+};

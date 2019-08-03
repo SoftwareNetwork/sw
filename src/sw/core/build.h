@@ -82,18 +82,18 @@ struct SW_CORE_API SwBuild
     const PackageIdSet &getKnownPackages() const;
     void addKnownPackage(const PackageId &);
 
-private:
-    using Inputs = std::vector<InputWithSettings>;
+    std::vector<InputWithSettings> getInputs() const;
 
+private:
     SwContext &swctx;
     path build_dir;
     TargetMap targets;
     TargetMap targets_to_build;
     PackageIdSet known_packages;
-    Inputs inputs;
+    std::vector<InputWithSettings> inputs;
     mutable BuildState state = BuildState::NotStarted;
 
-    void load(const Inputs &inputs, bool set_eps);
+    void load(const std::vector<InputWithSettings> &inputs, bool set_eps);
     Commands getCommands() const;
     void loadPackages(const TargetMap &predefined);
 };

@@ -26,6 +26,7 @@
 #include "sw/driver/target/native.h"
 
 #include <sw/builder/execution_plan.h>
+#include <sw/core/input.h>
 #include <sw/core/sw_context.h>
 #include <sw/support/filesystem.h>
 
@@ -458,7 +459,7 @@ void ProjectEmitter::addProjectConfigurations(const SwBuild &b)
     {
         beginBlock("ProjectConfiguration", {{"Include", get_project_configuration(s)}});
         addBlock("Configuration", get_configuration(s));
-        addBlock("Platform", generator::toString(s.TargetOS.Arch));
+        addBlock("Platform", generator::toString(BuildSettings(s).TargetOS.Arch));
         endBlock();
     }
     endBlock();
@@ -1439,9 +1440,18 @@ SolutionEmitter::Project &SolutionEmitter::addProject(VSProjectType type, const 
 void SolutionEmitter::beginProject(VSProjectType type, const String &n, const path &dir, const String &solution_dir)
 {
     bool has_dash = n.find("-") != n.npos;
-    PackageId p(n);
-    beginBlock("Project(\"" + project_type_uuids[type] + "\") = \"" +
-               p.getPath().back() + (has_dash ? "-" + p.getVersion().toString() : "") +
+    String s;
+    if (has_dash)
+    {
+        PackageId p(n);
+        s = p.getPath().back() + "-" + p.getVersion().toString();
+    }
+    else
+    {
+        PackagePath p(n);
+        s = p.back();
+    }
+    beginBlock("Project(\"" + project_type_uuids[type] + "\") = \"" + s +
         "\", \"" + (dir / (n + vs_project_ext)).u8string() + "\", \"{" + uuids[n] + "}\"");
 
     projects[n].ctx = &addEmitter<SolutionEmitter>();
@@ -1502,9 +1512,8 @@ void SolutionEmitter::setSolutionConfigurationPlatforms(const SwBuild &b)
     // sort like VS does
     beginGlobalSection("SolutionConfigurationPlatforms", "preSolution");
     std::set<String, less> platforms;
-    SW_UNIMPLEMENTED;
-    //for (auto &s : b.settings)
-        //platforms.insert(get_project_configuration(s) + " = " + get_project_configuration(s));
+    for (auto &s : getSettings())
+        platforms.insert(get_project_configuration(s) + " = " + get_project_configuration(s));
     for (auto &s : platforms)
         addLine(s);
     endGlobalSection();
@@ -1639,6 +1648,8 @@ VSGenerator::VSGenerator()
 
 void VSGenerator::generate(const SwBuild &b)
 {
+    version = Version(16);
+
     // add / b.getBuildHash()
     dir = b.getBuildDirectory() / toPathString(getType()) / version.toString(1);
     PackagePathTree tree, local_tree, overridden_tree;
@@ -1648,6 +1659,13 @@ void VSGenerator::generate(const SwBuild &b)
     ctx.all_build_name = all_build_name;
     ctx.build_dependencies_name = build_dependencies_name;
     ctx.version = version;
+
+    auto inputs = b.getInputs();
+    if (inputs.size() != 1)
+        throw SW_RUNTIME_ERROR("unsupported");
+    for (auto &i : inputs)
+        ctx.settings = i.getSettings();
+
     ctx.printVersion();
 
     ctx.addDirectory(predefined_targets_dir);
