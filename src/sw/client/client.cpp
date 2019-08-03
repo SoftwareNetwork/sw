@@ -67,6 +67,16 @@ DECLARE_STATIC_LOGGER(logger, "main");
 #endif
 #endif
 
+#if _MSC_VER
+#if defined(SW_USE_JEMALLOC)
+#define JEMALLOC_NO_PRIVATE_NAMESPACE
+#include <jemalloc-5.1.0/include/jemalloc/jemalloc.h>
+//#include <jemalloc-5.1.0/src/jemalloc_cpp.cpp>
+#endif
+#endif
+
+//#include <mimalloc.h>
+
 using namespace sw;
 
 bool bConsoleMode = true;
@@ -303,8 +313,6 @@ int parse_main(int argc, char **argv)
     return setup_main(args);
 }
 
-//#include <mimalloc.h>
-
 int main(int argc, char **argv)
 {
     //mi_version();
@@ -494,11 +502,3 @@ std::string getProgramName()
 {
     return PACKAGE_NAME_CLEAN;
 }
-
-#if _MSC_VER
-#if defined(SW_USE_JEMALLOC)
-#define JEMALLOC_NO_PRIVATE_NAMESPACE
-#include <jemalloc-5.1.0/include/jemalloc/jemalloc.h>
-//#include <jemalloc-5.1.0/src/jemalloc_cpp.cpp>
-#endif
-#endif

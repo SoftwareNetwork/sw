@@ -70,7 +70,8 @@ SUBCOMMAND_DECL(setup)
     }
 
     // register .sw extension
-    {
+    // remove? improve?
+    /*{
         const std::wstring id = L"sw.1";
 
         winreg::RegKey ext(HKEY_CLASSES_ROOT, L".sw");
@@ -81,7 +82,7 @@ SUBCOMMAND_DECL(setup)
 
         winreg::RegKey p(HKEY_CLASSES_ROOT, id + L"\\shell\\open\\command");
         p.SetStringValue(L"", prog + L" build %1");
-    }
+    }*/
 #endif
 
     auto swctx = createSwContext();
