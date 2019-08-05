@@ -38,8 +38,7 @@ struct SW_DRIVER_CPP_API Driver : IDriver
     virtual ~Driver();
 
     // driver api
-    PackageId getPackageId() const override;
-    bool canLoad(const RawInput &) const override;
+    std::optional<RawInputData> canLoadInput(const RawInput &) const override;
     EntryPointsVector createEntryPoints(SwContext &, const std::vector<RawInput> &) const override;
     String getSpecification(const RawInput &) const override;
 

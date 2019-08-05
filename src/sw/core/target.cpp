@@ -42,19 +42,12 @@ const ITarget *TargetContainer::getAnyTarget() const
 {
     if (!targets.empty())
         return targets.begin()->get();
-    if (!targets_inactive.empty())
-        return targets_inactive.begin()->get();
     return nullptr;
 }
 
 void TargetContainer::push_back(const ITargetPtr &t)
 {
     targets.push_back(t);
-}
-
-void TargetContainer::push_back_inactive(const ITargetPtr &t)
-{
-    targets_inactive.push_back(t);
 }
 
 void TargetContainer::clear()

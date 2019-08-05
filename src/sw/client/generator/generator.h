@@ -54,9 +54,6 @@ struct Generator
     virtual ~Generator() = default;
 
     virtual void generate(const sw::SwBuild &) = 0;
-    //void generate(const path &file, const Build &b);
-    //virtual void createSolutions(Build &b) {}
-    //virtual void initSolutions(Build &b) {}
 
     static std::unique_ptr<Generator> create(const String &s);
 
@@ -69,21 +66,9 @@ private:
 struct VSGenerator : Generator
 {
     sw::Version version;
-    String cwd;
-    path dir;
-    const path projects_dir = "projects";
-    const sw::InsecurePath deps_subdir = "Dependencies";
-    const sw::InsecurePath overridden_deps_subdir = "Overridden Packages";
-    const String predefined_targets_dir = ". SW Predefined Targets"s;
-    const String visualizers_dir = "Visualizers"s;
-    const String all_build_name = "ALL_BUILD"s;
-    const String build_dependencies_name = "BUILD_DEPENDENCIES"s;
-
-    VSGenerator();
+    path sln_root;
 
     void generate(const sw::SwBuild &b) override;
-    //void createSolutions(Build &b) override;
-    //void initSolutions(Build &b) override;
 };
 
 struct NinjaGenerator : Generator
@@ -113,6 +98,4 @@ struct SwExecutionPlan : Generator
     void generate(const sw::SwBuild &b) override;
 };
 
-String toString(GeneratorType Type);
 String toPathString(GeneratorType Type);
-GeneratorType fromString(const String &ss);

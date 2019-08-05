@@ -163,9 +163,12 @@ static ::cl::list<path> internal_verify_file("internal-verify-file", ::cl::value
 static ::cl::opt<bool> curl_verbose("curl-verbose");
 static ::cl::opt<bool> ignore_ssl_checks("ignore-ssl-checks");
 
+//
 #include <sw/core/c.hpp>
 
 sw_driver_t sw_create_driver(void);
+
+//static ::cl::list<String> drivers("load-driver", ::cl::desc("Load more drivers"), ::cl::CommaSeparated);
 
 std::unique_ptr<sw::SwContext> createSwContext()
 {
@@ -175,7 +178,11 @@ std::unique_ptr<sw::SwContext> createSwContext()
     httpSettings.proxy = Settings::get_local_settings().proxy;
 
     auto swctx = std::make_unique<sw::SwContext>(storage_dir_override.empty() ? sw::Settings::get_user_settings().storage_dir : storage_dir_override);
-    swctx->registerDriver(std::make_unique<sw::driver::cpp::Driver>());
+    // TODO:
+    // before default?
+    //for (auto &d : drivers)
+        //swctx->registerDriver(std::make_unique<sw::driver::cpp::Driver>());
+    swctx->registerDriver("org.sw.sw.driver.cpp-0.3.1"s, std::make_unique<sw::driver::cpp::Driver>());
     //swctx->registerDriver(std::make_unique<sw::CDriver>(sw_create_driver));
     return swctx;
 }

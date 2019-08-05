@@ -7,6 +7,8 @@
 #include "c.h"
 #include "c.hpp"
 
+#include <sw/manager/package_id.h>
+
 const char *sw_driver_get_package_id(void)
 {
     return "org.sw.driver.c-0.3.1";
@@ -35,7 +37,7 @@ sw_driver_t sw_create_driver(void)
 namespace sw
 {
 
-CDriver::CDriver(create_driver cd)
+/*CDriver::CDriver(create_driver cd)
 {
     d = cd();
 }
@@ -48,7 +50,7 @@ PackageId CDriver::getPackageId() const
     return String(d.get_package_id());
 }
 
-bool CDriver::canLoad(const RawInput &) const
+bool CDriver::canLoad(RawInputData &) const
 {
     return d.can_load(0);
 }
@@ -57,7 +59,7 @@ CDriver::EntryPointsVector CDriver::createEntryPoints(SwContext &, const std::ve
 {
     SW_UNIMPLEMENTED;
     d.load(0);
-}
+}*/
 
 }
 

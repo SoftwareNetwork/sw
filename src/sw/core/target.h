@@ -22,7 +22,7 @@ namespace sw
 struct ITarget;
 struct SwBuild;
 
-struct IDependency
+struct SW_CORE_API IDependency
 {
     virtual ~IDependency() = 0;
 
@@ -30,9 +30,10 @@ struct IDependency
     virtual UnresolvedPackage getUnresolvedPackage() const = 0;
     virtual bool isResolved() const = 0;
     virtual void setTarget(const ITarget &) = 0;
+    virtual const ITarget &getTarget() const = 0;
 };
 
-struct ITarget : ICastable
+struct SW_CORE_API ITarget : ICastable
 {
     virtual ~ITarget() = 0;
 
@@ -91,7 +92,6 @@ struct SW_CORE_API TargetContainer
     Base::const_iterator find(const TargetSettings &s) const;
 
     void push_back(const ITargetPtr &);
-    void push_back_inactive(const ITargetPtr &);
 
     void clear();
     bool empty() const;
@@ -104,7 +104,6 @@ struct SW_CORE_API TargetContainer
 
 private:
     std::vector<ITargetPtr> targets;
-    std::vector<ITargetPtr> targets_inactive;
 };
 
 namespace detail

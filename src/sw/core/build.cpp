@@ -123,6 +123,7 @@ void SwBuild::load()
         auto tgts = i.loadTargets(*this);
         for (auto &tgt : tgts)
         {
+            known_packages.insert(tgt->getPackage()); // also mark them as known
             if (tgt->getSettings()["dry-run"] == "true")
                 continue;
             getTargets()[tgt->getPackage()].push_back(tgt);

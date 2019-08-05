@@ -223,7 +223,6 @@ private:
 
     PackagePath constructTargetName(const PackagePath &Name) const;
     TargetBase &addChild(const TargetBaseTypePtr &t);
-    TargetBase &addChild(const TargetBaseTypePtr &t, const TargetSettings &);
     virtual void setupTarget(TargetBaseType *t) const;
 
     friend struct Assigner;

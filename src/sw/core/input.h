@@ -14,26 +14,32 @@ namespace sw
 struct IDriver;
 struct SwContext;
 
-enum class InputType : int32_t
+enum class InputType : uint8_t
 {
-    /// drivers may use their own methods for better loading packages
-    /// rather than when direct spec file provided
-    InstalledPackage,
-
     ///
     SpecificationFile,
+
+    /// no input file, use some heuristics
+    Directory,
 
     /// from some regular file
     InlineSpecification,
 
+    /// drivers may use their own methods for better loading packages
+    /// rather than when direct spec file provided
+    InstalledPackage,
+
     /// only try to find spec file
     DirectorySpecificationFile,
-
-    /// no input file, use any heuristics
-    Directory,
 };
 
-struct SW_CORE_API RawInput
+struct RawInputData
+{
+    InputType type;
+    std::variant<path, PackageId> data;
+};
+
+struct SW_CORE_API RawInput : protected RawInputData
 {
     InputType getType() const { return type; }
     path getPath() const;
@@ -43,16 +49,16 @@ struct SW_CORE_API RawInput
     bool operator<(const RawInput &rhs) const;
 
 protected:
-    std::variant<path, PackageId> data;
-    InputType type;
-
     RawInput() = default;
 };
 
 struct SW_CORE_API Input : RawInput
 {
+    /// determine input type
     Input(const path &, const SwContext &);
-    Input(const PackageId &, const SwContext &);
+    Input(const PackageId &, SwContext &);
+    /// forced input type
+    Input(const path &, InputType, const SwContext &);
 
     IDriver &getDriver() const { return *driver; }
 
@@ -69,7 +75,7 @@ private:
     std::vector<TargetEntryPointPtr> eps;
 
     void init(const path &, const SwContext &);
-    void init(const PackageId &, const SwContext &);
+    void init(const PackageId &, SwContext &);
 };
 
 struct SW_CORE_API InputWithSettings

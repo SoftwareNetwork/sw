@@ -45,9 +45,18 @@ Input::Input(const path &p, const SwContext &swctx)
     init(p, swctx);
 }
 
-Input::Input(const PackageId &p, const SwContext &swctx)
+Input::Input(const PackageId &p, SwContext &swctx)
 {
     init(p, swctx);
+}
+
+Input::Input(const path &in, InputType t, const SwContext &)
+{
+    path p = in;
+    if (!p.is_absolute())
+        p = fs::absolute(p);
+    data = p;
+    type = t;
 }
 
 void Input::init(const path &in, const SwContext &swctx)
@@ -57,8 +66,14 @@ void Input::init(const path &in, const SwContext &swctx)
         type = t;
         for (auto &[_, d] : swctx.getDrivers())
         {
-            if (d->canLoad(*this))
+            auto r = d->canLoadInput(*this);
+            if (r)
             {
+                if (*r != getPath())
+                {
+                    type = InputType::SpecificationFile;
+                    data = *r;
+                }
                 driver = d.get();
                 return true;
             }
@@ -111,8 +126,11 @@ void Input::init(const path &in, const SwContext &swctx)
     throw SW_RUNTIME_ERROR("Cannot select driver for " + normalize_path(p));
 }
 
-void Input::init(const PackageId &p, const SwContext &swctx)
+void Input::init(const PackageId &p, SwContext &swctx)
 {
+    //auto driver_pkg = swctx.install(UnresolvedPackage(p));
+
+    SW_UNIMPLEMENTED;
     data = p;
     type = InputType::InstalledPackage;
     driver = swctx.getDrivers().begin()->second.get();

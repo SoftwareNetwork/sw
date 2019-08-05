@@ -12,7 +12,7 @@
 namespace sw
 {
 
-struct SW_CORE_API CDriver : IDriver
+/*struct SW_CORE_API CDriver : IDriver
 {
     using create_driver = sw_driver_t(*)(void);
 
@@ -20,11 +20,11 @@ struct SW_CORE_API CDriver : IDriver
     virtual ~CDriver();
 
     PackageId getPackageId() const override;
-    bool canLoad(const RawInput &) const override;
+    bool canLoad(RawInputData &) const override;
     EntryPointsVector createEntryPoints(SwContext &, const std::vector<RawInput> &) const override;
 
 private:
     sw_driver_t d;
-};
+};*/
 
 }

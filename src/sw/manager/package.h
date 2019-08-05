@@ -38,6 +38,9 @@ struct PackageData
 
     // for overridden pkgs
     path sdir;
+
+    //
+    // PackageId driver
 };
 
 struct LocalPackage;

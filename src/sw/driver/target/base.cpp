@@ -222,19 +222,7 @@ TargetBase &TargetBase::addChild(const TargetBaseTypePtr &t)
         t->ts["dry-run"] = "true";
     }
 
-    return addChild(t, t->getTargetSettings());
-}
-
-TargetBase &TargetBase::addChild(const TargetBaseTypePtr &t, const TargetSettings &tid)
-{
     getSolution().getModuleData().added_targets.push_back(t);
-
-    //
-    /*if (t->DryRun)
-        cld[t->getPackage()].push_back_inactive(t);
-    else
-        cld[t->getPackage()].push_back(t);*/
-
     return *t;
 }
 

@@ -59,32 +59,43 @@ Driver::~Driver()
 {
 }
 
-PackageId Driver::getPackageId() const
+std::optional<RawInputData> Driver::canLoadInput(const RawInput &i) const
 {
-    return "org.sw.sw.driver.cpp-0.3.0"s;
-}
-
-bool Driver::canLoad(const RawInput &i) const
-{
+    RawInputData r;
     switch (i.getType())
     {
     case InputType::SpecificationFile:
     {
         auto &fes = getAvailableFrontendConfigFilenames();
-        return std::find(fes.begin(), fes.end(), i.getPath().filename().u8string()) != fes.end();
+        auto it = std::find(fes.begin(), fes.end(), i.getPath().filename());
+        if (it != fes.end())
+        {
+            r.type = InputType::SpecificationFile;
+            r.data = i.getPath() / *it;
+            return;
+        }
+        break;
+    }
+    case InputType::DirectorySpecificationFile:
+    {
+        auto p = findConfig(i.getPath(), getAvailableFrontendConfigFilenames());
+        if (p)
+        {
+            r.type = InputType::SpecificationFile;
+            r.data = *p;
+        }
+        break;
     }
     case InputType::InlineSpecification:
         SW_UNIMPLEMENTED;
         break;
-    case InputType::DirectorySpecificationFile:
-        return !!findConfig(i.getPath(), getAvailableFrontendConfigFilenames());
     case InputType::Directory:
         SW_UNIMPLEMENTED;
         break;
     default:
         SW_UNREACHABLE;
     }
-    return false;
+    return {};
 }
 
 Driver::EntryPointsVector Driver::createEntryPoints(SwContext &swctx, const std::vector<RawInput> &inputs) const

@@ -66,7 +66,7 @@ String toPathString(GeneratorType t)
     }
 }
 
-String toString(GeneratorType t)
+static String toString(GeneratorType t)
 {
     switch (t)
     {
@@ -97,7 +97,7 @@ String toString(GeneratorType t)
     }
 }
 
-GeneratorType fromString(const String &s)
+static GeneratorType fromString(const String &s)
 {
     // make icasecmp
     if (0)
@@ -127,6 +127,52 @@ GeneratorType fromString(const String &s)
     //else if (boost::iequals(s, "qtc"))
         //return GeneratorType::qtc;
     throw SW_RUNTIME_ERROR("Unknown generator: " + s);
+}
+
+std::unique_ptr<Generator> Generator::create(const String &s)
+{
+    auto t = fromString(s);
+    std::unique_ptr<Generator> g;
+    switch (t)
+    {
+    case GeneratorType::VisualStudio:
+    case GeneratorType::VisualStudioNMake:
+    case GeneratorType::VisualStudioUtility:
+    case GeneratorType::VisualStudioNMakeAndUtility:
+    {
+        auto g1 = std::make_unique<VSGenerator>();
+        g1->version = Version(vsVersionFromString(s));
+        g = std::move(g1);
+        break;
+    }
+    case GeneratorType::Ninja:
+        g = std::make_unique<NinjaGenerator>();
+        break;
+    case GeneratorType::NMake:
+    case GeneratorType::Make:
+        g = std::make_unique<MakeGenerator>();
+        break;
+    case GeneratorType::Batch:
+    {
+        auto g1 = std::make_unique<ShellGenerator>();
+        g1->batch = true;
+        g = std::move(g1);
+        break;
+    }
+    case GeneratorType::Shell:
+        g = std::make_unique<ShellGenerator>();
+        break;
+    case GeneratorType::CompilationDatabase:
+        g = std::make_unique<CompilationDatabaseGenerator>();
+        break;
+    case GeneratorType::SwExecutionPlan:
+        g = std::make_unique<SwExecutionPlan>();
+        break;
+    default:
+        throw std::logic_error("not implemented");
+    }
+    g->type = t;
+    return g;
 }
 
 struct ProgramShortCutter1
@@ -206,52 +252,6 @@ private:
     ProgramShortCutter1 sc;
     ProgramShortCutter1 sc_generated;
 };
-
-std::unique_ptr<Generator> Generator::create(const String &s)
-{
-    auto t = fromString(s);
-    std::unique_ptr<Generator> g;
-    switch (t)
-    {
-    case GeneratorType::VisualStudio:
-    case GeneratorType::VisualStudioNMake:
-    case GeneratorType::VisualStudioUtility:
-    case GeneratorType::VisualStudioNMakeAndUtility:
-    {
-        auto g1 = std::make_unique<VSGenerator>();
-        g1->version = Version(vsVersionFromString(s));
-        g = std::move(g1);
-        break;
-    }
-    case GeneratorType::Ninja:
-        g = std::make_unique<NinjaGenerator>();
-        break;
-    case GeneratorType::NMake:
-    case GeneratorType::Make:
-        g = std::make_unique<MakeGenerator>();
-        break;
-    case GeneratorType::Batch:
-    {
-        auto g1 = std::make_unique<ShellGenerator>();
-        g1->batch = true;
-        g = std::move(g1);
-        break;
-    }
-    case GeneratorType::Shell:
-        g = std::make_unique<ShellGenerator>();
-        break;
-    case GeneratorType::CompilationDatabase:
-        g = std::make_unique<CompilationDatabaseGenerator>();
-        break;
-    case GeneratorType::SwExecutionPlan:
-        g = std::make_unique<SwExecutionPlan>();
-        break;
-    default:
-        throw std::logic_error("not implemented");
-    }
-    g->type = t;
-    return g;
-}
 
 struct NinjaEmitter : primitives::Emitter
 {
