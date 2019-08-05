@@ -22,7 +22,6 @@ struct Module;
 struct ModuleSwappableDataBase
 {
     PackagePath NamePrefix;
-    PackageVersionGroupNumber current_gn = 0;
 };
 
 struct ModuleSwappableData : ModuleSwappableDataBase

@@ -2484,10 +2484,19 @@ bool NativeCompiledTarget::prepare()
     case 6:
         // link libraries
     {
-        auto c = findProgramByExtension(".c")->as<VisualStudioCompiler *>();
-        auto cpp = findProgramByExtension(".cpp")->as<VisualStudioCompiler *>();
-        if (c || cpp)
+        // link libs
+        if (getBuildSettings().TargetOS.is(OSType::Windows))
         {
+            auto rt = vs::RuntimeLibraryType::MultiThreadedDLL;
+            if (getBuildSettings().Native.MT)
+                rt = vs::RuntimeLibraryType::MultiThreaded;
+            if (getBuildSettings().Native.ConfigurationType == ConfigurationType::Debug)
+            {
+                rt = vs::RuntimeLibraryType::MultiThreadedDLLDebug;
+                if (getBuildSettings().Native.MT)
+                    rt = vs::RuntimeLibraryType::MultiThreadedDebug;
+            }
+
             // https://docs.microsoft.com/en-us/cpp/c-runtime-library/crt-library-features?view=vs-2019
 
             // sometimes link.exe fails to add libs (SDL-2.0.10)
@@ -2517,9 +2526,12 @@ bool NativeCompiledTarget::prepare()
 
             // other libs
             *this += "oldnames.lib"_slib;
-            *this += "concrt.lib"_slib;
+            if (getBuildSettings().Native.ConfigurationType == ConfigurationType::Debug)
+                *this += "concrtd.lib"_slib;
+            else
+                *this += "concrt.lib"_slib;
 
-            switch ((c ? c : cpp)->RuntimeLibrary())
+            switch (rt)
             {
             case vs::RuntimeLibraryType::MultiThreadedDLL:
                 *this += "msvcprt.lib"_slib;
@@ -3096,12 +3108,9 @@ void NativeCompiledTarget::configureFile1(const path &from, const path &to, Conf
 
 CheckSet &NativeCompiledTarget::getChecks(const String &name)
 {
-    auto i0 = getSolution().checker.sets.find(getSolution().getCurrentGroupNumber());
-    if (i0 == getSolution().checker.sets.end())
-        throw SW_RUNTIME_ERROR("No such group number: " + std::to_string(getSolution().getCurrentGroupNumber()));
-    auto i = i0->second.find(name);
-    if (i == i0->second.end())
-        throw SW_RUNTIME_ERROR("No such set: " + name);
+    auto i = getSolution().checker.sets.find(name);
+    if (i == getSolution().checker.sets.end())
+        throw SW_RUNTIME_ERROR("No such check set: " + name);
     return *i->second;
 }
 

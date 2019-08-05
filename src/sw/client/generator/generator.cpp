@@ -41,12 +41,6 @@ String toPathString(GeneratorType t)
     {
     case GeneratorType::VisualStudio:
         return "vs";
-    case GeneratorType::VisualStudioNMake:
-        return "vs_nmake";
-    case GeneratorType::VisualStudioUtility:
-        return "vs_util";
-    case GeneratorType::VisualStudioNMakeAndUtility:
-        return "vs_nmake_util";
     case GeneratorType::Ninja:
         return "ninja";
     case GeneratorType::Batch:
@@ -66,18 +60,29 @@ String toPathString(GeneratorType t)
     }
 }
 
+String toPathString(VsGeneratorType t)
+{
+    switch (t)
+    {
+    case VsGeneratorType::VisualStudio:
+        return "vs";
+    case VsGeneratorType::VisualStudioNMake:
+        return "vs_nmake";
+    case VsGeneratorType::VisualStudioUtility:
+        return "vs_util";
+    case VsGeneratorType::VisualStudioNMakeAndUtility:
+        return "vs_nmake_util";
+    default:
+        throw SW_LOGIC_ERROR("not implemented");
+    }
+}
+
 static String toString(GeneratorType t)
 {
     switch (t)
     {
     case GeneratorType::VisualStudio:
         return "Visual Studio";
-    case GeneratorType::VisualStudioNMake:
-        return "Visual Studio NMake";
-    case GeneratorType::VisualStudioUtility:
-        return "Visual Studio Utility";
-    case GeneratorType::VisualStudioNMakeAndUtility:
-        return "Visual Studio NMake and Utility";
     case GeneratorType::Ninja:
         return "Ninja";
     case GeneratorType::Batch:
@@ -97,6 +102,23 @@ static String toString(GeneratorType t)
     }
 }
 
+static String toString(VsGeneratorType t)
+{
+    switch (t)
+    {
+    case VsGeneratorType::VisualStudio:
+        return "Visual Studio";
+    case VsGeneratorType::VisualStudioNMake:
+        return "Visual Studio NMake";
+    case VsGeneratorType::VisualStudioUtility:
+        return "Visual Studio Utility";
+    case VsGeneratorType::VisualStudioNMakeAndUtility:
+        return "Visual Studio NMake and Utility";
+    default:
+        throw SW_LOGIC_ERROR("not implemented");
+    }
+}
+
 static GeneratorType fromString(const String &s)
 {
     // make icasecmp
@@ -104,12 +126,6 @@ static GeneratorType fromString(const String &s)
         ;
     else if (boost::istarts_with(s, "VS_IDE") || boost::istarts_with(s, "VS"))
         return GeneratorType::VisualStudio;
-    else if (boost::istarts_with(s, "VS_NMake"))
-        return GeneratorType::VisualStudioNMake;
-    else if (boost::istarts_with(s, "VS_Utility") || boost::istarts_with(s, "VS_Util"))
-        return GeneratorType::VisualStudioUtility;
-    else if (boost::istarts_with(s, "VS_NMakeAndUtility") || boost::istarts_with(s, "VS_NMakeAndUtil") || boost::istarts_with(s, "VS_NMakeUtil"))
-        return GeneratorType::VisualStudioNMakeAndUtility;
     else if (boost::iequals(s, "Ninja"))
         return GeneratorType::Ninja;
     else if (boost::iequals(s, "Make") || boost::iequals(s, "Makefile"))
@@ -125,7 +141,23 @@ static GeneratorType fromString(const String &s)
     else if (boost::iequals(s, "SwExPlan"))
         return GeneratorType::SwExecutionPlan;
     //else if (boost::iequals(s, "qtc"))
-        //return GeneratorType::qtc;
+    //return GeneratorType::qtc;
+    throw SW_RUNTIME_ERROR("Unknown generator: " + s);
+}
+
+static VsGeneratorType fromStringVs(const String &s)
+{
+    // make icasecmp
+    if (0)
+        ;
+    else if (boost::istarts_with(s, "VS_IDE") || boost::istarts_with(s, "VS"))
+        return VsGeneratorType::VisualStudio;
+    else if (boost::istarts_with(s, "VS_NMake"))
+        return VsGeneratorType::VisualStudioNMake;
+    else if (boost::istarts_with(s, "VS_Utility") || boost::istarts_with(s, "VS_Util"))
+        return VsGeneratorType::VisualStudioUtility;
+    else if (boost::istarts_with(s, "VS_NMakeAndUtility") || boost::istarts_with(s, "VS_NMakeAndUtil") || boost::istarts_with(s, "VS_NMakeUtil"))
+        return VsGeneratorType::VisualStudioNMakeAndUtility;
     throw SW_RUNTIME_ERROR("Unknown generator: " + s);
 }
 
@@ -136,12 +168,10 @@ std::unique_ptr<Generator> Generator::create(const String &s)
     switch (t)
     {
     case GeneratorType::VisualStudio:
-    case GeneratorType::VisualStudioNMake:
-    case GeneratorType::VisualStudioUtility:
-    case GeneratorType::VisualStudioNMakeAndUtility:
     {
         auto g1 = std::make_unique<VSGenerator>();
         g1->version = Version(vsVersionFromString(s));
+        g1->vstype = fromStringVs(s);
         g = std::move(g1);
         break;
     }

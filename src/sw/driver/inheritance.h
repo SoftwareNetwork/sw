@@ -68,18 +68,7 @@ enum class InheritanceType
     Min = Private,
     Max = Public + 1,
 };
-
-inline InheritanceType operator|(InheritanceType lhs, InheritanceType rhs)
-{
-    using T = std::underlying_type_t<InheritanceType>;
-    return static_cast<InheritanceType>(static_cast<T>(lhs) | static_cast<T>(rhs));
-}
-
-inline InheritanceType &operator|=(InheritanceType &lhs, InheritanceType rhs)
-{
-    lhs = lhs | rhs;
-    return lhs;
-}
+ENABLE_ENUM_CLASS_BITMASK(InheritanceType);
 
 String toString(InheritanceType Type);
 

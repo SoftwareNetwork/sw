@@ -26,6 +26,7 @@ namespace sw
 {
 
 struct BuildSettings;
+struct Version;
 
 }
 
@@ -65,3 +66,5 @@ struct ProjectEmitter : XmlEmitter
 };
 
 String get_configuration(const sw::BuildSettings &s);
+std::string getVsToolset(const sw::Version &v);
+

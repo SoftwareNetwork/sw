@@ -21,15 +21,19 @@
 #include <sw/core/target.h>
 #include <sw/manager/package.h>
 
+#include <primitives/command.h>
+
 namespace sw
 {
 
 struct PackageId;
 struct SwBuild;
 struct BuildSettings;
+struct ITarget;
 
 }
 
+struct ProjectEmitter;
 struct SolutionEmitter;
 struct VSGenerator;
 
@@ -63,11 +67,20 @@ struct Directory
     Directory(const String &name);
 };
 
+struct ProjectData
+{
+    const sw::ITarget *target = nullptr;
+    primitives::Command *main_command = nullptr;
+    VSProjectType type = VSProjectType::Directory;
+};
+
 struct Project : Directory
 {
     // settings
     std::set<const Project *> dependencies;
     Settings settings;
+    std::map<sw::TargetSettings, ProjectData> data;
+    bool build = false;
 
     Project() = default;
     Project(const String &name);
@@ -78,6 +91,11 @@ struct Project : Directory
     void emitFilters(const VSGenerator &) const;
 
     const Settings &getSettings() const { return settings; }
+    ProjectData &getData(const sw::TargetSettings &);
+    const ProjectData &getData(const sw::TargetSettings &) const;
+
+private:
+    void printProperties(ProjectEmitter &, const primitives::Command &, const StringSet &exclude = {}) const;
 };
 
 struct Solution
@@ -95,5 +113,36 @@ private:
     void emitDirectories(SolutionEmitter &) const;
     void emitProjects(const path &root, SolutionEmitter &) const;
 };
+
+enum class FlagTableFlags
+{
+    Empty                   = 0x00,
+    UserValue               = 0x01,
+    SemicolonAppendable     = 0x02,
+    UserRequired            = 0x04,
+    UserIgnored             = 0x08,
+    UserFollowing           = 0x10,
+    Continue                = 0x20,
+    CaseInsensitive         = 0x40,
+    SpaceAppendable         = 0x80,
+};
+ENABLE_ENUM_CLASS_BITMASK(FlagTableFlags);
+
+struct FlagTableData
+{
+    String name;
+    String argument;
+    String comment;
+    String value;
+    FlagTableFlags flags = FlagTableFlags::Empty;
+};
+
+struct FlagTable
+{
+    std::map<String /* flag name */, FlagTableData> table;
+    std::unordered_map<String, FlagTableData> ftable;
+};
+
+using FlagTables = std::map<String /* command name */, FlagTable>;
 
 String get_project_configuration(const sw::BuildSettings &s);

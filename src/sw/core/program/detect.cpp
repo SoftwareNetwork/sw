@@ -98,8 +98,6 @@ void detectCompilers(DETECT_ARGS)
     detectDCompilers(s);*/
 }
 
-// left join comparator
-
 struct PredefinedTarget : ITarget
 {
     PackageId id;

@@ -74,7 +74,6 @@ struct SW_DRIVER_CPP_API Build : SimpleBuild
     path getChecksDir() const;
     void setModuleData(ModuleSwappableData &);
     ModuleSwappableData &getModuleData() const;
-    PackageVersionGroupNumber getCurrentGroupNumber() const;
 
     // tests
     // TODO: implement some of https://cmake.org/cmake/help/latest/manual/cmake-properties.7.html#properties-on-tests
@@ -107,7 +106,5 @@ private:
     void cppan_load(const yaml &root, const String &root_name = {});
     bool cppan_check_config_root(const yaml &root);
 };
-
-String gn2suffix(PackageVersionGroupNumber gn);
 
 }

@@ -224,7 +224,6 @@ std::vector<ITargetPtr> NativeTargetEntryPoint::loadPackages(SwBuild &swb, const
 
     ModuleSwappableData module_data1;
     module_data1.NamePrefix = module_data.NamePrefix;
-    module_data1.current_gn = module_data.current_gn;
     module_data1.known_targets = pkgs;
     module_data1.current_settings = settings;
     module_data1.bs = BuildSettings(settings);

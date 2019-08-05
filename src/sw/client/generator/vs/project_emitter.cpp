@@ -96,7 +96,7 @@ static String toString(LibraryType t)
 
 } // namespace generator
 
-static std::string getVsToolset(const Version &v)
+std::string getVsToolset(const Version &v)
 {
     switch (v.getMajor())
     {
@@ -105,7 +105,7 @@ static std::string getVsToolset(const Version &v)
     case 15:
         return "v141";
     case 14:
-        return "v14";
+        return "v140";
     case 12:
         return "v12";
     case 11:
@@ -241,8 +241,9 @@ void ProjectEmitter::addPropertyGroupConfigurationTypes(const Project &p)
 {
     for (auto &s : p.getSettings())
     {
+        auto &d = p.getData(s);
         beginBlockWithConfiguration("PropertyGroup", s, {{"Label", "Configuration"}});
-        addConfigurationType((int)p.type);
+        addConfigurationType((int)d.type);
         //addBlock("UseDebugLibraries", generator::toString(s.Settings.Native.ConfigurationType));
         if (toolset.empty())
         {

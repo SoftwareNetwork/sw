@@ -64,10 +64,6 @@ struct SW_CORE_API ITarget : ICastable
 
     // String get package settings(); // json coded or whatever via interface?
     // String getDescription()
-
-    // compare using settings
-    // remove?
-    bool operator==(const TargetSettings &s) const { return getSettings() == s; }
 };
 
 // shared_ptr for vector storage
@@ -88,8 +84,13 @@ struct SW_CORE_API TargetContainer
 
     const ITarget *getAnyTarget() const;
 
-    Base::iterator find(const TargetSettings &s);
-    Base::const_iterator find(const TargetSettings &s) const;
+    // find equal settings
+    Base::iterator findEqual(const TargetSettings &s);
+    Base::const_iterator findEqual(const TargetSettings &s) const;
+
+    //
+    Base::iterator findSuitable(const TargetSettings &s);
+    Base::const_iterator findSuitable(const TargetSettings &s) const;
 
     void push_back(const ITargetPtr &);
 

@@ -236,7 +236,7 @@ void SwBuild::loadPackages(const TargetMap &predefined)
                     if (i == chld.end())
                         throw SW_RUNTIME_ERROR(tgt->getPackage().toString() + ": No target loaded: " + d->getUnresolvedPackage().toString());
 
-                    auto k = i->second.find(d->getSettings());
+                    auto k = i->second.findSuitable(d->getSettings());
                     if (k != i->second.end())
                     {
                         d->setTarget(**k);
@@ -274,7 +274,7 @@ void SwBuild::loadPackages(const TargetMap &predefined)
                 getTargets()[tgt->getPackage()].push_back(tgt);
             }
 
-            auto k = d.second->find(s);
+            auto k = d.second->findSuitable(s);
             if (k == d.second->end())
             {
                 throw SW_RUNTIME_ERROR("cannot load package " + d.first.toString() + " with current settings\n" + s.toString());

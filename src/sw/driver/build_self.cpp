@@ -56,7 +56,6 @@ PackageIdSet build_self(SwContext &swctx)
             throw SW_RUNTIME_ERROR("Target not found: " + p.toString());
         auto gn = m.find(p)->second.getData().group_number;
         epm[gn] = ep;
-        ep->module_data.current_gn = gn;
     }
 
     // also set known pkgs

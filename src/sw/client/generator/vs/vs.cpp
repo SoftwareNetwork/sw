@@ -29,12 +29,13 @@
 #include <sw/driver/build_settings.h>
 #include <sw/support/filesystem.h>
 
-#include <primitives/win32helpers.h>
-
 #include <boost/algorithm/string.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
+#include <nlohmann/json.hpp>
+#include <primitives/http.h>
+#include <primitives/win32helpers.h>
 
 #include <sstream>
 #include <stack>
@@ -47,6 +48,8 @@ using namespace sw;
 bool gPrintDependencies;
 bool gPrintOverriddenDependencies;
 bool gOutputNoConfigSubdir;
+
+static FlagTables flag_tables;
 
 int vsVersionFromString(const String &s)
 {
@@ -96,6 +99,12 @@ static String uuid2string(const boost::uuids::uuid &u)
     return boost::to_upper_copy(ss.str());
 }
 
+static String make_backslashes(String s)
+{
+    std::replace(s.begin(), s.end(), '/', '\\');
+    return s;
+}
+
 static path get_int_dir(const path &dir, const path &projects_dir, const String &name)
 {
     auto tdir = dir / projects_dir;
@@ -114,6 +123,47 @@ static path get_out_dir(const path &dir, const path &projects_dir, const BuildSe
     if (!gOutputNoConfigSubdir)
         p /= get_configuration(s);
     return p;
+}
+
+static FlagTable read_flag_table(const path &fn)
+{
+    auto j = nlohmann::json::parse(read_file(fn));
+    FlagTable ft;
+    for (auto &flag : j)
+    {
+        FlagTableData d;
+        d.name = flag["name"].get<String>();
+        if (d.name.empty())
+            continue;
+        d.argument = flag["switch"].get<String>();
+        d.comment = flag["comment"].get<String>();
+        d.value = flag["value"].get<String>();
+        //d.flags = flag["name"].get<String>();
+        //ft.table[d.name] = d;
+        for (auto &f : flag["flags"])
+        {
+            if (f == "UserValue")
+                d.flags |= FlagTableFlags::UserValue;
+            else if (f == "SemicolonAppendable")
+                d.flags |= FlagTableFlags::SemicolonAppendable;
+            else if (f == "UserRequired")
+                d.flags |= FlagTableFlags::UserRequired;
+            else if (f == "UserIgnored")
+                d.flags |= FlagTableFlags::UserIgnored;
+            else if (f == "UserFollowing")
+                d.flags |= FlagTableFlags::UserFollowing;
+            else if (f == "Continue")
+                d.flags |= FlagTableFlags::Continue;
+            else if (f == "CaseInsensitive")
+                d.flags |= FlagTableFlags::CaseInsensitive;
+            else if (f == "SpaceAppendable")
+                d.flags |= FlagTableFlags::SpaceAppendable;
+            else
+                LOG_WARN(logger, "Unknown flag: " + f.get<String>());
+        }
+        ft.ftable[d.argument] = d;
+    }
+    return ft;
 }
 
 enum class VSFileType
@@ -177,28 +227,62 @@ void VSGenerator::generate(const SwBuild &b)
     version = Version(16);
     sln_root = b.getBuildDirectory() / toPathString(getType()) / version.toString(1);
 
+    // dl flag tables from cmake
+    static const String ft_base_url = "https://gitlab.kitware.com/cmake/cmake/raw/master/Templates/MSBuild/FlagTables/";
+    static const String ft_ext = ".json";
+    const Strings tables1 = { "CL", "Link" };
+    const Strings tables2 = { "LIB", "MASM", "RC" };
+    auto ts = getVsToolset(version);
+    auto dl = [](auto &ts, auto &tbl)
+    {
+        for (auto &t : tbl)
+        {
+            auto fn = ts + "_" + t + ".json";
+            auto url = ft_base_url + fn;
+            auto out = get_root_directory() / "FlagTables" / fn;
+            if (!fs::exists(out))
+                download_file(url, out);
+            auto ft = read_flag_table(out);
+            auto prog = boost::to_lower_copy(t);
+            if (prog == "masm")
+            {
+                flag_tables["ml"] = ft;
+                flag_tables["ml64"] = ft;
+            }
+            else
+            {
+                flag_tables[prog] = ft;
+            }
+        }
+    };
+    dl(ts, tables1);
+    dl(ts.substr(0, ts.size() - 1), tables2);
+
     Solution s;
 
     auto inputs = b.getInputs();
     if (inputs.size() != 1)
         throw SW_RUNTIME_ERROR("unsupported");
-    for (auto &i : inputs)
-        s.settings = i.getSettings();
+    auto &input = *inputs.begin();
+    s.settings = input.getSettings();
 
     Directory d(predefined_targets_dir);
     d.g = this;
     s.directories[d.name] = d;
 
-    Project p(all_build_name);
-    p.g = this;
-    p.directory = predefined_targets_dir;
-    for (auto &i : inputs)
     {
-        if (i.getInput().getType() == InputType::DirectorySpecificationFile)
-            p.files.insert(i.getInput().getPath());
+        Project p(all_build_name);
+        p.g = this;
+        p.directory = predefined_targets_dir;
+        if (input.getInput().getType() == InputType::SpecificationFile ||
+            input.getInput().getType() == InputType::InlineSpecification)
+            p.files.insert(input.getInput().getPath());
+        p.settings = s.settings;
+        // create datas
+        for (auto &st : s.settings)
+            p.getData(st).type = p.type;
+        s.projects[p.name] = p;
     }
-    p.settings = s.settings;
-    s.projects[p.name] = p;
 
     for (auto &[pkg, tgts] : b.getTargetsToBuild())
     {
@@ -208,9 +292,59 @@ void VSGenerator::generate(const SwBuild &b)
             p.g = this;
             p.files = tgt->getSourceFiles();
             p.settings = s.settings;
-            p.files = tgt->getSourceFiles();
+            p.build = true;
+
             s.projects[p.name] = p;
+            s.projects[all_build_name].dependencies.insert(&s.projects[p.name]);
             break;
+        }
+        for (auto &st : s.settings)
+        {
+            auto itgt = tgts.findEqual(st);
+            if (itgt == tgts.end())
+                throw SW_RUNTIME_ERROR("missing target");
+            auto &d = s.projects[pkg.toString()].getData(st);
+            d.target = itgt->get();
+
+            // determine type
+            auto cmds = d.target->getCommands();
+            bool has_dll = false;
+            bool has_exe = false;
+            for (auto &c : cmds)
+            {
+                has_dll |= std::any_of(c->outputs.begin(), c->outputs.end(), [&d, &c](const auto &f)
+                {
+                    bool r = f.extension() == ".dll";
+                    if (r)
+                        d.main_command = c.get();
+                    return r;
+                });
+                has_exe |= std::any_of(c->outputs.begin(), c->outputs.end(), [&d, &c](const auto &f)
+                {
+                    bool r = f.extension() == ".exe";
+                    if (r)
+                        d.main_command = c.get();
+                    return r;
+                });
+            }
+            if (has_exe)
+                d.type = VSProjectType::Application;
+            else if (has_dll)
+                d.type = VSProjectType::DynamicLibrary;
+            else
+            {
+                d.type = VSProjectType::StaticLibrary;
+                for (auto &c : cmds)
+                {
+                    std::any_of(c->outputs.begin(), c->outputs.end(), [&d, &c](const auto &f)
+                    {
+                        bool r = f.extension() == ".lib";
+                        if (r)
+                            d.main_command = c.get();
+                        return r;
+                    });
+                }
+            }
         }
     }
     for (auto &[pkg, tgts] : b.getTargetsToBuild())
@@ -312,6 +446,19 @@ Project::Project(const String &name)
     type = VSProjectType::Utility;
 }
 
+ProjectData &Project::getData(const sw::TargetSettings &s)
+{
+    return data[s];
+}
+
+const ProjectData &Project::getData(const sw::TargetSettings &s) const
+{
+    auto itd = data.find(s);
+    if (itd == data.end())
+        throw SW_RUNTIME_ERROR("no such settings");
+    return itd->second;
+}
+
 void Project::emit(SolutionEmitter &ctx) const
 {
     ctx.beginProject(*this);
@@ -386,17 +533,67 @@ void Project::emitProject(const VSGenerator &g) const
         ctx.endBlock();
     }
 
+    static const StringSet skip_cl_props =
+    {
+        "ShowIncludes",
+        "ObjectFileName",
+        "SuppressStartupBanner",
+    };
+
+    static const StringSet skip_link_props =
+    {
+        "ImportLibrary",
+        "OutputFile",
+        "ProgramDatabaseFile",
+        "ImportLibrary",
+    };
+
+    for (auto &s : settings)
+    {
+        auto &d = getData(s);
+        ctx.beginBlockWithConfiguration("ItemDefinitionGroup", s);
+        {
+            ctx.beginBlock("Link");
+            if (d.main_command)
+                printProperties(ctx, *d.main_command, skip_link_props);
+            ctx.endBlock();
+        }
+        ctx.endBlock();
+    }
+
     ctx.beginBlock("ItemGroup");
     for (auto &p : files)
     {
         auto t = get_vs_file_type_by_ext(p);
         ctx.beginBlock(toString(t), { { "Include", p.u8string() } });
-        //add_obj_file(t, p, sf);
-        /*if (sf->skip)
+
+        for (auto &[s, d] : data)
         {
-        beginBlock("ExcludedFromBuild");
-        addText("true");
-        endBlock(true);
+            if (!d.target)
+                continue;
+            auto cmds = d.target->getCommands();
+            auto itcmd = std::find_if(cmds.begin(), cmds.end(), [&p](const auto &c)
+            {
+                return std::any_of(c->inputs.begin(), c->inputs.end(), [&p](const auto &f)
+                {
+                    return p == f;
+                });
+            });
+            if (itcmd != cmds.end())
+            {
+                auto c = *itcmd;
+                printProperties(ctx, *c, skip_cl_props);
+                //ctx.beginBlockWithConfiguration("AdditionalOptions", s);
+                //ctx.endBlock();
+            }
+        }
+
+        //add_obj_file(t, p, sf);
+        /*if (!build)
+        {
+            ctx.beginBlock("ExcludedFromBuild");
+            ctx.addText("true");
+            ctx.endBlock(true);
         }*/
         ctx.endBlock();
     }
@@ -405,17 +602,172 @@ void Project::emitProject(const VSGenerator &g) const
     ctx.addBlock("Import", "", {{"Project", "$(VCTargetsPath)\\Microsoft.Cpp.targets"}});
 
     ctx.endProject();
-    write_file(g.sln_root / vs_project_dir / name += vs_project_ext, ctx.getText());
+    write_file_if_different(g.sln_root / vs_project_dir / name += vs_project_ext, ctx.getText());
 }
 
 void Project::emitFilters(const VSGenerator &g) const
 {
-    return;
+    StringSet filters; // dirs
+
+    String sd, bd, bdp;
+    std::set<path> parents;
+    for (auto &f : files)
+        parents.insert(f.parent_path());
+    // take shortest
+    if (!parents.empty())
+        sd = normalize_path(*parents.begin());
 
     FiltersEmitter ctx;
     ctx.beginProject();
+
     ctx.beginBlock("ItemGroup");
+    for (auto &f : files)
+    {
+        if (f.extension() == ".natvis")
+        {
+            SW_UNIMPLEMENTED;
+            //parent->visualizers.insert(f);
+            continue;
+        }
+
+        String *d = nullptr;
+        size_t p = 0;
+        auto fd = normalize_path(f);
+
+        auto calc = [&fd, &p, &d](auto &s)
+        {
+            if (s.empty())
+                return;
+            auto p1 = fd.find(s);
+            if (p1 != 0)
+                return;
+            //if (p1 > p)
+            {
+                p = s.size();
+                d = &s;
+            }
+        };
+
+        calc(sd);
+        calc(bd);
+        calc(bdp);
+
+        path filter;
+        if (p != -1)
+        {
+            auto ss = fd.substr(p);
+            if (ss[0] == '/')
+                ss = ss.substr(1);
+            path r = ss;
+            if (d == &sd)
+                r = "Source Files" / r;
+            /*if (d == &bd)
+            {
+                auto v = r;
+                r = "Generated Files";
+                r /= get_configuration(s);
+                r /= "Public" / v;
+            }
+            if (d == &bdp)
+            {
+                auto v = r;
+                r = "Generated Files";
+                r /= get_configuration(s);
+                r /= "Private" / v;
+            }*/
+            do
+            {
+                r = r.parent_path();
+                if (filter.empty())
+                    filter = r;
+                filters.insert(r.string());
+            } while (!r.empty() && r != r.root_path());
+        }
+
+        ctx.beginBlock(toString(get_vs_file_type_by_ext(f)), { {"Include", f.string()} });
+        if (!filter.empty() && !filter.is_absolute())
+            ctx.addBlock("Filter", make_backslashes(filter.string()));
+        ctx.endBlock();
+    }
+    filters.erase("");
     ctx.endBlock();
+
+    ctx.beginBlock("ItemGroup");
+    for (auto &f : filters)
+    {
+        ctx.beginBlock("Filter", { { "Include", make_backslashes(f) } });
+        ctx.addBlock("UniqueIdentifier", "{" + uuid2string(boost::uuids::name_generator_sha1(boost::uuids::ns::oid())(make_backslashes(f))) + "}");
+        ctx.endBlock();
+    }
+    ctx.endBlock();
+
     ctx.endProject();
-    write_file(g.sln_root / vs_project_dir / name += vs_project_ext += ".filters", ctx.getText());
+    write_file(g.sln_root / vs_project_dir / (name + vs_project_ext + ".filters"), ctx.getText());
+}
+
+void Project::printProperties(ProjectEmitter &ctx, const primitives::Command &c, const StringSet &exclude) const
+{
+    auto ft = path(c.getProgram()).stem().u8string();
+    auto ift = flag_tables.find(ft);
+    if (ift == flag_tables.end())
+        LOG_WARN(logger, "No flag table: " + ft);
+    else
+    {
+        std::map<String, String> semicolon_args;
+        for (auto &o : c.arguments)
+        {
+            auto arg = o->toString();
+            auto &tbl = flag_tables[ft].ftable;
+
+            auto print = [&ctx, &arg, &semicolon_args, &exclude](auto &d)
+            {
+                if (exclude.find(d.name) != exclude.end())
+                    return;
+                if (bitmask_includes(d.flags, FlagTableFlags::UserValue))
+                {
+                    if (bitmask_includes(d.flags, FlagTableFlags::SemicolonAppendable))
+                    {
+                        semicolon_args[d.name] += arg.substr(1 + d.argument.size()) + ";";
+                        return;
+                    }
+                    else
+                    {
+                        ctx.beginBlock(d.name);
+                        ctx.addText(arg.substr(1 + d.argument.size()));
+                    }
+                }
+                else
+                {
+                    ctx.beginBlock(d.name);
+                    ctx.addText(d.value);
+                }
+                ctx.endBlock(true);
+            };
+
+            // fast lookup first
+            auto i = tbl.find(arg.substr(1));
+            if (i != tbl.end())
+            {
+                print(i->second);
+                continue;
+            }
+
+            // TODO: we must find the longest match
+            for (auto &[_, d] : tbl)
+            {
+                if (d.argument.empty())
+                    continue;
+                if (arg.find(d.argument, 1) != 1)
+                    continue;
+                print(d);
+                break;
+            }
+        }
+        for (auto &[k, v] : semicolon_args)
+        {
+            ctx.beginBlock(k);
+            ctx.addText(v);
+            ctx.endBlock(true);
+        }
+    }
 }

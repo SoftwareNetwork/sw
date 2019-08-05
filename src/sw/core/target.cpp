@@ -9,8 +9,8 @@
 namespace sw
 {
 
-ITarget::~ITarget() = default;
 IDependency::~IDependency() = default;
+ITarget::~ITarget() = default;
 TargetEntryPoint::~TargetEntryPoint() = default;
 
 TargetData::~TargetData()
@@ -55,19 +55,35 @@ void TargetContainer::clear()
     targets.clear();
 }
 
-TargetContainer::Base::iterator TargetContainer::find(const TargetSettings &s)
+TargetContainer::Base::iterator TargetContainer::findEqual(const TargetSettings &s)
 {
     return std::find_if(begin(), end(), [&s](const auto &t)
     {
-        return *t == s;
+        return t->getSettings() == s;
     });
 }
 
-TargetContainer::Base::const_iterator TargetContainer::find(const TargetSettings &s) const
+TargetContainer::Base::const_iterator TargetContainer::findEqual(const TargetSettings &s) const
 {
     return std::find_if(begin(), end(), [&s](const auto &t)
     {
-        return *t == s;
+        return t->getSettings() == s;
+    });
+}
+
+TargetContainer::Base::iterator TargetContainer::findSuitable(const TargetSettings &s)
+{
+    return std::find_if(begin(), end(), [&s](const auto &t)
+    {
+        return TargetSettings::compareEqualKeys(t->getSettings(), s) == 0;
+    });
+}
+
+TargetContainer::Base::const_iterator TargetContainer::findSuitable(const TargetSettings &s) const
+{
+    return std::find_if(begin(), end(), [&s](const auto &t)
+    {
+        return TargetSettings::compareEqualKeys(t->getSettings(), s) == 0;
     });
 }
 
@@ -107,7 +123,7 @@ detail::SimpleExpected<std::pair<Version, ITarget*>> TargetMap::find(const Packa
     auto i = find_and_select_version(pp);
     if (!i)
         return i.ec();
-    auto j = i->second.find(ts);
+    auto j = i->second.findSuitable(ts);
     if (j == i->second.end())
         return std::pair<Version, ITarget*>{ i->first, nullptr };
     return std::pair<Version, ITarget*>{ i->first, j->get() };
@@ -118,7 +134,7 @@ ITarget *TargetMap::find(const PackageId &pkg, const TargetSettings &ts) const
     auto i = find(pkg);
     if (i == end())
         return {};
-    auto k = i->second.find(ts);
+    auto k = i->second.findSuitable(ts);
     if (k == i->second.end())
         return {};
     return k->get();
@@ -130,7 +146,7 @@ ITarget *TargetMap::find(const UnresolvedPackage &pkg, const TargetSettings &ts)
     auto i = find(pkg);
     if (i == end())
         return {};
-    auto k = i->second.find(ts);
+    auto k = i->second.findSuitable(ts);
     if (k == i->second.end())
         return {};
     return k->get();

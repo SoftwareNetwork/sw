@@ -236,7 +236,7 @@ Checker::Checker(Build &build)
 CheckSet &Checker::addSet(const String &name)
 {
     auto cs = std::make_shared<CheckSet>(*this);
-    auto p = sets[build.getCurrentGroupNumber()].emplace(name, cs);
+    auto p = sets.emplace(name, cs);
     p.first->second->name = name;
     return *p.first->second;
 }
@@ -328,7 +328,8 @@ int main() { return IsBigEndian(); }
         prepareChecksForUse();
         if (print_checks)
         {
-            std::ofstream o(fn.parent_path() / (std::to_string(checker.build.getCurrentGroupNumber()) + "." + name + ".checks.txt"));
+            SW_UNIMPLEMENTED;
+            /*std::ofstream o(fn.parent_path() / (std::to_string(checker.build.getCurrentGroupNumber()) + "." + name + ".checks.txt"));
             if (!o)
                 return;
             std::map<String, CheckPtr> check_values(check_values.begin(), check_values.end());
@@ -336,7 +337,7 @@ int main() { return IsBigEndian(); }
             {
                 if (c->Value)
                     o << d << " " << c->Value.value() << " " << c->getHash() << "\n";
-            }
+            }*/
         }
         // cleanup
         for (auto &[h, c] : checks)

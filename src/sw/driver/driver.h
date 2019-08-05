@@ -7,6 +7,7 @@
 #pragma once
 
 #include <sw/core/driver.h>
+#include <sw/manager/package_id.h>
 
 #include <boost/bimap.hpp>
 #include <boost/bimap/multiset_of.hpp>
@@ -38,7 +39,7 @@ struct SW_DRIVER_CPP_API Driver : IDriver
     virtual ~Driver();
 
     // driver api
-    std::optional<RawInputData> canLoadInput(const RawInput &) const override;
+    std::optional<path> canLoadInput(const RawInput &) const override;
     EntryPointsVector createEntryPoints(SwContext &, const std::vector<RawInput> &) const override;
     String getSpecification(const RawInput &) const override;
 
@@ -64,5 +65,7 @@ std::optional<path> findConfig(const path &dir, const FilesOrdered &fe_s);
 String toString(FrontendType T);
 
 } // namespace driver::cpp
+
+String gn2suffix(PackageVersionGroupNumber gn);
 
 } // namespace sw

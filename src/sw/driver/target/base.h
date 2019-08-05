@@ -51,14 +51,6 @@ struct LibraryTarget;
 struct StaticLibraryTarget;
 struct SharedLibraryTarget;
 
-struct SW_DRIVER_CPP_API SettingsComparator
-{
-    virtual ~SettingsComparator() = 0;
-
-    virtual bool equal(const TargetSettings &s1, const TargetSettings &s2) const;
-    virtual bool less(const TargetSettings &s1, const TargetSettings &s2) const;
-};
-
 struct SW_DRIVER_CPP_API TargetEvent
 {
     CallbackType t;
@@ -312,7 +304,6 @@ public:
     std::vector<IDependency *> getDependencies() const override;
     const TargetSettings &getSettings() const override;
     const TargetSettings &getInterfaceSettings() const override;
-    void setSettingsComparator(std::unique_ptr<SettingsComparator>);
 
     //
     Commands getCommands() const;
@@ -375,7 +366,6 @@ protected:
     SW_MULTIPASS_VARIABLE(prepare_pass);
     SW_MULTIPASS_VARIABLE(init_pass);
     mutable bool deps_resolved = false;
-    std::unique_ptr<SettingsComparator> scmp;
 
     //Target(const Target &);
 

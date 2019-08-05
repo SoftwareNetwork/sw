@@ -347,7 +347,7 @@ struct SW_DRIVER_CPP_API Checker
     Build &build;
 
     /// child sets
-    std::unordered_map<PackageVersionGroupNumber, std::unordered_map<String /* set name */, std::shared_ptr<CheckSet>>> sets;
+    std::unordered_map<String /* set name */, std::shared_ptr<CheckSet>> sets;
 
     Checker(Build &build);
 

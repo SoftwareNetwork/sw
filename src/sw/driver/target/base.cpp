@@ -76,30 +76,6 @@ String toString(TargetType T)
     throw SW_RUNTIME_ERROR("unreachable code");
 }
 
-/*bool TargetSettings::operator<(const TargetSettings &rhs) const
-{
-    return std::tie(ss, dependencies, features) < std::tie(rhs.ss, rhs.dependencies, rhs.features);
-}
-
-String TargetSettings::getConfig() const
-{
-    return ss.getConfig();
-}*/
-
-SettingsComparator::~SettingsComparator()
-{
-}
-
-bool SettingsComparator::equal(const TargetSettings &s1, const TargetSettings &s2) const
-{
-    return s1 == s2;
-}
-
-bool SettingsComparator::less(const TargetSettings &s1, const TargetSettings &s2) const
-{
-    return s1 < s2;
-}
-
 void TargetEvents::add(CallbackType t, const std::function<void()> &cb)
 {
     events.push_back({ t, cb });
@@ -168,8 +144,12 @@ TargetBase &TargetBase::addTarget2(bool add, const TargetBaseTypePtr &t, const P
     t->call(CallbackType::CreateTarget);
 
     t->Local = 0
-        || getSolution().getCurrentGroupNumber() == 0
-        || t->pkg->getOverriddenDir()
+        //|| getSolution().getCurrentGroupNumber() == 0
+        || getSolution().getModuleData().NamePrefix.empty()
+        //|| t->pkg->getPath().isRelative()
+        //|| t->pkg->getPath().is_loc()
+        //|| t->pkg->getOverriddenDir()
+        ////|| t->pkg->getData().group_number == 0
         ;
 
     // sdir
@@ -364,18 +344,6 @@ void Target::fetch()
     {
         setSourceDirectory(i->second);
     }
-}
-
-/*bool Target::operator<(const TargetSettings &s) const
-{
-    if (scmp)
-        return scmp->less(ts, s);
-    return ts < s;
-}*/
-
-void Target::setSettingsComparator(std::unique_ptr<SettingsComparator> cmp)
-{
-    scmp = std::move(cmp);
 }
 
 Files Target::getSourceFiles() const

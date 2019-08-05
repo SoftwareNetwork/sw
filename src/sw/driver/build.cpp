@@ -51,11 +51,6 @@ std::map<sw::PackagePath, sw::Version> gUserSelectedPackages;
 namespace sw
 {
 
-String gn2suffix(PackageVersionGroupNumber gn)
-{
-    return "_" + (gn > 0 ? std::to_string(gn) : ("_" + std::to_string(-gn)));
-}
-
 static void sw_check_abi_version(int v)
 {
     if (v > SW_MODULE_ABI_VERSION)
@@ -120,11 +115,6 @@ const BuildSettings &Build::getBuildSettings() const
 const TargetSettings &Build::getHostSettings() const
 {
     return getSettings()["host"].getSettings();
-}
-
-PackageVersionGroupNumber Build::getCurrentGroupNumber() const
-{
-    return getModuleData().current_gn;
 }
 
 // can be used in configs to load subdir configs

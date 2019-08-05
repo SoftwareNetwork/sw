@@ -42,11 +42,16 @@ enum class GeneratorType
     QMake,
     Shell,
     VisualStudio,
+
+    SwExecutionPlan,
+};
+
+enum class VsGeneratorType
+{
+    VisualStudio,
     VisualStudioNMake,
     VisualStudioUtility,
     VisualStudioNMakeAndUtility,
-
-    SwExecutionPlan,
 };
 
 struct Generator
@@ -54,9 +59,7 @@ struct Generator
     virtual ~Generator() = default;
 
     virtual void generate(const sw::SwBuild &) = 0;
-
     static std::unique_ptr<Generator> create(const String &s);
-
     GeneratorType getType() const { return type; }
 
 private:
@@ -67,6 +70,7 @@ struct VSGenerator : Generator
 {
     sw::Version version;
     path sln_root;
+    VsGeneratorType vstype;
 
     void generate(const sw::SwBuild &b) override;
 };

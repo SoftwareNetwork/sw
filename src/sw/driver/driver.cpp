@@ -25,6 +25,11 @@ namespace sw
 
 PackageIdSet build_self(SwContext &);
 
+String gn2suffix(PackageVersionGroupNumber gn)
+{
+    return "_" + (gn > 0 ? std::to_string(gn) : ("_" + std::to_string(-gn)));
+}
+
 namespace driver::cpp
 {
 
@@ -59,9 +64,8 @@ Driver::~Driver()
 {
 }
 
-std::optional<RawInputData> Driver::canLoadInput(const RawInput &i) const
+std::optional<path> Driver::canLoadInput(const RawInput &i) const
 {
-    RawInputData r;
     switch (i.getType())
     {
     case InputType::SpecificationFile:
@@ -70,19 +74,15 @@ std::optional<RawInputData> Driver::canLoadInput(const RawInput &i) const
         auto it = std::find(fes.begin(), fes.end(), i.getPath().filename());
         if (it != fes.end())
         {
-            r.type = InputType::SpecificationFile;
-            r.data = i.getPath() / *it;
-            return;
+            return i.getPath();
         }
         break;
     }
     case InputType::DirectorySpecificationFile:
     {
-        auto p = findConfig(i.getPath(), getAvailableFrontendConfigFilenames());
-        if (p)
+        if (auto p = findConfig(i.getPath(), getAvailableFrontendConfigFilenames()))
         {
-            r.type = InputType::SpecificationFile;
-            r.data = *p;
+            return *p;
         }
         break;
     }
@@ -111,10 +111,9 @@ Driver::EntryPointsVector Driver::createEntryPoints(SwContext &swctx, const std:
             pkgsids.insert(i.getPackageId());
             break;
         }
-        case InputType::DirectorySpecificationFile:
+        case InputType::SpecificationFile:
         {
-            auto p = *findConfig(i.getPath(), getAvailableFrontendConfigFilenames());
-            p_eps[i.getPath()] = load_spec_file(swctx, p);
+            p_eps[i.getPath()] = load_spec_file(swctx, i.getPath());
             break;
         }
         default:
@@ -141,15 +140,9 @@ String Driver::getSpecification(const RawInput &i) const
 {
     switch (i.getType())
     {
-    case InputType::InstalledPackage:
+    case InputType::SpecificationFile:
     {
-        SW_UNIMPLEMENTED;
-        break;
-    }
-    case InputType::DirectorySpecificationFile:
-    {
-        auto p = *findConfig(i.getPath(), getAvailableFrontendConfigFilenames());
-        return read_file(p);
+        return read_file(i.getPath());
     }
     default:
         SW_UNIMPLEMENTED;
@@ -232,7 +225,6 @@ std::unordered_map<PackageId, Driver::EntryPointsVector1> Driver::load_packages(
         auto ep = std::make_shared<NativeModuleTargetEntryPoint>(
             Module(swctx.getModuleStorage().get(dll), gn2suffix(p.getData().group_number)));
         ep->module_data.NamePrefix = p.getPath().slice(0, p.getData().prefix);
-        ep->module_data.current_gn = p.getData().group_number;
         swctx.getTargetData(p).setEntryPoint(ep);
         eps[p].push_back(ep);
     }

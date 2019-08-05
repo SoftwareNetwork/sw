@@ -128,16 +128,6 @@ String BuildSettings::getTargetTriplet() const
     return target;
 }
 
-/*bool BuildSettings::operator<(const BuildSettings &rhs) const
-{
-    return std::tie(TargetOS, Native) < std::tie(rhs.TargetOS, rhs.Native);
-}
-
-bool BuildSettings::operator==(const BuildSettings &rhs) const
-{
-    return std::tie(TargetOS, Native) == std::tie(rhs.TargetOS, rhs.Native);
-}*/
-
 TargetSettings BuildSettings::getTargetSettings() const
 {
     TargetSettings s;

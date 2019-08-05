@@ -61,6 +61,7 @@ struct SW_CORE_API TargetSettings
 
     bool operator==(const TargetSettings &) const;
     bool operator<(const TargetSettings &) const;
+    static int compareEqualKeys(const TargetSettings &lhs, const TargetSettings &rhs);
 
     auto begin() { return settings.begin(); }
     auto end() { return settings.end(); }
@@ -98,6 +99,8 @@ struct SW_CORE_API TargetSetting
 
     bool operator==(const TargetSetting &) const;
     bool operator!=(const TargetSetting &) const;
+    bool operator<(const TargetSetting &) const;
+    static int compareEqualKeys(const TargetSetting &lhs, const TargetSetting &rhs);
 
     template <class U>
     bool operator==(const U &u) const
@@ -113,8 +116,6 @@ struct SW_CORE_API TargetSetting
     {
         return !operator==(u);
     }
-
-    bool operator<(const TargetSetting &) const;
 
     explicit operator bool() const;
     //bool hasValue() const;

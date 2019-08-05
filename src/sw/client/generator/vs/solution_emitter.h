@@ -58,5 +58,5 @@ struct SolutionEmitter : primitives::Emitter
     void endProjectSection();
 };
 
-static path vs_project_dir = "projects";
-static String vs_project_ext = ".vcxproj";
+static const path vs_project_dir = "projects";
+static const String vs_project_ext = ".vcxproj";

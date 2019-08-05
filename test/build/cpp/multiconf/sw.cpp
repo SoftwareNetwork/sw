@@ -11,6 +11,8 @@ void build(Solution &s)
     auto &t1 = s.addExecutable("test");
     t1 += "src/main.cpp";
 
+    return;
+
     auto &t2 = s.addExecutable("test2");
     t2 += "src/main2.cpp";
 

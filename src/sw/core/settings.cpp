@@ -148,11 +148,6 @@ const TargetSettings &TargetSetting::getSettings() const
     return *s;
 }
 
-bool TargetSetting::operator<(const TargetSetting &rhs) const
-{
-    return value < rhs.value;
-}
-
 bool TargetSetting::operator==(const TargetSetting &rhs) const
 {
     return value == rhs.value;
@@ -161,6 +156,23 @@ bool TargetSetting::operator==(const TargetSetting &rhs) const
 bool TargetSetting::operator!=(const TargetSetting &rhs) const
 {
     return !operator==(rhs);
+}
+
+bool TargetSetting::operator<(const TargetSetting &rhs) const
+{
+    return value < rhs.value;
+}
+
+int TargetSetting::compareEqualKeys(const TargetSetting &lhs, const TargetSetting &rhs)
+{
+    auto lv = std::get_if<TargetSettings>(&lhs.value);
+    auto rv = std::get_if<TargetSettings>(&rhs.value);
+    if (lv && rv)
+        return TargetSettings::compareEqualKeys(*lv, *rv);
+    bool r = lhs.value == rhs.value;
+    if (r)
+        return 0;
+    return 1; // -1 is not implemented at the moment
 }
 
 void TargetSetting::merge(const TargetSetting &rhs)
@@ -335,19 +347,28 @@ const TargetSetting &TargetSettings::operator[](const TargetSettingKey &k) const
 
 bool TargetSettings::operator==(const TargetSettings &rhs) const
 {
-    const auto &main = settings.size() < rhs.settings.size() ? *this : rhs;
-    const auto &other = settings.size() >= rhs.settings.size() ? *this : rhs;
-    return std::all_of(main.settings.begin(), main.settings.end(), [&other](const auto &p)
-    {
-        if (other[p.first] && p.second)
-            return other[p.first] == p.second;
-        return true;
-    });
+    return settings == rhs.settings;
 }
 
 bool TargetSettings::operator<(const TargetSettings &rhs) const
 {
     return settings < rhs.settings;
+}
+
+int TargetSettings::compareEqualKeys(const TargetSettings &lhs, const TargetSettings &rhs)
+{
+    // at the moment we check if smaller set is subset of bigger one
+    const auto &main = lhs.settings.size() < rhs.settings.size() ? lhs : rhs;
+    const auto &other = lhs.settings.size() >= rhs.settings.size() ? lhs : rhs;
+    bool r = std::all_of(main.settings.begin(), main.settings.end(), [&other](const auto &p)
+    {
+        if (other[p.first] && p.second)
+            return TargetSetting::compareEqualKeys(other[p.first], p.second) == 0;
+        return true;
+    });
+    if (r)
+        return 0;
+    return 1; // -1 is not implemented at the moment
 }
 
 void TargetSettings::merge(const TargetSettings &rhs)
