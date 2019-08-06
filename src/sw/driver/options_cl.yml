@@ -1,12 +1,4 @@
 flags:
-    # internal name
-    nologo:
-        name: Nologo
-        flag: nologo
-        type: bool
-        default: true
-        order: -100
-
     compile:
         name: CompileWithoutLinking
         flag: c
@@ -47,12 +39,18 @@ types:
     # internal name
     vscomn:
         name: VisualStudioCommonOptions
-        using:
-            - nologo
 
     vscomncl:
         name: VisualStudioCommonCompilerOptions
         parent: VisualStudioCommonOptions
+
+        flags:
+            nologo:
+                name: Nologo
+                flag: nologo
+                type: bool
+                default: true
+                order: -100
 
         using:
             - compile
@@ -410,6 +408,13 @@ types:
             - ifiles
 
         flags:
+            nologo:
+                name: Nologo
+                flag: NOLOGO
+                type: bool
+                default: true
+                order: -100
+
             lds:
                 name: LinkDirectories
                 type: FilesOrdered

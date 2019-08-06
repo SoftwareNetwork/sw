@@ -2562,7 +2562,7 @@ bool NativeCompiledTarget::prepare()
             if (auto L = getSelectedTool()->as<VisualStudioLinker*>())
             {
                 auto cmd = L->createCommand(getSolution().getContext());
-                cmd->push_back("-nodefaultlib");
+                cmd->push_back("-NODEFAULTLIB");
             }
         }
 

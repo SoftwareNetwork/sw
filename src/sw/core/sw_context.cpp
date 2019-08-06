@@ -41,12 +41,11 @@ void SwCoreContext::createHostSettings()
     auto &ts = host_settings;
     ts["native"]["configuration"] = "release";
     ts["native"]["library"] = "shared";
+    ts["native"]["mt"] = "false";
 }
 
 void SwCoreContext::setHostPrograms()
 {
-    host_settings = toTargetSettings(getHostOs());
-
     auto &ts = host_settings;
     ts["native"]["configuration"] = "release";
     ts["native"]["library"] = "shared";

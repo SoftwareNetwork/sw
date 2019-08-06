@@ -95,7 +95,13 @@ struct Project : Directory
     const ProjectData &getData(const sw::TargetSettings &) const;
 
 private:
-    void printProperties(ProjectEmitter &, const primitives::Command &, const StringSet &exclude = {}) const;
+    struct Properties
+    {
+        StringSet exclude_flags;
+        StringSet exclude_exts;
+    };
+
+    void printProperties(ProjectEmitter &, const primitives::Command &, const Properties &props = {}) const;
 };
 
 struct Solution

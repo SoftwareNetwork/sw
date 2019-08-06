@@ -266,6 +266,23 @@ void VSGenerator::generate(const SwBuild &b)
     auto &input = *inputs.begin();
     s.settings = input.getSettings();
 
+    // get settings from targets to make use settings equality later
+    for (auto &[pkg, tgts] : b.getTargetsToBuild())
+    {
+        decltype(s.settings) s2;
+        for (auto &st : s.settings)
+        {
+            auto itgt = tgts.findSuitable(st);
+            if (itgt == tgts.end())
+                throw SW_RUNTIME_ERROR("missing target");
+            s2.insert((*itgt)->getSettings());
+        }
+        if (s2.size() != s.settings.size())
+            throw SW_RUNTIME_ERROR("settings size do not match");
+        s.settings = s2;
+        break;
+    }
+
     Directory d(predefined_targets_dir);
     d.g = this;
     s.directories[d.name] = d;
@@ -546,7 +563,15 @@ void Project::emitProject(const VSGenerator &g) const
         "OutputFile",
         "ProgramDatabaseFile",
         "ImportLibrary",
+        "SuppressStartupBanner",
     };
+
+    Properties link_props;
+    link_props.exclude_flags = skip_link_props;
+    link_props.exclude_exts = {".obj", ".res"};
+
+    Properties cl_props;
+    cl_props.exclude_flags = skip_cl_props;
 
     for (auto &s : settings)
     {
@@ -555,7 +580,7 @@ void Project::emitProject(const VSGenerator &g) const
         {
             ctx.beginBlock("Link");
             if (d.main_command)
-                printProperties(ctx, *d.main_command, skip_link_props);
+                printProperties(ctx, *d.main_command, link_props);
             ctx.endBlock();
         }
         ctx.endBlock();
@@ -582,7 +607,7 @@ void Project::emitProject(const VSGenerator &g) const
             if (itcmd != cmds.end())
             {
                 auto c = *itcmd;
-                printProperties(ctx, *c, skip_cl_props);
+                printProperties(ctx, *c, cl_props);
                 //ctx.beginBlockWithConfiguration("AdditionalOptions", s);
                 //ctx.endBlock();
             }
@@ -705,69 +730,90 @@ void Project::emitFilters(const VSGenerator &g) const
     write_file(g.sln_root / vs_project_dir / (name + vs_project_ext + ".filters"), ctx.getText());
 }
 
-void Project::printProperties(ProjectEmitter &ctx, const primitives::Command &c, const StringSet &exclude) const
+void Project::printProperties(ProjectEmitter &ctx, const primitives::Command &c, const Properties &props) const
 {
     auto ft = path(c.getProgram()).stem().u8string();
     auto ift = flag_tables.find(ft);
     if (ift == flag_tables.end())
-        LOG_WARN(logger, "No flag table: " + ft);
-    else
     {
-        std::map<String, String> semicolon_args;
-        for (auto &o : c.arguments)
-        {
-            auto arg = o->toString();
-            auto &tbl = flag_tables[ft].ftable;
+        LOG_WARN(logger, "No flag table: " + ft);
+        return;
+    }
 
-            auto print = [&ctx, &arg, &semicolon_args, &exclude](auto &d)
+    std::map<String, String> semicolon_args;
+    bool skip_prog = false;
+    for (auto &o : c.arguments)
+    {
+        if (!skip_prog)
+        {
+            skip_prog = true;
+            continue;
+        }
+
+        auto arg = o->toString();
+
+        if (!arg.empty() && arg[0] != '-' && arg[0] != '/')
+        {
+            if (props.exclude_exts.find(path(arg).extension().string()) != props.exclude_exts.end())
+                continue;
+            semicolon_args["AdditionalDependencies"] += arg + ";";
+            continue;
+        }
+
+        auto &tbl = flag_tables[ft].ftable;
+
+        auto print = [&ctx, &arg, &semicolon_args, &props](auto &d)
+        {
+            if (props.exclude_flags.find(d.name) != props.exclude_flags.end())
+                return;
+            if (bitmask_includes(d.flags, FlagTableFlags::UserValue))
             {
-                if (exclude.find(d.name) != exclude.end())
-                    return;
-                if (bitmask_includes(d.flags, FlagTableFlags::UserValue))
+                if (bitmask_includes(d.flags, FlagTableFlags::SemicolonAppendable))
                 {
-                    if (bitmask_includes(d.flags, FlagTableFlags::SemicolonAppendable))
-                    {
-                        semicolon_args[d.name] += arg.substr(1 + d.argument.size()) + ";";
-                        return;
-                    }
-                    else
-                    {
-                        ctx.beginBlock(d.name);
-                        ctx.addText(arg.substr(1 + d.argument.size()));
-                    }
+                    semicolon_args[d.name] += arg.substr(1 + d.argument.size()) + ";";
+                    return;
                 }
                 else
                 {
                     ctx.beginBlock(d.name);
-                    ctx.addText(d.value);
+                    ctx.addText(arg.substr(1 + d.argument.size()));
                 }
-                ctx.endBlock(true);
-            };
-
-            // fast lookup first
-            auto i = tbl.find(arg.substr(1));
-            if (i != tbl.end())
-            {
-                print(i->second);
-                continue;
             }
-
-            // TODO: we must find the longest match
-            for (auto &[_, d] : tbl)
+            else
             {
-                if (d.argument.empty())
-                    continue;
-                if (arg.find(d.argument, 1) != 1)
-                    continue;
-                print(d);
-                break;
+                ctx.beginBlock(d.name);
+                ctx.addText(d.value);
             }
-        }
-        for (auto &[k, v] : semicolon_args)
-        {
-            ctx.beginBlock(k);
-            ctx.addText(v);
             ctx.endBlock(true);
+        };
+
+        // fast lookup first
+        auto i = tbl.find(arg.substr(1));
+        if (i != tbl.end())
+        {
+            print(i->second);
+            continue;
         }
+
+        // TODO: we must find the longest match
+        //bool found = false;
+        for (auto &[_, d] : tbl)
+        {
+            if (d.argument.empty())
+                continue;
+            if (arg.find(d.argument, 1) != 1)
+                continue;
+            print(d);
+            //found = true;
+            break;
+        }
+        //if (!found)
+            //LOG_WARN(logger, "arg not found: " + arg);
+    }
+    for (auto &[k, v] : semicolon_args)
+    {
+        ctx.beginBlock(k);
+        ctx.addText(v);
+        ctx.endBlock(true);
     }
 }
