@@ -91,6 +91,14 @@ inline IncludeDirectory operator "" _idir(const char *s, size_t)
 
 // link directory
 // _ld or _ldir
+inline LinkDirectory operator "" _ld(const char *s, size_t)
+{
+    return LinkDirectory(String(s));
+}
+inline LinkDirectory operator "" _ldir(const char *s, size_t)
+{
+    return LinkDirectory(String(s));
+}
 
 // link library
 // _l or _lib

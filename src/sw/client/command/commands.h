@@ -24,6 +24,13 @@
 #include <sw/core/sw_context.h>
 #include <sw/manager/package_data.h>
 
+namespace sw
+{
+
+struct StorageWithPackagesDatabase;
+
+}
+
 #define SUBCOMMAND_DECL(n) void cli_##n()
 #define SUBCOMMAND_DECL2(n) void cli_##n(sw::SwContext &swctx)
 #define SUBCOMMAND(n, d) SUBCOMMAND_DECL(n); SUBCOMMAND_DECL2(n);
@@ -40,5 +47,7 @@ std::pair<sw::SourceDirMap, const sw::Input &> fetch(sw::SwContext &);
 sw::PackageDescriptionMap getPackages(const sw::SwBuild &, const sw::SourceDirMap & = {});
 sw::TargetSettings createSettings(const sw::SwContext &);
 std::vector<sw::TargetSettings> createSettings(const sw::SwBuild &);
-std::unique_ptr<sw::SwBuild> setBuildArgsAndCreateBuildAndPrepare(sw::SwContext &, const Strings &build_args);
+std::unique_ptr<sw::SwBuild> setBuildArgsAndCreateBuildAndPrepare(sw::SwContext &, const Strings &inputs);
 std::unique_ptr<sw::SwBuild> createBuildAndPrepare(sw::SwContext &);
+std::map<sw::PackagePath, sw::VersionSet> getMatchingPackages(const sw::StorageWithPackagesDatabase &, const sw::UnresolvedPackage &);
+sw::PackageIdSet getMatchingPackagesSet(const sw::StorageWithPackagesDatabase &, const sw::UnresolvedPackage &);

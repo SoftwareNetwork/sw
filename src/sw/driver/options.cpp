@@ -451,7 +451,6 @@ void NativeLinkerOptions::remove(const SystemLinkLibrary &l)
 void NativeLinkerOptions::merge(const NativeLinkerOptions &o, const GroupSettings &s)
 {
     // deps are handled separately
-    //FileDependencies.insert(o.FileDependencies.begin(), o.FileDependencies.end());
     NativeLinkerOptionsData::merge(o, s);
     System.merge(o.System, s);
 }

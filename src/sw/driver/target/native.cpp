@@ -412,6 +412,11 @@ void NativeCompiledTarget::findCompiler()
             cmd->push_back("-flavor");
             cmd->push_back("ld"); // for linux, TODO: add checks
             cmd->push_back("-eh-frame-hdr"); // needed
+            if (getBuildSettings().TargetOS.is(OSType::Linux))
+            {
+                cmd->push_back("-dynamic-linker"); // needed
+                cmd->push_back("/lib64/ld-linux-x86-64.so.2"); // needed
+            }
             cmd->first_response_file_argument = 2;
             //cmd->push_back("-target");
             //cmd->push_back(getBuildSettings().getTargetTriplet());
@@ -3116,6 +3121,9 @@ CheckSet &NativeCompiledTarget::getChecks(const String &name)
 
 void NativeCompiledTarget::setChecks(const String &name, bool check_definitions)
 {
+    if (DryRun)
+        return;
+
     auto &checks_set = getChecks(name);
     checks_set.t = this;
     checks_set.performChecks(getTargetSettings());
@@ -3270,12 +3278,15 @@ CompilerType NativeCompiledTarget::getCompilerType() const
     return ct;
 }
 
-static std::unique_ptr<Source> load_source_and_version(const yaml &root, Version &version)
+static std::unique_ptr<Source> load_source_and_version(const yaml &root, const Version &version)
 {
     String ver;
     YAML_EXTRACT_VAR(root, ver, "version", String);
     if (!ver.empty())
-        version = Version(ver);
+    {
+        SW_UNIMPLEMENTED;
+        //version = Version(ver);
+    }
     if (root["source"].IsDefined())
         return Source::load(root["source"]);
     return nullptr;
@@ -3283,7 +3294,8 @@ static std::unique_ptr<Source> load_source_and_version(const yaml &root, Version
 
 void NativeCompiledTarget::cppan_load_project(const yaml &root)
 {
-    *this += load_source_and_version(root, getPackageMutable().getVersion());
+    Version v = getPackage().getVersion();
+    *this += load_source_and_version(root, v);
 
     YAML_EXTRACT_AUTO2(Empty, "empty");
     YAML_EXTRACT_VAR(root, HeaderOnly, "header_only", bool);

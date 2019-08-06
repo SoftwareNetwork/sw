@@ -237,7 +237,7 @@ static void applySettingsFromFile(sw::TargetSettings &s, const path &fn)
 sw::TargetSettings createSettings(const sw::SwContext &swctx)
 {
     auto s = swctx.getHostSettings();
-    s["host"] = swctx.getHostSettings();
+    //s["host"] = swctx.getHostSettings();
     return s;
 }
 
@@ -245,7 +245,10 @@ std::vector<sw::TargetSettings> createSettings(const sw::SwBuild &b)
 {
     auto initial_settings = createSettings(b.getContext());
     if (!host_settings_file.empty())
+    {
+        SW_UNIMPLEMENTED;
         applySettingsFromFile(initial_settings["host"].getSettings(), host_settings_file);
+    }
 
     std::vector<sw::TargetSettings> settings;
     settings.push_back(initial_settings);

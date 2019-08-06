@@ -459,48 +459,9 @@ void PackagesDatabase::deleteOverriddenPackageDir(const path &sdir) const
         );
 }
 
-void PackagesDatabase::listPackages(const String &name) const
+std::vector<PackagePath> PackagesDatabase::getMatchingPackages(const String &name) const
 {
-    auto pkgs = getMatchingPackages<std::set>(name);
-    if (pkgs.empty())
-    {
-        LOG_INFO(logger, "nothing found");
-        return;
-    }
-
-    for (auto &pkg : pkgs)
-    {
-        auto v1 = getVersionsForPackage(pkg);
-        VersionSet versions(v1.begin(), v1.end());
-        String out = pkg.toString();
-        out += " (";
-        for (auto &v : versions)
-            out += v.toString() + ", ";
-        out.resize(out.size() - 2);
-        out += ")";
-        LOG_INFO(logger, out);
-    }
-}
-
-Version PackagesDatabase::getExactVersionForPackage(const PackageId &p) const
-{
-    Version v = p.getVersion();
-    /*DownloadDependency d;
-    d.getPath() = p.ppath;
-    d.id = getPackageId(p.ppath);
-
-    SomeFlags f;
-    String h;
-    PackageVersionGroupNumber gn;
-    int prefix;
-    getExactProjectVersionId(d, v, f, h, gn, prefix);*/
-    return v;
-}
-
-template <template <class...> class C>
-C<PackagePath> PackagesDatabase::getMatchingPackages(const String &name) const
-{
-    C<PackagePath> pkgs2;
+    std::vector<PackagePath> pkgs2;
     String q;
     if (name.empty())
         q = "SELECT path FROM package ORDER BY path COLLATE NOCASE";
@@ -511,16 +472,10 @@ C<PackagePath> PackagesDatabase::getMatchingPackages(const String &name) const
         .with_result_type_of(select(pkgs.path).from(pkgs))
         ))
     {
-        pkgs2.insert(row.path.value());
+        pkgs2.push_back(row.path.value());
     }
     return pkgs2;
 }
-
-template std::unordered_set<PackagePath>
-PackagesDatabase::getMatchingPackages<std::unordered_set>(const String &) const;
-
-template std::set<PackagePath>
-PackagesDatabase::getMatchingPackages<std::set>(const String &) const;
 
 std::vector<Version> PackagesDatabase::getVersionsForPackage(const PackagePath &ppath) const
 {
@@ -551,91 +506,6 @@ String PackagesDatabase::getPackagePath(db::PackageId id) const
         return row.path.value();
     }
     throw SW_RUNTIME_ERROR("No such package: " + std::to_string(id));
-}
-
-Packages PackagesDatabase::getDependentPackages(const PackageId &pkg)
-{
-    Packages r;
-
-    // 1. Find current project version id.
-    auto project_id = getPackageId(pkg.getPath());
-
-    // 2. Find project versions dependent on this version.
-    std::set<std::pair<String, String>> pkgs_s;
-    /*db->execute(
-        "select path, case when branch is not null then branch else major || '.' || minor || '.' || patch end as version "
-        "from package_version_dependency "
-        "join package_version on package_version.id = project_version_id "
-        "join package on package.id = project_id "
-        "where project_dependency_id = '" +
-            std::to_string(project_id) + "'",
-        [&pkgs_s](SQLITE_CALLBACK_ARGS) {
-            pkgs_s.insert({cols[0], cols[1]});
-            return 0;
-        });*/
-
-    for (auto &p : pkgs_s)
-    {
-        SW_UNIMPLEMENTED;
-
-        /*Package pkg;
-        pkg.ppath = p.first;
-        pkg.version = p.second;
-        //pkg.createNames();
-        r.insert(pkg);*/
-    }
-
-    return r;
-}
-
-Packages PackagesDatabase::getDependentPackages(const Packages &pkgs)
-{
-    Packages r;
-    for (auto &pkg : pkgs)
-    {
-        auto dpkgs = getDependentPackages(pkg);
-        r.merge(dpkgs);
-    }
-
-    // exclude input
-    for (auto &pkg : pkgs)
-        r.erase(pkg);
-
-    return r;
-}
-
-Packages PackagesDatabase::getTransitiveDependentPackages(const Packages &pkgs)
-{
-    SW_UNIMPLEMENTED;
-
-    /*auto r = pkgs;
-    std::map<PackageId, bool> retrieved;
-    while (1)
-    {
-        bool changed = false;
-
-        for (auto &pkg : r)
-        {
-            if (retrieved[pkg])
-                continue;
-
-            retrieved[pkg] = true;
-            changed = true;
-
-            auto dpkgs = getDependentPackages(pkg);
-            r.merge(dpkgs);
-            break;
-        }
-
-        if (!changed)
-            break;
-    }
-
-    // exclude input
-    for (auto &pkg : pkgs)
-        r.erase(pkg);
-
-    return r;*/
 }
 
 DataSources PackagesDatabase::getDataSources() const

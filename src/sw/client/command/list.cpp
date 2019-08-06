@@ -21,7 +21,42 @@
 #include <sw/manager/database.h>
 #include <sw/manager/storage.h>
 
+#include <primitives/log.h>
+DECLARE_STATIC_LOGGER(logger, "list");
+
 static ::cl::opt<String> list_arg(::cl::Positional, ::cl::desc("Package regex to list"), ::cl::init("."), ::cl::sub(subcommand_list));
+
+std::map<sw::PackagePath, sw::VersionSet> getMatchingPackages(const sw::StorageWithPackagesDatabase &s, const sw::UnresolvedPackage &u)
+{
+    auto &db = s.getPackagesDatabase();
+
+    auto ppaths = db.getMatchingPackages(u.getPath().toString());
+    if (ppaths.empty())
+        return {};
+
+    std::map<sw::PackagePath, sw::VersionSet> r;
+    for (auto &ppath : ppaths)
+    {
+        auto v1 = db.getVersionsForPackage(ppath);
+        for (auto &v : v1)
+        {
+            if (u.getRange().hasVersion(v))
+                r[ppath].insert(v);
+        }
+    }
+    return r;
+}
+
+sw::PackageIdSet getMatchingPackagesSet(const sw::StorageWithPackagesDatabase &s, const sw::UnresolvedPackage &u)
+{
+    sw::PackageIdSet p;
+    for (auto &[ppath, versions] : getMatchingPackages(s, u))
+    {
+        for (auto &v : versions)
+            p.emplace(ppath, v);
+    }
+    return p;
+}
 
 SUBCOMMAND_DECL(list)
 {
@@ -30,5 +65,23 @@ SUBCOMMAND_DECL(list)
     if (rs.empty())
         throw SW_RUNTIME_ERROR("No remote storages found");
 
-    static_cast<sw::StorageWithPackagesDatabase&>(*rs.front()).getPackagesDatabase().listPackages(list_arg);
+    auto &s = static_cast<sw::StorageWithPackagesDatabase &>(*rs.front());
+
+    auto r = getMatchingPackages(s, list_arg);
+    if (r.empty())
+    {
+        LOG_INFO(logger, "nothing found");
+        return;
+    }
+
+    for (auto &[ppath, versions] : r)
+    {
+        String out = ppath.toString();
+        out += " (";
+        for (auto &v : versions)
+            out += v.toString() + ", ";
+        out.resize(out.size() - 2);
+        out += ")";
+        LOG_INFO(logger, out);
+    }
 }

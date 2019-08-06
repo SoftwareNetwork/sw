@@ -26,7 +26,6 @@ namespace sw
 {
 
 struct BuildSettings;
-struct Version;
 
 }
 

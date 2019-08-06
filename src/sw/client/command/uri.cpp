@@ -39,7 +39,11 @@ extern String gUploadPrefix;
 static ::cl::list<String> uri_args(::cl::Positional, ::cl::desc("sw uri arguments"), ::cl::sub(subcommand_uri));
 
 #define F_ARGS sw::SwContext &swctx, sw::LocalStorage &sdb, const sw::LocalPackage &p
+#ifdef _MSC_VER
 #define F(n, ...) static void n(F_ARGS, __VA_ARGS__)
+#else
+#define F(n, ...) static void n(F_ARGS, ##__VA_ARGS__)
+#endif
 
 F(open_dir, const path &d)
 {
@@ -187,15 +191,25 @@ static void dispatcher()
     auto &sdb = swctx->getLocalStorage();
     sw::LocalPackage p(sdb, id);
 
+#ifdef _MSC_VER
 #define URI_CMD2(x, f, ...)             \
-    if (uri_args[0] == "sw:"## #x)      \
+    if (uri_args[0] == "sw:" #x)        \
     {                                   \
         f(*swctx, sdb, p, __VA_ARGS__); \
         return;                         \
     }
-
 #define URI_CMD(x, ...) \
     URI_CMD2(x, x, __VA_ARGS__)
+#else
+#define URI_CMD2(x, f, ...)               \
+    if (uri_args[0] == "sw:" #x)          \
+    {                                     \
+        f(*swctx, sdb, p, ##__VA_ARGS__); \
+        return;                           \
+    }
+#define URI_CMD(x, ...) \
+    URI_CMD2(x, x, ##__VA_ARGS__)
+#endif
 
     URI_CMD2(sdir, open_dir, p.getDirSrc2());
     URI_CMD2(bdir, open_dir, p.getDirObj());

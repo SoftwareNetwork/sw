@@ -714,7 +714,7 @@ void GNULinker::prepareCommand1(const Target &t)
     //if (InputFiles().empty())
         //return nullptr;
 
-    //LinkDirectories() = gatherLinkDirectories();
+    ((GNULinker*)this)->GNULinkerOptions::LinkDirectories = gatherLinkDirectories();
     //((GNULinker*)this)->GNULinkerOptions::LinkLibraries() = gatherLinkLibraries();
     ((GNULinker*)this)->GNULinkerOptions::SystemLinkLibraries = gatherLinkLibraries(true);
 
@@ -776,7 +776,7 @@ void GNULinker::prepareCommand1(const Target &t)
         cmd->name_short = Output().filename().u8string();
     }
 
-    if (PositionIndependentCode)
+    if (PositionIndependentCode && PositionIndependentCode())
         SharedObject = true;
 
     //((GNULibraryTool*)this)->GNULibraryToolOptions::LinkDirectories() = gatherLinkDirectories();

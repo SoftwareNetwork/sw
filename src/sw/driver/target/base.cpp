@@ -598,25 +598,48 @@ const TargetSettings &Target::getInterfaceSettings() const
 
 void TargetOptions::add(const IncludeDirectory &i)
 {
-    path idir = i.i;
-    if (!idir.is_absolute())
+    path dir = i.i;
+    if (!dir.is_absolute())
     {
-        //&& !fs::exists(idir))
-        idir = target->SourceDir / idir;
-        if (!target->DryRun && target->isLocal() && !fs::exists(idir))
-            throw SW_RUNTIME_ERROR(target->getPackage().toString() + ": include directory does not exist: " + normalize_path(idir));
+        //&& !fs::exists(dir))
+        dir = target->SourceDir / dir;
+        if (!target->DryRun && target->isLocal() && !fs::exists(dir))
+            throw SW_RUNTIME_ERROR(target->getPackage().toString() + ": include directory does not exist: " + normalize_path(dir));
 
         // check if exists, if not add bdir?
     }
-    IncludeDirectories.insert(idir);
+    IncludeDirectories.insert(dir);
 }
 
 void TargetOptions::remove(const IncludeDirectory &i)
 {
-    path idir = i.i;
-    if (!idir.is_absolute() && !fs::exists(idir))
-        idir = target->SourceDir / idir;
-    IncludeDirectories.erase(idir);
+    path dir = i.i;
+    if (!dir.is_absolute() && !fs::exists(dir))
+        dir = target->SourceDir / dir;
+    IncludeDirectories.erase(dir);
+}
+
+void TargetOptions::add(const LinkDirectory &i)
+{
+    path dir = i.d;
+    if (!dir.is_absolute())
+    {
+        //&& !fs::exists(dir))
+        dir = target->SourceDir / dir;
+        if (!target->DryRun && target->isLocal() && !fs::exists(dir))
+            throw SW_RUNTIME_ERROR(target->getPackage().toString() + ": link directory does not exist: " + normalize_path(dir));
+
+        // check if exists, if not add bdir?
+    }
+    LinkDirectories.insert(dir);
+}
+
+void TargetOptions::remove(const LinkDirectory &i)
+{
+    path dir = i.d;
+    if (!dir.is_absolute() && !fs::exists(dir))
+        dir = target->SourceDir / dir;
+    LinkDirectories.erase(dir);
 }
 
 void NativeTargetOptionsGroup::add(const Variable &v)
@@ -710,7 +733,6 @@ void Target::addSourceDependency(const DependencyPtr &t)
 {
     SourceDependencies.push_back(t);
 
-    auto &hs = getSolution().getHostSettings();
     auto &ds = SourceDependencies.back()->settings;
     ds = {}; // accept everything
 }

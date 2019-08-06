@@ -9,6 +9,7 @@
 #include "source.h"
 
 #include <nlohmann/json.hpp>
+#include <primitives/yaml.h>
 
 namespace sw
 {

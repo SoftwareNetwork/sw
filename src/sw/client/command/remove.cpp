@@ -18,6 +18,11 @@
 
 #include "commands.h"
 
+#include <sw/manager/storage.h>
+
+#include <primitives/log.h>
+DECLARE_STATIC_LOGGER(logger, "remove");
+
 static ::cl::list<String> remove_arg(::cl::Positional, ::cl::desc("package to remove"), ::cl::sub(subcommand_remove));
 
 SUBCOMMAND_DECL(remove)
@@ -25,8 +30,10 @@ SUBCOMMAND_DECL(remove)
     auto swctx = createSwContext();
     for (auto &a : remove_arg)
     {
-        sw::LocalPackage p(swctx->getLocalStorage(), a);
-        //sdb.removeInstalledPackage(p); // TODO: remove from db
-        fs::remove_all(p.getDir());
+        for (auto &p : getMatchingPackagesSet(swctx->getLocalStorage(), a))
+        {
+            LOG_INFO(logger, "Removing " << p.toString());
+            swctx->getLocalStorage().remove(sw::LocalPackage(swctx->getLocalStorage(), p));
+        }
     }
 }

@@ -420,6 +420,9 @@ struct SW_DRIVER_CPP_API TargetOptions : SourceFileStorage, NativeOptions
     void add(const IncludeDirectory &i);
     void remove(const IncludeDirectory &i);
 
+    void add(const LinkDirectory &i);
+    void remove(const LinkDirectory &i);
+
     void merge(const TargetOptions &g, const GroupSettings &s = GroupSettings())
     {
         SourceFileStorage::merge(g, s);

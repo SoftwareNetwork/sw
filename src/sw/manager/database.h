@@ -78,20 +78,11 @@ struct SW_MANAGER_API PackagesDatabase : public Database
     DataSources getDataSources() const;
     PackageVersionGroupNumber getMaxGroupNumber() const;
 
-    //
-    void listPackages(const String &name = String()) const;
-
-    template <template <class...> class C>
-    C<PackagePath> getMatchingPackages(const String &name = String()) const;
-    std::vector<Version> getVersionsForPackage(const PackagePath &ppath) const;
-    Version getExactVersionForPackage(const PackageId &p) const;
-
-    Packages getDependentPackages(const PackageId &pkg);
-    Packages getDependentPackages(const Packages &pkgs);
-    Packages getTransitiveDependentPackages(const Packages &pkgs);
-
     db::PackageId getPackageId(const PackagePath &ppath) const;
     String getPackagePath(db::PackageId) const;
+
+    std::vector<PackagePath> getMatchingPackages(const String &name = {}) const;
+    std::vector<Version> getVersionsForPackage(const PackagePath &) const;
 
 private:
     std::mutex m;

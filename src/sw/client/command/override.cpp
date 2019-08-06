@@ -36,10 +36,10 @@ void override_package_perform(sw::SwContext &swctx, const sw::PackagePath &prefi
 {
     auto b = swctx.createBuild();
     sw::InputWithSettings i(swctx.addInput(fs::current_path()));
-    b->addInput(i);
     auto ts = b->getContext().getHostSettings();
     ts["driver"]["dry-run"] = "true";
     i.addSettings(ts);
+    b->addInput(i);
     b->load();
 
     // one prepare step will find sources
@@ -108,7 +108,7 @@ SUBCOMMAND_DECL(override)
     if (prefix.empty())
         throw SW_RUNTIME_ERROR("Empty prefix");
 
-    if (!delete_overridden_package)
+    if (delete_overridden_package)
     {
         auto swctx = createSwContext();
         sw::PackageId pkg{ prefix };

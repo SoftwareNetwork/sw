@@ -1,0 +1,1 @@
+@sw2 -save-failed-commands -settings-file d:\Dropbox\files\settings\sw\win2linux_musl_clang.json build

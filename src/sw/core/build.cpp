@@ -12,6 +12,7 @@
 
 #include <sw/builder/execution_plan.h>
 
+#include <boost/current_function.hpp>
 #include <nlohmann/json.hpp>
 #include <primitives/executor.h>
 #include <primitives/sw/cl.h>
@@ -41,7 +42,7 @@ static cl::opt<bool> print_graph("print-graph", cl::desc("Print file with build 
         if (std::uncaught_exceptions() == 0) \
             state = to;                      \
     };                                       \
-    LOG_DEBUG(logger, "build id " << this << " performing " __FUNCTION__)
+    LOG_TRACE(logger, "build id " << this << " performing " << BOOST_CURRENT_FUNCTION)
 
 namespace sw
 {
@@ -103,7 +104,7 @@ bool SwBuild::step()
 
 void SwBuild::overrideBuildState(BuildState s) const
 {
-    LOG_DEBUG(logger, "build id " << this << " overriding state from " << toIndex(state) << " to " << toIndex(s));
+    LOG_TRACE(logger, "build id " << this << " overriding state from " << toIndex(state) << " to " << toIndex(s));
 
     state = s;
 }
@@ -218,7 +219,7 @@ void SwBuild::loadPackages(const TargetMap &predefined)
     int r = 1;
     while (1)
     {
-        LOG_TRACE(logger, "build id " << this << " " __FUNCTION__ << " round " << r++);
+        LOG_TRACE(logger, "build id " << this << " " << BOOST_CURRENT_FUNCTION << " round " << r++);
 
         std::map<TargetSettings, std::pair<PackageId, TargetContainer *>> load;
         auto &chld = targets; // take a ref, because it won't be changed in this loop
@@ -261,7 +262,7 @@ void SwBuild::loadPackages(const TargetMap &predefined)
             if (s.empty())
                 continue;
 
-            LOG_TRACE(logger, "build id " << this << " " __FUNCTION__ << " loading " << d.first.toString());
+            LOG_TRACE(logger, "build id " << this << " " << BOOST_CURRENT_FUNCTION << " loading " << d.first.toString());
 
             loaded = true;
 

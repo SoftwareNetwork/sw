@@ -62,7 +62,7 @@ SERIALIZATION_SPLIT_END
 
 #define SERIALIZATION_TYPE ::sw::builder::Command::Argument
 SERIALIZATION_BEGIN_UNIFIED
-    ar & a.toString();
+    ar & v.toString();
 SERIALIZATION_UNIFIED_END
 
 ////////////////////////////////////////

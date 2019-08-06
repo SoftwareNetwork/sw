@@ -45,7 +45,7 @@ Input::Input(const path &p, const SwContext &swctx)
     init(p, swctx);
 }
 
-Input::Input(const PackageId &p, SwContext &swctx)
+Input::Input(const LocalPackage &p, const SwContext &swctx)
 {
     init(p, swctx);
 }
@@ -59,28 +59,28 @@ Input::Input(const path &in, InputType t, const SwContext &)
     type = t;
 }
 
+bool Input::findDriver(InputType t, const SwContext &swctx)
+{
+    type = t;
+    for (auto &[_, d] : swctx.getDrivers())
+    {
+        auto r = d->canLoadInput(*this);
+        if (r)
+        {
+            if (*r != getPath())
+            {
+                type = InputType::SpecificationFile;
+                data = *r;
+            }
+            driver = d.get();
+            return true;
+        }
+    }
+    return false;
+}
+
 void Input::init(const path &in, const SwContext &swctx)
 {
-    auto find_driver = [this, &swctx](auto t)
-    {
-        type = t;
-        for (auto &[_, d] : swctx.getDrivers())
-        {
-            auto r = d->canLoadInput(*this);
-            if (r)
-            {
-                if (*r != getPath())
-                {
-                    type = InputType::SpecificationFile;
-                    data = *r;
-                }
-                driver = d.get();
-                return true;
-            }
-        }
-        return false;
-    };
-
     path p = in;
     if (!p.is_absolute())
         p = fs::absolute(p);
@@ -91,8 +91,8 @@ void Input::init(const path &in, const SwContext &swctx)
     // spec or regular file
     if (status.type() == fs::file_type::regular)
     {
-        if (find_driver(InputType::SpecificationFile) ||
-            find_driver(InputType::InlineSpecification))
+        if (findDriver(InputType::SpecificationFile, swctx) ||
+            findDriver(InputType::InlineSpecification, swctx))
             return;
 
         // find in file first: 'sw driver package-id', call that driver on whole file
@@ -116,8 +116,8 @@ void Input::init(const path &in, const SwContext &swctx)
     }
     else if (status.type() == fs::file_type::directory)
     {
-        if (find_driver(InputType::DirectorySpecificationFile) ||
-            find_driver(InputType::Directory))
+        if (findDriver(InputType::DirectorySpecificationFile, swctx) ||
+            findDriver(InputType::Directory, swctx))
             return;
     }
     else
@@ -126,10 +126,15 @@ void Input::init(const path &in, const SwContext &swctx)
     throw SW_RUNTIME_ERROR("Cannot select driver for " + normalize_path(p));
 }
 
-void Input::init(const PackageId &p, SwContext &swctx)
+void Input::init(const LocalPackage &p, const SwContext &swctx)
 {
-    auto pkg = swctx.resolve(UnresolvedPackage(p));
-    gn = pkg.getData().group_number;
+    /*gn = p.getData().group_number;
+
+    data = p.getDirSrc2();
+    if (findDriver(InputType::DirectorySpecificationFile, swctx) ||
+        findDriver(InputType::Directory, swctx))
+        return;
+    throw SW_RUNTIME_ERROR("Cannot select driver for " + p.toString());*/
 
     data = p;
     type = InputType::InstalledPackage;

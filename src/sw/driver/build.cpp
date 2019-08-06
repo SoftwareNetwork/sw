@@ -114,7 +114,7 @@ const BuildSettings &Build::getBuildSettings() const
 
 const TargetSettings &Build::getHostSettings() const
 {
-    return getSettings()["host"].getSettings();
+    return getModuleData().host_settings;
 }
 
 // can be used in configs to load subdir configs

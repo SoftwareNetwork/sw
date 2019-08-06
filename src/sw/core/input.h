@@ -56,7 +56,7 @@ struct SW_CORE_API Input : RawInput
 {
     /// determine input type
     Input(const path &, const SwContext &);
-    Input(const PackageId &, SwContext &);
+    Input(const LocalPackage &, const SwContext &);
     /// forced input type
     Input(const path &, InputType, const SwContext &);
 
@@ -79,7 +79,9 @@ private:
     PackageVersionGroupNumber gn = 0;
 
     void init(const path &, const SwContext &);
-    void init(const PackageId &, SwContext &);
+    void init(const LocalPackage &, const SwContext &);
+
+    bool findDriver(InputType t, const SwContext &);
 };
 
 struct SW_CORE_API InputWithSettings

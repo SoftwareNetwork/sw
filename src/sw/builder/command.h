@@ -280,7 +280,7 @@ struct SW_BUILDER_API CommandSequence : Command
     template <class C = Command, class ... Args>
     std::shared_ptr<C> addCommand(Args && ... args)
     {
-        auto c = std::make_shared<C>(swctx, std::forward<Args>(args)...);
+        auto c = std::make_shared<C>(getContext(), std::forward<Args>(args)...);
         commands.push_back(c);
         return c;
     }

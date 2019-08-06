@@ -153,7 +153,7 @@ Input &SwContext::addInput(const path &i)
     return addInput1(i);
 }
 
-Input &SwContext::addInput(const PackageId &p)
+Input &SwContext::addInput(const LocalPackage &p)
 {
     auto &i = addInput1(p);
     if (i.isLoaded())
@@ -206,8 +206,10 @@ void SwContext::loadEntryPoints(const std::set<Input*> &inputs, bool set_eps)
             {
                 if (inputs[i].getType() != InputType::InstalledPackage)
                     throw SW_RUNTIME_ERROR("unexpected input type");
+                g[i]->addEntryPoints({ getTargetData(inputs[i].getPackageId()).getEntryPoint() });
             }
-            g[i]->addEntryPoints(eps[i]);
+            else
+                g[i]->addEntryPoints(eps[i]);
 
             if (!set_eps)
                 continue;

@@ -121,14 +121,14 @@ bool Settings::checkForUpdates() const
     if (!(s1 != 0 && s2 != 0 && s2 > s1))
         return false;
 
-    LOG_INFO(logger, "New version of the CPPAN client is available!");
-    LOG_INFO(logger, "Feel free to upgrade it from website (https://cppan.org/) or simply run:");
-    LOG_INFO(logger, "cppan --self-upgrade");
+    LOG_INFO(logger, "New version of the SW client is available!");
+    LOG_INFO(logger, "Feel free to upgrade it from the website (https://software-network.org/) or simply run:");
+    LOG_INFO(logger, "sw --self-upgrade");
 #ifdef _WIN32
     LOG_INFO(logger, "(or the same command but from administrator)");
 #else
     LOG_INFO(logger, "or");
-    LOG_INFO(logger, "sudo cppan --self-upgrade");
+    LOG_INFO(logger, "sudo sw --self-upgrade");
 #endif
     LOG_INFO(logger, "");
     return true;

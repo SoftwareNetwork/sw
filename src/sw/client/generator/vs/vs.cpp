@@ -35,7 +35,9 @@
 #include <boost/uuid/uuid_io.hpp>
 #include <nlohmann/json.hpp>
 #include <primitives/http.h>
+#ifdef _WIN32
 #include <primitives/win32helpers.h>
+#endif
 
 #include <sstream>
 #include <stack>
@@ -233,7 +235,7 @@ void VSGenerator::generate(const SwBuild &b)
     const Strings tables1 = { "CL", "Link" };
     const Strings tables2 = { "LIB", "MASM", "RC" };
     auto ts = getVsToolset(version);
-    auto dl = [](auto &ts, auto &tbl)
+    auto dl = [](const auto &ts, const auto &tbl)
     {
         for (auto &t : tbl)
         {
@@ -428,7 +430,9 @@ void Solution::emit(const VSGenerator &g) const
     write_file_if_different(g.sln_root / fn, ctx.getText());
     auto lnk = current_thread_path() / fn;
     lnk += ".lnk";
+#ifdef _WIN32
     ::create_link(g.sln_root / fn, lnk, "SW link");
+#endif
 
     for (auto &[n, p] : projects)
         p.emit(g);

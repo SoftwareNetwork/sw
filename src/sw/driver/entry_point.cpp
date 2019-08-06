@@ -226,6 +226,7 @@ std::vector<ITargetPtr> NativeTargetEntryPoint::loadPackages(SwBuild &swb, const
     module_data1.NamePrefix = module_data.NamePrefix;
     module_data1.known_targets = pkgs;
     module_data1.current_settings = settings;
+    module_data1.host_settings = swb.getContext().getHostSettings();
     module_data1.bs = BuildSettings(settings);
 
     b.module_data = &module_data1;

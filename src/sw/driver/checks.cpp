@@ -19,14 +19,17 @@
 #include <sw/support/hash.h>
 
 #include <boost/algorithm/string.hpp>
+#include <nlohmann/json.hpp>
 #include <primitives/emitter.h>
 #include <primitives/sw/cl.h>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "checks");
 
+static cl::opt<bool> checks_single_thread("checks-st", cl::desc("Perform checks in one thread (for cc)"));
 static cl::opt<bool> print_checks("print-checks", cl::desc("Save extended checks info to file"));
 static cl::opt<bool> wait_for_cc_checks("wait-for-cc-checks", cl::desc("Do not exit on missing cc checks, wait for user input"));
+static cl::opt<String> cc_checks_command("cc-checks-command", cl::desc("Automatically execute cc checks command"));
 
 namespace sw
 {
@@ -248,6 +251,17 @@ void CheckSet::performChecks(const TargetSettings &ts)
     //std::unique_lock lk(m);
 
     auto config = ts.getHash();
+
+    /*static std::mutex m;
+    static std::map<String, std::mutex> checks_mutex;
+    std::mutex *m2;
+    {
+        std::unique_lock lk(m);
+        m2 = &checks_mutex[config];
+    }
+    std::unique_lock lk(*m2);
+    //std::unique_lock lk2(m);*/
+
     auto fn = checks_dir / config / "checks.3.txt";
     auto &cs = getChecksStorage(config, fn);
 
@@ -328,8 +342,7 @@ int main() { return IsBigEndian(); }
         prepareChecksForUse();
         if (print_checks)
         {
-            SW_UNIMPLEMENTED;
-            /*std::ofstream o(fn.parent_path() / (std::to_string(checker.build.getCurrentGroupNumber()) + "." + name + ".checks.txt"));
+            std::ofstream o(fn.parent_path() / (t->getPackage().toString() + "." + name + ".txt"));
             if (!o)
                 return;
             std::map<String, CheckPtr> check_values(check_values.begin(), check_values.end());
@@ -337,7 +350,7 @@ int main() { return IsBigEndian(); }
             {
                 if (c->Value)
                     o << d << " " << c->Value.value() << " " << c->getHash() << "\n";
-            }*/
+            }
         }
         // cleanup
         for (auto &[h, c] : checks)
@@ -345,6 +358,11 @@ int main() { return IsBigEndian(); }
             c->clean();
         }
     };
+
+    if (print_checks)
+    {
+        write_file(checks_dir / config / "cfg.json", nlohmann::json::parse(ts.toString(TargetSettings::Json)).dump(4));
+    }
 
     if (unchecked.empty())
     {
@@ -357,7 +375,7 @@ int main() { return IsBigEndian(); }
     if (ep)
     {
         LOG_INFO(logger, "Performing " << unchecked.size() << " check(s): "
-            << t->getPackage().toString() << " (" << name << ")");
+            << t->getPackage().toString() << " (" << name << "), config " + config);
 
         SCOPE_EXIT
         {
@@ -367,10 +385,7 @@ int main() { return IsBigEndian(); }
         };
 
         //auto &e = getExecutor();
-        static Executor e(getExecutor().numberOfThreads()); // separate executor!
-        //static Executor e(1); // separate executor!
-        //ep.throw_on_errors = false;
-        //ep.skip_errors = ep.commands.size();
+        static Executor e(checks_single_thread ? 1 : getExecutor().numberOfThreads()); // separate executor!
 
         try
         {
@@ -486,9 +501,19 @@ int main() { return IsBigEndian(); }
 
             if (wait_for_cc_checks)
             {
-                std::cout << "Waiting for completing cc checks.\n";
-                std::cout << "Run '" << normalize_path(out) << "' and press and key to continue...\n";
-                getchar();
+                if (!cc_checks_command.empty())
+                {
+                    ScopedCurrentPath scp(cc_dir);
+                    int r = system(cc_checks_command.c_str());
+                    if (r)
+                        throw SW_RUNTIME_ERROR("cc_checks_command exited abnormally: " + std::to_string(r));
+                }
+                else
+                {
+                    std::cout << "Waiting for completing cc checks.\n";
+                    std::cout << "Run '" << normalize_path(out) << "' and press and key to continue...\n";
+                    getchar();
+                }
                 cs.load_manual(fn);
                 for (auto &[h, c] : cs.manual_checks)
                 {
