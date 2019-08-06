@@ -128,12 +128,26 @@ void Input::init(const path &in, const SwContext &swctx)
 
 void Input::init(const PackageId &p, SwContext &swctx)
 {
-    //auto driver_pkg = swctx.install(UnresolvedPackage(p));
+    auto pkg = swctx.resolve(UnresolvedPackage(p));
+    gn = pkg.getData().group_number;
 
-    SW_UNIMPLEMENTED;
     data = p;
     type = InputType::InstalledPackage;
     driver = swctx.getDrivers().begin()->second.get();
+}
+
+bool Input::operator==(const Input &rhs) const
+{
+    if (gn == 0)
+        return data == rhs.data;
+    return std::tie(gn, data) == std::tie(rhs.gn, rhs.data);
+}
+
+bool Input::operator<(const Input &rhs) const
+{
+    if (gn == 0)
+        return data < rhs.data;
+    return std::tie(gn, data) < std::tie(rhs.gn, rhs.data);
 }
 
 bool Input::isChanged() const

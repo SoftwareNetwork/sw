@@ -68,11 +68,15 @@ struct SW_CORE_API Input : RawInput
     String getSpecification() const;
     const std::vector<TargetEntryPointPtr> &getEntryPoints() const { return eps; }
 
+    bool operator==(const Input &rhs) const;
+    bool operator<(const Input &rhs) const;
+
 private:
     IDriver *driver = nullptr;
     // one input may have several eps
     // example: .yml frontend - 1 document, but multiple eps, one per package
     std::vector<TargetEntryPointPtr> eps;
+    PackageVersionGroupNumber gn = 0;
 
     void init(const path &, const SwContext &);
     void init(const PackageId &, SwContext &);
