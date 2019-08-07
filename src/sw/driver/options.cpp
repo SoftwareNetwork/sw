@@ -520,24 +520,13 @@ void NativeLinkerOptions::add(const DependencyPtr &t)
         return d->getPackage() == t->getPackage();
     });
     if (i == deps.end())
-    {
         t->Disabled = false;
-        deps.push_back(t);
-    }
     else
-    {
         (*i)->Disabled = false;
-        deps.push_back(t);
-        /*auto d = &(*i)->getTarget();
-        if (d)
-            t->setTarget(*d);*/
-    }
+    deps.push_back(t);
 
-    auto t2 = t;
-    if (auto t = dynamic_cast<Target *>(this))
-    {
-        t2->settings.merge(t->getTargetSettings());
-    }
+    if (auto t2 = dynamic_cast<Target *>(this))
+        t->settings.merge(t2->getSettings());
 }
 
 void NativeLinkerOptions::remove(const DependencyPtr &t)
@@ -549,14 +538,10 @@ void NativeLinkerOptions::remove(const DependencyPtr &t)
             continue;
         d->Disabled = true;
     }
-
     deps.push_back(t);
 
-    auto t2 = t;
-    if (auto t = dynamic_cast<Target *>(this))
-    {
-        t2->settings.merge(t->getTargetSettings());
-    }
+    if (auto t2 = dynamic_cast<Target *>(this))
+        t->settings.merge(t2->getSettings());
 }
 
 void NativeLinkerOptions::add(const UnresolvedPackage &t)

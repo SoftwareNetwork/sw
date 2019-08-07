@@ -128,6 +128,12 @@ struct SW_CORE_API TargetSetting
     void push_back(const TargetSettingValue &);
     void reset();
 
+    void use();
+    void setUseCount(int);
+
+    void setRequired(bool = true);
+    bool isRequired() const;
+
     void merge(const TargetSetting &);
     void mergeFromJson(const nlohmann::json &);
 
@@ -136,6 +142,8 @@ struct SW_CORE_API TargetSetting
     bool isObject() const;
 
 private:
+    int use_count = 1;
+    bool required = false;
     TargetSettingKey key;
     std::variant<std::monostate, TargetSettingValue, std::vector<TargetSettingValue>, TargetSettings> value;
 

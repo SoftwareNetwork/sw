@@ -4,10 +4,6 @@
 
 void configure(Build &s)
 {
-    //auto ss = s.createSettings();
-    //ss.Native.LibrariesType = LibraryType::Static;
-    //s.addSettings(ss);
-
 #ifndef SW_CPP_DRIVER_API_VERSION
     s.registerCallback([](auto &t, auto cbt)
     {
@@ -32,10 +28,6 @@ void configure(Build &s)
     else if (s.isConfigSelected("win2android"))
         s.loadModule("utils/cc/win2android.cpp").call<void(Solution&)>("configure", s);
 #endif
-
-    //s.getBuildSettings().Native.ConfigurationType = ConfigurationType::ReleaseWithDebugInformation;
-    //s.getBuildSettings().Native.CompilerType = CompilerType::ClangCl;
-    //s.getBuildSettings().Native.CompilerType = CompilerType::Clang;
 }
 
 void build(Solution &s)
@@ -85,12 +77,13 @@ void build(Solution &s)
         manager.CPPVersion = CPPLanguageStandard::CPP17;
         manager.Public += "BOOST_DLL_USE_STD_FS"_def;
 
+        auto srcdep = "pub.egorpugin.primitives.source-master"_dep;
         manager.Public += support, protos,
             "pub.egorpugin.primitives.date_time-master"_dep,
             "pub.egorpugin.primitives.db.sqlite3-master"_dep,
             "pub.egorpugin.primitives.lock-master"_dep,
             "pub.egorpugin.primitives.pack-master"_dep,
-            "pub.egorpugin.primitives.source-master"_dep,
+            srcdep,
             "pub.egorpugin.primitives.sw.settings-master"_dep,
             "pub.egorpugin.primitives.version-master"_dep,
             "pub.egorpugin.primitives.yaml-master"_dep,
@@ -99,6 +92,10 @@ void build(Solution &s)
             "org.sw.demo.boost.dll"_dep,
             "org.sw.demo.rbock.sqlpp11_connector_sqlite3-develop"_dep
             ;
+#ifdef SW_CPP_DRIVER_API_VERSION
+        srcdep->getSettings()["export-if-static"] = "true";
+        srcdep->getSettings()["export-if-static"].setRequired();
+#endif
 
         manager.Public -= "pub.egorpugin.primitives.win32helpers-master"_dep;
         if (manager.getBuildSettings().TargetOS.Type == OSType::Windows)

@@ -56,12 +56,19 @@ struct SW_CORE_API ITarget : ICastable
     ///
     virtual Commands getCommands() const = 0;
 
-    // get output config?
-    // get input config?
+    /// final (output) configuration
+    /// available before prepare or after?
+    /// round trips
+    //virtual const TargetSettings &getConfiguration() const = 0;
 
+    /// input settings
+    /// does not round trip
     virtual const TargetSettings &getSettings() const = 0;
+
+    /// settings for consumers (targets)
     virtual const TargetSettings &getInterfaceSettings() const = 0;
 
+    // get binary settings, get doc settings?
     // String get package settings(); // json coded or whatever via interface?
     // String getDescription()
 };

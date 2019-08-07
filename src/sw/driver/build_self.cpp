@@ -4,9 +4,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#define SW_PACKAGE_API
-#include "sw.h"
-
 #include "entry_point.h"
 
 #include <sw/core/sw_context.h>
@@ -15,6 +12,9 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "build.self");
 
+#define SW_PACKAGE_API
+#include "sw.h"
+
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable : 4005) // warning C4005: 'XXX': macro redefinition
@@ -22,7 +22,6 @@ DECLARE_STATIC_LOGGER(logger, "build.self");
 
 using TargetEntryPointMap = std::unordered_map<sw::PackageId, std::shared_ptr<sw::NativeBuiltinTargetEntryPoint>>;
 
-#define getSettings getBuildSettings
 #define SW_CPP_DRIVER_API_VERSION 1
 #include <build_self.generated.h>
 

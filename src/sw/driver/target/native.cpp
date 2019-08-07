@@ -195,7 +195,7 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
 {
     auto &cld = getSolution().getChildren();
 
-    auto i = cld.find(id, getTargetSettings());
+    auto i = cld.find(id, getSettings());
     if (!i)
     {
         for (auto &e : exts)
@@ -345,7 +345,7 @@ void NativeCompiledTarget::findCompiler()
     {
         auto &cld = getSolution().getChildren();
 
-        auto i = cld.find(p, getTargetSettings());
+        auto i = cld.find(p, getSettings());
         if (!i)
             return nullptr;
         auto t = i->as<PredefinedProgram*>();
@@ -490,6 +490,13 @@ bool NativeCompiledTarget::init()
 
         // after compilers
         Target::init();
+
+        if (ts["export-if-static"] == "true")
+        {
+            throw SW_RUNTIME_ERROR("yes!");
+            ExportIfStatic = true;
+            ts["export-if-static"].use();
+        }
 
         addPackageDefinitions();
 
@@ -1757,7 +1764,7 @@ DependenciesType NativeCompiledTarget::gatherDependencies() const
             TargetDependency td;
             td.dep = d;
             td.inhtype = i;
-            td.dep->settings = ts;
+            td.dep->settings.merge(ts);
             deps.push_back(td);
         }
     });
@@ -1784,7 +1791,7 @@ NativeCompiledTarget::ActiveDeps &NativeCompiledTarget::getActiveDependencies()
                     TargetDependency td;
                     td.dep = d;
                     td.inhtype = i;
-                    td.dep->settings = ts;
+                    td.dep->settings.merge(ts);
                     deps.push_back(td);
                 }
             });
@@ -3126,7 +3133,7 @@ void NativeCompiledTarget::setChecks(const String &name, bool check_definitions)
 
     auto &checks_set = getChecks(name);
     checks_set.t = this;
-    checks_set.performChecks(getTargetSettings());
+    checks_set.performChecks(getSettings());
 
     // set results
     for (auto &[k, c] : checks_set.check_values)
@@ -3793,10 +3800,15 @@ bool ExecutableTarget::init()
 
         if (getSelectedTool())
         {
-            if (auto c = getSelectedTool()->as<VisualStudioLinker *>())
+            if (auto c = getSelectedTool()->as<VisualStudioLinker*>())
             {
                 c->ImportLibrary.output_dependency = false; // become optional
                 c->ImportLibrary.create_directory = true; // but create always
+            }
+            else if (auto L = Linker->as<GNULinker*>())
+            {
+                L->PositionIndependentCode = false;
+                L->SharedObject = false;
             }
         }
     }

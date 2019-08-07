@@ -1014,7 +1014,9 @@ void detectNonWindowsCompilers(DETECT_ARGS)
 
     resolve_and_add("ar", "org.gnu.binutils.ar");
     resolve_and_add("as", "org.gnu.gcc.as");
-    resolve_and_add("ld", "org.gnu.gcc.ld");
+    //resolve_and_add("ld", "org.gnu.gcc.ld");
+    //resolve_and_add("gcc", "org.gnu.gcc.ld"); // link using gcc
+    resolve_and_add("g++", "org.gnu.gcc.ld"); // link using g++
 
     resolve_and_add("gcc", "org.gnu.gcc");
     resolve_and_add("g++", "org.gnu.gpp");

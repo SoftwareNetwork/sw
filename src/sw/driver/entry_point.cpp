@@ -358,7 +358,7 @@ decltype(auto) PrepareConfigEntryPoint::commonActions(Build &b, const Files &fil
     for (auto &fn : files)
     {
         lib += fn;
-        lib[fn].args.push_back("-DgetSettings=getBuildSettings");
+        //lib[fn].args.push_back("-DgetSettings=getBuildSettings");
     }
 
     //

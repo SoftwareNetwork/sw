@@ -257,6 +257,29 @@ void TargetSetting::reset()
     value.swap(v);
 }
 
+void TargetSetting::use()
+{
+    if (use_count > 0)
+        use_count--;
+    if (use_count == 0)
+        reset();
+}
+
+void TargetSetting::setUseCount(int c)
+{
+    use_count = c;
+}
+
+void TargetSetting::setRequired(bool b)
+{
+    required = b;
+}
+
+bool TargetSetting::isRequired() const
+{
+    return required;
+}
+
 TargetSetting::operator bool() const
 {
     return value.index() != 0;
@@ -362,8 +385,30 @@ int TargetSettings::compareEqualKeys(const TargetSettings &lhs, const TargetSett
     const auto &other = lhs.settings.size() >= rhs.settings.size() ? lhs : rhs;
     bool r = std::all_of(main.settings.begin(), main.settings.end(), [&other](const auto &p)
     {
-        if (other[p.first] && p.second)
+        if (
+            // compare if both is present
+            (other[p.first] && p.second)
+
+            // or one is present and required
+            || (other[p.first] && other[p.first].isRequired())
+            || (p.second && p.second.isRequired())
+            )
+        {
             return TargetSetting::compareEqualKeys(other[p.first], p.second) == 0;
+        }
+        return true;
+    });
+    // check required settings in other
+    r &= std::all_of(other.settings.begin(), other.settings.end(), [&main](const auto &p)
+    {
+        if (
+            // compare if any is required
+            (p.second && p.second.isRequired()) ||
+            (main[p.first] && main[p.first].isRequired())
+            )
+        {
+            return TargetSetting::compareEqualKeys(main[p.first], p.second) == 0;
+        }
         return true;
     });
     if (r)

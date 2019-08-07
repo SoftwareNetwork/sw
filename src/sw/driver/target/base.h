@@ -7,12 +7,12 @@
 #pragma once
 
 #include "enums.h"
-#include "sw/driver/build_settings.h"
-#include "sw/driver/program_storage.h"
-#include "sw/driver/license.h"
-#include "sw/driver/dependency.h"
-#include "sw/driver/types.h"
-#include "sw/driver/source_file.h"
+#include "../build_settings.h"
+#include "../program_storage.h"
+#include "../license.h"
+#include "../dependency.h"
+#include "../types.h"
+#include "../source_file.h"
 
 #include <sw/builder/node.h>
 #include <sw/builder/os.h>
@@ -305,6 +305,9 @@ public:
     const TargetSettings &getSettings() const override;
     const TargetSettings &getInterfaceSettings() const override;
 
+    const TargetSettings &getTargetSettings() const { return getSettings(); }
+    const BuildSettings &getBuildSettings() const;
+
     //
     Commands getCommands() const;
     UnresolvedDependenciesType gatherUnresolvedDependencies() const;
@@ -326,12 +329,6 @@ public:
     path getTempDir() const;
 
     void setRootDirectory(const path &);
-
-    // driver settings
-    const BuildSettings &getBuildSettings() const;
-    // general settings
-    TargetSettings &getTargetSettings() { return ts; }
-    const TargetSettings &getTargetSettings() const { return ts; }
 
     // main apis
     virtual bool init(); // multipass init

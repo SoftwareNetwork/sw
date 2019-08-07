@@ -704,7 +704,7 @@ Build Check::setupSolution(SwBuild &b, const path &f) const
 
 TargetSettings Check::getSettings() const
 {
-    auto ss = check_set->t->getTargetSettings();
+    auto ss = check_set->t->getSettings();
 
     // some checks may fail in msvc release (functions become intrinsics (mem*) etc.)
     if (check_set->t->getCompilerType() == CompilerType::MSVC ||

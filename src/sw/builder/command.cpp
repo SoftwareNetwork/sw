@@ -752,7 +752,9 @@ path Command::writeCommand(const path &p) const
     }
     else
     {
-        static const String bat_next_line = "^\n    ";
+        static const String next_line_space = "    ";
+        static const String next_line = "\n" + next_line_space;
+        static const String bat_next_line = "^" + next_line;
 
         auto print_args = [&bat, &t](const auto &args)
         {
@@ -769,16 +771,14 @@ path Command::writeCommand(const path &p) const
                 }
                 t += "\"" + a2 + "\" ";
                 if (bat)
-                    t += bat_next_line;
+                    t += "^";
                 else
-                    t += "\\\n\t";
+                    t += "\\";
+                t += next_line;
             }
             if (!args.empty())
             {
-                if (bat)
-                    t.resize(t.size() - bat_next_line.size());
-                else
-                    t.resize(t.size() - 3);
+                t.resize(t.size() - 1 - next_line.size());
             }
         };
 

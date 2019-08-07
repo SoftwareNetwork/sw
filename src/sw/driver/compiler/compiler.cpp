@@ -763,8 +763,8 @@ void GNULinker::prepareCommand1(const Target &t)
             origin_dirs.push_back(d);
 
         // remove later?
-        cmd->arguments.push_back("-rpath");
-        cmd->arguments.push_back("./");
+        //cmd->arguments.push_back("-rpath");
+        //cmd->arguments.push_back("./");
     }
 
     //cmd->out.capture = true;
