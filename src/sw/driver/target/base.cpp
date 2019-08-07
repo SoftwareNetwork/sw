@@ -137,6 +137,7 @@ TargetBase &TargetBase::addTarget2(bool add, const TargetBaseTypePtr &t, const P
     //t->ts = &tid;
     t->ts = getSolution().getSettings();
     t->bs = t->ts;
+    t->ts_export = t->ts;
 
     // set some general settings, then init, then register
     setupTarget(t.get());

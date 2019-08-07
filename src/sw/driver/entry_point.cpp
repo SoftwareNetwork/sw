@@ -375,7 +375,7 @@ decltype(auto) PrepareConfigEntryPoint::commonActions(Build &b, const Files &fil
 
 void PrepareConfigEntryPoint::commonActions2(Build &b, SharedLibraryTarget &lib) const
 {
-    lib += "SW_CPP_DRIVER_API_VERSION=1"_def;
+    //lib += "SW_CPP_DRIVER_API_VERSION=1"_def;
 
     if (lib.getBuildSettings().TargetOS.is(OSType::Windows))
     {

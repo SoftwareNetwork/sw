@@ -417,6 +417,7 @@ void NativeCompiledTarget::findCompiler()
                 cmd->push_back("-dynamic-linker"); // needed
                 cmd->push_back("/lib64/ld-linux-x86-64.so.2"); // needed
             }
+            cmd->push_back("-export-dynamic"); // needed for shared symbols
             cmd->first_response_file_argument = 2;
             //cmd->push_back("-target");
             //cmd->push_back(getBuildSettings().getTargetTriplet());
@@ -491,11 +492,10 @@ bool NativeCompiledTarget::init()
         // after compilers
         Target::init();
 
-        if (ts["export-if-static"] == "true")
+        if (ts_export["export-if-static"] == "true")
         {
-            throw SW_RUNTIME_ERROR("yes!");
             ExportIfStatic = true;
-            ts["export-if-static"].use();
+            ts_export["export-if-static"].use();
         }
 
         addPackageDefinitions();
@@ -1764,7 +1764,9 @@ DependenciesType NativeCompiledTarget::gatherDependencies() const
             TargetDependency td;
             td.dep = d;
             td.inhtype = i;
-            td.dep->settings.merge(ts);
+            auto s = td.dep->settings;
+            td.dep->settings.merge(ts_export);
+            td.dep->settings.merge(s);
             deps.push_back(td);
         }
     });
@@ -1791,7 +1793,9 @@ NativeCompiledTarget::ActiveDeps &NativeCompiledTarget::getActiveDependencies()
                     TargetDependency td;
                     td.dep = d;
                     td.inhtype = i;
-                    td.dep->settings.merge(ts);
+                    auto s = td.dep->settings;
+                    td.dep->settings.merge(ts_export);
+                    td.dep->settings.merge(s);
                     deps.push_back(td);
                 }
             });

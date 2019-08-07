@@ -261,6 +261,7 @@ struct SW_DRIVER_CPP_API Target : ITarget, TargetBase, ProgramStorage,
 
     const TargetSettings *ts = nullptr;*/
     TargetSettings ts;
+    TargetSettings ts_export;
     BuildSettings bs;
 
     // Data storage for objects that must be alive with the target.

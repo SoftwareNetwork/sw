@@ -19,6 +19,9 @@
 // support stuff
 #include <boost/algorithm/string.hpp>
 
+// some macros
+#define SW_CPP_DRIVER_API_VERSION 1
+
 // precise usings and namespaces
 
 // namespaces

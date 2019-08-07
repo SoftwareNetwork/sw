@@ -526,7 +526,7 @@ void NativeLinkerOptions::add(const DependencyPtr &t)
     deps.push_back(t);
 
     if (auto t2 = dynamic_cast<Target *>(this))
-        t->settings.merge(t2->getSettings());
+        t->settings.merge(t2->ts_export);
 }
 
 void NativeLinkerOptions::remove(const DependencyPtr &t)
@@ -541,7 +541,7 @@ void NativeLinkerOptions::remove(const DependencyPtr &t)
     deps.push_back(t);
 
     if (auto t2 = dynamic_cast<Target *>(this))
-        t->settings.merge(t2->getSettings());
+        t->settings.merge(t2->ts_export);
 }
 
 void NativeLinkerOptions::add(const UnresolvedPackage &t)

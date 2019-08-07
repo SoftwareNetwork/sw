@@ -93,8 +93,8 @@ void build(Solution &s)
             "org.sw.demo.rbock.sqlpp11_connector_sqlite3-develop"_dep
             ;
 #ifdef SW_CPP_DRIVER_API_VERSION
-        srcdep->getSettings()["export-if-static"] = "true";
-        srcdep->getSettings()["export-if-static"].setRequired();
+        //srcdep->getSettings()["export-if-static"] = "true";
+        //srcdep->getSettings()["export-if-static"].setRequired();
 #endif
 
         manager.Public -= "pub.egorpugin.primitives.win32helpers-master"_dep;
