@@ -143,6 +143,7 @@ struct SW_BUILDER_API Command : Node, std::enable_shared_from_this<Command>,
     using Clock = std::chrono::high_resolution_clock;
 
     const SwBuilderContext &swctx;
+    const SwBuilderContext &getContext() const { return swctx; }
 
     String name;
     String name_short;

@@ -253,6 +253,7 @@ struct SW_DRIVER_CPP_API Target : TargetBase, ProgramStorage, std::enable_shared
     void setRootDirectory(const path &);
 
     const BuildSettings &getSettings() const;
+    const BuildSettings &getBuildSettings() const { return getSettings(); }
 
     // main apis
     virtual bool init(); // multipass init,
