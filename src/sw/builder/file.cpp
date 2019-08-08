@@ -87,15 +87,6 @@ const FileData &File::getFileData() const
 
 void FileData::refresh(const path &file)
 {
-    /*if (refreshed >= FileData::RefreshType::NotChanged)
-        return;
-
-    std::unique_lock lk(m);
-
-    // double check
-    if (refreshed >= FileData::RefreshType::NotChanged)
-        return;*/
-
     FileData::RefreshType r = FileData::RefreshType::Unrefreshed;
     if (!refreshed.compare_exchange_strong(r, FileData::RefreshType::InProcess))
         return;

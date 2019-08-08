@@ -24,7 +24,15 @@ struct NativeCompiledTarget;
 namespace cmd
 {
 
-struct Prefix : String {};
+struct Prefix
+{
+    String v;
+
+    explicit Prefix(const String &s)
+        : v(s)
+    {
+    }
+};
 
 namespace detail
 {
@@ -68,7 +76,7 @@ struct tag_files_data
     void populate(tag_normalize_path) { normalize = true; }
     void populate(tag_do_not_add_to_targets) { add_to_targets = false; }
     void populate(tag_skip) { skip = true; }
-    void populate(const Prefix &p) { prefix = p; }
+    void populate(const Prefix &p) { prefix = p.v; }
 };
 
 struct tag_io_file : tag_path, tag_targets, tag_files_data

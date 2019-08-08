@@ -57,10 +57,12 @@ struct CommandLineOptionBaseValue {};
 namespace detail
 {
 
-struct StringOption : CommandLineOptionBaseValue, String
+struct StringOption : CommandLineOptionBaseValue
 {
+    String v;
+
     StringOption(const String &s)
-        : String(s)
+        : v(s)
     {
     }
 };
@@ -220,24 +222,11 @@ public:
         assign(v);
     }
 
-    /*template <class U>
-    CommandLineOption1(U &&v)
-    {
-        assign(v);
-    }*/
-
     CommandLineOption1 &operator=(const CommandLineOption1 &rhs)
     {
         assign(rhs);
         return *this;
     }
-
-    /*template <class U>
-    CommandLineOption1 &operator=(U &&rhs)
-    {
-        assign_value(rhs);
-        return *this;
-    }*/
 
     CommandLineOption1 &operator=(const T &rhs)
     {
@@ -252,7 +241,6 @@ public:
             if (function)
                 return (*function)((const CommandLineOption<T> &)*this, c);
             return getCommandLineImpl(c);
-            //return Strings{};
         }
         return Strings{};
     }
@@ -307,12 +295,12 @@ protected:
 
 private:
     //void init(const cl::Value<T> &v) { assign_value(v.v); }
-    void init(const cl::Name &v) { name = v; }
-    void init(const cl::Comment &v) { comment = v; }
-    void init(const cl::IDEName &v) { ide_name = v; }
-    //void init(const cl::Prefix &v) { prefix = v; }
+    void init(const cl::Name &v) { name = v.v; }
+    void init(const cl::Comment &v) { comment = v.v; }
+    void init(const cl::IDEName &v) { ide_name = v.v; }
+    //void init(const cl::Prefix &v) { prefix = v.v; }
     void init(const cl::CommandLineFunction<T> &v) { function = v.F; }
-    void init(const cl::CommandFlag &v) { cmd_flag = v; }
+    void init(const cl::CommandFlag &v) { cmd_flag = v.v; }
     void init(const cl::ConfigVariable &) { config_variable = true; }
     void init(const cl::CommandFlagBeforeEachValue &) { cmd_flag_before_each_value = true; }
     void init(const cl::InputDependency &) { input_dependency = true; }

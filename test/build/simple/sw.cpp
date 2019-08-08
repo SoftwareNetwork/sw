@@ -26,5 +26,6 @@ void build(Solution &s)
             e.DryRun = true;
         e.ApiName = "API";
         e += "dlopen.cpp";
+        e += "dl"_slib;
     }
 }

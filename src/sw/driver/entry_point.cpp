@@ -596,12 +596,12 @@ void PrepareConfigEntryPoint::one2one(Build &b, const path &fn) const
         }
         else if (auto c = sf->compiler->template as<ClangCompiler*>())
         {
-            //c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / getSw1Header());
+            c->ForcedIncludeFiles().push_back(getDriverIncludeDir(b, lib) / getSw1Header());
             c->ForcedIncludeFiles().push_back(getDriverIncludeDir(b, lib) / getSwCheckAbiVersionHeader());
         }
         else if (auto c = sf->compiler->template as<GNUCompiler*>())
         {
-            //c->ForcedIncludeFiles().push_back(getDriverIncludeDir(solution) / getSw1Header());
+            c->ForcedIncludeFiles().push_back(getDriverIncludeDir(b, lib) / getSw1Header());
             c->ForcedIncludeFiles().push_back(getDriverIncludeDir(b, lib) / getSwCheckAbiVersionHeader());
         }
     }

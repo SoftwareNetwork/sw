@@ -2898,12 +2898,10 @@ bool NativeCompiledTarget::prepareLibrary(LibraryType Type)
         {
             if (Type == LibraryType::Shared)
             {
-                //Definitions["CPPAN_SHARED_BUILD"];
                 Definitions["SW_SHARED_BUILD"];
             }
             else if (Type == LibraryType::Static)
             {
-                //Definitions["CPPAN_STATIC_BUILD"];
                 Definitions["SW_STATIC_BUILD"];
             }
         }

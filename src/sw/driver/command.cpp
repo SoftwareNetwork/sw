@@ -221,7 +221,8 @@ void GNUCommand::postProcess1(bool ok)
                 files.push_back(s);
             break;
         }
-        if (f[p2 - 1] != '\\')
+        // p2 may be 0
+        if (p2 && f[p2 - 1] != '\\')
         {
             auto s = f.substr(p, p2 - p);
             if (!s.empty())

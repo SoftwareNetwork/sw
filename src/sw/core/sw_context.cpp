@@ -82,8 +82,11 @@ void SwCoreContext::setHostPrograms()
             return true;
         };
 
-        if_add(ts["native"]["program"]["c"], "org.gnu.gcc");
-        if_add(ts["native"]["program"]["cpp"], "org.gnu.gpp");
+        //if_add(ts["native"]["program"]["c"], "org.gnu.gcc");
+        if_add(ts["native"]["program"]["c"], "org.LLVM.clang");
+        //if_add(ts["native"]["program"]["cpp"], "org.gnu.gpp");
+        if_add(ts["native"]["program"]["cpp"], "org.LLVM.clangpp");
+
         if_add(ts["native"]["program"]["asm"], "org.gnu.gcc.as");
         if_add(ts["native"]["program"]["lib"], "org.gnu.binutils.ar");
         if_add(ts["native"]["program"]["link"], "org.gnu.gcc.ld");
