@@ -137,7 +137,7 @@ bool Command::isOutdated() const
     }
     else
     {
-        *((int64_t*)&mtime) = r.first->mtime;
+        *((size_t*)&mtime) = r.first->mtime;
         ((Command*)(this))->implicit_inputs = r.first->implicit_inputs;
         return isTimeChanged();
     }
@@ -215,15 +215,6 @@ size_t Command::getHash1() const
 size_t Command::getHashAndSave() const
 {
     return hash = getHash();
-}
-
-void Command::updateCommandTime() const
-{
-    auto k = getHash();
-    auto c = mtime.time_since_epoch().count();
-    auto r = getCommandStorage(getContext(), command_storage == CS_LOCAL).insert(k);
-    r.first->mtime = c;
-    r.first->implicit_inputs = implicit_inputs;
 }
 
 void Command::clean() const
@@ -455,8 +446,6 @@ void Command::afterCommand()
     if (command_storage != CS_LOCAL && command_storage != CS_GLOBAL)
         return;
 
-    updateCommandTime();
-
     // probably below is wrong, async writes are queue to one thread (FIFO)
     // so, deps are written first, only then command goes
 
@@ -468,9 +457,9 @@ void Command::afterCommand()
 
     auto k = getHash();
     auto &cs = getContext().getCommandStorage();
-    auto &r = *getCommandStorage(getContext(), command_storage == CS_LOCAL).insert(k).first;
-    r.hash = getHash();
-    r.mtime = mtime.time_since_epoch().count();
+    auto &r = *cs.getStorage(command_storage == CS_LOCAL).insert(k).first;
+    r.hash = k;
+    r.mtime = *(size_t*)&mtime;
     r.implicit_inputs = implicit_inputs;
     cs.async_command_log(r, command_storage == CS_LOCAL);
 }

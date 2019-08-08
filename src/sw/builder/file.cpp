@@ -185,9 +185,4 @@ std::shared_ptr<builder::Command> File::getGenerator() const
     return data->generator.lock();
 }
 
-/*bool File::operator<(const File &r) const
-{
-    return data->last_write_time < r.data->last_write_time;
-}*/
-
 }

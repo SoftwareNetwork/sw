@@ -157,7 +157,7 @@ struct SW_BUILDER_API Command : ICastable, CommandNode, detail::ResolvableComman
     // additional create dirs
     Files output_dirs;
 
-    fs::file_time_type mtime;
+    fs::file_time_type mtime = fs::file_time_type::min();
     std::optional<bool> use_response_files;
     int first_response_file_argument = 0;
     bool remove_outputs_before_execution = false; // was true
@@ -219,7 +219,6 @@ struct SW_BUILDER_API Command : ICastable, CommandNode, detail::ResolvableComman
     path redirectStdout(const path &p, bool append = false);
     path redirectStderr(const path &p, bool append = false);
     size_t getHash() const;
-    void updateCommandTime() const;
     void addPathDirectory(const path &p);
     Files getGeneratedDirs() const; // used by generators
     void addInputOutputDeps();
