@@ -710,6 +710,8 @@ path Command::writeCommand(const path &p) const
         {
             if (bat)
                 t += "set ";
+            else
+                t += "export ";
             t += k + "=";
             if (!bat)
                 t += "\"";

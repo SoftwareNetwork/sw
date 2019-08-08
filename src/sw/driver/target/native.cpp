@@ -544,10 +544,20 @@ void NativeCompiledTarget::setupCommand(builder::Command &c) const
 
     if (standalone)
     {
-        for_deps([&c](auto nt)
+        if (getSolution().getHostOs().is(OSType::Windows))
         {
-            c.addPathDirectory(nt->getOutputFile().parent_path());
-        });
+            for_deps([&c](auto nt)
+            {
+                c.addPathDirectory(nt->getOutputFile().parent_path());
+            });
+        }
+        else
+        {
+            for_deps([&c](auto nt)
+            {
+                c.environment["LD_LIBRARY_PATH"] += normalize_path(nt->getOutputFile().parent_path()) + ":";
+            });
+        }
         return;
     }
 
