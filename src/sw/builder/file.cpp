@@ -98,7 +98,7 @@ void FileData::refresh(const path &file)
         if (s.type() != fs::file_type::not_found)
             LOG_TRACE(logger, "checking for non-regular file: " << file);
         // we skip non regular files at the moment
-        last_write_time = decltype(last_write_time)();
+        last_write_time = fs::file_time_type::min();
         changed = true;
     }
     else
@@ -124,7 +124,7 @@ bool File::isChanged() const
 std::optional<String> File::isChanged(const fs::file_time_type &in, bool throw_on_missing)
 {
     isChanged();
-    if (data->last_write_time.time_since_epoch().count() == 0)
+    if (data->last_write_time == fs::file_time_type::min())
         return "file is missing";
     if (data->last_write_time > in)
         return "file is newer";

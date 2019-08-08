@@ -36,7 +36,7 @@ struct FileData
         Changed,
     };
 
-    fs::file_time_type last_write_time;
+    fs::file_time_type last_write_time = fs::file_time_type::min();
     //int64_t size = -1;
     //String hash;
     //SomeFlags flags;

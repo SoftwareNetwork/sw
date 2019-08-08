@@ -440,8 +440,6 @@ void Command::afterCommand()
             auto e = "Output file was not created: " + normalize_path(i) + "\n" + getError();
             throw SW_RUNTIME_ERROR(makeErrorString(e));
         }
-        //if (fr.data->last_write_time < start_time)
-            //err
         mtime = std::max(mtime, fr.last_write_time);
     };
 
