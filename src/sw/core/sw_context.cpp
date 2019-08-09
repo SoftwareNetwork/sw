@@ -68,32 +68,39 @@ void SwCoreContext::setHostPrograms()
         else
             SW_UNIMPLEMENTED;
     }
-    else if (getHostOs().is(OSType::Linux))
+    // add more defaults
+    else
     {
+        // set default libs?
         /*ts["native"]["stdlib"]["c"] = "com.Microsoft.Windows.SDK.ucrt";
         ts["native"]["stdlib"]["cpp"] = "com.Microsoft.VisualStudio.VC.libcpp";
         ts["native"]["stdlib"]["kernel"] = "com.Microsoft.Windows.SDK.um";*/
 
-        auto if_add = [this](auto &s, const auto &name)
+        auto if_add = [this](auto &s, const String &name)
         {
-            if (getPredefinedTargets()[name].empty())
+            auto &pd = getPredefinedTargets();
+            auto i = pd.find(UnresolvedPackage(name));
+            if (i == pd.end() || i->second.empty())
                 return false;
             s = name;
             return true;
         };
 
         //if_add(ts["native"]["program"]["c"], "org.gnu.gcc");
-        if_add(ts["native"]["program"]["c"], "org.LLVM.clang");
+        if_add(ts["native"]["program"]["c"], "org.LLVM.clang"s);
         //if_add(ts["native"]["program"]["cpp"], "org.gnu.gpp");
-        if_add(ts["native"]["program"]["cpp"], "org.LLVM.clangpp");
+        if_add(ts["native"]["program"]["cpp"], "org.LLVM.clangpp"s);
 
-        if_add(ts["native"]["program"]["asm"], "org.gnu.gcc.as");
-        if_add(ts["native"]["program"]["lib"], "org.gnu.binutils.ar");
-        if_add(ts["native"]["program"]["link"], "org.gnu.gcc.ld");
+        // using c prog
+        if_add(ts["native"]["program"]["asm"], ts["native"]["program"]["c"].getValue());
+
+        // reconsider, also with driver
+        if_add(ts["native"]["program"]["lib"], "org.gnu.binutils.ar"s);
+
+        // use driver
+        // use cpp driver for the moment to not burden ourselves in adding stdlib
+        if_add(ts["native"]["program"]["link"], ts["native"]["program"]["cpp"].getValue());
     }
-    // add more defaults
-    else
-        SW_UNIMPLEMENTED;
 }
 
 TargetData &SwCoreContext::getTargetData(const PackageId &pkg)

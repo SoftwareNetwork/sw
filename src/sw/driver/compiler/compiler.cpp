@@ -43,20 +43,6 @@ static void add_args(driver::Command &c, const Strings &args)
         c.arguments.push_back(a);
 }
 
-/*bool NativeToolchain::operator<(const NativeToolchain &rhs) const
-{
-    SW_UNIMPLEMENTED;
-    //return std::tie(LibrariesType, ConfigurationType, MT, SDK) <
-        //std::tie(rhs.LibrariesType, rhs.ConfigurationType, rhs.MT, rhs.SDK);
-}
-
-bool NativeToolchain::operator==(const NativeToolchain &rhs) const
-{
-    SW_UNIMPLEMENTED;
-    //return std::tie(LibrariesType, ConfigurationType, MT, SDK) ==
-        //std::tie(rhs.LibrariesType, rhs.ConfigurationType, rhs.MT, rhs.SDK);
-}*/
-
 CompilerBaseProgram::CompilerBaseProgram(const CompilerBaseProgram &rhs)
     : FileToFileTransformProgram(rhs)
 {
@@ -81,13 +67,6 @@ std::shared_ptr<builder::Command> CompilerBaseProgram::createCommand(const SwBui
         return cmd;
     return cmd = createCommand1(swctx);
 }
-
-/*std::shared_ptr<builder::Command> CompilerBaseProgram::createCommand(const std::shared_ptr<builder::Command> &c)
-{
-    if (cmd)
-        throw SW_RUNTIME_ERROR("Command already created");
-    return cmd = c;
-}*/
 
 std::shared_ptr<builder::Command> CompilerBaseProgram::getCommand(const Target &t)
 {

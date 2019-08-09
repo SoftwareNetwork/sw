@@ -243,7 +243,7 @@ void build(Solution &s)
 
             // needed to export all shared symbols
             // so dlopen will work for plugins
-            client.LinkOptions.push_back("-export-dynamic");
+            client.LinkOptions.push_back("-Wl,-export-dynamic");
         }
 
         {

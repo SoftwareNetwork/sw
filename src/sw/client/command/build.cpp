@@ -113,13 +113,13 @@ static sw::TargetSettings compilerTypeFromStringCaseI(const sw::UnresolvedPackag
     {
         ts["native"]["program"]["c"] = set_with_version("org.gnu.gcc");
         ts["native"]["program"]["cpp"] = set_with_version("org.gnu.gpp");
-        ts["native"]["program"]["asm"] = set_with_version("org.gnu.gcc.as");
+        ts["native"]["program"]["asm"] = set_with_version(ts["native"]["program"]["c"].getValue());
     }
     else if (compiler.ppath == "clang")
     {
         ts["native"]["program"]["c"] = set_with_version("org.LLVM.clang");
         ts["native"]["program"]["cpp"] = set_with_version("org.LLVM.clangpp");
-        ts["native"]["program"]["asm"] = set_with_version("org.LLVM.clang"); // llvm-as?
+        ts["native"]["program"]["asm"] = set_with_version(ts["native"]["program"]["c"].getValue());
     }
     // clang-cl is not possible for package path
     else if (compiler.ppath == "clangcl"/* || compiler.ppath == "clang-cl"*/)

@@ -330,7 +330,7 @@ struct SW_DRIVER_CPP_API Linker : CompilerBaseProgram
 };
 
 struct SW_DRIVER_CPP_API NativeLinker : Linker,
-    NativeLinkerOptions//, OptionsGroup<NativeLinkerOptions>
+    NativeLinkerOptions
 {
     LinkerType Type = LinkerType::UnspecifiedLinker;
 
@@ -408,6 +408,8 @@ protected:
     virtual void getAdditionalOptions(driver::Command *c) const = 0;
 };
 
+// we invoke linker via driver (gcc/clang)
+// so linker options are prefixed with -Wl,
 struct SW_DRIVER_CPP_API GNULinker : GNULibraryTool,
     CommandLineOptions<GNULinkerOptions>
 {

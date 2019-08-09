@@ -966,7 +966,7 @@ void detectWindowsClang(DETECT_ARGS)
             auto &c = addProgram(s, PackageId("org.LLVM.clang", v), p);
         }
         auto c = p->getCommand();
-        c->push_back("-Wno-everything");
+        //c->push_back("-Wno-everything");
         // is it able to find VC STL itself?
         //COpts2.System.IncludeDirectories.insert(base_llvm_path / "lib" / "clang" / C->getVersion().toString() / "include");
     }
@@ -987,7 +987,7 @@ void detectWindowsClang(DETECT_ARGS)
             auto &c = addProgram(s, PackageId("org.LLVM.clangpp", v), p);
         }
         auto c = p->getCommand();
-        c->push_back("-Wno-everything");
+        //c->push_back("-Wno-everything");
         // is it able to find VC STL itself?
         //COpts2.System.IncludeDirectories.insert(base_llvm_path / "lib" / "clang" / C->getVersion().toString() / "include");
     }
@@ -1013,8 +1013,8 @@ void detectNonWindowsCompilers(DETECT_ARGS)
     };
 
     resolve_and_add("ar", "org.gnu.binutils.ar");
-    resolve_and_add("as", "org.gnu.gcc.as");
-    resolve_and_add("ld", "org.gnu.gcc.ld");
+    //resolve_and_add("as", "org.gnu.gcc.as"); // not needed
+    //resolve_and_add("ld", "org.gnu.gcc.ld"); // not needed
 
     resolve_and_add("gcc", "org.gnu.gcc");
     resolve_and_add("g++", "org.gnu.gpp");
@@ -1026,8 +1026,8 @@ void detectNonWindowsCompilers(DETECT_ARGS)
     }
 
     // llvm/clang
-    resolve_and_add("llvm-ar", "org.LLVM.ar");
-    resolve_and_add("lld", "org.LLVM.ld");
+    //resolve_and_add("llvm-ar", "org.LLVM.ar"); // not needed
+    //resolve_and_add("lld", "org.LLVM.ld"); // not needed
 
     resolve_and_add("clang", "org.LLVM.clang");
     resolve_and_add("clang++", "org.LLVM.clangpp");

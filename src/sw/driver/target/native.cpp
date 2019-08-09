@@ -318,6 +318,149 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
     set_compiler_type(c);
 }
 
+std::shared_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetSetting &s)
+{
+    bool extended_desc = s.isObject();
+
+    UnresolvedPackage id;
+    if (extended_desc)
+        id = s["command"]["program"].getValue();
+    else
+        id = s.getValue();
+
+    return activateLinker(s, id, extended_desc);
+}
+
+std::shared_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetSetting &s, const UnresolvedPackage &id, bool extended_desc)
+{
+    auto &cld = getSolution().getChildren();
+
+    auto i = cld.find(id, getSettings());
+    if (!i)
+        return {};
+    auto t = i->as<PredefinedProgram*>();
+    if (!t)
+        return {};
+
+    std::shared_ptr<NativeLinker> c;
+
+    bool created = false;
+    auto create_command = [this, &created, &t, &c, &s, &extended_desc]()
+    {
+        if (created)
+            return;
+        (Program&)*c = t->getProgram();
+        auto C = c->createCommand(getSolution().getContext());
+        (primitives::Command&)*C = *t->getProgram().getCommand();
+        created = true;
+
+        if (extended_desc && s["command"])
+        {
+            if (s["command"]["arguments"])
+            {
+                for (auto &a : s["command"]["arguments"].getArray())
+                    C->push_back(a);
+            }
+        }
+    };
+
+    if (id.ppath == "com.Microsoft.VisualStudio.VC.lib")
+    {
+        c = std::make_shared<VisualStudioLibrarian>(getSolution().getContext());
+        c->Type = LinkerType::MSVC;
+    }
+    else if (id.ppath == "com.Microsoft.VisualStudio.VC.link")
+    {
+        c = std::make_shared<VisualStudioLinker>(getSolution().getContext());
+        c->Type = LinkerType::MSVC;
+    }
+    else if (id.ppath == "org.gnu.binutils.ar" || id.ppath == "org.LLVM.ar")
+    {
+        auto C = std::make_shared<GNULibrarian>(getSolution().getContext());
+        c = C;
+        c->Type = LinkerType::GNU;
+        C->Prefix = getBuildSettings().TargetOS.getLibraryPrefix();
+    }
+    else if (id.ppath == "org.gnu.gcc" || id.ppath == "org.LLVM.clang")
+    {
+        auto C = std::make_shared<GNULinker>(getSolution().getContext());
+        c = C;
+        // actually it is depends on -fuse-ld option
+        // do we need it at all?
+        // probably yes, because user might provide different commands to ld and lld
+        // is it true?
+        c->Type = LinkerType::GNU;
+        C->Prefix = getBuildSettings().TargetOS.getLibraryPrefix();
+        if (id.ppath == "org.LLVM.clang")
+        {
+            create_command();
+            auto cmd = c->createCommand(getSolution().getContext());
+            cmd->push_back("-target");
+            cmd->push_back(getBuildSettings().getTargetTriplet());
+        }
+        // TODO: find -fuse-ld option and set c->Type accordingly
+    }
+    else if (id.ppath == "org.gnu.gcc.ld")
+    {
+        SW_UNIMPLEMENTED;
+
+        auto C = std::make_shared<GNULinker>(getSolution().getContext());
+        c = C;
+        c->Type = LinkerType::GNU;
+        C->Prefix = getBuildSettings().TargetOS.getLibraryPrefix();
+    }
+    else if (id.ppath == "org.LLVM.lld")
+    {
+        SW_UNIMPLEMENTED;
+
+        auto C = std::make_shared<GNULinker>(getSolution().getContext());
+        c = C;
+        c->Type = LinkerType::GNU;
+        C->Prefix = getBuildSettings().TargetOS.getLibraryPrefix();
+
+        create_command();
+
+        auto cmd = c->createCommand(getSolution().getContext());
+        //cmd->push_back("-fuse-ld=lld");
+        cmd->push_back("-flavor");
+        cmd->push_back("ld"); // for linux, TODO: add checks
+        cmd->push_back("-eh-frame-hdr"); // needed
+        if (getBuildSettings().TargetOS.is(OSType::Linux))
+        {
+            cmd->push_back("-dynamic-linker"); // needed
+            cmd->push_back("/lib64/ld-linux-x86-64.so.2"); // needed
+        }
+        cmd->first_response_file_argument = 2;
+        //cmd->push_back("-target");
+        //cmd->push_back(getBuildSettings().getTargetTriplet());
+    }
+
+    create_command();
+
+    if (auto L = c->as<VisualStudioLibraryTool *>())
+    {
+        switch (getBuildSettings().TargetOS.Arch)
+        {
+        case ArchType::x86_64:
+            L->Machine = vs::MachineType::X64;
+            break;
+        case ArchType::x86:
+            L->Machine = vs::MachineType::X86;
+            break;
+        case ArchType::arm:
+            L->Machine = vs::MachineType::ARM;
+            break;
+        case ArchType::aarch64:
+            L->Machine = vs::MachineType::ARM64;
+            break;
+        default:
+            SW_UNIMPLEMENTED;
+        }
+    }
+
+    return c;
+}
+
 void NativeCompiledTarget::findCompiler()
 {
     activateCompiler(ts["native"]["program"]["cpp"], getCppSourceFileExtensions());
@@ -326,12 +469,16 @@ void NativeCompiledTarget::findCompiler()
     if (ct == CompilerType::UnspecifiedCompiler)
         throw SW_RUNTIME_ERROR("Unknown compiler: " + ts.toString());
 
-    activateCompiler(ts["native"]["program"]["asm"], { ".asm" });
-
     if (getBuildSettings().TargetOS.is(OSType::Windows))
     {
+        activateCompiler(ts["native"]["program"]["asm"], { ".asm" });
+
         // actually a missing setting
         activateCompiler(ts["native"]["program"]["rc"], "com.Microsoft.Windows.rc"s, { ".rc" }, false);
+    }
+    else
+    {
+        activateCompiler(ts["native"]["program"]["asm"], { ".s", ".S", ".sx" });
     }
 
     if (getBuildSettings().TargetOS.Type != OSType::Macos)
@@ -340,114 +487,9 @@ void NativeCompiledTarget::findCompiler()
         removeExtension(".mm");
     }
 
-    // lib/link
-    auto activate_lib_link_or_throw = [this](const UnresolvedPackage &p) -> std::shared_ptr<NativeLinker>
-    {
-        auto &cld = getSolution().getChildren();
-
-        auto i = cld.find(p, getSettings());
-        if (!i)
-            return nullptr;
-        auto t = i->as<PredefinedProgram*>();
-        if (!t)
-            return nullptr;
-
-        std::shared_ptr<NativeLinker> c;
-
-        bool created = false;
-        auto create_command = [this, &created, &t, &c]()
-        {
-            if (created)
-                return;
-            (Program&)*c = t->getProgram();
-            (primitives::Command&)*c->createCommand(getSolution().getContext()) = *t->getProgram().getCommand();
-            created = true;
-        };
-
-        if (p.ppath == "com.Microsoft.VisualStudio.VC.lib")
-        {
-            c = std::make_shared<VisualStudioLibrarian>(getSolution().getContext());
-            c->Type = LinkerType::MSVC;
-        }
-        else if (p.ppath == "com.Microsoft.VisualStudio.VC.link")
-        {
-            c = std::make_shared<VisualStudioLinker>(getSolution().getContext());
-            c->Type = LinkerType::MSVC;
-        }
-        else if (p.ppath == "org.gnu.binutils.ar")
-        {
-            auto C = std::make_shared<GNULibrarian>(getSolution().getContext());
-            c = C;
-            c->Type = LinkerType::GNU;
-            C->Prefix = getBuildSettings().TargetOS.getLibraryPrefix();
-        }
-        else if (p.ppath == "org.gnu.gcc.ld")
-        {
-            auto C = std::make_shared<GNULinker>(getSolution().getContext());
-            c = C;
-            c->Type = LinkerType::GNU;
-            C->Prefix = getBuildSettings().TargetOS.getLibraryPrefix();
-        }
-        else if (p.ppath == "org.LLVM.ar")
-        {
-            auto C = std::make_shared<GNULibrarian>(getSolution().getContext());
-            c = C;
-            c->Type = LinkerType::GNU;
-            C->Prefix = getBuildSettings().TargetOS.getLibraryPrefix();
-        }
-        else if (p.ppath == "org.LLVM.lld")
-        {
-            auto C = std::make_shared<GNULinker>(getSolution().getContext());
-            c = C;
-            c->Type = LinkerType::GNU;
-            C->Prefix = getBuildSettings().TargetOS.getLibraryPrefix();
-
-            create_command();
-
-            auto cmd = c->createCommand(getSolution().getContext());
-            //cmd->push_back("-fuse-ld=lld");
-            cmd->push_back("-flavor");
-            cmd->push_back("ld"); // for linux, TODO: add checks
-            cmd->push_back("-eh-frame-hdr"); // needed
-            if (getBuildSettings().TargetOS.is(OSType::Linux))
-            {
-                cmd->push_back("-dynamic-linker"); // needed
-                cmd->push_back("/lib64/ld-linux-x86-64.so.2"); // needed
-            }
-            cmd->first_response_file_argument = 2;
-            //cmd->push_back("-target");
-            //cmd->push_back(getBuildSettings().getTargetTriplet());
-        }
-
-        create_command();
-
-        if (auto L = c->as<VisualStudioLibraryTool *>())
-        {
-            switch (getBuildSettings().TargetOS.Arch)
-            {
-            case ArchType::x86_64:
-                L->Machine = vs::MachineType::X64;
-                break;
-            case ArchType::x86:
-                L->Machine = vs::MachineType::X86;
-                break;
-            case ArchType::arm:
-                L->Machine = vs::MachineType::ARM;
-                break;
-            case ArchType::aarch64:
-                L->Machine = vs::MachineType::ARM64;
-                break;
-            default:
-                SW_UNIMPLEMENTED;
-            }
-        }
-
-        return c;
-    };
-
-    if (!(Librarian = activate_lib_link_or_throw(ts["native"]["program"]["lib"].getValue())))
+    if (!(Librarian = activateLinker(ts["native"]["program"]["lib"])))
         throw SW_RUNTIME_ERROR("Try to add more librarians");
-    if (!(Linker = activate_lib_link_or_throw(ts["native"]["program"]["link"].getValue())))
+    if (!(Linker = activateLinker(ts["native"]["program"]["link"])))
         throw SW_RUNTIME_ERROR("Try to add more linkers");
 
     Librarian->Extension = getBuildSettings().TargetOS.getStaticLibraryExtension();
@@ -540,20 +582,15 @@ void NativeCompiledTarget::setupCommand(builder::Command &c) const
 
     if (standalone)
     {
-        if (getSolution().getHostOs().is(OSType::Windows))
+        for_deps([this, &c](auto nt)
         {
-            for_deps([&c](auto nt)
-            {
+            if (getSolution().getHostOs().is(OSType::Windows))
                 c.addPathDirectory(nt->getOutputFile().parent_path());
-            });
-        }
-        else
-        {
-            for_deps([&c](auto nt)
-            {
+            else if (getSolution().getHostOs().is(OSType::Macos))
+                c.environment["DYLD_LIBRARY_PATH"] += normalize_path(nt->getOutputFile().parent_path()) + ":";
+            else // linux and others
                 c.environment["LD_LIBRARY_PATH"] += normalize_path(nt->getOutputFile().parent_path()) + ":";
-            });
-        }
+        });
         return;
     }
 
@@ -1632,6 +1669,7 @@ void NativeCompiledTarget::autoDetectSources()
 
         static const std::set<String> other_source_file_extensions{
             ".s",
+            ".sx",
             ".S",
             ".asm",
             ".ipp",

@@ -900,6 +900,16 @@ types:
             - ifiles
 
         flags:
+            nostdlib:
+                name: nostdlib
+                flag: nostdlib
+                type: bool
+
+            nostartfiles:
+                name: nostartfiles
+                flag: nostartfiles
+                type: bool
+
             startfiles:
                 name: StartFiles
                 type: FilesOrdered
@@ -916,13 +926,13 @@ types:
 
             sg:
                 name: StartGroup
-                flag: start-group
+                flag: Wl,-start-group
                 type: bool
                 order: 50
 
             eg:
                 name: EndGroup
-                flag: end-group
+                flag: Wl,-end-group
                 type: bool
                 order: 70
 
@@ -969,7 +979,8 @@ types:
 
             undef:
                 name: Undefined
-                flag: undefined
+                # gcc use only -u, not -undefined
+                flag: u #undefined
                 type: String
 
     # ar

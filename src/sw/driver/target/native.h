@@ -103,6 +103,13 @@ public:
     String BazelTargetFunction;
     String BazelTargetName;
 
+    // autodetected option (if not provided)
+    // if any c++ files are present
+    // if true, stdlib will be added
+    //std::optional<bool> Cpp;
+    //std::optional<bool> AddCPPLibrary;
+    // enum CppLibrary {libstdc++/libc++}
+
     CLanguageStandard CVersion = CLanguageStandard::Unspecified;
     bool CExtensions = false;
     CPPLanguageStandard CPPVersion = CPPLanguageStandard::Unspecified;
@@ -231,6 +238,8 @@ private:
     void findCompiler();
     void activateCompiler(const TargetSetting &s, const StringSet &exts);
     void activateCompiler(const TargetSetting &s, const UnresolvedPackage &id, const StringSet &exts, bool extended_desc);
+    std::shared_ptr<NativeLinker> activateLinker(const TargetSetting &s);
+    std::shared_ptr<NativeLinker> activateLinker(const TargetSetting &s, const UnresolvedPackage &id, bool extended_desc);
 };
 
 /**
