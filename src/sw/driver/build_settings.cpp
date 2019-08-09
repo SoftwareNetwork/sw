@@ -33,6 +33,7 @@ static OS fromTargetSettings(const TargetSettings &ts)
         if (0);
         IF_SETTING("com.Microsoft.Windows.NT", os.Type, OSType::Windows);
         IF_SETTING("org.torvalds.linux", os.Type, OSType::Linux);
+        IF_SETTING("com.Apple.Macos", os.Type, OSType::Macos);
         else
             SW_UNIMPLEMENTED;
     IF_END
