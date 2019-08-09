@@ -16,13 +16,15 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "command/commands.h"
-#include "inserts.h"
+#include "commands.h"
+#include "../inserts.h"
 
 #include <primitives/emitter.h>
 #include <sw/core/sw_context.h>
 #include <sw/driver/build.h>
 #include <sw/driver/target/native.h>
+
+DEFINE_SUBCOMMAND(integrate, "Integrate sw into different tools.");
 
 static ::cl::opt<path> integrate_cmake_deps("cmake-deps", ::cl::sub(subcommand_integrate));
 static ::cl::opt<path> integrate_waf_deps("waf-deps", ::cl::sub(subcommand_integrate));

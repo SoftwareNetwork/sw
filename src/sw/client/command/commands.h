@@ -37,9 +37,7 @@ struct StorageWithPackagesDatabase;
 #include "commands.inl"
 #undef SUBCOMMAND
 
-#define SUBCOMMAND(n, d) extern ::cl::SubCommand subcommand_##n;
-#include "commands.inl"
-#undef SUBCOMMAND
+#define DEFINE_SUBCOMMAND(n, d) ::cl::SubCommand subcommand_##n(#n, d)
 
 std::unique_ptr<sw::SwContext> createSwContext();
 std::pair<sw::SourceDirMap, const sw::Input &> fetch(sw::SwBuild &);

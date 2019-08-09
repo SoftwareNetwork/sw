@@ -23,6 +23,8 @@
 
 #include <boost/algorithm/string.hpp>
 
+DEFINE_SUBCOMMAND(build, "Build files, dirs or packages");
+
 extern ::cl::opt<bool> build_after_fetch;
 
 static ::cl::list<String> build_arg(::cl::Positional, ::cl::desc("Files or directories to build (paths to config)"), ::cl::sub(subcommand_build));

@@ -22,6 +22,8 @@
 #include <sw/core/build.h>
 #include <sw/core/input.h>
 
+DEFINE_SUBCOMMAND(fetch, "Fetch sources.");
+
 ::cl::opt<bool> build_after_fetch("build", ::cl::desc("Build after fetch"), ::cl::sub(subcommand_fetch));
 
 SUBCOMMAND_DECL(fetch)

@@ -18,6 +18,8 @@
 
 #include "commands.h"
 
+DEFINE_SUBCOMMAND(test, "Run tests.");
+
 extern bool gWithTesting;
 
 static ::cl::list<String> build_arg_test(::cl::Positional, ::cl::desc("File or directory to use to generate projects"), ::cl::sub(subcommand_test));

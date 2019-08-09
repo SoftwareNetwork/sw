@@ -23,6 +23,8 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "remove");
 
+DEFINE_SUBCOMMAND(remove, "Remove package.");
+
 static ::cl::list<String> remove_arg(::cl::Positional, ::cl::desc("package to remove"), ::cl::sub(subcommand_remove));
 
 SUBCOMMAND_DECL(remove)

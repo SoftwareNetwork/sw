@@ -23,6 +23,8 @@
 #include <boost/algorithm/string.hpp>
 #include <primitives/emitter.h>
 
+DEFINE_SUBCOMMAND(create, "Create different projects.");
+
 static ::cl::opt<String> create_type(::cl::Positional, ::cl::desc("<type>"), ::cl::sub(subcommand_create), ::cl::Required);
 static ::cl::opt<String> create_proj_name(::cl::Positional, ::cl::desc("<project name>"), ::cl::sub(subcommand_create));
 

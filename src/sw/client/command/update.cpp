@@ -18,6 +18,8 @@
 
 #include "commands.h"
 
+DEFINE_SUBCOMMAND(update, "Update lock file.");
+
 //extern ::cl::opt<bool> dry_run;
 ::cl::opt<String> build_arg_update(::cl::Positional, ::cl::desc("Update lock"), ::cl::init("."), ::cl::sub(subcommand_update));
 

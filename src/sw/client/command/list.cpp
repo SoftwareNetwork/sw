@@ -24,6 +24,8 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "list");
 
+DEFINE_SUBCOMMAND(list, "List packages in database.");
+
 static ::cl::opt<String> list_arg(::cl::Positional, ::cl::desc("Package regex to list"), ::cl::init("."), ::cl::sub(subcommand_list));
 
 std::map<sw::PackagePath, sw::VersionSet> getMatchingPackages(const sw::StorageWithPackagesDatabase &s, const sw::UnresolvedPackage &u)

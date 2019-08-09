@@ -30,6 +30,8 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "command.open");
 
+DEFINE_SUBCOMMAND(open, "Open package directory.");
+
 static ::cl::opt<String> open_arg(::cl::Positional, ::cl::desc("package to open"), ::cl::sub(subcommand_open));
 
 SUBCOMMAND_DECL(open)

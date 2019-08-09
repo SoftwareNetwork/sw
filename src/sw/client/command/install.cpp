@@ -20,6 +20,8 @@
 
 #include <sw/manager/package.h>
 
+DEFINE_SUBCOMMAND(install, "Add package to lock.");
+
 static ::cl::opt<String> install_arg(::cl::Positional, ::cl::desc("Packages to add"), ::cl::sub(subcommand_install));
 static ::cl::list<String> install_args(::cl::ConsumeAfter, ::cl::desc("Packages to add"), ::cl::sub(subcommand_install));
 

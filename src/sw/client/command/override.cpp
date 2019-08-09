@@ -27,6 +27,8 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "override");
 
+DEFINE_SUBCOMMAND(override, "Override packages locally.");
+
 static ::cl::opt<String> prefix(::cl::Positional, ::cl::value_desc("prefix"), ::cl::sub(subcommand_override));
 static ::cl::opt<bool> list_overridden_packages("l", ::cl::desc("List overridden packages"), ::cl::sub(subcommand_override));
 static ::cl::opt<bool> delete_overridden_package("d", ::cl::desc("Delete overridden packages from index"), ::cl::sub(subcommand_override));

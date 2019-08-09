@@ -29,6 +29,8 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "upload");
 
+DEFINE_SUBCOMMAND(upload, "Upload packages.");
+
 extern ::cl::opt<String> build_arg_update;
 
 static ::cl::opt<String> upload_remote(::cl::Positional, ::cl::desc("Remote name"), ::cl::sub(subcommand_upload));

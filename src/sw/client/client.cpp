@@ -143,7 +143,7 @@ extern ::cl::opt<bool> useFileMonitor;
 
 static ::cl::opt<path> storage_dir_override("storage-dir");
 
-#define SUBCOMMAND(n, d) ::cl::SubCommand subcommand_##n(#n, d);
+#define SUBCOMMAND(n, d) extern ::cl::SubCommand subcommand_##n;
 #include "command/commands.inl"
 #undef SUBCOMMAND
 
@@ -380,8 +380,8 @@ int main(int argc, char **argv)
 
 // ide commands
 static ::cl::opt<String> target_build("target", ::cl::desc("Target to build")/*, ::cl::sub(subcommand_ide)*/);
-static ::cl::opt<String> ide_rebuild("rebuild", ::cl::desc("Rebuild target"), ::cl::sub(subcommand_ide));
-static ::cl::opt<String> ide_clean("clean", ::cl::desc("Clean target"), ::cl::sub(subcommand_ide));
+//static ::cl::opt<String> ide_rebuild("rebuild", ::cl::desc("Rebuild target"), ::cl::sub(subcommand_ide));
+//static ::cl::opt<String> ide_clean("clean", ::cl::desc("Clean target"), ::cl::sub(subcommand_ide));
 
 // uri commands
 extern bool gRunAppInContainer;
@@ -442,7 +442,7 @@ void setup_log(const std::string &log_level, bool simple)
     LOG_TRACE(logger, "Starting sw...");
 }
 
-SUBCOMMAND_DECL(mirror)
+/*SUBCOMMAND_DECL(mirror)
 {
     enum storage_file_type
     {
@@ -451,13 +451,11 @@ SUBCOMMAND_DECL(mirror)
         About,
         BuildArchive, // binary archive?
     };
-}
+}*/
 
-SUBCOMMAND_DECL(ide)
+/*SUBCOMMAND_DECL(ide)
 {
-    SW_UNIMPLEMENTED;
-
-    /*auto swctx = createSwContext();
+    auto swctx = createSwContext();
     if (!target_build.empty())
     {
         try_single_process_job(fs::current_path() / SW_BINARY_DIR / "ide", [&swctx]()
@@ -479,14 +477,14 @@ SUBCOMMAND_DECL(ide)
             b.ide = true;
             s->execute();
         });
-    }*/
-}
+    }
+}*/
 
-SUBCOMMAND_DECL(pack)
+/*SUBCOMMAND_DECL(pack)
 {
     // http://www.king-foo.com/2011/11/creating-debianubuntu-deb-packages/
     SW_UNIMPLEMENTED;
-}
+}*/
 
 String getBuildTime();
 String getGitRev();

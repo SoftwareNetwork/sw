@@ -22,6 +22,8 @@
 #include <sw/core/build.h>
 #include <sw/core/input.h>
 
+DEFINE_SUBCOMMAND(generate, "Generate IDE projects.");
+
 static ::cl::list<String> build_arg_generate(::cl::Positional, ::cl::desc("File or directory to use to generate projects"), ::cl::sub(subcommand_generate));
 
 String gGenerator;

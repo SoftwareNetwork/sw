@@ -28,6 +28,8 @@
 #include <WinReg.hpp>
 #endif
 
+DEFINE_SUBCOMMAND(setup, "Used to do some system setup which may require administrator access.");
+
 static void registerCmakePackage(sw::SwContext &swctx)
 {
 #ifdef _WIN32

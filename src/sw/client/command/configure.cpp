@@ -18,6 +18,8 @@
 
 #include "commands.h"
 
+DEFINE_SUBCOMMAND(configure, "Create build script.");
+
 static ::cl::opt<String> build_arg_configure(::cl::Positional, ::cl::desc("Configure"), ::cl::init("."), ::cl::sub(subcommand_configure));
 
 SUBCOMMAND_DECL(configure)

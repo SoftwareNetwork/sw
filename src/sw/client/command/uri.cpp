@@ -36,6 +36,8 @@
 extern bool bUseSystemPause;
 extern String gUploadPrefix;
 
+DEFINE_SUBCOMMAND(uri, "Used to invoke sw application from the website.");
+
 static ::cl::list<String> uri_args(::cl::Positional, ::cl::desc("sw uri arguments"), ::cl::sub(subcommand_uri));
 
 #define F_ARGS sw::SwContext &swctx, sw::LocalStorage &sdb, const sw::LocalPackage &p

@@ -21,6 +21,8 @@
 #include <sw/manager/remote.h>
 #include <sw/manager/settings.h>
 
+DEFINE_SUBCOMMAND(remote, "Manage remotes.");
+
 static ::cl::opt<String> remote_subcommand(::cl::Positional, ::cl::desc("remote subcomand"), ::cl::sub(subcommand_remote), ::cl::Required);
 static ::cl::list<String> remote_rest(::cl::desc("other remote args"), ::cl::sub(subcommand_remote), ::cl::ConsumeAfter);
 
