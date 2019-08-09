@@ -355,13 +355,14 @@ void VSGenerator::generate(const SwBuild &b)
                 d.type = VSProjectType::StaticLibrary;
                 for (auto &c : cmds)
                 {
-                    std::any_of(c->outputs.begin(), c->outputs.end(), [&d, &c](const auto &f)
+                    for (auto &f : c->outputs)
                     {
-                        bool r = f.extension() == ".lib";
-                        if (r)
+                        if (f.extension() == ".lib")
+                        {
                             d.main_command = c.get();
-                        return r;
-                    });
+                            break;
+                        }
+                    }
                 }
             }
         }

@@ -387,7 +387,6 @@ void NativeCompiledTarget::findCompiler()
             c = C;
             c->Type = LinkerType::GNU;
             C->Prefix = getBuildSettings().TargetOS.getLibraryPrefix();
-            C->use_start_end_groups = false;
         }
         else if (p.ppath == "org.LLVM.ar")
         {
@@ -402,7 +401,6 @@ void NativeCompiledTarget::findCompiler()
             c = C;
             c->Type = LinkerType::GNU;
             C->PositionIndependentCode = false;
-            C->use_start_end_groups = false;
             C->Prefix = getBuildSettings().TargetOS.getLibraryPrefix();
 
             create_command();
@@ -417,7 +415,6 @@ void NativeCompiledTarget::findCompiler()
                 cmd->push_back("-dynamic-linker"); // needed
                 cmd->push_back("/lib64/ld-linux-x86-64.so.2"); // needed
             }
-            cmd->push_back("-export-dynamic"); // needed for shared symbols
             cmd->first_response_file_argument = 2;
             //cmd->push_back("-target");
             //cmd->push_back(getBuildSettings().getTargetTriplet());

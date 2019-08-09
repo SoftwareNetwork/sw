@@ -925,17 +925,17 @@ types:
                 properties:
                     - input_dependency
 
-            rdyn:
-                name: rdynamic
-                flag: rdynamic
-                type: bool
-                #default: true
-
             sg:
                 name: StartGroup
-                flag: Wl,--start-group
+                flag: start-group
                 type: bool
                 order: 50
+
+            eg:
+                name: EndGroup
+                flag: end-group
+                type: bool
+                order: 70
 
             ild:
                 name: InputLibraryDependencies
@@ -969,12 +969,6 @@ types:
                 properties:
                     # it's not the input dep!
                     - flag_before_each_value
-
-            eg:
-                name: EndGroup
-                flag: Wl,--end-group
-                type: bool
-                order: 70
 
             o:
                 name: Output

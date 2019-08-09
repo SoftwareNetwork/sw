@@ -240,6 +240,10 @@ void build(Solution &s)
         {
             //client.getSelectedTool()->LinkOptions.push_back("-static-libstdc++");
             //client.getSelectedTool()->LinkOptions.push_back("-static-libgcc");
+
+            // needed to export all shared symbols
+            // so dlopen will work for plugins
+            client.LinkOptions.push_back("-export-dynamic");
         }
 
         {

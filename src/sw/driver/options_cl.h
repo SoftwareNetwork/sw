@@ -172,7 +172,9 @@ struct CommandLineOption1 : CommandLineOptionBase
     String name;
 protected:
     std::unique_ptr<T> value_;
-private:
+//private:
+public:
+    // sometimes we want to fix it
     String cmd_flag;
 public:
     String ide_name;

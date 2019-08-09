@@ -12,9 +12,9 @@
 
 #include <sw/core/sw_context.h>
 
-#include <primitives/sw/settings.h>
-
 #include <boost/algorithm/string.hpp>
+#include <primitives/sw/settings.h>
+#include <pystring.h>
 
 #include <regex>
 #include <string>
@@ -682,6 +682,22 @@ void GNULinker::setInputLibraryDependencies(const FilesOrdered &files)
 		return;
     // TODO: fast fix for GNU
     // https://eli.thegreenplace.net/2013/07/09/library-order-in-static-linking
+    if (use_start_end_groups)
+    {
+        auto fn = file.filename().string();
+        use_start_end_groups = 0
+            || pystring::startswith(fn, "gcc")
+            || pystring::startswith(fn, "g++")
+            || pystring::startswith(fn, "clang")
+            || pystring::startswith(fn, "clang++")
+            ;
+        if (use_start_end_groups)
+        {
+            // add Wl part for cmd flag
+            StartGroup.cmd_flag = "Wl,-" + StartGroup.cmd_flag;
+            EndGroup.cmd_flag = "Wl,-" + EndGroup.cmd_flag;
+        }
+    }
     if (use_start_end_groups)
         StartGroup = true;
     InputLibraryDependencies().insert(InputLibraryDependencies().end(), files.begin(), files.end());
