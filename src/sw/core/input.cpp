@@ -86,7 +86,13 @@ void Input::init(const path &in, const SwContext &swctx)
         p = fs::absolute(p);
 
     auto status = fs::status(p);
-    data = path(normalize_path(p));
+    if (status.type() != fs::file_type::regular &&
+        status.type() != fs::file_type::directory)
+    {
+        throw SW_RUNTIME_ERROR("Bad file type: " + normalize_path(p));
+    }
+
+    data = path(normalize_path(canonical(p)));
 
     // spec or regular file
     if (status.type() == fs::file_type::regular)
@@ -114,14 +120,12 @@ void Input::init(const path &in, const SwContext &swctx)
             return;
         }
     }
-    else if (status.type() == fs::file_type::directory)
+    else
     {
         if (findDriver(InputType::DirectorySpecificationFile, swctx) ||
             findDriver(InputType::Directory, swctx))
             return;
     }
-    else
-        throw SW_RUNTIME_ERROR("Bad file type: " + normalize_path(p));
 
     throw SW_RUNTIME_ERROR("Cannot select driver for " + normalize_path(p));
 }

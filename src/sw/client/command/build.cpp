@@ -107,16 +107,21 @@ static sw::TargetSettings compilerTypeFromStringCaseI(const sw::UnresolvedPackag
     // starts with
     else if (boost::istarts_with(compiler, "appleclang") || boost::iequals(compiler, "apple-clang"))
         return CompilerType::AppleClang;
-    else if (boost::istarts_with(compiler, "gnu") || boost::iequals(compiler, "gcc") || boost::iequals(compiler, "g++"))
-        return CompilerType::GNU;*/
+    */
+    // g++ is not possible for package path
+    else if (compiler.ppath == "gcc" || compiler.ppath == "gnu")
+    {
+        ts["native"]["program"]["c"] = set_with_version("org.gnu.gcc");
+        ts["native"]["program"]["cpp"] = set_with_version("org.gnu.gpp");
+        ts["native"]["program"]["asm"] = set_with_version("org.gnu.gcc.as");
+    }
     else if (compiler.ppath == "clang")
     {
         ts["native"]["program"]["c"] = set_with_version("org.LLVM.clang");
         ts["native"]["program"]["cpp"] = set_with_version("org.LLVM.clangpp");
         ts["native"]["program"]["asm"] = set_with_version("org.LLVM.clang"); // llvm-as?
-        ts["native"]["program"]["lib"] = set_with_version("org.LLVM.ar");
-        ts["native"]["program"]["link"] = set_with_version("org.LLVM.lld");
     }
+    // clang-cl is not possible for package path
     else if (compiler.ppath == "clangcl"/* || compiler.ppath == "clang-cl"*/)
     {
         ts["native"]["program"]["c"] = set_with_version("org.LLVM.clangcl");
