@@ -178,6 +178,15 @@ void NativeCompiledTarget::setOutputDir(const path &dir)
     setOutputFile();
 }
 
+static void targetSettings2Command(primitives::Command &c, const TargetSetting &s)
+{
+    if (s["arguments"])
+    {
+        for (auto &a : s["arguments"].getArray())
+            c.push_back(a);
+    }
+}
+
 void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const StringSet &exts)
 {
     bool extended_desc = s.isObject();
@@ -234,19 +243,13 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
     {
         if (created)
             return;
-        (Program&)*c = t->getProgram();
+        c->file = t->getProgram().file;
         auto C = c->createCommand(getSolution().getContext());
-        (primitives::Command&)*C = *t->getProgram().getCommand();
+        static_cast<primitives::Command&>(*C) = *t->getProgram().getCommand();
         created = true;
 
         if (extended_desc && s["command"])
-        {
-            if (s["command"]["arguments"])
-            {
-                for (auto &a : s["command"]["arguments"].getArray())
-                    C->push_back(a);
-            }
-        }
+            targetSettings2Command(*C, s["command"]);
     };
 
     if (id.ppath == "com.Microsoft.VisualStudio.VC.cl")
@@ -349,19 +352,13 @@ std::shared_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetS
     {
         if (created)
             return;
-        (Program&)*c = t->getProgram();
+        c->file = t->getProgram().file;
         auto C = c->createCommand(getSolution().getContext());
-        (primitives::Command&)*C = *t->getProgram().getCommand();
+        static_cast<primitives::Command&>(*C) = *t->getProgram().getCommand();
         created = true;
 
         if (extended_desc && s["command"])
-        {
-            if (s["command"]["arguments"])
-            {
-                for (auto &a : s["command"]["arguments"].getArray())
-                    C->push_back(a);
-            }
-        }
+            targetSettings2Command(*C, s["command"]);
     };
 
     if (id.ppath == "com.Microsoft.VisualStudio.VC.lib")
@@ -381,7 +378,12 @@ std::shared_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetS
         c->Type = LinkerType::GNU;
         C->Prefix = getBuildSettings().TargetOS.getLibraryPrefix();
     }
-    else if (id.ppath == "org.gnu.gcc" || id.ppath == "org.LLVM.clang")
+    else if (
+        id.ppath == "org.gnu.gcc" ||
+        id.ppath == "org.gnu.gpp" ||
+        id.ppath == "org.LLVM.clang" ||
+        id.ppath == "org.LLVM.clangpp"
+        )
     {
         auto C = std::make_shared<GNULinker>(getSolution().getContext());
         c = C;
@@ -434,6 +436,8 @@ std::shared_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetS
         //cmd->push_back("-target");
         //cmd->push_back(getBuildSettings().getTargetTriplet());
     }
+    else
+        throw SW_RUNTIME_ERROR("Unknown librarian/linker: " + id.toString());
 
     create_command();
 
@@ -487,10 +491,8 @@ void NativeCompiledTarget::findCompiler()
         removeExtension(".mm");
     }
 
-    if (!(Librarian = activateLinker(ts["native"]["program"]["lib"])))
-        throw SW_RUNTIME_ERROR("Try to add more librarians");
-    if (!(Linker = activateLinker(ts["native"]["program"]["link"])))
-        throw SW_RUNTIME_ERROR("Try to add more linkers");
+    Librarian = activateLinker(ts["native"]["program"]["lib"]);
+    Linker = activateLinker(ts["native"]["program"]["link"]);
 
     Librarian->Extension = getBuildSettings().TargetOS.getStaticLibraryExtension();
     Linker->Extension = getBuildSettings().TargetOS.getSharedLibraryExtension();
@@ -586,7 +588,7 @@ void NativeCompiledTarget::setupCommand(builder::Command &c) const
         {
             if (getSolution().getHostOs().is(OSType::Windows))
                 c.addPathDirectory(nt->getOutputFile().parent_path());
-            else if (getSolution().getHostOs().is(OSType::Macos))
+            else if (getSolution().getHostOs().is(OSType::Macos)) // use is apple
                 c.environment["DYLD_LIBRARY_PATH"] += normalize_path(nt->getOutputFile().parent_path()) + ":";
             else // linux and others
                 c.environment["LD_LIBRARY_PATH"] += normalize_path(nt->getOutputFile().parent_path()) + ":";
@@ -2972,6 +2974,11 @@ void NativeCompiledTarget::initLibrary(LibraryType Type)
             auto L = Linker->as<VisualStudioLinker*>();
             L->Dll = true;
         }
+        else if (Linker->Type == LinkerType::GNU)
+        {
+            auto L = Linker->as<GNULinker*>();
+            L->SharedObject = true;
+        }
         if (getBuildSettings().TargetOS.Type == OSType::Windows)
             Definitions["_WINDLL"];
     }
@@ -3845,6 +3852,11 @@ bool ExecutableTarget::init()
             {
                 c->ImportLibrary.output_dependency = false; // become optional
                 c->ImportLibrary.create_directory = true; // but create always
+            }
+            else if (auto L = Linker->as<GNULinker*>())
+            {
+                L->PositionIndependentCode = false;
+                L->SharedObject = false;
             }
         }
     }

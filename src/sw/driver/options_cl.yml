@@ -898,6 +898,7 @@ types:
 
         using:
             - ifiles
+            - fpic
 
         flags:
             nostdlib:
@@ -976,6 +977,11 @@ types:
                 properties:
                     - output_dependency
                     - separate_prefix
+
+            sh:
+                name: SharedObject
+                flag: shared
+                type: bool
 
             undef:
                 name: Undefined
