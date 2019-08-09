@@ -400,7 +400,6 @@ void NativeCompiledTarget::findCompiler()
             auto C = std::make_shared<GNULinker>(getSolution().getContext());
             c = C;
             c->Type = LinkerType::GNU;
-            C->PositionIndependentCode = false;
             C->Prefix = getBuildSettings().TargetOS.getLibraryPrefix();
 
             create_command();
@@ -2935,11 +2934,6 @@ void NativeCompiledTarget::initLibrary(LibraryType Type)
             auto L = Linker->as<VisualStudioLinker*>();
             L->Dll = true;
         }
-        else if (Linker->Type == LinkerType::GNU)
-        {
-            auto L = Linker->as<GNULinker*>();
-            L->SharedObject = true;
-        }
         if (getBuildSettings().TargetOS.Type == OSType::Windows)
             Definitions["_WINDLL"];
     }
@@ -3813,11 +3807,6 @@ bool ExecutableTarget::init()
             {
                 c->ImportLibrary.output_dependency = false; // become optional
                 c->ImportLibrary.create_directory = true; // but create always
-            }
-            else if (auto L = Linker->as<GNULinker*>())
-            {
-                L->PositionIndependentCode = false;
-                L->SharedObject = false;
             }
         }
     }

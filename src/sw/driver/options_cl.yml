@@ -898,19 +898,8 @@ types:
 
         using:
             - ifiles
-            - fpic
 
         flags:
-            nostdlib:
-                name: nostdlib
-                flag: nostdlib
-                type: bool
-
-            nostartfiles:
-                name: nostartfiles
-                flag: nostartfiles
-                type: bool
-
             startfiles:
                 name: StartFiles
                 type: FilesOrdered
@@ -977,11 +966,6 @@ types:
                 properties:
                     - output_dependency
                     - separate_prefix
-
-            sh:
-                name: SharedObject
-                flag: shared
-                type: bool
 
             undef:
                 name: Undefined
