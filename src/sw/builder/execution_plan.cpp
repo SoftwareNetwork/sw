@@ -57,6 +57,7 @@ void ExecutionPlan::execute(Executor &e) const
         {
             static_cast<builder::Command*>(c)->silent = silent;
             static_cast<builder::Command*>(c)->show_output = show_output;
+            static_cast<builder::Command*>(c)->write_output_to_file = write_output_to_file;
             static_cast<builder::Command*>(c)->always |= build_always;
         }
     }

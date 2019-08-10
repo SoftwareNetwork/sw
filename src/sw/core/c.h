@@ -9,7 +9,7 @@
 #ifndef _SW_CORE_C_H_
 #define _SW_CORE_C_H_
 
-#include <malloc.h>
+#include <stddef.h>
 
 /* memory allocations */
 

@@ -18,7 +18,7 @@ struct ProgramVersionStorage
     struct ProgramInfo
     {
         Version v;
-        time_t t;
+        fs::file_time_type t;
 
         operator Version&() { return v; }
     };
@@ -31,7 +31,7 @@ struct ProgramVersionStorage
 
     void addVersion(const path &p, const Version &v)
     {
-        versions[p] = {v,fs::last_write_time(p).time_since_epoch().count()};
+        versions[p] = {v,fs::last_write_time(p)};
     }
 };
 

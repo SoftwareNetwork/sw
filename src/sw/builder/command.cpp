@@ -137,7 +137,7 @@ bool Command::isOutdated() const
     }
     else
     {
-        *((size_t*)&mtime) = r.first->mtime;
+        ((Command*)(this))->mtime = r.first->mtime;
         ((Command*)(this))->implicit_inputs = r.first->implicit_inputs;
         return isTimeChanged();
     }
@@ -459,7 +459,7 @@ void Command::afterCommand()
     auto &cs = getContext().getCommandStorage();
     auto &r = *cs.getStorage(command_storage == CS_LOCAL).insert(k).first;
     r.hash = k;
-    r.mtime = *(size_t*)&mtime;
+    r.mtime = mtime;
     r.implicit_inputs = implicit_inputs;
     cs.async_command_log(r, command_storage == CS_LOCAL);
 }
@@ -595,12 +595,14 @@ void Command::printOutputs()
         s += out.text + "\n";
     if (!err.text.empty())
         s += err.text + "\n";
-    if (!s.empty())
-    {
-        s = log_string + "\n" + s;
-        boost::trim(s);
+    if (s.empty())
+        return;
+    s = log_string + "\n" + s;
+    boost::trim(s);
+    if (write_output_to_file)
+        write_file(fs::current_path() / SW_BINARY_DIR / "rsp" / std::to_string(getHash()) += ".txt", s);
+    else
         LOG_INFO(logger, s);
-    }
 }
 
 String Command::makeErrorString(const String &e)

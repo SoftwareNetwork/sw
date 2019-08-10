@@ -393,7 +393,10 @@ std::shared_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetS
         // is it true?
         c->Type = LinkerType::GNU;
         C->Prefix = getBuildSettings().TargetOS.getLibraryPrefix();
-        if (id.ppath == "org.LLVM.clang")
+        if (getBuildSettings().TargetOS.Type == OSType::Macos)
+            C->use_start_end_groups = false;
+        if (id.ppath == "org.LLVM.clang" ||
+            id.ppath == "org.LLVM.clangpp")
         {
             create_command();
             auto cmd = c->createCommand(getSolution().getContext());
@@ -507,7 +510,15 @@ void NativeCompiledTarget::findCompiler()
 
     // compiler runtime
     if (ts["native"]["stdlib"]["compiler"])
-        *this += UnresolvedPackage(ts["native"]["stdlib"]["compiler"].getValue());
+    {
+        if (ts["native"]["stdlib"]["compiler"].isValue())
+            *this += UnresolvedPackage(ts["native"]["stdlib"]["compiler"].getValue());
+        else if (ts["native"]["stdlib"]["compiler"].isArray())
+        {
+            for (auto &s : ts["native"]["stdlib"]["compiler"].getArray())
+                *this += UnresolvedPackage(s);
+        }
+    }
 
     // kernel headers
     if (ts["native"]["stdlib"]["kernel"])
@@ -536,6 +547,12 @@ bool NativeCompiledTarget::init()
         {
             ExportIfStatic = true;
             ts_export["export-if-static"].use();
+        }
+
+        if (ts_export["static-deps"] == "true")
+        {
+            ts_export["native"]["library"] = "static";
+            ts_export["static-deps"].reset();
         }
 
         addPackageDefinitions();
@@ -1631,7 +1648,8 @@ void NativeCompiledTarget::autoDetectSources()
     if (!(sources_empty && !already_built))
         return;
 
-    LOG_TRACE(logger, getPackage().toString() + ": Autodetecting sources");
+    // make additional log level for this
+    //LOG_TRACE(logger, getPackage().toString() + ": Autodetecting sources");
 
     // all files except starting from point
     static const auto files_regex = "[^\\.].*";
@@ -1719,7 +1737,8 @@ void NativeCompiledTarget::autoDetectIncludeDirectories()
         return;
     }
 
-    LOG_TRACE(logger, getPackage().toString() + ": Autodetecting include dirs");
+    // make additional log level for this
+    //LOG_TRACE(logger, getPackage().toString() + ": Autodetecting include dirs");
 
     // public idirs
     for (auto &d : include_dir_names)
@@ -1906,7 +1925,8 @@ bool NativeCompiledTarget::prepare()
     {
     case 1:
     {
-        LOG_TRACE(logger, "Preparing target: " + getPackage().getPath().toString());
+        // make additional log level for this
+        //LOG_TRACE(logger, "Preparing target: " + getPackage().getPath().toString());
 
         call(CallbackType::BeginPrepare);
 
@@ -3094,7 +3114,8 @@ void NativeCompiledTarget::configureFile1(const path &from, const path &to, Conf
         if (!repl)
         {
             s = m.prefix().str() + m.suffix().str();
-            LOG_TRACE(logger, "configure @@ or ${} " << m[1].str() << ": replacement not found");
+            // make additional log level for this
+            //LOG_TRACE(logger, "configure @@ or ${} " << m[1].str() << ": replacement not found");
             continue;
         }
         s = m.prefix().str() + *repl + m.suffix().str();
@@ -3107,7 +3128,8 @@ void NativeCompiledTarget::configureFile1(const path &from, const path &to, Conf
         if (!repl)
         {
             s = m.prefix().str() + "/* #undef " + m[1].str() + " */\n" + m.suffix().str();
-            LOG_TRACE(logger, "configure #mesondefine " << m[1].str() << ": replacement not found");
+            // make additional log level for this
+            //LOG_TRACE(logger, "configure #mesondefine " << m[1].str() << ": replacement not found");
             continue;
         }
         s = m.prefix().str() + "#define " + m[1].str() + " " + *repl + "\n" + m.suffix().str();
@@ -3122,7 +3144,8 @@ void NativeCompiledTarget::configureFile1(const path &from, const path &to, Conf
             if (!repl)
             {
                 s = m.prefix().str() + m.suffix().str();
-                LOG_TRACE(logger, "configure #undef " << m[1].str() << ": replacement not found");
+                // make additional log level for this
+                //LOG_TRACE(logger, "configure #undef " << m[1].str() << ": replacement not found");
                 continue;
             }
             if (offValues.find(boost::to_upper_copy(*repl)) != offValues.end())
@@ -3139,7 +3162,8 @@ void NativeCompiledTarget::configureFile1(const path &from, const path &to, Conf
         auto repl = find_repl(m[1].str());
         if (!repl)
         {
-            LOG_TRACE(logger, "configure #cmakedefine " << m[1].str() << ": replacement not found");
+            // make additional log level for this
+            //LOG_TRACE(logger, "configure #cmakedefine " << m[1].str() << ": replacement not found");
             repl = {};
         }
         if (offValues.find(boost::to_upper_copy(*repl)) != offValues.end())
@@ -3154,7 +3178,8 @@ void NativeCompiledTarget::configureFile1(const path &from, const path &to, Conf
         auto repl = find_repl(m[1].str());
         if (!repl)
         {
-            LOG_TRACE(logger, "configure #cmakedefine01 " << m[1].str() << ": replacement not found");
+            // make additional log level for this
+            //LOG_TRACE(logger, "configure #cmakedefine01 " << m[1].str() << ": replacement not found");
             repl = {};
         }
         if (offValues.find(boost::to_upper_copy(*repl)) != offValues.end())

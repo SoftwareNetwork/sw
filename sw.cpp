@@ -56,6 +56,11 @@ void build(Solution &s)
         }
         if (support.getBuildSettings().TargetOS.Type == OSType::Macos)
             support.Public += "BOOST_STACKTRACE_GNU_SOURCE_NOT_REQUIRED"_def;
+        if (support.getCompilerType() != CompilerType::MSVC)
+        {
+            support.Protected.CompileOptions.push_back("-Wall");
+            support.Protected.CompileOptions.push_back("-Wextra");
+        }
     }
 
     auto &protos = p.addTarget<StaticLibraryTarget>("protos");
@@ -78,14 +83,14 @@ void build(Solution &s)
         manager.Public += "BOOST_DLL_USE_STD_FS"_def;
 
         auto srcdep = "pub.egorpugin.primitives.source-master"_dep;
+        auto verdep = "pub.egorpugin.primitives.version-master"_dep;
         manager.Public += support, protos,
+            srcdep, verdep,
             "pub.egorpugin.primitives.date_time-master"_dep,
             "pub.egorpugin.primitives.db.sqlite3-master"_dep,
             "pub.egorpugin.primitives.lock-master"_dep,
             "pub.egorpugin.primitives.pack-master"_dep,
-            srcdep,
             "pub.egorpugin.primitives.sw.settings-master"_dep,
-            "pub.egorpugin.primitives.version-master"_dep,
             "pub.egorpugin.primitives.yaml-master"_dep,
             "org.sw.demo.nlohmann.json-3"_dep,
             "org.sw.demo.boost.variant"_dep,
@@ -95,6 +100,8 @@ void build(Solution &s)
 #ifdef SW_CPP_DRIVER_API_VERSION
         //srcdep->getSettings()["export-if-static"] = "true";
         //srcdep->getSettings()["export-if-static"].setRequired();
+        verdep->getSettings()["export-if-static"] = "true";
+        verdep->getSettings()["export-if-static"].setRequired();
 #endif
 
         manager.Public -= "pub.egorpugin.primitives.win32helpers-master"_dep;

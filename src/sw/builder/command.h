@@ -166,6 +166,7 @@ struct SW_BUILDER_API Command : ICastable, CommandNode, detail::ResolvableComman
     bool do_not_save_command = false;
     bool silent = false; // no log record
     bool show_output = false; // no command output
+    bool write_output_to_file = false;
     int strict_order = 0; // used to execute this before other commands
     ResourcePool *pool = nullptr;
 

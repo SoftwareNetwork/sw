@@ -17,7 +17,7 @@ void build(Solution &s)
     {
         auto &e = s.addExecutable("test2");
         e.ApiName = "API";
-        e += "main.cpp";
+        e += "main.cpp", "f.cpp";
     }
 
     {

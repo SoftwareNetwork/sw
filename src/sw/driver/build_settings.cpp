@@ -19,14 +19,15 @@ static OS fromTargetSettings(const TargetSettings &ts)
 {
     OS os;
 
-#define IF_SETTING(s, var, value) \
-    else if (v == s)      \
+#define IF_SETTING(s, var, value)   \
+    else if (v == s)                \
         var = value
 
-#define IF_KEY(k)            \
+#define IF_KEY(k)           \
     {                       \
-        auto &v = ts[k]; \
+        auto &v = ts[k];    \
         if (v) {
+
 #define IF_END }}
 
     IF_KEY("os"]["kernel")
@@ -112,11 +113,22 @@ String BuildSettings::getTargetTriplet() const
     // See https://clang.llvm.org/docs/CrossCompilation.html
 
     String target;
+
+    // arch
     target += toTripletString(TargetOS.Arch);
     if (TargetOS.Arch == ArchType::arm)
         target += toTripletString(TargetOS.SubArch);
-    target += "-unknown"; // vendor
+
+    // vendor
+    if (TargetOS.is(OSType::Macos))
+        target += "-apple";
+    else
+        target += "-unknown";
+
+    // os
     target += "-" + toTripletString(TargetOS.Type);
+    if (TargetOS.is(OSType::Macos) && TargetOS.Version > Version(1))
+        target += TargetOS.Version.toString();
     if (TargetOS.Type == OSType::Android)
         target += "-android";
     if (TargetOS.Arch == ArchType::arm)

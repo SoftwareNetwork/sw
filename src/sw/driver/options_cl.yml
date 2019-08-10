@@ -35,6 +35,13 @@ flags:
         type: bool
         default: true
 
+    nologo:
+        name: Nologo
+        flag: nologo
+        type: bool
+        default: true
+        order: -100
+
 types:
     # internal name
     vscomn:
@@ -44,18 +51,11 @@ types:
         name: VisualStudioCommonCompilerOptions
         parent: VisualStudioCommonOptions
 
-        flags:
-            nologo:
-                name: Nologo
-                flag: nologo
-                type: bool
-                default: true
-                order: -100
-
         using:
             - compile
             - pp_to_stdout
             - vsoutput
+            - nologo
 
     vsasm:
         name: VisualStudioAssemblerOptions
@@ -572,6 +572,7 @@ types:
 
         using:
             - vsoutput
+            - nologo
             - input:
                 order: 100
 
@@ -780,7 +781,6 @@ types:
                 name: Permissive
                 flag: fpermissive
                 type: bool
-                default: true
 
             isr:
                 name: IncludeSystemRoot

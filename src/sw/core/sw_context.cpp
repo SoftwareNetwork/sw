@@ -64,9 +64,9 @@ void SwCoreContext::setHostPrograms()
             ts["native"]["program"]["lib"] = "com.Microsoft.VisualStudio.VC.lib";
             ts["native"]["program"]["link"] = "com.Microsoft.VisualStudio.VC.link";
         }
-        // add more defaults
+        // add more defaults (clangcl, clang)
         else
-            SW_UNIMPLEMENTED;
+            throw SW_RUNTIME_ERROR("Seems like you do not have Visual Studio installed.\n Please, install the latest Visual Studio first.");
     }
     // add more defaults
     else

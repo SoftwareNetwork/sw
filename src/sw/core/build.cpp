@@ -22,12 +22,13 @@ DECLARE_STATIC_LOGGER(logger, "build");
 
 //cl::opt<bool> dry_run("n", cl::desc("Dry run"));
 
-cl::opt<bool> build_always("B", cl::desc("Build always"));
-cl::opt<int> skip_errors("k", cl::desc("Skip errors"));
+static cl::opt<bool> build_always("B", cl::desc("Build always"));
+static cl::opt<int> skip_errors("k", cl::desc("Skip errors"));
 static cl::opt<bool> time_trace("time-trace", cl::desc("Record chrome time trace events"));
 
 //static cl::opt<bool> hide_output("hide-output");
 static cl::opt<bool> cl_show_output("show-output");
+static cl::opt<bool> cl_write_output_to_file("write-output-to-file");
 static cl::opt<bool> print_graph("print-graph", cl::desc("Print file with build graph"));
 
 #define CHECK_STATE(from)                                                                 \
@@ -339,6 +340,8 @@ void SwBuild::execute(ExecutionPlan &p) const
     CHECK_STATE_AND_CHANGE(BuildState::Prepared, BuildState::Executed);
 
     p.build_always = build_always;
+    p.show_output = cl_show_output | cl_write_output_to_file;
+    p.write_output_to_file = cl_write_output_to_file;
     p.skip_errors = skip_errors.getValue();
 
     //ScopedTime t;

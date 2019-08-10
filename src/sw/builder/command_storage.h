@@ -18,7 +18,7 @@ namespace sw
 struct CommandRecord
 {
     size_t hash = 0;
-    size_t mtime = 0;
+    fs::file_time_type mtime = fs::file_time_type::min();
     Files implicit_inputs;
 };
 

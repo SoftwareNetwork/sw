@@ -44,6 +44,7 @@ struct SW_BUILDER_API ExecutionPlan
     bool build_always = false;
     bool silent = false;
     bool show_output = false;
+    bool write_output_to_file = false;
 
     ExecutionPlan() = default;
     ExecutionPlan(const ExecutionPlan &rhs) = delete;

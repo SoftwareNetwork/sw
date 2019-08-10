@@ -481,7 +481,10 @@ int main() { return IsBigEndian(); }
                 ctx.addLine("echo \"# " + defs + "\" >> " + mfn);
 
                 if (!bat)
+                {
+                    ctx.addLine("chmod 755 " + fn);
                     ctx.addLine("./");
+                }
                 ctx.addText(fn + checker.build.getBuildSettings().TargetOS.getExecutableExtension());
 
                 ctx.addLine("echo " + std::to_string(c->getHash()) + " ");

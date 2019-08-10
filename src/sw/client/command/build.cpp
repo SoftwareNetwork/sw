@@ -55,6 +55,9 @@ static cl::list<String> os("os", cl::desc("Set build target os"), cl::CommaSepar
 static cl::list<String> libc("libc", cl::desc("Set build libc"), cl::CommaSeparated);
 static cl::list<String> libcpp("libcpp", cl::desc("Set build libcpp"), cl::CommaSeparated);
 
+static ::cl::opt<bool> static_deps("static-dependencies", ::cl::desc("Build static dependencies of inputs"));
+static cl::alias static_deps2("static-deps", cl::aliasopt(static_deps));
+
 // -setting k1=v1,k2=v2,k3="v3,v3" -setting k4=v4,k5,k6 etc.
 // settings in one setting applied simultaneosly
 // settings in different settings are multiplied
@@ -256,6 +259,9 @@ std::vector<sw::TargetSettings> createSettings(const sw::SwBuild &b)
         SW_UNIMPLEMENTED;
         applySettingsFromFile(initial_settings["host"].getSettings(), host_settings_file);
     }
+
+    if (static_deps)
+        initial_settings["static-deps"] = "true";
 
     std::vector<sw::TargetSettings> settings;
     settings.push_back(initial_settings);
