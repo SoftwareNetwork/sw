@@ -1114,6 +1114,7 @@ void ProjectEmitter::printProject(
 
                                     // remove old program dep
                                     inputs.erase(gen->getProgram());
+                                    inputs.erase(normalize_path(gen->getProgram())); // sometimes getProgram() is not normalized
 
                                     // fix program
                                     gen->setProgram(tdir); // remove this?
