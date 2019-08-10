@@ -26,6 +26,9 @@ bin
 *.lnk
 *.pdb
 
+*.diff
+*.patch
+
 ddl2cpp
 doc/build
 cppan-build*
