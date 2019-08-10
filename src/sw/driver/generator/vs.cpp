@@ -1112,9 +1112,17 @@ void ProjectEmitter::printProject(
                                     tdir /= d->target->getPackage().toString() + ".exe";
                                     addText(normalize_path_windows(tdir) + ";");
 
+                                    path prog = gen->getProgram();
+
                                     // remove old program dep
                                     inputs.erase(gen->getProgram());
-                                    inputs.erase(normalize_path(gen->getProgram())); // sometimes getProgram() is not normalized
+                                    // sometimes getProgram() points to other place, so we cmp filenames
+                                    auto inputs2 = inputs;
+                                    for (auto &i : inputs2)
+                                    {
+                                        if (i.filename() == prog.filename())
+                                            inputs.erase(i);
+                                    }
 
                                     // fix program
                                     gen->setProgram(tdir); // remove this?
