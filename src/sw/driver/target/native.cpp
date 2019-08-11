@@ -271,13 +271,26 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
     else if (id.ppath == "org.gnu.gcc.as")
         c = std::make_shared<GNUASMCompiler>(getSolution().getContext());
     else if (id.ppath == "org.gnu.gcc" || id.ppath == "org.gnu.gpp")
-        c = std::make_shared<GNUCompiler>(getSolution().getContext());
+    {
+        auto C = std::make_shared<GNUCompiler>(getSolution().getContext());
+        c = C;
+        /*if (getBuildSettings().TargetOS.is(OSType::Macos))
+        {
+            C->VisibilityHidden = false;
+            C->VisibilityInlinesHidden = false;
+        }*/
+    }
     else if (id.ppath == "org.LLVM.clang" || id.ppath == "org.LLVM.clangpp")
     {
         auto C = std::make_shared<ClangCompiler>(getSolution().getContext());
         c = C;
         create_command();
         C->Target = getBuildSettings().getTargetTriplet();
+        /*if (getBuildSettings().TargetOS.is(OSType::Macos))
+        {
+            C->VisibilityHidden = false;
+            C->VisibilityInlinesHidden = false;
+        }*/
     }
     else if (id.ppath == "org.LLVM.clangcl")
     {
