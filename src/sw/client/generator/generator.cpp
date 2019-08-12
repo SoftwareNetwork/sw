@@ -324,8 +324,8 @@ private:
 
     String prepareString(const SwBuild &b, const String &s, bool quotes = false)
     {
-        if (b.getContext().getHostOs().Type != OSType::Windows)
-            quotes = false;
+        //if (b.getContext().getHostOs().Type != OSType::Windows)
+            //quotes = false;
 
         auto s2 = s;
         boost::replace_all(s2, ":", "$:");

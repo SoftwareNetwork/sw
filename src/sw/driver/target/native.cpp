@@ -180,6 +180,9 @@ void NativeCompiledTarget::setOutputDir(const path &dir)
 
 static void targetSettings2Command(primitives::Command &c, const TargetSetting &s)
 {
+    if (s["program"])
+        c.setProgram(s["program"].getValue());
+
     if (s["arguments"])
     {
         for (auto &a : s["arguments"].getArray())
@@ -193,7 +196,7 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const String
 
     UnresolvedPackage id;
     if (extended_desc)
-        id = s["command"]["program"].getValue();
+        id = s["package"].getValue();
     else
         id = s.getValue();
 
@@ -340,7 +343,7 @@ std::shared_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetS
 
     UnresolvedPackage id;
     if (extended_desc)
-        id = s["command"]["program"].getValue();
+        id = s["package"].getValue();
     else
         id = s.getValue();
 
@@ -508,7 +511,12 @@ void NativeCompiledTarget::findCompiler()
     }
 
     Librarian = activateLinker(ts["native"]["program"]["lib"]);
+    if (!Librarian)
+        throw SW_RUNTIME_ERROR("Librarian not found");
+
     Linker = activateLinker(ts["native"]["program"]["link"]);
+    if (!Linker)
+        throw SW_RUNTIME_ERROR("Linker not found");
 
     Librarian->Extension = getBuildSettings().TargetOS.getStaticLibraryExtension();
     Linker->Extension = getBuildSettings().TargetOS.getSharedLibraryExtension();

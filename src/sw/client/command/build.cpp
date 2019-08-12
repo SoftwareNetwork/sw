@@ -247,7 +247,6 @@ static void applySettingsFromFile(sw::TargetSettings &s, const path &fn)
 sw::TargetSettings createSettings(const sw::SwContext &swctx)
 {
     auto s = swctx.getHostSettings();
-    //s["host"] = swctx.getHostSettings();
     return s;
 }
 
@@ -256,8 +255,9 @@ std::vector<sw::TargetSettings> createSettings(const sw::SwBuild &b)
     auto initial_settings = createSettings(b.getContext());
     if (!host_settings_file.empty())
     {
-        SW_UNIMPLEMENTED;
-        applySettingsFromFile(initial_settings["host"].getSettings(), host_settings_file);
+        sw::TargetSettings s;
+        applySettingsFromFile(s, host_settings_file);
+        ((sw::SwContext &)b.getContext()).setHostSettings(s);
     }
 
     if (static_deps)
@@ -399,6 +399,13 @@ std::vector<sw::TargetSettings> createSettings(const sw::SwBuild &b)
     {
         applySettingsFromJson(s, settings_json[i]);
     });
+
+    // also we support inline host settings
+    if (settings.size() == 1 && settings[0]["host"])
+    {
+        ((sw::SwContext &)b.getContext()).setHostSettings(settings[0]["host"].getSettings());
+        settings[0]["host"].reset();
+    }
 
     return settings;
 }
