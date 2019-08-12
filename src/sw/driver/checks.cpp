@@ -345,8 +345,8 @@ int main() { return IsBigEndian(); }
             std::ofstream o(fn.parent_path() / (t->getPackage().toString() + "." + name + ".txt"));
             if (!o)
                 return;
-            std::map<String, CheckPtr> check_values(check_values.begin(), check_values.end());
-            for (auto &[d, c] : check_values)
+            std::map<String, CheckPtr> cv(check_values.begin(), check_values.end());
+            for (auto &[d, c] : cv)
             {
                 if (c->Value)
                     o << d << " " << c->Value.value() << " " << c->getHash() << "\n";

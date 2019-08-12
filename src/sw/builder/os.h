@@ -24,18 +24,15 @@ enum class OSType
 {
     UnknownOS,
 
-    // add apple's tvos/watchos etc.
     AIX,
     Android,
     BSD_OS,
     Cygwin,
     FreeBSD,
     HP_UX,
-    IOS,
     IRIX,
     Linux,
     GNU_kFreeBSD,
-    Macos,
     NetBSD,
     OpenBSD,
     OFS1,
@@ -49,6 +46,11 @@ enum class OSType
     Ultrix,
     Windows,
     WindowsCE,
+
+    // add apple's tvos/watchos etc.
+    Darwin,
+    Macos,
+    IOS,
 };
 
 // from llvm/ADT/Triple.h
@@ -224,7 +226,7 @@ struct SW_BUILDER_API OS
     bool support_dynamic_loading = true;
 
     bool is(OSType t) const { return Type == t; }
-    //bool isApple() const { return Type == t; } // macos/ios/tvos/watchos etc.
+    bool isApple() const;
     bool is(ArchType t) const { return Arch == t; }
     bool is(SubArchType t) const { return SubArch == t; }
     bool is(EnvironmentType t) const { return EnvironmentType1 == t; }

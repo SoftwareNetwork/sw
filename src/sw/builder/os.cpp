@@ -128,22 +128,23 @@ const OS &getHostOS()
 
 bool OS::canRunTargetExecutables(const OS &TargetOS) const
 {
-    auto cannotRunTargetExecutables = [this, &TargetOS]()
-    {
-        if (Type != TargetOS.Type)
-            return true;
-        if (Arch != TargetOS.Arch)
-        {
-            if (Type == OSType::Windows &&
-                Arch == ArchType::x86_64 && TargetOS.Arch == ArchType::x86
-                )
-                ; // win64 can run win32, but not vice versa
-            else
-                return true;
-        }
+    if (Type != TargetOS.Type)
         return false;
-    };
-    return !cannotRunTargetExecutables();
+
+    if (Arch != TargetOS.Arch)
+    {
+        // win64 can run win32, but not vice versa
+        if (Type == OSType::Windows &&
+            Arch == ArchType::x86_64 && TargetOS.Arch == ArchType::x86
+            )
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    return true;
 }
 
 ShellType OS::getShellType() const
@@ -210,6 +211,7 @@ String OS::getSharedLibraryExtension() const
     case OSType::Cygwin:
     case OSType::Windows:
         return ".dll";
+    case OSType::Darwin:
     case OSType::Macos:
     case OSType::IOS:
         return ".dylib";
@@ -239,6 +241,16 @@ bool OS::operator==(const OS &rhs) const
 {
     return std::tie(Type, Arch, SubArch, Version) ==
         std::tie(rhs.Type, rhs.Arch, rhs.SubArch, rhs.Version);
+}
+
+bool OS::isApple() const
+{
+    // macos/ios/tvos/watchos etc.
+    return 0
+        || Type == OSType::Darwin
+        || Type == OSType::Macos
+        || Type == OSType::IOS
+        ;
 }
 
 /*struct SW_BUILDER_API OsSdk
@@ -361,6 +373,8 @@ String toString(OSType e)
         CASE(Windows);
         CASE(Linux);
         CASE(Macos);
+        CASE(Darwin);
+        CASE(IOS);
         CASE(Cygwin);
         CASE(Android);
     default:

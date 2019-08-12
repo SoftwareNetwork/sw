@@ -30,6 +30,9 @@ TargetSettings toTargetSettings(const OS &o)
     case OSType::Macos:
         s["os"]["kernel"] = "com.Apple.Macos";
         break;
+    case OSType::Darwin:
+        s["os"]["kernel"] = "com.Apple.Darwin";
+        break;
     default:
         SW_UNIMPLEMENTED;
     }

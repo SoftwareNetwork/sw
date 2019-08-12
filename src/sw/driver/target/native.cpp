@@ -277,7 +277,7 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
     {
         auto C = std::make_shared<GNUCompiler>(getSolution().getContext());
         c = C;
-        /*if (getBuildSettings().TargetOS.is(OSType::Macos))
+        /*if (getBuildSettings().TargetOS.isApple())
         {
             C->VisibilityHidden = false;
             C->VisibilityInlinesHidden = false;
@@ -289,7 +289,7 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
         c = C;
         create_command();
         C->Target = getBuildSettings().getTargetTriplet();
-        /*if (getBuildSettings().TargetOS.is(OSType::Macos))
+        /*if (getBuildSettings().TargetOS.isApple())
         {
             C->VisibilityHidden = false;
             C->VisibilityInlinesHidden = false;
@@ -409,7 +409,7 @@ std::shared_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetS
         // is it true?
         c->Type = LinkerType::GNU;
         C->Prefix = getBuildSettings().TargetOS.getLibraryPrefix();
-        if (getBuildSettings().TargetOS.Type == OSType::Macos)
+        if (getBuildSettings().TargetOS.isApple())
             C->use_start_end_groups = false;
         if (id.ppath == "org.LLVM.clang" ||
             id.ppath == "org.LLVM.clangpp")
@@ -504,7 +504,7 @@ void NativeCompiledTarget::findCompiler()
         activateCompiler(ts["native"]["program"]["asm"], { ".s", ".S", ".sx" });
     }
 
-    if (getBuildSettings().TargetOS.Type != OSType::Macos)
+    if (!getBuildSettings().TargetOS.isApple())
     {
         removeExtension(".m");
         removeExtension(".mm");
@@ -626,7 +626,7 @@ void NativeCompiledTarget::setupCommand(builder::Command &c) const
         {
             if (getSolution().getHostOs().is(OSType::Windows))
                 c.addPathDirectory(nt->getOutputFile().parent_path());
-            else if (getSolution().getHostOs().is(OSType::Macos)) // use is apple
+            else if (getSolution().getHostOs().isApple())
                 c.environment["DYLD_LIBRARY_PATH"] += normalize_path(nt->getOutputFile().parent_path()) + ":";
             else // linux and others
                 c.environment["LD_LIBRARY_PATH"] += normalize_path(nt->getOutputFile().parent_path()) + ":";
@@ -2571,11 +2571,12 @@ bool NativeCompiledTarget::prepare()
         }
 
         // on macos we explicitly say that dylib should resolve symbols on dlopen
-        if (IsConfig && getSolution().getHostOs().is(OSType::Macos) && getSelectedTool())
+        /*if (IsConfig && getSolution().getHostOs().isApple() && getSelectedTool())
         {
+
             if (auto c = getSelectedTool()->as<GNULinker*>())
                 c->Undefined = "dynamic_lookup";
-        }
+        }*/
 
         // also fix rpath libname here
         if (createWindowsRpath())

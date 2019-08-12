@@ -841,7 +841,7 @@ bool Command::needsResponseFile() const
         if (!*use_response_files)
         {
             if ((getHostOS().is(OSType::Windows) && sz > win_sz) ||
-                (getHostOS().is(OSType::Macos) && sz > apple_sz))
+                (getHostOS().isApple() && sz > apple_sz))
                 LOG_WARN(logger, "Very long command line = " << sz << " and rsp files are disabled. Expect errors.");
         }
         return *use_response_files;

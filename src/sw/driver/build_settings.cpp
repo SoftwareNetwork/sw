@@ -35,8 +35,9 @@ static OS fromTargetSettings(const TargetSettings &ts)
         IF_SETTING("com.Microsoft.Windows.NT", os.Type, OSType::Windows);
         IF_SETTING("org.torvalds.linux", os.Type, OSType::Linux);
         IF_SETTING("com.Apple.Macos", os.Type, OSType::Macos);
+        IF_SETTING("com.Apple.Darwin", os.Type, OSType::Darwin);
         else
-            SW_UNIMPLEMENTED;
+            throw SW_RUNTIME_ERROR("Unknown os: " + v.getValue());
     IF_END
 
     IF_KEY("os"]["version")
@@ -50,7 +51,7 @@ static OS fromTargetSettings(const TargetSettings &ts)
         IF_SETTING("arm", os.Arch, ArchType::arm);
         IF_SETTING("aarch64", os.Arch, ArchType::aarch64);
         else
-            SW_UNIMPLEMENTED;
+            throw SW_RUNTIME_ERROR("Unknown arch: " + v.getValue());
     IF_END
 
     return os;
@@ -65,7 +66,7 @@ BuildSettings::BuildSettings(const TargetSettings &ts)
         IF_SETTING("static", Native.LibrariesType, LibraryType::Static);
         IF_SETTING("shared", Native.LibrariesType, LibraryType::Shared);
         else
-            SW_UNIMPLEMENTED;
+            throw SW_RUNTIME_ERROR("Bad library type: " + v.getValue());
     IF_END
 
     IF_KEY("native"]["configuration")
@@ -75,7 +76,7 @@ BuildSettings::BuildSettings(const TargetSettings &ts)
         IF_SETTING("release", Native.ConfigurationType, ConfigurationType::Release);
         IF_SETTING("releasewithdebuginformation", Native.ConfigurationType, ConfigurationType::ReleaseWithDebugInformation);
         else
-            SW_UNIMPLEMENTED;
+            throw SW_RUNTIME_ERROR("Unknown configuration: " + v.getValue());
     IF_END
 
     IF_KEY("native"]["mt")
@@ -120,15 +121,15 @@ String BuildSettings::getTargetTriplet() const
         target += toTripletString(TargetOS.SubArch);
 
     // vendor
-    if (TargetOS.is(OSType::Macos))
+    if (TargetOS.isApple())
         target += "-apple";
     else
         target += "-unknown";
 
     // os
     target += "-" + toTripletString(TargetOS.Type);
-    if (TargetOS.is(OSType::Macos) && TargetOS.Version > Version(1))
-        target += TargetOS.Version.toString();
+    if (TargetOS.isApple() && TargetOS.Version > Version(1))
+        target += TargetOS.Version.toString(TargetOS.Version.getRealLevel());
     if (TargetOS.Type == OSType::Android)
         target += "-android";
     if (TargetOS.Arch == ArchType::arm)
