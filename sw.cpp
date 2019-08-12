@@ -54,8 +54,6 @@ void build(Solution &s)
             support.Protected += "_CRT_SECURE_NO_WARNINGS"_d;
             support.Public += "UNICODE"_d;
         }
-        if (support.getBuildSettings().TargetOS.isApple())
-            support.Public += "BOOST_STACKTRACE_GNU_SOURCE_NOT_REQUIRED"_def;
         if (support.getCompilerType() != CompilerType::MSVC)
         {
             support.Protected.CompileOptions.push_back("-Wall");
