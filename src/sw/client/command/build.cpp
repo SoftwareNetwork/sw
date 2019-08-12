@@ -255,7 +255,7 @@ std::vector<sw::TargetSettings> createSettings(const sw::SwBuild &b)
     auto initial_settings = createSettings(b.getContext());
     if (!host_settings_file.empty())
     {
-        sw::TargetSettings s;
+        auto s = b.getContext().getHostSettings();
         applySettingsFromFile(s, host_settings_file);
         ((sw::SwContext &)b.getContext()).setHostSettings(s);
     }
@@ -403,7 +403,9 @@ std::vector<sw::TargetSettings> createSettings(const sw::SwBuild &b)
     // also we support inline host settings
     if (settings.size() == 1 && settings[0]["host"])
     {
-        ((sw::SwContext &)b.getContext()).setHostSettings(settings[0]["host"].getSettings());
+        auto s = b.getContext().getHostSettings();
+        s.merge(settings[0]["host"].getSettings());
+        ((sw::SwContext &)b.getContext()).setHostSettings(s);
         settings[0]["host"].reset();
     }
 
