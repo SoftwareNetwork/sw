@@ -369,6 +369,7 @@ protected:
 
 private:
     std::unique_ptr<Source> source;
+    String provided_cfg;
 
     void applyRootDirectory();
 

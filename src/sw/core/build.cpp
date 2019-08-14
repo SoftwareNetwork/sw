@@ -339,9 +339,8 @@ void SwBuild::execute(ExecutionPlan &p) const
 {
     CHECK_STATE_AND_CHANGE(BuildState::Prepared, BuildState::Executed);
 
-    p.build_always = build_always;
-    p.show_output = cl_show_output | cl_write_output_to_file;
-    p.write_output_to_file = cl_write_output_to_file;
+    p.build_always |= build_always;
+    p.write_output_to_file |= cl_write_output_to_file;
     p.skip_errors = skip_errors.getValue();
 
     //ScopedTime t;
@@ -382,7 +381,10 @@ Commands SwBuild::getCommands() const
         {
             auto c = tgt->getCommands();
             for (auto &c2 : c)
+            {
                 c2->maybe_unused &= ~builder::Command::MU_TRUE;
+                c2->show_output = cl_show_output || cl_write_output_to_file; // only for selected targets
+            }
             cmds.insert(c.begin(), c.end());
 
             // copy output dlls

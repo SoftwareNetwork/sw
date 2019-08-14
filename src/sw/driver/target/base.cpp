@@ -137,7 +137,6 @@ TargetBase &TargetBase::addTarget2(bool add, const TargetBaseTypePtr &t, const P
     //t->ts = &tid;
     t->ts = getSolution().getSettings();
     t->bs = t->ts;
-    t->ts_export = t->ts;
 
     // set some general settings, then init, then register
     setupTarget(t.get());
@@ -395,6 +394,8 @@ Program *Target::findProgramByExtension(const String &ext) const
 
 String Target::getConfig() const
 {
+    if (isLocal() && !provided_cfg.empty())
+        return provided_cfg;
     return ts.getHash();
 }
 
@@ -512,6 +513,14 @@ bool Target::init()
         auto c = getConfig();
         return c;
     };
+
+    if (ts["name"])
+    {
+        provided_cfg = ts["name"].getValue();
+        ts["name"].reset();
+    }
+
+    ts_export = ts;
 
     // this rd must come from parent!
     // but we take it in copy ctor

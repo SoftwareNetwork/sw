@@ -281,6 +281,7 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
         {
             C->VisibilityHidden = false;
             C->VisibilityInlinesHidden = false;
+            C->PositionIndependentCode = false;
         }*/
     }
     else if (id.ppath == "org.LLVM.clang" || id.ppath == "org.LLVM.clangpp")
@@ -293,6 +294,7 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
         {
             C->VisibilityHidden = false;
             C->VisibilityInlinesHidden = false;
+            C->PositionIndependentCode = false;
         }*/
     }
     else if (id.ppath == "org.LLVM.clangcl")

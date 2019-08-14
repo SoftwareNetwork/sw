@@ -194,6 +194,7 @@ int setup_main(const Strings &args)
 
     if (!working_directory.empty())
     {
+        working_directory = primitives::filesystem::canonical(working_directory);
         if (fs::is_regular_file(working_directory))
             fs::current_path(working_directory.parent_path());
         else

@@ -155,7 +155,8 @@ void build(Solution &s)
         builder.ExportIfStatic = true;
         builder.CPPVersion = CPPLanguageStandard::CPP17;
         builder += "src/sw/builder/.*"_rr;
-        builder.Public += manager, "org.sw.demo.preshing.junction-master"_dep,
+        builder.Public += manager,
+            "org.sw.demo.preshing.junction-master"_dep,
             "org.sw.demo.boost.graph"_dep,
             "org.sw.demo.boost.serialization"_dep,
             "org.sw.demo.microsoft.gsl-*"_dep,

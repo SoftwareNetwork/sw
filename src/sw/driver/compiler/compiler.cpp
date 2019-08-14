@@ -802,8 +802,8 @@ void GNULibrarian::prepareCommand1(const Target &t)
     // TODO: investigate, fix and remove?
     cmd->remove_outputs_before_execution = true;
 
-    if (t.getSolution().getHostOs().isApple() || t.getBuildSettings().TargetOS.isApple())
-        cmd->use_response_files = false;
+    //if (t.getSolution().getHostOs().isApple() || t.getBuildSettings().TargetOS.isApple())
+        //cmd->use_response_files = false;
 
     // can be zero imput files actually: lib.exe /DEF:my.def /OUT:x.lib
     //if (InputFiles().empty())

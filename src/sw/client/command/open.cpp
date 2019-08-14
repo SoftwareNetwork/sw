@@ -38,11 +38,14 @@ SUBCOMMAND_DECL(open)
 {
     auto swctx = createSwContext();
     auto &sdb = swctx->getLocalStorage();
-    sw::LocalPackage p(swctx->getLocalStorage(), open_arg);
+    auto pkgs = swctx->resolve(sw::UnresolvedPackages{ open_arg });
+    auto &p = pkgs.find(open_arg)->second;
 
 #ifdef _WIN32
     if (sdb.isPackageInstalled(p))
     {
+        auto p = swctx->resolve(open_arg);
+
         LOG_INFO(logger, "package: " + p.toString());
         LOG_INFO(logger, "package dir: " + p.getDir().u8string());
 

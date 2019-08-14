@@ -44,6 +44,7 @@ void SwCoreContext::createHostSettings()
     ts["native"]["mt"] = "false";
 }
 
+// move this to driver?
 void SwCoreContext::setHostPrograms()
 {
     auto &ts = host_settings;
@@ -56,7 +57,12 @@ void SwCoreContext::setHostPrograms()
         ts["native"]["stdlib"]["cpp"] = "com.Microsoft.VisualStudio.VC.libcpp";
         ts["native"]["stdlib"]["kernel"] = "com.Microsoft.Windows.SDK.um";
 
-        if (!getPredefinedTargets()["com.Microsoft.VisualStudio.VC.cl"].empty())
+        if (0);
+#ifdef _MSC_VER
+        // msvc + clangcl
+        // clangcl must be compatible with msvc
+        // and also clang actually
+        else if (!getPredefinedTargets()["com.Microsoft.VisualStudio.VC.cl"].empty())
         {
             ts["native"]["program"]["c"] = "com.Microsoft.VisualStudio.VC.cl";
             ts["native"]["program"]["cpp"] = "com.Microsoft.VisualStudio.VC.cl";
@@ -64,6 +70,18 @@ void SwCoreContext::setHostPrograms()
             ts["native"]["program"]["lib"] = "com.Microsoft.VisualStudio.VC.lib";
             ts["native"]["program"]["link"] = "com.Microsoft.VisualStudio.VC.link";
         }
+        // separate?
+#else __clang__
+        else if (!getPredefinedTargets()["org.LLVM.clangpp"].empty())
+        {
+            ts["native"]["program"]["c"] = "org.LLVM.clang";
+            ts["native"]["program"]["cpp"] = "org.LLVM.clangpp";
+            ts["native"]["program"]["asm"] = "org.LLVM.clang";
+            // ?
+            ts["native"]["program"]["lib"] = "com.Microsoft.VisualStudio.VC.lib";
+            ts["native"]["program"]["link"] = "com.Microsoft.VisualStudio.VC.link";
+        }
+#endif
         // add more defaults (clangcl, clang)
         else
             throw SW_RUNTIME_ERROR("Seems like you do not have Visual Studio installed.\n Please, install the latest Visual Studio first.");
@@ -86,10 +104,16 @@ void SwCoreContext::setHostPrograms()
             return true;
         };
 
-        //if_add(ts["native"]["program"]["c"], "org.gnu.gcc");
+        // must be the same compiler as current!
+#if defined(__clang__)
         if_add(ts["native"]["program"]["c"], "org.LLVM.clang"s);
-        //if_add(ts["native"]["program"]["cpp"], "org.gnu.gpp");
         if_add(ts["native"]["program"]["cpp"], "org.LLVM.clangpp"s);
+#elif defined(__GNUC__)
+        if_add(ts["native"]["program"]["c"], "org.gnu.gcc");
+        if_add(ts["native"]["program"]["cpp"], "org.gnu.gpp");
+#elif !defined(_WIN32)
+#error "Add your current compiler to detect.cpp and here."
+#endif
 
         // using c prog
         if_add(ts["native"]["program"]["asm"], ts["native"]["program"]["c"].getValue());
