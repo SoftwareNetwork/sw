@@ -57,7 +57,7 @@ private:
 
 using ProgramPtr = std::shared_ptr<Program>;
 
-struct PredefinedProgram
+struct SW_BUILDER_API PredefinedProgram
 {
     void setProgram(const ProgramPtr &p) { program = p; }
     Program &getProgram();

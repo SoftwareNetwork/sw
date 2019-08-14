@@ -31,7 +31,6 @@ using primitives::version::UnorderedVersionMap;
 
 struct SW_MANAGER_API VersionRange : primitives::version::VersionRange
 {
-#pragma warning(pop)
     using Base = primitives::version::VersionRange;
 
     using Base::Base;

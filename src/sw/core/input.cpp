@@ -164,13 +164,13 @@ bool Input::isChanged() const
     SW_UNIMPLEMENTED;
     return true;
 
-    switch (getType())
+    /*switch (getType())
     {
     //case InputType::SpecificationFile:
         //return true;
     default:
         SW_UNIMPLEMENTED;
-    }
+    }*/
 }
 
 void Input::addEntryPoints(const std::vector<TargetEntryPointPtr> &e)

@@ -49,6 +49,32 @@ bool isHostCygwin()
     return cyg;
 }
 
+#ifdef _WIN32
+static Version GetWindowsVersion(void)
+{
+    typedef void (WINAPI * RtlGetVersion_FUNC) (OSVERSIONINFOEXW *);
+
+    HMODULE hMod;
+    RtlGetVersion_FUNC func;
+    OSVERSIONINFOEXW osw = { 0 };
+
+    hMod = LoadLibrary(TEXT("ntdll.dll"));
+    if (!hMod)
+        throw SW_RUNTIME_ERROR("Cannot load ntdll.dll");
+
+    func = (RtlGetVersion_FUNC)GetProcAddress(hMod, "RtlGetVersion");
+    if (!func)
+    {
+        FreeLibrary(hMod);
+        throw SW_RUNTIME_ERROR("Cannot find RtlGetVersion");
+    }
+    osw.dwOSVersionInfoSize = sizeof(osw);
+    func(&osw);
+    FreeLibrary(hMod);
+    return { osw.dwMajorVersion, osw.dwMinorVersion, osw.dwBuildNumber };
+}
+#endif
+
 } // namespace detail
 
 OS detectOS()
@@ -64,13 +90,7 @@ OS detectOS()
 #endif
 
 #ifdef CPPAN_OS_WINDOWS_NO_CYGWIN
-    // TODO: set correct manifest
-    /* Windows version number data.  */
-    OSVERSIONINFOEXW osviex = { 0 };
-    osviex.dwOSVersionInfoSize = sizeof(osviex);
-    GetVersionExW((OSVERSIONINFOW*)&osviex);
-
-    os.Version = { osviex.dwMajorVersion, osviex.dwMinorVersion, osviex.dwBuildNumber };
+    os.Version = detail::GetWindowsVersion();
 
     auto a1 = getenv("PROCESSOR_ARCHITECTURE");
     auto a2 = getenv("PROCESSOR_ARCHITEW6432");

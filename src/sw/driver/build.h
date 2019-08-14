@@ -47,7 +47,7 @@ struct SW_DRIVER_CPP_API Test : driver::CommandBuilder
     }
 };
 
-struct SimpleBuild : TargetBase
+struct SW_DRIVER_CPP_API SimpleBuild : TargetBase
 {
     // public functions for sw frontend
 };
