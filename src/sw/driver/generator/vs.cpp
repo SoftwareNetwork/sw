@@ -777,6 +777,11 @@ void ProjectEmitter::printProject(
             beginBlockWithConfiguration("ItemDefinitionGroup", s);
 
             beginBlock("ClCompile");
+
+            beginBlock("WarningLevel");
+            addText("Level3");
+            endBlock(true);
+
             auto sf = nt.gatherSourceFiles();
             // FIXME: now taking cl settings from just one file
             if (!sf.empty())

@@ -230,7 +230,7 @@ struct SW_BUILDER_API OS
     bool support_dynamic_loading = true;
 
     bool is(OSType t) const { return Type == t; }
-    //bool isApple() const { return Type == t; } // macos/ios/tvos/watchos etc.
+    bool isApple() const { return Type == OSType::Macos; } // macos/ios/tvos/watchos etc.
     bool is(ArchType t) const { return Arch == t; }
     bool is(SubArchType t) const { return SubArch == t; }
     bool is(EnvironmentType t) const { return EnvironmentType1 == t; }
