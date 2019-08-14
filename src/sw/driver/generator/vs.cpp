@@ -546,7 +546,7 @@ static bool shouldAddTarget(const Target &t)
     // now without overridden
     return 0
         || gPrintDependencies
-        || t.isLocal()
+        || (t.isLocal() && !t.getPackage().getOverriddenDir())
         || (gPrintOverriddenDependencies && t.getPackage().getOverriddenDir())
         ;
 }
