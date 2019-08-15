@@ -84,11 +84,7 @@ void FileDb::write(std::vector<uint8_t> &v, const CommandRecord &f)
         return;
 
     write_int(v, f.hash);
-#ifndef __APPLE__
-    write_int(v, f.mtime);
-#else
-    write_int(v, decltype(f.mtime)::clock::to_time_t(f.mtime));
-#endif
+    write_int(v, file_time_type2time_t(f.mtime));
 
     auto n = f.implicit_inputs.size();
     write_int(v, n);
@@ -157,11 +153,7 @@ static void load(const path &fn, Files &files, ConcurrentCommandStorage &command
 
             time_t m;
             b.read(m);
-#ifndef __APPLE__
-            *(time_t*)&r.first->mtime = m;
-#else
-            r.first->mtime = decltype(r.first->mtime)::clock::from_time_t(m);
-#endif
+            r.first->mtime = time_t2file_time_type(m);
 
             size_t n;
             b.read(n);
