@@ -2910,7 +2910,8 @@ void NativeCompiledTarget::gatherStaticLinkLibraries(
                 auto &a = system ? dt->NativeLinkerOptions::System.LinkLibraries : dt->LinkLibraries;
                 if (added.find(base) == added.end() && !system)
                 {
-                    ll.push_back(base);
+                    if (!*dt->HeaderOnly)
+                        ll.push_back(base);
                     ll.insert(ll.end(), a.begin(), a.end()); // also link libs
                 }
                 else
@@ -2924,7 +2925,7 @@ void NativeCompiledTarget::gatherStaticLinkLibraries(
                 }
             };
 
-            if (!*dt->HeaderOnly)
+            //if (!*dt->HeaderOnly)
                 add(dt, dt->getOutputFile(), system);
 
             // if dep is a static library, we take all its deps link libraries too
@@ -2940,7 +2941,7 @@ void NativeCompiledTarget::gatherStaticLinkLibraries(
                 auto dt2 = d2->getTarget().template as<const NativeCompiledTarget*>();
                 if (!dt2)
                     continue;
-                if (!*dt2->HeaderOnly)
+                //if (!*dt2->HeaderOnly)
                     add(dt2, dt2->getImportLibrary(), system);
                 dt2->gatherStaticLinkLibraries(ll, added, targets, system);
             }
