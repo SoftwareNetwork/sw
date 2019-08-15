@@ -12,7 +12,7 @@
 #endif
 
 #include <boost/stacktrace.hpp>
-#include <boost/exception/all.hpp>
+#include <boost/exception/errinfo_errno.hpp>
 
 #ifdef REDEFINE_BOOST_USE_WINDOWS_H
 #define BOOST_USE_WINDOWS_H
