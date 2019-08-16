@@ -966,9 +966,25 @@ void ProjectEmitter::printProject(
 
             f(nt);
 
+            // remove sw libs deps
+            Files lldeps;
+            for (auto &l : nt.LinkLibraries)
+                lldeps.insert(l);
+            for (auto &d : nt.Dependencies)
+            {
+                if (auto nt3 = d->target->template as<NativeCompiledTarget>())
+                {
+                    lldeps.erase(nt3->getImportLibrary());
+                }
+            }
+            for (auto &l : lldeps)
+                ll.insert(l);
+            //
             for (auto &l : nt.LinkLibraries2)
                 ll.insert(l);
             for (auto &l : nt.NativeLinkerOptions::System.LinkLibraries)
+                ll.insert(l);
+            for (auto &l : nt.NativeLinkerOptions::System.LinkLibraries2)
                 ll.insert(l);
 
             beginBlockWithConfiguration("AdditionalDependencies", s);
