@@ -1,9 +1,10 @@
 #pragma sw require header pub.egorpugin.primitives.tools.embedder-master
-#pragma sw require header org.sw.demo.google.grpc.grpc_cpp_plugin-1
+#pragma sw require header org.sw.demo.google.grpc.cpp.plugin
 #pragma sw require header org.sw.demo.lexxmark.winflexbison.bison-master
 
 void configure(Build &s)
 {
+#ifndef SW_CPP_DRIVER_API_VERSION
     auto ss = s.createSettings();
     ss.Native.LibrariesType = LibraryType::Static;
     s.addSettings(ss);
@@ -31,9 +32,10 @@ void configure(Build &s)
     else if (s.isConfigSelected("win2android"))
         s.loadModule("utils/cc/win2android.cpp").call<void(Solution&)>("configure", s);
 
-    //s.getSettings().Native.ConfigurationType = ConfigurationType::ReleaseWithDebugInformation;
-    //s.getSettings().Native.CompilerType = CompilerType::ClangCl;
-    //s.getSettings().Native.CompilerType = CompilerType::Clang;
+    //s.getBuildSettings().Native.ConfigurationType = ConfigurationType::ReleaseWithDebugInformation;
+    //s.getBuildSettings().Native.CompilerType = CompilerType::ClangCl;
+    //s.getBuildSettings().Native.CompilerType = CompilerType::Clang;
+#endif
 }
 
 void build(Solution &s)
@@ -55,12 +57,12 @@ void build(Solution &s)
             "org.sw.demo.boost.property_tree-1"_dep,
             "org.sw.demo.boost.stacktrace-1"_dep;
         support.ApiName = "SW_SUPPORT_API";
-        if (support.getSettings().TargetOS.Type == OSType::Windows)
+        if (support.getBuildSettings().TargetOS.Type == OSType::Windows)
         {
             support.Protected += "_CRT_SECURE_NO_WARNINGS"_d;
             support.Public += "UNICODE"_d;
         }
-        if (support.getSettings().TargetOS.Type == OSType::Macos)
+        if (support.getBuildSettings().TargetOS.Type == OSType::Macos)
             support.Public += "BOOST_STACKTRACE_GNU_SOURCE_NOT_REQUIRED"_def;
     }
 
@@ -69,11 +71,13 @@ void build(Solution &s)
         protos.CPPVersion = CPPLanguageStandard::CPP17;
         protos += "src/sw/protocol/.*"_rr;
         protos.Public +=
-            "org.sw.demo.google.grpc.grpcpp-1"_dep,
+            "org.sw.demo.google.grpc.cpp"_dep,
             "pub.egorpugin.primitives.templates-master"_dep,
             "pub.egorpugin.primitives.log-master"_dep;
+        ProtobufData d;
+        d.public_protobuf = true;
         for (auto &[p, _] : protos["src/sw/protocol/.*\\.proto"_rr])
-            gen_grpc("org.sw.demo.google.protobuf-3"_dep, "org.sw.demo.google.grpc.grpc_cpp_plugin-1"_dep, protos, p, true);
+            gen_grpc_cpp("org.sw.demo.google.protobuf"_dep, "org.sw.demo.google.grpc.cpp.plugin"_dep, protos, p, d);
     }
 
     auto &manager = p.addTarget<LibraryTarget>("manager");
@@ -98,9 +102,9 @@ void build(Solution &s)
             "org.sw.demo.rbock.sqlpp11_connector_sqlite3-develop"_dep
             ;
         manager += "src/sw/manager/.*"_rr;
-        manager.Public.Definitions["VERSION_MAJOR"] += std::to_string(manager.getPackage().version.getMajor());
-        manager.Public.Definitions["VERSION_MINOR"] += std::to_string(manager.getPackage().version.getMinor());
-        manager.Public.Definitions["VERSION_PATCH"] += std::to_string(manager.getPackage().version.getPatch());
+        manager.Public.Definitions["VERSION_MAJOR"] += std::to_string(manager.getPackage().getVersion().getMajor());
+        manager.Public.Definitions["VERSION_MINOR"] += std::to_string(manager.getPackage().getVersion().getMinor());
+        manager.Public.Definitions["VERSION_PATCH"] += std::to_string(manager.getPackage().getVersion().getPatch());
         embed("pub.egorpugin.primitives.tools.embedder-master"_dep, manager, "src/sw/manager/inserts/inserts.cpp.in");
         gen_sqlite2cpp("pub.egorpugin.primitives.tools.sqlpp11.sqlite2cpp-master"_dep,
             manager, manager.SourceDir / "src/sw/manager/inserts/packages_db_schema.sql", "db_packages.h", "db::packages");
@@ -170,15 +174,15 @@ void build(Solution &s)
             "org.sw.demo.boost.uuid-1"_dep;
         cpp_driver += "src/sw/driver/.*"_rr;
         cpp_driver -= "src/sw/driver/inserts/.*"_rr;
-        if (cpp_driver.getSettings().TargetOS.Type != OSType::Windows)
+        if (cpp_driver.getBuildSettings().TargetOS.Type != OSType::Windows)
             cpp_driver -= "src/sw/driver/misc/.*"_rr;
         embed("pub.egorpugin.primitives.tools.embedder-master"_dep, cpp_driver, "src/sw/driver/inserts/inserts.cpp.in");
         gen_flex_bison("org.sw.demo.lexxmark.winflexbison-master"_dep, cpp_driver, "src/sw/driver/bazel/lexer.ll", "src/sw/driver/bazel/grammar.yy");
         if (cpp_driver.getCompilerType() == CompilerType::MSVC)
             cpp_driver.CompileOptions.push_back("-bigobj");
-        if (cpp_driver.getSettings().TargetOS.Type == OSType::Windows)
+        if (cpp_driver.getBuildSettings().TargetOS.Type == OSType::Windows)
             cpp_driver += "dbghelp.lib"_slib;
-        //else if (s.getSettings().Native.CompilerType == CompilerType::GNU)
+        //else if (s.getBuildSettings().Native.CompilerType == CompilerType::GNU)
             //cpp_driver.CompileOptions.push_back("-Wa,-mbig-obj");
         {
             auto c = cpp_driver.addCommand();
@@ -218,7 +222,7 @@ void build(Solution &s)
         embed("pub.egorpugin.primitives.tools.embedder-master"_dep, client, "src/sw/client/inserts/inserts.cpp.in");
         if (client.getCompilerType() == CompilerType::MSVC)
             client.CompileOptions.push_back("-bigobj");
-        if (client.getSettings().TargetOS.Type == OSType::Linux)
+        if (client.getBuildSettings().TargetOS.Type == OSType::Linux)
         {
             //client.getSelectedTool()->LinkOptions.push_back("-static-libstdc++");
             //client.getSelectedTool()->LinkOptions.push_back("-static-libgcc");
@@ -233,7 +237,7 @@ void build(Solution &s)
             c.c->always = true;
         }
 
-        if (client.getSettings().TargetOS.Type == OSType::Windows)
+        if (client.getBuildSettings().TargetOS.Type == OSType::Windows)
         {
             auto &client = tools.addTarget<ExecutableTarget>("client");
             client += "src/sw/tools/client.cpp";
@@ -241,7 +245,7 @@ void build(Solution &s)
                 "org.sw.demo.boost.dll-1"_dep,
                 "org.sw.demo.boost.filesystem-1"_dep,
                 "user32.lib"_slib;
-            if (client.getSettings().TargetOS.Type == OSType::Windows)
+            if (client.getBuildSettings().TargetOS.Type == OSType::Windows)
                 client.Public += "UNICODE"_d;
         }
     }

@@ -1251,10 +1251,10 @@ static void addDeps(NativeCompiledTarget &lib, Build &solution)
     lib += "pub.egorpugin.primitives.templates-master"_dep; // for SW_RUNTIME_ERROR
 
     // uncomment when you need help
-    //lib += "pub.egorpugin.primitives.source-master"_dep;
-    //lib += "pub.egorpugin.primitives.version-master"_dep;
-    //lib += "pub.egorpugin.primitives.command-master"_dep;
-    //lib += "pub.egorpugin.primitives.filesystem-master"_dep;
+    /*lib += "pub.egorpugin.primitives.source-master"_dep;
+    lib += "pub.egorpugin.primitives.version-master"_dep;
+    lib += "pub.egorpugin.primitives.command-master"_dep;
+    lib += "pub.egorpugin.primitives.filesystem-master"_dep;*/
 
     auto &drv = getDriverTarget(solution);
     auto d = lib + drv;
@@ -2288,7 +2288,7 @@ Commands Build::getCommands() const
                         continue;
                     if (dt->isLocal())
                         continue;
-                    if (dt->HeaderOnly.value())
+                    if (!dt->HeaderOnly || dt->HeaderOnly.value())
                         continue;
                     if (dt->getSettings().Native.LibrariesType != LibraryType::Shared && !dt->isSharedOnly())
                         continue;

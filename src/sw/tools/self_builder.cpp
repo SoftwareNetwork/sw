@@ -18,6 +18,8 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "self_builder");
 
+#define SW_TARGET "org.sw.sw.client.driver.cpp-0.3.0"
+
 using namespace sw;
 
 static cl::opt<path> p(cl::Positional, cl::Required);
@@ -65,25 +67,28 @@ void write_build_script(const std::unordered_map<UnresolvedPackage, LocalPackage
     std::vector<LocalPackage> lpkgs;
 
     // some packages must be before others
-    std::vector<UnresolvedPackage> prepkgs{
+    std::vector<UnresolvedPackage> prepkgs
+    {
         {"org.sw.demo.ragel"},
-        {"org.sw.demo.ragel-6"},
-
         {"org.sw.demo.lexxmark.winflexbison.bison-master"},
-
         {"org.sw.demo.google.protobuf.protobuf"},
-        {"org.sw.demo.google.protobuf.protobuf-3"},
-
-        {"org.sw.demo.google.grpc.grpc_cpp_plugin"},
-        {"org.sw.demo.google.grpc.grpc_cpp_plugin-1"},
+        {"org.sw.demo.google.grpc.cpp.plugin"},
+        {"pub.egorpugin.primitives.filesystem-master"},
+        {SW_TARGET},
     };
 
     for (auto &u : prepkgs)
     {
-        auto i = m.find(u);
-        if (i == m.end())
-            continue;
-        auto &r = i->second;
+        const LocalPackage *lp = nullptr;
+        for (auto &[u2, lp2] : m)
+        {
+            if (u2.ppath == u.ppath)
+                lp = &lp2;
+        }
+        if (!lp)
+            throw SW_RUNTIME_ERROR("Cannot find dependency: " + u.toString());
+
+        auto &r = *lp;
         auto &d = r.getData();
         if (used_gns.find(d.group_number) != used_gns.end())
             continue;
@@ -160,7 +165,7 @@ int main(int argc, char **argv)
     getExecutor(&e);
 
     SwManagerContext swctx(Settings::get_user_settings().storage_dir);
-    auto m = swctx.install({{"org.sw.sw.client.driver.cpp-0.3.0"}});
+    auto m = swctx.install({{SW_TARGET}});
 
     write_required_packages(m);
     write_build_script(m);

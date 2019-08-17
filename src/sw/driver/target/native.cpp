@@ -524,9 +524,11 @@ void NativeCompiledTarget::setupCommand(builder::Command &c) const
     }
 }
 
-driver::CommandBuilder NativeCompiledTarget::addCommand() const
+driver::CommandBuilder NativeCompiledTarget::addCommand(const std::shared_ptr<driver::Command> &in) const
 {
     driver::CommandBuilder cb(getSolution().swctx);
+    if (in)
+        cb.c = in;
     // set as default
     // source dir contains more files than bdir?
     // sdir or bdir?
