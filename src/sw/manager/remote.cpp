@@ -14,7 +14,6 @@
 
 #include <boost/dll.hpp>
 #include <fmt/ostream.h>
-#include <grpcpp/grpcpp.h>
 #include <primitives/http.h>
 #include <primitives/templates.h>
 

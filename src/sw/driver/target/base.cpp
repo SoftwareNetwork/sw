@@ -161,6 +161,10 @@ TargetBase &TargetBase::addTarget2(bool add, const TargetBaseTypePtr &t, const P
     // set source dir
     if (t->SourceDir.empty())
     {
+        auto i = getSolution().source_dirs_by_package.find(t->getPackage());
+        if (i != getSolution().source_dirs_by_package.end())
+            t->setSourceDirectory(i->second);
+
         // try to get solution provided source dir
         if (t->source)
         {

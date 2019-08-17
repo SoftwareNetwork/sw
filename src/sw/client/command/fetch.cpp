@@ -32,46 +32,36 @@ SUBCOMMAND_DECL(fetch)
     cli_fetch(*swctx);
 }
 
-decltype(auto) getInput(sw::SwBuild &b)
+static decltype(auto) getInput(sw::SwBuild &b)
 {
     return b.getContext().addInput(fs::current_path());
 }
 
-auto getSources(sw::SwContext &swctx)
+static sw::SourceDirMap getSources(sw::SwContext &swctx)
 {
     auto b1 = swctx.createBuild();
     auto &b = *b1;
 
     auto ts = createSettings(b.getContext());
-    ts["driver"]["dry-run"] = "true";
+    ts["driver"]["dry-run"] = "true"; // only used to get sources
 
     auto &ii = getInput(b);
     sw::InputWithSettings i(ii);
     i.addSettings(ts);
     b.addInput(i);
     b.load();
+    b.setTargetsToBuild();
 
     auto d = fs::current_path() / SW_BINARY_DIR / "src";
 
     sw::SourceDirMap srcs;
     std::unordered_set<sw::SourcePtr> sources;
-    for (const auto &[pkg, tgts] : b.getTargets())
+    for (const auto &[pkg, tgts] : b.getTargetsToBuild())
     {
-        // filter out predefined targets
-        if (b.getContext().getPredefinedTargets().find(pkg) != b.getContext().getPredefinedTargets().end())
-            continue;
-        auto tgt = tgts.getAnyTarget();
-        if (!tgt)
-            throw SW_RUNTIME_ERROR("Empty target");
-        auto &t = *tgt;
+        if (tgts.empty())
+            throw SW_RUNTIME_ERROR("Empty targets");
 
-        auto &tgts2 = tgts;
-        SCOPE_EXIT
-        {
-            // and clear targets
-            tgts2.clear();
-        };
-
+        auto &t = **tgts.begin();
         auto s = t.getSource().clone(); // make a copy!
         s->applyVersion(pkg.getVersion());
         if (srcs.find(s->getHash()) != srcs.end())
@@ -105,7 +95,6 @@ std::pair<sw::SourceDirMap, const sw::Input &> fetch(sw::SwBuild &b)
     sw::InputWithSettings i(ii);
     i.addSettings(ts);
     b.addInput(i);
-    b.overrideBuildState(sw::BuildState::NotStarted);
     b.load();
     b.setTargetsToBuild();
     b.resolvePackages();

@@ -8,6 +8,8 @@
 
 #include "remote.h"
 
+#include <grpcpp/grpcpp.h>
+
 #undef ERROR
 #include <api.grpc.pb.h>
 #undef strtoll

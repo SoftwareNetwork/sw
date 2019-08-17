@@ -51,17 +51,20 @@ sw::PackageDescriptionMap getPackages(const sw::SwBuild &b, const sw::SourceDirM
     using namespace sw;
 
     PackageDescriptionMap m;
-    for (auto &[pkg, td] : b.getTargets())
+    for (auto &[pkg, tgts] : b.getTargets())
     {
         // deps
         if (pkg.getPath().isAbsolute())
             continue;
-        auto t = td.getAnyTarget();
 
+        if (tgts.empty())
+            throw SW_RUNTIME_ERROR("Empty targets");
+
+        auto &t = **tgts.begin();
         nlohmann::json j;
 
         // source, version, path
-        t->getSource().save(j["source"]);
+        t.getSource().save(j["source"]);
         j["version"] = pkg.getVersion().toString();
         j["path"] = pkg.getPath().toString();
 
@@ -69,7 +72,7 @@ sw::PackageDescriptionMap getPackages(const sw::SwBuild &b, const sw::SourceDirM
         path rd;
         if (!sources.empty())
         {
-            auto src = t->getSource().clone(); // copy
+            auto src = t.getSource().clone(); // copy
             src->applyVersion(pkg.getVersion());
             auto si = sources.find(src->getHash());
             if (si == sources.end())
@@ -80,7 +83,7 @@ sw::PackageDescriptionMap getPackages(const sw::SwBuild &b, const sw::SourceDirM
 
         // double check files (normalize them)
         Files files;
-        for (auto &f : t->getSourceFiles())
+        for (auto &f : t.getSourceFiles())
             files.insert(f.lexically_normal());
 
         // we put files under SW_SDIR_NAME to keep space near it
@@ -97,7 +100,7 @@ sw::PackageDescriptionMap getPackages(const sw::SwBuild &b, const sw::SourceDirM
         }
 
         // deps
-        for (auto &d : t->getDependencies())
+        for (auto &d : t.getDependencies())
         {
             // filter out predefined targets
             if (b.getContext().getPredefinedTargets().find(d->getUnresolvedPackage().ppath) != b.getContext().getPredefinedTargets().end(d->getUnresolvedPackage().ppath))

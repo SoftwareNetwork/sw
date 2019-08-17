@@ -65,10 +65,17 @@ bool download(const std::unordered_set<SourcePtr> &sset, SourceDirMap &source_di
                 bool e = fs::exists(t);
                 if (!e || getUtc() - string2timepoint(read_file(t)) > opts.existing_dirs_age)
                 {
-                    if (e)
-                        LOG_INFO(logger, "Download data is stale, re-downloading");
-                    fs::remove_all(d);
-                    dl();
+                    // add src->needsRedownloading()?
+                    auto g = dynamic_cast<primitives::source::Git *>(src);
+                    if (g && (!g->tag.empty() || !g->commit.empty()))
+                        ;
+                    else
+                    {
+                        if (e)
+                            LOG_INFO(logger, "Download data is stale, re-downloading");
+                        fs::remove_all(d);
+                        dl();
+                    }
                 }
             }
             if (opts.adjust_root_dir)

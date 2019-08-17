@@ -23,6 +23,9 @@
 
 #include <boost/algorithm/string.hpp>
 
+#include <primitives/log.h>
+DECLARE_STATIC_LOGGER(logger, "build");
+
 DEFINE_SUBCOMMAND(build, "Build files, dirs or packages");
 
 extern ::cl::opt<bool> build_after_fetch;
@@ -35,6 +38,8 @@ static ::cl::opt<String> build_binary_dir("B", ::cl::desc("Explicitly specify a 
 static ::cl::opt<bool> build_fetch("fetch", ::cl::desc("Fetch sources, then build"), ::cl::sub(subcommand_build));
 static ::cl::opt<path> build_explan("ef", ::cl::desc("Build execution plan from specified file"), ::cl::sub(subcommand_build));
 static ::cl::opt<bool> build_default_explan("e", ::cl::desc("Build execution plan"), ::cl::sub(subcommand_build));
+
+static ::cl::opt<bool> isolated_build("isolated", cl::desc("Copy source files to isolated folders to check build like just after uploading"), ::cl::sub(subcommand_build));
 
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -436,6 +441,82 @@ std::unique_ptr<sw::SwBuild> createBuildAndPrepare(sw::SwContext &swctx)
     return std::move(b);
 }
 
+static decltype(auto) getInput(sw::SwBuild &b)
+{
+    return b.getContext().addInput(fs::current_path());
+}
+
+static void isolated_build1(sw::SwContext &swctx)
+{
+    // get targets
+    // create dirs
+
+    LOG_INFO(logger, "Determining targets");
+
+    auto b1 = swctx.createBuild();
+    auto &b = *b1;
+
+    auto ts = createSettings(b.getContext());
+    auto &ii = getInput(b);
+    sw::InputWithSettings i(ii);
+    i.addSettings(ts);
+    b.addInput(i);
+    b.load();
+    b.setTargetsToBuild();
+    b.resolvePackages();
+    b.loadPackages();
+    b.prepare();
+
+    // get sources to pass them into getPackages()
+    sw::SourceDirMap srcs;
+    for (const auto &[pkg, tgts] : b.getTargetsToBuild())
+    {
+        if (tgts.empty())
+            throw SW_RUNTIME_ERROR("Empty targets");
+
+        auto &t = **tgts.begin();
+        auto s = t.getSource().clone(); // make a copy!
+        s->applyVersion(pkg.getVersion());
+        if (srcs.find(s->getHash()) != srcs.end())
+            continue;
+        srcs[s->getHash()] = fs::current_path();
+    }
+
+    LOG_INFO(logger, "Copying files");
+
+    auto m = getPackages(b, srcs);
+    auto d = fs::current_path() / SW_BINARY_DIR / "isolated";
+
+    for (const auto &[pkg, tgts] : b.getTargetsToBuild())
+    {
+        if (tgts.empty())
+            throw SW_RUNTIME_ERROR("Empty targets");
+
+        auto dir = d / pkg.toString();
+        for (auto &[from, to] : m[pkg]->getData().files_map)
+        {
+            fs::create_directories((dir / to).parent_path());
+            fs::copy_file(from, dir / to, fs::copy_options::overwrite_existing);
+        }
+
+        ts["driver"]["source-dir-for-package"][pkg.toString()] = normalize_path(dir);
+    }
+
+    LOG_INFO(logger, "Building in isolated environment");
+
+    //
+    {
+        auto b1 = swctx.createBuild();
+        auto &b = *b1;
+
+        auto &ii = getInput(b);
+        sw::InputWithSettings i(ii);
+        i.addSettings(ts);
+        b.addInput(i);
+        b.build();
+    }
+}
+
 SUBCOMMAND_DECL2(build)
 {
     if (!build_explan.empty())
@@ -451,6 +532,12 @@ SUBCOMMAND_DECL2(build)
     {
         build_after_fetch = true;
         return cli_fetch(swctx);
+    }
+
+    if (isolated_build)
+    {
+        isolated_build1(swctx);
+        return;
     }
 
     // defaults or only one of build_arg and -S specified

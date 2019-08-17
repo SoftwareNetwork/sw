@@ -58,6 +58,7 @@ struct SW_DRIVER_CPP_API Build : SimpleBuild
 
     ModuleSwappableData *module_data = nullptr;
     SourceDirMap source_dirs_by_source;
+    std::unordered_map<PackageId, path> source_dirs_by_package;
     Checker checker;
 
     SwContext &getContext() const;

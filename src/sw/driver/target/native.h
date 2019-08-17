@@ -154,7 +154,7 @@ public:
     // reconsider?
     CompilerType getCompilerType() const;
 
-    driver::CommandBuilder addCommand() const;
+    driver::CommandBuilder addCommand(const std::shared_ptr<driver::Command> &in = {}) const;
     // add executed command?
 
     void writeFileOnce(const path &fn, const String &content = {}) const;

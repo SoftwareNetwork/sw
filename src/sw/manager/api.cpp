@@ -14,7 +14,6 @@
 #include <sw/protocol/grpc_helpers.h>
 #include <sw/support/exceptions.h>
 
-#include <grpcpp/grpcpp.h>
 #include <nlohmann/json.hpp>
 #include <primitives/templates.h>
 

@@ -38,13 +38,6 @@ void TargetData::setEntryPoint(const std::shared_ptr<TargetEntryPoint> &e)
     ep = e;
 }
 
-const ITarget *TargetContainer::getAnyTarget() const
-{
-    if (!targets.empty())
-        return targets.begin()->get();
-    return nullptr;
-}
-
 void TargetContainer::push_back(const ITargetPtr &t)
 {
     targets.push_back(t);

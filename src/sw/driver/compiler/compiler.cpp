@@ -288,6 +288,7 @@ void ClangCompiler::prepareCommand1(const ::sw::Target &t)
     if (OutputFile)
     {
         cmd->deps_file = OutputFile().parent_path() / (OutputFile().stem().u8string() + ".d");
+        cmd->output_dirs.insert(cmd->deps_file.parent_path());
         cmd->working_directory = OutputFile().parent_path();
     }
 
@@ -446,6 +447,7 @@ void GNUCompiler::prepareCommand1(const Target &t)
     if (OutputFile)
     {
         cmd->deps_file = OutputFile().parent_path() / (OutputFile().stem().u8string() + ".d");
+        cmd->output_dirs.insert(cmd->deps_file.parent_path());
         cmd->working_directory = OutputFile().parent_path();
     }
 

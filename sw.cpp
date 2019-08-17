@@ -1,5 +1,5 @@
 #pragma sw require header pub.egorpugin.primitives.tools.embedder-master
-#pragma sw require header org.sw.demo.google.grpc.grpc_cpp_plugin
+#pragma sw require header org.sw.demo.google.grpc.cpp.plugin
 #pragma sw require header org.sw.demo.lexxmark.winflexbison.bison-master
 
 void configure(Build &s)
@@ -66,11 +66,13 @@ void build(Solution &s)
         protos.CPPVersion = CPPLanguageStandard::CPP17;
         protos += "src/sw/protocol/.*"_rr;
         protos.Public +=
-            "org.sw.demo.google.grpc.grpcpp"_dep,
+            "org.sw.demo.google.grpc.cpp"_dep,
             "pub.egorpugin.primitives.templates-master"_dep,
             "pub.egorpugin.primitives.log-master"_dep;
+        ProtobufData d;
+        d.public_protobuf = true;
         for (auto &[p, _] : protos["src/sw/protocol/.*\\.proto"_rr])
-            gen_grpc("org.sw.demo.google.protobuf-3"_dep, "org.sw.demo.google.grpc.grpc_cpp_plugin"_dep, protos, p, true);
+            gen_grpc_cpp("org.sw.demo.google.protobuf"_dep, "org.sw.demo.google.grpc.cpp.plugin"_dep, protos, p, d);
     }
 
     auto &manager = p.addTarget<LibraryTarget>("manager");

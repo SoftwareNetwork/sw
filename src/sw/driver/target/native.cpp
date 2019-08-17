@@ -650,9 +650,11 @@ void NativeCompiledTarget::setupCommand(builder::Command &c) const
     }
 }
 
-driver::CommandBuilder NativeCompiledTarget::addCommand() const
+driver::CommandBuilder NativeCompiledTarget::addCommand(const std::shared_ptr<driver::Command> &in) const
 {
     driver::CommandBuilder cb(getSolution().getContext());
+    if (in)
+        cb.c = in;
     // set as default
     // source dir contains more files than bdir?
     // sdir or bdir?
@@ -1566,7 +1568,7 @@ void NativeCompiledTarget::findSources()
             }
         }
         if (bfn.empty())
-            throw SW_RUNTIME_ERROR("No bazel file found");
+            throw SW_RUNTIME_ERROR("No bazel file found in SourceDir: " + normalize_path(SourceDir));
 
         auto b = read_file(bfn);
         auto f = bazel::parse(b);
@@ -1658,8 +1660,8 @@ void NativeCompiledTarget::autoDetectOptions()
 
     autodetect = true;
 
+    autoDetectSources(); // sources first
     autoDetectIncludeDirectories();
-    autoDetectSources();
 }
 
 void NativeCompiledTarget::autoDetectSources()

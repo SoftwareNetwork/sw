@@ -363,7 +363,7 @@ private:
     bool dependency_set = false;
 };
 
-struct VSCommand : Command
+struct SW_DRIVER_CPP_API VSCommand : Command
 {
     using Command::Command;
 
@@ -373,7 +373,7 @@ private:
     void postProcess1(bool ok) override;
 };
 
-struct GNUCommand : Command
+struct SW_DRIVER_CPP_API GNUCommand : Command
 {
     path deps_file;
 
