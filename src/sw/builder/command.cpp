@@ -732,7 +732,11 @@ path Command::writeCommand(const path &p) const
     if (!working_directory.empty())
         t += "cd " + norm(working_directory) + "\n\n";
 
-    if (needsResponseFile())
+    bool need_rsp = needsResponseFile();
+    if (getHostOS().is(OSType::Windows))
+        need_rsp = needsResponseFile(6'000);
+
+    if (need_rsp)
     {
         auto rsp_name = path(p) += ".rsp";
         write_file(rsp_name, getResponseFileContents());
@@ -827,10 +831,32 @@ void Command::postProcess(bool ok)
 
 bool Command::needsResponseFile() const
 {
-    static constexpr auto win_sz = 8'100; // win have 8192 limit, we take a bit fewer symbols
-    static constexpr auto apple_sz = 260'000;
-    static constexpr auto nix_sz = 8'100; // something near 2M
+    // we do not use system(), so we really do not care when using exec*
+    // we care on windows where CreateProcess has limit of 32K in total
 
+    static constexpr auto win_create_process_sz = 32'000; // win have 32K limit, we take a bit fewer symbols
+    static constexpr auto win_console_sz = 8'100; // win have 8192 limit on console, we take a bit fewer symbols
+
+    static constexpr auto win_sz = win_create_process_sz;
+    static constexpr auto apple_sz = 260'000;
+    static constexpr auto nix_sz = 2'000'000; // something near 2M
+
+    const auto selected_size =
+#ifdef _WIN32
+        win_sz
+        // do not use for now
+//#elif __APPLE__
+        // apple_sz
+#else
+        nix_sz
+#endif
+        ;
+
+    return needsResponseFile(selected_size);
+}
+
+bool Command::needsResponseFile(size_t selected_size) const
+{
     // 3 = 1 + 2 = space + quotes
     size_t sz = getProgram().size() + 3;
     for (auto a = arguments.begin() + getFirstResponseFileArgument(); a != arguments.end(); a++)
@@ -840,22 +866,12 @@ bool Command::needsResponseFile() const
     {
         if (!*use_response_files)
         {
-            if ((getHostOS().is(OSType::Windows) && sz > win_sz) ||
-                (getHostOS().isApple() && sz > apple_sz))
+            if (sz > selected_size)
                 LOG_WARN(logger, "Very long command line = " << sz << " and rsp files are disabled. Expect errors.");
         }
         return *use_response_files;
     }
-    return sz >
-#ifdef _WIN32
-        win_sz
-// do not use for now
-//#elif __APPLE__
-        // apple_sz
-#else
-        nix_sz
-#endif
-        ;
+    return sz > selected_size;
 }
 
 String Command::getName(bool short_name) const

@@ -206,6 +206,7 @@ struct SW_BUILDER_API Command : ICastable, CommandNode, detail::ResolvableComman
 
     virtual bool isOutdated() const;
     bool needsResponseFile() const;
+    bool needsResponseFile(size_t sz) const;
 
     using Base::push_back;
     using Base::setProgram;
