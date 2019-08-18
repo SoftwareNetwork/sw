@@ -69,6 +69,7 @@ struct SW_MANAGER_API PackagesDatabase : public Database
     void installPackage(const Package &);
     void installPackage(const PackageId &, const PackageData &);
     void deletePackage(const PackageId &) const;
+    PackageId getGroupLeader(PackageVersionGroupNumber gn) const;
 
     // overridden
     std::optional<path> getOverriddenDir(const Package &p) const;

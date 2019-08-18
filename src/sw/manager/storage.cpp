@@ -323,6 +323,17 @@ const PackageData &LocalStorage::loadData(const PackageId &id) const
     return StorageWithPackagesDatabase::loadData(id);
 }
 
+LocalPackage LocalStorage::getGroupLeader(const LocalPackage &id) const
+{
+    if (isPackageOverridden(id))
+    {
+        auto pkg = ovs.getPackagesDatabase().getGroupLeader(id.getData().group_number);
+        return LocalPackage(*this, pkg);
+    }
+    auto pkg = getPackagesDatabase().getGroupLeader(id.getData().group_number);
+    return LocalPackage(*this, pkg);
+}
+
 LocalPackage LocalStorage::install(const Package &id) const
 {
     /*//if (&id.storage == this)

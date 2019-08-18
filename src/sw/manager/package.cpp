@@ -192,4 +192,9 @@ void LocalPackage::remove() const
     getLocalStorage().remove(*this);
 }
 
+LocalPackage LocalPackage::getGroupLeader() const
+{
+    return getLocalStorage().getGroupLeader(*this);
+}
+
 }

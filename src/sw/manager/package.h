@@ -95,6 +95,8 @@ struct SW_MANAGER_API LocalPackage : Package
 
     void remove() const;
 
+    LocalPackage getGroupLeader() const;
+
 private:
     path getDir(const path &root) const;
     const LocalStorage &getLocalStorage() const;

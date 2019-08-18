@@ -101,6 +101,16 @@ void Command::prepare()
         }
     }
 
+    for (auto &d1 : dependencies)
+    {
+        auto d = d1.lock();
+        if (!d)
+            throw SW_RUNTIME_ERROR("Command dependency was not resolved: ???UNKNOWN_PROGRAM??? " + print());
+
+        auto &t = d->getTarget();
+        ((const NativeTarget &)t).setupCommand(*this);
+    }
+
     Base::prepare();
 }
 
@@ -110,6 +120,11 @@ void Command::setProgram(const std::shared_ptr<Dependency> &d)
         throw SW_RUNTIME_ERROR("Setting program twice"); // probably throw, but who knows...
     dependency = d;
     dependency_set = true;
+}
+
+void Command::addProgramDependency(const std::shared_ptr<Dependency> &d)
+{
+    dependencies.push_back(d);
 }
 
 void Command::addLazyAction(LazyAction f)

@@ -61,8 +61,8 @@ private:
 
     void loadPackages1(Build &) const override;
 
-    SharedLibraryTarget &createTarget(Build &, const Files &files) const;
-    decltype(auto) commonActions(Build &, const Files &files) const;
+    SharedLibraryTarget &createTarget(Build &, const String &name) const;
+    decltype(auto) commonActions(Build &, const FilesSorted &files) const;
     void commonActions2(Build &, SharedLibraryTarget &lib) const;
 
     // many input files to many dlls

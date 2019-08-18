@@ -200,6 +200,7 @@ struct SW_MANAGER_API LocalStorage : Directories, LocalStorageBase
     void get(const IStorage &source, const PackageId &id, StorageFileType) const /* override*/;
     bool isPackageInstalled(const Package &id) const;
     bool isPackageOverridden(const PackageId &id) const;
+    LocalPackage getGroupLeader(const LocalPackage &id) const;
     const PackageData &loadData(const PackageId &) const override;
     std::unordered_map<UnresolvedPackage, Package> resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const override;
 

@@ -28,7 +28,6 @@ struct Module;
 struct ModuleStorage;
 struct SwContext;
 struct ModuleSwappableData;
-struct PrepareConfigEntryPoint;
 
 using FilesMap = std::unordered_map<path, path>;
 

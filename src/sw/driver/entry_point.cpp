@@ -271,7 +271,7 @@ void NativeModuleTargetEntryPoint::loadPackages1(Build &b) const
     m.build(b);
 }
 
-static auto getFilesHash(const Files &files)
+static auto getFilesHash(const FilesSorted &files)
 {
     String h;
     for (auto &fn : files)
@@ -279,7 +279,7 @@ static auto getFilesHash(const Files &files)
     return shorten_hash(blake2b_512(h), 6);
 }
 
-static PackagePath getSelfTargetName(const Files &files)
+static PackagePath getSelfTargetName(const FilesSorted &files)
 {
     return "loc.sw.self." + getFilesHash(files);
 }
@@ -338,25 +338,25 @@ void PrepareConfigEntryPoint::loadPackages1(Build &b) const
         many2many(b, files_);
 }
 
-SharedLibraryTarget &PrepareConfigEntryPoint::createTarget(Build &b, const Files &files) const
+SharedLibraryTarget &PrepareConfigEntryPoint::createTarget(Build &b, const String &name) const
 {
     b.IsConfig = true;
-    auto &lib = b.addTarget<SharedLibraryTarget>(getSelfTargetName(files), "local");
+    auto &lib = b.addTarget<SharedLibraryTarget>(name, "local");
     tgt = std::make_unique<PackageId>(lib.getPackage());
     b.IsConfig = false;
     return lib;
 }
 
-decltype(auto) PrepareConfigEntryPoint::commonActions(Build &b, const Files &files) const
+decltype(auto) PrepareConfigEntryPoint::commonActions(Build &b, const FilesSorted &files) const
 {
-    auto &lib = createTarget(b, files);
+    auto &lib = createTarget(b, getSelfTargetName(files));
 
     addDeps(b, lib);
     addImportLibrary(b.getContext(), lib);
     lib.AutoDetectOptions = false;
     lib.CPPVersion = CPPLanguageStandard::CPP17;
 
-    // add files
+    // add files, sorted!
     for (auto &fn : files)
     {
         lib += fn;
@@ -437,55 +437,53 @@ void PrepareConfigEntryPoint::many2one(Build &b, const std::unordered_set<LocalP
 {
     // make parallel?
     //std::unordered_map<PackageVersionGroupNumber, path> gn_files;
-    auto get_package_config = [](const auto &pkg) -> path
+
+    struct data
     {
-        if (pkg.getData().group_number)
-        {
-            auto d = driver::cpp::findConfig(pkg.getDirSrc2(), driver::cpp::Driver::getAvailableFrontendConfigFilenames());
-            if (!d)
-                throw SW_RUNTIME_ERROR("cannot find config for package: " + pkg.toString());
-            return *d;
-        }
-        SW_UNIMPLEMENTED;
-        /*auto p = pkg.getGroupLeader();
-        if (auto d = driver::cpp::findConfig(p.getDirSrc2(), driver::cpp::Driver::getAvailableFrontendConfigFilenames()))
-            return *d;
-        auto d = driver::cpp::findConfig(pkg.getDirSrc2(), driver::cpp::Driver::getAvailableFrontendConfigFilenames());
-        if (!d)
-            throw SW_RUNTIME_ERROR("cannot find config");
-        fs::create_directories(p.getDirSrc2());
-        fs::copy_file(*d, p.getDirSrc2() / d->filename());
-        return p.getDirSrc2() / d->filename();*/
+        LocalPackage pkg;
+        PackageVersionGroupNumber gn;
+        path p;
     };
 
-    Files files;
-    std::unordered_map<path, LocalPackage> output_names;
+    auto get_package_config = [&b](const LocalPackage &pkg)
+    {
+        if (!pkg.getData().group_number)
+            throw SW_RUNTIME_ERROR("Missing group number");
+
+        auto pkg2 = pkg.getGroupLeader();
+        auto d = driver::cpp::findConfig(pkg2.getDirSrc2(), driver::cpp::Driver::getAvailableFrontendConfigFilenames());
+        if (!d)
+            throw SW_RUNTIME_ERROR("cannot find config for package: " + pkg.toString());
+        return data{ {b.getSolution().getContext().getLocalStorage(), pkg2}, pkg.getData().group_number, *d };
+    };
+
+    FilesSorted files;
+    std::unordered_map<path, data> output_names;
     for (auto &pkg : pkgs)
     {
         auto p = get_package_config(pkg);
-        files.insert(p);
-        output_names.emplace(p, pkg);
+        files.insert(p.p);
+        output_names.emplace(p.p, p);
     }
 
     auto &lib = commonActions(b, files);
 
     // make fancy names
-    for (auto &[fn, pkg] : output_names)
+    for (auto &[fn, d] : output_names)
     {
-        lib[fn].fancy_name = "[" + output_names.find(fn)->second.toString() + "]/[config]";
+        lib[fn].fancy_name = "[" + output_names.find(fn)->second.pkg.toString() + "]/[config]";
         // configs depend on pch, and pch depends on getCurrentModuleId(), so we add name to the file
         // to make sure we have different config .objs for different pchs
-        lib[fn].as<NativeSourceFile>().setOutputFile(lib, fn.u8string() + "." + getCurrentModuleId(), lib.getObjectDir(pkg) / "self");
+        lib[fn].as<NativeSourceFile>().setOutputFile(lib, fn.u8string() + "." + getCurrentModuleId(), lib.getObjectDir(d.pkg) / "self");
         if (gVerbose)
             lib[fn].fancy_name += " (" + normalize_path(fn) + ")";
     }
 
     // file deps
-    auto gnu_setup = [&b, &lib](auto *c, const auto &headers, const path &fn, LocalPackage &pkg)
+    auto gnu_setup = [&b, &lib](auto *c, const auto &headers, const path &fn, const auto &gn)
     {
         // we use pch, but cannot add more defs on CL
         // so we create a file with them
-        auto gn = pkg.getData().group_number;
         auto hash = gn2suffix(gn);
         path h;
         // cannot create aux dir on windows; auxl = auxiliary
@@ -510,26 +508,26 @@ void PrepareConfigEntryPoint::many2one(Build &b, const std::unordered_set<LocalP
         c->ForcedIncludeFiles().push_back(getDriverIncludeDir(b, lib) / getSwCheckAbiVersionHeader());
     };
 
-    for (auto &[fn, pkg] : output_names)
+    for (auto &[fn, d] : output_names)
     {
         auto [headers, udeps] = getFileDependencies(b.getContext(), fn);
         if (auto sf = lib[fn].template as<NativeSourceFile*>())
         {
             if (auto c = sf->compiler->template as<VisualStudioCompiler*>())
             {
-                gnu_setup(c, headers, fn, pkg);
+                gnu_setup(c, headers, fn, d.gn);
             }
             else if (auto c = sf->compiler->template as<ClangClCompiler*>())
             {
-                gnu_setup(c, headers, fn, pkg);
+                gnu_setup(c, headers, fn, d.gn);
             }
             else if (auto c = sf->compiler->template as<ClangCompiler*>())
             {
-                gnu_setup(c, headers, fn, pkg);
+                gnu_setup(c, headers, fn, d.gn);
             }
             else if (auto c = sf->compiler->template as<GNUCompiler*>())
             {
-                gnu_setup(c, headers, fn, pkg);
+                gnu_setup(c, headers, fn, d.gn);
             }
         }
         for (auto &d : udeps)

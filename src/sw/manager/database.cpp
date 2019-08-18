@@ -525,4 +525,26 @@ DataSources PackagesDatabase::getDataSources() const
     return dss;
 }
 
+PackageId PackagesDatabase::getGroupLeader(PackageVersionGroupNumber gn) const
+{
+    auto q = (*db)(
+        select(pkg_ver.packageId, pkg_ver.version)
+        .from(pkg_ver)
+        .where(pkg_ver.groupNumber == gn)
+        .order_by(pkg_ver.packageVersionId.asc())
+        );
+    if (q.empty())
+        throw SW_RUNTIME_ERROR("No such gn: " + std::to_string(gn));
+
+    auto q2 = (*db)(
+        select(pkgs.path)
+        .from(pkgs)
+        .where(pkgs.packageId == q.front().packageId.value())
+        );
+    if (q2.empty())
+        throw SW_RUNTIME_ERROR("No such packageId: " + std::to_string(q.front().packageId.value()));
+
+    return { q2.front().path.value(), q.front().version.value() };
+}
+
 }

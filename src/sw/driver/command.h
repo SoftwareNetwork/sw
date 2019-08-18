@@ -342,8 +342,6 @@ struct SW_DRIVER_CPP_API Command : detail::Command
     using LazyCallback = std::function<String(void)>;
     using LazyAction = std::function<void(void)>;
 
-    std::weak_ptr<Dependency> dependency;
-
     using Base::Base;
     virtual ~Command() = default;
 
@@ -351,7 +349,10 @@ struct SW_DRIVER_CPP_API Command : detail::Command
     void prepare() override;
 
     using Base::setProgram;
-    void setProgram(const std::shared_ptr<Dependency> &d);
+    void setProgram(const std::shared_ptr<Dependency> &);
+
+    // additional dependencies will be used to set up the command
+    void addProgramDependency(const std::shared_ptr<Dependency> &);
 
     void addLazyAction(LazyAction f);
 
@@ -361,6 +362,8 @@ struct SW_DRIVER_CPP_API Command : detail::Command
 private:
     std::vector<LazyAction> actions;
     bool dependency_set = false;
+    std::weak_ptr<Dependency> dependency; // main
+    std::vector<std::weak_ptr<Dependency>> dependencies; // others
 };
 
 struct SW_DRIVER_CPP_API VSCommand : Command

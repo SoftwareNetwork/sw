@@ -882,11 +882,11 @@ String Command::getName(bool short_name) const
         {
             if (!outputs.empty())
             {
-                return "\"" + normalize_path(*outputs.begin()) + "\"";
+                return normalize_path(*outputs.begin());
             }
             return std::to_string((uint64_t)this);
         }
-        return "\"" + name_short + "\"";
+        return name_short;
     }
     if (name.empty())
     {
@@ -900,9 +900,7 @@ String Command::getName(bool short_name) const
         }
         return std::to_string((uint64_t)this);
     }
-    if (name[0] == '\"' && name.back() == '\"')
-        return name;
-    return "\"" + name + "\"";
+    return name;
 }
 
 void Command::printLog() const
