@@ -6,7 +6,6 @@
 
 #include "frontend/cppan/yaml.h"
 #include "functions.h"
-//#include "generator/generator.h"
 #include "inserts.h"
 #include "module.h"
 #include "run.h"
@@ -38,40 +37,16 @@ DECLARE_STATIC_LOGGER(logger, "solution_cppan");
 namespace sw
 {
 
-bool Build::cppan_check_config_root(const yaml &root)
+void Build::cppan_load(yaml &root, const String &root_name)
+{
+    auto root1 = cppan::load_yaml_config(root);
+    cppan_load1(root1, root_name);
+}
+
+void Build::cppan_load1(const yaml &root, const String &root_name)
 {
     if (root.IsNull() || !root.IsMap())
-    {
-        LOG_DEBUG(logger, "Spec file should be a map");
-        return false;
-    }
-    return true;
-}
-
-void Build::cppan_load()
-{
-    SW_UNIMPLEMENTED;
-
-    /*if (solutions.empty())
-        addSolution();
-
-    for (auto &s : solutions)
-    {
-        current_solution = &s;
-        cppan_load(config.value());
-    }*/
-}
-
-void Build::cppan_load(const path &fn)
-{
-    auto root = cppan::load_yaml_config(fn);
-    cppan_load(root);
-}
-
-void Build::cppan_load(const yaml &root, const String &root_name)
-{
-    if (!cppan_check_config_root(root))
-        return;
+        throw SW_RUNTIME_ERROR("Spec file should be a map");
 
     // load subdirs
     /*auto sd = root["add_directories"];
@@ -170,7 +145,7 @@ void Build::cppan_load(const yaml &root, const String &root_name)
         if (shared_only && static_only)
             throw std::runtime_error("Project cannot be static and shared simultaneously");
 
-        String lt;
+        String lt = "shared";
         YAML_EXTRACT_VAR(root, lt, "library_type", String);
         if (lt == "static" || static_only)
             return addStaticLibrary(name).cppan_load_project(root);

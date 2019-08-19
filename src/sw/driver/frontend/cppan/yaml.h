@@ -25,6 +25,7 @@ namespace sw::cppan
 
 yaml load_yaml_config(const path &p);
 yaml load_yaml_config(const String &s);
+yaml load_yaml_config(yaml &root);
 
 void dump_yaml_config(const path &p, const yaml &root);
 String dump_yaml_config(const yaml &root);

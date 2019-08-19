@@ -71,7 +71,9 @@ static cl::alias static_deps2("static-deps", cl::aliasopt(static_deps));
 // k= or k="" means empty value
 // k means reseted value
 static cl::list<String> settings("settings", cl::desc("Set settings directly"), cl::ZeroOrMore);
+// toolchain file
 static cl::list<path> settings_file("settings-file", cl::desc("Read settings from file"), cl::ZeroOrMore);
+static cl::list<String> settings_file_config("settings-file-config", cl::desc("Read settings from file"), cl::ZeroOrMore);
 static cl::list<String> settings_json("settings-json", cl::desc("Read settings from json string"), cl::ZeroOrMore);
 static cl::opt<path> host_settings_file("host-settings-file", cl::desc("Read host settings from file"));
 
@@ -88,6 +90,8 @@ static cl::opt<bool> win_md("win-md", cl::desc("Set /MD build (default)"));
 static cl::alias win_md2("md", cl::desc("Alias for -win-md"), cl::aliasopt(win_md));
 
 ////////////////////////////////////////////////////////////////////////////////
+
+#pragma optimize("", off)
 
 SUBCOMMAND_DECL(build)
 {
@@ -244,25 +248,63 @@ static void applySettingsFromJson(sw::TargetSettings &s, const String &jsonstr)
     s.merge(jsonstr);
 }
 
-static void applySettingsFromFile(sw::TargetSettings &s, const path &fn)
+static std::vector<sw::TargetSettings> applySettingsFromCppFile(sw::SwContext &swctx, const path &fn)
 {
-    applySettingsFromJson(s, read_file(fn));
+    auto b = swctx.createBuild();
+    sw::Input i1(fn, sw::InputType::InlineSpecification, swctx);
+    sw::InputWithSettings i(i1);
+    i.addSettings(createInitialSettings(swctx));
+    b->addInput(i);
+    b->build();
+
+    // load module
+    auto tgts = b->getTargetsToBuild();
+    if (tgts.size() != 1)
+        throw SW_RUNTIME_ERROR("Must be exactly one target");
+    auto &tgts2 = tgts.begin()->second;
+    if (tgts2.empty())
+        throw SW_RUNTIME_ERROR("Empty cfg target");
+    auto &t = **tgts2.begin();
+    /*auto t2 = t.as<sw::NativeCompiledTarget *>();
+    if (!t2)
+        throw SW_RUNTIME_ERROR("Dunno how to load");*/
+
+    return {};
 }
 
-sw::TargetSettings createSettings(const sw::SwContext &swctx)
+std::vector<sw::TargetSettings> getSettingsFromFile(sw::SwContext &swctx)
+{
+    std::vector<sw::TargetSettings> ts;
+    for (auto &fn : settings_file)
+    {
+        sw::TargetSettings s;
+        if (fn.extension() == ".json")
+            applySettingsFromJson(s, read_file(fn));
+        else if (fn.extension() == ".cpp")
+        {
+            auto ts1 = applySettingsFromCppFile(swctx, fn);
+            ts.insert(ts.end(), ts1.begin(), ts1.end());
+        }
+        else
+            throw SW_RUNTIME_ERROR("Unknown settings file: " + normalize_path(fn));
+    }
+    return ts;
+}
+
+sw::TargetSettings createInitialSettings(const sw::SwContext &swctx)
 {
     auto s = swctx.getHostSettings();
     return s;
 }
 
-std::vector<sw::TargetSettings> createSettings(const sw::SwBuild &b)
+std::vector<sw::TargetSettings> createSettings(sw::SwContext &swctx)
 {
-    auto initial_settings = createSettings(b.getContext());
+    auto initial_settings = createInitialSettings(swctx);
     if (!host_settings_file.empty())
     {
-        auto s = b.getContext().getHostSettings();
-        applySettingsFromFile(s, host_settings_file);
-        ((sw::SwContext &)b.getContext()).setHostSettings(s);
+        auto s = swctx.getHostSettings();
+        applySettingsFromJson(s, read_file(host_settings_file));
+        swctx.setHostSettings(s);
     }
 
     if (static_deps)
@@ -394,9 +436,10 @@ std::vector<sw::TargetSettings> createSettings(const sw::SwBuild &b)
     });
 
     // settings-file
-    mult_and_action(settings_file.size(), [](auto &s, int i)
+    auto sf = getSettingsFromFile(swctx);
+    mult_and_action(sf.size(), [&sf](auto &s, int i)
     {
-        applySettingsFromFile(s, settings_file[i]);
+        s.merge(sf[i]);
     });
 
     // settings-json
@@ -408,9 +451,9 @@ std::vector<sw::TargetSettings> createSettings(const sw::SwBuild &b)
     // also we support inline host settings
     if (settings.size() == 1 && settings[0]["host"])
     {
-        auto s = b.getContext().getHostSettings();
+        auto s = swctx.getHostSettings();
         s.merge(settings[0]["host"].getSettings());
-        ((sw::SwContext &)b.getContext()).setHostSettings(s);
+        swctx.setHostSettings(s);
         settings[0]["host"].reset();
     }
 
@@ -429,7 +472,7 @@ std::unique_ptr<sw::SwBuild> createBuildAndPrepare(sw::SwContext &swctx)
     for (auto &a : build_arg)
     {
         sw::InputWithSettings i(swctx.addInput(a));
-        for (auto &s : createSettings(*b))
+        for (auto &s : createSettings(swctx))
             i.addSettings(s);
         b->addInput(i);
     }
@@ -456,7 +499,7 @@ static void isolated_build1(sw::SwContext &swctx)
     auto b1 = swctx.createBuild();
     auto &b = *b1;
 
-    auto ts = createSettings(b.getContext());
+    auto ts = createInitialSettings(swctx);
     auto &ii = getInput(b);
     sw::InputWithSettings i(ii);
     i.addSettings(ts);
@@ -496,7 +539,7 @@ static void isolated_build1(sw::SwContext &swctx)
         for (auto &[from, to] : m[pkg]->getData().files_map)
         {
             fs::create_directories((dir / to).parent_path());
-            fs::copy_file(from, dir / to, fs::copy_options::overwrite_existing);
+            fs::copy_file(from, dir / to, fs::copy_options::update_existing);
         }
 
         ts["driver"]["source-dir-for-package"][pkg.toString()] = normalize_path(dir);
@@ -553,7 +596,7 @@ SUBCOMMAND_DECL2(build)
     for (auto &a : build_arg)
     {
         sw::InputWithSettings i(swctx.addInput(a));
-        for (auto &s : createSettings(*b))
+        for (auto &s : createSettings(swctx))
             i.addSettings(s);
         b->addInput(i);
     }

@@ -50,13 +50,15 @@ Input::Input(const LocalPackage &p, const SwContext &swctx)
     init(p, swctx);
 }
 
-Input::Input(const path &in, InputType t, const SwContext &)
+Input::Input(const path &in, InputType t, const SwContext &swctx)
 {
     path p = in;
     if (!p.is_absolute())
         p = fs::absolute(p);
     data = p;
     type = t;
+    if (!findDriver(type, swctx))
+        throw SW_RUNTIME_ERROR("Cannot find suitable driver for " + normalize_path(in));
 }
 
 bool Input::findDriver(InputType t, const SwContext &swctx)

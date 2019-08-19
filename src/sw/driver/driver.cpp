@@ -13,7 +13,9 @@
 #include <sw/core/input.h>
 #include <sw/core/sw_context.h>
 
+#include <boost/algorithm/string.hpp>
 #include <primitives/sw/cl.h>
+#include <primitives/yaml.h>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "driver.cpp");
@@ -87,7 +89,8 @@ std::optional<path> Driver::canLoadInput(const RawInput &i) const
         break;
     }
     case InputType::InlineSpecification:
-        SW_UNIMPLEMENTED;
+        if (can_load_configless_file(i.getPath()))
+            return i.getPath();
         break;
     case InputType::Directory:
         SW_UNIMPLEMENTED;
@@ -114,6 +117,11 @@ Driver::EntryPointsVector Driver::createEntryPoints(SwContext &swctx, const std:
         case InputType::SpecificationFile:
         {
             p_eps[i.getPath()] = load_spec_file(swctx, i.getPath());
+            break;
+        }
+        case InputType::InlineSpecification:
+        {
+            p_eps[i.getPath()] = load_configless_file(swctx, i.getPath());
             break;
         }
         default:
@@ -255,6 +263,88 @@ Driver::EntryPointsVector1 Driver::load_spec_file(SwContext &swctx, const path &
     default:
         SW_UNIMPLEMENTED;
     }
+}
+
+static Strings get_inline_comments(const path &p)
+{
+    auto f = read_file(p);
+
+    Strings comments;
+    auto b = f.find("/*");
+    if (b != f.npos)
+    {
+        auto e = f.find("*/", b);
+        if (e != f.npos)
+        {
+            auto s = f.substr(b + 2, e - b - 2);
+            boost::trim(s);
+            if (!s.empty())
+                comments.push_back(s);
+        }
+    }
+    return comments;
+}
+
+Driver::EntryPointsVector1 Driver::load_configless_file(SwContext &, const path &p) const
+{
+    auto comments = get_inline_comments(p);
+
+    if (comments.empty())
+    {
+        auto bf = [p](Build &b)
+        {
+            auto &t = b.addExecutable(p.stem().string());
+            t += p;
+        };
+        auto ep = std::make_shared<NativeBuiltinTargetEntryPoint>(bf);
+        ep->source_dir = p.parent_path();
+        return { ep };
+    }
+
+    for (auto &c : comments)
+    {
+        try
+        {
+            auto root = YAML::Load(c);
+            auto bf = [root, name = p.stem().u8string()](Build &b) mutable
+            {
+                b.cppan_load(root, name);
+            };
+            auto ep = std::make_shared<NativeBuiltinTargetEntryPoint>(bf);
+            ep->source_dir = p.parent_path();
+            return { ep };
+        }
+        catch (...)
+        {
+        }
+    }
+    throw SW_RUNTIME_ERROR("cannot load yaml comments");
+}
+
+bool Driver::can_load_configless_file(const path &p) const
+{
+    auto comments = get_inline_comments(p);
+
+    if (comments.empty())
+    {
+        const auto &exts = getCppSourceFileExtensions();
+        return exts.find(p.extension().string()) != exts.end();
+    }
+
+    for (auto &c : comments)
+    {
+        try
+        {
+            auto root = YAML::Load(c);
+            // just test yaml for now
+            //cppan_load(root, p.stem().u8string());
+            return true;
+        }
+        catch (...)
+        {
+        }
+    }
+    return false;
 }
 
 const StringSet &Driver::getAvailableFrontendNames()

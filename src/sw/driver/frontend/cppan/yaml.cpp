@@ -90,6 +90,11 @@ yaml load_yaml_config(const path &p)
 yaml load_yaml_config(const String &s)
 {
     auto root = YAML::Load(s);
+    return load_yaml_config(root);
+}
+
+yaml load_yaml_config(yaml &root)
+{
     prepare_config_for_reading(root);
     return root;
 }

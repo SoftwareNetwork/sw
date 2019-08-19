@@ -56,6 +56,8 @@ private:
     // load things
     EntryPointsVector1 load_spec_file(SwContext &, const path &) const;
     std::unordered_map<PackageId, EntryPointsVector1> load_packages(SwContext &, const PackageIdSet &pkgs) const;
+    bool can_load_configless_file(const path &) const;
+    EntryPointsVector1 load_configless_file(SwContext &, const path &) const;
 
     template <class T>
     std::shared_ptr<PrepareConfigEntryPoint> build_configs1(SwContext &, const T &objs) const;

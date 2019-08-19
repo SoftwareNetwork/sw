@@ -11,8 +11,6 @@
 
 #include <nlohmann/json.hpp>
 
-#pragma optimize( "", off )
-
 namespace sw
 {
 

@@ -17,36 +17,66 @@ message PackageId {
     string version = 2;
 }
 
-message UnresolvedPackages {
-    message UnresolvedPackage {
-        string path = 1;
-        string range = 2;
+message UnresolvedPackage {
+    string path = 1;
+    string range = 2;
+}
+
+message ResolvedPackage {
+    message Dependency {
+        int64 id = 1;
+        // if package is deployed on a private server
+        // string path?
+        // flags?
     }
+    // base fields
+    int64 id = 1;
+    PackageId package = 2;
+    int64 flags = 3;
+    string hash = 4;
+    repeated Dependency dependencies = 5;
+    // other
+    int64 group_number = 16;
+    int32 prefix = 17;
+    // int32 archive_type;
+    // optional string download_url;
+}
+
+message UnresolvedPackages {
     repeated UnresolvedPackage packages = 1;
-    // optional user info (name, token), repeated
 }
 
 message ResolvedPackages {
-    message ResolvedPackage {
-        message Dependency {
-            int64 id = 1;
-            // if package is deployed on a private server
-            // string path?
-            // flags?
-        }
-        // base fields
-        int64 id = 1;
-        PackageId package = 2;
-        int64 flags = 3;
-        string hash = 4;
-        repeated Dependency dependencies = 5;
-        // other
-        int64 group_number = 16;
-        int32 prefix = 17;
-        // int32 archive_type;
-        // optional string download_url;
-    }
     repeated ResolvedPackage packages = 1;
+}
+
+message ResolvedPackage2 {
+    message Dependency {
+        int64 id = 1;
+        // if package is deployed on a private server
+        // string path?
+        // flags?
+    }
+    // base fields
+    int64 id = 1;
+    PackageId package = 2;
+    int64 flags = 3;
+    string hash = 4;
+    repeated Dependency dependencies = 5;
+    // other
+    int64 group_number = 16;
+    int32 prefix = 17;
+    // int32 archive_type;
+    // optional string download_url;
+}
+
+message ResolvedPackagePair {
+    UnresolvedPackage u = 1;
+    ResolvedPackage r = 2;
+}
+
+message ResolvedPackages2 {
+    repeated ResolvedPackagePair packages = 1;
 }
 
 message PackageIds {
@@ -100,6 +130,9 @@ message NewPackage {
 // unauthorized
 service ApiService {
     rpc ResolvePackages (UnresolvedPackages) returns (ResolvedPackages);
+
+    // std::unordered_map<UnresolvedPackage, Package> resolve(const UnresolvedPackages &pkgs);
+    rpc ResolvePackages2 (UnresolvedPackages) returns (ResolvedPackages2);
 
     //
     // following are subtle calls, probably to be removed

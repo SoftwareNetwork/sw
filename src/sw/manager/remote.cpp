@@ -110,7 +110,8 @@ GrpcChannel Remote::getGrpcChannel() const
     if (host.find(':') == host.npos)
     {
         //host = host.substr(0, host.find(':')); // remove port
-        host = "api." + host;
+        if (host.find("api") != 0)
+            host = "api." + host;
     }
 
     static const grpc::SslCredentialsOptions ssl_options = []()

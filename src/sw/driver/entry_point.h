@@ -77,11 +77,11 @@ private:
 
 struct NativeBuiltinTargetEntryPoint : NativeTargetEntryPoint
 {
-    using BuildFunction = void(*)(Build &);
-    using CheckFunction = void(*)(Checker &);
+    using BuildFunction = std::function<void(Build &)>;
+    using CheckFunction = std::function<void(Checker &)>;
 
-    BuildFunction bf = nullptr;
-    CheckFunction cf = nullptr;
+    BuildFunction bf;
+    CheckFunction cf;
 
     NativeBuiltinTargetEntryPoint(BuildFunction bf);
 

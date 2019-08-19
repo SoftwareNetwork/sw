@@ -91,20 +91,13 @@ private:
 public:
     Build(SwBuild &);
 
-    void load_inline_spec(const path &);
-    void load_dir(const path &);
-
     Module loadModule(const path &fn) const;
 
-private:
-    // basic frontends
-    void load_configless(const path &file_or_dir);
+    // move to some other place?
+    void cppan_load(yaml &root, const String &root_name = {});
 
-    // other frontends
-    void cppan_load();
-    void cppan_load(const path &fn);
-    void cppan_load(const yaml &root, const String &root_name = {});
-    bool cppan_check_config_root(const yaml &root);
+private:
+    void cppan_load1(const yaml &root, const String &root_name);
 };
 
 }
