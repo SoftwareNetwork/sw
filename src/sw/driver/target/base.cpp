@@ -607,7 +607,7 @@ const TargetSettings &Target::getSettings() const
 
 const TargetSettings &Target::getInterfaceSettings() const
 {
-    SW_UNIMPLEMENTED;
+    return interface_settings;
 }
 
 void TargetOptions::add(const IncludeDirectory &i)

@@ -364,6 +364,7 @@ protected:
     SW_MULTIPASS_VARIABLE(prepare_pass);
     SW_MULTIPASS_VARIABLE(init_pass);
     mutable bool deps_resolved = false;
+    mutable TargetSettings interface_settings;
 
     //Target(const Target &);
 

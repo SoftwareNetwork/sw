@@ -39,7 +39,15 @@ void SwCoreContext::createHostSettings()
     host_settings = toTargetSettings(getHostOs());
 
     auto &ts = host_settings;
+#ifdef _WIN32
+    #ifdef NDEBUG
     ts["native"]["configuration"] = "release";
+    #else
+    ts["native"]["configuration"] = "debug";
+    #endif
+#else
+    ts["native"]["configuration"] = "release";
+#endif
     ts["native"]["library"] = "shared";
     ts["native"]["mt"] = "false";
 }

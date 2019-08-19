@@ -73,7 +73,7 @@ static cl::alias static_deps2("static-deps", cl::aliasopt(static_deps));
 static cl::list<String> settings("settings", cl::desc("Set settings directly"), cl::ZeroOrMore);
 // toolchain file
 static cl::list<path> settings_file("settings-file", cl::desc("Read settings from file"), cl::ZeroOrMore);
-static cl::list<String> settings_file_config("settings-file-config", cl::desc("Read settings from file"), cl::ZeroOrMore);
+static cl::list<String> settings_file_config("settings-file-config", cl::desc("Select settings from file"), cl::ZeroOrMore);
 static cl::list<String> settings_json("settings-json", cl::desc("Read settings from json string"), cl::ZeroOrMore);
 static cl::opt<path> host_settings_file("host-settings-file", cl::desc("Read host settings from file"));
 
@@ -253,7 +253,11 @@ static std::vector<sw::TargetSettings> applySettingsFromCppFile(sw::SwContext &s
     auto b = swctx.createBuild();
     sw::Input i1(fn, sw::InputType::InlineSpecification, swctx);
     sw::InputWithSettings i(i1);
-    i.addSettings(createInitialSettings(swctx));
+    auto ts = createInitialSettings(swctx);
+#ifdef NDEBUG
+    ts["native"]["configuration"] = "releasewithdebuginformation";
+#endif
+    i.addSettings(ts);
     b->addInput(i);
     b->build();
 
@@ -265,11 +269,26 @@ static std::vector<sw::TargetSettings> applySettingsFromCppFile(sw::SwContext &s
     if (tgts2.empty())
         throw SW_RUNTIME_ERROR("Empty cfg target");
     auto &t = **tgts2.begin();
-    /*auto t2 = t.as<sw::NativeCompiledTarget *>();
-    if (!t2)
-        throw SW_RUNTIME_ERROR("Dunno how to load");*/
+    auto is = t.getInterfaceSettings();
+    auto m = swctx.getModuleStorage().get(is["output-file"].getValue());
+    if (m.symbol_storage().get_function<std::map<std::string, std::string>()>("createJsonSettings").empty())
+        throw SW_RUNTIME_ERROR("Cannot find 'std::map<std::string, std::string> createJsonSettings()'");
 
-    return {};
+    auto selected_cfgs = std::set(settings_file_config.begin(), settings_file_config.end());
+    auto result = m.get_function<std::map<std::string, std::string>()>("createJsonSettings")();
+    std::vector<sw::TargetSettings> r;
+    for (auto &[k, v] : result)
+    {
+        if (v.empty())
+            throw SW_RUNTIME_ERROR("Empty settings");
+        if (selected_cfgs.empty() || selected_cfgs.find(k) != selected_cfgs.end())
+        {
+            sw::TargetSettings ts;
+            ts.merge(v);
+            r.push_back(ts);
+        }
+    }
+    return r;
 }
 
 std::vector<sw::TargetSettings> getSettingsFromFile(sw::SwContext &swctx)
@@ -277,9 +296,12 @@ std::vector<sw::TargetSettings> getSettingsFromFile(sw::SwContext &swctx)
     std::vector<sw::TargetSettings> ts;
     for (auto &fn : settings_file)
     {
-        sw::TargetSettings s;
         if (fn.extension() == ".json")
+        {
+            sw::TargetSettings s;
             applySettingsFromJson(s, read_file(fn));
+            ts.push_back(s);
+        }
         else if (fn.extension() == ".cpp")
         {
             auto ts1 = applySettingsFromCppFile(swctx, fn);

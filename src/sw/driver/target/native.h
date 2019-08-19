@@ -233,6 +233,7 @@ private:
     void processCircular(Files &objs);
     path getPatchDir(bool binary_dir) const;
     void addFileSilently(const path &);
+    const TargetSettings &getInterfaceSettings() const override;
 
     bool libstdcppset = false;
     void findCompiler();

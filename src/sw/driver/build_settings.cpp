@@ -23,6 +23,10 @@ static OS fromTargetSettings(const TargetSettings &ts)
     else if (v == s)                \
         var = value
 
+#define IF_SETTING_ANY_CASE(s, var, value)                                  \
+    else if (boost::to_lower_copy(v.getValue()) == boost::to_lower_copy(s)) \
+        var = value
+
 #define IF_KEY(k)           \
     {                       \
         auto &v = ts[k];    \
@@ -71,10 +75,10 @@ BuildSettings::BuildSettings(const TargetSettings &ts)
 
     IF_KEY("native"]["configuration")
         if (0);
-        IF_SETTING("debug", Native.ConfigurationType, ConfigurationType::Debug);
-        IF_SETTING("minimalsizerelease", Native.ConfigurationType, ConfigurationType::Debug);
-        IF_SETTING("release", Native.ConfigurationType, ConfigurationType::Release);
-        IF_SETTING("releasewithdebuginformation", Native.ConfigurationType, ConfigurationType::ReleaseWithDebugInformation);
+        IF_SETTING_ANY_CASE("debug"s, Native.ConfigurationType, ConfigurationType::Debug);
+        IF_SETTING_ANY_CASE("minimalsizerelease"s, Native.ConfigurationType, ConfigurationType::Debug);
+        IF_SETTING_ANY_CASE("release"s, Native.ConfigurationType, ConfigurationType::Release);
+        IF_SETTING_ANY_CASE("releasewithdebuginformation"s, Native.ConfigurationType, ConfigurationType::ReleaseWithDebugInformation);
         else
             throw SW_RUNTIME_ERROR("Unknown configuration: " + v.getValue());
     IF_END

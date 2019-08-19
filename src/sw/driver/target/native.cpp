@@ -1684,7 +1684,8 @@ void NativeCompiledTarget::autoDetectSources()
     {
         if (fs::exists(SourceDir / d))
         {
-            add(FileRegex(d, std::regex(files_regex), true));
+            // add files for non building
+            remove(FileRegex(d, std::regex(files_regex), true));
             added = true;
             break; // break here!
         }
@@ -1693,7 +1694,8 @@ void NativeCompiledTarget::autoDetectSources()
     {
         if (fs::exists(SourceDir / d))
         {
-            add(FileRegex(d, std::regex(files_regex), true));
+            // if build dir is "" or "." we do not do recursive search
+            add(FileRegex(d, std::regex(files_regex), d != ""s));
             added = true;
             break; // break here!
         }
@@ -1900,6 +1902,12 @@ const NativeCompiledTarget::ActiveDeps &NativeCompiledTarget::getActiveDependenc
     if (!active_deps)
         throw SW_RUNTIME_ERROR(getPackage().toString() + ": no active deps calculated");
     return *active_deps;
+}
+
+const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
+{
+    interface_settings["output-file"] = normalize_path(getOutputFile());
+    return interface_settings;
 }
 
 void NativeCompiledTarget::merge1()

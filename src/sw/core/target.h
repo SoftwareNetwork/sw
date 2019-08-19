@@ -39,6 +39,7 @@ struct SW_CORE_API ITarget : ICastable
 
     virtual const PackageId &getPackage() const = 0;
 
+    // how to fetch package
     ///
     virtual const Source &getSource() const = 0;
 
@@ -50,9 +51,11 @@ struct SW_CORE_API ITarget : ICastable
     /// get all direct dependencies
     virtual std::vector<IDependency *> getDependencies() const = 0;
 
+    /// prepare target for building
     /// returns true if target is not fully prepared yet
     virtual bool prepare() = 0;
 
+    // get commands for building
     ///
     virtual Commands getCommands() const = 0;
 
@@ -65,12 +68,22 @@ struct SW_CORE_API ITarget : ICastable
     /// does not round trip
     virtual const TargetSettings &getSettings() const = 0;
 
-    /// settings for consumers (targets)
+    // settings for consumers (targets) and users?
+    // output command or module name
+    ///
     virtual const TargetSettings &getInterfaceSettings() const = 0;
 
     // get binary settings, get doc settings?
     // String get package settings(); // json coded or whatever via interface?
     // String getDescription()
+
+    // returns prepared command for executing
+    // result may be null
+    //
+    // getCommand()
+
+    // result may be null
+    // getLoadableModule()
 };
 
 // shared_ptr for vector storage
