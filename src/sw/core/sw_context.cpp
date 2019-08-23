@@ -277,12 +277,12 @@ void SwContext::loadEntryPoints(const std::set<Input*> &inputs, bool set_eps)
                 // which are located in this config AND which are deps of this input package id
                 auto m = resolve(UnresolvedPackages{ inputs[i].getPackageId() });
                 auto &p = m.find(inputs[i].getPackageId())->second;
-                for (auto &d : p.getData().dependencies)
+                for (auto &d : p->getData().dependencies)
                 {
                     auto &p2 = m.find(d)->second;
-                    if (p2.getData().group_number != p.getData().group_number)
+                    if (p2->getData().group_number != p->getData().group_number)
                         continue;
-                    getTargetData(p2).setEntryPoint(ep);
+                    getTargetData(*p2).setEntryPoint(ep);
                 }
             }
         }

@@ -32,6 +32,12 @@ bool Git::isValid()
     return i == 1;
 }
 
+void detail::DownloadData::remove() const
+{
+    fs::remove_all(root_dir);
+    fs::remove(stamp_file);
+}
+
 bool download(const std::unordered_set<SourcePtr> &sset, SourceDirMap &source_dirs, const SourceDownloadOptions &opts)
 {
     std::atomic_bool downloaded = false;
@@ -41,24 +47,25 @@ bool download(const std::unordered_set<SourcePtr> &sset, SourceDirMap &source_di
     {
         fs.push_back(e.push([src = src.get(), &d = source_dirs[src->getHash()], &opts, &downloaded]
         {
-            path t = d;
+            auto &t = d.stamp_file;
+            t = d.root_dir;
             t += ".stamp";
 
             auto dl = [&src, d, &t, &downloaded]()
             {
                 downloaded = true;
                 LOG_INFO(logger, "Downloading source:\n" << src->print());
-                src->download(d);
+                src->download(d.root_dir);
                 write_file(t, timepoint2string(getUtc()));
             };
 
-            if (!fs::exists(d))
+            if (!fs::exists(d.root_dir))
             {
                 dl();
             }
             else if (!opts.ignore_existing_dirs)
             {
-                throw SW_RUNTIME_ERROR("Directory exists " + normalize_path(d) + " for source " + src->print());
+                throw SW_RUNTIME_ERROR("Directory exists " + normalize_path(d.root_dir) + " for source " + src->print());
             }
             else
             {
@@ -73,13 +80,14 @@ bool download(const std::unordered_set<SourcePtr> &sset, SourceDirMap &source_di
                     {
                         if (e)
                             LOG_INFO(logger, "Download data is stale, re-downloading");
-                        fs::remove_all(d);
+                        fs::remove_all(d.root_dir);
                         dl();
                     }
                 }
             }
+            d.requested_dir = d.root_dir;
             if (opts.adjust_root_dir)
-                d = d / findRootDirectory(d); // pass found regex or files for better root dir lookup
+                d.requested_dir /= findRootDirectory(d.requested_dir); // pass found regex or files for better root dir lookup
         }));
     }
     waitAndGet(fs);
@@ -90,7 +98,7 @@ SourceDirMap download(const std::unordered_set<SourcePtr> &sset, const SourceDow
 {
     SourceDirMap sources;
     for (auto &s : sset)
-        sources[s->getHash()] = opts.root_dir.empty() ? get_temp_filename("dl") : (opts.root_dir / s->getHash());
+        sources[s->getHash()].root_dir = opts.root_dir.empty() ? get_temp_filename("dl") : (opts.root_dir / s->getHash());
     download(sset, sources, opts);
     return sources;
 }

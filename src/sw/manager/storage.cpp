@@ -165,16 +165,18 @@ path Directories::getDatabaseRootDir() const
     return storage_dir_etc / "sw" / "database";
 }
 
-std::unordered_map<UnresolvedPackage, Package>
-IResolvableStorage::resolveWithDependencies(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
+std::unordered_map<UnresolvedPackage, PackagePtr>
+IStorage::resolveWithDependencies(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
 {
     auto r = resolve(pkgs, unresolved_pkgs);
     while (1)
     {
-        auto r2 = r;
+        std::unordered_map<UnresolvedPackage, Package*> r2;
+        for (auto &[u, p] : r)
+            r2.emplace(u, p.get());
         auto sz = r.size();
         for (auto &[u, p] : r2)
-            r.merge(resolve(p.getData().dependencies, unresolved_pkgs));
+            r.merge(resolve(p->getData().dependencies, unresolved_pkgs));
         if (r.size() == sz)
             break;
     }
@@ -194,13 +196,13 @@ StorageWithPackagesDatabase::StorageWithPackagesDatabase(const String &name, con
 
 StorageWithPackagesDatabase::~StorageWithPackagesDatabase() = default;
 
-const PackageData &StorageWithPackagesDatabase::loadData(const PackageId &id) const
+PackageDataPtr StorageWithPackagesDatabase::loadData(const PackageId &id) const
 {
     std::lock_guard lk(m);
     auto i = data.find(id);
     if (i == data.end())
-        return data.emplace(id, pkgdb->getPackageData(id)).first->second;
-    return i->second;
+        return data.emplace(id, pkgdb->getPackageData(id)).first->second.clone();
+    return i->second.clone();
 }
 
 PackagesDatabase &StorageWithPackagesDatabase::getPackagesDatabase() const
@@ -213,31 +215,21 @@ PackagesDatabase &StorageWithPackagesDatabase::getPackagesDatabase() const
     SW_UNIMPLEMENTED;
 }*/
 
-std::unordered_map<UnresolvedPackage, Package>
+std::unordered_map<UnresolvedPackage, PackagePtr>
 StorageWithPackagesDatabase::resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
 {
-    std::unordered_map<UnresolvedPackage, Package> r;
+    std::unordered_map<UnresolvedPackage, PackagePtr> r;
     for (auto &[ud, pkg] : pkgdb->resolve(pkgs, unresolved_pkgs))
-        r.emplace(ud, Package(*this, pkg));
+        r.emplace(ud, std::make_unique<Package>(*this, pkg));
     return r;
 }
 
 LocalStorageBase::LocalStorageBase(const String &name, const path &db_dir)
-    : StorageWithPackagesDatabase(name, db_dir)
+    : StorageWithPackagesDatabase(name, db_dir), schema(1, 2)
 {
 }
 
 LocalStorageBase::~LocalStorageBase() = default;
-
-int LocalStorageBase::getHashSchemaVersion() const
-{
-    return 1;
-}
-
-int LocalStorageBase::getHashPathFromHashSchemaVersion() const
-{
-    return 2;
-}
 
 std::unique_ptr<vfs::File> LocalStorageBase::getFile(const PackageId &id, StorageFileType t) const
 {
@@ -316,7 +308,7 @@ bool LocalStorage::isPackageOverridden(const PackageId &pkg) const
     return ovs.isPackageInstalled(p);
 }
 
-const PackageData &LocalStorage::loadData(const PackageId &id) const
+PackageDataPtr LocalStorage::loadData(const PackageId &id) const
 {
     if (isPackageOverridden(id))
         return ovs.loadData(id);
@@ -353,9 +345,10 @@ LocalPackage LocalStorage::install(const Package &id) const
     std::error_code ec;
     fs::remove_all(p.getDir(), ec);
 
-    get(id.storage, id, StorageFileType::SourceArchive);
+    get(static_cast<const IStorage2 &>(id.getStorage()), id, StorageFileType::SourceArchive);
 
-    auto h = std::hash<String>()(id.storage.getName());
+    // we mix gn with storage name to get unique gn
+    auto h = std::hash<String>()(static_cast<const IStorage2 &>(id.getStorage()).getName());
     auto d = id.getData();
     d.group_number = hash_combine(h, d.group_number);
 
@@ -363,7 +356,7 @@ LocalPackage LocalStorage::install(const Package &id) const
     return p;
 }
 
-void LocalStorage::get(const IStorage &source, const PackageId &id, StorageFileType t) const
+void LocalStorage::get(const IStorage2 &source, const PackageId &id, StorageFileType t) const
 {
     LocalPackage lp(*this, id);
 
@@ -398,7 +391,7 @@ const OverriddenPackagesStorage &LocalStorage::getOverriddenPackagesStorage() co
     return ovs;
 }
 
-std::unordered_map<UnresolvedPackage, Package>
+std::unordered_map<UnresolvedPackage, PackagePtr>
 LocalStorage::resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
 {
     return ovs.resolve(pkgs, unresolved_pkgs);
@@ -435,10 +428,11 @@ void OverriddenPackagesStorage::deletePackageDir(const path &sdir) const
 LocalPackage OverriddenPackagesStorage::install(const Package &p) const
 {
     // we can't install from ourselves
-    if (&p.storage == this)
+    if (&p.getStorage() == this)
         return LocalPackage(ls, p);
 
-    auto h = std::hash<String>()(p.storage.getName());
+    // we mix gn with storage name to get unique gn
+    auto h = std::hash<String>()(static_cast<const IStorage2 &>(p.getStorage()).getName());
     auto d = p.getData();
     d.group_number = hash_combine(h, d.group_number);
 
@@ -456,15 +450,10 @@ bool OverriddenPackagesStorage::isPackageInstalled(const Package &p) const
     return getPackagesDatabase().getInstalledPackageId(p) != 0;
 }
 
-String CachedStorage::getName() const
-{
-    return "resolve-cache";
-}
-
-std::unordered_map<UnresolvedPackage, Package>
+std::unordered_map<UnresolvedPackage, PackagePtr>
 CachedStorage::resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
 {
-    std::unordered_map<UnresolvedPackage, Package> r;
+    std::unordered_map<UnresolvedPackage, PackagePtr> r;
     for (auto &u : pkgs)
     {
         auto i = resolved_packages.find(u);
@@ -473,14 +462,15 @@ CachedStorage::resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unres
             unresolved_pkgs.insert(u);
             continue;
         }
-        r.emplace(u, i->second);
+        r.emplace(u, i->second->clone());
     }
     return r;
 }
 
-void CachedStorage::store(const std::unordered_map<UnresolvedPackage, Package> &r)
+void CachedStorage::store(const std::unordered_map<UnresolvedPackage, PackagePtr> &pkgs)
 {
-    resolved_packages.insert(r.begin(), r.end());
+    for (auto &[u,p] : pkgs)
+        resolved_packages.emplace(u, p->clone());
 }
 
 }

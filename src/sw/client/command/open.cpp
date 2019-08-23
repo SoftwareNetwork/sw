@@ -42,7 +42,7 @@ SUBCOMMAND_DECL(open)
     auto &p = pkgs.find(open_arg)->second;
 
 #ifdef _WIN32
-    if (sdb.isPackageInstalled(p))
+    if (sdb.isPackageInstalled(*p))
     {
         auto p = swctx->resolve(open_arg);
 
@@ -68,7 +68,7 @@ SUBCOMMAND_DECL(open)
     }
     else
     {
-        LOG_INFO(logger, "Package '" + p.toString() + "' not installed");
+        LOG_INFO(logger, "Package '" + p->toString() + "' not installed");
     }
 #endif
 }

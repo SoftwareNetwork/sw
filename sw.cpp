@@ -245,14 +245,16 @@ void build(Solution &s)
         embed("pub.egorpugin.primitives.tools.embedder-master"_dep, client, "src/sw/client/inserts/inserts.cpp.in");
         if (client.getCompilerType() == CompilerType::MSVC)
             client.CompileOptions.push_back("-bigobj");
-        if (client.getBuildSettings().TargetOS.Type == OSType::Linux)
+        if (client.getBuildSettings().TargetOS.Type != OSType::Windows)
         {
             //client.getSelectedTool()->LinkOptions.push_back("-static-libstdc++");
             //client.getSelectedTool()->LinkOptions.push_back("-static-libgcc");
 
             // needed to export all shared symbols
             // so dlopen will work for plugins
-            client.LinkOptions.push_back("-Wl,-export-dynamic");
+            //client.LinkOptions.push_back("-Wl,--export-dynamic");
+            //client.LinkOptions.push_back("-Wl,-export-dynamic");
+            client.LinkOptions.push_back("-rdynamic");
         }
 
         {

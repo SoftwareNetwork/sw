@@ -45,9 +45,6 @@ using PackageIdSet = std::unordered_set<PackageId>;
 SW_MANAGER_API
 PackageId extractPackageIdFromString(const String &target);
 
-SW_MANAGER_API
-String getSourceDirectoryName();
-
 }
 
 namespace std

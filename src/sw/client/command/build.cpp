@@ -544,7 +544,7 @@ static void isolated_build1(sw::SwContext &swctx)
         s->applyVersion(pkg.getVersion());
         if (srcs.find(s->getHash()) != srcs.end())
             continue;
-        srcs[s->getHash()] = fs::current_path();
+        srcs[s->getHash()].requested_dir = fs::current_path();
     }
 
     LOG_INFO(logger, "Copying files");

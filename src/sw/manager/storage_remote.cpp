@@ -4,7 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include "storage.h"
+#include "storage_remote.h"
 
 #include "api.h"
 #include "database.h"
@@ -71,10 +71,11 @@ void writePackagesDbVersion(const path &dir, int version)
     write_file(dir / PACKAGES_DB_VERSION_FILE, std::to_string(version));
 }
 
-RemoteStorage::RemoteStorage(LocalStorage &ls, const String &n, const path &db_dir)
-    : StorageWithPackagesDatabase(n, db_dir), ls(ls)
+RemoteStorage::RemoteStorage(LocalStorage &ls, const path &db_dir, const Remote &r)
+    : StorageWithPackagesDatabase(r.name, db_dir / "remote")
+    , r(r), ls(ls)
 {
-    db_repo_dir = db_dir / getName() / "repository";
+    db_repo_dir = db_dir / "remote" / r.name / "repository";
 
     static const auto db_loaded_var = "db_loaded";
 
@@ -94,17 +95,7 @@ RemoteStorage::RemoteStorage(LocalStorage &ls, const String &n, const path &db_d
 
 RemoteStorage::~RemoteStorage() = default;
 
-int RemoteStorage::getHashSchemaVersion() const
-{
-    return 1;
-}
-
-int RemoteStorage::getHashPathFromHashSchemaVersion() const
-{
-    return 1;
-}
-
-std::unordered_map<UnresolvedPackage, Package>
+std::unordered_map<UnresolvedPackage, PackagePtr>
 RemoteStorage::resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
 {
     preInitFindDependencies();
@@ -118,7 +109,7 @@ RemoteStorage::resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unres
 
 void RemoteStorage::download() const
 {
-    LOG_INFO(logger, "Downloading database");
+    LOG_INFO(logger, "Downloading database from " + getRemote().name + " remote");
 
     fs::create_directories(db_repo_dir);
 
@@ -406,14 +397,14 @@ struct RemoteFileWithHashVerification : vfs::File
         if (copy(fn, p.getData().hash))
             return true;
 
-        if (auto remote_storage = dynamic_cast<const RemoteStorageWithFallbackToRemoteResolving *>(&p.storage))
+        if (auto remote_storage = dynamic_cast<const RemoteStorageWithFallbackToRemoteResolving *>(&p.getStorage()))
         {
             UnresolvedPackage u = p;
             UnresolvedPackages upkgs;
             auto m = remote_storage->resolveFromRemote({ u }, upkgs);
             if (upkgs.empty())
             {
-                if (copy(fn, m.find(u)->second.getData().hash))
+                if (copy(fn, m.find(u)->second->getData().hash))
                     return true;
             }
         }
@@ -477,28 +468,31 @@ std::unique_ptr<vfs::File> RemoteStorage::getFile(const PackageId &id, StorageFi
     }
 }
 
-std::unordered_map<UnresolvedPackage, Package>
+RemoteStorageWithFallbackToRemoteResolving::RemoteStorageWithFallbackToRemoteResolving(
+    LocalStorage &ls, const path &root_db_dir, const Remote &r)
+    : RemoteStorage(ls, root_db_dir, r)
+{
+}
+
+std::unordered_map<UnresolvedPackage, PackagePtr>
 RemoteStorageWithFallbackToRemoteResolving::resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
 {
     auto m = RemoteStorage::resolve(pkgs, unresolved_pkgs);
     if (unresolved_pkgs.empty())
         return m;
 
-    LOG_INFO(logger, "Requesting dependency list... ");
+    LOG_INFO(logger, "Requesting dependency list from " + getRemote().name + " remote...");
 
     // fallback to really remote db
     return resolveFromRemote(pkgs, unresolved_pkgs);
 }
 
-std::unordered_map<UnresolvedPackage, Package>
+std::unordered_map<UnresolvedPackage, PackagePtr>
 RemoteStorageWithFallbackToRemoteResolving::resolveFromRemote(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
 {
-    std::unordered_map<UnresolvedPackage, Package> m;
+    std::unordered_map<UnresolvedPackage, PackagePtr> m;
 
-    auto &us = Settings::get_user_settings();
-    auto cr = us.remotes.begin();
-
-    auto api = cr->getApi();
+    auto api = getRemote().getApi();
     auto id_deps = api->resolvePackages(pkgs);
     for (auto &[vid, d] : id_deps)
     {
@@ -507,7 +501,7 @@ RemoteStorageWithFallbackToRemoteResolving::resolveFromRemote(const UnresolvedPa
             if (u.canBe(d))
             {
                 unresolved_pkgs.erase(u);
-                auto [i, inserted] = m.emplace(u, Package(*this, d));
+                auto [i, inserted] = m.emplace(u, std::make_unique<Package>(*this, d));
                 // it's fine
                 //if (!inserted)
                 //throw SW_RUNTIME_ERROR("Duplicate resolved dep: " + d.toString());
@@ -524,12 +518,12 @@ RemoteStorageWithFallbackToRemoteResolving::resolveFromRemote(const UnresolvedPa
     return m;
 }
 
-const PackageData &RemoteStorageWithFallbackToRemoteResolving::loadData(const PackageId &pkg) const
+PackageDataPtr RemoteStorageWithFallbackToRemoteResolving::loadData(const PackageId &pkg) const
 {
     auto i = data.find(pkg);
     if (i == data.end())
         return RemoteStorage::loadData(pkg);
-    return i->second;
+    return i->second.clone();
 }
 
 }

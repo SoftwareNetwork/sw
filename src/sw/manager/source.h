@@ -42,8 +42,23 @@ private:
 
 }
 
+namespace detail
+{
+
+struct DownloadData
+{
+    path root_dir;
+    path requested_dir;
+    path stamp_file;
+
+    path getRequestedDirectory() const { return requested_dir; }
+    void remove() const;
+};
+
+}
+
 using SourcePtr = std::unique_ptr<Source>;
-using SourceDirMap = std::unordered_map<String, path>;
+using SourceDirMap = std::unordered_map<String, detail::DownloadData>;
 
 struct SourceDownloadOptions
 {

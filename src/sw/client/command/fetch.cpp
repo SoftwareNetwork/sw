@@ -66,7 +66,7 @@ static sw::SourceDirMap getSources(sw::SwContext &swctx)
         s->applyVersion(pkg.getVersion());
         if (srcs.find(s->getHash()) != srcs.end())
             continue;
-        srcs[s->getHash()] = d / s->getHash();
+        srcs[s->getHash()].root_dir = d / s->getHash();
         sources.emplace(std::move(s));
     }
 
@@ -89,7 +89,7 @@ std::pair<sw::SourceDirMap, const sw::Input &> fetch(sw::SwBuild &b)
 
     auto ts = createInitialSettings(b.getContext());
     for (auto &[h, d] : srcs)
-        ts["driver"]["source-dir-for-source"][h] = normalize_path(d);
+        ts["driver"]["source-dir-for-source"][h] = normalize_path(d.getRequestedDirectory());
 
     auto &ii = getInput(b);
     sw::InputWithSettings i(ii);

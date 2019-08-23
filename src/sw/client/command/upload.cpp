@@ -77,7 +77,7 @@ sw::PackageDescriptionMap getPackages(const sw::SwBuild &b, const sw::SourceDirM
             auto si = sources.find(src->getHash());
             if (si == sources.end())
                 throw SW_RUNTIME_ERROR("no such source");
-            rd = si->second;
+            rd = si->second.getRequestedDirectory();
         }
         j["root_dir"] = normalize_path(rd);
 

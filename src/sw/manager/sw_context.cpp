@@ -6,7 +6,9 @@
 
 #include "sw_context.h"
 
+#include "settings.h"
 #include "storage.h"
+#include "storage_remote.h"
 
 #include <primitives/executor.h>
 
@@ -17,6 +19,8 @@ extern bool gForceServerQuery;
 
 namespace sw
 {
+
+//ISwContext::~ISwContext() = default;
 
 SwManagerContext::SwManagerContext(const path &local_storage_root_dir)
 {
@@ -33,8 +37,12 @@ SwManagerContext::SwManagerContext(const path &local_storage_root_dir)
     //if (!gForceServerQuery)
     //storages.emplace_back(std::make_unique<RemoteStorage>(
         //getLocalStorage(), "software-network.0", getLocalStorage().getDatabaseRootDir()));
-    storages.emplace_back(std::make_unique<RemoteStorageWithFallbackToRemoteResolving>(
-        getLocalStorage(), "software-network", getLocalStorage().getDatabaseRootDir()));
+
+    for (auto &r : Settings::get_user_settings().remotes)
+    {
+        storages.emplace_back(std::make_unique<RemoteStorageWithFallbackToRemoteResolving>(
+            getLocalStorage(), getLocalStorage().getDatabaseRootDir(), r));
+    }
 }
 
 SwManagerContext::~SwManagerContext() = default;
@@ -70,14 +78,14 @@ std::vector<const Storage *> SwManagerContext::getRemoteStorages() const
     return r;
 }
 
-std::unordered_map<UnresolvedPackage, Package> SwManagerContext::resolve(const UnresolvedPackages &pkgs) const
+std::unordered_map<UnresolvedPackage, PackagePtr> SwManagerContext::resolve(const UnresolvedPackages &pkgs) const
 {
     if (pkgs.empty())
         return {};
 
     std::lock_guard lk(resolve_mutex);
 
-    std::unordered_map<UnresolvedPackage, Package> resolved;
+    std::unordered_map<UnresolvedPackage, PackagePtr> resolved;
     auto pkgs2 = pkgs;
     // when there's new unresolved package available,
     // we must start from the beginning of storages!!!
@@ -124,20 +132,20 @@ std::unordered_map<UnresolvedPackage, LocalPackage> SwManagerContext::install(co
 
     // two unresolved pkgs may point to single pkg,
     // so make pkgs unique
-    std::unordered_set<Package> pkgs2;
+    std::unordered_set<Package*> pkgs2;
     for (auto &[u, p] : m)
-        pkgs2.emplace(p);
+        pkgs2.emplace(p.get());
 
     auto &e = getExecutor();
     Futures<void> fs;
     for (auto &p : pkgs2)
-        fs.push_back(e.push([this, &p]{ install(p); }));
+        fs.push_back(e.push([this, &p]{ install(*p); }));
     waitAndGet(fs);
 
     // install should be fast enough here
     std::unordered_map<UnresolvedPackage, LocalPackage> pkgs3;
     for (auto &[u, p] : m)
-        pkgs3.emplace(u, install(p));
+        pkgs3.emplace(u, install(*p));
 
     return pkgs3;
 }
@@ -154,7 +162,7 @@ LocalPackage SwManagerContext::install(const Package &p) const
 
 LocalPackage SwManagerContext::resolve(const UnresolvedPackage &pkg) const
 {
-    return install(resolve(UnresolvedPackages{ pkg }).find(pkg)->second);
+    return install(*resolve(UnresolvedPackages{ pkg }).find(pkg)->second);
 }
 
 }

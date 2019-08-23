@@ -219,7 +219,7 @@ std::vector<ITargetPtr> NativeTargetEntryPoint::loadPackages(SwBuild &swb, const
 
     b.DryRun = settings["driver"]["dry-run"] == "true";
     for (auto &[h, d] : settings["driver"]["source-dir-for-source"].getSettings())
-        b.source_dirs_by_source[h] = d.getValue();
+        b.source_dirs_by_source[h].requested_dir = d.getValue();
     for (auto &[pkg, p] : settings["driver"]["source-dir-for-package"].getSettings())
         b.source_dirs_by_package[pkg] = p.getValue();
     settings.erase("driver");

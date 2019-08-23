@@ -52,7 +52,7 @@ protected:
     void setValue(const String &key, const T &v) const;
 };
 
-struct SW_MANAGER_API PackagesDatabase : public Database
+struct SW_MANAGER_API PackagesDatabase : Database
 {
     PackagesDatabase(const path &db_fn);
     ~PackagesDatabase();

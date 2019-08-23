@@ -153,7 +153,7 @@ std::optional<path> Build::getSourceDir(const Source &s, const Version &v) const
     s2->applyVersion(v);
     auto i = source_dirs_by_source.find(s2->getHash());
     if (i != source_dirs_by_source.end())
-        return i->second;
+        return i->second.getRequestedDirectory();
     return {};
 }
 

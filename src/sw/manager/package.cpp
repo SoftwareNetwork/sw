@@ -35,37 +35,37 @@ String getSourceDirectoryName()
     return "sdir";
 }
 
-Package::Package(const Storage &storage, const String &s)
-    : storage(storage), PackageId(s)
-{
-}
-
-Package::Package(const Storage &storage, const PackagePath &p, const Version &v)
+Package::Package(const IStorage &storage, const PackagePath &p, const Version &v)
     : storage(storage), PackageId(p, v)
 {
 }
 
-Package::Package(const Storage &storage, const PackageId &id)
+Package::Package(const IStorage &storage, const PackageId &id)
     : storage(storage), PackageId(id)
+{
+}
+
+Package::Package(const Package &rhs)
+    : PackageId(rhs), storage(rhs.storage), data(rhs.data ? rhs.data->clone() : nullptr)
 {
 }
 
 String Package::getHash() const
 {
     // move these calculations to storage?
-    switch (storage.getHashSchemaVersion())
+    switch (storage.getSchema().getHashVersion())
     {
     case 1:
         return blake2b_512(getPath().toStringLower() + "-" + getVersion().toString());
     }
 
-    throw SW_RUNTIME_ERROR("Unknown hash schema version: " + std::to_string(storage.getHashSchemaVersion()));
+    throw SW_RUNTIME_ERROR("Unknown hash schema version: " + std::to_string(storage.getSchema().getHashVersion()));
 }
 
 path Package::getHashPath() const
 {
     // move these calculations to storage?
-    switch (storage.getHashPathFromHashSchemaVersion())
+    switch (storage.getSchema().getHashPathFromHashVersion())
     {
     case 1:
         return ::sw::getHashPathFromHash(getHash(), 4, 2); // remote consistent storage paths
@@ -73,7 +73,7 @@ path Package::getHashPath() const
         return ::sw::getHashPathFromHash(getHashShort(), 2, 2); // local storage is more relaxed
     }
 
-    throw SW_RUNTIME_ERROR("unreachable");
+    throw SW_RUNTIME_ERROR("Unknown hash path schema version: " + std::to_string(storage.getSchema().getHashPathFromHashVersion()));
 }
 
 String Package::getHashShort() const
@@ -81,29 +81,16 @@ String Package::getHashShort() const
     return shorten_hash(getHash(), 8);
 }
 
-/*void Package::setData(const PackageData &d) const
-{
-    data = std::make_unique<PackageData>(d);
-}*/
-
 const PackageData &Package::getData() const
 {
-    return storage.loadData(*this);
+    if (!data)
+        data = std::move(storage.loadData(*this));
+    return *data;
 }
 
-/*LocalPackage Package::download() const
+const IStorage &Package::getStorage() const
 {
-    return storage.download(*this);
-}*/
-
-/*LocalPackage Package::install() const
-{
-    return storage.install(*this);
-}*/
-
-LocalPackage::LocalPackage(const LocalStorage &storage, const String &s)
-    : Package(storage, s)
-{
+    return storage;
 }
 
 LocalPackage::LocalPackage(const LocalStorage &storage, const PackagePath &p, const Version &v)
@@ -118,7 +105,7 @@ LocalPackage::LocalPackage(const LocalStorage &storage, const PackageId &id)
 
 const LocalStorage &LocalPackage::getLocalStorage() const
 {
-    return static_cast<const LocalStorage &>(storage);
+    return static_cast<const LocalStorage &>(getStorage());
 }
 
 bool LocalPackage::isOverridden() const

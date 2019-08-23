@@ -12,7 +12,7 @@
 namespace sw
 {
 
-struct Storage;
+struct IStorage;
 struct LocalStorage;
 
 struct PackageData
@@ -41,45 +41,57 @@ struct PackageData
 
     //
     // PackageId driver
+
+    virtual ~PackageData() = default;
+
+    virtual std::unique_ptr<PackageData> clone() const { return std::make_unique<PackageData>(*this); }
 };
+
+using PackageDataPtr = std::unique_ptr<PackageData>;
 
 struct LocalPackage;
 struct OverriddenPackagesStorage;
 
 struct SW_MANAGER_API Package : PackageId
 {
-    const Storage &storage;
+    Package(const IStorage &, const PackagePath &, const Version &);
+    Package(const IStorage &, const PackageId &);
 
-    Package(const Storage &, const String &);
-    Package(const Storage &, const PackagePath &, const Version &);
-    Package(const Storage &, const PackageId &);
-    Package(const Package &) = default;
-    Package &operator=(const Package &) = default;
+    Package(const Package &);
+    Package &operator=(const Package &) = delete;
     Package(Package &&) = default;
     Package &operator=(Package &&) = default;
-    ~Package() = default;
+    virtual ~Package() = default;
 
     String getHash() const;
     String getHashShort() const;
     path getHashPath() const;
 
-    //void setData(const PackageData &) const;
     const PackageData &getData() const;
-    //LocalPackage download(file type) const;
-    //LocalPackage install() const;
+    const IStorage &getStorage() const;
+
+    virtual std::unique_ptr<Package> clone() const { return std::make_unique<Package>(*this); }
+
+private:
+    const IStorage &storage;
+    mutable PackageDataPtr data;
 };
+
+using PackagePtr = std::unique_ptr<Package>;
+//using Packages = std::unordered_set<Package>;
 
 struct SW_MANAGER_API LocalPackage : Package
 {
-    LocalPackage(const LocalStorage &, const String &);
     LocalPackage(const LocalStorage &, const PackagePath &, const Version &);
     LocalPackage(const LocalStorage &, const PackageId &);
 
     LocalPackage(const LocalPackage &) = default;
-    LocalPackage &operator=(const LocalPackage &) = default;
+    LocalPackage &operator=(const LocalPackage &) = delete;
     LocalPackage(LocalPackage &&) = default;
     LocalPackage &operator=(LocalPackage &&) = default;
-    ~LocalPackage() = default;
+    virtual ~LocalPackage() = default;
+
+    virtual std::unique_ptr<Package> clone() const { return std::make_unique<LocalPackage>(*this); }
 
     bool isOverridden() const;
     std::optional<path> getOverriddenDir() const;
@@ -102,7 +114,10 @@ private:
     const LocalStorage &getLocalStorage() const;
 };
 
-using Packages = std::unordered_set<Package>;
+using LocalPackagePtr = std::unique_ptr<LocalPackage>;
+
+SW_MANAGER_API
+String getSourceDirectoryName();
 
 }
 

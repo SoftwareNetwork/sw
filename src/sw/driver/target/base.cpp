@@ -339,14 +339,15 @@ void Target::fetch()
             s2->applyVersion(getPackage().getVersion());
             s2->download(d);
         }
+        fetched_dirs[s2->getHash()].root_dir = d;
         d = d / findRootDirectory(d);
         setSourceDirectory(d);
 
-        fetched_dirs.emplace(s2->getHash(), d);
+        fetched_dirs[s2->getHash()].requested_dir = d;
     }
     else
     {
-        setSourceDirectory(i->second);
+        setSourceDirectory(i->second.getRequestedDirectory());
     }
 }
 
