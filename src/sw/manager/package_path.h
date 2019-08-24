@@ -280,12 +280,6 @@ struct SW_MANAGER_API PackagePath : SecureSplitablePath<PackagePath>
     bool isRootOf(const PackagePath &rhs) const;
     bool hasSameParent(const PackagePath &rhs) const;
 
-    bool isPublic() const { return !isPrivate(); }
-    bool isPrivate() const { return is_pvt() || is_com(); }
-
-    bool isUser() const { return !isOrganization(); }
-    bool isOrganization() const { return is_org() || is_com(); }
-
     String getHash() const;
 
     Base::value_type getNamespace() const;

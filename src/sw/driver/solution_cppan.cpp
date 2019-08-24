@@ -112,11 +112,14 @@ void Build::cppan_load1(const yaml &root, const String &root_name)
     PackagePath root_project;
     YAML_EXTRACT(root_project, String);
 
+    Version version;
+    YAML_EXTRACT(version, String);
+
     auto prjs = root["projects"];
     if (prjs.IsDefined() && !prjs.IsMap())
         throw std::runtime_error("'projects' should be a map");
 
-    auto add_project = [this, &root_project](auto &root, String name)
+    auto add_project = [this, &root_project](auto &root, String name, Version version, bool name_unnamed = false)
     {
         /*Project project(root_project);
         project.defaults_allowed = defaults_allowed;
@@ -126,14 +129,26 @@ void Build::cppan_load1(const yaml &root, const String &root_name)
         project.subdir = subdir;*/
 
         if (name.empty())
+        {
             YAML_EXTRACT_AUTO(name);
+            if (name.empty())
+            {
+                LOG_WARN(logger, "Unnamed target, set 'name: ...' directive");
+                if (name_unnamed)
+                    name = "unnamed";
+                else
+                    throw SW_RUNTIME_ERROR("Unnamed target");
+            }
+        }
+
+        YAML_EXTRACT(version, String);
 
         String pt;
         YAML_EXTRACT_VAR(root, pt, "type", String);
         if (pt == "l" || pt == "lib" || pt == "library")
             ;
         else if (pt.empty() || pt == "e" || pt == "exe" || pt == "executable")
-            return addExecutable(name).cppan_load_project(root);
+            return addExecutable(name, version).cppan_load_project(root);
         else
             throw SW_RUNTIME_ERROR("Unknown project type");
 
@@ -148,9 +163,9 @@ void Build::cppan_load1(const yaml &root, const String &root_name)
         String lt = "shared";
         YAML_EXTRACT_VAR(root, lt, "library_type", String);
         if (lt == "static" || static_only)
-            return addStaticLibrary(name).cppan_load_project(root);
+            return addStaticLibrary(name, version).cppan_load_project(root);
         else if (lt == "shared" || lt == "dll" || shared_only)
-            return addSharedLibrary(name).cppan_load_project(root);
+            return addSharedLibrary(name, version).cppan_load_project(root);
         else if (lt.empty())
             throw SW_RUNTIME_ERROR(name + ": empty library type");
         else
@@ -168,11 +183,15 @@ void Build::cppan_load1(const yaml &root, const String &root_name)
     if (prjs.IsDefined())
     {
         for (auto prj : prjs)
-            add_project(prj.second, prj.first.template as<String>());
+            add_project(prj.second, prj.first.template as<String>(), version);
+    }
+    else if (root_name.empty())
+    {
+        add_project(root, {}, version, true);
     }
     else
     {
-        add_project(root, root_name);
+        add_project(root, root_name, version);
     }
 
     // remove unreferences projects

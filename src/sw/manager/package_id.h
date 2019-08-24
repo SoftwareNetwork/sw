@@ -21,12 +21,6 @@ struct SW_MANAGER_API PackageId
     PackagePath getPath() const { return ppath; }
     Version getVersion() const { return version; }
 
-    bool isPublic() const { return ppath.isPublic(); }
-    bool isPrivate() const { return ppath.isPrivate(); }
-
-    bool isUser() const { return ppath.isUser(); }
-    bool isOrganization() const { return ppath.isOrganization(); }
-
     bool operator<(const PackageId &rhs) const { return std::tie(ppath, version) < std::tie(rhs.ppath, rhs.version); }
     bool operator==(const PackageId &rhs) const { return std::tie(ppath, version) == std::tie(rhs.ppath, rhs.version); }
     bool operator!=(const PackageId &rhs) const { return !operator==(rhs); }

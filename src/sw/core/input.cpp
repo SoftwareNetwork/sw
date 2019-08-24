@@ -64,7 +64,7 @@ Input::Input(const path &in, InputType t, const SwContext &swctx)
 bool Input::findDriver(InputType t, const SwContext &swctx)
 {
     type = t;
-    for (auto &[_, d] : swctx.getDrivers())
+    for (auto &[dp, d] : swctx.getDrivers())
     {
         auto r = d->canLoadInput(*this);
         if (r)
@@ -75,6 +75,7 @@ bool Input::findDriver(InputType t, const SwContext &swctx)
                 data = *r;
             }
             driver = d.get();
+            LOG_DEBUG(logger, "Selecting driver " + dp.toString() + " for input " + normalize_path(*r));
             return true;
         }
     }
@@ -144,7 +145,10 @@ void Input::init(const LocalPackage &p, const SwContext &swctx)
 
     data = p;
     type = InputType::InstalledPackage;
-    driver = swctx.getDrivers().begin()->second.get();
+    auto &d = *swctx.getDrivers().begin();
+    driver = d.second.get();
+
+    LOG_TRACE(logger, "Selecting driver " + d.first.toString() + " for input " + p.toString());
 }
 
 bool Input::operator==(const Input &rhs) const

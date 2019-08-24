@@ -75,6 +75,15 @@ void ProtobufApi::addDownloads(const std::set<int64_t> &pkgs)
     GRPC_CALL(api_, AddDownloads, google::protobuf::Empty);
 }
 
+void ProtobufApi::addDownload(const PackageId &pkg) const
+{
+    api::PackageId request;
+    request.set_path(pkg.getPath().toString());
+    request.set_version(pkg.getVersion().toString());
+    auto context = getContext();
+    GRPC_CALL(api_, AddDownloads2, google::protobuf::Empty);
+}
+
 void ProtobufApi::addClientCall()
 {
     google::protobuf::Empty request;
@@ -152,7 +161,7 @@ std::unordered_map<UnresolvedPackage, PackagePtr> ProtobufApi::resolvePackages(c
     return m;
 }
 
-void ProtobufApi::addVersion(PackagePath prefix, const PackageDescriptionMap &pkgs, const String &script) const
+void ProtobufApi::addVersion(PackagePath prefix, const PackageDescriptionMap &pkgs, const String &script_name, const String &script) const
 {
     api::NewPackage request;
     request.mutable_package_data()->mutable_script()->set_script(script);
@@ -174,6 +183,7 @@ void ProtobufApi::addVersion(PackagePath prefix, const PackageDescriptionMap &pk
         }
         jm["packages"][pkg.toString()] = j;
     }
+    jm["script_name"] = script_name;
     request.mutable_package_data()->set_data(jm.dump());
     auto context = getContextWithAuth();
     GRPC_SET_DEADLINE(10);

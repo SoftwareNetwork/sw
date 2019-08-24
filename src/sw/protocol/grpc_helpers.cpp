@@ -2,9 +2,6 @@
 
 #include <primitives/exceptions.h>
 
-#include <primitives/log.h>
-DECLARE_STATIC_LOGGER(logger, "protocol");
-
 namespace sw
 {
 
@@ -24,10 +21,8 @@ CallResult check_result(
         auto err = "Method '" + method + "': RPC failed: " + std::to_string(status.error_code()) + ": " + status.error_message();
         if (throws)
             throw SW_RUNTIME_ERROR(err);
-        else
-            LOG_ERROR(logger, err);
         r.ec = std::make_error_code((std::errc)status.error_code());
-        r.message = status.error_message();
+        r.message = err;
         return r;
     }
 
@@ -37,9 +32,8 @@ CallResult check_result(
         auto err = "Method '" + method + "': missing error code";
         if (throws)
             throw SW_RUNTIME_ERROR(err);
-        else
-            LOG_DEBUG(logger, err);
         r.ec = std::make_error_code((std::errc)1);
+        r.message = err;
         return r;
     }
     auto ec = std::stoi(result.data());
@@ -49,10 +43,8 @@ CallResult check_result(
         auto err = "Method '" + method + "' returned error: ec = " + result + ", message: " + message;
         if (throws)
             throw SW_RUNTIME_ERROR(err);
-        else
-            LOG_DEBUG(logger, err);
         r.ec = std::make_error_code((std::errc)ec);
-        r.message = message;
+        r.message = err;
     }
 
     return r;

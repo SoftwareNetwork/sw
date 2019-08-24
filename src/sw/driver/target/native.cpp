@@ -3393,24 +3393,10 @@ CompilerType NativeCompiledTarget::getCompilerType() const
     return ct;
 }
 
-static std::unique_ptr<Source> load_source_and_version(const yaml &root, const Version &version)
-{
-    String ver;
-    YAML_EXTRACT_VAR(root, ver, "version", String);
-    if (!ver.empty())
-    {
-        SW_UNIMPLEMENTED;
-        //version = Version(ver);
-    }
-    if (root["source"].IsDefined())
-        return Source::load(root["source"]);
-    return nullptr;
-}
-
 void NativeCompiledTarget::cppan_load_project(const yaml &root)
 {
-    Version v = getPackage().getVersion();
-    *this += load_source_and_version(root, v);
+    if (root["source"].IsDefined())
+        *this += Source::load(root["source"]);
 
     YAML_EXTRACT_AUTO2(Empty, "empty");
     YAML_EXTRACT_VAR(root, HeaderOnly, "header_only", bool);

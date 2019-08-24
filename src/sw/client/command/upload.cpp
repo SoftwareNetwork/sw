@@ -141,8 +141,18 @@ SUBCOMMAND_DECL2(upload)
     if (!upload_remote.empty())
         current_remote = find_remote(us, upload_remote);
 
+    String script_name;
+    switch (i.getType())
+    {
+    case sw::InputType::SpecificationFile:
+        script_name = i.getPath().filename().string();
+        break;
+    default:
+        SW_UNIMPLEMENTED;
+    }
+
     // send signatures (gpg)
     // -k KEY1 -k KEY2
     auto api = current_remote->getApi();
-    api->addVersion(gUploadPrefix, m, i.getSpecification());
+    api->addVersion(gUploadPrefix, m, script_name, i.getSpecification());
 }

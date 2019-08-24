@@ -12,6 +12,7 @@
 
 #include <primitives/command.h>
 #include <primitives/exceptions.h>
+#include <primitives/executor.h>
 #include <primitives/lock.h>
 #include <primitives/pack.h>
 #include <sqlite3.h>
@@ -394,8 +395,23 @@ struct RemoteFileWithHashVerification : vfs::File
 
     bool copy(const path &fn) const override
     {
+        auto add_downloads = [this]()
+        {
+            auto remote_storage = dynamic_cast<const RemoteStorage *>(&p.getStorage());
+            if (!remote_storage)
+                return;
+            PackageId pkg = p;
+            getExecutor().push([remote_storage, pkg]
+            {
+                remote_storage->getRemote().getApi()->addDownload(pkg);
+            });
+        };
+
         if (copy(fn, p.getData().hash))
+        {
+            add_downloads();
             return true;
+        }
 
         if (auto remote_storage = dynamic_cast<const RemoteStorageWithFallbackToRemoteResolving *>(&p.getStorage()))
         {
@@ -405,7 +421,10 @@ struct RemoteFileWithHashVerification : vfs::File
             if (upkgs.empty())
             {
                 if (copy(fn, m.find(u)->second->getData().hash))
+                {
+                    add_downloads();
                     return true;
+                }
             }
         }
 

@@ -134,6 +134,7 @@ service ApiService {
 
     // tbr, check downloads on s3
     rpc AddDownloads (PackageIds) returns (google.protobuf.Empty);
+    rpc AddDownloads2 (PackageId) returns (google.protobuf.Empty); // second version, simple
     // also deprecate later
     rpc AddClientCall (google.protobuf.Empty) returns (google.protobuf.Empty);
 }

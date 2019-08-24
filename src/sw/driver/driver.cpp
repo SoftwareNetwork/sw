@@ -257,8 +257,15 @@ Driver::EntryPointsVector1 Driver::load_spec_file(SwContext &swctx, const path &
     }
         break;
     case FrontendType::Cppan:
-        SW_UNIMPLEMENTED;
-        //cppan_load();
+    {
+        auto root = YAML::Load(read_file(fn));
+        auto bf = [root](Build &b) mutable
+        {
+            b.cppan_load(root);
+        };
+        auto ep = std::make_shared<NativeBuiltinTargetEntryPoint>(bf);
+        return { ep };
+    }
         break;
     default:
         SW_UNIMPLEMENTED;
