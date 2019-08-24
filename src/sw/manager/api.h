@@ -6,13 +6,14 @@
 
 #pragma once
 
-#include "enums.h"
 #include "package.h"
+#include "enums.h"
 #include "package_data.h"
-#include "version.h"
 
 namespace sw
 {
+
+struct IStorage;
 
 struct Api
 {
@@ -29,6 +30,8 @@ struct Api
     virtual ~Api() = 0;
 
     virtual IdDependencies resolvePackages(const UnresolvedPackages &) const = 0;
+    virtual std::unordered_map<UnresolvedPackage, PackagePtr> resolvePackages(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs,
+        std::unordered_map<PackageId, PackageData> &data, const IStorage &) const = 0;
     virtual void addVersion(PackagePath prefix, const PackageDescriptionMap &pkgs, const String &script) const = 0;
 };
 

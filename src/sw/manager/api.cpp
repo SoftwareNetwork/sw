@@ -111,6 +111,47 @@ Api::IdDependencies ProtobufApi::resolvePackages(const UnresolvedPackages &pkgs)
     return id_deps;
 }
 
+std::unordered_map<UnresolvedPackage, PackagePtr> ProtobufApi::resolvePackages(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs,
+    std::unordered_map<PackageId, PackageData> &data, const IStorage &s) const
+{
+    api::UnresolvedPackages request;
+    for (auto &pkg : pkgs)
+    {
+        auto pb_pkg = request.mutable_packages()->Add();
+        pb_pkg->set_path(pkg.ppath);
+        pb_pkg->set_range(pkg.range.toString());
+    }
+    auto context = getContext();
+    GRPC_CALL_THROWS(api_, ResolvePackages2, api::ResolvedPackages2);
+
+    // process result
+
+    // read unresolved
+    for (auto &u : response.unresolved_packages())
+        unresolved_pkgs.emplace(u.path(), u.range());
+
+    // read resolved
+    std::unordered_map<UnresolvedPackage, PackagePtr> m;
+    for (auto &pair : response.resolved_packages())
+    {
+        auto &pkg = pair.resolved_package();
+
+        PackageId p(pkg.package().path(), pkg.package().version());
+
+        PackageData d;
+        d.flags = pkg.flags();
+        d.hash = pkg.hash();
+        d.group_number = pkg.group_number();
+        d.prefix = pkg.prefix();
+        for (auto &tree_dep : pkg.dependencies())
+            d.dependencies.emplace(tree_dep.path(), tree_dep.range());
+        data[p] = d;
+
+        m[{pair.unresolved_package().path(), pair.unresolved_package().range()}] = std::make_unique<Package>(s, p);
+    }
+    return m;
+}
+
 void ProtobufApi::addVersion(PackagePath prefix, const PackageDescriptionMap &pkgs, const String &script) const
 {
     api::NewPackage request;

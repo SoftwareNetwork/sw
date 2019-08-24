@@ -32,16 +32,11 @@ SwManagerContext::SwManagerContext(const path &local_storage_root_dir)
     storages.emplace_back(std::make_unique<LocalStorage>(local_storage_root_dir));
 
     first_remote_storage_id = storages.size();
-    // .0 for local counterpart
-    // .1 for remote's temporary storage
-    //if (!gForceServerQuery)
-    //storages.emplace_back(std::make_unique<RemoteStorage>(
-        //getLocalStorage(), "software-network.0", getLocalStorage().getDatabaseRootDir()));
-
     for (auto &r : Settings::get_user_settings().remotes)
     {
-        storages.emplace_back(std::make_unique<RemoteStorageWithFallbackToRemoteResolving>(
-            getLocalStorage(), getLocalStorage().getDatabaseRootDir(), r));
+        storages.emplace_back(
+            std::make_unique<RemoteStorageWithFallbackToRemoteResolving>(
+                getLocalStorage(), r));
     }
 }
 
