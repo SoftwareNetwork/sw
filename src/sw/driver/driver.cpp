@@ -170,7 +170,6 @@ static PackageIdSet getBuiltinPackages(SwContext &swctx)
 template <class T>
 std::shared_ptr<PrepareConfigEntryPoint> Driver::build_configs1(SwContext &swctx, const T &objs) const
 {
-    // separate build
     auto b = swctx.createBuild();
 
     auto ts = swctx.getHostSettings();
@@ -186,6 +185,10 @@ std::shared_ptr<PrepareConfigEntryPoint> Driver::build_configs1(SwContext &swctx
     auto tgts = ep->loadPackages(*b, ts, b->getKnownPackages()); // load all our known targets
     if (tgts.size() != 1)
         throw SW_LOGIC_ERROR("something went wrong, only one lib target must be exported");
+
+    // fast path
+    if (!ep->isOutdated())
+        return ep;
 
     for (auto &tgt : tgts)
         b->getTargets()[tgt->getPackage()].push_back(tgt);

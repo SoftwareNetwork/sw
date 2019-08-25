@@ -55,9 +55,12 @@ struct PrepareConfigEntryPoint : NativeTargetEntryPoint
     PrepareConfigEntryPoint(const std::unordered_set<LocalPackage> &pkgs);
     PrepareConfigEntryPoint(const Files &files);
 
+    bool isOutdated() const;
+
 private:
     const std::unordered_set<LocalPackage> pkgs_;
     mutable Files files_;
+    mutable FilesSorted pkg_files_;
 
     void loadPackages1(Build &) const override;
 

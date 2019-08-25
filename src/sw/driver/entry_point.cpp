@@ -15,6 +15,7 @@
 #include <sw/core/sw_context.h>
 #include <sw/manager/storage.h>
 
+#include <boost/dll.hpp>
 #include <primitives/emitter.h>
 #include <primitives/sw/settings_program_name.h>
 #include <primitives/symbol.h>
@@ -356,11 +357,9 @@ decltype(auto) PrepareConfigEntryPoint::commonActions(Build &b, const FilesSorte
     lib.AutoDetectOptions = false;
     lib.CPPVersion = CPPLanguageStandard::CPP17;
 
-    // add files, sorted!
     for (auto &fn : files)
     {
         lib += fn;
-        //lib[fn].args.push_back("-DgetSettings=getBuildSettings");
     }
 
     //
@@ -377,8 +376,6 @@ decltype(auto) PrepareConfigEntryPoint::commonActions(Build &b, const FilesSorte
 
 void PrepareConfigEntryPoint::commonActions2(Build &b, SharedLibraryTarget &lib) const
 {
-    //lib += "SW_CPP_DRIVER_API_VERSION=1"_def;
-
     if (lib.getBuildSettings().TargetOS.is(OSType::Windows))
     {
         lib.Definitions["SW_SUPPORT_API"] = "__declspec(dllimport)";
@@ -457,16 +454,15 @@ void PrepareConfigEntryPoint::many2one(Build &b, const std::unordered_set<LocalP
         return data{ {b.getSolution().getContext().getLocalStorage(), pkg2}, pkg.getData().group_number, *d };
     };
 
-    FilesSorted files;
     std::unordered_map<path, data> output_names;
     for (auto &pkg : pkgs)
     {
         auto p = get_package_config(pkg);
-        files.insert(p.p);
+        pkg_files_.insert(p.p);
         output_names.emplace(p.p, p);
     }
 
-    auto &lib = commonActions(b, files);
+    auto &lib = commonActions(b, pkg_files_);
 
     // make fancy names
     for (auto &[fn, d] : output_names)
@@ -607,6 +603,42 @@ void PrepareConfigEntryPoint::one2one(Build &b, const path &fn) const
     }
 
     commonActions2(b, lib);
+}
+
+bool PrepareConfigEntryPoint::isOutdated() const
+{
+    auto get_lwt = [](const path &p)
+    {
+        return file_time_type2time_t(fs::last_write_time(p));
+    };
+
+    bool not_exists = false;
+    time_t t0 = 0;
+    time_t t = 0;
+    t ^= get_lwt(boost::dll::program_location());
+
+    for (auto &f : pkg_files_)
+        t ^= get_lwt(f);
+    for (auto &f : FilesSorted(files_.begin(), files_.end()))
+        t ^= get_lwt(f);
+
+    if (!out.empty())
+    {
+        not_exists |= !fs::exists(out);
+        if (!not_exists)
+            t ^= get_lwt(out);
+    }
+    else
+    {
+        LOG_INFO(logger, __FILE__ << ":" << __LINE__ <<  ": not implemeted yet");
+        return true;
+    }
+
+    auto f = path(".sw") / "stamp" / (std::to_string(t) + ".txt");
+    if (fs::exists(f))
+        t0 = std::stoll(read_file(f));
+    write_file(f, std::to_string(t));
+    return not_exists || t0 != t;
 }
 
 }
