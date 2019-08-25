@@ -540,12 +540,12 @@ void Command::execute1(std::error_code *ec)
             fs::remove(rsp_file);
     };
 
-    auto make_error_string = [this](const String &e)
+    auto make_error_string = [this]()
     {
         postProcess(false);
         printOutputs();
 
-        return makeErrorString(e);
+        return makeErrorString();
     };
 
     // create generated dirs
@@ -554,34 +554,34 @@ void Command::execute1(std::error_code *ec)
 
     LOG_TRACE(logger, print());
 
-    try
+    if (ec)
     {
+        Base::execute(*ec);
         if (ec)
         {
-            Base::execute(*ec);
-            if (ec)
-            {
-                // TODO: save error string
-                make_error_string(getError());
-                return;
-            }
+            // TODO: save error string
+            make_error_string();
+            return;
         }
-        else
-            Base::execute();
-
-        if (save_executed_commands || save_all_commands)
-        {
-            saveCommand();
-        }
-
-        postProcess(); // process deps
-        printOutputs();
     }
-    catch (std::exception &e)
+    else
     {
-        auto err = make_error_string(e.what());
-        throw SW_RUNTIME_ERROR(err);
+        std::error_code ec;
+        Base::execute(ec);
+        if (ec)
+        {
+            auto err = make_error_string();
+            throw SW_RUNTIME_ERROR(err);
+        }
     }
+
+    if (save_executed_commands || save_all_commands)
+    {
+        saveCommand();
+    }
+
+    postProcess(); // process deps
+    printOutputs();
 }
 
 void Command::printOutputs()
@@ -603,6 +603,20 @@ void Command::printOutputs()
         write_file(fs::current_path() / SW_BINARY_DIR / "rsp" / std::to_string(getHash()) += ".txt", s);
     else
         LOG_INFO(logger, s);
+}
+
+String Command::makeErrorString()
+{
+    auto err = "command failed"s;
+    auto errors = getErrors();
+    if (errors.empty())
+        return makeErrorString(err);
+
+    err += ": ";
+    for (auto &e : errors)
+        err += e + ", ";
+    errors.resize(errors.size() - 2);
+    return makeErrorString(err);
 }
 
 String Command::makeErrorString(const String &e)

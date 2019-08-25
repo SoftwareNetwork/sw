@@ -267,6 +267,7 @@ private:
     bool isTimeChanged() const;
     void printLog() const;
     size_t getHashAndSave() const;
+    String makeErrorString();
     String makeErrorString(const String &e);
     String saveCommand() const;
     void printOutputs();
