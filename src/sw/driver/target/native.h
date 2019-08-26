@@ -85,7 +85,6 @@ public:
     std::optional<bool> AutoDetectOptions;
     std::shared_ptr<NativeLinker> Linker;
     std::shared_ptr<NativeLinker> Librarian;
-    path InstallDirectory;
     path OutputDir; // subdir
 
     String ApiName;

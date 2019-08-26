@@ -1277,26 +1277,6 @@ Commands NativeCompiledTarget::getGeneratedCommands() const
         generated.insert(cmds.begin(), cmds.end());
     }
 
-    // also add deps to all deps' generated commands
-    Commands deps_commands;
-    /*for (auto &f : FileDependencies)
-    {
-        File p(f, getFs());
-        if (!p.isGenerated())
-            continue;
-        auto c = p.getFileRecord().getGenerator();
-        deps_commands.insert(c); // gather deps' commands
-    }*/
-
-    // make our commands to depend on gathered
-    //for (auto &c : generated)
-        //c->dependencies.insert(deps_commands.begin(), deps_commands.end());
-
-    // and now also insert deps' commands to list
-    // this is useful when our generated list is empty
-    //if (generated.empty())
-    generated.insert(deps_commands.begin(), deps_commands.end());
-
     generated_commands = generated;
     return generated;
 }
@@ -2208,25 +2188,6 @@ bool NativeCompiledTarget::prepare()
             f = this->SourceFileMapThis::operator[](p) = p2->createSourceFile(*this, p);
         }
 
-        auto files = gatherSourceFiles();
-
-        // copy headers to install dir
-        if (!InstallDirectory.empty() && !fs::exists(SourceDir / InstallDirectory))
-        {
-            auto d = SourceDir / InstallDirectory;
-            fs::create_directories(d);
-            for (auto &[p, fp] : *this)
-            {
-                File f(p, getFs());
-                if (f.isGenerated())
-                    continue;
-                // is_header_ext()
-                const auto e = f.file.extension();
-                if (getCppHeaderFileExtensions().find(e.string()) != getCppHeaderFileExtensions().end())
-                    fs::copy_file(f.file, d / f.file.filename());
-            }
-        }
-
         // before merge
         if (getBuildSettings().Native.ConfigurationType != ConfigurationType::Debug)
             *this += Definition("NDEBUG");
@@ -2319,6 +2280,8 @@ bool NativeCompiledTarget::prepare()
             if (ExportAllSymbols && getSelectedTool() == Linker.get())
                 c->VisibilityHidden = false;
         };
+
+        auto files = gatherSourceFiles();
 
         // merge file compiler options with target compiler options
         for (auto &f : files)
