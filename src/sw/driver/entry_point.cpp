@@ -613,20 +613,20 @@ bool PrepareConfigEntryPoint::isOutdated() const
     };
 
     bool not_exists = false;
-    time_t t0 = 0;
-    time_t t = 0;
-    t ^= get_lwt(boost::dll::program_location());
+    size_t t0 = 0;
+    size_t t = 0;
+    hash_combine(t, get_lwt(boost::dll::program_location()));
 
     for (auto &f : pkg_files_)
-        t ^= get_lwt(f);
+        hash_combine(t, get_lwt(f));
     for (auto &f : FilesSorted(files_.begin(), files_.end()))
-        t ^= get_lwt(f);
+        hash_combine(t, get_lwt(f));
 
     if (!out.empty())
     {
         not_exists |= !fs::exists(out);
         if (!not_exists)
-            t ^= get_lwt(out);
+            hash_combine(t, get_lwt(out));
     }
     else
     {
@@ -636,7 +636,7 @@ bool PrepareConfigEntryPoint::isOutdated() const
 
     auto f = path(".sw") / "stamp" / (std::to_string(t) + ".txt");
     if (fs::exists(f))
-        t0 = std::stoll(read_file(f));
+        t0 = std::stoull(read_file(f));
     write_file(f, std::to_string(t));
     return not_exists || t0 != t;
 }

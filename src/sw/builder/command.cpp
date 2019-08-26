@@ -615,7 +615,7 @@ String Command::makeErrorString()
     err += ": ";
     for (auto &e : errors)
         err += e + ", ";
-    errors.resize(errors.size() - 2);
+    err.resize(err.size() - 2);
     return makeErrorString(err);
 }
 

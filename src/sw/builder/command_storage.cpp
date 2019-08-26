@@ -157,6 +157,7 @@ static void load(const path &fn, Files &files, ConcurrentCommandStorage &command
 
             size_t n;
             b.read(n);
+            r.first->implicit_inputs.reserve(n);
             while (n--)
             {
                 b.read(h);

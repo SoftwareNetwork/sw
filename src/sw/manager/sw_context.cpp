@@ -127,13 +127,13 @@ std::unordered_map<UnresolvedPackage, LocalPackage> SwManagerContext::install(co
 
     // two unresolved pkgs may point to single pkg,
     // so make pkgs unique
-    std::unordered_set<Package*> pkgs2;
+    std::unordered_map<PackageId, Package*> pkgs2;
     for (auto &[u, p] : m)
-        pkgs2.emplace(p.get());
+        pkgs2.emplace(*p, p.get());
 
     auto &e = getExecutor();
     Futures<void> fs;
-    for (auto &p : pkgs2)
+    for (auto &[_,p] : pkgs2)
         fs.push_back(e.push([this, &p]{ install(*p); }));
     waitAndGet(fs);
 
