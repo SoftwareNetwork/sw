@@ -169,7 +169,7 @@ void VSCommand::postProcess1(bool)
             }
             auto include = line.substr(pattern.size());
             boost::trim(include);
-            implicit_inputs.insert(include);
+            addImplicitInput(include);
         }
     };
 
@@ -258,7 +258,7 @@ void GNUCommand::postProcess1(bool ok)
             f3 = toupper(f3[0]) + ":" + f3.substr(1);
         }
 #endif
-        implicit_inputs.insert(f3);
+        addImplicitInput(f3);
     }
 }
 

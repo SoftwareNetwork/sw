@@ -11,6 +11,7 @@
 
 #include <sw/manager/storage.h>
 
+#include <boost/thread/lock_types.hpp>
 #include <primitives/emitter.h>
 #include <primitives/date_time.h>
 #include <primitives/debug.h>
@@ -54,11 +55,6 @@ static path getCommandsLogFileName(const SwBuilderContext &swctx, bool local)
     return getDir(swctx, local) / std::to_string(COMMAND_DB_FORMAT_VERSION) / ("cmd_log_" + cfg + ".bin");
 }
 
-FileDb::FileDb(const SwBuilderContext &swctx)
-    : swctx(swctx)
-{
-}
-
 template <class T>
 static void write_int(std::vector<uint8_t> &vec, T val)
 {
@@ -76,7 +72,46 @@ static void write_str(std::vector<uint8_t> &vec, const String &val)
     memcpy(&vec[vsz], &val[0], sz);
 }
 
-void FileDb::write(std::vector<uint8_t> &v, const CommandRecord &f)
+Files CommandRecord::getImplicitInputs(detail::Storage &s) const
+{
+    Files files;
+    for (auto &h : implicit_inputs)
+    {
+        boost::upgrade_lock lk(s.m_file_storage_by_hash);
+        auto i = s.file_storage_by_hash.find(h);
+        if (i == s.file_storage_by_hash.end())
+            throw SW_RUNTIME_ERROR("no such file");
+        auto p = i->second;
+        lk.unlock();
+        files.insert(p);
+    }
+    return files;
+}
+
+void CommandRecord::setImplicitInputs(const Files &files, detail::Storage &s)
+{
+    for (auto &f : files)
+    {
+        auto str = normalize_path(f);
+        auto h = std::hash<String>()(str);
+        implicit_inputs.insert(h);
+
+        boost::upgrade_lock lk(s.m_file_storage_by_hash);
+        auto i = s.file_storage_by_hash.find(h);
+        if (i == s.file_storage_by_hash.end())
+        {
+            boost::upgrade_to_unique_lock lk2(lk);
+            s.file_storage_by_hash[h] = str;
+        }
+    }
+}
+
+FileDb::FileDb(const SwBuilderContext &swctx)
+    : swctx(swctx)
+{
+}
+
+void FileDb::write(std::vector<uint8_t> &v, const CommandRecord &f, const detail::Storage &s)
 {
     v.clear();
 
@@ -88,8 +123,16 @@ void FileDb::write(std::vector<uint8_t> &v, const CommandRecord &f)
 
     auto n = f.implicit_inputs.size();
     write_int(v, n);
-    for (auto &i : f.implicit_inputs)
-        write_int(v, std::hash<String>()(normalize_path(i)));
+    for (auto &h : f.implicit_inputs)
+    {
+        boost::upgrade_lock lk(s.m_file_storage_by_hash);
+        auto i = s.file_storage_by_hash.find(h);
+        if (i == s.file_storage_by_hash.end())
+            throw SW_RUNTIME_ERROR("no such file");
+        auto p = i->second;
+        lk.unlock();
+        write_int(v, std::hash<String>()(normalize_path(p)));
+    }
 }
 
 static String getFilesSuffix()
@@ -97,10 +140,8 @@ static String getFilesSuffix()
     return ".files";
 }
 
-static void load(const path &fn, Files &files, ConcurrentCommandStorage &commands)
+static void load(const path &fn, Files &files, std::unordered_map<size_t, path> &files2, ConcurrentCommandStorage &commands)
 {
-    std::unordered_map<size_t, path> files2;
-
     // files
     if (fs::exists(path(fn) += getFilesSuffix()))
     {
@@ -163,19 +204,22 @@ static void load(const path &fn, Files &files, ConcurrentCommandStorage &command
                 b.read(h);
                 auto &f = files2[h];
                 if (!f.empty())
-                    r.first->implicit_inputs.insert(files2[h]);
+                {
+                    //r.first->implicit_inputs.insert(files2[h]);
+                    r.first->implicit_inputs.insert(h);
+                }
             }
         }
     }
 }
 
-void FileDb::load(Files &files, ConcurrentCommandStorage &commands, bool local) const
+void FileDb::load(Files &files, std::unordered_map<size_t, path> &files2, ConcurrentCommandStorage &commands, bool local) const
 {
-    sw::load(getCommandsDbFilename(swctx, local), files, commands);
-    sw::load(getCommandsLogFileName(swctx, local), files, commands);
+    sw::load(getCommandsDbFilename(swctx, local), files, files2, commands);
+    sw::load(getCommandsLogFileName(swctx, local), files, files2, commands);
 }
 
-void FileDb::save(Files &files, ConcurrentCommandStorage &commands, bool local) const
+void FileDb::save(const Files &files, const detail::Storage &s, ConcurrentCommandStorage &commands, bool local) const
 {
     std::vector<uint8_t> v;
 
@@ -202,7 +246,7 @@ void FileDb::save(Files &files, ConcurrentCommandStorage &commands, bool local) 
         primitives::BinaryStream b(10'000'000); // reserve amount
         for (const auto &[k, r] : commands)
         {
-            write(v, r);
+            write(v, r, s);
             auto sz = v.size();
             b.write(sz);
             b.write(v.data(), v.size());
@@ -220,7 +264,7 @@ void FileDb::save(Files &files, ConcurrentCommandStorage &commands, bool local) 
     fs::remove(getCommandsLogFileName(swctx, local) += getFilesSuffix(), ec);
 }
 
-CommandStorage::FileHolder::FileHolder(const path &fn)
+detail::FileHolder::FileHolder(const path &fn)
     : f(fn, "ab"), fn(fn)
 {
     // goes first
@@ -233,7 +277,7 @@ CommandStorage::FileHolder::FileHolder(const path &fn)
     fseek(f.getHandle(), 0, SEEK_END);
 }
 
-CommandStorage::FileHolder::~FileHolder()
+detail::FileHolder::~FileHolder()
 {
     f.close();
 
@@ -260,30 +304,17 @@ CommandStorage::~CommandStorage()
     }
 }
 
-#ifdef _WIN32
-#define USE_EXECUTOR 1
-#else
-#define USE_EXECUTOR 1
-#endif
-
 void CommandStorage::async_command_log(const CommandRecord &r, bool local)
 {
-#if !USE_EXECUTOR
-    static std::mutex m;
-    std::unique_lock lk(m);
-#endif
-
     static std::vector<uint8_t> v;
 
-#if USE_EXECUTOR
     swctx.getFileStorageExecutor().push([this, local, &r]
     {
-#endif
-        auto &s = getStorage1(local);
+        auto &s = getInternalStorage(local);
 
         {
             // write record to vector v
-            fdb.write(v, r);
+            fdb.write(v, r, s);
 
             auto &l = s.getCommandLog(swctx, local);
             auto sz = v.size();
@@ -294,7 +325,7 @@ void CommandStorage::async_command_log(const CommandRecord &r, bool local)
 
         {
             auto &l = s.getFileLog(swctx, local);
-            for (auto &f : r.implicit_inputs)
+            for (auto &f : r.getImplicitInputs(s))
             {
                 auto r = s.file_storage.insert(f);
                 if (!r.second)
@@ -306,12 +337,10 @@ void CommandStorage::async_command_log(const CommandRecord &r, bool local)
                 fflush(l.f.getHandle());
             }
         }
-#if USE_EXECUTOR
     });
-#endif
 }
 
-void CommandStorage::Storage::closeLogs()
+void detail::Storage::closeLogs()
 {
     commands.reset();
     files.reset();
@@ -323,14 +352,14 @@ void CommandStorage::closeLogs()
     local.closeLogs();
 }
 
-CommandStorage::FileHolder &CommandStorage::Storage::getCommandLog(const SwBuilderContext &swctx, bool local)
+detail::FileHolder &detail::Storage::getCommandLog(const SwBuilderContext &swctx, bool local)
 {
     if (!commands)
         commands = std::make_unique<FileHolder>(getCommandsLogFileName(swctx, local));
     return *commands;
 }
 
-CommandStorage::FileHolder &CommandStorage::Storage::getFileLog(const SwBuilderContext &swctx, bool local)
+detail::FileHolder &detail::Storage::getFileLog(const SwBuilderContext &swctx, bool local)
 {
     if (!files)
         files = std::make_unique<FileHolder>(getCommandsLogFileName(swctx, local) += getFilesSuffix());
@@ -339,22 +368,22 @@ CommandStorage::FileHolder &CommandStorage::Storage::getFileLog(const SwBuilderC
 
 void CommandStorage::load()
 {
-    fdb.load(local.file_storage, local.storage, true);
-    fdb.load(global.file_storage, global.storage, false);
+    fdb.load(local.file_storage, local.file_storage_by_hash, local.storage, true);
+    fdb.load(global.file_storage, global.file_storage_by_hash, global.storage, false);
 }
 
 void CommandStorage::save()
 {
-    fdb.save(local.file_storage, local.storage, true);
-    fdb.save(global.file_storage, global.storage, false);
+    fdb.save(local.file_storage, local, local.storage, true);
+    fdb.save(global.file_storage, global, global.storage, false);
 }
 
 ConcurrentCommandStorage &CommandStorage::getStorage(bool local)
 {
-    return getStorage1(local).storage;
+    return getInternalStorage(local).storage;
 }
 
-CommandStorage::Storage &CommandStorage::getStorage1(bool local_)
+detail::Storage &CommandStorage::getInternalStorage(bool local_)
 {
     return local_ ? local : global;
 }

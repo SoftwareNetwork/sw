@@ -137,8 +137,9 @@ bool Command::isOutdated() const
     }
     else
     {
+        auto &cs = getContext().getCommandStorage();
         ((Command*)(this))->mtime = r.first->mtime;
-        ((Command*)(this))->implicit_inputs = r.first->implicit_inputs;
+        ((Command*)(this))->implicit_inputs = r.first->getImplicitInputs(cs.getInternalStorage(command_storage == CS_LOCAL));
         return isTimeChanged();
     }
 }
@@ -457,10 +458,11 @@ void Command::afterCommand()
 
     auto k = getHash();
     auto &cs = getContext().getCommandStorage();
-    auto &r = *cs.getStorage(command_storage == CS_LOCAL).insert(k).first;
+    auto &s = cs.getStorage(command_storage == CS_LOCAL);
+    auto &r = *s.insert(k).first;
     r.hash = k;
     r.mtime = mtime;
-    r.implicit_inputs = implicit_inputs;
+    r.setImplicitInputs(implicit_inputs, cs.getInternalStorage(command_storage == CS_LOCAL));
     cs.async_command_log(r, command_storage == CS_LOCAL);
 }
 
