@@ -1886,8 +1886,59 @@ const NativeCompiledTarget::ActiveDeps &NativeCompiledTarget::getActiveDependenc
 
 const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
 {
-    interface_settings["output-file"] = normalize_path(getOutputFile());
-    return interface_settings;
+    auto &s = interface_settings;
+    s = {};
+
+    switch (getType())
+    {
+    case TargetType::NativeExecutable:
+        s["type"] == "native_executable";
+        break;
+    case TargetType::NativeLibrary:
+        s["type"] == "native_library";
+        break;
+    case TargetType::NativeStaticLibrary:
+        s["type"] == "native_static_library";
+        break;
+    case TargetType::NativeSharedLibrary:
+        s["type"] == "native_shared_library";
+        break;
+    default:
+        SW_UNIMPLEMENTED;
+    }
+
+    if (*HeaderOnly)
+        s["header_only"] = "true";
+
+    s["import_library"] = normalize_path(getImportLibrary());
+    s["output_file"] = normalize_path(getOutputFile());
+
+    TargetSettings defs;
+    for (auto &[k,v] : Public.Definitions)
+        defs[k] = v;
+    for (auto &[k,v] : Interface.Definitions)
+        defs[k] = v;
+    s["definitions"] = defs;
+
+    for (auto &d : Public.IncludeDirectories)
+        s["include_directories"].push_back(normalize_path(d));
+    for (auto &d : Interface.IncludeDirectories)
+        s["include_directories"].push_back(normalize_path(d));
+
+    for (auto &d : Public.LinkLibraries2)
+        s["link_libraries"].push_back(normalize_path(d));
+    for (auto &d : Interface.LinkLibraries2)
+        s["link_libraries"].push_back(normalize_path(d));
+
+    for (auto &d : getAllDependencies())
+    {
+        if (d->IncludeDirectoriesOnly)
+            continue;
+        if (auto t = d->getTarget().as<const NativeCompiledTarget*>(); t && !t->DryRun)
+            s["dependencies"]["link"].push_back(d->getTarget().getPackage().toString());
+    }
+
+    return s;
 }
 
 void NativeCompiledTarget::merge1()

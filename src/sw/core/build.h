@@ -47,7 +47,7 @@ struct SW_CORE_API SwBuild
     void build();
 
     // precise
-    void load();
+    void loadInputs();
     void setTargetsToBuild();
     void resolvePackages();
     void loadPackages();

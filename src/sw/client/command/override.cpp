@@ -41,7 +41,7 @@ void override_package_perform(sw::SwContext &swctx, const sw::PackagePath &prefi
     auto ts = b->getContext().getHostSettings();
     i.addSettings(ts);
     b->addInput(i);
-    b->load();
+    b->loadInputs();
 
     // one prepare step will find sources
     // maybe add explicit enum value

@@ -1,6 +1,6 @@
 ################################################################################
 
-find_program(SW_EXECUTABLE SW)
+find_program(SW_EXECUTABLE sw)
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(SW DEFAULT_MSG SW_EXECUTABLE)
@@ -105,11 +105,17 @@ function(sw_execute)
     execute_process(
         COMMAND ${swcmd}
         RESULT_VARIABLE ret
+
+        OUTPUT_VARIABLE swout
+        ERROR_VARIABLE swerr
+
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_STRIP_TRAILING_WHITESPACE
     )
     if (NOT ${ret} EQUAL 0)
         string(REPLACE ";" " " swcmd "${swcmd}")
         message("sw command: ${swcmd}")
-        message(FATAL_ERROR "sw: non-zero exit code - ${ret}")
+        message(FATAL_ERROR "sw: non-zero exit code: ${ret}:\nout:\n${swout}\nerr:\n${swerr}")
     endif()
 
     set(outdir)
@@ -137,7 +143,7 @@ function(sw_execute)
     # add deps targets
     add_custom_target(sw_build_dependencies ALL
         COMMAND
-            sw
+            ${SW_EXECUTABLE}
                 ${sw_platform_args}
                 -d "${SW_DEPS_DIR}"
                 -config

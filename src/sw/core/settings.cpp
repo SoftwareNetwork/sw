@@ -119,6 +119,11 @@ const String &TargetSetting::getValue() const
 
 const std::vector<TargetSettingValue> &TargetSetting::getArray() const
 {
+    if (value.index() == 0)
+    {
+        static std::vector<TargetSettingValue> s;
+        return s;
+    }
     auto v = std::get_if<std::vector<TargetSettingValue>>(&value);
     if (!v)
         throw SW_RUNTIME_ERROR("empty array for key: " + key);

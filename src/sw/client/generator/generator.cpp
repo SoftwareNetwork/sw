@@ -199,7 +199,7 @@ std::unique_ptr<Generator> Generator::create(const String &s)
         g = std::make_unique<SwExecutionPlan>();
         break;
     default:
-        throw std::logic_error("not implemented");
+        SW_UNIMPLEMENTED;
     }
     g->type = t;
     return g;

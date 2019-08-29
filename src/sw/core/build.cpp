@@ -78,7 +78,7 @@ bool SwBuild::step()
     {
     case BuildState::NotStarted:
         // load provided inputs
-        load();
+        loadInputs();
         return true;
     case BuildState::InputsLoaded:
         setTargetsToBuild();
@@ -110,7 +110,7 @@ void SwBuild::overrideBuildState(BuildState s) const
     state = s;
 }
 
-void SwBuild::load()
+void SwBuild::loadInputs()
 {
     CHECK_STATE_AND_CHANGE(BuildState::NotStarted, BuildState::InputsLoaded);
 

@@ -270,7 +270,7 @@ static std::vector<sw::TargetSettings> applySettingsFromCppFile(sw::SwContext &s
         throw SW_RUNTIME_ERROR("Empty cfg target");
     auto &t = **tgts2.begin();
     auto is = t.getInterfaceSettings();
-    auto m = swctx.getModuleStorage().get(is["output-file"].getValue());
+    auto m = swctx.getModuleStorage().get(is["output_file"].getValue());
     if (m.symbol_storage().get_function<std::map<std::string, std::string>()>("createJsonSettings").empty())
         throw SW_RUNTIME_ERROR("Cannot find 'std::map<std::string, std::string> createJsonSettings()'");
 
@@ -498,7 +498,7 @@ std::unique_ptr<sw::SwBuild> createBuildAndPrepare(sw::SwContext &swctx)
             i.addSettings(s);
         b->addInput(i);
     }
-    b->load();
+    b->loadInputs();
     b->setTargetsToBuild();
     b->resolvePackages();
     b->loadPackages();
@@ -526,7 +526,7 @@ static void isolated_build1(sw::SwContext &swctx)
     sw::InputWithSettings i(ii);
     i.addSettings(ts);
     b.addInput(i);
-    b.load();
+    b.loadInputs();
     b.setTargetsToBuild();
     b.resolvePackages();
     b.loadPackages();
@@ -624,7 +624,7 @@ SUBCOMMAND_DECL2(build)
     }
     if (build_default_explan)
     {
-        b->load();
+        b->loadInputs();
         swctx.clearFileStorages();
         b->runSavedExecutionPlan();
         return;

@@ -76,7 +76,7 @@ BuildSettings::BuildSettings(const TargetSettings &ts)
     IF_KEY("native"]["configuration")
         if (0);
         IF_SETTING_ANY_CASE("debug"s, Native.ConfigurationType, ConfigurationType::Debug);
-        IF_SETTING_ANY_CASE("minimalsizerelease"s, Native.ConfigurationType, ConfigurationType::Debug);
+        IF_SETTING_ANY_CASE("minimalsizerelease"s, Native.ConfigurationType, ConfigurationType::MinimalSizeRelease);
         IF_SETTING_ANY_CASE("release"s, Native.ConfigurationType, ConfigurationType::Release);
         IF_SETTING_ANY_CASE("releasewithdebuginformation"s, Native.ConfigurationType, ConfigurationType::ReleaseWithDebugInformation);
         else

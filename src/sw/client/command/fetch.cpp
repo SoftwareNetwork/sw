@@ -49,7 +49,7 @@ static sw::SourceDirMap getSources(sw::SwContext &swctx)
     sw::InputWithSettings i(ii);
     i.addSettings(ts);
     b.addInput(i);
-    b.load();
+    b.loadInputs();
     b.setTargetsToBuild();
 
     auto d = fs::current_path() / SW_BINARY_DIR / "src";
@@ -95,7 +95,7 @@ std::pair<sw::SourceDirMap, const sw::Input &> fetch(sw::SwBuild &b)
     sw::InputWithSettings i(ii);
     i.addSettings(ts);
     b.addInput(i);
-    b.load();
+    b.loadInputs();
     b.setTargetsToBuild();
     b.resolvePackages();
     b.loadPackages();

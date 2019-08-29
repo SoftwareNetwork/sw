@@ -19,7 +19,9 @@
 #include "commands.h"
 #include "../inserts.h"
 
+#include <boost/algorithm/string.hpp>
 #include <primitives/emitter.h>
+#include <sw/core/input.h>
 #include <sw/core/sw_context.h>
 #include <sw/driver/build.h>
 #include <sw/driver/target/native.h>
@@ -77,26 +79,39 @@ static String toCmakeString(sw::ConfigurationType t)
 
 SUBCOMMAND_DECL(integrate)
 {
-    /*if (!integrate_cmake_deps.empty())
+    if (!integrate_cmake_deps.empty())
     {
         auto lines = read_lines(integrate_cmake_deps);
 
         auto swctx = createSwContext();
-        sw::Build b(swctx);
-        b.Local = false;
-        for (auto &cfg : {
-            sw::ConfigurationType::Debug,
-            sw::ConfigurationType::MinimalSizeRelease,
-            sw::ConfigurationType::ReleaseWithDebugInformation,
-            sw::ConfigurationType::Release,
-            })
+        auto build = swctx->createBuild();
+        auto &b = *build;
+
+        auto settings = createSettings(*swctx);
+        if (settings.size() > 1)
+            throw SW_RUNTIME_ERROR("size() must be 1");
+        for (auto &l : lines)
         {
-            auto ss = b.createSettings();
-            ss.Native.ConfigurationType = cfg;
-            b.addSettings(ss);
+            auto &i = swctx->addInput(l);
+            sw::InputWithSettings s(i);
+            for (String cfg : {
+                "Debug",
+                "MinimalSizeRelease",
+                "ReleaseWithDebugInformation",
+                "Release",
+                })
+            {
+                auto cfgl = boost::to_lower_copy(cfg);
+                settings[0]["native"]["configuration"] = cfgl;
+                s.addSettings(settings[0]);
+            }
+            b.addInput(s);
         }
-        b.load_packages(StringSet(lines.begin(), lines.end()));
-        b.prepare(); // or step?
+        b.loadInputs();
+        b.setTargetsToBuild();
+        b.resolvePackages();
+        b.loadPackages();
+        b.prepare();
 
         CMakeEmitter ctx;
         ctx.addLine("#");
@@ -106,170 +121,151 @@ SUBCOMMAND_DECL(integrate)
 
         // targets
         ctx.addLine("# targets");
-        for (auto &s : b.settings)
+        for (auto &[pkg, tgts] : b.getTargets())
         {
-            for (auto &[pkg, td] : b.getChildren())
+            if (tgts.empty())
             {
-                if (td.find(sw::TargetSettings{ s }) == td.end())
-                    throw SW_RUNTIME_ERROR(pkg.toString() + ": missing config: " + s.getConfig());
-                auto t = td.find(sw::TargetSettings{ s })->second;
-                if (t->skip || t->sw_provided)
+                continue;
+                //throw SW_RUNTIME_ERROR("No targets in " + pkg.toString());
+            }
+            // filter out predefined targets
+            if (b.getContext().getPredefinedTargets().find(pkg) != b.getContext().getPredefinedTargets().end())
+                continue;
+
+            auto &t = **tgts.begin();
+            const auto &s = t.getInterfaceSettings();
+
+            if (s["type"] == "native_executable")
+                continue;
+
+            ctx.if_("NOT TARGET " + pkg.toString());
+
+            // tgt
+            auto st = "STATIC";
+            if (s["type"] == "native_static_library")
+                ;
+            else if (
+                s["type"] == "native_shared_library" ||
+                settings[0]["native"]["library"] == "shared")
+                st = "SHARED";
+            if (s["header_only"] == "true")
+                st = "INTERFACE";
+            ctx.addLine("add_library(" + pkg.toString() + " " + st + " IMPORTED GLOBAL)");
+
+            // props
+            ctx.increaseIndent("set_target_properties(" + pkg.toString() + " PROPERTIES");
+
+            // defs
+            String defs;
+            defs += "\"";
+            for (auto &[k,v] : s["definitions"].getSettings())
+            {
+                if (v.getValue().empty())
+                    defs += k + ";";
+                else
+                    defs += k + "=" + primitives::command::Argument::quote(v.getValue(), primitives::command::QuoteType::Escape) + ";";
+            }
+            defs += "\"";
+            ctx.addLine("INTERFACE_COMPILE_DEFINITIONS " + defs);
+
+            // idirs
+            String idirs;
+            idirs += "\"";
+            for (auto &d : s["include_directories"].getArray())
+                idirs += d + ";";
+            idirs += "\"";
+            ctx.addLine("INTERFACE_INCLUDE_DIRECTORIES " + idirs);
+
+            if (s["header_only"] != "true")
+            {
+                // libs
+                String libs;
+                libs += "\"";
+                for (auto &d : s["link_libraries"].getArray())
+                    libs += d + ";";
+                libs += "\"";
+                ctx.addLine("INTERFACE_LINK_LIBRARIES " + libs);
+            }
+
+            ctx.decreaseIndent(")");
+            ctx.emptyLines();
+            //
+
+            // imported configs
+            for (auto &tgt : tgts)
+            {
+                const auto &s = tgt->getInterfaceSettings();
+                if (s["header_only"] == "true")
                     continue;
-                auto &nt = *t->as<sw::NativeCompiledTarget>();
-                if (t->getType() == sw::TargetType::NativeExecutable)
-                    continue;
 
-                ctx.if_("NOT TARGET " + pkg.toString());
+                sw::BuildSettings bs(tgt->getSettings());
 
-                // tgt
-                auto st = "STATIC";
-                if (t->getType() == sw::TargetType::NativeStaticLibrary)
-                    ;
-                else if (
-                    t->getType() == sw::TargetType::NativeSharedLibrary ||
-                    s.Native.LibrariesType == sw::LibraryType::Shared)
-                    st = "SHARED";
-                if (*nt.HeaderOnly)
-                    st = "INTERFACE";
-                ctx.addLine("add_library(" + pkg.toString() + " " + st + " IMPORTED GLOBAL)");
+                ctx.addLine("set_property(TARGET " + pkg.toString() + " APPEND PROPERTY IMPORTED_CONFIGURATIONS " + toCmakeString(bs.Native.ConfigurationType) + ")");
 
-                // props
+                // props2
                 ctx.increaseIndent("set_target_properties(" + pkg.toString() + " PROPERTIES");
 
-                // defs
-                String defs;
-                defs += "\"";
-                for (auto &[k,v] : nt.Public.Definitions)
-                {
-                    if (v.empty())
-                        defs += k + ";";
-                    else
-                        defs += k + "=" + primitives::command::Argument::quote(v.toString(), primitives::command::QuoteType::Escape) + ";";
-                }
-                for (auto &[k,v] : nt.Interface.Definitions)
-                {
-                    if (v.empty())
-                        defs += k + ";";
-                    else
-                        defs += k + "=" + primitives::command::Argument::quote(v.toString(), primitives::command::QuoteType::Escape) + ";";
-                }
-                defs += "\"";
-                ctx.addLine("INTERFACE_COMPILE_DEFINITIONS " + defs);
+                // TODO: detect C/CXX language from target files
+                ctx.addLine("IMPORTED_LINK_INTERFACE_LANGUAGES_" + toCmakeString(bs.Native.ConfigurationType) + " \"CXX\"");
 
-                // idirs
-                String idirs;
-                idirs += "\"";
-                for (auto &d : nt.Public.IncludeDirectories)
-                    idirs += normalize_path(d) + ";";
-                for (auto &d : nt.Interface.IncludeDirectories)
-                    idirs += normalize_path(d) + ";";
-                idirs += "\"";
-                ctx.addLine("INTERFACE_INCLUDE_DIRECTORIES " + idirs);
-
-                if (!*nt.HeaderOnly)
-                {
-                    // libs
-                    String libs;
-                    libs += "\"";
-                    for (auto &d : nt.Public.LinkLibraries2)
-                        libs += normalize_path(d) + ";";
-                    for (auto &d : nt.Interface.LinkLibraries2)
-                        libs += normalize_path(d) + ";";
-                    libs += "\"";
-                    ctx.addLine("INTERFACE_LINK_LIBRARIES " + libs);
-                }
+                // IMPORTED_LOCATION = path to .dll/.so or static .lib/.a
+                ctx.addLine("IMPORTED_LOCATION_" + toCmakeString(bs.Native.ConfigurationType) + " \"" + normalize_path(s["output_file"].getValue()) + "\"");
+                // IMPORTED_IMPLIB = path to .lib (import)
+                ctx.addLine("IMPORTED_IMPLIB_" + toCmakeString(bs.Native.ConfigurationType) + " \"" + normalize_path(s["import_library"].getValue()) + "\"");
 
                 ctx.decreaseIndent(")");
                 ctx.emptyLines();
-                //
+            }
+            //
 
-                // imported configs
-                for (auto &s : b.settings)
-                {
-                    auto t = b.getChildren().find(pkg)->second.find(sw::TargetSettings{ s })->second;
-                    if (t->skip || t->sw_provided)
-                        continue;
-                    if (*nt.HeaderOnly)
-                        continue;
-                    auto &nt = *t->as<sw::NativeCompiledTarget>();
+            ctx.emptyLines();
 
-                    ctx.addLine("set_property(TARGET " + pkg.toString() + " APPEND PROPERTY IMPORTED_CONFIGURATIONS " + toCmakeString(s.Native.ConfigurationType) + ")");
+            // build dep
+            ctx.addLine("add_dependencies(" + pkg.toString() + " sw_build_dependencies)");
+            ctx.emptyLines();
 
-                    // props2
-                    ctx.increaseIndent("set_target_properties(" + pkg.toString() + " PROPERTIES");
-
-                    // TODO: detect C/CXX language from target files
-                    ctx.addLine("IMPORTED_LINK_INTERFACE_LANGUAGES_" + toCmakeString(s.Native.ConfigurationType) + " \"CXX\"");
-
-                    // IMPORTED_LOCATION = path to .dll/.so or static .lib/.a
-                    ctx.addLine("IMPORTED_LOCATION_" + toCmakeString(s.Native.ConfigurationType) + " \"" + normalize_path(nt.getOutputFile()) + "\"");
-                    // IMPORTED_IMPLIB = path to .lib (import)
-                    ctx.addLine("IMPORTED_IMPLIB_" + toCmakeString(s.Native.ConfigurationType) + " \"" + normalize_path(nt.getImportLibrary()) + "\"");
-
-                    ctx.decreaseIndent(")");
-                    ctx.emptyLines();
-                }
-                //
-
-                ctx.emptyLines();
-
-                // build dep
-                ctx.addLine("add_dependencies(" + pkg.toString() + " sw_build_dependencies)");
-                ctx.emptyLines();
-
-                if (pkg.version.isVersion())
-                for (auto i = pkg.version.getLevel() - 1; i >= 0; i--)
+            if (pkg.getVersion().isVersion())
+            {
+                for (auto i = pkg.getVersion().getLevel() - 1; i >= 0; i--)
                 {
                     if (i)
-                        ctx.addLine("add_library(" + pkg.ppath.toString() + "-" + pkg.version.toString(i) + " ALIAS " + pkg.toString() + ")");
+                        ctx.addLine("add_library(" + pkg.getPath().toString() + "-" + pkg.getVersion().toString(i) + " ALIAS " + pkg.toString() + ")");
                     else
-                        ctx.addLine("add_library(" + pkg.ppath.toString() + " ALIAS " + pkg.toString() + ")");
+                        ctx.addLine("add_library(" + pkg.getPath().toString() + " ALIAS " + pkg.toString() + ")");
                 }
-
-                ctx.endif();
             }
-            break;
+
+            ctx.endif();
         }
 
         // deps
         ctx.addLine("# dependencies");
-        for (auto &s : b.settings)
+        for (auto &[pkg, tgts] : b.getTargets())
         {
-            for (auto &[pkg, td] : b.getChildren())
+            if (tgts.empty())
             {
-                if (td.find(sw::TargetSettings{ s }) == td.end())
-                    throw SW_RUNTIME_ERROR(pkg.toString() + ": missing config: " + s.getConfig());
-                auto t = td.find(sw::TargetSettings{ s })->second;
-                if (t->skip || t->sw_provided)
-                    continue;
-                auto &nt = *t->as<sw::NativeCompiledTarget>();
-                if (t->getType() == sw::TargetType::NativeExecutable)
-                    continue;
-
-                auto add_deps = [&ctx, &b, &pkg, &s](auto &deps)
-                {
-                    for (auto &d : deps)
-                    {
-                        if (d->isDummy())
-                            continue;
-                        auto t = b.getChildren().find(d->getResolvedPackage())->second.find(sw::TargetSettings{ s })->second;
-                        if (t->skip || t->sw_provided)
-                            continue;
-                        if (!t->as<sw::ExecutableTarget>())
-                            ctx.addLine("target_link_libraries(" + pkg.toString() + " INTERFACE " + d->getResolvedPackage().toString() + ")");
-                    }
-                };
-                add_deps(nt.Public.Dependencies);
-                add_deps(nt.Interface.Dependencies);
+                continue;
+                //throw SW_RUNTIME_ERROR("No targets in " + pkg.toString());
             }
-            break;
+            // filter out predefined targets
+            if (b.getContext().getPredefinedTargets().find(pkg) != b.getContext().getPredefinedTargets().end())
+                continue;
+
+            auto &t = **tgts.begin();
+            const auto &s = t.getInterfaceSettings();
+
+            if (s["type"] == "native_executable")
+                continue;
+
+            for (auto &d : s["dependencies"]["link"].getArray())
+                ctx.addLine("target_link_libraries(" + pkg.toString() + " INTERFACE " + d + ")");
         }
         write_file_if_different(integrate_cmake_deps.parent_path() / "CMakeLists.txt", ctx.getText());
 
         return;
     }
 
-    if (!integrate_waf_deps.empty())
+    /*if (!integrate_waf_deps.empty())
     {
         auto lines = read_lines(integrate_waf_deps);
 
