@@ -1895,7 +1895,10 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
         s["type"] == "native_executable";
         break;
     case TargetType::NativeLibrary:
-        s["type"] == "native_library";
+        if (getBuildSettings().Native.LibrariesType == LibraryType::Shared)
+            s["type"] == "native_shared_library";
+        else
+            s["type"] == "native_static_library";
         break;
     case TargetType::NativeStaticLibrary:
         s["type"] == "native_static_library";
@@ -1935,7 +1938,7 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
         if (d->IncludeDirectoriesOnly)
             continue;
         if (auto t = d->getTarget().as<const NativeCompiledTarget*>(); t && !t->DryRun)
-            s["dependencies"]["link"].push_back(d->getTarget().getPackage().toString());
+            s["dependencies"]["link"][d->getTarget().getPackage().toString()] = d->getTarget().getSettings();
     }
 
     return s;

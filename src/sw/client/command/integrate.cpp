@@ -79,11 +79,10 @@ static String toCmakeString(sw::ConfigurationType t)
 
 SUBCOMMAND_DECL(integrate)
 {
-    if (!integrate_cmake_deps.empty())
-    {
-        auto lines = read_lines(integrate_cmake_deps);
+    auto swctx = createSwContext();
 
-        auto swctx = createSwContext();
+    auto create_build = [&swctx](const Strings &lines, const Strings &configs = {})
+    {
         auto build = swctx->createBuild();
         auto &b = *build;
 
@@ -94,15 +93,17 @@ SUBCOMMAND_DECL(integrate)
         {
             auto &i = swctx->addInput(l);
             sw::InputWithSettings s(i);
-            for (String cfg : {
-                "Debug",
-                "MinimalSizeRelease",
-                "ReleaseWithDebugInformation",
-                "Release",
-                })
+            if (!configs.empty())
             {
-                auto cfgl = boost::to_lower_copy(cfg);
-                settings[0]["native"]["configuration"] = cfgl;
+                for (String cfg : configs)
+                {
+                    auto cfgl = boost::to_lower_copy(cfg);
+                    settings[0]["native"]["configuration"] = cfgl;
+                    s.addSettings(settings[0]);
+                }
+            }
+            else
+            {
                 s.addSettings(settings[0]);
             }
             b.addInput(s);
@@ -112,6 +113,23 @@ SUBCOMMAND_DECL(integrate)
         b.resolvePackages();
         b.loadPackages();
         b.prepare();
+
+        return build;
+    };
+
+    if (!integrate_cmake_deps.empty())
+    {
+        const Strings configs
+        {
+            "Debug",
+            "MinimalSizeRelease",
+            "ReleaseWithDebugInformation",
+            "Release",
+        };
+
+        auto lines = read_lines(integrate_cmake_deps);
+        auto build = create_build(lines, configs);
+        auto &b = *build;
 
         CMakeEmitter ctx;
         ctx.addLine("#");
@@ -144,9 +162,7 @@ SUBCOMMAND_DECL(integrate)
             auto st = "STATIC";
             if (s["type"] == "native_static_library")
                 ;
-            else if (
-                s["type"] == "native_shared_library" ||
-                settings[0]["native"]["library"] == "shared")
+            else if (s["type"] == "native_shared_library")
                 st = "SHARED";
             if (s["header_only"] == "true")
                 st = "INTERFACE";
@@ -257,130 +273,112 @@ SUBCOMMAND_DECL(integrate)
             if (s["type"] == "native_executable")
                 continue;
 
-            for (auto &d : s["dependencies"]["link"].getArray())
-                ctx.addLine("target_link_libraries(" + pkg.toString() + " INTERFACE " + d + ")");
+            for (auto &[k,v] : s["dependencies"]["link"].getSettings())
+                ctx.addLine("target_link_libraries(" + pkg.toString() + " INTERFACE " + k + ")");
         }
         write_file_if_different(integrate_cmake_deps.parent_path() / "CMakeLists.txt", ctx.getText());
 
         return;
     }
 
-    /*if (!integrate_waf_deps.empty())
+    if (!integrate_waf_deps.empty())
     {
         auto lines = read_lines(integrate_waf_deps);
-
-        auto swctx = createSwContext();
-        sw::Build b(swctx);
-        b.Local = false;
-        b.load_packages(StringSet(lines.begin(), lines.end()));
-        b.prepare(); // or step?
+        auto build = create_build(lines);
+        auto &b = *build;
 
         // https://waf.io/apidocs/_modules/waflib/Tools/c_config.html#parse_flags
         primitives::Emitter ctx;
 
         ctx.increaseIndent("def configure(ctx):");
 
-        for (auto &s : b.settings)
+        for (auto &[pkg, tgts] : b.getTargets())
         {
-            for (auto &[pkg, td] : b.getChildren())
+            if (tgts.empty())
             {
-                if (td.find(sw::TargetSettings{ s }) == td.end())
-                    throw SW_RUNTIME_ERROR(pkg.toString() + ": missing config: " + s.getConfig());
-                auto t = td.find(sw::TargetSettings{ s })->second;
-                if (t->skip || t->sw_provided)
-                    continue;
-                auto &nt = *t->as<sw::NativeCompiledTarget>();
-                if (t->getType() == sw::TargetType::NativeExecutable)
-                    continue;
-
-                ctx.addLine("# " + pkg.toString());
-                ctx.increaseIndent("for lib in [");
-                for (auto i = pkg.version.getLevel(); i >= 0; i--)
-                {
-                    if (i)
-                        ctx.addLine("'" + pkg.ppath.toString() + "-" + pkg.version.toString(i) + "',");
-                    else
-                        ctx.addLine("'" + pkg.ppath.toString() + "',");
-                }
-                ctx.decreaseIndent("]:");
-                ctx.increaseIndent();
-
-                auto remove_ext = [](const auto &p)
-                {
-                    return p.parent_path() / p.stem();
-                };
-
-                ctx.addLine("ctx.parse_flags('-l" + normalize_path(remove_ext(nt.getImportLibrary())) + "', lib)");
-
-                std::function<void(sw::NativeCompiledTarget&)> process;
-                std::unordered_set<sw::NativeCompiledTarget *> visited;
-                process = [&process, &s, &b, &ctx, &remove_ext, &visited](auto &nt)
-                {
-                    if (visited.find(&nt) != visited.end())
-                        return;
-                    visited.insert(&nt);
-
-                    // defs
-                    for (auto &[k,v] : nt.Public.Definitions)
-                    {
-                        if (v.empty())
-                            ctx.addLine("ctx.parse_flags('-D" + k + "', lib)");
-                        else
-                            ctx.addLine("ctx.parse_flags('-D" + k + "=" + primitives::command::Argument::quote(v.toString(), primitives::command::QuoteType::Escape) + "', lib)");
-                    }
-                    for (auto &[k,v] : nt.Interface.Definitions)
-                    {
-                        if (v.empty())
-                            ctx.addLine("ctx.parse_flags('-D" + k + "', lib)");
-                        else
-                            ctx.addLine("ctx.parse_flags('-D" + k + "=" + primitives::command::Argument::quote(v.toString(), primitives::command::QuoteType::Escape) + "', lib)");
-                    }
-
-                    // idirs
-                    for (auto &d : nt.Public.IncludeDirectories)
-                        ctx.addLine("ctx.parse_flags('-I" + normalize_path(d) + "', lib)");
-                    for (auto &d : nt.Interface.IncludeDirectories)
-                        ctx.addLine("ctx.parse_flags('-I" + normalize_path(d) + "', lib)");
-
-                    // libs
-                    for (auto &d : nt.Public.LinkLibraries2)
-                        ctx.addLine("ctx.parse_flags('-l" + normalize_path(remove_ext(d)) + "', lib)");
-                    for (auto &d : nt.Interface.LinkLibraries2)
-                        ctx.addLine("ctx.parse_flags('-l" + normalize_path(remove_ext(d)) + "', lib)");
-
-                    // deps
-                    auto add_deps = [&ctx, &b, &s, &process, &remove_ext](auto &deps)
-                    {
-                        for (auto &d : deps)
-                        {
-                            auto t = b.getChildren().find(d->getResolvedPackage())->second.find(sw::TargetSettings{ s })->second;
-                            if (t->skip || t->sw_provided)
-                                continue;
-                            if (t->getType() == sw::TargetType::NativeExecutable)
-                                continue;
-
-                            auto &nt = *t->as<sw::NativeCompiledTarget>();
-                            ctx.addLine("ctx.parse_flags('-l" + normalize_path(remove_ext(nt.getImportLibrary())) + "', lib)");
-
-                            process(nt);
-                        }
-                    };
-                    add_deps(nt.Public.Dependencies);
-                    add_deps(nt.Interface.Dependencies);
-                };
-                process(nt);
-
-                ctx.decreaseIndent();
-                ctx.emptyLines();
-                //
+                continue;
+                //throw SW_RUNTIME_ERROR("No targets in " + pkg.toString());
             }
-            break;
+            // filter out predefined targets
+            if (b.getContext().getPredefinedTargets().find(pkg) != b.getContext().getPredefinedTargets().end())
+                continue;
+
+            auto &t = **tgts.begin();
+            const auto &s = t.getInterfaceSettings();
+
+            if (s["type"] == "native_executable")
+                continue;
+
+            ctx.addLine("# " + pkg.toString());
+            ctx.increaseIndent("for lib in [");
+            for (auto i = pkg.getVersion().getLevel(); i >= 0; i--)
+            {
+                if (i)
+                    ctx.addLine("'" + pkg.getPath().toString() + "-" + pkg.getVersion().toString(i) + "',");
+                else
+                    ctx.addLine("'" + pkg.getPath().toString() + "',");
+            }
+            ctx.decreaseIndent("]:");
+            ctx.increaseIndent();
+
+            auto remove_ext = [](const path &p)
+            {
+                return p.parent_path() / p.stem();
+            };
+
+            ctx.addLine("ctx.parse_flags('-l" + normalize_path(remove_ext(s["import_library"].getValue())) + "', lib)");
+
+            using tgt_type = std::pair<sw::PackageId, sw::TargetSettings>;
+            using f_param = const tgt_type &;
+            std::function<void(f_param)> process;
+            std::set<tgt_type> visited;
+            process = [&process, &s, &b, &ctx, &remove_ext, &visited](f_param nt)
+            {
+                if (visited.find(nt) != visited.end())
+                    return;
+                visited.insert(nt);
+
+                auto t = b.getTargets().find(nt.first, nt.second);
+                if (!t)
+                    throw SW_RUNTIME_ERROR("no such target: " + nt.first.toString());
+
+                const auto &s = t->getInterfaceSettings();
+
+                // defs
+                for (auto &[k,v] : s["definitions"].getSettings())
+                {
+                    if (v.getValue().empty())
+                        ctx.addLine("ctx.parse_flags('-D" + k + "', lib)");
+                    else
+                        ctx.addLine("ctx.parse_flags('-D" + k + "=" + primitives::command::Argument::quote(v.getValue(), primitives::command::QuoteType::Escape) + "', lib)");
+                }
+
+                // idirs
+                for (auto &d : s["include_directories"].getArray())
+                    ctx.addLine("ctx.parse_flags('-I" + normalize_path(d) + "', lib)");
+
+                // libs
+                for (auto &d : s["link_libraries"].getArray())
+                    ctx.addLine("ctx.parse_flags('-l" + normalize_path(remove_ext(d)) + "', lib)");
+
+                // deps
+                for (auto &[k,v] : s["dependencies"]["link"].getSettings())
+                {
+                    ctx.addLine("ctx.parse_flags('-l" + normalize_path(remove_ext(s["import_library"].getValue())) + "', lib)");
+                    process(nt);
+                }
+            };
+            process({t.getPackage(), t.getSettings()});
+
+            ctx.decreaseIndent();
+            ctx.emptyLines();
+            //
         }
 
         write_file_if_different("wscript", ctx.getText());
 
         return;
-    }*/
+    }
 
     SW_UNIMPLEMENTED;
 }
