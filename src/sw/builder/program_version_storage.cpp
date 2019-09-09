@@ -27,6 +27,8 @@ ProgramVersionStorage::ProgramVersionStorage(const path &fn)
             break;
         ifile >> v;
         ifile >> t;
+        if (!fs::exists(p))
+            continue;
         auto lwt = fs::last_write_time(p);
         if (t && file_time_type2time_t(lwt) <= t)
             versions[p] = {v,lwt};
