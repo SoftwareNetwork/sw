@@ -22,6 +22,8 @@
 #include <sw/manager/database.h>
 #include <sw/manager/storage.h>
 
+#include <nlohmann/json.hpp>
+
 #include <iostream>
 
 #include <primitives/log.h>
@@ -33,43 +35,71 @@ static ::cl::opt<String> prefix(::cl::Positional, ::cl::value_desc("prefix"), ::
 static ::cl::opt<bool> list_overridden_packages("l", ::cl::desc("List overridden packages"), ::cl::sub(subcommand_override));
 static ::cl::opt<bool> delete_overridden_package("d", ::cl::desc("Delete overridden packages from index"), ::cl::sub(subcommand_override));
 static ::cl::opt<path> delete_overridden_package_dir("dd", ::cl::value_desc("sdir"), ::cl::desc("Delete overridden dir packages"), ::cl::sub(subcommand_override));
+static ::cl::opt<path> load_overridden_packages_from_file("load", ::cl::value_desc("fn"), ::cl::desc("Load overridden packages desc from file and apply it."), ::cl::sub(subcommand_override));
+static ::cl::opt<path> save_overridden_packages_to_file("save", ::cl::value_desc("fn"), ::cl::desc("Save overridden packages desc to file."), ::cl::sub(subcommand_override));
 
-void override_package_perform(sw::SwContext &swctx, const sw::PackagePath &prefix)
+static void override_package_perform(sw::SwContext &swctx, sw::PackagePath prefix)
 {
+    auto dir = fs::absolute(".");
+    sw::PackageDescriptionMap pm;
+
+    auto override_packages = [&]()
+    {
+        auto gn = swctx.getLocalStorage().getOverriddenPackagesStorage().getPackagesDatabase().getMaxGroupNumber() + 1;
+        for (auto &[pkg, desc] : pm)
+        {
+            sw::PackageId pkg2{ prefix / pkg.getPath(), pkg.getVersion() };
+            LOG_INFO(logger, "Overriding " + pkg2.toString() + " to " + dir.u8string());
+            // fix deps' prefix
+            sw::UnresolvedPackages deps;
+            for (auto &d : desc->getData().dependencies)
+            {
+                if (d.ppath.isAbsolute())
+                    deps.insert(d);
+                else
+                    deps.insert({ prefix / d.ppath, d.range });
+            }
+            sw::LocalPackage lp(swctx.getLocalStorage(), pkg2);
+            sw::PackageData d;
+            d.sdir = dir;
+            d.dependencies = deps;
+            d.group_number = gn;
+            d.prefix = (int)prefix.size();
+            swctx.getLocalStorage().getOverriddenPackagesStorage().install(lp, d);
+        }
+    };
+
+    if (!load_overridden_packages_from_file.empty())
+    {
+        auto j = nlohmann::json::parse(read_file(load_overridden_packages_from_file));
+        dir = j["sdir"].get<String>();
+        prefix = j["prefix"].get<String>();
+        for (auto &[k,v] : j["packages"].items())
+            pm[k] = std::make_unique<sw::JsonPackageDescription>(v.dump());
+        override_packages();
+        return;
+    }
+
     auto b = swctx.createBuild();
     sw::InputWithSettings i(swctx.addInput(fs::current_path()));
     auto ts = b->getContext().getHostSettings();
     i.addSettings(ts);
     b->addInput(i);
     b->loadInputs();
+    pm = getPackages(*b);
 
-    // one prepare step will find sources
-    // maybe add explicit enum value
-    //swctx.prepareStep();
-
-    auto gn = swctx.getLocalStorage().getOverriddenPackagesStorage().getPackagesDatabase().getMaxGroupNumber() + 1;
-    for (auto &[pkg, desc] : getPackages(*b))
+    if (!save_overridden_packages_to_file.empty())
     {
-        sw::PackageId pkg2{ prefix / pkg.getPath(), pkg.getVersion() };
-        auto dir = fs::absolute(".");
-        LOG_INFO(logger, "Overriding " + pkg2.toString() + " to " + dir.u8string());
-        // fix deps' prefix
-        sw::UnresolvedPackages deps;
-        for (auto &d : desc->getData().dependencies)
-        {
-            if (d.ppath.isAbsolute())
-                deps.insert(d);
-            else
-                deps.insert({ prefix / d.ppath, d.range });
-        }
-        sw::LocalPackage lp(swctx.getLocalStorage(), pkg2);
-        sw::PackageData d;
-        d.sdir = dir;
-        d.dependencies = deps;
-        d.group_number = gn;
-        d.prefix = (int)prefix.size();
-        swctx.getLocalStorage().getOverriddenPackagesStorage().install(lp, d);
+        nlohmann::json j;
+        j["sdir"] = normalize_path(dir);
+        j["prefix"] = prefix.toString();
+        for (auto &[pkg, desc] : pm)
+            j["packages"][pkg.toString()] = nlohmann::json::parse(desc->getString());
+        write_file(save_overridden_packages_to_file, j.dump(4));
+        return;
     }
+
+    override_packages();
 }
 
 SUBCOMMAND_DECL(override)
@@ -106,7 +136,7 @@ SUBCOMMAND_DECL(override)
         return;
     }
 
-    if (prefix.empty())
+    if (prefix.empty() && load_overridden_packages_from_file.empty())
         throw SW_RUNTIME_ERROR("Empty prefix");
 
     if (delete_overridden_package)
