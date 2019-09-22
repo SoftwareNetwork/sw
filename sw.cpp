@@ -232,6 +232,7 @@ void build(Solution &s)
         }
     }
 
+#ifndef SW_DRIVER_ADD_SELF
     auto &client = p.addTarget<ExecutableTarget>("sw");
     {
         client.PackageDefinitions = true;
@@ -280,7 +281,7 @@ void build(Solution &s)
         }
     }
 
-    /*auto &gui = client.addTarget<ExecutableTarget>("gui");
+    auto &gui = client.addTarget<ExecutableTarget>("gui");
     {
         gui.PackageDefinitions = true;
         gui.SwDefinitions = true;
@@ -291,10 +292,15 @@ void build(Solution &s)
         gui += "org.sw.demo.qtproject.qt.base.plugins.platforms.windows-*"_dep;
         gui += "org.sw.demo.qtproject.qt.base.plugins.styles.windowsvista-*"_dep;
 
+#ifdef SW_CPP_DRIVER_API_VERSION
+        if (auto L = gui.getSelectedTool()->as<VisualStudioLinker*>(); L)
+#else
         if (auto L = gui.getSelectedTool()->as<VisualStudioLinker>(); L)
+#endif
             L->Subsystem = vs::Subsystem::Windows;
 
         qt_moc_rcc_uic("org.sw.demo.qtproject.qt-*"_dep, gui);
         qt_tr("org.sw.demo.qtproject.qt-*"_dep, gui);
-    }*/
+    }
+#endif
 }
