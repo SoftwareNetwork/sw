@@ -742,6 +742,7 @@ void detectWindowsSdk(DETECT_ARGS)
         String ldir_subversion;
 
         Strings idirs; // additional idirs
+        bool without_ldir = false; // when there's not libs
 
         void add(SwCoreContext &s, OS &new_settings, const Version &v)
         {
@@ -761,14 +762,24 @@ void detectWindowsSdk(DETECT_ARGS)
                 auto libdir = kit_root / "Lib" / ldir_subversion / name / toStringWindows(target_arch);
                 if (fs::exists(libdir))
                 {
-                    auto &ucrt = addTarget<PredefinedTarget>(s, PackageId("com.Microsoft.Windows.SDK." + name, v));
-                    ucrt.ts = ts;
-                    ucrt.ts["os"]["version"] = v.toString(3); // use 3 numbers at the moment
+                    auto &t = addTarget<PredefinedTarget>(s, PackageId("com.Microsoft.Windows.SDK." + name, v));
+                    t.ts = ts;
+                    t.ts["os"]["version"] = v.toString(3); // use 3 numbers at the moment
 
-                    ucrt.public_ts["system-include-directories"].push_back(normalize_path(idir / name));
+                    t.public_ts["system-include-directories"].push_back(normalize_path(idir / name));
                     for (auto &i : idirs)
-                        ucrt.public_ts["system-include-directories"].push_back(normalize_path(idir / i));
-                    ucrt.public_ts["system-link-directories"].push_back(normalize_path(libdir));
+                        t.public_ts["system-include-directories"].push_back(normalize_path(idir / i));
+                    t.public_ts["system-link-directories"].push_back(normalize_path(libdir));
+                }
+                else if (without_ldir)
+                {
+                    auto &t = addTarget<PredefinedTarget>(s, PackageId("com.Microsoft.Windows.SDK." + name, v));
+                    t.ts = ts;
+                    t.ts["os"]["version"] = v.toString(3); // use 3 numbers at the moment
+
+                    t.public_ts["system-include-directories"].push_back(normalize_path(idir / name));
+                    for (auto &i : idirs)
+                        t.public_ts["system-include-directories"].push_back(normalize_path(idir / i));
                 }
             }
         }
@@ -828,6 +839,16 @@ void detectWindowsSdk(DETECT_ARGS)
                     wk.kit_root = kr;
                     wk.idir_subversion = v.toString();
                     wk.ldir_subversion = v.toString();
+                    wk.add(s, new_settings, v);
+                }
+
+                // winrt
+                {
+                    WinKit wk;
+                    wk.name = "winrt";
+                    wk.kit_root = kr;
+                    wk.idir_subversion = v.toString();
+                    wk.without_ldir = true;
                     wk.add(s, new_settings, v);
                 }
 

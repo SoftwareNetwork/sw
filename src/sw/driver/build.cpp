@@ -107,11 +107,6 @@ const TargetSettings &Build::getSettings() const
     return getModuleData().current_settings;
 }
 
-const BuildSettings &Build::getBuildSettings() const
-{
-    return getModuleData().bs;
-}
-
 const TargetSettings &Build::getHostSettings() const
 {
     return getModuleData().host_settings;

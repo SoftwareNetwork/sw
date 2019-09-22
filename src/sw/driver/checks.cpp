@@ -422,7 +422,7 @@ int main() { return IsBigEndian(); }
             {
                 if (c->requires_manual_setup)
                 {
-                    auto dst = (cc_dir / std::to_string(c->getHash())) += checker.build.getBuildSettings().TargetOS.getExecutableExtension();
+                    auto dst = (cc_dir / std::to_string(c->getHash())) += BuildSettings(ts).TargetOS.getExecutableExtension();
                     if (!fs::exists(dst))
                         fs::copy_file(c->executable, dst, fs::copy_options::overwrite_existing);
                 }
@@ -439,7 +439,7 @@ int main() { return IsBigEndian(); }
             std::unique_lock lk(m);
 
             // save executables
-            auto &os = checker.build.getBuildSettings().TargetOS;
+            auto os = BuildSettings(ts).TargetOS;
             auto mfn = (path(fn) += MANUAL_CHECKS).filename().u8string();
 
             auto bat = os.getShellType() == ShellType::Batch;
@@ -485,7 +485,7 @@ int main() { return IsBigEndian(); }
                     ctx.addLine("chmod 755 " + fn);
                     ctx.addLine("./");
                 }
-                ctx.addText(fn + checker.build.getBuildSettings().TargetOS.getExecutableExtension());
+                ctx.addText(fn + BuildSettings(ts).TargetOS.getExecutableExtension());
 
                 ctx.addLine("echo " + std::to_string(c->getHash()) + " ");
                 if (!bat)

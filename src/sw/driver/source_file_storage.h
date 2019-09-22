@@ -102,7 +102,7 @@ private:
     void remove_full1(const FileRegex &r);
     void op(const FileRegex &r, Op f);
 
-    SourceFileMap<SourceFile> enumerate_files(const FileRegex &r) const;
+    SourceFileMap<SourceFile> enumerate_files(const FileRegex &r, bool allow_empty = false) const;
 };
 
 }
