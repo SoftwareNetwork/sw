@@ -3098,6 +3098,16 @@ void NativeCompiledTarget::pushBackToFileOnce(const path &fn, const String &text
     //f.getFileRecord().load();
 }
 
+void NativeCompiledTarget::addDummyDependency(const Target &t)
+{
+    (*this + t)->Dummy = true;
+}
+
+void NativeCompiledTarget::addDummyDependency(const DependencyPtr &t)
+{
+    (*this + t)->Dummy = true;
+}
+
 static std::unique_ptr<Source> load_source_and_version(const yaml &root, Version &version)
 {
     String ver;

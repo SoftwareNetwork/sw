@@ -52,7 +52,7 @@ struct ProgramGroup : Program
 
 using ProgramGroupPtr = std::shared_ptr<ProgramGroup>;
 
-struct PredefinedProgram
+struct SW_DRIVER_CPP_API PredefinedProgram
 {
     void setProgram(const ProgramPtr &p) { program = p; }
     Program &getProgram();

@@ -330,7 +330,7 @@ SourceFile &SourceFileStorage::operator[](path F)
 
 SourceFileMap<SourceFile> SourceFileStorage::operator[](const FileRegex &r) const
 {
-    return enumerate_files(r);
+    return enumerate_files(r, true);
 }
 
 bool SourceFileStorage::check_absolute(path &F, bool ignore_errors, bool *source_dir) const
@@ -418,7 +418,7 @@ void SourceFileStorage::merge(const SourceFileStorage &v, const GroupSettings &s
 }
 
 SourceFileMap<SourceFile>
-SourceFileStorage::enumerate_files(const FileRegex &r) const
+SourceFileStorage::enumerate_files(const FileRegex &r, bool allow_empty) const
 {
     auto dir = r.dir;
     if (!dir.is_absolute())
@@ -437,7 +437,7 @@ SourceFileStorage::enumerate_files(const FileRegex &r) const
         if (std::regex_match(s, r.r))
             files[p] = f;
     }
-    if (!target->DryRun && files.empty() && target->Local && !target->AllowEmptyRegexes)
+    if (!target->DryRun && files.empty() && target->Local && !target->AllowEmptyRegexes && !allow_empty)
     {
         String err = target->getPackage().toString() + ": No files matching regex: " + r.getRegexString();
         if (ignore_source_files_errors)

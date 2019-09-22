@@ -173,6 +173,9 @@ public:
     //
     bool hasCircularDependency() const;
 
+    void addDummyDependency(const Target &);
+    void addDummyDependency(const DependencyPtr &);
+
     using TargetBase::operator=;
     using TargetBase::operator+=;
 
