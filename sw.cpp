@@ -234,17 +234,28 @@ void build(Solution &s)
 
 #ifndef SW_DRIVER_ADD_SELF
     auto &client = p.addTarget<ExecutableTarget>("sw");
+    auto &client_common = client.addTarget<StaticLibrary>("common");
+    {
+        client_common.PackageDefinitions = true;
+        client_common.SwDefinitions = true;
+        client_common.StartupProject = true;
+        client_common += "src/sw/client/common/.*"_rr;
+        client_common.CPPVersion = CPPLanguageStandard::CPP17;
+        client_common.Public += core, cpp_driver;
+    }
+
+    // client
     {
         client.PackageDefinitions = true;
         client.SwDefinitions = true;
         client.StartupProject = true;
-        client += "src/sw/client/.*"_rr;
+        client += "src/sw/client/cli/.*"_rr;
         client.CPPVersion = CPPLanguageStandard::CPP17;
-        client += core, cpp_driver,
+        client += client_common,
             //"org.sw.demo.microsoft.mimalloc"_dep,
             "pub.egorpugin.primitives.sw.main-master"_dep,
             "org.sw.demo.giovannidicanio.winreg-master"_dep;
-        embed("pub.egorpugin.primitives.tools.embedder-master"_dep, client, "src/sw/client/inserts/inserts.cpp.in");
+        embed("pub.egorpugin.primitives.tools.embedder-master"_dep, client, "src/sw/client/cli/inserts/inserts.cpp.in");
         if (client.getCompilerType() == CompilerType::MSVC)
             client.CompileOptions.push_back("-bigobj");
         if (client.getBuildSettings().TargetOS.Type != OSType::Windows)
@@ -285,7 +296,9 @@ void build(Solution &s)
     {
         gui.PackageDefinitions = true;
         gui.SwDefinitions = true;
-        gui += "src/sw/gui/.*"_rr;
+        gui += "src/sw/client/gui/.*"_rr;
+        gui.CPPVersion = CPPLanguageStandard::CPP17;
+        gui += client_common;
 
         gui += "org.sw.demo.qtproject.qt.base.widgets-*"_dep;
         gui += "org.sw.demo.qtproject.qt.base.winmain-*"_dep;

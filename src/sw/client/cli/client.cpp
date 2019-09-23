@@ -141,8 +141,6 @@ static ::cl::list<String> cl_activate("activate", ::cl::desc("Activate specific 
 
 extern ::cl::opt<bool> useFileMonitor;
 
-static ::cl::opt<path> storage_dir_override("storage-dir");
-
 #define SUBCOMMAND(n, d) extern ::cl::SubCommand subcommand_##n;
 #include "command/commands.inl"
 #undef SUBCOMMAND
@@ -160,32 +158,12 @@ static ::cl::list<path> internal_verify_file("internal-verify-file", ::cl::value
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/signal_set.hpp>
 
-static ::cl::opt<bool> curl_verbose("curl-verbose");
-static ::cl::opt<bool> ignore_ssl_checks("ignore-ssl-checks");
-
 //
 #include <sw/core/c.hpp>
 
 sw_driver_t sw_create_driver(void);
 
 //static ::cl::list<String> drivers("load-driver", ::cl::desc("Load more drivers"), ::cl::CommaSeparated);
-
-std::unique_ptr<sw::SwContext> createSwContext()
-{
-    // load proxy settings early
-    httpSettings.verbose = curl_verbose;
-    httpSettings.ignore_ssl_checks = ignore_ssl_checks;
-    httpSettings.proxy = Settings::get_local_settings().proxy;
-
-    auto swctx = std::make_unique<sw::SwContext>(storage_dir_override.empty() ? sw::Settings::get_user_settings().storage_dir : storage_dir_override);
-    // TODO:
-    // before default?
-    //for (auto &d : drivers)
-        //swctx->registerDriver(std::make_unique<sw::driver::cpp::Driver>());
-    swctx->registerDriver("org.sw.sw.driver.cpp-0.3.1"s, std::make_unique<sw::driver::cpp::Driver>());
-    //swctx->registerDriver(std::make_unique<sw::CDriver>(sw_create_driver));
-    return swctx;
-}
 
 int setup_main(const Strings &args)
 {
@@ -324,6 +302,10 @@ int parse_main(int argc, char **argv)
 int main(int argc, char **argv)
 {
     //mi_version();
+
+#ifdef _WIN32
+    CoInitializeEx(0, 0); // vs find helper
+#endif
 
     int r = 0;
     String error;

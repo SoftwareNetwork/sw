@@ -143,8 +143,6 @@ private:
   SmartCOMPtr<ISetupHelper> setupHelper;
   // used to indicate failure in Initialize(), so we don't have to call again
   bool initializationFailure;
-  // indicated if COM initialization is successful
-  HRESULT comInitialized;
 };
 
 #endif // #ifdef _WIN32

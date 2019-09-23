@@ -57,12 +57,7 @@ cmVSSetupAPIHelper::cmVSSetupAPIHelper()
   , setupHelper(NULL)
   , initializationFailure(false)
 {
-  comInitialized = CoInitializeEx(NULL, 0);
-  if (SUCCEEDED(comInitialized)) {
     Initialize();
-  } else {
-    initializationFailure = true;
-  }
 }
 
 cmVSSetupAPIHelper::~cmVSSetupAPIHelper()
@@ -70,8 +65,6 @@ cmVSSetupAPIHelper::~cmVSSetupAPIHelper()
   setupHelper = NULL;
   setupConfig2 = NULL;
   setupConfig = NULL;
-  if (SUCCEEDED(comInitialized))
-    CoUninitialize();
 }
 
 bool cmVSSetupAPIHelper::CheckInstalledComponent(
@@ -244,14 +237,6 @@ bool cmVSSetupAPIHelper::EnumerateVSInstances()
 
 bool cmVSSetupAPIHelper::Initialize()
 {
-  if (initializationFailure)
-    return false;
-
-  if (FAILED(comInitialized)) {
-    initializationFailure = true;
-    return false;
-  }
-
   if (FAILED(setupConfig.CoCreateInstance(CLSID_SetupConfiguration, NULL,
                                           IID_ISetupConfiguration,
                                           CLSCTX_INPROC_SERVER)) ||

@@ -34,6 +34,6 @@ int main(int argc, char *argv[])
 void win32_hacks()
 {
 #ifdef WIN32
-    SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
+    //SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
 #endif
 }
