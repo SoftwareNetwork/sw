@@ -387,7 +387,7 @@ Program *Target::findProgramByExtension(const String &ext) const
     // resolve via getContext() because it might provide other version rather than cld.find(*u)
     auto pkg = getSolution().getContext().resolve(*u);
     auto &cld = getSolution().getChildren();
-    auto tgt = cld.find(pkg, getSolution().getHostSettings());
+    auto tgt = cld.find(pkg, getSolution().getContext().getHostSettings());
     if (!tgt)
         return {};
     if (auto t = tgt->as<PredefinedProgram*>())
@@ -717,7 +717,7 @@ void Target::addDummyDependency(const DependencyPtr &t)
 {
     DummyDependencies.push_back(t);
 
-    auto &hs = getSolution().getHostSettings();
+    auto &hs = getSolution().getContext().getHostSettings();
     auto &ds = DummyDependencies.back()->settings;
 
     bool use_current_settings =

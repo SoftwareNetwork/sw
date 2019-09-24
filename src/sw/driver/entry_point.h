@@ -28,7 +28,6 @@ struct ModuleSwappableData : ModuleSwappableDataBase
 {
     PackageIdSet known_targets;
     TargetSettings current_settings;
-    TargetSettings host_settings;
     std::vector<ITargetPtr> added_targets;
 };
 

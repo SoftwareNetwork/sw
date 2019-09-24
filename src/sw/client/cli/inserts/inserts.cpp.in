@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <sw/client/inserts.h>
+#include <sw/client/cli/inserts.h>
 
 #define DECLARE_TEXT_VAR_BEGIN(x) const uint8_t _##x[] = {
 #define DECLARE_TEXT_VAR_END(x) }; const std::string x = (const char *)&_##x[0];

@@ -92,7 +92,7 @@ void SwCoreContext::setHostPrograms()
 #endif
         // add more defaults (clangcl, clang)
         else
-            throw SW_RUNTIME_ERROR("Seems like you do not have Visual Studio installed.\n Please, install the latest Visual Studio first.");
+            throw SW_RUNTIME_ERROR("Seems like you do not have Visual Studio installed.\nPlease, install the latest Visual Studio first.");
     }
     // add more defaults
     else

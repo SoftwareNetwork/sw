@@ -102,10 +102,10 @@ inline LinkDirectory operator "" _ldir(const char *s, size_t)
 
 // link library
 // _l or _lib
-inline LinkLibrary operator "" _l(const char *s, size_t)
+/*inline LinkLibrary operator "" _l(const char *s, size_t)
 {
     return LinkLibrary(String(s));
-}
+}*/
 inline LinkLibrary operator "" _lib(const char *s, size_t)
 {
     return LinkLibrary(String(s));

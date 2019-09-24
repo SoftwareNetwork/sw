@@ -107,11 +107,6 @@ const TargetSettings &Build::getSettings() const
     return getModuleData().current_settings;
 }
 
-const TargetSettings &Build::getHostSettings() const
-{
-    return getModuleData().host_settings;
-}
-
 // can be used in configs to load subdir configs
 // s.build->loadModule("client/sw.cpp").call<void(Solution &)>("build", s);
 Module Build::loadModule(const path &p) const

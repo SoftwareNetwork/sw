@@ -62,7 +62,6 @@ struct SW_DRIVER_CPP_API Build : SimpleBuild
 
     SwContext &getContext() const;
     const OS &getHostOs() const;
-    const TargetSettings &getHostSettings() const;
     const TargetSettings &getSettings() const;
     bool isKnownTarget(const LocalPackage &p) const;
     path getSourceDir(const LocalPackage &p) const;
