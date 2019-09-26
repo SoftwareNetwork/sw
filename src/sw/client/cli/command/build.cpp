@@ -41,6 +41,18 @@ static ::cl::opt<bool> build_default_explan("e", ::cl::desc("Build execution pla
 
 static ::cl::opt<bool> isolated_build("isolated", cl::desc("Copy source files to isolated folders to check build like just after uploading"), ::cl::sub(subcommand_build));
 
+//
+
+//cl::opt<bool> dry_run("n", cl::desc("Dry run"));
+
+static cl::opt<bool> build_always("B", cl::desc("Build always"));
+static cl::opt<int> skip_errors("k", cl::desc("Skip errors"));
+static cl::opt<bool> time_trace("time-trace", cl::desc("Record chrome time trace events"));
+
+static cl::opt<bool> cl_show_output("show-output");
+static cl::opt<bool> cl_write_output_to_file("write-output-to-file");
+//static cl::opt<bool> print_graph("print-graph", cl::desc("Print file with build graph"));
+
 ////////////////////////////////////////////////////////////////////////////////
 //
 // build configs
@@ -250,7 +262,7 @@ static void applySettingsFromJson(sw::TargetSettings &s, const String &jsonstr)
 
 static std::vector<sw::TargetSettings> applySettingsFromCppFile(sw::SwContext &swctx, const path &fn)
 {
-    auto b = swctx.createBuild();
+    auto b = createBuild(swctx);
     sw::Input i1(fn, sw::InputType::InlineSpecification, swctx);
     sw::InputWithSettings i(i1);
     auto ts = createInitialSettings(swctx);
@@ -490,7 +502,7 @@ std::unique_ptr<sw::SwBuild> setBuildArgsAndCreateBuildAndPrepare(sw::SwContext 
 
 std::unique_ptr<sw::SwBuild> createBuildAndPrepare(sw::SwContext &swctx)
 {
-    auto b = swctx.createBuild();
+    auto b = createBuild(swctx);
     for (auto &a : build_arg)
     {
         sw::InputWithSettings i(swctx.addInput(a));
@@ -518,7 +530,7 @@ static void isolated_build1(sw::SwContext &swctx)
 
     LOG_INFO(logger, "Determining targets");
 
-    auto b1 = swctx.createBuild();
+    auto b1 = createBuild(swctx);
     auto &b = *b1;
 
     auto ts = createInitialSettings(swctx);
@@ -571,7 +583,7 @@ static void isolated_build1(sw::SwContext &swctx)
 
     //
     {
-        auto b1 = swctx.createBuild();
+        auto b1 = createBuild(swctx);
         auto &b = *b1;
 
         auto &ii = getInput(b);
@@ -582,11 +594,31 @@ static void isolated_build1(sw::SwContext &swctx)
     }
 }
 
+std::unique_ptr<sw::SwBuild> createBuild(sw::SwContext &swctx)
+{
+    auto b = swctx.createBuild();
+
+    sw::TargetSettings bs;
+    if (build_always)
+        bs["build_always"] = "true";
+    if (skip_errors)
+        bs["skip_errors"] = std::to_string(skip_errors);
+    if (time_trace)
+        bs["time_trace"] = "true";
+    if (cl_show_output)
+        bs["show_output"] = "true";
+    if (cl_write_output_to_file)
+        bs["write_output_to_file"] = "true";
+    b->setSettings(bs);
+
+    return b;
+}
+
 SUBCOMMAND_DECL2(build)
 {
     if (!build_explan.empty())
     {
-        auto b = swctx.createBuild();
+        auto b = createBuild(swctx);
         b->overrideBuildState(sw::BuildState::Prepared);
         auto p = sw::ExecutionPlan::load(build_explan, swctx);
         b->execute(p);
@@ -614,7 +646,7 @@ SUBCOMMAND_DECL2(build)
 
     // if -B specified, it is used as is
 
-    auto b = swctx.createBuild();
+    auto b = createBuild(swctx);
     for (auto &a : build_arg)
     {
         sw::InputWithSettings i(swctx.addInput(a));

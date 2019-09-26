@@ -84,6 +84,9 @@ struct SW_CORE_API SwBuild
 
     std::vector<InputWithSettings> getInputs() const;
 
+    TargetSettings getSettings() const { return build_settings; }
+    void setSettings(const TargetSettings &build_settings);
+
 private:
     SwContext &swctx;
     path build_dir;
@@ -91,6 +94,7 @@ private:
     TargetMap targets_to_build;
     PackageIdSet known_packages;
     std::vector<InputWithSettings> inputs;
+    TargetSettings build_settings;
     mutable BuildState state = BuildState::NotStarted;
 
     void load(const std::vector<InputWithSettings> &inputs, bool set_eps);
