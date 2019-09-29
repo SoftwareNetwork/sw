@@ -375,6 +375,29 @@ std::vector<IDependency *> Target::getDependencies() const
     return deps;
 }
 
+const TargetSettings &Target::getHostSettings() const
+{
+    auto &hs = getSolution().getContext().getHostSettings();
+
+    bool use_current_settings =
+        (
+            // same os & arch can run apps
+            ts["os"]["kernel"] == hs["os"]["kernel"] && ts["os"]["arch"] == hs["os"]["arch"]
+            )
+        ||
+        (
+            // 64-bit windows can run 32-bit apps
+            hs["os"]["kernel"] == "com.Microsoft.Windows.NT" && hs["os"]["arch"] == "x86_64" &&
+            ts["os"]["arch"] == "x86"
+            )
+        ;
+
+    // also compare compilers
+    use_current_settings &= hs["native"]["program"]["c"] == ts["native"]["program"]["c"];
+
+    return use_current_settings ? ts : hs;
+}
+
 Program *Target::findProgramByExtension(const String &ext) const
 {
     if (!hasExtension(ext))
@@ -387,7 +410,7 @@ Program *Target::findProgramByExtension(const String &ext) const
     // resolve via getContext() because it might provide other version rather than cld.find(*u)
     auto pkg = getSolution().getContext().resolve(*u);
     auto &cld = getSolution().getChildren();
-    auto tgt = cld.find(pkg, getSolution().getContext().getHostSettings());
+    auto tgt = cld.find(pkg, getHostSettings());
     if (!tgt)
         return {};
     if (auto t = tgt->as<PredefinedProgram*>())
@@ -717,26 +740,9 @@ void Target::addDummyDependency(const DependencyPtr &t)
 {
     DummyDependencies.push_back(t);
 
-    auto &hs = getSolution().getContext().getHostSettings();
+    auto &hs = getHostSettings();
     auto &ds = DummyDependencies.back()->settings;
-
-    bool use_current_settings =
-        (
-            // same os & arch can run apps
-            ts["os"]["kernel"] == hs["os"]["kernel"] && ts["os"]["arch"] == hs["os"]["arch"]
-        )
-        ||
-        (
-            // 64-bit windows can run 32-bit apps
-            hs["os"]["kernel"] == "com.Microsoft.Windows.NT" && hs["os"]["arch"] == "x86_64" &&
-            ts["os"]["arch"] == "x86"
-        )
-        ;
-
-    // also compare compilers
-    use_current_settings &= hs["native"]["program"]["c"] == ts["native"]["program"]["c"];
-
-    ds.merge(use_current_settings ? ts : hs);
+    ds.merge(hs);
 }
 
 void Target::addDummyDependency(const Target &t)

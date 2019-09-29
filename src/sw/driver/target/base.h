@@ -373,6 +373,7 @@ private:
     String provided_cfg;
 
     void applyRootDirectory();
+    const TargetSettings &getHostSettings() const;
 
     virtual Commands getCommands1() const { return Commands{}; }
 

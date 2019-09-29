@@ -2234,7 +2234,7 @@ bool NativeCompiledTarget::prepare()
             auto ext = p.extension().string();
             auto prog = findProgramByExtension(ext);
             if (!prog)
-                throw std::logic_error("User defined program not registered");
+                throw std::logic_error("User defined program not registered for " + ext);
 
             auto p2 = dynamic_cast<FileToFileTransformProgram*>(prog);
             if (!p2)
