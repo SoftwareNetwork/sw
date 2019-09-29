@@ -183,6 +183,7 @@ void build(Solution &s)
         core += "src/sw/core/.*"_rr;
         if (core.getBuildSettings().TargetOS.Type == OSType::Windows)
             core += "OleAut32.lib"_slib;
+        core += "org.sw.demo.giovannidicanio.winreg"_dep;
     }
 
     auto &cpp_driver = p.addTarget<LibraryTarget>("driver.cpp");
@@ -254,7 +255,8 @@ void build(Solution &s)
         client += client_common,
             //"org.sw.demo.microsoft.mimalloc"_dep,
             "pub.egorpugin.primitives.sw.main-master"_dep,
-            "org.sw.demo.giovannidicanio.winreg-master"_dep;
+            "org.sw.demo.giovannidicanio.winreg"_dep
+            ;
         embed("pub.egorpugin.primitives.tools.embedder-master"_dep, client, "src/sw/client/cli/inserts/inserts.cpp.in");
         if (client.getCompilerType() == CompilerType::MSVC)
             client.CompileOptions.push_back("-bigobj");

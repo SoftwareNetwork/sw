@@ -11,6 +11,9 @@
 #include <sw/builder/program.h>
 
 #include <boost/algorithm/string.hpp>
+#ifdef _WIN32
+#include <WinReg.hpp>
+#endif
 
 #include <regex>
 #include <string>
@@ -672,7 +675,32 @@ static path getWindowsKitRoot()
     auto p = getProgramFilesX86() / "Windows Kits";
     if (fs::exists(p))
         return p;
-    throw SW_RUNTIME_ERROR("No Windows Kits available");
+    //throw SW_RUNTIME_ERROR("No Windows Kits available");
+    return {};
+}
+
+static path getWindows10KitRoot()
+{
+#ifdef _WIN32
+    winreg::RegKey kits10(HKEY_LOCAL_MACHINE, L"SOFTWARE\\Microsoft\\Windows Kits\\Installed Roots", KEY_READ);
+    return kits10.GetStringValue(L"KitsRoot10");
+#endif
+    //throw SW_RUNTIME_ERROR("No Windows Kits available");
+    return {};
+}
+
+static VersionSet listWindows10Kits()
+{
+    VersionSet kits;
+#ifdef _WIN32
+    winreg::RegKey kits10(HKEY_LOCAL_MACHINE, L"SOFTWARE\\Microsoft\\Windows Kits\\Installed Roots", KEY_READ);
+    for (auto &k : kits10.EnumSubKeys())
+    {
+        kits.insert(to_string(k));
+    }
+#endif
+    //throw SW_RUNTIME_ERROR("No Windows Kits available");
+    return kits;
 }
 
 static String getWin10KitDirName()
@@ -683,39 +711,21 @@ static String getWin10KitDirName()
 static Strings listWindowsKits()
 {
     // https://en.wikipedia.org/wiki/Microsoft_Windows_SDK
-    static const Strings known_kits{ getWin10KitDirName(), "8.1A", "8.1", "8.0", "7.1A", "7.1", "7.0A", "7.0A","6.0A" };
+    static const Strings known_kits{ "8.1A", "8.1", "8.0", "7.1A", "7.1", "7.0A", "7.0A","6.0A" };
 
     Strings kits;
-    auto kr = getWindowsKitRoot();
+
+    // special handling for win10 kits
+    auto kr = getWindows10KitRoot();
+    if (fs::exists(kr))
+        kits.push_back(getWin10KitDirName());
+
+    kr = getWindowsKitRoot();
     for (auto &k : known_kits)
     {
         auto d = kr / k;
         if (fs::exists(d))
             kits.push_back(k);
-    }
-    return kits;
-}
-
-static path getWin10KitInspectionDir()
-{
-    auto kr = getWindowsKitRoot();
-    auto dir = kr / getWin10KitDirName() / "Include";
-    return dir;
-}
-
-static VersionSet listWindows10Kits()
-{
-    VersionSet kits;
-    auto dir = getWin10KitInspectionDir();
-    for (auto &i : fs::directory_iterator(dir))
-    {
-        if (fs::is_directory(i))
-        {
-            auto d = i.path().filename().u8string();
-            Version v = d;
-            if (v.isVersion())
-                kits.insert(d);
-        }
     }
     return kits;
 }
@@ -806,7 +816,7 @@ void detectWindowsSdk(DETECT_ARGS)
 
     for (auto &k : listWindowsKits())
     {
-        auto kr = getWindowsKitRoot() /k;
+        auto kr = getWindowsKitRoot() / k;
         if (k == getWin10KitDirName())
         {
             for (auto &v : listWindows10Kits())

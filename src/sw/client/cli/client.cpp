@@ -49,12 +49,6 @@ DECLARE_STATIC_LOGGER(logger, "main");
 
 #ifdef _WIN32
 #include <primitives/win32helpers.h>
-#include <windows.h>
-#include <shellapi.h>
-#include <Objbase.h>
-#include <Shlobj.h>
-
-#include <WinReg.hpp>
 #endif
 
 #if _MSC_VER
