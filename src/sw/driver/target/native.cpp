@@ -190,16 +190,21 @@ static void targetSettings2Command(primitives::Command &c, const TargetSetting &
     }
 }
 
-void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const StringSet &exts)
+static auto get_settings_package_id(const TargetSetting &s)
 {
     bool extended_desc = s.isObject();
-
     UnresolvedPackage id;
     if (extended_desc)
         id = s["package"].getValue();
     else
         id = s.getValue();
+    return id;
+}
 
+void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const StringSet &exts)
+{
+    bool extended_desc = s.isObject();
+    auto id = get_settings_package_id(s);
     activateCompiler(s, id, exts, extended_desc);
 }
 
@@ -232,6 +237,10 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
             ct = CompilerType::Clang;
         else if (id.ppath == "org.LLVM.clangcl")
             ct = CompilerType::ClangCl;
+        else if (id.ppath == "com.intel.compiler.c" || id.ppath == "com.intel.compiler.cpp")
+            ct = CompilerType::Intel;
+        //else
+            //throw SW_RUNTIME_ERROR("Unknown compiler type: " + id.toString());
     };
 
     auto c = std::dynamic_pointer_cast<CompilerBaseProgram>(t->getProgram().clone());
@@ -331,6 +340,20 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
             throw SW_RUNTIME_ERROR("Unknown arch");
         }
     }
+    else if (id.ppath == "com.intel.compiler.c" || id.ppath == "com.intel.compiler.cpp")
+    {
+        auto C = std::make_shared<VisualStudioCompiler>(getSolution().getContext());
+        c = C;
+        C->ForceSynchronousPDBWrites = false;
+        if (ts["native"]["stdlib"]["cpp"].getValue() == "com.Microsoft.VisualStudio.VC.libcpp")
+        {
+            // take same ver as cl
+            UnresolvedPackage up(ts["native"]["stdlib"]["cpp"].getValue());
+            up.range = id.range;
+            *this += up;
+            libstdcppset = true;
+        }
+    }
     else
         throw SW_RUNTIME_ERROR("Unknown compiler: " + id.toString());
 
@@ -342,13 +365,7 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
 std::shared_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetSetting &s)
 {
     bool extended_desc = s.isObject();
-
-    UnresolvedPackage id;
-    if (extended_desc)
-        id = s["package"].getValue();
-    else
-        id = s.getValue();
-
+    auto id = get_settings_package_id(s);
     return activateLinker(s, id, extended_desc);
 }
 
@@ -379,7 +396,8 @@ std::shared_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetS
             targetSettings2Command(*C, s["command"]);
     };
 
-    if (id.ppath == "com.Microsoft.VisualStudio.VC.lib")
+    if (0);
+    else if (id.ppath == "com.Microsoft.VisualStudio.VC.lib")
     {
         c = std::make_shared<VisualStudioLibrarian>(getSolution().getContext());
         c->Type = LinkerType::MSVC;
@@ -457,6 +475,16 @@ std::shared_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetS
         //cmd->push_back("-target");
         //cmd->push_back(getBuildSettings().getTargetTriplet());
     }
+    else if (id.ppath == "com.intel.compiler.lib")
+    {
+        c = std::make_shared<VisualStudioLibrarian>(getSolution().getContext());
+        c->Type = LinkerType::MSVC;
+    }
+    else if (id.ppath == "com.intel.compiler.link")
+    {
+        c = std::make_shared<VisualStudioLinker>(getSolution().getContext());
+        c->Type = LinkerType::MSVC;
+    }
     else
         throw SW_RUNTIME_ERROR("Unknown librarian/linker: " + id.toString());
 
@@ -492,7 +520,7 @@ void NativeCompiledTarget::findCompiler()
     activateCompiler(ts["native"]["program"]["c"], { ".c" });
 
     if (ct == CompilerType::UnspecifiedCompiler)
-        throw SW_RUNTIME_ERROR("Unknown compiler: " + ts.toString());
+        throw SW_RUNTIME_ERROR("Unknown compiler: " + get_settings_package_id(ts["native"]["program"]["c"]).toString());
 
     if (getBuildSettings().TargetOS.is(OSType::Windows))
     {

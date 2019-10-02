@@ -730,7 +730,7 @@ static Strings listWindowsKits()
     return kits;
 }
 
-void detectWindowsSdk(DETECT_ARGS)
+static void detectWindowsSdk(DETECT_ARGS)
 {
     // ucrt - universal CRT
     //
@@ -908,14 +908,14 @@ void detectWindowsSdk(DETECT_ARGS)
     }
 }
 
-void detectMsvc(DETECT_ARGS)
+static void detectMsvc(DETECT_ARGS)
 {
     detectMsvc15Plus(s);
     detectMsvc14AndOlder(s);
     detectWindowsSdk(s);
 }
 
-void detectWindowsClang(DETECT_ARGS)
+static void detectWindowsClang(DETECT_ARGS)
 {
     // create programs
     const path base_llvm_path = path("c:") / "Program Files" / "LLVM";
@@ -1024,13 +1024,111 @@ void detectWindowsClang(DETECT_ARGS)
     }
 }
 
-void detectWindowsCompilers(DETECT_ARGS)
+static void detectIntelCompilers(DETECT_ARGS)
+{
+    // some info at https://gitlab.com/ita1024/waf/blob/master/waflib/Tools/msvc.py#L521
+
+    // C, C++
+
+    // win
+    {
+        auto add_prog_from_path = [&s](const path &name, const String &ppath)
+        {
+            auto p = std::make_shared<SimpleProgram>(s);
+            p->file = resolveExecutable(name);
+            if (fs::exists(p->file))
+            {
+                auto v = getVersion(s, p->file);
+                addProgram(s, PackageId(ppath, v), p);
+
+                // icl/xilib/xilink on win wants VC in PATH
+                auto &cld = s.getPredefinedTargets();
+                auto i = cld["com.Microsoft.VisualStudio.VC.cl"].rbegin_releases();
+                if (i != cld["com.Microsoft.VisualStudio.VC.cl"].rend_releases())
+                {
+                    if (!i->second.empty())
+                    {
+                        if (auto t = (*i->second.begin())->as<PredefinedProgramTarget *>())
+                        {
+                            path x = t->getProgram().getCommand()->getProgram();
+                            p->getCommand()->addPathDirectory(x.parent_path());
+                        }
+                    }
+                }
+            }
+            return p;
+        };
+
+        add_prog_from_path("icl", "com.intel.compiler.c");
+        add_prog_from_path("icl", "com.intel.compiler.cpp");
+        add_prog_from_path("xilib", "com.intel.compiler.lib");
+        add_prog_from_path("xilink", "com.intel.compiler.link");
+
+        // ICPP_COMPILER{VERSION} like ICPP_COMPILER19 etc.
+        for (int i = 9; i < 23; i++)
+        {
+            auto s = "ICPP_COMPILER" + std::to_string(i);
+            auto v = getenv(s.c_str());
+            if (!v)
+                continue;
+
+            path root = v;
+            auto bin = root;
+            bin /= "bin";
+            auto arch = "intel64";
+            bin /= arch;
+
+            std::shared_ptr<SimpleProgram> p;
+            p = add_prog_from_path(bin / "icl", "com.intel.compiler.c");
+            p->getCommand()->push_back("-I");
+            p->getCommand()->push_back(root / "compiler" / "include");
+
+            p = add_prog_from_path(bin / "icl", "com.intel.compiler.cpp");
+            p->getCommand()->push_back("-I");
+            p->getCommand()->push_back(root / "compiler" / "include");
+
+            add_prog_from_path(bin / "xilib", "com.intel.compiler.lib");
+
+            p = add_prog_from_path(bin / "xilink", "com.intel.compiler.link");
+            p->getCommand()->push_back("-LIBPATH:" + (root / "compiler" / "lib" / arch).u8string());
+            p->getCommand()->push_back("libirc.lib");
+        }
+
+        // also registry paths
+        // HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Intel ...
+    }
+
+    // *nix
+    {
+        {
+            auto p = std::make_shared<SimpleProgram>(s); // new object
+            p->file = resolveExecutable("icc");
+            if (fs::exists(p->file))
+            {
+                auto v = getVersion(s, p->file);
+                addProgram(s, PackageId("com.intel.compiler.c", v), p);
+            }
+        }
+
+        {
+            auto p = std::make_shared<SimpleProgram>(s); // new object
+            p->file = resolveExecutable("icpc");
+            if (fs::exists(p->file))
+            {
+                auto v = getVersion(s, p->file);
+                addProgram(s, PackageId("com.intel.compiler.cpp", v), p);
+            }
+        }
+    }
+}
+
+static void detectWindowsCompilers(DETECT_ARGS)
 {
     detectMsvc(s);
     detectWindowsClang(s);
 }
 
-void detectNonWindowsCompilers(DETECT_ARGS)
+static void detectNonWindowsCompilers(DETECT_ARGS)
 {
     auto resolve_and_add = [&s](const path &prog, const String &ppath)
     {
@@ -1081,6 +1179,7 @@ void detectNativeCompilers(DETECT_ARGS)
     }
     else
         detectNonWindowsCompilers(s);
+    detectIntelCompilers(s);
 }
 
 }

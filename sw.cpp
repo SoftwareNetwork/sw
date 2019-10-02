@@ -294,6 +294,9 @@ void build(Solution &s)
         }
     }
 
+    if (client.getBuildSettings().TargetOS.Type != OSType::Windows)
+        return;
+
     auto &gui = client.addTarget<ExecutableTarget>("gui");
     {
         gui.PackageDefinitions = true;

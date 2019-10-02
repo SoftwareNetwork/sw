@@ -159,6 +159,14 @@ static sw::TargetSettings compilerTypeFromStringCaseI(const sw::UnresolvedPackag
         ts["native"]["program"]["cpp"] = set_with_version("com.Microsoft.VisualStudio.VC.cl");
         ts["native"]["program"]["asm"] = set_with_version("com.Microsoft.VisualStudio.VC.ml");
     }
+    else if (compiler.ppath == "intel")
+    {
+        ts["native"]["program"]["c"] = set_with_version("com.intel.compiler.c");
+        ts["native"]["program"]["cpp"] = set_with_version("com.intel.compiler.cpp");
+        ts["native"]["program"]["asm"] = set_with_version("com.Microsoft.VisualStudio.VC.ml");
+        ts["native"]["program"]["lib"] = "com.intel.compiler.lib";
+        ts["native"]["program"]["link"] = "com.intel.compiler.link";
+    }
     else
     {
         ts["native"]["program"]["c"] = compiler.toString();

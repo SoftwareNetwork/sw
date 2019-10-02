@@ -634,6 +634,7 @@ String Command::makeErrorString(const String &e)
         boost::replace_all(err.text, "\r", "");
         s += "\n" + boost::trim_copy(err.text);
     }
+    boost::trim(s);
     s += "\n";
     s += e;
     boost::trim(s);
@@ -655,7 +656,7 @@ String Command::saveCommand() const
 
     String s;
     s += "\n";
-    s += "pid = " + std::to_string(pid) + "\n";
+    //s += "pid = " + std::to_string(pid) + "\n";
     s += "command is copied to " + p.u8string() + "\n";
 
     return s;
