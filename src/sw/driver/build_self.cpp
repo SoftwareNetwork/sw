@@ -74,7 +74,7 @@ PackageIdSet build_self(SwContext &swctx)
         //  for 3.29.0 we do not have ep
         if (!ep)
         {
-            LOG_WARN(logger, "Skipping package: " << p.toString());
+            LOG_DEBUG(logger, "Skipping package: " << p.toString());
             continue;
             // actually it's better throw here?
             //throw SW_RUNTIME_ERROR();

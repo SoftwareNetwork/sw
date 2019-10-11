@@ -47,7 +47,7 @@ void self_upgrade()
 
     auto fn = fs::temp_directory_path() / (unique_path() += client.extension());
     std::cout << "Downloading the latest client" << "\n";
-    download_file(s.remotes[0].url + client.u8string(), fn, 50_MB);
+    download_file(s.remotes[0].url + client.u8string(), fn, 100_MB);
     try
     {
         ds_verify_sw_file(fn, algo, sig);

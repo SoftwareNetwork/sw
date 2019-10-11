@@ -330,7 +330,7 @@ void SwBuild::execute(ExecutionPlan &p) const
 
     p.build_always |= build_settings["build_always"] == "true";
     p.write_output_to_file |= build_settings["write_output_to_file"] == "true";
-    if (build_settings["build_always"].isValue())
+    if (build_settings["skip_errors"].isValue())
         p.skip_errors = std::stoll(build_settings["skip_errors"].getValue());
 
     //ScopedTime t;

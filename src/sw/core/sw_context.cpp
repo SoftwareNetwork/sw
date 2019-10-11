@@ -112,13 +112,28 @@ void SwCoreContext::setHostPrograms()
             return true;
         };
 
+        auto err_msg = [](const String &cl)
+        {
+            return "sw was built with " + cl + " as compiler, but it was not found in your system. Install " + cl + " to proceed.";
+        };
+
         // must be the same compiler as current!
 #if defined(__clang__)
-        if_add(ts["native"]["program"]["c"], "org.LLVM.clang"s);
-        if_add(ts["native"]["program"]["cpp"], "org.LLVM.clangpp"s);
+        if (!(
+            if_add(ts["native"]["program"]["c"], "org.LLVM.clang"s) &&
+            if_add(ts["native"]["program"]["cpp"], "org.LLVM.clangpp"s)
+            ))
+        {
+            throw SW_RUNTIME_ERROR(err_msg("clang"));
+        }
 #elif defined(__GNUC__)
-        if_add(ts["native"]["program"]["c"], "org.gnu.gcc");
-        if_add(ts["native"]["program"]["cpp"], "org.gnu.gpp");
+        if (!(
+            if_add(ts["native"]["program"]["c"], "org.gnu.gcc") &&
+            if_add(ts["native"]["program"]["cpp"], "org.gnu.gpp")
+            ))
+        {
+            throw SW_RUNTIME_ERROR(err_msg("gcc"));
+        }
 #elif !defined(_WIN32)
 #error "Add your current compiler to detect.cpp and here."
 #endif

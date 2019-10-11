@@ -39,7 +39,7 @@ static decltype(auto) getInput(sw::SwBuild &b)
 
 static sw::SourceDirMap getSources(sw::SwContext &swctx)
 {
-    auto b1 = swctx.createBuild();
+    auto b1 = createBuild(swctx);
     auto &b = *b1;
 
     auto ts = createInitialSettings(swctx);
@@ -109,7 +109,7 @@ std::pair<sw::SourceDirMap, const sw::Input &> fetch(sw::SwBuild &b)
 
 std::pair<sw::SourceDirMap, const sw::Input &> fetch(sw::SwContext &swctx)
 {
-    return fetch(*swctx.createBuild());
+    return fetch(*createBuild(swctx));
 }
 
 SUBCOMMAND_DECL2(fetch)
