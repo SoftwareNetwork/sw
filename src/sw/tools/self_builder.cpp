@@ -68,7 +68,7 @@ void write_build_script(const std::unordered_map<UnresolvedPackage, LocalPackage
         {"org.sw.demo.google.protobuf.protobuf"},
 
         // goes before sw cpp driver (client)
-        {"org.sw.demo.google.grpc.cpp.plugin-1.23"},
+        {"org.sw.demo.google.grpc.cpp.plugin"},
 
         // goes before sw cpp driver (client)
         {"pub.egorpugin.primitives.filesystem-master"},
