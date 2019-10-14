@@ -83,7 +83,7 @@ SUBCOMMAND_DECL(integrate)
 
     auto create_build = [&swctx](const Strings &lines, const Strings &configs = {})
     {
-        auto build = swctx->createBuild();
+        auto build = createBuild(*swctx);
         auto &b = *build;
 
         auto settings = createSettings(*swctx);
