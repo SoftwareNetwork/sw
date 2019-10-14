@@ -103,8 +103,6 @@ static cl::alias win_md2("md", cl::desc("Alias for -win-md"), cl::aliasopt(win_m
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#pragma optimize("", off)
-
 SUBCOMMAND_DECL(build)
 {
     if (build_arg.empty())

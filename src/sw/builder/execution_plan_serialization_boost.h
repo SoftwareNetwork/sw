@@ -9,8 +9,6 @@
 #pragma warning(disable : 4005) // warning C4005: 'XXX': macro redefinition
 #endif
 
-#pragma optimize("", off)
-
 ////////////////////////////////////////////////////////////////////////////////
 
 #define SERIALIZATION_TYPE ::path
