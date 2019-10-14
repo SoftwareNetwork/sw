@@ -225,9 +225,11 @@ SUBCOMMAND_DECL(integrate)
                 ctx.addLine("IMPORTED_LINK_INTERFACE_LANGUAGES_" + toCmakeString(bs.Native.ConfigurationType) + " \"CXX\"");
 
                 // IMPORTED_LOCATION = path to .dll/.so or static .lib/.a
-                ctx.addLine("IMPORTED_LOCATION_" + toCmakeString(bs.Native.ConfigurationType) + " \"" + normalize_path(s["output_file"].getValue()) + "\"");
+                ctx.addLine("IMPORTED_LOCATION_" + toCmakeString(bs.Native.ConfigurationType) + " \"" +
+                    normalize_path(s[st == "SHARED" ? "output_file" : "import_library"].getValue()) + "\"");
                 // IMPORTED_IMPLIB = path to .lib (import)
-                ctx.addLine("IMPORTED_IMPLIB_" + toCmakeString(bs.Native.ConfigurationType) + " \"" + normalize_path(s["import_library"].getValue()) + "\"");
+                ctx.addLine("IMPORTED_IMPLIB_" + toCmakeString(bs.Native.ConfigurationType) + " \"" +
+                    normalize_path(s["import_library"].getValue()) + "\"");
 
                 ctx.decreaseIndent(")");
                 ctx.emptyLines();
