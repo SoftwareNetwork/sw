@@ -360,12 +360,13 @@ Commands SwBuild::getCommands() const
 
     auto cl_show_output = build_settings["show_output"] == "true";
     auto cl_write_output_to_file = build_settings["write_output_to_file"] == "true";
+    path copy_dir = build_settings["build_ide_copy_to_dir"].isValue() ? build_settings["build_ide_copy_to_dir"].getValue() : "";
 
     Commands cmds;
     for (auto &[p, tgts] : targets_to_build)
     {
         // one target may be loaded twice
-        // we take only the latest, because it is has correct set of command deps
+        // we take only the latest, because it is has correct set of command deps per requested settings
         std::map<TargetSettings, ITarget*> latest_targets;
         for (auto &tgt : tgts)
             latest_targets[tgt->getSettings()] = tgt.get();
@@ -380,51 +381,62 @@ Commands SwBuild::getCommands() const
             }
             cmds.insert(c.begin(), c.end());
 
-            // copy output dlls
+            if (copy_dir.empty())
+                continue;
 
-            /*auto nt = t->as<NativeCompiledTarget*>();
-            if (!nt)
+            // copy output files
+
+            const auto &s = tgt->getInterfaceSettings();
+            if (s["header_only"] == "true")
                 continue;
-            if (*nt->HeaderOnly)
+            if (s["type"] != "native_shared_library")
                 continue;
-            if (nt->getSelectedTool() == nt->Librarian.get())
-                continue;
+
+            auto copy_file = [&cmds, &copy_dir, this](const auto &s)
+            {
+                path in = s["output_file"].getValue();
+                auto o = copy_dir / in.filename();
+                //auto o = nt->getOutputDir() / dt->OutputDir;
+                //o /= in.filename();
+                if (in == o)
+                    return;
+
+                //SW_MAKE_EXECUTE_BUILTIN_COMMAND(copy_cmd, *nt, "sw_copy_file", nullptr);
+                auto copy_cmd = std::make_shared<::sw::builder::ExecuteBuiltinCommand>(getContext(), "sw_copy_file", nullptr);
+                copy_cmd->arguments.push_back(in.u8string());
+                copy_cmd->arguments.push_back(o.u8string());
+                copy_cmd->addInput(in);
+                copy_cmd->addOutput(o);
+                //copy_cmd->dependencies.insert(nt->getCommand());
+                copy_cmd->name = "copy: " + normalize_path(o);
+                copy_cmd->maybe_unused = builder::Command::MU_ALWAYS;
+                copy_cmd->command_storage = builder::Command::CS_LOCAL;
+                cmds.insert(copy_cmd);
+            };
+
+            copy_file(s);
 
             // copy
-            if (nt->isLocal() && //getSettings().Native.CopySharedLibraries &&
-                nt->Scope == TargetScope::Build && nt->OutputDir.empty() && !nt->createWindowsRpath())
+            //if (nt->isLocal() &&
+                //nt->Scope == TargetScope::Build && nt->OutputDir.empty() && !nt->createWindowsRpath())
             {
-                for (auto &l : nt->gatherAllRelatedDependencies())
+                for (auto &[k,v] : s["dependencies"]["link"].getSettings())
                 {
-                    auto dt = l->as<NativeCompiledTarget*>();
-                    if (!dt)
-                        continue;
-                    if (dt->isLocal())
-                        continue;
-                    if (dt->HeaderOnly.value())
-                        continue;
-                    if (dt->getSettings().Native.LibrariesType != LibraryType::Shared && !dt->isSharedOnly())
-                        continue;
-                    if (dt->getSelectedTool() == dt->Librarian.get())
-                        continue;
-                    auto in = dt->getOutputFile();
-                    auto o = nt->getOutputDir() / dt->OutputDir;
-                    o /= in.filename();
-                    if (in == o)
-                        continue;
+                    auto i = getTargets().find(PackageId(k));
+                    if (i == getTargets().end())
+                        throw SW_RUNTIME_ERROR("dep not found");
+                    auto j = i->second.findSuitable(v.getSettings());
+                    if (j == i->second.end())
+                        throw SW_RUNTIME_ERROR("dep+settings not found");
 
-                    SW_MAKE_EXECUTE_BUILTIN_COMMAND(copy_cmd, *nt, "sw_copy_file", nullptr);
-                    copy_cmd->arguments.push_back(in.u8string());
-                    copy_cmd->arguments.push_back(o.u8string());
-                    copy_cmd->addInput(dt->getOutputFile());
-                    copy_cmd->addOutput(o);
-                    copy_cmd->dependencies.insert(nt->getCommand());
-                    copy_cmd->name = "copy: " + normalize_path(o);
-                    copy_cmd->maybe_unused = builder::Command::MU_ALWAYS;
-                    copy_cmd->command_storage = builder::Command::CS_LOCAL;
-                    cmds.insert(copy_cmd);
+                    const auto &s = (*j)->getInterfaceSettings();
+                    if (s["header_only"] == "true")
+                        continue;
+                    if (s["type"] != "native_shared_library")
+                        continue;
+                    copy_file(s);
                 }
-            }*/
+            }
         }
     }
 

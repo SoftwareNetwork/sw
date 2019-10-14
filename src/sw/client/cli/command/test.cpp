@@ -20,8 +20,6 @@
 
 DEFINE_SUBCOMMAND(test, "Run tests.");
 
-extern bool gWithTesting;
-
 static ::cl::list<String> build_arg_test(::cl::Positional, ::cl::desc("File or directory to use to generate projects"), ::cl::sub(subcommand_test));
 
 SUBCOMMAND_DECL(test)
@@ -30,7 +28,6 @@ SUBCOMMAND_DECL(test)
         build_arg_test.push_back(".");
 
     auto swctx = createSwContext();
-    gWithTesting = true;
     SW_UNIMPLEMENTED;
     //(Strings&)build_arg = (Strings&)build_arg_test;
     //cli_build(*swctx);

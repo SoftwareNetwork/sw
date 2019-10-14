@@ -41,6 +41,9 @@ static ::cl::opt<bool> build_default_explan("e", ::cl::desc("Build execution pla
 
 static ::cl::opt<bool> isolated_build("isolated", cl::desc("Copy source files to isolated folders to check build like just after uploading"), ::cl::sub(subcommand_build));
 
+static ::cl::opt<path> build_ide_fast_path("ide-fast-path", ::cl::sub(subcommand_build), ::cl::Hidden);
+static ::cl::opt<path> build_ide_copy_to_dir("ide-copy-to-dir", ::cl::sub(subcommand_build), ::cl::Hidden);
+
 //
 
 //cl::opt<bool> dry_run("n", cl::desc("Dry run"));
@@ -607,6 +610,10 @@ std::unique_ptr<sw::SwBuild> createBuild(sw::SwContext &swctx)
     sw::TargetSettings bs;
     if (build_always)
         bs["build_always"] = "true";
+    if (!build_ide_copy_to_dir.empty())
+        bs["build_ide_copy_to_dir"] = normalize_path(build_ide_copy_to_dir);
+    if (!build_ide_fast_path.empty())
+        bs["build_ide_fast_path"] = normalize_path(build_ide_fast_path);
     if (skip_errors)
         bs["skip_errors"] = std::to_string(skip_errors);
     if (time_trace)

@@ -153,9 +153,9 @@ function(sw_execute)
                     $<$<CONFIG:Release>:r>
                 build @${SW_DEPS_FILE}
                 -ide-copy-to-dir
-                ${outdir}
+                    ${outdir}
                 -ide-fast-path
-                ${SW_DEPS_DIR}/$<CONFIG>-${depshash}.deps
+                    ${SW_DEPS_DIR}/$<CONFIG>-${depshash}.deps
     )
     set_target_properties(sw_build_dependencies
         PROPERTIES

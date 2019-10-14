@@ -41,11 +41,6 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "build");
 
-bool gWithTesting;
-path gIdeFastPath;
-path gIdeCopyToDir;
-int gNumberOfJobs = -1;
-
 std::map<sw::PackagePath, sw::Version> gUserSelectedPackages;
 
 namespace sw

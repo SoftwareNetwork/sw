@@ -124,8 +124,7 @@ extern bool gVerbose;
 static ::cl::opt<bool, true> verbose_opt("verbose", ::cl::desc("Verbose output"), ::cl::location(gVerbose));
 static ::cl::alias verbose_opt2("v", ::cl::desc("Alias for -verbose"), ::cl::aliasopt(verbose_opt));
 static ::cl::opt<bool> trace("trace", ::cl::desc("Trace output"));
-extern int gNumberOfJobs;
-static ::cl::opt<int, true> jobs("j", ::cl::desc("Number of jobs"), ::cl::location(gNumberOfJobs));
+static ::cl::opt<int> jobs("j", ::cl::desc("Number of jobs"));
 
 static ::cl::opt<bool> cl_self_upgrade("self-upgrade", ::cl::desc("Upgrade client"));
 static ::cl::opt<path> cl_self_upgrade_copy("internal-self-upgrade-copy", ::cl::desc("Upgrade client: copy file"), ::cl::ReallyHidden);
@@ -139,10 +138,6 @@ extern ::cl::opt<bool> useFileMonitor;
 #include "command/commands.inl"
 #undef SUBCOMMAND
 
-extern path gIdeFastPath;
-static ::cl::opt<path, true> build_ide_fast_path("ide-fast-path", ::cl::sub(subcommand_build), ::cl::Hidden, ::cl::location(gIdeFastPath));
-extern path gIdeCopyToDir;
-static ::cl::opt<path, true> build_ide_copy_to_dir("ide-copy-to-dir", ::cl::sub(subcommand_build), ::cl::Hidden, ::cl::location(gIdeCopyToDir));
 // TODO: https://github.com/tomtom-international/cpp-dependencies
 static ::cl::list<bool> build_graph("g", ::cl::desc("Print .dot graph of build targets"), ::cl::sub(subcommand_build));
 
@@ -225,7 +220,7 @@ int setup_main(const Strings &args)
 
     // after everything
     std::unique_ptr<Executor> e;
-    if (gIdeFastPath.empty())
+    //if (gIdeFastPath.empty())
     {
         e = std::make_unique<Executor>(select_number_of_threads(jobs));
         getExecutor(e.get());
