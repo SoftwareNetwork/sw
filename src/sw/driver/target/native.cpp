@@ -1920,19 +1920,19 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
     switch (getType())
     {
     case TargetType::NativeExecutable:
-        s["type"] == "native_executable";
+        s["type"] = "native_executable";
         break;
     case TargetType::NativeLibrary:
         if (getBuildSettings().Native.LibrariesType == LibraryType::Shared)
-            s["type"] == "native_shared_library";
+            s["type"] = "native_shared_library";
         else
-            s["type"] == "native_static_library";
+            s["type"] = "native_static_library";
         break;
     case TargetType::NativeStaticLibrary:
-        s["type"] == "native_static_library";
+        s["type"] = "native_static_library";
         break;
     case TargetType::NativeSharedLibrary:
-        s["type"] == "native_shared_library";
+        s["type"] = "native_shared_library";
         break;
     default:
         SW_UNIMPLEMENTED;
