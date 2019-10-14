@@ -361,6 +361,7 @@ Commands SwBuild::getCommands() const
     auto cl_show_output = build_settings["show_output"] == "true";
     auto cl_write_output_to_file = build_settings["write_output_to_file"] == "true";
     path copy_dir = build_settings["build_ide_copy_to_dir"].isValue() ? build_settings["build_ide_copy_to_dir"].getValue() : "";
+    std::unordered_map<path, path> copy_files;
 
     Commands cmds;
     for (auto &[p, tgts] : targets_to_build)
@@ -385,59 +386,62 @@ Commands SwBuild::getCommands() const
                 continue;
 
             // copy output files
-
             const auto &s = tgt->getInterfaceSettings();
-            if (s["header_only"] == "true")
-                continue;
-            if (s["type"] != "native_shared_library")
-                continue;
 
-            auto copy_file = [&cmds, &copy_dir, this](const auto &s)
+            std::function<void(const TargetSettings &)> copy_file;
+            copy_file = [this, &cmds, &copy_dir, &copy_files, &copy_file](const auto &s)
             {
+                if (s["header_only"] == "true")
+                    return;
+                if (s["type"] != "native_shared_library")
+                    return;
+
                 path in = s["output_file"].getValue();
                 auto o = copy_dir / in.filename();
                 //auto o = nt->getOutputDir() / dt->OutputDir;
                 //o /= in.filename();
                 if (in == o)
                     return;
+                copy_files[in] = o;
 
-                //SW_MAKE_EXECUTE_BUILTIN_COMMAND(copy_cmd, *nt, "sw_copy_file", nullptr);
-                auto copy_cmd = std::make_shared<::sw::builder::ExecuteBuiltinCommand>(getContext(), "sw_copy_file", nullptr);
-                copy_cmd->arguments.push_back(in.u8string());
-                copy_cmd->arguments.push_back(o.u8string());
-                copy_cmd->addInput(in);
-                copy_cmd->addOutput(o);
-                //copy_cmd->dependencies.insert(nt->getCommand());
-                copy_cmd->name = "copy: " + normalize_path(o);
-                copy_cmd->maybe_unused = builder::Command::MU_ALWAYS;
-                copy_cmd->command_storage = builder::Command::CS_LOCAL;
-                cmds.insert(copy_cmd);
+                std::function<void(const TargetSettings &)> process_deps;
+                process_deps = [this, &copy_file, &process_deps](const auto &s)
+                {
+                    for (auto &[k, v] : s["dependencies"]["link"].getSettings())
+                    {
+                        auto i = getTargets().find(PackageId(k));
+                        if (i == getTargets().end())
+                            throw SW_RUNTIME_ERROR("dep not found");
+                        auto j = i->second.findSuitable(v.getSettings());
+                        if (j == i->second.end())
+                            throw SW_RUNTIME_ERROR("dep+settings not found");
+
+                        const auto &s = (*j)->getInterfaceSettings();
+                        copy_file(s);
+                        process_deps(s);
+                    }
+                };
+
+                process_deps(s);
             };
 
             copy_file(s);
-
-            // copy
-            //if (nt->isLocal() &&
-                //nt->Scope == TargetScope::Build && nt->OutputDir.empty() && !nt->createWindowsRpath())
-            {
-                for (auto &[k,v] : s["dependencies"]["link"].getSettings())
-                {
-                    auto i = getTargets().find(PackageId(k));
-                    if (i == getTargets().end())
-                        throw SW_RUNTIME_ERROR("dep not found");
-                    auto j = i->second.findSuitable(v.getSettings());
-                    if (j == i->second.end())
-                        throw SW_RUNTIME_ERROR("dep+settings not found");
-
-                    const auto &s = (*j)->getInterfaceSettings();
-                    if (s["header_only"] == "true")
-                        continue;
-                    if (s["type"] != "native_shared_library")
-                        continue;
-                    copy_file(s);
-                }
-            }
         }
+    }
+
+    for (auto &[f, t] : copy_files)
+    {
+        //SW_MAKE_EXECUTE_BUILTIN_COMMAND(copy_cmd, *nt, "sw_copy_file", nullptr);
+        auto copy_cmd = std::make_shared<::sw::builder::ExecuteBuiltinCommand>(getContext(), "sw_copy_file", nullptr);
+        copy_cmd->arguments.push_back(f);
+        copy_cmd->arguments.push_back(t);
+        copy_cmd->addInput(f);
+        copy_cmd->addOutput(t);
+        //copy_cmd->dependencies.insert(nt->getCommand());
+        copy_cmd->name = "copy: " + normalize_path(t);
+        copy_cmd->maybe_unused = builder::Command::MU_ALWAYS;
+        copy_cmd->command_storage = builder::Command::CS_LOCAL;
+        cmds.insert(copy_cmd);
     }
 
     return cmds;
