@@ -132,7 +132,7 @@ static ::cl::opt<path> cl_self_upgrade_copy("internal-self-upgrade-copy", ::cl::
 extern std::map<sw::PackagePath, sw::Version> gUserSelectedPackages;
 static ::cl::list<String> cl_activate("activate", ::cl::desc("Activate specific packages"));
 
-extern ::cl::opt<bool> useFileMonitor;
+extern ::cl::opt<path> build_ide_fast_path;
 
 #define SUBCOMMAND(n, d) extern ::cl::SubCommand subcommand_##n;
 #include "command/commands.inl"
@@ -218,21 +218,30 @@ int setup_main(const Strings &args)
         //destroyConcurrentContext(context);
     };
 
+    if (!build_ide_fast_path.empty() && fs::exists(build_ide_fast_path))
+    {
+        auto files = read_lines(build_ide_fast_path);
+        uint64_t mtime = 0;
+        for (auto &f : files)
+        {
+            if (!fs::exists(f))
+                continue;
+            auto lwt = fs::last_write_time(f);
+            mtime ^= file_time_type2time_t(lwt);
+        }
+        path fmtime = build_ide_fast_path;
+        fmtime += ".t";
+        if (fs::exists(fmtime) && mtime == std::stoull(read_file(fmtime)))
+            return 0;
+        write_file(fmtime, std::to_string(mtime));
+    }
+
     // after everything
     std::unique_ptr<Executor> e;
-    //if (gIdeFastPath.empty())
     {
         e = std::make_unique<Executor>(select_number_of_threads(jobs));
         getExecutor(e.get());
     }
-
-    /*boost::asio::io_context io_service;
-    boost::asio::signal_set signals(io_service, SIGINT);
-    signals.async_wait([&e]()
-    {
-        e.stop();
-    });
-    io_service.run();*/
 
     // actual execution
     return sw_main(args);
@@ -274,8 +283,6 @@ int parse_main(int argc, char **argv)
         args.insert(args.end(), icbf_args.begin(), icbf_args.end());
         return jumppad_call(args);
     }
-
-    //useFileMonitor = false;
 
     //
     ::cl::ParseCommandLineOptions(args, overview);

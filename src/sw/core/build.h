@@ -97,6 +97,9 @@ private:
     TargetSettings build_settings;
     mutable BuildState state = BuildState::NotStarted;
 
+    // other data
+    mutable FilesSorted fast_path_files;
+
     void load(const std::vector<InputWithSettings> &inputs, bool set_eps);
     Commands getCommands() const;
     void loadPackages(const TargetMap &predefined);
