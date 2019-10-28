@@ -770,7 +770,7 @@ void ShellGenerator::generate(const SwBuild &b)
     }
     ctx.addLine();
 
-    auto &ctx_progs = ctx.addEmitter();
+    auto &ctx_progs = ctx.createInlineEmitter();
 
     ProgramShortCutter sc;
 
