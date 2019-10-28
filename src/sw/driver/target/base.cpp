@@ -224,8 +224,11 @@ void TargetBase::setupTarget(TargetBaseType *t) const
     t->DryRun = DryRun; // TODO: inherit from reconsider
 
     t->main_build_ = main_build_; // ok, take from here (this, parent)
-    t->current_project = current_project; // ok, take from here (this, parent)
     t->command_storage = command_storage; // ok, take from here (this, parent)
+
+    t->current_project = current_project; // ok, take from here (this, parent)
+    if (!t->current_project)
+        t->current_project = t;
 }
 
 Build &TargetBase::getSolution()

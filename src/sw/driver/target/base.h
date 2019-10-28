@@ -82,7 +82,7 @@ protected:
 
     // projects and dirs go here
     std::vector<TargetBaseTypePtr> dummy_children;
-    const ProjectTarget *current_project = nullptr;
+    const Target *current_project = nullptr;
 };
 
 struct SW_DRIVER_CPP_API TargetBase : TargetBaseData
