@@ -45,6 +45,8 @@ String toPathString(GeneratorType t)
         return "ninja";
     case GeneratorType::Batch:
         return "batch";
+    case GeneratorType::CMake:
+        return "cmake";
     case GeneratorType::Make:
         return "make";
     case GeneratorType::NMake:
@@ -89,6 +91,8 @@ static String toString(GeneratorType t)
         return "Batch";
     case GeneratorType::Make:
         return "Make";
+    case GeneratorType::CMake:
+        return "CMake";
     case GeneratorType::NMake:
         return "NMake";
     case GeneratorType::Shell:
@@ -130,6 +134,8 @@ static GeneratorType fromString(const String &s)
         return GeneratorType::Ninja;
     else if (boost::iequals(s, "Make") || boost::iequals(s, "Makefile"))
         return GeneratorType::Make;
+    else if (boost::iequals(s, "CMake"))
+        return GeneratorType::CMake;
     else if (boost::iequals(s, "NMake"))
         return GeneratorType::NMake;
     else if (boost::iequals(s, "Batch"))
@@ -178,6 +184,9 @@ std::unique_ptr<Generator> Generator::create(const String &s)
     case GeneratorType::Ninja:
         g = std::make_unique<NinjaGenerator>();
         break;
+    case GeneratorType::CMake:
+        g = std::make_unique<CMakeGenerator>();
+        break;
     case GeneratorType::NMake:
     case GeneratorType::Make:
         g = std::make_unique<MakeGenerator>();
@@ -196,13 +205,18 @@ std::unique_ptr<Generator> Generator::create(const String &s)
         g = std::make_unique<CompilationDatabaseGenerator>();
         break;
     case GeneratorType::SwExecutionPlan:
-        g = std::make_unique<SwExecutionPlan>();
+        g = std::make_unique<SwExecutionPlanGenerator>();
         break;
     default:
         SW_UNIMPLEMENTED;
     }
     g->type = t;
     return g;
+}
+
+path Generator::getRootDirectory(const sw::SwBuild &b) const
+{
+    return path(SW_BINARY_DIR) / "g" / toPathString(getType()) / b.getHash();
 }
 
 struct ProgramShortCutter1
@@ -274,7 +288,7 @@ struct ProgramShortCutter
         // print programs
         print_progs(sc);
         ctx.emptyLines();
-        print_progs(sc_generated);
+        //print_progs(sc_generated);
         ctx.emptyLines();
     }
 
@@ -441,13 +455,13 @@ private:
     }
 };
 
-void NinjaGenerator::generate(const SwBuild &swctx)
+void NinjaGenerator::generate(const SwBuild &b)
 {
     // https://ninja-build.org/manual.html#_writing_your_own_ninja_files
 
-    const auto dir = path(SW_BINARY_DIR) / toPathString(getType()) / swctx.getHash();
+    const auto dir = getRootDirectory(b);
 
-    NinjaEmitter ctx(swctx, dir);
+    NinjaEmitter ctx(b, dir);
     write_file(dir / "build.ninja", ctx.getText());
 }
 
@@ -649,7 +663,7 @@ void MakeGenerator::generate(const SwBuild &b)
     // https://www.gnu.org/software/make/manual/html_node/index.html
     // https://en.wikipedia.org/wiki/Make_(software)
 
-    const auto d = fs::absolute(path(SW_BINARY_DIR) / toPathString(getType()) / b.getHash());
+    const auto d = getRootDirectory(b);
 
     auto ep = b.getExecutionPlan();
 
@@ -687,9 +701,59 @@ void MakeGenerator::generate(const SwBuild &b)
     write_file(d / commands_fn, ctx.getText());
 }
 
+void CMakeGenerator::generate(const sw::SwBuild &b)
+{
+    SW_UNIMPLEMENTED;
+
+    LOG_WARN(logger, "CMake generator is very experimental and subtle.");
+
+    const auto d = getRootDirectory(b);
+
+    auto ep = b.getExecutionPlan();
+
+    primitives::Emitter ctx;
+
+    ctx.addLine("cmake_minimum_required(VERSION 3.12.0)");
+    ctx.addLine("project("s + "x" + " ASM C CXX)");
+
+    for (auto &[pkg, tgts] : b.getTargetsToBuild())
+    {
+        if (tgts.empty())
+        {
+            continue;
+            //throw SW_RUNTIME_ERROR("No targets in " + pkg.toString());
+        }
+        // filter out predefined targets
+        if (b.getContext().getPredefinedTargets().find(pkg) != b.getContext().getPredefinedTargets().end())
+            continue;
+
+        auto &t = **tgts.begin();
+        const auto &s = t.getInterfaceSettings();
+
+        if (s["type"] == "native_executable")
+            ctx.addLine("add_executable(" + pkg.toString() + ")");
+        else
+        {
+            ctx.addLine("add_library(" + pkg.toString() + " ");
+
+            // tgt
+            auto st = "STATIC";
+            if (s["type"] == "native_static_library")
+                ;
+            else if (s["type"] == "native_shared_library")
+                st = "SHARED";
+            if (s["header_only"] == "true")
+                st = "INTERFACE";
+            ctx.addText(st + ")"s);
+        }
+    }
+
+    write_file(d / "CMakeLists.txt", ctx.getText());
+}
+
 void ShellGenerator::generate(const SwBuild &b)
 {
-    const auto d = path(SW_BINARY_DIR) / toPathString(getType()) / b.getHash();
+    const auto d = getRootDirectory(b);
 
     auto ep = b.getExecutionPlan();
 
@@ -791,7 +855,7 @@ void CompilationDatabaseGenerator::generate(const SwBuild &b)
         ".c", ".cpp", ".cxx", ".c++", ".cc", ".CPP", ".C++", ".CXX", ".C", ".CC"
     };
 
-    const auto d = path(SW_BINARY_DIR) / toPathString(getType()) / b.getHash();
+    const auto d = getRootDirectory(b);
 
     auto p = b.getExecutionPlan();
 
@@ -823,9 +887,9 @@ void CompilationDatabaseGenerator::generate(const SwBuild &b)
     write_file(d / "compile_commands.json", j.dump(2));
 }
 
-void SwExecutionPlan::generate(const sw::SwBuild &b)
+void SwExecutionPlanGenerator::generate(const sw::SwBuild &b)
 {
-    const auto d = path(SW_BINARY_DIR) / toPathString(getType()) / b.getHash();
+    const auto d = getRootDirectory(b);
     auto fn = path(d) += ".explan";
     fs::create_directories(d.parent_path());
 

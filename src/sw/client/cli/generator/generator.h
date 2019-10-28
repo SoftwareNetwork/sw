@@ -62,6 +62,8 @@ struct Generator
     static std::unique_ptr<Generator> create(const String &s);
     GeneratorType getType() const { return type; }
 
+    path getRootDirectory(const sw::SwBuild &) const;
+
 private:
     GeneratorType type;
 };
@@ -78,6 +80,11 @@ struct VSGenerator : Generator
 struct NinjaGenerator : Generator
 {
     void generate(const sw::SwBuild &) override;
+};
+
+struct CMakeGenerator : Generator
+{
+    void generate(const sw::SwBuild &b) override;
 };
 
 struct MakeGenerator : Generator
@@ -97,7 +104,7 @@ struct CompilationDatabaseGenerator : Generator
     void generate(const sw::SwBuild &b) override;
 };
 
-struct SwExecutionPlan : Generator
+struct SwExecutionPlanGenerator : Generator
 {
     void generate(const sw::SwBuild &b) override;
 };
