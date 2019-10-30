@@ -82,7 +82,7 @@ protected:
 
     // projects and dirs go here
     std::vector<TargetBaseTypePtr> dummy_children;
-    const Target *current_project = nullptr;
+    std::optional<PackageId> current_project;
 };
 
 struct SW_DRIVER_CPP_API TargetBase : TargetBaseData
@@ -308,6 +308,8 @@ public:
 
     const TargetSettings &getTargetSettings() const { return getSettings(); }
     const BuildSettings &getBuildSettings() const;
+
+    const TargetSettings &getOptions() const { return getSettings()["options"].getSettings(); }
 
     //
     Commands getCommands() const;

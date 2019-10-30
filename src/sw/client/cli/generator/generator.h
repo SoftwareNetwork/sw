@@ -44,6 +44,7 @@ enum class GeneratorType
     VisualStudio,
 
     SwExecutionPlan,
+    SwBuildDescription, // simply BDesc?
 };
 
 enum class VsGeneratorType
@@ -105,6 +106,11 @@ struct CompilationDatabaseGenerator : Generator
 };
 
 struct SwExecutionPlanGenerator : Generator
+{
+    void generate(const sw::SwBuild &b) override;
+};
+
+struct SwBuildDescriptionGenerator : Generator
 {
     void generate(const sw::SwBuild &b) override;
 };

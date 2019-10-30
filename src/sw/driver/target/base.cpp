@@ -119,7 +119,7 @@ bool Target::hasSameProject(const ITarget &t) const
         return false;
     return
         current_project && t2->current_project &&
-        current_project->getPackage() == t2->current_project->getPackage();
+        current_project == t2->current_project;
 }
 
 PackagePath TargetBase::constructTargetName(const PackagePath &Name) const
@@ -228,7 +228,7 @@ void TargetBase::setupTarget(TargetBaseType *t) const
 
     t->current_project = current_project; // ok, take from here (this, parent)
     if (!t->current_project)
-        t->current_project = t;
+        t->current_project = t->getPackage();
 }
 
 Build &TargetBase::getSolution()
@@ -786,7 +786,7 @@ path Target::getFile(const DependencyPtr &dep, const path &fn)
 
 bool ProjectTarget::init()
 {
-    current_project = this;
+    current_project = getPackage();
     return Target::init();
 }
 

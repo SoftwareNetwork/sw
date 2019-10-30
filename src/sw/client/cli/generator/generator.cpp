@@ -57,6 +57,8 @@ String toPathString(GeneratorType t)
         return "compdb";
     case GeneratorType::SwExecutionPlan:
         return "swexplan";
+    case GeneratorType::SwBuildDescription:
+        return "swbdesc";
     default:
         throw SW_LOGIC_ERROR("not implemented");
     }
@@ -101,6 +103,8 @@ static String toString(GeneratorType t)
         return "CompDB";
     case GeneratorType::SwExecutionPlan:
         return "Sw Execution Plan";
+    case GeneratorType::SwBuildDescription:
+        return "Sw Build Description";
     default:
         throw SW_LOGIC_ERROR("not implemented");
     }
@@ -146,6 +150,8 @@ static GeneratorType fromString(const String &s)
         return GeneratorType::CompilationDatabase;
     else if (boost::iequals(s, "SwExPlan"))
         return GeneratorType::SwExecutionPlan;
+    else if (boost::iequals(s, "SwBDesc"))
+        return GeneratorType::SwBuildDescription;
     //else if (boost::iequals(s, "qtc"))
     //return GeneratorType::qtc;
     throw SW_RUNTIME_ERROR("Unknown generator: " + s);
@@ -206,6 +212,9 @@ std::unique_ptr<Generator> Generator::create(const String &s)
         break;
     case GeneratorType::SwExecutionPlan:
         g = std::make_unique<SwExecutionPlanGenerator>();
+        break;
+    case GeneratorType::SwBuildDescription:
+        g = std::make_unique<SwBuildDescriptionGenerator>();
         break;
     default:
         SW_UNIMPLEMENTED;
@@ -895,4 +904,34 @@ void SwExecutionPlanGenerator::generate(const sw::SwBuild &b)
 
     auto ep = b.getExecutionPlan();
     ep.save(fn);
+}
+
+void SwBuildDescriptionGenerator::generate(const sw::SwBuild &b)
+{
+    const auto d = getRootDirectory(b);
+    auto fn = path(d) += ".json";
+    fs::create_directories(d.parent_path());
+
+    nlohmann::json j;
+    for (auto &[pkg, tgts] : b.getTargets())
+    {
+        if (tgts.empty())
+        {
+            continue;
+            //throw SW_RUNTIME_ERROR("No targets in " + pkg.toString());
+        }
+        // filter out predefined targets
+        if (b.getContext().getPredefinedTargets().find(pkg) != b.getContext().getPredefinedTargets().end())
+            continue;
+
+        for (auto &t : tgts)
+        {
+            nlohmann::json j1;
+            // rename to settings?
+            j1["key"] = nlohmann::json::parse(t->getSettings().toString());
+            j1["value"] = nlohmann::json::parse(t->getInterfaceSettings().toString());
+            j[pkg.toString()].push_back(j1);
+        }
+    }
+    write_file(fn, j.dump(4));
 }
