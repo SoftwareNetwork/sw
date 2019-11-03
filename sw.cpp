@@ -76,6 +76,7 @@ void build(Solution &s)
             "pub.egorpugin.primitives.log-master"_dep;
         ProtobufData d;
         d.public_protobuf = true;
+        d.addIncludeDirectory(protos.SourceDir / "src");
         for (auto &[p, _] : protos["src/sw/protocol/.*\\.proto"_rr])
             gen_grpc_cpp("org.sw.demo.google.protobuf"_dep, "org.sw.demo.google.grpc.cpp.plugin"_dep, protos, p, d);
     }
