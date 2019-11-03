@@ -1433,7 +1433,7 @@ SolutionEmitter &SolutionEmitter::addDirectory(const InsecurePath &n, const Stri
 
     addLine("Project(\"" + project_type_uuids[VSProjectType::Directory] + "\") = \"" +
         display_name + "\", \"" + display_name + "\", \"{" + uuids[n] + "}\"");
-    auto &e = addEmitter<SolutionEmitter>();
+    auto &e = createInlineEmitter<SolutionEmitter>();
     addLine("EndProject");
 
     if (!solution_dir.empty())
@@ -1464,7 +1464,7 @@ void SolutionEmitter::beginProject(VSProjectType type, const String &n, const pa
     beginBlock("Project(\"" + project_type_uuids[type] + "\") = \"" +
         p.ppath.back() + (has_dash ? "-" + p.version.toString() : "") + "\", \"" + (dir / (n + vs_project_ext)).u8string() + "\", \"{" + uuids[n] + "}\"");
 
-    projects[n].ctx = &addEmitter<SolutionEmitter>();
+    projects[n].ctx = &createInlineEmitter<SolutionEmitter>();
 
     if (!solution_dir.empty())
         nested_projects[n] = solution_dir;
