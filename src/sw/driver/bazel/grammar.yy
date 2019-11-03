@@ -202,7 +202,7 @@ expr: identifier
     }*/
     | keyword expr
 	{ /*$$ = $1;*/ }
-    | keyword expr COLON
+    | expr COLON
 	{ /*$$ = $1;*/ }
 	;
 
