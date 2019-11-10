@@ -93,7 +93,8 @@ void run(const LocalPackage &pkg, primitives::Command &c)
         throw SW_RUNTIME_ERROR("Cannot load Userenv.dll");
     auto create_app = (CreateAppF)GetProcAddress(userenv, "CreateAppContainerProfile");
     auto derive_app = (DeriveAppF)GetProcAddress(userenv, "DeriveAppContainerSidFromAppContainerName");
-    gRunAppInContainer &= create_app && derive_app;
+    if (gRunAppInContainer && !(create_app && derive_app))
+        throw SW_RUNTIME_ERROR("Cannot launch app in container");
 
     do
     {
