@@ -40,7 +40,7 @@ DEFINE_SUBCOMMAND(uri, "Used to invoke sw application from the website.");
 
 static ::cl::list<String> uri_args(::cl::Positional, ::cl::desc("sw uri arguments"), ::cl::sub(subcommand_uri));
 
-#define F_ARGS sw::SwContext &swctx, sw::LocalStorage &sdb, const sw::LocalPackage &p
+#define F_ARGS std::unique_ptr<sw::SwContext> swctx, sw::LocalStorage &sdb, const sw::LocalPackage &p
 #ifdef _MSC_VER
 #define F(n, ...) static void n(F_ARGS, __VA_ARGS__)
 #else
@@ -102,7 +102,7 @@ F(install)
     {
         SetupConsole();
         bUseSystemPause = true;
-        swctx.install(sw::UnresolvedPackages{ sw::UnresolvedPackage{p.getPath(), p.getVersion()} });
+        swctx->install(sw::UnresolvedPackages{ sw::UnresolvedPackage{p.getPath(), p.getVersion()} });
     }
     else
     {
@@ -122,11 +122,11 @@ F(build)
     SetupConsole();
     bUseSystemPause = true;
 #endif
-    auto d = swctx.getLocalStorage().storage_dir_tmp / "build";// / fs::unique_path();
+    auto d = swctx->getLocalStorage().storage_dir_tmp / "build";// / fs::unique_path();
     fs::create_directories(d);
     ScopedCurrentPath scp(d, CurrentPathScope::All);
-    auto b = swctx.createBuild();
-    sw::InputWithSettings i(swctx.addInput(p));
+    auto b = swctx->createBuild();
+    sw::InputWithSettings i(swctx->addInput(p));
     b->addInput(i);
     b->build();
 }
@@ -137,7 +137,7 @@ F(run)
     SetupConsole();
     bUseSystemPause = true;
 #endif
-    auto d = swctx.getLocalStorage().storage_dir_tmp / "build";// / fs::unique_path();
+    auto d = swctx->getLocalStorage().storage_dir_tmp / "build";// / fs::unique_path();
     fs::create_directories(d);
     ScopedCurrentPath scp(d, CurrentPathScope::All);
     SW_UNIMPLEMENTED;
@@ -149,7 +149,7 @@ F(upload)
     if (uri_args.size() != 4)
         throw SW_RUNTIME_ERROR("Bad upload args");
 
-    auto rs = swctx.getRemoteStorages();
+    auto rs = swctx->getRemoteStorages();
     if (rs.empty())
         throw SW_RUNTIME_ERROR("No remote storages found");
 
@@ -167,14 +167,14 @@ F(upload)
     SCOPE_EXIT
     {
         // free files
-        swctx.clearFileStorages();
+        swctx.reset();
         fs::remove_all(fn.parent_path());
     };
 
     // run secure as below?
     ScopedCurrentPath scp(fn.parent_path());
     gUploadPrefix = pkg.getPath().slice(0, std::stoi(uri_args[3]));
-    cli_upload(swctx);
+    cli_upload(*swctx);
 
     /*primitives::Command c;
     c.program = "sw";
@@ -194,20 +194,20 @@ static void dispatcher()
     sw::LocalPackage p(sdb, id);
 
 #ifdef _MSC_VER
-#define URI_CMD2(x, f, ...)             \
-    if (uri_args[0] == "sw:" #x)        \
-    {                                   \
-        f(*swctx, sdb, p, __VA_ARGS__); \
-        return;                         \
+#define URI_CMD2(x, f, ...)                       \
+    if (uri_args[0] == "sw:" #x)                  \
+    {                                             \
+        f(std::move(swctx), sdb, p, __VA_ARGS__); \
+        return;                                   \
     }
 #define URI_CMD(x, ...) \
     URI_CMD2(x, x, __VA_ARGS__)
 #else
-#define URI_CMD2(x, f, ...)               \
-    if (uri_args[0] == "sw:" #x)          \
-    {                                     \
-        f(*swctx, sdb, p, ##__VA_ARGS__); \
-        return;                           \
+#define URI_CMD2(x, f, ...)                         \
+    if (uri_args[0] == "sw:" #x)                    \
+    {                                               \
+        f(std::move(swctx), sdb, p, ##__VA_ARGS__); \
+        return;                                     \
     }
 #define URI_CMD(x, ...) \
     URI_CMD2(x, x, ##__VA_ARGS__)
