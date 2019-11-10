@@ -377,13 +377,68 @@ Commands SwBuild::getCommands() const
     if (targets_to_build.empty())
         throw SW_RUNTIME_ERROR("no targets were selected for building");
 
+    auto ttb = targets_to_build;
+
+    // detect all targets to build
+    // some static builds won't build deps, because there's no dependent link files
+    // (e.g. build static png, zlib won't be built)
+    for (auto &[p, tgts] : targets_to_build)
+    {
+        // one target may be loaded twice
+        // we take only the latest, because it is has correct set of command deps per requested settings
+        std::map<TargetSettings, ITarget*> latest_targets;
+        for (auto &tgt : tgts)
+            latest_targets[tgt->getSettings()] = tgt.get();
+
+        for (auto &[_, tgt] : latest_targets)
+        {
+            // copy output files
+            const auto &s = tgt->getInterfaceSettings();
+
+            std::function<void(const TargetSettings &)> copy_file;
+            copy_file = [this, &copy_file, &ttb](const auto &s) mutable
+            {
+                if (s["header_only"] == "true")
+                    return;
+
+                if (!(s["type"] == "native_shared_library" || s["type"] == "native_static_library" || s["type"] == "native_executable"))
+                    return;
+
+                std::function<void(const TargetSettings &)> process_deps;
+                process_deps = [this, &copy_file, &process_deps, &ttb](const auto &s) mutable
+                {
+                    for (auto &[k, v] : s["dependencies"]["link"].getSettings())
+                    {
+                        auto i = getTargets().find(PackageId(k));
+                        if (i == getTargets().end())
+                            throw SW_RUNTIME_ERROR("dep not found");
+                        auto j = i->second.findSuitable(v.getSettings());
+                        if (j == i->second.end())
+                            throw SW_RUNTIME_ERROR("dep+settings not found");
+
+                        ttb[PackageId(k)].push_back(*j);
+
+                        const auto &s = (*j)->getInterfaceSettings();
+                        copy_file(s);
+                        process_deps(s);
+                    }
+                };
+
+                process_deps(s);
+            };
+
+            copy_file(s);
+        }
+    }
+
+    //
     auto cl_show_output = build_settings["show_output"] == "true";
     auto cl_write_output_to_file = build_settings["write_output_to_file"] == "true";
     path copy_dir = build_settings["build_ide_copy_to_dir"].isValue() ? build_settings["build_ide_copy_to_dir"].getValue() : "";
     std::unordered_map<path, path> copy_files;
 
     Commands cmds;
-    for (auto &[p, tgts] : targets_to_build)
+    for (auto &[p, tgts] : ttb)
     {
         // one target may be loaded twice
         // we take only the latest, because it is has correct set of command deps per requested settings
@@ -422,16 +477,16 @@ Commands SwBuild::getCommands() const
                 path il = s["import_library"].isValue() ? s["import_library"].getValue() : "";
                 fast_path_files.insert(il);
 
-                if (s["type"] != "native_shared_library")
-                    return;
-
-                auto o = copy_dir / in.filename();
-                //auto o = nt->getOutputDir() / dt->OutputDir;
-                //o /= in.filename();
-                if (in == o)
-                    return;
-                copy_files[in] = o;
-                fast_path_files.insert(o);
+                if (s["type"] == "native_shared_library")
+                {
+                    auto o = copy_dir / in.filename();
+                    //auto o = nt->getOutputDir() / dt->OutputDir;
+                    //o /= in.filename();
+                    if (in == o)
+                        return;
+                    copy_files[in] = o;
+                    fast_path_files.insert(o);
+                }
 
                 std::function<void(const TargetSettings &)> process_deps;
                 process_deps = [this, &copy_file, &process_deps](const auto &s)

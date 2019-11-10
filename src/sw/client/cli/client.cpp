@@ -222,18 +222,25 @@ int setup_main(const Strings &args)
     {
         auto files = read_lines(build_ide_fast_path);
         uint64_t mtime = 0;
+        bool missing = false;
         for (auto &f : files)
         {
             if (!fs::exists(f))
-                continue;
+            {
+                missing = true;
+                break;
+            }
             auto lwt = fs::last_write_time(f);
             mtime ^= file_time_type2time_t(lwt);
         }
-        path fmtime = build_ide_fast_path;
-        fmtime += ".t";
-        if (fs::exists(fmtime) && mtime == std::stoull(read_file(fmtime)))
-            return 0;
-        write_file(fmtime, std::to_string(mtime));
+        if (!missing)
+        {
+            path fmtime = build_ide_fast_path;
+            fmtime += ".t";
+            if (fs::exists(fmtime) && mtime == std::stoull(read_file(fmtime)))
+                return 0;
+            write_file(fmtime, std::to_string(mtime));
+        }
     }
 
     // after everything

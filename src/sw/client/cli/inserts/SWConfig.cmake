@@ -53,8 +53,12 @@ endfunction()
 function(sw_execute)
     message(STATUS "sw: processing dependencies")
 
-    if (SW_FORCE)
-        set(SW_FORCE -s)
+    #if (SW_FORCE)
+        #set(SW_FORCE -s)
+    #endif()
+
+    if (NOT SW_BUILD_SHARED_LIBS)
+        set(SW_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
     endif()
 
     set(stsh -static)
@@ -101,6 +105,11 @@ function(sw_execute)
             integrate
             -cmake-deps "${SW_DEPS_FILE}"
     )
+
+    if (SW_DEBUG_CMAKE)
+        string(REPLACE ";" " " swcmd1 "${swcmd}")
+        message("${swcmd1}")
+    endif()
 
     execute_process(
         COMMAND ${swcmd}
