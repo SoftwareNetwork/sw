@@ -34,6 +34,22 @@ bool gRunAppInContainer;
 
 #include <vector>
 
+using CreateAppF =
+HRESULT
+(WINAPI*)(
+    _In_ PCWSTR pszAppContainerName,
+    _In_ PCWSTR pszDisplayName,
+    _In_ PCWSTR pszDescription,
+    _In_reads_opt_(dwCapabilityCount) PSID_AND_ATTRIBUTES pCapabilities,
+    _In_ DWORD dwCapabilityCount,
+    _Outptr_ PSID* ppSidAppContainerSid);
+
+using DeriveAppF =
+HRESULT
+(WINAPI*)(
+    _In_ PCWSTR pszAppContainerName,
+    _Outptr_ PSID *ppsidAppContainerSid);
+
 namespace sw
 {
 
@@ -71,16 +87,24 @@ void run(const LocalPackage &pkg, primitives::Command &c)
 
     String err(1024, 0);
 
+    // fix win7 startup
+    auto userenv = LoadLibrary(L"Userenv.dll");
+    if (!userenv)
+        throw SW_RUNTIME_ERROR("Cannot load Userenv.dll");
+    auto create_app = (CreateAppF)GetProcAddress(userenv, "CreateAppContainerProfile");
+    auto derive_app = (DeriveAppF)GetProcAddress(userenv, "DeriveAppContainerSidFromAppContainerName");
+    gRunAppInContainer &= create_app && derive_app;
+
     do
     {
         if (gRunAppInContainer)
         {
-            auto result = CreateAppContainerProfile(container_name, pkg_name, container_desc, NULL, 0, &sid);
+            auto result = create_app(container_name, pkg_name, container_desc, NULL, 0, &sid);
             if (!SUCCEEDED(result))
             {
                 if (HRESULT_CODE(result) == ERROR_ALREADY_EXISTS)
                 {
-                    result = DeriveAppContainerSidFromAppContainerName(container_name, &sid);
+                    result = derive_app(container_name, &sid);
                     if (!SUCCEEDED(result))
                     {
                         snprintf(err.data(), err.size(), "Failed to get existing AppContainer name, error code: %d", HRESULT_CODE(result));
