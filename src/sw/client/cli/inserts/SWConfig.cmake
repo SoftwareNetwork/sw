@@ -8,8 +8,8 @@ mark_as_advanced(SW_EXECUTABLE)
 
 ########################################
 
-set(SW_DEPS_DIR ${CMAKE_BINARY_DIR}/.sw/cmake CACHE STRING "SW local deps dir.")
-set(SW_DEPS_FILE ${SW_DEPS_DIR}/sw.txt CACHE STRING "SW local deps file.")
+set(SW_DEPS_DIR "${CMAKE_BINARY_DIR}/.sw/cmake" CACHE STRING "SW local deps dir.")
+set(SW_DEPS_FILE "${SW_DEPS_DIR}/sw.txt" CACHE STRING "SW local deps file.")
 
 file(WRITE ${SW_DEPS_FILE} "")
 
@@ -129,9 +129,9 @@ function(sw_execute)
 
     set(outdir)
     if (CMAKE_RUNTIME_OUTPUT_DIRECTORY)
-        set(outdir ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+        set(outdir "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
     else()
-        set(outdir ${CMAKE_BINARY_DIR})
+        set(outdir "${CMAKE_BINARY_DIR}")
     endif()
 
     set(append_config 0)
@@ -143,11 +143,14 @@ function(sw_execute)
         set(append_config 1)
     endif()
     if (append_config)
-        set(outdir ${outdir}/$<CONFIG>)
+        set(outdir "${outdir}/$<CONFIG>")
     endif()
 
     string(SHA1 depshash "${sw_platform_args}")
     string(SUBSTRING "${depshash}" 0 8 depshash)
+
+    set(SW_DEPS_DIR_CFG_STORAGE "${SW_DEPS_DIR}/deps")
+    execute_process(COMMAND ${CMAKE_COMMAND} -E remove_directory "${SW_DEPS_DIR_CFG_STORAGE}")
 
     # add deps targets
     add_custom_target(sw_build_dependencies ALL
@@ -162,9 +165,9 @@ function(sw_execute)
                     $<$<CONFIG:Release>:r>
                 build @${SW_DEPS_FILE}
                 -ide-copy-to-dir
-                    ${outdir}
+                    "${outdir}"
                 -ide-fast-path
-                    ${SW_DEPS_DIR}/$<CONFIG>-${depshash}.deps
+                    "${SW_DEPS_DIR_CFG_STORAGE}/$<CONFIG>-${depshash}.deps"
     )
     set_target_properties(sw_build_dependencies
         PROPERTIES
