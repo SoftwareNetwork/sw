@@ -35,26 +35,28 @@ upgrade - upgrade installed pkgs
 self-upgrade - upgrade the client. implement via upgrade?
 */
 
-SUBCOMMAND(build, "") COMMA
-SUBCOMMAND(configure, "") COMMA
-SUBCOMMAND(create, "") COMMA
-SUBCOMMAND(generate, "") COMMA
-SUBCOMMAND(fetch, "") COMMA
+SUBCOMMAND(build) COMMA
+SUBCOMMAND(b) COMMA // alias for build
+SUBCOMMAND(configure) COMMA
+SUBCOMMAND(create) COMMA
+SUBCOMMAND(generate) COMMA
+SUBCOMMAND(fetch) COMMA
 //SUBCOMMAND(ide, "Used to invoke sw application to do IDE tasks: generate project files, clean, rebuild etc.") COMMA
-SUBCOMMAND(install, "") COMMA
-SUBCOMMAND(integrate, "") COMMA
-SUBCOMMAND(list, "") COMMA
-SUBCOMMAND(open, "") COMMA
-SUBCOMMAND(override, "") COMMA
+SUBCOMMAND(install) COMMA
+SUBCOMMAND(i) COMMA // alias for install
+SUBCOMMAND(integrate) COMMA
+SUBCOMMAND(list) COMMA
+SUBCOMMAND(open) COMMA
+SUBCOMMAND(override) COMMA
 //SUBCOMMAND(mirror, "Manage software mirrors.") COMMA
 //SUBCOMMAND(pack, "Used to prepare distribution packages.") COMMA
-SUBCOMMAND(remote, "") COMMA
-SUBCOMMAND(remove, "") COMMA
-SUBCOMMAND(setup, "") COMMA
-SUBCOMMAND(test, "") COMMA
-SUBCOMMAND(update, "") COMMA
-SUBCOMMAND(upload, "") COMMA
-SUBCOMMAND(uri, "") COMMA
+SUBCOMMAND(remote) COMMA
+SUBCOMMAND(remove) COMMA
+SUBCOMMAND(setup) COMMA
+SUBCOMMAND(test) COMMA
+SUBCOMMAND(update) COMMA
+SUBCOMMAND(upload) COMMA
+SUBCOMMAND(uri) COMMA
 
 #ifdef SW_COMMA_SELF
 #undef COMMA

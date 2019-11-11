@@ -33,11 +33,18 @@ struct StorageWithPackagesDatabase;
 
 #define SUBCOMMAND_DECL(n) void cli_##n()
 #define SUBCOMMAND_DECL2(n) void cli_##n(sw::SwContext &swctx)
-#define SUBCOMMAND(n, d) SUBCOMMAND_DECL(n); SUBCOMMAND_DECL2(n);
+#define SUBCOMMAND(n) SUBCOMMAND_DECL(n); SUBCOMMAND_DECL2(n);
 #include "commands.inl"
 #undef SUBCOMMAND
 
 #define DEFINE_SUBCOMMAND(n, d) ::cl::SubCommand subcommand_##n(#n, d)
+
+#define DEFINE_SUBCOMMAND_ALIAS(command, alias)          \
+    DEFINE_SUBCOMMAND(alias, "Alias for " #command "."); \
+    SUBCOMMAND_DECL(alias)                               \
+    {                                                    \
+        cli_##command();                                 \
+    }
 
 std::unique_ptr<sw::SwContext> createSwContext();
 std::unique_ptr<sw::SwBuild> createBuild(sw::SwContext &);

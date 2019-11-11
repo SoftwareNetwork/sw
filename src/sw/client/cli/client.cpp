@@ -134,7 +134,7 @@ static ::cl::list<String> cl_activate("activate", ::cl::desc("Activate specific 
 
 extern ::cl::opt<path> build_ide_fast_path;
 
-#define SUBCOMMAND(n, d) extern ::cl::SubCommand subcommand_##n;
+#define SUBCOMMAND(n) extern ::cl::SubCommand subcommand_##n;
 #include "command/commands.inl"
 #undef SUBCOMMAND
 
@@ -393,7 +393,7 @@ int sw_main(const Strings &args)
     }*/
 
     if (0);
-#define SUBCOMMAND(n, d) else if (subcommand_##n) { cli_##n(); return 0; }
+#define SUBCOMMAND(n) else if (subcommand_##n) { cli_##n(); return 0; }
 #include "command/commands.inl"
 #undef SUBCOMMAND
 

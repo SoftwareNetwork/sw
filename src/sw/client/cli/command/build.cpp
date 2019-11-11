@@ -26,7 +26,8 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "build");
 
-DEFINE_SUBCOMMAND(build, "Build files, dirs or packages");
+DEFINE_SUBCOMMAND(build, "Build files, dirs or packages.");
+DEFINE_SUBCOMMAND_ALIAS(build, b)
 
 extern ::cl::opt<bool> build_after_fetch;
 
