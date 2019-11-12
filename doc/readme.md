@@ -3,7 +3,7 @@
 ## Quick Start
 
 1. Download the latest client application, unpack and put it to PATH.
-1. (optional) Run once `sw init` from any directory to perform extended configuration. Requires administartor rights.
+1. (optional) Run once `sw setup` from any directory to perform extended configuration. Requires administartor rights.
 1. Create project config or build script named `sw.cpp`.
 
 Report if anything goes wrong with this workflow!
