@@ -12,6 +12,7 @@
 
 #include <sw/core/input.h>
 #include <sw/core/sw_context.h>
+#include <sw/manager/storage.h>
 
 #include <boost/algorithm/string.hpp>
 #include <primitives/sw/cl.h>
@@ -157,28 +158,33 @@ String Driver::getSpecification(const RawInput &i) const
     }
 }
 
-// not in template, because it will have two copies there
-static PackageIdSet getBuiltinPackages(SwContext &swctx)
+PackageIdSet Driver::getBuiltinPackages(SwContext &swctx) const
 {
-    static const auto pkgs = [&swctx]()
+    if (!builtin_packages)
     {
-        return build_self(swctx);
-    }();
-    return pkgs;
+        std::unique_lock lk(m_bp);
+        builtin_packages = build_self(swctx);
+    }
+    return *builtin_packages;
 }
 
 template <class T>
 std::shared_ptr<PrepareConfigEntryPoint> Driver::build_configs1(SwContext &swctx, const T &objs) const
 {
-    auto b = swctx.createBuild();
+    /*SwContext ctx(swctx.getLocalStorage().storage_dir);
+    for (auto &[p, d] : swctx.getDrivers())
+        ctx.registerDriver(p, std::make_unique<::sw::driver::cpp::Driver>());*/
+    auto &ctx = swctx;
 
-    auto ts = swctx.getHostSettings();
+    auto b = ctx.createBuild();
+
+    auto ts = ctx.getHostSettings();
     ts["native"]["library"] = "static";
     if (debug_configs)
         ts["native"]["configuration"] = "debug";
 
     // before load packages!
-    for (auto &p : getBuiltinPackages(swctx))
+    for (auto &p : getBuiltinPackages(ctx))
         b->addKnownPackage(p);
 
     auto ep = std::make_shared<PrepareConfigEntryPoint>(objs);
@@ -199,6 +205,8 @@ std::shared_ptr<PrepareConfigEntryPoint> Driver::build_configs1(SwContext &swctx
     b->loadPackages();
     b->prepare();
     b->execute();
+
+    //ctx.clearFileStorages();
 
     return ep;
 }

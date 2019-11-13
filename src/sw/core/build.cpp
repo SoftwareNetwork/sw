@@ -258,15 +258,18 @@ void SwBuild::loadPackages(const TargetMap &predefined)
 
             auto tgts = swctx.getTargetData(d.first).loadPackages(*this, s, known_packages);
             //swctx.getTargetData(d.first).loadPackages(*this, s, { d.first });
+
+            bool added = false;
             for (auto &tgt : tgts)
             {
                 if (tgt->getSettings()["dry-run"] == "true")
                     continue;
                 getTargets()[tgt->getPackage()].push_back(tgt);
+                added = true;
             }
 
             auto k = d.second->findSuitable(s);
-            if (k == d.second->end())
+            if (k == d.second->end() || !added)
             {
                 throw SW_RUNTIME_ERROR("cannot load package " + d.first.toString() + " with current settings\n" + s.toString());
             }

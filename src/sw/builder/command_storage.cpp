@@ -83,7 +83,8 @@ Files CommandRecord::getImplicitInputs(detail::Storage &s) const
             throw SW_RUNTIME_ERROR("no such file");
         auto p = i->second;
         lk.unlock();
-        files.insert(p);
+        if (!p.empty())
+            files.insert(p);
     }
     return files;
 }

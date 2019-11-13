@@ -30,7 +30,7 @@ namespace sw
 
 PackageIdSet build_self(SwContext &swctx)
 {
-    static UnresolvedPackages required_packages
+    static const UnresolvedPackages required_packages
     {
 #include <build_self.packages.generated.h>
     };

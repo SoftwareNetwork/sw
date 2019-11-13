@@ -61,6 +61,11 @@ private:
 
     template <class T>
     std::shared_ptr<PrepareConfigEntryPoint> build_configs1(SwContext &, const T &objs) const;
+
+    //
+    mutable std::mutex m_bp;
+    mutable std::optional<PackageIdSet> builtin_packages;
+    PackageIdSet getBuiltinPackages(SwContext &swctx) const;
 };
 
 std::optional<path> findConfig(const path &dir, const FilesOrdered &fe_s);

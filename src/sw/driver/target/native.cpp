@@ -212,7 +212,8 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
 {
     auto &cld = getSolution().getChildren();
 
-    auto i = cld.find(id, getSettings());
+    auto oss = getSettings()["os"].getSettings();
+    auto i = cld.find(id, oss);
     if (!i)
     {
         for (auto &e : exts)
@@ -373,7 +374,8 @@ std::shared_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetS
 {
     auto &cld = getSolution().getChildren();
 
-    auto i = cld.find(id, getSettings());
+    auto oss = getSettings()["os"].getSettings();
+    auto i = cld.find(id, oss);
     if (!i)
         return {};
     auto t = i->as<PredefinedProgram*>();

@@ -83,6 +83,8 @@ TargetSetting &TargetSetting::operator=(const TargetSetting &rhs)
 {
     key = rhs.key;
     value = rhs.value;
+    required = rhs.required;
+    use_count = rhs.use_count;
     return *this;
 }
 
@@ -376,7 +378,17 @@ const TargetSetting &TargetSettings::operator[](const TargetSettingKey &k) const
 
 bool TargetSettings::operator==(const TargetSettings &rhs) const
 {
-    return settings == rhs.settings;
+    for (auto &[k, v] : rhs.settings)
+    {
+        if (v.value.index() == 0)
+            continue;
+        auto i = settings.find(k);
+        if (i == settings.end())
+            return false;
+        if (i->second != v)
+            return false;
+    }
+    return true;
 }
 
 bool TargetSettings::operator<(const TargetSettings &rhs) const

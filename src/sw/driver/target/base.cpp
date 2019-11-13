@@ -199,8 +199,17 @@ TargetBase &TargetBase::addChild(const TargetBaseTypePtr &t)
         return *t;
     }
 
+    bool dummy = false;
+    auto it = getSolution().getMainBuild().getTargets().find(t->getPackage());
+    if (it != getSolution().getMainBuild().getTargets().end())
+    {
+        auto i = it->second.findEqual(t->ts);
+        dummy = i != it->second.end();
+    }
+
     // we do not activate targets that are not selected for current builds
-    if (/*!isLocal() && */!getSolution().isKnownTarget(t->getPackage()))
+    if (/*!isLocal() && */
+        dummy || !getSolution().isKnownTarget(t->getPackage()))
     {
         t->DryRun = true;
         t->ts["dry-run"] = "true";
