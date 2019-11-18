@@ -380,11 +380,13 @@ bool TargetSettings::operator==(const TargetSettings &rhs) const
 {
     for (auto &[k, v] : rhs.settings)
     {
-        if (v.value.index() == 0)
-            continue;
         auto i = settings.find(k);
         if (i == settings.end())
+        {
+            if (v.value.index() == 0)
+                continue;
             return false;
+        }
         if (i->second != v)
             return false;
     }
@@ -399,8 +401,8 @@ bool TargetSettings::operator<(const TargetSettings &rhs) const
 int TargetSettings::compareEqualKeys(const TargetSettings &lhs, const TargetSettings &rhs)
 {
     // at the moment we check if smaller set is subset of bigger one
-    const auto &main = lhs.settings.size() < rhs.settings.size() ? lhs : rhs;
-    const auto &other = lhs.settings.size() >= rhs.settings.size() ? lhs : rhs;
+    const auto &main = lhs.settings.size() <= rhs.settings.size() ? lhs : rhs;
+    const auto &other = lhs.settings.size() > rhs.settings.size() ? lhs : rhs;
     bool r = std::all_of(main.settings.begin(), main.settings.end(), [&other](const auto &p)
     {
         if (

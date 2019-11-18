@@ -34,6 +34,7 @@ bool gRunAppInContainer;
 
 #include <vector>
 
+#ifdef _WIN32
 using CreateAppF =
 HRESULT
 (WINAPI*)(
@@ -49,6 +50,7 @@ HRESULT
 (WINAPI*)(
     _In_ PCWSTR pszAppContainerName,
     _Outptr_ PSID *ppsidAppContainerSid);
+#endif
 
 namespace sw
 {

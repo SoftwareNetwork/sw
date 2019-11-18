@@ -171,11 +171,7 @@ PackageIdSet Driver::getBuiltinPackages(SwContext &swctx) const
 template <class T>
 std::shared_ptr<PrepareConfigEntryPoint> Driver::build_configs1(SwContext &swctx, const T &objs) const
 {
-    /*SwContext ctx(swctx.getLocalStorage().storage_dir);
-    for (auto &[p, d] : swctx.getDrivers())
-        ctx.registerDriver(p, std::make_unique<::sw::driver::cpp::Driver>());*/
     auto &ctx = swctx;
-
     auto b = ctx.createBuild();
 
     auto ts = ctx.getHostSettings();
@@ -205,8 +201,6 @@ std::shared_ptr<PrepareConfigEntryPoint> Driver::build_configs1(SwContext &swctx
     b->loadPackages();
     b->prepare();
     b->execute();
-
-    //ctx.clearFileStorages();
 
     return ep;
 }

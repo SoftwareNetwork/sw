@@ -268,8 +268,12 @@ void SwBuild::loadPackages(const TargetMap &predefined)
                 added = true;
             }
 
+            // assert in fact
+            if (!added)
+                throw SW_LOGIC_ERROR("no packages loaded " + d.first.toString() + " with current settings\n" + s.toString());
+
             auto k = d.second->findSuitable(s);
-            if (k == d.second->end() || !added)
+            if (k == d.second->end())
             {
                 throw SW_RUNTIME_ERROR("cannot load package " + d.first.toString() + " with current settings\n" + s.toString());
             }
@@ -419,6 +423,9 @@ Commands SwBuild::getCommands() const
                         if (j == i->second.end())
                             throw SW_RUNTIME_ERROR("dep+settings not found");
 
+                        auto m = ttb[PackageId(k)].findEqual((*j)->getSettings());
+                        if (m != ttb[PackageId(k)].end())
+                            continue;
                         ttb[PackageId(k)].push_back(*j);
 
                         const auto &s = (*j)->getInterfaceSettings();
