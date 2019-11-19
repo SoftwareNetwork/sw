@@ -60,4 +60,14 @@ const ModuleStorage::DynamicLibrary &ModuleStorage::get(const path &dll)
     }
 }
 
+ModuleStorage::~ModuleStorage()
+{
+#ifndef _WIN32
+    // leave modules loaded for now
+    // TODO: re-consider c++ stdlib linkage
+    for (auto &[k, v] : modules)
+        v.release();
+#endif
+}
+
 }
