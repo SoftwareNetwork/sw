@@ -826,7 +826,7 @@ void GNULibrarian::prepareCommand1(const Target &t)
     //((GNULibraryTool*)this)->GNULibraryToolOptions::LinkDirectories() = gatherLinkDirectories();
 
     getCommandLineOptions<GNULibrarianOptions>(cmd.get(), *this);
-    addEverything(*cmd);
+    //addEverything(*cmd); // actually librarian does not need LINK options
     //getAdditionalOptions(cmd.get());
 }
 

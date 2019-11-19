@@ -163,7 +163,13 @@ int main(int argc, char **argv)
     getExecutor(&e);
 
     SwManagerContext swctx(Settings::get_user_settings().storage_dir);
-    auto m = swctx.install({{SW_TARGET}});
+    auto m = swctx.install({
+        // our main cpp driver target
+        {SW_TARGET},
+
+        // other needed stuff (libcxx)
+        {"org.sw.demo.llvm_project.libcxx"},
+    });
 
     write_required_packages(m);
     write_build_script(m);

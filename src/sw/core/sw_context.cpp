@@ -126,6 +126,7 @@ void SwCoreContext::setHostPrograms()
         {
             throw SW_RUNTIME_ERROR(err_msg("clang"));
         }
+        ts["native"]["stdlib"]["cpp"] = "org.sw.demo.llvm_project.libcxx";
 #elif defined(__GNUC__)
         if (!(
             if_add(ts["native"]["program"]["c"], "org.gnu.gcc") &&
