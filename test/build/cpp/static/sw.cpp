@@ -1,11 +1,11 @@
-void configure(Solution &s)
+/*void configure(Solution &s)
 {
     auto &s1 = s.addSolution();
     s1.Settings.Native.LibrariesType = LibraryType::Static;
 
     auto &s2 = s.addSolution();
     s2.Settings.Native.LibrariesType = LibraryType::Shared;
-}
+}*/
 
 void build(Solution &s)
 {
