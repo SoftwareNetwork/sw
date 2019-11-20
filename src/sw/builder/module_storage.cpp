@@ -62,22 +62,9 @@ const ModuleStorage::DynamicLibrary &ModuleStorage::get(const path &dll)
 
 ModuleStorage::~ModuleStorage()
 {
-    if (!std::uncaught_exceptions())
-        return;
-
-    // exception might come from module, so copy it
-    auto eptr = std::current_exception();
-    try
+    if (std::uncaught_exceptions())
     {
-        std::rethrow_exception(eptr);
-    }
-    catch (std::exception e) // copy
-    {
-        throw e;
-    }
-    catch (...)
-    {
-        LOG_ERROR(logger, "Unknown exception was thrown from one of the modules");
+        LOG_DEBUG(logger, "Exception might be thrown from one of the modules, so not unloading them");
 
         // unknown exception, cannot copy, so do not unload
         for (auto &[k, v] : modules)
