@@ -62,12 +62,27 @@ const ModuleStorage::DynamicLibrary &ModuleStorage::get(const path &dll)
 
 ModuleStorage::~ModuleStorage()
 {
-#ifndef _WIN32
-    // leave modules loaded for now
-    // TODO: re-consider c++ stdlib linkage
-    for (auto &[k, v] : modules)
-        v.release();
-#endif
+    if (!std::uncaught_exceptions())
+        return;
+
+    // exception might come from module, so copy it
+    auto eptr = std::current_exception();
+    try
+    {
+        std::rethrow_exception(eptr);
+    }
+    catch (std::exception e) // copy
+    {
+        throw e;
+    }
+    catch (...)
+    {
+        LOG_ERROR(logger, "Unknown exception was thrown from one of the modules");
+
+        // unknown exception, cannot copy, so do not unload
+        for (auto &[k, v] : modules)
+            v.release();
+    }
 }
 
 }
