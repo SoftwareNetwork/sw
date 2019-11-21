@@ -30,7 +30,7 @@
 #include <primitives/sw/cl.h>
 #include <primitives/sw/settings_program_name.h>
 
-#include <iostream>
+#include <regex>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "command");
@@ -1279,6 +1279,40 @@ path resolveExecutable(const FilesOrdered &paths)
             return e;
     }
     return path();
+}
+
+std::map<path, String> &getMsvcIncludePrefixes()
+{
+    static std::map<path, String> prefixes;
+    return prefixes;
+}
+
+void detectMsvcPrefix(builder::detail::ResolvableCommand c, const path &idir)
+{
+    auto &p = getMsvcIncludePrefixes();
+    if (!p[c.getProgram()].empty())
+        return;
+
+    String contents = "#include <iostream>\r\nint dummy;";
+    auto fn = get_temp_filename("cliprefix") += ".cpp";
+    write_file(fn, contents);
+    c.push_back("/showIncludes");
+    c.push_back("/c");
+    c.push_back(fn);
+    c.push_back("/I");
+    c.push_back(idir);
+    std::error_code ec;
+    c.execute(ec);
+
+    auto lines = split_lines(c.out.text);
+    if (lines.size() < 2)
+        throw SW_RUNTIME_ERROR("Cannot match vs include prefix (bad output)");
+
+    static std::regex r(R"((.*\s)[a-zA-Z]:\\.*iostream)");
+    std::smatch m;
+    if (!std::regex_search(lines[1], m, r))
+        throw SW_RUNTIME_ERROR("Cannot match vs include prefix");
+    p[c.getProgram()] = m[1].str();
 }
 
 } // namespace sw

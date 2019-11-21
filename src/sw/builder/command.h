@@ -332,6 +332,12 @@ path resolveExecutable(const path &p);
 SW_BUILDER_API
 path resolveExecutable(const FilesOrdered &paths);
 
+SW_BUILDER_API
+std::map<path, String> &getMsvcIncludePrefixes();
+
+SW_BUILDER_API
+void detectMsvcPrefix(builder::detail::ResolvableCommand c, const path &idir);
+
 } // namespace sw
 
 namespace std

@@ -391,6 +391,7 @@ void detectMsvc15Plus(DETECT_ARGS)
             }
 
             root = root / "Tools" / "MSVC" / boost::trim_copy(read_file(root / "Auxiliary" / "Build" / "Microsoft.VCToolsVersion.default.txt"));
+            auto idir = root / "include";
 
             // get suffix
             auto target = toStringWindows(target_arch);
@@ -414,6 +415,7 @@ void detectMsvc15Plus(DETECT_ARGS)
                     auto c = p->getCommand();
                     if (s.getHostOs().Arch != target_arch)
                         c->addPathDirectory(host_root);
+                    detectMsvcPrefix(*c, idir);
                     // run getVersion via prepared command
                     builder::detail::ResolvableCommand c2 = *c;
                     v = getVersion(s, c2);
@@ -471,7 +473,7 @@ void detectMsvc15Plus(DETECT_ARGS)
             {
                 auto &libcpp = addTarget<PredefinedTarget>(s, PackageId("com.Microsoft.VisualStudio.VC.libcpp", v));
                 libcpp.ts = ts;
-                libcpp.public_ts["system-include-directories"].push_back(normalize_path(root / "include"));
+                libcpp.public_ts["system-include-directories"].push_back(normalize_path(idir));
                 libcpp.public_ts["system-link-directories"].push_back(normalize_path(root / "lib" / target));
 
                 if (fs::exists(root / "ATLMFC" / "include"))
@@ -543,6 +545,7 @@ void detectMsvc14AndOlder(DETECT_ARGS)
                 continue;
 
             root /= "VC";
+            auto idir = root / "include";
 
             // get suffix
             auto target = toStringWindows14AndOlder(target_arch);
@@ -589,6 +592,7 @@ void detectMsvc14AndOlder(DETECT_ARGS)
                     auto c = p->getCommand();
                     if (s.getHostOs().Arch != target_arch)
                         c->addPathDirectory(host_root);
+                    detectMsvcPrefix(*c, idir);
                     // run getVersion via prepared command
                     builder::detail::ResolvableCommand c2 = *c;
                     v = getVersion(s, c2);
@@ -646,7 +650,7 @@ void detectMsvc14AndOlder(DETECT_ARGS)
             {
                 auto &libcpp = addTarget<PredefinedTarget>(s, PackageId("com.Microsoft.VisualStudio.VC.libcpp", v));
                 libcpp.ts = ts;
-                libcpp.public_ts["system-include-directories"].push_back(normalize_path(root / "include"));
+                libcpp.public_ts["system-include-directories"].push_back(normalize_path(idir));
                 libcpp.public_ts["system-link-directories"].push_back(normalize_path(root / libdir));
 
                 if (fs::exists(root / "ATLMFC" / "include"))

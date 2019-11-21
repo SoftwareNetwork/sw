@@ -149,9 +149,17 @@ void VSCommand::postProcess1(bool)
     // so we can't skip this filtering
 
     // filter out includes and file name
-    static const auto pattern = "Note: including file:"s;
+    // but locales!
+    // "Note: including file: filename\r" (english)
+    // "Some: other lang: filename\r"
+    // "Some: other lang  filename\r" (ita)
+    auto &p = getMsvcIncludePrefixes();
+    auto i = p.find(getProgram());
+    if (i == p.end())
+        throw SW_RUNTIME_ERROR("Cannot find msvc prefix");
+    auto &prefix = i->second;
 
-    auto perform = [this](auto &text)
+    auto perform = [this, &prefix](auto &text)
     {
         std::deque<String> lines;
         boost::split(lines, text, boost::is_any_of("\n"));
@@ -161,15 +169,12 @@ void VSCommand::postProcess1(bool)
 
         for (auto &line : lines)
         {
-            auto p = line.find(pattern);
-            if (p != 0)
-            {
-                text += line + "\n";
+            if (line.find(prefix) != 0)
                 continue;
-            }
-            auto include = line.substr(pattern.size());
+            auto include = line.substr(prefix.size());
             boost::trim(include);
-            addImplicitInput(include);
+            //if (fs::exists(include)) // slow check? but correct?
+                addImplicitInput(include);
         }
     };
 
@@ -258,7 +263,8 @@ void GNUCommand::postProcess1(bool ok)
             f3 = toupper(f3[0]) + ":" + f3.substr(1);
         }
 #endif
-        addImplicitInput(f3);
+        //if (fs::exists(f3))
+            addImplicitInput(f3);
     }
 }
 
