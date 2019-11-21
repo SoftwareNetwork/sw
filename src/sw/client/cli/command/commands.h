@@ -55,5 +55,4 @@ sw::TargetSettings createInitialSettings(const sw::SwContext &);
 std::vector<sw::TargetSettings> createSettings(sw::SwContext &);
 std::unique_ptr<sw::SwBuild> setBuildArgsAndCreateBuildAndPrepare(sw::SwContext &, const Strings &inputs);
 std::unique_ptr<sw::SwBuild> createBuildAndPrepare(sw::SwContext &);
-std::map<sw::PackagePath, sw::VersionSet> getMatchingPackages(const sw::StorageWithPackagesDatabase &, const sw::UnresolvedPackage &);
-sw::PackageIdSet getMatchingPackagesSet(const sw::StorageWithPackagesDatabase &, const sw::UnresolvedPackage &);
+std::map<sw::PackagePath, sw::VersionSet> getMatchingPackages(const sw::StorageWithPackagesDatabase &, const String &unresolved_arg);

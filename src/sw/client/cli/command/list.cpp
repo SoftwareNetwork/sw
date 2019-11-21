@@ -28,9 +28,12 @@ DEFINE_SUBCOMMAND(list, "List packages in database.");
 
 static ::cl::opt<String> list_arg(::cl::Positional, ::cl::desc("Package regex to list"), ::cl::init("."), ::cl::sub(subcommand_list));
 
-std::map<sw::PackagePath, sw::VersionSet> getMatchingPackages(const sw::StorageWithPackagesDatabase &s, const sw::UnresolvedPackage &u)
+std::map<sw::PackagePath, sw::VersionSet> getMatchingPackages(const sw::StorageWithPackagesDatabase &s, const String &arg)
 {
     auto &db = s.getPackagesDatabase();
+
+    bool has_version = arg.find('-') != arg.npos;
+    sw::UnresolvedPackage u(arg);
 
     auto ppaths = db.getMatchingPackages(u.getPath().toString());
     if (ppaths.empty())
@@ -42,22 +45,11 @@ std::map<sw::PackagePath, sw::VersionSet> getMatchingPackages(const sw::StorageW
         auto v1 = db.getVersionsForPackage(ppath);
         for (auto &v : v1)
         {
-            if (u.getRange().hasVersion(v))
+            if (!has_version || u.getRange().hasVersion(v))
                 r[ppath].insert(v);
         }
     }
     return r;
-}
-
-sw::PackageIdSet getMatchingPackagesSet(const sw::StorageWithPackagesDatabase &s, const sw::UnresolvedPackage &u)
-{
-    sw::PackageIdSet p;
-    for (auto &[ppath, versions] : getMatchingPackages(s, u))
-    {
-        for (auto &v : versions)
-            p.emplace(ppath, v);
-    }
-    return p;
 }
 
 SUBCOMMAND_DECL(list)
@@ -68,7 +60,6 @@ SUBCOMMAND_DECL(list)
         throw SW_RUNTIME_ERROR("No remote storages found");
 
     auto &s = static_cast<sw::StorageWithPackagesDatabase &>(*rs.front());
-
     auto r = getMatchingPackages(s, list_arg);
     if (r.empty())
     {

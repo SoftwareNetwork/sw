@@ -27,6 +27,17 @@ DEFINE_SUBCOMMAND(remove, "Remove package.");
 
 static ::cl::list<String> remove_arg(::cl::Positional, ::cl::desc("package to remove"), ::cl::sub(subcommand_remove));
 
+static sw::PackageIdSet getMatchingPackagesSet(const sw::StorageWithPackagesDatabase &s, const String &unresolved_pkg)
+{
+    sw::PackageIdSet p;
+    for (auto &[ppath, versions] : getMatchingPackages(s, unresolved_pkg))
+    {
+        for (auto &v : versions)
+            p.emplace(ppath, v);
+    }
+    return p;
+}
+
 SUBCOMMAND_DECL(remove)
 {
     auto swctx = createSwContext();
