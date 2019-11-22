@@ -73,50 +73,65 @@ std::vector<const Storage *> SwManagerContext::getRemoteStorages() const
     return r;
 }
 
-std::unordered_map<UnresolvedPackage, PackagePtr> SwManagerContext::resolve(const UnresolvedPackages &pkgs) const
+std::unordered_map<UnresolvedPackage, PackagePtr> SwManagerContext::resolve(const UnresolvedPackages &in_pkgs) const
 {
-    if (pkgs.empty())
+    if (in_pkgs.empty())
         return {};
 
     std::lock_guard lk(resolve_mutex);
 
     std::unordered_map<UnresolvedPackage, PackagePtr> resolved;
-    auto pkgs2 = pkgs;
-    // when there's new unresolved package available,
-    // we must start from the beginning of storages!!!
+    auto upkgs = in_pkgs;
     while (1)
     {
-        bool again = false;
-        for (const auto &[i, s] : enumerate(storages))
+        std::unordered_map<UnresolvedPackage, PackagePtr> resolved_step;
+        for (auto &p : upkgs)
         {
-            UnresolvedPackages unresolved;
-            auto rpkgs = s->resolveWithDependencies(pkgs2, unresolved);
-            again = !unresolved.empty() && pkgs2 != unresolved;
-            resolved.merge(rpkgs);
-            pkgs2 = std::move(unresolved);
-            if (pkgs2.empty())
-                break;
-            if (again)
-                break;
+            if (resolved.find(p) != resolved.end())
+                continue;
+
+            // select the best candidate from all storages first
+            // (later we'll have security selector also - what signature matches)
+
+            PackagePtr pkg;
+            for (const auto &[i, s] : enumerate(storages))
+            {
+                UnresolvedPackages unresolved;
+                auto r = s->resolve({ p }, unresolved);
+                if (r.empty())
+                    continue; // not found in this storage
+                if (p.getRange().isBranch())
+                {
+                    // when we found a branch, we stop, because following storages cannot give us more preferable branch
+                    // TODO: change this when security is on
+                    // (following storages cold give us suitable (signed) branch)
+                    pkg = std::move(r.begin()->second);
+                    break;
+                }
+                if (!pkg || r.begin()->second->getVersion() > pkg->getVersion())
+                {
+                    pkg = std::move(r.begin()->second);
+                }
+            }
+            if (!pkg)
+                throw SW_RUNTIME_ERROR("Package '" + p.toString() + "' is not resolved");
+
+            resolved_step[p] = std::move(pkg);
         }
-        if (pkgs2.empty())
+
+        if (resolved_step.empty())
             break;
-        if (!again)
-            break;
+
+        // gather deps
+        upkgs.clear(); // clear current unresolved pkgs
+        for (auto &[u, p] : resolved_step)
+            upkgs.insert(p->getData().dependencies.begin(), p->getData().dependencies.end());
+
+        resolved.merge(resolved_step);
     }
 
     // save existing results
     getCachedStorage().store(resolved);
-
-    if (!pkgs2.empty())
-    {
-        String s;
-        for (auto &d : pkgs2)
-            s += d.toString() + ", ";
-        if (!s.empty())
-            s.resize(s.size() - 2);
-        throw SW_RUNTIME_ERROR("Some packages (" + std::to_string(pkgs2.size()) + ") are unresolved: " + s);
-    }
 
     return resolved;
 }
