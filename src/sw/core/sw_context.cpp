@@ -28,6 +28,8 @@ SwCoreContext::SwCoreContext(const path &local_storage_root_dir)
     detectCompilers(*this);
     // after detection
     setHostPrograms();
+
+    LOG_TRACE(logger, "Host configuration: " + getHostSettings().toString());
 }
 
 SwCoreContext::~SwCoreContext()

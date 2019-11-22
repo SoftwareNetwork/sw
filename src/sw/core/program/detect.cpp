@@ -884,6 +884,8 @@ static void detectWindowsSdk(DETECT_ARGS)
                 wk.kit_root = kr;
                 if (k == "8.1")
                     wk.ldir_subversion = "winv6.3";
+                else if (k == "8.0")
+                    wk.ldir_subversion = "Win8";
                 else
                     LOG_DEBUG(logger, "TODO: Windows Kit " + k + " is not implemented yet. Report this issue.");
                 wk.idirs.push_back("shared");
@@ -897,6 +899,8 @@ static void detectWindowsSdk(DETECT_ARGS)
                 wk.kit_root = kr;
                 if (k == "8.1")
                     wk.ldir_subversion = "winv6.3";
+                else if (k == "8.0")
+                    wk.ldir_subversion = "Win8";
                 else
                     LOG_DEBUG(logger, "TODO: Windows Kit " + k + " is not implemented yet. Report this issue.");
                 wk.add(s, new_settings, k);
