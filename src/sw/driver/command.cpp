@@ -170,7 +170,10 @@ void VSCommand::postProcess1(bool)
         for (auto &line : lines)
         {
             if (line.find(prefix) != 0)
+            {
+                text += line + "\n";
                 continue;
+            }
             auto include = line.substr(prefix.size());
             boost::trim(include);
             //if (fs::exists(include)) // slow check? but correct?
