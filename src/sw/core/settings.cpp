@@ -171,18 +171,6 @@ bool TargetSetting::operator<(const TargetSetting &rhs) const
     return value < rhs.value;
 }
 
-int TargetSetting::compareEqualKeys(const TargetSetting &lhs, const TargetSetting &rhs)
-{
-    auto lv = std::get_if<TargetSettings>(&lhs.value);
-    auto rv = std::get_if<TargetSettings>(&rhs.value);
-    if (lv && rv)
-        return TargetSettings::compareEqualKeys(*lv, *rv);
-    bool r = lhs.value == rhs.value;
-    if (r)
-        return 0;
-    return 1; // -1 is not implemented at the moment
-}
-
 void TargetSetting::merge(const TargetSetting &rhs)
 {
     auto s = std::get_if<TargetSettings>(&value);
@@ -398,42 +386,31 @@ bool TargetSettings::operator<(const TargetSettings &rhs) const
     return settings < rhs.settings;
 }
 
-int TargetSettings::compareEqualKeys(const TargetSettings &lhs, const TargetSettings &rhs)
+bool TargetSettings::isSubsetOf(const TargetSettings &s) const
 {
-    // at the moment we check if smaller set is subset of bigger one
-    const auto &main = lhs.settings.size() <= rhs.settings.size() ? lhs : rhs;
-    const auto &other = lhs.settings.size() > rhs.settings.size() ? lhs : rhs;
-    bool r = std::all_of(main.settings.begin(), main.settings.end(), [&other](const auto &p)
+    for (auto &[k, v] : settings)
     {
-        if (
-            // compare if both is present
-            (other[p.first] && p.second)
+        // value is missing -> ok
+        if (v.value.index() == 0)
+            continue;
 
-            // or one is present and required
-            || (other[p.first] && other[p.first].isRequired())
-            || (p.second && p.second.isRequired())
-            )
+        auto i = s.settings.find(k);
+        if (i == s.settings.end() || i->second.value.index() == 0)
+            return false;
+
+        auto lv = std::get_if<TargetSettings>(&v.value);
+        auto rv = std::get_if<TargetSettings>(&i->second.value);
+        if (lv && rv)
         {
-            return TargetSetting::compareEqualKeys(other[p.first], p.second) == 0;
+            if (!lv->isSubsetOf(*rv))
+                return false;
+            continue;
         }
-        return true;
-    });
-    // check required settings in other
-    r &= std::all_of(other.settings.begin(), other.settings.end(), [&main](const auto &p)
-    {
-        if (
-            // compare if any is required
-            (p.second && p.second.isRequired()) ||
-            (main[p.first] && main[p.first].isRequired())
-            )
-        {
-            return TargetSetting::compareEqualKeys(main[p.first], p.second) == 0;
-        }
-        return true;
-    });
-    if (r)
-        return 0;
-    return 1; // -1 is not implemented at the moment
+
+        if (i->second != v)
+            return false;
+    }
+    return true;
 }
 
 void TargetSettings::merge(const TargetSettings &rhs)

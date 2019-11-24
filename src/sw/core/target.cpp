@@ -68,7 +68,7 @@ TargetContainer::Base::iterator TargetContainer::findSuitable(const TargetSettin
 {
     return std::find_if(begin(), end(), [&s](const auto &t)
     {
-        return TargetSettings::compareEqualKeys(t->getSettings(), s) == 0;
+        return t->getSettings().isSubsetOf(s);
     });
 }
 
@@ -76,7 +76,7 @@ TargetContainer::Base::const_iterator TargetContainer::findSuitable(const Target
 {
     return std::find_if(begin(), end(), [&s](const auto &t)
     {
-        return TargetSettings::compareEqualKeys(t->getSettings(), s) == 0;
+        return t->getSettings().isSubsetOf(s);
     });
 }
 

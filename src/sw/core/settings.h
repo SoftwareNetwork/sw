@@ -61,7 +61,7 @@ struct SW_CORE_API TargetSettings
 
     bool operator==(const TargetSettings &) const;
     bool operator<(const TargetSettings &) const;
-    static int compareEqualKeys(const TargetSettings &lhs, const TargetSettings &rhs);
+    bool isSubsetOf(const TargetSettings &) const;
 
     auto begin() { return settings.begin(); }
     auto end() { return settings.end(); }
@@ -100,7 +100,6 @@ struct SW_CORE_API TargetSetting
     bool operator==(const TargetSetting &) const;
     bool operator!=(const TargetSetting &) const;
     bool operator<(const TargetSetting &) const;
-    static int compareEqualKeys(const TargetSetting &lhs, const TargetSetting &rhs);
 
     template <class U>
     bool operator==(const U &u) const

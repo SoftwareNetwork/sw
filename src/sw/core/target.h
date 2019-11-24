@@ -102,13 +102,14 @@ struct SW_CORE_API TargetContainer
 {
     using Base = std::vector<ITargetPtr>;
 
-    // find equal settings
-    Base::iterator findEqual(const TargetSettings &s);
-    Base::const_iterator findEqual(const TargetSettings &s) const;
+    // find target with equal settings
+    Base::iterator findEqual(const TargetSettings &);
+    Base::const_iterator findEqual(const TargetSettings &) const;
 
-    //
-    Base::iterator findSuitable(const TargetSettings &s);
-    Base::const_iterator findSuitable(const TargetSettings &s) const;
+    // find target with equal subset of provided settings
+    // findEqualSubset()
+    Base::iterator findSuitable(const TargetSettings &);
+    Base::const_iterator findSuitable(const TargetSettings &) const;
 
     void push_back(const ITargetPtr &);
 
