@@ -64,8 +64,8 @@ TargetSettings toTargetSettings(const OS &o)
     SW_UNIMPLEMENTED;
     }*/
 
-    // no version at the moment
-    // it is not clear if it's needed
+    // we might not have sdk version installed
+    //s["os"]["version"] = o.Version.toString();
 
     return s;
 }

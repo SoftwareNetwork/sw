@@ -23,11 +23,7 @@ IDriver::~IDriver() = default;
 SwCoreContext::SwCoreContext(const path &local_storage_root_dir)
     : SwBuilderContext(local_storage_root_dir)
 {
-    // before detection
     createHostSettings();
-    detectCompilers(*this);
-    // after detection
-    setHostPrograms();
 
     LOG_TRACE(logger, "Host configuration: " + getHostSettings().toString());
 }
@@ -52,6 +48,9 @@ void SwCoreContext::createHostSettings()
 #endif
     ts["native"]["library"] = "shared";
     ts["native"]["mt"] = "false";
+
+    detectCompilers(*this);
+    setHostPrograms(); // after detection
 }
 
 // move this to driver?
@@ -66,6 +65,27 @@ void SwCoreContext::setHostPrograms()
         ts["native"]["stdlib"]["c"] = "com.Microsoft.Windows.SDK.ucrt";
         ts["native"]["stdlib"]["cpp"] = "com.Microsoft.VisualStudio.VC.libcpp";
         ts["native"]["stdlib"]["kernel"] = "com.Microsoft.Windows.SDK.um";
+
+        // now find the latest available sdk and select it
+        TargetSettings oss;
+        oss["os"] = ts["os"];
+        auto u = getPredefinedTargets().find(UnresolvedPackage("com.Microsoft.Windows.SDK.ucrt"));
+        if (u != getPredefinedTargets().end())
+        {
+            // NOTE: we also may want to allow take x86 on x64 later
+            if (!std::any_of(u->second.begin(), u->second.end(), [&oss, &ts](const auto &t)
+            {
+                if (oss.isSubsetOf(t->getSettings()))
+                {
+                    ts["os"]["version"] = t->getSettings()["os"]["version"];
+                    return true;
+                }
+                return false;
+            }))
+            {
+                throw SW_RUNTIME_ERROR("No suitable installed WinSDK found for this host");
+            }
+        }
 
         if (0);
 #ifdef _MSC_VER
