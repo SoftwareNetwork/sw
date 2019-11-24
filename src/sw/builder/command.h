@@ -336,7 +336,7 @@ SW_BUILDER_API
 std::map<path, String> &getMsvcIncludePrefixes();
 
 SW_BUILDER_API
-void detectMsvcPrefix(builder::detail::ResolvableCommand c, const path &idir);
+String detectMsvcPrefix(builder::detail::ResolvableCommand c, const path &idir);
 
 } // namespace sw
 

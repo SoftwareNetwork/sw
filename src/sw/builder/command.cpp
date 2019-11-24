@@ -1287,11 +1287,11 @@ std::map<path, String> &getMsvcIncludePrefixes()
     return prefixes;
 }
 
-void detectMsvcPrefix(builder::detail::ResolvableCommand c, const path &idir)
+String detectMsvcPrefix(builder::detail::ResolvableCommand c, const path &idir)
 {
     auto &p = getMsvcIncludePrefixes();
     if (!p[c.getProgram()].empty())
-        return;
+        return p[c.getProgram()];
 
     String contents = "#include <iostream>\r\nint dummy;";
     auto fn = get_temp_filename("cliprefix") += ".cpp";
@@ -1312,7 +1312,7 @@ void detectMsvcPrefix(builder::detail::ResolvableCommand c, const path &idir)
     std::smatch m;
     if (!std::regex_search(lines[1], m, r))
         throw SW_RUNTIME_ERROR("Cannot match vs include prefix");
-    p[c.getProgram()] = m[1].str();
+    return p[c.getProgram()] = m[1].str();
 }
 
 } // namespace sw

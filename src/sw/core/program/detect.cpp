@@ -118,7 +118,7 @@ struct PredefinedTarget : ITarget
     bool prepare() override { return false; }
     Commands getCommands() const override { return {}; }
 
-    const TargetSettings &getSettings() const override{ return ts; }
+    const TargetSettings &getSettings() const override { return ts; }
     const TargetSettings &getInterfaceSettings() const override { return public_ts; }
 };
 
@@ -406,6 +406,8 @@ void detectMsvc15Plus(DETECT_ARGS)
             // because ml,ml64,lib,link version (O) has O.Major = V.Major - 5
             // e.g., V = 19.21..., O = 14.21.... (19 - 5 = 14)
 
+            String msvc_prefix;
+
             // C, C++
             {
                 auto p = std::make_shared<SimpleProgram>(s);
@@ -415,7 +417,7 @@ void detectMsvc15Plus(DETECT_ARGS)
                     auto c = p->getCommand();
                     if (s.getHostOs().Arch != target_arch)
                         c->addPathDirectory(host_root);
-                    detectMsvcPrefix(*c, idir);
+                    msvc_prefix = detectMsvcPrefix(*c, idir);
                     // run getVersion via prepared command
                     builder::detail::ResolvableCommand c2 = *c;
                     v = getVersion(s, c2);
@@ -466,6 +468,7 @@ void detectMsvc15Plus(DETECT_ARGS)
                 {
                     auto &ml = addProgram(s, PackageId("com.Microsoft.VisualStudio.VC.ml", v), p);
                     ml.ts = ts;
+                    getMsvcIncludePrefixes()[p->file] = msvc_prefix;
                 }
             }
 
@@ -583,6 +586,8 @@ void detectMsvc14AndOlder(DETECT_ARGS)
             // because ml,ml64,lib,link version (O) has O.Major = V.Major - 5
             // e.g., V = 19.21..., O = 14.21.... (19 - 5 = 14)
 
+            String msvc_prefix;
+
             // C, C++
             {
                 auto p = std::make_shared<SimpleProgram>(s);
@@ -592,7 +597,7 @@ void detectMsvc14AndOlder(DETECT_ARGS)
                     auto c = p->getCommand();
                     if (s.getHostOs().Arch != target_arch)
                         c->addPathDirectory(host_root);
-                    detectMsvcPrefix(*c, idir);
+                    msvc_prefix = detectMsvcPrefix(*c, idir);
                     // run getVersion via prepared command
                     builder::detail::ResolvableCommand c2 = *c;
                     v = getVersion(s, c2);
@@ -643,6 +648,7 @@ void detectMsvc14AndOlder(DETECT_ARGS)
                 {
                     auto &ml = addProgram(s, PackageId("com.Microsoft.VisualStudio.VC.ml", v), p);
                     ml.ts = ts;
+                    getMsvcIncludePrefixes()[p->file] = msvc_prefix;
                 }
             }
 
