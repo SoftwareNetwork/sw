@@ -105,7 +105,7 @@ const TargetSetting &TargetSetting::operator[](const TargetSettingKey &k) const
 {
     if (value.index() != 3)
     {
-        static TargetSetting s("");
+        thread_local TargetSetting s("");
         return s;
     }
     return std::get<TargetSettings>(value)[k];
@@ -123,7 +123,7 @@ const std::vector<TargetSettingValue> &TargetSetting::getArray() const
 {
     if (value.index() == 0)
     {
-        static std::vector<TargetSettingValue> s;
+        thread_local std::vector<TargetSettingValue> s;
         return s;
     }
     auto v = std::get_if<std::vector<TargetSettingValue>>(&value);
@@ -150,7 +150,7 @@ const TargetSettings &TargetSetting::getSettings() const
     auto s = std::get_if<TargetSettings>(&value);
     if (!s)
     {
-        static const TargetSettings ts;
+        thread_local const TargetSettings ts;
         return ts;
     }
     return *s;
@@ -370,7 +370,7 @@ const TargetSetting &TargetSettings::operator[](const TargetSettingKey &k) const
     auto i = settings.find(k);
     if (i == settings.end())
     {
-        static TargetSetting s("");
+        thread_local TargetSetting s("");
         return s;
     }
     return i->second;
