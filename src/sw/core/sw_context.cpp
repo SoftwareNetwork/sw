@@ -69,23 +69,23 @@ void SwCoreContext::setHostPrograms()
         // now find the latest available sdk and select it
         TargetSettings oss;
         oss["os"] = ts["os"];
+        std::optional<Version> sdkver;
         auto u = getPredefinedTargets().find(UnresolvedPackage("com.Microsoft.Windows.SDK.ucrt"));
         if (u != getPredefinedTargets().end())
         {
             // NOTE: we also may want to allow take x86 on x64 later
-            if (!std::any_of(u->second.begin(), u->second.end(), [&oss, &ts](const auto &t)
+            for (auto &t : u->second)
             {
-                if (oss.isSubsetOf(t->getSettings()))
-                {
-                    ts["os"]["version"] = t->getSettings()["os"]["version"];
-                    return true;
-                }
-                return false;
-            }))
-            {
-                throw SW_RUNTIME_ERROR("No suitable installed WinSDK found for this host");
+                if (!oss.isSubsetOf(t->getSettings()))
+                    continue;
+                Version v(t->getSettings()["os"]["version"].getValue());
+                if (!sdkver || *sdkver < v)
+                    sdkver = v;
             }
         }
+        if (!sdkver)
+            throw SW_RUNTIME_ERROR("No suitable installed WinSDK found for this host");
+        ts["os"]["version"] = sdkver->toString();
 
         if (0);
 #ifdef _MSC_VER
