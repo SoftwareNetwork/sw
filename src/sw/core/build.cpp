@@ -268,14 +268,29 @@ void SwBuild::loadPackages(const TargetMap &predefined)
                 added = true;
             }
 
+            auto get_error = [&tgts, &s, d = d.first]()
+            {
+                String e;
+                e += d.toString() + " with current settings\n" + s.toString();
+                e += "\navailable targets:\n";
+                for (auto &tgt : tgts)
+                {
+                    if (tgt->getSettings()["dry-run"] == "true")
+                        continue;
+                    e += tgt->getSettings().toString() + "\n";
+                }
+                e.resize(e.size() - 1);
+                return e;
+            };
+
             // assert in fact
             if (!added)
-                throw SW_LOGIC_ERROR("no packages loaded " + d.first.toString() + " with current settings\n" + s.toString());
+                throw SW_LOGIC_ERROR("no packages loaded " + get_error());
 
             auto k = d.second->findSuitable(s);
             if (k == d.second->end())
             {
-                throw SW_RUNTIME_ERROR("cannot load package " + d.first.toString() + " with current settings\n" + s.toString());
+                throw SW_RUNTIME_ERROR("cannot load package " + get_error());
             }
         }
         if (!loaded)
