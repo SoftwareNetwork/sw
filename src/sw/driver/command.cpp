@@ -346,6 +346,11 @@ CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_out &t)
     all.insert(all.end(), cb.targets.begin(), cb.targets.end());
     all.insert(all.end(), t.targets.begin(), t.targets.end());
 
+    bool dry_run = std::all_of(all.begin(), all.end(), [](const auto &t)
+    {
+        return t->DryRun;
+    });
+
     for (auto p : t.files)
     {
         if (p.is_relative() && !all.empty())
@@ -354,7 +359,8 @@ CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_out &t)
 
         if (!cb.stopped)
             cb.c->arguments.push_back(t.prefix + (t.normalize ? normalize_path(p) : p.u8string()));
-        cb.c->addOutput(p);
+        if (!dry_run)
+            cb.c->addOutput(p);
         if (t.add_to_targets)
         {
             for (auto tgt : all)
@@ -400,12 +406,18 @@ CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_stdout &t)
     all.insert(all.end(), cb.targets.begin(), cb.targets.end());
     all.insert(all.end(), t.targets.begin(), t.targets.end());
 
+    bool dry_run = std::all_of(all.begin(), all.end(), [](const auto &t)
+    {
+        return t->DryRun;
+    });
+
     auto p = t.p;
     if (p.is_relative() && !all.empty())
         if (!all[0]->check_absolute(p, true))
             p = all[0]->BinaryDir / p;
 
-    cb.c->redirectStdout(p, t.append);
+    if (!dry_run)
+        cb.c->redirectStdout(p, t.append);
     if (t.add_to_targets)
     {
         for (auto tgt : all)
@@ -425,12 +437,18 @@ CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_stderr &t)
     all.insert(all.end(), cb.targets.begin(), cb.targets.end());
     all.insert(all.end(), t.targets.begin(), t.targets.end());
 
+    bool dry_run = std::all_of(all.begin(), all.end(), [](const auto &t)
+    {
+        return t->DryRun;
+    });
+
     auto p = t.p;
     if (p.is_relative() && !all.empty())
         if (!all[0]->check_absolute(p, true))
             p = all[0]->BinaryDir / p;
 
-    cb.c->redirectStderr(p, t.append);
+    if (!dry_run)
+        cb.c->redirectStderr(p, t.append);
     if (t.add_to_targets)
     {
         for (auto tgt : all)
