@@ -378,6 +378,18 @@ bool TargetSettings::operator==(const TargetSettings &rhs) const
         if (i->second != v)
             return false;
     }
+
+    // check the rest of this settings
+    for (auto &[k, v] : settings)
+    {
+        auto i = rhs.settings.find(k);
+        if (i == rhs.settings.end())
+        {
+            if (v.value.index() == 0)
+                continue;
+            return false;
+        }
+    }
     return true;
 }
 
