@@ -19,6 +19,7 @@
 #include <primitives/lock.h>
 #include <primitives/pack.h>
 #include <primitives/templates.h>
+#include <primitives/sqlpp11.h>
 
 // db
 #include <primitives/db/sqlite3.h>
@@ -307,14 +308,7 @@ bool PackagesDatabase::isPackageInstalled(const Package &p) const
 void PackagesDatabase::installPackage(const PackageId &p, const PackageData &d)
 {
     std::lock_guard lk(m);
-
-    db->execute("BEGIN");
-
-    ScopeGuard sg([this]()
-    {
-        db->execute("ROLLBACK");
-        //throw SW_RUNTIME_ERROR("db transaction not finished");
-    });
+    auto tr = sqlpp11_transaction_manual(*db);
 
     int64_t package_id = 0;
 
@@ -397,9 +391,6 @@ void PackagesDatabase::installPackage(const PackageId &p, const PackageData &d)
             pkg_deps.versionRange = d.range.toString()
         ));
     }
-
-    db->execute("COMMIT");
-    sg.dismiss();
 }
 
 void PackagesDatabase::installPackage(const Package &p)
