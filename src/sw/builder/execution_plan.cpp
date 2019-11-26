@@ -221,11 +221,11 @@ ExecutionPlan::Graph ExecutionPlan::getGraph(const VecT &v)
     return getGraph(v, gm);
 }
 
-auto ExecutionPlan::getStrongComponents(const Graph &g)
+std::tuple<size_t, ExecutionPlan::StrongComponents> ExecutionPlan::getStrongComponents(const Graph &g)
 {
     StrongComponents components(num_vertices(g));
     auto num = boost::strong_components(g, boost::make_iterator_property_map(components.begin(), get(boost::vertex_index, g)));
-    return std::tuple{ g, num, components };
+    return std::tuple{ num, components };
 }
 
 /// returns true if removed something
@@ -262,10 +262,11 @@ ExecutionPlan::Graph ExecutionPlan::getGraphSkeleton()
     return getGraphSkeleton(getGraph());
 }
 
-auto ExecutionPlan::getStrongComponents()
+std::tuple<ExecutionPlan::Graph, size_t, ExecutionPlan::StrongComponents> ExecutionPlan::getStrongComponents()
 {
     auto g = getGraphUnprocessed();
-    return getStrongComponents(g);
+    auto [num, components] = getStrongComponents(g);
+    return std::tuple{ g, num, components };
 }
 
 template <class G>

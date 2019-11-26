@@ -60,6 +60,7 @@ struct SW_BUILDER_API ExecutionPlan
     void saveChromeTrace(const path &) const;
 
     const VecT &getCommands() const { return commands; }
+    const VecT &getUnprocessedCommand() const { return unprocessed_commands; }
     const USet &getUnprocessedCommandSet() const { return unprocessed_commands_set; }
 
     explicit operator bool() const;
@@ -67,11 +68,11 @@ struct SW_BUILDER_API ExecutionPlan
     Graph getGraph() const;
     Graph getGraphUnprocessed() const;
     static Graph getGraph(const VecT &v);
-    static auto getStrongComponents(const Graph &g);
+    static std::tuple<size_t, StrongComponents> getStrongComponents(const Graph &g);
     /// returns true if removed something
     static Graph getGraphSkeleton(const Graph &in);
     Graph getGraphSkeleton();
-    auto getStrongComponents();
+    std::tuple<Graph, size_t, StrongComponents> getStrongComponents();
     void printGraph(path p) const;
 
     template <class G>
