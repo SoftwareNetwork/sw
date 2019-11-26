@@ -73,27 +73,31 @@ void Command::prepare()
             auto &t = d->getTarget();
             ((const NativeTarget &)t).setupCommand(*this);
 
-            path p;
-            if (auto nt = t.as<NativeCompiledTarget*>())
+            // command may be set inside setupCommand()
+            if (!isProgramSet())
             {
-                p = nt->getOutputFile();
-                if (!p.empty() && !File(p, getContext().getFileStorage()).isGenerated())
+                path p;
+                if (auto nt = t.as<NativeCompiledTarget *>())
                 {
-                    if (*nt->HeaderOnly)
-                        throw SW_RUNTIME_ERROR("Program is used from package: " + t.getPackage().toString() + " which is header only");
-                    if (!File(p, getContext().getFileStorage()).isGeneratedAtAll())
-                        throw SW_RUNTIME_ERROR("Program from package: " + t.getPackage().toString() + " is not generated at all: " + normalize_path(p));
-                    throw SW_RUNTIME_ERROR("Program from package: " + t.getPackage().toString() + " is not generated: " + normalize_path(p));
+                    p = nt->getOutputFile();
+                    if (!p.empty() && !File(p, getContext().getFileStorage()).isGenerated())
+                    {
+                        if (*nt->HeaderOnly)
+                            throw SW_RUNTIME_ERROR("Program is used from package: " + t.getPackage().toString() + " which is header only");
+                        if (!File(p, getContext().getFileStorage()).isGeneratedAtAll())
+                            throw SW_RUNTIME_ERROR("Program from package: " + t.getPackage().toString() + " is not generated at all: " + normalize_path(p));
+                        throw SW_RUNTIME_ERROR("Program from package: " + t.getPackage().toString() + " is not generated: " + normalize_path(p));
+                    }
                 }
-            }
-            else if (auto nt = t.as<NativeTarget*>())
-                p = nt->getOutputFile();
-            else
-                throw SW_RUNTIME_ERROR("Package: " + t.getPackage().toString() + " has unknown type");
+                else if (auto nt = t.as<NativeTarget *>())
+                    p = nt->getOutputFile();
+                else
+                    throw SW_RUNTIME_ERROR("Package: " + t.getPackage().toString() + " has unknown type");
 
-            if (p.empty())
-                throw SW_RUNTIME_ERROR("Empty program from package: " + t.getPackage().toString());
-            setProgram(p);
+                if (p.empty())
+                    throw SW_RUNTIME_ERROR("Empty program from package: " + t.getPackage().toString());
+                setProgram(p);
+            }
         }
         else if (dependency_set)
         {
