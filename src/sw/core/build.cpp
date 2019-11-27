@@ -592,13 +592,14 @@ ExecutionPlan SwBuild::getExecutionPlan(const Commands &cmds) const
     for (decltype(n) i = 0; i < n; i++)
     {
         if (subs[i]->m_graph.m_vertices.size() > 1)
-            ExecutionPlan::printGraph(subs[i]->m_graph, cyclic_path / std::to_string(i));
+            ExecutionPlan::printGraph(subs[i]->m_graph, cyclic_path / ("cycle_" + std::to_string(i)));
     }
 
     ep.printGraph(ep.getGraph(), cyclic_path / "processed", ep.getCommands(), true);
     ep.printGraph(ep.getGraphUnprocessed(), cyclic_path / "unprocessed", ep.getUnprocessedCommand(), true);
 
-    String error = "Cannot create execution plan because of cyclic dependencies: strong components = " + std::to_string(n);
+    String error = "Cannot create execution plan because of cyclic dependencies";
+    //String error = "Cannot create execution plan because of cyclic dependencies: strong components = " + std::to_string(n);
 
     throw SW_RUNTIME_ERROR(error);
 }
