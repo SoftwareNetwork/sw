@@ -424,9 +424,6 @@ void Command::afterCommand()
         auto &fr = f.getFileData();
         fr.refreshed = FileData::RefreshType::Unrefreshed;
         f.isChanged();
-        //fs->async_file_log(&fr);
-        //fr.writeToLog();
-        //fr.updateLwt();
         if (!fs::exists(i))
         {
             auto e = "Output file was not created: " + normalize_path(i) + "\n" + getError();
