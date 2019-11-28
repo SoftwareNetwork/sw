@@ -983,11 +983,12 @@ types:
                 flag: shared
                 type: bool
 
-            undef:
-                name: Undefined
+            #undef:
+                #name: Undefined
                 # gcc use only -u, not -undefined
-                flag: u #undefined
-                type: String
+                # apple clang use only -undefined, not -u
+                #flag: u #undefined
+                #type: String
 
     # ar
     # https://linux.die.net/man/1/ar

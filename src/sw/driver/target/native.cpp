@@ -2632,14 +2632,6 @@ bool NativeCompiledTarget::prepare()
             }
         }
 
-        // on macos we explicitly say that dylib should resolve symbols on dlopen
-        /*if (IsConfig && getSolution().getHostOs().isApple() && getSelectedTool())
-        {
-
-            if (auto c = getSelectedTool()->as<GNULinker*>())
-                c->Undefined = "dynamic_lookup";
-        }*/
-
         // also fix rpath libname here
         if (createWindowsRpath())
         {

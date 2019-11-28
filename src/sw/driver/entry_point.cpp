@@ -355,6 +355,12 @@ decltype(auto) PrepareConfigEntryPoint::commonActions(Build &b, const FilesSorte
     lib.AutoDetectOptions = false;
     lib.CPPVersion = CPPLanguageStandard::CPP17;
 
+    if (lib.getBuildSettings().TargetOS.isApple())
+    {
+        lib.LinkOptions.push_back("-undefined");
+        lib.LinkOptions.push_back("dynamic_lookup");
+    }
+
     for (auto &fn : files)
     {
         lib += fn;
