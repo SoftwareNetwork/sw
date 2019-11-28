@@ -127,7 +127,13 @@ std::optional<String> File::isChanged(const fs::file_time_type &in, bool throw_o
     if (data->last_write_time == fs::file_time_type::min())
         return "file is missing";
     if (data->last_write_time > in)
-        return "file is newer";
+    {
+        // if you see equal times after conversion to time_t,
+        // it means that lwt resolution is higher
+        return "file is newer than command time (" +
+            std::to_string(file_time_type2time_t(data->last_write_time)) + " > " +
+            std::to_string(file_time_type2time_t(in)) + ")";
+    }
     return {};
 }
 
