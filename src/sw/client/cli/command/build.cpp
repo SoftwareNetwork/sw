@@ -296,7 +296,7 @@ static std::vector<sw::TargetSettings> applySettingsFromCppFile(sw::SwContext &s
     if (m.symbol_storage().get_function<std::map<std::string, std::string>()>("createJsonSettings").empty())
         throw SW_RUNTIME_ERROR("Cannot find 'std::map<std::string, std::string> createJsonSettings()'");
 
-    auto selected_cfgs = std::set(settings_file_config.begin(), settings_file_config.end());
+    auto selected_cfgs = std::set<String>(settings_file_config.begin(), settings_file_config.end());
     auto result = m.get_function<std::map<std::string, std::string>()>("createJsonSettings")();
     std::vector<sw::TargetSettings> r;
     for (auto &[k, v] : result)

@@ -38,7 +38,7 @@ ProgramVersionStorage::ProgramVersionStorage(const path &fn)
 ProgramVersionStorage::~ProgramVersionStorage()
 {
     std::ofstream ofile(fn);
-    for (auto &[p, v] : std::map{ versions.begin(), versions.end() })
+    for (auto &[p, v] : std::map<path, ProgramInfo>(versions.begin(), versions.end()))
         ofile << p << " " << v.v.toString() << " " << file_time_type2time_t(v.t) << "\n";
 }
 
