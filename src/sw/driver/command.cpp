@@ -483,6 +483,27 @@ CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_env &t)
     return cb;
 }
 
+CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_prog_dep &t)
+{
+    cb.c->setProgram(t.d);
+    for (auto tgt : cb.targets)
+        tgt->addDummyDependency(t.d);
+    return cb;
+}
+
+CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_prog_prog &t)
+{
+    cb.c->setProgram(t.p);
+    return cb;
+}
+
+CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_prog_tgt &t)
+{
+    auto d = std::make_shared<Dependency>(*t.t);
+    cb << cmd::prog(d);
+    return cb;
+}
+
 CommandBuilder &operator<<(CommandBuilder &cb, const Command::LazyCallback &t)
 {
     struct LazyArgument : ::primitives::command::Argument

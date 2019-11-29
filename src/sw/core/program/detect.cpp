@@ -1180,6 +1180,8 @@ static void detectNonWindowsCompilers(DETECT_ARGS)
         resolve_and_add("clang-" + std::to_string(i), "org.LLVM.clang");
         resolve_and_add("clang++-" + std::to_string(i), "org.LLVM.clangpp");
     }
+
+    // detect apple clang?
 }
 
 void detectNativeCompilers(DETECT_ARGS)

@@ -126,8 +126,9 @@ static detail::tag_append Append;
 static detail::tag_normalize_path NormalizePath;
 // TODO: add target list tag, this will simplify lots of code
 
-template <class T>
-struct tag_prog { T *t; };
+struct tag_prog_dep { DependencyPtr d; };
+struct tag_prog_prog { path p; };
+struct tag_prog_tgt { const ITarget *t; };
 struct tag_wdir : detail::tag_path {};
 struct tag_in : detail::tag_io_files {};
 struct tag_out : detail::tag_io_files {};
@@ -171,10 +172,19 @@ struct tag_dep : detail::tag_targets
     }
 };
 
-template <class T>
-tag_prog<T> prog(const T &t)
+inline tag_prog_dep prog(const DependencyPtr &d)
 {
-    return { (T*)&t };
+    return { d };
+}
+
+inline tag_prog_prog prog(const path &p)
+{
+    return { p };
+}
+
+inline tag_prog_tgt prog(const ITarget &t)
+{
+    return { &t };
 }
 
 inline tag_wdir wdir(const path &file)
@@ -416,35 +426,10 @@ DECLARE_STREAM_OP(::sw::cmd::tag_wdir);
 DECLARE_STREAM_OP(::sw::cmd::tag_end);
 DECLARE_STREAM_OP(::sw::cmd::tag_dep);
 DECLARE_STREAM_OP(::sw::cmd::tag_env);
+DECLARE_STREAM_OP(::sw::cmd::tag_prog_dep);
+DECLARE_STREAM_OP(::sw::cmd::tag_prog_prog);
+DECLARE_STREAM_OP(::sw::cmd::tag_prog_tgt);
 DECLARE_STREAM_OP(Command::LazyCallback);
-
-template <class T>
-CommandBuilder &operator<<(CommandBuilder &cb, const cmd::tag_prog<T> &t)
-{
-    if constexpr (std::is_same_v<T, path> || std::is_convertible_v<T, String>)
-    {
-        cb.c->setProgram(*t.t);
-        return cb;
-    }
-
-    DependencyPtr d;
-    if constexpr (std::is_same_v<T, DependencyPtr>)
-        d = *t.t;
-    else
-        d = std::make_shared<Dependency>(*t.t);
-
-    bool once = false;
-    for (auto tgt : cb.targets)
-    {
-        tgt->addDummyDependency(d);
-        if (!once)
-        {
-            cb.c->setProgram(d);
-            once = true;
-        }
-    }
-    return cb;
-}
 
 template <class T>
 CommandBuilder &operator<<(CommandBuilder &cb, const T &t)
@@ -489,15 +474,6 @@ CommandBuilder &operator<<(CommandBuilder &cb, const T &t)
 }
 
 #undef DECLARE_STREAM_OP
-
-enum class BuiltinCommandArgumentId
-{
-    ArgumentKeyword,
-    ModulePath,
-    FunctionName,
-    FunctionVersion,
-    FirstArgument,
-};
 
 } // namespace driver
 
