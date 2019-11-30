@@ -317,7 +317,7 @@ void Command::prepare()
     {
         auto new_prog = resolveExecutable(getProgram());
         if (new_prog.empty())
-            throw SW_RUNTIME_ERROR("resolved program '" + getProgram() + "' is empty: " + getCommandId(*this));
+            throw SW_RUNTIME_ERROR("passed program '" + getProgram() + "' is not resolved (missing): " + getCommandId(*this));
         setProgram(new_prog);
     }
 
