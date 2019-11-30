@@ -1431,7 +1431,7 @@ Commands NativeCompiledTarget::getCommands1() const
         auto o = getOutputDir();
         o /= f->install_dir / p.filename();
 
-        SW_MAKE_EXECUTE_BUILTIN_COMMAND(copy_cmd, *this, "sw_copy_file", nullptr);
+        SW_MAKE_EXECUTE_BUILTIN_COMMAND_AND_ADD(copy_cmd, (NativeCompiledTarget&)*this, "sw_copy_file", nullptr);
         copy_cmd->arguments.push_back(p.u8string());
         copy_cmd->arguments.push_back(o.u8string());
         copy_cmd->addInput(p);

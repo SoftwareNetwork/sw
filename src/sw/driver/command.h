@@ -400,21 +400,21 @@ private:
 
 struct SW_DRIVER_CPP_API CommandBuilder
 {
-    std::shared_ptr<Command> c;
-    std::vector<NativeCompiledTarget*> targets;
-    bool stopped = false;
+    mutable std::shared_ptr<Command> c;
+    mutable std::vector<NativeCompiledTarget*> targets;
+    mutable bool stopped = false;
 
     CommandBuilder(const SwBuilderContext &swctx);
     CommandBuilder(const CommandBuilder &) = default;
     CommandBuilder &operator=(const CommandBuilder &) = default;
 
-    CommandBuilder &operator|(CommandBuilder &);
-    CommandBuilder &operator|(::sw::builder::Command &);
+    const CommandBuilder &operator|(CommandBuilder &) const;
+    const CommandBuilder &operator|(::sw::builder::Command &) const;
 };
 
 #define DECLARE_STREAM_OP(t) \
     SW_DRIVER_CPP_API        \
-    CommandBuilder &operator<<(CommandBuilder &, const t &)
+    const CommandBuilder &operator<<(const CommandBuilder &, const t &)
 
 DECLARE_STREAM_OP(NativeCompiledTarget);
 DECLARE_STREAM_OP(::sw::cmd::tag_in);
@@ -432,7 +432,7 @@ DECLARE_STREAM_OP(::sw::cmd::tag_prog_tgt);
 DECLARE_STREAM_OP(Command::LazyCallback);
 
 template <class T>
-CommandBuilder &operator<<(CommandBuilder &cb, const T &t)
+const CommandBuilder &operator<<(const CommandBuilder &cb, const T &t)
 {
     auto add_arg = [&cb](const String &s)
     {

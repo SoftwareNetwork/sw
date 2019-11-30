@@ -30,25 +30,33 @@
     SW_INTERNAL_ADD_COMMAND(name, target)
 #endif
 
+/*
 #define SW_MAKE_COMMAND(name, target) \
     SW_MAKE_CUSTOM_COMMAND(Command, name, target)
+*/
 #define SW_MAKE_COMMAND_AND_ADD(name, target) \
     SW_MAKE_CUSTOM_COMMAND_AND_ADD(Command, name, target)
 
+/*
 #define _SW_MAKE_EXECUTE_COMMAND(name, target) \
     SW_MAKE_CUSTOM_COMMAND(ExecuteCommand, name, target, __FILE__, __LINE__)
+*/
 #define _SW_MAKE_EXECUTE_COMMAND_AND_ADD(name, target) \
     SW_MAKE_CUSTOM_COMMAND_AND_ADD(ExecuteCommand, name, target, __FILE__, __LINE__)
 
 // ExecuteBuiltinCommand
 #ifdef _MSC_VER
+/*
 #define SW_MAKE_EXECUTE_BUILTIN_COMMAND(var_name, target, func_name, ...) \
     SW_MAKE_CUSTOM_COMMAND(::sw::builder::ExecuteBuiltinCommand, var_name, target, func_name, __VA_ARGS__)
+*/
 #define SW_MAKE_EXECUTE_BUILTIN_COMMAND_AND_ADD(var_name, target, func_name, ...) \
     SW_MAKE_CUSTOM_COMMAND_AND_ADD(::sw::builder::ExecuteBuiltinCommand, var_name, target, func_name, __VA_ARGS__)
 #else
+/*
 #define SW_MAKE_EXECUTE_BUILTIN_COMMAND(var_name, target, func_name, ...) \
     SW_MAKE_CUSTOM_COMMAND(::sw::builder::ExecuteBuiltinCommand, var_name, target, func_name, ## __VA_ARGS__)
+*/
 #define SW_MAKE_EXECUTE_BUILTIN_COMMAND_AND_ADD(var_name, target, func_name, ...) \
     SW_MAKE_CUSTOM_COMMAND_AND_ADD(::sw::builder::ExecuteBuiltinCommand, var_name, target, func_name, ## __VA_ARGS__)
 #endif

@@ -282,19 +282,19 @@ CommandBuilder::CommandBuilder(const SwBuilderContext &swctx)
     c = std::make_shared<Command>(swctx);
 }
 
-CommandBuilder &CommandBuilder::operator|(CommandBuilder &c2)
+const CommandBuilder &CommandBuilder::operator|(CommandBuilder &c2) const
 {
     operator|(*c2.c);
     return *this;
 }
 
-CommandBuilder &CommandBuilder::operator|(::sw::builder::Command &c2)
+const CommandBuilder &CommandBuilder::operator|(::sw::builder::Command &c2) const
 {
     *c | c2;
     return * this;
 }
 
-CommandBuilder &operator<<(CommandBuilder &cb, const NativeCompiledTarget &t)
+const CommandBuilder &operator<<(const CommandBuilder &cb, const NativeCompiledTarget &t)
 {
     auto nt = (NativeCompiledTarget*)&t;
     cb.targets.push_back(nt);
@@ -302,7 +302,7 @@ CommandBuilder &operator<<(CommandBuilder &cb, const NativeCompiledTarget &t)
     return cb;
 }
 
-CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_wdir &t)
+const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_wdir &t)
 {
     auto p = t.p;
     if (p.is_relative() && !cb.targets.empty())
@@ -312,7 +312,7 @@ CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_wdir &t)
     return cb;
 }
 
-CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_in &t)
+const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_in &t)
 {
     decltype(cb.targets) all;
     all.insert(all.end(), cb.targets.begin(), cb.targets.end());
@@ -344,7 +344,7 @@ CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_in &t)
     return cb;
 }
 
-CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_out &t)
+const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_out &t)
 {
     decltype(cb.targets) all;
     all.insert(all.end(), cb.targets.begin(), cb.targets.end());
@@ -379,7 +379,7 @@ CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_out &t)
     return cb;
 }
 
-CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_stdin &t)
+const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_stdin &t)
 {
     decltype(cb.targets) all;
     all.insert(all.end(), cb.targets.begin(), cb.targets.end());
@@ -404,7 +404,7 @@ CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_stdin &t)
     return cb;
 }
 
-CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_stdout &t)
+const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_stdout &t)
 {
     decltype(cb.targets) all;
     all.insert(all.end(), cb.targets.begin(), cb.targets.end());
@@ -435,7 +435,7 @@ CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_stdout &t)
     return cb;
 }
 
-CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_stderr &t)
+const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_stderr &t)
 {
     decltype(cb.targets) all;
     all.insert(all.end(), cb.targets.begin(), cb.targets.end());
@@ -466,24 +466,24 @@ CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_stderr &t)
     return cb;
 }
 
-CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_end &t)
+const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_end &t)
 {
     cb.stopped = true;
     return cb;
 }
 
-CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_dep &t)
+const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_dep &t)
 {
     SW_UNIMPLEMENTED;
 }
 
-CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_env &t)
+const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_env &t)
 {
     cb.c->environment[t.k] = t.v;
     return cb;
 }
 
-CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_prog_dep &t)
+const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_prog_dep &t)
 {
     cb.c->setProgram(t.d);
     for (auto tgt : cb.targets)
@@ -491,20 +491,20 @@ CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_prog_dep &t)
     return cb;
 }
 
-CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_prog_prog &t)
+const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_prog_prog &t)
 {
     cb.c->setProgram(t.p);
     return cb;
 }
 
-CommandBuilder &operator<<(CommandBuilder &cb, const ::sw::cmd::tag_prog_tgt &t)
+const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_prog_tgt &t)
 {
     auto d = std::make_shared<Dependency>(*t.t);
     cb << cmd::prog(d);
     return cb;
 }
 
-CommandBuilder &operator<<(CommandBuilder &cb, const Command::LazyCallback &t)
+const CommandBuilder &operator<<(const CommandBuilder &cb, const Command::LazyCallback &t)
 {
     struct LazyArgument : ::primitives::command::Argument
     {
