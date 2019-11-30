@@ -61,10 +61,10 @@ void write_build_script(const std::unordered_map<UnresolvedPackage, LocalPackage
     // goes before primitives
     prepkgs.push_back("org.sw.demo.ragel"s);
 
-#ifdef _WIN32
+//#ifdef _WIN32
     // goes before primitives
     prepkgs.push_back("org.sw.demo.lexxmark.winflexbison.bison-master"s);
-#endif
+//#endif
 
     // goes before grpc
     prepkgs.push_back("org.sw.demo.google.protobuf.protobuf"s);
@@ -164,7 +164,8 @@ int main(int argc, char **argv)
     getExecutor(&e);
 
     SwManagerContext swctx(Settings::get_user_settings().storage_dir);
-    auto m = swctx.install({
+    auto m = swctx.install(
+    {
         // our main cpp driver target
         {SW_TARGET},
 
