@@ -282,7 +282,7 @@ CommandBuilder::CommandBuilder(const SwBuilderContext &swctx)
     c = std::make_shared<Command>(swctx);
 }
 
-const CommandBuilder &CommandBuilder::operator|(CommandBuilder &c2) const
+const CommandBuilder &CommandBuilder::operator|(const CommandBuilder &c2) const
 {
     operator|(*c2.c);
     return *this;
@@ -291,7 +291,7 @@ const CommandBuilder &CommandBuilder::operator|(CommandBuilder &c2) const
 const CommandBuilder &CommandBuilder::operator|(::sw::builder::Command &c2) const
 {
     *c | c2;
-    return * this;
+    return *this;
 }
 
 const CommandBuilder &operator<<(const CommandBuilder &cb, const NativeCompiledTarget &t)

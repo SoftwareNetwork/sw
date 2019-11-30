@@ -408,7 +408,7 @@ struct SW_DRIVER_CPP_API CommandBuilder
     CommandBuilder(const CommandBuilder &) = default;
     CommandBuilder &operator=(const CommandBuilder &) = default;
 
-    const CommandBuilder &operator|(CommandBuilder &) const;
+    const CommandBuilder &operator|(const CommandBuilder &) const;
     const CommandBuilder &operator|(::sw::builder::Command &) const;
 };
 
