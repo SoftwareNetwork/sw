@@ -57,13 +57,12 @@ struct File
 struct Directory
 {
     String name;
-    String directory;
+    String directory; // parent
     String uuid;
     Files files;
     VSProjectType type = VSProjectType::Directory;
     const VSGenerator *g = nullptr;
 
-    Directory() = default;
     Directory(const String &name);
 };
 
@@ -82,13 +81,10 @@ struct Project : Directory
     std::map<sw::TargetSettings, ProjectData> data;
     bool build = false;
 
-    Project() = default;
     Project(const String &name);
 
     void emit(SolutionEmitter &) const;
     void emit(const VSGenerator &) const;
-    void emitProject(const VSGenerator &) const;
-    void emitFilters(const VSGenerator &) const;
 
     const Settings &getSettings() const { return settings; }
     ProjectData &getData(const sw::TargetSettings &);
@@ -101,6 +97,8 @@ private:
         StringSet exclude_exts;
     };
 
+    void emitProject(const VSGenerator &) const;
+    void emitFilters(const VSGenerator &) const;
     void printProperties(ProjectEmitter &, const primitives::Command &, const Properties &props = {}) const;
 };
 

@@ -77,9 +77,16 @@ void SolutionEmitter::printVersion()
 
 void SolutionEmitter::addDirectory(const Directory &d)
 {
-    addLine("Project(\"" + project_type_uuids[d.type] + "\") = \"" +
+    beginBlock("Project(\"" + project_type_uuids[d.type] + "\") = \"" +
         d.name + "\", \"" + d.name + "\", \"" + d.uuid + "\"");
-    addLine("EndProject");
+    if (!d.files.empty())
+    {
+        beginBlock("ProjectSection(SolutionItems) = preProject");
+        for (auto &f : d.files)
+            addLine(normalize_path(f) + " = " + normalize_path(f));
+        endBlock("EndProjectSection");
+    }
+    endBlock("EndProject");
 }
 
 void SolutionEmitter::beginProject(const Project &p)

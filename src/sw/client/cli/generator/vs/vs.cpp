@@ -285,9 +285,11 @@ void VSGenerator::generate(const SwBuild &b)
         break;
     }
 
-    Directory d(predefined_targets_dir);
-    d.g = this;
-    s.directories[d.name] = d;
+    {
+        Directory d(predefined_targets_dir);
+        d.g = this;
+        s.directories.emplace(d.name, d);
+    }
 
     {
         Project p(all_build_name);
@@ -300,7 +302,7 @@ void VSGenerator::generate(const SwBuild &b)
         // create datas
         for (auto &st : s.settings)
             p.getData(st).type = p.type;
-        s.projects[p.name] = p;
+        s.projects.emplace(p.name, p);
     }
 
     for (auto &[pkg, tgts] : b.getTargetsToBuild())
@@ -313,8 +315,8 @@ void VSGenerator::generate(const SwBuild &b)
             p.settings = s.settings;
             p.build = true;
 
-            s.projects[p.name] = p;
-            s.projects[all_build_name].dependencies.insert(&s.projects[p.name]);
+            s.projects.emplace(p.name, p);
+            s.projects.find(all_build_name)->second.dependencies.insert(&s.projects.find(p.name)->second);
             break;
         }
         for (auto &st : s.settings)
@@ -322,7 +324,7 @@ void VSGenerator::generate(const SwBuild &b)
             auto itgt = tgts.findEqual(st);
             if (itgt == tgts.end())
                 throw SW_RUNTIME_ERROR("missing target");
-            auto &d = s.projects[pkg.toString()].getData(st);
+            auto &d = s.projects.find(pkg.toString())->second.getData(st);
             d.target = itgt->get();
 
             // determine type
@@ -378,11 +380,32 @@ void VSGenerator::generate(const SwBuild &b)
                 auto &pd = b.getTargetsToBuild();
                 if (pd.find(d->getUnresolvedPackage().ppath) == pd.end(d->getUnresolvedPackage().ppath))
                     continue;
-                s.projects[tgt->getPackage().toString()].dependencies.insert(&s.projects[d->getTarget().getPackage().toString()]);
+                s.projects.find(tgt->getPackage().toString())->second.dependencies.insert(&s.projects.find(d->getTarget().getPackage().toString())->second);
             }
             break;
         }
     }
+
+    // gather .natvis
+    Files natvis;
+    for (auto &[n, p] : s.projects)
+    {
+        for (auto &f : p.files)
+        {
+            if (f.extension() == ".natvis")
+                natvis.insert(f);
+        }
+    }
+
+    if (!natvis.empty())
+    {
+        Directory d(visualizers_dir);
+        d.g = this;
+        d.files = natvis;
+        d.directory = predefined_targets_dir;
+        s.directories.emplace(d.name, d);
+    }
+
     s.emit(*this);
 }
 
@@ -413,6 +436,12 @@ void Solution::emit(const VSGenerator &g) const
     ctx.endGlobalSection();
     //
     ctx.beginGlobalSection("NestedProjects", "preSolution");
+    for (auto &[n, p] : directories)
+    {
+        if (p.directory.empty())
+            continue;
+        ctx.addKeyValue(p.uuid, directories.find(p.directory)->second.uuid);
+    }
     for (auto &[n, p] : projects)
     {
         if (p.directory.empty())
@@ -594,6 +623,9 @@ void Project::emitProject(const VSGenerator &g) const
     ctx.beginBlock("ItemGroup");
     for (auto &p : files)
     {
+        if (p.extension() == ".natvis")
+            continue;
+
         auto t = get_vs_file_type_by_ext(p);
         ctx.beginBlock(toString(t), { { "Include", p.u8string() } });
 
@@ -616,6 +648,8 @@ void Project::emitProject(const VSGenerator &g) const
                 //ctx.beginBlockWithConfiguration("AdditionalOptions", s);
                 //ctx.endBlock();
             }
+            else
+                LOG_WARN(logger, "File " << p << " is not processed");
         }
 
         //add_obj_file(t, p, sf);
@@ -654,11 +688,7 @@ void Project::emitFilters(const VSGenerator &g) const
     for (auto &f : files)
     {
         if (f.extension() == ".natvis")
-        {
-            SW_UNIMPLEMENTED;
-            //parent->visualizers.insert(f);
             continue;
-        }
 
         String *d = nullptr;
         size_t p = 0;
@@ -741,7 +771,8 @@ void Project::printProperties(ProjectEmitter &ctx, const primitives::Command &c,
     auto ift = flag_tables.find(ft);
     if (ift == flag_tables.end())
     {
-        LOG_WARN(logger, "No flag table: " + ft);
+        // we must create custom rule here
+        LOG_TRACE(logger, "No flag table: " + ft);
         return;
     }
 
