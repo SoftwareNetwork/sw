@@ -33,23 +33,39 @@ struct SW_CORE_API IDependency
     virtual const ITarget &getTarget() const = 0;
 };
 
+/// Very basic interface for targets and must be very stable.
+/// You won't be operating much using it.
+/// Instead, text interface for querying data will be available.
 struct SW_CORE_API ITarget : ICastable
 {
     virtual ~ITarget() = 0;
 
+    //
+    // basic info/description section
+    //
+
     virtual const PackageId &getPackage() const = 0;
+
+    // merge getSource(), getFiles() and getDependencies() into single call returning json/target settings?
+    // into getDescription() or getInformation() or something similar
 
     // how to fetch package
     ///
     virtual const Source &getSource() const = 0;
 
-    ///
+    /// all input (for creating an input package) non-generated files under base source dir
     virtual Files getSourceFiles() const = 0;
+    // better to call getFiles() because source files = files for specific configuration
+    // and such sets may differ for different configs
     // getFiles()? some langs does not have 'sources'
     // also add get binary files?
 
     /// get all direct dependencies
     virtual std::vector<IDependency *> getDependencies() const = 0;
+
+    //
+    // build section
+    //
 
     /// prepare target for building
     /// returns true if target is not fully prepared yet
@@ -59,13 +75,19 @@ struct SW_CORE_API ITarget : ICastable
     ///
     virtual Commands getCommands() const = 0;
 
+    //
+    // extended info section
+    // configuration specific
+    // (build information, output information)
+    //
+
     /// final (output) configuration
     /// available before prepare or after?
     /// round trips
     //virtual const TargetSettings &getConfiguration() const = 0;
 
     /// input settings
-    /// does not round trip
+    /// do not round trip
     virtual const TargetSettings &getSettings() const = 0;
 
     // settings for consumers (targets) and users?

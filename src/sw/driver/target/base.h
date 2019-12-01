@@ -312,7 +312,7 @@ public:
     const TargetSettings &getOptions() const { return getSettings()["options"].getSettings(); }
 
     //
-    Commands getCommands() const;
+    Commands getCommands() const override;
     UnresolvedDependenciesType gatherUnresolvedDependencies() const;
     DependencyPtr getDependency() const; // returns current target as dependency
     void registerCommand(builder::Command &cmd);
