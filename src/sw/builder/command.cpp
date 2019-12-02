@@ -40,6 +40,7 @@ static cl::opt<bool> save_all_commands("save-all-commands");
 static cl::opt<bool> save_executed_commands("save-executed-commands");
 static cl::opt<bool> explain_outdated("explain-outdated", cl::desc("Explain outdated commands"));
 static cl::opt<bool> explain_outdated_full("explain-outdated-full", cl::desc("Explain outdated commands with more info"));
+static cl::opt<String> save_command_format("save-command-format", cl::desc("Explicitly set saved command format (bat or sh)"));
 
 namespace sw
 {
@@ -665,6 +666,15 @@ path Command::writeCommand(const path &p) const
     String t;
 
     bool bat = getHostOS().getShellType() == ShellType::Batch && !::sw::detail::isHostCygwin();
+    if (!save_command_format.empty())
+    {
+        if (save_command_format == "bat")
+            bat = true;
+        else if (save_command_format == "sh")
+            bat = false;
+        else
+            LOG_ERROR(logger, "Unknown save_command_format");
+    }
 
     auto norm = [bat](const auto &s)
     {
