@@ -19,6 +19,7 @@
 #include "commands.h"
 #include "../generator/generator.h"
 
+#include <sw/builder/execution_plan.h>
 #include <sw/core/build.h>
 #include <sw/core/input.h>
 
@@ -82,5 +83,6 @@ SUBCOMMAND_DECL2(generate)
     }
 
     auto b = setBuildArgsAndCreateBuildAndPrepare(swctx, (Strings&)build_arg_generate);
+    b->getExecutionPlan(); // prepare commands
     generator->generate(*b);
 }
