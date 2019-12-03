@@ -77,7 +77,10 @@ std::optional<PackageId> UnresolvedPackage::toPackageId() const
 
 String UnresolvedPackage::toString(const String &delim) const
 {
-    return ppath.toString() + delim + range.toString();
+    auto s = ppath.toString() + delim + range.toString();
+    //if (s == delim + "*")
+        //s.resize(s.size() - (delim.size() + 1));
+    return s;
 }
 
 bool UnresolvedPackage::canBe(const PackageId &id) const

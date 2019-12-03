@@ -166,8 +166,8 @@ static sw::TargetSettings compilerTypeFromStringCaseI(const sw::UnresolvedPackag
         ts["native"]["program"]["c"] = set_with_version("com.intel.compiler.c");
         ts["native"]["program"]["cpp"] = set_with_version("com.intel.compiler.cpp");
         ts["native"]["program"]["asm"] = set_with_version("com.Microsoft.VisualStudio.VC.ml");
-        ts["native"]["program"]["lib"] = "com.intel.compiler.lib";
-        ts["native"]["program"]["link"] = "com.intel.compiler.link";
+        ts["native"]["program"]["lib"] = sw::UnresolvedPackage("com.intel.compiler.lib").toString();
+        ts["native"]["program"]["link"] = sw::UnresolvedPackage("com.intel.compiler.link").toString();
     }
     else
     {

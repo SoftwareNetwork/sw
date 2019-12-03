@@ -60,11 +60,16 @@ void SwCoreContext::setHostPrograms()
     ts["native"]["configuration"] = "release";
     ts["native"]["library"] = "shared";
 
+    auto to_upkg = [](const auto &s)
+    {
+        return UnresolvedPackage(s).toString();
+    };
+
     if (getHostOs().is(OSType::Windows))
     {
-        ts["native"]["stdlib"]["c"] = "com.Microsoft.Windows.SDK.ucrt";
-        ts["native"]["stdlib"]["cpp"] = "com.Microsoft.VisualStudio.VC.libcpp";
-        ts["native"]["stdlib"]["kernel"] = "com.Microsoft.Windows.SDK.um";
+        ts["native"]["stdlib"]["c"] = to_upkg("com.Microsoft.Windows.SDK.ucrt");
+        ts["native"]["stdlib"]["cpp"] = to_upkg("com.Microsoft.VisualStudio.VC.libcpp");
+        ts["native"]["stdlib"]["kernel"] = to_upkg("com.Microsoft.Windows.SDK.um");
 
         // now find the latest available sdk and select it
         TargetSettings oss;
@@ -94,22 +99,22 @@ void SwCoreContext::setHostPrograms()
         // and also clang actually
         else if (!getPredefinedTargets()["com.Microsoft.VisualStudio.VC.cl"].empty())
         {
-            ts["native"]["program"]["c"] = "com.Microsoft.VisualStudio.VC.cl";
-            ts["native"]["program"]["cpp"] = "com.Microsoft.VisualStudio.VC.cl";
-            ts["native"]["program"]["asm"] = "com.Microsoft.VisualStudio.VC.ml";
-            ts["native"]["program"]["lib"] = "com.Microsoft.VisualStudio.VC.lib";
-            ts["native"]["program"]["link"] = "com.Microsoft.VisualStudio.VC.link";
+            ts["native"]["program"]["c"] = to_upkg("com.Microsoft.VisualStudio.VC.cl");
+            ts["native"]["program"]["cpp"] = to_upkg("com.Microsoft.VisualStudio.VC.cl");
+            ts["native"]["program"]["asm"] = to_upkg("com.Microsoft.VisualStudio.VC.ml");
+            ts["native"]["program"]["lib"] = to_upkg("com.Microsoft.VisualStudio.VC.lib");
+            ts["native"]["program"]["link"] = to_upkg("com.Microsoft.VisualStudio.VC.link");
         }
         // separate?
 #else __clang__
         else if (!getPredefinedTargets()["org.LLVM.clangpp"].empty())
         {
-            ts["native"]["program"]["c"] = "org.LLVM.clang";
-            ts["native"]["program"]["cpp"] = "org.LLVM.clangpp";
-            ts["native"]["program"]["asm"] = "org.LLVM.clang";
+            ts["native"]["program"]["c"] = to_upkg("org.LLVM.clang");
+            ts["native"]["program"]["cpp"] = to_upkg("org.LLVM.clangpp");
+            ts["native"]["program"]["asm"] = to_upkg("org.LLVM.clang");
             // ?
-            ts["native"]["program"]["lib"] = "com.Microsoft.VisualStudio.VC.lib";
-            ts["native"]["program"]["link"] = "com.Microsoft.VisualStudio.VC.link";
+            ts["native"]["program"]["lib"] = to_upkg("com.Microsoft.VisualStudio.VC.lib");
+            ts["native"]["program"]["link"] = to_upkg("com.Microsoft.VisualStudio.VC.link");
         }
 #endif
         // add more defaults (clangcl, clang)
@@ -120,17 +125,17 @@ void SwCoreContext::setHostPrograms()
     else
     {
         // set default libs?
-        /*ts["native"]["stdlib"]["c"] = "com.Microsoft.Windows.SDK.ucrt";
-        ts["native"]["stdlib"]["cpp"] = "com.Microsoft.VisualStudio.VC.libcpp";
-        ts["native"]["stdlib"]["kernel"] = "com.Microsoft.Windows.SDK.um";*/
+        /*ts["native"]["stdlib"]["c"] = to_upkg("com.Microsoft.Windows.SDK.ucrt");
+        ts["native"]["stdlib"]["cpp"] = to_upkg("com.Microsoft.VisualStudio.VC.libcpp");
+        ts["native"]["stdlib"]["kernel"] = to_upkg("com.Microsoft.Windows.SDK.um");*/
 
-        auto if_add = [this](auto &s, const String &name)
+        auto if_add = [this](auto &s, const UnresolvedPackage &name)
         {
             auto &pd = getPredefinedTargets();
-            auto i = pd.find(UnresolvedPackage(name));
+            auto i = pd.find(name);
             if (i == pd.end() || i->second.empty())
                 return false;
-            s = name;
+            s = name.toString();
             return true;
         };
 
@@ -149,7 +154,7 @@ void SwCoreContext::setHostPrograms()
             throw SW_RUNTIME_ERROR(err_msg("clang"));
         }
         if (getHostOs().is(OSType::Linux))
-            ts["native"]["stdlib"]["cpp"] = "org.sw.demo.llvm_project.libcxx";
+            ts["native"]["stdlib"]["cpp"] = to_upkg("org.sw.demo.llvm_project.libcxx");
 #elif defined(__GNUC__)
         if (!(
             if_add(ts["native"]["program"]["c"], "org.gnu.gcc") &&
@@ -165,7 +170,7 @@ void SwCoreContext::setHostPrograms()
         // using c prog
         if_add(ts["native"]["program"]["asm"], ts["native"]["program"]["c"].getValue());
 
-        // reconsider, also with driver
+        // reconsider, also with driver?
         if_add(ts["native"]["program"]["lib"], "org.gnu.binutils.ar"s);
 
         // use driver
