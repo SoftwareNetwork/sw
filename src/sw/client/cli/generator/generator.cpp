@@ -182,7 +182,7 @@ std::unique_ptr<Generator> Generator::create(const String &s)
     case GeneratorType::VisualStudio:
     {
         auto g1 = std::make_unique<VSGenerator>();
-        g1->version = Version(vsVersionFromString(s));
+        //g1->vs_version = Version(vsVersionFromString(s));
         g1->vstype = fromStringVs(s);
         g = std::move(g1);
         break;

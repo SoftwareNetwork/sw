@@ -94,6 +94,30 @@ int vsVersionFromString(const String &s)
     throw SW_RUNTIME_ERROR("Unknown or bad VS version: " + t);
 }
 
+static Version clver2vsver(const Version &clver, const Version &clmaxver)
+{
+    if (clver >= Version(19, 20))
+    {
+        return Version(16);
+    }
+
+    if (clver >= Version(19, 10) && clver < Version(19, 20))
+    {
+        // vs 16 (v142) can also handle v141 toolset.
+        if (clmaxver >= Version(19, 20))
+            return Version(16);
+        return Version(15);
+    }
+
+    if (clver >= Version(19, 00) && clver < Version(19, 10))
+    {
+        return Version(14);
+    }
+
+    LOG_WARN(logger, "Untested branch");
+    return Version(13); // ?
+}
+
 static String uuid2string(const boost::uuids::uuid &u)
 {
     std::ostringstream ss;
@@ -177,15 +201,28 @@ void VSGenerator::generate(const SwBuild &b)
     const String all_build_name = "ALL_BUILD"s;
     const String build_dependencies_name = "BUILD_DEPENDENCIES"s;
 
-    version = Version(16);
-    sln_root = b.getBuildDirectory() / toPathString(getType()) / version.toString(1);
+    auto inputs = b.getInputs();
+    if (inputs.size() != 1)
+        throw SW_RUNTIME_ERROR("unsupported number of inputs, must be 1");
+    auto &input = *inputs.begin();
+
+    Solution s;
+    s.settings = input.getSettings();
+
+    UnresolvedPackage compiler = (*s.settings.begin())["native"]["program"]["cpp"].getValue();
+    auto compiler_id = b.getContext().getPredefinedTargets().find(compiler)->first;
+    auto compiler_id_max = b.getContext().getPredefinedTargets().find(UnresolvedPackage(compiler.getPath().toString()))->first;
+
+    vs_version = clver2vsver(compiler_id.getVersion(), compiler_id_max.getVersion());
+    toolset_version = compiler_id.getVersion();
+    sln_root = b.getBuildDirectory() / toPathString(getType()) / vs_version.toString(1);
 
     // dl flag tables from cmake
     static const String ft_base_url = "https://gitlab.kitware.com/cmake/cmake/raw/master/Templates/MSBuild/FlagTables/";
     static const String ft_ext = ".json";
     const Strings tables1 = { "CL", "Link" };
     const Strings tables2 = { "LIB", "MASM", "RC" };
-    auto ts = getVsToolset(version);
+    auto ts = getVsToolset(toolset_version);
     auto dl = [](const auto &ts, const auto &tbl)
     {
         for (auto &t : tbl)
@@ -210,14 +247,6 @@ void VSGenerator::generate(const SwBuild &b)
     };
     dl(ts, tables1);
     dl(ts.substr(0, ts.size() - 1), tables2);
-
-    Solution s;
-
-    auto inputs = b.getInputs();
-    if (inputs.size() != 1)
-        throw SW_RUNTIME_ERROR("unsupported");
-    auto &input = *inputs.begin();
-    s.settings = input.getSettings();
 
     // get settings from targets to use settings equality later
     for (auto &[pkg, tgts] : b.getTargetsToBuild())
@@ -416,7 +445,7 @@ void VSGenerator::generate(const SwBuild &b)
 void Solution::emit(const VSGenerator &g) const
 {
     SolutionEmitter ctx;
-    ctx.version = g.version;
+    ctx.version = g.vs_version;
     ctx.printVersion();
     emitDirectories(ctx);
     emitProjects(g.sln_root, ctx);
@@ -459,7 +488,7 @@ void Solution::emit(const VSGenerator &g) const
     const String compiler_name = "msvc";
     //String fn = b.ide_solution_name + "_";
     String fn = "p_";
-    fn += compiler_name + "_" + toPathString(g.getType()) + "_" + g.version.toString(1);
+    fn += compiler_name + "_" + toPathString(g.getType()) + "_" + g.vs_version.toString(1);
     fn += ".sln";
     write_file_if_different(g.sln_root / fn, ctx.getText());
     auto lnk = current_thread_path() / fn;
@@ -536,11 +565,11 @@ void Project::emit(const VSGenerator &g) const
 void Project::emitProject(const VSGenerator &g) const
 {
     ProjectEmitter ctx;
-    ctx.beginProject(g.version);
+    ctx.beginProject(g.vs_version);
     ctx.addProjectConfigurations(*this);
 
     ctx.beginBlock("PropertyGroup", {{"Label", "Globals"}});
-    ctx.addBlock("VCProjectVersion", std::to_string(g.version.getMajor()) + ".0");
+    ctx.addBlock("VCProjectVersion", std::to_string(g.vs_version.getMajor()) + ".0");
     ctx.addBlock("ProjectGuid", uuid);
     ctx.addBlock("Keyword", "Win32Proj");
     if (g.getType() != GeneratorType::VisualStudio)
@@ -548,7 +577,7 @@ void Project::emitProject(const VSGenerator &g) const
     else
     {
         ctx.addBlock("RootNamespace", name);
-        //pctx.addBlock("WindowsTargetPlatformVersion", ctx.getSettings().begin()->Native.SDK.getWindowsTargetPlatformVersion());
+        ctx.addBlock("WindowsTargetPlatformVersion", PackageId((*settings.begin())["native"]["stdlib"]["c"].getValue()).getVersion().toString());
     }
     ctx.addBlock("PreferredToolArchitecture", "x64"); // also x86
     ctx.endBlock();

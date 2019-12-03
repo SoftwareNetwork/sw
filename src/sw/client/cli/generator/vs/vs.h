@@ -51,6 +51,7 @@ enum class VSProjectType
 struct File
 {
     path p;
+    path filter; // (dir)
     // command
     // is generated
 };

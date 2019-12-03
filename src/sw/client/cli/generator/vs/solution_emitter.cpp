@@ -24,6 +24,9 @@
 
 #include <boost/algorithm/string.hpp>
 
+#include <primitives/log.h>
+DECLARE_STATIC_LOGGER(logger, "solution_emitter");
+
 static std::map<VSProjectType, String> project_type_uuids
 {
     {
@@ -72,6 +75,8 @@ void SolutionEmitter::printVersion()
         addLine("# Visual Studio Version " + std::to_string(version.getMajor()));
         addLine("VisualStudioVersion = 16.0.28606.126");
     }
+    else
+        LOG_WARN(logger, "Unknown vs version " << version.toString());
     addLine("MinimumVisualStudioVersion = 10.0.40219.1");
 }
 

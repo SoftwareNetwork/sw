@@ -134,17 +134,17 @@ String toString(VSFileType t)
     }
 }
 
-std::string getVsToolset(const Version &v)
+std::string getVsToolset(const Version &clver)
 {
-    switch (v.getMajor())
-    {
-    case 16:
+    if (clver >= Version(19, 20))
         return "v142";
-    case 15:
+    if (clver >= Version(19, 10))
         return "v141";
-    case 14:
+    if (clver >= Version(19, 00))
         return "v140";
-    case 12:
+
+    throw SW_RUNTIME_ERROR("Unknown vs version (cl = " + clver.toString() + ")");
+    /*case 12:
         return "v12";
     case 11:
         return "v11";
@@ -156,8 +156,7 @@ std::string getVsToolset(const Version &v)
         return "v8";
         // _xp?
         // v71?
-    }
-    throw SW_RUNTIME_ERROR("Unknown VS version");
+    throw SW_RUNTIME_ERROR("Unknown VS version");*/
 }
 
 String get_configuration(const BuildSettings &s)
@@ -285,7 +284,7 @@ void ProjectEmitter::addPropertyGroupConfigurationTypes(const Project &p)
         //addBlock("UseDebugLibraries", generator::toString(s.Settings.Native.ConfigurationType));
         if (toolset.empty())
         {
-            addBlock("PlatformToolset", getVsToolset(p.g->version));
+            addBlock("PlatformToolset", getVsToolset(p.g->toolset_version));
         }
         else
             addBlock("PlatformToolset", toolset);

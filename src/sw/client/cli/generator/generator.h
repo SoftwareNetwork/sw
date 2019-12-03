@@ -71,9 +71,11 @@ private:
 
 struct VSGenerator : Generator
 {
-    sw::Version version;
+    sw::Version vs_version;
+    sw::Version toolset_version;
     path sln_root;
     VsGeneratorType vstype;
+    sw::Version winsdk;
 
     void generate(const sw::SwBuild &b) override;
 };
