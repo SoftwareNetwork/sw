@@ -72,8 +72,14 @@ SUBCOMMAND_DECL2(generate)
     auto generator = Generator::create(gGenerator);
     if (generator->getType() == GeneratorType::VisualStudio)
     {
-        ((Strings&)compiler).clear();
-        compiler.push_back("msvc");
+        auto &compilers = (Strings&)compiler;
+        if (!compilers.empty())
+        {
+            if (compilers.size() > 1)
+                throw SW_RUNTIME_ERROR("Only one compiler may be specified");
+        }
+        else
+            compiler.push_back("msvc");
         if (configuration.empty())
         {
             configuration.push_back("d");
