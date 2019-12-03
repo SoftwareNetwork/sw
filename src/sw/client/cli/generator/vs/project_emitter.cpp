@@ -96,6 +96,44 @@ static String toString(LibraryType t)
 
 } // namespace generator
 
+VSFileType get_vs_file_type_by_ext(const path &p)
+{
+    if (p.extension() == ".rc")
+        return VSFileType::ResourceCompile;
+    else if (p.extension() == ".rule")
+        return VSFileType::CustomBuild;
+    else if (isCppHeaderFileExtension(p.extension().string()))
+        return VSFileType::ClInclude;
+    else if (isCppSourceFileExtensions(p.extension().string()) || p.extension() == ".c")
+        return VSFileType::ClCompile;
+    else if (p.extension() == ".asm")
+        return VSFileType::MASM;
+    else if (p.extension() == ".manifest")
+        return VSFileType::Manifest;
+    return VSFileType::None;
+}
+
+String toString(VSFileType t)
+{
+    switch (t)
+    {
+    case VSFileType::ClCompile:
+        return "ClCompile";
+    case VSFileType::ClInclude:
+        return "ClInclude";
+    case VSFileType::ResourceCompile:
+        return "ResourceCompile";
+    case VSFileType::CustomBuild:
+        return "CustomBuild";
+    case VSFileType::MASM:
+        return "MASM";
+    case VSFileType::Manifest:
+        return "Manifest";
+    default:
+        return "None";
+    }
+}
+
 std::string getVsToolset(const Version &v)
 {
     switch (v.getMajor())
@@ -294,4 +332,16 @@ void ProjectEmitter::addPropertySheets(const Project &p)
             });
         endBlock();
     }
+}
+
+VSFileType ProjectEmitter::beginFileBlock(const path &p)
+{
+    auto t = get_vs_file_type_by_ext(p);
+    beginBlock(toString(t), { { "Include", p.u8string() } });
+    return t;
+}
+
+void ProjectEmitter::endFileBlock()
+{
+    endBlock();
 }

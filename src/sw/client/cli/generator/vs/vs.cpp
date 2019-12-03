@@ -168,55 +168,6 @@ static FlagTable read_flag_table(const path &fn)
     return ft;
 }
 
-enum class VSFileType
-{
-    None,
-    ResourceCompile,
-    CustomBuild,
-    ClInclude,
-    ClCompile,
-    MASM,
-    Manifest,
-};
-
-static String toString(VSFileType t)
-{
-    switch (t)
-    {
-    case VSFileType::ClCompile:
-        return "ClCompile";
-    case VSFileType::ClInclude:
-        return "ClInclude";
-    case VSFileType::ResourceCompile:
-        return "ResourceCompile";
-    case VSFileType::CustomBuild:
-        return "CustomBuild";
-    case VSFileType::MASM:
-        return "MASM";
-    case VSFileType::Manifest:
-        return "Manifest";
-    default:
-        return "None";
-    }
-}
-
-static VSFileType get_vs_file_type_by_ext(const path &p)
-{
-    if (p.extension() == ".rc")
-        return VSFileType::ResourceCompile;
-    else if (p.extension() == ".rule")
-        return VSFileType::CustomBuild;
-    else if (isCppHeaderFileExtension(p.extension().string()))
-        return VSFileType::ClInclude;
-    else if (isCppSourceFileExtensions(p.extension().string()) || p.extension() == ".c")
-        return VSFileType::ClCompile;
-    else if (p.extension() == ".asm")
-        return VSFileType::MASM;
-    else if (p.extension() == ".manifest")
-        return VSFileType::Manifest;
-    return VSFileType::None;
-}
-
 void VSGenerator::generate(const SwBuild &b)
 {
     const sw::InsecurePath deps_subdir = "Dependencies";
@@ -268,7 +219,7 @@ void VSGenerator::generate(const SwBuild &b)
     auto &input = *inputs.begin();
     s.settings = input.getSettings();
 
-    // get settings from targets to make use settings equality later
+    // get settings from targets to use settings equality later
     for (auto &[pkg, tgts] : b.getTargetsToBuild())
     {
         decltype(s.settings) s2;
@@ -285,12 +236,14 @@ void VSGenerator::generate(const SwBuild &b)
         break;
     }
 
+    // add predefined dirs
     {
         Directory d(predefined_targets_dir);
         d.g = this;
         s.directories.emplace(d.name, d);
     }
 
+    // add ALL_BUILD project
     {
         Project p(all_build_name);
         p.g = this;
@@ -305,13 +258,38 @@ void VSGenerator::generate(const SwBuild &b)
         s.projects.emplace(p.name, p);
     }
 
+    auto can_add_file = [](const auto &f)
+    {
+        auto t = get_vs_file_type_by_ext(f);
+        return t == VSFileType::ClInclude || t == VSFileType::None;
+    };
+
+    auto is_generated_ext = [](const auto &f)
+    {
+        return
+            0
+            || f.extension() == ".obj"
+            || f.extension() == ".lib"
+            || f.extension() == ".dll"
+            || f.extension() == ".exe"
+            || f.extension() == ".res"
+            || f.extension() == ".pdb"
+            // add more
+            ;
+    };
+
     for (auto &[pkg, tgts] : b.getTargetsToBuild())
     {
+        // add project with settings
         for (auto &tgt : tgts)
         {
             Project p(pkg.toString());
             p.g = this;
-            p.files = tgt->getSourceFiles();
+            for (auto &f : tgt->getSourceFiles())
+            {
+                if (can_add_file(f))
+                    p.files.insert(f);
+            }
             p.settings = s.settings;
             p.build = true;
 
@@ -319,6 +297,9 @@ void VSGenerator::generate(const SwBuild &b)
             s.projects.find(all_build_name)->second.dependencies.insert(&s.projects.find(p.name)->second);
             break;
         }
+
+        // process project
+        auto &p = s.projects.find(pkg.toString())->second;
         for (auto &st : s.settings)
         {
             auto itgt = tgts.findEqual(st);
@@ -327,12 +308,32 @@ void VSGenerator::generate(const SwBuild &b)
             auto &d = s.projects.find(pkg.toString())->second.getData(st);
             d.target = itgt->get();
 
-            // determine type
             auto cmds = d.target->getCommands();
+
             bool has_dll = false;
             bool has_exe = false;
             for (auto &c : cmds)
             {
+                for (auto &o : c->inputs)
+                {
+                    if (is_generated_ext(o))
+                        continue;
+
+                    if (can_add_file(o))
+                        p.files.insert(o);
+                    else
+                        d.build_rules[c.get()] = o;
+                }
+
+                for (auto &o : c->outputs)
+                {
+                    if (is_generated_ext(o))
+                        continue;
+
+                    d.custom_rules.insert(c.get());
+                }
+
+                // determine project type and main command
                 has_dll |= std::any_of(c->outputs.begin(), c->outputs.end(), [&d, &c](const auto &f)
                 {
                     bool r = f.extension() == ".dll";
@@ -348,6 +349,7 @@ void VSGenerator::generate(const SwBuild &b)
                     return r;
                 });
             }
+
             if (has_exe)
                 d.type = VSProjectType::Application;
             else if (has_dll)
@@ -367,6 +369,8 @@ void VSGenerator::generate(const SwBuild &b)
                     }
                 }
             }
+
+            d.build_rules.erase(d.main_command);
         }
     }
     for (auto &[pkg, tgts] : b.getTargetsToBuild())
@@ -484,7 +488,7 @@ void Solution::emitProjects(const path &root, SolutionEmitter &sctx) const
     }
 }
 
-Directory::Directory(const String &name)
+CommonProjectData::CommonProjectData(const String &name)
     : name(name)
 {
     auto up = boost::uuids::name_generator_sha1(boost::uuids::ns::oid())(name);
@@ -492,7 +496,7 @@ Directory::Directory(const String &name)
 }
 
 Project::Project(const String &name)
-    : Directory(name)
+    : CommonProjectData(name)
 {
     type = VSProjectType::Utility;
 }
@@ -526,7 +530,7 @@ void Project::emit(SolutionEmitter &ctx) const
 void Project::emit(const VSGenerator &g) const
 {
     emitProject(g);
-    emitFilters(g);
+    //emitFilters(g);
 }
 
 void Project::emitProject(const VSGenerator &g) const
@@ -614,25 +618,35 @@ void Project::emitProject(const VSGenerator &g) const
         {
             ctx.beginBlock("Link");
             if (d.main_command)
-                printProperties(ctx, *d.main_command, link_props);
+                printProperties(ctx, s, *d.main_command, link_props);
+            ctx.endBlock();
+
+            ctx.beginBlock("ClCompile");
+
+            ctx.beginBlock("MultiProcessorCompilation");
+            ctx.addText("true");
+            ctx.endBlock(true);
+
             ctx.endBlock();
         }
         ctx.endBlock();
     }
 
     ctx.beginBlock("ItemGroup");
+
+    // usual files
     for (auto &p : files)
     {
         if (p.extension() == ".natvis")
             continue;
 
-        auto t = get_vs_file_type_by_ext(p);
-        ctx.beginBlock(toString(t), { { "Include", p.u8string() } });
+        ctx.beginFileBlock(p);
 
-        for (auto &[s, d] : data)
+        /*for (auto &[s, d] : data)
         {
             if (!d.target)
                 continue;
+
             auto cmds = d.target->getCommands();
             auto itcmd = std::find_if(cmds.begin(), cmds.end(), [&p](const auto &c)
             {
@@ -641,6 +655,7 @@ void Project::emitProject(const VSGenerator &g) const
                     return p == f;
                 });
             });
+
             if (itcmd != cmds.end())
             {
                 auto c = *itcmd;
@@ -648,18 +663,102 @@ void Project::emitProject(const VSGenerator &g) const
                 //ctx.beginBlockWithConfiguration("AdditionalOptions", s);
                 //ctx.endBlock();
             }
-            else
-                LOG_WARN(logger, "File " << p << " is not processed");
-        }
+            //else
+                //LOG_WARN(logger, "File " << p << " is not processed");
+        }*/
 
         //add_obj_file(t, p, sf);
-        /*if (!build)
+        //if (!build)
+        //{
+            //ctx.beginBlock("ExcludedFromBuild");
+            //ctx.addText("true");
+            //ctx.endBlock(true);
+        //}
+        ctx.endFileBlock();
+    }
+
+    // build rules
+    std::map<path, std::map<const sw::TargetSettings *, Command>> bfiles;
+    for (auto &[s, d] : data)
+    {
+        for (auto &[c, f] : d.build_rules)
         {
-            ctx.beginBlock("ExcludedFromBuild");
-            ctx.addText("true");
+            bfiles[f][&s] = c;
+        }
+    }
+    for (auto &[f, cfgs] : bfiles)
+    {
+        auto t = ctx.beginFileBlock(f);
+        for (auto &[sp, c] : cfgs)
+        {
+            printProperties(ctx, *sp, *c, cl_props);
+
+            // one .rc file
+            if (t == VSFileType::ResourceCompile)
+            {
+                for (auto &[s, d] : data)
+                {
+                    if (sp == &s)
+                        continue;
+                    ctx.beginBlockWithConfiguration("ExcludedFromBuild", s);
+                    ctx.addText("true");
+                    ctx.endBlock(true);
+                }
+            }
+        }
+        ctx.endFileBlock();
+    }
+
+    // custom rules
+    for (auto &[s, d] : data)
+    {
+        auto int_dir = get_int_dir(s);
+        auto rules_dir = get_int_dir(s) / "rules";
+        auto commands_dir = get_int_dir(s) / "commands";
+
+        Files rules;
+        for (auto &c : d.custom_rules)
+        {
+            // TODO: add hash if two rules with same name
+            path rule = rules_dir / c->outputs.begin()->filename();
+            rules.insert(rule);
+            if (rules.find(rule) != rules.end())
+                rule += "." + std::to_string(c->getHash());
+            rule += ".rule";
+            write_file(rule, "");
+
+            auto cmd = c->writeCommand(commands_dir / std::to_string(c->getHash()));
+
+            ctx.beginFileBlock(rule);
+
+            ctx.beginBlockWithConfiguration("AdditionalInputs", s);
+            for (auto &o : c->inputs)
+                ctx.addText(normalize_path_windows(o) + ";");
             ctx.endBlock(true);
-        }*/
-        ctx.endBlock();
+
+            ctx.beginBlockWithConfiguration("Outputs", s);
+            for (auto &o : c->outputs)
+                ctx.addText(normalize_path_windows(o) + ";");
+            ctx.endBlock(true);
+
+            ctx.beginBlockWithConfiguration("Command", s);
+            ctx.addText("call \"" + normalize_path_windows(cmd) + "\"");
+            ctx.endBlock(true);
+
+            ctx.beginBlockWithConfiguration("Message", s);
+            ctx.endBlock();
+
+            for (auto &[s1, d] : data)
+            {
+                if (s == s1)
+                    continue;
+                ctx.beginBlockWithConfiguration("ExcludedFromBuild", s1);
+                ctx.addText("true");
+                ctx.endBlock(true);
+            }
+
+            ctx.endFileBlock();
+        }
     }
     ctx.endBlock();
 
@@ -721,20 +820,20 @@ void Project::emitFilters(const VSGenerator &g) const
             path r = ss;
             if (d == &sd)
                 r = "Source Files" / r;
-            /*if (d == &bd)
-            {
-                auto v = r;
-                r = "Generated Files";
-                r /= get_configuration(s);
-                r /= "Public" / v;
-            }
-            if (d == &bdp)
-            {
-                auto v = r;
-                r = "Generated Files";
-                r /= get_configuration(s);
-                r /= "Private" / v;
-            }*/
+            //if (d == &bd)
+            //{
+            //    auto v = r;
+            //    r = "Generated Files";
+            //    r /= get_configuration(s);
+            //    r /= "Public" / v;
+            //}
+            //if (d == &bdp)
+            //{
+            //    auto v = r;
+            //    r = "Generated Files";
+            //    r /= get_configuration(s);
+            //    r /= "Private" / v;
+            //}
             do
             {
                 r = r.parent_path();
@@ -765,7 +864,7 @@ void Project::emitFilters(const VSGenerator &g) const
     write_file(g.sln_root / vs_project_dir / (name + vs_project_ext + ".filters"), ctx.getText());
 }
 
-void Project::printProperties(ProjectEmitter &ctx, const primitives::Command &c, const Properties &props) const
+void Project::printProperties(ProjectEmitter &ctx, const sw::TargetSettings &s, const primitives::Command &c, const Properties &props) const
 {
     auto ft = path(c.getProgram()).stem().u8string();
     auto ift = flag_tables.find(ft);
@@ -778,7 +877,7 @@ void Project::printProperties(ProjectEmitter &ctx, const primitives::Command &c,
 
     std::map<String, String> semicolon_args;
     bool skip_prog = false;
-    for (auto &o : c.arguments)
+    for (int na = 0; na < c.arguments.size(); na++)
     {
         if (!skip_prog)
         {
@@ -786,6 +885,7 @@ void Project::printProperties(ProjectEmitter &ctx, const primitives::Command &c,
             continue;
         }
 
+        auto &o = c.arguments[na];
         auto arg = o->toString();
 
         if (!arg.empty() && arg[0] != '-' && arg[0] != '/')
@@ -798,26 +898,39 @@ void Project::printProperties(ProjectEmitter &ctx, const primitives::Command &c,
 
         auto &tbl = flag_tables[ft].ftable;
 
-        auto print = [&ctx, &arg, &semicolon_args, &props](auto &d)
+        auto print = [&ctx, &arg, &semicolon_args, &props, &s, &c, &na, &ft](auto &d)
         {
             if (props.exclude_flags.find(d.name) != props.exclude_flags.end())
                 return;
             if (bitmask_includes(d.flags, FlagTableFlags::UserValue))
             {
+                auto a = arg.substr(1 + d.argument.size());
+
+                // if we get empty string, probably value is in the next arg
+                if (a.empty())
+                    a = c.arguments[++na]->toString().substr(1 + d.argument.size());
+
+                // filters
+                if (ft == "rc" && arg.find("-D") == 0)
+                {
+                    // fix quotes for -D in .rc files
+                    boost::replace_all(a, "\"", "\\\"");
+                }
+
                 if (bitmask_includes(d.flags, FlagTableFlags::SemicolonAppendable))
                 {
-                    semicolon_args[d.name] += arg.substr(1 + d.argument.size()) + ";";
+                    semicolon_args[d.name] += a + ";";
                     return;
                 }
                 else
                 {
-                    ctx.beginBlock(d.name);
-                    ctx.addText(arg.substr(1 + d.argument.size()));
+                    ctx.beginBlockWithConfiguration(d.name, s);
+                    ctx.addText(a);
                 }
             }
             else
             {
-                ctx.beginBlock(d.name);
+                ctx.beginBlockWithConfiguration(d.name, s);
                 ctx.addText(d.value);
             }
             ctx.endBlock(true);
@@ -848,7 +961,7 @@ void Project::printProperties(ProjectEmitter &ctx, const primitives::Command &c,
     }
     for (auto &[k, v] : semicolon_args)
     {
-        ctx.beginBlock(k);
+        ctx.beginBlockWithConfiguration(k, s);
         ctx.addText(v);
         ctx.endBlock(true);
     }

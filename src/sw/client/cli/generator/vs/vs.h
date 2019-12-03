@@ -18,10 +18,9 @@
 
 #pragma once
 
+#include <sw/builder/command.h>
 #include <sw/core/target.h>
 #include <sw/manager/package.h>
-
-#include <primitives/command.h>
 
 namespace sw
 {
@@ -51,29 +50,42 @@ enum class VSProjectType
 
 struct File
 {
-
+    path p;
+    // command
+    // is generated
 };
 
-struct Directory
+struct CommonProjectData
 {
     String name;
     String directory; // parent
     String uuid;
-    Files files;
     VSProjectType type = VSProjectType::Directory;
     const VSGenerator *g = nullptr;
 
-    Directory(const String &name);
+    Files files;
+
+    CommonProjectData(const String &name);
 };
+
+struct Directory : CommonProjectData
+{
+    using CommonProjectData::CommonProjectData;
+};
+
+using Command = const sw::builder::Command *;
 
 struct ProjectData
 {
     const sw::ITarget *target = nullptr;
-    primitives::Command *main_command = nullptr;
+    Command main_command = nullptr;
     VSProjectType type = VSProjectType::Directory;
+    std::unordered_set<Command> custom_rules;
+    std::unordered_map<Command, path> build_rules;
+    std::unordered_map<path, path> rewrite_dirs;
 };
 
-struct Project : Directory
+struct Project : CommonProjectData
 {
     // settings
     std::set<const Project *> dependencies;
@@ -99,7 +111,7 @@ private:
 
     void emitProject(const VSGenerator &) const;
     void emitFilters(const VSGenerator &) const;
-    void printProperties(ProjectEmitter &, const primitives::Command &, const Properties &props = {}) const;
+    void printProperties(ProjectEmitter &, const sw::TargetSettings &, const primitives::Command &, const Properties &props = {}) const;
 };
 
 struct Solution

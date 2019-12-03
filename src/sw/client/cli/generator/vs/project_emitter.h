@@ -31,6 +31,17 @@ struct BuildSettings;
 
 struct Project;
 
+enum class VSFileType
+{
+    None,
+    ResourceCompile,
+    CustomBuild,
+    ClInclude,
+    ClCompile,
+    MASM,
+    Manifest,
+};
+
 struct XmlEmitter : primitives::Emitter
 {
     std::stack<String> blocks;
@@ -62,8 +73,14 @@ struct ProjectEmitter : XmlEmitter
     void addPropertyGroupConfigurationTypes(const Project &);
     void addConfigurationType(int t);
     void addPropertySheets(const Project &);
+
+    VSFileType beginFileBlock(const path &p);
+    void endFileBlock();
 };
 
 String get_configuration(const sw::BuildSettings &s);
 std::string getVsToolset(const sw::Version &v);
+
+VSFileType get_vs_file_type_by_ext(const path &p);
+String toString(VSFileType t);
 
