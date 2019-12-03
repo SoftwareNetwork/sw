@@ -245,6 +245,8 @@ std::vector<ITargetPtr> InputWithSettings::loadTargets(SwBuild &b) const
         {
             for (auto &s : settings)
             {
+                LOG_TRACE(logger, "Loading input " << i.getPackageId().toString() << ", settings = " << s.toString());
+
                 // load only this pkg
                 auto t = ep->loadPackages(b, s, { i.getPackageId() });
                 tgts.insert(tgts.end(), t.begin(), t.end());
@@ -264,6 +266,8 @@ std::vector<ITargetPtr> InputWithSettings::loadTargets(SwBuild &b) const
 
         for (auto &s : settings)
         {
+            LOG_TRACE(logger, "Loading input " << i.getPath() << ", settings = " << s.toString());
+
             // load all packages here
             auto t = ep->loadPackages(b, s, {});
             tgts.insert(tgts.end(), t.begin(), t.end());
