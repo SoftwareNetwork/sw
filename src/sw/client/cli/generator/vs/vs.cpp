@@ -577,9 +577,13 @@ void Project::emitProject(const VSGenerator &g) const
 
     for (auto &s : settings)
     {
+        auto &d = getData(s);
         ctx.beginBlockWithConfiguration("PropertyGroup", s);
         {
-            ctx.addBlock("OutDir", normalize_path_windows(get_out_dir(g.sln_root, vs_project_dir, s)) + "\\");
+            if (d.main_command)
+                ctx.addBlock("OutDir", normalize_path_windows(d.main_command->outputs.begin()->parent_path()) + "\\");
+            else
+                ctx.addBlock("OutDir", normalize_path_windows(get_out_dir(g.sln_root, vs_project_dir, s)) + "\\");
             ctx.addBlock("IntDir", normalize_path_windows(get_int_dir(s)) + "\\int\\");
             // full name of target, keep as is (it might have subdirs)
             ctx.addBlock("TargetName", name);
@@ -597,10 +601,9 @@ void Project::emitProject(const VSGenerator &g) const
 
     static const StringSet skip_link_props =
     {
-        "ImportLibrary",
-        "OutputFile",
-        "ProgramDatabaseFile",
-        "ImportLibrary",
+        //"ImportLibrary",
+        //"OutputFile",
+        //"ProgramDatabaseFile",
         "SuppressStartupBanner",
     };
 
@@ -616,7 +619,7 @@ void Project::emitProject(const VSGenerator &g) const
         auto &d = getData(s);
         ctx.beginBlockWithConfiguration("ItemDefinitionGroup", s);
         {
-            ctx.beginBlock("Link");
+            ctx.beginBlock(d.type == VSProjectType::StaticLibrary ? "Lib" : "Link");
             if (d.main_command)
                 printProperties(ctx, s, *d.main_command, link_props);
             ctx.endBlock();
@@ -864,8 +867,11 @@ void Project::emitFilters(const VSGenerator &g) const
     write_file(g.sln_root / vs_project_dir / (name + vs_project_ext + ".filters"), ctx.getText());
 }
 
-void Project::printProperties(ProjectEmitter &ctx, const sw::TargetSettings &s, const primitives::Command &c, const Properties &props) const
+void Project::printProperties(ProjectEmitter &ctx, const sw::TargetSettings &s, const sw::builder::Command &c, const Properties &props) const
 {
+    for (auto &d : c.getGeneratedDirs())
+        fs::create_directories(d);
+
     auto ft = path(c.getProgram()).stem().u8string();
     auto ift = flag_tables.find(ft);
     if (ift == flag_tables.end())

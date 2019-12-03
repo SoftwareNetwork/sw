@@ -111,7 +111,7 @@ private:
 
     void emitProject(const VSGenerator &) const;
     void emitFilters(const VSGenerator &) const;
-    void printProperties(ProjectEmitter &, const sw::TargetSettings &, const primitives::Command &, const Properties &props = {}) const;
+    void printProperties(ProjectEmitter &, const sw::TargetSettings &, const sw::builder::Command &, const Properties &props = {}) const;
 };
 
 struct Solution
