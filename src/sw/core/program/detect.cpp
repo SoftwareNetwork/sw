@@ -21,6 +21,8 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "compiler.detect");
 
+// TODO: actually detect.cpp may be rewritten as entry point
+
 #define DETECT_ARGS SwCoreContext &s
 
 namespace sw
@@ -784,7 +786,7 @@ static void detectWindowsSdk(DETECT_ARGS)
                 {
                     auto &t = addTarget<PredefinedTarget>(s, PackageId("com.Microsoft.Windows.SDK." + name, v));
                     t.ts = ts;
-                    t.ts["os"]["version"] = v.toString(3); // use 3 numbers at the moment
+                    //t.ts["os"]["version"] = v.toString();
 
                     t.public_ts["system-include-directories"].push_back(normalize_path(idir / name));
                     for (auto &i : idirs)
@@ -795,7 +797,7 @@ static void detectWindowsSdk(DETECT_ARGS)
                 {
                     auto &t = addTarget<PredefinedTarget>(s, PackageId("com.Microsoft.Windows.SDK." + name, v));
                     t.ts = ts;
-                    t.ts["os"]["version"] = v.toString(3); // use 3 numbers at the moment
+                    //t.ts["os"]["version"] = v.toString();
 
                     t.public_ts["system-include-directories"].push_back(normalize_path(idir / name));
                     for (auto &i : idirs)
