@@ -79,7 +79,7 @@ struct SW_BUILDER_API ExecutionPlan
     static void printGraph(const G &g, const path &base, const VecT &names = {}, bool mangle_names = false);
 
     template <class T>
-    static ExecutionPlan createExecutionPlan(const std::unordered_set<T> &in)
+    static ExecutionPlan create(const std::unordered_set<T> &in)
     {
         USet cmds;
         cmds.reserve(in.size());

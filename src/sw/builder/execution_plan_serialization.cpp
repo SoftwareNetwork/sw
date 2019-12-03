@@ -77,7 +77,7 @@ ExecutionPlan ExecutionPlan::load(const path &p, const SwBuilderContext &swctx, 
     {
         c->setContext(swctx);
     }
-    return createExecutionPlan(commands);
+    return create(commands);
 }
 
 void ExecutionPlan::save(const path &p, int type) const

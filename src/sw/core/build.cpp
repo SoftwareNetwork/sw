@@ -564,7 +564,7 @@ ExecutionPlan SwBuild::getExecutionPlan() const
 
 ExecutionPlan SwBuild::getExecutionPlan(const Commands &cmds) const
 {
-    auto ep = ExecutionPlan::createExecutionPlan(cmds);
+    auto ep = ExecutionPlan::create(cmds);
     if (ep)
         return ep;
 

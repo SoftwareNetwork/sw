@@ -371,7 +371,7 @@ int main() { return IsBigEndian(); }
         return;
     }
 
-    auto ep = ExecutionPlan::createExecutionPlan(unchecked);
+    auto ep = ExecutionPlan::create(unchecked);
     if (ep)
     {
         LOG_INFO(logger, "Performing " << unchecked.size() << " check(s): "
