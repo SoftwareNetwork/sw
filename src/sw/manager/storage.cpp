@@ -373,10 +373,17 @@ LocalPackage LocalStorage::install(const Package &id) const
     return LocalPackage(*this, id);*/
 
     LocalPackage p(*this, id);
-    if (isPackageInstalled(id))
+    if (isPackageInstalled(id) || isPackageOverridden(id))
         return p;
-    if (isPackageOverridden(id))
-        return LocalPackage(*this, id);
+
+    // check if we already have this package and do not dl it again
+    // and do not rewrite binaries etc.
+    /*auto stamp = p.getDirSrc() / "aux" / "stamp.hash";
+    if (fs::exists(stamp) && fs::exists(p.getDirSrc2()))
+    {
+        if (get_strong_file_hash(stamp) == read_file(stamp))
+            ;
+    }*/
 
     // actually we may want to remove only stamps, hashes etc.
     // but remove everything for now
