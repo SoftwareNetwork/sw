@@ -1946,7 +1946,8 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
     if (*HeaderOnly)
         s["header_only"] = "true";
 
-    s["import_library"] = normalize_path(getImportLibrary());
+    if (getType() != TargetType::NativeExecutable) // skip for exe atm
+        s["import_library"] = normalize_path(getImportLibrary());
     s["output_file"] = normalize_path(getOutputFile());
 
     TargetSettings defs;
@@ -1970,7 +1971,7 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
     {
         if (d->IncludeDirectoriesOnly)
             continue;
-        if (auto t = d->getTarget().as<const NativeCompiledTarget*>(); t && !t->DryRun)
+        if (auto t = d->getTarget().as<const NativeCompiledTarget*>(); t && !t->DryRun/* && t->getType() != TargetType::NativeExecutable*/)
             s["dependencies"]["link"][d->getTarget().getPackage().toString()] = d->getTarget().getSettings();
     }
 

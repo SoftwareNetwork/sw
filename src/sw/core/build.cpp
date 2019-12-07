@@ -560,8 +560,11 @@ Commands SwBuild::getCommands() const
                 path in = s["output_file"].getValue();
                 fast_path_files.insert(in);
 
-                path il = s["import_library"].isValue() ? s["import_library"].getValue() : "";
-                fast_path_files.insert(il);
+                if (s["import_library"].isValue())
+                {
+                    path il = s["import_library"].getValue();
+                    fast_path_files.insert(il);
+                }
 
                 if (s["type"] == "native_shared_library")
                 {
