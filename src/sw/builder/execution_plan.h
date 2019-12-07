@@ -16,6 +16,8 @@
 #include <boost/graph/graph_utility.hpp> // dumping graphs
 #include <boost/graph/graphviz.hpp>      // generating pictures
 
+#include <chrono>
+
 namespace sw
 {
 
@@ -39,6 +41,9 @@ struct SW_BUILDER_API ExecutionPlan
     using GraphMapping = std::unordered_map<PtrT, VertexNode>;
     using StrongComponents = std::vector<size_t>;
 
+    using Clock = std::chrono::steady_clock;
+
+public:
     int64_t skip_errors = 0;
     bool throw_on_errors = true;
     bool build_always = false;
@@ -58,6 +63,7 @@ struct SW_BUILDER_API ExecutionPlan
     void save(const path &, int type = 0) const;
 
     void saveChromeTrace(const path &) const;
+    void setTimeLimit(const Clock::duration &);
 
     const VecT &getCommands() const { return commands; }
     const VecT &getUnprocessedCommand() const { return unprocessed_commands; }
@@ -97,6 +103,9 @@ private:
     VecT commands;
     VecT unprocessed_commands;
     USet unprocessed_commands_set;
+
+    //
+    std::optional<Clock::time_point> stop_time;
 
     void setup();
     static GraphMapping getGraphMapping(const VecT &v);

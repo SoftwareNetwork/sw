@@ -45,6 +45,8 @@ static ::cl::opt<bool> isolated_build("isolated", cl::desc("Copy source files to
 ::cl::opt<path> build_ide_fast_path("ide-fast-path", ::cl::sub(subcommand_build), ::cl::Hidden);
 static ::cl::opt<path> build_ide_copy_to_dir("ide-copy-to-dir", ::cl::sub(subcommand_build), ::cl::Hidden);
 
+static ::cl::opt<String> time_limit("time-limit", ::cl::sub(subcommand_build));
+
 //
 
 //cl::opt<bool> dry_run("n", cl::desc("Dry run"));
@@ -626,6 +628,8 @@ std::unique_ptr<sw::SwBuild> createBuild(sw::SwContext &swctx)
         bs["show_output"] = "true";
     if (cl_write_output_to_file)
         bs["write_output_to_file"] = "true";
+    if (!time_limit.empty())
+        bs["time_limit"] = time_limit;
     b->setSettings(bs);
 
     return b;

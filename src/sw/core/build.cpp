@@ -37,6 +37,58 @@ DECLARE_STATIC_LOGGER(logger, "build");
 namespace sw
 {
 
+static ExecutionPlan::Clock::duration parseTimeLimit(String tl)
+{
+    enum duration_type
+    {
+        none,
+        day,
+        hour,
+        minute,
+        second,
+    };
+
+    ExecutionPlan::Clock::duration d;
+
+    size_t idx = 0, n;
+    int t = none;
+    while (1)
+    {
+        n = std::stoi(tl, &idx);
+        if (tl[idx] == 0)
+            break;
+        int t0 = t;
+        switch (tl[idx])
+        {
+        case 'd':
+            d += std::chrono::hours(24 * n);
+            t = day;
+            break;
+        case 'h':
+            d += std::chrono::hours(n);
+            t = hour;
+            break;
+        case 'm':
+            d += std::chrono::minutes(n);
+            t = minute;
+            break;
+        case 's':
+            d += std::chrono::seconds(n);
+            t = second;
+            break;
+        default:
+            throw SW_RUNTIME_ERROR("Unknown duration specifier: '"s + tl[idx] + "'");
+        }
+        if (t < t0)
+            throw SW_RUNTIME_ERROR("Bad duration specifier order");
+        tl = tl.substr(idx + 1);
+        if (tl.empty())
+            break;
+    }
+
+    return d;
+}
+
 SwBuild::SwBuild(SwContext &swctx, const path &build_dir)
     : swctx(swctx)
     , build_dir(build_dir)
@@ -355,6 +407,8 @@ void SwBuild::execute(ExecutionPlan &p) const
     p.write_output_to_file |= build_settings["write_output_to_file"] == "true";
     if (build_settings["skip_errors"].isValue())
         p.skip_errors = std::stoll(build_settings["skip_errors"].getValue());
+    if (build_settings["time_limit"].isValue())
+        p.setTimeLimit(parseTimeLimit(build_settings["time_limit"].getValue()));
 
     //ScopedTime t;
     p.execute(getExecutor());

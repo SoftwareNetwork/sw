@@ -90,6 +90,9 @@ void ExecutionPlan::execute(Executor &e) const
                 all.push_back(fs.back());
             }
         }
+
+        if (stop_time && Clock::now() > *stop_time)
+            throw SW_RUNTIME_ERROR("Time limit exceeded");
     };
 
     // we cannot know exact number of commands to be executed,
@@ -468,6 +471,11 @@ ExecutionPlan ExecutionPlan::create(USet &cmds)
     ep.init(cmds);
     ep.setup();
     return ep;
+}
+
+void ExecutionPlan::setTimeLimit(const Clock::duration &d)
+{
+    stop_time = Clock::now() + d;
 }
 
 }
