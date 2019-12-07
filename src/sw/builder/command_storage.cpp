@@ -22,11 +22,7 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "db_file");
 
-#ifndef __APPLE__
-#define COMMAND_DB_FORMAT_VERSION 3
-#else
 #define COMMAND_DB_FORMAT_VERSION 4
-#endif
 
 namespace sw
 {
@@ -123,6 +119,9 @@ void FileDb::write(std::vector<uint8_t> &v, const CommandRecord &f, const detail
     if (f.hash == 0)
         return;
 
+    //if (!std::is_trivially_copyable_v<decltype(f.mtime)>)
+        //throw SW_RUNTIME_ERROR("x");
+
     write_int(v, f.hash);
 #ifndef __APPLE__
     write_int(v, file_time_type2time_t(f.mtime));
@@ -200,6 +199,9 @@ static void load(const path &fn, Files &files, std::unordered_map<size_t, path> 
 
             auto r = commands.insert(h);
             r.first->hash = h;
+
+            //if (!std::is_trivially_copyable_v<decltype(r.first->mtime)>)
+                //throw SW_RUNTIME_ERROR("x");
 
 #ifndef __APPLE__
             time_t m;
