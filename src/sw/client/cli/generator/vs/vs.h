@@ -22,6 +22,8 @@
 #include <sw/core/target.h>
 #include <sw/manager/package.h>
 
+#include <optional>
+
 namespace sw
 {
 
@@ -56,6 +58,18 @@ struct File
     // is generated
 };
 
+struct Rule
+{
+    String name;
+    String command;
+    Files outputs;
+};
+
+struct BuildEvent
+{
+    String command;
+};
+
 struct CommonProjectData
 {
     String name;
@@ -82,8 +96,11 @@ struct ProjectData
     Command main_command = nullptr;
     VSProjectType type = VSProjectType::Directory;
     std::unordered_set<Command> custom_rules;
+    std::vector<Rule> custom_rules_manual; // not commands
     std::unordered_map<Command, path> build_rules;
     std::unordered_map<path, path> rewrite_dirs;
+    std::optional<BuildEvent> pre_build_event;
+    std::set<const sw::ITarget *> dependencies;
 };
 
 struct Project : CommonProjectData

@@ -406,39 +406,129 @@ void VSGenerator::generate(const SwBuild &b)
     {
         for (auto &tgt : tgts)
         {
+            auto &p = s.projects.find(tgt->getPackage().toString())->second;
+            auto &data = p.getData(tgt->getSettings());
             auto deps = tgt->getDependencies();
             for (auto &d : deps)
             {
+                // filter out predefined targets
+                auto &pd1 = b.getContext().getPredefinedTargets();
+                if (pd1.find(d->getUnresolvedPackage().ppath) != pd1.end(d->getUnresolvedPackage().ppath))
+                    continue;
+
                 // filter out predefined & deps targets
                 auto &pd = b.getTargetsToBuild();
                 if (pd.find(d->getUnresolvedPackage().ppath) == pd.end(d->getUnresolvedPackage().ppath))
+                {
+                    data.dependencies.insert(&d->getTarget());
                     continue;
-                s.projects.find(tgt->getPackage().toString())->second.dependencies.insert(&s.projects.find(d->getTarget().getPackage().toString())->second);
+                }
+                p.dependencies.insert(&s.projects.find(d->getTarget().getPackage().toString())->second);
             }
             break;
         }
     }
 
-    // gather .natvis
-    Files natvis;
-    for (auto &[n, p] : s.projects)
+    // natvis
     {
-        for (auto &f : p.files)
+        // gather .natvis
+        Files natvis;
+        for (auto &[n, p] : s.projects)
         {
-            if (f.extension() == ".natvis")
-                natvis.insert(f);
+            for (auto &f : p.files)
+            {
+                if (f.extension() == ".natvis")
+                    natvis.insert(f);
+            }
+        }
+
+        if (!natvis.empty())
+        {
+            Directory d(visualizers_dir);
+            d.g = this;
+            d.files = natvis;
+            d.directory = predefined_targets_dir;
+            s.directories.emplace(d.name, d);
         }
     }
 
-    if (!natvis.empty())
+    // add BUILD_DEPENDENCIES project
     {
-        Directory d(visualizers_dir);
-        d.g = this;
-        d.files = natvis;
-        d.directory = predefined_targets_dir;
-        s.directories.emplace(d.name, d);
+        {
+            Project p(build_dependencies_name);
+            p.g = this;
+            p.directory = predefined_targets_dir;
+            p.settings = s.settings;
+            s.projects.emplace(p.name, p);
+        }
+
+        auto &p = s.projects.find(build_dependencies_name)->second;
+
+        // create datas
+        for (auto &st : s.settings)
+            p.getData(st).type = p.type;
+        for (auto &st : s.settings)
+        {
+            auto &d = p.getData(st);
+
+            auto int_dir = get_int_dir(sln_root, vs_project_dir, p.name, st);
+
+            // fake command
+            Rule r;
+            r.name = p.name;
+            r.command = "setlocal";
+            r.outputs.insert(int_dir / "rules" / "intentionally_missing.file");
+
+            d.custom_rules_manual.push_back(r);
+
+            // actually we must build deps + their specific settings
+            // not one setting for all deps
+            std::set<PackageId> deps;
+            for (auto &[_, p1] : s.projects)
+            {
+                auto &d = p1.getData(st);
+                for (auto &t : d.dependencies)
+                {
+                    deps.insert(t->getPackage());
+                    p1.dependencies.insert(&p); // add dependency for project
+                }
+            }
+
+            String deps_str;
+            for (auto &d : deps)
+                deps_str += d.toString() + " ";
+            auto fn = shorten_hash(blake2b_512(deps_str), 6);
+            auto basefn = int_dir / fn;
+
+            Strings args;
+            args.push_back("-d");
+            args.push_back(normalize_path(fs::current_path()));
+            args.push_back("-settings-json");
+            auto js = st.toString();
+            boost::replace_all(js, "\\", "\\\\");
+            boost::replace_all(js, "\"", "\\\"");
+            args.push_back("\"" + js + "\"");
+            args.push_back("build");
+            for (auto &d : deps)
+                args.push_back(d.toString());
+            args.push_back("-ide-fast-path");
+            args.push_back(normalize_path(path(basefn) += ".deps"));
+            args.push_back("-ide-copy-to-dir");
+            args.push_back(normalize_path(b.getBuildDirectory() / "out" / st.getHash()));
+
+            String s;
+            for (auto &a : args)
+                s += a + "\n";
+            auto rsp = path(basefn) += ".rsp";
+            write_file(rsp, s);
+
+            BuildEvent be;
+            be.command = "sw @" + normalize_path(rsp);
+            d.pre_build_event = be;
+        }
     }
 
+    // main emit
     s.emit(*this);
 }
 
@@ -486,8 +576,7 @@ void Solution::emit(const VSGenerator &g) const
 
     //const auto compiler_name = boost::to_lower_copy(toString(b.solutions[0].Settings.Native.CompilerType));
     const String compiler_name = "msvc";
-    //String fn = b.ide_solution_name + "_";
-    String fn = "p_";
+    String fn = fs::current_path().filename().u8string() + "_";
     fn += compiler_name + "_" + toPathString(g.getType()) + "_" + g.vs_version.toString(1);
     fn += ".sln";
     write_file_if_different(g.sln_root / fn, ctx.getText());
@@ -648,11 +737,13 @@ void Project::emitProject(const VSGenerator &g) const
         auto &d = getData(s);
         ctx.beginBlockWithConfiguration("ItemDefinitionGroup", s);
         {
+            //
             ctx.beginBlock(d.type == VSProjectType::StaticLibrary ? "Lib" : "Link");
             if (d.main_command)
                 printProperties(ctx, s, *d.main_command, link_props);
             ctx.endBlock();
 
+            //
             ctx.beginBlock("ClCompile");
 
             ctx.beginBlock("MultiProcessorCompilation");
@@ -660,6 +751,17 @@ void Project::emitProject(const VSGenerator &g) const
             ctx.endBlock(true);
 
             ctx.endBlock();
+
+            if (d.pre_build_event)
+            {
+                ctx.beginBlock("PreBuildEvent");
+
+                ctx.beginBlock("Command");
+                ctx.addText(d.pre_build_event->command);
+                ctx.endBlock(true);
+
+                ctx.endBlock();
+            }
         }
         ctx.endBlock();
     }
@@ -788,6 +890,29 @@ void Project::emitProject(const VSGenerator &g) const
                 ctx.addText("true");
                 ctx.endBlock(true);
             }
+
+            ctx.endFileBlock();
+        }
+
+        for (auto &c : d.custom_rules_manual)
+        {
+            path rule = rules_dir / c.name;
+            rule += ".rule";
+            write_file(rule, "");
+
+            ctx.beginFileBlock(rule);
+
+            ctx.beginBlockWithConfiguration("Outputs", s);
+            for (auto &o : c.outputs)
+                ctx.addText(normalize_path_windows(o) + ";");
+            ctx.endBlock(true);
+
+            ctx.beginBlockWithConfiguration("Command", s);
+            ctx.addText(c.command);
+            ctx.endBlock(true);
+
+            ctx.beginBlockWithConfiguration("Message", s);
+            ctx.endBlock();
 
             ctx.endFileBlock();
         }
