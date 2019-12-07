@@ -280,19 +280,13 @@ PackageData PackagesDatabase::getPackageData(const PackageId &p) const
 
 int64_t PackagesDatabase::getInstalledPackageId(const PackageId &p) const
 {
-    auto q = (*db)(
-        select(pkg_ver.packageVersionId, pkg_ver.hash, pkg_ver.flags, pkg_ver.updated, pkg_ver.groupNumber, pkg_ver.prefix)
-        .from(pkg_ver)
-        .where(pkg_ver.packageId == getPackageId(p.getPath()) && pkg_ver.version == p.getVersion().toString()));
-    if (q.empty())
-        return 0;
-    return q.front().packageVersionId.value();
+    return getPackageVersionId(p);
 }
 
 String PackagesDatabase::getInstalledPackageHash(const PackageId &p) const
 {
     auto q = (*db)(
-        select(pkg_ver.packageVersionId, pkg_ver.hash, pkg_ver.flags, pkg_ver.updated, pkg_ver.groupNumber, pkg_ver.prefix)
+        select(pkg_ver.hash)
         .from(pkg_ver)
         .where(pkg_ver.packageId == getPackageId(p.getPath()) && pkg_ver.version == p.getVersion().toString()));
     if (q.empty())
@@ -357,7 +351,7 @@ void PackagesDatabase::installPackage(const PackageId &p, const PackageData &d)
         // extended
         pkg_ver.prefix = d.prefix,
         pkg_ver.hash = d.hash,
-        pkg_ver.groupNumber = d.group_number,
+        //pkg_ver.groupNumber = d.group_number,
 
         // TODO:
         pkg_ver.archiveVersion = 1,
@@ -407,17 +401,6 @@ void PackagesDatabase::installPackage(const PackageId &p, const PackageData &d)
 void PackagesDatabase::installPackage(const Package &p)
 {
     installPackage(p, p.getData());
-}
-
-PackageVersionGroupNumber PackagesDatabase::getMaxGroupNumber() const
-{
-    auto q = (*db)(
-        select(max(pkg_ver.groupNumber))
-        .from(pkg_ver)
-        .unconditionally());
-    if (q.empty())
-        return {};
-    return q.front().max.value();
 }
 
 std::optional<path> PackagesDatabase::getOverriddenDir(const Package &p) const
@@ -498,6 +481,17 @@ db::PackageId PackagesDatabase::getPackageId(const PackagePath &ppath) const
     return q.front().packageId.value();
 }
 
+db::PackageId PackagesDatabase::getPackageVersionId(const PackageId &p) const
+{
+    auto q = (*db)(
+        select(pkg_ver.packageVersionId)
+        .from(pkg_ver)
+        .where(pkg_ver.packageId == getPackageId(p.getPath()) && pkg_ver.version == p.getVersion().toString()));
+    if (q.empty())
+        return 0;
+    return q.front().packageVersionId.value();
+}
+
 String PackagesDatabase::getPackagePath(db::PackageId id) const
 {
     for (const auto &row : (*db)(
@@ -529,6 +523,9 @@ DataSources PackagesDatabase::getDataSources() const
 
 PackageId PackagesDatabase::getGroupLeader(PackageVersionGroupNumber gn) const
 {
+    if (gn == 0)
+        throw SW_RUNTIME_ERROR("Zero gn");
+
     auto q = (*db)(
         select(pkg_ver.packageId, pkg_ver.version)
         .from(pkg_ver)
@@ -547,6 +544,19 @@ PackageId PackagesDatabase::getGroupLeader(PackageVersionGroupNumber gn) const
         throw SW_RUNTIME_ERROR("No such packageId: " + std::to_string(q.front().packageId.value()));
 
     return { q2.front().path.value(), q.front().version.value() };
+}
+
+void PackagesDatabase::setGroupNumber(const PackageId &id, PackageVersionGroupNumber gn) const
+{
+    auto vid = getPackageVersionId(id);
+    if (vid == 0)
+        throw SW_RUNTIME_ERROR("No such packages in db: " + id.toString());
+
+    (*db)(
+        update(pkg_ver)
+        .set(pkg_ver.groupNumber = gn)
+        .where(pkg_ver.packageVersionId == vid)
+        );
 }
 
 }

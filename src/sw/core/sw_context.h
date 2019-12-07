@@ -32,15 +32,28 @@ struct SW_CORE_API SwCoreContext : SwBuilderContext
     void setHostSettings(const TargetSettings &s) { host_settings = s; }
     const TargetSettings &getHostSettings() const { return host_settings; }
 
+    void setEntryPoint(const LocalPackage &, const TargetEntryPointPtr &);
+    void setEntryPoint(const PackageId &, const TargetEntryPointPtr &);
+    void setEntryPoint(PackageVersionGroupNumber, const TargetEntryPointPtr &);
+    TargetEntryPointPtr getEntryPoint(const LocalPackage &) const;
+    TargetEntryPointPtr getEntryPoint(const PackageId &) const;
+
+    // load targets
+    /*[[nodiscard]]
+    std::vector<ITargetPtr> loadPackages(SwBuild &, const TargetSettings &, const PackageIdSet &allowed_packages) const;*/
+
 private:
     // rename to detected?
     // not only detected, but also predefined? do not rename?
     TargetMap predefined_targets;
     std::unordered_map<PackageId, TargetData> target_data;
     TargetSettings host_settings;
+    std::unordered_map<PackageId, TargetEntryPointPtr> entry_points;
+    std::unordered_map<PackageVersionGroupNumber, TargetEntryPointPtr> entry_points_by_group_number;
 
     void createHostSettings();
     void setHostPrograms();
+    TargetEntryPointPtr getEntryPoint(PackageVersionGroupNumber) const;
 };
 
 // public context

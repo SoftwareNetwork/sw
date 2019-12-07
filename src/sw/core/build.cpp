@@ -254,7 +254,8 @@ void SwBuild::loadPackages()
 void SwBuild::loadPackages(const TargetMap &predefined)
 {
     // first, we create all package ids with EPs in targets
-    for (auto &[p, _] : swctx.getTargetData())
+    //for (auto &[p, _] : swctx.getTargetData())
+    for (auto &p : getKnownPackages())
         targets[p];
 
     // load
@@ -277,7 +278,9 @@ void SwBuild::loadPackages(const TargetMap &predefined)
 
                     auto i = chld.find(d->getUnresolvedPackage());
                     if (i == chld.end())
+                    {
                         throw SW_RUNTIME_ERROR(tgt->getPackage().toString() + ": No target loaded: " + d->getUnresolvedPackage().toString());
+                    }
 
                     auto k = i->second.findSuitable(d->getSettings());
                     if (k != i->second.end())
@@ -308,7 +311,10 @@ void SwBuild::loadPackages(const TargetMap &predefined)
 
             loaded = true;
 
-            auto tgts = swctx.getTargetData(d.first).loadPackages(*this, s, known_packages);
+            auto ep = swctx.getEntryPoint(d.first);
+            if (!ep)
+                throw SW_RUNTIME_ERROR("no entry point for " + d.first.toString());
+            auto tgts = ep->loadPackages(*this, s, known_packages);
             //swctx.getTargetData(d.first).loadPackages(*this, s, { d.first });
 
             bool added = false;

@@ -108,6 +108,7 @@ struct SW_MANAGER_API LocalPackage : Package
     void remove() const;
 
     LocalPackage getGroupLeader() const;
+    void setGroupNumber(PackageVersionGroupNumber) const;
 
 private:
     path getDir(const path &root) const;

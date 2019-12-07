@@ -184,4 +184,9 @@ LocalPackage LocalPackage::getGroupLeader() const
     return getLocalStorage().getGroupLeader(*this);
 }
 
+void LocalPackage::setGroupNumber(PackageVersionGroupNumber gn) const
+{
+    return getLocalStorage().setGroupNumber(*this, gn);
+}
+
 }

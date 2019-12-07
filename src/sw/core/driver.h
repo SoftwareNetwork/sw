@@ -55,6 +55,10 @@ struct SW_CORE_API IDriver
     /// for example set of files
     virtual std::string getSpecification(const RawInput &) const = 0;
 
+    ///
+    //virtual PackageVersionSpecificationHash getHash(const RawInput &) const;
+    virtual int64_t getGroupNumber(const RawInput &) const;
+
     // get features()?
 };
 

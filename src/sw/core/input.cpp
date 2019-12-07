@@ -278,7 +278,7 @@ std::vector<ITargetPtr> InputWithSettings::loadTargets(SwBuild &b) const
         {
             if (old.find(pkg) != old.end())
                 continue;
-            b.getContext().getTargetData(pkg).setEntryPoint(ep);
+            b.getContext().setEntryPoint(pkg, ep);
         }
     }
     return tgts;

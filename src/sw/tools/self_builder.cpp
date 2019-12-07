@@ -136,7 +136,8 @@ void write_build_script(const std::unordered_map<UnresolvedPackage, LocalPackage
         if (has_checks)
             build.addLine("ep->cf = check_" + r.getVariableName() + ";");
         build.addLine("ep->module_data.NamePrefix = \"" + r.getPath().slice(0, d.prefix).toString() + "\";");
-        build.addLine("epm[\"" + r.toString() + "\"s] = ep;");
+        //build.addLine("epm[\"" + r.toString() + "\"s] = ep;");
+        build.addLine("epm[" + std::to_string(r.getData().group_number) + "] = ep;");
         build.endBlock();
         build.addLine();
     }
@@ -172,6 +173,16 @@ int main(int argc, char **argv)
         // other needed stuff (libcxx)
         {"org.sw.demo.llvm_project.libcxx"},
     });
+
+    // calc GNs
+    for (auto &[u2, r] : m)
+    {
+        auto &d = r.getData();
+        if (d.group_number == 0)
+        {
+            ((PackageData&)d).group_number = std::hash<String>()(read_file(r.getDirSrc2() / "sw.cpp"));
+        }
+    }
 
     write_required_packages(m);
     write_build_script(m);

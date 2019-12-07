@@ -253,6 +253,11 @@ void LocalStorageBase::deletePackage(const PackageId &id) const
     getPackagesDatabase().deletePackage(id);
 }
 
+void LocalStorageBase::setGroupNumber(const PackageId &id, PackageVersionGroupNumber gn) const
+{
+    getPackagesDatabase().setGroupNumber(id, gn);
+}
+
 LocalStorage::LocalStorage(const path &local_storage_root_dir)
     : Directories(local_storage_root_dir), LocalStorageBase("local", getDatabaseRootDir()), ovs(*this, getDatabaseRootDir())
 {
@@ -326,6 +331,13 @@ LocalPackage LocalStorage::getGroupLeader(const LocalPackage &id) const
     return LocalPackage(*this, pkg);
 }
 
+void LocalStorage::setGroupNumber(const PackageId &id, PackageVersionGroupNumber gn) const
+{
+    if (isPackageOverridden(id))
+        return ovs.setGroupNumber(id, gn);
+    return LocalStorageBase::setGroupNumber(id, gn);
+}
+
 LocalPackage LocalStorage::install(const Package &id) const
 {
     /*//if (&id.storage == this)
@@ -348,11 +360,11 @@ LocalPackage LocalStorage::install(const Package &id) const
     get(static_cast<const IStorage2 &>(id.getStorage()), id, StorageFileType::SourceArchive);
 
     // we mix gn with storage name to get unique gn
-    auto h = std::hash<String>()(static_cast<const IStorage2 &>(id.getStorage()).getName());
+    /*auto h = std::hash<String>()(static_cast<const IStorage2 &>(id.getStorage()).getName());
     auto d = id.getData();
-    d.group_number = hash_combine(h, d.group_number);
+    d.group_number = hash_combine(h, d.group_number);*/
 
-    getPackagesDatabase().installPackage(id, d);
+    getPackagesDatabase().installPackage(id, id.getData());
     return p;
 }
 
@@ -432,11 +444,11 @@ LocalPackage OverriddenPackagesStorage::install(const Package &p) const
         return LocalPackage(ls, p);
 
     // we mix gn with storage name to get unique gn
-    auto h = std::hash<String>()(static_cast<const IStorage2 &>(p.getStorage()).getName());
+    /*auto h = std::hash<String>()(static_cast<const IStorage2 &>(p.getStorage()).getName());
     auto d = p.getData();
-    d.group_number = hash_combine(h, d.group_number);
+    d.group_number = hash_combine(h, d.group_number);*/
 
-    return install(p, d);
+    return install(p, p.getData());
 }
 
 LocalPackage OverriddenPackagesStorage::install(const PackageId &id, const PackageData &d) const

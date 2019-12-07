@@ -26,7 +26,7 @@ static cl::opt<bool> debug_configs("debug-configs", cl::desc("Build configs in d
 namespace sw
 {
 
-PackageIdSet build_self(SwContext &);
+PackageIdSet load_builtin_packages(SwContext &swctx);
 
 String gn2suffix(PackageVersionGroupNumber gn)
 {
@@ -163,7 +163,7 @@ PackageIdSet Driver::getBuiltinPackages(SwContext &swctx) const
     if (!builtin_packages)
     {
         std::unique_lock lk(m_bp);
-        builtin_packages = build_self(swctx);
+        builtin_packages = load_builtin_packages(swctx);
     }
     return *builtin_packages;
 }
@@ -207,6 +207,11 @@ std::shared_ptr<PrepareConfigEntryPoint> Driver::build_configs1(SwContext &swctx
 
 std::unordered_map<PackageId, Driver::EntryPointsVector1> Driver::load_packages(SwContext &swctx, const PackageIdSet &pkgsids) const
 {
+    // init here
+    getBuiltinPackages(swctx);
+
+    std::unordered_map<PackageId, EntryPointsVector1> eps;
+
     std::unordered_set<LocalPackage> in_pkgs;
     for (auto &p : pkgsids)
         in_pkgs.emplace(swctx.getLocalStorage(), p);
@@ -215,9 +220,15 @@ std::unordered_map<PackageId, Driver::EntryPointsVector1> Driver::load_packages(
     std::unordered_map<PackageVersionGroupNumber, LocalPackage> cfgs2;
     for (auto &p : in_pkgs)
     {
-        auto &td = swctx.getTargetData();
-        if (td.find(p) == td.end())
+        auto ep = swctx.getEntryPoint(p);
+        if (!ep)
             cfgs2.emplace(p.getData().group_number, p);
+        else
+            eps[p].push_back(ep);
+
+        /*auto &td = swctx.getTargetData();
+        if (td.find(p) == td.end())
+            cfgs2.emplace(p.getData().group_number, p);*/
     }
 
     std::unordered_set<LocalPackage> pkgs;
@@ -225,12 +236,16 @@ std::unordered_map<PackageId, Driver::EntryPointsVector1> Driver::load_packages(
         pkgs.insert(p);
 
     if (pkgs.empty())
-        return {};
+        return eps;
 
     auto dll = build_configs1(swctx, pkgs)->out;
-    std::unordered_map<PackageId, EntryPointsVector1> eps;
     for (auto &p : in_pkgs)
     {
+        if (auto ep = swctx.getEntryPoint(p))
+        {
+            eps[p].push_back(ep);
+            continue;
+        }
         auto &td = swctx.getTargetData();
         if (td.find(p) != td.end())
             continue;
@@ -238,7 +253,7 @@ std::unordered_map<PackageId, Driver::EntryPointsVector1> Driver::load_packages(
         auto ep = std::make_shared<NativeModuleTargetEntryPoint>(
             Module(swctx.getModuleStorage().get(dll), gn2suffix(p.getData().group_number)));
         ep->module_data.NamePrefix = p.getPath().slice(0, p.getData().prefix);
-        swctx.getTargetData(p).setEntryPoint(ep);
+        swctx.setEntryPoint(p, ep);
         eps[p].push_back(ep);
     }
     return eps;

@@ -197,6 +197,17 @@ void RemoteStorage::load() const
     sdb.setPackagesDbSchemaVersion(sver);
     }*/
 
+    struct Column
+    {
+        String name;
+        bool skip = false;
+    };
+
+    static const Strings skip_cols
+    {
+        "group_number",
+    };
+
     auto mdb = getPackagesDatabase().db->native_handle();
     sqlite3_stmt *stmt = nullptr;
 
@@ -242,28 +253,48 @@ void RemoteStorage::load() const
         safe_getline(ifile, s);
         split_csv_line(s);
 
+        auto is_skipped_column = [](const String &name)
+        {
+            return std::find_if(skip_cols.begin(), skip_cols.end(), [&name](const auto &col)
+            {
+                return col == name;
+            }) != skip_cols.end();
+        };
+
         // read fields
         auto b = s.c_str();
         auto e = &s.back() + 1;
-        Strings cols;
-        cols.push_back(b);
+        std::vector<Column> cols;
+        cols.push_back({ b });
+        if (is_skipped_column(cols.back().name))
+            cols.back().skip = true;
         while (1)
         {
             if (b == e)
                 break;
             if (*b++ == 0)
-                cols.push_back(b);
+            {
+                cols.push_back({ b });
+                if (is_skipped_column(cols.back().name))
+                    cols.back().skip = true;
+            }
         }
         auto n_cols = cols.size();
 
         // add only them
         String query = "insert into " + td + " (";
         for (auto &c : cols)
-            query += c + ", ";
+        {
+            if (!c.skip)
+                query += c.name + ", ";
+        }
         query.resize(query.size() - 2);
         query += ") values (";
         for (size_t i = 0; i < n_cols; i++)
-            query += "?, ";
+        {
+            if (!cols[i].skip)
+                query += "?, ";
+        }
         query.resize(query.size() - 2);
         query += ");";
 
@@ -275,12 +306,18 @@ void RemoteStorage::load() const
             auto b = s.c_str();
             split_csv_line(s);
 
-            for (int i = 1; i <= n_cols; i++)
+            for (int i = 1, col = 1; i <= n_cols; i++)
             {
-                if (*b)
-                    sqlite3_bind_text(stmt, i, b, -1, SQLITE_TRANSIENT);
-                else
-                    sqlite3_bind_null(stmt, i);
+                if (!cols[i - 1].skip)
+                {
+                    if (*b)
+                        sqlite3_bind_text(stmt, col, b, -1, SQLITE_TRANSIENT);
+                    else
+                        sqlite3_bind_null(stmt, col);
+                    col++;
+                }
+
+                // skip ahead
                 while (*b++);
             }
 

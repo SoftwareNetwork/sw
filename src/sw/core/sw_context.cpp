@@ -180,6 +180,88 @@ const TargetData &SwCoreContext::getTargetData(const PackageId &pkg) const
     return i->second;
 }
 
+void SwCoreContext::setEntryPoint(const PackageId &pkgid, const TargetEntryPointPtr &ep)
+{
+    LocalPackage p(getLocalStorage(), pkgid);
+    return setEntryPoint(p, ep);
+}
+
+void SwCoreContext::setEntryPoint(const LocalPackage &p, const TargetEntryPointPtr &ep)
+{
+    if (!ep)
+        return;
+
+    auto iep = entry_points.find(p);
+    if (iep != entry_points.end())
+    {
+        if (iep->second != ep)
+            throw SW_RUNTIME_ERROR("Setting entry point twice for package " + p.toString());
+        //getTargetData(p); // "register" package
+        return;
+    }
+    //getTargetData(p).setEntryPoint(ep);
+    //getTargetData(p); // "register" package
+    entry_points[p] = ep; // after target data
+
+    // local package
+    if (p.getPath().isRelative())
+        return;
+
+    setEntryPoint(p.getData().group_number, ep);
+}
+
+void SwCoreContext::setEntryPoint(PackageVersionGroupNumber gn, const TargetEntryPointPtr &ep)
+{
+    if (gn == 0)
+        return;
+
+    auto iepgn = entry_points_by_group_number.find(gn);
+    if (iepgn != entry_points_by_group_number.end())
+    {
+        if (iepgn->second != ep)
+            throw SW_RUNTIME_ERROR("Setting entry point twice for group_number " + std::to_string(gn));
+        return;
+    }
+    entry_points_by_group_number[gn] = ep;
+}
+
+TargetEntryPointPtr SwCoreContext::getEntryPoint(const PackageId &pkgid) const
+{
+    LocalPackage p(getLocalStorage(), pkgid);
+    return getEntryPoint(p);
+}
+
+TargetEntryPointPtr SwCoreContext::getEntryPoint(const LocalPackage &p) const
+{
+    auto gn = p.getData().group_number;
+    if (gn == 0)
+    {
+        gn = std::hash<String>()(read_file(p.getDirSrc2() / "sw.cpp"));
+        p.setGroupNumber(gn);
+        ((PackageData &)p.getData()).group_number = gn;
+    }
+
+    auto ep = getEntryPoint(gn);
+    if (ep)
+        return ep;
+    auto i = entry_points.find(p);
+    if (i != entry_points.end())
+        return i->second;
+    return {};
+}
+
+TargetEntryPointPtr SwCoreContext::getEntryPoint(PackageVersionGroupNumber p) const
+{
+    if (p == 0)
+        //return {};
+        throw SW_RUNTIME_ERROR("Empty entry point"); // assert?
+
+    auto i = entry_points_by_group_number.find(p);
+    if (i == entry_points_by_group_number.end())
+        return {};
+    return i->second;
+}
+
 SwContext::SwContext(const path &local_storage_root_dir)
     : SwCoreContext(local_storage_root_dir)
 {
@@ -232,9 +314,9 @@ Input &SwContext::addInput(const LocalPackage &p)
     auto &i = addInput1(p);
     if (i.isLoaded())
         return i;
-    if (getTargetData().find(p) == getTargetData().end())
-        return i;
-    auto ep = getTargetData(p).getEntryPoint();
+    //if (getTargetData().find(p) == getTargetData().end())
+        //return i;
+    auto ep = getEntryPoint(p);
     if (ep)
         i.addEntryPoints({ ep });
     return i;
@@ -280,7 +362,7 @@ void SwContext::loadEntryPoints(const std::set<Input*> &inputs, bool set_eps)
             {
                 if (inputs[i].getType() != InputType::InstalledPackage)
                     throw SW_RUNTIME_ERROR("unexpected input type");
-                g[i]->addEntryPoints({ getTargetData(inputs[i].getPackageId()).getEntryPoint() });
+                g[i]->addEntryPoints({ getEntryPoint(inputs[i].getPackageId()) });
             }
             else
                 g[i]->addEntryPoints(eps[i]);
@@ -297,13 +379,13 @@ void SwContext::loadEntryPoints(const std::set<Input*> &inputs, bool set_eps)
                 for (auto &ep : eps[i])
                 {
                     auto tgts = ep->loadPackages(*b, s, {});
-                    for (auto &tgt  : tgts)
-                        getTargetData(tgt->getPackage()).setEntryPoint(ep);
+                    for (auto &tgt : tgts)
+                        setEntryPoint(LocalPackage(getLocalStorage(), tgt->getPackage()), ep);
                 }
                 continue;
             }
 
-            for (auto &ep : eps[i])
+            /*for (auto &ep : eps[i])
             {
                 // for packages we must also register all other group packages
                 // which are located in this config AND which are deps of this input package id
@@ -314,9 +396,9 @@ void SwContext::loadEntryPoints(const std::set<Input*> &inputs, bool set_eps)
                     auto &p2 = m.find(d)->second;
                     if (p2->getData().group_number != p->getData().group_number)
                         continue;
-                    getTargetData(*p2).setEntryPoint(ep);
+                    setEntryPoint(*p2, ep);
                 }
-            }
+            }*/
         }
     }
 }

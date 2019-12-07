@@ -70,6 +70,7 @@ struct SW_MANAGER_API PackagesDatabase : Database
     void installPackage(const PackageId &, const PackageData &);
     void deletePackage(const PackageId &) const;
     PackageId getGroupLeader(PackageVersionGroupNumber gn) const;
+    void setGroupNumber(const PackageId &, PackageVersionGroupNumber) const;
 
     // overridden
     std::optional<path> getOverriddenDir(const Package &p) const;
@@ -77,9 +78,9 @@ struct SW_MANAGER_API PackagesDatabase : Database
     void deleteOverriddenPackageDir(const path &sdir) const;
 
     DataSources getDataSources() const;
-    PackageVersionGroupNumber getMaxGroupNumber() const;
 
-    db::PackageId getPackageId(const PackagePath &ppath) const;
+    db::PackageId getPackageId(const PackagePath &) const;
+    db::PackageId getPackageVersionId(const PackageId &) const;
     String getPackagePath(db::PackageId) const;
 
     std::vector<PackagePath> getMatchingPackages(const String &name = {}) const;
