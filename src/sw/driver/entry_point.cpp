@@ -180,6 +180,12 @@ static std::tuple<FilesOrdered, UnresolvedPackages> getFileDependencies(const Sw
         {
             auto upkg = extractFromString(m[3].str());
             auto pkg = swctx.resolve(upkg);
+            if (pkg.getData().group_number == 0)
+            {
+                auto gn = std::hash<String>()(read_file(pkg.getDirSrc2() / "sw.cpp"));
+                pkg.setGroupNumber(gn);
+                ((PackageData &)pkg.getData()).group_number = gn;
+            }
             if (!gns.insert(pkg.getData().group_number).second)
                 throw SW_RUNTIME_ERROR("#pragma sw header: trying to add same header twice, last one: " + upkg.toString());
             auto h = getPackageHeader(pkg, upkg);
