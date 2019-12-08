@@ -95,6 +95,8 @@ static cl::list<String> settings_file_config("settings-file-config", cl::desc("S
 static cl::list<String> settings_json("settings-json", cl::desc("Read settings from json string"), cl::ZeroOrMore);
 static cl::opt<path> host_settings_file("host-settings-file", cl::desc("Read host settings from file"));
 
+static cl::list<String> input_settings_pairs("input-settings-pairs", cl::desc("Read settings from json string"), ::cl::sub(subcommand_build), ::cl::SpaceSeparated);
+
 // static/shared
 static cl::opt<bool> static_build("static-build", cl::desc("Set static build"));
 static cl::alias static_build2("static", cl::desc("Alias for -static-build"), cl::aliasopt(static_build));
@@ -111,7 +113,7 @@ static cl::alias win_md2("md", cl::desc("Alias for -win-md"), cl::aliasopt(win_m
 
 SUBCOMMAND_DECL(build)
 {
-    if (build_arg.empty())
+    if (build_arg.empty() && input_settings_pairs.empty())
         build_arg.push_back(".");
 
     auto swctx = createSwContext();
@@ -509,6 +511,32 @@ std::vector<sw::TargetSettings> createSettings(sw::SwContext &swctx)
     return settings;
 }
 
+void createInputs(sw::SwBuild &b)
+{
+    auto &pairs = (Strings &)input_settings_pairs;
+    if (!pairs.empty())
+    {
+        if (pairs.size() % 2 == 1)
+            throw SW_RUNTIME_ERROR("Incorrect input settings pairs. Something is missing. Size must be even, but size = " + std::to_string(pairs.size()));
+        for (int i = 0; i < pairs.size(); i += 2)
+        {
+            sw::InputWithSettings p(b.getContext().addInput(pairs[i]));
+            sw::TargetSettings s;
+            s.merge(pairs[i + 1]);
+            p.addSettings(s);
+            b.addInput(p);
+        }
+    }
+
+    for (auto &a : build_arg)
+    {
+        sw::InputWithSettings i(b.getContext().addInput(a));
+        for (auto &s : createSettings(b.getContext()))
+            i.addSettings(s);
+        b.addInput(i);
+    }
+}
+
 std::unique_ptr<sw::SwBuild> setBuildArgsAndCreateBuildAndPrepare(sw::SwContext &swctx, const Strings &build_args)
 {
     ((Strings&)build_arg) = build_args;
@@ -518,13 +546,7 @@ std::unique_ptr<sw::SwBuild> setBuildArgsAndCreateBuildAndPrepare(sw::SwContext 
 std::unique_ptr<sw::SwBuild> createBuildAndPrepare(sw::SwContext &swctx)
 {
     auto b = createBuild(swctx);
-    for (auto &a : build_arg)
-    {
-        sw::InputWithSettings i(swctx.addInput(a));
-        for (auto &s : createSettings(swctx))
-            i.addSettings(s);
-        b->addInput(i);
-    }
+    createInputs(*b);
     b->loadInputs();
     b->setTargetsToBuild();
     b->resolvePackages();
@@ -668,13 +690,7 @@ SUBCOMMAND_DECL2(build)
     // if -B specified, it is used as is
 
     auto b = createBuild(swctx);
-    for (auto &a : build_arg)
-    {
-        sw::InputWithSettings i(swctx.addInput(a));
-        for (auto &s : createSettings(swctx))
-            i.addSettings(s);
-        b->addInput(i);
-    }
+    createInputs(*b);
     if (build_default_explan)
     {
         b->loadInputs();
