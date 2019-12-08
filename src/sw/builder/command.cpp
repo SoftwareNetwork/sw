@@ -1302,14 +1302,18 @@ String detectMsvcPrefix(builder::detail::ResolvableCommand c, const path &idir)
 
     String contents = "#include <iostream>\r\nint dummy;";
     auto fn = get_temp_filename("cliprefix") += ".cpp";
+    auto obj = path(fn) += ".obj";
     write_file(fn, contents);
     c.push_back("/showIncludes");
     c.push_back("/c");
     c.push_back(fn);
+    c.push_back("/Fo:" + normalize_path_windows(obj));
     c.push_back("/I");
     c.push_back(idir);
     std::error_code ec;
     c.execute(ec);
+    fs::remove(obj);
+    fs::remove(fn);
 
     auto lines = split_lines(c.out.text);
     if (lines.size() < 2)
