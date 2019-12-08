@@ -425,7 +425,6 @@ void VSGenerator::generate(const SwBuild &b)
                 }
                 p.dependencies.insert(&s.projects.find(d->getTarget().getPackage().toString())->second);
             }
-            break;
         }
     }
 
@@ -483,34 +482,40 @@ void VSGenerator::generate(const SwBuild &b)
 
             // actually we must build deps + their specific settings
             // not one setting for all deps
-            std::set<PackageId> deps;
+            std::map<PackageId, String> deps;
             for (auto &[_, p1] : s.projects)
             {
                 auto &d = p1.getData(st);
                 for (auto &t : d.dependencies)
                 {
-                    deps.insert(t->getPackage());
+                    deps[t->getPackage()] = t->getSettings().toString();
                     p1.dependencies.insert(&p); // add dependency for project
                 }
             }
 
             String deps_str;
-            for (auto &d : deps)
-                deps_str += d.toString() + " ";
+            for (auto &[d,s] : deps)
+                deps_str += d.toString() + " " + s + " ";
             auto fn = shorten_hash(blake2b_512(deps_str), 6);
             auto basefn = int_dir / fn;
+
+            auto fix_json = [](auto s)
+            {
+                boost::replace_all(s, "\\", "\\\\");
+                boost::replace_all(s, "\"", "\\\"");
+                return "\"" + s + "\"";
+            };
 
             Strings args;
             args.push_back("-d");
             args.push_back(normalize_path(fs::current_path()));
-            args.push_back("-settings-json");
-            auto js = st.toString();
-            boost::replace_all(js, "\\", "\\\\");
-            boost::replace_all(js, "\"", "\\\"");
-            args.push_back("\"" + js + "\"");
             args.push_back("build");
-            for (auto &d : deps)
+            args.push_back("-input-settings-pairs");
+            for (auto &[d, s] : deps)
+            {
                 args.push_back(d.toString());
+                args.push_back(fix_json(s));
+            }
             args.push_back("-ide-fast-path");
             args.push_back(normalize_path(path(basefn) += ".deps"));
             args.push_back("-ide-copy-to-dir");
