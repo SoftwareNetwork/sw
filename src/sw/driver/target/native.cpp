@@ -1922,6 +1922,10 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
     auto &s = interface_settings;
     s = {};
 
+    s["source_dir"] = normalize_path(SourceDirBase);
+    s["binary_dir"] = normalize_path(BinaryDir);
+    s["binary_private_dir"] = normalize_path(BinaryPrivateDir);
+
     switch (getType())
     {
     case TargetType::NativeExecutable:
