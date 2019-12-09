@@ -23,7 +23,7 @@ before_build:
   - set PATH=%PATH%;%cd%
 
 build_script:
-  - sw -platform %platform% -static build
+  - sw -platform %platform% -static build -time-limit 50m
 
 artifacts:
   - path: sw.zip
