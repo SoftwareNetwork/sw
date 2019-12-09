@@ -1,4 +1,5 @@
 environment:
+  APPVEYOR_SAVE_CACHE_ON_ERROR: true
   matrix:
     #- APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
       #platform: Win32
@@ -9,9 +10,6 @@ environment:
 
 cache:
   - c:/Users/appveyor/.sw -> appveyor.yml
-
-environment:
-  APPVEYOR_SAVE_CACHE_ON_ERROR: true
 
 configuration:
   - Release
