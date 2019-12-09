@@ -366,7 +366,8 @@ void VSGenerator::generate(const SwBuild &b)
                     if (is_generated_ext(o))
                         continue;
 
-                    p.files.insert(o);
+                    if (can_add_file(o))
+                        p.files.insert(o);
                     d.custom_rules.insert(c.get());
                 }
 
@@ -892,6 +893,10 @@ void Project::emitProject(const VSGenerator &g) const
 
             ctx.beginBlockWithConfiguration("Command", s);
             ctx.addText("call \"" + normalize_path_windows(cmd) + "\"");
+            ctx.endBlock(true);
+
+            ctx.beginBlockWithConfiguration("BuildInParallel", s);
+            ctx.addText("true");
             ctx.endBlock(true);
 
             ctx.beginBlockWithConfiguration("Message", s);
