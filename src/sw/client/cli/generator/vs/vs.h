@@ -22,7 +22,9 @@
 #include <sw/core/target.h>
 #include <sw/manager/package.h>
 
+#include <functional>
 #include <optional>
+#include <unordered_set>
 
 namespace sw
 {
@@ -50,13 +52,35 @@ enum class VSProjectType
     Utility,
 };
 
-struct File
+struct FileWithFilter
 {
     path p;
     path filter; // (dir)
     // command
     // is generated
+
+    FileWithFilter(const path &p, const path &f = {}) : p(p), filter(f) {}
+
+    bool operator==(const FileWithFilter &rhs) const
+    {
+        return std::tie(p) == std::tie(rhs.p);
+    }
 };
+
+namespace std
+{
+
+template<> struct hash<::FileWithFilter>
+{
+    size_t operator()(const ::FileWithFilter &f) const
+    {
+        return std::hash<::path>()(f.p);
+    }
+};
+
+}
+
+using FilesWithFilter = std::unordered_set<FileWithFilter>;
 
 struct Rule
 {
@@ -78,7 +102,7 @@ struct CommonProjectData
     VSProjectType type = VSProjectType::Directory;
     const VSGenerator *g = nullptr;
 
-    Files files;
+    FilesWithFilter files;
 
     CommonProjectData(const String &name);
 };
@@ -101,6 +125,8 @@ struct ProjectData
     std::unordered_map<path, path> rewrite_dirs;
     std::optional<BuildEvent> pre_build_event;
     std::set<const sw::ITarget *> dependencies;
+    path binary_dir;
+    path binary_private_dir;
 };
 
 struct Project : CommonProjectData
@@ -110,6 +136,7 @@ struct Project : CommonProjectData
     Settings settings;
     std::map<sw::TargetSettings, ProjectData> data;
     bool build = false;
+    path source_dir;
 
     Project(const String &name);
 

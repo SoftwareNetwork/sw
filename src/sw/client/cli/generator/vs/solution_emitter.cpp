@@ -88,7 +88,7 @@ void SolutionEmitter::addDirectory(const Directory &d)
     {
         beginBlock("ProjectSection(SolutionItems) = preProject");
         for (auto &f : d.files)
-            addLine(normalize_path(f) + " = " + normalize_path(f));
+            addLine(normalize_path(f.p) + " = " + normalize_path(f.p));
         endBlock("EndProjectSection");
     }
     endBlock("EndProject");

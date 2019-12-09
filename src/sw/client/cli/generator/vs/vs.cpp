@@ -52,6 +52,7 @@ bool gPrintOverriddenDependencies;
 bool gOutputNoConfigSubdir;
 
 static FlagTables flag_tables;
+static const auto SourceFilesFilter = "Source Files";
 
 int vsVersionFromString(const String &s)
 {
@@ -279,7 +280,9 @@ void VSGenerator::generate(const SwBuild &b)
         p.directory = predefined_targets_dir;
         if (input.getInput().getType() == InputType::SpecificationFile ||
             input.getInput().getType() == InputType::InlineSpecification)
-            p.files.insert(input.getInput().getPath());
+        {
+            p.files.insert({ input.getInput().getPath(), SourceFilesFilter });
+        }
         p.settings = s.settings;
         // create datas
         for (auto &st : s.settings)
@@ -321,6 +324,7 @@ void VSGenerator::generate(const SwBuild &b)
             }
             p.settings = s.settings;
             p.build = true;
+            p.source_dir = tgt->getInterfaceSettings()["source_dir"].getValue();
 
             s.projects.emplace(p.name, p);
             s.projects.find(all_build_name)->second.dependencies.insert(&s.projects.find(p.name)->second);
@@ -336,6 +340,9 @@ void VSGenerator::generate(const SwBuild &b)
                 throw SW_RUNTIME_ERROR("missing target");
             auto &d = s.projects.find(pkg.toString())->second.getData(st);
             d.target = itgt->get();
+
+            d.binary_dir = d.target->getInterfaceSettings()["binary_dir"].getValue();
+            d.binary_private_dir = d.target->getInterfaceSettings()["binary_private_dir"].getValue();
 
             auto cmds = d.target->getCommands();
 
@@ -359,6 +366,7 @@ void VSGenerator::generate(const SwBuild &b)
                     if (is_generated_ext(o))
                         continue;
 
+                    p.files.insert(o);
                     d.custom_rules.insert(c.get());
                 }
 
@@ -431,12 +439,12 @@ void VSGenerator::generate(const SwBuild &b)
     // natvis
     {
         // gather .natvis
-        Files natvis;
+        FilesWithFilter natvis;
         for (auto &[n, p] : s.projects)
         {
             for (auto &f : p.files)
             {
-                if (f.extension() == ".natvis")
+                if (f.p.extension() == ".natvis")
                     natvis.insert(f);
             }
         }
@@ -653,7 +661,7 @@ void Project::emit(SolutionEmitter &ctx) const
 void Project::emit(const VSGenerator &g) const
 {
     emitProject(g);
-    //emitFilters(g);
+    emitFilters(g);
 }
 
 void Project::emitProject(const VSGenerator &g) const
@@ -776,10 +784,10 @@ void Project::emitProject(const VSGenerator &g) const
     // usual files
     for (auto &p : files)
     {
-        if (p.extension() == ".natvis")
+        if (p.p.extension() == ".natvis")
             continue;
 
-        ctx.beginFileBlock(p);
+        ctx.beginFileBlock(p.p);
 
         /*for (auto &[s, d] : data)
         {
@@ -827,6 +835,7 @@ void Project::emitProject(const VSGenerator &g) const
     }
     for (auto &[f, cfgs] : bfiles)
     {
+        ((Project&)*this).files.insert(f);
         auto t = ctx.beginFileBlock(f);
         for (auto &[sp, c] : cfgs)
         {
@@ -865,6 +874,7 @@ void Project::emitProject(const VSGenerator &g) const
                 rule += "." + std::to_string(c->getHash());
             rule += ".rule";
             write_file(rule, "");
+            ((Project&)*this).files.insert({rule, ". SW Rules"});
 
             auto cmd = c->writeCommand(commands_dir / std::to_string(c->getHash()));
 
@@ -904,6 +914,7 @@ void Project::emitProject(const VSGenerator &g) const
             path rule = rules_dir / c.name;
             rule += ".rule";
             write_file(rule, "");
+            ((Project&)*this).files.insert({rule, ". SW Rules"});
 
             ctx.beginFileBlock(rule);
 
@@ -934,13 +945,7 @@ void Project::emitFilters(const VSGenerator &g) const
 {
     StringSet filters; // dirs
 
-    String sd, bd, bdp;
-    std::set<path> parents;
-    for (auto &f : files)
-        parents.insert(f.parent_path());
-    // take shortest
-    if (!parents.empty())
-        sd = normalize_path(*parents.begin());
+    String sd = normalize_path(source_dir);
 
     FiltersEmitter ctx;
     ctx.beginProject();
@@ -948,12 +953,23 @@ void Project::emitFilters(const VSGenerator &g) const
     ctx.beginBlock("ItemGroup");
     for (auto &f : files)
     {
-        if (f.extension() == ".natvis")
+        if (f.p.extension() == ".natvis")
             continue;
 
+        if (!f.filter.empty())
+        {
+            filters.insert(make_backslashes(f.filter.string()));
+            ctx.beginBlock(toString(get_vs_file_type_by_ext(f.p)), { {"Include", f.p.string()} });
+            ctx.addBlock("Filter", make_backslashes(f.filter.string()));
+            ctx.endBlock();
+            continue;
+        }
+
         String *d = nullptr;
+        const sw::TargetSettings *s = nullptr; // also mark generated files
+        bool bdir_private = false;
         size_t p = 0;
-        auto fd = normalize_path(f);
+        auto fd = normalize_path(f.p);
 
         auto calc = [&fd, &p, &d](auto &s)
         {
@@ -963,6 +979,7 @@ void Project::emitFilters(const VSGenerator &g) const
             if (p1 != 0)
                 return;
             //if (p1 > p)
+            //if (p1 != -1 && p1 > p)
             {
                 p = s.size();
                 d = &s;
@@ -970,8 +987,28 @@ void Project::emitFilters(const VSGenerator &g) const
         };
 
         calc(sd);
-        calc(bd);
-        calc(bdp);
+
+        for (const auto &d1 : data)
+        {
+            String bd = normalize_path(d1.second.binary_dir);
+            String bdp = normalize_path(d1.second.binary_private_dir);
+
+            calc(bd);
+            calc(bdp);
+
+            if (d == &bdp)
+            {
+                s = &d1.first;
+                bdir_private = true;
+                break;
+            }
+
+            if (d == &bd)
+            {
+                s = &d1.first;
+                break;
+            }
+        }
 
         path filter;
         if (p != -1)
@@ -980,22 +1017,30 @@ void Project::emitFilters(const VSGenerator &g) const
             if (ss[0] == '/')
                 ss = ss.substr(1);
             path r = ss;
+
             if (d == &sd)
-                r = "Source Files" / r;
-            //if (d == &bd)
-            //{
-            //    auto v = r;
-            //    r = "Generated Files";
-            //    r /= get_configuration(s);
-            //    r /= "Public" / v;
-            //}
-            //if (d == &bdp)
-            //{
-            //    auto v = r;
-            //    r = "Generated Files";
-            //    r /= get_configuration(s);
-            //    r /= "Private" / v;
-            //}
+                r = SourceFilesFilter / r;
+
+            if (s)
+            {
+                if (!bdir_private)
+                {
+                    auto v = r;
+                    r = "Generated Files";
+                    r /= (*s)["os"]["arch"].getValue();
+                    r /= get_configuration(*s);
+                    r /= "Public" / v;
+                }
+                else
+                {
+                    auto v = r;
+                    r = "Generated Files";
+                    r /= (*s)["os"]["arch"].getValue();
+                    r /= get_configuration(*s);
+                    r /= "Private" / v;
+                }
+            }
+
             do
             {
                 r = r.parent_path();
@@ -1005,7 +1050,7 @@ void Project::emitFilters(const VSGenerator &g) const
             } while (!r.empty() && r != r.root_path());
         }
 
-        ctx.beginBlock(toString(get_vs_file_type_by_ext(f)), { {"Include", f.string()} });
+        ctx.beginBlock(toString(get_vs_file_type_by_ext(f.p)), { {"Include", f.p.string()} });
         if (!filter.empty() && !filter.is_absolute())
             ctx.addBlock("Filter", make_backslashes(filter.string()));
         ctx.endBlock();
