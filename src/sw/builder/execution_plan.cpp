@@ -92,7 +92,7 @@ void ExecutionPlan::execute(Executor &e) const
         }
 
         if (stop_time && Clock::now() > *stop_time)
-            throw SW_RUNTIME_ERROR("Time limit exceeded");
+            stopped = true;
     };
 
     // we cannot know exact number of commands to be executed,
@@ -153,7 +153,11 @@ void ExecutionPlan::execute(Executor &e) const
         throw ExceptionVector(eptrs);
 
     if (i != sz/* && !stopped*/)
+    {
+        if (stop_time && Clock::now() > *stop_time && stopped)
+            throw SW_RUNTIME_ERROR("Time limit exceeded");
         throw SW_RUNTIME_ERROR("Executor did not perform all steps");
+    }
 }
 
 void ExecutionPlan::saveChromeTrace(const path &p) const
