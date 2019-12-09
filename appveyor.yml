@@ -10,6 +10,9 @@ environment:
 cache:
   - c:/Users/appveyor/.sw -> appveyor.yml
 
+environment:
+  APPVEYOR_SAVE_CACHE_ON_ERROR: true
+
 configuration:
   - Release
 
@@ -23,7 +26,7 @@ before_build:
   - set PATH=%PATH%;%cd%
 
 build_script:
-  - sw -platform %platform% -static build -time-limit 50m
+  - sw -platform %platform% -static build -time-limit 45m
 
 artifacts:
   - path: sw.zip
