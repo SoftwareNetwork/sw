@@ -22,6 +22,7 @@
 #include "project_emitter.h"
 #include "solution_emitter.h"
 
+#include <sw/builder/file.h>
 #include <sw/builder/execution_plan.h>
 #include <sw/core/build.h>
 #include <sw/core/input.h>
@@ -843,7 +844,8 @@ void Project::emitProject(const VSGenerator &g) const
             printProperties(ctx, *sp, *c, cl_props);
 
             // one .rc file
-            if (t == VSFileType::ResourceCompile)
+            //if (t == VSFileType::ResourceCompile)
+            if (sw::File(f, c->getContext().getFileStorage()).isGeneratedAtAll())
             {
                 for (auto &[s, d] : data)
                 {
