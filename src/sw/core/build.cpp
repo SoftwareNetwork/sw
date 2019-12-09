@@ -568,7 +568,10 @@ Commands SwBuild::getCommands() const
 
                 if (s["type"] == "native_shared_library")
                 {
-                    auto o = copy_dir / in.filename();
+                    auto o = copy_dir;
+                    if (s["output_dir"].isValue())
+                        o /= s["output_dir"].getValue();
+                    o /= in.filename();
                     //auto o = nt->getOutputDir() / dt->OutputDir;
                     //o /= in.filename();
                     if (in == o)

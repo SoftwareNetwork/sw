@@ -1953,6 +1953,8 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
     if (getType() != TargetType::NativeExecutable) // skip for exe atm
         s["import_library"] = normalize_path(getImportLibrary());
     s["output_file"] = normalize_path(getOutputFile());
+    if (!OutputDir.empty())
+        s["output_dir"] = normalize_path(OutputDir);
 
     TargetSettings defs;
     for (auto &[k,v] : Public.Definitions)
@@ -2659,6 +2661,8 @@ bool NativeCompiledTarget::prepare()
                 if (getBuildSettings().Native.MT)
                     rt = vs::RuntimeLibraryType::MultiThreadedDebug;
             }
+
+            // TODO: move vs _slib to detect.cpp from native.cpp
 
             // https://docs.microsoft.com/en-us/cpp/c-runtime-library/crt-library-features?view=vs-2019
 
