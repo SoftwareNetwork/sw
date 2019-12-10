@@ -92,14 +92,14 @@ static void override_package_perform(sw::SwContext &swctx, sw::PackagePath prefi
         nlohmann::json j;
         j["sdir"] = normalize_path(dir);
         j["prefix"] = prefix.toString();
-        j["group_number"] = std::hash<String>()(read_file(i.getInput().getPath() / "sw.cpp"));
+        j["group_number"] = i.getInput().getGroupNumber();
         for (auto &[pkg, desc] : pm)
             j["packages"][pkg.toString()] = nlohmann::json::parse(desc->getString());
         write_file(save_overridden_packages_to_file, j.dump(4));
         return;
     }
 
-    override_packages(std::hash<String>()(read_file(i.getInput().getPath() / "sw.cpp")));
+    override_packages(i.getInput().getGroupNumber());
 }
 
 SUBCOMMAND_DECL(override)

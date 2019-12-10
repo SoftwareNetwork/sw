@@ -198,6 +198,11 @@ String Input::getSpecification() const
     return driver->getSpecification(*this);
 }
 
+PackageVersionGroupNumber Input::getGroupNumber() const
+{
+    return driver->getGroupNumber(*this);
+}
+
 InputWithSettings::InputWithSettings(const Input &i)
     : i(i)
 {

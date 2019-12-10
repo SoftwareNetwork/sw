@@ -66,6 +66,7 @@ struct SW_CORE_API Input : RawInput
     void addEntryPoints(const std::vector<TargetEntryPointPtr> &);
     bool isLoaded() const;
     String getSpecification() const;
+    PackageVersionGroupNumber getGroupNumber() const;
     const std::vector<TargetEntryPointPtr> &getEntryPoints() const { return eps; }
 
     bool operator==(const Input &rhs) const;
