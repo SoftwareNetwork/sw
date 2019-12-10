@@ -19,12 +19,7 @@ struct Build;
 struct Checker;
 struct Module;
 
-struct ModuleSwappableDataBase
-{
-    PackagePath NamePrefix;
-};
-
-struct ModuleSwappableData : ModuleSwappableDataBase
+struct ModuleSwappableData
 {
     PackageIdSet known_targets;
     TargetSettings current_settings;
@@ -34,11 +29,10 @@ struct ModuleSwappableData : ModuleSwappableDataBase
 // this driver ep
 struct NativeTargetEntryPoint : TargetEntryPoint
 {
-    ModuleSwappableDataBase module_data;
     path source_dir;
 
     [[nodiscard]]
-    std::vector<ITargetPtr> loadPackages(SwBuild &, const TargetSettings &, const PackageIdSet &pkgs) const override;
+    std::vector<ITargetPtr> loadPackages(SwBuild &, const TargetSettings &, const PackageIdSet &pkgs, const PackagePath &prefix) const override;
 
 private:
     virtual void loadPackages1(Build &) const = 0;

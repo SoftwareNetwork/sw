@@ -10,6 +10,8 @@
 #include "input.h"
 #include "driver.h"
 
+#include <sw/manager/storage.h>
+
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "context");
 
@@ -378,9 +380,17 @@ void SwContext::loadEntryPoints(const std::set<Input*> &inputs, bool set_eps)
                 s["driver"]["dry-run"] = "true";
                 for (auto &ep : eps[i])
                 {
-                    auto tgts = ep->loadPackages(*b, s, {});
+                    auto tgts = ep->loadPackages(*b, s, {}, {});
                     for (auto &tgt : tgts)
+                    {
+                        PackageData d;
+                        d.prefix = 0;
+                        // add only gn atm
+                        d.group_number = g[i]->getGroupNumber();
+                        getLocalStorage().installLocalPackage(tgt->getPackage(), d);
+
                         setEntryPoint(LocalPackage(getLocalStorage(), tgt->getPackage()), ep);
+                    }
                 }
                 continue;
             }

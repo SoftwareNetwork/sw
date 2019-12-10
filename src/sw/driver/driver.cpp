@@ -79,6 +79,15 @@ std::optional<path> Driver::canLoadInput(const RawInput &i) const
         {
             return i.getPath();
         }
+        // or check by extension
+        /*it = std::find_if(fes.begin(), fes.end(), [e = i.getPath().extension()](const auto &fe)
+        {
+            return fe.extension() == e;
+        });
+        if (it != fes.end())
+        {
+            return i.getPath();
+        }*/
         break;
     }
     case InputType::DirectorySpecificationFile:
@@ -153,6 +162,13 @@ String Driver::getSpecification(const RawInput &i) const
     {
         return read_file(i.getPath());
     }
+    case InputType::InlineSpecification:
+    {
+        auto spec = load_configless_file_spec(i.getPath());
+        if (!spec)
+            throw SW_RUNTIME_ERROR("Cannot load inline specification");
+        return *spec;
+    }
     default:
         SW_UNIMPLEMENTED;
     }
@@ -184,7 +200,7 @@ std::shared_ptr<PrepareConfigEntryPoint> Driver::build_configs1(SwContext &swctx
         b->addKnownPackage(p);
 
     auto ep = std::make_shared<PrepareConfigEntryPoint>(objs);
-    auto tgts = ep->loadPackages(*b, ts, b->getKnownPackages()); // load all our known targets
+    auto tgts = ep->loadPackages(*b, ts, b->getKnownPackages(), {}); // load all our known targets
     if (tgts.size() != 1)
         throw SW_LOGIC_ERROR("something went wrong, only one lib target must be exported");
 
@@ -252,7 +268,7 @@ std::unordered_map<PackageId, Driver::EntryPointsVector1> Driver::load_packages(
 
         auto ep = std::make_shared<NativeModuleTargetEntryPoint>(
             Module(swctx.getModuleStorage().get(dll), gn2suffix(p.getData().group_number)));
-        ep->module_data.NamePrefix = p.getPath().slice(0, p.getData().prefix);
+        //ep->module_data.NamePrefix = p.getPath().slice(0, p.getData().prefix);
         swctx.setEntryPoint(p, ep);
         eps[p].push_back(ep);
     }
@@ -362,9 +378,7 @@ bool Driver::can_load_configless_file(const path &p) const
     {
         try
         {
-            auto root = YAML::Load(c);
-            // just test yaml for now
-            //cppan_load(root, p.stem().u8string());
+            YAML::Load(c);
             return true;
         }
         catch (...)
@@ -372,6 +386,29 @@ bool Driver::can_load_configless_file(const path &p) const
         }
     }
     return false;
+}
+
+std::optional<String> Driver::load_configless_file_spec(const path &p) const
+{
+    auto comments = get_inline_comments(p);
+
+    if (comments.empty())
+    {
+        return String{};
+    }
+
+    for (auto &c : comments)
+    {
+        try
+        {
+            YAML::Load(c);
+            return c;
+        }
+        catch (...)
+        {
+        }
+    }
+    return {};
 }
 
 const StringSet &Driver::getAvailableFrontendNames()
@@ -450,9 +487,16 @@ bool Driver::isFrontendConfigFilename(const path &fn)
 std::optional<FrontendType> Driver::selectFrontendByFilename(const path &fn)
 {
     auto i = getAvailableFrontends().right.find(fn.filename());
-    if (i == getAvailableFrontends().right.end())
-        return {};
-    return i->get_left();
+    if (i != getAvailableFrontends().right.end())
+        return i->get_left();
+    // or check by extension
+    /*i = std::find_if(getAvailableFrontends().right.begin(), getAvailableFrontends().right.end(), [e = fn.extension()](const auto &fe)
+    {
+        return fe.first.extension() == e;
+    });
+    if (i != getAvailableFrontends().right.end())
+        return i->get_left();*/
+    return {};
 }
 
 } // namespace driver::cpp

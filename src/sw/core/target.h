@@ -231,7 +231,7 @@ struct TargetEntryPoint
     virtual ~TargetEntryPoint() = 0;
 
     [[nodiscard]]
-    virtual std::vector<ITargetPtr> loadPackages(SwBuild &, const TargetSettings &, const PackageIdSet &allowed_packages) const = 0;
+    virtual std::vector<ITargetPtr> loadPackages(SwBuild &, const TargetSettings &, const PackageIdSet &allowed_packages, const PackagePath &prefix) const = 0;
 };
 
 using TargetEntryPointPtr = std::shared_ptr<TargetEntryPoint>;

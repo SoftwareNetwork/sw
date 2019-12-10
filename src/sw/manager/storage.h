@@ -225,9 +225,11 @@ struct SW_MANAGER_API LocalStorage : Directories, LocalStorageBase
     //LocalPackage download(const PackageId &) const override;
     void remove(const LocalPackage &) const;
     LocalPackage install(const Package &) const override;
+    LocalPackage installLocalPackage(const PackageId &, const PackageData &);
     void get(const IStorage2 &source, const PackageId &id, StorageFileType) const /* override*/;
     bool isPackageInstalled(const Package &id) const;
     bool isPackageOverridden(const PackageId &id) const;
+    bool isPackageLocal(const PackageId &id) const;
     LocalPackage getGroupLeader(const LocalPackage &id) const;
     void setGroupNumber(const PackageId &id, PackageVersionGroupNumber) const;
     PackageDataPtr loadData(const PackageId &) const override;
@@ -237,6 +239,7 @@ struct SW_MANAGER_API LocalStorage : Directories, LocalStorageBase
     const OverriddenPackagesStorage &getOverriddenPackagesStorage() const;
 
 private:
+    std::unordered_map<PackageId, PackageData> local_packages;
     OverriddenPackagesStorage ovs;
 
     void migrateStorage(int from, int to);

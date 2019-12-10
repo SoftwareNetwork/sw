@@ -215,7 +215,7 @@ static std::tuple<FilesOrdered, UnresolvedPackages> getFileDependencies(const Sw
     return getFileDependencies(swctx, in_config_file, gns);
 }
 
-std::vector<ITargetPtr> NativeTargetEntryPoint::loadPackages(SwBuild &swb, const TargetSettings &s, const PackageIdSet &pkgs) const
+std::vector<ITargetPtr> NativeTargetEntryPoint::loadPackages(SwBuild &swb, const TargetSettings &s, const PackageIdSet &pkgs, const PackagePath &prefix) const
 {
     // TODO: memory leak
     auto nb = new Build(swb);
@@ -232,12 +232,11 @@ std::vector<ITargetPtr> NativeTargetEntryPoint::loadPackages(SwBuild &swb, const
     settings.erase("driver");
 
     ModuleSwappableData module_data1;
-    module_data1.NamePrefix = module_data.NamePrefix;
     module_data1.known_targets = pkgs;
     module_data1.current_settings = settings;
 
     b.module_data = &module_data1;
-    b.NamePrefix = module_data.NamePrefix;
+    b.NamePrefix = prefix;
 
     // canonical makes disk letter uppercase on windows
     if (!source_dir.empty())

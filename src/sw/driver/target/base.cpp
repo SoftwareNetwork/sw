@@ -145,7 +145,7 @@ TargetBase &TargetBase::addTarget2(bool add, const TargetBaseTypePtr &t, const P
 
     t->Local = 0
         //|| getSolution().getCurrentGroupNumber() == 0
-        || getSolution().getModuleData().NamePrefix.empty()
+        || getSolution().NamePrefix.empty()
         //|| t->pkg->getPath().isRelative()
         //|| t->pkg->getPath().is_loc()
         //|| t->pkg->getOverriddenDir()

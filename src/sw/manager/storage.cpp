@@ -285,7 +285,9 @@ void LocalStorageBase::setGroupNumber(const PackageId &id, PackageVersionGroupNu
 }
 
 LocalStorage::LocalStorage(const path &local_storage_root_dir)
-    : Directories(local_storage_root_dir), LocalStorageBase("local", getDatabaseRootDir()), ovs(*this, getDatabaseRootDir())
+    : Directories(local_storage_root_dir)
+    , LocalStorageBase("local", getDatabaseRootDir())
+    , ovs(*this, getDatabaseRootDir())
 {
 /*#define SW_CURRENT_LOCAL_STORAGE_VERSION 0
 #define SW_CURRENT_LOCAL_STORAGE_VERSION_KEY "storage_version"
@@ -333,6 +335,11 @@ bool LocalStorage::isPackageInstalled(const Package &pkg) const
     return getPackagesDatabase().isPackageInstalled(pkg) && fs::exists(p.getDirSrc2());
 }
 
+bool LocalStorage::isPackageLocal(const PackageId &id) const
+{
+    return id.getPath().isRelative();
+}
+
 bool LocalStorage::isPackageOverridden(const PackageId &pkg) const
 {
     LocalPackage p(*this, pkg);
@@ -341,6 +348,13 @@ bool LocalStorage::isPackageOverridden(const PackageId &pkg) const
 
 PackageDataPtr LocalStorage::loadData(const PackageId &id) const
 {
+    if (isPackageLocal(id))
+    {
+        auto i = local_packages.find(id);
+        if (i == local_packages.end())
+            throw SW_RUNTIME_ERROR("Missing local package data: " + id.toString());
+        return std::make_unique<PackageData>(i->second);
+    }
     if (isPackageOverridden(id))
         return ovs.loadData(id);
     return StorageWithPackagesDatabase::loadData(id);
@@ -362,6 +376,15 @@ void LocalStorage::setGroupNumber(const PackageId &id, PackageVersionGroupNumber
     if (isPackageOverridden(id))
         return ovs.setGroupNumber(id, gn);
     return LocalStorageBase::setGroupNumber(id, gn);
+}
+
+LocalPackage LocalStorage::installLocalPackage(const PackageId &id, const PackageData &d)
+{
+    if (!isPackageLocal(id))
+        throw SW_RUNTIME_ERROR("Not a local package: " + id.toString());
+    local_packages[id] = d;
+    LocalPackage p(*this, id);
+    return p;
 }
 
 LocalPackage LocalStorage::install(const Package &id) const
