@@ -487,6 +487,7 @@ void VSGenerator::generate(const SwBuild &b)
             r.name = p.name;
             r.command = "setlocal";
             r.outputs.insert(int_dir / "rules" / "intentionally_missing.file");
+            r.verify_inputs_and_outputs_exist = false;
 
             d.custom_rules_manual.push_back(r);
 
@@ -936,6 +937,13 @@ void Project::emitProject(const VSGenerator &g) const
 
             ctx.beginBlockWithConfiguration("Message", s);
             ctx.endBlock();
+
+            if (!c.verify_inputs_and_outputs_exist)
+            {
+                ctx.beginBlockWithConfiguration("VerifyInputsAndOutputsExist", s);
+                ctx.addText("false");
+                ctx.endBlock();
+            }
 
             ctx.endFileBlock();
         }

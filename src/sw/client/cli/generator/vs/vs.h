@@ -87,6 +87,7 @@ struct Rule
     String name;
     String command;
     Files outputs;
+    bool verify_inputs_and_outputs_exist = true;
 };
 
 struct BuildEvent
