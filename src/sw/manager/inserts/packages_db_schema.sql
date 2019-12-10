@@ -44,6 +44,7 @@ CREATE TABLE package_version (
     -- packages have same group_number when they are came from the same build script
     -- (in other words this is spec hash)
     group_number INTEGER NOT NULL DEFAULT 0,
+    group_number1 INTEGER NOT NULL DEFAULT 0, -- TO BE REMOVED
     prefix INTEGER NOT NULL DEFAULT 2,
     updated TEXT NOT NULL,
     hash TEXT NOT NULL,
