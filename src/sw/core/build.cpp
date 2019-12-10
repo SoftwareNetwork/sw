@@ -572,8 +572,6 @@ Commands SwBuild::getCommands() const
                     if (s["output_dir"].isValue())
                         o /= s["output_dir"].getValue();
                     o /= in.filename();
-                    //auto o = nt->getOutputDir() / dt->OutputDir;
-                    //o /= in.filename();
                     if (in == o)
                         return;
                     copy_files[in] = o;
