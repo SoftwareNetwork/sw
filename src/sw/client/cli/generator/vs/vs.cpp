@@ -556,6 +556,7 @@ void VSGenerator::generate(const SwBuild &b)
                 pp = pp.parent();
 
             Directory d(p);
+            d.visible_name = p.slice(pp.size());
             d.g = this;
             if (!pp.empty())
                 d.directory = &s.directories.find(pp.toString())->second;

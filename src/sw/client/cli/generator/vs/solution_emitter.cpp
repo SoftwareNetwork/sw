@@ -83,7 +83,7 @@ void SolutionEmitter::printVersion()
 void SolutionEmitter::addDirectory(const Directory &d)
 {
     beginBlock("Project(\"" + project_type_uuids[d.type] + "\") = \"" +
-        d.name + "\", \"" + d.name + "\", \"" + d.uuid + "\"");
+        d.getVisibleName() + "\", \"" + d.name + "\", \"" + d.uuid + "\"");
     if (!d.files.empty())
     {
         beginBlock("ProjectSection(SolutionItems) = preProject");
