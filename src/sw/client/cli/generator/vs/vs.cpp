@@ -1190,11 +1190,26 @@ void Project::printProperties(ProjectEmitter &ctx, const sw::TargetSettings &s, 
         auto &o = c.arguments[na];
         auto arg = o->toString();
 
-        if (!arg.empty() && arg[0] != '-' && arg[0] != '/')
+        auto add_additional_args = [&semicolon_args, &ft, &c, &props](const auto &arg)
         {
             if (props.exclude_exts.find(path(arg).extension().string()) != props.exclude_exts.end())
-                continue;
+                return;
+            if (ft == "cl")
+            {
+                if (arg == "-c" || arg == "-FS")
+                    return;
+                auto i = c.inputs.find(normalize_path(arg));
+                if (i != c.inputs.end())
+                    return;
+                semicolon_args["AdditionalOptions"] += arg + " ";
+                return;
+            }
             semicolon_args["AdditionalDependencies"] += arg + ";";
+        };
+
+        if (!arg.empty() && arg[0] != '-' && arg[0] != '/')
+        {
+            add_additional_args(arg);
             continue;
         }
 
@@ -1253,7 +1268,7 @@ void Project::printProperties(ProjectEmitter &ctx, const sw::TargetSettings &s, 
         }
 
         // TODO: we must find the longest match
-        //bool found = false;
+        bool found = false;
         for (auto &[_, d] : tbl)
         {
             if (d.argument.empty())
@@ -1261,12 +1276,19 @@ void Project::printProperties(ProjectEmitter &ctx, const sw::TargetSettings &s, 
             if (arg.find(d.argument, 1) != 1)
                 continue;
             print(d);
-            //found = true;
+            found = true;
             break;
         }
-        //if (!found)
+        if (!found)
+        {
             //LOG_WARN(logger, "arg not found: " + arg);
+
+            add_additional_args(arg);
+            continue;
+        }
     }
+    //if (ft == "cl")
+        //semicolon_args["AdditionalOptions"] += "%(AdditionalOptions)";
     for (auto &[k, v] : semicolon_args)
     {
         ctx.beginBlockWithConfiguration(k, s);
