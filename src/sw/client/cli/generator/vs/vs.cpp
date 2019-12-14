@@ -208,6 +208,7 @@ void VSGenerator::generate(const SwBuild &b)
         throw SW_RUNTIME_ERROR("unsupported number of inputs, must be 1");
     auto &input = *inputs.begin();
 
+    PackagePathTree path_tree;
     Solution s;
     s.settings = input.getSettings();
 
@@ -278,7 +279,7 @@ void VSGenerator::generate(const SwBuild &b)
     {
         Project p(all_build_name);
         p.g = this;
-        p.directory = predefined_targets_dir;
+        p.directory = &s.directories.find(predefined_targets_dir)->second;
         if (input.getInput().getType() == InputType::SpecificationFile ||
             input.getInput().getType() == InputType::InlineSpecification)
         {
@@ -341,6 +342,7 @@ void VSGenerator::generate(const SwBuild &b)
                 throw SW_RUNTIME_ERROR("missing target");
             auto &d = s.projects.find(pkg.toString())->second.getData(st);
             d.target = itgt->get();
+            path_tree.add(d.target->getPackage());
 
             d.binary_dir = d.target->getInterfaceSettings()["binary_dir"].getValue();
             d.binary_private_dir = d.target->getInterfaceSettings()["binary_private_dir"].getValue();
@@ -456,7 +458,7 @@ void VSGenerator::generate(const SwBuild &b)
             Directory d(visualizers_dir);
             d.g = this;
             d.files = natvis;
-            d.directory = predefined_targets_dir;
+            d.directory = &s.directories.find(predefined_targets_dir)->second;
             s.directories.emplace(d.name, d);
         }
     }
@@ -466,7 +468,7 @@ void VSGenerator::generate(const SwBuild &b)
         {
             Project p(build_dependencies_name);
             p.g = this;
-            p.directory = predefined_targets_dir;
+            p.directory = &s.directories.find(predefined_targets_dir)->second;
             p.settings = s.settings;
             s.projects.emplace(p.name, p);
         }
@@ -544,6 +546,35 @@ void VSGenerator::generate(const SwBuild &b)
         }
     }
 
+    // add path dirs
+    {
+        std::set<sw::PackagePath> parents;
+        for (auto &p : parents = path_tree.getDirectories())
+        {
+            auto pp = p.parent();
+            while (!pp.empty() && parents.find(pp) == parents.end())
+                pp = pp.parent();
+            //ctx.addDirectory(InsecurePath() / p.toString(), p.slice(pp.size()), pp.empty() ? root : pp.toString());
+
+            /*Directory d(p.slice(pp.size()));
+            d.g = this;
+            if (!pp.empty())
+                d.directory = pp.toString();
+            s.directories.emplace(d.name, d);
+
+            for (auto &[pkg, tgts] : b.getTargetsToBuild())
+            {
+                for (auto &tgt : tgts)
+                {
+                    auto &p = s.projects.find(tgt->getPackage().toString())->second;
+                    if (PackagePath(d.name).isRootOf(tgt->getPackage().getPath()))
+                        p.directory = { d.name };
+                    break;
+                }
+            }*/
+        }
+    }
+
     // main emit
     s.emit(*this);
 }
@@ -577,15 +608,15 @@ void Solution::emit(const VSGenerator &g) const
     ctx.beginGlobalSection("NestedProjects", "preSolution");
     for (auto &[n, p] : directories)
     {
-        if (p.directory.empty())
+        if (!p.directory)
             continue;
-        ctx.addKeyValue(p.uuid, directories.find(p.directory)->second.uuid);
+        ctx.addKeyValue(p.uuid, p.directory->uuid);
     }
     for (auto &[n, p] : projects)
     {
-        if (p.directory.empty())
+        if (!p.directory)
             continue;
-        ctx.addKeyValue(p.uuid, directories.find(p.directory)->second.uuid);
+        ctx.addKeyValue(p.uuid, p.directory->uuid);
     }
     ctx.endGlobalSection();
     ctx.endGlobal();
@@ -627,6 +658,13 @@ CommonProjectData::CommonProjectData(const String &name)
 {
     auto up = boost::uuids::name_generator_sha1(boost::uuids::ns::oid())(name);
     uuid = "{" + uuid2string(up) + "}";
+}
+
+String CommonProjectData::getVisibleName() const
+{
+    if (visible_name.empty())
+        return name;
+    return visible_name;
 }
 
 Project::Project(const String &name)
@@ -678,10 +716,10 @@ void Project::emitProject(const VSGenerator &g) const
     ctx.addBlock("ProjectGuid", uuid);
     ctx.addBlock("Keyword", "Win32Proj");
     if (g.getType() != GeneratorType::VisualStudio)
-        ctx.addBlock("ProjectName", name);
+        ctx.addBlock("ProjectName", getVisibleName());
     else
     {
-        ctx.addBlock("RootNamespace", name);
+        ctx.addBlock("RootNamespace", getVisibleName());
         ctx.addBlock("WindowsTargetPlatformVersion", PackageId((*settings.begin())["native"]["stdlib"]["c"].getValue()).getVersion().toString());
     }
     ctx.addBlock("PreferredToolArchitecture", "x64"); // also x86
@@ -729,8 +767,13 @@ void Project::emitProject(const VSGenerator &g) const
     static const StringSet skip_cl_props =
     {
         "ShowIncludes",
-        "ObjectFileName",
         "SuppressStartupBanner",
+
+        // When we turn this on, we must provide this property for object files with some cpp names
+        // but in different directory.
+        // Otherwise in VS pre 16 (pre VS2019) there's no way to perform multiprocess compilation,
+        // when this is turned off.
+        //"ObjectFileName",
     };
 
     static const StringSet skip_link_props =
@@ -938,11 +981,23 @@ void Project::emitProject(const VSGenerator &g) const
             ctx.beginBlockWithConfiguration("Message", s);
             ctx.endBlock();
 
-            if (!c.verify_inputs_and_outputs_exist)
+            if (g.vs_version >= Version(16))
             {
-                ctx.beginBlockWithConfiguration("VerifyInputsAndOutputsExist", s);
-                ctx.addText("false");
-                ctx.endBlock();
+                if (!c.verify_inputs_and_outputs_exist)
+                {
+                    ctx.beginBlockWithConfiguration("VerifyInputsAndOutputsExist", s);
+                    ctx.addText("false");
+                    ctx.endBlock(true);
+                }
+            }
+
+            for (auto &[s1, d] : data)
+            {
+                if (&s1 == &s)
+                    continue;
+                ctx.beginBlockWithConfiguration("ExcludedFromBuild", s1);
+                ctx.addText("true");
+                ctx.endBlock(true);
             }
 
             ctx.endFileBlock();
@@ -1190,4 +1245,32 @@ void Project::printProperties(ProjectEmitter &ctx, const sw::TargetSettings &s, 
         ctx.addText(v);
         ctx.endBlock(true);
     }
+}
+
+void PackagePathTree::add(const sw::PackageId &p)
+{
+    add(p.getPath(), p);
+}
+
+void PackagePathTree::add(const sw::PackagePath &p, const sw::PackageId &project)
+{
+    if (p.empty())
+    {
+        projects.insert(project);
+        return;
+    }
+    tree[p.slice(0, 1).toString()].add(p.slice(1), project);
+}
+
+PackagePathTree::Directories PackagePathTree::getDirectories(const sw::PackagePath &p)
+{
+    Directories dirs;
+    for (auto &[s, t] : tree)
+    {
+        auto dirs2 = t.getDirectories(p / s);
+        dirs.insert(dirs2.begin(), dirs2.end());
+    }
+    if (tree.size() > 1 && !p.empty())
+        dirs.insert(p);
+    return dirs;
 }

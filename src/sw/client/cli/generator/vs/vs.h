@@ -95,10 +95,32 @@ struct BuildEvent
     String command;
 };
 
+struct DirectoryPath : Strings
+{
+    using Strings::Strings;
+
+    DirectoryPath(const String &s)
+    {
+        if (!s.empty())
+            push_back(s);
+    }
+
+    DirectoryPath(const sw::PackagePath &pp)
+    {
+        if (pp.empty())
+            return;
+        for (auto &p : pp)
+            push_back(p);
+    }
+};
+
+struct Directory;
+
 struct CommonProjectData
 {
     String name;
-    String directory; // parent
+    String visible_name;
+    Directory *directory = nullptr; // parent
     String uuid;
     VSProjectType type = VSProjectType::Directory;
     const VSGenerator *g = nullptr;
@@ -106,6 +128,8 @@ struct CommonProjectData
     FilesWithFilter files;
 
     CommonProjectData(const String &name);
+
+    String getVisibleName() const;
 };
 
 struct Directory : CommonProjectData
@@ -162,7 +186,7 @@ private:
 
 struct Solution
 {
-    std::map<String, Directory> directories;
+    std::map<DirectoryPath, Directory> directories;
     std::map<String, Project> projects;
     const Project *first_project = nullptr;
     Settings settings;
@@ -174,6 +198,20 @@ struct Solution
 private:
     void emitDirectories(SolutionEmitter &) const;
     void emitProjects(const path &root, SolutionEmitter &) const;
+};
+
+struct PackagePathTree
+{
+    using Directories = std::set<sw::PackagePath>;
+
+    std::map<String, PackagePathTree> tree;
+    sw::PackageIdSet projects;
+
+    void add(const sw::PackageId &);
+    Directories getDirectories(const sw::PackagePath &p = {});
+
+private:
+    void add(const sw::PackagePath &, const sw::PackageId &project);
 };
 
 enum class FlagTableFlags
