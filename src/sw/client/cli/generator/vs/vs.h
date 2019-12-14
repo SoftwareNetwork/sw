@@ -95,24 +95,7 @@ struct BuildEvent
     String command;
 };
 
-struct DirectoryPath : Strings
-{
-    using Strings::Strings;
-
-    DirectoryPath(const String &s)
-    {
-        if (!s.empty())
-            push_back(s);
-    }
-
-    DirectoryPath(const sw::PackagePath &pp)
-    {
-        if (pp.empty())
-            return;
-        for (auto &p : pp)
-            push_back(p);
-    }
-};
+using DirectoryPath = String;
 
 struct Directory;
 

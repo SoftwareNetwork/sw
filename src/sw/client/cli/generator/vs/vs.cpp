@@ -548,30 +548,36 @@ void VSGenerator::generate(const SwBuild &b)
 
     // add path dirs
     {
-        std::set<sw::PackagePath> parents;
-        for (auto &p : parents = path_tree.getDirectories())
+        auto parents = path_tree.getDirectories();
+        for (auto &p : parents)
         {
             auto pp = p.parent();
             while (!pp.empty() && parents.find(pp) == parents.end())
                 pp = pp.parent();
-            //ctx.addDirectory(InsecurePath() / p.toString(), p.slice(pp.size()), pp.empty() ? root : pp.toString());
 
-            /*Directory d(p.slice(pp.size()));
+            Directory d(p);
             d.g = this;
             if (!pp.empty())
-                d.directory = pp.toString();
+                d.directory = &s.directories.find(pp.toString())->second;
             s.directories.emplace(d.name, d);
+        }
 
-            for (auto &[pkg, tgts] : b.getTargetsToBuild())
+        // set project dirs
+        for (auto &[pkg, tgts] : b.getTargetsToBuild())
+        {
+            for (auto &tgt : tgts)
             {
-                for (auto &tgt : tgts)
+                auto &p = s.projects.find(tgt->getPackage().toString())->second;
+                auto pp = tgt->getPackage().getPath();
+                while (!pp.empty() && parents.find(pp) == parents.end())
+                    pp = pp.parent();
+                if (!pp.empty())
                 {
-                    auto &p = s.projects.find(tgt->getPackage().toString())->second;
-                    if (PackagePath(d.name).isRootOf(tgt->getPackage().getPath()))
-                        p.directory = { d.name };
-                    break;
+                    p.directory = &s.directories.find(pp.toString())->second;
+                    p.visible_name = sw::PackageId(tgt->getPackage().getPath().slice(pp.size()), tgt->getPackage().getVersion()).toString();
                 }
-            }*/
+                break;
+            }
         }
     }
 
@@ -715,13 +721,12 @@ void Project::emitProject(const VSGenerator &g) const
     ctx.addBlock("VCProjectVersion", std::to_string(g.vs_version.getMajor()) + ".0");
     ctx.addBlock("ProjectGuid", uuid);
     ctx.addBlock("Keyword", "Win32Proj");
-    if (g.getType() != GeneratorType::VisualStudio)
-        ctx.addBlock("ProjectName", getVisibleName());
-    else
+    if (g.getType() == GeneratorType::VisualStudio)
     {
         ctx.addBlock("RootNamespace", getVisibleName());
         ctx.addBlock("WindowsTargetPlatformVersion", PackageId((*settings.begin())["native"]["stdlib"]["c"].getValue()).getVersion().toString());
     }
+    ctx.addBlock("ProjectName", getVisibleName());
     ctx.addBlock("PreferredToolArchitecture", "x64"); // also x86
     ctx.endBlock();
 
@@ -1215,6 +1220,12 @@ void Project::printProperties(ProjectEmitter &ctx, const sw::TargetSettings &s, 
             }
             ctx.endBlock(true);
         };
+
+        if (arg.empty())
+        {
+            LOG_WARN(logger, "Empty arg for command: " + c.print());
+            continue;
+        }
 
         // fast lookup first
         auto i = tbl.find(arg.substr(1));
