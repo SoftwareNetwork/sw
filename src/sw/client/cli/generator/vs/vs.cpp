@@ -633,8 +633,24 @@ void Solution::emit(const VSGenerator &g) const
     String fn = fs::current_path().filename().u8string() + "_";
     fn += compiler_name + "_" + toPathString(g.getType()) + "_" + g.vs_version.toString(1);
     fn += ".sln";
+    auto visible_lnk_name = fn;
     write_file_if_different(g.sln_root / fn, ctx.getText());
-    auto lnk = current_thread_path() / fn;
+
+    // write bat for multiprocess compilation
+    if (g.vs_version >= Version(16))
+    {
+        String bat;
+        bat += "@echo off\n";
+        bat += "setlocal\n";
+        bat += ":: turn on multiprocess compilation\n";
+        bat += "set UseMultiToolTask=true\n";
+        bat += "start " + normalize_path_windows(g.sln_root / fn) + "\n";
+        fn += ".bat"; // we now make a link to bat file
+        write_file_if_different(g.sln_root / fn, bat);
+    }
+
+    // link
+    auto lnk = current_thread_path() / visible_lnk_name;
     lnk += ".lnk";
 #ifdef _WIN32
     ::create_link(g.sln_root / fn, lnk, "SW link");
