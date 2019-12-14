@@ -19,8 +19,11 @@ void Specification::addFile(const path &relative_path, const String &contents)
 int64_t Specification::getHash() const
 {
     size_t h = 0;
-    for (auto &[f, s] : files)
-        hash_combine(h, s);
+    if (files.size() != 1)
+        SW_UNIMPLEMENTED;
+    //for (auto &[f, s] : files)
+        //hash_combine(h, s);
+    h = std::hash<String>()(files.begin()->second);
     return h;
 }
 
