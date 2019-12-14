@@ -193,7 +193,7 @@ bool Input::isLoaded() const
     return !eps.empty();
 }
 
-String Input::getSpecification() const
+std::unique_ptr<Specification> Input::getSpecification() const
 {
     return driver->getSpecification(*this);
 }

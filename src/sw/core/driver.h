@@ -20,6 +20,15 @@ struct SwContext;
 struct TargetEntryPoint;
 using TargetEntryPointPtr = std::shared_ptr<TargetEntryPoint>;
 
+struct SW_CORE_API Specification
+{
+    void addFile(const path &relative_path, const String &contents);
+    int64_t getHash() const;
+
+//private:
+    std::map<path, String> files;
+};
+
 struct SW_CORE_API IDriver
 {
     using EntryPointsVector1 = std::vector<TargetEntryPointPtr>;
@@ -53,7 +62,7 @@ struct SW_CORE_API IDriver
     /// get raw specification
     /// complex return value?
     /// for example set of files
-    virtual std::string getSpecification(const RawInput &) const = 0;
+    virtual std::unique_ptr<Specification> getSpecification(const RawInput &) const = 0;
 
     ///
     //virtual PackageVersionSpecificationHash getHash(const RawInput &) const;

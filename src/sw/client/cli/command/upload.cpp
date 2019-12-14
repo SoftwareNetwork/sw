@@ -19,6 +19,7 @@
 #include "commands.h"
 #include "../build.h"
 
+#include <sw/core/driver.h>
 #include <sw/core/input.h>
 #include <sw/manager/api.h>
 #include <sw/manager/settings.h>
@@ -154,5 +155,5 @@ SUBCOMMAND_DECL2(upload)
     // send signatures (gpg)
     // -k KEY1 -k KEY2
     auto api = current_remote->getApi();
-    api->addVersion(gUploadPrefix, m, script_name, i.getSpecification());
+    api->addVersion(gUploadPrefix, m, script_name, i.getSpecification()->files.begin()->second);
 }

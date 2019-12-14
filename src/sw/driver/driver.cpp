@@ -154,24 +154,30 @@ Driver::EntryPointsVector Driver::createEntryPoints(SwContext &swctx, const std:
     return eps;
 }
 
-String Driver::getSpecification(const RawInput &i) const
+std::unique_ptr<Specification> Driver::getSpecification(const RawInput &i) const
 {
+    auto spec = std::make_unique<Specification>();
     switch (i.getType())
     {
     case InputType::SpecificationFile:
     {
-        return read_file(i.getPath());
+        // TODO: take relative path here
+        spec->addFile(i.getPath(), read_file(i.getPath()));
+        break;
     }
     case InputType::InlineSpecification:
     {
-        auto spec = load_configless_file_spec(i.getPath());
-        if (!spec)
+        auto s = load_configless_file_spec(i.getPath());
+        if (!s)
             throw SW_RUNTIME_ERROR("Cannot load inline specification");
-        return *spec;
+        // TODO: mark as inline path (spec)
+        // add spec type?
+        spec->addFile(i.getPath(), *s);
     }
     default:
         SW_UNIMPLEMENTED;
     }
+    return spec;
 }
 
 PackageIdSet Driver::getBuiltinPackages(SwContext &swctx) const

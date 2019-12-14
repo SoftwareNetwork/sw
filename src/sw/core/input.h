@@ -11,6 +11,7 @@
 namespace sw
 {
 
+struct Specification;
 struct IDriver;
 struct SwContext;
 
@@ -65,7 +66,7 @@ struct SW_CORE_API Input : RawInput
     bool isChanged() const;
     void addEntryPoints(const std::vector<TargetEntryPointPtr> &);
     bool isLoaded() const;
-    String getSpecification() const;
+    std::unique_ptr<Specification> getSpecification() const;
     PackageVersionGroupNumber getGroupNumber() const;
     const std::vector<TargetEntryPointPtr> &getEntryPoints() const { return eps; }
 

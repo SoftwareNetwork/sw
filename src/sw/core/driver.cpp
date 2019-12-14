@@ -6,12 +6,27 @@
 
 #include "driver.h"
 
+#include <sw/support/hash.h>
+
 namespace sw
 {
 
+void Specification::addFile(const path &relative_path, const String &contents)
+{
+    files[relative_path] = contents;
+}
+
+int64_t Specification::getHash() const
+{
+    size_t h = 0;
+    for (auto &[f, s] : files)
+        hash_combine(h, s);
+    return h;
+}
+
 int64_t IDriver::getGroupNumber(const RawInput &i) const
 {
-    return std::hash<String>()(getSpecification(i));
+    return getSpecification(i)->getHash();
 }
 
 } // namespace sw

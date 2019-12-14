@@ -41,7 +41,7 @@ struct SW_DRIVER_CPP_API Driver : IDriver
     // driver api
     std::optional<path> canLoadInput(const RawInput &) const override;
     EntryPointsVector createEntryPoints(SwContext &, const std::vector<RawInput> &) const override;
-    String getSpecification(const RawInput &) const override;
+    std::unique_ptr<Specification> getSpecification(const RawInput &) const override;
 
     // frontends
     using AvailableFrontends = boost::bimap<boost::bimaps::multiset_of<FrontendType>, path>;
