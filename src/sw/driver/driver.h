@@ -59,6 +59,7 @@ private:
     bool can_load_configless_file(const path &) const;
     std::optional<String> load_configless_file_spec(const path &) const;
     EntryPointsVector1 load_configless_file(SwContext &, const path &) const;
+    EntryPointsVector1 load_configless_dir(SwContext &, const path &) const;
 
     template <class T>
     std::shared_ptr<PrepareConfigEntryPoint> build_configs1(SwContext &, const T &objs) const;

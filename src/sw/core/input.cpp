@@ -71,8 +71,21 @@ bool Input::findDriver(InputType t, const SwContext &swctx)
         {
             if (*r != getPath())
             {
-                type = InputType::SpecificationFile;
-                data = *r;
+                if (fs::is_regular_file(*r))
+                {
+                    type = InputType::SpecificationFile;
+                    data = *r;
+                }
+                else if (fs::is_directory(*r))
+                {
+                    type = InputType::Directory;
+                    data = *r;
+                }
+                else
+                {
+                    // what is it?
+                    throw SW_RUNTIME_ERROR("Unknown file type: " + normalize_path(*r));
+                }
             }
             driver = d.get();
             LOG_DEBUG(logger, "Selecting driver " + dp.toString() + " for input " + normalize_path(*r));

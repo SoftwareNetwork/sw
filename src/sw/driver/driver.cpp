@@ -103,8 +103,7 @@ std::optional<path> Driver::canLoadInput(const RawInput &i) const
             return i.getPath();
         break;
     case InputType::Directory:
-        SW_UNIMPLEMENTED;
-        break;
+        return i.getPath();
     default:
         SW_UNREACHABLE;
     }
@@ -132,6 +131,11 @@ Driver::EntryPointsVector Driver::createEntryPoints(SwContext &swctx, const std:
         case InputType::InlineSpecification:
         {
             p_eps[i.getPath()] = load_configless_file(swctx, i.getPath());
+            break;
+        }
+        case InputType::Directory:
+        {
+            p_eps[i.getPath()] = load_configless_dir(swctx, i.getPath());
             break;
         }
         default:
@@ -173,6 +177,11 @@ std::unique_ptr<Specification> Driver::getSpecification(const RawInput &i) const
         // TODO: mark as inline path (spec)
         // add spec type?
         spec->addFile(i.getPath(), *s);
+    }
+    case InputType::Directory:
+    {
+        spec->addFile(i.getPath(), {}); // empty
+        break;
     }
     default:
         SW_UNIMPLEMENTED;
@@ -332,6 +341,17 @@ static Strings get_inline_comments(const path &p)
         }
     }
     return comments;
+}
+
+Driver::EntryPointsVector1 Driver::load_configless_dir(SwContext &, const path &p) const
+{
+    auto bf = [p](Build &b)
+    {
+        auto &t = b.addExecutable(p.stem().string());
+    };
+    auto ep = std::make_shared<NativeBuiltinTargetEntryPoint>(bf);
+    ep->source_dir = p;
+    return { ep };
 }
 
 Driver::EntryPointsVector1 Driver::load_configless_file(SwContext &, const path &p) const
