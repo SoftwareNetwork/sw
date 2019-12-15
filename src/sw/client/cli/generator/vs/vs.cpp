@@ -788,8 +788,8 @@ void Project::emitProject(const VSGenerator &g) const
         {
             if (d.main_command)
                 ctx.addBlock("OutDir", normalize_path_windows(d.main_command->outputs.begin()->parent_path()) + "\\");
-            else
-                ctx.addBlock("OutDir", normalize_path_windows(get_out_dir(g.sln_root, vs_project_dir, s)) + "\\");
+            //else
+                //ctx.addBlock("OutDir", normalize_path_windows(get_out_dir(g.sln_root, vs_project_dir, s)) + "\\");
             ctx.addBlock("IntDir", normalize_path_windows(get_int_dir(s)) + "\\int\\");
             // full name of target, keep as is (it might have subdirs)
             ctx.addBlock("TargetName", name);
