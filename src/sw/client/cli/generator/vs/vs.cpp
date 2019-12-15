@@ -371,6 +371,18 @@ void VSGenerator::generate(const SwBuild &b)
 
                     if (can_add_file(o))
                         p.files.insert(o);
+
+                    if (1
+                        && c->arguments.size() > 1
+                        && c->arguments[1]->toString() == sw::builder::getInternalCallBuiltinFunctionName()
+                        && c->arguments.size() > 3
+                        && c->arguments[3]->toString() == "sw_create_def_file"
+                        )
+                    {
+                        d.pre_link_command = c.get();
+                        continue;
+                    }
+
                     d.custom_rules.insert(c.get());
                 }
 
@@ -815,14 +827,29 @@ void Project::emitProject(const VSGenerator &g) const
 
     for (auto &s : settings)
     {
+        auto commands_dir = get_int_dir(s) / "commands";
+
         auto &d = getData(s);
         ctx.beginBlockWithConfiguration("ItemDefinitionGroup", s);
         {
             //
-            ctx.beginBlock(d.type == VSProjectType::StaticLibrary ? "Lib" : "Link");
             if (d.main_command)
+            {
+                ctx.beginBlock(d.type == VSProjectType::StaticLibrary ? "Lib" : "Link");
                 printProperties(ctx, s, *d.main_command, link_props);
-            ctx.endBlock();
+                ctx.endBlock();
+            }
+
+            if (d.pre_link_command)
+            {
+                auto cmd = d.pre_link_command->writeCommand(commands_dir / std::to_string(d.pre_link_command->getHash()));
+
+                ctx.beginBlock("PreLinkEvent");
+                ctx.beginBlock("Command");
+                ctx.addText("call \"" + normalize_path_windows(cmd) + "\"");
+                ctx.endBlock(true);
+                ctx.endBlock();
+            }
 
             //
             ctx.beginBlock("ClCompile");

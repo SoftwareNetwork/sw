@@ -126,6 +126,7 @@ struct ProjectData
 {
     const sw::ITarget *target = nullptr;
     Command main_command = nullptr;
+    Command pre_link_command = nullptr;
     VSProjectType type = VSProjectType::Directory;
     std::unordered_set<Command> custom_rules;
     std::vector<Rule> custom_rules_manual; // not commands
