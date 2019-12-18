@@ -22,11 +22,13 @@
 #include <sw/builder/execution_plan.h>
 #include <sw/core/build.h>
 #include <sw/core/sw_context.h>
+#include <sw/manager/storage.h>
 #include <sw/support/filesystem.h>
 
 #include <boost/algorithm/string.hpp>
 #include <nlohmann/json.hpp>
 #include <primitives/sw/cl.h>
+#include <primitives/pack.h>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "generator");
@@ -59,6 +61,8 @@ String toPathString(GeneratorType t)
         return "swexplan";
     case GeneratorType::SwBuildDescription:
         return "swbdesc";
+    case GeneratorType::RawBootstrapBuild:
+        return "rawbootstrap";
     default:
         throw SW_LOGIC_ERROR("not implemented");
     }
@@ -105,6 +109,8 @@ static String toString(GeneratorType t)
         return "Sw Execution Plan";
     case GeneratorType::SwBuildDescription:
         return "Sw Build Description";
+    case GeneratorType::RawBootstrapBuild:
+        return "Raw Bootstrap Build";
     default:
         throw SW_LOGIC_ERROR("not implemented");
     }
@@ -152,6 +158,8 @@ static GeneratorType fromString(const String &s)
         return GeneratorType::SwExecutionPlan;
     else if (boost::iequals(s, "SwBDesc"))
         return GeneratorType::SwBuildDescription;
+    else if (boost::iequals(s, "raw-bootstrap"))
+        return GeneratorType::RawBootstrapBuild;
     //else if (boost::iequals(s, "qtc"))
     //return GeneratorType::qtc;
     throw SW_RUNTIME_ERROR("Unknown generator: " + s);
@@ -216,6 +224,9 @@ std::unique_ptr<Generator> Generator::create(const String &s)
     case GeneratorType::SwBuildDescription:
         g = std::make_unique<SwBuildDescriptionGenerator>();
         break;
+    case GeneratorType::RawBootstrapBuild:
+        g = std::make_unique<RawBootstrapBuildGenerator>();
+        break;
     default:
         SW_UNIMPLEMENTED;
     }
@@ -275,13 +286,22 @@ struct ProgramShortCutter
     //                                                           program           alias
     using F = std::function<void(primitives::Emitter &ctx, const String &, const String &)>;
 
-    ProgramShortCutter()
+    ProgramShortCutter(bool print_sc_generated = false)
         : sc_generated("SW_PROGRAM_GENERATED_")
+        , print_sc_generated(print_sc_generated)
     {}
 
-    String getProgramName(const String &in, const builder::Command &c)
+    String getProgramName(const String &in, const builder::Command &c, bool *untouched = nullptr)
     {
         bool gen = File(c.getProgram(), c.getContext().getFileStorage()).isGeneratedAtAll();
+        if (gen && !print_sc_generated)
+        {
+            if (untouched)
+                *untouched = true;
+            return in;
+        }
+        if (untouched)
+            *untouched = false;
         auto &progs = gen ? sc_generated : sc;
         return progs.getProgramName(in);
     }
@@ -297,13 +317,15 @@ struct ProgramShortCutter
         // print programs
         print_progs(sc);
         ctx.emptyLines();
-        //print_progs(sc_generated);
+        if (print_sc_generated)
+            print_progs(sc_generated);
         ctx.emptyLines();
     }
 
 private:
     ProgramShortCutter1 sc;
     ProgramShortCutter1 sc_generated;
+    bool print_sc_generated;
 };
 
 struct NinjaEmitter : primitives::Emitter
@@ -361,6 +383,8 @@ private:
     void addCommand(const SwBuild &b, const builder::Command &c)
     {
         bool rsp = c.needsResponseFile();
+        if (b.getContext().getHostOs().Type == OSType::Windows)
+            rsp = c.needsResponseFile(8000);
         path rsp_dir = dir / "rsp";
         path rsp_file = fs::absolute(rsp_dir / (std::to_string(c.getHash()) + ".rsp"));
         if (rsp)
@@ -401,7 +425,9 @@ private:
         }
 
         // prog
-        addText("$" + sc.getProgramName(prepareString(b, getShortName(prog), true), c) + " ");
+        bool untouched;
+        auto progn = sc.getProgramName(prepareString(b, getShortName(prog), true), c, &untouched);
+        addText((untouched ? "" : "$") + progn + " ");
 
         // args
         if (!rsp)
@@ -464,14 +490,17 @@ private:
     }
 };
 
-void NinjaGenerator::generate(const SwBuild &b)
+static void generate_ninja(const SwBuild &b, const path &root_dir)
 {
     // https://ninja-build.org/manual.html#_writing_your_own_ninja_files
 
-    const auto dir = getRootDirectory(b);
+    NinjaEmitter ctx(b, root_dir);
+    write_file(root_dir / "build.ninja", ctx.getText());
+}
 
-    NinjaEmitter ctx(b, dir);
-    write_file(dir / "build.ninja", ctx.getText());
+void NinjaGenerator::generate(const SwBuild &b)
+{
+    generate_ninja(b, getRootDirectory(b));
 }
 
 static bool should_print(const String &o)
@@ -934,4 +963,87 @@ void SwBuildDescriptionGenerator::generate(const sw::SwBuild &b)
         }
     }
     write_file(fn, j.dump(4));
+}
+
+void RawBootstrapBuildGenerator::generate(const sw::SwBuild &b)
+{
+    // bootstrap build is:
+    //  1. ninja rules
+    //  2. list of all used files except system ones
+
+    auto dir = getRootDirectory(b);
+    // remove hash part
+    // this is very specific generator, so remove it for now
+    // if users report to turn it back, turn it back
+    dir = dir.parent_path();
+
+    LOG_INFO(logger, "Generating ninja script");
+
+    generate_ninja(b, dir);
+
+    LOG_INFO(logger, "Building project");
+
+    auto &mb = (SwBuild &)b;
+    auto ep = mb.getExecutionPlan(); // save our commands
+    mb.build(); // now build to get implicit inputs
+
+    // gather files (inputs + implicit inputs)
+    LOG_INFO(logger, "Gathering files");
+
+    Files files;
+    files.reserve(10000);
+
+    for (auto &c1 : ep.getCommands())
+    {
+        auto &c = dynamic_cast<const sw::builder::Command &>(*c1);
+        files.insert(c.inputs.begin(), c.inputs.end());
+        files.insert(c.implicit_inputs.begin(), c.implicit_inputs.end());
+    }
+
+    LOG_INFO(logger, "Filtering files");
+
+    const auto cp = fs::current_path();
+    const auto sd = b.getContext().getLocalStorage().storage_dir;
+
+    // filter out files not in current dir and not in storage
+    std::unordered_map<path /* real file */, path /* path in archive */> files2;
+    std::set<path> files_ordered;
+    for (auto &f : files)
+    {
+        if (File(f, b.getContext().getFileStorage()).isGenerated())
+            continue;
+        if (is_under_root(f, sd))
+        {
+            files2[f] = f;
+            files_ordered.insert(f);
+        }
+        else if (is_under_root(f, cp))
+        {
+            files2[f] = f;
+            files_ordered.insert(f);
+        }
+    }
+
+    String s;
+    for (auto &f : files_ordered)
+        s += normalize_path(f) + "\n";
+    // remove last \n?
+    write_file(dir / "files.txt", s);
+
+    LOG_INFO(logger, "Packing files");
+
+    auto bat = b.getContext().getHostOs().Type == OSType::Windows;
+    String script;
+    path script_fn = "bootstrap";
+    if (bat)
+        script_fn += ".bat";
+    else
+        script_fn += ".sh";
+    if (bat)
+        script += "@setlocal\n";
+    script += "cd \"" + normalize_path(fs::current_path()) + "\"\n";
+    script += "ninja -C \"" + normalize_path(dir) + "\"\n";
+    write_file(script_fn, script);
+
+    pack_files("bootstrap.tar.xz", files2);
 }

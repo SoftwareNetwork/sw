@@ -39,6 +39,7 @@ enum class GeneratorType
     Make,
     NMake,
     Ninja,
+    RawBootstrapBuild,
     QMake,
     Shell,
     VisualStudio,
@@ -113,6 +114,11 @@ struct SwExecutionPlanGenerator : Generator
 };
 
 struct SwBuildDescriptionGenerator : Generator
+{
+    void generate(const sw::SwBuild &b) override;
+};
+
+struct RawBootstrapBuildGenerator : Generator
 {
     void generate(const sw::SwBuild &b) override;
 };
