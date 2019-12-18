@@ -236,7 +236,7 @@ std::unique_ptr<Generator> Generator::create(const String &s)
 
 path Generator::getRootDirectory(const sw::SwBuild &b) const
 {
-    return path(SW_BINARY_DIR) / "g" / toPathString(getType()) / b.getHash();
+    return fs::current_path() / path(SW_BINARY_DIR) / "g" / toPathString(getType()) / b.getHash();
 }
 
 struct ProgramShortCutter1
@@ -331,8 +331,8 @@ private:
 struct NinjaEmitter : primitives::Emitter
 {
     NinjaEmitter(const SwBuild &b, const path &dir)
+        : dir(dir)
     {
-        const String commands_fn = "commands.ninja";
         addLine("include " + commands_fn);
         emptyLines(1);
 
@@ -349,9 +349,23 @@ struct NinjaEmitter : primitives::Emitter
         write_file(dir / commands_fn, ctx_progs.getText());
     }
 
+    Files getCreatedFiles() const
+    {
+        Files files;
+        files.insert(dir / commands_fn);
+        files.insert(getRspDir());
+        return files;
+    }
+
 private:
     path dir;
     ProgramShortCutter sc;
+    static inline const String commands_fn = "commands.ninja";
+
+    path getRspDir() const
+    {
+        return dir / "rsp";
+    }
 
     String getShortName(const path &p)
     {
@@ -385,7 +399,7 @@ private:
         bool rsp = c.needsResponseFile();
         if (b.getContext().getHostOs().Type == OSType::Windows)
             rsp = c.needsResponseFile(8000);
-        path rsp_dir = dir / "rsp";
+        path rsp_dir = getRspDir();
         path rsp_file = fs::absolute(rsp_dir / (std::to_string(c.getHash()) + ".rsp"));
         if (rsp)
             fs::create_directories(rsp_dir);
@@ -425,7 +439,7 @@ private:
         }
 
         // prog
-        bool untouched;
+        bool untouched = false;
         auto progn = sc.getProgramName(prepareString(b, getShortName(prog), true), c, &untouched);
         addText((untouched ? "" : "$") + progn + " ");
 
@@ -490,12 +504,16 @@ private:
     }
 };
 
-static void generate_ninja(const SwBuild &b, const path &root_dir)
+static Files generate_ninja(const SwBuild &b, const path &root_dir)
 {
     // https://ninja-build.org/manual.html#_writing_your_own_ninja_files
 
     NinjaEmitter ctx(b, root_dir);
     write_file(root_dir / "build.ninja", ctx.getText());
+
+    auto files = ctx.getCreatedFiles();
+    files.insert(root_dir / "build.ninja");
+    return files;
 }
 
 void NinjaGenerator::generate(const SwBuild &b)
@@ -979,7 +997,7 @@ void RawBootstrapBuildGenerator::generate(const sw::SwBuild &b)
 
     LOG_INFO(logger, "Generating ninja script");
 
-    generate_ninja(b, dir);
+    auto files = generate_ninja(b, dir);
 
     LOG_INFO(logger, "Building project");
 
@@ -989,10 +1007,7 @@ void RawBootstrapBuildGenerator::generate(const sw::SwBuild &b)
 
     // gather files (inputs + implicit inputs)
     LOG_INFO(logger, "Gathering files");
-
-    Files files;
     files.reserve(10000);
-
     for (auto &c1 : ep.getCommands())
     {
         auto &c = dynamic_cast<const sw::builder::Command &>(*c1);
