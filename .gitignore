@@ -6,6 +6,7 @@
 *.pdf
 *.blg
 .*
+*.tar*.*
 
 # build files and directories
 /build*
