@@ -218,7 +218,8 @@ void VSGenerator::generate(const SwBuild &b)
 
     vs_version = clver2vsver(compiler_id.getVersion(), compiler_id_max.getVersion());
     toolset_version = compiler_id.getVersion();
-    sln_root = b.getBuildDirectory() / toPathString(getType()) / vs_version.toString(1);
+    // this removes hash part      vvvvvvvvvvvvv
+    sln_root = getRootDirectory(b).parent_path() / vs_version.toString(1);
 
     // dl flag tables from cmake
     static const String ft_base_url = "https://gitlab.kitware.com/cmake/cmake/raw/master/Templates/MSBuild/FlagTables/";
@@ -662,7 +663,7 @@ void Solution::emit(const VSGenerator &g) const
     }
 
     // link
-    auto lnk = current_thread_path() / visible_lnk_name;
+    auto lnk = fs::current_path() / visible_lnk_name;
     lnk += ".lnk";
 #ifdef _WIN32
     ::create_link(g.sln_root / fn, lnk, "SW link");
