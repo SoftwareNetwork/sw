@@ -40,4 +40,4 @@ jobs:
         key: ${{ runner.os }}-sw-storage
         
     - name: build
-      run: ./sw build
+      run: ./sw -static -mt build
