@@ -707,9 +707,7 @@ static VersionSet listWindows10Kits()
 #ifdef _WIN32
     winreg::RegKey kits10(HKEY_LOCAL_MACHINE, L"SOFTWARE\\Microsoft\\Windows Kits\\Installed Roots", KEY_READ);
     for (auto &k : kits10.EnumSubKeys())
-    {
         kits.insert(to_string(k));
-    }
 #endif
     //throw SW_RUNTIME_ERROR("No Windows Kits available");
     return kits;
@@ -770,7 +768,10 @@ static void detectWindowsSdk(DETECT_ARGS)
         {
             auto idir = kit_root / "Include" / idir_subversion;
             if (!fs::exists(idir / name))
+            {
+                LOG_TRACE(logger, "No include dir " << (idir / name) << " found for library: " << name);
                 return;
+            }
 
             for (auto target_arch : { ArchType::x86_64,ArchType::x86,ArchType::arm,ArchType::aarch64 })
             {
@@ -803,6 +804,8 @@ static void detectWindowsSdk(DETECT_ARGS)
                     for (auto &i : idirs)
                         t.public_ts["system-include-directories"].push_back(normalize_path(idir / i));
                 }
+                else
+                    LOG_TRACE(logger, "No libdir " << libdir << " found for library: " << name);
             }
         }
 
@@ -828,11 +831,19 @@ static void detectWindowsSdk(DETECT_ARGS)
 
     for (auto &k : listWindowsKits())
     {
+        LOG_TRACE(logger, "Found Windows Kit: " + k);
+
         auto kr = getWindowsKitRoot() / k;
         if (k == getWin10KitDirName())
         {
             for (auto &v : listWindows10Kits())
             {
+                LOG_TRACE(logger, "Found Windows10 Kit: " + k);
+
+                // win10 kit dir may be different from default kit root,
+                // so we update it here
+                kr = getWindows10KitRoot();
+
                 // ucrt
                 {
                     WinKit wk;
