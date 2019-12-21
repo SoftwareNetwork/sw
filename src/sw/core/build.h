@@ -96,6 +96,7 @@ private:
     std::vector<InputWithSettings> inputs;
     TargetSettings build_settings;
     mutable BuildState state = BuildState::NotStarted;
+    mutable Commands commands_storage; // we need some place to keep copy cmds
 
     // other data
     mutable FilesSorted fast_path_files;
