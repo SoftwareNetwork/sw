@@ -838,7 +838,7 @@ static void detectWindowsSdk(DETECT_ARGS)
         {
             for (auto &v : listWindows10Kits())
             {
-                LOG_TRACE(logger, "Found Windows10 Kit: " + k);
+                LOG_TRACE(logger, "Found Windows10 Kit: " + v.toString());
 
                 // win10 kit dir may be different from default kit root,
                 // so we update it here
