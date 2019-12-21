@@ -230,7 +230,7 @@ void TargetBase::setupTarget(TargetBaseType *t) const
         t->source = t0->source ? t0->source->clone() : nullptr;
 
     t->IsConfig = IsConfig; // TODO: inherit from reconsider
-    t->DryRun = DryRun; // TODO: inherit from reconsider
+    //t->DryRun = DryRun; // TODO: inherit from reconsider
 
     t->main_build_ = main_build_; // ok, take from here (this, parent)
     t->command_storage = command_storage; // ok, take from here (this, parent)
