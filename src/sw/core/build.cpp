@@ -368,8 +368,6 @@ bool SwBuild::prepareStep()
     {
         for (const auto &tgt : tgts)
         {
-            if (tgt->getSettings()["dry-run"] == "true")
-                continue;
             fs.push_back(e.push([tgt, &next_pass]
             {
                 if (tgt->prepare())
@@ -455,9 +453,6 @@ Commands SwBuild::getCommands() const
     {
         for (auto &tgt : tgts)
         {
-            if (tgt->getSettings()["dry-run"] == "true")
-                continue;
-
             for (auto &c : tgt->getCommands())
                 c->maybe_unused = builder::Command::MU_TRUE; // why?
         }
@@ -473,11 +468,14 @@ Commands SwBuild::getCommands() const
     // (e.g. build static png, zlib won't be built)
     for (auto &[p, tgts] : targets_to_build)
     {
+        // one target may be loaded twice
+        // we take only the latest, because it is has correct set of command deps per requested settings
+        std::map<TargetSettings, ITarget*> latest_targets;
         for (auto &tgt : tgts)
-        {
-            if (tgt->getSettings()["dry-run"] == "true")
-                continue;
+            latest_targets[tgt->getSettings()] = tgt.get();
 
+        for (auto &[_, tgt] : latest_targets)
+        {
             // copy output files
             const auto &s = tgt->getInterfaceSettings();
 
@@ -529,11 +527,14 @@ Commands SwBuild::getCommands() const
     Commands cmds;
     for (auto &[p, tgts] : ttb)
     {
+        // one target may be loaded twice
+        // we take only the latest, because it is has correct set of command deps per requested settings
+        std::map<TargetSettings, ITarget*> latest_targets;
         for (auto &tgt : tgts)
-        {
-            if (tgt->getSettings()["dry-run"] == "true")
-                continue;
+            latest_targets[tgt->getSettings()] = tgt.get();
 
+        for (auto &[_, tgt] : latest_targets)
+        {
             auto c = tgt->getCommands();
             for (auto &c2 : c)
             {
