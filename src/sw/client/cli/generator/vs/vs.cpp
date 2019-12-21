@@ -585,6 +585,14 @@ void VSGenerator::generate(const SwBuild &b)
                 auto pp = tgt->getPackage().getPath();
                 while (!pp.empty() && parents.find(pp) == parents.end())
                     pp = pp.parent();
+                // sometimes there a project and a dir with same name
+                // in this case select parent dir
+                if (pp == tgt->getPackage().getPath())
+                {
+                    pp = pp.parent();
+                    while (!pp.empty() && parents.find(pp) == parents.end())
+                        pp = pp.parent();
+                }
                 if (!pp.empty())
                 {
                     p.directory = &s.directories.find(pp.toString())->second;
