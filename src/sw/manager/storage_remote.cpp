@@ -539,7 +539,7 @@ RemoteStorageWithFallbackToRemoteResolving::resolve(const UnresolvedPackages &pk
     // clear dirty output
     unresolved_pkgs.clear();
 
-    LOG_INFO(logger, "Requesting dependency list from " + getRemote().name + " remote...");
+    LOG_DEBUG(logger, "Requesting dependency list from " + getRemote().name + " remote...");
 
     try
     {
@@ -551,7 +551,7 @@ RemoteStorageWithFallbackToRemoteResolving::resolve(const UnresolvedPackages &pk
         // we ignore remote storage errors, print them,
         // mark all deps as unresolved and
         // return empty result
-        LOG_INFO(logger, e.what());
+        LOG_TRACE(logger, e.what());
         unresolved_pkgs = pkgs;
         return {};
     }
