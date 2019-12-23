@@ -313,6 +313,8 @@ void VSGenerator::generate(const SwBuild &b)
             ;
     };
 
+    int n_executables = 0;
+
     for (auto &[pkg, tgts] : b.getTargetsToBuild())
     {
         // add project with settings
@@ -331,6 +333,11 @@ void VSGenerator::generate(const SwBuild &b)
 
             s.projects.emplace(p.name, p);
             s.projects.find(all_build_name)->second.dependencies.insert(&s.projects.find(p.name)->second);
+
+            // some other stuff
+            n_executables += tgt->getInterfaceSettings()["type"] == "native_executable";
+            if (!s.first_project && tgt->getInterfaceSettings()["ide"]["startup_project"] == "true")
+                s.first_project = &s.projects.find(p.name)->second;
             break;
         }
 
@@ -450,6 +457,10 @@ void VSGenerator::generate(const SwBuild &b)
                 }
                 p.dependencies.insert(&s.projects.find(d->getTarget().getPackage().toString())->second);
             }
+
+            //
+            if (!s.first_project && n_executables == 1 && tgt->getInterfaceSettings()["type"] == "native_executable")
+                s.first_project = &p;
         }
     }
 
@@ -612,6 +623,9 @@ void Solution::emit(const VSGenerator &g) const
     SolutionEmitter ctx;
     ctx.version = g.vs_version;
     ctx.printVersion();
+
+    if (first_project)
+        first_project->emit(ctx);
     emitDirectories(ctx);
     emitProjects(g.sln_root, ctx);
 
@@ -693,6 +707,8 @@ void Solution::emitProjects(const path &root, SolutionEmitter &sctx) const
 {
     for (auto &[n, p] : projects)
     {
+        if (first_project == &p)
+            continue;
         p.emit(sctx);
     }
 }
