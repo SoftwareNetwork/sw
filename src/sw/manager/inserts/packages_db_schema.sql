@@ -112,5 +112,11 @@ ALTER TABLE package_version RENAME COLUMN group_number TO group_number1;
 ALTER TABLE package_version ADD COLUMN group_number INTEGER NOT NULL DEFAULT 0;
 
 --------------------------------------------------------------------------------
+-- %split
+--------------------------------------------------------------------------------
+
+UPDATE package_version SET group_number = 0;
+
+--------------------------------------------------------------------------------
 -- % split - merge '%' and 'split' together when patches are available
 --------------------------------------------------------------------------------

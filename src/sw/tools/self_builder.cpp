@@ -180,7 +180,7 @@ int main(int argc, char **argv)
         auto &d = r.getData();
         if (d.group_number == 0)
         {
-            ((PackageData&)d).group_number = std::hash<String>()(read_file(r.getDirSrc2() / "sw.cpp"));
+            ((PackageData&)d).group_number = get_specification_hash(read_file(r.getDirSrc2() / "sw.cpp"));
         }
     }
 

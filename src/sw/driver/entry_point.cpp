@@ -182,7 +182,7 @@ static std::tuple<FilesOrdered, UnresolvedPackages> getFileDependencies(const Sw
             auto pkg = swctx.resolve(upkg);
             if (pkg.getData().group_number == 0)
             {
-                auto gn = std::hash<String>()(read_file(pkg.getDirSrc2() / "sw.cpp"));
+                auto gn = get_specification_hash(read_file(pkg.getDirSrc2() / "sw.cpp"));
                 pkg.setGroupNumber(gn);
                 ((PackageData &)pkg.getData()).group_number = gn;
             }

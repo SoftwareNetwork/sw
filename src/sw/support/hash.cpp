@@ -15,3 +15,13 @@ bool check_file_hash(const path &fn, const String &hash)
 {
     return hash == get_file_hash(fn);
 }
+
+size_t get_specification_hash(const String &input)
+{
+    return boost::hash<String>()(input);
+}
+
+size_t add_specification_hash(size_t &hash, const String &input)
+{
+    return hash_combine(hash, get_specification_hash(input));
+}

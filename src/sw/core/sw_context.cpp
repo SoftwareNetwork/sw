@@ -238,7 +238,7 @@ TargetEntryPointPtr SwCoreContext::getEntryPoint(const LocalPackage &p) const
     auto gn = p.getData().group_number;
     if (gn == 0)
     {
-        gn = std::hash<String>()(read_file(p.getDirSrc2() / "sw.cpp"));
+        gn = get_specification_hash(read_file(p.getDirSrc2() / "sw.cpp"));
         p.setGroupNumber(gn);
         ((PackageData &)p.getData()).group_number = gn;
     }
