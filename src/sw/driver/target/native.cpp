@@ -1981,6 +1981,10 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
             s["dependencies"]["link"][d->getTarget().getPackage().toString()] = d->getTarget().getSettings();
     }
 
+    // add ide settings to s["ide"]
+    if (StartupProject)
+        s["ide"]["startup_project"] = "true";
+
     return s;
 }
 
