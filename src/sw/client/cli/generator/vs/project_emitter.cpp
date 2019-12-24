@@ -183,7 +183,7 @@ String get_project_configuration(const BuildSettings &s)
 }
 
 XmlEmitter::XmlEmitter(bool print_version)
-    : Emitter("  ")
+    : Emitter("  ", "\r\n")
 {
     if (print_version)
         addLine(R"(<?xml version="1.0" encoding="utf-8"?>)");
