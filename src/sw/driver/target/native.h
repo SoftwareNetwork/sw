@@ -211,6 +211,7 @@ private:
     mutable std::optional<Commands> generated_commands;
     path outputfile;
     Commands cmds;
+    Files configure_files; // needed by IDEs, move to base target later
 
     using ActiveDeps = std::vector<TargetDependency>;
     std::optional<ActiveDeps> active_deps;

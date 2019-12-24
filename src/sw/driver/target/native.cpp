@@ -1984,6 +1984,8 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
     // add ide settings to s["ide"]
     if (StartupProject)
         s["ide"]["startup_project"] = "true";
+    for (auto &f : configure_files)
+        s["ide"]["configure_files"].push_back(normalize_path(f));
 
     return s;
 }
@@ -3164,6 +3166,8 @@ void NativeCompiledTarget::configureFile1(const path &from, const path &to, Conf
     static const StringSet offValues{
         "", "0", //"OFF", "NO", "FALSE", "N", "IGNORE",
     };
+
+    configure_files.insert(from);
 
     auto s = read_file(from);
 
