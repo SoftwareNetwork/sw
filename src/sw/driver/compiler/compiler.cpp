@@ -219,7 +219,7 @@ SW_DEFINE_PROGRAM_CLONE(VisualStudioCompiler)
 
 void VisualStudioCompiler::setSourceFile(const path &input_file, path &output_file)
 {
-    InputFile = input_file.u8string();
+    InputFile = input_file;
     VisualStudioCompiler::setOutputFile(output_file);
 }
 
@@ -269,7 +269,7 @@ path VisualStudioASMCompiler::getOutputFile() const
 
 void VisualStudioASMCompiler::setSourceFile(const path &input_file, path &output_file)
 {
-    InputFile = input_file.u8string();
+    InputFile = input_file;
     setOutputFile(output_file);
 }
 
@@ -322,7 +322,7 @@ SW_DEFINE_PROGRAM_CLONE(ClangCompiler)
 
 void ClangCompiler::setSourceFile(const path &input_file, path &output_file)
 {
-    InputFile = input_file.u8string();
+    InputFile = input_file;
     setOutputFile(output_file);
 }
 
@@ -382,7 +382,7 @@ SW_DEFINE_PROGRAM_CLONE(ClangClCompiler)
 
 void ClangClCompiler::setSourceFile(const path &input_file, path &output_file)
 {
-    InputFile = input_file.u8string();
+    InputFile = input_file;
     setOutputFile(output_file);
 }
 
@@ -426,7 +426,7 @@ path GNUASMCompiler::getOutputFile() const
 
 void GNUASMCompiler::setSourceFile(const path &input_file, path &output_file)
 {
-    InputFile = input_file.u8string();
+    InputFile = input_file;
     setOutputFile(output_file);
 }
 
@@ -481,7 +481,7 @@ SW_DEFINE_PROGRAM_CLONE(GNUCompiler)
 
 void GNUCompiler::setSourceFile(const path &input_file, path &output_file)
 {
-    InputFile = input_file.u8string();
+    InputFile = input_file;
     setOutputFile(output_file);
 }
 
@@ -526,12 +526,14 @@ void VisualStudioLibraryTool::setObjectFiles(const Files &files)
 
 void VisualStudioLibraryTool::setOutputFile(const path &out)
 {
-    Output = out.u8string() + Extension;
+    Output = out;
+    Output() += Extension;
 }
 
 void VisualStudioLibraryTool::setImportLibrary(const path &out)
 {
-    ImportLibrary = out.u8string() + ".lib";
+    ImportLibrary = out;
+    ImportLibrary() += ".lib";
 }
 
 path VisualStudioLibraryTool::getOutputFile() const
@@ -923,7 +925,8 @@ void VisualStudioCSharpCompiler::prepareCommand1(const ::sw::Target &t)
 
 void VisualStudioCSharpCompiler::setOutputFile(const path &output_file)
 {
-    Output = output_file.u8string() + Extension;
+    Output = output_file;
+    Output() += Extension;
 }
 
 void VisualStudioCSharpCompiler::addSourceFile(const path &input_file)
@@ -940,7 +943,8 @@ void RustCompiler::prepareCommand1(const Target &t)
 
 void RustCompiler::setOutputFile(const path &output_file)
 {
-    Output = output_file.u8string() + Extension;
+    Output = output_file;
+    Output() += Extension;
 }
 
 void RustCompiler::setSourceFile(const path &input_file)
@@ -957,7 +961,8 @@ void GoCompiler::prepareCommand1(const Target &t)
 
 void GoCompiler::setOutputFile(const path &output_file)
 {
-    Output = output_file.u8string() + Extension;
+    Output = output_file;
+    Output() += Extension;
 }
 
 void GoCompiler::setSourceFile(const path &input_file)
@@ -974,7 +979,8 @@ void FortranCompiler::prepareCommand1(const Target &t)
 
 void FortranCompiler::setOutputFile(const path &output_file)
 {
-    Output = output_file.u8string() + Extension;
+    Output = output_file;
+    Output() += Extension;
 }
 
 void FortranCompiler::setSourceFile(const path &input_file)
@@ -1033,7 +1039,8 @@ void DCompiler::prepareCommand1(const Target &t)
 
 void DCompiler::setOutputFile(const path &output_file)
 {
-    Output = output_file.u8string() + Extension;
+    Output = output_file;
+    Output() += Extension;
 }
 
 void DCompiler::setObjectDir(const path &output_dir)

@@ -66,13 +66,13 @@ DECLARE_OPTION_SPECIALIZATION(FilesOrdered)
             if (separate_prefix)
             {
                 cmds.push_back(getCommandLineFlag());
-                cmds.push_back(v.string());
+                cmds.push_back(v.u8string());
             }
             else
-                cmds.push_back(getCommandLineFlag() + v.string());
+                cmds.push_back(getCommandLineFlag() + v.u8string());
         }
         else
-            cmds.push_back(v.string());
+            cmds.push_back(v.u8string());
     }
     return cmds;
 }
@@ -93,13 +93,13 @@ DECLARE_OPTION_SPECIALIZATION(Files)
             if (separate_prefix)
             {
                 cmds.push_back(getCommandLineFlag());
-                cmds.push_back(v.string());
+                cmds.push_back(v.u8string());
             }
             else
-                cmds.push_back(getCommandLineFlag() + v.string());
+                cmds.push_back(getCommandLineFlag() + v.u8string());
         }
         else
-            cmds.push_back(v.string());
+            cmds.push_back(v.u8string());
     }
     return cmds;
 }
