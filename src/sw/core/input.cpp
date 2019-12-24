@@ -108,7 +108,7 @@ void Input::init(const path &in, const SwContext &swctx)
         throw SW_RUNTIME_ERROR("Bad file type: " + normalize_path(p));
     }
 
-    data = path(normalize_path(primitives::filesystem::canonical(p)));
+    data = fs::u8path(normalize_path(primitives::filesystem::canonical(p)));
 
     // spec or regular file
     if (status.type() == fs::file_type::regular)
