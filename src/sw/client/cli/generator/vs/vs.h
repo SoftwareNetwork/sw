@@ -85,7 +85,9 @@ using FilesWithFilter = std::unordered_set<FileWithFilter>;
 struct Rule
 {
     String name;
+    String message;
     String command;
+    Files inputs;
     Files outputs;
     bool verify_inputs_and_outputs_exist = true;
 };

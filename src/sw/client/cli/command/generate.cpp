@@ -45,6 +45,9 @@ static ::cl::alias print_overridden_dependencies3("odeps", ::cl::desc("Alias for
 extern bool gOutputNoConfigSubdir;
 static ::cl::opt<bool, true> output_no_config_subdir("output-no-config-subdir", ::cl::location(gOutputNoConfigSubdir), ::cl::sub(subcommand_generate));
 
+::cl::opt<path> check_stamp_list("check-stamp-list", ::cl::sub(subcommand_generate), ::cl::Hidden);
+String vs_zero_check_stamp_ext = ".stamp";
+
 // generated solution dir instead of .sw/...
 //static ::cl::opt<String> generate_binary_dir("B", ::cl::desc("Explicitly specify a build directory."), ::cl::sub(subcommand_build), ::cl::init(SW_BINARY_DIR));
 
@@ -53,6 +56,34 @@ extern ::cl::list<String> configuration;
 
 SUBCOMMAND_DECL(generate)
 {
+    if (!check_stamp_list.empty())
+    {
+        auto stampfn = path(check_stamp_list) += vs_zero_check_stamp_ext;
+        auto files = read_lines(check_stamp_list);
+        uint64_t mtime = 0;
+        bool missing = false;
+        for (auto &f : files)
+        {
+            if (!fs::exists(f))
+            {
+                mtime ^= 0;
+                continue;
+            }
+            auto lwt = fs::last_write_time(f);
+            mtime ^= file_time_type2time_t(lwt);
+        }
+        if (fs::exists(stampfn))
+        {
+            auto t0 = std::stoull(read_file(stampfn));
+            if (t0 == mtime)
+            {
+                // must write to file to make it updated!
+                write_file(stampfn, std::to_string(mtime));
+                return;
+            }
+        }
+    }
+
     if (build_arg_generate.empty())
         build_arg_generate.push_back(".");
 

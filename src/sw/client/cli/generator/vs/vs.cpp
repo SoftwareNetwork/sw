@@ -36,12 +36,17 @@
 #include <boost/uuid/uuid_io.hpp>
 #include <nlohmann/json.hpp>
 #include <primitives/http.h>
+#include <primitives/sw/cl.h>
 #ifdef _WIN32
 #include <primitives/win32helpers.h>
 #endif
 
 #include <sstream>
 #include <stack>
+
+#ifdef _WIN32
+#include <shellapi.h>
+#endif
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "generator.vs");
@@ -54,6 +59,9 @@ bool gOutputNoConfigSubdir;
 
 static FlagTables flag_tables;
 static const auto SourceFilesFilter = "Source Files";
+
+extern ::cl::opt<path> check_stamp_list;
+extern String vs_zero_check_stamp_ext;
 
 int vsVersionFromString(const String &s)
 {
@@ -202,6 +210,7 @@ void VSGenerator::generate(const SwBuild &b)
     const String visualizers_dir = "Visualizers"s;
     const String all_build_name = "ALL_BUILD"s;
     const String build_dependencies_name = "BUILD_DEPENDENCIES"s;
+    const String zero_check_name = "ZERO_CHECK"s;
 
     auto inputs = b.getInputs();
     if (inputs.size() != 1)
@@ -276,6 +285,29 @@ void VSGenerator::generate(const SwBuild &b)
         s.directories.emplace(d.name, d);
     }
 
+    // add ZERO_CHECK project
+    {
+        Project p(zero_check_name);
+        p.g = this;
+        p.directory = &s.directories.find(predefined_targets_dir)->second;
+        p.settings = s.settings;
+        // create datas
+        for (auto &st : s.settings)
+            p.getData(st).type = p.type;
+
+        for (auto &[s, d] : p.data)
+        {
+            Rule r;
+            r.name = "generate.stamp";
+            r.message = "Checking Build System";
+            r.command += "setlocal\r\n";
+            r.command += "cd \"" + normalize_path_windows(fs::current_path()) + "\"\r\n";
+            d.custom_rules_manual.push_back(r);
+        }
+
+        s.projects.emplace(p.name, p);
+    }
+
     // add ALL_BUILD project
     {
         Project p(all_build_name);
@@ -290,6 +322,7 @@ void VSGenerator::generate(const SwBuild &b)
         // create datas
         for (auto &st : s.settings)
             p.getData(st).type = p.type;
+        p.dependencies.insert(&s.projects.find(zero_check_name)->second);
         s.projects.emplace(p.name, p);
     }
 
@@ -315,6 +348,18 @@ void VSGenerator::generate(const SwBuild &b)
 
     int n_executables = 0;
 
+    // write basic config files
+    std::map<sw::TargetSettings, Files> configure_files;
+    for (auto &i : inputs)
+    {
+        if (i.getInput().getType() == sw::InputType::SpecificationFile ||
+            i.getInput().getType() == sw::InputType::InlineSpecification)
+        {
+            for (auto &st : s.settings)
+                configure_files[st].insert(i.getInput().getPath());
+        }
+    }
+
     for (auto &[pkg, tgts] : b.getTargetsToBuild())
     {
         // add project with settings
@@ -330,6 +375,8 @@ void VSGenerator::generate(const SwBuild &b)
             p.settings = s.settings;
             p.build = true;
             p.source_dir = tgt->getInterfaceSettings()["source_dir"].getValue();
+
+            p.dependencies.insert(&s.projects.find(zero_check_name)->second);
 
             s.projects.emplace(p.name, p);
             s.projects.find(all_build_name)->second.dependencies.insert(&s.projects.find(p.name)->second);
@@ -354,6 +401,10 @@ void VSGenerator::generate(const SwBuild &b)
 
             d.binary_dir = d.target->getInterfaceSettings()["binary_dir"].getValue();
             d.binary_private_dir = d.target->getInterfaceSettings()["binary_private_dir"].getValue();
+
+            auto cfs = d.target->getInterfaceSettings()["ide"]["configure_files"].getArray();
+            for (auto &cf : cfs)
+                configure_files[d.target->getSettings()].insert(cf);
 
             auto cmds = d.target->getCommands();
 
@@ -487,6 +538,51 @@ void VSGenerator::generate(const SwBuild &b)
         }
     }
 
+    // ZERO_BUILD rule
+    {
+        auto &p = s.projects.find(zero_check_name)->second;
+        for (auto &[st, cfs] : configure_files)
+        {
+            auto &d = p.getData(st);
+            auto int_dir = get_int_dir(sln_root, vs_project_dir, p.name, st);
+            path fn = int_dir / "check_list.txt";
+            auto stampfn = path(fn) += vs_zero_check_stamp_ext;
+
+            auto &r = d.custom_rules_manual.back();
+
+#ifdef _WIN32
+            LPWSTR *szArglist;
+            int nArgs;
+            szArglist = CommandLineToArgvW(GetCommandLineW(), &nArgs);
+            if (!check_stamp_list.empty())
+                nArgs -= 2;
+            for (int i = 0; i < nArgs; i++)
+                r.command += to_string(szArglist[i]) + " ";
+            LocalFree(szArglist);
+#else
+            SW_UNIMPLEMENTED;
+#endif
+
+            r.command += " -check-stamp-list \"" + normalize_path(fn) + "\"";
+            r.outputs.insert(stampfn);
+            r.inputs = cfs;
+
+            String s;
+            uint64_t mtime = 0;
+            for (auto &f : cfs)
+            {
+                s += normalize_path(f) + "\n";
+
+                if (!fs::exists(f))
+                    throw SW_RUNTIME_ERROR("Input file does not exist: " + normalize_path(s));
+                auto lwt = fs::last_write_time(f);
+                mtime ^= file_time_type2time_t(lwt);
+            }
+            write_file(fn, s);
+            write_file(stampfn, std::to_string(mtime));
+        }
+    }
+
     // add BUILD_DEPENDENCIES project
     {
         {
@@ -494,6 +590,7 @@ void VSGenerator::generate(const SwBuild &b)
             p.g = this;
             p.directory = &s.directories.find(predefined_targets_dir)->second;
             p.settings = s.settings;
+            p.dependencies.insert(&s.projects.find(zero_check_name)->second);
             s.projects.emplace(p.name, p);
         }
 
@@ -1048,11 +1145,18 @@ void Project::emitProject(const VSGenerator &g) const
                 ctx.addText(normalize_path_windows(o) + ";");
             ctx.endBlock(true);
 
+            ctx.beginBlockWithConfiguration("AdditionalInputs", s);
+            for (auto &o : c.inputs)
+                ctx.addText(normalize_path_windows(o) + ";");
+            ctx.endBlock(true);
+
             ctx.beginBlockWithConfiguration("Command", s);
             ctx.addText(c.command);
             ctx.endBlock(true);
 
             ctx.beginBlockWithConfiguration("Message", s);
+            if (!c.message.empty())
+                ctx.addText(c.message);
             ctx.endBlock();
 
             if (g.vs_version >= Version(16))
