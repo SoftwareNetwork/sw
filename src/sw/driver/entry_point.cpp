@@ -33,25 +33,27 @@ static String getCurrentModuleId()
     return shorten_hash(sha1(getProgramName()), 6);
 }
 
-static path getImportFilePrefix(const SwBuilderContext &swctx)
+static path getImportFilePrefix(const Build &b)
 {
     static const String pch_ver = "1";
-    return swctx.getLocalStorage().storage_dir_tmp / ("sw." + pch_ver + "." + getCurrentModuleId());
+    String h;
+    h = "." + b.getContext().getHostSettings().getHash(); // takes a lot of disk
+    return b.getContext().getLocalStorage().storage_dir_tmp / ("sw." + pch_ver + h + "." + getCurrentModuleId());
 }
 
-static path getImportDefinitionsFile(const SwBuilderContext &swctx)
+static path getImportDefinitionsFile(const Build &b)
 {
-    return getImportFilePrefix(swctx) += ".def";
+    return getImportFilePrefix(b) += ".def";
 }
 
-static path getImportLibraryFile(const SwBuilderContext &swctx)
+static path getImportLibraryFile(const Build &b)
 {
-    return getImportFilePrefix(swctx) += ".lib";
+    return getImportFilePrefix(b) += ".lib";
 }
 
-static path getImportPchFile(const SwBuilderContext &swctx)
+static path getImportPchFile(Build &b)
 {
-    return getImportFilePrefix(swctx) += ".cpp";
+    return getImportFilePrefix(b) += ".cpp";
 }
 
 #ifdef _WIN32
@@ -70,7 +72,7 @@ static Strings getExports(HMODULE lib)
 }
 #endif
 
-static void addImportLibrary(const SwBuilderContext &swctx, NativeCompiledTarget &t)
+static void addImportLibrary(const Build &b, NativeCompiledTarget &t)
 {
 #ifdef _WIN32
     auto lib = (HMODULE)primitives::getModuleForSymbol();
@@ -82,15 +84,15 @@ static void addImportLibrary(const SwBuilderContext &swctx, NativeCompiledTarget
     defs += "EXPORTS\n";
     for (auto &s : syms)
         defs += "    "s + s + "\n";
-    write_file_if_different(getImportDefinitionsFile(swctx), defs);
+    write_file_if_different(getImportDefinitionsFile(b), defs);
 
     auto c = t.addCommand();
-    c.c->working_directory = getImportDefinitionsFile(swctx).parent_path();
+    c.c->working_directory = getImportDefinitionsFile(b).parent_path();
     c << t.Librarian->file
-        << cmd::in(getImportDefinitionsFile(swctx), cmd::Prefix{ "-DEF:" }, cmd::Skip)
-        << cmd::out(getImportLibraryFile(swctx), cmd::Prefix{ "-OUT:" })
+        << cmd::in(getImportDefinitionsFile(b), cmd::Prefix{ "-DEF:" }, cmd::Skip)
+        << cmd::out(getImportLibraryFile(b), cmd::Prefix{ "-OUT:" })
         ;
-    t.LinkLibraries.push_back(getImportLibraryFile(swctx));
+    t.LinkLibraries.push_back(getImportLibraryFile(b));
 #endif
 }
 
@@ -319,7 +321,7 @@ static void addDeps(Build &solution, NativeCompiledTarget &lib)
 
 static void write_pch(Build &solution)
 {
-    write_file_if_different(getImportPchFile(solution.getContext()),
+    write_file_if_different(getImportPchFile(solution),
         //"#include <" + normalize_path(getDriverIncludeDir(solution) / getMainPchFilename()) + ">\n\n" +
         //"#include <" + getDriverIncludePathString(solution, getMainPchFilename()) + ">\n\n" +
         //"#include <" + normalize_path(getMainPchFilename()) + ">\n\n" + // the last one
@@ -356,7 +358,7 @@ decltype(auto) PrepareConfigEntryPoint::commonActions(Build &b, const FilesSorte
     auto &lib = createTarget(b, getSelfTargetName(files));
 
     addDeps(b, lib);
-    addImportLibrary(b.getContext(), lib);
+    addImportLibrary(b, lib);
     lib.AutoDetectOptions = false;
     lib.CPPVersion = CPPLanguageStandard::CPP17;
 
@@ -375,7 +377,7 @@ decltype(auto) PrepareConfigEntryPoint::commonActions(Build &b, const FilesSorte
     write_pch(b);
     PrecompiledHeader pch;
     pch.header = getDriverIncludeDir(b, lib) / getMainPchFilename();
-    pch.source = getImportPchFile(b.getContext());
+    pch.source = getImportPchFile(b);
     pch.force_include_pch = true;
     pch.force_include_pch_to_source = true;
     lib.addPrecompiledHeader(pch);
