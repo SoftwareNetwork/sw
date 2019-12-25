@@ -414,8 +414,8 @@ bool Command::beforeCommand()
 
 void Command::afterCommand()
 {
-    if (always)
-        return;
+    //if (always)
+        //return;
 
     // update things
 
