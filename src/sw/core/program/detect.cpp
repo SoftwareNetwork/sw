@@ -712,12 +712,25 @@ static path getWindowsKitRootFromReg(const std::wstring &root, const std::wstrin
 
 static path getWindows10KitRoot()
 {
-    return getWindowsKitRootFromReg(L"SOFTWARE\\Microsoft\\Windows Kits\\Installed Roots", L"10", KEY_READ);
+    return getWindowsKitRootFromReg(L"SOFTWARE\\Microsoft\\Windows Kits\\Installed Roots", L"10",
+#ifdef _WIN32
+        KEY_READ
+#else
+        0
+#endif
+    );
 }
 
 static path getWindows81KitRoot()
 {
-    return getWindowsKitRootFromReg(L"SOFTWARE\\Microsoft\\Windows Kits\\Installed Roots", L"81", KEY_READ | KEY_WOW64_32KEY);
+    return getWindowsKitRootFromReg(L"SOFTWARE\\Microsoft\\Windows Kits\\Installed Roots", L"81",
+#ifdef _WIN32
+        // query old tree
+        KEY_READ | KEY_WOW64_32KEY
+#else
+        0
+#endif
+    );
 }
 
 static VersionSet listWindows10Kits()
