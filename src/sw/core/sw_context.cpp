@@ -73,7 +73,7 @@ void SwCoreContext::setHostPrograms()
         ts["native"]["stdlib"]["cpp"] = to_upkg("com.Microsoft.VisualStudio.VC.libcpp");
         ts["native"]["stdlib"]["kernel"] = to_upkg("com.Microsoft.Windows.SDK.um");
 
-        // now find the latest available sdk and select it
+        // now find the latest available sdk (ucrt) and select it
         TargetSettings oss;
         oss["os"] = ts["os"];
         auto sdk = getPredefinedTargets().find(UnresolvedPackage(ts["native"]["stdlib"]["c"].getValue()), oss);
