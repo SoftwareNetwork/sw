@@ -727,6 +727,14 @@ static VersionSet listWindows10Kits()
     winreg::RegKey kits10(HKEY_LOCAL_MACHINE, L"SOFTWARE\\Microsoft\\Windows Kits\\Installed Roots", KEY_READ);
     for (auto &k : kits10.EnumSubKeys())
         kits.insert(to_string(k));
+    // also try directly (kit 10.0.10240 does not register in registry)
+    auto kr10 = getWindows10KitRoot();
+    for (auto &d : fs::directory_iterator(kr10 / "Include"))
+    {
+        auto k = d.path().filename().string();
+        if (fs::exists(kr10 / "Lib" / k) && Version(k).isVersion())
+            kits.insert(k);
+    }
 #endif
     //throw SW_RUNTIME_ERROR("No Windows Kits available");
     return kits;
