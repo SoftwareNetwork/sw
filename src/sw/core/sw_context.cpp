@@ -169,6 +169,14 @@ void SwCoreContext::setHostPrograms()
     }
 }
 
+void SwCoreContext::setHostSettings(const TargetSettings &s)
+{
+    host_settings = s;
+
+    // always log!
+    LOG_TRACE(logger, "New host configuration: " + getHostSettings().toString());
+}
+
 TargetData &SwCoreContext::getTargetData(const PackageId &pkg)
 {
     return target_data[pkg];

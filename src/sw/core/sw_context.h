@@ -29,7 +29,7 @@ struct SW_CORE_API SwCoreContext : SwBuilderContext
     TargetData &getTargetData(const PackageId &);
     const TargetData &getTargetData(const PackageId &) const;
 
-    void setHostSettings(const TargetSettings &s) { host_settings = s; }
+    void setHostSettings(const TargetSettings &s);
     const TargetSettings &getHostSettings() const { return host_settings; }
 
     void setEntryPoint(const LocalPackage &, const TargetEntryPointPtr &);
