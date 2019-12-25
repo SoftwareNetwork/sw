@@ -557,7 +557,19 @@ void NativeCompiledTarget::findCompiler()
 
     // c++ goes first for correct include order
     if (!libstdcppset && ts["native"]["stdlib"]["cpp"])
-        *this += UnresolvedPackage(ts["native"]["stdlib"]["cpp"].getValue());
+    {
+        if (IsConfig && getBuildSettings().TargetOS.is(OSType::Linux))
+        {
+            // to prevent ODR violation
+            // we have stdlib builtin into sw binary
+            auto d = *this + UnresolvedPackage(ts["native"]["stdlib"]["cpp"].getValue());
+            d->IncludeDirectoriesOnly = true;
+        }
+        else
+        {
+            *this += UnresolvedPackage(ts["native"]["stdlib"]["cpp"].getValue());
+        }
+    }
 
     // goes last
     if (ts["native"]["stdlib"]["c"])
