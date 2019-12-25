@@ -356,6 +356,8 @@ std::vector<sw::TargetSettings> createSettings(sw::SwContext &swctx)
         auto s = swctx.getHostSettings();
         applySettingsFromJson(s, read_file(host_settings_file));
         swctx.setHostSettings(s);
+        if (s["host"])
+            LOG_WARN(logger, "'host' key present in host settings. Probably misuse. Remove it and put everything under root.");
     }
 
     if (static_deps)
