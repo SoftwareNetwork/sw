@@ -691,14 +691,33 @@ static path getWindowsKitRoot()
     return {};
 }
 
-static path getWindows10KitRoot()
+static path getWindowsKitRootFromReg(const std::wstring &root, const std::wstring &key, int access)
 {
 #ifdef _WIN32
-    winreg::RegKey kits10(HKEY_LOCAL_MACHINE, L"SOFTWARE\\Microsoft\\Windows Kits\\Installed Roots", KEY_READ);
-    return kits10.GetStringValue(L"KitsRoot10");
+    try
+    {
+        // may throw if not installed
+        winreg::RegKey kits(HKEY_LOCAL_MACHINE, root, access);
+        return kits.GetStringValue(L"KitsRoot" + key);
+    }
+    catch (std::exception &e)
+    {
+        LOG_TRACE(logger, e.what());
+        return {};
+    }
 #endif
     //throw SW_RUNTIME_ERROR("No Windows Kits available");
     return {};
+}
+
+static path getWindows10KitRoot()
+{
+    return getWindowsKitRootFromReg(L"SOFTWARE\\Microsoft\\Windows Kits\\Installed Roots", L"10", KEY_READ);
+}
+
+static path getWindows81KitRoot()
+{
+    return getWindowsKitRootFromReg(L"SOFTWARE\\Microsoft\\Windows Kits\\Installed Roots", L"81", KEY_READ | KEY_WOW64_32KEY);
 }
 
 static VersionSet listWindows10Kits()
@@ -725,10 +744,13 @@ static Strings listWindowsKits()
 
     Strings kits;
 
-    // special handling for win10 kits
+    // special handling for win10/81 kits
     auto kr = getWindows10KitRoot();
     if (fs::exists(kr))
         kits.push_back(getWin10KitDirName());
+    kr = getWindows81KitRoot();
+    if (fs::exists(kr))
+        kits.push_back("8.1");
 
     kr = getWindowsKitRoot();
     for (auto &k : known_kits)
@@ -842,7 +864,9 @@ static void detectWindowsSdk(DETECT_ARGS)
 
                 // win10 kit dir may be different from default kit root,
                 // so we update it here
-                kr = getWindows10KitRoot();
+                auto kr10 = getWindows10KitRoot();
+                if (!kr10.empty())
+                    kr = kr10;
 
                 // ucrt
                 {
@@ -896,6 +920,15 @@ static void detectWindowsSdk(DETECT_ARGS)
         }
         else
         {
+            // win81 kit dir may be different from default kit root,
+            // so we update it here
+            if (k == "8.1")
+            {
+                auto kr81 = getWindows81KitRoot();
+                if (!kr81.empty())
+                    kr = kr81;
+            }
+
             // um + shared
             {
                 WinKit wk;
