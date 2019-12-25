@@ -391,6 +391,10 @@ std::vector<IDependency *> Target::getDependencies() const
 const TargetSettings &Target::getHostSettings() const
 {
     auto &hs = getSolution().getContext().getHostSettings();
+    return hs;
+
+    //if (hs["force"] == "true")
+        //return hs;
 
     bool use_current_settings =
         (
@@ -407,6 +411,9 @@ const TargetSettings &Target::getHostSettings() const
 
     // also compare compilers
     use_current_settings &= hs["native"]["program"]["c"] == ts["native"]["program"]["c"];
+
+    // in case of different mt, do not use current settings!
+    use_current_settings &= hs["native"]["mt"] == ts["native"]["mt"];
 
     return use_current_settings ? ts : hs;
 }
