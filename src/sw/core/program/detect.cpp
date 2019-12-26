@@ -489,6 +489,20 @@ void detectMsvc15Plus(DETECT_ARGS)
                     atlmfc.public_ts["system-link-directories"].push_back(normalize_path(root / "ATLMFC" / "lib" / target));
                 }
             }
+
+            // concrt
+            if (fs::exists(root / "crt" / "src" / "concrt"))
+            {
+                auto &libcpp = addTarget<PredefinedTarget>(s, PackageId("com.Microsoft.VisualStudio.VC.concrt", v));
+                libcpp.public_ts["system-include-directories"].push_back(normalize_path(root / "crt" / "src" / "concrt"));
+            }
+
+            // vcruntime
+            if (fs::exists(root / "crt" / "src" / "vcruntime"))
+            {
+                auto &libcpp = addTarget<PredefinedTarget>(s, PackageId("com.Microsoft.VisualStudio.VC.runtime", v));
+                libcpp.public_ts["system-include-directories"].push_back(normalize_path(root / "crt" / "src" / "vcruntime"));
+            }
         }
     }
 }
