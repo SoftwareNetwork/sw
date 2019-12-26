@@ -119,6 +119,8 @@ struct SW_CORE_API TargetSetting
     explicit operator bool() const;
     //bool hasValue() const;
 
+    //String getHash() const;
+
     const String &getValue() const;
     const std::vector<TargetSettingValue> &getArray() const;
     TargetSettings &getSettings();
@@ -133,6 +135,9 @@ struct SW_CORE_API TargetSetting
     void setRequired(bool = true);
     bool isRequired() const;
 
+    void useInHash(bool);
+    bool useInHash() const { return used_in_hash; }
+
     void merge(const TargetSetting &);
     void mergeFromJson(const nlohmann::json &);
 
@@ -143,6 +148,7 @@ struct SW_CORE_API TargetSetting
 private:
     int use_count = 1;
     bool required = false;
+    bool used_in_hash = true;
     TargetSettingKey key;
     std::variant<std::monostate, TargetSettingValue, std::vector<TargetSettingValue>, TargetSettings> value;
 

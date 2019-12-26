@@ -117,6 +117,10 @@ SUBCOMMAND_DECL2(generate)
             configuration.push_back("rwdi");
             configuration.push_back("r");
         }
+        auto hs = swctx.getHostSettings();
+        hs["use_same_config_for_host_dependencies"] = "true";
+        hs["use_same_config_for_host_dependencies"].useInHash(false);
+        swctx.setHostSettings(hs);
     }
 
     auto b = setBuildArgsAndCreateBuildAndPrepare(swctx, (Strings&)build_arg_generate);

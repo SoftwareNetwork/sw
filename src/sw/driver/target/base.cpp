@@ -391,10 +391,10 @@ std::vector<IDependency *> Target::getDependencies() const
 const TargetSettings &Target::getHostSettings() const
 {
     auto &hs = getSolution().getContext().getHostSettings();
-    return hs;
 
-    //if (hs["force"] == "true")
-        //return hs;
+    if (hs["use_same_config_for_host_dependencies"] == "true")
+        return ts;
+    return hs;
 
     bool use_current_settings =
         (

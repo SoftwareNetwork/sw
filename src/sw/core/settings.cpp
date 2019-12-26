@@ -171,6 +171,15 @@ bool TargetSetting::operator<(const TargetSetting &rhs) const
     return value < rhs.value;
 }
 
+/*String TargetSetting::getHash() const
+{
+}*/
+
+void TargetSetting::useInHash(bool b)
+{
+    used_in_hash = b;
+}
+
 void TargetSetting::merge(const TargetSetting &rhs)
 {
     auto s = std::get_if<TargetSettings>(&value);
@@ -320,6 +329,8 @@ String TargetSettings::toString(int type) const
 nlohmann::json TargetSetting::toJson() const
 {
     nlohmann::json j;
+    if (!used_in_hash)
+        return j;
     switch (value.index())
     {
     case 0:
