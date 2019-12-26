@@ -149,7 +149,9 @@ std::unordered_map<UnresolvedPackage, LocalPackage> SwManagerContext::install(co
     auto &e = getExecutor();
     Futures<void> fs;
     for (auto &p : pkgs2)
-        fs.push_back(e.push([this, &p]{ install(*p.second); }));
+    {
+        fs.push_back(e.push([this, &p] { install(*p.second); }));
+    }
     waitAndGet(fs);
 
     // install should be fast enough here

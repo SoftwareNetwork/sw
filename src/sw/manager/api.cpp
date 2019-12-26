@@ -123,6 +123,8 @@ Api::IdDependencies ProtobufApi::resolvePackages(const UnresolvedPackages &pkgs)
 std::unordered_map<UnresolvedPackage, PackagePtr> ProtobufApi::resolvePackages(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs,
     std::unordered_map<PackageId, PackageData> &data, const IStorage &s) const
 {
+    SW_UNIMPLEMENTED;
+
     api::UnresolvedPackages request;
     for (auto &pkg : pkgs)
     {
