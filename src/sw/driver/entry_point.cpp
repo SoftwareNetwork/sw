@@ -37,7 +37,9 @@ static path getImportFilePrefix(const Build &b)
 {
     static const String pch_ver = "1";
     String h;
-    h = "." + b.getContext().getHostSettings().getHash(); // takes a lot of disk
+    // takes a lot of disk
+    // also sometimes it causes crashes or infinite loops
+    //h = "." + b.getContext().getHostSettings().getHash();
     return b.getContext().getLocalStorage().storage_dir_tmp / ("sw." + pch_ver + h + "." + getCurrentModuleId());
 }
 
