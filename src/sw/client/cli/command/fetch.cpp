@@ -44,6 +44,8 @@ static sw::SourceDirMap getSources(sw::SwContext &swctx)
 
     auto ts = createInitialSettings(swctx);
     ts["driver"]["dry-run"] = "true"; // only used to get sources
+    //ts["driver"].useInHash(false);
+    //ts["driver"].ignoreInComparison(true);
 
     auto &ii = getInput(b);
     sw::InputWithSettings i(ii);
@@ -87,13 +89,19 @@ std::pair<sw::SourceDirMap, const sw::Input &> fetch(sw::SwBuild &b)
 {
     auto srcs = getSources(b.getContext());
 
-    auto ts = createInitialSettings(b.getContext());
-    for (auto &[h, d] : srcs)
-        ts["driver"]["source-dir-for-source"][h] = normalize_path(d.getRequestedDirectory());
+    auto tss = createSettings(b.getContext());
+    for (auto &ts : tss)
+    {
+        for (auto &[h, d] : srcs)
+            ts["driver"]["source-dir-for-source"][h] = normalize_path(d.getRequestedDirectory());
+        //ts["driver"].useInHash(false);
+        //ts["driver"].ignoreInComparison(true);
+    }
 
     auto &ii = getInput(b);
     sw::InputWithSettings i(ii);
-    i.addSettings(ts);
+    for (auto &ts : tss)
+        i.addSettings(ts);
     b.addInput(i);
     b.loadInputs();
     b.setTargetsToBuild();
