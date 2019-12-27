@@ -419,7 +419,14 @@ void Command::afterCommand()
 
     // update things
 
-    auto update_time = [this](const auto &i)
+    for (auto &i : inputs)
+    {
+        File f(i, getContext().getFileStorage());
+        auto &fr = f.getFileData();
+        mtime = std::max(mtime, fr.last_write_time);
+    }
+
+    for (auto &i : outputs)
     {
         File f(i, getContext().getFileStorage());
         auto &fr = f.getFileData();
@@ -431,16 +438,7 @@ void Command::afterCommand()
             throw SW_RUNTIME_ERROR(makeErrorString(e));
         }
         mtime = std::max(mtime, fr.last_write_time);
-    };
-
-    for (auto &i : inputs)
-    {
-        File f(i, getContext().getFileStorage());
-        auto &fr = f.getFileData();
-        mtime = std::max(mtime, fr.last_write_time);
     }
-    for (auto &i : outputs)
-        update_time(i);
 
     if (command_storage != CS_LOCAL && command_storage != CS_GLOBAL)
         return;
