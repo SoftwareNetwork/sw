@@ -20,7 +20,6 @@ namespace sw
 {
 
 struct CommandStorage;
-struct FileData;
 struct FileStorage;
 struct ProgramVersionStorage;
 
