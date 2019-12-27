@@ -392,7 +392,7 @@ const TargetSettings &Target::getHostSettings() const
 {
     auto &hs = getSolution().getContext().getHostSettings();
 
-    if (hs["use_same_config_for_host_dependencies"] == "true")
+    if (ts["use_same_config_for_host_dependencies"] == "true")
         return ts;
     return hs;
 
