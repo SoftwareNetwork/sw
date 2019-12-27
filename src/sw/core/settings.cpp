@@ -188,6 +188,7 @@ void TargetSetting::merge(const TargetSetting &rhs)
         s->merge(std::get<TargetSettings>(rhs.value));
         return;
     }
+    if (value.index() == 0)
     value = rhs.value;
 }
 
