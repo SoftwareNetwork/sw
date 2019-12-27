@@ -123,7 +123,11 @@ Api::IdDependencies ProtobufApi::resolvePackages(const UnresolvedPackages &pkgs)
 std::unordered_map<UnresolvedPackage, PackagePtr> ProtobufApi::resolvePackages(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs,
     std::unordered_map<PackageId, PackageData> &data, const IStorage &s) const
 {
-    SW_UNIMPLEMENTED;
+    // currently this is server error
+    //unresolved_pkgs = pkgs;
+    //return;
+    //SW_UNIMPLEMENTED;
+    throw SW_LOGIC_ERROR("Server error. Contact administrator, please.");
 
     api::UnresolvedPackages request;
     for (auto &pkg : pkgs)
