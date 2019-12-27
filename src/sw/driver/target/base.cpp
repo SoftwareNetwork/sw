@@ -756,18 +756,19 @@ DependenciesType NativeTargetOptionsGroup::gatherDependencies() const
     return deps;
 }
 
-void Target::addDummyDependency(const DependencyPtr &t)
+DependencyPtr Target::addDummyDependency(const DependencyPtr &t)
 {
     DummyDependencies.push_back(t);
 
     auto &hs = getHostSettings();
     auto &ds = DummyDependencies.back()->settings;
     ds.merge(hs);
+    return t;
 }
 
-void Target::addDummyDependency(const Target &t)
+DependencyPtr Target::addDummyDependency(const Target &t)
 {
-    addDummyDependency(std::make_shared<Dependency>(t));
+    return addDummyDependency(std::make_shared<Dependency>(t));
 }
 
 void Target::addSourceDependency(const DependencyPtr &t)
