@@ -233,7 +233,9 @@ std::vector<ITargetPtr> NativeTargetEntryPoint::loadPackages(SwBuild &swb, const
         b.source_dirs_by_source[h].requested_dir = d.getValue();
     for (auto &[pkg, p] : settings["driver"]["source-dir-for-package"].getSettings())
         b.source_dirs_by_package[pkg] = p.getValue();
-    settings.erase("driver");
+    //settings.erase("driver");
+    settings["driver"].useInHash(false);
+    settings["driver"].ignoreInComparison(true);
 
     ModuleSwappableData module_data1;
     module_data1.known_targets = pkgs;

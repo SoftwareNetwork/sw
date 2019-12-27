@@ -85,6 +85,8 @@ TargetSetting &TargetSetting::operator=(const TargetSetting &rhs)
     value = rhs.value;
     required = rhs.required;
     use_count = rhs.use_count;
+    used_in_hash = rhs.used_in_hash;
+    ignore_in_comparison = rhs.ignore_in_comparison;
     return *this;
 }
 
@@ -158,6 +160,8 @@ const TargetSettings &TargetSetting::getSettings() const
 
 bool TargetSetting::operator==(const TargetSetting &rhs) const
 {
+    if (ignore_in_comparison)
+        return true;
     return value == rhs.value;
 }
 
@@ -180,6 +184,11 @@ void TargetSetting::useInHash(bool b)
     used_in_hash = b;
 }
 
+void TargetSetting::ignoreInComparison(bool b)
+{
+    ignore_in_comparison = b;
+}
+
 void TargetSetting::merge(const TargetSetting &rhs)
 {
     auto s = std::get_if<TargetSettings>(&value);
@@ -189,7 +198,7 @@ void TargetSetting::merge(const TargetSetting &rhs)
         return;
     }
     if (value.index() == 0)
-    value = rhs.value;
+        value = rhs.value;
 }
 
 void TargetSetting::mergeFromJson(const nlohmann::json &j)
@@ -380,6 +389,8 @@ bool TargetSettings::operator==(const TargetSettings &rhs) const
 {
     for (auto &[k, v] : rhs.settings)
     {
+        if (v.ignoreInComparison())
+            continue;
         auto i = settings.find(k);
         if (i == settings.end())
         {
@@ -394,6 +405,8 @@ bool TargetSettings::operator==(const TargetSettings &rhs) const
     // check the rest of this settings
     for (auto &[k, v] : settings)
     {
+        if (v.ignoreInComparison())
+            continue;
         auto i = rhs.settings.find(k);
         if (i == rhs.settings.end())
         {
@@ -416,6 +429,9 @@ bool TargetSettings::isSubsetOf(const TargetSettings &s) const
     {
         // value is missing -> ok
         if (v.value.index() == 0)
+            continue;
+        // ignore -> ok
+        if (v.ignoreInComparison())
             continue;
 
         auto i = s.settings.find(k);

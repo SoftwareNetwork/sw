@@ -138,6 +138,9 @@ struct SW_CORE_API TargetSetting
     void useInHash(bool);
     bool useInHash() const { return used_in_hash; }
 
+    void ignoreInComparison(bool);
+    bool ignoreInComparison() const { return ignore_in_comparison; }
+
     void merge(const TargetSetting &);
     void mergeFromJson(const nlohmann::json &);
 
@@ -149,6 +152,8 @@ private:
     int use_count = 1;
     bool required = false;
     bool used_in_hash = true;
+    bool ignore_in_comparison = false;
+    // when adding new member, add it to copy ctor!
     TargetSettingKey key;
     std::variant<std::monostate, TargetSettingValue, std::vector<TargetSettingValue>, TargetSettings> value;
 
