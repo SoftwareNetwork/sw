@@ -476,11 +476,11 @@ Commands SwBuild::getCommands() const
 
         for (auto &[_, tgt] : latest_targets)
         {
-            // copy output files
+            // gather targets to build
             const auto &s = tgt->getInterfaceSettings();
 
-            std::function<void(const TargetSettings &)> copy_file;
-            copy_file = [this, &copy_file, &ttb](const auto &s) mutable
+            std::function<void(const TargetSettings &)> gather_ttb;
+            gather_ttb = [this, &gather_ttb, &ttb](const auto &s) mutable
             {
                 if (s["header_only"] == "true")
                     return;
@@ -489,7 +489,7 @@ Commands SwBuild::getCommands() const
                     return;
 
                 std::function<void(const TargetSettings &)> process_deps;
-                process_deps = [this, &copy_file, &process_deps, &ttb](const auto &s) mutable
+                process_deps = [this, &gather_ttb, &process_deps, &ttb](const auto &s) mutable
                 {
                     for (auto &[k, v] : s["dependencies"]["link"].getSettings())
                     {
@@ -506,7 +506,7 @@ Commands SwBuild::getCommands() const
                         ttb[PackageId(k)].push_back(*j);
 
                         const auto &s = (*j)->getInterfaceSettings();
-                        copy_file(s);
+                        gather_ttb(s);
                         process_deps(s);
                     }
                 };
@@ -514,7 +514,7 @@ Commands SwBuild::getCommands() const
                 process_deps(s);
             };
 
-            copy_file(s);
+            gather_ttb(s);
         }
     }
 
@@ -522,6 +522,8 @@ Commands SwBuild::getCommands() const
     auto cl_show_output = build_settings["show_output"] == "true";
     auto cl_write_output_to_file = build_settings["write_output_to_file"] == "true";
     path copy_dir = build_settings["build_ide_copy_to_dir"].isValue() ? build_settings["build_ide_copy_to_dir"].getValue() : "";
+    //bool copy_deps_of_local_pkgs = false;
+    bool copy_deps_of_local_pkgs = copy_dir.empty();
     std::unordered_map<path, path> copy_files;
 
     Commands cmds;
@@ -543,14 +545,26 @@ Commands SwBuild::getCommands() const
             }
             cmds.insert(c.begin(), c.end());
 
-            if (copy_dir.empty())
+            if (copy_dir.empty() && !copy_deps_of_local_pkgs)
                 continue;
 
             // copy output files
             const auto &s = tgt->getInterfaceSettings();
 
+            if (copy_deps_of_local_pkgs)
+            {
+                if (p.getPath().isAbsolute())
+                    continue;
+                if (s["header_only"] == "true")
+                    continue;
+                if (!(s["type"] == "native_shared_library" || s["type"] == "native_static_library" || s["type"] == "native_executable"))
+                    continue;
+                copy_dir = path(s["output_file"].getValue()).parent_path();
+            }
+
+            PackageIdSet visited_pkgs;
             std::function<void(const TargetSettings &)> copy_file;
-            copy_file = [this, &cmds, &copy_dir, &copy_files, &copy_file](const auto &s)
+            copy_file = [this, &cmds, &copy_dir, &copy_files, &copy_file, &visited_pkgs](const auto &s)
             {
                 if (s["header_only"] == "true")
                     return;
@@ -575,16 +589,22 @@ Commands SwBuild::getCommands() const
                     o /= in.filename();
                     if (in == o)
                         return;
+                    if (copy_files.find(in) != copy_files.end())
+                        return;
                     copy_files[in] = o;
                     fast_path_files.insert(o);
                 }
 
                 std::function<void(const TargetSettings &)> process_deps;
-                process_deps = [this, &copy_file, &process_deps](const auto &s)
+                process_deps = [this, &copy_file, &process_deps, &visited_pkgs](const auto &s)
                 {
                     for (auto &[k, v] : s["dependencies"]["link"].getSettings())
                     {
-                        auto i = getTargets().find(PackageId(k));
+                        PackageId p(k);
+                        if (visited_pkgs.find(p) != visited_pkgs.end())
+                            continue;
+                        visited_pkgs.insert(p);
+                        auto i = getTargets().find(p);
                         if (i == getTargets().end())
                             throw SW_RUNTIME_ERROR("dep not found");
                         auto j = i->second.findSuitable(v.getSettings());
