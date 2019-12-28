@@ -705,13 +705,24 @@ static path getWindowsKitRoot()
     return {};
 }
 
-static path getWindowsKitRootFromReg(const std::wstring &root, const std::wstring &key, int access)
+static int getWinRegAccess(DETECT_ARGS)
+{
+#ifdef _WIN32
+    if (s.getHostOs().Version < Version(6, 2))
+        return KEY_READ | KEY_WOW64_32KEY;
+    return KEY_READ;
+#else
+    return 0;
+#endif
+}
+
+static path getWindowsKitRootFromReg(DETECT_ARGS, const std::wstring &root, const std::wstring &key)
 {
 #ifdef _WIN32
     try
     {
         // may throw if not installed
-        winreg::RegKey kits(HKEY_LOCAL_MACHINE, root, access);
+        winreg::RegKey kits(HKEY_LOCAL_MACHINE, root, getWinRegAccess(s));
         return kits.GetStringValue(L"KitsRoot" + key);
     }
     catch (std::exception &e)
@@ -724,38 +735,32 @@ static path getWindowsKitRootFromReg(const std::wstring &root, const std::wstrin
     return {};
 }
 
-static path getWindows10KitRoot()
+static path getWindows10KitRoot(DETECT_ARGS)
 {
-    return getWindowsKitRootFromReg(L"SOFTWARE\\Microsoft\\Windows Kits\\Installed Roots", L"10",
-#ifdef _WIN32
-        KEY_READ
-#else
-        0
-#endif
-    );
+    return getWindowsKitRootFromReg(s, L"SOFTWARE\\Microsoft\\Windows Kits\\Installed Roots", L"10");
 }
 
-static path getWindows81KitRoot()
+static path getWindows81KitRoot(DETECT_ARGS)
 {
-    return getWindowsKitRootFromReg(L"SOFTWARE\\Microsoft\\Windows Kits\\Installed Roots", L"81",
-#ifdef _WIN32
-        // query old tree
-        KEY_READ | KEY_WOW64_32KEY
-#else
-        0
-#endif
-    );
+    return getWindowsKitRootFromReg(s, L"SOFTWARE\\Microsoft\\Windows Kits\\Installed Roots", L"81");
 }
 
-static VersionSet listWindows10Kits()
+static VersionSet listWindows10Kits(DETECT_ARGS)
 {
     VersionSet kits;
 #ifdef _WIN32
-    winreg::RegKey kits10(HKEY_LOCAL_MACHINE, L"SOFTWARE\\Microsoft\\Windows Kits\\Installed Roots", KEY_READ);
-    for (auto &k : kits10.EnumSubKeys())
-        kits.insert(to_string(k));
+    try
+    {
+        winreg::RegKey kits10(HKEY_LOCAL_MACHINE, L"SOFTWARE\\Microsoft\\Windows Kits\\Installed Roots", getWinRegAccess(s));
+        for (auto &k : kits10.EnumSubKeys())
+            kits.insert(to_string(k));
+    }
+    catch (std::exception &)
+    {
+        // ignore
+    }
     // also try directly (kit 10.0.10240 does not register in registry)
-    auto kr10 = getWindows10KitRoot();
+    auto kr10 = getWindows10KitRoot(s);
     for (auto &d : fs::directory_iterator(kr10 / "Include"))
     {
         auto k = d.path().filename().string();
@@ -772,7 +777,7 @@ static String getWin10KitDirName()
     return "10";
 }
 
-static Strings listWindowsKits()
+static Strings listWindowsKits(DETECT_ARGS)
 {
     // https://en.wikipedia.org/wiki/Microsoft_Windows_SDK
     static const Strings known_kits{ "8.1A", "8.1", "8.0", "7.1A", "7.1", "7.0A", "7.0A","6.0A" };
@@ -780,10 +785,10 @@ static Strings listWindowsKits()
     Strings kits;
 
     // special handling for win10/81 kits
-    auto kr = getWindows10KitRoot();
+    auto kr = getWindows10KitRoot(s);
     if (fs::exists(kr))
         kits.push_back(getWin10KitDirName());
-    kr = getWindows81KitRoot();
+    kr = getWindows81KitRoot(s);
     if (fs::exists(kr))
         kits.push_back("8.1");
 
@@ -886,20 +891,20 @@ static void detectWindowsSdk(DETECT_ARGS)
         }
     };
 
-    for (auto &k : listWindowsKits())
+    for (auto &k : listWindowsKits(s))
     {
         LOG_TRACE(logger, "Found Windows Kit: " + k);
 
         auto kr = getWindowsKitRoot() / k;
         if (k == getWin10KitDirName())
         {
-            for (auto &v : listWindows10Kits())
+            for (auto &v : listWindows10Kits(s))
             {
                 LOG_TRACE(logger, "Found Windows10 Kit: " + v.toString());
 
                 // win10 kit dir may be different from default kit root,
                 // so we update it here
-                auto kr10 = getWindows10KitRoot();
+                auto kr10 = getWindows10KitRoot(s);
                 if (!kr10.empty())
                     kr = kr10;
 
@@ -959,7 +964,7 @@ static void detectWindowsSdk(DETECT_ARGS)
             // so we update it here
             if (k == "8.1")
             {
-                auto kr81 = getWindows81KitRoot();
+                auto kr81 = getWindows81KitRoot(s);
                 if (!kr81.empty())
                     kr = kr81;
             }
