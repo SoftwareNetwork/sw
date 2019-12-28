@@ -33,11 +33,11 @@ jobs:
       run: chmod 755 sw
       shell: sh
 
-    - name: SW Cache
-      uses: actions/cache@v1
-      with:
-        path: ~/.sw
-        key: ${{ runner.os }}-sw-storage
+    #- name: SW Cache
+      #uses: actions/cache@v1
+      #with:
+        #path: ~/.sw
+        #key: ${{ runner.os }}-sw-storage
         
     - name: build
       run: ./sw -static -mt build
