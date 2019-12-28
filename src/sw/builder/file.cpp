@@ -52,6 +52,8 @@ FileData &FileData::operator=(const FileData &rhs)
     //flags = rhs.flags;
 
     refreshed = rhs.refreshed.load();
+    //if (refreshed == FileData::RefreshType::InProcess)
+        //refreshed = FileData::RefreshType::Unrefreshed;
 
     return *this;
 }
@@ -90,6 +92,14 @@ void FileData::refresh(const path &file)
     FileData::RefreshType r = FileData::RefreshType::Unrefreshed;
     if (!refreshed.compare_exchange_strong(r, FileData::RefreshType::InProcess))
         return;
+
+    // extra protection
+    // some files throw before the last line :(
+    /*SCOPE_EXIT
+    {
+        if (refreshed == FileData::RefreshType::InProcess)
+            refreshed = FileData::RefreshType::Unrefreshed;
+    };*/
 
     bool changed = false;
     auto s = fs::status(file);
