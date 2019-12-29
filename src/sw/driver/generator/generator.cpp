@@ -95,7 +95,7 @@ GeneratorType fromString(const String &s)
     // make icasecmp
     if (0)
         ;
-    else if (boost::istarts_with(s, "VS_IDE") || boost::istarts_with(s, "VS"))
+    else if (boost::istarts_with(s, "VS_IDE") || boost::iequals(s, "VS"))
         return GeneratorType::VisualStudio;
     else if (boost::istarts_with(s, "VS_NMake"))
         return GeneratorType::VisualStudioNMake;
