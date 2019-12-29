@@ -1,0 +1,7 @@
+{
+    "native": {
+        "stdlib": {
+            "kernel": "com.Microsoft.Windows.SDK.um-8"
+        }
+    }
+}
