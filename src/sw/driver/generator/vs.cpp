@@ -109,7 +109,7 @@ std::string getVsToolset(const Version &v)
         // _xp?
         // v71?
     }
-    throw SW_RUNTIME_ERROR("Unknown VS version");
+    throw SW_RUNTIME_ERROR("Unknown VS version: " + v.toString());
 }
 
 std::unique_ptr<Generator> Generator::create(const String &s)
@@ -485,12 +485,15 @@ void ProjectEmitter::addPropertyGroupConfigurationTypes(const Build &b, VSProjec
         beginBlockWithConfiguration("PropertyGroup", s, {{ "Label","Configuration" } });
         addConfigurationType(t);
         //addBlock("UseDebugLibraries", generator::toString(s.Settings.Native.ConfigurationType));
+        if (ptype != VSProjectType::Makefile)
+        {
 		if (toolset.empty())
 		{
             addBlock("PlatformToolset", getVsToolset(parent->version));
 		}
 		else
 			addBlock("PlatformToolset", toolset);
+        }
 
         endBlock();
     }
@@ -514,12 +517,15 @@ void ProjectEmitter::addPropertyGroupConfigurationTypes(const Build &b, const Pa
         addConfigurationType(get_vs_project_type(s, *i->second.find(TargetSettings{ s })->second));
 
         //addBlock("UseDebugLibraries", generator::toString(s.Settings.Native.ConfigurationType));
+        if (ptype != VSProjectType::Makefile)
+        {
 		if (toolset.empty())
 		{
             addBlock("PlatformToolset", getVsToolset(parent->version));
 		}
 		else
 			addBlock("PlatformToolset", toolset);
+        }
 
         endBlock();
     }
