@@ -52,8 +52,8 @@ enum class VsGeneratorType
 {
     VisualStudio,
     VisualStudioNMake,
-    VisualStudioUtility,
-    VisualStudioNMakeAndUtility,
+    //VisualStudioUtility,
+    //VisualStudioNMakeAndUtility,
 };
 
 struct Generator
@@ -65,6 +65,7 @@ struct Generator
     GeneratorType getType() const { return type; }
 
     path getRootDirectory(const sw::SwBuild &) const;
+    virtual path getPathString() const;
 
 private:
     GeneratorType type;
@@ -79,6 +80,8 @@ struct VSGenerator : Generator
     sw::Version winsdk;
 
     void generate(const sw::SwBuild &b) override;
+
+    path getPathString() const override;
 };
 
 struct NinjaGenerator : Generator

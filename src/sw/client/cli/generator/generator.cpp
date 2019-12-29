@@ -76,10 +76,10 @@ String toPathString(VsGeneratorType t)
         return "vs";
     case VsGeneratorType::VisualStudioNMake:
         return "vs_nmake";
-    case VsGeneratorType::VisualStudioUtility:
+    /*case VsGeneratorType::VisualStudioUtility:
         return "vs_util";
     case VsGeneratorType::VisualStudioNMakeAndUtility:
-        return "vs_nmake_util";
+        return "vs_nmake_util";*/
     default:
         throw SW_LOGIC_ERROR("not implemented");
     }
@@ -124,10 +124,10 @@ static String toString(VsGeneratorType t)
         return "Visual Studio";
     case VsGeneratorType::VisualStudioNMake:
         return "Visual Studio NMake";
-    case VsGeneratorType::VisualStudioUtility:
+    /*case VsGeneratorType::VisualStudioUtility:
         return "Visual Studio Utility";
     case VsGeneratorType::VisualStudioNMakeAndUtility:
-        return "Visual Studio NMake and Utility";
+        return "Visual Studio NMake and Utility";*/
     default:
         throw SW_LOGIC_ERROR("not implemented");
     }
@@ -168,16 +168,32 @@ static GeneratorType fromString(const String &s)
 static VsGeneratorType fromStringVs(const String &s)
 {
     // make icasecmp
-    if (0)
-        ;
-    else if (boost::istarts_with(s, "VS_IDE") || boost::istarts_with(s, "VS"))
+    if (0);
+
+    else if (
+        boost::istarts_with(s, "VS_IDE") ||
+        boost::iequals(s, "VS"))
         return VsGeneratorType::VisualStudio;
-    else if (boost::istarts_with(s, "VS_NMake"))
+
+    else if (
+        boost::istarts_with(s, "VS_NMake") ||
+        boost::istarts_with(s, "VSNMake"))
         return VsGeneratorType::VisualStudioNMake;
-    else if (boost::istarts_with(s, "VS_Utility") || boost::istarts_with(s, "VS_Util"))
+
+    /*else if (
+        boost::istarts_with(s, "VS_Utility") ||
+        boost::istarts_with(s, "VS_Util") ||
+        boost::istarts_with(s, "VSUtil"))
         return VsGeneratorType::VisualStudioUtility;
-    else if (boost::istarts_with(s, "VS_NMakeAndUtility") || boost::istarts_with(s, "VS_NMakeAndUtil") || boost::istarts_with(s, "VS_NMakeUtil"))
-        return VsGeneratorType::VisualStudioNMakeAndUtility;
+
+    else if (
+        boost::istarts_with(s, "VS_NMakeAndUtility") ||
+        boost::istarts_with(s, "VS_NMakeAndUtil") ||
+        boost::istarts_with(s, "VS_NMakeUtil") ||
+        boost::istarts_with(s, "VSNMakeAndUtil") ||
+        boost::istarts_with(s, "VSNMakeUtil"))
+        return VsGeneratorType::VisualStudioNMakeAndUtility;*/
+
     throw SW_RUNTIME_ERROR("Unknown generator: " + s);
 }
 
@@ -190,8 +206,9 @@ std::unique_ptr<Generator> Generator::create(const String &s)
     case GeneratorType::VisualStudio:
     {
         auto g1 = std::make_unique<VSGenerator>();
-        //g1->vs_version = Version(vsVersionFromString(s));
         g1->vstype = fromStringVs(s);
+        //if (g1->vstype > VsGeneratorType::VisualStudioNMake)
+            //SW_UNIMPLEMENTED;
         g = std::move(g1);
         break;
     }
@@ -236,7 +253,17 @@ std::unique_ptr<Generator> Generator::create(const String &s)
 
 path Generator::getRootDirectory(const sw::SwBuild &b) const
 {
-    return fs::current_path() / path(SW_BINARY_DIR) / "g" / toPathString(getType()) / b.getHash();
+    return fs::current_path() / path(SW_BINARY_DIR) / "g" / getPathString() / b.getHash();
+}
+
+path Generator::getPathString() const
+{
+    return toPathString(getType());
+}
+
+path VSGenerator::getPathString() const
+{
+    return toPathString(vstype);
 }
 
 struct ProgramShortCutter1

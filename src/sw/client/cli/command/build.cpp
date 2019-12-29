@@ -95,7 +95,7 @@ static cl::list<String> settings_file_config("settings-file-config", cl::desc("S
 static cl::list<String> settings_json("settings-json", cl::desc("Read settings from json string"), cl::ZeroOrMore);
 static cl::opt<path> host_settings_file("host-settings-file", cl::desc("Read host settings from file"));
 
-static cl::list<String> input_settings_pairs("input-settings-pairs", cl::desc("Read settings from json string"), ::cl::sub(subcommand_build), ::cl::SpaceSeparated);
+static cl::list<String> input_settings_pairs("input-settings-pairs", cl::value_desc("<input settings>"), cl::desc("Read settings from json string"), ::cl::sub(subcommand_build), ::cl::SpaceSeparated);
 
 // static/shared
 static cl::opt<bool> static_build("static-build", cl::desc("Set static build"));

@@ -138,6 +138,9 @@ struct ProjectData
     std::set<const sw::ITarget *> dependencies;
     path binary_dir;
     path binary_private_dir;
+    String nmake_build;
+    String nmake_clean;
+    String nmake_rebuild;
 };
 
 struct Project : CommonProjectData

@@ -104,6 +104,13 @@ int vsVersionFromString(const String &s)
     throw SW_RUNTIME_ERROR("Unknown or bad VS version: " + t);
 }
 
+static auto fix_json(String s)
+{
+    boost::replace_all(s, "\\", "\\\\");
+    boost::replace_all(s, "\"", "\\\"");
+    return "\"" + s + "\"";
+};
+
 static Version clver2vsver(const Version &clver, const Version &clmaxver)
 {
     if (clver >= Version(19, 20))
@@ -319,10 +326,43 @@ void VSGenerator::generate(const SwBuild &b)
             p.files.insert({ input.getInput().getPath(), SourceFilesFilter });
         }
         p.settings = s.settings;
+        if (vstype != VsGeneratorType::VisualStudio)
+            p.type = VSProjectType::Makefile;
         // create datas
         for (auto &st : s.settings)
             p.getData(st).type = p.type;
         p.dependencies.insert(&s.projects.find(zero_check_name)->second);
+        if (vstype != VsGeneratorType::VisualStudio)
+        {
+            for (auto &st : s.settings)
+            {
+                auto &d = p.getData(st);
+
+                String cmd;
+                cmd = "-d " + normalize_path(fs::current_path()) + " build -input-settings-pairs ";
+                for (auto &i : inputs)
+                {
+                    if (i.getInput().getType() == sw::InputType::SpecificationFile ||
+                        i.getInput().getType() == sw::InputType::InlineSpecification)
+                    {
+                        cmd += "\"" + normalize_path(i.getInput().getPath()) + "\" ";
+                        cmd += fix_json(st.toString()) + " ";
+                    }
+                    else
+                        SW_UNIMPLEMENTED;
+                }
+
+                // TODO: switch to swexplans
+                // sw -config d build -e
+                // sw -config d build -ef .sw\g\swexplan\....explan
+
+                d.nmake_build = "sw " + cmd;
+                d.nmake_rebuild = "sw -B " + cmd;
+                //d.nmake_clean = "sw "; // not yet implemented
+            }
+        }
+
+        // register
         s.projects.emplace(p.name, p);
     }
 
@@ -481,6 +521,8 @@ void VSGenerator::generate(const SwBuild &b)
                     }
                 }
             }
+            if (vstype != VsGeneratorType::VisualStudio)
+                d.type = VSProjectType::Utility;
 
             d.build_rules.erase(d.main_command);
         }
@@ -584,6 +626,7 @@ void VSGenerator::generate(const SwBuild &b)
     }
 
     // add BUILD_DEPENDENCIES project
+    if (vstype == VsGeneratorType::VisualStudio)
     {
         {
             Project p(build_dependencies_name);
@@ -632,13 +675,6 @@ void VSGenerator::generate(const SwBuild &b)
                 deps_str += d.toString() + " " + s + " ";
             auto fn = shorten_hash(blake2b_512(deps_str), 6);
             auto basefn = int_dir / fn;
-
-            auto fix_json = [](auto s)
-            {
-                boost::replace_all(s, "\\", "\\\\");
-                boost::replace_all(s, "\"", "\\\"");
-                return "\"" + s + "\"";
-            };
 
             Strings args;
             args.push_back("-d");
@@ -736,12 +772,6 @@ void Solution::emit(const VSGenerator &g) const
         //if (projects.find(p.toString() + "-build") != projects.end())
             //addProjectConfigurationPlatforms(b, p.toString() + "-build");
     }
-    // we do not need it here
-    if (g.getType() != GeneratorType::VisualStudio)
-    {
-        SW_UNIMPLEMENTED;
-        //ctx.addProjectConfigurationPlatforms(b, all_build_name, true);
-    }
     ctx.endGlobalSection();
     //
     ctx.beginGlobalSection("NestedProjects", "preSolution");
@@ -763,7 +793,7 @@ void Solution::emit(const VSGenerator &g) const
     //const auto compiler_name = boost::to_lower_copy(toString(b.solutions[0].Settings.Native.CompilerType));
     const String compiler_name = "msvc";
     String fn = fs::current_path().filename().u8string() + "_";
-    fn += compiler_name + "_" + toPathString(g.getType()) + "_" + g.vs_version.toString(1);
+    fn += compiler_name + "_" + g.getPathString().string() + "_" + g.vs_version.toString(1);
     fn += ".sln";
     auto visible_lnk_name = fn;
     write_file_if_different(g.sln_root / fn, ctx.getText());
@@ -872,7 +902,7 @@ void Project::emitProject(const VSGenerator &g) const
     ctx.addBlock("VCProjectVersion", std::to_string(g.vs_version.getMajor()) + ".0");
     ctx.addBlock("ProjectGuid", uuid);
     ctx.addBlock("Keyword", "Win32Proj");
-    if (g.getType() == GeneratorType::VisualStudio)
+    if (g.vstype == VsGeneratorType::VisualStudio)
     {
         ctx.addBlock("RootNamespace", getVisibleName());
         ctx.addBlock("WindowsTargetPlatformVersion", PackageId((*settings.begin())["native"]["stdlib"]["c"].getValue()).getVersion().toString());
@@ -916,6 +946,13 @@ void Project::emitProject(const VSGenerator &g) const
             // full name of target, keep as is (it might have subdirs)
             ctx.addBlock("TargetName", name);
             //addBlock("TargetExt", ext);
+
+            if (!d.nmake_build.empty())
+                ctx.addBlock("NMakeBuildCommandLine", d.nmake_build);
+            if (!d.nmake_clean.empty())
+                ctx.addBlock("NMakeCleanCommandLine", d.nmake_clean);
+            if (!d.nmake_rebuild.empty())
+                ctx.addBlock("NMakeReBuildCommandLine", d.nmake_rebuild);
         }
         ctx.endBlock();
     }
@@ -1005,39 +1042,6 @@ void Project::emitProject(const VSGenerator &g) const
             continue;
 
         ctx.beginFileBlock(p.p);
-
-        /*for (auto &[s, d] : data)
-        {
-            if (!d.target)
-                continue;
-
-            auto cmds = d.target->getCommands();
-            auto itcmd = std::find_if(cmds.begin(), cmds.end(), [&p](const auto &c)
-            {
-                return std::any_of(c->inputs.begin(), c->inputs.end(), [&p](const auto &f)
-                {
-                    return p == f;
-                });
-            });
-
-            if (itcmd != cmds.end())
-            {
-                auto c = *itcmd;
-                printProperties(ctx, *c, cl_props);
-                //ctx.beginBlockWithConfiguration("AdditionalOptions", s);
-                //ctx.endBlock();
-            }
-            //else
-                //LOG_WARN(logger, "File " << p << " is not processed");
-        }*/
-
-        //add_obj_file(t, p, sf);
-        //if (!build)
-        //{
-            //ctx.beginBlock("ExcludedFromBuild");
-            //ctx.addText("true");
-            //ctx.endBlock(true);
-        //}
         ctx.endFileBlock();
     }
 
@@ -1082,53 +1086,56 @@ void Project::emitProject(const VSGenerator &g) const
         auto rules_dir = get_int_dir(s) / "rules";
         auto commands_dir = get_int_dir(s) / "commands";
 
-        Files rules;
-        for (auto &c : d.custom_rules)
+        if (type != VSProjectType::Utility)
         {
-            // TODO: add hash if two rules with same name
-            path rule = rules_dir / c->outputs.begin()->filename();
-            rules.insert(rule);
-            if (rules.find(rule) != rules.end())
-                rule += "." + std::to_string(c->getHash());
-            rule += ".rule";
-            write_file(rule, "");
-            ((Project&)*this).files.insert({rule, ". SW Rules"});
-
-            auto cmd = c->writeCommand(commands_dir / std::to_string(c->getHash()));
-
-            ctx.beginFileBlock(rule);
-
-            ctx.beginBlockWithConfiguration("AdditionalInputs", s);
-            for (auto &o : c->inputs)
-                ctx.addText(normalize_path_windows(o) + ";");
-            ctx.endBlock(true);
-
-            ctx.beginBlockWithConfiguration("Outputs", s);
-            for (auto &o : c->outputs)
-                ctx.addText(normalize_path_windows(o) + ";");
-            ctx.endBlock(true);
-
-            ctx.beginBlockWithConfiguration("Command", s);
-            ctx.addText("call \"" + normalize_path_windows(cmd) + "\"");
-            ctx.endBlock(true);
-
-            ctx.beginBlockWithConfiguration("BuildInParallel", s);
-            ctx.addText("true");
-            ctx.endBlock(true);
-
-            ctx.beginBlockWithConfiguration("Message", s);
-            ctx.endBlock();
-
-            for (auto &[s1, d] : data)
+            Files rules;
+            for (auto &c : d.custom_rules)
             {
-                if (s == s1)
-                    continue;
-                ctx.beginBlockWithConfiguration("ExcludedFromBuild", s1);
+                // TODO: add hash if two rules with same name
+                path rule = rules_dir / c->outputs.begin()->filename();
+                rules.insert(rule);
+                if (rules.find(rule) != rules.end())
+                    rule += "." + std::to_string(c->getHash());
+                rule += ".rule";
+                write_file(rule, "");
+                ((Project &)*this).files.insert({ rule, ". SW Rules" });
+
+                auto cmd = c->writeCommand(commands_dir / std::to_string(c->getHash()));
+
+                ctx.beginFileBlock(rule);
+
+                ctx.beginBlockWithConfiguration("AdditionalInputs", s);
+                for (auto &o : c->inputs)
+                    ctx.addText(normalize_path_windows(o) + ";");
+                ctx.endBlock(true);
+
+                ctx.beginBlockWithConfiguration("Outputs", s);
+                for (auto &o : c->outputs)
+                    ctx.addText(normalize_path_windows(o) + ";");
+                ctx.endBlock(true);
+
+                ctx.beginBlockWithConfiguration("Command", s);
+                ctx.addText("call \"" + normalize_path_windows(cmd) + "\"");
+                ctx.endBlock(true);
+
+                ctx.beginBlockWithConfiguration("BuildInParallel", s);
                 ctx.addText("true");
                 ctx.endBlock(true);
-            }
 
-            ctx.endFileBlock();
+                ctx.beginBlockWithConfiguration("Message", s);
+                ctx.endBlock();
+
+                for (auto &[s1, d] : data)
+                {
+                    if (s == s1)
+                        continue;
+                    ctx.beginBlockWithConfiguration("ExcludedFromBuild", s1);
+                    ctx.addText("true");
+                    ctx.endBlock(true);
+                }
+
+                ctx.endFileBlock();
+            }
         }
 
         for (auto &c : d.custom_rules_manual)
@@ -1136,7 +1143,7 @@ void Project::emitProject(const VSGenerator &g) const
             path rule = rules_dir / c.name;
             rule += ".rule";
             write_file(rule, "");
-            ((Project&)*this).files.insert({rule, ". SW Rules"});
+            ((Project &)*this).files.insert({ rule, ". SW Rules" });
 
             ctx.beginFileBlock(rule);
 
