@@ -57,7 +57,7 @@ function(sw_execute)
         #set(SW_FORCE -s)
     #endif()
 
-    if (NOT SW_BUILD_SHARED_LIBS)
+    if (NOT DEFINED SW_BUILD_SHARED_LIBS)
         set(SW_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
     endif()
 
