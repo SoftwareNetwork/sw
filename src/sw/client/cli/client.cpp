@@ -365,7 +365,6 @@ int main(int argc, char **argv)
 //static ::cl::list<path> build_arg0(::cl::Positional, ::cl::desc("Files or directoris to build"));
 
 // ide commands
-static ::cl::opt<String> target_build("target", ::cl::desc("Target to build")/*, ::cl::sub(subcommand_ide)*/);
 //static ::cl::opt<String> ide_rebuild("rebuild", ::cl::desc("Rebuild target"), ::cl::sub(subcommand_ide));
 //static ::cl::opt<String> ide_clean("clean", ::cl::desc("Clean target"), ::cl::sub(subcommand_ide));
 

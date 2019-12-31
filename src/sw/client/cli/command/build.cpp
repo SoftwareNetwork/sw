@@ -59,6 +59,9 @@ static cl::opt<bool> cl_show_output("show-output");
 static cl::opt<bool> cl_write_output_to_file("write-output-to-file");
 //static cl::opt<bool> print_graph("print-graph", cl::desc("Print file with build graph"));
 
+static ::cl::list<String> targets_to_build("target", ::cl::desc("Targets to build"));
+static ::cl::list<String> targets_to_ignore("exclude-target", ::cl::desc("Targets to ignore"));
+
 ////////////////////////////////////////////////////////////////////////////////
 //
 // build configs
@@ -654,6 +657,10 @@ std::unique_ptr<sw::SwBuild> createBuild(sw::SwContext &swctx)
         bs["write_output_to_file"] = "true";
     if (!time_limit.empty())
         bs["time_limit"] = time_limit;
+    for (auto &t : targets_to_build)
+        bs["target-to-build"].push_back(t);
+    for (auto &t : targets_to_ignore)
+        bs["target-to-exclude"].push_back(t);
     b->setSettings(bs);
 
     return b;

@@ -461,13 +461,38 @@ Commands SwBuild::getCommands() const
     if (targets_to_build.empty())
         throw SW_RUNTIME_ERROR("no targets were selected for building");
 
-    auto ttb = targets_to_build;
+    StringSet in_ttb;
+    StringSet in_ttb_exclude;
+    for (auto &t : build_settings["target-to-build"].getArray())
+        in_ttb.insert(t);
+    for (auto &t : build_settings["target-to-exclude"].getArray())
+    {
+        if (in_ttb.find(t) != in_ttb.end())
+            throw SW_RUNTIME_ERROR("Target " + t + " specified both in include and exclude lists");
+        in_ttb_exclude.insert(t);
+    }
+
+    decltype(targets_to_build) ttb;
 
     // detect all targets to build
     // some static builds won't build deps, because there's no dependent link files
     // (e.g. build static png, zlib won't be built)
     for (auto &[p, tgts] : targets_to_build)
     {
+        if (!in_ttb.empty())
+        {
+            auto i = in_ttb.find(p.toString());
+            if (i == in_ttb.end())
+                continue;
+            in_ttb.erase(i);
+        }
+        if (in_ttb_exclude.find(p.toString()) != in_ttb_exclude.end())
+        {
+            continue;
+        }
+
+        ttb[p] = tgts;
+
         // one target may be loaded twice
         // we take only the latest, because it is has correct set of command deps per requested settings
         std::map<TargetSettings, ITarget*> latest_targets;
@@ -516,6 +541,15 @@ Commands SwBuild::getCommands() const
 
             gather_ttb(s);
         }
+    }
+
+    if (!in_ttb.empty())
+    {
+        String s;
+        for (auto &t : in_ttb)
+            s += t + ", ";
+        s.resize(s.size() - 2);
+        throw SW_RUNTIME_ERROR("Cannot make targets: " + s + ": no such targets");
     }
 
     //
