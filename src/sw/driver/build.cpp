@@ -98,6 +98,11 @@ std::optional<path> Build::getSourceDir(const Source &s, const Version &v) const
     return {};
 }
 
+const TargetSettings &Build::getExternalVariables() const
+{
+    return getMainBuild().getExternalVariables();
+}
+
 /*path Build::getTestDir() const
 {
     return BinaryDir / "test" / getSettings().getConfig();

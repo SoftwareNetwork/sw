@@ -66,13 +66,13 @@ struct SW_DRIVER_CPP_API Build : SimpleBuild
     std::unordered_map<PackageId, path> source_dirs_by_package;
     Checker checker;
 
-    // old
-
     //
     bool isKnownTarget(const LocalPackage &p) const;
     path getSourceDir(const LocalPackage &p) const;
     std::optional<path> getSourceDir(const Source &s, const Version &v) const;
     //bool skipTarget(TargetScope Scope) const;
+
+    const TargetSettings &getExternalVariables() const;
 
     // tests
     // TODO: implement some of https://cmake.org/cmake/help/latest/manual/cmake-properties.7.html#properties-on-tests

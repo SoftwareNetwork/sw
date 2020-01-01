@@ -797,5 +797,10 @@ void SwBuild::setSettings(const TargetSettings &bs)
     build_settings = bs;
 }
 
+const TargetSettings &SwBuild::getExternalVariables() const
+{
+    return getSettings()["D"].getSettings();
+}
+
 }
 

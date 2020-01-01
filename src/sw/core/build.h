@@ -84,7 +84,8 @@ struct SW_CORE_API SwBuild
 
     std::vector<InputWithSettings> getInputs() const;
 
-    TargetSettings getSettings() const { return build_settings; }
+    const TargetSettings &getExternalVariables() const;
+    const TargetSettings &getSettings() const { return build_settings; }
     void setSettings(const TargetSettings &build_settings);
 
 private:

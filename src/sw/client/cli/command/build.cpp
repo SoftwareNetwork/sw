@@ -62,6 +62,8 @@ static cl::opt<bool> cl_write_output_to_file("write-output-to-file");
 static ::cl::list<String> targets_to_build("target", ::cl::desc("Targets to build"));
 static ::cl::list<String> targets_to_ignore("exclude-target", ::cl::desc("Targets to ignore"));
 
+static ::cl::list<String> Dvariables("D", ::cl::desc("Input variables"), ::cl::ZeroOrMore, ::cl::Prefix);
+
 ////////////////////////////////////////////////////////////////////////////////
 //
 // build configs
@@ -661,6 +663,11 @@ std::unique_ptr<sw::SwBuild> createBuild(sw::SwContext &swctx)
         bs["target-to-build"].push_back(t);
     for (auto &t : targets_to_ignore)
         bs["target-to-exclude"].push_back(t);
+    for (auto &t : Dvariables)
+    {
+        auto p = t.find('=');
+        bs["D"][t.substr(0, p)] = t.substr(p + 1);
+    }
     b->setSettings(bs);
 
     return b;
