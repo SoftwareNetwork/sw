@@ -232,9 +232,9 @@ void TargetBase::setupTarget(TargetBaseType *t) const
     t->IsConfig = IsConfig; // TODO: inherit from reconsider
 
     t->DryRun = getSolution().DryRun; // ok, take from Solution (Build)
+    t->command_storage = getSolution().command_storage; // ok, take from Solution (Build)
 
     t->main_build_ = main_build_; // ok, take from here (this, parent)
-    t->command_storage = command_storage; // ok, take from here (this, parent)
 
     t->current_project = current_project; // ok, take from here (this, parent)
     if (!t->current_project)
@@ -258,7 +258,7 @@ const Build &TargetBase::getSolution() const
 
 int TargetBase::getCommandStorageType() const
 {
-    if (getSolution().command_storage == builder::Command::CS_DO_NOT_SAVE)
+    if (command_storage == builder::Command::CS_DO_NOT_SAVE)
         return builder::Command::CS_DO_NOT_SAVE;
     return (isLocal() && !IsConfig) ? builder::Command::CS_LOCAL : builder::Command::CS_GLOBAL;
 }
