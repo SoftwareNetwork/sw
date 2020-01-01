@@ -55,76 +55,32 @@ static void sw_check_abi_version(int v)
 }
 
 Build::Build(SwBuild &mb)
-    : checker(*this)
+    : checker(mb)
 {
     main_build_ = &mb;
 }
 
-SwContext &Build::getContext() const
-{
-    return getMainBuild().getContext();
-}
-
-TargetMap &Build::getChildren()
-{
-    return getMainBuild().getTargets();
-}
-
-const TargetMap &Build::getChildren() const
-{
-    return getMainBuild().getTargets();
-}
-
-const OS &Build::getHostOs() const
-{
-    return getContext().HostOS;
-}
-
-path Build::getChecksDir() const
-{
-    return getServiceDir() / "checks";
-}
-
-void Build::setModuleData(ModuleSwappableData &d)
-{
-    module_data = &d;
-}
-
-ModuleSwappableData &Build::getModuleData() const
-{
-    if (!module_data)
-        throw SW_LOGIC_ERROR("no module data was set");
-    return *module_data;
-}
-
-const TargetSettings &Build::getSettings() const
-{
-    return getModuleData().current_settings;
-}
-
 // can be used in configs to load subdir configs
 // s.build->loadModule("client/sw.cpp").call<void(Solution &)>("build", s);
-Module Build::loadModule(const path &p) const
+/*Module Build::loadModule(const path &p) const
 {
-    SW_UNIMPLEMENTED;
-
     auto fn2 = p;
     if (!fn2.is_absolute())
         fn2 = SourceDir / fn2;
     // driver->build_cpp_spec(swctx, p);
     //return getContext().getModuleStorage().get(dll);
-}
+}*/
 
-bool Build::skipTarget(TargetScope Scope) const
+/*bool Build::skipTarget(TargetScope Scope) const
 {
     return false;
-}
+}*/
 
 bool Build::isKnownTarget(const LocalPackage &p) const
 {
-    return getModuleData().known_targets.empty() ||
+    return module_data.known_targets.empty() ||
         p.getPath().is_loc() || // used by cfg targets and checks
-        getModuleData().known_targets.find(p) != getModuleData().known_targets.end();
+        module_data.known_targets.find(p) != module_data.known_targets.end();
 }
 
 path Build::getSourceDir(const LocalPackage &p) const
@@ -142,10 +98,9 @@ std::optional<path> Build::getSourceDir(const Source &s, const Version &v) const
     return {};
 }
 
-path Build::getTestDir() const
+/*path Build::getTestDir() const
 {
-    SW_UNIMPLEMENTED;
-    //return BinaryDir / "test" / getSettings().getConfig();
+    return BinaryDir / "test" / getSettings().getConfig();
 }
 
 void Build::addTest(Test &cb, const String &name)
@@ -171,12 +126,11 @@ Test Build::addTest(const ExecutableTarget &t)
 
 Test Build::addTest(const String &name, const ExecutableTarget &tgt)
 {
-    SW_UNIMPLEMENTED;
-    /*auto c = tgt.addCommand();
+    auto c = tgt.addCommand();
     c << cmd::prog(tgt);
     Test t(c);
     addTest(t, name);
-    return t;*/
+    return t;
 }
 
 Test Build::addTest()
@@ -189,6 +143,6 @@ Test Build::addTest(const String &name)
     Test cb(getContext());
     addTest(cb, name);
     return cb;
-}
+}*/
 
 }

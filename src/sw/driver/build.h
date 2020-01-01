@@ -27,9 +27,15 @@ namespace driver::cpp { struct Driver; }
 struct Module;
 struct ModuleStorage;
 struct SwContext;
-struct ModuleSwappableData;
 
 using FilesMap = std::unordered_map<path, path>;
+
+struct ModuleSwappableData
+{
+    PackageIdSet known_targets;
+    TargetSettings current_settings;
+    std::vector<ITargetPtr> added_targets;
+};
 
 struct SW_DRIVER_CPP_API Test : driver::CommandBuilder
 {
@@ -55,27 +61,22 @@ struct SW_DRIVER_CPP_API Build : SimpleBuild
 {
     using Base = SimpleBuild;
 
-    ModuleSwappableData *module_data = nullptr;
+    ModuleSwappableData module_data;
     SourceDirMap source_dirs_by_source;
     std::unordered_map<PackageId, path> source_dirs_by_package;
     Checker checker;
 
-    SwContext &getContext() const;
-    const OS &getHostOs() const;
-    const TargetSettings &getSettings() const;
+    // old
+
+    //
     bool isKnownTarget(const LocalPackage &p) const;
     path getSourceDir(const LocalPackage &p) const;
     std::optional<path> getSourceDir(const Source &s, const Version &v) const;
-    bool skipTarget(TargetScope Scope) const;
-    TargetMap &getChildren();
-    const TargetMap &getChildren() const;
-    path getChecksDir() const;
-    void setModuleData(ModuleSwappableData &);
-    ModuleSwappableData &getModuleData() const;
+    //bool skipTarget(TargetScope Scope) const;
 
     // tests
     // TODO: implement some of https://cmake.org/cmake/help/latest/manual/cmake-properties.7.html#properties-on-tests
-    Commands tests;
+    /*Commands tests;
     Test addTest(const ExecutableTarget &t);
     Test addTest(const String &name, const ExecutableTarget &t);
     Test addTest();
@@ -83,13 +84,13 @@ struct SW_DRIVER_CPP_API Build : SimpleBuild
     path getTestDir() const;
 
 private:
-    void addTest(Test &cb, const String &name);
+    //void addTest(Test &cb, const String &name);*/
 
     //
 public:
     Build(SwBuild &);
 
-    Module loadModule(const path &fn) const;
+    //Module loadModule(const path &fn) const;
 
     // move to some other place?
     void cppan_load(yaml &root, const String &root_name = {});

@@ -38,6 +38,7 @@ String toString(TargetType T);
 
 struct NativeCompiledTarget;
 struct Build;
+struct SwContext;
 struct SwBuild;
 struct Target;
 struct ProjectTarget;
@@ -73,7 +74,6 @@ struct SW_DRIVER_CPP_API TargetBaseData : ProjectDirectories, TargetEvents
     PackagePath NamePrefix;
     int command_storage = 0;
 
-    path getServiceDir() const;
     SwBuild &getMainBuild() const;
 
 protected:
@@ -170,6 +170,7 @@ struct SW_DRIVER_CPP_API TargetBase : TargetBaseData
 
     Build &getSolution();
     const Build &getSolution() const;
+    const SwContext &getContext() const;
 
 protected:
     // impl
@@ -329,7 +330,6 @@ public:
 
     path getTargetsDir() const;
     path getTargetDirShort(const path &root) const;
-    path getTempDir() const;
 
     void setRootDirectory(const path &);
 

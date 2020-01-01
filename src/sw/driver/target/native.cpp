@@ -210,7 +210,7 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const String
 
 void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const UnresolvedPackage &id, const StringSet &exts, bool extended_desc)
 {
-    auto &cld = getSolution().getChildren();
+    auto &cld = getMainBuild().getTargets();
 
     TargetSettings oss;
     oss["os"] = getSettings()["os"];
@@ -258,7 +258,7 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
         if (created)
             return;
         c->file = t->getProgram().file;
-        auto C = c->createCommand(getSolution().getContext());
+        auto C = c->createCommand(getMainBuild().getContext());
         static_cast<primitives::Command&>(*C) = *t->getProgram().getCommand();
         created = true;
 
@@ -268,7 +268,7 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
 
     if (id.ppath == "com.Microsoft.VisualStudio.VC.cl")
     {
-        c = std::make_shared<VisualStudioCompiler>(getSolution().getContext());
+        c = std::make_shared<VisualStudioCompiler>(getMainBuild().getContext());
         if (ts["native"]["stdlib"]["cpp"].getValue() == "com.Microsoft.VisualStudio.VC.libcpp")
         {
             // take same ver as cl
@@ -279,14 +279,14 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
         }
     }
     else if (id.ppath == "com.Microsoft.VisualStudio.VC.ml")
-        c = std::make_shared<VisualStudioASMCompiler>(getSolution().getContext());
+        c = std::make_shared<VisualStudioASMCompiler>(getMainBuild().getContext());
     else if (id.ppath == "com.Microsoft.Windows.rc")
-        c = std::make_shared<RcTool>(getSolution().getContext());
+        c = std::make_shared<RcTool>(getMainBuild().getContext());
     else if (id.ppath == "org.gnu.gcc.as")
-        c = std::make_shared<GNUASMCompiler>(getSolution().getContext());
+        c = std::make_shared<GNUASMCompiler>(getMainBuild().getContext());
     else if (id.ppath == "org.gnu.gcc" || id.ppath == "org.gnu.gpp")
     {
-        auto C = std::make_shared<GNUCompiler>(getSolution().getContext());
+        auto C = std::make_shared<GNUCompiler>(getMainBuild().getContext());
         c = C;
         /*if (getBuildSettings().TargetOS.isApple())
         {
@@ -297,7 +297,7 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
     }
     else if (id.ppath == "org.LLVM.clang" || id.ppath == "org.LLVM.clangpp")
     {
-        auto C = std::make_shared<ClangCompiler>(getSolution().getContext());
+        auto C = std::make_shared<ClangCompiler>(getMainBuild().getContext());
         c = C;
         create_command();
         C->Target = getBuildSettings().getTargetTriplet();
@@ -310,7 +310,7 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
     }
     else if (id.ppath == "org.LLVM.clangcl")
     {
-        auto C = std::make_shared<ClangClCompiler>(getSolution().getContext());
+        auto C = std::make_shared<ClangClCompiler>(getMainBuild().getContext());
         c = C;
         create_command();
 
@@ -326,7 +326,7 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
         {
             SW_UNIMPLEMENTED;
             // not working atm
-            auto c = C->createCommand(getSolution().getContext());
+            auto c = C->createCommand(getMainBuild().getContext());
             c->push_back("-target=arm-pc-windows-msvc");
         }
         break;
@@ -334,7 +334,7 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
         {
             SW_UNIMPLEMENTED;
             // not working atm
-            auto c = C->createCommand(getSolution().getContext());
+            auto c = C->createCommand(getMainBuild().getContext());
             c->push_back("-target=aarch64-pc-windows-msvc");
         }
         break;
@@ -344,7 +344,7 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
     }
     else if (id.ppath == "com.intel.compiler.c" || id.ppath == "com.intel.compiler.cpp")
     {
-        auto C = std::make_shared<VisualStudioCompiler>(getSolution().getContext());
+        auto C = std::make_shared<VisualStudioCompiler>(getMainBuild().getContext());
         c = C;
         C->ForceSynchronousPDBWrites = false;
         if (ts["native"]["stdlib"]["cpp"].getValue() == "com.Microsoft.VisualStudio.VC.libcpp")
@@ -373,7 +373,7 @@ std::shared_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetS
 
 std::shared_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetSetting &s, const UnresolvedPackage &id, bool extended_desc)
 {
-    auto &cld = getSolution().getChildren();
+    auto &cld = getMainBuild().getTargets();
 
     TargetSettings oss;
     oss["os"] = getSettings()["os"];
@@ -392,7 +392,7 @@ std::shared_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetS
         if (created)
             return;
         c->file = t->getProgram().file;
-        auto C = c->createCommand(getSolution().getContext());
+        auto C = c->createCommand(getMainBuild().getContext());
         static_cast<primitives::Command&>(*C) = *t->getProgram().getCommand();
         created = true;
 
@@ -403,17 +403,17 @@ std::shared_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetS
     if (0);
     else if (id.ppath == "com.Microsoft.VisualStudio.VC.lib")
     {
-        c = std::make_shared<VisualStudioLibrarian>(getSolution().getContext());
+        c = std::make_shared<VisualStudioLibrarian>(getMainBuild().getContext());
         c->Type = LinkerType::MSVC;
     }
     else if (id.ppath == "com.Microsoft.VisualStudio.VC.link")
     {
-        c = std::make_shared<VisualStudioLinker>(getSolution().getContext());
+        c = std::make_shared<VisualStudioLinker>(getMainBuild().getContext());
         c->Type = LinkerType::MSVC;
     }
     else if (id.ppath == "org.gnu.binutils.ar" || id.ppath == "org.LLVM.ar")
     {
-        auto C = std::make_shared<GNULibrarian>(getSolution().getContext());
+        auto C = std::make_shared<GNULibrarian>(getMainBuild().getContext());
         c = C;
         c->Type = LinkerType::GNU;
         C->Prefix = getBuildSettings().TargetOS.getLibraryPrefix();
@@ -425,7 +425,7 @@ std::shared_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetS
         id.ppath == "org.LLVM.clangpp"
         )
     {
-        auto C = std::make_shared<GNULinker>(getSolution().getContext());
+        auto C = std::make_shared<GNULinker>(getMainBuild().getContext());
         c = C;
         // actually it is depends on -fuse-ld option
         // do we need it at all?
@@ -439,7 +439,7 @@ std::shared_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetS
             id.ppath == "org.LLVM.clangpp")
         {
             create_command();
-            auto cmd = c->createCommand(getSolution().getContext());
+            auto cmd = c->createCommand(getMainBuild().getContext());
             cmd->push_back("-target");
             cmd->push_back(getBuildSettings().getTargetTriplet());
         }
@@ -449,7 +449,7 @@ std::shared_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetS
     {
         SW_UNIMPLEMENTED;
 
-        auto C = std::make_shared<GNULinker>(getSolution().getContext());
+        auto C = std::make_shared<GNULinker>(getMainBuild().getContext());
         c = C;
         c->Type = LinkerType::GNU;
         C->Prefix = getBuildSettings().TargetOS.getLibraryPrefix();
@@ -458,14 +458,14 @@ std::shared_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetS
     {
         SW_UNIMPLEMENTED;
 
-        auto C = std::make_shared<GNULinker>(getSolution().getContext());
+        auto C = std::make_shared<GNULinker>(getMainBuild().getContext());
         c = C;
         c->Type = LinkerType::GNU;
         C->Prefix = getBuildSettings().TargetOS.getLibraryPrefix();
 
         create_command();
 
-        auto cmd = c->createCommand(getSolution().getContext());
+        auto cmd = c->createCommand(getMainBuild().getContext());
         //cmd->push_back("-fuse-ld=lld");
         cmd->push_back("-flavor");
         cmd->push_back("ld"); // for linux, TODO: add checks
@@ -481,12 +481,12 @@ std::shared_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetS
     }
     else if (id.ppath == "com.intel.compiler.lib")
     {
-        c = std::make_shared<VisualStudioLibrarian>(getSolution().getContext());
+        c = std::make_shared<VisualStudioLibrarian>(getMainBuild().getContext());
         c->Type = LinkerType::MSVC;
     }
     else if (id.ppath == "com.intel.compiler.link")
     {
-        c = std::make_shared<VisualStudioLinker>(getSolution().getContext());
+        c = std::make_shared<VisualStudioLinker>(getMainBuild().getContext());
         c->Type = LinkerType::MSVC;
     }
     else
@@ -670,9 +670,9 @@ void NativeCompiledTarget::setupCommand(builder::Command &c) const
     {
         for_deps([this, &c](auto nt)
         {
-            if (getSolution().getHostOs().is(OSType::Windows))
+            if (getContext().HostOS.is(OSType::Windows))
                 c.addPathDirectory(nt->getOutputFile().parent_path());
-            else if (getSolution().getHostOs().isApple())
+            else if (getContext().HostOS.isApple())
                 c.environment["DYLD_LIBRARY_PATH"] += normalize_path(nt->getOutputFile().parent_path()) + ":";
             else // linux and others
                 c.environment["LD_LIBRARY_PATH"] += normalize_path(nt->getOutputFile().parent_path()) + ":";
@@ -681,7 +681,7 @@ void NativeCompiledTarget::setupCommand(builder::Command &c) const
     }
 
     // more under if (createWindowsRpath())?
-    c.addPathDirectory(getSolution().getContext().getLocalStorage().storage_dir);
+    c.addPathDirectory(getMainBuild().getContext().getLocalStorage().storage_dir);
 
     if (createWindowsRpath())
     {
@@ -696,7 +696,7 @@ void NativeCompiledTarget::setupCommand(builder::Command &c) const
 
 driver::CommandBuilder NativeCompiledTarget::addCommand(const std::shared_ptr<driver::Command> &in) const
 {
-    driver::CommandBuilder cb(getSolution().getContext());
+    driver::CommandBuilder cb(getMainBuild().getContext());
     if (in)
         cb.c = in;
     // set as default
@@ -1181,7 +1181,7 @@ void NativeCompiledTarget::addPrecompiledHeader(PrecompiledHeader &p)
                     c->ForcedIncludeFiles().push_back(p.header);
 
                 c->PrecompiledHeader = gch_fn_clang;
-                c->createCommand(getSolution().getContext())->addInput(gch_fn_clang);
+                c->createCommand(getMainBuild().getContext())->addInput(gch_fn_clang);
             }
             else if (auto c = sf->compiler->as<GNUCompiler*>())
             {
@@ -1190,7 +1190,7 @@ void NativeCompiledTarget::addPrecompiledHeader(PrecompiledHeader &p)
                 if (force_include_pch_header_to_target_source_files)
                     c->ForcedIncludeFiles().push_back(p.header);
 
-                c->createCommand(getSolution().getContext())->addInput(gch_fn);
+                c->createCommand(getMainBuild().getContext())->addInput(gch_fn);
             }
         }
     }
@@ -1328,8 +1328,8 @@ Commands NativeCompiledTarget::getGeneratedCommands() const
 
 Commands NativeCompiledTarget::getCommands1() const
 {
-    if (getSolution().skipTarget(Scope))
-        return {};
+    //if (getSolution().skipTarget(Scope))
+        //return {};
     if (DryRun)
         return {};
     if (already_built)
@@ -2051,8 +2051,8 @@ bool NativeCompiledTarget::prepare()
         return false;
     }
 
-    if (getSolution().skipTarget(Scope))
-        return false;
+    //if (getSolution().skipTarget(Scope))
+        //return false;
 
     //DEBUG_BREAK_IF_STRING_HAS(getPackage().getPath().toString(), "GDCM.gdcm");
 
@@ -2156,7 +2156,7 @@ bool NativeCompiledTarget::prepare()
     {
         for (auto &d : getActiveDependencies())
         {
-            auto t = getSolution().getChildren().find(d.dep->getPackage(), d.dep->settings);
+            auto t = getMainBuild().getTargets().find(d.dep->getPackage(), d.dep->settings);
             if (!t)
                 throw SW_RUNTIME_ERROR("No such target: " + d.dep->getPackage().toString());
             d.dep->setTarget(*t);
@@ -2756,7 +2756,7 @@ bool NativeCompiledTarget::prepare()
             *this += "kernel32.lib"_slib;
             if (auto L = getSelectedTool()->as<VisualStudioLinker*>())
             {
-                auto cmd = L->createCommand(getSolution().getContext());
+                auto cmd = L->createCommand(getMainBuild().getContext());
                 cmd->push_back("-NODEFAULTLIB");
             }
         }
@@ -2943,7 +2943,7 @@ void NativeCompiledTarget::processCircular(Files &obj)
         c->arguments.push_back(out.u8string());
         c->addInput(Linker->getOutputFile());
         c->addOutput(out);
-        auto cmd = Linker->createCommand(getSolution().getContext());
+        auto cmd = Linker->createCommand(getMainBuild().getContext());
         cmd->dependent_commands.insert(c);
         c->push_back(dlls);
         cmds.insert(c);

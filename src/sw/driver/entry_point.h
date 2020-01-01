@@ -19,13 +19,6 @@ struct Build;
 struct Checker;
 struct Module;
 
-struct ModuleSwappableData
-{
-    PackageIdSet known_targets;
-    TargetSettings current_settings;
-    std::vector<ITargetPtr> added_targets;
-};
-
 // this driver ep
 struct NativeTargetEntryPoint : TargetEntryPoint
 {

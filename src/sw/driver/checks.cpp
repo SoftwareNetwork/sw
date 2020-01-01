@@ -34,6 +34,16 @@ static cl::opt<String> cc_checks_command("cc-checks-command", cl::desc("Automati
 namespace sw
 {
 
+static path getServiceDir(const path &bdir)
+{
+    return bdir / "misc";
+}
+
+static path getChecksDir(const path &bdir)
+{
+    return getServiceDir(bdir) / "checks";
+}
+
 static String toString(CheckType t)
 {
     switch (t)
@@ -231,8 +241,8 @@ CheckSet::CheckSet(Checker &checker)
 {
 }
 
-Checker::Checker(Build &build)
-    : build(build)
+Checker::Checker(SwBuild &swbld)
+    : swbld(swbld)
 {
 }
 
@@ -246,7 +256,7 @@ CheckSet &Checker::addSet(const String &name)
 
 void CheckSet::performChecks(const TargetSettings &ts)
 {
-    static const auto checks_dir = checker.build.getContext().getLocalStorage().storage_dir_etc / "sw" / "checks";
+    static const auto checks_dir = checker.swbld.getContext().getLocalStorage().storage_dir_etc / "sw" / "checks";
 
     //std::unique_lock lk(m);
 
@@ -381,7 +391,7 @@ int main() { return IsBigEndian(); }
         {
             // remove tmp dir
             error_code ec;
-            fs::remove_all(checker.build.getChecksDir(), ec);
+            fs::remove_all(getChecksDir(checker.swbld.getBuildDirectory()), ec);
         };
 
         //auto &e = getExecutor();
@@ -555,7 +565,7 @@ int main() { return IsBigEndian(); }
     }
     s += "}";
 
-    auto d = checker.build.getServiceDir();
+    auto d = getServiceDir(checker.swbld.getBuildDirectory());
     auto cyclic_path = d / "cyclic";
     write_file(cyclic_path / "deps_checks.dot", s);
 
@@ -671,7 +681,7 @@ bool Check::lessDuringExecution(const CommandNode &in) const
 
 path Check::getOutputFilename() const
 {
-    auto d = check_set->checker.build.getChecksDir();
+    auto d = getChecksDir(check_set->checker.swbld.getBuildDirectory());
     //static std::atomic_int64_t n = 0;
     auto up = unique_path();
     //auto up = std::to_string(++n);
@@ -796,14 +806,12 @@ int main(int ac, char* av[])
 }
 
 #define SETUP_SOLUTION()                                          \
-    auto b = check_set->checker.build.getContext().createBuild(); \
+    auto b = check_set->checker.swbld.getContext().createBuild(); \
     auto s = setupSolution(*b, f);                                \
-    ModuleSwappableData msd;                                      \
-    msd.current_settings = getSettings();                         \
-    s.setModuleData(msd)
+    s.module_data.current_settings = getSettings()
 
 #define EXECUTE_SOLUTION()                             \
-    for (auto &t : msd.added_targets)                  \
+    for (auto &t : s.module_data.added_targets)        \
         b->getTargets()[t->getPackage()].push_back(t); \
     if (!execute(*b))                                  \
     return
@@ -954,7 +962,7 @@ void TypeSize::run() const
         return;
     }
 
-    if (!check_set->t->getSolution().getHostOs().canRunTargetExecutables(check_set->t->getBuildSettings().TargetOS))
+    if (!check_set->t->getContext().getHostOs().canRunTargetExecutables(check_set->t->getBuildSettings().TargetOS))
     {
         requires_manual_setup = true;
         executable = e.getOutputFile();
@@ -1028,7 +1036,7 @@ void TypeAlignment::run() const
         return;
     }
 
-    if (!check_set->t->getSolution().getHostOs().canRunTargetExecutables(check_set->t->getBuildSettings().TargetOS))
+    if (!check_set->t->getContext().getHostOs().canRunTargetExecutables(check_set->t->getBuildSettings().TargetOS))
     {
         requires_manual_setup = true;
         executable = e.getOutputFile();
@@ -1338,7 +1346,7 @@ void SourceRuns::run() const
         return;
     }
 
-    if (!check_set->t->getSolution().getHostOs().canRunTargetExecutables(check_set->t->getBuildSettings().TargetOS))
+    if (!check_set->t->getContext().getHostOs().canRunTargetExecutables(check_set->t->getBuildSettings().TargetOS))
     {
         requires_manual_setup = true;
         executable = e.getOutputFile();

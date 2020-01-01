@@ -131,11 +131,11 @@ TargetBase &TargetBase::addTarget2(bool add, const TargetBaseTypePtr &t, const P
 {
     auto N = constructTargetName(Name);
 
-    t->pkg = std::make_unique<LocalPackage>(getSolution().getContext().getLocalStorage(), N, V);
+    t->pkg = std::make_unique<LocalPackage>(getMainBuild().getContext().getLocalStorage(), N, V);
 
     //TargetSettings tid{ getSolution().getSettings().getTargetSettings() };
     //t->ts = &tid;
-    t->ts = getSolution().getSettings();
+    t->ts = getSolution().module_data.current_settings;
     t->bs = t->ts;
 
     // set some general settings, then init, then register
@@ -200,8 +200,8 @@ TargetBase &TargetBase::addChild(const TargetBaseTypePtr &t)
     }
 
     bool dummy = false;
-    auto it = getSolution().getMainBuild().getTargets().find(t->getPackage());
-    if (it != getSolution().getMainBuild().getTargets().end())
+    auto it = getMainBuild().getTargets().find(t->getPackage());
+    if (it != getMainBuild().getTargets().end())
     {
         auto i = it->second.findEqual(t->ts);
         dummy = i != it->second.end();
@@ -215,7 +215,7 @@ TargetBase &TargetBase::addChild(const TargetBaseTypePtr &t)
         t->ts["dry-run"] = "true";
     }
 
-    getSolution().getModuleData().added_targets.push_back(t);
+    getSolution().module_data.added_targets.push_back(t);
     return *t;
 }
 
@@ -241,6 +241,11 @@ void TargetBase::setupTarget(TargetBaseType *t) const
         t->current_project = t->getPackage();
 }
 
+const SwContext &TargetBase::getContext() const
+{
+    return getMainBuild().getContext();
+}
+
 Build &TargetBase::getSolution()
 {
     return (Build &)*(build ? build : this);
@@ -249,11 +254,6 @@ Build &TargetBase::getSolution()
 const Build &TargetBase::getSolution() const
 {
     return build ? *build : (const Build &)*this;
-}
-
-path TargetBaseData::getServiceDir() const
-{
-    return BinaryDir / "misc";
 }
 
 int TargetBase::getCommandStorageType() const
@@ -390,7 +390,7 @@ std::vector<IDependency *> Target::getDependencies() const
 
 const TargetSettings &Target::getHostSettings() const
 {
-    auto &hs = getSolution().getContext().getHostSettings();
+    auto &hs = getMainBuild().getContext().getHostSettings();
 
     if (ts["use_same_config_for_host_dependencies"] == "true")
         return ts;
@@ -428,8 +428,8 @@ Program *Target::findProgramByExtension(const String &ext) const
     if (!u)
         return {};
     // resolve via getContext() because it might provide other version rather than cld.find(*u)
-    auto pkg = getSolution().getContext().resolve(*u);
-    auto &cld = getSolution().getChildren();
+    auto pkg = getMainBuild().getContext().resolve(*u);
+    auto &cld = getMainBuild().getTargets();
     auto tgt = cld.find(pkg, getHostSettings());
     if (!tgt)
         return {};
@@ -449,7 +449,7 @@ String Target::getConfig() const
 
 path Target::getTargetsDir() const
 {
-    auto d = getSolution().BinaryDir / "out" / getConfig();
+    auto d = getMainBuild().getBuildDirectory() / "out" / getConfig();
     write_file(d / "cfg.json", nlohmann::json::parse(ts.toString(TargetSettings::Json)).dump(4));
     return d;
 }
@@ -458,11 +458,6 @@ path Target::getTargetDirShort(const path &root) const
 {
     // make t subdir or tgt? or tgts?
     return root / "t" / getConfig() / shorten_hash(blake2b_512(getPackage().toString()), 6);
-}
-
-path Target::getTempDir() const
-{
-    return getServiceDir() / "temp";
 }
 
 path Target::getObjectDir() const
@@ -538,7 +533,7 @@ const BuildSettings &Target::getBuildSettings() const
 
 FileStorage &Target::getFs() const
 {
-    return getSolution().getContext().getFileStorage();
+    return getMainBuild().getContext().getFileStorage();
 }
 
 bool Target::init()
@@ -587,7 +582,7 @@ bool Target::init()
     }
     else if (isLocal())
     {
-        BinaryDir = getTargetDirShort(getSolution().BinaryDir);
+        BinaryDir = getTargetDirShort(getMainBuild().getBuildDirectory());
     }
     else /* package from network */
     {
@@ -598,7 +593,7 @@ bool Target::init()
     {
         // we doing some download on server or whatever
         // so, we do not want to touch real existing bdirs
-        BinaryDir = getSolution().BinaryDir / "dry" / shorten_hash(blake2b_512(BinaryDir.u8string()), 6);
+        BinaryDir = getMainBuild().getBuildDirectory() / "dry" / shorten_hash(blake2b_512(BinaryDir.u8string()), 6);
         fs::remove_all(BinaryDir);
         fs::create_directories(BinaryDir);
     }
@@ -796,7 +791,7 @@ path Target::getFile(const Target &dep, const path &fn)
 path Target::getFile(const DependencyPtr &dep, const path &fn)
 {
     addSourceDependency(dep); // main trick is to add a dependency
-    auto p = getSolution().getContext().resolve(dep->getPackage()).getDirSrc2();
+    auto p = getMainBuild().getContext().resolve(dep->getPackage()).getDirSrc2();
     if (!fn.empty())
         p /= fn;
     return p;

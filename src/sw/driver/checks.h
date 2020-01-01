@@ -22,6 +22,7 @@ namespace sw
 
 struct Build;
 struct SwBuild;
+struct SwContext;
 struct Checker;
 struct CheckSet;
 struct ChecksStorage;
@@ -344,12 +345,12 @@ private:
 
 struct SW_DRIVER_CPP_API Checker
 {
-    Build &build;
+    SwBuild &swbld;
 
     /// child sets
     std::unordered_map<String /* set name */, std::shared_ptr<CheckSet>> sets;
 
-    Checker(Build &build);
+    Checker(SwBuild &swbld);
 
     CheckSet &addSet(const String &name);
 

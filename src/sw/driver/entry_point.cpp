@@ -221,9 +221,7 @@ static std::tuple<FilesOrdered, UnresolvedPackages> getFileDependencies(const Sw
 
 std::vector<ITargetPtr> NativeTargetEntryPoint::loadPackages(SwBuild &swb, const TargetSettings &s, const PackageIdSet &pkgs, const PackagePath &prefix) const
 {
-    // TODO: memory leak
-    auto nb = new Build(swb);
-    auto &b = *nb;
+    Build b(swb);
 
     // we need to fix some settings before they go to targets
     auto settings = s;
@@ -237,14 +235,10 @@ std::vector<ITargetPtr> NativeTargetEntryPoint::loadPackages(SwBuild &swb, const
     settings["driver"].useInHash(false);
     settings["driver"].ignoreInComparison(true);
 
-    ModuleSwappableData module_data1;
-    module_data1.known_targets = pkgs;
-    module_data1.current_settings = settings;
-
-    b.module_data = &module_data1;
+    b.module_data.known_targets = pkgs;
+    b.module_data.current_settings = settings;
     b.NamePrefix = prefix;
 
-    // canonical makes disk letter uppercase on windows
     if (!source_dir.empty())
         b.setSourceDirectory(source_dir);
     else
@@ -253,7 +247,7 @@ std::vector<ITargetPtr> NativeTargetEntryPoint::loadPackages(SwBuild &swb, const
 
     loadPackages1(b);
 
-    return module_data1.added_targets;
+    return b.module_data.added_targets;
 }
 
 NativeBuiltinTargetEntryPoint::NativeBuiltinTargetEntryPoint(BuildFunction bf)
@@ -410,7 +404,7 @@ void PrepareConfigEntryPoint::commonActions2(Build &b, SharedLibraryTarget &lib)
         lib.Definitions["SW_PACKAGE_API"] = "__attribute__ ((visibility (\"default\")))";
     }
 
-    BuildSettings bs(b.getModuleData().current_settings);
+    BuildSettings bs(b.module_data.current_settings);
     if (bs.TargetOS.is(OSType::Windows))
         lib.NativeLinkerOptions::System.LinkLibraries.insert("Delayimp.lib");
 
