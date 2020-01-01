@@ -91,7 +91,7 @@ private:
     SwContext &swctx;
     path build_dir;
     TargetMap targets;
-    TargetMap targets_to_build;
+    mutable TargetMap targets_to_build;
     PackageIdSet known_packages;
     std::vector<InputWithSettings> inputs;
     TargetSettings build_settings;

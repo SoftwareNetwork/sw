@@ -552,6 +552,9 @@ Commands SwBuild::getCommands() const
         throw SW_RUNTIME_ERROR("Cannot make targets: " + s + ": no such targets");
     }
 
+    // update public ttb
+    targets_to_build = ttb;
+
     //
     auto cl_show_output = build_settings["show_output"] == "true";
     auto cl_write_output_to_file = build_settings["write_output_to_file"] == "true";
