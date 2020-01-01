@@ -160,7 +160,7 @@ void build(Solution &s)
             "org.sw.demo.preshing.junction-master"_dep,
             "org.sw.demo.boost.graph"_dep,
             "org.sw.demo.boost.serialization"_dep,
-            "org.sw.demo.microsoft.gsl-*"_dep,
+            "org.sw.demo.microsoft.gsl"_dep,
             "pub.egorpugin.primitives.emitter-master"_dep;
         //if (!s.Variables["SW_SELF_BUILD"])
         {
@@ -230,7 +230,6 @@ void build(Solution &s)
         }
     }
 
-#ifndef SW_DRIVER_ADD_SELF
     auto &client = p.addTarget<ExecutableTarget>("sw");
     auto &client_common = client.addTarget<StaticLibrary>("common");
     {
@@ -294,6 +293,7 @@ void build(Solution &s)
     if (s.getExternalVariables()["with-gui"] != "true")
         return;
 
+#ifndef SW_DRIVER_ADD_SELF
     auto &gui = client.addTarget<ExecutableTarget>("gui");
     {
         gui.PackageDefinitions = true;
@@ -302,10 +302,10 @@ void build(Solution &s)
         gui.CPPVersion = CPPLanguageStandard::CPP17;
         gui += client_common;
 
-        gui += "org.sw.demo.qtproject.qt.base.widgets-*"_dep;
-        gui += "org.sw.demo.qtproject.qt.base.winmain-*"_dep;
-        gui += "org.sw.demo.qtproject.qt.base.plugins.platforms.windows-*"_dep;
-        gui += "org.sw.demo.qtproject.qt.base.plugins.styles.windowsvista-*"_dep;
+        gui += "org.sw.demo.qtproject.qt.base.widgets"_dep;
+        gui += "org.sw.demo.qtproject.qt.base.winmain"_dep;
+        gui += "org.sw.demo.qtproject.qt.base.plugins.platforms.windows"_dep;
+        gui += "org.sw.demo.qtproject.qt.base.plugins.styles.windowsvista"_dep;
 
 #ifdef SW_CPP_DRIVER_API_VERSION
         if (auto L = gui.getSelectedTool()->as<VisualStudioLinker*>(); L)
@@ -314,8 +314,8 @@ void build(Solution &s)
 #endif
             L->Subsystem = vs::Subsystem::Windows;
 
-        qt_moc_rcc_uic("org.sw.demo.qtproject.qt-*"_dep, gui);
-        qt_tr("org.sw.demo.qtproject.qt-*"_dep, gui);
+        qt_moc_rcc_uic("org.sw.demo.qtproject.qt"_dep, gui);
+        qt_tr("org.sw.demo.qtproject.qt"_dep, gui);
     }
 #endif
 }
