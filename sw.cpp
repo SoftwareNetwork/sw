@@ -291,7 +291,7 @@ void build(Solution &s)
         }
     }
 
-    if (client.getBuildSettings().TargetOS.Type != OSType::Windows)
+    if (s.getExternalVariables()["with-gui"] != "true")
         return;
 
     auto &gui = client.addTarget<ExecutableTarget>("gui");
