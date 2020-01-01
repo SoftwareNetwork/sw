@@ -471,6 +471,7 @@ Commands SwBuild::getCommands() const
             throw SW_RUNTIME_ERROR("Target " + t + " specified both in include and exclude lists");
         in_ttb_exclude.insert(t);
     }
+    bool in_ttb_used = !in_ttb.empty();
 
     decltype(targets_to_build) ttb;
 
@@ -479,7 +480,7 @@ Commands SwBuild::getCommands() const
     // (e.g. build static png, zlib won't be built)
     for (auto &[p, tgts] : targets_to_build)
     {
-        if (!in_ttb.empty())
+        if (in_ttb_used)
         {
             auto i = in_ttb.find(p.toString());
             if (i == in_ttb.end())
