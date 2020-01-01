@@ -268,8 +268,10 @@ void VSGenerator::generate(const SwBuild &b)
     dl(ts, tables1);
     dl(ts.substr(0, ts.size() - 1), tables2);
 
+    auto &ttb = b.getTargetsToBuild();
+
     // get settings from targets to use settings equality later
-    for (auto &[pkg, tgts] : b.getTargetsToBuild())
+    for (auto &[pkg, tgts] : ttb)
     {
         decltype(s.settings) s2;
         for (auto &st : s.settings)
@@ -400,7 +402,7 @@ void VSGenerator::generate(const SwBuild &b)
         }
     }
 
-    for (auto &[pkg, tgts] : b.getTargetsToBuild())
+    for (auto &[pkg, tgts] : ttb)
     {
         // add project with settings
         for (auto &tgt : tgts)
@@ -527,7 +529,7 @@ void VSGenerator::generate(const SwBuild &b)
             d.build_rules.erase(d.main_command);
         }
     }
-    for (auto &[pkg, tgts] : b.getTargetsToBuild())
+    for (auto &[pkg, tgts] : ttb)
     {
         for (auto &tgt : tgts)
         {
@@ -542,7 +544,7 @@ void VSGenerator::generate(const SwBuild &b)
                     continue;
 
                 // filter out predefined & deps targets
-                auto &pd = b.getTargetsToBuild();
+                auto &pd = ttb;
                 if (pd.find(d->getUnresolvedPackage().ppath) == pd.end(d->getUnresolvedPackage().ppath))
                 {
                     data.dependencies.insert(&d->getTarget());
@@ -642,6 +644,8 @@ void VSGenerator::generate(const SwBuild &b)
         // create datas
         for (auto &st : s.settings)
             p.getData(st).type = p.type;
+
+        bool has_deps = false;
         for (auto &st : s.settings)
         {
             auto &d = p.getData(st);
@@ -669,6 +673,9 @@ void VSGenerator::generate(const SwBuild &b)
                     p1.dependencies.insert(&p); // add dependency for project
                 }
             }
+            if (deps.empty())
+                continue;
+            has_deps = true;
 
             String deps_str;
             for (auto &[d,s] : deps)
@@ -701,6 +708,9 @@ void VSGenerator::generate(const SwBuild &b)
             be.command = "sw @" + normalize_path(rsp);
             d.pre_build_event = be;
         }
+
+        if (!has_deps)
+            s.projects.erase(build_dependencies_name);
     }
 
     // add path dirs
@@ -721,7 +731,7 @@ void VSGenerator::generate(const SwBuild &b)
         }
 
         // set project dirs
-        for (auto &[pkg, tgts] : b.getTargetsToBuild())
+        for (auto &[pkg, tgts] : ttb)
         {
             for (auto &tgt : tgts)
             {
