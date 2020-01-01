@@ -63,7 +63,7 @@ void write_build_script(const std::unordered_map<UnresolvedPackage, LocalPackage
 
 //#ifdef _WIN32
     // goes before primitives
-    prepkgs.push_back("org.sw.demo.lexxmark.winflexbison.bison-master"s);
+    prepkgs.push_back("org.sw.demo.lexxmark.winflexbison.bison"s);
 //#endif
 
     // goes before grpc

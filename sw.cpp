@@ -1,7 +1,7 @@
 #pragma sw require header pub.egorpugin.primitives.tools.embedder-master
 #pragma sw require header org.sw.demo.google.grpc.cpp.plugin
-#pragma sw require header org.sw.demo.lexxmark.winflexbison.bison-master
-#pragma sw require header org.sw.demo.qtproject.qt.base.tools.moc-*
+#pragma sw require header org.sw.demo.lexxmark.winflexbison.bison
+#pragma sw require header org.sw.demo.qtproject.qt.base.tools.moc
 
 void configure(Build &s)
 {
@@ -196,7 +196,7 @@ void build(Solution &s)
         cpp_driver += "src/sw/driver/.*"_rr;
         cpp_driver -= "src/sw/driver/inserts/.*"_rr;
         embed("pub.egorpugin.primitives.tools.embedder-master"_dep, cpp_driver, "src/sw/driver/inserts/inserts.cpp.in");
-        gen_flex_bison("org.sw.demo.lexxmark.winflexbison-master"_dep, cpp_driver, "src/sw/driver/bazel/lexer.ll", "src/sw/driver/bazel/grammar.yy");
+        gen_flex_bison("org.sw.demo.lexxmark.winflexbison"_dep, cpp_driver, "src/sw/driver/bazel/lexer.ll", "src/sw/driver/bazel/grammar.yy");
         if (cpp_driver.getCompilerType() == CompilerType::MSVC)
             cpp_driver.CompileOptions.push_back("-bigobj");
         if (cpp_driver.getBuildSettings().TargetOS.Type == OSType::Windows)
