@@ -851,7 +851,7 @@ path NativeCompiledTarget::getOutputFileName(const path &root) const
     path p;
     if (IsConfig)
     {
-        p = getSolution().BinaryDir / "cfg" / getConfig() / ::sw::getOutputFileName(*this);
+        p = getMainBuild().getBuildDirectory() / "cfg" / getConfig() / ::sw::getOutputFileName(*this);
     }
     else if (auto d = getPackage().getOverriddenDir(); d)
     {
@@ -1140,8 +1140,8 @@ void NativeCompiledTarget::addPrecompiledHeader(PrecompiledHeader &p)
     auto gch_fn = pch.parent_path() / (p.header.filename().string() + ".gch");
     auto gch_fn_clang = pch.parent_path() / (p.header.filename().string() + ".pch");
 #ifndef _WIN32
-    pch_dir = getSolution().getContext().getLocalStorage().storage_dir_tmp;
-    gch_fn = getSolution().getContext().getLocalStorage().storage_dir_tmp / "sw/driver/sw.h.gch";
+    pch_dir = getContext().getLocalStorage().storage_dir_tmp;
+    gch_fn = getContext().getLocalStorage().storage_dir_tmp / "sw/driver/sw.h.gch";
 #endif
 
     auto setup_use_vc = [&force_include_pch_header_to_target_source_files, &p, &pch_fn, &pdb_fn](auto &c)
@@ -1561,7 +1561,6 @@ bool NativeCompiledTarget::hasCircularDependency() const
         1
         && getSelectedTool() == Linker.get()
         && circular_dependency
-        //|| (getSolution().getGenerator())
         ;
 }
 
@@ -1573,7 +1572,6 @@ bool NativeCompiledTarget::createWindowsRpath() const
         && !IsConfig
         && getBuildSettings().TargetOS.is(OSType::Windows)
         && getSelectedTool() == Linker.get()
-        //&& !getSolution().getGenerator()
         && !standalone
         ;
 }
@@ -3350,7 +3348,7 @@ path NativeCompiledTarget::getPatchDir(bool binary_dir) const
     else if (!isLocal())
         base = getPackage().getDirSrc();
     else
-        base = getSolution().BinaryDir;
+        base = getMainBuild().getBuildDirectory();
     return base / "patch";
 }
 
