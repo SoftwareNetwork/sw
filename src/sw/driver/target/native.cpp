@@ -1992,6 +1992,16 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
         if (auto t = d->getTarget().as<const NativeCompiledTarget*>(); t && !t->DryRun/* && t->getType() != TargetType::NativeExecutable*/)
             s["dependencies"]["link"][d->getTarget().getPackage().toString()] = d->getTarget().getSettings();
     }
+    for (auto &d : DummyDependencies)
+    {
+        // rename dummy?
+        s["dependencies"]["dummy"][d->getTarget().getPackage().toString()] = d->getTarget().getSettings();
+    }
+    for (auto &d : SourceDependencies)
+    {
+        // commented for now
+        //s["dependencies"]["source"].push_back(d->getTarget().getPackage().toString());
+    }
 
     // add ide settings to s["ide"]
     if (StartupProject)
