@@ -516,24 +516,30 @@ Commands SwBuild::getCommands() const
                 std::function<void(const TargetSettings &)> process_deps;
                 process_deps = [this, &gather_ttb, &process_deps, &ttb](const auto &s) mutable
                 {
-                    for (auto &[k, v] : s["dependencies"]["link"].getSettings())
+                    auto get_deps = [this, &gather_ttb, &process_deps, &ttb](const auto &in)
                     {
-                        auto i = getTargets().find(PackageId(k));
-                        if (i == getTargets().end())
-                            throw SW_RUNTIME_ERROR("dep not found");
-                        auto j = i->second.findSuitable(v.getSettings());
-                        if (j == i->second.end())
-                            throw SW_RUNTIME_ERROR("dep+settings not found");
+                        for (auto &[k, v] : in)
+                        {
+                            auto i = getTargets().find(PackageId(k));
+                            if (i == getTargets().end())
+                                throw SW_RUNTIME_ERROR("dep not found");
+                            auto j = i->second.findSuitable(v.getSettings());
+                            if (j == i->second.end())
+                                throw SW_RUNTIME_ERROR("dep+settings not found");
 
-                        auto m = ttb[PackageId(k)].findEqual((*j)->getSettings());
-                        if (m != ttb[PackageId(k)].end())
-                            continue;
-                        ttb[PackageId(k)].push_back(*j);
+                            auto m = ttb[PackageId(k)].findEqual((*j)->getSettings());
+                            if (m != ttb[PackageId(k)].end())
+                                continue;
+                            ttb[PackageId(k)].push_back(*j);
 
-                        const auto &s = (*j)->getInterfaceSettings();
-                        gather_ttb(s);
-                        process_deps(s);
-                    }
+                            const auto &s = (*j)->getInterfaceSettings();
+                            gather_ttb(s);
+                            process_deps(s);
+                        }
+                    };
+
+                    get_deps(s["dependencies"]["link"].getSettings());
+                    get_deps(s["dependencies"]["dummy"].getSettings());
                 };
 
                 process_deps(s);
