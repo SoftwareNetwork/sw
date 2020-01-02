@@ -508,6 +508,11 @@ const BuildSettings &Target::getSettings() const
     return ts->ss;
 }
 
+SwContext &Target::getContext() const
+{
+    return getSolution().getContext();
+}
+
 FileStorage &Target::getFs() const
 {
     return getSolution().swctx.getFileStorage();

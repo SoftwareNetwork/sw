@@ -274,6 +274,8 @@ struct SW_DRIVER_CPP_API Target : TargetBase, ProgramStorage, std::enable_shared
     path getObjectDir(const LocalPackage &pkg) const;
     static path getObjectDir(const LocalPackage &pkg, const String &cfg);
 
+    SwContext &getContext() const;
+
     using TargetBase::operator+=;
 
 protected:

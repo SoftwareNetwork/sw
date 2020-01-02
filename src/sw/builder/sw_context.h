@@ -37,6 +37,8 @@ struct SW_BUILDER_API SwBuilderContext : SwManagerContext
 
     void clearFileStorages();
 
+    const OS &getHostOs() const { return HostOS; }
+
 private:
     // keep order
     std::unique_ptr<ProgramVersionStorage> pvs;
