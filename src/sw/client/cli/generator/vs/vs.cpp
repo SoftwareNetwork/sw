@@ -1102,7 +1102,7 @@ void Project::emitProject(const VSGenerator &g) const
         auto rules_dir = get_int_dir(s) / "rules";
         auto commands_dir = get_int_dir(s) / "commands";
 
-        if (type != VSProjectType::Utility)
+        if (d.type != VSProjectType::Utility)
         {
             Files rules;
             for (auto &c : d.custom_rules)
