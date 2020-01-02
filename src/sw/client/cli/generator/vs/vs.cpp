@@ -541,23 +541,34 @@ void VSGenerator::generate(const SwBuild &b)
         {
             auto &p = s.projects.find(tgt->getPackage().toString())->second;
             auto &data = p.getData(tgt->getSettings());
-            auto deps = tgt->getDependencies();
-            for (auto &d : deps)
-            {
-                // filter out predefined targets
-                auto &pd1 = b.getContext().getPredefinedTargets();
-                if (pd1.find(d->getUnresolvedPackage().ppath) != pd1.end(d->getUnresolvedPackage().ppath))
-                    continue;
+            auto &is = tgt->getInterfaceSettings();
 
-                // filter out predefined & deps targets
-                auto &pd = ttb;
-                if (pd.find(d->getUnresolvedPackage().ppath) == pd.end(d->getUnresolvedPackage().ppath))
+            auto add_deps = [&ttb, &data, &s, &b, &p](auto &is)
+            {
+                for (auto &[id, v] : is)
                 {
-                    data.dependencies.insert(&d->getTarget());
-                    continue;
+                    PackageId d(id);
+                    // filter out predefined targets
+                    if (b.getContext().getPredefinedTargets().find(d) != b.getContext().getPredefinedTargets().end())
+                        continue;
+
+                    // filter out NON TARGET TO BUILD deps
+                    // add them to just deps list
+                    auto &pd = ttb;
+                    if (pd.find(d) == pd.end())
+                    {
+                        auto i = b.getTargets().find(d, v.getSettings());
+                        if (!i)
+                            throw SW_LOGIC_ERROR("Cannot find dependency: " + d.toString());
+                        data.dependencies.insert(i);
+                        continue;
+                    }
+                    p.dependencies.insert(&s.projects.find(d.toString())->second);
                 }
-                p.dependencies.insert(&s.projects.find(d->getTarget().getPackage().toString())->second);
-            }
+            };
+
+            add_deps(is["dependencies"]["link"].getSettings());
+            add_deps(is["dependencies"]["dummy"].getSettings());
 
             //
             if (!s.first_project && n_executables == 1 && tgt->getInterfaceSettings()["type"] == "native_executable")
