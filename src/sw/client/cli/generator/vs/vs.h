@@ -124,6 +124,7 @@ struct Directory : CommonProjectData
 
 using Command = const sw::builder::Command *;
 
+// per config data
 struct ProjectData
 {
     const sw::ITarget *target = nullptr;
@@ -135,7 +136,7 @@ struct ProjectData
     std::unordered_map<Command, path> build_rules;
     std::unordered_map<path, path> rewrite_dirs;
     std::optional<BuildEvent> pre_build_event;
-    std::set<const sw::ITarget *> dependencies;
+    std::set<const sw::ITarget *> dependencies; // per config deps
     path binary_dir;
     path binary_private_dir;
     String nmake_build;
@@ -146,7 +147,7 @@ struct ProjectData
 struct Project : CommonProjectData
 {
     // settings
-    std::set<const Project *> dependencies;
+    std::set<const Project *> dependencies; // solution deps
     Settings settings;
     std::map<sw::TargetSettings, ProjectData> data;
     bool build = false;
