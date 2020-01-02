@@ -450,7 +450,11 @@ String Target::getConfig() const
 path Target::getTargetsDir() const
 {
     auto d = getMainBuild().getBuildDirectory() / "out" / getConfig();
-    write_file(d / "cfg.json", nlohmann::json::parse(ts.toString(TargetSettings::Json)).dump(4));
+    try
+    {
+        write_file(d / "cfg.json", nlohmann::json::parse(ts.toString(TargetSettings::Json)).dump(4));
+    }
+    catch (...) {} // write once
     return d;
 }
 
