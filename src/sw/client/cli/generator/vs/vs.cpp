@@ -268,7 +268,13 @@ void VSGenerator::generate(const SwBuild &b)
     dl(ts, tables1);
     dl(ts.substr(0, ts.size() - 1), tables2);
 
-    auto &ttb = b.getTargetsToBuild();
+    TargetMap ttb;
+    for (auto &[pkg, tgts] : b.getTargetsToBuild())
+    {
+        if (pkg.getPath().isAbsolute())
+            continue;
+        ttb[pkg] = tgts;
+    }
 
     // get settings from targets to use settings equality later
     for (auto &[pkg, tgts] : ttb)
