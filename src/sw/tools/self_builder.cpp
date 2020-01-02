@@ -70,7 +70,7 @@ void write_build_script(const std::unordered_map<UnresolvedPackage, LocalPackage
     std::vector<UnresolvedPackage> prepkgs
     {
         {"org.sw.demo.ragel"},
-        {"org.sw.demo.lexxmark.winflexbison.bison-master"},
+        {"org.sw.demo.lexxmark.winflexbison.bison"},
         {"org.sw.demo.google.protobuf.protobuf"},
         {"org.sw.demo.google.grpc.cpp.plugin"},
         {"pub.egorpugin.primitives.filesystem-master"},
