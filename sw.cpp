@@ -290,7 +290,9 @@ void build(Solution &s)
         }
     }
 
+#ifdef SW_CPP_DRIVER_API_VERSION
     if (s.getExternalVariables()["with-gui"] != "true")
+#endif
         return;
 
 #ifndef SW_DRIVER_ADD_SELF
