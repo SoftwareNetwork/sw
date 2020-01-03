@@ -232,6 +232,9 @@ struct TargetEntryPoint
 
     [[nodiscard]]
     virtual std::vector<ITargetPtr> loadPackages(SwBuild &, const TargetSettings &, const PackageIdSet &allowed_packages, const PackagePath &prefix) const = 0;
+
+    // add get group number api?
+    // or entry point hash?
 };
 
 using TargetEntryPointPtr = std::shared_ptr<TargetEntryPoint>;
