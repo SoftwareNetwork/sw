@@ -11,7 +11,6 @@
 #include "functions.h"
 #include "inserts.h"
 #include "module.h"
-#include "run.h"
 #include "suffix.h"
 #include "sw_abi_version.h"
 #include "target/native.h"

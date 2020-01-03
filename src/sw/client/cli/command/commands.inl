@@ -51,6 +51,7 @@ SUBCOMMAND(override) COMMA
 //SUBCOMMAND(pack, "Used to prepare distribution packages.") COMMA
 SUBCOMMAND(remote) COMMA
 SUBCOMMAND(remove) COMMA
+SUBCOMMAND(run) COMMA
 SUBCOMMAND(setup) COMMA
 SUBCOMMAND(test) COMMA
 SUBCOMMAND(update) COMMA

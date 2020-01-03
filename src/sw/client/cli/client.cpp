@@ -361,10 +361,6 @@ int main(int argc, char **argv)
     return r;
 }
 
-//
-extern bool gRunAppInContainer;
-static ::cl::opt<bool, true> run_app_in_container("in-container", ::cl::desc("Print file with build graph"), ::cl::location(gRunAppInContainer), ::cl::sub(subcommand_uri));
-
 bool gUseLockFile;
 static ::cl::opt<bool, true> use_lock_file("l", ::cl::desc("Use lock file"), ::cl::location(gUseLockFile));// , cl::init(true));
 

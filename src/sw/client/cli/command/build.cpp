@@ -59,7 +59,8 @@ static cl::opt<bool> cl_show_output("show-output");
 static cl::opt<bool> cl_write_output_to_file("write-output-to-file");
 //static cl::opt<bool> print_graph("print-graph", cl::desc("Print file with build graph"));
 
-static ::cl::list<String> targets_to_build("target", ::cl::desc("Targets to build"));
+Strings targets_to_build;
+static ::cl::list<String, Strings> cl_targets_to_build("target", ::cl::desc("Targets to build"), ::cl::location(targets_to_build));
 static ::cl::list<String> targets_to_ignore("exclude-target", ::cl::desc("Targets to ignore"));
 
 static ::cl::list<String> Dvariables("D", ::cl::desc("Input variables"), ::cl::ZeroOrMore, ::cl::Prefix);

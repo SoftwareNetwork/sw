@@ -1,8 +1,20 @@
-// Copyright (C) 2017-2018 Egor Pugin <egor.pugin@gmail.com>
-//
-// This Source Code Form is subject to the terms of the Mozilla Public
-// License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+/*
+ * SW - Build System and Package Manager
+ * Copyright (C) 2017-2020 Egor Pugin
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
 
 /*
 TODO:
@@ -13,7 +25,17 @@ TODO:
 #ifdef _WIN32
 #undef _WIN32_WINNT
 #define _WIN32_WINNT 0x0602
+#endif
 
+#include "commands.h"
+
+#include <sw/manager/storage.h>
+
+#include <primitives/command.h>
+
+#include <vector>
+
+#ifdef _WIN32
 #include <windows.h>
 #include <strsafe.h>
 #include <Sddl.h>
@@ -24,15 +46,17 @@ TODO:
 #pragma comment(lib, "Userenv.lib")
 #endif
 
-#include "run.h"
+DEFINE_SUBCOMMAND(run, "Run target (if applicable).");
 
-#include <sw/manager/storage.h>
+extern Strings targets_to_build;
 
-#include <primitives/command.h>
+static ::cl::opt<bool> run_app_in_container("in-container", ::cl::desc("Run app in secure container"), ::cl::sub(subcommand_run));
+static ::cl::opt<path> wdir("wdir", ::cl::desc("Working directory"), ::cl::sub(subcommand_run));
+//static ::cl::list<String> env("env", ::cl::desc("Env vars"), ::cl::sub(subcommand_run));
+static ::cl::opt<String> target(::cl::Positional, ::cl::Required, ::cl::desc("Target to run"), ::cl::sub(subcommand_run));
+static ::cl::list<String> args(::cl::Positional, ::cl::ConsumeAfter, ::cl::desc("Command args"), ::cl::sub(subcommand_run));
 
-bool gRunAppInContainer;
-
-#include <vector>
+static void run(const sw::LocalPackage &pkg, primitives::Command &c);
 
 #ifdef _WIN32
 using CreateAppF =
@@ -52,9 +76,6 @@ HRESULT
     _Outptr_ PSID *ppsidAppContainerSid);
 #endif
 
-namespace sw
-{
-
 #ifdef _WIN32
 //List of allowed capabilities for the application
 // https://docs.microsoft.com/en-us/windows/desktop/api/winnt/ne-winnt-well_known_sid_type
@@ -63,10 +84,10 @@ std::vector<WELL_KNOWN_SID_TYPE> app_capabilities
     //WinCapabilityPrivateNetworkClientServerSid,
 };
 
-BOOL SetSecurityCapabilities(PSID container_sid, SECURITY_CAPABILITIES *capabilities, PDWORD num_capabilities);
-BOOL GrantNamedObjectAccess(PSID appcontainer_sid, const path &object_name, SE_OBJECT_TYPE object_type, DWORD access_mask);
+static BOOL SetSecurityCapabilities(PSID container_sid, SECURITY_CAPABILITIES *capabilities, PDWORD num_capabilities);
+static BOOL GrantNamedObjectAccess(PSID appcontainer_sid, const path &object_name, SE_OBJECT_TYPE object_type, DWORD access_mask);
 
-void run(const LocalPackage &pkg, primitives::Command &c)
+static void run(const sw::LocalPackage &pkg, primitives::Command &c)
 {
     PSID sid = NULL;
     SECURITY_CAPABILITIES SecurityCapabilities = { 0 };
@@ -95,12 +116,12 @@ void run(const LocalPackage &pkg, primitives::Command &c)
         throw SW_RUNTIME_ERROR("Cannot load Userenv.dll");
     auto create_app = (CreateAppF)GetProcAddress(userenv, "CreateAppContainerProfile");
     auto derive_app = (DeriveAppF)GetProcAddress(userenv, "DeriveAppContainerSidFromAppContainerName");
-    if (gRunAppInContainer && !(create_app && derive_app))
+    if (run_app_in_container && !(create_app && derive_app))
         throw SW_RUNTIME_ERROR("Cannot launch app in container");
 
     do
     {
-        if (gRunAppInContainer)
+        if (run_app_in_container)
         {
             auto result = create_app(container_name, pkg_name, container_desc, NULL, 0, &sid);
             if (!SUCCEEDED(result))
@@ -130,14 +151,14 @@ void run(const LocalPackage &pkg, primitives::Command &c)
             // set permissions
             auto paths = { c.working_directory/*, getStorage().storage_dir_bin*/, pkg.getDirSrc2() };
             if (!std::all_of(paths.begin(), paths.end(), [&sid, &err](auto &p)
+            {
+                if (!GrantNamedObjectAccess(sid, p, SE_FILE_OBJECT, FILE_ALL_ACCESS & ~DELETE))
                 {
-                    if (!GrantNamedObjectAccess(sid, p, SE_FILE_OBJECT, FILE_ALL_ACCESS & ~DELETE))
-                    {
-                        snprintf(err.data(), err.size(), "Failed to grant explicit access to %s\n", p.u8string().c_str());
-                        return false;
-                    }
-                    return true;
-                }))
+                    snprintf(err.data(), err.size(), "Failed to grant explicit access to %s\n", p.u8string().c_str());
+                    return false;
+                }
+                return true;
+            }))
                 break;
 
             int n = 1 + 1; // +1 for uv std handles
@@ -187,7 +208,7 @@ void run(const LocalPackage &pkg, primitives::Command &c)
     }
 }
 
-BOOL SetSecurityCapabilities(PSID container_sid, SECURITY_CAPABILITIES *capabilities, PDWORD num_capabilities)
+static BOOL SetSecurityCapabilities(PSID container_sid, SECURITY_CAPABILITIES *capabilities, PDWORD num_capabilities)
 {
     DWORD sid_size = SECURITY_MAX_SID_SIZE;
     DWORD num_capabilities_ = app_capabilities.size() * sizeof(WELL_KNOWN_SID_TYPE) / sizeof(DWORD);
@@ -231,7 +252,7 @@ BOOL SetSecurityCapabilities(PSID container_sid, SECURITY_CAPABILITIES *capabili
     return success;
 }
 
-BOOL GrantNamedObjectAccess(PSID appcontainer_sid, const path &object_name, SE_OBJECT_TYPE object_type, DWORD access_mask)
+static BOOL GrantNamedObjectAccess(PSID appcontainer_sid, const path &object_name, SE_OBJECT_TYPE object_type, DWORD access_mask)
 {
     EXPLICIT_ACCESS explicit_access;
     PACL original_acl = NULL, new_acl = NULL;
@@ -277,7 +298,7 @@ BOOL GrantNamedObjectAccess(PSID appcontainer_sid, const path &object_name, SE_O
 
     // MSDN: no need to free original_acl
     //if (original_acl)
-        //LocalFree(original_acl);
+    //LocalFree(original_acl);
 
     if (new_acl)
         LocalFree(new_acl);
@@ -285,10 +306,30 @@ BOOL GrantNamedObjectAccess(PSID appcontainer_sid, const path &object_name, SE_O
     return success;
 }
 #else
-void run(const PackageId &pkg, primitives::Command &c)
+static void run(const PackageId &pkg, primitives::Command &c)
 {
     throw SW_RUNTIME_ERROR("not implemented");
 }
 #endif
 
+SUBCOMMAND_DECL(run)
+{
+    targets_to_build.push_back(target);
+
+    auto swctx = createSwContext();
+    auto b = setBuildArgsAndCreateBuildAndPrepare(*swctx, { "." });
+    b->build();
+
+    // take last target
+    auto i = b->getTargetsToBuild()[sw::PackageId(target)].end() - 1;
+
+    primitives::Command c;
+    if (!wdir.empty())
+        c.working_directory = wdir;
+    c.setProgram((*i)->getInterfaceSettings()["output_file"].getValue());
+    for (auto &a : args)
+        c.push_back(a);
+
+    sw::LocalPackage p(swctx->getLocalStorage(), target);
+    run(p, c);
 }
