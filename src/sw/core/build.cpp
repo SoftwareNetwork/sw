@@ -775,7 +775,7 @@ void SwBuild::saveExecutionPlan(const path &in) const
 
 void SwBuild::runSavedExecutionPlan(const path &in) const
 {
-    auto p = ExecutionPlan::load(in, getContext());
+    auto [cmds, p] = ExecutionPlan::load(in, getContext());
 
     // change state
     overrideBuildState(BuildState::Prepared);

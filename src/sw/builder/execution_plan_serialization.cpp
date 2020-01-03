@@ -35,10 +35,10 @@ enum SerializationType
     BoostSerializationTextArchive,
 };
 
-ExecutionPlan ExecutionPlan::load(const path &p, const SwBuilderContext &swctx, int type)
+std::tuple<std::unordered_set<std::shared_ptr<builder::Command>>, ExecutionPlan>
+ExecutionPlan::load(const path &p, const SwBuilderContext &swctx, int type)
 {
-    // TODO: memory leak
-    auto &commands = *new std::unordered_set<std::shared_ptr<builder::Command>>;
+    std::unordered_set<std::shared_ptr<builder::Command>> commands;
 
     auto load = [&commands](auto &ar)
     {
@@ -74,10 +74,8 @@ ExecutionPlan ExecutionPlan::load(const path &p, const SwBuilderContext &swctx, 
 
     // some setup
     for (auto &c : commands)
-    {
         c->setContext(swctx);
-    }
-    return create(commands);
+    return { commands, create(commands) };
 }
 
 void ExecutionPlan::save(const path &p, int type) const

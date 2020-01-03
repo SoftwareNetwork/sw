@@ -679,7 +679,7 @@ SUBCOMMAND_DECL2(build)
     {
         auto b = createBuild(swctx);
         b->overrideBuildState(sw::BuildState::Prepared);
-        auto p = sw::ExecutionPlan::load(build_explan, swctx);
+        auto [cmds, p] = sw::ExecutionPlan::load(build_explan, swctx);
         b->execute(p);
         return;
     }
