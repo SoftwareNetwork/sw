@@ -41,7 +41,6 @@ SUBCOMMAND(configure) COMMA
 SUBCOMMAND(create) COMMA
 SUBCOMMAND(generate) COMMA
 SUBCOMMAND(fetch) COMMA
-//SUBCOMMAND(ide, "Used to invoke sw application to do IDE tasks: generate project files, clean, rebuild etc.") COMMA
 SUBCOMMAND(install) COMMA
 SUBCOMMAND(i) COMMA // alias for install
 SUBCOMMAND(integrate) COMMA

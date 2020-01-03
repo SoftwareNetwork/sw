@@ -48,9 +48,6 @@ static ::cl::opt<bool, true> output_no_config_subdir("output-no-config-subdir", 
 ::cl::opt<path> check_stamp_list("check-stamp-list", ::cl::sub(subcommand_generate), ::cl::Hidden);
 String vs_zero_check_stamp_ext = ".stamp";
 
-// generated solution dir instead of .sw/...
-//static ::cl::opt<String> generate_binary_dir("B", ::cl::desc("Explicitly specify a build directory."), ::cl::sub(subcommand_build), ::cl::init(SW_BINARY_DIR));
-
 extern ::cl::list<String> compiler;
 extern ::cl::list<String> configuration;
 

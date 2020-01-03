@@ -362,13 +362,6 @@ int main(int argc, char **argv)
 }
 
 //
-//static ::cl::list<path> build_arg0(::cl::Positional, ::cl::desc("Files or directoris to build"));
-
-// ide commands
-//static ::cl::opt<String> ide_rebuild("rebuild", ::cl::desc("Rebuild target"), ::cl::sub(subcommand_ide));
-//static ::cl::opt<String> ide_clean("clean", ::cl::desc("Clean target"), ::cl::sub(subcommand_ide));
-
-// uri commands
 extern bool gRunAppInContainer;
 static ::cl::opt<bool, true> run_app_in_container("in-container", ::cl::desc("Print file with build graph"), ::cl::location(gRunAppInContainer), ::cl::sub(subcommand_uri));
 
@@ -384,12 +377,6 @@ int sw_main(const Strings &args)
         SW_UNIMPLEMENTED;
         //getPackageStore().loadLockFile(fs::current_path() / "sw.lock");
     }
-
-    /*if (!build_arg0.empty())
-    {
-        sw::build(Files{ build_arg0.begin(), build_arg0.end() });
-        return 0;
-    }*/
 
     if (0);
 #define SUBCOMMAND(n) else if (subcommand_##n) { cli_##n(); return 0; }
@@ -436,33 +423,6 @@ void setup_log(const std::string &log_level, bool simple)
         About,
         BuildArchive, // binary archive?
     };
-}*/
-
-/*SUBCOMMAND_DECL(ide)
-{
-    auto swctx = createSwContext();
-    if (!target_build.empty())
-    {
-        try_single_process_job(fs::current_path() / SW_BINARY_DIR / "ide", [&swctx]()
-        {
-            auto s = sw::load(swctx, working_directory);
-            auto &b = *((sw::Build*)s.get());
-            b.ide = true;
-            auto pkg = sw::extractPackageIdFromString(target_build);
-            b.TargetsToBuild[pkg] = b.children[pkg];
-            s->execute();
-        });
-    }
-    else
-    {
-        single_process_job(fs::current_path() / SW_BINARY_DIR / "ide", [&swctx]()
-        {
-            auto s = sw::load(swctx, working_directory);
-            auto &b = *((sw::Build*)s.get());
-            b.ide = true;
-            s->execute();
-        });
-    }
 }*/
 
 /*SUBCOMMAND_DECL(pack)
