@@ -570,6 +570,7 @@ Commands SwBuild::getCommands() const
     bool copy_deps_of_local_pkgs = copy_dir.empty();
     std::unordered_map<path, path> copy_files;
 
+    // gather commands
     Commands cmds;
     for (auto &[p, tgts] : ttb)
     {
