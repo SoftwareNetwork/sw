@@ -33,8 +33,8 @@ extern ::cl::opt<bool> build_after_fetch;
 
 static ::cl::list<String> build_arg(::cl::Positional, ::cl::desc("Files or directories to build (paths to config)"), ::cl::sub(subcommand_build));
 
-static ::cl::opt<String> build_source_dir("S", ::cl::desc("Explicitly specify a source directory."), ::cl::sub(subcommand_build), ::cl::init("."));
-static ::cl::opt<String> build_binary_dir("B", ::cl::desc("Explicitly specify a build directory."), ::cl::sub(subcommand_build), ::cl::init(SW_BINARY_DIR));
+//static ::cl::opt<String> build_source_dir("S", ::cl::desc("Explicitly specify a source directory."), ::cl::sub(subcommand_build), ::cl::init("."));
+//static ::cl::opt<String> build_binary_dir("B", ::cl::desc("Explicitly specify a build directory."), ::cl::sub(subcommand_build), ::cl::init(SW_BINARY_DIR));
 
 static ::cl::opt<bool> build_fetch("fetch", ::cl::desc("Fetch sources, then build"), ::cl::sub(subcommand_build));
 static ::cl::opt<path> build_explan("ef", ::cl::desc("Build execution plan from specified file"), ::cl::sub(subcommand_build));
@@ -606,7 +606,7 @@ static void isolated_build1(sw::SwContext &swctx)
     LOG_INFO(logger, "Copying files");
 
     auto m = getPackages(b, srcs);
-    auto d = fs::current_path() / SW_BINARY_DIR / "isolated";
+    auto d = b.getBuildDirectory() / "isolated";
 
     for (const auto &[pkg, tgts] : b.getTargetsToBuild())
     {

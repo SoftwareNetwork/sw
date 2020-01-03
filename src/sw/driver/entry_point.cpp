@@ -495,7 +495,7 @@ void PrepareConfigEntryPoint::many2one(Build &b, const std::unordered_set<LocalP
         if (is_under_root(fn, b.getContext().getLocalStorage().storage_dir_pkg))
             h = fn.parent_path().parent_path() / "auxl" / ("defs" + hash + ".h");
         else
-            h = fn.parent_path() / SW_BINARY_DIR / "auxl" / ("defs" + hash + ".h");
+            h = b.getMainBuild().getBuildDirectory() / "auxl" / ("defs" + hash + ".h");
         primitives::CppEmitter ctx;
 
         ctx.addLine("#define configure configure" + hash);

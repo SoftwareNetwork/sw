@@ -54,7 +54,7 @@ static sw::SourceDirMap getSources(sw::SwContext &swctx)
     b.loadInputs();
     b.setTargetsToBuild();
 
-    auto d = fs::current_path() / SW_BINARY_DIR / "src";
+    auto d = b.getBuildDirectory() / "src";
 
     sw::SourceDirMap srcs;
     std::unordered_set<sw::SourcePtr> sources;
@@ -73,7 +73,7 @@ static sw::SourceDirMap getSources(sw::SwContext &swctx)
     }
 
     sw::SourceDownloadOptions opts;
-    opts.root_dir = fs::current_path() / SW_BINARY_DIR;
+    opts.root_dir = b.getBuildDirectory();
     opts.ignore_existing_dirs = true;
     opts.existing_dirs_age = std::chrono::hours(1);
 
