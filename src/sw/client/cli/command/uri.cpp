@@ -140,8 +140,7 @@ F(run)
     auto d = swctx->getLocalStorage().storage_dir_tmp / "build";// / fs::unique_path();
     fs::create_directories(d);
     ScopedCurrentPath scp(d, CurrentPathScope::All);
-    SW_UNIMPLEMENTED;
-    //sw::run(swctx, p);
+    run(*swctx, p);
 }
 
 F(upload)

@@ -2007,6 +2007,19 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
     for (auto &f : configure_files)
         s["ide"]["configure_files"].push_back(normalize_path(f));
 
+    if (getType() == TargetType::NativeExecutable)
+    {
+        builder::Command c;
+        setupCommandForRun(c);
+        s["run_command"]["program"] = normalize_path(getOutputFile());
+        for (auto &a : c.getArguments())
+            s["run_command"]["arguments"].push_back(a->toString());
+        for (auto &[k, v] : c.environment)
+            s["run_command"]["environment"][k] = v;
+        if (c.create_new_console)
+            s["run_command"]["create_new_console"] = "true";
+    }
+
     return s;
 }
 

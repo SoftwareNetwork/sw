@@ -104,8 +104,9 @@ static cl::opt<path> host_settings_file("host-settings-file", cl::desc("Read hos
 static cl::list<String> input_settings_pairs("input-settings-pairs", cl::value_desc("<input settings>"), cl::desc("Read settings from json string"), ::cl::sub(subcommand_build), ::cl::SpaceSeparated);
 
 // static/shared
-static cl::opt<bool> static_build("static-build", cl::desc("Set static build"));
-static cl::alias static_build2("static", cl::desc("Alias for -static-build"), cl::aliasopt(static_build));
+static bool static_build = false; // do not expose for now
+static cl::opt<bool, true> cl_static_build("static-build", cl::desc("Set static build"), ::cl::location(static_build));
+static cl::alias static_build2("static", cl::desc("Alias for -static-build"), cl::aliasopt(cl_static_build));
 static cl::opt<bool> shared_build("shared-build", cl::desc("Set shared build (default)"));
 static cl::alias shared_build2("shared", cl::desc("Alias for -shared-build"), cl::aliasopt(shared_build));
 

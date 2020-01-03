@@ -50,7 +50,8 @@ DEFINE_SUBCOMMAND(run, "Run target (if applicable).");
 
 extern Strings targets_to_build;
 
-static ::cl::opt<bool> run_app_in_container("in-container", ::cl::desc("Run app in secure container"), ::cl::sub(subcommand_run));
+bool gRunAppInContainer = false;
+static ::cl::opt<bool, true> run_app_in_container("in-container", ::cl::desc("Run app in secure container"), ::cl::sub(subcommand_run), ::cl::location(gRunAppInContainer));
 static ::cl::opt<path> wdir("wdir", ::cl::desc("Working directory"), ::cl::sub(subcommand_run));
 //static ::cl::list<String> env("env", ::cl::desc("Env vars"), ::cl::sub(subcommand_run));
 static ::cl::opt<String> target(::cl::Positional, ::cl::Required, ::cl::desc("Target to run"), ::cl::sub(subcommand_run));
@@ -116,12 +117,12 @@ static void run(const sw::LocalPackage &pkg, primitives::Command &c)
         throw SW_RUNTIME_ERROR("Cannot load Userenv.dll");
     auto create_app = (CreateAppF)GetProcAddress(userenv, "CreateAppContainerProfile");
     auto derive_app = (DeriveAppF)GetProcAddress(userenv, "DeriveAppContainerSidFromAppContainerName");
-    if (run_app_in_container && !(create_app && derive_app))
+    if (gRunAppInContainer && !(create_app && derive_app))
         throw SW_RUNTIME_ERROR("Cannot launch app in container");
 
     do
     {
-        if (run_app_in_container)
+        if (gRunAppInContainer)
         {
             auto result = create_app(container_name, pkg_name, container_desc, NULL, 0, &sid);
             if (!SUCCEEDED(result))
@@ -149,17 +150,47 @@ static void run(const sw::LocalPackage &pkg, primitives::Command &c)
             }
 
             // set permissions
-            auto paths = { c.working_directory/*, getStorage().storage_dir_bin*/, pkg.getDirSrc2() };
-            if (!std::all_of(paths.begin(), paths.end(), [&sid, &err](auto &p)
+            auto grant_perms = [&sid, &err](const Files &paths, DWORD mode)
             {
-                if (!GrantNamedObjectAccess(sid, p, SE_FILE_OBJECT, FILE_ALL_ACCESS & ~DELETE))
+                if (!std::all_of(paths.begin(), paths.end(), [&sid, &err, mode](auto &p)
                 {
-                    snprintf(err.data(), err.size(), "Failed to grant explicit access to %s\n", p.u8string().c_str());
+                    if (!GrantNamedObjectAccess(sid, p, SE_FILE_OBJECT, mode))
+                    {
+                        snprintf(err.data(), err.size(), "Failed to grant explicit access to '%s'\n", p.u8string().c_str());
+                        return false;
+                    }
+                    return true;
+                }))
+                {
                     return false;
                 }
                 return true;
-            }))
+            };
+
+            //
+            Files paths;
+            if (!c.working_directory.empty())
+                paths.insert(c.working_directory);
+            //paths.push_back(getStorage().storage_dir_bin);
+            paths.insert(pkg.getDirSrc2());
+
+            if (!grant_perms(paths, FILE_ALL_ACCESS & ~DELETE))
                 break;
+
+            if (c.environment.find("Path") != c.environment.end())
+            {
+                auto dirs = split_string(c.environment["Path"], ";");
+                Files paths;
+                for (auto &d : dirs)
+                {
+                    // we cannot set rights on c:\\windows
+                    if (boost::to_upper_copy(normalize_path_windows(d)).find("C:\\WINDOWS") == 0)
+                        continue;
+                    paths.insert(d);
+                }
+                if (!grant_perms(paths, FILE_GENERIC_READ))
+                    break;
+            }
 
             int n = 1 + 1; // +1 for uv std handles
             InitializeProcThreadAttributeList(NULL, n, NULL, &attribute_size);
@@ -179,7 +210,6 @@ static void run(const sw::LocalPackage &pkg, primitives::Command &c)
             }
 
             c.attribute_list = lpAttributeList;
-            c.detached = false;
         }
 
         error_code ec;
@@ -312,24 +342,62 @@ static void run(const PackageId &pkg, primitives::Command &c)
 }
 #endif
 
-SUBCOMMAND_DECL(run)
+void run(sw::SwContext &swctx, const sw::PackageId &pkg)
 {
-    targets_to_build.push_back(target);
+    targets_to_build.push_back(pkg.toString());
 
-    auto swctx = createSwContext();
-    auto b = setBuildArgsAndCreateBuildAndPrepare(*swctx, { "." });
+    Strings inputs;
+    if (pkg.getPath().isRelative())
+        inputs.push_back(".");
+    else
+        inputs.push_back(pkg.toString());
+
+    auto b = setBuildArgsAndCreateBuildAndPrepare(swctx, inputs);
     b->build();
 
+    if (b->getTargetsToBuild()[pkg].empty())
+        throw SW_RUNTIME_ERROR("No such target: " + pkg.toString());
+
     // take last target
-    auto i = b->getTargetsToBuild()[sw::PackageId(target)].end() - 1;
+    auto i = b->getTargetsToBuild()[pkg].end() - 1;
+    auto &s = (*i)->getInterfaceSettings();
+    if (!s["run_command"])
+        throw SW_RUNTIME_ERROR("Target is not runnable: " + pkg.toString());
+    auto &sc = s["run_command"].getSettings();
 
     primitives::Command c;
     if (!wdir.empty())
         c.working_directory = wdir;
-    c.setProgram((*i)->getInterfaceSettings()["output_file"].getValue());
-    for (auto &a : args)
-        c.push_back(a);
+    c.setProgram(sc["program"].getValue());
+    if (sc["arguments"])
+    {
+        for (auto &a : sc["arguments"].getArray())
+            c.push_back(a);
+    }
+    if (sc["environment"])
+    {
+        for (auto &[k, v] : sc["environment"].getSettings())
+            c.environment[k] = v.getValue();
+    }
+    //if (sc["create_new_console"] && sc["create_new_console"] == "true")
+        //c.create_new_console = true;
 
-    sw::LocalPackage p(swctx->getLocalStorage(), target);
+    // set flags always
+    c.create_new_console = true;
+    // detach is needed because only it helps spawned program to outlive sw app
+    c.detached = true;
+
+    sw::LocalPackage p(swctx.getLocalStorage(), pkg);
     run(p, c);
+}
+
+SUBCOMMAND_DECL(run)
+{
+    auto swctx = createSwContext();
+    cli_run(*swctx);
+}
+
+SUBCOMMAND_DECL2(run)
+{
+    run(swctx, target);
 }
