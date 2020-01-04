@@ -47,6 +47,14 @@ static ::cl::list<String> uri_args(::cl::Positional, ::cl::desc("sw uri argument
 #define F(n, ...) static void n(F_ARGS, ##__VA_ARGS__)
 #endif
 
+static void setup_console()
+{
+#ifdef _WIN32
+    //SetupConsole();
+    //bUseSystemPause = true;
+#endif
+}
+
 F(open_dir, const path &d)
 {
 #ifdef _WIN32
@@ -100,8 +108,7 @@ F(install)
 #ifdef _WIN32
     if (!sdb.isPackageInstalled(p))
     {
-        SetupConsole();
-        bUseSystemPause = true;
+        setup_console();
         swctx->install(sw::UnresolvedPackages{ sw::UnresolvedPackage{p.getPath(), p.getVersion()} });
     }
     else
@@ -118,10 +125,7 @@ F(remove)
 
 F(build)
 {
-#ifdef _WIN32
-    SetupConsole();
-    bUseSystemPause = true;
-#endif
+    setup_console();
     auto d = swctx->getLocalStorage().storage_dir_tmp / "build";// / fs::unique_path();
     fs::create_directories(d);
     ScopedCurrentPath scp(d, CurrentPathScope::All);
@@ -133,10 +137,12 @@ F(build)
 
 F(run)
 {
-#ifdef _WIN32
-    SetupConsole();
-    bUseSystemPause = true;
-#endif
+    setup_console();
+
+    // simple protection for now
+    if (p.getPath().isRelative() || p.getPath().getOwner() != "sw")
+        return;
+
     auto d = swctx->getLocalStorage().storage_dir_tmp / "build";// / fs::unique_path();
     fs::create_directories(d);
     ScopedCurrentPath scp(d, CurrentPathScope::All);

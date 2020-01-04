@@ -171,8 +171,8 @@ static void run(const sw::LocalPackage &pkg, primitives::Command &c)
             Files paths;
             if (!c.working_directory.empty())
                 paths.insert(c.working_directory);
-            //paths.push_back(getStorage().storage_dir_bin);
             paths.insert(pkg.getDirSrc2());
+            paths.insert(normalize_path_windows(path(c.getProgram()).parent_path()));
 
             if (!grant_perms(paths, FILE_ALL_ACCESS & ~DELETE))
                 break;
@@ -210,6 +210,8 @@ static void run(const sw::LocalPackage &pkg, primitives::Command &c)
             }
 
             c.attribute_list = lpAttributeList;
+            // this allows us to see error message
+            c.detached = false;
         }
 
         error_code ec;
