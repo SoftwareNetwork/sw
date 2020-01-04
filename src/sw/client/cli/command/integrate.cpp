@@ -323,18 +323,11 @@ SUBCOMMAND_DECL(integrate)
             ctx.decreaseIndent("]:");
             ctx.increaseIndent();
 
-            auto remove_ext = [](const path &p)
-            {
-                return p.parent_path() / p.stem();
-            };
-
-            ctx.addLine("ctx.parse_flags('-l" + normalize_path(remove_ext(s["import_library"].getValue())) + "', lib)");
-
             using tgt_type = std::pair<sw::PackageId, sw::TargetSettings>;
             using f_param = const tgt_type &;
             std::function<void(f_param)> process;
             std::set<tgt_type> visited;
-            process = [&process, &s, &b, &ctx, &remove_ext, &visited](f_param nt)
+            process = [&process, &s, &b, &ctx, &visited](f_param nt)
             {
                 if (visited.find(nt) != visited.end())
                     return;
@@ -345,6 +338,13 @@ SUBCOMMAND_DECL(integrate)
                     throw SW_RUNTIME_ERROR("no such target: " + nt.first.toString());
 
                 const auto &s = t->getInterfaceSettings();
+
+                auto remove_ext = [](const path &p)
+                {
+                    return p.parent_path() / p.stem();
+                };
+
+                ctx.addLine("ctx.parse_flags('-l" + normalize_path(remove_ext(s["import_library"].getValue())) + "', lib)");
 
                 // defs
                 for (auto &[k,v] : s["definitions"].getSettings())
@@ -366,8 +366,7 @@ SUBCOMMAND_DECL(integrate)
                 // deps
                 for (auto &[k,v] : s["dependencies"]["link"].getSettings())
                 {
-                    ctx.addLine("ctx.parse_flags('-l" + normalize_path(remove_ext(s["import_library"].getValue())) + "', lib)");
-                    process(nt);
+                    process({k, v.getSettings()});
                 }
             };
             process({t.getPackage(), t.getSettings()});

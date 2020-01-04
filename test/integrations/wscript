@@ -1,15 +1,22 @@
+# run me like:
+# python waf sw_configure sw_build configure build
+
+import os
+import subprocess
+
 top = '.'
 out = 'build_waf'
 
-import subprocess
 swdir = out + '/.sw'
 swdeps = swdir + '/deps.txt'
+
 def sw_configure(ctx):
     deps = [
         'org.sw.demo.sqlite3',
         'org.sw.demo.glennrp.png',
     ]
 
+    os.makedirs(swdir, exist_ok=True)
     f = open(swdeps, 'w')
     for d in deps:
         f.write(d + '\n')
