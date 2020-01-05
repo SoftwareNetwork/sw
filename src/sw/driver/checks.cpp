@@ -679,14 +679,18 @@ bool Check::lessDuringExecution(const CommandNode &in) const
     return dependent_commands.size() > dependent_commands.size();
 }
 
+const path &Check::getUniqueName() const
+{
+    if (uniq_name.empty())
+        uniq_name = unique_path();
+    return uniq_name;
+}
+
 path Check::getOutputFilename() const
 {
     auto d = getChecksDir(check_set->checker.swbld.getBuildDirectory());
-    //static std::atomic_int64_t n = 0;
-    auto up = unique_path();
-    //auto up = std::to_string(++n);
+    auto up = getUniqueName();
     d /= up;
-    //::create_directories(d);
     auto f = d;
     if (!CPP)
         f /= "x.c";
@@ -723,6 +727,12 @@ TargetSettings Check::getSettings() const
     if (check_set->t->getCompilerType() == CompilerType::MSVC ||
         check_set->t->getCompilerType() == CompilerType::ClangCl)
         ss["native"]["configuration"] = "debug";
+
+    // set output dir for check binaries
+    auto d = getChecksDir(check_set->checker.swbld.getBuildDirectory());
+    auto up = getUniqueName();
+    d /= up;
+    ss["output_dir"] = normalize_path(d);
 
     return ss;
 }

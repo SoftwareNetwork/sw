@@ -138,6 +138,10 @@ protected:
 
 private:
     mutable std::vector<std::shared_ptr<builder::Command>> commands; // for cleanup
+    mutable path uniq_name;
+
+private:
+    const path &getUniqueName() const;
 };
 
 using CheckPtr = std::shared_ptr<Check>;
