@@ -133,7 +133,7 @@ bool Command::isOutdated() const
         // we have insertion, no previous value available
         // so outdated
         if (isExplainNeeded())
-            EXPLAIN_OUTDATED("command", true, "new command: " + print(), getCommandId(*this));
+            EXPLAIN_OUTDATED("command", true, "new command (command_storage = " + std::to_string(command_storage) + "): " + print(), getCommandId(*this));
         return true;
     }
     else
