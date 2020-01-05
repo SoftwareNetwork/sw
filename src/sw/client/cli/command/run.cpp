@@ -177,9 +177,9 @@ static void run(const sw::LocalPackage &pkg, primitives::Command &c)
             if (!grant_perms(paths, FILE_ALL_ACCESS & ~DELETE))
                 break;
 
-            if (c.environment.find("Path") != c.environment.end())
+            if (c.environment.find("PATH") != c.environment.end())
             {
-                auto dirs = split_string(c.environment["Path"], ";");
+                auto dirs = split_string(c.environment["PATH"], ";");
                 Files paths;
                 for (auto &d : dirs)
                 {

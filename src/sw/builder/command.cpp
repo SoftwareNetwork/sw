@@ -697,18 +697,18 @@ path Command::writeCommand(const path &p) const
     t += "\n\n";
 
     /*if (bat)
-        t += "::";
+    t += "::";
     else
-        t += "#";
+    t += "#";
     t += " command: " + name + "\n\n";
 
     if (!name_short.empty())
     {
-        if (bat)
-            t += "::";
-        else
-            t += "#";
-        t += " short name: " + name_short + "\n\n";
+    if (bat)
+    t += "::";
+    else
+    t += "#";
+    t += " short name: " + name_short + "\n\n";
     }*/
 
     // name
@@ -1000,19 +1000,21 @@ static String getSystemPath()
     static const String sp = []()
     {
         auto r = getSystemRoot();
-        return r + "\\system32;" + r + ";" + r + "\\System32\\Wbem;" + r + "\\System32\\WindowsPowerShell\\v1.0\\";
+        // let users provide other paths than System32 themselves?
+        //                                        remove?                   remove?
+        return r + "\\System32;" + r + ";" + r + "\\System32\\Wbem;" + r + "\\System32\\WindowsPowerShell\\v1.0\\";
     }();
     return sp;
 }
 
 void Command::addPathDirectory(const path &p)
 {
+    // Windows uses 'Path' not 'PATH', but we handle it in underlying primitives::Command.
+    static const auto env = "PATH";
 #ifdef _WIN32
-    static const auto env = "Path";
     static const auto delim = ";";
     auto norm = [](const auto &p) { return normalize_path_windows(p); };
 #else
-    static const auto env = "PATH";
     static const auto delim = ":";
     auto norm = [](const auto &p) { return p.u8string(); };
 #endif
