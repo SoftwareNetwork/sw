@@ -79,14 +79,19 @@ TargetSetting::TargetSetting(const TargetSetting &rhs)
     operator=(rhs);
 }
 
-TargetSetting &TargetSetting::operator=(const TargetSetting &rhs)
+void TargetSetting::copy_fields(const TargetSetting &rhs)
 {
-    key = rhs.key;
-    value = rhs.value;
     required = rhs.required;
     use_count = rhs.use_count;
     used_in_hash = rhs.used_in_hash;
     ignore_in_comparison = rhs.ignore_in_comparison;
+}
+
+TargetSetting &TargetSetting::operator=(const TargetSetting &rhs)
+{
+    key = rhs.key;
+    value = rhs.value;
+    copy_fields(rhs);
     return *this;
 }
 
@@ -198,7 +203,10 @@ void TargetSetting::merge(const TargetSetting &rhs)
         return;
     }
     if (value.index() == 0)
+    {
         value = rhs.value;
+        copy_fields(rhs);
+    }
 }
 
 void TargetSetting::mergeFromJson(const nlohmann::json &j)
