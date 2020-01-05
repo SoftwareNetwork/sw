@@ -116,8 +116,11 @@ void self_upgrade_copy(const path &dst);
 #endif
 
 extern bool gForceServerQuery;
-static ::cl::opt<bool, true> force_server_query1("s", ::cl::desc("Force server check"), ::cl::location(gForceServerQuery));
+static ::cl::opt<bool, true> force_server_query1("s", ::cl::desc("Force server resolving"), ::cl::location(gForceServerQuery));
 static ::cl::alias force_server_query2("server", ::cl::desc("Alias for -s"), ::cl::aliasopt(force_server_query1));
+
+extern bool gForceServerDatabaseUpdate;
+static ::cl::opt<bool, true> force_server_db_check("sd", ::cl::desc("Force server db check"), ::cl::location(gForceServerDatabaseUpdate));
 
 static ::cl::opt<path> working_directory("d", ::cl::desc("Working directory"));
 extern bool gVerbose;

@@ -39,7 +39,12 @@ const String db_version_url = "https://raw.githubusercontent.com/" + db_repo_nam
 // it is used for detecting young packages
 static TimePoint tstart;
 
+// not fully implemented, it will check only
+// when uninstalled packages will be resolved
 bool gForceServerQuery;
+
+//
+bool gForceServerDatabaseUpdate;
 
 static const String packages_db_name = "packages.db";
 
@@ -339,7 +344,7 @@ void RemoteStorage::load() const
 
 void RemoteStorage::updateDb() const
 {
-    if (!gForceServerQuery)
+    if (!gForceServerDatabaseUpdate)
     {
         if (!Settings::get_system_settings().can_update_packages_db || !isCurrentDbOld())
             return;
