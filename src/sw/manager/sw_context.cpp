@@ -15,8 +15,6 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "icontext");
 
-extern bool gForceServerQuery;
-
 namespace sw
 {
 
