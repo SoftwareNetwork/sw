@@ -449,7 +449,11 @@ String Target::getConfig() const
 
 path Target::getTargetsDir() const
 {
-    auto d = getMainBuild().getBuildDirectory() / "out" / getConfig();
+    path d;
+    if (ts["output_dir"])
+        d = fs::u8path(ts["output_dir"].getValue());
+    else
+        d = getMainBuild().getBuildDirectory() / "out" / getConfig();
     try
     {
         write_file(d / "cfg.json", nlohmann::json::parse(ts.toString(TargetSettings::Json)).dump(4));

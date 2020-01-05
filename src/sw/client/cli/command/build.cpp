@@ -47,6 +47,9 @@ static ::cl::opt<path> build_ide_copy_to_dir("ide-copy-to-dir", ::cl::sub(subcom
 
 static ::cl::opt<String> time_limit("time-limit", ::cl::sub(subcommand_build));
 
+// remove from build subcommand later?
+static ::cl::opt<path> output_dir("output-dir", ::cl::sub(subcommand_build));
+
 //
 
 //cl::opt<bool> dry_run("n", cl::desc("Dry run"));
@@ -523,6 +526,21 @@ std::vector<sw::TargetSettings> createSettings(sw::SwContext &swctx)
         s.merge(settings[0]["host"].getSettings());
         swctx.setHostSettings(s);
         settings[0]["host"].reset();
+    }
+
+    if (!output_dir.empty())
+    {
+        if (settings.size() != 1)
+            throw SW_RUNTIME_ERROR("Cannot set output-dir, multiple configurations requested");
+        auto d = fs::absolute(output_dir);
+        fs::create_directories(d);
+        d = fs::canonical(d);
+        for (auto &s : settings)
+        {
+            s["output_dir"] = normalize_path(d);
+            s["output_dir"].useInHash(false);
+            s["output_dir"].ignoreInComparison(true);
+        }
     }
 
     return settings;
