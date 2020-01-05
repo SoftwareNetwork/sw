@@ -146,7 +146,15 @@ F(run)
     auto d = swctx->getLocalStorage().storage_dir_tmp / "build";// / fs::unique_path();
     fs::create_directories(d);
     ScopedCurrentPath scp(d, CurrentPathScope::All);
-    run(*swctx, p);
+
+    primitives::Command c;
+
+    // set flags always
+    c.create_new_console = true;
+    // detach is needed because only it helps spawned program to outlive sw app
+    c.detached = true;
+
+    run(*swctx, p, c);
 }
 
 F(upload)
