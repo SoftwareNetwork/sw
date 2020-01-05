@@ -328,7 +328,7 @@ public:
 
     FileStorage &getFs() const;
 
-    path getTargetsDir() const;
+    path getLocalOutputBinariesDirectory() const;
     path getTargetDirShort(const path &root) const;
 
     void setRootDirectory(const path &);

@@ -44,7 +44,7 @@ path CSharpTarget::getOutputFileName(const path &root) const
     path p;
     if (isLocal())
     {
-        p = getTargetsDir() / ::sw::getOutputFileName(*this);
+        p = getLocalOutputBinariesDirectory() / ::sw::getOutputFileName(*this);
     }
     else
     {
@@ -101,7 +101,7 @@ path RustTarget::getOutputFileName(const path &root) const
     path p;
     if (isLocal())
     {
-        p = getTargetsDir() / ::sw::getOutputFileName(*this);
+        p = getLocalOutputBinariesDirectory() / ::sw::getOutputFileName(*this);
     }
     else
     {
@@ -158,7 +158,7 @@ path GoTarget::getOutputFileName(const path &root) const
     path p;
     if (isLocal())
     {
-        p = getTargetsDir() / ::sw::getOutputFileName(*this);
+        p = getLocalOutputBinariesDirectory() / ::sw::getOutputFileName(*this);
     }
     else
     {
@@ -215,7 +215,7 @@ path FortranTarget::getOutputFileName(const path &root) const
     path p;
     if (isLocal())
     {
-        p = getTargetsDir() / ::sw::getOutputFileName(*this);
+        p = getLocalOutputBinariesDirectory() / ::sw::getOutputFileName(*this);
     }
     else
     {
@@ -271,7 +271,7 @@ path JavaTarget::getOutputFileName(const path &root) const
     path p;
     if (isLocal())
     {
-        p = getTargetsDir() / ::sw::getOutputFileName(*this);
+        p = getLocalOutputBinariesDirectory() / ::sw::getOutputFileName(*this);
     }
     else
     {
@@ -331,7 +331,7 @@ path KotlinTarget::getOutputFileName(const path &root) const
     path p;
     if (isLocal())
     {
-        p = getTargetsDir() / ::sw::getOutputFileName(*this);
+        p = getLocalOutputBinariesDirectory() / ::sw::getOutputFileName(*this);
     }
     else
     {
@@ -389,7 +389,7 @@ path DTarget::getOutputFileName(const path &root) const
     path p;
     if (isLocal())
     {
-        p = getTargetsDir() / ::sw::getOutputFileName(*this);
+        p = getLocalOutputBinariesDirectory() / ::sw::getOutputFileName(*this);
     }
     else
     {

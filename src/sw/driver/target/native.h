@@ -143,7 +143,7 @@ public:
     NativeLinker *getSelectedTool() const;// override;
     //void setOutputFilename(const path &fn);
     virtual void setOutputFile();
-    path getOutputDir() const;
+    path getOutputDir1() const;
     void removeFile(const path &fn, bool binary_dir = false) override;
     std::unordered_set<NativeSourceFile*> gatherSourceFiles() const;
     bool mustResolveDeps() const override { return prepare_pass == 2; }

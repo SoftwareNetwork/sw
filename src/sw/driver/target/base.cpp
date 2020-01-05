@@ -447,7 +447,7 @@ String Target::getConfig() const
     return ts.getHash();
 }
 
-path Target::getTargetsDir() const
+path Target::getLocalOutputBinariesDirectory() const
 {
     path d;
     if (ts["output_dir"])

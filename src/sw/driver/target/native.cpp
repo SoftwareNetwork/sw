@@ -803,11 +803,11 @@ bool NativeCompiledTarget::isHeaderOnly() const
     return HeaderOnly && *HeaderOnly;
 }
 
-path NativeCompiledTarget::getOutputDir() const
+path NativeCompiledTarget::getOutputDir1() const
 {
     if (OutputDir.empty())
         return getOutputFile().parent_path();
-    return getTargetsDir() / OutputDir;
+    return getLocalOutputBinariesDirectory() / OutputDir;
 }
 
 void NativeCompiledTarget::setOutputFile()
@@ -859,7 +859,7 @@ path NativeCompiledTarget::getOutputFileName(const path &root) const
     }
     else if (isLocal())
     {
-        p = getTargetsDir() / OutputDir / ::sw::getOutputFileName(*this);
+        p = getLocalOutputBinariesDirectory() / OutputDir / ::sw::getOutputFileName(*this);
     }
     else
     {
@@ -1440,7 +1440,7 @@ Commands NativeCompiledTarget::getCommands1() const
         if (f->install_dir.empty())
             continue;
 
-        auto o = getOutputDir();
+        auto o = getOutputDir1();
         o /= f->install_dir / p.filename();
 
         SW_MAKE_EXECUTE_BUILTIN_COMMAND_AND_ADD(copy_cmd, (NativeCompiledTarget&)*this, "sw_copy_file", nullptr);
