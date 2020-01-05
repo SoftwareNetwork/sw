@@ -11,7 +11,7 @@
 # build files and directories
 /build*
 /temp*
-bin
+bin*
 
 .cppan
 
