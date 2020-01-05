@@ -14,10 +14,6 @@ Feel free to support the project and its development if you like it.
 
 https://money.yandex.ru/to/410015962212665
 
-## Patreon
+<!--## Patreon
 
-https://www.patreon.com/egorpugin
-
-## Crypto
-
-- Bitcoin: 1GUsPwLfsjnE6mb1UVXtXkJ5HHkRp9GY2k
+https://www.patreon.com/egorpugin-->
