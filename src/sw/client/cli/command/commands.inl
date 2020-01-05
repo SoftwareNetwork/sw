@@ -36,13 +36,13 @@ self-upgrade - upgrade the client. implement via upgrade?
 */
 
 SUBCOMMAND(build) COMMA
-SUBCOMMAND(b) COMMA // alias for build
+//SUBCOMMAND(b) COMMA // alias for build
 SUBCOMMAND(configure) COMMA
 SUBCOMMAND(create) COMMA
 SUBCOMMAND(generate) COMMA
 SUBCOMMAND(fetch) COMMA
 SUBCOMMAND(install) COMMA
-SUBCOMMAND(i) COMMA // alias for install
+//SUBCOMMAND(i) COMMA // alias for install
 SUBCOMMAND(integrate) COMMA
 SUBCOMMAND(list) COMMA
 SUBCOMMAND(open) COMMA
