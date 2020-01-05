@@ -75,9 +75,17 @@ static ::cl::list<String> Dvariables("D", ::cl::desc("Input variables"), ::cl::Z
 
 static cl::list<String> target_os("target-os", cl::CommaSeparated);
 cl::list<String> compiler("compiler", cl::desc("Set compiler"), cl::CommaSeparated);
-cl::list<String> configuration("configuration", cl::desc("Set build configuration"), cl::CommaSeparated);
+cl::list<String> configuration("configuration", cl::desc(R"(Set build configuration.
+Allowed values:
+    - debug, d
+    - release, r
+    - releasewithdebuginformation, releasewithdebinfo, rwdi
+    - minimalsizerelease, minsizerel, msr
+Default is release.
+Specify multiple using a comma: "d,r".
+)"), cl::CommaSeparated);
 static cl::alias configuration2("config", cl::desc("Alias for -configuration"), cl::aliasopt(configuration));
-static cl::list<String> platform("platform", cl::desc("Set build platform"), cl::CommaSeparated);
+static cl::list<String> platform("platform", cl::desc("Set build platform.\nExamples: x86, x64, arm, arm64"), cl::CommaSeparated);
 static cl::alias platform2("arch", cl::desc("Alias for -platform"), cl::aliasopt(platform));
 static cl::list<String> os("os", cl::desc("Set build target os"), cl::CommaSeparated);
 // rename to stdc, stdcpp?
