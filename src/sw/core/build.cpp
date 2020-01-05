@@ -101,9 +101,7 @@ SwBuild::~SwBuild()
 
 path SwBuild::getBuildDirectory() const
 {
-    // use like this for now
-    return fs::current_path() / SW_BINARY_DIR;
-    //return build_dir;
+    return build_dir;
 }
 
 void SwBuild::build()
