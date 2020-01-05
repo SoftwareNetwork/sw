@@ -370,9 +370,8 @@ bool SourceFileStorage::check_absolute(path &F, bool ignore_errors, bool *source
                 }
             }
         }
-        auto old = F;
-        F = fs::absolute(p);
-        files_cache[old] = F;
+        files_cache[F] = p; // assign to old F
+        F = p; // assign to F
     }
     else
     {
