@@ -241,6 +241,16 @@ private:
     void activateCompiler(const TargetSetting &s, const UnresolvedPackage &id, const StringSet &exts, bool extended_desc);
     std::shared_ptr<NativeLinker> activateLinker(const TargetSetting &s);
     std::shared_ptr<NativeLinker> activateLinker(const TargetSetting &s, const UnresolvedPackage &id, bool extended_desc);
+
+    void prepare_pass1();
+    void prepare_pass2();
+    void prepare_pass3();
+    void prepare_pass4();
+    void prepare_pass5();
+    void prepare_pass6();
+    void prepare_pass7();
+    void prepare_pass8();
+    void prepare_pass9();
 };
 
 /**

@@ -2065,805 +2065,844 @@ bool NativeCompiledTarget::prepare()
     //if (getSolution().skipTarget(Scope))
         //return false;
 
-    //DEBUG_BREAK_IF_STRING_HAS(getPackage().getPath().toString(), "GDCM.gdcm");
-
     switch (prepare_pass)
     {
     case 1:
-    {
-        // make additional log level for this
-        //LOG_TRACE(logger, "Preparing target: " + getPackage().getPath().toString());
-
-        call(CallbackType::BeginPrepare);
-
-        if (UseModules)
-        {
-            if (getCompilerType() != CompilerType::MSVC)
-                throw SW_RUNTIME_ERROR("Currently modules are implemented for MSVC only");
-            CPPVersion = CPPLanguageStandard::CPP2a;
-        }
-
-        findSources();
-
-        if (!sw_provided)
-        {
-            // add pvt binary dir
-            IncludeDirectories.insert(BinaryPrivateDir);
-
-            // always add bdir to include dirs
-            Public.IncludeDirectories.insert(BinaryDir);
-        }
-
-        resolvePostponedSourceFiles();
-        HeaderOnly = !hasSourceFiles();
-
-        if (PackageDefinitions)
-            addPackageDefinitions(true);
-
-        for (auto &[p, f] : *this)
-        {
-            if (f->isActive() && !f->postponed)
-            {
-                auto f2 = f->as<NativeSourceFile*>();
-                if (!f2)
-                    continue;
-                auto ba = f2->BuildAs;
-                switch (ba)
-                {
-                case NativeSourceFile::BasedOnExtension:
-                    break;
-                case NativeSourceFile::C:
-                    if (auto p = findProgramByExtension(".c"))
-                    {
-                        if (auto c = f2->compiler->as<VisualStudioCompiler*>())
-                            c->CompileAsC = true;
-                    }
-                    else
-                        throw std::logic_error("no C language found");
-                    break;
-                case NativeSourceFile::CPP:
-                    if (auto p = findProgramByExtension(".cpp"))
-                    {
-                        if (auto c = f2->compiler->as<VisualStudioCompiler*>())
-                            c->CompileAsCPP = true;
-                    }
-                    else
-                        throw std::logic_error("no CPP language found");
-                    break;
-                case NativeSourceFile::ASM:
-                    SW_UNIMPLEMENTED; // actually remove this to make noop?
-                    /*if (auto L = SourceFileStorage::findLanguageByExtension(".asm"); L)
-                        L->clone()->createSourceFile(f.first, this);
-                    else
-                        throw std::logic_error("no ASM language found");*/
-                    break;
-                default:
-                    throw std::logic_error("not implemented");
-                }
-            }
-        }
-
-        // default macros
-        // public to make sure integrations also take these
-        if (getBuildSettings().TargetOS.Type == OSType::Windows)
-        {
-            Public.Definitions["SW_EXPORT"] = "__declspec(dllexport)";
-            Public.Definitions["SW_IMPORT"] = "__declspec(dllimport)";
-        }
-        else
-        {
-            Public.Definitions["SW_EXPORT"] = "__attribute__ ((visibility (\"default\")))";
-            Public.Definitions["SW_IMPORT"] = "__attribute__ ((visibility (\"default\")))";
-        }
-
-        // gather deps into one list of active deps
-
-        // set our initial deps
-        getActiveDependencies();
-    }
+        prepare_pass1();
     RETURN_PREPARE_MULTIPASS_NEXT_PASS;
     case 2:
         // resolve
-    {
-        for (auto &d : getActiveDependencies())
-        {
-            auto t = getMainBuild().getTargets().find(d.dep->getPackage(), d.dep->settings);
-            if (!t)
-                throw SW_RUNTIME_ERROR("No such target: " + d.dep->getPackage().toString());
-            d.dep->setTarget(*t);
-        }
-    }
+        prepare_pass2();
     RETURN_PREPARE_MULTIPASS_NEXT_PASS;
     case 3:
         // inheritance
-    {
-        struct H
-        {
-            size_t operator()(const DependencyPtr &p) const
-            {
-                return std::hash<PackageId>()(p->getTarget().getPackage());
-            }
-        };
-        struct EQ
-        {
-            size_t operator()(const DependencyPtr &p1, const DependencyPtr &p2) const
-            {
-                return &p1->getTarget() == &p2->getTarget();
-            }
-        };
-
-        // we have ptrs, so do custom sorting
-        std::unordered_map<DependencyPtr, InheritanceType, H, EQ> deps(0, H{});
-        std::vector<DependencyPtr> deps_ordered;
-
-        // set our initial deps
-        for (auto &d : getActiveDependencies())
-        {
-            deps.emplace(d.dep, d.inhtype);
-            deps_ordered.push_back(d.dep);
-        }
-
-        while (1)
-        {
-            bool new_dependency = false;
-            auto deps2 = deps;
-            for (auto &[d, _] : deps2)
-            {
-                // iterate over child deps
-                auto t = d->getTarget().as<const NativeCompiledTarget*>();
-                if (!t)
-                    continue;
-                for (auto &dep : t->getActiveDependencies())
-                {
-                    auto Inheritance = dep.inhtype;
-                    auto d2 = dep.dep;
-
-                    // nothing to do with private inheritance
-                    // before d2->getTarget()!
-                    if (Inheritance == InheritanceType::Private)
-                        continue;
-
-                    if (&d2->getTarget() == this)
-                        continue;
-
-                    if (Inheritance == InheritanceType::Protected && !hasSameProject(d2->getTarget()))
-                        continue;
-
-                    auto copy = std::make_shared<Dependency>(*d2);
-                    auto[i, inserted] = deps.emplace(copy,
-                        Inheritance == InheritanceType::Interface ?
-                        InheritanceType::Public : Inheritance
-                    );
-                    if (inserted)
-                        deps_ordered.push_back(copy);
-
-                    // include directories only handling
-                    auto di = i->first;
-                    if (inserted)
-                    {
-                        // new dep is added
-                        if (d->IncludeDirectoriesOnly)
-                        {
-                            // if we inserted 3rd party dep (d2=di) of idir_only dep (d),
-                            // we mark it always as idir_only
-                            di->IncludeDirectoriesOnly = true;
-                        }
-                        else
-                        {
-                            // otherwise we keep idir_only flag as is
-                        }
-                        new_dependency = true;
-                    }
-                    else
-                    {
-                        // we already have this dep
-                        if (d->IncludeDirectoriesOnly)
-                        {
-                            // left as is if parent (d) idir_only
-                        }
-                        else
-                        {
-                            // if parent dep is not idir_only, then we choose whether to build dep
-                            if (d2->IncludeDirectoriesOnly)
-                            {
-                                // left as is if d2 idir_only
-                            }
-                            else
-                            {
-                                if (di->IncludeDirectoriesOnly)
-                                {
-                                    // also mark as new dependency (!) if processing changed for it
-                                    new_dependency = true;
-                                }
-                                // if d2 is not idir_only, we set so for di
-                                di->IncludeDirectoriesOnly = false;
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (!new_dependency)
-            {
-                for (auto &d : deps_ordered)
-                {
-                    if (&d->getTarget() != this)
-                        all_deps.insert(deps.find(d)->first);
-                }
-                break;
-            }
-        }
-    }
+        prepare_pass3();
     RETURN_PREPARE_MULTIPASS_NEXT_PASS;
     case 4:
         // merge
-    {
-        merge1();
-    }
+        prepare_pass4();
     RETURN_PREPARE_MULTIPASS_NEXT_PASS;
     case 5:
         // source files
-    {
-        // check postponed files first
-        for (auto &[p, f] : *this)
-        {
-            if (!f->postponed || f->skip)
-                continue;
-
-            auto ext = p.extension().string();
-            auto prog = findProgramByExtension(ext);
-            if (!prog)
-                throw std::logic_error("User defined program not registered for " + ext);
-
-            auto p2 = dynamic_cast<FileToFileTransformProgram*>(prog);
-            if (!p2)
-                throw SW_RUNTIME_ERROR("Bad program type");
-            f = this->SourceFileMapThis::operator[](p) = p2->createSourceFile(*this, p);
-        }
-
-        // before merge
-        if (getBuildSettings().Native.ConfigurationType != ConfigurationType::Debug)
-            *this += Definition("NDEBUG");
-        // allow to other compilers?
-        // it is set automatically with /LDd, /MDd, or /MTd
-        //else if (getCompilerType() == CompilerType::MSVC)
-            //*this += Definition("_DEBUG");
-
-        auto remove_bdirs = [this](auto *c)
-        {
-            // if we won't remove this, bdirs will differ between different config compilations
-            // so our own config pch will be outdated on every call
-            c->IncludeDirectories.erase(BinaryDir);
-            c->IncludeDirectories.erase(BinaryPrivateDir);
-        };
-
-        auto vs_setup = [this, &remove_bdirs](auto *f, auto *c)
-        {
-            if (getBuildSettings().Native.MT)
-                c->RuntimeLibrary = vs::RuntimeLibraryType::MultiThreaded;
-
-            switch (getBuildSettings().Native.ConfigurationType)
-            {
-            case ConfigurationType::Debug:
-                c->RuntimeLibrary =
-                    getBuildSettings().Native.MT ?
-                    vs::RuntimeLibraryType::MultiThreadedDebug :
-                    vs::RuntimeLibraryType::MultiThreadedDLLDebug;
-                c->Optimizations().Disable = true;
-                break;
-            case ConfigurationType::Release:
-                c->Optimizations().FastCode = true;
-                break;
-            case ConfigurationType::ReleaseWithDebugInformation:
-                c->Optimizations().FastCode = true;
-                break;
-            case ConfigurationType::MinimalSizeRelease:
-                c->Optimizations().SmallCode = true;
-                break;
-            }
-            if (f->file.extension() != ".c")
-                c->CPPStandard = CPPVersion;
-
-            if (IsConfig/* || c->PrecompiledHeader && c->PrecompiledHeader().create*/)
-            {
-                remove_bdirs(c);
-            }
-
-			// for static libs, we gather and put pdb near output file
-            // btw, VS is clever enough to take this info from .lib
-			/*if (getSelectedTool() == Librarian.get())
-			{
-				if ((getBuildSettings().Native.ConfigurationType == ConfigurationType::Debug ||
-					getBuildSettings().Native.ConfigurationType == ConfigurationType::ReleaseWithDebugInformation) &&
-					c->PDBFilename.empty())
-				{
-					auto f = getOutputFile();
-					f = f.parent_path() / f.filename().stem();
-					f += ".pdb";
-					c->PDBFilename = f;// BinaryDir.parent_path() / "obj" / (getPackage().getPath().toString() + ".pdb");
-				}
-			}*/
-        };
-
-        auto gnu_setup = [this](auto *f, auto *c)
-        {
-            switch (getBuildSettings().Native.ConfigurationType)
-            {
-            case ConfigurationType::Debug:
-                c->GenerateDebugInformation = true;
-                //c->Optimizations().Level = 0; this is the default
-                break;
-            case ConfigurationType::Release:
-                c->Optimizations().Level = 3;
-                break;
-            case ConfigurationType::ReleaseWithDebugInformation:
-                c->GenerateDebugInformation = true;
-                c->Optimizations().Level = 2;
-                break;
-            case ConfigurationType::MinimalSizeRelease:
-                c->Optimizations().SmallCode = true;
-                c->Optimizations().Level = 2;
-                break;
-            }
-            if (f->file.extension() != ".c")
-                c->CPPStandard = CPPVersion;
-            else
-                c->CStandard = CVersion;
-
-            if (ExportAllSymbols && getSelectedTool() == Linker.get())
-                c->VisibilityHidden = false;
-        };
-
-        auto files = gatherSourceFiles();
-
-        // merge file compiler options with target compiler options
-        for (auto &f : files)
-        {
-            // set everything before merge!
-            f->compiler->merge(*this);
-
-            if (auto c = f->compiler->as<VisualStudioCompiler*>())
-            {
-                if (UseModules)
-                {
-                    c->UseModules = UseModules;
-                    //c->stdIfcDir = c->System.IncludeDirectories.begin()->parent_path() / "ifc" / (getBuildSettings().TargetOS.Arch == ArchType::x86_64 ? "x64" : "x86");
-                    c->stdIfcDir = c->System.IncludeDirectories.begin()->parent_path() / "ifc" / c->file.parent_path().filename();
-                    c->UTF8 = false; // utf8 is not used in std modules and produce a warning
-
-                    auto s = read_file(f->file);
-                    std::smatch m;
-                    static std::regex r("export module (\\w+)");
-                    if (std::regex_search(s, m, r))
-                    {
-                        c->ExportModule = true;
-                    }
-                }
-
-                vs_setup(f, c);
-            }
-            else if (auto c = f->compiler->as<ClangClCompiler*>())
-            {
-                vs_setup(f, c);
-            }
-            // clang compiler is not working atm, gnu is created instead
-            else if (auto c = f->compiler->as<ClangCompiler*>())
-            {
-                gnu_setup(f, c);
-
-                if (IsConfig/* || c->EmitPCH*/)
-                {
-                    remove_bdirs(c);
-                }
-            }
-            else if (auto c = f->compiler->as<GNUCompiler*>())
-            {
-                gnu_setup(f, c);
-
-                if (IsConfig/* || c->Language && c->Language() == "c++-header"s*/)
-                {
-                    remove_bdirs(c);
-                }
-            }
-        }
-
-        // also merge rc files
-        for (auto &f : ::sw::gatherSourceFiles<RcToolSourceFile>(*this))
-        {
-            // add casual idirs?
-            f->compiler->idirs = NativeCompilerOptions::System.IncludeDirectories;
-        }
-
-        //
-        if (GenerateWindowsResource
-            && !*HeaderOnly
-            && ::sw::gatherSourceFiles<RcToolSourceFile>(*this).empty()
-            && getSelectedTool() == Linker.get()
-            && !IsConfig
-            && getBuildSettings().TargetOS.is(OSType::Windows)
-            && Scope == TargetScope::Build
-            )
-        {
-            struct RcEmitter : primitives::Emitter
-            {
-                using Base = primitives::Emitter;
-
-                RcEmitter(Version file_ver, Version product_ver)
-                {
-                    if (file_ver.isBranch())
-                        file_ver = Version();
-                    if (product_ver.isBranch())
-                        product_ver = Version();
-
-                    file_ver = Version(file_ver.getMajor(), file_ver.getMinor(), file_ver.getPatch(), file_ver.getTweak());
-                    product_ver = Version(product_ver.getMajor(), product_ver.getMinor(), product_ver.getPatch(), product_ver.getTweak());
-
-                    addLine("1 VERSIONINFO");
-                    addLine("  FILEVERSION " + file_ver.toString(","s));
-                    addLine("  PRODUCTVERSION " + product_ver.toString(","s));
-                }
-
-                void beginBlock(const String &name)
-                {
-                    addLine("BLOCK \"" + name + "\"");
-                    begin();
-                }
-
-                void endBlock()
-                {
-                    end();
-                }
-
-                void addValue(const String &name, const Strings &vals)
-                {
-                    addLine("VALUE \"" + name + "\", ");
-                    for (auto &v : vals)
-                        addText(v + ", ");
-                    trimEnd(2);
-                }
-
-                void addValueQuoted(const String &name, const Strings &vals)
-                {
-                    Strings vals2;
-                    for (auto &v : vals)
-                        vals2.push_back("\"" + v + "\"");
-                    addValue(name, vals2);
-                }
-
-                void begin()
-                {
-                    increaseIndent("BEGIN");
-                }
-
-                void end()
-                {
-                    decreaseIndent("END");
-                }
-            };
-
-            RcEmitter ctx(getPackage().getVersion(), getPackage().getVersion());
-            ctx.begin();
-
-            ctx.beginBlock("StringFileInfo");
-            ctx.beginBlock("040904b0");
-            //VALUE "CompanyName", "TODO: <Company name>"
-            ctx.addValueQuoted("FileDescription", { getPackage().getPath().back()/* + " - " + getConfig()*/ }); // remove config for now
-            ctx.addValueQuoted("FileVersion", { getPackage().getVersion().toString() });
-            //VALUE "InternalName", "@PACKAGE@"
-            ctx.addValueQuoted("LegalCopyright", { "Powered by Software Network" });
-            ctx.addValueQuoted("OriginalFilename", { getPackage().toString() });
-            ctx.addValueQuoted("ProductName", { getPackage().getPath().toString() });
-            ctx.addValueQuoted("ProductVersion", { getPackage().getVersion().toString() });
-            ctx.endBlock();
-            ctx.endBlock();
-
-            ctx.beginBlock("VarFileInfo");
-            ctx.addValue("Translation", { "0x409","1200" });
-            ctx.endBlock();
-
-            ctx.end();
-
-            path p = BinaryPrivateDir / "sw.rc";
-            write_file_if_different(p, ctx.getText());
-
-            // more info for generators
-            File(p, getFs()).setGenerated(true);
-
-            operator+=(p);
-        }
-
-        // setup pch deps
-        {
-            // gather pch
-            struct PCH
-            {
-                NativeSourceFile *create = nullptr;
-                std::set<NativeSourceFile *> use;
-            };
-
-            std::map<path /* pch file */, std::map<path, PCH> /* pch hdr */> pchs;
-            for (auto &f : files)
-            {
-                if (auto c = f->compiler->as<VisualStudioCompiler*>())
-                {
-                    if (c->PrecompiledHeader().create)
-                        pchs[c->PrecompiledHeaderFilename()][c->PrecompiledHeader().create.value()].create = f;
-                    else if (c->PrecompiledHeader().use)
-                        pchs[c->PrecompiledHeaderFilename()][c->PrecompiledHeader().use.value()].use.insert(f);
-                }
-            }
-
-            // set deps
-            for (auto &pch : pchs)
-            {
-                // groups
-                for (auto &g : pch.second)
-                {
-                    for (auto &f : g.second.use)
-                        f->dependencies.insert(g.second.create);
-                }
-            }
-        }
-
-        // pdb
-        if (getSelectedTool())
-        {
-            if (auto c = getSelectedTool()->as<VisualStudioLinker *>())
-            {
-                if (!c->GenerateDebugInformation)
-                {
-                    if (getBuildSettings().Native.ConfigurationType == ConfigurationType::Debug ||
-                        getBuildSettings().Native.ConfigurationType == ConfigurationType::ReleaseWithDebugInformation)
-                    {
-                        /*if (auto g = getSolution().getGenerator(); g && g->type == GeneratorType::VisualStudio)
-                            c->GenerateDebugInformation = vs::link::Debug::FastLink;
-                        else*/
-                            c->GenerateDebugInformation = vs::link::Debug::Full;
-                    }
-                    else
-                        c->GenerateDebugInformation = vs::link::Debug::None;
-                }
-
-                //if ((!c->GenerateDebugInformation || c->GenerateDebugInformation() != vs::link::Debug::None) &&
-                if ((c->GenerateDebugInformation && c->GenerateDebugInformation() != vs::link::Debug::None) &&
-                    c->PDBFilename.empty())
-                {
-                    auto f = getOutputFile();
-                    f = f.parent_path() / f.filename().stem();
-                    f += ".pdb";
-                    c->PDBFilename = f;// BinaryDir.parent_path() / "obj" / (getPackage().getPath().toString() + ".pdb");
-                }
-                else
-                    c->PDBFilename.output_dependency = false;
-
-                if (Linker->Type == LinkerType::LLD)
-                {
-                    if (c->GenerateDebugInformation)
-                        c->InputFiles().insert("msvcrtd.lib");
-                    else
-                        c->InputFiles().insert("msvcrt.lib");
-                }
-            }
-        }
-
-        // export all symbols
-        if (ExportAllSymbols && getBuildSettings().TargetOS.Type == OSType::Windows && getSelectedTool() == Linker.get())
-        {
-            const path def = NATIVE_TARGET_DEF_SYMBOLS_FILE;
-            Files objs;
-            for (auto &f : files)
-                objs.insert(f->output);
-            SW_MAKE_EXECUTE_BUILTIN_COMMAND_AND_ADD(c, *this, "sw_create_def_file", nullptr);
-            //c->record_inputs_mtime = true;
-            c->arguments.push_back(def.u8string());
-            c->push_back(objs);
-            c->addInput(objs);
-            c->addOutput(def);
-            add(def);
-        }
-
-        // add def file to linker
-        if (getSelectedTool() && getSelectedTool() == Linker.get())
-        {
-            if (auto VSL = getSelectedTool()->as<VisualStudioLibraryTool*>())
-            {
-                for (auto &[p, f] : *this)
-                {
-                    if (!f->skip && p.extension() == ".def")
-                    {
-                        VSL->ModuleDefinitionFile = p;
-                        HeaderOnly = false;
-                    }
-                }
-            }
-        }
-
-        // also fix rpath libname here
-        if (createWindowsRpath())
-        {
-            getSelectedTool()->setImportLibrary(getOutputFileName2("lib") += ".rp");
-        }
-    }
+        prepare_pass5();
     RETURN_PREPARE_MULTIPASS_NEXT_PASS;
     case 6:
         // link libraries
-    {
-        // link libs
-        if (getBuildSettings().TargetOS.is(OSType::Windows))
-        {
-            auto rt = vs::RuntimeLibraryType::MultiThreadedDLL;
-            if (getBuildSettings().Native.MT)
-                rt = vs::RuntimeLibraryType::MultiThreaded;
-            if (getBuildSettings().Native.ConfigurationType == ConfigurationType::Debug)
-            {
-                rt = vs::RuntimeLibraryType::MultiThreadedDLLDebug;
-                if (getBuildSettings().Native.MT)
-                    rt = vs::RuntimeLibraryType::MultiThreadedDebug;
-            }
-
-            // TODO: move vs _slib to detect.cpp from native.cpp
-
-            // https://docs.microsoft.com/en-us/cpp/c-runtime-library/crt-library-features?view=vs-2019
-
-            // sometimes link.exe fails to add libs (SDL-2.0.10)
-            // so we take full control here
-
-            // we add main 5 libs and its variations for /MD /MDd /MT /MTd flags
-            // (listed in reverse order):
-            // 1. kernel (windows) library - kernel32.lib
-            // 2. libc - ucrt.lib
-            // 3. ms crt - msvcrt.lib
-            // 4. compiler (cl.exe) library - vcruntime.lib
-            // 5. ms std c++ library - msvcprt.lib
-            //
-            // we also add some other libs needed by msvc
-            // 1. oldnames.lib - for backward compat - https://docs.microsoft.com/en-us/cpp/c-runtime-library/backward-compatibility?view=vs-2019
-            // 2. concrt.lib - concurrency crt
-
-            // TODO: push these libs from properties!
-
-            // TODO: libs may have further versions like
-            // libcpmt.lib
-            // libcpmt1.lib
-            //
-            // libcpmtd.lib
-            // libcpmtd0.lib
-            // libcpmtd1.lib
-
-            // other libs
-            *this += "oldnames.lib"_slib;
-            if (getBuildSettings().Native.ConfigurationType == ConfigurationType::Debug)
-                *this += "concrtd.lib"_slib;
-            else
-                *this += "concrt.lib"_slib;
-
-            switch (rt)
-            {
-            case vs::RuntimeLibraryType::MultiThreadedDLL:
-                *this += "msvcprt.lib"_slib;
-                *this += "vcruntime.lib"_slib;
-                *this += "msvcrt.lib"_slib;
-                *this += "ucrt.lib"_slib;
-                break;
-            case vs::RuntimeLibraryType::MultiThreadedDLLDebug:
-                *this += "msvcprtd.lib"_slib;
-                *this += "vcruntimed.lib"_slib;
-                *this += "msvcrtd.lib"_slib;
-                *this += "ucrtd.lib"_slib;
-                break;
-            case vs::RuntimeLibraryType::MultiThreaded:
-                *this += "libcpmt.lib"_slib;
-                *this += "libvcruntime.lib"_slib;
-                *this += "libcmt.lib"_slib;
-                *this += "libucrt.lib"_slib;
-                break;
-            case vs::RuntimeLibraryType::MultiThreadedDebug:
-                *this += "libcpmtd.lib"_slib;
-                *this += "libvcruntimed.lib"_slib;
-                *this += "libcmtd.lib"_slib;
-                *this += "libucrtd.lib"_slib;
-                break;
-            }
-            *this += "kernel32.lib"_slib;
-            if (auto L = getSelectedTool()->as<VisualStudioLinker*>())
-            {
-                auto cmd = L->createCommand(getMainBuild().getContext());
-                cmd->push_back("-NODEFAULTLIB");
-            }
-        }
-
-        // add link libraries from deps
-        if (!*HeaderOnly && getSelectedTool() != Librarian.get())
-        {
-            auto L = Linker->as<VisualStudioLinker*>();
-            for (auto &d : getAllDependencies())
-            {
-                if (&d->getTarget() == this)
-                    continue;
-                if (d->IncludeDirectoriesOnly)
-                    continue;
-
-                auto nt = d->getTarget().template as<NativeCompiledTarget*>();
-                if (!nt)
-                    continue;
-
-                // circular deps detection
-                if (L)
-                {
-                    for (auto &d2 : nt->getAllDependencies())
-                    {
-                        if (&d2->getTarget() != this)
-                            continue;
-                        if (d2->IncludeDirectoriesOnly)
-                            continue;
-
-                        circular_dependency = true;
-                        break;
-                    }
-                }
-
-                if (!*nt->HeaderOnly)
-                {
-                    LinkLibraries.push_back(nt->getImportLibrary());
-                }
-            }
-        }
-    }
+        prepare_pass6();
     RETURN_PREPARE_MULTIPASS_NEXT_PASS;
     case 7:
         // linker 1
-    {
-        // add more link libraries from deps
-        if (!*HeaderOnly && getSelectedTool() != Librarian.get())
-        {
-            auto ll = [this](auto &l, bool system)
-            {
-                std::unordered_set<const NativeCompiledTarget*> targets;
-                Files added;
-                added.insert(l.begin(), l.end());
-                gatherStaticLinkLibraries(l, added, targets, system);
-            };
-
-            ll(LinkLibraries, false);
-            ll(NativeLinkerOptions::System.LinkLibraries, true);
-        }
-
-        // right after gatherStaticLinkLibraries()!
-        if (getSelectedTool())
-            getSelectedTool()->merge(*this);
-    }
+        prepare_pass7();
     RETURN_PREPARE_MULTIPASS_NEXT_PASS;
     case 8:
         // linker 2
-    {
-        // linker setup
-        auto obj = gatherObjectFilesWithoutLibraries();
-        auto O1 = gatherLinkLibraries();
-
-        if (!*HeaderOnly && getSelectedTool() != Librarian.get())
-        {
-            for (auto &f : ::sw::gatherSourceFiles<RcToolSourceFile>(*this))
-                obj.insert(f->output);
-        }
-
-        // circular and windows rpath processing
-        processCircular(obj);
-
-        if (getSelectedTool())
-        {
-            getSelectedTool()->setObjectFiles(obj);
-            getSelectedTool()->setInputLibraryDependencies(O1);
-        }
-
-        call(CallbackType::EndPrepare);
-    }
+        prepare_pass8();
     RETURN_PREPARE_MULTIPASS_NEXT_PASS;
     case 9:
-        clearGlobCache();
+        prepare_pass9();
     SW_RETURN_MULTIPASS_END;
     }
 
     SW_RETURN_MULTIPASS_END;
+}
+
+void NativeCompiledTarget::prepare_pass1()
+{
+    // make additional log level for this
+    //LOG_TRACE(logger, "Preparing target: " + getPackage().getPath().toString());
+
+    call(CallbackType::BeginPrepare);
+
+    if (UseModules)
+    {
+        if (getCompilerType() != CompilerType::MSVC)
+            throw SW_RUNTIME_ERROR("Currently modules are implemented for MSVC only");
+        CPPVersion = CPPLanguageStandard::CPP2a;
+    }
+
+    findSources();
+
+    if (!sw_provided)
+    {
+        // add pvt binary dir
+        IncludeDirectories.insert(BinaryPrivateDir);
+
+        // always add bdir to include dirs
+        Public.IncludeDirectories.insert(BinaryDir);
+    }
+
+    resolvePostponedSourceFiles();
+    HeaderOnly = !hasSourceFiles();
+
+    if (PackageDefinitions)
+        addPackageDefinitions(true);
+
+    for (auto &[p, f] : *this)
+    {
+        if (f->isActive() && !f->postponed)
+        {
+            auto f2 = f->as<NativeSourceFile*>();
+            if (!f2)
+                continue;
+            auto ba = f2->BuildAs;
+            switch (ba)
+            {
+            case NativeSourceFile::BasedOnExtension:
+                break;
+            case NativeSourceFile::C:
+                if (auto p = findProgramByExtension(".c"))
+                {
+                    if (auto c = f2->compiler->as<VisualStudioCompiler*>())
+                        c->CompileAsC = true;
+                }
+                else
+                    throw std::logic_error("no C language found");
+                break;
+            case NativeSourceFile::CPP:
+                if (auto p = findProgramByExtension(".cpp"))
+                {
+                    if (auto c = f2->compiler->as<VisualStudioCompiler*>())
+                        c->CompileAsCPP = true;
+                }
+                else
+                    throw std::logic_error("no CPP language found");
+                break;
+            case NativeSourceFile::ASM:
+                SW_UNIMPLEMENTED; // actually remove this to make noop?
+                                  /*if (auto L = SourceFileStorage::findLanguageByExtension(".asm"); L)
+                                  L->clone()->createSourceFile(f.first, this);
+                                  else
+                                  throw std::logic_error("no ASM language found");*/
+                break;
+            default:
+                throw std::logic_error("not implemented");
+            }
+        }
+    }
+
+    // default macros
+    // public to make sure integrations also take these
+    if (getBuildSettings().TargetOS.Type == OSType::Windows)
+    {
+        Public.Definitions["SW_EXPORT"] = "__declspec(dllexport)";
+        Public.Definitions["SW_IMPORT"] = "__declspec(dllimport)";
+    }
+    else
+    {
+        Public.Definitions["SW_EXPORT"] = "__attribute__ ((visibility (\"default\")))";
+        Public.Definitions["SW_IMPORT"] = "__attribute__ ((visibility (\"default\")))";
+    }
+
+    // gather deps into one list of active deps
+
+    // set our initial deps
+    getActiveDependencies();
+}
+
+void NativeCompiledTarget::prepare_pass2()
+{
+    // resolve
+    for (auto &d : getActiveDependencies())
+    {
+        auto t = getMainBuild().getTargets().find(d.dep->getPackage(), d.dep->settings);
+        if (!t)
+            throw SW_RUNTIME_ERROR("No such target: " + d.dep->getPackage().toString());
+        d.dep->setTarget(*t);
+    }
+}
+
+void NativeCompiledTarget::prepare_pass3()
+{
+    // inheritance
+
+    struct H
+    {
+        size_t operator()(const DependencyPtr &p) const
+        {
+            return std::hash<PackageId>()(p->getTarget().getPackage());
+        }
+    };
+    struct EQ
+    {
+        size_t operator()(const DependencyPtr &p1, const DependencyPtr &p2) const
+        {
+            return &p1->getTarget() == &p2->getTarget();
+        }
+    };
+
+    // we have ptrs, so do custom sorting
+    std::unordered_map<DependencyPtr, InheritanceType, H, EQ> deps(0, H{});
+    std::vector<DependencyPtr> deps_ordered;
+
+    // set our initial deps
+    for (auto &d : getActiveDependencies())
+    {
+        deps.emplace(d.dep, d.inhtype);
+        deps_ordered.push_back(d.dep);
+    }
+
+    while (1)
+    {
+        bool new_dependency = false;
+        auto deps2 = deps;
+        for (auto &[d, _] : deps2)
+        {
+            // iterate over child deps
+            auto t = d->getTarget().as<const NativeCompiledTarget*>();
+            if (!t)
+                continue;
+            for (auto &dep : t->getActiveDependencies())
+            {
+                auto Inheritance = dep.inhtype;
+                auto d2 = dep.dep;
+
+                // nothing to do with private inheritance
+                // before d2->getTarget()!
+                if (Inheritance == InheritanceType::Private)
+                    continue;
+
+                if (&d2->getTarget() == this)
+                    continue;
+
+                if (Inheritance == InheritanceType::Protected && !hasSameProject(d2->getTarget()))
+                    continue;
+
+                auto copy = std::make_shared<Dependency>(*d2);
+                auto[i, inserted] = deps.emplace(copy,
+                    Inheritance == InheritanceType::Interface ?
+                    InheritanceType::Public : Inheritance
+                );
+                if (inserted)
+                    deps_ordered.push_back(copy);
+
+                // include directories only handling
+                auto di = i->first;
+                if (inserted)
+                {
+                    // new dep is added
+                    if (d->IncludeDirectoriesOnly)
+                    {
+                        // if we inserted 3rd party dep (d2=di) of idir_only dep (d),
+                        // we mark it always as idir_only
+                        di->IncludeDirectoriesOnly = true;
+                    }
+                    else
+                    {
+                        // otherwise we keep idir_only flag as is
+                    }
+                    new_dependency = true;
+                }
+                else
+                {
+                    // we already have this dep
+                    if (d->IncludeDirectoriesOnly)
+                    {
+                        // left as is if parent (d) idir_only
+                    }
+                    else
+                    {
+                        // if parent dep is not idir_only, then we choose whether to build dep
+                        if (d2->IncludeDirectoriesOnly)
+                        {
+                            // left as is if d2 idir_only
+                        }
+                        else
+                        {
+                            if (di->IncludeDirectoriesOnly)
+                            {
+                                // also mark as new dependency (!) if processing changed for it
+                                new_dependency = true;
+                            }
+                            // if d2 is not idir_only, we set so for di
+                            di->IncludeDirectoriesOnly = false;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (!new_dependency)
+        {
+            for (auto &d : deps_ordered)
+            {
+                if (&d->getTarget() != this)
+                    all_deps.insert(deps.find(d)->first);
+            }
+            break;
+        }
+    }
+}
+
+void NativeCompiledTarget::prepare_pass4()
+{
+    // merge
+    merge1();
+}
+
+void NativeCompiledTarget::prepare_pass5()
+{
+    // source files
+
+    // check postponed files first
+    for (auto &[p, f] : *this)
+    {
+        if (!f->postponed || f->skip)
+            continue;
+
+        auto ext = p.extension().string();
+        auto prog = findProgramByExtension(ext);
+        if (!prog)
+            throw std::logic_error("User defined program not registered for " + ext);
+
+        auto p2 = dynamic_cast<FileToFileTransformProgram*>(prog);
+        if (!p2)
+            throw SW_RUNTIME_ERROR("Bad program type");
+        f = this->SourceFileMapThis::operator[](p) = p2->createSourceFile(*this, p);
+    }
+
+    // before merge
+    if (getBuildSettings().Native.ConfigurationType != ConfigurationType::Debug)
+        *this += Definition("NDEBUG");
+    // allow to other compilers?
+    // it is set automatically with /LDd, /MDd, or /MTd
+    //else if (getCompilerType() == CompilerType::MSVC)
+    //*this += Definition("_DEBUG");
+
+    auto remove_bdirs = [this](auto *c)
+    {
+        // if we won't remove this, bdirs will differ between different config compilations
+        // so our own config pch will be outdated on every call
+        c->IncludeDirectories.erase(BinaryDir);
+        c->IncludeDirectories.erase(BinaryPrivateDir);
+    };
+
+    auto vs_setup = [this, &remove_bdirs](auto *f, auto *c)
+    {
+        if (getBuildSettings().Native.MT)
+            c->RuntimeLibrary = vs::RuntimeLibraryType::MultiThreaded;
+
+        switch (getBuildSettings().Native.ConfigurationType)
+        {
+        case ConfigurationType::Debug:
+            c->RuntimeLibrary =
+                getBuildSettings().Native.MT ?
+                vs::RuntimeLibraryType::MultiThreadedDebug :
+                vs::RuntimeLibraryType::MultiThreadedDLLDebug;
+            c->Optimizations().Disable = true;
+            break;
+        case ConfigurationType::Release:
+            c->Optimizations().FastCode = true;
+            break;
+        case ConfigurationType::ReleaseWithDebugInformation:
+            c->Optimizations().FastCode = true;
+            break;
+        case ConfigurationType::MinimalSizeRelease:
+            c->Optimizations().SmallCode = true;
+            break;
+        }
+        if (f->file.extension() != ".c")
+            c->CPPStandard = CPPVersion;
+
+        if (IsConfig/* || c->PrecompiledHeader && c->PrecompiledHeader().create*/)
+        {
+            remove_bdirs(c);
+        }
+
+        // for static libs, we gather and put pdb near output file
+        // btw, VS is clever enough to take this info from .lib
+        /*if (getSelectedTool() == Librarian.get())
+        {
+        if ((getBuildSettings().Native.ConfigurationType == ConfigurationType::Debug ||
+        getBuildSettings().Native.ConfigurationType == ConfigurationType::ReleaseWithDebugInformation) &&
+        c->PDBFilename.empty())
+        {
+        auto f = getOutputFile();
+        f = f.parent_path() / f.filename().stem();
+        f += ".pdb";
+        c->PDBFilename = f;// BinaryDir.parent_path() / "obj" / (getPackage().getPath().toString() + ".pdb");
+        }
+        }*/
+    };
+
+    auto gnu_setup = [this](auto *f, auto *c)
+    {
+        switch (getBuildSettings().Native.ConfigurationType)
+        {
+        case ConfigurationType::Debug:
+            c->GenerateDebugInformation = true;
+            //c->Optimizations().Level = 0; this is the default
+            break;
+        case ConfigurationType::Release:
+            c->Optimizations().Level = 3;
+            break;
+        case ConfigurationType::ReleaseWithDebugInformation:
+            c->GenerateDebugInformation = true;
+            c->Optimizations().Level = 2;
+            break;
+        case ConfigurationType::MinimalSizeRelease:
+            c->Optimizations().SmallCode = true;
+            c->Optimizations().Level = 2;
+            break;
+        }
+        if (f->file.extension() != ".c")
+            c->CPPStandard = CPPVersion;
+        else
+            c->CStandard = CVersion;
+
+        if (ExportAllSymbols && getSelectedTool() == Linker.get())
+            c->VisibilityHidden = false;
+    };
+
+    auto files = gatherSourceFiles();
+
+    // merge file compiler options with target compiler options
+    for (auto &f : files)
+    {
+        // set everything before merge!
+        f->compiler->merge(*this);
+
+        if (auto c = f->compiler->as<VisualStudioCompiler*>())
+        {
+            if (UseModules)
+            {
+                c->UseModules = UseModules;
+                //c->stdIfcDir = c->System.IncludeDirectories.begin()->parent_path() / "ifc" / (getBuildSettings().TargetOS.Arch == ArchType::x86_64 ? "x64" : "x86");
+                c->stdIfcDir = c->System.IncludeDirectories.begin()->parent_path() / "ifc" / c->file.parent_path().filename();
+                c->UTF8 = false; // utf8 is not used in std modules and produce a warning
+
+                auto s = read_file(f->file);
+                std::smatch m;
+                static std::regex r("export module (\\w+)");
+                if (std::regex_search(s, m, r))
+                {
+                    c->ExportModule = true;
+                }
+            }
+
+            vs_setup(f, c);
+        }
+        else if (auto c = f->compiler->as<ClangClCompiler*>())
+        {
+            vs_setup(f, c);
+        }
+        // clang compiler is not working atm, gnu is created instead
+        else if (auto c = f->compiler->as<ClangCompiler*>())
+        {
+            gnu_setup(f, c);
+
+            if (IsConfig/* || c->EmitPCH*/)
+            {
+                remove_bdirs(c);
+            }
+        }
+        else if (auto c = f->compiler->as<GNUCompiler*>())
+        {
+            gnu_setup(f, c);
+
+            if (IsConfig/* || c->Language && c->Language() == "c++-header"s*/)
+            {
+                remove_bdirs(c);
+            }
+        }
+    }
+
+    // also merge rc files
+    for (auto &f : ::sw::gatherSourceFiles<RcToolSourceFile>(*this))
+    {
+        // add casual idirs?
+        f->compiler->idirs = NativeCompilerOptions::System.IncludeDirectories;
+    }
+
+    //
+    if (GenerateWindowsResource
+        && !*HeaderOnly
+        && ::sw::gatherSourceFiles<RcToolSourceFile>(*this).empty()
+        && getSelectedTool() == Linker.get()
+        && !IsConfig
+        && getBuildSettings().TargetOS.is(OSType::Windows)
+        && Scope == TargetScope::Build
+        )
+    {
+        struct RcEmitter : primitives::Emitter
+        {
+            using Base = primitives::Emitter;
+
+            RcEmitter(Version file_ver, Version product_ver)
+            {
+                if (file_ver.isBranch())
+                    file_ver = Version();
+                if (product_ver.isBranch())
+                    product_ver = Version();
+
+                file_ver = Version(file_ver.getMajor(), file_ver.getMinor(), file_ver.getPatch(), file_ver.getTweak());
+                product_ver = Version(product_ver.getMajor(), product_ver.getMinor(), product_ver.getPatch(), product_ver.getTweak());
+
+                addLine("1 VERSIONINFO");
+                addLine("  FILEVERSION " + file_ver.toString(","s));
+                addLine("  PRODUCTVERSION " + product_ver.toString(","s));
+            }
+
+            void beginBlock(const String &name)
+            {
+                addLine("BLOCK \"" + name + "\"");
+                begin();
+            }
+
+            void endBlock()
+            {
+                end();
+            }
+
+            void addValue(const String &name, const Strings &vals)
+            {
+                addLine("VALUE \"" + name + "\", ");
+                for (auto &v : vals)
+                    addText(v + ", ");
+                trimEnd(2);
+            }
+
+            void addValueQuoted(const String &name, const Strings &vals)
+            {
+                Strings vals2;
+                for (auto &v : vals)
+                    vals2.push_back("\"" + v + "\"");
+                addValue(name, vals2);
+            }
+
+            void begin()
+            {
+                increaseIndent("BEGIN");
+            }
+
+            void end()
+            {
+                decreaseIndent("END");
+            }
+        };
+
+        RcEmitter ctx(getPackage().getVersion(), getPackage().getVersion());
+        ctx.begin();
+
+        ctx.beginBlock("StringFileInfo");
+        ctx.beginBlock("040904b0");
+        //VALUE "CompanyName", "TODO: <Company name>"
+        ctx.addValueQuoted("FileDescription", { getPackage().getPath().back()/* + " - " + getConfig()*/ }); // remove config for now
+        ctx.addValueQuoted("FileVersion", { getPackage().getVersion().toString() });
+        //VALUE "InternalName", "@PACKAGE@"
+        ctx.addValueQuoted("LegalCopyright", { "Powered by Software Network" });
+        ctx.addValueQuoted("OriginalFilename", { getPackage().toString() });
+        ctx.addValueQuoted("ProductName", { getPackage().getPath().toString() });
+        ctx.addValueQuoted("ProductVersion", { getPackage().getVersion().toString() });
+        ctx.endBlock();
+        ctx.endBlock();
+
+        ctx.beginBlock("VarFileInfo");
+        ctx.addValue("Translation", { "0x409","1200" });
+        ctx.endBlock();
+
+        ctx.end();
+
+        path p = BinaryPrivateDir / "sw.rc";
+        write_file_if_different(p, ctx.getText());
+
+        // more info for generators
+        File(p, getFs()).setGenerated(true);
+
+        operator+=(p);
+    }
+
+    // setup pch deps
+    {
+        // gather pch
+        struct PCH
+        {
+            NativeSourceFile *create = nullptr;
+            std::set<NativeSourceFile *> use;
+        };
+
+        std::map<path /* pch file */, std::map<path, PCH> /* pch hdr */> pchs;
+        for (auto &f : files)
+        {
+            if (auto c = f->compiler->as<VisualStudioCompiler*>())
+            {
+                if (c->PrecompiledHeader().create)
+                    pchs[c->PrecompiledHeaderFilename()][c->PrecompiledHeader().create.value()].create = f;
+                else if (c->PrecompiledHeader().use)
+                    pchs[c->PrecompiledHeaderFilename()][c->PrecompiledHeader().use.value()].use.insert(f);
+            }
+        }
+
+        // set deps
+        for (auto &pch : pchs)
+        {
+            // groups
+            for (auto &g : pch.second)
+            {
+                for (auto &f : g.second.use)
+                    f->dependencies.insert(g.second.create);
+            }
+        }
+    }
+
+    // pdb
+    if (getSelectedTool())
+    {
+        if (auto c = getSelectedTool()->as<VisualStudioLinker *>())
+        {
+            if (!c->GenerateDebugInformation)
+            {
+                if (getBuildSettings().Native.ConfigurationType == ConfigurationType::Debug ||
+                    getBuildSettings().Native.ConfigurationType == ConfigurationType::ReleaseWithDebugInformation)
+                {
+                    /*if (auto g = getSolution().getGenerator(); g && g->type == GeneratorType::VisualStudio)
+                    c->GenerateDebugInformation = vs::link::Debug::FastLink;
+                    else*/
+                    c->GenerateDebugInformation = vs::link::Debug::Full;
+                }
+                else
+                    c->GenerateDebugInformation = vs::link::Debug::None;
+            }
+
+            //if ((!c->GenerateDebugInformation || c->GenerateDebugInformation() != vs::link::Debug::None) &&
+            if ((c->GenerateDebugInformation && c->GenerateDebugInformation() != vs::link::Debug::None) &&
+                c->PDBFilename.empty())
+            {
+                auto f = getOutputFile();
+                f = f.parent_path() / f.filename().stem();
+                f += ".pdb";
+                c->PDBFilename = f;// BinaryDir.parent_path() / "obj" / (getPackage().getPath().toString() + ".pdb");
+            }
+            else
+                c->PDBFilename.output_dependency = false;
+
+            if (Linker->Type == LinkerType::LLD)
+            {
+                if (c->GenerateDebugInformation)
+                    c->InputFiles().insert("msvcrtd.lib");
+                else
+                    c->InputFiles().insert("msvcrt.lib");
+            }
+        }
+    }
+
+    // export all symbols
+    if (ExportAllSymbols && getBuildSettings().TargetOS.Type == OSType::Windows && getSelectedTool() == Linker.get())
+    {
+        const path def = NATIVE_TARGET_DEF_SYMBOLS_FILE;
+        Files objs;
+        for (auto &f : files)
+            objs.insert(f->output);
+        SW_MAKE_EXECUTE_BUILTIN_COMMAND_AND_ADD(c, *this, "sw_create_def_file", nullptr);
+        //c->record_inputs_mtime = true;
+        c->arguments.push_back(def.u8string());
+        c->push_back(objs);
+        c->addInput(objs);
+        c->addOutput(def);
+        add(def);
+    }
+
+    // add def file to linker
+    if (getSelectedTool() && getSelectedTool() == Linker.get())
+    {
+        if (auto VSL = getSelectedTool()->as<VisualStudioLibraryTool*>())
+        {
+            for (auto &[p, f] : *this)
+            {
+                if (!f->skip && p.extension() == ".def")
+                {
+                    VSL->ModuleDefinitionFile = p;
+                    HeaderOnly = false;
+                }
+            }
+        }
+    }
+
+    // also fix rpath libname here
+    if (createWindowsRpath())
+    {
+        getSelectedTool()->setImportLibrary(getOutputFileName2("lib") += ".rp");
+    }
+}
+
+void NativeCompiledTarget::prepare_pass6()
+{
+    // link libraries
+
+    // link libs
+    if (getBuildSettings().TargetOS.is(OSType::Windows))
+    {
+        auto rt = vs::RuntimeLibraryType::MultiThreadedDLL;
+        if (getBuildSettings().Native.MT)
+            rt = vs::RuntimeLibraryType::MultiThreaded;
+        if (getBuildSettings().Native.ConfigurationType == ConfigurationType::Debug)
+        {
+            rt = vs::RuntimeLibraryType::MultiThreadedDLLDebug;
+            if (getBuildSettings().Native.MT)
+                rt = vs::RuntimeLibraryType::MultiThreadedDebug;
+        }
+
+        // TODO: move vs _slib to detect.cpp from native.cpp
+
+        // https://docs.microsoft.com/en-us/cpp/c-runtime-library/crt-library-features?view=vs-2019
+
+        // sometimes link.exe fails to add libs (SDL-2.0.10)
+        // so we take full control here
+
+        // we add main 5 libs and its variations for /MD /MDd /MT /MTd flags
+        // (listed in reverse order):
+        // 1. kernel (windows) library - kernel32.lib
+        // 2. libc - ucrt.lib
+        // 3. ms crt - msvcrt.lib
+        // 4. compiler (cl.exe) library - vcruntime.lib
+        // 5. ms std c++ library - msvcprt.lib
+        //
+        // we also add some other libs needed by msvc
+        // 1. oldnames.lib - for backward compat - https://docs.microsoft.com/en-us/cpp/c-runtime-library/backward-compatibility?view=vs-2019
+        // 2. concrt.lib - concurrency crt
+
+        // TODO: push these libs from properties!
+
+        // TODO: libs may have further versions like
+        // libcpmt.lib
+        // libcpmt1.lib
+        //
+        // libcpmtd.lib
+        // libcpmtd0.lib
+        // libcpmtd1.lib
+
+        // other libs
+        *this += "oldnames.lib"_slib;
+        if (getBuildSettings().Native.ConfigurationType == ConfigurationType::Debug)
+            *this += "concrtd.lib"_slib;
+        else
+            *this += "concrt.lib"_slib;
+
+        switch (rt)
+        {
+        case vs::RuntimeLibraryType::MultiThreadedDLL:
+            *this += "msvcprt.lib"_slib;
+            *this += "vcruntime.lib"_slib;
+            *this += "msvcrt.lib"_slib;
+            *this += "ucrt.lib"_slib;
+            break;
+        case vs::RuntimeLibraryType::MultiThreadedDLLDebug:
+            *this += "msvcprtd.lib"_slib;
+            *this += "vcruntimed.lib"_slib;
+            *this += "msvcrtd.lib"_slib;
+            *this += "ucrtd.lib"_slib;
+            break;
+        case vs::RuntimeLibraryType::MultiThreaded:
+            *this += "libcpmt.lib"_slib;
+            *this += "libvcruntime.lib"_slib;
+            *this += "libcmt.lib"_slib;
+            *this += "libucrt.lib"_slib;
+            break;
+        case vs::RuntimeLibraryType::MultiThreadedDebug:
+            *this += "libcpmtd.lib"_slib;
+            *this += "libvcruntimed.lib"_slib;
+            *this += "libcmtd.lib"_slib;
+            *this += "libucrtd.lib"_slib;
+            break;
+        }
+        *this += "kernel32.lib"_slib;
+        if (auto L = getSelectedTool()->as<VisualStudioLinker*>())
+        {
+            auto cmd = L->createCommand(getMainBuild().getContext());
+            cmd->push_back("-NODEFAULTLIB");
+        }
+    }
+
+    // add link libraries from deps
+    if (!*HeaderOnly && getSelectedTool() != Librarian.get())
+    {
+        auto L = Linker->as<VisualStudioLinker*>();
+        for (auto &d : getAllDependencies())
+        {
+            if (&d->getTarget() == this)
+                continue;
+            if (d->IncludeDirectoriesOnly)
+                continue;
+
+            auto nt = d->getTarget().template as<NativeCompiledTarget*>();
+            if (!nt)
+                continue;
+
+            // circular deps detection
+            if (L)
+            {
+                for (auto &d2 : nt->getAllDependencies())
+                {
+                    if (&d2->getTarget() != this)
+                        continue;
+                    if (d2->IncludeDirectoriesOnly)
+                        continue;
+
+                    circular_dependency = true;
+                    break;
+                }
+            }
+
+            if (!*nt->HeaderOnly)
+            {
+                LinkLibraries.push_back(nt->getImportLibrary());
+            }
+        }
+    }
+}
+
+void NativeCompiledTarget::prepare_pass7()
+{
+    // linker 1
+
+    // add more link libraries from deps
+    if (!*HeaderOnly && getSelectedTool() != Librarian.get())
+    {
+        auto ll = [this](auto &l, bool system)
+        {
+            std::unordered_set<const NativeCompiledTarget*> targets;
+            Files added;
+            added.insert(l.begin(), l.end());
+            gatherStaticLinkLibraries(l, added, targets, system);
+        };
+
+        ll(LinkLibraries, false);
+        ll(NativeLinkerOptions::System.LinkLibraries, true);
+    }
+
+    // right after gatherStaticLinkLibraries()!
+    if (getSelectedTool())
+        getSelectedTool()->merge(*this);
+}
+
+void NativeCompiledTarget::prepare_pass8()
+{
+    // linker 2
+
+    // linker setup
+    auto obj = gatherObjectFilesWithoutLibraries();
+    auto O1 = gatherLinkLibraries();
+
+    if (!*HeaderOnly && getSelectedTool() != Librarian.get())
+    {
+        for (auto &f : ::sw::gatherSourceFiles<RcToolSourceFile>(*this))
+            obj.insert(f->output);
+    }
+
+    // circular and windows rpath processing
+    processCircular(obj);
+
+    if (getSelectedTool())
+    {
+        getSelectedTool()->setObjectFiles(obj);
+        getSelectedTool()->setInputLibraryDependencies(O1);
+    }
+
+    call(CallbackType::EndPrepare);
+}
+
+void NativeCompiledTarget::prepare_pass9()
+{
+    clearGlobCache();
 }
 
 void NativeCompiledTarget::processCircular(Files &obj)
@@ -3081,8 +3120,9 @@ bool NativeCompiledTarget::prepareLibrary(LibraryType Type)
                 Public.Definitions[api] = "SW_EXPORT";
             }
 
-            Definitions[api + "_EXTERN="];
-            Interface.Definitions[api + "_EXTERN"] = "extern";
+            // old
+            //Definitions[api + "_EXTERN="];
+            //Interface.Definitions[api + "_EXTERN"] = "extern";
         };
 
         if (SwDefinitions)
