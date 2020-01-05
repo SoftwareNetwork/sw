@@ -1313,14 +1313,19 @@ String detectMsvcPrefix(builder::detail::ResolvableCommand c, const path &idir)
     fs::remove(obj);
     fs::remove(fn);
 
+    auto error = [&c](const String &reason)
+    {
+        return "Cannot match VS include prefix (" + reason + "):\n" + c.out.text + "\nstderr:\n" + c.err.text;
+    };
+
     auto lines = split_lines(c.out.text);
     if (lines.size() < 2)
-        throw SW_RUNTIME_ERROR("Cannot match vs include prefix (bad output)");
+        throw SW_RUNTIME_ERROR(error("bad output"));
 
     static std::regex r(R"((.*\s)[a-zA-Z]:\\.*iostream)");
     std::smatch m;
     if (!std::regex_search(lines[1], m, r))
-        throw SW_RUNTIME_ERROR("Cannot match vs include prefix");
+        throw SW_RUNTIME_ERROR(error("regex_search failed"));
     return p[c.getProgram()] = m[1].str();
 }
 
