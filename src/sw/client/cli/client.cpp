@@ -129,6 +129,9 @@ static ::cl::alias verbose_opt2("v", ::cl::desc("Alias for -verbose"), ::cl::ali
 static ::cl::opt<bool> trace("trace", ::cl::desc("Trace output"));
 static ::cl::opt<int> jobs("j", ::cl::desc("Number of jobs"));
 
+static ::cl::opt<bool> cl_list_programs("list-programs", ::cl::desc("List available programs on the system"));
+static ::cl::opt<bool> cl_list_predefined_targets("list-predefined-targets", ::cl::desc("List predefined targets"));
+
 static ::cl::opt<bool> cl_self_upgrade("self-upgrade", ::cl::desc("Upgrade client"));
 static ::cl::opt<path> cl_self_upgrade_copy("internal-self-upgrade-copy", ::cl::desc("Upgrade client: copy file"), ::cl::ReallyHidden);
 
@@ -156,6 +159,9 @@ static ::cl::list<path> internal_verify_file("internal-verify-file", ::cl::value
 sw_driver_t sw_create_driver(void);
 
 //static ::cl::list<String> drivers("load-driver", ::cl::desc("Load more drivers"), ::cl::CommaSeparated);
+
+void list_predefined_targets();
+void list_programs();
 
 int setup_main(const Strings &args)
 {
@@ -193,6 +199,18 @@ int setup_main(const Strings &args)
     if (cl_self_upgrade)
     {
         self_upgrade();
+        return 0;
+    }
+
+    if (cl_list_predefined_targets)
+    {
+        list_predefined_targets();
+        return 0;
+    }
+
+    if (cl_list_programs)
+    {
+        list_programs();
         return 0;
     }
 
@@ -411,6 +429,73 @@ void setup_log(const std::string &log_level, bool simple)
     // first trace message
     LOG_TRACE(logger, "----------------------------------------");
     LOG_TRACE(logger, "Starting sw...");
+}
+
+void list_predefined_targets()
+{
+    using OrderedTargetMap = sw::PackageVersionMapBase<sw::TargetContainer, std::map, primitives::version::VersionMap>;
+
+    auto swctx = createSwContext();
+    OrderedTargetMap m;
+    for (auto &[pkg, tgts] : swctx->getPredefinedTargets())
+        m[pkg] = tgts;
+    for (auto &[pkg, tgts] : m)
+    {
+        LOG_INFO(logger, pkg.toString());
+    }
+}
+
+void list_programs()
+{
+    auto swctx = createSwContext();
+    auto &m = swctx->getPredefinedTargets();
+
+    primitives::Emitter ctx("  ");
+    ctx.addLine("List of detected programs:");
+
+    auto print_program = [&m, &ctx](const sw::PackagePath &p, const String &title)
+    {
+        ctx.increaseIndent();
+        auto i = m.find(p);
+        if (i != m.end(p) && !i->second.empty())
+        {
+            ctx.addLine(title + ":");
+            ctx.increaseIndent();
+            if (!i->second.releases().empty())
+                ctx.addLine("release:");
+            ctx.increaseIndent();
+            for (auto &[v,tgts] : i->second.releases())
+            {
+                ctx.addLine("- " + v.toString());
+            }
+            ctx.decreaseIndent();
+            if (std::any_of(i->second.begin(), i->second.end(), [](const auto &p) { return !p.first.isRelease(); }))
+            {
+                ctx.addLine("preview:");
+                ctx.increaseIndent();
+                for (auto &[v, tgts] : i->second)
+                {
+                    if (v.isRelease())
+                        continue;
+                    ctx.addLine("- " + v.toString());
+                }
+                ctx.decreaseIndent();
+            }
+            ctx.decreaseIndent();
+        }
+        ctx.decreaseIndent();
+    };
+
+    print_program("com.Microsoft.VisualStudio.VC.cl", "Microsoft Visual Studio C/C++ Compiler (short form - msvc)");
+    print_program("org.LLVM.clang", "Clang C/C++ Compiler (short form - clang)");
+    print_program("org.LLVM.clangcl", "Clang C/C++ Compiler in MSVC compatibility mode (short form - clangcl)");
+
+    ctx.addLine();
+    ctx.addLine("Use short program form plus version to select it for use.");
+    ctx.addLine("   short-version");
+    ctx.addLine("Examples: msvc-19.16, msvc-19.24-preview, clang-10");
+
+    LOG_INFO(logger, ctx.getText());
 }
 
 /*SUBCOMMAND_DECL(mirror)
