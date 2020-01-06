@@ -70,10 +70,6 @@ TargetSettings toTargetSettings(const OS &o)
     return s;
 }
 
-TargetSetting::TargetSetting(const TargetSettingKey &k) : key(k)
-{
-}
-
 TargetSetting::TargetSetting(const TargetSetting &rhs)
 {
     operator=(rhs);
@@ -89,7 +85,6 @@ void TargetSetting::copy_fields(const TargetSetting &rhs)
 
 TargetSetting &TargetSetting::operator=(const TargetSetting &rhs)
 {
-    key = rhs.key;
     value = rhs.value;
     copy_fields(rhs);
     return *this;
@@ -112,7 +107,7 @@ const TargetSetting &TargetSetting::operator[](const TargetSettingKey &k) const
 {
     if (value.index() != 3)
     {
-        thread_local TargetSetting s("");
+        thread_local TargetSetting s;
         return s;
     }
     return std::get<TargetSettings>(value)[k];
@@ -122,7 +117,7 @@ const String &TargetSetting::getValue() const
 {
     auto v = std::get_if<TargetSettingValue>(&value);
     if (!v)
-        throw SW_RUNTIME_ERROR("empty value for key: " + key);
+        throw SW_RUNTIME_ERROR("empty value");
     return *v;
 }
 
@@ -135,7 +130,7 @@ const std::vector<TargetSettingValue> &TargetSetting::getArray() const
     }
     auto v = std::get_if<std::vector<TargetSettingValue>>(&value);
     if (!v)
-        throw SW_RUNTIME_ERROR("empty array for key: " + key);
+        throw SW_RUNTIME_ERROR("empty array");
     return *v;
 }
 
@@ -379,7 +374,7 @@ nlohmann::json TargetSettings::toJson() const
 
 TargetSetting &TargetSettings::operator[](const TargetSettingKey &k)
 {
-    return settings.try_emplace(k, k).first->second;
+    return settings.try_emplace(k, TargetSetting{}).first->second;
 }
 
 const TargetSetting &TargetSettings::operator[](const TargetSettingKey &k) const
@@ -387,7 +382,7 @@ const TargetSetting &TargetSettings::operator[](const TargetSettingKey &k) const
     auto i = settings.find(k);
     if (i == settings.end())
     {
-        thread_local TargetSetting s("");
+        thread_local TargetSetting s;
         return s;
     }
     return i->second;

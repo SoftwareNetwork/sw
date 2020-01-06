@@ -81,7 +81,7 @@ private:
 
 struct SW_CORE_API TargetSetting
 {
-    TargetSetting(const TargetSettingKey &k);
+    TargetSetting() = default;
     TargetSetting(const TargetSetting &);
     TargetSetting &operator=(const TargetSetting &);
 
@@ -154,7 +154,6 @@ private:
     bool used_in_hash = true;
     bool ignore_in_comparison = false;
     // when adding new member, add it to copy_fields()!
-    TargetSettingKey key;
     std::variant<std::monostate, TargetSettingValue, std::vector<TargetSettingValue>, TargetSettings> value;
 
     nlohmann::json toJson() const;
