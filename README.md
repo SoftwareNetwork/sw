@@ -2,7 +2,7 @@
 
 <!---[![Build status](https://ci.appveyor.com/api/projects/status/3mf8eall4lf764sk/branch/master?svg=true)](https://ci.appveyor.com/project/egorpugin/sw/branch/master)--->
 
-![Build status](https://github.com/SoftwareNetwork/sw/workflows/C%2FC%2B%2B%20CI%20with%20SW/badge.svg)
+![Build status](https://github.com/SoftwareNetwork/sw/workflows/CI/badge.svg)
 
 ## Resources
 

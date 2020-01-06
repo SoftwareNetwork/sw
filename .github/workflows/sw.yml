@@ -1,4 +1,4 @@
-name: C/C++ CI with SW
+name: CI
 
 on: [push]
 
@@ -10,11 +10,11 @@ jobs:
         os: [windows-latest]
         #os: [ubuntu-latest]
         #os: [windows-latest, ubuntu-latest, macOS-latest]
-    
+
     steps:
     - uses: actions/checkout@v1
-    #- uses: egorpugin/sw-action@master      
-    
+    #- uses: egorpugin/sw-action@master
+
     - name: Download SW
       shell: cmake -P {0}
       run: |
@@ -25,10 +25,10 @@ jobs:
         else()
           file(DOWNLOAD "https://software-network.org/client/sw-master-linux-client.tar.gz" ./sw.zip)
         endif()
-        
+
     - name: Unpack SW
       run: cmake -E tar xvf sw.zip
-      
+
     - name: chmod
       run: chmod 755 sw
       shell: sh
@@ -38,7 +38,7 @@ jobs:
       #with:
         #path: ~/.sw
         #key: ${{ runner.os }}-sw-storage
-        
+
     - name: build
       run: ./sw -static -mt build
 
