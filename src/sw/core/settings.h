@@ -48,11 +48,12 @@ struct SW_CORE_API TargetSettings
     TargetSetting &operator[](const TargetSettingKey &);
     const TargetSetting &operator[](const TargetSettingKey &) const;
 
-    void merge(const TargetSettings &);
+    void mergeMissing(const TargetSettings &);
+    void mergeAndAssign(const TargetSettings &);
     void erase(const TargetSettingKey &);
 
     // other merges
-    void merge(const String &s, int type = Json);
+    void mergeFromString(const String &s, int type = Json);
     void mergeFromJson(const nlohmann::json &);
 
     String getConfig() const; // getShortConfig()?
@@ -141,7 +142,8 @@ struct SW_CORE_API TargetSetting
     void ignoreInComparison(bool);
     bool ignoreInComparison() const { return ignore_in_comparison; }
 
-    void merge(const TargetSetting &);
+    void mergeAndAssign(const TargetSetting &);
+    void mergeMissing(const TargetSetting &);
     void mergeFromJson(const nlohmann::json &);
 
     bool isValue() const;

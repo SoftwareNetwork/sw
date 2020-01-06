@@ -1880,8 +1880,8 @@ DependenciesType NativeCompiledTarget::gatherDependencies() const
             td.dep = d;
             td.inhtype = i;
             auto s = td.dep->settings;
-            td.dep->settings.merge(ts_export);
-            td.dep->settings.merge(s);
+            td.dep->settings.mergeAndAssign(ts_export);
+            td.dep->settings.mergeAndAssign(s);
             deps.push_back(td);
         }
     });
@@ -1909,8 +1909,8 @@ NativeCompiledTarget::ActiveDeps &NativeCompiledTarget::getActiveDependencies()
                     td.dep = d;
                     td.inhtype = i;
                     auto s = td.dep->settings;
-                    td.dep->settings.merge(ts_export);
-                    td.dep->settings.merge(s);
+                    td.dep->settings.mergeAndAssign(ts_export);
+                    td.dep->settings.mergeAndAssign(s);
                     deps.push_back(td);
                 }
             });

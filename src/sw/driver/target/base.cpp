@@ -765,7 +765,7 @@ DependencyPtr Target::addDummyDependency(const DependencyPtr &t)
 
     auto &hs = getHostSettings();
     auto &ds = DummyDependencies.back()->settings;
-    ds.merge(hs);
+    ds.mergeAndAssign(hs);
     return t;
 }
 

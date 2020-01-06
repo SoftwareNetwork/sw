@@ -189,12 +189,12 @@ void TargetSetting::ignoreInComparison(bool b)
     ignore_in_comparison = b;
 }
 
-void TargetSetting::merge(const TargetSetting &rhs)
+void TargetSetting::mergeMissing(const TargetSetting &rhs)
 {
     auto s = std::get_if<TargetSettings>(&value);
     if (s)
     {
-        s->merge(std::get<TargetSettings>(rhs.value));
+        s->mergeMissing(std::get<TargetSettings>(rhs.value));
         return;
     }
     if (value.index() == 0)
@@ -202,6 +202,18 @@ void TargetSetting::merge(const TargetSetting &rhs)
         value = rhs.value;
         copy_fields(rhs);
     }
+}
+
+void TargetSetting::mergeAndAssign(const TargetSetting &rhs)
+{
+    auto s = std::get_if<TargetSettings>(&value);
+    if (s)
+    {
+        s->mergeAndAssign(std::get<TargetSettings>(rhs.value));
+        return;
+    }
+    value = rhs.value;
+    copy_fields(rhs);
 }
 
 void TargetSetting::mergeFromJson(const nlohmann::json &j)
@@ -313,7 +325,7 @@ String TargetSettings::getHash() const
     return shorten_hash(blake2b_512(getConfig()), 6);
 }
 
-void TargetSettings::merge(const String &s, int type)
+void TargetSettings::mergeFromString(const String &s, int type)
 {
     switch (type)
     {
@@ -456,10 +468,16 @@ bool TargetSettings::isSubsetOf(const TargetSettings &s) const
     return true;
 }
 
-void TargetSettings::merge(const TargetSettings &rhs)
+void TargetSettings::mergeMissing(const TargetSettings &rhs)
 {
     for (auto &[k, v] : rhs)
-        (*this)[k].merge(v);
+        (*this)[k].mergeMissing(v);
+}
+
+void TargetSettings::mergeAndAssign(const TargetSettings &rhs)
+{
+    for (auto &[k, v] : rhs)
+        (*this)[k].mergeAndAssign(v);
 }
 
 void TargetSettings::mergeFromJson(const nlohmann::json &j)

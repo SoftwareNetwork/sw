@@ -292,7 +292,7 @@ static void applySettings(sw::TargetSettings &s, const String &in_settings)
 
 static void applySettingsFromJson(sw::TargetSettings &s, const String &jsonstr)
 {
-    s.merge(jsonstr);
+    s.mergeFromString(jsonstr);
 }
 
 static std::vector<sw::TargetSettings> applySettingsFromCppFile(sw::SwContext &swctx, const path &fn)
@@ -331,7 +331,7 @@ static std::vector<sw::TargetSettings> applySettingsFromCppFile(sw::SwContext &s
         if (selected_cfgs.empty() || selected_cfgs.find(k) != selected_cfgs.end())
         {
             sw::TargetSettings ts;
-            ts.merge(v);
+            ts.mergeFromString(v);
             r.push_back(ts);
         }
     }
@@ -491,7 +491,7 @@ std::vector<sw::TargetSettings> createSettings(sw::SwContext &swctx)
     // compiler
     mult_and_action(compiler.size(), [](auto &s, int i)
     {
-        s.merge(compilerTypeFromStringCaseI(compiler[i]));
+        s.mergeAndAssign(compilerTypeFromStringCaseI(compiler[i]));
     });
 
     // target_os
@@ -510,7 +510,7 @@ std::vector<sw::TargetSettings> createSettings(sw::SwContext &swctx)
     auto sf = getSettingsFromFile(swctx);
     mult_and_action(sf.size(), [&sf](auto &s, int i)
     {
-        s.merge(sf[i]);
+        s.mergeAndAssign(sf[i]);
     });
 
     // settings-json
@@ -523,7 +523,7 @@ std::vector<sw::TargetSettings> createSettings(sw::SwContext &swctx)
     if (settings.size() == 1 && settings[0]["host"])
     {
         auto s = swctx.getHostSettings();
-        s.merge(settings[0]["host"].getSettings());
+        s.mergeAndAssign(settings[0]["host"].getSettings());
         swctx.setHostSettings(s);
         settings[0]["host"].reset();
     }
@@ -557,7 +557,7 @@ void createInputs(sw::SwBuild &b)
         {
             sw::InputWithSettings p(b.getContext().addInput(pairs[i]));
             sw::TargetSettings s;
-            s.merge(pairs[i + 1]);
+            s.mergeFromString(pairs[i + 1]);
             p.addSettings(s);
             b.addInput(p);
         }

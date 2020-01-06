@@ -148,8 +148,7 @@ String BuildSettings::getTargetTriplet() const
 
 TargetSettings BuildSettings::getTargetSettings() const
 {
-    TargetSettings s;
-    s.merge(toTargetSettings(TargetOS));
+    auto s = toTargetSettings(TargetOS);
 
     switch (Native.LibrariesType)
     {
