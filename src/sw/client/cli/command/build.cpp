@@ -131,9 +131,6 @@ static cl::alias win_md2("md", cl::desc("Alias for -win-md"), cl::aliasopt(win_m
 
 SUBCOMMAND_DECL(build)
 {
-    if (build_arg.empty() && input_settings_pairs.empty())
-        build_arg.push_back(".");
-
     auto swctx = createSwContext();
     cli_build(*swctx);
 }
@@ -572,9 +569,11 @@ void createInputs(sw::SwBuild &b)
     }
 }
 
-std::unique_ptr<sw::SwBuild> setBuildArgsAndCreateBuildAndPrepare(sw::SwContext &swctx, const Strings &build_args)
+std::unique_ptr<sw::SwBuild> setBuildArgsAndCreateBuildAndPrepare(sw::SwContext &swctx, const Strings &in_build_args)
 {
-    ((Strings&)build_arg) = build_args;
+    ((Strings&)build_arg) = in_build_args;
+    if (build_arg.empty() && input_settings_pairs.empty())
+        build_arg.push_back(".");
     return createBuildAndPrepare(swctx);
 }
 
