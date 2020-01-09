@@ -25,6 +25,6 @@ static ::cl::opt<String> build_arg_configure(::cl::Positional, ::cl::desc("Confi
 SUBCOMMAND_DECL(configure)
 {
     auto swctx = createSwContext();
-    auto b = setBuildArgsAndCreateBuildAndPrepare(*swctx, { build_arg_configure.getValue() });
+    auto b = createBuildAndPrepare(*swctx, { build_arg_configure.getValue() });
     b->saveExecutionPlan();
 }

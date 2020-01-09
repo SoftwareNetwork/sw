@@ -120,7 +120,7 @@ SUBCOMMAND_DECL2(generate)
         swctx.setHostSettings(hs);
     }
 
-    auto b = setBuildArgsAndCreateBuildAndPrepare(swctx, (Strings&)build_arg_generate);
+    auto b = createBuildAndPrepare(swctx, (Strings&)build_arg_generate);
     b->getExecutionPlan(); // prepare commands
     generator->generate(*b);
 }

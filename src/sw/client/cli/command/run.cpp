@@ -101,7 +101,7 @@ void run(sw::SwContext &swctx, const sw::PackageId &pkg, primitives::Command &c)
     else
         inputs.push_back(pkg.toString());
 
-    auto b = setBuildArgsAndCreateBuildAndPrepare(swctx, inputs);
+    auto b = createBuildAndPrepare(swctx, inputs);
     b->build();
 
     run(*b, pkg, c);
@@ -127,7 +127,7 @@ SUBCOMMAND_DECL2(run)
 
     if (!valid_target && fs::exists((String&)target))
     {
-        auto b = setBuildArgsAndCreateBuildAndPrepare(swctx, {target});
+        auto b = createBuildAndPrepare(swctx, {target});
         b->build();
         // TODO: add better target detection
         // check only for executable targets

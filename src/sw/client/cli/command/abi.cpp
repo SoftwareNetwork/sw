@@ -39,7 +39,7 @@ SUBCOMMAND_DECL(abi)
 #endif
 
     auto swctx = createSwContext();
-    auto b = setBuildArgsAndCreateBuildAndPrepare(*swctx, (Strings&)inputs);
+    auto b = createBuildAndPrepare(*swctx, (Strings&)inputs);
     auto tgts1 = b->getTargetsToBuild();
     b->build();
 

@@ -31,7 +31,7 @@ DEFINE_SUBCOMMAND(build, "Build files, dirs or packages.");
 
 extern ::cl::opt<bool> build_after_fetch;
 
-static ::cl::list<String> build_arg(::cl::Positional, ::cl::desc("Files or directories to build (paths to config)"), ::cl::sub(subcommand_build));
+static ::cl::list<String> build_inputs(::cl::Positional, ::cl::desc("Files or directories to build (paths to config)"), ::cl::sub(subcommand_build));
 
 //static ::cl::opt<String> build_source_dir("S", ::cl::desc("Explicitly specify a source directory."), ::cl::sub(subcommand_build), ::cl::init("."));
 //static ::cl::opt<String> build_binary_dir("B", ::cl::desc("Explicitly specify a build directory."), ::cl::sub(subcommand_build), ::cl::init(SW_BINARY_DIR));
@@ -543,24 +543,16 @@ std::vector<sw::TargetSettings> createSettings(sw::SwContext &swctx)
     return settings;
 }
 
-void createInputs(sw::SwBuild &b)
+static void addInputs(sw::SwBuild &b, const Inputs &i)
 {
-    auto &pairs = (Strings &)input_settings_pairs;
-    if (!pairs.empty())
+    for (auto &[ts,in] : i.getInputPairs())
     {
-        if (pairs.size() % 2 == 1)
-            throw SW_RUNTIME_ERROR("Incorrect input settings pairs. Something is missing. Size must be even, but size = " + std::to_string(pairs.size()));
-        for (int i = 0; i < pairs.size(); i += 2)
-        {
-            sw::InputWithSettings p(b.getContext().addInput(pairs[i]));
-            sw::TargetSettings s;
-            s.mergeFromString(pairs[i + 1]);
-            p.addSettings(s);
-            b.addInput(p);
-        }
+        sw::InputWithSettings p(b.getContext().addInput(in));
+        p.addSettings(ts);
+        b.addInput(p);
     }
 
-    for (auto &a : build_arg)
+    for (auto &a : i.getInputs())
     {
         sw::InputWithSettings i(b.getContext().addInput(a));
         for (auto &s : createSettings(b.getContext()))
@@ -569,18 +561,10 @@ void createInputs(sw::SwBuild &b)
     }
 }
 
-std::unique_ptr<sw::SwBuild> setBuildArgsAndCreateBuildAndPrepare(sw::SwContext &swctx, const Strings &in_build_args)
-{
-    ((Strings&)build_arg) = in_build_args;
-    if (build_arg.empty() && input_settings_pairs.empty())
-        build_arg.push_back(".");
-    return createBuildAndPrepare(swctx);
-}
-
-std::unique_ptr<sw::SwBuild> createBuildAndPrepare(sw::SwContext &swctx)
+std::unique_ptr<sw::SwBuild> createBuildAndPrepare(sw::SwContext &swctx, const Inputs &i)
 {
     auto b = createBuild(swctx);
-    createInputs(*b);
+    addInputs(*b, i);
     b->loadInputs();
     b->setTargetsToBuild();
     b->resolvePackages();
@@ -700,6 +684,13 @@ std::unique_ptr<sw::SwBuild> createBuild(sw::SwContext &swctx)
     return b;
 }
 
+std::unique_ptr<sw::SwBuild> createBuild(sw::SwContext &swctx, const Inputs &i)
+{
+    auto b = createBuild(swctx);
+    addInputs(*b, i);
+    return b;
+}
+
 SUBCOMMAND_DECL2(build)
 {
     if (!build_explan.empty())
@@ -732,8 +723,18 @@ SUBCOMMAND_DECL2(build)
 
     // if -B specified, it is used as is
 
-    auto b = createBuild(swctx);
-    createInputs(*b);
+    Inputs inputs(build_inputs);
+    auto &pairs = (Strings &)input_settings_pairs;
+    if (pairs.size() % 2 == 1)
+        throw SW_RUNTIME_ERROR("Incorrect input settings pairs. Something is missing. Size must be even, but size = " + std::to_string(pairs.size()));
+    for (int i = 0; i < pairs.size(); i += 2)
+    {
+        sw::TargetSettings s;
+        s.mergeFromString(pairs[i + 1]);
+        inputs.addInputPair(s, pairs[i]);
+    }
+
+    auto b = createBuild(swctx, inputs);
     if (build_default_explan)
     {
         b->loadInputs();

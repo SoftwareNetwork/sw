@@ -46,14 +46,44 @@ struct StorageWithPackagesDatabase;
         cli_##command();                                 \
     }
 
+struct Inputs
+{
+    Inputs() = default;
+    Inputs(const String &s)
+    {
+        inputs.push_back(s);
+    }
+    Inputs(const Strings &s)
+    {
+        inputs = s;
+    }
+
+    void addInputPair(const sw::TargetSettings &settings, const String &input)
+    {
+        input_pairs.push_back({settings, input});
+    }
+
+    const auto &getInputs() const
+    {
+        if (inputs.empty() && input_pairs.empty())
+            inputs.push_back(".");
+        return inputs;
+    }
+    const auto &getInputPairs() const { return input_pairs; }
+
+private:
+    mutable Strings inputs;
+    std::vector<std::pair<sw::TargetSettings, String>> input_pairs;
+};
+
 std::unique_ptr<sw::SwContext> createSwContext();
 std::unique_ptr<sw::SwBuild> createBuild(sw::SwContext &);
+std::unique_ptr<sw::SwBuild> createBuild(sw::SwContext &, const Inputs &);
 std::pair<sw::SourceDirMap, const sw::Input &> fetch(sw::SwBuild &);
 std::pair<sw::SourceDirMap, const sw::Input &> fetch(sw::SwContext &);
 sw::PackageDescriptionMap getPackages(const sw::SwBuild &, const sw::SourceDirMap & = {});
 sw::TargetSettings createInitialSettings(const sw::SwContext &);
 std::vector<sw::TargetSettings> createSettings(sw::SwContext &);
-std::unique_ptr<sw::SwBuild> setBuildArgsAndCreateBuildAndPrepare(sw::SwContext &, const Strings &inputs);
-std::unique_ptr<sw::SwBuild> createBuildAndPrepare(sw::SwContext &);
+std::unique_ptr<sw::SwBuild> createBuildAndPrepare(sw::SwContext &, const Inputs &);
 std::map<sw::PackagePath, sw::VersionSet> getMatchingPackages(const sw::StorageWithPackagesDatabase &, const String &unresolved_arg);
 void run(sw::SwContext &swctx, const sw::PackageId &pkg, primitives::Command &c);
