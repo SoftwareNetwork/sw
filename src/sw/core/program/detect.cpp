@@ -203,6 +203,9 @@ void detectFortranCompilers(DETECT_ARGS)
 {
     SW_UNIMPLEMENTED;
 
+    // TODO: gfortran, flang, ifort, pgfortran, f90 (Oracle Sun), xlf, bgxlf, ...
+    // aocc, armflang
+
     /*path compiler;
     compiler = resolveExecutable("gfortran");
     if (compiler.empty())
@@ -474,6 +477,23 @@ void detectMsvc15Plus(DETECT_ARGS)
                 }
             }
 
+            // dumpbin
+            {
+                auto p = std::make_shared<SimpleProgram>(s);
+                p->file = compiler / "dumpbin.exe";
+                if (fs::exists(p->file))
+                {
+                    auto c = p->getCommand();
+                    // run getVersion via prepared command
+                    builder::detail::ResolvableCommand c2 = *c;
+                    auto v = getVersion(s, c2);
+                    if (instance.version.isPreRelease())
+                        v.getExtra() = instance.version.getExtra();
+                    auto &cl = addProgram(s, PackageId("com.Microsoft.VisualStudio.VC.dumpbin", v), p);
+                    cl.ts = ts;
+                }
+            }
+
             // libc++
             {
                 auto &libcpp = addTarget<PredefinedTarget>(s, PackageId("com.Microsoft.VisualStudio.VC.libcpp", v));
@@ -665,6 +685,21 @@ void detectMsvc14AndOlder(DETECT_ARGS)
                     auto &ml = addProgram(s, PackageId("com.Microsoft.VisualStudio.VC.ml", v), p);
                     ml.ts = ts;
                     getMsvcIncludePrefixes()[p->file] = msvc_prefix;
+                }
+            }
+
+            // dumpbin
+            {
+                auto p = std::make_shared<SimpleProgram>(s);
+                p->file = compiler / "dumpbin.exe";
+                if (fs::exists(p->file))
+                {
+                    auto c = p->getCommand();
+                    // run getVersion via prepared command
+                    builder::detail::ResolvableCommand c2 = *c;
+                    auto v = getVersion(s, c2);
+                    auto &cl = addProgram(s, PackageId("com.Microsoft.VisualStudio.VC.dumpbin", v), p);
+                    cl.ts = ts;
                 }
             }
 
