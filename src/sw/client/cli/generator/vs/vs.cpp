@@ -257,7 +257,7 @@ void VSGenerator::generate(const SwBuild &b)
             if (prog == "masm")
             {
                 flag_tables["ml"] = ft;
-                flag_tables["ml64"] = ft;
+                //flag_tables["ml64"] = ft;
             }
             else
             {
@@ -921,6 +921,33 @@ void Project::emit(const VSGenerator &g) const
 
 void Project::emitProject(const VSGenerator &g) const
 {
+    static const StringSet skip_cl_props =
+    {
+        "ShowIncludes",
+        "SuppressStartupBanner",
+
+        // When we turn this on, we must provide this property for object files with some cpp names
+        // but in different directory.
+        // Otherwise in VS pre 16 (pre VS2019) there's no way to perform multiprocess compilation,
+        // when this is turned off.
+        //"ObjectFileName",
+    };
+
+    static const StringSet skip_link_props =
+    {
+        //"ImportLibrary",
+        //"OutputFile",
+        //"ProgramDatabaseFile",
+        "SuppressStartupBanner",
+    };
+
+    Properties link_props;
+    link_props.exclude_flags = skip_link_props;
+    link_props.exclude_exts = {".obj", ".res"};
+
+    Properties cl_props;
+    cl_props.exclude_flags = skip_cl_props;
+
     ProjectEmitter ctx;
     ctx.beginProject(g.vs_version);
     ctx.addProjectConfigurations(*this);
@@ -960,6 +987,37 @@ void Project::emitProject(const VSGenerator &g) const
         return ::get_int_dir(g.sln_root, vs_project_dir, name, s);
     };
 
+    // build files
+    std::map<path, std::map<const sw::TargetSettings *, Command>> bfiles;
+    std::map<sw::TargetSettings, std::map<String /*ft*/, std::map<String /*opt*/, String /*val*/>>> common_cl_options;
+    for (auto &[s, d] : data)
+    {
+        std::map<String /*opt*/, std::map<std::pair<String, String> /*command line argument*/, int /*count*/>> cl_opts;
+        std::map<String /*opt*/, int /*count*/> ft_count;
+        for (auto &[c, f] : d.build_rules)
+        {
+            bfiles[f][&s] = c;
+
+            // gather opts
+            auto ft = get_flag_table(*c);
+            ft_count[ft]++;
+            for (auto &v : printProperties(*c, cl_props))
+                cl_opts[ft][v]++;
+        }
+
+        // gather common opts
+        auto &cl_opts2 = common_cl_options[s];
+        for (auto &[ft, v1] : cl_opts)
+        {
+            for (auto &[k, v] : v1)
+            {
+                if (v == ft_count[ft])
+                    cl_opts2[ft][k.first] = k.second;
+            }
+        }
+    }
+
+    //
     for (auto &s : settings)
     {
         auto &d = getData(s);
@@ -984,33 +1042,8 @@ void Project::emitProject(const VSGenerator &g) const
         ctx.endBlock();
     }
 
-    static const StringSet skip_cl_props =
-    {
-        "ShowIncludes",
-        "SuppressStartupBanner",
-
-        // When we turn this on, we must provide this property for object files with some cpp names
-        // but in different directory.
-        // Otherwise in VS pre 16 (pre VS2019) there's no way to perform multiprocess compilation,
-        // when this is turned off.
-        //"ObjectFileName",
-    };
-
-    static const StringSet skip_link_props =
-    {
-        //"ImportLibrary",
-        //"OutputFile",
-        //"ProgramDatabaseFile",
-        "SuppressStartupBanner",
-    };
-
-    Properties link_props;
-    link_props.exclude_flags = skip_link_props;
-    link_props.exclude_exts = {".obj", ".res"};
-
-    Properties cl_props;
-    cl_props.exclude_flags = skip_cl_props;
-
+    //
+    StringSet used_flag_tables;
     for (auto &s : settings)
     {
         auto commands_dir = get_int_dir(s) / "commands";
@@ -1021,13 +1054,24 @@ void Project::emitProject(const VSGenerator &g) const
             //
             if (d.main_command)
             {
+                for (auto &d : d.main_command->getGeneratedDirs())
+                    fs::create_directories(d);
+
                 ctx.beginBlock(d.type == VSProjectType::StaticLibrary ? "Lib" : "Link");
-                printProperties(ctx, s, *d.main_command, link_props);
+                for (auto &[k, v] : printProperties(*d.main_command, link_props))
+                {
+                    ctx.beginBlockWithConfiguration(k, s);
+                    ctx.addText(v);
+                    ctx.endBlock(true);
+                }
                 ctx.endBlock();
             }
 
             if (d.pre_link_command)
             {
+                for (auto &d : d.pre_link_command->getGeneratedDirs())
+                    fs::create_directories(d);
+
                 auto cmd = d.pre_link_command->writeCommand(commands_dir / std::to_string(d.pre_link_command->getHash()));
 
                 ctx.beginBlock("PreLinkEvent");
@@ -1037,14 +1081,52 @@ void Project::emitProject(const VSGenerator &g) const
                 ctx.endBlock();
             }
 
-            //
-            ctx.beginBlock("ClCompile");
+            // ClCompile
+            {
+                ctx.beginBlock("ClCompile");
 
-            ctx.beginBlock("MultiProcessorCompilation");
-            ctx.addText("true");
-            ctx.endBlock(true);
+                ctx.beginBlock("MultiProcessorCompilation");
+                ctx.addText("true");
+                ctx.endBlock(true);
 
-            ctx.endBlock();
+                // common opts
+                for (auto &[k, v] : common_cl_options[s]["cl"])
+                {
+                    ctx.beginBlockWithConfiguration(k, s);
+                    ctx.addText(v);
+                    ctx.endBlock(true);
+                }
+                used_flag_tables.insert("cl");
+
+                ctx.endBlock();
+            }
+
+            // ResourceCompile
+            {
+                ctx.beginBlock("ResourceCompile");
+                // common opts
+                for (auto &[k, v] : common_cl_options[s]["rc"])
+                {
+                    ctx.beginBlockWithConfiguration(k, s);
+                    ctx.addText(v);
+                    ctx.endBlock(true);
+                }
+                used_flag_tables.insert("rc");
+                ctx.endBlock();
+            }
+
+            {
+                ctx.beginBlock("MASM");
+                // common opts
+                for (auto &[k, v] : common_cl_options[s]["ml"])
+                {
+                    ctx.beginBlockWithConfiguration(k, s);
+                    ctx.addText(v);
+                    ctx.endBlock(true);
+                }
+                used_flag_tables.insert("ml");
+                ctx.endBlock();
+            }
 
             if (d.pre_build_event)
             {
@@ -1073,21 +1155,27 @@ void Project::emitProject(const VSGenerator &g) const
     }
 
     // build rules
-    std::map<path, std::map<const sw::TargetSettings *, Command>> bfiles;
-    for (auto &[s, d] : data)
-    {
-        for (auto &[c, f] : d.build_rules)
-        {
-            bfiles[f][&s] = c;
-        }
-    }
     for (auto &[f, cfgs] : bfiles)
     {
         ((Project&)*this).files.insert(f);
         auto t = ctx.beginFileBlock(f);
         for (auto &[sp, c] : cfgs)
         {
-            printProperties(ctx, *sp, *c, cl_props);
+            for (auto &d : c->getGeneratedDirs())
+                fs::create_directories(d);
+
+            auto ft = get_flag_table(*c);
+            if (used_flag_tables.find(ft) == used_flag_tables.end())
+                throw SW_RUNTIME_ERROR("Flag table was not set: " + ft);
+            auto &cl_opts = common_cl_options[*sp][ft];
+            for (auto &[k, v] : printProperties(*c, cl_props))
+            {
+                if (cl_opts.find(k) != cl_opts.end())
+                    continue;
+                ctx.beginBlockWithConfiguration(k, *sp);
+                ctx.addText(v);
+                ctx.endBlock(true);
+            }
 
             // one .rc file
             //if (t == VSFileType::ResourceCompile)
@@ -1118,6 +1206,9 @@ void Project::emitProject(const VSGenerator &g) const
             Files rules;
             for (auto &c : d.custom_rules)
             {
+                for (auto &d : c->getGeneratedDirs())
+                    fs::create_directories(d);
+
                 // TODO: add hash if two rules with same name
                 path rule = rules_dir / c->outputs.begin()->filename();
                 rules.insert(rule);
@@ -1353,36 +1444,29 @@ void Project::emitFilters(const VSGenerator &g) const
     write_file(g.sln_root / vs_project_dir / (name + vs_project_ext + ".filters"), ctx.getText());
 }
 
-void Project::printProperties(ProjectEmitter &ctx, const sw::TargetSettings &s, const sw::builder::Command &c, const Properties &props) const
+String Project::get_flag_table(const primitives::Command &c)
 {
-    for (auto &d : c.getGeneratedDirs())
-        fs::create_directories(d);
-
     auto ft = path(c.getProgram()).stem().u8string();
-    auto ift = flag_tables.find(ft);
-    if (ift == flag_tables.end())
-    {
-        // we must create custom rule here
-        LOG_TRACE(logger, "No flag table: " + ft);
-        return;
-    }
+    if (ft == "ml64")
+        ft = "ml";
+    if (flag_tables.find(ft) == flag_tables.end())
+        throw SW_RUNTIME_ERROR("No flag table: " + ft);
+    return ft;
+}
 
-    std::map<String, String> semicolon_args;
-    bool skip_prog = false;
-    for (int na = 0; na < c.arguments.size(); na++)
-    {
-        if (!skip_prog)
-        {
-            skip_prog = true;
-            continue;
-        }
+std::map<String, String> Project::printProperties(const sw::builder::Command &c, const Properties &exclude_props) const
+{
+    auto ft = get_flag_table(c);
 
+    std::map<String, String> args;
+    for (int na = 1; na < c.arguments.size(); na++)
+    {
         auto &o = c.arguments[na];
         auto arg = o->toString();
 
-        auto add_additional_args = [&semicolon_args, &ft, &c, &props](const auto &arg)
+        auto add_additional_args = [&args, &ft, &c, &exclude_props](const auto &arg)
         {
-            if (props.exclude_exts.find(path(arg).extension().string()) != props.exclude_exts.end())
+            if (exclude_props.exclude_exts.find(path(arg).extension().string()) != exclude_props.exclude_exts.end())
                 return;
             if (ft == "cl")
             {
@@ -1391,10 +1475,10 @@ void Project::printProperties(ProjectEmitter &ctx, const sw::TargetSettings &s, 
                 auto i = c.inputs.find(normalize_path(arg));
                 if (i != c.inputs.end())
                     return;
-                semicolon_args["AdditionalOptions"] += arg + " ";
+                args["AdditionalOptions"] += arg + " ";
                 return;
             }
-            semicolon_args["AdditionalDependencies"] += arg + ";";
+            args["AdditionalDependencies"] += arg + ";";
         };
 
         if (!arg.empty() && arg[0] != '-' && arg[0] != '/')
@@ -1405,9 +1489,9 @@ void Project::printProperties(ProjectEmitter &ctx, const sw::TargetSettings &s, 
 
         auto &tbl = flag_tables[ft].ftable;
 
-        auto print = [&ctx, &arg, &semicolon_args, &props, &s, &c, &na, &ft](auto &d)
+        auto print = [&arg, &args, &exclude_props, &c, &na, &ft](auto &d)
         {
-            if (props.exclude_flags.find(d.name) != props.exclude_flags.end())
+            if (exclude_props.exclude_flags.find(d.name) != exclude_props.exclude_flags.end())
                 return;
             if (bitmask_includes(d.flags, FlagTableFlags::UserValue))
             {
@@ -1426,21 +1510,18 @@ void Project::printProperties(ProjectEmitter &ctx, const sw::TargetSettings &s, 
 
                 if (bitmask_includes(d.flags, FlagTableFlags::SemicolonAppendable))
                 {
-                    semicolon_args[d.name] += a + ";";
+                    args[d.name] += a + ";";
                     return;
                 }
                 else
                 {
-                    ctx.beginBlockWithConfiguration(d.name, s);
-                    ctx.addText(a);
+                    args[d.name] = a;
                 }
             }
             else
             {
-                ctx.beginBlockWithConfiguration(d.name, s);
-                ctx.addText(d.value);
+                args[d.name] = d.value;
             }
-            ctx.endBlock(true);
         };
 
         if (arg.empty())
@@ -1477,14 +1558,7 @@ void Project::printProperties(ProjectEmitter &ctx, const sw::TargetSettings &s, 
             continue;
         }
     }
-    //if (ft == "cl")
-        //semicolon_args["AdditionalOptions"] += "%(AdditionalOptions)";
-    for (auto &[k, v] : semicolon_args)
-    {
-        ctx.beginBlockWithConfiguration(k, s);
-        ctx.addText(v);
-        ctx.endBlock(true);
-    }
+    return args;
 }
 
 void PackagePathTree::add(const sw::PackageId &p)
