@@ -748,6 +748,8 @@ void NativeCompiledTarget::addPackageDefinitions(bool defs)
         a["PACKAGE_BUILD_CONFIG"] = q + getConfig() + q;
         a["PACKAGE_BUGREPORT"] = q + q;
         a["PACKAGE_URL"] = q + q;
+        a["PACKAGE_SUFFIX"] = q + q;
+        a["PACKAGE_DATADIR"] = q + q;
         a["PACKAGE_TARNAME"] = q + getPackage().getPath().toString() + q; // must be lowercase version of PACKAGE_NAME
         a["PACKAGE_VENDOR"] = q + getPackage().getPath().getOwner() + q;
         a["PACKAGE_YEAR"] = std::to_string(1900 + t.tm_year); // custom
@@ -1930,6 +1932,8 @@ const NativeCompiledTarget::ActiveDeps &NativeCompiledTarget::getActiveDependenc
 const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
 {
     auto &s = interface_settings;
+    // info may change during prepare, so we create it every time for now
+    // TODO: deny calls during prepare()
     s = {};
 
     s["source_dir"] = normalize_path(SourceDirBase);
