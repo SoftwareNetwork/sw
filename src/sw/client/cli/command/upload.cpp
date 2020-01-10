@@ -17,7 +17,6 @@
  */
 
 #include "commands.h"
-#include "../build.h"
 
 #include <sw/core/driver.h>
 #include <sw/core/input.h>
