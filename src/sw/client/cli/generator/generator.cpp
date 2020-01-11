@@ -21,6 +21,7 @@
 #include <sw/builder/file.h>
 #include <sw/builder/execution_plan.h>
 #include <sw/core/build.h>
+#include <sw/core/input.h>
 #include <sw/core/sw_context.h>
 #include <sw/manager/storage.h>
 #include <sw/support/filesystem.h>
@@ -82,6 +83,15 @@ String toPathString(VsGeneratorType t)
         return "vs_nmake_util";*/
     default:
         throw SW_LOGIC_ERROR("not implemented");
+    }
+}
+
+void checkForSingleSettingsInputs(const SwBuild &b)
+{
+    for (auto &i : b.getInputs())
+    {
+        if (i.getSettings().size() != 1)
+            throw SW_RUNTIME_ERROR("This generator supports single config inputs only.");
     }
 }
 
@@ -937,6 +947,8 @@ void CompilationDatabaseGenerator::generate(const SwBuild &b)
     static const std::set<String> exts{
         ".c", ".cpp", ".cxx", ".c++", ".cc", ".CPP", ".C++", ".CXX", ".C", ".CC"
     };
+
+    checkForSingleSettingsInputs(b);
 
     const auto d = getRootDirectory(b);
 

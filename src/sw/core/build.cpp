@@ -787,7 +787,7 @@ void SwBuild::runSavedExecutionPlan(const path &in) const
     execute(p);
 }
 
-std::vector<InputWithSettings> SwBuild::getInputs() const
+const std::vector<InputWithSettings> &SwBuild::getInputs() const
 {
     return inputs;
 }

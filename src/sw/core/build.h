@@ -82,7 +82,7 @@ struct SW_CORE_API SwBuild
     const PackageIdSet &getKnownPackages() const;
     void addKnownPackage(const PackageId &);
 
-    std::vector<InputWithSettings> getInputs() const;
+    const std::vector<InputWithSettings> &getInputs() const;
 
     const TargetSettings &getExternalVariables() const;
     const TargetSettings &getSettings() const { return build_settings; }
