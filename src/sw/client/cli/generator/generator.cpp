@@ -949,18 +949,33 @@ void CompilationDatabaseGenerator::generate(const SwBuild &b)
         {
             for (auto &c : tgt->getCommands())
             {
-                if (c->inputs.empty())
-                    continue;
-                if (c->working_directory.empty())
-                    continue;
-                if (c->inputs.size() > 1)
-                    continue;
-                if (exts.find(c->inputs.begin()->extension().string()) == exts.end())
-                    continue;
                 nlohmann::json j2;
-                j2["directory"] = normalize_path(c->working_directory);
-                j2["file"] = normalize_path(*c->inputs.begin());
-                j2["arguments"].push_back(normalize_path(c->getProgram()));
+                if (!c->working_directory.empty())
+                    j2["directory"] = normalize_path(c->working_directory);
+                if (!c->inputs.empty())
+                {
+                    bool cppset = false;
+                    for (auto &input : c->inputs)
+                    {
+                        auto i = exts.find(input.extension().string());
+                        if (i == exts.end())
+                            continue;
+                        j2["file"] = normalize_path(input);
+                        cppset = true;
+                        break;
+                    }
+                    if (!cppset)
+                    {
+                        for (auto &input : c->inputs)
+                        {
+                            if (normalize_path(input) != normalize_path(c->getProgram()))
+                            {
+                                j2["file"] = normalize_path(input);
+                                break;
+                            }
+                        }
+                    }
+                }
                 for (auto &a : c->arguments)
                     j2["arguments"].push_back(a->toString());
                 j.push_back(j2);
