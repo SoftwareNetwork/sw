@@ -98,6 +98,7 @@ static cl::list<String> libcpp("libcpp", cl::desc("Set build libcpp"), cl::Comma
 static ::cl::opt<bool> static_deps("static-dependencies", ::cl::desc("Build static dependencies of inputs"));
 static cl::alias static_deps2("static-deps", cl::aliasopt(static_deps));
 
+static cl::opt<String> build_name("build-name", cl::desc("Set meaningful build name instead of hash"));
 static cl::list<String> config_names("config-name", cl::desc("Set meaningful config names instead of hashes"), cl::CommaSeparated);
 
 // -setting k1=v1,k2=v2,k3="v3,v3" -setting k4=v4,k5,k6 etc.
@@ -683,6 +684,8 @@ static void isolated_build1(sw::SwContext &swctx)
 std::unique_ptr<sw::SwBuild> createBuild(sw::SwContext &swctx)
 {
     auto b = swctx.createBuild();
+
+    b->setName(build_name);
 
     sw::TargetSettings bs;
     if (build_always)

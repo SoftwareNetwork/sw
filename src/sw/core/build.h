@@ -88,6 +88,9 @@ struct SW_CORE_API SwBuild
     const TargetSettings &getSettings() const { return build_settings; }
     void setSettings(const TargetSettings &build_settings);
 
+    void setName(const String &);
+    const String &getName() const;
+
 private:
     SwContext &swctx;
     path build_dir;
@@ -100,6 +103,7 @@ private:
     mutable Commands commands_storage; // we need some place to keep copy cmds
 
     // other data
+    String name;
     mutable FilesSorted fast_path_files;
 
     void load(const std::vector<InputWithSettings> &inputs, bool set_eps);

@@ -741,6 +741,20 @@ String SwBuild::getHash() const
     return shorten_hash(blake2b_512(s), 8);
 }
 
+void SwBuild::setName(const String &n)
+{
+    if (!name.empty())
+        throw SW_RUNTIME_ERROR("Cannot set build name twice");
+    name = n;
+}
+
+const String &SwBuild::getName() const
+{
+    if (!name.empty())
+        return name;
+    return getHash();
+}
+
 void SwBuild::addInput(const InputWithSettings &i)
 {
     inputs.push_back(i);
@@ -749,7 +763,7 @@ void SwBuild::addInput(const InputWithSettings &i)
 path SwBuild::getExecutionPlanPath() const
 {
     const auto ext = ".swb"; // sw build
-    return getBuildDirectory() / "ep" / getHash() += ext;
+    return getBuildDirectory() / "ep" / getName() += ext;
 }
 
 void SwBuild::saveExecutionPlan() const

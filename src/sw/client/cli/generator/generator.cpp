@@ -263,7 +263,7 @@ std::unique_ptr<Generator> Generator::create(const String &s)
 
 path Generator::getRootDirectory(const sw::SwBuild &b) const
 {
-    return b.getBuildDirectory() / "g" / getPathString() / b.getHash();
+    return b.getBuildDirectory() / "g" / getPathString() / b.getName();
 }
 
 path Generator::getPathString() const
