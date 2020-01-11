@@ -98,6 +98,8 @@ static cl::list<String> libcpp("libcpp", cl::desc("Set build libcpp"), cl::Comma
 static ::cl::opt<bool> static_deps("static-dependencies", ::cl::desc("Build static dependencies of inputs"));
 static cl::alias static_deps2("static-deps", cl::aliasopt(static_deps));
 
+static cl::list<String> config_names("config-name", cl::desc("Set meaningful config names instead of hashes"), cl::CommaSeparated);
+
 // -setting k1=v1,k2=v2,k3="v3,v3" -setting k4=v4,k5,k6 etc.
 // settings in one setting applied simultaneosly
 // settings in different settings are multiplied
@@ -118,8 +120,10 @@ static cl::list<String> input_settings_pairs("input-settings-pairs", cl::value_d
 static bool static_build = false; // do not expose for now
 static cl::opt<bool, true> cl_static_build("static-build", cl::desc("Set static build"), ::cl::location(static_build));
 static cl::alias static_build2("static", cl::desc("Alias for -static-build"), cl::aliasopt(cl_static_build));
-static cl::opt<bool> shared_build("shared-build", cl::desc("Set shared build (default)"));
-static cl::alias shared_build2("shared", cl::desc("Alias for -shared-build"), cl::aliasopt(shared_build));
+
+static bool shared_build = false; // do not expose for now
+static cl::opt<bool, true> cl_shared_build("shared-build", cl::desc("Set shared build (default)"), ::cl::location(shared_build));
+static cl::alias shared_build2("shared", cl::desc("Alias for -shared-build"), cl::aliasopt(cl_shared_build));
 
 //mt/md
 static cl::opt<bool> win_mt("win-mt", cl::desc("Set /MT build"));
@@ -424,11 +428,15 @@ std::vector<sw::TargetSettings> createSettings(sw::SwContext &swctx)
     // static/shared
     if (static_build && shared_build)
     {
-        mult_and_action(2, [](auto &s, int i)
+        // preserve order
+        int st = 0, sh = 1;
+        if (cl_static_build.getPosition() > cl_shared_build.getPosition())
+            st = 1, sh = 0;
+        mult_and_action(2, [st,sh](auto &s, int i)
         {
-            if (i == 0)
+            if (i == st)
                 s["native"]["library"] = "static";
-            if (i == 1)
+            if (i == sh)
                 s["native"]["library"] = "shared";
         });
     }
@@ -446,9 +454,13 @@ std::vector<sw::TargetSettings> createSettings(sw::SwContext &swctx)
     // mt/md
     if (win_mt && win_md)
     {
-        mult_and_action(2, [&settings](auto &s, int i)
+        // preserve order
+        int mt = 0;
+        if (win_mt.getPosition() > win_md.getPosition())
+            mt = 1;
+        mult_and_action(2, [mt](auto &s, int i)
         {
-            if (i == 0)
+            if (i == mt)
                 s["native"]["mt"] = "true";
         });
     }
@@ -538,6 +550,25 @@ std::vector<sw::TargetSettings> createSettings(sw::SwContext &swctx)
             s["output_dir"].useInHash(false);
             s["output_dir"].ignoreInComparison(true);
         }
+    }
+
+    if (!config_names.empty())
+    {
+        if (config_names.size() != settings.size())
+        {
+            throw SW_RUNTIME_ERROR("Number of config names (" + std::to_string(config_names.size()) +
+                ") must be equal to number of configs (" + std::to_string(settings.size()) + ")");
+        }
+        for (const auto &[i,s] : enumerate(settings))
+        {
+            if (s["name"])
+                throw SW_RUNTIME_ERROR("Some config already has its name");
+            s["name"] = config_names[i];
+            s["name"].useInHash(false);
+            s["name"].ignoreInComparison(true);
+        }
+        LOG_WARN(logger, "WARNING: Setting config names may result in wrong config-name pair assignment, "
+            "because of unspecified config creation order.");
     }
 
     return settings;
