@@ -748,7 +748,7 @@ void SwBuild::setName(const String &n)
     name = n;
 }
 
-const String &SwBuild::getName() const
+String SwBuild::getName() const
 {
     if (!name.empty())
         return name;

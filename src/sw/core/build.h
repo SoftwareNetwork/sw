@@ -89,7 +89,7 @@ struct SW_CORE_API SwBuild
     void setSettings(const TargetSettings &build_settings);
 
     void setName(const String &);
-    const String &getName() const;
+    String getName() const; // returns temporary object, so no refs
 
 private:
     SwContext &swctx;
