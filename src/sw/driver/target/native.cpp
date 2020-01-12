@@ -2759,6 +2759,7 @@ void NativeCompiledTarget::prepare_pass6()
         // 3. ms crt - msvcrt.lib
         // 4. compiler (cl.exe) library - vcruntime.lib
         // 5. ms std c++ library - msvcprt.lib
+        // 6. concurrency crt (concrt.lib)
         //
         // we also add some other libs needed by msvc
         // 1. oldnames.lib - for backward compat - https://docs.microsoft.com/en-us/cpp/c-runtime-library/backward-compatibility?view=vs-2019
@@ -2773,35 +2774,42 @@ void NativeCompiledTarget::prepare_pass6()
         // libcpmtd.lib
         // libcpmtd0.lib
         // libcpmtd1.lib
+        //
+        // libconcrt.lib
+        // libconcrt1.lib
+        //
+        // libconcrtd.lib
+        // libconcrtd0.lib
+        // libconcrtd1.lib
 
         // other libs
         *this += "oldnames.lib"_slib;
-        if (getBuildSettings().Native.ConfigurationType == ConfigurationType::Debug)
-            *this += "concrtd.lib"_slib;
-        else
-            *this += "concrt.lib"_slib;
 
         switch (rt)
         {
         case vs::RuntimeLibraryType::MultiThreadedDLL:
+            *this += "concrt.lib"_slib;
             *this += "msvcprt.lib"_slib;
             *this += "vcruntime.lib"_slib;
             *this += "msvcrt.lib"_slib;
             *this += "ucrt.lib"_slib;
             break;
         case vs::RuntimeLibraryType::MultiThreadedDLLDebug:
+            *this += "concrtd.lib"_slib;
             *this += "msvcprtd.lib"_slib;
             *this += "vcruntimed.lib"_slib;
             *this += "msvcrtd.lib"_slib;
             *this += "ucrtd.lib"_slib;
             break;
         case vs::RuntimeLibraryType::MultiThreaded:
+            *this += "libconcrt.lib"_slib;
             *this += "libcpmt.lib"_slib;
             *this += "libvcruntime.lib"_slib;
             *this += "libcmt.lib"_slib;
             *this += "libucrt.lib"_slib;
             break;
         case vs::RuntimeLibraryType::MultiThreadedDebug:
+            *this += "libconcrtd.lib"_slib;
             *this += "libcpmtd.lib"_slib;
             *this += "libvcruntimed.lib"_slib;
             *this += "libcmtd.lib"_slib;
