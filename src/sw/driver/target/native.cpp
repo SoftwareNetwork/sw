@@ -3409,7 +3409,7 @@ path NativeCompiledTarget::getPatchDir(bool binary_dir) const
     return base / "patch";
 }
 
-void NativeCompiledTarget::writeFileOnce(const path &fn, const String &content) const
+void NativeCompiledTarget::writeFileOnce(const path &fn, const String &content)
 {
     bool source_dir = false;
     path p = fn;
@@ -3436,11 +3436,13 @@ void NativeCompiledTarget::writeFileOnce(const path &fn, const String &content) 
 
     ::sw::writeFileOnce(p, content, getPatchDir(!source_dir));
 
+    addFileSilently(p);
+
     //File f(p, getFs());
     //f.getFileRecord().load();
 }
 
-void NativeCompiledTarget::writeFileSafe(const path &fn, const String &content) const
+void NativeCompiledTarget::writeFileSafe(const path &fn, const String &content)
 {
     if (DryRun)
         return;
@@ -3450,6 +3452,8 @@ void NativeCompiledTarget::writeFileSafe(const path &fn, const String &content) 
     if (!check_absolute(p, true, &source_dir))
         p = BinaryDir / p;
     ::sw::writeFileSafe(p, content, getPatchDir(!source_dir));
+
+    addFileSilently(p);
 
     //File f(fn, getFs());
     //f.getFileRecord().load();

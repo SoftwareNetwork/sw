@@ -156,8 +156,8 @@ public:
     driver::CommandBuilder addCommand(const std::shared_ptr<driver::Command> &in = {}) const;
     // add executed command?
 
-    void writeFileOnce(const path &fn, const String &content = {}) const;
-    void writeFileSafe(const path &fn, const String &content) const;
+    void writeFileOnce(const path &fn, const String &content = {});
+    void writeFileSafe(const path &fn, const String &content);
     void replaceInFileOnce(const path &fn, const String &from, const String &to); // deprecate?
     void patch(const path &fn, const String &from, const String &to);
     void patch(const path &fn, const String &patch_str);
