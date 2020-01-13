@@ -42,8 +42,8 @@ static ::cl::opt<bool, true> run_app_in_container("in-container", ::cl::desc("Ru
 static ::cl::opt<path> wdir("wdir", ::cl::desc("Working directory"), ::cl::sub(subcommand_run));
 static ::cl::opt<String> input("input", ::cl::desc("SW Input"), ::cl::sub(subcommand_run));
 //static ::cl::list<String> env("env", ::cl::desc("Env vars"), ::cl::sub(subcommand_run));
-static ::cl::opt<String> target(::cl::Positional, ::cl::Required, ::cl::desc("Target to run"), ::cl::sub(subcommand_run));
-static ::cl::list<String> args(::cl::Positional, ::cl::ConsumeAfter, ::cl::desc("Command args"), ::cl::sub(subcommand_run));
+static ::cl::opt<String> target(::cl::Positional, ::cl::Required, ::cl::desc("<Target to run>"), ::cl::sub(subcommand_run));
+static ::cl::list<String> args(::cl::ConsumeAfter, ::cl::desc("<Command args>"), ::cl::sub(subcommand_run));
 
 void run1(const sw::LocalPackage &pkg, primitives::Command &c);
 
@@ -66,8 +66,6 @@ static void run(sw::SwBuild &b, const sw::PackageId &pkg, primitives::Command &c
         throw SW_RUNTIME_ERROR("Target is not runnable: " + pkg.toString());
     auto &sc = s["run_command"].getSettings();
 
-    if (!wdir.empty())
-        c.working_directory = wdir;
     c.setProgram(sc["program"].getValue());
     if (sc["arguments"])
     {
@@ -124,6 +122,12 @@ SUBCOMMAND_DECL2(run)
     primitives::Command c;
     c.inherit = true;
     c.in.inherit = true;
+
+    for (auto &a : args)
+        c.push_back(a);
+
+    if (!wdir.empty())
+        c.working_directory = wdir;
 
     if (!valid_target && fs::exists((String&)target))
     {
