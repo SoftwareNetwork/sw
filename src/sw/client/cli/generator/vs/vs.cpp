@@ -1230,6 +1230,8 @@ void Project::emitProject(const VSGenerator &g) const
                 ctx.beginBlockWithConfiguration("Outputs", s);
                 for (auto &o : c->outputs)
                     ctx.addText(normalize_path_windows(o) + ";");
+                if (c->always)
+                    ctx.addText(normalize_path_windows(int_dir / "rules" / "intentionally_missing.file") + ";");
                 ctx.endBlock(true);
 
                 ctx.beginBlockWithConfiguration("Command", s);
@@ -1242,6 +1244,13 @@ void Project::emitProject(const VSGenerator &g) const
 
                 ctx.beginBlockWithConfiguration("Message", s);
                 ctx.endBlock();
+
+                if (c->always && g.vs_version >= Version(16))
+                {
+                    ctx.beginBlockWithConfiguration("VerifyInputsAndOutputsExist", s);
+                    ctx.addText("false");
+                    ctx.endBlock(true);
+                }
 
                 for (auto &[s1, d] : data)
                 {
