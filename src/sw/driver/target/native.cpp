@@ -1984,12 +1984,12 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
     for (auto &d : Interface.LinkLibraries2)
         s["link_libraries"].push_back(normalize_path(d));
 
-    for (auto &d : getAllDependencies())
+    for (auto &d : getActiveDependencies())
     {
-        if (d->IncludeDirectoriesOnly)
+        if (d.dep->IncludeDirectoriesOnly)
             continue;
-        if (auto t = d->getTarget().as<const NativeCompiledTarget*>(); t && !t->DryRun/* && t->getType() != TargetType::NativeExecutable*/)
-            s["dependencies"]["link"][boost::to_lower_copy(d->getTarget().getPackage().toString())] = d->getTarget().getSettings();
+        if (auto t = d.dep->getTarget().as<const NativeCompiledTarget*>(); t && !t->DryRun/* && t->getType() != TargetType::NativeExecutable*/)
+            s["dependencies"]["link"][boost::to_lower_copy(d.dep->getTarget().getPackage().toString())] = d.dep->getTarget().getSettings();
     }
     for (auto &d : DummyDependencies)
     {
