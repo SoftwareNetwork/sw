@@ -38,10 +38,6 @@ struct SW_CORE_API SwCoreContext : SwBuilderContext
     TargetEntryPointPtr getEntryPoint(const LocalPackage &) const;
     TargetEntryPointPtr getEntryPoint(const PackageId &) const;
 
-    // load targets
-    /*[[nodiscard]]
-    std::vector<ITargetPtr> loadPackages(SwBuild &, const TargetSettings &, const PackageIdSet &allowed_packages) const;*/
-
 private:
     // rename to detected?
     // not only detected, but also predefined? do not rename?
