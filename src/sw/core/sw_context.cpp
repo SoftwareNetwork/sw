@@ -49,7 +49,6 @@ void SwCoreContext::createHostSettings()
     ts["native"]["configuration"] = "release";
 #endif
     ts["native"]["library"] = "shared";
-    ts["native"]["mt"] = "false";
 
     detectCompilers(*this);
     setHostPrograms(); // after detection

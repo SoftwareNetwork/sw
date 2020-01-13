@@ -180,8 +180,8 @@ TargetSettings BuildSettings::getTargetSettings() const
         SW_UNIMPLEMENTED;
     }
 
-    if (TargetOS.is(OSType::Windows))
-        s["native"]["mt"] = Native.MT ? "true" : "false";
+    if (TargetOS.is(OSType::Windows) && Native.MT)
+        s["native"]["mt"] = "true";
 
     // debug, release, ...
 
