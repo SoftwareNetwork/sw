@@ -618,7 +618,7 @@ void VSGenerator::generate(const SwBuild &b)
             if (!check_stamp_list.empty())
                 nArgs -= 2;
             for (int i = 0; i < nArgs; i++)
-                r.command += to_string(szArglist[i]) + " ";
+                r.command += "\"" + to_string(szArglist[i]) + "\" ";
             LocalFree(szArglist);
 #else
             SW_UNIMPLEMENTED;
