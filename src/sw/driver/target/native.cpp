@@ -269,10 +269,10 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
     if (id.ppath == "com.Microsoft.VisualStudio.VC.cl")
     {
         c = std::make_shared<VisualStudioCompiler>(getMainBuild().getContext());
-        if (ts["native"]["stdlib"]["cpp"].getValue() == "com.Microsoft.VisualStudio.VC.libcpp")
+        if (getSettings()["native"]["stdlib"]["cpp"].getValue() == "com.Microsoft.VisualStudio.VC.libcpp")
         {
             // take same ver as cl
-            UnresolvedPackage up(ts["native"]["stdlib"]["cpp"].getValue());
+            UnresolvedPackage up(getSettings()["native"]["stdlib"]["cpp"].getValue());
             up.range = id.range;
             *this += up;
             libstdcppset = true;
@@ -347,10 +347,10 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
         auto C = std::make_shared<VisualStudioCompiler>(getMainBuild().getContext());
         c = C;
         C->ForceSynchronousPDBWrites = false;
-        if (ts["native"]["stdlib"]["cpp"].getValue() == "com.Microsoft.VisualStudio.VC.libcpp")
+        if (getSettings()["native"]["stdlib"]["cpp"].getValue() == "com.Microsoft.VisualStudio.VC.libcpp")
         {
             // take same ver as cl
-            UnresolvedPackage up(ts["native"]["stdlib"]["cpp"].getValue());
+            UnresolvedPackage up(getSettings()["native"]["stdlib"]["cpp"].getValue());
             up.range = id.range;
             *this += up;
             libstdcppset = true;
@@ -520,22 +520,22 @@ std::shared_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetS
 
 void NativeCompiledTarget::findCompiler()
 {
-    activateCompiler(ts["native"]["program"]["cpp"], getCppSourceFileExtensions());
-    activateCompiler(ts["native"]["program"]["c"], { ".c" });
+    activateCompiler(getSettings()["native"]["program"]["cpp"], getCppSourceFileExtensions());
+    activateCompiler(getSettings()["native"]["program"]["c"], { ".c" });
 
     if (ct == CompilerType::UnspecifiedCompiler)
-        throw SW_RUNTIME_ERROR("Unknown compiler: " + get_settings_package_id(ts["native"]["program"]["c"]).toString());
+        throw SW_RUNTIME_ERROR("Unknown compiler: " + get_settings_package_id(getSettings()["native"]["program"]["c"]).toString());
 
     if (getBuildSettings().TargetOS.is(OSType::Windows))
     {
-        activateCompiler(ts["native"]["program"]["asm"], { ".asm" });
+        activateCompiler(getSettings()["native"]["program"]["asm"], { ".asm" });
 
         // actually a missing setting
-        activateCompiler(ts["native"]["program"]["rc"], "com.Microsoft.Windows.rc"s, { ".rc" }, false);
+        activateCompiler(getSettings()["native"]["program"]["rc"], "com.Microsoft.Windows.rc"s, { ".rc" }, false);
     }
     else
     {
-        activateCompiler(ts["native"]["program"]["asm"], { ".s", ".S", ".sx" });
+        activateCompiler(getSettings()["native"]["program"]["asm"], { ".s", ".S", ".sx" });
     }
 
     if (!getBuildSettings().TargetOS.isApple())
@@ -544,11 +544,11 @@ void NativeCompiledTarget::findCompiler()
         removeExtension(".mm");
     }
 
-    Librarian = activateLinker(ts["native"]["program"]["lib"]);
+    Librarian = activateLinker(getSettings()["native"]["program"]["lib"]);
     if (!Librarian)
         throw SW_RUNTIME_ERROR("Librarian not found");
 
-    Linker = activateLinker(ts["native"]["program"]["link"]);
+    Linker = activateLinker(getSettings()["native"]["program"]["link"]);
     if (!Linker)
         throw SW_RUNTIME_ERROR("Linker not found");
 
@@ -556,40 +556,40 @@ void NativeCompiledTarget::findCompiler()
     Linker->Extension = getBuildSettings().TargetOS.getSharedLibraryExtension();
 
     // c++ goes first for correct include order
-    if (!libstdcppset && ts["native"]["stdlib"]["cpp"])
+    if (!libstdcppset && getSettings()["native"]["stdlib"]["cpp"])
     {
         if (IsConfig && getBuildSettings().TargetOS.is(OSType::Linux))
         {
             // to prevent ODR violation
             // we have stdlib builtin into sw binary
-            auto d = *this + UnresolvedPackage(ts["native"]["stdlib"]["cpp"].getValue());
+            auto d = *this + UnresolvedPackage(getSettings()["native"]["stdlib"]["cpp"].getValue());
             d->IncludeDirectoriesOnly = true;
         }
         else
         {
-            *this += UnresolvedPackage(ts["native"]["stdlib"]["cpp"].getValue());
+            *this += UnresolvedPackage(getSettings()["native"]["stdlib"]["cpp"].getValue());
         }
     }
 
     // goes last
-    if (ts["native"]["stdlib"]["c"])
-        *this += UnresolvedPackage(ts["native"]["stdlib"]["c"].getValue());
+    if (getSettings()["native"]["stdlib"]["c"])
+        *this += UnresolvedPackage(getSettings()["native"]["stdlib"]["c"].getValue());
 
     // compiler runtime
-    if (ts["native"]["stdlib"]["compiler"])
+    if (getSettings()["native"]["stdlib"]["compiler"])
     {
-        if (ts["native"]["stdlib"]["compiler"].isValue())
-            *this += UnresolvedPackage(ts["native"]["stdlib"]["compiler"].getValue());
-        else if (ts["native"]["stdlib"]["compiler"].isArray())
+        if (getSettings()["native"]["stdlib"]["compiler"].isValue())
+            *this += UnresolvedPackage(getSettings()["native"]["stdlib"]["compiler"].getValue());
+        else if (getSettings()["native"]["stdlib"]["compiler"].isArray())
         {
-            for (auto &s : ts["native"]["stdlib"]["compiler"].getArray())
+            for (auto &s : getSettings()["native"]["stdlib"]["compiler"].getArray())
                 *this += UnresolvedPackage(s);
         }
     }
 
     // kernel headers
-    if (ts["native"]["stdlib"]["kernel"])
-        *this += UnresolvedPackage(ts["native"]["stdlib"]["kernel"].getValue());
+    if (getSettings()["native"]["stdlib"]["kernel"])
+        *this += UnresolvedPackage(getSettings()["native"]["stdlib"]["kernel"].getValue());
 }
 
 bool NativeCompiledTarget::init()
@@ -610,16 +610,16 @@ bool NativeCompiledTarget::init()
         // after compilers
         Target::init();
 
-        if (ts_export["export-if-static"] == "true")
+        if (getSettings()["export-if-static"] == "true")
         {
             ExportIfStatic = true;
-            ts_export["export-if-static"].use();
+            getExportOptions()["export-if-static"].use();
         }
 
-        if (ts_export["static-deps"] == "true")
+        if (getSettings()["static-deps"] == "true")
         {
-            ts_export["native"]["library"] = "static";
-            ts_export["static-deps"].reset();
+            getExportOptions()["native"]["library"] = "static";
+            getExportOptions()["static-deps"].use();
         }
 
         addPackageDefinitions();
@@ -1869,6 +1869,18 @@ void NativeCompiledTarget::detectLicenseFile()
     }
 }
 
+static auto createDependency(const DependencyPtr &d, InheritanceType i, const Target &t)
+{
+    TargetDependency td;
+    td.dep = d;
+    td.inhtype = i;
+    td.dep->settings.mergeMissing(t.getExportOptions());
+    /*auto s = td.dep->settings;
+    td.dep->settings.mergeAndAssign(t.getExportOptions());
+    td.dep->settings.mergeAndAssign(s);*/
+    return td;
+}
+
 DependenciesType NativeCompiledTarget::gatherDependencies() const
 {
     // take all
@@ -1877,15 +1889,7 @@ DependenciesType NativeCompiledTarget::gatherDependencies() const
     TargetOptionsGroup::iterate([this, &deps](auto &v, auto i)
     {
         for (auto &d : v.getRawDependencies())
-        {
-            TargetDependency td;
-            td.dep = d;
-            td.inhtype = i;
-            auto s = td.dep->settings;
-            td.dep->settings.mergeAndAssign(ts_export);
-            td.dep->settings.mergeAndAssign(s);
-            deps.push_back(td);
-        }
+            deps.push_back(createDependency(d, i, *this));
     });
     DependenciesType deps2;
     for (auto &d : deps)
@@ -1906,14 +1910,7 @@ NativeCompiledTarget::ActiveDeps &NativeCompiledTarget::getActiveDependencies()
                 {
                     if (d->isDisabled())
                         continue;
-
-                    TargetDependency td;
-                    td.dep = d;
-                    td.inhtype = i;
-                    auto s = td.dep->settings;
-                    td.dep->settings.mergeAndAssign(ts_export);
-                    td.dep->settings.mergeAndAssign(s);
-                    deps.push_back(td);
+                    deps.push_back(createDependency(d, i, *this));
                 }
             });
         }

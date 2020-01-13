@@ -254,16 +254,8 @@ struct SW_DRIVER_CPP_API Target : ITarget, TargetBase, ProgramStorage,
         BuildSettings ss;
         std::set<PackageId> dependencies;
         StringSet features; // make map with values?
-
-        String getConfig() const;
-
-        bool operator<(const TargetSettings &rhs) const;
     };
-
     const TargetSettings *ts = nullptr;*/
-    TargetSettings ts;
-    TargetSettings ts_export;
-    BuildSettings bs;
 
     // Data storage for objects that must be alive with the target.
     // For example, program clones etc.
@@ -310,7 +302,10 @@ public:
     const TargetSettings &getTargetSettings() const { return getSettings(); }
     const BuildSettings &getBuildSettings() const;
 
-    const TargetSettings &getOptions() const { return getSettings()["options"].getSettings(); }
+    TargetSettings &getOptions();
+    const TargetSettings &getOptions() const;
+    TargetSettings &getExportOptions();
+    const TargetSettings &getExportOptions() const;
 
     //
     Commands getCommands() const override;
@@ -371,6 +366,13 @@ protected:
     //Target(const Target &);
 
 private:
+    TargetSettings ts; // this settings
+    // export settings may be different
+    // example: we set 'static-deps' setting which changes
+    // ["native"]["library"] to "static";
+    TargetSettings ts_export;
+    BuildSettings bs;
+
     std::unique_ptr<Source> source;
     String provided_cfg;
 

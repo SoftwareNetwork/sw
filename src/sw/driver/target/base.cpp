@@ -392,11 +392,11 @@ const TargetSettings &Target::getHostSettings() const
 {
     auto &hs = getMainBuild().getContext().getHostSettings();
 
-    if (ts["use_same_config_for_host_dependencies"] == "true")
-        return ts;
+    if (ts_export["use_same_config_for_host_dependencies"] == "true")
+        return ts_export;
     return hs;
 
-    bool use_current_settings =
+    /*bool use_current_settings =
         (
             // same os & arch can run apps
             ts["os"]["kernel"] == hs["os"]["kernel"] && ts["os"]["arch"] == hs["os"]["arch"]
@@ -415,7 +415,7 @@ const TargetSettings &Target::getHostSettings() const
     // in case of different mt, do not use current settings!
     use_current_settings &= hs["native"]["mt"] == ts["native"]["mt"];
 
-    return use_current_settings ? ts : hs;
+    return use_current_settings ? ts : hs;*/
 }
 
 Program *Target::findProgramByExtension(const String &ext) const
@@ -566,12 +566,10 @@ bool Target::init()
     };
 
     if (ts["name"])
-    {
         provided_cfg = ts["name"].getValue();
-        ts["name"].reset();
-    }
 
     ts_export = ts;
+    //DEBUG_BREAK_IF(getOptions()["alligned-allocator"] == "1");
 
     // this rd must come from parent!
     // but we take it in copy ctor
@@ -803,6 +801,27 @@ path Target::getFile(const DependencyPtr &dep, const path &fn)
     if (!fn.empty())
         p /= fn;
     return p;
+}
+
+TargetSettings &Target::getOptions()
+{
+    // only export options are changeable
+    return getExportOptions()["options"].getSettings();
+}
+
+const TargetSettings &Target::getOptions() const
+{
+    return getSettings()["options"].getSettings();
+}
+
+TargetSettings &Target::getExportOptions()
+{
+    return ts_export;
+}
+
+const TargetSettings &Target::getExportOptions() const
+{
+    return ts_export;
 }
 
 bool ProjectTarget::init()
