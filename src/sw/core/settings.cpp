@@ -283,8 +283,8 @@ void TargetSetting::push_back(const TargetSettingValue &v)
 
 void TargetSetting::reset()
 {
-    decltype(value) v;
-    value.swap(v);
+    TargetSetting s;
+    *this = s;
 }
 
 void TargetSetting::use()
