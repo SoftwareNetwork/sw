@@ -16,18 +16,6 @@
 namespace sw
 {
 
-/*struct SettingValue
-{
-    //String value;
-    bool used = false;
-
-    // int inherit?
-    // -1 - infinite depth
-    // 0 - false
-    // >0 - depth
-    bool inherit = false;
-};*/
-
 using TargetSettingKey = String;
 using TargetSettingValue = String;
 struct TargetSetting;
