@@ -17,30 +17,17 @@ TargetData::~TargetData()
 {
 }
 
-/*std::vector<ITargetPtr> TargetData::loadPackages(SwBuild &b, const TargetSettings &s, const PackageIdSet &whitelist) const
-{
-    if (!ep)
-        throw SW_RUNTIME_ERROR("No entry point provided");
-    return ep->loadPackages(b, s, whitelist);
-}*/
-
-/*TargetEntryPointPtr TargetData::getEntryPoint() const
-{
-    if (!ep)
-        throw SW_RUNTIME_ERROR("No entry point provided");
-    return ep;
-}
-
-void TargetData::setEntryPoint(const TargetEntryPointPtr &e)
-{
-    if (ep && ep != e)
-        throw SW_RUNTIME_ERROR("Setting entry point twice");
-    ep = e;
-}*/
-
 void TargetContainer::push_back(const ITargetPtr &t)
 {
-    targets.push_back(t);
+    // on the same settings, we take input target and overwrite old one
+
+    auto i = findEqual(t->getSettings());
+    if (i == end())
+    {
+        targets.push_back(t);
+        return;
+    }
+    *i = t;
 }
 
 void TargetContainer::clear()

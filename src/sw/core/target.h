@@ -243,14 +243,6 @@ struct TargetData
 {
     ~TargetData();
 
-    // load targets
-    /*[[nodiscard]]
-    std::vector<ITargetPtr> loadPackages(SwBuild &, const TargetSettings &, const PackageIdSet &allowed_packages) const;*/
-
-    //
-    //TargetEntryPointPtr getEntryPoint() const;
-    //void setEntryPoint(const TargetEntryPointPtr &);
-
     // create if empty
     template <class U>
     U &getData()
@@ -269,9 +261,6 @@ struct TargetData
     }
 
 private:
-    // shared, because multiple pkgs has same entry point
-    //TargetEntryPointPtr ep;
-
     // regex storage
     // files cache
     // etc.
