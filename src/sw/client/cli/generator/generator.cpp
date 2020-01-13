@@ -1013,7 +1013,9 @@ void SwBuildDescriptionGenerator::generate(const sw::SwBuild &b)
     auto fn = path(d) += ".json";
     fs::create_directories(d.parent_path());
 
-    nlohmann::json j;
+    nlohmann::json jx;
+    jx["schema"]["version"] = 1;
+    auto &j = jx["build"];
     for (auto &[pkg, tgts] : b.getTargets())
     {
         if (tgts.empty())
@@ -1034,7 +1036,7 @@ void SwBuildDescriptionGenerator::generate(const sw::SwBuild &b)
             j[pkg.toString()].push_back(j1);
         }
     }
-    write_file(fn, j.dump(4));
+    write_file(fn, jx.dump(4));
 }
 
 void RawBootstrapBuildGenerator::generate(const sw::SwBuild &b)
