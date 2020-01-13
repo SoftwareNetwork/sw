@@ -85,6 +85,12 @@ void TargetSetting::copy_fields(const TargetSetting &rhs)
 
 TargetSetting &TargetSetting::operator=(const TargetSetting &rhs)
 {
+    // if we see an option which was consumed, we do not copy, just reset this
+    if (rhs.use_count == 0)
+    {
+        reset();
+        return *this;
+    }
     value = rhs.value;
     copy_fields(rhs);
     return *this;
@@ -198,10 +204,7 @@ void TargetSetting::mergeMissing(const TargetSetting &rhs)
         return;
     }
     if (value.index() == 0)
-    {
-        value = rhs.value;
-        copy_fields(rhs);
-    }
+        *this = rhs;
 }
 
 void TargetSetting::mergeAndAssign(const TargetSetting &rhs)
@@ -212,8 +215,7 @@ void TargetSetting::mergeAndAssign(const TargetSetting &rhs)
         s->mergeAndAssign(std::get<TargetSettings>(rhs.value));
         return;
     }
-    value = rhs.value;
-    copy_fields(rhs);
+    *this = rhs;
 }
 
 void TargetSetting::mergeFromJson(const nlohmann::json &j)
