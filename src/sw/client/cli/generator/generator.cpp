@@ -1033,7 +1033,7 @@ void SwBuildDescriptionGenerator::generate(const sw::SwBuild &b)
             // rename to settings?
             j1["key"] = nlohmann::json::parse(t->getSettings().toString());
             j1["value"] = nlohmann::json::parse(t->getInterfaceSettings().toString());
-            j[pkg.toString()].push_back(j1);
+            j[boost::to_lower_copy(pkg.toString())].push_back(j1);
         }
     }
     write_file(fn, jx.dump(4));

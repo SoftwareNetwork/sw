@@ -1992,12 +1992,12 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
         if (d->IncludeDirectoriesOnly)
             continue;
         if (auto t = d->getTarget().as<const NativeCompiledTarget*>(); t && !t->DryRun/* && t->getType() != TargetType::NativeExecutable*/)
-            s["dependencies"]["link"][d->getTarget().getPackage().toString()] = d->getTarget().getSettings();
+            s["dependencies"]["link"][boost::to_lower_copy(d->getTarget().getPackage().toString())] = d->getTarget().getSettings();
     }
     for (auto &d : DummyDependencies)
     {
         // rename dummy?
-        s["dependencies"]["dummy"][d->getTarget().getPackage().toString()] = d->getTarget().getSettings();
+        s["dependencies"]["dummy"][boost::to_lower_copy(d->getTarget().getPackage().toString())] = d->getTarget().getSettings();
     }
     for (auto &d : SourceDependencies)
     {
