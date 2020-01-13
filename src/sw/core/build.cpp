@@ -313,8 +313,8 @@ void SwBuild::loadPackages(const TargetMap &predefined)
             if (!ep)
                 throw SW_RUNTIME_ERROR("no entry point for " + d.first.toString());
             auto pp = d.first.getPath().slice(0, LocalPackage(getContext().getLocalStorage(), d.first).getData().prefix);
+            //auto tgts = ep->loadPackages(*this, s, { d.first }, pp);
             auto tgts = ep->loadPackages(*this, s, known_packages, pp);
-            //swctx.getTargetData(d.first).loadPackages(*this, s, { d.first });
 
             bool added = false;
             for (auto &tgt : tgts)
@@ -494,11 +494,12 @@ Commands SwBuild::getCommands() const
 
         // one target may be loaded twice
         // we take only the latest, because it is has correct set of command deps per requested settings
-        std::map<TargetSettings, ITarget*> latest_targets;
-        for (auto &tgt : tgts)
-            latest_targets[tgt->getSettings()] = tgt.get();
+        //std::map<TargetSettings, ITarget*> latest_targets;
+        //for (auto &tgt : tgts)
+            //latest_targets[tgt->getSettings()] = tgt.get();
 
-        for (auto &[_, tgt] : latest_targets)
+        //for (auto &[_, tgt] : latest_targets)
+        for (auto &tgt : tgts)
         {
             // gather targets to build
             const auto &s = tgt->getInterfaceSettings();
@@ -574,11 +575,12 @@ Commands SwBuild::getCommands() const
     {
         // one target may be loaded twice
         // we take only the latest, because it is has correct set of command deps per requested settings
-        std::map<TargetSettings, ITarget*> latest_targets;
-        for (auto &tgt : tgts)
-            latest_targets[tgt->getSettings()] = tgt.get();
+        //std::map<TargetSettings, ITarget*> latest_targets;
+        //for (auto &tgt : tgts)
+            //latest_targets[tgt->getSettings()] = tgt.get();
 
-        for (auto &[_, tgt] : latest_targets)
+        //for (auto &[_, tgt] : latest_targets)
+        for (auto &tgt : tgts)
         {
             auto c = tgt->getCommands();
             for (auto &c2 : c)
