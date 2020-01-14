@@ -263,8 +263,7 @@ void SwBuild::loadPackages(const TargetMap &predefined)
         LOG_TRACE(logger, "build id " << this << " " << BOOST_CURRENT_FUNCTION << " round " << r++);
 
         std::map<TargetSettings, std::pair<PackageId, TargetContainer *>> load;
-        auto &chld = targets; // take a ref, because it won't be changed in this loop
-        for (const auto &[pkg, tgts] : chld)
+        for (const auto &[pkg, tgts] : getTargets())
         {
             for (const auto &tgt : tgts)
             {
@@ -274,8 +273,8 @@ void SwBuild::loadPackages(const TargetMap &predefined)
                     if (d->isResolved())
                         continue;
 
-                    auto i = chld.find(d->getUnresolvedPackage());
-                    if (i == chld.end())
+                    auto i = getTargets().find(d->getUnresolvedPackage());
+                    if (i == getTargets().end())
                     {
                         throw SW_RUNTIME_ERROR(tgt->getPackage().toString() + ": No target loaded: " + d->getUnresolvedPackage().toString());
                     }
