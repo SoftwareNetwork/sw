@@ -72,7 +72,7 @@ struct SW_DRIVER_CPP_API TargetBaseData : ProjectDirectories, TargetEvents
     bool IsConfig = false;
     bool DryRun = false;
     PackagePath NamePrefix;
-    bool empty_command_storage = false;
+    std::optional<CommandStorage *> command_storage;
 
     SwBuild &getMainBuild() const;
 
