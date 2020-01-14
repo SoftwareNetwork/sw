@@ -179,7 +179,6 @@ protected:
     TargetBase(const TargetBase &);
 
     LocalPackage &getPackageMutable();
-    int getCommandStorageType() const;
     const LocalPackage &getPackage() const;
 
 private:
@@ -380,6 +379,7 @@ private:
     const TargetSettings &getHostSettings() const;
 
     virtual Commands getCommands1() const { return Commands{}; }
+    CommandStorage *getCommandStorage() const;
 
     // for source access
     friend struct TargetBase;

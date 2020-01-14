@@ -256,13 +256,6 @@ const Build &TargetBase::getSolution() const
     return build ? *build : (const Build &)*this;
 }
 
-int TargetBase::getCommandStorageType() const
-{
-    if (command_storage == builder::Command::CS_DO_NOT_SAVE)
-        return builder::Command::CS_DO_NOT_SAVE;
-    return (isLocal() && !IsConfig) ? builder::Command::CS_LOCAL : builder::Command::CS_GLOBAL;
-}
-
 bool TargetBase::isLocal() const
 {
     return Local;
@@ -505,17 +498,24 @@ void Target::applyRootDirectory()
     }
 }
 
+CommandStorage *Target::getCommandStorage() const
+{
+    if (command_storage == builder::Command::CS_DO_NOT_SAVE || DryRun)
+        return (CommandStorage *)builder::Command::CS_DO_NOT_SAVE;
+    return &getContext().getCommandStorage(BinaryDir.parent_path());
+}
+
 Commands Target::getCommands() const
 {
     auto cmds = getCommands1();
     for (auto &c : cmds)
-        c->command_storage = getCommandStorageType();
+        c->command_storage = getCommandStorage();
     return cmds;
 }
 
 void Target::registerCommand(builder::Command &c)
 {
-    c.command_storage = getCommandStorageType();
+    c.command_storage = getCommandStorage();
     Storage.push_back(c.shared_from_this());
 }
 

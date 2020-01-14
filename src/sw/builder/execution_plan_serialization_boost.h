@@ -120,7 +120,18 @@ SERIALIZATION_BEGIN_SPLIT
     ar & base_object<::primitives::Command>(v);
 
     ar & v.name;
-    ar & v.command_storage;
+    size_t flag;
+    ar & flag;
+    if (flag != 2)
+        v.command_storage = (::sw::CommandStorage*)flag;
+    else
+    {
+        path root;
+        ar & root;
+        SW_UNIMPLEMENTED;
+        // take ctx, create cmd storage with root and assign
+        // v.command_storage = &swctx.getCommandStorage(root);
+    }
     ar & v.first_response_file_argument;
     ar & v.always;
     ar & v.remove_outputs_before_execution;
@@ -133,7 +144,15 @@ SERIALIZATION_SPLIT_CONTINUE
     ar & base_object<::primitives::Command>(v);
 
     ar & v.getName();
-    ar & v.command_storage;
+    SW_UNIMPLEMENTED;
+    if (v.command_storage <= (::sw::CommandStorage*)::sw::builder::Command::CS_DO_NOT_SAVE)
+        ar & (size_t)v.command_storage;
+    else
+    {
+        size_t x = 2;
+        ar & x; // marker
+        ar & v.command_storage->root;
+    }
     ar & v.first_response_file_argument;
     ar & v.always;
     ar & v.remove_outputs_before_execution;

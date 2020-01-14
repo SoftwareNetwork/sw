@@ -45,14 +45,8 @@ static cl::opt<String> save_command_format("save-command-format", cl::desc("Expl
 namespace sw
 {
 
-static ConcurrentCommandStorage &getCommandStorage(const SwBuilderContext &swctx, bool local)
-{
-    return swctx.getCommandStorage().getStorage(local);
-}
-
 CommandNode::CommandNode()
 {
-
 }
 
 CommandNode::CommandNode(const CommandNode &)
@@ -119,7 +113,7 @@ bool Command::isOutdated() const
         return true;
     }
 
-    if (command_storage == CS_DO_NOT_SAVE)
+    if (command_storage == (CommandStorage*)CS_DO_NOT_SAVE)
     {
         if (isExplainNeeded())
             EXPLAIN_OUTDATED("command", true, "command storage is disabled", getCommandId(*this));
@@ -127,20 +121,19 @@ bool Command::isOutdated() const
     }
 
     auto k = getHash();
-    auto r = getCommandStorage(getContext(), command_storage == CS_LOCAL).insert(k);
+    auto r = command_storage->insert(k);
     if (r.second)
     {
         // we have insertion, no previous value available
         // so outdated
         if (isExplainNeeded())
-            EXPLAIN_OUTDATED("command", true, "new command (command_storage = " + std::to_string(command_storage) + "): " + print(), getCommandId(*this));
+            EXPLAIN_OUTDATED("command", true, "new command (command_storage = " + std::to_string((size_t)command_storage) + "): " + print(), getCommandId(*this));
         return true;
     }
     else
     {
-        auto &cs = getContext().getCommandStorage();
         ((Command*)(this))->mtime = r.first->mtime;
-        ((Command*)(this))->implicit_inputs = r.first->getImplicitInputs(cs.getInternalStorage(command_storage == CS_LOCAL));
+        ((Command*)(this))->implicit_inputs = r.first->getImplicitInputs(command_storage->getInternalStorage());
         return isTimeChanged();
     }
 }
@@ -384,7 +377,7 @@ bool Command::beforeCommand()
     prepare();
 
     // check
-    if (!always && command_storage == CS_UNDEFINED)
+    if (!always && !command_storage)
         throw SW_RUNTIME_ERROR(makeErrorString("command storage is not selected, call t.registerCommand(cmd)"));
 
     if (!isOutdated())
@@ -440,7 +433,7 @@ void Command::afterCommand()
         mtime = std::max(mtime, fr.last_write_time);
     }
 
-    if (command_storage != CS_LOCAL && command_storage != CS_GLOBAL)
+    if (!command_storage || command_storage == (CommandStorage*)CS_DO_NOT_SAVE)
         return;
 
     // probably below is wrong, async writes are queue to one thread (FIFO)
@@ -453,13 +446,11 @@ void Command::afterCommand()
     // so outdated command wil not be re-runned
 
     auto k = getHash();
-    auto &cs = getContext().getCommandStorage();
-    auto &s = cs.getStorage(command_storage == CS_LOCAL);
-    auto &r = *s.insert(k).first;
+    auto &r = *command_storage->insert(k).first;
     r.hash = k;
     r.mtime = mtime;
-    r.setImplicitInputs(implicit_inputs, cs.getInternalStorage(command_storage == CS_LOCAL));
-    cs.async_command_log(r, command_storage == CS_LOCAL);
+    r.setImplicitInputs(implicit_inputs, command_storage->getInternalStorage());
+    command_storage->async_command_log(r);
 }
 
 path Command::getResponseFilename() const

@@ -60,8 +60,8 @@ struct Storage
     std::unique_ptr<FileHolder> files;
 
     void closeLogs();
-    FileHolder &getCommandLog(const SwBuilderContext &swctx, bool local);
-    FileHolder &getFileLog(const SwBuilderContext &swctx, bool local);
+    FileHolder &getCommandLog(const SwBuilderContext &swctx, const path &root);
+    FileHolder &getFileLog(const SwBuilderContext &swctx, const path &root);
 };
 
 }
@@ -72,8 +72,8 @@ struct FileDb
 
     FileDb(const SwBuilderContext &swctx);
 
-    void load(Files &files, std::unordered_map<size_t, path> &files2, ConcurrentCommandStorage &commands, bool local) const;
-    void save(const Files &files, const detail::Storage &, ConcurrentCommandStorage &commands, bool local) const;
+    void load(Files &files, std::unordered_map<size_t, path> &files2, ConcurrentCommandStorage &commands, const path &root) const;
+    void save(const Files &files, const detail::Storage &, ConcurrentCommandStorage &commands, const path &root) const;
 
     static void write(std::vector<uint8_t> &, const CommandRecord &, const detail::Storage &);
 };
@@ -81,8 +81,9 @@ struct FileDb
 struct SW_BUILDER_API CommandStorage
 {
     const SwBuilderContext &swctx;
+    path root;
 
-    CommandStorage(const SwBuilderContext &swctx);
+    CommandStorage(const SwBuilderContext &swctx, const path &root);
     CommandStorage(const CommandStorage &) = delete;
     CommandStorage &operator=(const CommandStorage &) = delete;
     ~CommandStorage();
@@ -90,14 +91,14 @@ struct SW_BUILDER_API CommandStorage
     void load();
     void save();
 
-    ConcurrentCommandStorage &getStorage(bool local);
-    detail::Storage &getInternalStorage(bool local);
-    void async_command_log(const CommandRecord &r, bool local);
+    ConcurrentCommandStorage &getStorage();
+    detail::Storage &getInternalStorage();
+    void async_command_log(const CommandRecord &r);
+    std::pair<CommandRecord *, bool> insert(size_t hash);
 
 private:
     FileDb fdb;
-    detail::Storage global;
-    detail::Storage local;
+    detail::Storage s;
 
     void closeLogs();
 };

@@ -61,14 +61,12 @@ FileStorage &SwBuilderContext::getFileStorage() const
     return *file_storage;
 }
 
-CommandStorage &SwBuilderContext::getCommandStorage() const
+CommandStorage &SwBuilderContext::getCommandStorage(const path &root) const
 {
+    std::unique_lock lk(csm);
+    auto &cs = command_storages[root];
     if (!cs)
-    {
-        std::unique_lock lk(csm);
-        if (!cs)
-            cs = std::make_unique<CommandStorage>(*this);
-    }
+        cs = std::make_unique<CommandStorage>(*this, root);
     return *cs;
 }
 

@@ -6,6 +6,8 @@
 
 #include "execution_plan.h"
 
+#include "command_storage.h"
+
 #include <sw/support/serialization.h>
 
 #include <boost/serialization/access.hpp>

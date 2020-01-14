@@ -666,7 +666,7 @@ Commands SwBuild::getCommands() const
         //copy_cmd->dependencies.insert(nt->getCommand());
         copy_cmd->name = "copy: " + normalize_path(t);
         copy_cmd->maybe_unused = builder::Command::MU_ALWAYS;
-        copy_cmd->command_storage = builder::Command::CS_LOCAL;
+        copy_cmd->command_storage = &getContext().getCommandStorage(getBuildDirectory() / "cs");
         cmds.insert(copy_cmd);
         commands_storage.insert(copy_cmd); // prevents early destruction
     }

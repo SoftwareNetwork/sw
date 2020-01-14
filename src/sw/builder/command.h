@@ -67,6 +67,7 @@ namespace sw
 struct FileStorage;
 struct Program;
 struct SwBuilderContext;
+struct CommandStorage;
 
 struct SW_BUILDER_API CommandNode : std::enable_shared_from_this<CommandNode>
 {
@@ -193,12 +194,9 @@ struct SW_BUILDER_API Command : ICastable, CommandNode, detail::ResolvableComman
     enum
     {
         CS_UNDEFINED,
-
-        CS_DO_NOT_SAVE,
-        CS_GLOBAL,
-        CS_LOCAL,
+        CS_DO_NOT_SAVE, // still used
     };
-    int command_storage = 0;
+    CommandStorage *command_storage = nullptr;
 
     Command() = default;
     Command(const SwBuilderContext &swctx);

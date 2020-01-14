@@ -35,7 +35,7 @@ struct SW_BUILDER_API SwBuilderContext : SwManagerContext
     ProgramVersionStorage &getVersionStorage() const;
     FileStorage &getFileStorage() const;
     Executor &getFileStorageExecutor() const;
-    CommandStorage &getCommandStorage() const;
+    CommandStorage &getCommandStorage(const path &root) const;
     ModuleStorage &getModuleStorage() const;
     const OS &getHostOs() const { return HostOS; }
 
@@ -45,7 +45,7 @@ private:
     std::unique_ptr<ModuleStorage> module_storage;
     // keep order
     std::unique_ptr<ProgramVersionStorage> pvs;
-    mutable std::unique_ptr<CommandStorage> cs;
+    mutable std::unordered_map<path, std::unique_ptr<CommandStorage>> command_storages;
     mutable std::unique_ptr<FileStorage> file_storage;
     std::unique_ptr<Executor> file_storage_executor; // after everything!
 
