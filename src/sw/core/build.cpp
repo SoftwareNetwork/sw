@@ -384,8 +384,9 @@ void SwBuild::setTargetsToBuild()
 
     // mark existing targets as targets to build
     // only in case if not present?
-    if (targets_to_build.empty())
-        targets_to_build = getTargets();
+    if (!targets_to_build.empty())
+        return;
+    targets_to_build = getTargets();
     for (auto &[pkg, d] : swctx.getPredefinedTargets())
         targets_to_build.erase(pkg.getPath());
 }
@@ -492,13 +493,6 @@ Commands SwBuild::getCommands() const
 
         ttb[p] = tgts;
 
-        // one target may be loaded twice
-        // we take only the latest, because it is has correct set of command deps per requested settings
-        //std::map<TargetSettings, ITarget*> latest_targets;
-        //for (auto &tgt : tgts)
-            //latest_targets[tgt->getSettings()] = tgt.get();
-
-        //for (auto &[_, tgt] : latest_targets)
         for (auto &tgt : tgts)
         {
             // gather targets to build
@@ -573,13 +567,6 @@ Commands SwBuild::getCommands() const
     Commands cmds;
     for (auto &[p, tgts] : ttb)
     {
-        // one target may be loaded twice
-        // we take only the latest, because it is has correct set of command deps per requested settings
-        //std::map<TargetSettings, ITarget*> latest_targets;
-        //for (auto &tgt : tgts)
-            //latest_targets[tgt->getSettings()] = tgt.get();
-
-        //for (auto &[_, tgt] : latest_targets)
         for (auto &tgt : tgts)
         {
             auto c = tgt->getCommands();
