@@ -309,8 +309,8 @@ static void addDeps(Build &solution, NativeCompiledTarget &lib)
     // uncomment when you need help
     //lib += "pub.egorpugin.primitives.source-master"_dep;
     //lib += "pub.egorpugin.primitives.version-master"_dep;
-    //lib += "pub.egorpugin.primitives.command-master"_dep;
-    //lib += "pub.egorpugin.primitives.filesystem-master"_dep;
+    lib += "pub.egorpugin.primitives.command-master"_dep;
+    lib += "pub.egorpugin.primitives.filesystem-master"_dep;
 
     auto d = lib + UnresolvedPackage(SW_DRIVER_NAME);
     d->IncludeDirectoriesOnly = true;
