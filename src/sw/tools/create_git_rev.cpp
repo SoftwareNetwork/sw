@@ -35,6 +35,7 @@ int main(int argc, char **argv)
         c.arguments.push_back(git.u8string());
         c.arguments.push_back("status");
         c.arguments.push_back("--porcelain");
+        c.arguments.push_back("-uno");
         c.execute();
         status = boost::trim_copy(c.out.text);
         if (status.empty())
