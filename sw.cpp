@@ -226,7 +226,7 @@ void build(Solution &s)
             "pub.egorpugin.primitives.sw.main-master"_dep,
             "org.sw.demo.giovannidicanio.winreg"_dep
             ;
-        embed("pub.egorpugin.primitives.tools.embedder-master"_dep, client, "src/sw/client/cli/inserts/inserts.cpp.in");
+        embed2("pub.egorpugin.primitives.tools.embedder2-master"_dep, client, "src/sw/client/cli/inserts/SWConfig.cmake");
         if (client.getCompilerType() == CompilerType::MSVC)
             client.CompileOptions.push_back("-bigobj");
         if (client.getBuildSettings().TargetOS.Type != OSType::Windows)

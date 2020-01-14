@@ -22,7 +22,7 @@
 #define DECLARE_TEXT_VAR_END(x) }; const std::string x = (const char *)&_##x[0];
 
 DECLARE_TEXT_VAR_BEGIN(sw_config_cmake)
-EMBED<SWConfig.cmake>
+#include <src/sw/client/cli/inserts/SWConfig.cmake.emb>
 DECLARE_TEXT_VAR_END(sw_config_cmake);
 
 #undef DECLARE_TEXT_VAR_BEGIN
