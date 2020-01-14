@@ -1960,12 +1960,14 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
 
     if (*HeaderOnly)
         s["header_only"] = "true";
-
-    if (getType() != TargetType::NativeExecutable) // skip for exe atm
-        s["import_library"] = normalize_path(getImportLibrary());
-    s["output_file"] = normalize_path(getOutputFile());
-    if (!OutputDir.empty())
-        s["output_dir"] = normalize_path(OutputDir);
+    else
+    {
+        if (getType() != TargetType::NativeExecutable) // skip for exe atm
+            s["import_library"] = normalize_path(getImportLibrary());
+        s["output_file"] = normalize_path(getOutputFile());
+        if (!OutputDir.empty())
+            s["output_dir"] = normalize_path(OutputDir);
+    }
 
     TargetSettings defs;
     for (auto &[k,v] : Public.Definitions)
