@@ -144,6 +144,8 @@ struct SW_CORE_API TargetContainer
     auto begin() const { return targets.begin(); }
     auto end() const { return targets.end(); }
 
+    Base::iterator erase(Base::iterator begin, Base::iterator end);
+
 private:
     std::vector<ITargetPtr> targets;
 };

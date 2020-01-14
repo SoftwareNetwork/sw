@@ -72,6 +72,11 @@ bool TargetContainer::empty() const
     return targets.empty();
 }
 
+TargetContainer::Base::iterator TargetContainer::erase(Base::iterator begin, Base::iterator end)
+{
+    return targets.erase(begin, end);
+}
+
 TargetMap::~TargetMap()
 {
 }
