@@ -52,6 +52,23 @@ enum class VSProjectType
     Utility,
 };
 
+struct icmp
+{
+    struct icasecmp
+    {
+        bool operator()(const char &c1, const char &c2) const
+        {
+            return tolower(c1) < tolower(c2);
+        }
+    };
+    bool operator()(const std::string &s1, const std::string &s2) const
+    {
+        return std::lexicographical_compare(s1.begin(), s1.end(),
+            s2.begin(), s2.end(),
+            icasecmp());
+    }
+};
+
 struct FileWithFilter
 {
     path p;
@@ -179,7 +196,7 @@ private:
 struct Solution
 {
     std::map<DirectoryPath, Directory> directories;
-    std::map<String, Project> projects;
+    std::map<String, Project, icmp> projects;
     const Project *first_project = nullptr;
     Settings settings;
 
