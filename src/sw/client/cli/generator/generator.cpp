@@ -145,7 +145,6 @@ static String toString(VsGeneratorType t)
 
 static GeneratorType fromString(const String &s)
 {
-    // make icasecmp
     if (0)
         ;
     else if (boost::istarts_with(s, "VS_IDE") || boost::istarts_with(s, "VS"))
@@ -177,7 +176,6 @@ static GeneratorType fromString(const String &s)
 
 static VsGeneratorType fromStringVs(const String &s)
 {
-    // make icasecmp
     if (0);
 
     else if (
@@ -1016,7 +1014,7 @@ void SwBuildDescriptionGenerator::generate(const sw::SwBuild &b)
     nlohmann::json jx;
     jx["schema"]["version"] = 1;
     auto &j = jx["build"];
-    for (auto &[pkg, tgts] : b.getTargets())
+    for (auto &[pkg, tgts] : b.getTargetsToBuild())
     {
         if (tgts.empty())
         {
