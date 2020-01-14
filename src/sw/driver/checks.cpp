@@ -712,7 +712,6 @@ static String getTargetName(const path &p)
 Build Check::setupSolution(SwBuild &b, const path &f) const
 {
     Build s(b);
-    s.command_storage = nullptr;
     s.BinaryDir = f.parent_path();
     s.NamePrefix.clear();
     s.DryRun = false;
@@ -733,15 +732,18 @@ TargetSettings Check::getSettings() const
     auto up = getUniqueName();
     d /= up;
     ss["output_dir"] = normalize_path(d);
+    ss["output_dir"].useInHash(false);
+    ss["output_dir"].ignoreInComparison(true);
 
     return ss;
 }
 
-void Check::setupTarget(NativeCompiledTarget &e) const
+void Check::setupTarget(NativeCompiledTarget &t) const
 {
-    e.GenerateWindowsResource = false;
-    if (auto L = e.getSelectedTool()->as<VisualStudioLinker*>())
+    t.GenerateWindowsResource = false;
+    if (auto L = t.getSelectedTool()->as<VisualStudioLinker*>())
         L->DisableIncrementalLink = true;
+    t.command_storage = nullptr;
 }
 
 bool Check::execute(SwBuild &b) const
