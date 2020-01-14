@@ -127,7 +127,7 @@ bool Command::isOutdated() const
         // we have insertion, no previous value available
         // so outdated
         if (isExplainNeeded())
-            EXPLAIN_OUTDATED("command", true, "new command (command_storage = " + std::to_string((size_t)command_storage) + "): " + print(), getCommandId(*this));
+            EXPLAIN_OUTDATED("command", true, "new command (command_storage = " + normalize_path(command_storage->root) + "): " + print(), getCommandId(*this));
         return true;
     }
     else
@@ -377,6 +377,8 @@ bool Command::beforeCommand()
     prepare();
 
     // check
+    // if you want to run command always and 'command_storage == nullptr'
+    // also set 'always = true'!
     if (!always && !command_storage)
         throw SW_RUNTIME_ERROR(makeErrorString("command storage is not selected, call t.registerCommand(cmd)"));
 

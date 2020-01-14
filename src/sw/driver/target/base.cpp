@@ -513,7 +513,11 @@ Commands Target::getCommands() const
     for (auto &c : cmds)
     {
         if (!c->command_storage)
+        {
             c->command_storage = getCommandStorage();
+            if (!c->command_storage)
+                c->always = true;
+        }
     }
     return cmds;
 }
@@ -521,7 +525,11 @@ Commands Target::getCommands() const
 void Target::registerCommand(builder::Command &c)
 {
     if (!c.command_storage)
+    {
         c.command_storage = getCommandStorage();
+        if (!c.command_storage)
+            c.always = true;
+    }
     Storage.push_back(c.shared_from_this());
 }
 
