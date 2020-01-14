@@ -311,13 +311,17 @@ static std::vector<sw::TargetSettings> applySettingsFromCppFile(sw::SwContext &s
     b->build();
 
     // load module
-    auto tgts = b->getTargetsToBuild();
-    if (tgts.size() != 1)
-        throw SW_RUNTIME_ERROR("Must be exactly one target");
-    auto &tgts2 = tgts.begin()->second;
-    if (tgts2.empty())
+    sw::TargetContainer *tc = nullptr;
+    for (auto &[pkg, tgts] : b->getTargetsToBuild())
+    {
+        if (pkg.getPath().isRelative())
+            tc = &tgts;
+    }
+    if (!tc)
+        throw SW_RUNTIME_ERROR("No relative targets found");
+    if (tc->empty())
         throw SW_RUNTIME_ERROR("Empty cfg target");
-    auto &t = **tgts2.begin();
+    auto &t = **tc->begin();
     auto is = t.getInterfaceSettings();
     auto m = swctx.getModuleStorage().get(is["output_file"].getValue());
     if (m.symbol_storage().get_function<std::map<std::string, std::string>()>("createJsonSettings").empty())
