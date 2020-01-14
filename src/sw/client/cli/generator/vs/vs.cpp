@@ -996,10 +996,17 @@ void Project::emitProject(const VSGenerator &g) const
         std::map<String /*opt*/, int /*count*/> ft_count;
         for (auto &[c, f] : d.build_rules)
         {
+            // gather opts
+            auto ft = get_flag_table(*c, false);
+            if (ft.empty())
+            {
+                LOG_TRACE(logger, "No flag table for file: " + normalize_path(f));
+                continue;
+            }
+
+            // without flag table, we do not add file
             bfiles[f][&s] = c;
 
-            // gather opts
-            auto ft = get_flag_table(*c);
             ft_count[ft]++;
             for (auto &v : printProperties(*c, cl_props))
                 cl_opts[ft][v]++;
@@ -1453,13 +1460,17 @@ void Project::emitFilters(const VSGenerator &g) const
     write_file(g.sln_root / vs_project_dir / (name + vs_project_ext + ".filters"), ctx.getText());
 }
 
-String Project::get_flag_table(const primitives::Command &c)
+String Project::get_flag_table(const primitives::Command &c, bool throw_on_error)
 {
     auto ft = path(c.getProgram()).stem().u8string();
     if (ft == "ml64")
         ft = "ml";
     if (flag_tables.find(ft) == flag_tables.end())
-        throw SW_RUNTIME_ERROR("No flag table: " + ft);
+    {
+        if (throw_on_error)
+            throw SW_RUNTIME_ERROR("No flag table: " + ft);
+        return {};
+    }
     return ft;
 }
 
