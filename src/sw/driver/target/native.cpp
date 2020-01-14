@@ -1931,6 +1931,8 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
     auto &s = interface_settings;
     // info may change during prepare, so we create it every time for now
     // TODO: deny calls during prepare()
+    if (prepare_pass == 9 && !s.empty())
+        return s;
     s = {};
 
     s["source_dir"] = normalize_path(SourceDirBase);
