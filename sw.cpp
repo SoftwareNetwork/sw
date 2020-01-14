@@ -3,34 +3,6 @@
 #pragma sw require header org.sw.demo.lexxmark.winflexbison.bison
 #pragma sw require header org.sw.demo.qtproject.qt.base.tools.moc
 
-void configure(Build &s)
-{
-#ifndef SW_CPP_DRIVER_API_VERSION
-    s.registerCallback([](auto &t, auto cbt)
-    {
-        if (cbt != sw::CallbackType::CreateTarget)
-            return;
-        if (0
-            || t.getPackage() == PackageId{ "pub.egorpugin.primitives.source-master" }
-            || t.getPackage() == PackageId{ "pub.egorpugin.primitives.version-master" }
-            || t.getPackage() == PackageId{ "pub.egorpugin.primitives.command-master" }
-            || t.getPackage() == PackageId{ "pub.egorpugin.primitives.filesystem-master" }
-            )
-        {
-            auto &nt = dynamic_cast<NativeExecutedTarget &>(t);
-            nt.ExportIfStatic = true;
-        }
-    });
-
-    if (s.isConfigSelected("cygwin2macos"))
-        s.loadModule("utils/cc/cygwin2macos.cpp").call<void(Solution&)>("configure", s);
-    else if (s.isConfigSelected("win2macos"))
-        s.loadModule("utils/cc/win2macos.cpp").call<void(Solution&)>("configure", s);
-    else if (s.isConfigSelected("win2android"))
-        s.loadModule("utils/cc/win2android.cpp").call<void(Solution&)>("configure", s);
-#endif
-}
-
 void build(Solution &s)
 {
     auto &p = s.addProject("sw.client", "0.3.1");
@@ -40,15 +12,18 @@ void build(Solution &s)
     {
         support.CPPVersion = CPPLanguageStandard::CPP17;
         support += "src/sw/support/.*"_rr;
+        auto cmddep = "pub.egorpugin.primitives.command-master"_dep;
         support.Public +=
+            cmddep,
             "pub.egorpugin.primitives.http-master"_dep,
             "pub.egorpugin.primitives.hash-master"_dep,
-            "pub.egorpugin.primitives.command-master"_dep,
             "pub.egorpugin.primitives.log-master"_dep,
             "pub.egorpugin.primitives.executor-master"_dep,
             "pub.egorpugin.primitives.symbol-master"_dep,
             "org.sw.demo.boost.property_tree"_dep,
             "org.sw.demo.boost.stacktrace"_dep;
+        //cmddep->getSettings()["export-if-static"] = "true";
+        //cmddep->getSettings()["export-if-static"].setRequired();
         support.ApiName = "SW_SUPPORT_API";
         if (support.getBuildSettings().TargetOS.Type == OSType::Windows)
         {
@@ -96,12 +71,10 @@ void build(Solution &s)
             "org.sw.demo.boost.dll"_dep,
             "org.sw.demo.rbock.sqlpp11_connector_sqlite3-develop"_dep
             ;
-#ifdef SW_CPP_DRIVER_API_VERSION
-        //srcdep->getSettings()["export-if-static"] = "true";
-        //srcdep->getSettings()["export-if-static"].setRequired();
+        srcdep->getSettings()["export-if-static"] = "true";
+        srcdep->getSettings()["export-if-static"].setRequired();
         verdep->getSettings()["export-if-static"] = "true";
         verdep->getSettings()["export-if-static"].setRequired();
-#endif
 
         manager.Public -= "pub.egorpugin.primitives.win32helpers-master"_dep;
         if (manager.getBuildSettings().TargetOS.Type == OSType::Windows)
@@ -268,6 +241,9 @@ void build(Solution &s)
             client.LinkOptions.push_back("-rdynamic");
         }
 
+        if (client.getCompilerType() == CompilerType::MSVC)
+            client.CompileOptions.push_back("-wd4275");
+
         {
             auto c = client.addCommand();
             c << cmd::prog(create_git_rev)
@@ -290,9 +266,7 @@ void build(Solution &s)
         }
     }
 
-#ifdef SW_CPP_DRIVER_API_VERSION
     if (s.getExternalVariables()["with-gui"] != "true")
-#endif
         return;
 
 #ifndef SW_DRIVER_ADD_SELF
@@ -309,11 +283,7 @@ void build(Solution &s)
         gui += "org.sw.demo.qtproject.qt.base.plugins.platforms.windows"_dep;
         gui += "org.sw.demo.qtproject.qt.base.plugins.styles.windowsvista"_dep;
 
-#ifdef SW_CPP_DRIVER_API_VERSION
         if (auto L = gui.getSelectedTool()->as<VisualStudioLinker*>(); L)
-#else
-        if (auto L = gui.getSelectedTool()->as<VisualStudioLinker>(); L)
-#endif
             L->Subsystem = vs::Subsystem::Windows;
 
         qt_moc_rcc_uic("org.sw.demo.qtproject.qt"_dep, gui);
