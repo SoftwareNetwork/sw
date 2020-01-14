@@ -178,9 +178,12 @@ int main(int argc, char **argv)
     for (auto &[u2, r] : m)
     {
         auto &d = r.getData();
+        // uncomment when you need to update spec hash
+        //if (d.group_number == 0 || r.isOverridden())
         if (d.group_number == 0)
         {
             ((PackageData&)d).group_number = get_specification_hash(read_file(r.getDirSrc2() / "sw.cpp"));
+            r.setGroupNumber(d.group_number);
         }
     }
 
