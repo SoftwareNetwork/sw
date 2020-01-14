@@ -232,7 +232,7 @@ void TargetBase::setupTarget(TargetBaseType *t) const
     t->IsConfig = IsConfig; // TODO: inherit from reconsider
 
     t->DryRun = getSolution().DryRun; // ok, take from Solution (Build)
-    t->command_storage = getSolution().command_storage; // ok, take from Solution (Build)
+    t->empty_command_storage = getSolution().empty_command_storage; // ok, take from Solution (Build)
 
     t->main_build_ = main_build_; // ok, take from here (this, parent)
 
@@ -500,8 +500,8 @@ void Target::applyRootDirectory()
 
 CommandStorage *Target::getCommandStorage() const
 {
-    if (command_storage == builder::Command::CS_DO_NOT_SAVE || DryRun)
-        return (CommandStorage *)builder::Command::CS_DO_NOT_SAVE;
+    if (empty_command_storage || DryRun)
+        return nullptr;
     return &getContext().getCommandStorage(BinaryDir.parent_path());
 }
 

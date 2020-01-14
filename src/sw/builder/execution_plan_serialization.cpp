@@ -21,7 +21,8 @@
 
 #include "execution_plan_serialization_boost.h"
 
-static const int serialization_version = 2;
+// change when you change the header above
+static const int serialization_version = 3;
 
 namespace sw
 {

@@ -122,7 +122,7 @@ SERIALIZATION_BEGIN_SPLIT
     ar & v.name;
     size_t flag;
     ar & flag;
-    if (flag != 2)
+    if (flag != 1)
         v.command_storage = (::sw::CommandStorage*)flag;
     else
     {
@@ -145,11 +145,11 @@ SERIALIZATION_SPLIT_CONTINUE
 
     ar & v.getName();
     SW_UNIMPLEMENTED;
-    if (v.command_storage <= (::sw::CommandStorage*)::sw::builder::Command::CS_DO_NOT_SAVE)
+    if (!v.command_storage)
         ar & (size_t)v.command_storage;
     else
     {
-        size_t x = 2;
+        size_t x = 1;
         ar & x; // marker
         ar & v.command_storage->root;
     }

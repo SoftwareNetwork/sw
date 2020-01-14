@@ -191,11 +191,6 @@ struct SW_BUILDER_API Command : ICastable, CommandNode, detail::ResolvableComman
     };
     int maybe_unused = 0;
 
-    enum
-    {
-        CS_UNDEFINED,
-        CS_DO_NOT_SAVE, // still used
-    };
     CommandStorage *command_storage = nullptr;
 
     Command() = default;

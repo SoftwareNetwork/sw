@@ -113,7 +113,7 @@ bool Command::isOutdated() const
         return true;
     }
 
-    if (command_storage == (CommandStorage*)CS_DO_NOT_SAVE)
+    if (!command_storage)
     {
         if (isExplainNeeded())
             EXPLAIN_OUTDATED("command", true, "command storage is disabled", getCommandId(*this));
@@ -433,7 +433,7 @@ void Command::afterCommand()
         mtime = std::max(mtime, fr.last_write_time);
     }
 
-    if (!command_storage || command_storage == (CommandStorage*)CS_DO_NOT_SAVE)
+    if (!command_storage)
         return;
 
     // probably below is wrong, async writes are queue to one thread (FIFO)

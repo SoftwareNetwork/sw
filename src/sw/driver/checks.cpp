@@ -712,7 +712,7 @@ static String getTargetName(const path &p)
 Build Check::setupSolution(SwBuild &b, const path &f) const
 {
     Build s(b);
-    s.command_storage = builder::Command::CS_DO_NOT_SAVE;
+    s.empty_command_storage = true;
     s.BinaryDir = f.parent_path();
     s.NamePrefix.clear();
     s.DryRun = false;
