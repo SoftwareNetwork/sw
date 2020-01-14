@@ -74,6 +74,11 @@ static Strings getExports(HMODULE lib)
 }
 #endif
 
+static CommandStorage &getDriverCommandStorage(const Build &b)
+{
+    return b.getContext().getCommandStorage(b.getContext().getLocalStorage().storage_dir_tmp / "db" / "service");
+}
+
 static void addImportLibrary(const Build &b, NativeCompiledTarget &t)
 {
 #ifdef _WIN32
@@ -95,6 +100,7 @@ static void addImportLibrary(const Build &b, NativeCompiledTarget &t)
         << cmd::out(getImportLibraryFile(b), cmd::Prefix{ "-OUT:" })
         ;
     t.LinkLibraries.push_back(getImportLibraryFile(b));
+    t.command_storage = &getDriverCommandStorage(b);
 #endif
 }
 
@@ -317,15 +323,6 @@ static void addDeps(Build &solution, NativeCompiledTarget &lib)
     //d->GenerateCommandsBefore = true;
 }
 
-static void write_pch(Build &solution)
-{
-    write_file_if_different(getImportPchFile(solution),
-        //"#include <" + normalize_path(getDriverIncludeDir(solution) / getMainPchFilename()) + ">\n\n" +
-        //"#include <" + getDriverIncludePathString(solution, getMainPchFilename()) + ">\n\n" +
-        //"#include <" + normalize_path(getMainPchFilename()) + ">\n\n" + // the last one
-        cppan_cpp);
-}
-
 PrepareConfigEntryPoint::PrepareConfigEntryPoint(const std::unordered_set<LocalPackage> &pkgs)
     : pkgs_(pkgs)
 {}
@@ -367,12 +364,15 @@ decltype(auto) PrepareConfigEntryPoint::commonActions(Build &b, const FilesSorte
     }
 
     for (auto &fn : files)
-    {
         lib += fn;
-    }
 
-    //
-    write_pch(b);
+    // pch
+    write_file_if_different(getImportPchFile(b),
+        //"#include <" + normalize_path(getDriverIncludeDir(solution) / getMainPchFilename()) + ">\n\n" +
+        //"#include <" + getDriverIncludePathString(solution, getMainPchFilename()) + ">\n\n" +
+        //"#include <" + normalize_path(getMainPchFilename()) + ">\n\n" + // the last one
+        cppan_cpp);
+
     PrecompiledHeader pch;
     pch.header = getDriverIncludeDir(b, lib) / getMainPchFilename();
     pch.source = getImportPchFile(b);
