@@ -84,7 +84,7 @@ void build(Solution &s)
         manager.Public.Definitions["VERSION_MAJOR"] += std::to_string(manager.getPackage().getVersion().getMajor());
         manager.Public.Definitions["VERSION_MINOR"] += std::to_string(manager.getPackage().getVersion().getMinor());
         manager.Public.Definitions["VERSION_PATCH"] += std::to_string(manager.getPackage().getVersion().getPatch());
-        embed("pub.egorpugin.primitives.tools.embedder-master"_dep, manager, "src/sw/manager/inserts/inserts.cpp.in");
+        embed2("pub.egorpugin.primitives.tools.embedder2-master"_dep, manager, "src/sw/manager/inserts/packages_db_schema.sql");
         gen_sqlite2cpp("pub.egorpugin.primitives.tools.sqlpp11.sqlite2cpp-master"_dep,
             manager, manager.SourceDir / "src/sw/manager/inserts/packages_db_schema.sql", "db_packages.h", "db::packages");
 
@@ -167,8 +167,8 @@ void build(Solution &s)
             "org.sw.demo.boost.bimap"_dep,
             "org.sw.demo.boost.uuid"_dep;
         cpp_driver += "src/sw/driver/.*"_rr;
-        cpp_driver -= "src/sw/driver/inserts/.*"_rr;
-        embed("pub.egorpugin.primitives.tools.embedder-master"_dep, cpp_driver, "src/sw/driver/inserts/inserts.cpp.in");
+        embed2("pub.egorpugin.primitives.tools.embedder2-master"_dep, cpp_driver, "src/sw/driver/inserts/sw.cpp");
+        cpp_driver -= "src/sw/driver/inserts/sw.cpp";
         gen_flex_bison("org.sw.demo.lexxmark.winflexbison"_dep, cpp_driver, "src/sw/driver/bazel/lexer.ll", "src/sw/driver/bazel/grammar.yy");
         if (cpp_driver.getCompilerType() == CompilerType::MSVC)
             cpp_driver.CompileOptions.push_back("-bigobj");

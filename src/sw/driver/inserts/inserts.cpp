@@ -10,9 +10,8 @@
 #define DECLARE_TEXT_VAR_END(x) }; const std::string x = _##x;
 
 DECLARE_TEXT_VAR_BEGIN(cppan_cpp)
-EMBED<cppan.cpp>
+#include <src/sw/driver/inserts/sw.cpp.emb>
 DECLARE_TEXT_VAR_END(cppan_cpp);
 
 #undef DECLARE_TEXT_VAR_BEGIN
 #undef DECLARE_TEXT_VAR_END
-

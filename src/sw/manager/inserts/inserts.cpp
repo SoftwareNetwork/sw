@@ -10,7 +10,7 @@
 #define DECLARE_TEXT_VAR_END(x) }; const std::string x = (const char *)&_##x[0];
 
 DECLARE_TEXT_VAR_BEGIN(packages_db_schema)
-EMBED<packages_db_schema.sql>
+#include <src/sw/manager/inserts/packages_db_schema.sql.emb>
 DECLARE_TEXT_VAR_END(packages_db_schema);
 
 #undef DECLARE_TEXT_VAR_BEGIN
