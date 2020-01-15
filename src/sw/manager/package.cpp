@@ -149,6 +149,7 @@ path LocalPackage::getDirObj() const
 
 path LocalPackage::getDirInfo() const
 {
+    // maybe you getDir()? because gitDirSrc() is unpacked from archive
     return getDirSrc() / "info"; // make inf?
 }
 

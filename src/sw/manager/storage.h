@@ -54,6 +54,12 @@ struct SW_MANAGER_API File
     virtual bool copy(const path &to) const = 0;
 };
 
+struct SW_MANAGER_API FileWithHashVerification : vfs::File
+{
+    // available after successful copy()
+    virtual String getHash() const = 0;
+};
+
 } // namespace vfs
 
 struct SW_MANAGER_API Directories

@@ -428,12 +428,20 @@ bool RemoteStorage::isCurrentDbOld() const
     return p;
 }*/
 
-struct RemoteFileWithHashVerification : vfs::File
+struct RemoteFileWithHashVerification : vfs::FileWithHashVerification
 {
     Strings urls;
     Package p;
+    mutable String hash;
 
     RemoteFileWithHashVerification(const Package &p) : p(p) {}
+
+    String getHash() const override
+    {
+        if (hash.empty())
+            throw SW_RUNTIME_ERROR("empty hash, pkg = " + p.toString());
+        return hash;
+    }
 
     bool copy(const path &fn) const override
     {
@@ -497,14 +505,17 @@ struct RemoteFileWithHashVerification : vfs::File
             auto sfh = get_strong_file_hash(fn, hash);
             if (sfh == hash)
             {
+                this->hash = sfh;
+                LOG_TRACE(logger, "Downloaded file: " << url << " hash = " << sfh);
                 return true;
             }
             auto fh = get_file_hash(fn);
             if (fh == hash)
             {
+                this->hash = fh;
+                LOG_TRACE(logger, "Downloaded file: " << url << " hash = " << fh);
                 return true;
             }
-            LOG_TRACE(logger, "Downloaded file: " << url << " hash = " << sfh);
         }
 
         return false;

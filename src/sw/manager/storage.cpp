@@ -408,11 +408,6 @@ LocalPackage LocalStorage::install(const Package &id) const
             ;
     }*/
 
-    // actually we may want to remove only stamps, hashes etc.
-    // but remove everything for now
-    std::error_code ec;
-    fs::remove_all(p.getDir(), ec);
-
     get(static_cast<const IStorage2 &>(id.getStorage()), id, StorageFileType::SourceArchive);
 
     // we mix gn with storage name to get unique gn
@@ -432,21 +427,51 @@ void LocalStorage::get(const IStorage2 &source, const PackageId &id, StorageFile
     switch (t)
     {
     case StorageFileType::SourceArchive:
-        dst = lp.getDirSrc() / make_archive_name();
+        dst = lp.getDir() / make_archive_name();
         //dst += ".new"; // without this storage can be left in inconsistent state
         break;
     }
 
     LOG_INFO(logger, "Downloading: [" + id.toString() + "]/[" + toUserString(t) + "]");
-    if (!source.getFile(id, t)->copy(dst))
+    auto f = source.getFile(id, t);
+    if (!f->copy(dst))
         throw SW_RUNTIME_ERROR("Error downloading file for package: " + id.toString() + ", file: " + toUserString(t));
 
-    LOG_INFO(logger, "Unpacking  : [" + id.toString() + "]/[" + toUserString(t) + "]");
-    unpack_file(dst, lp.getDirSrc());
+    SCOPE_EXIT
+    {
+        // now move .new to usual archive (or remove archive)
+        // we're removing for now
+        fs::remove(dst);
+    };
 
-    // now move .new to usual archive (or remove archive)
-    // we're removing for now
-    fs::remove(dst);
+    auto unpack = [&id, &dst, &lp, &t]()
+    {
+        for (auto &d : fs::directory_iterator(lp.getDir()))
+        {
+            if (d.path() != dst)
+                fs::remove_all(d);
+        }
+
+        LOG_INFO(logger, "Unpacking  : [" + id.toString() + "]/[" + toUserString(t) + "]");
+        unpack_file(dst, lp.getDirSrc());
+    };
+
+    // at the moment we perform check after download
+    // but maybe we can move it before real download?
+    if (auto fh = dynamic_cast<const vfs::FileWithHashVerification *>(f.get()))
+    {
+        if (fh->getHash() == lp.getStampHash())
+        {
+            // skip unpack
+            return;
+        }
+
+        unpack();
+        write_file(lp.getStampFilename(), fh->getHash());
+        return;
+    }
+
+    unpack();
 }
 
 OverriddenPackagesStorage &LocalStorage::getOverriddenPackagesStorage()
