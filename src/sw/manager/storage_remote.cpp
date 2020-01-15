@@ -445,7 +445,7 @@ struct RemoteFileWithHashVerification : vfs::FileWithHashVerification
 
     bool copy(const path &fn) const override
     {
-        auto add_downloads = [this]()
+        /*auto add_downloads = [this]()
         {
             auto remote_storage = dynamic_cast<const RemoteStorage *>(&p.getStorage());
             if (!remote_storage)
@@ -455,11 +455,11 @@ struct RemoteFileWithHashVerification : vfs::FileWithHashVerification
             {
                 remote_storage->getRemote().getApi()->addDownload(pkg);
             });
-        };
+        };*/
 
         if (copy(fn, p.getData().hash))
         {
-            add_downloads();
+            //add_downloads();
             return true;
         }
 
@@ -472,7 +472,7 @@ struct RemoteFileWithHashVerification : vfs::FileWithHashVerification
             {
                 if (copy(fn, m.find(u)->second->getData().hash))
                 {
-                    add_downloads();
+                    //add_downloads();
                     return true;
                 }
             }
