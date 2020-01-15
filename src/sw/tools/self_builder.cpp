@@ -52,7 +52,7 @@ void write_required_packages(const std::unordered_map<UnresolvedPackage, LocalPa
 
 void write_build_script(const std::unordered_map<UnresolvedPackage, LocalPackage> &m)
 {
-    std::set<PackageVersionGroupNumber> used_gns;
+    std::map<PackageVersionGroupNumber, std::set<LocalPackage>> used_gns;
     std::vector<LocalPackage> lpkgs;
 
     // some packages must be before others
@@ -92,8 +92,11 @@ void write_build_script(const std::unordered_map<UnresolvedPackage, LocalPackage
         auto &r = *lp;
         auto &d = r.getData();
         if (used_gns.find(d.group_number) != used_gns.end())
+        {
+            used_gns[d.group_number].insert(*lp);
             continue;
-        used_gns.insert(d.group_number);
+        }
+        used_gns[d.group_number].insert(*lp);
         lpkgs.emplace_back(r);
     }
 
@@ -101,14 +104,18 @@ void write_build_script(const std::unordered_map<UnresolvedPackage, LocalPackage
     {
         auto &d = r.getData();
         if (used_gns.find(d.group_number) != used_gns.end())
+        {
+            used_gns[d.group_number].insert(r);
             continue;
-        used_gns.insert(d.group_number);
+        }
+        used_gns[d.group_number].insert(r);
         lpkgs.emplace_back(r);
     }
 
     primitives::CppEmitter build;
-    build.beginFunction("TargetEntryPointMap build_self_generated()");
+    build.beginFunction("std::pair<TargetEntryPointMap,TargetEntryPointMap1> build_self_generated()");
     build.addLine("TargetEntryPointMap epm;");
+    build.addLine("TargetEntryPointMap1 epm1;");
     build.addLine();
 
     primitives::CppEmitter ctx;
@@ -129,20 +136,19 @@ void write_build_script(const std::unordered_map<UnresolvedPackage, LocalPackage
             ctx.addLine("#undef check");
         ctx.addLine();
 
-        auto gn = std::to_string(d.group_number) + "LL";
-
         build.beginBlock();
         build.addLine("auto ep = std::make_shared<sw::NativeBuiltinTargetEntryPoint>(build_" + r.getVariableName() + ");");
         if (has_checks)
             build.addLine("ep->cf = check_" + r.getVariableName() + ";");
-        //build.addLine("ep->module_data.NamePrefix = \"" + r.getPath().slice(0, d.prefix).toString() + "\";");
-        //build.addLine("epm[\"" + r.toString() + "\"s] = ep;");
         build.addLine("epm[" + std::to_string(r.getData().group_number) + "] = ep;");
+        // enumerate all other packages in group
+        for (auto &p : used_gns[r.getData().group_number])
+            build.addLine("epm1[\"" + p.toString() + "\"s] = ep;");
         build.endBlock();
         build.addLine();
     }
 
-    build.addLine("return epm;");
+    build.addLine("return {epm,epm1};");
     build.endFunction();
 
     ctx += build;

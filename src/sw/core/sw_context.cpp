@@ -216,7 +216,13 @@ void SwCoreContext::setEntryPoint(const LocalPackage &p, const TargetEntryPointP
     if (p.getPath().isRelative())
         return;
 
-    setEntryPoint(p.getData().group_number, ep);
+    //try
+    //{
+        setEntryPoint(p.getData().group_number, ep);
+    //}
+    //catch (...)
+    //{
+    //}
 }
 
 void SwCoreContext::setEntryPoint(PackageVersionGroupNumber gn, const TargetEntryPointPtr &ep)

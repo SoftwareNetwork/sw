@@ -21,6 +21,7 @@ DECLARE_STATIC_LOGGER(logger, "build.self");
 #endif
 
 using TargetEntryPointMap = std::unordered_map<sw::PackageVersionGroupNumber, std::shared_ptr<sw::NativeBuiltinTargetEntryPoint>>;
+using TargetEntryPointMap1 = std::unordered_map<sw::PackageId, std::shared_ptr<sw::NativeBuiltinTargetEntryPoint>>;
 
 #define SW_DRIVER_ADD_SELF
 #include <build_self.generated.h>
@@ -35,14 +36,12 @@ PackageIdSet load_builtin_packages(SwContext &swctx)
 #include <build_self.packages.generated.h>
     };
 
-    // we need lock file here
-    //static UnresolvedPackages store; // tmp store
-    //auto m = s.swctx.install(required_packages, store);
-
     // create entry points by package
-    auto epm = build_self_generated();
+    auto [epm,epm1] = build_self_generated();
     for (auto &[gn, ep] : epm)
         swctx.setEntryPoint(gn, ep);
+    //for (auto &[p, ep] : epm1)
+        //swctx.setEntryPoint(p, ep);
 
     //
     auto m = swctx.install(required_packages);
