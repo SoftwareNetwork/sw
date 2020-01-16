@@ -100,7 +100,6 @@ static void addImportLibrary(const Build &b, NativeCompiledTarget &t)
         << cmd::out(getImportLibraryFile(b), cmd::Prefix{ "-OUT:" })
         ;
     t.LinkLibraries.push_back(getImportLibraryFile(b));
-    t.command_storage = &getDriverCommandStorage(b);
 #endif
 }
 
@@ -351,6 +350,7 @@ SharedLibraryTarget &PrepareConfigEntryPoint::createTarget(Build &b, const Strin
 decltype(auto) PrepareConfigEntryPoint::commonActions(Build &b, const FilesSorted &files) const
 {
     auto &lib = createTarget(b, getSelfTargetName(files));
+    lib.command_storage = &getDriverCommandStorage(b);
 
     addDeps(b, lib);
     addImportLibrary(b, lib);
