@@ -572,7 +572,7 @@ std::vector<sw::TargetSettings> createSettings(sw::SwContext &swctx)
             s["name"].useInHash(false);
             s["name"].ignoreInComparison(true);
         }
-        LOG_WARN(logger, "WARNING: Setting config names may result in wrong config-name pair assignment, "
+        LOG_DEBUG(logger, "WARNING: Setting config names may result in wrong config-name pair assignment, "
             "because of unspecified config creation order.");
     }
 
