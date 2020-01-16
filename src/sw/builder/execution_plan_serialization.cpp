@@ -7,6 +7,7 @@
 #include "execution_plan.h"
 
 #include "command_storage.h"
+#include "sw_context.h"
 
 #include <sw/support/serialization.h>
 
@@ -19,6 +20,7 @@
 
 #include <fstream>
 
+static sw::SwBuilderContext *swctx;
 #include "execution_plan_serialization_boost.h"
 
 // change when you change the header above
@@ -41,6 +43,7 @@ enum SerializationType
 std::tuple<std::unordered_set<std::shared_ptr<builder::Command>>, ExecutionPlan>
 ExecutionPlan::load(const path &p, const SwBuilderContext &swctx, int type)
 {
+    ::swctx = (SwBuilderContext *)&swctx;
     std::unordered_set<std::shared_ptr<builder::Command>> commands;
 
     auto load = [&commands](auto &ar)

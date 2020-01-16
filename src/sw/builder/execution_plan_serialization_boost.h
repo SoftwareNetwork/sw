@@ -128,9 +128,8 @@ SERIALIZATION_BEGIN_SPLIT
     {
         path root;
         ar & root;
-        SW_UNIMPLEMENTED;
         // take ctx, create cmd storage with root and assign
-        // v.command_storage = &swctx.getCommandStorage(root);
+        v.command_storage = &swctx->getCommandStorage(root);
     }
     ar & v.first_response_file_argument;
     ar & v.always;
@@ -144,7 +143,6 @@ SERIALIZATION_SPLIT_CONTINUE
     ar & base_object<::primitives::Command>(v);
 
     ar & v.getName();
-    SW_UNIMPLEMENTED;
     if (!v.command_storage)
         ar & (size_t)v.command_storage;
     else
