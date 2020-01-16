@@ -705,7 +705,10 @@ driver::CommandBuilder NativeCompiledTarget::addCommand(const std::shared_ptr<dr
     cb.c->working_directory = SourceDir;
     //setupCommand(*cb.c);
     if (!DryRun)
+    {
         cb << *this; // this adds to storage
+        cb.c->command_storage = getCommandStorage();
+    }
     return cb;
 }
 

@@ -363,6 +363,7 @@ protected:
     mutable TargetSettings interface_settings;
 
     //Target(const Target &);
+    CommandStorage *getCommandStorage() const;
 
 private:
     TargetSettings ts; // this settings
@@ -379,7 +380,6 @@ private:
     const TargetSettings &getHostSettings() const;
 
     virtual Commands getCommands1() const { return Commands{}; }
-    CommandStorage *getCommandStorage() const;
 
     // for source access
     friend struct TargetBase;
