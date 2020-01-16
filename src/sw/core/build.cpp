@@ -308,7 +308,7 @@ void SwBuild::loadPackages(const TargetMap &predefined)
 
             loaded = true;
 
-            auto ep = swctx.getEntryPoint(d.first);
+            auto ep = getEntryPoint(d.first);
             if (!ep)
                 throw SW_RUNTIME_ERROR("no entry point for " + d.first.toString());
             auto pp = d.first.getPath().slice(0, LocalPackage(getContext().getLocalStorage(), d.first).getData().prefix);
@@ -802,6 +802,19 @@ void SwBuild::setSettings(const TargetSettings &bs)
 const TargetSettings &SwBuild::getExternalVariables() const
 {
     return getSettings()["D"].getSettings();
+}
+
+void SwBuild::setServiceEntryPoint(const PackageId &p, const TargetEntryPointPtr &ep)
+{
+    service_entry_points[p] = ep;
+}
+
+TargetEntryPointPtr SwBuild::getEntryPoint(const PackageId &p) const
+{
+    auto i = service_entry_points.find(p);
+    if (i != service_entry_points.end())
+        return i->second;
+    return getContext().getEntryPoint(p);
 }
 
 }

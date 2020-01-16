@@ -37,11 +37,9 @@ PackageIdSet load_builtin_packages(SwContext &swctx)
     };
 
     // create entry points by package
-    auto [epm,epm1] = build_self_generated();
-    for (auto &[gn, ep] : epm)
-        swctx.setEntryPoint(gn, ep);
-    //for (auto &[p, ep] : epm1)
-        //swctx.setEntryPoint(p, ep);
+    //auto epm = build_self_generated();
+    //for (auto &[gn, ep] : epm)
+        //swctx.setEntryPoint(gn, ep); // still set
 
     //
     auto m = swctx.install(required_packages);

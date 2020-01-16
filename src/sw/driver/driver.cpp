@@ -23,6 +23,9 @@ DECLARE_STATIC_LOGGER(logger, "driver.cpp");
 
 static cl::opt<bool> debug_configs("debug-configs", cl::desc("Build configs in debug mode"));
 
+std::unordered_map<sw::PackageId, std::shared_ptr<sw::NativeBuiltinTargetEntryPoint>>
+    load_builtin_entry_points();
+
 namespace sw
 {
 
@@ -210,6 +213,9 @@ std::shared_ptr<PrepareConfigEntryPoint> Driver::build_configs1(SwContext &swctx
     //ts["native"]["mt"] = "true";
     if (debug_configs)
         ts["native"]["configuration"] = "debug";
+
+    for (auto &[p, ep] : load_builtin_entry_points())
+        b->setServiceEntryPoint(p, ep);
 
     // before load packages!
     for (auto &p : getBuiltinPackages(ctx))

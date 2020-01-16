@@ -91,6 +91,8 @@ struct SW_CORE_API SwBuild
     void setName(const String &);
     String getName() const; // returns temporary object, so no refs
 
+    void setServiceEntryPoint(const PackageId &, const TargetEntryPointPtr &);
+
 private:
     SwContext &swctx;
     path build_dir;
@@ -105,10 +107,12 @@ private:
     // other data
     String name;
     mutable FilesSorted fast_path_files;
+    std::unordered_map<PackageId, TargetEntryPointPtr> service_entry_points;
 
     void load(const std::vector<InputWithSettings> &inputs, bool set_eps);
     Commands getCommands() const;
     void loadPackages(const TargetMap &predefined);
+    TargetEntryPointPtr getEntryPoint(const PackageId &) const;
 };
 
 } // namespace sw

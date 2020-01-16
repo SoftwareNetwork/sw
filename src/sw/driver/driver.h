@@ -67,7 +67,7 @@ private:
     //
     mutable std::mutex m_bp;
     mutable std::optional<PackageIdSet> builtin_packages;
-    PackageIdSet getBuiltinPackages(SwContext &swctx) const;
+    PackageIdSet getBuiltinPackages(SwContext &) const;
 };
 
 std::optional<path> findConfig(const path &dir, const FilesOrdered &fe_s);

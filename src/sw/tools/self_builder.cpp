@@ -113,9 +113,8 @@ void write_build_script(const std::unordered_map<UnresolvedPackage, LocalPackage
     }
 
     primitives::CppEmitter build;
-    build.beginFunction("std::pair<TargetEntryPointMap,TargetEntryPointMap1> build_self_generated()");
+    build.beginFunction("TargetEntryPointMap build_self_generated()");
     build.addLine("TargetEntryPointMap epm;");
-    build.addLine("TargetEntryPointMap1 epm1;");
     build.addLine();
 
     primitives::CppEmitter ctx;
@@ -141,14 +140,33 @@ void write_build_script(const std::unordered_map<UnresolvedPackage, LocalPackage
         if (has_checks)
             build.addLine("ep->cf = check_" + r.getVariableName() + ";");
         build.addLine("epm[" + std::to_string(r.getData().group_number) + "] = ep;");
+        build.endBlock();
+        build.addLine();
+    }
+
+    build.addLine("return epm;");
+    build.endFunction();
+
+    //
+    build.beginFunction("TargetEntryPointMap1 load_builtin_entry_points()");
+    build.addLine("TargetEntryPointMap1 epm1;");
+    build.addLine();
+    for (auto &r : lpkgs)
+    {
+        auto f = read_file(r.getDirSrc2() / "sw.cpp");
+        bool has_checks = f.find("Checker") != f.npos; // more presize than setChecks
+
+        build.beginBlock();
+        build.addLine("auto ep = std::make_shared<sw::NativeBuiltinTargetEntryPoint>(build_" + r.getVariableName() + ");");
+        if (has_checks)
+            build.addLine("ep->cf = check_" + r.getVariableName() + ";");
         // enumerate all other packages in group
         for (auto &p : used_gns[r.getData().group_number])
             build.addLine("epm1[\"" + p.toString() + "\"s] = ep;");
         build.endBlock();
         build.addLine();
     }
-
-    build.addLine("return {epm,epm1};");
+    build.addLine("return epm1;");
     build.endFunction();
 
     ctx += build;
