@@ -2140,7 +2140,8 @@ void NativeCompiledTarget::prepare_pass1()
     }
 
     resolvePostponedSourceFiles();
-    HeaderOnly = !hasSourceFiles();
+    if (!HeaderOnly || !*HeaderOnly)
+        HeaderOnly = !hasSourceFiles();
 
     if (PackageDefinitions)
         addPackageDefinitions(true);
