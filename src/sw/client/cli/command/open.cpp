@@ -34,41 +34,79 @@ DEFINE_SUBCOMMAND(open, "Open package directory.");
 
 static ::cl::opt<String> open_arg(::cl::Positional, ::cl::desc("package to open"), ::cl::sub(subcommand_open));
 
+static void open_nix(const path &p)
+{
+#ifdef _WIN32
+    SW_UNREACHABLE;
+#endif
+    String s;
+#ifdef __linux__
+    s += "xdg-";
+#endif
+    s += "open \"" + normalize_path(p) + "\"";
+    if (system(s.c_str()) != 0)
+    {
+#if !(defined(__linux__) || defined(__APPLE__))
+        SW_UNIMPLEMENTED;
+#endif
+    }
+}
+
+void open_directory(const path &p)
+{
+#ifdef _WIN32
+    auto pidl = ILCreateFromPath(p.wstring().c_str());
+    if (pidl)
+    {
+        CoInitialize(0);
+        // ShellExecute does not work here for some scenarios
+        auto r = SHOpenFolderAndSelectItems(pidl, 0, 0, 0);
+        if (FAILED(r))
+        {
+            LOG_INFO(logger, "Error in SHOpenFolderAndSelectItems");
+        }
+        ILFree(pidl);
+    }
+    else
+    {
+        LOG_INFO(logger, "Error in ILCreateFromPath");
+    }
+#else
+    open_nix(p);
+#endif
+}
+
+void open_file(const path &p)
+{
+#ifdef _WIN32
+    CoInitialize(0);
+    auto r = ShellExecute(0, L"open", p.wstring().c_str(), 0, 0, 0);
+    if (r <= (HINSTANCE)HINSTANCE_ERROR)
+    {
+        throw SW_RUNTIME_ERROR("Error in ShellExecute");
+    }
+#else
+    open_nix(p);
+#endif
+}
+
 SUBCOMMAND_DECL(open)
 {
     auto swctx = createSwContext();
     auto &sdb = swctx->getLocalStorage();
     auto pkgs = swctx->resolve(sw::UnresolvedPackages{ open_arg });
-    auto &p = pkgs.find(open_arg)->second;
+    auto &p2 = pkgs.find(open_arg)->second;
 
-#ifdef _WIN32
-    if (sdb.isPackageInstalled(*p))
+    if (!sdb.isPackageInstalled(*p2))
     {
-        auto p = swctx->resolve(open_arg);
-
-        LOG_INFO(logger, "package: " + p.toString());
-        LOG_INFO(logger, "package dir: " + p.getDir().u8string());
-
-        auto pidl = ILCreateFromPath((p.getDirSrc() / "").wstring().c_str());
-        if (pidl)
-        {
-            CoInitialize(0);
-            // ShellExecute does not work here for some scenarios
-            auto r = SHOpenFolderAndSelectItems(pidl, 0, 0, 0);
-            if (FAILED(r))
-            {
-                LOG_INFO(logger, "Error in SHOpenFolderAndSelectItems");
-            }
-            ILFree(pidl);
-        }
-        else
-        {
-            LOG_INFO(logger, "Error in ILCreateFromPath");
-        }
+        LOG_INFO(logger, "Package '" + p2->toString() + "' not installed");
+        return;
     }
-    else
-    {
-        LOG_INFO(logger, "Package '" + p->toString() + "' not installed");
-    }
-#endif
+
+    auto p = swctx->resolve(open_arg);
+
+    LOG_INFO(logger, "package: " + p.toString());
+    LOG_INFO(logger, "package dir: " + p.getDir().u8string());
+
+    open_directory(p.getDirSrc() / ""); // on win we must add last slash
 }

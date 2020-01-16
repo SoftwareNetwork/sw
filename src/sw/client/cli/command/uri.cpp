@@ -55,67 +55,29 @@ static void setup_console()
 #endif
 }
 
+void open_directory(const path &);
+void open_file(const path &);
+
 F(open_dir, const path &d)
 {
-#ifdef _WIN32
-    if (sdb.isPackageInstalled(p))
-    {
-        auto pidl = ILCreateFromPath(d.wstring().c_str());
-        if (pidl)
-        {
-            CoInitialize(0);
-            // ShellExecute does not work here for some scenarios
-            auto r = SHOpenFolderAndSelectItems(pidl, 0, 0, 0);
-            if (FAILED(r))
-            {
-                message_box(sw::getProgramName(), "Error in SHOpenFolderAndSelectItems");
-            }
-            ILFree(pidl);
-        }
-        else
-        {
-            message_box(sw::getProgramName(), "Error in ILCreateFromPath");
-        }
-    }
-    else
-    {
-        message_box(sw::getProgramName(), "Package '" + p.toString() + "' is not installed");
-    }
-#endif
+    if (!sdb.isPackageInstalled(p))
+        throw SW_RUNTIME_ERROR("Package '" + p.toString() + "' is not installed");
+    open_directory(d);
 }
 
 F(open_file, const path &f)
 {
-#ifdef _WIN32
-    if (sdb.isPackageInstalled(p))
-    {
-        CoInitialize(0);
-        auto r = ShellExecute(0, L"open", f.wstring().c_str(), 0, 0, 0);
-        if (r <= (HINSTANCE)HINSTANCE_ERROR)
-        {
-            message_box(sw::getProgramName(), "Error in ShellExecute");
-        }
-    }
-    else
-    {
-        message_box(sw::getProgramName(), "Package '" + p.toString() + "' is not installed");
-    }
-#endif
+    if (!sdb.isPackageInstalled(p))
+        throw SW_RUNTIME_ERROR("Package '" + p.toString() + "' is not installed");
+    open_file(f);
 }
 
 F(install)
 {
-#ifdef _WIN32
-    if (!sdb.isPackageInstalled(p))
-    {
-        setup_console();
-        swctx->install(sw::UnresolvedPackages{ sw::UnresolvedPackage{p.getPath(), p.getVersion()} });
-    }
-    else
-    {
-        message_box(sw::getProgramName(), "Package '" + p.toString() + "' is already installed");
-    }
-#endif
+    if (sdb.isPackageInstalled(p))
+        throw SW_RUNTIME_ERROR("Package '" + p.toString() + "' is already installed");
+    setup_console();
+    swctx->install(sw::UnresolvedPackages{ sw::UnresolvedPackage{p.getPath(), p.getVersion()} });
 }
 
 F(remove)
