@@ -222,7 +222,6 @@ struct SW_BUILDER_API Command : ICastable, CommandNode, detail::ResolvableComman
     path redirectStdout(const path &p, bool append = false);
     path redirectStderr(const path &p, bool append = false);
     size_t getHash() const;
-    void addPathDirectory(const path &p);
     Files getGeneratedDirs() const; // used by generators
     void addInputOutputDeps();
     path writeCommand(const path &basename) const;

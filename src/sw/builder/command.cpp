@@ -990,57 +990,6 @@ Files Command::getGeneratedDirs() const
     return dirs;
 }
 
-static String getSystemRoot()
-{
-    static const String sr = []()
-    {
-        auto e = getenv("SystemRoot");
-        if (!e)
-            throw SW_RUNTIME_ERROR("getenv() failed");
-        return e;
-    }();
-    return sr;
-}
-
-static String getSystemPath()
-{
-    // explicit! Path may be changed by IDE, other sources, so we keep it very small and very system
-    static const String sp = []()
-    {
-        auto r = getSystemRoot();
-        // let users provide other paths than System32 themselves?
-        //                                        remove?                   remove?
-        return r + "\\System32;" + r + ";" + r + "\\System32\\Wbem;" + r + "\\System32\\WindowsPowerShell\\v1.0\\";
-    }();
-    return sp;
-}
-
-void Command::addPathDirectory(const path &p)
-{
-    // Windows uses 'Path' not 'PATH', but we handle it in underlying primitives::Command.
-    static const auto env = "PATH";
-#ifdef _WIN32
-    static const auto delim = ";";
-    auto norm = [](const auto &p) { return normalize_path_windows(p); };
-#else
-    static const auto delim = ":";
-    auto norm = [](const auto &p) { return p.u8string(); };
-#endif
-
-    if (environment[env].empty())
-    {
-#ifdef _WIN32
-        environment[env] = getSystemPath();
-#else
-        auto e = getenv(env);
-        if (!e)
-            throw SW_RUNTIME_ERROR("getenv() failed");
-        environment[env] = e;
-#endif
-    }
-    environment[env] += delim + norm(p);
-}
-
 bool Command::lessDuringExecution(const CommandNode &in) const
 {
     // improve sorting! it's too stupid
