@@ -32,17 +32,17 @@ DEFINE_SUBCOMMAND(setup, "Used to do some system setup which may require adminis
 
 static void registerCmakePackage(sw::SwContext &swctx)
 {
+    const auto sw_cmake_config_filename = "SWConfig.cmake";
 #ifdef _WIN32
     auto dir = swctx.getLocalStorage().storage_dir_etc / "sw" / "static";
     // if we write into HKLM, we won't be able to access the pkg file in admins folder
     winreg::RegKey icon(/*is_elevated() ? HKEY_LOCAL_MACHINE : */HKEY_CURRENT_USER, L"Software\\Kitware\\CMake\\Packages\\SW");
     icon.SetStringValue(L"", dir.wstring().c_str());
-    write_file_if_different(dir / "SWConfig.cmake", sw_config_cmake);
+    write_file_if_different(dir / sw_cmake_config_filename, sw_config_cmake);
 #else
-    SW_UNIMPLEMENTED;
-    //auto cppan_cmake_dir = get_home_directory() / ".cmake" / "packages";
-    //write_file_if_different(cppan_cmake_dir / "SW" / "1", cppan_cmake_dir.string());
-    //write_file_if_different(cppan_cmake_dir / cppan_cmake_config_filename, cppan_cmake_config);
+    auto sw_cmake_dir = get_home_directory() / ".cmake" / "packages";
+    write_file_if_different(sw_cmake_dir / "SW" / "1", sw_cmake_dir.u8string());
+    write_file_if_different(sw_cmake_dir / sw_cmake_config_filename, sw_config_cmake);
 #endif
 }
 
