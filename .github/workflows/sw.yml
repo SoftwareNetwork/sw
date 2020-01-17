@@ -7,9 +7,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [windows-latest]
-        #os: [ubuntu-latest]
-        #os: [windows-latest, ubuntu-latest, macOS-latest]
+        os: [windows-latest, ubuntu-latest, macOS-latest]
 
     steps:
     - uses: actions/checkout@v1
@@ -40,5 +38,5 @@ jobs:
         #key: ${{ runner.os }}-sw-storage
 
     - name: build
-      run: ./sw -static -mt build
+      run: ./sw -static build
 
