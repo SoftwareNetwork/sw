@@ -151,13 +151,11 @@ static ::cl::list<bool> build_graph("g", ::cl::desc("Print .dot graph of build t
 static ::cl::list<path> internal_sign_file("internal-sign-file", ::cl::value_desc("<file> <private.key>"), ::cl::desc("Sign file with private key"), ::cl::ReallyHidden, ::cl::multi_val(2));
 static ::cl::list<path> internal_verify_file("internal-verify-file", ::cl::value_desc("<file> <sigfile> <public.key>"), ::cl::desc("Verify signature with public key"), ::cl::ReallyHidden, ::cl::multi_val(3));
 
+static ::cl::opt<path> cl_parse_configure_ac("parse-configure-ac",
+    ::cl::desc("Read checks from configure.ac. Add without space '=file' for custom files."), ::cl::ValueOptional, ::cl::Hidden);
+
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/signal_set.hpp>
-
-//
-#include <sw/core/c.hpp>
-
-sw_driver_t sw_create_driver(void);
 
 //static ::cl::list<String> drivers("load-driver", ::cl::desc("Load more drivers"), ::cl::CommaSeparated);
 
@@ -209,6 +207,15 @@ int setup_main(const Strings &args)
     if (cl_list_programs)
     {
         LOG_INFO(logger, list_programs());
+        return 0;
+    }
+
+    if (cl_parse_configure_ac.getNumOccurrences())
+    {
+        if (cl_parse_configure_ac.empty())
+            cl_parse_configure_ac = "configure.ac";
+        void process_configure_ac2(const path &p);
+        process_configure_ac2(cl_parse_configure_ac);
         return 0;
     }
 
