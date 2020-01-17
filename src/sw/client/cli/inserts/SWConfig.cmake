@@ -158,11 +158,15 @@ function(sw_execute)
             ${SW_EXECUTABLE}
                 ${sw_platform_args}
                 -d "${SW_DEPS_DIR}"
+                # config
                 -config
                     $<$<CONFIG:Debug>:d>
                     $<$<CONFIG:MinSizeRel>:msr>
                     $<$<CONFIG:RelWithDebInfo>:rwdi>
                     $<$<CONFIG:Release>:r>
+                    # in cmake default config is debug (non-optimized)
+                    $<$<CONFIG:>:d>
+                #
                 build @${SW_DEPS_FILE}
                 -ide-copy-to-dir
                     "${outdir}"
