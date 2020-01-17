@@ -612,7 +612,10 @@ Commands SwBuild::getCommands() const
                     fast_path_files.insert(il);
                 }
 
-                if (s["type"] == "native_shared_library")
+                if (s["type"] == "native_shared_library"
+                    // copy only for wintgt?
+                    //&& PackagePath(s["os"]["kernel"].getValue()) == PackagePath("com.Microsoft.Windows.NT")
+                    )
                 {
                     auto o = copy_dir;
                     if (s["output_dir"].isValue())
