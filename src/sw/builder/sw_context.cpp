@@ -18,12 +18,22 @@
 
 #include <regex>
 
+//#include <primitives/log.h>
+//DECLARE_STATIC_LOGGER(logger, "builder.context");
+
 namespace sw
 {
 
 SwBuilderContext::SwBuilderContext(const path &local_storage_root_dir)
     : SwManagerContext(local_storage_root_dir)
 {
+#ifdef _WIN32
+    // with per pkg command log we must increase the limits
+    //auto new_limit = 8192;
+    //if (_setmaxstdio(new_limit) == -1)
+        //LOG_ERROR(logger, "Cannot raise number of maximum opened files");
+#endif
+
     HostOS = getHostOS();
 
     module_storage = std::make_unique<ModuleStorage>();

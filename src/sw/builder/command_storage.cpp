@@ -352,7 +352,20 @@ void CommandStorage::async_command_log(const CommandRecord &r)
                 fflush(l.f.getHandle());
             }
         }
+
+        if (--n_users == 0)
+            s.closeLogs();
     });
+}
+
+void CommandStorage::add_user()
+{
+    n_users++;
+}
+
+void CommandStorage::free_user()
+{
+    n_users--;
 }
 
 void detail::Storage::closeLogs()

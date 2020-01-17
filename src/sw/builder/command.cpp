@@ -356,9 +356,24 @@ void Command::prepare()
 
 void Command::execute()
 {
+    if (command_storage)
+        command_storage->add_user();
+
+    auto sg = SCOPE_EXIT_NAMED
+    {
+        // free cs to release files (logs, cs)
+        if (command_storage)
+            command_storage->free_user();
+    };
+
     if (!beforeCommand())
         return;
-    execute1(); // main thing
+
+    execute1(); // main call
+
+    // when we are here, we disable free_user() call,
+    // because it will be called in afterCommand()
+    sg.dismiss();
     afterCommand();
 }
 

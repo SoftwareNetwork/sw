@@ -13,6 +13,8 @@
 #include <boost/thread/shared_mutex.hpp>
 #include <primitives/templates.h>
 
+#include <atomic>
+
 namespace sw
 {
 
@@ -94,11 +96,14 @@ struct SW_BUILDER_API CommandStorage
     ConcurrentCommandStorage &getStorage();
     detail::Storage &getInternalStorage();
     void async_command_log(const CommandRecord &r);
+    void add_user();
+    void free_user();
     std::pair<CommandRecord *, bool> insert(size_t hash);
 
 private:
     FileDb fdb;
     detail::Storage s;
+    std::atomic_int n_users;
 
     void closeLogs();
 };
