@@ -20,16 +20,24 @@
 
 #include <qabstractitemmodel.h>
 #include <qmainwindow.h>
-#include <sw/core/sw_context.h>
+#include <sw/manager/package.h>
+#include <sw/manager/storage.h>
 
-class MainWindow : public QMainWindow
+class PackagesModel : public QAbstractItemModel
 {
     Q_OBJECT
 public:
-    MainWindow(QWidget *parent = 0);
+    PackagesModel(sw::PackagesDatabase &, bool lazy = false);
+
+    void init();
+
+    QModelIndex index(int row, int column, const QModelIndex &parent = QModelIndex()) const override;
+    QModelIndex parent(const QModelIndex &index) const override;
+    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
+    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
+    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
 
 private:
-    std::unique_ptr<sw::SwContext> ctx;
-
-    void setupUi();
+    sw::PackagesDatabase &s;
+    std::vector<sw::PackageId> pkgs;
 };

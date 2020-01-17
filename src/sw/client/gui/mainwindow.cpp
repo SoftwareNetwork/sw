@@ -18,6 +18,8 @@
 
 #include "mainwindow.h"
 
+#include "packages_model.h"
+
 #include <qboxlayout.h>
 #include <qheaderview.h>
 #include <qlabel.h>
@@ -27,8 +29,6 @@
 #include <qtextedit.h>
 
 #include <sw/client/common/common.h>
-#include <sw/core/sw_context.h>
-#include <sw/manager/database.h>
 #include <sw/manager/storage.h>
 
 class TabBar : public QTabBar
@@ -98,6 +98,7 @@ void MainWindow::setupUi()
     auto mainLayout = new QHBoxLayout;
     auto t = new TabWidget;
 
+    t->addTab(new QWidget, "Search");
     t->addTab(new QWidget, "Control");
 
     auto add_packages_tab = [this, t](const String &name, auto &db)
@@ -138,61 +139,4 @@ void MainWindow::setupUi()
     auto centralWidget = new QWidget;
     centralWidget->setLayout(mainLayout);
     setCentralWidget(centralWidget);
-}
-
-PackagesModel::PackagesModel(sw::PackagesDatabase &s, bool lazy)
-    : s(s)
-{
-    if (!lazy)
-        init();
-}
-
-void PackagesModel::init()
-{
-    if (!this->pkgs.empty())
-        return;
-    beginResetModel();
-    std::set<sw::PackageId> pkgs;
-    auto ppaths = s.getMatchingPackages();
-    for (auto &ppath : ppaths)
-    {
-        auto vs = s.getVersionsForPackage(ppath);
-        for (auto &v : vs)
-            pkgs.emplace(ppath, v);
-    }
-    this->pkgs.assign(pkgs.begin(), pkgs.end());
-    endResetModel();
-}
-
-QModelIndex PackagesModel::index(int row, int column, const QModelIndex &parent) const
-{
-    if (hasIndex(row, column, parent))
-        return createIndex(row, column);
-    return {};
-}
-
-QModelIndex PackagesModel::parent(const QModelIndex &index) const
-{
-    if (!index.isValid())
-        return {};
-    if (index.row() == 0)
-        return {};
-    return index;
-}
-
-int PackagesModel::rowCount(const QModelIndex &parent) const
-{
-    return pkgs.size();
-}
-
-int PackagesModel::columnCount(const QModelIndex &parent) const
-{
-    return 1;
-}
-
-QVariant PackagesModel::data(const QModelIndex &index, int role) const
-{
-    if (role == Qt::DisplayRole)
-        return pkgs[index.row()].toString().c_str();
-    return {};
 }
