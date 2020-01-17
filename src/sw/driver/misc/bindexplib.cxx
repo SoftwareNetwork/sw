@@ -324,6 +324,8 @@ bool DumpFile(const path &filename, std::set<std::string>& symbols,
 
   dosHeader = (PIMAGE_DOS_HEADER)lpFileBase;
   if (dosHeader->e_magic == IMAGE_DOS_SIGNATURE) {
+    CloseHandle(hFileMapping);
+    CloseHandle(hFile);
     fprintf(stderr, "File is an executable.  I don't dump those.\n");
     return false;
   }
@@ -350,6 +352,8 @@ bool DumpFile(const path &filename, std::set<std::string>& symbols,
         (h->Machine == IMAGE_FILE_MACHINE_I386));
       symbolDumper.DumpObjFile();
     } else {
+      CloseHandle(hFileMapping);
+      CloseHandle(hFile);
       printf("unrecognized file format in '%s'\n", filename.string().c_str());
       return false;
     }
