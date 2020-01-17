@@ -1372,143 +1372,143 @@ void SourceRuns::run() const
     Value = c.exit_code;
 }
 
-FunctionExists &CheckSet::checkFunctionExists(const String &function, bool cpp)
+FunctionExists &CheckSet1::checkFunctionExists(const String &function, bool cpp)
 {
     auto c = add<FunctionExists>(function);
     c->CPP = cpp;
     return *c;
 }
 
-FunctionExists &CheckSet::checkFunctionExists(const String &function, const String &def, bool cpp)
+FunctionExists &CheckSet1::checkFunctionExists(const String &function, const String &def, bool cpp)
 {
     auto c = add<FunctionExists>(function, def);
     c->CPP = cpp;
     return *c;
 }
 
-Check &CheckSet::checkIncludeExists(const String &include, bool cpp)
+Check &CheckSet1::checkIncludeExists(const String &include, bool cpp)
 {
     auto c = add<IncludeExists>(include);
     c->CPP = cpp;
     return *c;
 }
 
-Check &CheckSet::checkIncludeExists(const String &include, const String &def, bool cpp)
+Check &CheckSet1::checkIncludeExists(const String &include, const String &def, bool cpp)
 {
     auto c = add<IncludeExists>(include, def);
     c->CPP = cpp;
     return *c;
 }
 
-Check &CheckSet::checkLibraryFunctionExists(const String &library, const String &function, bool cpp)
+Check &CheckSet1::checkLibraryFunctionExists(const String &library, const String &function, bool cpp)
 {
     auto c = add<LibraryFunctionExists>(library, function);
     c->CPP = cpp;
     return *c;
 }
 
-Check &CheckSet::checkLibraryFunctionExists(const String &library, const String &function, const String &def, bool cpp)
+Check &CheckSet1::checkLibraryFunctionExists(const String &library, const String &function, const String &def, bool cpp)
 {
     auto c = add<LibraryFunctionExists>(library, function, def);
     c->CPP = cpp;
     return *c;
 }
 
-Check &CheckSet::checkLibraryExists(const String &library, bool cpp)
+Check &CheckSet1::checkLibraryExists(const String &library, bool cpp)
 {
     return *add<FunctionExists>(library);
 }
 
-Check &CheckSet::checkLibraryExists(const String &library, const String &def, bool cpp)
+Check &CheckSet1::checkLibraryExists(const String &library, const String &def, bool cpp)
 {
     return *add<FunctionExists>(library);
 }
 
-Check &CheckSet::checkSymbolExists(const String &symbol, bool cpp)
+Check &CheckSet1::checkSymbolExists(const String &symbol, bool cpp)
 {
     auto c = add<SymbolExists>(symbol);
     c->CPP = cpp;
     return *c;
 }
 
-Check &CheckSet::checkSymbolExists(const String &symbol, const String &def, bool cpp)
+Check &CheckSet1::checkSymbolExists(const String &symbol, const String &def, bool cpp)
 {
     auto c = add<SymbolExists>(symbol, def);
     c->CPP = cpp;
     return *c;
 }
 
-Check &CheckSet::checkStructMemberExists(const String &s, const String &member, bool cpp)
+Check &CheckSet1::checkStructMemberExists(const String &s, const String &member, bool cpp)
 {
     auto c = add<StructMemberExists>(s, member);
     c->CPP = cpp;
     return *c;
 }
 
-Check &CheckSet::checkStructMemberExists(const String &s, const String &member, const String &def, bool cpp)
+Check &CheckSet1::checkStructMemberExists(const String &s, const String &member, const String &def, bool cpp)
 {
     auto c = add<StructMemberExists>(s, member, def);
     c->CPP = cpp;
     return *c;
 }
 
-Check &CheckSet::checkDeclarationExists(const String &decl, bool cpp)
+Check &CheckSet1::checkDeclarationExists(const String &decl, bool cpp)
 {
     auto c = add<DeclarationExists>(decl);
     c->CPP = cpp;
     return *c;
 }
 
-Check &CheckSet::checkDeclarationExists(const String &decl, const String &def, bool cpp)
+Check &CheckSet1::checkDeclarationExists(const String &decl, const String &def, bool cpp)
 {
     auto c = add<DeclarationExists>(decl, def);
     c->CPP = cpp;
     return *c;
 }
 
-Check &CheckSet::checkTypeSize(const String &type, bool cpp)
+Check &CheckSet1::checkTypeSize(const String &type, bool cpp)
 {
     auto c = add<TypeSize>(type);
     c->CPP = cpp;
     return *c;
 }
 
-Check &CheckSet::checkTypeSize(const String &type, const String &def, bool cpp)
+Check &CheckSet1::checkTypeSize(const String &type, const String &def, bool cpp)
 {
     auto c = add<TypeSize>(type, def);
     c->CPP = cpp;
     return *c;
 }
 
-Check &CheckSet::checkTypeAlignment(const String &type, bool cpp)
+Check &CheckSet1::checkTypeAlignment(const String &type, bool cpp)
 {
     auto c = add<TypeAlignment>(type);
     c->CPP = cpp;
     return *c;
 }
 
-Check &CheckSet::checkTypeAlignment(const String &type, const String &def, bool cpp)
+Check &CheckSet1::checkTypeAlignment(const String &type, const String &def, bool cpp)
 {
     auto c = add<TypeAlignment>(type, def);
     c->CPP = cpp;
     return *c;
 }
 
-Check &CheckSet::checkSourceCompiles(const String &def, const String &src, bool cpp)
+Check &CheckSet1::checkSourceCompiles(const String &def, const String &src, bool cpp)
 {
     auto c = add<SourceCompiles>(def, src);
     c->CPP = cpp;
     return *c;
 }
 
-Check &CheckSet::checkSourceLinks(const String &def, const String &src, bool cpp)
+Check &CheckSet1::checkSourceLinks(const String &def, const String &src, bool cpp)
 {
     auto c = add<SourceLinks>(def, src);
     c->CPP = cpp;
     return *c;
 }
 
-Check &CheckSet::checkSourceRuns(const String &def, const String &src, bool cpp)
+Check &CheckSet1::checkSourceRuns(const String &def, const String &src, bool cpp)
 {
     auto c = add<SourceRuns>(def, src);
     c->CPP = cpp;

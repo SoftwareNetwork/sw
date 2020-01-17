@@ -113,6 +113,7 @@ struct SW_DRIVER_CPP_API Check : CommandNode
     virtual size_t getHash() const;
 
     String getName(bool short_name = false) const override;
+    String getData() const { return data; }
     bool isChecked() const;
     std::vector<std::shared_ptr<Check>> gatherDependencies();
     void execute() override;
@@ -259,9 +260,10 @@ struct SW_DRIVER_CPP_API SourceRuns : Check
     CheckType getType() const override { return CheckType::SourceRuns; }
 };
 
-struct SW_DRIVER_CPP_API CheckSet
+struct CheckSet;
+
+struct SW_DRIVER_CPP_API CheckSet1
 {
-    Checker &checker;
     String name;
     const NativeCompiledTarget *t = nullptr;
     std::unordered_map<String, CheckPtr> check_values;
@@ -274,15 +276,11 @@ struct SW_DRIVER_CPP_API CheckSet
     //   check->Prefixes.insert("U_");
     std::list<CheckPtr> all;
 
-    CheckSet(Checker &checker);
-    CheckSet(const CheckSet &) = delete;
-    CheckSet &operator=(const CheckSet &) = delete;
-
     template <class T, class ... Args>
     std::shared_ptr<T> add(Args && ... args)
     {
         auto t = std::make_shared<T>(std::forward<Args>(args)...);
-        t->check_set = this;
+        t->check_set = (CheckSet*)this;
         all.push_back(t);
         return t;
     }
@@ -296,9 +294,6 @@ struct SW_DRIVER_CPP_API CheckSet
             throw SW_RUNTIME_ERROR("Missing check: " + *t->Definitions.begin());
         return std::static_pointer_cast<T>(i->second);
     }
-
-    void prepareChecksForUse();
-    void performChecks(const TargetSettings &);
 
     FunctionExists &checkFunctionExists(const String &function, bool cpp = false);
     FunctionExists &checkFunctionExists(const String &function, const String &def, bool cpp = false);
@@ -345,6 +340,19 @@ private:
     //std::mutex m;
 
     friend struct Checker;
+    friend struct CheckSet;
+};
+
+struct SW_DRIVER_CPP_API CheckSet : CheckSet1
+{
+    Checker &checker;
+
+    CheckSet(Checker &checker);
+    CheckSet(const CheckSet &) = delete;
+    CheckSet &operator=(const CheckSet &) = delete;
+
+    void prepareChecksForUse();
+    void performChecks(const TargetSettings &);
 };
 
 struct SW_DRIVER_CPP_API Checker
