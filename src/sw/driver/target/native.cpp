@@ -1991,6 +1991,17 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
     for (auto &d : Interface.LinkLibraries2)
         s["link_libraries"].push_back(normalize_path(d));
 
+    if (getType() == TargetType::NativeStaticLibrary)
+    {
+        // static libs also expose private syslibs
+        for (auto &d : NativeLinkerOptions::System.LinkLibraries)
+            s["system_link_libraries"].push_back(normalize_path(d));
+    }
+    for (auto &d : Public.NativeLinkerOptions::System.LinkLibraries)
+        s["system_link_libraries"].push_back(normalize_path(d));
+    for (auto &d : Interface.NativeLinkerOptions::System.LinkLibraries2)
+        s["system_link_libraries"].push_back(normalize_path(d));
+
     for (auto &d : getActiveDependencies())
     {
         if (d.dep->IncludeDirectoriesOnly)

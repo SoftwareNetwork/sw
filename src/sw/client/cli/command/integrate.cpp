@@ -199,6 +199,8 @@ SUBCOMMAND_DECL(integrate)
                 libs += "\"";
                 for (auto &d : s["link_libraries"].getArray())
                     libs += d + ";";
+                for (auto &d : s["system_link_libraries"].getArray())
+                    libs += d + ";";
                 libs += "\"";
                 ctx.addLine("INTERFACE_LINK_LIBRARIES " + libs);
             }
@@ -361,6 +363,8 @@ SUBCOMMAND_DECL(integrate)
 
                 // libs
                 for (auto &d : s["link_libraries"].getArray())
+                    ctx.addLine("ctx.parse_flags('-l" + normalize_path(remove_ext(d)) + "', lib)");
+                for (auto &d : s["system_link_libraries"].getArray())
                     ctx.addLine("ctx.parse_flags('-l" + normalize_path(remove_ext(d)) + "', lib)");
 
                 // deps
