@@ -324,18 +324,16 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
             break;
         case ArchType::arm:
         {
-            SW_UNIMPLEMENTED;
-            // not working atm
             auto c = C->createCommand(getMainBuild().getContext());
-            c->push_back("-target=arm-pc-windows-msvc");
+            c->push_back("--target=arm-pc-windows-msvc");
+            // set using target? check correctness then: improve getTargetTriplet()
         }
         break;
         case ArchType::aarch64:
         {
-            SW_UNIMPLEMENTED;
-            // not working atm
             auto c = C->createCommand(getMainBuild().getContext());
-            c->push_back("-target=aarch64-pc-windows-msvc");
+            c->push_back("--target=aarch64-pc-windows-msvc");
+            // set using target? check correctness then: improve getTargetTriplet()
         }
         break;
         default:
