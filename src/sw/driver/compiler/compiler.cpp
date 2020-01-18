@@ -482,6 +482,9 @@ SW_DEFINE_PROGRAM_CLONE(GNUCompiler)
 void GNUCompiler::setSourceFile(const path &input_file, path &output_file)
 {
     InputFile = input_file;
+    // gcc does not accept this, clang does
+    if (input_file.extension() == ".c")
+        VisibilityInlinesHidden = false;
     setOutputFile(output_file);
 }
 
