@@ -1264,7 +1264,7 @@ String detectMsvcPrefix(builder::detail::ResolvableCommand c, const path &idir)
     c.push_back("/showIncludes");
     c.push_back("/c");
     c.push_back(fn);
-    c.push_back("/Fo:" + normalize_path_windows(obj));
+    c.push_back("/Fo" + normalize_path_windows(obj));
     c.push_back("/I");
     c.push_back(idir);
     std::error_code ec;
@@ -1283,7 +1283,9 @@ String detectMsvcPrefix(builder::detail::ResolvableCommand c, const path &idir)
 
     static std::regex r(R"((.*\s)[a-zA-Z]:\\.*iostream)");
     std::smatch m;
-    if (!std::regex_search(lines[1], m, r))
+    if (!std::regex_search(lines[1], m, r) &&
+        !std::regex_search(lines[0], m, r) // clang-cl does not output filename
+        )
         throw SW_RUNTIME_ERROR(error("regex_search failed"));
     return p[c.getProgram()] = m[1].str();
 }

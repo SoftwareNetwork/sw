@@ -1075,6 +1075,10 @@ static void detectWindowsClang(DETECT_ARGS)
         }
         if (fs::exists(p->file))
         {
+            auto cmd = p->getCommand();
+            auto msvc_prefix = detectMsvcPrefix(*cmd, ".");
+            getMsvcIncludePrefixes()[p->file] = msvc_prefix;
+
             auto v = getVersion(s, p->file);
             auto &c = addProgram(s, PackageId("org.LLVM.clangcl", v), p);
         }

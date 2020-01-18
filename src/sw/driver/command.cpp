@@ -157,11 +157,18 @@ void VSCommand::postProcess1(bool)
     // "Note: including file: filename\r" (english)
     // "Some: other lang: filename\r"
     // "Some: other lang  filename\r" (ita)
+    String prefix;
     auto &p = getMsvcIncludePrefixes();
     auto i = p.find(getProgram());
     if (i == p.end())
+    {
+        // clangcl uses this one (default)
+        // with or without space? clang has some code with '.' instead of ' '
+        //prefix = "Note: including file: ";
         throw SW_RUNTIME_ERROR("Cannot find msvc prefix");
-    auto &prefix = i->second;
+    }
+    else
+        prefix = i->second;
 
     auto perform = [this, &prefix](auto &text)
     {
