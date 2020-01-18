@@ -93,10 +93,10 @@ public:
     //Module loadModule(const path &fn) const;
 
     // move to some other place?
-    void cppan_load(yaml &root, const String &root_name = {});
+    std::vector<NativeCompiledTarget *> cppan_load(yaml &root, const String &root_name = {});
 
 private:
-    void cppan_load1(const yaml &root, const String &root_name);
+    std::vector<NativeCompiledTarget *> cppan_load1(const yaml &root, const String &root_name);
 };
 
 }

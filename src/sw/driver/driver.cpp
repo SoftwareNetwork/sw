@@ -382,9 +382,11 @@ Driver::EntryPointsVector1 Driver::load_configless_file(SwContext &, const path 
         try
         {
             auto root = YAML::Load(c);
-            auto bf = [root, name = p.stem().u8string()](Build &b) mutable
+            auto bf = [root, p](Build &b) mutable
             {
-                b.cppan_load(root, name);
+                auto tgts = b.cppan_load(root, p.stem().u8string());
+                if (tgts.size() == 1)
+                    *tgts[0] += p;
             };
             auto ep = std::make_shared<NativeBuiltinTargetEntryPoint>(bf);
             ep->source_dir = p.parent_path();

@@ -5,30 +5,8 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "frontend/cppan/yaml.h"
-#include "functions.h"
-#include "inserts.h"
-#include "module.h"
 #include "build.h"
-#include "sw_abi_version.h"
 #include "target/native.h"
-
-#include <sw/builder/file_storage.h>
-#include <sw/builder/program.h>
-#include <sw/manager/database.h>
-#include <sw/manager/settings.h>
-#include <sw/manager/storage.h>
-
-#include <boost/algorithm/string.hpp>
-#include <boost/thread/lock_types.hpp>
-#include <primitives/date_time.h>
-#include <primitives/executor.h>
-#include <primitives/pack.h>
-#include <primitives/symbol.h>
-#include <primitives/templates.h>
-#include <primitives/sw/settings.h>
-
-#include <boost/dll.hpp>
-#include <nlohmann/json.hpp>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "solution_cppan");
@@ -36,13 +14,13 @@ DECLARE_STATIC_LOGGER(logger, "solution_cppan");
 namespace sw
 {
 
-void Build::cppan_load(yaml &root, const String &root_name)
+std::vector<NativeCompiledTarget *> Build::cppan_load(yaml &root, const String &root_name)
 {
     auto root1 = cppan::load_yaml_config(root);
-    cppan_load1(root1, root_name);
+    return cppan_load1(root1, root_name);
 }
 
-void Build::cppan_load1(const yaml &root, const String &root_name)
+std::vector<NativeCompiledTarget *> Build::cppan_load1(const yaml &root, const String &root_name)
 {
     if (root.IsNull() || !root.IsMap())
         throw SW_RUNTIME_ERROR("Spec file should be a map");
@@ -118,7 +96,7 @@ void Build::cppan_load1(const yaml &root, const String &root_name)
     if (prjs.IsDefined() && !prjs.IsMap())
         throw std::runtime_error("'projects' should be a map");
 
-    auto add_project = [this, &root_project](auto &root, String name, Version version, bool name_unnamed = false)
+    auto add_project = [this, &root_project](auto &root, String name, Version version, bool name_unnamed = false) -> NativeCompiledTarget&
     {
         /*Project project(root_project);
         project.defaults_allowed = defaults_allowed;
@@ -147,7 +125,7 @@ void Build::cppan_load1(const yaml &root, const String &root_name)
         if (pt == "l" || pt == "lib" || pt == "library")
             ;
         else if (pt.empty() || pt == "e" || pt == "exe" || pt == "executable")
-            return addExecutable(name, version).cppan_load_project(root);
+            return addExecutable(name, version);
         else
             throw SW_RUNTIME_ERROR("Unknown project type");
 
@@ -162,9 +140,9 @@ void Build::cppan_load1(const yaml &root, const String &root_name)
         String lt = "shared";
         YAML_EXTRACT_VAR(root, lt, "library_type", String);
         if (lt == "static" || static_only)
-            return addStaticLibrary(name, version).cppan_load_project(root);
+            return addStaticLibrary(name, version);
         else if (lt == "shared" || lt == "dll" || shared_only)
-            return addSharedLibrary(name, version).cppan_load_project(root);
+            return addSharedLibrary(name, version);
         else if (lt.empty())
             throw SW_RUNTIME_ERROR(name + ": empty library type");
         else
@@ -179,18 +157,28 @@ void Build::cppan_load1(const yaml &root, const String &root_name)
         //projects.emplace(project.pkg.ppath.toString(), project);
     };
 
+    std::vector<NativeCompiledTarget *> targets;
+
     if (prjs.IsDefined())
     {
         for (auto prj : prjs)
-            add_project(prj.second, prj.first.template as<String>(), version);
+        {
+            auto &t = add_project(prj.second, prj.first.template as<String>(), version);
+            t.cppan_load_project(prj.second);
+            targets.push_back(&t);
+        }
     }
     else if (root_name.empty())
     {
-        add_project(root, {}, version, true);
+        auto &t = add_project(root, {}, version, true);
+        t.cppan_load_project(root);
+        targets.push_back(&t);
     }
     else
     {
-        add_project(root, root_name, version);
+        auto &t = add_project(root, root_name, version);
+        t.cppan_load_project(root);
+        targets.push_back(&t);
     }
 
     // remove unreferences projects
@@ -217,6 +205,8 @@ void Build::cppan_load1(const yaml &root, const String &root_name)
                 break;
         }
     }*/
+
+    return targets;
 }
 
 }
