@@ -40,7 +40,7 @@ static ::cl::opt<path> save_overridden_packages_to_file("save", ::cl::value_desc
 
 static void override_package_perform(sw::SwContext &swctx, sw::PackagePath prefix)
 {
-    auto dir = fs::absolute(".");
+    auto dir = fs::canonical(".");
     sw::PackageDescriptionMap pm;
 
     auto override_packages = [&](sw::PackageVersionGroupNumber gn)
