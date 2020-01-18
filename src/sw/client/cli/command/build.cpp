@@ -144,12 +144,12 @@ static sw::TargetSettings compilerTypeFromStringCaseI(const sw::UnresolvedPackag
 {
     sw::TargetSettings ts;
 
-    auto with_version = [&compiler](const auto &ppath)
+    auto with_version = [&compiler](const sw::PackagePath &ppath)
     {
         return sw::UnresolvedPackage(ppath, compiler.range);
     };
 
-    auto set_with_version = [&with_version](const auto &ppath)
+    auto set_with_version = [&with_version](const sw::PackagePath &ppath)
     {
         return with_version(ppath).toString();
     };
@@ -165,13 +165,13 @@ static sw::TargetSettings compilerTypeFromStringCaseI(const sw::UnresolvedPackag
     {
         ts["native"]["program"]["c"] = set_with_version("org.gnu.gcc");
         ts["native"]["program"]["cpp"] = set_with_version("org.gnu.gpp");
-        ts["native"]["program"]["asm"] = set_with_version(ts["native"]["program"]["c"].getValue());
+        ts["native"]["program"]["asm"] = ts["native"]["program"]["c"].getValue();
     }
     else if (compiler.ppath == "clang")
     {
         ts["native"]["program"]["c"] = set_with_version("org.LLVM.clang");
         ts["native"]["program"]["cpp"] = set_with_version("org.LLVM.clangpp");
-        ts["native"]["program"]["asm"] = set_with_version(ts["native"]["program"]["c"].getValue());
+        ts["native"]["program"]["asm"] = ts["native"]["program"]["c"].getValue();
     }
     // clang-cl is not possible for package path
     else if (compiler.ppath == "clangcl"/* || compiler.ppath == "clang-cl"*/)
