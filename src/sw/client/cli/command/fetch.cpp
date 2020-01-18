@@ -21,6 +21,10 @@
 #include <sw/core/build.h>
 #include <sw/core/input.h>
 
+// sometimes we do not want
+//  sw build --fetch
+// but just
+//  sw fetch
 DEFINE_SUBCOMMAND(fetch, "Fetch sources.");
 
 ::cl::opt<bool> build_after_fetch("build", ::cl::desc("Build after fetch"), ::cl::sub(subcommand_fetch));
@@ -102,14 +106,14 @@ std::pair<sw::SourceDirMap, const sw::Input &> fetch(sw::SwBuild &b)
     for (auto &ts : tss)
         i.addSettings(ts);
     b.addInput(i);
-    b.loadInputs();
-    b.setTargetsToBuild();
+    b.loadInputs(); // download occurs here
+    /*b.setTargetsToBuild();
     b.resolvePackages();
     b.loadPackages();
-    b.prepare();
+    b.prepare();*/
 
     if (build_after_fetch)
-        b.execute();
+        b.build();
 
     return { srcs, ii };
 }
