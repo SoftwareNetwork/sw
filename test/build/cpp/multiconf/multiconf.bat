@@ -7,4 +7,5 @@ sw ^
     -mt -md ^
     build
 
+:: clangcl not working atm (linker errors)
 :: -compiler msvc,clangcl
