@@ -376,7 +376,7 @@ std::vector<IDependency *> Target::getDependencies() const
         deps.push_back(d.get());
     for (auto &d : DummyDependencies)
         deps.push_back(d.get());
-    for (auto &d : SourceDependencies)
+    for (auto &[u,d] : SourceDependencies)
         deps.push_back(d.get());
     return deps;
 }
@@ -645,7 +645,7 @@ UnresolvedDependenciesType Target::gatherUnresolvedDependencies() const
         if (!*d)
             deps.insert({ d->package, d });
     }
-    for (auto &d : SourceDependencies)
+    for (auto &[u,d] : SourceDependencies)
     {
         if (!*d)
             deps.insert({ d->package, d });
@@ -788,10 +788,9 @@ DependencyPtr Target::addDummyDependency(const Target &t)
 
 void Target::addSourceDependency(const DependencyPtr &t)
 {
-    SourceDependencies.push_back(t);
-
-    auto &ds = SourceDependencies.back()->settings;
-    ds = {}; // accept everything
+    auto [i,_] = SourceDependencies.try_emplace(t->getUnresolvedPackage(), t);
+    // clear and accept everything
+    i->second->settings = {};
 }
 
 void Target::addSourceDependency(const Target &t)
