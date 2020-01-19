@@ -274,7 +274,7 @@ struct SW_DRIVER_CPP_API Target : ITarget, TargetBase, ProgramStorage,
     //std::vector<TargetDependency> tdeps;
     // always not inheritable
     std::vector<DependencyPtr> DummyDependencies; // host config, but allowing some changes (configuration type/mt)
-    std::map<UnresolvedPackage, DependencyPtr> SourceDependencies; // no config, dependency on source files
+    std::vector<DependencyPtr> SourceDependencies; // no config, dependency on source files
     // build dir deps?
     std::vector<DependencyPtr> RuntimeDependencies; // this target config
 
