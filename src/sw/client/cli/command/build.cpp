@@ -434,11 +434,15 @@ std::vector<sw::TargetSettings> createSettings(sw::SwContext &swctx)
     if (static_build && shared_build)
     {
         // preserve order
-        int st = cl_static_build.getPosition() > cl_shared_build.getPosition();
-        mult_and_action(2, [st](auto &s, int i)
+        int st = 0, sh = 1;
+        if (cl_static_build.getPosition() > cl_shared_build.getPosition())
+            st = 1, sh = 0;
+        mult_and_action(2, [st,sh](auto &s, int i)
         {
             if (i == st)
                 s["native"]["library"] = "static";
+            if (i == sh)
+                s["native"]["library"] = "shared";
         });
     }
     else
@@ -447,6 +451,8 @@ std::vector<sw::TargetSettings> createSettings(sw::SwContext &swctx)
         {
             if (static_build)
                 s["native"]["library"] = "static";
+            if (shared_build)
+                s["native"]["library"] = "shared";
         }
     }
 

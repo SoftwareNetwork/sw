@@ -48,6 +48,7 @@ void SwCoreContext::createHostSettings()
 #else
     ts["native"]["configuration"] = "release";
 #endif
+    ts["native"]["library"] = "shared";
 
     detectCompilers(*this);
     setHostPrograms(); // after detection
@@ -58,6 +59,7 @@ void SwCoreContext::setHostPrograms()
 {
     auto &ts = host_settings;
     ts["native"]["configuration"] = "release";
+    ts["native"]["library"] = "shared";
 
     auto to_upkg = [](const auto &s)
     {
