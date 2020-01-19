@@ -460,13 +460,15 @@ std::vector<sw::TargetSettings> createSettings(sw::SwContext &swctx)
     if (win_mt && win_md)
     {
         // preserve order
-        int mt = 0;
+        int mt = 0, md = 1;
         if (win_mt.getPosition() > win_md.getPosition())
-            mt = 1;
-        mult_and_action(2, [mt](auto &s, int i)
+            mt = 1, md = 0;
+        mult_and_action(2, [mt, md](auto &s, int i)
         {
             if (i == mt)
                 s["native"]["mt"] = "true";
+            if (i == md)
+                s["native"]["mt"] = "false";
         });
     }
     else
@@ -475,6 +477,8 @@ std::vector<sw::TargetSettings> createSettings(sw::SwContext &swctx)
         {
             if (win_mt)
                 s["native"]["mt"] = "true";
+            if (win_md)
+                s["native"]["mt"] = "false";
         }
     }
 
