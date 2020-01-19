@@ -40,7 +40,7 @@ static path getImportFilePrefix(const Build &b)
     // takes a lot of disk
     // also sometimes it causes crashes or infinite loops
     //h = "." + b.getContext().getHostSettings().getHash();
-    return b.getContext().getLocalStorage().storage_dir_tmp / ("sw." + pch_ver + h + "." + getCurrentModuleId());
+    return b.getContext().getLocalStorage().storage_dir_tmp / "pch" / ("sw." + pch_ver + h + "." + getCurrentModuleId());
 }
 
 static path getImportDefinitionsFile(const Build &b)
@@ -53,9 +53,20 @@ static path getImportLibraryFile(const Build &b)
     return getImportFilePrefix(b) += ".lib";
 }
 
-static path getImportPchFile(Build &b)
+static path getImportPchFile(NativeCompiledTarget &t, const UnresolvedPackages &deps)
 {
-    return getImportFilePrefix(b) += ".cpp";
+    // we create separate pch for different target deps
+
+    std::set<String> sdeps;
+    for (auto &d : t.getDependencies())
+        sdeps.insert(d->getUnresolvedPackage().toString());
+    for (auto &d : deps)
+        sdeps.insert(d.toString());
+    String s;
+    for (auto &d : sdeps)
+        s += d;
+    auto h = shorten_hash(blake2b_512(s), 6);
+    return getImportFilePrefix(t.getSolution()) += "." + h + ".cpp";
 }
 
 #ifdef _WIN32
@@ -170,7 +181,7 @@ static path getPackageHeader(const LocalPackage &p, const UnresolvedPackage &up)
     return h;
 }
 
-static std::tuple<FilesOrdered, UnresolvedPackages> getFileDependencies(const SwBuilderContext &swctx, const path &p, std::set<PackageVersionGroupNumber> &gns)
+static std::pair<FilesOrdered, UnresolvedPackages> getFileDependencies(const SwBuilderContext &swctx, const path &p, std::set<PackageVersionGroupNumber> &gns)
 {
     UnresolvedPackages udeps;
     FilesOrdered headers;
@@ -218,7 +229,7 @@ static std::tuple<FilesOrdered, UnresolvedPackages> getFileDependencies(const Sw
     return { headers, udeps };
 }
 
-static std::tuple<FilesOrdered, UnresolvedPackages> getFileDependencies(const SwBuilderContext &swctx, const path &in_config_file)
+static std::pair<FilesOrdered, UnresolvedPackages> getFileDependencies(const SwBuilderContext &swctx, const path &in_config_file)
 {
     std::set<PackageVersionGroupNumber> gns;
     return getFileDependencies(swctx, in_config_file, gns);
@@ -347,7 +358,7 @@ SharedLibraryTarget &PrepareConfigEntryPoint::createTarget(Build &b, const Strin
     return lib;
 }
 
-decltype(auto) PrepareConfigEntryPoint::commonActions(Build &b, const FilesSorted &files) const
+decltype(auto) PrepareConfigEntryPoint::commonActions(Build &b, const FilesSorted &files, const UnresolvedPackages &deps) const
 {
     auto &lib = createTarget(b, getSelfTargetName(files));
     lib.command_storage = &getDriverCommandStorage(b);
@@ -367,7 +378,7 @@ decltype(auto) PrepareConfigEntryPoint::commonActions(Build &b, const FilesSorte
         lib += fn;
 
     // pch
-    write_file_if_different(getImportPchFile(b),
+    write_file_if_different(getImportPchFile(lib, deps),
         //"#include <" + normalize_path(getDriverIncludeDir(solution) / getMainPchFilename()) + ">\n\n" +
         //"#include <" + getDriverIncludePathString(solution, getMainPchFilename()) + ">\n\n" +
         //"#include <" + normalize_path(getMainPchFilename()) + ">\n\n" + // the last one
@@ -375,7 +386,7 @@ decltype(auto) PrepareConfigEntryPoint::commonActions(Build &b, const FilesSorte
 
     PrecompiledHeader pch;
     pch.header = getDriverIncludeDir(b, lib) / getMainPchFilename();
-    pch.source = getImportPchFile(b);
+    pch.source = getImportPchFile(lib, deps);
     pch.force_include_pch = true;
     pch.force_include_pch_to_source = true;
     lib.addPrecompiledHeader(pch);
@@ -471,7 +482,15 @@ void PrepareConfigEntryPoint::many2one(Build &b, const std::unordered_set<LocalP
         output_names.emplace(p.p, p);
     }
 
-    auto &lib = commonActions(b, pkg_files_);
+    UnresolvedPackages udeps2;
+    std::unordered_map<path, std::pair<FilesOrdered, UnresolvedPackages>> output_names_info;
+    for (auto &[fn, d] : output_names)
+    {
+        output_names_info[fn] = getFileDependencies(b.getContext(), fn);
+        udeps2.insert(output_names_info[fn].second.begin(), output_names_info[fn].second.end());
+    }
+
+    auto &lib = commonActions(b, pkg_files_, udeps2);
 
     // make fancy names
     for (auto &[fn, d] : output_names)
@@ -515,7 +534,7 @@ void PrepareConfigEntryPoint::many2one(Build &b, const std::unordered_set<LocalP
 
     for (auto &[fn, d] : output_names)
     {
-        auto [headers, udeps] = getFileDependencies(b.getContext(), fn);
+        auto [headers, udeps] = output_names_info[fn];
         if (auto sf = lib[fn].template as<NativeSourceFile*>())
         {
             if (auto c = sf->compiler->template as<VisualStudioCompiler*>())
@@ -545,7 +564,9 @@ void PrepareConfigEntryPoint::many2one(Build &b, const std::unordered_set<LocalP
 // one input file to one dll
 void PrepareConfigEntryPoint::one2one(Build &b, const path &fn) const
 {
-    auto &lib = commonActions(b, { fn });
+    auto [headers, udeps] = getFileDependencies(b.getContext(), fn);
+
+    auto &lib = commonActions(b, { fn }, udeps);
 
     // turn on later again
     //if (lib.getSettings().TargetOS.is(OSType::Windows))
@@ -553,7 +574,6 @@ void PrepareConfigEntryPoint::one2one(Build &b, const path &fn) const
 
     // file deps
     {
-        auto [headers, udeps] = getFileDependencies(b.getContext(), fn);
         for (auto &h : headers)
         {
             // TODO: refactor this and same cases below
