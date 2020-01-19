@@ -1,0 +1,64 @@
+% !TEX root = sw.tex
+% !TeX spellcheck = en_US
+
+
+\chapter{Software Management}
+
+\section{Package Id}
+
+\subsection{Path}
+
+\subsection{Version}
+
+\section{Features}
+
+Goals:
+
+\begin{enumerate}
+\item
+Reliability.
+\item
+Correctness.
+\item
+Repeatability.
+\item
+Robustness.
+\item
+Scalability.
+\item
+Performance. This one is mostly provided by language of implementation (C++).
+\end{enumerate}
+
+Features:
+
+\begin{enumerate}
+\item
+Build System is integrated with Package Manager in one program. This allows us to have more information on both ends. User does not need any external tools except sw itself.
+\item
+Describe your builds directly in C++(17).
+\item
+Different frontends. Do not like C++? Write you build configuration in declarative YAML, JSON, Python, LUA and even on good old CMake etc. Currently only basic YAML frontend is implemented. Contributions are welcome.
+SW itself is written in modern C++ (C++17).
+\item
+Easy crosscompilation.
+\item
+Generators for different IDEs (WIP, contributions are welcome).
+\item
+Integrations with other tools (CMake etc.).
+\end{enumerate}
+
+
+
+\section{Drivers}
+
+\section{Frontends}
+
+Main frontend - C++.
+
+Second frontend - CPPAN (v1) YAML-based frontend.
+
+\section{Security}
+
+SW security is based on GPG digital signatures.
+
+TBD

@@ -1,0 +1,67 @@
+% !TeX spellcheck = en_US
+
+%% main file for the SW and Software Management documentation
+%%
+
+%%--------------------------------------------------
+%% basics
+\documentclass[a4paper,10pt,oneside,openany,final]{memoir}
+
+\usepackage{polyglossia}
+\usepackage{fontspec}
+\setmainlanguage{english}
+
+\usepackage{graphicx}
+\usepackage[final]
+           {listings}     % code listings
+\usepackage{longtable}    % auto-breaking tables
+\usepackage{ltcaption}    % fix captions for long tables
+\usepackage{relsize}      % provide relative font size changes
+\usepackage{textcomp}     % provide \text{l,r}angle
+\usepackage{underscore}   % remove special status of '_' in ordinary text
+\usepackage{parskip}      % handle non-indented paragraphs "properly"
+\usepackage{array}        % new column definitions for tables
+\usepackage[normalem]{ulem}
+\usepackage{enumitem}
+\usepackage{color}        % define colors for strikeouts and underlines
+\usepackage{amsmath}      % additional math symbols
+\usepackage{mathrsfs}     % mathscr font
+\usepackage[final]{microtype}
+\usepackage{multicol}
+\usepackage{lmodern}
+\usepackage{xcolor}
+
+\usepackage[unicode,
+            pdftitle={Software Management},
+            pdfsubject={Software Management},
+            pdfcreator={Egor Pugin},
+            bookmarks=true,
+            bookmarksnumbered=true,
+            pdfpagelabels=true,
+            pdfpagemode=UseOutlines,
+            pdfstartview=FitH,
+            linktocpage=true,
+            colorlinks=true,
+            linkcolor=blue,
+            plainpages=false
+           ]{hyperref}
+
+\usepackage{expl3}
+\usepackage{xparse}
+
+
+\input{layout.tex}
+\input{styles.tex}
+
+%%--------------------------------------------------
+\begin{document}
+
+\input{front.tex}
+\tableofcontents
+
+\input{intro.tex}
+\input{sm.tex}
+\input{client.tex}
+\input{server.tex}
+
+\end{document}

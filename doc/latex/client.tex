@@ -1,0 +1,489 @@
+% !TEX root = sw.tex
+% !TeX spellcheck = en_US
+
+
+\chapter{Client tools}
+
+Main client tool is SW.
+
+A gui frontend is also available. It is Qt-based and widgets-based (no QML).
+
+\section{Quick Start}
+
+
+
+\subsection{Package Management}
+
+SW uses packages paths to uniquely identify projects on the web.
+Project path is similar to Java packages. Version is appended to it.
+
+`org.username.path.to.project.target-version`
+
+It contains:
+\begin{enumerate}
+\item
+Namespace: `org`
+\item
+User name: `username`
+\item
+Path to target: `path.to.project.target`
+\end{enumerate}
+
+Allowed namespaces are:
+\begin{enumerate}
+\item
+`org` - organization's public projects with open (free) software license.
+\item
+`com` - organization's projects with commercial license.
+\item
+`pub` - user's public projects.
+\item
+`pvt` - user's private projects.
+\end{enumerate}
+
+`version` - is a **semver-like** version.
+
+\subsection{Build process}
+
+SW uses configuration files to describe build process (Build).
+
+Build contains several solutions (Solution).
+Each Solution is responsible for exactly one configuration. For example, x86+dll+Release or arm64+static+Debug (plus sign is used only for this document).
+
+Solution consists of targets, projects and directories. Each object might include any other object.
+
+SW uses multipass approach if it needs to build more than one solution.
+(Unlike CMake that is telled which options go to what configuration during single pass.)
+
+It is possible to use different frontends to describe build.
+Main frontend is called `sw` as well as the program and uses C++ code directly.
+Current secondary frontend is `cppan` YAML frontend used in first version of the program.
+
+\subsection{Frontends}
+
+\subsubsection{sw}
+
+_HINT: run `sw create project` to force sw to create first config and generate an IDE project for you._
+
+To start your first build configuration, create a file called `sw.cpp`.
+
+\begin{verbatim}
+// this is our 'main' build function signature
+// function accepts current Solution
+void build(Solution &s)
+{
+    // add non copyable target to Solution of type Executable with name 'mytarget'
+    auto &t = s.addTarget<Executable>("mytarget");
+    t += "src/main.cpp"; // add our first source file
+    // t += "dependency.path"_dep; // add needed dependency
+}
+\end{verbatim}
+
+SW uses the latest current standard available - C++17.
+
+To control your build (add definitions, dependencies, link libraries) sw uses user-defined literals. For more help on this, see https://github.com/SoftwareNetwork/sw/blob/master/src/sw/driver/suffix.h
+Examples:
+
+\begin{verbatim}
+t += "MY_DEFINITION"_def;
+t += "ws2_32.lib"_lib;
+t += "src"_idir;
+\end{verbatim}
+
+Now create `src/main.cpp` file with contents you want.
+
+Run `sw build` to perform build or `sw generate` to generate IDE project.
+
+
+
+Visibility
+
+To provide control on properies visibility, one might use following target members:
+
+\begin{verbatim}
+t.Private += ...; // equals to t += ...;
+t.Protected += ...; // available only for this target and current project members
+t.Public += ...; // available for this target and all downstream users
+t.Inheritance += ...; // available only for all downstream users
+\end{verbatim}
+
+Underlying implementation uses three bits to describe inheritance.
+
+* 1 - This target T
+* 2 - This project P (excluding T)
+* 3 - All other projects A (excluding P and T)
+
+This gives 7 different inheritance modes (excluding 000) and you could use them all!
+
+
+
+
+
+More than one configuration
+
+To create additional configs you might add them on command line or write into configuration.
+Add following code to your `sw.cpp`:
+
+\begin{verbatim}
+// configure signature
+// Note that it accepts whole build, not a single solution!
+void configure(Build &b)
+{
+    auto &s1 = b.addSolution(); // add first solution
+    s1.Settings.Native.LibrariesType = LibraryType::Static;
+    s1.Settings.Native.ConfigurationType = ConfigurationType::ReleaseWithDebugInformation;
+
+    auto &s2 = b.addSolution(); // add first solution
+    s2.Settings.Native.LibrariesType = LibraryType::Shared;
+    s2.Settings.Native.ConfigurationType = ConfigurationType::Debug;
+
+    return;
+
+    // following code can be used for advanced toolchain configuration
+    if (b.isConfigSelected("cygwin2macos"))
+        b.loadModule("utils/cc/cygwin2macos.cpp").call<void(Solution&)>("configure", b);
+    else if (b.isConfigSelected("win2macos"))
+        b.loadModule("utils/cc/win2macos.cpp").call<void(Solution&)>("configure", b);
+}
+\end{verbatim}
+
+In this function you could provide full custom toolchain to use (compilers, linkers, librarians etc.).
+Extended configs can be found here: https://github.com/SoftwareNetwork/sw/tree/master/utils/cc
+
+
+\subsubsection{cppan}
+
+
+
+
+
+
+
+
+\section{Command Line Reference}
+
+
+
+
+\section{Supported Languages}
+
+Mature support:
+\begin{enumerate}
+\item ASM
+\item C
+\item C++
+\end{enumerate}
+
+Hello-world support:
+\begin{enumerate}
+\item C\#
+\item D
+\item Fortran
+\item Go
+\item Java
+\item Kotlin
+\item Rust
+\end{enumerate}
+
+
+Ported Intepreters
+
+- perl (partial)
+
+- python
+
+- tcl
+
+Work started
+
+- java
+
+
+\section{Integrations}
+
+It is possible to use SW as package manager for your favourite build system.
+
+Here you can find list of completed integrations with examples.
+
+\subsection{CMake}
+
+
+[Full example](https://github.com/SoftwareNetwork/sw/blob/master/test/integrations/CMakeLists.txt)
+
+Steps
+\begin{enumerate}
+\item
+Download SW, unpack and add to PATH.
+\item
+Run `sw setup` to perform initial integration into system.
+\item
+Add necessary parts to your CMakeLists.txt (see below).
+\end{enumerate}
+
+First, make sure CMake is able to found SW package: ```find_package(SW REQUIRED)```
+
+Then add necessary dependencies (packages) with `sw_add_package()`. You can omit version. In this case the latest will be used.
+
+Next step is to execute SW to prepare imported targets script with `sw_execute()`.
+
+\begin{verbatim}
+find_package(SW REQUIRED)
+sw_add_package(
+    org.sw.demo.sqlite3
+    org.sw.demo.glennrp.png
+)
+sw_execute()
+\end{verbatim}
+
+Last thing is to add dependency to your package:
+
+\begin{verbatim}
+add_executable(mytarget ${MY_SOURCES})
+target_link_libraries(mytarget 
+    org.sw.demo.glennrp.png
+)
+\end{verbatim}
+
+Configure SW deps
+
+Use `set(SW_BUILD_SHARED_LIBS 1)` to build shared libs instead of static (default).
+
+\subsection{Waf}
+
+[Full example](https://github.com/SoftwareNetwork/sw/blob/master/test/integrations/wscript)
+
+\begin{enumerate}
+\item
+Copy-paste these lines to your file \url{https://github.com/SoftwareNetwork/sw/blob/master/test/integrations/wscript#L4-L25}
+
+\item
+Replace these lines with your dependencies \url{https://github.com/SoftwareNetwork/sw/blob/master/test/integrations/wscript#L9-L10}
+
+\item
+Use deps like on those lines \url{https://github.com/SoftwareNetwork/sw/blob/master/test/integrations/wscript#L35-L36}
+
+\end{enumerate}
+
+To build things call
+
+```
+waf sw_configure sw_build configure build
+```
+
+`sw_configure` setups SW for waf.
+
+`sw_build` builds necessary deps.
+
+
+
+
+
+\section{Generators}
+
+SW allows you to generate projects to many different existing systems.
+
+In square brackets current support status is shown.
+
+\begin{enumerate}
+\item
+* Visual Studio (C++ projects) [2/5]
+\item
+* Visual Studio (NMake projects) [4/5]
+\item
+* Visual Studio (Utility projects) [3/5]
+\item
+* Visual Studio (NMake + Utility projects) [3/5]
+\item
+* CMake [0/5]
+\item
+* CompilationDatabase [5/5]
+\item
+* Make [5/5]
+\item
+* NMake [4/5]
+\item
+* Ninja [5/5]
+\item
+* QMake [0/5]
+\item
+* Batch [5/5]
+\item
+* Shell [5/5]
+\end{enumerate}
+
+
+\section{Command Line Reference}
+
+\subsection{sw build}
+
+Build current project.
+
+To get build and dependencies graphs, run:
+```
+sw -print-graph build
+```
+
+\subsection{sw generate}
+
+Generate IDE project.
+
+\subsection{sw upload}
+
+Upload current project to Software Network.
+Project will be fetched from your version control system using specified tag/version/branch.
+
+\subsection{sw create}
+
+Create templated project.
+
+\subsection{sw -help}
+
+CLI help.
+
+\begin{verbatim}
+OVERVIEW: SW: Software Network Client
+
+  SW is a Universal Package Manager and Build System
+
+USAGE: sw.client.sw-0.3.1.exe [subcommand] [options]
+
+SUBCOMMANDS:
+
+  abi       - List package ABI, check for ABI breakages.
+  build     - Build files, dirs or packages.
+  configure - Create build script.
+  create    - Create different projects.
+  fetch     - Fetch sources.
+  generate  - Generate IDE projects.
+  install   - Add package to lock.
+  integrate - Integrate sw into different tools.
+  list      - List packages in database.
+  open      - Open package directory.
+  override  - Override packages locally.
+  remote    - Manage remotes.
+  remove    - Remove package.
+  run       - Run target (if applicable).
+  setup     - Used to do some system setup which may require administrator access.
+  test      - Run tests.
+  update    - Update lock file.
+  upload    - Upload packages.
+  uri       - Used to invoke sw application from the website.
+
+  Type "sw.client.sw-0.3.1.exe <subcommand> -help" to get more help on a specific subcommand
+
+OPTIONS:
+
+General options:
+
+  -B                             - Build always
+  -D=<string>                    - Input variables
+  -activate=<string>             - Activate specific packages
+  -build-name=<string>           - Set meaningful build name instead of hash
+  -cc-checks-command=<string>    - Automatically execute cc checks command
+  -checks-st                     - Perform checks in one thread (for cc)
+  -compiler=<string>             - Set compiler
+  -config-name=<string>          - Set meaningful config names instead of hashes
+  -configuration=<string>        - Set build configuration.
+                                   Allowed values:
+                                       - debug, d
+                                       - release, r
+                                       - releasewithdebuginformation, releasewithdebinfo, rwdi
+                                       - minimalsizerelease, minsizerel, msr
+                                   Default is release.
+                                   Specify multiple using a comma: "d,r".
+  -curl-verbose                  -
+  -d=<path>                      - Working directory
+  -debug-configs                 - Build configs in debug mode
+  -do-not-mangle-object-names    -
+  -do-not-remove-bad-module      -
+  -exclude-target=<string>       - Targets to ignore
+  -explain-outdated              - Explain outdated commands
+  -explain-outdated-full         - Explain outdated commands with more info
+  -host-cygwin                   - When on cygwin, allow it as host
+  -host-settings-file=<path>     - Read host settings from file
+  -ignore-source-files-errors    - Useful for debugging
+  -ignore-ssl-checks             -
+  -j=<int>                       - Number of jobs
+  -k=<int>                       - Skip errors
+  -l                             - Use lock file
+  -libc=<string>                 - Set build libc
+  -libcpp=<string>               - Set build libcpp
+  -list-predefined-targets       - List predefined targets
+  -list-programs                 - List available programs on the system
+  -log-to-file                   -
+  -os=<string>                   - Set build target os
+  -platform=<string>             - Set build platform.
+                                   Examples: x86, x64, arm, arm64
+  -print-checks                  - Save extended checks info to file
+  -r=<string>                    - Select default remote
+  -s                             - Force server resolving
+  -save-all-commands             -
+  -save-command-format=<string>  - Explicitly set saved command format (bat or sh)
+  -save-executed-commands        -
+  -save-failed-commands          -
+  -sd                            - Force server db check
+  -self-upgrade                  - Upgrade client
+  -settings=<string>             - Set settings directly
+  -settings-file=<path>          - Read settings from file
+  -settings-file-config=<string> - Select settings from file
+  -settings-json=<string>        - Read settings from json string
+  -shared-build                  - Set shared build (default)
+  -show-output                   -
+  -standalone                    - Build standalone binaries
+  -static-build                  - Set static build
+  -static-dependencies           - Build static dependencies of inputs
+  -storage-dir=<path>            -
+  -target=<string>               - Targets to build
+  -target-os=<string>            -
+  -time-trace                    - Record chrome time trace events
+  -toolset=<string>              - Set VS generator toolset
+  -trace                         - Trace output
+  -verbose                       - Verbose output
+  -wait-for-cc-checks            - Do not exit on missing cc checks, wait for user input
+  -win-md                        - Set /MD build (default)
+  -win-mt                        - Set /MT build
+  -write-output-to-file          -
+
+Generic Options:
+
+  -help                          - Display available options (-help-hidden for more)
+  -help-list                     - Display list of available options (-help-list-hidden for more)
+  -version                       - Display the version of this program
+\end{verbatim}
+
+
+
+
+
+\section{Internals}
+\subsection{Components and directory structure}
+
+Components
+
+\begin{enumerate}
+\item
+Support - small helper library.
+\item
+Manager - does package managing: package paths, package ids, local databases, remote repository selector, package downloader etc.
+\item
+Builder - controls executed commands, file timestamps, timestamp databases.
+\item
+Driver.cpp - main program driver that implements high level build, solutions, targets representation, programs (compilers), source files, languages and generators.
+\item
+Client - main executable.
+\end{enumerate}
+
+Directory structure
+
+\begin{enumerate}
+\item
+doc - documentation
+\item
+include - some public headers; not well set up
+\item
+src - source code
+\item
+test - tests
+\item
+utils - all other misc. files: crosscompilation configs etc.
+\end{enumerate}

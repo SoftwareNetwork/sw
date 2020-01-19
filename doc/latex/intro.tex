@@ -1,0 +1,64 @@
+% !TEX root = sw.tex
+% !TeX spellcheck = en_US
+
+\newcommand{\sectionToc}[1]{%
+    \section*{#1}%
+    \addcontentsline{toc}{section}{#1}%
+}
+
+
+\chapter*{Introduction}
+\addcontentsline{toc}{chapter}{Introduction}
+
+\sectionToc{This document}
+
+This document describes a modern approach to software management.
+It consists of several chapters which include the new approach itself, documentation for client-side tools and utilities and server-side (website) functionality description.
+
+License for this documentation is unspecified yet.
+% GNU FDL?
+% CC?
+
+\sectionToc{Overview}
+
+Software Network is a project dedicated to better software management.
+
+Originally started as a package manager (CPPAN - \url{https://github.com/cppan/cppan}) to C/C++ languages based on CMake build system, it is evolved to independent set of tools and libraries.
+CPPAN or v1 was a playground where different ideas were studied and checked.
+
+Main user tool is called `sw`. Whole project also may be called as SW. Pronounce it as you like: `[software]` or `[sw]` or `[sv]`.
+
+
+
+\sectionToc{History}
+
+\subsection*{CPPAN or SW v1}
+
+Idea was formed during years of work with CMake, different projects, porting things to different OSs.
+Development started in the early 2016.
+
+YAML was choosen as configuration file format. It was mixed declarative approach with imperative CMake insertions.
+
+\subsection*{SW or CPPAN v2}
+
+Development started in the late 2017.
+
+Decarative approach showed weaknesses, so it was decided to switch to the most flexible thing - complete programming language. C++ was choosen over Python (Conan) and, possibly, other languages such as Lua (Premake).
+
+
+
+\sectionToc{Useful links}
+
+
+\begin{enumerate}
+\item
+Website - \url{https://software-network.org/}
+
+\item
+Download client - \url{https://software-network.org/client/}
+\end{enumerate}
+
+
+\section*{Acknowledgements}
+
+\undef\sectionToc

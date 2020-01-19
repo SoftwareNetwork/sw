@@ -1,0 +1,91 @@
+% !TEX root = sw.tex
+% !TeX spellcheck = en_US
+
+
+\chapter{Server tools}
+
+Software Network -- server frontend.
+
+https://software-network.org/
+
+\section{Publish a project}
+
+Publish Instructions
+
+\begin{enumerate}
+
+\item
+Prepare your project.
+
+\item
+Prepare build script.
+
+\item
+Set up source code repository.
+
+\item
+Upload project on some hosting.
+
+\item
+
+[Create an account](https://software-network.org/) and your [user token](https://software-network.org/u/tokens) on Software Network.
+
+\item
+[Create your first publisher](https://software-network.org/u/publishers).
+
+\item
+Add user token to SW settings. Run:
+`
+sw remote alter origin add token PUBLISHERNAME SECRETTOKEN
+`
+
+\item
+Run locally near build script to upload the project:
+`
+sw upload PREFIX
+`
+
+\end{enumerate}
+
+
+SW will download your sources from the public hosting using Source provided in build script.
+
+---
+
+PREFIX is your namespace (com/org/pub/pvt) + your publisher name + custom subdirectory inside it.
+```
+namespace.publisher[.subdirectory]
+```
+
+Examples:
+\begin{enumerate}
+\item
+org.sw.demo
+\item
+org.boost
+\item
+com.someorgname
+\item
+pub.egorpugin.my.fancy.subdir
+\item
+pvt.egorpugin.my.secret.project
+\end{enumerate}
+
+
+
+
+
+
+
+
+
+
+
+
+
+\chapter*{F.A.Q.}
+\addcontentsline{toc}{chapter}{F.A.Q.}
+
+
+
+* F.A.Q. (https://github.com/SoftwareNetwork/sw/wiki/F.A.Q.)
