@@ -5,7 +5,6 @@
 *.toc
 *.pdf
 *.blg
-.*
 *.tar*.*
 
 # build files and directories
@@ -13,7 +12,9 @@
 /temp*
 bin*
 
+.build
 .cppan
+.sw
 
 *.bat
 
@@ -38,3 +39,5 @@ sw.config
 sw.creator
 sw.files
 sw.includes
+
+*.lock*
