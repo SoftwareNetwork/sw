@@ -1109,7 +1109,7 @@ void NativeCompiledTarget::addPrecompiledHeader(const path &h, const path &cpp)
     PrecompiledHeader pch;
     pch.header = h;
     pch.source = cpp;
-    addPrecompiledHeader(pch);
+    return addPrecompiledHeader(pch);
 }
 
 void NativeCompiledTarget::addPrecompiledHeader(PrecompiledHeader &p)
