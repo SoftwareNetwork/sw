@@ -68,9 +68,8 @@ BuildSettings::BuildSettings(const TargetSettings &ts)
     IF_KEY("native"]["library")
         if (0);
         IF_SETTING("static", Native.LibrariesType, LibraryType::Static);
-        IF_SETTING("shared", Native.LibrariesType, LibraryType::Shared);
         else
-            throw SW_RUNTIME_ERROR("Bad library type: " + v.getValue());
+            Native.LibrariesType = LibraryType::Shared;
     IF_END
 
     IF_KEY("native"]["configuration")
@@ -150,17 +149,8 @@ TargetSettings BuildSettings::getTargetSettings() const
 {
     auto s = toTargetSettings(TargetOS);
 
-    switch (Native.LibrariesType)
-    {
-    case LibraryType::Static:
+    if (Native.LibrariesType == LibraryType::Static)
         s["native"]["library"] = "static";
-        break;
-    case LibraryType::Shared:
-        s["native"]["library"] = "shared";
-        break;
-    default:
-        SW_UNIMPLEMENTED;
-    }
 
     switch (Native.ConfigurationType)
     {
