@@ -46,6 +46,8 @@ enum class GeneratorType
 
     SwExecutionPlan,
     SwBuildDescription, // simply BDesc?
+
+    //Max,
 };
 
 enum class VsGeneratorType

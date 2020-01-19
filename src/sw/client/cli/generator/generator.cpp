@@ -167,11 +167,16 @@ static GeneratorType fromString(const String &s)
         return GeneratorType::SwExecutionPlan;
     else if (boost::iequals(s, "SwBDesc"))
         return GeneratorType::SwBuildDescription;
-    else if (boost::iequals(s, "raw-bootstrap"))
+    else if (boost::iequals(s, "raw-bootstrap") || boost::iequals(s, "raw-bootstrap"))
         return GeneratorType::RawBootstrapBuild;
     //else if (boost::iequals(s, "qtc"))
     //return GeneratorType::qtc;
-    throw SW_RUNTIME_ERROR("Unknown generator: " + s);
+    //String gens;
+    //for (int i = 0; i < (int)GeneratorType::Max; i++)
+        //gens += "    - " + toString(GeneratorType(i)) + "\n";
+    throw SW_RUNTIME_ERROR("Unknown generator: " + s
+        //+ "\nAvailable generators:\n" + gens
+    );
 }
 
 static VsGeneratorType fromStringVs(const String &s)
