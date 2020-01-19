@@ -148,6 +148,20 @@ String BuildSettings::getTargetTriplet() const
 
 TargetSettings BuildSettings::getTargetSettings() const
 {
+    // DO NOT REMOVE any fields, because they do must be set in order to not fail relaxed comparison!
+    //
+    // TODO: also
+    // FIXME: assign special settings value that will think value is different
+    //
+    // For example:
+    //
+    // 1. default case: shared lib
+    // then: set s["native"]["library"].ForceInComparison(); or something like that
+    //
+    // 2. default case: mt = false
+    // then: same as above
+    //
+
     auto s = toTargetSettings(TargetOS);
 
     switch (Native.LibrariesType)
