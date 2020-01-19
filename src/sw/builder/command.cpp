@@ -35,11 +35,20 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "command");
 
+//
 static cl::opt<bool> save_failed_commands("save-failed-commands");
+static cl::alias sfc("sfc", cl::desc("Alias for -save-failed-commands"), cl::aliasopt(save_failed_commands));
+
 static cl::opt<bool> save_all_commands("save-all-commands");
+static cl::alias sac("sac", cl::desc("Alias for -save-all-commands"), cl::aliasopt(save_all_commands));
+
 static cl::opt<bool> save_executed_commands("save-executed-commands");
+static cl::alias sec("sec", cl::desc("Alias for -save-executed-commands"), cl::aliasopt(save_executed_commands));
+
+//
 static cl::opt<bool> explain_outdated("explain-outdated", cl::desc("Explain outdated commands"));
 static cl::opt<bool> explain_outdated_full("explain-outdated-full", cl::desc("Explain outdated commands with more info"));
+
 static cl::opt<String> save_command_format("save-command-format", cl::desc("Explicitly set saved command format (bat or sh)"));
 
 namespace sw
