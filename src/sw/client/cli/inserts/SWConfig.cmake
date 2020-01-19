@@ -114,17 +114,11 @@ function(sw_execute)
     execute_process(
         COMMAND ${swcmd}
         RESULT_VARIABLE ret
-
-        OUTPUT_VARIABLE swout
-        ERROR_VARIABLE swerr
-
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-        ERROR_STRIP_TRAILING_WHITESPACE
     )
     if (NOT ${ret} EQUAL 0)
         string(REPLACE ";" " " swcmd "${swcmd}")
         message("sw command: ${swcmd}")
-        message(FATAL_ERROR "sw: non-zero exit code: ${ret}:\nout:\n${swout}\nerr:\n${swerr}")
+        message(FATAL_ERROR "sw: non-zero exit code: ${ret}")
     endif()
 
     set(outdir)
