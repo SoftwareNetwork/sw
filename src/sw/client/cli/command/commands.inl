@@ -40,6 +40,7 @@ SUBCOMMAND(build) COMMA
 //SUBCOMMAND(b) COMMA // alias for build
 SUBCOMMAND(configure) COMMA
 SUBCOMMAND(create) COMMA
+SUBCOMMAND(doc) COMMA // invokes documentation (hopefully)
 SUBCOMMAND(generate) COMMA
 SUBCOMMAND(fetch) COMMA
 SUBCOMMAND(install) COMMA

@@ -34,7 +34,7 @@ DEFINE_SUBCOMMAND(open, "Open package directory.");
 
 static ::cl::opt<String> open_arg(::cl::Positional, ::cl::desc("package to open"), ::cl::sub(subcommand_open));
 
-static void open_nix(const path &p)
+static void open_nix(const String &p)
 {
 #ifdef _WIN32
     SW_UNREACHABLE;
@@ -81,6 +81,20 @@ void open_file(const path &p)
 #ifdef _WIN32
     CoInitialize(0);
     auto r = ShellExecute(0, L"open", p.wstring().c_str(), 0, 0, 0);
+    if (r <= (HINSTANCE)HINSTANCE_ERROR)
+    {
+        throw SW_RUNTIME_ERROR("Error in ShellExecute");
+    }
+#else
+    open_nix(p);
+#endif
+}
+
+void open_url(const String &url)
+{
+#ifdef _WIN32
+    CoInitialize(0);
+    auto r = ShellExecute(0, L"open", to_wstring(url).c_str(), 0, 0, 0);
     if (r <= (HINSTANCE)HINSTANCE_ERROR)
     {
         throw SW_RUNTIME_ERROR("Error in ShellExecute");

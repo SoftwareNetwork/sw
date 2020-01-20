@@ -286,7 +286,10 @@ int parse_main(int argc, char **argv)
 
     String overview = "SW: Software Network Client\n"
         "\n"
-        "  SW is a Universal Package Manager and Build System\n";
+        "  SW is a Universal Package Manager and Build System\n"
+        "\n"
+        "  Documentation: " SW_DOC_URL "\n"
+        ;
 
     std::vector<std::string> args0(argv + 1, argv + argc);
     Strings args;
