@@ -109,9 +109,11 @@ t.Inheritance += ...; // available only for all downstream users
 
 Underlying implementation uses three bits to describe inheritance.
 
-* 1 - This target T
-* 2 - This project P (excluding T)
-* 3 - All other projects A (excluding P and T)
+\begin{enumerate}
+\item 1 - This target T
+\item 2 - This project P (excluding T)
+\item 3 - All other projects A (excluding P and T)
+\end{enumerate}
 
 This gives 7 different inheritance modes (excluding 000) and you could use them all!
 
@@ -148,10 +150,10 @@ void configure(Build &b)
 \end{verbatim}
 
 In this function you could provide full custom toolchain to use (compilers, linkers, librarians etc.).
-Extended configs can be found here: https://github.com/SoftwareNetwork/sw/tree/master/utils/cc
+Extended configs can be found here: \url{https://github.com/SoftwareNetwork/sw/tree/master/utils/cc}
 
 
-\subsubsection{cppan}
+\subsubsection{CPPAN}
 
 
 
@@ -208,7 +210,8 @@ Here you can find list of completed integrations with examples.
 \subsection{CMake}
 
 
-[Full example](https://github.com/SoftwareNetwork/sw/blob/master/test/integrations/CMakeLists.txt)
+Full example:\\
+\url{https://github.com/SoftwareNetwork/sw/blob/master/test/integrations/CMakeLists.txt}
 
 Steps
 \begin{enumerate}
@@ -250,7 +253,8 @@ Use `set(SW_BUILD_SHARED_LIBS 1)` to build shared libs instead of static (defaul
 
 \subsection{Waf}
 
-[Full example](https://github.com/SoftwareNetwork/sw/blob/master/test/integrations/wscript)
+Full example\\
+\url{https://github.com/SoftwareNetwork/sw/blob/master/test/integrations/wscript}
 
 \begin{enumerate}
 \item
@@ -286,29 +290,33 @@ In square brackets current support status is shown.
 
 \begin{enumerate}
 \item
-* Visual Studio (C++ projects) [2/5]
+Visual Studio (C++ projects) [5/5]
 \item
-* Visual Studio (NMake projects) [4/5]
+Visual Studio (NMake projects) [5/5]
+%\item Visual Studio (Utility projects) [3/5]
+%\item Visual Studio (NMake + Utility projects) [3/5]
 \item
-* Visual Studio (Utility projects) [3/5]
+CMake [0/5]
 \item
-* Visual Studio (NMake + Utility projects) [3/5]
+CompilationDatabase [5/5]
 \item
-* CMake [0/5]
+Make [5/5]
 \item
-* CompilationDatabase [5/5]
+NMake [4/5]
 \item
-* Make [5/5]
+Ninja [5/5]
 \item
-* NMake [4/5]
+QMake [0/5]
 \item
-* Ninja [5/5]
+Batch [5/5]
 \item
-* QMake [0/5]
+Shell [5/5]
 \item
-* Batch [5/5]
+SW build description [5/5]
 \item
-* Shell [5/5]
+SW execution plan [5/5]
+\item
+Raw bootstrap [5/5] - used to bootstrap programs without sw.
 \end{enumerate}
 
 
@@ -452,6 +460,15 @@ Generic Options:
 \end{verbatim}
 
 
+
+\section{Bootstrapping}
+
+SW client is distributed in a form of precompiled binary.
+This binary is built with SW tool, so we have a circular dependency.
+
+It is important to be able to build it without existing SW client.
+Here comes bootstrapping procedure.
+To make bootstrap package, use `rawbootstrap` generator.
 
 
 
