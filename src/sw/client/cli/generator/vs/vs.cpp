@@ -716,13 +716,16 @@ void VSGenerator::generate(const SwBuild &b)
             if (st["name"])
                 args.push_back(normalize_path(b.getBuildDirectory() / "out" / st["name"].getValue()));
             else
-            args.push_back(normalize_path(b.getBuildDirectory() / "out" / st.getHash()));
+                args.push_back(normalize_path(b.getBuildDirectory() / "out" / st.getHash()));
 
             String s;
             for (auto &a : args)
                 s += a + "\n";
             auto rsp = path(basefn) += ".rsp";
             write_file(rsp, s);
+
+            error_code ec;
+            fs::remove(path(basefn) += ".deps", ec); // trigger updates
 
             BuildEvent be;
             be.command = "sw @" + normalize_path(rsp);
