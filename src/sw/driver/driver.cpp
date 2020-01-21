@@ -26,6 +26,8 @@ static cl::opt<bool> debug_configs("debug-configs", cl::desc("Build configs in d
 std::unordered_map<sw::PackageId, std::shared_ptr<sw::NativeBuiltinTargetEntryPoint>>
     load_builtin_entry_points();
 
+void process_configure_ac2(const path &p);
+
 namespace sw
 {
 
@@ -68,6 +70,11 @@ Driver::Driver()
 
 Driver::~Driver()
 {
+}
+
+void Driver::processConfigureAc(const path &p)
+{
+    process_configure_ac2(p);
 }
 
 std::optional<path> Driver::canLoadInput(const RawInput &i) const

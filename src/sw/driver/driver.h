@@ -38,7 +38,10 @@ struct SW_DRIVER_CPP_API Driver : IDriver
     Driver &operator=(const Driver &) = delete;
     virtual ~Driver();
 
-    // driver api
+    // this driver own api
+    void processConfigureAc(const path &p);
+
+    // IDriver api
     std::optional<path> canLoadInput(const RawInput &) const override;
     EntryPointsVector createEntryPoints(SwContext &, const std::vector<RawInput> &) const override;
     std::unique_ptr<Specification> getSpecification(const RawInput &) const override;
