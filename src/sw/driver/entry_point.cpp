@@ -7,6 +7,7 @@
 #include "entry_point.h"
 
 #include "build.h"
+#include "command.h"
 #include "driver.h"
 #include "inserts.h"
 #include "suffix.h"
@@ -474,7 +475,8 @@ void PrepareConfigEntryPoint::many2one(Build &b, const std::unordered_set<LocalP
         return data{ {b.getSolution().getContext().getLocalStorage(), pkg2}, pkg.getData().group_number, *d };
     };
 
-    std::unordered_map<path, data> output_names;
+    // ordered map!
+    std::map<path, data> output_names;
     for (auto &pkg : pkgs)
     {
         auto p = get_package_config(pkg);
@@ -554,7 +556,8 @@ void PrepareConfigEntryPoint::many2one(Build &b, const std::unordered_set<LocalP
                 gnu_setup(c, headers, fn, d.gn);
             }
         }
-        for (auto &d : udeps)
+        // sort deps first!
+        for (auto &d : std::set<UnresolvedPackage>(udeps.begin(), udeps.end()))
             lib += std::make_shared<Dependency>(d);
     }
 
@@ -597,7 +600,8 @@ void PrepareConfigEntryPoint::one2one(Build &b, const path &fn) const
                 }
             }
         }
-        for (auto &d : udeps)
+        // sort deps first!
+        for (auto &d : std::set<UnresolvedPackage>(udeps.begin(), udeps.end()))
             lib += std::make_shared<Dependency>(d);
     }
 
