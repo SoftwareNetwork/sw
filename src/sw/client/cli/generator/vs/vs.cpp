@@ -713,6 +713,9 @@ void VSGenerator::generate(const SwBuild &b)
             args.push_back("-ide-fast-path");
             args.push_back(normalize_path(path(basefn) += ".deps"));
             args.push_back("-ide-copy-to-dir");
+            if (st["name"])
+                args.push_back(normalize_path(b.getBuildDirectory() / "out" / st["name"].getValue()));
+            else
             args.push_back(normalize_path(b.getBuildDirectory() / "out" / st.getHash()));
 
             String s;
