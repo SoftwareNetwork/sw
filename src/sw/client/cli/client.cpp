@@ -184,6 +184,13 @@ int setup_main(const Strings &args)
     else
         setup_log("INFO");
 
+    {
+        String cmdline;
+        for (auto &a : args)
+            cmdline += a + " ";
+        LOG_TRACE(logger, "command line:\n" + cmdline);
+    }
+
     // after log initialized
 
     if (!cl_self_upgrade_copy.empty())
