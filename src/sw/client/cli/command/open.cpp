@@ -100,7 +100,7 @@ void open_url(const String &url)
         throw SW_RUNTIME_ERROR("Error in ShellExecute");
     }
 #else
-    open_nix(p);
+    open_nix(url);
 #endif
 }
 
