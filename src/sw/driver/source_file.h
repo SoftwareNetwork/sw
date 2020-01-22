@@ -78,22 +78,6 @@ struct SW_DRIVER_CPP_API NativeSourceFile : SourceFile
     String getObjectFilename(const Target &t, const path &p);
 };
 
-// TODO: move to some other place
-struct PrecompiledHeader1
-{
-    path header;
-    path source;
-
-    //
-    String fancy_name;
-    //
-    path dir;
-    path obj; // obj file (msvc)
-    path pch; // file itself (msvc)
-    path gch; // file itself (gcc and others)
-    path pdb; // pdb file (msvc)
-};
-
 struct SW_DRIVER_CPP_API RcToolSourceFile : SourceFile
 {
     path output;

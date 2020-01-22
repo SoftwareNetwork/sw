@@ -34,6 +34,11 @@ static String getCurrentModuleId()
     return shorten_hash(sha1(getProgramName()), 6);
 }
 
+static path getPchDir(const Build &b)
+{
+    return b.getContext().getLocalStorage().storage_dir_tmp / "pch";
+}
+
 static path getImportFilePrefix(const Build &b)
 {
     static const String pch_ver = "1";
@@ -41,7 +46,7 @@ static path getImportFilePrefix(const Build &b)
     // takes a lot of disk
     // also sometimes it causes crashes or infinite loops
     //h = "." + b.getContext().getHostSettings().getHash();
-    return b.getContext().getLocalStorage().storage_dir_tmp / "pch" / ("sw." + pch_ver + h + "." + getCurrentModuleId());
+    return getPchDir(b) / ("sw." + pch_ver + h + "." + getCurrentModuleId());
 }
 
 static path getImportDefinitionsFile(const Build &b)
@@ -115,24 +120,24 @@ static void addImportLibrary(const Build &b, NativeCompiledTarget &t)
 #endif
 }
 
-static path getMainPchFilename()
+static path getSwDir()
 {
-    return path("sw") / "driver" / "sw.h";
+    return path("sw") / "driver";
 }
 
 static path getSwHeader()
 {
-    return getMainPchFilename();
+    return getSwDir() / "sw.h";
 }
 
 static path getSw1Header()
 {
-    return path("sw") / "driver" / "sw1.h";
+    return getSwDir() / "sw1.h";
 }
 
 static path getSwCheckAbiVersionHeader()
 {
-    return path("sw") / "driver" / "sw_check_abi_version.h";
+    return getSwDir() / "sw_check_abi_version.h";
 }
 
 static path getPackageHeader(const LocalPackage &p, const UnresolvedPackage &up)
@@ -378,18 +383,20 @@ decltype(auto) PrepareConfigEntryPoint::commonActions(Build &b, const FilesSorte
     for (auto &fn : files)
         lib += fn;
 
-    // pch
-    write_file_if_different(getImportPchFile(lib, deps),
-        //"#include <" + normalize_path(getDriverIncludeDir(solution) / getMainPchFilename()) + ">\n\n" +
-        //"#include <" + getDriverIncludePathString(solution, getMainPchFilename()) + ">\n\n" +
-        //"#include <" + normalize_path(getMainPchFilename()) + ">\n\n" + // the last one
-        cppan_cpp);
+#ifdef _WIN32
+    auto delay_load_helper = getPchDir(b) / "delay_load_helper.cpp";
+    write_file_if_different(delay_load_helper, delay_load_helper_emb);
+    lib += delay_load_helper;
+#endif
 
-    PrecompiledHeader1 pch;
-    pch.header = getDriverIncludeDir(b, lib) / getMainPchFilename();
-    pch.source = getImportPchFile(lib, deps);
+    // pch
+    lib += PrecompiledHeader(getDriverIncludeDir(b, lib) / getSwHeader());
+
+    detail::PrecompiledHeaderInternal pch;
+    pch.name = getImportPchFile(lib, deps).stem();
+    pch.dir = getPchDir(b);
     pch.fancy_name = "[config pch]";
-    lib.addPrecompiledHeader_internal(pch);
+    lib.pch = pch;
 
     return lib;
 }

@@ -1122,38 +1122,45 @@ void NativeCompiledTarget::createPrecompiledHeader()
     if (files.empty())
         return;
 
+    if (pch.name.empty())
+        pch.name = "sw_pch";
+
     if (pch.dir.empty())
         pch.dir = BinaryDir.parent_path() / "pch";
 
-    auto get_base_pch_path = [this]()
-    {
-        return pch.dir / "sw_pch";
-    };
+    if (pch.files.empty())
+        pch.files = files;
 
     String h;
-    for (auto &f : files)
+    for (auto &f : pch.files)
     {
         if (f.string()[0] == '<')
             h += "#include " + f.string() + "\n";
         else
             h += "#include \"" + normalize_path(f) + "\"\n";
     }
-    pch.header = get_base_pch_path() += ".h";
+    pch.header = pch.get_base_pch_path() += ".h";
     write_file_if_different(pch.header, h);
-    File(pch.header, getFs()).setGenerated(true);
+    File(pch.header, getFs()).setGenerated(true); // prevents resolving issues
 
-    pch.source = get_base_pch_path() += ".cpp"; // msvc
+    pch.source = pch.get_base_pch_path() += ".cpp"; // msvc
     write_file_if_different(pch.source, "#include \"" + normalize_path(pch.header) + "\"");
-    File(pch.source, getFs()).setGenerated(true);
+    File(pch.source, getFs()).setGenerated(true); // prevents resolving issues
 
+    //
     if (pch.pch.empty())
-        pch.pch = get_base_pch_path() += ".pch";
-    if (pch.gch.empty())
-        pch.gch = path(pch.header) += ".gch";
+    {
+        if (getCompilerType() == CompilerType::MSVC || getCompilerType() == CompilerType::ClangCl)
+            pch.pch = pch.get_base_pch_path() += ".pch";
+        else if (isClangFamily(getCompilerType()))
+            pch.pch = path(pch.header) += ".pch";
+        else // gcc
+            pch.pch = path(pch.header) += ".gch";
+    }
     if (pch.obj.empty())
-        pch.obj = get_base_pch_path() += ".obj";
+        pch.obj = pch.get_base_pch_path() += ".obj";
     if (pch.pdb.empty())
-        pch.pdb = get_base_pch_path() += ".pdb";
+        pch.pdb = pch.get_base_pch_path() += ".pdb";
 
     //
     *this += pch.source;
@@ -1178,15 +1185,15 @@ void NativeCompiledTarget::createPrecompiledHeader()
         c->PDBFilename = pch.pdb;
     };
 
-    auto setup_create_other = [this, &sf](auto &c, const auto &ext)
+    auto setup_create_gcc_clang = [this, &sf](auto &c)
     {
-        sf->compiler->setSourceFile(pch.header, path(pch.header) += ext);
+        sf->compiler->setSourceFile(pch.header, pch.pch);
         sf->output = sf->compiler->getOutputFile();
 
         if (gVerbose)
             (*this)[pch.source].fancy_name += " (" + normalize_path(pch.header) + ")";
 
-        c->Language = "c++-header";
+        c->Language = "c++-header"; // FIXME: also c-header sometimes
     };
 
     if (auto c = sf->compiler->as<VisualStudioCompiler*>())
@@ -1199,11 +1206,11 @@ void NativeCompiledTarget::createPrecompiledHeader()
     }
     else if (auto c = sf->compiler->as<ClangCompiler*>())
     {
-        setup_create_other(c, ".pch");
+        setup_create_gcc_clang(c);
     }
     else if (auto c = sf->compiler->as<GNUCompiler*>())
     {
-        setup_create_other(c, ".gch");
+        setup_create_gcc_clang(c);
     }
 }
 
@@ -1213,7 +1220,6 @@ void NativeCompiledTarget::addPrecompiledHeader()
         return;
 
     // on this step we setup compilers to USE our created pch
-    // MSVC does it explicitly, gnu does implicitly; check what about clang
     for (auto &f : gatherSourceFiles())
     {
         auto sf = f->as<NativeSourceFile *>();
@@ -1226,18 +1232,18 @@ void NativeCompiledTarget::addPrecompiledHeader()
 
         auto setup_use_vc = [this](auto &c)
         {
-            c->ForcedIncludeFiles().push_back(pch.header);
+            c->ForcedIncludeFiles().insert(c->ForcedIncludeFiles().begin(), pch.header);
             c->PrecompiledHeaderFilename() = pch.pch;
             c->PrecompiledHeaderFilename.input_dependency = true;
             c->PrecompiledHeader().use = pch.header;
             c->PDBFilename = pch.pdb;
         };
 
-        auto setup_use_other = [this](auto &c, const auto &ext)
+        auto setup_use_gcc_clang = [this](auto &c)
         {
-            c->ForcedIncludeFiles().push_back(pch.header);
+            c->ForcedIncludeFiles().insert(c->ForcedIncludeFiles().begin(), pch.header);
             // we must add this explicitly
-            c->createCommand(getMainBuild().getContext())->addInput(path(pch.header) += ext);
+            c->createCommand(getMainBuild().getContext())->addInput(pch.pch);
         };
 
         if (auto c = sf->compiler->as<VisualStudioCompiler*>())
@@ -1250,144 +1256,11 @@ void NativeCompiledTarget::addPrecompiledHeader()
         }
         else if (auto c = sf->compiler->as<ClangCompiler*>())
         {
-            setup_use_other(c, ".pch");
+            setup_use_gcc_clang(c);
         }
         else if (auto c = sf->compiler->as<GNUCompiler*>())
         {
-            setup_use_other(c, ".gch");
-        }
-    }
-}
-
-void NativeCompiledTarget::addPrecompiledHeader_internal(PrecompiledHeader1 p)
-{
-    /*check_absolute(p.header);
-    if (!p.source.empty())
-        check_absolute(p.source);*/
-
-    bool force_include_pch_header_to_pch_source = true;
-    bool force_include_pch_header_to_target_source_files = true;
-    auto &pch = p.source;
-    path pch_dir = BinaryDir.parent_path() / "pch";
-    if (!pch.empty())
-    {
-        if (!fs::exists(pch))
-            write_file_if_different(pch, "");
-        pch_dir = pch.parent_path();
-        force_include_pch_header_to_pch_source = true;
-    }
-    else
-    {
-        pch = pch_dir / (p.header.stem().string() + ".cpp");
-        write_file_if_different(pch, "");
-    }
-
-    auto pch_fn = pch.parent_path() / (pch.stem().string() + ".pch");
-    auto obj_fn = pch.parent_path() / (pch.stem().string() + ".obj");
-    auto pdb_fn = pch.parent_path() / (pch.stem().string() + ".pdb");
-
-    // gch always uses header filename + .gch
-    auto gch_fn = pch.parent_path() / (p.header.filename().string() + ".gch");
-    auto gch_fn_clang = pch.parent_path() / (p.header.filename().string() + ".pch");
-#ifndef _WIN32
-    pch_dir = getContext().getLocalStorage().storage_dir_tmp;
-    gch_fn = getContext().getLocalStorage().storage_dir_tmp / "sw/driver/sw.h.gch";
-#endif
-
-    auto setup_use_vc = [&force_include_pch_header_to_target_source_files, &p, &pch_fn, &pdb_fn](auto &c)
-    {
-        if (force_include_pch_header_to_target_source_files)
-            c->ForcedIncludeFiles().push_back(p.header);
-        c->PrecompiledHeaderFilename() = pch_fn;
-        c->PrecompiledHeaderFilename.input_dependency = true;
-        c->PrecompiledHeader().use = p.header;
-        c->PDBFilename = pdb_fn;
-        //c->PDBFilename.intermediate_file = false;
-    };
-
-    // before adding pch source file to target
-    // on this step we setup compilers to USE our created pch
-    // MSVC does it explicitly, gnu does implicitly; check what about clang
-    for (auto &f : gatherSourceFiles())
-    {
-        if (auto sf = f->as<NativeSourceFile*>())
-        {
-            if (auto c = sf->compiler->as<VisualStudioCompiler*>())
-            {
-                setup_use_vc(c);
-            }
-            else if (auto c = sf->compiler->as<ClangClCompiler*>())
-            {
-                setup_use_vc(c);
-            }
-            else if (auto c = sf->compiler->as<ClangCompiler*>())
-            {
-                if (force_include_pch_header_to_target_source_files)
-                    c->ForcedIncludeFiles().push_back(p.header);
-
-                c->PrecompiledHeader = gch_fn_clang;
-                c->createCommand(getMainBuild().getContext())->addInput(gch_fn_clang);
-            }
-            else if (auto c = sf->compiler->as<GNUCompiler*>())
-            {
-                if (force_include_pch_header_to_target_source_files)
-                    c->ForcedIncludeFiles().push_back(p.header);
-
-                c->createCommand(getMainBuild().getContext())->addInput(gch_fn);
-            }
-        }
-    }
-
-    // on this step we setup compilers to CREATE our pch
-    *this += pch;
-    (*this)[pch].fancy_name = p.fancy_name;
-    if (auto sf = ((*this)[pch]).as<NativeSourceFile*>())
-    {
-        auto setup_create_vc = [this, &pch, &sf, &force_include_pch_header_to_pch_source, &p, &pch_fn, &pdb_fn, &obj_fn](auto &c)
-        {
-            if (gVerbose)
-                (*this)[pch].fancy_name += " (" + normalize_path(pch) + ")";
-
-            sf->setOutputFile(obj_fn);
-
-            if (force_include_pch_header_to_pch_source)
-                c->ForcedIncludeFiles().push_back(p.header);
-            c->PrecompiledHeaderFilename() = pch_fn;
-            c->PrecompiledHeaderFilename.output_dependency = true;
-            c->PrecompiledHeader().create = p.header;
-            c->PDBFilename = pdb_fn;
-            //c->PDBFilename.intermediate_file = false;
-        };
-
-        if (auto c = sf->compiler->as<VisualStudioCompiler*>())
-        {
-            setup_create_vc(c);
-        }
-        else if (auto c = sf->compiler->as<ClangClCompiler*>())
-        {
-            setup_create_vc(c);
-        }
-        else if (auto c = sf->compiler->as<ClangCompiler*>())
-        {
-            if (gVerbose)
-                (*this)[pch].fancy_name += " (" + normalize_path(gch_fn_clang) + ")";
-
-            sf->setOutputFile(gch_fn_clang);
-            c->Language = "c++-header";
-            if (force_include_pch_header_to_pch_source)
-                c->ForcedIncludeFiles().push_back(p.header);
-        }
-        else if (auto c = sf->compiler->as<GNUCompiler*>())
-        {
-            if (gVerbose)
-                (*this)[pch].fancy_name += " (" + normalize_path(gch_fn) + ")";
-
-            sf->setOutputFile(gch_fn);
-            c->Language = "c++-header";
-            if (force_include_pch_header_to_pch_source)
-                c->ForcedIncludeFiles().push_back(p.header);
-
-            IncludeDirectories.insert(pch_dir);
+            setup_use_gcc_clang(c);
         }
     }
 }

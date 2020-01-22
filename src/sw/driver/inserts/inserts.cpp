@@ -9,9 +9,9 @@
 #define DECLARE_TEXT_VAR_BEGIN(x) const char _##x[] = {
 #define DECLARE_TEXT_VAR_END(x) }; const std::string x = _##x;
 
-DECLARE_TEXT_VAR_BEGIN(cppan_cpp)
+DECLARE_TEXT_VAR_BEGIN(delay_load_helper_emb)
 #include <src/sw/driver/inserts/sw.cpp.emb>
-DECLARE_TEXT_VAR_END(cppan_cpp);
+DECLARE_TEXT_VAR_END(delay_load_helper_emb);
 
 #undef DECLARE_TEXT_VAR_BEGIN
 #undef DECLARE_TEXT_VAR_END

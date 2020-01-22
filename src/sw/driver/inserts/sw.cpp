@@ -4,7 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-// Replace fake dll dependency with current running program
+// Replace fake dll dependency with currently running program.
 
 #include <Windows.h>
 #include <Delayimp.h>

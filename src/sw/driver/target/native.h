@@ -23,6 +23,27 @@ namespace detail
 #include "std.inl"
 #undef STD_MACRO
 
+struct PrecompiledHeaderInternal
+{
+    path header;
+    path source;
+    FilesOrdered files;
+
+    //
+    path name; // base filename
+    String fancy_name;
+    //
+    path dir;
+    path obj; // obj file (msvc)
+    path pdb; // pdb file (msvc)
+    path pch; // file itself
+
+    path get_base_pch_path() const
+    {
+        return dir / name;
+    }
+};
+
 }
 
 enum class ConfigureFlags
@@ -167,8 +188,6 @@ public:
     void pushBackToFileOnce(const path &fn, const String &text);
     void configureFile(path from, path to, ConfigureFlags flags = ConfigureFlags::Default);
 
-    void addPrecompiledHeader_internal(PrecompiledHeader1 pch);
-
     void setupCommand(builder::Command &c) const override;
 
     virtual bool isStaticOnly() const { return false; }
@@ -188,6 +207,9 @@ public:
     ASSIGN_TYPES_NO_REMOVE(detail::__sw_##p##x);
 #include "std.inl"
 #undef STD_MACRO
+
+    // internal data
+    detail::PrecompiledHeaderInternal pch;
 
 protected:
     mutable NativeLinker *SelectedTool = nullptr;
@@ -210,7 +232,6 @@ private:
     path outputfile;
     Commands cmds;
     Files configure_files; // needed by IDEs, move to base target later
-    PrecompiledHeader1 pch;
 
     using ActiveDeps = std::vector<TargetDependency>;
     std::optional<ActiveDeps> active_deps;
