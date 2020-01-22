@@ -34,6 +34,7 @@ DEFINE_SUBCOMMAND(upload, "Upload packages.");
 extern ::cl::opt<String> build_arg_update;
 
 static ::cl::opt<String> upload_remote(::cl::Positional, ::cl::desc("Remote name"), ::cl::sub(subcommand_upload));
+static ::cl::opt<bool> upload_dry("dry-run", ::cl::desc("Dry upload (without upload step)"), ::cl::sub(subcommand_upload));
 String gUploadPrefix;
 static ::cl::opt<String, true> upload_prefix(::cl::Positional, ::cl::desc("Prefix path"), ::cl::sub(subcommand_upload),
     ::cl::Required, ::cl::location(gUploadPrefix));
@@ -144,12 +145,6 @@ SUBCOMMAND_DECL2(upload)
         LOG_INFO(logger, "Uploading " + id2.toString());
     }
 
-    // select remote first
-    auto &us = sw::Settings::get_user_settings();
-    auto current_remote = &*us.remotes.begin();
-    if (!upload_remote.empty())
-        current_remote = find_remote(us, upload_remote);
-
     String script_name;
     switch (i.getType())
     {
@@ -159,6 +154,18 @@ SUBCOMMAND_DECL2(upload)
     default:
         SW_UNIMPLEMENTED;
     }
+
+    if (upload_dry)
+    {
+        LOG_INFO(logger, "Dry run. Upload was cancelled.");
+        return;
+    }
+
+    // select remote
+    auto &us = sw::Settings::get_user_settings();
+    auto current_remote = &*us.remotes.begin();
+    if (!upload_remote.empty())
+        current_remote = find_remote(us, upload_remote);
 
     // send signatures (gpg)
     // -k KEY1 -k KEY2
