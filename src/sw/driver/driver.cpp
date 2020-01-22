@@ -7,6 +7,7 @@
 #include "driver.h"
 
 #include "build.h"
+#include "target/native.h"
 #include "entry_point.h"
 #include "module.h"
 

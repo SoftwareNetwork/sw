@@ -6,18 +6,11 @@
 
 #pragma once
 
-#include "build_settings.h"
 #include "checks_storage.h"
-#include "command.h"
 #include "target/base.h"
 
-#include <sw/builder/file_storage.h>
 #include <sw/core/build.h>
 #include <sw/core/target.h>
-#include <sw/manager/package_data.h>
-
-#include <any>
-#include <variant>
 
 namespace sw
 {
@@ -28,7 +21,7 @@ struct Module;
 struct ModuleStorage;
 struct SwContext;
 
-using FilesMap = std::unordered_map<path, path>;
+//using FilesMap = std::unordered_map<path, path>;
 
 struct ModuleSwappableData
 {
@@ -37,7 +30,7 @@ struct ModuleSwappableData
     std::vector<ITargetPtr> added_targets;
 };
 
-struct SW_DRIVER_CPP_API Test : driver::CommandBuilder
+/*struct SW_DRIVER_CPP_API Test : driver::CommandBuilder
 {
     using driver::CommandBuilder::CommandBuilder;
 
@@ -50,7 +43,7 @@ struct SW_DRIVER_CPP_API Test : driver::CommandBuilder
     {
         // todo?
     }
-};
+};*/
 
 struct SW_DRIVER_CPP_API SimpleBuild : TargetBase
 {

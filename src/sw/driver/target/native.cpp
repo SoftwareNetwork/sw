@@ -11,6 +11,7 @@
 #include "../frontend/cppan/project.h"
 #include "../functions.h"
 #include "../build.h"
+#include "../command.h"
 
 #include <sw/builder/jumppad.h>
 #include <sw/core/sw_context.h>

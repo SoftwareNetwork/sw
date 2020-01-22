@@ -7,6 +7,7 @@
 #include "compiler.h"
 
 #include "../build.h"
+#include "../command.h"
 #include "compiler_helpers.h"
 #include "../target/native.h"
 

@@ -8,6 +8,7 @@
 
 #include "module.h"
 #include "build.h"
+#include "command.h"
 #include "suffix.h"
 #include "target/all.h"
 #include "compiler/compiler_helpers.h"
@@ -38,7 +39,7 @@ namespace cl = sw::cl;
 using sw::Build;
 using Solution = Build;
 using sw::Checker;
-using sw::Test;
+//using sw::Test;
 
 using sw::builder::CommandSequence;
 using sw::driver::Command;
