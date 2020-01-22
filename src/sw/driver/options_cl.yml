@@ -232,6 +232,8 @@ types:
                 flag: FI
                 type: FilesOrdered
                 properties:
+                    # do not set input_deps flag, because path may be relative
+                    # and we get this file in showIncludes anyways
                     - flag_before_each_value
 
             mp:
@@ -754,6 +756,8 @@ types:
                 flag: include
                 type: FilesOrdered
                 properties:
+                    # do not set input_deps flag, because path may be relative
+                    # and we get this file in showIncludes anyways
                     - flag_before_each_value
 
             vis:
