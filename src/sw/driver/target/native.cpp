@@ -948,7 +948,7 @@ Files NativeCompiledTarget::gatherIncludeDirectories() const
     TargetOptionsGroup::iterate_this(
         [this, &idirs](auto &v, auto i)
     {
-        for (auto &i2 : v.PrecompiledHeaders)
+        for (auto &i2 : v.gatherIncludeDirectories())
             idirs.insert(i2);
     });
     return idirs;
@@ -960,7 +960,6 @@ FilesOrdered NativeCompiledTarget::gatherPrecompiledHeaders() const
     TargetOptionsGroup::iterate_this(
         [this, &hdrs](auto &v, auto i)
     {
-        auto hdrs2 = v.gatherIncludeDirectories();
         for (auto &i2 : v.PrecompiledHeaders)
             hdrs.push_back(i2);
     });
@@ -2019,7 +2018,7 @@ NativeCompiledTarget::ActiveDeps &NativeCompiledTarget::getActiveDependencies()
         ActiveDeps deps;
         if (!DryRun)
         {
-            TargetOptionsGroup::iterate_this([this, &deps](auto &v, auto i)
+            TargetOptionsGroup::iterate([this, &deps](auto &v, auto i)
             {
                 for (auto &d : v.getRawDependencies())
                 {
