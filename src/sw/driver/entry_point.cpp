@@ -385,11 +385,9 @@ decltype(auto) PrepareConfigEntryPoint::commonActions(Build &b, const FilesSorte
         //"#include <" + normalize_path(getMainPchFilename()) + ">\n\n" + // the last one
         cppan_cpp);
 
-    PrecompiledHeader pch;
+    PrecompiledHeader1 pch;
     pch.header = getDriverIncludeDir(b, lib) / getMainPchFilename();
     pch.source = getImportPchFile(lib, deps);
-    pch.force_include_pch = true;
-    pch.force_include_pch_header_to_pch_source = true;
     pch.fancy_name = "[config pch]";
     lib.addPrecompiledHeader_internal(pch);
 

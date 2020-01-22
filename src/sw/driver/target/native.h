@@ -167,8 +167,6 @@ public:
     void pushBackToFileOnce(const path &fn, const String &text);
     void configureFile(path from, path to, ConfigureFlags flags = ConfigureFlags::Default);
 
-    // not public api
-    void createPrecompiledHeaders();
     void addPrecompiledHeader_internal(PrecompiledHeader1 pch);
 
     void setupCommand(builder::Command &c) const override;
@@ -212,6 +210,7 @@ private:
     path outputfile;
     Commands cmds;
     Files configure_files; // needed by IDEs, move to base target later
+    PrecompiledHeader1 pch;
 
     using ActiveDeps = std::vector<TargetDependency>;
     std::optional<ActiveDeps> active_deps;
@@ -229,12 +228,15 @@ private:
     void gatherStaticLinkLibraries(LinkLibrariesType &ll, Files &added, std::unordered_set<const NativeCompiledTarget*> &targets, bool system) const;
     FilesOrdered gatherLinkDirectories() const;
     FilesOrdered gatherLinkLibraries() const;
-    FilesOrdered gatherPrecompiledHeaders() const;
     void merge1();
     void processCircular(Files &objs);
     path getPatchDir(bool binary_dir) const;
     void addFileSilently(const path &);
     const TargetSettings &getInterfaceSettings() const override;
+
+    FilesOrdered gatherPrecompiledHeaders() const;
+    void createPrecompiledHeader();
+    void addPrecompiledHeader();
 
     bool libstdcppset = false;
     void findCompiler();

@@ -64,6 +64,7 @@ struct SW_DRIVER_CPP_API NativeSourceFile : SourceFile
     std::unordered_set<SourceFile*> dependencies; // explicit file deps? currently used for pchs
     BuildAsType BuildAs = BuildAsType::BasedOnExtension;
     bool skip_linking = false; // produce object file only
+    bool skip_pch = false;
 
     NativeSourceFile(const NativeCompiler &c, const path &input, const path &output);
     NativeSourceFile(const NativeSourceFile &rhs);
@@ -82,15 +83,14 @@ struct PrecompiledHeader1
 {
     path header;
     path source;
-    bool force_include_pch = true; // follow cmake
-    bool force_include_pch_header_to_pch_source = false; // msvc thing
 
     //
     String fancy_name;
     //
+    path dir;
     path obj; // obj file (msvc)
     path pch; // file itself (msvc)
-    //path gch; // file itself (gcc and others)
+    path gch; // file itself (gcc and others)
     path pdb; // pdb file (msvc)
 };
 

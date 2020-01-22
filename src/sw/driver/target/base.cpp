@@ -458,6 +458,9 @@ path Target::getLocalOutputBinariesDirectory() const
 path Target::getTargetDirShort(const path &root) const
 {
     // make t subdir or tgt? or tgts?
+
+    // now config goes first, then target
+    // maybe target goes first, then config like in storage/pkg?
     return root / "t" / getConfig() / shorten_hash(blake2b_512(getPackage().toString()), 6);
 }
 
@@ -720,6 +723,14 @@ void TargetOptions::add(const PrecompiledHeader &i)
     if (target->DryRun)
         return;
 
+    if (i.h.empty())
+        throw SW_RUNTIME_ERROR("empty pch fn");
+    if (i.h[0] == '<' && i.h.back() == '>')
+    {
+        PrecompiledHeaders.insert(i.h);
+        return;
+    }
+
     path p = i.h;
     check_absolute(p);
     PrecompiledHeaders.insert(p);
@@ -729,6 +740,14 @@ void TargetOptions::remove(const PrecompiledHeader &i)
 {
     if (target->DryRun)
         return;
+
+    if (i.h.empty())
+        throw SW_RUNTIME_ERROR("empty pch fn");
+    if (i.h[0] == '<' && i.h.back() == '>')
+    {
+        PrecompiledHeaders.erase(i.h);
+        return;
+    }
 
     path p = i.h;
     check_absolute(p);

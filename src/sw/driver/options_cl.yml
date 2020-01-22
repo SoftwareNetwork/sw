@@ -232,8 +232,7 @@ types:
                 flag: FI
                 type: FilesOrdered
                 properties:
-                    # do not set input_deps flag, because path may be relative
-                    # and we get this file in showIncludes anyways
+                    - input_dependency
                     - flag_before_each_value
 
             mp:
@@ -756,8 +755,7 @@ types:
                 flag: include
                 type: FilesOrdered
                 properties:
-                    # do not set input_deps flag, because path may be relative
-                    # and we get this file in showIncludes anyways
+                    - input_dependency
                     - flag_before_each_value
 
             vis:
@@ -849,11 +847,6 @@ types:
                 type: path
                 properties:
                     - separate_prefix
-
-            empch:
-                name: EmitPCH
-                flag: Xclang -emit-pch
-                type: bool
 
             tgt:
                 name: Target
