@@ -107,10 +107,6 @@ std::pair<sw::SourceDirMap, const sw::Input &> fetch(sw::SwBuild &b)
         i.addSettings(ts);
     b.addInput(i);
     b.loadInputs(); // download occurs here
-    /*b.setTargetsToBuild();
-    b.resolvePackages();
-    b.loadPackages();
-    b.prepare();*/
 
     if (build_after_fetch)
         b.build();

@@ -125,6 +125,15 @@ SUBCOMMAND_DECL2(upload)
     if (sources.empty())
         throw SW_RUNTIME_ERROR("Empty target sources");
 
+    // to get sources, we MUST prepare loaded targets
+    // otherwise not all source get uploaded
+    // example:
+    // t = add target()
+    // t -= "1.cpp";
+    // in this case no .* regexes are applied and we'll get only single file
+    b->overrideBuildState(sw::BuildState::PackagesLoaded);
+    b->prepare();
+
     auto m = getPackages(*b, sources);
 
     // dbg purposes
