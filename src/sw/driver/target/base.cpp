@@ -715,6 +715,26 @@ void TargetOptions::remove(const LinkDirectory &i)
     LinkDirectories.erase(dir);
 }
 
+void TargetOptions::add(const PrecompiledHeader &i)
+{
+    if (target->DryRun)
+        return;
+
+    path p = i.h;
+    check_absolute(p);
+    PrecompiledHeaders.insert(p);
+}
+
+void TargetOptions::remove(const PrecompiledHeader &i)
+{
+    if (target->DryRun)
+        return;
+
+    path p = i.h;
+    check_absolute(p);
+    PrecompiledHeaders.erase(p);
+}
+
 void NativeTargetOptionsGroup::add(const Variable &v)
 {
     auto p = v.v.find_first_of(" =");

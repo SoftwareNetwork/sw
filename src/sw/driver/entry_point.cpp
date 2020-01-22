@@ -389,8 +389,9 @@ decltype(auto) PrepareConfigEntryPoint::commonActions(Build &b, const FilesSorte
     pch.header = getDriverIncludeDir(b, lib) / getMainPchFilename();
     pch.source = getImportPchFile(lib, deps);
     pch.force_include_pch = true;
-    pch.force_include_pch_to_source = true;
-    lib.addPrecompiledHeader(pch);
+    pch.force_include_pch_header_to_pch_source = true;
+    pch.fancy_name = "[config pch]";
+    lib.addPrecompiledHeader_internal(pch);
 
     return lib;
 }

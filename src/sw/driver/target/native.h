@@ -167,9 +167,9 @@ public:
     void pushBackToFileOnce(const path &fn, const String &text);
     void configureFile(path from, path to, ConfigureFlags flags = ConfigureFlags::Default);
 
-    void addPrecompiledHeader(const path &h, const path &cpp = path());
-    void addPrecompiledHeader(PrecompiledHeader &pch);
-    NativeCompiledTarget &operator=(PrecompiledHeader &pch);
+    // not public api
+    void createPrecompiledHeaders();
+    void addPrecompiledHeader_internal(PrecompiledHeader1 pch);
 
     void setupCommand(builder::Command &c) const override;
 
@@ -229,6 +229,7 @@ private:
     void gatherStaticLinkLibraries(LinkLibrariesType &ll, Files &added, std::unordered_set<const NativeCompiledTarget*> &targets, bool system) const;
     FilesOrdered gatherLinkDirectories() const;
     FilesOrdered gatherLinkLibraries() const;
+    FilesOrdered gatherPrecompiledHeaders() const;
     void merge1();
     void processCircular(Files &objs);
     path getPatchDir(bool binary_dir) const;

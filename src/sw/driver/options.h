@@ -171,6 +171,15 @@ struct SW_DRIVER_CPP_API SystemLinkLibrary
     explicit SystemLinkLibrary(const path &p);
 };
 
+struct SW_DRIVER_CPP_API PrecompiledHeader
+{
+    String h;
+
+    PrecompiledHeader() = default;
+    explicit PrecompiledHeader(const String &p);
+    explicit PrecompiledHeader(const path &p);
+};
+
 struct SW_DRIVER_CPP_API FileRegex
 {
     path dir;
@@ -221,6 +230,7 @@ struct SW_DRIVER_CPP_API NativeLinkerOptionsData
     PathOptionsType PreLinkDirectories;
     PathOptionsType LinkDirectories;
     PathOptionsType PostLinkDirectories;
+    PathOptionsType PrecompiledHeaders;
 
     PathOptionsType gatherLinkDirectories() const;
     LinkLibrariesType gatherLinkLibraries() const;

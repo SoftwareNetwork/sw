@@ -78,16 +78,20 @@ struct SW_DRIVER_CPP_API NativeSourceFile : SourceFile
 };
 
 // TODO: move to some other place
-struct PrecompiledHeader
+struct PrecompiledHeader1
 {
     path header;
     path source;
-    // path pch; // file itself
-    bool force_include_pch = false;
-    bool force_include_pch_to_source = false;
+    bool force_include_pch = true; // follow cmake
+    bool force_include_pch_header_to_pch_source = false; // msvc thing
 
-    // internal
-    bool created = false;
+    //
+    String fancy_name;
+    //
+    path obj; // obj file (msvc)
+    path pch; // file itself (msvc)
+    //path gch; // file itself (gcc and others)
+    path pdb; // pdb file (msvc)
 };
 
 struct SW_DRIVER_CPP_API RcToolSourceFile : SourceFile

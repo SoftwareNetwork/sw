@@ -34,7 +34,7 @@ IncludeDirectory::IncludeDirectory(const String &s)
 
 IncludeDirectory::IncludeDirectory(const path &p)
 {
-    i = p.string();
+    i = p.u8string();
 }
 
 LinkDirectory::LinkDirectory(const String &s)
@@ -44,7 +44,7 @@ LinkDirectory::LinkDirectory(const String &s)
 
 LinkDirectory::LinkDirectory(const path &p)
 {
-    d = p.string();
+    d = p.u8string();
 }
 
 LinkLibrary::LinkLibrary(const String &s)
@@ -54,7 +54,7 @@ LinkLibrary::LinkLibrary(const String &s)
 
 LinkLibrary::LinkLibrary(const path &p)
 {
-    l = p.string();
+    l = p.u8string();
 }
 
 SystemLinkLibrary::SystemLinkLibrary(const String &s)
@@ -64,7 +64,17 @@ SystemLinkLibrary::SystemLinkLibrary(const String &s)
 
 SystemLinkLibrary::SystemLinkLibrary(const path &p)
 {
-    l = p.string();
+    l = p.u8string();
+}
+
+PrecompiledHeader::PrecompiledHeader(const String &s)
+{
+    h = s;
+}
+
+PrecompiledHeader::PrecompiledHeader(const path &p)
+{
+    h = p.u8string();
 }
 
 FileRegex::FileRegex(const String &fn, bool recursive)
@@ -436,6 +446,7 @@ void NativeLinkerOptionsData::merge(const NativeLinkerOptionsData &o, const Grou
     unique_merge_containers(PreLinkDirectories, o.PreLinkDirectories);
     unique_merge_containers(LinkDirectories, o.LinkDirectories);
     unique_merge_containers(PostLinkDirectories, o.PostLinkDirectories);
+    unique_merge_containers(PrecompiledHeaders, o.PrecompiledHeaders);
 }
 
 void NativeLinkerOptions::add(const SystemLinkLibrary &l)

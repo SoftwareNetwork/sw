@@ -422,11 +422,14 @@ struct SW_DRIVER_CPP_API TargetOptions : SourceFileStorage, NativeOptions
     using NativeOptions::remove;
     using NativeOptions::operator=;
 
-    void add(const IncludeDirectory &i);
-    void remove(const IncludeDirectory &i);
+    void add(const IncludeDirectory &);
+    void remove(const IncludeDirectory &);
 
-    void add(const LinkDirectory &i);
-    void remove(const LinkDirectory &i);
+    void add(const LinkDirectory &);
+    void remove(const LinkDirectory &);
+
+    void add(const PrecompiledHeader &);
+    void remove(const PrecompiledHeader &);
 
     void merge(const TargetOptions &g, const GroupSettings &s = GroupSettings())
     {
@@ -450,6 +453,7 @@ public:
     ASSIGN_TYPES(Definition)
     ASSIGN_TYPES(DefinitionsType)
     ASSIGN_TYPES(IncludeDirectory)
+    ASSIGN_TYPES(PrecompiledHeader)
 
     // linker options
     ASSIGN_TYPES(LinkDirectory)

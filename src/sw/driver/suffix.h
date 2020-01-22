@@ -122,9 +122,7 @@ inline SystemLinkLibrary operator "" _slib(const char *s, size_t)
 // _pch
 inline PrecompiledHeader operator "" _pch(const char *s, size_t)
 {
-    PrecompiledHeader pch;
-    pch.header = s;
-    return pch;
+    return PrecompiledHeader(String(s));
 }
 
 // variable
