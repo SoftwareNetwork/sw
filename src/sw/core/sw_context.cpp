@@ -301,7 +301,9 @@ std::unique_ptr<SwBuild> SwContext::createBuild()
 
 void SwContext::registerDriver(const PackageId &pkg, std::unique_ptr<IDriver> &&driver)
 {
-    drivers.insert_or_assign(pkg, std::move(driver));
+    auto [_, inserted] = drivers.insert_or_assign(pkg, std::move(driver));
+    if (inserted)
+        LOG_TRACE(logger, "Registering driver: " + pkg.toString());
 }
 
 void SwContext::executeBuild(const path &in)
