@@ -9,7 +9,6 @@
 #include "entry_point.h"
 #include "frontend/cppan/yaml.h"
 #include "functions.h"
-#include "inserts.h"
 #include "module.h"
 #include "suffix.h"
 #include "sw_abi_version.h"

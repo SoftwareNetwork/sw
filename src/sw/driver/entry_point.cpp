@@ -9,7 +9,6 @@
 #include "build.h"
 #include "command.h"
 #include "driver.h"
-#include "inserts.h"
 #include "suffix.h"
 #include "target/native.h"
 
@@ -384,9 +383,7 @@ decltype(auto) PrepareConfigEntryPoint::commonActions(Build &b, const FilesSorte
         lib += fn;
 
 #ifdef _WIN32
-    auto delay_load_helper = getPchDir(b) / "delay_load_helper.cpp";
-    write_file_if_different(delay_load_helper, delay_load_helper_emb);
-    lib += delay_load_helper;
+    lib += getDriverIncludeDir(b, lib) / getSwDir() / "misc" / "delay_load_helper.cpp";
 #endif
 
     // pch
