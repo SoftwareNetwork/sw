@@ -1134,7 +1134,7 @@ void NativeCompiledTarget::createPrecompiledHeader()
     String h;
     for (auto &f : pch.files)
     {
-        if (f.string()[0] == '<')
+        if (f.string()[0] == '<' || f.string()[0] == '\"')
             h += "#include " + f.string() + "\n";
         else
             h += "#include \"" + normalize_path(f) + "\"\n";

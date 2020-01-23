@@ -730,6 +730,11 @@ void TargetOptions::add(const PrecompiledHeader &i)
         PrecompiledHeaders.insert(i.h);
         return;
     }
+    if (i.h[0] == '\"' && i.h.back() == '\"')
+    {
+        PrecompiledHeaders.insert(i.h);
+        return;
+    }
 
     path p = i.h;
     check_absolute(p);
@@ -744,6 +749,11 @@ void TargetOptions::remove(const PrecompiledHeader &i)
     if (i.h.empty())
         throw SW_RUNTIME_ERROR("empty pch fn");
     if (i.h[0] == '<' && i.h.back() == '>')
+    {
+        PrecompiledHeaders.erase(i.h);
+        return;
+    }
+    if (i.h[0] == '\"' && i.h.back() == '\"')
     {
         PrecompiledHeaders.erase(i.h);
         return;
