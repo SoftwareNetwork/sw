@@ -382,9 +382,8 @@ decltype(auto) PrepareConfigEntryPoint::commonActions(Build &b, const FilesSorte
     for (auto &fn : files)
         lib += fn;
 
-#ifdef _WIN32
-    lib += getDriverIncludeDir(b, lib) / getSwDir() / "misc" / "delay_load_helper.cpp";
-#endif
+    if (lib.getBuildSettings().TargetOS.is(OSType::Windows))
+        lib += getDriverIncludeDir(b, lib) / getSwDir() / "misc" / "delay_load_helper.cpp";
 
     // pch
     lib += PrecompiledHeader(getDriverIncludeDir(b, lib) / getSwHeader());
