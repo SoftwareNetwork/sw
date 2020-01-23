@@ -42,8 +42,6 @@ String toPathString(GeneratorType t)
 {
     switch (t)
     {
-    case GeneratorType::VisualStudio:
-        return "vs";
     case GeneratorType::Ninja:
         return "ninja";
     case GeneratorType::Batch:
@@ -58,12 +56,21 @@ String toPathString(GeneratorType t)
         return "shell";
     case GeneratorType::CompilationDatabase:
         return "compdb";
+    case GeneratorType::RawBootstrapBuild:
+        return "rawbootstrap";
+
     case GeneratorType::SwExecutionPlan:
         return "swexplan";
     case GeneratorType::SwBuildDescription:
         return "swbdesc";
-    case GeneratorType::RawBootstrapBuild:
-        return "rawbootstrap";
+
+    case GeneratorType::CodeBlocks:
+        return "cb";
+    case GeneratorType::VisualStudio:
+        return "vs";
+    case GeneratorType::Xcode:
+        return "xcode";
+
     default:
         throw SW_LOGIC_ERROR("not implemented");
     }
@@ -99,8 +106,6 @@ static String toString(GeneratorType t)
 {
     switch (t)
     {
-    case GeneratorType::VisualStudio:
-        return "Visual Studio";
     case GeneratorType::Ninja:
         return "Ninja";
     case GeneratorType::Batch:
@@ -115,12 +120,21 @@ static String toString(GeneratorType t)
         return "Shell";
     case GeneratorType::CompilationDatabase:
         return "CompDB";
+    case GeneratorType::RawBootstrapBuild:
+        return "Raw Bootstrap Build";
+
     case GeneratorType::SwExecutionPlan:
         return "Sw Execution Plan";
     case GeneratorType::SwBuildDescription:
         return "Sw Build Description";
-    case GeneratorType::RawBootstrapBuild:
-        return "Raw Bootstrap Build";
+
+    case GeneratorType::CodeBlocks:
+        return "Code Blocks";
+    case GeneratorType::VisualStudio:
+        return "Visual Studio";
+    case GeneratorType::Xcode:
+        return "Xcode";
+
     default:
         throw SW_LOGIC_ERROR("not implemented");
     }
@@ -149,6 +163,10 @@ static GeneratorType fromString(const String &s)
         ;
     else if (boost::istarts_with(s, "VS_IDE") || boost::istarts_with(s, "VS"))
         return GeneratorType::VisualStudio;
+    else if (boost::iequals(s, "cb") || boost::iequals(s, "codeblocks"))
+        return GeneratorType::CodeBlocks;
+    else if (boost::iequals(s, "xcode"))
+        return GeneratorType::Xcode;
     else if (boost::iequals(s, "Ninja"))
         return GeneratorType::Ninja;
     else if (boost::iequals(s, "Make") || boost::iequals(s, "Makefile"))
@@ -225,6 +243,12 @@ std::unique_ptr<Generator> Generator::create(const String &s)
         g = std::move(g1);
         break;
     }
+    case GeneratorType::CodeBlocks:
+        g = std::make_unique<CodeBlocksGenerator>();
+        break;
+    case GeneratorType::Xcode:
+        g = std::make_unique<XcodeGenerator>();
+        break;
     case GeneratorType::Ninja:
         g = std::make_unique<NinjaGenerator>();
         break;
@@ -1120,4 +1144,16 @@ void RawBootstrapBuildGenerator::generate(const sw::SwBuild &b)
     write_file(script_fn, script);
 
     pack_files("bootstrap.tar.xz", files2);
+}
+
+void CodeBlocksGenerator::generate(const sw::SwBuild &b)
+{
+    // http://wiki.codeblocks.org/index.php/Project_file
+    SW_UNIMPLEMENTED;
+}
+
+void XcodeGenerator::generate(const sw::SwBuild &b)
+{
+    // http://www.monobjc.net/xcode-project-file-format.html
+    SW_UNIMPLEMENTED;
 }

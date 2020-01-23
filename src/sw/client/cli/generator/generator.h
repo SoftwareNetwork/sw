@@ -33,6 +33,7 @@ struct SwBuild;
 
 enum class GeneratorType
 {
+    // everything
     Batch,
     CMake,
     CompilationDatabase,
@@ -42,10 +43,16 @@ enum class GeneratorType
     RawBootstrapBuild,
     QMake,
     Shell,
-    VisualStudio,
 
+    // sw
     SwExecutionPlan,
     SwBuildDescription, // simply BDesc?
+
+    // IDE
+    CodeBlocks,
+    VisualStudio,
+    Xcode,
+    // qt creator?
 
     //Max,
 };
@@ -124,6 +131,16 @@ struct SwBuildDescriptionGenerator : Generator
 };
 
 struct RawBootstrapBuildGenerator : Generator
+{
+    void generate(const sw::SwBuild &b) override;
+};
+
+struct CodeBlocksGenerator : Generator
+{
+    void generate(const sw::SwBuild &b) override;
+};
+
+struct XcodeGenerator : Generator
 {
     void generate(const sw::SwBuild &b) override;
 };

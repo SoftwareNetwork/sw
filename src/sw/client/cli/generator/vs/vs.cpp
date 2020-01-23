@@ -342,6 +342,10 @@ void VSGenerator::generate(const SwBuild &b)
         p.dependencies.insert(&s.projects.find(zero_check_name)->second);
         if (vstype != VsGeneratorType::VisualStudio)
         {
+            // save explan
+            //b.saveExecutionPlan();
+            // we must split configs or something like that
+
             for (auto &st : s.settings)
             {
                 auto &d = p.getData(st);
