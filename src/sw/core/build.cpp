@@ -25,14 +25,16 @@ DECLARE_STATIC_LOGGER(logger, "build");
     throw SW_RUNTIME_ERROR("Unexpected build state = " + std::to_string(toIndex(state)) + \
                            ", expected = " + std::to_string(toIndex(from)))
 
-#define CHECK_STATE_AND_CHANGE(from, to)     \
-    CHECK_STATE(from);                       \
-    SCOPE_EXIT                               \
-    {                                        \
-        if (std::uncaught_exceptions() == 0) \
-            state = to;                      \
-    };                                       \
+#define CHECK_STATE_AND_CHANGE_RAW(from, to, scope_exit) \
+    CHECK_STATE(from);                                   \
+    scope_exit                                           \
+    {                                                    \
+        if (std::uncaught_exceptions() == 0)             \
+            state = to;                                  \
+    };                                                   \
     LOG_TRACE(logger, "build id " << this << " performing " << BOOST_CURRENT_FUNCTION)
+
+#define CHECK_STATE_AND_CHANGE(from, to) CHECK_STATE_AND_CHANGE_RAW(from, to, SCOPE_EXIT)
 
 namespace sw
 {
@@ -192,7 +194,7 @@ void SwBuild::addKnownPackage(const PackageId &id)
 
 void SwBuild::resolvePackages()
 {
-    CHECK_STATE_AND_CHANGE(BuildState::TargetsToBuildSet, BuildState::PackagesResolved);
+    CHECK_STATE_AND_CHANGE_RAW(BuildState::TargetsToBuildSet, BuildState::PackagesResolved, auto se = SCOPE_EXIT_NAMED);
 
     // gather
     UnresolvedPackages upkgs;
@@ -226,6 +228,14 @@ void SwBuild::resolvePackages()
             break; // take first as all deps are equal
         }
     }
+
+    se.~ScopeGuard();
+    resolvePackages(upkgs);
+}
+
+void SwBuild::resolvePackages(const UnresolvedPackages &upkgs)
+{
+    CHECK_STATE_AND_CHANGE(BuildState::PackagesResolved, BuildState::PackagesResolved);
 
     // install
     auto m = install(upkgs);
@@ -276,7 +286,8 @@ void SwBuild::loadPackages(const TargetMap &predefined)
                     auto i = getTargets().find(d->getUnresolvedPackage());
                     if (i == getTargets().end())
                     {
-                        throw SW_RUNTIME_ERROR(tgt->getPackage().toString() + ": No target loaded: " + d->getUnresolvedPackage().toString());
+                        // package was not resolved
+                        throw SW_RUNTIME_ERROR(tgt->getPackage().toString() + ": No target resolved: " + d->getUnresolvedPackage().toString());
                     }
 
                     auto k = i->second.findSuitable(d->getSettings());

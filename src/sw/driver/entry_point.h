@@ -37,6 +37,9 @@ struct PrepareConfigEntryPoint : NativeTargetEntryPoint
     mutable FilesMap r;
     mutable std::unique_ptr<PackageId> tgt;
 
+    // output var
+    mutable UnresolvedPackages udeps;
+
     PrepareConfigEntryPoint(const std::unordered_set<LocalPackage> &pkgs);
     PrepareConfigEntryPoint(const Files &files);
 

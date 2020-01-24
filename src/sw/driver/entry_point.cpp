@@ -67,11 +67,12 @@ static path getImportPchFile(NativeCompiledTarget &t, const UnresolvedPackages &
         sdeps.insert(d->getUnresolvedPackage().toString());
     for (auto &d : deps)
         sdeps.insert(d.toString());
+    String h;
     String s;
     for (auto &d : sdeps)
         s += d;
-    auto h = shorten_hash(blake2b_512(s), 6);
-    return getImportFilePrefix(t.getSolution()) += "." + h + ".cpp";
+    h = "." + shorten_hash(blake2b_512(s), 6);
+    return getImportFilePrefix(t.getSolution()) += h + ".cpp";
 }
 
 #ifdef _WIN32
@@ -365,6 +366,9 @@ SharedLibraryTarget &PrepareConfigEntryPoint::createTarget(Build &b, const Strin
 
 decltype(auto) PrepareConfigEntryPoint::commonActions(Build &b, const FilesSorted &files, const UnresolvedPackages &deps) const
 {
+    // record udeps
+    udeps = deps;
+
     auto &lib = createTarget(b, getSelfTargetName(files));
     lib.command_storage = &getDriverCommandStorage(b);
 

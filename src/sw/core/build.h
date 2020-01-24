@@ -49,7 +49,8 @@ struct SW_CORE_API SwBuild
     // precise
     void loadInputs();
     void setTargetsToBuild();
-    void resolvePackages();
+    void resolvePackages(); // [1/2] step
+    void resolvePackages(const UnresolvedPackages &upkgs); // [2/2] step
     void loadPackages();
     void prepare();
     void execute() const;
