@@ -819,8 +819,8 @@ void NativeCompiledTarget::setOutputFile()
     if (isHeaderOnly())
         return;
 
-    /* || add a considiton so user could change nont build output dir*/
-    if (Scope == TargetScope::Build)
+    /* || add a condition so user could change non build output dir*/
+    //if (Scope == TargetScope::Build)
     {
         if (getSelectedTool() == Librarian.get())
             getSelectedTool()->setOutputFile(getOutputFileName2("lib"));
@@ -833,7 +833,7 @@ void NativeCompiledTarget::setOutputFile()
             getSelectedTool()->setImportLibrary(getOutputFileName2("lib"));
         }
     }
-    else
+    /*else
     {
         SW_UNIMPLEMENTED;
 
@@ -841,7 +841,7 @@ void NativeCompiledTarget::setOutputFile()
         getSelectedTool()->setOutputFile(base);
         if (getSelectedTool() != Librarian.get())
             getSelectedTool()->setImportLibrary(base);
-    }
+    }*/
 
     // set generated early
     if (auto f = getOutputFile(); !f.empty())

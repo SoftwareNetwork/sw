@@ -236,6 +236,8 @@ void TargetBase::setupTarget(TargetBaseType *t) const
 
     t->main_build_ = main_build_; // ok, take from here (this, parent)
 
+    t->Scope = Scope; // ok, take from here (this, parent)
+
     t->current_project = current_project; // ok, take from here (this, parent)
     if (!t->current_project)
         t->current_project = t->getPackage();

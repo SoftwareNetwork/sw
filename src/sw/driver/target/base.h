@@ -74,6 +74,11 @@ struct SW_DRIVER_CPP_API TargetBaseData : ProjectDirectories, TargetEvents
     PackagePath NamePrefix;
     std::optional<CommandStorage *> command_storage;
 
+    /**
+     * \brief Target scope.
+     */
+    TargetScope Scope = TargetScope::Build;
+
     SwBuild &getMainBuild() const;
 
 protected:
@@ -259,11 +264,6 @@ struct SW_DRIVER_CPP_API Target : ITarget, TargetBase, ProgramStorage,
     // Data storage for objects that must be alive with the target.
     // For example, program clones etc.
     std::vector<std::any> Storage;
-
-    /**
-    * \brief Target scope.
-    */
-    TargetScope Scope = TargetScope::Build;
 
     // rename to information?
     TargetDescription Description; // or inherit?
