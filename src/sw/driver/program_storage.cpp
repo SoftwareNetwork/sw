@@ -48,9 +48,6 @@ void ProgramStorage::setExtensionProgram(const String &ext, const UnresolvedPack
     //auto pkg = t->getSolution().swctx.resolve(p);
     extensions.insert_or_assign(ext, p);
 
-    //if (t->sw_provided)
-        //return;
-
     // add a dependency to current target
     if (auto t = dynamic_cast<NativeCompiledTarget *>(this); t)
         t->addDummyDependency(std::make_shared<Dependency>(p));
