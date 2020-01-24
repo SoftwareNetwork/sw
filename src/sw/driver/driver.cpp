@@ -244,9 +244,9 @@ std::shared_ptr<PrepareConfigEntryPoint> Driver::build_configs1(SwContext &swctx
     // execute
     b->getTargetsToBuild()[*ep->tgt] = b->getTargets()[*ep->tgt]; // set our main target
     b->overrideBuildState(BuildState::PackagesResolved);
-    if (!ep->udeps.empty())
+    /*if (!ep->udeps.empty())
         LOG_WARN(logger, "WARNING: '#pragma sw require' is not well tested yet. Expect instability.");
-    b->resolvePackages(ep->udeps);
+    b->resolvePackages(ep->udeps);*/
     b->loadPackages();
     b->prepare();
     b->execute();
