@@ -2381,15 +2381,7 @@ void NativeCompiledTarget::prepare_pass5()
     //else if (getCompilerType() == CompilerType::MSVC)
     //*this += Definition("_DEBUG");
 
-    auto remove_bdirs = [this](auto *c)
-    {
-        // if we won't remove this, bdirs will differ between different config compilations
-        // so our own config pch will be outdated on every call
-        c->IncludeDirectories.erase(BinaryDir);
-        c->IncludeDirectories.erase(BinaryPrivateDir);
-    };
-
-    auto vs_setup = [this, &remove_bdirs](auto *f, auto *c)
+    auto vs_setup = [this](auto *f, auto *c)
     {
         if (getBuildSettings().Native.MT)
             c->RuntimeLibrary = vs::RuntimeLibraryType::MultiThreaded;
@@ -2415,11 +2407,6 @@ void NativeCompiledTarget::prepare_pass5()
         }
         if (f->file.extension() != ".c")
             c->CPPStandard = CPPVersion;
-
-        if (IsConfig/* || c->PrecompiledHeader && c->PrecompiledHeader().create*/)
-        {
-            remove_bdirs(c);
-        }
 
         // for static libs, we gather and put pdb near output file
         // btw, VS is clever enough to take this info from .lib
@@ -2502,20 +2489,10 @@ void NativeCompiledTarget::prepare_pass5()
         else if (auto c = f->compiler->as<ClangCompiler*>())
         {
             gnu_setup(f, c);
-
-            if (IsConfig/* || c->EmitPCH*/)
-            {
-                remove_bdirs(c);
-            }
         }
         else if (auto c = f->compiler->as<GNUCompiler*>())
         {
             gnu_setup(f, c);
-
-            if (IsConfig/* || c->Language && c->Language() == "c++-header"s*/)
-            {
-                remove_bdirs(c);
-            }
         }
     }
 
