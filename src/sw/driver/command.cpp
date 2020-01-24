@@ -118,7 +118,7 @@ void Command::prepare()
     Base::prepare();
 }
 
-void Command::setProgram(const std::shared_ptr<Dependency> &d)
+void Command::setProgram(const DependencyPtr &d)
 {
     if (dependency_set)
         throw SW_RUNTIME_ERROR("Setting program twice"); // probably throw, but who knows...
@@ -126,7 +126,7 @@ void Command::setProgram(const std::shared_ptr<Dependency> &d)
     dependency_set = true;
 }
 
-void Command::addProgramDependency(const std::shared_ptr<Dependency> &d)
+void Command::addProgramDependency(const DependencyPtr &d)
 {
     dependencies.push_back(d);
 }

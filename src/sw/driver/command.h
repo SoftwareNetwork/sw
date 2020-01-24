@@ -359,10 +359,10 @@ struct SW_DRIVER_CPP_API Command : detail::Command
     void prepare() override;
 
     using Base::setProgram;
-    void setProgram(const std::shared_ptr<Dependency> &);
+    void setProgram(const DependencyPtr &);
 
     // additional dependencies will be used to set up the command
-    void addProgramDependency(const std::shared_ptr<Dependency> &);
+    void addProgramDependency(const DependencyPtr &);
 
     void addLazyAction(LazyAction f);
 
