@@ -25,7 +25,9 @@ IDriver::~IDriver() = default;
 SwCoreContext::SwCoreContext(const path &local_storage_root_dir)
     : SwBuilderContext(local_storage_root_dir)
 {
-    createHostSettings();
+    detectCompilers(*this);
+
+    host_settings = createHostSettings();
 
     LOG_TRACE(logger, "Host configuration: " + getHostSettings().toString());
 }
@@ -34,31 +36,25 @@ SwCoreContext::~SwCoreContext()
 {
 }
 
-void SwCoreContext::createHostSettings()
+TargetSettings SwCoreContext::createHostSettings() const
 {
-    host_settings = toTargetSettings(getHostOs());
+    auto ts = toTargetSettings(getHostOs());
 
-    auto &ts = host_settings;
 #ifdef _WIN32
-    #ifdef NDEBUG
+  #ifdef NDEBUG
     ts["native"]["configuration"] = "release";
-    #else
+  #else
     ts["native"]["configuration"] = "debug";
-    #endif
+  #endif
 #else
     ts["native"]["configuration"] = "release";
 #endif
     ts["native"]["library"] = "shared";
     ts["native"]["mt"] = "false";
 
-    detectCompilers(*this);
-    setHostPrograms(); // after detection
-}
-
-// move this to driver?
-void SwCoreContext::setHostPrograms()
-{
-    auto &ts = host_settings;
+    // setHostPrograms()
+    // after detection
+    // move this to driver?
     ts["native"]["configuration"] = "release";
     ts["native"]["library"] = "shared";
 
@@ -82,12 +78,18 @@ void SwCoreContext::setHostPrograms()
         ts["native"]["stdlib"]["c"] = sdk->getPackage().toString();
         //ts["os"]["version"] = sdkver->toString(3); // cut off the last (fourth) number
 
+        auto clpkg = "com.Microsoft.VisualStudio.VC.cl";
+        auto cl = getPredefinedTargets().find(clpkg);
+
+        auto clangpppkg = "org.LLVM.clangpp";
+        auto clangpp = getPredefinedTargets().find(clpkg);
+
         if (0);
 #ifdef _MSC_VER
         // msvc + clangcl
         // clangcl must be compatible with msvc
         // and also clang actually
-        else if (!getPredefinedTargets()["com.Microsoft.VisualStudio.VC.cl"].empty())
+        else if (cl != getPredefinedTargets().end(clpkg) && !cl->second.empty())
         {
             ts["native"]["program"]["c"] = to_upkg("com.Microsoft.VisualStudio.VC.cl");
             ts["native"]["program"]["cpp"] = to_upkg("com.Microsoft.VisualStudio.VC.cl");
@@ -97,7 +99,7 @@ void SwCoreContext::setHostPrograms()
         }
         // separate?
 #else __clang__
-        else if (!getPredefinedTargets()["org.LLVM.clangpp"].empty())
+        else if (clangpp != getPredefinedTargets().end(clangpppkg) && !clangpp->second.empty())
         {
             ts["native"]["program"]["c"] = to_upkg("org.LLVM.clang");
             ts["native"]["program"]["cpp"] = to_upkg("org.LLVM.clangpp");
@@ -167,6 +169,8 @@ void SwCoreContext::setHostPrograms()
         // use cpp driver for the moment to not burden ourselves in adding stdlib
         if_add(ts["native"]["program"]["link"], ts["native"]["program"]["cpp"].getValue());
     }
+
+    return ts;
 }
 
 void SwCoreContext::setHostSettings(const TargetSettings &s)

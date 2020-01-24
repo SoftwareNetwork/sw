@@ -30,7 +30,10 @@ struct SW_CORE_API SwCoreContext : SwBuilderContext
     const TargetData &getTargetData(const PackageId &) const;
 
     void setHostSettings(const TargetSettings &s);
+    /// these host settings may be changed by the user
     const TargetSettings &getHostSettings() const { return host_settings; }
+    /// original, unmodified host settings
+    TargetSettings createHostSettings() const;
 
     void setEntryPoint(const LocalPackage &, const TargetEntryPointPtr &);
     void setEntryPoint(const PackageId &, const TargetEntryPointPtr &);
@@ -47,8 +50,6 @@ private:
     std::unordered_map<PackageId, TargetEntryPointPtr> entry_points;
     std::unordered_map<PackageVersionGroupNumber, TargetEntryPointPtr> entry_points_by_group_number;
 
-    void createHostSettings();
-    void setHostPrograms();
     TargetEntryPointPtr getEntryPoint(PackageVersionGroupNumber) const;
 };
 

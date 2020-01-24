@@ -216,7 +216,7 @@ std::shared_ptr<PrepareConfigEntryPoint> Driver::build_configs1(SwContext &swctx
     auto &ctx = swctx;
     auto b = ctx.createBuild();
 
-    auto ts = ctx.getHostSettings();
+    auto ts = ctx.createHostSettings();
     ts["native"]["library"] = "static";
     //ts["native"]["mt"] = "true";
     if (debug_configs)
