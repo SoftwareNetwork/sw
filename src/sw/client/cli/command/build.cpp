@@ -40,7 +40,7 @@ static ::cl::opt<bool> build_fetch("fetch", ::cl::desc("Fetch sources, then buil
 static ::cl::opt<path> build_explan("ef", ::cl::desc("Build execution plan from specified file"), ::cl::sub(subcommand_build));
 static ::cl::opt<bool> build_default_explan("e", ::cl::desc("Build execution plan"), ::cl::sub(subcommand_build));
 
-static ::cl::opt<bool> isolated_build("isolated", cl::desc("Copy source files to isolated folders to check build like just after uploading"), ::cl::sub(subcommand_build));
+static ::cl::opt<bool> cl_isolated_build("isolated", cl::desc("Copy source files to isolated folders to check build like just after uploading"), ::cl::sub(subcommand_build));
 
 ::cl::opt<path> build_ide_fast_path("ide-fast-path", ::cl::sub(subcommand_build), ::cl::Hidden);
 static ::cl::opt<path> build_ide_copy_to_dir("ide-copy-to-dir", ::cl::sub(subcommand_build), ::cl::Hidden);
@@ -618,7 +618,7 @@ static decltype(auto) getInput(sw::SwBuild &b)
     return b.getContext().addInput(fs::current_path());
 }
 
-static void isolated_build1(sw::SwContext &swctx)
+static void isolated_build(sw::SwContext &swctx)
 {
     // get targets
     // create dirs
@@ -750,9 +750,9 @@ SUBCOMMAND_DECL2(build)
         return cli_fetch(swctx);
     }
 
-    if (isolated_build)
+    if (cl_isolated_build)
     {
-        isolated_build1(swctx);
+        isolated_build(swctx);
         return;
     }
 
