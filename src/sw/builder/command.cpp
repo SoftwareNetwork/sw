@@ -109,7 +109,10 @@ bool Command::check_if_file_newer(const path &p, const String &what, bool throw_
 {
     auto s = File(p, getContext().getFileStorage()).isChanged(mtime, throw_on_missing);
     if (s && isExplainNeeded())
-        EXPLAIN_OUTDATED("command", true, what + " changed " + normalize_path(p) + ": " + *s, getCommandId(*this));
+    {
+        EXPLAIN_OUTDATED("command", true, what + " changed " + normalize_path(p) + " (command_storage = " +
+            normalize_path(command_storage->root) + ") : " + *s, getCommandId(*this));
+    }
     return !!s;
 }
 
