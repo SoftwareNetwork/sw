@@ -1926,6 +1926,9 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
     s["binary_dir"] = normalize_path(BinaryDir);
     s["binary_private_dir"] = normalize_path(BinaryPrivateDir);
 
+    if (!Publish || !*Publish)
+        s["skip_upload"] = "true";
+
     switch (getType())
     {
     case TargetType::NativeExecutable:
@@ -2125,7 +2128,10 @@ void NativeCompiledTarget::prepare_pass1()
 
     findSources();
 
-    if (!sw_provided)
+    if (!Publish)
+        Publish = Scope == TargetScope::Build;
+
+    if (!IsConfig)
     {
         // add pvt binary dir
         IncludeDirectories.insert(BinaryPrivateDir);

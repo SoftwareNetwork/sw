@@ -267,7 +267,7 @@ struct SW_DRIVER_CPP_API Target : ITarget, TargetBase, ProgramStorage,
 
     // rename to information?
     TargetDescription Description; // or inherit?
-    bool sw_provided = false;
+    std::optional<bool> Publish;
     bool AllowEmptyRegexes = false;
 
     // inheritable, move to native? what about other langs?

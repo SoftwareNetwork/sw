@@ -62,6 +62,10 @@ sw::PackageDescriptionMap getPackages(const sw::SwBuild &b, const sw::SourceDirM
             throw SW_RUNTIME_ERROR("Empty targets");
 
         auto &t = **tgts.begin();
+
+        if (t.getInterfaceSettings()["skip_upload"] == "true")
+            continue;
+
         nlohmann::json j;
 
         // source, version, path
