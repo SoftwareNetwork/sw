@@ -126,6 +126,10 @@ sw::PackageDescriptionMap getPackages(const sw::SwBuild &b, const sw::SourceDirM
 SUBCOMMAND_DECL2(upload)
 {
     auto b = swctx.createBuild();
+
+    // get spec early, so changes won't be considered
+    auto spec = swctx.addInput(fs::current_path()).getSpecification()->files.begin()->second;
+
     auto [sources, i] = fetch(*b);
     if (sources.empty())
         throw SW_RUNTIME_ERROR("Empty target sources");
@@ -180,5 +184,5 @@ SUBCOMMAND_DECL2(upload)
     // send signatures (gpg)
     // -k KEY1 -k KEY2
     auto api = current_remote->getApi();
-    api->addVersion(gUploadPrefix, m, script_name, i.getSpecification()->files.begin()->second);
+    api->addVersion(gUploadPrefix, m, script_name, spec);
 }
