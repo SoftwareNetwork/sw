@@ -117,6 +117,7 @@ public:
     bool SwDefinitions = false;
     bool StartupProject = false; // move to description? move to Generator.VS... struct? IDE struct?
     bool GenerateWindowsResource = true; // internal?
+    bool NoUndefined = true;
 
     bool ImportFromBazel = false;
     StringSet BazelNames;

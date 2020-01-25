@@ -2131,6 +2131,12 @@ void NativeCompiledTarget::prepare_pass1()
     if (!Publish)
         Publish = Scope == TargetScope::Build;
 
+    if (getBuildSettings().TargetOS.is(OSType::Linux) && NoUndefined)
+    {
+        // also check compiler type?
+        LinkOptions.push_back("--no-undefined");
+    }
+
     if (!IsConfig)
     {
         // add pvt binary dir
