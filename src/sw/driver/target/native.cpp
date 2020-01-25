@@ -1926,7 +1926,7 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
     s["binary_dir"] = normalize_path(BinaryDir);
     s["binary_private_dir"] = normalize_path(BinaryPrivateDir);
 
-    if (!Publish || !*Publish)
+    if (Publish && !*Publish)
         s["skip_upload"] = "true";
 
     switch (getType())
