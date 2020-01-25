@@ -2861,6 +2861,10 @@ void NativeCompiledTarget::prepare_pass7()
             for (auto &d : dirs)
                 LinkOptions.push_back("-Wl,-rpath-link," + normalize_path(d));
         }
+
+        // rpath: currently we set rpath to '.'
+        if (!getBuildSettings().TargetOS.is(OSType::Windows) && getType() == TargetType::NativeExecutable)
+            LinkOptions.push_back("-Wl,-rpath,.");
     }
 
     // right after gatherStaticLinkLibraries()!
