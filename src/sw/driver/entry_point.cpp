@@ -376,6 +376,7 @@ decltype(auto) PrepareConfigEntryPoint::commonActions(Build &b, const FilesSorte
     addImportLibrary(b, lib);
     lib.AutoDetectOptions = false;
     lib.CPPVersion = CPPLanguageStandard::CPP17;
+    lib.NoUndefined = false;
 
     if (lib.getBuildSettings().TargetOS.isApple())
     {
