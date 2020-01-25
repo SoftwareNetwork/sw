@@ -2834,6 +2834,27 @@ void NativeCompiledTarget::prepare_pass7()
 
         ll(LinkLibraries, false);
         ll(NativeLinkerOptions::System.LinkLibraries, true);
+
+        //
+        // linux:
+        //
+        // -rpath-link
+        //
+        // When linking libA.so to libB.so and then libB.so to exeC,
+        // ld requires to provide -rpath or -rpath-link to libA.so.
+        //
+        // Currently we do not set rpath, so ld cannot read automatically from libB.so
+        // where libA.so is located.
+        //
+        // Hence, we must provide such paths ourselves.
+        //
+        if (getBuildSettings().TargetOS.is(OSType::Linux) && getType() == TargetType::NativeExecutable)
+        {
+            Files dirs;
+            gatherRpathLinkDirectories(dirs, 1);
+            for (auto &d : dirs)
+                LinkOptions.push_back("-Wl,-rpath-link," + normalize_path(d));
+        }
     }
 
     // right after gatherStaticLinkLibraries()!
@@ -2999,6 +3020,7 @@ void NativeCompiledTarget::gatherStaticLinkLibraries(
 {
     if (!targets.insert(this).second)
         return;
+    // switch to getActiveDeps()?
     for (auto &d : getAllDependencies())
     {
         if (d->IncludeDirectoriesOnly)
@@ -3052,6 +3074,34 @@ void NativeCompiledTarget::gatherStaticLinkLibraries(
                 dt2->gatherStaticLinkLibraries(ll, added, targets, system);
             }
         }
+    }
+}
+
+void NativeCompiledTarget::gatherRpathLinkDirectories(
+    Files &added, int round) const
+{
+    for (auto &d : getActiveDependencies())
+    {
+        if (d.dep->IncludeDirectoriesOnly)
+            continue;
+
+        auto dt = d.dep->getTarget().template as<const NativeCompiledTarget*>();
+        if (!dt)
+            continue;
+
+        // here we must gather all shared (and header only?) lib deps in recursive manner
+        if (round != 1)
+        {
+            if (!*dt->HeaderOnly && dt->getSelectedTool() == dt->Linker.get() &&
+                dt->getType() != TargetType::NativeExecutable)
+            {
+                auto [_, inserted] = added.insert(dt->getOutputFile().parent_path());
+                if (!inserted)
+                    continue;
+            }
+        }
+
+        dt->gatherRpathLinkDirectories(added, round + 1);
     }
 }
 
