@@ -922,6 +922,11 @@ types:
                 properties:
                     - input_dependency
 
+            as_needed:
+                name: AsNeeded
+                flag: Wl,--as-needed
+                type: bool
+
             sg:
                 name: StartGroup
                 flag: Wl,-start-group

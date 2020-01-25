@@ -3180,6 +3180,8 @@ void NativeCompiledTarget::initLibrary(LibraryType Type)
         {
             auto L = Linker->as<GNULinker*>();
             L->SharedObject = true;
+            if (getBuildSettings().TargetOS.Type == OSType::Linux)
+                L->AsNeeded = true;
         }
         if (getBuildSettings().TargetOS.Type == OSType::Windows)
             Definitions["_WINDLL"];
