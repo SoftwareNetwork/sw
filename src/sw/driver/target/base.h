@@ -431,6 +431,9 @@ struct SW_DRIVER_CPP_API TargetOptions : SourceFileStorage, NativeOptions
     void add(const PrecompiledHeader &);
     void remove(const PrecompiledHeader &);
 
+    void add(const Framework &);
+    void remove(const Framework &);
+
     void merge(const TargetOptions &g, const GroupSettings &s = GroupSettings())
     {
         SourceFileStorage::merge(g, s);
@@ -454,6 +457,7 @@ public:
     ASSIGN_TYPES(DefinitionsType)
     ASSIGN_TYPES(IncludeDirectory)
     ASSIGN_TYPES(PrecompiledHeader)
+    ASSIGN_TYPES(Framework)
 
     // linker options
     ASSIGN_TYPES(LinkDirectory)

@@ -32,6 +32,11 @@ Framework::Framework(const String &s)
     f = s;
 }
 
+Framework::Framework(const path &p)
+{
+    f = p.u8string();
+}
+
 IncludeDirectory::IncludeDirectory(const String &s)
 {
     i = s;

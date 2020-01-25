@@ -141,6 +141,7 @@ struct SW_DRIVER_CPP_API Framework
 
     Framework() = default;
     explicit Framework(const String &p);
+    explicit Framework(const path &p);
 };
 
 struct SW_DRIVER_CPP_API IncludeDirectory

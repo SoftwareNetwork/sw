@@ -766,6 +766,16 @@ void TargetOptions::remove(const PrecompiledHeader &i)
     PrecompiledHeaders.erase(p);
 }
 
+void TargetOptions::add(const Framework &f)
+{
+    Frameworks.push_back(f.f);
+}
+
+void TargetOptions::remove(const Framework &f)
+{
+    Frameworks.erase(f.f);
+}
+
 void NativeTargetOptionsGroup::add(const Variable &v)
 {
     auto p = v.v.find_first_of(" =");
