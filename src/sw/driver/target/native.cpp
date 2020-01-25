@@ -1918,7 +1918,8 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
     auto &s = interface_settings;
     // info may change during prepare, so we create it every time for now
     // TODO: deny calls during prepare()
-    if (prepare_pass == 9 && !s.empty())
+    bool prepared = prepare_pass == 9;
+    if (prepared && !s.empty())
         return s;
     s = {};
 
@@ -1989,22 +1990,25 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
     for (auto &d : Interface.NativeLinkerOptions::System.LinkLibraries2)
         s["system_link_libraries"].push_back(normalize_path(d));
 
-    for (auto &d : getActiveDependencies())
+    if (prepared)
     {
-        if (d.dep->IncludeDirectoriesOnly)
-            continue;
-        if (auto t = d.dep->getTarget().as<const NativeCompiledTarget*>(); t && !t->DryRun/* && t->getType() != TargetType::NativeExecutable*/)
-            s["dependencies"]["link"][boost::to_lower_copy(d.dep->getTarget().getPackage().toString())] = d.dep->getTarget().getSettings();
-    }
-    for (auto &d : DummyDependencies)
-    {
-        // rename dummy?
-        s["dependencies"]["dummy"][boost::to_lower_copy(d->getTarget().getPackage().toString())] = d->getTarget().getSettings();
-    }
-    for (auto &d : SourceDependencies)
-    {
-        // commented for now
-        //s["dependencies"]["source"].push_back(d->getTarget().getPackage().toString());
+        for (auto &d : getActiveDependencies())
+        {
+            if (d.dep->IncludeDirectoriesOnly)
+                continue;
+            if (auto t = d.dep->getTarget().as<const NativeCompiledTarget *>(); t && !t->DryRun/* && t->getType() != TargetType::NativeExecutable*/)
+                s["dependencies"]["link"][boost::to_lower_copy(d.dep->getTarget().getPackage().toString())] = d.dep->getTarget().getSettings();
+        }
+        for (auto &d : DummyDependencies)
+        {
+            // rename dummy?
+            s["dependencies"]["dummy"][boost::to_lower_copy(d->getTarget().getPackage().toString())] = d->getTarget().getSettings();
+        }
+        for (auto &d : SourceDependencies)
+        {
+            // commented for now
+            //s["dependencies"]["source"].push_back(d->getTarget().getPackage().toString());
+        }
     }
 
     // add ide settings to s["ide"]
