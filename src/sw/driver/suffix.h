@@ -66,16 +66,11 @@ inline DependencyPtr operator "" _dep(const char *s, size_t)
     return std::make_shared<Dependency>(extractFromString(s));
 }
 
-// regex
-inline FileRegex operator "" _r(const char *s, size_t)
+// framework (macos)
+// _framework (_fr? fw?)
+inline Framework operator "" _framework(const char *s, size_t)
 {
-    return FileRegex(s, false);
-}
-
-// recursive regex
-inline FileRegex operator "" _rr(const char *s, size_t)
-{
-    return FileRegex(s, true);
+    return Framework(String(s));
 }
 
 // include directory
@@ -111,18 +106,30 @@ inline LinkLibrary operator "" _lib(const char *s, size_t)
     return LinkLibrary(String(s));
 }
 
-// system link library
-// _slib
-inline SystemLinkLibrary operator "" _slib(const char *s, size_t)
-{
-    return SystemLinkLibrary(String(s));
-}
-
 // precompiled header
 // _pch
 inline PrecompiledHeader operator "" _pch(const char *s, size_t)
 {
     return PrecompiledHeader(String(s));
+}
+
+// regex
+inline FileRegex operator "" _r(const char *s, size_t)
+{
+    return FileRegex(s, false);
+}
+
+// recursive regex
+inline FileRegex operator "" _rr(const char *s, size_t)
+{
+    return FileRegex(s, true);
+}
+
+// system link library
+// _slib
+inline SystemLinkLibrary operator "" _slib(const char *s, size_t)
+{
+    return SystemLinkLibrary(String(s));
 }
 
 // variable

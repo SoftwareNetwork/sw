@@ -137,6 +137,7 @@ public:
     bool CPPExtensions = false;
 
     bool UseModules = false;
+    // bool Framework = false; // TODO: macos framework
 
     //
     virtual ~NativeCompiledTarget();

@@ -963,6 +963,14 @@ types:
                     - input_dependency
                     - flag_before_each_value
 
+            frameworks:
+                name: Frameworks
+                flag: framework
+                type: FilesOrdered
+                order: 59
+                properties:
+                    - flag_before_each_value
+
             sll:
                 name: SystemLinkLibraries
                 flag: l

@@ -700,6 +700,11 @@ void GNULinker::prepareCommand1(const Target &t)
     //if (InputFiles().empty())
         //return nullptr;
 
+    for (auto &f : NativeLinkerOptions::Frameworks)
+        ((GNULinker *)this)->GNULinkerOptions::Frameworks().push_back(f);
+    for (auto &f : NativeLinkerOptions::System.Frameworks)
+        ((GNULinker *)this)->GNULinkerOptions::Frameworks().push_back(f);
+
     ((GNULinker*)this)->GNULinkerOptions::LinkDirectories = gatherLinkDirectories();
     //((GNULinker*)this)->GNULinkerOptions::LinkLibraries() = gatherLinkLibraries();
     ((GNULinker*)this)->GNULinkerOptions::SystemLinkLibraries = gatherLinkLibraries(true);
@@ -761,8 +766,6 @@ void GNULinker::prepareCommand1(const Target &t)
         cmd->name = normalize_path(Output());
         cmd->name_short = Output().filename().u8string();
     }
-
-    //((GNULibraryTool*)this)->GNULibraryToolOptions::LinkDirectories() = gatherLinkDirectories();
 
     getCommandLineOptions<GNULinkerOptions>(cmd.get(), *this);
     addEverything(*cmd);

@@ -27,6 +27,11 @@ Definition::Definition(const String &s)
     d = s;
 }
 
+Framework::Framework(const String &s)
+{
+    f = s;
+}
+
 IncludeDirectory::IncludeDirectory(const String &s)
 {
     i = s;

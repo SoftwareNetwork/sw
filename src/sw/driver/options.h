@@ -135,6 +135,14 @@ struct SW_DRIVER_CPP_API Definition
     explicit Definition(const String &p);
 };
 
+struct SW_DRIVER_CPP_API Framework
+{
+    String f;
+
+    Framework() = default;
+    explicit Framework(const String &p);
+};
+
 struct SW_DRIVER_CPP_API IncludeDirectory
 {
     String i;
