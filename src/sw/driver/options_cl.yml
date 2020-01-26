@@ -970,6 +970,7 @@ types:
                 order: 59
                 properties:
                     - flag_before_each_value
+                    - separate_prefix
 
             sll:
                 name: SystemLinkLibraries
