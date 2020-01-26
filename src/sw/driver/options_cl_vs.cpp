@@ -43,7 +43,7 @@ Strings PrecompiledHeaderVs::getCommandLine(builder::Command *c) const
         String o = "-Yc";
         if (!create->empty())
         {
-            o += create->string();
+            o += normalize_path(*create);
             //c->addOutput(create.value());
         }
         s.push_back(o);
@@ -53,7 +53,7 @@ Strings PrecompiledHeaderVs::getCommandLine(builder::Command *c) const
         String o = "-Yu";
         if (!use->empty())
         {
-            o += use->string();
+            o += normalize_path(*use);
             //c->addInput(use.value());
         }
         // TODO: add autocreated name by cl.exe or whatever
