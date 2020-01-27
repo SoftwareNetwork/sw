@@ -393,7 +393,7 @@ decltype(auto) PrepareConfigEntryPoint::commonActions(Build &b, const FilesSorte
     // pch
     lib += PrecompiledHeader(getDriverIncludeDir(b, lib) / getSwHeader());
 
-    detail::PrecompiledHeaderInternal pch;
+    detail::PrecompiledHeader pch;
     pch.name = getImportPchFile(lib, deps).stem();
     pch.dir = getPchDir(b);
     pch.fancy_name = "[config pch]";

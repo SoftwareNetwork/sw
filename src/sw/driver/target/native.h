@@ -23,7 +23,7 @@ namespace detail
 #include "std.inl"
 #undef STD_MACRO
 
-struct PrecompiledHeaderInternal
+struct PrecompiledHeader
 {
     path header;
     path source;
@@ -211,7 +211,7 @@ public:
 #undef STD_MACRO
 
     // internal data
-    detail::PrecompiledHeaderInternal pch;
+    detail::PrecompiledHeader pch;
 
 protected:
     mutable NativeLinker *SelectedTool = nullptr;
