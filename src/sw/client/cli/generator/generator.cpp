@@ -981,7 +981,21 @@ void CMakeGenerator::generate(const sw::SwBuild &b)
         ctx.addLine(")");
         ctx.addLine();
 
+        ctx.addLine("target_compile_options(" + pkg.toString() + " PRIVATE");
+        ctx.increaseIndent();
+        for (auto &f : s["this"]["compile_options"].getArray())
+            ctx.addLine("\"" + f + "\"");
+        ctx.decreaseIndent();
+        ctx.addLine(")");
+        ctx.addLine();
+
         ctx.addLine("target_link_options(" + pkg.toString() + " PRIVATE /NODEFAULTLIB)");
+        ctx.addLine("target_link_options(" + pkg.toString() + " PRIVATE");
+        ctx.increaseIndent();
+        for (auto &f : s["this"]["link_options"].getArray())
+            ctx.addLine("\"" + f + "\"");
+        ctx.decreaseIndent();
+        ctx.addLine(")");
         ctx.addLine();
 
         ctx.emptyLines();
