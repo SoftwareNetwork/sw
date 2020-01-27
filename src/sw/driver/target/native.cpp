@@ -1915,6 +1915,9 @@ const NativeCompiledTarget::ActiveDeps &NativeCompiledTarget::getActiveDependenc
 
 const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
 {
+    // Do not export any private information.
+    // It MUST be extracted from getCommands() call.
+
     auto &s = interface_settings;
     // info may change during prepare, so we create it every time for now
     // TODO: deny calls during prepare()
@@ -1922,8 +1925,6 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
     if (prepared && !s.empty())
         return s;
     s = {};
-    auto &this_s = s["this"];
-    // TODO: export everything as three-bit?
 
     s["source_dir"] = normalize_path(SourceDirBase);
     s["binary_dir"] = normalize_path(BinaryDir);
@@ -1963,18 +1964,6 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
         if (!OutputDir.empty())
             s["output_dir"] = normalize_path(OutputDir);
     }
-
-    // this
-    for (auto &[k,v] : Definitions)
-        this_s["definitions"][k] = v;
-    for (auto &d : IncludeDirectories)
-        this_s["include_directories"].push_back(normalize_path(d));
-    for (auto &d : NativeLinkerOptions::System.LinkLibraries)
-        this_s["system_link_libraries"].push_back(normalize_path(d));
-    for (auto &d : CompileOptions)
-        this_s["compile_options"].push_back(d);
-    for (auto &d : LinkOptions)
-        this_s["link_options"].push_back(d);
 
     // interface
     TargetSettings defs;
