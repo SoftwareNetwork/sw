@@ -55,7 +55,6 @@ std::unique_ptr<grpc::ClientContext> ProtobufApi::getContext() const
 {
     auto context = std::make_unique<grpc::ClientContext>();
     GRPC_SET_DEADLINE(10);
-    context->AddMetadata(SW_GRPC_METADATA_CLIENT_VERSION, "0.3.0");
     return context;
 }
 
