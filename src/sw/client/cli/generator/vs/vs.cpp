@@ -209,6 +209,20 @@ static FlagTable read_flag_table(const path &fn)
     return ft;
 }
 
+bool is_generated_ext(const path &f)
+{
+    return
+        0
+        || f.extension() == ".obj"
+        || f.extension() == ".lib"
+        || f.extension() == ".dll"
+        || f.extension() == ".exe"
+        || f.extension() == ".res"
+        || f.extension() == ".pdb"
+        // add more
+        ;
+};
+
 void VSGenerator::generate(const SwBuild &b)
 {
     const sw::InsecurePath deps_subdir = "Dependencies";
@@ -382,20 +396,6 @@ void VSGenerator::generate(const SwBuild &b)
     {
         auto t = get_vs_file_type_by_ext(f);
         return t == VSFileType::ClInclude || t == VSFileType::None;
-    };
-
-    auto is_generated_ext = [](const auto &f)
-    {
-        return
-            0
-            || f.extension() == ".obj"
-            || f.extension() == ".lib"
-            || f.extension() == ".dll"
-            || f.extension() == ".exe"
-            || f.extension() == ".res"
-            || f.extension() == ".pdb"
-            // add more
-            ;
     };
 
     int n_executables = 0;

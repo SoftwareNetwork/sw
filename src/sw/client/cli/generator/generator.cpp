@@ -823,19 +823,40 @@ void MakeGenerator::generate(const SwBuild &b)
 
 void CMakeGenerator::generate(const sw::SwBuild &b)
 {
-    SW_UNIMPLEMENTED;
+    bool is_generated_ext(const path &);
 
-    LOG_WARN(logger, "CMake generator is very experimental and subtle.");
-
-    const auto d = getRootDirectory(b);
+    auto inputs = b.getInputs();
+    if (inputs.size() != 1)
+        throw SW_RUNTIME_ERROR("Only single input is supported at the moment");
+    if (inputs[0].getSettings().size() != 1)
+        throw SW_RUNTIME_ERROR("Only single settings is supported at the moment");
+    bool abs_pkg = inputs[0].getInput().getType() == sw::InputType::InstalledPackage;
 
     auto ep = b.getExecutionPlan();
 
     primitives::Emitter ctx;
+    const auto long_line = "################################################################################";
+
+    auto add_title = [&ctx, &long_line](const String &title)
+    {
+        ctx.addLine(long_line);
+        ctx.addLine("#");
+        ctx.addLine("# " + title);
+        ctx.addLine("#");
+        ctx.addLine(long_line);
+        ctx.addLine();
+    };
+
+    add_title("This is SW generated file. Do not edit!");
 
     ctx.addLine("cmake_minimum_required(VERSION 3.12.0)");
-    ctx.addLine("project("s + "x" + " ASM C CXX)");
+    ctx.addLine();
+    ctx.addLine("project("s + "sw" /*b.getName()*/ + " C CXX)"); // ASM
+    ctx.addLine();
 
+    auto &ctx_deps = ctx.createInlineEmitter();
+
+    StringSet deps;
     for (auto &[pkg, tgts] : b.getTargetsToBuild())
     {
         if (tgts.empty())
@@ -846,9 +867,13 @@ void CMakeGenerator::generate(const sw::SwBuild &b)
         // filter out predefined targets
         if (b.getContext().getPredefinedTargets().find(pkg) != b.getContext().getPredefinedTargets().end())
             continue;
+        if (!abs_pkg && pkg.getPath().isAbsolute())
+            continue;
 
         auto &t = **tgts.begin();
         const auto &s = t.getInterfaceSettings();
+
+        add_title("Target: " + pkg.toString());
 
         if (s["type"] == "native_executable")
             ctx.addLine("add_executable(" + pkg.toString() + ")");
@@ -866,15 +891,123 @@ void CMakeGenerator::generate(const sw::SwBuild &b)
                 st = "INTERFACE";
             ctx.addText(st + ")"s);
         }
+        ctx.addLine();
+
+        /*auto can_add_file = [](const auto &f)
+        {
+            auto t = get_vs_file_type_by_ext(f);
+            return t == VSFileType::ClInclude || t == VSFileType::None;
+        };*/
+
+        Files files;
+        auto cmds = t.getCommands();
+        for (auto &c : cmds)
+        {
+            for (auto &o : c->inputs)
+            {
+                if (is_generated_ext(o))
+                    continue;
+
+                //if (can_add_file(o))
+                    files.insert(o);
+                /*else
+                    d.build_rules[c.get()] = o;*/
+            }
+
+            for (auto &o : c->outputs)
+            {
+                if (is_generated_ext(o))
+                    continue;
+
+                //if (can_add_file(o))
+                    files.insert(o);
+
+                /*if (1
+                    && c->arguments.size() > 1
+                    && c->arguments[1]->toString() == sw::builder::getInternalCallBuiltinFunctionName()
+                    && c->arguments.size() > 3
+                    && c->arguments[3]->toString() == "sw_create_def_file"
+                    )
+                {
+                    d.pre_link_command = c.get();
+                    continue;
+                }
+
+                d.custom_rules.insert(c.get());*/
+            }
+        }
+
+        ctx.addLine("target_sources(" + pkg.toString() + " PRIVATE");
+        ctx.increaseIndent();
+        for (auto &f : files)
+            ctx.addLine(normalize_path(f));
+        ctx.decreaseIndent();
+        ctx.addLine(")");
+        ctx.addLine();
+
+        ctx.addLine("target_compile_definitions(" + pkg.toString() + " PRIVATE");
+        ctx.increaseIndent();
+        for (auto &[k, v] : s["this"]["definitions"].getSettings())
+        {
+            if (k == "NDEBUG")
+                continue;
+            ctx.addLine("\"" + k + "=" + v.getValue() + "\"");
+        }
+        ctx.decreaseIndent();
+        ctx.addLine(")");
+        ctx.addLine();
+
+        ctx.addLine("target_include_directories(" + pkg.toString() + " PRIVATE");
+        ctx.increaseIndent();
+        for (auto &f : s["this"]["include_directories"].getArray())
+            ctx.addLine("\"" + normalize_path(f) + "\"");
+        ctx.decreaseIndent();
+        ctx.addLine(")");
+        ctx.addLine();
+
+        ctx.addLine("target_link_libraries(" + pkg.toString() + " PRIVATE");
+        ctx.increaseIndent();
+        for (auto &[k, _] : s["dependencies"]["link"].getSettings())
+        {
+            if (sw::PackageId(k).getPath().isAbsolute())
+                deps.insert(k);
+            ctx.addLine(k);
+        }
+        if (!s["dependencies"]["link"].getSettings().empty())
+            ctx.addLine();
+        for (auto &f : s["this"]["system_link_libraries"].getArray())
+            ctx.addLine("\"" + normalize_path(f) + "\"");
+        ctx.decreaseIndent();
+        ctx.addLine(")");
+        ctx.addLine();
+
+        ctx.addLine("target_link_options(" + pkg.toString() + " PRIVATE /NODEFAULTLIB)");
+        ctx.addLine();
+
+        ctx.emptyLines();
     }
 
-    write_file(d / "CMakeLists.txt", ctx.getText());
+    if (!deps.empty())
+    {
+        ctx_deps.addLine("find_package(SW REQUIRED)");
+        ctx_deps.addLine("sw_add_package(");
+        ctx_deps.increaseIndent();
+        for (auto &d : deps)
+            ctx_deps.addLine(d);
+        ctx_deps.decreaseIndent();
+        ctx_deps.addLine(")");
+        ctx_deps.addLine("sw_execute()");
+        ctx_deps.addLine();
+    }
+
+    ctx.addLine(long_line);
+    ctx.addLine();
+
+    write_file(getRootDirectory(b) / "CMakeLists.txt", ctx.getText());
 }
 
 void ShellGenerator::generate(const SwBuild &b)
 {
-    const auto d = getRootDirectory(b);
-
     auto ep = b.getExecutionPlan();
 
     primitives::Emitter ctx;
@@ -966,7 +1099,7 @@ void ShellGenerator::generate(const SwBuild &b)
         ctx.addLine(alias + "=\"" + normalize_path(prog) + "\"");
     });
 
-    write_file(d / ("commands"s + (batch ? ".bat" : ".sh")), ctx.getText());
+    write_file(getRootDirectory(b) / ("commands"s + (batch ? ".bat" : ".sh")), ctx.getText());
 }
 
 void CompilationDatabaseGenerator::generate(const SwBuild &b)
