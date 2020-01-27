@@ -1,0 +1,64 @@
+% !TEX root = sw.tex
+% !TeX spellcheck = en_US
+
+\tcbset{common/.style={before upper = {\topskip0pt \maxdepth=0pt},
+    enhanced,
+    listing only,
+    breakable = unlimited,
+    top = 0em,
+    bottom = 0em,
+    left = 0pt,
+    right = 0pt,
+    arc = 0em,
+    outer arc = 0em,
+    boxsep = 0em,
+    boxrule = 1pt,
+    titlerule = 0em,
+    colback = white,
+    size = fbox,
+ }
+}
+
+\newtcblisting{command}[1][]{common,
+    title=Shell,
+    listing only,
+    listing options={
+        basicstyle=\ttfamily\scriptsize,
+        tabsize=2,
+        inputencoding=utf8
+    },
+    #1
+}
+
+\newtcblisting{cmake}[1][]{common,
+    title=CMake,
+    listing only,
+    listing options={
+        basicstyle=\ttfamily\scriptsize,
+        tabsize=2,
+        inputencoding=utf8
+    },
+    #1
+}
+
+\newtcblisting{swcpp}[1][]{common,
+    title=sw.cpp,
+    listing only,
+    listing options={
+        basicstyle=\ttfamily\scriptsize,
+        tabsize=2,
+        inputencoding=utf8
+    },
+    #1
+}
+
+\newtcblisting{cppan}[1][]{common,
+    title=cppan.yml,
+    listing only,
+    listing options={
+        basicstyle=\ttfamily\scriptsize,
+        tabsize=2,
+        inputencoding=utf8
+    },
+    #1
+}
