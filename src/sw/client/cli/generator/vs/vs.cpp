@@ -1235,7 +1235,7 @@ void Project::emitProject(const VSGenerator &g) const
                 write_file(rule, "");
                 ((Project &)*this).files.insert({ rule, ". SW Rules" });
 
-                auto cmd = c->writeCommand(commands_dir / std::to_string(c->getHash()));
+                auto cmd = c->writeCommand(commands_dir / std::to_string(c->getHash()), false);
 
                 ctx.beginFileBlock(rule);
 
@@ -1260,6 +1260,7 @@ void Project::emitProject(const VSGenerator &g) const
                 ctx.endBlock(true);
 
                 ctx.beginBlockWithConfiguration("Message", s);
+                ctx.addText(c->getName());
                 ctx.endBlock();
 
                 if (c->always && g.vs_version >= Version(16))
