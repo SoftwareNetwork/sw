@@ -1126,7 +1126,7 @@ void NativeCompiledTarget::createPrecompiledHeader()
         pch.name = "sw_pch";
 
     if (pch.dir.empty())
-        pch.dir = BinaryDir.parent_path() / "pch";
+        pch.dir = getObjectDir() / "pch";
 
     if (pch.files.empty())
         pch.files = files;
