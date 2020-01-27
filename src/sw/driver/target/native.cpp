@@ -1922,6 +1922,8 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
     if (prepared && !s.empty())
         return s;
     s = {};
+    auto &this_s = s["this"];
+    // TODO: export everything as three-bit?
 
     s["source_dir"] = normalize_path(SourceDirBase);
     s["binary_dir"] = normalize_path(BinaryDir);
@@ -1962,6 +1964,15 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
             s["output_dir"] = normalize_path(OutputDir);
     }
 
+    // this
+    for (auto &[k,v] : Definitions)
+        this_s["definitions"][k] = v;
+    for (auto &d : IncludeDirectories)
+        this_s["include_directories"].push_back(normalize_path(d));
+    for (auto &d : NativeLinkerOptions::System.LinkLibraries)
+        this_s["system_link_libraries"].push_back(normalize_path(d));
+
+    // interface
     TargetSettings defs;
     for (auto &[k,v] : Public.Definitions)
         defs[k] = v;
