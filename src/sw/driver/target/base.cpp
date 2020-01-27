@@ -899,6 +899,47 @@ const TargetSettings &Target::getExportOptions() const
     return ts_export;
 }
 
+void Target::addTest(Test &cb, const String &name)
+{
+    auto &c = *cb.c;
+    c.name = name;
+    tests.insert(cb.c);
+}
+
+String Target::getTestName(const String &name) const
+{
+    auto tn = getPackage().toString() + "/";
+    if (!name.empty())
+        return tn + name;
+    return tn + std::to_string(tests.size() + 1);
+}
+
+Test Target::addTest()
+{
+    return addTest(getTestName());
+}
+
+Test Target::addTest(const String &name)
+{
+    Test cb(getContext());
+    addTest(cb, name);
+    return cb;
+}
+
+Test Target::addTest(const String &name, const ExecutableTarget &tgt)
+{
+    auto c = tgt.addCommand();
+    c << cmd::prog(tgt);
+    Test t(c);
+    addTest(t, name);
+    return t;
+}
+
+Test Target::addTest(const ExecutableTarget &t)
+{
+    return addTest(getTestName(), t);
+}
+
 bool ProjectTarget::init()
 {
     current_project = getPackage();

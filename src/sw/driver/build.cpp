@@ -69,11 +69,6 @@ Build::Build(SwBuild &mb)
     //return getContext().getModuleStorage().get(dll);
 }*/
 
-/*bool Build::skipTarget(TargetScope Scope) const
-{
-    return false;
-}*/
-
 bool Build::isKnownTarget(const LocalPackage &p) const
 {
     return module_data.known_targets.empty() ||
@@ -100,52 +95,5 @@ const TargetSettings &Build::getExternalVariables() const
 {
     return getMainBuild().getExternalVariables();
 }
-
-/*path Build::getTestDir() const
-{
-    return BinaryDir / "test" / getSettings().getConfig();
-}
-
-void Build::addTest(Test &cb, const String &name)
-{
-    auto dir = getTestDir() / name;
-    fs::remove_all(dir); // also makea condition here
-
-    auto &c = *cb.c;
-    c.name = "test: [" + name + "]";
-    c.always = true;
-    c.working_directory = dir;
-    SW_UNIMPLEMENTED;
-    //c.addPathDirectory(BinaryDir / getSettings().getConfig());
-    c.out.file = dir / "stdout.txt";
-    c.err.file = dir / "stderr.txt";
-    tests.insert(cb.c);
-}
-
-Test Build::addTest(const ExecutableTarget &t)
-{
-    return addTest("test." + std::to_string(tests.size() + 1), t);
-}
-
-Test Build::addTest(const String &name, const ExecutableTarget &tgt)
-{
-    auto c = tgt.addCommand();
-    c << cmd::prog(tgt);
-    Test t(c);
-    addTest(t, name);
-    return t;
-}
-
-Test Build::addTest()
-{
-    return addTest("test." + std::to_string(tests.size() + 1));
-}
-
-Test Build::addTest(const String &name)
-{
-    Test cb(getContext());
-    addTest(cb, name);
-    return cb;
-}*/
 
 }

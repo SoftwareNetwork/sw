@@ -28,7 +28,6 @@ SUBCOMMAND_DECL(test)
         build_arg_test.push_back(".");
 
     auto swctx = createSwContext();
-    SW_UNIMPLEMENTED;
-    //(Strings&)build_arg = (Strings&)build_arg_test;
-    //cli_build(*swctx);
+    auto b = createBuildAndPrepare(*swctx, (Strings&)build_arg_test);
+    b->test();
 }

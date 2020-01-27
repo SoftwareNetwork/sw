@@ -563,6 +563,7 @@ Commands SwBuild::getCommands() const
     }
 
     // update public ttb
+    // reconsider? remove?
     targets_to_build = ttb;
 
     //
@@ -829,6 +830,56 @@ TargetEntryPointPtr SwBuild::getEntryPoint(const PackageId &p) const
     if (i != service_entry_points.end())
         return i->second;
     return getContext().getEntryPoint(p);
+}
+
+path SwBuild::getTestDir() const
+{
+    return getBuildDirectory() / "test";
+}
+
+void SwBuild::test()
+{
+    build();
+
+    auto dir = getTestDir();
+    fs::remove_all(dir); // also make a condition here - what condition?
+
+    // prepare
+    for (const auto &[pkg, tgts] : getTargetsToBuild())
+    {
+        for (auto &tgt : tgts)
+        {
+            for (auto &c : tgt->getTests())
+            {
+                auto test_dir = dir / tgt->getSettings().getHash() / c->getName();
+                fs::create_directories(test_dir);
+
+                c->maybe_unused = builder::Command::MU_TRUE; // why?
+
+                //
+                c->name = "test: [" + c->name + "]";
+                c->always = true;
+                c->working_directory = test_dir;
+                //c.addPathDirectory(BinaryDir / getSettings().getConfig());
+                c->out.file = test_dir / "stdout.txt";
+                c->err.file = test_dir / "stderr.txt";
+            }
+        }
+    }
+
+    // gather commands
+    Commands cmds;
+    for (const auto &[pkg, tgts] : getTargetsToBuild())
+    {
+        for (auto &tgt : tgts)
+        {
+            auto c = tgt->getTests();
+            cmds.insert(c.begin(), c.end());
+        }
+    }
+
+    auto ep = getExecutionPlan(cmds);
+    ep.execute(getExecutor());
 }
 
 }

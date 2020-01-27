@@ -52,6 +52,8 @@ struct LibraryTarget;
 struct StaticLibraryTarget;
 struct SharedLibraryTarget;
 
+struct Test;
+
 struct SW_DRIVER_CPP_API TargetEvent
 {
     CallbackType t;
@@ -355,6 +357,17 @@ public:
     String getTypeName() const { return toString(getType()); }
     bool hasSameProject(const ITarget &t) const;
 
+    // tests
+    // TODO: implement some of https://cmake.org/cmake/help/latest/manual/cmake-properties.7.html#properties-on-tests
+    Test addTest();
+    Test addTest(const String &name);
+    Test addTest(const String &name, const ExecutableTarget &t);
+    Test addTest(const ExecutableTarget &t);
+
+private:
+    void addTest(Test &cb, const String &name);
+    String getTestName(const String &name = {}) const;
+
 protected:
     path RootDirectory;
     SW_MULTIPASS_VARIABLE(prepare_pass);
@@ -372,14 +385,15 @@ private:
     // ["native"]["library"] to "static";
     TargetSettings ts_export;
     BuildSettings bs;
-
     std::unique_ptr<Source> source;
     String provided_cfg;
+    Commands tests;
 
     void applyRootDirectory();
     const TargetSettings &getHostSettings() const;
 
     virtual Commands getCommands1() const { return Commands{}; }
+    Commands getTests() const override { return tests; }
 
     // for source access
     friend struct TargetBase;

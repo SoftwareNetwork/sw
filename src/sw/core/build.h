@@ -28,6 +28,8 @@ enum class BuildState
     PackagesLoaded,
     Prepared,
     Executed,
+
+    // Tested?
 };
 
 // single build
@@ -70,6 +72,11 @@ struct SW_CORE_API SwBuild
     String getHash() const;
     path getExecutionPlanPath() const;
 
+    // tests
+    void test();
+    path getTestDir() const;
+
+    //
     TargetMap &getTargets() { return targets; }
     const TargetMap &getTargets() const { return targets; }
 

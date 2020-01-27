@@ -51,6 +51,8 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "generator.vs");
 
+// TODO: add TESTS target (or how it is named in cmake)
+
 using namespace sw;
 
 bool gPrintDependencies;

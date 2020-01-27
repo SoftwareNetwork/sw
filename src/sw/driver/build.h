@@ -7,6 +7,7 @@
 #pragma once
 
 #include "checks_storage.h"
+#include "command.h"
 #include "target/base.h"
 
 #include <sw/core/build.h>
@@ -21,8 +22,6 @@ struct Module;
 struct ModuleStorage;
 struct SwContext;
 
-//using FilesMap = std::unordered_map<path, path>;
-
 struct ModuleSwappableData
 {
     PackageIdSet known_targets;
@@ -30,7 +29,7 @@ struct ModuleSwappableData
     std::vector<ITargetPtr> added_targets;
 };
 
-/*struct SW_DRIVER_CPP_API Test : driver::CommandBuilder
+struct SW_DRIVER_CPP_API Test : driver::CommandBuilder
 {
     using driver::CommandBuilder::CommandBuilder;
 
@@ -43,7 +42,7 @@ struct ModuleSwappableData
     {
         // todo?
     }
-};*/
+};
 
 struct SW_DRIVER_CPP_API SimpleBuild : TargetBase
 {
@@ -63,21 +62,8 @@ struct SW_DRIVER_CPP_API Build : SimpleBuild
     bool isKnownTarget(const LocalPackage &p) const;
     path getSourceDir(const LocalPackage &p) const;
     std::optional<path> getSourceDir(const Source &s, const Version &v) const;
-    //bool skipTarget(TargetScope Scope) const;
 
     const TargetSettings &getExternalVariables() const;
-
-    // tests
-    // TODO: implement some of https://cmake.org/cmake/help/latest/manual/cmake-properties.7.html#properties-on-tests
-    /*Commands tests;
-    Test addTest(const ExecutableTarget &t);
-    Test addTest(const String &name, const ExecutableTarget &t);
-    Test addTest();
-    Test addTest(const String &name);
-    path getTestDir() const;
-
-private:
-    //void addTest(Test &cb, const String &name);*/
 
     //
 public:

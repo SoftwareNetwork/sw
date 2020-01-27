@@ -75,6 +75,11 @@ struct SW_CORE_API ITarget : ICastable
     ///
     virtual Commands getCommands() const = 0;
 
+    // get tests
+    // reconsider?
+    // get using settings?
+    virtual Commands getTests() const = 0;
+
     //
     // extended info section
     // configuration specific
