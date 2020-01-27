@@ -98,7 +98,7 @@ static Version gatherVersion1(builder::detail::ResolvableCommand &c, const Strin
     if (c.pid == -1)
         throw SW_RUNTIME_ERROR(normalize_path(c.getProgram()) + ": " + ec.message());
 
-    static std::regex r_default("(\\d+)\\.(\\d+)\\.(\\d+)(\\.(\\d+))?");
+    static std::regex r_default("(\\d+)(\\.(\\d+)){2,}(-\\S+([.-]\\S+)*)?");
 
     std::regex r_in;
     if (!in_regex.empty())
@@ -110,10 +110,14 @@ static Version gatherVersion1(builder::detail::ResolvableCommand &c, const Strin
     std::smatch m;
     if (std::regex_search(c.err.text.empty() ? c.out.text : c.err.text, m, r))
     {
-        if (m[5].matched)
-            V = { std::stoi(m[1].str()), std::stoi(m[2].str()), std::stoi(m[3].str()), std::stoi(m[5].str()) };
-        else
-            V = { std::stoi(m[1].str()), std::stoi(m[2].str()), std::stoi(m[3].str()) };
+        auto s = m[0].str();
+        if (m[4].matched)
+        {
+            // some programs write extra as 'beta2-123-123' when we expect 'beta2.123.123'
+            // this math skips until m[4] started plus first '-'
+            std::replace(s.begin() + (m[4].first - m[0].first) + 1, s.end(), '-', '.');
+        }
+        V = s;
     }
     return V;
 }
