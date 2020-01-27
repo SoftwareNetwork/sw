@@ -252,18 +252,6 @@ void build(Solution &s)
                 << cmd::out("gitrev.h");
             c.c->always = true;
         }
-
-        if (client.getBuildSettings().TargetOS.Type == OSType::Windows)
-        {
-            auto &client = tools.addTarget<ExecutableTarget>("client");
-            client += "src/sw/tools/client.cpp";
-            client +=
-                "org.sw.demo.boost.dll"_dep,
-                "org.sw.demo.boost.filesystem"_dep,
-                "user32.lib"_slib;
-            if (client.getBuildSettings().TargetOS.Type == OSType::Windows)
-                client.Public += "UNICODE"_d;
-        }
     }
 
     if (s.getExternalVariables()["with-gui"] != "true")
