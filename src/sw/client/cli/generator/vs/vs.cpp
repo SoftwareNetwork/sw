@@ -1579,6 +1579,13 @@ std::map<String, String> Project::printProperties(const sw::builder::Command &c,
                 continue;
             if (arg.find(d.argument, 1) != 1)
                 continue;
+
+            // if flag is matched, but it does not expect user value, we skip it
+            // distinct -u vs -utf8
+            //                                                                        '/'
+            if (!bitmask_includes(d.flags, FlagTableFlags::UserValue) && arg.size() > (1 + d.argument.size()))
+                continue;
+
             print(d);
             found = true;
             break;
