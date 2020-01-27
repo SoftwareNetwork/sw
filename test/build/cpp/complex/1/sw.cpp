@@ -4,5 +4,5 @@ void build(Solution &s)
     auto &d = p.addDirectory("xb");
     auto &t = d.addTarget<ExecutableTarget>("x");
     t += "main.cpp";
-    t += "pub.cppan2.demo.png"_dep;
+    t += "org.sw.demo.glennrp.png"_dep;
 }
