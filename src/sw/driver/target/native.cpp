@@ -1971,6 +1971,10 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
         this_s["include_directories"].push_back(normalize_path(d));
     for (auto &d : NativeLinkerOptions::System.LinkLibraries)
         this_s["system_link_libraries"].push_back(normalize_path(d));
+    for (auto &d : CompileOptions)
+        this_s["compile_options"].push_back(d);
+    for (auto &d : LinkOptions)
+        this_s["link_options"].push_back(d);
 
     // interface
     TargetSettings defs;
