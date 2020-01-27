@@ -678,7 +678,7 @@ String Command::saveCommand() const
     return s;
 }
 
-path Command::writeCommand(const path &p) const
+path Command::writeCommand(const path &p, bool print_name) const
 {
     auto pbat = p;
     String t;
@@ -732,7 +732,8 @@ path Command::writeCommand(const path &p) const
     }*/
 
     // name
-    t += "echo " + getName() + "\n\n";
+    if (print_name)
+        t += "echo " + getName() + "\n\n";
 
     // env
     auto print_env = [&t, &bat](const auto &env)

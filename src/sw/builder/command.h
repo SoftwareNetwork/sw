@@ -224,7 +224,7 @@ struct SW_BUILDER_API Command : ICastable, CommandNode, detail::ResolvableComman
     size_t getHash() const;
     Files getGeneratedDirs() const; // used by generators
     void addInputOutputDeps();
-    path writeCommand(const path &basename) const;
+    path writeCommand(const path &basename, bool print_name = true) const;
 
     bool lessDuringExecution(const CommandNode &rhs) const override;
 
