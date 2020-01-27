@@ -160,6 +160,7 @@ void build(Solution &s)
     {
         cpp_driver.ApiName = "SW_DRIVER_CPP_API";
         cpp_driver.ExportIfStatic = true;
+        cpp_driver.PackageDefinitions = true;
         cpp_driver.CPPVersion = CPPLanguageStandard::CPP17;
         cpp_driver.Public += core,
             "pub.egorpugin.primitives.patch-master"_dep,

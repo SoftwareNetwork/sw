@@ -25,6 +25,8 @@ DECLARE_STATIC_LOGGER(logger, "entry_point");
 
 bool gVerbose;
 
+#define SW_DRIVER_NAME "org.sw." PACKAGE_NAME "-" PACKAGE_VERSION
+
 namespace sw
 {
 
@@ -310,9 +312,6 @@ static PackagePath getSelfTargetName(const FilesSorted &files)
     return "loc.sw.self." + getFilesHash(files);
 }
 
-#define SW_DRIVER_NAME "org.sw.sw.client.driver.cpp-0.3.1"
-#define SW_DRIVER_INCLUDE_DIR "src"
-
 static auto getDriverDep()
 {
     return std::make_shared<Dependency>(UnresolvedPackage(SW_DRIVER_NAME));
@@ -321,7 +320,7 @@ static auto getDriverDep()
 // add Dirs?
 static path getDriverIncludeDir(Build &solution, NativeCompiledTarget &lib)
 {
-    return lib.getFile(getDriverDep()) / SW_DRIVER_INCLUDE_DIR;
+    return lib.getFile(getDriverDep()) / "src";
 }
 
 static void addDeps(Build &solution, NativeCompiledTarget &lib)
