@@ -124,7 +124,7 @@ std::unordered_map<UnresolvedPackage, PackagePtr> ProtobufApi::resolvePackages(c
 {
     // currently this is server error
     //unresolved_pkgs = pkgs;
-    //return;
+    //return {};
     //SW_UNIMPLEMENTED;
     throw SW_LOGIC_ERROR("Server error. Contact administrator, please.");
 

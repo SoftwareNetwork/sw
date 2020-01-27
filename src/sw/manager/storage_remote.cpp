@@ -576,6 +576,10 @@ RemoteStorageWithFallbackToRemoteResolving::resolve(const UnresolvedPackages &pk
 std::unordered_map<UnresolvedPackage, PackagePtr>
 RemoteStorageWithFallbackToRemoteResolving::resolveFromRemote(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
 {
+    // exception and thread creation in resolveFromRemote() is way too slow at the moment
+    unresolved_pkgs = pkgs;
+    return {};
+
     return getRemote().getApi()->resolvePackages(pkgs, unresolved_pkgs, data, *this);
 }
 
