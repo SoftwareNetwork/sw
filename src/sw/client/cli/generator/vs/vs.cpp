@@ -1232,7 +1232,8 @@ void Project::emitProject(const VSGenerator &g) const
                 if (rules.find(rule) != rules.end())
                     rule += "." + std::to_string(c->getHash());
                 rule += ".rule";
-                write_file(rule, "");
+                if (!fs::exists(rule)) // prevent rebuilds
+                    write_file(rule, "");
                 ((Project &)*this).files.insert({ rule, ". SW Rules" });
 
                 auto cmd = c->writeCommand(commands_dir / std::to_string(c->getHash()), false);
@@ -1287,7 +1288,8 @@ void Project::emitProject(const VSGenerator &g) const
         {
             path rule = rules_dir / c.name;
             rule += ".rule";
-            write_file(rule, "");
+            if (!fs::exists(rule)) // prevent rebuilds
+                write_file(rule, "");
             ((Project &)*this).files.insert({ rule, ". SW Rules" });
 
             ctx.beginFileBlock(rule);
