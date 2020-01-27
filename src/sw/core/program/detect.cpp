@@ -94,13 +94,13 @@ void detectCompilers(DETECT_ARGS)
     detectNativeCompilers(s);
 
     // others
-    /*detectCSharpCompilers(s);
+    detectCSharpCompilers(s);
     detectRustCompilers(s);
     detectGoCompilers(s);
     detectFortranCompilers(s);
     detectJavaCompilers(s);
     detectKotlinCompilers(s);
-    detectDCompilers(s);*/
+    detectDCompilers(s);
 }
 
 struct PredefinedTarget : ITarget
@@ -119,6 +119,7 @@ struct PredefinedTarget : ITarget
     std::vector<IDependency *> getDependencies() const override { return {}; }
     bool prepare() override { return false; }
     Commands getCommands() const override { return {}; }
+    Commands getTests() const override { return {}; }
 
     const TargetSettings &getSettings() const override { return ts; }
     const TargetSettings &getInterfaceSettings() const override { return public_ts; }
@@ -127,6 +128,25 @@ struct PredefinedTarget : ITarget
 struct PredefinedProgramTarget : PredefinedTarget, PredefinedProgram
 {
     using PredefinedTarget::PredefinedTarget;
+};
+
+struct SimpleProgram : Program
+{
+    using Program::Program;
+
+    std::shared_ptr<Program> clone() const override { return std::make_shared<SimpleProgram>(*this); }
+    std::shared_ptr<builder::Command> getCommand() const override
+    {
+        if (!cmd)
+        {
+            cmd = std::make_shared<builder::Command>(swctx);
+            cmd->setProgram(file);
+        }
+        return cmd;
+    }
+
+private:
+    mutable std::shared_ptr<builder::Command> cmd;
 };
 
 template <class T>
@@ -154,77 +174,52 @@ static T &addProgram(SwCoreContext &s, const PackageId &id, const std::shared_pt
 
 void detectDCompilers(DETECT_ARGS)
 {
-    SW_UNIMPLEMENTED;
-
-    /*path compiler;
-    compiler = resolveExecutable("dmd");
-    if (compiler.empty())
-        return;
-
-    auto C = std::make_shared<DCompiler>(s.swctx);
-    C->file = compiler;
-    C->Extension = s.getBuildSettings().TargetOS.getExecutableExtension();
     //C->input_extensions = { ".d" };
-    addProgram(s, "org.dlang.dmd.dmd", C);*/
+
+    auto p = std::make_shared<SimpleProgram>(s);
+    auto f = resolveExecutable("dmd");
+    if (!fs::exists(f))
+        return;
+    p->file = f;
+
+    auto v = getVersion(s, p->file);
+    addProgram(s, PackageId("org.dlang.dmd.dmd", v), p);
 }
 
 void detectKotlinCompilers(DETECT_ARGS)
 {
-    SW_UNIMPLEMENTED;
-
-    /*path compiler;
-    compiler = resolveExecutable("kotlinc");
-    if (compiler.empty())
-        return;
-
-    auto C = std::make_shared<KotlinCompiler>(s.swctx);
-    C->file = compiler;
     //C->input_extensions = { ".kt", ".kts" };
-    //s.registerProgram("com.JetBrains.kotlin.kotlinc", C);*/
+
+    auto p = std::make_shared<SimpleProgram>(s);
+    auto f = resolveExecutable("kotlinc");
+    if (!fs::exists(f))
+        return;
+    p->file = f;
+
+    auto v = getVersion(s, p->file, "-version");
+    addProgram(s, PackageId("com.JetBrains.kotlin.kotlinc", v), p);
 }
 
 void detectJavaCompilers(DETECT_ARGS)
 {
-    SW_UNIMPLEMENTED;
-
-    /*path compiler;
-    compiler = resolveExecutable("javac");
-    if (compiler.empty())
-        return;
+    //C->input_extensions = { ".java" };
     //compiler = resolveExecutable("jar"); // later
 
-    auto C = std::make_shared<JavaCompiler>(s.swctx);
-    C->file = compiler;
-    //C->input_extensions = { ".java", };
-    //s.registerProgram("com.oracle.java.javac", C);*/
+    auto p = std::make_shared<SimpleProgram>(s);
+    auto f = resolveExecutable("javac");
+    if (!fs::exists(f))
+        return;
+    p->file = f;
+
+    auto v = getVersion(s, p->file);
+    addProgram(s, PackageId("com.oracle.java.javac", v), p);
 }
 
 void detectFortranCompilers(DETECT_ARGS)
 {
-    SW_UNIMPLEMENTED;
-
     // TODO: gfortran, flang, ifort, pgfortran, f90 (Oracle Sun), xlf, bgxlf, ...
     // aocc, armflang
 
-    /*path compiler;
-    compiler = resolveExecutable("gfortran");
-    if (compiler.empty())
-    {
-        compiler = resolveExecutable("f95");
-        if (compiler.empty())
-        {
-            compiler = resolveExecutable("g95");
-            if (compiler.empty())
-            {
-                return;
-            }
-        }
-    }
-
-    auto C = std::make_shared<FortranCompiler>(s.swctx);
-    C->file = compiler;
-    SW_UNIMPLEMENTED;
-    //C->Extension = s.Settings.TargetOS.getExecutableExtension();
     /*C->input_extensions = {
         ".f",
         ".FOR",
@@ -238,45 +233,57 @@ void detectFortranCompilers(DETECT_ARGS)
         ".fpp",
         ".FPP",
     };*/
-    //s.registerProgram("org.gnu.gcc.fortran", C);*/
+
+    // TODO: add each program separately
+
+    auto p = std::make_shared<SimpleProgram>(s);
+    auto f = resolveExecutable("gfortran");
+    if (!fs::exists(f))
+    {
+        auto f = resolveExecutable("f95");
+        if (!fs::exists(f))
+        {
+            auto f = resolveExecutable("g95");
+            if (!fs::exists(f))
+                return;
+        }
+    }
+    p->file = f;
+
+    auto v = getVersion(s, p->file);
+    addProgram(s, PackageId("org.gnu.gcc.fortran", v), p);
 }
 
 void detectGoCompilers(DETECT_ARGS)
 {
-    SW_UNIMPLEMENTED;
+    //C->input_extensions = { ".go", };
 
 #if defined(_WIN32)
-    /*auto compiler = path("go");
-    compiler = resolveExecutable(compiler);
-    if (compiler.empty())
+    auto p = std::make_shared<SimpleProgram>(s);
+    auto f = resolveExecutable("go");
+    if (!fs::exists(f))
         return;
+    p->file = f;
 
-    auto C = std::make_shared<GoCompiler>(s.swctx);
-    C->file = compiler;
-    SW_UNIMPLEMENTED;
-    //C->Extension = s.Settings.TargetOS.getExecutableExtension();
-    //C->input_extensions = { ".go", };
-    //s.registerProgram("org.google.golang.go", C);*/
+    auto v = getVersion(s, p->file, "version");
+    addProgram(s, PackageId("org.google.golang.go", v), p);
 #else
 #endif
 }
 
 void detectRustCompilers(DETECT_ARGS)
 {
-    SW_UNIMPLEMENTED;
+    //C->input_extensions = { ".rs", };
 
 #if defined(_WIN32)
-    /*auto compiler = get_home_directory() / ".cargo" / "bin" / "rustc";
-    compiler = resolveExecutable(compiler);
-    if (compiler.empty())
+    auto p = std::make_shared<SimpleProgram>(s);
+    auto f = resolveExecutable(get_home_directory() / ".cargo" / "bin" / "rustc");
+    if (!fs::exists(f))
         return;
+    p->file = f;
 
-    auto C = std::make_shared<RustCompiler>(s.swctx);
-    C->file = compiler;
-    SW_UNIMPLEMENTED;
-    //C->Extension = s.Settings.TargetOS.getExecutableExtension();
-    //C->input_extensions = { ".rs", };
-    //s.registerProgram("org.rust.rustc", C);*/
+    auto v = getVersion(s, p->file);
+    addProgram(s, PackageId("org.rust.rustc", v), p);
 #else
 #endif
 }
@@ -288,25 +295,6 @@ struct VSInstance
 };
 
 using VSInstances = VersionMap<VSInstance>;
-
-struct SimpleProgram : Program
-{
-    using Program::Program;
-
-    std::shared_ptr<Program> clone() const override { return std::make_shared<SimpleProgram>(*this); }
-    std::shared_ptr<builder::Command> getCommand() const override
-    {
-        if (!cmd)
-        {
-            cmd = std::make_shared<builder::Command>(swctx);
-            cmd->setProgram(file);
-        }
-        return cmd;
-    }
-
-private:
-    mutable std::shared_ptr<builder::Command> cmd;
-};
 
 VSInstances &gatherVSInstances(DETECT_ARGS)
 {
@@ -338,9 +326,9 @@ VSInstances &gatherVSInstances(DETECT_ARGS)
 
 void detectCSharpCompilers(DETECT_ARGS)
 {
-    SW_UNIMPLEMENTED;
+    //C->input_extensions = { ".cs", };
 
-    /*auto &instances = gatherVSInstances(s);
+    auto &instances = gatherVSInstances(s);
     for (auto &[v, i] : instances)
     {
         auto root = i.root;
@@ -356,15 +344,12 @@ void detectCSharpCompilers(DETECT_ARGS)
             SW_UNIMPLEMENTED;
         }
 
-        auto compiler = root / "csc.exe";
+        auto p = std::make_shared<SimpleProgram>(s);
+        p->file = root / "csc.exe";
 
-        auto C = std::make_shared<VisualStudioCSharpCompiler>(s.swctx);
-        C->file = compiler;
-        SW_UNIMPLEMENTED;
-        //C->Extension = s.Settings.TargetOS.getExecutableExtension();
-        //C->input_extensions = { ".cs", };
-        //s.registerProgram("com.Microsoft.VisualStudio.Roslyn.csc", C);
-    }*/
+        auto v = getVersion(s, p->file);
+        addProgram(s, PackageId("com.Microsoft.VisualStudio.Roslyn.csc", v), p);
+    }
 }
 
 void detectMsvc15Plus(DETECT_ARGS)
