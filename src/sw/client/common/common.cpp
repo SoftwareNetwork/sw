@@ -42,7 +42,7 @@ std::unique_ptr<sw::SwContext> createSwContext()
     // before default?
     //for (auto &d : drivers)
     //swctx->registerDriver(std::make_unique<sw::driver::cpp::Driver>());
-    swctx->registerDriver("org.sw.sw.driver.cpp-0.3.1"s, std::make_unique<sw::driver::cpp::Driver>());
+    swctx->registerDriver("org.sw.sw.driver.cpp-0.4.0"s, std::make_unique<sw::driver::cpp::Driver>());
     //swctx->registerDriver(std::make_unique<sw::CDriver>(sw_create_driver));
     return swctx;
 }

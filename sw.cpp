@@ -5,7 +5,7 @@
 
 void build(Solution &s)
 {
-    auto &p = s.addProject("sw.client", "0.3.1");
+    auto &p = s.addProject("sw.client", "0.4.0");
     p += Git("https://github.com/SoftwareNetwork/sw", "", "master");
 
     auto &support = p.addTarget<StaticLibraryTarget>("support");
@@ -97,32 +97,6 @@ void build(Solution &s)
         }*/
     }
 
-    auto &tools = p.addDirectory("tools");
-    auto &self_builder = tools.addTarget<ExecutableTarget>("self_builder");
-    self_builder.PackageDefinitions = true;
-    self_builder.CPPVersion = CPPLanguageStandard::CPP17;
-    self_builder += "src/sw/tools/self_builder.cpp";
-    self_builder +=
-        manager,
-        "pub.egorpugin.primitives.emitter-master"_dep,
-        "pub.egorpugin.primitives.sw.main-master"_dep;
-
-    auto &cl_generator = tools.addTarget<ExecutableTarget>("cl_generator");
-    cl_generator.PackageDefinitions = true;
-    cl_generator.CPPVersion = CPPLanguageStandard::CPP17;
-    cl_generator += "src/sw/tools/cl_generator.*"_rr;
-    cl_generator +=
-        "pub.egorpugin.primitives.emitter-master"_dep,
-        "pub.egorpugin.primitives.yaml-master"_dep,
-        "pub.egorpugin.primitives.main-master"_dep;
-
-    auto &create_git_rev = tools.addTarget<ExecutableTarget>("create_git_rev");
-    create_git_rev.CPPVersion = CPPLanguageStandard::CPP17;
-    create_git_rev += "src/sw/tools/create_git_rev.*"_rr;
-    create_git_rev +=
-        "pub.egorpugin.primitives.command-master"_dep,
-        "pub.egorpugin.primitives.sw.main-master"_dep;
-
     auto &builder = p.addTarget<LibraryTarget>("builder");
     {
         builder.ApiName = "SW_BUILDER_API";
@@ -177,6 +151,15 @@ void build(Solution &s)
         //else if (s.getBuildSettings().Native.CompilerType == CompilerType::GNU)
             //cpp_driver.CompileOptions.push_back("-Wa,-mbig-obj");
         {
+            auto &self_builder = cpp_driver.addTarget<ExecutableTarget>("self_builder");
+            self_builder.PackageDefinitions = true;
+            self_builder.CPPVersion = CPPLanguageStandard::CPP17;
+            self_builder += "src/sw/tools/self_builder.cpp";
+            self_builder +=
+                manager,
+                "pub.egorpugin.primitives.emitter-master"_dep,
+                "pub.egorpugin.primitives.sw.main-master"_dep;
+
             auto c = cpp_driver.addCommand();
             c << cmd::prog(self_builder)
                 << cmd::out("build_self.generated.h")
@@ -184,6 +167,15 @@ void build(Solution &s)
                 ;
         }
         {
+            auto &cl_generator = cpp_driver.addTarget<ExecutableTarget>("cl_generator");
+            cl_generator.PackageDefinitions = true;
+            cl_generator.CPPVersion = CPPLanguageStandard::CPP17;
+            cl_generator += "src/sw/tools/cl_generator.*"_rr;
+            cl_generator +=
+                "pub.egorpugin.primitives.emitter-master"_dep,
+                "pub.egorpugin.primitives.yaml-master"_dep,
+                "pub.egorpugin.primitives.main-master"_dep;
+
             auto c = cpp_driver.addCommand();
             c << cmd::prog(cl_generator)
                 << cmd::in("src/sw/driver/options_cl.yml")
@@ -203,7 +195,7 @@ void build(Solution &s)
         }
     }
 
-    auto &client = p.addTarget<ExecutableTarget>("sw");
+    auto &client = p.addTarget<ExecutableTarget>("sw", "1.0.0");
     auto &client_common = client.addTarget<StaticLibrary>("common");
     {
         client_common.PackageDefinitions = true;
@@ -245,6 +237,13 @@ void build(Solution &s)
             client.CompileOptions.push_back("-wd4275");
 
         {
+            auto &create_git_rev = client.addTarget<ExecutableTarget>("create_git_rev");
+            create_git_rev.CPPVersion = CPPLanguageStandard::CPP17;
+            create_git_rev += "src/sw/tools/create_git_rev.*"_rr;
+            create_git_rev +=
+                "pub.egorpugin.primitives.command-master"_dep,
+                "pub.egorpugin.primitives.sw.main-master"_dep;
+
             auto c = client.addCommand();
             c << cmd::prog(create_git_rev)
                 << sw::resolveExecutable("git")
@@ -258,7 +257,7 @@ void build(Solution &s)
         return;
 
 #ifndef SW_DRIVER_ADD_SELF
-    auto &gui = client.addTarget<ExecutableTarget>("gui");
+    auto &gui = client.addTarget<ExecutableTarget>("gui", "0.4.0");
     {
         gui.PackageDefinitions = true;
         gui.SwDefinitions = true;

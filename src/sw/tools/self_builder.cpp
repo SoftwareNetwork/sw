@@ -18,7 +18,7 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "self_builder");
 
-#define SW_TARGET "org.sw.sw.client.driver.cpp-0.3.1"
+#define SW_DRIVER_NAME "org.sw.sw.client.driver.cpp-" PACKAGE_VERSION
 
 using namespace sw;
 
@@ -76,7 +76,7 @@ void write_build_script(const std::unordered_map<UnresolvedPackage, LocalPackage
     prepkgs.push_back("pub.egorpugin.primitives.filesystem-master"s);
 
     // cpp driver
-    prepkgs.push_back({SW_TARGET});
+    prepkgs.push_back({SW_DRIVER_NAME});
 
     for (auto &u : prepkgs)
     {
@@ -192,7 +192,7 @@ int main(int argc, char **argv)
     auto m = swctx.install(
     {
         // our main cpp driver target
-        {SW_TARGET},
+        {SW_DRIVER_NAME},
 
         // other needed stuff (libcxx)
         {"org.sw.demo.llvm_project.libcxx"},
