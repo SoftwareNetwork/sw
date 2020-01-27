@@ -39,7 +39,7 @@ static String getCurrentModuleNameHash()
 
 static path getDir(const path &root)
 {
-    return root / "db" / "0.3.1";
+    return root / "db";
 }
 
 static path getCommandsDbFilename(const path &root)
