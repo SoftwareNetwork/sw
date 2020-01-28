@@ -39,6 +39,8 @@ struct SW_DRIVER_CPP_API Module
 
         template <class ... Args>
         typename std_function_type::result_type operator()(Args &&... args) const;
+
+        bool isRequired() const { return Required; }
     };
 
     Module(const Module::DynamicLibrary &, const String &suffix = {});

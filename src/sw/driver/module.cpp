@@ -65,16 +65,16 @@ Module::LibraryCall<F, Required>::operator()(Args && ... args) const
 Module::Module(const Module::DynamicLibrary &dll, const String &suffix)
     : module(dll)
 {
-#define LOAD_NAME(f, n)                                                                               \
-    do                                                                                                \
-    {                                                                                                 \
-        f##_.name = #f;                                                                               \
-        f##_.m = this;                                                                                \
-        if (!module.symbol_storage().get_function<decltype(f##_)::function_type>(n + suffix).empty()) \
-            f##_ = module.get_function<decltype(f##_)::function_type>(n + suffix);                    \
+#define LOAD(f)                                                                                                                                     \
+    do                                                                                                                                              \
+    {                                                                                                                                               \
+        f##_.name = #f + suffix;                                                                                                                    \
+        f##_.m = this;                                                                                                                              \
+        if (!module.symbol_storage().get_function<decltype(f##_)::function_type>(f##_.name).empty())                                                \
+            f##_ = module.get_function<decltype(f##_)::function_type>(f##_.name);                                                                   \
+        else if (f##_.isRequired())                                                                                                                 \
+            throw SW_RUNTIME_ERROR("Required function '" + f##_.name + "' is not found in module: " + normalize_path(dll.shared_lib().location())); \
     } while (0)
-
-#define LOAD(f) LOAD_NAME(f, f##_.name)
 
     LOAD(build);
     LOAD(check);
@@ -82,7 +82,6 @@ Module::Module(const Module::DynamicLibrary &dll, const String &suffix)
     LOAD(sw_get_module_abi_version);
 
 #undef LOAD
-#undef LOAD_NAME
 }
 
 path Module::getLocation() const

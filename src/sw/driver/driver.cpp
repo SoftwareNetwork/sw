@@ -299,11 +299,18 @@ std::unordered_map<PackageId, Driver::EntryPointsVector1> Driver::load_packages(
         if (td.find(p) != td.end())
             continue;
 
-        auto ep = std::make_shared<NativeModuleTargetEntryPoint>(
-            Module(swctx.getModuleStorage().get(dll), gn2suffix(p.getData().group_number)));
-        //ep->module_data.NamePrefix = p.getPath().slice(0, p.getData().prefix);
-        swctx.setEntryPoint(p, ep);
-        eps[p].push_back(ep);
+        try
+        {
+            auto ep = std::make_shared<NativeModuleTargetEntryPoint>(
+                Module(swctx.getModuleStorage().get(dll), gn2suffix(p.getData().group_number)));
+            //ep->module_data.NamePrefix = p.getPath().slice(0, p.getData().prefix);
+            swctx.setEntryPoint(p, ep);
+            eps[p].push_back(ep);
+        }
+        catch (std::exception &e)
+        {
+            throw SW_RUNTIME_ERROR("Entry point not found for " + p.toString() + ": " + e.what());
+        }
     }
     return eps;
 }
