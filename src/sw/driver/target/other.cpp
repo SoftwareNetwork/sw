@@ -460,6 +460,11 @@ Commands DTarget::getCommands1() const
     for (auto f : gatherSourceFiles<SourceFile>(*this, {".d"}))
         compiler->setSourceFile(f->file/*, BinaryDir.parent_path() / "obj" / f->file.filename()*/);
 
+    // add prepare() to propagate deps
+    // here we check only our deps
+    for (auto &d : this->gatherDependencies())
+        compiler->setSourceFile(d->getTarget().as<DTarget &>().compiler->getOutputFile());
+
     Commands cmds;
     auto c = compiler->getCommand(*this);
     cmds.insert(c);
@@ -470,6 +475,7 @@ bool DStaticLibrary::init()
 {
     auto r = DTarget::init();
     compiler->Extension = getBuildSettings().TargetOS.getStaticLibraryExtension();
+    compiler->BuildLibrary = true;
     return r;
 }
 
@@ -477,6 +483,7 @@ bool DSharedLibrary::init()
 {
     auto r = DTarget::init();
     compiler->Extension = getBuildSettings().TargetOS.getSharedLibraryExtension();
+    compiler->BuildDll = true;
     return r;
 }
 
