@@ -411,6 +411,8 @@ NativeLinker *DTarget::getSelectedTool() const
 
 bool DTarget::init()
 {
+    // https://dlang.org/dmd-windows.html
+    // https://wiki.dlang.org/Win32_DLLs_in_D
     switch (init_pass)
     {
     case 1:
