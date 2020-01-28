@@ -33,4 +33,12 @@ void build(Solution &s)
         c << cmd::prog(t3)
             << cmd::std_out("main4.cpp");
     }
+
+    auto &l7 = s.addLibrary("lib7");
+    l7.ApiName = "L7_API";
+    l7 += "src/lib7.c";
+
+    auto &t5 = s.addExecutable("test5");
+    t5 += "src/main5.cpp";
+    t5 += l7;
 }
