@@ -347,8 +347,8 @@ void detectCSharpCompilers(DETECT_ARGS)
         auto p = std::make_shared<SimpleProgram>(s);
         p->file = root / "csc.exe";
 
-        auto v = getVersion(s, p->file);
-        addProgram(s, PackageId("com.Microsoft.VisualStudio.Roslyn.csc", v), p);
+        auto v1 = getVersion(s, p->file);
+        addProgram(s, PackageId("com.Microsoft.VisualStudio.Roslyn.csc", v1), p);
     }
 }
 
