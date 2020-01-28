@@ -155,18 +155,15 @@ static T &addTarget(SwCoreContext &s, const PackageId &id)
     LOG_TRACE(logger, "Detected target: " + id.toString());
 
     auto t = std::make_shared<T>(id);
-
     auto &cld = s.getPredefinedTargets();
     cld[id].push_back(t);
-
-    //t.sw_provided = true;
     return *t;
 }
 
-template <class T = PredefinedProgramTarget>
-static T &addProgram(SwCoreContext &s, const PackageId &id, const std::shared_ptr<Program> &p)
+static PredefinedProgramTarget &addProgram(SwCoreContext &s, const PackageId &id, const std::shared_ptr<Program> &p)
 {
-    auto &t = addTarget<T>(s, id);
+    auto &t = addTarget<PredefinedProgramTarget>(s, id);
+    t.public_ts["output_file"] = normalize_path(p->file);
     t.setProgram(p);
     LOG_TRACE(logger, "Detected program: " + p->file.u8string());
     return t;
@@ -903,6 +900,22 @@ static void detectWindowsSdk(DETECT_ARGS)
                 {
                     auto v = getVersion(s, p->file, "/?");
                     auto &rc = addProgram(s, PackageId("com.Microsoft.Windows.rc", v), p);
+                    auto ts1 = toTargetSettings(new_settings);
+                    rc.ts["os"]["kernel"] = ts1["os"]["kernel"];
+                }
+                // these are passed from compiler during merge?
+                //for (auto &idir : COpts.System.IncludeDirectories)
+                //C->system_idirs.push_back(idir);
+            }
+
+            // .mc
+            {
+                auto p = std::make_shared<SimpleProgram>(s);
+                p->file = kit_root / "bin" / bdir_subversion / toStringWindows(s.getHostOs().Arch) / "mc.exe";
+                if (fs::exists(p->file))
+                {
+                    auto v = getVersion(s, p->file, "/?");
+                    auto &rc = addProgram(s, PackageId("com.Microsoft.Windows.mc", v), p);
                     auto ts1 = toTargetSettings(new_settings);
                     rc.ts["os"]["kernel"] = ts1["os"]["kernel"];
                 }
