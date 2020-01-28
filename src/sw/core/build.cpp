@@ -594,6 +594,12 @@ Commands SwBuild::getCommands() const
             // copy output files
             const auto &s = tgt->getInterfaceSettings();
 
+            // do not copy such deps
+            // example: when processing qt plugins, without the condition we'll copy
+            // main dlls to plugins dir which is not desirable
+            if (s["output_dir"].isValue())
+                continue;
+
             if (copy_deps_of_local_pkgs)
             {
                 if (p.getPath().isAbsolute())
