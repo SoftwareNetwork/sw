@@ -192,9 +192,6 @@ public:
 
     void setupCommand(builder::Command &c) const override;
 
-    virtual bool isStaticOnly() const { return false; }
-    virtual bool isSharedOnly() const { return false; }
-
     //
     virtual void cppan_load_project(const yaml &root);
 
@@ -313,8 +310,6 @@ struct SW_DRIVER_CPP_API ExecutableTarget : NativeCompiledTarget, PredefinedProg
 */
 struct SW_DRIVER_CPP_API StaticLibraryTarget : NativeCompiledTarget
 {
-    bool isStaticOnly() const override { return true; }
-
     bool init() override;
 
     TargetType getType() const override { return TargetType::NativeStaticLibrary; }
@@ -331,8 +326,6 @@ struct SW_DRIVER_CPP_API StaticLibraryTarget : NativeCompiledTarget
 */
 struct SW_DRIVER_CPP_API SharedLibraryTarget : NativeCompiledTarget
 {
-    bool isSharedOnly() const override { return true; }
-
     bool init() override;
 
     TargetType getType() const override { return TargetType::NativeSharedLibrary; }
