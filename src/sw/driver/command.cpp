@@ -71,7 +71,8 @@ void Command::prepare()
         if (d)
         {
             auto &t = d->getTarget();
-            ((const NativeTarget &)t).setupCommand(*this);
+            if (auto nt = t.as<NativeTarget *>())
+                nt->setupCommand(*this);
 
             // command may be set inside setupCommand()
             if (!isProgramSet())
@@ -91,6 +92,17 @@ void Command::prepare()
                 }
                 else if (auto nt = t.as<NativeTarget *>())
                     p = nt->getOutputFile();
+                else if (auto nt = t.as<PredefinedProgram *>())
+                {
+                    p = nt->getProgram().file;
+                }
+                else if (auto nt = t.as<ITarget *>())
+                {
+                    auto &of = nt->getInterfaceSettings()["output_file"];
+                    if (!of)
+                        throw SW_RUNTIME_ERROR("Empty output file in target: " + nt->getPackage().toString());
+                    p = of.getValue();
+                }
                 else
                     throw SW_RUNTIME_ERROR("Package: " + t.getPackage().toString() + " has unknown type");
 
@@ -112,7 +124,8 @@ void Command::prepare()
             throw SW_RUNTIME_ERROR("Command dependency was not resolved: ???UNKNOWN_PROGRAM??? " + print());
 
         auto &t = d->getTarget();
-        ((const NativeTarget &)t).setupCommand(*this);
+        if (auto nt = t.as<NativeTarget *>())
+            nt->setupCommand(*this);
     }
 
     Base::prepare();
