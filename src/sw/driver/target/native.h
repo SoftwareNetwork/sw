@@ -6,78 +6,10 @@
 
 #pragma once
 
-#include "base.h"
+#include "native1.h"
 
 namespace sw
 {
-
-namespace driver
-{
-struct CommandBuilder;
-}
-
-namespace detail
-{
-
-#define STD_MACRO(x, p) static struct __sw_ ## p ## x {} p ## x;
-#include "std.inl"
-#undef STD_MACRO
-
-struct PrecompiledHeader
-{
-    path header;
-    path source;
-    FilesOrdered files;
-
-    //
-    path name; // base filename
-    String fancy_name;
-    //
-    path dir;
-    path obj; // obj file (msvc)
-    path pdb; // pdb file (msvc)
-    path pch; // file itself
-
-    path get_base_pch_path() const
-    {
-        return dir / name;
-    }
-};
-
-}
-
-enum class ConfigureFlags
-{
-    Empty = 0x0,
-
-    AtOnly = 0x1, // @
-    CopyOnly = 0x2,
-    EnableUndefReplacements = 0x4,
-    AddToBuild = 0x8,
-    ReplaceUndefinedVariablesWithZeros = 0x10,
-
-    Default = Empty, //AddToBuild,
-};
-
-struct PredefinedTarget : Target, PredefinedProgram
-{
-};
-
-/**
-* \brief Native Target is a binary target that produces binary files (probably executables).
-*/
-struct SW_DRIVER_CPP_API NativeTarget : Target
-    //,protected NativeOptions
-{
-    using Target::Target;
-
-    virtual path getOutputFile() const = 0;
-
-    //
-    virtual void setupCommand(builder::Command &c) const {}
-    // move to runnable target? since we might have data only targets
-    virtual void setupCommandForRun(builder::Command &c) const { setupCommand(c); } // for Launch?
-};
 
 // target without linking?
 //struct SW_DRIVER_CPP_API ObjectTarget : NativeTarget {};
@@ -85,6 +17,7 @@ struct SW_DRIVER_CPP_API NativeTarget : Target
 /**
 * \brief Native Executed Target is a binary target that must be built.
 */
+// actually this is asm/c/cpp target
 struct SW_DRIVER_CPP_API NativeCompiledTarget : NativeTarget,
     NativeTargetOptionsGroup
 {
@@ -106,7 +39,6 @@ public:
     std::optional<bool> AutoDetectOptions;
     std::shared_ptr<NativeLinker> Linker;
     std::shared_ptr<NativeLinker> Librarian;
-    path OutputDir; // subdir
 
     String ApiName;
     StringSet ApiNames;
@@ -163,9 +95,9 @@ public:
     bool hasSourceFiles() const;
     Files gatherIncludeDirectories() const;
     TargetsSet gatherAllRelatedDependencies() const;
-    NativeLinker *getSelectedTool() const;// override;
+    NativeLinker *getSelectedTool() const override;
+    void setOutputFile() override;
     //void setOutputFilename(const path &fn);
-    virtual void setOutputFile();
     path getOutputDir1() const;
     void removeFile(const path &fn, bool binary_dir = false) override;
     std::unordered_set<NativeSourceFile*> gatherSourceFiles() const;
@@ -241,8 +173,6 @@ private:
 
     Commands getCommands1() const override;
 
-    path getOutputFileName(const path &root) const;
-    path getOutputFileName2(const path &subdir) const;
     Commands getGeneratedCommands() const;
     void resolvePostponedSourceFiles();
     void gatherStaticLinkLibraries(LinkLibrariesType &ll, Files &added, std::unordered_set<const NativeCompiledTarget*> &targets, bool system) const;
@@ -275,6 +205,8 @@ private:
     void prepare_pass7();
     void prepare_pass8();
     void prepare_pass9();
+
+    bool isStaticLibrary() const override;
 };
 
 /**

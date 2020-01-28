@@ -341,12 +341,13 @@ struct SW_DRIVER_CPP_API NativeLinker : Linker,
 
     virtual void setObjectFiles(const Files &files) = 0; // actually this is addObjectFiles()
     virtual void setInputLibraryDependencies(const FilesOrdered &files) {}
-    virtual void setOutputFile(const path &out) = 0;
-    virtual void setImportLibrary(const path &out) = 0;
     virtual void setLinkLibraries(const FilesOrdered &in) {}
 
     virtual path getOutputFile() const = 0;
+    virtual void setOutputFile(const path &out) = 0;
+
     virtual path getImportLibrary() const = 0;
+    virtual void setImportLibrary(const path &out) = 0;
 
     FilesOrdered gatherLinkDirectories() const;
     FilesOrdered gatherLinkLibraries(bool system = false) const;
@@ -567,16 +568,22 @@ private:
     //Version gatherVersion() const override { return Program::gatherVersion(file, "-version"); }
 };
 
-struct SW_DRIVER_CPP_API DCompiler : Compiler,
-    CommandLineOptions<DCompilerOptions>
+struct SW_DRIVER_CPP_API DCompiler : NativeLinker,
+    CommandLineOptions<DLinkerOptions>
 {
-    using Compiler::Compiler;
+    using NativeLinker::NativeLinker;
 
     SW_COMMON_COMPILER_API;
 
-    void setOutputFile(const path &output_file);
     void setObjectDir(const path &dir);
     void setSourceFile(const path &input_file);
+    void setObjectFiles(const Files &files) override {}
+
+    path getOutputFile() const override;
+    void setOutputFile(const path &out) override;
+
+    path getImportLibrary() const override { return {}; }
+    void setImportLibrary(const path &out) override {}
 };
 
 // TODO: compiled

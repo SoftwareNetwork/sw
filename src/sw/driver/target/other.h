@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include "base.h"
+#include "native1.h"
 
 namespace sw
 {
@@ -163,7 +163,7 @@ struct SW_DRIVER_CPP_API KotlinExecutable : KotlinTarget
 
 // D
 
-struct SW_DRIVER_CPP_API DTarget : Target
+struct SW_DRIVER_CPP_API DTarget : NativeTarget
     , NativeTargetOptionsGroup
 {
     SW_TARGET_USING_ASSIGN_OPS(NativeTargetOptionsGroup);
@@ -177,8 +177,13 @@ struct SW_DRIVER_CPP_API DTarget : Target
     Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
 
 private:
-    path getOutputFileName(const path &root) const;
     Commands getCommands1() const override;
+
+    void activateCompiler(const UnresolvedPackage &id, const StringSet &exts);
+
+    //
+    bool isStaticLibrary() const override { return false; }
+    NativeLinker *getSelectedTool() const override;
 };
 
 struct SW_DRIVER_CPP_API DLibrary : DTarget
@@ -187,16 +192,21 @@ struct SW_DRIVER_CPP_API DLibrary : DTarget
 
 struct SW_DRIVER_CPP_API DStaticLibrary : DLibrary
 {
+    bool init() override;
     TargetType getType() const override { return TargetType::DStaticLibrary; }
+
+    bool isStaticLibrary() const override { return true; }
 };
 
 struct SW_DRIVER_CPP_API DSharedLibrary : DLibrary
 {
+    bool init() override;
     TargetType getType() const override { return TargetType::DSharedLibrary; }
 };
 
 struct SW_DRIVER_CPP_API DExecutable : DTarget
 {
+    bool init() override;
     TargetType getType() const override { return TargetType::DExecutable; }
 };
 

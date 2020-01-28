@@ -696,29 +696,68 @@ types:
                     - output_dependency
                     - separate_prefix
 
-    d:
-        name: DCompilerOptions
-
-        using:
-            - ifiles
+    dcommon:
+        name: DCommonOptions
 
         flags:
-            dnwof:
-                name: DoNotWriteObjectFiles
-                flag: o-
-                type: bool
-
-            objdir:
-                name: ObjectDir
-                flag: od=
-                type: path
-
             output:
                 name: Output
                 flag: of=
                 type: path
                 properties:
                     - output_dependency
+
+            objdir:
+                name: ObjectDir
+                flag: od=
+                type: path
+
+    dcl:
+        name: DCompilerOptions
+        parent: DCommonOptions
+
+        flags:
+            ifile:
+                name: InputFile
+                type: path
+                properties:
+                    - input_dependency
+
+            cl:
+                name: Compile
+                flag: c
+                type: bool
+                default: true
+
+            dnwof:
+                name: DoNotWriteObjectFiles
+                flag: o-
+                type: bool
+
+    dlink:
+        name: DLinkerOptions
+        parent: DCommonOptions
+
+        using:
+            - ifiles
+
+        flags:
+            dll:
+                name: BuildDll
+                flag: shared
+                type: bool
+            lib:
+                name: BuildLibrary
+                flag: lib
+                type: bool
+            32:
+                name: Build32
+                flag: m32
+                type: bool
+            64:
+                name: Build64
+                flag: m64
+                type: bool
 
     gnuclangcmn:
         name: GNUClangCommonOptions

@@ -1041,18 +1041,23 @@ SW_DEFINE_PROGRAM_CLONE(DCompiler)
 
 void DCompiler::prepareCommand1(const Target &t)
 {
-    getCommandLineOptions<DCompilerOptions>(cmd.get(), *this);
+    getCommandLineOptions<DLinkerOptions>(cmd.get(), *this);
+}
+
+void DCompiler::setObjectDir(const path &output_dir)
+{
+    ObjectDir = output_dir;
+}
+
+path DCompiler::getOutputFile() const
+{
+    return Output();
 }
 
 void DCompiler::setOutputFile(const path &output_file)
 {
     Output = output_file;
     Output() += Extension;
-}
-
-void DCompiler::setObjectDir(const path &output_dir)
-{
-    ObjectDir = output_dir;
 }
 
 void DCompiler::setSourceFile(const path &input_file)

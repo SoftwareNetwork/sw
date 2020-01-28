@@ -1,4 +1,4 @@
-int f()
+export int f()
 {
     return 42;
 }

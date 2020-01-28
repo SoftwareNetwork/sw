@@ -161,15 +161,92 @@ SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD(sw_replace_dll_import, replace_dll_import)
 namespace sw
 {
 
-path getOutputFileName(const Target &t)
+static path getOutputFileName(const Target &t)
 {
     return t.getPackage().toString();
+}
+
+void NativeTarget::setOutputFile()
+{
+    /* || add a condition so user could change non build output dir*/
+    //if (Scope == TargetScope::Build)
+    {
+        if (isStaticLibrary())
+            getSelectedTool()->setOutputFile(getOutputFileName2("lib"));
+        else
+        {
+            getSelectedTool()->setOutputFile(getOutputFileName2("bin"));
+            getSelectedTool()->setImportLibrary(getOutputFileName2("lib"));
+        }
+    }
+    /*else
+    {
+        SW_UNIMPLEMENTED;
+
+        auto base = BinaryDir.parent_path() / "out" / ::sw::getOutputFileName(*this);
+        getSelectedTool()->setOutputFile(base);
+        if (getSelectedTool() != Librarian.get())
+            getSelectedTool()->setImportLibrary(base);
+    }*/
+
+    // set generated early
+    if (auto f = getOutputFile(); !f.empty())
+        File(f, getFs()).setGenerated(true);
+    if (auto f = getOutputFile(); !f.empty())
+        File(f, getFs()).setGenerated(true);
+}
+
+path NativeTarget::getOutputFileName(const path &root) const
+{
+    path p;
+    if (IsConfig)
+    {
+        p = getMainBuild().getBuildDirectory() / "cfg" / getConfig() / ::sw::getOutputFileName(*this);
+    }
+    else if (auto d = getPackage().getOverriddenDir(); d)
+    {
+        p = *d / SW_BINARY_DIR / "out" / getConfig() / OutputDir / ::sw::getOutputFileName(*this);
+    }
+    else if (isLocal())
+    {
+        p = getLocalOutputBinariesDirectory() / OutputDir / ::sw::getOutputFileName(*this);
+    }
+    else
+    {
+        p = root / getConfig() / OutputDir / ::sw::getOutputFileName(*this);
+    }
+    return p;
+}
+
+path NativeTarget::getOutputFileName2(const path &subdir) const
+{
+    if (isLocal())
+    {
+        return getOutputFileName("");
+    }
+    else
+    {
+        if (IsConfig)
+            return getOutputFileName("");
+        else
+            return BinaryDir.parent_path() / subdir / ::sw::getOutputFileName(*this);
+    }
+}
+
+path NativeTarget::getOutputFile() const
+{
+    return getSelectedTool()->getOutputFile();
 }
 
 NativeCompiledTarget::~NativeCompiledTarget()
 {
     // incomplete type cannot be in default dtor
     // in our case it is nlohmann::json member
+}
+
+bool NativeCompiledTarget::isStaticLibrary() const
+{
+    return getSelectedTool() == Librarian.get();
 }
 
 void NativeCompiledTarget::setOutputDir(const path &dir)
@@ -818,80 +895,14 @@ void NativeCompiledTarget::setOutputFile()
 {
     if (isHeaderOnly())
         return;
-
-    /* || add a condition so user could change non build output dir*/
-    //if (Scope == TargetScope::Build)
-    {
-        if (getSelectedTool() == Librarian.get())
-            getSelectedTool()->setOutputFile(getOutputFileName2("lib"));
-        else
-        {
-            if (getType() == TargetType::NativeExecutable)
-                getSelectedTool()->setOutputFile(getOutputFileName2("bin"));
-            else
-                getSelectedTool()->setOutputFile(getOutputFileName2("bin"));
-            getSelectedTool()->setImportLibrary(getOutputFileName2("lib"));
-        }
-    }
-    /*else
-    {
-        SW_UNIMPLEMENTED;
-
-        auto base = BinaryDir.parent_path() / "out" / ::sw::getOutputFileName(*this);
-        getSelectedTool()->setOutputFile(base);
-        if (getSelectedTool() != Librarian.get())
-            getSelectedTool()->setImportLibrary(base);
-    }*/
-
-    // set generated early
-    if (auto f = getOutputFile(); !f.empty())
-        File(f, getFs()).setGenerated(true);
-    if (auto f = getOutputFile(); !f.empty())
-        File(f, getFs()).setGenerated(true);
-}
-
-path NativeCompiledTarget::getOutputFileName(const path &root) const
-{
-    path p;
-    if (IsConfig)
-    {
-        p = getMainBuild().getBuildDirectory() / "cfg" / getConfig() / ::sw::getOutputFileName(*this);
-    }
-    else if (auto d = getPackage().getOverriddenDir(); d)
-    {
-        p = *d / SW_BINARY_DIR / "out" / getConfig() / OutputDir / ::sw::getOutputFileName(*this);
-    }
-    else if (isLocal())
-    {
-        p = getLocalOutputBinariesDirectory() / OutputDir / ::sw::getOutputFileName(*this);
-    }
-    else
-    {
-        p = root / getConfig() / OutputDir / ::sw::getOutputFileName(*this);
-    }
-    return p;
-}
-
-path NativeCompiledTarget::getOutputFileName2(const path &subdir) const
-{
-    if (isLocal())
-    {
-        return getOutputFileName("");
-    }
-    else
-    {
-        if (IsConfig)
-            return getOutputFileName("");
-        else
-            return BinaryDir.parent_path() / subdir / ::sw::getOutputFileName(*this);
-    }
+    NativeTarget::setOutputFile();
 }
 
 path NativeCompiledTarget::getOutputFile() const
 {
     if (!outputfile.empty())
         return outputfile;
-    return getSelectedTool()->getOutputFile();
+    return NativeTarget::getOutputFile();
 }
 
 path NativeCompiledTarget::getImportLibrary() const
@@ -1126,7 +1137,7 @@ void NativeCompiledTarget::createPrecompiledHeader()
         pch.name = "sw_pch";
 
     if (pch.dir.empty())
-        pch.dir = getObjectDir() / "pch";
+        pch.dir = BinaryDir.parent_path() / "pch";
 
     if (pch.files.empty())
         pch.files = files;
