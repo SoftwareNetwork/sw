@@ -477,7 +477,7 @@ void PrepareConfigEntryPoint::many2one(Build &b, const std::unordered_set<LocalP
         auto pkg2 = pkg.getGroupLeader();
         auto d = driver::cpp::findConfig(pkg2.getDirSrc2(), driver::cpp::Driver::getAvailableFrontendConfigFilenames());
         if (!d)
-            throw SW_RUNTIME_ERROR("cannot find config for package: " + pkg.toString());
+            throw SW_RUNTIME_ERROR("cannot find config for package " + pkg.toString() + " in dir " + normalize_path(pkg2.getDirSrc2()));
         return data{ {b.getSolution().getContext().getLocalStorage(), pkg2}, pkg.getData().group_number, *d };
     };
 
