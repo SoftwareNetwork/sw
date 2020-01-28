@@ -176,6 +176,8 @@ void detectDCompilers(DETECT_ARGS)
 {
     //C->input_extensions = { ".d" };
 
+    // also todo LDC compiler
+
     auto p = std::make_shared<SimpleProgram>(s);
     auto f = resolveExecutable("dmd");
     if (!fs::exists(f))

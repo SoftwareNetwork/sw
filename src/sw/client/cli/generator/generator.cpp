@@ -851,7 +851,7 @@ void CMakeGenerator::generate(const sw::SwBuild &b)
 
     ctx.addLine("cmake_minimum_required(VERSION 3.12.0)");
     ctx.addLine();
-    ctx.addLine("project("s + "sw" /*b.getName()*/ + " C CXX)"); // ASM
+    ctx.addLine("project("s + "sw" /*b.getName()*/ + " LANGUAGES C CXX)"); // ASM
     ctx.addLine();
 
     auto &ctx_deps = ctx.createInlineEmitter();
