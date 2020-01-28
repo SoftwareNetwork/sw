@@ -431,8 +431,7 @@ std::unordered_set<PackageId> PackagesDatabase::getOverriddenPackages() const
 void PackagesDatabase::deletePackage(const PackageId &p) const
 {
     (*db)(
-        update(pkg_ver)
-        .set(pkg_ver.sdir = sqlpp::null)
+        remove_from(pkg_ver)
         .where(pkg_ver.packageId == getPackageId(p.getPath()) && pkg_ver.version == p.getVersion().toString())
         );
 }
