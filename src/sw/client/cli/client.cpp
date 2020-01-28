@@ -159,10 +159,28 @@ static ::cl::opt<path> cl_parse_configure_ac("parse-configure-ac",
 
 //static ::cl::list<String> drivers("load-driver", ::cl::desc("Load more drivers"), ::cl::CommaSeparated);
 
+static bool setConsoleColorProcessing()
+{
+    bool r = false;
+#ifdef _WIN32
+    DWORD mode;
+    // Try enabling ANSI escape sequence support on Windows 10 terminals.
+    auto console_ = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (GetConsoleMode(console_, &mode))
+        r |= !!SetConsoleMode(console_, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+    console_ = GetStdHandle(STD_ERROR_HANDLE);
+    if (GetConsoleMode(console_, &mode))
+        r &= !!SetConsoleMode(console_, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+#endif
+    return r;
+}
+
 int setup_main(const Strings &args)
 {
     // some initial stuff
     // try to do as less as possible before log init
+
+    setConsoleColorProcessing();
 
     if (!working_directory.empty())
     {

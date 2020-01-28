@@ -1035,11 +1035,29 @@ static void detectMsvc(DETECT_ARGS)
     detectWindowsSdk(s);
 }
 
+static bool hasConsoleColorProcessing()
+{
+    bool r = false;
+#ifdef _WIN32
+    DWORD mode;
+    // Try enabling ANSI escape sequence support on Windows 10 terminals.
+    auto console_ = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (GetConsoleMode(console_, &mode))
+        r |= (bool)(mode & ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+    console_ = GetStdHandle(STD_ERROR_HANDLE);
+    if (GetConsoleMode(console_, &mode))
+        r &= (bool)(mode & ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+#endif
+    return r;
+}
+
 static void detectWindowsClang(DETECT_ARGS)
 {
     // create programs
     const path base_llvm_path = path("c:") / "Program Files" / "LLVM";
     const path bin_llvm_path = base_llvm_path / "bin";
+
+    bool colored_output = hasConsoleColorProcessing();
 
     // clang-cl, move to msvc?
 
@@ -1066,6 +1084,15 @@ static void detectWindowsClang(DETECT_ARGS)
 
             auto v = getVersion(s, p->file);
             auto &c = addProgram(s, PackageId("org.LLVM.clangcl", v), p);
+
+            if (colored_output)
+            {
+                auto c2 = p->getCommand();
+                c2->push_back("-Xclang");
+                c2->push_back("-fcolor-diagnostics");
+                c2->push_back("-Xclang");
+                c2->push_back("-fansi-escape-codes");
+            }
         }
     }
 
@@ -1119,11 +1146,17 @@ static void detectWindowsClang(DETECT_ARGS)
         {
             auto v = getVersion(s, p->file);
             auto &c = addProgram(s, PackageId("org.LLVM.clang", v), p);
+
+            if (colored_output)
+            {
+                auto c2 = p->getCommand();
+                c2->push_back("-fcolor-diagnostics");
+                c2->push_back("-fansi-escape-codes");
+            }
+            //c->push_back("-Wno-everything");
+            // is it able to find VC STL itself?
+            //COpts2.System.IncludeDirectories.insert(base_llvm_path / "lib" / "clang" / C->getVersion().toString() / "include");
         }
-        auto c = p->getCommand();
-        //c->push_back("-Wno-everything");
-        // is it able to find VC STL itself?
-        //COpts2.System.IncludeDirectories.insert(base_llvm_path / "lib" / "clang" / C->getVersion().toString() / "include");
     }
 
     // C++
@@ -1140,11 +1173,17 @@ static void detectWindowsClang(DETECT_ARGS)
         {
             auto v = getVersion(s, p->file);
             auto &c = addProgram(s, PackageId("org.LLVM.clangpp", v), p);
+
+            if (colored_output)
+            {
+                auto c2 = p->getCommand();
+                c2->push_back("-fcolor-diagnostics");
+                c2->push_back("-fansi-escape-codes");
+            }
+            //c->push_back("-Wno-everything");
+            // is it able to find VC STL itself?
+            //COpts2.System.IncludeDirectories.insert(base_llvm_path / "lib" / "clang" / C->getVersion().toString() / "include");
         }
-        auto c = p->getCommand();
-        //c->push_back("-Wno-everything");
-        // is it able to find VC STL itself?
-        //COpts2.System.IncludeDirectories.insert(base_llvm_path / "lib" / "clang" / C->getVersion().toString() / "include");
     }
 }
 
