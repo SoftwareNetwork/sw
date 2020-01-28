@@ -82,6 +82,31 @@ using StaticLibrary = StaticLibraryTarget;
 using SharedLibrary = SharedLibraryTarget;
 using Executable = ExecutableTarget;
 
+// other langs
+using sw::CSharpTarget;
+using sw::CSharpExecutable;
+
+using sw::DLibrary;
+using sw::DStaticLibrary;
+using sw::DSharedLibrary;
+using sw::DExecutable;
+
+using sw::FortranTarget;
+using sw::FortranExecutable;
+
+using sw::GoTarget;
+using sw::GoExecutable;
+
+using sw::JavaTarget;
+using sw::JavaExecutable;
+
+using sw::KotlinTarget;
+using sw::KotlinExecutable;
+
+using sw::RustTarget;
+using sw::RustExecutable;
+
+//
 using sw::ConfigureFlags;
 using sw::PrecompiledHeader;
 
