@@ -197,39 +197,26 @@ bool JavaTarget::init()
         v.target = this;
     });
 
-    if (auto p = findProgramByExtension(".java"); p)
-        compiler = std::dynamic_pointer_cast<JavaCompiler>(p->clone());
-    else
+    compiler = activateCompiler<decltype(compiler)::element_type>(*this, "com.oracle.java.javac"s, { ".java" });
+    if (!compiler)
         throw SW_RUNTIME_ERROR("No Java compiler found");
 
-    /* || add a considiton so user could change nont build output dir*/
-    /*if (Scope == TargetScope::Build)
-    {
-        //compiler->setOutputFile(getOutputFileName(getSolution().swctx.getLocalStorage().storage_dir_bin));
-    }
-    else
-    {*/
-    auto base = BinaryDir.parent_path() / "out";
-    compiler->setOutputDir(base);
-    //}
+    compiler->setOutputDir(getBaseOutputDirName(*this, {}, "bin"));
 
     SW_RETURN_MULTIPASS_END;
 }
 
 Commands JavaTarget::getCommands1() const
 {
-    SW_UNIMPLEMENTED;
-
-    /*Commands cmds;
-    for (auto f : gatherSourceFiles<SourceFile>(*this, compiler->input_extensions))
+    Commands cmds;
+    for (auto f : gatherSourceFiles<SourceFile>(*this, {".java"}))
     {
         compiler->setSourceFile(f->file);
-        cmds.insert(compiler->prepareCommand(*this));
     }
 
-    //auto c = compiler->getCommand(*this);
-    //cmds.insert(c);
-    return cmds;*/
+    auto c = compiler->getCommand(*this);
+    cmds.insert(c);
+    return cmds;
 }
 
 bool KotlinTarget::init()
@@ -242,37 +229,24 @@ bool KotlinTarget::init()
         v.target = this;
     });
 
-    if (auto p = findProgramByExtension(".kt"); p)
-        compiler = std::dynamic_pointer_cast<KotlinCompiler>(p->clone());
-    else
+    compiler = activateCompiler<decltype(compiler)::element_type>(*this, "com.JetBrains.kotlin.kotlinc"s, { ".kt", ".kts" });
+    if (!compiler)
         throw SW_RUNTIME_ERROR("No Kotlin compiler found");
 
-    /* || add a considiton so user could change nont build output dir*/
-    if (Scope == TargetScope::Build)
-    {
-        SW_UNIMPLEMENTED;
-        //compiler->setOutputFile(getOutputFileName(getSolution().swctx.getLocalStorage().storage_dir_bin));
-    }
-    else
-    {
-        auto base = BinaryDir.parent_path() / "out" / ::sw::getOutputFileName(*this);
-        compiler->setOutputFile(base);
-    }
+    compiler->setOutputFile(getBaseOutputFileName(*this, {}, "bin"));
 
     SW_RETURN_MULTIPASS_END;
 }
 
 Commands KotlinTarget::getCommands1() const
 {
-    SW_UNIMPLEMENTED;
-
-    /*for (auto f : gatherSourceFiles<SourceFile>(*this, compiler->input_extensions))
+    for (auto f : gatherSourceFiles<SourceFile>(*this, { ".kt", ".kts" }))
         compiler->setSourceFile(f->file);
 
     Commands cmds;
     auto c = compiler->getCommand(*this);
     cmds.insert(c);
-    return cmds;*/
+    return cmds;
 }
 
 NativeLinker *DTarget::getSelectedTool() const
