@@ -79,8 +79,6 @@ struct SW_DRIVER_CPP_API NativeTarget : Target
     virtual void setupCommandForRun(builder::Command &c) const { setupCommand(c); } // for Launch?
 
 protected:
-    // this is sw config
-    bool IsConfig = false;
     //
     path OutputDir; // output subdir
     path getOutputFileName(const path &root) const;

@@ -629,7 +629,7 @@ void NativeCompiledTarget::findCompiler()
     // c++ goes first for correct include order
     if (!libstdcppset && getSettings()["native"]["stdlib"]["cpp"])
     {
-        if (IsConfig && getBuildSettings().TargetOS.is(OSType::Linux))
+        if (IsSwConfig && getBuildSettings().TargetOS.is(OSType::Linux))
         {
             // to prevent ODR violation
             // we have stdlib builtin into sw binary
@@ -1354,7 +1354,7 @@ Commands NativeCompiledTarget::getCommands1() const
             c->arguments.push_back(f->args);
 
             // set fancy name
-            if (!IsConfig && !do_not_mangle_object_names)
+            if (!IsSwConfig && !do_not_mangle_object_names)
             {
                 auto p = normalize_path(f->file);
                 if (bdp.size() < p.size() && p.find(bdp) == 0)
@@ -1499,7 +1499,7 @@ Commands NativeCompiledTarget::getCommands1() const
         cmds.insert(c);
 
         // set fancy name
-        if (!IsConfig && !do_not_mangle_object_names)
+        if (!IsSwConfig && !do_not_mangle_object_names)
         {
             c->name.clear();
 
@@ -1539,7 +1539,7 @@ Commands NativeCompiledTarget::getCommands1() const
         cmds.insert(evs.begin(), evs.end());
     }*/
 
-    /*if (!IsConfig && !Local)
+    /*if (!IsSwConfig && !Local)
     {
         if (!File(getOutputFile(), getFs()).isChanged())
             return {};
@@ -1564,7 +1564,7 @@ bool NativeCompiledTarget::createWindowsRpath() const
     // http://nibblestew.blogspot.com/2019/05/emulating-rpath-on-windows-via-binary.html
     return
         1
-        && !IsConfig
+        && !IsSwConfig
         && getBuildSettings().TargetOS.is(OSType::Windows)
         && getSelectedTool() == Linker.get()
         && !standalone
@@ -2151,7 +2151,7 @@ void NativeCompiledTarget::prepare_pass1()
         LinkOptions.push_back("--no-undefined");
     }
 
-    if (!IsConfig)
+    if (!IsSwConfig)
     {
         // add pvt binary dir
         IncludeDirectories.insert(BinaryPrivateDir);
@@ -2528,7 +2528,7 @@ void NativeCompiledTarget::prepare_pass5()
         && !*HeaderOnly
         && ::sw::gatherSourceFiles<RcToolSourceFile>(*this).empty()
         && getSelectedTool() == Linker.get()
-        && !IsConfig
+        && !IsSwConfig
         && getBuildSettings().TargetOS.is(OSType::Windows)
         && Scope == TargetScope::Build
         )

@@ -360,7 +360,7 @@ SharedLibraryTarget &PrepareConfigEntryPoint::createTarget(Build &b, const Strin
     {
         ConfigSharedLibraryTarget()
         {
-            IsConfig = true;
+            IsSwConfig = true;
         }
     };
 
