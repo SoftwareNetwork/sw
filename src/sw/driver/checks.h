@@ -47,6 +47,7 @@ enum class CheckType
     SourceLinks,
     SourceRuns,
     Declaration,
+    CompilerFlag,
     Custom,
 
     Max,
@@ -235,6 +236,8 @@ private:
 
 struct SW_DRIVER_CPP_API SourceCompiles : Check
 {
+    Strings compiler_flags;
+
     SourceCompiles(const String &def, const String &source);
 
     void run() const override;
@@ -258,6 +261,14 @@ struct SW_DRIVER_CPP_API SourceRuns : Check
     void run() const override;
     String getSourceFileContents() const override;
     CheckType getType() const override { return CheckType::SourceRuns; }
+};
+
+struct SW_DRIVER_CPP_API CompilerFlag : SourceCompiles
+{
+    CompilerFlag(const String &def, const String &compiler_flag);
+    CompilerFlag(const String &def, const Strings &compiler_flags);
+
+    CheckType getType() const override { return CheckType::CompilerFlag; }
 };
 
 struct CheckSet;

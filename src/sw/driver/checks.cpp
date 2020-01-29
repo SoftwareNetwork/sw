@@ -1282,6 +1282,8 @@ void SourceCompiles::run() const
 
     auto &e = s.addTarget<ExecutableTarget>(getTargetName(f));
     setupTarget(e);
+    for (auto &f : compiler_flags)
+        e.CompileOptions.push_back(f);
     e += f;
 
     EXECUTE_SOLUTION();
@@ -1370,6 +1372,19 @@ void SourceRuns::run() const
     error_code ec;
     c.execute(ec);
     Value = c.exit_code;
+}
+
+CompilerFlag::CompilerFlag(const String &def, const String &compiler_flag)
+    : SourceCompiles(def, "int main() {return 0;}")
+{
+    compiler_flags.push_back(compiler_flag);
+}
+
+CompilerFlag::CompilerFlag(const String &def, const Strings &compiler_flags)
+    : SourceCompiles(def, "int main() {return 0;}")
+{
+    for (auto &f : compiler_flags)
+        this->compiler_flags.push_back(f);
 }
 
 FunctionExists &CheckSet1::checkFunctionExists(const String &function, bool cpp)
