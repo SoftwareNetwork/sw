@@ -356,9 +356,15 @@ void PrepareConfigEntryPoint::loadPackages1(Build &b) const
 
 SharedLibraryTarget &PrepareConfigEntryPoint::createTarget(Build &b, const String &name) const
 {
-    b.IsConfig = true;
-    auto &lib = b.addTarget<SharedLibraryTarget>(name, "local");
-    b.IsConfig = false;
+    struct ConfigSharedLibraryTarget : SharedLibraryTarget
+    {
+        ConfigSharedLibraryTarget()
+        {
+            IsConfig = true;
+        }
+    };
+
+    auto &lib = b.addTarget<ConfigSharedLibraryTarget>(name, "local");
     tgt = lib.getPackage();
     return lib;
 }

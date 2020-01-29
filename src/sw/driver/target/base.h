@@ -71,7 +71,6 @@ private:
 
 struct SW_DRIVER_CPP_API TargetBaseData : ProjectDirectories, TargetEvents
 {
-    bool IsConfig = false;
     bool DryRun = false;
     PackagePath NamePrefix;
     std::optional<CommandStorage *> command_storage;

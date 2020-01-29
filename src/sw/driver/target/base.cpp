@@ -229,8 +229,6 @@ void TargetBase::setupTarget(TargetBaseType *t) const
     if (auto t0 = dynamic_cast<const Target*>(this))
         t->source = t0->source ? t0->source->clone() : nullptr;
 
-    t->IsConfig = IsConfig; // TODO: inherit from reconsider
-
     t->DryRun = getSolution().DryRun; // ok, take from Solution (Build)
     t->command_storage = getSolution().command_storage; // ok, take from Solution (Build)
 
