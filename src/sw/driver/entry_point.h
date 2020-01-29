@@ -35,7 +35,7 @@ struct PrepareConfigEntryPoint : NativeTargetEntryPoint
 {
     mutable path out;
     mutable FilesMap r;
-    mutable std::unique_ptr<PackageId> tgt;
+    mutable std::optional<PackageId> tgt;
 
     // output var
     mutable UnresolvedPackages udeps;

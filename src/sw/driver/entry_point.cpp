@@ -358,8 +358,8 @@ SharedLibraryTarget &PrepareConfigEntryPoint::createTarget(Build &b, const Strin
 {
     b.IsConfig = true;
     auto &lib = b.addTarget<SharedLibraryTarget>(name, "local");
-    tgt = std::make_unique<PackageId>(lib.getPackage());
     b.IsConfig = false;
+    tgt = lib.getPackage();
     return lib;
 }
 
