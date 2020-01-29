@@ -4015,6 +4015,8 @@ void NativeCompiledTarget::cppan_load_project(const yaml &root)
     auto options = cppan::loadOptionsMap(root);
     for (auto &[k, v] : options["any"].system_definitions["win32"])
         add(Definition(v));
+    for (auto &[k, v] : options["any"].system_link_libraries["win32"])
+        add(SystemLinkLibrary(v));
 
     /*read_sources(public_headers, "public_headers");
     include_hints = get_sequence_set<String>(root, "include_hints");
