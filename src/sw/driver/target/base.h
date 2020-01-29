@@ -343,7 +343,6 @@ public:
     Program *findProgramByExtension(const String &ext) const;
 
     // using in build, move to protected when not used
-    path getObjectDir() const;
     path getObjectDir(const LocalPackage &pkg) const;
     static path getObjectDir(const LocalPackage &pkg, const String &cfg);
 
