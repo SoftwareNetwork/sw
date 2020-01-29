@@ -98,6 +98,30 @@ SourceFileStorage::~SourceFileStorage()
 {
 }
 
+void SourceFileStorage::addFile(const path &p, const std::shared_ptr<SourceFile> &f)
+{
+    source_files[p] = f;
+    f->index = index++;
+}
+
+std::shared_ptr<SourceFile> SourceFileStorage::getFileInternal(const path &p) const
+{
+    auto i = source_files.find(p);
+    if (i != source_files.end())
+        return i->second;
+    return {};
+}
+
+void SourceFileStorage::removeFile(const path &p)
+{
+    source_files.erase(p);
+}
+
+bool SourceFileStorage::hasFile(const path &p) const
+{
+    return source_files.find(p) != source_files.end();
+}
+
 void SourceFileStorage::add_unchecked(const path &file_in, bool skip)
 {
     auto file = file_in;
@@ -106,14 +130,15 @@ void SourceFileStorage::add_unchecked(const path &file_in, bool skip)
     if (!check_absolute(file, !target->isLocal() && skip))
         return;
 
-    auto f = this->SourceFileMapThis::operator[](file);
+    auto f = getFileInternal(file);
 
     auto ext = file.extension().string();
     auto nt = target->as<NativeCompiledTarget*>();
     auto ho = nt && nt->HeaderOnly && nt->HeaderOnly.value();
     if (!target->hasExtension(ext) || ho)
     {
-        f = this->SourceFileMapThis::operator[](file) = std::make_shared<SourceFile>(file);
+        f = std::make_shared<SourceFile>(file);
+        addFile(file, f);
         f->created = false;
     }
     else
@@ -125,7 +150,8 @@ void SourceFileStorage::add_unchecked(const path &file_in, bool skip)
                 // only unresolved dep for now
                 //if (f && f->postponed)
                     //throw SW_RUNTIME_ERROR("Postponing postponed file");
-                f = this->SourceFileMapThis::operator[](file) = std::make_shared<SourceFile>(file);
+                f = std::make_shared<SourceFile>(file);
+                addFile(file, f);
                 f->postponed = true;
             }
             else
@@ -136,7 +162,8 @@ void SourceFileStorage::add_unchecked(const path &file_in, bool skip)
                 auto p2 = dynamic_cast<FileToFileTransformProgram*>(p);
                 if (!p2)
                     throw SW_RUNTIME_ERROR("Bad program type");
-                f = this->SourceFileMapThis::operator[](file) = p2->createSourceFile(*target, file);
+                f = p2->createSourceFile(*target, file);
+                addFile(file, f);
                 if (f2 && f2->postponed)
                 {
                     // retain some data
@@ -250,7 +277,7 @@ void SourceFileStorage::remove_full(const path &file)
     auto F = file;
     // ignore missing file only when non local
     if (check_absolute(F, !target->isLocal()))
-        erase(F);
+        removeFile(F);
 }
 
 void SourceFileStorage::add1(const FileRegex &r)
@@ -322,7 +349,7 @@ SourceFile &SourceFileStorage::operator[](path F)
     if (target->DryRun)
         return sf;
     check_absolute(F);
-    auto f = this->SourceFileMapThis::operator[](F);
+    auto f = getFileInternal(F);
     if (!f)
     {
         // here we may let other fibers progress until language is registered
@@ -413,7 +440,7 @@ void SourceFileStorage::merge(const SourceFileStorage &v, const GroupSettings &s
 {
     for (auto &s : v)
     {
-        auto f = this->SourceFileMapThis::operator[](s.first);
+        auto f = getFileInternal(s.first);
         if (!f)
             add(s.first);
     }

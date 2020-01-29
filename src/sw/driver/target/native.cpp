@@ -2382,7 +2382,8 @@ void NativeCompiledTarget::prepare_pass5()
         auto p2 = dynamic_cast<FileToFileTransformProgram*>(prog);
         if (!p2)
             throw SW_RUNTIME_ERROR("Bad program type");
-        f = this->SourceFileMapThis::operator[](p) = p2->createSourceFile(*this, p);
+        f = p2->createSourceFile(*this, p);
+        addFile(p, f);
     }
 
     // now create pch
@@ -3226,7 +3227,7 @@ void NativeCompiledTarget::addFileSilently(const path &from)
     {
         auto fr = from;
         check_absolute(fr);
-        if (find(fr) == end())
+        if (!hasFile(fr))
             operator-=(from);
     }
 }

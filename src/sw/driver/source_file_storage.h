@@ -37,16 +37,8 @@ using SourceFileMap = std::unordered_map<path, std::shared_ptr<T>>;
  *   4. all files are not skipped
  *
  */
- //template <class T>
-struct SW_DRIVER_CPP_API SourceFileStorage : protected SourceFileMap<SourceFile>
+struct SW_DRIVER_CPP_API SourceFileStorage
 {
-public:
-    using SourceFileMapThis = SourceFileMap<SourceFile>;
-    using SourceFileMapThis::begin;
-    using SourceFileMapThis::end;
-    using SourceFileMapThis::empty;
-    using SourceFileMapThis::size;
-
 public:
     Target *target = nullptr;
 
@@ -87,14 +79,32 @@ public:
     mutable std::unordered_map<path, std::map<bool /* recursive */, Files>> glob_cache;
     mutable FilesMap files_cache;
 
+    // redirected ops
+    auto begin() { return source_files.begin(); }
+    auto end() { return source_files.end(); }
+    auto begin() const { return source_files.begin(); }
+    auto end() const { return source_files.end(); }
+    auto empty() const { return source_files.empty(); }
+    auto size() const { return source_files.size(); }
+    void clear() { source_files.clear(); }
+
 protected:
     bool autodetect = false;
 
     void clearGlobCache();
     void remove_full(const path &file);
 
+    // redirected ops2
+    void addFile(const path &, const std::shared_ptr<SourceFile> &);
+    bool hasFile(const path &) const;
+    std::shared_ptr<SourceFile> getFileInternal(const path &) const;
+    void removeFile(const path &);
+
 private:
     using Op = void (SourceFileStorage::*)(const path &);
+
+    SourceFileMap<SourceFile> source_files;
+    int index = 0;
 
     void add_unchecked(const path &f, bool skip = false);
     void add1(const FileRegex &r);

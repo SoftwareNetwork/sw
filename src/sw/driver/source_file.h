@@ -34,6 +34,8 @@ struct SW_DRIVER_CPP_API SourceFile : ICastable
     path install_dir;
     Strings args; // additional args to job, move to native?
     String fancy_name; // for output
+    bool skip_unity_build = false;
+    int index; // index of file during addition
 
     SourceFile(const path &input);
     SourceFile(const SourceFile &) = default;
