@@ -539,6 +539,8 @@ std::unordered_set<SF*> gatherSourceFiles(const SourceFileStorage &s, const Stri
 }
 
 path getOutputFileName(const Target &t);
+path getBaseOutputDirNameForLocalOnly(const Target &t, const path &root, const path &OutputDir);
+path getBaseOutputDirName(const Target &t, const path &OutputDir, const path &subdir);
 path getBaseOutputFileNameForLocalOnly(const Target &t, const path &root, const path &OutputDir);
 path getBaseOutputFileName(const Target &t, const path &OutputDir, const path &subdir);
 

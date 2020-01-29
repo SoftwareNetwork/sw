@@ -944,31 +944,41 @@ path getOutputFileName(const Target &t)
     return t.getPackage().toString();
 }
 
-path getBaseOutputFileNameForLocalOnly(const Target &t, const path &root, const path &OutputDir)
+path getBaseOutputDirNameForLocalOnly(const Target &t, const path &root, const path &OutputDir)
 {
     path p;
     if (auto d = t.getPackage().getOverriddenDir(); d)
     {
-        p = *d / SW_BINARY_DIR / "out" / t.getConfig() / OutputDir / ::sw::getOutputFileName(t);
+        p = *d / SW_BINARY_DIR / "out" / t.getConfig() / OutputDir;
     }
     else if (t.isLocal())
     {
-        p = t.getLocalOutputBinariesDirectory() / OutputDir / ::sw::getOutputFileName(t);
+        p = t.getLocalOutputBinariesDirectory() / OutputDir;
     }
     else
     {
         SW_UNIMPLEMENTED;
-        p = root / t.getConfig() / OutputDir / ::sw::getOutputFileName(t);
+        p = root / t.getConfig() / OutputDir;
     }
     return p;
 }
 
-path getBaseOutputFileName(const Target &t, const path &OutputDir, const path &subdir)
+path getBaseOutputDirName(const Target &t, const path &OutputDir, const path &subdir)
 {
     if (t.isLocal())
-        return getBaseOutputFileNameForLocalOnly(t, {}, OutputDir);
+        return getBaseOutputDirNameForLocalOnly(t, {}, OutputDir);
     else
-        return t.BinaryDir.parent_path() / subdir / ::sw::getOutputFileName(t);
+        return t.BinaryDir.parent_path() / subdir;
+}
+
+path getBaseOutputFileNameForLocalOnly(const Target &t, const path &root, const path &OutputDir)
+{
+    return getBaseOutputDirNameForLocalOnly(t, root, OutputDir) / ::sw::getOutputFileName(t);
+}
+
+path getBaseOutputFileName(const Target &t, const path &OutputDir, const path &subdir)
+{
+    return getBaseOutputDirName(t, OutputDir, subdir) / ::sw::getOutputFileName(t);
 }
 
 }
