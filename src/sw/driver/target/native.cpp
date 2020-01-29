@@ -220,17 +220,12 @@ path NativeTarget::getOutputFileName(const path &root) const
 
 path NativeTarget::getOutputFileName2(const path &subdir) const
 {
-    if (isLocal())
-    {
+    if (IsConfig)
         return getOutputFileName("");
-    }
+    else if (isLocal())
+        return getOutputFileName("");
     else
-    {
-        if (IsConfig)
-            return getOutputFileName("");
-        else
-            return BinaryDir.parent_path() / subdir / ::sw::getOutputFileName(*this);
-    }
+        return BinaryDir.parent_path() / subdir / ::sw::getOutputFileName(*this);
 }
 
 path NativeTarget::getOutputFile() const
