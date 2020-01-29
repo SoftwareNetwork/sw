@@ -51,6 +51,12 @@ public:
     bool GenerateWindowsResource = true; // internal?
     bool NoUndefined = true;
 
+    // unity
+    // https://cmake.org/cmake/help/latest/prop_tgt/UNITY_BUILD.html
+    // maybe implement source code before and after?
+    bool UnityBuild = false;
+    int UnityBuildBatchSize = 8;
+
     bool ImportFromBazel = false;
     StringSet BazelNames;
     String BazelTargetFunction;

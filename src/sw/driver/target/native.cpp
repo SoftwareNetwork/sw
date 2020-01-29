@@ -2397,85 +2397,147 @@ void NativeCompiledTarget::prepare_pass5()
     //else if (getCompilerType() == CompilerType::MSVC)
     //*this += Definition("_DEBUG");
 
-    auto vs_setup = [this](auto *f, auto *c)
-    {
-        if (getBuildSettings().Native.MT)
-            c->RuntimeLibrary = vs::RuntimeLibraryType::MultiThreaded;
-
-        switch (getBuildSettings().Native.ConfigurationType)
-        {
-        case ConfigurationType::Debug:
-            c->RuntimeLibrary =
-                getBuildSettings().Native.MT ?
-                vs::RuntimeLibraryType::MultiThreadedDebug :
-                vs::RuntimeLibraryType::MultiThreadedDLLDebug;
-            c->Optimizations().Disable = true;
-            break;
-        case ConfigurationType::Release:
-            c->Optimizations().FastCode = true;
-            break;
-        case ConfigurationType::ReleaseWithDebugInformation:
-            c->Optimizations().FastCode = true;
-            break;
-        case ConfigurationType::MinimalSizeRelease:
-            c->Optimizations().SmallCode = true;
-            break;
-        }
-        if (f->file.extension() != ".c")
-            c->CPPStandard = CPPVersion;
-
-        // for static libs, we gather and put pdb near output file
-        // btw, VS is clever enough to take this info from .lib
-        /*if (getSelectedTool() == Librarian.get())
-        {
-        if ((getBuildSettings().Native.ConfigurationType == ConfigurationType::Debug ||
-        getBuildSettings().Native.ConfigurationType == ConfigurationType::ReleaseWithDebugInformation) &&
-        c->PDBFilename.empty())
-        {
-        auto f = getOutputFile();
-        f = f.parent_path() / f.filename().stem();
-        f += ".pdb";
-        c->PDBFilename = f;// BinaryDir.parent_path() / "obj" / (getPackage().getPath().toString() + ".pdb");
-        }
-        }*/
-    };
-
-    auto gnu_setup = [this](auto *f, auto *c)
-    {
-        switch (getBuildSettings().Native.ConfigurationType)
-        {
-        case ConfigurationType::Debug:
-            c->GenerateDebugInformation = true;
-            //c->Optimizations().Level = 0; this is the default
-            break;
-        case ConfigurationType::Release:
-            c->Optimizations().Level = 3;
-            break;
-        case ConfigurationType::ReleaseWithDebugInformation:
-            c->GenerateDebugInformation = true;
-            c->Optimizations().Level = 2;
-            break;
-        case ConfigurationType::MinimalSizeRelease:
-            c->Optimizations().SmallCode = true;
-            c->Optimizations().Level = 2;
-            break;
-        }
-        if (f->file.extension() != ".c")
-            c->CPPStandard = CPPVersion;
-        else
-            c->CStandard = CVersion;
-
-        if (ExportAllSymbols && getSelectedTool() == Linker.get())
-            c->VisibilityHidden = false;
-    };
-
     auto files = gatherSourceFiles();
+
+    // unity build
+    if (UnityBuild)
+    {
+        std::vector<NativeSourceFile *> files2(files.begin(), files.end());
+        std::sort(files2.begin(), files2.end(), [](const auto f1, const auto f2)
+        {
+            return f1->index < f2->index;
+        });
+
+        if (UnityBuildBatchSize < 0)
+            UnityBuildBatchSize = 0;
+
+        struct data
+        {
+            String s;
+            int idx = 0;
+            String ext;
+        };
+
+        data c, cpp;
+        c.ext = ".c";
+        cpp.ext = ".cpp";
+        int fidx = 1; // for humans
+        auto writef = [this, &fidx](auto &d)
+        {
+            if (d.s.empty())
+                return;
+            auto fns = "Module." + std::to_string(fidx++) + d.ext;
+            auto fn = BinaryPrivateDir / "unity" / fns;
+            write_file_if_different(fn, d.s); // do not trigger rebuilds
+            *this += fn; // after write
+            (*this)[fn].fancy_name = "[" + getPackage().toString() + "]/[unity]/" + fns;
+            d.s.clear();
+        };
+
+        for (auto f : files2)
+        {
+            // skip when args are populated
+            if (!f->args.empty())
+                continue;
+
+            auto ext = f->file.extension().string();
+            auto cext = ext == ".c";
+            auto cppext = getCppSourceFileExtensions().find(ext) != getCppSourceFileExtensions().end();
+            // skip asm etc.
+            if (!cext && !cppext)
+                continue;
+
+            // asm won't work here right now
+            data &d = cext ? c : cpp;
+            d.s += "#include \"" + normalize_path(f->file) + "\"\n";
+            *this -= f->file;
+            if (++d.idx % UnityBuildBatchSize == 0)
+                writef(d);
+        }
+        writef(c);
+        writef(cpp);
+
+        // again
+        files = gatherSourceFiles();
+    }
 
     // merge file compiler options with target compiler options
     for (auto &f : files)
     {
         // set everything before merge!
         f->compiler->merge(*this);
+
+        auto vs_setup = [this](auto *f, auto *c)
+        {
+            if (getBuildSettings().Native.MT)
+                c->RuntimeLibrary = vs::RuntimeLibraryType::MultiThreaded;
+
+            switch (getBuildSettings().Native.ConfigurationType)
+            {
+            case ConfigurationType::Debug:
+                c->RuntimeLibrary =
+                    getBuildSettings().Native.MT ?
+                    vs::RuntimeLibraryType::MultiThreadedDebug :
+                    vs::RuntimeLibraryType::MultiThreadedDLLDebug;
+                c->Optimizations().Disable = true;
+                break;
+            case ConfigurationType::Release:
+                c->Optimizations().FastCode = true;
+                break;
+            case ConfigurationType::ReleaseWithDebugInformation:
+                c->Optimizations().FastCode = true;
+                break;
+            case ConfigurationType::MinimalSizeRelease:
+                c->Optimizations().SmallCode = true;
+                break;
+            }
+            if (f->file.extension() != ".c")
+                c->CPPStandard = CPPVersion;
+
+            // for static libs, we gather and put pdb near output file
+            // btw, VS is clever enough to take this info from .lib
+            /*if (getSelectedTool() == Librarian.get())
+            {
+            if ((getBuildSettings().Native.ConfigurationType == ConfigurationType::Debug ||
+            getBuildSettings().Native.ConfigurationType == ConfigurationType::ReleaseWithDebugInformation) &&
+            c->PDBFilename.empty())
+            {
+            auto f = getOutputFile();
+            f = f.parent_path() / f.filename().stem();
+            f += ".pdb";
+            c->PDBFilename = f;// BinaryDir.parent_path() / "obj" / (getPackage().getPath().toString() + ".pdb");
+            }
+            }*/
+        };
+
+        auto gnu_setup = [this](auto *f, auto *c)
+        {
+            switch (getBuildSettings().Native.ConfigurationType)
+            {
+            case ConfigurationType::Debug:
+                c->GenerateDebugInformation = true;
+                //c->Optimizations().Level = 0; this is the default
+                break;
+            case ConfigurationType::Release:
+                c->Optimizations().Level = 3;
+                break;
+            case ConfigurationType::ReleaseWithDebugInformation:
+                c->GenerateDebugInformation = true;
+                c->Optimizations().Level = 2;
+                break;
+            case ConfigurationType::MinimalSizeRelease:
+                c->Optimizations().SmallCode = true;
+                c->Optimizations().Level = 2;
+                break;
+            }
+            if (f->file.extension() != ".c")
+                c->CPPStandard = CPPVersion;
+            else
+                c->CStandard = CVersion;
+
+            if (ExportAllSymbols && getSelectedTool() == Linker.get())
+                c->VisibilityHidden = false;
+        };
 
         if (auto c = f->compiler->as<VisualStudioCompiler*>())
         {
