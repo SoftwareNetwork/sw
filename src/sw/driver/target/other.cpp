@@ -13,6 +13,56 @@ static path getOutputFileName(const Target &t)
     SW_UNIMPLEMENTED;
 }
 
+template <class CompilerType>
+static std::shared_ptr<CompilerType> activateCompiler(Target &t, const UnresolvedPackage &id, const StringSet &exts)
+{
+    auto &cld = t.getMainBuild().getTargets();
+
+    TargetSettings oss; // empty for now
+    auto i = cld.find(id, oss);
+    if (!i)
+    {
+        for (auto &e : exts)
+            t.setExtensionProgram(e, id);
+        return {};
+    }
+    auto prog = i->as<PredefinedProgram *>();
+    if (!prog)
+        throw SW_RUNTIME_ERROR("Target without PredefinedProgram: " + i->getPackage().toString());
+
+    auto set_compiler_type = [&t, &id, &exts](const auto &c)
+    {
+        for (auto &e : exts)
+            t.setExtensionProgram(e, c->clone());
+    };
+
+    auto c = std::dynamic_pointer_cast<CompilerBaseProgram>(prog->getProgram().clone());
+    if (c)
+    {
+        set_compiler_type(c);
+        return {};
+    }
+
+    bool created = false;
+    auto create_command = [&prog, &created, &t, &c]()
+    {
+        if (created)
+            return;
+        c->file = prog->getProgram().file;
+        auto C = c->createCommand(t.getMainBuild().getContext());
+        static_cast<primitives::Command&>(*C) = *prog->getProgram().getCommand();
+        created = true;
+    };
+
+    auto compiler = std::make_shared<CompilerType>(t.getMainBuild().getContext());
+    c = compiler;
+    create_command();
+
+    set_compiler_type(c);
+
+    return compiler;
+}
+
 bool CSharpTarget::init()
 {
     Target::init();
@@ -23,51 +73,25 @@ bool CSharpTarget::init()
         v.target = this;
     });
 
-    if (auto p = findProgramByExtension(".cs"); p)
-        compiler = std::dynamic_pointer_cast<CSharpCompiler>(p->clone());
-    else
+    compiler = activateCompiler<VisualStudioCSharpCompiler>(*this, "com.Microsoft.VisualStudio.Roslyn.csc"s, { ".cs" });
+    if (!compiler)
         throw SW_RUNTIME_ERROR("No C# compiler found");
 
-    /* || add a considiton so user could change nont build output dir*/
-    if (Scope == TargetScope::Build)
-    {
-        SW_UNIMPLEMENTED;
-        //compiler->setOutputFile(getOutputFileName(getSolution().swctx.getLocalStorage().storage_dir_bin));
-    }
-    else
-    {
-        auto base = BinaryDir.parent_path() / "out" / ::sw::getOutputFileName(*this);
-        compiler->setOutputFile(base);
-    }
+    compiler->Extension = getBuildSettings().TargetOS.getExecutableExtension();
+    compiler->setOutputFile(getBaseOutputFileName(*this, {}, "bin"));
 
     SW_RETURN_MULTIPASS_END;
 }
 
-path CSharpTarget::getOutputFileName(const path &root) const
-{
-    path p;
-    if (isLocal())
-    {
-        p = getLocalOutputBinariesDirectory() / ::sw::getOutputFileName(*this);
-    }
-    else
-    {
-        p = root / getConfig() / ::sw::getOutputFileName(*this);
-    }
-    return p;
-}
-
 Commands CSharpTarget::getCommands1() const
 {
-    SW_UNIMPLEMENTED;
-
-    /*for (auto f : gatherSourceFiles<SourceFile>(*this, compiler->input_extensions))
+    for (auto f : gatherSourceFiles<SourceFile>(*this, { ".cs" }))
         compiler->addSourceFile(f->file);
 
     Commands cmds;
     auto c = compiler->getCommand(*this);
     cmds.insert(c);
-    return cmds;*/
+    return cmds;
 }
 
 bool RustTarget::init()
@@ -80,51 +104,25 @@ bool RustTarget::init()
         v.target = this;
     });
 
-    if (auto p = findProgramByExtension(".rs"); p)
-        compiler = std::dynamic_pointer_cast<RustCompiler>(p->clone());
-    else
+    compiler = activateCompiler<decltype(compiler)::element_type>(*this, "org.rust.rustc"s, { ".rs" });
+    if (!compiler)
         throw SW_RUNTIME_ERROR("No Rust compiler found");
 
-    /* || add a considiton so user could change nont build output dir*/
-    if (Scope == TargetScope::Build)
-    {
-        SW_UNIMPLEMENTED;
-        //compiler->setOutputFile(getOutputFileName(getSolution().swctx.getLocalStorage().storage_dir_bin));
-    }
-    else
-    {
-        auto base = BinaryDir.parent_path() / "out" / ::sw::getOutputFileName(*this);
-        compiler->setOutputFile(base);
-    }
+    compiler->Extension = getBuildSettings().TargetOS.getExecutableExtension();
+    compiler->setOutputFile(getBaseOutputFileName(*this, {}, "bin"));
 
     SW_RETURN_MULTIPASS_END;
 }
 
-path RustTarget::getOutputFileName(const path &root) const
-{
-    path p;
-    if (isLocal())
-    {
-        p = getLocalOutputBinariesDirectory() / ::sw::getOutputFileName(*this);
-    }
-    else
-    {
-        p = root / getConfig() / ::sw::getOutputFileName(*this);
-    }
-    return p;
-}
-
 Commands RustTarget::getCommands1() const
 {
-    SW_UNIMPLEMENTED;
-
-    /*for (auto f : gatherSourceFiles<SourceFile>(*this, compiler->input_extensions))
+    for (auto f : gatherSourceFiles<SourceFile>(*this, {".rs"}))
         compiler->setSourceFile(f->file);
 
     Commands cmds;
     auto c = compiler->getCommand(*this);
     cmds.insert(c);
-    return cmds;*/
+    return cmds;
 }
 
 bool GoTarget::init()
@@ -137,51 +135,25 @@ bool GoTarget::init()
         v.target = this;
     });
 
-    if (auto p = findProgramByExtension(".go"); p)
-        compiler = std::dynamic_pointer_cast<GoCompiler>(p->clone());
-    else
+    compiler = activateCompiler<decltype(compiler)::element_type>(*this, "org.google.golang.go"s, { ".go" });
+    if (!compiler)
         throw SW_RUNTIME_ERROR("No Go compiler found");
 
-    /* || add a considiton so user could change nont build output dir*/
-    if (Scope == TargetScope::Build)
-    {
-        SW_UNIMPLEMENTED;
-        //compiler->setOutputFile(getOutputFileName(getSolution().swctx.getLocalStorage().storage_dir_bin));
-    }
-    else
-    {
-        auto base = BinaryDir.parent_path() / "out" / ::sw::getOutputFileName(*this);
-        compiler->setOutputFile(base);
-    }
+    compiler->Extension = getBuildSettings().TargetOS.getExecutableExtension();
+    compiler->setOutputFile(getBaseOutputFileName(*this, {}, "bin"));
 
     SW_RETURN_MULTIPASS_END;
 }
 
-path GoTarget::getOutputFileName(const path &root) const
-{
-    path p;
-    if (isLocal())
-    {
-        p = getLocalOutputBinariesDirectory() / ::sw::getOutputFileName(*this);
-    }
-    else
-    {
-        p = root / getConfig() / ::sw::getOutputFileName(*this);
-    }
-    return p;
-}
-
 Commands GoTarget::getCommands1() const
 {
-    SW_UNIMPLEMENTED;
-
-    /*for (auto f : gatherSourceFiles<SourceFile>(*this, compiler->input_extensions))
+    for (auto f : gatherSourceFiles<SourceFile>(*this, {".go"}))
         compiler->setSourceFile(f->file);
 
     Commands cmds;
     auto c = compiler->getCommand(*this);
     cmds.insert(c);
-    return cmds;*/
+    return cmds;
 }
 
 bool FortranTarget::init()
@@ -194,51 +166,25 @@ bool FortranTarget::init()
         v.target = this;
     });
 
-    if (auto p = findProgramByExtension(".f"); p)
-        compiler = std::dynamic_pointer_cast<FortranCompiler>(p->clone());
-    else
+    compiler = activateCompiler<decltype(compiler)::element_type>(*this, "org.gnu.gcc.fortran"s, { ".f" });
+    if (!compiler)
         throw SW_RUNTIME_ERROR("No Fortran compiler found");
 
-    /* || add a considiton so user could change nont build output dir*/
-    if (Scope == TargetScope::Build)
-    {
-        SW_UNIMPLEMENTED;
-        //compiler->setOutputFile(getOutputFileName(getSolution().swctx.getLocalStorage().storage_dir_bin));
-    }
-    else
-    {
-        auto base = BinaryDir.parent_path() / "out" / ::sw::getOutputFileName(*this);
-        compiler->setOutputFile(base);
-    }
+    compiler->Extension = getBuildSettings().TargetOS.getExecutableExtension();
+    compiler->setOutputFile(getBaseOutputFileName(*this, {}, "bin"));
 
     SW_RETURN_MULTIPASS_END;
 }
 
-path FortranTarget::getOutputFileName(const path &root) const
-{
-    path p;
-    if (isLocal())
-    {
-        p = getLocalOutputBinariesDirectory() / ::sw::getOutputFileName(*this);
-    }
-    else
-    {
-        p = root / getConfig() / ::sw::getOutputFileName(*this);
-    }
-    return p;
-}
-
 Commands FortranTarget::getCommands1() const
 {
-    SW_UNIMPLEMENTED;
-
-    /*for (auto f : gatherSourceFiles<SourceFile>(*this, compiler->input_extensions))
+    for (auto f : gatherSourceFiles<SourceFile>(*this, {".f"}))
         compiler->setSourceFile(f->file);
 
     Commands cmds;
     auto c = compiler->getCommand(*this);
     cmds.insert(c);
-    return cmds;*/
+    return cmds;
 }
 
 bool JavaTarget::init()
@@ -268,20 +214,6 @@ bool JavaTarget::init()
     //}
 
     SW_RETURN_MULTIPASS_END;
-}
-
-path JavaTarget::getOutputFileName(const path &root) const
-{
-    path p;
-    if (isLocal())
-    {
-        p = getLocalOutputBinariesDirectory() / ::sw::getOutputFileName(*this);
-    }
-    else
-    {
-        p = root / getConfig() / ::sw::getOutputFileName(*this);
-    }
-    return p;
 }
 
 Commands JavaTarget::getCommands1() const
@@ -330,20 +262,6 @@ bool KotlinTarget::init()
     SW_RETURN_MULTIPASS_END;
 }
 
-path KotlinTarget::getOutputFileName(const path &root) const
-{
-    path p;
-    if (isLocal())
-    {
-        p = getLocalOutputBinariesDirectory() / ::sw::getOutputFileName(*this);
-    }
-    else
-    {
-        p = root / getConfig() / ::sw::getOutputFileName(*this);
-    }
-    return p;
-}
-
 Commands KotlinTarget::getCommands1() const
 {
     SW_UNIMPLEMENTED;
@@ -355,53 +273,6 @@ Commands KotlinTarget::getCommands1() const
     auto c = compiler->getCommand(*this);
     cmds.insert(c);
     return cmds;*/
-}
-
-void DTarget::activateCompiler(const UnresolvedPackage &id, const StringSet &exts)
-{
-    auto &cld = getMainBuild().getTargets();
-
-    TargetSettings oss; // empty for now
-    auto i = cld.find(id, oss);
-    if (!i)
-    {
-        for (auto &e : exts)
-            setExtensionProgram(e, id);
-        return;
-    }
-    auto t = i->as<PredefinedProgram *>();
-    if (!t)
-        throw SW_RUNTIME_ERROR("Target without PredefinedProgram: " + i->getPackage().toString());
-
-    auto set_compiler_type = [this, &id, &exts](const auto &c)
-    {
-        for (auto &e : exts)
-            setExtensionProgram(e, c->clone());
-    };
-
-    auto c = std::dynamic_pointer_cast<CompilerBaseProgram>(t->getProgram().clone());
-    if (c)
-    {
-        set_compiler_type(c);
-        return;
-    }
-
-    bool created = false;
-    auto create_command = [this, &created, &t, &c]()
-    {
-        if (created)
-            return;
-        c->file = t->getProgram().file;
-        auto C = c->createCommand(getMainBuild().getContext());
-        static_cast<primitives::Command&>(*C) = *t->getProgram().getCommand();
-        created = true;
-    };
-
-    compiler = std::make_shared<DCompiler>(getMainBuild().getContext());
-    c = compiler;
-    create_command();
-
-    set_compiler_type(c);
 }
 
 NativeLinker *DTarget::getSelectedTool() const
@@ -425,9 +296,9 @@ bool DTarget::init()
             v.target = this;
         });
 
-        activateCompiler("org.dlang.dmd.dmd"s, { ".d" });
+        compiler = activateCompiler<decltype(compiler)::element_type>(*this, "org.dlang.dmd.dmd"s, { ".d" });
         if (!compiler)
-            throw SW_RUNTIME_ERROR("Cannot find d compiler");
+            throw SW_RUNTIME_ERROR("No D compiler found");
 
         compiler->setObjectDir(BinaryDir.parent_path() / "obj");
     }
@@ -439,20 +310,6 @@ bool DTarget::init()
     SW_RETURN_MULTIPASS_END;
     }
     SW_RETURN_MULTIPASS_END;
-
-    /* || add a considiton so user could change nont build output dir*/
-    /*if (Scope == TargetScope::Build)
-    {
-        auto base = BinaryDir.parent_path() / "out" / ::sw::getOutputFileName(*this);
-        compiler->setOutputFile(base);
-        //compiler->setOutputFile(getOutputFileName(getSolution().getContext().getLocalStorage().storage_dir_bin));
-    }
-    else
-    {
-        auto base = BinaryDir.parent_path() / "out" / ::sw::getOutputFileName(*this);
-        compiler->setOutputFile(base);
-    }*/
-    //compiler->setObjectDir(BinaryDir.parent_path() / "obj");
 
     SW_RETURN_MULTIPASS_END;
 }

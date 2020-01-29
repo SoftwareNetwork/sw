@@ -27,7 +27,6 @@ struct SW_DRIVER_CPP_API CSharpTarget : Target
     Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
 
 private:
-    path getOutputFileName(const path &root) const;
     Commands getCommands1() const override;
 };
 
@@ -52,7 +51,6 @@ struct SW_DRIVER_CPP_API RustTarget : Target
     Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
 
 private:
-    path getOutputFileName(const path &root) const;
     Commands getCommands1() const override;
 };
 
@@ -77,7 +75,6 @@ struct SW_DRIVER_CPP_API GoTarget : Target
     Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
 
 private:
-    path getOutputFileName(const path &root) const;
     Commands getCommands1() const override;
 };
 
@@ -102,7 +99,6 @@ struct SW_DRIVER_CPP_API FortranTarget : Target
     Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
 
 private:
-    path getOutputFileName(const path &root) const;
     Commands getCommands1() const override;
 };
 
@@ -127,7 +123,6 @@ struct SW_DRIVER_CPP_API JavaTarget : Target
     Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
 
 private:
-    path getOutputFileName(const path &root) const;
     Commands getCommands1() const override;
 };
 
@@ -152,7 +147,6 @@ struct SW_DRIVER_CPP_API KotlinTarget : Target
     Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
 
 private:
-    path getOutputFileName(const path &root) const;
     Commands getCommands1() const override;
 };
 
@@ -178,8 +172,6 @@ struct SW_DRIVER_CPP_API DTarget : NativeTarget
 
 private:
     Commands getCommands1() const override;
-
-    void activateCompiler(const UnresolvedPackage &id, const StringSet &exts);
 
     //
     bool isStaticLibrary() const override { return false; }
