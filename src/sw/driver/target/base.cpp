@@ -939,4 +939,36 @@ bool ProjectTarget::init()
     return Target::init();
 }
 
+path getOutputFileName(const Target &t)
+{
+    return t.getPackage().toString();
+}
+
+path getBaseOutputFileNameForLocalOnly(const Target &t, const path &root, const path &OutputDir)
+{
+    path p;
+    if (auto d = t.getPackage().getOverriddenDir(); d)
+    {
+        p = *d / SW_BINARY_DIR / "out" / t.getConfig() / OutputDir / ::sw::getOutputFileName(t);
+    }
+    else if (t.isLocal())
+    {
+        p = t.getLocalOutputBinariesDirectory() / OutputDir / ::sw::getOutputFileName(t);
+    }
+    else
+    {
+        SW_UNIMPLEMENTED;
+        p = root / t.getConfig() / OutputDir / ::sw::getOutputFileName(t);
+    }
+    return p;
+}
+
+path getBaseOutputFileName(const Target &t, const path &OutputDir, const path &subdir)
+{
+    if (t.isLocal())
+        return getBaseOutputFileNameForLocalOnly(t, {}, OutputDir);
+    else
+        return t.BinaryDir.parent_path() / subdir / ::sw::getOutputFileName(t);
+}
+
 }

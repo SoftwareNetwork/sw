@@ -208,6 +208,9 @@ private:
     void prepare_pass9();
 
     bool isStaticLibrary() const override;
+
+    path getOutputFileName(const path &root) const override;
+    path getOutputFileName2(const path &subdir) const override;
 };
 
 /**

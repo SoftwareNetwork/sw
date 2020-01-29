@@ -81,8 +81,8 @@ struct SW_DRIVER_CPP_API NativeTarget : Target
 protected:
     //
     path OutputDir; // output subdir
-    path getOutputFileName(const path &root) const;
-    path getOutputFileName2(const path &subdir) const;
+    virtual path getOutputFileName(const path &root) const;
+    virtual path getOutputFileName2(const path &subdir) const;
 
     virtual void setOutputFile();
     virtual NativeLinker *getSelectedTool() const = 0;

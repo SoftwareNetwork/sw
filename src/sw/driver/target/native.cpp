@@ -161,11 +161,6 @@ SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD(sw_replace_dll_import, replace_dll_import)
 namespace sw
 {
 
-static path getOutputFileName(const Target &t)
-{
-    return t.getPackage().toString();
-}
-
 void NativeTarget::setOutputFile()
 {
     /* || add a condition so user could change non build output dir*/
@@ -198,34 +193,12 @@ void NativeTarget::setOutputFile()
 
 path NativeTarget::getOutputFileName(const path &root) const
 {
-    path p;
-    if (IsConfig)
-    {
-        p = getMainBuild().getBuildDirectory() / "cfg" / getConfig() / ::sw::getOutputFileName(*this);
-    }
-    else if (auto d = getPackage().getOverriddenDir(); d)
-    {
-        p = *d / SW_BINARY_DIR / "out" / getConfig() / OutputDir / ::sw::getOutputFileName(*this);
-    }
-    else if (isLocal())
-    {
-        p = getLocalOutputBinariesDirectory() / OutputDir / ::sw::getOutputFileName(*this);
-    }
-    else
-    {
-        p = root / getConfig() / OutputDir / ::sw::getOutputFileName(*this);
-    }
-    return p;
+    return getBaseOutputFileNameForLocalOnly(*this, root, OutputDir);
 }
 
 path NativeTarget::getOutputFileName2(const path &subdir) const
 {
-    if (IsConfig)
-        return getOutputFileName("");
-    else if (isLocal())
-        return getOutputFileName("");
-    else
-        return BinaryDir.parent_path() / subdir / ::sw::getOutputFileName(*this);
+    return getBaseOutputFileName(*this, OutputDir, subdir);
 }
 
 path NativeTarget::getOutputFile() const
@@ -237,6 +210,28 @@ NativeCompiledTarget::~NativeCompiledTarget()
 {
     // incomplete type cannot be in default dtor
     // in our case it is nlohmann::json member
+}
+
+path NativeCompiledTarget::getOutputFileName(const path &root) const
+{
+    path p;
+    if (IsSwConfig)
+    {
+        p = getMainBuild().getBuildDirectory() / "cfg" / getConfig() / ::sw::getOutputFileName(*this);
+    }
+    else
+    {
+        p = NativeTarget::getOutputFileName(root);
+    }
+    return p;
+}
+
+path NativeCompiledTarget::getOutputFileName2(const path &subdir) const
+{
+    if (IsSwConfig)
+        return getOutputFileName("");
+    else
+        return NativeTarget::getOutputFileName2(subdir);
 }
 
 bool NativeCompiledTarget::isStaticLibrary() const

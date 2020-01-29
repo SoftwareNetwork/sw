@@ -538,4 +538,8 @@ std::unordered_set<SF*> gatherSourceFiles(const SourceFileStorage &s, const Stri
     return files;
 }
 
+path getOutputFileName(const Target &t);
+path getBaseOutputFileNameForLocalOnly(const Target &t, const path &root, const path &OutputDir);
+path getBaseOutputFileName(const Target &t, const path &OutputDir, const path &subdir);
+
 } // namespace sw
