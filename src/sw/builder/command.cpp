@@ -316,6 +316,15 @@ void Command::prepare()
     if (prepared)
         return;
 
+    // stable sort args by their positions
+    // before getProgram() calculations!
+    std::stable_sort(arguments.begin(), arguments.end(), [](const auto &p1, const auto &p2)
+    {
+        if (p1 && p2)
+            return p1->getPosition() < p2->getPosition();
+        return p1 < p2;
+    });
+
     // user entered commands may be in form 'git'
     // so, it is not empty, not generated and does not exist
     if (!getProgram().empty() && !File(getProgram(), getContext().getFileStorage()).isGeneratedAtAll() &&
@@ -333,8 +342,6 @@ void Command::prepare()
 
     // program is an input!
     inputs.insert(getProgram());
-
-    // stable sort args by their positions
 
     getHashAndSave();
 
