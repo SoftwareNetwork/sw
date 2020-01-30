@@ -287,7 +287,15 @@ void VSGenerator::generate(const SwBuild &b)
     TargetMap ttb;
     for (auto &[pkg, tgts] : b.getTargetsToBuild())
     {
-        if (pkg.getPath().isAbsolute())
+        if (add_all_packages)
+            ;
+        else if (add_overridden_packages)
+        {
+            sw::LocalPackage p(b.getContext().getLocalStorage(), pkg);
+            if (!p.isOverridden())
+                continue;
+        }
+        else if (pkg.getPath().isAbsolute())
             continue;
         ttb[pkg] = tgts;
     }

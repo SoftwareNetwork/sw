@@ -118,6 +118,12 @@ SUBCOMMAND_DECL2(generate)
         hs["use_same_config_for_host_dependencies"] = "true";
         hs["use_same_config_for_host_dependencies"].useInHash(false);
         swctx.setHostSettings(hs);
+
+        auto g = (VSGenerator*)generator.get();
+        if (print_overridden_dependencies)
+            g->add_overridden_packages = true;
+        if (print_dependencies)
+            g->add_all_packages = true;
     }
 
     auto b = createBuildAndPrepare(swctx, (Strings&)build_arg_generate);

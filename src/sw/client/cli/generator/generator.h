@@ -87,6 +87,8 @@ struct VSGenerator : Generator
     path sln_root;
     VsGeneratorType vstype;
     sw::Version winsdk;
+    bool add_overridden_packages = false;
+    bool add_all_packages = false;
 
     void generate(const sw::SwBuild &b) override;
 
