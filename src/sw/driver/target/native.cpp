@@ -254,7 +254,24 @@ static void targetSettings2Command(primitives::Command &c, const TargetSetting &
     if (s["arguments"])
     {
         for (auto &a : s["arguments"].getArray())
-            c.push_back(a);
+        {
+            if (a.index() == 0)
+                c.push_back(std::get<TargetSetting::Value>(a));
+            else
+            {
+                auto &m = std::get<TargetSetting::Map>(a);
+
+                auto a2 = std::make_unique<::primitives::command::SimplePositionalArgument>(m["argument"].getValue());
+                if (m["position"].isValue())
+                    a2->getPosition().push_back(std::stoi(m["position"].getValue()));
+                else if (m["position"].isArray())
+                {
+                    for (auto &p : m["position"].getArray())
+                        a2->getPosition().push_back(std::stoi(std::get<TargetSetting::Value>(p)));
+                }
+                c.push_back(std::move(a2));
+            }
+        }
     }
 }
 
