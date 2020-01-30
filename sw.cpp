@@ -219,6 +219,7 @@ void build(Solution &s)
             "org.sw.demo.giovannidicanio.winreg"_dep
             ;
         embed2("pub.egorpugin.primitives.tools.embedder2-master"_dep, client, "src/sw/client/cli/inserts/SWConfig.cmake");
+        embed2("pub.egorpugin.primitives.tools.embedder2-master"_dep, client, "src/sw/client/cli/inserts/project_templates.yml");
         if (client.getCompilerType() == CompilerType::MSVC)
             client.CompileOptions.push_back("-bigobj");
         if (client.getBuildSettings().TargetOS.Type != OSType::Windows)

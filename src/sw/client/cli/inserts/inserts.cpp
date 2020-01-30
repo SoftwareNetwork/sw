@@ -25,5 +25,9 @@ DECLARE_TEXT_VAR_BEGIN(sw_config_cmake)
 #include <src/sw/client/cli/inserts/SWConfig.cmake.emb>
 DECLARE_TEXT_VAR_END(sw_config_cmake);
 
+DECLARE_TEXT_VAR_BEGIN(project_templates)
+#include <src/sw/client/cli/inserts/project_templates.yml.emb>
+DECLARE_TEXT_VAR_END(project_templates);
+
 #undef DECLARE_TEXT_VAR_BEGIN
 #undef DECLARE_TEXT_VAR_END

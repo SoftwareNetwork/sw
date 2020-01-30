@@ -1,0 +1,90 @@
+templates:
+    c.exe:
+        target: Executable
+        config:
+            sw.cpp: sw.cpp
+        files:
+            src/main.c: main.c
+
+    cpp.exe:
+        target: Executable
+        config:
+            sw.cpp: sw.cpp
+        files:
+            src/main.cpp: main.cpp
+
+    sw.cpp.exe:
+        target: Executable
+        config:
+            sw.cpp: sw.cpp
+        dependencies:
+            - pub.egorpugin.primitives.sw.main-master
+        files:
+            src/main.cpp: sw.main.cpp
+
+    cpp.lib:
+        target: Library
+        config:
+            sw.cpp: sw.cpp
+        files:
+            src/lib.cpp: lib.cpp
+            src/lib.h: lib.h
+
+files:
+    main.c: |
+        #include <stdio.h>
+
+        int main()
+        {
+            printf("Hello, World!\n");
+            return 0;
+        }
+
+    main.cpp: |
+        #include <iostream>
+
+        int main()
+        {
+            std::cout << "Hello, World!\n";
+            return 0;
+        }
+
+    sw.main.cpp: |
+        #include <primitives/sw/main.h>
+        #include <primitives/sw/settings.h>
+        #include <primitives/sw/cl.h>
+
+        #include <iostream>
+
+        int main(int argc, char *argv[])
+        {
+            ::cl::ParseCommandLineOptions(argc, argv);
+
+            std::cout << "Hello, World!\n";
+            return 0;
+        }
+
+    lib.h: |
+        LIB_API int f();
+
+    lib.cpp: |
+        #include "lib.h"
+
+        int f()
+        {
+            return 5;
+        }
+
+    sw.cpp: |
+        void build(Solution &s)
+        {
+            // Uncomment to make a project. Also replace s.addTarget(). with p.addTarget() below.
+            // auto &p = s.addProject("myproject");
+            // p += Git("enter your url here", "enter tag here", "or branch here");
+
+            auto &t = s.addTarget<{target}>("{name}");
+            t += cpp17;
+            {files}
+            {deps}
+        }
+
