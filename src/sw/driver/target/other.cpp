@@ -8,11 +8,6 @@
 namespace sw
 {
 
-static path getOutputFileName(const Target &t)
-{
-    SW_UNIMPLEMENTED;
-}
-
 template <class CompilerType>
 static std::shared_ptr<CompilerType> activateCompiler(Target &t, const UnresolvedPackage &id, const StringSet &exts)
 {
