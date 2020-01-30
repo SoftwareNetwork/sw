@@ -98,7 +98,7 @@ static Version gatherVersion1(builder::detail::ResolvableCommand &c, const Strin
     if (c.pid == -1)
         throw SW_RUNTIME_ERROR(normalize_path(c.getProgram()) + ": " + ec.message());
 
-    static std::regex r_default("(\\d+)(\\.(\\d+)){2,}(-\\S+([.-]\\S+)*)?");
+    static std::regex r_default("(\\d+)(\\.(\\d+)){2,}(-[[:alnum:]]+([.-][[:alnum:]]+)*)?");
 
     std::regex r_in;
     if (!in_regex.empty())
