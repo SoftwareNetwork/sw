@@ -649,7 +649,7 @@ void NativeCompiledTarget::findCompiler()
         else if (getSettings()["native"]["stdlib"]["compiler"].isArray())
         {
             for (auto &s : getSettings()["native"]["stdlib"]["compiler"].getArray())
-                *this += UnresolvedPackage(s);
+                *this += UnresolvedPackage(std::get<TargetSetting::Value>(s));
         }
     }
 
@@ -2059,12 +2059,12 @@ void NativeCompiledTarget::merge1()
         if (is["system-include-directories"])
         {
             for (auto &v : is["system-include-directories"].getArray())
-                NativeCompilerOptions::System.IncludeDirectories.push_back(v);
+                NativeCompilerOptions::System.IncludeDirectories.push_back(std::get<TargetSetting::Value>(v));
         }
         if (is["system-link-directories"])
         {
             for (auto &v : is["system-link-directories"].getArray())
-                NativeLinkerOptions::System.LinkDirectories.push_back(v);
+                NativeLinkerOptions::System.LinkDirectories.push_back(std::get<TargetSetting::Value>(v));
         }
     }
 }

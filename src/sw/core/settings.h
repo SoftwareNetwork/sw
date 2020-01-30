@@ -70,6 +70,10 @@ private:
 
 struct SW_CORE_API TargetSetting
 {
+    using Value = TargetSettingValue;
+    using Map = TargetSettings;
+    using Array = std::vector<std::variant<Value, Map>>;
+
     TargetSetting() = default;
     TargetSetting(const TargetSetting &);
     TargetSetting &operator=(const TargetSetting &);
@@ -77,7 +81,7 @@ struct SW_CORE_API TargetSetting
     TargetSetting &operator[](const TargetSettingKey &k);
     const TargetSetting &operator[](const TargetSettingKey &k) const;
 
-    TargetSetting &operator=(const TargetSettings &u);
+    TargetSetting &operator=(const Map &u);
 
     template <class U>
     TargetSetting &operator=(const U &u)
@@ -93,7 +97,7 @@ struct SW_CORE_API TargetSetting
     template <class U>
     bool operator==(const U &u) const
     {
-        auto v = std::get_if<TargetSettingValue>(&value);
+        auto v = std::get_if<Value>(&value);
         if (!v)
             return false;
         return *v == u;
@@ -111,11 +115,11 @@ struct SW_CORE_API TargetSetting
     //String getHash() const;
 
     const String &getValue() const;
-    const std::vector<TargetSettingValue> &getArray() const;
-    TargetSettings &getSettings();
-    const TargetSettings &getSettings() const;
+    const Array &getArray() const;
+    Map &getSettings();
+    const Map &getSettings() const;
 
-    void push_back(const TargetSettingValue &);
+    void push_back(const Value &);
     void reset();
 
     void use();
@@ -144,7 +148,7 @@ private:
     bool used_in_hash = true;
     bool ignore_in_comparison = false;
     // when adding new member, add it to copy_fields()!
-    std::variant<std::monostate, TargetSettingValue, std::vector<TargetSettingValue>, TargetSettings> value;
+    std::variant<std::monostate, Value, Array, Map> value;
 
     nlohmann::json toJson() const;
     void copy_fields(const TargetSetting &);

@@ -458,7 +458,7 @@ void VSGenerator::generate(const SwBuild &b)
 
             auto cfs = d.target->getInterfaceSettings()["ide"]["configure_files"].getArray();
             for (auto &cf : cfs)
-                configure_files[d.target->getSettings()].insert(cf);
+                configure_files[d.target->getSettings()].insert(std::get<sw::TargetSetting::Value>(cf));
 
             auto cmds = d.target->getCommands();
 

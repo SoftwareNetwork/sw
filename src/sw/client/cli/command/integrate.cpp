@@ -188,7 +188,7 @@ SUBCOMMAND_DECL(integrate)
             String idirs;
             idirs += "\"";
             for (auto &d : s["include_directories"].getArray())
-                idirs += d + ";";
+                idirs += std::get<sw::TargetSetting::Value>(d) + ";";
             idirs += "\"";
             ctx.addLine("INTERFACE_INCLUDE_DIRECTORIES " + idirs);
 
@@ -198,9 +198,9 @@ SUBCOMMAND_DECL(integrate)
                 String libs;
                 libs += "\"";
                 for (auto &d : s["link_libraries"].getArray())
-                    libs += d + ";";
+                    libs += std::get<sw::TargetSetting::Value>(d) + ";";
                 for (auto &d : s["system_link_libraries"].getArray())
-                    libs += d + ";";
+                    libs += std::get<sw::TargetSetting::Value>(d) + ";";
                 libs += "\"";
                 ctx.addLine("INTERFACE_LINK_LIBRARIES " + libs);
             }
@@ -359,13 +359,13 @@ SUBCOMMAND_DECL(integrate)
 
                 // idirs
                 for (auto &d : s["include_directories"].getArray())
-                    ctx.addLine("ctx.parse_flags('-I" + normalize_path(d) + "', lib)");
+                    ctx.addLine("ctx.parse_flags('-I" + normalize_path(std::get<sw::TargetSetting::Value>(d)) + "', lib)");
 
                 // libs
                 for (auto &d : s["link_libraries"].getArray())
-                    ctx.addLine("ctx.parse_flags('-l" + normalize_path(remove_ext(d)) + "', lib)");
+                    ctx.addLine("ctx.parse_flags('-l" + normalize_path(remove_ext(std::get<sw::TargetSetting::Value>(d))) + "', lib)");
                 for (auto &d : s["system_link_libraries"].getArray())
-                    ctx.addLine("ctx.parse_flags('-l" + normalize_path(remove_ext(d)) + "', lib)");
+                    ctx.addLine("ctx.parse_flags('-l" + normalize_path(remove_ext(std::get<sw::TargetSetting::Value>(d))) + "', lib)");
 
                 // deps
                 for (auto &[k,v] : s["dependencies"]["link"].getSettings())

@@ -960,7 +960,7 @@ void CMakeGenerator::generate(const sw::SwBuild &b)
         ctx.addLine("target_include_directories(" + pkg.toString() + " PRIVATE");
         ctx.increaseIndent();
         for (auto &f : s["this"]["include_directories"].getArray())
-            ctx.addLine("\"" + normalize_path(f) + "\"");
+            ctx.addLine("\"" + normalize_path(std::get<sw::TargetSetting::Value>(f)) + "\"");
         ctx.decreaseIndent();
         ctx.addLine(")");
         ctx.addLine();
@@ -976,7 +976,7 @@ void CMakeGenerator::generate(const sw::SwBuild &b)
         if (!s["dependencies"]["link"].getSettings().empty())
             ctx.addLine();
         for (auto &f : s["this"]["system_link_libraries"].getArray())
-            ctx.addLine("\"" + normalize_path(f) + "\"");
+            ctx.addLine("\"" + normalize_path(std::get<sw::TargetSetting::Value>(f)) + "\"");
         ctx.decreaseIndent();
         ctx.addLine(")");
         ctx.addLine();
@@ -984,7 +984,7 @@ void CMakeGenerator::generate(const sw::SwBuild &b)
         ctx.addLine("target_compile_options(" + pkg.toString() + " PRIVATE");
         ctx.increaseIndent();
         for (auto &f : s["this"]["compile_options"].getArray())
-            ctx.addLine("\"" + f + "\"");
+            ctx.addLine("\"" + std::get<sw::TargetSetting::Value>(f) + "\"");
         ctx.decreaseIndent();
         ctx.addLine(")");
         ctx.addLine();
@@ -993,7 +993,7 @@ void CMakeGenerator::generate(const sw::SwBuild &b)
         ctx.addLine("target_link_options(" + pkg.toString() + " PRIVATE");
         ctx.increaseIndent();
         for (auto &f : s["this"]["link_options"].getArray())
-            ctx.addLine("\"" + f + "\"");
+            ctx.addLine("\"" + std::get<sw::TargetSetting::Value>(f) + "\"");
         ctx.decreaseIndent();
         ctx.addLine(")");
         ctx.addLine();

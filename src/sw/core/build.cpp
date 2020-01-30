@@ -473,12 +473,12 @@ Commands SwBuild::getCommands() const
     StringSet in_ttb;
     StringSet in_ttb_exclude;
     for (auto &t : build_settings["target-to-build"].getArray())
-        in_ttb.insert(t);
+        in_ttb.insert(std::get<TargetSetting::Value>(t));
     for (auto &t : build_settings["target-to-exclude"].getArray())
     {
-        if (in_ttb.find(t) != in_ttb.end())
-            throw SW_RUNTIME_ERROR("Target " + t + " specified both in include and exclude lists");
-        in_ttb_exclude.insert(t);
+        if (in_ttb.find(std::get<sw::TargetSetting::Value>(t)) != in_ttb.end())
+            throw SW_RUNTIME_ERROR("Target " + std::get<sw::TargetSetting::Value>(t) + " specified both in include and exclude lists");
+        in_ttb_exclude.insert(std::get<sw::TargetSetting::Value>(t));
     }
     bool in_ttb_used = !in_ttb.empty();
 

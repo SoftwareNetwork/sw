@@ -96,7 +96,7 @@ TargetSetting &TargetSetting::operator=(const TargetSetting &rhs)
     return *this;
 }
 
-TargetSetting &TargetSetting::operator=(const TargetSettings &u)
+TargetSetting &TargetSetting::operator=(const Map &u)
 {
     value = u;
     return *this;
@@ -105,8 +105,8 @@ TargetSetting &TargetSetting::operator=(const TargetSettings &u)
 TargetSetting &TargetSetting::operator[](const TargetSettingKey &k)
 {
     if (value.index() == 0)
-        value = TargetSettings();
-    return std::get<TargetSettings>(value)[k];
+        value = Map();
+    return std::get<Map>(value)[k];
 }
 
 const TargetSetting &TargetSetting::operator[](const TargetSettingKey &k) const
@@ -116,7 +116,7 @@ const TargetSetting &TargetSetting::operator[](const TargetSettingKey &k) const
         thread_local TargetSetting s;
         return s;
     }
-    return std::get<TargetSettings>(value)[k];
+    return std::get<Map>(value)[k];
 }
 
 const String &TargetSetting::getValue() const
@@ -127,38 +127,38 @@ const String &TargetSetting::getValue() const
     return *v;
 }
 
-const std::vector<TargetSettingValue> &TargetSetting::getArray() const
+const TargetSetting::Array &TargetSetting::getArray() const
 {
     if (value.index() == 0)
     {
-        thread_local std::vector<TargetSettingValue> s;
+        thread_local Array s;
         return s;
     }
-    auto v = std::get_if<std::vector<TargetSettingValue>>(&value);
+    auto v = std::get_if<Array>(&value);
     if (!v)
         throw SW_RUNTIME_ERROR("empty array");
     return *v;
 }
 
-TargetSettings &TargetSetting::getSettings()
+TargetSetting::Map &TargetSetting::getSettings()
 {
-    auto s = std::get_if<TargetSettings>(&value);
+    auto s = std::get_if<Map>(&value);
     if (!s)
     {
         if (value.index() != 0)
             throw SW_RUNTIME_ERROR("Not settings");
-        *this = TargetSettings();
-        s = std::get_if<TargetSettings>(&value);
+        *this = Map();
+        s = std::get_if<Map>(&value);
     }
     return *s;
 }
 
-const TargetSettings &TargetSetting::getSettings() const
+const TargetSetting::Map &TargetSetting::getSettings() const
 {
-    auto s = std::get_if<TargetSettings>(&value);
+    auto s = std::get_if<Map>(&value);
     if (!s)
     {
-        thread_local const TargetSettings ts;
+        thread_local const Map ts;
         return ts;
     }
     return *s;
@@ -197,10 +197,10 @@ void TargetSetting::ignoreInComparison(bool b)
 
 void TargetSetting::mergeMissing(const TargetSetting &rhs)
 {
-    auto s = std::get_if<TargetSettings>(&value);
+    auto s = std::get_if<Map>(&value);
     if (s)
     {
-        s->mergeMissing(std::get<TargetSettings>(rhs.value));
+        s->mergeMissing(std::get<Map>(rhs.value));
         return;
     }
     if (value.index() == 0)
@@ -209,10 +209,10 @@ void TargetSetting::mergeMissing(const TargetSetting &rhs)
 
 void TargetSetting::mergeAndAssign(const TargetSetting &rhs)
 {
-    auto s = std::get_if<TargetSettings>(&value);
+    auto s = std::get_if<Map>(&value);
     if (s)
     {
-        s->mergeAndAssign(std::get<TargetSettings>(rhs.value));
+        s->mergeAndAssign(std::get<Map>(rhs.value));
         return;
     }
     *this = rhs;
@@ -222,11 +222,11 @@ void TargetSetting::mergeFromJson(const nlohmann::json &j)
 {
     if (j.is_object())
     {
-        auto v = std::get_if<TargetSettings>(&value);
+        auto v = std::get_if<Map>(&value);
         if (!v)
         {
-            operator=(TargetSettings());
-            v = std::get_if<TargetSettings>(&value);
+            operator=(Map());
+            v = std::get_if<Map>(&value);
         }
         v->mergeFromJson(j);
         return;
@@ -234,15 +234,26 @@ void TargetSetting::mergeFromJson(const nlohmann::json &j)
 
     if (j.is_array())
     {
-        auto v = std::get_if<std::vector<TargetSettingValue>>(&value);
+        auto v = std::get_if<Array>(&value);
         if (!v)
         {
-            operator=(std::vector<TargetSettingValue>());
-            v = std::get_if<std::vector<TargetSettingValue>>(&value);
+            operator=(Array());
+            v = std::get_if<Array>(&value);
         }
         v->clear();
         for (auto &e : j)
-            v->push_back(e);
+        {
+            if (e.is_string())
+                v->push_back(e);
+            else if (e.is_object())
+            {
+                Map m;
+                m.mergeFromJson(e);
+                v->push_back(m);
+            }
+            else
+                SW_UNIMPLEMENTED;
+        }
         return;
     }
 
@@ -268,19 +279,19 @@ bool TargetSetting::isValue() const
 
 bool TargetSetting::isArray() const
 {
-    return std::get_if<std::vector<TargetSettingValue>>(&value);
+    return std::get_if<Array>(&value);
 }
 
 bool TargetSetting::isObject() const
 {
-    return std::get_if<TargetSettings>(&value);
+    return std::get_if<Map>(&value);
 }
 
 void TargetSetting::push_back(const TargetSettingValue &v)
 {
     if (value.index() == 0)
-        value = std::vector<TargetSettingValue>();
-    return std::get<std::vector<TargetSettingValue>>(value).push_back(v);
+        value = Array();
+    return std::get<Array>(value).push_back(v);
 }
 
 void TargetSetting::reset()
@@ -365,8 +376,13 @@ nlohmann::json TargetSetting::toJson() const
     case 1:
         return getValue();
     case 2:
-        for (auto &v2 : std::get<std::vector<TargetSettingValue>>(value))
-            j.push_back(v2);
+        for (auto &v2 : std::get<Array>(value))
+        {
+            if (v2.index() == 0)
+                j.push_back(std::get<Value>(v2));
+            else
+                j.push_back(std::get<TargetSettings>(v2).toJson());
+        }
         break;
     case 3:
         return std::get<TargetSettings>(value).toJson();

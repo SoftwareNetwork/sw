@@ -70,7 +70,7 @@ static void run(sw::SwBuild &b, const sw::PackageId &pkg, primitives::Command &c
     if (sc["arguments"])
     {
         for (auto &a : sc["arguments"].getArray())
-            c.push_back(a);
+            c.push_back(std::get<sw::TargetSetting::Value>(a));
     }
     if (sc["environment"])
     {
