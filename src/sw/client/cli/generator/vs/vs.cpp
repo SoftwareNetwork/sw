@@ -845,6 +845,7 @@ void Solution::emit(const VSGenerator &g) const
         bat += "setlocal\n";
         bat += ":: turn on multiprocess compilation\n";
         bat += "set UseMultiToolTask=true\n";
+        //bat += "set EnforceProcessCountAcrossBuilds=true\n";
         bat += "start " + normalize_path_windows(g.sln_root / fn) + "\n";
         fn += ".bat"; // we now make a link to bat file
         write_file_if_different(g.sln_root / fn, bat);
