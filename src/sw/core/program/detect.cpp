@@ -1314,7 +1314,10 @@ static void detectNonWindowsCompilers(DETECT_ARGS)
         p->file = resolveExecutable(prog);
         if (fs::exists(p->file))
         {
-            auto v = getVersion(s, p->file);
+            // use simple regex for now, because ubuntu may have
+            // the following version 7.4.0-1ubuntu1~18.04.1
+            // which will be parsed as pre-release
+            auto v = getVersion(s, p->file, "--version", "\\d+(\\.\\d+){2,}");
             auto &c = addProgram(s, PackageId(ppath, v), p);
         }
     };
