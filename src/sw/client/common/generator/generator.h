@@ -54,8 +54,10 @@ enum class GeneratorType
     Xcode,
     // qt creator?
 
-    //Max,
+    Max,
 };
+
+String toString(GeneratorType t);
 
 enum class VsGeneratorType
 {

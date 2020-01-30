@@ -29,7 +29,7 @@ public:
     MainWindow(QWidget *parent = 0);
 
 private:
-    std::unique_ptr<sw::SwContext> ctx;
+    std::unique_ptr<sw::SwContext> swctx;
 
     void setupUi();
 };

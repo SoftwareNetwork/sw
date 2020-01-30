@@ -19,7 +19,29 @@
 #pragma once
 
 #include <sw/core/sw_context.h>
+#include <sw/core/target.h>
 
 std::unique_ptr<sw::SwContext> createSwContext();
-String list_predefined_targets();
-String list_programs();
+
+struct Program
+{
+    String name;
+    String desc;
+
+    struct data
+    {
+        sw::TargetContainer *c = nullptr;
+    };
+
+    using Container = sw::PackageVersionMapBase<data, std::unordered_map, primitives::version::VersionMap>;
+
+    Container releases;
+    Container prereleases;
+};
+
+using Programs = std::vector<Program>;
+
+Programs list_compilers(sw::SwContext &);
+
+String list_predefined_targets(sw::SwContext &);
+String list_programs(sw::SwContext &);

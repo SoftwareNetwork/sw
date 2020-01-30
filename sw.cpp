@@ -204,6 +204,10 @@ void build(Solution &s)
         client_common += "src/sw/client/common/.*"_rr;
         client_common.CPPVersion = CPPLanguageStandard::CPP17;
         client_common.Public += core, cpp_driver;
+        client_common.Public += "org.sw.demo.giovannidicanio.winreg"_dep;
+
+        embed2("pub.egorpugin.primitives.tools.embedder2-master"_dep, client_common, "src/sw/client/common/inserts/SWConfig.cmake");
+        embed2("pub.egorpugin.primitives.tools.embedder2-master"_dep, client_common, "src/sw/client/common/inserts/project_templates.yml");
     }
 
     // client
@@ -215,11 +219,8 @@ void build(Solution &s)
         client.CPPVersion = CPPLanguageStandard::CPP17;
         client += client_common,
             //"org.sw.demo.microsoft.mimalloc"_dep,
-            "pub.egorpugin.primitives.sw.main-master"_dep,
-            "org.sw.demo.giovannidicanio.winreg"_dep
+            "pub.egorpugin.primitives.sw.main-master"_dep
             ;
-        embed2("pub.egorpugin.primitives.tools.embedder2-master"_dep, client, "src/sw/client/cli/inserts/SWConfig.cmake");
-        embed2("pub.egorpugin.primitives.tools.embedder2-master"_dep, client, "src/sw/client/cli/inserts/project_templates.yml");
         if (client.getCompilerType() == CompilerType::MSVC)
             client.CompileOptions.push_back("-bigobj");
         if (client.getBuildSettings().TargetOS.Type != OSType::Windows)
@@ -270,6 +271,10 @@ void build(Solution &s)
         gui += "org.sw.demo.qtproject.qt.base.winmain"_dep;
         gui += "org.sw.demo.qtproject.qt.base.plugins.platforms.windows"_dep;
         gui += "org.sw.demo.qtproject.qt.base.plugins.styles.windowsvista"_dep;
+
+        gui -= "org.sw.demo.qtproject.qt.winextras"_dep;
+        if (client.getBuildSettings().TargetOS.Type == OSType::Windows)
+            gui += "org.sw.demo.qtproject.qt.winextras"_dep;
 
         if (auto L = gui.getSelectedTool()->as<VisualStudioLinker*>(); L)
             L->Subsystem = vs::Subsystem::Windows;

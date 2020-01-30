@@ -16,10 +16,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "command/commands.h"
-
 #include <sw/builder/jumppad.h>
 #include <sw/client/common/common.h>
+#include <sw/client/common/command/commands.h>
 #include <sw/core/input.h>
 #include <sw/driver/driver.h>
 #include <sw/manager/api.h>
@@ -142,7 +141,7 @@ static ::cl::list<String> cl_activate("activate", ::cl::desc("Activate specific 
 extern ::cl::opt<path> build_ide_fast_path;
 
 #define SUBCOMMAND(n) extern ::cl::SubCommand subcommand_##n;
-#include "command/commands.inl"
+#include <sw/client/common/command/commands.inl>
 #undef SUBCOMMAND
 
 // TODO: https://github.com/tomtom-international/cpp-dependencies
@@ -225,13 +224,15 @@ int setup_main(const Strings &args)
 
     if (cl_list_predefined_targets)
     {
-        LOG_INFO(logger, list_predefined_targets());
+        auto swctx = createSwContext();
+        LOG_INFO(logger, list_predefined_targets(*swctx));
         return 0;
     }
 
     if (cl_list_programs)
     {
-        LOG_INFO(logger, list_programs());
+        auto swctx = createSwContext();
+        LOG_INFO(logger, list_programs(*swctx));
         return 0;
     }
 
@@ -430,7 +431,7 @@ int sw_main(const Strings &args)
 
     if (0);
 #define SUBCOMMAND(n) else if (subcommand_##n) { cli_##n(); return 0; }
-#include "command/commands.inl"
+#include <sw/client/common/command/commands.inl>
 #undef SUBCOMMAND
 
     LOG_WARN(logger, "No command was issued");

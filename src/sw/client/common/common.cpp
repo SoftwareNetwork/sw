@@ -47,13 +47,12 @@ std::unique_ptr<sw::SwContext> createSwContext()
     return swctx;
 }
 
-String list_predefined_targets()
+String list_predefined_targets(sw::SwContext &swctx)
 {
     using OrderedTargetMap = sw::PackageVersionMapBase<sw::TargetContainer, std::map, primitives::version::VersionMap>;
 
-    auto swctx = createSwContext();
     OrderedTargetMap m;
-    for (auto &[pkg, tgts] : swctx->getPredefinedTargets())
+    for (auto &[pkg, tgts] : swctx.getPredefinedTargets())
         m[pkg] = tgts;
     primitives::Emitter ctx;
     for (auto &[pkg, tgts] : m)
@@ -63,10 +62,9 @@ String list_predefined_targets()
     return ctx.getText();
 }
 
-String list_programs()
+String list_programs(sw::SwContext &swctx)
 {
-    auto swctx = createSwContext();
-    auto &m = swctx->getPredefinedTargets();
+    auto &m = swctx.getPredefinedTargets();
 
     primitives::Emitter ctx("  ");
     ctx.addLine("List of detected programs:");
@@ -134,4 +132,39 @@ String list_programs()
     ctx.addLine("Examples: msvc-19.16, msvc-19.24-preview, clang-10");
 
     return ctx.getText();
+}
+
+Programs list_compilers(sw::SwContext &swctx)
+{
+    auto &m = swctx.getPredefinedTargets();
+
+    Programs progs;
+
+    auto print_program = [&m, &swctx, &progs](const sw::PackagePath &p, const String &title)
+    {
+        Program prog;
+        prog.name = title;
+        auto i = m.find(p);
+        if (i != m.end(p) && !i->second.empty())
+        {
+            for (auto &[v,tgts] : i->second.releases())
+                prog.releases[{p, v}] = { &tgts };
+            if (std::any_of(i->second.begin(), i->second.end(), [](const auto &p) { return !p.first.isRelease(); }))
+            {
+                for (auto &[v, tgts] : i->second)
+                {
+                    if (v.isRelease())
+                        continue;
+                    prog.prereleases[{p, v}] = { &tgts };
+                }
+            }
+            progs.push_back(prog);
+        }
+    };
+
+    print_program("com.Microsoft.VisualStudio.VC.cl", "Microsoft Visual Studio C/C++ Compiler");
+    print_program("org.LLVM.clang", "Clang C/C++ Compiler");
+    print_program("org.LLVM.clangcl", "Clang C/C++ Compiler in MSVC compatibility mode (clang-cl)");
+
+    return progs;
 }

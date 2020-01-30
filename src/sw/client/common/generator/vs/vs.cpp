@@ -288,15 +288,24 @@ void VSGenerator::generate(const SwBuild &b)
     for (auto &[pkg, tgts] : b.getTargetsToBuild())
     {
         if (add_all_packages)
-            ;
-        else if (add_overridden_packages)
+        {
+            ttb[pkg] = tgts;
+            continue;
+        }
+
+        if (add_overridden_packages)
         {
             sw::LocalPackage p(b.getContext().getLocalStorage(), pkg);
-            if (!p.isOverridden())
+            if (p.isOverridden())
+            {
+                ttb[pkg] = tgts;
                 continue;
+            }
         }
-        else if (pkg.getPath().isAbsolute())
+
+        if (pkg.getPath().isAbsolute())
             continue;
+
         ttb[pkg] = tgts;
     }
 
@@ -456,7 +465,7 @@ void VSGenerator::generate(const SwBuild &b)
         {
             auto itgt = tgts.findEqual(st);
             if (itgt == tgts.end())
-                throw SW_RUNTIME_ERROR("missing target");
+                throw SW_RUNTIME_ERROR("missing target: " + pkg.toString());
             auto &d = s.projects.find(pkg.toString())->second.getData(st);
             d.target = itgt->get();
             path_tree.add(d.target->getPackage());

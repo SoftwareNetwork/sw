@@ -21,14 +21,20 @@
 #include "packages_model.h"
 
 #include <qboxlayout.h>
+#include <qcheckbox.h>
+#include <qcombobox.h>
+#include <qgroupbox.h>
 #include <qheaderview.h>
 #include <qlabel.h>
+#include <qpushbutton.h>
+#include <qspinbox.h>
 #include <qstylepainter.h>
 #include <qtabbar.h>
 #include <qtableview.h>
 #include <qtextedit.h>
 
 #include <sw/client/common/common.h>
+#include <sw/client/common/generator/generator.h>
 #include <sw/manager/storage.h>
 
 class TabBar : public QTabBar
@@ -83,24 +89,157 @@ public:
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
-    setWindowTitle("SW GUI");
+    //setWindowTitle("SW GUI"); // SW is present in icon
+    setWindowTitle("GUI");
 
     setupUi();
 
     //resize(minimumSizeHint());
-    resize(800, 600);
+    resize(600, 600);
 }
 
 void MainWindow::setupUi()
 {
-    ctx = createSwContext();
+    swctx = createSwContext();
 
     auto mainLayout = new QHBoxLayout;
     auto t = new TabWidget;
+    //t->setDocumentMode(true);
+    //t->setAutoFillBackground(true);
 
+    //
+    auto ctrlLayout = new QVBoxLayout;
+    {
+        auto topL = new QHBoxLayout;
+        auto botL = new QVBoxLayout;
+        ctrlLayout->addLayout(topL);
+        ctrlLayout->addLayout(botL);
+
+        auto topLL = new QVBoxLayout;
+        auto topRL = new QVBoxLayout;
+        topL->addLayout(topLL);
+        topL->addLayout(topRL);
+
+        // configuration
+        {
+            auto gb = new QGroupBox("Configuration");
+            topLL->addWidget(gb);
+            QVBoxLayout *gbl = new QVBoxLayout;
+            gbl->addWidget(new QCheckBox("Debug"));
+            auto cb = new QCheckBox("Release");
+            cb->setChecked(true);
+            gbl->addWidget(cb);
+            gbl->addWidget(new QCheckBox("Release With Debug Information"));
+            gbl->addWidget(new QCheckBox("Minimal Size Release"));
+            gbl->addStretch(1);
+            gb->setLayout(gbl);
+        }
+
+        // shared/static
+        {
+            auto gb = new QGroupBox("Linking");
+            topLL->addWidget(gb);
+            QVBoxLayout *gbl = new QVBoxLayout;
+            auto cb = new QCheckBox("Dynamic (.dll)");
+            cb->setChecked(true);
+            gbl->addWidget(cb);
+            gbl->addWidget(new QCheckBox("Static (.lib)"));
+            gbl->addStretch(1);
+            gb->setLayout(gbl);
+        }
+
+        // mt/md
+        {
+            auto gb = new QGroupBox("Runtime");
+            topLL->addWidget(gb);
+            QVBoxLayout *gbl = new QVBoxLayout;
+            auto cb = new QCheckBox("Dynamic (MD/MDd)");
+            cb->setChecked(true);
+            gbl->addWidget(cb);
+            gbl->addWidget(new QCheckBox("Static (MT/MTd)"));
+            gbl->addStretch(1);
+            gb->setLayout(gbl);
+        }
+
+        // arch
+        {
+            auto gb = new QGroupBox("Architecture");
+            topLL->addWidget(gb);
+            QVBoxLayout *gbl = new QVBoxLayout;
+            // basic list
+            gbl->addWidget(new QCheckBox("x86"));
+            auto cb = new QCheckBox("x64");
+            cb->setChecked(true);
+            gbl->addWidget(cb);
+            gbl->addWidget(new QCheckBox("arm"));
+            gbl->addWidget(new QCheckBox("aarch64"));
+            gbl->addStretch(1);
+            gb->setLayout(gbl);
+        }
+
+        // compilers
+        {
+            auto gb = new QGroupBox("Compiler");
+            topRL->addWidget(gb);
+            QVBoxLayout *gbl = new QVBoxLayout;
+            auto cls = list_compilers(*swctx);
+            for (auto &cl : cls)
+            {
+                auto gb = new QGroupBox(cl.name.c_str());
+                gbl->addWidget(gb);
+                QVBoxLayout *gbl = new QVBoxLayout;
+                for (auto &[pkg,_] : cl.releases)
+                    gbl->addWidget(new QCheckBox(pkg.getVersion().toString().c_str()));
+                for (auto &[pkg,_] : cl.prereleases)
+                    gbl->addWidget(new QCheckBox(pkg.getVersion().toString().c_str()));
+                gbl->addStretch(1);
+                gb->setLayout(gbl);
+            }
+            gbl->addStretch(1);
+            gb->setLayout(gbl);
+        }
+
+        ctrlLayout->addWidget(new QPushButton("Build"));
+        ctrlLayout->addWidget(new QPushButton("Test"));
+
+        // generators
+        {
+            auto gb = new QGroupBox("Generators");
+            ctrlLayout->addWidget(gb);
+            QVBoxLayout *gbl = new QVBoxLayout;
+            //
+            auto cb = new QComboBox();
+            cb->setEditable(false);
+            for (GeneratorType g = (GeneratorType)0; g < GeneratorType::Max; ((int&)g)++)
+            {
+                cb->addItem(toString(g).c_str(), (int)g);
+            }
+            cb->model()->sort(0);
+
+#ifdef _WIN32
+            int index = cb->findData((int)GeneratorType::VisualStudio);
+            if (index != -1)
+                cb->setCurrentIndex(index);
+#endif
+            gbl->addWidget(cb);
+            gbl->addWidget(new QPushButton("Generate"));
+
+            //
+            gbl->addStretch(1);
+            gb->setLayout(gbl);
+        }
+
+        ctrlLayout->addStretch(1);
+    }
+
+    auto ctrl = new QWidget;
+    ctrl->setLayout(ctrlLayout);
+
+    //
+    t->addTab(ctrl, "Control");
     t->addTab(new QWidget, "Search");
-    t->addTab(new QWidget, "Control");
 
+    //
     auto add_packages_tab = [this, t](const String &name, auto &db)
     {
         auto v = new QTableView;
@@ -116,13 +255,14 @@ void MainWindow::setupUi()
         });
     };
 
-    add_packages_tab("Installed Packages", ctx->getLocalStorage().getPackagesDatabase());
-    for (auto rs : ctx->getRemoteStorages())
+    add_packages_tab("Installed Packages", swctx->getLocalStorage().getPackagesDatabase());
+    for (auto rs : swctx->getRemoteStorages())
     {
         if (auto s1 = dynamic_cast<sw::StorageWithPackagesDatabase *>(rs))
             add_packages_tab("Remote Packages: " + rs->getName(), s1->getPackagesDatabase());
     }
 
+    //
     auto add_text_tab = [t](const String &name, const String &text)
     {
         auto te = new QTextEdit();
@@ -131,9 +271,30 @@ void MainWindow::setupUi()
         t->addTab(te, name.c_str());
     };
 
-    add_text_tab("List of Predefined Targets", list_predefined_targets());
-    add_text_tab("List of Programs", list_programs());
+    add_text_tab("List of Predefined Targets", list_predefined_targets(*swctx));
+    add_text_tab("List of Programs", list_programs(*swctx));
 
+    //
+    auto setLayout = new QVBoxLayout;
+    {
+        // -j
+        {
+            setLayout->addWidget(new QLabel("Number of threads"));
+            auto sb = new QSpinBox();
+            sb->setMinimum(1);
+            sb->setMaximum(std::thread::hardware_concurrency() + 4);
+            sb->setValue(std::thread::hardware_concurrency());
+            setLayout->addWidget(sb);
+        }
+
+        setLayout->addStretch(1);
+    }
+
+    auto set = new QWidget;
+    set->setLayout(setLayout);
+    t->addTab(set, "Settings");
+
+    //
     mainLayout->addWidget(t);
 
     auto centralWidget = new QWidget;

@@ -20,7 +20,9 @@
 
 #include <qapplication.h>
 #include <qglobal.h>
+#include <qmessagebox.h>
 #include <qthread.h>
+#include <QtWin>
 
 #ifdef QT_STATIC
 #include <QtPlugin>
@@ -43,10 +45,27 @@ int main(int argc, char *argv[])
 
     QThread t(0);
     QApplication a(argc, argv);
-    MainWindow w;
-    w.show();
 
-    return a.exec();
+    auto hIcon = (HICON)LoadImage(GetModuleHandle(nullptr), MAKEINTRESOURCE(100), IMAGE_ICON, 0, 0, LR_DEFAULTSIZE | LR_LOADTRANSPARENT);
+    if (hIcon)
+        QApplication::setWindowIcon(QIcon(QtWin::fromHICON(hIcon)));
+    ::DestroyIcon(hIcon);
+
+    try
+    {
+        MainWindow w;
+        w.show();
+        return a.exec();
+    }
+    catch (std::exception &e)
+    {
+        QMessageBox::critical(0, "Error", e.what(), "Ok");
+    }
+    catch (...)
+    {
+        QMessageBox::critical(0, "Error", "Unknown error.", "Ok");
+    }
+    return 1;
 }
 
 void win32_hacks()

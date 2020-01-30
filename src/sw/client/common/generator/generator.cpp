@@ -102,7 +102,7 @@ void checkForSingleSettingsInputs(const SwBuild &b)
     }
 }
 
-static String toString(GeneratorType t)
+String toString(GeneratorType t)
 {
     switch (t)
     {
@@ -116,10 +116,12 @@ static String toString(GeneratorType t)
         return "CMake";
     case GeneratorType::NMake:
         return "NMake";
+    case GeneratorType::QMake:
+        return "QMake";
     case GeneratorType::Shell:
         return "Shell";
     case GeneratorType::CompilationDatabase:
-        return "CompDB";
+        return "Compilation Database";
     case GeneratorType::RawBootstrapBuild:
         return "Raw Bootstrap Build";
 
@@ -136,7 +138,7 @@ static String toString(GeneratorType t)
         return "Xcode";
 
     default:
-        throw SW_LOGIC_ERROR("not implemented");
+        throw SW_LOGIC_ERROR("not implemented: " + std::to_string((int)t));
     }
 }
 
