@@ -5,12 +5,6 @@ flags:
         type: bool
         default: true
 
-    pp_to_stdout:
-        name: PreprocessToStdout
-        flag: E
-        #flag: EP # EP = without #line directives
-        type: bool
-
     input:
         name: InputFile
         type: path
@@ -54,7 +48,6 @@ types:
 
         using:
             - compile
-            - pp_to_stdout
             - vsoutput
             - nologo
 
@@ -309,6 +302,16 @@ types:
 
                     function: |
                         return value().getCommandLine(c);
+
+            pp_to_stdout:
+                name: PreprocessToStdout
+                flag: E
+                type: bool
+
+            pp_supress_line:
+                name: PreprocessSupressLineDirectives
+                flag: EP
+                type: bool
 
             pptofile:
                 name: PreprocessToFile
