@@ -138,8 +138,6 @@ static ::cl::opt<path> cl_self_upgrade_copy("internal-self-upgrade-copy", ::cl::
 extern std::map<sw::PackagePath, sw::Version> gUserSelectedPackages;
 static ::cl::list<String> cl_activate("activate", ::cl::desc("Activate specific packages"));
 
-extern ::cl::opt<path> build_ide_fast_path;
-
 #define SUBCOMMAND(n) extern ::cl::SubCommand subcommand_##n;
 #include <sw/client/common/command/commands.inl>
 #undef SUBCOMMAND
@@ -174,7 +172,7 @@ static bool setConsoleColorProcessing()
     return r;
 }
 
-int setup_main(const Strings &args)
+int setup_main(const Strings &args, const Options &options)
 {
     // some initial stuff
     // try to do as less as possible before log init
@@ -224,14 +222,14 @@ int setup_main(const Strings &args)
 
     if (cl_list_predefined_targets)
     {
-        auto swctx = createSwContext();
+        auto swctx = createSwContext(options);
         LOG_INFO(logger, list_predefined_targets(*swctx));
         return 0;
     }
 
     if (cl_list_programs)
     {
-        auto swctx = createSwContext();
+        auto swctx = createSwContext(options);
         LOG_INFO(logger, list_programs(*swctx));
         return 0;
     }
@@ -270,9 +268,9 @@ int setup_main(const Strings &args)
         //destroyConcurrentContext(context);
     };
 
-    if (!build_ide_fast_path.empty() && fs::exists(build_ide_fast_path))
+    if (!options.options_build.ide_fast_path.empty() && fs::exists(options.options_build.ide_fast_path))
     {
-        auto files = read_lines(build_ide_fast_path);
+        auto files = read_lines(options.options_build.ide_fast_path);
         uint64_t mtime = 0;
         bool missing = false;
         for (auto &f : files)
@@ -287,7 +285,7 @@ int setup_main(const Strings &args)
         }
         if (!missing)
         {
-            path fmtime = build_ide_fast_path;
+            path fmtime = options.options_build.ide_fast_path;
             fmtime += ".t";
             if (fs::exists(fmtime) && mtime == std::stoull(read_file(fmtime)))
                 return 0;
@@ -349,12 +347,15 @@ int parse_main(int argc, char **argv)
     //
     ::cl::ParseCommandLineOptions(args, overview);
 
+    // main!
+    Options options;
+
     // post setup args
 
     for (sw::PackageId p : cl_activate)
         gUserSelectedPackages[p.getPath()] = p.getVersion();
 
-    return setup_main(args);
+    return setup_main(args, options);
 }
 
 int main(int argc, char **argv)
@@ -430,7 +431,7 @@ int sw_main(const Strings &args)
     }
 
     if (0);
-#define SUBCOMMAND(n) else if (subcommand_##n) { cli_##n(); return 0; }
+#define SUBCOMMAND(n) else if (subcommand_##n) { cli_##n(Options()); return 0; }
 #include <sw/client/common/command/commands.inl>
 #undef SUBCOMMAND
 

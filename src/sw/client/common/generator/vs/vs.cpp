@@ -48,6 +48,8 @@
 #include <shellapi.h>
 #endif
 
+#include <build.llvm.h>
+
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "generator.vs");
 
@@ -55,14 +57,9 @@ DECLARE_STATIC_LOGGER(logger, "generator.vs");
 
 using namespace sw;
 
-bool gPrintDependencies;
-bool gPrintOverriddenDependencies;
-bool gOutputNoConfigSubdir;
-
 static FlagTables flag_tables;
 static const auto SourceFilesFilter = "Source Files";
 
-extern ::cl::opt<path> check_stamp_list;
 extern String vs_zero_check_stamp_ext;
 
 int vsVersionFromString(const String &s)
@@ -161,11 +158,11 @@ static path get_int_dir(const path &dir, const path &projects_dir, const String 
     return get_int_dir(dir, projects_dir, name) / shorten_hash(blake2b_512(get_project_configuration(s)), 6);
 }
 
-static path get_out_dir(const path &dir, const path &projects_dir, const BuildSettings &s)
+static path get_out_dir(const path &dir, const path &projects_dir, const BuildSettings &s, const Options &options)
 {
     auto p = fs::current_path();
     p /= "bin";
-    if (!gOutputNoConfigSubdir)
+    if (!options.options_generate.output_no_config_subdir)
         p /= get_configuration(s);
     return p;
 }
@@ -638,7 +635,7 @@ void VSGenerator::generate(const SwBuild &b)
             LPWSTR *szArglist;
             int nArgs;
             szArglist = CommandLineToArgvW(GetCommandLineW(), &nArgs);
-            if (!check_stamp_list.empty())
+            if (!options.options_generate.check_stamp_list.empty())
                 nArgs -= 2;
             for (int i = 0; i < nArgs; i++)
                 r.command += "\"" + to_string(szArglist[i]) + "\" ";

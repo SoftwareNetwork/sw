@@ -28,8 +28,6 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "command.doc");
 
-DEFINE_SUBCOMMAND(doc, "Open documentation.");
-
 void open_url(const String &);
 
 SUBCOMMAND_DECL(doc)

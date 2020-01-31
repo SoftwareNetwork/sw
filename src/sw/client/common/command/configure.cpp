@@ -18,13 +18,9 @@
 
 #include "commands.h"
 
-DEFINE_SUBCOMMAND(configure, "Create build script.");
-
-static ::cl::opt<String> build_arg_configure(::cl::Positional, ::cl::desc("Configure"), ::cl::init("."), ::cl::sub(subcommand_configure));
-
 SUBCOMMAND_DECL(configure)
 {
-    auto swctx = createSwContext();
-    auto b = createBuildAndPrepare(*swctx, { build_arg_configure.getValue() });
+    auto swctx = createSwContext(options);
+    auto b = createBuildAndPrepare(*swctx, { options.options_configure.build_arg_configure }, options);
     b->saveExecutionPlan();
 }

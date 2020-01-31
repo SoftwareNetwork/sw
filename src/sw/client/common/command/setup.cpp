@@ -28,8 +28,6 @@
 #include <WinReg.hpp>
 #endif
 
-DEFINE_SUBCOMMAND(setup, "Used to do some system setup which may require administrator access.");
-
 static void registerCmakePackage(sw::SwContext &swctx)
 {
     const auto sw_cmake_config_filename = "SWConfig.cmake";
@@ -87,6 +85,6 @@ SUBCOMMAND_DECL(setup)
     }*/
 #endif
 
-    auto swctx = createSwContext();
+    auto swctx = createSwContext(options);
     registerCmakePackage(*swctx);
 }

@@ -29,22 +29,12 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "upload");
 
-DEFINE_SUBCOMMAND(upload, "Upload packages.");
-
-extern ::cl::opt<String> build_arg_update;
-
-static ::cl::opt<String> upload_remote(::cl::Positional, ::cl::desc("Remote name"), ::cl::sub(subcommand_upload));
-static ::cl::opt<bool> upload_dry("dry-run", ::cl::desc("Dry upload (without upload step)"), ::cl::sub(subcommand_upload));
-String gUploadPrefix;
-static ::cl::opt<String, true> upload_prefix(::cl::Positional, ::cl::desc("Prefix path"), ::cl::sub(subcommand_upload),
-    ::cl::Required, ::cl::location(gUploadPrefix));
-
 sw::Remote *find_remote(sw::Settings &s, const String &name);
 
 SUBCOMMAND_DECL(upload)
 {
-    auto swctx = createSwContext();
-    cli_upload(*swctx);
+    auto swctx = createSwContext(options);
+    cli_upload(*swctx, options);
 }
 
 sw::PackageDescriptionMap getPackages(const sw::SwBuild &b, const sw::SourceDirMap &sources)
@@ -130,7 +120,7 @@ SUBCOMMAND_DECL2(upload)
     // get spec early, so changes won't be considered
     auto spec = swctx.addInput(fs::current_path()).getSpecification()->files.begin()->second;
 
-    auto [sources, i] = fetch(*b);
+    auto [sources, i] = fetch(*b, options);
     if (sources.empty())
         throw SW_RUNTIME_ERROR("Empty target sources");
 
@@ -155,7 +145,7 @@ SUBCOMMAND_DECL2(upload)
     for (auto &[id, d] : m)
     {
         write_file(b->getBuildDirectory() / "upload" / id.toString() += ".json", d->getString());
-        auto id2 = sw::PackageId(sw::PackagePath(upload_prefix) / id.getPath(), id.getVersion());
+        auto id2 = sw::PackageId(sw::PackagePath(options.options_upload.upload_prefix) / id.getPath(), id.getVersion());
         LOG_INFO(logger, "Uploading " + id2.toString());
     }
 
@@ -169,7 +159,7 @@ SUBCOMMAND_DECL2(upload)
         SW_UNIMPLEMENTED;
     }
 
-    if (upload_dry)
+    if (options.options_upload.upload_dry)
     {
         LOG_INFO(logger, "Dry run. Upload was cancelled.");
         return;
@@ -178,11 +168,11 @@ SUBCOMMAND_DECL2(upload)
     // select remote
     auto &us = sw::Settings::get_user_settings();
     auto current_remote = &*us.remotes.begin();
-    if (!upload_remote.empty())
-        current_remote = find_remote(us, upload_remote);
+    if (!options.options_upload.upload_remote.empty())
+        current_remote = find_remote(us, options.options_upload.upload_remote);
 
     // send signatures (gpg)
     // -k KEY1 -k KEY2
     auto api = current_remote->getApi();
-    api->addVersion(gUploadPrefix, m, script_name, spec);
+    api->addVersion(options.options_upload.upload_prefix, m, script_name, spec);
 }

@@ -34,6 +34,8 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "generator");
 
+#include <build.llvm.h>
+
 using namespace sw;
 
 int vsVersionFromString(const String &s);
@@ -230,58 +232,65 @@ static VsGeneratorType fromStringVs(const String &s)
     throw SW_RUNTIME_ERROR("Unknown generator: " + s);
 }
 
-std::unique_ptr<Generator> Generator::create(const String &s)
+Generator::Generator(const Options &options)
+    : options(options)
 {
-    auto t = fromString(s);
+}
+
+std::unique_ptr<Generator> Generator::create(const Options &options)
+{
+#define CREATE_GENERATOR(t) std::make_unique<t>(options)
+
+    auto t = fromString(options.options_generate.generator);
     std::unique_ptr<Generator> g;
     switch (t)
     {
     case GeneratorType::VisualStudio:
     {
-        auto g1 = std::make_unique<VSGenerator>();
-        g1->vstype = fromStringVs(s);
+        auto g1 = CREATE_GENERATOR(VSGenerator);
+        g1->vstype = fromStringVs(options.options_generate.generator);
         //if (g1->vstype > VsGeneratorType::VisualStudioNMake)
             //SW_UNIMPLEMENTED;
         g = std::move(g1);
         break;
     }
     case GeneratorType::CodeBlocks:
-        g = std::make_unique<CodeBlocksGenerator>();
+        g = CREATE_GENERATOR(CodeBlocksGenerator);
         break;
     case GeneratorType::Xcode:
-        g = std::make_unique<XcodeGenerator>();
+        g = CREATE_GENERATOR(XcodeGenerator);
         break;
     case GeneratorType::Ninja:
-        g = std::make_unique<NinjaGenerator>();
+        g = CREATE_GENERATOR(NinjaGenerator);
         break;
     case GeneratorType::CMake:
-        g = std::make_unique<CMakeGenerator>();
+        g = CREATE_GENERATOR(CMakeGenerator);
         break;
     case GeneratorType::NMake:
     case GeneratorType::Make:
-        g = std::make_unique<MakeGenerator>();
+        g = CREATE_GENERATOR(MakeGenerator);
         break;
     case GeneratorType::Batch:
     {
-        auto g1 = std::make_unique<ShellGenerator>();
+        auto g1 = CREATE_GENERATOR(ShellGenerator);
         g1->batch = true;
         g = std::move(g1);
         break;
     }
     case GeneratorType::Shell:
-        g = std::make_unique<ShellGenerator>();
+        g = CREATE_GENERATOR(ShellGenerator);
         break;
     case GeneratorType::CompilationDatabase:
-        g = std::make_unique<CompilationDatabaseGenerator>();
+        g = CREATE_GENERATOR(CompilationDatabaseGenerator);
         break;
     case GeneratorType::SwExecutionPlan:
-        g = std::make_unique<SwExecutionPlanGenerator>();
+        g = CREATE_GENERATOR(SwExecutionPlanGenerator);
         break;
     case GeneratorType::SwBuildDescription:
-        g = std::make_unique<SwBuildDescriptionGenerator>();
+        g = CREATE_GENERATOR(SwBuildDescriptionGenerator);
         break;
     case GeneratorType::RawBootstrapBuild:
-        g = std::make_unique<RawBootstrapBuildGenerator>();
+        g = CREATE_GENERATOR(RawBootstrapBuildGenerator);
         break;
     default:
         SW_UNIMPLEMENTED;

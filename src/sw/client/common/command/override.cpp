@@ -29,16 +29,7 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "override");
 
-DEFINE_SUBCOMMAND(override, "Override packages locally.");
-
-static ::cl::opt<String> prefix(::cl::Positional, ::cl::value_desc("prefix"), ::cl::sub(subcommand_override));
-static ::cl::opt<bool> list_overridden_packages("l", ::cl::desc("List overridden packages"), ::cl::sub(subcommand_override));
-static ::cl::opt<bool> delete_overridden_package("d", ::cl::desc("Delete overridden packages from index"), ::cl::sub(subcommand_override));
-static ::cl::opt<path> delete_overridden_package_dir("dd", ::cl::value_desc("sdir"), ::cl::desc("Delete overridden dir packages"), ::cl::sub(subcommand_override));
-static ::cl::opt<path> load_overridden_packages_from_file("load", ::cl::value_desc("fn"), ::cl::desc("Load overridden packages desc from file and apply it."), ::cl::sub(subcommand_override));
-static ::cl::opt<path> save_overridden_packages_to_file("save", ::cl::value_desc("fn"), ::cl::desc("Save overridden packages desc to file."), ::cl::sub(subcommand_override));
-
-static void override_package_perform(sw::SwContext &swctx, sw::PackagePath prefix)
+static void override_package_perform(sw::SwContext &swctx, sw::PackagePath prefix, OPTIONS_ARG_CONST)
 {
     auto dir = fs::canonical(".");
     sw::PackageDescriptionMap pm;
@@ -68,9 +59,9 @@ static void override_package_perform(sw::SwContext &swctx, sw::PackagePath prefi
         }
     };
 
-    if (!load_overridden_packages_from_file.empty())
+    if (!options.options_override.load_overridden_packages_from_file.empty())
     {
-        auto j = nlohmann::json::parse(read_file(load_overridden_packages_from_file));
+        auto j = nlohmann::json::parse(read_file(options.options_override.load_overridden_packages_from_file));
         dir = j["sdir"].get<String>();
         prefix = j["prefix"].get<String>();
         for (auto &[k,v] : j["packages"].items())
@@ -87,7 +78,7 @@ static void override_package_perform(sw::SwContext &swctx, sw::PackagePath prefi
     b->loadInputs();
     pm = getPackages(*b);
 
-    if (!save_overridden_packages_to_file.empty())
+    if (!options.options_override.save_overridden_packages_to_file.empty())
     {
         nlohmann::json j;
         j["sdir"] = normalize_path(dir);
@@ -95,7 +86,7 @@ static void override_package_perform(sw::SwContext &swctx, sw::PackagePath prefi
         j["group_number"] = i.getInput().getGroupNumber();
         for (auto &[pkg, desc] : pm)
             j["packages"][pkg.toString()] = nlohmann::json::parse(desc->getString());
-        write_file(save_overridden_packages_to_file, j.dump(4));
+        write_file(options.options_override.save_overridden_packages_to_file, j.dump(4));
         return;
     }
 
@@ -104,9 +95,9 @@ static void override_package_perform(sw::SwContext &swctx, sw::PackagePath prefi
 
 SUBCOMMAND_DECL(override)
 {
-    if (list_overridden_packages)
+    if (options.options_override.list_overridden_packages)
     {
-        auto swctx = createSwContext();
+        auto swctx = createSwContext(options);
         // sort
         std::set<sw::LocalPackage> pkgs;
         for (auto &p : swctx->getLocalStorage().getOverriddenPackagesStorage().getPackages())
@@ -116,13 +107,13 @@ SUBCOMMAND_DECL(override)
         return;
     }
 
-    if (!delete_overridden_package_dir.empty())
+    if (!options.options_override.delete_overridden_package_dir.empty())
     {
-        LOG_INFO(logger, "Delete override for sdir " + delete_overridden_package_dir.u8string());
+        LOG_INFO(logger, "Delete override for sdir " + options.options_override.delete_overridden_package_dir.u8string());
 
-        auto d = primitives::filesystem::canonical(delete_overridden_package_dir);
+        auto d = primitives::filesystem::canonical(options.options_override.delete_overridden_package_dir);
 
-        auto swctx = createSwContext();
+        auto swctx = createSwContext(options);
         std::set<sw::LocalPackage> pkgs;
         for (auto &p : swctx->getLocalStorage().getOverriddenPackagesStorage().getPackages())
         {
@@ -136,19 +127,18 @@ SUBCOMMAND_DECL(override)
         return;
     }
 
-    if (prefix.empty() && load_overridden_packages_from_file.empty())
+    if (options.options_override.prefix.empty() && options.options_override.load_overridden_packages_from_file.empty())
         throw SW_RUNTIME_ERROR("Empty prefix");
 
-    if (delete_overridden_package)
+    if (options.options_override.delete_overridden_package)
     {
-        auto swctx = createSwContext();
-        sw::PackageId pkg{ prefix };
+        auto swctx = createSwContext(options);
+        sw::PackageId pkg{ options.options_override.prefix };
         LOG_INFO(logger, "Delete override for " + pkg.toString());
         swctx->getLocalStorage().getOverriddenPackagesStorage().deletePackage(pkg);
         return;
     }
 
-    auto swctx = createSwContext();
-    override_package_perform(*swctx, prefix);
-    return;
+    auto swctx = createSwContext(options);
+    override_package_perform(*swctx, options.options_override.prefix, options);
 }

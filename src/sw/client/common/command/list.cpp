@@ -24,10 +24,6 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "list");
 
-DEFINE_SUBCOMMAND(list, "List packages in database.");
-
-static ::cl::opt<String> list_arg(::cl::Positional, ::cl::desc("Package regex to list"), ::cl::init("."), ::cl::sub(subcommand_list));
-
 std::map<sw::PackagePath, sw::VersionSet> getMatchingPackages(const sw::StorageWithPackagesDatabase &s, const String &arg)
 {
     auto &db = s.getPackagesDatabase();
@@ -54,13 +50,13 @@ std::map<sw::PackagePath, sw::VersionSet> getMatchingPackages(const sw::StorageW
 
 SUBCOMMAND_DECL(list)
 {
-    auto swctx = createSwContext();
+    auto swctx = createSwContext(options);
     auto rs = swctx->getRemoteStorages();
     if (rs.empty())
         throw SW_RUNTIME_ERROR("No remote storages found");
 
     auto &s = static_cast<sw::StorageWithPackagesDatabase &>(*rs.front());
-    auto r = getMatchingPackages(s, list_arg);
+    auto r = getMatchingPackages(s, options.options_list.list_arg);
     if (r.empty())
     {
         LOG_INFO(logger, "nothing found");

@@ -33,17 +33,7 @@ TODO:
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "sw.cli.run");
 
-DEFINE_SUBCOMMAND(run, "Run target (if applicable).");
-
-extern Strings targets_to_build;
-
 bool gRunAppInContainer = false;
-static ::cl::opt<bool, true> run_app_in_container("in-container", ::cl::desc("Run app in secure container"), ::cl::sub(subcommand_run), ::cl::location(gRunAppInContainer));
-static ::cl::opt<path> wdir("wdir", ::cl::desc("Working directory"), ::cl::sub(subcommand_run));
-static ::cl::opt<String> input("input", ::cl::desc("SW Input"), ::cl::sub(subcommand_run));
-//static ::cl::list<String> env("env", ::cl::desc("Env vars"), ::cl::sub(subcommand_run));
-static ::cl::opt<String> target(::cl::Positional, ::cl::Required, ::cl::desc("<Target to run>"), ::cl::sub(subcommand_run));
-static ::cl::list<String> args(::cl::ConsumeAfter, ::cl::desc("<Command args>"), ::cl::sub(subcommand_run));
 
 void run1(const sw::LocalPackage &pkg, primitives::Command &c);
 
@@ -84,22 +74,22 @@ static void run(sw::SwBuild &b, const sw::PackageId &pkg, primitives::Command &c
     run1(p, c);
 }
 
-void run(sw::SwContext &swctx, const sw::PackageId &pkg, primitives::Command &c)
+void run(sw::SwContext &swctx, const sw::PackageId &pkg, primitives::Command &c, OPTIONS_ARG)
 {
-    targets_to_build.push_back(pkg.toString());
+    options.targets_to_build.push_back(pkg.toString());
 
     Strings inputs;
     if (pkg.getPath().isRelative())
     {
-        if (input.empty())
+        if (options.options_run.input.empty())
             inputs.push_back(".");
         else
-            inputs.push_back(input);
+            inputs.push_back(options.options_run.input);
     }
     else
         inputs.push_back(pkg.toString());
 
-    auto b = createBuildAndPrepare(swctx, inputs);
+    auto b = createBuildAndPrepare(swctx, inputs, options);
     b->build();
 
     run(*b, pkg, c);
@@ -107,14 +97,14 @@ void run(sw::SwContext &swctx, const sw::PackageId &pkg, primitives::Command &c)
 
 SUBCOMMAND_DECL(run)
 {
-    auto swctx = createSwContext();
-    cli_run(*swctx);
+    auto swctx = createSwContext(options);
+    cli_run(*swctx, options);
 }
 
 SUBCOMMAND_DECL2(run)
 {
     bool valid_target = true;
-    try { sw::PackageId pkg(target); }
+    try { sw::PackageId pkg(options.options_run.target); }
     catch (std::exception &) { valid_target = false; }
 
     // for such commands we inherit them
@@ -123,15 +113,15 @@ SUBCOMMAND_DECL2(run)
     c.inherit = true;
     c.in.inherit = true;
 
-    for (auto &a : args)
+    for (auto &a : options.options_run.args)
         c.push_back(a);
 
-    if (!wdir.empty())
-        c.working_directory = wdir;
+    if (!options.options_run.wdir.empty())
+        c.working_directory = options.options_run.wdir;
 
-    if (!valid_target && fs::exists((String&)target))
+    if (!valid_target && fs::exists((String&)options.options_run.target))
     {
-        auto b = createBuildAndPrepare(swctx, {target});
+        auto b = createBuildAndPrepare(swctx, {options.options_run.target}, options);
         b->build();
         // TODO: add better target detection
         // check only for executable targets
@@ -142,5 +132,5 @@ SUBCOMMAND_DECL2(run)
         return;
     }
 
-    run(swctx, target, c);
+    run(swctx, options.options_run.target, c, options);
 }

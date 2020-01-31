@@ -27,8 +27,6 @@
 
 #include <primitives/sw/cl.h>
 
-static ::cl::opt<String> toolset("toolset", ::cl::desc("Set VS generator toolset"));
-
 using namespace sw;
 
 static const std::map<ArchType, String> platforms
@@ -282,12 +280,12 @@ void ProjectEmitter::addPropertyGroupConfigurationTypes(const Project &p)
         beginBlockWithConfiguration("PropertyGroup", s, {{"Label", "Configuration"}});
         addConfigurationType((int)d.type);
         //addBlock("UseDebugLibraries", generator::toString(s.Settings.Native.ConfigurationType));
-        if (toolset.empty())
+        if (1)//toolset.empty())
         {
             addBlock("PlatformToolset", getVsToolset(p.g->toolset_version));
         }
-        else
-            addBlock("PlatformToolset", toolset);
+        //else
+            //addBlock("PlatformToolset", toolset);
 
         endBlock();
     }

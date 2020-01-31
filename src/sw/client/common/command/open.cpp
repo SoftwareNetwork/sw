@@ -30,10 +30,6 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "command.open");
 
-DEFINE_SUBCOMMAND(open, "Open package directory.");
-
-static ::cl::opt<String> open_arg(::cl::Positional, ::cl::desc("package to open"), ::cl::sub(subcommand_open));
-
 static void open_nix(const String &p)
 {
 #ifdef _WIN32
@@ -106,10 +102,10 @@ void open_url(const String &url)
 
 SUBCOMMAND_DECL(open)
 {
-    auto swctx = createSwContext();
+    auto swctx = createSwContext(options);
     auto &sdb = swctx->getLocalStorage();
-    auto pkgs = swctx->resolve(sw::UnresolvedPackages{ open_arg });
-    auto &p2 = pkgs.find(open_arg)->second;
+    auto pkgs = swctx->resolve(sw::UnresolvedPackages{ options.options_open.open_arg });
+    auto &p2 = pkgs.find(options.options_open.open_arg)->second;
 
     if (!sdb.isPackageInstalled(*p2))
     {
@@ -117,7 +113,7 @@ SUBCOMMAND_DECL(open)
         return;
     }
 
-    auto p = swctx->resolve(open_arg);
+    auto p = swctx->resolve(options.options_open.open_arg);
 
     LOG_INFO(logger, "package: " + p.toString());
     LOG_INFO(logger, "package dir: " + p.getDir().u8string());

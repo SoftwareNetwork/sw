@@ -25,14 +25,11 @@
 //  sw build --fetch
 // but just
 //  sw fetch
-DEFINE_SUBCOMMAND(fetch, "Fetch sources.");
-
-::cl::opt<bool> build_after_fetch("build", ::cl::desc("Build after fetch"), ::cl::sub(subcommand_fetch));
 
 SUBCOMMAND_DECL(fetch)
 {
-    auto swctx = createSwContext();
-    cli_fetch(*swctx);
+    auto swctx = createSwContext(options);
+    cli_fetch(*swctx, options);
 }
 
 static decltype(auto) getInput(sw::SwBuild &b)
@@ -40,9 +37,9 @@ static decltype(auto) getInput(sw::SwBuild &b)
     return b.getContext().addInput(fs::current_path());
 }
 
-static sw::SourceDirMap getSources(sw::SwContext &swctx)
+static sw::SourceDirMap getSources(sw::SwContext &swctx, OPTIONS_ARG_CONST)
 {
-    auto b1 = createBuild(swctx);
+    auto b1 = createBuild(swctx, options);
     auto &b = *b1;
 
     auto ts = createInitialSettings(swctx);
@@ -88,11 +85,11 @@ static sw::SourceDirMap getSources(sw::SwContext &swctx)
     return srcs;
 }
 
-std::pair<sw::SourceDirMap, const sw::Input &> fetch(sw::SwBuild &b)
+std::pair<sw::SourceDirMap, const sw::Input &> fetch(sw::SwBuild &b, OPTIONS_ARG_CONST)
 {
-    auto srcs = getSources(b.getContext());
+    auto srcs = getSources(b.getContext(), options);
 
-    auto tss = createSettings(b.getContext());
+    auto tss = createSettings(b.getContext(), options);
     for (auto &ts : tss)
     {
         for (auto &[h, d] : srcs)
@@ -108,18 +105,18 @@ std::pair<sw::SourceDirMap, const sw::Input &> fetch(sw::SwBuild &b)
     b.addInput(i);
     b.loadInputs(); // download occurs here
 
-    if (build_after_fetch)
+    if (options.options_fetch.build_after_fetch)
         b.build();
 
     return { srcs, ii };
 }
 
-std::pair<sw::SourceDirMap, const sw::Input &> fetch(sw::SwContext &swctx)
+std::pair<sw::SourceDirMap, const sw::Input &> fetch(sw::SwContext &swctx, OPTIONS_ARG_CONST)
 {
-    return fetch(*createBuild(swctx));
+    return fetch(*createBuild(swctx, options), options);
 }
 
 SUBCOMMAND_DECL2(fetch)
 {
-    fetch(swctx);
+    fetch(swctx, options);
 }

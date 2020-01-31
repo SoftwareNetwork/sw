@@ -26,44 +26,29 @@
 #include <primitives/emitter.h>
 #include <primitives/yaml.h>
 
-DEFINE_SUBCOMMAND(create, "Create different projects.");
-
-static ::cl::opt<String> create_type(::cl::Positional, ::cl::desc("<type>"), ::cl::sub(subcommand_create), ::cl::Required);
-static ::cl::opt<String> create_proj_name(::cl::Positional, ::cl::desc("<project name>"), ::cl::sub(subcommand_create));
-
-static ::cl::opt<String> create_template("template", ::cl::desc("Template project to create"), ::cl::sub(subcommand_create), ::cl::init("cpp.exe"));
-static ::cl::alias create_template2("t", ::cl::desc("Alias for -template"), ::cl::aliasopt(create_template));
-static ::cl::opt<bool> create_clear_dir("clear", ::cl::desc("Clear current directory"), ::cl::sub(subcommand_create));
-static ::cl::opt<bool> create_clear_dir_y("y", ::cl::desc("Answer yes"), ::cl::sub(subcommand_create));
-static ::cl::opt<bool> create_build("b", ::cl::desc("Build instead of generate"), ::cl::sub(subcommand_create));
-static ::cl::alias create_clear_dir2("c", ::cl::desc("Alias for -clear"), ::cl::aliasopt(create_clear_dir));
-static ::cl::opt<bool> create_overwrite_files("overwrite", ::cl::desc("Clear current directory"), ::cl::sub(subcommand_create));
-static ::cl::alias create_overwrite_files2("ow", ::cl::desc("Alias for -overwrite"), ::cl::aliasopt(create_overwrite_files));
-static ::cl::alias create_overwrite_files3("o", ::cl::desc("Alias for -overwrite"), ::cl::aliasopt(create_overwrite_files));
-
-static String get_name()
+static String get_name(const Options &options)
 {
     String name = fs::current_path().filename().u8string();
-    if (!create_proj_name.empty())
-        name = create_proj_name;
+    if (!options.options_create.create_proj_name.empty())
+        name = options.options_create.create_proj_name;
     return name;
 }
 
 SUBCOMMAND_DECL(create)
 {
-    auto swctx = createSwContext();
+    auto swctx = createSwContext(options);
     const auto root = YAML::Load(project_templates);
     auto &tpls = root["templates"];
 
-    if (create_clear_dir)
+    if (options.options_create.create_clear_dir)
     {
         String s;
-        if (!create_clear_dir_y)
+        if (!options.options_create.create_clear_dir_y)
         {
             std::cout << "Going to clear current directory. Are you sure? [Yes/No]\n";
             std::cin >> s;
         }
-        if (create_clear_dir_y || boost::iequals(s, "yes") || boost::iequals(s, "Y"))
+        if (options.options_create.create_clear_dir_y || boost::iequals(s, "yes") || boost::iequals(s, "Y"))
         {
             for (auto &p : fs::directory_iterator("."))
                 fs::remove_all(p);
@@ -74,16 +59,16 @@ SUBCOMMAND_DECL(create)
                 return;
         }
     }
-    if (!create_overwrite_files && fs::directory_iterator(".") != fs::directory_iterator())
+    if (!options.options_create.create_overwrite_files && fs::directory_iterator(".") != fs::directory_iterator())
         throw SW_RUNTIME_ERROR("directory is not empty");
 
-    if (create_type == "project")
+    if (options.options_create.create_type == "project")
     {
-        auto &tpl = tpls[(String)create_template];
+        auto &tpl = tpls[(String)options.options_create.create_template];
         if (!tpl.IsDefined())
-            throw SW_RUNTIME_ERROR("No such template: " + create_template);
+            throw SW_RUNTIME_ERROR("No such template: " + options.options_create.create_template);
 
-        auto name = get_name();
+        auto name = get_name(options);
         auto target = tpl["target"].template as<String>();
         String files;
         for (auto &p : tpl["files"])
@@ -119,8 +104,8 @@ SUBCOMMAND_DECL(create)
             write_file(fn, s);
         }
 
-        if (create_build)
-            cli_build(*swctx);
+        if (options.options_create.create_build)
+            cli_build(*swctx, options);
         else
         {
             // uses current cmd line which is not suitable for VS
@@ -130,7 +115,7 @@ SUBCOMMAND_DECL(create)
         return;
     }
 
-    if (create_type == "config")
+    if (options.options_create.create_type == "config")
     {
         primitives::CppEmitter ctx;
         ctx.beginFunction("void build(Solution &s)");

@@ -67,12 +67,17 @@ enum class VsGeneratorType
     //VisualStudioNMakeAndUtility,
 };
 
+struct Options;
+
 struct Generator
 {
+    const Options &options;
+
+    Generator(const Options &options);
     virtual ~Generator() = default;
 
     virtual void generate(const sw::SwBuild &) = 0;
-    static std::unique_ptr<Generator> create(const String &s);
+    static std::unique_ptr<Generator> create(const Options &);
     GeneratorType getType() const { return type; }
 
     path getRootDirectory(const sw::SwBuild &) const;
@@ -92,6 +97,7 @@ struct VSGenerator : Generator
     bool add_overridden_packages = false;
     bool add_all_packages = false;
 
+    using Generator::Generator;
     void generate(const sw::SwBuild &b) override;
 
     path getPathString() const override;
@@ -99,16 +105,19 @@ struct VSGenerator : Generator
 
 struct NinjaGenerator : Generator
 {
+    using Generator::Generator;
     void generate(const sw::SwBuild &) override;
 };
 
 struct CMakeGenerator : Generator
 {
+    using Generator::Generator;
     void generate(const sw::SwBuild &b) override;
 };
 
 struct MakeGenerator : Generator
 {
+    using Generator::Generator;
     void generate(const sw::SwBuild &b) override;
 };
 
@@ -116,36 +125,43 @@ struct ShellGenerator : Generator
 {
     bool batch = false;
 
+    using Generator::Generator;
     void generate(const sw::SwBuild &b) override;
 };
 
 struct CompilationDatabaseGenerator : Generator
 {
+    using Generator::Generator;
     void generate(const sw::SwBuild &b) override;
 };
 
 struct SwExecutionPlanGenerator : Generator
 {
+    using Generator::Generator;
     void generate(const sw::SwBuild &b) override;
 };
 
 struct SwBuildDescriptionGenerator : Generator
 {
+    using Generator::Generator;
     void generate(const sw::SwBuild &b) override;
 };
 
 struct RawBootstrapBuildGenerator : Generator
 {
+    using Generator::Generator;
     void generate(const sw::SwBuild &b) override;
 };
 
 struct CodeBlocksGenerator : Generator
 {
+    using Generator::Generator;
     void generate(const sw::SwBuild &b) override;
 };
 
 struct XcodeGenerator : Generator
 {
+    using Generator::Generator;
     void generate(const sw::SwBuild &b) override;
 };
 

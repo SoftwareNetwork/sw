@@ -33,8 +33,12 @@ struct StorageWithPackagesDatabase;
 
 }
 
-#define SUBCOMMAND_DECL(n) void cli_##n()
-#define SUBCOMMAND_DECL2(n) void cli_##n(sw::SwContext &swctx)
+#include <cl.llvm.h>
+#define OPTIONS_ARG Options &options
+#define OPTIONS_ARG_CONST const OPTIONS_ARG
+
+#define SUBCOMMAND_DECL(n) void cli_##n(OPTIONS_ARG)
+#define SUBCOMMAND_DECL2(n) void cli_##n(sw::SwContext &swctx, OPTIONS_ARG)
 #define SUBCOMMAND(n) SUBCOMMAND_DECL(n); SUBCOMMAND_DECL2(n);
 #include "commands.inl"
 #undef SUBCOMMAND
@@ -78,14 +82,18 @@ private:
     std::vector<std::pair<sw::TargetSettings, String>> input_pairs;
 };
 
-std::unique_ptr<sw::SwContext> createSwContext();
-std::unique_ptr<sw::SwBuild> createBuild(sw::SwContext &);
-std::unique_ptr<sw::SwBuild> createBuild(sw::SwContext &, const Inputs &);
-std::pair<sw::SourceDirMap, const sw::Input &> fetch(sw::SwBuild &);
-std::pair<sw::SourceDirMap, const sw::Input &> fetch(sw::SwContext &);
-sw::PackageDescriptionMap getPackages(const sw::SwBuild &, const sw::SourceDirMap & = {});
+std::unique_ptr<sw::SwContext> createSwContext(OPTIONS_ARG_CONST);
+
+std::unique_ptr<sw::SwBuild> createBuild(sw::SwContext &, OPTIONS_ARG_CONST);
+std::unique_ptr<sw::SwBuild> createBuild(sw::SwContext &, const Inputs &, OPTIONS_ARG_CONST);
+std::unique_ptr<sw::SwBuild> createBuildAndPrepare(sw::SwContext &, const Inputs &, OPTIONS_ARG_CONST);
+
 sw::TargetSettings createInitialSettings(const sw::SwContext &);
-std::vector<sw::TargetSettings> createSettings(sw::SwContext &);
-std::unique_ptr<sw::SwBuild> createBuildAndPrepare(sw::SwContext &, const Inputs &);
+std::vector<sw::TargetSettings> createSettings(sw::SwContext &, OPTIONS_ARG_CONST);
+
+std::pair<sw::SourceDirMap, const sw::Input &> fetch(sw::SwBuild &, OPTIONS_ARG_CONST);
+std::pair<sw::SourceDirMap, const sw::Input &> fetch(sw::SwContext &, OPTIONS_ARG_CONST);
+
+sw::PackageDescriptionMap getPackages(const sw::SwBuild &, const sw::SourceDirMap & = {});
 std::map<sw::PackagePath, sw::VersionSet> getMatchingPackages(const sw::StorageWithPackagesDatabase &, const String &unresolved_arg);
-void run(sw::SwContext &swctx, const sw::PackageId &pkg, primitives::Command &c);
+void run(sw::SwContext &swctx, const sw::PackageId &pkg, primitives::Command &c, OPTIONS_ARG);

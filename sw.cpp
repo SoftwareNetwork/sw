@@ -208,6 +208,9 @@ void build(Solution &s)
 
         embed2("pub.egorpugin.primitives.tools.embedder2-master"_dep, client_common, "src/sw/client/common/inserts/SWConfig.cmake");
         embed2("pub.egorpugin.primitives.tools.embedder2-master"_dep, client_common, "src/sw/client/common/inserts/project_templates.yml");
+
+        generate_cl("pub.egorpugin.primitives.tools.cl_generator-master"_dep, client_common,
+            "src/sw/client/common/cl.yml", "llvm");
     }
 
     // client

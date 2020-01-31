@@ -21,7 +21,9 @@
 #include <sw/core/sw_context.h>
 #include <sw/core/target.h>
 
-std::unique_ptr<sw::SwContext> createSwContext();
+struct Options;
+
+std::unique_ptr<sw::SwContext> createSwContext(const Options &);
 
 struct Program
 {

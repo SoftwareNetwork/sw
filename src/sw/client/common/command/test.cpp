@@ -18,16 +18,12 @@
 
 #include "commands.h"
 
-DEFINE_SUBCOMMAND(test, "Run tests.");
-
-static ::cl::list<String> build_arg_test(::cl::Positional, ::cl::desc("File or directory to use to generate projects"), ::cl::sub(subcommand_test));
-
 SUBCOMMAND_DECL(test)
 {
-    if (build_arg_test.empty())
-        build_arg_test.push_back(".");
+    if (options.options_test.build_arg_test.empty())
+        options.options_test.build_arg_test.push_back(".");
 
-    auto swctx = createSwContext();
-    auto b = createBuildAndPrepare(*swctx, (Strings&)build_arg_test);
+    auto swctx = createSwContext(options);
+    auto b = createBuildAndPrepare(*swctx, options.options_test.build_arg_test, options);
     b->test();
 }

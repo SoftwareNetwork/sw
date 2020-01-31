@@ -23,40 +23,14 @@
 #include <sw/core/build.h>
 #include <sw/core/input.h>
 
-DEFINE_SUBCOMMAND(generate, "Generate IDE projects.");
-
-static ::cl::list<String> build_arg_generate(::cl::Positional, ::cl::desc("File or directory to use to generate projects"), ::cl::sub(subcommand_generate));
-
-String gGenerator;
-static ::cl::opt<String, true> cl_generator("G", ::cl::desc("Generator"), ::cl::location(gGenerator), ::cl::sub(subcommand_generate));
-static ::cl::alias generator2("g", ::cl::desc("Alias for -G"), ::cl::aliasopt(cl_generator));
-extern bool gPrintDependencies;
-static ::cl::opt<bool, true> print_dependencies("print-dependencies", ::cl::location(gPrintDependencies), ::cl::sub(subcommand_generate));
-// ad = all deps?
-static ::cl::alias print_dependencies4("ad", ::cl::desc("Alias for -print-dependencies"), ::cl::aliasopt(print_dependencies));
-static ::cl::alias print_dependencies2("d", ::cl::desc("Alias for -print-dependencies"), ::cl::aliasopt(print_dependencies));
-static ::cl::alias print_dependencies3("deps", ::cl::desc("Alias for -print-dependencies"), ::cl::aliasopt(print_dependencies));
-extern bool gPrintOverriddenDependencies;
-static ::cl::opt<bool, true> print_overridden_dependencies("print-overridden-dependencies", ::cl::location(gPrintOverriddenDependencies), ::cl::sub(subcommand_generate));
-// o = od?
-static ::cl::alias print_overridden_dependencies4("o", ::cl::desc("Alias for -print-overridden-dependencies"), ::cl::aliasopt(print_overridden_dependencies));
-static ::cl::alias print_overridden_dependencies2("od", ::cl::desc("Alias for -print-overridden-dependencies"), ::cl::aliasopt(print_overridden_dependencies));
-static ::cl::alias print_overridden_dependencies3("odeps", ::cl::desc("Alias for -print-overridden-dependencies"), ::cl::aliasopt(print_overridden_dependencies));
-extern bool gOutputNoConfigSubdir;
-static ::cl::opt<bool, true> output_no_config_subdir("output-no-config-subdir", ::cl::location(gOutputNoConfigSubdir), ::cl::sub(subcommand_generate));
-
-::cl::opt<path> check_stamp_list("check-stamp-list", ::cl::sub(subcommand_generate), ::cl::Hidden);
 String vs_zero_check_stamp_ext = ".stamp";
-
-extern ::cl::list<String> compiler;
-extern ::cl::list<String> configuration;
 
 SUBCOMMAND_DECL(generate)
 {
-    if (!check_stamp_list.empty())
+    if (!options.options_generate.check_stamp_list.empty())
     {
-        auto stampfn = path(check_stamp_list) += vs_zero_check_stamp_ext;
-        auto files = read_lines(check_stamp_list);
+        auto stampfn = path(options.options_generate.check_stamp_list) += vs_zero_check_stamp_ext;
+        auto files = read_lines(options.options_generate.check_stamp_list);
         uint64_t mtime = 0;
         bool missing = false;
         for (auto &f : files)
@@ -81,38 +55,38 @@ SUBCOMMAND_DECL(generate)
         }
     }
 
-    if (build_arg_generate.empty())
-        build_arg_generate.push_back(".");
+    if (options.options_generate.build_arg_generate.empty())
+        options.options_generate.build_arg_generate.push_back(".");
 
-    auto swctx = createSwContext();
-    cli_generate(*swctx);
+    auto swctx = createSwContext(options);
+    cli_generate(*swctx, options);
 }
 
 SUBCOMMAND_DECL2(generate)
 {
-    if (gGenerator.empty())
+    if (options.options_generate.generator.empty())
     {
 #ifdef _WIN32
-        gGenerator = "vs";
+        options.options_generate.generator = "vs";
 #endif
     }
 
-    auto generator = Generator::create(gGenerator);
+    auto generator = Generator::create(options);
     if (generator->getType() == GeneratorType::VisualStudio)
     {
-        auto &compilers = (Strings&)compiler;
+        auto &compilers = (Strings&)options.compiler;
         if (!compilers.empty())
         {
             if (compilers.size() > 1)
                 throw SW_RUNTIME_ERROR("Only one compiler may be specified");
         }
         else
-            compiler.push_back("msvc");
-        if (configuration.empty())
+            options.compiler.push_back("msvc");
+        if (options.configuration.empty())
         {
-            configuration.push_back("d");
-            configuration.push_back("rwdi");
-            configuration.push_back("r");
+            options.configuration.push_back("d");
+            options.configuration.push_back("rwdi");
+            options.configuration.push_back("r");
         }
         auto hs = swctx.getHostSettings();
         hs["use_same_config_for_host_dependencies"] = "true";
@@ -120,13 +94,13 @@ SUBCOMMAND_DECL2(generate)
         swctx.setHostSettings(hs);
 
         auto g = (VSGenerator*)generator.get();
-        if (print_overridden_dependencies)
+        if (options.options_generate.print_overridden_dependencies)
             g->add_overridden_packages = true;
-        if (print_dependencies)
+        if (options.options_generate.print_dependencies)
             g->add_all_packages = true;
     }
 
-    auto b = createBuildAndPrepare(swctx, (Strings&)build_arg_generate);
+    auto b = createBuildAndPrepare(swctx, (Strings&)options.options_generate.build_arg_generate, options);
     b->getExecutionPlan(); // prepare commands
     generator->generate(*b);
 }

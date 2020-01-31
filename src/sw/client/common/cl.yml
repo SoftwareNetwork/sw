@@ -1,0 +1,611 @@
+settings:
+    prefix: cl_
+    generate_struct: true
+
+command_line:
+    storage_dir:
+        option: storage-dir
+        type: path
+
+    curl_verbose:
+        type: bool
+
+    ignore_ssl_checks:
+        type: bool
+
+
+    # from libs
+    default_remote:
+        option: r
+        type: String
+        external: true
+        description: Select default remote
+
+    allow_cygwin_hosts:
+        option: host-cygwin
+        type: bool
+        external: true
+        description: When on cygwin, allow it as host
+
+    do_not_remove_bad_module:
+        type: bool
+        external: true
+        description: When on cygwin, allow it as host
+
+    #
+    save_failed_commands:
+        type: bool
+        external: true
+        aliases: sfc
+    save_all_commands:
+        type: bool
+        external: true
+        aliases: sac
+    save_executed_commands:
+        type: bool
+        external: true
+        aliases: sec
+
+    # explain
+    explain_outdated:
+        type: bool
+        external: true
+        description: Explain outdated commands
+    explain_outdated_full:
+        type: bool
+        external: true
+        description: Explain outdated commands with more info
+
+    save_command_format:
+        type: String
+        external: true
+        description: Explicitly set saved command format (bat or sh)
+
+    debug_configs:
+        type: bool
+        external: true
+        description: Build configs in debug mode
+
+    ignore_source_files_errors:
+        type: bool
+        external: true
+        description: Useful for debugging
+
+    do_not_mangle_object_names:
+        type: bool
+        external: true
+
+    standalone:
+        type: bool
+        external: true
+        default_value: true
+        description: Build standalone binaries
+        aliases: sa
+
+    # checks
+    checks_single_thread:
+        option: checks-st
+        type: bool
+        external: true
+        description: Perform checks in one thread (for cc)
+    print_checks:
+        type: bool
+        external: true
+        description: Save extended checks info to file
+    wait_for_cc_checks:
+        type: bool
+        external: true
+        description: Do not exit on missing cc checks, wait for user input
+    cc_checks_command:
+        type: String
+        external: true
+        description: Automatically execute cc checks command
+
+
+    # build stuff
+
+    #cl::opt<bool> dry_run("n", cl::desc("Dry run"));
+
+    build_always:
+        option: B
+        type: bool
+        desc: Build always
+    skip_errors:
+        option: k
+        type: bool
+        desc: Skip errors
+    time_trace:
+        type: bool
+        desc: Record chrome time trace events
+
+    show_output:
+        type: bool
+    write_output_to_file:
+        type: bool
+
+    #//static cl::opt<bool> print_graph("print-graph", cl::desc("Print file with build graph"));
+
+    targets_to_build:
+        option: target
+        type: String
+        list: true
+        desc: Targets to build
+    targets_to_ignore:
+        option: exclude-target
+        type: String
+        list: true
+        desc: Targets to ignore
+
+    Dvariables:
+        option: D
+        type: String
+        list: true
+        desc: Input variables
+        prefix: true
+        zero_or_more: true
+
+    #////////////////////////////////////////////////////////////////////////////////
+    #//
+    #// build configs
+    #//
+    #////////////////////////////////////////////////////////////////////////////////
+
+    #//static cl::opt<bool> append_configs("append-configs", cl::desc("Append configs for generation"));
+
+    os:
+        type: String
+        list: true
+        comma_separated: true
+        desc: Set build target os
+    compiler:
+        type: String
+        list: true
+        comma_separated: true
+        desc: Set compiler
+    configuration:
+        type: String
+        list: true
+        comma_separated: true
+        desc: |-
+            Set build configuration.
+            Allowed values:
+                - debug, d
+                - release, r
+                - releasewithdebuginformation, releasewithdebinfo, rwdi
+                - minimalsizerelease, minsizerel, msr
+            Default is release.
+            Specify multiple using a comma: "d,r".
+        aliases: config
+    platform:
+        type: String
+        list: true
+        comma_separated: true
+        desc: |
+            Set build platform.
+            Examples: x86, x64, arm, arm64
+        aliases: arch
+
+    #// rename to stdc, stdcpp?
+    libc:
+        type: String
+        list: true
+        comma_separated: true
+        desc: Set build libc
+    libcpp:
+        type: String
+        list: true
+        comma_separated: true
+        desc: Set build libcpp
+
+    static_dependencies:
+        type: bool
+        desc: Build static dependencies of inputs
+        aliases: static-deps
+
+    build_name:
+        type: String
+        desc: Set meaningful build name instead of hash
+    config_name:
+        list: true
+        type: String
+        desc: Set meaningful config names instead of hash
+        comma_separated: true
+
+    #// -setting k1=v1,k2=v2,k3="v3,v3" -setting k4=v4,k5,k6 etc.
+    #// settings in one setting applied simultaneosly
+    #// settings in different settings are multiplied
+    #// k=v assigns value to dot separated key
+    #// complex.key.k1 means s["complex"]["key"]["k1"]
+    #// k= or k="" means empty value
+    #// k means reseted value
+    settings:
+        type: String
+        list: true
+        desc: Set settings directly
+        zero_or_more: true
+
+    #// toolchain file
+    settings_file:
+        type: path
+        list: true
+        desc: Read settings from file
+        zero_or_more: true
+    settings_file_config:
+        type: String
+        list: true
+        desc: Select settings from file
+        zero_or_more: true
+    settings_json:
+        type: String
+        list: true
+        desc: Read settings from json string
+        zero_or_more: true
+    host_settings_file:
+        type: path
+        desc: Read host settings from file
+
+
+    #// static/shared
+    static_build:
+        desc: Set static build
+        aliases: static
+    shared_build:
+        desc: Set shared build (default)
+        aliases: shared
+
+    #//mt/md
+    win_mt:
+        desc: Set /MT or /MTd build
+        aliases: mt
+    win_md:
+        desc: Set /MD or /MDd build
+        aliases: md
+
+    #
+
+    toolset:
+        type: String
+        desc: Set VS generator toolset
+
+    #
+    subcommand:
+        name: build
+        desc: Build files, dirs or packages.
+
+        command_line:
+            build_inputs:
+                type: String
+                list: true
+                positional: true
+                desc: Files or directories to build (paths to config)
+
+            #static ::cl::opt<String> build_source_dir("S", ::cl::desc("Explicitly specify a source directory."), ::cl::sub(subcommand_build), ::cl::init("."));
+            #static ::cl::opt<String> build_binary_dir("B", ::cl::desc("Explicitly specify a build directory."), ::cl::sub(subcommand_build), ::cl::init(SW_BINARY_DIR));
+
+            build_fetch:
+                option: fetch
+                type: bool
+                desc: Fetch sources, then build
+
+            build_explan:
+                option: ef
+                type: path
+                desc: Build execution plan from specified file
+
+            build_default_explan:
+                option: e
+                type: bool
+                desc: Build execution plan
+
+            isolated_build:
+                option: isolated
+                type: bool
+                desc: Copy source files to isolated folders to check build like just after uploading
+
+            ide_fast_path:
+                type: path
+                hidden: true
+            ide_copy_to_dir:
+                type: path
+                hidden: true
+
+            time_limit:
+                type: String
+            output_dir:
+                type: path
+
+            input_settings_pairs:
+                type: String
+                list: true
+                desc: Read settings from json string
+                value_desc: <input settings>
+                space_separated: true
+
+
+    subcommand:
+        name: abi
+        desc: List package ABI, check for ABI breakages.
+
+        command_line:
+            inputs:
+                type: String
+                list: true
+                positional: true
+                desc: inputs
+
+    subcommand:
+        name: configure
+        desc: Create build script.
+
+        command_line:
+            build_arg_configure:
+                type: String
+                positional: true
+                desc: Configure
+                default_value: |-
+                    "."
+
+    subcommand:
+        name: create
+        desc: Create different projects.
+
+        command_line:
+            create_type:
+                type: String
+                positional: true
+                value_desc: <type>
+                required: true
+            create_proj_name:
+                type: String
+                positional: true
+                value_desc: <project name>
+
+            create_template:
+                option: template
+                type: String
+                desc: Template project to create
+                default_value: |-
+                    "cpp.exe"
+                aliases: t
+
+            create_clear_dir:
+                option: clear
+                desc: Clear current directory
+                aliases: c
+            create_clear_dir_y:
+                option: y
+                desc: Answer yes
+            create_build:
+                option: b
+                desc: Build instead of generate
+            create_overwrite_files:
+                option: overwrite
+                desc: Clear current directory
+                aliases: [o, ow]
+
+    subcommand:
+        name: doc
+        desc: Open documentation.
+
+    subcommand:
+        name: fetch
+        desc: Fetch sources.
+
+        command_line:
+            build_after_fetch:
+                option: build
+                desc: Build after fetch
+
+    subcommand:
+        name: generate
+        desc: Generate IDE projects.
+
+        command_line:
+            build_arg_generate:
+                desc: File or directory to use to generate projects
+                positional: true
+                type: String
+                list: true
+            generator:
+                option: G
+                type: String
+                desc: Generator
+                aliases: g
+            print_dependencies:
+                aliases: [ad,d,deps]
+            print_overridden_dependencies:
+                aliases: [od,o,odeps]
+            output_no_config_subdir:
+            check_stamp_list:
+                type: path
+                hidden: true
+
+    subcommand:
+        name: install
+        desc: Add package to lock.
+
+        command_line:
+            install_arg:
+                positional: true
+                type: String
+            install_args:
+                consume_after: true
+                desc: Packages to add
+                type: String
+                list: true
+
+    subcommand:
+        name: integrate
+        desc: Integrate sw into different tools.
+
+        command_line:
+            integrate_cmake_deps:
+                option: cmake-deps
+                type: path
+            integrate_waf_deps:
+                option: waf-deps
+                type: path
+
+    subcommand:
+        name: list
+        desc: List packages in database.
+
+        command_line:
+            list_arg:
+                positional: true
+                type: String
+                desc: Package regex to list
+                default_value: |-
+                    "."
+
+    subcommand:
+        name: open
+        desc: Open package directory.
+
+        command_line:
+            open_arg:
+                positional: true
+                type: String
+                desc: package to open
+
+    subcommand:
+        name: override
+        desc: Override packages locally.
+
+        command_line:
+            prefix:
+                positional: true
+                type: String
+                value_desc: prefix
+            list_overridden_packages:
+                option: l
+                desc: List overridden packages
+            delete_overridden_package:
+                option: d
+                desc: Delete overridden packages from index
+            delete_overridden_package_dir:
+                option: dd
+                type: path
+                desc: Delete overridden dir packages
+                value_desc: sdir
+            load_overridden_packages_from_file:
+                option: load
+                type: path
+                desc: Load overridden packages desc from file and apply it.
+                value_desc: fn
+            save_overridden_packages_to_file:
+                option: save
+                type: path
+                desc: Save overridden packages desc to file.
+                value_desc: fn
+
+    subcommand:
+        name: remote
+        desc: Manage remotes.
+
+        command_line:
+            remote_subcommand:
+                type: String
+                positional: true
+                desc: remote subcomand
+                required: true
+            remote_rest:
+                type: String
+                list: true
+                desc: other remote args
+                consume_after: true
+
+    subcommand:
+        name: remove
+        desc: Remove package.
+
+        command_line:
+            remove_arg:
+                type: String
+                list: true
+                positional: true
+                desc: package to remove
+
+    subcommand:
+        name: run
+        desc: Run target (if applicable).
+
+        command_line:
+            run_app_in_container:
+                option: in-container
+                location: gRunAppInContainer
+                desc: Run app in secure container
+            wdir:
+                type: path
+                desc: Working directory
+            input:
+                type: String
+                desc: SW Input
+            #//static ::cl::list<String> env("env", ::cl::desc("Env vars"), ::cl::sub(subcommand_run));
+            target:
+                type: String
+                positional: true
+                required: true
+                value_desc: <Target to run>
+            args:
+                consume_after: true
+                value_desc: <Command args>
+                type: String
+                list: true
+
+    subcommand:
+        name: setup
+        desc: Used to do some system setup which may require administrator access.
+
+    subcommand:
+        name: test
+        desc: Run tests.
+
+        command_line:
+            build_arg_test:
+                positional: true
+                desc: File or directory to use to generate projects
+                type: String
+                list: true
+
+    subcommand:
+        name: update
+        desc: Update lock file.
+
+        command_line:
+            #//extern ::cl::opt<bool> dry_run;
+            build_arg_update:
+                positional: true
+                desc: Update lock
+                default_value: |-
+                    "."
+
+    subcommand:
+        name: upload
+        desc: Upload packages.
+
+        command_line:
+            upload_remote:
+                type: String
+                positional: true
+                desc: Remote name
+            upload_dry:
+                option: dry-run
+                desc: Dry upload (without upload step)
+            upload_prefix:
+                positional: true
+                desc: Prefix path
+                required: true
+                type: String
+
+    subcommand:
+        name: uri
+        desc: Used to invoke sw application from the website.
+
+        command_line:
+            uri_args:
+                list: true
+                type: String
+                positional: true
+                desc: sw uri arguments
+

@@ -28,18 +28,14 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "abi");
 
-DEFINE_SUBCOMMAND(abi, "List package ABI, check for ABI breakages.");
-
-static ::cl::list<String> inputs(::cl::Positional, ::cl::desc("inputs"), ::cl::sub(subcommand_abi));
-
 SUBCOMMAND_DECL(abi)
 {
 #ifndef _WIN32
     SW_UNIMPLEMENTED;
 #endif
 
-    auto swctx = createSwContext();
-    auto b = createBuildAndPrepare(*swctx, (Strings&)inputs);
+    auto swctx = createSwContext(options);
+    auto b = createBuildAndPrepare(*swctx, options.options_abi.inputs, options);
     auto tgts1 = b->getTargetsToBuild();
     b->build();
 

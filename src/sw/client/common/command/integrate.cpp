@@ -26,11 +26,6 @@
 #include <sw/driver/build_settings.h>
 #include <sw/driver/types.h>
 
-DEFINE_SUBCOMMAND(integrate, "Integrate sw into different tools.");
-
-static ::cl::opt<path> integrate_cmake_deps("cmake-deps", ::cl::sub(subcommand_integrate));
-static ::cl::opt<path> integrate_waf_deps("waf-deps", ::cl::sub(subcommand_integrate));
-
 struct CMakeEmitter : primitives::Emitter
 {
     void if_(const String &s)
@@ -79,14 +74,14 @@ static String toCmakeString(sw::ConfigurationType t)
 
 SUBCOMMAND_DECL(integrate)
 {
-    auto swctx = createSwContext();
+    auto swctx = createSwContext(options);
 
-    auto create_build = [&swctx](const Strings &lines, const Strings &configs = {})
+    auto create_build = [&swctx, &options](const Strings &lines, const Strings &configs = {})
     {
-        auto build = createBuild(*swctx);
+        auto build = createBuild(*swctx, options);
         auto &b = *build;
 
-        auto settings = createSettings(*swctx);
+        auto settings = createSettings(*swctx, options);
         if (settings.size() > 1)
             throw SW_RUNTIME_ERROR("size() must be 1");
         for (auto &l : lines)
@@ -117,7 +112,7 @@ SUBCOMMAND_DECL(integrate)
         return build;
     };
 
-    if (!integrate_cmake_deps.empty())
+    if (!options.options_integrate.integrate_cmake_deps.empty())
     {
         const Strings configs
         {
@@ -127,7 +122,7 @@ SUBCOMMAND_DECL(integrate)
             "Release",
         };
 
-        auto lines = read_lines(integrate_cmake_deps);
+        auto lines = read_lines(options.options_integrate.integrate_cmake_deps);
         auto build = create_build(lines, configs);
         auto &b = *build;
 
@@ -280,14 +275,14 @@ SUBCOMMAND_DECL(integrate)
             for (auto &[k,v] : s["dependencies"]["link"].getSettings())
                 ctx.addLine("target_link_libraries(" + pkg.toString() + " INTERFACE " + k + ")");
         }
-        write_file_if_different(integrate_cmake_deps.parent_path() / "CMakeLists.txt", ctx.getText());
+        write_file_if_different(options.options_integrate.integrate_cmake_deps.parent_path() / "CMakeLists.txt", ctx.getText());
 
         return;
     }
 
-    if (!integrate_waf_deps.empty())
+    if (!options.options_integrate.integrate_waf_deps.empty())
     {
-        auto lines = read_lines(integrate_waf_deps);
+        auto lines = read_lines(options.options_integrate.integrate_waf_deps);
         auto build = create_build(lines);
         auto &b = *build;
 

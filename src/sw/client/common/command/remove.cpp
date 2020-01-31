@@ -23,10 +23,6 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "remove");
 
-DEFINE_SUBCOMMAND(remove, "Remove package.");
-
-static ::cl::list<String> remove_arg(::cl::Positional, ::cl::desc("package to remove"), ::cl::sub(subcommand_remove));
-
 static sw::PackageIdSet getMatchingPackagesSet(const sw::StorageWithPackagesDatabase &s, const String &unresolved_pkg)
 {
     sw::PackageIdSet p;
@@ -40,8 +36,8 @@ static sw::PackageIdSet getMatchingPackagesSet(const sw::StorageWithPackagesData
 
 SUBCOMMAND_DECL(remove)
 {
-    auto swctx = createSwContext();
-    for (auto &a : remove_arg)
+    auto swctx = createSwContext(options);
+    for (auto &a : options.options_remove.remove_arg)
     {
         for (auto &p : getMatchingPackagesSet(swctx->getLocalStorage(), a))
         {

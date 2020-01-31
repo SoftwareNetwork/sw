@@ -20,18 +20,12 @@
 
 #include <sw/manager/package.h>
 
-DEFINE_SUBCOMMAND(install, "Add package to lock.");
-//DEFINE_SUBCOMMAND_ALIAS(install, i)
-
-static ::cl::opt<String> install_arg(::cl::Positional, ::cl::desc("Packages to add"), ::cl::sub(subcommand_install));
-static ::cl::list<String> install_args(::cl::ConsumeAfter, ::cl::desc("Packages to add"), ::cl::sub(subcommand_install));
-
 SUBCOMMAND_DECL(install)
 {
-    auto swctx = createSwContext();
+    auto swctx = createSwContext(options);
     sw::UnresolvedPackages pkgs;
-    install_args.push_back(install_arg);
-    for (auto &p : install_args)
+    options.options_install.install_args.push_back(options.options_install.install_arg);
+    for (auto &p : options.options_install.install_args)
         pkgs.insert(sw::extractFromString(p));
     auto m = swctx->install(pkgs);
     for (auto &[p1, d] : m)

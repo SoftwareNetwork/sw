@@ -26,118 +26,10 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "build");
 
-DEFINE_SUBCOMMAND(build, "Build files, dirs or packages.");
-//DEFINE_SUBCOMMAND_ALIAS(build, b)
-
-extern ::cl::opt<bool> build_after_fetch;
-
-static ::cl::list<String> build_inputs(::cl::Positional, ::cl::desc("Files or directories to build (paths to config)"), ::cl::sub(subcommand_build));
-
-//static ::cl::opt<String> build_source_dir("S", ::cl::desc("Explicitly specify a source directory."), ::cl::sub(subcommand_build), ::cl::init("."));
-//static ::cl::opt<String> build_binary_dir("B", ::cl::desc("Explicitly specify a build directory."), ::cl::sub(subcommand_build), ::cl::init(SW_BINARY_DIR));
-
-static ::cl::opt<bool> build_fetch("fetch", ::cl::desc("Fetch sources, then build"), ::cl::sub(subcommand_build));
-static ::cl::opt<path> build_explan("ef", ::cl::desc("Build execution plan from specified file"), ::cl::sub(subcommand_build));
-static ::cl::opt<bool> build_default_explan("e", ::cl::desc("Build execution plan"), ::cl::sub(subcommand_build));
-
-static ::cl::opt<bool> cl_isolated_build("isolated", cl::desc("Copy source files to isolated folders to check build like just after uploading"), ::cl::sub(subcommand_build));
-
-::cl::opt<path> build_ide_fast_path("ide-fast-path", ::cl::sub(subcommand_build), ::cl::Hidden);
-static ::cl::opt<path> build_ide_copy_to_dir("ide-copy-to-dir", ::cl::sub(subcommand_build), ::cl::Hidden);
-
-static ::cl::opt<String> time_limit("time-limit", ::cl::sub(subcommand_build));
-
-// remove from build subcommand later?
-static ::cl::opt<path> output_dir("output-dir", ::cl::sub(subcommand_build));
-
-//
-
-//cl::opt<bool> dry_run("n", cl::desc("Dry run"));
-
-static cl::opt<bool> build_always("B", cl::desc("Build always"));
-static cl::opt<int> skip_errors("k", cl::desc("Skip errors"));
-static cl::opt<bool> time_trace("time-trace", cl::desc("Record chrome time trace events"));
-
-static cl::opt<bool> cl_show_output("show-output");
-static cl::opt<bool> cl_write_output_to_file("write-output-to-file");
-//static cl::opt<bool> print_graph("print-graph", cl::desc("Print file with build graph"));
-
-Strings targets_to_build;
-static ::cl::list<String, Strings> cl_targets_to_build("target", ::cl::desc("Targets to build"), ::cl::location(targets_to_build));
-static ::cl::list<String> targets_to_ignore("exclude-target", ::cl::desc("Targets to ignore"));
-
-static ::cl::list<String> Dvariables("D", ::cl::desc("Input variables"), ::cl::ZeroOrMore, ::cl::Prefix);
-
-////////////////////////////////////////////////////////////////////////////////
-//
-// build configs
-//
-////////////////////////////////////////////////////////////////////////////////
-
-//static cl::opt<bool> append_configs("append-configs", cl::desc("Append configs for generation"));
-
-static cl::list<String> target_os("target-os", cl::CommaSeparated);
-cl::list<String> compiler("compiler", cl::desc("Set compiler"), cl::CommaSeparated);
-cl::list<String> configuration("configuration", cl::desc(R"(Set build configuration.
-Allowed values:
-    - debug, d
-    - release, r
-    - releasewithdebuginformation, releasewithdebinfo, rwdi
-    - minimalsizerelease, minsizerel, msr
-Default is release.
-Specify multiple using a comma: "d,r".
-)"), cl::CommaSeparated);
-static cl::alias configuration2("config", cl::desc("Alias for -configuration"), cl::aliasopt(configuration));
-static cl::list<String> platform("platform", cl::desc("Set build platform.\nExamples: x86, x64, arm, arm64"), cl::CommaSeparated);
-static cl::alias platform2("arch", cl::desc("Alias for -platform"), cl::aliasopt(platform));
-static cl::list<String> os("os", cl::desc("Set build target os"), cl::CommaSeparated);
-// rename to stdc, stdcpp?
-static cl::list<String> libc("libc", cl::desc("Set build libc"), cl::CommaSeparated);
-static cl::list<String> libcpp("libcpp", cl::desc("Set build libcpp"), cl::CommaSeparated);
-
-static ::cl::opt<bool> static_deps("static-dependencies", ::cl::desc("Build static dependencies of inputs"));
-static cl::alias static_deps2("static-deps", cl::aliasopt(static_deps));
-
-static cl::opt<String> build_name("build-name", cl::desc("Set meaningful build name instead of hash"));
-static cl::list<String> config_names("config-name", cl::desc("Set meaningful config names instead of hashes"), cl::CommaSeparated);
-
-// -setting k1=v1,k2=v2,k3="v3,v3" -setting k4=v4,k5,k6 etc.
-// settings in one setting applied simultaneosly
-// settings in different settings are multiplied
-// k=v assigns value to dot separated key
-// complex.key.k1 means s["complex"]["key"]["k1"]
-// k= or k="" means empty value
-// k means reseted value
-static cl::list<String> settings("settings", cl::desc("Set settings directly"), cl::ZeroOrMore);
-// toolchain file
-static cl::list<path> settings_file("settings-file", cl::desc("Read settings from file"), cl::ZeroOrMore);
-static cl::list<String> settings_file_config("settings-file-config", cl::desc("Select settings from file"), cl::ZeroOrMore);
-static cl::list<String> settings_json("settings-json", cl::desc("Read settings from json string"), cl::ZeroOrMore);
-static cl::opt<path> host_settings_file("host-settings-file", cl::desc("Read host settings from file"));
-
-static cl::list<String> input_settings_pairs("input-settings-pairs", cl::value_desc("<input settings>"), cl::desc("Read settings from json string"), ::cl::sub(subcommand_build), ::cl::SpaceSeparated);
-
-// static/shared
-static bool static_build = false; // do not expose for now
-static cl::opt<bool, true> cl_static_build("static-build", cl::desc("Set static build"), ::cl::location(static_build));
-static cl::alias static_build2("static", cl::desc("Alias for -static-build"), cl::aliasopt(cl_static_build));
-
-static bool shared_build = false; // do not expose for now
-static cl::opt<bool, true> cl_shared_build("shared-build", cl::desc("Set shared build (default)"), ::cl::location(shared_build));
-static cl::alias shared_build2("shared", cl::desc("Alias for -shared-build"), cl::aliasopt(cl_shared_build));
-
-//mt/md
-static cl::opt<bool> win_mt("win-mt", cl::desc("Set /MT build"));
-static cl::alias win_mt2("mt", cl::desc("Alias for -win-mt"), cl::aliasopt(win_mt));
-static cl::opt<bool> win_md("win-md", cl::desc("Set /MD build (default)"));
-static cl::alias win_md2("md", cl::desc("Alias for -win-md"), cl::aliasopt(win_md));
-
-////////////////////////////////////////////////////////////////////////////////
-
 SUBCOMMAND_DECL(build)
 {
-    auto swctx = createSwContext();
-    cli_build(*swctx);
+    auto swctx = createSwContext(options);
+    cli_build(*swctx, options);
 }
 
 static sw::TargetSettings compilerTypeFromStringCaseI(const sw::UnresolvedPackage &compiler)
@@ -297,9 +189,9 @@ static void applySettingsFromJson(sw::TargetSettings &s, const String &jsonstr)
     s.mergeFromString(jsonstr);
 }
 
-static std::vector<sw::TargetSettings> applySettingsFromCppFile(sw::SwContext &swctx, const path &fn)
+static std::vector<sw::TargetSettings> applySettingsFromCppFile(sw::SwContext &swctx, const Options &options, const path &fn)
 {
-    auto b = createBuild(swctx);
+    auto b = createBuild(swctx, options);
     sw::Input i1(fn, sw::InputType::InlineSpecification, swctx);
     sw::InputWithSettings i(i1);
     auto ts = createInitialSettings(swctx);
@@ -327,7 +219,7 @@ static std::vector<sw::TargetSettings> applySettingsFromCppFile(sw::SwContext &s
     if (m.symbol_storage().get_function<std::map<std::string, std::string>()>("createJsonSettings").empty())
         throw SW_RUNTIME_ERROR("Cannot find 'std::map<std::string, std::string> createJsonSettings()'");
 
-    auto selected_cfgs = std::set<String>(settings_file_config.begin(), settings_file_config.end());
+    auto selected_cfgs = std::set<String>(options.settings_file_config.begin(), options.settings_file_config.end());
     auto result = m.get_function<std::map<std::string, std::string>()>("createJsonSettings")();
     std::vector<sw::TargetSettings> r;
     for (auto &[k, v] : result)
@@ -344,10 +236,10 @@ static std::vector<sw::TargetSettings> applySettingsFromCppFile(sw::SwContext &s
     return r;
 }
 
-std::vector<sw::TargetSettings> getSettingsFromFile(sw::SwContext &swctx)
+static std::vector<sw::TargetSettings> getSettingsFromFile(sw::SwContext &swctx, const Options &options)
 {
     std::vector<sw::TargetSettings> ts;
-    for (auto &fn : settings_file)
+    for (auto &fn : options.settings_file)
     {
         if (fn.extension() == ".json")
         {
@@ -357,7 +249,7 @@ std::vector<sw::TargetSettings> getSettingsFromFile(sw::SwContext &swctx)
         }
         else if (fn.extension() == ".cpp")
         {
-            auto ts1 = applySettingsFromCppFile(swctx, fn);
+            auto ts1 = applySettingsFromCppFile(swctx, options, fn);
             ts.insert(ts.end(), ts1.begin(), ts1.end());
         }
         else
@@ -372,19 +264,19 @@ sw::TargetSettings createInitialSettings(const sw::SwContext &swctx)
     return s;
 }
 
-std::vector<sw::TargetSettings> createSettings(sw::SwContext &swctx)
+std::vector<sw::TargetSettings> createSettings(sw::SwContext &swctx, const Options &options)
 {
     auto initial_settings = createInitialSettings(swctx);
-    if (!host_settings_file.empty())
+    if (!options.host_settings_file.empty())
     {
         auto s = swctx.getHostSettings();
-        applySettingsFromJson(s, read_file(host_settings_file));
+        applySettingsFromJson(s, read_file(options.host_settings_file));
         swctx.setHostSettings(s);
         if (s["host"])
             LOG_WARN(logger, "'host' key present in host settings. Probably misuse. Remove it and put everything under root.");
     }
 
-    if (static_deps)
+    if (options.static_dependencies)
         initial_settings["static-deps"] = "true";
 
     std::vector<sw::TargetSettings> settings;
@@ -415,7 +307,7 @@ std::vector<sw::TargetSettings> createSettings(sw::SwContext &swctx)
 
     // configuration
     Strings configs;
-    for (auto &c : configuration)
+    for (auto &c : options.configuration)
     {
         /*if (used_configs.find(c) == used_configs.end())
         {
@@ -431,7 +323,7 @@ std::vector<sw::TargetSettings> createSettings(sw::SwContext &swctx)
     });
 
     // static/shared
-    if (static_build && shared_build)
+    if (options.static_build && options.shared_build)
     {
         // preserve order
         int st = 0, sh = 1;
@@ -449,19 +341,19 @@ std::vector<sw::TargetSettings> createSettings(sw::SwContext &swctx)
     {
         for (auto &s : settings)
         {
-            if (static_build)
+            if (options.static_build)
                 s["native"]["library"] = "static";
-            if (shared_build)
+            if (options.shared_build)
                 s["native"]["library"] = "shared";
         }
     }
 
     // mt/md
-    if (win_mt && win_md)
+    if (options.win_mt && options.win_md)
     {
         // preserve order
         int mt = 0, md = 1;
-        if (win_mt.getPosition() > win_md.getPosition())
+        if (cl_win_mt.getPosition() > cl_win_md.getPosition())
             mt = 1, md = 0;
         mult_and_action(2, [mt, md](auto &s, int i)
         {
@@ -475,66 +367,60 @@ std::vector<sw::TargetSettings> createSettings(sw::SwContext &swctx)
     {
         for (auto &s : settings)
         {
-            if (win_mt)
+            if (options.win_mt)
                 s["native"]["mt"] = "true";
-            if (win_md)
+            if (options.win_md)
                 s["native"]["mt"] = "false";
         }
     }
 
     // platform
-    mult_and_action(platform.size(), [](auto &s, int i)
+    mult_and_action(options.platform.size(), [&options](auto &s, int i)
     {
-        s["os"]["arch"] = archTypeFromStringCaseI(platform[i]);
-    });
-
-    // os
-    mult_and_action(os.size(), [](auto &s, int i)
-    {
-        s["os"]["kernel"] = osTypeFromStringCaseI(os[i]);
-    });
-
-    // libc
-    mult_and_action(libc.size(), [](auto &s, int i)
-    {
-        s["native"]["stdlib"]["c"] = archTypeFromStringCaseI(libc[i]);
-    });
-
-    // libcpp
-    mult_and_action(libcpp.size(), [](auto &s, int i)
-    {
-        s["native"]["stdlib"]["cpp"] = archTypeFromStringCaseI(libcpp[i]);
-    });
-
-    // compiler
-    mult_and_action(compiler.size(), [](auto &s, int i)
-    {
-        s.mergeAndAssign(compilerTypeFromStringCaseI(compiler[i]));
+        s["os"]["arch"] = archTypeFromStringCaseI(options.platform[i]);
     });
 
     // target_os
-    mult_and_action(target_os.size(), [](auto &s, int i)
+    mult_and_action(options.os.size(), [&options](auto &s, int i)
     {
-        s["os"]["kernel"] = OSTypeFromStringCaseI(target_os[i]);
+        s["os"]["kernel"] = osTypeFromStringCaseI(options.os[i]);
+    });
+
+    // libc
+    mult_and_action(options.libc.size(), [&options](auto &s, int i)
+    {
+        s["native"]["stdlib"]["c"] = archTypeFromStringCaseI(options.libc[i]);
+    });
+
+    // libcpp
+    mult_and_action(options.libcpp.size(), [&options](auto &s, int i)
+    {
+        s["native"]["stdlib"]["cpp"] = archTypeFromStringCaseI(options.libcpp[i]);
+    });
+
+    // compiler
+    mult_and_action(options.compiler.size(), [&options](auto &s, int i)
+    {
+        s.mergeAndAssign(compilerTypeFromStringCaseI(options.compiler[i]));
     });
 
     // settings
-    mult_and_action(::settings.size(), [](auto &s, int i)
+    mult_and_action(options.settings.size(), [&options](auto &s, int i)
     {
-        applySettings(s, ::settings[i]);
+        applySettings(s, options.settings[i]);
     });
 
     // settings-file
-    auto sf = getSettingsFromFile(swctx);
+    auto sf = getSettingsFromFile(swctx, options);
     mult_and_action(sf.size(), [&sf](auto &s, int i)
     {
         s.mergeAndAssign(sf[i]);
     });
 
     // settings-json
-    mult_and_action(settings_json.size(), [](auto &s, int i)
+    mult_and_action(options.settings_json.size(), [&options](auto &s, int i)
     {
-        applySettingsFromJson(s, settings_json[i]);
+        applySettingsFromJson(s, options.settings_json[i]);
     });
 
     // also we support inline host settings
@@ -546,11 +432,11 @@ std::vector<sw::TargetSettings> createSettings(sw::SwContext &swctx)
         settings[0]["host"].reset();
     }
 
-    if (!output_dir.empty())
+    if (!options.options_build.output_dir.empty())
     {
         if (settings.size() != 1)
             throw SW_RUNTIME_ERROR("Cannot set output-dir, multiple configurations requested");
-        auto d = fs::absolute(output_dir);
+        auto d = fs::absolute(options.options_build.output_dir);
         fs::create_directories(d);
         d = fs::canonical(d);
         for (auto &s : settings)
@@ -561,18 +447,18 @@ std::vector<sw::TargetSettings> createSettings(sw::SwContext &swctx)
         }
     }
 
-    if (!config_names.empty())
+    if (!options.config_name.empty())
     {
-        if (config_names.size() != settings.size())
+        if (options.config_name.size() != settings.size())
         {
-            throw SW_RUNTIME_ERROR("Number of config names (" + std::to_string(config_names.size()) +
+            throw SW_RUNTIME_ERROR("Number of config names (" + std::to_string(options.config_name.size()) +
                 ") must be equal to number of configs (" + std::to_string(settings.size()) + ")");
         }
         for (const auto &[i,s] : enumerate(settings))
         {
             if (s["name"])
                 throw SW_RUNTIME_ERROR("Some config already has its name");
-            s["name"] = config_names[i];
+            s["name"] = options.config_name[i];
             s["name"].useInHash(false);
             s["name"].ignoreInComparison(true);
         }
@@ -583,7 +469,7 @@ std::vector<sw::TargetSettings> createSettings(sw::SwContext &swctx)
     return settings;
 }
 
-static void addInputs(sw::SwBuild &b, const Inputs &i)
+static void addInputs(sw::SwBuild &b, const Inputs &i, const Options &options)
 {
     for (auto &[ts,in] : i.getInputPairs())
     {
@@ -595,16 +481,16 @@ static void addInputs(sw::SwBuild &b, const Inputs &i)
     for (auto &a : i.getInputs())
     {
         sw::InputWithSettings i(b.getContext().addInput(a));
-        for (auto &s : createSettings(b.getContext()))
+        for (auto &s : createSettings(b.getContext(), options))
             i.addSettings(s);
         b.addInput(i);
     }
 }
 
-std::unique_ptr<sw::SwBuild> createBuildAndPrepare(sw::SwContext &swctx, const Inputs &i)
+std::unique_ptr<sw::SwBuild> createBuildAndPrepare(sw::SwContext &swctx, const Inputs &i, const Options &options)
 {
-    auto b = createBuild(swctx);
-    addInputs(*b, i);
+    auto b = createBuild(swctx, options);
+    addInputs(*b, i, options);
     b->loadInputs();
     b->setTargetsToBuild();
     b->resolvePackages();
@@ -618,14 +504,14 @@ static decltype(auto) getInput(sw::SwBuild &b)
     return b.getContext().addInput(fs::current_path());
 }
 
-static void isolated_build(sw::SwContext &swctx)
+static void isolated_build(sw::SwContext &swctx, const Options &options)
 {
     // get targets
     // create dirs
 
     LOG_INFO(logger, "Determining targets");
 
-    auto b1 = createBuild(swctx);
+    auto b1 = createBuild(swctx, options);
     auto &b = *b1;
 
     auto ts = createInitialSettings(swctx);
@@ -678,7 +564,7 @@ static void isolated_build(sw::SwContext &swctx)
 
     //
     {
-        auto b1 = createBuild(swctx);
+        auto b1 = createBuild(swctx, options);
         auto &b = *b1;
 
         auto &ii = getInput(b);
@@ -689,34 +575,34 @@ static void isolated_build(sw::SwContext &swctx)
     }
 }
 
-std::unique_ptr<sw::SwBuild> createBuild(sw::SwContext &swctx)
+std::unique_ptr<sw::SwBuild> createBuild(sw::SwContext &swctx, const Options &options)
 {
     auto b = swctx.createBuild();
 
-    b->setName(build_name);
+    b->setName(options.build_name);
 
     sw::TargetSettings bs;
-    if (build_always)
+    if (options.build_always)
         bs["build_always"] = "true";
-    if (!build_ide_copy_to_dir.empty())
-        bs["build_ide_copy_to_dir"] = normalize_path(build_ide_copy_to_dir);
-    if (!build_ide_fast_path.empty())
-        bs["build_ide_fast_path"] = normalize_path(build_ide_fast_path);
-    if (skip_errors)
-        bs["skip_errors"] = std::to_string(skip_errors);
-    if (time_trace)
+    if (!options.options_build.ide_copy_to_dir.empty())
+        bs["build_ide_copy_to_dir"] = normalize_path(options.options_build.ide_copy_to_dir);
+    if (!options.options_build.ide_fast_path.empty())
+        bs["build_ide_fast_path"] = normalize_path(options.options_build.ide_fast_path);
+    if (options.skip_errors)
+        bs["skip_errors"] = std::to_string(options.skip_errors);
+    if (options.time_trace)
         bs["time_trace"] = "true";
     if (cl_show_output)
         bs["show_output"] = "true";
     if (cl_write_output_to_file)
         bs["write_output_to_file"] = "true";
-    if (!time_limit.empty())
-        bs["time_limit"] = time_limit;
-    for (auto &t : targets_to_build)
+    if (!options.options_build.time_limit.empty())
+        bs["time_limit"] = options.options_build.time_limit;
+    for (auto &t : options.targets_to_build)
         bs["target-to-build"].push_back(t);
-    for (auto &t : targets_to_ignore)
+    for (auto &t : options.targets_to_ignore)
         bs["target-to-exclude"].push_back(t);
-    for (auto &t : Dvariables)
+    for (auto &t : options.Dvariables)
     {
         auto p = t.find('=');
         bs["D"][t.substr(0, p)] = t.substr(p + 1);
@@ -726,33 +612,33 @@ std::unique_ptr<sw::SwBuild> createBuild(sw::SwContext &swctx)
     return b;
 }
 
-std::unique_ptr<sw::SwBuild> createBuild(sw::SwContext &swctx, const Inputs &i)
+std::unique_ptr<sw::SwBuild> createBuild(sw::SwContext &swctx, const Inputs &i, const Options &options)
 {
-    auto b = createBuild(swctx);
-    addInputs(*b, i);
+    auto b = createBuild(swctx, options);
+    addInputs(*b, i, options);
     return b;
 }
 
 SUBCOMMAND_DECL2(build)
 {
-    if (!build_explan.empty())
+    if (!options.options_build.build_explan.empty())
     {
-        auto b = createBuild(swctx);
+        auto b = createBuild(swctx, options);
         b->overrideBuildState(sw::BuildState::Prepared);
-        auto [cmds, p] = sw::ExecutionPlan::load(build_explan, swctx);
+        auto [cmds, p] = sw::ExecutionPlan::load(options.options_build.build_explan, swctx);
         b->execute(p);
         return;
     }
 
-    if (build_fetch)
+    if (options.options_build.build_fetch)
     {
-        build_after_fetch = true;
-        return cli_fetch(swctx);
+        options.options_fetch.build_after_fetch = true;
+        return cli_fetch(swctx, options);
     }
 
     if (cl_isolated_build)
     {
-        isolated_build(swctx);
+        isolated_build(swctx, options);
         return;
     }
 
@@ -765,8 +651,8 @@ SUBCOMMAND_DECL2(build)
 
     // if -B specified, it is used as is
 
-    Inputs inputs(build_inputs);
-    auto &pairs = (Strings &)input_settings_pairs;
+    Inputs inputs(options.options_build.build_inputs);
+    auto &pairs = (Strings &)options.options_build.input_settings_pairs;
     if (pairs.size() % 2 == 1)
         throw SW_RUNTIME_ERROR("Incorrect input settings pairs. Something is missing. Size must be even, but size = " + std::to_string(pairs.size()));
     for (int i = 0; i < pairs.size(); i += 2)
@@ -776,8 +662,8 @@ SUBCOMMAND_DECL2(build)
         inputs.addInputPair(s, pairs[i]);
     }
 
-    auto b = createBuild(swctx, inputs);
-    if (build_default_explan)
+    auto b = createBuild(swctx, inputs, options);
+    if (options.options_build.build_default_explan)
     {
         b->loadInputs();
         swctx.clearFileStorages();
