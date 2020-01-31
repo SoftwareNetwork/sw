@@ -132,7 +132,6 @@ void MainWindow::setupUi()
             auto cb = new QCheckBox("Release");
             cb->setChecked(true);
             gbl->addWidget(cb);
-            gbl->addStretch(1);
             gb->setLayout(gbl);
         }
 
@@ -145,7 +144,6 @@ void MainWindow::setupUi()
             cb->setChecked(true);
             gbl->addWidget(cb);
             gbl->addWidget(new QCheckBox("Static (.lib)"));
-            gbl->addStretch(1);
             gb->setLayout(gbl);
         }
 
@@ -158,7 +156,6 @@ void MainWindow::setupUi()
             cb->setChecked(true);
             gbl->addWidget(cb);
             gbl->addWidget(new QCheckBox("Static (MT/MTd)"));
-            gbl->addStretch(1);
             gb->setLayout(gbl);
         }
 
@@ -304,6 +301,7 @@ void MainWindow::setupUi()
             gb->setLayout(gbl);
         }
 
+        middle->addStretch(1);
         ctrlLayout->addStretch(1);
     }
 
