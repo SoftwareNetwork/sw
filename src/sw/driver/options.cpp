@@ -376,10 +376,8 @@ void NativeCompilerOptions::addDefinitionsAndIncludeDirectories(builder::Command
     addIncludeDirectories(c);
 }
 
-void NativeCompilerOptions::addEverything(builder::Command &c) const
+void NativeCompilerOptions::addCompileOptions(builder::Command &c) const
 {
-    addDefinitionsAndIncludeDirectories(c);
-
     auto print_idir = [&c](const auto &a, auto &flag)
     {
         for (auto &d : a)
@@ -388,6 +386,12 @@ void NativeCompilerOptions::addEverything(builder::Command &c) const
 
     print_idir(System.CompileOptions, "");
     print_idir(CompileOptions, "");
+}
+
+void NativeCompilerOptions::addEverything(builder::Command &c) const
+{
+    addDefinitionsAndIncludeDirectories(c);
+    addCompileOptions(c);
 }
 
 PathOptionsType NativeCompilerOptions::gatherIncludeDirectories() const
