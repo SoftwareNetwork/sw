@@ -2600,29 +2600,26 @@ void NativeCompiledTarget::prepare_pass5()
     {
         for (auto &f : files)
         {
-            //
-            if (auto c = f->compiler->as<VisualStudioCompiler *>())
+            auto vs_setup = [](auto &t, auto *f, auto *c, auto &pp_command)
             {
                 // create new cmd
-                auto pp_command = f->compiler->clone();
-                auto vs_pp_command = std::static_pointer_cast<VisualStudioCompiler>(pp_command);
-                Storage.push_back(pp_command);
+                t.Storage.push_back(pp_command);
 
                 // set pp
-                vs_pp_command->PreprocessToFile() = true;
+                pp_command->PreprocessToFile() = true;
                 // prepare & register
-                auto cmd = vs_pp_command->getCommand(*this);
-                registerCommand(*cmd);
+                auto cmd = pp_command->getCommand(t);
+                t.registerCommand(*cmd);
 
                 // set input file for old command
-                c->setSourceFile(vs_pp_command->PreprocessFileName(), c->getOutputFile());
+                c->setSourceFile(pp_command->PreprocessFileName(), c->getOutputFile());
 
                 // set fancy name
                 if (!do_not_mangle_object_names)
                 {
-                    auto sd = normalize_path(SourceDir);
-                    auto bd = normalize_path(BinaryDir);
-                    auto bdp = normalize_path(BinaryPrivateDir);
+                    auto sd = normalize_path(t.SourceDir);
+                    auto bd = normalize_path(t.BinaryDir);
+                    auto bdp = normalize_path(t.BinaryPrivateDir);
 
                     auto p = normalize_path(f->file);
                     if (bdp.size() < p.size() && p.find(bdp) == 0)
@@ -2642,9 +2639,25 @@ void NativeCompiledTarget::prepare_pass5()
                             n = n.substr(1);
                         cmd->name = n;
                     }
-                    cmd->name = "[" + getPackage().toString() + "]/[preprocess]/" + cmd->name;
+                    cmd->name = "[" + t.getPackage().toString() + "]/[preprocess]/" + cmd->name;
                 }
+            };
+
+            //
+            if (auto c = f->compiler->as<VisualStudioCompiler *>())
+            {
+                auto pp_command = f->compiler->clone();
+                auto pp_command2 = std::static_pointer_cast<VisualStudioCompiler>(pp_command);
+                vs_setup(*this, f, c, pp_command2);
             }
+            else if (auto c = f->compiler->as<ClangClCompiler *>())
+            {
+                auto pp_command = f->compiler->clone();
+                auto pp_command2 = std::static_pointer_cast<ClangClCompiler>(pp_command);
+                vs_setup(*this, f, c, pp_command2);
+            }
+            else
+                SW_UNIMPLEMENTED;
         }
     }
 

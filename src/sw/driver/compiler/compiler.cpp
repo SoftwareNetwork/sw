@@ -168,7 +168,6 @@ void VisualStudioCompiler::prepareCommand1(const Target &t)
     {
         cmd->name = normalize_path(InputFile());
         cmd->name_short = InputFile().filename().u8string();
-        //cmd->file = InputFile;
     }
 
     bool preprocessed_file = false;
@@ -176,13 +175,11 @@ void VisualStudioCompiler::prepareCommand1(const Target &t)
     {
         cmd->name = normalize_path(CSourceFile());
         cmd->name_short = CSourceFile().filename().u8string();
-        //cmd->file = CSourceFile;
     }
     else if (CPPSourceFile)
     {
         cmd->name = normalize_path(CPPSourceFile());
         cmd->name_short = CPPSourceFile().filename().u8string();
-        //cmd->file = CPPSourceFile;
     }
     else if (InputFile && !CompileAsC && !CompileAsCPP)
     {
@@ -206,11 +203,6 @@ void VisualStudioCompiler::prepareCommand1(const Target &t)
 
     if (Output)
         cmd->working_directory = Output().parent_path();
-
-    //if (cmd->file.empty())
-        //return nullptr;
-
-    //cmd->out.capture = true;
 
     if (PreprocessToFile)
     {
@@ -352,28 +344,40 @@ void ClangClCompiler::prepareCommand1(const Target &t)
     {
         cmd->name = normalize_path(InputFile());
         cmd->name_short = InputFile().filename().u8string();
-        //cmd->file = InputFile;
     }
+
+    bool preprocessed_file = false;
     if (CSourceFile)
     {
         cmd->name = normalize_path(CSourceFile());
         cmd->name_short = CSourceFile().filename().u8string();
-        //cmd->file = CSourceFile;
     }
-    if (CPPSourceFile)
+    else if (CPPSourceFile)
     {
         cmd->name = normalize_path(CPPSourceFile());
         cmd->name_short = CPPSourceFile().filename().u8string();
-        //cmd->file = CPPSourceFile;
+    }
+    else if (InputFile && !CompileAsC && !CompileAsCPP)
+    {
+        // .C extension is treated as C language by default (Wt library)
+        auto &exts = getCppSourceFileExtensions();
+        if (exts.find(InputFile().extension().string()) != exts.end())
+        {
+            CompileAsCPP = true;
+        }
+        else if (InputFile().extension() == ".i")
+        {
+            CompileAsC = true;
+            preprocessed_file = true;
+        }
+        else if (InputFile().extension() == ".ii")
+        {
+            CompileAsCPP = true;
+            preprocessed_file = true;
+        }
     }
     if (Output)
         cmd->working_directory = Output().parent_path();
-
-    //if (cmd->file.empty())
-        //return nullptr;
-
-    //cmd->out.capture = true;
-    //cmd->base = clone();
 
     add_args(*cmd, getCStdOption(dynamic_cast<const NativeCompiledTarget&>(t).CVersion,
         dynamic_cast<const NativeCompiledTarget&>(t).CExtensions));
@@ -381,9 +385,21 @@ void ClangClCompiler::prepareCommand1(const Target &t)
         true, getVersion(swctx, file)));
     CPPStandard.skip = true;
 
+    if (PreprocessToFile)
+    {
+        auto ext = ".i";
+        if (CompileAsCPP)
+            ext = ".ii";
+        PreprocessFileName = Output().parent_path() / (Output().stem().u8string() + ext);
+        Output.clear();
+    }
+
     getCommandLineOptions<VisualStudioCompilerOptions>(cmd.get(), *this);
     getCommandLineOptions<ClangClOptions>(cmd.get(), *this/*, "-Xclang"*/);
-    addEverything(*cmd);
+    if (preprocessed_file)
+        addCompileOptions(*cmd);
+    else
+        addEverything(*cmd);
 }
 
 void ClangClCompiler::setOutputFile(const path &output_file)
