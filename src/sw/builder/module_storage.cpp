@@ -10,12 +10,11 @@
 #include <boost/dll/import_mangled.hpp>
 #include <boost/thread/lock_types.hpp>
 #include <primitives/exceptions.h>
-#include <primitives/sw/cl.h>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "module_storage");
 
-static cl::opt<bool> do_not_remove_bad_module("do-not-remove-bad-module");
+bool do_not_remove_bad_module;
 
 namespace sw
 {

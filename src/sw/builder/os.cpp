@@ -11,7 +11,6 @@
 #include <primitives/command.h>
 #include <primitives/templates.h>
 #include <primitives/sw/settings.h>
-#include <primitives/sw/cl.h>
 
 #include <boost/algorithm/string.hpp>
 
@@ -22,7 +21,7 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "os");
 
-static cl::opt<bool> allow_cygwin_hosts("host-cygwin", cl::desc("When on cygwin, allow it as host"));
+bool allow_cygwin_hosts;
 
 namespace sw
 {

@@ -30,11 +30,6 @@ DECLARE_STATIC_LOGGER(logger, "compiler");
         return c;                                                                           \
     }
 
-//static cl::opt<bool> use_other_langs("use-other-languages");
-
-// add manual provided options: rust compiler, go compiler, d compiler etc.
-// c/cc toolchain probably complex: ar(opt?)+ld(opt)+c+cc(opt)
-
 namespace sw
 {
 

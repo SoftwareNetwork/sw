@@ -23,7 +23,6 @@
 #include <primitives/constants.h>
 #include <primitives/emitter.h>
 #include <primitives/debug.h>
-#include <primitives/sw/cl.h>
 #include <pystring.h>
 
 #include <charconv>
@@ -39,11 +38,10 @@ DECLARE_STATIC_LOGGER(logger, "target.native");
 
 extern bool gVerbose;
 
-static cl::opt<bool> do_not_mangle_object_names("do-not-mangle-object-names");
+bool do_not_mangle_object_names;
+//bool full_build;
 //static cl::opt<bool> full_build("full", cl::desc("Full build (check all conditions)"));
-
-static cl::opt<bool> standalone("standalone", cl::desc("Build standalone binaries"), cl::init(true));
-static cl::alias standalone2("sa", cl::aliasopt(standalone));
+bool standalone;
 
 void createDefFile(const path &def, const Files &obj_files)
 #if defined(CPPAN_OS_WINDOWS)

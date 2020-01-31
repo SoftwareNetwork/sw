@@ -16,13 +16,12 @@
 #include <sw/manager/storage.h>
 
 #include <boost/algorithm/string.hpp>
-#include <primitives/sw/cl.h>
 #include <primitives/yaml.h>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "driver.cpp");
 
-static cl::opt<bool> debug_configs("debug-configs", cl::desc("Build configs in debug mode"));
+bool debug_configs;
 
 std::unordered_map<sw::PackageId, std::shared_ptr<sw::NativeBuiltinTargetEntryPoint>>
     load_builtin_entry_points();

@@ -16,7 +16,6 @@
 #include <boost/algorithm/string.hpp>
 #include <primitives/hasher.h>
 #include <primitives/templates.h>
-#include <primitives/sw/cl.h>
 
 #include <fstream>
 
@@ -25,7 +24,7 @@ DECLARE_STATIC_LOGGER(logger, "settings");
 
 #define CONFIG_ROOT "/etc/sw/"
 
-static cl::opt<String> default_remote("r", cl::desc("Select default remote"));
+String default_remote;
 
 namespace sw
 {

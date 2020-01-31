@@ -15,7 +15,6 @@
 #include <boost/current_function.hpp>
 #include <nlohmann/json.hpp>
 #include <primitives/executor.h>
-#include <primitives/sw/cl.h>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "build");

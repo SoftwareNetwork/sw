@@ -21,15 +21,14 @@
 #include <boost/algorithm/string.hpp>
 #include <nlohmann/json.hpp>
 #include <primitives/emitter.h>
-#include <primitives/sw/cl.h>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "checks");
 
-static cl::opt<bool> checks_single_thread("checks-st", cl::desc("Perform checks in one thread (for cc)"));
-static cl::opt<bool> print_checks("print-checks", cl::desc("Save extended checks info to file"));
-static cl::opt<bool> wait_for_cc_checks("wait-for-cc-checks", cl::desc("Do not exit on missing cc checks, wait for user input"));
-static cl::opt<String> cc_checks_command("cc-checks-command", cl::desc("Automatically execute cc checks command"));
+bool checks_single_thread;
+bool print_checks;
+bool wait_for_cc_checks;
+String cc_checks_command;
 
 namespace sw
 {
