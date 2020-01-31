@@ -57,6 +57,9 @@ public:
     bool UnityBuild = false;
     int UnityBuildBatchSize = 8;
 
+    //
+    bool PreprocessStep = false;
+
     bool ImportFromBazel = false;
     StringSet BazelNames;
     String BazelTargetFunction;

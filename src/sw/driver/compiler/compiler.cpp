@@ -171,6 +171,7 @@ void VisualStudioCompiler::prepareCommand1(const Target &t)
         //cmd->file = InputFile;
     }
 
+    bool preprocessed_file = false;
     if (CSourceFile)
     {
         cmd->name = normalize_path(CSourceFile());
@@ -191,6 +192,16 @@ void VisualStudioCompiler::prepareCommand1(const Target &t)
         {
             CompileAsCPP = true;
         }
+        else if (InputFile().extension() == ".i")
+        {
+            CompileAsC = true;
+            preprocessed_file = true;
+        }
+        else if (InputFile().extension() == ".ii")
+        {
+            CompileAsCPP = true;
+            preprocessed_file = true;
+        }
     }
 
     if (Output)
@@ -201,14 +212,20 @@ void VisualStudioCompiler::prepareCommand1(const Target &t)
 
     //cmd->out.capture = true;
 
-    getCommandLineOptions<VisualStudioCompilerOptions>(cmd.get(), *this);
-    addEverything(*cmd);
-
     if (PreprocessToFile)
     {
-        //cmd->addOutput(cmd->file.file.parent_path() / (cmd->file.file.filename().stem().u8string() + ".i"));
-        // TODO: remove old object file, it's now incorrect
+        auto ext = ".i";
+        if (CompileAsCPP)
+            ext = ".ii";
+        PreprocessFileName = Output().parent_path() / (Output().stem().u8string() + ext);
+        Output.clear();
     }
+
+    getCommandLineOptions<VisualStudioCompilerOptions>(cmd.get(), *this);
+    if (preprocessed_file)
+        addCompileOptions(*cmd);
+    else
+        addEverything(*cmd);
 }
 
 void VisualStudioCompiler::setOutputFile(const path &output_file)

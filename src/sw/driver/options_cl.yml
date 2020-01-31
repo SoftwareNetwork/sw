@@ -7,7 +7,8 @@ flags:
 
     pp_to_stdout:
         name: PreprocessToStdout
-        flag: EP
+        flag: E
+        #flag: EP # EP = without #line directives
         type: bool
 
     input:
@@ -313,6 +314,13 @@ types:
                 name: PreprocessToFile
                 flag: P
                 type: bool
+
+            pptofilefn:
+                name: PreprocessFileName
+                flag: Fi
+                type: path
+                properties:
+                    - output_dependency
 
             showinc:
                 name: ShowIncludes

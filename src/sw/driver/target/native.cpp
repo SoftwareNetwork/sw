@@ -1136,6 +1136,10 @@ NativeLinker *NativeCompiledTarget::getSelectedTool() const
 
 void NativeCompiledTarget::createPrecompiledHeader()
 {
+    // disabled with PP
+    if (PreprocessStep)
+        return;
+
     auto files = gatherPrecompiledHeaders();
     if (files.empty())
         return;
@@ -2588,6 +2592,59 @@ void NativeCompiledTarget::prepare_pass5()
         else if (auto c = f->compiler->as<GNUCompiler*>())
         {
             gnu_setup(f, c);
+        }
+    }
+
+    // after merge
+    if (PreprocessStep)
+    {
+        for (auto &f : files)
+        {
+            //
+            if (auto c = f->compiler->as<VisualStudioCompiler *>())
+            {
+                // create new cmd
+                auto pp_command = f->compiler->clone();
+                auto vs_pp_command = std::static_pointer_cast<VisualStudioCompiler>(pp_command);
+                Storage.push_back(pp_command);
+
+                // set pp
+                vs_pp_command->PreprocessToFile() = true;
+                // prepare & register
+                auto cmd = vs_pp_command->getCommand(*this);
+                registerCommand(*cmd);
+
+                // set input file for old command
+                c->setSourceFile(vs_pp_command->PreprocessFileName(), c->getOutputFile());
+
+                // set fancy name
+                if (!do_not_mangle_object_names)
+                {
+                    auto sd = normalize_path(SourceDir);
+                    auto bd = normalize_path(BinaryDir);
+                    auto bdp = normalize_path(BinaryPrivateDir);
+
+                    auto p = normalize_path(f->file);
+                    if (bdp.size() < p.size() && p.find(bdp) == 0)
+                    {
+                        auto n = p.substr(bdp.size());
+                        cmd->name = "[bdir_pvt]" + n;
+                    }
+                    else if (bd.size() < p.size() && p.find(bd) == 0)
+                    {
+                        auto n = p.substr(bd.size());
+                        cmd->name = "[bdir]" + n;
+                    }
+                    if (sd.size() < p.size() && p.find(sd) == 0)
+                    {
+                        auto n = p.substr(sd.size());
+                        if (!n.empty() && n[0] == '/')
+                            n = n.substr(1);
+                        cmd->name = n;
+                    }
+                    cmd->name = "[" + getPackage().toString() + "]/[preprocess]/" + cmd->name;
+                }
+            }
         }
     }
 
