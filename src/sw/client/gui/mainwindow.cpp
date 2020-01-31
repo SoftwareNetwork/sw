@@ -243,10 +243,24 @@ void MainWindow::setupUi()
     auto add_packages_tab = [this, t](const String &name, auto &db)
     {
         auto v = new QTableView;
+
         auto m = new PackagesModel(db, true);
         v->setModel(m);
         v->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
-        auto idx = t->addTab(v, name.c_str());
+
+        auto l = new QVBoxLayout;
+        auto te = new QLineEdit;
+        te->setPlaceholderText("Search Software...");
+        connect(te, &QLineEdit::textChanged, [te, m]()
+        {
+            m->setFilter(te->text());
+        });
+        l->addWidget(te);
+        l->addWidget(v);
+
+        auto w = new QWidget;
+        w->setLayout(l);
+        auto idx = t->addTab(w, name.c_str());
         connect(t, &TabWidget::currentChanged, [idx, m](int i)
         {
             if (i != idx)

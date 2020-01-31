@@ -30,6 +30,7 @@ public:
     PackagesModel(sw::PackagesDatabase &, bool lazy = false);
 
     void init();
+    void setFilter(const QString & = {});
 
     QModelIndex index(int row, int column, const QModelIndex &parent = QModelIndex()) const override;
     QModelIndex parent(const QModelIndex &index) const override;

@@ -31,9 +31,14 @@ void PackagesModel::init()
 {
     if (!this->pkgs.empty())
         return;
+    setFilter();
+}
+
+void PackagesModel::setFilter(const QString &f)
+{
     beginResetModel();
     std::set<sw::PackageId> pkgs;
-    auto ppaths = s.getMatchingPackages();
+    auto ppaths = s.getMatchingPackages(f.toStdString());
     for (auto &ppath : ppaths)
     {
         auto vs = s.getVersionsForPackage(ppath);
