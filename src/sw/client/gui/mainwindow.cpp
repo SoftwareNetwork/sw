@@ -23,9 +23,11 @@
 #include <qboxlayout.h>
 #include <qcheckbox.h>
 #include <qcombobox.h>
+#include <qfiledialog.h>
 #include <qgroupbox.h>
 #include <qheaderview.h>
 #include <qlabel.h>
+#include <qlineedit.h>
 #include <qpushbutton.h>
 #include <qspinbox.h>
 #include <qstylepainter.h>
@@ -35,6 +37,7 @@
 
 #include <sw/client/common/common.h>
 #include <sw/client/common/generator/generator.h>
+#include <sw/manager/database.h>
 #include <sw/manager/storage.h>
 
 class TabBar : public QTabBar
@@ -95,7 +98,7 @@ MainWindow::MainWindow(QWidget *parent)
     setupUi();
 
     //resize(minimumSizeHint());
-    resize(600, 600);
+    resize(200, 200);
 }
 
 void MainWindow::setupUi()
@@ -108,29 +111,27 @@ void MainWindow::setupUi()
     //t->setAutoFillBackground(true);
 
     //
-    auto ctrlLayout = new QVBoxLayout;
+    auto ctrlLayout = new QHBoxLayout;
     {
-        auto topL = new QHBoxLayout;
-        auto botL = new QVBoxLayout;
-        ctrlLayout->addLayout(topL);
-        ctrlLayout->addLayout(botL);
+        auto left = new QVBoxLayout;
+        auto middle = new QVBoxLayout;
+        auto right = new QVBoxLayout;
 
-        auto topLL = new QVBoxLayout;
-        auto topRL = new QVBoxLayout;
-        topL->addLayout(topLL);
-        topL->addLayout(topRL);
+        ctrlLayout->addLayout(left);
+        ctrlLayout->addLayout(middle);
+        ctrlLayout->addLayout(right);
 
         // configuration
         {
             auto gb = new QGroupBox("Configuration");
-            topLL->addWidget(gb);
+            middle->addWidget(gb);
             QVBoxLayout *gbl = new QVBoxLayout;
             gbl->addWidget(new QCheckBox("Debug"));
+            gbl->addWidget(new QCheckBox("Minimal Size Release"));
+            gbl->addWidget(new QCheckBox("Release With Debug Information"));
             auto cb = new QCheckBox("Release");
             cb->setChecked(true);
             gbl->addWidget(cb);
-            gbl->addWidget(new QCheckBox("Release With Debug Information"));
-            gbl->addWidget(new QCheckBox("Minimal Size Release"));
             gbl->addStretch(1);
             gb->setLayout(gbl);
         }
@@ -138,7 +139,7 @@ void MainWindow::setupUi()
         // shared/static
         {
             auto gb = new QGroupBox("Linking");
-            topLL->addWidget(gb);
+            middle->addWidget(gb);
             QVBoxLayout *gbl = new QVBoxLayout;
             auto cb = new QCheckBox("Dynamic (.dll)");
             cb->setChecked(true);
@@ -151,7 +152,7 @@ void MainWindow::setupUi()
         // mt/md
         {
             auto gb = new QGroupBox("Runtime");
-            topLL->addWidget(gb);
+            middle->addWidget(gb);
             QVBoxLayout *gbl = new QVBoxLayout;
             auto cb = new QCheckBox("Dynamic (MD/MDd)");
             cb->setChecked(true);
@@ -164,7 +165,7 @@ void MainWindow::setupUi()
         // arch
         {
             auto gb = new QGroupBox("Architecture");
-            topLL->addWidget(gb);
+            middle->addWidget(gb);
             QVBoxLayout *gbl = new QVBoxLayout;
             // basic list
             gbl->addWidget(new QCheckBox("x86"));
@@ -180,32 +181,106 @@ void MainWindow::setupUi()
         // compilers
         {
             auto gb = new QGroupBox("Compiler");
-            topRL->addWidget(gb);
+            right->addWidget(gb);
             QVBoxLayout *gbl = new QVBoxLayout;
             auto cls = list_compilers(*swctx);
+            bool set = false;
             for (auto &cl : cls)
             {
                 auto gb = new QGroupBox(cl.name.c_str());
                 gbl->addWidget(gb);
                 QVBoxLayout *gbl = new QVBoxLayout;
+                gb->setLayout(gbl);
                 for (auto &[pkg,_] : cl.releases)
                     gbl->addWidget(new QCheckBox(pkg.getVersion().toString().c_str()));
+                if (!set && !cl.releases.empty())
+                {
+                    ((QCheckBox*)gb->children().back())->setChecked(true);
+                    set = true;
+                }
                 for (auto &[pkg,_] : cl.prereleases)
                     gbl->addWidget(new QCheckBox(pkg.getVersion().toString().c_str()));
                 gbl->addStretch(1);
-                gb->setLayout(gbl);
             }
             gbl->addStretch(1);
             gb->setLayout(gbl);
         }
 
-        ctrlLayout->addWidget(new QPushButton("Build"));
-        ctrlLayout->addWidget(new QPushButton("Test"));
+        // inputs
+        {
+            auto gb = new QGroupBox("Inputs");
+            gb->setMinimumWidth(350);
+            left->addWidget(gb, 1);
+            QVBoxLayout *gbl = new QVBoxLayout;
+            gb->setLayout(gbl);
+            auto afile = new QPushButton("Add File");
+            auto adir = new QPushButton("Add Directory");
+            auto pkgcb = new QComboBox();
+            auto apkg = new QPushButton("Add Package");
+            gbl->addWidget(afile);
+            gbl->addWidget(adir);
+            gbl->addWidget(pkgcb);
+            gbl->addWidget(apkg);
+
+            connect(pkgcb, &QComboBox::currentTextChanged, [this, pkgcb]()
+            {
+                return;
+                auto &rs = swctx->getRemoteStorages();
+                if (rs.empty())
+                    return;
+                if (auto s1 = dynamic_cast<sw::StorageWithPackagesDatabase *>(rs[0]))
+                {
+                    pkgcb->clear();
+                    auto ppaths = s1->getPackagesDatabase().getMatchingPackages(pkgcb->currentText().toStdString());
+                    for (auto &ppath : ppaths)
+                    {
+                        auto vs = s1->getPackagesDatabase().getVersionsForPackage(ppath);
+                        for (auto &v : vs)
+                            pkgcb->addItem(sw::PackageId{ ppath, v }.toString().c_str());
+                    }
+                }
+            });
+            pkgcb->setAutoCompletion(true);
+            pkgcb->setEditable(true);
+
+            auto add_input = [gbl](const auto &s)
+            {
+                auto le = new QLineEdit(s);
+                le->setEnabled(false);
+                gbl->addWidget(le);
+            };
+
+            connect(apkg, &QPushButton::clicked, [add_input, pkgcb]()
+            {
+                add_input(pkgcb->currentText());
+            });
+
+            connect(afile, &QPushButton::clicked, [this, add_input]()
+            {
+                QFileDialog dialog(this);
+                dialog.setFileMode(QFileDialog::ExistingFile);
+                if (dialog.exec())
+                    add_input(dialog.selectedFiles()[0]);
+            });
+
+            connect(adir, &QPushButton::clicked, [this, add_input]()
+            {
+                QFileDialog dialog(this);
+                dialog.setFileMode(QFileDialog::Directory);
+                if (dialog.exec())
+                    add_input(dialog.selectedFiles()[0]);
+            });
+
+            gbl->addStretch(1);
+        }
+
+        left->addWidget(new QPushButton("Build"));
+        left->addWidget(new QPushButton("Test"));
 
         // generators
         {
             auto gb = new QGroupBox("Generators");
-            ctrlLayout->addWidget(gb);
+            left->addWidget(gb);
             QVBoxLayout *gbl = new QVBoxLayout;
             //
             auto cb = new QComboBox();
@@ -234,10 +309,7 @@ void MainWindow::setupUi()
 
     auto ctrl = new QWidget;
     ctrl->setLayout(ctrlLayout);
-
-    //
-    t->addTab(ctrl, "Control");
-    t->addTab(new QWidget, "Search");
+    t->addTab(ctrl, "General");
 
     //
     auto add_packages_tab = [this, t](const String &name, auto &db)
