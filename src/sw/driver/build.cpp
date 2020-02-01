@@ -39,8 +39,6 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "build");
 
-std::map<sw::PackagePath, sw::Version> gUserSelectedPackages;
-
 namespace sw
 {
 

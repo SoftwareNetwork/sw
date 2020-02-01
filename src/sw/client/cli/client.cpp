@@ -90,7 +90,7 @@ int main(int argc, char **argv);
 
 int sw_main(const Strings &args);
 void stop();
-void setup_log(const std::string &log_level, bool simple = true);
+void setup_log(const std::string &log_level, const Options &options, bool simple = true);
 void self_upgrade();
 void self_upgrade_copy(const path &dst);
 
@@ -115,46 +115,8 @@ void self_upgrade_copy(const path &dst);
 }*/
 #endif
 
-extern bool gForceServerQuery;
-static ::cl::opt<bool, true> force_server_query1("s", ::cl::desc("Force server resolving"), ::cl::location(gForceServerQuery));
-static ::cl::alias force_server_query2("server", ::cl::desc("Alias for -s"), ::cl::aliasopt(force_server_query1));
-
-extern bool gForceServerDatabaseUpdate;
-static ::cl::opt<bool, true> force_server_db_check("sd", ::cl::desc("Force server db check"), ::cl::location(gForceServerDatabaseUpdate));
-
-static ::cl::opt<path> working_directory("d", ::cl::desc("Working directory"));
-extern bool gVerbose;
-static ::cl::opt<bool, true> verbose_opt("verbose", ::cl::desc("Verbose output"), ::cl::location(gVerbose));
-static ::cl::alias verbose_opt2("v", ::cl::desc("Alias for -verbose"), ::cl::aliasopt(verbose_opt));
-static ::cl::opt<bool> trace("trace", ::cl::desc("Trace output"));
-static ::cl::opt<int> jobs("j", ::cl::desc("Number of jobs"));
-
-static ::cl::opt<bool> cl_list_programs("list-programs", ::cl::desc("List available programs on the system"));
-static ::cl::opt<bool> cl_list_predefined_targets("list-predefined-targets", ::cl::desc("List predefined targets"));
-
-static ::cl::opt<bool> cl_self_upgrade("self-upgrade", ::cl::desc("Upgrade client"));
-static ::cl::opt<path> cl_self_upgrade_copy("internal-self-upgrade-copy", ::cl::desc("Upgrade client: copy file"), ::cl::ReallyHidden);
-
-extern std::map<sw::PackagePath, sw::Version> gUserSelectedPackages;
-static ::cl::list<String> cl_activate("activate", ::cl::desc("Activate specific packages"));
-
-#define SUBCOMMAND(n) extern ::cl::SubCommand subcommand_##n;
-#include <sw/client/common/command/commands.inl>
-#undef SUBCOMMAND
-
-// TODO: https://github.com/tomtom-international/cpp-dependencies
-static ::cl::list<bool> build_graph("g", ::cl::desc("Print .dot graph of build targets"), ::cl::sub(subcommand_build));
-
-static ::cl::list<path> internal_sign_file("internal-sign-file", ::cl::value_desc("<file> <private.key>"), ::cl::desc("Sign file with private key"), ::cl::ReallyHidden, ::cl::multi_val(2));
-static ::cl::list<path> internal_verify_file("internal-verify-file", ::cl::value_desc("<file> <sigfile> <public.key>"), ::cl::desc("Verify signature with public key"), ::cl::ReallyHidden, ::cl::multi_val(3));
-
-static ::cl::opt<path> cl_parse_configure_ac("parse-configure-ac",
-    ::cl::desc("Read checks from configure.ac. Add without space '=file' for custom files."), ::cl::ValueOptional, ::cl::Hidden);
-
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/signal_set.hpp>
-
-//static ::cl::list<String> drivers("load-driver", ::cl::desc("Load more drivers"), ::cl::CommaSeparated);
 
 static bool setConsoleColorProcessing()
 {
@@ -172,32 +134,32 @@ static bool setConsoleColorProcessing()
     return r;
 }
 
-int setup_main(const Strings &args, const Options &options)
+int setup_main(const Strings &args, Options &options)
 {
     // some initial stuff
     // try to do as less as possible before log init
 
     setConsoleColorProcessing();
 
-    if (!working_directory.empty())
+    if (!options.working_directory.empty())
     {
-        working_directory = primitives::filesystem::canonical(working_directory);
-        if (fs::is_regular_file(working_directory))
-            fs::current_path(working_directory.parent_path());
+        options.working_directory = primitives::filesystem::canonical(options.working_directory);
+        if (fs::is_regular_file(options.working_directory))
+            fs::current_path(options.working_directory.parent_path());
         else
-            fs::current_path(working_directory);
+            fs::current_path(options.working_directory);
 
 #ifdef _WIN32
         sw_append_symbol_path(fs::current_path());
 #endif
     }
 
-    if (trace)
-        setup_log("TRACE");// , false); // add modules for trace logger
+    if (options.trace)
+        setup_log("TRACE", options);// , false); // add modules for trace logger
     else if (gVerbose)
-        setup_log("DEBUG");
+        setup_log("DEBUG", options);
     else
-        setup_log("INFO");
+        setup_log("INFO", options);
 
     {
         String cmdline;
@@ -208,26 +170,26 @@ int setup_main(const Strings &args, const Options &options)
 
     // after log initialized
 
-    if (!cl_self_upgrade_copy.empty())
+    if (!options.self_upgrade_copy.empty())
     {
-        self_upgrade_copy(cl_self_upgrade_copy);
+        self_upgrade_copy(options.self_upgrade_copy);
         return 0;
     }
 
-    if (cl_self_upgrade)
+    if (options.self_upgrade)
     {
         self_upgrade();
         return 0;
     }
 
-    if (cl_list_predefined_targets)
+    if (options.list_predefined_targets)
     {
         auto swctx = createSwContext(options);
         LOG_INFO(logger, list_predefined_targets(*swctx));
         return 0;
     }
 
-    if (cl_list_programs)
+    if (options.list_programs)
     {
         auto swctx = createSwContext(options);
         LOG_INFO(logger, list_programs(*swctx));
@@ -243,14 +205,14 @@ int setup_main(const Strings &args, const Options &options)
         return 0;
     }
 
-    if (!internal_sign_file.empty())
+    if (!options.internal_sign_file.empty())
     {
         SW_UNIMPLEMENTED;
         //ds_sign_file(internal_sign_file[0], internal_sign_file[1]);
         return 0;
     }
 
-    if (!internal_verify_file.empty())
+    if (!options.internal_verify_file.empty())
     {
         SW_UNIMPLEMENTED;
         //ds_verify_file(internal_verify_file[0], internal_verify_file[1], internal_verify_file[2]);
@@ -296,7 +258,7 @@ int setup_main(const Strings &args, const Options &options)
     // after everything
     std::unique_ptr<Executor> e;
     {
-        e = std::make_unique<Executor>(select_number_of_threads(jobs));
+        e = std::make_unique<Executor>(select_number_of_threads(options.jobs));
         getExecutor(e.get());
     }
 
@@ -347,14 +309,10 @@ int parse_main(int argc, char **argv)
     //
     ::cl::ParseCommandLineOptions(args, overview);
 
-    // main!
-    Options options;
-
     // post setup args
 
-    for (sw::PackageId p : cl_activate)
-        gUserSelectedPackages[p.getPath()] = p.getVersion();
-
+    // create main options!
+    Options options;
     return setup_main(args, options);
 }
 
@@ -417,14 +375,13 @@ int main(int argc, char **argv)
     return r;
 }
 
-bool gUseLockFile;
-static ::cl::opt<bool, true> use_lock_file("l", ::cl::desc("Use lock file"), ::cl::location(gUseLockFile));// , cl::init(true));
-
-//static ::cl::list<String> builtin_function(sw::builder::getInternalCallBuiltinFunctionName(), ::cl::desc("Call built-in function"), ::cl::Hidden);
+#define SUBCOMMAND(n) extern ::cl::SubCommand subcommand_##n;
+#include <sw/client/common/command/commands.inl>
+#undef SUBCOMMAND
 
 int sw_main(const Strings &args)
 {
-    if (gUseLockFile && fs::exists(fs::current_path() / "sw.lock"))
+    if (0/*gUseLockFile*/ && fs::exists(fs::current_path() / "sw.lock"))
     {
         SW_UNIMPLEMENTED;
         //getPackageStore().loadLockFile(fs::current_path() / "sw.lock");
@@ -442,20 +399,18 @@ int sw_main(const Strings &args)
 
 void stop()
 {
-    if (gUseLockFile)
+    if (/*gUseLockFile*/0)
     {
         SW_UNIMPLEMENTED;
         //getPackageStore().saveLockFile(fs::current_path() / "sw.lock");
     }
 }
 
-static ::cl::opt<bool> write_log_to_file("log-to-file");
-
-void setup_log(const std::string &log_level, bool simple)
+void setup_log(const std::string &log_level, const Options &options, bool simple)
 {
     LoggerSettings log_settings;
     log_settings.log_level = log_level;
-    if (write_log_to_file && bConsoleMode)
+    if (options.write_log_to_file && bConsoleMode)
         log_settings.log_file = (get_root_directory() / "sw").string();
     log_settings.simple_logger = simple;
     log_settings.print_trace = true;

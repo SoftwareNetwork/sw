@@ -268,6 +268,85 @@ command_line:
         desc: Set VS generator toolset
 
     #
+
+    force_server_query:
+        option: s
+        desc: Force server resolving
+        location: gForceServerQuery
+        aliases: server
+    force_server_db_check:
+        option: sd
+        desc: Force server db check
+        location: gForceServerDatabaseUpdate
+
+    working_directory:
+        option: d
+        desc: Working directory
+        type: path
+
+    verbose:
+        desc: Verbose output
+        location: gVerbose
+        aliases: v
+    trace:
+        desc: Trace output
+    jobs:
+        option: j
+        desc: Number of jobs
+        type: int
+
+    list_programs:
+        desc: List available programs on the system
+    list_predefined_targets:
+        desc: List predefined targets
+
+    self_upgrade:
+        desc: Upgrade client
+    self_upgrade_copy:
+        type: path
+        desc: "Upgrade client: copy file"
+        option: internal-self-upgrade-copy
+        really_hidden: true
+
+    #static ::cl::list<String> cl_activate("activate", ::cl::desc("Activate specific packages"));
+
+    #// TODO: https://github.com/tomtom-international/cpp-dependencies
+    #static ::cl::list<bool> build_graph("g", ::cl::desc("Print .dot graph of build targets"), ::cl::sub(subcommand_build));
+
+    internal_sign_file:
+        type: path
+        list: true
+        value_desc: <file> <private.key>
+        desc: Sign file with private key
+        really_hidden: true
+        multi_val: 2
+    internal_verify_file:
+        type: path
+        list: true
+        value_desc: <file> <sigfile> <public.key>
+        desc: Verify signature with public key
+        really_hidden: true
+        multi_val: 3
+
+    parse_configure_ac:
+        type: path
+        desc: Read checks from configure.ac. Add without space '=file' for custom files.
+        value_optional: true
+        hidden: true
+
+    #//static ::cl::list<String> drivers("load-driver", ::cl::desc("Load more drivers"), ::cl::CommaSeparated);
+
+    use_lock_file:
+        option: l
+        desc: Use lock file
+        default_value: true
+
+        #//static ::cl::list<String> builtin_function(sw::builder::getInternalCallBuiltinFunctionName(), ::cl::desc("Call built-in function"), ::cl::Hidden);
+
+    write_log_to_file:
+        option: log-to-file
+
+    #
     subcommand:
         name: build
         desc: Build files, dirs or packages.
