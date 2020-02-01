@@ -7,4 +7,6 @@ STD(11)
 STD(17)
 STD(18)
 
+STD(2x)
+
 STD(latest)
