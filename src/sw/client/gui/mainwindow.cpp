@@ -89,8 +89,9 @@ public:
     }
 };
 
-MainWindow::MainWindow(QWidget *parent)
+MainWindow::MainWindow(sw::SwContext &swctx, QWidget *parent)
     : QMainWindow(parent)
+    , swctx(swctx)
 {
     //setWindowTitle("SW GUI"); // SW is present in icon
     setWindowTitle("GUI");
@@ -103,8 +104,6 @@ MainWindow::MainWindow(QWidget *parent)
 
 void MainWindow::setupUi()
 {
-    swctx = createSwContext();
-
     auto mainLayout = new QHBoxLayout;
     auto t = new TabWidget;
     //t->setDocumentMode(true);
@@ -180,7 +179,7 @@ void MainWindow::setupUi()
             auto gb = new QGroupBox("Compiler");
             right->addWidget(gb);
             QVBoxLayout *gbl = new QVBoxLayout;
-            auto cls = list_compilers(*swctx);
+            auto cls = list_compilers(swctx);
             bool set = false;
             for (auto &cl : cls)
             {
@@ -222,7 +221,7 @@ void MainWindow::setupUi()
             connect(pkgcb, &QComboBox::currentTextChanged, [this, pkgcb]()
             {
                 return;
-                auto &rs = swctx->getRemoteStorages();
+                auto &rs = swctx.getRemoteStorages();
                 if (rs.empty())
                     return;
                 if (auto s1 = dynamic_cast<sw::StorageWithPackagesDatabase *>(rs[0]))
@@ -339,8 +338,8 @@ void MainWindow::setupUi()
         });
     };
 
-    add_packages_tab("Installed Packages", swctx->getLocalStorage().getPackagesDatabase());
-    for (auto rs : swctx->getRemoteStorages())
+    add_packages_tab("Installed Packages", swctx.getLocalStorage().getPackagesDatabase());
+    for (auto rs : swctx.getRemoteStorages())
     {
         if (auto s1 = dynamic_cast<sw::StorageWithPackagesDatabase *>(rs))
             add_packages_tab("Remote Packages: " + rs->getName(), s1->getPackagesDatabase());
@@ -355,8 +354,8 @@ void MainWindow::setupUi()
         t->addTab(te, name.c_str());
     };
 
-    add_text_tab("List of Predefined Targets", list_predefined_targets(*swctx));
-    add_text_tab("List of Programs", list_programs(*swctx));
+    add_text_tab("List of Predefined Targets", list_predefined_targets(swctx));
+    add_text_tab("List of Programs", list_programs(swctx));
 
     //
     auto setLayout = new QVBoxLayout;

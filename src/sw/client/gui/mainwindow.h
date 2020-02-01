@@ -26,10 +26,10 @@ class MainWindow : public QMainWindow
 {
     Q_OBJECT
 public:
-    MainWindow(QWidget *parent = 0);
+    MainWindow(sw::SwContext &swctx, QWidget *parent = 0);
 
 private:
-    std::unique_ptr<sw::SwContext> swctx;
+    sw::SwContext &swctx;
 
     void setupUi();
 };

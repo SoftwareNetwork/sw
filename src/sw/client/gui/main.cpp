@@ -18,6 +18,9 @@
 
 #include "mainwindow.h"
 
+#include <cl.llvm.h>
+#include <sw/client/common/common.h>
+
 #include <qapplication.h>
 #include <qglobal.h>
 #include <qmessagebox.h>
@@ -53,7 +56,9 @@ int main(int argc, char *argv[])
 
     try
     {
-        MainWindow w;
+        auto swctx = createSwContext({});
+
+        MainWindow w(*swctx);
         w.show();
         return a.exec();
     }
