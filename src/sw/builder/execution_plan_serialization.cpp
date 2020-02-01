@@ -6,59 +6,25 @@
 
 #include "execution_plan.h"
 
-#include "command_storage.h"
-#include "sw_context.h"
-
 #include <sw/support/serialization.h>
 
-#include <boost/serialization/access.hpp>
-#include <boost/archive/binary_iarchive.hpp>
-#include <boost/archive/binary_oarchive.hpp>
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
-#include <primitives/exceptions.h>
-
-#include <fstream>
-
-static sw::SwBuilderContext *swctx;
-#include "execution_plan_serialization_boost.h"
-
-// change when you change the header above
-static const int serialization_version = 3;
+#include "command_serialization.h"
+#include "sw_context.h"
 
 namespace sw
 {
 
-namespace driver
-{
-struct Command;
-}
-
-enum SerializationType
-{
-    BoostSerializationBinaryArchive,
-    BoostSerializationTextArchive,
-};
-
-std::tuple<std::unordered_set<std::shared_ptr<builder::Command>>, ExecutionPlan>
+std::tuple<Commands, ExecutionPlan>
 ExecutionPlan::load(const path &p, const SwBuilderContext &swctx, int type)
 {
-    ::swctx = (SwBuilderContext *)&swctx;
-    std::unordered_set<std::shared_ptr<builder::Command>> commands;
+    Commands commands;
 
     auto load = [&commands](auto &ar)
     {
-        int version;
-        ar >> version;
-        if (version != serialization_version)
-        {
-            throw SW_RUNTIME_ERROR("Incorrect archive version (" + std::to_string(version) + "), expected (" +
-                std::to_string(serialization_version) + "), run configure command again");
-        }
         path cp;
         ar >> cp;
         fs::current_path(cp);
-        ar >> commands;
+        commands = loadCommands(ar);
     };
 
     if (type == 0)
@@ -80,7 +46,10 @@ ExecutionPlan::load(const path &p, const SwBuilderContext &swctx, int type)
 
     // some setup
     for (auto &c : commands)
+    {
         c->setContext(swctx);
+        c->command_storage = &swctx.getCommandStorage(c->command_storage_root);
+    }
     return { commands, create(commands) };
 }
 
@@ -90,9 +59,9 @@ void ExecutionPlan::save(const path &p, int type) const
 
     auto save = [this](auto &ar)
     {
-        ar << serialization_version;
         ar << fs::current_path();
-        ar << commands;
+        //               v be careful... v
+        saveCommands(ar, (SimpleCommands&)commands);
     };
 
     if (type == 0)

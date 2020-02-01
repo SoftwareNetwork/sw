@@ -11,53 +11,6 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#define SERIALIZATION_TYPE ::path
-SERIALIZATION_BEGIN_SPLIT
-    String s;
-    ar >> s;
-    v = fs::u8path(s);
-SERIALIZATION_SPLIT_CONTINUE
-    ar << v.u8string();
-SERIALIZATION_SPLIT_END
-
-////////////////////////////////////////
-
-#define SERIALIZATION_TYPE Files
-SERIALIZATION_BEGIN_SPLIT
-    size_t sz;
-    ar >> sz;
-    while (sz--)
-    {
-        path p;
-        ar >> p;
-        v.insert(p);
-    }
-SERIALIZATION_SPLIT_CONTINUE
-    ar << v.size();
-    for (auto &p : v)
-        ar << p;
-SERIALIZATION_SPLIT_END
-
-////////////////////////////////////////
-
-#define SERIALIZATION_TYPE StringMap<String>
-SERIALIZATION_BEGIN_SPLIT
-    size_t sz;
-    ar >> sz;
-    while (sz--)
-    {
-        String k, va;
-        ar >> k >> va;
-        v[k] = va;
-    }
-SERIALIZATION_SPLIT_CONTINUE
-    ar << v.size();
-    for (auto &[k, va] : v)
-        ar << k << va;
-SERIALIZATION_SPLIT_END
-
-////////////////////////////////////////
-
 #define SERIALIZATION_TYPE ::sw::builder::Command::Argument
 SERIALIZATION_BEGIN_UNIFIED
     ar & v.toString();
@@ -125,12 +78,7 @@ SERIALIZATION_BEGIN_SPLIT
     if (flag != 1)
         v.command_storage = (::sw::CommandStorage*)flag;
     else
-    {
-        path root;
-        ar & root;
-        // take ctx, create cmd storage with root and assign
-        v.command_storage = &swctx->getCommandStorage(root);
-    }
+        ar & v.command_storage_root;
     ar & v.first_response_file_argument;
     ar & v.always;
     ar & v.remove_outputs_before_execution;
@@ -163,7 +111,7 @@ SERIALIZATION_SPLIT_END
 
 ////////////////////////////////////////
 
-#define SERIALIZATION_TYPE ::std::unordered_set<std::shared_ptr<::sw::builder::Command>>
+#define SERIALIZATION_TYPE ::sw::Commands
 SERIALIZATION_BEGIN_SPLIT
     size_t sz;
     ar >> sz;
@@ -174,18 +122,20 @@ SERIALIZATION_BEGIN_SPLIT
         ar >> *c;
     }
 SERIALIZATION_SPLIT_CONTINUE
-    SW_UNREACHABLE;
+    ar << v.size();
+    for (const auto &c : v)
+        ar << *c;
 SERIALIZATION_SPLIT_END
 
 ////////////////////////////////////////
 
-#define SERIALIZATION_TYPE ::std::vector<::sw::ExecutionPlan::PtrT>
+#define SERIALIZATION_TYPE ::sw::SimpleCommands
 SERIALIZATION_BEGIN_SPLIT
     SW_UNREACHABLE;
 SERIALIZATION_SPLIT_CONTINUE
     ar << v.size();
-    for (auto c : v)
-        ar << *static_cast<::sw::builder::Command*>(c);
+    for (const auto &c : v)
+        ar << *c;
 SERIALIZATION_SPLIT_END
 
 ////////////////////////////////////////////////////////////////////////////////

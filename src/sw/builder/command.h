@@ -191,6 +191,7 @@ struct SW_BUILDER_API Command : ICastable, CommandNode, detail::ResolvableComman
     };
     int maybe_unused = 0;
 
+    path command_storage_root; // used during deserialization to restore command_storage
     CommandStorage *command_storage = nullptr;
 
     Command() = default;
@@ -337,6 +338,15 @@ std::map<path, String> &getMsvcIncludePrefixes();
 
 SW_BUILDER_API
 String detectMsvcPrefix(builder::detail::ResolvableCommand c, const path &idir);
+
+// serialization
+
+// remember to set context and command storage after
+SW_BUILDER_API
+Commands loadCommands(const path &archive_fn, int type = 0);
+
+SW_BUILDER_API
+void saveCommands(const path &archive_fn, const Commands &commands, int type = 0);
 
 } // namespace sw
 

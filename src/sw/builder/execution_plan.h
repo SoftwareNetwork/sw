@@ -59,7 +59,7 @@ public:
     void execute(Executor &e) const;
 
     // functions for builder::Command's
-    static std::tuple<std::unordered_set<std::shared_ptr<builder::Command>>, ExecutionPlan>
+    static std::tuple<Commands, ExecutionPlan>
         load(const path &, const SwBuilderContext &, int type = 0);
     void save(const path &, int type = 0) const;
 
