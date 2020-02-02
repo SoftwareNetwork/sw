@@ -68,6 +68,50 @@ const StringSet &getCppSourceFileExtensions()
     return cpp_source_file_extensions;
 }
 
+struct PredefinedProgramTarget : PredefinedTarget, PredefinedProgram
+{
+    using PredefinedTarget::PredefinedTarget;
+};
+
+struct SimpleProgram : Program
+{
+    using Program::Program;
+
+    std::shared_ptr<Program> clone() const override { return std::make_shared<SimpleProgram>(*this); }
+    std::shared_ptr<builder::Command> getCommand() const override
+    {
+        if (!cmd)
+        {
+            cmd = std::make_shared<builder::Command>(swctx);
+            cmd->setProgram(file);
+        }
+        return cmd;
+    }
+
+private:
+    mutable std::shared_ptr<builder::Command> cmd;
+};
+
+template <class T>
+static T &addTarget(SwCoreContext &s, const PackageId &id, const TargetSettings &ts)
+{
+    LOG_TRACE(logger, "Detected target: " + id.toString());
+
+    auto t = std::make_shared<T>(id, ts);
+    auto &cld = s.getPredefinedTargets();
+    cld[id].push_back(t);
+    return *t;
+}
+
+static PredefinedProgramTarget &addProgram(SwCoreContext &s, const PackageId &id, const TargetSettings &ts, const std::shared_ptr<Program> &p)
+{
+    auto &t = addTarget<PredefinedProgramTarget>(s, id, ts);
+    t.public_ts["output_file"] = normalize_path(p->file);
+    t.setProgram(p);
+    LOG_TRACE(logger, "Detected program: " + p->file.u8string());
+    return t;
+}
+
 void detectNativeCompilers(DETECT_ARGS);
 void detectCSharpCompilers(DETECT_ARGS);
 void detectRustCompilers(DETECT_ARGS);
@@ -103,72 +147,6 @@ void detectCompilers(DETECT_ARGS)
     detectDCompilers(s);
 }
 
-struct PredefinedTarget : ITarget
-{
-    PackageId id;
-    TargetSettings ts;
-    TargetSettings public_ts;
-
-    PredefinedTarget(const PackageId &id) : id(id) {}
-    virtual ~PredefinedTarget() {}
-
-    const PackageId &getPackage() const override { return id; }
-
-    const Source &getSource() const override { static EmptySource es; return es; }
-    Files getSourceFiles() const override { SW_UNIMPLEMENTED; }
-    std::vector<IDependency *> getDependencies() const override { return {}; }
-    bool prepare() override { return false; }
-    Commands getCommands() const override { return {}; }
-    Commands getTests() const override { return {}; }
-
-    const TargetSettings &getSettings() const override { return ts; }
-    const TargetSettings &getInterfaceSettings() const override { return public_ts; }
-};
-
-struct PredefinedProgramTarget : PredefinedTarget, PredefinedProgram
-{
-    using PredefinedTarget::PredefinedTarget;
-};
-
-struct SimpleProgram : Program
-{
-    using Program::Program;
-
-    std::shared_ptr<Program> clone() const override { return std::make_shared<SimpleProgram>(*this); }
-    std::shared_ptr<builder::Command> getCommand() const override
-    {
-        if (!cmd)
-        {
-            cmd = std::make_shared<builder::Command>(swctx);
-            cmd->setProgram(file);
-        }
-        return cmd;
-    }
-
-private:
-    mutable std::shared_ptr<builder::Command> cmd;
-};
-
-template <class T>
-static T &addTarget(SwCoreContext &s, const PackageId &id)
-{
-    LOG_TRACE(logger, "Detected target: " + id.toString());
-
-    auto t = std::make_shared<T>(id);
-    auto &cld = s.getPredefinedTargets();
-    cld[id].push_back(t);
-    return *t;
-}
-
-static PredefinedProgramTarget &addProgram(SwCoreContext &s, const PackageId &id, const std::shared_ptr<Program> &p)
-{
-    auto &t = addTarget<PredefinedProgramTarget>(s, id);
-    t.public_ts["output_file"] = normalize_path(p->file);
-    t.setProgram(p);
-    LOG_TRACE(logger, "Detected program: " + p->file.u8string());
-    return t;
-}
-
 void detectDCompilers(DETECT_ARGS)
 {
     //C->input_extensions = { ".d" };
@@ -182,7 +160,7 @@ void detectDCompilers(DETECT_ARGS)
     p->file = f;
 
     auto v = getVersion(s, p->file);
-    addProgram(s, PackageId("org.dlang.dmd.dmd", v), p);
+    addProgram(s, PackageId("org.dlang.dmd.dmd", v), {}, p);
 }
 
 void detectKotlinCompilers(DETECT_ARGS)
@@ -196,7 +174,7 @@ void detectKotlinCompilers(DETECT_ARGS)
     p->file = f;
 
     auto v = getVersion(s, p->file, "-version");
-    addProgram(s, PackageId("com.JetBrains.kotlin.kotlinc", v), p);
+    addProgram(s, PackageId("com.JetBrains.kotlin.kotlinc", v), {}, p);
 }
 
 void detectJavaCompilers(DETECT_ARGS)
@@ -211,7 +189,7 @@ void detectJavaCompilers(DETECT_ARGS)
     p->file = f;
 
     auto v = getVersion(s, p->file);
-    addProgram(s, PackageId("com.oracle.java.javac", v), p);
+    addProgram(s, PackageId("com.oracle.java.javac", v), {}, p);
 }
 
 void detectFortranCompilers(DETECT_ARGS)
@@ -250,7 +228,7 @@ void detectFortranCompilers(DETECT_ARGS)
     p->file = f;
 
     auto v = getVersion(s, p->file);
-    addProgram(s, PackageId("org.gnu.gcc.fortran", v), p);
+    addProgram(s, PackageId("org.gnu.gcc.fortran", v), {}, p);
 }
 
 void detectGoCompilers(DETECT_ARGS)
@@ -265,7 +243,7 @@ void detectGoCompilers(DETECT_ARGS)
     p->file = f;
 
     auto v = getVersion(s, p->file, "version");
-    addProgram(s, PackageId("org.google.golang.go", v), p);
+    addProgram(s, PackageId("org.google.golang.go", v), {}, p);
 #else
 #endif
 }
@@ -282,7 +260,7 @@ void detectRustCompilers(DETECT_ARGS)
     p->file = f;
 
     auto v = getVersion(s, p->file);
-    addProgram(s, PackageId("org.rust.rustc", v), p);
+    addProgram(s, PackageId("org.rust.rustc", v), {}, p);
 #else
 #endif
 }
@@ -347,7 +325,7 @@ void detectCSharpCompilers(DETECT_ARGS)
         p->file = root / "csc.exe";
 
         auto v1 = getVersion(s, p->file);
-        addProgram(s, PackageId("com.Microsoft.VisualStudio.Roslyn.csc", v1), p);
+        addProgram(s, PackageId("com.Microsoft.VisualStudio.Roslyn.csc", v1), {}, p);
     }
 }
 
@@ -412,8 +390,7 @@ void detectMsvc15Plus(DETECT_ARGS)
                     v = getVersion(s, c2);
                     if (instance.version.isPreRelease())
                         v.getExtra() = instance.version.getExtra();
-                    auto &cl = addProgram(s, PackageId("com.Microsoft.VisualStudio.VC.cl", v), p);
-                    cl.ts = ts;
+                    auto &cl = addProgram(s, PackageId("com.Microsoft.VisualStudio.VC.cl", v), ts, p);
                 }
             }
 
@@ -422,10 +399,7 @@ void detectMsvc15Plus(DETECT_ARGS)
                 auto p = std::make_shared<SimpleProgram>(s);
                 p->file = compiler / "link.exe";
                 if (fs::exists(p->file))
-                {
-                    auto &link = addProgram(s, PackageId("com.Microsoft.VisualStudio.VC.link", v), p);
-                    link.ts = ts;
-                }
+                    addProgram(s, PackageId("com.Microsoft.VisualStudio.VC.link", v), ts, p);
 
                 if (s.getHostOs().Arch != target_arch)
                 {
@@ -436,10 +410,7 @@ void detectMsvc15Plus(DETECT_ARGS)
                 p = std::make_shared<SimpleProgram>(s);
                 p->file = compiler / "lib.exe";
                 if (fs::exists(p->file))
-                {
-                    auto &lib = addProgram(s, PackageId("com.Microsoft.VisualStudio.VC.lib", v), p);
-                    lib.ts = ts;
-                }
+                    addProgram(s, PackageId("com.Microsoft.VisualStudio.VC.lib", v), ts, p);
 
                 if (s.getHostOs().Arch != target_arch)
                 {
@@ -455,8 +426,7 @@ void detectMsvc15Plus(DETECT_ARGS)
                 p->file = compiler / (target_arch == ArchType::x86_64 ? "ml64.exe" : "ml.exe");
                 if (fs::exists(p->file))
                 {
-                    auto &ml = addProgram(s, PackageId("com.Microsoft.VisualStudio.VC.ml", v), p);
-                    ml.ts = ts;
+                    addProgram(s, PackageId("com.Microsoft.VisualStudio.VC.ml", v), ts, p);
                     getMsvcIncludePrefixes()[p->file] = msvc_prefix;
                 }
             }
@@ -473,39 +443,36 @@ void detectMsvc15Plus(DETECT_ARGS)
                     auto v = getVersion(s, c2);
                     if (instance.version.isPreRelease())
                         v.getExtra() = instance.version.getExtra();
-                    auto &cl = addProgram(s, PackageId("com.Microsoft.VisualStudio.VC.dumpbin", v), p);
-                    cl.ts = ts;
+                    addProgram(s, PackageId("com.Microsoft.VisualStudio.VC.dumpbin", v), ts, p);
                 }
             }
 
             // libc++
             {
-                auto &libcpp = addTarget<PredefinedTarget>(s, PackageId("com.Microsoft.VisualStudio.VC.libcpp", v));
-                libcpp.ts = ts;
-                libcpp.public_ts["system-include-directories"].push_back(normalize_path(idir));
-                libcpp.public_ts["system-link-directories"].push_back(normalize_path(root / "lib" / target));
+                auto &libcpp = addTarget<PredefinedTarget>(s, PackageId("com.Microsoft.VisualStudio.VC.libcpp", v), ts);
+                libcpp.public_ts["system_include_directories"].push_back(normalize_path(idir));
+                libcpp.public_ts["system_link_directories"].push_back(normalize_path(root / "lib" / target));
 
                 if (fs::exists(root / "ATLMFC" / "include"))
                 {
-                    auto &atlmfc = addTarget<PredefinedTarget>(s, PackageId("com.Microsoft.VisualStudio.VC.ATLMFC", v));
-                    atlmfc.ts = ts;
-                    atlmfc.public_ts["system-include-directories"].push_back(normalize_path(root / "ATLMFC" / "include"));
-                    atlmfc.public_ts["system-link-directories"].push_back(normalize_path(root / "ATLMFC" / "lib" / target));
+                    auto &atlmfc = addTarget<PredefinedTarget>(s, PackageId("com.Microsoft.VisualStudio.VC.ATLMFC", v), ts);
+                    atlmfc.public_ts["system_include_directories"].push_back(normalize_path(root / "ATLMFC" / "include"));
+                    atlmfc.public_ts["system_link_directories"].push_back(normalize_path(root / "ATLMFC" / "lib" / target));
                 }
             }
 
             // concrt
             if (fs::exists(root / "crt" / "src" / "concrt"))
             {
-                auto &libcpp = addTarget<PredefinedTarget>(s, PackageId("com.Microsoft.VisualStudio.VC.concrt", v));
-                libcpp.public_ts["system-include-directories"].push_back(normalize_path(root / "crt" / "src" / "concrt"));
+                auto &libcpp = addTarget<PredefinedTarget>(s, PackageId("com.Microsoft.VisualStudio.VC.concrt", v), ts);
+                libcpp.public_ts["system_include_directories"].push_back(normalize_path(root / "crt" / "src" / "concrt"));
             }
 
             // vcruntime
             if (fs::exists(root / "crt" / "src" / "vcruntime"))
             {
-                auto &libcpp = addTarget<PredefinedTarget>(s, PackageId("com.Microsoft.VisualStudio.VC.runtime", v));
-                libcpp.public_ts["system-include-directories"].push_back(normalize_path(root / "crt" / "src" / "vcruntime"));
+                auto &libcpp = addTarget<PredefinedTarget>(s, PackageId("com.Microsoft.VisualStudio.VC.runtime", v), ts);
+                libcpp.public_ts["system_include_directories"].push_back(normalize_path(root / "crt" / "src" / "vcruntime"));
             }
         }
     }
@@ -621,8 +588,7 @@ void detectMsvc14AndOlder(DETECT_ARGS)
                     // run getVersion via prepared command
                     builder::detail::ResolvableCommand c2 = *c;
                     v = getVersion(s, c2);
-                    auto &cl = addProgram(s, PackageId("com.Microsoft.VisualStudio.VC.cl", v), p);
-                    cl.ts = ts;
+                    addProgram(s, PackageId("com.Microsoft.VisualStudio.VC.cl", v), ts, p);
                 }
                 else
                     continue;
@@ -633,10 +599,7 @@ void detectMsvc14AndOlder(DETECT_ARGS)
                 auto p = std::make_shared<SimpleProgram>(s);
                 p->file = compiler / "link.exe";
                 if (fs::exists(p->file))
-                {
-                    auto &link = addProgram(s, PackageId("com.Microsoft.VisualStudio.VC.link", v), p);
-                    link.ts = ts;
-                }
+                    addProgram(s, PackageId("com.Microsoft.VisualStudio.VC.link", v), ts, p);
 
                 if (s.getHostOs().Arch != target_arch)
                 {
@@ -647,10 +610,7 @@ void detectMsvc14AndOlder(DETECT_ARGS)
                 p = std::make_shared<SimpleProgram>(s);
                 p->file = compiler / "lib.exe";
                 if (fs::exists(p->file))
-                {
-                    auto &lib = addProgram(s, PackageId("com.Microsoft.VisualStudio.VC.lib", v), p);
-                    lib.ts = ts;
-                }
+                    addProgram(s, PackageId("com.Microsoft.VisualStudio.VC.lib", v), ts, p);
 
                 if (s.getHostOs().Arch != target_arch)
                 {
@@ -666,8 +626,7 @@ void detectMsvc14AndOlder(DETECT_ARGS)
                 p->file = compiler / (target_arch == ArchType::x86_64 ? "ml64.exe" : "ml.exe");
                 if (fs::exists(p->file))
                 {
-                    auto &ml = addProgram(s, PackageId("com.Microsoft.VisualStudio.VC.ml", v), p);
-                    ml.ts = ts;
+                    auto &ml = addProgram(s, PackageId("com.Microsoft.VisualStudio.VC.ml", v), ts, p);
                     getMsvcIncludePrefixes()[p->file] = msvc_prefix;
                 }
             }
@@ -682,24 +641,21 @@ void detectMsvc14AndOlder(DETECT_ARGS)
                     // run getVersion via prepared command
                     builder::detail::ResolvableCommand c2 = *c;
                     auto v = getVersion(s, c2);
-                    auto &cl = addProgram(s, PackageId("com.Microsoft.VisualStudio.VC.dumpbin", v), p);
-                    cl.ts = ts;
+                    addProgram(s, PackageId("com.Microsoft.VisualStudio.VC.dumpbin", v), ts, p);
                 }
             }
 
             // libc++
             {
-                auto &libcpp = addTarget<PredefinedTarget>(s, PackageId("com.Microsoft.VisualStudio.VC.libcpp", v));
-                libcpp.ts = ts;
-                libcpp.public_ts["system-include-directories"].push_back(normalize_path(idir));
-                libcpp.public_ts["system-link-directories"].push_back(normalize_path(root / libdir));
+                auto &libcpp = addTarget<PredefinedTarget>(s, PackageId("com.Microsoft.VisualStudio.VC.libcpp", v), ts);
+                libcpp.public_ts["system_include_directories"].push_back(normalize_path(idir));
+                libcpp.public_ts["system_link_directories"].push_back(normalize_path(root / libdir));
 
                 if (fs::exists(root / "ATLMFC" / "include"))
                 {
-                    auto &atlmfc = addTarget<PredefinedTarget>(s, PackageId("com.Microsoft.VisualStudio.VC.ATLMFC", v));
-                    atlmfc.ts = ts;
-                    atlmfc.public_ts["system-include-directories"].push_back(normalize_path(root / "ATLMFC" / "include"));
-                    atlmfc.public_ts["system-link-directories"].push_back(normalize_path(root / "ATLMFC" / libdir));
+                    auto &atlmfc = addTarget<PredefinedTarget>(s, PackageId("com.Microsoft.VisualStudio.VC.ATLMFC", v), ts);
+                    atlmfc.public_ts["system_include_directories"].push_back(normalize_path(root / "ATLMFC" / "include"));
+                    atlmfc.public_ts["system_link_directories"].push_back(normalize_path(root / "ATLMFC" / libdir));
                 }
             }
         }
@@ -866,31 +822,29 @@ static void detectWindowsSdk(DETECT_ARGS)
                 auto libdir = kit_root / "Lib" / ldir_subversion / name / toStringWindows(target_arch);
                 if (fs::exists(libdir))
                 {
-                    auto &t = addTarget<PredefinedTarget>(s, PackageId("com.Microsoft.Windows.SDK." + name, v));
-                    t.ts = ts;
+                    auto &t = addTarget<PredefinedTarget>(s, PackageId("com.Microsoft.Windows.SDK." + name, v), ts);
                     //t.ts["os"]["version"] = v.toString();
 
-                    t.public_ts["system-include-directories"].push_back(normalize_path(idir / name));
+                    t.public_ts["system_include_directories"].push_back(normalize_path(idir / name));
                     for (auto &i : idirs)
-                        t.public_ts["system-include-directories"].push_back(normalize_path(idir / i));
-                    t.public_ts["system-link-directories"].push_back(normalize_path(libdir));
+                        t.public_ts["system_include_directories"].push_back(normalize_path(idir / i));
+                    t.public_ts["system_link_directories"].push_back(normalize_path(libdir));
                 }
                 else if (without_ldir)
                 {
-                    auto &t = addTarget<PredefinedTarget>(s, PackageId("com.Microsoft.Windows.SDK." + name, v));
-                    t.ts = ts;
+                    auto &t = addTarget<PredefinedTarget>(s, PackageId("com.Microsoft.Windows.SDK." + name, v), ts);
                     //t.ts["os"]["version"] = v.toString();
 
-                    t.public_ts["system-include-directories"].push_back(normalize_path(idir / name));
+                    t.public_ts["system_include_directories"].push_back(normalize_path(idir / name));
                     for (auto &i : idirs)
-                        t.public_ts["system-include-directories"].push_back(normalize_path(idir / i));
+                        t.public_ts["system_include_directories"].push_back(normalize_path(idir / i));
                 }
                 else
                     LOG_TRACE(logger, "No libdir " << libdir << " found for library: " << name);
             }
         }
 
-        void addTools(SwCoreContext &s, OS &new_settings)
+        void addTools(SwCoreContext &s)
         {
             // .rc
             {
@@ -899,9 +853,10 @@ static void detectWindowsSdk(DETECT_ARGS)
                 if (fs::exists(p->file))
                 {
                     auto v = getVersion(s, p->file, "/?");
-                    auto &rc = addProgram(s, PackageId("com.Microsoft.Windows.rc", v), p);
-                    auto ts1 = toTargetSettings(new_settings);
-                    rc.ts["os"]["kernel"] = ts1["os"]["kernel"];
+                    TargetSettings ts2;
+                    auto ts1 = toTargetSettings(s.getHostOs());
+                    ts2["os"]["kernel"] = ts1["os"]["kernel"];
+                    auto &rc = addProgram(s, PackageId("com.Microsoft.Windows.rc", v), ts2, p);
                 }
                 // these are passed from compiler during merge?
                 //for (auto &idir : COpts.System.IncludeDirectories)
@@ -915,9 +870,10 @@ static void detectWindowsSdk(DETECT_ARGS)
                 if (fs::exists(p->file))
                 {
                     auto v = getVersion(s, p->file, "/?");
-                    auto &rc = addProgram(s, PackageId("com.Microsoft.Windows.mc", v), p);
-                    auto ts1 = toTargetSettings(new_settings);
-                    rc.ts["os"]["kernel"] = ts1["os"]["kernel"];
+                    auto ts1 = toTargetSettings(s.getHostOs());
+                    TargetSettings ts2;
+                    ts2["os"]["kernel"] = ts1["os"]["kernel"];
+                    auto &rc = addProgram(s, PackageId("com.Microsoft.Windows.mc", v), ts2, p);
                 }
                 // these are passed from compiler during merge?
                 //for (auto &idir : COpts.System.IncludeDirectories)
@@ -989,7 +945,7 @@ static void detectWindowsSdk(DETECT_ARGS)
                     WinKit wk;
                     wk.kit_root = kr;
                     wk.bdir_subversion = v.toString();
-                    wk.addTools(s, new_settings);
+                    wk.addTools(s);
                 }
             }
         }
@@ -1037,7 +993,7 @@ static void detectWindowsSdk(DETECT_ARGS)
             {
                 WinKit wk;
                 wk.kit_root = kr;
-                wk.addTools(s, new_settings);
+                wk.addTools(s);
             }
         }
     }
@@ -1098,7 +1054,7 @@ static void detectWindowsClang(DETECT_ARGS)
             getMsvcIncludePrefixes()[p->file] = msvc_prefix;
 
             auto v = getVersion(s, p->file);
-            auto &c = addProgram(s, PackageId("org.LLVM.clangcl", v), p);
+            auto &c = addProgram(s, PackageId("org.LLVM.clangcl", v), {}, p);
 
             if (colored_output)
             {
@@ -1126,7 +1082,7 @@ static void detectWindowsClang(DETECT_ARGS)
         if (fs::exists(p->file))
         {
             auto v = getVersion(s, p->file);
-            auto &c = addProgram(s, PackageId("org.LLVM.lld", v), p);
+            addProgram(s, PackageId("org.LLVM.lld", v), {}, p);
         }
     }
 
@@ -1143,7 +1099,7 @@ static void detectWindowsClang(DETECT_ARGS)
         if (fs::exists(p->file))
         {
             auto v = getVersion(s, p->file);
-            auto &c = addProgram(s, PackageId("org.LLVM.ar", v), p);
+            addProgram(s, PackageId("org.LLVM.ar", v), {}, p);
         }
     }
 
@@ -1160,7 +1116,7 @@ static void detectWindowsClang(DETECT_ARGS)
         if (fs::exists(p->file))
         {
             auto v = getVersion(s, p->file);
-            auto &c = addProgram(s, PackageId("org.LLVM.clang", v), p);
+            addProgram(s, PackageId("org.LLVM.clang", v), {}, p);
 
             if (colored_output)
             {
@@ -1187,7 +1143,7 @@ static void detectWindowsClang(DETECT_ARGS)
         if (fs::exists(p->file))
         {
             auto v = getVersion(s, p->file);
-            auto &c = addProgram(s, PackageId("org.LLVM.clangpp", v), p);
+            auto &c = addProgram(s, PackageId("org.LLVM.clangpp", v), {}, p);
 
             if (colored_output)
             {
@@ -1217,7 +1173,7 @@ static void detectIntelCompilers(DETECT_ARGS)
             if (fs::exists(p->file))
             {
                 auto v = getVersion(s, p->file);
-                addProgram(s, PackageId(ppath, v), p);
+                addProgram(s, PackageId(ppath, v), {}, p);
 
                 // icl/xilib/xilink on win wants VC in PATH
                 auto &cld = s.getPredefinedTargets();
@@ -1284,7 +1240,7 @@ static void detectIntelCompilers(DETECT_ARGS)
             if (fs::exists(p->file))
             {
                 auto v = getVersion(s, p->file);
-                addProgram(s, PackageId("com.intel.compiler.c", v), p);
+                addProgram(s, PackageId("com.intel.compiler.c", v), {}, p);
             }
         }
 
@@ -1294,7 +1250,7 @@ static void detectIntelCompilers(DETECT_ARGS)
             if (fs::exists(p->file))
             {
                 auto v = getVersion(s, p->file);
-                addProgram(s, PackageId("com.intel.compiler.cpp", v), p);
+                addProgram(s, PackageId("com.intel.compiler.cpp", v), {}, p);
             }
         }
     }
@@ -1318,7 +1274,7 @@ static void detectNonWindowsCompilers(DETECT_ARGS)
             // the following version 7.4.0-1ubuntu1~18.04.1
             // which will be parsed as pre-release
             auto v = getVersion(s, p->file, "--version", "\\d+(\\.\\d+){2,}");
-            auto &c = addProgram(s, PackageId(ppath, v), p);
+            auto &c = addProgram(s, PackageId(ppath, v), {}, p);
         }
     };
 
