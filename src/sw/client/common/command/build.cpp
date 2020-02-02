@@ -582,6 +582,12 @@ std::unique_ptr<sw::SwBuild> createBuild(sw::SwContext &swctx, const Options &op
     b->setName(options.build_name);
 
     sw::TargetSettings bs;
+
+    // this is coming from the outside to distinguish from
+    // internal builds (checks, scripts builds)
+    bs["master_build"] = "true";
+
+    //
     if (options.build_always)
         bs["build_always"] = "true";
     if (!options.options_build.ide_copy_to_dir.empty())
