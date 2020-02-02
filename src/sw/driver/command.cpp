@@ -36,6 +36,7 @@ BOOST_CLASS_TYPE_INFO(
     boost::serialization::extended_type_info_typeid<::sw::driver::Command>
 )*/
 
+#undef SERIALIZATION_TYPE
 #define SERIALIZATION_TYPE ::sw::driver::Command
 SERIALIZATION_BEGIN_SPLIT
     SW_UNIMPLEMENTED;
