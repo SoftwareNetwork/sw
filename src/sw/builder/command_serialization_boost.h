@@ -70,6 +70,13 @@ SERIALIZATION_SPLIT_END
 
 #define SERIALIZATION_TYPE ::sw::builder::Command
 SERIALIZATION_BEGIN_SPLIT
+
+    /*if (version != serialization_version)
+    {
+        throw SW_RUNTIME_ERROR("Incorrect archive version (" + std::to_string(version) + "), expected (" +
+            std::to_string(serialization_version) + "), run configure command again");
+    }*/
+
     ar & base_object<::primitives::Command>(v);
 
     ar & v.name;
@@ -137,5 +144,8 @@ SERIALIZATION_SPLIT_CONTINUE
     for (const auto &c : v)
         ar << *c;
 SERIALIZATION_SPLIT_END
+
+// change when you update serialization
+BOOST_CLASS_VERSION(::sw::builder::Command, 3)
 
 ////////////////////////////////////////////////////////////////////////////////

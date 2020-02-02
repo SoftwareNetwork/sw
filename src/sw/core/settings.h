@@ -6,12 +6,17 @@
 
 #pragma once
 
+#include <boost/serialization/split_member.hpp>
+
 #include <nlohmann/json_fwd.hpp>
-#include <primitives/string.h>
+#include <primitives/filesystem.h>
 
 #include <memory>
 #include <optional>
 #include <variant>
+
+// SERIALIZATION_ACCESS_FWD
+namespace boost::serialization { class access; }
 
 namespace sw
 {
@@ -66,6 +71,15 @@ private:
     nlohmann::json toJson() const;
 
     friend struct TargetSetting;
+
+    //
+    // SERIALIZATION_ACCESS
+    friend class boost::serialization::access;
+    template <class Ar>
+    void serialize(Ar &ar, unsigned)
+    {
+        ar & settings;
+    }
 };
 
 struct SW_CORE_API TargetSetting
@@ -154,9 +168,112 @@ private:
     void copy_fields(const TargetSetting &);
 
     friend struct TargetSettings;
+
+    // SERIALIZATION_ACCESS
+    friend class boost::serialization::access;
+
+    template <class Ar>
+    void load(Ar &ar, unsigned)
+    {
+        size_t idx;
+        ar & idx;
+        switch (idx)
+        {
+        case 0:
+            break;
+        case 1:
+        {
+            Value v;
+            ar & v;
+            value = v;
+        }
+            break;
+        case 2:
+        {
+            size_t idx;
+            ar & idx;
+            Array v1;
+            v1.resize(idx);
+            for (auto &v2 : v1)
+            {
+                size_t idx;
+                ar & idx;
+                switch (idx)
+                {
+                case 0:
+                {
+                    Value v;
+                    ar & v;
+                    v2 = v;
+                }
+                    break;
+                case 1:
+                {
+                    Map v;
+                    ar & v;
+                    v2 = v;
+                }
+                    break;
+                }
+            }
+        }
+            break;
+        case 3:
+        {
+            Map v;
+            ar & v;
+            value = v;
+        }
+            break;
+        }
+    }
+    template <class Ar>
+    void save(Ar &ar, unsigned) const
+    {
+        ar & value.index();
+        switch (value.index())
+        {
+        case 0:
+            break;
+        case 1:
+            ar & std::get<Value>(value);
+            break;
+        case 2:
+        {
+            auto &v1 = std::get<Array>(value);
+            ar & v1.size();
+            for (auto &v : v1)
+            {
+                ar & v.index();
+                switch (v.index())
+                {
+                case 0:
+                    ar & std::get<Value>(v);
+                    break;
+                case 1:
+                    ar & std::get<Map>(v);
+                    break;
+                }
+            }
+        }
+            break;
+        case 3:
+            ar & std::get<Map>(value);
+            break;
+        }
+    }
+    BOOST_SERIALIZATION_SPLIT_MEMBER()
 };
 
 SW_CORE_API
 TargetSettings toTargetSettings(const struct OS &);
+
+// serialization
+
+SW_CORE_API
+TargetSettings loadSettings(const path &archive_fn, int type = 0);
+
+SW_CORE_API
+void saveSettings(const path &archive_fn, const TargetSettings &, int type = 0);
 
 } // namespace sw

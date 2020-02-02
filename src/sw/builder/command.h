@@ -341,12 +341,12 @@ String detectMsvcPrefix(builder::detail::ResolvableCommand c, const path &idir);
 
 // serialization
 
-// remember to set context and command storage after
+// remember to set context and command storage after loading
 SW_BUILDER_API
 Commands loadCommands(const path &archive_fn, int type = 0);
 
 SW_BUILDER_API
-void saveCommands(const path &archive_fn, const Commands &commands, int type = 0);
+void saveCommands(const path &archive_fn, const Commands &, int type = 0);
 
 } // namespace sw
 

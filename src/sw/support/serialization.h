@@ -97,3 +97,62 @@ SERIALIZATION_SPLIT_END
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////
+
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
+
+enum SerializationType
+{
+    BoostSerializationBinaryArchive,
+    BoostSerializationTextArchive,
+};
+
+template <class T>
+T deserialize(const path &archive_fn, int type = 0)
+{
+    T data;
+    if (type == SerializationType::BoostSerializationBinaryArchive)
+    {
+        std::ifstream ifs(archive_fn, std::ios_base::in | std::ios_base::binary);
+        if (!ifs)
+            throw SW_RUNTIME_ERROR("Cannot read file: " + normalize_path(archive_fn));
+        boost::archive::binary_iarchive ia(ifs);
+        load(ia, data);
+    }
+    else if (type == SerializationType::BoostSerializationTextArchive)
+    {
+        std::ifstream ifs(archive_fn);
+        if (!ifs)
+            throw SW_RUNTIME_ERROR("Cannot read file: " + normalize_path(archive_fn));
+        boost::archive::text_iarchive ia(ifs);
+        load(ia, data);
+    }
+    else
+        throw SW_RUNTIME_ERROR("Bad type");
+    return data;
+}
+
+template <class T>
+void serialize(const path &archive_fn, const T &v, int type = 0)
+{
+    if (type == SerializationType::BoostSerializationBinaryArchive)
+    {
+        std::ofstream ofs(archive_fn, std::ios_base::out | std::ios_base::binary);
+        if (!ofs)
+            throw SW_RUNTIME_ERROR("Cannot write file: " + normalize_path(archive_fn));
+        boost::archive::binary_oarchive oa(ofs);
+        return save(oa, v);
+    }
+    else if (type == SerializationType::BoostSerializationTextArchive)
+    {
+        std::ofstream ofs(archive_fn);
+        if (!ofs)
+            throw SW_RUNTIME_ERROR("Cannot write file: " + normalize_path(archive_fn));
+        boost::archive::text_oarchive oa(ofs);
+        return save(oa, v);
+    }
+    else
+        throw SW_RUNTIME_ERROR("Bad type");
+}
