@@ -314,6 +314,30 @@ void SwBuild::loadPackages(const TargetMap &predefined)
             if (s.empty())
                 continue;
 
+            if (build_settings["master_build"] == "true") // allow only in the main build for now
+            if (d.first.toString() == "org.sw.demo.madler.zlib-1.2.11"
+                || d.first.toString() == "org.sw.demo.glennrp.png-1.6.37"
+                )
+            {
+                LocalPackage p(getContext().getLocalStorage(), d.first);
+                auto cfg = s.getHash();
+                auto base = p.getDirObj(cfg);
+                auto sfn = base / "settings.json";
+                if (fs::exists(sfn))
+                {
+                    LOG_TRACE(logger, "loading " << d.first.toString() << ": " << s.getHash() << " from settings file");
+
+                    auto tgt = std::make_shared<PredefinedTarget>(d.first, s);
+                    //tgt->public_ts = loadSettings(sfn);
+                    TargetSettings its;
+                    its.mergeFromString(read_file(sfn));
+                    tgt->public_ts = its;
+                    getTargets()[tgt->getPackage()].push_back(tgt);
+                    loaded = true;
+                    continue;
+                }
+            }
+
             LOG_TRACE(logger, "build id " << this << " " << BOOST_CURRENT_FUNCTION << " loading " << d.first.toString());
 
             loaded = true;
@@ -406,6 +430,34 @@ void SwBuild::prepare()
 
     while (prepareStep())
         ;
+
+    // after prepare it is possible to record our targets
+    // to skip many previous steps in the future
+    if (build_settings["master_build"] != "true")
+        return;
+
+    for (const auto &[pkg, tgts] : getTargets())
+    {
+        if (pkg.toString() != "org.sw.demo.madler.zlib-1.2.11" && pkg.toString() != "org.sw.demo.glennrp.png-1.6.37")
+            continue;
+        for (auto &tgt : tgts)
+        {
+            LocalPackage p(getContext().getLocalStorage(), tgt->getPackage());
+            auto cfg = tgt->getSettings().getHash();
+            auto base = p.getDirObj(cfg);
+            auto sfn = base / "settings.json";
+            auto sptrfn = base / "settings.hash";
+
+            LOG_INFO(logger, "saving " << pkg.toString() << ": " << cfg << " into settings file " << sfn);
+
+            if (!fs::exists(sfn) || !fs::exists(sptrfn) || read_file(sptrfn) != tgt->getInterfaceSettings().getHash())
+            {
+                //saveSettings(sfn, tgt->getInterfaceSettings());
+                write_file(sfn, nlohmann::json::parse(tgt->getInterfaceSettings().getConfig()).dump(4));
+                write_file(sptrfn, tgt->getInterfaceSettings().getHash());
+            }
+        }
+    }
 }
 
 void SwBuild::execute() const
