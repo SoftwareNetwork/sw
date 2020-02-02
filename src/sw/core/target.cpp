@@ -127,7 +127,6 @@ ITarget *TargetMap::find(const PackageId &pkg, const TargetSettings &ts) const
 
 ITarget *TargetMap::find(const UnresolvedPackage &pkg, const TargetSettings &ts) const
 {
-    // TODO: consider provided resolving into find()
     auto i = find(pkg);
     if (i == end())
         return {};

@@ -59,10 +59,6 @@ enum class ConfigureFlags
     Default = Empty, //AddToBuild,
 };
 
-struct PredefinedTarget : Target, PredefinedProgram
-{
-};
-
 /**
 * \brief Native Target is a binary target that produces binary files (probably executables).
 */
