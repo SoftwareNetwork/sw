@@ -136,4 +136,58 @@ ITarget *TargetMap::find(const UnresolvedPackage &pkg, const TargetSettings &ts)
     return k->get();
 }
 
+PredefinedTarget::PredefinedTarget(const PackageId &id, const TargetSettings &ts)
+    : pkg(id), ts(ts)
+{
+}
+
+PredefinedTarget::~PredefinedTarget()
+{
+}
+
+struct PredefinedDependency : IDependency
+{
+    PredefinedDependency(const PackageId &unresolved_pkg, const TargetSettings &ts) : unresolved_pkg(unresolved_pkg), ts(ts) {}
+    virtual ~PredefinedDependency() {}
+
+    const TargetSettings &getSettings() const override { return ts; }
+    UnresolvedPackage getUnresolvedPackage() const override { return unresolved_pkg; }
+    bool isResolved() const override { return t; }
+    void setTarget(const ITarget &t) override { this->t = &t; }
+    const ITarget &getTarget() const override
+    {
+        if (!t)
+            throw SW_RUNTIME_ERROR("not resolved");
+        return *t;
+    }
+
+private:
+    PackageId unresolved_pkg;
+    TargetSettings ts;
+    const ITarget *t = nullptr;
+};
+
+std::vector<IDependency *> PredefinedTarget::getDependencies() const
+{
+    if (!deps_set)
+    {
+        //for (auto &[k, v] : public_ts["dependencies"]["link"].getSettings())
+            //deps.push_back(std::make_shared<PredefinedDependency>(k, v.getSettings()));
+
+        for (auto &[k, v] : public_ts["new"].getSettings())
+        {
+            for (auto &[k, v] : v["dependencies"].getSettings())
+            {
+                deps.push_back(std::make_shared<PredefinedDependency>(k, v.getSettings()));
+            }
+        }
+
+        deps_set = true;
+    }
+    std::vector<IDependency *> deps;
+    for (auto &d : this->deps)
+        deps.push_back(d.get());
+    return deps;
+}
+
 }

@@ -33,6 +33,8 @@ struct SW_CORE_API IDependency
     virtual const ITarget &getTarget() const = 0;
 };
 
+using IDependencyPtr = std::shared_ptr<IDependency>;
+
 /// Very basic interface for targets and must be very stable.
 /// You won't be operating much using it.
 /// Instead, text interface for querying data will be available.
@@ -124,6 +126,37 @@ using ITargetPtr = std::shared_ptr<ITarget>;
     // get cl args?
     // get link args?
 };*/
+
+// this target will be created by core
+// when saved settings loaded
+// when program detection occurs
+struct SW_CORE_API PredefinedTarget : ITarget
+{
+    TargetSettings public_ts;
+
+    PredefinedTarget(const PackageId &, const TargetSettings &);
+    virtual ~PredefinedTarget();
+
+    std::vector<IDependency *> getDependencies() const override;
+
+    // return what we know
+    const PackageId &getPackage() const override { return pkg; }
+    const TargetSettings &getSettings() const override { return ts; }
+    const TargetSettings &getInterfaceSettings() const override { return public_ts; }
+
+    // lightweight target
+    const Source &getSource() const override { static EmptySource es; return es; }  // empty source
+    Files getSourceFiles() const override { return {}; }                            // no source files
+    bool prepare() override { return false; }                                       // no prepare
+    Commands getCommands() const override { return {}; }                            // no commands
+    Commands getTests() const override { return {}; }                               // no tests
+
+private:
+    PackageId pkg;
+    TargetSettings ts;
+    mutable bool deps_set = false;
+    mutable std::vector<IDependencyPtr> deps;
+};
 
 struct SW_CORE_API TargetContainer
 {
