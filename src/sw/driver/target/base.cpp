@@ -471,8 +471,7 @@ path Target::getObjectDir(const LocalPackage &in) const
 
 path Target::getObjectDir(const LocalPackage &pkg, const String &cfg)
 {
-    // bld was build
-    return pkg.getDirObj() / "bld" / cfg;
+    return pkg.getDirObj(cfg);
 }
 
 void Target::setRootDirectory(const path &p)

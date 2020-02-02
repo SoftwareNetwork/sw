@@ -147,6 +147,12 @@ path LocalPackage::getDirObj() const
     return getDir() / "obj";
 }
 
+path LocalPackage::getDirObj(const String &cfg) const
+{
+    // bld was build
+    return getDirObj() / "bld" / cfg;
+}
+
 path LocalPackage::getDirInfo() const
 {
     // maybe you getDir()? because gitDirSrc() is unpacked from archive
