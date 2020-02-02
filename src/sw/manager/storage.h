@@ -76,12 +76,23 @@ struct SW_MANAGER_API Directories
 
 enum class StorageFileType
 {
-    // or Archive or DataArchive
-    SourceArchive       =   0x1,
+    //
+    SourceArchive       =   1,
 
-    // db?
-    // binary files
-    // dbg info
+    // everything below is not stable yet
+
+    // binaries + runtime data
+    // or split?
+    RuntimeArchive      =   2,
+
+    RuntimeDataArchive,
+
+    // RuntimeArchive + headers + implib
+    DevelopmentArchive,
+
+    // symbols, pdb, dbg info
+    SymbolArchive,
+
     // data files
     // config files
     // used files
