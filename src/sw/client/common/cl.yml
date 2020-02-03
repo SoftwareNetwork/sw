@@ -32,6 +32,10 @@ command_line:
         external: true
         description: When on cygwin, allow it as host
 
+    use_saved_configs:
+        option: usc
+        default_value: true
+
     #
     save_failed_commands:
         type: bool

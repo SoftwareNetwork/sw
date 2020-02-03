@@ -331,7 +331,8 @@ void SwBuild::loadPackages(const TargetMap &predefined)
             if (s.empty())
                 continue;
 
-            if (0 && build_settings["master_build"] == "true") // allow only in the main build for now
+            if (build_settings["use_saved_configs"] == "true" &&
+                build_settings["master_build"] == "true") // allow only in the main build for now
             {
                 LocalPackage p(getContext().getLocalStorage(), d.first);
                 auto cfg = s.getHash();
