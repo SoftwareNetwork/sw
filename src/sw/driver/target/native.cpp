@@ -741,25 +741,32 @@ void NativeCompiledTarget::setupCommand(builder::Command &c) const
             {
                 if (!*nt->HeaderOnly && nt->getSelectedTool() == nt->Linker.get())
                 {
-                    f(nt);
+                    f(nt->getOutputFile());
+                }
+            }
+            else if (auto nt = d->getTarget().as<PredefinedTarget *>())
+            {
+                auto &ts = nt->getInterfaceSettings();
+                if (ts["header_only"] != "true" && ts["type"] == "native_shared_library")
+                {
+                    f(fs::u8path(ts["output_file"].getValue()));
                 }
             }
             else
-                continue;
-                //throw SW_RUNTIME_ERROR("missing predefined target code");
+                throw SW_RUNTIME_ERROR("missing predefined target code");
         }
     };
 
     if (standalone)
     {
-        for_deps([this, &c](auto nt)
+        for_deps([this, &c](const path &output_file)
         {
             if (getContext().HostOS.is(OSType::Windows))
-                c.addPathDirectory(nt->getOutputFile().parent_path());
+                c.addPathDirectory(output_file.parent_path());
             else if (getContext().HostOS.isApple())
-                c.environment["DYLD_LIBRARY_PATH"] += normalize_path(nt->getOutputFile().parent_path()) + ":";
+                c.environment["DYLD_LIBRARY_PATH"] += normalize_path(output_file.parent_path()) + ":";
             else // linux and others
-                c.environment["LD_LIBRARY_PATH"] += normalize_path(nt->getOutputFile().parent_path()) + ":";
+                c.environment["LD_LIBRARY_PATH"] += normalize_path(output_file.parent_path()) + ":";
         });
         return;
     }
@@ -769,11 +776,11 @@ void NativeCompiledTarget::setupCommand(builder::Command &c) const
 
     if (createWindowsRpath())
     {
-        for_deps([&c](auto nt)
+        for_deps([&c](const path &output_file)
         {
             // dlls, when emulating rpath, are created after executables and commands running them
             // so we put explicit dependency on them
-            c.addInput(nt->getOutputFile());
+            c.addInput(output_file);
         });
     }
 }
