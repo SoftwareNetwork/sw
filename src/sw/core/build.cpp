@@ -197,7 +197,9 @@ void SwBuild::resolvePackages()
 
     // gather
     UnresolvedPackages upkgs;
-    for (const auto &[pkg, tgts] : getTargetsToBuild())
+    // remove first loop?
+    // we have already loaded inputs
+    /*for (const auto &[pkg, tgts] : getTargetsToBuild())
     {
         for (const auto &tgt : tgts)
         {
@@ -208,7 +210,7 @@ void SwBuild::resolvePackages()
                 upkgs.insert(pkg);
             break;
         }
-    }
+    }*/
     for (const auto &[pkg, tgts] : getTargets())
     {
         for (const auto &tgt : tgts)
