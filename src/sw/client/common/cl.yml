@@ -29,7 +29,7 @@ command_line:
 
     use_saved_configs:
         option: usc
-        default_value: true
+        #default_value: true
 
     #
     save_failed_commands:
