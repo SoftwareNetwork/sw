@@ -116,7 +116,7 @@ void SwBuild::build()
         ;
 
     if (build_settings["measure"] == "true")
-        LOG_DEBUG(logger, BOOST_CURRENT_FUNCTION " time: " << t.getTimeFloat() << " s.");
+        LOG_DEBUG(logger, BOOST_CURRENT_FUNCTION << " time: " << t.getTimeFloat() << " s.");
 }
 
 bool SwBuild::step()
@@ -477,7 +477,7 @@ void SwBuild::execute(ExecutionPlan &p) const
     ScopedTime t;
     p.execute(getExecutor());
     if (build_settings["measure"] == "true")
-        LOG_DEBUG(logger, BOOST_CURRENT_FUNCTION " time: " << t.getTimeFloat() << " s.");
+        LOG_DEBUG(logger, BOOST_CURRENT_FUNCTION << " time: " << t.getTimeFloat() << " s.");
 
     if (build_settings["time_trace"] == "true")
         p.saveChromeTrace(getBuildDirectory() / "misc" / "time_trace.json");

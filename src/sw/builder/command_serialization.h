@@ -29,7 +29,7 @@ void saveCommands(A &ar, const T &cmds)
     commands.reserve(cmds.size());
     for (auto &c : cmds)
         commands.push_back(c.get());
-    return commands;
+    saveCommands(ar, commands);
 }
 
 }

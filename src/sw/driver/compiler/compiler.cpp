@@ -223,7 +223,7 @@ void VisualStudioCompiler::setOutputFile(const path &output_file)
 
 SW_DEFINE_PROGRAM_CLONE(VisualStudioCompiler)
 
-void VisualStudioCompiler::setSourceFile(const path &input_file, path &output_file)
+void VisualStudioCompiler::setSourceFile(const path &input_file, const path &output_file)
 {
     InputFile = input_file;
     VisualStudioCompiler::setOutputFile(output_file);
@@ -273,7 +273,7 @@ path VisualStudioASMCompiler::getOutputFile() const
     return Output();
 }
 
-void VisualStudioASMCompiler::setSourceFile(const path &input_file, path &output_file)
+void VisualStudioASMCompiler::setSourceFile(const path &input_file, const path &output_file)
 {
     InputFile = input_file;
     setOutputFile(output_file);
@@ -326,7 +326,7 @@ path ClangCompiler::getOutputFile() const
 
 SW_DEFINE_PROGRAM_CLONE(ClangCompiler)
 
-void ClangCompiler::setSourceFile(const path &input_file, path &output_file)
+void ClangCompiler::setSourceFile(const path &input_file, const path &output_file)
 {
     InputFile = input_file;
     setOutputFile(output_file);
@@ -411,7 +411,7 @@ path ClangClCompiler::getOutputFile() const
 
 SW_DEFINE_PROGRAM_CLONE(ClangClCompiler)
 
-void ClangClCompiler::setSourceFile(const path &input_file, path &output_file)
+void ClangClCompiler::setSourceFile(const path &input_file, const path &output_file)
 {
     InputFile = input_file;
     setOutputFile(output_file);
@@ -455,7 +455,7 @@ path GNUASMCompiler::getOutputFile() const
     return OutputFile();
 }
 
-void GNUASMCompiler::setSourceFile(const path &input_file, path &output_file)
+void GNUASMCompiler::setSourceFile(const path &input_file, const path &output_file)
 {
     InputFile = input_file;
     setOutputFile(output_file);
@@ -510,7 +510,7 @@ path GNUCompiler::getOutputFile() const
 
 SW_DEFINE_PROGRAM_CLONE(GNUCompiler)
 
-void GNUCompiler::setSourceFile(const path &input_file, path &output_file)
+void GNUCompiler::setSourceFile(const path &input_file, const path &output_file)
 {
     InputFile = input_file;
     // gcc does not accept this, clang does

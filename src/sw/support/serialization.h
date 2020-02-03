@@ -5,6 +5,9 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include <boost/serialization/split_free.hpp>
+#include <primitives/exceptions.h>
+
+#include <fstream>
 
 #define SERIALIZATION_BEGIN_SERIALIZE(t) \
     template <class Archive>             \

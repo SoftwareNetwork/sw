@@ -6,10 +6,10 @@
 
 #include "execution_plan.h"
 
-#include <sw/support/serialization.h>
-
-#include "command_serialization.h"
 #include "sw_context.h"
+
+#include <sw/support/serialization.h>
+#include "command_serialization.h"
 
 namespace sw
 {
