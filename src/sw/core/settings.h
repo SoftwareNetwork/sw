@@ -174,6 +174,9 @@ private:
     template <class Ar>
     void load(Ar &ar, unsigned)
     {
+        ar & used_in_hash;
+        ar & ignore_in_comparison;
+        //
         size_t idx;
         ar & idx;
         switch (idx)
@@ -229,6 +232,9 @@ private:
     template <class Ar>
     void save(Ar &ar, unsigned) const
     {
+        ar & used_in_hash;
+        ar & ignore_in_comparison;
+        //
         ar & value.index();
         switch (value.index())
         {
