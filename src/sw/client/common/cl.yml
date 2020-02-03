@@ -8,10 +8,7 @@ command_line:
         type: path
 
     curl_verbose:
-        type: bool
-
     ignore_ssl_checks:
-        type: bool
 
 
     # from libs
@@ -23,12 +20,10 @@ command_line:
 
     allow_cygwin_hosts:
         option: host-cygwin
-        type: bool
         external: true
         description: When on cygwin, allow it as host
 
     do_not_remove_bad_module:
-        type: bool
         external: true
         description: When on cygwin, allow it as host
 
@@ -38,25 +33,20 @@ command_line:
 
     #
     save_failed_commands:
-        type: bool
         external: true
         aliases: sfc
     save_all_commands:
-        type: bool
         external: true
         aliases: sac
     save_executed_commands:
-        type: bool
         external: true
         aliases: sec
 
     # explain
     explain_outdated:
-        type: bool
         external: true
         description: Explain outdated commands
     explain_outdated_full:
-        type: bool
         external: true
         description: Explain outdated commands with more info
 
@@ -66,21 +56,17 @@ command_line:
         description: Explicitly set saved command format (bat or sh)
 
     debug_configs:
-        type: bool
         external: true
         description: Build configs in debug mode
 
     ignore_source_files_errors:
-        type: bool
         external: true
         description: Useful for debugging
 
     do_not_mangle_object_names:
-        type: bool
         external: true
 
     standalone:
-        type: bool
         external: true
         default_value: true
         description: Build standalone binaries
@@ -89,15 +75,12 @@ command_line:
     # checks
     checks_single_thread:
         option: checks-st
-        type: bool
         external: true
         description: Perform checks in one thread (for cc)
     print_checks:
-        type: bool
         external: true
         description: Save extended checks info to file
     wait_for_cc_checks:
-        type: bool
         external: true
         description: Do not exit on missing cc checks, wait for user input
     cc_checks_command:
@@ -112,20 +95,16 @@ command_line:
 
     build_always:
         option: B
-        type: bool
         desc: Build always
     skip_errors:
         option: k
         type: int
         desc: Skip errors
     time_trace:
-        type: bool
         desc: Record chrome time trace events
 
     show_output:
-        type: bool
     write_output_to_file:
-        type: bool
 
     #//static cl::opt<bool> print_graph("print-graph", cl::desc("Print file with build graph"));
 
@@ -202,7 +181,6 @@ command_line:
         desc: Set build libcpp
 
     static_dependencies:
-        type: bool
         desc: Build static dependencies of inputs
         aliases: static-deps
 
@@ -367,7 +345,6 @@ command_line:
 
             build_fetch:
                 option: fetch
-                type: bool
                 desc: Fetch sources, then build
 
             build_explan:
@@ -377,12 +354,10 @@ command_line:
 
             build_default_explan:
                 option: e
-                type: bool
                 desc: Build execution plan
 
             isolated_build:
                 option: isolated
-                type: bool
                 desc: Copy source files to isolated folders to check build like just after uploading
 
             ide_fast_path:
