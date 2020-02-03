@@ -725,7 +725,7 @@ void NativeCompiledTarget::setupCommand(builder::Command &c) const
     NativeTarget::setupCommand(c);
 
     // perform this after prepare?
-    auto for_deps = [this](auto f)
+    auto for_deps = [this, &c](auto f)
     {
         for (auto &d : getAllDependencies())
         {
@@ -737,14 +737,16 @@ void NativeCompiledTarget::setupCommand(builder::Command &c) const
                     continue;
             }
 
-            auto nt = d->getTarget().as<NativeCompiledTarget*>();
-            if (!nt)
+            if (auto nt = d->getTarget().as<NativeCompiledTarget *>())
+            {
+                if (!*nt->HeaderOnly && nt->getSelectedTool() == nt->Linker.get())
+                {
+                    f(nt);
+                }
+            }
+            else
                 continue;
                 //throw SW_RUNTIME_ERROR("missing predefined target code");
-            if (!*nt->HeaderOnly && nt->getSelectedTool() == nt->Linker.get())
-            {
-                f(nt);
-            }
         }
     };
 
@@ -2068,10 +2070,32 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
         auto &ts = s["new"];
         TargetOptionsGroup::iterate([&ts](auto &g, auto i)
         {
-            if (i == InheritanceType::Private)
-                return;
             auto is = std::to_string((int)i);
             auto &s = ts[is];
+
+            auto print_deps = [&s](auto &g)
+            {
+                for (auto &d : g.getRawDependencies())
+                {
+                    if (d->isDisabled())
+                        continue;
+                    auto &ds = s["dependencies"][boost::to_lower_copy(d->getTarget().getPackage().toString())];
+                    ds = d->getTarget().getSettings();
+                    if (d->IncludeDirectoriesOnly)
+                    {
+                        ds["include_directories_only"] = "true";
+                        ds["include_directories_only"].ignoreInComparison(true);
+                        ds["include_directories_only"].useInHash(false);
+                    }
+                }
+            };
+
+            if (i == InheritanceType::Private)
+            {
+                // we must also print pvt deps
+                print_deps(g);
+                return;
+            }
 
             for (auto &[k,v] : g.Definitions)
                 s["definitions"][k] = v;
@@ -2081,15 +2105,7 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
                 s["link_libraries"].push_back(normalize_path(d));
             for (auto &d : g.NativeLinkerOptions::System.LinkLibraries)
                 s["system_link_libraries"].push_back(normalize_path(d));
-            for (auto &d : g.getRawDependencies())
-            {
-                if (d->isDisabled())
-                    continue;
-                auto &ds = s["dependencies"][boost::to_lower_copy(d->getTarget().getPackage().toString())];
-                ds = d->getTarget().getSettings();
-                if (d->IncludeDirectoriesOnly)
-                    ds["include_directories_only"] = "true";
-            }
+            print_deps(g);
         });
     }
 
@@ -3290,54 +3306,108 @@ void NativeCompiledTarget::gatherStaticLinkLibraries(
         if (d->IncludeDirectoriesOnly)
             continue;
 
-        auto dt = d->getTarget().template as<const NativeCompiledTarget*>();
-        if (!dt)
-            continue;
-
         // here we must gather all static (and header only?) lib deps in recursive manner
-        if (dt->getSelectedTool() == dt->Librarian.get() || *dt->HeaderOnly)
+        if (auto dt = d->getTarget().template as<const NativeCompiledTarget *>())
         {
-            auto add = [&added, &ll](auto &dt, const path &base, bool system)
+            if (dt->getSelectedTool() == dt->Librarian.get() || *dt->HeaderOnly)
             {
-                auto &a = system ? dt->NativeLinkerOptions::System.LinkLibraries : dt->LinkLibraries;
-                if (added.find(base) == added.end() && !system)
+                auto add = [&added, &ll](auto &dt, const path &base, bool system)
                 {
-                    if (!*dt->HeaderOnly)
-                        ll.push_back(base);
-                    ll.insert(ll.end(), a.begin(), a.end()); // also link libs
-                }
-                else
-                {
-                    // we added output file but not its system libs
-                    for (auto &l : a)
+                    auto &a = system ? dt->NativeLinkerOptions::System.LinkLibraries : dt->LinkLibraries;
+                    if (added.find(base) == added.end() && !system)
                     {
-                        if (std::find(ll.begin(), ll.end(), l) == ll.end())
-                            ll.push_back(l);
+                        if (!*dt->HeaderOnly)
+                            ll.push_back(base);
+                        ll.insert(ll.end(), a.begin(), a.end()); // also link libs
                     }
-                }
-            };
+                    else
+                    {
+                        // we added output file but not its system libs
+                        for (auto &l : a)
+                        {
+                            if (std::find(ll.begin(), ll.end(), l) == ll.end())
+                                ll.push_back(l);
+                        }
+                    }
+                };
 
-            //if (!*dt->HeaderOnly)
+                //if (!*dt->HeaderOnly)
                 add(dt, dt->getOutputFile(), system);
 
-            // if dep is a static library, we take all its deps link libraries too
-            for (auto &d2 : dt->getAllDependencies())
-            {
-                if (&d2->getTarget() == this)
-                    continue;
-                if (&d2->getTarget() == &d->getTarget())
-                    continue;
-                if (d2->IncludeDirectoriesOnly)
-                    continue;
+                // if dep is a static library, we take all its deps link libraries too
+                for (auto &d2 : dt->getAllDependencies())
+                {
+                    if (&d2->getTarget() == this)
+                        continue;
+                    if (&d2->getTarget() == &d->getTarget())
+                        continue;
+                    if (d2->IncludeDirectoriesOnly)
+                        continue;
 
-                auto dt2 = d2->getTarget().template as<const NativeCompiledTarget*>();
-                if (!dt2)
-                    continue;
-                //if (!*dt2->HeaderOnly)
+                    auto dt2 = d2->getTarget().template as<const NativeCompiledTarget *>();
+                    if (!dt2)
+                        continue;
+                    //if (!*dt2->HeaderOnly)
                     add(dt2, dt2->getImportLibrary(), system);
-                dt2->gatherStaticLinkLibraries(ll, added, targets, system);
+                    dt2->gatherStaticLinkLibraries(ll, added, targets, system);
+                }
             }
         }
+        else if (auto dt = d->getTarget().template as<const PredefinedTarget *>())
+        {
+            auto &s = dt->getInterfaceSettings();
+            if (s["type"] == "native_static_library" || s["header_only"] == "true")
+            {
+                auto add = [&added, &ll, &s](auto &dt, const path &base, bool system)
+                {
+                    auto &a = system ? s["system_link_libraries"].getArray() : s["link_libraries"].getArray();
+                    if (added.find(base) == added.end() && !system)
+                    {
+                        if (s["header_only"] != "true")
+                            ll.push_back(base);
+                        // also link libs
+                        for (auto &l : a)
+                        {
+                            ll.push_back(std::get<String>(l));
+                        }
+                    }
+                    else
+                    {
+                        // we added output file but not its system libs
+                        for (auto &l : a)
+                        {
+                            if (std::find(ll.begin(), ll.end(), std::get<String>(l)) == ll.end())
+                            {
+                                ll.push_back(std::get<String>(l));
+                            }
+                        }
+                    }
+                };
+
+                if (s["header_only"] != "true")
+                    add(dt, s["output_file"].getValue(), system);
+
+                // if dep is a static library, we take all its deps link libraries too
+                /*for (auto &d2 : dt->getAllDependencies())
+                {
+                    if (&d2->getTarget() == this)
+                        continue;
+                    if (&d2->getTarget() == &d->getTarget())
+                        continue;
+                    if (d2->IncludeDirectoriesOnly)
+                        continue;
+
+                    auto dt2 = d2->getTarget().template as<const NativeCompiledTarget *>();
+                    if (!dt2)
+                        continue;
+                    //if (!*dt2->HeaderOnly)
+                    add(dt2, dt2->getImportLibrary(), system);
+                    dt2->gatherStaticLinkLibraries(ll, added, targets, system);
+                }*/
+            }
+        }
+        else
+            throw SW_RUNTIME_ERROR("missing predefined target code");
     }
 }
 
