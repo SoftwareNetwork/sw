@@ -151,7 +151,7 @@ bool SwBuild::step()
     }
 
     if (build_settings["measure"] == "true")
-        LOG_DEBUG(logger, "build step #" << magic_enum::enum_name(state) << " time: " << t.getTimeFloat() << " s.");
+        LOG_DEBUG(logger, "build step " << magic_enum::enum_name(state) << " time: " << t.getTimeFloat() << " s.");
 
     return true;
 }
@@ -331,15 +331,12 @@ void SwBuild::loadPackages(const TargetMap &predefined)
             if (s.empty())
                 continue;
 
-            if (build_settings["master_build"] == "true") // allow only in the main build for now
-            if (d.first.toString() == "org.sw.demo.madler.zlib-1.2.11"
-                || d.first.toString() == "org.sw.demo.glennrp.png-1.6.37"
-                )
+            if (0 && build_settings["master_build"] == "true") // allow only in the main build for now
             {
                 LocalPackage p(getContext().getLocalStorage(), d.first);
                 auto cfg = s.getHash();
                 auto base = p.getDirObj(cfg);
-                auto sfn = base / "settings.json";
+                auto sfn = base / "settings1.json";
                 if (fs::exists(sfn))
                 {
                     LOG_TRACE(logger, "loading " << d.first.toString() << ": " << s.getHash() << " from settings file");
