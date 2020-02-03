@@ -204,7 +204,8 @@ void VisualStudioCompiler::prepareCommand1(const Target &t)
         auto ext = ".i";
         if (CompileAsCPP)
             ext = ".ii";
-        PreprocessFileName = Output().parent_path() / (Output().stem().u8string() + ext);
+        if (!PreprocessFileName)
+            PreprocessFileName = Output().parent_path() / (Output().stem().u8string() + ext);
         Output.clear();
     }
 
@@ -385,7 +386,8 @@ void ClangClCompiler::prepareCommand1(const Target &t)
         auto ext = ".i";
         if (CompileAsCPP)
             ext = ".ii";
-        PreprocessFileName = Output().parent_path() / (Output().stem().u8string() + ext);
+        if (!PreprocessFileName)
+            PreprocessFileName = Output().parent_path() / (Output().stem().u8string() + ext);
         Output.clear();
     }
 
