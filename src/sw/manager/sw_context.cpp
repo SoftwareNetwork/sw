@@ -110,6 +110,11 @@ std::unordered_map<UnresolvedPackage, PackagePtr> SwManagerContext::resolve(cons
                 {
                     pkg = std::move(r.begin()->second);
                 }
+                if (pkg && i == cache_storage_id)
+                {
+                    // cache hit, we stop immediately
+                    break;
+                }
             }
             if (!pkg)
                 throw SW_RUNTIME_ERROR("Package '" + p.toString() + "' is not resolved");
