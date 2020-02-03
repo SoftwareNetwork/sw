@@ -430,34 +430,6 @@ void SwBuild::prepare()
 
     while (prepareStep())
         ;
-
-    // after prepare it is possible to record our targets
-    // to skip many previous steps in the future
-    if (build_settings["master_build"] != "true")
-        return;
-
-    for (const auto &[pkg, tgts] : getTargets())
-    {
-        if (pkg.toString() != "org.sw.demo.madler.zlib-1.2.11" && pkg.toString() != "org.sw.demo.glennrp.png-1.6.37")
-            continue;
-        for (auto &tgt : tgts)
-        {
-            LocalPackage p(getContext().getLocalStorage(), tgt->getPackage());
-            auto cfg = tgt->getSettings().getHash();
-            auto base = p.getDirObj(cfg);
-            auto sfn = base / "settings.json";
-            auto sptrfn = base / "settings.hash";
-
-            LOG_INFO(logger, "saving " << pkg.toString() << ": " << cfg << " into settings file " << sfn);
-
-            if (!fs::exists(sfn) || !fs::exists(sptrfn) || read_file(sptrfn) != tgt->getInterfaceSettings().getHash())
-            {
-                //saveSettings(sfn, tgt->getInterfaceSettings());
-                write_file(sfn, nlohmann::json::parse(tgt->getInterfaceSettings().getConfig()).dump(4));
-                write_file(sptrfn, tgt->getInterfaceSettings().getHash());
-            }
-        }
-    }
 }
 
 void SwBuild::execute() const
@@ -503,6 +475,30 @@ void SwBuild::execute(ExecutionPlan &p) const
         path fmtime = ide_fast_path;
         fmtime += ".t";
         write_file(fmtime, std::to_string(mtime));
+    }
+
+    // only after build it is possible to record our targets
+    // to skip many previous steps in the future
+    if (build_settings["master_build"] != "true")
+        return;
+
+    for (const auto &[pkg, tgts] : getTargets())
+    {
+        for (auto &tgt : tgts)
+        {
+            LocalPackage p(getContext().getLocalStorage(), tgt->getPackage());
+            auto cfg = tgt->getSettings().getHash();
+            auto base = p.getDirObj(cfg);
+            auto sfn = base / "settings1.json";
+            auto sptrfn = base / "settings.hash";
+
+            if (!fs::exists(sfn) || !fs::exists(sptrfn) || read_file(sptrfn) != tgt->getInterfaceSettings().getHash())
+            {
+                //saveSettings(sfn, tgt->getInterfaceSettings());
+                write_file(sfn, nlohmann::json::parse(tgt->getInterfaceSettings().getConfig()).dump(4));
+                write_file(sptrfn, tgt->getInterfaceSettings().getHash());
+            }
+        }
     }
 }
 
