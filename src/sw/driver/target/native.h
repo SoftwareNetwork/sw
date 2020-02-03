@@ -193,6 +193,8 @@ private:
     void processCircular(Files &objs);
     path getPatchDir(bool binary_dir) const;
     void addFileSilently(const path &);
+
+    mutable bool interface_settings_set = false;
     const TargetSettings &getInterfaceSettings() const override;
 
     FilesOrdered gatherPrecompiledHeaders() const;
