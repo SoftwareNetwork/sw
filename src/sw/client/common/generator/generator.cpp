@@ -1201,7 +1201,8 @@ void SwBuildDescriptionGenerator::generate(const sw::SwBuild &b)
     nlohmann::json jx;
     jx["schema"]["version"] = 1;
     auto &j = jx["build"];
-    for (auto &[pkg, tgts] : b.getTargetsToBuild())
+    for (auto &[pkg, tgts] : b.getTargets())
+    //for (auto &[pkg, tgts] : b.getTargetsToBuild())
     {
         if (tgts.empty())
         {
