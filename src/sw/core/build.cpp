@@ -336,7 +336,8 @@ void SwBuild::loadPackages(const TargetMap &predefined)
                 LocalPackage p(getContext().getLocalStorage(), d.first);
                 auto cfg = s.getHash();
                 auto base = p.getDirObj(cfg);
-                auto sfn = base / "settings1.json";
+#define BASE_SETTINGS "settings.14"
+                auto sfn = base / BASE_SETTINGS ".json";
                 if (fs::exists(sfn))
                 {
                     LOG_TRACE(logger, "loading " << d.first.toString() << ": " << s.getHash() << " from settings file");
@@ -495,21 +496,31 @@ void SwBuild::execute(ExecutionPlan &p) const
     if (build_settings["master_build"] != "true")
         return;
 
-    for (const auto &[pkg, tgts] : getTargets())
+    for (const auto &[pkg, tgts] : targets_to_build)
     {
+        if (!pkg.getPath().isAbsolute())
+            continue;
         for (auto &tgt : tgts)
         {
+            // do not overwrite settings again
+            if (auto dt = tgt->as<const PredefinedTarget *>())
+                continue;
+
             LocalPackage p(getContext().getLocalStorage(), tgt->getPackage());
+            if (p.isOverridden())
+                continue;
             auto cfg = tgt->getSettings().getHash();
             auto base = p.getDirObj(cfg);
-            auto sfn = base / "settings1.json";
+            auto sfn = base / BASE_SETTINGS ".json";
+            auto sfncfg = base / BASE_SETTINGS ".cfg";
             auto sptrfn = base / "settings.hash";
 
             if (!fs::exists(sfn) || !fs::exists(sptrfn) || read_file(sptrfn) != tgt->getInterfaceSettings().getHash())
             {
                 //saveSettings(sfn, tgt->getInterfaceSettings());
-                write_file(sfn, nlohmann::json::parse(tgt->getInterfaceSettings().getConfig()).dump(4));
+                write_file(sfn, nlohmann::json::parse(tgt->getInterfaceSettings().toString()).dump(4));
                 write_file(sptrfn, tgt->getInterfaceSettings().getHash());
+                write_file(sfncfg, nlohmann::json::parse(tgt->getSettings().toString()).dump(4));
             }
         }
     }
