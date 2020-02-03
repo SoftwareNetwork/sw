@@ -63,6 +63,8 @@ using sw::Version;
 //using sw::UnresolvedPackages;
 
 // targets
+using sw::PredefinedTarget; // from core
+//
 using sw::TargetBase;
 using sw::Target;
 using sw::ProjectTarget;
