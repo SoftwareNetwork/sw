@@ -234,15 +234,9 @@ void NativeCompilerOptionsData::add(const Definition &d)
     auto add_def = [this](const String &k, const String &v = {})
     {
         if (v.empty())
-        {
             Definitions[k];
-            Definitions2[k];
-        }
         else
-        {
             Definitions[k] = v;
-            Definitions2[k] = v;
-        }
     };
 
     auto p = d.d.find('=');
@@ -264,7 +258,6 @@ void NativeCompilerOptionsData::remove(const Definition &d)
     auto erase_def = [this](const String &k)
     {
         Definitions.erase(k);
-        Definitions2.erase(k);
     };
 
     auto p = d.d.find('=');
@@ -284,16 +277,12 @@ void NativeCompilerOptionsData::remove(const Definition &d)
 void NativeCompilerOptionsData::add(const DefinitionsType &defs)
 {
     Definitions.insert(defs.begin(), defs.end());
-    Definitions2.insert(defs.begin(), defs.end());
 }
 
 void NativeCompilerOptionsData::remove(const DefinitionsType &defs)
 {
     for (auto &[k, v] : defs)
-    {
         Definitions.erase(k);
-        Definitions2.erase(k);
-    }
 }
 
 PathOptionsType NativeCompilerOptionsData::gatherIncludeDirectories() const

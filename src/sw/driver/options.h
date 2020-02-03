@@ -31,22 +31,9 @@ struct Target;
 struct Package;
 
 using DefinitionKey = std::string;
-using DefinitionValue = PropertyValue;
+//using DefinitionValue = PropertyValue;
 using VariableValue = PropertyValue;
-
-struct DefinitionsType : std::map<DefinitionKey, VariableValue>
-{
-    using base = std::map<DefinitionKey, VariableValue>;
-
-    base::mapped_type &operator[](const base::key_type &k)
-    {
-        if (!k.empty() && k.back() != '=')
-            base::operator[](k);// = 1;
-        return base::operator[](k);
-    }
-
-    // add operator+= ?
-};
+using DefinitionsType = std::map<DefinitionKey, VariableValue>;
 
 struct VariablesType : std::map<DefinitionKey, VariableValue>
 {
@@ -211,7 +198,6 @@ using DependenciesType = UniqueVector<DependencyPtr>;
 struct SW_DRIVER_CPP_API NativeCompilerOptionsData
 {
     DefinitionsType Definitions;
-    DefinitionsType Definitions2; // untouched defs
     UniqueVector<String> CompileOptions;
     PathOptionsType PreIncludeDirectories;
     PathOptionsType IncludeDirectories;
