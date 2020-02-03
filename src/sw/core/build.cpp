@@ -337,17 +337,26 @@ void SwBuild::loadPackages(const TargetMap &predefined)
                 LocalPackage p(getContext().getLocalStorage(), d.first);
                 auto cfg = s.getHash();
                 auto base = p.getDirObj(cfg);
-#define BASE_SETTINGS "settings.14"
-                auto sfn = base / BASE_SETTINGS ".json";
+#define BASE_SETTINGS "settings.16"
+#define USE_JSON
+#ifndef USE_JSON
+#define SETTINGS_FN BASE_SETTINGS ".bin"
+#else
+#define SETTINGS_FN BASE_SETTINGS ".json"
+#endif
+                auto sfn = base / SETTINGS_FN;
                 if (fs::exists(sfn))
                 {
                     LOG_TRACE(logger, "loading " << d.first.toString() << ": " << s.getHash() << " from settings file");
 
                     auto tgt = std::make_shared<PredefinedTarget>(d.first, s);
-                    //tgt->public_ts = loadSettings(sfn);
+#ifndef USE_JSON
+                    tgt->public_ts = loadSettings(sfn);
+#else
                     TargetSettings its;
                     its.mergeFromString(read_file(sfn));
                     tgt->public_ts = its;
+#endif
                     getTargets()[tgt->getPackage()].push_back(tgt);
                     loaded = true;
                     continue;
@@ -504,24 +513,28 @@ void SwBuild::execute(ExecutionPlan &p) const
         for (auto &tgt : tgts)
         {
             // do not overwrite settings again
-            if (auto dt = tgt->as<const PredefinedTarget *>())
-                continue;
+            // but settings may change during development, so we should not do this check
+            //if (auto dt = tgt->as<const PredefinedTarget *>())
+                //continue;
 
             LocalPackage p(getContext().getLocalStorage(), tgt->getPackage());
             if (p.isOverridden())
                 continue;
             auto cfg = tgt->getSettings().getHash();
             auto base = p.getDirObj(cfg);
-            auto sfn = base / BASE_SETTINGS ".json";
+            auto sfn = base / SETTINGS_FN;
             auto sfncfg = base / BASE_SETTINGS ".cfg";
             auto sptrfn = base / "settings.hash";
 
             if (!fs::exists(sfn) || !fs::exists(sptrfn) || read_file(sptrfn) != tgt->getInterfaceSettings().getHash())
             {
-                //saveSettings(sfn, tgt->getInterfaceSettings());
+#ifndef USE_JSON
+                saveSettings(sfn, tgt->getInterfaceSettings());
+#else
                 write_file(sfn, nlohmann::json::parse(tgt->getInterfaceSettings().toString()).dump(4));
-                write_file(sptrfn, tgt->getInterfaceSettings().getHash());
                 write_file(sfncfg, nlohmann::json::parse(tgt->getSettings().toString()).dump(4));
+#endif
+                write_file(sptrfn, tgt->getInterfaceSettings().getHash());
             }
         }
     }
