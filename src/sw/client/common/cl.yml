@@ -112,7 +112,7 @@ command_line:
         desc: Build always
     skip_errors:
         option: k
-        type: bool
+        type: int
         desc: Skip errors
     time_trace:
         type: bool
