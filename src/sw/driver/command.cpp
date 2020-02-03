@@ -74,6 +74,17 @@ void Command::prepare()
             auto &t = d->getTarget();
             if (auto nt = t.as<NativeTarget *>())
                 nt->setupCommand(*this);
+            else if (auto nt = t.as<PredefinedTarget *>())
+            {
+                const auto &is = nt->getInterfaceSettings();
+                if (is["run_command"])
+                {
+                    for (auto &[k, v] : is["run_command"]["environment"].getSettings())
+                        environment[k] = v.getValue();
+                }
+            }
+            else
+                throw SW_RUNTIME_ERROR("missing predefined target code");
 
             // command may be set inside setupCommand()
             if (!isProgramSet())
@@ -118,6 +129,7 @@ void Command::prepare()
         }
     }
 
+    // more setup
     for (auto &d1 : dependencies)
     {
         auto d = d1.lock();
@@ -127,6 +139,17 @@ void Command::prepare()
         auto &t = d->getTarget();
         if (auto nt = t.as<NativeTarget *>())
             nt->setupCommand(*this);
+        else if (auto nt = t.as<PredefinedTarget *>())
+        {
+            const auto &is = nt->getInterfaceSettings();
+            if (is["run_command"])
+            {
+                for (auto &[k, v] : is["run_command"]["environment"].getSettings())
+                    environment[k] = v.getValue();
+            }
+        }
+        else
+            throw SW_RUNTIME_ERROR("missing predefined target code");
     }
 
     Base::prepare();
