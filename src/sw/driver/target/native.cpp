@@ -2127,7 +2127,7 @@ void NativeCompiledTarget::merge1()
             }
 
             if (is["import_library"])
-                LinkLibraries.push_back(is["import_library"].getValue());
+                LinkLibraries.push_back(fs::u8path(is["import_library"].getValue()));
 
             // some old code for libs in detect.cpp
             if (is["system_include_directories"])
@@ -3067,7 +3067,7 @@ void NativeCompiledTarget::prepare_pass6()
 
             if (!*nt->HeaderOnly)
             {
-                LinkLibraries.push_back(nt->getImportLibrary());
+                LinkLibraries.push_back(normalize_path(nt->getImportLibrary()));
             }
         }
     }
