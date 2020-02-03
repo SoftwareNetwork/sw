@@ -49,9 +49,8 @@ struct SW_CORE_API TargetSettings
     void mergeFromString(const String &s, int type = Json);
     void mergeFromJson(const nlohmann::json &);
 
-    String getConfig() const; // getShortConfig()?
-    String toString(int type = Json) const;
     String getHash() const;
+    String toString(int type = Json) const;
 
     bool operator==(const TargetSettings &) const;
     bool operator<(const TargetSettings &) const;
@@ -69,6 +68,7 @@ private:
 
     //String toStringKeyValue() const;
     nlohmann::json toJson() const;
+    size_t getHash1() const;
 
     friend struct TargetSetting;
 
@@ -126,8 +126,6 @@ struct SW_CORE_API TargetSetting
     explicit operator bool() const;
     //bool hasValue() const;
 
-    //String getHash() const;
-
     const String &getValue() const;
     const Array &getArray() const;
     Map &getSettings();
@@ -165,6 +163,7 @@ private:
     std::variant<std::monostate, Value, Array, Map> value;
 
     nlohmann::json toJson() const;
+    size_t getHash1() const;
     void copy_fields(const TargetSetting &);
 
     friend struct TargetSettings;

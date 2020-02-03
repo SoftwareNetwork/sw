@@ -10,6 +10,7 @@
 #include <sw/support/hash.h>
 
 #include <nlohmann/json.hpp>
+#include <pystring.h>
 
 namespace sw
 {
@@ -328,14 +329,9 @@ TargetSetting::operator bool() const
     return value.index() != 0;
 }
 
-String TargetSettings::getConfig() const
-{
-    return toString();
-}
-
 String TargetSettings::getHash() const
 {
-    return shorten_hash(blake2b_512(getConfig()), 6);
+    return shorten_hash(std::to_string(getHash1()), 6);
 }
 
 void TargetSettings::mergeFromString(const String &s, int type)
@@ -367,8 +363,6 @@ String TargetSettings::toString(int type) const
 nlohmann::json TargetSetting::toJson() const
 {
     nlohmann::json j;
-    if (!used_in_hash)
-        return j;
     switch (value.index())
     {
     case 0:
@@ -381,11 +375,11 @@ nlohmann::json TargetSetting::toJson() const
             if (v2.index() == 0)
                 j.push_back(std::get<Value>(v2));
             else
-                j.push_back(std::get<TargetSettings>(v2).toJson());
+                j.push_back(std::get<Map>(v2).toJson());
         }
         break;
     case 3:
-        return std::get<TargetSettings>(value).toJson();
+        return std::get<Map>(value).toJson();
     }
     return j;
 }
@@ -396,10 +390,55 @@ nlohmann::json TargetSettings::toJson() const
     for (auto &[k, v] : *this)
     {
         auto j2 = v.toJson();
-        if (!j2.is_null())
-            j[k] = j2;
+        if (j2.is_null())
+            continue;
+        j[k] = j2;
+        if (!v.used_in_hash)
+            j[k + "_used_in_hash"] = "false";
+        if (v.ignore_in_comparison)
+            j[k + "_ignore_in_comparison"] = "true";
     }
     return j;
+}
+
+size_t TargetSetting::getHash1() const
+{
+    size_t h = 0;
+    switch (value.index())
+    {
+    case 0:
+        return h;
+    case 1:
+        return hash_combine(h, getValue());
+    case 2:
+        for (auto &v2 : std::get<Array>(value))
+        {
+            if (v2.index() == 0)
+                hash_combine(h, std::get<Value>(v2));
+            else
+                hash_combine(h, std::get<Map>(v2).getHash1());
+        }
+        break;
+    case 3:
+        return hash_combine(h, std::get<Map>(value).getHash1());
+    }
+    return h;
+}
+
+size_t TargetSettings::getHash1() const
+{
+    size_t h = 0;
+    for (auto &[k, v] : *this)
+    {
+        if (!v.used_in_hash)
+            continue;
+        auto h2 = v.getHash1();
+        if (h2 == 0)
+            continue;
+        hash_combine(h, k);
+        hash_combine(h, h2);
+    }
+    return h;
 }
 
 TargetSetting &TargetSettings::operator[](const TargetSettingKey &k)
@@ -504,6 +543,18 @@ void TargetSettings::mergeFromJson(const nlohmann::json &j)
         throw SW_RUNTIME_ERROR("Not an object");
     for (auto it = j.begin(); it != j.end(); ++it)
     {
+        if (pystring::endswith(it.key(), "_used_in_hash"))
+        {
+            if (it.value().get<String>() == "false")
+                (*this)[it.key().substr(0, it.key().size() - strlen("_used_in_hash"))].used_in_hash = false;
+            continue;
+        }
+        if (pystring::endswith(it.key(), "_ignore_in_comparison"))
+        {
+            if (it.value().get<String>() == "true")
+                (*this)[it.key().substr(0, it.key().size() - strlen("_ignore_in_comparison"))].ignore_in_comparison = true;
+            continue;
+        }
         (*this)[it.key()].mergeFromJson(it.value());
     }
 }
