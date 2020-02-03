@@ -52,7 +52,6 @@ struct SW_CORE_API SwBuild
     void loadInputs();
     void setTargetsToBuild();
     void resolvePackages(); // [1/2] step
-    void resolvePackages(const UnresolvedPackages &upkgs); // [2/2] step
     void loadPackages();
     void prepare();
     void execute() const;
@@ -121,6 +120,7 @@ private:
     Commands getCommands() const;
     void loadPackages(const TargetMap &predefined);
     TargetEntryPointPtr getEntryPoint(const PackageId &) const;
+    void resolvePackages(const UnresolvedPackages &upkgs); // [2/2] step
 };
 
 } // namespace sw
