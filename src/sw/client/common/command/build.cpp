@@ -604,6 +604,8 @@ std::unique_ptr<sw::SwBuild> createBuild(sw::SwContext &swctx, const Options &op
         bs["write_output_to_file"] = "true";
     if (!options.options_build.time_limit.empty())
         bs["time_limit"] = options.options_build.time_limit;
+    if (gVerbose || options.trace)
+        bs["measure"] = "true";
     for (auto &t : options.targets_to_build)
         bs["target-to-build"].push_back(t);
     for (auto &t : options.targets_to_ignore)

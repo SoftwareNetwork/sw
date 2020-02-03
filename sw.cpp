@@ -128,6 +128,7 @@ void build(Solution &s)
         if (core.getBuildSettings().TargetOS.Type == OSType::Windows)
             core += "OleAut32.lib"_slib;
         core += "org.sw.demo.giovannidicanio.winreg"_dep;
+        core += "org.sw.demo.Neargye.magic_enum"_dep;
     }
 
     auto &cpp_driver = p.addTarget<LibraryTarget>("driver.cpp");

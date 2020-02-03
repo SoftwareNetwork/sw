@@ -13,7 +13,9 @@
 #include <sw/builder/execution_plan.h>
 
 #include <boost/current_function.hpp>
+#include <magic_enum.hpp>
 #include <nlohmann/json.hpp>
+#include <primitives/date_time.h>
 #include <primitives/executor.h>
 
 #include <primitives/log.h>
@@ -107,40 +109,51 @@ path SwBuild::getBuildDirectory() const
 
 void SwBuild::build()
 {
+    ScopedTime t;
+
     // this is all in one call
     while (step())
         ;
+
+    if (build_settings["measure"] == "true")
+        LOG_DEBUG(logger, BOOST_CURRENT_FUNCTION " time: " << t.getTimeFloat() << " s.");
 }
 
 bool SwBuild::step()
 {
+    ScopedTime t;
+
     switch (state)
     {
     case BuildState::NotStarted:
         // load provided inputs
         loadInputs();
-        return true;
+        break;
     case BuildState::InputsLoaded:
         setTargetsToBuild();
-        return true;
+        break;
     case BuildState::TargetsToBuildSet:
         resolvePackages();
-        return true;
+        break;
     case BuildState::PackagesResolved:
         loadPackages();
-        return true;
+        break;
     case BuildState::PackagesLoaded:
         // prepare targets
         prepare();
-        return true;
+        break;
     case BuildState::Prepared:
         // create ex. plan and execute it
         execute();
-        return true;
-    default:
         break;
+    default:
+        return false;
     }
-    return false;
+
+    if (build_settings["measure"] == "true")
+        LOG_DEBUG(logger, "build step #" << magic_enum::enum_name(state) << " time: " << t.getTimeFloat() << " s.");
+
+    return true;
 }
 
 void SwBuild::overrideBuildState(BuildState s) const
@@ -453,11 +466,10 @@ void SwBuild::execute(ExecutionPlan &p) const
     if (build_settings["time_limit"].isValue())
         p.setTimeLimit(parseTimeLimit(build_settings["time_limit"].getValue()));
 
-    //ScopedTime t;
+    ScopedTime t;
     p.execute(getExecutor());
-    /*auto t2 = t.getTimeFloat();
-    if (!silent && t2 > 0.15)
-        LOG_INFO(logger, "Build time: " << t2 << " s.");*/
+    if (build_settings["measure"] == "true")
+        LOG_DEBUG(logger, BOOST_CURRENT_FUNCTION " time: " << t.getTimeFloat() << " s.");
 
     if (build_settings["time_trace"] == "true")
         p.saveChromeTrace(getBuildDirectory() / "misc" / "time_trace.json");
