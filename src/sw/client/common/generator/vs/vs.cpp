@@ -48,7 +48,7 @@
 #include <shellapi.h>
 #endif
 
-#include <build.llvm.h>
+#include <cl.llvm.h>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "generator.vs");

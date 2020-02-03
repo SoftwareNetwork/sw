@@ -34,7 +34,7 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "generator");
 
-#include <build.llvm.h>
+#include <cl.llvm.h>
 
 using namespace sw;
 

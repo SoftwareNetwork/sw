@@ -24,7 +24,7 @@
 #include <primitives/emitter.h>
 #include <primitives/http.h>
 
-#include <build.llvm.h>
+#include <cl.llvm.h>
 
 std::unique_ptr<sw::SwContext> createSwContext(const Options &options)
 {

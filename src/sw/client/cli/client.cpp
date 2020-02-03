@@ -88,9 +88,9 @@ bool bUseSystemPause = false;
 int main(int argc, char **argv);
 #pragma pop_macro("main")
 
-int sw_main(const Strings &args);
+int sw_main(const Strings &args, OPTIONS_ARG);
 void stop();
-void setup_log(const std::string &log_level, const Options &options, bool simple = true);
+void setup_log(const std::string &log_level, OPTIONS_ARG_CONST, bool simple = true);
 void self_upgrade();
 void self_upgrade_copy(const path &dst);
 
@@ -134,7 +134,7 @@ static bool setConsoleColorProcessing()
     return r;
 }
 
-int setup_main(const Strings &args, Options &options)
+int setup_main(const Strings &args, OPTIONS_ARG)
 {
     // some initial stuff
     // try to do as less as possible before log init
@@ -263,7 +263,7 @@ int setup_main(const Strings &args, Options &options)
     }
 
     // actual execution
-    return sw_main(args);
+    return sw_main(args, options);
 }
 
 int parse_main(int argc, char **argv)
@@ -379,7 +379,7 @@ int main(int argc, char **argv)
 #include <sw/client/common/command/commands.inl>
 #undef SUBCOMMAND
 
-int sw_main(const Strings &args)
+int sw_main(const Strings &args, OPTIONS_ARG)
 {
     if (0/*gUseLockFile*/ && fs::exists(fs::current_path() / "sw.lock"))
     {
@@ -388,7 +388,7 @@ int sw_main(const Strings &args)
     }
 
     if (0);
-#define SUBCOMMAND(n) else if (subcommand_##n) { cli_##n(Options()); return 0; }
+#define SUBCOMMAND(n) else if (subcommand_##n) { cli_##n(options); return 0; }
 #include <sw/client/common/command/commands.inl>
 #undef SUBCOMMAND
 
@@ -406,7 +406,7 @@ void stop()
     }
 }
 
-void setup_log(const std::string &log_level, const Options &options, bool simple)
+void setup_log(const std::string &log_level, OPTIONS_ARG_CONST, bool simple)
 {
     LoggerSettings log_settings;
     log_settings.log_level = log_level;
