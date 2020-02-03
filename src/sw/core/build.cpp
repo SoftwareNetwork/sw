@@ -217,11 +217,13 @@ void SwBuild::resolvePackages()
             for (auto &d : deps)
             {
                 // filter out existing targets as they come from same module
+                // reconsider?
                 if (auto id = d->getUnresolvedPackage().toPackageId(); id && getTargets().find(*id) != getTargets().end())
                     continue;
                 // filter out predefined targets
                 if (swctx.getPredefinedTargets().find(d->getUnresolvedPackage().ppath) != swctx.getPredefinedTargets().end(d->getUnresolvedPackage().ppath))
                     continue;
+
                 upkgs.insert(d->getUnresolvedPackage());
             }
             break; // take first as all deps are equal
@@ -573,10 +575,10 @@ Commands SwBuild::getCommands() const
                         {
                             auto i = getTargets().find(PackageId(k));
                             if (i == getTargets().end())
-                                throw SW_RUNTIME_ERROR("dep not found");
+                                throw SW_RUNTIME_ERROR("dep not found: " + k);
                             auto j = i->second.findSuitable(v.getSettings());
                             if (j == i->second.end())
-                                throw SW_RUNTIME_ERROR("dep+settings not found");
+                                throw SW_RUNTIME_ERROR("dep+settings not found: " + k + ": " + v.getSettings().toString());
 
                             auto m = ttb[PackageId(k)].findEqual((*j)->getSettings());
                             if (m != ttb[PackageId(k)].end())
