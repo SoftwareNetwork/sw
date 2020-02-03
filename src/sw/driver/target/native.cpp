@@ -715,9 +715,9 @@ bool NativeCompiledTarget::init()
     {
         setOutputFile();
     }
-    SW_RETURN_MULTIPASS_END;
+    SW_RETURN_MULTIPASS_END(init_pass);
     }
-    SW_RETURN_MULTIPASS_END;
+    SW_RETURN_MULTIPASS_END(init_pass);
 }
 
 void NativeCompiledTarget::setupCommand(builder::Command &c) const
@@ -2194,10 +2194,10 @@ bool NativeCompiledTarget::prepare()
     RETURN_PREPARE_MULTIPASS_NEXT_PASS;
     case 9:
         prepare_pass9();
-    SW_RETURN_MULTIPASS_END;
+    SW_RETURN_MULTIPASS_END(prepare_pass);
     }
 
-    SW_RETURN_MULTIPASS_END;
+    SW_RETURN_MULTIPASS_END(prepare_pass);
 }
 
 void NativeCompiledTarget::prepare_pass1()

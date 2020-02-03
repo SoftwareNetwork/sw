@@ -74,8 +74,8 @@ bool CSharpTarget::init()
 
     compiler->Extension = getBuildSettings().TargetOS.getExecutableExtension();
     compiler->setOutputFile(getBaseOutputFileName(*this, {}, "bin"));
-
-    SW_RETURN_MULTIPASS_END;
+    
+    SW_RETURN_MULTIPASS_END(init_pass);
 }
 
 Commands CSharpTarget::getCommands1() const
@@ -106,7 +106,7 @@ bool RustTarget::init()
     compiler->Extension = getBuildSettings().TargetOS.getExecutableExtension();
     compiler->setOutputFile(getBaseOutputFileName(*this, {}, "bin"));
 
-    SW_RETURN_MULTIPASS_END;
+    SW_RETURN_MULTIPASS_END(init_pass);
 }
 
 Commands RustTarget::getCommands1() const
@@ -137,7 +137,7 @@ bool GoTarget::init()
     compiler->Extension = getBuildSettings().TargetOS.getExecutableExtension();
     compiler->setOutputFile(getBaseOutputFileName(*this, {}, "bin"));
 
-    SW_RETURN_MULTIPASS_END;
+    SW_RETURN_MULTIPASS_END(init_pass);
 }
 
 Commands GoTarget::getCommands1() const
@@ -168,7 +168,7 @@ bool FortranTarget::init()
     compiler->Extension = getBuildSettings().TargetOS.getExecutableExtension();
     compiler->setOutputFile(getBaseOutputFileName(*this, {}, "bin"));
 
-    SW_RETURN_MULTIPASS_END;
+    SW_RETURN_MULTIPASS_END(init_pass);
 }
 
 Commands FortranTarget::getCommands1() const
@@ -198,7 +198,7 @@ bool JavaTarget::init()
 
     compiler->setOutputDir(getBaseOutputDirName(*this, {}, "bin"));
 
-    SW_RETURN_MULTIPASS_END;
+    SW_RETURN_MULTIPASS_END(init_pass);
 }
 
 Commands JavaTarget::getCommands1() const
@@ -230,7 +230,7 @@ bool KotlinTarget::init()
 
     compiler->setOutputFile(getBaseOutputFileName(*this, {}, "bin"));
 
-    SW_RETURN_MULTIPASS_END;
+    SW_RETURN_MULTIPASS_END(init_pass);
 }
 
 Commands KotlinTarget::getCommands1() const
@@ -276,11 +276,9 @@ bool DTarget::init()
     {
         setOutputFile();
     }
-    SW_RETURN_MULTIPASS_END;
+    SW_RETURN_MULTIPASS_END(init_pass);
     }
-    SW_RETURN_MULTIPASS_END;
-
-    SW_RETURN_MULTIPASS_END;
+    SW_RETURN_MULTIPASS_END(init_pass);
 }
 
 Commands DTarget::getCommands1() const

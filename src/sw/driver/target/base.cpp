@@ -626,7 +626,7 @@ bool Target::init()
     BinaryDir = fs::absolute(BinaryDir);
     BinaryPrivateDir = fs::absolute(BinaryPrivateDir);
 
-    SW_RETURN_MULTIPASS_END;
+    SW_RETURN_MULTIPASS_END(init_pass);
 }
 
 UnresolvedDependenciesType Target::gatherUnresolvedDependencies() const
