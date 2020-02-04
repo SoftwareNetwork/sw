@@ -773,6 +773,17 @@ bool Check::execute(SwBuild &b) const
     return true;
 }
 
+#define SETUP_SOLUTION()                                          \
+    auto b = check_set->checker.swbld.getContext().createBuild(); \
+    auto s = setupSolution(*b, f);                                \
+    s.module_data.current_settings = getSettings()
+
+#define EXECUTE_SOLUTION()                             \
+    for (auto &t : s.module_data.added_targets)        \
+        b->getTargets()[t->getPackage()].push_back(t); \
+    if (!execute(*b))                                  \
+    return
+
 FunctionExists::FunctionExists(const String &f, const String &def)
 {
     if (f.empty())
@@ -815,17 +826,6 @@ int main(int ac, char* av[])
 
     return src;
 }
-
-#define SETUP_SOLUTION()                                          \
-    auto b = check_set->checker.swbld.getContext().createBuild(); \
-    auto s = setupSolution(*b, f);                                \
-    s.module_data.current_settings = getSettings()
-
-#define EXECUTE_SOLUTION()                             \
-    for (auto &t : s.module_data.added_targets)        \
-        b->getTargets()[t->getPackage()].push_back(t); \
-    if (!execute(*b))                                  \
-    return
 
 void FunctionExists::run() const
 {
