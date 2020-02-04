@@ -185,7 +185,8 @@ private:
 
     Commands getGeneratedCommands() const;
     void resolvePostponedSourceFiles();
-    void gatherStaticLinkLibraries(LinkLibrariesType &ll, Files &added, std::unordered_set<const NativeCompiledTarget*> &targets, bool system) const;
+    template <class T>
+    void gatherStaticLinkLibraries(T &ll, Files &added, std::unordered_set<const NativeCompiledTarget*> &targets, int type) const;
     void gatherRpathLinkDirectories(Files &added, int round) const;
     FilesOrdered gatherLinkDirectories() const;
     FilesOrdered gatherLinkLibraries() const;

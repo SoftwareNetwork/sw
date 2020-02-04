@@ -156,6 +156,13 @@ SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD(sw_replace_dll_import, replace_dll_import)
 
 #endif
 
+enum gatherStaticLinkLibrariesType
+{
+    E_link_libraries,
+    E_system_link_libraries,
+    E_frameworks,
+};
+
 namespace sw
 {
 
@@ -3121,16 +3128,17 @@ void NativeCompiledTarget::prepare_pass7()
     // add more link libraries from deps
     if (!*HeaderOnly && getSelectedTool() != Librarian.get())
     {
-        auto ll = [this](auto &l, bool system)
+        auto ll = [this](auto &l, int what)
         {
             std::unordered_set<const NativeCompiledTarget*> targets;
             Files added;
             added.insert(l.begin(), l.end());
-            gatherStaticLinkLibraries(l, added, targets, system);
+            gatherStaticLinkLibraries(l, added, targets, what);
         };
 
-        ll(LinkLibraries, false);
-        ll(NativeLinkerOptions::System.LinkLibraries, true);
+        ll(LinkLibraries, E_link_libraries);
+        ll(NativeLinkerOptions::System.LinkLibraries, E_system_link_libraries);
+        ll(Frameworks, E_frameworks);
 
         //
         // linux:
@@ -3316,8 +3324,9 @@ void NativeCompiledTarget::processCircular(Files &obj)
     obj.insert(exp);
 }
 
+template <class T>
 void NativeCompiledTarget::gatherStaticLinkLibraries(
-    LinkLibrariesType &ll, Files &added, std::unordered_set<const NativeCompiledTarget*> &targets, bool system) const
+    T &ll, Files &added, std::unordered_set<const NativeCompiledTarget*> &targets, int what) const
 {
     if (!targets.insert(this).second)
         return;
@@ -3327,33 +3336,71 @@ void NativeCompiledTarget::gatherStaticLinkLibraries(
         if (d->IncludeDirectoriesOnly)
             continue;
 
+        auto add_native = [&added, &ll](auto &dt, const path &base, auto &a, int what)
+        {
+            if (added.find(base) == added.end() && what == E_link_libraries)
+            {
+                if (!*dt->HeaderOnly)
+                    ll.push_back(base);
+                for (auto &l : a)
+                {
+                    ll.push_back(l); // also link libs
+                }
+            }
+            else
+            {
+                // we added output file but not its system libs
+                for (auto &l : a)
+                {
+                    if (std::find(ll.begin(), ll.end(), l) == ll.end())
+                        ll.push_back(l);
+                }
+            }
+        };
+
+        auto add_predefined = [&added, &ll](auto &s, auto &dt, const path &base, auto &a, int what)
+        {
+            if (added.find(base) == added.end() && what == E_link_libraries)
+            {
+                if (s["header_only"] != "true")
+                    ll.push_back(base);
+                // also link libs
+                for (auto &l : a)
+                {
+                    ll.push_back(std::get<String>(l));
+                }
+            }
+            else
+            {
+                // we added output file but not its system libs
+                for (auto &l : a)
+                {
+                    if (std::find(ll.begin(), ll.end(), std::get<String>(l)) == ll.end())
+                    {
+                        ll.push_back(std::get<String>(l));
+                    }
+                }
+            }
+        };
+
         // here we must gather all static (and header only?) lib deps in recursive manner
         if (auto dt = d->getTarget().template as<const NativeCompiledTarget *>())
         {
             if (dt->getSelectedTool() == dt->Librarian.get() || *dt->HeaderOnly)
             {
-                auto add = [&added, &ll](auto &dt, const path &base, bool system)
-                {
-                    auto &a = system ? dt->NativeLinkerOptions::System.LinkLibraries : dt->LinkLibraries;
-                    if (added.find(base) == added.end() && !system)
-                    {
-                        if (!*dt->HeaderOnly)
-                            ll.push_back(base);
-                        ll.insert(ll.end(), a.begin(), a.end()); // also link libs
-                    }
-                    else
-                    {
-                        // we added output file but not its system libs
-                        for (auto &l : a)
-                        {
-                            if (std::find(ll.begin(), ll.end(), l) == ll.end())
-                                ll.push_back(l);
-                        }
-                    }
-                };
-
                 //if (!*dt->HeaderOnly)
-                add(dt, dt->getOutputFile(), system);
+                switch (what)
+                {
+                case E_link_libraries:
+                    add_native(dt, dt->getOutputFile(), dt->LinkLibraries, what);
+                    break;
+                case E_system_link_libraries:
+                    add_native(dt, dt->getOutputFile(), dt->NativeLinkerOptions::System.LinkLibraries, what);
+                    break;
+                case E_frameworks:
+                    add_native(dt, dt->getOutputFile(), dt->Frameworks, what);
+                    break;
+                }
 
                 // if dep is a static library, we take all its deps link libraries too
                 for (auto &d2 : dt->getAllDependencies())
@@ -3369,8 +3416,19 @@ void NativeCompiledTarget::gatherStaticLinkLibraries(
                     if (!dt2)
                         continue;
                     //if (!*dt2->HeaderOnly)
-                    add(dt2, dt2->getImportLibrary(), system);
-                    dt2->gatherStaticLinkLibraries(ll, added, targets, system);
+                    switch (what)
+                    {
+                    case E_link_libraries:
+                        add_native(dt2, dt2->getImportLibrary(), dt2->LinkLibraries, what);
+                        break;
+                    case E_system_link_libraries:
+                        add_native(dt2, dt2->getImportLibrary(), dt2->NativeLinkerOptions::System.LinkLibraries, what);
+                        break;
+                    case E_frameworks:
+                        add_native(dt2, dt2->getImportLibrary(), dt2->Frameworks, what);
+                        break;
+                    }
+                    dt2->gatherStaticLinkLibraries(ll, added, targets, what);
                 }
             }
         }
@@ -3379,34 +3437,21 @@ void NativeCompiledTarget::gatherStaticLinkLibraries(
             auto &s = dt->getInterfaceSettings();
             if (s["type"] == "native_static_library" || s["header_only"] == "true")
             {
-                auto add = [&added, &ll, &s](auto &dt, const path &base, bool system)
-                {
-                    auto &a = system ? s["system_link_libraries"].getArray() : s["link_libraries"].getArray();
-                    if (added.find(base) == added.end() && !system)
-                    {
-                        if (s["header_only"] != "true")
-                            ll.push_back(base);
-                        // also link libs
-                        for (auto &l : a)
-                        {
-                            ll.push_back(std::get<String>(l));
-                        }
-                    }
-                    else
-                    {
-                        // we added output file but not its system libs
-                        for (auto &l : a)
-                        {
-                            if (std::find(ll.begin(), ll.end(), std::get<String>(l)) == ll.end())
-                            {
-                                ll.push_back(std::get<String>(l));
-                            }
-                        }
-                    }
-                };
-
                 if (s["header_only"] != "true")
-                    add(dt, s["output_file"].getValue(), system);
+                {
+                    switch (what)
+                    {
+                    case E_link_libraries:
+                        add_predefined(s, dt, s["output_file"].getValue(), s["link_libraries"].getArray(), what);
+                        break;
+                    case E_system_link_libraries:
+                        add_predefined(s, dt, s["output_file"].getValue(), s["system_link_libraries"].getArray(), what);
+                        break;
+                    case E_frameworks:
+                        add_predefined(s, dt, s["output_file"].getValue(), s["frameworks"].getArray(), what);
+                        break;
+                    }
+                }
 
                 // if dep is a static library, we take all its deps link libraries too
                 for (auto &d2 : dt->getDependencies())
@@ -3423,15 +3468,39 @@ void NativeCompiledTarget::gatherStaticLinkLibraries(
                     if (auto dt2 = d2->getTarget().template as<const NativeCompiledTarget *>())
                     {
                         //if (!*dt2->HeaderOnly)
-                        add(dt2, dt2->getImportLibrary(), system);
-                        dt2->gatherStaticLinkLibraries(ll, added, targets, system);
+                        switch (what)
+                        {
+                        case E_link_libraries:
+                            add_native(dt2, dt2->getImportLibrary(), dt2->LinkLibraries, what);
+                            break;
+                        case E_system_link_libraries:
+                            add_native(dt2, dt2->getImportLibrary(), dt2->NativeLinkerOptions::System.LinkLibraries, what);
+                            break;
+                        case E_frameworks:
+                            add_native(dt2, dt2->getImportLibrary(), dt2->Frameworks, what);
+                            break;
+                        }
+                        dt2->gatherStaticLinkLibraries(ll, added, targets, what);
                     }
                     else if (auto dt2 = d2->getTarget().template as<const PredefinedTarget *>())
                     {
                         auto &s = dt2->getInterfaceSettings();
                         if (s["header_only"] != "true" && s["import_library"])
-                            add(dt2, s["import_library"].getValue(), system);
-                        //dt2->gatherStaticLinkLibraries(ll, added, targets, system);
+                        {
+                            switch (what)
+                            {
+                            case E_link_libraries:
+                                add_predefined(s, dt2, s["import_library"].getValue(), s["link_libraries"].getArray(), what);
+                                break;
+                            case E_system_link_libraries:
+                                add_predefined(s, dt2, s["import_library"].getValue(), s["system_link_libraries"].getArray(), what);
+                                break;
+                            case E_frameworks:
+                                add_predefined(s, dt2, s["import_library"].getValue(), s["frameworks"].getArray(), what);
+                                break;
+                            }
+                        }
+                        //dt2->gatherStaticLinkLibraries(ll, added, targets, what);
                     }
                     else
                         throw SW_RUNTIME_ERROR("missing predefined target code");
