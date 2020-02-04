@@ -324,8 +324,8 @@ static void print_checks2(primitives::CppEmitter &ctx, const sw::CheckSet1 &chec
             ctx.addLine("s.checkLibraryFunctionExists(\"" + ((sw::LibraryFunctionExists*)c.get())->library + "\", \"" + c->getData() + "\");");
             break;
         case sw::CheckType::SourceCompiles:
-            if (c->getDefinition())
-                ctx.addLine("s.checkSourceCompiles(\"" + *c->getDefinition() + "\", R\"sw_xxx(" + c->getData() + ")sw_xxx\");");
+            if (!c->Definitions.empty())
+                ctx.addLine("s.checkSourceCompiles(\"" + *c->Definitions.begin() + "\", R\"sw_xxx(" + c->getData() + ")sw_xxx\");");
             else
                 LOG_ERROR(logger, "no def for " + c->getData());
             break;
