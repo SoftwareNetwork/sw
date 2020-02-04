@@ -2015,9 +2015,11 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
 
     if (getType() == TargetType::NativeStaticLibrary)
     {
-        // static libs also expose private syslibs
+        // static libs also expose private syslibs and frameworks
         for (auto &d : NativeLinkerOptions::System.LinkLibraries)
             s["system_link_libraries"].push_back(normalize_path(d));
+        for (auto &d : Frameworks)
+            s["frameworks"].push_back(normalize_path(d));
     }
     for (auto &d : Public.NativeLinkerOptions::System.LinkLibraries)
         s["system_link_libraries"].push_back(normalize_path(d));
@@ -2111,6 +2113,8 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
                 s["link_libraries"].push_back(normalize_path(d));
             for (auto &d : g.NativeLinkerOptions::System.LinkLibraries)
                 s["system_link_libraries"].push_back(normalize_path(d));
+            for (auto &d : g.Frameworks)
+                s["frameworks"].push_back(normalize_path(d));
             print_deps(g);
         });
     }
@@ -2159,6 +2163,8 @@ void NativeCompiledTarget::merge1()
                     LinkLibraries.insert(std::get<String>(v2));
                 for (auto &v2 : v["system_link_libraries"].getArray())
                     NativeLinkerOptions::System.LinkLibraries.insert(std::get<String>(v2));
+                for (auto &v2 : v["frameworks"].getArray())
+                    Frameworks.insert(std::get<String>(v2));
             }
 
             if (is["import_library"])
