@@ -120,6 +120,37 @@ SUBCOMMAND_DECL2(upload)
     // get spec early, so changes won't be considered
     auto spec = swctx.addInput(fs::current_path()).getSpecification()->files.begin()->second;
 
+    // detect from options
+    bool cmdline_source_present = 0
+        || !options.options_upload.source.empty()
+        || !options.options_upload.git.empty()
+        || !options.options_upload.hg.empty()
+        || !options.options_upload.bzr.empty()
+        || !options.options_upload.fossil.empty()
+        || !options.options_upload.svn.empty()
+        || !options.options_upload.cvs.empty()
+        || !options.options_upload.remote.empty()
+    ;
+    if (cmdline_source_present)
+    {
+        if (options.options_upload.version.empty())
+            throw SW_RUNTIME_ERROR("version must be present on cmd as well");
+        if (options.options_upload.source.empty())
+        {
+#define CHECK_AND_ASSIGN(x)                \
+    if (!options.options_upload.x.empty()) \
+    options.options_upload.source = #x
+            CHECK_AND_ASSIGN(git);
+            CHECK_AND_ASSIGN(hg);
+            CHECK_AND_ASSIGN(bzr);
+            CHECK_AND_ASSIGN(fossil);
+            CHECK_AND_ASSIGN(svn);
+            CHECK_AND_ASSIGN(cvs);
+            CHECK_AND_ASSIGN(remote);
+#undef CHECK_AND_ASSIGN
+        }
+    }
+
     auto [sources, i] = fetch(*b, options);
     if (sources.empty())
         throw SW_RUNTIME_ERROR("Empty target sources");

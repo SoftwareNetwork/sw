@@ -638,6 +638,7 @@ command_line:
                 default_value: |-
                     "."
 
+    # upload
     subcommand:
         name: upload
         desc: Upload packages.
@@ -656,6 +657,48 @@ command_line:
                 required: true
                 type: String
 
+            source:
+                type: String
+                desc: Source type
+            version:
+                type: String
+
+            git:
+                type: String
+                desc: Git url
+            hg:
+                type: String
+                desc: Mercurial url
+            bzr:
+                type: String
+                desc: Bazaar url
+            fossil:
+                type: String
+                desc: Fossil url
+            svn:
+                type: String
+                desc: Svn url
+            cvs:
+                type: String
+                desc: Cvs url
+            remote:
+                type: String
+                list: true
+                desc: Remote url or urls
+
+            branch:
+                type: String
+            commit:
+                type: String
+            tag:
+                type: String
+            revision:
+                type: String
+            # cvs
+            module:
+                type: String
+
+    # uri
     subcommand:
         name: uri
         desc: Used to invoke sw application from the website.
