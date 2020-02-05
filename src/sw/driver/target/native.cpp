@@ -2132,68 +2132,6 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
     return s;
 }
 
-void NativeCompiledTarget::merge1()
-{
-    // merge self
-    merge();
-
-    // merge deps' stuff
-    for (auto &d : getAllDependencies())
-    {
-        if (auto t = d->getTarget().as<const NativeCompiledTarget *>())
-        {
-            GroupSettings s;
-            s.include_directories_only = d->IncludeDirectoriesOnly;
-            s.has_same_parent = hasSameProject(*t);
-            merge(*t, s);
-            continue;
-        }
-        else if (auto t = d->getTarget().as<const PredefinedTarget *>())
-        {
-            const auto &is = d->getTarget().getInterfaceSettings();
-
-            for (auto &[k,v] : is["new"].getSettings())
-            {
-                auto inh = (InheritanceType)std::stoi(k);
-                if (inh == InheritanceType::Protected && !hasSameProject(d->getTarget()))
-                    continue;
-                for (auto &[k, v2] : v["definitions"].getSettings())
-                {
-                    if (v2.getValue().empty())
-                        Definitions[k];
-                    else
-                        Definitions[k] = v2.getValue();
-                }
-                for (auto &v2 : v["include_directories"].getArray())
-                    IncludeDirectories.insert(std::get<String>(v2));
-                for (auto &v2 : v["link_libraries"].getArray())
-                    LinkLibraries.insert(std::get<String>(v2));
-                for (auto &v2 : v["system_link_libraries"].getArray())
-                    NativeLinkerOptions::System.LinkLibraries.insert(std::get<String>(v2));
-                for (auto &v2 : v["frameworks"].getArray())
-                    Frameworks.insert(std::get<String>(v2));
-            }
-
-            if (is["import_library"])
-                LinkLibraries.push_back(fs::u8path(is["import_library"].getValue()));
-
-            // some old code for libs in detect.cpp
-            if (is["system_include_directories"])
-            {
-                for (auto &v : is["system_include_directories"].getArray())
-                    NativeCompilerOptions::System.IncludeDirectories.push_back(std::get<TargetSetting::Value>(v));
-            }
-            if (is["system_link_directories"])
-            {
-                for (auto &v : is["system_link_directories"].getArray())
-                    NativeLinkerOptions::System.LinkDirectories.push_back(std::get<TargetSetting::Value>(v));
-            }
-        }
-        else
-            throw SW_RUNTIME_ERROR("missing target code");
-    }
-}
-
 bool NativeCompiledTarget::prepare()
 {
     if (DryRun)
@@ -2521,7 +2459,64 @@ void NativeCompiledTarget::prepare_pass3()
 void NativeCompiledTarget::prepare_pass4()
 {
     // merge
-    merge1();
+
+    // merge self
+    merge();
+
+    // merge deps' stuff
+    for (auto &d : getAllDependencies())
+    {
+        if (auto t = d->getTarget().as<const NativeCompiledTarget *>())
+        {
+            GroupSettings s;
+            s.include_directories_only = d->IncludeDirectoriesOnly;
+            s.has_same_parent = hasSameProject(*t);
+            merge(*t, s);
+        }
+        else if (auto t = d->getTarget().as<const PredefinedTarget *>())
+        {
+            const auto &is = d->getTarget().getInterfaceSettings();
+
+            for (auto &[k,v] : is["new"].getSettings())
+            {
+                auto inh = (InheritanceType)std::stoi(k);
+                if (inh == InheritanceType::Protected && !hasSameProject(d->getTarget()))
+                    continue;
+                for (auto &[k, v2] : v["definitions"].getSettings())
+                {
+                    if (v2.getValue().empty())
+                        Definitions[k];
+                    else
+                        Definitions[k] = v2.getValue();
+                }
+                for (auto &v2 : v["include_directories"].getArray())
+                    IncludeDirectories.insert(std::get<String>(v2));
+                for (auto &v2 : v["link_libraries"].getArray())
+                    LinkLibraries.insert(std::get<String>(v2));
+                for (auto &v2 : v["system_link_libraries"].getArray())
+                    NativeLinkerOptions::System.LinkLibraries.insert(std::get<String>(v2));
+                for (auto &v2 : v["frameworks"].getArray())
+                    Frameworks.insert(std::get<String>(v2));
+            }
+
+            if (is["import_library"])
+                LinkLibraries.push_back(fs::u8path(is["import_library"].getValue()));
+
+            // some old code for libs in detect.cpp
+            if (is["system_include_directories"])
+            {
+                for (auto &v : is["system_include_directories"].getArray())
+                    NativeCompilerOptions::System.IncludeDirectories.push_back(std::get<TargetSetting::Value>(v));
+            }
+            if (is["system_link_directories"])
+            {
+                for (auto &v : is["system_link_directories"].getArray())
+                    NativeLinkerOptions::System.LinkDirectories.push_back(std::get<TargetSetting::Value>(v));
+            }
+        }
+        else
+            throw SW_RUNTIME_ERROR("missing target code");
+    }
 }
 
 void NativeCompiledTarget::prepare_pass5()

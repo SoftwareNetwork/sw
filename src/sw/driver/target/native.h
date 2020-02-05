@@ -190,7 +190,6 @@ private:
     void gatherRpathLinkDirectories(Files &added, int round) const;
     FilesOrdered gatherLinkDirectories() const;
     FilesOrdered gatherLinkLibraries() const;
-    void merge1();
     void processCircular(Files &objs);
     path getPatchDir(bool binary_dir) const;
     void addFileSilently(const path &);
