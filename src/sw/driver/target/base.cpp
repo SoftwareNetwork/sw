@@ -166,6 +166,8 @@ TargetBase &TargetBase::addTarget2(bool add, const TargetBaseTypePtr &t, const P
             t->setSourceDirectory(i->second);
 
         // try to get solution provided source dir
+        if (getSolution().force_source)
+            t->setSource(*getSolution().force_source);
         if (t->source)
         {
             if (auto sd = getSolution().getSourceDir(t->getSource(), t->getPackage().getVersion()); sd)

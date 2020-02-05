@@ -18,6 +18,7 @@
 
 #include "commands.h"
 
+#include <nlohmann/json.hpp>
 #include <sw/core/build.h>
 #include <sw/core/input.h>
 
@@ -64,8 +65,6 @@ static sw::SourceDirMap getSources(sw::SwContext &swctx, OPTIONS_ARG_CONST)
 
     auto ts = createInitialSettings(swctx);
     ts["driver"]["dry-run"] = "true"; // only used to get sources
-    //ts["driver"].useInHash(false);
-    //ts["driver"].ignoreInComparison(true);
 
     auto &ii = getInput(b);
     sw::InputWithSettings i(ii);
@@ -98,84 +97,11 @@ static sw::SourceDirMap getSources(sw::SwContext &swctx, OPTIONS_ARG_CONST)
 // get sources extracted from options
 static sw::SourceDirMap getSources(const path &bdir, OPTIONS_ARG_CONST)
 {
-    auto d = get_source_dir(bdir);
-
+    auto s = createSource(options);
     sw::SourceDirMap srcs;
     std::unordered_set<sw::SourcePtr> sources;
-
-    sw::SourcePtr s;
-    if (0);
-    else if (options.options_upload.source == "git")
-    {
-        s = std::make_unique<sw::Git>(
-            options.options_upload.git,
-            options.options_upload.tag,
-            options.options_upload.branch,
-            options.options_upload.commit
-            );
-    }
-    else if (options.options_upload.source == "hg")
-    {
-        s = std::make_unique<sw::Hg>(
-            options.options_upload.hg,
-            options.options_upload.tag,
-            options.options_upload.branch,
-            options.options_upload.commit,
-            std::stoll(options.options_upload.revision)
-            );
-    }
-    else if (options.options_upload.source == "fossil")
-    {
-        s = std::make_unique<sw::Fossil>(
-            options.options_upload.fossil,
-            options.options_upload.tag,
-            options.options_upload.branch,
-            options.options_upload.commit
-            );
-    }
-    else if (options.options_upload.source == "bzr")
-    {
-        s = std::make_unique<sw::Bazaar>(
-            options.options_upload.bzr,
-            options.options_upload.tag,
-            std::stoll(options.options_upload.revision)
-            );
-    }
-    else if (options.options_upload.source == "cvs")
-    {
-        s = std::make_unique<sw::Cvs>(
-            options.options_upload.cvs,
-            options.options_upload.module,
-            options.options_upload.tag,
-            options.options_upload.branch,
-            options.options_upload.revision
-            );
-    }
-    else if (options.options_upload.source == "svn")
-    {
-        s = std::make_unique<sw::Svn>(
-            options.options_upload.svn,
-            options.options_upload.tag,
-            options.options_upload.branch,
-            std::stoll(options.options_upload.revision)
-            );
-    }
-    else if (options.options_upload.source == "remote")
-    {
-        s = std::make_unique<sw::RemoteFile>(
-            options.options_upload.remote[0]
-            );
-    }
-    else if (options.options_upload.source == "remotes")
-    {
-        s = std::make_unique<sw::RemoteFiles>(
-            StringSet(options.options_upload.remote.begin(), options.options_upload.remote.end())
-            );
-    }
-
-    srcs[s->getHash()].root_dir = d / s->getHash();
+    srcs[s->getHash()].root_dir = get_source_dir(bdir) / s->getHash();
     sources.emplace(std::move(s));
-
     return getSources(bdir, sources, srcs);
 }
 
@@ -189,9 +115,16 @@ std::pair<sw::SourceDirMap, const sw::Input &> fetch(sw::SwBuild &b, OPTIONS_ARG
     for (auto &ts : tss)
     {
         for (auto &[h, d] : srcs)
+        {
             ts["driver"]["source-dir-for-source"][h] = normalize_path(d.getRequestedDirectory());
-        //ts["driver"].useInHash(false);
-        //ts["driver"].ignoreInComparison(true);
+            if (!options.options_upload.source.empty())
+            {
+                // TODO: if version is empty, load it from config
+                nlohmann::json j;
+                createSource(options)->save(j);
+                ts["driver"]["force-source"] = j.dump();
+            }
+        }
     }
 
     auto &ii = getInput(b);
@@ -199,7 +132,7 @@ std::pair<sw::SourceDirMap, const sw::Input &> fetch(sw::SwBuild &b, OPTIONS_ARG
     for (auto &ts : tss)
         i.addSettings(ts);
     b.addInput(i);
-    b.loadInputs(); // download occurs here
+    b.loadInputs();
 
     if (options.options_fetch.build_after_fetch)
         b.build();

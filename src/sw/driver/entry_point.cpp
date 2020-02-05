@@ -16,6 +16,7 @@
 #include <sw/manager/storage.h>
 
 #include <boost/dll.hpp>
+#include <nlohmann/json.hpp>
 #include <primitives/emitter.h>
 #include <primitives/sw/settings_program_name.h>
 #include <primitives/symbol.h>
@@ -255,6 +256,8 @@ std::vector<ITargetPtr> NativeTargetEntryPoint::loadPackages(SwBuild &swb, const
         b.source_dirs_by_source[h].requested_dir = d.getValue();
     for (auto &[pkg, p] : settings["driver"]["source-dir-for-package"].getSettings())
         b.source_dirs_by_package[pkg] = p.getValue();
+    if (settings["driver"]["force-source"].isValue())
+        b.force_source = load(nlohmann::json::parse(settings["driver"]["force-source"].getValue()));
     //settings.erase("driver");
     settings["driver"].useInHash(false);
     settings["driver"].ignoreInComparison(true);

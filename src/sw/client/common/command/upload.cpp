@@ -214,9 +214,10 @@ SUBCOMMAND_DECL2(upload)
             throw SW_RUNTIME_ERROR("version must be present on cmd as well");
         if (options.options_upload.source.empty())
         {
-#define CHECK_AND_ASSIGN(x)                \
-    if (!options.options_upload.x.empty()) \
-    options.options_upload.source = #x
+#define CHECK_AND_ASSIGN(x)                     \
+    else if (!options.options_upload.x.empty()) \
+        options.options_upload.source = #x
+            if (0);
             CHECK_AND_ASSIGN(git);
             CHECK_AND_ASSIGN(hg);
             CHECK_AND_ASSIGN(bzr);
