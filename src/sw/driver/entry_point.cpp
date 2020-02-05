@@ -375,6 +375,7 @@ decltype(auto) PrepareConfigEntryPoint::commonActions(Build &b, const FilesSorte
     udeps = deps;
 
     auto &lib = createTarget(b, getSelfTargetName(files));
+    lib.GenerateWindowsResource = false;
     lib.command_storage = &getDriverCommandStorage(b);
 
     addDeps(b, lib);

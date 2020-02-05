@@ -2812,7 +2812,6 @@ void NativeCompiledTarget::prepare_pass5()
         && !*HeaderOnly
         && ::sw::gatherSourceFiles<RcToolSourceFile>(*this).empty()
         && getSelectedTool() == Linker.get()
-        && !IsSwConfig
         && getBuildSettings().TargetOS.is(OSType::Windows)
         && Scope == TargetScope::Build
         )
