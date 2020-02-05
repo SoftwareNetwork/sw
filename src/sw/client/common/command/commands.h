@@ -91,6 +91,9 @@ std::unique_ptr<sw::SwBuild> createBuildAndPrepare(sw::SwContext &, const Inputs
 sw::TargetSettings createInitialSettings(const sw::SwContext &);
 std::vector<sw::TargetSettings> createSettings(sw::SwContext &, OPTIONS_ARG_CONST);
 
+// from upload settings
+sw::SourcePtr createSource(OPTIONS_ARG_CONST);
+
 std::pair<sw::SourceDirMap, const sw::Input &> fetch(sw::SwBuild &, OPTIONS_ARG_CONST);
 std::pair<sw::SourceDirMap, const sw::Input &> fetch(sw::SwContext &, OPTIONS_ARG_CONST);
 

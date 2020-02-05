@@ -37,6 +37,83 @@ SUBCOMMAND_DECL(upload)
     cli_upload(*swctx, options);
 }
 
+sw::SourcePtr createSource(OPTIONS_ARG_CONST)
+{
+    sw::SourcePtr s;
+    if (0);
+    else if (options.options_upload.source == "git")
+    {
+        s = std::make_unique<sw::Git>(
+            options.options_upload.git,
+            options.options_upload.tag,
+            options.options_upload.branch,
+            options.options_upload.commit
+            );
+    }
+    else if (options.options_upload.source == "hg")
+    {
+        s = std::make_unique<sw::Hg>(
+            options.options_upload.hg,
+            options.options_upload.tag,
+            options.options_upload.branch,
+            options.options_upload.commit,
+            std::stoll(options.options_upload.revision)
+            );
+    }
+    else if (options.options_upload.source == "fossil")
+    {
+        s = std::make_unique<sw::Fossil>(
+            options.options_upload.fossil,
+            options.options_upload.tag,
+            options.options_upload.branch,
+            options.options_upload.commit
+            );
+    }
+    else if (options.options_upload.source == "bzr")
+    {
+        s = std::make_unique<sw::Bazaar>(
+            options.options_upload.bzr,
+            options.options_upload.tag,
+            std::stoll(options.options_upload.revision)
+            );
+    }
+    else if (options.options_upload.source == "cvs")
+    {
+        s = std::make_unique<sw::Cvs>(
+            options.options_upload.cvs,
+            options.options_upload.module,
+            options.options_upload.tag,
+            options.options_upload.branch,
+            options.options_upload.revision
+            );
+    }
+    else if (options.options_upload.source == "svn")
+    {
+        s = std::make_unique<sw::Svn>(
+            options.options_upload.svn,
+            options.options_upload.tag,
+            options.options_upload.branch,
+            std::stoll(options.options_upload.revision)
+            );
+    }
+    else if (options.options_upload.source == "remote")
+    {
+        s = std::make_unique<sw::RemoteFile>(
+            options.options_upload.remote[0]
+            );
+    }
+    else if (options.options_upload.source == "remotes")
+    {
+        s = std::make_unique<sw::RemoteFiles>(
+            StringSet(options.options_upload.remote.begin(), options.options_upload.remote.end())
+            );
+    }
+
+    if (!options.options_upload.version.empty())
+        s->applyVersion(options.options_upload.version);
+    return s;
+}
+
 sw::PackageDescriptionMap getPackages(const sw::SwBuild &b, const sw::SourceDirMap &sources)
 {
     using namespace sw;
