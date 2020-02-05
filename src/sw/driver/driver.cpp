@@ -7,7 +7,9 @@
 #include "driver.h"
 
 #include "build.h"
+#include "suffix.h"
 #include "target/native.h"
+#include "target/other.h"
 #include "entry_point.h"
 #include "module.h"
 
@@ -17,6 +19,7 @@
 
 #include <boost/algorithm/string.hpp>
 #include <primitives/yaml.h>
+#include <toml.hpp>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "driver.cpp");
@@ -59,6 +62,8 @@ String toString(FrontendType t)
         return "sw";
     case FrontendType::Cppan:
         return "cppan";
+    case FrontendType::Cargo:
+        return "cargo";
     default:
         throw std::logic_error("not implemented");
     }
@@ -330,7 +335,6 @@ Driver::EntryPointsVector1 Driver::load_spec_file(SwContext &swctx, const path &
         ep->source_dir = fn.parent_path();
         return { ep };
     }
-        break;
     case FrontendType::Cppan:
     {
         auto root = YAML::Load(read_file(fn));
@@ -341,7 +345,19 @@ Driver::EntryPointsVector1 Driver::load_spec_file(SwContext &swctx, const path &
         auto ep = std::make_shared<NativeBuiltinTargetEntryPoint>(bf);
         return { ep };
     }
-        break;
+    case FrontendType::Cargo:
+    {
+        auto root = toml::parse(normalize_path(fn));
+        auto bf = [root](Build &b) mutable
+        {
+            std::string name = toml::find<std::string>(root["package"], "name");
+            std::string version = toml::find<std::string>(root["package"], "version");
+            auto &t = b.addTarget<RustExecutable>(name, version);
+            t += "src/.*"_rr;
+        };
+        auto ep = std::make_shared<NativeBuiltinTargetEntryPoint>(bf);
+        return { ep };
+    }
     default:
         SW_UNIMPLEMENTED;
     }
@@ -513,6 +529,9 @@ const Driver::AvailableFrontends &Driver::getAvailableFrontends()
 
         // cppan fe
         m.insert({ FrontendType::Cppan, "cppan.yml" });
+
+        // rust fe
+        m.insert({ FrontendType::Cargo, "Cargo.toml" });
 
         return m;
     }();

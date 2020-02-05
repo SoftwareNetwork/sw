@@ -139,6 +139,7 @@ void build(Solution &s)
         cpp_driver.CPPVersion = CPPLanguageStandard::CPP17;
         cpp_driver.Public += core,
             "pub.egorpugin.primitives.patch-master"_dep,
+            "org.sw.demo.ToruNiina.toml11"_dep,
             "org.sw.demo.boost.assign"_dep,
             "org.sw.demo.boost.bimap"_dep,
             "org.sw.demo.boost.uuid"_dep;

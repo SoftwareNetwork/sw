@@ -29,6 +29,7 @@ enum class FrontendType
     // priority!
     Sw = 1,
     Cppan = 2,
+    Cargo = 3, // rust
 };
 
 struct SW_DRIVER_CPP_API Driver : IDriver
