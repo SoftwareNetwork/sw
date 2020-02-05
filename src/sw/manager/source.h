@@ -40,6 +40,10 @@ private:
     std::unique_ptr<Source> clone() const override { return std::make_unique<Git>(*this); }
 };
 
+/// load from current (passed) object, detects 'getString()' subobject
+SW_MANAGER_API
+std::unique_ptr<Source> load(const nlohmann::json &j);
+
 }
 
 namespace detail

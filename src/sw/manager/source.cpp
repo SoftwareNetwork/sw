@@ -8,6 +8,7 @@
 
 #include <sw/support/filesystem.h>
 
+#include <nlohmann/json.hpp>
 #include <primitives/date_time.h>
 #include <primitives/exceptions.h>
 #include <primitives/executor.h>
@@ -16,6 +17,9 @@
 DECLARE_STATIC_LOGGER(logger, "source");
 
 namespace sw
+{
+
+inline namespace source
 {
 
 Git::Git(const String &url)
@@ -31,6 +35,15 @@ bool Git::isValid()
     i += !commit.empty();
     return i == 1;
 }
+
+std::unique_ptr<Source> load(const nlohmann::json &j)
+{
+    if (j.contains("git"))
+        return std::make_unique<Git>(j["git"]);
+    return ::primitives::source::Source::load(j);
+}
+
+} // inline namespace source
 
 void detail::DownloadData::remove() const
 {
