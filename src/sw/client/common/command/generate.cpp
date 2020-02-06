@@ -100,7 +100,7 @@ SUBCOMMAND_DECL2(generate)
             g->add_all_packages = true;
     }
 
-    auto b = createBuildAndPrepare(swctx, (Strings&)options.options_generate.build_arg_generate, options);
+    auto b = createBuildAndPrepare(swctx, options.options_generate.build_arg_generate, options);
     b->getExecutionPlan(); // prepare commands
     generator->generate(*b);
 }
