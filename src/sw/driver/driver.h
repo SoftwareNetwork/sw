@@ -24,13 +24,7 @@ struct TargetSettings;
 namespace driver::cpp
 {
 
-enum class FrontendType
-{
-    // priority!
-    Sw = 1,
-    Cppan = 2,
-    Cargo = 3, // rust
-};
+enum class FrontendType;
 
 struct SW_DRIVER_CPP_API Driver : IDriver
 {

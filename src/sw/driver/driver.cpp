@@ -18,6 +18,7 @@
 #include <sw/manager/storage.h>
 
 #include <boost/algorithm/string.hpp>
+#include <nlohmann/json.hpp>
 #include <primitives/yaml.h>
 #include <toml.hpp>
 
@@ -44,6 +45,16 @@ String gn2suffix(PackageVersionGroupNumber gn)
 namespace driver::cpp
 {
 
+enum class FrontendType
+{
+    // priority!
+    Sw = 1,
+    Cppan = 2,
+    Cargo = 3, // rust
+    Dub = 4, // d
+    Composer = 5, // php
+};
+
 std::optional<path> findConfig(const path &dir, const FilesOrdered &fe_s)
 {
     for (auto &fn : fe_s)
@@ -64,6 +75,10 @@ String toString(FrontendType t)
         return "cppan";
     case FrontendType::Cargo:
         return "cargo";
+    case FrontendType::Dub:
+        return "dub";
+    case FrontendType::Composer:
+        return "composer";
     default:
         throw std::logic_error("not implemented");
     }
@@ -358,6 +373,40 @@ Driver::EntryPointsVector1 Driver::load_spec_file(SwContext &swctx, const path &
         auto ep = std::make_shared<NativeBuiltinTargetEntryPoint>(bf);
         return { ep };
     }
+    case FrontendType::Dub:
+    {
+        // https://dub.pm/package-format-json
+        if (fn.extension() == ".sdl")
+            SW_UNIMPLEMENTED;
+        nlohmann::json j;
+        j = nlohmann::json::parse(read_file(fn));
+        auto bf = [j](Build &b) mutable
+        {
+            auto &t = b.addTarget<DExecutable>(j["name"].get<String>(),
+                j.contains("version") ? j["version"].get<String>() : "0.0.1"s);
+            if (j.contains("sourcePaths"))
+                t += FileRegex(t.SourceDir / j["sourcePaths"].get<String>(), ".*", true);
+            else if (fs::exists(t.SourceDir / "source"))
+                t += "source/.*"_rr;
+            else if (fs::exists(t.SourceDir / "src"))
+                t += "src/.*"_rr;
+            else
+                throw SW_RUNTIME_ERROR("No source paths found");
+        };
+        auto ep = std::make_shared<NativeBuiltinTargetEntryPoint>(bf);
+        return { ep };
+    }
+    case FrontendType::Composer:
+    {
+        nlohmann::json j;
+        j = nlohmann::json::parse(read_file(fn));
+        auto bf = [j](Build &b) mutable
+        {
+            SW_UNIMPLEMENTED;
+        };
+        auto ep = std::make_shared<NativeBuiltinTargetEntryPoint>(bf);
+        return { ep };
+    }
     default:
         SW_UNIMPLEMENTED;
     }
@@ -532,6 +581,13 @@ const Driver::AvailableFrontends &Driver::getAvailableFrontends()
 
         // rust fe
         m.insert({ FrontendType::Cargo, "Cargo.toml" });
+
+        // d fe
+        m.insert({ FrontendType::Dub, "dub.json" });
+        m.insert({ FrontendType::Dub, "dub.sdl" });
+
+        // php
+        m.insert({ FrontendType::Composer, "composer.json" });
 
         return m;
     }();
