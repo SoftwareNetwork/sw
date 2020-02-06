@@ -329,20 +329,33 @@ void SwBuild::resolvePackages(const UnresolvedPackages &upkgs)
 {
     CHECK_STATE_AND_CHANGE(BuildState::PackagesResolved, BuildState::PackagesResolved);
 
-    bool loaded = false;
+    // this is simple lock file: u->p
+    //
+    // more complex lock file will be
+    // when we able to set dependency per each target with its settings
+    bool should_update_lock_file = true;
     if (1
         && build_settings["update_lock_file"] != "true" // update flag
         && build_settings["lock_file"].isValue()
         && fs::exists(build_settings["lock_file"].getValue())
         )
     {
+        should_update_lock_file = false; // no need to update, we are loading
+
         auto m = loadLockFile(build_settings["lock_file"].getValue()/*, getContext()*/);
+        if (build_settings["update_lock_file_packages"])
+        {
+            for (auto &[u, p] : build_settings["update_lock_file_packages"].getSettings())
+            {
+                m.erase(u);
+                should_update_lock_file = true; // must update lock file
+            }
+        }
         getContext().setCachedPackages(m);
         UnresolvedPackages upkgs;
         for (auto &[u, p] : m)
             upkgs.insert(p); // add exactly p, not u!
         swctx.install(upkgs, false);
-        loaded = true;
     }
 
     // install
@@ -350,7 +363,7 @@ void SwBuild::resolvePackages(const UnresolvedPackages &upkgs)
     for (auto &[_, p] : m)
         addKnownPackage(p);
 
-    if (!m.empty() && build_settings["lock_file"].isValue() && !loaded)
+    if (build_settings["lock_file"].isValue() && should_update_lock_file)
     {
         saveLockFile(build_settings["lock_file"].getValue(), m);
     }

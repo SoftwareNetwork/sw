@@ -24,7 +24,13 @@ SUBCOMMAND_DECL(update)
     auto swctx = createSwContext(options);
     auto b = createBuild(*swctx, options.options_update.build_arg_update, options);
     auto bs = b->getSettings();
-    bs["update_lock_file"] = "true";
+    if (!options.options_update.packages.empty())
+    {
+        for (auto &p : options.options_update.packages)
+            bs["update_lock_file_packages"][p];
+    }
+    else
+        bs["update_lock_file"] = "true"; // update all
     b->setSettings(bs);
     b->loadInputs();
     b->setTargetsToBuild();
