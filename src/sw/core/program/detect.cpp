@@ -1008,8 +1008,8 @@ static void detectMsvc(DETECT_ARGS)
 
 static bool hasConsoleColorProcessing()
 {
-    bool r = false;
 #ifdef _WIN32
+    bool r = false;
     DWORD mode;
     // Try enabling ANSI escape sequence support on Windows 10 terminals.
     auto console_ = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -1018,8 +1018,9 @@ static bool hasConsoleColorProcessing()
     console_ = GetStdHandle(STD_ERROR_HANDLE);
     if (GetConsoleMode(console_, &mode))
         r &= (bool)(mode & ENABLE_VIRTUAL_TERMINAL_PROCESSING);
-#endif
     return r;
+#endif
+    return true;
 }
 
 static void detectWindowsClang(DETECT_ARGS)
@@ -1262,7 +1263,9 @@ static void detectWindowsCompilers(DETECT_ARGS)
 
 static void detectNonWindowsCompilers(DETECT_ARGS)
 {
-    auto resolve_and_add = [&s](const path &prog, const String &ppath)
+    bool colored_output = hasConsoleColorProcessing();
+
+    auto resolve_and_add = [&s, &colored_output](const path &prog, const String &ppath, int color_diag = 0)
     {
         auto p = std::make_shared<SimpleProgram>(s);
         p->file = resolveExecutable(prog);
@@ -1274,6 +1277,17 @@ static void detectNonWindowsCompilers(DETECT_ARGS)
             auto v = getVersion(s, p->file, "--version", "\\d+(\\.\\d+){2,}");
             auto &c = addProgram(s, PackageId(ppath, v), {}, p);
             //-fdiagnostics-color=always // gcc
+            if (colored_output)
+            {
+                auto c2 = p->getCommand();
+                if (color_diag == 1)
+                    c2->push_back("-fdiagnostics-color=always");
+                else if (color_diag == 2)
+                {
+                    c2->push_back("-fcolor-diagnostics");
+                    c2->push_back("-fansi-escape-codes");
+                }
+            }
         }
     };
 
@@ -1281,26 +1295,26 @@ static void detectNonWindowsCompilers(DETECT_ARGS)
     //resolve_and_add("as", "org.gnu.gcc.as"); // not needed
     //resolve_and_add("ld", "org.gnu.gcc.ld"); // not needed
 
-    resolve_and_add("gcc", "org.gnu.gcc");
-    resolve_and_add("g++", "org.gnu.gpp");
+    resolve_and_add("gcc", "org.gnu.gcc", 1);
+    resolve_and_add("g++", "org.gnu.gpp", 1);
 
     for (int i = 3; i < 12; i++)
     {
-        resolve_and_add("gcc-" + std::to_string(i), "org.gnu.gcc");
-        resolve_and_add("g++-" + std::to_string(i), "org.gnu.gpp");
+        resolve_and_add("gcc-" + std::to_string(i), "org.gnu.gcc", 1);
+        resolve_and_add("g++-" + std::to_string(i), "org.gnu.gpp", 1);
     }
 
     // llvm/clang
     //resolve_and_add("llvm-ar", "org.LLVM.ar"); // not needed
     //resolve_and_add("lld", "org.LLVM.ld"); // not needed
 
-    resolve_and_add("clang", "org.LLVM.clang");
-    resolve_and_add("clang++", "org.LLVM.clangpp");
+    resolve_and_add("clang", "org.LLVM.clang", 2);
+    resolve_and_add("clang++", "org.LLVM.clangpp", 2);
 
     for (int i = 3; i < 16; i++)
     {
-        resolve_and_add("clang-" + std::to_string(i), "org.LLVM.clang");
-        resolve_and_add("clang++-" + std::to_string(i), "org.LLVM.clangpp");
+        resolve_and_add("clang-" + std::to_string(i), "org.LLVM.clang", 2);
+        resolve_and_add("clang++-" + std::to_string(i), "org.LLVM.clangpp", 2);
     }
 
     // detect apple clang?
