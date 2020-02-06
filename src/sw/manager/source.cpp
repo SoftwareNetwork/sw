@@ -12,6 +12,7 @@
 #include <primitives/date_time.h>
 #include <primitives/exceptions.h>
 #include <primitives/executor.h>
+#include <primitives/yaml.h>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "source");
