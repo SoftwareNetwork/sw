@@ -1059,10 +1059,8 @@ static void detectWindowsClang(DETECT_ARGS)
             if (colored_output)
             {
                 auto c2 = p->getCommand();
-                c2->push_back("-Xclang");
-                c2->push_back("-fcolor-diagnostics");
-                c2->push_back("-Xclang");
-                c2->push_back("-fansi-escape-codes");
+                c2->push_back("-Xclang,-fcolor-diagnostics");
+                c2->push_back("-Xclang,-fansi-escape-codes");
             }
         }
     }
@@ -1275,6 +1273,7 @@ static void detectNonWindowsCompilers(DETECT_ARGS)
             // which will be parsed as pre-release
             auto v = getVersion(s, p->file, "--version", "\\d+(\\.\\d+){2,}");
             auto &c = addProgram(s, PackageId(ppath, v), {}, p);
+            //-fdiagnostics-color=always // gcc
         }
     };
 
