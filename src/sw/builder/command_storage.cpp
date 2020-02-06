@@ -89,6 +89,8 @@ Files CommandRecord::getImplicitInputs(detail::Storage &s) const
 
 void CommandRecord::setImplicitInputs(const Files &files, detail::Storage &s)
 {
+    implicit_inputs.clear(); // clear first!
+
     for (auto &f : files)
     {
         auto str = normalize_path(f);
