@@ -635,12 +635,15 @@ command_line:
         desc: Update lock file.
 
         command_line:
-            #//extern ::cl::opt<bool> dry_run;
             build_arg_update:
                 positional: true
+                list: true
+                type: String
                 desc: Update lock
-                default_value: |-
-                    "."
+            packages:
+                desc: Packages to update
+                list: true
+                type: String
 
     # upload
     subcommand:

@@ -20,11 +20,13 @@
 
 SUBCOMMAND_DECL(update)
 {
-    SW_UNIMPLEMENTED;
-
+    // see https://doc.rust-lang.org/cargo/commands/cargo-update.html
     auto swctx = createSwContext(options);
-    //dry_run = true;
-    /*((Strings&)build_arg).clear();
-    build_arg.push_back(build_arg_update.getValue());
-    cli_build(*swctx);*/
+    auto b = createBuild(*swctx, options.options_update.build_arg_update, options);
+    auto bs = b->getSettings();
+    bs["update_lock_file"] = "true";
+    b->setSettings(bs);
+    b->loadInputs();
+    b->setTargetsToBuild();
+    b->resolvePackages();
 }

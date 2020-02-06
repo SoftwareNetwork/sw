@@ -330,7 +330,11 @@ void SwBuild::resolvePackages(const UnresolvedPackages &upkgs)
     CHECK_STATE_AND_CHANGE(BuildState::PackagesResolved, BuildState::PackagesResolved);
 
     bool loaded = false;
-    if (build_settings["lock_file"].isValue() && fs::exists(build_settings["lock_file"].getValue()))
+    if (1
+        && build_settings["update_lock_file"] != "true" // update flag
+        && build_settings["lock_file"].isValue()
+        && fs::exists(build_settings["lock_file"].getValue())
+        )
     {
         auto m = loadLockFile(build_settings["lock_file"].getValue()/*, getContext()*/);
         getContext().setCachedPackages(m);
