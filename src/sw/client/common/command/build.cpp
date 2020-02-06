@@ -587,6 +587,15 @@ std::unique_ptr<sw::SwBuild> createBuild(sw::SwContext &swctx, const Options &op
     // internal builds (checks, scripts builds)
     bs["master_build"] = "true";
 
+    if (options.use_lock_file)
+    {
+        // save lock file near input? what if we have multiple inputs?
+        if (options.lock_file.empty())
+            bs["lock_file"] = normalize_path(fs::current_path() / "sw.lock");
+        else
+            bs["lock_file"] = normalize_path(options.lock_file);
+    }
+
     //
     if (options.build_always)
         bs["build_always"] = "true";

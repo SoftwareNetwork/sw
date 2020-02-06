@@ -560,7 +560,7 @@ CachedStorage::resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unres
     return r;
 }
 
-void CachedStorage::store(const std::unordered_map<UnresolvedPackage, PackagePtr> &pkgs)
+void CachedStorage::storePackages(const StoredPackages &pkgs)
 {
     for (auto &[u,p] : pkgs)
         resolved_packages.emplace(u, p->clone());

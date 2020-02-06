@@ -37,8 +37,92 @@ DECLARE_STATIC_LOGGER(logger, "build");
 
 #define CHECK_STATE_AND_CHANGE(from, to) CHECK_STATE_AND_CHANGE_RAW(from, to, SCOPE_EXIT)
 
+#define SW_CURRENT_LOCK_FILE_VERSION 1
+
 namespace sw
 {
+
+std::unordered_map<UnresolvedPackage, PackageId> loadLockFile(const path &fn/*, SwContext &swctx*/)
+{
+    auto j = nlohmann::json::parse(read_file(fn));
+    if (j["schema"]["version"] != SW_CURRENT_LOCK_FILE_VERSION)
+    {
+        throw SW_RUNTIME_ERROR("Cannot use this lock file: bad version " + std::to_string((int)j["version"]) +
+            ", expected " + std::to_string(SW_CURRENT_LOCK_FILE_VERSION));
+    }
+
+    std::unordered_map<UnresolvedPackage, PackageId> m;
+
+    /*for (auto &v : j["packages"])
+    {
+        DownloadDependency d;
+        (PackageId&)d = extractFromStringPackageId(v["package"].get<std::string>());
+        d.createNames();
+        d.prefix = v["prefix"];
+        d.hash = v["hash"];
+        d.group_number_from_lock_file = d.group_number = v["group_number"];
+        auto i = overridden.find(d);
+        d.local_override = i != overridden.end(d);
+        if (d.local_override)
+            d.group_number = i->second.getGroupNumber();
+        d.from_lock_file = true;
+        for (auto &v2 : v["dependencies"])
+        {
+            auto p = extractFromStringPackageId(v2.get<std::string>());
+            DownloadDependency1 d2{ p };
+            d.db_dependencies[p.ppath.toString()] = d2;
+        }
+        download_dependencies_.insert(d);
+    }*/
+
+    for (auto &v : j["resolved_packages"].items())
+    {
+        auto u = extractFromString(v.key());
+        auto id = extractPackageIdFromString(v.value()["package"].get<std::string>());
+        //LocalPackage d(swctx.getLocalStorage(), id);
+        /*auto i = download_dependencies_.find(d);
+        if (i == download_dependencies_.end())
+            throw SW_RUNTIME_EXCEPTION("bad lock file");
+        d = *i;
+        if (v.value().find("installed") != v.value().end())
+            d.installed = v.value()["installed"];*/
+        m.emplace(u, id);
+    }
+    return m;
+}
+
+static void saveLockFile(const path &fn, const std::unordered_map<UnresolvedPackage, LocalPackage> &pkgs)
+{
+    nlohmann::json j;
+    j["schema"]["version"] = SW_CURRENT_LOCK_FILE_VERSION;
+
+    /*auto &jpkgs = j["packages"];
+    for (auto &r : std::set<DownloadDependency>(download_dependencies_.begin(), download_dependencies_.end()))
+    {
+        nlohmann::json jp;
+        jp["package"] = r.toString();
+        jp["prefix"] = r.prefix;
+        jp["hash"] = r.hash;
+        if (r.group_number > 0)
+            jp["group_number"] = r.group_number;
+        else
+            jp["group_number"] = r.group_number_from_lock_file;
+        for (auto &[_, d] : std::map<String, DownloadDependency1>(r.db_dependencies.begin(), r.db_dependencies.end()))
+            jp["dependencies"].push_back(d.toString());
+        jpkgs.push_back(jp);
+    }*/
+
+    auto &jp = j["resolved_packages"];
+    // sort
+    for (auto &[u, r] : std::map<UnresolvedPackage, LocalPackage>(pkgs.begin(), pkgs.end()))
+    {
+        jp[u.toString()]["package"] = r.toString();
+        //if (r.installed)
+            //jp[u.toString()]["installed"] = true;
+    }
+
+    write_file_if_different(fn, j.dump(2));
+}
 
 static ExecutionPlan::Clock::duration parseTimeLimit(String tl)
 {
@@ -186,14 +270,6 @@ void SwBuild::loadInputs()
     }
 }
 
-std::unordered_map<UnresolvedPackage, LocalPackage> SwBuild::install(const UnresolvedPackages &upkgs)
-{
-    auto m = swctx.install(upkgs);
-    for (auto &[_, p] : m)
-        addKnownPackage(p);
-    return m;
-}
-
 const PackageIdSet &SwBuild::getKnownPackages() const
 {
     return known_packages;
@@ -253,8 +329,27 @@ void SwBuild::resolvePackages(const UnresolvedPackages &upkgs)
 {
     CHECK_STATE_AND_CHANGE(BuildState::PackagesResolved, BuildState::PackagesResolved);
 
+    bool loaded = false;
+    if (build_settings["lock_file"].isValue() && fs::exists(build_settings["lock_file"].getValue()))
+    {
+        auto m = loadLockFile(build_settings["lock_file"].getValue()/*, getContext()*/);
+        getContext().setCachedPackages(m);
+        UnresolvedPackages upkgs;
+        for (auto &[u, p] : m)
+            upkgs.insert(p); // add exactly p, not u!
+        swctx.install(upkgs, false);
+        loaded = true;
+    }
+
     // install
-    auto m = install(upkgs);
+    auto m = swctx.install(upkgs);
+    for (auto &[_, p] : m)
+        addKnownPackage(p);
+
+    if (!m.empty() && build_settings["lock_file"].isValue() && !loaded)
+    {
+        saveLockFile(build_settings["lock_file"].getValue(), m);
+    }
 
     // now we know all drivers
     std::set<Input *> iv;

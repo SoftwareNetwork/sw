@@ -71,11 +71,22 @@ std::vector<const Storage *> SwManagerContext::getRemoteStorages() const
     return r;
 }
 
-std::unordered_map<UnresolvedPackage, PackagePtr> SwManagerContext::resolve(const UnresolvedPackages &in_pkgs) const
+std::unordered_map<UnresolvedPackage, PackagePtr> SwManagerContext::resolve(const UnresolvedPackages &in_pkgs, bool use_cache) const
 {
     if (in_pkgs.empty())
         return {};
 
+    std::vector<IStorage *> s2;
+    for (const auto &[i, s] : enumerate(storages))
+    {
+        if (i != cache_storage_id || use_cache)
+            s2.push_back(s.get());
+    }
+    return resolve(in_pkgs, s2);
+}
+
+std::unordered_map<UnresolvedPackage, PackagePtr> SwManagerContext::resolve(const UnresolvedPackages &in_pkgs, const std::vector<IStorage*> &storages) const
+{
     std::lock_guard lk(resolve_mutex);
 
     std::unordered_map<UnresolvedPackage, PackagePtr> resolved;
@@ -134,14 +145,14 @@ std::unordered_map<UnresolvedPackage, PackagePtr> SwManagerContext::resolve(cons
     }
 
     // save existing results
-    getCachedStorage().store(resolved);
+    getCachedStorage().storePackages(resolved);
 
     return resolved;
 }
 
-std::unordered_map<UnresolvedPackage, LocalPackage> SwManagerContext::install(const UnresolvedPackages &pkgs) const
+std::unordered_map<UnresolvedPackage, LocalPackage> SwManagerContext::install(const UnresolvedPackages &pkgs, bool use_cache) const
 {
-    auto m = resolve(pkgs);
+    auto m = resolve(pkgs, use_cache);
 
     // two unresolved pkgs may point to single pkg,
     // so make pkgs unique
@@ -170,14 +181,20 @@ LocalPackage SwManagerContext::install(const Package &p) const
     return getLocalStorage().install(p);
 }
 
-/*bool SwManagerContext::isResolved(const UnresolvedPackage &pkg) const
-{
-    return resolved_packages.find(pkg) != resolved_packages.end();
-}*/
-
 LocalPackage SwManagerContext::resolve(const UnresolvedPackage &pkg) const
 {
     return install(*resolve(UnresolvedPackages{ pkg }).find(pkg)->second);
+}
+
+void SwManagerContext::setCachedPackages(const std::unordered_map<UnresolvedPackage, PackageId> &pkgs) const
+{
+    auto &s = getCachedStorage();
+    std::unordered_map<UnresolvedPackage, PackagePtr> pkgs2;
+    for (auto &[u, p] : pkgs)
+    {
+        pkgs2.emplace(u, std::make_unique<LocalPackage>(getLocalStorage(), p));
+    }
+    s.storePackages(pkgs2);
 }
 
 }

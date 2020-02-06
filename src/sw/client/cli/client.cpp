@@ -88,8 +88,6 @@ bool bUseSystemPause = false;
 int main(int argc, char **argv);
 #pragma pop_macro("main")
 
-int sw_main(const Strings &args, OPTIONS_ARG);
-void stop();
 void setup_log(const std::string &log_level, OPTIONS_ARG_CONST, bool simple = true);
 void self_upgrade();
 void self_upgrade_copy(const path &dst);
@@ -132,6 +130,18 @@ static bool setConsoleColorProcessing()
         r &= !!SetConsoleMode(console_, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
 #endif
     return r;
+}
+
+int sw_main(const Strings &args, OPTIONS_ARG)
+{
+    if (0);
+#define SUBCOMMAND(n) else if (subcommand_##n) { cli_##n(options); return 0; }
+#include <sw/client/common/command/commands.inl>
+#undef SUBCOMMAND
+
+    LOG_WARN(logger, "No command was issued");
+
+    return 0;
 }
 
 int setup_main(const Strings &args, OPTIONS_ARG)
@@ -340,8 +350,6 @@ int main(int argc, char **argv)
         error = e.what();
     }
 
-    stop();
-
     if (!error.empty() || supress)
     {
         if (!supress)
@@ -378,33 +386,6 @@ int main(int argc, char **argv)
 #define SUBCOMMAND(n) extern ::cl::SubCommand subcommand_##n;
 #include <sw/client/common/command/commands.inl>
 #undef SUBCOMMAND
-
-int sw_main(const Strings &args, OPTIONS_ARG)
-{
-    if (0/*gUseLockFile*/ && fs::exists(fs::current_path() / "sw.lock"))
-    {
-        SW_UNIMPLEMENTED;
-        //getPackageStore().loadLockFile(fs::current_path() / "sw.lock");
-    }
-
-    if (0);
-#define SUBCOMMAND(n) else if (subcommand_##n) { cli_##n(options); return 0; }
-#include <sw/client/common/command/commands.inl>
-#undef SUBCOMMAND
-
-    LOG_WARN(logger, "No command was issued");
-
-    return 0;
-}
-
-void stop()
-{
-    if (/*gUseLockFile*/0)
-    {
-        SW_UNIMPLEMENTED;
-        //getPackageStore().saveLockFile(fs::current_path() / "sw.lock");
-    }
-}
 
 void setup_log(const std::string &log_level, OPTIONS_ARG_CONST, bool simple)
 {

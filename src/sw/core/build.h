@@ -84,8 +84,6 @@ struct SW_CORE_API SwBuild
 
     path getBuildDirectory() const;
 
-    // install packages and add them to build
-    std::unordered_map<UnresolvedPackage, LocalPackage> install(const UnresolvedPackages &pkgs);
     const PackageIdSet &getKnownPackages() const;
     void addKnownPackage(const PackageId &);
 

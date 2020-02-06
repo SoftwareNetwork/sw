@@ -322,6 +322,10 @@ command_line:
         option: l
         desc: Use lock file
         default_value: true
+    lock_file:
+        option: lf
+        desc: Lock file path
+        type: path
 
         #//static ::cl::list<String> builtin_function(sw::builder::getInternalCallBuiltinFunctionName(), ::cl::desc("Call built-in function"), ::cl::Hidden);
 

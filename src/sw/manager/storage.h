@@ -264,16 +264,18 @@ private:
 
 struct CachedStorage : IStorage
 {
+    using StoredPackages = std::unordered_map<UnresolvedPackage, PackagePtr>;
+
     virtual ~CachedStorage() = default;
 
-    void store(const std::unordered_map<UnresolvedPackage, PackagePtr> &);
+    void storePackages(const StoredPackages &);
     std::unordered_map<UnresolvedPackage, PackagePtr> resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const override;
 
     const StorageSchema &getSchema() const override { SW_UNREACHABLE; }
     PackageDataPtr loadData(const PackageId &) const override { SW_UNREACHABLE; }
 
 private:
-    mutable std::unordered_map<UnresolvedPackage, PackagePtr> resolved_packages;
+    mutable StoredPackages resolved_packages;
 };
 
 } // namespace sw
