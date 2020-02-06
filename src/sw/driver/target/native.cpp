@@ -2143,8 +2143,6 @@ bool NativeCompiledTarget::prepare()
     //if (getSolution().skipTarget(Scope))
         //return false;
 
-    //DEBUG_BREAK_IF(getPackage().toString() == "org.sw.demo.glennrp.png-1.6.37");
-
     switch (prepare_pass)
     {
     case 1:
