@@ -3187,9 +3187,20 @@ void NativeCompiledTarget::prepare_pass7()
                 LinkOptions.push_back("-Wl,-rpath-link," + normalize_path(d));
         }
 
-        // rpath: currently we set rpath to '.'
-        if (!getBuildSettings().TargetOS.is(OSType::Windows) && getType() == TargetType::NativeExecutable)
-            LinkOptions.push_back("-Wl,-rpath,.");
+        // rpaths
+        if (getType() == TargetType::NativeExecutable)
+        {
+            if (getBuildSettings().TargetOS.is(OSType::Macos))
+            {
+                // rpath: currently we set rpath to @executable_path
+                LinkOptions.push_back("-Wl,-rpath,@executable_path");
+            }
+            else if (!getBuildSettings().TargetOS.is(OSType::Windows))
+            {
+                // rpath: currently we set runpath to $ORIGIN
+                LinkOptions.push_back("-Wl,--enable-new-dtags,-rpath,$ORIGIN");
+            }
+        }
     }
 
     // right after gatherStaticLinkLibraries()!
