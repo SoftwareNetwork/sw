@@ -201,7 +201,7 @@ void build(Solution &s)
         embed2("pub.egorpugin.primitives.tools.embedder2-master"_dep, cpp_driver, "src/sw/driver/misc/delay_load_helper.cpp");
 
         // preprocess sw.h
-        if (!cpp_driver.DryRun)
+        /*if (!cpp_driver.DryRun)
         {
             auto pp = cpp_driver.BinaryPrivateDir / "sw.pp";
 
@@ -234,7 +234,7 @@ void build(Solution &s)
                 // for ide build
                 c->inputs.erase(cpp_driver.SourceDir / "src/sw/driver/misc/sw.cpp");
             });
-        }
+        }*/
     }
 
     auto &client = p.addTarget<ExecutableTarget>("sw", "1.0.0");

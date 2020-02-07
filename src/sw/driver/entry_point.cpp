@@ -31,7 +31,7 @@ bool gVerbose;
 namespace sw
 {
 
-static String getSwPchContents()
+/*static String getSwPchContents()
 {
 #define DECLARE_TEXT_VAR_BEGIN(x) const uint8_t _##x[] = {
 #define DECLARE_TEXT_VAR_END(x) }; const std::string x = (const char *)&_##x[0];
@@ -39,7 +39,7 @@ static String getSwPchContents()
 #include <sw.pp.emb>
     DECLARE_TEXT_VAR_END(v);
     return v;
-}
+}*/
 
 static String getCurrentModuleId()
 {
