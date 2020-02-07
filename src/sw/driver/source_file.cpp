@@ -492,13 +492,13 @@ SourceFile::SourceFile(const path &input)
 {
 }
 
-String SourceFile::getObjectFilename(const Target &t, const path &p)
+path SourceFile::getObjectFilename(const Target &t, const path &p)
 {
     // target may push its files to outer packages,
     // so files must be concatenated with its target name
     // ^^^ wrong?
     // target push files, they'll use local definitions etc.
-    return p.filename().u8string() + "." + sha256(/*t.pkg.toString() + */p.u8string()).substr(0, 8);
+    return fs::u8path(p.filename().u8string() + "." + sha256(/*t.pkg.toString() + */p.u8string()).substr(0, 8));
 }
 
 bool SourceFile::isActive() const
@@ -536,9 +536,9 @@ void NativeSourceFile::setOutputFile(const Target &t, const path &input, const p
     setOutputFile(output_dir / getObjectFilename(t, input));
 }
 
-String NativeSourceFile::getObjectFilename(const Target &t, const path &p)
+path NativeSourceFile::getObjectFilename(const Target &t, const path &p)
 {
-    return SourceFile::getObjectFilename(t, p) + compiler->getObjectExtension(t.getBuildSettings().TargetOS);
+    return SourceFile::getObjectFilename(t, p) += compiler->getObjectExtension(t.getBuildSettings().TargetOS);
 }
 
 std::shared_ptr<builder::Command> NativeSourceFile::getCommand(const Target &t) const

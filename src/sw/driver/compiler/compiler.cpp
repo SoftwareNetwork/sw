@@ -145,7 +145,7 @@ template <class C>
 static path getOutputFile(const Target &t, const C &c, const path &input)
 {
     auto o = t.BinaryDir.parent_path() / "obj" /
-        (SourceFile::getObjectFilename(t, input) + c.getObjectExtension(t.getBuildSettings().TargetOS));
+        (SourceFile::getObjectFilename(t, input) += c.getObjectExtension(t.getBuildSettings().TargetOS));
     o = fs::absolute(o);
     return o;
 }
@@ -293,7 +293,7 @@ void ClangCompiler::prepareCommand1(const ::sw::Target &t)
     }
     if (OutputFile)
     {
-        cmd->deps_file = OutputFile().parent_path() / (OutputFile().stem().u8string() + ".d");
+        cmd->deps_file = OutputFile().parent_path() / (OutputFile().stem() += ".d");
         cmd->output_dirs.insert(cmd->deps_file.parent_path());
         cmd->working_directory = OutputFile().parent_path();
     }
@@ -477,7 +477,7 @@ void GNUCompiler::prepareCommand1(const Target &t)
     }
     if (OutputFile)
     {
-        cmd->deps_file = OutputFile().parent_path() / (OutputFile().stem().u8string() + ".d");
+        cmd->deps_file = OutputFile().parent_path() / (OutputFile().stem() += ".d");
         cmd->output_dirs.insert(cmd->deps_file.parent_path());
         cmd->working_directory = OutputFile().parent_path();
     }

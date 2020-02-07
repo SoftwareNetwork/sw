@@ -285,7 +285,7 @@ void GNUCommand::postProcess1(bool ok)
     auto p = f.c_str();
     auto begin = p;
     while (*p)
-        {
+    {
         switch (state)
         {
         case EMPTY:
@@ -311,6 +311,10 @@ void GNUCommand::postProcess1(bool ok)
         p++;
     }
 
+#ifndef _WIN32
+    for (auto &f : files)
+        addImplicitInput(f);
+#else
     for (auto &f2 : files)
     {
         auto f3 = normalize_path(f2);
@@ -322,9 +326,10 @@ void GNUCommand::postProcess1(bool ok)
             f3 = toupper(f3[0]) + ":" + f3.substr(1);
         }
 #endif
-        //if (fs::exists(f3))
-            addImplicitInput(f3);
+        //if (!fs::exists(fs::u8path(f3)))
+            addImplicitInput(fs::u8path(f3));
     }
+#endif
 }
 
 ///

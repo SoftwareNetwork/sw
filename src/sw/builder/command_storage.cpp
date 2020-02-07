@@ -102,7 +102,7 @@ void CommandRecord::setImplicitInputs(const Files &files, detail::Storage &s)
         if (i == s.file_storage_by_hash.end())
         {
             boost::upgrade_to_unique_lock lk2(lk);
-            s.file_storage_by_hash[h] = str;
+            s.file_storage_by_hash[h] = fs::u8path(str);
         }
     }
 }
@@ -168,11 +168,13 @@ static void load(const path &fn, Files &files, std::unordered_map<size_t, path> 
             if (sz == 0)
                 continue;
 
+            // file
             String s;
             b.read(s);
-            files.insert(s);
+            auto p = fs::u8path(s);
+            files.insert(p);
 
-            files2[std::hash<String>()(s)] = s;
+            files2[std::hash<String>()(s)] = p;
         }
     }
 

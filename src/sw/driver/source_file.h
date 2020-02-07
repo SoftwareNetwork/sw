@@ -48,7 +48,7 @@ struct SW_DRIVER_CPP_API SourceFile : ICastable
     void showInIde(bool s) { show_in_ide = s; }
     bool showInIde() { return show_in_ide; }
 
-    static String getObjectFilename(const Target &t, const path &p);
+    static path getObjectFilename(const Target &t, const path &p);
 };
 
 struct SW_DRIVER_CPP_API NativeSourceFile : SourceFile
@@ -77,7 +77,7 @@ struct SW_DRIVER_CPP_API NativeSourceFile : SourceFile
     //void setSourceFile(const path &input, const path &output);
     void setOutputFile(const Target &t, const path &input, const path &output_dir); // bad name?
     void setOutputFile(const path &output);
-    String getObjectFilename(const Target &t, const path &p);
+    path getObjectFilename(const Target &t, const path &p);
 };
 
 struct SW_DRIVER_CPP_API RcToolSourceFile : SourceFile
