@@ -49,6 +49,7 @@ DECLARE_STATIC_LOGGER(logger, "main");
 
 #ifdef _WIN32
 #include <primitives/win32helpers.h>
+#include <combaseapi.h>
 #endif
 
 #if _MSC_VER
