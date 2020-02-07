@@ -270,36 +270,44 @@ void GNUCommand::postProcess1(bool ok)
     auto f = read_file(deps_file);
 
     // skip target
-    //  use exactly ': ' because on windows target is 'C:/path/to/file: '
+    //  use exactly ": " because on windows target is 'C:/path/to/file: '
     //                                           skip up to this space ^
     f = f.substr(f.find(": ") + 1);
 
-    boost::trim(f);
-    boost::replace_all(f, "\\\r", ""); // CR LF case or just CR
-    boost::replace_all(f, "\\\n", "");
-    boost::replace_all(f, "\r", "");
-    boost::replace_all(f, "\n", "");
-
     FilesOrdered files;
-    size_t p = 0;
-    while (1)
+
+    enum
     {
-        auto p2 = f.find(' ', p);
-        if (p2 == f.npos)
+        EMPTY,
+        FILE,
+    };
+    int state = EMPTY;
+    auto p = f.c_str();
+    auto begin = p;
+    while (*p)
         {
-            auto s = f.substr(p);
+        switch (state)
+        {
+        case EMPTY:
+            if (isspace(*p) || *p == '\\')
+                break;
+            state = FILE;
+            begin = p;
+            break;
+        case FILE:
+            if (!isspace(*p))
+                break;
+            if (*(p - 1) == '\\')
+                break;
+            String s(begin, p);
             if (!s.empty())
-                files.push_back(s);
+            {
+                boost::replace_all(s, "\\ ", " ");
+                files.push_back(fs::u8path(s));
+            }
+            state = EMPTY;
             break;
         }
-        // p2 may be 0
-        if (p2 && f[p2 - 1] != '\\')
-        {
-            auto s = f.substr(p, p2 - p);
-            if (!s.empty())
-                files.push_back(s);
-        }
-        p = p2;
         p++;
     }
 
