@@ -406,6 +406,9 @@ decltype(auto) PrepareConfigEntryPoint::commonActions(Build &b, const FilesSorte
     for (auto &fn : files)
         lib += fn;
 
+    if (lib.getCompilerType() == CompilerType::MSVC)
+        lib.CompileOptions.push_back("/utf-8");
+
     if (lib.getBuildSettings().TargetOS.is(OSType::Windows))
         lib += getDriverIncludeDir(b, lib) / getSwDir() / "misc" / "delay_load_helper.cpp";
 
