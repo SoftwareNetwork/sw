@@ -2297,6 +2297,22 @@ void NativeCompiledTarget::prepare_pass2()
             throw SW_RUNTIME_ERROR("No such target: " + d.dep->getPackage().toString());
         d.dep->setTarget(*t);
     }
+
+    // force cpp standard
+    // some stdlibs require *minimal* cpp std to be set
+    if (UnresolvedPackage(getSettings()["native"]["stdlib"]["cpp"].getValue()).getPath() == "com.Microsoft.VisualStudio.VC.libcpp")
+    {
+        for (auto &d : getActiveDependencies())
+        {
+            auto pkg = d.dep->getResolvedPackage();
+            if (pkg.getPath() == "com.Microsoft.VisualStudio.VC.libcpp")
+            {
+                if (pkg.getVersion() > Version(19) && CPPVersion < CPPLanguageStandard::CPP14)
+                    CPPVersion = CPPLanguageStandard::CPP14;
+                break;
+            }
+        }
+    }
 }
 
 void NativeCompiledTarget::prepare_pass3()
