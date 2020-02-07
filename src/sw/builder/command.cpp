@@ -472,7 +472,7 @@ void Command::afterCommand()
     // When command is written before all files above
     // and those files failed (deps write failed).
     // On the next run command times won't be compared with missing deps,
-    // so outdated command wil not be re-runned
+    // so outdated command will not be re-runned
 
     auto k = getHash();
     auto &r = *command_storage->insert(k).first;
