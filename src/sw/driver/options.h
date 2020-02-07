@@ -217,6 +217,7 @@ using LinkLibrariesType = FancyFilesOrdered;
 
 struct SW_DRIVER_CPP_API NativeLinkerOptionsData
 {
+    // there are also -weak_framework s
     PathOptionsType Frameworks; // macOS
     // it is possible to have repeated link libraries on the command line
     LinkLibrariesType LinkLibraries;
