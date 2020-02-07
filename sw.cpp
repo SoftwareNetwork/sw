@@ -195,6 +195,46 @@ void build(Solution &s)
             pch.force_include_pch = true;*/
             //cpp_driver.addPrecompiledHeader(pch);
         }
+
+        embed2("pub.egorpugin.primitives.tools.embedder2-master"_dep, cpp_driver, "src/sw/driver/sw1.h");
+        embed2("pub.egorpugin.primitives.tools.embedder2-master"_dep, cpp_driver, "src/sw/driver/sw_check_abi_version.h");
+        embed2("pub.egorpugin.primitives.tools.embedder2-master"_dep, cpp_driver, "src/sw/driver/misc/delay_load_helper.cpp");
+
+        // preprocess sw.h
+        if (!cpp_driver.DryRun)
+        {
+            auto pp = cpp_driver.BinaryPrivateDir / "sw.pp";
+
+            auto f = cpp_driver["src/sw/driver/misc/sw.cpp"].as<NativeSourceFile *>();
+            if (!f)
+                throw SW_RUNTIME_ERROR("cannot cast to NativeSourceFile");
+
+            // for cmdline build
+            f->skip_linking = true;
+            f->fancy_name = "[preprocess forced include header]";
+
+            if (auto c = f->compiler->as<VisualStudioCompiler *>())
+            {
+                c->PreprocessToFile = true;
+                c->PreprocessSupressLineDirectives = true;
+                c->PreprocessFileName = pp;
+                File(pp, cpp_driver.getFs()).setGenerated(true);
+            }
+            else
+                SW_UNIMPLEMENTED;
+
+            cpp_driver += pp; // mark as generated (to add into vs solution)
+            embed2("pub.egorpugin.primitives.tools.embedder2-master"_dep, cpp_driver, pp, cpp_driver.BinaryPrivateDir / "sw.pp.emb", 1);
+
+            // exclude
+            cpp_driver.add(sw::CallbackType::EndPrepare, [&cpp_driver, f]()
+            {
+                cpp_driver -= "src/sw/driver/misc/sw.cpp";
+                auto c = f->compiler->getCommand(cpp_driver);
+                // for ide build
+                c->inputs.erase(cpp_driver.SourceDir / "src/sw/driver/misc/sw.cpp");
+            });
+        }
     }
 
     auto &client = p.addTarget<ExecutableTarget>("sw", "1.0.0");
