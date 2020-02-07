@@ -1,2 +1,2 @@
-#include "lib2.h"
-int main() {lib2();}
+#include "lib3.h"
+int main() {lib3();}
