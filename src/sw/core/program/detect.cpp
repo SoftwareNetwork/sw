@@ -801,15 +801,16 @@ static void detectWindowsSdk(DETECT_ARGS)
         Strings idirs; // additional idirs
         bool without_ldir = false; // when there's not libs
 
-        void add(SwCoreContext &s, OS &new_settings, const Version &v)
+        std::vector<PredefinedTarget*> add(SwCoreContext &s, OS &new_settings, const Version &v)
         {
             auto idir = kit_root / "Include" / idir_subversion;
             if (!fs::exists(idir / name))
             {
                 LOG_TRACE(logger, "No include dir " << (idir / name) << " found for library: " << name);
-                return;
+                return {};
             }
 
+            std::vector<PredefinedTarget *> targets;
             for (auto target_arch : { ArchType::x86_64,ArchType::x86,ArchType::arm,ArchType::aarch64 })
             {
                 new_settings.Arch = target_arch;
@@ -829,6 +830,7 @@ static void detectWindowsSdk(DETECT_ARGS)
                     for (auto &i : idirs)
                         t.public_ts["system_include_directories"].push_back(normalize_path(idir / i));
                     t.public_ts["system_link_directories"].push_back(normalize_path(libdir));
+                    targets.push_back(&t);
                 }
                 else if (without_ldir)
                 {
@@ -838,10 +840,12 @@ static void detectWindowsSdk(DETECT_ARGS)
                     t.public_ts["system_include_directories"].push_back(normalize_path(idir / name));
                     for (auto &i : idirs)
                         t.public_ts["system_include_directories"].push_back(normalize_path(idir / i));
+                    targets.push_back(&t);
                 }
                 else
                     LOG_TRACE(logger, "No libdir " << libdir << " found for library: " << name);
             }
+            return targets;
         }
 
         void addTools(SwCoreContext &s)
@@ -917,7 +921,8 @@ static void detectWindowsSdk(DETECT_ARGS)
                     wk.idir_subversion = v.toString();
                     wk.ldir_subversion = v.toString();
                     wk.idirs.push_back("shared");
-                    wk.add(s, new_settings, v);
+                    for (auto t : wk.add(s, new_settings, v))
+                        t->public_ts["system_link_libraries"].push_back("kernel32.lib");
                 }
 
                 // km

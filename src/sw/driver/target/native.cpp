@@ -2527,6 +2527,11 @@ void NativeCompiledTarget::prepare_pass4()
                 for (auto &v : is["system_link_directories"].getArray())
                     NativeLinkerOptions::System.LinkDirectories.push_back(std::get<TargetSetting::Value>(v));
             }
+            if (is["system_link_libraries"])
+            {
+                for (auto &v : is["system_link_libraries"].getArray())
+                    NativeLinkerOptions::System.LinkLibraries.push_back(std::get<TargetSetting::Value>(v));
+            }
         }
         else
             throw SW_RUNTIME_ERROR("missing target code");
@@ -3114,7 +3119,6 @@ void NativeCompiledTarget::prepare_pass6()
             *this += "libucrtd.lib"_slib;
             break;
         }
-        *this += "kernel32.lib"_slib;
         if (auto L = getSelectedTool()->as<VisualStudioLinker*>())
         {
             auto cmd = L->createCommand(getMainBuild().getContext());
