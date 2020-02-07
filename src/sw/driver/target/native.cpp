@@ -2561,10 +2561,18 @@ void NativeCompiledTarget::prepare_pass5()
     // before merge
     if (getBuildSettings().Native.ConfigurationType != ConfigurationType::Debug)
         *this += Definition("NDEBUG");
-    // allow to other compilers?
-    // it is set automatically with /LDd, /MDd, or /MTd
-    //else if (getCompilerType() == CompilerType::MSVC)
-    //*this += Definition("_DEBUG");
+
+    // emulate msvc defs for clang
+    // https://docs.microsoft.com/en-us/cpp/build/reference/md-mt-ld-use-run-time-library?view=vs-2019
+    if (getBuildSettings().TargetOS.is(OSType::Windows) && getCompilerType() == CompilerType::Clang)
+    {
+        // always (except /LD but we do not support it yet)
+        add(Definition("_MT"));
+        if (!getBuildSettings().Native.MT)
+            add(Definition("_DLL"));
+        if (getBuildSettings().Native.ConfigurationType == ConfigurationType::Debug)
+            add(Definition("_DEBUG"));
+    }
 
     auto files = gatherSourceFiles();
 
