@@ -288,7 +288,6 @@ void SwBuild::loadInputs()
         {
             if (tgt->getSettings()["dry-run"] == "true")
                 continue;
-            addKnownPackage(tgt->getPackage()); // also mark them as known
             getTargets()[tgt->getPackage()].push_back(tgt);
         }
     }
@@ -387,8 +386,6 @@ void SwBuild::resolvePackages(const UnresolvedPackages &upkgs)
 
     // install
     auto m = swctx.install(upkgs);
-    for (auto &[_, p] : m)
-        addKnownPackage(p);
 
     if (build_settings["lock_file"].isValue() && should_update_lock_file)
     {
@@ -420,11 +417,6 @@ void SwBuild::loadPackages()
 
 void SwBuild::loadPackages(const TargetMap &predefined)
 {
-    // first, we create all package ids with EPs in targets
-    //for (auto &[p, _] : swctx.getTargetData())
-    //for (auto &p : getKnownPackages())
-        //targets[p];
-
     // load
     int r = 1;
     while (1)
@@ -515,7 +507,7 @@ void SwBuild::loadPackages(const TargetMap &predefined)
                 throw SW_RUNTIME_ERROR("no entry point for " + d.first.toString());
             auto pp = d.first.getPath().slice(0, LocalPackage(getContext().getLocalStorage(), d.first).getData().prefix);
             //auto tgts = ep->loadPackages(*this, s, { d.first }, pp);
-            auto tgts = ep->loadPackages(*this, s, known_packages, pp);
+            auto tgts = ep->loadPackages(*this, s, getTargets().getPackagesSet(), pp);
 
             bool added = false;
             for (auto &tgt : tgts)
@@ -1023,16 +1015,6 @@ void SwBuild::runSavedExecutionPlan(const path &in) const
     };
 
     execute(p);
-}
-
-const PackageIdSet &SwBuild::getKnownPackages() const
-{
-    return known_packages;
-}
-
-void SwBuild::addKnownPackage(const PackageId &id)
-{
-    known_packages.insert(id);
 }
 
 const std::vector<InputWithSettings> &SwBuild::getInputs() const

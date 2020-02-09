@@ -55,7 +55,7 @@ enum class FrontendType
     Composer = 5, // php
 };
 
-FilesOrdered findConfig(const path &dir, const FilesOrdered &fe_s)
+static FilesOrdered findConfig(const path &dir, const FilesOrdered &fe_s)
 {
     FilesOrdered files;
     FilesSorted f2;
@@ -71,7 +71,7 @@ FilesOrdered findConfig(const path &dir, const FilesOrdered &fe_s)
     return files;
 }
 
-String toString(FrontendType t)
+static String toString(FrontendType t)
 {
     switch (t)
     {
@@ -90,6 +90,26 @@ String toString(FrontendType t)
     }
 }
 
+static Strings get_inline_comments(const path &p)
+{
+    auto f = read_file(p);
+
+    Strings comments;
+    auto b = f.find("/*");
+    if (b != f.npos)
+    {
+        auto e = f.find("*/", b);
+        if (e != f.npos)
+        {
+            auto s = f.substr(b + 2, e - b - 2);
+            boost::trim(s);
+            if (!s.empty())
+                comments.push_back(s);
+        }
+    }
+    return comments;
+}
+
 Driver::Driver()
 {
 }
@@ -103,7 +123,7 @@ void Driver::processConfigureAc(const path &p)
     process_configure_ac2(p);
 }
 
-FilesOrdered Driver::canLoadInput(const RawInput &i) const
+/*FilesOrdered Driver::canLoadInput(const RawInput &i) const
 {
     switch (i.getType())
     {
@@ -119,17 +139,175 @@ FilesOrdered Driver::canLoadInput(const RawInput &i) const
     {
         return findConfig(i.getPath(), getAvailableFrontendConfigFilenames());
     }
-    case InputType::InlineSpecification:
-        if (can_load_configless_file(i.getPath()))
-            return { i.getPath() };
-        break;
     case InputType::Directory:
         return { i.getPath() };
     default:
         SW_UNREACHABLE;
     }
     return {};
-}
+}*/
+
+struct DriverInput
+{
+    FrontendType fe_type;
+};
+
+struct SpecFileInput : Input, DriverInput
+{
+    Driver *driver = nullptr;
+
+    using Input::Input;
+
+    std::unique_ptr<Specification> getSpecification() const override
+    {
+        auto spec = std::make_unique<Specification>();
+        // TODO: take relative path here
+        spec->addFile(getPath(), read_file(getPath()));
+        return spec;
+    }
+
+    EntryPointsVector load1(SwContext &swctx) override
+    {
+        auto fn = getPath();
+        switch (fe_type)
+        {
+        case FrontendType::Sw:
+        {
+            auto dll = driver->build_configs1(swctx, Files{ fn })->r.begin()->second;
+            auto ep = std::make_shared<NativeModuleTargetEntryPoint>(Module(swctx.getModuleStorage().get(dll)));
+            ep->source_dir = fn.parent_path();
+            return { ep };
+        }
+        case FrontendType::Cppan:
+        {
+            auto root = YAML::Load(read_file(fn));
+            auto bf = [root](Build &b) mutable
+            {
+                b.cppan_load(root);
+            };
+            auto ep = std::make_shared<NativeBuiltinTargetEntryPoint>(bf);
+            return { ep };
+        }
+        case FrontendType::Cargo:
+        {
+            auto root = toml::parse(normalize_path(fn));
+            auto bf = [root](Build &b) mutable
+            {
+                std::string name = toml::find<std::string>(root["package"], "name");
+                std::string version = toml::find<std::string>(root["package"], "version");
+                auto &t = b.addTarget<RustExecutable>(name, version);
+                t += "src/.*"_rr;
+            };
+            auto ep = std::make_shared<NativeBuiltinTargetEntryPoint>(bf);
+            return { ep };
+        }
+        case FrontendType::Dub:
+        {
+            // https://dub.pm/package-format-json
+            if (fn.extension() == ".sdl")
+                SW_UNIMPLEMENTED;
+            nlohmann::json j;
+            j = nlohmann::json::parse(read_file(fn));
+            auto bf = [j](Build &b) mutable
+            {
+                auto &t = b.addTarget<DExecutable>(j["name"].get<String>(),
+                    j.contains("version") ? j["version"].get<String>() : "0.0.1"s);
+                if (j.contains("sourcePaths"))
+                    t += FileRegex(t.SourceDir / j["sourcePaths"].get<String>(), ".*", true);
+                else if (fs::exists(t.SourceDir / "source"))
+                    t += "source/.*"_rr;
+                else if (fs::exists(t.SourceDir / "src"))
+                    t += "src/.*"_rr;
+                else
+                    throw SW_RUNTIME_ERROR("No source paths found");
+            };
+            auto ep = std::make_shared<NativeBuiltinTargetEntryPoint>(bf);
+            return { ep };
+        }
+        case FrontendType::Composer:
+        {
+            nlohmann::json j;
+            j = nlohmann::json::parse(read_file(fn));
+            auto bf = [j](Build &b) mutable
+            {
+                SW_UNIMPLEMENTED;
+            };
+            auto ep = std::make_shared<NativeBuiltinTargetEntryPoint>(bf);
+            return { ep };
+        }
+        default:
+            SW_UNIMPLEMENTED;
+        }
+    }
+};
+
+struct InlineSpecInput : Input, DriverInput
+{
+    yaml root;
+
+    using Input::Input;
+
+    std::unique_ptr<Specification> getSpecification() const override
+    {
+        auto spec = std::make_unique<Specification>();
+        String s;
+        if (!root.IsNull())
+            s = YAML::Dump(root);
+        // TODO: mark as inline path (spec)
+        // add spec type?
+        spec->addFile(getPath(), s);
+        return spec;
+    }
+
+    EntryPointsVector load1(SwContext &swctx) override
+    {
+        auto p = getPath();
+        if (root.IsNull())
+        {
+            auto bf = [p](Build &b)
+            {
+                auto &t = b.addExecutable(p.stem().string());
+                t += p;
+            };
+            auto ep = std::make_shared<NativeBuiltinTargetEntryPoint>(bf);
+            ep->source_dir = p.parent_path();
+            return { ep };
+        }
+
+        auto bf = [this, p](Build &b) mutable
+        {
+            auto tgts = b.cppan_load(root, p.stem().u8string());
+            if (tgts.size() == 1)
+                *tgts[0] += p;
+        };
+        auto ep = std::make_shared<NativeBuiltinTargetEntryPoint>(bf);
+        ep->source_dir = p.parent_path();
+        return { ep };
+    }
+};
+
+struct DirInput : Input
+{
+    using Input::Input;
+
+    std::unique_ptr<Specification> getSpecification() const override
+    {
+        auto spec = std::make_unique<Specification>();
+        spec->addFile(getPath(), {}); // empty
+        return spec;
+    }
+
+    EntryPointsVector load1(SwContext &swctx) override
+    {
+        auto bf = [this](Build &b)
+        {
+            auto &t = b.addExecutable(getPath().stem().string());
+        };
+        auto ep = std::make_shared<NativeBuiltinTargetEntryPoint>(bf);
+        ep->source_dir = getPath();
+        return { ep };
+    }
+};
 
 std::vector<std::unique_ptr<Input>> Driver::detectInputs(const path &p, InputType type) const
 {
@@ -138,32 +316,79 @@ std::vector<std::unique_ptr<Input>> Driver::detectInputs(const path &p, InputTyp
     {
     case InputType::SpecificationFile:
     {
-        auto &fes = getAvailableFrontendConfigFilenames();
-        auto it = std::find(fes.begin(), fes.end(), p.filename());
-        if (it != fes.end())
-            inputs.push_back(std::make_unique<Input>(*this, p, type));
+        auto fe = selectFrontendByFilename(p);
+        if (!fe)
+            break;
+
+        auto i = std::make_unique<SpecFileInput>(p, type);
+        i->driver = (Driver*)this;
+        i->fe_type = *fe;
+        LOG_TRACE(logger, "using " << toString(i->fe_type) << " frontend for input " << p);
+        inputs.push_back(std::move(i));
         break;
     }
     case InputType::DirectorySpecificationFile:
     {
         for (auto &f : findConfig(p, getAvailableFrontendConfigFilenames()))
-            inputs.push_back(std::make_unique<Input>(*this, f, InputType::SpecificationFile));
+        {
+            for (auto &i : detectInputs(f, InputType::SpecificationFile))
+                inputs.push_back(std::move(i));
+        }
         break;
     }
     case InputType::InlineSpecification:
-        if (can_load_configless_file(p))
-            inputs.push_back(std::make_unique<Input>(*this, p, type));
+    {
+        auto comments = get_inline_comments(p);
+
+        if (comments.empty())
+        {
+            const auto &exts = getCppSourceFileExtensions();
+            if (exts.find(p.extension().string()) != exts.end())
+            {
+                // file ehas cpp extension
+                auto i = std::make_unique<InlineSpecInput>(p, type);
+                i->fe_type = FrontendType::Cppan;
+                LOG_TRACE(logger, "using inline " << toString(i->fe_type) << " frontend for input " << p);
+                inputs.push_back(std::move(i));
+
+                return inputs;
+            }
+        }
+
+        for (auto &c : comments)
+        {
+            try
+            {
+                auto root = YAML::Load(c);
+
+                auto i = std::make_unique<InlineSpecInput>(p, type);
+                i->fe_type = FrontendType::Cppan;
+                i->root = root;
+                LOG_TRACE(logger, "using inline " << toString(i->fe_type) << " frontend for input " << p);
+                inputs.push_back(std::move(i));
+
+                return inputs;
+            }
+            catch (...)
+            {
+            }
+        }
         break;
+    }
     case InputType::Directory:
-        inputs.push_back(std::make_unique<Input>(*this, p, type));
+    {
+        auto i = std::make_unique<DirInput>(p, type);
+        LOG_TRACE(logger, "dir input " << p);
+        inputs.push_back(std::move(i));
         break;
+    }
     default:
         SW_UNREACHABLE;
     }
     return inputs;
 }
 
-Driver::EntryPointsVector Driver::createEntryPoints(SwContext &swctx, const std::vector<RawInput> &inputs) const
+/*Driver::EntryPointsVector Driver::createEntryPoints(SwContext &swctx, const std::vector<RawInput> &inputs) const
 {
     PackageIdSet pkgsids;
     std::unordered_map<path, EntryPointsVector1> p_eps;
@@ -171,26 +396,6 @@ Driver::EntryPointsVector Driver::createEntryPoints(SwContext &swctx, const std:
     {
         switch (i.getType())
         {
-        /*case InputType::InstalledPackage:
-        {
-            pkgsids.insert(i.getPackageId());
-            break;
-        }*/
-        case InputType::SpecificationFile:
-        {
-            p_eps[i.getPath()] = load_spec_file(swctx, i.getPath());
-            break;
-        }
-        case InputType::InlineSpecification:
-        {
-            p_eps[i.getPath()] = load_configless_file(swctx, i.getPath());
-            break;
-        }
-        case InputType::Directory:
-        {
-            p_eps[i.getPath()] = load_configless_dir(swctx, i.getPath());
-            break;
-        }
         default:
             SW_UNIMPLEMENTED;
         }
@@ -209,38 +414,7 @@ Driver::EntryPointsVector Driver::createEntryPoints(SwContext &swctx, const std:
             eps.push_back(p_eps[i.getPath()]);
     }
     return eps;
-}
-
-std::unique_ptr<Specification> Driver::getSpecification(const RawInput &i) const
-{
-    auto spec = std::make_unique<Specification>();
-    switch (i.getType())
-    {
-    case InputType::SpecificationFile:
-    {
-        // TODO: take relative path here
-        spec->addFile(i.getPath(), read_file(i.getPath()));
-        break;
-    }
-    case InputType::InlineSpecification:
-    {
-        auto s = load_configless_file_spec(i.getPath());
-        if (!s)
-            throw SW_RUNTIME_ERROR("Cannot load inline specification");
-        // TODO: mark as inline path (spec)
-        // add spec type?
-        spec->addFile(i.getPath(), *s);
-    }
-    case InputType::Directory:
-    {
-        spec->addFile(i.getPath(), {}); // empty
-        break;
-    }
-    default:
-        SW_UNIMPLEMENTED;
-    }
-    return spec;
-}
+}*/
 
 PackageIdSet Driver::getBuiltinPackages(SwContext &swctx) const
 {
@@ -267,12 +441,8 @@ std::shared_ptr<PrepareConfigEntryPoint> Driver::build_configs1(SwContext &swctx
     for (auto &[p, ep] : load_builtin_entry_points())
         b->setServiceEntryPoint(p, ep);
 
-    // before load packages!
-    for (auto &p : getBuiltinPackages(ctx))
-        b->addKnownPackage(p);
-
     auto ep = std::make_shared<PrepareConfigEntryPoint>(objs);
-    auto tgts = ep->loadPackages(*b, ts, b->getKnownPackages(), {}); // load all our known targets
+    auto tgts = ep->loadPackages(*b, ts, getBuiltinPackages(ctx), {}); // load all our known targets
     if (tgts.size() != 1)
         throw SW_LOGIC_ERROR("something went wrong, only one lib target must be exported");
 
@@ -355,200 +525,6 @@ std::unordered_map<PackageId, Driver::EntryPointsVector1> Driver::load_packages(
         }
     }
     return eps;
-}
-
-Driver::EntryPointsVector1 Driver::load_spec_file(SwContext &swctx, const path &fn) const
-{
-    auto fe = selectFrontendByFilename(fn);
-    if (!fe)
-        throw SW_RUNTIME_ERROR("frontend was not found for file: " + normalize_path(fn));
-
-    LOG_TRACE(logger, "using " << toString(*fe) << " frontend");
-    switch (fe.value())
-    {
-    case FrontendType::Sw:
-    {
-        auto dll = build_configs1(swctx, Files{ fn })->r.begin()->second;
-        auto ep = std::make_shared<NativeModuleTargetEntryPoint>(Module(swctx.getModuleStorage().get(dll)));
-        ep->source_dir = fn.parent_path();
-        return { ep };
-    }
-    case FrontendType::Cppan:
-    {
-        auto root = YAML::Load(read_file(fn));
-        auto bf = [root](Build &b) mutable
-        {
-            b.cppan_load(root);
-        };
-        auto ep = std::make_shared<NativeBuiltinTargetEntryPoint>(bf);
-        return { ep };
-    }
-    case FrontendType::Cargo:
-    {
-        auto root = toml::parse(normalize_path(fn));
-        auto bf = [root](Build &b) mutable
-        {
-            std::string name = toml::find<std::string>(root["package"], "name");
-            std::string version = toml::find<std::string>(root["package"], "version");
-            auto &t = b.addTarget<RustExecutable>(name, version);
-            t += "src/.*"_rr;
-        };
-        auto ep = std::make_shared<NativeBuiltinTargetEntryPoint>(bf);
-        return { ep };
-    }
-    case FrontendType::Dub:
-    {
-        // https://dub.pm/package-format-json
-        if (fn.extension() == ".sdl")
-            SW_UNIMPLEMENTED;
-        nlohmann::json j;
-        j = nlohmann::json::parse(read_file(fn));
-        auto bf = [j](Build &b) mutable
-        {
-            auto &t = b.addTarget<DExecutable>(j["name"].get<String>(),
-                j.contains("version") ? j["version"].get<String>() : "0.0.1"s);
-            if (j.contains("sourcePaths"))
-                t += FileRegex(t.SourceDir / j["sourcePaths"].get<String>(), ".*", true);
-            else if (fs::exists(t.SourceDir / "source"))
-                t += "source/.*"_rr;
-            else if (fs::exists(t.SourceDir / "src"))
-                t += "src/.*"_rr;
-            else
-                throw SW_RUNTIME_ERROR("No source paths found");
-        };
-        auto ep = std::make_shared<NativeBuiltinTargetEntryPoint>(bf);
-        return { ep };
-    }
-    case FrontendType::Composer:
-    {
-        nlohmann::json j;
-        j = nlohmann::json::parse(read_file(fn));
-        auto bf = [j](Build &b) mutable
-        {
-            SW_UNIMPLEMENTED;
-        };
-        auto ep = std::make_shared<NativeBuiltinTargetEntryPoint>(bf);
-        return { ep };
-    }
-    default:
-        SW_UNIMPLEMENTED;
-    }
-}
-
-static Strings get_inline_comments(const path &p)
-{
-    auto f = read_file(p);
-
-    Strings comments;
-    auto b = f.find("/*");
-    if (b != f.npos)
-    {
-        auto e = f.find("*/", b);
-        if (e != f.npos)
-        {
-            auto s = f.substr(b + 2, e - b - 2);
-            boost::trim(s);
-            if (!s.empty())
-                comments.push_back(s);
-        }
-    }
-    return comments;
-}
-
-Driver::EntryPointsVector1 Driver::load_configless_dir(SwContext &, const path &p) const
-{
-    auto bf = [p](Build &b)
-    {
-        auto &t = b.addExecutable(p.stem().string());
-    };
-    auto ep = std::make_shared<NativeBuiltinTargetEntryPoint>(bf);
-    ep->source_dir = p;
-    return { ep };
-}
-
-Driver::EntryPointsVector1 Driver::load_configless_file(SwContext &, const path &p) const
-{
-    auto comments = get_inline_comments(p);
-
-    if (comments.empty())
-    {
-        auto bf = [p](Build &b)
-        {
-            auto &t = b.addExecutable(p.stem().string());
-            t += p;
-        };
-        auto ep = std::make_shared<NativeBuiltinTargetEntryPoint>(bf);
-        ep->source_dir = p.parent_path();
-        return { ep };
-    }
-
-    for (auto &c : comments)
-    {
-        try
-        {
-            auto root = YAML::Load(c);
-            auto bf = [root, p](Build &b) mutable
-            {
-                auto tgts = b.cppan_load(root, p.stem().u8string());
-                if (tgts.size() == 1)
-                    *tgts[0] += p;
-            };
-            auto ep = std::make_shared<NativeBuiltinTargetEntryPoint>(bf);
-            ep->source_dir = p.parent_path();
-            return { ep };
-        }
-        catch (...)
-        {
-        }
-    }
-    throw SW_RUNTIME_ERROR("cannot load yaml comments");
-}
-
-bool Driver::can_load_configless_file(const path &p) const
-{
-    auto comments = get_inline_comments(p);
-
-    if (comments.empty())
-    {
-        const auto &exts = getCppSourceFileExtensions();
-        return exts.find(p.extension().string()) != exts.end();
-    }
-
-    for (auto &c : comments)
-    {
-        try
-        {
-            YAML::Load(c);
-            return true;
-        }
-        catch (...)
-        {
-        }
-    }
-    return false;
-}
-
-std::optional<String> Driver::load_configless_file_spec(const path &p) const
-{
-    auto comments = get_inline_comments(p);
-
-    if (comments.empty())
-    {
-        return String{};
-    }
-
-    for (auto &c : comments)
-    {
-        try
-        {
-            YAML::Load(c);
-            return c;
-        }
-        catch (...)
-        {
-        }
-    }
-    return {};
 }
 
 const StringSet &Driver::getAvailableFrontendNames()

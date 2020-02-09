@@ -29,7 +29,8 @@ int64_t Specification::getHash() const
 
 int64_t IDriver::getGroupNumber(const RawInput &i) const
 {
-    return getSpecification(i)->getHash();
+    SW_UNIMPLEMENTED;
+    //return getSpecification(i)->getHash();
 }
 
 } // namespace sw

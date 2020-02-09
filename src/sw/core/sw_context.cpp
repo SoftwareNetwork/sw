@@ -436,27 +436,31 @@ std::vector<Input *> SwContext::addInput(const LocalPackage &p)
 
 void SwContext::loadEntryPoints(const std::set<Input*> &inputs, bool set_eps)
 {
+    for (auto &i : inputs)
+        i->load(*this);
+    return;
+
     std::map<const IDriver *, std::vector<Input*>> active_drivers;
     for (auto &i : inputs)
     {
-        if (!i->isLoaded())
-            active_drivers[&i->getDriver()].push_back(i);
+        //if (!i->isLoaded())
+            //active_drivers[&i->getDriver()].push_back(i);
     }
     for (auto &[d, g] : active_drivers)
     {
         std::vector<RawInput> inputs;
         for (auto &i : g)
             inputs.push_back(*i);
-        auto eps = d->createEntryPoints(*this, inputs); // batch load
-        if (eps.size() != inputs.size())
-            throw SW_RUNTIME_ERROR("Incorrect number of returned entry points");
-        for (size_t i = 0; i < eps.size(); i++)
+        //auto eps = d->createEntryPoints(*this, inputs); // batch load
+        //if (eps.size() != inputs.size())
+            //throw SW_RUNTIME_ERROR("Incorrect number of returned entry points");
+        //for (size_t i = 0; i < eps.size(); i++)
         {
             // when loading installed package, eps[i] may be empty
             // (ep already exists in driver)
             // so we take ep from context
             // test: sw build org.sw.demo.madler.zlib
-            if (eps[i].empty())
+            //if (eps[i].empty())
             {
                 SW_UNREACHABLE;
                 //if (inputs[i].getType() != InputType::InstalledPackage)
@@ -464,7 +468,7 @@ void SwContext::loadEntryPoints(const std::set<Input*> &inputs, bool set_eps)
                 //g[i]->addEntryPoints({ getEntryPoint(inputs[i].getPackageId()) });
             }
             //else
-                g[i]->addEntryPoints(eps[i]);
+                //g[i]->addEntryPoints(eps[i]);
 
             //if (!set_eps)
                 //continue;

@@ -33,146 +33,27 @@ bool RawInput::operator<(const RawInput &rhs) const
     return std::tie(type, p) < std::tie(rhs.type, rhs.p);
 }
 
-/*Input::Input(IDriver &driver, const path &p)
-    : driver(driver)
-{
-    if (p.empty())
-        throw SW_RUNTIME_ERROR("empty path");
-    this->p = p;
-    //init(p, swctx);
-}*/
-
-/*Input::Input(const LocalPackage &p, const SwContext &swctx)
-{
-    init(p, swctx);
-}*/
-
-Input::Input(const IDriver &driver, const path &p, InputType t)
-    : driver(driver)
+Input::Input(/*const IDriver &driver, */const path &p, InputType t)
+    //: driver(driver)
 {
     if (p.empty())
         throw SW_RUNTIME_ERROR("empty path");
     this->p = p;
     type = t;
-    /*path p = in;
-    if (!p.is_absolute())
-        p = fs::absolute(p);
-    this->p = p;
-    type = t;
-    if (!findDriver(type, swctx))
-        throw SW_RUNTIME_ERROR("Cannot find suitable driver for " + normalize_path(in));*/
 }
 
-bool Input::findDriver(InputType t, const SwContext &swctx)
+Input::~Input()
 {
-    type = t;
-    /*for (auto &[dp, d] : swctx.getDrivers())
-    {
-        auto files = d->canLoadInput(*this);
-        if (!files.empty())
-        {
-            SW_UNIMPLEMENTED;
-            if (*r != getPath())
-            {
-                if (fs::is_regular_file(*r))
-                {
-                    type = InputType::SpecificationFile;
-                    data = *r;
-                }
-                else if (fs::is_directory(*r))
-                {
-                    type = InputType::Directory;
-                    data = *r;
-                }
-                else
-                {
-                    // what is it?
-                    throw SW_RUNTIME_ERROR("Unknown file type: " + normalize_path(*r));
-                }
-            }
-            driver = d.get();
-            LOG_DEBUG(logger, "Selecting driver " + dp.toString() + " for input " + normalize_path(*r));
-            return true;
-        }
-    }*/
-    return false;
 }
 
-void Input::init(const path &in, const SwContext &swctx)
+void Input::load(SwContext &swctx)
 {
-    SW_UNIMPLEMENTED;
-    /*path p = in;
-    if (!p.is_absolute())
-        p = fs::absolute(p);
-
-    auto status = fs::status(p);
-    if (status.type() != fs::file_type::regular &&
-        status.type() != fs::file_type::directory)
-    {
-        throw SW_RUNTIME_ERROR("Bad file type: " + normalize_path(p));
-    }
-
-    data = fs::u8path(normalize_path(primitives::filesystem::canonical(p)));
-
-    // spec or regular file
-    if (status.type() == fs::file_type::regular)
-    {
-        if (findDriver(InputType::SpecificationFile, swctx) ||
-            findDriver(InputType::InlineSpecification, swctx))
-            return;
-
-        // find in file first: 'sw driver package-id', call that driver on whole file
-        auto f = read_file(p);
-
-        static const std::regex r("sw\\s+driver\\s+(\\S+)");
-        std::smatch m;
-        if (std::regex_search(f, m, r))
-        {
-            SW_UNIMPLEMENTED;
-
-            //- install driver
-            //- load & register it
-            //- re-run this ctor
-
-            auto driver_pkg = swctx.install({ m[1].str() }).find(m[1].str());
-            return;
-        }
-    }
-    else
-    {
-        if (findDriver(InputType::DirectorySpecificationFile, swctx) ||
-            findDriver(InputType::Directory, swctx))
-            return;
-    }*/
-
-    throw SW_RUNTIME_ERROR("Cannot select driver for " + normalize_path(p));
+    if (isLoaded())
+        return;
+    eps = load1(swctx);
+    if (eps.empty())
+        throw SW_RUNTIME_ERROR("Empty entry points");
 }
-
-/*void Input::init(const LocalPackage &p, const SwContext &swctx)
-{
-    data = p;
-    type = InputType::InstalledPackage;
-    auto &d = *swctx.getDrivers().begin();
-    driver = d.second.get();
-
-    LOG_TRACE(logger, "Selecting driver " + d.first.toString() + " for input " + p.toString());
-}*/
-
-//bool Input::operator==(const Input &rhs) const
-//{
-    //SW_UNIMPLEMENTED;
-    /*if (gn == 0)
-        return data == rhs.data;
-    return std::tie(gn, data) == std::tie(rhs.gn, rhs.data);*/
-//}
-
-//bool Input::operator<(const Input &rhs) const
-//{
-    //SW_UNIMPLEMENTED;
-    /*if (gn == 0)
-        return data < rhs.data;
-    return std::tie(gn, data) < std::tie(rhs.gn, rhs.data);*/
-//}
 
 bool Input::isChanged() const
 {
@@ -188,29 +69,20 @@ bool Input::isChanged() const
     }*/
 }
 
-void Input::addEntryPoints(const std::vector<TargetEntryPointPtr> &e)
-{
-    if (isLoaded())
-        throw SW_RUNTIME_ERROR("Can add eps only once");
-    if (e.empty())
-        throw SW_RUNTIME_ERROR("Empty entry points");
-    eps = e;
-}
-
 bool Input::isLoaded() const
 {
     return !eps.empty();
 }
 
-std::unique_ptr<Specification> Input::getSpecification() const
+/*std::unique_ptr<Specification> Input::getSpecification() const
 {
     return driver.getSpecification(*this);
-}
+}*/
 
-PackageVersionGroupNumber Input::getGroupNumber() const
+/*PackageVersionGroupNumber Input::getGroupNumber() const
 {
     return driver.getGroupNumber(*this);
-}
+}*/
 
 InputWithSettings::InputWithSettings(const Input &i)
     : i(i)

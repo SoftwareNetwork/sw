@@ -30,21 +30,6 @@ enum class InputType : uint8_t
     DirectorySpecificationFile,
 };
 
-/*struct IInput
-{
-    virtual ~IInput() = 0;
-
-    // used for batch loading inputs (if applicable)
-    virtual IDriver &getDriver() const = 0;
-
-    //bool isChanged() const;
-    //bool isLoaded() const; ?
-    //std::unique_ptr<Specification> getSpecification() const;
-    //const std::vector<TargetEntryPointPtr> &getEntryPoints() const;
-    //PackageVersionGroupNumber getGroupNumber() const; ?
-    //void addEntryPoints(const std::vector<TargetEntryPointPtr> &);
-};*/
-
 struct RawInputData
 {
     InputType type;
@@ -65,34 +50,31 @@ protected:
 
 struct SW_CORE_API Input : RawInput
 {
-    /// determine input type
-    //Input(IDriver &, const path &);
-    /// forced input type
-    Input(const IDriver &, const path &, InputType);
+    using EntryPointsVector = std::vector<TargetEntryPointPtr>;
 
-    const IDriver &getDriver() const { return driver; }
+    Input(/*const IDriver &, */const path &, InputType);
+    virtual ~Input();
+
+    void load(SwContext &);
+
+    virtual std::unique_ptr<Specification> getSpecification() const = 0;
+
+    // used for batch loading inputs (if applicable)
+    //const IDriver &getDriver() const { return driver; }
 
     bool isChanged() const;
-    void addEntryPoints(const std::vector<TargetEntryPointPtr> &);
     bool isLoaded() const;
-    std::unique_ptr<Specification> getSpecification() const;
-    PackageVersionGroupNumber getGroupNumber() const;
-    const std::vector<TargetEntryPointPtr> &getEntryPoints() const { return eps; }
-
-    //bool operator==(const Input &rhs) const;
-    //bool operator<(const Input &rhs) const;
+    //PackageVersionGroupNumber getGroupNumber() const;
+    const EntryPointsVector &getEntryPoints() const { return eps; }
 
 private:
-    const IDriver &driver;
+    //const IDriver &driver;
     // one input may have several eps
     // example: .yml frontend - 1 document, but multiple eps, one per package
-    std::vector<TargetEntryPointPtr> eps;
+    EntryPointsVector eps;
     //PackageVersionGroupNumber gn = 0;
 
-    void init(const path &, const SwContext &);
-    //void init(const LocalPackage &, const SwContext &);
-
-    bool findDriver(InputType t, const SwContext &);
+    virtual EntryPointsVector load1(SwContext &) = 0;
 };
 
 struct SW_CORE_API InputWithSettings

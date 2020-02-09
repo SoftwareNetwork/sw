@@ -48,7 +48,7 @@ struct SW_CORE_API IDriver
     /// It is changed for InputType::DirectorySpecificationFile
     /// and left unchanged for other input types.
     ///
-    virtual FilesOrdered canLoadInput(const RawInput &) const = 0;
+    //virtual FilesOrdered canLoadInput(const RawInput &) const = 0;
 
     virtual std::vector<std::unique_ptr<Input>> detectInputs(const path &, InputType) const = 0;
 
@@ -66,12 +66,12 @@ struct SW_CORE_API IDriver
     // maybe move it inside Input? because later we'll have saved targets
     //
     [[nodiscard]]
-    virtual EntryPointsVector createEntryPoints(SwContext &, const std::vector<RawInput> &) const = 0;
+    //virtual EntryPointsVector createEntryPoints(SwContext &, const std::vector<RawInput> &) const = 0;
 
     /// get raw specification
     /// complex return value?
     /// for example set of files
-    virtual std::unique_ptr<Specification> getSpecification(const RawInput &) const = 0;
+    //virtual std::unique_ptr<Specification> getSpecification(const RawInput &) const = 0;
 
     ///
     //virtual PackageVersionSpecificationHash getHash(const RawInput &) const;

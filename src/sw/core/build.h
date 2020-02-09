@@ -84,9 +84,6 @@ struct SW_CORE_API SwBuild
 
     path getBuildDirectory() const;
 
-    const PackageIdSet &getKnownPackages() const;
-    void addKnownPackage(const PackageId &);
-
     const std::vector<InputWithSettings> &getInputs() const;
 
     const TargetSettings &getExternalVariables() const;
@@ -103,7 +100,6 @@ private:
     path build_dir;
     TargetMap targets;
     mutable TargetMap targets_to_build;
-    PackageIdSet known_packages;
     std::vector<InputWithSettings> inputs;
     TargetSettings build_settings;
     mutable BuildState state = BuildState::NotStarted;
