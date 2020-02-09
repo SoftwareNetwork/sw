@@ -3190,7 +3190,7 @@ void NativeCompiledTarget::prepare_pass7()
     // linker 1
 
     // add more link libraries from deps
-    if (!*HeaderOnly && getSelectedTool() != Librarian.get())
+    if (!*HeaderOnly && !isStaticLibrary())
     {
         //
         // linux:
@@ -3242,7 +3242,7 @@ void NativeCompiledTarget::prepare_pass8()
     auto obj = gatherObjectFilesWithoutLibraries();
     auto O1 = gatherLinkLibraries();
 
-    if (!*HeaderOnly && getSelectedTool() != Librarian.get())
+    if (!*HeaderOnly && !isStaticLibrary())
     {
         for (auto &f : ::sw::gatherSourceFiles<RcToolSourceFile>(*this))
             obj.insert(f->output);
@@ -3269,7 +3269,7 @@ void NativeCompiledTarget::processCircular(Files &obj)
 {
     if (!hasCircularDependency() && !createWindowsRpath())
         return;
-    if (*HeaderOnly || getSelectedTool() == Librarian.get())
+    if (*HeaderOnly || isStaticLibrary())
         return;
 
     auto lib_exe = Librarian->as<VisualStudioLibrarian*>();
@@ -3858,6 +3858,17 @@ CompilerType NativeCompiledTarget::getCompilerType() const
     return ct;
 }
 
+TargetType NativeCompiledTarget::getRealType() const
+{
+    if (isHeaderOnly())
+        return TargetType::NativeHeaderOnlyLibrary;
+    if (isStaticLibrary())
+        return TargetType::NativeStaticLibrary;
+    if (getType() == TargetType::NativeExecutable)
+        return TargetType::NativeExecutable;
+    return TargetType::NativeSharedLibrary;
+}
+
 void NativeCompiledTarget::cppan_load_project(const yaml &root)
 {
     if (root["source"].IsDefined())
@@ -4437,7 +4448,7 @@ bool LibraryTarget::init()
 
 path LibraryTarget::getImportLibrary() const
 {
-    if (getSelectedTool() == Librarian.get())
+    if (isStaticLibrary())
         return getOutputFile();
     return getSelectedTool()->getImportLibrary();
 }

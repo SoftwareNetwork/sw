@@ -51,6 +51,7 @@ enum class TargetType : int
     Directory, // implicitly created?
 
     NativeLibrary,
+    NativeHeaderOnlyLibrary,
     NativeStaticLibrary,
     NativeSharedLibrary,
     NativeExecutable,
