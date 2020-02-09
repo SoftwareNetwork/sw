@@ -13,12 +13,15 @@
 namespace sw
 {
 
+struct Input;
 struct PackageId;
 struct RawInput;
 struct RawInputData;
 struct SwContext;
 struct TargetEntryPoint;
 using TargetEntryPointPtr = std::shared_ptr<TargetEntryPoint>;
+
+enum class InputType : uint8_t;
 
 struct SW_CORE_API Specification
 {
@@ -41,21 +44,27 @@ struct SW_CORE_API IDriver
     /// Input types - all except InputType::InstalledPackage.
     /// Path in raw input is absolute.
     ///
-    /// On success path is returned.
+    /// On success one or more is returned.
     /// It is changed for InputType::DirectorySpecificationFile
     /// and left unchanged for other input types.
     ///
-    virtual std::optional<path> canLoadInput(const RawInput &) const = 0;
+    virtual FilesOrdered canLoadInput(const RawInput &) const = 0;
+
+    virtual std::vector<std::unique_ptr<Input>> detectInputs(const path &, InputType) const = 0;
 
     /// Create entry points for inputs.
-    /// inputs are unique and non null
-    /// inputs will receive their entry points
-    /// result is number of vectors of entry points equal to inputs, in the same order
-    /// one input may provide several entry points (yml)
-    /// we return shared points because we cannot load them into context because package ids is not known in advance
+    /// Inputs are unique and non null.
+    /// Inputs will receive their entry points.
+    /// Result is number of vectors of entry points equal to inputs, in the same order.
+    /// One input may provide several entry points (yml).
+    /// We return shared points because we cannot load them into context because package ids is not known in advance.
     /// (in case of loading not installed package)
-    /// if entry points were already loaded (like for installed packages), internal vector may be empty
+    /// If entry points were already loaded (like for installed packages), internal vector may be empty.
     ///
+    //
+    // this function is used for batch loading
+    // maybe move it inside Input? because later we'll have saved targets
+    //
     [[nodiscard]]
     virtual EntryPointsVector createEntryPoints(SwContext &, const std::vector<RawInput> &) const = 0;
 

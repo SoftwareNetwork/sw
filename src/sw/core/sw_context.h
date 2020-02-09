@@ -62,14 +62,16 @@ struct SW_CORE_API SwContext : SwCoreContext
     virtual ~SwContext();
 
     void registerDriver(const PackageId &pkg, std::unique_ptr<IDriver> &&driver);
-    const Drivers &getDrivers() const { return drivers; }
+    //const Drivers &getDrivers() const { return drivers; }
 
     std::unique_ptr<SwBuild> createBuild();
     void executeBuild(const path &);
 
-    Input &addInput(const String &);
-    Input &addInput(const path &);
-    Input &addInput(const LocalPackage &);
+    // one subject may bring several inputs
+    // (one path containing multiple inputs)
+    std::vector<Input *> addInput(const String &);
+    std::vector<Input *> addInput(const LocalPackage &);
+    std::vector<Input *> addInput(const path &);
 
     void loadEntryPoints(const std::set<Input*> &inputs, bool set_eps);
 
@@ -81,8 +83,6 @@ private:
     Inputs inputs;
 
     std::unique_ptr<SwBuild> createBuild1();
-    template <class I>
-    Input &addInput1(const I &);
 };
 
 } // namespace sw

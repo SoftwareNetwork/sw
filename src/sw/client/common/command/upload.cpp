@@ -195,7 +195,8 @@ SUBCOMMAND_DECL2(upload)
     auto b = swctx.createBuild();
 
     // get spec early, so changes won't be considered
-    auto spec = swctx.addInput(fs::current_path()).getSpecification()->files.begin()->second;
+    SW_UNIMPLEMENTED;
+    /*auto spec = swctx.addInput(fs::current_path()).getSpecification()->files.begin()->second;
 
     // detect from options
     bool cmdline_source_present = 0
@@ -283,5 +284,5 @@ SUBCOMMAND_DECL2(upload)
     // send signatures (gpg)
     // -k KEY1 -k KEY2
     auto api = current_remote->getApi();
-    api->addVersion(options.options_upload.upload_prefix, m, script_name, spec);
+    api->addVersion(options.options_upload.upload_prefix, m, script_name, spec);*/
 }

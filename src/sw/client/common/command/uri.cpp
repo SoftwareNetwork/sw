@@ -87,9 +87,11 @@ F(build)
     fs::create_directories(d);
     ScopedCurrentPath scp(d, CurrentPathScope::All);
     auto b = swctx->createBuild();
-    sw::InputWithSettings i(swctx->addInput(p));
+
+    SW_UNIMPLEMENTED;
+    /*sw::InputWithSettings i(swctx->addInput(p));
     b->addInput(i);
-    b->build();
+    b->build();*/
 }
 
 F(run)

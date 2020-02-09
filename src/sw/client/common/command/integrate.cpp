@@ -86,7 +86,8 @@ SUBCOMMAND_DECL(integrate)
             throw SW_RUNTIME_ERROR("size() must be 1");
         for (auto &l : lines)
         {
-            auto &i = swctx->addInput(l);
+            SW_UNIMPLEMENTED;
+            /*auto &i = swctx->addInput(l);
             sw::InputWithSettings s(i);
             if (!configs.empty())
             {
@@ -101,7 +102,7 @@ SUBCOMMAND_DECL(integrate)
             {
                 s.addSettings(settings[0]);
             }
-            b.addInput(s);
+            b.addInput(s);*/
         }
         b.loadInputs();
         b.setTargetsToBuild();

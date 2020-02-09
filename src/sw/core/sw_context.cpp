@@ -317,7 +317,7 @@ void SwContext::executeBuild(const path &in)
     b->runSavedExecutionPlan(in);
 }
 
-Input &SwContext::addInput(const String &i)
+std::vector<Input *> SwContext::addInput(const String &i)
 {
     path p(i);
     if (fs::exists(p))
@@ -326,28 +326,87 @@ Input &SwContext::addInput(const String &i)
         return addInput(resolve(i));
 }
 
-Input &SwContext::addInput(const path &i)
+std::vector<Input *> SwContext::addInput(const path &in)
 {
-    return addInput1(i);
-}
+    path p = in;
+    if (!p.is_absolute())
+        p = fs::absolute(p);
 
-Input &SwContext::addInput(const LocalPackage &p)
-{
-    auto &i = addInput1(p);
-    if (i.isLoaded())
-        return i;
-    //if (getTargetData().find(p) == getTargetData().end())
-        //return i;
-    auto ep = getEntryPoint(p);
-    if (ep)
-        i.addEntryPoints({ ep });
-    return i;
-}
+    auto status = fs::status(p);
+    if (status.type() != fs::file_type::regular &&
+        status.type() != fs::file_type::directory)
+    {
+        throw SW_RUNTIME_ERROR("Bad file type: " + normalize_path(p));
+    }
 
-template <class I>
-Input &SwContext::addInput1(const I &i)
-{
-    auto input = std::make_unique<Input>(i, *this);
+    p = fs::u8path(normalize_path(primitives::filesystem::canonical(p)));
+
+    std::vector<Input *> inputs_local;
+
+    auto findDriver = [this, &p, &inputs_local](auto type) -> bool
+    {
+        for (auto &[dp, d] : drivers)
+        {
+            auto inpts = d->detectInputs(p, type);
+            if (inpts.empty())
+                continue;
+            for (auto &i : inpts)
+            {
+                auto it = std::find_if(inputs.begin(), inputs.end(), [&i = *i](const auto &p)
+                {
+                    return *p == i;
+                });
+                if (it != inputs.end())
+                    inputs_local.push_back(&**it);
+                else
+                {
+                    inputs.push_back(std::move(i));
+                    inputs_local.push_back(&*inputs.back());
+                }
+
+                LOG_DEBUG(logger, "Selecting driver " + dp.toString() + " for input " + normalize_path(i->getPath()));
+            }
+            return true;
+        }
+        return false;
+    };
+
+    // spec or regular file
+    if (status.type() == fs::file_type::regular)
+    {
+        if (findDriver(InputType::SpecificationFile) ||
+            findDriver(InputType::InlineSpecification))
+            return inputs_local;
+
+        SW_UNIMPLEMENTED;
+
+        // find in file first: 'sw driver package-id', call that driver on whole file
+        /*auto f = read_file(p);
+
+        static const std::regex r("sw\\s+driver\\s+(\\S+)");
+        std::smatch m;
+        if (std::regex_search(f, m, r))
+        {
+            SW_UNIMPLEMENTED;
+
+            //- install driver
+            //- load & register it
+            //- re-run this ctor
+
+            auto driver_pkg = swctx.install({ m[1].str() }).find(m[1].str());
+            return;
+        }*/
+    }
+    else
+    {
+        if (findDriver(InputType::DirectorySpecificationFile) ||
+            findDriver(InputType::Directory))
+            return inputs_local;
+    }
+
+    SW_UNIMPLEMENTED;
+
+    /*auto input = std::make_unique<Input>(i, *this);
     auto it = std::find_if(inputs.begin(), inputs.end(), [&i = *input](const auto &p)
     {
         return *p == i;
@@ -355,12 +414,29 @@ Input &SwContext::addInput1(const I &i)
     if (it != inputs.end())
         return **it;
     inputs.push_back(std::move(input));
-    return *inputs.back();
+    return *inputs.back();*/
+}
+
+std::vector<Input *> SwContext::addInput(const LocalPackage &p)
+{
+    if (!p.getData().group_number)
+        throw SW_RUNTIME_ERROR("Missing group number");
+
+    return addInput(p.getGroupLeader().getDirSrc2());
+    /*auto &i = addInput(p.getGroupLeader().getDirSrc2());
+    if (i.isLoaded())
+        return i;
+    //if (getTargetData().find(p) == getTargetData().end())
+        //return i;
+    auto ep = getEntryPoint(p);
+    if (ep)
+        i.addEntryPoints({ ep });
+    return i;*/
 }
 
 void SwContext::loadEntryPoints(const std::set<Input*> &inputs, bool set_eps)
 {
-    std::map<IDriver *, std::vector<Input*>> active_drivers;
+    std::map<const IDriver *, std::vector<Input*>> active_drivers;
     for (auto &i : inputs)
     {
         if (!i->isLoaded())
@@ -371,7 +447,7 @@ void SwContext::loadEntryPoints(const std::set<Input*> &inputs, bool set_eps)
         std::vector<RawInput> inputs;
         for (auto &i : g)
             inputs.push_back(*i);
-        auto eps = d->createEntryPoints(*this, inputs);
+        auto eps = d->createEntryPoints(*this, inputs); // batch load
         if (eps.size() != inputs.size())
             throw SW_RUNTIME_ERROR("Incorrect number of returned entry points");
         for (size_t i = 0; i < eps.size(); i++)
@@ -382,17 +458,19 @@ void SwContext::loadEntryPoints(const std::set<Input*> &inputs, bool set_eps)
             // test: sw build org.sw.demo.madler.zlib
             if (eps[i].empty())
             {
-                if (inputs[i].getType() != InputType::InstalledPackage)
-                    throw SW_RUNTIME_ERROR("unexpected input type");
-                g[i]->addEntryPoints({ getEntryPoint(inputs[i].getPackageId()) });
+                SW_UNREACHABLE;
+                //if (inputs[i].getType() != InputType::InstalledPackage)
+                    //throw SW_RUNTIME_ERROR("unexpected input type");
+                //g[i]->addEntryPoints({ getEntryPoint(inputs[i].getPackageId()) });
             }
-            else
+            //else
                 g[i]->addEntryPoints(eps[i]);
 
-            if (!set_eps)
-                continue;
+            //if (!set_eps)
+                //continue;
 
-            if (inputs[i].getType() != InputType::InstalledPackage)
+            //if (inputs[i].getType() != InputType::InstalledPackage)
+            /*if (eps[i].empty())
             {
                 // for non installed packages we must create entry points in sw context
                 auto b = createBuild();
@@ -413,21 +491,6 @@ void SwContext::loadEntryPoints(const std::set<Input*> &inputs, bool set_eps)
                     }
                 }
                 continue;
-            }
-
-            /*for (auto &ep : eps[i])
-            {
-                // for packages we must also register all other group packages
-                // which are located in this config AND which are deps of this input package id
-                auto m = resolve(UnresolvedPackages{ inputs[i].getPackageId() });
-                auto &p = m.find(inputs[i].getPackageId())->second;
-                for (auto &d : p->getData().dependencies)
-                {
-                    auto &p2 = m.find(d)->second;
-                    if (p2->getData().group_number != p->getData().group_number)
-                        continue;
-                    setEntryPoint(*p2, ep);
-                }
             }*/
         }
     }

@@ -70,7 +70,8 @@ static void override_package_perform(sw::SwContext &swctx, sw::PackagePath prefi
         return;
     }
 
-    auto b = swctx.createBuild();
+    SW_UNIMPLEMENTED;
+    /*auto b = swctx.createBuild();
     sw::InputWithSettings i(swctx.addInput(fs::current_path()));
     auto ts = b->getContext().getHostSettings();
     i.addSettings(ts);
@@ -90,7 +91,7 @@ static void override_package_perform(sw::SwContext &swctx, sw::PackagePath prefi
         return;
     }
 
-    override_packages(i.getInput().getGroupNumber());
+    override_packages(i.getInput().getGroupNumber());*/
 }
 
 SUBCOMMAND_DECL(override)

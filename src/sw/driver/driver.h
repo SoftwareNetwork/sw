@@ -37,9 +37,10 @@ struct SW_DRIVER_CPP_API Driver : IDriver
     void processConfigureAc(const path &p);
 
     // IDriver api
-    std::optional<path> canLoadInput(const RawInput &) const override;
+    FilesOrdered canLoadInput(const RawInput &) const override;
     EntryPointsVector createEntryPoints(SwContext &, const std::vector<RawInput> &) const override;
     std::unique_ptr<Specification> getSpecification(const RawInput &) const override;
+    std::vector<std::unique_ptr<Input>> detectInputs(const path &, InputType) const override;
 
     // frontends
     using AvailableFrontends = boost::bimap<boost::bimaps::multiset_of<FrontendType>, path>;
@@ -68,7 +69,7 @@ private:
     PackageIdSet getBuiltinPackages(SwContext &) const;
 };
 
-std::optional<path> findConfig(const path &dir, const FilesOrdered &fe_s);
+FilesOrdered findConfig(const path &dir, const FilesOrdered &fe_s);
 String toString(FrontendType T);
 
 } // namespace driver::cpp

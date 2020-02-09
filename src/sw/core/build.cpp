@@ -193,6 +193,30 @@ path SwBuild::getBuildDirectory() const
 
 void SwBuild::build()
 {
+    /*
+
+        General build process:
+        1) Load provided inputs.
+        2) Set all targets to build from input.
+        3) Resolve dependencies.
+        4) Load dependencies (inputs).
+        5) Prepare build.
+        6) Run build.
+
+        Input = file | directory
+        InputHash =
+                    Directory: Path Hash
+                    File: Specification Hash (from Driver)
+        Some inputs may be equal, but have different paths, so we compare by hash.
+        Specification may include several files.
+
+        ---
+
+        Each package has exactly one entry point.
+        Entry point may include several packages.
+
+    */
+
     ScopedTime t;
 
     // this is all in one call
@@ -270,14 +294,17 @@ void SwBuild::loadInputs()
     }
 }
 
-const PackageIdSet &SwBuild::getKnownPackages() const
+void SwBuild::setTargetsToBuild()
 {
-    return known_packages;
-}
+    CHECK_STATE_AND_CHANGE(BuildState::InputsLoaded, BuildState::TargetsToBuildSet);
 
-void SwBuild::addKnownPackage(const PackageId &id)
-{
-    known_packages.insert(id);
+    // mark existing targets as targets to build
+    // only in case if not present?
+    if (!targets_to_build.empty())
+        return;
+    targets_to_build = getTargets();
+    for (auto &[pkg, d] : swctx.getPredefinedTargets())
+        targets_to_build.erase(pkg.getPath());
 }
 
 void SwBuild::resolvePackages()
@@ -375,7 +402,11 @@ void SwBuild::resolvePackages(const UnresolvedPackages &upkgs)
         // use addInput to prevent doubling already existing and loaded inputs
         // like when we loading dependency that is already loaded from the input
         // test: sw build org.sw.demo.gnome.pango.pangocairo-1.44
-        iv.insert(&swctx.addInput(p));
+        for (auto i : swctx.addInput(p))
+            iv.insert(i);
+
+        // this marks package as known;
+        targets[p];
     }
     swctx.loadEntryPoints(iv, false);
 }
@@ -391,8 +422,8 @@ void SwBuild::loadPackages(const TargetMap &predefined)
 {
     // first, we create all package ids with EPs in targets
     //for (auto &[p, _] : swctx.getTargetData())
-    for (auto &p : getKnownPackages())
-        targets[p];
+    //for (auto &p : getKnownPackages())
+        //targets[p];
 
     // load
     int r = 1;
@@ -546,19 +577,6 @@ bool SwBuild::prepareStep()
     waitAndGet(fs);
 
     return next_pass;
-}
-
-void SwBuild::setTargetsToBuild()
-{
-    CHECK_STATE_AND_CHANGE(BuildState::InputsLoaded, BuildState::TargetsToBuildSet);
-
-    // mark existing targets as targets to build
-    // only in case if not present?
-    if (!targets_to_build.empty())
-        return;
-    targets_to_build = getTargets();
-    for (auto &[pkg, d] : swctx.getPredefinedTargets())
-        targets_to_build.erase(pkg.getPath());
 }
 
 void SwBuild::prepare()
@@ -1005,6 +1023,16 @@ void SwBuild::runSavedExecutionPlan(const path &in) const
     };
 
     execute(p);
+}
+
+const PackageIdSet &SwBuild::getKnownPackages() const
+{
+    return known_packages;
+}
+
+void SwBuild::addKnownPackage(const PackageId &id)
+{
+    known_packages.insert(id);
 }
 
 const std::vector<InputWithSettings> &SwBuild::getInputs() const

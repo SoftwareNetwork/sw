@@ -66,7 +66,8 @@ static sw::SourceDirMap getSources(sw::SwContext &swctx, OPTIONS_ARG_CONST)
     auto ts = createInitialSettings(swctx);
     ts["driver"]["dry-run"] = "true"; // only used to get sources
 
-    auto &ii = getInput(b);
+    SW_UNIMPLEMENTED;
+    /*auto &ii = getInput(b);
     sw::InputWithSettings i(ii);
     i.addSettings(ts);
     b.addInput(i);
@@ -91,7 +92,7 @@ static sw::SourceDirMap getSources(sw::SwContext &swctx, OPTIONS_ARG_CONST)
         sources.emplace(std::move(s));
     }
 
-    return getSources(b.getBuildDirectory(), sources, srcs);
+    return getSources(b.getBuildDirectory(), sources, srcs);*/
 }
 
 // get sources extracted from options
@@ -127,7 +128,8 @@ std::pair<sw::SourceDirMap, const sw::Input &> fetch(sw::SwBuild &b, OPTIONS_ARG
         }
     }
 
-    auto &ii = getInput(b);
+    SW_UNIMPLEMENTED;
+    /*auto &ii = getInput(b);
     sw::InputWithSettings i(ii);
     for (auto &ts : tss)
         i.addSettings(ts);
@@ -137,7 +139,7 @@ std::pair<sw::SourceDirMap, const sw::Input &> fetch(sw::SwBuild &b, OPTIONS_ARG
     if (options.options_fetch.build_after_fetch)
         b.build();
 
-    return { srcs, ii };
+    return { srcs, ii };*/
 }
 
 std::pair<sw::SourceDirMap, const sw::Input &> fetch(sw::SwContext &swctx, OPTIONS_ARG_CONST)

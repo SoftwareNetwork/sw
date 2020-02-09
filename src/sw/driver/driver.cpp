@@ -55,14 +55,20 @@ enum class FrontendType
     Composer = 5, // php
 };
 
-std::optional<path> findConfig(const path &dir, const FilesOrdered &fe_s)
+FilesOrdered findConfig(const path &dir, const FilesOrdered &fe_s)
 {
+    FilesOrdered files;
+    FilesSorted f2;
     for (auto &fn : fe_s)
     {
-        if (fs::exists(dir / fn))
-            return dir / fn;
+        if (!fs::exists(dir / fn))
+            continue;
+        // on windows some exts are the same .cpp and .CPP,
+        // so we check it
+        if (f2.insert(fs::canonical(dir / fn)).second)
+            files.push_back(dir / fn);
     }
-    return {};
+    return files;
 }
 
 String toString(FrontendType t)
@@ -97,7 +103,7 @@ void Driver::processConfigureAc(const path &p)
     process_configure_ac2(p);
 }
 
-std::optional<path> Driver::canLoadInput(const RawInput &i) const
+FilesOrdered Driver::canLoadInput(const RawInput &i) const
 {
     switch (i.getType())
     {
@@ -106,38 +112,55 @@ std::optional<path> Driver::canLoadInput(const RawInput &i) const
         auto &fes = getAvailableFrontendConfigFilenames();
         auto it = std::find(fes.begin(), fes.end(), i.getPath().filename());
         if (it != fes.end())
-        {
-            return i.getPath();
-        }
-        // or check by extension
-        /*it = std::find_if(fes.begin(), fes.end(), [e = i.getPath().extension()](const auto &fe)
-        {
-            return fe.extension() == e;
-        });
-        if (it != fes.end())
-        {
-            return i.getPath();
-        }*/
+            return { i.getPath() };
         break;
     }
     case InputType::DirectorySpecificationFile:
     {
-        if (auto p = findConfig(i.getPath(), getAvailableFrontendConfigFilenames()))
-        {
-            return *p;
-        }
-        break;
+        return findConfig(i.getPath(), getAvailableFrontendConfigFilenames());
     }
     case InputType::InlineSpecification:
         if (can_load_configless_file(i.getPath()))
-            return i.getPath();
+            return { i.getPath() };
         break;
     case InputType::Directory:
-        return i.getPath();
+        return { i.getPath() };
     default:
         SW_UNREACHABLE;
     }
     return {};
+}
+
+std::vector<std::unique_ptr<Input>> Driver::detectInputs(const path &p, InputType type) const
+{
+    std::vector<std::unique_ptr<Input>> inputs;
+    switch (type)
+    {
+    case InputType::SpecificationFile:
+    {
+        auto &fes = getAvailableFrontendConfigFilenames();
+        auto it = std::find(fes.begin(), fes.end(), p.filename());
+        if (it != fes.end())
+            inputs.push_back(std::make_unique<Input>(*this, p, type));
+        break;
+    }
+    case InputType::DirectorySpecificationFile:
+    {
+        for (auto &f : findConfig(p, getAvailableFrontendConfigFilenames()))
+            inputs.push_back(std::make_unique<Input>(*this, f, InputType::SpecificationFile));
+        break;
+    }
+    case InputType::InlineSpecification:
+        if (can_load_configless_file(p))
+            inputs.push_back(std::make_unique<Input>(*this, p, type));
+        break;
+    case InputType::Directory:
+        inputs.push_back(std::make_unique<Input>(*this, p, type));
+        break;
+    default:
+        SW_UNREACHABLE;
+    }
+    return inputs;
 }
 
 Driver::EntryPointsVector Driver::createEntryPoints(SwContext &swctx, const std::vector<RawInput> &inputs) const
@@ -148,11 +171,11 @@ Driver::EntryPointsVector Driver::createEntryPoints(SwContext &swctx, const std:
     {
         switch (i.getType())
         {
-        case InputType::InstalledPackage:
+        /*case InputType::InstalledPackage:
         {
             pkgsids.insert(i.getPackageId());
             break;
-        }
+        }*/
         case InputType::SpecificationFile:
         {
             p_eps[i.getPath()] = load_spec_file(swctx, i.getPath());
@@ -180,9 +203,9 @@ Driver::EntryPointsVector Driver::createEntryPoints(SwContext &swctx, const std:
     EntryPointsVector eps;
     for (auto &i : inputs)
     {
-        if (i.getType() == InputType::InstalledPackage)
-            eps.push_back(pkg_eps[i.getPackageId()]);
-        else
+        //if (i.getType() == InputType::InstalledPackage)
+            //eps.push_back(pkg_eps[i.getPackageId()]);
+        //else
             eps.push_back(p_eps[i.getPath()]);
     }
     return eps;

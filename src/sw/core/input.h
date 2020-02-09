@@ -26,25 +26,35 @@ enum class InputType : uint8_t
     /// from some regular file
     InlineSpecification,
 
-    /// drivers may use their own methods for better loading packages
-    /// rather than when direct spec file provided
-    InstalledPackage,
-
     /// only try to find spec file
     DirectorySpecificationFile,
 };
 
+/*struct IInput
+{
+    virtual ~IInput() = 0;
+
+    // used for batch loading inputs (if applicable)
+    virtual IDriver &getDriver() const = 0;
+
+    //bool isChanged() const;
+    //bool isLoaded() const; ?
+    //std::unique_ptr<Specification> getSpecification() const;
+    //const std::vector<TargetEntryPointPtr> &getEntryPoints() const;
+    //PackageVersionGroupNumber getGroupNumber() const; ?
+    //void addEntryPoints(const std::vector<TargetEntryPointPtr> &);
+};*/
+
 struct RawInputData
 {
     InputType type;
-    std::variant<path, PackageId> data;
+    path p;
 };
 
 struct SW_CORE_API RawInput : protected RawInputData
 {
     InputType getType() const { return type; }
     path getPath() const;
-    PackageId getPackageId() const;
 
     bool operator==(const RawInput &rhs) const;
     bool operator<(const RawInput &rhs) const;
@@ -56,12 +66,11 @@ protected:
 struct SW_CORE_API Input : RawInput
 {
     /// determine input type
-    Input(const path &, const SwContext &);
-    Input(const LocalPackage &, const SwContext &);
+    //Input(IDriver &, const path &);
     /// forced input type
-    Input(const path &, InputType, const SwContext &);
+    Input(const IDriver &, const path &, InputType);
 
-    IDriver &getDriver() const { return *driver; }
+    const IDriver &getDriver() const { return driver; }
 
     bool isChanged() const;
     void addEntryPoints(const std::vector<TargetEntryPointPtr> &);
@@ -70,18 +79,18 @@ struct SW_CORE_API Input : RawInput
     PackageVersionGroupNumber getGroupNumber() const;
     const std::vector<TargetEntryPointPtr> &getEntryPoints() const { return eps; }
 
-    bool operator==(const Input &rhs) const;
-    bool operator<(const Input &rhs) const;
+    //bool operator==(const Input &rhs) const;
+    //bool operator<(const Input &rhs) const;
 
 private:
-    IDriver *driver = nullptr;
+    const IDriver &driver;
     // one input may have several eps
     // example: .yml frontend - 1 document, but multiple eps, one per package
     std::vector<TargetEntryPointPtr> eps;
-    PackageVersionGroupNumber gn = 0;
+    //PackageVersionGroupNumber gn = 0;
 
     void init(const path &, const SwContext &);
-    void init(const LocalPackage &, const SwContext &);
+    //void init(const LocalPackage &, const SwContext &);
 
     bool findDriver(InputType t, const SwContext &);
 };

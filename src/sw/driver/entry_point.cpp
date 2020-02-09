@@ -485,6 +485,8 @@ void PrepareConfigEntryPoint::many2one(Build &b, const std::unordered_set<LocalP
     // make parallel?
     //std::unordered_map<PackageVersionGroupNumber, path> gn_files;
 
+    SW_UNIMPLEMENTED;
+
     struct data
     {
         LocalPackage pkg;
@@ -492,16 +494,17 @@ void PrepareConfigEntryPoint::many2one(Build &b, const std::unordered_set<LocalP
         path p;
     };
 
-    auto get_package_config = [&b](const LocalPackage &pkg)
+    auto get_package_config = [&b](const LocalPackage &pkg) -> data
     {
         if (!pkg.getData().group_number)
             throw SW_RUNTIME_ERROR("Missing group number");
 
-        auto pkg2 = pkg.getGroupLeader();
+        SW_UNIMPLEMENTED;
+        /*auto pkg2 = pkg.getGroupLeader();
         auto d = driver::cpp::findConfig(pkg2.getDirSrc2(), driver::cpp::Driver::getAvailableFrontendConfigFilenames());
         if (!d)
             throw SW_RUNTIME_ERROR("cannot find config for package " + pkg.toString() + " in dir " + normalize_path(pkg2.getDirSrc2()));
-        return data{ {b.getSolution().getContext().getLocalStorage(), pkg2}, pkg.getData().group_number, *d };
+        return data{ {b.getSolution().getContext().getLocalStorage(), pkg2}, pkg.getData().group_number, *d };*/
     };
 
     // ordered map!
