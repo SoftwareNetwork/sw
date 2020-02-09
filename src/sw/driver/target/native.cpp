@@ -156,13 +156,6 @@ SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD(sw_replace_dll_import, replace_dll_import)
 
 #endif
 
-enum gatherStaticLinkLibrariesType
-{
-    E_link_libraries,
-    E_system_link_libraries,
-    E_frameworks,
-};
-
 namespace sw
 {
 
@@ -3140,6 +3133,13 @@ void NativeCompiledTarget::prepare_pass6()
         }
     }
 }
+
+enum gatherStaticLinkLibrariesType
+{
+    E_link_libraries,
+    E_system_link_libraries,
+    E_frameworks,
+};
 
 void NativeCompiledTarget::prepare_pass7()
 {
