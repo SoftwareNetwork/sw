@@ -4,11 +4,9 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include "sw/core/sw_context.h"
+#include "detect.h"
 
 #include "misc/cmVSSetupHelper.h"
-
-#include <sw/builder/program.h>
 
 #include <boost/algorithm/string.hpp>
 #ifdef _WIN32
@@ -22,8 +20,6 @@
 DECLARE_STATIC_LOGGER(logger, "compiler.detect");
 
 // TODO: actually detect.cpp may be rewritten as entry point
-
-#define DETECT_ARGS SwCoreContext &s
 
 namespace sw
 {
@@ -68,42 +64,12 @@ const StringSet &getCppSourceFileExtensions()
     return cpp_source_file_extensions;
 }
 
-struct PredefinedProgramTarget : PredefinedTarget, PredefinedProgram
+void log_msg_detect_target(const String &m)
 {
-    using PredefinedTarget::PredefinedTarget;
-};
-
-struct SimpleProgram : Program
-{
-    using Program::Program;
-
-    std::shared_ptr<Program> clone() const override { return std::make_shared<SimpleProgram>(*this); }
-    std::shared_ptr<builder::Command> getCommand() const override
-    {
-        if (!cmd)
-        {
-            cmd = std::make_shared<builder::Command>(swctx);
-            cmd->setProgram(file);
-        }
-        return cmd;
-    }
-
-private:
-    mutable std::shared_ptr<builder::Command> cmd;
-};
-
-template <class T>
-static T &addTarget(SwCoreContext &s, const PackageId &id, const TargetSettings &ts)
-{
-    LOG_TRACE(logger, "Detected target: " + id.toString());
-
-    auto t = std::make_shared<T>(id, ts);
-    auto &cld = s.getPredefinedTargets();
-    cld[id].push_back(t);
-    return *t;
+    LOG_TRACE(logger, m);
 }
 
-static PredefinedProgramTarget &addProgram(SwCoreContext &s, const PackageId &id, const TargetSettings &ts, const std::shared_ptr<Program> &p)
+PredefinedProgramTarget &addProgram(DETECT_ARGS, const PackageId &id, const TargetSettings &ts, const std::shared_ptr<Program> &p)
 {
     auto &t = addTarget<PredefinedProgramTarget>(s, id, ts);
     t.public_ts["output_file"] = normalize_path(p->file);
@@ -111,15 +77,6 @@ static PredefinedProgramTarget &addProgram(SwCoreContext &s, const PackageId &id
     LOG_TRACE(logger, "Detected program: " + p->file.u8string());
     return t;
 }
-
-void detectNativeCompilers(DETECT_ARGS);
-void detectCSharpCompilers(DETECT_ARGS);
-void detectRustCompilers(DETECT_ARGS);
-void detectGoCompilers(DETECT_ARGS);
-void detectFortranCompilers(DETECT_ARGS);
-void detectJavaCompilers(DETECT_ARGS);
-void detectKotlinCompilers(DETECT_ARGS);
-void detectDCompilers(DETECT_ARGS);
 
 bool isCppHeaderFileExtension(const String &e)
 {
@@ -132,146 +89,6 @@ bool isCppSourceFileExtensions(const String &e)
     auto &exts = getCppSourceFileExtensions();
     return exts.find(e) != exts.end();
 }
-
-void detectCompilers(DETECT_ARGS)
-{
-    detectNativeCompilers(s);
-
-    // others
-    detectCSharpCompilers(s);
-    detectRustCompilers(s);
-    detectGoCompilers(s);
-    detectFortranCompilers(s);
-    detectJavaCompilers(s);
-    detectKotlinCompilers(s);
-    detectDCompilers(s);
-}
-
-void detectDCompilers(DETECT_ARGS)
-{
-    //C->input_extensions = { ".d" };
-
-    // also todo LDC, GDC compiler
-
-    auto p = std::make_shared<SimpleProgram>(s);
-    auto f = resolveExecutable("dmd");
-    if (!fs::exists(f))
-        return;
-    p->file = f;
-
-    auto v = getVersion(s, p->file);
-    addProgram(s, PackageId("org.dlang.dmd.dmd", v), {}, p);
-}
-
-void detectKotlinCompilers(DETECT_ARGS)
-{
-    //C->input_extensions = { ".kt", ".kts" };
-
-    auto p = std::make_shared<SimpleProgram>(s);
-    auto f = resolveExecutable("kotlinc");
-    if (!fs::exists(f))
-        return;
-    p->file = f;
-
-    auto v = getVersion(s, p->file, "-version");
-    addProgram(s, PackageId("com.JetBrains.kotlin.kotlinc", v), {}, p);
-}
-
-void detectJavaCompilers(DETECT_ARGS)
-{
-    //C->input_extensions = { ".java" };
-    //compiler = resolveExecutable("jar"); // later
-
-    auto p = std::make_shared<SimpleProgram>(s);
-    auto f = resolveExecutable("javac");
-    if (!fs::exists(f))
-        return;
-    p->file = f;
-
-    auto v = getVersion(s, p->file);
-    addProgram(s, PackageId("com.oracle.java.javac", v), {}, p);
-}
-
-void detectFortranCompilers(DETECT_ARGS)
-{
-    // TODO: gfortran, flang, ifort, pgfortran, f90 (Oracle Sun), xlf, bgxlf, ...
-    // aocc, armflang
-
-    /*C->input_extensions = {
-        ".f",
-        ".FOR",
-        ".for",
-        ".f77",
-        ".f90",
-        ".f95",
-
-        // support Preprocessing
-        ".F",
-        ".fpp",
-        ".FPP",
-    };*/
-
-    // TODO: add each program separately
-
-    auto p = std::make_shared<SimpleProgram>(s);
-    auto f = resolveExecutable("gfortran");
-    if (!fs::exists(f))
-    {
-        auto f = resolveExecutable("f95");
-        if (!fs::exists(f))
-        {
-            auto f = resolveExecutable("g95");
-            if (!fs::exists(f))
-                return;
-        }
-    }
-    p->file = f;
-
-    auto v = getVersion(s, p->file);
-    addProgram(s, PackageId("org.gnu.gcc.fortran", v), {}, p);
-}
-
-void detectGoCompilers(DETECT_ARGS)
-{
-    //C->input_extensions = { ".go", };
-
-#if defined(_WIN32)
-    auto p = std::make_shared<SimpleProgram>(s);
-    auto f = resolveExecutable("go");
-    if (!fs::exists(f))
-        return;
-    p->file = f;
-
-    auto v = getVersion(s, p->file, "version");
-    addProgram(s, PackageId("org.google.golang.go", v), {}, p);
-#else
-#endif
-}
-
-void detectRustCompilers(DETECT_ARGS)
-{
-    //C->input_extensions = { ".rs", };
-
-#if defined(_WIN32)
-    auto p = std::make_shared<SimpleProgram>(s);
-    auto f = resolveExecutable(get_home_directory() / ".cargo" / "bin" / "rustc");
-    if (!fs::exists(f))
-        return;
-    p->file = f;
-
-    auto v = getVersion(s, p->file);
-    addProgram(s, PackageId("org.rust.rustc", v), {}, p);
-#else
-#endif
-}
-
-struct VSInstance
-{
-    path root;
-    Version version;
-};
-
-using VSInstances = VersionMap<VSInstance>;
 
 VSInstances &gatherVSInstances(DETECT_ARGS)
 {
@@ -299,34 +116,6 @@ VSInstances &gatherVSInstances(DETECT_ARGS)
         return instances;
     }();
     return instances;
-}
-
-void detectCSharpCompilers(DETECT_ARGS)
-{
-    //C->input_extensions = { ".cs", };
-
-    auto &instances = gatherVSInstances(s);
-    for (auto &[v, i] : instances)
-    {
-        auto root = i.root;
-        switch (v.getMajor())
-        {
-        case 15:
-            root = root / "MSBuild" / "15.0" / "Bin" / "Roslyn";
-            break;
-        case 16:
-            root = root / "MSBuild" / "Current" / "Bin" / "Roslyn";
-            break;
-        default:
-            SW_UNIMPLEMENTED;
-        }
-
-        auto p = std::make_shared<SimpleProgram>(s);
-        p->file = root / "csc.exe";
-
-        auto v1 = getVersion(s, p->file);
-        addProgram(s, PackageId("com.Microsoft.VisualStudio.Roslyn.csc", v1), {}, p);
-    }
 }
 
 void detectMsvc15Plus(DETECT_ARGS)
@@ -1337,6 +1126,11 @@ void detectNativeCompilers(DETECT_ARGS)
     else
         detectNonWindowsCompilers(s);
     detectIntelCompilers(s);
+}
+
+void detectCompilers(DETECT_ARGS)
+{
+    detectNativeCompilers(s);
 }
 
 }
