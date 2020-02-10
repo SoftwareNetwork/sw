@@ -2293,7 +2293,8 @@ void NativeCompiledTarget::prepare_pass2()
 
     // force cpp standard
     // some stdlibs require *minimal* cpp std to be set
-    if (UnresolvedPackage(getSettings()["native"]["stdlib"]["cpp"].getValue()).getPath() == "com.Microsoft.VisualStudio.VC.libcpp")
+    if (getSettings()["native"]["stdlib"]["cpp"] &&
+        UnresolvedPackage(getSettings()["native"]["stdlib"]["cpp"].getValue()).getPath() == "com.Microsoft.VisualStudio.VC.libcpp")
     {
         for (auto &d : getActiveDependencies())
         {
