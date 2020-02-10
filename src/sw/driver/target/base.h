@@ -376,11 +376,12 @@ protected:
     //Target(const Target &);
     CommandStorage *getCommandStorage() const;
 
-private:
+protected:
     TargetSettings ts; // this settings
     // export settings may be different
     // example: we set 'static-deps' setting which changes
     // ["native"]["library"] to "static";
+private:
     TargetSettings ts_export;
     BuildSettings bs;
     std::unique_ptr<Source> source;

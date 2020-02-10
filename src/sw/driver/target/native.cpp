@@ -12,6 +12,7 @@
 #include "../functions.h"
 #include "../build.h"
 #include "../command.h"
+#include "../compiler/detect.h"
 
 #include <sw/builder/jumppad.h>
 #include <sw/core/sw_context.h>
@@ -300,9 +301,13 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
     auto i = cld.find(id, oss);
     if (!i)
     {
-        for (auto &e : exts)
-            setExtensionProgram(e, id);
-        return;
+        i = getContext().getPredefinedTargets().find(id, oss);
+        if (!i)
+        {
+            for (auto &e : exts)
+                setExtensionProgram(e, id);
+            return;
+        }
     }
     auto t = i->as<PredefinedProgram *>();
     if (!t)
@@ -460,7 +465,11 @@ std::shared_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetS
     oss["os"] = getSettings()["os"];
     auto i = cld.find(id, oss);
     if (!i)
-        return {};
+    {
+        i = getContext().getPredefinedTargets().find(id, oss);
+        if (!i)
+            return {};
+    }
     auto t = i->as<PredefinedProgram*>();
     if (!t)
         return {};
@@ -675,6 +684,9 @@ void NativeCompiledTarget::findCompiler()
 
 bool NativeCompiledTarget::init()
 {
+    static std::once_flag f;
+    std::call_once(f, [this] {detectNativeCompilers((SwContext&)getContext()); });
+
     switch (init_pass)
     {
     case 1:
@@ -684,6 +696,9 @@ bool NativeCompiledTarget::init()
         {
             v.target = this;
         });
+
+        // before target init
+        setHostPrograms((SwContext&)getContext(), ts);
 
         if (!isHeaderOnly())
             findCompiler();

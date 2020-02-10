@@ -414,6 +414,17 @@ void SwBuild::loadPackages(const TargetMap &predefined)
                     auto i = getTargets().find(d->getUnresolvedPackage());
                     if (i == getTargets().end())
                     {
+                        auto i = predefined.find(d->getUnresolvedPackage());
+                        if (i != predefined.end())
+                        {
+                            auto k = i->second.findSuitable(d->getSettings());
+                            if (k != i->second.end())
+                            {
+                                d->setTarget(**k);
+                                continue;
+                            }
+                        }
+
                         // package was not resolved
                         throw SW_RUNTIME_ERROR(tgt->getPackage().toString() + ": No target resolved: " + d->getUnresolvedPackage().toString());
                     }

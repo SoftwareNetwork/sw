@@ -6,7 +6,7 @@
 
 #include "detect.h"
 
-#include "misc/cmVSSetupHelper.h"
+#include "../misc/cmVSSetupHelper.h"
 
 #include <boost/algorithm/string.hpp>
 #ifdef _WIN32
@@ -1128,9 +1128,125 @@ void detectNativeCompilers(DETECT_ARGS)
     detectIntelCompilers(s);
 }
 
-void detectCompilers(DETECT_ARGS)
+void setHostPrograms(const SwCoreContext &swctx, TargetSettings &ts)
 {
-    detectNativeCompilers(s);
+    auto to_upkg = [](const auto &s)
+    {
+        return UnresolvedPackage(s).toString();
+    };
+
+    auto check_and_assign = [](auto &k, const auto &v)
+    {
+        if (!k)
+            k = v;
+    };
+
+    if (swctx.getHostOs().is(OSType::Windows))
+    {
+        check_and_assign(ts["native"]["stdlib"]["c"], to_upkg("com.Microsoft.Windows.SDK.ucrt"));
+        check_and_assign(ts["native"]["stdlib"]["cpp"], to_upkg("com.Microsoft.VisualStudio.VC.libcpp"));
+        check_and_assign(ts["native"]["stdlib"]["kernel"], to_upkg("com.Microsoft.Windows.SDK.um"));
+
+        // now find the latest available sdk (ucrt) and select it
+        TargetSettings oss;
+        oss["os"] = ts["os"];
+        auto sdk = swctx.getPredefinedTargets().find(UnresolvedPackage(ts["native"]["stdlib"]["c"].getValue()), oss);
+        if (!sdk)
+            throw SW_RUNTIME_ERROR("No suitable installed WinSDK found for this host");
+        ts["native"]["stdlib"]["c"] = sdk->getPackage().toString(); // assign always
+        //ts["os"]["version"] = sdkver->toString(3); // cut off the last (fourth) number
+
+        auto clpkg = "com.Microsoft.VisualStudio.VC.cl";
+        auto cl = swctx.getPredefinedTargets().find(clpkg);
+
+        auto clangpppkg = "org.LLVM.clangpp";
+        auto clangpp = swctx.getPredefinedTargets().find(clpkg);
+
+        if (0);
+#ifdef _MSC_VER
+        // msvc + clangcl
+        // clangcl must be compatible with msvc
+        // and also clang actually
+        else if (cl != swctx.getPredefinedTargets().end(clpkg) && !cl->second.empty())
+        {
+            check_and_assign(ts["native"]["program"]["c"], to_upkg("com.Microsoft.VisualStudio.VC.cl"));
+            check_and_assign(ts["native"]["program"]["cpp"], to_upkg("com.Microsoft.VisualStudio.VC.cl"));
+            check_and_assign(ts["native"]["program"]["asm"], to_upkg("com.Microsoft.VisualStudio.VC.ml"));
+            check_and_assign(ts["native"]["program"]["lib"], to_upkg("com.Microsoft.VisualStudio.VC.lib"));
+            check_and_assign(ts["native"]["program"]["link"], to_upkg("com.Microsoft.VisualStudio.VC.link"));
+        }
+        // separate?
+#else __clang__
+        else if (clangpp != getPredefinedTargets().end(clangpppkg) && !clangpp->second.empty())
+        {
+            check_and_assign(ts["native"]["program"]["c"], to_upkg("org.LLVM.clang"));
+            check_and_assign(ts["native"]["program"]["cpp"], to_upkg("org.LLVM.clangpp"));
+            check_and_assign(ts["native"]["program"]["asm"], to_upkg("org.LLVM.clang"));
+            // ?
+            check_and_assign(ts["native"]["program"]["lib"], to_upkg("com.Microsoft.VisualStudio.VC.lib"));
+            check_and_assign(ts["native"]["program"]["link"], to_upkg("com.Microsoft.VisualStudio.VC.link"));
+        }
+#endif
+        // add more defaults (clangcl, clang)
+        else
+            throw SW_RUNTIME_ERROR("Seems like you do not have Visual Studio installed.\nPlease, install the latest Visual Studio first.");
+    }
+    // add more defaults
+    else
+    {
+        // set default libs?
+        /*ts["native"]["stdlib"]["c"] = to_upkg("com.Microsoft.Windows.SDK.ucrt");
+        ts["native"]["stdlib"]["cpp"] = to_upkg("com.Microsoft.VisualStudio.VC.libcpp");
+        ts["native"]["stdlib"]["kernel"] = to_upkg("com.Microsoft.Windows.SDK.um");*/
+
+        auto if_add = [&swctx, &check_and_assign](auto &s, const UnresolvedPackage &name)
+        {
+            auto &pd = swctx.getPredefinedTargets();
+            auto i = pd.find(name);
+            if (i == pd.end() || i->second.empty())
+                return false;
+            check_and_assign(s, name.toString());
+            return true;
+        };
+
+        auto err_msg = [](const String &cl)
+        {
+            return "sw was built with " + cl + " as compiler, but it was not found in your system. Install " + cl + " to proceed.";
+        };
+
+        // must be the same compiler as current!
+#if defined(__clang__)
+        if (!(
+            if_add(ts["native"]["program"]["c"], "org.LLVM.clang"s) &&
+            if_add(ts["native"]["program"]["cpp"], "org.LLVM.clangpp"s)
+            ))
+        {
+            throw SW_RUNTIME_ERROR(err_msg("clang"));
+        }
+        //if (getHostOs().is(OSType::Linux))
+        //ts["native"]["stdlib"]["cpp"] = to_upkg("org.sw.demo.llvm_project.libcxx");
+#elif defined(__GNUC__)
+        if (!(
+            if_add(ts["native"]["program"]["c"], "org.gnu.gcc") &&
+            if_add(ts["native"]["program"]["cpp"], "org.gnu.gpp")
+            ))
+        {
+            throw SW_RUNTIME_ERROR(err_msg("gcc"));
+        }
+#elif !defined(_WIN32)
+#error "Add your current compiler to detect.cpp and here."
+#endif
+
+        // using c prog
+        if_add(ts["native"]["program"]["asm"], ts["native"]["program"]["c"].getValue());
+
+        // reconsider, also with driver?
+        if_add(ts["native"]["program"]["lib"], "org.gnu.binutils.ar"s);
+
+        // use driver
+        // use cpp driver for the moment to not burden ourselves in adding stdlib
+        if_add(ts["native"]["program"]["link"], ts["native"]["program"]["cpp"].getValue());
+    }
 }
 
 }

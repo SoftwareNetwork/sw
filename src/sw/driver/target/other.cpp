@@ -1,9 +1,9 @@
 #include "other.h"
 
 #include "sw/driver/build.h"
+#include "sw/driver/compiler/detect.h"
 
 #include <sw/core/sw_context.h>
-#include <sw/core/program/detect.h>
 #include <sw/manager/storage.h>
 
 namespace sw
