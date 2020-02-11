@@ -1157,7 +1157,7 @@ void setHostPrograms(const SwCoreContext &swctx, TargetSettings &ts, bool force)
     // deps: programs, stdlib etc.
     auto check_and_assign_dependency = [&check_and_assign, &swctx, &ts, force](auto &k, const auto &v, int version_level = 0)
     {
-        bool use_k = !force && k;
+        bool use_k = !force && k && k.isValue();
         auto i = swctx.getPredefinedTargets().find(UnresolvedPackage(use_k ? k.getValue() : v), ts);
         if (i)
             check_and_assign(k, version_level ? i->getPackage().toString(version_level) : i->getPackage().toString(), use_k);
