@@ -1201,7 +1201,7 @@ void setHostPrograms(const SwCoreContext &swctx, TargetSettings &ts, bool force)
         }
         // separate?
 #else __clang__
-        else if (clangpp != getPredefinedTargets().end(clangpppkg) && !clangpp->second.empty())
+        else if (clangpp != swctx.getPredefinedTargets().end(clangpppkg) && !clangpp->second.empty())
         {
             check_and_assign_dependency(ts["native"]["program"]["c"], to_upkg("org.LLVM.clang"));
             check_and_assign_dependency(ts["native"]["program"]["cpp"], to_upkg("org.LLVM.clangpp"));
