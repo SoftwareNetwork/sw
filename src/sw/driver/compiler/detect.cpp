@@ -1135,12 +1135,13 @@ void setHostPrograms(const SwCoreContext &swctx, TargetSettings &ts, bool force)
         return UnresolvedPackage(s).toString();
     };
 
-    auto check_and_assign = [force](auto &k, const auto &v)
+    auto check_and_assign = [force](auto &k, const auto &v, bool force2 = false)
     {
-        if (force || !k)
+        if (force || !k || force2)
             k = v;
     };
 
+    // settings
 #ifdef _WIN32
 #ifdef NDEBUG
     check_and_assign(ts["native"]["configuration"], "release");
@@ -1153,19 +1154,30 @@ void setHostPrograms(const SwCoreContext &swctx, TargetSettings &ts, bool force)
     check_and_assign(ts["native"]["library"], "shared");
     check_and_assign(ts["native"]["mt"], "false");
 
+    // deps: programs, stdlib etc.
+    auto check_and_assign_dependency = [&check_and_assign, &swctx, &ts, force](auto &k, const auto &v, int version_level = 0)
+    {
+        bool use_k = !force && k;
+        auto i = swctx.getPredefinedTargets().find(UnresolvedPackage(use_k ? k.getValue() : v), ts);
+        if (i)
+            check_and_assign(k, version_level ? i->getPackage().toString(version_level) : i->getPackage().toString(), use_k);
+        else
+            check_and_assign(k, v);
+    };
+
     if (swctx.getHostOs().is(OSType::Windows))
     {
-        check_and_assign(ts["native"]["stdlib"]["c"], to_upkg("com.Microsoft.Windows.SDK.ucrt"));
-        check_and_assign(ts["native"]["stdlib"]["cpp"], to_upkg("com.Microsoft.VisualStudio.VC.libcpp"));
-        check_and_assign(ts["native"]["stdlib"]["kernel"], to_upkg("com.Microsoft.Windows.SDK.um"));
+        check_and_assign_dependency(ts["native"]["stdlib"]["c"], to_upkg("com.Microsoft.Windows.SDK.ucrt"));
+        check_and_assign_dependency(ts["native"]["stdlib"]["cpp"], to_upkg("com.Microsoft.VisualStudio.VC.libcpp"));
+        check_and_assign_dependency(ts["native"]["stdlib"]["kernel"], to_upkg("com.Microsoft.Windows.SDK.um"));
 
         // now find the latest available sdk (ucrt) and select it
-        TargetSettings oss;
-        oss["os"] = ts["os"];
-        auto sdk = swctx.getPredefinedTargets().find(UnresolvedPackage(ts["native"]["stdlib"]["c"].getValue()), oss);
-        if (!sdk)
-            throw SW_RUNTIME_ERROR("No suitable installed WinSDK found for this host");
-        ts["native"]["stdlib"]["c"] = sdk->getPackage().toString(); // assign always
+        //TargetSettings oss;
+        //oss["os"] = ts["os"];
+        //auto sdk = swctx.getPredefinedTargets().find(UnresolvedPackage(ts["native"]["stdlib"]["c"].getValue()), oss);
+        //if (!sdk)
+            //throw SW_RUNTIME_ERROR("No suitable installed WinSDK found for this host");
+        //ts["native"]["stdlib"]["c"] = sdk->getPackage().toString(); // assign always
         //ts["os"]["version"] = sdkver->toString(3); // cut off the last (fourth) number
 
         auto clpkg = "com.Microsoft.VisualStudio.VC.cl";
@@ -1181,22 +1193,22 @@ void setHostPrograms(const SwCoreContext &swctx, TargetSettings &ts, bool force)
         // and also clang actually
         else if (cl != swctx.getPredefinedTargets().end(clpkg) && !cl->second.empty())
         {
-            check_and_assign(ts["native"]["program"]["c"], to_upkg("com.Microsoft.VisualStudio.VC.cl"));
-            check_and_assign(ts["native"]["program"]["cpp"], to_upkg("com.Microsoft.VisualStudio.VC.cl"));
-            check_and_assign(ts["native"]["program"]["asm"], to_upkg("com.Microsoft.VisualStudio.VC.ml"));
-            check_and_assign(ts["native"]["program"]["lib"], to_upkg("com.Microsoft.VisualStudio.VC.lib"));
-            check_and_assign(ts["native"]["program"]["link"], to_upkg("com.Microsoft.VisualStudio.VC.link"));
+            check_and_assign_dependency(ts["native"]["program"]["c"], to_upkg("com.Microsoft.VisualStudio.VC.cl"));
+            check_and_assign_dependency(ts["native"]["program"]["cpp"], to_upkg("com.Microsoft.VisualStudio.VC.cl"));
+            check_and_assign_dependency(ts["native"]["program"]["asm"], to_upkg("com.Microsoft.VisualStudio.VC.ml"));
+            check_and_assign_dependency(ts["native"]["program"]["lib"], to_upkg("com.Microsoft.VisualStudio.VC.lib"));
+            check_and_assign_dependency(ts["native"]["program"]["link"], to_upkg("com.Microsoft.VisualStudio.VC.link"));
         }
         // separate?
 #else __clang__
         else if (clangpp != getPredefinedTargets().end(clangpppkg) && !clangpp->second.empty())
         {
-            check_and_assign(ts["native"]["program"]["c"], to_upkg("org.LLVM.clang"));
-            check_and_assign(ts["native"]["program"]["cpp"], to_upkg("org.LLVM.clangpp"));
-            check_and_assign(ts["native"]["program"]["asm"], to_upkg("org.LLVM.clang"));
+            check_and_assign_dependency(ts["native"]["program"]["c"], to_upkg("org.LLVM.clang"));
+            check_and_assign_dependency(ts["native"]["program"]["cpp"], to_upkg("org.LLVM.clangpp"));
+            check_and_assign_dependency(ts["native"]["program"]["asm"], to_upkg("org.LLVM.clang"));
             // ?
-            check_and_assign(ts["native"]["program"]["lib"], to_upkg("com.Microsoft.VisualStudio.VC.lib"));
-            check_and_assign(ts["native"]["program"]["link"], to_upkg("com.Microsoft.VisualStudio.VC.link"));
+            check_and_assign_dependency(ts["native"]["program"]["lib"], to_upkg("com.Microsoft.VisualStudio.VC.lib"));
+            check_and_assign_dependency(ts["native"]["program"]["link"], to_upkg("com.Microsoft.VisualStudio.VC.link"));
         }
 #endif
         // add more defaults (clangcl, clang)
@@ -1211,13 +1223,13 @@ void setHostPrograms(const SwCoreContext &swctx, TargetSettings &ts, bool force)
         ts["native"]["stdlib"]["cpp"] = to_upkg("com.Microsoft.VisualStudio.VC.libcpp");
         ts["native"]["stdlib"]["kernel"] = to_upkg("com.Microsoft.Windows.SDK.um");*/
 
-        auto if_add = [&swctx, &check_and_assign](auto &s, const UnresolvedPackage &name)
+        auto if_add = [&swctx, &check_and_assign_dependency](auto &s, const UnresolvedPackage &name)
         {
             auto &pd = swctx.getPredefinedTargets();
             auto i = pd.find(name);
             if (i == pd.end() || i->second.empty())
                 return false;
-            check_and_assign(s, name.toString());
+            check_and_assign_dependency(s, name.toString());
             return true;
         };
 
