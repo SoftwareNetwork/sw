@@ -95,11 +95,12 @@ struct SW_CORE_API TargetSetting
     TargetSetting &operator[](const TargetSettingKey &k);
     const TargetSetting &operator[](const TargetSettingKey &k) const;
 
-    TargetSetting &operator=(const Map &u);
-
     template <class U>
     TargetSetting &operator=(const U &u)
     {
+        reset();
+        if constexpr (std::is_same_v<U, std::monostate>)
+            null_value = true;
         value = u;
         return *this;
     }
@@ -125,6 +126,9 @@ struct SW_CORE_API TargetSetting
 
     explicit operator bool() const;
     //bool hasValue() const;
+    bool isEmpty() const;
+    bool isNull() const;
+    void setNull();
 
     const String &getValue() const;
     const Array &getArray() const;
@@ -156,6 +160,7 @@ struct SW_CORE_API TargetSetting
 
 private:
     int use_count = 1;
+    bool null_value = false;
     bool required = false;
     bool used_in_hash = true;
     bool ignore_in_comparison = false;
