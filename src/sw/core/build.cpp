@@ -423,10 +423,13 @@ void SwBuild::loadPackages(const TargetMap &predefined)
                                 d->setTarget(**k);
                                 continue;
                             }
+
+                            // package was not resolved
+                            throw SW_RUNTIME_ERROR(tgt->getPackage().toString() + ": " + tgt->getSettings().toString() + ": predefined target is not resolved: " + d->getUnresolvedPackage().toString());
                         }
 
                         // package was not resolved
-                        throw SW_RUNTIME_ERROR(tgt->getPackage().toString() + ": No target resolved: " + d->getUnresolvedPackage().toString());
+                        throw SW_RUNTIME_ERROR(tgt->getPackage().toString() + ": " + tgt->getSettings().toString() + ": No target resolved: " + d->getUnresolvedPackage().toString());
                     }
 
                     auto k = i->second.findSuitable(d->getSettings());
@@ -438,7 +441,7 @@ void SwBuild::loadPackages(const TargetMap &predefined)
 
                     if (predefined.find(d->getUnresolvedPackage().ppath) != predefined.end(d->getUnresolvedPackage().ppath))
                     {
-                        throw SW_LOGIC_ERROR(tgt->getPackage().toString() + ": predefined target is not resolved: " + d->getUnresolvedPackage().toString());
+                        throw SW_LOGIC_ERROR(tgt->getPackage().toString() + ": " + tgt->getSettings().toString() + ": predefined target is not resolved: " + d->getUnresolvedPackage().toString());
                     }
 
                     load.insert({ d->getSettings(), { i->first, &i->second } });
