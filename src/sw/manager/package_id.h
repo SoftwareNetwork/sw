@@ -27,7 +27,9 @@ struct SW_MANAGER_API PackageId
 
     String getVariableName() const;
 
-    String toString(const String &delim = "-") const;
+    String toString() const;
+    String toString(const String &delim) const;
+    String toString(Version::Level, const String &delim = "-") const;
 
 private:
     PackagePath ppath;

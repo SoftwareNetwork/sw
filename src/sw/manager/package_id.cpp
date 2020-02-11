@@ -110,9 +110,19 @@ String PackageId::getVariableName() const
     return vname;
 }
 
+String PackageId::toString() const
+{
+    return toString("-");
+}
+
 String PackageId::toString(const String &delim) const
 {
     return ppath.toString() + delim + version.toString();
+}
+
+String PackageId::toString(Version::Level level, const String &delim) const
+{
+    return ppath.toString() + delim + version.toString(level);
 }
 
 PackageId extractPackageIdFromString(const String &target)
