@@ -646,7 +646,7 @@ void NativeCompiledTarget::findCompiler()
     Linker->Extension = getBuildSettings().TargetOS.getSharedLibraryExtension();
 
     // c++ goes first for correct include order
-    if (!libstdcppset && getSettings()["native"]["stdlib"]["cpp"])
+    if (!libstdcppset && getSettings()["native"]["stdlib"]["cpp"].isValue())
     {
         if (IsSwConfig && getBuildSettings().TargetOS.is(OSType::Linux))
         {
@@ -662,7 +662,7 @@ void NativeCompiledTarget::findCompiler()
     }
 
     // goes last
-    if (getSettings()["native"]["stdlib"]["c"])
+    if (getSettings()["native"]["stdlib"]["c"].isValue())
         *this += UnresolvedPackage(getSettings()["native"]["stdlib"]["c"].getValue());
 
     // compiler runtime
@@ -678,7 +678,7 @@ void NativeCompiledTarget::findCompiler()
     }
 
     // kernel headers
-    if (getSettings()["native"]["stdlib"]["kernel"])
+    if (getSettings()["native"]["stdlib"]["kernel"].isValue())
         *this += UnresolvedPackage(getSettings()["native"]["stdlib"]["kernel"].getValue());
 }
 
@@ -2312,7 +2312,7 @@ void NativeCompiledTarget::prepare_pass2()
 
     // force cpp standard
     // some stdlibs require *minimal* cpp std to be set
-    if (getSettings()["native"]["stdlib"]["cpp"] &&
+    if (getSettings()["native"]["stdlib"]["cpp"].isValue() &&
         UnresolvedPackage(getSettings()["native"]["stdlib"]["cpp"].getValue()).getPath() == "com.Microsoft.VisualStudio.VC.libcpp")
     {
         for (auto &d : getActiveDependencies())
