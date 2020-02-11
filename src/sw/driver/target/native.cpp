@@ -2302,7 +2302,11 @@ void NativeCompiledTarget::prepare_pass2()
     {
         auto t = getMainBuild().getTargets().find(d.dep->getPackage(), d.dep->settings);
         if (!t)
-            throw SW_RUNTIME_ERROR("No such target: " + d.dep->getPackage().toString());
+        {
+            t = getContext().getPredefinedTargets().find(d.dep->getPackage(), d.dep->settings);
+            if (!t)
+                throw SW_RUNTIME_ERROR("No such target: " + d.dep->getPackage().toString());
+        }
         d.dep->setTarget(*t);
     }
 

@@ -34,21 +34,7 @@ SwCoreContext::~SwCoreContext()
 
 TargetSettings SwCoreContext::createHostSettings() const
 {
-    auto ts = toTargetSettings(getHostOs());
-
-#ifdef _WIN32
-  #ifdef NDEBUG
-    ts["native"]["configuration"] = "release";
-  #else
-    ts["native"]["configuration"] = "debug";
-  #endif
-#else
-    ts["native"]["configuration"] = "release";
-#endif
-    ts["native"]["library"] = "shared";
-    ts["native"]["mt"] = "false";
-
-    return ts;
+    return toTargetSettings(getHostOs());
 }
 
 void SwCoreContext::setHostSettings(const TargetSettings &s)

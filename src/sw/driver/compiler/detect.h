@@ -66,6 +66,6 @@ T &addTarget(DETECT_ARGS, const PackageId &id, const TargetSettings &ts)
 }
 
 void detectNativeCompilers(SwCoreContext &);
-void setHostPrograms(const SwCoreContext &, TargetSettings &);
+void setHostPrograms(const SwCoreContext &, TargetSettings &, bool force = false);
 
 }

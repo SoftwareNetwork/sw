@@ -1128,18 +1128,30 @@ void detectNativeCompilers(DETECT_ARGS)
     detectIntelCompilers(s);
 }
 
-void setHostPrograms(const SwCoreContext &swctx, TargetSettings &ts)
+void setHostPrograms(const SwCoreContext &swctx, TargetSettings &ts, bool force)
 {
     auto to_upkg = [](const auto &s)
     {
         return UnresolvedPackage(s).toString();
     };
 
-    auto check_and_assign = [](auto &k, const auto &v)
+    auto check_and_assign = [force](auto &k, const auto &v)
     {
-        if (!k)
+        if (force || !k)
             k = v;
     };
+
+#ifdef _WIN32
+#ifdef NDEBUG
+    check_and_assign(ts["native"]["configuration"], "release");
+#else
+    check_and_assign(ts["native"]["configuration"], "debug");
+#endif
+#else
+    check_and_assign(ts["native"]["configuration"], "release");
+#endif
+    check_and_assign(ts["native"]["library"], "shared");
+    check_and_assign(ts["native"]["mt"], "false");
 
     if (swctx.getHostOs().is(OSType::Windows))
     {

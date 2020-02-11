@@ -389,7 +389,7 @@ private:
     Commands tests;
 
     void applyRootDirectory();
-    const TargetSettings &getHostSettings() const;
+    TargetSettings getHostSettings() const;
 
     virtual Commands getCommands1() const { return Commands{}; }
     Commands getTests() const override { return tests; }
