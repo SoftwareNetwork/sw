@@ -4,11 +4,9 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include "sw/core/sw_context.h"
+#include "detect.h"
 
-#include "misc/cmVSSetupHelper.h"
-
-#include <sw/builder/program.h>
+#include "../misc/cmVSSetupHelper.h"
 
 #include <boost/algorithm/string.hpp>
 #ifdef _WIN32
@@ -22,8 +20,6 @@
 DECLARE_STATIC_LOGGER(logger, "compiler.detect");
 
 // TODO: actually detect.cpp may be rewritten as entry point
-
-#define DETECT_ARGS SwCoreContext &s
 
 namespace sw
 {
@@ -68,42 +64,12 @@ const StringSet &getCppSourceFileExtensions()
     return cpp_source_file_extensions;
 }
 
-struct PredefinedProgramTarget : PredefinedTarget, PredefinedProgram
+void log_msg_detect_target(const String &m)
 {
-    using PredefinedTarget::PredefinedTarget;
-};
-
-struct SimpleProgram : Program
-{
-    using Program::Program;
-
-    std::shared_ptr<Program> clone() const override { return std::make_shared<SimpleProgram>(*this); }
-    std::shared_ptr<builder::Command> getCommand() const override
-    {
-        if (!cmd)
-        {
-            cmd = std::make_shared<builder::Command>(swctx);
-            cmd->setProgram(file);
-        }
-        return cmd;
-    }
-
-private:
-    mutable std::shared_ptr<builder::Command> cmd;
-};
-
-template <class T>
-static T &addTarget(SwCoreContext &s, const PackageId &id, const TargetSettings &ts)
-{
-    LOG_TRACE(logger, "Detected target: " + id.toString());
-
-    auto t = std::make_shared<T>(id, ts);
-    auto &cld = s.getPredefinedTargets();
-    cld[id].push_back(t);
-    return *t;
+    LOG_TRACE(logger, m);
 }
 
-static PredefinedProgramTarget &addProgram(SwCoreContext &s, const PackageId &id, const TargetSettings &ts, const std::shared_ptr<Program> &p)
+PredefinedProgramTarget &addProgram(DETECT_ARGS, const PackageId &id, const TargetSettings &ts, const std::shared_ptr<Program> &p)
 {
     auto &t = addTarget<PredefinedProgramTarget>(s, id, ts);
     t.public_ts["output_file"] = normalize_path(p->file);
@@ -111,15 +77,6 @@ static PredefinedProgramTarget &addProgram(SwCoreContext &s, const PackageId &id
     LOG_TRACE(logger, "Detected program: " + p->file.u8string());
     return t;
 }
-
-void detectNativeCompilers(DETECT_ARGS);
-void detectCSharpCompilers(DETECT_ARGS);
-void detectRustCompilers(DETECT_ARGS);
-void detectGoCompilers(DETECT_ARGS);
-void detectFortranCompilers(DETECT_ARGS);
-void detectJavaCompilers(DETECT_ARGS);
-void detectKotlinCompilers(DETECT_ARGS);
-void detectDCompilers(DETECT_ARGS);
 
 bool isCppHeaderFileExtension(const String &e)
 {
@@ -132,146 +89,6 @@ bool isCppSourceFileExtensions(const String &e)
     auto &exts = getCppSourceFileExtensions();
     return exts.find(e) != exts.end();
 }
-
-void detectCompilers(DETECT_ARGS)
-{
-    detectNativeCompilers(s);
-
-    // others
-    detectCSharpCompilers(s);
-    detectRustCompilers(s);
-    detectGoCompilers(s);
-    detectFortranCompilers(s);
-    detectJavaCompilers(s);
-    detectKotlinCompilers(s);
-    detectDCompilers(s);
-}
-
-void detectDCompilers(DETECT_ARGS)
-{
-    //C->input_extensions = { ".d" };
-
-    // also todo LDC, GDC compiler
-
-    auto p = std::make_shared<SimpleProgram>(s);
-    auto f = resolveExecutable("dmd");
-    if (!fs::exists(f))
-        return;
-    p->file = f;
-
-    auto v = getVersion(s, p->file);
-    addProgram(s, PackageId("org.dlang.dmd.dmd", v), {}, p);
-}
-
-void detectKotlinCompilers(DETECT_ARGS)
-{
-    //C->input_extensions = { ".kt", ".kts" };
-
-    auto p = std::make_shared<SimpleProgram>(s);
-    auto f = resolveExecutable("kotlinc");
-    if (!fs::exists(f))
-        return;
-    p->file = f;
-
-    auto v = getVersion(s, p->file, "-version");
-    addProgram(s, PackageId("com.JetBrains.kotlin.kotlinc", v), {}, p);
-}
-
-void detectJavaCompilers(DETECT_ARGS)
-{
-    //C->input_extensions = { ".java" };
-    //compiler = resolveExecutable("jar"); // later
-
-    auto p = std::make_shared<SimpleProgram>(s);
-    auto f = resolveExecutable("javac");
-    if (!fs::exists(f))
-        return;
-    p->file = f;
-
-    auto v = getVersion(s, p->file);
-    addProgram(s, PackageId("com.oracle.java.javac", v), {}, p);
-}
-
-void detectFortranCompilers(DETECT_ARGS)
-{
-    // TODO: gfortran, flang, ifort, pgfortran, f90 (Oracle Sun), xlf, bgxlf, ...
-    // aocc, armflang
-
-    /*C->input_extensions = {
-        ".f",
-        ".FOR",
-        ".for",
-        ".f77",
-        ".f90",
-        ".f95",
-
-        // support Preprocessing
-        ".F",
-        ".fpp",
-        ".FPP",
-    };*/
-
-    // TODO: add each program separately
-
-    auto p = std::make_shared<SimpleProgram>(s);
-    auto f = resolveExecutable("gfortran");
-    if (!fs::exists(f))
-    {
-        auto f = resolveExecutable("f95");
-        if (!fs::exists(f))
-        {
-            auto f = resolveExecutable("g95");
-            if (!fs::exists(f))
-                return;
-        }
-    }
-    p->file = f;
-
-    auto v = getVersion(s, p->file);
-    addProgram(s, PackageId("org.gnu.gcc.fortran", v), {}, p);
-}
-
-void detectGoCompilers(DETECT_ARGS)
-{
-    //C->input_extensions = { ".go", };
-
-#if defined(_WIN32)
-    auto p = std::make_shared<SimpleProgram>(s);
-    auto f = resolveExecutable("go");
-    if (!fs::exists(f))
-        return;
-    p->file = f;
-
-    auto v = getVersion(s, p->file, "version");
-    addProgram(s, PackageId("org.google.golang.go", v), {}, p);
-#else
-#endif
-}
-
-void detectRustCompilers(DETECT_ARGS)
-{
-    //C->input_extensions = { ".rs", };
-
-#if defined(_WIN32)
-    auto p = std::make_shared<SimpleProgram>(s);
-    auto f = resolveExecutable(get_home_directory() / ".cargo" / "bin" / "rustc");
-    if (!fs::exists(f))
-        return;
-    p->file = f;
-
-    auto v = getVersion(s, p->file);
-    addProgram(s, PackageId("org.rust.rustc", v), {}, p);
-#else
-#endif
-}
-
-struct VSInstance
-{
-    path root;
-    Version version;
-};
-
-using VSInstances = VersionMap<VSInstance>;
 
 VSInstances &gatherVSInstances(DETECT_ARGS)
 {
@@ -299,34 +116,6 @@ VSInstances &gatherVSInstances(DETECT_ARGS)
         return instances;
     }();
     return instances;
-}
-
-void detectCSharpCompilers(DETECT_ARGS)
-{
-    //C->input_extensions = { ".cs", };
-
-    auto &instances = gatherVSInstances(s);
-    for (auto &[v, i] : instances)
-    {
-        auto root = i.root;
-        switch (v.getMajor())
-        {
-        case 15:
-            root = root / "MSBuild" / "15.0" / "Bin" / "Roslyn";
-            break;
-        case 16:
-            root = root / "MSBuild" / "Current" / "Bin" / "Roslyn";
-            break;
-        default:
-            SW_UNIMPLEMENTED;
-        }
-
-        auto p = std::make_shared<SimpleProgram>(s);
-        p->file = root / "csc.exe";
-
-        auto v1 = getVersion(s, p->file);
-        addProgram(s, PackageId("com.Microsoft.VisualStudio.Roslyn.csc", v1), {}, p);
-    }
 }
 
 void detectMsvc15Plus(DETECT_ARGS)
@@ -1337,6 +1126,151 @@ void detectNativeCompilers(DETECT_ARGS)
     else
         detectNonWindowsCompilers(s);
     detectIntelCompilers(s);
+}
+
+void setHostPrograms(const SwCoreContext &swctx, TargetSettings &ts, bool force)
+{
+    auto to_upkg = [](const auto &s)
+    {
+        return UnresolvedPackage(s).toString();
+    };
+
+    auto check_and_assign = [force](auto &k, const auto &v, bool force2 = false)
+    {
+        if (force || !k || force2)
+            k = v;
+    };
+
+    // settings
+#ifdef _WIN32
+#ifdef NDEBUG
+    check_and_assign(ts["native"]["configuration"], "release");
+#else
+    check_and_assign(ts["native"]["configuration"], "debug");
+#endif
+#else
+    check_and_assign(ts["native"]["configuration"], "release");
+#endif
+    check_and_assign(ts["native"]["library"], "shared");
+    check_and_assign(ts["native"]["mt"], "false");
+
+    // deps: programs, stdlib etc.
+    auto check_and_assign_dependency = [&check_and_assign, &swctx, &ts, force](auto &k, const auto &v, int version_level = 0)
+    {
+        bool use_k = !force && k && k.isValue();
+        auto i = swctx.getPredefinedTargets().find(UnresolvedPackage(use_k ? k.getValue() : v), ts);
+        if (i)
+            check_and_assign(k, version_level ? i->getPackage().toString(version_level) : i->getPackage().toString(), use_k);
+        else
+            check_and_assign(k, v);
+    };
+
+    if (swctx.getHostOs().is(OSType::Windows))
+    {
+        check_and_assign_dependency(ts["native"]["stdlib"]["c"], to_upkg("com.Microsoft.Windows.SDK.ucrt"));
+        check_and_assign_dependency(ts["native"]["stdlib"]["cpp"], to_upkg("com.Microsoft.VisualStudio.VC.libcpp"));
+        check_and_assign_dependency(ts["native"]["stdlib"]["kernel"], to_upkg("com.Microsoft.Windows.SDK.um"));
+
+        // now find the latest available sdk (ucrt) and select it
+        //TargetSettings oss;
+        //oss["os"] = ts["os"];
+        //auto sdk = swctx.getPredefinedTargets().find(UnresolvedPackage(ts["native"]["stdlib"]["c"].getValue()), oss);
+        //if (!sdk)
+            //throw SW_RUNTIME_ERROR("No suitable installed WinSDK found for this host");
+        //ts["native"]["stdlib"]["c"] = sdk->getPackage().toString(); // assign always
+        //ts["os"]["version"] = sdkver->toString(3); // cut off the last (fourth) number
+
+        auto clpkg = "com.Microsoft.VisualStudio.VC.cl";
+        auto cl = swctx.getPredefinedTargets().find(clpkg);
+
+        auto clangpppkg = "org.LLVM.clangpp";
+        auto clangpp = swctx.getPredefinedTargets().find(clpkg);
+
+        if (0);
+#ifdef _MSC_VER
+        // msvc + clangcl
+        // clangcl must be compatible with msvc
+        // and also clang actually
+        else if (cl != swctx.getPredefinedTargets().end(clpkg) && !cl->second.empty())
+        {
+            check_and_assign_dependency(ts["native"]["program"]["c"], to_upkg("com.Microsoft.VisualStudio.VC.cl"));
+            check_and_assign_dependency(ts["native"]["program"]["cpp"], to_upkg("com.Microsoft.VisualStudio.VC.cl"));
+            check_and_assign_dependency(ts["native"]["program"]["asm"], to_upkg("com.Microsoft.VisualStudio.VC.ml"));
+            check_and_assign_dependency(ts["native"]["program"]["lib"], to_upkg("com.Microsoft.VisualStudio.VC.lib"));
+            check_and_assign_dependency(ts["native"]["program"]["link"], to_upkg("com.Microsoft.VisualStudio.VC.link"));
+        }
+        // separate?
+#else __clang__
+        else if (clangpp != swctx.getPredefinedTargets().end(clangpppkg) && !clangpp->second.empty())
+        {
+            check_and_assign_dependency(ts["native"]["program"]["c"], to_upkg("org.LLVM.clang"));
+            check_and_assign_dependency(ts["native"]["program"]["cpp"], to_upkg("org.LLVM.clangpp"));
+            check_and_assign_dependency(ts["native"]["program"]["asm"], to_upkg("org.LLVM.clang"));
+            // ?
+            check_and_assign_dependency(ts["native"]["program"]["lib"], to_upkg("com.Microsoft.VisualStudio.VC.lib"));
+            check_and_assign_dependency(ts["native"]["program"]["link"], to_upkg("com.Microsoft.VisualStudio.VC.link"));
+        }
+#endif
+        // add more defaults (clangcl, clang)
+        else
+            throw SW_RUNTIME_ERROR("Seems like you do not have Visual Studio installed.\nPlease, install the latest Visual Studio first.");
+    }
+    // add more defaults
+    else
+    {
+        // set default libs?
+        /*ts["native"]["stdlib"]["c"] = to_upkg("com.Microsoft.Windows.SDK.ucrt");
+        ts["native"]["stdlib"]["cpp"] = to_upkg("com.Microsoft.VisualStudio.VC.libcpp");
+        ts["native"]["stdlib"]["kernel"] = to_upkg("com.Microsoft.Windows.SDK.um");*/
+
+        auto if_add = [&swctx, &check_and_assign_dependency](auto &s, const UnresolvedPackage &name)
+        {
+            auto &pd = swctx.getPredefinedTargets();
+            auto i = pd.find(name);
+            if (i == pd.end() || i->second.empty())
+                return false;
+            check_and_assign_dependency(s, name.toString());
+            return true;
+        };
+
+        auto err_msg = [](const String &cl)
+        {
+            return "sw was built with " + cl + " as compiler, but it was not found in your system. Install " + cl + " to proceed.";
+        };
+
+        // must be the same compiler as current!
+#if defined(__clang__)
+        if (!(
+            if_add(ts["native"]["program"]["c"], "org.LLVM.clang"s) &&
+            if_add(ts["native"]["program"]["cpp"], "org.LLVM.clangpp"s)
+            ))
+        {
+            throw SW_RUNTIME_ERROR(err_msg("clang"));
+        }
+        //if (getHostOs().is(OSType::Linux))
+        //ts["native"]["stdlib"]["cpp"] = to_upkg("org.sw.demo.llvm_project.libcxx");
+#elif defined(__GNUC__)
+        if (!(
+            if_add(ts["native"]["program"]["c"], "org.gnu.gcc") &&
+            if_add(ts["native"]["program"]["cpp"], "org.gnu.gpp")
+            ))
+        {
+            throw SW_RUNTIME_ERROR(err_msg("gcc"));
+        }
+#elif !defined(_WIN32)
+#error "Add your current compiler to detect.cpp and here."
+#endif
+
+        // using c prog
+        if_add(ts["native"]["program"]["asm"], ts["native"]["program"]["c"].getValue());
+
+        // reconsider, also with driver?
+        if_add(ts["native"]["program"]["lib"], "org.gnu.binutils.ar"s);
+
+        // use driver
+        // use cpp driver for the moment to not burden ourselves in adding stdlib
+        if_add(ts["native"]["program"]["link"], ts["native"]["program"]["cpp"].getValue());
+    }
 }
 
 }

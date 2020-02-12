@@ -376,11 +376,12 @@ protected:
     //Target(const Target &);
     CommandStorage *getCommandStorage() const;
 
-private:
+protected:
     TargetSettings ts; // this settings
     // export settings may be different
     // example: we set 'static-deps' setting which changes
     // ["native"]["library"] to "static";
+private:
     TargetSettings ts_export;
     BuildSettings bs;
     std::unique_ptr<Source> source;
@@ -388,7 +389,7 @@ private:
     Commands tests;
 
     void applyRootDirectory();
-    const TargetSettings &getHostSettings() const;
+    TargetSettings getHostSettings() const;
 
     virtual Commands getCommands1() const { return Commands{}; }
     Commands getTests() const override { return tests; }

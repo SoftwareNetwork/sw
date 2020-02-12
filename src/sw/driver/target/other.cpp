@@ -1,6 +1,7 @@
 #include "other.h"
 
 #include "sw/driver/build.h"
+#include "sw/driver/compiler/detect.h"
 
 #include <sw/core/sw_context.h>
 #include <sw/manager/storage.h>
@@ -17,9 +18,13 @@ static std::shared_ptr<CompilerType> activateCompiler(Target &t, const Unresolve
     auto i = cld.find(id, oss);
     if (!i)
     {
-        for (auto &e : exts)
-            t.setExtensionProgram(e, id);
-        return {};
+        i = t.getContext().getPredefinedTargets().find(id, oss);
+        if (!i)
+        {
+            for (auto &e : exts)
+                t.setExtensionProgram(e, id);
+            return {};
+        }
     }
     auto prog = i->as<PredefinedProgram *>();
     if (!prog)
@@ -58,8 +63,37 @@ static std::shared_ptr<CompilerType> activateCompiler(Target &t, const Unresolve
     return compiler;
 }
 
+static void detectCSharpCompilers(DETECT_ARGS)
+{
+    auto &instances = gatherVSInstances(s);
+    for (auto &[v, i] : instances)
+    {
+        auto root = i.root;
+        switch (v.getMajor())
+        {
+        case 15:
+            root = root / "MSBuild" / "15.0" / "Bin" / "Roslyn";
+            break;
+        case 16:
+            root = root / "MSBuild" / "Current" / "Bin" / "Roslyn";
+            break;
+        default:
+            SW_UNIMPLEMENTED;
+        }
+
+        auto p = std::make_shared<SimpleProgram>(s);
+        p->file = root / "csc.exe";
+
+        auto v1 = getVersion(s, p->file);
+        addProgram(s, PackageId("com.Microsoft.VisualStudio.Roslyn.csc", v1), {}, p);
+    }
+}
+
 bool CSharpTarget::init()
 {
+    static std::once_flag f;
+    std::call_once(f, [this] {detectCSharpCompilers((SwContext&)getContext()); });
+
     Target::init();
 
     // propagate this pointer to all
@@ -74,7 +108,7 @@ bool CSharpTarget::init()
 
     compiler->Extension = getBuildSettings().TargetOS.getExecutableExtension();
     compiler->setOutputFile(getBaseOutputFileName(*this, {}, "bin"));
-    
+
     SW_RETURN_MULTIPASS_END(init_pass);
 }
 
@@ -89,8 +123,27 @@ Commands CSharpTarget::getCommands1() const
     return cmds;
 }
 
+static void detectRustCompilers(DETECT_ARGS)
+{
+    auto p = std::make_shared<SimpleProgram>(s);
+    auto f = resolveExecutable("rustc");
+    if (!fs::exists(f))
+    {
+        f = resolveExecutable(get_home_directory() / ".cargo" / "bin" / "rustc");
+        if (!fs::exists(f))
+            return;
+    }
+    p->file = f;
+
+    auto v = getVersion(s, p->file);
+    addProgram(s, PackageId("org.rust.rustc", v), {}, p);
+}
+
 bool RustTarget::init()
 {
+    static std::once_flag f;
+    std::call_once(f, [this] {detectRustCompilers((SwContext&)getContext()); });
+
     Target::init();
 
     // propagate this pointer to all
@@ -120,8 +173,23 @@ Commands RustTarget::getCommands1() const
     return cmds;
 }
 
+static void detectGoCompilers(DETECT_ARGS)
+{
+    auto p = std::make_shared<SimpleProgram>(s);
+    auto f = resolveExecutable("go");
+    if (!fs::exists(f))
+        return;
+    p->file = f;
+
+    auto v = getVersion(s, p->file, "version");
+    addProgram(s, PackageId("org.google.golang.go", v), {}, p);
+}
+
 bool GoTarget::init()
 {
+    static std::once_flag f;
+    std::call_once(f, [this] {detectGoCompilers((SwContext&)getContext()); });
+
     Target::init();
 
     // propagate this pointer to all
@@ -151,8 +219,36 @@ Commands GoTarget::getCommands1() const
     return cmds;
 }
 
+static void detectFortranCompilers(DETECT_ARGS)
+{
+    // TODO: gfortran, flang, ifort, pgfortran, f90 (Oracle Sun), xlf, bgxlf, ...
+    // aocc, armflang
+
+    // TODO: add each program separately
+
+    auto p = std::make_shared<SimpleProgram>(s);
+    auto f = resolveExecutable("gfortran");
+    if (!fs::exists(f))
+    {
+        auto f = resolveExecutable("f95");
+        if (!fs::exists(f))
+        {
+            auto f = resolveExecutable("g95");
+            if (!fs::exists(f))
+                return;
+        }
+    }
+    p->file = f;
+
+    auto v = getVersion(s, p->file);
+    addProgram(s, PackageId("org.gnu.gcc.fortran", v), {}, p);
+}
+
 bool FortranTarget::init()
 {
+    static std::once_flag f;
+    std::call_once(f, [this] {detectFortranCompilers((SwContext&)getContext()); });
+
     Target::init();
 
     // propagate this pointer to all
@@ -161,6 +257,19 @@ bool FortranTarget::init()
         v.target = this;
     });
 
+    /*C->input_extensions = {
+    ".f",
+    ".FOR",
+    ".for",
+    ".f77",
+    ".f90",
+    ".f95",
+
+    // support Preprocessing
+    ".F",
+    ".fpp",
+    ".FPP",
+    };*/
     compiler = activateCompiler<decltype(compiler)::element_type>(*this, "org.gnu.gcc.fortran"s, { ".f" });
     if (!compiler)
         throw SW_RUNTIME_ERROR("No Fortran compiler found");
@@ -182,8 +291,25 @@ Commands FortranTarget::getCommands1() const
     return cmds;
 }
 
+void detectJavaCompilers(DETECT_ARGS)
+{
+    //compiler = resolveExecutable("jar"); // later
+
+    auto p = std::make_shared<SimpleProgram>(s);
+    auto f = resolveExecutable("javac");
+    if (!fs::exists(f))
+        return;
+    p->file = f;
+
+    auto v = getVersion(s, p->file);
+    addProgram(s, PackageId("com.oracle.java.javac", v), {}, p);
+}
+
 bool JavaTarget::init()
 {
+    static std::once_flag f;
+    std::call_once(f, [this] {detectJavaCompilers((SwContext&)getContext()); });
+
     Target::init();
 
     // propagate this pointer to all
@@ -214,8 +340,23 @@ Commands JavaTarget::getCommands1() const
     return cmds;
 }
 
+static void detectKotlinCompilers(DETECT_ARGS)
+{
+    auto p = std::make_shared<SimpleProgram>(s);
+    auto f = resolveExecutable("kotlinc");
+    if (!fs::exists(f))
+        return;
+    p->file = f;
+
+    auto v = getVersion(s, p->file, "-version");
+    addProgram(s, PackageId("com.JetBrains.kotlin.kotlinc", v), {}, p);
+}
+
 bool KotlinTarget::init()
 {
+    static std::once_flag f;
+    std::call_once(f, [this] {detectKotlinCompilers((SwContext&)getContext()); });
+
     Target::init();
 
     // propagate this pointer to all
@@ -249,8 +390,25 @@ NativeLinker *DTarget::getSelectedTool() const
     return compiler.get();
 }
 
+static void detectDCompilers(DETECT_ARGS)
+{
+    // also todo LDC, GDC compiler
+
+    auto p = std::make_shared<SimpleProgram>(s);
+    auto f = resolveExecutable("dmd");
+    if (!fs::exists(f))
+        return;
+    p->file = f;
+
+    auto v = getVersion(s, p->file);
+    addProgram(s, PackageId("org.dlang.dmd.dmd", v), {}, p);
+}
+
 bool DTarget::init()
 {
+    static std::once_flag f;
+    std::call_once(f, [this] {detectDCompilers((SwContext&)getContext()); });
+
     // https://dlang.org/dmd-windows.html
     // https://wiki.dlang.org/Win32_DLLs_in_D
     switch (init_pass)
@@ -265,7 +423,7 @@ bool DTarget::init()
             v.target = this;
         });
 
-        compiler = activateCompiler<decltype(compiler)::element_type>(*this, "org.dlang.dmd.dmd"s, { ".d" });
+        compiler = activateCompiler<decltype(compiler)::element_type>(*this, "org.dlang.dmd.dmd"s, { ".d", /*.di*/ });
         if (!compiler)
             throw SW_RUNTIME_ERROR("No D compiler found");
 

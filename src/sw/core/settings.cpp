@@ -84,6 +84,21 @@ void TargetSetting::copy_fields(const TargetSetting &rhs)
     ignore_in_comparison = rhs.ignore_in_comparison;
 }
 
+bool TargetSetting::isEmpty() const
+{
+    return value.index() == 0;
+}
+
+bool TargetSetting::isNull() const
+{
+    return value.index() == 4;
+}
+
+void TargetSetting::setNull()
+{
+    *this = NullType{};
+}
+
 TargetSetting &TargetSetting::operator=(const TargetSetting &rhs)
 {
     // if we see an option which was consumed, we do not copy, just reset this
@@ -97,16 +112,14 @@ TargetSetting &TargetSetting::operator=(const TargetSetting &rhs)
     return *this;
 }
 
-TargetSetting &TargetSetting::operator=(const Map &u)
-{
-    value = u;
-    return *this;
-}
-
 TargetSetting &TargetSetting::operator[](const TargetSettingKey &k)
 {
     if (value.index() == 0)
-        value = Map();
+    {
+        if (!isEmpty())
+            throw SW_RUNTIME_ERROR("key is not a map (null)");
+        *this = Map();
+    }
     return std::get<Map>(value)[k];
 }
 
@@ -122,7 +135,7 @@ const TargetSetting &TargetSetting::operator[](const TargetSettingKey &k) const
 
 const String &TargetSetting::getValue() const
 {
-    auto v = std::get_if<TargetSettingValue>(&value);
+    auto v = std::get_if<Value>(&value);
     if (!v)
         throw SW_RUNTIME_ERROR("empty value");
     return *v;
@@ -172,10 +185,10 @@ bool TargetSetting::operator==(const TargetSetting &rhs) const
     return value == rhs.value;
 }
 
-bool TargetSetting::operator!=(const TargetSetting &rhs) const
+/*bool TargetSetting::operator!=(const TargetSetting &rhs) const
 {
     return !operator==(rhs);
-}
+}*/
 
 bool TargetSetting::operator<(const TargetSetting &rhs) const
 {
@@ -204,7 +217,7 @@ void TargetSetting::mergeMissing(const TargetSetting &rhs)
         s->mergeMissing(std::get<Map>(rhs.value));
         return;
     }
-    if (value.index() == 0)
+    if (isEmpty())
         *this = rhs;
 }
 
@@ -226,7 +239,7 @@ void TargetSetting::mergeFromJson(const nlohmann::json &j)
         auto v = std::get_if<Map>(&value);
         if (!v)
         {
-            operator=(Map());
+            *this = Map();
             v = std::get_if<Map>(&value);
         }
         v->mergeFromJson(j);
@@ -238,7 +251,7 @@ void TargetSetting::mergeFromJson(const nlohmann::json &j)
         auto v = std::get_if<Array>(&value);
         if (!v)
         {
-            operator=(Array());
+            *this = Array();
             v = std::get_if<Array>(&value);
         }
         v->clear();
@@ -260,13 +273,13 @@ void TargetSetting::mergeFromJson(const nlohmann::json &j)
 
     if (j.is_string())
     {
-        operator=(j.get<String>());
+        *this = j.get<String>();
         return;
     }
 
     if (j.is_null())
     {
-        reset();
+        setNull();
         return;
     }
 
@@ -275,7 +288,7 @@ void TargetSetting::mergeFromJson(const nlohmann::json &j)
 
 bool TargetSetting::isValue() const
 {
-    return std::get_if<TargetSettingValue>(&value);
+    return std::get_if<Value>(&value);
 }
 
 bool TargetSetting::isArray() const
@@ -288,10 +301,14 @@ bool TargetSetting::isObject() const
     return std::get_if<Map>(&value);
 }
 
-void TargetSetting::push_back(const TargetSettingValue &v)
+void TargetSetting::push_back(const Value &v)
 {
     if (value.index() == 0)
-        value = Array();
+    {
+        if (!isEmpty())
+            throw SW_RUNTIME_ERROR("key is not an array (null)");
+        *this = Array();
+    }
     return std::get<Array>(value).push_back(v);
 }
 
@@ -326,7 +343,7 @@ bool TargetSetting::isRequired() const
 
 TargetSetting::operator bool() const
 {
-    return value.index() != 0;
+    return !isEmpty();
 }
 
 String TargetSettings::getHash() const
@@ -380,6 +397,10 @@ nlohmann::json TargetSetting::toJson() const
         break;
     case 3:
         return std::get<Map>(value).toJson();
+    case 4:
+        return nullptr;
+    default:
+        SW_UNREACHABLE;
     }
     return j;
 }
@@ -390,7 +411,7 @@ nlohmann::json TargetSettings::toJson() const
     for (auto &[k, v] : *this)
     {
         auto j2 = v.toJson();
-        if (j2.is_null())
+        if (j2.is_null() && !v.isNull())
             continue;
         j[k] = j2;
         if (!v.used_in_hash)
@@ -421,6 +442,10 @@ size_t TargetSetting::getHash1() const
         break;
     case 3:
         return hash_combine(h, std::get<Map>(value).getHash1());
+    case 4:
+        return hash_combine(h, h); // combine 0 and 0
+    default:
+        SW_UNREACHABLE;
     }
     return h;
 }
@@ -466,7 +491,7 @@ bool TargetSettings::operator==(const TargetSettings &rhs) const
         auto i = settings.find(k);
         if (i == settings.end())
         {
-            if (v.value.index() == 0)
+            if (!v)
                 continue;
             return false;
         }
@@ -482,7 +507,7 @@ bool TargetSettings::operator==(const TargetSettings &rhs) const
         auto i = rhs.settings.find(k);
         if (i == rhs.settings.end())
         {
-            if (v.value.index() == 0)
+            if (!v)
                 continue;
             return false;
         }
@@ -500,14 +525,14 @@ bool TargetSettings::isSubsetOf(const TargetSettings &s) const
     for (auto &[k, v] : settings)
     {
         // value is missing -> ok
-        if (v.value.index() == 0)
+        if (!v)
             continue;
         // ignore -> ok
         if (v.ignoreInComparison())
             continue;
 
         auto i = s.settings.find(k);
-        if (i == s.settings.end() || i->second.value.index() == 0)
+        if (i == s.settings.end() || !i->second)
             return false;
 
         auto lv = std::get_if<TargetSettings>(&v.value);

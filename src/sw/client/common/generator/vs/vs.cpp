@@ -239,7 +239,35 @@ void VSGenerator::generate(const SwBuild &b)
 
     PackagePathTree path_tree;
     Solution s;
-    s.settings = input.getSettings();
+
+    // gather ttb and settings
+    TargetMap ttb;
+    for (auto &[pkg, tgts] : b.getTargetsToBuild())
+    {
+        if (add_all_packages)
+        {
+            ttb[pkg] = tgts;
+            continue;
+        }
+
+        if (add_overridden_packages)
+        {
+            sw::LocalPackage p(b.getContext().getLocalStorage(), pkg);
+            if (p.isOverridden())
+            {
+                ttb[pkg] = tgts;
+                continue;
+            }
+        }
+
+        if (pkg.getPath().isAbsolute())
+            continue;
+
+        if (tgts.empty())
+            throw SW_RUNTIME_ERROR("empty target");
+        ttb[pkg] = tgts;
+        s.settings.insert((*tgts.begin())->getSettings());
+    }
 
     UnresolvedPackage compiler = (*s.settings.begin())["native"]["program"]["cpp"].getValue();
     auto compiler_id = b.getContext().getPredefinedTargets().find(compiler)->first;
@@ -281,31 +309,6 @@ void VSGenerator::generate(const SwBuild &b)
     dl(ts, tables1);
     dl(ts.substr(0, ts.size() - 1), tables2);
 
-    TargetMap ttb;
-    for (auto &[pkg, tgts] : b.getTargetsToBuild())
-    {
-        if (add_all_packages)
-        {
-            ttb[pkg] = tgts;
-            continue;
-        }
-
-        if (add_overridden_packages)
-        {
-            sw::LocalPackage p(b.getContext().getLocalStorage(), pkg);
-            if (p.isOverridden())
-            {
-                ttb[pkg] = tgts;
-                continue;
-            }
-        }
-
-        if (pkg.getPath().isAbsolute())
-            continue;
-
-        ttb[pkg] = tgts;
-    }
-
     // get settings from targets to use settings equality later
     for (auto &[pkg, tgts] : ttb)
     {
@@ -314,7 +317,7 @@ void VSGenerator::generate(const SwBuild &b)
         {
             auto itgt = tgts.findSuitable(st);
             if (itgt == tgts.end())
-                throw SW_RUNTIME_ERROR("missing target");
+                throw SW_RUNTIME_ERROR("missing target: " + pkg.toString() + ", settings: " + st.toString());
             s2.insert((*itgt)->getSettings());
         }
         if (s2.size() != s.settings.size())

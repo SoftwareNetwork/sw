@@ -72,7 +72,7 @@ F(install)
     if (sdb.isPackageInstalled(p))
         throw SW_RUNTIME_ERROR("Package '" + p.toString() + "' is already installed");
     setup_console();
-    swctx->install(sw::UnresolvedPackages{ sw::UnresolvedPackage{p.getPath(), p.getVersion()} });
+    swctx->install(sw::UnresolvedPackages{ p });
 }
 
 F(remove)
@@ -83,10 +83,20 @@ F(remove)
 F(build)
 {
     setup_console();
-    auto d = swctx->getLocalStorage().storage_dir_tmp / "build";// / fs::unique_path();
+
+    // simple protection for now
+    if (p.getPath().isRelative() || p.getPath().getOwner() != "sw")
+        return;
+
+    swctx->install(sw::UnresolvedPackages{ p });
+    auto d = swctx->getLocalStorage().storage_dir_tmp / "build" / unique_path();
     fs::create_directories(d);
+    SCOPE_EXIT
+    {
+        //fs::remove_all(d); // FIXME:
+    };
     ScopedCurrentPath scp(d, CurrentPathScope::All);
-    auto b = swctx->createBuild();
+    auto b = createBuildAndPrepare(*swctx, { p.toString() }, options);
 
     SW_UNIMPLEMENTED;
     /*sw::InputWithSettings i(swctx->addInput(p));
@@ -102,8 +112,13 @@ F(run)
     if (p.getPath().isRelative() || p.getPath().getOwner() != "sw")
         return;
 
-    auto d = swctx->getLocalStorage().storage_dir_tmp / "build";// / fs::unique_path();
+    swctx->install(sw::UnresolvedPackages{ p });
+    auto d = swctx->getLocalStorage().storage_dir_tmp / "build" / unique_path();
     fs::create_directories(d);
+    SCOPE_EXIT
+    {
+        //fs::remove_all(d); // FIXME:
+    };
     ScopedCurrentPath scp(d, CurrentPathScope::All);
 
     primitives::Command c;

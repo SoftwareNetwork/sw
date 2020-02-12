@@ -127,7 +127,6 @@ void build(Solution &s)
         core += "src/sw/core/.*"_rr;
         if (core.getBuildSettings().TargetOS.Type == OSType::Windows)
             core += "OleAut32.lib"_slib;
-        core += "org.sw.demo.giovannidicanio.winreg"_dep;
         core += "org.sw.demo.Neargye.magic_enum"_dep;
     }
 
@@ -140,6 +139,7 @@ void build(Solution &s)
         cpp_driver.Public += core,
             "pub.egorpugin.primitives.patch-master"_dep,
             "org.sw.demo.ToruNiina.toml11"_dep,
+            "org.sw.demo.giovannidicanio.winreg"_dep,
             "org.sw.demo.boost.assign"_dep,
             "org.sw.demo.boost.bimap"_dep,
             "org.sw.demo.boost.uuid"_dep;

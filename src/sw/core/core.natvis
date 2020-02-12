@@ -7,4 +7,42 @@
         </DisplayString>
     </Type>
 
+    <Type Name="sw::TargetSetting">
+        <DisplayString Condition="value._Which == 0">
+            empty
+        </DisplayString>
+        <DisplayString Condition="value._Which == 1">
+            {value._Tail._Head}
+        </DisplayString>
+        <DisplayString Condition="value._Which == 2">
+            {value._Tail._Tail._Head}
+        </DisplayString>
+        <DisplayString Condition="value._Which == 3">
+            {value._Tail._Tail._Tail._Head}
+        </DisplayString>
+        <DisplayString>
+            {value}
+        </DisplayString>
+        <Expand>
+            <ExpandedItem Condition="value._Which == 2">
+                value._Tail._Tail._Head
+            </ExpandedItem>
+            <ExpandedItem Condition="value._Which == 3">
+                value._Tail._Tail._Tail._Head
+            </ExpandedItem>
+        </Expand>
+    </Type>
+
+    <Type Name="sw::TargetSettings">
+        <DisplayString Condition="settings._Mypair._Myval2._Myval2._Mysize == 0">
+            empty
+        </DisplayString>
+        <DisplayString>
+            {settings}
+        </DisplayString>
+        <Expand>
+            <ExpandedItem>settings</ExpandedItem>
+        </Expand>
+    </Type>
+
 </AutoVisualizer>

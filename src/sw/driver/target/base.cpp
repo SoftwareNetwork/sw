@@ -9,6 +9,7 @@
 #include "../entry_point.h"
 #include "../command.h"
 #include "../build.h"
+#include "../compiler/detect.h"
 
 #include <sw/builder/jumppad.h>
 #include <sw/core/sw_context.h>
@@ -383,12 +384,12 @@ std::vector<IDependency *> Target::getDependencies() const
     return deps;
 }
 
-const TargetSettings &Target::getHostSettings() const
+TargetSettings Target::getHostSettings() const
 {
-    auto &hs = getMainBuild().getContext().getHostSettings();
-
     if (ts_export["use_same_config_for_host_dependencies"] == "true")
         return ts_export;
+    auto hs = getMainBuild().getContext().getHostSettings();
+    setHostPrograms(getContext(), hs, true);
     return hs;
 
     /*bool use_current_settings =
@@ -830,7 +831,7 @@ DependencyPtr Target::addDummyDependency(const DependencyPtr &t)
 {
     DummyDependencies.push_back(t);
 
-    auto &hs = getHostSettings();
+    auto hs = getHostSettings();
     auto &ds = DummyDependencies.back()->settings;
     ds.mergeMissing(hs);
     return t;

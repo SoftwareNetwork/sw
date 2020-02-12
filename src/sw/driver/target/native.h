@@ -163,7 +163,10 @@ protected:
     void initLibrary(LibraryType Type);
     void configureFile1(const path &from, const path &to, ConfigureFlags flags);
     void detectLicenseFile();
+
     bool isHeaderOnly() const;
+    bool isStaticLibrary() const override;
+    TargetType getRealType() const;
 
 private:
     CompilerType ct = CompilerType::UnspecifiedCompiler;
@@ -185,6 +188,8 @@ private:
 
     Commands getGeneratedCommands() const;
     void resolvePostponedSourceFiles();
+    template <class T>
+    void gatherStaticLinkLibraries(T &ll, Files &added, std::unordered_set<const NativeCompiledTarget*> &targets, int type) const;
     void gatherRpathLinkDirectories(Files &added, int round) const;
     FilesOrdered gatherLinkDirectories() const;
     FilesOrdered gatherLinkLibraries() const;
@@ -215,8 +220,6 @@ private:
     void prepare_pass7();
     void prepare_pass8();
     void prepare_pass9();
-
-    bool isStaticLibrary() const override;
 
     path getOutputFileName(const path &root) const override;
     path getOutputFileName2(const path &subdir) const override;
