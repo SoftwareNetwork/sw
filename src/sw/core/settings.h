@@ -84,9 +84,16 @@ private:
 
 struct SW_CORE_API TargetSetting
 {
+    struct nulltag_t
+    {
+        bool operator==(const nulltag_t &) const { return true; }
+        bool operator<(const nulltag_t &) const { return false; }
+    };
+
     using Value = TargetSettingValue;
     using Map = TargetSettings;
     using Array = std::vector<std::variant<Value, Map>>;
+    using NullType = nulltag_t;
 
     TargetSetting() = default;
     TargetSetting(const TargetSetting &);
@@ -98,15 +105,18 @@ struct SW_CORE_API TargetSetting
     template <class U>
     TargetSetting &operator=(const U &u)
     {
+        if constexpr (std::is_same_v<U, std::nullptr_t>)
+        {
+            setNull();
+            return *this;
+        }
         reset();
-        if constexpr (std::is_same_v<U, std::monostate>)
-            null_value = true;
         value = u;
         return *this;
     }
 
     bool operator==(const TargetSetting &) const;
-    bool operator!=(const TargetSetting &) const;
+    //bool operator!=(const TargetSetting &) const;
     bool operator<(const TargetSetting &) const;
 
     template <class U>
@@ -160,12 +170,11 @@ struct SW_CORE_API TargetSetting
 
 private:
     int use_count = 1;
-    bool null_value = false;
     bool required = false;
     bool used_in_hash = true;
     bool ignore_in_comparison = false;
     // when adding new member, add it to copy_fields()!
-    std::variant<std::monostate, Value, Array, Map> value;
+    std::variant<std::monostate, Value, Array, Map, NullType> value;
 
     nlohmann::json toJson() const;
     size_t getHash1() const;

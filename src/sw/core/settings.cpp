@@ -78,7 +78,6 @@ TargetSetting::TargetSetting(const TargetSetting &rhs)
 
 void TargetSetting::copy_fields(const TargetSetting &rhs)
 {
-    null_value = rhs.null_value;
     required = rhs.required;
     use_count = rhs.use_count;
     used_in_hash = rhs.used_in_hash;
@@ -87,17 +86,17 @@ void TargetSetting::copy_fields(const TargetSetting &rhs)
 
 bool TargetSetting::isEmpty() const
 {
-    return value.index() == 0 && null_value == false;
+    return value.index() == 0;
 }
 
 bool TargetSetting::isNull() const
 {
-    return value.index() == 0 && null_value == true;
+    return value.index() == 4;
 }
 
 void TargetSetting::setNull()
 {
-    *this = std::monostate{};
+    *this = NullType{};
 }
 
 TargetSetting &TargetSetting::operator=(const TargetSetting &rhs)
@@ -186,10 +185,10 @@ bool TargetSetting::operator==(const TargetSetting &rhs) const
     return value == rhs.value;
 }
 
-bool TargetSetting::operator!=(const TargetSetting &rhs) const
+/*bool TargetSetting::operator!=(const TargetSetting &rhs) const
 {
     return !operator==(rhs);
-}
+}*/
 
 bool TargetSetting::operator<(const TargetSetting &rhs) const
 {
@@ -398,6 +397,10 @@ nlohmann::json TargetSetting::toJson() const
         break;
     case 3:
         return std::get<Map>(value).toJson();
+    case 4:
+        return nullptr;
+    default:
+        SW_UNREACHABLE;
     }
     return j;
 }
@@ -408,7 +411,7 @@ nlohmann::json TargetSettings::toJson() const
     for (auto &[k, v] : *this)
     {
         auto j2 = v.toJson();
-        if (j2.is_null() && !v.null_value)
+        if (j2.is_null() && !v.isNull())
             continue;
         j[k] = j2;
         if (!v.used_in_hash)
@@ -425,8 +428,6 @@ size_t TargetSetting::getHash1() const
     switch (value.index())
     {
     case 0:
-        if (null_value)
-            return hash_combine(h, h); // combine 0 and 0
         return h;
     case 1:
         return hash_combine(h, getValue());
@@ -441,6 +442,10 @@ size_t TargetSetting::getHash1() const
         break;
     case 3:
         return hash_combine(h, std::get<Map>(value).getHash1());
+    case 4:
+        return hash_combine(h, h); // combine 0 and 0
+    default:
+        SW_UNREACHABLE;
     }
     return h;
 }
