@@ -286,7 +286,9 @@ std::vector<Input *> SwContext::addInput(const LocalPackage &p)
     if (!p.getData().group_number)
         throw SW_RUNTIME_ERROR("Missing group number");
 
-    return addInput(p.getGroupLeader().getDirSrc2());
+    auto v = addInput(p.getGroupLeader().getDirSrc2());
+    SW_CHECK(v.size() == 1);
+    return v;
     /*auto &i = addInput(p.getGroupLeader().getDirSrc2());
     if (i.isLoaded())
         return i;
