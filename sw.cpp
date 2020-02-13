@@ -69,7 +69,7 @@ void build(Solution &s)
             "org.sw.demo.nlohmann.json-3"_dep,
             "org.sw.demo.boost.variant"_dep,
             "org.sw.demo.boost.dll"_dep,
-            "org.sw.demo.rbock.sqlpp11_connector_sqlite3-develop"_dep
+            "org.sw.demo.rbock.sqlpp11_connector_sqlite3-master"_dep
             ;
         srcdep->getSettings()["export-if-static"] = "true";
         srcdep->getSettings()["export-if-static"].setRequired();
