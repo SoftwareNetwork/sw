@@ -452,6 +452,8 @@ std::shared_ptr<PrepareConfigEntryPoint> Driver::build_configs1(SwContext &swctx
 
     for (auto &tgt : tgts)
         b->getTargets()[tgt->getPackage()].push_back(tgt);
+    for (auto &p : getBuiltinPackages(ctx))
+        b->getTargets()[p]; // register
 
     // execute
     b->getTargetsToBuild()[*ep->tgt] = b->getTargets()[*ep->tgt]; // set our main target
