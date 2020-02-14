@@ -24,6 +24,7 @@
 struct Options;
 
 std::unique_ptr<sw::SwContext> createSwContext(const Options &);
+void setHttpSettings(const Options &);
 
 struct Program
 {

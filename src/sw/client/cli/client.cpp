@@ -324,6 +324,9 @@ int parse_main(int argc, char **argv)
 
     // create main options!
     Options options;
+    // set http settings very early
+    // needed for self-upgrade feature
+    setHttpSettings(options);
     return setup_main(args, options);
 }
 

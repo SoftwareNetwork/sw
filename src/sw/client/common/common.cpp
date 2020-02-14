@@ -26,12 +26,17 @@
 
 #include <cl.llvm.h>
 
-std::unique_ptr<sw::SwContext> createSwContext(const Options &options)
+void setHttpSettings(const Options &options)
 {
-    // load proxy settings early
     httpSettings.verbose = options.curl_verbose;
     httpSettings.ignore_ssl_checks = options.ignore_ssl_checks;
     httpSettings.proxy = sw::Settings::get_local_settings().proxy;
+}
+
+std::unique_ptr<sw::SwContext> createSwContext(const Options &options)
+{
+    // load proxy settings before ctx
+    setHttpSettings(options);
 
     auto swctx = std::make_unique<sw::SwContext>(options.storage_dir.empty() ? sw::Settings::get_user_settings().storage_dir : options.storage_dir);
     // TODO:
