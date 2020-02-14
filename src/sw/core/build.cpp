@@ -45,9 +45,13 @@ namespace sw
 std::unordered_map<UnresolvedPackage, PackageId> loadLockFile(const path &fn/*, SwContext &swctx*/)
 {
     auto j = nlohmann::json::parse(read_file(fn));
+    if (j["schema"]["version"].is_null())
+    {
+        throw SW_RUNTIME_ERROR("Cannot use this lock file: unknown version, expected " + std::to_string(SW_CURRENT_LOCK_FILE_VERSION));
+    }
     if (j["schema"]["version"] != SW_CURRENT_LOCK_FILE_VERSION)
     {
-        throw SW_RUNTIME_ERROR("Cannot use this lock file: bad version " + std::to_string((int)j["version"]) +
+        throw SW_RUNTIME_ERROR("Cannot use this lock file: bad version " + std::to_string((int)j["schema"]["version"]) +
             ", expected " + std::to_string(SW_CURRENT_LOCK_FILE_VERSION));
     }
 
