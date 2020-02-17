@@ -410,7 +410,14 @@ void SwBuild::resolvePackages(const UnresolvedPackages &upkgs)
         // this marks package as known;
         targets[p];
     }
-    swctx.loadEntryPointsBatch(iv, false);
+
+    {
+        ScopedTime t;
+        swctx.loadEntryPointsBatch(iv, false);
+        if (build_settings["measure"] == "true")
+            LOG_DEBUG(logger, "load entry points time: " << t.getTimeFloat() << " s.");
+    }
+
     // set
     for (auto &[p, i] : ivm)
         setEntryPoint(p, i->getEntryPoints()[0]);
