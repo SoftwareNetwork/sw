@@ -679,7 +679,7 @@ SUBCOMMAND_DECL2(build)
     // if -B specified, it is used as is
 
     Inputs inputs(options.options_build.build_inputs);
-    auto &pairs = (Strings &)options.options_build.input_settings_pairs;
+    const auto &pairs = options.options_build.input_settings_pairs;
     if (pairs.size() % 2 == 1)
         throw SW_RUNTIME_ERROR("Incorrect input settings pairs. Something is missing. Size must be even, but size = " + std::to_string(pairs.size()));
     for (int i = 0; i < pairs.size(); i += 2)
