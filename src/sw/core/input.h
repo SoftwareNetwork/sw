@@ -65,7 +65,7 @@ struct SW_CORE_API Input : RawInput
     bool isChanged() const;
     bool isLoaded() const;
     //PackageVersionGroupNumber getGroupNumber() const;
-    const EntryPointsVector &getEntryPoints() const { return eps; }
+    const EntryPointsVector &getEntryPoints() const;
 
 private:
     //const IDriver &driver;
@@ -79,19 +79,20 @@ private:
 
 struct SW_CORE_API InputWithSettings
 {
-    InputWithSettings(const Input &);
+    InputWithSettings(Input &);
 
     const std::set<TargetSettings> &getSettings() const;
     void addSettings(const TargetSettings &s);
     void clearSettings() { settings.clear(); }
     String getHash() const;
+    Input &getInput() { return i; }
     const Input &getInput() const { return i; }
 
     [[nodiscard]]
     std::vector<ITargetPtr> loadTargets(SwBuild &) const;
 
 protected:
-    const Input &i;
+    Input &i;
     std::set<TargetSettings> settings;
 };
 

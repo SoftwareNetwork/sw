@@ -93,6 +93,7 @@ struct SW_CORE_API SwBuild
     void setName(const String &);
     String getName() const; // returns temporary object, so no refs
 
+    void setEntryPoint(const PackageId &, const TargetEntryPointPtr &);
     void setServiceEntryPoint(const PackageId &, const TargetEntryPointPtr &);
 
 private:
@@ -108,6 +109,7 @@ private:
     // other data
     String name;
     mutable FilesSorted fast_path_files;
+    std::unordered_map<PackageId, TargetEntryPointPtr> entry_points;
     std::unordered_map<PackageId, TargetEntryPointPtr> service_entry_points;
 
     void load(const std::vector<InputWithSettings> &inputs, bool set_eps);

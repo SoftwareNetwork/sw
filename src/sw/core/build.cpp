@@ -277,7 +277,7 @@ void SwBuild::loadInputs()
 
     std::set<Input *> iv;
     for (auto &i : inputs)
-        iv.insert((Input*)&i.getInput());
+        iv.insert(&i.getInput());
     swctx.loadEntryPoints(iv, true);
 
     // and load packages
@@ -287,7 +287,8 @@ void SwBuild::loadInputs()
         for (auto &tgt : tgts)
         {
             if (tgt->getSettings()["dry-run"] == "true")
-                continue;
+                SW_UNREACHABLE;
+                //continue;
             getTargets()[tgt->getPackage()].push_back(tgt);
         }
     }
@@ -394,18 +395,25 @@ void SwBuild::resolvePackages(const UnresolvedPackages &upkgs)
 
     // now we know all drivers
     std::set<Input *> iv;
+    std::map<PackageId, Input *> ivm;
     for (auto &[u, p] : m)
     {
         // use addInput to prevent doubling already existing and loaded inputs
         // like when we loading dependency that is already loaded from the input
         // test: sw build org.sw.demo.gnome.pango.pangocairo-1.44
         for (auto i : swctx.addInput(p))
+        {
             iv.insert(i);
+            ivm[p] = i;
+        }
 
         // this marks package as known;
         targets[p];
     }
     swctx.loadEntryPoints(iv, false);
+    // set
+    for (auto &[p, i] : ivm)
+        setEntryPoint(p, i->getEntryPoints()[0]);
 }
 
 void SwBuild::loadPackages()
@@ -1051,11 +1059,23 @@ void SwBuild::setServiceEntryPoint(const PackageId &p, const TargetEntryPointPtr
     service_entry_points[p] = ep;
 }
 
+void SwBuild::setEntryPoint(const PackageId &p, const TargetEntryPointPtr &ep)
+{
+    entry_points[p] = ep;
+}
+
 TargetEntryPointPtr SwBuild::getEntryPoint(const PackageId &p) const
 {
-    auto i = service_entry_points.find(p);
-    if (i != service_entry_points.end())
-        return i->second;
+    {
+        auto i = service_entry_points.find(p);
+        if (i != service_entry_points.end())
+            return i->second;
+    }
+    {
+        auto i = entry_points.find(p);
+        if (i != entry_points.end())
+            return i->second;
+    }
     return getContext().getEntryPoint(p);
 }
 

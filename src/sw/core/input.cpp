@@ -84,7 +84,14 @@ bool Input::isLoaded() const
     return driver.getGroupNumber(*this);
 }*/
 
-InputWithSettings::InputWithSettings(const Input &i)
+const Input::EntryPointsVector &Input::getEntryPoints() const
+{
+    if (!isLoaded())
+        throw SW_RUNTIME_ERROR("Input is not loaded");
+    return eps;
+}
+
+InputWithSettings::InputWithSettings(Input &i)
     : i(i)
 {
 }
@@ -112,9 +119,6 @@ String InputWithSettings::getHash() const
 
 std::vector<ITargetPtr> InputWithSettings::loadTargets(SwBuild &b) const
 {
-    if (!i.isLoaded())
-        throw SW_RUNTIME_ERROR("Input is not loaded");
-
     std::vector<ITargetPtr> tgts;
 
     /*if (i.getType() == InputType::InstalledPackage)
@@ -153,11 +157,11 @@ std::vector<ITargetPtr> InputWithSettings::loadTargets(SwBuild &b) const
         }
 
         // don't forget to set EPs for loaded targets
-        for (const auto &[pkg, tgts] : b.getTargets())
+        for (const auto &t : tgts)
         {
-            if (old.find(pkg) != old.end())
+            if (old.find(t->getPackage()) != old.end())
                 continue;
-            b.getContext().setEntryPoint(pkg, ep);
+            b.setEntryPoint(t->getPackage(), ep);
         }
     }
     return tgts;
