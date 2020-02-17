@@ -49,6 +49,7 @@ private:
     const std::unordered_set<LocalPackage> pkgs_;
     mutable Files files_;
     mutable FilesSorted pkg_files_;
+    mutable path driver_idir;
 
     void loadPackages1(Build &) const override;
 

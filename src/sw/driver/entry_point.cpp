@@ -396,6 +396,9 @@ decltype(auto) PrepareConfigEntryPoint::commonActions(Build &b, const FilesSorte
     lib.GenerateWindowsResource = false;
     lib.command_storage = &getDriverCommandStorage(b);
 
+    // cache idir
+    driver_idir = getDriverIncludeDir(b, lib);
+
     addDeps(b, lib);
     addImportLibrary(b, lib);
     lib.AutoDetectOptions = false;
@@ -416,14 +419,14 @@ decltype(auto) PrepareConfigEntryPoint::commonActions(Build &b, const FilesSorte
 
     if (lib.getBuildSettings().TargetOS.is(OSType::Windows))
     {
-        auto fn = getDriverIncludeDir(b, lib) / getSwDir() / "misc" / "delay_load_helper.cpp";
+        auto fn = driver_idir / getSwDir() / "misc" / "delay_load_helper.cpp";
         lib += fn;
         if (auto nsf = lib[fn].as<NativeSourceFile *>())
             nsf->setOutputFile(getPchDir(b) / ("delay_load_helper" + getDepsSuffix(lib, deps) + ".obj"));
     }
 
     // pch
-    lib += PrecompiledHeader(getDriverIncludeDir(b, lib) / getSwHeader());
+    lib += PrecompiledHeader(driver_idir / getSwHeader());
 
     detail::PrecompiledHeader pch;
     pch.name = getImportPchFile(lib, deps).stem();
@@ -548,7 +551,7 @@ void PrepareConfigEntryPoint::many2one(Build &b, const std::unordered_set<LocalP
     }
 
     // file deps
-    auto gnu_setup = [&b, &lib](auto *c, const auto &headers, const path &fn, const auto &gn)
+    auto gnu_setup = [this, &b, &lib](auto *c, const auto &headers, const path &fn, const auto &gn)
     {
         // we use pch, but cannot add more defs on CL
         // so we create a file with them
@@ -569,11 +572,11 @@ void PrepareConfigEntryPoint::many2one(Build &b, const std::unordered_set<LocalP
         write_file_if_different(h, ctx.getText());
 
         c->ForcedIncludeFiles().push_back(h);
-        c->ForcedIncludeFiles().push_back(getDriverIncludeDir(b, lib) / getSw1Header());
+        c->ForcedIncludeFiles().push_back(driver_idir / getSw1Header());
 
         for (auto &h : headers)
             c->ForcedIncludeFiles().push_back(h);
-        c->ForcedIncludeFiles().push_back(getDriverIncludeDir(b, lib) / getSwCheckAbiVersionHeader());
+        c->ForcedIncludeFiles().push_back(driver_idir / getSwCheckAbiVersionHeader());
     };
 
     for (auto &[fn, d] : output_names)
@@ -651,8 +654,8 @@ void PrepareConfigEntryPoint::one2one(Build &b, const path &fn) const
     {
         if (auto c = sf->compiler->template as<VisualStudioCompiler*>())
         {
-            c->ForcedIncludeFiles().push_back(getDriverIncludeDir(b, lib) / getSw1Header());
-            c->ForcedIncludeFiles().push_back(getDriverIncludeDir(b, lib) / getSwCheckAbiVersionHeader());
+            c->ForcedIncludeFiles().push_back(driver_idir / getSw1Header());
+            c->ForcedIncludeFiles().push_back(driver_idir / getSwCheckAbiVersionHeader());
 
             // deprecated warning
             // activate later
@@ -662,18 +665,18 @@ void PrepareConfigEntryPoint::one2one(Build &b, const path &fn) const
         }
         else if (auto c = sf->compiler->template as<ClangClCompiler*>())
         {
-            c->ForcedIncludeFiles().push_back(getDriverIncludeDir(b, lib) / getSw1Header());
-            c->ForcedIncludeFiles().push_back(getDriverIncludeDir(b, lib) / getSwCheckAbiVersionHeader());
+            c->ForcedIncludeFiles().push_back(driver_idir / getSw1Header());
+            c->ForcedIncludeFiles().push_back(driver_idir / getSwCheckAbiVersionHeader());
         }
         else if (auto c = sf->compiler->template as<ClangCompiler*>())
         {
-            c->ForcedIncludeFiles().push_back(getDriverIncludeDir(b, lib) / getSw1Header());
-            c->ForcedIncludeFiles().push_back(getDriverIncludeDir(b, lib) / getSwCheckAbiVersionHeader());
+            c->ForcedIncludeFiles().push_back(driver_idir / getSw1Header());
+            c->ForcedIncludeFiles().push_back(driver_idir / getSwCheckAbiVersionHeader());
         }
         else if (auto c = sf->compiler->template as<GNUCompiler*>())
         {
-            c->ForcedIncludeFiles().push_back(getDriverIncludeDir(b, lib) / getSw1Header());
-            c->ForcedIncludeFiles().push_back(getDriverIncludeDir(b, lib) / getSwCheckAbiVersionHeader());
+            c->ForcedIncludeFiles().push_back(driver_idir / getSw1Header());
+            c->ForcedIncludeFiles().push_back(driver_idir / getSwCheckAbiVersionHeader());
         }
     }
 
