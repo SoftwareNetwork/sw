@@ -534,9 +534,12 @@ void SwBuild::loadPackages(const TargetMap &predefined)
             auto ep = getEntryPoint(d.first);
             if (!ep)
                 throw SW_RUNTIME_ERROR("no entry point for " + d.first.toString());
-            auto pp = d.first.getPath().slice(0, LocalPackage(getContext().getLocalStorage(), d.first).getData().prefix);
             //auto tgts = ep->loadPackages(*this, s, { d.first }, pp);
-            auto tgts = ep->loadPackages(*this, s, getTargets().getPackagesSet(), pp);
+            auto tgts = ep->loadPackages(*this, s, getTargets().getPackagesSet(),
+                d.first.getPath().isAbsolute()
+                ? d.first.getPath().slice(0, LocalPackage(getContext().getLocalStorage(), d.first).getData().prefix)
+                : PackagePath{}
+                );
 
             bool added = false;
             for (auto &tgt : tgts)
