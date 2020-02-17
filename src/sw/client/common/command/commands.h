@@ -94,8 +94,8 @@ std::vector<sw::TargetSettings> createSettings(sw::SwContext &, OPTIONS_ARG_CONS
 // from upload settings
 sw::SourcePtr createSource(OPTIONS_ARG_CONST);
 
-std::pair<sw::SourceDirMap, const sw::Input &> fetch(sw::SwBuild &, OPTIONS_ARG_CONST);
-std::pair<sw::SourceDirMap, const sw::Input &> fetch(sw::SwContext &, OPTIONS_ARG_CONST);
+std::pair<sw::SourceDirMap, std::vector<sw::Input*>> fetch(sw::SwBuild &, OPTIONS_ARG_CONST);
+std::pair<sw::SourceDirMap, std::vector<sw::Input*>> fetch(sw::SwContext &, OPTIONS_ARG_CONST);
 
 sw::PackageDescriptionMap getPackages(const sw::SwBuild &, const sw::SourceDirMap & = {});
 std::map<sw::PackagePath, sw::VersionSet> getMatchingPackages(const sw::StorageWithPackagesDatabase &, const String &unresolved_arg);

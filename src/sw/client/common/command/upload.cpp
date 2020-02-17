@@ -195,8 +195,9 @@ SUBCOMMAND_DECL2(upload)
     auto b = swctx.createBuild();
 
     // get spec early, so changes won't be considered
-    SW_UNIMPLEMENTED;
-    /*auto spec = swctx.addInput(fs::current_path()).getSpecification()->files.begin()->second;
+    auto inputs = swctx.addInput(fs::current_path());
+    SW_CHECK(inputs.size() == 1); // for now
+    auto spec = inputs[0]->getSpecification()->files.begin()->second;
 
     // detect from options
     bool cmdline_source_present = 0
@@ -260,10 +261,10 @@ SUBCOMMAND_DECL2(upload)
     }
 
     String script_name;
-    switch (i.getType())
+    switch (i[0]->getType())
     {
     case sw::InputType::SpecificationFile:
-        script_name = i.getPath().filename().string();
+        script_name = i[0]->getPath().filename().string();
         break;
     default:
         SW_UNIMPLEMENTED;
@@ -284,5 +285,5 @@ SUBCOMMAND_DECL2(upload)
     // send signatures (gpg)
     // -k KEY1 -k KEY2
     auto api = current_remote->getApi();
-    api->addVersion(options.options_upload.upload_prefix, m, script_name, spec);*/
+    api->addVersion(options.options_upload.upload_prefix, m, script_name, spec);
 }
