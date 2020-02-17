@@ -71,10 +71,8 @@ static path getImportLibraryFile(const Build &b)
     return getImportFilePrefix(b) += ".lib";
 }
 
-static path getImportPchFile(NativeCompiledTarget &t, const UnresolvedPackages &deps)
+static String getDepsSuffix(NativeCompiledTarget &t, const UnresolvedPackages &deps)
 {
-    // we create separate pch for different target deps
-
     std::set<String> sdeps;
     for (auto &d : t.getDependencies())
         sdeps.insert(d->getUnresolvedPackage().toString());
@@ -85,6 +83,13 @@ static path getImportPchFile(NativeCompiledTarget &t, const UnresolvedPackages &
     for (auto &d : sdeps)
         s += d;
     h = "." + shorten_hash(blake2b_512(s), 6);
+    return h;
+}
+
+static path getImportPchFile(NativeCompiledTarget &t, const UnresolvedPackages &deps)
+{
+    // we create separate pch for different target deps
+    auto h = getDepsSuffix(t, deps);
     return getImportFilePrefix(t.getSolution()) += h + ".cpp";
 }
 
@@ -410,7 +415,12 @@ decltype(auto) PrepareConfigEntryPoint::commonActions(Build &b, const FilesSorte
         lib.CompileOptions.push_back("/utf-8");
 
     if (lib.getBuildSettings().TargetOS.is(OSType::Windows))
-        lib += getDriverIncludeDir(b, lib) / getSwDir() / "misc" / "delay_load_helper.cpp";
+    {
+        auto fn = getDriverIncludeDir(b, lib) / getSwDir() / "misc" / "delay_load_helper.cpp";
+        lib += fn;
+        if (auto nsf = lib[fn].as<NativeSourceFile *>())
+            nsf->setOutputFile(getPchDir(b) / ("delay_load_helper" + getDepsSuffix(lib, deps) + ".obj"));
+    }
 
     // pch
     lib += PrecompiledHeader(getDriverIncludeDir(b, lib) / getSwHeader());
