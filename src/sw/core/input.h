@@ -52,7 +52,7 @@ struct SW_CORE_API Input : RawInput
 {
     using EntryPointsVector = std::vector<TargetEntryPointPtr>;
 
-    Input(/*const IDriver &, */const path &, InputType);
+    Input(const IDriver &, const path &, InputType);
     virtual ~Input();
 
     void load(SwContext &);
@@ -60,15 +60,23 @@ struct SW_CORE_API Input : RawInput
     virtual std::unique_ptr<Specification> getSpecification() const = 0;
 
     // used for batch loading inputs (if applicable)
-    //const IDriver &getDriver() const { return driver; }
+    const IDriver &getDriver() const { return driver; }
+
+    /// allow to load several inputs via driver
+    virtual bool isBatchLoadable() const = 0;
+    /// allow to throw input->load() into thread pool
+    virtual bool isParallelLoadable() const = 0;
 
     bool isChanged() const;
     bool isLoaded() const;
     //PackageVersionGroupNumber getGroupNumber() const;
     const EntryPointsVector &getEntryPoints() const;
 
+protected:
+    virtual void setEntryPoints(const EntryPointsVector &in);
+
 private:
-    //const IDriver &driver;
+    const IDriver &driver;
     // one input may have several eps
     // example: .yml frontend - 1 document, but multiple eps, one per package
     EntryPointsVector eps;

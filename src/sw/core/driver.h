@@ -55,7 +55,6 @@ struct SW_CORE_API IDriver
     /// Create entry points for inputs.
     /// Inputs are unique and non null.
     /// Inputs will receive their entry points.
-    /// Result is number of vectors of entry points equal to inputs, in the same order.
     /// One input may provide several entry points (yml).
     /// We return shared points because we cannot load them into context because package ids is not known in advance.
     /// (in case of loading not installed package)
@@ -63,10 +62,9 @@ struct SW_CORE_API IDriver
     ///
     //
     // this function is used for batch loading
-    // maybe move it inside Input? because later we'll have saved targets
     //
     [[nodiscard]]
-    //virtual EntryPointsVector createEntryPoints(SwContext &, const std::vector<RawInput> &) const = 0;
+    virtual void loadInputsBatch(SwContext &, const std::set<Input*> &) const = 0;
 
     /// get raw specification
     /// complex return value?

@@ -228,7 +228,7 @@ std::vector<Input *> SwContext::addInput(const path &in)
                     inputs_local.push_back(&*inputs.back());
                 }
 
-                LOG_DEBUG(logger, "Selecting driver " + dp.toString() + " for input " + normalize_path(i->getPath()));
+                LOG_TRACE(logger, "Selecting driver " + dp.toString() + " for input " + normalize_path(inputs_local.back()->getPath()));
             }
             return true;
         }
@@ -298,6 +298,42 @@ std::vector<Input *> SwContext::addInput(const LocalPackage &p)
     if (ep)
         i.addEntryPoints({ ep });
     return i;*/
+}
+
+void SwContext::loadEntryPointsBatch(const std::set<Input *> &inputs, bool set_eps)
+{
+    std::map<const IDriver *, std::set<Input*>> batch_inputs;
+    std::set<Input*> parallel_inputs;
+
+    // select inputs
+    for (auto &i : inputs)
+    {
+        if (i->isLoaded())
+            continue;
+        if (i->isBatchLoadable())
+            batch_inputs[&i->getDriver()].insert(i);
+        else if (i->isParallelLoadable())
+            parallel_inputs.insert(i);
+        else
+            // perform single loads
+            i->load(*this);
+    }
+
+    // perform batch loads
+    for (auto &[d, g] : batch_inputs)
+        d->loadInputsBatch(*this, g);
+
+    // perform parallel loads
+    auto &e = getExecutor();
+    Futures<void> fs;
+    for (auto &i : parallel_inputs)
+    {
+        fs.push_back(e.push([i, this]
+        {
+            i->load(*this);
+        }));
+    }
+    waitAndGet(fs);
 }
 
 void SwContext::loadEntryPoints(const std::set<Input*> &inputs, bool set_eps)

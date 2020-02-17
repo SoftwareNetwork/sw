@@ -33,8 +33,8 @@ bool RawInput::operator<(const RawInput &rhs) const
     return std::tie(type, p) < std::tie(rhs.type, rhs.p);
 }
 
-Input::Input(/*const IDriver &driver, */const path &p, InputType t)
-    //: driver(driver)
+Input::Input(const IDriver &driver, const path &p, InputType t)
+    : driver(driver)
 {
     if (p.empty())
         throw SW_RUNTIME_ERROR("empty path");
@@ -89,6 +89,13 @@ const Input::EntryPointsVector &Input::getEntryPoints() const
     if (!isLoaded())
         throw SW_RUNTIME_ERROR("Input is not loaded");
     return eps;
+}
+
+void Input::setEntryPoints(const EntryPointsVector &in)
+{
+    SW_ASSERT(!in.empty(), "No entry points provided");
+    SW_ASSERT(!isLoaded(), "Input already loaded");
+    eps = in;
 }
 
 InputWithSettings::InputWithSettings(Input &i)

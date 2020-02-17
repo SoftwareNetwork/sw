@@ -410,7 +410,7 @@ void SwBuild::resolvePackages(const UnresolvedPackages &upkgs)
         // this marks package as known;
         targets[p];
     }
-    swctx.loadEntryPoints(iv, false);
+    swctx.loadEntryPointsBatch(iv, false);
     // set
     for (auto &[p, i] : ivm)
         setEntryPoint(p, i->getEntryPoints()[0]);

@@ -47,6 +47,8 @@ namespace driver::cpp
 
 enum class FrontendType
 {
+    Unspecified,
+
     // priority!
     Sw = 1,
     Cppan = 2,
@@ -149,7 +151,7 @@ void Driver::processConfigureAc(const path &p)
 
 struct DriverInput
 {
-    FrontendType fe_type;
+    FrontendType fe_type = FrontendType::Unspecified;
 };
 
 struct SpecFileInput : Input, DriverInput
@@ -157,6 +159,12 @@ struct SpecFileInput : Input, DriverInput
     Driver *driver = nullptr;
 
     using Input::Input;
+
+    // at the moment only sw is batch loadable
+    bool isBatchLoadable() const override { return fe_type == FrontendType::Sw; }
+
+    // everything else is parallel loadable
+    bool isParallelLoadable() const override { return !isBatchLoadable(); }
 
     std::unique_ptr<Specification> getSpecification() const override
     {
@@ -239,6 +247,8 @@ struct SpecFileInput : Input, DriverInput
             SW_UNIMPLEMENTED;
         }
     }
+
+    void setEntryPoints(const EntryPointsVector &in) override { Input::setEntryPoints(in); }
 };
 
 struct InlineSpecInput : Input, DriverInput
@@ -247,8 +257,13 @@ struct InlineSpecInput : Input, DriverInput
 
     using Input::Input;
 
+    bool isBatchLoadable() const override { return false; }
+    bool isParallelLoadable() const override { return !isBatchLoadable(); }
+
     std::unique_ptr<Specification> getSpecification() const override
     {
+        SW_ASSERT(fe_type == FrontendType::Cppan, "not implemented");
+
         auto spec = std::make_unique<Specification>();
         String s;
         if (!root.IsNull())
@@ -261,6 +276,8 @@ struct InlineSpecInput : Input, DriverInput
 
     EntryPointsVector load1(SwContext &swctx) override
     {
+        SW_ASSERT(fe_type == FrontendType::Cppan, "not implemented");
+
         auto p = getPath();
         if (root.IsNull())
         {
@@ -289,6 +306,9 @@ struct InlineSpecInput : Input, DriverInput
 struct DirInput : Input
 {
     using Input::Input;
+
+    bool isBatchLoadable() const override { return false; }
+    bool isParallelLoadable() const override { return !isBatchLoadable(); }
 
     std::unique_ptr<Specification> getSpecification() const override
     {
@@ -320,7 +340,7 @@ std::vector<std::unique_ptr<Input>> Driver::detectInputs(const path &p, InputTyp
         if (!fe)
             break;
 
-        auto i = std::make_unique<SpecFileInput>(p, type);
+        auto i = std::make_unique<SpecFileInput>(*this, p, type);
         i->driver = (Driver*)this;
         i->fe_type = *fe;
         LOG_TRACE(logger, "using " << toString(i->fe_type) << " frontend for input " << p);
@@ -346,7 +366,7 @@ std::vector<std::unique_ptr<Input>> Driver::detectInputs(const path &p, InputTyp
             if (exts.find(p.extension().string()) != exts.end())
             {
                 // file ehas cpp extension
-                auto i = std::make_unique<InlineSpecInput>(p, type);
+                auto i = std::make_unique<InlineSpecInput>(*this, p, type);
                 i->fe_type = FrontendType::Cppan;
                 LOG_TRACE(logger, "using inline " << toString(i->fe_type) << " frontend for input " << p);
                 inputs.push_back(std::move(i));
@@ -361,7 +381,7 @@ std::vector<std::unique_ptr<Input>> Driver::detectInputs(const path &p, InputTyp
             {
                 auto root = YAML::Load(c);
 
-                auto i = std::make_unique<InlineSpecInput>(p, type);
+                auto i = std::make_unique<InlineSpecInput>(*this, p, type);
                 i->fe_type = FrontendType::Cppan;
                 i->root = root;
                 LOG_TRACE(logger, "using inline " << toString(i->fe_type) << " frontend for input " << p);
@@ -377,7 +397,7 @@ std::vector<std::unique_ptr<Input>> Driver::detectInputs(const path &p, InputTyp
     }
     case InputType::Directory:
     {
-        auto i = std::make_unique<DirInput>(p, type);
+        auto i = std::make_unique<DirInput>(*this, p, type);
         LOG_TRACE(logger, "dir input " << p);
         inputs.push_back(std::move(i));
         break;
@@ -388,33 +408,29 @@ std::vector<std::unique_ptr<Input>> Driver::detectInputs(const path &p, InputTyp
     return inputs;
 }
 
-/*Driver::EntryPointsVector Driver::createEntryPoints(SwContext &swctx, const std::vector<RawInput> &inputs) const
+void Driver::loadInputsBatch(SwContext &swctx, const std::set<Input *> &inputs) const
 {
-    PackageIdSet pkgsids;
-    std::unordered_map<path, EntryPointsVector1> p_eps;
+    /*for (auto &i : inputs)
+        i->load(swctx);
+    return;*/
+
+    Files files;
+    std::map<path, Input *> m;
     for (auto &i : inputs)
     {
-        switch (i.getType())
-        {
-        default:
-            SW_UNIMPLEMENTED;
-        }
+        SW_ASSERT(dynamic_cast<SpecFileInput *>(i), "Bad input type");
+        files.insert(i->getPath());
+        m[i->getPath()] = i;
     }
 
-    std::unordered_map<PackageId, EntryPointsVector1> pkg_eps;
-    if (!pkgsids.empty())
-        pkg_eps = load_packages(swctx, pkgsids);
-
-    EntryPointsVector eps;
-    for (auto &i : inputs)
+    auto ep = build_configs1(swctx, files);
+    for (auto &[p, dll] : ep->r)
     {
-        //if (i.getType() == InputType::InstalledPackage)
-            //eps.push_back(pkg_eps[i.getPackageId()]);
-        //else
-            eps.push_back(p_eps[i.getPath()]);
+        auto i = dynamic_cast<SpecFileInput *>(m[p]);
+        auto ep = std::make_shared<NativeModuleTargetEntryPoint>(Module(swctx.getModuleStorage().get(dll)));
+        i->setEntryPoints({ ep });
     }
-    return eps;
-}*/
+}
 
 PackageIdSet Driver::getBuiltinPackages(SwContext &swctx) const
 {
@@ -426,11 +442,28 @@ PackageIdSet Driver::getBuiltinPackages(SwContext &swctx) const
     return *builtin_packages;
 }
 
+std::unique_ptr<SwBuild> Driver::create_build(SwContext &swctx) const
+{
+    auto &ctx = swctx;
+    auto b = ctx.createBuild();
+
+    for (auto &[p, ep] : load_builtin_entry_points())
+        b->setServiceEntryPoint(p, ep);
+
+    // register
+    for (auto &p : getBuiltinPackages(ctx))
+        b->getTargets()[p];
+
+    return std::move(b);
+}
+
+// not thread-safe
 template <class T>
 std::shared_ptr<PrepareConfigEntryPoint> Driver::build_configs1(SwContext &swctx, const T &objs) const
 {
     auto &ctx = swctx;
-    auto b = ctx.createBuild();
+    if (!b)
+        b = create_build(ctx);
 
     auto ts = ctx.createHostSettings();
     ts["native"]["library"] = "static";
@@ -438,13 +471,10 @@ std::shared_ptr<PrepareConfigEntryPoint> Driver::build_configs1(SwContext &swctx
     if (debug_configs)
         ts["native"]["configuration"] = "debug";
 
-    for (auto &[p, ep] : load_builtin_entry_points())
-        b->setServiceEntryPoint(p, ep);
-
     auto ep = std::make_shared<PrepareConfigEntryPoint>(objs);
     auto tgts = ep->loadPackages(*b, ts, getBuiltinPackages(ctx), {}); // load all our known targets
-    if (tgts.size() != 1)
-        throw SW_LOGIC_ERROR("something went wrong, only one lib target must be exported");
+    // something went wrong, only one lib target must be exported
+    //SW_CHECK(tgts.size() == 1);
 
     // fast path
     if (!ep->isOutdated())
@@ -452,11 +482,10 @@ std::shared_ptr<PrepareConfigEntryPoint> Driver::build_configs1(SwContext &swctx
 
     for (auto &tgt : tgts)
         b->getTargets()[tgt->getPackage()].push_back(tgt);
-    for (auto &p : getBuiltinPackages(ctx))
-        b->getTargets()[p]; // register
 
     // execute
-    b->getTargetsToBuild()[*ep->tgt] = b->getTargets()[*ep->tgt]; // set our main target
+    for (auto &tgt : tgts)
+        b->getTargetsToBuild()[tgt->getPackage()] = b->getTargets()[tgt->getPackage()]; // set our targets
     b->overrideBuildState(BuildState::PackagesResolved);
     /*if (!ep->udeps.empty())
         LOG_WARN(logger, "WARNING: '#pragma sw require' is not well tested yet. Expect instability.");
@@ -465,13 +494,18 @@ std::shared_ptr<PrepareConfigEntryPoint> Driver::build_configs1(SwContext &swctx
     b->prepare();
     b->execute();
 
+    for (auto &tgt : tgts)
+    {
+        b->getTargetsToBuild().erase(tgt->getPackage());
+        b->getTargets().erase(tgt->getPackage());
+    }
+
     return ep;
 }
 
 std::unordered_map<PackageId, Driver::EntryPointsVector1> Driver::load_packages(SwContext &swctx, const PackageIdSet &pkgsids) const
 {
-    // init here
-    getBuiltinPackages(swctx);
+    SW_UNIMPLEMENTED;
 
     std::unordered_map<PackageId, EntryPointsVector1> eps;
 
