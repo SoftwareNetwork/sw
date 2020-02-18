@@ -90,8 +90,6 @@ struct InputDatabase : Database
     }
 };
 
-IDriver::~IDriver() = default;
-
 SwCoreContext::SwCoreContext(const path &local_storage_root_dir)
     : SwBuilderContext(local_storage_root_dir)
 {
@@ -339,16 +337,6 @@ std::vector<Input *> SwContext::addInput(const path &in)
 
     SW_ASSERT(!inputs_local.empty(), "Inputs empty for " + normalize_path(p));
     return inputs_local;
-
-    /*auto input = std::make_unique<Input>(i, *this);
-    auto it = std::find_if(inputs.begin(), inputs.end(), [&i = *input](const auto &p)
-    {
-        return *p == i;
-    });
-    if (it != inputs.end())
-        return **it;
-    inputs.push_back(std::move(input));
-    return *inputs.back();*/
 }
 
 std::vector<Input *> SwContext::addInput(const LocalPackage &p)
@@ -356,18 +344,9 @@ std::vector<Input *> SwContext::addInput(const LocalPackage &p)
     auto v = addInput(p.getDirSrc2());
     SW_CHECK(v.size() == 1);
     return v;
-    /*auto &i = addInput(p.getGroupLeader().getDirSrc2());
-    if (i.isLoaded())
-        return i;
-    //if (getTargetData().find(p) == getTargetData().end())
-        //return i;
-    auto ep = getEntryPoint(p);
-    if (ep)
-        i.addEntryPoints({ ep });
-    return i;*/
 }
 
-void SwContext::loadEntryPointsBatch(const std::set<Input *> &inputs, bool set_eps)
+void SwContext::loadEntryPointsBatch(const std::set<Input *> &inputs)
 {
     std::map<const IDriver *, std::set<Input*>> batch_inputs;
     std::set<Input*> parallel_inputs;
@@ -401,72 +380,6 @@ void SwContext::loadEntryPointsBatch(const std::set<Input *> &inputs, bool set_e
         }));
     }
     waitAndGet(fs);
-}
-
-void SwContext::loadEntryPoints(const std::set<Input*> &inputs, bool set_eps)
-{
-    for (auto &i : inputs)
-        i->load(*this);
-    return;
-
-    std::map<const IDriver *, std::vector<Input*>> active_drivers;
-    for (auto &i : inputs)
-    {
-        //if (!i->isLoaded())
-            //active_drivers[&i->getDriver()].push_back(i);
-    }
-    for (auto &[d, g] : active_drivers)
-    {
-        //std::vector<RawInput> inputs;
-        //for (auto &i : g)
-            //inputs.push_back(*i);
-        //auto eps = d->createEntryPoints(*this, inputs); // batch load
-        //if (eps.size() != inputs.size())
-            //throw SW_RUNTIME_ERROR("Incorrect number of returned entry points");
-        //for (size_t i = 0; i < eps.size(); i++)
-        {
-            // when loading installed package, eps[i] may be empty
-            // (ep already exists in driver)
-            // so we take ep from context
-            // test: sw build org.sw.demo.madler.zlib
-            //if (eps[i].empty())
-            {
-                SW_UNREACHABLE;
-                //if (inputs[i].getType() != InputType::InstalledPackage)
-                    //throw SW_RUNTIME_ERROR("unexpected input type");
-                //g[i]->addEntryPoints({ getEntryPoint(inputs[i].getPackageId()) });
-            }
-            //else
-                //g[i]->addEntryPoints(eps[i]);
-
-            //if (!set_eps)
-                //continue;
-
-            //if (inputs[i].getType() != InputType::InstalledPackage)
-            /*if (eps[i].empty())
-            {
-                // for non installed packages we must create entry points in sw context
-                auto b = createBuild();
-                auto s = getHostSettings();
-                s["driver"]["dry-run"] = "true"; // used only to get pkgs list
-                for (auto &ep : eps[i])
-                {
-                    auto tgts = ep->loadPackages(*b, s, {}, {});
-                    for (auto &tgt : tgts)
-                    {
-                        PackageData d;
-                        d.prefix = 0;
-                        // add only gn atm
-                        d.group_number = g[i]->getGroupNumber();
-                        getLocalStorage().installLocalPackage(tgt->getPackage(), d);
-
-                        setEntryPoint(LocalPackage(getLocalStorage(), tgt->getPackage()), ep);
-                    }
-                }
-                continue;
-            }*/
-        }
-    }
 }
 
 }

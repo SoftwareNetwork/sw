@@ -11,6 +11,10 @@
 namespace sw
 {
 
+IDriver::~IDriver()
+{
+}
+
 void Specification::addFile(const path &relative_path, const String &contents)
 {
     files[relative_path] = contents;
@@ -26,11 +30,5 @@ int64_t Specification::getHash() const
     h = std::hash<String>()(files.begin()->second);
     return h;
 }
-
-/*int64_t IDriver::getGroupNumber(const RawInput &i) const
-{
-    SW_UNIMPLEMENTED;
-    //return getSpecification(i)->getHash();
-}*/
 
 } // namespace sw

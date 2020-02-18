@@ -85,16 +85,6 @@ void Input::setHash(size_t h)
     hash = h;
 }
 
-/*std::unique_ptr<Specification> Input::getSpecification() const
-{
-    return driver.getSpecification(*this);
-}*/
-
-/*PackageVersionGroupNumber Input::getGroupNumber() const
-{
-    return driver.getGroupNumber(*this);
-}*/
-
 const Input::EntryPointsVector &Input::getEntryPoints() const
 {
     if (!isLoaded())
@@ -138,23 +128,6 @@ String InputWithSettings::getHash() const
 std::vector<ITargetPtr> InputWithSettings::loadTargets(SwBuild &b) const
 {
     std::vector<ITargetPtr> tgts;
-
-    /*if (i.getType() == InputType::InstalledPackage)
-    {
-        for (auto &ep : i.getEntryPoints())
-        {
-            for (auto &s : settings)
-            {
-                LOG_TRACE(logger, "Loading input " << i.getPackageId().toString() << ", settings = " << s.toString());
-
-                // load only this pkg
-                auto pp = i.getPackageId().getPath().slice(0, LocalPackage(b.getContext().getLocalStorage(), i.getPackageId()).getData().prefix);
-                auto t = ep->loadPackages(b, s, { i.getPackageId() }, pp);
-                tgts.insert(tgts.end(), t.begin(), t.end());
-            }
-        }
-        return tgts;
-    }*/
 
     // for non installed packages we do special handling
     // we register their entry points in swctx

@@ -51,7 +51,6 @@ struct SW_CORE_API Input
 
     bool isChanged() const;
     bool isLoaded() const;
-    //PackageVersionGroupNumber getGroupNumber() const;
     const EntryPointsVector &getEntryPoints() const;
 
     size_t getHash() const;
@@ -75,7 +74,6 @@ private:
     // example: .yml frontend - 1 document, but multiple eps, one per package
     EntryPointsVector eps;
     size_t hash = 0;
-    //PackageVersionGroupNumber gn = 0;
 
     virtual EntryPointsVector load1(SwContext &) = 0;
 };

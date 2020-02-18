@@ -112,7 +112,6 @@ private:
     std::unordered_map<PackageId, TargetEntryPointPtr> entry_points;
     std::unordered_map<PackageId, TargetEntryPointPtr> service_entry_points;
 
-    void load(const std::vector<InputWithSettings> &inputs, bool set_eps);
     Commands getCommands() const;
     void loadPackages(const TargetMap &predefined);
     TargetEntryPointPtr getEntryPoint(const PackageId &) const;

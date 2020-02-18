@@ -278,19 +278,14 @@ void SwBuild::loadInputs()
     std::set<Input *> iv;
     for (auto &i : inputs)
         iv.insert(&i.getInput());
-    swctx.loadEntryPoints(iv, true);
+    swctx.loadEntryPointsBatch(iv);
 
     // and load packages
     for (auto &i : inputs)
     {
         auto tgts = i.loadTargets(*this);
         for (auto &tgt : tgts)
-        {
-            if (tgt->getSettings()["dry-run"] == "true")
-                SW_UNREACHABLE;
-                //continue;
             getTargets()[tgt->getPackage()].push_back(tgt);
-        }
     }
 }
 
@@ -313,20 +308,6 @@ void SwBuild::resolvePackages()
 
     // gather
     UnresolvedPackages upkgs;
-    // remove first loop?
-    // we have already loaded inputs
-    /*for (const auto &[pkg, tgts] : getTargetsToBuild())
-    {
-        for (const auto &tgt : tgts)
-        {
-            // for package id inputs we also load themselves
-            auto pkg = tgt->getPackage();
-            //                                skip checks
-            if (pkg.getPath().isAbsolute() && !pkg.getPath().is_loc())
-                upkgs.insert(pkg);
-            break;
-        }
-    }*/
     for (const auto &[pkg, tgts] : getTargets())
     {
         for (const auto &tgt : tgts)
@@ -413,7 +394,7 @@ void SwBuild::resolvePackages(const UnresolvedPackages &upkgs)
 
     {
         ScopedTime t;
-        swctx.loadEntryPointsBatch(iv, false);
+        swctx.loadEntryPointsBatch(iv);
         if (build_settings["measure"] == "true")
             LOG_DEBUG(logger, "load entry points time: " << t.getTimeFloat() << " s.");
     }

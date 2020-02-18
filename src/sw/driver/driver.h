@@ -57,10 +57,6 @@ struct SW_DRIVER_CPP_API Driver : IDriver
     std::shared_ptr<PrepareConfigEntryPoint> build_configs1(SwContext &, const T &objs) const;
 
 private:
-    // load things
-    std::unordered_map<PackageId, EntryPointsVector1> load_packages(SwContext &, const PackageIdSet &pkgs) const;
-
-    //
     mutable std::mutex m_bp;
     mutable std::optional<PackageIdSet> builtin_packages;
     PackageIdSet getBuiltinPackages(SwContext &) const;
@@ -68,9 +64,6 @@ private:
     mutable std::unique_ptr<SwBuild> b;
     std::unique_ptr<SwBuild> create_build(SwContext &swctx) const;
 };
-
-//FilesOrdered findConfig(const path &dir, const FilesOrdered &fe_s);
-//String toString(FrontendType T);
 
 } // namespace driver::cpp
 

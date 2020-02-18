@@ -503,66 +503,6 @@ std::shared_ptr<PrepareConfigEntryPoint> Driver::build_configs1(SwContext &swctx
     return ep;
 }
 
-std::unordered_map<PackageId, Driver::EntryPointsVector1> Driver::load_packages(SwContext &swctx, const PackageIdSet &pkgsids) const
-{
-    SW_UNIMPLEMENTED;
-
-    std::unordered_map<PackageId, EntryPointsVector1> eps;
-
-    std::unordered_set<LocalPackage> in_pkgs;
-    for (auto &p : pkgsids)
-        in_pkgs.emplace(swctx.getLocalStorage(), p);
-
-    // make pkgs unique
-    std::unordered_map<PackageVersionGroupNumber, LocalPackage> cfgs2;
-    for (auto &p : in_pkgs)
-    {
-        auto ep = swctx.getEntryPoint(p);
-        if (!ep)
-            cfgs2.emplace(p.getData().group_number, p);
-        else
-            eps[p].push_back(ep);
-
-        /*auto &td = swctx.getTargetData();
-        if (td.find(p) == td.end())
-            cfgs2.emplace(p.getData().group_number, p);*/
-    }
-
-    std::unordered_set<LocalPackage> pkgs;
-    for (auto &[gn, p] : cfgs2)
-        pkgs.insert(p);
-
-    if (pkgs.empty())
-        return eps;
-
-    auto dll = build_configs1(swctx, pkgs)->out;
-    for (auto &p : in_pkgs)
-    {
-        if (auto ep = swctx.getEntryPoint(p))
-        {
-            eps[p].push_back(ep);
-            continue;
-        }
-        auto &td = swctx.getTargetData();
-        if (td.find(p) != td.end())
-            continue;
-
-        try
-        {
-            auto ep = std::make_shared<NativeModuleTargetEntryPoint>(
-                Module(swctx.getModuleStorage().get(dll), gn2suffix(p.getData().group_number)));
-            //ep->module_data.NamePrefix = p.getPath().slice(0, p.getData().prefix);
-            swctx.setEntryPoint(p, ep);
-            eps[p].push_back(ep);
-        }
-        catch (std::exception &e)
-        {
-            throw SW_RUNTIME_ERROR("Entry point not found for " + p.toString() + ": " + e.what());
-        }
-    }
-    return eps;
-}
-
 const StringSet &Driver::getAvailableFrontendNames()
 {
     static StringSet s = []
