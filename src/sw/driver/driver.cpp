@@ -125,30 +125,6 @@ void Driver::processConfigureAc(const path &p)
     process_configure_ac2(p);
 }
 
-/*FilesOrdered Driver::canLoadInput(const RawInput &i) const
-{
-    switch (i.getType())
-    {
-    case InputType::SpecificationFile:
-    {
-        auto &fes = getAvailableFrontendConfigFilenames();
-        auto it = std::find(fes.begin(), fes.end(), i.getPath().filename());
-        if (it != fes.end())
-            return { i.getPath() };
-        break;
-    }
-    case InputType::DirectorySpecificationFile:
-    {
-        return findConfig(i.getPath(), getAvailableFrontendConfigFilenames());
-    }
-    case InputType::Directory:
-        return { i.getPath() };
-    default:
-        SW_UNREACHABLE;
-    }
-    return {};
-}*/
-
 struct DriverInput
 {
     FrontendType fe_type = FrontendType::Unspecified;

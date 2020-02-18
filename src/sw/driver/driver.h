@@ -37,10 +37,7 @@ struct SW_DRIVER_CPP_API Driver : IDriver
     void processConfigureAc(const path &p);
 
     // IDriver api
-    //FilesOrdered canLoadInput(const RawInput &) const override;
-    //EntryPointsVector createEntryPoints(SwContext &, const std::vector<RawInput> &) const override;
     void loadInputsBatch(SwContext &, const std::set<Input *> &) const override;
-    //std::unique_ptr<Specification> getSpecification(const RawInput &) const override;
     std::vector<std::unique_ptr<Input>> detectInputs(const path &, InputType) const override;
 
     // frontends
