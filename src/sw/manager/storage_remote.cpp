@@ -7,7 +7,7 @@
 #include "storage_remote.h"
 
 #include "api.h"
-#include "database.h"
+#include "package_database.h"
 #include "settings.h"
 
 #include <primitives/command.h>

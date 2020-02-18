@@ -6,7 +6,7 @@
 
 #include "storage.h"
 
-#include "database.h"
+#include "package_database.h"
 
 #include <primitives/pack.h>
 
