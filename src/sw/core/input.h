@@ -30,22 +30,7 @@ enum class InputType : uint8_t
     DirectorySpecificationFile,
 };
 
-struct RawInputData
-{
-    InputType type;
-    path p;
-};
-
-struct SW_CORE_API RawInput : protected RawInputData
-{
-    InputType getType() const { return type; }
-    path getPath() const;
-
-protected:
-    RawInput() = default;
-};
-
-struct SW_CORE_API Input : RawInput
+struct SW_CORE_API Input
 {
     using EntryPointsVector = std::vector<TargetEntryPointPtr>;
 
@@ -72,6 +57,9 @@ struct SW_CORE_API Input : RawInput
     size_t getHash() const;
     void setHash(size_t);
 
+    InputType getType() const { return type; }
+    path getPath() const;
+
     bool operator==(const Input &rhs) const;
     bool operator<(const Input &rhs) const;
 
@@ -79,6 +67,9 @@ protected:
     virtual void setEntryPoints(const EntryPointsVector &in);
 
 private:
+    InputType type;
+    path p;
+    //
     const IDriver &driver;
     // one input may have several eps
     // example: .yml frontend - 1 document, but multiple eps, one per package
@@ -88,6 +79,9 @@ private:
 
     virtual EntryPointsVector load1(SwContext &) = 0;
 };
+
+static_assert(!std::is_copy_constructible_v<Input>, "must not be copied");
+static_assert(!std::is_copy_assignable_v<Input>, "must not be copied");
 
 struct SW_CORE_API InputWithSettings
 {

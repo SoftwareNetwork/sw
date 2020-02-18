@@ -18,11 +18,6 @@ DECLARE_STATIC_LOGGER(logger, "input");
 namespace sw
 {
 
-path RawInput::getPath() const
-{
-    return p;
-}
-
 Input::Input(const IDriver &driver, const path &p, InputType t)
     : driver(driver)
 {
@@ -34,6 +29,11 @@ Input::Input(const IDriver &driver, const path &p, InputType t)
 
 Input::~Input()
 {
+}
+
+path Input::getPath() const
+{
+    return p;
 }
 
 bool Input::operator==(const Input &rhs) const

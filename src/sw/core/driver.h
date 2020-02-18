@@ -15,8 +15,7 @@ namespace sw
 
 struct Input;
 struct PackageId;
-struct RawInput;
-struct RawInputData;
+//struct RawInput;
 struct SwContext;
 struct TargetEntryPoint;
 using TargetEntryPointPtr = std::shared_ptr<TargetEntryPoint>;
@@ -73,7 +72,7 @@ struct SW_CORE_API IDriver
 
     ///
     //virtual PackageVersionSpecificationHash getHash(const RawInput &) const;
-    virtual int64_t getGroupNumber(const RawInput &) const;
+    //virtual int64_t getGroupNumber(const RawInput &) const;
 
     // get features()?
 };

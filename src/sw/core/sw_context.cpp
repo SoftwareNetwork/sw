@@ -417,9 +417,9 @@ void SwContext::loadEntryPoints(const std::set<Input*> &inputs, bool set_eps)
     }
     for (auto &[d, g] : active_drivers)
     {
-        std::vector<RawInput> inputs;
-        for (auto &i : g)
-            inputs.push_back(*i);
+        //std::vector<RawInput> inputs;
+        //for (auto &i : g)
+            //inputs.push_back(*i);
         //auto eps = d->createEntryPoints(*this, inputs); // batch load
         //if (eps.size() != inputs.size())
             //throw SW_RUNTIME_ERROR("Incorrect number of returned entry points");

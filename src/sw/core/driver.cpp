@@ -27,10 +27,10 @@ int64_t Specification::getHash() const
     return h;
 }
 
-int64_t IDriver::getGroupNumber(const RawInput &i) const
+/*int64_t IDriver::getGroupNumber(const RawInput &i) const
 {
     SW_UNIMPLEMENTED;
     //return getSpecification(i)->getHash();
-}
+}*/
 
 } // namespace sw
