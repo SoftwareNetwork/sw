@@ -20,6 +20,7 @@
 
 #include <sw/builder/execution_plan.h>
 #include <sw/core/input.h>
+#include <sw/driver/driver.h>
 
 #include <boost/algorithm/string.hpp>
 
@@ -191,10 +192,15 @@ static void applySettingsFromJson(sw::TargetSettings &s, const String &jsonstr)
 
 static std::vector<sw::TargetSettings> applySettingsFromCppFile(sw::SwContext &swctx, const Options &options, const path &fn)
 {
-    SW_UNIMPLEMENTED;
-    /*auto b = createBuild(swctx, options);
-    sw::Input i1(fn, sw::InputType::InlineSpecification, swctx);
-    sw::InputWithSettings i(i1);
+    auto b = createBuild(swctx, options);
+
+    // create manually
+    SW_CHECK(swctx.getDrivers().size() == 1);
+    auto di = std::make_unique<sw::driver::cpp::SpecFileInput>(*swctx.getDrivers().begin()->second, fn, sw::InputType::InlineSpecification);
+    di->fe_type = sw::driver::cpp::FrontendType::Sw;
+
+    auto [pi,_] = swctx.registerInput(std::move(di));
+    sw::InputWithSettings i(*pi);
     auto ts = createInitialSettings(swctx);
 #ifdef NDEBUG
     ts["native"]["configuration"] = "releasewithdebuginformation";
@@ -234,7 +240,7 @@ static std::vector<sw::TargetSettings> applySettingsFromCppFile(sw::SwContext &s
             r.push_back(ts);
         }
     }
-    return r;*/
+    return r;
 }
 
 static std::vector<sw::TargetSettings> getSettingsFromFile(sw::SwContext &swctx, const Options &options)
