@@ -410,10 +410,6 @@ std::vector<std::unique_ptr<Input>> Driver::detectInputs(const path &p, InputTyp
 
 void Driver::loadInputsBatch(SwContext &swctx, const std::set<Input *> &inputs) const
 {
-    /*for (auto &i : inputs)
-        i->load(swctx);
-    return;*/
-
     Files files;
     std::map<path, Input *> m;
     for (auto &i : inputs)
