@@ -260,6 +260,13 @@ std::vector<Input *> SwContext::addInput(const String &i)
         return addInput(resolve(i));
 }
 
+std::vector<Input *> SwContext::addInput(const LocalPackage &p)
+{
+    auto v = addInput(p.getDirSrc2());
+    SW_CHECK(v.size() == 1);
+    return v;
+}
+
 std::vector<Input *> SwContext::addInput(const path &in)
 {
     path p = in;
@@ -338,13 +345,6 @@ std::vector<Input *> SwContext::addInput(const path &in)
 
     SW_ASSERT(!inputs_local.empty(), "Inputs empty for " + normalize_path(p));
     return inputs_local;
-}
-
-std::vector<Input *> SwContext::addInput(const LocalPackage &p)
-{
-    auto v = addInput(p.getDirSrc2());
-    SW_CHECK(v.size() == 1);
-    return v;
 }
 
 void SwContext::loadEntryPointsBatch(const std::set<Input *> &inputs)
