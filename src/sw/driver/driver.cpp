@@ -170,6 +170,7 @@ struct SpecFileInput : Input, DriverInput
                 b.cppan_load(root);
             };
             auto ep = std::make_shared<NativeBuiltinTargetEntryPoint>(bf);
+            ep->source_dir = fn.parent_path();
             return { ep };
         }
         case FrontendType::Cargo:
@@ -183,6 +184,7 @@ struct SpecFileInput : Input, DriverInput
                 t += "src/.*"_rr;
             };
             auto ep = std::make_shared<NativeBuiltinTargetEntryPoint>(bf);
+            ep->source_dir = fn.parent_path();
             return { ep };
         }
         case FrontendType::Dub:
@@ -206,6 +208,7 @@ struct SpecFileInput : Input, DriverInput
                     throw SW_RUNTIME_ERROR("No source paths found");
             };
             auto ep = std::make_shared<NativeBuiltinTargetEntryPoint>(bf);
+            ep->source_dir = fn.parent_path();
             return { ep };
         }
         case FrontendType::Composer:
@@ -217,6 +220,7 @@ struct SpecFileInput : Input, DriverInput
                 SW_UNIMPLEMENTED;
             };
             auto ep = std::make_shared<NativeBuiltinTargetEntryPoint>(bf);
+            ep->source_dir = fn.parent_path();
             return { ep };
         }
         default:
@@ -400,6 +404,7 @@ void Driver::loadInputsBatch(SwContext &swctx, const std::set<Input *> &inputs) 
     {
         auto i = dynamic_cast<SpecFileInput *>(m[p]);
         auto ep = std::make_shared<NativeModuleTargetEntryPoint>(Module(swctx.getModuleStorage().get(dll)));
+        ep->source_dir = p.parent_path();
         i->setEntryPoints({ ep });
     }
 }
