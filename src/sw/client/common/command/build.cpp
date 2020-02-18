@@ -525,8 +525,8 @@ static void isolated_build(sw::SwContext &swctx, const Options &options)
     for (auto &ii : getInput(b))
     {
         sw::InputWithSettings i(*ii);
-    i.addSettings(ts);
-    b.addInput(i);
+        i.addSettings(ts);
+        b.addInput(i);
     }
     b.loadInputs();
     b.setTargetsToBuild();
@@ -579,8 +579,8 @@ static void isolated_build(sw::SwContext &swctx, const Options &options)
         for (auto &ii : getInput(b))
         {
             sw::InputWithSettings i(*ii);
-        i.addSettings(ts);
-        b.addInput(i);
+            i.addSettings(ts);
+            b.addInput(i);
         }
         b.build();
     }
