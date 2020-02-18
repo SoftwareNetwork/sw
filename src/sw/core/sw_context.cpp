@@ -276,10 +276,9 @@ std::vector<Input *> SwContext::addInput(const path &in)
     p = fs::u8path(normalize_path(primitives::filesystem::canonical(p)));
 
     //
-    InputDatabase db(getLocalStorage().storage_dir_tmp / "db" / "inputs.db");
     std::vector<Input *> inputs_local;
 
-    auto findDriver = [this, &p, &inputs_local, &db](auto type) -> bool
+    auto findDriver = [this, &p, &inputs_local](auto type) -> bool
     {
         for (auto &[dp, d] : drivers)
         {
@@ -288,7 +287,9 @@ std::vector<Input *> SwContext::addInput(const path &in)
                 continue;
             for (auto &i : inpts)
             {
-                db.setupInput(*i);
+                if (!idb)
+                    idb = std::make_unique<InputDatabase>(getLocalStorage().storage_dir_tmp / "db" / "inputs.db");
+                idb->setupInput(*i);
                 auto h = i->getHash();
                 auto [it,inserted] = inputs.emplace(h, std::move(i));
                 inputs_local.push_back(&*it->second);

@@ -14,6 +14,7 @@ namespace sw
 
 struct IDriver;
 struct Input;
+struct InputDatabase;
 struct SwBuild;
 
 // core context for drivers
@@ -81,6 +82,7 @@ private:
 
     Drivers drivers;
     Inputs inputs;
+    std::unique_ptr<InputDatabase> idb;
 
     std::unique_ptr<SwBuild> createBuild1();
 };
