@@ -23,16 +23,6 @@ path RawInput::getPath() const
     return p;
 }
 
-bool RawInput::operator==(const RawInput &rhs) const
-{
-    return std::tie(type, p) == std::tie(rhs.type, rhs.p);
-}
-
-bool RawInput::operator<(const RawInput &rhs) const
-{
-    return std::tie(type, p) < std::tie(rhs.type, rhs.p);
-}
-
 Input::Input(const IDriver &driver, const path &p, InputType t)
     : driver(driver)
 {
@@ -44,6 +34,16 @@ Input::Input(const IDriver &driver, const path &p, InputType t)
 
 Input::~Input()
 {
+}
+
+bool Input::operator==(const Input &rhs) const
+{
+    return getHash() == rhs.getHash();
+}
+
+bool Input::operator<(const Input &rhs) const
+{
+    return getHash() < rhs.getHash();
 }
 
 void Input::load(SwContext &swctx)
@@ -72,6 +72,17 @@ bool Input::isChanged() const
 bool Input::isLoaded() const
 {
     return !eps.empty();
+}
+
+size_t Input::getHash() const
+{
+    SW_ASSERT(hash, "Hash was not set");
+    return hash;
+}
+
+void Input::setHash(size_t h)
+{
+    hash = h;
 }
 
 /*std::unique_ptr<Specification> Input::getSpecification() const

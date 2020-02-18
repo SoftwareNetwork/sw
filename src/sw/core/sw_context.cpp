@@ -15,8 +15,80 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "context");
 
+#include <sw/manager/database.h>
+#include <db_inputs.h>
+#include "inserts.h"
+#include <sqlpp11/sqlite3/connection.h>
+#include <sqlpp11/sqlite3/sqlite3.h>
+#include <sqlpp11/sqlpp11.h>
+
 namespace sw
 {
+
+struct InputDatabase : Database
+{
+    InputDatabase(const path &p)
+        : Database(p, inputs_db_schema)
+    {
+    }
+
+    void setupInput(Input &i) const
+    {
+        if (i.getType() == InputType::Directory)
+        {
+            // set hash by path
+            i.setHash(std::hash<path>()(i.getPath()));
+            return;
+        }
+
+        const ::db::inputs::File file{};
+
+        auto set_input = [&]()
+        {
+            auto spec = i.getSpecification();
+            auto h = spec->getHash();
+            i.setHash(h);
+
+            // spec may contain many files
+            for (auto &[f,_] : spec->files)
+            {
+                auto lwt = fs::last_write_time(f);
+                std::vector<uint8_t> lwtdata(sizeof(lwt));
+                memcpy(lwtdata.data(), &lwt, lwtdata.size());
+
+                (*db)(insert_into(file).set(
+                    file.path = normalize_path(f),
+                    file.hash = h,
+                    file.lastWriteTime = lwtdata
+                ));
+            }
+        };
+
+        auto q = (*db)(
+            select(file.fileId, file.hash, file.lastWriteTime)
+            .from(file)
+            .where(file.path == normalize_path(i.getPath())));
+        if (q.empty())
+        {
+            set_input();
+            return;
+        }
+
+        bool ok = true;
+        for (const auto &row : (*db)(
+            select(file.fileId, file.path, file.lastWriteTime)
+            .from(file)
+            .where(file.hash == q.front().hash.value())))
+        {
+            auto lwt = fs::last_write_time(row.path.value());
+            ok &= memcmp(row.lastWriteTime.value().data(), &lwt, sizeof(lwt)) == 0;
+        }
+        if (ok)
+            i.setHash(q.front().hash.value());
+        else
+            set_input();
+    }
+};
 
 IDriver::~IDriver() = default;
 
@@ -205,9 +277,11 @@ std::vector<Input *> SwContext::addInput(const path &in)
 
     p = fs::u8path(normalize_path(primitives::filesystem::canonical(p)));
 
+    //
+    InputDatabase db(getLocalStorage().storage_dir_tmp / "db" / "inputs.db");
     std::vector<Input *> inputs_local;
 
-    auto findDriver = [this, &p, &inputs_local](auto type) -> bool
+    auto findDriver = [this, &p, &inputs_local, &db](auto type) -> bool
     {
         for (auto &[dp, d] : drivers)
         {
@@ -216,19 +290,12 @@ std::vector<Input *> SwContext::addInput(const path &in)
                 continue;
             for (auto &i : inpts)
             {
-                auto it = std::find_if(inputs.begin(), inputs.end(), [&i = *i](const auto &p)
-                {
-                    return *p == i;
-                });
-                if (it != inputs.end())
-                    inputs_local.push_back(&**it);
-                else
-                {
-                    inputs.push_back(std::move(i));
-                    inputs_local.push_back(&*inputs.back());
-                }
-
-                LOG_TRACE(logger, "Selecting driver " + dp.toString() + " for input " + normalize_path(inputs_local.back()->getPath()));
+                db.setupInput(*i);
+                auto h = i->getHash();
+                auto [it,inserted] = inputs.emplace(h, std::move(i));
+                inputs_local.push_back(&*it->second);
+                if (inserted)
+                    LOG_TRACE(logger, "Selecting driver " + dp.toString() + " for input " + normalize_path(inputs_local.back()->getPath()));
             }
             return true;
         }
@@ -238,37 +305,40 @@ std::vector<Input *> SwContext::addInput(const path &in)
     // spec or regular file
     if (status.type() == fs::file_type::regular)
     {
-        if (findDriver(InputType::SpecificationFile) ||
-            findDriver(InputType::InlineSpecification))
-            return inputs_local;
-
-        SW_UNIMPLEMENTED;
-
-        // find in file first: 'sw driver package-id', call that driver on whole file
-        /*auto f = read_file(p);
-
-        static const std::regex r("sw\\s+driver\\s+(\\S+)");
-        std::smatch m;
-        if (std::regex_search(f, m, r))
+        if (!findDriver(InputType::SpecificationFile) &&
+            !findDriver(InputType::InlineSpecification))
         {
             SW_UNIMPLEMENTED;
 
-            //- install driver
-            //- load & register it
-            //- re-run this ctor
+            // find in file first: 'sw driver package-id', call that driver on whole file
+            /*auto f = read_file(p);
 
-            auto driver_pkg = swctx.install({ m[1].str() }).find(m[1].str());
-            return;
-        }*/
+            static const std::regex r("sw\\s+driver\\s+(\\S+)");
+            std::smatch m;
+            if (std::regex_search(f, m, r))
+            {
+                SW_UNIMPLEMENTED;
+
+                //- install driver
+                //- load & register it
+                //- re-run this ctor
+
+                auto driver_pkg = swctx.install({ m[1].str() }).find(m[1].str());
+                return;
+            }*/
+        }
     }
     else
     {
-        if (findDriver(InputType::DirectorySpecificationFile) ||
-            findDriver(InputType::Directory))
-            return inputs_local;
+        if (!findDriver(InputType::DirectorySpecificationFile) &&
+            !findDriver(InputType::Directory))
+        {
+            SW_UNIMPLEMENTED;
+        }
     }
 
-    SW_UNIMPLEMENTED;
+    SW_ASSERT(!inputs_local.empty(), "Inputs empty for " + normalize_path(p));
+    return inputs_local;
 
     /*auto input = std::make_unique<Input>(i, *this);
     auto it = std::find_if(inputs.begin(), inputs.end(), [&i = *input](const auto &p)
@@ -283,10 +353,7 @@ std::vector<Input *> SwContext::addInput(const path &in)
 
 std::vector<Input *> SwContext::addInput(const LocalPackage &p)
 {
-    if (!p.getData().group_number)
-        throw SW_RUNTIME_ERROR("Missing group number");
-
-    auto v = addInput(p.getGroupLeader().getDirSrc2());
+    auto v = addInput(p.getDirSrc2());
     SW_CHECK(v.size() == 1);
     return v;
     /*auto &i = addInput(p.getGroupLeader().getDirSrc2());

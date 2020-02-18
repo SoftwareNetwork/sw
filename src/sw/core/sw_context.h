@@ -78,12 +78,7 @@ struct SW_CORE_API SwContext : SwCoreContext
 
 private:
     using InputPtr = std::unique_ptr<Input>;
-    // TODO: make set
-    // same input may reside in different locations,
-    // so we must track it:
-    // example: zlib in org.x and in pvt.x
-    // different group numbers, but same input
-    using Inputs = std::vector<InputPtr>;
+    using Inputs = std::map<size_t, InputPtr>;
 
     Drivers drivers;
     Inputs inputs;

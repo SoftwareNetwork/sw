@@ -41,9 +41,6 @@ struct SW_CORE_API RawInput : protected RawInputData
     InputType getType() const { return type; }
     path getPath() const;
 
-    bool operator==(const RawInput &rhs) const;
-    bool operator<(const RawInput &rhs) const;
-
 protected:
     RawInput() = default;
 };
@@ -72,6 +69,12 @@ struct SW_CORE_API Input : RawInput
     //PackageVersionGroupNumber getGroupNumber() const;
     const EntryPointsVector &getEntryPoints() const;
 
+    size_t getHash() const;
+    void setHash(size_t);
+
+    bool operator==(const Input &rhs) const;
+    bool operator<(const Input &rhs) const;
+
 protected:
     virtual void setEntryPoints(const EntryPointsVector &in);
 
@@ -80,6 +83,7 @@ private:
     // one input may have several eps
     // example: .yml frontend - 1 document, but multiple eps, one per package
     EntryPointsVector eps;
+    size_t hash = 0;
     //PackageVersionGroupNumber gn = 0;
 
     virtual EntryPointsVector load1(SwContext &) = 0;
