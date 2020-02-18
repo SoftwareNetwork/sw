@@ -394,6 +394,8 @@ private:
     virtual Commands getCommands1() const { return Commands{}; }
     Commands getTests() const override { return tests; }
 
+    virtual path getBinaryParentDir() const;
+
     // for source access
     friend struct TargetBase;
 };

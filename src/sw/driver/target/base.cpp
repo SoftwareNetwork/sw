@@ -560,25 +560,6 @@ FileStorage &Target::getFs() const
 
 bool Target::init()
 {
-    auto get_config_with_deps = [this]() -> String
-    {
-        StringSet ss;
-        /*for (const auto &[unr, res] : getPackageStore().resolved_packages)
-        {
-            if (res == getPackage())
-            {
-                for (const auto &[ppath, dep] : res.db_dependencies)
-                    ss.insert(dep.toString());
-                break;
-            }
-        }*/
-        String s;
-        for (auto &v : ss)
-            s += v + "\n";
-        auto c = getConfig();
-        return c;
-    };
-
     if (ts["name"])
         provided_cfg = ts["name"].getValue();
 
@@ -588,26 +569,10 @@ bool Target::init()
     // this rd must come from parent!
     // but we take it in copy ctor
     setRootDirectory(RootDirectory); // keep root dir growing
-                                        //t->applyRootDirectory();
-                                        //t->SourceDirBase = t->SourceDir;
+    //t->applyRootDirectory();
+    //t->SourceDirBase = t->SourceDir;
 
-    if (auto d = getPackage().getOverriddenDir(); d)
-    {
-        // same as local for testing purposes?
-        BinaryDir = getTargetDirShort(d.value() / SW_BINARY_DIR);
-
-        //BinaryDir = d.value() / SW_BINARY_DIR;
-        //BinaryDir /= sha256_short(getPackage().toString()); // getPackage() first
-        //BinaryDir /= path(getConfig(true));
-    }
-    else if (isLocal())
-    {
-        BinaryDir = getTargetDirShort(getMainBuild().getBuildDirectory());
-    }
-    else /* package from network */
-    {
-        BinaryDir = getObjectDir(getPackage(), get_config_with_deps()); // remove 'build' part?
-    }
+    BinaryDir = getBinaryParentDir();
 
     if (DryRun)
     {
@@ -630,6 +595,42 @@ bool Target::init()
     BinaryPrivateDir = fs::absolute(BinaryPrivateDir);
 
     SW_RETURN_MULTIPASS_END(init_pass);
+}
+
+path Target::getBinaryParentDir() const
+{
+    auto get_config_with_deps = [this]() -> String
+    {
+        StringSet ss;
+        /*for (const auto &[unr, res] : getPackageStore().resolved_packages)
+        {
+            if (res == getPackage())
+            {
+                for (const auto &[ppath, dep] : res.db_dependencies)
+                    ss.insert(dep.toString());
+                break;
+            }
+        }*/
+        String s;
+        for (auto &v : ss)
+            s += v + "\n";
+        auto c = getConfig();
+        return c;
+    };
+
+    if (0);
+    else if (auto d = getPackage().getOverriddenDir(); d)
+    {
+        return getTargetDirShort(d.value() / SW_BINARY_DIR);
+    }
+    else if (isLocal())
+    {
+        return getTargetDirShort(getMainBuild().getBuildDirectory());
+    }
+    else /* package from network */
+    {
+        return getObjectDir(getPackage(), get_config_with_deps()); // remove 'build' part?
+    }
 }
 
 UnresolvedDependenciesType Target::gatherUnresolvedDependencies() const

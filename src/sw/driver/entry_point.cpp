@@ -380,6 +380,13 @@ SharedLibraryTarget &PrepareConfigEntryPoint::createTarget(Build &b, const Strin
         {
             IsSwConfig = true;
         }
+
+    private:
+        path getBinaryParentDir() const override
+        {
+            // TODO: build packages here, but local and overridden in their dirs somehow
+            return getTargetDirShort(getContext().getLocalStorage().storage_dir_tmp / "cfg");
+        }
     };
 
     auto &lib = b.addTarget<ConfigSharedLibraryTarget>(name, "local");
