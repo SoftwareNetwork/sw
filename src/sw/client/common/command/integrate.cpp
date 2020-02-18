@@ -86,22 +86,24 @@ SUBCOMMAND_DECL(integrate)
             throw SW_RUNTIME_ERROR("size() must be 1");
         for (auto &l : lines)
         {
-            auto &i = swctx->addInput(l);
-            sw::InputWithSettings s(i);
-            if (!configs.empty())
+            for (auto &i : swctx->addInput(l))
             {
-                for (String cfg : configs)
+                sw::InputWithSettings s(*i);
+                if (!configs.empty())
                 {
-                    auto cfgl = boost::to_lower_copy(cfg);
-                    settings[0]["native"]["configuration"] = cfgl;
+                    for (String cfg : configs)
+                    {
+                        auto cfgl = boost::to_lower_copy(cfg);
+                        settings[0]["native"]["configuration"] = cfgl;
+                        s.addSettings(settings[0]);
+                    }
+                }
+                else
+                {
                     s.addSettings(settings[0]);
                 }
+                b.addInput(s);
             }
-            else
-            {
-                s.addSettings(settings[0]);
-            }
-            b.addInput(s);
         }
         b.loadInputs();
         b.setTargetsToBuild();

@@ -191,7 +191,8 @@ static void applySettingsFromJson(sw::TargetSettings &s, const String &jsonstr)
 
 static std::vector<sw::TargetSettings> applySettingsFromCppFile(sw::SwContext &swctx, const Options &options, const path &fn)
 {
-    auto b = createBuild(swctx, options);
+    SW_UNIMPLEMENTED;
+    /*auto b = createBuild(swctx, options);
     sw::Input i1(fn, sw::InputType::InlineSpecification, swctx);
     sw::InputWithSettings i(i1);
     auto ts = createInitialSettings(swctx);
@@ -233,7 +234,7 @@ static std::vector<sw::TargetSettings> applySettingsFromCppFile(sw::SwContext &s
             r.push_back(ts);
         }
     }
-    return r;
+    return r;*/
 }
 
 static std::vector<sw::TargetSettings> getSettingsFromFile(sw::SwContext &swctx, const Options &options)
@@ -473,17 +474,23 @@ static void addInputs(sw::SwBuild &b, const Inputs &i, const Options &options)
 {
     for (auto &[ts,in] : i.getInputPairs())
     {
-        sw::InputWithSettings p(b.getContext().addInput(in));
-        p.addSettings(ts);
-        b.addInput(p);
+        for (auto i : b.getContext().addInput(in))
+        {
+            sw::InputWithSettings p(*i);
+            p.addSettings(ts);
+            b.addInput(p);
+        }
     }
 
     for (auto &a : i.getInputs())
     {
-        sw::InputWithSettings i(b.getContext().addInput(a));
-        for (auto &s : createSettings(b.getContext(), options))
-            i.addSettings(s);
-        b.addInput(i);
+        for (auto i : b.getContext().addInput(a))
+        {
+            sw::InputWithSettings ii(*i);
+            for (auto &s : createSettings(b.getContext(), options))
+                ii.addSettings(s);
+            b.addInput(ii);
+        }
     }
 }
 
@@ -515,10 +522,12 @@ static void isolated_build(sw::SwContext &swctx, const Options &options)
     auto &b = *b1;
 
     auto ts = createInitialSettings(swctx);
-    auto &ii = getInput(b);
-    sw::InputWithSettings i(ii);
-    i.addSettings(ts);
-    b.addInput(i);
+    for (auto &ii : getInput(b))
+    {
+        sw::InputWithSettings i(*ii);
+        i.addSettings(ts);
+        b.addInput(i);
+    }
     b.loadInputs();
     b.setTargetsToBuild();
     b.resolvePackages();
@@ -567,10 +576,12 @@ static void isolated_build(sw::SwContext &swctx, const Options &options)
         auto b1 = createBuild(swctx, options);
         auto &b = *b1;
 
-        auto &ii = getInput(b);
-        sw::InputWithSettings i(ii);
-        i.addSettings(ts);
-        b.addInput(i);
+        for (auto &ii : getInput(b))
+        {
+            sw::InputWithSettings i(*ii);
+            i.addSettings(ts);
+            b.addInput(i);
+        }
         b.build();
     }
 }
@@ -671,7 +682,7 @@ SUBCOMMAND_DECL2(build)
     // if -B specified, it is used as is
 
     Inputs inputs(options.options_build.build_inputs);
-    auto &pairs = (Strings &)options.options_build.input_settings_pairs;
+    const auto &pairs = options.options_build.input_settings_pairs;
     if (pairs.size() % 2 == 1)
         throw SW_RUNTIME_ERROR("Incorrect input settings pairs. Something is missing. Size must be even, but size = " + std::to_string(pairs.size()));
     for (int i = 0; i < pairs.size(); i += 2)

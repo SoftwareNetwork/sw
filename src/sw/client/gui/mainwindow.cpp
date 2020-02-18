@@ -93,8 +93,7 @@ MainWindow::MainWindow(sw::SwContext &swctx, QWidget *parent)
     : QMainWindow(parent)
     , swctx(swctx)
 {
-    //setWindowTitle("SW GUI"); // SW is present in icon
-    setWindowTitle("GUI");
+    setWindowTitle("SW GUI");
 
     setupUi();
 

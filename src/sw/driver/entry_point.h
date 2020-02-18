@@ -49,10 +49,11 @@ private:
     const std::unordered_set<LocalPackage> pkgs_;
     mutable Files files_;
     mutable FilesSorted pkg_files_;
+    mutable path driver_idir;
 
     void loadPackages1(Build &) const override;
 
-    SharedLibraryTarget &createTarget(Build &, const String &name) const;
+    SharedLibraryTarget &createTarget(Build &, const FilesSorted &) const;
     decltype(auto) commonActions(Build &, const FilesSorted &files, const UnresolvedPackages &deps) const;
     void commonActions2(Build &, SharedLibraryTarget &lib) const;
 

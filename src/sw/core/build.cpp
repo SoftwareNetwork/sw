@@ -197,6 +197,30 @@ path SwBuild::getBuildDirectory() const
 
 void SwBuild::build()
 {
+    /*
+
+        General build process:
+        1) Load provided inputs.
+        2) Set all targets to build from input.
+        3) Resolve dependencies.
+        4) Load dependencies (inputs).
+        5) Prepare build.
+        6) Run build.
+
+        Input = file | directory
+        InputHash =
+                    Directory: Path Hash
+                    File: Specification Hash (from Driver)
+        Some inputs may be equal, but have different paths, so we compare by hash.
+        Specification may include several files.
+
+        ---
+
+        Each package has exactly one entry point.
+        Entry point may include several packages.
+
+    */
+
     ScopedTime t;
 
     // this is all in one call
@@ -257,31 +281,29 @@ void SwBuild::loadInputs()
 
     std::set<Input *> iv;
     for (auto &i : inputs)
-        iv.insert((Input*)&i.getInput());
-    swctx.loadEntryPoints(iv, true);
+        iv.insert(&i.getInput());
+    swctx.loadEntryPointsBatch(iv);
 
     // and load packages
     for (auto &i : inputs)
     {
         auto tgts = i.loadTargets(*this);
         for (auto &tgt : tgts)
-        {
-            if (tgt->getSettings()["dry-run"] == "true")
-                continue;
-            addKnownPackage(tgt->getPackage()); // also mark them as known
             getTargets()[tgt->getPackage()].push_back(tgt);
-        }
     }
 }
 
-const PackageIdSet &SwBuild::getKnownPackages() const
+void SwBuild::setTargetsToBuild()
 {
-    return known_packages;
-}
+    CHECK_STATE_AND_CHANGE(BuildState::InputsLoaded, BuildState::TargetsToBuildSet);
 
-void SwBuild::addKnownPackage(const PackageId &id)
-{
-    known_packages.insert(id);
+    // mark existing targets as targets to build
+    // only in case if not present?
+    if (!targets_to_build.empty())
+        return;
+    targets_to_build = getTargets();
+    for (auto &[pkg, d] : swctx.getPredefinedTargets())
+        targets_to_build.erase(pkg.getPath());
 }
 
 void SwBuild::resolvePackages()
@@ -290,20 +312,6 @@ void SwBuild::resolvePackages()
 
     // gather
     UnresolvedPackages upkgs;
-    // remove first loop?
-    // we have already loaded inputs
-    /*for (const auto &[pkg, tgts] : getTargetsToBuild())
-    {
-        for (const auto &tgt : tgts)
-        {
-            // for package id inputs we also load themselves
-            auto pkg = tgt->getPackage();
-            //                                skip checks
-            if (pkg.getPath().isAbsolute() && !pkg.getPath().is_loc())
-                upkgs.insert(pkg);
-            break;
-        }
-    }*/
     for (const auto &[pkg, tgts] : getTargets())
     {
         for (const auto &tgt : tgts)
@@ -364,8 +372,6 @@ void SwBuild::resolvePackages(const UnresolvedPackages &upkgs)
 
     // install
     auto m = swctx.install(upkgs);
-    for (auto &[_, p] : m)
-        addKnownPackage(p);
 
     if (build_settings["lock_file"].isValue() && should_update_lock_file)
     {
@@ -374,14 +380,32 @@ void SwBuild::resolvePackages(const UnresolvedPackages &upkgs)
 
     // now we know all drivers
     std::set<Input *> iv;
+    std::map<PackageId, Input *> ivm;
     for (auto &[u, p] : m)
     {
         // use addInput to prevent doubling already existing and loaded inputs
         // like when we loading dependency that is already loaded from the input
         // test: sw build org.sw.demo.gnome.pango.pangocairo-1.44
-        iv.insert(&swctx.addInput(p));
+        for (auto i : swctx.addInput(p))
+        {
+            iv.insert(i);
+            ivm[p] = i;
+        }
+
+        // this marks package as known;
+        targets[p];
     }
-    swctx.loadEntryPoints(iv, false);
+
+    {
+        ScopedTime t;
+        swctx.loadEntryPointsBatch(iv);
+        if (build_settings["measure"] == "true")
+            LOG_DEBUG(logger, "load entry points time: " << t.getTimeFloat() << " s.");
+    }
+
+    // set
+    for (auto &[p, i] : ivm)
+        setEntryPoint(p, i->getEntryPoints()[0]);
 }
 
 void SwBuild::loadPackages()
@@ -393,11 +417,6 @@ void SwBuild::loadPackages()
 
 void SwBuild::loadPackages(const TargetMap &predefined)
 {
-    // first, we create all package ids with EPs in targets
-    //for (auto &[p, _] : swctx.getTargetData())
-    for (auto &p : getKnownPackages())
-        targets[p];
-
     // load
     int r = 1;
     while (1)
@@ -500,9 +519,12 @@ void SwBuild::loadPackages(const TargetMap &predefined)
             auto ep = getEntryPoint(d.first);
             if (!ep)
                 throw SW_RUNTIME_ERROR("no entry point for " + d.first.toString());
-            auto pp = d.first.getPath().slice(0, LocalPackage(getContext().getLocalStorage(), d.first).getData().prefix);
             //auto tgts = ep->loadPackages(*this, s, { d.first }, pp);
-            auto tgts = ep->loadPackages(*this, s, known_packages, pp);
+            auto tgts = ep->loadPackages(*this, s, getTargets().getPackagesSet(),
+                d.first.getPath().isAbsolute()
+                ? d.first.getPath().slice(0, LocalPackage(getContext().getLocalStorage(), d.first).getData().prefix)
+                : PackagePath{}
+                );
 
             bool added = false;
             for (auto &tgt : tgts)
@@ -564,19 +586,6 @@ bool SwBuild::prepareStep()
     waitAndGet(fs);
 
     return next_pass;
-}
-
-void SwBuild::setTargetsToBuild()
-{
-    CHECK_STATE_AND_CHANGE(BuildState::InputsLoaded, BuildState::TargetsToBuildSet);
-
-    // mark existing targets as targets to build
-    // only in case if not present?
-    if (!targets_to_build.empty())
-        return;
-    targets_to_build = getTargets();
-    for (auto &[pkg, d] : swctx.getPredefinedTargets())
-        targets_to_build.erase(pkg.getPath());
 }
 
 void SwBuild::prepare()
@@ -1045,11 +1054,23 @@ void SwBuild::setServiceEntryPoint(const PackageId &p, const TargetEntryPointPtr
     service_entry_points[p] = ep;
 }
 
+void SwBuild::setEntryPoint(const PackageId &p, const TargetEntryPointPtr &ep)
+{
+    entry_points[p] = ep;
+}
+
 TargetEntryPointPtr SwBuild::getEntryPoint(const PackageId &p) const
 {
-    auto i = service_entry_points.find(p);
-    if (i != service_entry_points.end())
-        return i->second;
+    {
+        auto i = service_entry_points.find(p);
+        if (i != service_entry_points.end())
+            return i->second;
+    }
+    {
+        auto i = entry_points.find(p);
+        if (i != entry_points.end())
+            return i->second;
+    }
     return getContext().getEntryPoint(p);
 }
 

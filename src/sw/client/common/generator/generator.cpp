@@ -841,7 +841,8 @@ void CMakeGenerator::generate(const sw::SwBuild &b)
         throw SW_RUNTIME_ERROR("Only single input is supported at the moment");
     if (inputs[0].getSettings().size() != 1)
         throw SW_RUNTIME_ERROR("Only single settings is supported at the moment");
-    bool abs_pkg = inputs[0].getInput().getType() == sw::InputType::InstalledPackage;
+    SW_UNIMPLEMENTED;
+    bool abs_pkg = false;// inputs[0].getInput().getType() == sw::InputType::InstalledPackage;
 
     auto ep = b.getExecutionPlan();
 

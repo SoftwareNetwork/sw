@@ -37,9 +37,11 @@ struct SW_DRIVER_CPP_API Driver : IDriver
     void processConfigureAc(const path &p);
 
     // IDriver api
-    std::optional<path> canLoadInput(const RawInput &) const override;
-    EntryPointsVector createEntryPoints(SwContext &, const std::vector<RawInput> &) const override;
-    std::unique_ptr<Specification> getSpecification(const RawInput &) const override;
+    //FilesOrdered canLoadInput(const RawInput &) const override;
+    //EntryPointsVector createEntryPoints(SwContext &, const std::vector<RawInput> &) const override;
+    void loadInputsBatch(SwContext &, const std::set<Input *> &) const override;
+    //std::unique_ptr<Specification> getSpecification(const RawInput &) const override;
+    std::vector<std::unique_ptr<Input>> detectInputs(const path &, InputType) const override;
 
     // frontends
     using AvailableFrontends = boost::bimap<boost::bimaps::multiset_of<FrontendType>, path>;
@@ -50,26 +52,18 @@ struct SW_DRIVER_CPP_API Driver : IDriver
     static bool isFrontendConfigFilename(const path &fn);
     static std::optional<FrontendType> selectFrontendByFilename(const path &fn);
 
-private:
-    // load things
-    EntryPointsVector1 load_spec_file(SwContext &, const path &) const;
-    std::unordered_map<PackageId, EntryPointsVector1> load_packages(SwContext &, const PackageIdSet &pkgs) const;
-    bool can_load_configless_file(const path &) const;
-    std::optional<String> load_configless_file_spec(const path &) const;
-    EntryPointsVector1 load_configless_file(SwContext &, const path &) const;
-    EntryPointsVector1 load_configless_dir(SwContext &, const path &) const;
-
+    // service methods
     template <class T>
     std::shared_ptr<PrepareConfigEntryPoint> build_configs1(SwContext &, const T &objs) const;
 
-    //
+private:
     mutable std::mutex m_bp;
     mutable std::optional<PackageIdSet> builtin_packages;
     PackageIdSet getBuiltinPackages(SwContext &) const;
-};
 
-std::optional<path> findConfig(const path &dir, const FilesOrdered &fe_s);
-String toString(FrontendType T);
+    mutable std::unique_ptr<SwBuild> b;
+    std::unique_ptr<SwBuild> create_build(SwContext &swctx) const;
+};
 
 } // namespace driver::cpp
 

@@ -265,7 +265,7 @@ private:
     detail::SimpleExpected<Base::version_map_type::const_iterator> find_and_select_version(const PackagePath &pp) const;
 };
 
-// equals to one group number in terms of non local packages
+//
 struct TargetEntryPoint
 {
     virtual ~TargetEntryPoint() = 0;

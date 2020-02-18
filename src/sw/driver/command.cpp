@@ -16,6 +16,7 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/dll.hpp>
+#include <pystring.h>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "cpp.command");
@@ -303,6 +304,8 @@ void GNUCommand::postProcess1(bool ok)
             if (!s.empty())
             {
                 boost::replace_all(s, "\\ ", " ");
+                if (pystring::endswith(s, "\\\n")) // protobuf does not put space after filename
+                    s.resize(s.size() - 2);
                 files.push_back(fs::u8path(s));
             }
             state = EMPTY;

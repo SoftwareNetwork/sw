@@ -216,7 +216,12 @@ path NativeCompiledTarget::getOutputFileName(const path &root) const
     path p;
     if (IsSwConfig)
     {
-        p = getMainBuild().getBuildDirectory() / "cfg" / getConfig() / ::sw::getOutputFileName(*this);
+        path root;
+        if (IsSwConfigLocal)
+            root = getMainBuild().getBuildDirectory();
+        else
+            root = getContext().getLocalStorage().storage_dir_tmp;
+        p = root / "cfg" / getConfig() / ::sw::getOutputFileName(*this);
     }
     else
     {

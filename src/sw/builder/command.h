@@ -87,6 +87,7 @@ struct SW_BUILDER_API CommandNode : std::enable_shared_from_this<CommandNode>
     virtual ~CommandNode();
 
     virtual String getName(bool short_name = false) const = 0;
+    virtual size_t getHash() const = 0;
     virtual void execute() = 0;
     virtual void prepare() = 0;
     virtual bool lessDuringExecution(const CommandNode &) const = 0;
@@ -205,6 +206,7 @@ struct SW_BUILDER_API Command : ICastable, CommandNode, detail::ResolvableComman
     bool isExecuted() const { return pid != -1 || executed_; }
 
     String getName(bool short_name = false) const override;
+    size_t getHash() const override;
 
     virtual bool isOutdated() const;
     bool needsResponseFile() const;
@@ -222,7 +224,6 @@ struct SW_BUILDER_API Command : ICastable, CommandNode, detail::ResolvableComman
     path redirectStdin(const path &p);
     path redirectStdout(const path &p, bool append = false);
     path redirectStderr(const path &p, bool append = false);
-    size_t getHash() const;
     Files getGeneratedDirs() const; // used by generators
     void addInputOutputDeps();
     path writeCommand(const path &basename, bool print_name = true) const;

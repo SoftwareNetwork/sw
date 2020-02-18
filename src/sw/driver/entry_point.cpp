@@ -71,10 +71,8 @@ static path getImportLibraryFile(const Build &b)
     return getImportFilePrefix(b) += ".lib";
 }
 
-static path getImportPchFile(NativeCompiledTarget &t, const UnresolvedPackages &deps)
+static String getDepsSuffix(NativeCompiledTarget &t, const UnresolvedPackages &deps)
 {
-    // we create separate pch for different target deps
-
     std::set<String> sdeps;
     for (auto &d : t.getDependencies())
         sdeps.insert(d->getUnresolvedPackage().toString());
@@ -85,6 +83,13 @@ static path getImportPchFile(NativeCompiledTarget &t, const UnresolvedPackages &
     for (auto &d : sdeps)
         s += d;
     h = "." + shorten_hash(blake2b_512(s), 6);
+    return h;
+}
+
+static path getImportPchFile(NativeCompiledTarget &t, const UnresolvedPackages &deps)
+{
+    // we create separate pch for different target deps
+    auto h = getDepsSuffix(t, deps);
     return getImportFilePrefix(t.getSolution()) += h + ".cpp";
 }
 
@@ -367,17 +372,27 @@ void PrepareConfigEntryPoint::loadPackages1(Build &b) const
         many2many(b, files_);
 }
 
-SharedLibraryTarget &PrepareConfigEntryPoint::createTarget(Build &b, const String &name) const
+SharedLibraryTarget &PrepareConfigEntryPoint::createTarget(Build &b, const FilesSorted &files) const
 {
     struct ConfigSharedLibraryTarget : SharedLibraryTarget
     {
-        ConfigSharedLibraryTarget()
+        ConfigSharedLibraryTarget(const FilesSorted &files, const path &storage_dir)
         {
             IsSwConfig = true;
+            IsSwConfigLocal = files.size() == 1 && !is_under_root(*files.begin(), storage_dir);
+        }
+
+    private:
+        path getBinaryParentDir() const override
+        {
+            if (IsSwConfigLocal)
+                return SharedLibraryTarget::getBinaryParentDir();
+            return getTargetDirShort(getContext().getLocalStorage().storage_dir_tmp / "cfg");
         }
     };
 
-    auto &lib = b.addTarget<ConfigSharedLibraryTarget>(name, "local");
+    auto name = getSelfTargetName(files);
+    auto &lib = b.addTarget<ConfigSharedLibraryTarget>(name, "local", files, b.getContext().getLocalStorage().storage_dir);
     tgt = lib.getPackage();
     return lib;
 }
@@ -387,9 +402,12 @@ decltype(auto) PrepareConfigEntryPoint::commonActions(Build &b, const FilesSorte
     // record udeps
     udeps = deps;
 
-    auto &lib = createTarget(b, getSelfTargetName(files));
+    auto &lib = createTarget(b, files);
     lib.GenerateWindowsResource = false;
     lib.command_storage = &getDriverCommandStorage(b);
+
+    // cache idir
+    driver_idir = getDriverIncludeDir(b, lib);
 
     addDeps(b, lib);
     addImportLibrary(b, lib);
@@ -410,10 +428,15 @@ decltype(auto) PrepareConfigEntryPoint::commonActions(Build &b, const FilesSorte
         lib.CompileOptions.push_back("/utf-8");
 
     if (lib.getBuildSettings().TargetOS.is(OSType::Windows))
-        lib += getDriverIncludeDir(b, lib) / getSwDir() / "misc" / "delay_load_helper.cpp";
+    {
+        auto fn = driver_idir / getSwDir() / "misc" / "delay_load_helper.cpp";
+        lib += fn;
+        if (auto nsf = lib[fn].as<NativeSourceFile *>())
+            nsf->setOutputFile(getPchDir(b) / ("delay_load_helper" + getDepsSuffix(lib, deps) + ".obj"));
+    }
 
     // pch
-    lib += PrecompiledHeader(getDriverIncludeDir(b, lib) / getSwHeader());
+    lib += PrecompiledHeader(driver_idir / getSwHeader());
 
     detail::PrecompiledHeader pch;
     pch.name = getImportPchFile(lib, deps).stem();
@@ -485,6 +508,8 @@ void PrepareConfigEntryPoint::many2one(Build &b, const std::unordered_set<LocalP
     // make parallel?
     //std::unordered_map<PackageVersionGroupNumber, path> gn_files;
 
+    SW_UNIMPLEMENTED;
+
     struct data
     {
         LocalPackage pkg;
@@ -492,16 +517,17 @@ void PrepareConfigEntryPoint::many2one(Build &b, const std::unordered_set<LocalP
         path p;
     };
 
-    auto get_package_config = [&b](const LocalPackage &pkg)
+    auto get_package_config = [&b](const LocalPackage &pkg) -> data
     {
         if (!pkg.getData().group_number)
             throw SW_RUNTIME_ERROR("Missing group number");
 
-        auto pkg2 = pkg.getGroupLeader();
+        SW_UNIMPLEMENTED;
+        /*auto pkg2 = pkg.getGroupLeader();
         auto d = driver::cpp::findConfig(pkg2.getDirSrc2(), driver::cpp::Driver::getAvailableFrontendConfigFilenames());
         if (!d)
             throw SW_RUNTIME_ERROR("cannot find config for package " + pkg.toString() + " in dir " + normalize_path(pkg2.getDirSrc2()));
-        return data{ {b.getSolution().getContext().getLocalStorage(), pkg2}, pkg.getData().group_number, *d };
+        return data{ {b.getSolution().getContext().getLocalStorage(), pkg2}, pkg.getData().group_number, *d };*/
     };
 
     // ordered map!
@@ -535,7 +561,7 @@ void PrepareConfigEntryPoint::many2one(Build &b, const std::unordered_set<LocalP
     }
 
     // file deps
-    auto gnu_setup = [&b, &lib](auto *c, const auto &headers, const path &fn, const auto &gn)
+    auto gnu_setup = [this, &b, &lib](auto *c, const auto &headers, const path &fn, const auto &gn)
     {
         // we use pch, but cannot add more defs on CL
         // so we create a file with them
@@ -556,11 +582,11 @@ void PrepareConfigEntryPoint::many2one(Build &b, const std::unordered_set<LocalP
         write_file_if_different(h, ctx.getText());
 
         c->ForcedIncludeFiles().push_back(h);
-        c->ForcedIncludeFiles().push_back(getDriverIncludeDir(b, lib) / getSw1Header());
+        c->ForcedIncludeFiles().push_back(driver_idir / getSw1Header());
 
         for (auto &h : headers)
             c->ForcedIncludeFiles().push_back(h);
-        c->ForcedIncludeFiles().push_back(getDriverIncludeDir(b, lib) / getSwCheckAbiVersionHeader());
+        c->ForcedIncludeFiles().push_back(driver_idir / getSwCheckAbiVersionHeader());
     };
 
     for (auto &[fn, d] : output_names)
@@ -638,8 +664,8 @@ void PrepareConfigEntryPoint::one2one(Build &b, const path &fn) const
     {
         if (auto c = sf->compiler->template as<VisualStudioCompiler*>())
         {
-            c->ForcedIncludeFiles().push_back(getDriverIncludeDir(b, lib) / getSw1Header());
-            c->ForcedIncludeFiles().push_back(getDriverIncludeDir(b, lib) / getSwCheckAbiVersionHeader());
+            c->ForcedIncludeFiles().push_back(driver_idir / getSw1Header());
+            c->ForcedIncludeFiles().push_back(driver_idir / getSwCheckAbiVersionHeader());
 
             // deprecated warning
             // activate later
@@ -649,18 +675,18 @@ void PrepareConfigEntryPoint::one2one(Build &b, const path &fn) const
         }
         else if (auto c = sf->compiler->template as<ClangClCompiler*>())
         {
-            c->ForcedIncludeFiles().push_back(getDriverIncludeDir(b, lib) / getSw1Header());
-            c->ForcedIncludeFiles().push_back(getDriverIncludeDir(b, lib) / getSwCheckAbiVersionHeader());
+            c->ForcedIncludeFiles().push_back(driver_idir / getSw1Header());
+            c->ForcedIncludeFiles().push_back(driver_idir / getSwCheckAbiVersionHeader());
         }
         else if (auto c = sf->compiler->template as<ClangCompiler*>())
         {
-            c->ForcedIncludeFiles().push_back(getDriverIncludeDir(b, lib) / getSw1Header());
-            c->ForcedIncludeFiles().push_back(getDriverIncludeDir(b, lib) / getSwCheckAbiVersionHeader());
+            c->ForcedIncludeFiles().push_back(driver_idir / getSw1Header());
+            c->ForcedIncludeFiles().push_back(driver_idir / getSwCheckAbiVersionHeader());
         }
         else if (auto c = sf->compiler->template as<GNUCompiler*>())
         {
-            c->ForcedIncludeFiles().push_back(getDriverIncludeDir(b, lib) / getSw1Header());
-            c->ForcedIncludeFiles().push_back(getDriverIncludeDir(b, lib) / getSwCheckAbiVersionHeader());
+            c->ForcedIncludeFiles().push_back(driver_idir / getSw1Header());
+            c->ForcedIncludeFiles().push_back(driver_idir / getSwCheckAbiVersionHeader());
         }
     }
 

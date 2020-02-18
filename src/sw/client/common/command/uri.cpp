@@ -97,6 +97,12 @@ F(build)
     };
     ScopedCurrentPath scp(d, CurrentPathScope::All);
     auto b = createBuildAndPrepare(*swctx, { p.toString() }, options);
+
+    for (auto &i : swctx->addInput(p))
+    {
+        sw::InputWithSettings ii(*i);
+        b->addInput(ii);
+    }
     b->build();
 }
 

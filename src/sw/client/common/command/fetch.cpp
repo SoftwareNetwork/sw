@@ -67,7 +67,8 @@ static sw::SourceDirMap getSources(sw::SwContext &swctx, OPTIONS_ARG_CONST)
     ts["driver"]["dry-run"] = "true"; // only used to get sources
 
     auto &ii = getInput(b);
-    sw::InputWithSettings i(ii);
+    SW_CHECK(ii.size() == 1); // for now?
+    sw::InputWithSettings i(*ii[0]);
     i.addSettings(ts);
     b.addInput(i);
     b.loadInputs();
@@ -105,7 +106,7 @@ static sw::SourceDirMap getSources(const path &bdir, OPTIONS_ARG_CONST)
     return getSources(bdir, sources, srcs);
 }
 
-std::pair<sw::SourceDirMap, const sw::Input &> fetch(sw::SwBuild &b, OPTIONS_ARG_CONST)
+std::pair<sw::SourceDirMap, std::vector<sw::Input*>> fetch(sw::SwBuild &b, OPTIONS_ARG_CONST)
 {
     auto srcs = options.options_upload.source.empty()
         ? getSources(b.getContext(), options) // from config
@@ -128,7 +129,8 @@ std::pair<sw::SourceDirMap, const sw::Input &> fetch(sw::SwBuild &b, OPTIONS_ARG
     }
 
     auto &ii = getInput(b);
-    sw::InputWithSettings i(ii);
+    SW_CHECK(ii.size() == 1); // for now?
+    sw::InputWithSettings i(*ii[0]);
     for (auto &ts : tss)
         i.addSettings(ts);
     b.addInput(i);
@@ -140,7 +142,7 @@ std::pair<sw::SourceDirMap, const sw::Input &> fetch(sw::SwBuild &b, OPTIONS_ARG
     return { srcs, ii };
 }
 
-std::pair<sw::SourceDirMap, const sw::Input &> fetch(sw::SwContext &swctx, OPTIONS_ARG_CONST)
+std::pair<sw::SourceDirMap, std::vector<sw::Input*>> fetch(sw::SwContext &swctx, OPTIONS_ARG_CONST)
 {
     return fetch(*createBuild(swctx, options), options);
 }

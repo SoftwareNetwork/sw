@@ -84,9 +84,6 @@ struct SW_CORE_API SwBuild
 
     path getBuildDirectory() const;
 
-    const PackageIdSet &getKnownPackages() const;
-    void addKnownPackage(const PackageId &);
-
     const std::vector<InputWithSettings> &getInputs() const;
 
     const TargetSettings &getExternalVariables() const;
@@ -96,6 +93,7 @@ struct SW_CORE_API SwBuild
     void setName(const String &);
     String getName() const; // returns temporary object, so no refs
 
+    void setEntryPoint(const PackageId &, const TargetEntryPointPtr &);
     void setServiceEntryPoint(const PackageId &, const TargetEntryPointPtr &);
 
 private:
@@ -103,7 +101,6 @@ private:
     path build_dir;
     TargetMap targets;
     mutable TargetMap targets_to_build;
-    PackageIdSet known_packages;
     std::vector<InputWithSettings> inputs;
     TargetSettings build_settings;
     mutable BuildState state = BuildState::NotStarted;
@@ -112,9 +109,9 @@ private:
     // other data
     String name;
     mutable FilesSorted fast_path_files;
+    std::unordered_map<PackageId, TargetEntryPointPtr> entry_points;
     std::unordered_map<PackageId, TargetEntryPointPtr> service_entry_points;
 
-    void load(const std::vector<InputWithSettings> &inputs, bool set_eps);
     Commands getCommands() const;
     void loadPackages(const TargetMap &predefined);
     TargetEntryPointPtr getEntryPoint(const PackageId &) const;

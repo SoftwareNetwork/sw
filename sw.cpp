@@ -128,6 +128,9 @@ void build(Solution &s)
         if (core.getBuildSettings().TargetOS.Type == OSType::Windows)
             core += "OleAut32.lib"_slib;
         core += "org.sw.demo.Neargye.magic_enum"_dep;
+        embed2("pub.egorpugin.primitives.tools.embedder2-master"_dep, core, "src/sw/core/inserts/input_db_schema.sql");
+        gen_sqlite2cpp("pub.egorpugin.primitives.tools.sqlpp11.sqlite2cpp-master"_dep,
+            core, core.SourceDir / "src/sw/core/inserts/input_db_schema.sql", "db_inputs.h", "db::inputs");
     }
 
     auto &cpp_driver = p.addTarget<LibraryTarget>("driver.cpp");

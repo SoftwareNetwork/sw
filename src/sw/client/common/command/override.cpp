@@ -70,11 +70,16 @@ static void override_package_perform(sw::SwContext &swctx, sw::PackagePath prefi
         return;
     }
 
-    auto b = swctx.createBuild();
-    sw::InputWithSettings i(swctx.addInput(fs::current_path()));
-    auto ts = b->getContext().getHostSettings();
-    i.addSettings(ts);
-    b->addInput(i);
+    SW_UNIMPLEMENTED;
+    /*auto b = swctx.createBuild();
+    auto inputs = swctx.addInput(fs::current_path());
+    for (auto &i : inputs)
+    {
+        sw::InputWithSettings ii(*i);
+        auto ts = b->getContext().getHostSettings();
+        ii.addSettings(ts);
+        b->addInput(ii);
+    }
     b->loadInputs();
     pm = getPackages(*b);
 
@@ -90,7 +95,7 @@ static void override_package_perform(sw::SwContext &swctx, sw::PackagePath prefi
         return;
     }
 
-    override_packages(i.getInput().getGroupNumber());
+    override_packages(i.getInput().getGroupNumber());*/
 }
 
 SUBCOMMAND_DECL(override)

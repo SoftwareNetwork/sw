@@ -376,6 +376,8 @@ protected:
     //Target(const Target &);
     CommandStorage *getCommandStorage() const;
 
+    virtual path getBinaryParentDir() const;
+
 protected:
     TargetSettings ts; // this settings
     // export settings may be different

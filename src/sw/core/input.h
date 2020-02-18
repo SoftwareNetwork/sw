@@ -26,81 +26,77 @@ enum class InputType : uint8_t
     /// from some regular file
     InlineSpecification,
 
-    /// drivers may use their own methods for better loading packages
-    /// rather than when direct spec file provided
-    InstalledPackage,
-
     /// only try to find spec file
     DirectorySpecificationFile,
 };
 
-struct RawInputData
+struct SW_CORE_API Input
 {
-    InputType type;
-    std::variant<path, PackageId> data;
-};
+    using EntryPointsVector = std::vector<TargetEntryPointPtr>;
 
-struct SW_CORE_API RawInput : protected RawInputData
-{
-    InputType getType() const { return type; }
-    path getPath() const;
-    PackageId getPackageId() const;
+    Input(const IDriver &, const path &, InputType);
+    virtual ~Input();
 
-    bool operator==(const RawInput &rhs) const;
-    bool operator<(const RawInput &rhs) const;
+    void load(SwContext &);
 
-protected:
-    RawInput() = default;
-};
+    virtual std::unique_ptr<Specification> getSpecification() const = 0;
 
-struct SW_CORE_API Input : RawInput
-{
-    /// determine input type
-    Input(const path &, const SwContext &);
-    Input(const LocalPackage &, const SwContext &);
-    /// forced input type
-    Input(const path &, InputType, const SwContext &);
+    // used for batch loading inputs (if applicable)
+    const IDriver &getDriver() const { return driver; }
 
-    IDriver &getDriver() const { return *driver; }
+    /// allow to load several inputs via driver
+    virtual bool isBatchLoadable() const = 0;
+    /// allow to throw input->load() into thread pool
+    virtual bool isParallelLoadable() const = 0;
 
     bool isChanged() const;
-    void addEntryPoints(const std::vector<TargetEntryPointPtr> &);
     bool isLoaded() const;
-    std::unique_ptr<Specification> getSpecification() const;
-    PackageVersionGroupNumber getGroupNumber() const;
-    const std::vector<TargetEntryPointPtr> &getEntryPoints() const { return eps; }
+    const EntryPointsVector &getEntryPoints() const;
+
+    size_t getHash() const;
+    void setHash(size_t);
+
+    InputType getType() const { return type; }
+    path getPath() const;
 
     bool operator==(const Input &rhs) const;
     bool operator<(const Input &rhs) const;
 
+protected:
+    virtual void setEntryPoints(const EntryPointsVector &in);
+
 private:
-    IDriver *driver = nullptr;
+    InputType type;
+    path p;
+    //
+    const IDriver &driver;
     // one input may have several eps
     // example: .yml frontend - 1 document, but multiple eps, one per package
-    std::vector<TargetEntryPointPtr> eps;
-    PackageVersionGroupNumber gn = 0;
+    EntryPointsVector eps;
+    size_t hash = 0;
 
-    void init(const path &, const SwContext &);
-    void init(const LocalPackage &, const SwContext &);
-
-    bool findDriver(InputType t, const SwContext &);
+    virtual EntryPointsVector load1(SwContext &) = 0;
 };
+
+static_assert(!std::is_copy_constructible_v<Input>, "must not be copied");
+static_assert(!std::is_copy_assignable_v<Input>, "must not be copied");
 
 struct SW_CORE_API InputWithSettings
 {
-    InputWithSettings(const Input &);
+    InputWithSettings(Input &);
 
     const std::set<TargetSettings> &getSettings() const;
     void addSettings(const TargetSettings &s);
     void clearSettings() { settings.clear(); }
     String getHash() const;
+    Input &getInput() { return i; }
     const Input &getInput() const { return i; }
 
     [[nodiscard]]
     std::vector<ITargetPtr> loadTargets(SwBuild &) const;
 
 protected:
-    const Input &i;
+    Input &i;
     std::set<TargetSettings> settings;
 };
 

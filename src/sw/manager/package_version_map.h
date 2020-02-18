@@ -248,6 +248,14 @@ struct PackageVersionMapBase : PackagePathMap<PackagePath, VersionMap<T>>
     {
         return { *this, Base::end() };
     }
+
+    PackageIdSet getPackagesSet() const
+    {
+        PackageIdSet s;
+        for (auto &[pkg, _] : *this)
+            s.insert(pkg);
+        return s;
+    }
 };
 
 }

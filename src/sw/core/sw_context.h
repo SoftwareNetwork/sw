@@ -14,6 +14,7 @@ namespace sw
 
 struct IDriver;
 struct Input;
+struct InputDatabase;
 struct SwBuild;
 
 // core context for drivers
@@ -62,27 +63,28 @@ struct SW_CORE_API SwContext : SwCoreContext
     virtual ~SwContext();
 
     void registerDriver(const PackageId &pkg, std::unique_ptr<IDriver> &&driver);
-    const Drivers &getDrivers() const { return drivers; }
+    //const Drivers &getDrivers() const { return drivers; }
 
     std::unique_ptr<SwBuild> createBuild();
     void executeBuild(const path &);
 
-    Input &addInput(const String &);
-    Input &addInput(const path &);
-    Input &addInput(const LocalPackage &);
+    // one subject may bring several inputs
+    // (one path containing multiple inputs)
+    std::vector<Input *> addInput(const String &);
+    std::vector<Input *> addInput(const LocalPackage &);
+    std::vector<Input *> addInput(const path &);
 
-    void loadEntryPoints(const std::set<Input*> &inputs, bool set_eps);
+    void loadEntryPointsBatch(const std::set<Input*> &inputs);
 
 private:
     using InputPtr = std::unique_ptr<Input>;
-    using Inputs = std::vector<InputPtr>;
+    using Inputs = std::map<size_t, InputPtr>;
 
     Drivers drivers;
     Inputs inputs;
+    std::unique_ptr<InputDatabase> idb;
 
     std::unique_ptr<SwBuild> createBuild1();
-    template <class I>
-    Input &addInput1(const I &);
 };
 
 } // namespace sw
