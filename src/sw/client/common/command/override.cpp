@@ -18,6 +18,7 @@
 
 #include "commands.h"
 
+#include <sw/core/driver.h>
 #include <sw/core/input.h>
 #include <sw/manager/database.h>
 #include <sw/manager/storage.h>
@@ -72,6 +73,7 @@ static void override_package_perform(sw::SwContext &swctx, sw::PackagePath prefi
 
     auto b = swctx.createBuild();
     auto inputs = swctx.addInput(fs::current_path());
+    SW_CHECK(inputs.size() == 1); // for now
     for (auto &i : inputs)
     {
         sw::InputWithSettings ii(*i);
@@ -87,14 +89,14 @@ static void override_package_perform(sw::SwContext &swctx, sw::PackagePath prefi
         nlohmann::json j;
         j["sdir"] = normalize_path(dir);
         j["prefix"] = prefix.toString();
-        j["group_number"] = 0;
+        j["group_number"] = inputs[0]->getSpecification()->getHash();
         for (auto &[pkg, desc] : pm)
             j["packages"][pkg.toString()] = nlohmann::json::parse(desc->getString());
         write_file(options.options_override.save_overridden_packages_to_file, j.dump(4));
         return;
     }
 
-    override_packages(0);
+    override_packages(inputs[0]->getSpecification()->getHash());
 }
 
 SUBCOMMAND_DECL(override)
