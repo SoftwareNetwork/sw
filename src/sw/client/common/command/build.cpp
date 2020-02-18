@@ -605,7 +605,7 @@ std::unique_ptr<sw::SwBuild> createBuild(sw::SwContext &swctx, const Options &op
     if (!use_lock) // try heuristics
     {
         use_lock = fs::exists(fs::current_path() / "sw.lock");
-        if (use_lock)
+        if (*use_lock)
             LOG_INFO(logger, "Lock file is found, using it: " << fs::current_path() / "sw.lock");
     }
     if (*use_lock)
