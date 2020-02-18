@@ -45,18 +45,6 @@ String gn2suffix(PackageVersionGroupNumber gn)
 namespace driver::cpp
 {
 
-enum class FrontendType
-{
-    Unspecified,
-
-    // priority!
-    Sw = 1,
-    Cppan = 2,
-    Cargo = 3, // rust
-    Dub = 4, // d
-    Composer = 5, // php
-};
-
 static FilesOrdered findConfig(const path &dir, const FilesOrdered &fe_s)
 {
     FilesOrdered files;
@@ -125,107 +113,95 @@ void Driver::processConfigureAc(const path &p)
     process_configure_ac2(p);
 }
 
-struct DriverInput
+// at the moment only sw is batch loadable
+bool SpecFileInput::isBatchLoadable() const { return fe_type == FrontendType::Sw; }
+
+// everything else is parallel loadable
+bool SpecFileInput::isParallelLoadable() const { return !isBatchLoadable(); }
+
+std::unique_ptr<Specification> SpecFileInput::getSpecification() const
 {
-    FrontendType fe_type = FrontendType::Unspecified;
-};
+    auto spec = std::make_unique<Specification>();
+    // TODO: take relative path here
+    spec->addFile(getPath(), read_file(getPath()));
+    return spec;
+}
 
-struct SpecFileInput : Input, DriverInput
+SpecFileInput::EntryPointsVector SpecFileInput::load1(SwContext &swctx)
 {
-    Driver *driver = nullptr;
-
-    using Input::Input;
-
-    // at the moment only sw is batch loadable
-    bool isBatchLoadable() const override { return fe_type == FrontendType::Sw; }
-
-    // everything else is parallel loadable
-    bool isParallelLoadable() const override { return !isBatchLoadable(); }
-
-    std::unique_ptr<Specification> getSpecification() const override
+    auto fn = getPath();
+    switch (fe_type)
     {
-        auto spec = std::make_unique<Specification>();
-        // TODO: take relative path here
-        spec->addFile(getPath(), read_file(getPath()));
-        return spec;
+    case FrontendType::Sw:
+    {
+        auto dll = dynamic_cast<const Driver&>(getDriver()).build_configs1(swctx, Files{ fn })->r.begin()->second;
+        auto ep = std::make_shared<NativeModuleTargetEntryPoint>(Module(swctx.getModuleStorage().get(dll)));
+        ep->source_dir = fn.parent_path();
+        return { ep };
     }
-
-    EntryPointsVector load1(SwContext &swctx) override
+    case FrontendType::Cppan:
     {
-        auto fn = getPath();
-        switch (fe_type)
+        auto root = YAML::Load(read_file(fn));
+        auto bf = [root](Build &b) mutable
         {
-        case FrontendType::Sw:
+            b.cppan_load(root);
+        };
+        auto ep = std::make_shared<NativeBuiltinTargetEntryPoint>(bf);
+        return { ep };
+    }
+    case FrontendType::Cargo:
+    {
+        auto root = toml::parse(normalize_path(fn));
+        auto bf = [root](Build &b) mutable
         {
-            auto dll = driver->build_configs1(swctx, Files{ fn })->r.begin()->second;
-            auto ep = std::make_shared<NativeModuleTargetEntryPoint>(Module(swctx.getModuleStorage().get(dll)));
-            ep->source_dir = fn.parent_path();
-            return { ep };
-        }
-        case FrontendType::Cppan:
-        {
-            auto root = YAML::Load(read_file(fn));
-            auto bf = [root](Build &b) mutable
-            {
-                b.cppan_load(root);
-            };
-            auto ep = std::make_shared<NativeBuiltinTargetEntryPoint>(bf);
-            return { ep };
-        }
-        case FrontendType::Cargo:
-        {
-            auto root = toml::parse(normalize_path(fn));
-            auto bf = [root](Build &b) mutable
-            {
-                std::string name = toml::find<std::string>(root["package"], "name");
-                std::string version = toml::find<std::string>(root["package"], "version");
-                auto &t = b.addTarget<RustExecutable>(name, version);
-                t += "src/.*"_rr;
-            };
-            auto ep = std::make_shared<NativeBuiltinTargetEntryPoint>(bf);
-            return { ep };
-        }
-        case FrontendType::Dub:
-        {
-            // https://dub.pm/package-format-json
-            if (fn.extension() == ".sdl")
-                SW_UNIMPLEMENTED;
-            nlohmann::json j;
-            j = nlohmann::json::parse(read_file(fn));
-            auto bf = [j](Build &b) mutable
-            {
-                auto &t = b.addTarget<DExecutable>(j["name"].get<String>(),
-                    j.contains("version") ? j["version"].get<String>() : "0.0.1"s);
-                if (j.contains("sourcePaths"))
-                    t += FileRegex(t.SourceDir / j["sourcePaths"].get<String>(), ".*", true);
-                else if (fs::exists(t.SourceDir / "source"))
-                    t += "source/.*"_rr;
-                else if (fs::exists(t.SourceDir / "src"))
-                    t += "src/.*"_rr;
-                else
-                    throw SW_RUNTIME_ERROR("No source paths found");
-            };
-            auto ep = std::make_shared<NativeBuiltinTargetEntryPoint>(bf);
-            return { ep };
-        }
-        case FrontendType::Composer:
-        {
-            nlohmann::json j;
-            j = nlohmann::json::parse(read_file(fn));
-            auto bf = [j](Build &b) mutable
-            {
-                SW_UNIMPLEMENTED;
-            };
-            auto ep = std::make_shared<NativeBuiltinTargetEntryPoint>(bf);
-            return { ep };
-        }
-        default:
+            std::string name = toml::find<std::string>(root["package"], "name");
+            std::string version = toml::find<std::string>(root["package"], "version");
+            auto &t = b.addTarget<RustExecutable>(name, version);
+            t += "src/.*"_rr;
+        };
+        auto ep = std::make_shared<NativeBuiltinTargetEntryPoint>(bf);
+        return { ep };
+    }
+    case FrontendType::Dub:
+    {
+        // https://dub.pm/package-format-json
+        if (fn.extension() == ".sdl")
             SW_UNIMPLEMENTED;
-        }
+        nlohmann::json j;
+        j = nlohmann::json::parse(read_file(fn));
+        auto bf = [j](Build &b) mutable
+        {
+            auto &t = b.addTarget<DExecutable>(j["name"].get<String>(),
+                j.contains("version") ? j["version"].get<String>() : "0.0.1"s);
+            if (j.contains("sourcePaths"))
+                t += FileRegex(t.SourceDir / j["sourcePaths"].get<String>(), ".*", true);
+            else if (fs::exists(t.SourceDir / "source"))
+                t += "source/.*"_rr;
+            else if (fs::exists(t.SourceDir / "src"))
+                t += "src/.*"_rr;
+            else
+                throw SW_RUNTIME_ERROR("No source paths found");
+        };
+        auto ep = std::make_shared<NativeBuiltinTargetEntryPoint>(bf);
+        return { ep };
     }
+    case FrontendType::Composer:
+    {
+        nlohmann::json j;
+        j = nlohmann::json::parse(read_file(fn));
+        auto bf = [j](Build &b) mutable
+        {
+            SW_UNIMPLEMENTED;
+        };
+        auto ep = std::make_shared<NativeBuiltinTargetEntryPoint>(bf);
+        return { ep };
+    }
+    default:
+        SW_UNIMPLEMENTED;
+    }
+}
 
-    void setEntryPoints(const EntryPointsVector &in) override { Input::setEntryPoints(in); }
-};
+void SpecFileInput::setEntryPoints(const EntryPointsVector &in) { Input::setEntryPoints(in); }
 
 struct InlineSpecInput : Input, DriverInput
 {
@@ -317,7 +293,6 @@ std::vector<std::unique_ptr<Input>> Driver::detectInputs(const path &p, InputTyp
             break;
 
         auto i = std::make_unique<SpecFileInput>(*this, p, type);
-        i->driver = (Driver*)this;
         i->fe_type = *fe;
         LOG_TRACE(logger, "using " << toString(i->fe_type) << " frontend for input " << p);
         inputs.push_back(std::move(i));
