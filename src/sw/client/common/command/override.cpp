@@ -70,8 +70,7 @@ static void override_package_perform(sw::SwContext &swctx, sw::PackagePath prefi
         return;
     }
 
-    SW_UNIMPLEMENTED;
-    /*auto b = swctx.createBuild();
+    auto b = swctx.createBuild();
     auto inputs = swctx.addInput(fs::current_path());
     for (auto &i : inputs)
     {
@@ -88,14 +87,14 @@ static void override_package_perform(sw::SwContext &swctx, sw::PackagePath prefi
         nlohmann::json j;
         j["sdir"] = normalize_path(dir);
         j["prefix"] = prefix.toString();
-        j["group_number"] = i.getInput().getGroupNumber();
+        j["group_number"] = 0;
         for (auto &[pkg, desc] : pm)
             j["packages"][pkg.toString()] = nlohmann::json::parse(desc->getString());
         write_file(options.options_override.save_overridden_packages_to_file, j.dump(4));
         return;
     }
 
-    override_packages(i.getInput().getGroupNumber());*/
+    override_packages(0);
 }
 
 SUBCOMMAND_DECL(override)
