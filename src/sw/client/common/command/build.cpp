@@ -599,7 +599,16 @@ std::unique_ptr<sw::SwBuild> createBuild(sw::SwContext &swctx, const Options &op
     // internal builds (checks, scripts builds)
     bs["master_build"] = "true";
 
-    if (options.use_lock_file)
+    std::optional<bool> use_lock;
+    if (cl_use_lock_file.getNumOccurrences()) // always respect when specified
+        use_lock = options.use_lock_file;
+    if (!use_lock) // try heuristics
+    {
+        use_lock = fs::exists(fs::current_path() / "sw.lock");
+        if (use_lock)
+            LOG_INFO(logger, "Lock file is found, using it: " << fs::current_path() / "sw.lock");
+    }
+    if (*use_lock)
     {
         // save lock file near input? what if we have multiple inputs?
         if (options.lock_file.empty())

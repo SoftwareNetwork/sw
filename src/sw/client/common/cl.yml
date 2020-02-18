@@ -321,7 +321,9 @@ command_line:
     use_lock_file:
         option: l
         desc: Use lock file
-        default_value: true
+        # do not want it as true
+        # maybe add settings for it
+        #default_value: true
     lock_file:
         option: lf
         desc: Lock file path
