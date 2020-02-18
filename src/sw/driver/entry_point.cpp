@@ -372,24 +372,27 @@ void PrepareConfigEntryPoint::loadPackages1(Build &b) const
         many2many(b, files_);
 }
 
-SharedLibraryTarget &PrepareConfigEntryPoint::createTarget(Build &b, const String &name) const
+SharedLibraryTarget &PrepareConfigEntryPoint::createTarget(Build &b, const FilesSorted &files) const
 {
     struct ConfigSharedLibraryTarget : SharedLibraryTarget
     {
-        ConfigSharedLibraryTarget()
+        ConfigSharedLibraryTarget(const FilesSorted &files, const path &storage_dir)
         {
             IsSwConfig = true;
+            IsSwConfigLocal = files.size() == 1 && !is_under_root(*files.begin(), storage_dir);
         }
 
     private:
         path getBinaryParentDir() const override
         {
-            // TODO: build packages here, but local and overridden in their dirs somehow
+            if (IsSwConfigLocal)
+                return SharedLibraryTarget::getBinaryParentDir();
             return getTargetDirShort(getContext().getLocalStorage().storage_dir_tmp / "cfg");
         }
     };
 
-    auto &lib = b.addTarget<ConfigSharedLibraryTarget>(name, "local");
+    auto name = getSelfTargetName(files);
+    auto &lib = b.addTarget<ConfigSharedLibraryTarget>(name, "local", files, b.getContext().getLocalStorage().storage_dir);
     tgt = lib.getPackage();
     return lib;
 }
@@ -399,7 +402,7 @@ decltype(auto) PrepareConfigEntryPoint::commonActions(Build &b, const FilesSorte
     // record udeps
     udeps = deps;
 
-    auto &lib = createTarget(b, getSelfTargetName(files));
+    auto &lib = createTarget(b, files);
     lib.GenerateWindowsResource = false;
     lib.command_storage = &getDriverCommandStorage(b);
 

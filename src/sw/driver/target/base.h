@@ -376,6 +376,8 @@ protected:
     //Target(const Target &);
     CommandStorage *getCommandStorage() const;
 
+    virtual path getBinaryParentDir() const;
+
 protected:
     TargetSettings ts; // this settings
     // export settings may be different
@@ -393,8 +395,6 @@ private:
 
     virtual Commands getCommands1() const { return Commands{}; }
     Commands getTests() const override { return tests; }
-
-    virtual path getBinaryParentDir() const;
 
     // for source access
     friend struct TargetBase;

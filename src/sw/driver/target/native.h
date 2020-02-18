@@ -155,6 +155,7 @@ protected:
     mutable NativeLinker *SelectedTool = nullptr;
     bool circular_dependency = false;
     bool IsSwConfig = false;
+    bool IsSwConfigLocal = false;
 
     Files gatherObjectFiles() const;
     Files gatherObjectFilesWithoutLibraries() const;
