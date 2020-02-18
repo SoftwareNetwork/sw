@@ -63,7 +63,7 @@ struct SW_CORE_API SwContext : SwCoreContext
     virtual ~SwContext();
 
     void registerDriver(const PackageId &pkg, std::unique_ptr<IDriver> &&driver);
-    const Drivers &getDrivers() const { return drivers; }
+    //const Drivers &getDrivers() const { return drivers; }
 
     std::unique_ptr<SwBuild> createBuild();
     void executeBuild(const path &);

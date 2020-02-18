@@ -7,7 +7,6 @@
 #pragma once
 
 #include <sw/core/driver.h>
-#include <sw/core/input.h>
 #include <sw/manager/package_id.h>
 
 #include <boost/bimap.hpp>
@@ -25,17 +24,7 @@ struct TargetSettings;
 namespace driver::cpp
 {
 
-enum class FrontendType
-{
-    Unspecified,
-
-    // priority!
-    Sw = 1,
-    Cppan = 2,
-    Cargo = 3, // rust
-    Dub = 4, // d
-    Composer = 5, // php
-};
+enum class FrontendType;
 
 struct SW_DRIVER_CPP_API Driver : IDriver
 {
@@ -71,26 +60,6 @@ private:
 
     mutable std::unique_ptr<SwBuild> b;
     std::unique_ptr<SwBuild> create_build(SwContext &swctx) const;
-};
-
-struct DriverInput
-{
-    FrontendType fe_type = FrontendType::Unspecified;
-};
-
-struct SpecFileInput : Input, DriverInput
-{
-    using Input::Input;
-
-    // at the moment only sw is batch loadable
-    bool isBatchLoadable() const override;
-
-    // everything else is parallel loadable
-    bool isParallelLoadable() const override;
-
-    std::unique_ptr<Specification> getSpecification() const override;
-    EntryPointsVector load1(SwContext &swctx) override;
-    void setEntryPoints(const EntryPointsVector &in) override;
 };
 
 } // namespace driver::cpp
