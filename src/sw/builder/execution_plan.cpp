@@ -14,6 +14,11 @@
 namespace sw
 {
 
+ExecutionPlan::ExecutionPlan(USet &cmds)
+{
+    init(cmds);
+}
+
 ExecutionPlan::~ExecutionPlan()
 {
     auto break_commands = [](auto &a)
@@ -156,7 +161,7 @@ void ExecutionPlan::execute(Executor &e) const
     {
         if (stop_time && Clock::now() > *stop_time && stopped)
             throw SW_RUNTIME_ERROR("Time limit exceeded");
-        throw SW_RUNTIME_ERROR("Executor did not perform all steps");
+        throw SW_RUNTIME_ERROR("Executor did not perform all steps (" + std::to_string(i) + "/" + std::to_string(sz) + ")");
     }
 }
 
@@ -310,28 +315,6 @@ void ExecutionPlan::printGraph(path p) const
     printGraph(getGraph(), p);
 }
 
-void ExecutionPlan::setup()
-{
-    // potentially *should* speedup later execution
-    // TODO: measure and decide
-    // it reduses some memory usage,
-    // but influence on performance on execution stages is not very clear
-    //transitiveReduction();
-
-    // set number of deps and dependent commands
-    for (auto &c : commands)
-    {
-        c->dependencies_left = c->dependencies.size();
-        for (auto &d : c->dependencies)
-            d->dependent_commands.insert(c->shared_from_this());
-    }
-
-    std::sort(commands.begin(), commands.end(), [](const auto &c1, const auto &c2)
-    {
-        return c1->lessDuringExecution(*c2);
-    });
-}
-
 ExecutionPlan::GraphMapping ExecutionPlan::getGraphMapping(const VecT &v)
 {
     GraphMapping gm;
@@ -388,8 +371,9 @@ std::tuple<ExecutionPlan::Graph, ExecutionPlan::VertexMap> ExecutionPlan::transi
 
 void ExecutionPlan::prepare(USet &cmds)
 {
-    // prepare all commands
-    // extract all deps commands
+    // 1. prepare all commands
+    // 2. extract all deps commands
+    // 3. remove duplicates?
 
     // try to lower number of rehashes
     auto reserve = [](auto &a)
@@ -435,14 +419,53 @@ void ExecutionPlan::prepare(USet &cmds)
         if (cmds.size() == sz)
             break;
     }
-}
 
-void ExecutionPlan::init(USet &cmds)
-{
     // remove self deps
     for (auto &c : cmds)
         c->dependencies.erase(c->shared_from_this());
 
+    // 3. remove duplicates
+    {
+        // gather hashes
+        std::unordered_map<size_t, T *> cmds3;
+        cmds3.reserve(cmds.size());
+        for (auto &c : cmds)
+        {
+            //if (cmds3[c->getHash()])
+                //throw SW_RUNTIME_ERROR("Duplicate commands!");
+            cmds3[c->getHash()] = c;
+        }
+
+        auto replace = [&cmds3](const auto &d)
+        {
+            auto i = cmds3.find(d->getHash());
+            SW_CHECK(i != cmds3.end());
+            //if (i->second != d.get())
+                return i->second->shared_from_this();
+        };
+
+        auto replace2 = [&replace](auto &a)
+        {
+            auto copy = a;
+            a.clear();
+            for (auto &d : copy)
+                a.insert(replace(d));
+        };
+
+        // replace commands and set them back
+        cmds.clear();
+        cmds.reserve(cmds3.size());
+        for (auto &[_,c] : cmds3)
+        {
+            replace2(c->dependencies);
+            replace2(c->dependent_commands);
+            cmds.insert(c);
+        }
+    }
+}
+
+void ExecutionPlan::init(USet &cmds)
+{
     while (!cmds.empty())
     {
         bool added = false;
@@ -467,14 +490,27 @@ void ExecutionPlan::init(USet &cmds)
             return;
         }
     }
-}
 
-ExecutionPlan ExecutionPlan::create(USet &cmds)
-{
-    ExecutionPlan ep;
-    ep.init(cmds);
-    ep.setup();
-    return ep;
+    // setup
+
+    // potentially *should* speedup later execution
+    // TODO: measure and decide
+    // it reduses some memory usage,
+    // but influence on performance on execution stages is not very clear
+    //transitiveReduction();
+
+    // set number of deps and dependent commands
+    for (auto &c : commands)
+    {
+        c->dependencies_left = c->dependencies.size();
+        for (auto &d : c->dependencies)
+            d->dependent_commands.insert(c->shared_from_this());
+    }
+
+    std::sort(commands.begin(), commands.end(), [](const auto &c1, const auto &c2)
+    {
+        return c1->lessDuringExecution(*c2);
+    });
 }
 
 void ExecutionPlan::setTimeLimit(const Clock::duration &d)

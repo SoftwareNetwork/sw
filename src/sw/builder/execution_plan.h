@@ -51,7 +51,7 @@ public:
     bool show_output = false;
     bool write_output_to_file = false;
 
-    ExecutionPlan() = default;
+    ExecutionPlan(USet &cmds);
     ExecutionPlan(const ExecutionPlan &rhs) = delete;
     ExecutionPlan(ExecutionPlan &&) = default;
     ~ExecutionPlan();
@@ -94,7 +94,7 @@ public:
             cmds.insert(c.get());
 
         prepare(cmds);
-        return create(cmds);
+        return cmds;
     }
 
 private:
@@ -108,14 +108,12 @@ private:
     //
     std::optional<Clock::time_point> stop_time;
 
-    void setup();
     static GraphMapping getGraphMapping(const VecT &v);
     static Graph getGraph(const VecT &v, GraphMapping &gm);
     void transitiveReduction();
     static std::tuple<Graph, VertexMap> transitiveReduction(const Graph &g);
     static void prepare(USet &cmds);
     void init(USet &cmds);
-    static ExecutionPlan create(USet &cmds);
 };
 
 }
