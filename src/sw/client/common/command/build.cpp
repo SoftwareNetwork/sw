@@ -196,10 +196,10 @@ static std::vector<sw::TargetSettings> applySettingsFromCppFile(sw::SwContext &s
 
     // create manually
     SW_CHECK(swctx.getDrivers().size() == 1);
-    auto di = std::make_unique<sw::driver::cpp::SpecFileInput>(*swctx.getDrivers().begin()->second, fn, sw::InputType::InlineSpecification);
-    di->fe_type = sw::driver::cpp::FrontendType::Sw;
+    auto inputs = swctx.getDrivers().begin()->second->detectInputs(fn, sw::InputType::InlineSpecification);
+    SW_CHECK(inputs.size() == 1);
 
-    auto [pi,_] = swctx.registerInput(std::move(di));
+    auto [pi,_] = swctx.registerInput(std::move(inputs[0]));
     sw::InputWithSettings i(*pi);
     auto ts = createInitialSettings(swctx);
 #ifdef NDEBUG

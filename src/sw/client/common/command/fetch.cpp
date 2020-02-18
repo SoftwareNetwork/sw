@@ -66,9 +66,9 @@ static sw::SourceDirMap getSources(sw::SwContext &swctx, OPTIONS_ARG_CONST)
     auto ts = createInitialSettings(swctx);
     ts["driver"]["dry-run"] = "true"; // only used to get sources
 
-    auto &ii = getInput(b);
-    SW_CHECK(ii.size() == 1); // for now?
-    sw::InputWithSettings i(*ii[0]);
+    auto inputs = getInput(b);
+    SW_CHECK(inputs.size() == 1); // for now?
+    sw::InputWithSettings i(*inputs[0]);
     i.addSettings(ts);
     b.addInput(i);
     b.loadInputs();
@@ -128,9 +128,9 @@ std::pair<sw::SourceDirMap, std::vector<sw::Input*>> fetch(sw::SwBuild &b, OPTIO
         }
     }
 
-    auto &ii = getInput(b);
-    SW_CHECK(ii.size() == 1); // for now?
-    sw::InputWithSettings i(*ii[0]);
+    auto inputs = getInput(b);
+    SW_CHECK(inputs.size() == 1); // for now?
+    sw::InputWithSettings i(*inputs[0]);
     for (auto &ts : tss)
         i.addSettings(ts);
     b.addInput(i);
@@ -139,7 +139,7 @@ std::pair<sw::SourceDirMap, std::vector<sw::Input*>> fetch(sw::SwBuild &b, OPTIO
     if (options.options_fetch.build_after_fetch)
         b.build();
 
-    return { srcs, ii };
+    return { srcs, inputs };
 }
 
 std::pair<sw::SourceDirMap, std::vector<sw::Input*>> fetch(sw::SwContext &swctx, OPTIONS_ARG_CONST)
