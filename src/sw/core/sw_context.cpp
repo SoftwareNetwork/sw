@@ -294,12 +294,8 @@ std::vector<Input *> SwContext::addInput(const path &in)
                 continue;
             for (auto &i : inpts)
             {
-                if (!idb)
-                    idb = std::make_unique<InputDatabase>(getLocalStorage().storage_dir_tmp / "db" / "inputs.db");
-                idb->setupInput(*i);
-                auto h = i->getHash();
-                auto [it,inserted] = inputs.emplace(h, std::move(i));
-                inputs_local.push_back(&*it->second);
+                auto [p,inserted] = registerInput(std::move(i));
+                inputs_local.push_back(p);
                 if (inserted)
                     LOG_TRACE(logger, "Selecting driver " + dp.toString() + " for input " + normalize_path(inputs_local.back()->getPath()));
             }
@@ -345,6 +341,16 @@ std::vector<Input *> SwContext::addInput(const path &in)
 
     SW_ASSERT(!inputs_local.empty(), "Inputs empty for " + normalize_path(p));
     return inputs_local;
+}
+
+std::pair<Input *, bool> SwContext::registerInput(std::unique_ptr<Input> i)
+{
+    if (!idb)
+        idb = std::make_unique<InputDatabase>(getLocalStorage().storage_dir_tmp / "db" / "inputs.db");
+    idb->setupInput(*i);
+    auto h = i->getHash();
+    auto [it,inserted] = inputs.emplace(h, std::move(i));
+    return { &*it->second, inserted };
 }
 
 void SwContext::loadEntryPointsBatch(const std::set<Input *> &inputs)
