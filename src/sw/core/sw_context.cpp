@@ -75,18 +75,26 @@ struct InputDatabase : Database
         }
 
         bool ok = true;
-        for (const auto &row : (*db)(
+        auto q2 = (*db)(
             select(file.fileId, file.path, file.lastWriteTime)
             .from(file)
-            .where(file.hash == q.front().hash.value())))
+            .where(file.hash == q.front().hash.value()));
+        for (const auto &row : q2)
         {
             auto lwt = fs::last_write_time(row.path.value());
             ok &= memcmp(row.lastWriteTime.value().data(), &lwt, sizeof(lwt)) == 0;
+            if (!ok)
+                break;
         }
         if (ok)
             i.setHash(q.front().hash.value());
         else
+        {
+            // remove old first
+            for (const auto &row : q2)
+                (*db)(remove_from(file).where(file.fileId == row.fileId));
             set_input();
+        }
     }
 };
 
