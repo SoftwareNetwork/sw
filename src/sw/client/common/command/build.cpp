@@ -193,14 +193,9 @@ static void applySettingsFromJson(sw::TargetSettings &s, const String &jsonstr)
 static std::vector<sw::TargetSettings> applySettingsFromCppFile(sw::SwContext &swctx, const Options &options, const path &fn)
 {
     auto b = createBuild(swctx, options);
-
-    // create manually
-    SW_CHECK(swctx.getDrivers().size() == 1);
-    auto inputs = swctx.getDrivers().begin()->second->detectInputs(fn, sw::InputType::InlineSpecification);
+    auto inputs = swctx.addInput(fn);
     SW_CHECK(inputs.size() == 1);
-
-    auto [pi,_] = swctx.registerInput(std::move(inputs[0]));
-    sw::InputWithSettings i(*pi);
+    sw::InputWithSettings i(*inputs[0]);
     auto ts = createInitialSettings(swctx);
 #ifdef NDEBUG
     ts["native"]["configuration"] = "releasewithdebuginformation";
