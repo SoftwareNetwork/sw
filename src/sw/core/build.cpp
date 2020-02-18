@@ -345,22 +345,22 @@ void SwBuild::resolvePackages(const UnresolvedPackages &upkgs)
     //
     // more complex lock file will be
     // when we able to set dependency per each target with its settings
-    bool should_update_lock_file = true;
+    bool must_update_lock_file = true;
     if (1
         && build_settings["update_lock_file"] != "true" // update flag
         && build_settings["lock_file"].isValue()
         && fs::exists(build_settings["lock_file"].getValue())
         )
     {
-        should_update_lock_file = false; // no need to update, we are loading
+        must_update_lock_file = false; // no need to update, we are loading
 
-        auto m = loadLockFile(build_settings["lock_file"].getValue()/*, getContext()*/);
+        auto m = loadLockFile(build_settings["lock_file"].getValue());
         if (build_settings["update_lock_file_packages"])
         {
             for (auto &[u, p] : build_settings["update_lock_file_packages"].getSettings())
             {
                 m.erase(u);
-                should_update_lock_file = true; // must update lock file
+                must_update_lock_file = true; // must update lock file here
             }
         }
         getContext().setCachedPackages(m);
@@ -373,15 +373,40 @@ void SwBuild::resolvePackages(const UnresolvedPackages &upkgs)
     // install
     auto m = swctx.install(upkgs);
 
-    if (build_settings["lock_file"].isValue() && should_update_lock_file)
+    if (build_settings["lock_file"].isValue() && must_update_lock_file)
     {
+        // show fancy diffs during update lock file
+        if (build_settings["update_lock_file"] == "true")
+        try
+        {
+            // may throw
+            auto mold = loadLockFile(build_settings["lock_file"].getValue());
+            for (auto &[u, p] : mold)
+            {
+                auto i = m.find(u);
+                if (i == m.end())
+                    LOG_INFO(logger, "Deleting dependency  : " + u.toString() + " (" + p.toString() + ")");
+                else if (i->second != p)
+                    LOG_INFO(logger, "Updating dependency  : " + u.toString() + " (" + p.toString() + " -> " + i->second.toString() + ")");
+            }
+            for (auto &[u, p] : m)
+            {
+                auto i = mold.find(u);
+                if (i == mold.end())
+                    LOG_INFO(logger, "Adding new dependency: " + u.toString() + " -> " + p.toString());
+            }
+        }
+        catch (std::exception &)
+        {
+        }
+
         saveLockFile(build_settings["lock_file"].getValue(), m);
     }
 
     // now we know all drivers
     std::set<Input *> iv;
     std::map<PackageId, Input *> ivm;
-    for (auto &[u, p] : m)
+    for (auto &[_, p] : m)
     {
         // use addInput to prevent doubling already existing and loaded inputs
         // like when we loading dependency that is already loaded from the input
