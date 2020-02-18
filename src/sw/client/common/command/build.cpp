@@ -521,12 +521,13 @@ static void isolated_build(sw::SwContext &swctx, const Options &options)
     auto b1 = createBuild(swctx, options);
     auto &b = *b1;
 
-    SW_UNIMPLEMENTED;
-    /*auto ts = createInitialSettings(swctx);
-    auto &ii = getInput(b);
-    sw::InputWithSettings i(ii);
+    auto ts = createInitialSettings(swctx);
+    for (auto &ii : getInput(b))
+    {
+        sw::InputWithSettings i(*ii);
     i.addSettings(ts);
     b.addInput(i);
+    }
     b.loadInputs();
     b.setTargetsToBuild();
     b.resolvePackages();
@@ -575,12 +576,14 @@ static void isolated_build(sw::SwContext &swctx, const Options &options)
         auto b1 = createBuild(swctx, options);
         auto &b = *b1;
 
-        auto &ii = getInput(b);
-        sw::InputWithSettings i(ii);
+        for (auto &ii : getInput(b))
+        {
+            sw::InputWithSettings i(*ii);
         i.addSettings(ts);
         b.addInput(i);
+        }
         b.build();
-    }*/
+    }
 }
 
 std::unique_ptr<sw::SwBuild> createBuild(sw::SwContext &swctx, const Options &options)
