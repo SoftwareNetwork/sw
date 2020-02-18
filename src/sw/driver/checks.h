@@ -111,7 +111,7 @@ struct SW_DRIVER_CPP_API Check : CommandNode
     virtual ~Check();
 
     // for comparison
-    virtual size_t getHash() const;
+    size_t getHash() const override;
 
     String getName(bool short_name = false) const override;
     String getData() const { return data; }
