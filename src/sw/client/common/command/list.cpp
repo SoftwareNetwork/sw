@@ -18,7 +18,7 @@
 
 #include "commands.h"
 
-#include <sw/manager/database.h>
+#include <sw/manager/package_database.h>
 #include <sw/manager/storage.h>
 
 #include <primitives/log.h>
