@@ -99,6 +99,18 @@ void Input::setEntryPoints(const EntryPointsVector &in)
     eps = in;
 }
 
+const Package *Input::getPackage() const
+{
+    if (!pkg)
+        return nullptr;
+    return &*pkg;
+}
+
+void Input::setPackage(const LocalPackage &in)
+{
+    pkg = in.clone();
+}
+
 InputWithSettings::InputWithSettings(Input &i)
     : i(i)
 {
@@ -142,8 +154,16 @@ std::vector<ITargetPtr> InputWithSettings::loadTargets(SwBuild &b) const
         {
             LOG_TRACE(logger, "Loading input " << i.getPath() << ", settings = " << s.toString());
 
+            PackageIdSet pkgs;
+            PackagePath prefix;
+            if (auto p = i.getPackage())
+            {
+                pkgs.insert(*p);
+                prefix = p->getPath().slice(0, p->getData().prefix);
+            }
+
             // load all packages here
-            auto t = ep->loadPackages(b, s, {}, {});
+            auto t = ep->loadPackages(b, s, pkgs, prefix);
             tgts.insert(tgts.end(), t.begin(), t.end());
         }
 

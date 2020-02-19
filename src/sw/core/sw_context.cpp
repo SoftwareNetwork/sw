@@ -272,6 +272,7 @@ std::vector<Input *> SwContext::addInput(const LocalPackage &p)
 {
     auto v = addInput(p.getDirSrc2());
     SW_CHECK(v.size() == 1);
+    v[0]->setPackage(p);
     return v;
 }
 

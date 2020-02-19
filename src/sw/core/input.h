@@ -59,6 +59,9 @@ struct SW_CORE_API Input
     InputType getType() const { return type; }
     path getPath() const;
 
+    const Package *getPackage() const;
+    void setPackage(const LocalPackage &);
+
     bool operator==(const Input &rhs) const;
     bool operator<(const Input &rhs) const;
 
@@ -68,6 +71,7 @@ protected:
 private:
     InputType type;
     path p;
+    std::unique_ptr<Package> pkg;
     //
     const IDriver &driver;
     // one input may have several eps
