@@ -42,6 +42,9 @@ struct SW_CORE_API SwCoreContext : SwBuilderContext
     TargetEntryPointPtr getEntryPoint(const LocalPackage &) const;
     TargetEntryPointPtr getEntryPoint(const PackageId &) const;
 
+    InputDatabase &getInputDatabase();
+    InputDatabase &getInputDatabase() const;
+
 private:
     // rename to detected?
     // not only detected, but also predefined? do not rename?
@@ -50,6 +53,7 @@ private:
     TargetSettings host_settings;
     std::unordered_map<PackageId, TargetEntryPointPtr> entry_points;
     std::unordered_map<PackageVersionGroupNumber, TargetEntryPointPtr> entry_points_by_group_number;
+    std::unique_ptr<InputDatabase> idb;
 
     TargetEntryPointPtr getEntryPoint(PackageVersionGroupNumber) const;
 };
@@ -82,7 +86,6 @@ private:
 
     Drivers drivers;
     Inputs inputs;
-    std::unique_ptr<InputDatabase> idb;
 
     std::unique_ptr<SwBuild> createBuild1();
 

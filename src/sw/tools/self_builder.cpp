@@ -7,7 +7,8 @@
 #include <sw/manager/database.h>
 #include <sw/manager/settings.h>
 #include <sw/manager/storage.h>
-#include <sw/manager/sw_context.h>
+#include <sw/core/sw_context.h>
+#include <sw/core/input_database.h>
 
 #include <primitives/emitter.h>
 #include <primitives/executor.h>
@@ -173,7 +174,7 @@ int main(int argc, char **argv)
     Executor e(select_number_of_threads());
     getExecutor(&e);
 
-    SwManagerContext swctx(Settings::get_user_settings().storage_dir);
+    SwCoreContext swctx(Settings::get_user_settings().storage_dir);
     auto m = swctx.install(
     {
         // our main cpp driver target
@@ -184,15 +185,14 @@ int main(int argc, char **argv)
     });
 
     // calc GNs
+    auto &idb = swctx.getInputDatabase();
     for (auto &[u2, r] : m)
     {
         auto &d = r.getData();
-        // uncomment when you need to update spec hash
-        //if (d.group_number == 0 || r.isOverridden())
-        if (d.group_number == 0)
+        //if (d.group_number == 0)
         {
-            ((PackageData&)d).group_number = get_specification_hash(read_file(r.getDirSrc2() / "sw.cpp"));
-            r.setGroupNumber(d.group_number);
+            ((PackageData&)d).group_number = idb.addInputFile(r.getDirSrc2() / "sw.cpp");
+            //r.setGroupNumber(d.group_number);
         }
     }
 

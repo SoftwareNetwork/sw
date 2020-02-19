@@ -8,6 +8,7 @@
 
 #include "build.h"
 #include "input.h"
+#include "input_database.h"
 #include "driver.h"
 
 #include <sw/manager/storage.h>
@@ -15,93 +16,8 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "context");
 
-#include <sw/manager/database.h>
-#include <db_inputs.h>
-#include "inserts.h"
-#include <sqlpp11/sqlite3/connection.h>
-#include <sqlpp11/sqlite3/sqlite3.h>
-#include <sqlpp11/sqlpp11.h>
-
 namespace sw
 {
-
-struct InputDatabase : Database
-{
-    InputDatabase(const path &p)
-        : Database(p, inputs_db_schema)
-    {
-    }
-
-    void setupInput(Input &i) const
-    {
-        if (i.getType() == InputType::Directory)
-        {
-            // set hash by path
-            i.setHash(std::hash<path>()(i.getPath()));
-            return;
-        }
-
-        const ::db::inputs::File file{};
-
-        auto set_input = [&]()
-        {
-            auto spec = i.getSpecification();
-            auto h = spec->getHash();
-            i.setHash(h);
-
-            // spec may contain many files
-            for (auto &[f,_] : spec->files)
-            {
-                auto lwt = fs::last_write_time(f);
-                std::vector<uint8_t> lwtdata(sizeof(lwt));
-                memcpy(lwtdata.data(), &lwt, lwtdata.size());
-
-                (*db)(insert_into(file).set(
-                    file.path = normalize_path(f),
-                    file.hash = h,
-                    file.lastWriteTime = lwtdata
-                ));
-            }
-        };
-
-        auto q = (*db)(
-            select(file.fileId, file.hash, file.lastWriteTime)
-            .from(file)
-            .where(file.path == normalize_path(i.getPath())));
-        if (q.empty())
-        {
-            set_input();
-            return;
-        }
-
-        bool ok = true;
-        auto q2 = (*db)(
-            select(file.fileId, file.path, file.lastWriteTime)
-            .from(file)
-            .where(file.hash == q.front().hash.value()));
-        for (const auto &row : q2)
-        {
-            if (!fs::exists(row.path.value()))
-            {
-                ok = false;
-                break;
-            }
-            auto lwt = fs::last_write_time(row.path.value());
-            ok &= memcmp(row.lastWriteTime.value().data(), &lwt, sizeof(lwt)) == 0;
-            if (!ok)
-                break;
-        }
-        if (ok)
-            i.setHash(q.front().hash.value());
-        else
-        {
-            // remove old first
-            for (const auto &row : q2)
-                (*db)(remove_from(file).where(file.fileId == row.fileId));
-            set_input();
-        }
-    }
-};
 
 SwCoreContext::SwCoreContext(const path &local_storage_root_dir)
     : SwBuilderContext(local_storage_root_dir)
@@ -113,6 +29,19 @@ SwCoreContext::SwCoreContext(const path &local_storage_root_dir)
 
 SwCoreContext::~SwCoreContext()
 {
+}
+
+InputDatabase &SwCoreContext::getInputDatabase()
+{
+    if (!idb)
+        idb = std::make_unique<InputDatabase>(getLocalStorage().storage_dir_tmp / "db" / "inputs.db");
+    return *idb;
+}
+
+InputDatabase &SwCoreContext::getInputDatabase() const
+{
+    SW_CHECK(idb);
+    return *idb;
 }
 
 TargetSettings SwCoreContext::createHostSettings() const
@@ -359,9 +288,8 @@ std::vector<Input *> SwContext::addInput(const path &in)
 
 std::pair<Input *, bool> SwContext::registerInput(std::unique_ptr<Input> i)
 {
-    if (!idb)
-        idb = std::make_unique<InputDatabase>(getLocalStorage().storage_dir_tmp / "db" / "inputs.db");
-    idb->setupInput(*i);
+    auto &idb = getInputDatabase();
+    idb.setupInput(*i);
     auto h = i->getHash();
     auto [it,inserted] = inputs.emplace(h, std::move(i));
     return { &*it->second, inserted };

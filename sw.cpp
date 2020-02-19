@@ -161,7 +161,7 @@ void build(Solution &s)
             self_builder.CPPVersion = CPPLanguageStandard::CPP17;
             self_builder += "src/sw/tools/self_builder.cpp";
             self_builder +=
-                manager,
+                core,
                 "pub.egorpugin.primitives.emitter-master"_dep,
                 "pub.egorpugin.primitives.sw.main-master"_dep;
 
