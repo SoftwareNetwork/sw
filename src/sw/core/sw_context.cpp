@@ -81,6 +81,11 @@ struct InputDatabase : Database
             .where(file.hash == q.front().hash.value()));
         for (const auto &row : q2)
         {
+            if (!fs::exists(row.path.value()))
+            {
+                ok = false;
+                break;
+            }
             auto lwt = fs::last_write_time(row.path.value());
             ok &= memcmp(row.lastWriteTime.value().data(), &lwt, sizeof(lwt)) == 0;
             if (!ok)
