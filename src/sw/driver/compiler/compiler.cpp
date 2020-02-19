@@ -127,7 +127,7 @@ static Strings getCppStdOption(CPPLanguageStandard std, bool gnuext, bool clang,
         else
             s += "1z";
         break;
-    case CPPLanguageStandard::CPPLatest:
+    case CPPLanguageStandard::CPP20:
         if (clang && clver > Version(10) || clver > Version(9))
             s += "20";
         else
