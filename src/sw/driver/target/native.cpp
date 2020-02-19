@@ -1232,7 +1232,6 @@ void NativeCompiledTarget::createPrecompiledHeader()
         c->PrecompiledHeaderFilename.output_dependency = true;
         c->PrecompiledHeader().create = pch.header;
         c->PDBFilename = pch.pdb;
-        c->PDBFilename.output_dependency = true;
     };
 
     auto setup_create_gcc_clang = [this, &sf](auto &c)
@@ -1287,7 +1286,6 @@ void NativeCompiledTarget::addPrecompiledHeader()
             c->PrecompiledHeaderFilename.input_dependency = true;
             c->PrecompiledHeader().use = pch.header;
             c->PDBFilename = pch.pdb;
-            c->PDBFilename.input_dependency = true;
         };
 
         auto setup_use_gcc_clang = [this](auto &c)
