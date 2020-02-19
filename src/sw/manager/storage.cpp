@@ -279,11 +279,6 @@ void LocalStorageBase::deletePackage(const PackageId &id) const
     getPackagesDatabase().deletePackage(id);
 }
 
-void LocalStorageBase::setGroupNumber(const PackageId &id, PackageVersionGroupNumber gn) const
-{
-    getPackagesDatabase().setGroupNumber(id, gn);
-}
-
 LocalStorage::LocalStorage(const path &local_storage_root_dir)
     : Directories(local_storage_root_dir)
     , LocalStorageBase("local", getDatabaseRootDir())
@@ -358,24 +353,6 @@ PackageDataPtr LocalStorage::loadData(const PackageId &id) const
     if (isPackageOverridden(id))
         return ovs.loadData(id);
     return StorageWithPackagesDatabase::loadData(id);
-}
-
-LocalPackage LocalStorage::getGroupLeader(const LocalPackage &id) const
-{
-    if (isPackageOverridden(id))
-    {
-        auto pkg = ovs.getPackagesDatabase().getGroupLeader(id.getData().group_number);
-        return LocalPackage(*this, pkg);
-    }
-    auto pkg = getPackagesDatabase().getGroupLeader(id.getData().group_number);
-    return LocalPackage(*this, pkg);
-}
-
-void LocalStorage::setGroupNumber(const PackageId &id, PackageVersionGroupNumber gn) const
-{
-    if (isPackageOverridden(id))
-        return ovs.setGroupNumber(id, gn);
-    return LocalStorageBase::setGroupNumber(id, gn);
 }
 
 LocalPackage LocalStorage::installLocalPackage(const PackageId &id, const PackageData &d)

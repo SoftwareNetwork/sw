@@ -30,9 +30,6 @@ struct PackageData
     // then prefix equals to size of 'org.sw', thus 2
     int prefix = 2;
 
-    // packages added in one bunch (=group) have the same group number
-    PackageVersionGroupNumber group_number = 0;
-
     //
     UnresolvedPackages dependencies;
 
@@ -107,9 +104,6 @@ struct SW_MANAGER_API LocalPackage : Package
     String getStampHash() const;
 
     void remove() const;
-
-    LocalPackage getGroupLeader() const;
-    void setGroupNumber(PackageVersionGroupNumber) const;
 
 private:
     path getDir(const path &root) const;

@@ -38,7 +38,6 @@ struct SW_CORE_API SwCoreContext : SwBuilderContext
 
     void setEntryPoint(const LocalPackage &, const TargetEntryPointPtr &);
     void setEntryPoint(const PackageId &, const TargetEntryPointPtr &);
-    void setEntryPoint(PackageVersionGroupNumber, const TargetEntryPointPtr &);
     TargetEntryPointPtr getEntryPoint(const LocalPackage &) const;
     TargetEntryPointPtr getEntryPoint(const PackageId &) const;
 
@@ -52,10 +51,7 @@ private:
     std::unordered_map<PackageId, TargetData> target_data;
     TargetSettings host_settings;
     std::unordered_map<PackageId, TargetEntryPointPtr> entry_points;
-    std::unordered_map<PackageVersionGroupNumber, TargetEntryPointPtr> entry_points_by_group_number;
     std::unique_ptr<InputDatabase> idb;
-
-    TargetEntryPointPtr getEntryPoint(PackageVersionGroupNumber) const;
 };
 
 // public context

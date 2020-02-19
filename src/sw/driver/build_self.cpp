@@ -20,8 +20,7 @@ DECLARE_STATIC_LOGGER(logger, "build.self");
 #pragma warning(disable : 4005) // warning C4005: 'XXX': macro redefinition
 #endif
 
-using TargetEntryPointMap = std::unordered_map<sw::PackageVersionGroupNumber, std::shared_ptr<sw::NativeBuiltinTargetEntryPoint>>;
-using TargetEntryPointMap1 = std::unordered_map<sw::PackageId, std::shared_ptr<sw::NativeBuiltinTargetEntryPoint>>;
+using TargetEntryPointMap = std::unordered_map<sw::PackageId, std::shared_ptr<sw::NativeBuiltinTargetEntryPoint>>;
 
 #define SW_DRIVER_ADD_SELF
 #include <build_self.generated.h>

@@ -37,11 +37,6 @@ namespace sw
 
 PackageIdSet load_builtin_packages(SwContext &swctx);
 
-String gn2suffix(PackageVersionGroupNumber gn)
-{
-    return "_" + (gn > 0 ? std::to_string(gn) : ("_" + std::to_string(-gn)));
-}
-
 namespace driver::cpp
 {
 

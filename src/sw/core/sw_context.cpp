@@ -92,33 +92,6 @@ void SwCoreContext::setEntryPoint(const LocalPackage &p, const TargetEntryPointP
     //getTargetData(p).setEntryPoint(ep);
     //getTargetData(p); // "register" package
     entry_points[p] = ep; // after target data
-
-    // local package
-    if (p.getPath().isRelative())
-        return;
-
-    //try
-    //{
-        setEntryPoint(p.getData().group_number, ep);
-    //}
-    //catch (...)
-    //{
-    //}
-}
-
-void SwCoreContext::setEntryPoint(PackageVersionGroupNumber gn, const TargetEntryPointPtr &ep)
-{
-    if (gn == 0)
-        return;
-
-    auto iepgn = entry_points_by_group_number.find(gn);
-    if (iepgn != entry_points_by_group_number.end())
-    {
-        if (iepgn->second != ep)
-            throw SW_RUNTIME_ERROR("Setting entry point twice for group_number " + std::to_string(gn));
-        return;
-    }
-    entry_points_by_group_number[gn] = ep;
 }
 
 TargetEntryPointPtr SwCoreContext::getEntryPoint(const PackageId &pkgid) const
@@ -129,33 +102,10 @@ TargetEntryPointPtr SwCoreContext::getEntryPoint(const PackageId &pkgid) const
 
 TargetEntryPointPtr SwCoreContext::getEntryPoint(const LocalPackage &p) const
 {
-    auto gn = p.getData().group_number;
-    if (gn == 0)
-    {
-        gn = get_specification_hash(read_file(p.getDirSrc2() / "sw.cpp"));
-        p.setGroupNumber(gn);
-        ((PackageData &)p.getData()).group_number = gn;
-    }
-
-    auto ep = getEntryPoint(gn);
-    if (ep)
-        return ep;
     auto i = entry_points.find(p);
     if (i != entry_points.end())
         return i->second;
     return {};
-}
-
-TargetEntryPointPtr SwCoreContext::getEntryPoint(PackageVersionGroupNumber p) const
-{
-    if (p == 0)
-        //return {};
-        throw SW_RUNTIME_ERROR("Empty entry point"); // assert?
-
-    auto i = entry_points_by_group_number.find(p);
-    if (i == entry_points_by_group_number.end())
-        return {};
-    return i->second;
 }
 
 SwContext::SwContext(const path &local_storage_root_dir)

@@ -263,7 +263,6 @@ PackageData PackagesDatabase::getPackageData(const PackageId &p) const
     auto &row = q.front();
     d.hash = row.hash.value();
     d.flags = row.flags.value();
-    d.group_number = row.groupNumber.value();
     d.prefix = (int)row.prefix.value();
     d.sdir = row.sdir.value();
 
@@ -351,7 +350,7 @@ void PackagesDatabase::installPackage(const PackageId &p, const PackageData &d)
         // extended
         pkg_ver.prefix = d.prefix,
         pkg_ver.hash = d.hash,
-        pkg_ver.groupNumber = d.group_number,
+        pkg_ver.groupNumber = 0, // old column too
         pkg_ver.groupNumber1 = 0, // old column
 
         // TODO:
@@ -519,44 +518,6 @@ DataSources PackagesDatabase::getDataSources() const
     if (dss.empty())
         throw SW_RUNTIME_ERROR("No data sources available");
     return dss;
-}
-
-PackageId PackagesDatabase::getGroupLeader(PackageVersionGroupNumber gn) const
-{
-    if (gn == 0)
-        throw SW_RUNTIME_ERROR("Zero gn");
-
-    auto q = (*db)(
-        select(pkg_ver.packageId, pkg_ver.version)
-        .from(pkg_ver)
-        .where(pkg_ver.groupNumber == gn)
-        .order_by(pkg_ver.packageVersionId.asc())
-        );
-    if (q.empty())
-        throw SW_RUNTIME_ERROR("No such gn: " + std::to_string(gn));
-
-    auto q2 = (*db)(
-        select(pkgs.path)
-        .from(pkgs)
-        .where(pkgs.packageId == q.front().packageId.value())
-        );
-    if (q2.empty())
-        throw SW_RUNTIME_ERROR("No such packageId: " + std::to_string(q.front().packageId.value()));
-
-    return { q2.front().path.value(), q.front().version.value() };
-}
-
-void PackagesDatabase::setGroupNumber(const PackageId &id, PackageVersionGroupNumber gn) const
-{
-    auto vid = getPackageVersionId(id);
-    if (vid == 0)
-        throw SW_RUNTIME_ERROR("No such packages in db: " + id.toString());
-
-    (*db)(
-        update(pkg_ver)
-        .set(pkg_ver.groupNumber = gn)
-        .where(pkg_ver.packageVersionId == vid)
-        );
 }
 
 }

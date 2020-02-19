@@ -64,6 +64,4 @@ private:
 
 } // namespace driver::cpp
 
-String gn2suffix(PackageVersionGroupNumber gn);
-
 } // namespace sw

@@ -109,7 +109,6 @@ Api::IdDependencies ProtobufApi::resolvePackages(const UnresolvedPackages &pkgs)
         d.id = pkg.id();
         d.flags = pkg.flags();
         d.hash = pkg.hash();
-        d.group_number = pkg.group_number();
         d.prefix = pkg.prefix();
 
         for (auto &tree_dep : pkg.dependencies())
@@ -155,7 +154,6 @@ std::unordered_map<UnresolvedPackage, PackagePtr> ProtobufApi::resolvePackages(c
         PackageData d;
         d.flags = pkg.flags();
         d.hash = pkg.hash();
-        d.group_number = pkg.group_number();
         d.prefix = pkg.prefix();
         for (auto &tree_dep : pkg.dependencies())
             d.dependencies.emplace(tree_dep.path(), tree_dep.range());

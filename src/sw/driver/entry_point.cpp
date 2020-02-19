@@ -13,6 +13,7 @@
 #include "target/native.h"
 
 #include <sw/core/sw_context.h>
+#include <sw/core/input_database.h>
 #include <sw/manager/storage.h>
 
 #include <boost/dll.hpp>
@@ -205,7 +206,8 @@ static path getPackageHeader(const LocalPackage &p, const UnresolvedPackage &up)
     return h;
 }
 
-static std::pair<FilesOrdered, UnresolvedPackages> getFileDependencies(const SwBuilderContext &swctx, const path &p, std::set<PackageVersionGroupNumber> &gns)
+static std::pair<FilesOrdered, UnresolvedPackages>
+getFileDependencies(const SwCoreContext &swctx, const path &p, std::set<size_t> &gns)
 {
     UnresolvedPackages udeps;
     FilesOrdered headers;
@@ -224,13 +226,8 @@ static std::pair<FilesOrdered, UnresolvedPackages> getFileDependencies(const SwB
         {
             auto upkg = extractFromString(m[3].str());
             auto pkg = swctx.resolve(upkg);
-            if (pkg.getData().group_number == 0)
-            {
-                auto gn = get_specification_hash(read_file(pkg.getDirSrc2() / "sw.cpp"));
-                pkg.setGroupNumber(gn);
-                ((PackageData &)pkg.getData()).group_number = gn;
-            }
-            if (!gns.insert(pkg.getData().group_number).second)
+            auto gn = swctx.getInputDatabase().addInputFile(pkg.getDirSrc2() / "sw.cpp");
+            if (!gns.insert(gn).second)
                 throw SW_RUNTIME_ERROR("#pragma sw header: trying to add same header twice, last one: " + upkg.toString());
             auto h = getPackageHeader(pkg, upkg);
             auto [headers2,udeps2] = getFileDependencies(swctx, h, gns);
@@ -253,9 +250,9 @@ static std::pair<FilesOrdered, UnresolvedPackages> getFileDependencies(const SwB
     return { headers, udeps };
 }
 
-static std::pair<FilesOrdered, UnresolvedPackages> getFileDependencies(const SwBuilderContext &swctx, const path &in_config_file)
+static std::pair<FilesOrdered, UnresolvedPackages> getFileDependencies(const SwCoreContext &swctx, const path &in_config_file)
 {
-    std::set<PackageVersionGroupNumber> gns;
+    std::set<size_t> gns;
     return getFileDependencies(swctx, in_config_file, gns);
 }
 
@@ -510,7 +507,7 @@ void PrepareConfigEntryPoint::many2one(Build &b, const std::unordered_set<LocalP
 
     SW_UNIMPLEMENTED;
 
-    struct data
+    /*struct data
     {
         LocalPackage pkg;
         PackageVersionGroupNumber gn;
@@ -523,11 +520,11 @@ void PrepareConfigEntryPoint::many2one(Build &b, const std::unordered_set<LocalP
             throw SW_RUNTIME_ERROR("Missing group number");
 
         SW_UNIMPLEMENTED;
-        /*auto pkg2 = pkg.getGroupLeader();
-        auto d = driver::cpp::findConfig(pkg2.getDirSrc2(), driver::cpp::Driver::getAvailableFrontendConfigFilenames());
-        if (!d)
-            throw SW_RUNTIME_ERROR("cannot find config for package " + pkg.toString() + " in dir " + normalize_path(pkg2.getDirSrc2()));
-        return data{ {b.getSolution().getContext().getLocalStorage(), pkg2}, pkg.getData().group_number, *d };*/
+        //auto pkg2 = pkg.getGroupLeader();
+        //auto d = driver::cpp::findConfig(pkg2.getDirSrc2(), driver::cpp::Driver::getAvailableFrontendConfigFilenames());
+        //if (!d)
+            //throw SW_RUNTIME_ERROR("cannot find config for package " + pkg.toString() + " in dir " + normalize_path(pkg2.getDirSrc2()));
+        //return data{ {b.getSolution().getContext().getLocalStorage(), pkg2}, pkg.getData().group_number, *d };
     };
 
     // ordered map!
@@ -563,6 +560,11 @@ void PrepareConfigEntryPoint::many2one(Build &b, const std::unordered_set<LocalP
     // file deps
     auto gnu_setup = [this, &b, &lib](auto *c, const auto &headers, const path &fn, const auto &gn)
     {
+        auto gn2suffix = [](PackageVersionGroupNumber gn)
+        {
+            return "_" + (gn > 0 ? std::to_string(gn) : ("_" + std::to_string(-gn)));
+        }
+
         // we use pch, but cannot add more defs on CL
         // so we create a file with them
         auto hash = gn2suffix(gn);
@@ -616,7 +618,7 @@ void PrepareConfigEntryPoint::many2one(Build &b, const std::unordered_set<LocalP
             lib += std::make_shared<Dependency>(d);
     }
 
-    commonActions2(b, lib);
+    commonActions2(b, lib);*/
 }
 
 // one input file to one dll

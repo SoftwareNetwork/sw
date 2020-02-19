@@ -14,10 +14,3 @@ String get_file_hash(const path &fn);
 
 SW_SUPPORT_API
 bool check_file_hash(const path &fn, const String &hash);
-
-SW_SUPPORT_API
-size_t get_specification_hash(const String &input);
-
-// returns copy of new hash
-SW_SUPPORT_API
-size_t add_specification_hash(size_t &hash, const String &input);

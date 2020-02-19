@@ -35,7 +35,7 @@ static void override_package_perform(sw::SwContext &swctx, sw::PackagePath prefi
     auto dir = fs::canonical(".");
     sw::PackageDescriptionMap pm;
 
-    auto override_packages = [&](sw::PackageVersionGroupNumber gn)
+    auto override_packages = [&]()
     {
         for (auto &[pkg, desc] : pm)
         {
@@ -54,7 +54,6 @@ static void override_package_perform(sw::SwContext &swctx, sw::PackagePath prefi
             sw::PackageData d;
             d.sdir = dir;
             d.dependencies = deps;
-            d.group_number = gn;
             d.prefix = (int)prefix.size();
             swctx.getLocalStorage().getOverriddenPackagesStorage().install(lp, d);
         }
@@ -67,7 +66,6 @@ static void override_package_perform(sw::SwContext &swctx, sw::PackagePath prefi
         prefix = j["prefix"].get<String>();
         for (auto &[k,v] : j["packages"].items())
             pm[k] = std::make_unique<sw::JsonPackageDescription>(v.dump());
-        override_packages(j["group_number"].get<sw::PackageVersionGroupNumber>());
         return;
     }
 
@@ -89,14 +87,13 @@ static void override_package_perform(sw::SwContext &swctx, sw::PackagePath prefi
         nlohmann::json j;
         j["sdir"] = normalize_path(dir);
         j["prefix"] = prefix.toString();
-        j["group_number"] = inputs[0]->getSpecification()->getHash();
         for (auto &[pkg, desc] : pm)
             j["packages"][pkg.toString()] = nlohmann::json::parse(desc->getString());
         write_file(options.options_override.save_overridden_packages_to_file, j.dump(4));
         return;
     }
 
-    override_packages(inputs[0]->getSpecification()->getHash());
+    override_packages();
 }
 
 SUBCOMMAND_DECL(override)

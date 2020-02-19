@@ -213,8 +213,6 @@ struct SW_MANAGER_API LocalStorageBase : StorageWithPackagesDatabase
 
     void deletePackage(const PackageId &id) const;
 
-    void setGroupNumber(const PackageId &id, PackageVersionGroupNumber) const;
-
 private:
     StorageSchema schema;
 };
@@ -247,8 +245,6 @@ struct SW_MANAGER_API LocalStorage : Directories, LocalStorageBase
     bool isPackageInstalled(const Package &id) const;
     bool isPackageOverridden(const PackageId &id) const;
     bool isPackageLocal(const PackageId &id) const;
-    LocalPackage getGroupLeader(const LocalPackage &id) const;
-    void setGroupNumber(const PackageId &id, PackageVersionGroupNumber) const;
     PackageDataPtr loadData(const PackageId &) const override;
     std::unordered_map<UnresolvedPackage, PackagePtr> resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const override;
 

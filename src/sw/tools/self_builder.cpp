@@ -51,16 +51,33 @@ void write_required_packages(const std::unordered_map<UnresolvedPackage, LocalPa
     write_file(packages, ctx_packages.getText());
 }
 
-void write_build_script(const std::unordered_map<UnresolvedPackage, LocalPackage> &m)
+void write_build_script(
+    const std::unordered_map<UnresolvedPackage, LocalPackage> &m,
+    const std::unordered_map<UnresolvedPackage, size_t> &gns,
+    const std::unordered_map<LocalPackage, size_t> &gns2
+    )
 {
-    std::map<PackageVersionGroupNumber, std::set<LocalPackage>> used_gns;
+    auto get_gn = [&gns](auto &u)
+    {
+        auto i = gns.find(u);
+        SW_ASSERT(i != gns.end(), "not found: " + u.toString());
+        return i->second;
+    };
+    auto get_gn2 = [&gns2](auto &u)
+    {
+        auto i = gns2.find(u);
+        SW_ASSERT(i != gns2.end(), "not found 2: " + u.toString());
+        return i->second;
+    };
+
+    std::map<size_t, std::set<LocalPackage>> used_gns;
     std::vector<LocalPackage> lpkgs;
 
     // some packages must be before others
     std::vector<UnresolvedPackage> prepkgs;
 
     // goes before primitives
-    prepkgs.push_back("org.sw.demo.ragel"s);
+    prepkgs.push_back("org.sw.demo.ragel-6"s); // keep upkg same as in deps!!!
 
 //#ifdef _WIN32
     // goes before primitives
@@ -92,24 +109,24 @@ void write_build_script(const std::unordered_map<UnresolvedPackage, LocalPackage
 
         auto &r = *lp;
         auto &d = r.getData();
-        if (used_gns.find(d.group_number) != used_gns.end())
+        if (used_gns.find(get_gn(u)) != used_gns.end())
         {
-            used_gns[d.group_number].insert(*lp);
+            used_gns[get_gn(u)].insert(*lp);
             continue;
         }
-        used_gns[d.group_number].insert(*lp);
+        used_gns[get_gn(u)].insert(*lp);
         lpkgs.emplace_back(r);
     }
 
     for (auto &[u, r] : m)
     {
         auto &d = r.getData();
-        if (used_gns.find(d.group_number) != used_gns.end())
+        if (used_gns.find(get_gn(u)) != used_gns.end())
         {
-            used_gns[d.group_number].insert(r);
+            used_gns[get_gn(u)].insert(r);
             continue;
         }
-        used_gns[d.group_number].insert(r);
+        used_gns[get_gn(u)].insert(r);
         lpkgs.emplace_back(r);
     }
 
@@ -134,8 +151,8 @@ void write_build_script(const std::unordered_map<UnresolvedPackage, LocalPackage
     }
 
     //
-    build.beginFunction("TargetEntryPointMap1 load_builtin_entry_points()");
-    build.addLine("TargetEntryPointMap1 epm1;");
+    build.beginFunction("TargetEntryPointMap load_builtin_entry_points()");
+    build.addLine("TargetEntryPointMap epm;");
     build.addLine();
     for (auto &r : lpkgs)
     {
@@ -147,12 +164,12 @@ void write_build_script(const std::unordered_map<UnresolvedPackage, LocalPackage
         if (has_checks)
             build.addLine("ep->cf = check_" + r.getVariableName() + ";");
         // enumerate all other packages in group
-        for (auto &p : used_gns[r.getData().group_number])
-            build.addLine("epm1[\"" + p.toString() + "\"s] = ep;");
+        for (auto &p : used_gns[get_gn2(r)])
+            build.addLine("epm[\"" + p.toString() + "\"s] = ep;");
         build.endBlock();
         build.addLine();
     }
-    build.addLine("return epm1;");
+    build.addLine("return epm;");
     build.endFunction();
 
     ctx += build;
@@ -185,19 +202,17 @@ int main(int argc, char **argv)
     });
 
     // calc GNs
+    std::unordered_map<UnresolvedPackage, size_t> gns;
+    std::unordered_map<LocalPackage, size_t> gns2;
     auto &idb = swctx.getInputDatabase();
-    for (auto &[u2, r] : m)
+    for (auto &[u, r] : m)
     {
-        auto &d = r.getData();
-        //if (d.group_number == 0)
-        {
-            ((PackageData&)d).group_number = idb.addInputFile(r.getDirSrc2() / "sw.cpp");
-            //r.setGroupNumber(d.group_number);
-        }
+        gns[u] = idb.addInputFile(r.getDirSrc2() / "sw.cpp");
+        gns2[r] = idb.addInputFile(r.getDirSrc2() / "sw.cpp");
     }
 
     write_required_packages(m);
-    write_build_script(m);
+    write_build_script(m, gns, gns2);
 
     return 0;
 }

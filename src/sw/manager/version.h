@@ -21,11 +21,6 @@ using PackageVersionId = int64_t;
 
 }
 
-// return back to just int64_t
-// also this is spec hash
-using PackageVersionGroupNumber = int64_t;
-//using PackageVersionSpecificationHash = PackageVersionGroupNumber;
-
 using primitives::version::Version;
 using primitives::version::VersionSet;
 using primitives::version::VersionMap;
