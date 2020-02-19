@@ -289,7 +289,12 @@ void SwBuild::loadInputs()
     {
         auto tgts = i.loadTargets(*this);
         for (auto &tgt : tgts)
+        {
+            // do not remove this cond, it really filters some targets
+            if (tgt->getSettings()["dry-run"] == "true")
+                continue;
             getTargets()[tgt->getPackage()].push_back(tgt);
+        }
     }
 }
 
