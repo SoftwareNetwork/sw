@@ -122,13 +122,16 @@ static Strings getCppStdOption(CPPLanguageStandard std, bool gnuext, bool clang,
         s += "14";
         break;
     case CPPLanguageStandard::CPP17:
-        if (clang)
-            s += clver > Version(5) ? "17" : "1z";
+        if (clang && clver > Version(5) || clver > Version(6))
+            s += "17";
         else
-            s += clver > Version(6) ? "17" : "1z";
+            s += "1z";
         break;
     case CPPLanguageStandard::CPPLatest:
-        s += "2a";
+        if (clang && clver > Version(10) || clver > Version(9))
+            s += "20";
+        else
+            s += "2a";
         break;
     default:
         return {};
