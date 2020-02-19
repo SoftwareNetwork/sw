@@ -5,7 +5,7 @@
 
 void build(Solution &s)
 {
-    auto &p = s.addProject("sw.client", "0.4.0");
+    auto &p = s.addProject("sw.client", "0.4.1");
     p += Git("https://github.com/SoftwareNetwork/sw", "", "master");
 
     auto &support = p.addTarget<StaticLibraryTarget>("support");
