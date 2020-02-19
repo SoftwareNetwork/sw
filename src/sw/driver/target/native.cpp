@@ -2779,7 +2779,37 @@ void NativeCompiledTarget::prepare_pass5()
     {
         for (auto &f : files)
         {
-            auto vs_setup = [](auto &t, auto *f, auto *c, auto &pp_command)
+            auto set_fancy_name = [](auto &t, auto &cmd, auto *f)
+            {
+                if (do_not_mangle_object_names)
+                    return;
+
+                auto sd = normalize_path(t.SourceDir);
+                auto bd = normalize_path(t.BinaryDir);
+                auto bdp = normalize_path(t.BinaryPrivateDir);
+
+                auto p = normalize_path(f->file);
+                if (bdp.size() < p.size() && p.find(bdp) == 0)
+                {
+                    auto n = p.substr(bdp.size());
+                    cmd->name = "[bdir_pvt]" + n;
+                }
+                else if (bd.size() < p.size() && p.find(bd) == 0)
+                {
+                    auto n = p.substr(bd.size());
+                    cmd->name = "[bdir]" + n;
+                }
+                if (sd.size() < p.size() && p.find(sd) == 0)
+                {
+                    auto n = p.substr(sd.size());
+                    if (!n.empty() && n[0] == '/')
+                        n = n.substr(1);
+                    cmd->name = n;
+                }
+                cmd->name = "[" + t.getPackage().toString() + "]/[preprocess]/" + cmd->name;
+            };
+
+            auto vs_setup = [&set_fancy_name](auto &t, auto *f, auto *c, auto &pp_command)
             {
                 // create new cmd
                 t.Storage.push_back(pp_command);
@@ -2793,33 +2823,28 @@ void NativeCompiledTarget::prepare_pass5()
                 // set input file for old command
                 c->setSourceFile(pp_command->PreprocessFileName(), c->getOutputFile());
 
-                // set fancy name
-                if (!do_not_mangle_object_names)
-                {
-                    auto sd = normalize_path(t.SourceDir);
-                    auto bd = normalize_path(t.BinaryDir);
-                    auto bdp = normalize_path(t.BinaryPrivateDir);
+                set_fancy_name(t, cmd, f);
+            };
 
-                    auto p = normalize_path(f->file);
-                    if (bdp.size() < p.size() && p.find(bdp) == 0)
-                    {
-                        auto n = p.substr(bdp.size());
-                        cmd->name = "[bdir_pvt]" + n;
-                    }
-                    else if (bd.size() < p.size() && p.find(bd) == 0)
-                    {
-                        auto n = p.substr(bd.size());
-                        cmd->name = "[bdir]" + n;
-                    }
-                    if (sd.size() < p.size() && p.find(sd) == 0)
-                    {
-                        auto n = p.substr(sd.size());
-                        if (!n.empty() && n[0] == '/')
-                            n = n.substr(1);
-                        cmd->name = n;
-                    }
-                    cmd->name = "[" + t.getPackage().toString() + "]/[preprocess]/" + cmd->name;
-                }
+            auto gnu_setup = [&set_fancy_name](auto &t, auto *f, auto *c, auto &pp_command)
+            {
+                // create new cmd
+                t.Storage.push_back(pp_command);
+
+                // set pp
+                pp_command->CompileWithoutLinking = false;
+                pp_command->Preprocess = true;
+                auto o = pp_command->getOutputFile();
+                o = o.parent_path() / o.stem() += ".i";
+                pp_command->setOutputFile(o);
+                // prepare & register
+                auto cmd = pp_command->getCommand(t);
+                t.registerCommand(*cmd);
+
+                // set input file for old command
+                c->setSourceFile(pp_command->getOutputFile(), c->getOutputFile());
+
+                set_fancy_name(t, cmd, f);
             };
 
             //
@@ -2834,6 +2859,18 @@ void NativeCompiledTarget::prepare_pass5()
                 auto pp_command = f->compiler->clone();
                 auto pp_command2 = std::static_pointer_cast<ClangClCompiler>(pp_command);
                 vs_setup(*this, f, c, pp_command2);
+            }
+            else if (auto c = f->compiler->as<ClangCompiler *>())
+            {
+                auto pp_command = f->compiler->clone();
+                auto pp_command2 = std::static_pointer_cast<ClangCompiler>(pp_command);
+                gnu_setup(*this, f, c, pp_command2);
+            }
+            else if (auto c = f->compiler->as<GNUCompiler *>())
+            {
+                auto pp_command = f->compiler->clone();
+                auto pp_command2 = std::static_pointer_cast<GNUCompiler>(pp_command);
+                gnu_setup(*this, f, c, pp_command2);
             }
             else
                 SW_UNIMPLEMENTED;

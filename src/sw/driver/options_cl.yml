@@ -5,6 +5,11 @@ flags:
         type: bool
         default: true
 
+    preprocess:
+        name: Preprocess
+        flag: E
+        type: bool
+
     input:
         name: InputFile
         type: path
@@ -776,6 +781,7 @@ types:
         using:
             - input
             - compile
+            - preprocess
             - fpic
 
         flags:
