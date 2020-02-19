@@ -41,10 +41,6 @@ CREATE TABLE package_version (
     -- archive version shows how package is packed
     archive_version INTEGER NOT NULL,
 
-    -- packages have same group_number when they are came from the same build script
-    -- (in other words this is spec hash)
-    group_number INTEGER NOT NULL DEFAULT 0,
-    group_number1 INTEGER NOT NULL DEFAULT 0, -- TO BE REMOVED
     prefix INTEGER NOT NULL DEFAULT 2,
     updated TEXT NOT NULL,
     hash TEXT NOT NULL,
@@ -108,14 +104,13 @@ CREATE INDEX ix_package_id ON package_version (package_id ASC);
 -- %split
 --------------------------------------------------------------------------------
 
-ALTER TABLE package_version RENAME COLUMN group_number TO group_number1;
-ALTER TABLE package_version ADD COLUMN group_number INTEGER NOT NULL DEFAULT 0;
+-- removed, do not delete empty split, to prevent version downgrade
 
 --------------------------------------------------------------------------------
 -- %split
 --------------------------------------------------------------------------------
 
-UPDATE package_version SET group_number = 0;
+-- removed, do not delete empty split, to prevent version downgrade
 
 --------------------------------------------------------------------------------
 -- % split - merge '%' and 'split' together when patches are available

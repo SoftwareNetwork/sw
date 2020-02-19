@@ -20,7 +20,7 @@ using PreparedStatement = decltype(((sql::connection*)nullptr)->prepare(*((Selec
 auto selectPackageVersionData = []()
 {
     return
-        select(pkg_ver.packageVersionId, pkg_ver.hash, pkg_ver.flags, pkg_ver.groupNumber, pkg_ver.prefix, pkg_ver.sdir)
+        select(pkg_ver.packageVersionId, pkg_ver.hash, pkg_ver.flags, pkg_ver.prefix, pkg_ver.sdir)
         .from(pkg_ver)
         .where(pkg_ver.packageId == parameter(pkg_ver.packageId) && pkg_ver.version == parameter(pkg_ver.version));
 };

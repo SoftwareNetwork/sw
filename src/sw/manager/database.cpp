@@ -350,8 +350,6 @@ void PackagesDatabase::installPackage(const PackageId &p, const PackageData &d)
         // extended
         pkg_ver.prefix = d.prefix,
         pkg_ver.hash = d.hash,
-        pkg_ver.groupNumber = 0, // old column too
-        pkg_ver.groupNumber1 = 0, // old column
 
         // TODO:
         pkg_ver.archiveVersion = 1,
