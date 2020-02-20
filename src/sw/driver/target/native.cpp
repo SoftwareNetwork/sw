@@ -24,6 +24,7 @@
 #include <primitives/constants.h>
 #include <primitives/emitter.h>
 #include <primitives/debug.h>
+#include <primitives/lock.h>
 #include <pystring.h>
 
 #include <charconv>
@@ -1189,11 +1190,17 @@ void NativeCompiledTarget::createPrecompiledHeader()
             h += "#include \"" + normalize_path(f) + "\"\n";
     }
     pch.header = pch.get_base_pch_path() += ".h";
-    write_file_if_different(pch.header, h);
+    {
+        ScopedFileLock lk(pch.header);
+        write_file_if_different(pch.header, h);
+    }
     File(pch.header, getFs()).setGenerated(true); // prevents resolving issues
 
     pch.source = pch.get_base_pch_path() += ".cpp"; // msvc
-    write_file_if_different(pch.source, "#include \"" + normalize_path(pch.header) + "\"");
+    {
+        ScopedFileLock lk(pch.source);
+        write_file_if_different(pch.source, "#include \"" + normalize_path(pch.header) + "\"");
+    }
     File(pch.source, getFs()).setGenerated(true); // prevents resolving issues
 
     //
