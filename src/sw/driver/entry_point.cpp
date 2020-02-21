@@ -373,13 +373,41 @@ SharedLibraryTarget &PrepareConfigEntryPoint::createTarget(Build &b, const Files
 {
     struct ConfigSharedLibraryTarget : SharedLibraryTarget
     {
-        ConfigSharedLibraryTarget(const FilesSorted &files, const path &storage_dir)
+        ConfigSharedLibraryTarget(const PrepareConfigEntryPoint &ep, const FilesSorted &files, const path &storage_dir)
+            : ep(ep)
         {
             IsSwConfig = true;
             IsSwConfigLocal = files.size() == 1 && !is_under_root(*files.begin(), storage_dir);
         }
 
     private:
+        const PrepareConfigEntryPoint &ep;
+
+        Commands getCommands() const override
+        {
+            // only for msvc?
+            if (getHostOS().is(OSType::Windows))
+            {
+                // set main cmd dependency on config files
+                // otherwise it does not work on windows
+                // link.exe uses pdb file and cl.exe cannot proceed
+                // fatal error C1041: cannot open program database '*.pdb';
+                // if multiple CL.EXE write to the same .PDB file, please use /FS
+                auto c = getCommand();
+                for (auto t : ep.targets)
+                {
+                    auto cmd = t->getCommand();
+                    auto cmds = t->SharedLibraryTarget::getCommands();
+                    for (auto &c2 : cmds)
+                    {
+                        if (c2 != cmd)
+                            c->dependencies.insert(c2);
+                    }
+                }
+            }
+            return SharedLibraryTarget::getCommands();
+        }
+
         path getBinaryParentDir() const override
         {
             if (IsSwConfigLocal)
@@ -389,8 +417,9 @@ SharedLibraryTarget &PrepareConfigEntryPoint::createTarget(Build &b, const Files
     };
 
     auto name = getSelfTargetName(files);
-    auto &lib = b.addTarget<ConfigSharedLibraryTarget>(name, "local", files, b.getContext().getLocalStorage().storage_dir);
+    auto &lib = b.addTarget<ConfigSharedLibraryTarget>(name, "local", *this, files, b.getContext().getLocalStorage().storage_dir);
     tgt = lib.getPackage();
+    targets.insert(&lib);
     return lib;
 }
 

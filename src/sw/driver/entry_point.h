@@ -50,6 +50,7 @@ private:
     mutable Files files_;
     mutable FilesSorted pkg_files_;
     mutable path driver_idir;
+    mutable std::set<SharedLibraryTarget *> targets;
 
     void loadPackages1(Build &) const override;
 
