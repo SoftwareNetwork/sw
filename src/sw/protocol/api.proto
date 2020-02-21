@@ -37,7 +37,7 @@ message ResolvedPackage {
     string hash = 4;
     repeated Dependency dependencies = 5;
     // other
-    int64 group_number = 16;
+    //int64 group_number = 16;
     int32 prefix = 17;
     // int32 archive_type;
     // optional string download_url;
@@ -49,7 +49,7 @@ message ResolvedPackage2 {
     string hash = 3;
     repeated UnresolvedPackage dependencies = 4;
     // other
-    int64 group_number = 16;
+    //int64 group_number = 16;
     int32 prefix = 17;
     // int32 archive_type;
     // optional string download_url;
