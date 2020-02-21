@@ -212,6 +212,13 @@ NativeCompiledTarget::~NativeCompiledTarget()
     // in our case it is nlohmann::json member
 }
 
+path NativeCompiledTarget::getBinaryParentDir() const
+{
+    if (IsSwConfigLocal)
+        return getTargetDirShort(getMainBuild().getBuildDirectory() / "cfg");
+    return Target::getBinaryParentDir();
+}
+
 path NativeCompiledTarget::getOutputFileName(const path &root) const
 {
     path p;

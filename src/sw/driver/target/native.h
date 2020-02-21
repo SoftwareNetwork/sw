@@ -169,6 +169,8 @@ protected:
     bool isStaticLibrary() const override;
     TargetType getRealType() const;
 
+    path getBinaryParentDir() const override;
+
 private:
     CompilerType ct = CompilerType::UnspecifiedCompiler;
     bool already_built = false;
