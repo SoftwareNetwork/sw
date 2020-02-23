@@ -266,7 +266,8 @@ void VSGenerator::generate(const SwBuild &b)
         if (tgts.empty())
             throw SW_RUNTIME_ERROR("empty target");
         ttb[pkg] = tgts;
-        s.settings.insert((*tgts.begin())->getSettings());
+        for (auto &tgt : tgts)
+            s.settings.insert(tgt->getSettings());
     }
 
     UnresolvedPackage compiler = (*s.settings.begin())["native"]["program"]["cpp"].getValue();
