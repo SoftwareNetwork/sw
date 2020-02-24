@@ -2,7 +2,7 @@
 #include <memory>
 
 #include <allheaders.h> // leptonica main header for image io
-#include <baseapi.h> // tesseract main header
+#include <tesseract/baseapi.h> // tesseract main header
 
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
