@@ -72,6 +72,21 @@ static String toCmakeString(sw::ConfigurationType t)
     }
 }
 
+static String pkg2string(const String &p)
+{
+    return boost::to_lower_copy(p);
+}
+
+static String pkg2string(const sw::PackagePath &p)
+{
+    return pkg2string(p.toString());
+}
+
+static String pkg2string(const sw::PackageId &p)
+{
+    return pkg2string(p.toString());
+}
+
 SUBCOMMAND_DECL(integrate)
 {
     auto swctx = createSwContext(options);
@@ -86,6 +101,11 @@ SUBCOMMAND_DECL(integrate)
             throw SW_RUNTIME_ERROR("size() must be 1");
         for (auto &l : lines)
         {
+            for (auto c : l)
+            {
+                if (isalpha(c) && isupper(c))
+                    throw SW_RUNTIME_ERROR("Package name must be in lower case for now. Sorry for inconvenience.");
+            }
             for (auto &i : swctx->addInput(l))
             {
                 sw::InputWithSettings s(*i);
@@ -141,7 +161,7 @@ SUBCOMMAND_DECL(integrate)
             if (tgts.empty())
             {
                 continue;
-                //throw SW_RUNTIME_ERROR("No targets in " + pkg.toString());
+                //throw SW_RUNTIME_ERROR("No targets in " + pkg2string(pkg));
             }
             // filter out predefined targets
             if (b.getContext().getPredefinedTargets().find(pkg) != b.getContext().getPredefinedTargets().end())
@@ -153,7 +173,7 @@ SUBCOMMAND_DECL(integrate)
             if (s["type"] == "native_executable")
                 continue;
 
-            ctx.if_("NOT TARGET " + pkg.toString());
+            ctx.if_("NOT TARGET " + pkg2string(pkg));
 
             // tgt
             auto st = "STATIC";
@@ -163,10 +183,10 @@ SUBCOMMAND_DECL(integrate)
                 st = "SHARED";
             if (s["header_only"] == "true")
                 st = "INTERFACE";
-            ctx.addLine("add_library(" + pkg.toString() + " " + st + " IMPORTED GLOBAL)");
+            ctx.addLine("add_library(" + pkg2string(pkg) + " " + st + " IMPORTED GLOBAL)");
 
             // props
-            ctx.increaseIndent("set_target_properties(" + pkg.toString() + " PROPERTIES");
+            ctx.increaseIndent("set_target_properties(" + pkg2string(pkg) + " PROPERTIES");
 
             // defs
             String defs;
@@ -215,10 +235,10 @@ SUBCOMMAND_DECL(integrate)
 
                 sw::BuildSettings bs(tgt->getSettings());
 
-                ctx.addLine("set_property(TARGET " + pkg.toString() + " APPEND PROPERTY IMPORTED_CONFIGURATIONS " + toCmakeString(bs.Native.ConfigurationType) + ")");
+                ctx.addLine("set_property(TARGET " + pkg2string(pkg) + " APPEND PROPERTY IMPORTED_CONFIGURATIONS " + toCmakeString(bs.Native.ConfigurationType) + ")");
 
                 // props2
-                ctx.increaseIndent("set_target_properties(" + pkg.toString() + " PROPERTIES");
+                ctx.increaseIndent("set_target_properties(" + pkg2string(pkg) + " PROPERTIES");
 
                 // TODO: detect C/CXX language from target files
                 ctx.addLine("IMPORTED_LINK_INTERFACE_LANGUAGES_" + toCmakeString(bs.Native.ConfigurationType) + " \"CXX\"");
@@ -238,7 +258,7 @@ SUBCOMMAND_DECL(integrate)
             ctx.emptyLines();
 
             // build dep
-            ctx.addLine("add_dependencies(" + pkg.toString() + " sw_build_dependencies)");
+            ctx.addLine("add_dependencies(" + pkg2string(pkg) + " sw_build_dependencies)");
             ctx.emptyLines();
 
             if (pkg.getVersion().isVersion())
@@ -246,9 +266,9 @@ SUBCOMMAND_DECL(integrate)
                 for (auto i = pkg.getVersion().getLevel() - 1; i >= 0; i--)
                 {
                     if (i)
-                        ctx.addLine("add_library(" + pkg.getPath().toString() + "-" + pkg.getVersion().toString(i) + " ALIAS " + pkg.toString() + ")");
+                        ctx.addLine("add_library(" + pkg2string(pkg.getPath()) + "-" + pkg.getVersion().toString(i) + " ALIAS " + pkg2string(pkg) + ")");
                     else
-                        ctx.addLine("add_library(" + pkg.getPath().toString() + " ALIAS " + pkg.toString() + ")");
+                        ctx.addLine("add_library(" + pkg2string(pkg.getPath()) + " ALIAS " + pkg2string(pkg) + ")");
                 }
             }
 
@@ -262,7 +282,7 @@ SUBCOMMAND_DECL(integrate)
             if (tgts.empty())
             {
                 continue;
-                //throw SW_RUNTIME_ERROR("No targets in " + pkg.toString());
+                //throw SW_RUNTIME_ERROR("No targets in " + pkg2string(pkg));
             }
             // filter out predefined targets
             if (b.getContext().getPredefinedTargets().find(pkg) != b.getContext().getPredefinedTargets().end())
@@ -275,7 +295,7 @@ SUBCOMMAND_DECL(integrate)
                 continue;
 
             for (auto &[k,v] : s["dependencies"]["link"].getSettings())
-                ctx.addLine("target_link_libraries(" + pkg.toString() + " INTERFACE " + k + ")");
+                ctx.addLine("target_link_libraries(" + pkg2string(pkg) + " INTERFACE " + k + ")");
         }
         write_file_if_different(options.options_integrate.integrate_cmake_deps.parent_path() / "CMakeLists.txt", ctx.getText());
 
@@ -298,7 +318,7 @@ SUBCOMMAND_DECL(integrate)
             if (tgts.empty())
             {
                 continue;
-                //throw SW_RUNTIME_ERROR("No targets in " + pkg.toString());
+                //throw SW_RUNTIME_ERROR("No targets in " + pkg2string(pkg));
             }
             // filter out predefined targets
             if (b.getContext().getPredefinedTargets().find(pkg) != b.getContext().getPredefinedTargets().end())
@@ -310,14 +330,14 @@ SUBCOMMAND_DECL(integrate)
             if (s["type"] == "native_executable")
                 continue;
 
-            ctx.addLine("# " + pkg.toString());
+            ctx.addLine("# " + pkg2string(pkg));
             ctx.increaseIndent("for lib in [");
             for (auto i = pkg.getVersion().getLevel(); i >= 0; i--)
             {
                 if (i)
-                    ctx.addLine("'" + pkg.getPath().toString() + "-" + pkg.getVersion().toString(i) + "',");
+                    ctx.addLine("'" + pkg2string(pkg.getPath()) + "-" + pkg.getVersion().toString(i) + "',");
                 else
-                    ctx.addLine("'" + pkg.getPath().toString() + "',");
+                    ctx.addLine("'" + pkg2string(pkg.getPath()) + "',");
             }
             ctx.decreaseIndent("]:");
             ctx.increaseIndent();
@@ -334,7 +354,7 @@ SUBCOMMAND_DECL(integrate)
 
                 auto t = b.getTargets().find(nt.first, nt.second);
                 if (!t)
-                    throw SW_RUNTIME_ERROR("no such target: " + nt.first.toString());
+                    throw SW_RUNTIME_ERROR("no such target: " + pkg2string(nt.first));
 
                 const auto &s = t->getInterfaceSettings();
 
