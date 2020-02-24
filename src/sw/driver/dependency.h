@@ -38,13 +38,17 @@ struct SW_DRIVER_CPP_API DependencyData : IDependency
     operator bool() const { return target; }
     bool isResolved() const override { return operator bool(); }
 
+    PackageId getResolvedPackage() const;
+
+    TargetSetting &getOption(const String &name) { return getOptions()[name]; }
+    const TargetSetting &getOption(const String &name) const { return getOptions()[name]; }
+    void setOption(const String &name, const TargetSetting &value) { getOption(name) = value; }
+
     TargetSettings &getOptions() { return getSettings()["options"].getSettings(); }
     const TargetSettings &getOptions() const { return getSettings()["options"].getSettings(); }
 
     TargetSettings &getSettings() { return settings; }
     const TargetSettings &getSettings() const override { return settings; }
-
-    PackageId getResolvedPackage() const;
 
 private:
     const ITarget *target = nullptr;
