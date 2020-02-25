@@ -81,6 +81,7 @@ void build(Solution &s)
             manager.Public += "pub.egorpugin.primitives.win32helpers-master"_dep;
 
         manager += "src/sw/manager/.*"_rr;
+        manager.Public += "src/sw/manager/manager.natvis";
         manager.Public.Definitions["VERSION_MAJOR"] += std::to_string(manager.getPackage().getVersion().getMajor());
         manager.Public.Definitions["VERSION_MINOR"] += std::to_string(manager.getPackage().getVersion().getMinor());
         manager.Public.Definitions["VERSION_PATCH"] += std::to_string(manager.getPackage().getVersion().getPatch());
