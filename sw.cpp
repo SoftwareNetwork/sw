@@ -287,21 +287,7 @@ void build(Solution &s)
         if (client.getCompilerType() == CompilerType::MSVC)
             client.CompileOptions.push_back("-wd4275");
 
-        {
-            auto &create_git_rev = client.addTarget<ExecutableTarget>("create_git_rev");
-            create_git_rev.CPPVersion = CPPLanguageStandard::CPP17;
-            create_git_rev += "src/sw/tools/create_git_rev.*"_rr;
-            create_git_rev +=
-                "pub.egorpugin.primitives.command-master"_dep,
-                "pub.egorpugin.primitives.sw.main-master"_dep;
-
-            auto c = client.addCommand();
-            c << cmd::prog(create_git_rev)
-                << sw::resolveExecutable("git")
-                << client.SourceDir
-                << cmd::out("gitrev.h");
-            c.c->always = true;
-        }
+        create_git_revision("pub.egorpugin.primitives.tools.create_git_rev-master"_dep, client);
     }
 
     if (s.getExternalVariables()["with-gui"] != "true")

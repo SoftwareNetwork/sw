@@ -41,6 +41,7 @@
 #include <primitives/sw/settings_program_name.h>
 #include <primitives/sw/main.h>
 #include <primitives/thread.h>
+#include <primitives/git_rev.h>
 
 #include <iostream>
 
@@ -423,9 +424,6 @@ void setup_log(const std::string &log_level, OPTIONS_ARG_CONST, bool simple)
     SW_UNIMPLEMENTED;
 }*/
 
-String getBuildTime();
-String getGitRev();
-
 EXPORT_FROM_EXECUTABLE
 std::string getVersionString()
 {
@@ -434,8 +432,8 @@ std::string getVersionString()
     s += " version ";
     s += PACKAGE_VERSION;
     s += "\n";
-    s += getGitRev();
-    s += "assembled on " + getBuildTime();
+    s += primitives::git_rev::getGitRevision();
+    s += "assembled on " + primitives::git_rev::getBuildTime();
     return s;
 }
 
