@@ -119,6 +119,9 @@ command_line:
         list: true
         desc: Targets to ignore
 
+    reproducible_build:
+        desc: Perform reproducible build.
+
     Dvariables:
         option: D
         type: String

@@ -280,6 +280,8 @@ std::vector<sw::TargetSettings> createSettings(sw::SwContext &swctx, const Optio
 
     if (options.static_dependencies)
         initial_settings["static-deps"] = "true";
+    if (options.reproducible_build)
+        initial_settings["reproducible-build"] = "true";
 
     std::vector<sw::TargetSettings> settings;
     settings.push_back(initial_settings);

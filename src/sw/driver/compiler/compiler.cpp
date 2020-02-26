@@ -212,6 +212,8 @@ void VisualStudioCompiler::prepareCommand1(const Target &t)
         Output.clear();
     }
 
+    ReproducibleBuild = t.isReproducibleBuild();
+
     getCommandLineOptions<VisualStudioCompilerOptions>(cmd.get(), *this);
     if (preprocessed_file)
         addCompileOptions(*cmd);
@@ -252,6 +254,8 @@ void VisualStudioASMCompiler::prepareCommand1(const Target &t)
     }
     if (Output)
         cmd->working_directory = Output().parent_path();
+
+    ReproducibleBuild = t.isReproducibleBuild();
 
     //if (cmd->file.empty())
         //return nullptr;
@@ -606,6 +610,8 @@ void VisualStudioLibraryTool::prepareCommand1(const Target &t)
 
     ((VisualStudioLibraryTool*)this)->VisualStudioLibraryToolOptions::LinkDirectories() = gatherLinkDirectories();
 
+    ReproducibleBuild = t.isReproducibleBuild();
+
     getCommandLineOptions<VisualStudioLibraryToolOptions>(cmd.get(), *this);
     addEverything(*cmd);
     getAdditionalOptions(cmd.get());
@@ -643,6 +649,8 @@ void VisualStudioLinker::prepareCommand1(const Target &t)
     }
 
     ((VisualStudioLibraryTool*)this)->VisualStudioLibraryToolOptions::LinkDirectories() = gatherLinkDirectories();
+
+    ReproducibleBuild = t.isReproducibleBuild();
 
     getCommandLineOptions<VisualStudioLibraryToolOptions>(cmd.get(), *this);
     addEverything(*cmd);

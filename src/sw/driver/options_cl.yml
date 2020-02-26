@@ -47,6 +47,12 @@ types:
     vscomn:
         name: VisualStudioCommonOptions
 
+        flags:
+            msvc_reproducible_build:
+                name: ReproducibleBuild
+                flag: Brepro
+                type: bool
+
     vscomncl:
         name: VisualStudioCommonCompilerOptions
         parent: VisualStudioCommonOptions

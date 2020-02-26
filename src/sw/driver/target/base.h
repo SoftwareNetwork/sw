@@ -354,6 +354,7 @@ public:
     virtual TargetType getType() const { return TargetType::Unspecified; }
     String getTypeName() const { return toString(getType()); }
     bool hasSameProject(const ITarget &t) const;
+    bool isReproducibleBuild() const { return ReproducibleBuild; }
 
     // tests
     // TODO: implement some of https://cmake.org/cmake/help/latest/manual/cmake-properties.7.html#properties-on-tests
@@ -372,6 +373,7 @@ protected:
     SW_MULTIPASS_VARIABLE(init_pass);
     mutable bool deps_resolved = false;
     mutable TargetSettings interface_settings;
+    bool ReproducibleBuild = false;
 
     //Target(const Target &);
     CommandStorage *getCommandStorage() const;

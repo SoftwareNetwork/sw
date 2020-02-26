@@ -562,6 +562,8 @@ bool Target::init()
 {
     if (ts["name"])
         provided_cfg = ts["name"].getValue();
+    if (ts["reproducible-build"])
+        ReproducibleBuild = ts["reproducible-build"] == "true";
 
     ts_export = ts;
     //DEBUG_BREAK_IF(getOptions()["alligned-allocator"] == "1");
