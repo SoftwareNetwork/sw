@@ -452,7 +452,8 @@ path Target::getLocalOutputBinariesDirectory() const
         d = getMainBuild().getBuildDirectory() / "out" / getConfig();
     try
     {
-        write_file(d / "cfg.json", nlohmann::json::parse(ts.toString(TargetSettings::Json)).dump(4));
+        if (!fs::exists(d / "cfg.json"))
+            write_file(d / "cfg.json", nlohmann::json::parse(ts.toString(TargetSettings::Json)).dump(4));
     }
     catch (...) {} // write once
     return d;
