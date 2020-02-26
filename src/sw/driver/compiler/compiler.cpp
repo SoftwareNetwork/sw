@@ -398,6 +398,8 @@ void ClangClCompiler::prepareCommand1(const Target &t)
         Output.clear();
     }
 
+    ReproducibleBuild = t.isReproducibleBuild();
+
     getCommandLineOptions<VisualStudioCompilerOptions>(cmd.get(), *this);
     getCommandLineOptions<ClangClOptions>(cmd.get(), *this/*, "-Xclang"*/);
     if (preprocessed_file)
