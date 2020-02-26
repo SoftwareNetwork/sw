@@ -2233,6 +2233,20 @@ void NativeCompiledTarget::prepare_pass1()
         CPPVersion = CPPLanguageStandard::CPP2a;
     }
 
+    if (ReproducibleBuild)
+    {
+        if (isClangFamily(getCompilerType()) || getCompilerType() == CompilerType::GNU)
+        {
+            // use pkg add timestamp later
+            CompileOptions.push_back("-Wno-builtin-macro-redefined");
+            // we set to empty string because
+            // auto v = __DATE__; will cause an error in case -D__DATE__=
+            add("__DATE__=\"\""_def);
+            add("__TIME__=\"\""_def);
+            add("__TIMESTAMP__=\"\""_def);
+        }
+    }
+
     findSources();
 
     if (!Publish)

@@ -444,6 +444,12 @@ void GNUASMCompiler::prepareCommand1(const Target &t)
 
     if (!InputFile && !assembly)
         addEverything(*cmd);
+
+    if (t.isReproducibleBuild())
+    {
+        cmd->push_back("-frandom-seed=0");
+        cmd->environment["SOURCE_DATE_EPOCH"] = "0";
+    }
 }
 
 SW_DEFINE_PROGRAM_CLONE(GNUASMCompiler)
@@ -499,6 +505,12 @@ void GNUCompiler::prepareCommand1(const Target &t)
     getCommandLineOptions<GNUOptions>(cmd.get(), *this);
     addEverything(*this->cmd);
     getCommandLineOptions<GNUOptions>(cmd.get(), *this, "", true);
+
+    if (t.isReproducibleBuild())
+    {
+        cmd->push_back("-frandom-seed=0");
+        cmd->environment["SOURCE_DATE_EPOCH"] = "0";
+    }
 }
 
 void GNUCompiler::setOutputFile(const path &output_file)
@@ -807,6 +819,11 @@ void GNULinker::prepareCommand1(const Target &t)
     getCommandLineOptions<GNULinkerOptions>(cmd.get(), *this);
     addEverything(*cmd);
     //getAdditionalOptions(cmd.get());
+
+    if (t.isReproducibleBuild())
+    {
+        cmd->environment["ZERO_AR_DATE"] = "1";
+    }
 }
 
 SW_DEFINE_PROGRAM_CLONE(GNULibrarian)
@@ -874,6 +891,11 @@ void GNULibrarian::prepareCommand1(const Target &t)
     getCommandLineOptions<GNULibrarianOptions>(cmd.get(), *this);
     //addEverything(*cmd); // actually librarian does not need LINK options
     //getAdditionalOptions(cmd.get());
+
+    if (t.isReproducibleBuild())
+    {
+        cmd->environment["ZERO_AR_DATE"] = "1";
+    }
 }
 
 SW_DEFINE_PROGRAM_CLONE(RcTool)
