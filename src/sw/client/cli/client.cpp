@@ -178,6 +178,14 @@ int setup_main(const Strings &args, OPTIONS_ARG)
         for (auto &a : args)
             cmdline += a + " ";
         LOG_TRACE(logger, "command line:\n" + cmdline);
+
+        if (Settings::get_user_settings().record_commands)
+        {
+            auto hfn = ".sw_history";
+            append_file(get_home_directory() / hfn, cmdline + "\n");
+            if (Settings::get_user_settings().record_commands_in_current_dir)
+                append_file(path(".sw") / hfn, cmdline + "\n");
+        }
     }
 
     // after log initialized

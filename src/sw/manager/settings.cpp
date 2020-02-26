@@ -85,6 +85,8 @@ void Settings::load_main(const yaml &root, const SettingsType type)
     }
 
     YAML_EXTRACT_AUTO(disable_update_checks);
+    YAML_EXTRACT_AUTO(record_commands);
+    YAML_EXTRACT_AUTO(record_commands_in_current_dir);
     YAML_EXTRACT(storage_dir, String);
 
     auto &p = root["proxy"];
