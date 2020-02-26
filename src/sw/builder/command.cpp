@@ -180,14 +180,16 @@ size_t Command::getHash1() const
     // must sort arguments first
     // because some command may generate args in unspecified order
     // actually no, we do not allow unspecified order anymore
-    /*std::set<String> args_sorted;
+    // actually we have different deps order -> different defs, idir order, libs order
+    // FIXME: ^
+    std::set<String> args_sorted;
     Strings sa;
     for (auto &a : arguments)
         args_sorted.insert(a->toString());
     for (auto &a : args_sorted)
-        hash_combine(h, std::hash<String>()(a));*/
-    for (auto &a : arguments)
-        hash_combine(h, std::hash<String>()(a->toString()));
+        hash_combine(h, std::hash<String>()(a));
+    //for (auto &a : arguments)
+        //hash_combine(h, std::hash<String>()(a->toString()));
 
     // redirections are also considered as arguments
     if (!in.file.empty())
