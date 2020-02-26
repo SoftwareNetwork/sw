@@ -373,6 +373,7 @@ protected:
     SW_MULTIPASS_VARIABLE(init_pass);
     mutable bool deps_resolved = false;
     mutable TargetSettings interface_settings;
+    // http://blog.llvm.org/2019/11/deterministic-builds-with-clang-and-lld.html
     bool ReproducibleBuild = false;
 
     //Target(const Target &);
