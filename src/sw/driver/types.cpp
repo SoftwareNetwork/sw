@@ -21,6 +21,14 @@ bool isClangFamily(CompilerType t)
            t == CompilerType::ClangCl;
 }
 
+bool isMsvcFamily(CompilerType t)
+{
+    return
+        t == CompilerType::MSVC ||
+        t == CompilerType::ClangCl
+        ;
+}
+
 bool Assigner::canProceed(TargetOptions &r) const
 {
     if (allow)

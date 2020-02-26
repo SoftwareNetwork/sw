@@ -38,8 +38,13 @@ enum class CompilerType
     GCC = GNU,
 };
 
+// any clang (clang, clangcl, appleclang)
 SW_DRIVER_CPP_API
 bool isClangFamily(CompilerType);
+
+// msvc, clangcl
+SW_DRIVER_CPP_API
+bool isMsvcFamily(CompilerType);
 
 enum class LinkerType
 {
