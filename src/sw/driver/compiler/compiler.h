@@ -339,7 +339,7 @@ struct SW_DRIVER_CPP_API NativeLinker : Linker,
 
     using Linker::Linker;
 
-    virtual void setObjectFiles(const Files &files) = 0; // actually this is addObjectFiles()
+    virtual void setObjectFiles(const FilesOrdered &files) = 0; // actually this is addObjectFiles()
     virtual void setInputLibraryDependencies(const FilesOrdered &files) {}
     virtual void setLinkLibraries(const FilesOrdered &in) {}
 
@@ -359,7 +359,7 @@ struct SW_DRIVER_CPP_API VisualStudioLibraryTool : VisualStudio,
 {
     using NativeLinker::NativeLinker;
 
-    void setObjectFiles(const Files &files) override;
+    void setObjectFiles(const FilesOrdered &files) override;
     void setOutputFile(const path &out) override;
     void setImportLibrary(const path &out) override;
 
@@ -422,7 +422,7 @@ struct SW_DRIVER_CPP_API GNULinker : GNULibraryTool,
     void getAdditionalOptions(driver::Command *c) const override;
 
     void setInputLibraryDependencies(const FilesOrdered &files) override;
-    void setObjectFiles(const Files &files) override;
+    void setObjectFiles(const FilesOrdered &files) override;
     void setOutputFile(const path &out) override;
     void setImportLibrary(const path &out) override;
     void setLinkLibraries(const FilesOrdered &in) override;
@@ -441,7 +441,7 @@ struct SW_DRIVER_CPP_API GNULibrarian : GNULibraryTool,
 
     void getAdditionalOptions(driver::Command *c) const override;
 
-    void setObjectFiles(const Files &files) override;
+    void setObjectFiles(const FilesOrdered &files) override;
     void setOutputFile(const path &out) override;
     void setImportLibrary(const path &out) override;
 
@@ -577,7 +577,7 @@ struct SW_DRIVER_CPP_API DCompiler : NativeLinker,
 
     void setObjectDir(const path &dir);
     void setSourceFile(const path &input_file);
-    void setObjectFiles(const Files &files) override {}
+    void setObjectFiles(const FilesOrdered &files) override {}
 
     path getOutputFile() const override;
     void setOutputFile(const path &out) override;

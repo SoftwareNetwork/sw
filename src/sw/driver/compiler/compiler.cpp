@@ -560,9 +560,9 @@ FilesOrdered NativeLinker::gatherLinkLibraries(bool system) const
     return dirs;
 }
 
-void VisualStudioLibraryTool::setObjectFiles(const Files &files)
+void VisualStudioLibraryTool::setObjectFiles(const FilesOrdered &files)
 {
-    InputFiles().insert(files.begin(), files.end());
+    InputFiles().insert(InputFiles().end(), files.begin(), files.end());
 }
 
 void VisualStudioLibraryTool::setOutputFile(const path &out)
@@ -669,9 +669,9 @@ void VisualStudioLibrarian::getAdditionalOptions(driver::Command *cmd) const
 
 SW_DEFINE_PROGRAM_CLONE(GNULinker)
 
-void GNULinker::setObjectFiles(const Files &files)
+void GNULinker::setObjectFiles(const FilesOrdered &files)
 {
-    InputFiles().insert(files.begin(), files.end());
+    InputFiles().insert(InputFiles().end(), files.begin(), files.end());
 }
 
 static auto add_prefix_and_suffix(const path &p, const String &prefix, const String &ext)
@@ -815,9 +815,9 @@ void GNULinker::prepareCommand1(const Target &t)
 
 SW_DEFINE_PROGRAM_CLONE(GNULibrarian)
 
-void GNULibrarian::setObjectFiles(const Files &files)
+void GNULibrarian::setObjectFiles(const FilesOrdered &files)
 {
-    InputFiles().insert(files.begin(), files.end());
+    InputFiles().insert(InputFiles().end(), files.begin(), files.end());
 }
 
 void GNULibrarian::setOutputFile(const path &out)
@@ -979,7 +979,7 @@ void VisualStudioCSharpCompiler::setOutputFile(const path &output_file)
 
 void VisualStudioCSharpCompiler::addSourceFile(const path &input_file)
 {
-    InputFiles().insert(input_file);
+    InputFiles().push_back(input_file);
 }
 
 SW_DEFINE_PROGRAM_CLONE(RustCompiler)
@@ -1015,7 +1015,7 @@ void GoCompiler::setOutputFile(const path &output_file)
 
 void GoCompiler::setSourceFile(const path &input_file)
 {
-    InputFiles().insert(input_file);
+    InputFiles().push_back(input_file);
 }
 
 SW_DEFINE_PROGRAM_CLONE(FortranCompiler)
@@ -1033,7 +1033,7 @@ void FortranCompiler::setOutputFile(const path &output_file)
 
 void FortranCompiler::setSourceFile(const path &input_file)
 {
-    InputFiles().insert(input_file);
+    InputFiles().push_back(input_file);
 }
 
 SW_DEFINE_PROGRAM_CLONE(JavaCompiler)
@@ -1056,7 +1056,7 @@ void JavaCompiler::setOutputDir(const path &output_dir)
 
 void JavaCompiler::setSourceFile(const path &input_file)
 {
-    InputFiles().insert(input_file);
+    InputFiles().push_back(input_file);
 }
 
 SW_DEFINE_PROGRAM_CLONE(KotlinCompiler)
@@ -1074,7 +1074,7 @@ void KotlinCompiler::setOutputFile(const path &output_file)
 
 void KotlinCompiler::setSourceFile(const path &input_file)
 {
-    InputFiles().insert(input_file);
+    InputFiles().push_back(input_file);
 }
 
 SW_DEFINE_PROGRAM_CLONE(DCompiler)
@@ -1102,7 +1102,7 @@ void DCompiler::setOutputFile(const path &output_file)
 
 void DCompiler::setSourceFile(const path &input_file)
 {
-    InputFiles().insert(input_file);
+    InputFiles().push_back(input_file);
 }
 
 }

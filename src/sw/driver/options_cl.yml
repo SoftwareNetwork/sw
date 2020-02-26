@@ -18,7 +18,7 @@ flags:
 
     ifiles:
         name: InputFiles
-        type: Files
+        type: FilesOrdered
         properties:
             - input_dependency
 

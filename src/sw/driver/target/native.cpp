@@ -3031,9 +3031,9 @@ void NativeCompiledTarget::prepare_pass5()
             if (Linker->Type == LinkerType::LLD)
             {
                 if (c->GenerateDebugInformation)
-                    c->InputFiles().insert("msvcrtd.lib");
+                    c->InputFiles().push_back("msvcrtd.lib");
                 else
-                    c->InputFiles().insert("msvcrt.lib");
+                    c->InputFiles().push_back("msvcrt.lib");
             }
         }
     }
@@ -3297,7 +3297,9 @@ void NativeCompiledTarget::prepare_pass8()
 
     if (getSelectedTool())
     {
-        getSelectedTool()->setObjectFiles(obj);
+        FilesOrdered files(obj.begin(), obj.end());
+        std::sort(files.begin(), files.end());
+        getSelectedTool()->setObjectFiles(files);
         getSelectedTool()->setInputLibraryDependencies(O1);
     }
 
@@ -3410,7 +3412,9 @@ void NativeCompiledTarget::processCircular(Files &obj)
 
     if (!link_exe->ModuleDefinitionFile)
     {
-        Librarian->setObjectFiles(obj);
+        FilesOrdered files(obj.begin(), obj.end());
+        std::sort(files.begin(), files.end());
+        Librarian->setObjectFiles(files);
     }
     else
     {
