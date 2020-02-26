@@ -832,10 +832,6 @@ static void detectWindowsClang(DETECT_ARGS)
         auto p = std::make_shared<SimpleProgram>(s);
         p->file = bin_llvm_path / "clang-cl.exe";
         //C->file = base_llvm_path / "msbuild-bin" / "cl.exe";
-        // clangcl is able to find VC STL itself
-        // also we could provide command line arg -fms-compat...=19.16 19.20 or smth like that
-        //COpts2.System.IncludeDirectories.insert(bin_llvm_path / "lib" / "clang" / C->getVersion().toString() / "include");
-        //COpts2.System.CompileOptions.push_back("-Wno-everything");
         if (!fs::exists(p->file))
         {
             auto f = resolveExecutable("clang-cl");
@@ -851,11 +847,14 @@ static void detectWindowsClang(DETECT_ARGS)
             auto v = getVersion(s, p->file);
             auto &c = addProgram(s, PackageId("org.LLVM.clangcl", v), {}, p);
 
+            auto c2 = p->getCommand();
+            c2->push_back("-X"); // prevents include dirs autodetection
             if (colored_output)
             {
-                auto c2 = p->getCommand();
-                c2->push_back("-Xclang,-fcolor-diagnostics");
-                c2->push_back("-Xclang,-fansi-escape-codes");
+                c2->push_back("-Xclang");
+                c2->push_back("-fcolor-diagnostics");
+                c2->push_back("-Xclang");
+                c2->push_back("-fansi-escape-codes");
             }
         }
     }
@@ -876,6 +875,10 @@ static void detectWindowsClang(DETECT_ARGS)
         {
             auto v = getVersion(s, p->file);
             addProgram(s, PackageId("org.LLVM.lld", v), {}, p);
+
+            // this must go into lld-link
+            //auto c2 = p->getCommand();
+            //c2->push_back("-lldignoreenv"); // prevents libs dirs autodetection (from msvc)
         }
     }
 
