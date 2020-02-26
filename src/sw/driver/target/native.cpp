@@ -189,6 +189,14 @@ void NativeTarget::setOutputFile()
         File(f, getFs()).setGenerated(true);
     if (auto f = getOutputFile(); !f.empty())
         File(f, getFs()).setGenerated(true);
+
+    if (!isLocal())
+    try
+    {
+        if (!fs::exists(BinaryDir.parent_path() / "cfg.json"))
+            write_file(BinaryDir.parent_path() / "cfg.json", nlohmann::json::parse(ts.toString(TargetSettings::Json)).dump(4));
+    }
+    catch (...) {} // write once
 }
 
 path NativeTarget::getOutputFileName(const path &root) const
