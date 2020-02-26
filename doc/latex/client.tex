@@ -581,6 +581,16 @@ qmake & \\
 Raw bootstrap is used to bootstrap programs without sw.
 
 
+\section{Reproducible builds}
+
+SW supports reproducible builds.
+Invoke your commands with `--reproducible-build` parameter.
+Binaries MUST BE the same on all systems assuming you compare identical build configs.
+
+\begin{command}
+sw --reproducible-build ... build
+\end{command}
+
 
 \section{Command Line Reference}
 
