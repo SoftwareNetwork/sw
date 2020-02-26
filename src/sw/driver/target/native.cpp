@@ -2245,6 +2245,23 @@ void NativeCompiledTarget::prepare_pass1()
             add("__TIME__=\"\""_def);
             add("__TIMESTAMP__=\"\""_def);
         }
+
+        if (getCompilerType() == CompilerType::GNU)
+        {
+            CompileOptions.push_back("-ffile-prefix-map="
+                + normalize_path(getContext().getLocalStorage().storage_dir)
+                + "="
+                // on windows we use the same path, but the root disk is also must be provided
+                // not here, but in general
+                // our windows paths are REALLY OK with starting slash '/' too
+#define SW_DEFAULT_INSTALLATION_PATH "/sw/storage"
+                // make a global definition and later a setting
+                // this will be the default sw storage path on clean installations
+                + SW_DEFAULT_INSTALLATION_PATH
+            );
+        }
+
+        // TODO: for *nix we probably must strip (debug) symbols also
     }
 
     findSources();
