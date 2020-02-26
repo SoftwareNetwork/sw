@@ -382,12 +382,6 @@ void ClangClCompiler::prepareCommand1(const Target &t)
     if (Output)
         cmd->working_directory = Output().parent_path();
 
-    add_args(*cmd, getCStdOption(dynamic_cast<const NativeCompiledTarget&>(t).CVersion,
-        dynamic_cast<const NativeCompiledTarget&>(t).CExtensions));
-    add_args(*cmd, getCppStdOption(CPPStandard(), dynamic_cast<const NativeCompiledTarget&>(t).CPPExtensions,
-        true, getVersion(swctx, file)));
-    CPPStandard.skip = true;
-
     if (PreprocessToFile)
     {
         auto ext = ".i";
