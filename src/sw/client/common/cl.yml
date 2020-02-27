@@ -3,339 +3,343 @@ settings:
     generate_struct: true
 
 command_line:
-    storage_dir:
-        option: storage-dir
-        type: path
-
-    curl_verbose:
-    ignore_ssl_checks:
-
-
-    # from libs
-    default_remote:
-        option: r
-        type: String
-        external: true
-        description: Select default remote
-
-    allow_cygwin_hosts:
-        option: host-cygwin
-        external: true
-        description: When on cygwin, allow it as host
-
-    do_not_remove_bad_module:
-        external: true
-        description: When on cygwin, allow it as host
-
-    use_saved_configs:
-        option: usc
-        #default_value: true
-
     #
-    save_failed_commands:
-        external: true
-        aliases: sfc
-    save_all_commands:
-        external: true
-        aliases: sac
-    save_executed_commands:
-        external: true
-        aliases: sec
+    subcommand:
+        name: AllSubCommands
 
-    # explain
-    explain_outdated:
-        external: true
-        description: Explain outdated commands
-    explain_outdated_full:
-        external: true
-        description: Explain outdated commands with more info
+        command_line:
+            storage_dir:
+                option: storage-dir
+                type: path
 
-    save_command_format:
-        type: String
-        external: true
-        description: Explicitly set saved command format (bat or sh)
+            curl_verbose:
+            ignore_ssl_checks:
 
-    debug_configs:
-        external: true
-        description: Build configs in debug mode
+            # from libs
+            default_remote:
+                option: r
+                type: String
+                external: true
+                description: Select default remote
 
-    ignore_source_files_errors:
-        external: true
-        description: Useful for debugging
+            allow_cygwin_hosts:
+                option: host-cygwin
+                external: true
+                description: When on cygwin, allow it as host
 
-    do_not_mangle_object_names:
-        external: true
+            do_not_remove_bad_module:
+                external: true
+                description: When on cygwin, allow it as host
 
-    standalone:
-        external: true
-        default_value: true
-        description: Build standalone binaries
-        aliases: sa
+            use_saved_configs:
+                option: usc
+                #default_value: true
 
-    # checks
-    checks_single_thread:
-        option: checks-st
-        external: true
-        description: Perform checks in one thread (for cc)
-    print_checks:
-        external: true
-        description: Save extended checks info to file
-    wait_for_cc_checks:
-        external: true
-        description: Do not exit on missing cc checks, wait for user input
-    cc_checks_command:
-        type: String
-        external: true
-        description: Automatically execute cc checks command
+            #
+            save_failed_commands:
+                external: true
+                aliases: sfc
+            save_all_commands:
+                external: true
+                aliases: sac
+            save_executed_commands:
+                external: true
+                aliases: sec
 
+            # explain
+            explain_outdated:
+                external: true
+                description: Explain outdated commands
+            explain_outdated_full:
+                external: true
+                description: Explain outdated commands with more info
 
-    # build stuff
+            save_command_format:
+                type: String
+                external: true
+                description: Explicitly set saved command format (bat or sh)
 
-    #cl::opt<bool> dry_run("n", cl::desc("Dry run"));
+            debug_configs:
+                external: true
+                description: Build configs in debug mode
 
-    build_always:
-        option: B
-        desc: Build always
-    skip_errors:
-        option: k
-        type: int
-        desc: Skip errors
-    time_trace:
-        desc: Record chrome time trace events
+            ignore_source_files_errors:
+                external: true
+                description: Useful for debugging
 
-    show_output:
-    write_output_to_file:
+            do_not_mangle_object_names:
+                external: true
 
-    #//static cl::opt<bool> print_graph("print-graph", cl::desc("Print file with build graph"));
+            standalone:
+                external: true
+                default_value: true
+                description: Build standalone binaries
+                aliases: sa
 
-    targets_to_build:
-        option: target
-        type: String
-        list: true
-        desc: Targets to build
-    targets_to_ignore:
-        option: exclude-target
-        type: String
-        list: true
-        desc: Targets to ignore
-
-    reproducible_build:
-        desc: Perform reproducible build.
-
-    Dvariables:
-        option: D
-        type: String
-        list: true
-        desc: Input variables
-        prefix: true
-        zero_or_more: true
-
-    #////////////////////////////////////////////////////////////////////////////////
-    #//
-    #// build configs
-    #//
-    #////////////////////////////////////////////////////////////////////////////////
-
-    #//static cl::opt<bool> append_configs("append-configs", cl::desc("Append configs for generation"));
-
-    os:
-        type: String
-        list: true
-        comma_separated: true
-        desc: Set build target os
-    compiler:
-        type: String
-        list: true
-        comma_separated: true
-        desc: Set compiler
-    configuration:
-        type: String
-        list: true
-        comma_separated: true
-        desc: |-
-            Set build configuration.
-            Allowed values:
-                - debug, d
-                - release, r
-                - releasewithdebuginformation, releasewithdebinfo, rwdi
-                - minimalsizerelease, minsizerel, msr
-            Default is release.
-            Specify multiple using a comma: "d,r".
-        aliases: config
-    platform:
-        type: String
-        list: true
-        comma_separated: true
-        desc: |
-            Set build platform.
-            Examples: x86, x64, arm, arm64
-        aliases: arch
-
-    #// rename to stdc, stdcpp?
-    libc:
-        type: String
-        list: true
-        comma_separated: true
-        desc: Set build libc
-    libcpp:
-        type: String
-        list: true
-        comma_separated: true
-        desc: Set build libcpp
-
-    static_dependencies:
-        desc: Build static dependencies of inputs
-        aliases: static-deps
-
-    build_name:
-        type: String
-        desc: Set meaningful build name instead of hash
-    config_name:
-        list: true
-        type: String
-        desc: Set meaningful config names instead of hash
-        comma_separated: true
-
-    #// -setting k1=v1,k2=v2,k3="v3,v3" -setting k4=v4,k5,k6 etc.
-    #// settings in one setting applied simultaneosly
-    #// settings in different settings are multiplied
-    #// k=v assigns value to dot separated key
-    #// complex.key.k1 means s["complex"]["key"]["k1"]
-    #// k= or k="" means empty value
-    #// k means reseted value
-    settings:
-        type: String
-        list: true
-        desc: Set settings directly
-        zero_or_more: true
-
-    #// toolchain file
-    settings_file:
-        type: path
-        list: true
-        desc: Read settings from file
-        zero_or_more: true
-    settings_file_config:
-        type: String
-        list: true
-        desc: Select settings from file
-        zero_or_more: true
-    settings_json:
-        type: String
-        list: true
-        desc: Read settings from json string
-        zero_or_more: true
-    host_settings_file:
-        type: path
-        desc: Read host settings from file
+            # checks
+            checks_single_thread:
+                option: checks-st
+                external: true
+                description: Perform checks in one thread (for cc)
+            print_checks:
+                external: true
+                description: Save extended checks info to file
+            wait_for_cc_checks:
+                external: true
+                description: Do not exit on missing cc checks, wait for user input
+            cc_checks_command:
+                type: String
+                external: true
+                description: Automatically execute cc checks command
 
 
-    #// static/shared
-    static_build:
-        desc: Set static build
-        aliases: static
-    shared_build:
-        desc: Set shared build (default)
-        aliases: shared
+            # build stuff
 
-    #//mt/md
-    win_mt:
-        desc: Set /MT or /MTd build
-        aliases: mt
-    win_md:
-        desc: Set /MD or /MDd build
-        aliases: md
+            #cl::opt<bool> dry_run("n", cl::desc("Dry run"));
 
-    #
+            build_always:
+                option: B
+                desc: Build always
+            skip_errors:
+                option: k
+                type: int
+                desc: Skip errors
+            time_trace:
+                desc: Record chrome time trace events
 
-    toolset:
-        type: String
-        desc: Set VS generator toolset
+            show_output:
+            write_output_to_file:
 
-    #
+            #//static cl::opt<bool> print_graph("print-graph", cl::desc("Print file with build graph"));
 
-    force_server_query:
-        option: s
-        desc: Force server resolving
-        location: gForceServerQuery
-        aliases: server
-    force_server_db_check:
-        option: sd
-        desc: Force server db check
-        location: gForceServerDatabaseUpdate
+            targets_to_build:
+                option: target
+                type: String
+                list: true
+                desc: Targets to build
+            targets_to_ignore:
+                option: exclude-target
+                type: String
+                list: true
+                desc: Targets to ignore
 
-    working_directory:
-        option: d
-        desc: Working directory
-        type: path
+            reproducible_build:
+                desc: Perform reproducible build.
 
-    verbose:
-        desc: Verbose output
-        location: gVerbose
-        aliases: v
-    trace:
-        desc: Trace output
-    jobs:
-        option: j
-        desc: Number of jobs
-        type: int
+            Dvariables:
+                option: D
+                type: String
+                list: true
+                desc: Input variables
+                prefix: true
+                zero_or_more: true
 
-    list_programs:
-        desc: List available programs on the system
-    list_predefined_targets:
-        desc: List predefined targets
+            #////////////////////////////////////////////////////////////////////////////////
+            #//
+            #// build configs
+            #//
+            #////////////////////////////////////////////////////////////////////////////////
 
-    self_upgrade:
-        desc: Upgrade client
-    self_upgrade_copy:
-        type: path
-        desc: "Upgrade client: copy file"
-        option: internal-self-upgrade-copy
-        really_hidden: true
+            #//static cl::opt<bool> append_configs("append-configs", cl::desc("Append configs for generation"));
 
-    #static ::cl::list<String> cl_activate("activate", ::cl::desc("Activate specific packages"));
+            os:
+                type: String
+                list: true
+                comma_separated: true
+                desc: Set build target os
+            compiler:
+                type: String
+                list: true
+                comma_separated: true
+                desc: Set compiler
+            configuration:
+                type: String
+                list: true
+                comma_separated: true
+                desc: |-
+                    Set build configuration.
+                    Allowed values:
+                        - debug, d
+                        - release, r
+                        - releasewithdebuginformation, releasewithdebinfo, rwdi
+                        - minimalsizerelease, minsizerel, msr
+                    Default is release.
+                    Specify multiple using a comma: "d,r".
+                aliases: config
+            platform:
+                type: String
+                list: true
+                comma_separated: true
+                desc: |
+                    Set build platform.
+                    Examples: x86, x64, arm, arm64
+                aliases: arch
 
-    #// TODO: https://github.com/tomtom-international/cpp-dependencies
-    #static ::cl::list<bool> build_graph("g", ::cl::desc("Print .dot graph of build targets"), ::cl::sub(subcommand_build));
+            #// rename to stdc, stdcpp?
+            libc:
+                type: String
+                list: true
+                comma_separated: true
+                desc: Set build libc
+            libcpp:
+                type: String
+                list: true
+                comma_separated: true
+                desc: Set build libcpp
 
-    internal_sign_file:
-        type: path
-        list: true
-        value_desc: <file> <private.key>
-        desc: Sign file with private key
-        really_hidden: true
-        multi_val: 2
-    internal_verify_file:
-        type: path
-        list: true
-        value_desc: <file> <sigfile> <public.key>
-        desc: Verify signature with public key
-        really_hidden: true
-        multi_val: 3
+            static_dependencies:
+                desc: Build static dependencies of inputs
+                aliases: static-deps
 
-    parse_configure_ac:
-        type: path
-        desc: Read checks from configure.ac. Add without space '=file' for custom files.
-        value_optional: true
-        hidden: true
+            build_name:
+                type: String
+                desc: Set meaningful build name instead of hash
+            config_name:
+                list: true
+                type: String
+                desc: Set meaningful config names instead of hash
+                comma_separated: true
 
-    #//static ::cl::list<String> drivers("load-driver", ::cl::desc("Load more drivers"), ::cl::CommaSeparated);
+            #// -setting k1=v1,k2=v2,k3="v3,v3" -setting k4=v4,k5,k6 etc.
+            #// settings in one setting applied simultaneosly
+            #// settings in different settings are multiplied
+            #// k=v assigns value to dot separated key
+            #// complex.key.k1 means s["complex"]["key"]["k1"]
+            #// k= or k="" means empty value
+            #// k means reseted value
+            settings:
+                type: String
+                list: true
+                desc: Set settings directly
+                zero_or_more: true
 
-    use_lock_file:
-        option: l
-        desc: Use lock file
-        # do not want it as true
-        # maybe add settings for it
-        #default_value: true
-    lock_file:
-        option: lf
-        desc: Lock file path
-        type: path
+            #// toolchain file
+            settings_file:
+                type: path
+                list: true
+                desc: Read settings from file
+                zero_or_more: true
+            settings_file_config:
+                type: String
+                list: true
+                desc: Select settings from file
+                zero_or_more: true
+            settings_json:
+                type: String
+                list: true
+                desc: Read settings from json string
+                zero_or_more: true
+            host_settings_file:
+                type: path
+                desc: Read host settings from file
 
-        #//static ::cl::list<String> builtin_function(sw::builder::getInternalCallBuiltinFunctionName(), ::cl::desc("Call built-in function"), ::cl::Hidden);
 
-    write_log_to_file:
-        option: log-to-file
+            #// static/shared
+            static_build:
+                desc: Set static build
+                aliases: static
+            shared_build:
+                desc: Set shared build (default)
+                aliases: shared
+
+            #//mt/md
+            win_mt:
+                desc: Set /MT or /MTd build
+                aliases: mt
+            win_md:
+                desc: Set /MD or /MDd build
+                aliases: md
+
+            #
+
+            toolset:
+                type: String
+                desc: Set VS generator toolset
+
+            #
+
+            force_server_query:
+                option: s
+                desc: Force server resolving
+                location: gForceServerQuery
+                aliases: server
+            force_server_db_check:
+                option: sd
+                desc: Force server db check
+                location: gForceServerDatabaseUpdate
+
+            working_directory:
+                option: d
+                desc: Working directory
+                type: path
+
+            verbose:
+                desc: Verbose output
+                location: gVerbose
+                aliases: v
+            trace:
+                desc: Trace output
+            jobs:
+                option: j
+                desc: Number of jobs
+                type: int
+
+            list_programs:
+                desc: List available programs on the system
+            list_predefined_targets:
+                desc: List predefined targets
+
+            self_upgrade:
+                desc: Upgrade client
+            self_upgrade_copy:
+                type: path
+                desc: "Upgrade client: copy file"
+                option: internal-self-upgrade-copy
+                really_hidden: true
+
+            #static ::cl::list<String> cl_activate("activate", ::cl::desc("Activate specific packages"));
+
+            #// TODO: https://github.com/tomtom-international/cpp-dependencies
+            #static ::cl::list<bool> build_graph("g", ::cl::desc("Print .dot graph of build targets"), ::cl::sub(subcommand_build));
+
+            internal_sign_file:
+                type: path
+                list: true
+                value_desc: <file> <private.key>
+                desc: Sign file with private key
+                really_hidden: true
+                multi_val: 2
+            internal_verify_file:
+                type: path
+                list: true
+                value_desc: <file> <sigfile> <public.key>
+                desc: Verify signature with public key
+                really_hidden: true
+                multi_val: 3
+
+            parse_configure_ac:
+                type: path
+                desc: Read checks from configure.ac. Add without space '=file' for custom files.
+                value_optional: true
+                hidden: true
+
+            #//static ::cl::list<String> drivers("load-driver", ::cl::desc("Load more drivers"), ::cl::CommaSeparated);
+
+            use_lock_file:
+                option: l
+                desc: Use lock file
+                # do not want it as true
+                # maybe add settings for it
+                #default_value: true
+            lock_file:
+                option: lf
+                desc: Lock file path
+                type: path
+
+                #//static ::cl::list<String> builtin_function(sw::builder::getInternalCallBuiltinFunctionName(), ::cl::desc("Call built-in function"), ::cl::Hidden);
+
+            write_log_to_file:
+                option: log-to-file
 
     #
     subcommand:
