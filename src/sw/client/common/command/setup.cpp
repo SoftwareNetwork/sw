@@ -28,6 +28,9 @@
 #include <WinReg.hpp>
 #endif
 
+#include <primitives/log.h>
+DECLARE_STATIC_LOGGER(logger, "setup");
+
 static void registerCmakePackage(sw::SwContext &swctx)
 {
     const auto sw_cmake_config_filename = "SWConfig.cmake";
@@ -83,6 +86,28 @@ SUBCOMMAND_DECL(setup)
         winreg::RegKey p(HKEY_CLASSES_ROOT, id + L"\\shell\\open\\command");
         p.SetStringValue(L"", prog + L" build %1");
     }*/
+
+#elif defined(__linux__)
+    // https://specifications.freedesktop.org/desktop-entry-spec/desktop-entry-spec-latest.html
+    // Exec=)"s + normalize_path(prog) + R"( uri %u
+    // or
+    // Exec=sw uri %u
+    const auto opener = R"([Desktop Entry]
+Type=Application
+Name=SW Scheme Handler
+Exec=sw uri %u
+StartupNotify=false
+Terminal=true
+MimeType=x-scheme-handler/sw;
+)"s;
+    const auto fn = "sw-opener.desktop"s;
+    write_file(get_home_directory() / ".local/share/applications" / fn, opener);
+    String cmd;
+    cmd = "xdg-mime default " + fn + " x-scheme-handler/sw";
+    if (system(cmd.c_str()))
+        LOG_ERROR(logger, "Cannot register sw uri handler");
+
+#elif defined(__APPLE__)
 #endif
 
     auto swctx = createSwContext(options);

@@ -22,6 +22,7 @@
 #include <sw/manager/storage.h>
 #include <sw/support/filesystem.h>
 
+#include <boost/algorithm/string.hpp>
 #include <primitives/http.h>
 #include <primitives/sw/settings_program_name.h>
 
@@ -65,6 +66,11 @@ F(open_file, const path &f)
     if (!sdb.isPackageInstalled(p))
         throw SW_RUNTIME_ERROR("Package '" + p.toString() + "' is not installed");
     open_file(f);
+#ifdef __linux__
+    // sometimes we need more time to process file open
+    // otherwise our process terminates and it terminates child call chain
+    std::this_thread::sleep_for(std::chrono::seconds(3));
+#endif
 }
 
 F(install)
@@ -218,6 +224,13 @@ SUBCOMMAND_DECL(uri)
 {
     fs::current_path(sw::temp_directory_path());
 
+#if defined(__linux__)
+    if (options.options_uri.uri_args.size() != 1)
+        return;
+    decltype(options.options_uri.uri_args) v;
+    boost::split(v, options.options_uri.uri_args[0], boost::is_any_of(" "));
+    options.options_uri.uri_args = v;
+#endif
     if (options.options_uri.uri_args.size() <= 1)
         return;
 
@@ -229,12 +242,16 @@ SUBCOMMAND_DECL(uri)
     {
 #ifdef _WIN32
         message_box(sw::getProgramName(), e.what());
+#else
+        std::cerr << e.what();
 #endif
     }
     catch (...)
     {
 #ifdef _WIN32
         message_box(sw::getProgramName(), "Unknown exception");
+#else
+        std::cerr << "unknown exception";
 #endif
     }
 }

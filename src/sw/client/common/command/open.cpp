@@ -44,6 +44,8 @@ static void open_nix(const String &p)
     {
 #if !(defined(__linux__) || defined(__APPLE__))
         SW_UNIMPLEMENTED;
+#else
+        throw SW_RUNTIME_ERROR("Cannot open: " + p);
 #endif
     }
 }
