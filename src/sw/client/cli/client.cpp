@@ -184,7 +184,14 @@ int setup_main(const Strings &args, OPTIONS_ARG)
             auto hfn = ".sw_history";
             append_file(get_home_directory() / hfn, cmdline + "\n");
             if (Settings::get_user_settings().record_commands_in_current_dir)
-                append_file(path(".sw") / hfn, cmdline + "\n");
+            {
+                try
+                {
+                    // do not work on some commands (uri)
+                    append_file(path(".sw") / hfn, cmdline + "\n");
+                }
+                catch (std::exception &) {}
+            }
         }
     }
 
