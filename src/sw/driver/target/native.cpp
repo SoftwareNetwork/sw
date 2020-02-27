@@ -2275,8 +2275,10 @@ void NativeCompiledTarget::prepare_pass1()
 
     if (getBuildSettings().TargetOS.is(OSType::Linux) && NoUndefined)
     {
-        // also check compiler type?
-        LinkOptions.push_back("--no-undefined");
+        if (getCompilerType() == CompilerType::Clang)
+            LinkOptions.push_back("--no-undefined");
+        else // gcc and others
+            LinkOptions.push_back("-Wl,--no-undefined");
     }
 
     if (!IsSwConfig)
