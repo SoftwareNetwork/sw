@@ -40,6 +40,7 @@ static OS fromTargetSettings(const TargetSettings &ts)
         IF_SETTING("org.torvalds.linux", os.Type, OSType::Linux);
         IF_SETTING("com.Apple.Macos", os.Type, OSType::Macos);
         IF_SETTING("com.Apple.Darwin", os.Type, OSType::Darwin);
+        IF_SETTING("org.cygwin", os.Type, OSType::Cygwin);
         else
             throw SW_RUNTIME_ERROR("Unknown os: " + v.getValue());
     IF_END

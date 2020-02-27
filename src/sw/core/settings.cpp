@@ -32,6 +32,9 @@ TargetSettings toTargetSettings(const OS &o)
     case OSType::Darwin:
         s["os"]["kernel"] = "com.Apple.Darwin";
         break;
+    case OSType::Cygwin:
+        s["os"]["kernel"] = "org.cygwin";
+        break;
     default:
         SW_UNIMPLEMENTED;
     }

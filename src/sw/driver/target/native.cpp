@@ -2259,6 +2259,10 @@ void NativeCompiledTarget::prepare_pass1()
                 // this will be the default sw storage path on clean installations
                 + SW_DEFAULT_INSTALLATION_PATH
             );
+
+            // ld inserts timestamp by default for PE, we disable it
+            if (getBuildSettings().TargetOS.is(OSType::Cygwin))
+                LinkOptions.push_back("-Wl,--no-insert-timestamp");
         }
 
         // TODO: for *nix we probably must strip (debug) symbols also
@@ -3304,7 +3308,7 @@ void NativeCompiledTarget::prepare_pass7()
                 // rpath: currently we set rpath to @executable_path
                 LinkOptions.push_back("-Wl,-rpath,@executable_path");
             }
-            else if (!getBuildSettings().TargetOS.is(OSType::Windows))
+            else if (!getBuildSettings().TargetOS.is(OSType::Windows) && !getBuildSettings().TargetOS.is(OSType::Cygwin))
             {
                 // rpath: currently we set runpath to $ORIGIN
                 LinkOptions.push_back("-Wl,--enable-new-dtags,-rpath,$ORIGIN");
