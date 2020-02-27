@@ -65,82 +65,23 @@ std::unique_ptr<grpc::ClientContext> ProtobufApi::getContextWithAuth() const
     return ctx;
 }
 
-void ProtobufApi::addDownloads(const std::set<int64_t> &pkgs)
-{
-    api::PackageIds request;
-    for (auto &id : pkgs)
-        request.mutable_ids()->Add(id);
-    auto context = getContext();
-    GRPC_CALL(api_, AddDownloads, google::protobuf::Empty);
-}
-
-void ProtobufApi::addDownload(const PackageId &pkg) const
-{
-    api::PackageId request;
-    request.set_path(pkg.getPath().toString());
-    request.set_version(pkg.getVersion().toString());
-    auto context = getContext();
-    GRPC_CALL(api_, AddDownloads2, google::protobuf::Empty);
-}
-
-void ProtobufApi::addClientCall()
-{
-    google::protobuf::Empty request;
-    auto context = getContext();
-    GRPC_CALL(api_, AddClientCall, google::protobuf::Empty);
-}
-
-Api::IdDependencies ProtobufApi::resolvePackages(const UnresolvedPackages &pkgs) const
+std::unordered_map<UnresolvedPackage, PackagePtr> ProtobufApi::resolvePackages(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs,
+    std::unordered_map<PackageId, PackageData> &data, const IStorage &s) const
 {
     api::UnresolvedPackages request;
     for (auto &pkg : pkgs)
     {
-        auto pb_pkg = request.mutable_packages()->Add();
+        auto pb_pkg = request.mutable_unresolved_packages()->Add();
         pb_pkg->set_path(pkg.ppath);
         pb_pkg->set_range(pkg.range.toString());
     }
     auto context = getContext();
     GRPC_CALL_THROWS(api_, ResolvePackages, api::ResolvedPackages);
 
-    IdDependencies id_deps;
-    for (auto &pkg : response.packages())
-    {
-        RemotePackageData d(pkg.package().path(), pkg.package().version());
-        d.id = pkg.id();
-        d.flags = pkg.flags();
-        d.hash = pkg.hash();
-        d.prefix = pkg.prefix();
-
-        for (auto &tree_dep : pkg.dependencies())
-            d.deps.insert(tree_dep.id());
-        id_deps.emplace(d.id, d);
-    }
-    return id_deps;
-}
-
-std::unordered_map<UnresolvedPackage, PackagePtr> ProtobufApi::resolvePackages(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs,
-    std::unordered_map<PackageId, PackageData> &data, const IStorage &s) const
-{
-    // currently this is server error
-    //unresolved_pkgs = pkgs;
-    //return {};
-    //SW_UNIMPLEMENTED;
-    throw SW_LOGIC_ERROR("Server error. Contact administrator, please.");
-
-    api::UnresolvedPackages request;
-    for (auto &pkg : pkgs)
-    {
-        auto pb_pkg = request.mutable_packages()->Add();
-        pb_pkg->set_path(pkg.ppath);
-        pb_pkg->set_range(pkg.range.toString());
-    }
-    auto context = getContext();
-    GRPC_CALL_THROWS(api_, ResolvePackages2, api::ResolvedPackages2);
-
     // process result
 
     // read unresolved
-    for (auto &u : response.unresolved_packages())
+    for (auto &u : response.unresolved_packages().unresolved_packages())
         unresolved_pkgs.emplace(u.path(), u.range());
 
     // read resolved
@@ -155,7 +96,7 @@ std::unordered_map<UnresolvedPackage, PackagePtr> ProtobufApi::resolvePackages(c
         d.flags = pkg.flags();
         d.hash = pkg.hash();
         d.prefix = pkg.prefix();
-        for (auto &tree_dep : pkg.dependencies())
+        for (auto &tree_dep : pkg.dependencies().unresolved_packages())
             d.dependencies.emplace(tree_dep.path(), tree_dep.range());
         data[p] = d;
 

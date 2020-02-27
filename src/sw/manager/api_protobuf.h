@@ -24,14 +24,9 @@ struct ProtobufApi : Api
 {
     ProtobufApi(const Remote &);
 
-    IdDependencies resolvePackages(const UnresolvedPackages &) const override;
     std::unordered_map<UnresolvedPackage, PackagePtr> resolvePackages(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs,
         std::unordered_map<PackageId, PackageData> &data, const IStorage &) const override;
     void addVersion(PackagePath prefix, const PackageDescriptionMap &pkgs, const String &script_name, const String &script) const override;
-    void addDownload(const PackageId &) const override;
-
-    void addDownloads(const std::set<int64_t> &);
-    void addClientCall();
 
     void addVersion(const PackagePath &prefix, const String &script);
     void addVersion(PackagePath p, const Version &vnew, const std::optional<Version> &vold = {});

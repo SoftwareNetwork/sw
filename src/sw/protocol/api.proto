@@ -22,32 +22,15 @@ message UnresolvedPackage {
     string range = 2;
 }
 
-message ResolvedPackage {
-    message Dependency {
-        int64 id = 1;
-        // if package is deployed on a private server
-        // string path?
-        // flags?
-    }
-
-    // base fields
-    int64 id = 1;
-    PackageId package = 2;
-    int64 flags = 3;
-    string hash = 4;
-    repeated Dependency dependencies = 5;
-    // other
-    //int64 group_number = 16;
-    int32 prefix = 17;
-    // int32 archive_type;
-    // optional string download_url;
+message UnresolvedPackages {
+    repeated UnresolvedPackage unresolved_packages = 1;
 }
 
 message ResolvedPackage2 {
     PackageId package = 1;
     int64 flags = 2;
     string hash = 3;
-    repeated UnresolvedPackage dependencies = 4;
+    UnresolvedPackages dependencies = 4;
     // other
     //int64 group_number = 16;
     int32 prefix = 17;
@@ -55,26 +38,14 @@ message ResolvedPackage2 {
     // optional string download_url;
 }
 
-message UnresolvedPackages {
-    repeated UnresolvedPackage packages = 1;
-}
-
 message ResolvedPackages {
-    repeated ResolvedPackage packages = 1;
-}
-
-message ResolvedPackages2 {
     message ResolvedPackagePair {
         UnresolvedPackage unresolved_package = 1;
         ResolvedPackage2 resolved_package = 2;
     }
 
     repeated ResolvedPackagePair resolved_packages = 1;
-    repeated UnresolvedPackage unresolved_packages = 2;
-}
-
-message PackageIds {
-    repeated int64 ids = 1;
+    UnresolvedPackages unresolved_packages = 2;
 }
 
 message NotificationsRequest {
@@ -123,20 +94,9 @@ message NewPackage {
 
 // unauthorized
 service ApiService {
-    rpc ResolvePackages (UnresolvedPackages) returns (ResolvedPackages);
-
     // std::unordered_map<UnresolvedPackage, Package>
     //  resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs)
-    rpc ResolvePackages2 (UnresolvedPackages) returns (ResolvedPackages2);
-
-    //
-    // following are subtle calls, probably to be removed
-
-    // tbr, check downloads on s3
-    rpc AddDownloads (PackageIds) returns (google.protobuf.Empty);
-    rpc AddDownloads2 (PackageId) returns (google.protobuf.Empty); // second version, simple
-    // also deprecate later
-    rpc AddClientCall (google.protobuf.Empty) returns (google.protobuf.Empty);
+    rpc ResolvePackages (UnresolvedPackages) returns (ResolvedPackages);
 }
 
 // id: 1

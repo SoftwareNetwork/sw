@@ -17,23 +17,14 @@ struct IStorage;
 
 struct Api
 {
-    struct RemotePackageData : PackageId, PackageData
-    {
-        using PackageId::PackageId;
-
-        db::PackageVersionId id;
-        std::unordered_set<db::PackageVersionId> deps;
-    };
-
-    using IdDependencies = std::unordered_map<db::PackageVersionId, RemotePackageData>;
-
     virtual ~Api() = 0;
 
-    virtual IdDependencies resolvePackages(const UnresolvedPackages &) const = 0;
-    virtual std::unordered_map<UnresolvedPackage, PackagePtr> resolvePackages(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs,
+    virtual std::unordered_map<UnresolvedPackage, PackagePtr>
+    resolvePackages(
+        const UnresolvedPackages &pkgs,
+        UnresolvedPackages &unresolved_pkgs,
         std::unordered_map<PackageId, PackageData> &data, const IStorage &) const = 0;
     virtual void addVersion(PackagePath prefix, const PackageDescriptionMap &pkgs, const String &script_name, const String &script) const = 0;
-    virtual void addDownload(const PackageId &) const = 0; // replace with file id
 };
 
 }
