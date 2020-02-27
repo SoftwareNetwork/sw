@@ -12,6 +12,7 @@
 #include "../target/native.h"
 
 #include <sw/core/sw_context.h>
+#include <sw/manager/storage.h>
 
 #include <boost/algorithm/string.hpp>
 #include <primitives/sw/settings.h>
@@ -422,6 +423,18 @@ void ClangClCompiler::setSourceFile(const path &input_file, const path &output_f
 
 SW_CREATE_COMPILER_COMMAND(GNUASMCompiler, driver::GNUCommand)
 
+static String getRandomSeed(const path &p, const path &sw_storage_dir)
+{
+    if (p.empty())
+        return "0"s;
+    auto np = normalize_path(p);
+    auto nsp = normalize_path(sw_storage_dir);
+    if (np.find(nsp) != 0)
+        return "0"s;
+    // size() + next slash
+    return std::to_string(std::hash<String>()(np.substr(nsp.size() + 1)));
+}
+
 void GNUASMCompiler::prepareCommand1(const Target &t)
 {
     bool assembly = false;
@@ -447,7 +460,7 @@ void GNUASMCompiler::prepareCommand1(const Target &t)
 
     if (t.isReproducibleBuild())
     {
-        cmd->push_back("-frandom-seed=0");
+        cmd->push_back("-frandom-seed=" + getRandomSeed(InputFile ? InputFile() : path{}, t.getContext().getLocalStorage().storage_dir));
         cmd->environment["SOURCE_DATE_EPOCH"] = "0";
     }
 }
@@ -508,7 +521,7 @@ void GNUCompiler::prepareCommand1(const Target &t)
 
     if (t.isReproducibleBuild())
     {
-        cmd->push_back("-frandom-seed=0");
+        cmd->push_back("-frandom-seed=" + getRandomSeed(InputFile ? InputFile() : path{}, t.getContext().getLocalStorage().storage_dir));
         cmd->environment["SOURCE_DATE_EPOCH"] = "0";
     }
 }
