@@ -3,6 +3,22 @@ settings:
     generate_struct: true
 
 command_line:
+    working_directory:
+        option: d
+        desc: Working directory
+        type: path
+
+    use_lock_file:
+        option: l
+        desc: Use lock file
+        # do not want it as true
+        # maybe add settings for it
+        #default_value: true
+    lock_file:
+        option: lf
+        desc: Lock file path
+        type: path
+
     #
     subcommand:
         name: AllSubCommands
@@ -268,11 +284,6 @@ command_line:
                 desc: Force server db check
                 location: gForceServerDatabaseUpdate
 
-            working_directory:
-                option: d
-                desc: Working directory
-                type: path
-
             verbose:
                 desc: Verbose output
                 location: gVerbose
@@ -325,18 +336,7 @@ command_line:
 
             #//static ::cl::list<String> drivers("load-driver", ::cl::desc("Load more drivers"), ::cl::CommaSeparated);
 
-            use_lock_file:
-                option: l
-                desc: Use lock file
-                # do not want it as true
-                # maybe add settings for it
-                #default_value: true
-            lock_file:
-                option: lf
-                desc: Lock file path
-                type: path
-
-                #//static ::cl::list<String> builtin_function(sw::builder::getInternalCallBuiltinFunctionName(), ::cl::desc("Call built-in function"), ::cl::Hidden);
+            #//static ::cl::list<String> builtin_function(sw::builder::getInternalCallBuiltinFunctionName(), ::cl::desc("Call built-in function"), ::cl::Hidden);
 
             write_log_to_file:
                 option: log-to-file
