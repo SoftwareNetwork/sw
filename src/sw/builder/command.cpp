@@ -41,6 +41,7 @@ bool save_executed_commands;
 
 bool explain_outdated;
 bool explain_outdated_full;
+bool gExplainOutdatedToTrace;
 
 String save_command_format;
 
@@ -78,7 +79,7 @@ Command::~Command()
 
 static bool isExplainNeeded()
 {
-    return explain_outdated || explain_outdated_full;
+    return explain_outdated || explain_outdated_full || gExplainOutdatedToTrace;
 }
 
 static String getCommandId(const Command &c)

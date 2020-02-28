@@ -69,6 +69,10 @@ command_line:
             explain_outdated_full:
                 external: true
                 description: Explain outdated commands with more info
+            explain_outdated_to_trace:
+                external: true
+                description: Explain outdated commands with more info
+                location: gExplainOutdatedToTrace
 
             save_command_format:
                 type: String

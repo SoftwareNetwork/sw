@@ -12,11 +12,14 @@
 #include <primitives/executor.h>
 
 #include <fstream>
+#include <sstream>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "file");
 
-#define CPPAN_FILES_EXPLAIN_FILE ".sw/misc/explain.txt"
+#define SW_EXPLAIN_FILE ".sw/misc/explain.txt"
+
+extern bool gExplainOutdatedToTrace;
 
 namespace sw
 {
@@ -26,16 +29,26 @@ void explainMessage(const String &subject, bool outdated, const String &reason, 
     static Executor explain_executor("explain executor", 1);
     static std::ofstream o([]()
     {
-        fs::create_directories(path(CPPAN_FILES_EXPLAIN_FILE).parent_path());
-        return CPPAN_FILES_EXPLAIN_FILE;
+        fs::create_directories(path(SW_EXPLAIN_FILE).parent_path());
+        return SW_EXPLAIN_FILE;
     }()); // goes first
     explain_executor.push([=]
     {
         if (!outdated)
             return;
-        o << subject << ": " << name << "\n";
-        o << "outdated\n";
-        o << "reason = " << reason << "\n" << std::endl;
+        auto print = [&subject, &name, &reason](auto &o)
+        {
+            o << subject << ": " << name << "\n";
+            o << "outdated\n";
+            o << "reason = " << reason << "\n" << std::endl;
+        };
+        print(o);
+        if (gExplainOutdatedToTrace)
+        {
+            std::ostringstream ss;
+            print(ss);
+            LOG_TRACE(logger, ss.str());
+        }
     });
 }
 
