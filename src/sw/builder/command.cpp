@@ -469,6 +469,20 @@ void Command::afterCommand()
     if (!command_storage)
         return;
 
+    // sometimes, implicit input was not created before it is registered with File(fn) - configureFile() etc.
+    // in this case here we have fr.last_write_time == min()
+    // so, we must register this file again
+    for (auto &i : implicit_inputs)
+    {
+        File f(i, getContext().getFileStorage());
+        auto &fr = f.getFileData();
+        if (fr.last_write_time == fs::file_time_type::min())
+        {
+            fr.refreshed = FileData::RefreshType::Unrefreshed;
+            f.isChanged();
+        }
+    }
+
     // probably below is wrong, async writes are queue to one thread (FIFO)
     // so, deps are written first, only then command goes
 
