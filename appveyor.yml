@@ -34,4 +34,3 @@ after_build:
   - 7z a sw.zip %APPVEYOR_BUILD_FOLDER%\.sw\out\**\*.exe
   #- 7z a sw.zip %APPVEYOR_BUILD_FOLDER%\.sw\windows_*_msvc_*_static_Release\*.exe
 #  - ps: Get-ChildItem .sw/windows_*_msvc_*_static_Release_*/*.exe | % { Push-AppveyorArtifact $_.FullName -FileName $_.Name -DeploymentName sw-$(APPVEYOR_BUILD_VERSION) }
-
