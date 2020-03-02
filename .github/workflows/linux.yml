@@ -8,7 +8,6 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        #os: [windows-latest, ubuntu-latest, macOS-latest]
 
     steps:
     - uses: actions/checkout@v1
@@ -33,5 +32,4 @@ jobs:
       shell: sh
 
     - name: build
-      run: ./sw -static -config d build
-
+      run: ./sw -static build
