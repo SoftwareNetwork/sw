@@ -285,7 +285,7 @@ int setup_main(const Strings &args, OPTIONS_ARG)
     // after everything
     std::unique_ptr<Executor> e;
     {
-        e = std::make_unique<Executor>(select_number_of_threads(options.jobs));
+        e = std::make_unique<Executor>(select_number_of_threads(options.global_jobs));
         getExecutor(e.get());
     }
 

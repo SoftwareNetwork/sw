@@ -294,9 +294,13 @@ command_line:
                 aliases: v
             trace:
                 desc: Trace output
-            jobs:
+            build_jobs:
                 option: j
-                desc: Number of jobs
+                desc: Number of main build jobs
+                type: int
+            global_jobs:
+                option: jg
+                desc: Global number of jobs
                 type: int
 
             list_programs:

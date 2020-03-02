@@ -105,6 +105,7 @@ private:
     TargetSettings build_settings;
     mutable BuildState state = BuildState::NotStarted;
     mutable Commands commands_storage; // we need some place to keep copy cmds
+    std::unique_ptr<Executor> executor;
 
     // other data
     String name;
@@ -116,6 +117,7 @@ private:
     void loadPackages(const TargetMap &predefined);
     TargetEntryPointPtr getEntryPoint(const PackageId &) const;
     void resolvePackages(const UnresolvedPackages &upkgs); // [2/2] step
+    Executor &getExecutor() const;
 };
 
 } // namespace sw

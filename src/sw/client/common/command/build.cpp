@@ -644,6 +644,7 @@ std::unique_ptr<sw::SwBuild> createBuild(sw::SwContext &swctx, const Options &op
         bs["target-to-build"].push_back(t);
     for (auto &t : options.targets_to_ignore)
         bs["target-to-exclude"].push_back(t);
+    bs["build-jobs"] = std::to_string(select_number_of_threads(options.build_jobs));
     for (auto &t : options.Dvariables)
     {
         auto p = t.find('=');

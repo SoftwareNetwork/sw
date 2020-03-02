@@ -1072,6 +1072,16 @@ const std::vector<InputWithSettings> &SwBuild::getInputs() const
 void SwBuild::setSettings(const TargetSettings &bs)
 {
     build_settings = bs;
+
+    if (build_settings["build-jobs"])
+        executor = std::make_unique<Executor>(std::stoi(build_settings["build-jobs"].getValue()));
+}
+
+Executor &SwBuild::getExecutor() const
+{
+    if (executor)
+        return *executor;
+    return ::getExecutor();
 }
 
 const TargetSettings &SwBuild::getExternalVariables() const
