@@ -304,12 +304,13 @@ void PackagesDatabase::installPackage(const PackageId &p, const PackageData &d)
     //auto tr = sqlpp11_transaction_manual(*db);
 
     db->execute("BEGIN");
-
-    ScopeGuard sg([this]()
+    SCOPE_EXIT
     {
-        db->execute("ROLLBACK");
-        //throw SW_RUNTIME_ERROR("db transaction not finished");
-    });
+        if (std::uncaught_exceptions())
+            db->execute("ROLLBACK");
+        else
+            db->execute("COMMIT");
+    };
 
     int64_t package_id = 0;
 
@@ -391,9 +392,6 @@ void PackagesDatabase::installPackage(const PackageId &p, const PackageData &d)
             pkg_deps.versionRange = d.range.toString()
         ));
     }
-
-    db->execute("COMMIT");
-    sg.dismiss();
 }
 
 void PackagesDatabase::installPackage(const Package &p)
