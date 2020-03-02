@@ -38,4 +38,4 @@ jobs:
         #key: ${{ runner.os }}-sw-storage
 
     - name: build
-      run: ./sw -static build
+      run: ./sw -static -trace -explain-outdated-to-trace build
