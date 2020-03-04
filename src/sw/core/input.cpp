@@ -99,16 +99,17 @@ void Input::setEntryPoints(const EntryPointsVector &in)
     eps = in;
 }
 
-const Package *Input::getPackage() const
+std::pair<PackageIdSet, int> Input::getPackages() const
 {
-    if (!pkg)
-        return nullptr;
-    return &*pkg;
+    return { pkgs, prefix };
 }
 
-void Input::setPackage(const LocalPackage &in)
+void Input::addPackage(const LocalPackage &in)
 {
-    pkg = in.clone();
+    if (prefix != -1 && in.getData().prefix != prefix)
+        throw SW_RUNTIME_ERROR("Trying to add different prefix");
+    prefix = in.getData().prefix;
+    pkgs.insert(in);
 }
 
 InputWithSettings::InputWithSettings(Input &i)
@@ -154,13 +155,10 @@ std::vector<ITargetPtr> InputWithSettings::loadTargets(SwBuild &b) const
         {
             LOG_TRACE(logger, "Loading input " << i.getPath() << ", settings = " << s.toString());
 
-            PackageIdSet pkgs;
             PackagePath prefix;
-            if (auto p = i.getPackage())
-            {
-                pkgs.insert(*p);
-                prefix = p->getPath().slice(0, p->getData().prefix);
-            }
+            auto [pkgs, iprefix] = i.getPackages();
+            if (!pkgs.empty())
+                prefix = pkgs.begin()->getPath().slice(0, iprefix);
 
             // load all packages here
             auto t = ep->loadPackages(b, s, pkgs, prefix);

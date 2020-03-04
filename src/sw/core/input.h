@@ -59,8 +59,10 @@ struct SW_CORE_API Input
     InputType getType() const { return type; }
     path getPath() const;
 
-    const Package *getPackage() const;
-    void setPackage(const LocalPackage &);
+    // same input may be used to load multiple packages
+    // they all share same prefix
+    std::pair<PackageIdSet, int> getPackages() const;
+    void addPackage(const LocalPackage &);
 
     bool operator==(const Input &rhs) const;
     bool operator<(const Input &rhs) const;
@@ -71,7 +73,8 @@ protected:
 private:
     InputType type;
     path p;
-    std::unique_ptr<Package> pkg;
+    PackageIdSet pkgs;
+    int prefix = -1;
     //
     const IDriver &driver;
     // one input may have several eps
