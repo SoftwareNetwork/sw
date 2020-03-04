@@ -106,7 +106,7 @@ function(sw_execute)
             -cmake-deps "${SW_DEPS_FILE}"
     )
 
-    if (SW_DEBUG_CMAKE)
+    if (SW_DEBUG)
         string(REPLACE ";" " " swcmd1 "${swcmd}")
         message("${swcmd1}")
     endif()
