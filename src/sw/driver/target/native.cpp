@@ -3920,7 +3920,8 @@ void NativeCompiledTarget::configureFile1(const path &from, const path &to, Conf
             auto repl = find_repl(m[1].str());
             if (!repl)
             {
-                s = m.prefix().str() + m.suffix().str();
+                // space to prevent loops
+                s = m.prefix().str() + "/* # undef " + m[1].str() + " */\n" + m.suffix().str();
                 // make additional log level for this
                 //LOG_TRACE(logger, "configure #undef " << m[1].str() << ": replacement not found");
                 continue;
