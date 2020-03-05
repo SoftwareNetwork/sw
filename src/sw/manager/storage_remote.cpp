@@ -39,11 +39,7 @@ const String db_version_url = "https://raw.githubusercontent.com/" + db_repo_nam
 // it is used for detecting young packages
 static TimePoint tstart;
 
-// not fully implemented, it will check only
-// when uninstalled packages will be resolved
 bool gForceServerQuery;
-
-//
 bool gForceServerDatabaseUpdate;
 
 static const String packages_db_name = "packages.db";
