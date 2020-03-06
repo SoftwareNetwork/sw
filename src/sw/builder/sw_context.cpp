@@ -8,7 +8,6 @@
 
 #include "command_storage.h"
 #include "file_storage.h"
-#include "program_version_storage.h"
 
 #include <sw/manager/storage.h>
 
@@ -40,9 +39,6 @@ SwBuilderContext::SwBuilderContext(const path &local_storage_root_dir)
 
     //
     file_storage_executor = std::make_unique<Executor>("async log writer", 1);
-
-    //
-    pvs = std::make_unique<ProgramVersionStorage>(getLocalStorage().storage_dir_tmp / "db" / "program_versions.txt");
 }
 
 SwBuilderContext::~SwBuilderContext()
@@ -80,92 +76,9 @@ CommandStorage &SwBuilderContext::getCommandStorage(const path &root) const
     return *cs;
 }
 
-ProgramVersionStorage &SwBuilderContext::getVersionStorage() const
-{
-    return *pvs;
-}
-
 void SwBuilderContext::clearFileStorages()
 {
     file_storage.reset();
-}
-
-static Version gatherVersion1(builder::detail::ResolvableCommand &c, const String &in_regex)
-{
-    error_code ec;
-    c.execute(ec);
-
-    if (c.pid == -1)
-        throw SW_RUNTIME_ERROR(normalize_path(c.getProgram()) + ": " + ec.message());
-
-    Version v;
-    if (!in_regex.empty())
-    {
-        std::regex r_in(in_regex);
-        std::smatch m;
-        if (std::regex_search(c.err.text.empty() ? c.out.text : c.err.text, m, r_in))
-            v = m[0].str();
-    }
-    else
-    {
-        static std::regex r_default("(\\d+)(\\.(\\d+)){2,}(-[[:alnum:]]+([.-][[:alnum:]]+)*)?");
-        std::smatch m;
-        if (std::regex_search(c.err.text.empty() ? c.out.text : c.err.text, m, r_default))
-        {
-            auto s = m[0].str();
-            if (m[4].matched)
-            {
-                // some programs write extra as 'beta2-123-123' when we expect 'beta2.123.123'
-                // this math skips until m[4] started plus first '-'
-                std::replace(s.begin() + (m[4].first - m[0].first) + 1, s.end(), '-', '.');
-            }
-            v = s;
-        }
-    }
-    return v;
-}
-
-static Version gatherVersion(const path &program, const String &arg, const String &in_regex)
-{
-    builder::detail::ResolvableCommand c; // for nice program resolving
-    c.setProgram(program);
-    if (!arg.empty())
-        c.push_back(arg);
-    return gatherVersion1(c, in_regex);
-}
-
-Version getVersion(const SwBuilderContext &swctx, builder::detail::ResolvableCommand &c, const String &in_regex)
-{
-    auto &vs = swctx.getVersionStorage();
-    static boost::upgrade_mutex m;
-
-    const auto program = c.getProgram();
-
-    boost::upgrade_lock lk(m);
-    auto i = vs.versions.find(program);
-    if (i != vs.versions.end())
-        return i->second;
-
-    boost::upgrade_to_unique_lock lk2(lk);
-
-    vs.addVersion(program, gatherVersion1(c, in_regex));
-    return vs.versions[program];
-}
-
-Version getVersion(const SwBuilderContext &swctx, const path &program, const String &arg, const String &in_regex)
-{
-    auto &vs = swctx.getVersionStorage();
-    static boost::upgrade_mutex m;
-
-    boost::upgrade_lock lk(m);
-    auto i = vs.versions.find(program);
-    if (i != vs.versions.end())
-        return i->second;
-
-    boost::upgrade_to_unique_lock lk2(lk);
-
-    vs.addVersion(program, gatherVersion(program, arg, in_regex));
-    return vs.versions[program];
 }
 
 }

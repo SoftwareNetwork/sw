@@ -7,6 +7,8 @@
 #include "detect.h"
 
 #include "../misc/cmVSSetupHelper.h"
+#include "../command.h"
+#include "../program_version_storage.h"
 
 #include <boost/algorithm/string.hpp>
 #ifdef _WIN32

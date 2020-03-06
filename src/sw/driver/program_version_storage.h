@@ -11,7 +11,7 @@
 namespace sw
 {
 
-struct FileStorage;
+struct SwManagerContext;
 
 struct ProgramVersionStorage
 {
@@ -34,5 +34,7 @@ struct ProgramVersionStorage
         versions[p] = {v,fs::last_write_time(p)};
     }
 };
+
+ProgramVersionStorage &getVersionStorage(const SwManagerContext &);
 
 }

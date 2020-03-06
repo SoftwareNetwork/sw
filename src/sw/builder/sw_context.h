@@ -21,7 +21,6 @@ namespace sw
 
 struct CommandStorage;
 struct FileStorage;
-struct ProgramVersionStorage;
 
 namespace builder::detail { struct ResolvableCommand; }
 
@@ -32,7 +31,6 @@ struct SW_BUILDER_API SwBuilderContext : SwManagerContext
     SwBuilderContext(const path &local_storage_root_dir);
     virtual ~SwBuilderContext();
 
-    ProgramVersionStorage &getVersionStorage() const;
     FileStorage &getFileStorage() const;
     Executor &getFileStorageExecutor() const;
     CommandStorage &getCommandStorage(const path &root) const;
@@ -44,22 +42,11 @@ struct SW_BUILDER_API SwBuilderContext : SwManagerContext
 private:
     std::unique_ptr<ModuleStorage> module_storage;
     // keep order
-    std::unique_ptr<ProgramVersionStorage> pvs;
     mutable std::unordered_map<path, std::unique_ptr<CommandStorage>> command_storages;
     mutable std::unique_ptr<FileStorage> file_storage;
     std::unique_ptr<Executor> file_storage_executor; // after everything!
 
     mutable std::mutex csm;
 };
-
-SW_BUILDER_API
-Version getVersion(
-    const SwBuilderContext &swctx, builder::detail::ResolvableCommand &c,
-    const String &in_regex = {});
-
-SW_BUILDER_API
-Version getVersion(
-    const SwBuilderContext &swctx, const path &program,
-    const String &arg = "--version", const String &in_regex = {});
 
 } // namespace sw

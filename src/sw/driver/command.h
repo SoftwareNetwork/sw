@@ -20,6 +20,7 @@ namespace sw
 {
 
 struct NativeCompiledTarget;
+struct SwManagerContext;
 
 namespace cmd
 {
@@ -476,5 +477,16 @@ const CommandBuilder &operator<<(const CommandBuilder &cb, const T &t)
 #undef DECLARE_STREAM_OP
 
 } // namespace driver
+
+std::map<path, String> &getMsvcIncludePrefixes();
+String detectMsvcPrefix(builder::detail::ResolvableCommand c, const path &idir);
+
+Version getVersion(
+    const SwManagerContext &swctx, builder::detail::ResolvableCommand &c,
+    const String &in_regex = {});
+
+Version getVersion(
+    const SwManagerContext &swctx, const path &program,
+    const String &arg = "--version", const String &in_regex = {});
 
 } // namespace sw

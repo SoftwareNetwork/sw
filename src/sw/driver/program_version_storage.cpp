@@ -6,7 +6,9 @@
 
 #include "program_version_storage.h"
 
-#include "file.h"
+#include <sw/builder/file.h>
+#include <sw/manager/sw_context.h>
+#include <sw/manager/storage.h>
 
 #include <fstream>
 
@@ -40,6 +42,12 @@ ProgramVersionStorage::~ProgramVersionStorage()
     std::ofstream ofile(fn);
     for (auto &[p, v] : std::map<path, ProgramInfo>(versions.begin(), versions.end()))
         ofile << p << " " << v.v.toString() << " " << file_time_type2time_t(v.t) << "\n";
+}
+
+ProgramVersionStorage &getVersionStorage(const SwManagerContext &swctx)
+{
+    static ProgramVersionStorage pvs(swctx.getLocalStorage().storage_dir_tmp / "db" / "program_versions.txt");
+    return pvs;
 }
 
 }
