@@ -117,8 +117,17 @@ public:
     // reconsider?
     CompilerType getCompilerType() const;
 
-    driver::CommandBuilder addCommand(const std::shared_ptr<driver::Command> &in = {}) const;
-    // add executed command?
+    driver::CommandBuilder addCommand(const std::shared_ptr<builder::Command> &in = {}) const;
+    // executed command
+    driver::CommandBuilder addCommand(const String &func_name, void *f, int version = 0) const;
+    template <class F>
+    driver::CommandBuilder addCommand(const String &func_name, F f, int version = 0) const
+    {
+        if constexpr (std::is_pointer_v<F>)
+            return addCommand(func_name, (void *)f, version);
+        else
+            return addCommand(func_name, (void *)&f, version);
+    }
 
     void writeFileOnce(const path &fn, const String &content = {});
     void writeFileSafe(const path &fn, const String &content);

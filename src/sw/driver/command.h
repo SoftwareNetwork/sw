@@ -401,7 +401,7 @@ private:
 
 struct SW_DRIVER_CPP_API CommandBuilder
 {
-    mutable std::shared_ptr<Command> c;
+    mutable std::shared_ptr<::sw::builder::Command> c;
     mutable std::vector<NativeCompiledTarget*> targets;
     mutable bool stopped = false;
 

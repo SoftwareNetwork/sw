@@ -188,7 +188,7 @@ void build(Solution &s)
                 << cmd::out("options_cl.generated.h")
                 << cmd::out("options_cl.generated.cpp", cmd::Skip)
                 ;
-            c.c->ignore_deps_generated_commands = true;
+            std::dynamic_pointer_cast<::sw::driver::Command>(c.c)->ignore_deps_generated_commands = true;
             // make sure this is exported header, so we depend on it
             cpp_driver.Public += "options_cl.generated.h";
         }

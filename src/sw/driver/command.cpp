@@ -551,7 +551,7 @@ const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_
 
 const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_prog_dep &t)
 {
-    cb.c->setProgram(t.d);
+    std::dynamic_pointer_cast<::sw::driver::Command>(cb.c)->setProgram(t.d);
     for (auto tgt : cb.targets)
         tgt->addDummyDependency(t.d);
     return cb;
