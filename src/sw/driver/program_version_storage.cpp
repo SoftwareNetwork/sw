@@ -46,6 +46,7 @@ ProgramVersionStorage::~ProgramVersionStorage()
 
 ProgramVersionStorage &getVersionStorage(const SwManagerContext &swctx)
 {
+    // maybe store program db in .sw?
     static ProgramVersionStorage pvs(swctx.getLocalStorage().storage_dir_tmp / "db" / "program_versions.txt");
     return pvs;
 }
