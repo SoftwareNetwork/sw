@@ -837,7 +837,7 @@ driver::CommandBuilder NativeCompiledTarget::addCommand(const std::shared_ptr<bu
 
 driver::CommandBuilder NativeCompiledTarget::addCommand(const String &func_name, void *f, int version) const
 {
-    auto c = std::make_shared<ExecuteBuiltinCommand>(getContext(), func_name, f, version);
+    auto c = std::make_shared<BuiltinCommand>(getContext(), func_name, f, version);
     return addCommand(c);
 }
 
@@ -1505,14 +1505,12 @@ Commands NativeCompiledTarget::getCommands1() const
         auto o = getOutputDir1();
         o /= f->install_dir / p.filename();
 
-        SW_MAKE_EXECUTE_BUILTIN_COMMAND_AND_ADD(copy_cmd, (NativeCompiledTarget&)*this, "sw_copy_file", nullptr);
-        copy_cmd->arguments.push_back(p.u8string());
-        copy_cmd->arguments.push_back(o.u8string());
-        copy_cmd->addInput(p);
-        copy_cmd->addOutput(o);
-        copy_cmd->name = "copy: " + normalize_path(o);
-        copy_cmd->maybe_unused = builder::Command::MU_ALWAYS;
-        cmds.insert(copy_cmd);
+        auto c = addCommand("sw_copy_file", nullptr);
+        c << cmd::in(p);
+        c << cmd::out(o);
+        c.c->name = "copy: " + normalize_path(o);
+        c.c->maybe_unused = builder::Command::MU_ALWAYS;
+        cmds.insert(c.c);
     }
 
     // this library, check if nothing to link
@@ -3092,13 +3090,10 @@ void NativeCompiledTarget::prepare_pass5()
         Files objs;
         for (auto &f : files)
             objs.insert(f->output);
-        SW_MAKE_EXECUTE_BUILTIN_COMMAND_AND_ADD(c, *this, "sw_create_def_file", nullptr);
-        //c->record_inputs_mtime = true;
-        c->arguments.push_back(def.u8string());
-        c->push_back(objs);
-        c->addInput(objs);
-        c->addOutput(def);
-        add(def);
+        auto c = addCommand("sw_create_def_file", nullptr);
+        c << cmd::out(def);
+        std::dynamic_pointer_cast<builder::BuiltinCommand>(c.c)->push_back(objs);
+        c.c->addInput(objs);
     }
 
     // add def file to linker
@@ -3379,7 +3374,7 @@ void NativeCompiledTarget::processCircular(Files &obj)
     auto name = Linker->getOutputFile().filename().u8string();
     if (createWindowsRpath())
     {
-        Strings dlls;
+        Files dlls;
         SW_UNIMPLEMENTED;
         /*for (auto &d : Dependencies)
         {
@@ -3441,15 +3436,15 @@ void NativeCompiledTarget::processCircular(Files &obj)
         }
         out += ".rp" + out.extension().u8string();
 
-        SW_MAKE_EXECUTE_BUILTIN_COMMAND_AND_ADD(c, *this, "sw_replace_dll_import", nullptr);
-        c->arguments.push_back(Linker->getOutputFile().u8string());
-        c->arguments.push_back(out.u8string());
-        c->addInput(Linker->getOutputFile());
-        c->addOutput(out);
+        auto c = addCommand("sw_replace_dll_import", nullptr);
+        c << cmd::in(Linker->getOutputFile());
+        c << cmd::out(out);
+
         auto cmd = Linker->createCommand(getMainBuild().getContext());
-        cmd->dependent_commands.insert(c);
-        c->push_back(dlls);
-        cmds.insert(c);
+        cmd->dependent_commands.insert(c.c);
+        std::dynamic_pointer_cast<builder::BuiltinCommand>(c.c)->push_back(dlls);
+        c.c->addInput(dlls);
+        cmds.insert(c.c);
         outputfile = out;
     }
 

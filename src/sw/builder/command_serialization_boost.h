@@ -120,7 +120,7 @@ SERIALIZATION_SPLIT_END
 
 /*
 // no working currently
-#define SERIALIZATION_TYPE ::sw::builder::ExecuteBuiltinCommand
+#define SERIALIZATION_TYPE ::sw::builder::BuiltinCommand
 SERIALIZATION_BEGIN_SPLIT
     ar & base_object<::sw::builder::Command>(v);
 SERIALIZATION_SPLIT_CONTINUE

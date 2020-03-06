@@ -1104,14 +1104,14 @@ void CommandSequence::prepare()
         c->prepare();
 }
 
-ExecuteBuiltinCommand::ExecuteBuiltinCommand(const SwBuilderContext &swctx)
+BuiltinCommand::BuiltinCommand(const SwBuilderContext &swctx)
     : Command(swctx)
 {
     setProgram(boost::dll::program_location().wstring());
 }
 
-ExecuteBuiltinCommand::ExecuteBuiltinCommand(const SwBuilderContext &swctx, const String &cmd_name, void *f, int version)
-    : ExecuteBuiltinCommand(swctx)
+BuiltinCommand::BuiltinCommand(const SwBuilderContext &swctx, const String &cmd_name, void *f, int version)
+    : BuiltinCommand(swctx)
 {
     first_response_file_argument = 1;
     arguments.push_back(getInternalCallBuiltinFunctionName());
@@ -1120,21 +1120,21 @@ ExecuteBuiltinCommand::ExecuteBuiltinCommand(const SwBuilderContext &swctx, cons
     arguments.push_back(std::to_string(version));
 }
 
-void ExecuteBuiltinCommand::push_back(const Files &files)
+void BuiltinCommand::push_back(const Files &files)
 {
     arguments.push_back(std::to_string(files.size()));
     for (auto &o : FilesSorted(files.begin(), files.end()))
         arguments.push_back(normalize_path(o));
 }
 
-void ExecuteBuiltinCommand::push_back(const Strings &strings)
+void BuiltinCommand::push_back(const Strings &strings)
 {
     arguments.push_back(std::to_string(strings.size()));
     for (auto &o : strings)
         arguments.push_back(normalize_path(o));
 }
 
-void ExecuteBuiltinCommand::execute1(std::error_code *ec)
+void BuiltinCommand::execute1(std::error_code *ec)
 {
     // add try catch?
 
@@ -1150,7 +1150,7 @@ void ExecuteBuiltinCommand::execute1(std::error_code *ec)
         Strings{ sa.begin() + start + 3, sa.end() });
 }
 
-size_t ExecuteBuiltinCommand::getHash1() const
+size_t BuiltinCommand::getHash1() const
 {
     size_t h = 0;
     // ignore program!

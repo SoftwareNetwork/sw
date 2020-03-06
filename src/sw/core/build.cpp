@@ -932,8 +932,7 @@ Commands SwBuild::getCommands() const
 
     for (auto &[f, t] : copy_files)
     {
-        //SW_MAKE_EXECUTE_BUILTIN_COMMAND(copy_cmd, *nt, "sw_copy_file", nullptr);
-        auto copy_cmd = std::make_shared<::sw::builder::ExecuteBuiltinCommand>(getContext(), "sw_copy_file", nullptr);
+        auto copy_cmd = std::make_shared<::sw::builder::BuiltinCommand>(getContext(), "sw_copy_file", nullptr);
         copy_cmd->arguments.push_back(f);
         copy_cmd->arguments.push_back(t);
         copy_cmd->addInput(f);

@@ -301,13 +301,12 @@ private:
 
 // remove? probably no, just don't use it much
 // we always can create executable commands that is not builtin into modules
-struct SW_BUILDER_API ExecuteBuiltinCommand : Command
+struct SW_BUILDER_API BuiltinCommand : Command
 {
-    using F = std::function<void(void)>;
-
-    ExecuteBuiltinCommand(const SwBuilderContext &swctx);
-    ExecuteBuiltinCommand(const SwBuilderContext &swctx, const String &cmd_name, void *f, int version = 0);
-    virtual ~ExecuteBuiltinCommand() = default;
+    BuiltinCommand(const SwBuilderContext &swctx);
+    // 3rd parameter is an anchor to detect module in which our function resides
+    BuiltinCommand(const SwBuilderContext &swctx, const String &cmd_name, void *f, int version = 0);
+    virtual ~BuiltinCommand() = default;
 
     using Command::push_back;
     void push_back(const Strings &strings);
@@ -324,7 +323,7 @@ String getInternalCallBuiltinFunctionName();
 
 } // namespace bulder
 
-using builder::ExecuteBuiltinCommand;
+using builder::BuiltinCommand;
 using Commands = std::unordered_set<std::shared_ptr<builder::Command>>;
 
 /// return input when file not found
