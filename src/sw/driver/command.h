@@ -365,13 +365,10 @@ struct SW_DRIVER_CPP_API Command : detail::Command
     // additional dependencies will be used to set up the command
     void addProgramDependency(const DependencyPtr &);
 
-    void addLazyAction(LazyAction f);
-
     using Base::operator|;
     Command &operator|(struct CommandBuilder &);
 
 private:
-    std::vector<LazyAction> actions;
     bool dependency_set = false;
     std::weak_ptr<Dependency> dependency; // main
     std::vector<std::weak_ptr<Dependency>> dependencies; // others

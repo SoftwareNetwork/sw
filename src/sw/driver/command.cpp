@@ -64,13 +64,6 @@ void Command::prepare()
     if (prepared)
         return;
 
-    // evaluate lazy
-    for (auto &f : actions)
-        f();
-
-    // early cleanup
-    actions.clear();
-
     // target may set program explicitly (e.g. to system program)
     // so we don't check other conditions below
     if (!isProgramSet())
@@ -173,11 +166,6 @@ void Command::setProgram(const DependencyPtr &d)
 void Command::addProgramDependency(const DependencyPtr &d)
 {
     dependencies.push_back(d);
-}
-
-void Command::addLazyAction(LazyAction f)
-{
-    actions.push_back(f);
 }
 
 Command &Command::operator|(CommandBuilder &c)
