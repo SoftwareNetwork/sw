@@ -301,16 +301,7 @@ bool PackagesDatabase::isPackageInstalled(const Package &p) const
 void PackagesDatabase::installPackage(const PackageId &p, const PackageData &d)
 {
     std::lock_guard lk(m);
-    //auto tr = sqlpp11_transaction_manual(*db);
-
-    db->execute("BEGIN");
-    SCOPE_EXIT
-    {
-        if (std::uncaught_exceptions())
-            db->execute("ROLLBACK");
-        else
-            db->execute("COMMIT");
-    };
+    auto tr = sqlpp11_transaction_manual(*db);
 
     int64_t package_id = 0;
 
