@@ -11,6 +11,7 @@
 #include "sw_context.h"
 
 #include <sw/builder/execution_plan.h>
+#include <sw/builder/jumppad.h>
 
 #include <boost/current_function.hpp>
 #include <magic_enum.hpp>
@@ -932,7 +933,7 @@ Commands SwBuild::getCommands() const
 
     for (auto &[f, t] : copy_files)
     {
-        auto copy_cmd = std::make_shared<::sw::builder::BuiltinCommand>(getContext(), "sw_copy_file", nullptr);
+        auto copy_cmd = std::make_shared<::sw::builder::BuiltinCommand>(getContext(), SW_VISIBLE_BUILTIN_FUNCTION(copy_file));
         copy_cmd->arguments.push_back(f);
         copy_cmd->arguments.push_back(t);
         copy_cmd->addInput(f);

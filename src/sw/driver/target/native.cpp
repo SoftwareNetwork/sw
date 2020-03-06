@@ -1505,7 +1505,7 @@ Commands NativeCompiledTarget::getCommands1() const
         auto o = getOutputDir1();
         o /= f->install_dir / p.filename();
 
-        auto c = addCommand("sw_copy_file", nullptr);
+        auto c = addCommand(SW_VISIBLE_BUILTIN_FUNCTION(copy_file));
         c << cmd::in(p);
         c << cmd::out(o);
         c.c->name = "copy: " + normalize_path(o);
@@ -3090,7 +3090,7 @@ void NativeCompiledTarget::prepare_pass5()
         Files objs;
         for (auto &f : files)
             objs.insert(f->output);
-        auto c = addCommand("sw_create_def_file", nullptr);
+        auto c = addCommand(SW_VISIBLE_BUILTIN_FUNCTION(create_def_file));
         c << cmd::out(def);
         std::dynamic_pointer_cast<builder::BuiltinCommand>(c.c)->push_back(objs);
         c.c->addInput(objs);
@@ -3436,7 +3436,7 @@ void NativeCompiledTarget::processCircular(Files &obj)
         }
         out += ".rp" + out.extension().u8string();
 
-        auto c = addCommand("sw_replace_dll_import", nullptr);
+        auto c = addCommand(SW_VISIBLE_BUILTIN_FUNCTION(replace_dll_import));
         c << cmd::in(Linker->getOutputFile());
         c << cmd::out(out);
 
