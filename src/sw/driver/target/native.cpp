@@ -57,7 +57,6 @@ static int create_def_file(path def, Files obj_files)
     createDefFile(def, obj_files);
     return 0;
 }
-
 SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD(sw_create_def_file, create_def_file)
 
 static int copy_file(path in, path out)
@@ -67,7 +66,6 @@ static int copy_file(path in, path out)
     fs::copy_file(in, out, fs::copy_options::overwrite_existing, ec);
     return 0;
 }
-
 SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD(sw_copy_file, copy_file)
 
 static int remove_file(path f)
@@ -76,7 +74,6 @@ static int remove_file(path f)
     fs::remove(f, ec);
     return 0;
 }
-
 SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD(sw_remove_file, remove_file)
 
 const int symbol_len_max = 240; // 256 causes errors
@@ -153,7 +150,6 @@ static int replace_dll_import(path in, path out, Strings indlls)
     write_file(out, f);
     return 0;
 }
-
 SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD(sw_replace_dll_import, replace_dll_import)
 
 #endif
