@@ -272,8 +272,8 @@ private:
 struct SW_BUILDER_API BuiltinCommand : Command
 {
     BuiltinCommand(const SwBuilderContext &swctx);
-    // 3rd parameter is an anchor to detect module in which our function resides
-    BuiltinCommand(const SwBuilderContext &swctx, const String &cmd_name, void *f, int version = 0);
+    // 3rd parameter is a symbol in module in which our function resides
+    BuiltinCommand(const SwBuilderContext &swctx, const String &cmd_name, void *symbol, int version = 0);
     virtual ~BuiltinCommand() = default;
 
     using Command::push_back;
