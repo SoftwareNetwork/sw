@@ -716,10 +716,7 @@ Commands SwBuild::getCommands() const
     for (const auto &[pkg, tgts] : getTargets())
     {
         for (auto &tgt : tgts)
-        {
-            for (auto &c : tgt->getCommands())
-                c->maybe_unused = builder::Command::MU_TRUE; // why?
-        }
+            tgt->getCommands();
     }
 
     if (targets_to_build.empty())
@@ -838,7 +835,6 @@ Commands SwBuild::getCommands() const
             auto c = tgt->getCommands();
             for (auto &c2 : c)
             {
-                c2->maybe_unused &= ~builder::Command::MU_TRUE;
                 c2->show_output = cl_show_output || cl_write_output_to_file; // only for selected targets
             }
             cmds.insert(c.begin(), c.end());
@@ -940,7 +936,6 @@ Commands SwBuild::getCommands() const
         copy_cmd->addOutput(t);
         //copy_cmd->dependencies.insert(nt->getCommand());
         copy_cmd->name = "copy: " + normalize_path(t);
-        copy_cmd->maybe_unused = builder::Command::MU_ALWAYS;
         copy_cmd->command_storage = &getContext().getCommandStorage(getBuildDirectory() / "cs");
         cmds.insert(copy_cmd);
         commands_storage.insert(copy_cmd); // prevents early destruction
@@ -1135,8 +1130,6 @@ void SwBuild::test()
             {
                 auto test_dir = dir / tgt->getSettings().getHash() / c->getName();
                 fs::create_directories(test_dir);
-
-                c->maybe_unused = builder::Command::MU_TRUE; // why?
 
                 //
                 c->name = "test: [" + c->name + "]";

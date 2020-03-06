@@ -178,7 +178,6 @@ void File::setGenerator(const std::shared_ptr<builder::Command> &g, bool ignore_
     auto gold = data->generator.lock();
     if (!ignore_errors && gold && (gold != g &&
         !gold->isExecuted() &&
-        !gold->maybe_unused &&
         gold->getHash() != g->getHash()))
     {
         String err;

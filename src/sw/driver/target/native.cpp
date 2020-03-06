@@ -1509,7 +1509,6 @@ Commands NativeCompiledTarget::getCommands1() const
         c << cmd::in(p);
         c << cmd::out(o);
         c.c->name = "copy: " + normalize_path(o);
-        c.c->maybe_unused = builder::Command::MU_ALWAYS;
         cmds.insert(c.c);
     }
 

@@ -160,14 +160,6 @@ struct SW_BUILDER_API Command : ICastable, CommandNode, detail::ResolvableComman
     Clock::time_point t_begin;
     Clock::time_point t_end;
 
-    enum
-    {
-        MU_FALSE    = 0,
-        MU_TRUE     = 1,
-        MU_ALWAYS   = 2,
-    };
-    int maybe_unused = 0;
-
     path command_storage_root; // used during deserialization to restore command_storage
     CommandStorage *command_storage = nullptr;
 
