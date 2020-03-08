@@ -38,11 +38,6 @@ command_line:
                 external: true
                 description: Select default remote
 
-            allow_cygwin_hosts:
-                option: host-cygwin
-                external: true
-                description: When on cygwin, allow it as host
-
             do_not_remove_bad_module:
                 external: true
                 description: When on cygwin, allow it as host

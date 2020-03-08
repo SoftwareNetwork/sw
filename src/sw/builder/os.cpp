@@ -21,32 +21,8 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "os");
 
-bool allow_cygwin_hosts;
-
 namespace sw
 {
-
-namespace detail
-{
-
-bool isHostCygwin()
-{
-    static auto cyg = []()
-    {
-        primitives::Command c;
-        c.arguments = { "uname", "-o" };
-        error_code ec;
-        c.execute(ec);
-        if (!ec)
-        {
-            boost::trim(c.out.text);
-            if (boost::iequals(c.out.text, "cygwin"))
-                return true;
-        }
-        return false;
-    }();
-    return cyg;
-}
 
 #ifdef _WIN32
 static Version GetWindowsVersion(void)
@@ -74,8 +50,6 @@ static Version GetWindowsVersion(void)
 }
 #endif
 
-} // namespace detail
-
 OS detectOS()
 {
     OS os;
@@ -89,7 +63,7 @@ OS detectOS()
 #endif
 
 #ifdef CPPAN_OS_WINDOWS_NO_CYGWIN
-    os.Version = detail::GetWindowsVersion();
+    os.Version = GetWindowsVersion();
 
     auto a1 = getenv("PROCESSOR_ARCHITECTURE");
     auto a2 = getenv("PROCESSOR_ARCHITEW6432");
@@ -102,12 +76,6 @@ OS detectOS()
     };
     check_env_var(a1);
     check_env_var(a2);
-
-    if (allow_cygwin_hosts)
-    {
-        if (detail::isHostCygwin())
-            os.Type = OSType::Cygwin;
-    }
 #endif
 
 #if defined(CPPAN_OS_LINUX)
@@ -155,7 +123,7 @@ bool OS::canRunTargetExecutables(const OS &TargetOS) const
             || Type == OSType::Windows && TargetOS.Type == OSType::Cygwin
             ;
         if (!ok)
-        return false;
+            return false;
     }
 
     if (Arch != TargetOS.Arch)

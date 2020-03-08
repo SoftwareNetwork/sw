@@ -701,7 +701,7 @@ path Command::writeCommand(const path &p, bool print_name) const
     auto pbat = p;
     String t;
 
-    bool bat = getHostOS().getShellType() == ShellType::Batch && !::sw::detail::isHostCygwin();
+    bool bat = getHostOS().getShellType() == ShellType::Batch;
     if (!save_command_format.empty())
     {
         if (save_command_format == "bat")
@@ -1236,11 +1236,13 @@ path resolveExecutable(const path &in)
         {
             boost::trim(c.out.text);
 
+            static const auto p_cygpath = primitives::resolve_executable("cygpath");
+
             // now run cygpath
-            if (which && detail::isHostCygwin())
+            if (which && !p_cygpath.empty())
             {
                 primitives::Command c2;
-                c2.setProgram("cygpath");
+                c2.setProgram(p_cygpath);
                 c2.arguments.push_back("-w");
                 c2.arguments.push_back(c.out.text);
                 c2.execute(ec);
