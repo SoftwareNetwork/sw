@@ -144,6 +144,8 @@ static String osTypeFromStringCaseI(const String &in)
         return "org.torvalds.linux";
     else if (os == "mac" || os == "macos")
         return "com.Apple.Macos"; // XNU? Darwin?
+    else if (os == "cyg" || os == "cygwin")
+        return "org.cygwin";
     return os;
 }
 
