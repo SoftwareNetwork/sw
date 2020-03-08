@@ -8,6 +8,15 @@ mark_as_advanced(SW_EXECUTABLE)
 
 ########################################
 
+macro(sw_fix_path p)
+    # fix cygwin paths
+    if (CYGWIN AND "${${p}}" MATCHES "^/cygdrive/.*")
+        string(REGEX REPLACE "^/cygdrive/(.)(.*)" "\\1:\\2" ${p} "${${p}}")
+    endif()
+endmacro()
+
+########################################
+
 set(SW_DEPS_DIR "${CMAKE_BINARY_DIR}/.sw/cmake" CACHE STRING "SW local deps dir.")
 set(SW_DEPS_FILE "${SW_DEPS_DIR}/sw.txt" CACHE STRING "SW local deps file.")
 
@@ -90,20 +99,44 @@ function(sw_execute)
         endif()
     endif()
 
+    set(cyg)
+    if (CYGWIN)
+        #set(cyg -host-cygwin) # not working atm
+        set(cyg -os cygwin)
+    endif()
+
+    set(compiler)
+    if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL MSVC)
+        set(compiler -compiler msvc)
+    elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL GNU)
+        set(compiler -compiler gcc)
+    elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL CLANG)
+        set(compiler -compiler clang)
+    else()
+        # https://cmake.org/cmake/help/latest/variable/CMAKE_LANG_COMPILER_ID.html
+        message(FATAL_ERROR "Compiler is not implemented: '${CMAKE_C_COMPILER_ID}' or '${CMAKE_CXX_COMPILER_ID}'")
+    endif()
+
     set(sw_platform_args
         ${stsh}
         -platform ${platform}
         ${mt_flag}
-        #-compiler msvc
+        ${compiler}
+        ${cyg}
     )
+
+    set(wdir "${SW_DEPS_DIR}")
+    set(depsfile "${SW_DEPS_FILE}")
+    sw_fix_path(wdir)
+    sw_fix_path(depsfile)
 
     set(swcmd
         ${SW_EXECUTABLE}
             ${sw_platform_args}
-            -d "${SW_DEPS_DIR}"
+            -d "${wdir}"
             ${SW_FORCE}
             integrate
-            -cmake-deps "${SW_DEPS_FILE}"
+            -cmake-deps "${depsfile}"
     )
 
     if (SW_DEBUG)
@@ -137,22 +170,8 @@ function(sw_execute)
         set(append_config 1)
     endif()
     if (append_config)
-        set(outdir "${outdir}/$<CONFIG>")
-    endif()
-
-    string(SHA1 depshash "${sw_platform_args}")
-    string(SUBSTRING "${depshash}" 0 8 depshash)
-
-    set(SW_DEPS_DIR_CFG_STORAGE "${SW_DEPS_DIR}/deps")
-    execute_process(COMMAND ${CMAKE_COMMAND} -E remove_directory "${SW_DEPS_DIR_CFG_STORAGE}")
-
-    # add deps targets
-    add_custom_target(sw_build_dependencies ALL
-        COMMAND
-            ${SW_EXECUTABLE}
-                ${sw_platform_args}
-                -d "${SW_DEPS_DIR}"
-                # config
+        set(cfg "$<CONFIG>")
+        set(extendedcfg
                 -config
                     $<$<CONFIG:Debug>:d>
                     $<$<CONFIG:MinSizeRel>:msr>
@@ -160,12 +179,48 @@ function(sw_execute)
                     $<$<CONFIG:Release>:r>
                     # in cmake default config is debug (non-optimized)
                     $<$<CONFIG:>:d>
-                #
-                build @${SW_DEPS_FILE}
+            )
+    elseif (CMAKE_BUILD_TYPE)
+        set(cfg "${CMAKE_BUILD_TYPE}")
+        if ("${CMAKE_BUILD_TYPE}" STREQUAL Debug)
+            set(extendedcfg -config d)
+        elseif ("${CMAKE_BUILD_TYPE}" STREQUAL Release)
+            set(extendedcfg -config r)
+        elseif ("${CMAKE_BUILD_TYPE}" STREQUAL RelWithDebInfo)
+            set(extendedcfg -config rwdi)
+        elseif ("${CMAKE_BUILD_TYPE}" STREQUAL MinSizeRel)
+            set(extendedcfg -config msr)
+        else()
+            message(FATAL_ERROR "CMAKE_BUILD_TYPE is not implemented: '${CMAKE_BUILD_TYPE}'")
+        endif()
+    else()
+        set(cfg)
+        set(extendedcfg -config d)
+    endif()
+    set(outdir "${outdir}/${cfg}")
+
+    string(SHA1 depshash "${sw_platform_args}")
+    string(SUBSTRING "${depshash}" 0 8 depshash)
+
+    set(SW_DEPS_DIR_CFG_STORAGE "${SW_DEPS_DIR}/deps")
+    execute_process(COMMAND ${CMAKE_COMMAND} -E remove_directory "${SW_DEPS_DIR_CFG_STORAGE}")
+
+    # fix dirs
+    sw_fix_path(SW_DEPS_DIR_CFG_STORAGE) # after execute_process
+    sw_fix_path(outdir)
+
+    # add deps targets
+    add_custom_target(sw_build_dependencies ALL
+        COMMAND
+            ${SW_EXECUTABLE}
+                ${sw_platform_args}
+                -d "${wdir}"
+                ${extendedcfg}
+                build "@${depsfile}"
                 -ide-copy-to-dir
                     "${outdir}"
                 -ide-fast-path
-                    "${SW_DEPS_DIR_CFG_STORAGE}/$<CONFIG>-${depshash}.deps"
+                    "${SW_DEPS_DIR_CFG_STORAGE}/${cfg}-${depshash}.deps"
     )
     set_target_properties(sw_build_dependencies
         PROPERTIES
