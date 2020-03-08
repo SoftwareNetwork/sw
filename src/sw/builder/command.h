@@ -40,7 +40,6 @@
 namespace sw
 {
 
-struct FileStorage;
 struct Program;
 struct SwBuilderContext;
 struct CommandStorage;
