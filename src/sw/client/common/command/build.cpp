@@ -117,14 +117,6 @@ static String configurationTypeFromStringCaseI(const String &in)
     return configuration;
 }
 
-static String OSTypeFromStringCaseI(const String &in)
-{
-    auto target_os = boost::to_lower_copy(in);
-    if (target_os == "win" || target_os == "windows")
-        return "com.Microsoft.Windows.NT";
-    return target_os;
-}
-
 static String archTypeFromStringCaseI(const String &in)
 {
     auto platform = boost::to_lower_copy(in);
