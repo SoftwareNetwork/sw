@@ -1133,7 +1133,7 @@ void detectNativeCompilers(DETECT_ARGS)
     detectIntelCompilers(s);
 }
 
-void setHostPrograms(const SwCoreContext &swctx, TargetSettings &ts, bool force)
+void addSettingsAndSetPrograms(const SwCoreContext &swctx, TargetSettings &ts, bool force)
 {
     auto to_upkg = [](const auto &s)
     {
@@ -1252,13 +1252,14 @@ void setHostPrograms(const SwCoreContext &swctx, TargetSettings &ts, bool force)
         //ts["native"]["stdlib"]["cpp"] = to_upkg("org.sw.demo.llvm_project.libcxx");
 #elif defined(__GNUC__)
         if (!(
-            if_add(ts["native"]["program"]["c"], "org.gnu.gcc") &&
-            if_add(ts["native"]["program"]["cpp"], "org.gnu.gpp")
+            if_add(ts["native"]["program"]["c"], "org.gnu.gcc"s) &&
+            if_add(ts["native"]["program"]["cpp"], "org.gnu.gpp"s)
             ))
         {
             throw SW_RUNTIME_ERROR(err_msg("gcc"));
         }
-#elif !defined(_WIN32)
+#elif defined(_WIN32)
+#else
 #error "Add your current compiler to detect.cpp and here."
 #endif
 

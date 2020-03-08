@@ -715,7 +715,7 @@ bool NativeCompiledTarget::init()
         });
 
         // before target init
-        setHostPrograms((SwContext&)getContext(), ts);
+        addSettingsAndSetPrograms((SwContext&)getContext(), ts);
 
         if (!isHeaderOnly())
             findCompiler();
