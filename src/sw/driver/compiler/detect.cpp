@@ -1166,7 +1166,8 @@ void addSettingsAndSetPrograms(const SwCoreContext &swctx, TargetSettings &ts, b
             check_and_assign(k, v);
     };
 
-    if (swctx.getHostOs().is(OSType::Windows))
+    BuildSettings bs(ts);
+    if (bs.TargetOS.is(OSType::Windows))
     {
         check_and_assign_dependency(ts["native"]["stdlib"]["c"], to_upkg("com.Microsoft.Windows.SDK.ucrt"));
         check_and_assign_dependency(ts["native"]["stdlib"]["cpp"], to_upkg("com.Microsoft.VisualStudio.VC.libcpp"));
