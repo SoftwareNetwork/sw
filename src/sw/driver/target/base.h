@@ -36,6 +36,7 @@ bool isExecutable(TargetType T);
 SW_DRIVER_CPP_API
 String toString(TargetType T);
 
+struct FileStorage;
 struct NativeCompiledTarget;
 struct Build;
 struct SwContext;
