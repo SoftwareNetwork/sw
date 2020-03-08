@@ -1263,6 +1263,16 @@ void addSettingsAndSetPrograms(const SwCoreContext &swctx, TargetSettings &ts, b
 #else
 #error "Add your current compiler to detect.cpp and here."
 #endif
+        if (bs.TargetOS.is(OSType::Cygwin) && !ts["native"]["program"]["c"])
+        {
+            if (!(
+                if_add(ts["native"]["program"]["c"], "org.gnu.gcc"s) &&
+                if_add(ts["native"]["program"]["cpp"], "org.gnu.gpp"s)
+                ))
+            {
+                throw SW_RUNTIME_ERROR(err_msg("gcc"));
+            }
+        }
 
         // using c prog
         if_add(ts["native"]["program"]["asm"], ts["native"]["program"]["c"].getValue());
