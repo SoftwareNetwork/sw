@@ -91,7 +91,21 @@ SUBCOMMAND_DECL(integrate)
 {
     auto swctx = createSwContext(options);
 
-    auto create_build = [&swctx, &options](const Strings &lines, const Strings &configs = {})
+    bool cygwin = false;
+    auto fix_path = [&cygwin](const auto &p)
+    {
+        if (!cygwin)
+            return p;
+        if (p.size() < 3 || p[1] != ':')
+            return p;
+        String s2 = "x";
+        s2[0] = tolower(p[0]);
+        if (p[2] != '/')
+            s2 += "/";
+        return "/cygdrive/"s + s2 + p.substr(2);
+    };
+
+    auto create_build = [&swctx, &options, &cygwin](const Strings &lines, const Strings &configs = {})
     {
         auto build = createBuild(*swctx, options);
         auto &b = *build;
@@ -99,6 +113,9 @@ SUBCOMMAND_DECL(integrate)
         auto settings = createSettings(*swctx, options);
         if (settings.size() > 1)
             throw SW_RUNTIME_ERROR("size() must be 1");
+
+        cygwin = settings[0]["os"]["kernel"] == "org.cygwin";
+
         for (auto &l : lines)
         {
             for (auto c : l)
@@ -205,7 +222,7 @@ SUBCOMMAND_DECL(integrate)
             String idirs;
             idirs += "\"";
             for (auto &d : s["include_directories"].getArray())
-                idirs += std::get<sw::TargetSetting::Value>(d) + ";";
+                idirs += fix_path(std::get<sw::TargetSetting::Value>(d)) + ";";
             idirs += "\"";
             ctx.addLine("INTERFACE_INCLUDE_DIRECTORIES " + idirs);
 
@@ -215,7 +232,7 @@ SUBCOMMAND_DECL(integrate)
                 String libs;
                 libs += "\"";
                 for (auto &d : s["link_libraries"].getArray())
-                    libs += std::get<sw::TargetSetting::Value>(d) + ";";
+                    libs += fix_path(std::get<sw::TargetSetting::Value>(d)) + ";";
                 for (auto &d : s["system_link_libraries"].getArray())
                     libs += std::get<sw::TargetSetting::Value>(d) + ";";
                 libs += "\"";
@@ -235,7 +252,8 @@ SUBCOMMAND_DECL(integrate)
 
                 sw::BuildSettings bs(tgt->getSettings());
 
-                ctx.addLine("set_property(TARGET " + pkg2string(pkg) + " APPEND PROPERTY IMPORTED_CONFIGURATIONS " + toCmakeString(bs.Native.ConfigurationType) + ")");
+                ctx.addLine("set_property(TARGET " + pkg2string(pkg) + " APPEND PROPERTY IMPORTED_CONFIGURATIONS " +
+                    toCmakeString(bs.Native.ConfigurationType) + ")");
 
                 // props2
                 ctx.increaseIndent("set_target_properties(" + pkg2string(pkg) + " PROPERTIES");
@@ -245,10 +263,10 @@ SUBCOMMAND_DECL(integrate)
 
                 // IMPORTED_LOCATION = path to .dll/.so or static .lib/.a
                 ctx.addLine("IMPORTED_LOCATION_" + toCmakeString(bs.Native.ConfigurationType) + " \"" +
-                    normalize_path(s[st == "SHARED" ? "output_file" : "import_library"].getValue()) + "\"");
+                    fix_path(normalize_path(s[st == "SHARED" ? "output_file" : "import_library"].getValue())) + "\"");
                 // IMPORTED_IMPLIB = path to .lib (import)
                 ctx.addLine("IMPORTED_IMPLIB_" + toCmakeString(bs.Native.ConfigurationType) + " \"" +
-                    normalize_path(s["import_library"].getValue()) + "\"");
+                    fix_path(normalize_path(s["import_library"].getValue())) + "\"");
 
                 ctx.decreaseIndent(")");
                 ctx.emptyLines();
