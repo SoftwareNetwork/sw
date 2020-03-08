@@ -1134,16 +1134,11 @@ void detectNativeCompilers(DETECT_ARGS)
     detectIntelCompilers(s);
 }
 
-void addSettingsAndSetPrograms(const SwCoreContext &swctx, TargetSettings &ts, bool force)
+static void addSettings(TargetSettings &ts, bool force)
 {
-    auto to_upkg = [](const auto &s)
+    auto check_and_assign = [force](auto &k, const auto &v)
     {
-        return UnresolvedPackage(s).toString();
-    };
-
-    auto check_and_assign = [force](auto &k, const auto &v, bool force2 = false)
-    {
-        if (force || !k || force2)
+        if (force || !k)
             k = v;
     };
 
@@ -1155,20 +1150,35 @@ void addSettingsAndSetPrograms(const SwCoreContext &swctx, TargetSettings &ts, b
 #endif
     check_and_assign(ts["native"]["library"], "shared");
     check_and_assign(ts["native"]["mt"], "false");
+}
+
+// remember! only host tools
+// they must be the same as used when building sw
+void addSettingsAndSetHostPrograms(const SwCoreContext &swctx, TargetSettings &ts)
+{
+    addSettings(ts, true);
+
+    auto to_upkg = [](const auto &s)
+    {
+        return UnresolvedPackage(s).toString();
+    };
 
     // deps: programs, stdlib etc.
-    auto check_and_assign_dependency = [&check_and_assign, &swctx, &ts, force](auto &k, const auto &v, int version_level = 0)
+    auto check_and_assign_dependency = [&swctx, &ts](auto &k, const auto &v, int version_level = 0)
     {
-        bool use_k = !force && k && k.isValue();
-        auto i = swctx.getPredefinedTargets().find(UnresolvedPackage(use_k ? k.getValue() : v), ts);
+        auto check_and_assign = [](auto &k, const auto &v)
+        {
+            k = v;
+        };
+
+        auto i = swctx.getPredefinedTargets().find(UnresolvedPackage(v), ts);
         if (i)
-            check_and_assign(k, version_level ? i->getPackage().toString(version_level) : i->getPackage().toString(), use_k);
+            check_and_assign(k, version_level ? i->getPackage().toString(version_level) : i->getPackage().toString());
         else
             check_and_assign(k, v);
     };
 
-    BuildSettings bs(ts);
-    if (bs.TargetOS.is(OSType::Windows))
+    if (swctx.getHostOs().Type == OSType::Windows)
     {
         check_and_assign_dependency(ts["native"]["stdlib"]["c"], to_upkg("com.Microsoft.Windows.SDK.ucrt"));
         check_and_assign_dependency(ts["native"]["stdlib"]["cpp"], to_upkg("com.Microsoft.VisualStudio.VC.libcpp"));
@@ -1252,7 +1262,7 @@ void addSettingsAndSetPrograms(const SwCoreContext &swctx, TargetSettings &ts, b
         }
         //if (getHostOs().is(OSType::Linux))
         //ts["native"]["stdlib"]["cpp"] = to_upkg("org.sw.demo.llvm_project.libcxx");
-#elif defined(__GNUC__)
+#elif defined(__GNUC__) || defined(__CYGWIN__)
         if (!(
             if_add(ts["native"]["program"]["c"], "org.gnu.gcc"s) &&
             if_add(ts["native"]["program"]["cpp"], "org.gnu.gpp"s)
@@ -1264,26 +1274,145 @@ void addSettingsAndSetPrograms(const SwCoreContext &swctx, TargetSettings &ts, b
 #else
 #error "Add your current compiler to detect.cpp and here."
 #endif
-        if (bs.TargetOS.is(OSType::Cygwin) && !ts["native"]["program"]["c"])
-        {
-            if (!(
-                if_add(ts["native"]["program"]["c"], "org.gnu.gcc"s) &&
-                if_add(ts["native"]["program"]["cpp"], "org.gnu.gpp"s)
-                ))
-            {
-                throw SW_RUNTIME_ERROR(err_msg("gcc"));
-            }
-        }
 
         // using c prog
-        if_add(ts["native"]["program"]["asm"], ts["native"]["program"]["c"].getValue());
+        if (ts["native"]["program"]["c"].isValue())
+            if_add(ts["native"]["program"]["asm"], ts["native"]["program"]["c"].getValue());
 
         // reconsider, also with driver?
-        if_add(ts["native"]["program"]["lib"], "org.gnu.binutils.ar"s);
+        check_and_assign_dependency(ts["native"]["program"]["lib"], "org.gnu.binutils.ar"s);
 
         // use driver
         // use cpp driver for the moment to not burden ourselves in adding stdlib
-        if_add(ts["native"]["program"]["link"], ts["native"]["program"]["cpp"].getValue());
+        if (ts["native"]["program"]["cpp"].isValue())
+            if_add(ts["native"]["program"]["link"], ts["native"]["program"]["cpp"].getValue());
+    }
+}
+
+//
+void addSettingsAndSetPrograms(const SwCoreContext &swctx, TargetSettings &ts)
+{
+    addSettings(ts, false);
+
+    auto to_upkg = [](const auto &s)
+    {
+        return UnresolvedPackage(s).toString();
+    };
+
+    // deps: programs, stdlib etc.
+    auto check_and_assign_dependency = [&swctx, &ts](auto &k, const auto &v, int version_level = 0)
+    {
+        auto check_and_assign = [](auto &k, const auto &v, bool force2 = false)
+        {
+            if (!k || force2)
+                k = v;
+        };
+
+        bool use_k = k && k.isValue();
+        auto i = swctx.getPredefinedTargets().find(UnresolvedPackage(use_k ? k.getValue() : v), ts);
+        if (i)
+            check_and_assign(k, version_level ? i->getPackage().toString(version_level) : i->getPackage().toString(), use_k);
+        else
+            check_and_assign(k, v);
+    };
+
+    BuildSettings bs(ts);
+    // on win we select msvc, clang, clangcl
+    if (bs.TargetOS.is(OSType::Windows))
+    {
+        check_and_assign_dependency(ts["native"]["stdlib"]["c"], to_upkg("com.Microsoft.Windows.SDK.ucrt"));
+        check_and_assign_dependency(ts["native"]["stdlib"]["cpp"], to_upkg("com.Microsoft.VisualStudio.VC.libcpp"));
+        check_and_assign_dependency(ts["native"]["stdlib"]["kernel"], to_upkg("com.Microsoft.Windows.SDK.um"));
+
+        // now find the latest available sdk (ucrt) and select it
+        //TargetSettings oss;
+        //oss["os"] = ts["os"];
+        //auto sdk = swctx.getPredefinedTargets().find(UnresolvedPackage(ts["native"]["stdlib"]["c"].getValue()), oss);
+        //if (!sdk)
+        //throw SW_RUNTIME_ERROR("No suitable installed WinSDK found for this host");
+        //ts["native"]["stdlib"]["c"] = sdk->getPackage().toString(); // assign always
+        //ts["os"]["version"] = sdkver->toString(3); // cut off the last (fourth) number
+
+        auto clpkg = "com.Microsoft.VisualStudio.VC.cl";
+        auto cl = swctx.getPredefinedTargets().find(clpkg);
+
+        auto clangpppkg = "org.LLVM.clangpp";
+        auto clangpp = swctx.getPredefinedTargets().find(clpkg);
+
+        auto clangclpkg = "org.LLVM.clangcl";
+        auto clangcl = swctx.getPredefinedTargets().find(clangclpkg);
+
+        if (0);
+        // msvc
+        else if (cl != swctx.getPredefinedTargets().end(clpkg) && !cl->second.empty())
+        {
+            check_and_assign_dependency(ts["native"]["program"]["c"], to_upkg("com.Microsoft.VisualStudio.VC.cl"));
+            check_and_assign_dependency(ts["native"]["program"]["cpp"], to_upkg("com.Microsoft.VisualStudio.VC.cl"));
+            check_and_assign_dependency(ts["native"]["program"]["asm"], to_upkg("com.Microsoft.VisualStudio.VC.ml"));
+            check_and_assign_dependency(ts["native"]["program"]["lib"], to_upkg("com.Microsoft.VisualStudio.VC.lib"));
+            check_and_assign_dependency(ts["native"]["program"]["link"], to_upkg("com.Microsoft.VisualStudio.VC.link"));
+        }
+        // clang
+        else if (clangpp != swctx.getPredefinedTargets().end(clangpppkg) && !clangpp->second.empty())
+        {
+            check_and_assign_dependency(ts["native"]["program"]["c"], to_upkg("org.LLVM.clang"));
+            check_and_assign_dependency(ts["native"]["program"]["cpp"], to_upkg("org.LLVM.clangpp"));
+            check_and_assign_dependency(ts["native"]["program"]["asm"], to_upkg("org.LLVM.clang"));
+            // ?
+            check_and_assign_dependency(ts["native"]["program"]["lib"], to_upkg("com.Microsoft.VisualStudio.VC.lib"));
+            check_and_assign_dependency(ts["native"]["program"]["link"], to_upkg("com.Microsoft.VisualStudio.VC.link"));
+        }
+        // clangcl
+        else if (clangcl != swctx.getPredefinedTargets().end(clangclpkg) && !clangcl->second.empty())
+        {
+            check_and_assign_dependency(ts["native"]["program"]["c"], to_upkg("org.LLVM.clangcl"));
+            check_and_assign_dependency(ts["native"]["program"]["cpp"], to_upkg("org.LLVM.clangcl"));
+            check_and_assign_dependency(ts["native"]["program"]["asm"], to_upkg("org.LLVM.clangcl"));
+            // ?
+            check_and_assign_dependency(ts["native"]["program"]["lib"], to_upkg("com.Microsoft.VisualStudio.VC.lib"));
+            check_and_assign_dependency(ts["native"]["program"]["link"], to_upkg("com.Microsoft.VisualStudio.VC.link"));
+        }
+        else
+            throw SW_RUNTIME_ERROR("No suitable compilers found.\nPlease, install one first.");
+    }
+    // add more defaults
+    else
+    {
+        // set default libs?
+        /*ts["native"]["stdlib"]["c"] = to_upkg("com.Microsoft.Windows.SDK.ucrt");
+        ts["native"]["stdlib"]["cpp"] = to_upkg("com.Microsoft.VisualStudio.VC.libcpp");
+        ts["native"]["stdlib"]["kernel"] = to_upkg("com.Microsoft.Windows.SDK.um");*/
+
+        auto if_add = [&swctx, &check_and_assign_dependency](auto &s, const UnresolvedPackage &name)
+        {
+            auto &pd = swctx.getPredefinedTargets();
+            auto i = pd.find(name);
+            if (i == pd.end() || i->second.empty())
+                return false;
+            check_and_assign_dependency(s, name.toString());
+            return true;
+        };
+
+        // try clang first
+        check_and_assign_dependency(ts["native"]["program"]["c"], "org.LLVM.clang"s);
+        check_and_assign_dependency(ts["native"]["program"]["cpp"], "org.LLVM.clangpp"s);
+        //if (getHostOs().is(OSType::Linux))
+        //ts["native"]["stdlib"]["cpp"] = to_upkg("org.sw.demo.llvm_project.libcxx");
+
+        check_and_assign_dependency(ts["native"]["program"]["c"], "org.gnu.gcc"s);
+        check_and_assign_dependency(ts["native"]["program"]["cpp"], "org.gnu.gpp"s);
+
+        // using c prog
+        if (ts["native"]["program"]["c"].isValue())
+            if_add(ts["native"]["program"]["asm"], ts["native"]["program"]["c"].getValue());
+
+        // reconsider, also with driver?
+        check_and_assign_dependency(ts["native"]["program"]["lib"], "org.gnu.binutils.ar"s);
+
+        // use driver
+        // use cpp driver for the moment to not burden ourselves in adding stdlib
+        if (ts["native"]["program"]["cpp"].isValue())
+            if_add(ts["native"]["program"]["link"], ts["native"]["program"]["cpp"].getValue());
     }
 }
 
