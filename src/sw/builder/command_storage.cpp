@@ -272,7 +272,9 @@ void FileDb::save(const Files &files, const detail::Storage &s, ConcurrentComman
 }
 
 detail::FileHolder::FileHolder(const path &fn)
-    : f(fn, "ab"), fn(fn)
+    : /*lk(fn)
+    , */f(fn, "ab")
+    , fn(fn)
 {
     // goes first
     // but maybe remove?
