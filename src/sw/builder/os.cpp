@@ -148,7 +148,15 @@ const OS &getHostOS()
 bool OS::canRunTargetExecutables(const OS &TargetOS) const
 {
     if (Type != TargetOS.Type)
+    {
+        bool ok =
+            0
+            || Type == OSType::Cygwin && TargetOS.Type == OSType::Windows
+            || Type == OSType::Windows && TargetOS.Type == OSType::Cygwin
+            ;
+        if (!ok)
         return false;
+    }
 
     if (Arch != TargetOS.Arch)
     {
