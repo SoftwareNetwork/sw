@@ -3,3 +3,5 @@ build_waf
 waf*
 win*
 mingw*
+*.bat
+*.sh
