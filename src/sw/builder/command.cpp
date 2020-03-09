@@ -1180,7 +1180,7 @@ String getInternalCallBuiltinFunctionName()
 
 } // namespace builder
 
-// libuv cannot resolve /such/paths/on/cygwin, so we explicitly use which/where
+// libuv cannot resolve /such/paths/on/cygwin, so we explicitly use which/where/cygpath
 path resolveExecutable(const path &in)
 {
     if (in.empty())

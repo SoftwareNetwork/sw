@@ -1134,6 +1134,9 @@ void detectNativeCompilers(DETECT_ARGS)
     detectIntelCompilers(s);
 }
 
+// actually we cannot move this to client,
+// because we support different languages and packages
+// scripting languages do not have os, arch, kernel, configuration etc.
 static void addSettings(TargetSettings &ts, bool force)
 {
     auto check_and_assign = [force](auto &k, const auto &v)
@@ -1320,6 +1323,7 @@ void addSettingsAndSetPrograms(const SwCoreContext &swctx, TargetSettings &ts)
     // on win we select msvc, clang, clangcl
     if (bs.TargetOS.is(OSType::Windows))
     {
+        //if (!ts["native"]["program"]["c"] || ts["native"]["program"]["c"].isValue())
         check_and_assign_dependency(ts["native"]["stdlib"]["c"], to_upkg("com.Microsoft.Windows.SDK.ucrt"));
         check_and_assign_dependency(ts["native"]["stdlib"]["cpp"], to_upkg("com.Microsoft.VisualStudio.VC.libcpp"));
         check_and_assign_dependency(ts["native"]["stdlib"]["kernel"], to_upkg("com.Microsoft.Windows.SDK.um"));
