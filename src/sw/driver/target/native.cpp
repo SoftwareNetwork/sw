@@ -2346,6 +2346,14 @@ void NativeCompiledTarget::prepare_pass1()
         Public.Definitions["SW_EXPORT"] = "__declspec(dllexport)";
         Public.Definitions["SW_IMPORT"] = "__declspec(dllimport)";
     }
+    else if (0
+        || getBuildSettings().TargetOS.Type == OSType::Cygwin
+        || getBuildSettings().TargetOS.Type == OSType::Mingw
+        )
+    {
+        Public.Definitions["SW_EXPORT"] = "__attribute__ ((dllexport))";
+        Public.Definitions["SW_IMPORT"] = "__attribute__ ((dllimport))";
+    }
     else
     {
         Public.Definitions["SW_EXPORT"] = "__attribute__ ((visibility (\"default\")))";
@@ -3707,7 +3715,11 @@ bool NativeCompiledTarget::prepareLibrary(LibraryType Type)
             if (api.empty())
                 return;
 
-            if (getBuildSettings().TargetOS.Type == OSType::Windows)
+            if (0
+                || getBuildSettings().TargetOS.Type == OSType::Windows
+                || getBuildSettings().TargetOS.Type == OSType::Cygwin
+                || getBuildSettings().TargetOS.Type == OSType::Mingw
+                )
             {
                 if (Type == LibraryType::Shared)
                 {
@@ -4682,7 +4694,11 @@ bool ExecutableTarget::prepare()
         {
             if (api.empty())
                 return;
-            if (getBuildSettings().TargetOS.Type == OSType::Windows)
+            if (0
+                || getBuildSettings().TargetOS.Type == OSType::Windows
+                || getBuildSettings().TargetOS.Type == OSType::Cygwin
+                || getBuildSettings().TargetOS.Type == OSType::Mingw
+                )
             {
                 Private.Definitions[api] = "SW_EXPORT";
                 Interface.Definitions[api] = "SW_IMPORT";
