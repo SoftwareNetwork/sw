@@ -99,10 +99,12 @@ function(sw_execute)
         endif()
     endif()
 
-    set(cyg)
+    set(os)
     if (CYGWIN)
-        #set(cyg -host-cygwin) # not working atm
-        set(cyg -os cygwin)
+        set(os -os cygwin)
+    endif()
+    if (MINGW OR MSYS)
+        set(os -os mingw)
     endif()
 
     set(compiler)
@@ -122,7 +124,7 @@ function(sw_execute)
         -platform ${platform}
         ${mt_flag}
         ${compiler}
-        ${cyg}
+        ${os}
     )
 
     set(wdir "${SW_DEPS_DIR}")

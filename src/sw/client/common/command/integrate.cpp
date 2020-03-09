@@ -102,7 +102,8 @@ SUBCOMMAND_DECL(integrate)
         s2[0] = tolower(p[0]);
         if (p[2] != '/')
             s2 += "/";
-        return "/cygdrive/"s + s2 + p.substr(2);
+        s2 = "cygdrive/" + s2;
+        return "/"s + s2 + p.substr(2);
     };
 
     auto create_build = [&swctx, &options, &cygwin](const Strings &lines, const Strings &configs = {})
