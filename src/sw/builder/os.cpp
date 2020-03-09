@@ -121,6 +121,8 @@ bool OS::canRunTargetExecutables(const OS &TargetOS) const
             0
             || Type == OSType::Cygwin && TargetOS.Type == OSType::Windows
             || Type == OSType::Windows && TargetOS.Type == OSType::Cygwin
+            || Type == OSType::Mingw && TargetOS.Type == OSType::Windows
+            || Type == OSType::Windows && TargetOS.Type == OSType::Mingw
             ;
         if (!ok)
             return false;
@@ -168,8 +170,9 @@ String OS::getExecutableExtension() const
 {
     switch (Type)
     {
-    case OSType::Cygwin:
     case OSType::Windows:
+    case OSType::Cygwin:
+    case OSType::Mingw:
         return ".exe";
     default:
         return "";
@@ -191,8 +194,9 @@ String OS::getLibraryPrefix() const
 {
     switch (Type)
     {
-    case OSType::Cygwin: // empty for cygwin or lib?
     case OSType::Windows:
+    case OSType::Mingw:
+    case OSType::Cygwin: // empty for cygwin or lib?
         return "";
     default:
         return "lib";
@@ -203,8 +207,9 @@ String OS::getSharedLibraryExtension() const
 {
     switch (Type)
     {
-    case OSType::Cygwin:
     case OSType::Windows:
+    case OSType::Cygwin:
+    case OSType::Mingw:
         return ".dll";
     case OSType::Darwin:
     case OSType::Macos:
@@ -371,6 +376,7 @@ String toString(OSType e)
         CASE(Darwin);
         CASE(IOS);
         CASE(Cygwin);
+        CASE(Mingw);
         CASE(Android);
     default:
         throw std::logic_error("TODO: implement target os");

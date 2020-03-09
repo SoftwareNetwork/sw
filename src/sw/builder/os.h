@@ -51,6 +51,8 @@ enum class OSType
     Darwin,
     Macos,
     IOS,
+
+    Mingw, // mingw32, mingw64, msys, msys2, msys64?
 };
 
 // from llvm/ADT/Triple.h

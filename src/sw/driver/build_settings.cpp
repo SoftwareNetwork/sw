@@ -41,6 +41,7 @@ static OS fromTargetSettings(const TargetSettings &ts)
         IF_SETTING("com.Apple.Macos", os.Type, OSType::Macos);
         IF_SETTING("com.Apple.Darwin", os.Type, OSType::Darwin);
         IF_SETTING("org.cygwin", os.Type, OSType::Cygwin);
+        IF_SETTING("org.mingw", os.Type, OSType::Mingw);
         else
             throw SW_RUNTIME_ERROR("Unknown os: " + v.getValue());
     IF_END

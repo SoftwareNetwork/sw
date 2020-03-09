@@ -146,6 +146,8 @@ static String osTypeFromStringCaseI(const String &in)
         return "com.Apple.Macos"; // XNU? Darwin?
     else if (os == "cyg" || os == "cygwin")
         return "org.cygwin";
+    else if (os == "mingw" || os == "mingw32" || os == "mingw64" || os == "msys")
+        return "org.mingw";
     return os;
 }
 

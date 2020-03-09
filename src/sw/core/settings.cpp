@@ -35,6 +35,9 @@ TargetSettings toTargetSettings(const OS &o)
     case OSType::Cygwin:
         s["os"]["kernel"] = "org.cygwin";
         break;
+    case OSType::Mingw:
+        s["os"]["kernel"] = "org.mingw";
+        break;
     default:
         SW_UNIMPLEMENTED;
     }
