@@ -680,7 +680,7 @@ bool Check::lessDuringExecution(const CommandNode &in) const
 const path &Check::getUniqueName() const
 {
     if (uniq_name.empty())
-        uniq_name = unique_path();
+        uniq_name = std::to_string(getHash());
     return uniq_name;
 }
 
