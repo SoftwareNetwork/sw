@@ -40,7 +40,7 @@ command_line:
 
             do_not_remove_bad_module:
                 external: true
-                description: When on cygwin, allow it as host
+                description: Keep bad compiled config module file
 
             use_saved_configs:
                 option: usc
