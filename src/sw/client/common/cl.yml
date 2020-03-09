@@ -90,6 +90,7 @@ command_line:
                 default_value: true
                 description: Build standalone binaries
                 aliases: sa
+                hidden: true
 
             # checks
             checks_single_thread:
