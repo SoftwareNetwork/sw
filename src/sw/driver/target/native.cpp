@@ -2339,12 +2339,23 @@ void NativeCompiledTarget::prepare_pass1()
         }
     }
 
-    // default macros
+    // default export/import macros
     // public to make sure integrations also take these
     if (getBuildSettings().TargetOS.Type == OSType::Windows)
     {
-        Public.Definitions["SW_EXPORT"] = "__declspec(dllexport)";
-        Public.Definitions["SW_IMPORT"] = "__declspec(dllimport)";
+        if (getCompilerType() == CompilerType::Clang)
+        {
+            // must be an attribute
+            // must be     __attribute__ ((dllexport))
+            // must not be __attribute__ ((visibility (\"default\"))) - in such case symbols are not exported
+            Public.Definitions["SW_EXPORT"] = "__attribute__ ((dllexport))";
+            Public.Definitions["SW_IMPORT"] = "__attribute__ ((dllimport))";
+        }
+        else
+        {
+            Public.Definitions["SW_EXPORT"] = "__declspec(dllexport)";
+            Public.Definitions["SW_IMPORT"] = "__declspec(dllimport)";
+        }
     }
     else if (0
         || getBuildSettings().TargetOS.Type == OSType::Cygwin
