@@ -527,6 +527,7 @@ static VersionSet listWindows10Kits(DETECT_ARGS)
     }
     // also try directly (kit 10.0.10240 does not register in registry)
     auto kr10 = getWindows10KitRoot(s);
+    if (fs::exists(kr10 / "Include"))
     for (auto &d : fs::directory_iterator(kr10 / "Include"))
     {
         auto k = d.path().filename().string();
