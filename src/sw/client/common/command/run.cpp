@@ -24,6 +24,7 @@ TODO:
 
 #include "commands.h"
 
+#include <sw/core/input.h>
 #include <sw/manager/storage.h>
 
 #include <primitives/command.h>
@@ -123,12 +124,16 @@ SUBCOMMAND_DECL2(run)
     {
         auto b = createBuildAndPrepare(swctx, {options.options_run.target}, options);
         b->build();
+        auto inputs = b->getInputs();
+        if (inputs.size() != 1)
+            throw SW_RUNTIME_ERROR("More than one input provided");
+        auto tgts = inputs[0].loadTargets(*b);
         // TODO: add better target detection
         // check only for executable targets
-        if (b->getTargetsToBuild().size() != 1)
+        if (tgts.size() != 1)
             throw SW_RUNTIME_ERROR("More than one target provided in input");
 
-        run(*b, b->getTargetsToBuild().begin()->first, c);
+        run(*b, (*tgts.begin())->getPackage(), c);
         return;
     }
 
