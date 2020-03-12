@@ -150,6 +150,7 @@ void ChecksStorage::load_manual(const path &fn)
         all_checks[std::stoull(v[0])] = std::stoi(v[1]);
         new_manual_checks_loaded = true;
     }
+    fs::remove(mf);
 }
 
 void ChecksStorage::save(const path &fn) const
@@ -491,21 +492,42 @@ int main() { return IsBigEndian(); }
                 if (!bat)
                 {
                     ctx.addLine("chmod 755 " + fn);
-                    ctx.addLine("./");
+                    ctx.addLine();
+                    if (c->manual_setup_use_stdout)
+                        ctx.addText("V=`");
+                    ctx.addText("./");
                 }
                 ctx.addText(fn + BuildSettings(ts).TargetOS.getExecutableExtension());
+                if (!bat)
+                {
+                    if (c->manual_setup_use_stdout)
+                        ctx.addText("`");
+                    else
+                        ctx.addLine("V=$?");
+                }
 
+                if (!bat)
+                {
+                    // 126, 127 are used by shells
+                    // 128 + signal - error values
+                    ctx.addLine("if [ ! $V -ge 125 ]; then");
+                    ctx.increaseIndent();
+                }
                 ctx.addLine("echo " + std::to_string(c->getHash()) + " ");
                 if (!bat)
-                    ctx.addText("$? ");
+                    ctx.addText("$V ");
                 else
                     ctx.addText("%errorlevel% ");
                 ctx.addText(">> " + mfn);
                 if (!bat)
-                    ctx.addLine("echo ok");
+                    ctx.addLine("echo \"ok (result = $V)\"");
                 ctx.addLine("echo \"\" >> " + mfn);
+                if (!bat)
+                {
+                    ctx.decreaseIndent();
+                    ctx.addLine("fi");
+                }
                 ctx.addLine();
-
             }
             path out = (cc_dir / "run") += os.getShellExtension();
             write_file(out, ctx.getText());
@@ -947,7 +969,9 @@ String TypeSize::getSourceFileContents() const
         if (c->Value && c->Value.value())
             src += "#include <" + d + ">\n";
     }
-    src += "int main() { return sizeof(" + data + "); }";
+    // use printf because size of some struct may be greater than 128
+    // and we cannot pass it via exit code
+    src += "int main() { printf(\"%d\", sizeof(" + data + ")); return 0; }";
 
     return src;
 }
@@ -975,6 +999,7 @@ void TypeSize::run() const
     if (!check_set->t->getContext().getHostOs().canRunTargetExecutables(check_set->t->getBuildSettings().TargetOS))
     {
         requires_manual_setup = true;
+        manual_setup_use_stdout = true;
         executable = e.getOutputFile();
         return;
     }
@@ -983,7 +1008,8 @@ void TypeSize::run() const
     c.setProgram(e.getOutputFile());
     error_code ec;
     c.execute(ec);
-    Value = c.exit_code;
+    if (!ec)
+        Value = std::stoi(c.out.text);
 }
 
 TypeAlignment::TypeAlignment(const String &t, const String &def)

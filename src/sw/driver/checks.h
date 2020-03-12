@@ -103,6 +103,7 @@ struct SW_DRIVER_CPP_API Check : CommandNode
 
     CheckSet *check_set = nullptr;
     mutable bool requires_manual_setup = false;
+    mutable bool manual_setup_use_stdout = false;
     mutable path executable; // for cc copying
 
     Check() = default;
