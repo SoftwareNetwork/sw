@@ -3312,7 +3312,8 @@ void NativeCompiledTarget::prepare_pass7()
         if (getBuildSettings().TargetOS.is(OSType::Linux) && getType() == TargetType::NativeExecutable)
         {
             Files dirs;
-            gatherRpathLinkDirectories(dirs, 1);
+            Files visited;
+            gatherRpathLinkDirectories(dirs, visited, 1);
             for (auto &d : dirs)
                 LinkOptions.push_back("-Wl,-rpath-link," + normalize_path(d));
         }
@@ -3688,7 +3689,7 @@ void NativeCompiledTarget::gatherStaticLinkLibraries(
 }
 
 void NativeCompiledTarget::gatherRpathLinkDirectories(
-    Files &added, int round) const
+    Files &added, Files &visited, int round) const
 {
     for (auto &d : getActiveDependencies())
     {
@@ -3711,7 +3712,9 @@ void NativeCompiledTarget::gatherRpathLinkDirectories(
             }
         }
 
-        dt->gatherRpathLinkDirectories(added, round + 1);
+        if (!visited.insert(dt->getOutputFile().parent_path()).second)
+            continue;
+        dt->gatherRpathLinkDirectories(added, visited, round + 1);
     }
 }
 
