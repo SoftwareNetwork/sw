@@ -448,7 +448,7 @@ std::string getVersionString()
     s += PACKAGE_VERSION;
     s += "\n";
     s += primitives::git_rev::getGitRevision();
-    s += "assembled on " + primitives::git_rev::getBuildTime();
+    s += primitives::git_rev::getBuildTime();
     return s;
 }
 
