@@ -493,8 +493,7 @@ static path getWindowsKitRootFromReg(DETECT_ARGS, const std::wstring &root, cons
     }
     catch (std::exception &e)
     {
-        LOG_TRACE(logger, e.what());
-        return {};
+        LOG_TRACE(logger, "getWindowsKitRootFromReg: "s + e.what());
     }
 #endif
     //throw SW_RUNTIME_ERROR("No Windows Kits available");
@@ -511,7 +510,7 @@ static path getWindows81KitRoot(DETECT_ARGS)
     return getWindowsKitRootFromReg(s, L"SOFTWARE\\Microsoft\\Windows Kits\\Installed Roots", L"81");
 }
 
-static VersionSet listWindows10Kits(DETECT_ARGS)
+static VersionSet listWindows10KitsFromReg(DETECT_ARGS)
 {
     VersionSet kits;
 #ifdef _WIN32
@@ -521,10 +520,18 @@ static VersionSet listWindows10Kits(DETECT_ARGS)
         for (auto &k : kits10.EnumSubKeys())
             kits.insert(to_string(k));
     }
-    catch (std::exception &)
+    catch (std::exception & e)
     {
-        // ignore
+        LOG_TRACE(logger, "listWindows10KitsFromReg: "s + e.what());
     }
+#endif
+    return kits;
+}
+
+static VersionSet listWindows10Kits(DETECT_ARGS)
+{
+    auto kits = listWindows10KitsFromReg(s);
+#ifdef _WIN32
     // also try directly (kit 10.0.10240 does not register in registry)
     auto kr10 = getWindows10KitRoot(s);
     if (fs::exists(kr10 / "Include"))
@@ -598,7 +605,7 @@ static void detectWindowsSdk(DETECT_ARGS)
             auto idir = kit_root / "Include" / idir_subversion;
             if (!fs::exists(idir / name))
             {
-                LOG_TRACE(logger, "No include dir " << (idir / name) << " found for library: " << name);
+                LOG_TRACE(logger, "Include dir " << (idir / name) << " not found for library: " << name);
                 return {};
             }
 
@@ -635,7 +642,7 @@ static void detectWindowsSdk(DETECT_ARGS)
                     targets.push_back(&t);
                 }
                 else
-                    LOG_TRACE(logger, "No libdir " << libdir << " found for library: " << name);
+                    LOG_TRACE(logger, "Libdir " << libdir << " not found for library: " << name);
             }
             return targets;
         }
