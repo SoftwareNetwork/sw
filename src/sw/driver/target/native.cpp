@@ -4738,10 +4738,15 @@ bool ExecutableTarget::prepare()
 
 void ExecutableTarget::cppan_load_project(const yaml &root)
 {
-    /*String et;
+    String et;
+    bool et2 = false;
     YAML_EXTRACT_VAR(root, et, "executable_type", String);
-    if (et == "win32")
-        executable_type = ExecutableType::Win32;*/
+    YAML_EXTRACT_VAR(root, et2, "win32", bool);
+    if (et == "win32" || et2)
+    {
+        if (auto L = getSelectedTool()->as<VisualStudioLinker *>(); L)
+            L->Subsystem = vs::Subsystem::Windows;
+    }
 
     NativeCompiledTarget::cppan_load_project(root);
 }
