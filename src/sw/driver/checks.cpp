@@ -958,6 +958,8 @@ TypeSize::TypeSize(const String &t, const String &def)
 
     for (auto &h : { "sys/types.h", "stdint.h", "stddef.h", "inttypes.h" })
         Parameters.Includes.push_back(h);
+    // for printf
+    Parameters.Includes.push_back("stdio.h");
 }
 
 String TypeSize::getSourceFileContents() const
@@ -971,7 +973,7 @@ String TypeSize::getSourceFileContents() const
     }
     // use printf because size of some struct may be greater than 128
     // and we cannot pass it via exit code
-    src += "int main() { printf(\"%d\", sizeof(" + data + ")); return 0; }";
+    src += "#include <stdio.h>\nint main() { printf(\"%d\", sizeof(" + data + ")); return 0; }";
 
     return src;
 }
@@ -1010,6 +1012,8 @@ void TypeSize::run() const
     c.execute(ec);
     if (!ec)
         Value = std::stoi(c.out.text);
+    else
+        Value = 0;
 }
 
 TypeAlignment::TypeAlignment(const String &t, const String &def)
