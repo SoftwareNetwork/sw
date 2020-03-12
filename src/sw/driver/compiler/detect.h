@@ -11,7 +11,7 @@
 
 // TODO: actually detect.cpp may be rewritten as entry point
 
-#define DETECT_ARGS SwCoreContext &s
+#define DETECT_ARGS ::sw::SwCoreContext &s
 
 namespace sw
 {
