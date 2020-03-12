@@ -510,7 +510,7 @@ int main() { return IsBigEndian(); }
                 {
                     // 126, 127 are used by shells
                     // 128 + signal - error values
-                    ctx.addLine("if [ ! $V -ge 125 ]; then");
+                    ctx.addLine("if [ ! $? -ge 125 ]; then");
                     ctx.increaseIndent();
                 }
                 ctx.addLine("echo " + std::to_string(c->getHash()) + " ");
