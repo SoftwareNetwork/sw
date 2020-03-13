@@ -1,14 +1,38 @@
+# Copyright (C) 2017-2020 Egor Pugin <egor.pugin@gmail.com>
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
 ################################################################################
+#
+# SWConfig.cmake
+#
+################################################################################
+
+########################################
+# general settings
+########################################
 
 find_program(SW_EXECUTABLE sw)
 
+# some standard cmake handling of vars
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(SW DEFAULT_MSG SW_EXECUTABLE)
 mark_as_advanced(SW_EXECUTABLE)
 
+set(SW_DEPS_DIR "${CMAKE_BINARY_DIR}/.sw/cmake" CACHE STRING "SW local deps dir.")
+set(SW_DEPS_FILE "${SW_DEPS_DIR}/sw.txt" CACHE STRING "SW local deps file.")
+
+# clear deps before each run
+file(WRITE ${SW_DEPS_FILE} "")
+
+########################################
+# MACRO sw_internal_fix_path
 ########################################
 
-macro(sw_fix_path p)
+# currently convert cygwin paths into normal windows paths
+macro(sw_internal_fix_path p)
     # fix cygwin paths
     if (CYGWIN AND "${${p}}" MATCHES "^/cygdrive/.*")
         string(REGEX REPLACE "^/cygdrive/(.)(.*)" "\\1:\\2" ${p} "${${p}}")
@@ -16,17 +40,10 @@ macro(sw_fix_path p)
 endmacro()
 
 ########################################
-
-set(SW_DEPS_DIR "${CMAKE_BINARY_DIR}/.sw/cmake" CACHE STRING "SW local deps dir.")
-set(SW_DEPS_FILE "${SW_DEPS_DIR}/sw.txt" CACHE STRING "SW local deps file.")
-
-file(WRITE ${SW_DEPS_FILE} "")
-
-########################################
-# FUNCTION find_flag
+# FUNCTION sw_internal_find_flag
 ########################################
 
-function(find_flag in_flags f out)
+function(sw_internal_find_flag in_flags f out)
     if (NOT "${${out}}" STREQUAL "")
         return()
     endif()
@@ -43,12 +60,13 @@ function(find_flag in_flags f out)
     else()
         set(${out} 0 PARENT_SCOPE)
     endif()
-endfunction(find_flag)
+endfunction()
 
 ########################################
 # FUNCTION sw_add_package
 ########################################
 
+# appends package(s) to deps file
 function(sw_add_package)
     foreach(a ${ARGN})
         file(APPEND ${SW_DEPS_FILE} "${a}\n")
@@ -84,14 +102,14 @@ function(sw_execute)
 
     set(mt_flag)
     if (MSVC)
-        find_flag("${CMAKE_C_FLAGS_RELEASE}"              /MT       C_MTR        )
-        find_flag("${CMAKE_C_FLAGS_RELWITHDEBINFO}"       /MT       C_MTRWDI     )
-        find_flag("${CMAKE_C_FLAGS_MINSIZEREL}"           /MT       C_MTMSR      )
-        find_flag("${CMAKE_C_FLAGS_DEBUG}"                /MTd      C_MTD        )
-        find_flag("${CMAKE_CXX_FLAGS_RELEASE}"            /MT     CXX_MTR        )
-        find_flag("${CMAKE_CXX_FLAGS_RELWITHDEBINFO}"     /MT     CXX_MTRWDI     )
-        find_flag("${CMAKE_CXX_FLAGS_MINSIZEREL}"         /MT     CXX_MTMSR      )
-        find_flag("${CMAKE_CXX_FLAGS_DEBUG}"              /MTd    CXX_MTD        )
+        sw_internal_find_flag("${CMAKE_C_FLAGS_RELEASE}"              /MT       C_MTR        )
+        sw_internal_find_flag("${CMAKE_C_FLAGS_RELWITHDEBINFO}"       /MT       C_MTRWDI     )
+        sw_internal_find_flag("${CMAKE_C_FLAGS_MINSIZEREL}"           /MT       C_MTMSR      )
+        sw_internal_find_flag("${CMAKE_C_FLAGS_DEBUG}"                /MTd      C_MTD        )
+        sw_internal_find_flag("${CMAKE_CXX_FLAGS_RELEASE}"            /MT     CXX_MTR        )
+        sw_internal_find_flag("${CMAKE_CXX_FLAGS_RELWITHDEBINFO}"     /MT     CXX_MTRWDI     )
+        sw_internal_find_flag("${CMAKE_CXX_FLAGS_MINSIZEREL}"         /MT     CXX_MTMSR      )
+        sw_internal_find_flag("${CMAKE_CXX_FLAGS_DEBUG}"              /MTd    CXX_MTD        )
 
         if (  C_MTR OR   C_MTRWDI OR   C_MTMSR OR   C_MTD OR
             CXX_MTR OR CXX_MTRWDI OR CXX_MTMSR OR CXX_MTD)
@@ -129,8 +147,8 @@ function(sw_execute)
 
     set(wdir "${SW_DEPS_DIR}")
     set(depsfile "${SW_DEPS_FILE}")
-    sw_fix_path(wdir)
-    sw_fix_path(depsfile)
+    sw_internal_fix_path(wdir)
+    sw_internal_fix_path(depsfile)
 
     set(swcmd
         ${SW_EXECUTABLE}
@@ -208,21 +226,25 @@ function(sw_execute)
     execute_process(COMMAND ${CMAKE_COMMAND} -E remove_directory "${SW_DEPS_DIR_CFG_STORAGE}")
 
     # fix dirs
-    sw_fix_path(SW_DEPS_DIR_CFG_STORAGE) # after execute_process
-    sw_fix_path(outdir)
+    sw_internal_fix_path(SW_DEPS_DIR_CFG_STORAGE) # after execute_process
+    sw_internal_fix_path(outdir)
+
+    # create cmd
+    set(swcmd
+        ${SW_EXECUTABLE}
+            ${sw_platform_args}
+            -d "${wdir}"
+            ${extendedcfg}
+            build "@${depsfile}"
+            -ide-copy-to-dir
+                "${outdir}"
+            -ide-fast-path
+                "${SW_DEPS_DIR_CFG_STORAGE}/${cfg}-${depshash}.deps"
+    )
 
     # add deps targets
     add_custom_target(sw_build_dependencies ALL
-        COMMAND
-            ${SW_EXECUTABLE}
-                ${sw_platform_args}
-                -d "${wdir}"
-                ${extendedcfg}
-                build "@${depsfile}"
-                -ide-copy-to-dir
-                    "${outdir}"
-                -ide-fast-path
-                    "${SW_DEPS_DIR_CFG_STORAGE}/${cfg}-${depshash}.deps"
+        COMMAND ${swcmd}
     )
     set_target_properties(sw_build_dependencies
         PROPERTIES
@@ -230,6 +252,7 @@ function(sw_execute)
             PROJECT_LABEL "BUILD_DEPENDENCIES"
     )
 
+    # load our deps
     add_subdirectory(${SW_DEPS_DIR} ${SW_DEPS_DIR}/cmake_bdir)
 endfunction()
 
