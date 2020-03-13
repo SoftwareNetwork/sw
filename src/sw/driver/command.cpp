@@ -348,9 +348,9 @@ const CommandBuilder &CommandBuilder::operator|(::sw::builder::Command &c2) cons
     return *this;
 }
 
-const CommandBuilder &operator<<(const CommandBuilder &cb, const NativeCompiledTarget &t)
+const CommandBuilder &operator<<(const CommandBuilder &cb, const Target &t)
 {
-    auto nt = (NativeCompiledTarget *)&t;
+    auto nt = (Target *)&t;
     cb.targets.push_back(nt);
     nt->Storage.push_back(cb.c);
     return cb;
@@ -366,6 +366,15 @@ const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_
     return cb;
 }
 
+static NativeCompiledTarget &cast_as_nct(Target &t)
+{
+    return dynamic_cast<NativeCompiledTarget &>(t);
+}
+static NativeCompiledTarget *cast_as_nct(Target *t)
+{
+    return &cast_as_nct(*t);
+}
+
 const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_in &t)
 {
     decltype(cb.targets) all;
@@ -378,7 +387,7 @@ const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_
     for (auto p : t.files)
     {
         if (p.is_relative() && !all.empty())
-            if (!all[0]->check_absolute(p, true))
+            if (!cast_as_nct(all[0])->check_absolute(p, true))
                 p = all[0]->SourceDir / p;
 
         if (!cb.stopped)
@@ -388,8 +397,8 @@ const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_
         {
             for (auto tgt : all)
             {
-                *tgt += p;
-                (*tgt)[p].skip = t.skip;
+                cast_as_nct(*tgt) += p;
+                cast_as_nct(*tgt)[p].skip = t.skip;
             }
         }
     }
@@ -412,7 +421,7 @@ const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_
     for (auto p : t.files)
     {
         if (p.is_relative() && !all.empty())
-            if (!all[0]->check_absolute(p, true))
+            if (!cast_as_nct(all[0])->check_absolute(p, true))
                 p = all[0]->BinaryDir / p;
 
         if (!cb.stopped)
@@ -423,8 +432,8 @@ const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_
         {
             for (auto tgt : all)
             {
-                *tgt += p;
-                (*tgt)[p].skip = t.skip;
+                cast_as_nct(*tgt) += p;
+                cast_as_nct(*tgt)[p].skip = t.skip;
             }
         }
     }
@@ -441,7 +450,7 @@ const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_
 
     auto p = t.p;
     if (p.is_relative() && !all.empty())
-        if (!all[0]->check_absolute(p, true))
+        if (!cast_as_nct(all[0])->check_absolute(p, true))
             p = all[0]->SourceDir / p;
 
     cb.c->redirectStdin(p);
@@ -449,8 +458,8 @@ const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_
     {
         for (auto tgt : all)
         {
-            *tgt += p;
-            (*tgt)[p].skip = t.skip;
+            cast_as_nct(*tgt) += p;
+            cast_as_nct(*tgt)[p].skip = t.skip;
         }
     }
     for (auto tgt : t.targets)
@@ -471,7 +480,7 @@ const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_
 
     auto p = t.p;
     if (p.is_relative() && !all.empty())
-        if (!all[0]->check_absolute(p, true))
+        if (!cast_as_nct(all[0])->check_absolute(p, true))
             p = all[0]->BinaryDir / p;
 
     if (!dry_run)
@@ -480,8 +489,8 @@ const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_
     {
         for (auto tgt : all)
         {
-            *tgt += p;
-            (*tgt)[p].skip = t.skip;
+            cast_as_nct(*tgt) += p;
+            cast_as_nct(*tgt)[p].skip = t.skip;
         }
     }
     for (auto tgt : t.targets)
@@ -502,7 +511,7 @@ const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_
 
     auto p = t.p;
     if (p.is_relative() && !all.empty())
-        if (!all[0]->check_absolute(p, true))
+        if (!cast_as_nct(all[0])->check_absolute(p, true))
             p = all[0]->BinaryDir / p;
 
     if (!dry_run)
@@ -511,8 +520,8 @@ const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_
     {
         for (auto tgt : all)
         {
-            *tgt += p;
-            (*tgt)[p].skip = t.skip;
+            cast_as_nct(*tgt) += p;
+            cast_as_nct(*tgt)[p].skip = t.skip;
         }
     }
     for (auto tgt : t.targets)
