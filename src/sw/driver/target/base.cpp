@@ -932,11 +932,14 @@ Test Target::addTest(const String &name, const Target &tgt)
 Test Target::addTest1(const String &name, const Target &tgt)
 {
     auto c = addCommand();
-    if (!isLocal() || getPackage().getOverriddenDir())
-        return c;
+    //if (!isLocal() || getPackage().getOverriddenDir())
+        //return c;
     auto d = std::make_shared<Dependency>(tgt);
     d->getSettings() = getSettings(); // same settings!
-    c << cmd::prog(d);
+    d->setTarget(tgt); // "resolve" right here
+    // manual setup
+    std::dynamic_pointer_cast<::sw::driver::Command>(c.c)->setProgram(d);
+    Storage.push_back(d); // keep dependency safe, because there's weak ptr in command
     Test t(c);
     addTest(t, name);
     return t;
