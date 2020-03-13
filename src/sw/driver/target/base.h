@@ -370,11 +370,12 @@ public:
     // TODO: implement some of https://cmake.org/cmake/help/latest/manual/cmake-properties.7.html#properties-on-tests
     Test addTest();
     Test addTest(const String &name);
-    Test addTest(const String &name, const ExecutableTarget &t);
-    Test addTest(const ExecutableTarget &t);
+    Test addTest(const String &name, const Target &t);
+    Test addTest(const Target &t);
 
 private:
     void addTest(Test &cb, const String &name);
+    Test addTest1(const String &name, const Target &t);
     String getTestName(const String &name = {}) const;
 
 protected:

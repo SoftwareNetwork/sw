@@ -1119,7 +1119,22 @@ void SwBuild::test()
     build();
 
     auto dir = getTestDir();
-    fs::remove_all(dir); // also make a condition here - what condition?
+
+    // remove only test dirs for active configs
+    Files tdirs;
+    for (const auto &[pkg, tgts] : getTargetsToBuild())
+    {
+        for (auto &tgt : tgts)
+        {
+            for (auto &c : tgt->getTests())
+            {
+                auto test_dir = dir / tgt->getSettings().getHash();
+                tdirs.insert(test_dir);
+            }
+        }
+    }
+    for (auto &d : tdirs)
+        fs::remove_all(d);
 
     // prepare
     for (const auto &[pkg, tgts] : getTargetsToBuild())

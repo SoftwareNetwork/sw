@@ -898,12 +898,8 @@ const TargetSettings &Target::getExportOptions() const
     return ts_export;
 }
 
-void Target::addTest(Test &cb, const String &name)
 driver::CommandBuilder Target::addCommand(const std::shared_ptr<builder::Command> &in) const
 {
-    auto &c = *cb.c;
-    c.name = name;
-    tests.insert(cb.c);
     driver::CommandBuilder cb(getMainBuild().getContext());
     if (in)
         cb.c = in;
@@ -936,28 +932,42 @@ String Target::getTestName(const String &name) const
 
 Test Target::addTest()
 {
-    return addTest(getTestName());
+    return addTest(*this);
 }
 
 Test Target::addTest(const String &name)
 {
-    Test cb(getContext());
-    addTest(cb, name);
-    return cb;
+    return addTest1(getTestName(name), *this);
 }
 
-Test Target::addTest(const String &name, const ExecutableTarget &tgt)
+Test Target::addTest(const Target &t)
 {
-    auto c = tgt.addCommand();
-    c << cmd::prog(tgt);
+    return addTest1(getTestName(), t);
+}
+
+Test Target::addTest(const String &name, const Target &tgt)
+{
+    return addTest1(getTestName(name), tgt);
+}
+
+Test Target::addTest1(const String &name, const Target &tgt)
+{
+    auto c = addCommand();
+    if (!isLocal() || getPackage().getOverriddenDir())
+        return c;
+    auto d = std::make_shared<Dependency>(tgt);
+    d->getSettings() = getSettings(); // same settings!
+    c << cmd::prog(d);
     Test t(c);
     addTest(t, name);
     return t;
 }
 
-Test Target::addTest(const ExecutableTarget &t)
+void Target::addTest(Test &cb, const String &name)
 {
-    return addTest(getTestName(), t);
+    auto &c = *cb.c;
+    c.name = name;
+    tests.insert(cb.c);
 }
 
 bool ProjectTarget::init()
