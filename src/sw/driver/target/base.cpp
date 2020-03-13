@@ -931,9 +931,11 @@ Test Target::addTest(const String &name, const Target &tgt)
 
 Test Target::addTest1(const String &name, const Target &tgt)
 {
-    auto c = addCommand();
-    //if (!isLocal() || getPackage().getOverriddenDir())
-        //return c;
+    // add into that target, so executable will be set up correctly?
+    auto c = /*tgt.*/addCommand();
+    // test only local targets
+    if (!isLocal() || getPackage().getOverriddenDir())
+        return c;
     auto d = std::make_shared<Dependency>(tgt);
     d->getSettings() = getSettings(); // same settings!
     d->setTarget(tgt); // "resolve" right here
