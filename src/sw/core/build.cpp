@@ -1147,7 +1147,6 @@ void SwBuild::test()
                 fs::create_directories(test_dir);
 
                 //
-                c->name = "test: [" + c->name + "]";
                 c->always = true;
                 c->working_directory = test_dir;
                 //c.addPathDirectory(BinaryDir / getSettings().getConfig());
