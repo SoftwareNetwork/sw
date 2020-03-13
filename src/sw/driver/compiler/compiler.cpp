@@ -163,6 +163,9 @@ SW_CREATE_COMPILER_COMMAND(VisualStudioCompiler, driver::VSCommand)
 
 void VisualStudioCompiler::prepareCommand1(const Target &t)
 {
+    // msvc compilers - _MSC_VER
+    // https://en.wikipedia.org/wiki/Microsoft_Visual_C%2B%2B#Internal_version_numbering
+
     if (InputFile)
     {
         cmd->name = normalize_path(InputFile());
