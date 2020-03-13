@@ -636,27 +636,6 @@ path Target::getBinaryParentDir() const
     }
 }
 
-UnresolvedDependenciesType Target::gatherUnresolvedDependencies() const
-{
-    UnresolvedDependenciesType deps;
-    for (auto &d : gatherDependencies())
-    {
-        if (!*d)
-            deps.insert({ d->package, d });
-    }
-    for (auto &d : DummyDependencies)
-    {
-        if (!*d)
-            deps.insert({ d->package, d });
-    }
-    for (auto &d : SourceDependencies)
-    {
-        if (!*d)
-            deps.insert({ d->package, d });
-    }
-    return deps;
-}
-
 DependencyPtr Target::getDependency() const
 {
     auto d = std::make_shared<Dependency>(*this);

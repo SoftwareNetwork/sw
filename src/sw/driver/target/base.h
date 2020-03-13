@@ -315,7 +315,6 @@ public:
 
     //
     Commands getCommands() const override;
-    UnresolvedDependenciesType gatherUnresolvedDependencies() const;
     DependencyPtr getDependency() const; // returns current target as dependency
     void registerCommand(builder::Command &cmd);
 
