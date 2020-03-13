@@ -117,9 +117,6 @@ public:
     // reconsider?
     CompilerType getCompilerType() const;
 
-    driver::CommandBuilder addCommand(const std::shared_ptr<builder::Command> &in = {}) const;
-    driver::CommandBuilder addCommand(const String &func_name, void *symbol, int version = 0) const; // builtin command
-
     void writeFileOnce(const path &fn, const String &content = {});
     void writeFileSafe(const path &fn, const String &content);
     void replaceInFileOnce(const path &fn, const String &from, const String &to); // deprecate?

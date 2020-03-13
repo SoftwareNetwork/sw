@@ -30,6 +30,11 @@
 namespace sw
 {
 
+namespace driver
+{
+struct CommandBuilder;
+}
+
 SW_DRIVER_CPP_API
 bool isExecutable(TargetType T);
 
@@ -356,6 +361,10 @@ public:
     String getTypeName() const { return toString(getType()); }
     bool hasSameProject(const ITarget &t) const;
     bool isReproducibleBuild() const { return ReproducibleBuild; }
+
+    // commands
+    driver::CommandBuilder addCommand(const std::shared_ptr<builder::Command> &in = {}) const;
+    driver::CommandBuilder addCommand(const String &func_name, void *symbol, int version = 0) const; // builtin command
 
     // tests
     // TODO: implement some of https://cmake.org/cmake/help/latest/manual/cmake-properties.7.html#properties-on-tests

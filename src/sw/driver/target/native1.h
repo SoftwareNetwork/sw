@@ -11,11 +11,6 @@
 namespace sw
 {
 
-namespace driver
-{
-struct CommandBuilder;
-}
-
 namespace detail
 {
 

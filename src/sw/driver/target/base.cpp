@@ -899,10 +899,31 @@ const TargetSettings &Target::getExportOptions() const
 }
 
 void Target::addTest(Test &cb, const String &name)
+driver::CommandBuilder Target::addCommand(const std::shared_ptr<builder::Command> &in) const
 {
     auto &c = *cb.c;
     c.name = name;
     tests.insert(cb.c);
+    driver::CommandBuilder cb(getMainBuild().getContext());
+    if (in)
+        cb.c = in;
+    // set as default
+    // source dir contains more files than bdir?
+    // sdir or bdir?
+    cb.c->working_directory = SourceDir;
+    //setupCommand(*cb.c);
+    if (!DryRun)
+    {
+        cb << *this; // this adds to storage
+        cb.c->command_storage = getCommandStorage();
+    }
+    return cb;
+}
+
+driver::CommandBuilder Target::addCommand(const String &func_name, void *f, int version) const
+{
+    auto c = std::make_shared<BuiltinCommand>(getContext(), func_name, f, version);
+    return addCommand(c);
 }
 
 String Target::getTestName(const String &name) const

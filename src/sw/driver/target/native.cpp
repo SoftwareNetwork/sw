@@ -817,30 +817,6 @@ void NativeCompiledTarget::setupCommand(builder::Command &c) const
     }
 }
 
-driver::CommandBuilder NativeCompiledTarget::addCommand(const std::shared_ptr<builder::Command> &in) const
-{
-    driver::CommandBuilder cb(getMainBuild().getContext());
-    if (in)
-        cb.c = in;
-    // set as default
-    // source dir contains more files than bdir?
-    // sdir or bdir?
-    cb.c->working_directory = SourceDir;
-    //setupCommand(*cb.c);
-    if (!DryRun)
-    {
-        cb << *this; // this adds to storage
-        cb.c->command_storage = getCommandStorage();
-    }
-    return cb;
-}
-
-driver::CommandBuilder NativeCompiledTarget::addCommand(const String &func_name, void *f, int version) const
-{
-    auto c = std::make_shared<BuiltinCommand>(getContext(), func_name, f, version);
-    return addCommand(c);
-}
-
 void NativeCompiledTarget::addPackageDefinitions(bool defs)
 {
     tm t;
