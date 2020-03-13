@@ -1143,10 +1143,11 @@ void SwBuild::test()
         {
             for (auto &c : tgt->getTests())
             {
-                auto test_dir = dir / tgt->getSettings().getHash() / c->getName();
+                auto test_dir = dir / tgt->getSettings().getHash() / tgt->getPackage().toString() / c->getName();
                 fs::create_directories(test_dir);
 
                 //
+                c->name = "test: [" + tgt->getPackage().toString() + "]/" + c->name;
                 c->always = true;
                 c->working_directory = test_dir;
                 //c.addPathDirectory(BinaryDir / getSettings().getConfig());

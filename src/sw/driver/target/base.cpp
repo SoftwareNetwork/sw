@@ -901,14 +901,9 @@ driver::CommandBuilder Target::addCommand(const String &func_name, void *f, int 
     return addCommand(c);
 }
 
-static String get_test_name(const String &pkg, const String &name)
-{
-    return "test: [" + pkg + "]/" + name;
-}
-
 String Target::getTestName(const String &name) const
 {
-    return get_test_name(getPackage().toString(), name.empty() ? std::to_string(tests.size() + 1) : name);
+    return name.empty() ? std::to_string(tests.size() + 1) : name;
 }
 
 Test Target::addTest()
