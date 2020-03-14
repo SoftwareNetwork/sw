@@ -27,7 +27,7 @@ sw build
 
 (optional) Run `sw generate` to generate VS solution.
 
-(optional) Run `sw -override org.sw` for smooth development.
+(optional) Run `sw override org.sw` for smooth development.
 
 ### Support SW
 
