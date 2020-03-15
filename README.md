@@ -2,7 +2,7 @@
 
 <!---[![Build status](https://ci.appveyor.com/api/projects/status/3mf8eall4lf764sk/branch/master?svg=true)](https://ci.appveyor.com/project/egorpugin/sw/branch/master)--->
 
-![Build status](https://github.com/SoftwareNetwork/sw/workflows/windows/badge.svg)
+![Build status](https://github.com/SoftwareNetwork/sw/workflows/sw/badge.svg)
 
 ## Resources
 
@@ -27,7 +27,7 @@ sw build
 
 (optional) Run `sw generate` to generate VS solution.
 
-(optional) Run `sw -override org.sw` for smooth development.
+(optional) Run `sw override org.sw` for smooth development.
 
 ### Support SW
 
