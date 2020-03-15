@@ -4537,6 +4537,8 @@ void NativeCompiledTarget::cppan_load_project(const yaml &root)
         YAML_EXTRACT_VAR(root, cxx, "cxx_standard", String);
         if (cxx.empty())
             YAML_EXTRACT_VAR(root, cxx, "c++", String);
+        if (cxx.empty())
+            YAML_EXTRACT_VAR(root, cxx, "cpp", String);
         YAML_EXTRACT_AUTO(cxx_extensions);
 
         if (!cxx.empty())
