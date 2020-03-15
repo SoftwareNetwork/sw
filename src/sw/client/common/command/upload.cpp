@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "commands.h"
+#include "../commands.h"
 
 #include <sw/core/driver.h>
 #include <sw/core/input.h>
@@ -30,89 +30,6 @@
 DECLARE_STATIC_LOGGER(logger, "upload");
 
 sw::Remote *find_remote(sw::Settings &s, const String &name);
-
-SUBCOMMAND_DECL(upload)
-{
-    auto swctx = createSwContext(options);
-    cli_upload(*swctx, options);
-}
-
-sw::SourcePtr createSource(OPTIONS_ARG_CONST)
-{
-    sw::SourcePtr s;
-    if (0);
-    else if (options.options_upload.source == "git")
-    {
-        s = std::make_unique<sw::Git>(
-            options.options_upload.git,
-            options.options_upload.tag,
-            options.options_upload.branch,
-            options.options_upload.commit
-            );
-    }
-    else if (options.options_upload.source == "hg")
-    {
-        s = std::make_unique<sw::Hg>(
-            options.options_upload.hg,
-            options.options_upload.tag,
-            options.options_upload.branch,
-            options.options_upload.commit,
-            std::stoll(options.options_upload.revision)
-            );
-    }
-    else if (options.options_upload.source == "fossil")
-    {
-        s = std::make_unique<sw::Fossil>(
-            options.options_upload.fossil,
-            options.options_upload.tag,
-            options.options_upload.branch,
-            options.options_upload.commit
-            );
-    }
-    else if (options.options_upload.source == "bzr")
-    {
-        s = std::make_unique<sw::Bazaar>(
-            options.options_upload.bzr,
-            options.options_upload.tag,
-            std::stoll(options.options_upload.revision)
-            );
-    }
-    else if (options.options_upload.source == "cvs")
-    {
-        s = std::make_unique<sw::Cvs>(
-            options.options_upload.cvs,
-            options.options_upload.module,
-            options.options_upload.tag,
-            options.options_upload.branch,
-            options.options_upload.revision
-            );
-    }
-    else if (options.options_upload.source == "svn")
-    {
-        s = std::make_unique<sw::Svn>(
-            options.options_upload.svn,
-            options.options_upload.tag,
-            options.options_upload.branch,
-            std::stoll(options.options_upload.revision)
-            );
-    }
-    else if (options.options_upload.source == "remote")
-    {
-        s = std::make_unique<sw::RemoteFile>(
-            options.options_upload.remote[0]
-            );
-    }
-    else if (options.options_upload.source == "remotes")
-    {
-        s = std::make_unique<sw::RemoteFiles>(
-            StringSet(options.options_upload.remote.begin(), options.options_upload.remote.end())
-            );
-    }
-
-    if (!options.options_upload.version.empty())
-        s->applyVersion(options.options_upload.version);
-    return s;
-}
 
 sw::PackageDescriptionMap getPackages(const sw::SwBuild &b, const sw::SourceDirMap &sources)
 {
@@ -190,35 +107,35 @@ sw::PackageDescriptionMap getPackages(const sw::SwBuild &b, const sw::SourceDirM
     return m;
 }
 
-SUBCOMMAND_DECL2(upload)
+SUBCOMMAND_DECL(upload)
 {
-    auto b = swctx.createBuild();
+    auto b = createBuild();
 
     // get spec early, so changes won't be considered
-    auto inputs = swctx.addInput(fs::current_path());
+    auto inputs = getContext().addInput(fs::current_path());
     SW_CHECK(inputs.size() == 1); // for now
     auto spec = inputs[0]->getSpecification()->files.begin()->second;
 
     // detect from options
     bool cmdline_source_present = 0
-        || !options.options_upload.source.empty()
-        || !options.options_upload.git.empty()
-        || !options.options_upload.hg.empty()
-        || !options.options_upload.bzr.empty()
-        || !options.options_upload.fossil.empty()
-        || !options.options_upload.svn.empty()
-        || !options.options_upload.cvs.empty()
-        || !options.options_upload.remote.empty()
+        || !getOptions().options_upload.source.empty()
+        || !getOptions().options_upload.git.empty()
+        || !getOptions().options_upload.hg.empty()
+        || !getOptions().options_upload.bzr.empty()
+        || !getOptions().options_upload.fossil.empty()
+        || !getOptions().options_upload.svn.empty()
+        || !getOptions().options_upload.cvs.empty()
+        || !getOptions().options_upload.remote.empty()
     ;
     if (cmdline_source_present)
     {
-        if (options.options_upload.version.empty())
+        if (getOptions().options_upload.version.empty())
             throw SW_RUNTIME_ERROR("version must be present on cmd as well");
-        if (options.options_upload.source.empty())
+        if (getOptions().options_upload.source.empty())
         {
 #define CHECK_AND_ASSIGN(x)                     \
-    else if (!options.options_upload.x.empty()) \
-        options.options_upload.source = #x
+    else if (!getOptions().options_upload.x.empty()) \
+        getOptions().options_upload.source = #x
             if (0);
             CHECK_AND_ASSIGN(git);
             CHECK_AND_ASSIGN(hg);
@@ -231,7 +148,7 @@ SUBCOMMAND_DECL2(upload)
         }
     }
 
-    auto [sources, i] = fetch(*b, options);
+    auto [sources, i] = fetch(*b);
     if (sources.empty())
         throw SW_RUNTIME_ERROR("Empty target sources");
 
@@ -256,7 +173,7 @@ SUBCOMMAND_DECL2(upload)
     for (auto &[id, d] : m)
     {
         write_file(b->getBuildDirectory() / "upload" / id.toString() += ".json", d->getString());
-        auto id2 = sw::PackageId(sw::PackagePath(options.options_upload.upload_prefix) / id.getPath(), id.getVersion());
+        auto id2 = sw::PackageId(sw::PackagePath(getOptions().options_upload.upload_prefix) / id.getPath(), id.getVersion());
         LOG_INFO(logger, "Uploading " + id2.toString());
     }
 
@@ -270,7 +187,7 @@ SUBCOMMAND_DECL2(upload)
         SW_UNIMPLEMENTED;
     }
 
-    if (options.options_upload.upload_dry)
+    if (getOptions().options_upload.upload_dry)
     {
         LOG_INFO(logger, "Dry run. Upload was cancelled.");
         return;
@@ -279,11 +196,11 @@ SUBCOMMAND_DECL2(upload)
     // select remote
     auto &us = sw::Settings::get_user_settings();
     auto current_remote = &*us.remotes.begin();
-    if (!options.options_upload.upload_remote.empty())
-        current_remote = find_remote(us, options.options_upload.upload_remote);
+    if (!getOptions().options_upload.upload_remote.empty())
+        current_remote = find_remote(us, getOptions().options_upload.upload_remote);
 
     // send signatures (gpg)
     // -k KEY1 -k KEY2
     auto api = current_remote->getApi();
-    api->addVersion(options.options_upload.upload_prefix, m, script_name, spec);
+    api->addVersion(getOptions().options_upload.upload_prefix, m, script_name, spec);
 }

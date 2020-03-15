@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "commands.h"
+#include "../commands.h"
 
 #include <sw/core/driver.h>
 #include <sw/core/input.h>
@@ -30,7 +30,7 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "override");
 
-static void override_package_perform(sw::SwContext &swctx, sw::PackagePath prefix, OPTIONS_ARG_CONST)
+static void override_package_perform(SwClientContext &swctx, sw::PackagePath prefix)
 {
     auto dir = fs::canonical(".");
     sw::PackageDescriptionMap pm;
@@ -50,18 +50,18 @@ static void override_package_perform(sw::SwContext &swctx, sw::PackagePath prefi
                 else
                     deps.insert({ prefix / d.ppath, d.range });
             }
-            sw::LocalPackage lp(swctx.getLocalStorage(), pkg2);
+            sw::LocalPackage lp(swctx.getContext().getLocalStorage(), pkg2);
             sw::PackageData d;
             d.sdir = dir;
             d.dependencies = deps;
             d.prefix = (int)prefix.size();
-            swctx.getLocalStorage().getOverriddenPackagesStorage().install(lp, d);
+            swctx.getContext().getLocalStorage().getOverriddenPackagesStorage().install(lp, d);
         }
     };
 
-    if (!options.options_override.load_overridden_packages_from_file.empty())
+    if (!swctx.getOptions().options_override.load_overridden_packages_from_file.empty())
     {
-        auto j = nlohmann::json::parse(read_file(options.options_override.load_overridden_packages_from_file));
+        auto j = nlohmann::json::parse(read_file(swctx.getOptions().options_override.load_overridden_packages_from_file));
         dir = j["sdir"].get<String>();
         prefix = j["prefix"].get<String>();
         for (auto &[k,v] : j["packages"].items())
@@ -70,7 +70,7 @@ static void override_package_perform(sw::SwContext &swctx, sw::PackagePath prefi
     }
 
     auto b = swctx.createBuild();
-    auto inputs = swctx.addInput(fs::current_path());
+    auto inputs = swctx.getContext().addInput(fs::current_path());
     SW_CHECK(inputs.size() == 1); // for now
     for (auto &i : inputs)
     {
@@ -82,14 +82,14 @@ static void override_package_perform(sw::SwContext &swctx, sw::PackagePath prefi
     b->loadInputs();
     pm = getPackages(*b);
 
-    if (!options.options_override.save_overridden_packages_to_file.empty())
+    if (!swctx.getOptions().options_override.save_overridden_packages_to_file.empty())
     {
         nlohmann::json j;
         j["sdir"] = normalize_path(dir);
         j["prefix"] = prefix.toString();
         for (auto &[pkg, desc] : pm)
             j["packages"][pkg.toString()] = nlohmann::json::parse(desc->getString());
-        write_file(options.options_override.save_overridden_packages_to_file, j.dump(4));
+        write_file(swctx.getOptions().options_override.save_overridden_packages_to_file, j.dump(4));
         return;
     }
 
@@ -98,9 +98,8 @@ static void override_package_perform(sw::SwContext &swctx, sw::PackagePath prefi
 
 SUBCOMMAND_DECL(override)
 {
-    if (options.options_override.list_overridden_packages)
+    if (getOptions().options_override.list_overridden_packages)
     {
-        auto swctx = createSwContext(options);
         // sort
         std::set<sw::LocalPackage> pkgs;
         for (auto &p : swctx->getLocalStorage().getOverriddenPackagesStorage().getPackages())
@@ -110,13 +109,12 @@ SUBCOMMAND_DECL(override)
         return;
     }
 
-    if (!options.options_override.delete_overridden_package_dir.empty())
+    if (!getOptions().options_override.delete_overridden_package_dir.empty())
     {
-        LOG_INFO(logger, "Delete override for sdir " + options.options_override.delete_overridden_package_dir.u8string());
+        LOG_INFO(logger, "Delete override for sdir " + getOptions().options_override.delete_overridden_package_dir.u8string());
 
-        auto d = primitives::filesystem::canonical(options.options_override.delete_overridden_package_dir);
+        auto d = primitives::filesystem::canonical(getOptions().options_override.delete_overridden_package_dir);
 
-        auto swctx = createSwContext(options);
         std::set<sw::LocalPackage> pkgs;
         for (auto &p : swctx->getLocalStorage().getOverriddenPackagesStorage().getPackages())
         {
@@ -130,18 +128,16 @@ SUBCOMMAND_DECL(override)
         return;
     }
 
-    if (options.options_override.prefix.empty() && options.options_override.load_overridden_packages_from_file.empty())
+    if (getOptions().options_override.prefix.empty() && getOptions().options_override.load_overridden_packages_from_file.empty())
         throw SW_RUNTIME_ERROR("Empty prefix");
 
-    if (options.options_override.delete_overridden_package)
+    if (getOptions().options_override.delete_overridden_package)
     {
-        auto swctx = createSwContext(options);
-        sw::PackageId pkg{ options.options_override.prefix };
+        sw::PackageId pkg{ getOptions().options_override.prefix };
         LOG_INFO(logger, "Delete override for " + pkg.toString());
         swctx->getLocalStorage().getOverriddenPackagesStorage().deletePackage(pkg);
         return;
     }
 
-    auto swctx = createSwContext(options);
-    override_package_perform(*swctx, options.options_override.prefix, options);
+    override_package_perform(*this, getOptions().options_override.prefix);
 }

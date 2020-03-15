@@ -16,18 +16,17 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "commands.h"
+#include "../commands.h"
 
 #include <sw/manager/package.h>
 
 SUBCOMMAND_DECL(install)
 {
-    auto swctx = createSwContext(options);
     sw::UnresolvedPackages pkgs;
-    options.options_install.install_args.push_back(options.options_install.install_arg);
-    for (auto &p : options.options_install.install_args)
+    getOptions().options_install.install_args.push_back(getOptions().options_install.install_arg);
+    for (auto &p : getOptions().options_install.install_args)
         pkgs.insert(sw::extractFromString(p));
-    auto m = swctx->install(pkgs);
+    auto m = getContext().install(pkgs);
     for (auto &[p1, d] : m)
     {
         //for (auto &p2 : install_args)

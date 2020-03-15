@@ -20,16 +20,17 @@
 
 #include <qabstractitemmodel.h>
 #include <qmainwindow.h>
-#include <sw/core/sw_context.h>
+
+struct SwClientContext;
 
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
 public:
-    MainWindow(sw::SwContext &swctx, QWidget *parent = 0);
+    MainWindow(SwClientContext &swctx, QWidget *parent = 0);
 
 private:
-    sw::SwContext &swctx;
+    SwClientContext &swctx;
 
     void setupUi();
 };

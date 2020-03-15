@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "commands.h"
+#include "../commands.h"
 
 #include <sw/manager/storage.h>
 
@@ -104,10 +104,9 @@ void open_url(const String &url)
 
 SUBCOMMAND_DECL(open)
 {
-    auto swctx = createSwContext(options);
-    auto &sdb = swctx->getLocalStorage();
-    auto pkgs = swctx->resolve(sw::UnresolvedPackages{ options.options_open.open_arg });
-    auto &p2 = pkgs.find(options.options_open.open_arg)->second;
+    auto &sdb = getContext().getLocalStorage();
+    auto pkgs = getContext().resolve(sw::UnresolvedPackages{ getOptions().options_open.open_arg });
+    auto &p2 = pkgs.find(getOptions().options_open.open_arg)->second;
 
     if (!sdb.isPackageInstalled(*p2))
     {
@@ -115,7 +114,7 @@ SUBCOMMAND_DECL(open)
         return;
     }
 
-    auto p = swctx->resolve(options.options_open.open_arg);
+    auto p = getContext().resolve(getOptions().options_open.open_arg);
 
     LOG_INFO(logger, "package: " + p.toString());
     LOG_INFO(logger, "package dir: " + p.getDir().u8string());

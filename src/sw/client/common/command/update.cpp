@@ -16,17 +16,16 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "commands.h"
+#include "../commands.h"
 
 SUBCOMMAND_DECL(update)
 {
     // see https://doc.rust-lang.org/cargo/commands/cargo-update.html
-    auto swctx = createSwContext(options);
-    auto b = createBuild(*swctx, options.options_update.build_arg_update, options);
+    auto b = createBuild(getOptions().options_update.build_arg_update);
     auto bs = b->getSettings();
-    if (!options.options_update.packages.empty())
+    if (!getOptions().options_update.packages.empty())
     {
-        for (auto &p : options.options_update.packages)
+        for (auto &p : getOptions().options_update.packages)
             bs["update_lock_file_packages"][p];
     }
     else

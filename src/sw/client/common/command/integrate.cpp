@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "commands.h"
+#include "../commands.h"
 #include "../inserts.h"
 
 #include <boost/algorithm/string.hpp>
@@ -89,8 +89,6 @@ static String pkg2string(const sw::PackageId &p)
 
 SUBCOMMAND_DECL(integrate)
 {
-    auto swctx = createSwContext(options);
-
     bool cygwin = false;
     auto fix_path = [&cygwin](const auto &p)
     {
@@ -106,12 +104,12 @@ SUBCOMMAND_DECL(integrate)
         return "/"s + s2 + p.substr(2);
     };
 
-    auto create_build = [&swctx, &options, &cygwin](const Strings &lines, const Strings &configs = {})
+    auto create_build = [this, &cygwin](const Strings &lines, const Strings &configs = {})
     {
-        auto build = createBuild(*swctx, options);
+        auto build = getContext().createBuild();
         auto &b = *build;
 
-        auto settings = createSettings(*swctx, options);
+        auto settings = createSettings();
         if (settings.size() > 1)
             throw SW_RUNTIME_ERROR("size() must be 1");
 
@@ -152,7 +150,7 @@ SUBCOMMAND_DECL(integrate)
         return build;
     };
 
-    if (!options.options_integrate.integrate_cmake_deps.empty())
+    if (!getOptions().options_integrate.integrate_cmake_deps.empty())
     {
         if (getOptions().options_integrate.cmake_file_version < 1)
             throw SW_RUNTIME_ERROR("Outdated cmake integration file. Run 'sw setup' to update it.");
@@ -165,7 +163,7 @@ SUBCOMMAND_DECL(integrate)
             "Release",
         };
 
-        auto lines = read_lines(options.options_integrate.integrate_cmake_deps);
+        auto lines = read_lines(getOptions().options_integrate.integrate_cmake_deps);
         auto build = create_build(lines, configs);
         auto &b = *build;
 
@@ -319,14 +317,14 @@ SUBCOMMAND_DECL(integrate)
             for (auto &[k,v] : s["dependencies"]["link"].getSettings())
                 ctx.addLine("target_link_libraries(" + pkg2string(pkg) + " INTERFACE " + k + ")");
         }
-        write_file_if_different(options.options_integrate.integrate_cmake_deps.parent_path() / "CMakeLists.txt", ctx.getText());
+        write_file_if_different(getOptions().options_integrate.integrate_cmake_deps.parent_path() / "CMakeLists.txt", ctx.getText());
 
         return;
     }
 
-    if (!options.options_integrate.integrate_waf_deps.empty())
+    if (!getOptions().options_integrate.integrate_waf_deps.empty())
     {
-        auto lines = read_lines(options.options_integrate.integrate_waf_deps);
+        auto lines = read_lines(getOptions().options_integrate.integrate_waf_deps);
         auto build = create_build(lines);
         auto &b = *build;
 

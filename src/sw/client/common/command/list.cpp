@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "commands.h"
+#include "../commands.h"
 
 #include <sw/manager/package_database.h>
 #include <sw/manager/storage.h>
@@ -50,13 +50,12 @@ std::map<sw::PackagePath, sw::VersionSet> getMatchingPackages(const sw::StorageW
 
 SUBCOMMAND_DECL(list)
 {
-    auto swctx = createSwContext(options);
-    auto rs = swctx->getRemoteStorages();
+    auto rs = getContext().getRemoteStorages();
     if (rs.empty())
         throw SW_RUNTIME_ERROR("No remote storages found");
 
     auto &s = static_cast<sw::StorageWithPackagesDatabase &>(*rs.front());
-    auto r = getMatchingPackages(s, options.options_list.list_arg);
+    auto r = getMatchingPackages(s, getOptions().options_list.list_arg);
     if (r.empty())
     {
         LOG_INFO(logger, "nothing found");

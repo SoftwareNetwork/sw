@@ -22,7 +22,7 @@ TODO:
     - add win7
 */
 
-#include "commands.h"
+#include "../commands.h"
 
 #include <sw/core/input.h>
 #include <sw/manager/storage.h>
@@ -75,37 +75,31 @@ static void run(sw::SwBuild &b, const sw::PackageId &pkg, primitives::Command &c
     run1(p, c);
 }
 
-void run(sw::SwContext &swctx, const sw::PackageId &pkg, primitives::Command &c, OPTIONS_ARG)
+void SwClientContext::run(const sw::PackageId &pkg, primitives::Command &c)
 {
-    options.targets_to_build.push_back(pkg.toString());
+    getOptions().targets_to_build.push_back(pkg.toString());
 
     Strings inputs;
     if (pkg.getPath().isRelative())
     {
-        if (options.options_run.input.empty())
+        if (getOptions().options_run.input.empty())
             inputs.push_back(".");
         else
-            inputs.push_back(options.options_run.input);
+            inputs.push_back(getOptions().options_run.input);
     }
     else
         inputs.push_back(pkg.toString());
 
-    auto b = createBuildAndPrepare(swctx, inputs, options);
+    auto b = createBuildAndPrepare(inputs);
     b->build();
 
-    run(*b, pkg, c);
+    ::run(*b, pkg, c);
 }
 
 SUBCOMMAND_DECL(run)
 {
-    auto swctx = createSwContext(options);
-    cli_run(*swctx, options);
-}
-
-SUBCOMMAND_DECL2(run)
-{
     bool valid_target = true;
-    try { sw::PackageId pkg(options.options_run.target); }
+    try { sw::PackageId pkg(getOptions().options_run.target); }
     catch (std::exception &) { valid_target = false; }
 
     // for such commands we inherit them
@@ -114,15 +108,15 @@ SUBCOMMAND_DECL2(run)
     c.inherit = true;
     c.in.inherit = true;
 
-    for (auto &a : options.options_run.args)
+    for (auto &a : getOptions().options_run.args)
         c.push_back(a);
 
-    if (!options.options_run.wdir.empty())
-        c.working_directory = options.options_run.wdir;
+    if (!getOptions().options_run.wdir.empty())
+        c.working_directory = getOptions().options_run.wdir;
 
-    if (!valid_target && fs::exists((String&)options.options_run.target))
+    if (!valid_target && fs::exists((String&)getOptions().options_run.target))
     {
-        auto b = createBuildAndPrepare(swctx, {options.options_run.target}, options);
+        auto b = createBuildAndPrepare({getOptions().options_run.target});
         b->build();
         auto inputs = b->getInputs();
         if (inputs.size() != 1)
@@ -133,9 +127,9 @@ SUBCOMMAND_DECL2(run)
         if (tgts.size() != 1)
             throw SW_RUNTIME_ERROR("More than one target provided in input");
 
-        run(*b, (*tgts.begin())->getPackage(), c);
+        ::run(*b, (*tgts.begin())->getPackage(), c);
         return;
     }
 
-    run(swctx, options.options_run.target, c, options);
+    run(getOptions().options_run.target, c);
 }

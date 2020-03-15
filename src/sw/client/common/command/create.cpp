@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "commands.h"
+#include "../commands.h"
 
 #include "../inserts.h"
 
@@ -36,19 +36,18 @@ static String get_name(const Options &options)
 
 SUBCOMMAND_DECL(create)
 {
-    auto swctx = createSwContext(options);
     const auto root = YAML::Load(project_templates);
     auto &tpls = root["templates"];
 
-    if (options.options_create.create_clear_dir)
+    if (getOptions().options_create.create_clear_dir)
     {
         String s;
-        if (!options.options_create.create_clear_dir_y)
+        if (!getOptions().options_create.create_clear_dir_y)
         {
             std::cout << "Going to clear current directory. Are you sure? [Yes/No]\n";
             std::cin >> s;
         }
-        if (options.options_create.create_clear_dir_y || boost::iequals(s, "yes") || boost::iequals(s, "Y"))
+        if (getOptions().options_create.create_clear_dir_y || boost::iequals(s, "yes") || boost::iequals(s, "Y"))
         {
             for (auto &p : fs::directory_iterator("."))
                 fs::remove_all(p);
@@ -59,16 +58,16 @@ SUBCOMMAND_DECL(create)
                 return;
         }
     }
-    if (!options.options_create.create_overwrite_files && fs::directory_iterator(".") != fs::directory_iterator())
+    if (!getOptions().options_create.create_overwrite_files && fs::directory_iterator(".") != fs::directory_iterator())
         throw SW_RUNTIME_ERROR("directory is not empty");
 
-    if (options.options_create.create_type == "project")
+    if (getOptions().options_create.create_type == "project")
     {
-        auto &tpl = tpls[(String)options.options_create.create_template];
+        auto &tpl = tpls[(String)getOptions().options_create.create_template];
         if (!tpl.IsDefined())
-            throw SW_RUNTIME_ERROR("No such template: " + options.options_create.create_template);
+            throw SW_RUNTIME_ERROR("No such template: " + getOptions().options_create.create_template);
 
-        auto name = get_name(options);
+        auto name = get_name(getOptions());
         auto target = tpl["target"].template as<String>();
         String files;
         for (auto &p : tpl["files"])
@@ -104,8 +103,8 @@ SUBCOMMAND_DECL(create)
             write_file(fn, s);
         }
 
-        if (options.options_create.create_build)
-            cli_build(*swctx, options);
+        if (getOptions().options_create.create_build)
+            command_build();
         else
         {
             // uses current cmd line which is not suitable for VS
@@ -115,7 +114,7 @@ SUBCOMMAND_DECL(create)
         return;
     }
 
-    if (options.options_create.create_type == "config")
+    if (getOptions().options_create.create_type == "config")
     {
         primitives::CppEmitter ctx;
         ctx.beginFunction("void build(Solution &s)");

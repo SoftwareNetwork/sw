@@ -22,8 +22,9 @@
 #include <sw/core/target.h>
 
 struct Options;
+struct SwClientContext;
 
-std::unique_ptr<sw::SwContext> createSwContext(const Options &);
+std::unique_ptr<SwClientContext> createSwContext2(const Options &);
 void setHttpSettings(const Options &);
 
 struct Program

@@ -20,6 +20,7 @@
 
 #include <cl.llvm.h>
 #include <sw/client/common/common.h>
+#include <sw/client/common/sw_context.h>
 
 #include <qapplication.h>
 #include <qglobal.h>
@@ -56,7 +57,7 @@ int main(int argc, char *argv[])
 
     try
     {
-        auto swctx = createSwContext({});
+        auto swctx = createSwContext2({});
 
         MainWindow w(*swctx);
         w.show();

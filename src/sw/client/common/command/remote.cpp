@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "commands.h"
+#include "../commands.h"
 
 #include <sw/manager/remote.h>
 #include <sw/manager/settings.h>
@@ -46,31 +46,31 @@ SUBCOMMAND_DECL(remote)
     // sw remote rename origin origin2
     // sw remote alter origin add token TOKEN
 
-    if (options.options_remote.remote_subcommand == "alter" || options.options_remote.remote_subcommand == "change")
+    if (getOptions().options_remote.remote_subcommand == "alter" || getOptions().options_remote.remote_subcommand == "change")
     {
         int i = 0;
-        if (options.options_remote.remote_rest.size() > i + 1)
+        if (getOptions().options_remote.remote_rest.size() > i + 1)
         {
-            auto token = options.options_remote.remote_rest[i];
+            auto token = getOptions().options_remote.remote_rest[i];
             auto &us = sw::Settings::get_user_settings();
-            auto r = find_remote(us, options.options_remote.remote_rest[i]);
+            auto r = find_remote(us, getOptions().options_remote.remote_rest[i]);
 
             i++;
-            if (options.options_remote.remote_rest.size() > i + 1)
+            if (getOptions().options_remote.remote_rest.size() > i + 1)
             {
-                if (options.options_remote.remote_rest[i] == "add")
+                if (getOptions().options_remote.remote_rest[i] == "add")
                 {
                     i++;
-                    if (options.options_remote.remote_rest.size() > i + 1)
+                    if (getOptions().options_remote.remote_rest.size() > i + 1)
                     {
-                        if (options.options_remote.remote_rest[i] == "token")
+                        if (getOptions().options_remote.remote_rest[i] == "token")
                         {
                             i++;
-                            if (options.options_remote.remote_rest.size() >= i + 2) // publisher + token
+                            if (getOptions().options_remote.remote_rest.size() >= i + 2) // publisher + token
                             {
                                 sw::Remote::Publisher p;
-                                p.name = options.options_remote.remote_rest[i];
-                                p.token = options.options_remote.remote_rest[i+1];
+                                p.name = getOptions().options_remote.remote_rest[i];
+                                p.token = getOptions().options_remote.remote_rest[i+1];
                                 r->publishers[p.name] = p;
                                 us.save(sw::get_config_filename());
                             }
@@ -78,13 +78,13 @@ SUBCOMMAND_DECL(remote)
                                 throw SW_RUNTIME_ERROR("missing publisher or token");
                         }
                         else
-                            throw SW_RUNTIME_ERROR("unknown add object: " + options.options_remote.remote_rest[i]);
+                            throw SW_RUNTIME_ERROR("unknown add object: " + getOptions().options_remote.remote_rest[i]);
                     }
                     else
                         throw SW_RUNTIME_ERROR("missing add object");
                 }
                 else
-                    throw SW_RUNTIME_ERROR("unknown alter command: " + options.options_remote.remote_rest[i]);
+                    throw SW_RUNTIME_ERROR("unknown alter command: " + getOptions().options_remote.remote_rest[i]);
             }
             else
                 throw SW_RUNTIME_ERROR("missing alter command");

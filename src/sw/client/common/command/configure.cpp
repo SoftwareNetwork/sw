@@ -16,11 +16,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "commands.h"
+#include "../commands.h"
 
 SUBCOMMAND_DECL(configure)
 {
-    auto swctx = createSwContext(options);
-    auto b = createBuildAndPrepare(*swctx, { options.options_configure.build_arg_configure }, options);
+    auto b = createBuildAndPrepare({ getOptions().options_configure.build_arg_configure });
     b->saveExecutionPlan();
 }

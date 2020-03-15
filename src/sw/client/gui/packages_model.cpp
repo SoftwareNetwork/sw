@@ -18,7 +18,7 @@
 
 #include "packages_model.h"
 
-#include <sw/manager/database.h>
+#include <sw/manager/package_database.h>
 
 PackagesModel::PackagesModel(sw::PackagesDatabase &s, bool lazy)
     : s(s)

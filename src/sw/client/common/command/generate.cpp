@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "commands.h"
+#include "../commands.h"
 #include "../generator/generator.h"
 
 #include <sw/builder/execution_plan.h>
@@ -27,10 +27,10 @@ String vs_zero_check_stamp_ext = ".stamp";
 
 SUBCOMMAND_DECL(generate)
 {
-    if (!options.options_generate.check_stamp_list.empty())
+    if (!getOptions().options_generate.check_stamp_list.empty())
     {
-        auto stampfn = path(options.options_generate.check_stamp_list) += vs_zero_check_stamp_ext;
-        auto files = read_lines(options.options_generate.check_stamp_list);
+        auto stampfn = path(getOptions().options_generate.check_stamp_list) += vs_zero_check_stamp_ext;
+        auto files = read_lines(getOptions().options_generate.check_stamp_list);
         uint64_t mtime = 0;
         bool missing = false;
         for (auto &f : files)
@@ -55,52 +55,47 @@ SUBCOMMAND_DECL(generate)
         }
     }
 
-    if (options.options_generate.build_arg_generate.empty())
-        options.options_generate.build_arg_generate.push_back(".");
+    if (getOptions().options_generate.build_arg_generate.empty())
+        getOptions().options_generate.build_arg_generate.push_back(".");
 
-    auto swctx = createSwContext(options);
-    cli_generate(*swctx, options);
-}
-
-SUBCOMMAND_DECL2(generate)
-{
-    if (options.options_generate.generator.empty())
+    // actual generate
+    if (getOptions().options_generate.generator.empty())
     {
 #ifdef _WIN32
-        options.options_generate.generator = "vs";
+        getOptions().options_generate.generator = "vs";
 #endif
     }
 
-    auto generator = Generator::create(options);
+    auto generator = Generator::create(getOptions());
     if (generator->getType() == GeneratorType::VisualStudio)
     {
-        auto &compilers = (Strings&)options.compiler;
+        auto &compilers = (Strings&)getOptions().compiler;
         if (!compilers.empty())
         {
             if (compilers.size() > 1)
                 throw SW_RUNTIME_ERROR("Only one compiler may be specified");
         }
         else
-            options.compiler.push_back("msvc");
-        if (options.configuration.empty())
+            getOptions().compiler.push_back("msvc");
+        if (getOptions().configuration.empty())
         {
-            options.configuration.push_back("d");
-            options.configuration.push_back("rwdi");
-            options.configuration.push_back("r");
+            getOptions().configuration.push_back("d");
+            getOptions().configuration.push_back("rwdi");
+            getOptions().configuration.push_back("r");
         }
-        auto hs = swctx.getHostSettings();
+        auto hs = getContext().getHostSettings();
         hs["use_same_config_for_host_dependencies"] = "true";
         hs["use_same_config_for_host_dependencies"].useInHash(false);
-        swctx.setHostSettings(hs);
+        getContext().setHostSettings(hs);
 
         auto g = (VSGenerator*)generator.get();
-        if (options.options_generate.print_overridden_dependencies)
+        if (getOptions().options_generate.print_overridden_dependencies)
             g->add_overridden_packages = true;
-        if (options.options_generate.print_dependencies)
+        if (getOptions().options_generate.print_dependencies)
             g->add_all_packages = true;
     }
 
-    auto b = createBuildAndPrepare(swctx, options.options_generate.build_arg_generate, options);
+    auto b = createBuildAndPrepare({ getOptions().options_generate.build_arg_generate });
     b->getExecutionPlan(); // prepare commands
     generator->generate(*b);
 }

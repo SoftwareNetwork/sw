@@ -1,6 +1,6 @@
 /*
  * SW - Build System and Package Manager
- * Copyright (C) 2020 Egor Pugin
+ * Copyright (C) 2017-2019 Egor Pugin
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,21 +16,27 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "../commands.h"
+#pragma once
 
-#ifdef _WIN32
-#include <windows.h>
-#include <shellapi.h>
-#include <Objbase.h>
-#include <Shlobj.h>
-#endif
+#include "common.h"
+#include "sw_context.h"
 
-#include <primitives/log.h>
-DECLARE_STATIC_LOGGER(logger, "command.doc");
+#include <primitives/sw/cl.h>
 
-void open_url(const String &);
+#include <sw/core/build.h>
+#include <sw/core/sw_context.h>
+#include <sw/manager/package_data.h>
 
-SUBCOMMAND_DECL(doc)
+#define SW_DOC_URL "https://software-network.org/client/sw.pdf"
+
+namespace sw
 {
-    open_url(SW_DOC_URL);
+struct StorageWithPackagesDatabase;
 }
+
+#include <cl.llvm.h>
+
+#define SUBCOMMAND_DECL(n) void SwClientContext::command_##n()
+
+sw::PackageDescriptionMap getPackages(const sw::SwBuild &, const sw::SourceDirMap & = {});
+std::map<sw::PackagePath, sw::VersionSet> getMatchingPackages(const sw::StorageWithPackagesDatabase &, const String &unresolved_arg);

@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "commands.h"
+#include "../commands.h"
 
 #include <sw/builder/program.h>
 #include <sw/core/input.h>
@@ -34,13 +34,12 @@ SUBCOMMAND_DECL(abi)
     SW_UNIMPLEMENTED;
 #endif
 
-    auto swctx = createSwContext(options);
-    auto b = createBuildAndPrepare(*swctx, options.options_abi.inputs, options);
+    auto b = createBuildAndPrepare(getOptions().options_abi.inputs);
     auto tgts1 = b->getTargetsToBuild();
     b->build();
 
-    auto i = swctx->getPredefinedTargets().find(sw::UnresolvedPackage("com.Microsoft.VisualStudio.VC.dumpbin-*"));
-    if (i == swctx->getPredefinedTargets().end() || i->second.empty())
+    auto i = getContext().getPredefinedTargets().find(sw::UnresolvedPackage("com.Microsoft.VisualStudio.VC.dumpbin-*"));
+    if (i == getContext().getPredefinedTargets().end() || i->second.empty())
         throw SW_RUNTIME_ERROR("No dumpbin program");
     auto j = i->second.end() - 1;
     auto p = (*j)->as<const sw::PredefinedProgram *>();

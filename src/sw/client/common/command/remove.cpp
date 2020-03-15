@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "commands.h"
+#include "../commands.h"
 
 #include <sw/manager/storage.h>
 
@@ -36,13 +36,12 @@ static sw::PackageIdSet getMatchingPackagesSet(const sw::StorageWithPackagesData
 
 SUBCOMMAND_DECL(remove)
 {
-    auto swctx = createSwContext(options);
-    for (auto &a : options.options_remove.remove_arg)
+    for (auto &a : getOptions().options_remove.remove_arg)
     {
         for (auto &p : getMatchingPackagesSet(swctx->getLocalStorage(), a))
         {
             LOG_INFO(logger, "Removing " << p.toString());
-            swctx->getLocalStorage().remove(sw::LocalPackage(swctx->getLocalStorage(), p));
+            getContext().getLocalStorage().remove(sw::LocalPackage(swctx->getLocalStorage(), p));
         }
     }
 }

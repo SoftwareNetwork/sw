@@ -18,7 +18,7 @@
 
 #include <sw/builder/jumppad.h>
 #include <sw/client/common/common.h>
-#include <sw/client/common/command/commands.h>
+#include <sw/client/common/commands.h>
 #include <sw/core/input.h>
 #include <sw/driver/driver.h>
 #include <sw/manager/api.h>
@@ -90,7 +90,7 @@ bool bUseSystemPause = false;
 int main(int argc, char **argv);
 #pragma pop_macro("main")
 
-void setup_log(const std::string &log_level, OPTIONS_ARG_CONST, bool simple = true);
+void setup_log(const std::string &log_level, const Options &, bool simple = true);
 void self_upgrade();
 void self_upgrade_copy(const path &dst);
 
@@ -134,11 +134,13 @@ static bool setConsoleColorProcessing()
     return r;
 }
 
-int sw_main(const Strings &args, OPTIONS_ARG)
+int sw_main(const Strings &args, Options &options)
 {
+    auto swctx = createSwContext2(options);
+
     if (0);
-#define SUBCOMMAND(n) else if (subcommand_##n) { cli_##n(options); return 0; }
-#include <sw/client/common/command/commands.inl>
+#define SUBCOMMAND(n) else if (subcommand_##n) { swctx->command_##n(); return 0; }
+#include <sw/client/common/commands.inl>
 #undef SUBCOMMAND
 
     LOG_WARN(logger, "No command was issued");
@@ -146,7 +148,7 @@ int sw_main(const Strings &args, OPTIONS_ARG)
     return 0;
 }
 
-int setup_main(const Strings &args, OPTIONS_ARG)
+int setup_main(const Strings &args, Options &options)
 {
     // some initial stuff
     // try to do as less as possible before log init
@@ -211,15 +213,15 @@ int setup_main(const Strings &args, OPTIONS_ARG)
 
     if (options.list_predefined_targets)
     {
-        auto swctx = createSwContext(options);
-        LOG_INFO(logger, list_predefined_targets(*swctx));
+        auto swctx = createSwContext2(options);
+        LOG_INFO(logger, list_predefined_targets(swctx->getContext()));
         return 0;
     }
 
     if (options.list_programs)
     {
-        auto swctx = createSwContext(options);
-        LOG_INFO(logger, list_programs(*swctx));
+        auto swctx = createSwContext2(options);
+        LOG_INFO(logger, list_programs(swctx->getContext()));
         return 0;
     }
 
@@ -280,13 +282,6 @@ int setup_main(const Strings &args, OPTIONS_ARG)
                 return 0;
             write_file(fmtime, std::to_string(mtime));
         }
-    }
-
-    // after everything
-    std::unique_ptr<Executor> e;
-    {
-        e = std::make_unique<Executor>(select_number_of_threads(options.global_jobs));
-        getExecutor(e.get());
     }
 
     // actual execution
@@ -403,11 +398,7 @@ int main(int argc, char **argv)
     return r;
 }
 
-#define SUBCOMMAND(n) extern ::cl::SubCommand subcommand_##n;
-#include <sw/client/common/command/commands.inl>
-#undef SUBCOMMAND
-
-void setup_log(const std::string &log_level, OPTIONS_ARG_CONST, bool simple)
+void setup_log(const std::string &log_level, const Options &options, bool simple)
 {
     LoggerSettings log_settings;
     log_settings.log_level = log_level;

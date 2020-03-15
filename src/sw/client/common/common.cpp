@@ -18,7 +18,8 @@
 
 #include "common.h"
 
-#include <sw/driver/driver.h>
+#include "sw_context.h"
+
 #include <sw/manager/settings.h>
 
 #include <primitives/emitter.h>
@@ -33,18 +34,12 @@ void setHttpSettings(const Options &options)
     httpSettings.proxy = sw::Settings::get_local_settings().proxy;
 }
 
-std::unique_ptr<sw::SwContext> createSwContext(const Options &options)
+std::unique_ptr<SwClientContext> createSwContext2(const Options &options)
 {
     // load proxy settings before ctx
     setHttpSettings(options);
 
-    auto swctx = std::make_unique<sw::SwContext>(options.storage_dir.empty() ? sw::Settings::get_user_settings().storage_dir : options.storage_dir);
-    // TODO:
-    // before default?
-    //for (auto &d : drivers)
-    //swctx->registerDriver(std::make_unique<sw::driver::cpp::Driver>());
-    swctx->registerDriver("org.sw.sw.driver.cpp-0.4.1"s, std::make_unique<sw::driver::cpp::Driver>());
-    //swctx->registerDriver(std::make_unique<sw::CDriver>(sw_create_driver));
+    auto swctx = std::make_unique<SwClientContext>(options.storage_dir.empty() ? sw::Settings::get_user_settings().storage_dir : options.storage_dir, options);
     return swctx;
 }
 

@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "commands.h"
+#include "../commands.h"
 #include "../inserts.h"
 
 #include <sw/manager/storage.h>
@@ -31,7 +31,7 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "setup");
 
-static void registerCmakePackage(sw::SwContext &swctx)
+static void registerCmakePackage(SwClientContext &swctx)
 {
     const auto sw_cmake_config_filename = "SWConfig.cmake";
 
@@ -43,7 +43,7 @@ static void registerCmakePackage(sw::SwContext &swctx)
     };
 
 #ifdef _WIN32
-    auto dir = swctx.getLocalStorage().storage_dir_etc / "sw" / "static";
+    auto dir = swctx.getContext().getLocalStorage().storage_dir_etc / "sw" / "static";
     // if we write into HKLM, we won't be able to access the pkg file in admins folder
     winreg::RegKey icon(/*is_elevated() ? HKEY_LOCAL_MACHINE : */HKEY_CURRENT_USER, L"Software\\Kitware\\CMake\\Packages\\SW");
     icon.SetStringValue(L"", dir.wstring().c_str());
@@ -120,6 +120,5 @@ MimeType=x-scheme-handler/sw;
 #elif defined(__APPLE__)
 #endif
 
-    auto swctx = createSwContext(options);
-    registerCmakePackage(*swctx);
+    registerCmakePackage(*this);
 }

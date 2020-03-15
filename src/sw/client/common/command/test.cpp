@@ -16,14 +16,13 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "commands.h"
+#include "../commands.h"
 
 SUBCOMMAND_DECL(test)
 {
-    if (options.options_test.build_arg_test.empty())
-        options.options_test.build_arg_test.push_back(".");
+    if (getOptions().options_test.build_arg_test.empty())
+        getOptions().options_test.build_arg_test.push_back(".");
 
-    auto swctx = createSwContext(options);
-    auto b = createBuildAndPrepare(*swctx, options.options_test.build_arg_test, options);
+    auto b = createBuildAndPrepare(getOptions().options_test.build_arg_test);
     b->test();
 }

@@ -37,7 +37,9 @@
 
 #include <sw/client/common/common.h>
 #include <sw/client/common/generator/generator.h>
-#include <sw/manager/database.h>
+#include <sw/client/common/commands.h>
+#include <sw/client/common/sw_context.h>
+#include <sw/manager/package_database.h>
 #include <sw/manager/storage.h>
 
 class TabBar : public QTabBar
@@ -89,7 +91,7 @@ public:
     }
 };
 
-MainWindow::MainWindow(sw::SwContext &swctx, QWidget *parent)
+MainWindow::MainWindow(SwClientContext &swctx, QWidget *parent)
     : QMainWindow(parent)
     , swctx(swctx)
 {
@@ -138,10 +140,10 @@ void MainWindow::setupUi()
             auto gb = new QGroupBox("Linking");
             middle->addWidget(gb);
             QVBoxLayout *gbl = new QVBoxLayout;
-            auto cb = new QCheckBox("Dynamic (.dll)");
+            auto cb = new QCheckBox("Dynamic (.dll/.so/.dylib)");
             cb->setChecked(true);
             gbl->addWidget(cb);
-            gbl->addWidget(new QCheckBox("Static (.lib)"));
+            gbl->addWidget(new QCheckBox("Static (.lib/.a)"));
             gb->setLayout(gbl);
         }
 
@@ -178,7 +180,7 @@ void MainWindow::setupUi()
             auto gb = new QGroupBox("Compiler");
             right->addWidget(gb);
             QVBoxLayout *gbl = new QVBoxLayout;
-            auto cls = list_compilers(swctx);
+            auto cls = list_compilers(swctx.getContext());
             bool set = false;
             for (auto &cl : cls)
             {
@@ -220,7 +222,7 @@ void MainWindow::setupUi()
             connect(pkgcb, &QComboBox::currentTextChanged, [this, pkgcb]()
             {
                 return;
-                auto &rs = swctx.getRemoteStorages();
+                auto &rs = swctx.getContext().getRemoteStorages();
                 if (rs.empty())
                     return;
                 if (auto s1 = dynamic_cast<sw::StorageWithPackagesDatabase *>(rs[0]))
@@ -238,11 +240,27 @@ void MainWindow::setupUi()
             pkgcb->setAutoCompletion(true);
             pkgcb->setEditable(true);
 
-            auto add_input = [gbl](const auto &s)
+            auto add_input = [this, gbl](const auto &s)
             {
+                auto w = new QWidget();
+                auto l = new QHBoxLayout();
+                l->setMargin(0);
+
                 auto le = new QLineEdit(s);
                 le->setEnabled(false);
-                gbl->addWidget(le);
+                l->addWidget(le);
+
+                auto b = new QPushButton("X");
+                b->setMaximumWidth(30);
+                connect(b, &QPushButton::clicked, [gbl, w]()
+                {
+                    //gbl->removeWidget(w);
+                    delete w;
+                });
+                l->addWidget(b);
+
+                w->setLayout(l);
+                gbl->addWidget(w);
             };
 
             connect(apkg, &QPushButton::clicked, [add_input, pkgcb]()
@@ -269,7 +287,12 @@ void MainWindow::setupUi()
             gbl->addStretch(1);
         }
 
-        left->addWidget(new QPushButton("Build"));
+        auto build = new QPushButton("Build");
+        connect(build, &QPushButton::clicked, [this]()
+        {
+            auto b = swctx.createBuild();
+        });
+        left->addWidget(build);
         left->addWidget(new QPushButton("Test"));
 
         // generators
@@ -337,8 +360,8 @@ void MainWindow::setupUi()
         });
     };
 
-    add_packages_tab("Installed Packages", swctx.getLocalStorage().getPackagesDatabase());
-    for (auto rs : swctx.getRemoteStorages())
+    add_packages_tab("Installed Packages", swctx.getContext().getLocalStorage().getPackagesDatabase());
+    for (auto rs : swctx.getContext().getRemoteStorages())
     {
         if (auto s1 = dynamic_cast<sw::StorageWithPackagesDatabase *>(rs))
             add_packages_tab("Remote Packages: " + rs->getName(), s1->getPackagesDatabase());
@@ -353,8 +376,8 @@ void MainWindow::setupUi()
         t->addTab(te, name.c_str());
     };
 
-    add_text_tab("List of Predefined Targets", list_predefined_targets(swctx));
-    add_text_tab("List of Programs", list_programs(swctx));
+    add_text_tab("List of Predefined Targets", list_predefined_targets(swctx.getContext()));
+    add_text_tab("List of Programs", list_programs(swctx.getContext()));
 
     //
     auto setLayout = new QVBoxLayout;
