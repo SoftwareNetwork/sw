@@ -154,6 +154,9 @@ SUBCOMMAND_DECL(integrate)
 
     if (!options.options_integrate.integrate_cmake_deps.empty())
     {
+        if (getOptions().options_integrate.cmake_file_version < 1)
+            throw SW_RUNTIME_ERROR("Outdated cmake integration file. Run 'sw setup' to update it.");
+
         const Strings configs
         {
             "Debug",

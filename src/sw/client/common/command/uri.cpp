@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "commands.h"
+#include "../commands.h"
 
 #include <sw/core/input.h>
 #include <sw/manager/storage.h>
@@ -36,7 +36,7 @@
 
 extern bool bUseSystemPause;
 
-#define F_ARGS std::unique_ptr<sw::SwContext> swctx, sw::LocalStorage &sdb, const sw::LocalPackage &p, OPTIONS_ARG
+#define F_ARGS SwClientContext &swctx, sw::LocalStorage &sdb, const sw::LocalPackage &p
 #ifdef _MSC_VER
 #define F(n, ...) static void n(F_ARGS, __VA_ARGS__)
 #else
@@ -78,7 +78,7 @@ F(install)
     if (sdb.isPackageInstalled(p))
         throw SW_RUNTIME_ERROR("Package '" + p.toString() + "' is already installed");
     setup_console();
-    swctx->install(sw::UnresolvedPackages{ p });
+    swctx.getContext().install(sw::UnresolvedPackages{ p });
 }
 
 F(remove)
@@ -94,17 +94,17 @@ F(build)
     if (p.getPath().isRelative() || p.getPath().getOwner() != "sw")
         return;
 
-    swctx->install(sw::UnresolvedPackages{ p });
-    auto d = swctx->getLocalStorage().storage_dir_tmp / "build" / unique_path();
+    swctx.getContext().install(sw::UnresolvedPackages{ p });
+    auto d = swctx.getContext().getLocalStorage().storage_dir_tmp / "build" / unique_path();
     fs::create_directories(d);
     SCOPE_EXIT
     {
         //fs::remove_all(d); // FIXME:
     };
     ScopedCurrentPath scp(d, CurrentPathScope::All);
-    auto b = createBuildAndPrepare(*swctx, { p.toString() }, options);
+    auto b = swctx.createBuildAndPrepare({ p.toString() });
 
-    for (auto &i : swctx->addInput(p))
+    for (auto &i : swctx.getContext().addInput(p))
     {
         sw::InputWithSettings ii(*i);
         b->addInput(ii);
@@ -120,8 +120,8 @@ F(run)
     if (p.getPath().isRelative() || p.getPath().getOwner() != "sw")
         return;
 
-    swctx->install(sw::UnresolvedPackages{ p });
-    auto d = swctx->getLocalStorage().storage_dir_tmp / "build" / unique_path();
+    swctx.getContext().install(sw::UnresolvedPackages{ p });
+    auto d = swctx.getContext().getLocalStorage().storage_dir_tmp / "build" / unique_path();
     fs::create_directories(d);
     SCOPE_EXIT
     {
@@ -136,20 +136,20 @@ F(run)
     // detach is needed because only it helps spawned program to outlive sw app
     c.detached = true;
 
-    run(*swctx, p, c, options);
+    swctx.run(p, c);
 }
 
 F(upload)
 {
-    if (options.options_uri.uri_args.size() != 4)
+    if (swctx.getOptions().options_uri.uri_args.size() != 4)
         throw SW_RUNTIME_ERROR("Bad upload args");
 
-    auto rs = swctx->getRemoteStorages();
+    auto rs = swctx.getContext().getRemoteStorages();
     if (rs.empty())
         throw SW_RUNTIME_ERROR("No remote storages found");
 
-    sw::Package pkg(*rs.front(), options.options_uri.uri_args[1]);
-    sw::Version new_version(options.options_uri.uri_args[2]);
+    sw::Package pkg(*rs.front(), swctx.getOptions().options_uri.uri_args[1]);
+    sw::Version new_version(swctx.getOptions().options_uri.uri_args[2]);
 
     String url = "https://raw.githubusercontent.com/SoftwareNetwork/specifications/master/";
     url += normalize_path(pkg.getHashPath() / "sw.cpp");
@@ -162,14 +162,14 @@ F(upload)
     SCOPE_EXIT
     {
         // free files
-        swctx.reset();
+        //swctx.getContext().reset();
         fs::remove_all(fn.parent_path());
     };
 
     // run secure as below?
     ScopedCurrentPath scp(fn.parent_path());
-    options.options_upload.upload_prefix = pkg.getPath().slice(0, std::stoi(options.options_uri.uri_args[3]));
-    cli_upload(*swctx, options);
+    swctx.getOptions().options_upload.upload_prefix = pkg.getPath().slice(0, std::stoi(swctx.getOptions().options_uri.uri_args[3]));
+    swctx.command_upload();
 
     /*primitives::Command c;
     c.program = "sw";
@@ -181,28 +181,27 @@ F(upload)
     //c.execute();*/
 }
 
-static void dispatcher(OPTIONS_ARG)
+static void dispatcher(SwClientContext &swctx)
 {
-    auto swctx = createSwContext(options);
-    auto id = sw::extractPackageIdFromString(options.options_uri.uri_args[1]);
-    auto &sdb = swctx->getLocalStorage();
+    auto id = sw::extractPackageIdFromString(swctx.getOptions().options_uri.uri_args[1]);
+    auto &sdb = swctx.getContext().getLocalStorage();
     sw::LocalPackage p(sdb, id);
 
 #ifdef _MSC_VER
-#define URI_CMD2(x, f, ...)                                \
-    if (options.options_uri.uri_args[0] == "sw:" #x)       \
-    {                                                      \
-        f(std::move(swctx), sdb, p, options, __VA_ARGS__); \
-        return;                                            \
+#define URI_CMD2(x, f, ...)                                     \
+    if (swctx.getOptions().options_uri.uri_args[0] == "sw:" #x) \
+    {                                                           \
+        f(swctx, sdb, p, __VA_ARGS__);                          \
+        return;                                                 \
     }
 #define URI_CMD(x, ...) \
     URI_CMD2(x, x, __VA_ARGS__)
 #else
-#define URI_CMD2(x, f, ...)                                  \
-    if (options.options_uri.uri_args[0] == "sw:" #x)         \
-    {                                                        \
-        f(std::move(swctx), sdb, p, options, ##__VA_ARGS__); \
-        return;                                              \
+#define URI_CMD2(x, f, ...)                                     \
+    if (swctx.getOptions().options_uri.uri_args[0] == "sw:" #x) \
+    {                                                           \
+        f(swctx, sdb, p, ##__VA_ARGS__);                        \
+        return;                                                 \
     }
 #define URI_CMD(x, ...) \
     URI_CMD2(x, x, ##__VA_ARGS__)
@@ -217,7 +216,7 @@ static void dispatcher(OPTIONS_ARG)
     URI_CMD(run);
     URI_CMD(upload);
 
-    throw SW_RUNTIME_ERROR("Unknown command: " + options.options_uri.uri_args[0]);
+    throw SW_RUNTIME_ERROR("Unknown command: " + swctx.getOptions().options_uri.uri_args[0]);
 }
 
 SUBCOMMAND_DECL(uri)
@@ -225,18 +224,18 @@ SUBCOMMAND_DECL(uri)
     fs::current_path(sw::temp_directory_path());
 
 #if defined(__linux__)
-    if (options.options_uri.uri_args.size() != 1)
+    if (getOptions().options_uri.uri_args.size() != 1)
         return;
-    decltype(options.options_uri.uri_args) v;
-    boost::split(v, options.options_uri.uri_args[0], boost::is_any_of(" "));
-    options.options_uri.uri_args = v;
+    decltype(getOptions().options_uri.uri_args) v;
+    boost::split(v, getOptions().options_uri.uri_args[0], boost::is_any_of(" "));
+    getOptions().options_uri.uri_args = v;
 #endif
-    if (options.options_uri.uri_args.size() <= 1)
+    if (getOptions().options_uri.uri_args.size() <= 1)
         return;
 
     try
     {
-        dispatcher(options);
+        dispatcher(*this);
     }
     catch (std::exception &e)
     {

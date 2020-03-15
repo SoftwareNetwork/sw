@@ -517,6 +517,8 @@ command_line:
             integrate_cmake_deps:
                 option: cmake-deps
                 type: path
+            cmake_file_version:
+                type: int
             integrate_waf_deps:
                 option: waf-deps
                 type: path
