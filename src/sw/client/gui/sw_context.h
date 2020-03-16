@@ -19,10 +19,15 @@
 #pragma once
 
 #include <sw/client/common/sw_context.h>
+#include <qstring.h>
 
 struct SwGuiContext : SwClientContext
 {
     using Base = SwClientContext;
 
     void command_build() override;
+    void command_test() override;
+
+private:
+    void run_with_log(const QString &title, std::function<void(void)> f);
 };

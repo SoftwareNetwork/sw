@@ -18,8 +18,10 @@
 
 #pragma once
 
+#include <boost/log/sinks.hpp>
 #include <qabstractitemmodel.h>
 #include <qmainwindow.h>
+#include <qplaintextedit.h>
 
 struct SwGuiContext;
 
@@ -38,4 +40,73 @@ private:
     void setupConfiguration(QWidget *parent);
 
     void createMenus();
+};
+
+namespace sinks = boost::log::sinks;
+class qt_text_ostream_backend :
+    public QObject,
+    public sinks::basic_formatted_sink_backend<
+        char,
+        sinks::combine_requirements<sinks::synchronized_feeding, sinks::flushing>::type>
+{
+    Q_OBJECT
+public:
+    //! Base type
+    typedef sinks::basic_formatted_sink_backend<
+        char,
+        sinks::combine_requirements< sinks::synchronized_feeding, sinks::flushing >::type
+    > base_type;
+
+    //! Character type
+    typedef typename base_type::char_type char_type;
+    //! String type to be used as a message text holder
+    typedef typename base_type::string_type string_type;
+    //! Output stream type
+    typedef std::basic_ostream< char_type > stream_type;
+
+public:
+    void auto_flush(bool enable = true) { autoflush = enable; }
+    void set_auto_newline_mode(sinks::auto_newline_mode mode) {}
+    void consume(boost::log::record_view const &rec, string_type const &formatted_message);
+    void flush();
+
+signals:
+    void updateText(const QString &);
+
+private:
+    bool autoflush = false;
+    QString t;
+};
+
+class SwWorker : public QObject
+{
+    Q_OBJECT
+public:
+    SwWorker(std::function<void(void)> f) : f(f) {}
+
+public slots:
+    void doWork(std::function<void(void)> f)
+    {
+        f();
+        emit finished();
+    }
+
+signals:
+    void finished();
+
+private:
+    std::function<void(void)> f;
+};
+
+class LogWindow : public QPlainTextEdit
+{
+    Q_OBJECT
+
+public:
+    LogWindow(SwGuiContext &swctx, QWidget *parent = 0);
+
+    void appendMessage(const QString &text);
+
+private:
+    SwGuiContext &swctx;
 };
