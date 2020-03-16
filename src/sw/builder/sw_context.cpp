@@ -35,8 +35,7 @@
 namespace sw
 {
 
-SwBuilderContext::SwBuilderContext(const path &local_storage_root_dir)
-    : SwManagerContext(local_storage_root_dir)
+SwBuilderContext::SwBuilderContext()
 {
 #ifdef _WIN32
     // with per pkg command log we must increase the limits
@@ -44,8 +43,6 @@ SwBuilderContext::SwBuilderContext(const path &local_storage_root_dir)
     //if (_setmaxstdio(new_limit) == -1)
         //LOG_ERROR(logger, "Cannot raise number of maximum opened files");
 #endif
-
-    HostOS = getHostOS();
 
     module_storage = std::make_unique<ModuleStorage>();
 

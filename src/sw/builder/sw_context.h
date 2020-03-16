@@ -22,8 +22,6 @@
 #include "module_storage.h"
 #include "os.h"
 
-#include <sw/manager/sw_context.h>
-
 #include <shared_mutex>
 
 struct Executor;
@@ -36,18 +34,15 @@ struct FileStorage;
 
 namespace builder::detail { struct ResolvableCommand; }
 
-struct SW_BUILDER_API SwBuilderContext : SwManagerContext
+struct SW_BUILDER_API SwBuilderContext
 {
-    OS HostOS;
-
-    SwBuilderContext(const path &local_storage_root_dir);
-    virtual ~SwBuilderContext();
+    SwBuilderContext();
+    ~SwBuilderContext();
 
     FileStorage &getFileStorage() const;
     Executor &getFileStorageExecutor() const;
     CommandStorage &getCommandStorage(const path &root) const;
     ModuleStorage &getModuleStorage() const;
-    const OS &getHostOs() const { return HostOS; }
 
     void clearFileStorages();
 
