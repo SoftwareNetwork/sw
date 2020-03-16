@@ -120,6 +120,11 @@ using sw::KotlinExecutable;
 using sw::RustTarget;
 using sw::RustExecutable;
 
+using sw::ValaLibrary;
+using sw::ValaStaticLibrary;
+using sw::ValaSharedLibrary;
+using sw::ValaExecutable;
+
 //
 using sw::ConfigureFlags;
 using sw::PrecompiledHeader;

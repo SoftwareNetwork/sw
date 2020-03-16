@@ -781,6 +781,25 @@ types:
                 flag: m64
                 type: bool
 
+    vala:
+        name: ValaOptions
+
+        using:
+            - ifiles
+
+        flags:
+            gen_c_code:
+                name: OutputCCode
+                flag: C
+                type: bool
+                default: true
+            outdir:
+                name: OutputDir
+                flag: d
+                type: path
+                properties:
+                    - separate_prefix
+
     gnuclangcmn:
         name: GNUClangCommonOptions
 

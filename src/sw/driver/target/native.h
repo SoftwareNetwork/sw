@@ -196,8 +196,10 @@ private:
     const ActiveDeps &getActiveDependencies() const;
     const DependenciesType &getAllDependencies() const { return all_deps; } // deps from all subdeps too
 
+protected:
     Commands getCommands1() const override;
 
+private:
     Commands getGeneratedCommands() const;
     void resolvePostponedSourceFiles();
     template <class T>

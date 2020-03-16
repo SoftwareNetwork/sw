@@ -21,3 +21,4 @@
 #include "base.h"
 #include "native.h"
 #include "other.h"
+#include "vala.h"

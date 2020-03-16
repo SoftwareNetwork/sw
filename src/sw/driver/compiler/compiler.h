@@ -598,6 +598,14 @@ struct SW_DRIVER_CPP_API DCompiler : NativeLinker,
     void setImportLibrary(const path &out) override {}
 };
 
+struct SW_DRIVER_CPP_API ValaCompiler : Compiler,
+    CommandLineOptions<ValaOptions>
+{
+    using Compiler::Compiler;
+
+    SW_COMMON_COMPILER_API;
+};
+
 // TODO: compiled
 // VB, VB.NET, Obj-C (check work), Pascal (+Delphi?), swift, dart, cobol, lisp, ada, haskell, F#, erlang
 

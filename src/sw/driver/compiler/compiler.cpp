@@ -1151,4 +1151,11 @@ void DCompiler::setSourceFile(const path &input_file)
     InputFiles().push_back(input_file);
 }
 
+SW_DEFINE_PROGRAM_CLONE(ValaCompiler)
+
+void ValaCompiler::prepareCommand1(const Target &t)
+{
+    sw::getCommandLineOptions<ValaOptions>(cmd.get(), *this);
+}
+
 }
