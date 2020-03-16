@@ -903,6 +903,7 @@ driver::CommandBuilder Target::addCommand(const std::shared_ptr<builder::Command
     {
         cb << *this; // this adds to storage
         cb.c->command_storage = getCommandStorage();
+        cb.c->setContext(getMainBuild());
     }
     return cb;
 }

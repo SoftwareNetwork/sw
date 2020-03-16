@@ -30,7 +30,8 @@
     (target).Storage.push_back(name)
 
 #define SW_MAKE_CUSTOM_COMMAND(type, name, target, ...) \
-    auto name = std::make_shared<type>((target).getMainBuild().getContext(), __VA_ARGS__)
+    auto name = std::make_shared<type>((target).getContext(), __VA_ARGS__); \
+    name->setContext((target).getMainBuild())
 
 #ifdef _MSC_VER
 #define SW_MAKE_CUSTOM_COMMAND_AND_ADD(type, name, target, ...) \
@@ -42,10 +43,6 @@
     SW_INTERNAL_ADD_COMMAND(name, target)
 #endif
 
-/*
-#define SW_MAKE_COMMAND(name, target) \
-    SW_MAKE_CUSTOM_COMMAND(Command, name, target)
-*/
 #define SW_MAKE_COMMAND_AND_ADD(name, target) \
     SW_MAKE_CUSTOM_COMMAND_AND_ADD(Command, name, target)
 

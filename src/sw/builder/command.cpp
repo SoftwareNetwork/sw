@@ -1077,14 +1077,14 @@ Command &Command::operator|=(Command &c2)
 const SwBuilderContext &Command::getContext() const
 {
     if (!swctx)
-        throw SW_RUNTIME_ERROR("Empty sw context");
+        throw SW_RUNTIME_ERROR("Empty sw context: " + getName());
     return *swctx;
 }
 
 void Command::setContext(const SwBuilderContext &in)
 {
-    if (swctx)
-        throw SW_RUNTIME_ERROR("Settings swctx twice");
+    if (swctx && swctx != &in)
+        throw SW_RUNTIME_ERROR("Settings swctx twice: " + getName());
     swctx = &in;
 }
 
