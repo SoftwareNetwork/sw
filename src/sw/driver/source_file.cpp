@@ -548,7 +548,7 @@ void NativeSourceFile::setOutputFile(const Target &t, const path &input, const p
     setOutputFile(output_dir / getObjectFilename(t, input));
 }
 
-path NativeSourceFile::getObjectFilename(const Target &t, const path &p)
+path NativeSourceFile::getObjectFilename(const Target &t, const path &p) const
 {
     return SourceFile::getObjectFilename(t, p) += compiler->getObjectExtension(t.getBuildSettings().TargetOS);
 }

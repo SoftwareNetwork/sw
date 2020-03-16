@@ -89,7 +89,7 @@ struct SW_DRIVER_CPP_API NativeSourceFile : SourceFile
     //void setSourceFile(const path &input, const path &output);
     void setOutputFile(const Target &t, const path &input, const path &output_dir); // bad name?
     void setOutputFile(const path &output);
-    path getObjectFilename(const Target &t, const path &p);
+    path getObjectFilename(const Target &t, const path &p) const;
 };
 
 struct SW_DRIVER_CPP_API RcToolSourceFile : SourceFile
