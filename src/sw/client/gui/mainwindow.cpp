@@ -109,6 +109,8 @@ MainWindow::MainWindow(SwClientContext &swctx, QWidget *parent)
 
 void MainWindow::setupUi()
 {
+    createMenus();
+
     auto mainLayout = new QHBoxLayout;
     auto t = new TabWidget;
     //t->setDocumentMode(true);
@@ -479,4 +481,44 @@ void MainWindow::setupConfiguration(QWidget *parent)
 
     middle->addStretch(1);
     cfgLayout->addStretch(1);
+}
+
+void MainWindow::createMenus()
+{
+    auto aboutAction = new QAction("About");
+    connect(aboutAction, &QAction::triggered, [this]
+    {
+        QMessageBox::information(this, windowTitle(),
+            tr("Author: Pugin Egor") + ", 2020\n" +
+            ::sw::getProgramName().c_str() + " version " + PACKAGE_VERSION + "\n" +
+            primitives::git_rev::getGitRevision().c_str() + "\n" +
+            primitives::git_rev::getBuildTime().c_str()
+        );
+    });
+
+    auto docAction = new QAction("Documentation");
+    connect(docAction, &QAction::triggered, [this]
+    {
+        swctx.command_doc();
+    });
+
+    auto fileMenu = new QMenu("File");
+    //fileMenu->addAction(newAction);
+    fileMenu->addSeparator();
+    auto exitAction = fileMenu->addAction("Exit");
+    connect(exitAction, &QAction::triggered, [this]
+    {
+        close();
+    });
+
+    auto helpMenu = new QMenu("Help");
+    helpMenu->addAction(docAction);
+    helpMenu->addSeparator();
+    helpMenu->addAction(aboutAction);
+
+    auto mainMenu = new QMenuBar;
+    mainMenu->addMenu(fileMenu);
+    mainMenu->addMenu(helpMenu);
+
+    setMenuBar(mainMenu);
 }

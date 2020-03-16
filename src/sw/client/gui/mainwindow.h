@@ -36,4 +36,6 @@ private:
 
     void setupGeneral(QWidget *parent);
     void setupConfiguration(QWidget *parent);
+
+    void createMenus();
 };
