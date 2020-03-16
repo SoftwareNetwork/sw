@@ -17,7 +17,6 @@
  */
 
 #include <sw/builder/jumppad.h>
-#include <sw/client/common/common.h>
 #include <sw/client/common/commands.h>
 #include <sw/core/input.h>
 #include <sw/driver/driver.h>
@@ -136,10 +135,22 @@ static bool setConsoleColorProcessing()
 
 int sw_main(const Strings &args, Options &options)
 {
-    auto swctx = createSwContext2(options);
+    SwClientContext swctx(options);
+
+    if (options.list_predefined_targets)
+    {
+        LOG_INFO(logger, swctx.listPredefinedTargets());
+        return 0;
+    }
+
+    if (options.list_programs)
+    {
+        LOG_INFO(logger, swctx.listPrograms());
+        return 0;
+    }
 
     if (0);
-#define SUBCOMMAND(n) else if (subcommand_##n) { swctx->command_##n(); return 0; }
+#define SUBCOMMAND(n) else if (subcommand_##n) { swctx.command_##n(); return 0; }
 #include <sw/client/common/commands.inl>
 #undef SUBCOMMAND
 
@@ -208,20 +219,6 @@ int setup_main(const Strings &args, Options &options)
     if (options.self_upgrade)
     {
         self_upgrade();
-        return 0;
-    }
-
-    if (options.list_predefined_targets)
-    {
-        auto swctx = createSwContext2(options);
-        LOG_INFO(logger, list_predefined_targets(swctx->getContext()));
-        return 0;
-    }
-
-    if (options.list_programs)
-    {
-        auto swctx = createSwContext2(options);
-        LOG_INFO(logger, list_programs(swctx->getContext()));
         return 0;
     }
 
@@ -439,6 +436,7 @@ std::string getVersionString()
     s += PACKAGE_VERSION;
     s += "\n";
     s += primitives::git_rev::getGitRevision();
+    s += "\n";
     s += primitives::git_rev::getBuildTime();
     return s;
 }

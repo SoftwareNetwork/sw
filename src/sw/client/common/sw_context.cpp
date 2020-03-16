@@ -21,13 +21,24 @@
 #include <cl.llvm.h>
 
 #include <boost/algorithm/string.hpp>
+#include <primitives/emitter.h>
+#include <primitives/http.h>
 #include <sw/core/build.h>
 #include <sw/core/input.h>
 #include <sw/core/sw_context.h>
 #include <sw/driver/driver.h> // register driver
+#include <sw/driver/compiler/detect.h>
+#include <sw/manager/settings.h>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "client.context");
+
+void setHttpSettings(const Options &options)
+{
+    httpSettings.verbose = options.curl_verbose;
+    httpSettings.ignore_ssl_checks = options.ignore_ssl_checks;
+    httpSettings.proxy = sw::Settings::get_local_settings().proxy;
+}
 
 static void applySettingsFromJson(sw::TargetSettings &s, const String &jsonstr)
 {
@@ -252,13 +263,26 @@ static std::vector<sw::TargetSettings> getSettingsFromFile(SwClientContext &swct
     return ts;
 }
 
-SwClientContext::SwClientContext(const path &local_storage_root_dir, const Options &options)
-    : local_storage_root_dir(local_storage_root_dir), options(std::make_unique<Options>(options))
+SwClientContext::SwClientContext()
+    : SwClientContext(Options{})
 {
+}
+
+SwClientContext::SwClientContext(const Options &options)
+    : local_storage_root_dir(options.storage_dir.empty() ? sw::Settings::get_user_settings().storage_dir : options.storage_dir)
+    , options(std::make_unique<Options>(options))
+{
+    // load proxy settings before getContext()
+    setHttpSettings(options);
+
     // maybe put outside ctx, because it will be recreated every time
     // but since this is a rare operation, maybe it's fine
     executor = std::make_unique<Executor>(select_number_of_threads(options.global_jobs));
     getExecutor(executor.get());
+}
+
+SwClientContext::~SwClientContext()
+{
 }
 
 std::unique_ptr<sw::SwBuild> SwClientContext::createBuild()
@@ -599,4 +623,137 @@ sw::SwContext &SwClientContext::getContext()
         //swctx->registerDriver(std::make_unique<sw::CDriver>(sw_create_driver));
     }
     return *swctx;
+}
+
+const sw::TargetMap &SwClientContext::getPredefinedTargets(sw::SwContext &swctx)
+{
+    if (!tm)
+    {
+        sw::TargetMap tm;
+        sw::detectProgramsAndLibraries(swctx, tm);
+        this->tm = tm;
+    }
+    return *tm;
+}
+
+String SwClientContext::listPredefinedTargets()
+{
+    using OrderedTargetMap = sw::PackageVersionMapBase<sw::TargetContainer, std::map, primitives::version::VersionMap>;
+
+    OrderedTargetMap m;
+    for (auto &[pkg, tgts] : getPredefinedTargets(getContext()))
+        m[pkg] = tgts;
+    primitives::Emitter ctx;
+    for (auto &[pkg, tgts] : m)
+    {
+        ctx.addLine(pkg.toString());
+    }
+    return ctx.getText();
+}
+
+String SwClientContext::listPrograms()
+{
+    auto m = getPredefinedTargets(getContext());
+
+    primitives::Emitter ctx("  ");
+    ctx.addLine("List of detected programs:");
+
+    auto print_program = [&m, &ctx](const sw::PackagePath &p, const String &title)
+    {
+        ctx.increaseIndent();
+        auto i = m.find(p);
+        if (i != m.end(p) && !i->second.empty())
+        {
+            ctx.addLine(title + ":");
+            ctx.increaseIndent();
+            if (!i->second.releases().empty())
+                ctx.addLine("release:");
+
+            auto add_archs = [](auto &tgts)
+            {
+                String a;
+                for (auto &tgt : tgts)
+                {
+                    auto &s = tgt->getSettings();
+                    if (s["os"]["arch"])
+                        a += s["os"]["arch"].getValue() + ", ";
+                }
+                if (!a.empty())
+                {
+                    a.resize(a.size() - 2);
+                    a = " (" + a + ")";
+                }
+                return a;
+            };
+
+            ctx.increaseIndent();
+            for (auto &[v,tgts] : i->second.releases())
+            {
+                ctx.addLine("- " + v.toString());
+                ctx.addText(add_archs(tgts));
+            }
+            ctx.decreaseIndent();
+            if (std::any_of(i->second.begin(), i->second.end(), [](const auto &p) { return !p.first.isRelease(); }))
+            {
+                ctx.addLine("preview:");
+                ctx.increaseIndent();
+                for (auto &[v, tgts] : i->second)
+                {
+                    if (v.isRelease())
+                        continue;
+                    ctx.addLine("- " + v.toString());
+                    ctx.addText(add_archs(tgts));
+                }
+                ctx.decreaseIndent();
+            }
+            ctx.decreaseIndent();
+        }
+        ctx.decreaseIndent();
+    };
+
+    print_program("com.Microsoft.VisualStudio.VC.cl", "Microsoft Visual Studio C/C++ Compiler (short form - msvc)");
+    print_program("org.LLVM.clang", "Clang C/C++ Compiler (short form - clang)");
+    print_program("org.LLVM.clangcl", "Clang C/C++ Compiler in MSVC compatibility mode (short form - clangcl)");
+
+    ctx.addLine();
+    ctx.addLine("Use short program form plus version to select it for use.");
+    ctx.addLine("   short-version");
+    ctx.addLine("Examples: msvc-19.16, msvc-19.24-preview, clang-10");
+
+    return ctx.getText();
+}
+
+Programs SwClientContext::listCompilers()
+{
+    auto m = getPredefinedTargets(getContext());
+
+    Programs progs;
+
+    auto print_program = [&m, &progs](const sw::PackagePath &p, const String &title)
+    {
+        Program prog;
+        prog.name = title;
+        auto i = m.find(p);
+        if (i != m.end(p) && !i->second.empty())
+        {
+            for (auto &[v,tgts] : i->second.releases())
+                prog.releases[{p, v}] = { &tgts };
+            if (std::any_of(i->second.begin(), i->second.end(), [](const auto &p) { return !p.first.isRelease(); }))
+            {
+                for (auto &[v, tgts] : i->second)
+                {
+                    if (v.isRelease())
+                        continue;
+                    prog.prereleases[{p, v}] = { &tgts };
+                }
+            }
+            progs.push_back(prog);
+        }
+    };
+
+    print_program("com.Microsoft.VisualStudio.VC.cl", "Microsoft Visual Studio C/C++ Compiler");
+    print_program("org.LLVM.clang", "Clang C/C++ Compiler");
+    print_program("org.LLVM.clangcl", "Clang C/C++ Compiler in MSVC compatibility mode (clang-cl)");
+
+    return progs;
 }

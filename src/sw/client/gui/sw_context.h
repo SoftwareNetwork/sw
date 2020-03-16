@@ -18,24 +18,11 @@
 
 #pragma once
 
-#include <qabstractitemmodel.h>
-#include <qmainwindow.h>
+#include <sw/client/common/sw_context.h>
 
-struct SwGuiContext;
-
-class MainWindow : public QMainWindow
+struct SwGuiContext : SwClientContext
 {
-    Q_OBJECT
-public:
-    MainWindow(SwGuiContext &swctx, QWidget *parent = 0);
+    using Base = SwClientContext;
 
-private:
-    SwGuiContext &swctx;
-
-    void setupUi();
-
-    void setupGeneral(QWidget *parent);
-    void setupConfiguration(QWidget *parent);
-
-    void createMenus();
+    void command_build() override;
 };

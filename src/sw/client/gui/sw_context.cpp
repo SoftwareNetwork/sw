@@ -16,26 +16,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#pragma once
+#include "sw_context.h"
 
-#include <qabstractitemmodel.h>
-#include <qmainwindow.h>
-
-struct SwGuiContext;
-
-class MainWindow : public QMainWindow
+void SwGuiContext::command_build()
 {
-    Q_OBJECT
-public:
-    MainWindow(SwGuiContext &swctx, QWidget *parent = 0);
-
-private:
-    SwGuiContext &swctx;
-
-    void setupUi();
-
-    void setupGeneral(QWidget *parent);
-    void setupConfiguration(QWidget *parent);
-
-    void createMenus();
-};
+    Base::command_build();
+}

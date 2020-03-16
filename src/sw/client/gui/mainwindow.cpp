@@ -19,7 +19,9 @@
 #include "mainwindow.h"
 
 #include "packages_model.h"
+#include "sw_context.h"
 
+#include <qaction.h>
 #include <qboxlayout.h>
 #include <qcheckbox.h>
 #include <qcombobox.h>
@@ -35,11 +37,14 @@
 #include <qtableview.h>
 #include <qtextedit.h>
 #include <qscrollarea.h>
+#include <qmenu.h>
+#include <qmenubar.h>
+#include <qmessagebox.h>
 
-#include <sw/client/common/common.h>
+#include <primitives/git_rev.h>
+#include <primitives/sw/settings_program_name.h>
 #include <sw/client/common/generator/generator.h>
 #include <sw/client/common/commands.h>
-#include <sw/client/common/sw_context.h>
 #include <sw/manager/package_database.h>
 #include <sw/manager/storage.h>
 
@@ -95,7 +100,7 @@ public:
     }
 };
 
-MainWindow::MainWindow(SwClientContext &swctx, QWidget *parent)
+MainWindow::MainWindow(SwGuiContext &swctx, QWidget *parent)
     : QMainWindow(parent)
     , swctx(swctx)
 {
@@ -173,8 +178,8 @@ void MainWindow::setupUi()
         t->addTab(te, name.c_str());
     };
 
-    add_text_tab("List of Predefined Targets", list_predefined_targets(swctx.getContext()));
-    add_text_tab("List of Programs", list_programs(swctx.getContext()));
+    add_text_tab("List of Predefined Targets", swctx.listPredefinedTargets());
+    add_text_tab("List of Programs", swctx.listPrograms());
 
     // raw subcommands
     {
@@ -456,7 +461,7 @@ void MainWindow::setupConfiguration(QWidget *parent)
         auto gb = new QGroupBox("Compiler");
         right->addWidget(gb);
         QVBoxLayout *gbl = new QVBoxLayout;
-        auto cls = list_compilers(swctx.getContext());
+        auto cls = swctx.listCompilers();
         bool set = false;
         for (auto &cl : cls)
         {

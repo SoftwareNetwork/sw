@@ -32,6 +32,24 @@ struct SwBuild;
 struct Executor;
 struct Options;
 
+struct Program
+{
+    String name;
+    String desc;
+
+    struct data
+    {
+        sw::TargetContainer *c = nullptr;
+    };
+
+    using Container = sw::PackageVersionMapBase<data, std::unordered_map, primitives::version::VersionMap>;
+
+    Container releases;
+    Container prereleases;
+};
+
+using Programs = std::vector<Program>;
+
 struct Inputs
 {
     Inputs() = default;
@@ -67,7 +85,9 @@ struct SwClientContext
 {
     using Base = sw::SwContext;
 
-    SwClientContext(const path &local_storage_root_dir, const Options &options);
+    SwClientContext();
+    SwClientContext(const Options &options);
+    virtual ~SwClientContext();
 
     sw::SwContext &getContext();
 
@@ -83,8 +103,13 @@ struct SwClientContext
 
     void addInputs(sw::SwBuild &b, const Inputs &i);
 
+    //
+    String listPredefinedTargets();
+    String listPrograms();
+    Programs listCompilers();
+
     // main commands
-#define SUBCOMMAND(n) void command_##n();
+#define SUBCOMMAND(n) virtual void command_##n();
 #include "commands.inl"
 #undef SUBCOMMAND
 
@@ -99,4 +124,9 @@ private:
     std::unique_ptr<sw::SwContext> swctx;
     // we can copy options into unique ptr also
     std::unique_ptr<Options> options;
+    std::optional<sw::TargetMap> tm;
+
+    const sw::TargetMap &getPredefinedTargets(sw::SwContext &swctx);
 };
+
+void setHttpSettings(const Options &);

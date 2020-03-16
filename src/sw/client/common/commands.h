@@ -18,7 +18,6 @@
 
 #pragma once
 
-#include "common.h"
 #include "sw_context.h"
 
 #include <primitives/sw/cl.h>

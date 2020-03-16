@@ -19,14 +19,15 @@
 #include "mainwindow.h"
 
 #include <cl.llvm.h>
-#include <sw/client/common/common.h>
-#include <sw/client/common/sw_context.h>
+#include "sw_context.h"
 
 #include <qapplication.h>
 #include <qglobal.h>
 #include <qmessagebox.h>
 #include <qthread.h>
 #include <QtWin>
+
+#include <primitives/sw/settings_program_name.h>
 
 #ifdef QT_STATIC
 #include <QtPlugin>
@@ -57,9 +58,8 @@ int main(int argc, char *argv[])
 
     try
     {
-        auto swctx = createSwContext2({});
-
-        MainWindow w(*swctx);
+        SwGuiContext swctx;
+        MainWindow w(swctx);
         w.show();
         return a.exec();
     }
@@ -79,4 +79,10 @@ void win32_hacks()
 #ifdef WIN32
     //SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
 #endif
+}
+
+EXPORT_FROM_EXECUTABLE
+std::string getProgramName()
+{
+    return PACKAGE_NAME_CLEAN;
 }
