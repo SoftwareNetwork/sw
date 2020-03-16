@@ -11,7 +11,11 @@
 
 // TODO: actually detect.cpp may be rewritten as entry point
 
-#define DETECT_ARGS ::sw::SwCoreContext &s
+#define DETECT_ARGS ::sw::SwCoreContext &s, ::sw::TargetMap &tm
+#define DETECT_ARGS_PASS s, tm
+#define DETECT_ARGS_PASS_TO_LAMBDA &s, &tm
+#define DETECT_ARGS_PASS_FIRST_CALL(ctx) (::sw::SwContext&)(ctx), ((::sw::SwContext&)ctx).getPredefinedTargets()
+#define DETECT_ARGS_PASS_FIRST_CALL_SIMPLE DETECT_ARGS_PASS_FIRST_CALL(getContext())
 
 namespace sw
 {
@@ -49,8 +53,7 @@ struct VSInstance
 };
 
 using VSInstances = VersionMap<VSInstance>;
-
-VSInstances &gatherVSInstances(DETECT_ARGS);
+VSInstances &gatherVSInstances();
 
 void log_msg_detect_target(const String &m);
 
@@ -60,12 +63,18 @@ T &addTarget(DETECT_ARGS, const PackageId &id, const TargetSettings &ts)
     log_msg_detect_target("Detected target: " + id.toString());
 
     auto t = std::make_shared<T>(id, ts);
-    auto &cld = s.getPredefinedTargets();
-    cld[id].push_back(t);
+    tm[id].push_back(t);
     return *t;
 }
 
-void detectNativeCompilers(SwCoreContext &);
+// combined function for users
+SW_DRIVER_CPP_API
+void detectProgramsAndLibraries(DETECT_ARGS);
+
+#define DETECT(x) void detect##x##Compilers(DETECT_ARGS);
+#include "detect.inl"
+#undef DETECT
+
 void addSettingsAndSetPrograms(const SwCoreContext &, TargetSettings &);
 void addSettingsAndSetHostPrograms(const SwCoreContext &, TargetSettings &);
 

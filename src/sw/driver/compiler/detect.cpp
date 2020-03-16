@@ -70,7 +70,7 @@ void log_msg_detect_target(const String &m)
 
 PredefinedProgramTarget &addProgram(DETECT_ARGS, const PackageId &id, const TargetSettings &ts, const std::shared_ptr<Program> &p)
 {
-    auto &t = addTarget<PredefinedProgramTarget>(s, id, ts);
+    auto &t = addTarget<PredefinedProgramTarget>(DETECT_ARGS_PASS, id, ts);
     t.public_ts["output_file"] = normalize_path(p->file);
     t.setProgram(p);
     LOG_TRACE(logger, "Detected program: " + p->file.u8string());
@@ -89,9 +89,9 @@ bool isCppSourceFileExtensions(const String &e)
     return exts.find(e) != exts.end();
 }
 
-VSInstances &gatherVSInstances(DETECT_ARGS)
+VSInstances &gatherVSInstances()
 {
-    static VSInstances instances = [&s]()
+    static VSInstances instances = []()
     {
         VSInstances instances;
 #ifdef _WIN32
@@ -121,7 +121,7 @@ void detectMsvc15Plus(DETECT_ARGS)
 {
     // https://docs.microsoft.com/en-us/cpp/c-runtime-library/crt-library-features?view=vs-2019
 
-    auto &instances = gatherVSInstances(s);
+    auto &instances = gatherVSInstances();
     const auto host = toStringWindows(s.getHostOs().Arch);
     auto new_settings = s.getHostOs();
 
@@ -178,7 +178,7 @@ void detectMsvc15Plus(DETECT_ARGS)
                     v = getVersion(s, c2);
                     if (instance.version.isPreRelease())
                         v.getExtra() = instance.version.getExtra();
-                    auto &cl = addProgram(s, PackageId("com.Microsoft.VisualStudio.VC.cl", v), ts, p);
+                    auto &cl = addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.cl", v), ts, p);
                 }
             }
 
@@ -187,7 +187,7 @@ void detectMsvc15Plus(DETECT_ARGS)
                 auto p = std::make_shared<SimpleProgram>(s);
                 p->file = compiler / "link.exe";
                 if (fs::exists(p->file))
-                    addProgram(s, PackageId("com.Microsoft.VisualStudio.VC.link", v), ts, p);
+                    addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.link", v), ts, p);
 
                 if (s.getHostOs().Arch != target_arch)
                 {
@@ -198,7 +198,7 @@ void detectMsvc15Plus(DETECT_ARGS)
                 p = std::make_shared<SimpleProgram>(s);
                 p->file = compiler / "lib.exe";
                 if (fs::exists(p->file))
-                    addProgram(s, PackageId("com.Microsoft.VisualStudio.VC.lib", v), ts, p);
+                    addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.lib", v), ts, p);
 
                 if (s.getHostOs().Arch != target_arch)
                 {
@@ -214,7 +214,7 @@ void detectMsvc15Plus(DETECT_ARGS)
                 p->file = compiler / (target_arch == ArchType::x86_64 ? "ml64.exe" : "ml.exe");
                 if (fs::exists(p->file))
                 {
-                    addProgram(s, PackageId("com.Microsoft.VisualStudio.VC.ml", v), ts, p);
+                    addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.ml", v), ts, p);
                     getMsvcIncludePrefixes()[p->file] = msvc_prefix;
                 }
             }
@@ -231,19 +231,19 @@ void detectMsvc15Plus(DETECT_ARGS)
                     auto v = getVersion(s, c2);
                     if (instance.version.isPreRelease())
                         v.getExtra() = instance.version.getExtra();
-                    addProgram(s, PackageId("com.Microsoft.VisualStudio.VC.dumpbin", v), ts, p);
+                    addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.dumpbin", v), ts, p);
                 }
             }
 
             // libc++
             {
-                auto &libcpp = addTarget<PredefinedTarget>(s, PackageId("com.Microsoft.VisualStudio.VC.libcpp", v), ts);
+                auto &libcpp = addTarget<PredefinedTarget>(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.libcpp", v), ts);
                 libcpp.public_ts["system_include_directories"].push_back(normalize_path(idir));
                 libcpp.public_ts["system_link_directories"].push_back(normalize_path(root / "lib" / target));
 
                 if (fs::exists(root / "ATLMFC" / "include"))
                 {
-                    auto &atlmfc = addTarget<PredefinedTarget>(s, PackageId("com.Microsoft.VisualStudio.VC.ATLMFC", v), ts);
+                    auto &atlmfc = addTarget<PredefinedTarget>(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.ATLMFC", v), ts);
                     atlmfc.public_ts["system_include_directories"].push_back(normalize_path(root / "ATLMFC" / "include"));
                     atlmfc.public_ts["system_link_directories"].push_back(normalize_path(root / "ATLMFC" / "lib" / target));
                 }
@@ -252,14 +252,14 @@ void detectMsvc15Plus(DETECT_ARGS)
             // concrt
             if (fs::exists(root / "crt" / "src" / "concrt"))
             {
-                auto &libcpp = addTarget<PredefinedTarget>(s, PackageId("com.Microsoft.VisualStudio.VC.concrt", v), ts);
+                auto &libcpp = addTarget<PredefinedTarget>(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.concrt", v), ts);
                 libcpp.public_ts["system_include_directories"].push_back(normalize_path(root / "crt" / "src" / "concrt"));
             }
 
             // vcruntime
             if (fs::exists(root / "crt" / "src" / "vcruntime"))
             {
-                auto &libcpp = addTarget<PredefinedTarget>(s, PackageId("com.Microsoft.VisualStudio.VC.runtime", v), ts);
+                auto &libcpp = addTarget<PredefinedTarget>(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.runtime", v), ts);
                 libcpp.public_ts["system_include_directories"].push_back(normalize_path(root / "crt" / "src" / "vcruntime"));
             }
         }
@@ -376,7 +376,7 @@ void detectMsvc14AndOlder(DETECT_ARGS)
                     // run getVersion via prepared command
                     builder::detail::ResolvableCommand c2 = *c;
                     v = getVersion(s, c2);
-                    addProgram(s, PackageId("com.Microsoft.VisualStudio.VC.cl", v), ts, p);
+                    addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.cl", v), ts, p);
                 }
                 else
                     continue;
@@ -387,7 +387,7 @@ void detectMsvc14AndOlder(DETECT_ARGS)
                 auto p = std::make_shared<SimpleProgram>(s);
                 p->file = compiler / "link.exe";
                 if (fs::exists(p->file))
-                    addProgram(s, PackageId("com.Microsoft.VisualStudio.VC.link", v), ts, p);
+                    addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.link", v), ts, p);
 
                 if (s.getHostOs().Arch != target_arch)
                 {
@@ -398,7 +398,7 @@ void detectMsvc14AndOlder(DETECT_ARGS)
                 p = std::make_shared<SimpleProgram>(s);
                 p->file = compiler / "lib.exe";
                 if (fs::exists(p->file))
-                    addProgram(s, PackageId("com.Microsoft.VisualStudio.VC.lib", v), ts, p);
+                    addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.lib", v), ts, p);
 
                 if (s.getHostOs().Arch != target_arch)
                 {
@@ -414,7 +414,7 @@ void detectMsvc14AndOlder(DETECT_ARGS)
                 p->file = compiler / (target_arch == ArchType::x86_64 ? "ml64.exe" : "ml.exe");
                 if (fs::exists(p->file))
                 {
-                    auto &ml = addProgram(s, PackageId("com.Microsoft.VisualStudio.VC.ml", v), ts, p);
+                    auto &ml = addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.ml", v), ts, p);
                     getMsvcIncludePrefixes()[p->file] = msvc_prefix;
                 }
             }
@@ -429,19 +429,19 @@ void detectMsvc14AndOlder(DETECT_ARGS)
                     // run getVersion via prepared command
                     builder::detail::ResolvableCommand c2 = *c;
                     auto v = getVersion(s, c2);
-                    addProgram(s, PackageId("com.Microsoft.VisualStudio.VC.dumpbin", v), ts, p);
+                    addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.dumpbin", v), ts, p);
                 }
             }
 
             // libc++
             {
-                auto &libcpp = addTarget<PredefinedTarget>(s, PackageId("com.Microsoft.VisualStudio.VC.libcpp", v), ts);
+                auto &libcpp = addTarget<PredefinedTarget>(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.libcpp", v), ts);
                 libcpp.public_ts["system_include_directories"].push_back(normalize_path(idir));
                 libcpp.public_ts["system_link_directories"].push_back(normalize_path(root / libdir));
 
                 if (fs::exists(root / "ATLMFC" / "include"))
                 {
-                    auto &atlmfc = addTarget<PredefinedTarget>(s, PackageId("com.Microsoft.VisualStudio.VC.ATLMFC", v), ts);
+                    auto &atlmfc = addTarget<PredefinedTarget>(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.ATLMFC", v), ts);
                     atlmfc.public_ts["system_include_directories"].push_back(normalize_path(root / "ATLMFC" / "include"));
                     atlmfc.public_ts["system_link_directories"].push_back(normalize_path(root / "ATLMFC" / libdir));
                 }
@@ -454,9 +454,9 @@ void detectWindowsSdk(DETECT_ARGS);
 
 static void detectMsvc(DETECT_ARGS)
 {
-    detectMsvc15Plus(s);
-    detectMsvc14AndOlder(s);
-    detectWindowsSdk(s);
+    detectMsvc15Plus(DETECT_ARGS_PASS);
+    detectMsvc14AndOlder(DETECT_ARGS_PASS);
+    detectWindowsSdk(DETECT_ARGS_PASS);
 }
 
 static bool hasConsoleColorProcessing()
@@ -504,7 +504,7 @@ static void detectWindowsClang(DETECT_ARGS)
             getMsvcIncludePrefixes()[p->file] = msvc_prefix;
 
             auto v = getVersion(s, p->file);
-            auto &c = addProgram(s, PackageId("org.LLVM.clangcl", v), {}, p);
+            auto &c = addProgram(DETECT_ARGS_PASS, PackageId("org.LLVM.clangcl", v), {}, p);
 
             auto c2 = p->getCommand();
             c2->push_back("-X"); // prevents include dirs autodetection
@@ -533,7 +533,7 @@ static void detectWindowsClang(DETECT_ARGS)
         if (fs::exists(p->file))
         {
             auto v = getVersion(s, p->file);
-            addProgram(s, PackageId("org.LLVM.lld", v), {}, p);
+            addProgram(DETECT_ARGS_PASS, PackageId("org.LLVM.lld", v), {}, p);
 
             // this must go into lld-link
             //auto c2 = p->getCommand();
@@ -554,7 +554,7 @@ static void detectWindowsClang(DETECT_ARGS)
         if (fs::exists(p->file))
         {
             auto v = getVersion(s, p->file);
-            addProgram(s, PackageId("org.LLVM.ar", v), {}, p);
+            addProgram(DETECT_ARGS_PASS, PackageId("org.LLVM.ar", v), {}, p);
         }
     }
 
@@ -571,7 +571,7 @@ static void detectWindowsClang(DETECT_ARGS)
         if (fs::exists(p->file))
         {
             auto v = getVersion(s, p->file);
-            addProgram(s, PackageId("org.LLVM.clang", v), {}, p);
+            addProgram(DETECT_ARGS_PASS, PackageId("org.LLVM.clang", v), {}, p);
 
             if (colored_output)
             {
@@ -598,7 +598,7 @@ static void detectWindowsClang(DETECT_ARGS)
         if (fs::exists(p->file))
         {
             auto v = getVersion(s, p->file);
-            auto &c = addProgram(s, PackageId("org.LLVM.clangpp", v), {}, p);
+            auto &c = addProgram(DETECT_ARGS_PASS, PackageId("org.LLVM.clangpp", v), {}, p);
 
             if (colored_output)
             {
@@ -621,14 +621,14 @@ static void detectIntelCompilers(DETECT_ARGS)
 
     // win
     {
-        auto add_prog_from_path = [&s](const path &name, const String &ppath)
+        auto add_prog_from_path = [DETECT_ARGS_PASS_TO_LAMBDA](const path &name, const String &ppath)
         {
             auto p = std::make_shared<SimpleProgram>(s);
             p->file = resolveExecutable(name);
             if (fs::exists(p->file))
             {
                 auto v = getVersion(s, p->file);
-                addProgram(s, PackageId(ppath, v), {}, p);
+                addProgram(DETECT_ARGS_PASS, PackageId(ppath, v), {}, p);
 
                 // icl/xilib/xilink on win wants VC in PATH
                 auto &cld = s.getPredefinedTargets();
@@ -695,7 +695,7 @@ static void detectIntelCompilers(DETECT_ARGS)
             if (fs::exists(p->file))
             {
                 auto v = getVersion(s, p->file);
-                addProgram(s, PackageId("com.intel.compiler.c", v), {}, p);
+                addProgram(DETECT_ARGS_PASS, PackageId("com.intel.compiler.c", v), {}, p);
             }
         }
 
@@ -705,7 +705,7 @@ static void detectIntelCompilers(DETECT_ARGS)
             if (fs::exists(p->file))
             {
                 auto v = getVersion(s, p->file);
-                addProgram(s, PackageId("com.intel.compiler.cpp", v), {}, p);
+                addProgram(DETECT_ARGS_PASS, PackageId("com.intel.compiler.cpp", v), {}, p);
             }
         }
     }
@@ -713,15 +713,15 @@ static void detectIntelCompilers(DETECT_ARGS)
 
 static void detectWindowsCompilers(DETECT_ARGS)
 {
-    detectMsvc(s);
-    detectWindowsClang(s);
+    detectMsvc(DETECT_ARGS_PASS);
+    detectWindowsClang(DETECT_ARGS_PASS);
 }
 
 static void detectNonWindowsCompilers(DETECT_ARGS)
 {
     bool colored_output = hasConsoleColorProcessing();
 
-    auto resolve_and_add = [&s, &colored_output](const path &prog, const String &ppath, int color_diag = 0)
+    auto resolve_and_add = [DETECT_ARGS_PASS_TO_LAMBDA, &colored_output](const path &prog, const String &ppath, int color_diag = 0)
     {
         auto p = std::make_shared<SimpleProgram>(s);
         p->file = resolveExecutable(prog);
@@ -731,7 +731,7 @@ static void detectNonWindowsCompilers(DETECT_ARGS)
             // the following version 7.4.0-1ubuntu1~18.04.1
             // which will be parsed as pre-release
             auto v = getVersion(s, p->file, "--version", "\\d+(\\.\\d+){2,}");
-            auto &c = addProgram(s, PackageId(ppath, v), {}, p);
+            auto &c = addProgram(DETECT_ARGS_PASS, PackageId(ppath, v), {}, p);
             //-fdiagnostics-color=always // gcc
             if (colored_output)
             {
@@ -783,12 +783,19 @@ void detectNativeCompilers(DETECT_ARGS)
     {
         // we should pass target settings here and check accroding target os (cygwin)
         //if (os.is(OSType::Cygwin))
-            detectNonWindowsCompilers(s);
-        detectWindowsCompilers(s);
+            detectNonWindowsCompilers(DETECT_ARGS_PASS);
+        detectWindowsCompilers(DETECT_ARGS_PASS);
     }
     else
-        detectNonWindowsCompilers(s);
-    detectIntelCompilers(s);
+        detectNonWindowsCompilers(DETECT_ARGS_PASS);
+    detectIntelCompilers(DETECT_ARGS_PASS);
+}
+
+void detectProgramsAndLibraries(DETECT_ARGS)
+{
+#define DETECT(x) detect##x##Compilers(DETECT_ARGS_PASS);
+#include "detect.inl"
+#undef DETECT
 }
 
 // actually we cannot move this to client,

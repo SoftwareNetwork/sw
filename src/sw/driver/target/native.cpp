@@ -702,7 +702,7 @@ void NativeCompiledTarget::findCompiler()
 bool NativeCompiledTarget::init()
 {
     static std::once_flag f;
-    std::call_once(f, [this] {detectNativeCompilers((SwContext&)getContext()); });
+    std::call_once(f, [this] {detectNativeCompilers(DETECT_ARGS_PASS_FIRST_CALL_SIMPLE); });
 
     switch (init_pass)
     {

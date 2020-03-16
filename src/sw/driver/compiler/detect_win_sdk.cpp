@@ -48,7 +48,7 @@ struct WinKit
     Strings idirs; // additional idirs
     bool without_ldir = false; // when there's not libs
 
-    std::vector<sw::PredefinedTarget*> add(sw::SwCoreContext &s, sw::OS settings, const sw::Version &v)
+    std::vector<sw::PredefinedTarget*> add(DETECT_ARGS, sw::OS settings, const sw::Version &v)
     {
         auto idir = kit_root / "Include" / idir_subversion;
         if (!fs::exists(idir / name))
@@ -70,7 +70,7 @@ struct WinKit
             auto libdir = kit_root / "Lib" / ldir_subversion / name / toStringWindows(target_arch);
             if (fs::exists(libdir))
             {
-                auto &t = sw::addTarget<sw::PredefinedTarget>(s, sw::PackageId("com.Microsoft.Windows.SDK." + name, v), ts);
+                auto &t = sw::addTarget<sw::PredefinedTarget>(DETECT_ARGS_PASS, sw::PackageId("com.Microsoft.Windows.SDK." + name, v), ts);
                 //t.ts["os"]["version"] = v.toString();
 
                 t.public_ts["system_include_directories"].push_back(normalize_path(idir / name));
@@ -81,7 +81,7 @@ struct WinKit
             }
             else if (without_ldir)
             {
-                auto &t = sw::addTarget<sw::PredefinedTarget>(s, sw::PackageId("com.Microsoft.Windows.SDK." + name, v), ts);
+                auto &t = sw::addTarget<sw::PredefinedTarget>(DETECT_ARGS_PASS, sw::PackageId("com.Microsoft.Windows.SDK." + name, v), ts);
                 //t.ts["os"]["version"] = v.toString();
 
                 t.public_ts["system_include_directories"].push_back(normalize_path(idir / name));
@@ -95,7 +95,7 @@ struct WinKit
         return targets;
     }
 
-    void addTools(sw::SwCoreContext &s)
+    void addTools(DETECT_ARGS)
     {
         // .rc
         {
@@ -107,7 +107,7 @@ struct WinKit
                 sw::TargetSettings ts2;
                 auto ts1 = toTargetSettings(s.getHostOs());
                 ts2["os"]["kernel"] = ts1["os"]["kernel"];
-                auto &rc = addProgram(s, sw::PackageId("com.Microsoft.Windows.rc", v), ts2, p);
+                auto &rc = addProgram(DETECT_ARGS_PASS, sw::PackageId("com.Microsoft.Windows.rc", v), ts2, p);
             }
             // these are passed from compiler during merge?
             //for (auto &idir : COpts.System.IncludeDirectories)
@@ -124,7 +124,7 @@ struct WinKit
                 auto ts1 = toTargetSettings(s.getHostOs());
                 sw::TargetSettings ts2;
                 ts2["os"]["kernel"] = ts1["os"]["kernel"];
-                auto &rc = addProgram(s, sw::PackageId("com.Microsoft.Windows.mc", v), ts2, p);
+                auto &rc = addProgram(DETECT_ARGS_PASS, sw::PackageId("com.Microsoft.Windows.mc", v), ts2, p);
             }
             // these are passed from compiler during merge?
             //for (auto &idir : COpts.System.IncludeDirectories)
@@ -148,8 +148,8 @@ struct WinSdkInfo
     {
         // we have now possible double detections, but this is fine for now
 
-        listWindows10Kits(s);
-        listWindowsKits1(s);
+        listWindows10Kits(DETECT_ARGS_PASS);
+        listWindowsKitsOld(DETECT_ARGS_PASS);
     }
 
 private:
@@ -272,14 +272,14 @@ private:
         for (auto &kr10 : win10_roots)
         {
             for (auto &v : kits)
-                add10Kit(s, kr10, v);
+                add10Kit(DETECT_ARGS_PASS, kr10, v);
         }
     }
 
-    void listWindowsKits1(DETECT_ARGS) const
+    void listWindowsKitsOld(DETECT_ARGS) const
     {
         for (auto &kr : win81_sdk_roots)
-            addKit(s, kr, "8.1");
+            addKit(DETECT_ARGS_PASS, kr, "8.1");
 
         for (auto &kr : default_sdk_roots)
         {
@@ -287,7 +287,7 @@ private:
             {
                 auto p = kr / k;
                 if (fs::exists(p))
-                    addKit(s, p, k);
+                    addKit(DETECT_ARGS_PASS, p, k);
             }
         }
     }
@@ -311,7 +311,7 @@ private:
             wk.kit_root = kr;
             wk.idir_subversion = v.toString();
             wk.ldir_subversion = v.toString();
-            wk.add(s, settings, v);
+            wk.add(DETECT_ARGS_PASS, settings, v);
         }
 
         // um + shared
@@ -322,7 +322,7 @@ private:
             wk.idir_subversion = v.toString();
             wk.ldir_subversion = v.toString();
             wk.idirs.push_back("shared");
-            for (auto t : wk.add(s, settings, v))
+            for (auto t : wk.add(DETECT_ARGS_PASS, settings, v))
                 t->public_ts["system_link_libraries"].push_back("kernel32.lib");
         }
 
@@ -333,7 +333,7 @@ private:
             wk.kit_root = kr;
             wk.idir_subversion = v.toString();
             wk.ldir_subversion = v.toString();
-            wk.add(s, settings, v);
+            wk.add(DETECT_ARGS_PASS, settings, v);
         }
 
         // winrt
@@ -343,7 +343,7 @@ private:
             wk.kit_root = kr;
             wk.idir_subversion = v.toString();
             wk.without_ldir = true;
-            wk.add(s, settings, v);
+            wk.add(DETECT_ARGS_PASS, settings, v);
         }
 
         // tools
@@ -351,7 +351,7 @@ private:
             WinKit wk;
             wk.kit_root = kr;
             wk.bdir_subversion = v.toString();
-            wk.addTools(s);
+            wk.addTools(DETECT_ARGS_PASS);
         }
     }
 
@@ -371,7 +371,7 @@ private:
             else
                 LOG_DEBUG(logger, "TODO: Windows Kit " + k + " is not implemented yet. Report this issue.");
             wk.idirs.push_back("shared");
-            wk.add(s, settings, k);
+            wk.add(DETECT_ARGS_PASS, settings, k);
         }
 
         // km
@@ -385,14 +385,14 @@ private:
                 wk.ldir_subversion = "Win8";
             else
                 LOG_DEBUG(logger, "TODO: Windows Kit " + k + " is not implemented yet. Report this issue.");
-            wk.add(s, settings, k);
+            wk.add(DETECT_ARGS_PASS, settings, k);
         }
 
         // tools
         {
             WinKit wk;
             wk.kit_root = kr;
-            wk.addTools(s);
+            wk.addTools(DETECT_ARGS_PASS);
         }
     }
 };
@@ -406,7 +406,7 @@ void detectWindowsSdk(DETECT_ARGS)
 {
     WinSdkInfo info;
     info.settings = s.getHostOs();
-    info.listWindowsKits(s);
+    info.listWindowsKits(DETECT_ARGS_PASS);
 }
 
 }

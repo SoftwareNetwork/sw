@@ -63,9 +63,9 @@ static std::shared_ptr<CompilerType> activateCompiler(Target &t, const Unresolve
     return compiler;
 }
 
-static void detectCSharpCompilers(DETECT_ARGS)
+void detectCSharpCompilers(DETECT_ARGS)
 {
-    auto &instances = gatherVSInstances(s);
+    auto &instances = gatherVSInstances();
     for (auto &[v, i] : instances)
     {
         auto root = i.root;
@@ -85,14 +85,14 @@ static void detectCSharpCompilers(DETECT_ARGS)
         p->file = root / "csc.exe";
 
         auto v1 = getVersion(s, p->file);
-        addProgram(s, PackageId("com.Microsoft.VisualStudio.Roslyn.csc", v1), {}, p);
+        addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.Roslyn.csc", v1), {}, p);
     }
 }
 
 bool CSharpTarget::init()
 {
     static std::once_flag f;
-    std::call_once(f, [this] {detectCSharpCompilers((SwContext&)getContext()); });
+    std::call_once(f, [this] {detectCSharpCompilers(DETECT_ARGS_PASS_FIRST_CALL_SIMPLE); });
 
     Target::init();
 
@@ -123,7 +123,7 @@ Commands CSharpTarget::getCommands1() const
     return cmds;
 }
 
-static void detectRustCompilers(DETECT_ARGS)
+void detectRustCompilers(DETECT_ARGS)
 {
     auto p = std::make_shared<SimpleProgram>(s);
     auto f = resolveExecutable("rustc");
@@ -136,13 +136,13 @@ static void detectRustCompilers(DETECT_ARGS)
     p->file = f;
 
     auto v = getVersion(s, p->file);
-    addProgram(s, PackageId("org.rust.rustc", v), {}, p);
+    addProgram(DETECT_ARGS_PASS, PackageId("org.rust.rustc", v), {}, p);
 }
 
 bool RustTarget::init()
 {
     static std::once_flag f;
-    std::call_once(f, [this] {detectRustCompilers((SwContext&)getContext()); });
+    std::call_once(f, [this] {detectRustCompilers(DETECT_ARGS_PASS_FIRST_CALL_SIMPLE); });
 
     Target::init();
 
@@ -173,7 +173,7 @@ Commands RustTarget::getCommands1() const
     return cmds;
 }
 
-static void detectGoCompilers(DETECT_ARGS)
+void detectGoCompilers(DETECT_ARGS)
 {
     auto p = std::make_shared<SimpleProgram>(s);
     auto f = resolveExecutable("go");
@@ -182,13 +182,13 @@ static void detectGoCompilers(DETECT_ARGS)
     p->file = f;
 
     auto v = getVersion(s, p->file, "version");
-    addProgram(s, PackageId("org.google.golang.go", v), {}, p);
+    addProgram(DETECT_ARGS_PASS, PackageId("org.google.golang.go", v), {}, p);
 }
 
 bool GoTarget::init()
 {
     static std::once_flag f;
-    std::call_once(f, [this] {detectGoCompilers((SwContext&)getContext()); });
+    std::call_once(f, [this] {detectGoCompilers(DETECT_ARGS_PASS_FIRST_CALL_SIMPLE); });
 
     Target::init();
 
@@ -219,7 +219,7 @@ Commands GoTarget::getCommands1() const
     return cmds;
 }
 
-static void detectFortranCompilers(DETECT_ARGS)
+void detectFortranCompilers(DETECT_ARGS)
 {
     // TODO: gfortran, flang, ifort, pgfortran, f90 (Oracle Sun), xlf, bgxlf, ...
     // aocc, armflang
@@ -241,13 +241,13 @@ static void detectFortranCompilers(DETECT_ARGS)
     p->file = f;
 
     auto v = getVersion(s, p->file);
-    addProgram(s, PackageId("org.gnu.gcc.fortran", v), {}, p);
+    addProgram(DETECT_ARGS_PASS, PackageId("org.gnu.gcc.fortran", v), {}, p);
 }
 
 bool FortranTarget::init()
 {
     static std::once_flag f;
-    std::call_once(f, [this] {detectFortranCompilers((SwContext&)getContext()); });
+    std::call_once(f, [this] {detectFortranCompilers(DETECT_ARGS_PASS_FIRST_CALL_SIMPLE); });
 
     Target::init();
 
@@ -302,13 +302,13 @@ void detectJavaCompilers(DETECT_ARGS)
     p->file = f;
 
     auto v = getVersion(s, p->file);
-    addProgram(s, PackageId("com.oracle.java.javac", v), {}, p);
+    addProgram(DETECT_ARGS_PASS, PackageId("com.oracle.java.javac", v), {}, p);
 }
 
 bool JavaTarget::init()
 {
     static std::once_flag f;
-    std::call_once(f, [this] {detectJavaCompilers((SwContext&)getContext()); });
+    std::call_once(f, [this] {detectJavaCompilers(DETECT_ARGS_PASS_FIRST_CALL_SIMPLE); });
 
     Target::init();
 
@@ -340,7 +340,7 @@ Commands JavaTarget::getCommands1() const
     return cmds;
 }
 
-static void detectKotlinCompilers(DETECT_ARGS)
+void detectKotlinCompilers(DETECT_ARGS)
 {
     auto p = std::make_shared<SimpleProgram>(s);
     auto f = resolveExecutable("kotlinc");
@@ -349,13 +349,13 @@ static void detectKotlinCompilers(DETECT_ARGS)
     p->file = f;
 
     auto v = getVersion(s, p->file, "-version");
-    addProgram(s, PackageId("com.JetBrains.kotlin.kotlinc", v), {}, p);
+    addProgram(DETECT_ARGS_PASS, PackageId("com.JetBrains.kotlin.kotlinc", v), {}, p);
 }
 
 bool KotlinTarget::init()
 {
     static std::once_flag f;
-    std::call_once(f, [this] {detectKotlinCompilers((SwContext&)getContext()); });
+    std::call_once(f, [this] {detectKotlinCompilers(DETECT_ARGS_PASS_FIRST_CALL_SIMPLE); });
 
     Target::init();
 
@@ -390,7 +390,7 @@ NativeLinker *DTarget::getSelectedTool() const
     return compiler.get();
 }
 
-static void detectDCompilers(DETECT_ARGS)
+void detectDCompilers(DETECT_ARGS)
 {
     // also todo LDC, GDC compiler
 
@@ -401,13 +401,13 @@ static void detectDCompilers(DETECT_ARGS)
     p->file = f;
 
     auto v = getVersion(s, p->file);
-    addProgram(s, PackageId("org.dlang.dmd.dmd", v), {}, p);
+    addProgram(DETECT_ARGS_PASS, PackageId("org.dlang.dmd.dmd", v), {}, p);
 }
 
 bool DTarget::init()
 {
     static std::once_flag f;
-    std::call_once(f, [this] {detectDCompilers((SwContext&)getContext()); });
+    std::call_once(f, [this] {detectDCompilers(DETECT_ARGS_PASS_FIRST_CALL_SIMPLE); });
 
     // https://dlang.org/dmd-windows.html
     // https://wiki.dlang.org/Win32_DLLs_in_D
