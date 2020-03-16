@@ -19,7 +19,6 @@
 #pragma once
 
 #include "concurrent_map.h"
-#include "module_storage.h"
 #include "os.h"
 
 #include <shared_mutex>
@@ -42,12 +41,10 @@ struct SW_BUILDER_API SwBuilderContext
     FileStorage &getFileStorage() const;
     Executor &getFileStorageExecutor() const;
     CommandStorage &getCommandStorage(const path &root) const;
-    ModuleStorage &getModuleStorage() const;
 
     void clearFileStorages();
 
 private:
-    std::unique_ptr<ModuleStorage> module_storage;
     // keep order
     mutable std::unordered_map<path, std::unique_ptr<CommandStorage>> command_storages;
     mutable std::unique_ptr<FileStorage> file_storage;

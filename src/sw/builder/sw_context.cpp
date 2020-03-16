@@ -44,24 +44,12 @@ SwBuilderContext::SwBuilderContext()
         //LOG_ERROR(logger, "Cannot raise number of maximum opened files");
 #endif
 
-    module_storage = std::make_unique<ModuleStorage>();
-
     //
     file_storage_executor = std::make_unique<Executor>("async log writer", 1);
 }
 
 SwBuilderContext::~SwBuilderContext()
 {
-    // do not clear modules on exception, because it may come from there
-    // TODO: cleanup modules data first
-    // copy exception here and pass further?
-    //if (std::uncaught_exceptions())
-        //module_storage.release();
-}
-
-ModuleStorage &SwBuilderContext::getModuleStorage() const
-{
-    return *module_storage;
 }
 
 Executor &SwBuilderContext::getFileStorageExecutor() const

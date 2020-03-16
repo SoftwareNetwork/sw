@@ -32,8 +32,10 @@ namespace sw
 {
 
 SwCoreContext::SwCoreContext(const path &local_storage_root_dir)
-    : SwBuilderContext(local_storage_root_dir)
+    : SwManagerContext(local_storage_root_dir)
 {
+    module_storage = std::make_unique<ModuleStorage>();
+    HostOS = getHostOS();
     host_settings = createHostSettings();
 
     LOG_TRACE(logger, "Host configuration: " + getHostSettings().toString());
@@ -41,6 +43,16 @@ SwCoreContext::SwCoreContext(const path &local_storage_root_dir)
 
 SwCoreContext::~SwCoreContext()
 {
+    // do not clear modules on exception, because it may come from there
+    // TODO: cleanup modules data first
+    // copy exception here and pass further?
+    //if (std::uncaught_exceptions() == 0)
+        //module_storage.release();
+}
+
+ModuleStorage &SwCoreContext::getModuleStorage() const
+{
+    return *module_storage;
 }
 
 InputDatabase &SwCoreContext::getInputDatabase()
@@ -150,7 +162,7 @@ void SwContext::registerDriver(const PackageId &pkg, std::unique_ptr<IDriver> &&
 
 void SwContext::executeBuild(const path &in)
 {
-    clearFileStorages();
+    //clearFileStorages();
     auto b = createBuild1();
     b->runSavedExecutionPlan(in);
 }
