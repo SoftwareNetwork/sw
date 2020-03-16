@@ -33,4 +33,7 @@ private:
     SwClientContext &swctx;
 
     void setupUi();
+
+    void setupGeneral(QWidget *parent);
+    void setupConfiguration(QWidget *parent);
 };
