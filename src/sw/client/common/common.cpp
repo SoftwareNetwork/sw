@@ -20,6 +20,7 @@
 
 #include "sw_context.h"
 
+#include <sw/driver/compiler/detect.h>
 #include <sw/manager/settings.h>
 
 #include <primitives/emitter.h>
@@ -43,12 +44,19 @@ std::unique_ptr<SwClientContext> createSwContext2(const Options &options)
     return swctx;
 }
 
+static sw::TargetMap getPredefinedTargets(sw::SwContext &swctx)
+{
+    sw::TargetMap tm;
+    sw::detectProgramsAndLibraries(swctx, tm);
+    return tm;
+}
+
 String list_predefined_targets(sw::SwContext &swctx)
 {
     using OrderedTargetMap = sw::PackageVersionMapBase<sw::TargetContainer, std::map, primitives::version::VersionMap>;
 
     OrderedTargetMap m;
-    for (auto &[pkg, tgts] : swctx.getPredefinedTargets())
+    for (auto &[pkg, tgts] : getPredefinedTargets(swctx))
         m[pkg] = tgts;
     primitives::Emitter ctx;
     for (auto &[pkg, tgts] : m)
@@ -60,7 +68,7 @@ String list_predefined_targets(sw::SwContext &swctx)
 
 String list_programs(sw::SwContext &swctx)
 {
-    auto &m = swctx.getPredefinedTargets();
+    auto m = getPredefinedTargets(swctx);
 
     primitives::Emitter ctx("  ");
     ctx.addLine("List of detected programs:");
@@ -132,7 +140,7 @@ String list_programs(sw::SwContext &swctx)
 
 Programs list_compilers(sw::SwContext &swctx)
 {
-    auto &m = swctx.getPredefinedTargets();
+    auto m = getPredefinedTargets(swctx);
 
     Programs progs;
 

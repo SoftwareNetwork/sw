@@ -34,6 +34,7 @@
 #include <qtabbar.h>
 #include <qtableview.h>
 #include <qtextedit.h>
+#include <qscrollarea.h>
 
 #include <sw/client/common/common.h>
 #include <sw/client/common/generator/generator.h>
@@ -41,6 +42,9 @@
 #include <sw/client/common/sw_context.h>
 #include <sw/manager/package_database.h>
 #include <sw/manager/storage.h>
+
+#include "cl_helper.h"
+#include <cl.llvm.qt.inl>
 
 class TabBar : public QTabBar
 {
@@ -379,25 +383,28 @@ void MainWindow::setupUi()
     add_text_tab("List of Predefined Targets", list_predefined_targets(swctx.getContext()));
     add_text_tab("List of Programs", list_programs(swctx.getContext()));
 
-    //
-    auto setLayout = new QVBoxLayout;
+    // settings
     {
-        // -j
+        auto sa = new QScrollArea;
+        //sa->setBackgroundRole(QPalette::Dark);
+        sa->setWidgetResizable(true);
+        sa->setVerticalScrollBarPolicy(Qt::ScrollBarPolicy::ScrollBarAsNeeded);
+
+        auto idx = t->addTab(sa, "Settings");
+        connect(t, &TabWidget::currentChanged, [idx, this, sa](int i)
         {
-            setLayout->addWidget(new QLabel("Number of threads"));
-            auto sb = new QSpinBox();
-            sb->setMinimum(1);
-            sb->setMaximum(std::thread::hardware_concurrency() + 4);
-            sb->setValue(std::thread::hardware_concurrency());
-            setLayout->addWidget(sb);
-        }
+            if (i != idx)
+                return;
 
-        setLayout->addStretch(1);
+            auto setLayout = new QVBoxLayout;
+            createOptionWidgets(setLayout, swctx.getOptions());
+            //setLayout->addStretch(1);
+
+            auto set = new QWidget;
+            set->setLayout(setLayout);
+            sa->setWidget(set);
+        });
     }
-
-    auto set = new QWidget;
-    set->setLayout(setLayout);
-    t->addTab(set, "Settings");
 
     //
     mainLayout->addWidget(t);
