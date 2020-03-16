@@ -99,12 +99,23 @@ void SwClientContext::run(const sw::PackageId &pkg, primitives::Command &c)
 SUBCOMMAND_DECL(run)
 {
     bool valid_target = true;
-    try { sw::PackageId pkg(getOptions().options_run.target); }
-    catch (std::exception &) { valid_target = false; }
+    try
+    {
+        sw::PackageId pkg(getOptions().options_run.target);
+    }
+    catch (std::exception &)
+    {
+        valid_target = false;
+    }
 
     // for such commands we inherit them
     // TODO: check for program subsystem later to detach gui apps
-    primitives::Command c;
+    //primitives::Command c;
+    auto b = createBuild();
+    sw::builder::Command c;
+    c.setContext(*b);
+    c.always = true;
+
     c.inherit = true;
     c.in.inherit = true;
 
@@ -114,9 +125,9 @@ SUBCOMMAND_DECL(run)
     if (!getOptions().options_run.wdir.empty())
         c.working_directory = getOptions().options_run.wdir;
 
-    if (!valid_target && fs::exists((String&)getOptions().options_run.target))
+    if (!valid_target && fs::exists((String &)getOptions().options_run.target))
     {
-        auto b = createBuildAndPrepare({getOptions().options_run.target});
+        auto b = createBuildAndPrepare({ getOptions().options_run.target });
         b->build();
         auto inputs = b->getInputs();
         if (inputs.size() != 1)
@@ -131,5 +142,10 @@ SUBCOMMAND_DECL(run)
         return;
     }
 
+    // resolve
+    auto p = getContext().resolve(sw::UnresolvedPackages{ getOptions().options_run.target });
+    getOptions().options_run.target = p[getOptions().options_run.target]->toString();
+
+    //
     run(getOptions().options_run.target, c);
 }
