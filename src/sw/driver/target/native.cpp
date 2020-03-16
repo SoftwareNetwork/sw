@@ -2626,22 +2626,34 @@ void NativeCompiledTarget::prepare_pass5()
     // source files
 
     // check postponed files first
-    for (auto &[p, f] : *this)
+    auto create_more_source_files = [this]()
     {
-        if (!f->postponed || f->skip)
-            continue;
+        std::vector<std::shared_ptr<NativeSourceFile>> new_files;
+        for (auto &[p, f] : *this)
+        {
+            if (!f->postponed || f->skip)
+                continue;
 
-        auto ext = p.extension().string();
-        auto prog = findProgramByExtension(ext);
-        if (!prog)
-            throw std::logic_error("User defined program not registered for " + ext);
+            auto ext = p.extension().string();
+            auto prog = findProgramByExtension(ext);
+            if (!prog)
+                throw std::logic_error("User defined program not registered for " + ext);
 
-        auto p2 = dynamic_cast<FileToFileTransformProgram*>(prog);
-        if (!p2)
-            throw SW_RUNTIME_ERROR("Bad program type");
-        f = p2->createSourceFile(*this, p);
-        addFile(p, f);
-    }
+            auto p2 = dynamic_cast<FileToFileTransformProgram *>(prog);
+            if (!p2)
+                throw SW_RUNTIME_ERROR("Bad program type");
+            f = p2->createSourceFile(*this, p);
+            addFile(p, f);
+            if (auto f2 = std::dynamic_pointer_cast<NativeSourceFile>(f))
+                new_files.push_back(f2);
+        }
+        for (auto &f : new_files)
+            *this += f->output;
+        return !new_files.empty();
+    };
+
+    while (create_more_source_files())
+        ;
 
     // now create pch
     createPrecompiledHeader();
