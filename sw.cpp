@@ -316,6 +316,8 @@ void build(Solution &s)
 
         qt_moc_rcc_uic("org.sw.demo.qtproject.qt"_dep, gui);
         qt_tr("org.sw.demo.qtproject.qt"_dep, gui);
+
+        create_git_revision("pub.egorpugin.primitives.tools.create_git_rev-master"_dep, gui);
     }
 #endif
 }
