@@ -244,9 +244,16 @@ void VSGenerator::generate(const SwBuild &b)
     TargetMap ttb;
     for (auto &[pkg, tgts] : b.getTargetsToBuild())
     {
-        if (add_all_packages)
+        auto add = [&ttb, &pkg = pkg, &tgts = tgts, &s]()
         {
             ttb[pkg] = tgts;
+            for (auto &tgt : tgts)
+                s.settings.insert(tgt->getSettings());
+        };
+
+        if (add_all_packages)
+        {
+            add();
             continue;
         }
 
@@ -255,7 +262,7 @@ void VSGenerator::generate(const SwBuild &b)
             sw::LocalPackage p(b.getContext().getLocalStorage(), pkg);
             if (p.isOverridden())
             {
-                ttb[pkg] = tgts;
+                add();
                 continue;
             }
         }
@@ -265,9 +272,7 @@ void VSGenerator::generate(const SwBuild &b)
 
         if (tgts.empty())
             throw SW_RUNTIME_ERROR("empty target");
-        ttb[pkg] = tgts;
-        for (auto &tgt : tgts)
-            s.settings.insert(tgt->getSettings());
+        add();
     }
 
     UnresolvedPackage compiler = (*s.settings.begin())["native"]["program"]["cpp"].getValue();
