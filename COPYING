@@ -1,8 +1,10 @@
 Different parts of this repository (project) are subject to different licences.
 
-Core libraries:     MPLv2
-Client tool:        GPLv3+
-Server tools:       AGPLv3+
-Utilities, helpers: APLv2
+src/sw/support:     MPLv2
+src/sw/protocol:    MPLv2
+src/sw/manager:     MPLv2
+other code:         GPLv3+
+server code:        AGPLv3+
+utilities, helpers: APLv2
 
 See specific files for detailed information about their license.
