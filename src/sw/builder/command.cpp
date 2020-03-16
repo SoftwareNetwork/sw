@@ -423,7 +423,10 @@ bool Command::beforeCommand()
     // if you want to run command always and 'command_storage == nullptr'
     // also set 'always = true'!
     if (!always && !command_storage)
-        throw SW_RUNTIME_ERROR(makeErrorString("command storage is not selected, call t.registerCommand(cmd)"));
+    {
+        throw SW_RUNTIME_ERROR(makeErrorString("command storage is not selected, call t.registerCommand(cmd), "
+            "or set always = true"));
+    }
 
     if (!isOutdated())
     {
