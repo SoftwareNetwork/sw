@@ -330,7 +330,7 @@ std::unique_ptr<sw::SwBuild> SwClientContext::createBuild()
 
 std::unique_ptr<sw::SwBuild> SwClientContext::createBuildAndPrepare(const Inputs &i)
 {
-    auto b = getContext().createBuild();
+    auto b = createBuild();
     addInputs(*b, i);
     b->loadInputs();
     b->setTargetsToBuild();
