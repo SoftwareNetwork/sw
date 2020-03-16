@@ -10,6 +10,10 @@
 #
 ################################################################################
 
+# increase this variable when file is changed
+# and you need user to call 'sw setup' again to update this file
+set(SW_CMAKE_VERSION 1)
+
 ########################################
 # general settings
 ########################################
@@ -23,7 +27,6 @@ mark_as_advanced(SW_EXECUTABLE)
 
 set(SW_DEPS_DIR "${CMAKE_BINARY_DIR}/.sw/cmake" CACHE STRING "SW local deps dir.")
 set(SW_DEPS_FILE "${SW_DEPS_DIR}/sw.txt" CACHE STRING "SW local deps file.")
-set(SW_CMAKE_VERSION 1)
 
 # clear deps before each run
 file(WRITE ${SW_DEPS_FILE} "")
@@ -157,7 +160,8 @@ function(sw_execute)
             -d "${wdir}"
             ${SW_FORCE}
             integrate
-            -cmake-deps "${depsfile}" -cmake-file-version "${SW_CMAKE_VERSION}"
+            -cmake-deps "${depsfile}"
+            -cmake-file-version ${SW_CMAKE_VERSION}
     )
 
     if (SW_DEBUG)

@@ -87,6 +87,18 @@ static String pkg2string(const sw::PackageId &p)
     return pkg2string(p.toString());
 }
 
+const String &getCmakeConfig();
+
+int getSwCmakeConfigVersion()
+{
+    auto &cfg = getCmakeConfig();
+    static std::regex r("set\\(SW_CMAKE_VERSION (\\d+)\\)");
+    std::smatch m;
+    if (!std::regex_search(cfg, m, r))
+        return 0;
+    return std::stoi(m[1].str());
+}
+
 SUBCOMMAND_DECL(integrate)
 {
     bool cygwin = false;
@@ -152,7 +164,7 @@ SUBCOMMAND_DECL(integrate)
 
     if (!getOptions().options_integrate.integrate_cmake_deps.empty())
     {
-        if (getOptions().options_integrate.cmake_file_version < 1)
+        if (getOptions().options_integrate.cmake_file_version < getSwCmakeConfigVersion())
             throw SW_RUNTIME_ERROR("Outdated cmake integration file. Run 'sw setup' to update it.");
 
         const Strings configs
@@ -211,46 +223,46 @@ SUBCOMMAND_DECL(integrate)
 
                 sw::BuildSettings bs(tgt->getSettings());
 
-            // props
-            ctx.increaseIndent("set_target_properties(" + pkg2string(pkg) + " PROPERTIES");
+                // props
+                ctx.increaseIndent("set_target_properties(" + pkg2string(pkg) + " PROPERTIES");
 
-            // defs
-            String defs;
-            defs += "\"";
-            for (auto &[k,v] : s["definitions"].getSettings())
-            {
-                if (v.getValue().empty())
-                    defs += k + ";";
-                else
-                    defs += k + "=" + primitives::command::Argument::quote(v.getValue(), primitives::command::QuoteType::Escape) + ";";
-            }
-            defs += "\"";
+                // defs
+                String defs;
+                defs += "\"";
+                for (auto &[k,v] : s["definitions"].getSettings())
+                {
+                    if (v.getValue().empty())
+                        defs += k + ";";
+                    else
+                        defs += k + "=" + primitives::command::Argument::quote(v.getValue(), primitives::command::QuoteType::Escape) + ";";
+                }
+                defs += "\"";
                 ctx.addLine("INTERFACE_COMPILE_DEFINITIONS_" + toCmakeString(bs.Native.ConfigurationType) + " " + defs);
 
-            // idirs
-            String idirs;
-            idirs += "\"";
-            for (auto &d : s["include_directories"].getArray())
-                idirs += fix_path(std::get<sw::TargetSetting::Value>(d)) + ";";
-            idirs += "\"";
+                // idirs
+                String idirs;
+                idirs += "\"";
+                for (auto &d : s["include_directories"].getArray())
+                    idirs += fix_path(std::get<sw::TargetSetting::Value>(d)) + ";";
+                idirs += "\"";
                 ctx.addLine("INTERFACE_INCLUDE_DIRECTORIES_" + toCmakeString(bs.Native.ConfigurationType) + " " + idirs);
 
-            if (s["header_only"] != "true")
-            {
-                // libs
-                String libs;
-                libs += "\"";
-                for (auto &d : s["link_libraries"].getArray())
-                    libs += fix_path(std::get<sw::TargetSetting::Value>(d)) + ";";
-                for (auto &d : s["system_link_libraries"].getArray())
-                    libs += std::get<sw::TargetSetting::Value>(d) + ";";
-                libs += "\"";
+                if (s["header_only"] != "true")
+                {
+                    // libs
+                    String libs;
+                    libs += "\"";
+                    for (auto &d : s["link_libraries"].getArray())
+                        libs += fix_path(std::get<sw::TargetSetting::Value>(d)) + ";";
+                    for (auto &d : s["system_link_libraries"].getArray())
+                        libs += std::get<sw::TargetSetting::Value>(d) + ";";
+                    libs += "\"";
                     ctx.addLine("INTERFACE_LINK_LIBRARIES_" + toCmakeString(bs.Native.ConfigurationType) + " " + libs);
-            }
+                }
 
-            ctx.decreaseIndent(")");
-            ctx.emptyLines();
-            //
+                ctx.decreaseIndent(")");
+                ctx.emptyLines();
+                //
 
                 if (s["header_only"] == "true")
                     continue;

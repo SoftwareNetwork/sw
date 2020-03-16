@@ -31,6 +31,11 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "setup");
 
+const String &getCmakeConfig()
+{
+    return sw_config_cmake;
+}
+
 static void registerCmakePackage(SwClientContext &swctx)
 {
     const auto sw_cmake_config_filename = "SWConfig.cmake";
@@ -39,7 +44,7 @@ static void registerCmakePackage(SwClientContext &swctx)
     {
         auto sw_cmake_dir = dir / ".cmake" / "packages";
         write_file_if_different(sw_cmake_dir / "SW" / "1", sw_cmake_dir.u8string());
-        write_file_if_different(sw_cmake_dir / sw_cmake_config_filename, sw_config_cmake);
+        write_file_if_different(sw_cmake_dir / sw_cmake_config_filename, getCmakeConfig());
     };
 
 #ifdef _WIN32
@@ -47,7 +52,7 @@ static void registerCmakePackage(SwClientContext &swctx)
     // if we write into HKLM, we won't be able to access the pkg file in admins folder
     winreg::RegKey icon(/*is_elevated() ? HKEY_LOCAL_MACHINE : */HKEY_CURRENT_USER, L"Software\\Kitware\\CMake\\Packages\\SW");
     icon.SetStringValue(L"", dir.wstring().c_str());
-    write_file_if_different(dir / sw_cmake_config_filename, sw_config_cmake);
+    write_file_if_different(dir / sw_cmake_config_filename, getCmakeConfig());
 
     // cygwin case
     if (auto d = getenv("HOME"))
