@@ -888,6 +888,12 @@ path Command::writeCommand(const path &p, bool print_name) const
         t += " 2> " + norm(err.file);
 
     t += "\n";
+    t += "\n";
+    if (bat)
+        t += "if %ERRORLEVEL% NEQ 0 echo Error code: %ERRORLEVEL% && exit /b %ERRORLEVEL%";
+    else
+        t += "if [ $? -ne 0 ]; then echo \"Error code: $?\"; fi";
+    t += "\n";
 
     write_file(pbat, t);
     fs::permissions(pbat,
