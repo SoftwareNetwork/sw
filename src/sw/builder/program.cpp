@@ -33,13 +33,12 @@
 namespace sw
 {
 
-Program::Program(const SwBuilderContext &swctx)
-    : swctx(swctx)
+Program::Program()
 {
 }
 
 Program::Program(const Program &rhs)
-    : swctx(rhs.swctx), file(rhs.file)
+    : file(rhs.file)
 {
 }
 

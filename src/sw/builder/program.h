@@ -46,10 +46,9 @@ struct SwBuilderContext;
 
 struct SW_BUILDER_API Program : ICastable, detail::Executable
 {
-    const SwBuilderContext &swctx;
     path file;
 
-    Program(const SwBuilderContext &swctx);
+    Program();
     Program(const Program &);
     Program &operator=(const Program &);
     virtual ~Program() = default;
