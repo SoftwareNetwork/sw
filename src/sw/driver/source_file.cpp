@@ -326,6 +326,8 @@ void SourceFileStorage::op(const FileRegex &r, Op func)
         auto s = normalize_path(f);
         if (s.size() < root_s.size() + 1)
             continue; // file is in bdir or somthing like that
+        if (s.find(root_s) != 0)
+            continue;
         s = s.substr(root_s.size() + 1); // + 1 to skip first slash
         if (std::regex_match(s, r.r))
         {
@@ -475,6 +477,8 @@ SourceFileStorage::enumerate_files(const FileRegex &r, bool allow_empty) const
         auto s = normalize_path(p);
         if (s.size() < root_s.size() + 1)
             continue; // file is in bdir or something like that
+        if (s.find(root_s) != 0)
+            continue;
         s = s.substr(root_s.size() + 1); // + 1 to skip first slash
         if (std::regex_match(s, r.r))
             files[p] = f;
