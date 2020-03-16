@@ -134,7 +134,7 @@ SUBCOMMAND_DECL(integrate)
                 if (isalpha(c) && isupper(c))
                     throw SW_RUNTIME_ERROR("Package name must be in lower case for now. Sorry for inconvenience.");
             }
-            for (auto &i : swctx->addInput(l))
+            for (auto &i : getContext().addInput(l))
             {
                 sw::InputWithSettings s(*i);
                 if (!configs.empty())

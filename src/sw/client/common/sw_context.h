@@ -121,7 +121,7 @@ struct SwClientContext
 private:
     path local_storage_root_dir;
     std::unique_ptr<Executor> executor;
-    std::unique_ptr<sw::SwContext> swctx;
+    std::unique_ptr<sw::SwContext> swctx_;
     // we can copy options into unique ptr also
     std::unique_ptr<Options> options;
     std::optional<sw::TargetMap> tm;

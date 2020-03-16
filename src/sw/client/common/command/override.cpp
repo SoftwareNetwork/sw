@@ -102,7 +102,7 @@ SUBCOMMAND_DECL(override)
     {
         // sort
         std::set<sw::LocalPackage> pkgs;
-        for (auto &p : swctx->getLocalStorage().getOverriddenPackagesStorage().getPackages())
+        for (auto &p : getContext().getLocalStorage().getOverriddenPackagesStorage().getPackages())
             pkgs.emplace(p);
         for (auto &p : pkgs)
             std::cout << p.toString() << " " << *p.getOverriddenDir() << "\n";
@@ -116,7 +116,7 @@ SUBCOMMAND_DECL(override)
         auto d = primitives::filesystem::canonical(getOptions().options_override.delete_overridden_package_dir);
 
         std::set<sw::LocalPackage> pkgs;
-        for (auto &p : swctx->getLocalStorage().getOverriddenPackagesStorage().getPackages())
+        for (auto &p : getContext().getLocalStorage().getOverriddenPackagesStorage().getPackages())
         {
             if (*p.getOverriddenDir() == d)
                 pkgs.emplace(p);
@@ -124,7 +124,7 @@ SUBCOMMAND_DECL(override)
         for (auto &p : pkgs)
             std::cout << "Deleting " << p.toString() << "\n";
 
-        swctx->getLocalStorage().getOverriddenPackagesStorage().deletePackageDir(d);
+        getContext().getLocalStorage().getOverriddenPackagesStorage().deletePackageDir(d);
         return;
     }
 
@@ -135,7 +135,7 @@ SUBCOMMAND_DECL(override)
     {
         sw::PackageId pkg{ getOptions().options_override.prefix };
         LOG_INFO(logger, "Delete override for " + pkg.toString());
-        swctx->getLocalStorage().getOverriddenPackagesStorage().deletePackage(pkg);
+        getContext().getLocalStorage().getOverriddenPackagesStorage().deletePackage(pkg);
         return;
     }
 

@@ -621,17 +621,17 @@ std::vector<sw::TargetSettings> SwClientContext::createSettings()
 
 sw::SwContext &SwClientContext::getContext()
 {
-    if (!swctx)
+    if (!swctx_)
     {
-        swctx = std::make_unique<sw::SwContext>(local_storage_root_dir);
+        swctx_ = std::make_unique<sw::SwContext>(local_storage_root_dir);
         // TODO:
         // before default?
         //for (auto &d : drivers)
         //swctx->registerDriver(std::make_unique<sw::driver::cpp::Driver>());
-        swctx->registerDriver("org.sw.sw.driver.cpp-0.4.1"s, std::make_unique<sw::driver::cpp::Driver>());
+        swctx_->registerDriver("org.sw.sw.driver.cpp-0.4.1"s, std::make_unique<sw::driver::cpp::Driver>());
         //swctx->registerDriver(std::make_unique<sw::CDriver>(sw_create_driver));
     }
-    return *swctx;
+    return *swctx_;
 }
 
 const sw::TargetMap &SwClientContext::getPredefinedTargets(sw::SwContext &swctx)
