@@ -407,6 +407,14 @@ std::vector<sw::TargetSettings> SwClientContext::createSettings()
     auto &options = getOptions();
 
     auto initial_settings = createInitialSettings();
+
+    if (options.use_same_config_for_host_dependencies)
+    {
+        initial_settings["use_same_config_for_host_dependencies"] = "true";
+        initial_settings["use_same_config_for_host_dependencies"].useInHash(false);
+        getContext().setHostSettings(initial_settings);
+    }
+
     if (!options.host_settings_file.empty())
     {
         auto s = getContext().getHostSettings();

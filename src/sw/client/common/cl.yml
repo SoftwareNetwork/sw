@@ -42,6 +42,8 @@ command_line:
                 external: true
                 description: Keep bad compiled config module file
 
+            use_same_config_for_host_dependencies:
+
             use_saved_configs:
                 option: usc
                 #default_value: true

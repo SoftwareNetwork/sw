@@ -83,10 +83,7 @@ SUBCOMMAND_DECL(generate)
             getOptions().configuration.push_back("rwdi");
             getOptions().configuration.push_back("r");
         }
-        auto hs = getContext().getHostSettings();
-        hs["use_same_config_for_host_dependencies"] = "true";
-        hs["use_same_config_for_host_dependencies"].useInHash(false);
-        getContext().setHostSettings(hs);
+        getOptions().use_same_config_for_host_dependencies = true;
 
         auto g = (VSGenerator*)generator.get();
         if (getOptions().options_generate.print_overridden_dependencies)
