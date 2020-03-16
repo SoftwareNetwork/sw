@@ -89,7 +89,6 @@ bool bUseSystemPause = false;
 int main(int argc, char **argv);
 #pragma pop_macro("main")
 
-void setup_log(const std::string &log_level, const Options &, bool simple = true);
 void self_upgrade();
 void self_upgrade_copy(const path &dst);
 
@@ -180,11 +179,11 @@ int setup_main(const Strings &args, Options &options)
     }
 
     if (options.trace)
-        setup_log("TRACE", options);// , false); // add modules for trace logger
+        setupLogger("TRACE", options);// , false); // add modules for trace logger
     else if (gVerbose)
-        setup_log("DEBUG", options);
+        setupLogger("DEBUG", options);
     else
-        setup_log("INFO", options);
+        setupLogger("INFO", options);
 
     {
         String cmdline;
@@ -393,21 +392,6 @@ int main(int argc, char **argv)
     LOG_FLUSH();
 
     return r;
-}
-
-void setup_log(const std::string &log_level, const Options &options, bool simple)
-{
-    LoggerSettings log_settings;
-    log_settings.log_level = log_level;
-    if (options.write_log_to_file && bConsoleMode)
-        log_settings.log_file = (get_root_directory() / "sw").string();
-    log_settings.simple_logger = simple;
-    log_settings.print_trace = true;
-    initLogger(log_settings);
-
-    // first trace message
-    LOG_TRACE(logger, "----------------------------------------");
-    LOG_TRACE(logger, "Starting sw...");
 }
 
 /*SUBCOMMAND_DECL(mirror)

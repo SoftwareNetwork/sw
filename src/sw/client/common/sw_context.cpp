@@ -29,6 +29,7 @@
 #include <sw/driver/driver.h> // register driver
 #include <sw/driver/compiler/detect.h>
 #include <sw/manager/settings.h>
+#include <sw/support/filesystem.h>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "client.context");
@@ -756,4 +757,19 @@ Programs SwClientContext::listCompilers()
     print_program("org.LLVM.clangcl", "Clang C/C++ Compiler in MSVC compatibility mode (clang-cl)");
 
     return progs;
+}
+
+void setupLogger(const std::string &log_level, const Options &options, bool simple)
+{
+    LoggerSettings log_settings;
+    log_settings.log_level = log_level;
+    if (options.write_log_to_file && 1/*bConsoleMode*/)
+        log_settings.log_file = (sw::get_root_directory() / "sw").string();
+    log_settings.simple_logger = simple;
+    log_settings.print_trace = true;
+    initLogger(log_settings);
+
+    // first trace message
+    LOG_TRACE(logger, "----------------------------------------");
+    LOG_TRACE(logger, "Starting sw...");
 }
