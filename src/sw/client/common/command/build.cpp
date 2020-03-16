@@ -110,7 +110,7 @@ SUBCOMMAND_DECL(build)
     {
         auto b = createBuild();
         b->overrideBuildState(sw::BuildState::Prepared);
-        auto [cmds, p] = sw::ExecutionPlan::load(getOptions().options_build.build_explan, getContext());
+        auto [cmds, p] = sw::ExecutionPlan::load(getOptions().options_build.build_explan, *b);
         b->execute(p);
         return;
     }
@@ -151,7 +151,7 @@ SUBCOMMAND_DECL(build)
     if (getOptions().options_build.build_default_explan)
     {
         b->loadInputs();
-        getContext().clearFileStorages();
+        //getContext().clearFileStorages();
         b->runSavedExecutionPlan();
         return;
     }

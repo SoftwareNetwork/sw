@@ -124,7 +124,7 @@ static Strings getExports(HMODULE lib)
 
 static CommandStorage &getDriverCommandStorage(const Build &b)
 {
-    return b.getContext().getCommandStorage(b.getContext().getLocalStorage().storage_dir_tmp / "db" / "service");
+    return b.getMainBuild().getCommandStorage(b.getContext().getLocalStorage().storage_dir_tmp / "db" / "service");
 }
 
 static void addImportLibrary(const Build &b, NativeCompiledTarget &t)

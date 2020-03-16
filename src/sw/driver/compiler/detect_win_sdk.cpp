@@ -111,7 +111,7 @@ struct WinKit
     {
         // .rc
         {
-            auto p = std::make_shared<sw::SimpleProgram>(s);
+            auto p = std::make_shared<sw::SimpleProgram>();
             p->file = kit_root / "bin" / bdir_subversion / toStringWindows(s.getHostOs().Arch) / "rc.exe";
             if (fs::exists(p->file))
             {
@@ -128,7 +128,7 @@ struct WinKit
 
         // .mc
         {
-            auto p = std::make_shared<sw::SimpleProgram>(s);
+            auto p = std::make_shared<sw::SimpleProgram>();
             p->file = kit_root / "bin" / bdir_subversion / toStringWindows(s.getHostOs().Arch) / "mc.exe";
             if (fs::exists(p->file))
             {

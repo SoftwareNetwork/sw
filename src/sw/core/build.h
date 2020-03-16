@@ -20,6 +20,7 @@
 
 #include "target.h"
 
+#include <sw/builder/sw_context.h>
 #include <sw/manager/package_data.h>
 
 namespace sw
@@ -45,7 +46,7 @@ enum class BuildState
 };
 
 // single build
-struct SW_CORE_API SwBuild
+struct SW_CORE_API SwBuild : SwBuilderContext
 {
     SwBuild(SwContext &swctx, const path &build_dir);
     SwBuild(const SwBuild &) = delete;

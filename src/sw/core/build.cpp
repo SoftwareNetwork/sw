@@ -941,14 +941,14 @@ Commands SwBuild::getCommands() const
 
     for (auto &[f, t] : copy_files)
     {
-        auto copy_cmd = std::make_shared<::sw::builder::BuiltinCommand>(getContext(), SW_VISIBLE_BUILTIN_FUNCTION(copy_file));
+        auto copy_cmd = std::make_shared<::sw::builder::BuiltinCommand>(*this, SW_VISIBLE_BUILTIN_FUNCTION(copy_file));
         copy_cmd->arguments.push_back(f);
         copy_cmd->arguments.push_back(t);
         copy_cmd->addInput(f);
         copy_cmd->addOutput(t);
         //copy_cmd->dependencies.insert(nt->getCommand());
         copy_cmd->name = "copy: " + normalize_path(t);
-        copy_cmd->command_storage = &getContext().getCommandStorage(getBuildDirectory() / "cs");
+        copy_cmd->command_storage = &getCommandStorage(getBuildDirectory() / "cs");
         cmds.insert(copy_cmd);
         commands_storage.insert(copy_cmd); // prevents early destruction
     }
@@ -1058,7 +1058,7 @@ void SwBuild::saveExecutionPlan(const path &in) const
 
 void SwBuild::runSavedExecutionPlan(const path &in) const
 {
-    auto [cmds, p] = ExecutionPlan::load(in, getContext());
+    auto [cmds, p] = ExecutionPlan::load(in, *this);
 
     // change state
     overrideBuildState(BuildState::Prepared);

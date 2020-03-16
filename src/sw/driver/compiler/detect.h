@@ -46,7 +46,7 @@ struct SimpleProgram : Program
     {
         if (!cmd)
         {
-            cmd = std::make_shared<builder::Command>(swctx);
+            cmd = std::make_shared<builder::Command>();
             cmd->setProgram(file);
         }
         return cmd;

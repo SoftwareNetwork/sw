@@ -517,7 +517,7 @@ CommandStorage *Target::getCommandStorage() const
         return nullptr;
     if (command_storage)
         return *command_storage;
-    return &getContext().getCommandStorage(BinaryDir.parent_path());
+    return &getMainBuild().getCommandStorage(BinaryDir.parent_path());
 }
 
 Commands Target::getCommands() const
@@ -568,7 +568,7 @@ const BuildSettings &Target::getBuildSettings() const
 
 FileStorage &Target::getFs() const
 {
-    return getMainBuild().getContext().getFileStorage();
+    return getMainBuild().getFileStorage();
 }
 
 bool Target::init()
@@ -891,7 +891,7 @@ const TargetSettings &Target::getExportOptions() const
 
 driver::CommandBuilder Target::addCommand(const std::shared_ptr<builder::Command> &in) const
 {
-    driver::CommandBuilder cb(getMainBuild().getContext());
+    driver::CommandBuilder cb(getMainBuild());
     if (in)
         cb.c = in;
     // set as default
@@ -909,7 +909,7 @@ driver::CommandBuilder Target::addCommand(const std::shared_ptr<builder::Command
 
 driver::CommandBuilder Target::addCommand(const String &func_name, void *f, int version) const
 {
-    auto c = std::make_shared<BuiltinCommand>(getContext(), func_name, f, version);
+    auto c = std::make_shared<BuiltinCommand>(getMainBuild(), func_name, f, version);
     return addCommand(c);
 }
 

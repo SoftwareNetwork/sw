@@ -67,12 +67,12 @@ static std::shared_ptr<CompilerType> activateCompiler(Target &t, const Unresolve
         if (created)
             return;
         c->file = prog->getProgram().file;
-        auto C = c->createCommand(t.getMainBuild().getContext());
+        auto C = c->createCommand(t.getMainBuild());
         static_cast<primitives::Command&>(*C) = *prog->getProgram().getCommand();
         created = true;
     };
 
-    auto compiler = std::make_shared<CompilerType>(t.getMainBuild().getContext());
+    auto compiler = std::make_shared<CompilerType>();
     c = compiler;
     create_command();
 
@@ -99,7 +99,7 @@ void detectCSharpCompilers(DETECT_ARGS)
             SW_UNIMPLEMENTED;
         }
 
-        auto p = std::make_shared<SimpleProgram>(s);
+        auto p = std::make_shared<SimpleProgram>();
         p->file = root / "csc.exe";
 
         auto v1 = getVersion(s, p->file);
@@ -143,7 +143,7 @@ Commands CSharpTarget::getCommands1() const
 
 void detectRustCompilers(DETECT_ARGS)
 {
-    auto p = std::make_shared<SimpleProgram>(s);
+    auto p = std::make_shared<SimpleProgram>();
     auto f = resolveExecutable("rustc");
     if (!fs::exists(f))
     {
@@ -193,7 +193,7 @@ Commands RustTarget::getCommands1() const
 
 void detectGoCompilers(DETECT_ARGS)
 {
-    auto p = std::make_shared<SimpleProgram>(s);
+    auto p = std::make_shared<SimpleProgram>();
     auto f = resolveExecutable("go");
     if (!fs::exists(f))
         return;
@@ -244,7 +244,7 @@ void detectFortranCompilers(DETECT_ARGS)
 
     // TODO: add each program separately
 
-    auto p = std::make_shared<SimpleProgram>(s);
+    auto p = std::make_shared<SimpleProgram>();
     auto f = resolveExecutable("gfortran");
     if (!fs::exists(f))
     {
@@ -313,7 +313,7 @@ void detectJavaCompilers(DETECT_ARGS)
 {
     //compiler = resolveExecutable("jar"); // later
 
-    auto p = std::make_shared<SimpleProgram>(s);
+    auto p = std::make_shared<SimpleProgram>();
     auto f = resolveExecutable("javac");
     if (!fs::exists(f))
         return;
@@ -360,7 +360,7 @@ Commands JavaTarget::getCommands1() const
 
 void detectKotlinCompilers(DETECT_ARGS)
 {
-    auto p = std::make_shared<SimpleProgram>(s);
+    auto p = std::make_shared<SimpleProgram>();
     auto f = resolveExecutable("kotlinc");
     if (!fs::exists(f))
         return;
@@ -412,7 +412,7 @@ void detectDCompilers(DETECT_ARGS)
 {
     // also todo LDC, GDC compiler
 
-    auto p = std::make_shared<SimpleProgram>(s);
+    auto p = std::make_shared<SimpleProgram>();
     auto f = resolveExecutable("dmd");
     if (!fs::exists(f))
         return;

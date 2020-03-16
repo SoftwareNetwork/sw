@@ -1268,7 +1268,7 @@ void RawBootstrapBuildGenerator::generate(const sw::SwBuild &b)
     std::set<path> files_ordered;
     for (auto &f : files)
     {
-        if (File(f, b.getContext().getFileStorage()).isGenerated())
+        if (File(f, b.getFileStorage()).isGenerated())
             continue;
         if (is_under_root(f, sd))
         {

@@ -177,7 +177,7 @@ void detectMsvc15Plus(DETECT_ARGS)
 
             // C, C++
             {
-                auto p = std::make_shared<SimpleProgram>(s);
+                auto p = std::make_shared<SimpleProgram>();
                 p->file = compiler / "cl.exe";
                 if (fs::exists(p->file))
                 {
@@ -196,7 +196,7 @@ void detectMsvc15Plus(DETECT_ARGS)
 
             // lib, link
             {
-                auto p = std::make_shared<SimpleProgram>(s);
+                auto p = std::make_shared<SimpleProgram>();
                 p->file = compiler / "link.exe";
                 if (fs::exists(p->file))
                     addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.link", v), ts, p);
@@ -207,7 +207,7 @@ void detectMsvc15Plus(DETECT_ARGS)
                     c->addPathDirectory(host_root);
                 }
 
-                p = std::make_shared<SimpleProgram>(s);
+                p = std::make_shared<SimpleProgram>();
                 p->file = compiler / "lib.exe";
                 if (fs::exists(p->file))
                     addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.lib", v), ts, p);
@@ -222,7 +222,7 @@ void detectMsvc15Plus(DETECT_ARGS)
             // ASM
             if (target_arch == ArchType::x86_64 || target_arch == ArchType::x86)
             {
-                auto p = std::make_shared<SimpleProgram>(s);
+                auto p = std::make_shared<SimpleProgram>();
                 p->file = compiler / (target_arch == ArchType::x86_64 ? "ml64.exe" : "ml.exe");
                 if (fs::exists(p->file))
                 {
@@ -233,7 +233,7 @@ void detectMsvc15Plus(DETECT_ARGS)
 
             // dumpbin
             {
-                auto p = std::make_shared<SimpleProgram>(s);
+                auto p = std::make_shared<SimpleProgram>();
                 p->file = compiler / "dumpbin.exe";
                 if (fs::exists(p->file))
                 {
@@ -377,7 +377,7 @@ void detectMsvc14AndOlder(DETECT_ARGS)
 
             // C, C++
             {
-                auto p = std::make_shared<SimpleProgram>(s);
+                auto p = std::make_shared<SimpleProgram>();
                 p->file = compiler / "cl.exe";
                 if (fs::exists(p->file))
                 {
@@ -396,7 +396,7 @@ void detectMsvc14AndOlder(DETECT_ARGS)
 
             // lib, link
             {
-                auto p = std::make_shared<SimpleProgram>(s);
+                auto p = std::make_shared<SimpleProgram>();
                 p->file = compiler / "link.exe";
                 if (fs::exists(p->file))
                     addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.link", v), ts, p);
@@ -407,7 +407,7 @@ void detectMsvc14AndOlder(DETECT_ARGS)
                     c->addPathDirectory(host_root);
                 }
 
-                p = std::make_shared<SimpleProgram>(s);
+                p = std::make_shared<SimpleProgram>();
                 p->file = compiler / "lib.exe";
                 if (fs::exists(p->file))
                     addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.lib", v), ts, p);
@@ -422,7 +422,7 @@ void detectMsvc14AndOlder(DETECT_ARGS)
             // ASM
             if (target_arch == ArchType::x86_64 || target_arch == ArchType::x86)
             {
-                auto p = std::make_shared<SimpleProgram>(s);
+                auto p = std::make_shared<SimpleProgram>();
                 p->file = compiler / (target_arch == ArchType::x86_64 ? "ml64.exe" : "ml.exe");
                 if (fs::exists(p->file))
                 {
@@ -433,7 +433,7 @@ void detectMsvc14AndOlder(DETECT_ARGS)
 
             // dumpbin
             {
-                auto p = std::make_shared<SimpleProgram>(s);
+                auto p = std::make_shared<SimpleProgram>();
                 p->file = compiler / "dumpbin.exe";
                 if (fs::exists(p->file))
                 {
@@ -500,7 +500,7 @@ static void detectWindowsClang(DETECT_ARGS)
 
     // C, C++
     {
-        auto p = std::make_shared<SimpleProgram>(s);
+        auto p = std::make_shared<SimpleProgram>();
         p->file = bin_llvm_path / "clang-cl.exe";
         //C->file = base_llvm_path / "msbuild-bin" / "cl.exe";
         if (!fs::exists(p->file))
@@ -534,7 +534,7 @@ static void detectWindowsClang(DETECT_ARGS)
 
     // link
     {
-        auto p = std::make_shared<SimpleProgram>(s);
+        auto p = std::make_shared<SimpleProgram>();
         p->file = bin_llvm_path / "lld.exe";
         if (!fs::exists(p->file))
         {
@@ -555,7 +555,7 @@ static void detectWindowsClang(DETECT_ARGS)
 
     // ar
     {
-        auto p = std::make_shared<SimpleProgram>(s);
+        auto p = std::make_shared<SimpleProgram>();
         p->file = bin_llvm_path / "llvm-ar.exe";
         if (!fs::exists(p->file))
         {
@@ -572,7 +572,7 @@ static void detectWindowsClang(DETECT_ARGS)
 
     // C
     {
-        auto p = std::make_shared<SimpleProgram>(s);
+        auto p = std::make_shared<SimpleProgram>();
         p->file = bin_llvm_path / "clang.exe";
         if (!fs::exists(p->file))
         {
@@ -599,7 +599,7 @@ static void detectWindowsClang(DETECT_ARGS)
 
     // C++
     {
-        auto p = std::make_shared<SimpleProgram>(s);
+        auto p = std::make_shared<SimpleProgram>();
         p->file = bin_llvm_path / "clang++.exe";
         if (!fs::exists(p->file))
         {
@@ -635,7 +635,7 @@ static void detectIntelCompilers(DETECT_ARGS)
     {
         auto add_prog_from_path = [DETECT_ARGS_PASS_TO_LAMBDA](const path &name, const String &ppath)
         {
-            auto p = std::make_shared<SimpleProgram>(s);
+            auto p = std::make_shared<SimpleProgram>();
             p->file = resolveExecutable(name);
             if (fs::exists(p->file))
             {
@@ -702,7 +702,7 @@ static void detectIntelCompilers(DETECT_ARGS)
     // *nix
     {
         {
-            auto p = std::make_shared<SimpleProgram>(s); // new object
+            auto p = std::make_shared<SimpleProgram>(); // new object
             p->file = resolveExecutable("icc");
             if (fs::exists(p->file))
             {
@@ -712,7 +712,7 @@ static void detectIntelCompilers(DETECT_ARGS)
         }
 
         {
-            auto p = std::make_shared<SimpleProgram>(s); // new object
+            auto p = std::make_shared<SimpleProgram>(); // new object
             p->file = resolveExecutable("icpc");
             if (fs::exists(p->file))
             {
@@ -735,7 +735,7 @@ static void detectNonWindowsCompilers(DETECT_ARGS)
 
     auto resolve_and_add = [DETECT_ARGS_PASS_TO_LAMBDA, &colored_output](const path &prog, const String &ppath, int color_diag = 0)
     {
-        auto p = std::make_shared<SimpleProgram>(s);
+        auto p = std::make_shared<SimpleProgram>();
         p->file = resolveExecutable(prog);
         if (fs::exists(p->file))
         {

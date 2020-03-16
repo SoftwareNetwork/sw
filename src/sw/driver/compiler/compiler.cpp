@@ -87,7 +87,7 @@ std::shared_ptr<builder::Command> CompilerBaseProgram::prepareCommand(const Targ
 {
     if (prepared)
         return cmd;
-    createCommand(t.getMainBuild().getContext()); // do some init
+    createCommand(t.getMainBuild()); // do some init
     prepareCommand1(t);
     prepared = true;
     return cmd;
@@ -329,7 +329,7 @@ void ClangCompiler::prepareCommand1(const ::sw::Target &t)
     add_args(*cmd, getCStdOption(CStandard(), dynamic_cast<const NativeCompiledTarget&>(t).CExtensions));
     CStandard.skip = true;
     add_args(*cmd, getCppStdOption(CPPStandard(), dynamic_cast<const NativeCompiledTarget&>(t).CPPExtensions,
-        true, getVersion(swctx, file)));
+        true, getVersion(t.getContext(), file)));
     CPPStandard.skip = true;
 
     getCommandLineOptions<ClangOptions>(cmd.get(), *this);
@@ -527,7 +527,7 @@ void GNUCompiler::prepareCommand1(const Target &t)
     add_args(*cmd, getCStdOption(CStandard(), dynamic_cast<const NativeCompiledTarget&>(t).CExtensions));
     CStandard.skip = true;
     add_args(*cmd, getCppStdOption(CPPStandard(), dynamic_cast<const NativeCompiledTarget&>(t).CPPExtensions,
-        false, getVersion(swctx, file)));
+        false, getVersion(t.getContext(), file)));
     CPPStandard.skip = true;
 
     getCommandLineOptions<GNUOptions>(cmd.get(), *this);
