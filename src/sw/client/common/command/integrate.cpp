@@ -204,6 +204,13 @@ SUBCOMMAND_DECL(integrate)
                 st = "INTERFACE";
             ctx.addLine("add_library(" + pkg2string(pkg) + " " + st + " IMPORTED GLOBAL)");
 
+            // imported configs
+            for (auto &tgt : tgts)
+            {
+                const auto &s = tgt->getInterfaceSettings();
+
+                sw::BuildSettings bs(tgt->getSettings());
+
             // props
             ctx.increaseIndent("set_target_properties(" + pkg2string(pkg) + " PROPERTIES");
 
@@ -218,7 +225,7 @@ SUBCOMMAND_DECL(integrate)
                     defs += k + "=" + primitives::command::Argument::quote(v.getValue(), primitives::command::QuoteType::Escape) + ";";
             }
             defs += "\"";
-            ctx.addLine("INTERFACE_COMPILE_DEFINITIONS " + defs);
+                ctx.addLine("INTERFACE_COMPILE_DEFINITIONS_" + toCmakeString(bs.Native.ConfigurationType) + " " + defs);
 
             // idirs
             String idirs;
@@ -226,7 +233,7 @@ SUBCOMMAND_DECL(integrate)
             for (auto &d : s["include_directories"].getArray())
                 idirs += fix_path(std::get<sw::TargetSetting::Value>(d)) + ";";
             idirs += "\"";
-            ctx.addLine("INTERFACE_INCLUDE_DIRECTORIES " + idirs);
+                ctx.addLine("INTERFACE_INCLUDE_DIRECTORIES_" + toCmakeString(bs.Native.ConfigurationType) + " " + idirs);
 
             if (s["header_only"] != "true")
             {
@@ -238,21 +245,15 @@ SUBCOMMAND_DECL(integrate)
                 for (auto &d : s["system_link_libraries"].getArray())
                     libs += std::get<sw::TargetSetting::Value>(d) + ";";
                 libs += "\"";
-                ctx.addLine("INTERFACE_LINK_LIBRARIES " + libs);
+                    ctx.addLine("INTERFACE_LINK_LIBRARIES_" + toCmakeString(bs.Native.ConfigurationType) + " " + libs);
             }
 
             ctx.decreaseIndent(")");
             ctx.emptyLines();
             //
 
-            // imported configs
-            for (auto &tgt : tgts)
-            {
-                const auto &s = tgt->getInterfaceSettings();
                 if (s["header_only"] == "true")
                     continue;
-
-                sw::BuildSettings bs(tgt->getSettings());
 
                 ctx.addLine("set_property(TARGET " + pkg2string(pkg) + " APPEND PROPERTY IMPORTED_CONFIGURATIONS " +
                     toCmakeString(bs.Native.ConfigurationType) + ")");
