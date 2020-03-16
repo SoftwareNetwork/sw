@@ -42,14 +42,14 @@ struct SW_DRIVER_CPP_API ProgramStorage
     void setExtensionProgram(const String &ext, const ProgramPtr &);
 
     bool hasExtension(const String &ext) const;
-    std::optional<UnresolvedPackage> getExtPackage(const String &ext) const;
+    std::optional<DependencyPtr> getExtPackage(const String &ext) const;
     Program *getProgram(const String &ext) const;
 
     void clearExtensions();
     void removeExtension(const String &ext);
 
 private:
-    std::map<String, std::variant<UnresolvedPackage, ProgramPtr>> extensions;
+    std::map<String, std::variant<DependencyPtr, ProgramPtr>> extensions;
 };
 
 }

@@ -436,16 +436,19 @@ Program *Target::findProgramByExtension(const String &ext) const
     if (!u)
         return {};
     // resolve via getContext() because it might provide other version rather than cld.find(*u)
-    auto pkg = getMainBuild().getContext().resolve(*u);
+    /*auto pkg = getMainBuild().getContext().resolve(*u);
     auto &cld = getMainBuild().getTargets();
     auto tgt = cld.find(pkg, getHostSettings());
     if (!tgt)
-        return {};
-    if (auto t = tgt->as<PredefinedProgram*>())
+        return {};*/
+    if (!(*u)->isResolved())
+        throw SW_LOGIC_ERROR("unresolved program");
+    auto &tgt = (*u)->getTarget();
+    if (auto t = tgt.as<PredefinedProgram*>())
     {
-        return &t->getProgram();
+        return (Program*)&t->getProgram();
     }
-    throw SW_RUNTIME_ERROR("Target without PredefinedProgram: " + pkg.toString());
+    throw SW_RUNTIME_ERROR("Target without PredefinedProgram: " + tgt.getPackage().toString());
 }
 
 String Target::getConfig() const

@@ -42,23 +42,28 @@ void ProgramStorage::setExtensionProgram(const String &ext, const ProgramPtr &p)
 
 void ProgramStorage::setExtensionProgram(const String &ext, const DependencyPtr &d)
 {
-    setExtensionProgram(ext, d->getPackage());
+    //setExtensionProgram(ext, d->getPackage());
+    extensions.insert_or_assign(ext, d);
 
     // also add (yes, duplicate!) passed dptr
     // add a dependency to current target
-    if (auto t = dynamic_cast<NativeCompiledTarget *>(this); t)
+    if (auto t = dynamic_cast<Target *>(this); t)
         t->addDummyDependency(d);
 }
 
 void ProgramStorage::setExtensionProgram(const String &ext, const UnresolvedPackage &p)
 {
+    setExtensionProgram(ext, std::make_shared<Dependency>(p));
+    return;
+
     auto t = dynamic_cast<Target*>(this);
     if (!t)
         throw SW_RUNTIME_ERROR("not a target");
 
     // late resolve version
     //auto pkg = t->getSolution().swctx.resolve(p);
-    extensions.insert_or_assign(ext, p);
+    SW_UNIMPLEMENTED;
+    //extensions.insert_or_assign(ext, p);
 
     // add a dependency to current target
     if (auto t = dynamic_cast<NativeCompiledTarget *>(this); t)
@@ -76,12 +81,12 @@ Program *ProgramStorage::getProgram(const String &ext) const
     return p->get();
 }
 
-std::optional<UnresolvedPackage> ProgramStorage::getExtPackage(const String &ext) const
+std::optional<DependencyPtr> ProgramStorage::getExtPackage(const String &ext) const
 {
     auto i = extensions.find(ext);
     if (i == extensions.end())
         return {};
-    auto p = std::get_if<UnresolvedPackage>(&i->second);
+    auto p = std::get_if<DependencyPtr>(&i->second);
     if (!p)
         return {};
     return *p;
