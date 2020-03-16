@@ -6,7 +6,7 @@
 |---|---|---|---|---|---|---|---|
 | package manager | ![](https://img.shields.io/badge/yes-brightgreen.svg) | ![](https://img.shields.io/badge/yes-brightgreen.svg) | ![](https://img.shields.io/badge/yes-brightgreen.svg) | ![](https://img.shields.io/badge/yes-brightgreen.svg) |![](https://img.shields.io/badge/no-red.svg) |![](https://img.shields.io/badge/no-red.svg) | ![](https://img.shields.io/badge/yes-brightgreen.svg) |
 | build system | ![](https://img.shields.io/badge/yes-brightgreen.svg) | ![](https://img.shields.io/badge/no-red.svg) | ![](https://img.shields.io/badge/no-red.svg) | ![](https://img.shields.io/badge/yes-brightgreen.svg) |![](https://img.shields.io/badge/yes-brightgreen.svg) |![](https://img.shields.io/badge/yes-brightgreen.svg) | ![](https://img.shields.io/badge/yes-brightgreen.svg) |
-| multilang | 
+| multilang | ![](https://img.shields.io/badge/yes-brightgreen.svg) |![](https://img.shields.io/badge/yes-brightgreen.svg) |![](https://img.shields.io/badge/yes-brightgreen.svg) |![](https://img.shields.io/badge/yes-brightgreen.svg) |![](https://img.shields.io/badge/yes-brightgreen.svg) |![](https://img.shields.io/badge/no-red.svg) |![](https://img.shields.io/badge/yes-brightgreen.svg) |
 
 ## Compilers & OSes
 
