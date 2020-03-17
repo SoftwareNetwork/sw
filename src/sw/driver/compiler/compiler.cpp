@@ -328,6 +328,10 @@ void ClangCompiler::prepareCommand1(const ::sw::Target &t)
     {
         PositionIndependentCode = false;
     }
+    if (t.getBuildSettings().TargetOS.is(OSType::Mingw))
+    {
+        //cmd->push_back("-stdlib=libstdc++");
+    }
 
     add_args(*cmd, getCStdOption(CStandard(), dynamic_cast<const NativeCompiledTarget&>(t).CExtensions));
     CStandard.skip = true;
