@@ -24,6 +24,8 @@
 #include "../suffix.h"
 #include "../compiler/compiler_helpers.h"
 
+static int vala_custom_options_idx = -1;
+
 namespace sw
 {
 
@@ -45,6 +47,18 @@ void ValaBase::init()
         if (t.getBuildSettings().Native.LibrariesType == LibraryType::Shared &&
             t.getType() == TargetType::NativeLibrary)
             t.ExportAllSymbols = true;
+
+        if (t.getType() != TargetType::NativeExecutable)
+        {
+            if (vala_custom_options_idx != -1)
+                vala_custom_options_idx = t.Interface.CustomTargetOptions.size();
+            if (t.Interface.CustomTargetOptions.size() < vala_custom_options_idx + 1)
+                t.Interface.CustomTargetOptions.resize(vala_custom_options_idx + 1);
+
+            t.Interface.CustomTargetOptions[vala_custom_options_idx]
+                .push_back(normalize_path(t.BinaryDir.parent_path() / "obj" / t.getPackage().toString() += ".vapi"));
+            t.Interface.IncludeDirectories.push_back(t.BinaryDir.parent_path() / "obj");
+        }
     });
 
     d = "org.sw.demo.gnome.vala.compiler"_dep;
@@ -53,7 +67,8 @@ void ValaBase::init()
     d->getSettings()["native"]["library"] = "shared";
     d->getSettings()["native"]["configuration"] = "debug";
     t.setExtensionProgram(".vala", d);
-    t += "org.sw.demo.gnome.glib.glib"_dep;
+    //t += "org.sw.demo.gnome.glib.glib"_dep;
+    t += "org.sw.demo.gnome.glib.gobject"_dep;
 }
 
 void ValaBase::prepare()
@@ -71,20 +86,36 @@ void ValaBase::prepare()
     else
         SW_UNIMPLEMENTED;
 
+    auto c = compiler->createCommand(t.getMainBuild());
     compiler->OutputDir = t.BinaryDir.parent_path() / "obj";
-
-    compiler->InputFiles = {};
+    compiler->InputFiles = FilesOrdered{};
     for (auto &f : ::sw::gatherSourceFiles<SourceFile>(t, {".vala"}))
     {
         auto rel = f->file.lexically_relative(t.SourceDir);
         auto o = compiler->OutputDir() / rel.parent_path() / rel.stem() += ".c";
-        auto c = compiler->createCommand(t.getMainBuild());
         File(o, t.getFs()).setGenerator(c, false);
         t += o;
         c->addOutput(o);
 
         compiler->InputFiles().push_back(f->file);
         f->skip = true;
+    }
+
+    if (t.getType() != TargetType::NativeExecutable)
+    {
+        auto h = compiler->OutputDir() / t.getPackage().getPath().toString() += ".h";
+        c->push_back("-H");
+        c->push_back(h);
+        c->push_back("--library");
+        c->push_back(t.getPackage().toString());
+        c->addOutput(compiler->OutputDir() / t.getPackage().toString() += ".vapi");
+        c->addOutput(h);
+    }
+
+    if (vala_custom_options_idx != -1 && t.CustomTargetOptions.size() > vala_custom_options_idx)
+    {
+        for (auto &o : t.CustomTargetOptions[vala_custom_options_idx])
+            c->push_back(o);
     }
 }
 
