@@ -7,8 +7,6 @@ void build(Solution &s)
     t += "exe1.vala";
     t += lib1;
 
-    return;
-
     {
         auto &t = s.add<ValaStaticLibrary>("st");
         t += "sh.vala";
