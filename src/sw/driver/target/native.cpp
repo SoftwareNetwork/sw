@@ -768,6 +768,17 @@ void NativeCompiledTarget::setupCommand(builder::Command &c) const
 {
     NativeTarget::setupCommand(c);
 
+    // default win32 paths are not enough
+    if (getBuildSettings().TargetOS.is(OSType::Mingw))
+    {
+        // we must find reliable anchor here (.exe or .dll) that is present in all mingw setups
+        // use gcc for now
+        static auto p = resolveExecutable("gcc");
+        if (p.empty())
+            throw SW_RUNTIME_ERROR("Mingw PATH: cannot add default bin dir");
+        c.addPathDirectory(p.parent_path());
+    }
+
     // perform this after prepare?
     auto for_deps = [this, &c](auto f)
     {
