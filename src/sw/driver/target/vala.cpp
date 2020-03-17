@@ -50,7 +50,7 @@ void ValaBase::init()
 
         if (t.getType() != TargetType::NativeExecutable)
         {
-            if (vala_custom_options_idx != -1)
+            if (vala_custom_options_idx == -1)
                 vala_custom_options_idx = t.Interface.CustomTargetOptions.size();
             if (t.Interface.CustomTargetOptions.size() < vala_custom_options_idx + 1)
                 t.Interface.CustomTargetOptions.resize(vala_custom_options_idx + 1);
