@@ -319,7 +319,19 @@ void NativeCompilerOptionsData::merge(const NativeCompilerOptionsData &o, const 
 
     Definitions.insert(o.Definitions.begin(), o.Definitions.end());
     if (!s.include_directories_only)
+    {
         CompileOptions.insert(o.CompileOptions.begin(), o.CompileOptions.end());
+
+        //
+        auto sz = std::min(CustomTargetOptions.size(), o.CustomTargetOptions.size());
+        if (CustomTargetOptions.size() < o.CustomTargetOptions.size())
+        {
+            CustomTargetOptions.resize(o.CustomTargetOptions.size());
+            sz = o.CustomTargetOptions.size();
+        }
+        for (int i = 0; i < sz; i++)
+            CustomTargetOptions[i].insert(o.CustomTargetOptions[i].begin(), o.CustomTargetOptions[i].end());
+    }
 
     if (s.merge_to_self)
     {
