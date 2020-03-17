@@ -1396,6 +1396,7 @@ void Project::emitFilters(const VSGenerator &g) const
         String *d = nullptr;
         const sw::TargetSettings *s = nullptr; // also mark generated files
         bool bdir_private = false;
+        bool bdir_parent = false;
         size_t p = 0;
         auto fd = normalize_path(f.p);
 
@@ -1420,7 +1421,9 @@ void Project::emitFilters(const VSGenerator &g) const
         {
             String bd = normalize_path(d1.second.binary_dir);
             String bdp = normalize_path(d1.second.binary_private_dir);
+            String bdparent = normalize_path(d1.second.binary_dir.parent_path());
 
+            calc(bdparent); // must go first, as shorter path
             calc(bd);
             calc(bdp);
 
@@ -1434,6 +1437,13 @@ void Project::emitFilters(const VSGenerator &g) const
             if (d == &bd)
             {
                 s = &d1.first;
+                break;
+            }
+
+            if (d == &bdparent)
+            {
+                s = &d1.first;
+                bdir_parent = true;
                 break;
             }
         }
@@ -1451,7 +1461,15 @@ void Project::emitFilters(const VSGenerator &g) const
 
             if (s)
             {
-                if (!bdir_private)
+                if (bdir_parent)
+                {
+                    auto v = r;
+                    r = "Generated Files";
+                    r /= (*s)["os"]["arch"].getValue();
+                    r /= get_configuration(*s);
+                    r /= "Other" / v;
+                }
+                else if (!bdir_private)
                 {
                     auto v = r;
                     r = "Generated Files";
