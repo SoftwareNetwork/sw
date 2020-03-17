@@ -215,7 +215,7 @@ std::pair<sw::SourceDirMap, std::vector<sw::Input*>> SwClientContext::fetch(sw::
 
 std::pair<sw::SourceDirMap, std::vector<sw::Input*>> SwClientContext::fetch()
 {
-    return fetch(*getContext().createBuild());
+    return fetch(*createBuild());
 }
 
 SUBCOMMAND_DECL(fetch)
