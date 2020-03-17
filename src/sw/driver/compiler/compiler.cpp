@@ -323,8 +323,11 @@ void ClangCompiler::prepareCommand1(const ::sw::Target &t)
 
     // not available for msvc triple
     // must be enabled on per target basis (when shared lib is built)?
-    if (t.getBuildSettings().TargetOS.is(OSType::Windows))
+    if (t.getBuildSettings().TargetOS.is(OSType::Windows) ||
+        t.getBuildSettings().TargetOS.is(OSType::Mingw))
+    {
         PositionIndependentCode = false;
+    }
 
     add_args(*cmd, getCStdOption(CStandard(), dynamic_cast<const NativeCompiledTarget&>(t).CExtensions));
     CStandard.skip = true;
