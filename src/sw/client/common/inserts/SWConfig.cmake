@@ -12,7 +12,7 @@
 
 # increase this variable when file is changed
 # and you need user to call 'sw setup' again to update this file
-set(SW_CMAKE_VERSION 1)
+set(SW_CMAKE_VERSION 2)
 
 ########################################
 # general settings
@@ -130,11 +130,12 @@ function(sw_execute)
     endif()
 
     set(compiler)
-    if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+    string(TOUPPER "${CMAKE_CXX_COMPILER_ID}" compiler)
+    if ("${compiler}" STREQUAL "MSVC")
         set(compiler -compiler msvc)
-    elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+    elseif ("${compiler}" STREQUAL "GNU")
         set(compiler -compiler gcc)
-    elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "CLANG")
+    elseif ("${compiler}" STREQUAL "CLANG")
         set(compiler -compiler clang)
     else()
         # https://cmake.org/cmake/help/latest/variable/CMAKE_LANG_COMPILER_ID.html
