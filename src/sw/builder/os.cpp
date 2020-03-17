@@ -196,6 +196,7 @@ String OS::getStaticLibraryExtension() const
     switch (Type)
     {
     case OSType::Windows:
+    case OSType::Mingw:
         return ".lib";
     default:
         return ".a";
