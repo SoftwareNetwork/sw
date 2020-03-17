@@ -72,6 +72,14 @@ static String toCmakeString(sw::ConfigurationType t)
     }
 }
 
+static String toCmakeStringCapital(sw::ConfigurationType t)
+{
+    auto s = toCmakeString(t);
+    boost::to_lower(s);
+    s[0] = toupper(s[0]);
+    return s;
+}
+
 static String pkg2string(const String &p)
 {
     return boost::to_lower_copy(p);
@@ -165,7 +173,7 @@ SUBCOMMAND_DECL(integrate)
     if (!getOptions().options_integrate.integrate_cmake_deps.empty())
     {
         if (getOptions().options_integrate.cmake_file_version < getSwCmakeConfigVersion())
-            throw SW_RUNTIME_ERROR("Outdated cmake integration file. Run 'sw setup' to update it.");
+            throw SW_RUNTIME_ERROR("Old cmake integration file detected. Run 'sw setup' to upgrade it.");
 
         const Strings configs
         {
@@ -223,47 +231,49 @@ SUBCOMMAND_DECL(integrate)
                 const auto &s = tgt->getInterfaceSettings();
                 sw::BuildSettings bs(tgt->getSettings());
 
-                ctx.addLine("set_property(TARGET " + pkg2string(pkg) + " APPEND PROPERTY IMPORTED_CONFIGURATIONS " +
-                    toCmakeString(bs.Native.ConfigurationType) + ")");
-
-                // props
-                ctx.increaseIndent("set_target_properties(" + pkg2string(pkg) + " PROPERTIES");
+                auto cmake_cfg = "$<$<CONFIG:" + toCmakeStringCapital(bs.Native.ConfigurationType) + ">: \"";
+                auto cmake_cfg_end = "\" >";
 
                 // defs
-                String defs;
-                defs += "\"";
+                ctx.increaseIndent("target_compile_definitions(" + pkg2string(pkg) + " INTERFACE");
                 for (auto &[k,v] : s["definitions"].getSettings())
                 {
+                    ctx.addLine(cmake_cfg);
                     if (v.getValue().empty())
-                        defs += k + ";";
+                        ctx.addText(k);
                     else
-                        defs += k + "=" + primitives::command::Argument::quote(v.getValue(), primitives::command::QuoteType::Escape) + ";";
+                        ctx.addText(k + "=" + primitives::command::Argument::quote(v.getValue(), primitives::command::QuoteType::Escape));
+                    ctx.addText(cmake_cfg_end);
                 }
-                defs += "\"";
-                ctx.addLine("INTERFACE_COMPILE_DEFINITIONS_" + toCmakeString(bs.Native.ConfigurationType) + " " + defs);
+                ctx.decreaseIndent(")");
+                ctx.emptyLines();
 
                 // idirs
-                String idirs;
-                idirs += "\"";
+                ctx.increaseIndent("target_include_directories(" + pkg2string(pkg) + " INTERFACE");
                 for (auto &d : s["include_directories"].getArray())
-                    idirs += fix_path(std::get<sw::TargetSetting::Value>(d)) + ";";
-                idirs += "\"";
-                ctx.addLine("INTERFACE_INCLUDE_DIRECTORIES_" + toCmakeString(bs.Native.ConfigurationType) + " " + idirs);
+                    ctx.addLine(cmake_cfg + fix_path(std::get<sw::TargetSetting::Value>(d)) + cmake_cfg_end);
+                ctx.decreaseIndent(")");
+                ctx.emptyLines();
 
                 if (s["header_only"] != "true")
                 {
                     // libs
-                    String libs;
-                    libs += "\"";
+                    ctx.increaseIndent("target_link_libraries(" + pkg2string(pkg) + " INTERFACE");
                     for (auto &d : s["link_libraries"].getArray())
-                        libs += fix_path(std::get<sw::TargetSetting::Value>(d)) + ";";
+                        ctx.addLine(cmake_cfg + fix_path(std::get<sw::TargetSetting::Value>(d)) + cmake_cfg_end);
                     for (auto &d : s["system_link_libraries"].getArray())
-                        libs += std::get<sw::TargetSetting::Value>(d) + ";";
-                    libs += "\"";
-                    ctx.addLine("INTERFACE_LINK_LIBRARIES_" + toCmakeString(bs.Native.ConfigurationType) + " " + libs);
+                        ctx.addLine(cmake_cfg + fix_path(std::get<sw::TargetSetting::Value>(d)) + cmake_cfg_end);
+                    ctx.decreaseIndent(")");
+                    ctx.emptyLines();
+
+                    // not needed?
+                    ctx.addLine("set_property(TARGET " + pkg2string(pkg) + " APPEND PROPERTY IMPORTED_CONFIGURATIONS " +
+                        toCmakeString(bs.Native.ConfigurationType) + ")");
+                    // props
+                    ctx.increaseIndent("set_target_properties(" + pkg2string(pkg) + " PROPERTIES");
 
                     // TODO: detect C/CXX language from target files
-                    ctx.addLine("IMPORTED_LINK_INTERFACE_LANGUAGES_" + toCmakeString(bs.Native.ConfigurationType) + " \"CXX\"");
+                    //ctx.addLine("IMPORTED_LINK_INTERFACE_LANGUAGES_" + toCmakeString(bs.Native.ConfigurationType) + " \"CXX\"");
 
                     // IMPORTED_LOCATION = path to .dll/.so or static .lib/.a
                     ctx.addLine("IMPORTED_LOCATION_" + toCmakeString(bs.Native.ConfigurationType) + " \"" +
@@ -271,11 +281,10 @@ SUBCOMMAND_DECL(integrate)
                     // IMPORTED_IMPLIB = path to .lib (import)
                     ctx.addLine("IMPORTED_IMPLIB_" + toCmakeString(bs.Native.ConfigurationType) + " \"" +
                         fix_path(normalize_path(s["import_library"].getValue())) + "\"");
-                }
 
-                ctx.decreaseIndent(")");
-                ctx.emptyLines();
-                //
+                    ctx.decreaseIndent(")");
+                    ctx.emptyLines();
+                }
             }
             //
 
