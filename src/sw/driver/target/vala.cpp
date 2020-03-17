@@ -40,7 +40,7 @@ void ValaBase::init()
 {
     auto &t = dynamic_cast<NativeCompiledTarget &>(*this);
 
-    t.add(CallbackType::CreateTargetInitialized, [&t]()
+    t.add(CallbackType::CreateTargetInitialized, [this, &t]()
     {
         if (t.getType() == TargetType::NativeSharedLibrary)
             t.ExportAllSymbols = true;
@@ -59,16 +59,18 @@ void ValaBase::init()
                 .push_back(normalize_path(t.BinaryDir.parent_path() / "obj" / t.getPackage().toString() += ".vapi"));
             t.Interface.IncludeDirectories.push_back(t.BinaryDir.parent_path() / "obj");
         }
-    });
 
-    d = "org.sw.demo.gnome.vala.compiler"_dep;
-    d->getSettings() = t.getSettings();
-    // glib+gobject currently do not work in other configs
-    d->getSettings()["native"]["library"] = "shared";
-    d->getSettings()["native"]["configuration"] = "debug";
-    t.setExtensionProgram(".vala", d);
-    //t += "org.sw.demo.gnome.glib.glib"_dep;
-    t += "org.sw.demo.gnome.glib.gobject"_dep;
+        // must add only after native target init
+        // because of unresolved native programs before that
+        d = "org.sw.demo.gnome.vala.compiler"_dep;
+        d->getSettings() = t.getSettings();
+        // glib+gobject currently do not work in other configs
+        d->getSettings()["native"]["library"] = "shared";
+        d->getSettings()["native"]["configuration"] = "debug";
+        t.setExtensionProgram(".vala", d);
+        //t += "org.sw.demo.gnome.glib.glib"_dep;
+        t += "org.sw.demo.gnome.glib.gobject"_dep;
+    });
 }
 
 void ValaBase::prepare()
