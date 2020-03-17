@@ -2327,6 +2327,21 @@ void NativeCompiledTarget::prepare_pass1()
         }
     }
 
+    // mingw system link libraries must be specified without explicit .lib suffix
+    if (getBuildSettings().TargetOS.Type == OSType::Mingw)
+    {
+        TargetOptionsGroup::iterate([this](auto &v, auto i)
+        {
+            for (auto &l : v.NativeLinkerOptions::System.LinkLibraries)
+            {
+                if (!l.parent_path().empty())
+                    l = l.parent_path() / l.stem();
+                else
+                    l = l.stem();
+            }
+        });
+    }
+
     // default export/import macros
     // public to make sure integrations also take these
     if (getBuildSettings().TargetOS.Type == OSType::Windows)
