@@ -215,13 +215,16 @@ SUBCOMMAND_DECL(integrate)
             if (s["header_only"] == "true")
                 st = "INTERFACE";
             ctx.addLine("add_library(" + pkg2string(pkg) + " " + st + " IMPORTED GLOBAL)");
+            ctx.emptyLines();
 
             // imported configs
             for (auto &tgt : tgts)
             {
                 const auto &s = tgt->getInterfaceSettings();
-
                 sw::BuildSettings bs(tgt->getSettings());
+
+                ctx.addLine("set_property(TARGET " + pkg2string(pkg) + " APPEND PROPERTY IMPORTED_CONFIGURATIONS " +
+                    toCmakeString(bs.Native.ConfigurationType) + ")");
 
                 // props
                 ctx.increaseIndent("set_target_properties(" + pkg2string(pkg) + " PROPERTIES");
@@ -258,33 +261,21 @@ SUBCOMMAND_DECL(integrate)
                         libs += std::get<sw::TargetSetting::Value>(d) + ";";
                     libs += "\"";
                     ctx.addLine("INTERFACE_LINK_LIBRARIES_" + toCmakeString(bs.Native.ConfigurationType) + " " + libs);
+
+                    // TODO: detect C/CXX language from target files
+                    ctx.addLine("IMPORTED_LINK_INTERFACE_LANGUAGES_" + toCmakeString(bs.Native.ConfigurationType) + " \"CXX\"");
+
+                    // IMPORTED_LOCATION = path to .dll/.so or static .lib/.a
+                    ctx.addLine("IMPORTED_LOCATION_" + toCmakeString(bs.Native.ConfigurationType) + " \"" +
+                        fix_path(normalize_path(s[st == "SHARED" ? "output_file" : "import_library"].getValue())) + "\"");
+                    // IMPORTED_IMPLIB = path to .lib (import)
+                    ctx.addLine("IMPORTED_IMPLIB_" + toCmakeString(bs.Native.ConfigurationType) + " \"" +
+                        fix_path(normalize_path(s["import_library"].getValue())) + "\"");
                 }
 
                 ctx.decreaseIndent(")");
                 ctx.emptyLines();
                 //
-
-                if (s["header_only"] == "true")
-                    continue;
-
-                ctx.addLine("set_property(TARGET " + pkg2string(pkg) + " APPEND PROPERTY IMPORTED_CONFIGURATIONS " +
-                    toCmakeString(bs.Native.ConfigurationType) + ")");
-
-                // props2
-                ctx.increaseIndent("set_target_properties(" + pkg2string(pkg) + " PROPERTIES");
-
-                // TODO: detect C/CXX language from target files
-                ctx.addLine("IMPORTED_LINK_INTERFACE_LANGUAGES_" + toCmakeString(bs.Native.ConfigurationType) + " \"CXX\"");
-
-                // IMPORTED_LOCATION = path to .dll/.so or static .lib/.a
-                ctx.addLine("IMPORTED_LOCATION_" + toCmakeString(bs.Native.ConfigurationType) + " \"" +
-                    fix_path(normalize_path(s[st == "SHARED" ? "output_file" : "import_library"].getValue())) + "\"");
-                // IMPORTED_IMPLIB = path to .lib (import)
-                ctx.addLine("IMPORTED_IMPLIB_" + toCmakeString(bs.Native.ConfigurationType) + " \"" +
-                    fix_path(normalize_path(s["import_library"].getValue())) + "\"");
-
-                ctx.decreaseIndent(")");
-                ctx.emptyLines();
             }
             //
 
