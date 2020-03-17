@@ -270,18 +270,24 @@ static std::pair<FilesOrdered, UnresolvedPackages> getFileDependencies(const SwC
 
 std::vector<ITargetPtr> NativeTargetEntryPoint::loadPackages(SwBuild &swb, const TargetSettings &s, const PackageIdSet &pkgs, const PackagePath &prefix) const
 {
-    Build b(swb);
-
     // we need to fix some settings before they go to targets
     auto settings = s;
 
-    b.DryRun = settings["driver"]["dry-run"] == "true";
+    if (!dd)
+        dd = std::make_unique<DriverData>();
+
     for (auto &[h, d] : settings["driver"]["source-dir-for-source"].getSettings())
-        b.source_dirs_by_source[h].requested_dir = d.getValue();
+        dd->source_dirs_by_source[h].requested_dir = d.getValue();
     for (auto &[pkg, p] : settings["driver"]["source-dir-for-package"].getSettings())
-        b.source_dirs_by_package[pkg] = p.getValue();
+        dd->source_dirs_by_package[pkg] = p.getValue();
     if (settings["driver"]["force-source"].isValue())
-        b.force_source = load(nlohmann::json::parse(settings["driver"]["force-source"].getValue()));
+        dd->force_source = load(nlohmann::json::parse(settings["driver"]["force-source"].getValue()));
+
+    Build b(swb);
+    b.dd = dd.get();
+    // leave as b. setting
+    b.DryRun = settings["driver"]["dry-run"] == "true";
+
     //settings.erase("driver");
     settings["driver"].useInHash(false);
     settings["driver"].ignoreInComparison(true);

@@ -95,9 +95,12 @@ std::optional<path> Build::getSourceDir(const Source &s, const Version &v) const
 {
     auto s2 = s.clone();
     s2->applyVersion(v);
-    auto i = source_dirs_by_source.find(s2->getHash());
-    if (i != source_dirs_by_source.end())
-        return i->second.getRequestedDirectory();
+    if (dd)
+    {
+        auto i = dd->source_dirs_by_source.find(s2->getHash());
+        if (i != dd->source_dirs_by_source.end())
+            return i->second.getRequestedDirectory();
+    }
     return {};
 }
 

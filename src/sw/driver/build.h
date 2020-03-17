@@ -41,6 +41,13 @@ struct ModuleSwappableData
     std::vector<ITargetPtr> added_targets;
 };
 
+struct DriverData
+{
+    SourceDirMap source_dirs_by_source;
+    std::unordered_map<PackageId, path> source_dirs_by_package;
+    SourcePtr force_source;
+};
+
 struct SW_DRIVER_CPP_API Test : driver::CommandBuilder
 {
     using driver::CommandBuilder::CommandBuilder;
@@ -66,9 +73,7 @@ struct SW_DRIVER_CPP_API Build : SimpleBuild
     using Base = SimpleBuild;
 
     ModuleSwappableData module_data;
-    SourceDirMap source_dirs_by_source;
-    std::unordered_map<PackageId, path> source_dirs_by_package;
-    SourcePtr force_source;
+    DriverData *dd = nullptr;
     Checker checker;
 
     //

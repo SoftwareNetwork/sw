@@ -30,11 +30,13 @@ struct SharedLibraryTarget;
 struct Build;
 struct Checker;
 struct Module;
+struct DriverData;
 
 // this driver ep
 struct NativeTargetEntryPoint : TargetEntryPoint
 {
     path source_dir;
+    mutable std::unique_ptr<DriverData> dd;
 
     [[nodiscard]]
     std::vector<ITargetPtr> loadPackages(SwBuild &, const TargetSettings &, const PackageIdSet &pkgs, const PackagePath &prefix) const override;
