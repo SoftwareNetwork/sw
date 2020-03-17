@@ -613,7 +613,7 @@ bool SwBuild::prepareStep()
 {
     std::atomic_bool next_pass = false;
 
-    auto &e = getExecutor();
+    auto &e = getPrepareExecutor();
     Futures<void> fs;
     for (const auto &[pkg, tgts] : getTargets())
     {
@@ -657,7 +657,7 @@ void SwBuild::execute(ExecutionPlan &p) const
         p.setTimeLimit(parseTimeLimit(build_settings["time_limit"].getValue()));
 
     ScopedTime t;
-    p.execute(getExecutor());
+    p.execute(getBuildExecutor());
     if (build_settings["measure"] == "true")
         LOG_DEBUG(logger, BOOST_CURRENT_FUNCTION << " time: " << t.getTimeFloat() << " s.");
 
@@ -1081,13 +1081,22 @@ void SwBuild::setSettings(const TargetSettings &bs)
     build_settings = bs;
 
     if (build_settings["build-jobs"])
-        executor = std::make_unique<Executor>(std::stoi(build_settings["build-jobs"].getValue()));
+        build_executor = std::make_unique<Executor>(std::stoi(build_settings["build-jobs"].getValue()));
+    if (build_settings["prepare-jobs"])
+        prepare_executor = std::make_unique<Executor>(std::stoi(build_settings["prepare-jobs"].getValue()));
 }
 
-Executor &SwBuild::getExecutor() const
+Executor &SwBuild::getBuildExecutor() const
 {
-    if (executor)
-        return *executor;
+    if (build_executor)
+        return *build_executor;
+    return ::getExecutor();
+}
+
+Executor &SwBuild::getPrepareExecutor() const
+{
+    if (prepare_executor)
+        return *prepare_executor;
     return ::getExecutor();
 }
 
@@ -1181,7 +1190,7 @@ void SwBuild::test()
     }
 
     auto ep = getExecutionPlan(cmds);
-    ep.execute(getExecutor());
+    ep.execute(::getExecutor());
 }
 
 }

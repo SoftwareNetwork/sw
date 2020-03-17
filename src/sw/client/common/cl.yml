@@ -296,6 +296,10 @@ command_line:
                 option: j
                 desc: Number of main build jobs
                 type: int
+            prepare_jobs:
+                option: jp
+                desc: Number of main build prepare jobs
+                type: int
             global_jobs:
                 option: jg
                 desc: Global number of jobs
