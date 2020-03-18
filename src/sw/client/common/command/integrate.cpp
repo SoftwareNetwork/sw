@@ -196,10 +196,12 @@ SUBCOMMAND_DECL(integrate)
         ctx.emptyLines();
 
         // some vars
+        ctx.addLine("# variables");
         ctx.addLine("string(FIND \"${CMAKE_GENERATOR}\" \"Visual Studio\" found)");
         ctx.addLine("if (NOT ${found} EQUAL -1 OR XCODE)");
         ctx.addLine("    set(" + multiconf_gen_var + " 1)");
         ctx.addLine("endif()");
+        ctx.addLine();
 
         // targets
         ctx.addLine("# targets");
@@ -250,65 +252,121 @@ SUBCOMMAND_DECL(integrate)
                 const auto &s = tgt->getInterfaceSettings();
                 sw::BuildSettings bs(tgt->getSettings());
 
+                ctx.increaseIndent("if (" + multiconf_gen_var + ")");
+                auto &if_ctx = ctx.createInlineEmitter<CMakeEmitter>();
+                ctx.decreaseIndent();
+                ctx.addLine("else()");
+                ctx.increaseIndent();
+                auto &else_ctx = ctx.createInlineEmitter<CMakeEmitter>();
+                ctx.decreaseIndent("endif()");
+                ctx.emptyLines();
+
                 // gen.exprs (CONFIG) are available only for multi-config generators
                 // they are vs and xcode at the moment
 
                 auto cmake_cfg = "$<$<CONFIG:" + toCmakeStringCapital(bs.Native.ConfigurationType) + ">: \"";
                 auto cmake_cfg_end = "\" >";
 
-                // defs
-                ctx.increaseIndent("if (" + multiconf_gen_var + ")");
-                ctx.increaseIndent("target_compile_definitions(" + pkg2string(pkg) + " INTERFACE");
-                for (auto &[k,v] : s["definitions"].getSettings())
+                // if_ctx
                 {
-                    ctx.addLine(cmake_cfg);
-                    if (v.getValue().empty())
-                        ctx.addText(k);
-                    else
-                        ctx.addText(k + "=" + primitives::command::Argument::quote(v.getValue(), primitives::command::QuoteType::Escape));
-                    ctx.addText(cmake_cfg_end);
+                    // defs
+                    if_ctx.increaseIndent("target_compile_definitions(" + pkg2string(pkg) + " INTERFACE");
+                    for (auto &[k, v] : s["definitions"].getSettings())
+                    {
+                        if_ctx.addLine(cmake_cfg);
+                        if (v.getValue().empty())
+                            if_ctx.addText(k);
+                        else
+                            if_ctx.addText(k + "=" + primitives::command::Argument::quote(v.getValue(), primitives::command::QuoteType::Escape));
+                        if_ctx.addText(cmake_cfg_end);
+                    }
+                    if_ctx.decreaseIndent(")");
+                    if_ctx.emptyLines();
+
+                    // idirs
+                    if_ctx.increaseIndent("target_include_directories(" + pkg2string(pkg) + " INTERFACE");
+                    for (auto &d : s["include_directories"].getArray())
+                        if_ctx.addLine(cmake_cfg + fix_path(std::get<sw::TargetSetting::Value>(d)) + cmake_cfg_end);
+                    if_ctx.decreaseIndent(")");
+                    if_ctx.emptyLines();
                 }
-                ctx.decreaseIndent(")");
-                ctx.emptyLines();
 
-                // idirs
-                ctx.increaseIndent("target_include_directories(" + pkg2string(pkg) + " INTERFACE");
-                for (auto &d : s["include_directories"].getArray())
-                    ctx.addLine(cmake_cfg + fix_path(std::get<sw::TargetSetting::Value>(d)) + cmake_cfg_end);
-                ctx.decreaseIndent(")");
+                // else_ctx
+                {
+                    // defs
+                    String defs;
+                    defs += "\"";
+                    for (auto &[k, v] : s["definitions"].getSettings())
+                    {
+                        if (v.getValue().empty())
+                            defs += k + ";";
+                        else
+                            defs += k + "=" + primitives::command::Argument::quote(v.getValue(), primitives::command::QuoteType::Escape) + ";";
+                    }
+                    defs += "\"";
+                    else_ctx.increaseIndent("set_target_properties(" + pkg2string(pkg) + " PROPERTIES");
+                    else_ctx.addLine("INTERFACE_COMPILE_DEFINITIONS " + defs);
+                    else_ctx.decreaseIndent(")");
+                    else_ctx.emptyLines();
+
+                    // idirs
+                    String idirs;
+                    idirs += "\"";
+                    for (auto &d : s["include_directories"].getArray())
+                        idirs += fix_path(std::get<sw::TargetSetting::Value>(d)) + ";";
+                    idirs += "\"";
+                    else_ctx.increaseIndent("set_target_properties(" + pkg2string(pkg) + " PROPERTIES");
+                    else_ctx.addLine("INTERFACE_INCLUDE_DIRECTORIES " + idirs);
+                    else_ctx.decreaseIndent(")");
+                    else_ctx.emptyLines();
+                }
+
                 if (s["header_only"] == "true")
-                    ctx.decreaseIndent("endif()");
-                ctx.emptyLines();
+                    continue;
 
-                if (s["header_only"] != "true")
+                // if_ctx
                 {
                     // libs
-                    ctx.increaseIndent("target_link_libraries(" + pkg2string(pkg) + " INTERFACE");
+                    if_ctx.increaseIndent("target_link_libraries(" + pkg2string(pkg) + " INTERFACE");
                     for (auto &d : s["link_libraries"].getArray())
-                        ctx.addLine(cmake_cfg + fix_path(std::get<sw::TargetSetting::Value>(d)) + cmake_cfg_end);
+                        if_ctx.addLine(cmake_cfg + fix_path(std::get<sw::TargetSetting::Value>(d)) + cmake_cfg_end);
                     for (auto &d : s["system_link_libraries"].getArray())
-                        ctx.addLine(cmake_cfg + fix_path(std::get<sw::TargetSetting::Value>(d)) + cmake_cfg_end);
-                    ctx.decreaseIndent(")");
-                    ctx.decreaseIndent("endif()");
-                    ctx.emptyLines();
-
-                    // props
-                    ctx.increaseIndent("set_target_properties(" + pkg2string(pkg) + " PROPERTIES");
-
-                    // TODO: detect C/CXX language from target files
-                    // not needed?
-                    ctx.addLine("IMPORTED_LINK_INTERFACE_LANGUAGES_" + toCmakeString(bs.Native.ConfigurationType) + " \"C CXX\"");
-
-                    // IMPORTED_LOCATION = path to .dll/.so or static .lib/.a
-                    ctx.addLine("IMPORTED_LOCATION_" + toCmakeString(bs.Native.ConfigurationType) + " \"" +
-                        fix_path(normalize_path(s[st == "SHARED" ? "output_file" : "import_library"].getValue())) + "\"");
-                    // IMPORTED_IMPLIB = path to .lib (import)
-                    ctx.addLine("IMPORTED_IMPLIB_" + toCmakeString(bs.Native.ConfigurationType) + " \"" +
-                        fix_path(normalize_path(s["import_library"].getValue())) + "\"");
-
-                    ctx.decreaseIndent(")");
-                    ctx.emptyLines();
+                        if_ctx.addLine(cmake_cfg + fix_path(std::get<sw::TargetSetting::Value>(d)) + cmake_cfg_end);
+                    if_ctx.decreaseIndent(")");
+                    if_ctx.emptyLines();
                 }
+
+                // else_ctx
+                {
+                    // libs
+                    String libs;
+                    libs += "\"";
+                    for (auto &d : s["link_libraries"].getArray())
+                        libs += fix_path(std::get<sw::TargetSetting::Value>(d)) + ";";
+                    for (auto &d : s["system_link_libraries"].getArray())
+                        libs += std::get<sw::TargetSetting::Value>(d) + ";";
+                    libs += "\"";
+                    else_ctx.increaseIndent("set_target_properties(" + pkg2string(pkg) + " PROPERTIES");
+                    else_ctx.addLine("INTERFACE_LINK_LIBRARIES " + libs);
+                    else_ctx.decreaseIndent(")");
+                }
+
+                // props
+                ctx.increaseIndent("set_target_properties(" + pkg2string(pkg) + " PROPERTIES");
+
+                // TODO: detect C/CXX language from target files
+                // not needed?
+                ctx.addLine("IMPORTED_LINK_INTERFACE_LANGUAGES_" + toCmakeString(bs.Native.ConfigurationType) + " \"C CXX\"");
+
+                // IMPORTED_LOCATION = path to .dll/.so or static .lib/.a
+                ctx.addLine("IMPORTED_LOCATION_" + toCmakeString(bs.Native.ConfigurationType) + " \"" +
+                    fix_path(normalize_path(s[st == "SHARED" ? "output_file" : "import_library"].getValue())) + "\"");
+                // IMPORTED_IMPLIB = path to .lib (import)
+                ctx.addLine("IMPORTED_IMPLIB_" + toCmakeString(bs.Native.ConfigurationType) + " \"" +
+                    fix_path(normalize_path(s["import_library"].getValue())) + "\"");
+
+                ctx.decreaseIndent(")");
+                ctx.emptyLines();
             }
             //
 
