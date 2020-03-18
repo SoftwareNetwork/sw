@@ -104,6 +104,12 @@ function(sw_execute)
         set(platform x86)
     endif()
 
+    set(SW_MULTI_CONFIG_GENERATOR 0)
+    string(FIND "${CMAKE_GENERATOR}" "Visual Studio" found)
+    if (NOT ${found} EQUAL -1 OR XCODE)
+        set(SW_MULTI_CONFIG_GENERATOR 1)
+    endif()
+
     set(mt_flag)
     if (MSVC)
         sw_internal_find_flag("${CMAKE_C_FLAGS_RELEASE}"              /MT       C_MTR        )
@@ -142,6 +148,23 @@ function(sw_execute)
         message(FATAL_ERROR "Compiler is not implemented: '${CMAKE_C_COMPILER_ID}' or '${CMAKE_CXX_COMPILER_ID}'")
     endif()
 
+    set(extendedcfg -config d)
+    if (SW_MULTI_CONFIG_GENERATOR)
+        set(extendedcfg -config d,msr,rwdi,r)
+    elseif (CMAKE_BUILD_TYPE)
+        if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
+            set(extendedcfg -config d)
+        elseif ("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
+            set(extendedcfg -config r)
+        elseif ("${CMAKE_BUILD_TYPE}" STREQUAL "RelWithDebInfo")
+            set(extendedcfg -config rwdi)
+        elseif ("${CMAKE_BUILD_TYPE}" STREQUAL "MinSizeRel")
+            set(extendedcfg -config msr)
+        else()
+            message(FATAL_ERROR "CMAKE_BUILD_TYPE is not implemented: '${CMAKE_BUILD_TYPE}'")
+        endif()
+    endif()
+
     set(wdir "${SW_DEPS_DIR}")
     sw_internal_fix_path(wdir)
 
@@ -160,6 +183,7 @@ function(sw_execute)
     set(swcmd
         ${SW_EXECUTABLE}
             ${sw_platform_args}
+            ${extendedcfg}
             ${SW_FORCE}
             integrate
             -cmake-deps "${depsfile}"
@@ -188,15 +212,7 @@ function(sw_execute)
         set(outdir "${CMAKE_BINARY_DIR}")
     endif()
 
-    set(append_config 0)
-    string(FIND "${CMAKE_GENERATOR}" "Visual Studio" found)
-    if (NOT ${found} EQUAL -1)
-        set(append_config 1)
-    endif()
-    if (XCODE)
-        set(append_config 1)
-    endif()
-    if (append_config)
+    if (SW_MULTI_CONFIG_GENERATOR)
         set(cfg "$<CONFIG>")
         set(extendedcfg
                 -config
