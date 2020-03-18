@@ -12,7 +12,7 @@
 
 # increase this variable when file is changed
 # and you need user to call 'sw setup' again to update this file
-set(SW_CMAKE_VERSION 3)
+set(SW_CMAKE_VERSION 4)
 
 ########################################
 # general settings
@@ -146,6 +146,28 @@ function(sw_execute)
     else()
         # https://cmake.org/cmake/help/latest/variable/CMAKE_LANG_COMPILER_ID.html
         message(FATAL_ERROR "Compiler is not implemented: '${CMAKE_C_COMPILER_ID}' or '${CMAKE_CXX_COMPILER_ID}'")
+    endif()
+    if (CMAKE_CXX_COMPILER_VERSION)
+        # 3 numbers do not always match sw version
+        # this because of preview versions of compiler
+        # cl.exe:
+        #     19.26       < 19.26.99999-preview
+        # but 19.26.99999 > 19.26.99999-preview
+        #string(REGEX MATCH "[0-9]+\\.[0-9]+\\.[0-9]+" v "${CMAKE_CXX_COMPILER_VERSION}")
+        string(REGEX MATCH "[0-9]+\\.[0-9]+" v "${CMAKE_CXX_COMPILER_VERSION}")
+        if (v)
+            set(compiler ${compiler}-${v})
+        else()
+            string(REGEX MATCH "[0-9]+\\.[0-9]+" v "${CMAKE_CXX_COMPILER_VERSION}")
+            if (v)
+                set(compiler ${compiler}-${v})
+            else()
+                string(REGEX MATCH "[0-9]+" v "${CMAKE_CXX_COMPILER_VERSION}")
+                if (v)
+                    set(compiler ${compiler}-${v})
+                endif()
+            endif()
+        endif()
     endif()
 
     set(extendedcfg -config d)
