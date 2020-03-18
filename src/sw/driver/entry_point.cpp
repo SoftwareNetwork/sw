@@ -638,10 +638,8 @@ bool PrepareConfigEntryPoint::isOutdated() const
     size_t t = 0;
     hash_combine(t, get_lwt(boost::dll::program_location()));
 
-    for (auto &f : pkg_files_)
-        hash_combine(t, get_lwt(f));
-    for (auto &f : FilesSorted(files_.begin(), files_.end()))
-        hash_combine(t, get_lwt(f));
+    for (auto &i : inputs)
+        hash_combine(t, get_lwt(i->getPath()));
 
     if (!out.empty())
     {

@@ -60,10 +60,7 @@ struct PrepareConfigEntryPoint : NativeTargetEntryPoint
     bool isOutdated() const;
 
 private:
-    mutable Files files_;
     const std::set<Input *> &inputs;
-
-    mutable FilesSorted pkg_files_;
     mutable path driver_idir;
     mutable std::set<SharedLibraryTarget *> targets;
 
