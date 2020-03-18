@@ -92,7 +92,7 @@ F(build)
 
     // simple protection for now
     if (p.getPath().isRelative() || p.getPath().getOwner() != "sw")
-        return;
+        throw SW_RUNTIME_ERROR("Insecure operation. Aborting...");
 
     swctx.getContext().install(sw::UnresolvedPackages{ p });
     auto d = swctx.getContext().getLocalStorage().storage_dir_tmp / "build" / unique_path();
@@ -118,7 +118,7 @@ F(run)
 
     // simple protection for now
     if (p.getPath().isRelative() || p.getPath().getOwner() != "sw")
-        return;
+        throw SW_RUNTIME_ERROR("Insecure operation. Aborting...");
 
     swctx.getContext().install(sw::UnresolvedPackages{ p });
     auto d = swctx.getContext().getLocalStorage().storage_dir_tmp / "build" / unique_path();
