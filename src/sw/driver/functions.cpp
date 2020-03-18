@@ -99,12 +99,6 @@ void pushFrontToFileOnce(const path &fn, const String &text, const path &lock_di
     if (fs::exists(hfn))
         return;
 
-    const auto orig = lock_dir / (hf + ".orig");
-    if (!fs::exists(orig))
-        fs::copy_file(fn, orig, fs::copy_options::overwrite_existing);
-    else
-        fs::copy_file(orig, fn, fs::copy_options::overwrite_existing);
-
     auto s = read_file(fn);
     s = text + "\n" + s;
     write_file_if_different(fn, s);
@@ -128,12 +122,6 @@ void pushBackToFileOnce(const path &fn, const String &text, const path &lock_dir
     // double check
     if (fs::exists(hfn))
         return;
-
-    const auto orig = lock_dir / (hf + ".orig");
-    if (!fs::exists(orig))
-        fs::copy_file(fn, orig, fs::copy_options::overwrite_existing);
-    else
-        fs::copy_file(orig, fn, fs::copy_options::overwrite_existing);
 
     auto s = read_file(fn);
     s = s + "\n" + text;
