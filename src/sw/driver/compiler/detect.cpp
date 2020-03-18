@@ -1073,14 +1073,25 @@ void addSettingsAndSetPrograms(const SwCoreContext &swctx, TargetSettings &ts)
             return true;
         };
 
-        // try clang first
-        check_and_assign_dependency(ts["native"]["program"]["c"], "org.LLVM.clang"s);
-        check_and_assign_dependency(ts["native"]["program"]["cpp"], "org.LLVM.clangpp"s);
-        //if (getHostOs().is(OSType::Linux))
-        //ts["native"]["stdlib"]["cpp"] = to_upkg("org.sw.demo.llvm_project.libcxx");
+        auto try_clang = [&check_and_assign_dependency, &ts]()
+        {
+            check_and_assign_dependency(ts["native"]["program"]["c"], "org.LLVM.clang"s);
+            check_and_assign_dependency(ts["native"]["program"]["cpp"], "org.LLVM.clangpp"s);
+            //if (getHostOs().is(OSType::Linux))
+            //ts["native"]["stdlib"]["cpp"] = to_upkg("org.sw.demo.llvm_project.libcxx");
+        };
 
-        check_and_assign_dependency(ts["native"]["program"]["c"], "org.gnu.gcc"s);
-        check_and_assign_dependency(ts["native"]["program"]["cpp"], "org.gnu.gpp"s);
+        auto try_gcc = [&check_and_assign_dependency, &ts]()
+        {
+            check_and_assign_dependency(ts["native"]["program"]["c"], "org.gnu.gcc"s);
+            check_and_assign_dependency(ts["native"]["program"]["cpp"], "org.gnu.gpp"s);
+        };
+
+        if (bs.TargetOS.is(OSType::Mingw))
+            try_gcc();
+
+        try_clang();
+        try_gcc();
 
         // using c prog
         if (ts["native"]["program"]["c"].isValue())
