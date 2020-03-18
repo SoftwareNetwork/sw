@@ -2674,7 +2674,10 @@ void NativeCompiledTarget::prepare_pass5()
                 new_files.push_back(f2);
         }
         for (auto &f : new_files)
+        {
+            File(f->output, getFs()).setGenerated();
             *this += f->output;
+        }
         return !new_files.empty();
     };
 
