@@ -63,7 +63,7 @@ void ValaBase::init()
         // must add only after native target init
         // because of unresolved native programs before that
         d = "org.sw.demo.gnome.vala.compiler"_dep;
-        d->getSettings() = t.getSettings();
+        //d->getSettings() = t.getSettings();
         // glib+gobject currently do not work in other configs
         d->getSettings()["native"]["library"] = "shared";
         d->getSettings()["native"]["configuration"] = "debug";
