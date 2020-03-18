@@ -26,6 +26,7 @@
 
 #include <sw/core/sw_context.h>
 #include <sw/core/input_database.h>
+#include <sw/core/input.h>
 #include <sw/manager/storage.h>
 
 #include <boost/dll.hpp>
@@ -371,35 +372,37 @@ static void addDeps(Build &solution, NativeCompiledTarget &lib)
     //d->GenerateCommandsBefore = true;
 }
 
-PrepareConfigEntryPoint::PrepareConfigEntryPoint(const std::unordered_set<LocalPackage> &pkgs)
-    : pkgs_(pkgs)
-{}
-
-PrepareConfigEntryPoint::PrepareConfigEntryPoint(const Files &files)
-    : files_(files)
+PrepareConfigEntryPoint::PrepareConfigEntryPoint(const std::set<Input *> &inputs)
+    : inputs(inputs)
 {}
 
 void PrepareConfigEntryPoint::loadPackages1(Build &b) const
 {
-    if (files_.empty())
-        many2one(b, pkgs_);
-    else
-        many2many(b, files_);
+    many2many(b, inputs);
 }
 
-SharedLibraryTarget &PrepareConfigEntryPoint::createTarget(Build &b, const FilesSorted &files) const
+SharedLibraryTarget &PrepareConfigEntryPoint::createTarget(Build &b, const Input &i) const
 {
     struct ConfigSharedLibraryTarget : SharedLibraryTarget
     {
-        ConfigSharedLibraryTarget(const PrepareConfigEntryPoint &ep, const FilesSorted &files, const path &storage_dir)
-            : ep(ep)
+        ConfigSharedLibraryTarget(const PrepareConfigEntryPoint &ep, const Input &i, const path &storage_dir)
+            : ep(ep), i(i)
         {
             IsSwConfig = true;
-            IsSwConfigLocal = files.size() == 1 && !is_under_root(*files.begin(), storage_dir);
+            IsSwConfigLocal = !is_under_root(i.getPath(), storage_dir);
         }
 
     private:
         const PrepareConfigEntryPoint &ep;
+        const Input &i;
+
+        std::shared_ptr<builder::Command> getCommand() const override
+        {
+            auto c = SharedLibraryTarget::getCommand();
+            if (auto [pkgs, prefix] = i.getPackages(); !pkgs.empty())
+                c->name = "[" + pkgs.begin()->toString() + "]/[config]" + getSelectedTool()->Extension;
+            return c;
+        }
 
         Commands getCommands() const override
         {
@@ -434,19 +437,20 @@ SharedLibraryTarget &PrepareConfigEntryPoint::createTarget(Build &b, const Files
         }
     };
 
-    auto name = getSelfTargetName(files);
-    auto &lib = b.addTarget<ConfigSharedLibraryTarget>(name, "local", *this, files, b.getContext().getLocalStorage().storage_dir);
+    auto name = getSelfTargetName({ i.getPath() });
+    auto &lib = b.addTarget<ConfigSharedLibraryTarget>(name, "local", *this, i, b.getContext().getLocalStorage().storage_dir);
     tgt = lib.getPackage();
     targets.insert(&lib);
     return lib;
 }
 
-decltype(auto) PrepareConfigEntryPoint::commonActions(Build &b, const FilesSorted &files, const UnresolvedPackages &deps) const
+decltype(auto) PrepareConfigEntryPoint::commonActions(Build &b, const Input &i, const UnresolvedPackages &deps) const
 {
     // record udeps
     udeps = deps;
 
-    auto &lib = createTarget(b, files);
+    auto fn = i.getPath();
+    auto &lib = createTarget(b, i);
     lib.GenerateWindowsResource = false;
     lib.command_storage = &getDriverCommandStorage(b);
 
@@ -465,8 +469,9 @@ decltype(auto) PrepareConfigEntryPoint::commonActions(Build &b, const FilesSorte
         lib.LinkOptions.push_back("dynamic_lookup");
     }
 
-    for (auto &fn : files)
-        lib += fn;
+    lib += fn;
+    if (auto [pkgs, prefix] = i.getPackages(); !pkgs.empty())
+        lib[fn].fancy_name = "[" + pkgs.begin()->toString() + "]/[config]/" + fn.filename().string();
 
     if (lib.getCompilerType() == CompilerType::MSVC)
         lib.CompileOptions.push_back("/utf-8");
@@ -537,143 +542,22 @@ void PrepareConfigEntryPoint::commonActions2(Build &b, SharedLibraryTarget &lib)
 }
 
 // many input files to many dlls
-void PrepareConfigEntryPoint::many2many(Build &b, const Files &files) const
+void PrepareConfigEntryPoint::many2many(Build &b, const std::set<Input *> &inputs) const
 {
-    for (auto &fn : files)
+    for (auto &i : inputs)
     {
-        one2one(b, fn);
-        r[fn] = out;
+        one2one(b, *i);
+        r[i->getPath()] = out;
     }
-}
-
-// many input files into one dll
-void PrepareConfigEntryPoint::many2one(Build &b, const std::unordered_set<LocalPackage> &pkgs) const
-{
-    // make parallel?
-    //std::unordered_map<PackageVersionGroupNumber, path> gn_files;
-
-    SW_UNIMPLEMENTED;
-
-    /*struct data
-    {
-        LocalPackage pkg;
-        PackageVersionGroupNumber gn;
-        path p;
-    };
-
-    auto get_package_config = [&b](const LocalPackage &pkg) -> data
-    {
-        if (!pkg.getData().group_number)
-            throw SW_RUNTIME_ERROR("Missing group number");
-
-        SW_UNIMPLEMENTED;
-        //auto pkg2 = pkg.getGroupLeader();
-        //auto d = driver::cpp::findConfig(pkg2.getDirSrc2(), driver::cpp::Driver::getAvailableFrontendConfigFilenames());
-        //if (!d)
-            //throw SW_RUNTIME_ERROR("cannot find config for package " + pkg.toString() + " in dir " + normalize_path(pkg2.getDirSrc2()));
-        //return data{ {b.getSolution().getContext().getLocalStorage(), pkg2}, pkg.getData().group_number, *d };
-    };
-
-    // ordered map!
-    std::map<path, data> output_names;
-    for (auto &pkg : pkgs)
-    {
-        auto p = get_package_config(pkg);
-        pkg_files_.insert(p.p);
-        output_names.emplace(p.p, p);
-    }
-
-    UnresolvedPackages udeps2;
-    std::unordered_map<path, std::pair<FilesOrdered, UnresolvedPackages>> output_names_info;
-    for (auto &[fn, d] : output_names)
-    {
-        output_names_info[fn] = getFileDependencies(b.getContext(), fn);
-        udeps2.insert(output_names_info[fn].second.begin(), output_names_info[fn].second.end());
-    }
-
-    auto &lib = commonActions(b, pkg_files_, udeps2);
-
-    // make fancy names
-    for (auto &[fn, d] : output_names)
-    {
-        lib[fn].fancy_name = "[" + output_names.find(fn)->second.pkg.toString() + "]/[config]";
-        // configs depend on pch, and pch depends on getCurrentModuleId(), so we add name to the file
-        // to make sure we have different config .objs for different pchs
-        lib[fn].as<NativeSourceFile>().setOutputFile(lib, fn.u8string() + "." + getCurrentModuleId(), lib.getObjectDir(d.pkg) / "self");
-        if (gVerbose)
-            lib[fn].fancy_name += " (" + normalize_path(fn) + ")";
-    }
-
-    // file deps
-    auto gnu_setup = [this, &b, &lib](auto *c, const auto &headers, const path &fn, const auto &gn)
-    {
-        auto gn2suffix = [](PackageVersionGroupNumber gn)
-        {
-            return "_" + (gn > 0 ? std::to_string(gn) : ("_" + std::to_string(-gn)));
-        }
-
-        // we use pch, but cannot add more defs on CL
-        // so we create a file with them
-        auto hash = gn2suffix(gn);
-        path h;
-        // cannot create aux dir on windows; auxl = auxiliary
-        if (is_under_root(fn, b.getContext().getLocalStorage().storage_dir_pkg))
-            h = fn.parent_path().parent_path() / "auxl" / ("defs" + hash + ".h");
-        else
-            h = b.getMainBuild().getBuildDirectory() / "auxl" / ("defs" + hash + ".h");
-        primitives::CppEmitter ctx;
-
-        ctx.addLine("#define configure configure" + hash);
-        ctx.addLine("#define build build" + hash);
-        ctx.addLine("#define check check" + hash);
-        ctx.addLine("#define sw_get_module_abi_version sw_get_module_abi_version" + hash);
-
-        write_file_if_different(h, ctx.getText());
-
-        c->ForcedIncludeFiles().push_back(h);
-        c->ForcedIncludeFiles().push_back(driver_idir / getSw1Header());
-
-        for (auto &h : headers)
-            c->ForcedIncludeFiles().push_back(h);
-        c->ForcedIncludeFiles().push_back(driver_idir / getSwCheckAbiVersionHeader());
-    };
-
-    for (auto &[fn, d] : output_names)
-    {
-        auto [headers, udeps] = output_names_info[fn];
-        if (auto sf = lib[fn].template as<NativeSourceFile*>())
-        {
-            if (auto c = sf->compiler->template as<VisualStudioCompiler*>())
-            {
-                gnu_setup(c, headers, fn, d.gn);
-            }
-            else if (auto c = sf->compiler->template as<ClangClCompiler*>())
-            {
-                gnu_setup(c, headers, fn, d.gn);
-            }
-            else if (auto c = sf->compiler->template as<ClangCompiler*>())
-            {
-                gnu_setup(c, headers, fn, d.gn);
-            }
-            else if (auto c = sf->compiler->template as<GNUCompiler*>())
-            {
-                gnu_setup(c, headers, fn, d.gn);
-            }
-        }
-        // sort deps first!
-        for (auto &d : std::set<UnresolvedPackage>(udeps.begin(), udeps.end()))
-            lib += std::make_shared<Dependency>(d);
-    }
-
-    commonActions2(b, lib);*/
 }
 
 // one input file to one dll
-void PrepareConfigEntryPoint::one2one(Build &b, const path &fn) const
+void PrepareConfigEntryPoint::one2one(Build &b, const Input &i) const
 {
+    auto fn = i.getPath();
     auto [headers, udeps] = getFileDependencies(b.getContext(), fn);
 
-    auto &lib = commonActions(b, { fn }, udeps);
+    auto &lib = commonActions(b, i, udeps);
 
     // turn on later again
     //if (lib.getSettings().TargetOS.is(OSType::Windows))

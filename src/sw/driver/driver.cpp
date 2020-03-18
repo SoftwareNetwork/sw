@@ -164,7 +164,7 @@ struct SpecFileInput : Input, DriverInput
         {
         case FrontendType::Sw:
         {
-            auto dll = driver->build_configs1(swctx, Files{ fn })->r.begin()->second;
+            auto dll = driver->build_configs1(swctx, { this })->r.begin()->second;
             auto ep = std::make_shared<NativeModuleTargetEntryPoint>(Module(swctx.getModuleStorage().get(dll)));
             ep->source_dir = fn.parent_path();
             return { ep };
@@ -397,16 +397,14 @@ std::vector<std::unique_ptr<Input>> Driver::detectInputs(const path &p, InputTyp
 
 void Driver::loadInputsBatch(SwContext &swctx, const std::set<Input *> &inputs) const
 {
-    Files files;
     std::map<path, Input *> m;
     for (auto &i : inputs)
     {
         SW_ASSERT(dynamic_cast<SpecFileInput *>(i), "Bad input type");
-        files.insert(i->getPath());
         m[i->getPath()] = i;
     }
 
-    auto ep = build_configs1(swctx, files);
+    auto ep = build_configs1(swctx, inputs);
     for (auto &[p, dll] : ep->r)
     {
         auto i = dynamic_cast<SpecFileInput *>(m[p]);
@@ -442,8 +440,7 @@ std::unique_ptr<SwBuild> Driver::create_build(SwContext &swctx) const
 }
 
 // not thread-safe
-template <class T>
-std::shared_ptr<PrepareConfigEntryPoint> Driver::build_configs1(SwContext &swctx, const T &objs) const
+std::shared_ptr<PrepareConfigEntryPoint> Driver::build_configs1(SwContext &swctx, const std::set<Input *> &inputs) const
 {
     auto &ctx = swctx;
     if (!b)
@@ -455,7 +452,7 @@ std::shared_ptr<PrepareConfigEntryPoint> Driver::build_configs1(SwContext &swctx
     if (debug_configs)
         ts["native"]["configuration"] = "debug";
 
-    auto ep = std::make_shared<PrepareConfigEntryPoint>(objs);
+    auto ep = std::make_shared<PrepareConfigEntryPoint>(inputs);
     auto tgts = ep->loadPackages(*b, ts, getBuiltinPackages(ctx), {}); // load all our known targets
     // something went wrong, only one lib target must be exported
     //SW_CHECK(tgts.size() == 1);

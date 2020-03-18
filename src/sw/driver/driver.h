@@ -62,8 +62,7 @@ struct SW_DRIVER_CPP_API Driver : IDriver
     static std::optional<FrontendType> selectFrontendByFilename(const path &fn);
 
     // service methods
-    template <class T>
-    std::shared_ptr<PrepareConfigEntryPoint> build_configs1(SwContext &, const T &objs) const;
+    std::shared_ptr<PrepareConfigEntryPoint> build_configs1(SwContext &, const std::set<Input *> &inputs) const;
 
 private:
     mutable std::mutex m_bp;

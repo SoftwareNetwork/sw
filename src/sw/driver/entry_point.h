@@ -31,6 +31,7 @@ struct Build;
 struct Checker;
 struct Module;
 struct DriverData;
+struct Input;
 
 // this driver ep
 struct NativeTargetEntryPoint : TargetEntryPoint
@@ -54,32 +55,29 @@ struct PrepareConfigEntryPoint : NativeTargetEntryPoint
     // output var
     mutable UnresolvedPackages udeps;
 
-    PrepareConfigEntryPoint(const std::unordered_set<LocalPackage> &pkgs);
-    PrepareConfigEntryPoint(const Files &files);
+    PrepareConfigEntryPoint(const std::set<Input *> &inputs);
 
     bool isOutdated() const;
 
 private:
-    const std::unordered_set<LocalPackage> pkgs_;
     mutable Files files_;
+    const std::set<Input *> &inputs;
+
     mutable FilesSorted pkg_files_;
     mutable path driver_idir;
     mutable std::set<SharedLibraryTarget *> targets;
 
     void loadPackages1(Build &) const override;
 
-    SharedLibraryTarget &createTarget(Build &, const FilesSorted &) const;
-    decltype(auto) commonActions(Build &, const FilesSorted &files, const UnresolvedPackages &deps) const;
+    SharedLibraryTarget &createTarget(Build &, const Input &) const;
+    decltype(auto) commonActions(Build &, const Input &, const UnresolvedPackages &deps) const;
     void commonActions2(Build &, SharedLibraryTarget &lib) const;
 
     // many input files to many dlls
-    void many2many(Build &, const Files &files) const;
-
-    // many input files into one dll
-    void many2one(Build &, const std::unordered_set<LocalPackage> &pkgs) const;
+    void many2many(Build &, const std::set<Input *> &inputs) const;
 
     // one input file to one dll
-    void one2one(Build &, const path &fn) const;
+    void one2one(Build &, const Input &) const;
 };
 
 struct NativeBuiltinTargetEntryPoint : NativeTargetEntryPoint

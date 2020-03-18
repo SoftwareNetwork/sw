@@ -103,7 +103,7 @@ public:
     DependenciesType gatherDependencies() const override;
 
     void addPackageDefinitions(bool defs = false);
-    std::shared_ptr<builder::Command> getCommand() const;
+    virtual std::shared_ptr<builder::Command> getCommand() const;
     //Files getGeneratedDirs() const override;
     path getOutputFile() const override;
     virtual path getImportLibrary() const;
