@@ -273,7 +273,8 @@ SUBCOMMAND_DECL(integrate)
                     ctx.increaseIndent("set_target_properties(" + pkg2string(pkg) + " PROPERTIES");
 
                     // TODO: detect C/CXX language from target files
-                    //ctx.addLine("IMPORTED_LINK_INTERFACE_LANGUAGES_" + toCmakeString(bs.Native.ConfigurationType) + " \"CXX\"");
+                    // not needed?
+                    ctx.addLine("IMPORTED_LINK_INTERFACE_LANGUAGES_" + toCmakeString(bs.Native.ConfigurationType) + " \"C CXX\"");
 
                     // IMPORTED_LOCATION = path to .dll/.so or static .lib/.a
                     ctx.addLine("IMPORTED_LOCATION_" + toCmakeString(bs.Native.ConfigurationType) + " \"" +
