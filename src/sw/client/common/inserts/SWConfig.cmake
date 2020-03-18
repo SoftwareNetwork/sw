@@ -12,7 +12,7 @@
 
 # increase this variable when file is changed
 # and you need user to call 'sw setup' again to update this file
-set(SW_CMAKE_VERSION 2)
+set(SW_CMAKE_VERSION 3)
 
 ########################################
 # general settings
@@ -220,7 +220,7 @@ function(sw_execute)
             message(FATAL_ERROR "CMAKE_BUILD_TYPE is not implemented: '${CMAKE_BUILD_TYPE}'")
         endif()
     else()
-        set(cfg)
+        set(cfg Debug)
         set(extendedcfg -config d)
     endif()
     set(outdir "${outdir}/${cfg}")
@@ -249,8 +249,10 @@ function(sw_execute)
     )
 
     # add deps targets
+    string(REPLACE ";" " " swcmd1 "${swcmd}")
     add_custom_target(sw_build_dependencies ALL
         COMMAND ${swcmd}
+        COMMENT ${swcmd1}
     )
     set_target_properties(sw_build_dependencies
         PROPERTIES
