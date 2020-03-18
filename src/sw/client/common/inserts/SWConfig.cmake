@@ -142,23 +142,24 @@ function(sw_execute)
         message(FATAL_ERROR "Compiler is not implemented: '${CMAKE_C_COMPILER_ID}' or '${CMAKE_CXX_COMPILER_ID}'")
     endif()
 
+    set(wdir "${SW_DEPS_DIR}")
+    sw_internal_fix_path(wdir)
+
     set(sw_platform_args
         ${stsh}
         -platform ${platform}
         ${mt_flag}
         ${compiler}
         ${os}
+        -d "${wdir}"
     )
 
-    set(wdir "${SW_DEPS_DIR}")
     set(depsfile "${SW_DEPS_FILE}")
-    sw_internal_fix_path(wdir)
     sw_internal_fix_path(depsfile)
 
     set(swcmd
         ${SW_EXECUTABLE}
             ${sw_platform_args}
-            -d "${wdir}"
             ${SW_FORCE}
             integrate
             -cmake-deps "${depsfile}"
@@ -239,7 +240,6 @@ function(sw_execute)
     set(swcmd
         ${SW_EXECUTABLE}
             ${sw_platform_args}
-            -d "${wdir}"
             ${extendedcfg}
             build "@${depsfile}"
             -ide-copy-to-dir
