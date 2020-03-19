@@ -20,8 +20,7 @@
 
 #include "build.h"
 #include "suffix.h"
-#include "target/native.h"
-#include "target/other.h"
+#include "target/all.h"
 #include "entry_point.h"
 #include "module.h"
 
@@ -58,13 +57,16 @@ enum class FrontendType
     Unspecified,
 
     // priority!
+
+    // Sw prefix means sw.EXT files, almost always EXT is a language name
     Sw = 1,
     SwC,
+    SwVala,
+
     Cppan,
     Cargo, // rust
     Dub, // d
     Composer, // php
-    //Vala,
 };
 
 static FilesOrdered findConfig(const path &dir, const FilesOrdered &fe_s)
@@ -90,7 +92,9 @@ static String toString(FrontendType t)
     case FrontendType::Sw:
         return "sw";
     case FrontendType::SwC:
-        return "swc";
+        return "sw.c";
+    case FrontendType::SwVala:
+        return "sw.vala";
     case FrontendType::Cppan:
         return "cppan";
     case FrontendType::Cargo:
@@ -137,6 +141,24 @@ void Driver::processConfigureAc(const path &p)
     process_configure_ac2(p);
 }
 
+struct BuiltinInput : Input
+{
+    std::function<void(Build &)> bf;
+
+    using Input::Input;
+
+    bool isBatchLoadable() const override { return false; }
+    bool isParallelLoadable() const override { return false; }
+
+    std::unique_ptr<Specification> getSpecification() const override { return std::make_unique<Specification>(); }
+
+    EntryPointsVector load1(SwContext &swctx) override
+    {
+        auto ep = std::make_shared<NativeBuiltinTargetEntryPoint>(bf);
+        return { ep };
+    }
+};
+
 struct DriverInput
 {
     FrontendType fe_type = FrontendType::Unspecified;
@@ -177,6 +199,59 @@ struct SpecFileInput : Input, DriverInput
         case FrontendType::SwC:
         {
             auto dll = driver->build_configs1(swctx, { this })->r.begin()->second;
+            auto ep = std::make_shared<NativeModuleTargetEntryPoint>(Module(swctx.getModuleStorage().get(dll)));
+            ep->source_dir = fn.parent_path();
+            return { ep };
+        }
+        case FrontendType::SwVala:
+        {
+            path dll;
+            builder::Command c;
+            auto bf = [fn, &dll, &c](Build &b) mutable
+            {
+                auto &t = b.add<ValaSharedLibrary>("sw");
+                t += fn;
+                t.CustomTargetOptions[VALA_OPTIONS_NAME].push_back("--vapidir");
+                t.CustomTargetOptions[VALA_OPTIONS_NAME].push_back("d:\\dev\\cppan2\\client2\\test\\build\\simple");
+                t.CustomTargetOptions[VALA_OPTIONS_NAME].push_back("--pkg");
+                t.CustomTargetOptions[VALA_OPTIONS_NAME].push_back("sw");
+                t.CustomTargetOptions[VALA_OPTIONS_NAME].push_back("--includedir=" + normalize_path(getDriverIncludeDir(b, t)));
+                t.IncludeDirectories.push_back(getDriverIncludeDir(b, t));
+                dll = t.getOutputFile();
+                t.add(CallbackType::EndPrepare, [&t, &c]()
+                {
+                    t.setupCommand(c);
+                });
+
+                auto &lib = t;
+                lib.Definitions["SW_SUPPORT_API"] = "__declspec(dllimport)";
+                lib.Definitions["SW_MANAGER_API"] = "__declspec(dllimport)";
+                lib.Definitions["SW_BUILDER_API"] = "__declspec(dllimport)";
+                lib.Definitions["SW_CORE_API"] = "__declspec(dllimport)";
+                lib.Definitions["SW_DRIVER_CPP_API"] = "__declspec(dllimport)";
+                // do not use api name because we use C linkage
+                lib.Definitions["SW_PACKAGE_API"] = "__declspec(dllexport)";
+            };
+
+            auto i = std::make_unique<BuiltinInput>(*driver, path{}, InputType::InlineSpecification);
+            i->bf = bf;
+            i->setHash((size_t)&dll);
+
+            auto b = swctx.createBuild();
+            InputWithSettings ii(*swctx.registerInput(std::move(i)).first);
+            auto s = swctx.getHostSettings();
+            s["native"]["configuration"] = "releasewithdebuginformation";
+            ii.addSettings(s);
+            b->addInput(ii);
+            b->build();
+
+#ifdef _WIN32
+            // set dll deps (glib, etc)
+            SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_USER_DIRS);
+            for (path p : split_string(c.environment["PATH"], ";"))
+                AddDllDirectory(p.wstring().c_str());
+#endif
+
             auto ep = std::make_shared<NativeModuleTargetEntryPoint>(Module(swctx.getModuleStorage().get(dll)));
             ep->source_dir = fn.parent_path();
             return { ep };
@@ -549,6 +624,7 @@ const Driver::AvailableFrontends &Driver::getAvailableFrontends()
             m.insert({ FrontendType::Sw, "sw" + e });
 
         m.insert({ FrontendType::SwC, "sw.c" });
+        m.insert({ FrontendType::SwVala, "sw.vala" });
 
         // cppan fe
         m.insert({ FrontendType::Cppan, "cppan.yml" });
