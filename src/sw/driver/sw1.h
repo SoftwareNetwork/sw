@@ -23,8 +23,8 @@ SW_PACKAGE_API
 void build(Solution &s);
 
 /// everything for configuring
-SW_PACKAGE_API
-void configure(Build &s);
+//SW_PACKAGE_API
+//void configure(Build &s);
 
 /// checker
 SW_PACKAGE_API
