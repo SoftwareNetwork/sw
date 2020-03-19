@@ -81,7 +81,9 @@ Module::Module(const Module::DynamicLibrary &dll, const String &suffix)
     {                                                                                                                                               \
         f##_.name = #f + suffix;                                                                                                                    \
         f##_.m = this;                                                                                                                              \
-        if (!module.symbol_storage().get_function<decltype(f##_)::function_type>(f##_.name).empty())                                                \
+        if (module.shared_lib().has(#f))                                                                                                            \
+            f##_ = module.shared_lib().get<decltype(f##_)::function_type>(#f);                                                                      \
+        else if (!module.symbol_storage().get_function<decltype(f##_)::function_type>(f##_.name).empty())                                           \
             f##_ = module.get_function<decltype(f##_)::function_type>(f##_.name);                                                                   \
         else if (f##_.isRequired())                                                                                                                 \
             throw SW_RUNTIME_ERROR("Required function '" + f##_.name + "' is not found in module: " + normalize_path(dll.shared_lib().location())); \
