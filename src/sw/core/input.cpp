@@ -33,8 +33,8 @@ namespace sw
 Input::Input(const IDriver &driver, const path &p, InputType t)
     : driver(driver)
 {
-    if (p.empty())
-        throw SW_RUNTIME_ERROR("empty path");
+    //if (p.empty())
+        //throw SW_RUNTIME_ERROR("empty path");
     this->p = p;
     type = t;
 }
@@ -88,7 +88,7 @@ bool Input::isLoaded() const
 
 size_t Input::getHash() const
 {
-    SW_ASSERT(hash, "Hash was not set");
+    //SW_ASSERT(hash, "Hash was not set");
     return hash;
 }
 

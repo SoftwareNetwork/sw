@@ -265,7 +265,8 @@ std::vector<Input *> SwContext::addInput(const path &in)
 std::pair<Input *, bool> SwContext::registerInput(std::unique_ptr<Input> i)
 {
     auto &idb = getInputDatabase();
-    idb.setupInput(*i);
+    if (i->getHash() == 0) // otherwise, hash was set manually
+        idb.setupInput(*i);
     auto h = i->getHash();
     auto [it,inserted] = inputs.emplace(h, std::move(i));
     return { &*it->second, inserted };
