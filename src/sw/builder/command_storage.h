@@ -118,6 +118,7 @@ private:
     FileDb fdb;
     detail::Storage s;
     std::atomic_int n_users;
+    std::atomic_int n_queued;
 
     void closeLogs();
 };

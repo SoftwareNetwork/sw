@@ -329,6 +329,7 @@ void CommandStorage::async_command_log(const CommandRecord &r)
 {
     static std::vector<uint8_t> v;
 
+    ++n_queued;
     swctx.getFileStorageExecutor().push([this, &r]
     {
         auto &s = getInternalStorage();
@@ -359,19 +360,22 @@ void CommandStorage::async_command_log(const CommandRecord &r)
             }
         }
 
-        if (--n_users == 0)
-            s.closeLogs();
+        --n_queued;
+        free_user();
     });
 }
 
 void CommandStorage::add_user()
 {
-    n_users++;
+    ++n_users;
 }
 
 void CommandStorage::free_user()
 {
-    n_users--;
+    if (n_users > 0)
+        --n_users;
+    if (n_queued == 0 && n_users == 0)
+        s.closeLogs();
 }
 
 void detail::Storage::closeLogs()
