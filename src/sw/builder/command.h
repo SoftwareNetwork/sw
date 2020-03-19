@@ -73,7 +73,8 @@ struct SW_BUILDER_API CommandNode : std::enable_shared_from_this<CommandNode>
     virtual String getName(bool short_name = false) const = 0;
     virtual size_t getHash() const = 0;
     virtual void execute() = 0;
-    virtual void prepare() = 0;
+    virtual void prepare() = 0; // some internal preparations, command may not be executed still
+    virtual void markForExecution() {} // not command can be sure, it will be executed
     virtual bool lessDuringExecution(const CommandNode &) const = 0;
 
     void clear()
@@ -176,6 +177,7 @@ struct SW_BUILDER_API Command : ICastable, CommandNode, detail::ResolvableComman
     virtual ~Command();
 
     void prepare() override;
+    void markForExecution() override;
     void execute() override;
     void execute(std::error_code &ec) override;
     void clean() const;

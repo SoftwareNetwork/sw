@@ -31,6 +31,8 @@
 namespace sw
 {
 
+struct CommandStorage;
+
 namespace detail
 {
 
@@ -38,7 +40,6 @@ struct Storage;
 
 struct FileHolder
 {
-    //ScopedFileLock lk;
     ScopedFile f;
     path fn;
 
@@ -104,9 +105,6 @@ struct SW_BUILDER_API CommandStorage
     CommandStorage &operator=(const CommandStorage &) = delete;
     ~CommandStorage();
 
-    void load();
-    void save();
-
     ConcurrentCommandStorage &getStorage();
     detail::Storage &getInternalStorage();
     void async_command_log(const CommandRecord &r);
@@ -118,9 +116,18 @@ private:
     FileDb fdb;
     detail::Storage s;
     std::atomic_int n_users;
-    std::atomic_int n_queued;
+    std::mutex m;
+    std::unique_ptr<ScopedFileLock> lock;
+    bool saved = false;
 
     void closeLogs();
+
+    void load();
+    void save();
+    void save1();
+
+    std::unique_ptr<ScopedFileLock> getLock() const;
+    path getLockFileName() const;
 };
 
 }

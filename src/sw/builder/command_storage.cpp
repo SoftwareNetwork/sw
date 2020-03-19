@@ -307,29 +307,24 @@ detail::FileHolder::~FileHolder()
 }
 
 CommandStorage::CommandStorage(const SwBuilderContext &swctx, const path &root)
-    : swctx(swctx), root(root), fdb(swctx)
+    : swctx(swctx)
+    , root(root)
+    , fdb(swctx)
 {
-    load();
+    //lock = getLock();
+    load(); // load early
 }
 
 CommandStorage::~CommandStorage()
 {
-    try
-    {
-        closeLogs();
-        save();
-    }
-    catch (std::exception &e)
-    {
-        LOG_ERROR(logger, "Error during command db save: " << e.what());
-    }
+    save();
 }
 
 void CommandStorage::async_command_log(const CommandRecord &r)
 {
     static std::vector<uint8_t> v;
 
-    ++n_queued;
+    add_user();
     swctx.getFileStorageExecutor().push([this, &r]
     {
         auto &s = getInternalStorage();
@@ -360,7 +355,6 @@ void CommandStorage::async_command_log(const CommandRecord &r)
             }
         }
 
-        --n_queued;
         free_user();
     });
 }
@@ -372,10 +366,9 @@ void CommandStorage::add_user()
 
 void CommandStorage::free_user()
 {
-    if (n_users > 0)
-        --n_users;
-    if (n_queued == 0 && n_users == 0)
-        s.closeLogs();
+    --n_users;
+    if (n_users == 0)
+        closeLogs(); // reduce number of open fds
 }
 
 void detail::Storage::closeLogs()
@@ -387,6 +380,24 @@ void detail::Storage::closeLogs()
 void CommandStorage::closeLogs()
 {
     s.closeLogs();
+    //save();
+}
+
+void CommandStorage::save()
+{
+    if (saved)
+        return;
+    // and save at the end
+    try
+    {
+        save1();
+        saved = true;
+    }
+    catch (std::exception &e)
+    {
+        LOG_ERROR(logger, "Error during command db save: " << e.what());
+    }
+    lock.reset();
 }
 
 detail::FileHolder &detail::Storage::getCommandLog(const SwBuilderContext &swctx, const path &root)
@@ -408,7 +419,7 @@ void CommandStorage::load()
     fdb.load(s.file_storage, s.file_storage_by_hash, s.storage, root);
 }
 
-void CommandStorage::save()
+void CommandStorage::save1()
 {
     fdb.save(s.file_storage, s, s.storage, root);
 }
@@ -426,6 +437,16 @@ detail::Storage &CommandStorage::getInternalStorage()
 std::pair<CommandRecord *, bool> CommandStorage::insert(size_t hash)
 {
     return getStorage().insert(hash);
+}
+
+path CommandStorage::getLockFileName() const
+{
+    return root / "build";
+}
+
+std::unique_ptr<ScopedFileLock> CommandStorage::getLock() const
+{
+    return std::make_unique<ScopedFileLock>(getLockFileName());
 }
 
 }
