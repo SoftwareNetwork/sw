@@ -41,6 +41,7 @@ DECLARE_STATIC_LOGGER(logger, "entry_point");
 bool gVerbose;
 
 #define SW_DRIVER_NAME "org.sw." PACKAGE_NAME "-" PACKAGE_VERSION
+#define IMPORT_LIBRARY "sw.dll"
 
 namespace sw
 {
@@ -478,6 +479,7 @@ decltype(auto) PrepareConfigEntryPoint::commonActions(Build &b, const Input &i, 
 
     if (lib.getBuildSettings().TargetOS.is(OSType::Windows))
     {
+        lib += Definition("IMPORT_LIBRARY=\""s + IMPORT_LIBRARY + "\"");
         auto fn = driver_idir / getSwDir() / "misc" / "delay_load_helper.cpp";
         lib += fn;
         if (auto nsf = lib[fn].as<NativeSourceFile *>())
