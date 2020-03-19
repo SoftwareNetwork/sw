@@ -16,7 +16,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#pragma once
+#ifndef _SW_H_
+#define _SW_H_
 
 #include "module.h"
 #include "build.h"
@@ -178,3 +179,5 @@ using sw::toString;
 //#ifdef _MSC_VER
 //#include "sw1.h"
 //#endif
+
+#endif

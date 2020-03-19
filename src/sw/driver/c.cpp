@@ -19,7 +19,7 @@
 #include "c.h"
 #include "c.hpp"
 
-#include <sw/manager/package_id.h>
+#pragma optimize("", off)
 
 const char *sw_driver_get_package_id(void)
 {
@@ -110,17 +110,56 @@ void *sw_aligned_alloc(size_t alignment, size_t size)
 }
 #endif
 
-sw_target_t *sw_add_executable(sw_build_t *, const char *name)
+template <class T>
+static T &toTarget(sw_target_t *in)
 {
-    return 0;
+    auto &t = (Target &)*in;
+    return dynamic_cast<T &>(t);
+    //t.getType();
+    //return t;
 }
 
-void sw_set_target_property(sw_target_t *, const char *property, const char *value)
+sw_target_t *sw_add_executable(Build *b, const char *name)
 {
-
+    auto &t = b->add<Executable>(name);
+    return &t;
 }
 
-void sw_add_target_source(sw_target_t *, const char *filename)
+sw_target_t *sw_add_library(Build *b, const char *name)
 {
+    auto &t = b->add<Library>(name);
+    return &t;
+}
 
+sw_target_t *sw_add_static_library(Build *b, const char *name)
+{
+    auto &t = b->add<StaticLibrary>(name);
+    return &t;
+}
+
+sw_target_t *sw_add_shared_library(Build *b, const char *name)
+{
+    auto &t = b->add<SharedLibrary>(name);
+    return &t;
+}
+
+void sw_set_target_property(Target *t, const char *property, const char *value)
+{
+    if (strcmp(property, "API_NAME") == 0)
+        toTarget<NativeCompiledTarget>(t).ApiNames.insert(value);
+}
+
+void sw_add_target_source(Target *t, const char *filename)
+{
+    toTarget<NativeCompiledTarget>(t) += filename;
+}
+
+void sw_add_target_regex(Target *t, const char *filename)
+{
+    toTarget<NativeCompiledTarget>(t) += FileRegex({}, filename, false);
+}
+
+void sw_add_target_recursive_regex(Target *t, const char *filename)
+{
+    toTarget<NativeCompiledTarget>(t) += FileRegex({}, filename, true);
 }

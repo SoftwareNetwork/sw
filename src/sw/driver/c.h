@@ -16,8 +16,12 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef _SW_CORE_C_H_
-#define _SW_CORE_C_H_
+#ifndef _SW_C_H_
+#define _SW_C_H_
+
+#ifdef __cplusplus
+#include "sw.h"
+#endif
 
 #include <stddef.h>
 
@@ -59,18 +63,26 @@ typedef struct
 
 } sw_driver_t;
 
-typedef struct sw_build_t sw_build_t;
+#ifdef __cplusplus
+#define TYPE(f, t) typedef f sw_##t##_t;
+#include "c.types.inl"
+#undef TYPE
+#else
+#define TYPE(f, t) typedef void sw_##t##_t;
+#include "c.types.inl"
+#undef TYPE
+#endif
 
-typedef struct sw_target_t sw_target_t;
+SW_CORE_API sw_executable_target_t *sw_add_executable(sw_build_t *, const char *name);
+SW_CORE_API sw_library_target_t *sw_add_library(sw_build_t *, const char *name);
+SW_CORE_API sw_static_library_t *sw_add_static_library(sw_build_t *, const char *name);
+SW_CORE_API sw_shared_library_t *sw_add_shared_library(sw_build_t *, const char *name);
 
-SW_CORE_API
-sw_target_t *sw_add_executable(sw_build_t *, const char *name);
+SW_CORE_API void sw_set_target_property(sw_target_t *, const char *property, const char *value);
 
-SW_CORE_API
-void sw_set_target_property(sw_target_t *, const char *property, const char *value);
-
-SW_CORE_API
-void sw_add_target_source(sw_target_t *, const char *filename);
+SW_CORE_API void sw_add_target_source(sw_target_t *, const char *filename);
+SW_CORE_API void sw_add_target_regex(sw_target_t *, const char *regex);
+SW_CORE_API void sw_add_target_recursive_regex(sw_target_t *, const char *regex);
 
 #ifdef __cplusplus
 }

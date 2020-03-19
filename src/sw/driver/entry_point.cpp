@@ -458,11 +458,6 @@ decltype(auto) PrepareConfigEntryPoint::commonActions(Build &b, const Input &i, 
     // cache idir
     if (driver_idir.empty())
         driver_idir = getDriverIncludeDir(b, lib);
-    if (core_idir.empty())
-    {
-        // the latest core ver for now
-        core_idir = lib.getFile("org.sw.sw.client.core"_dep) / "src";
-    }
 
     addDeps(b, lib);
     addImportLibrary(b, lib);
@@ -614,8 +609,8 @@ void PrepareConfigEntryPoint::one2one(Build &b, const Input &i) const
     }
     else
     {
-        fi_files.push_back(core_idir / "sw/core/c.h"); // main include, goes first
-        fi_files.push_back(driver_idir / "sw/driver/swc.h");
+        fi_files.push_back(driver_idir / getSwDir() / "c.h"); // main include, goes first
+        fi_files.push_back(driver_idir / getSwDir() / "swc.h");
         fi_files.push_back(driver_idir / getSwCheckAbiVersionHeader()); // TODO: remove it, we don't need abi here
     }
 
