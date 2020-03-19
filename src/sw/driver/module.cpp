@@ -90,7 +90,7 @@ Module::Module(const Module::DynamicLibrary &dll, const String &suffix)
     LOAD(build);
     LOAD(check);
     LOAD(configure);
-    LOAD(sw_get_module_abi_version);
+    //LOAD(sw_get_module_abi_version);
 
 #undef LOAD
 }
