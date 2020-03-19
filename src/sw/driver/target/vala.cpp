@@ -99,6 +99,9 @@ void ValaBase::prepare()
         f->skip = true;
     }
 
+    if (t.getBuildSettings().Native.ConfigurationType != ConfigurationType::Release)
+        c->push_back("-g");
+
     if (t.getType() != TargetType::NativeExecutable)
     {
         auto h = compiler->OutputDir() / t.getPackage().getPath().toString() += ".h";
