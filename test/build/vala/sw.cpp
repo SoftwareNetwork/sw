@@ -23,4 +23,9 @@ void build(Solution &s)
         auto &t = s.add<ValaExecutable>("hw");
         t += "hw.vala";
     }
+
+    {
+        auto &t = s.add<ValaExecutable>("exe2");
+        t += "exe2.vala";
+    }
 }
