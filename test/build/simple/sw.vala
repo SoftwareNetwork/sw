@@ -2,8 +2,7 @@ using sw;
 
 public void build(Build b)
 {
-    int a = 5;
-    int c = 5;
+    var t = add_executable(b, "test1");
+    sw_set_target_property(t, "API_NAME", "API");
+    sw_add_target_source(t, "main.c");
 }
-
-

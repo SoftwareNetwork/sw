@@ -212,7 +212,7 @@ struct SpecFileInput : Input, DriverInput
                 auto &t = b.add<ValaSharedLibrary>("sw");
                 t += fn;
                 t.CustomTargetOptions[VALA_OPTIONS_NAME].push_back("--vapidir");
-                t.CustomTargetOptions[VALA_OPTIONS_NAME].push_back("d:\\dev\\cppan2\\client2\\test\\build\\simple");
+                t.CustomTargetOptions[VALA_OPTIONS_NAME].push_back(normalize_path(getDriverIncludeDir(b, t) / "frontend" / "vala"));
                 t.CustomTargetOptions[VALA_OPTIONS_NAME].push_back("--pkg");
                 t.CustomTargetOptions[VALA_OPTIONS_NAME].push_back("sw");
                 t.CustomTargetOptions[VALA_OPTIONS_NAME].push_back("--includedir=" + normalize_path(getDriverIncludeDir(b, t)));

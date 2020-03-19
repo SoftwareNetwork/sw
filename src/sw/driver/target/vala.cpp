@@ -64,6 +64,7 @@ void ValaBase::init()
         //t += "org.sw.demo.gnome.glib.glib"_dep;
         t += "org.sw.demo.gnome.glib.gobject"_dep;
         //t += "org.sw.demo.gnome.glib.gmodule"_dep;
+        //"--profile=posix" removes need in glib dependency
     });
 }
 
