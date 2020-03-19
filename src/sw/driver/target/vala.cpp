@@ -24,7 +24,8 @@
 #include "../suffix.h"
 #include "../compiler/compiler_helpers.h"
 
-static int vala_custom_options_idx = -1;
+// vala.CompilerOptions? vala.copts?
+#define VALA_OPTIONS_NAME "vala"
 
 namespace sw
 {
@@ -50,12 +51,7 @@ void ValaBase::init()
 
         if (t.getType() != TargetType::NativeExecutable)
         {
-            if (vala_custom_options_idx == -1)
-                vala_custom_options_idx = t.Interface.CustomTargetOptions.size();
-            if (t.Interface.CustomTargetOptions.size() < vala_custom_options_idx + 1)
-                t.Interface.CustomTargetOptions.resize(vala_custom_options_idx + 1);
-
-            t.Interface.CustomTargetOptions[vala_custom_options_idx]
+            t.Interface.CustomTargetOptions[VALA_OPTIONS_NAME]
                 .push_back(normalize_path(t.BinaryDir.parent_path() / "obj" / t.getPackage().toString() += ".vapi"));
             t.Interface.IncludeDirectories.push_back(t.BinaryDir.parent_path() / "obj");
         }
@@ -114,9 +110,9 @@ void ValaBase::prepare()
         c->addOutput(h);
     }
 
-    if (vala_custom_options_idx != -1 && t.CustomTargetOptions.size() > vala_custom_options_idx)
+    if (auto i = t.CustomTargetOptions.find(VALA_OPTIONS_NAME); i != t.CustomTargetOptions.end())
     {
-        for (auto &o : t.CustomTargetOptions[vala_custom_options_idx])
+        for (auto &o : i->second)
             c->push_back(o);
     }
 }

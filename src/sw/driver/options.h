@@ -216,7 +216,7 @@ struct SW_DRIVER_CPP_API NativeCompilerOptionsData
     PathOptionsType PostIncludeDirectories;
 
     // other langs and targets may use this
-    std::vector<UniqueVector<String>> CustomTargetOptions;
+    std::map<String, UniqueVector<String>> CustomTargetOptions;
 
     PathOptionsType gatherIncludeDirectories() const;
     bool IsIncludeDirectoriesEmpty() const;

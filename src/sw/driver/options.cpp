@@ -323,14 +323,8 @@ void NativeCompilerOptionsData::merge(const NativeCompilerOptionsData &o, const 
         CompileOptions.insert(o.CompileOptions.begin(), o.CompileOptions.end());
 
         //
-        auto sz = std::min(CustomTargetOptions.size(), o.CustomTargetOptions.size());
-        if (CustomTargetOptions.size() < o.CustomTargetOptions.size())
-        {
-            CustomTargetOptions.resize(o.CustomTargetOptions.size());
-            sz = o.CustomTargetOptions.size();
-        }
-        for (int i = 0; i < sz; i++)
-            CustomTargetOptions[i].insert(o.CustomTargetOptions[i].begin(), o.CustomTargetOptions[i].end());
+        for (auto &[k, v] : o.CustomTargetOptions)
+            CustomTargetOptions[k].insert(v.begin(), v.end());
     }
 
     if (s.merge_to_self)
