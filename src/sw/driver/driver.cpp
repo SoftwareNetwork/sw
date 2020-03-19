@@ -59,10 +59,12 @@ enum class FrontendType
 
     // priority!
     Sw = 1,
-    Cppan = 2,
-    Cargo = 3, // rust
-    Dub = 4, // d
-    Composer = 5, // php
+    SwC,
+    Cppan,
+    Cargo, // rust
+    Dub, // d
+    Composer, // php
+    //Vala,
 };
 
 static FilesOrdered findConfig(const path &dir, const FilesOrdered &fe_s)
@@ -87,6 +89,8 @@ static String toString(FrontendType t)
     {
     case FrontendType::Sw:
         return "sw";
+    case FrontendType::SwC:
+        return "swc";
     case FrontendType::Cppan:
         return "cppan";
     case FrontendType::Cargo:
@@ -145,7 +149,13 @@ struct SpecFileInput : Input, DriverInput
     using Input::Input;
 
     // at the moment only sw is batch loadable
-    bool isBatchLoadable() const override { return fe_type == FrontendType::Sw; }
+    bool isBatchLoadable() const override
+    {
+        return 0
+            || fe_type == FrontendType::Sw
+            || fe_type == FrontendType::SwC
+            ;
+    }
 
     // everything else is parallel loadable
     bool isParallelLoadable() const override { return !isBatchLoadable(); }
@@ -164,6 +174,7 @@ struct SpecFileInput : Input, DriverInput
         switch (fe_type)
         {
         case FrontendType::Sw:
+        case FrontendType::SwC:
         {
             auto dll = driver->build_configs1(swctx, { this })->r.begin()->second;
             auto ep = std::make_shared<NativeModuleTargetEntryPoint>(Module(swctx.getModuleStorage().get(dll)));
@@ -536,6 +547,8 @@ const Driver::AvailableFrontends &Driver::getAvailableFrontends()
         // rest
         for (auto &e : exts)
             m.insert({ FrontendType::Sw, "sw" + e });
+
+        m.insert({ FrontendType::SwC, "sw.c" });
 
         // cppan fe
         m.insert({ FrontendType::Cppan, "cppan.yml" });

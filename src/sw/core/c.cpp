@@ -109,3 +109,18 @@ void *sw_aligned_alloc(size_t alignment, size_t size)
 #endif
 }
 #endif
+
+sw_target_t *sw_add_executable(sw_build_t *, const char *name)
+{
+    return 0;
+}
+
+void sw_set_target_property(sw_target_t *, const char *property, const char *value)
+{
+
+}
+
+void sw_add_target_source(sw_target_t *, const char *filename)
+{
+
+}

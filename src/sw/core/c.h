@@ -21,6 +21,10 @@
 
 #include <stddef.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* memory allocations */
 
 SW_CORE_API
@@ -40,9 +44,7 @@ void *sw_calloc(size_t, size_t);
 
 /* ...  */
 
-typedef struct
-{
-} sw_driver_input_t;
+typedef struct sw_driver_input_t sw_driver_input_t;
 
 typedef struct
 {
@@ -56,5 +58,22 @@ typedef struct
     void (*load)(sw_driver_input_t **);
 
 } sw_driver_t;
+
+typedef struct sw_build_t sw_build_t;
+
+typedef struct sw_target_t sw_target_t;
+
+SW_CORE_API
+sw_target_t *sw_add_executable(sw_build_t *, const char *name);
+
+SW_CORE_API
+void sw_set_target_property(sw_target_t *, const char *property, const char *value);
+
+SW_CORE_API
+void sw_add_target_source(sw_target_t *, const char *filename);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

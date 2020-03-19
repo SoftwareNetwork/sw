@@ -61,6 +61,7 @@ struct PrepareConfigEntryPoint : NativeTargetEntryPoint
 
 private:
     const std::set<Input *> &inputs;
+    mutable path core_idir;
     mutable path driver_idir;
     mutable std::set<SharedLibraryTarget *> targets;
 

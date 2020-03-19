@@ -456,7 +456,13 @@ decltype(auto) PrepareConfigEntryPoint::commonActions(Build &b, const Input &i, 
     lib.command_storage = &getDriverCommandStorage(b);
 
     // cache idir
-    driver_idir = getDriverIncludeDir(b, lib);
+    if (driver_idir.empty())
+        driver_idir = getDriverIncludeDir(b, lib);
+    if (core_idir.empty())
+    {
+        // the latest core ver for now
+        core_idir = lib.getFile("org.sw.sw.client.core"_dep) / "src";
+    }
 
     addDeps(b, lib);
     addImportLibrary(b, lib);
@@ -487,13 +493,16 @@ decltype(auto) PrepareConfigEntryPoint::commonActions(Build &b, const Input &i, 
     }
 
     // pch
-    lib += PrecompiledHeader(driver_idir / getSwHeader());
+    if (fn.filename() != "sw.c")
+    {
+        lib += PrecompiledHeader(driver_idir / getSwHeader());
 
-    detail::PrecompiledHeader pch;
-    pch.name = getImportPchFile(lib, deps).stem();
-    pch.dir = getPchDir(b);
-    pch.fancy_name = "[config pch]";
-    lib.pch = pch;
+        detail::PrecompiledHeader pch;
+        pch.name = getImportPchFile(lib, deps).stem();
+        pch.dir = getPchDir(b);
+        pch.fancy_name = "[config pch]";
+        lib.pch = pch;
+    }
 
     return lib;
 }
@@ -505,6 +514,7 @@ void PrepareConfigEntryPoint::commonActions2(Build &b, SharedLibraryTarget &lib)
         lib.Definitions["SW_SUPPORT_API"] = "__declspec(dllimport)";
         lib.Definitions["SW_MANAGER_API"] = "__declspec(dllimport)";
         lib.Definitions["SW_BUILDER_API"] = "__declspec(dllimport)";
+        lib.Definitions["SW_CORE_API"] = "__declspec(dllimport)";
         lib.Definitions["SW_DRIVER_CPP_API"] = "__declspec(dllimport)";
         // do not use api name because we use C linkage
         lib.Definitions["SW_PACKAGE_API"] = "__declspec(dllexport)";
@@ -514,6 +524,7 @@ void PrepareConfigEntryPoint::commonActions2(Build &b, SharedLibraryTarget &lib)
         lib.Definitions["SW_SUPPORT_API="];
         lib.Definitions["SW_MANAGER_API="];
         lib.Definitions["SW_BUILDER_API="];
+        lib.Definitions["SW_CORE_API="];
         lib.Definitions["SW_DRIVER_CPP_API="];
         // do not use api name because we use C linkage
         lib.Definitions["SW_PACKAGE_API"] = "__attribute__ ((visibility (\"default\")))";
@@ -595,12 +606,25 @@ void PrepareConfigEntryPoint::one2one(Build &b, const Input &i) const
             lib += std::make_shared<Dependency>(d);
     }
 
+    FilesOrdered fi_files;
+    if (fn.filename() != "sw.c")
+    {
+        fi_files.push_back(driver_idir / getSw1Header());
+        fi_files.push_back(driver_idir / getSwCheckAbiVersionHeader());
+    }
+    else
+    {
+        fi_files.push_back(core_idir / "sw/core/c.h"); // main include, goes first
+        fi_files.push_back(driver_idir / "sw/driver/swc.h");
+        fi_files.push_back(driver_idir / getSwCheckAbiVersionHeader()); // TODO: remove it, we don't need abi here
+    }
+
     if (auto sf = lib[fn].template as<NativeSourceFile*>())
     {
         if (auto c = sf->compiler->template as<VisualStudioCompiler*>())
         {
-            c->ForcedIncludeFiles().push_back(driver_idir / getSw1Header());
-            c->ForcedIncludeFiles().push_back(driver_idir / getSwCheckAbiVersionHeader());
+            for (auto &f : fi_files)
+                c->ForcedIncludeFiles().push_back(f);
 
             // deprecated warning
             // activate later
@@ -610,18 +634,18 @@ void PrepareConfigEntryPoint::one2one(Build &b, const Input &i) const
         }
         else if (auto c = sf->compiler->template as<ClangClCompiler*>())
         {
-            c->ForcedIncludeFiles().push_back(driver_idir / getSw1Header());
-            c->ForcedIncludeFiles().push_back(driver_idir / getSwCheckAbiVersionHeader());
+            for (auto &f : fi_files)
+                c->ForcedIncludeFiles().push_back(f);
         }
         else if (auto c = sf->compiler->template as<ClangCompiler*>())
         {
-            c->ForcedIncludeFiles().push_back(driver_idir / getSw1Header());
-            c->ForcedIncludeFiles().push_back(driver_idir / getSwCheckAbiVersionHeader());
+            for (auto &f : fi_files)
+                c->ForcedIncludeFiles().push_back(f);
         }
         else if (auto c = sf->compiler->template as<GNUCompiler*>())
         {
-            c->ForcedIncludeFiles().push_back(driver_idir / getSw1Header());
-            c->ForcedIncludeFiles().push_back(driver_idir / getSwCheckAbiVersionHeader());
+            for (auto &f : fi_files)
+                c->ForcedIncludeFiles().push_back(f);
         }
     }
 
