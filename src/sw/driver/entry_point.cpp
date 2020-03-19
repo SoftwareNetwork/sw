@@ -23,6 +23,7 @@
 #include "driver.h"
 #include "suffix.h"
 #include "target/native.h"
+#include "target/vala.h"
 
 #include <sw/core/sw_context.h>
 #include <sw/core/input_database.h>
@@ -129,7 +130,7 @@ static CommandStorage &getDriverCommandStorage(const Build &b)
     return b.getMainBuild().getCommandStorage(b.getContext().getLocalStorage().storage_dir_tmp / "db" / "service");
 }
 
-static void addImportLibrary(const Build &b, NativeCompiledTarget &t)
+void addImportLibrary(const Build &b, NativeCompiledTarget &t)
 {
 #ifdef _WIN32
     auto lib = (HMODULE)primitives::getModuleForSymbol();
@@ -270,20 +271,22 @@ static std::pair<FilesOrdered, UnresolvedPackages> getFileDependencies(const SwC
     return getFileDependencies(swctx, in_config_file, gns);
 }
 
-std::vector<ITargetPtr> NativeTargetEntryPoint::loadPackages(SwBuild &swb, const TargetSettings &s, const PackageIdSet &pkgs, const PackagePath &prefix) const
+Build NativeTargetEntryPoint::createBuild(SwBuild &swb, const TargetSettings &s, const PackageIdSet &pkgs, const PackagePath &prefix) const
 {
     // we need to fix some settings before they go to targets
     auto settings = s;
 
     if (!dd)
+    {
         dd = std::make_unique<DriverData>();
 
-    for (auto &[h, d] : settings["driver"]["source-dir-for-source"].getSettings())
-        dd->source_dirs_by_source[h].requested_dir = d.getValue();
-    for (auto &[pkg, p] : settings["driver"]["source-dir-for-package"].getSettings())
-        dd->source_dirs_by_package[pkg] = p.getValue();
-    if (settings["driver"]["force-source"].isValue())
-        dd->force_source = load(nlohmann::json::parse(settings["driver"]["force-source"].getValue()));
+        for (auto &[h, d] : settings["driver"]["source-dir-for-source"].getSettings())
+            dd->source_dirs_by_source[h].requested_dir = d.getValue();
+        for (auto &[pkg, p] : settings["driver"]["source-dir-for-package"].getSettings())
+            dd->source_dirs_by_package[pkg] = p.getValue();
+        if (settings["driver"]["force-source"].isValue())
+            dd->force_source = load(nlohmann::json::parse(settings["driver"]["force-source"].getValue()));
+    }
 
     Build b(swb);
     b.dd = dd.get();
@@ -304,8 +307,13 @@ std::vector<ITargetPtr> NativeTargetEntryPoint::loadPackages(SwBuild &swb, const
         b.setSourceDirectory(swb.getBuildDirectory().parent_path());
     b.BinaryDir = swb.getBuildDirectory();
 
-    loadPackages1(b);
+    return b;
+}
 
+std::vector<ITargetPtr> NativeTargetEntryPoint::loadPackages(SwBuild &swb, const TargetSettings &s, const PackageIdSet &pkgs, const PackagePath &prefix) const
+{
+    auto b = createBuild(swb, s, pkgs, prefix);
+    loadPackages1(b);
     return b.module_data.added_targets;
 }
 
@@ -373,89 +381,96 @@ static void addDeps(Build &solution, NativeCompiledTarget &lib)
     //d->GenerateCommandsBefore = true;
 }
 
-PrepareConfigEntryPoint::PrepareConfigEntryPoint(const std::set<Input *> &inputs)
-    : inputs(inputs)
-{}
-
-void PrepareConfigEntryPoint::loadPackages1(Build &b) const
+void PrepareConfig::addInput(Build &b, const Input &i)
 {
-    for (auto &i : inputs)
+    InputData d;
+    d.fn = d.cfn = i.getPath();
+    if (auto [pkgs, prefix] = i.getPackages(); !pkgs.empty())
     {
-        one2one(b, *i);
-        r[i->getPath()] = out;
+        d.link_name = "[" + pkgs.begin()->toString() + "]/[config]";
+        d.cl_name = d.link_name + "/" + d.fn.filename().string();
     }
+
+    vala = d.fn.filename() == "sw.vala";
+    // c = fn == "sw.c";
+    r[d.fn].dll = one2one(b, d);
+    inputs_outdated |= i.isOutdated();
 }
 
-SharedLibraryTarget &PrepareConfigEntryPoint::createTarget(Build &b, const Input &i) const
+template <class T>
+struct ConfigSharedLibraryTarget : T
 {
-    struct ConfigSharedLibraryTarget : SharedLibraryTarget
+    ConfigSharedLibraryTarget(const PrepareConfig &ep, const PrepareConfig::InputData &d, const path &storage_dir)
+        : ep(ep), d(d)
     {
-        ConfigSharedLibraryTarget(const PrepareConfigEntryPoint &ep, const Input &i, const path &storage_dir)
-            : ep(ep), i(i)
-        {
-            IsSwConfig = true;
-            IsSwConfigLocal = !is_under_root(i.getPath(), storage_dir);
-        }
+        IsSwConfig = true;
+        IsSwConfigLocal = !is_under_root(d.fn, storage_dir);
+    }
 
-    private:
-        const PrepareConfigEntryPoint &ep;
-        const Input &i;
+private:
+    const PrepareConfig &ep;
+    PrepareConfig::InputData d;
 
-        std::shared_ptr<builder::Command> getCommand() const override
-        {
-            auto c = SharedLibraryTarget::getCommand();
-            if (auto [pkgs, prefix] = i.getPackages(); !pkgs.empty())
-                c->name = "[" + pkgs.begin()->toString() + "]/[config]" + getSelectedTool()->Extension;
-            return c;
-        }
+    std::shared_ptr<builder::Command> getCommand() const override
+    {
+        auto c = T::getCommand();
+        if (!d.link_name.empty())
+            c->name = d.link_name + getSelectedTool()->Extension;
+        return c;
+    }
 
-        Commands getCommands() const override
+    Commands getCommands() const override
+    {
+        // only for msvc?
+        if (getHostOS().is(OSType::Windows))
         {
-            // only for msvc?
-            if (getHostOS().is(OSType::Windows))
+            // set main cmd dependency on config files
+            // otherwise it does not work on windows
+            // link.exe uses pdb file and cl.exe cannot proceed
+            // fatal error C1041: cannot open program database '*.pdb';
+            // if multiple CL.EXE write to the same .PDB file, please use /FS
+            auto c = getCommand();
+            for (auto t : ep.targets)
             {
-                // set main cmd dependency on config files
-                // otherwise it does not work on windows
-                // link.exe uses pdb file and cl.exe cannot proceed
-                // fatal error C1041: cannot open program database '*.pdb';
-                // if multiple CL.EXE write to the same .PDB file, please use /FS
-                auto c = getCommand();
-                for (auto t : ep.targets)
+                auto cmd = t->getCommand();
+                auto cmds = ((ConfigSharedLibraryTarget*)t)->T::getCommands();
+                for (auto &c2 : cmds)
                 {
-                    auto cmd = t->getCommand();
-                    auto cmds = t->SharedLibraryTarget::getCommands();
-                    for (auto &c2 : cmds)
-                    {
-                        if (c2 != cmd)
-                            c->dependencies.insert(c2);
-                    }
+                    if (c2 != cmd)
+                        c->dependencies.insert(c2);
                 }
             }
-            return SharedLibraryTarget::getCommands();
         }
+        return T::getCommands();
+    }
 
-        path getBinaryParentDir() const override
-        {
-            if (IsSwConfigLocal)
-                return SharedLibraryTarget::getBinaryParentDir();
-            return getTargetDirShort(getContext().getLocalStorage().storage_dir_tmp / "cfg");
-        }
-    };
+    path getBinaryParentDir() const override
+    {
+        if (IsSwConfigLocal)
+            return T::getBinaryParentDir();
+        return getTargetDirShort(getContext().getLocalStorage().storage_dir_tmp / "cfg");
+    }
+};
 
-    auto name = getSelfTargetName({ i.getPath() });
-    auto &lib = b.addTarget<ConfigSharedLibraryTarget>(name, "local", *this, i, b.getContext().getLocalStorage().storage_dir);
+SharedLibraryTarget &PrepareConfig::createTarget(Build &b, const InputData &d)
+{
+    auto name = getSelfTargetName({ d.fn });
+    auto &lib =
+        vala
+        ? (SharedLibraryTarget&)b.addTarget<ConfigSharedLibraryTarget<ValaSharedLibrary>>(name, "local", *this, d, b.getContext().getLocalStorage().storage_dir)
+        : b.addTarget<ConfigSharedLibraryTarget<SharedLibraryTarget>>(name, "local", *this, d, b.getContext().getLocalStorage().storage_dir);
     tgt = lib.getPackage();
     targets.insert(&lib);
     return lib;
 }
 
-decltype(auto) PrepareConfigEntryPoint::commonActions(Build &b, const Input &i, const UnresolvedPackages &deps) const
+decltype(auto) PrepareConfig::commonActions(Build &b, const InputData &d, const UnresolvedPackages &deps)
 {
     // record udeps
     udeps = deps;
 
-    auto fn = i.getPath();
-    auto &lib = createTarget(b, i);
+    auto &fn = d.fn;
+    auto &lib = createTarget(b, d);
     lib.GenerateWindowsResource = false;
     lib.command_storage = &getDriverCommandStorage(b);
 
@@ -476,8 +491,15 @@ decltype(auto) PrepareConfigEntryPoint::commonActions(Build &b, const Input &i, 
     }
 
     lib += fn;
-    if (auto [pkgs, prefix] = i.getPackages(); !pkgs.empty())
-        lib[fn].fancy_name = "[" + pkgs.begin()->toString() + "]/[config]/" + fn.filename().string();
+    if (vala)
+    {
+        auto cfn = ((ValaSharedLibrary &)lib).getOutputCCodeFileName(fn);
+        File(cfn, lib.getFs()).setGenerated(true);
+        lib += cfn;
+        (path&)d.cfn = cfn; // set c name
+    }
+    if (!d.cl_name.empty())
+        lib[fn].fancy_name = d.cl_name;
 
     if (lib.getCompilerType() == CompilerType::MSVC)
         lib.CompileOptions.push_back("/utf-8");
@@ -491,8 +513,29 @@ decltype(auto) PrepareConfigEntryPoint::commonActions(Build &b, const Input &i, 
             nsf->setOutputFile(getPchDir(b) / ("delay_load_helper" + getDepsSuffix(lib, deps) + ".obj"));
     }
 
+    if (vala)
+    {
+        lib.CustomTargetOptions[VALA_OPTIONS_NAME].push_back("--vapidir");
+        lib.CustomTargetOptions[VALA_OPTIONS_NAME].push_back(normalize_path(getDriverIncludeDir(b, lib) / "sw/driver/frontend/vala"));
+        lib.CustomTargetOptions[VALA_OPTIONS_NAME].push_back("--pkg");
+        lib.CustomTargetOptions[VALA_OPTIONS_NAME].push_back("sw");
+        // when (cheader_filename = "sw/driver/c.h") is present
+        //lib.CustomTargetOptions[VALA_OPTIONS_NAME].push_back("--includedir=" + normalize_path(getDriverIncludeDir(b, lib)));
+
+#ifdef _WIN32
+        // set dll deps (glib, etc)
+        lib.add(CallbackType::EndPrepare, [&lib, this, d]()
+        {
+            builder::Command c;
+            lib.setupCommand(c);
+            for (path p : split_string(c.environment["PATH"], ";"))
+                r[d.fn].PATH.push_back(p);
+        });
+#endif
+    }
+
     // pch
-    if (fn.filename() != "sw.c")
+    if (fn.filename() != "sw.c" && !vala)
     {
         lib += PrecompiledHeader(driver_idir / getSwHeader());
 
@@ -507,12 +550,12 @@ decltype(auto) PrepareConfigEntryPoint::commonActions(Build &b, const Input &i, 
 }
 
 // one input file to one dll
-void PrepareConfigEntryPoint::one2one(Build &b, const Input &i) const
+path PrepareConfig::one2one(Build &b, const InputData &d)
 {
-    auto fn = i.getPath();
+    auto &fn = d.cfn;
     auto [headers, udeps] = getFileDependencies(b.getContext(), fn);
 
-    auto &lib = commonActions(b, i, udeps);
+    auto &lib = commonActions(b, d, udeps);
 
     // turn on later again
     //if (lib.getSettings().TargetOS.is(OSType::Windows))
@@ -549,7 +592,7 @@ void PrepareConfigEntryPoint::one2one(Build &b, const Input &i) const
     }
 
     FilesOrdered fi_files;
-    if (fn.filename() != "sw.c")
+    if (fn.filename() != "sw.c" && !vala)
     {
         fi_files.push_back(driver_idir / getSw1Header());
         fi_files.push_back(driver_idir / getSwCheckAbiVersionHeader());
@@ -630,15 +673,14 @@ void PrepareConfigEntryPoint::one2one(Build &b, const Input &i) const
                                           //L->IgnoreWarnings().insert(4088); // warning LNK4088: image being generated due to /FORCE option; image may not run
     }
 
-    /*auto i = b.getChildren().find(lib.getPackage());
-    if (i == b.getChildren().end())
-    throw std::logic_error("config target not found");*/
-
-    out = lib.getOutputFile();
+    return lib.getOutputFile();
 }
 
-bool PrepareConfigEntryPoint::isOutdated() const
+bool PrepareConfig::isOutdated() const
 {
+    if (inputs_outdated)
+        return true;
+
     auto get_lwt = [](const path &p)
     {
         return file_time_type2time_t(fs::last_write_time(p));
@@ -649,19 +691,12 @@ bool PrepareConfigEntryPoint::isOutdated() const
     size_t t = 0;
     hash_combine(t, get_lwt(boost::dll::program_location()));
 
-    for (auto &i : inputs)
-        hash_combine(t, get_lwt(i->getPath()));
-
-    if (!out.empty())
+    for (auto &[p, out] : r)
     {
-        not_exists |= !fs::exists(out);
+        hash_combine(t, get_lwt(p));
+        not_exists |= !fs::exists(out.dll);
         if (!not_exists)
-            hash_combine(t, get_lwt(out));
-    }
-    else
-    {
-        LOG_INFO(logger, __FILE__ << ":" << __LINE__ <<  ": not implemeted yet");
-        return true;
+            hash_combine(t, get_lwt(out.dll));
     }
 
     auto f = path(".sw") / "stamp" / (std::to_string(t) + ".txt");

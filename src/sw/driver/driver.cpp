@@ -141,24 +141,6 @@ void Driver::processConfigureAc(const path &p)
     process_configure_ac2(p);
 }
 
-struct BuiltinInput : Input
-{
-    std::function<void(Build &)> bf;
-
-    using Input::Input;
-
-    bool isBatchLoadable() const override { return false; }
-    bool isParallelLoadable() const override { return false; }
-
-    std::unique_ptr<Specification> getSpecification() const override { return std::make_unique<Specification>(); }
-
-    EntryPointsVector load1(SwContext &swctx) override
-    {
-        auto ep = std::make_shared<NativeBuiltinTargetEntryPoint>(bf);
-        return { ep };
-    }
-};
-
 struct DriverInput
 {
     FrontendType fe_type = FrontendType::Unspecified;
@@ -170,12 +152,12 @@ struct SpecFileInput : Input, DriverInput
 
     using Input::Input;
 
-    // at the moment only sw is batch loadable
     bool isBatchLoadable() const override
     {
         return 0
             || fe_type == FrontendType::Sw
             || fe_type == FrontendType::SwC
+            // vala requires glib which is not in default packages, so we load it separately
             ;
     }
 
@@ -198,61 +180,37 @@ struct SpecFileInput : Input, DriverInput
         case FrontendType::Sw:
         case FrontendType::SwC:
         {
-            auto dll = driver->build_configs1(swctx, { this })->r.begin()->second;
-            auto ep = std::make_shared<NativeModuleTargetEntryPoint>(Module(swctx.getModuleStorage().get(dll)));
+            auto out = driver->build_configs1(swctx, { this }).begin()->second;
+            auto ep = std::make_shared<NativeModuleTargetEntryPoint>(Module(swctx.getModuleStorage().get(out.dll, out.PATH)));
             ep->source_dir = fn.parent_path();
             return { ep };
         }
         case FrontendType::SwVala:
         {
-            path dll;
-            builder::Command c;
-            auto bf = [fn, &dll, &c](Build &b) mutable
-            {
-                auto &t = b.add<ValaSharedLibrary>("sw");
-                t += fn;
-                t.CustomTargetOptions[VALA_OPTIONS_NAME].push_back("--vapidir");
-                t.CustomTargetOptions[VALA_OPTIONS_NAME].push_back(normalize_path(getDriverIncludeDir(b, t) / "frontend" / "vala"));
-                t.CustomTargetOptions[VALA_OPTIONS_NAME].push_back("--pkg");
-                t.CustomTargetOptions[VALA_OPTIONS_NAME].push_back("sw");
-                t.CustomTargetOptions[VALA_OPTIONS_NAME].push_back("--includedir=" + normalize_path(getDriverIncludeDir(b, t)));
-                t.IncludeDirectories.push_back(getDriverIncludeDir(b, t));
-                dll = t.getOutputFile();
-                t.add(CallbackType::EndPrepare, [&t, &c]()
-                {
-                    t.setupCommand(c);
-                });
-
-                auto &lib = t;
-                lib.Definitions["SW_SUPPORT_API"] = "__declspec(dllimport)";
-                lib.Definitions["SW_MANAGER_API"] = "__declspec(dllimport)";
-                lib.Definitions["SW_BUILDER_API"] = "__declspec(dllimport)";
-                lib.Definitions["SW_CORE_API"] = "__declspec(dllimport)";
-                lib.Definitions["SW_DRIVER_CPP_API"] = "__declspec(dllimport)";
-                // do not use api name because we use C linkage
-                lib.Definitions["SW_PACKAGE_API"] = "__declspec(dllexport)";
-            };
-
-            auto i = std::make_unique<BuiltinInput>(*driver, path{}, InputType::InlineSpecification);
-            i->bf = bf;
-            i->setHash((size_t)&dll);
-
             auto b = swctx.createBuild();
-            InputWithSettings ii(*swctx.registerInput(std::move(i)).first);
-            auto s = swctx.getHostSettings();
-            s["native"]["configuration"] = "releasewithdebuginformation";
-            ii.addSettings(s);
-            b->addInput(ii);
+
+            auto ts = swctx.createHostSettings();
+            if (debug_configs)
+                ts["native"]["configuration"] = "debug";
+            else
+                ts["native"]["configuration"] = "releasewithdebuginformation";
+            NativeTargetEntryPoint ep1;
+            auto b2 = ep1.createBuild(*b, ts, {}, {});
+
+            PrepareConfig pc;
+            pc.addInput(b2, *this);
+
+            auto &tgts = b2.module_data.added_targets;
+            for (auto &tgt : tgts)
+                b->getTargets()[tgt->getPackage()].push_back(tgt);
+
+            // execute
+            for (auto &tgt : tgts)
+                b->getTargetsToBuild()[tgt->getPackage()] = b->getTargets()[tgt->getPackage()]; // set our targets
+
             b->build();
-
-#ifdef _WIN32
-            // set dll deps (glib, etc)
-            SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_USER_DIRS);
-            for (path p : split_string(c.environment["PATH"], ";"))
-                AddDllDirectory(p.wstring().c_str());
-#endif
-
-            auto ep = std::make_shared<NativeModuleTargetEntryPoint>(Module(swctx.getModuleStorage().get(dll)));
+            auto &out = pc.r[getPath()];
+            auto ep = std::make_shared<NativeModuleTargetEntryPoint>(Module(swctx.getModuleStorage().get(out.dll, out.PATH)));
             ep->source_dir = fn.parent_path();
             return { ep };
         }
@@ -491,11 +449,10 @@ void Driver::loadInputsBatch(SwContext &swctx, const std::set<Input *> &inputs) 
         m[i->getPath()] = i;
     }
 
-    auto ep = build_configs1(swctx, inputs);
-    for (auto &[p, dll] : ep->r)
+    for (auto &[p, out] : build_configs1(swctx, inputs))
     {
         auto i = dynamic_cast<SpecFileInput *>(m[p]);
-        auto ep = std::make_shared<NativeModuleTargetEntryPoint>(Module(swctx.getModuleStorage().get(dll)));
+        auto ep = std::make_shared<NativeModuleTargetEntryPoint>(Module(swctx.getModuleStorage().get(out.dll, out.PATH)));
         ep->source_dir = p.parent_path();
         i->setEntryPoints({ ep });
     }
@@ -526,28 +483,35 @@ std::unique_ptr<SwBuild> Driver::create_build(SwContext &swctx) const
     return std::move(b);
 }
 
+TargetSettings Driver::getDllConfigSettings(SwContext &swctx) const
+{
+    auto ts = swctx.createHostSettings();
+    ts["native"]["library"] = "static";
+    //ts["native"]["mt"] = "true";
+    if (debug_configs)
+        ts["native"]["configuration"] = "debug";
+    return ts;
+}
+
 // not thread-safe
-std::shared_ptr<PrepareConfigEntryPoint> Driver::build_configs1(SwContext &swctx, const std::set<Input *> &inputs) const
+std::unordered_map<path, PrepareConfigOutputData> Driver::build_configs1(SwContext &swctx, const std::set<Input *> &inputs) const
 {
     auto &ctx = swctx;
     if (!b)
         b = create_build(ctx);
 
-    auto ts = ctx.createHostSettings();
-    ts["native"]["library"] = "static";
-    //ts["native"]["mt"] = "true";
-    if (debug_configs)
-        ts["native"]["configuration"] = "debug";
-
-    auto ep = std::make_shared<PrepareConfigEntryPoint>(inputs);
-    auto tgts = ep->loadPackages(*b, ts, getBuiltinPackages(ctx), {}); // load all our known targets
-    // something went wrong, only one lib target must be exported
-    //SW_CHECK(tgts.size() == 1);
+    NativeTargetEntryPoint ep;
+    //                                                        load all our known targets
+    auto b2 = ep.createBuild(*b, getDllConfigSettings(swctx), getBuiltinPackages(ctx), {});
+    PrepareConfig pc;
+    for (auto &i : inputs)
+        pc.addInput(b2, *i);
 
     // fast path
-    if (!ep->isOutdated())
-        return ep;
+    if (!pc.isOutdated())
+        return pc.r;
 
+    auto &tgts = b2.module_data.added_targets;
     for (auto &tgt : tgts)
         b->getTargets()[tgt->getPackage()].push_back(tgt);
 
@@ -572,7 +536,7 @@ std::shared_ptr<PrepareConfigEntryPoint> Driver::build_configs1(SwContext &swctx
         b->getTargets().erase(tgt->getPackage());
     }
 
-    return ep;
+    return pc.r;
 }
 
 const StringSet &Driver::getAvailableFrontendNames()

@@ -42,35 +42,10 @@ struct NativeTargetEntryPoint : TargetEntryPoint
     [[nodiscard]]
     std::vector<ITargetPtr> loadPackages(SwBuild &, const TargetSettings &, const PackageIdSet &pkgs, const PackagePath &prefix) const override;
 
-private:
-    virtual void loadPackages1(Build &) const = 0;
-};
-
-struct PrepareConfigEntryPoint : NativeTargetEntryPoint
-{
-    mutable path out;
-    mutable FilesMap r;
-    mutable std::optional<PackageId> tgt;
-
-    // output var
-    mutable UnresolvedPackages udeps;
-
-    PrepareConfigEntryPoint(const std::set<Input *> &inputs);
-
-    bool isOutdated() const;
+    Build createBuild(SwBuild &, const TargetSettings &, const PackageIdSet &pkgs, const PackagePath &prefix) const;
 
 private:
-    const std::set<Input *> &inputs;
-    mutable path driver_idir;
-    mutable std::set<SharedLibraryTarget *> targets;
-
-    void loadPackages1(Build &) const override;
-
-    SharedLibraryTarget &createTarget(Build &, const Input &) const;
-    decltype(auto) commonActions(Build &, const Input &, const UnresolvedPackages &deps) const;
-
-    // one input file to one dll
-    void one2one(Build &, const Input &) const;
+    virtual void loadPackages1(Build &) const {}
 };
 
 struct NativeBuiltinTargetEntryPoint : NativeTargetEntryPoint
@@ -95,6 +70,45 @@ private:
     Module m;
 
     void loadPackages1(Build &) const override;
+};
+
+struct PrepareConfigOutputData
+{
+    path dll;
+    FilesOrdered PATH;
+};
+
+struct PrepareConfig
+{
+    struct InputData
+    {
+        path fn;
+        path cfn;
+        String cl_name;
+        String link_name;
+    };
+    using FilesMap = std::unordered_map<path, PrepareConfigOutputData>;
+
+    FilesMap r;
+    std::optional<PackageId> tgt;
+    bool vala = false;
+    std::set<SharedLibraryTarget *> targets; // internal
+
+    // output var
+    mutable UnresolvedPackages udeps;
+
+    void addInput(Build &, const Input &);
+    bool isOutdated() const;
+
+private:
+    bool inputs_outdated = false;
+    path driver_idir;
+
+    SharedLibraryTarget &createTarget(Build &, const InputData &);
+    decltype(auto) commonActions(Build &, const InputData &, const UnresolvedPackages &deps);
+
+    // one input file to one dll
+    path one2one(Build &, const InputData &);
 };
 
 }

@@ -29,12 +29,15 @@ namespace sw
 
 struct Build;
 struct Target;
+struct NativeCompiledTarget;
 struct SwBuild;
 struct SwContext;
 struct PrepareConfigEntryPoint;
 struct TargetSettings;
+struct PrepareConfigOutputData;
 
 path getDriverIncludeDir(Build &solution, Target &lib);
+void addImportLibrary(const Build &b, NativeCompiledTarget &t);
 
 namespace driver::cpp
 {
@@ -65,7 +68,8 @@ struct SW_DRIVER_CPP_API Driver : IDriver
     static std::optional<FrontendType> selectFrontendByFilename(const path &fn);
 
     // service methods
-    std::shared_ptr<PrepareConfigEntryPoint> build_configs1(SwContext &, const std::set<Input *> &inputs) const;
+    std::unordered_map<path, PrepareConfigOutputData> build_configs1(SwContext &, const std::set<Input *> &inputs) const;
+    TargetSettings getDllConfigSettings(SwContext &swctx) const;
 
 private:
     mutable std::mutex m_bp;
