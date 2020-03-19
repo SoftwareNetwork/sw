@@ -19,8 +19,6 @@
 #include "c.h"
 #include "c.hpp"
 
-#pragma optimize("", off)
-
 const char *sw_driver_get_package_id(void)
 {
     return "org.sw.driver.c-0.3.1";
@@ -119,25 +117,25 @@ static T &toTarget(sw_target_t *in)
     //return t;
 }
 
-sw_target_t *sw_add_executable(Build *b, const char *name)
+sw_executable_target_t *sw_add_executable(Build *b, const char *name)
 {
     auto &t = b->add<Executable>(name);
     return &t;
 }
 
-sw_target_t *sw_add_library(Build *b, const char *name)
+sw_library_target_t *sw_add_library(Build *b, const char *name)
 {
     auto &t = b->add<Library>(name);
     return &t;
 }
 
-sw_target_t *sw_add_static_library(Build *b, const char *name)
+sw_static_library_target_t *sw_add_static_library(Build *b, const char *name)
 {
     auto &t = b->add<StaticLibrary>(name);
     return &t;
 }
 
-sw_target_t *sw_add_shared_library(Build *b, const char *name)
+sw_shared_library_target_t *sw_add_shared_library(Build *b, const char *name)
 {
     auto &t = b->add<SharedLibrary>(name);
     return &t;

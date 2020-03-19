@@ -75,8 +75,8 @@ typedef struct
 
 SW_CORE_API sw_executable_target_t *sw_add_executable(sw_build_t *, const char *name);
 SW_CORE_API sw_library_target_t *sw_add_library(sw_build_t *, const char *name);
-SW_CORE_API sw_static_library_t *sw_add_static_library(sw_build_t *, const char *name);
-SW_CORE_API sw_shared_library_t *sw_add_shared_library(sw_build_t *, const char *name);
+SW_CORE_API sw_static_library_target_t *sw_add_static_library(sw_build_t *, const char *name);
+SW_CORE_API sw_shared_library_target_t *sw_add_shared_library(sw_build_t *, const char *name);
 
 SW_CORE_API void sw_set_target_property(sw_target_t *, const char *property, const char *value);
 
