@@ -31,6 +31,7 @@
 
 #include <boost/algorithm/string.hpp>
 #include <nlohmann/json.hpp>
+#include <primitives/lock.h>
 #include <primitives/yaml.h>
 #include <toml.hpp>
 
@@ -471,9 +472,13 @@ std::shared_ptr<PrepareConfigEntryPoint> Driver::build_configs1(SwContext &swctx
     /*if (!ep->udeps.empty())
         LOG_WARN(logger, "WARNING: '#pragma sw require' is not well tested yet. Expect instability.");
     b->resolvePackages(ep->udeps);*/
-    b->loadPackages();
-    b->prepare();
-    b->execute();
+    {
+        // prevent simultaneous cfg builds
+        ScopedFileLock lk(swctx.getLocalStorage().storage_dir_tmp / "cfg" / "build");
+        b->loadPackages();
+        b->prepare();
+        b->execute();
+    }
 
     for (auto &tgt : tgts)
     {
