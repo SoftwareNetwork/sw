@@ -36,7 +36,7 @@ struct SW_BUILDER_API ModuleStorage
     ModuleStorage(const ModuleStorage &) = delete;
     ~ModuleStorage();
 
-    const DynamicLibrary &get(const path &dll);
+    const DynamicLibrary &get(const path &dll, const FilesOrdered &PATH = {});
 };
 
 }

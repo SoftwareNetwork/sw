@@ -31,7 +31,7 @@ bool do_not_remove_bad_module;
 namespace sw
 {
 
-const ModuleStorage::DynamicLibrary &ModuleStorage::get(const path &dll)
+const ModuleStorage::DynamicLibrary &ModuleStorage::get(const path &dll, const FilesOrdered &PATH)
 {
     if (dll.empty())
         throw SW_RUNTIME_ERROR("Empty module");
@@ -41,6 +41,20 @@ const ModuleStorage::DynamicLibrary &ModuleStorage::get(const path &dll)
     if (i != modules.end())
         return *i->second;
     boost::upgrade_to_unique_lock lk2(lk);
+
+#ifdef _WIN32
+    // set dll deps
+    SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_USER_DIRS);
+    std::vector<void *> cookies;
+    for (const path &p : PATH)
+        cookies.push_back(AddDllDirectory(p.wstring().c_str()));
+    SCOPE_EXIT
+    {
+        // restore
+        for (auto c : cookies)
+            RemoveDllDirectory(c);
+    };
+#endif
 
     String err;
     err = "Module " + normalize_path(dll) + " is in bad shape";
