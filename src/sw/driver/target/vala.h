@@ -36,10 +36,14 @@ struct SW_DRIVER_CPP_API ValaBase
     void init();
     void prepare();
 
+    path getOutputCCodeFileName(const path &valasrc) const;
+
 protected:
     DependencyPtr d;
     std::shared_ptr<ValaCompiler> compiler;
-    void getCommands(Commands &) const;
+    path OutputDir;
+    NativeCompiledTarget *t_ = nullptr;
+    void getCommands1(Commands &) const;
 };
 
 }

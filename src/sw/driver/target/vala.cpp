@@ -34,9 +34,17 @@ ValaBase::~ValaBase()
 {
 }
 
+path ValaBase::getOutputCCodeFileName(const path &f) const
+{
+    auto rel = f.lexically_relative(t_->SourceDir);
+    auto o = OutputDir / rel.parent_path() / rel.stem() += ".c";
+    return o;
+}
+
 void ValaBase::init()
 {
-    auto &t = dynamic_cast<NativeCompiledTarget &>(*this);
+    t_ = dynamic_cast<NativeCompiledTarget*>(this);
+    auto &t = *t_;
 
     t.add(CallbackType::CreateTargetInitialized, [this, &t]()
     {
@@ -65,12 +73,14 @@ void ValaBase::init()
         t += "org.sw.demo.gnome.glib.gobject"_dep;
         //t += "org.sw.demo.gnome.glib.gmodule"_dep;
         //"--profile=posix" removes need in glib dependency
+
+        OutputDir = t.BinaryDir.parent_path() / "obj";
     });
 }
 
 void ValaBase::prepare()
 {
-    auto &t = dynamic_cast<NativeCompiledTarget &>(*this);
+    auto &t = *t_;
 
     compiler = std::make_shared<ValaCompiler>();
     auto &dt = d->getTarget();
@@ -84,12 +94,11 @@ void ValaBase::prepare()
         SW_UNIMPLEMENTED;
 
     auto c = compiler->createCommand(t.getMainBuild());
-    compiler->OutputDir = t.BinaryDir.parent_path() / "obj";
+    compiler->OutputDir = OutputDir;
     compiler->InputFiles = FilesOrdered{};
     for (auto &f : ::sw::gatherSourceFiles<SourceFile>(t, {".vala"}))
     {
-        auto rel = f->file.lexically_relative(t.SourceDir);
-        auto o = compiler->OutputDir() / rel.parent_path() / rel.stem() += ".c";
+        auto o = getOutputCCodeFileName(f->file);
         File(o, t.getFs()).setGenerator(c, false);
         t += o;
         c->addOutput(o);
@@ -98,6 +107,7 @@ void ValaBase::prepare()
         f->skip = true;
     }
 
+    // #line directives
     if (t.getBuildSettings().Native.ConfigurationType != ConfigurationType::Release)
         c->push_back("-g");
 
@@ -119,7 +129,7 @@ void ValaBase::prepare()
     }
 }
 
-void ValaBase::getCommands(Commands &cmds) const
+void ValaBase::getCommands1(Commands &cmds) const
 {
     auto c = compiler->getCommand(dynamic_cast<const Target &>(*this));
     c->use_response_files = false;
@@ -161,7 +171,7 @@ void ValaBase::getCommands(Commands &cmds) const
     Commands t::getCommands1() const      \
     {                                     \
         auto cmds = Base::getCommands1(); \
-        ValaBase::getCommands(cmds);      \
+        ValaBase::getCommands1(cmds);     \
         return cmds;                      \
     }
 
