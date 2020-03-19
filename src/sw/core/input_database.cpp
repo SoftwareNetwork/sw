@@ -156,7 +156,10 @@ void InputDatabase::setupInput(Input &i) const
             break;
     }
     if (ok)
+    {
         i.setHash(q.front().hash.value());
+        i.setOutdated(false);
+    }
     else
     {
         // remove old first

@@ -61,7 +61,8 @@ struct SW_CORE_API Input
     /// allow to throw input->load() into thread pool
     virtual bool isParallelLoadable() const = 0;
 
-    bool isChanged() const;
+    void setOutdated(bool b) { outdated = b; }
+    /*virtual */bool isOutdated() const;
     bool isLoaded() const;
     const EntryPointsVector &getEntryPoints() const;
 
@@ -93,6 +94,7 @@ private:
     // example: .yml frontend - 1 document, but multiple eps, one per package
     EntryPointsVector eps;
     size_t hash = 0;
+    bool outdated = true;
 
     virtual EntryPointsVector load1(SwContext &) = 0;
 };

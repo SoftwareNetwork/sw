@@ -67,18 +67,9 @@ void Input::load(SwContext &swctx)
         throw SW_RUNTIME_ERROR("Empty entry points");
 }
 
-bool Input::isChanged() const
+bool Input::isOutdated() const
 {
-    SW_UNIMPLEMENTED;
-    return true;
-
-    /*switch (getType())
-    {
-    //case InputType::SpecificationFile:
-        //return true;
-    default:
-        SW_UNIMPLEMENTED;
-    }*/
+    return outdated;
 }
 
 bool Input::isLoaded() const
