@@ -20,6 +20,9 @@
 
 #include "native.h"
 
+ // vala.CompilerOptions? vala.copts?
+#define VALA_OPTIONS_NAME "vala"
+
 namespace sw
 {
 
