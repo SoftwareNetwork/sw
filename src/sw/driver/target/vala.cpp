@@ -63,6 +63,7 @@ void ValaBase::init()
         t.setExtensionProgram(".vala", d);
         //t += "org.sw.demo.gnome.glib.glib"_dep;
         t += "org.sw.demo.gnome.glib.gobject"_dep;
+        //t += "org.sw.demo.gnome.glib.gmodule"_dep;
     });
 }
 
