@@ -28,10 +28,13 @@ namespace sw
 {
 
 struct Build;
+struct Target;
 struct SwBuild;
 struct SwContext;
 struct PrepareConfigEntryPoint;
 struct TargetSettings;
+
+path getDriverIncludeDir(Build &solution, Target &lib);
 
 namespace driver::cpp
 {

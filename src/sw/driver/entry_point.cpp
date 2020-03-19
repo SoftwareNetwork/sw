@@ -353,7 +353,7 @@ static auto getDriverDep()
 }
 
 // add Dirs?
-static path getDriverIncludeDir(Build &solution, NativeCompiledTarget &lib)
+path getDriverIncludeDir(Build &solution, Target &lib)
 {
     return lib.getFile(getDriverDep()) / "src";
 }
@@ -379,7 +379,11 @@ PrepareConfigEntryPoint::PrepareConfigEntryPoint(const std::set<Input *> &inputs
 
 void PrepareConfigEntryPoint::loadPackages1(Build &b) const
 {
-    many2many(b, inputs);
+    for (auto &i : inputs)
+    {
+        one2one(b, *i);
+        r[i->getPath()] = out;
+    }
 }
 
 SharedLibraryTarget &PrepareConfigEntryPoint::createTarget(Build &b, const Input &i) const
@@ -502,63 +506,6 @@ decltype(auto) PrepareConfigEntryPoint::commonActions(Build &b, const Input &i, 
     return lib;
 }
 
-void PrepareConfigEntryPoint::commonActions2(Build &b, SharedLibraryTarget &lib) const
-{
-    if (lib.getBuildSettings().TargetOS.is(OSType::Windows))
-    {
-        lib.Definitions["SW_SUPPORT_API"] = "__declspec(dllimport)";
-        lib.Definitions["SW_MANAGER_API"] = "__declspec(dllimport)";
-        lib.Definitions["SW_BUILDER_API"] = "__declspec(dllimport)";
-        lib.Definitions["SW_CORE_API"] = "__declspec(dllimport)";
-        lib.Definitions["SW_DRIVER_CPP_API"] = "__declspec(dllimport)";
-        // do not use api name because we use C linkage
-        lib.Definitions["SW_PACKAGE_API"] = "__declspec(dllexport)";
-    }
-    else
-    {
-        lib.Definitions["SW_SUPPORT_API="];
-        lib.Definitions["SW_MANAGER_API="];
-        lib.Definitions["SW_BUILDER_API="];
-        lib.Definitions["SW_CORE_API="];
-        lib.Definitions["SW_DRIVER_CPP_API="];
-        // do not use api name because we use C linkage
-        lib.Definitions["SW_PACKAGE_API"] = "__attribute__ ((visibility (\"default\")))";
-    }
-
-    BuildSettings bs(b.module_data.current_settings);
-    if (bs.TargetOS.is(OSType::Windows))
-        lib.NativeLinkerOptions::System.LinkLibraries.insert("Delayimp.lib");
-
-    if (auto L = lib.Linker->template as<VisualStudioLinker*>())
-    {
-        L->DelayLoadDlls().push_back(IMPORT_LIBRARY);
-        //#ifdef CPPAN_DEBUG
-        L->GenerateDebugInformation = vs::link::Debug::Full;
-        //#endif
-        L->Force = vs::ForceType::Multiple;
-        L->IgnoreWarnings().insert(4006); // warning LNK4006: X already defined in Y; second definition ignored
-        L->IgnoreWarnings().insert(4070); // warning LNK4070: /OUT:X.dll directive in .EXP differs from output filename 'Y.dll'; ignoring directive
-                                            // cannot be ignored https://docs.microsoft.com/en-us/cpp/build/reference/ignore-ignore-specific-warnings?view=vs-2017
-                                            //L->IgnoreWarnings().insert(4088); // warning LNK4088: image being generated due to /FORCE option; image may not run
-    }
-
-    /*auto i = b.getChildren().find(lib.getPackage());
-    if (i == b.getChildren().end())
-        throw std::logic_error("config target not found");*/
-
-    out = lib.getOutputFile();
-}
-
-// many input files to many dlls
-void PrepareConfigEntryPoint::many2many(Build &b, const std::set<Input *> &inputs) const
-{
-    for (auto &i : inputs)
-    {
-        one2one(b, *i);
-        r[i->getPath()] = out;
-    }
-}
-
 // one input file to one dll
 void PrepareConfigEntryPoint::one2one(Build &b, const Input &i) const
 {
@@ -644,7 +591,50 @@ void PrepareConfigEntryPoint::one2one(Build &b, const Input &i) const
         }
     }
 
-    commonActions2(b, lib);
+    //commonActions2
+    if (lib.getBuildSettings().TargetOS.is(OSType::Windows))
+    {
+        lib.Definitions["SW_SUPPORT_API"] = "__declspec(dllimport)";
+        lib.Definitions["SW_MANAGER_API"] = "__declspec(dllimport)";
+        lib.Definitions["SW_BUILDER_API"] = "__declspec(dllimport)";
+        lib.Definitions["SW_CORE_API"] = "__declspec(dllimport)";
+        lib.Definitions["SW_DRIVER_CPP_API"] = "__declspec(dllimport)";
+        // do not use api name because we use C linkage
+        lib.Definitions["SW_PACKAGE_API"] = "__declspec(dllexport)";
+    }
+    else
+    {
+        lib.Definitions["SW_SUPPORT_API="];
+        lib.Definitions["SW_MANAGER_API="];
+        lib.Definitions["SW_BUILDER_API="];
+        lib.Definitions["SW_CORE_API="];
+        lib.Definitions["SW_DRIVER_CPP_API="];
+        // do not use api name because we use C linkage
+        lib.Definitions["SW_PACKAGE_API"] = "__attribute__ ((visibility (\"default\")))";
+    }
+
+    BuildSettings bs(b.module_data.current_settings);
+    if (bs.TargetOS.is(OSType::Windows))
+        lib.NativeLinkerOptions::System.LinkLibraries.insert("Delayimp.lib");
+
+    if (auto L = lib.Linker->template as<VisualStudioLinker*>())
+    {
+        L->DelayLoadDlls().push_back(IMPORT_LIBRARY);
+        //#ifdef CPPAN_DEBUG
+        L->GenerateDebugInformation = vs::link::Debug::Full;
+        //#endif
+        L->Force = vs::ForceType::Multiple;
+        L->IgnoreWarnings().insert(4006); // warning LNK4006: X already defined in Y; second definition ignored
+        L->IgnoreWarnings().insert(4070); // warning LNK4070: /OUT:X.dll directive in .EXP differs from output filename 'Y.dll'; ignoring directive
+                                          // cannot be ignored https://docs.microsoft.com/en-us/cpp/build/reference/ignore-ignore-specific-warnings?view=vs-2017
+                                          //L->IgnoreWarnings().insert(4088); // warning LNK4088: image being generated due to /FORCE option; image may not run
+    }
+
+    /*auto i = b.getChildren().find(lib.getPackage());
+    if (i == b.getChildren().end())
+    throw std::logic_error("config target not found");*/
+
+    out = lib.getOutputFile();
 }
 
 bool PrepareConfigEntryPoint::isOutdated() const

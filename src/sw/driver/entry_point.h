@@ -68,10 +68,6 @@ private:
 
     SharedLibraryTarget &createTarget(Build &, const Input &) const;
     decltype(auto) commonActions(Build &, const Input &, const UnresolvedPackages &deps) const;
-    void commonActions2(Build &, SharedLibraryTarget &lib) const;
-
-    // many input files to many dlls
-    void many2many(Build &, const std::set<Input *> &inputs) const;
 
     // one input file to one dll
     void one2one(Build &, const Input &) const;
