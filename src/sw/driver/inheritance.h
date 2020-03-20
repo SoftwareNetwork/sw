@@ -207,7 +207,7 @@ public:
         for (int i = toIndex(InheritanceType::Min); i < toIndex(InheritanceType::Max); i++)
         {
             if ((i & InheritanceScope::Package) == 0)
-                return;
+                continue;
             auto s = getInheritanceStorage().raw()[i];
             if (s)
                 f(*s, (InheritanceType)i);
