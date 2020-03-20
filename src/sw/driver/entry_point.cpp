@@ -276,16 +276,14 @@ Build NativeTargetEntryPoint::createBuild(SwBuild &swb, const TargetSettings &s,
     auto settings = s;
 
     if (!dd)
-    {
         dd = std::make_unique<DriverData>();
 
-        for (auto &[h, d] : settings["driver"]["source-dir-for-source"].getSettings())
-            dd->source_dirs_by_source[h].requested_dir = d.getValue();
-        for (auto &[pkg, p] : settings["driver"]["source-dir-for-package"].getSettings())
-            dd->source_dirs_by_package[pkg] = p.getValue();
-        if (settings["driver"]["force-source"].isValue())
-            dd->force_source = load(nlohmann::json::parse(settings["driver"]["force-source"].getValue()));
-    }
+    for (auto &[h, d] : settings["driver"]["source-dir-for-source"].getSettings())
+        dd->source_dirs_by_source[h].requested_dir = d.getValue();
+    for (auto &[pkg, p] : settings["driver"]["source-dir-for-package"].getSettings())
+        dd->source_dirs_by_package[pkg] = p.getValue();
+    if (settings["driver"]["force-source"].isValue())
+        dd->force_source = load(nlohmann::json::parse(settings["driver"]["force-source"].getValue()));
 
     Build b(swb);
     b.dd = dd.get();
