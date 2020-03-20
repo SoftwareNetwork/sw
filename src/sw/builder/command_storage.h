@@ -115,10 +115,11 @@ struct SW_BUILDER_API CommandStorage
 private:
     FileDb fdb;
     detail::Storage s;
-    std::atomic_int n_users;
+    std::atomic_int n_users{ 0 };
     std::mutex m;
     std::unique_ptr<ScopedFileLock> lock;
     bool saved = false;
+    bool changed = false;
 
     void closeLogs();
 

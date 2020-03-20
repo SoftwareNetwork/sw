@@ -382,20 +382,20 @@ void Command::prepare()
     }
 }
 
-void Command::markForExecution()
+/*void Command::markForExecution()
 {
     if (command_storage)
         command_storage->add_user();
-}
+}*/
 
 void Command::execute()
 {
-    SCOPE_EXIT
+    /*SCOPE_EXIT
     {
         // free cs to release files (logs, cs)
         if (command_storage)
             command_storage->free_user();
-    };
+    };*/
 
     if (!beforeCommand())
         return;
@@ -405,6 +405,13 @@ void Command::execute()
 
 void Command::execute(std::error_code &ec)
 {
+    /*SCOPE_EXIT
+    {
+        // free cs to release files (logs, cs)
+        if (command_storage)
+            command_storage->free_user();
+    };*/
+
     if (!beforeCommand())
         return;
     execute1(&ec); // main thing

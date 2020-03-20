@@ -324,6 +324,7 @@ void CommandStorage::async_command_log(const CommandRecord &r)
 {
     static std::vector<uint8_t> v;
 
+    changed = true;
     add_user();
     swctx.getFileStorageExecutor().push([this, &r]
     {
@@ -361,13 +362,13 @@ void CommandStorage::async_command_log(const CommandRecord &r)
 
 void CommandStorage::add_user()
 {
-    ++n_users;
+    //++n_users;
 }
 
 void CommandStorage::free_user()
 {
-    --n_users;
-    if (n_users == 0)
+    //--n_users;
+    //if (n_users == 0)
         closeLogs(); // reduce number of open fds
 }
 
@@ -385,6 +386,8 @@ void CommandStorage::closeLogs()
 
 void CommandStorage::save()
 {
+    if (!changed)
+        return;
     if (saved)
         return;
     // and save at the end

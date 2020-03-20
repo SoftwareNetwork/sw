@@ -43,6 +43,7 @@ struct SW_BUILDER_API SwBuilderContext
     CommandStorage &getCommandStorage(const path &root) const;
 
     void clearFileStorages();
+    void clearCommandStorages();
 
 private:
     // keep order

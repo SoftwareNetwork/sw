@@ -77,7 +77,7 @@ void ExecutionPlan::execute(Executor &e) const
             static_cast<builder::Command*>(c)->write_output_to_file |= write_output_to_file;
             static_cast<builder::Command*>(c)->always |= build_always;
         }
-        c->markForExecution();
+        //c->markForExecution();
     }
 
     std::function<void(PtrT)> run;

@@ -78,5 +78,11 @@ void SwBuilderContext::clearFileStorages()
     file_storage.reset();
 }
 
+void SwBuilderContext::clearCommandStorages()
+{
+    std::unique_lock lk(csm);
+    command_storages.clear();
+}
+
 }
 

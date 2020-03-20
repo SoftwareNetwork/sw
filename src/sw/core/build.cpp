@@ -656,6 +656,11 @@ void SwBuild::execute(ExecutionPlan &p) const
     if (build_settings["time_limit"].isValue())
         p.setTimeLimit(parseTimeLimit(build_settings["time_limit"].getValue()));
 
+    SCOPE_EXIT
+    {
+        ((SwBuild&)(*this)).clearCommandStorages();
+    };
+
     ScopedTime t;
     p.execute(getBuildExecutor());
     if (build_settings["measure"] == "true")
