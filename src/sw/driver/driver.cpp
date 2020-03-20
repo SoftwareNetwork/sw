@@ -497,8 +497,8 @@ TargetSettings Driver::getDllConfigSettings(SwContext &swctx) const
 std::unordered_map<path, PrepareConfigOutputData> Driver::build_configs1(SwContext &swctx, const std::set<Input *> &inputs) const
 {
     auto &ctx = swctx;
-    if (!b)
-        b = create_build(ctx);
+    //if (!b)
+        auto b = create_build(ctx);
 
     NativeTargetEntryPoint ep;
     //                                                        load all our known targets
