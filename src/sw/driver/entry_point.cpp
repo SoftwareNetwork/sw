@@ -86,7 +86,7 @@ static path getImportLibraryFile(const Build &b)
     return getImportFilePrefix(b) += ".lib";
 }
 
-static String getDepsSuffix(NativeCompiledTarget &t, const UnresolvedPackages &deps)
+static String getDepsSuffix(PrepareConfig &pc, NativeCompiledTarget &t, const UnresolvedPackages &deps)
 {
     std::set<String> sdeps;
     for (auto &d : t.getDependencies())
@@ -97,14 +97,15 @@ static String getDepsSuffix(NativeCompiledTarget &t, const UnresolvedPackages &d
     String s;
     for (auto &d : sdeps)
         s += d;
+    s += std::to_string(pc.lang);
     h = "." + shorten_hash(blake2b_512(s), 6);
     return h;
 }
 
-static path getImportPchFile(NativeCompiledTarget &t, const UnresolvedPackages &deps)
+static path getImportPchFile(PrepareConfig &pc, NativeCompiledTarget &t, const UnresolvedPackages &deps)
 {
     // we create separate pch for different target deps
-    auto h = getDepsSuffix(t, deps);
+    auto h = getDepsSuffix(pc, t, deps);
     return getImportFilePrefix(t.getSolution()) += h + ".cpp";
 }
 
@@ -388,8 +389,14 @@ void PrepareConfig::addInput(Build &b, const Input &i)
         d.cl_name = d.link_name + "/" + d.fn.filename().string();
     }
 
-    vala = d.fn.filename() == "sw.vala";
-    // c = fn == "sw.c";
+    if (d.fn.extension() == ".vala")
+        lang = LANG_VALA;
+    else if (d.fn.extension() == ".c")
+        lang = LANG_C;
+    else if (d.fn.extension() == ".cpp")
+        lang = LANG_CPP;
+    else
+        SW_UNIMPLEMENTED;
     r[d.fn].dll = one2one(b, d);
     inputs_outdated |= i.isOutdated();
 }
@@ -455,7 +462,7 @@ SharedLibraryTarget &PrepareConfig::createTarget(Build &b, const InputData &d)
 {
     auto name = getSelfTargetName({ d.fn });
     auto &lib =
-        vala
+        lang == LANG_VALA
         ? (SharedLibraryTarget&)b.addTarget<ConfigSharedLibraryTarget<ValaSharedLibrary>>(name, "local", *this, d, b.getContext().getLocalStorage().storage_dir)
         : b.addTarget<ConfigSharedLibraryTarget<SharedLibraryTarget>>(name, "local", *this, d, b.getContext().getLocalStorage().storage_dir);
     tgt = lib.getPackage();
@@ -465,8 +472,8 @@ SharedLibraryTarget &PrepareConfig::createTarget(Build &b, const InputData &d)
 
 decltype(auto) PrepareConfig::commonActions(Build &b, const InputData &d, const UnresolvedPackages &deps)
 {
-    // record udeps
-    udeps = deps;
+    // save udeps
+    //udeps = deps;
 
     auto &fn = d.fn;
     auto &lib = createTarget(b, d);
@@ -490,7 +497,7 @@ decltype(auto) PrepareConfig::commonActions(Build &b, const InputData &d, const 
     }
 
     lib += fn;
-    if (vala)
+    if (lang == LANG_VALA)
     {
         auto cfn = ((ValaSharedLibrary &)lib).getOutputCCodeFileName(fn);
         File(cfn, lib.getFs()).setGenerated(true);
@@ -509,10 +516,10 @@ decltype(auto) PrepareConfig::commonActions(Build &b, const InputData &d, const 
         auto fn = driver_idir / getSwDir() / "misc" / "delay_load_helper.cpp";
         lib += fn;
         if (auto nsf = lib[fn].as<NativeSourceFile *>())
-            nsf->setOutputFile(getPchDir(b) / ("delay_load_helper" + getDepsSuffix(lib, deps) + ".obj"));
+            nsf->setOutputFile(getPchDir(b) / ("delay_load_helper" + getDepsSuffix(*this, lib, deps) + ".obj"));
     }
 
-    if (vala)
+    if (lang == LANG_VALA)
     {
         lib.CustomTargetOptions[VALA_OPTIONS_NAME].push_back("--vapidir");
         lib.CustomTargetOptions[VALA_OPTIONS_NAME].push_back(normalize_path(getDriverIncludeDir(b, lib) / "sw/driver/frontend/vala"));
@@ -534,12 +541,12 @@ decltype(auto) PrepareConfig::commonActions(Build &b, const InputData &d, const 
     }
 
     // pch
-    if (fn.filename() != "sw.c" && !vala)
+    if (lang == LANG_CPP)
     {
         lib += PrecompiledHeader(driver_idir / getSwHeader());
 
         detail::PrecompiledHeader pch;
-        pch.name = getImportPchFile(lib, deps).stem();
+        pch.name = getImportPchFile(*this, lib, deps).stem();
         pch.dir = getPchDir(b);
         pch.fancy_name = "[config pch]";
         lib.pch = pch;
@@ -591,7 +598,7 @@ path PrepareConfig::one2one(Build &b, const InputData &d)
     }
 
     FilesOrdered fi_files;
-    if (fn.filename() != "sw.c" && !vala)
+    if (lang == LANG_CPP)
     {
         fi_files.push_back(driver_idir / getSw1Header());
         fi_files.push_back(driver_idir / getSwCheckAbiVersionHeader());

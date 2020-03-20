@@ -91,11 +91,16 @@ struct PrepareConfig
 
     FilesMap r;
     std::optional<PackageId> tgt;
-    bool vala = false;
-    std::set<SharedLibraryTarget *> targets; // internal
+    enum
+    {
+        LANG_CPP,
+        LANG_C,
+        LANG_VALA
+    } lang;
+    std::set<SharedLibraryTarget *> targets;
 
     // output var
-    mutable UnresolvedPackages udeps;
+    //mutable UnresolvedPackages udeps;
 
     void addInput(Build &, const Input &);
     bool isOutdated() const;
