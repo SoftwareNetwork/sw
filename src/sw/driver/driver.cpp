@@ -568,24 +568,11 @@ const Driver::AvailableFrontends &Driver::getAvailableFrontends()
     static AvailableFrontends m = []
     {
         AvailableFrontends m;
-        auto exts = getCppSourceFileExtensions();
-
-        // objc
-        exts.erase(".m");
-        exts.erase(".mm");
 
         // top priority
         m.insert({ FrontendType::Sw, "sw.cpp" });
         m.insert({ FrontendType::Sw, "sw.cxx" });
         m.insert({ FrontendType::Sw, "sw.cc" });
-
-        exts.erase(".cpp");
-        exts.erase(".cxx");
-        exts.erase(".cc");
-
-        // rest
-        for (auto &e : exts)
-            m.insert({ FrontendType::Sw, "sw" + e });
 
         m.insert({ FrontendType::SwC, "sw.c" });
         m.insert({ FrontendType::SwVala, "sw.vala" });
