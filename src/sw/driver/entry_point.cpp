@@ -22,8 +22,7 @@
 #include "command.h"
 #include "driver.h"
 #include "suffix.h"
-#include "target/native.h"
-#include "target/vala.h"
+#include "target/all.h"
 
 #include <sw/core/sw_context.h>
 #include <sw/core/input_database.h>
@@ -400,11 +399,13 @@ void PrepareConfig::addInput(Build &b, const Input &i)
 template <class T>
 struct ConfigSharedLibraryTarget : T
 {
+    using Base = T;
+
     ConfigSharedLibraryTarget(const PrepareConfig &ep, const PrepareConfig::InputData &d, const path &storage_dir)
         : ep(ep), d(d)
     {
-        IsSwConfig = true;
-        IsSwConfigLocal = !is_under_root(d.fn, storage_dir);
+        Base::IsSwConfig = true;
+        Base::IsSwConfigLocal = !is_under_root(d.fn, storage_dir);
     }
 
 private:
@@ -415,7 +416,7 @@ private:
     {
         auto c = T::getCommand();
         if (!d.link_name.empty())
-            c->name = d.link_name + getSelectedTool()->Extension;
+            c->name = d.link_name + Base::getSelectedTool()->Extension;
         return c;
     }
 
@@ -433,7 +434,7 @@ private:
             for (auto t : ep.targets)
             {
                 auto cmd = t->getCommand();
-                auto cmds = ((ConfigSharedLibraryTarget*)t)->T::getCommands();
+                auto cmds = ((ConfigSharedLibraryTarget*)t)->Base::getCommands();
                 for (auto &c2 : cmds)
                 {
                     if (c2 != cmd)
@@ -441,14 +442,14 @@ private:
                 }
             }
         }
-        return T::getCommands();
+        return Base::getCommands();
     }
 
     path getBinaryParentDir() const override
     {
-        if (IsSwConfigLocal)
-            return T::getBinaryParentDir();
-        return getTargetDirShort(getContext().getLocalStorage().storage_dir_tmp / "cfg");
+        if (Base::IsSwConfigLocal)
+            return Base::getBinaryParentDir();
+        return Base::getTargetDirShort(Base::getContext().getLocalStorage().storage_dir_tmp / "cfg");
     }
 };
 
