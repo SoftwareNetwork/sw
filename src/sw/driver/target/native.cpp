@@ -2291,7 +2291,16 @@ void NativeCompiledTarget::prepare_pass1()
     }
     else
     {
-        Interface += LinkLibrary(getImportLibrary());
+        LinkLibrary l(getImportLibrary());
+        l.whole_archive = WholeArchive;
+        if (l.whole_archive)
+        {
+            if (getCompilerType() == CompilerType::MSVC || getCompilerType() == CompilerType::ClangCl)
+                l.style = l.MSVC;
+            else
+                l.style = l.GNU;
+        }
+        Interface += l;
     }
 
     if (PackageDefinitions)
@@ -3353,20 +3362,6 @@ void NativeCompiledTarget::prepare_pass6()
                     circular_dependency = true;
                     break;
                 }
-            }
-
-            if (!*nt->HeaderOnly)
-            {
-                LinkLibrary l{ normalize_path(nt->getImportLibrary()) };
-                l.whole_archive = nt->WholeArchive;
-                if (l.whole_archive)
-                {
-                    if (getCompilerType() == CompilerType::MSVC || getCompilerType() == CompilerType::ClangCl)
-                        l.style = l.MSVC;
-                    else
-                        l.style = l.GNU;
-                }
-                LinkLibraries.push_back(l);
             }
         }
     }
