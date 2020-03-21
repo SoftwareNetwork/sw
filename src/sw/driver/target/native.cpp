@@ -2291,7 +2291,7 @@ void NativeCompiledTarget::prepare_pass1()
     }
     else
     {
-        //Interface += LinkLibrary(getImportLibrary());
+        Interface += LinkLibrary(getImportLibrary());
     }
 
     if (PackageDefinitions)
