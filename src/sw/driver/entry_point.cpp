@@ -393,10 +393,13 @@ void PrepareConfig::addInput(Build &b, const Input &i)
         lang = LANG_VALA;
     else if (d.fn.extension() == ".c")
         lang = LANG_C;
-    else if (d.fn.extension() == ".cpp")
-        lang = LANG_CPP;
+    //else if (d.fn.extension() == ".cpp")
+        //lang = LANG_CPP;
+    // cpp has now some other exts
+    // TODO: sync with driver.cpp
     else
-        SW_UNIMPLEMENTED;
+        lang = LANG_CPP;
+        //SW_UNIMPLEMENTED;
     r[d.fn].dll = one2one(b, d);
     inputs_outdated |= i.isOutdated();
 }
