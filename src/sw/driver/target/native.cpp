@@ -3405,9 +3405,6 @@ void NativeCompiledTarget::prepare_pass7()
             {
                 if (auto t = d->getTarget().as<const NativeCompiledTarget *>())
                 {
-                    if (*t->HeaderOnly)
-                        continue;
-
                     /*for (auto &ll : t->NativeLinkerOptions::System.LinkLibraries)
                     {
                         if (ll.l.empty())
