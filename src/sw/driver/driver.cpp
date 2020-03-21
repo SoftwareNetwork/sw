@@ -38,6 +38,7 @@
 DECLARE_STATIC_LOGGER(logger, "driver.cpp");
 
 bool debug_configs;
+bool ignore_outdated_configs;
 
 std::unordered_map<sw::PackageId, std::shared_ptr<sw::NativeBuiltinTargetEntryPoint>>
     load_builtin_entry_points();
@@ -508,7 +509,7 @@ std::unordered_map<path, PrepareConfigOutputData> Driver::build_configs1(SwConte
         pc.addInput(b2, *i);
 
     // fast path
-    if (!pc.isOutdated())
+    if (ignore_outdated_configs || !pc.isOutdated())
         return pc.r;
 
     auto &tgts = b2.module_data.added_targets;

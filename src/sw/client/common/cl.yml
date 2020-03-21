@@ -80,6 +80,11 @@ command_line:
                 external: true
                 description: Build configs in debug mode
 
+            ignore_outdated_configs:
+                external: true
+                description: Do not rebuild configs
+                hidden: true
+
             ignore_source_files_errors:
                 external: true
                 description: Useful for debugging
