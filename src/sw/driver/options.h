@@ -91,20 +91,21 @@ private:
     unique_type u;
 };
 
-struct FancyFilesOrdered : FilesOrdered
+template <class T>
+struct FancyContainerOrdered : std::vector<T>
 {
-    using base = FilesOrdered;
+    using base = std::vector<T>;
 
     using base::insert;
     using base::erase;
 
     // fix return type
-    void insert(const path &p)
+    void insert(const T &p)
     {
         push_back(p);
     }
 
-    void erase(const path &p)
+    void erase(const T &p)
     {
         base::erase(std::remove(begin(), end(), p), end());
     }
@@ -163,16 +164,25 @@ struct SW_DRIVER_CPP_API LinkDirectory
 
 struct SW_DRIVER_CPP_API LinkLibrary
 {
-    String l;
+    path l;
+    bool whole_archive = false;
+    enum
+    {
+        NONE,
+        MSVC,
+        GNU,
+    } style = NONE;
 
     LinkLibrary() = default;
     explicit LinkLibrary(const String &p);
     explicit LinkLibrary(const path &p);
+
+    bool operator==(const LinkLibrary &rhs) const { return std::tie(l, whole_archive) == std::tie(rhs.l, rhs.whole_archive); }
 };
 
 struct SW_DRIVER_CPP_API SystemLinkLibrary
 {
-    String l;
+    path l;
 
     SystemLinkLibrary() = default;
     explicit SystemLinkLibrary(const String &p);
@@ -228,7 +238,8 @@ struct SW_DRIVER_CPP_API NativeCompilerOptionsData
     void remove(const DefinitionsType &defs);
 };
 
-using LinkLibrariesType = FancyFilesOrdered;
+using FancyFilesOrdered = FancyContainerOrdered<path>;
+using LinkLibrariesType = FancyContainerOrdered<LinkLibrary>;
 
 struct SW_DRIVER_CPP_API NativeLinkerOptionsData
 {
@@ -288,7 +299,7 @@ struct SW_DRIVER_CPP_API NativeLinkerOptions : NativeLinkerOptionsData
 
     void merge(const NativeLinkerOptions &o, const GroupSettings &s = GroupSettings());
     void addEverything(builder::Command &c) const;
-    FilesOrdered gatherLinkLibraries() const;
+    LinkLibrariesType gatherLinkLibraries() const;
 
     //
     void add(const Target &t);
@@ -311,6 +322,7 @@ struct SW_DRIVER_CPP_API NativeLinkerOptions : NativeLinkerOptionsData
     DependencyPtr operator+(const PackageId &);
     DependencyPtr operator+(const UnresolvedPackage &);
 
+    std::vector<DependencyPtr> &getRawDependencies() { return deps; }
     const std::vector<DependencyPtr> &getRawDependencies() const { return deps; }
 
 private:

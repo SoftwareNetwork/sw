@@ -16,6 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "options.h"
 #include "options_cl_vs.h"
 
 #include "command.h"

@@ -139,6 +139,7 @@ void build(Solution &s)
         cpp_driver.ApiName = "SW_DRIVER_CPP_API";
         cpp_driver.ExportIfStatic = true;
         cpp_driver.PackageDefinitions = true;
+        cpp_driver.WholeArchive = true;
         cpp_driver.CPPVersion = CPPLanguageStandard::CPP17;
         cpp_driver.Public += core,
             "pub.egorpugin.primitives.patch-master"_dep,
@@ -150,11 +151,8 @@ void build(Solution &s)
         cpp_driver += "src/sw/driver/.*"_rr;
         cpp_driver -= "src/sw/driver/misc/delay_load_helper.cpp";
         gen_flex_bison("org.sw.demo.lexxmark.winflexbison"_dep, cpp_driver, "src/sw/driver/bazel/lexer.ll", "src/sw/driver/bazel/grammar.yy");
-        if (cpp_driver.getCompilerType() == CompilerType::MSVC)
-        {
+        if (cpp_driver.getCompilerType() == CompilerType::MSVC || cpp_driver.getCompilerType() == CompilerType::ClangCl)
             cpp_driver.CompileOptions.push_back("-bigobj");
-            cpp_driver.Interface.LinkOptions.push_back("/WHOLEARCHIVE:" + normalize_path(cpp_driver.getImportLibrary()));
-        }
         if (cpp_driver.getBuildSettings().TargetOS.Type == OSType::Windows)
             cpp_driver += "dbghelp.lib"_slib;
         //else if (s.getBuildSettings().Native.CompilerType == CompilerType::GNU)

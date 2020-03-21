@@ -1296,7 +1296,7 @@ void LibraryFunctionExists::setupTarget(NativeCompiledTarget &e) const
 {
     FunctionExists::setupTarget(e);
     e.Definitions["CHECK_FUNCTION_EXISTS"] = function;
-    e.NativeLinkerOptions::System.LinkLibraries.push_back(library);
+    e.NativeLinkerOptions::System.LinkLibraries.push_back(LinkLibrary{ library });
 }
 
 SourceCompiles::SourceCompiles(const String &def, const String &source)

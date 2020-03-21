@@ -116,6 +116,37 @@ DECLARE_OPTION_SPECIALIZATION(Files)
     return cmds;
 }
 
+DECLARE_OPTION_SPECIALIZATION(LinkLibrariesType)
+{
+    Strings cmds;
+    for (auto &v : value())
+    {
+        if (input_dependency)
+            c->addInput(v.l);
+        //if (intermediate_file)
+            //c->addIntermediate(v);
+        if (output_dependency)
+            c->addOutput(v.l);
+        if (cmd_flag_before_each_value)
+        {
+            if (v.whole_archive && v.style == v.GNU)
+                cmds.push_back("-Wl,--whole-archive");
+            if (separate_prefix)
+            {
+                cmds.push_back(getCommandLineFlag());
+                cmds.push_back((v.whole_archive && v.style == v.MSVC ? "/WHOLEARCHIVE:" : "") + normalize_path(v.l));
+            }
+            else
+                cmds.push_back((v.whole_archive && v.style == v.MSVC ? "/WHOLEARCHIVE:" : "") + getCommandLineFlag() + normalize_path(v.l));
+            if (v.whole_archive && v.style == v.GNU)
+                cmds.push_back("-Wl,--no-whole-archive");
+        }
+        else
+            cmds.push_back(normalize_path(v.l));
+    }
+    return cmds;
+}
+
 DECLARE_OPTION_SPECIALIZATION(std::set<int>)
 {
     Strings cmds;

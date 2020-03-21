@@ -150,7 +150,7 @@ void addImportLibrary(const Build &b, NativeCompiledTarget &t)
         << cmd::in(getImportDefinitionsFile(b), cmd::Prefix{ "-DEF:" }, cmd::Skip)
         << cmd::out(getImportLibraryFile(b), cmd::Prefix{ "-OUT:" })
         ;
-    t.LinkLibraries.push_back(getImportLibraryFile(b));
+    t.LinkLibraries.push_back(LinkLibrary{ getImportLibraryFile(b) });
 #endif
 }
 
@@ -664,7 +664,7 @@ path PrepareConfig::one2one(Build &b, const InputData &d)
 
     BuildSettings bs(b.module_data.current_settings);
     if (bs.TargetOS.is(OSType::Windows))
-        lib.NativeLinkerOptions::System.LinkLibraries.insert("Delayimp.lib");
+        lib.NativeLinkerOptions::System.LinkLibraries.insert(LinkLibrary{ "Delayimp.lib"s });
 
     if (auto L = lib.Linker->template as<VisualStudioLinker*>())
     {

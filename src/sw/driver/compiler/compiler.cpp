@@ -585,9 +585,9 @@ FilesOrdered NativeLinker::gatherLinkDirectories() const
     return dirs;
 }
 
-FilesOrdered NativeLinker::gatherLinkLibraries(bool system) const
+LinkLibrariesType NativeLinker::gatherLinkLibraries(bool system) const
 {
-    FilesOrdered dirs;
+    LinkLibrariesType dirs;
 
     auto get_ldir = [&dirs](const auto &a)
     {
@@ -667,7 +667,7 @@ void VisualStudioLinker::getAdditionalOptions(driver::Command *cmd) const
     getCommandLineOptions<VisualStudioLinkerOptions>(cmd, *this);
 }
 
-void VisualStudioLinker::setInputLibraryDependencies(const FilesOrdered &files)
+void VisualStudioLinker::setInputLibraryDependencies(const LinkLibrariesType &files)
 {
     InputLibraryDependencies().insert(InputLibraryDependencies().end(), files.begin(), files.end());
 }
@@ -680,7 +680,9 @@ void VisualStudioLinker::prepareCommand1(const Target &t)
 
     //LinkDirectories() = gatherLinkDirectories();
     //LinkLibraries() = gatherLinkLibraries();
-    ((VisualStudioLinker*)this)->VisualStudioLinkerOptions::SystemLinkLibraries = gatherLinkLibraries(true);
+    ((VisualStudioLinker *)this)->VisualStudioLinkerOptions::SystemLinkLibraries = {};
+    for (auto &l : gatherLinkLibraries(true))
+        ((VisualStudioLinker *)this)->VisualStudioLinkerOptions::SystemLinkLibraries().push_back(l.l);
 
     //cmd->out.capture = true;
     //cmd->base = clone();
@@ -740,13 +742,13 @@ void GNULinker::setImportLibrary(const path &out)
     //ImportLibrary = out.u8string();// + ".lib";
 }
 
-void GNULinker::setLinkLibraries(const FilesOrdered &in)
+void GNULinker::setLinkLibraries(const LinkLibrariesType &in)
 {
     for (auto &lib : in)
         NativeLinker::LinkLibraries.push_back(lib);
 }
 
-void GNULinker::setInputLibraryDependencies(const FilesOrdered &files)
+void GNULinker::setInputLibraryDependencies(const LinkLibrariesType &files)
 {
     if (files.empty())
 		return;
@@ -813,12 +815,12 @@ void GNULinker::prepareCommand1(const Target &t)
         {
             for (auto &ll : a)
             {
-                if (ll.is_relative())
+                if (ll.l.is_relative())
                     continue;
                 if (add_inputs)
-                    cmd->addInput(ll);
-                dirs.insert(ll.parent_path());
-                ll = "-l" + remove_prefix_and_suffix(ll);
+                    cmd->addInput(ll.l);
+                dirs.insert(ll.l.parent_path());
+                //ll.l = "-l" + remove_prefix_and_suffix(ll.l);
             }
         };
 

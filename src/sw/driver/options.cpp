@@ -423,14 +423,14 @@ void NativeLinkerOptionsData::remove(const LinkDirectory &l)
 
 void NativeLinkerOptionsData::add(const LinkLibrary &l)
 {
-    LinkLibraries.push_back(l.l);
-    LinkLibraries2.push_back(l.l);
+    LinkLibraries.push_back(l);
+    LinkLibraries2.push_back(l);
 }
 
 void NativeLinkerOptionsData::remove(const LinkLibrary &l)
 {
-    LinkLibraries.erase(l.l);
-    LinkLibraries2.erase(l.l);
+    LinkLibraries.erase(l);
+    LinkLibraries2.erase(l);
 }
 
 PathOptionsType NativeLinkerOptionsData::gatherLinkDirectories() const
@@ -472,12 +472,12 @@ void NativeLinkerOptionsData::merge(const NativeLinkerOptionsData &o, const Grou
 
 void NativeLinkerOptions::add(const SystemLinkLibrary &l)
 {
-    System.LinkLibraries.push_back(l.l);
+    System.LinkLibraries.push_back(LinkLibrary{ l.l });
 }
 
 void NativeLinkerOptions::remove(const SystemLinkLibrary &l)
 {
-    System.LinkLibraries.erase(l.l);
+    System.LinkLibraries.erase(LinkLibrary{ l.l });
 }
 
 void NativeLinkerOptions::merge(const NativeLinkerOptions &o, const GroupSettings &s)
@@ -499,9 +499,9 @@ void NativeLinkerOptions::addEverything(builder::Command &c) const
     print_idir(LinkOptions, "");
 }
 
-FilesOrdered NativeLinkerOptions::gatherLinkLibraries() const
+LinkLibrariesType NativeLinkerOptions::gatherLinkLibraries() const
 {
-    FilesOrdered llib;
+    LinkLibrariesType llib;
     auto i = NativeLinkerOptionsData::gatherLinkLibraries();
     llib.insert(llib.end(), i.begin(), i.end());
     //i = System.gatherLinkLibraries();

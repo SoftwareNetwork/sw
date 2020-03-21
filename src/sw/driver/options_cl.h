@@ -19,6 +19,7 @@
 #pragma once
 
 #include <sw/builder/command.h>
+#include "options.h"
 #include "types.h"
 
 #include <unordered_map>
@@ -450,6 +451,7 @@ DECLARE_OPTION_SPECIALIZATION(StringMap<String>);
 DECLARE_OPTION_SPECIALIZATION(path);
 DECLARE_OPTION_SPECIALIZATION(FilesOrdered);
 DECLARE_OPTION_SPECIALIZATION(Files);
+DECLARE_OPTION_SPECIALIZATION(LinkLibrariesType);
 DECLARE_OPTION_SPECIALIZATION(std::set<int>);
 
 }

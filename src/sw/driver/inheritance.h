@@ -44,8 +44,9 @@ struct InheritanceScope
 enum class InheritanceType
 {
     // 8 types
-    // - 000 type (invalid)
-    // = 7 types
+
+    // 000 - special type to pass stuff to any user
+    Special,
 
     // 001 - usual private options
     Private = InheritanceScope::Package,
@@ -77,7 +78,7 @@ enum class InheritanceType
     // alternative names
 
     Default = Private,
-    Min = Private,
+    Min = Special,
     Max = Public + 1,
 };
 ENABLE_ENUM_CLASS_BITMASK(InheritanceType);
@@ -100,14 +101,17 @@ struct InheritanceStorage : std::vector<T*>
     InheritanceStorage(T *pvt)
         : base(toIndex(InheritanceType::Max), nullptr)
     {
-        base::operator[](1) = pvt;
+        base::operator[](toIndex(InheritanceType::Private)) = pvt;
     }
 
     ~InheritanceStorage()
     {
-        // we do not own 0 and 1 elements
-        for (int i = toIndex(InheritanceType::Min) + 1; i < toIndex(InheritanceType::Max); i++)
-            delete base::operator[](i);
+        for (int i = toIndex(InheritanceType::Min); i < toIndex(InheritanceType::Max); i++)
+        {
+            // private is our target
+            if ((InheritanceType)i != InheritanceType::Private)
+                delete base::operator[](i);
+        }
     }
 
     T &operator[](int i)
@@ -120,7 +124,10 @@ struct InheritanceStorage : std::vector<T*>
 
     const T &operator[](int i) const
     {
-        return *base::operator[](i);
+        auto &e = base::operator[](i);
+        if (!e)
+            throw SW_RUNTIME_ERROR("Empty instance: " + std::to_string(i));
+        return *e;
     }
 
     T &operator[](InheritanceType i)

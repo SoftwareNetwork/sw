@@ -509,7 +509,7 @@ types:
         flags:
             ild:
                 name: InputLibraryDependencies
-                type: FilesOrdered
+                type: LinkLibrariesType
                 properties:
                     - input_dependency
 
@@ -1022,10 +1022,12 @@ types:
 
             ild:
                 name: InputLibraryDependencies
-                type: FilesOrdered
+                type: LinkLibrariesType
+                flag: l
                 order: 53
                 properties:
                     - input_dependency
+                    - flag_before_each_value
 
             ld:
                 name: LinkDirectories
@@ -1038,7 +1040,7 @@ types:
             ll:
                 name: LinkLibraries
                 flag: l
-                type: FilesOrdered
+                type: LinkLibrariesType
                 order: 57
                 properties:
                     - input_dependency
@@ -1056,7 +1058,7 @@ types:
             sll:
                 name: SystemLinkLibraries
                 flag: l
-                type: FilesOrdered
+                type: LinkLibrariesType
                 order: 59
                 properties:
                     # it's not the input dep!

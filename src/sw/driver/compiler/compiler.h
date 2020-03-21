@@ -352,8 +352,8 @@ struct SW_DRIVER_CPP_API NativeLinker : Linker,
     using Linker::Linker;
 
     virtual void setObjectFiles(const FilesOrdered &files) = 0; // actually this is addObjectFiles()
-    virtual void setInputLibraryDependencies(const FilesOrdered &files) {}
-    virtual void setLinkLibraries(const FilesOrdered &in) {}
+    virtual void setInputLibraryDependencies(const LinkLibrariesType &files) {}
+    virtual void setLinkLibraries(const LinkLibrariesType &in) {}
 
     virtual path getOutputFile() const = 0;
     virtual void setOutputFile(const path &out) = 0;
@@ -362,7 +362,7 @@ struct SW_DRIVER_CPP_API NativeLinker : Linker,
     virtual void setImportLibrary(const path &out) = 0;
 
     FilesOrdered gatherLinkDirectories() const;
-    FilesOrdered gatherLinkLibraries(bool system = false) const;
+    LinkLibrariesType gatherLinkLibraries(bool system = false) const;
 };
 
 struct SW_DRIVER_CPP_API VisualStudioLibraryTool : VisualStudio,
@@ -395,7 +395,7 @@ struct SW_DRIVER_CPP_API VisualStudioLinker : VisualStudioLibraryTool,
 
     SW_DECLARE_PROGRAM_CLONE;
     void getAdditionalOptions(driver::Command *c) const override;
-    void setInputLibraryDependencies(const FilesOrdered &files) override;
+    void setInputLibraryDependencies(const LinkLibrariesType &files) override;
 
 protected:
     void prepareCommand1(const Target &t) override;
@@ -433,11 +433,11 @@ struct SW_DRIVER_CPP_API GNULinker : GNULibraryTool,
 
     void getAdditionalOptions(driver::Command *c) const override;
 
-    void setInputLibraryDependencies(const FilesOrdered &files) override;
+    void setInputLibraryDependencies(const LinkLibrariesType &files) override;
     void setObjectFiles(const FilesOrdered &files) override;
     void setOutputFile(const path &out) override;
     void setImportLibrary(const path &out) override;
-    void setLinkLibraries(const FilesOrdered &in) override;
+    void setLinkLibraries(const LinkLibrariesType &in) override;
 
     path getOutputFile() const override;
     path getImportLibrary() const override;

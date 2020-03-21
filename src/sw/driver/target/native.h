@@ -62,6 +62,7 @@ public:
     bool StartupProject = false; // move to description? move to Generator.VS... struct? IDE struct?
     bool GenerateWindowsResource = true; // internal?
     bool NoUndefined = true;
+    bool WholeArchive = false;
 
     // unity
     // https://cmake.org/cmake/help/latest/prop_tgt/UNITY_BUILD.html
@@ -166,7 +167,6 @@ protected:
     bool IsSwConfig = false;
     bool IsSwConfigLocal = false;
 
-    Files gatherObjectFiles() const;
     Files gatherObjectFilesWithoutLibraries() const;
     TargetsSet gatherDependenciesTargets() const;
     bool prepareLibrary(LibraryType Type);
@@ -206,7 +206,7 @@ private:
     void gatherStaticLinkLibraries(T &ll, Files &added, std::unordered_set<const NativeCompiledTarget*> &targets, int type) const;
     void gatherRpathLinkDirectories(Files &added, Files &visited, int round) const;
     FilesOrdered gatherLinkDirectories() const;
-    FilesOrdered gatherLinkLibraries() const;
+    LinkLibrariesType gatherLinkLibraries() const;
     void processCircular(Files &objs);
     path getPatchDir(bool binary_dir) const;
     void addFileSilently(const path &);
