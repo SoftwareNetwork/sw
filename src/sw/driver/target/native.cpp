@@ -3416,10 +3416,10 @@ void NativeCompiledTarget::prepare_pass7()
                             LOG_WARN(logger, "Empty lib: " + t->getPackage().toString());
                     }*/
 
-                    LinkLibrary l{ t->getImportLibrary() };
+                    //LinkLibrary l{ t->getImportLibrary() };
                     // take ll2
                     //LinkLibraries.insert(LinkLibraries.end(), t->LinkLibraries2.begin(), t->LinkLibraries2.end());
-                    for (auto &ll : t->NativeLinkerOptions::System.LinkLibraries)
+                    for (auto &ll : t->LinkLibraries)
                     {
                         if (ll.l.empty())
                             continue;
