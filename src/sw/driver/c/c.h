@@ -20,7 +20,7 @@
 #define _SW_C_H_
 
 #ifdef __cplusplus
-#include "sw.h"
+#include "../sw.h"
 #endif
 
 #include <stddef.h>

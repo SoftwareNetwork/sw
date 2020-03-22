@@ -528,7 +528,7 @@ decltype(auto) PrepareConfig::commonActions(Build &b, const InputData &d, const 
         lib.CustomTargetOptions[VALA_OPTIONS_NAME].push_back(normalize_path(getDriverIncludeDir(b, lib) / "sw/driver/frontend/vala"));
         lib.CustomTargetOptions[VALA_OPTIONS_NAME].push_back("--pkg");
         lib.CustomTargetOptions[VALA_OPTIONS_NAME].push_back("sw");
-        // when (cheader_filename = "sw/driver/c.h") is present
+        // when (cheader_filename = "sw/driver/c/c.h") is present
         //lib.CustomTargetOptions[VALA_OPTIONS_NAME].push_back("--includedir=" + normalize_path(getDriverIncludeDir(b, lib)));
 
 #ifdef _WIN32
@@ -608,8 +608,8 @@ path PrepareConfig::one2one(Build &b, const InputData &d)
     }
     else
     {
-        fi_files.push_back(driver_idir / getSwDir() / "c.h"); // main include, goes first
-        fi_files.push_back(driver_idir / getSwDir() / "swc.h");
+        fi_files.push_back(driver_idir / getSwDir() / "c" / "c.h"); // main include, goes first
+        fi_files.push_back(driver_idir / getSwDir() / "c" / "swc.h");
         fi_files.push_back(driver_idir / getSwCheckAbiVersionHeader()); // TODO: remove it, we don't need abi here
     }
 

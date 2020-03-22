@@ -19,7 +19,7 @@
 #pragma once
 
 #include "c.h"
-#include "driver.h"
+#include "../driver.h"
 
 namespace sw
 {
