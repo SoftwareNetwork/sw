@@ -2297,6 +2297,9 @@ void NativeCompiledTarget::prepare_pass1()
         {
             if (getCompilerType() == CompilerType::MSVC || getCompilerType() == CompilerType::ClangCl)
                 l.style = l.MSVC;
+            // remove clang check? any apple platform?
+            else if (getBuildSettings().TargetOS.isApple() && getCompilerType() == CompilerType::Clang)
+                l.style = l.AppleLD;
             else
                 l.style = l.GNU;
         }

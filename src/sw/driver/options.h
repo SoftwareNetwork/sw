@@ -171,6 +171,7 @@ struct SW_DRIVER_CPP_API LinkLibrary
         NONE,
         MSVC,
         GNU,
+        AppleLD,
     } style = NONE;
 
     LinkLibrary() = default;

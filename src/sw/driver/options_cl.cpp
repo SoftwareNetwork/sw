@@ -131,6 +131,8 @@ DECLARE_OPTION_SPECIALIZATION(LinkLibrariesType)
         {
             if (v.whole_archive && v.style == v.GNU)
                 cmds.push_back("-Wl,--whole-archive");
+            if (v.whole_archive && v.style == v.AppleLD)
+                cmds.push_back("-Wl,-all_load");
             if (separate_prefix)
             {
                 cmds.push_back(getCommandLineFlag());
@@ -140,6 +142,8 @@ DECLARE_OPTION_SPECIALIZATION(LinkLibrariesType)
                 cmds.push_back((v.whole_archive && v.style == v.MSVC ? "/WHOLEARCHIVE:" : "") + getCommandLineFlag() + normalize_path(v.l));
             if (v.whole_archive && v.style == v.GNU)
                 cmds.push_back("-Wl,--no-whole-archive");
+            if (v.whole_archive && v.style == v.AppleLD)
+                cmds.push_back("-Wl,-noall_load");
         }
         else
             cmds.push_back(normalize_path(v.l));
