@@ -3650,8 +3650,16 @@ void NativeCompiledTarget::gatherRpathLinkDirectories(
             }
         }
 
-        if (!visited.insert(dt->getOutputFile().parent_path()).second)
-            continue;
+        if (!*dt->HeaderOnly)
+        {
+            if (!visited.insert(dt->getOutputFile().parent_path()).second)
+                continue;
+        }
+        else
+        {
+            if (!visited.insert(dt->getPackage().toString()).second)
+                continue;
+        }
         dt->gatherRpathLinkDirectories(added, visited, round + 1);
     }
 }
