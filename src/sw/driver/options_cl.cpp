@@ -146,7 +146,7 @@ DECLARE_OPTION_SPECIALIZATION(LinkLibrariesType)
                 cmds.push_back("-Wl,-noall_load");
         }
         else
-            cmds.push_back(normalize_path(v.l));
+            cmds.push_back((v.whole_archive && v.style == v.MSVC ? "/WHOLEARCHIVE:" : "") + normalize_path(v.l));
     }
     return cmds;
 }
