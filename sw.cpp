@@ -291,6 +291,17 @@ void build(Solution &s)
         create_git_revision("pub.egorpugin.primitives.tools.create_git_rev-master"_dep, client);
     }
 
+    // tests
+    {
+        // at the moment tests cannot run in parallel
+        auto p = new sw::ResourcePool;
+
+        auto t = cpp_driver.addTest(client);
+        t.c->push_back("build");
+        t.c->push_back(client.SourceDir / "test/build/simple/sw.cpp");
+        t.c->pool = p;
+    }
+
     if (s.getExternalVariables()["with-gui"] != "true")
         return;
 
