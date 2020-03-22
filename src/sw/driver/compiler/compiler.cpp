@@ -786,10 +786,13 @@ void GNULinker::prepareCommand1(const Target &t)
     //if (InputFiles().empty())
         //return nullptr;
 
-    for (auto &f : NativeLinkerOptions::Frameworks)
-        ((GNULinker *)this)->GNULinkerOptions::Frameworks().push_back(f);
-    for (auto &f : NativeLinkerOptions::System.Frameworks)
-        ((GNULinker *)this)->GNULinkerOptions::Frameworks().push_back(f);
+    if (t.getBuildSettings().TargetOS.isApple())
+    {
+        for (auto &f : NativeLinkerOptions::Frameworks)
+            ((GNULinker *)this)->GNULinkerOptions::Frameworks().push_back(f);
+        for (auto &f : NativeLinkerOptions::System.Frameworks)
+            ((GNULinker *)this)->GNULinkerOptions::Frameworks().push_back(f);
+    }
 
     ((GNULinker*)this)->GNULinkerOptions::LinkDirectories = gatherLinkDirectories();
     //((GNULinker*)this)->GNULinkerOptions::LinkLibraries() = gatherLinkLibraries();
