@@ -219,7 +219,10 @@ path NativeTarget::getOutputFileName2(const path &subdir) const
 
 path NativeTarget::getOutputFile() const
 {
-    return getSelectedTool()->getOutputFile();
+    auto t = getSelectedTool();
+    if (!t)
+        throw SW_RUNTIME_ERROR("Empty selected tool: " + getPackage().toString());
+    return t->getOutputFile();
 }
 
 NativeCompiledTarget::~NativeCompiledTarget()
@@ -2095,7 +2098,10 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
     {
         builder::Command c;
         setupCommandForRun(c);
-        s["run_command"]["program"] = normalize_path(getOutputFile());
+        if (c.isProgramSet())
+            s["run_command"]["program"] = normalize_path(c.getProgram());
+        else
+            s["run_command"]["program"] = normalize_path(getOutputFile());
         for (auto &a : c.getArguments())
             s["run_command"]["arguments"].push_back(a->toString());
         for (auto &[k, v] : c.environment)
