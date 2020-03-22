@@ -173,7 +173,18 @@ std::vector<Input *> SwContext::addInput(const String &i)
     if (fs::exists(p))
         return addInput(p);
     else
-        return addInput(resolve(i));
+    {
+        UnresolvedPackage p;
+        try
+        {
+            p = extractFromString(i);
+        }
+        catch (std::exception &)
+        {
+            throw SW_RUNTIME_ERROR("No such file, directory or suitable package: " + i);
+        }
+        return addInput(resolve(p));
+    }
 }
 
 std::vector<Input *> SwContext::addInput(const LocalPackage &p)
