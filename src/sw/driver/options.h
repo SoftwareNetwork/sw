@@ -102,12 +102,12 @@ struct FancyContainerOrdered : std::vector<T>
     // fix return type
     void insert(const T &p)
     {
-        push_back(p);
+        base::push_back(p);
     }
 
     void erase(const T &p)
     {
-        base::erase(std::remove(begin(), end(), p), end());
+        base::erase(std::remove(base::begin(), base::end(), p), base::end());
     }
 };
 

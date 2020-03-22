@@ -680,7 +680,7 @@ void VisualStudioLinker::prepareCommand1(const Target &t)
 
     //LinkDirectories() = gatherLinkDirectories();
     //LinkLibraries() = gatherLinkLibraries();
-    ((VisualStudioLinker *)this)->VisualStudioLinkerOptions::SystemLinkLibraries = {};
+    ((VisualStudioLinker *)this)->VisualStudioLinkerOptions::SystemLinkLibraries.value().clear();
     for (auto &l : gatherLinkLibraries(true))
         ((VisualStudioLinker *)this)->VisualStudioLinkerOptions::SystemLinkLibraries().push_back(l.l);
 
@@ -811,7 +811,7 @@ void GNULinker::prepareCommand1(const Target &t)
         for (auto &d : origin_dirs)
             dirs.push_back(d);
 
-        auto update_libs = [&dirs, this](auto &a, bool add_inputs = false)
+        auto update_libs = [&dirs, this](auto &a, bool add_inputs = false, bool sys = false)
         {
             for (auto &ll : a)
             {
@@ -820,17 +820,20 @@ void GNULinker::prepareCommand1(const Target &t)
                 if (add_inputs)
                     cmd->addInput(ll.l);
                 dirs.insert(ll.l.parent_path());
-                //ll.l = "-l" + remove_prefix_and_suffix(ll.l);
+                if (sys)
+                    ll.l = remove_prefix_and_suffix(ll.l);
+                else
+                    ll.l = remove_prefix_and_suffix(ll.l.filename());
             }
         };
 
         // we also now provide manual handling of input files
 
         update_libs(NativeLinker::LinkLibraries);
-        update_libs(NativeLinker::System.LinkLibraries);
+        update_libs(NativeLinker::System.LinkLibraries, false, true);
         update_libs(GNULinkerOptions::InputLibraryDependencies(), true);
         update_libs(GNULinkerOptions::LinkLibraries(), true);
-        update_libs(GNULinkerOptions::SystemLinkLibraries());
+        update_libs(GNULinkerOptions::SystemLinkLibraries(), false, true);
 
         GNULinkerOptions::InputLibraryDependencies.input_dependency = false;
         GNULinkerOptions::LinkLibraries.input_dependency = false;
