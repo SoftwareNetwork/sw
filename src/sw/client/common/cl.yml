@@ -45,7 +45,7 @@ command_line:
             use_same_config_for_host_dependencies:
 
             use_saved_configs:
-                option: usc
+                aliases: usc
                 #default_value: true
 
             #

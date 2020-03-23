@@ -329,7 +329,7 @@ void SwBuild::resolvePackages()
     CHECK_STATE_AND_CHANGE_RAW(BuildState::TargetsToBuildSet, BuildState::PackagesResolved, auto se = SCOPE_EXIT_NAMED);
 
     // gather
-    UnresolvedPackages upkgs;
+    std::vector<IDependency*> upkgs;
     for (const auto &[pkg, tgts] : getTargets())
     {
         for (const auto &tgt : tgts)
@@ -345,7 +345,7 @@ void SwBuild::resolvePackages()
                 if (swctx.getPredefinedTargets().find(d->getUnresolvedPackage().ppath) != swctx.getPredefinedTargets().end(d->getUnresolvedPackage().ppath))
                     continue;
 
-                upkgs.insert(d->getUnresolvedPackage());
+                upkgs.push_back(d);
             }
             break; // take first as all deps are equal
         }
@@ -355,7 +355,7 @@ void SwBuild::resolvePackages()
     resolvePackages(upkgs);
 }
 
-void SwBuild::resolvePackages(const UnresolvedPackages &upkgs)
+void SwBuild::resolvePackages(const std::vector<IDependency*> &udeps)
 {
     CHECK_STATE_AND_CHANGE(BuildState::PackagesResolved, BuildState::PackagesResolved);
 
@@ -388,11 +388,49 @@ void SwBuild::resolvePackages(const UnresolvedPackages &upkgs)
         swctx.install(upkgs, false);
     }
 
+#define BASE_SETTINGS "settings.17"
+#define USE_JSON
+#ifndef USE_JSON
+#define SETTINGS_FN BASE_SETTINGS ".bin"
+#else
+#define SETTINGS_FN BASE_SETTINGS ".json"
+#endif
+#define CAN_USE_USV (build_settings["use_saved_configs"] == "true")
+    //&& build_settings["master_build"] == "true" // allow only in the main build for now)
+
+    UnresolvedPackages upkgs;
+    for (auto &d : udeps)
+        upkgs.insert(d->getUnresolvedPackage());
+
     // install
-    auto m = swctx.install(upkgs);
+    std::unordered_map<UnresolvedPackage, LocalPackage> m;
+    m.merge(swctx.install(upkgs));
+    // mark packages as known right after resolve
+    for (auto &[u, p] : m)
+        targets[p];
+
+    bool everything_resolved = true;
+    for (auto d : udeps)
+    {
+        if (CAN_USE_USV)
+        {
+            auto &p = m.find(d->getUnresolvedPackage())->second;
+            auto cfg = d->getSettings().getHash();
+            auto base = p.getDirObj(cfg);
+            auto sfn = base / SETTINGS_FN;
+            if (fs::exists(sfn))
+                continue;
+        }
+        everything_resolved = false;
+    }
+    if (everything_resolved)
+        return;
 
     if (build_settings["lock_file"].isValue() && must_update_lock_file)
     {
+        // TODO: update for deps changes
+        SW_UNIMPLEMENTED;
+
         // show fancy diffs during update lock file
         if (build_settings["update_lock_file"] == "true")
         try
@@ -424,8 +462,11 @@ void SwBuild::resolvePackages(const UnresolvedPackages &upkgs)
     // now we know all drivers
     std::set<Input *> iv;
     std::map<PackageId, Input *> ivm;
-    for (auto &[_, p] : m)
+    for (auto &[u,p] : m)
     {
+        // this marks package as known;
+        targets[p];
+
         // use addInput to prevent doubling already existing and loaded inputs
         // like when we loading dependency that is already loaded from the input
         // test: sw build org.sw.demo.gnome.pango.pangocairo-1.44
@@ -434,9 +475,6 @@ void SwBuild::resolvePackages(const UnresolvedPackages &upkgs)
             iv.insert(i);
             ivm[p] = i;
         }
-
-        // this marks package as known;
-        targets[p];
     }
 
     {
@@ -523,19 +561,11 @@ void SwBuild::loadPackages(const TargetMap &predefined)
             if (s.empty())
                 continue;
 
-            if (build_settings["use_saved_configs"] == "true" &&
-                build_settings["master_build"] == "true") // allow only in the main build for now
+            if (CAN_USE_USV)
             {
                 LocalPackage p(getContext().getLocalStorage(), d.first);
                 auto cfg = s.getHash();
                 auto base = p.getDirObj(cfg);
-#define BASE_SETTINGS "settings.16"
-#define USE_JSON
-#ifndef USE_JSON
-#define SETTINGS_FN BASE_SETTINGS ".bin"
-#else
-#define SETTINGS_FN BASE_SETTINGS ".json"
-#endif
                 auto sfn = base / SETTINGS_FN;
                 if (fs::exists(sfn))
                 {
