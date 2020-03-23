@@ -44,15 +44,22 @@ const ModuleStorage::DynamicLibrary &ModuleStorage::get(const path &dll, const F
 
 #ifdef _WIN32
     // set dll deps
-    SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_USER_DIRS);
     std::vector<void *> cookies;
-    for (const path &p : PATH)
-        cookies.push_back(AddDllDirectory(p.wstring().c_str()));
+    if (!PATH.empty())
+    {
+        SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_USER_DIRS);
+        for (const path &p : PATH)
+            cookies.push_back(AddDllDirectory(p.wstring().c_str()));
+    }
     SCOPE_EXIT
     {
         // restore
-        for (auto c : cookies)
-            RemoveDllDirectory(c);
+        if (!cookies.empty())
+        {
+            for (auto c : cookies)
+                RemoveDllDirectory(c);
+            SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
+        }
     };
 #endif
 
@@ -66,6 +73,14 @@ const ModuleStorage::DynamicLibrary &ModuleStorage::get(const path &dll, const F
         );
 
         return *modules.emplace(dll, std::move(module)).first->second;
+    }
+    catch (std::system_error &e)
+    {
+        err += ": "s + e.what() + " Error code = " + std::to_string(e.code().value()) + ".";
+        err += " Will rebuild on the next run.";
+        if (!do_not_remove_bad_module)
+            fs::remove(dll);
+        throw SW_RUNTIME_ERROR(err);
     }
     catch (std::exception &e)
     {
