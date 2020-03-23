@@ -11,4 +11,7 @@ public void build(Build? b)
         var t = add_executable(b, "vala.test2");
         add_target_source(t, "main.cpp");
     }
+
+    // to test PATH dll deps
+    print("");
 }
