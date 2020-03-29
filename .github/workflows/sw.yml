@@ -14,5 +14,16 @@ jobs:
     - uses: actions/checkout@v1
     - uses: egorpugin/sw-action@master
 
+    - name: Install (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt update
+        sudo apt install flex bison
+
+    - name: Install (macOS)
+      if: runner.os == 'macOS'
+      run: |
+        brew install flex bison
+
     - name: build
       run: ./sw -static build
