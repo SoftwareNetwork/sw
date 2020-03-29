@@ -252,7 +252,7 @@ void GNUCommand::postProcess1(bool ok)
     if (!ok)
         return;
 
-    if (deps_file.empty())
+    if (deps_file.empty() || !has_deps)
         return;
     if (!fs::exists(deps_file))
     {

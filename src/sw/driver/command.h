@@ -399,6 +399,7 @@ private:
 struct SW_DRIVER_CPP_API GNUCommand : Command
 {
     path deps_file;
+    bool has_deps = true;
 
     using Command::Command;
 

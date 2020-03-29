@@ -470,6 +470,9 @@ void GNUASMCompiler::prepareCommand1(const Target &t)
     if (OutputFile)
         cmd->working_directory = OutputFile().parent_path();
 
+    // asm files does not have deps AFAIK
+    std::dynamic_pointer_cast<driver::GNUCommand>(cmd)->has_deps = false;
+
     //if (cmd->file.empty())
         //return nullptr;
 
