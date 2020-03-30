@@ -5,6 +5,11 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include <boost/serialization/split_free.hpp>
+// containers
+#include <boost/serialization/map.hpp>
+#include <boost/serialization/unordered_set.hpp>
+#include <boost/serialization/unordered_map.hpp>
+#include <boost/serialization/vector.hpp>
 #include <primitives/exceptions.h>
 
 #include <fstream>
@@ -50,6 +55,8 @@
 #pragma warning(disable : 4005)
 #endif
 
+////////////////////////////////////////
+
 #define SERIALIZATION_TYPE ::path
 SERIALIZATION_BEGIN_SPLIT
     String s;
@@ -60,40 +67,6 @@ SERIALIZATION_SPLIT_CONTINUE
 SERIALIZATION_SPLIT_END
 
 ////////////////////////////////////////
-
-#define SERIALIZATION_TYPE Files
-SERIALIZATION_BEGIN_SPLIT
-    size_t sz;
-    ar >> sz;
-    while (sz--)
-    {
-        path p;
-        ar >> p;
-        v.insert(p);
-    }
-SERIALIZATION_SPLIT_CONTINUE
-    ar << v.size();
-    for (auto &p : v)
-        ar << p;
-SERIALIZATION_SPLIT_END
-
-////////////////////////////////////////
-
-#define SERIALIZATION_TYPE StringMap<String>
-SERIALIZATION_BEGIN_SPLIT
-    size_t sz;
-    ar >> sz;
-    while (sz--)
-    {
-        String k, va;
-        ar >> k >> va;
-        v[k] = va;
-    }
-SERIALIZATION_SPLIT_CONTINUE
-    ar << v.size();
-    for (auto &[k, va] : v)
-        ar << k << va;
-SERIALIZATION_SPLIT_END
 
 #ifdef _MSC_VER
 #pragma warning(pop)
