@@ -58,6 +58,7 @@
 #include <boost/log/common.hpp>
 #include <boost/log/expressions.hpp>
 #include <boost/log/trivial.hpp>
+
 BOOST_LOG_ATTRIBUTE_KEYWORD(severity, "Severity", boost::log::trivial::severity_level)
 void logFormatterSimple1(boost::log::record_view const& rec, boost::log::formatting_ostream& strm)
 {

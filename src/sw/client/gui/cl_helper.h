@@ -54,18 +54,6 @@ void add_label(const String &name, QLayout *parent, const primitives::cl::Option
     parent->addWidget(l);
 }
 
-void cl_option_add_widget(const String &name, QLayout *parent, bool &value, const primitives::cl::Option &o)
-{
-    add_label(name, parent, o);
-    auto w = new QCheckBox();
-    w->setChecked(value);
-    w->connect(w, &QCheckBox::stateChanged, [&value](int val)
-    {
-        value = val;
-    });
-    parent->addWidget(w);
-}
-
 template <class T>
 void cl_option_add_widget(const String &name, QLayout *parent, std::vector<T> &value, const primitives::cl::Option &o)
 {
@@ -90,8 +78,44 @@ template <class T>
 void cl_option_add_widget1(QLayout *parent, T &value, const primitives::cl::Option &o)
 {
     auto w = new QLineEdit();
-    w->setText(option_to_qstring(value));
+    //if (o.getNumOccurrences())
+        w->setText(option_to_qstring(value));
     w->setPlaceholderText(o.ValueStr.str().c_str());
+    if constexpr (std::is_floating_point_v<T>)
+    {
+        w->setValidator(new QDoubleValidator());
+        w->connect(w, &QLineEdit::textChanged, [&value](const QString &s)
+        {
+            value = s.toInt();
+        });
+    }
+    else if constexpr (std::is_integral_v<T>)
+    {
+        w->setValidator(new QIntValidator());
+        w->connect(w, &QLineEdit::textChanged, [&value](const QString &s)
+        {
+            value = s.toDouble();
+        });
+    }
+    else
+    {
+        w->connect(w, &QLineEdit::textChanged, [&value](const QString &s)
+        {
+            value = s.toStdString();
+        });
+    }
+    parent->addWidget(w);
+}
+
+template <>
+void cl_option_add_widget1(QLayout *parent, bool &value, const primitives::cl::Option &o)
+{
+    auto w = new QCheckBox();
+    w->setChecked(value);
+    w->connect(w, &QCheckBox::stateChanged, [&value](int val)
+    {
+        value = val;
+    });
     parent->addWidget(w);
 }
 
