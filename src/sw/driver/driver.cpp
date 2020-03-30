@@ -27,8 +27,11 @@
 #include <sw/core/input.h>
 #include <sw/core/sw_context.h>
 #include <sw/manager/storage.h>
+#include <sw/support/serialization.h>
 
 #include <boost/algorithm/string.hpp>
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
 #include <nlohmann/json.hpp>
 #include <primitives/lock.h>
 #include <primitives/yaml.h>
@@ -497,6 +500,50 @@ TargetSettings Driver::getDllConfigSettings(SwContext &swctx) const
 // not thread-safe
 std::unordered_map<path, PrepareConfigOutputData> Driver::build_configs1(SwContext &swctx, const std::set<Input *> &inputs) const
 {
+    auto cfg_storage_dir = swctx.getLocalStorage().storage_dir_tmp / "cfg" / "stamps";
+    fs::create_directories(cfg_storage_dir);
+
+    auto save_and_return = [&cfg_storage_dir, &inputs](const std::unordered_map<path, PrepareConfigOutputData> &m)
+    {
+        for (auto &i : inputs)
+        {
+            auto fn = cfg_storage_dir / std::to_string(i->getHash()) += ".bin";
+            std::ofstream ofs(fn, std::ios_base::out | std::ios_base::binary);
+            if (ofs)
+            {
+                std::unordered_map<path, PrepareConfigOutputData> m2;
+                m2[i->getPath()] = m.find(i->getPath())->second;
+                boost::archive::binary_oarchive oa(ofs);
+                oa << m2;
+            }
+        }
+        return m;
+    };
+
+    // fast path
+    {
+        std::unordered_map<path, PrepareConfigOutputData> m;
+        bool ok = true;
+        for (auto &i : inputs)
+        {
+            auto fn = cfg_storage_dir / std::to_string(i->getHash()) += ".bin";
+            std::ifstream ifs(fn, std::ios_base::in | std::ios_base::binary);
+            if (!ifs)
+            {
+                ok = false;
+                break; // we failed
+            }
+            decltype(m) m2;
+            boost::archive::binary_iarchive ia(ifs);
+            ia >> m2;
+            m.merge(m2);
+        }
+        if (ok)
+            return m;
+    }
+
+    //
+
     auto &ctx = swctx;
     //if (!b)
         auto b = create_build(ctx);
@@ -510,7 +557,7 @@ std::unordered_map<path, PrepareConfigOutputData> Driver::build_configs1(SwConte
 
     // fast path
     if (ignore_outdated_configs || !pc.isOutdated())
-        return pc.r;
+        return save_and_return(pc.r);
 
     auto &tgts = b2.module_data.added_targets;
     for (auto &tgt : tgts)
@@ -537,7 +584,7 @@ std::unordered_map<path, PrepareConfigOutputData> Driver::build_configs1(SwConte
         b->getTargets().erase(tgt->getPackage());
     }
 
-    return pc.r;
+    return save_and_return(pc.r);
 }
 
 const StringSet &Driver::getAvailableFrontendNames()

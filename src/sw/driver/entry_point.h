@@ -76,6 +76,13 @@ struct PrepareConfigOutputData
 {
     path dll;
     FilesOrdered PATH;
+
+    template <class Ar>
+    void serialize(Ar & ar, unsigned)
+    {
+        ar & dll;
+        ar & PATH;
+    }
 };
 
 struct PrepareConfig
