@@ -84,7 +84,12 @@ bool download(const std::unordered_set<SourcePtr> &sset, SourceDirMap &source_di
             else
             {
                 bool e = fs::exists(t);
-                if (!e || getUtc() - string2timepoint(read_file(t)) > opts.existing_dirs_age)
+                if (!e)
+                {
+                    fs::remove_all(d.root_dir);
+                    dl();
+                }
+                else if (getUtc() - string2timepoint(read_file(t)) > opts.existing_dirs_age)
                 {
                     // add src->needsRedownloading()?
                     auto g = dynamic_cast<primitives::source::Git *>(src);
