@@ -355,6 +355,32 @@ void SwBuild::resolvePackages()
     resolvePackages(upkgs);
 }
 
+static auto get_base_settings_version()
+{
+    return 19;
+}
+
+static auto get_base_settings_name()
+{
+    return "settings." + std::to_string(get_base_settings_version());
+}
+
+static auto use_json()
+{
+    return true;
+}
+
+static auto get_settings_fn()
+{
+    return get_base_settings_name() + (use_json() ? ".json" : ".bin");
+}
+
+static auto can_use_usv(const SwBuild &b)
+{
+    return b.getSettings()["use_saved_configs"] == "true";
+        //&& build_settings["master_build"] == "true" // allow only in the main build for now)
+}
+
 void SwBuild::resolvePackages(const std::vector<IDependency*> &udeps)
 {
     CHECK_STATE_AND_CHANGE(BuildState::PackagesResolved, BuildState::PackagesResolved);
@@ -388,16 +414,6 @@ void SwBuild::resolvePackages(const std::vector<IDependency*> &udeps)
         swctx.install(upkgs, false);
     }
 
-#define BASE_SETTINGS "settings.17"
-#define USE_JSON
-#ifndef USE_JSON
-#define SETTINGS_FN BASE_SETTINGS ".bin"
-#else
-#define SETTINGS_FN BASE_SETTINGS ".json"
-#endif
-#define CAN_USE_USV (build_settings["use_saved_configs"] == "true")
-    //&& build_settings["master_build"] == "true" // allow only in the main build for now)
-
     UnresolvedPackages upkgs;
     for (auto &d : udeps)
         upkgs.insert(d->getUnresolvedPackage());
@@ -412,12 +428,12 @@ void SwBuild::resolvePackages(const std::vector<IDependency*> &udeps)
     bool everything_resolved = true;
     for (auto d : udeps)
     {
-        if (CAN_USE_USV)
+        if (can_use_usv(*this))
         {
             auto &p = m.find(d->getUnresolvedPackage())->second;
             auto cfg = d->getSettings().getHash();
             auto base = p.getDirObj(cfg);
-            auto sfn = base / SETTINGS_FN;
+            auto sfn = base / get_settings_fn();
             if (fs::exists(sfn))
                 continue;
         }
@@ -561,24 +577,25 @@ void SwBuild::loadPackages(const TargetMap &predefined)
             if (s.empty())
                 continue;
 
-            if (CAN_USE_USV)
+            if (can_use_usv(*this))
             {
                 LocalPackage p(getContext().getLocalStorage(), d.first);
                 auto cfg = s.getHash();
                 auto base = p.getDirObj(cfg);
-                auto sfn = base / SETTINGS_FN;
+                auto sfn = base / get_settings_fn();
                 if (fs::exists(sfn))
                 {
                     LOG_TRACE(logger, "loading " << d.first.toString() << ": " << s.getHash() << " from settings file");
 
                     auto tgt = std::make_shared<PredefinedTarget>(d.first, s);
-#ifndef USE_JSON
-                    tgt->public_ts = loadSettings(sfn);
-#else
-                    TargetSettings its;
-                    its.mergeFromString(read_file(sfn));
-                    tgt->public_ts = its;
-#endif
+                    if (!use_json())
+                        tgt->public_ts = loadSettings(sfn);
+                    else
+                    {
+                        TargetSettings its;
+                        its.mergeFromString(read_file(sfn));
+                        tgt->public_ts = its;
+                    }
                     getTargets()[tgt->getPackage()].push_back(tgt);
                     loaded = true;
                     continue;
@@ -734,18 +751,19 @@ void SwBuild::execute(ExecutionPlan &p) const
                 continue;
             auto cfg = tgt->getSettings().getHash();
             auto base = p.getDirObj(cfg);
-            auto sfn = base / SETTINGS_FN;
-            auto sfncfg = base / BASE_SETTINGS ".cfg";
+            auto sfn = base / get_settings_fn();
+            auto sfncfg = base / get_base_settings_name() += ".cfg";
             auto sptrfn = base / "settings.hash";
 
             if (!fs::exists(sfn) || !fs::exists(sptrfn) || read_file(sptrfn) != tgt->getInterfaceSettings().getHash())
             {
-#ifndef USE_JSON
-                saveSettings(sfn, tgt->getInterfaceSettings());
-#else
-                write_file(sfn, nlohmann::json::parse(tgt->getInterfaceSettings().toString()).dump(4));
-                write_file(sfncfg, nlohmann::json::parse(tgt->getSettings().toString()).dump(4));
-#endif
+                if (!use_json())
+                    saveSettings(sfn, tgt->getInterfaceSettings());
+                else
+                {
+                    write_file(sfn, nlohmann::json::parse(tgt->getInterfaceSettings().toString()).dump(4));
+                    write_file(sfncfg, nlohmann::json::parse(tgt->getSettings().toString()).dump(4));
+                }
                 write_file(sptrfn, tgt->getInterfaceSettings().getHash());
             }
         }
