@@ -394,6 +394,15 @@ struct SW_DRIVER_CPP_API VSCommand : Command
 
 private:
     void postProcess1(bool ok) override;
+
+#ifdef BOOST_SERIALIZATION_ACCESS_HPP
+    friend class boost::serialization::access;
+    template <class Ar>
+    void serialize(Ar &ar, unsigned)
+    {
+        ar & boost::serialization::base_object<::sw::builder::Command>(*this);
+    }
+#endif
 };
 
 struct SW_DRIVER_CPP_API GNUCommand : Command
@@ -407,6 +416,17 @@ struct SW_DRIVER_CPP_API GNUCommand : Command
 
 private:
     void postProcess1(bool ok) override;
+
+#ifdef BOOST_SERIALIZATION_ACCESS_HPP
+    friend class boost::serialization::access;
+    template <class Ar>
+    void serialize(Ar &ar, unsigned)
+    {
+        ar & boost::serialization::base_object<::sw::builder::Command>(*this);
+        ar & deps_file;
+        ar & has_deps;
+    }
+#endif
 };
 
 struct SW_DRIVER_CPP_API CommandBuilder

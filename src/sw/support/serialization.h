@@ -5,11 +5,15 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include <boost/serialization/split_free.hpp>
-// containers
+// STL
+#include <boost/serialization/deque.hpp>
 #include <boost/serialization/map.hpp>
+#include <boost/serialization/shared_ptr.hpp>
+#include <boost/serialization/unique_ptr.hpp>
 #include <boost/serialization/unordered_set.hpp>
 #include <boost/serialization/unordered_map.hpp>
 #include <boost/serialization/vector.hpp>
+//
 #include <primitives/exceptions.h>
 
 #include <fstream>

@@ -16,6 +16,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+ // for serialization
+#include <boost/serialization/access.hpp>
+#include <sw/builder/command_storage.h>
 #include "command.h"
 
 #include "build.h"
@@ -29,6 +32,7 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/dll.hpp>
+#include <boost/serialization/void_cast.hpp>
 #include <boost/thread/locks.hpp>
 #include <boost/thread/shared_mutex.hpp>
 #include <pystring.h>
@@ -43,7 +47,19 @@ BOOST_CLASS_EXPORT_GUID(::sw::driver::VSCommand, "sw.driver.command.vs")
 BOOST_CLASS_EXPORT_GUID(::sw::driver::GNUCommand, "sw.driver.command.gnu")*/
 
 //BOOST_CLASS_EXPORT_GUID(::sw::driver::Command, "sw.driver.command2")
-BOOST_CLASS_EXPORT_IMPLEMENT(::sw::driver::Command)
+//BOOST_CLASS_EXPORT_IMPLEMENT(::sw::driver::Command)
+//BOOST_CLASS_EXPORT_IMPLEMENT(::sw::driver::VSCommand)
+
+//BOOST_CLASS_EXPORT(::sw::driver::detail::Command)
+//BOOST_CLASS_EXPORT(::sw::driver::Command)
+BOOST_CLASS_EXPORT(::sw::driver::VSCommand)
+BOOST_CLASS_EXPORT(::sw::driver::GNUCommand)
+
+//BOOST_CLASS_EXPORT_IMPLEMENT(::sw::driver::Command)
+//BOOST_CLASS_EXPORT_IMPLEMENT(::sw::driver::VSCommand)
+
+//BOOST_CLASS_EXPORT_GUID(::sw::driver::Command, "::sw::driver::Command")
+//BOOST_CLASS_EXPORT_GUID(::sw::driver::VSCommand, "::sw::driver::VSCommand")
 
 /*#include <boost/serialization/type_info_implementation.hpp>
 #include <boost/serialization/extended_type_info_typeid.hpp>
@@ -52,13 +68,39 @@ BOOST_CLASS_TYPE_INFO(
     boost::serialization::extended_type_info_typeid<::sw::driver::Command>
 )*/
 
+static struct init_sn{
+    init_sn()
+    {
+        boost::serialization::void_cast_register((::sw::driver::detail::Command*)0, (::sw::builder::Command*)0);
+        boost::serialization::void_cast_register((::sw::driver::Command*)0, (::sw::driver::detail::Command*)0);
+        boost::serialization::void_cast_register((::sw::driver::VSCommand*)0, (::sw::driver::Command*)0);
+        boost::serialization::void_cast_register((::sw::driver::GNUCommand*)0, (::sw::driver::Command*)0);
+    }
+} _______x;
+
+/*#undef SERIALIZATION_TYPE
+#define SERIALIZATION_TYPE ::sw::driver::detail::Command
+SERIALIZATION_BEGIN_UNIFIED
+    ar & base_object<::sw::builder::Command>(v);
+SERIALIZATION_SPLIT_END
+
 #undef SERIALIZATION_TYPE
 #define SERIALIZATION_TYPE ::sw::driver::Command
-SERIALIZATION_BEGIN_SPLIT
-    SW_UNIMPLEMENTED;
-SERIALIZATION_SPLIT_CONTINUE
-    SW_UNIMPLEMENTED;
+SERIALIZATION_BEGIN_UNIFIED
+    ar & base_object<::sw::driver::detail::Command>(v);
 SERIALIZATION_SPLIT_END
+
+#undef SERIALIZATION_TYPE
+#define SERIALIZATION_TYPE ::sw::driver::VSCommand
+SERIALIZATION_BEGIN_UNIFIED
+    ar & base_object<::sw::driver::Command>(v);
+SERIALIZATION_SPLIT_END
+
+#undef SERIALIZATION_TYPE
+#define SERIALIZATION_TYPE ::sw::driver::GNUCommand
+SERIALIZATION_BEGIN_UNIFIED
+    ar & base_object<::sw::driver::Command>(v);
+SERIALIZATION_SPLIT_END*/
 
 namespace sw
 {

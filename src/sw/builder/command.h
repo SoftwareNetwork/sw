@@ -251,6 +251,34 @@ private:
     String makeErrorString(const String &e);
     String saveCommand() const;
     void printOutputs();
+
+#ifdef BOOST_SERIALIZATION_ACCESS_HPP
+    friend class boost::serialization::access;
+    template <class Ar>
+    void serialize(Ar &ar, unsigned)
+    {
+        ar & boost::serialization::base_object<::primitives::Command>(*this);
+
+        ar & name;
+
+        size_t flag = (size_t)command_storage;
+        ar & flag;
+        if (flag != 1)
+            ar & command_storage->root;
+        command_storage = (::sw::CommandStorage*)flag;
+
+        ar & first_response_file_argument;
+        ar & always;
+        ar & remove_outputs_before_execution;
+        ar & strict_order;
+        ar & output_dirs;
+
+        ar & inputs;
+        ar & outputs;
+
+        // TODO: add program set
+    }
+#endif
 };
 
 struct SW_BUILDER_API CommandSequence : Command
@@ -334,3 +362,8 @@ template<> struct hash<sw::builder::Command>
 };
 
 }
+
+#ifdef BOOST_SERIALIZATION_ACCESS_HPP
+// change when you update serialization
+//BOOST_CLASS_VERSION(::sw::builder::Command, 3)
+#endif

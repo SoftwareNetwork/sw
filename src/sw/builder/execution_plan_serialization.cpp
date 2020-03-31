@@ -16,12 +16,18 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+// headers for serialization
+#include <boost/serialization/access.hpp>
+#include <boost/serialization/base_object.hpp>
+
+#include "command_storage.h"
+//
+
 #include "execution_plan.h"
 
 #include "sw_context.h"
 
 #include <sw/support/serialization.h>
-#include "command_serialization.h"
 
 namespace sw
 {
@@ -36,7 +42,7 @@ ExecutionPlan::load(const path &p, const SwBuilderContext &swctx, int type)
         path cp;
         ar >> cp;
         fs::current_path(cp);
-        commands = loadCommands(ar);
+        ar >> commands;
     };
 
     if (type == 0)
@@ -72,8 +78,7 @@ void ExecutionPlan::save(const path &p, int type) const
     auto save = [this](auto &ar)
     {
         ar << fs::current_path();
-        //               v be careful... v
-        saveCommands(ar, (SimpleCommands&)commands);
+        ar << commands;
     };
 
     if (type == 0)
