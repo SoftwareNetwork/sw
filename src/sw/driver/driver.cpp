@@ -456,6 +456,11 @@ void Driver::loadInputsBatch(SwContext &swctx, const std::set<Input *> &inputs) 
     for (auto &[p, out] : build_configs1(swctx, inputs))
     {
         auto i = dynamic_cast<SpecFileInput *>(m[p]);
+        if (!i)
+        {
+            LOG_WARN(logger, "Bad input");
+            continue;
+        }
         auto ep = std::make_shared<NativeModuleTargetEntryPoint>(Module(swctx.getModuleStorage().get(out.dll, out.PATH)));
         ep->source_dir = p.parent_path();
         i->setEntryPoints({ ep });
@@ -538,8 +543,8 @@ std::unordered_map<path, PrepareConfigOutputData> Driver::build_configs1(SwConte
             ia >> m2;
             m.merge(m2);
         }
-        if (ok)
-            return m;
+        //if (ok)
+            //return m;
     }
 
     //
