@@ -822,11 +822,7 @@ static void addSettings(TargetSettings &ts, bool force)
     };
 
     // settings
-#ifdef NDEBUG
     check_and_assign(ts["native"]["configuration"], "release");
-#else
-    check_and_assign(ts["native"]["configuration"], "debug");
-#endif
     check_and_assign(ts["native"]["library"], "shared");
     check_and_assign(ts["native"]["mt"], "false");
 }
