@@ -40,7 +40,7 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "driver.cpp");
 
-bool debug_configs;
+bool debug_configs = true; // true for now
 bool ignore_outdated_configs;
 
 std::unordered_map<sw::PackageId, std::shared_ptr<sw::NativeBuiltinTargetEntryPoint>>
@@ -193,11 +193,8 @@ struct SpecFileInput : Input, DriverInput
         {
             auto b = swctx.createBuild();
 
-            auto ts = swctx.createHostSettings();
-            if (debug_configs)
-                ts["native"]["configuration"] = "debug";
-            else
-                ts["native"]["configuration"] = "releasewithdebuginformation";
+            auto ts = driver->getDllConfigSettings(swctx);
+            //ts["native"]["library"] = "shared"; // why?
             NativeTargetEntryPoint ep1;
             auto b2 = ep1.createBuild(*b, ts, {}, {});
 
@@ -495,10 +492,16 @@ std::unique_ptr<SwBuild> Driver::create_build(SwContext &swctx) const
 TargetSettings Driver::getDllConfigSettings(SwContext &swctx) const
 {
     auto ts = swctx.createHostSettings();
-    ts["native"]["library"] = "static";
+    ts["native"]["library"] = "static"; // why not shared?
     //ts["native"]["mt"] = "true";
     if (debug_configs)
+    {
+#ifndef NDEBUG
         ts["native"]["configuration"] = "debug";
+#else
+        ts["native"]["configuration"] = "releasewithdebuginformation";
+#endif
+    }
     return ts;
 }
 
