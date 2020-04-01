@@ -99,6 +99,8 @@ static struct register_s11n_casts
         boost::serialization::void_cast_register((::sw::driver::VSCommand*)0, (::sw::driver::Command*)0);
         boost::serialization::void_cast_register((::sw::driver::GNUCommand*)0, (::sw::driver::Command*)0);
         boost::serialization::void_cast_register((LazyArgument*)0, (::primitives::command::Argument*)0);
+        boost::serialization::void_cast_register((::primitives::command::SimpleArgument*)0, (::primitives::command::Argument*)0);
+        boost::serialization::void_cast_register((::primitives::command::SimplePositionalArgument*)0, (::primitives::command::SimpleArgument*)0);
     }
 } _______x;
 

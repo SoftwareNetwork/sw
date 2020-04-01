@@ -39,6 +39,14 @@ BOOST_CLASS_EXPORT(::sw::builder::BuiltinCommand)
 BOOST_CLASS_EXPORT(::primitives::command::SimpleArgument)
 BOOST_CLASS_EXPORT(::primitives::command::SimplePositionalArgument)
 
+template <class Ar>
+void setup_ar(Ar &ar)
+{
+    ar.template register_type<::sw::builder::BuiltinCommand>();
+    ar.template register_type<::primitives::command::SimpleArgument>();
+    ar.template register_type<::primitives::command::SimplePositionalArgument>();
+}
+
 namespace sw
 {
 
@@ -55,21 +63,24 @@ ExecutionPlan::load(const path &p, const SwBuilderContext &swctx, int type)
         ar >> commands;
     };
 
+    type = 1;
     if (type == 0)
     {
         std::ifstream ifs(p, std::ios_base::in | std::ios_base::binary);
         if (!ifs)
             throw SW_RUNTIME_ERROR("Cannot read file: " + normalize_path(p));
-        boost::archive::binary_iarchive ia(ifs);
-        load(ia);
+        boost::archive::binary_iarchive ar(ifs);
+        setup_ar(ar);
+        load(ar);
     }
     else if (type == 1)
     {
         std::ifstream ifs(p);
         if (!ifs)
             throw SW_RUNTIME_ERROR("Cannot read file: " + normalize_path(p));
-        boost::archive::text_iarchive ia(ifs);
-        load(ia);
+        boost::archive::text_iarchive ar(ifs);
+        setup_ar(ar);
+        load(ar);
     }
 
     // some setup
@@ -91,24 +102,24 @@ void ExecutionPlan::save(const path &p, int type) const
         ar << commands;
     };
 
+    type = 1;
     if (type == 0)
     {
         std::ofstream ofs(p, std::ios_base::out | std::ios_base::binary);
         if (!ofs)
             throw SW_RUNTIME_ERROR("Cannot write file: " + normalize_path(p));
-        boost::archive::binary_oarchive oa(ofs);
-        oa.template register_type<::sw::builder::BuiltinCommand>();
-        oa.template register_type<::primitives::command::SimpleArgument>();
-        oa.template register_type<::primitives::command::SimplePositionalArgument>();
-        save(oa);
+        boost::archive::binary_oarchive ar(ofs);
+        setup_ar(ar);
+        save(ar);
     }
     else if (type == 1)
     {
         std::ofstream ofs(p);
         if (!ofs)
             throw SW_RUNTIME_ERROR("Cannot write file: " + normalize_path(p));
-        boost::archive::text_oarchive oa(ofs);
-        save(oa);
+        boost::archive::text_oarchive ar(ofs);
+        setup_ar(ar);
+        save(ar);
     }
 }
 
