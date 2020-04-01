@@ -340,17 +340,13 @@ void NativeModuleTargetEntryPoint::loadPackages1(Build &b) const
     m.build(b);
 }
 
-static auto getFilesHash(const FilesSorted &files)
+static PackagePath getSelfTargetName(Build &b, const FilesSorted &files)
 {
-    String h;
+    String h = b.module_data.current_settings.getHash();
     for (auto &fn : files)
-        h += fn.u8string();
-    return shorten_hash(blake2b_512(h), 6);
-}
-
-static PackagePath getSelfTargetName(const FilesSorted &files)
-{
-    return "loc.sw.self." + getFilesHash(files);
+        h += normalize_path(fn);
+    h = shorten_hash(blake2b_512(h), 6);
+    return "loc.sw.self." + h;
 }
 
 static auto getDriverDep()
@@ -463,7 +459,7 @@ private:
 
 SharedLibraryTarget &PrepareConfig::createTarget(Build &b, const InputData &d)
 {
-    auto name = getSelfTargetName({ d.fn });
+    auto name = getSelfTargetName(b, { d.fn });
     auto &lib =
         lang == LANG_VALA
         ? (SharedLibraryTarget&)b.addTarget<ConfigSharedLibraryTarget<ValaSharedLibrary>>(name, "local", *this, d, b.getContext().getLocalStorage().storage_dir)
