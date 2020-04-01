@@ -337,12 +337,17 @@ void SwBuild::resolvePackages()
             auto deps = tgt->getDependencies();
             for (auto &d : deps)
             {
+                auto &u = d->getUnresolvedPackage();
+
                 // filter out existing targets as they come from same module
                 // reconsider?
-                if (auto id = d->getUnresolvedPackage().toPackageId(); id && getTargets().find(*id) != getTargets().end())
+                if (auto id = u.toPackageId(); id && getTargets().find(*id) != getTargets().end())
                     continue;
                 // filter out predefined targets
-                if (swctx.getPredefinedTargets().find(d->getUnresolvedPackage().ppath) != swctx.getPredefinedTargets().end(d->getUnresolvedPackage().ppath))
+                if (swctx.getPredefinedTargets().find(u.getPath()) != swctx.getPredefinedTargets().end(u.getPath()))
+                    continue;
+                // filter out local targets
+                if (u.getPath().isRelative() || u.getPath().is_loc())
                     continue;
 
                 upkgs.push_back(d);
