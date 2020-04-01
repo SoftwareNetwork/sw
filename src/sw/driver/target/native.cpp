@@ -1125,9 +1125,7 @@ LinkLibrariesType NativeCompiledTarget::gatherLinkLibraries() const
 {
     LinkLibrariesType libs;
     const auto dirs = gatherLinkDirectories();
-    auto add = [this, &libs, &dirs](auto &ll)
-    {
-        for (auto &l : ll)
+    for (auto &l : LinkLibraries)
         {
             // reconsider
             // remove resolving?
@@ -1155,8 +1153,6 @@ LinkLibrariesType NativeCompiledTarget::gatherLinkLibraries() const
             //if (!getBuildSettings().TargetOS.is(OSType::Windows))
                 //libs.push_back("-l" + l.u8string());
         }
-    };
-    add(LinkLibraries);
     return libs;
 }
 
