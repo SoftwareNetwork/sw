@@ -546,8 +546,8 @@ std::unordered_map<path, PrepareConfigOutputData> Driver::build_configs1(SwConte
             ia >> m2;
             m.merge(m2);
         }
-        //if (ok)
-            //return m;
+        if (ignore_outdated_configs && ok)
+            return m;
     }
 
     //
