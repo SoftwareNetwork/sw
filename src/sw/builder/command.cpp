@@ -1130,6 +1130,11 @@ void CommandSequence::prepare()
         c->prepare();
 }
 
+BuiltinCommand::BuiltinCommand()
+{
+    setProgram(boost::dll::program_location().wstring());
+}
+
 BuiltinCommand::BuiltinCommand(const SwBuilderContext &swctx)
     : Command(swctx)
 {

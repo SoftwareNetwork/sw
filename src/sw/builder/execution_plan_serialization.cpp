@@ -19,6 +19,12 @@
 // headers for serialization
 #include <boost/serialization/access.hpp>
 #include <boost/serialization/base_object.hpp>
+#include <boost/serialization/export.hpp>
+
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
 
 #include "command_storage.h"
 //
@@ -28,6 +34,10 @@
 #include "sw_context.h"
 
 #include <sw/support/serialization.h>
+
+BOOST_CLASS_EXPORT(::sw::builder::BuiltinCommand)
+BOOST_CLASS_EXPORT(::primitives::command::SimpleArgument)
+BOOST_CLASS_EXPORT(::primitives::command::SimplePositionalArgument)
 
 namespace sw
 {
@@ -87,6 +97,9 @@ void ExecutionPlan::save(const path &p, int type) const
         if (!ofs)
             throw SW_RUNTIME_ERROR("Cannot write file: " + normalize_path(p));
         boost::archive::binary_oarchive oa(ofs);
+        oa.template register_type<::sw::builder::BuiltinCommand>();
+        oa.template register_type<::primitives::command::SimpleArgument>();
+        oa.template register_type<::primitives::command::SimplePositionalArgument>();
         save(oa);
     }
     else if (type == 1)

@@ -17,8 +17,17 @@
  */
 
  // for serialization
+#include <primitives/filesystem.h>
 #include <boost/serialization/access.hpp>
+#include <sw/support/serialization.h>
+#include <boost/serialization/export.hpp>
+#include <boost/serialization/void_cast.hpp>
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/archive/binary_iarchive.hpp>
 #include <sw/builder/command_storage.h>
+//
 #include "command.h"
 
 #include "build.h"
@@ -32,7 +41,6 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/dll.hpp>
-#include <boost/serialization/void_cast.hpp>
 #include <boost/thread/locks.hpp>
 #include <boost/thread/shared_mutex.hpp>
 #include <pystring.h>
@@ -40,67 +48,59 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "cpp.command");
 
-#include <sw/support/serialization.h>
-#include <boost/serialization/export.hpp>
-/*BOOST_CLASS_EXPORT_GUID(::sw::driver::detail::Command, "sw.driver.command.detail")
-BOOST_CLASS_EXPORT_GUID(::sw::driver::VSCommand, "sw.driver.command.vs")
-BOOST_CLASS_EXPORT_GUID(::sw::driver::GNUCommand, "sw.driver.command.gnu")*/
-
-//BOOST_CLASS_EXPORT_GUID(::sw::driver::Command, "sw.driver.command2")
-//BOOST_CLASS_EXPORT_IMPLEMENT(::sw::driver::Command)
-//BOOST_CLASS_EXPORT_IMPLEMENT(::sw::driver::VSCommand)
-
-//BOOST_CLASS_EXPORT(::sw::driver::detail::Command)
-//BOOST_CLASS_EXPORT(::sw::driver::Command)
+BOOST_CLASS_EXPORT(::sw::driver::Command)
 BOOST_CLASS_EXPORT(::sw::driver::VSCommand)
 BOOST_CLASS_EXPORT(::sw::driver::GNUCommand)
 
-//BOOST_CLASS_EXPORT_IMPLEMENT(::sw::driver::Command)
-//BOOST_CLASS_EXPORT_IMPLEMENT(::sw::driver::VSCommand)
+struct LazyArgument : ::primitives::command::Argument
+{
+    ::sw::driver::Command::LazyCallback cb;
 
-//BOOST_CLASS_EXPORT_GUID(::sw::driver::Command, "::sw::driver::Command")
-//BOOST_CLASS_EXPORT_GUID(::sw::driver::VSCommand, "::sw::driver::VSCommand")
+    LazyArgument(::sw::driver::Command::LazyCallback cb = {})
+        : cb(cb)
+    {}
 
-/*#include <boost/serialization/type_info_implementation.hpp>
-#include <boost/serialization/extended_type_info_typeid.hpp>
-BOOST_CLASS_TYPE_INFO(
-    ::sw::driver::Command,
-    boost::serialization::extended_type_info_typeid<::sw::driver::Command>
-)*/
-
-static struct init_sn{
-    init_sn()
+    String toString() const override
     {
+        if (!cached_value.empty())
+            return cached_value;
+        return cached_value = cb();
+    }
+
+    std::unique_ptr<::primitives::command::Argument> clone() const
+    {
+        return std::make_unique<LazyArgument>(cb);
+    }
+
+private:
+    mutable String cached_value;
+
+#ifdef BOOST_SERIALIZATION_ACCESS_HPP
+    friend class boost::serialization::access;
+    template <class Ar>
+    void serialize(Ar &ar, unsigned)
+    {
+        ar & boost::serialization::base_object<::primitives::command::Argument>(*this);
+        auto s = toString();
+        ar & s;
+        cached_value = s;
+    }
+#endif
+};
+BOOST_CLASS_EXPORT(LazyArgument)
+
+static struct register_s11n_casts
+{
+    register_s11n_casts()
+    {
+        boost::serialization::void_cast_register((::sw::builder::Command*)0, (::sw::CommandNode*)0);
         boost::serialization::void_cast_register((::sw::driver::detail::Command*)0, (::sw::builder::Command*)0);
         boost::serialization::void_cast_register((::sw::driver::Command*)0, (::sw::driver::detail::Command*)0);
         boost::serialization::void_cast_register((::sw::driver::VSCommand*)0, (::sw::driver::Command*)0);
         boost::serialization::void_cast_register((::sw::driver::GNUCommand*)0, (::sw::driver::Command*)0);
+        boost::serialization::void_cast_register((LazyArgument*)0, (::primitives::command::Argument*)0);
     }
 } _______x;
-
-/*#undef SERIALIZATION_TYPE
-#define SERIALIZATION_TYPE ::sw::driver::detail::Command
-SERIALIZATION_BEGIN_UNIFIED
-    ar & base_object<::sw::builder::Command>(v);
-SERIALIZATION_SPLIT_END
-
-#undef SERIALIZATION_TYPE
-#define SERIALIZATION_TYPE ::sw::driver::Command
-SERIALIZATION_BEGIN_UNIFIED
-    ar & base_object<::sw::driver::detail::Command>(v);
-SERIALIZATION_SPLIT_END
-
-#undef SERIALIZATION_TYPE
-#define SERIALIZATION_TYPE ::sw::driver::VSCommand
-SERIALIZATION_BEGIN_UNIFIED
-    ar & base_object<::sw::driver::Command>(v);
-SERIALIZATION_SPLIT_END
-
-#undef SERIALIZATION_TYPE
-#define SERIALIZATION_TYPE ::sw::driver::GNUCommand
-SERIALIZATION_BEGIN_UNIFIED
-    ar & base_object<::sw::driver::Command>(v);
-SERIALIZATION_SPLIT_END*/
 
 namespace sw
 {
@@ -623,29 +623,8 @@ const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_
 
 const CommandBuilder &operator<<(const CommandBuilder &cb, const Command::LazyCallback &t)
 {
-    struct LazyArgument : ::primitives::command::Argument
-    {
-        Command::LazyCallback cb;
-
-        LazyArgument(Command::LazyCallback cb)
-            : cb(cb)
-        {}
-
-        String toString() const override
-        {
-            return cb();
-        }
-
-        std::unique_ptr<::primitives::command::Argument> clone() const
-        {
-            return std::make_unique<LazyArgument>(cb);
-        }
-    };
-
     if (!cb.stopped)
-    {
         cb.c->arguments.push_back(std::make_unique<LazyArgument>(t));
-    }
     return cb;
 }
 

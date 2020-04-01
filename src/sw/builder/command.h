@@ -82,6 +82,15 @@ struct SW_BUILDER_API CommandNode : std::enable_shared_from_this<CommandNode>
         dependent_commands.clear();
         dependencies.clear();
     }
+
+private:
+#ifdef BOOST_SERIALIZATION_ACCESS_HPP
+    friend class boost::serialization::access;
+    template <class Ar>
+    void serialize(Ar &ar, unsigned)
+    {
+    }
+#endif
 };
 
 struct SW_BUILDER_API ResourcePool
@@ -257,6 +266,7 @@ private:
     template <class Ar>
     void serialize(Ar &ar, unsigned)
     {
+        ar & boost::serialization::base_object<CommandNode>(*this);
         ar & boost::serialization::base_object<::primitives::Command>(*this);
 
         ar & name;
@@ -309,6 +319,7 @@ private:
 // we always can create executable commands that is not builtin into modules
 struct SW_BUILDER_API BuiltinCommand : Command
 {
+    BuiltinCommand();
     BuiltinCommand(const SwBuilderContext &swctx);
     // 3rd parameter is a symbol in module in which our function resides
     BuiltinCommand(const SwBuilderContext &swctx, const String &cmd_name, void *symbol, int version = 0);
@@ -322,6 +333,15 @@ private:
     void execute1(std::error_code *ec = nullptr) override;
     size_t getHash1() const override;
     void prepare() override {}
+
+#ifdef BOOST_SERIALIZATION_ACCESS_HPP
+    friend class boost::serialization::access;
+    template <class Ar>
+    void serialize(Ar &ar, unsigned)
+    {
+        ar & boost::serialization::base_object<Command>(*this);
+    }
+#endif
 };
 
 SW_BUILDER_API
