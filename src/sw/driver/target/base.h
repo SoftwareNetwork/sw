@@ -199,6 +199,7 @@ struct SW_DRIVER_CPP_API TargetBase : TargetBaseData
 protected:
     // impl
     bool prepared = false;
+    mutable std::mutex m; // some internal mutex
 
     TargetBase(const TargetBase &);
 

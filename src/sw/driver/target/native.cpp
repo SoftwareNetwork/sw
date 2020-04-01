@@ -1126,33 +1126,33 @@ LinkLibrariesType NativeCompiledTarget::gatherLinkLibraries() const
     LinkLibrariesType libs;
     const auto dirs = gatherLinkDirectories();
     for (auto &l : LinkLibraries)
+    {
+        // reconsider
+        // remove resolving?
+
+        //if (l.is_absolute())
         {
-            // reconsider
-            // remove resolving?
-
-            //if (l.is_absolute())
-            {
-                libs.push_back(LinkLibrary{ l });
-                continue;
-            }
-
-            if (std::none_of(dirs.begin(), dirs.end(), [&l, &libs](auto &d)
-            {
-                if (fs::exists(d / l.l))
-                {
-                    libs.push_back(LinkLibrary{ d / l.l });
-                    return true;
-                }
-                return false;
-            }))
-            {
-                //LOG_TRACE(logger, "Cannot resolve library: " << l);
-                throw SW_RUNTIME_ERROR(getPackage().toString() + ": Cannot resolve library: " + normalize_path(l.l));
-            }
-
-            //if (!getBuildSettings().TargetOS.is(OSType::Windows))
-                //libs.push_back("-l" + l.u8string());
+            libs.push_back(LinkLibrary{ l });
+            continue;
         }
+
+        if (std::none_of(dirs.begin(), dirs.end(), [&l, &libs](auto &d)
+        {
+            if (fs::exists(d / l.l))
+            {
+                libs.push_back(LinkLibrary{ d / l.l });
+                return true;
+            }
+            return false;
+        }))
+        {
+            //LOG_TRACE(logger, "Cannot resolve library: " << l);
+            throw SW_RUNTIME_ERROR(getPackage().toString() + ": Cannot resolve library: " + normalize_path(l.l));
+        }
+
+        //if (!getBuildSettings().TargetOS.is(OSType::Windows))
+            //libs.push_back("-l" + l.u8string());
+    }
     return libs;
 }
 
@@ -3339,7 +3339,7 @@ void NativeCompiledTarget::prepare_pass6()
         }
     }
 
-    // add link libraries from deps
+    // check for circular deps
     if (!*HeaderOnly && getSelectedTool() != Librarian.get())
     {
         auto L = Linker->as<VisualStudioLinker*>();
@@ -3381,28 +3381,16 @@ void NativeCompiledTarget::prepare_pass7()
     {
         if (getSelectedTool() == Linker.get())
         {
+            // we get only deps list from special
             auto &s = get(InheritanceType::Special);
             for (auto &d : s.getRawDependencies())
             {
                 if (auto t = d->getTarget().as<const NativeCompiledTarget *>())
                 {
-                    /*for (auto &ll : t->NativeLinkerOptions::System.LinkLibraries)
-                    {
-                        if (ll.l.empty())
-                            LOG_WARN(logger, "Empty slib: " + t->getPackage().toString());
-                    }
-                    for (auto &ll : t->LinkLibraries2)
-                    {
-                        if (ll.l.empty())
-                            LOG_WARN(logger, "Empty lib: " + t->getPackage().toString());
-                    }*/
+                    std::scoped_lock lk(m, t->m);
 
-                    // take ll2
-                    //LinkLibraries.insert(LinkLibraries.end(), t->LinkLibraries2.begin(), t->LinkLibraries2.end());
                     for (auto &ll : t->LinkLibraries)
                     {
-                        if (ll.l.empty())
-                            continue;
                         if (std::find(LinkLibraries.begin(), LinkLibraries.end(), ll) == LinkLibraries.end())
                             LinkLibraries.insert(ll);
                     }
@@ -3411,8 +3399,6 @@ void NativeCompiledTarget::prepare_pass7()
                         //t->NativeLinkerOptions::System.LinkLibraries.begin(), t->NativeLinkerOptions::System.LinkLibraries.end());
                     for (auto &ll : t->NativeLinkerOptions::System.LinkLibraries)
                     {
-                        if (ll.l.empty())
-                            continue;
                         if (std::find(NativeLinkerOptions::System.LinkLibraries.begin(), NativeLinkerOptions::System.LinkLibraries.end(), ll) == NativeLinkerOptions::System.LinkLibraries.end())
                             NativeLinkerOptions::System.LinkLibraries.insert(ll);
                     }
