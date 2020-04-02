@@ -18,17 +18,12 @@
 
 #pragma once
 
-#include <boost/serialization/split_member.hpp>
-
 #include <nlohmann/json_fwd.hpp>
 #include <primitives/filesystem.h>
 
 #include <memory>
 #include <optional>
 #include <variant>
-
-// SERIALIZATION_ACCESS_FWD
-namespace boost::serialization { class access; }
 
 namespace sw
 {
@@ -84,14 +79,14 @@ private:
 
     friend struct TargetSetting;
 
-    //
-    // SERIALIZATION_ACCESS
+#ifdef BOOST_SERIALIZATION_ACCESS_HPP
     friend class boost::serialization::access;
     template <class Ar>
     void serialize(Ar &ar, unsigned)
     {
         ar & settings;
     }
+#endif
 };
 
 struct SW_CORE_API TargetSetting
@@ -194,7 +189,7 @@ private:
 
     friend struct TargetSettings;
 
-    // SERIALIZATION_ACCESS
+#ifdef BOOST_SERIALIZATION_ACCESS_HPP
     friend class boost::serialization::access;
 
     template <class Ar>
@@ -294,6 +289,7 @@ private:
         }
     }
     BOOST_SERIALIZATION_SPLIT_MEMBER()
+#endif
 };
 
 SW_CORE_API

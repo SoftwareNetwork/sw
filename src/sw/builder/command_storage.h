@@ -20,8 +20,6 @@
 
 #include "concurrent_map.h"
 
-#include <sw/builder/command.h>
-
 #include <boost/thread/shared_mutex.hpp>
 #include <primitives/lock.h>
 #include <primitives/templates.h>

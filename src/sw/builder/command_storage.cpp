@@ -25,6 +25,7 @@
 
 #include <boost/thread/lock_types.hpp>
 #include <primitives/emitter.h>
+#include <primitives/executor.h>
 #include <primitives/date_time.h>
 #include <primitives/debug.h>
 #include <primitives/exceptions.h>

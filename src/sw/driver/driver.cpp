@@ -16,6 +16,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+#include <sw/builder/command_storage.h>
+
 #include "driver.h"
 
 #include "build.h"
@@ -30,8 +34,6 @@
 #include <sw/support/serialization.h>
 
 #include <boost/algorithm/string.hpp>
-#include <boost/archive/binary_iarchive.hpp>
-#include <boost/archive/binary_oarchive.hpp>
 #include <nlohmann/json.hpp>
 #include <primitives/lock.h>
 #include <primitives/yaml.h>

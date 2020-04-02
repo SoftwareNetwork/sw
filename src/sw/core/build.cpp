@@ -337,7 +337,7 @@ void SwBuild::resolvePackages()
             auto deps = tgt->getDependencies();
             for (auto &d : deps)
             {
-                auto &u = d->getUnresolvedPackage();
+                auto u = d->getUnresolvedPackage();
 
                 // filter out existing targets as they come from same module
                 // reconsider?

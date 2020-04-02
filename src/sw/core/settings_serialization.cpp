@@ -18,6 +18,9 @@
 
 #pragma once
 
+#include <boost/serialization/access.hpp>
+#include <boost/serialization/split_member.hpp>
+
 #include "settings.h"
 
 #include <boost/serialization/map.hpp>
