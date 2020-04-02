@@ -3379,40 +3379,40 @@ void NativeCompiledTarget::prepare_pass7()
     // gatherStaticLinkLibraries
     if (!*HeaderOnly && !isStaticLibrary())
     {
-        if (getSelectedTool() == Linker.get())
+        // we get only deps list from special
+        auto &s = get(InheritanceType::Special);
+        for (auto &d : s.getRawDependencies())
         {
-            // we get only deps list from special
-            auto &s = get(InheritanceType::Special);
-            for (auto &d : s.getRawDependencies())
+            if (auto t = d->getTarget().as<const NativeCompiledTarget *>())
             {
-                if (auto t = d->getTarget().as<const NativeCompiledTarget *>())
+                std::scoped_lock lk(m, t->m);
+
+                for (auto &ll : t->LinkLibraries)
                 {
-                    std::scoped_lock lk(m, t->m);
-
-                    for (auto &ll : t->LinkLibraries)
-                    {
-                        if (std::find(LinkLibraries.begin(), LinkLibraries.end(), ll) == LinkLibraries.end())
-                            LinkLibraries.insert(ll);
-                    }
-
-                    //NativeLinkerOptions::System.LinkLibraries.insert(NativeLinkerOptions::System.LinkLibraries.end(),
-                        //t->NativeLinkerOptions::System.LinkLibraries.begin(), t->NativeLinkerOptions::System.LinkLibraries.end());
-                    for (auto &ll : t->NativeLinkerOptions::System.LinkLibraries)
-                    {
-                        if (std::find(NativeLinkerOptions::System.LinkLibraries.begin(), NativeLinkerOptions::System.LinkLibraries.end(), ll) == NativeLinkerOptions::System.LinkLibraries.end())
-                            NativeLinkerOptions::System.LinkLibraries.insert(ll);
-                    }
-
-                    Frameworks.insert(t->Frameworks.begin(), t->Frameworks.end());
+                    if (std::find(LinkLibraries.begin(), LinkLibraries.end(), ll) == LinkLibraries.end())
+                        LinkLibraries.insert(ll);
                 }
-                else if (auto t = d->getTarget().as<const PredefinedTarget *>())
+
+                //NativeLinkerOptions::System.LinkLibraries.insert(NativeLinkerOptions::System.LinkLibraries.end(),
+                    //t->NativeLinkerOptions::System.LinkLibraries.begin(), t->NativeLinkerOptions::System.LinkLibraries.end());
+                for (auto &ll : t->NativeLinkerOptions::System.LinkLibraries)
                 {
-                    //SW_UNIMPLEMENTED;
+                    if (std::find(NativeLinkerOptions::System.LinkLibraries.begin(), NativeLinkerOptions::System.LinkLibraries.end(), ll) == NativeLinkerOptions::System.LinkLibraries.end())
+                        NativeLinkerOptions::System.LinkLibraries.insert(ll);
                 }
-                else
-                    throw SW_RUNTIME_ERROR("missing target code");
+
+                Frameworks.insert(t->Frameworks.begin(), t->Frameworks.end());
             }
+            else if (auto t = d->getTarget().as<const PredefinedTarget *>())
+            {
+                //SW_UNIMPLEMENTED;
+            }
+            else
+                throw SW_RUNTIME_ERROR("missing target code");
         }
+
+        // clear after use
+        s.getRawDependencies().clear();
 
         //
         // linux:
