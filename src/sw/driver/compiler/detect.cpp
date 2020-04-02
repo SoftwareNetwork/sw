@@ -250,14 +250,14 @@ void detectMsvc15Plus(DETECT_ARGS)
             // libc++
             {
                 auto &libcpp = addTarget<PredefinedTarget>(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.libcpp", v), ts);
-                libcpp.public_ts["system_include_directories"].push_back(normalize_path(idir));
-                libcpp.public_ts["system_link_directories"].push_back(normalize_path(root / "lib" / target));
+                libcpp.public_ts["new"]["6"]["system_include_directories"].push_back(normalize_path(idir));
+                libcpp.public_ts["new"]["6"]["system_link_directories"].push_back(normalize_path(root / "lib" / target));
 
                 if (fs::exists(root / "ATLMFC" / "include"))
                 {
                     auto &atlmfc = addTarget<PredefinedTarget>(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.ATLMFC", v), ts);
-                    atlmfc.public_ts["system_include_directories"].push_back(normalize_path(root / "ATLMFC" / "include"));
-                    atlmfc.public_ts["system_link_directories"].push_back(normalize_path(root / "ATLMFC" / "lib" / target));
+                    atlmfc.public_ts["new"]["6"]["system_include_directories"].push_back(normalize_path(root / "ATLMFC" / "include"));
+                    atlmfc.public_ts["new"]["6"]["system_link_directories"].push_back(normalize_path(root / "ATLMFC" / "lib" / target));
                 }
             }
 
@@ -265,14 +265,14 @@ void detectMsvc15Plus(DETECT_ARGS)
             if (fs::exists(root / "crt" / "src" / "concrt"))
             {
                 auto &libcpp = addTarget<PredefinedTarget>(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.concrt", v), ts);
-                libcpp.public_ts["system_include_directories"].push_back(normalize_path(root / "crt" / "src" / "concrt"));
+                libcpp.public_ts["new"]["6"]["system_include_directories"].push_back(normalize_path(root / "crt" / "src" / "concrt"));
             }
 
             // vcruntime
             if (fs::exists(root / "crt" / "src" / "vcruntime"))
             {
                 auto &libcpp = addTarget<PredefinedTarget>(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.runtime", v), ts);
-                libcpp.public_ts["system_include_directories"].push_back(normalize_path(root / "crt" / "src" / "vcruntime"));
+                libcpp.public_ts["new"]["6"]["system_include_directories"].push_back(normalize_path(root / "crt" / "src" / "vcruntime"));
             }
         }
     }
@@ -448,14 +448,14 @@ void detectMsvc14AndOlder(DETECT_ARGS)
             // libc++
             {
                 auto &libcpp = addTarget<PredefinedTarget>(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.libcpp", v), ts);
-                libcpp.public_ts["system_include_directories"].push_back(normalize_path(idir));
-                libcpp.public_ts["system_link_directories"].push_back(normalize_path(root / libdir));
+                libcpp.public_ts["new"]["6"]["system_include_directories"].push_back(normalize_path(idir));
+                libcpp.public_ts["new"]["6"]["system_link_directories"].push_back(normalize_path(root / libdir));
 
                 if (fs::exists(root / "ATLMFC" / "include"))
                 {
                     auto &atlmfc = addTarget<PredefinedTarget>(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.ATLMFC", v), ts);
-                    atlmfc.public_ts["system_include_directories"].push_back(normalize_path(root / "ATLMFC" / "include"));
-                    atlmfc.public_ts["system_link_directories"].push_back(normalize_path(root / "ATLMFC" / libdir));
+                    atlmfc.public_ts["new"]["6"]["system_include_directories"].push_back(normalize_path(root / "ATLMFC" / "include"));
+                    atlmfc.public_ts["new"]["6"]["system_link_directories"].push_back(normalize_path(root / "ATLMFC" / libdir));
                 }
             }
         }

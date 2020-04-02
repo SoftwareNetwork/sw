@@ -231,6 +231,7 @@ private:
     void prepare_pass4();
     void prepare_pass5();
     void prepare_pass6();
+    void prepare_pass61();
     void prepare_pass7();
     void prepare_pass8();
     void prepare_pass9();

@@ -2196,14 +2196,18 @@ bool NativeCompiledTarget::prepare()
         prepare_pass6();
     RETURN_PREPARE_MULTIPASS_NEXT_PASS;
     case 7:
+        // link libraries
+        prepare_pass61();
+        RETURN_PREPARE_MULTIPASS_NEXT_PASS;
+    case 8:
         // linker 1
         prepare_pass7();
     RETURN_PREPARE_MULTIPASS_NEXT_PASS;
-    case 8:
+    case 9:
         // linker 2
         prepare_pass8();
     RETURN_PREPARE_MULTIPASS_NEXT_PASS;
-    case 9:
+    case 10:
         prepare_pass9();
     SW_RETURN_MULTIPASS_END(prepare_pass);
     }
@@ -2683,6 +2687,7 @@ void NativeCompiledTarget::prepare_pass4()
                 auto inh = (InheritanceType)std::stoi(k);
                 if (inh == InheritanceType::Protected && !hasSameProject(d->getTarget()))
                     continue;
+
                 for (auto &[k, v2] : v["definitions"].getSettings())
                 {
                     if (v2.getValue().empty())
@@ -2690,34 +2695,21 @@ void NativeCompiledTarget::prepare_pass4()
                     else
                         Definitions[k] = v2.getValue();
                 }
+
                 for (auto &v2 : v["include_directories"].getArray())
                     IncludeDirectories.insert(std::get<String>(v2));
                 for (auto &v2 : v["link_libraries"].getArray())
-                    LinkLibraries.insert(LinkLibrary{ std::get<String>(v2) });
+                    LinkLibraries.insert(LinkLibrary{ fs::u8path(std::get<String>(v2)) });
+
+                for (auto &v2 : v["system_include_directories"].getArray())
+                    NativeCompilerOptions::System.IncludeDirectories.push_back(std::get<TargetSetting::Value>(v2));
+                for (auto &v2 : v["system_link_directories"].getArray())
+                    NativeLinkerOptions::System.LinkDirectories.push_back(std::get<TargetSetting::Value>(v2));
                 for (auto &v2 : v["system_link_libraries"].getArray())
                     NativeLinkerOptions::System.LinkLibraries.insert(LinkLibrary{ std::get<String>(v2) });
+
                 for (auto &v2 : v["frameworks"].getArray())
                     Frameworks.insert(std::get<String>(v2));
-            }
-
-            if (is["import_library"])
-                LinkLibraries.push_back(LinkLibrary{ fs::u8path(is["import_library"].getValue()) });
-
-            // some old code for libs in detect.cpp
-            if (is["system_include_directories"])
-            {
-                for (auto &v : is["system_include_directories"].getArray())
-                    NativeCompilerOptions::System.IncludeDirectories.push_back(std::get<TargetSetting::Value>(v));
-            }
-            if (is["system_link_directories"])
-            {
-                for (auto &v : is["system_link_directories"].getArray())
-                    NativeLinkerOptions::System.LinkDirectories.push_back(std::get<TargetSetting::Value>(v));
-            }
-            if (is["system_link_libraries"])
-            {
-                for (auto &v : is["system_link_libraries"].getArray())
-                    NativeLinkerOptions::System.LinkLibraries.push_back(LinkLibrary{ std::get<TargetSetting::Value>(v) });
             }
         }
         else
@@ -3249,100 +3241,105 @@ void NativeCompiledTarget::prepare_pass6()
     // link libraries
 
     // link libs
-    if (getBuildSettings().TargetOS.is(OSType::Windows))
+    if (!getBuildSettings().TargetOS.is(OSType::Windows))
+        return;
+
+    auto rt = vs::RuntimeLibraryType::MultiThreadedDLL;
+    if (getBuildSettings().Native.MT)
+        rt = vs::RuntimeLibraryType::MultiThreaded;
+    if (getBuildSettings().Native.ConfigurationType == ConfigurationType::Debug)
     {
-        auto rt = vs::RuntimeLibraryType::MultiThreadedDLL;
+        rt = vs::RuntimeLibraryType::MultiThreadedDLLDebug;
         if (getBuildSettings().Native.MT)
-            rt = vs::RuntimeLibraryType::MultiThreaded;
-        if (getBuildSettings().Native.ConfigurationType == ConfigurationType::Debug)
-        {
-            rt = vs::RuntimeLibraryType::MultiThreadedDLLDebug;
-            if (getBuildSettings().Native.MT)
-                rt = vs::RuntimeLibraryType::MultiThreadedDebug;
-        }
-
-        // TODO: move vs _slib to detect.cpp from native.cpp
-
-        // https://docs.microsoft.com/en-us/cpp/c-runtime-library/crt-library-features?view=vs-2019
-
-        // sometimes link.exe fails to add libs (SDL-2.0.10)
-        // so we take full control here
-
-        // we add main 5 libs and its variations for /MD /MDd /MT /MTd flags
-        // (listed in reverse order):
-        // 1. kernel (windows) library - kernel32.lib
-        // 2. libc - ucrt.lib
-        // 3. ms crt - msvcrt.lib
-        // 4. compiler (cl.exe) library - vcruntime.lib
-        // 5. ms std c++ library - msvcprt.lib
-        // 6. concurrency crt (concrt.lib)
-        //
-        // we also add some other libs needed by msvc
-        // 1. oldnames.lib - for backward compat - https://docs.microsoft.com/en-us/cpp/c-runtime-library/backward-compatibility?view=vs-2019
-        // 2. concrt.lib - concurrency crt
-
-        // TODO: push these libs from properties!
-
-        // TODO: libs may have further versions like
-        // libcpmt.lib
-        // libcpmt1.lib
-        //
-        // libcpmtd.lib
-        // libcpmtd0.lib
-        // libcpmtd1.lib
-        //
-        // libconcrt.lib
-        // libconcrt1.lib
-        //
-        // libconcrtd.lib
-        // libconcrtd0.lib
-        // libconcrtd1.lib
-
-        // other libs
-        *this += "oldnames.lib"_slib;
-
-        switch (rt)
-        {
-        case vs::RuntimeLibraryType::MultiThreadedDLL:
-            *this += "concrt.lib"_slib;
-            *this += "msvcprt.lib"_slib;
-            *this += "vcruntime.lib"_slib;
-            *this += "msvcrt.lib"_slib;
-            *this += "ucrt.lib"_slib;
-            break;
-        case vs::RuntimeLibraryType::MultiThreadedDLLDebug:
-            *this += "concrtd.lib"_slib;
-            *this += "msvcprtd.lib"_slib;
-            *this += "vcruntimed.lib"_slib;
-            *this += "msvcrtd.lib"_slib;
-            *this += "ucrtd.lib"_slib;
-            break;
-        case vs::RuntimeLibraryType::MultiThreaded:
-            *this += "libconcrt.lib"_slib;
-            *this += "libcpmt.lib"_slib;
-            *this += "libvcruntime.lib"_slib;
-            *this += "libcmt.lib"_slib;
-            *this += "libucrt.lib"_slib;
-            break;
-        case vs::RuntimeLibraryType::MultiThreadedDebug:
-            *this += "libconcrtd.lib"_slib;
-            *this += "libcpmtd.lib"_slib;
-            *this += "libvcruntimed.lib"_slib;
-            *this += "libcmtd.lib"_slib;
-            *this += "libucrtd.lib"_slib;
-            break;
-        }
-        if (auto L = getSelectedTool()->as<VisualStudioLinker*>())
-        {
-            auto cmd = L->createCommand(getMainBuild());
-            cmd->push_back("-NODEFAULTLIB");
-        }
+            rt = vs::RuntimeLibraryType::MultiThreadedDebug;
     }
 
-    // check for circular deps
-    if (!*HeaderOnly && getSelectedTool() != Librarian.get())
+    // TODO: move vs _slib to detect.cpp from native.cpp
+
+    // https://docs.microsoft.com/en-us/cpp/c-runtime-library/crt-library-features?view=vs-2019
+
+    // sometimes link.exe fails to add libs (SDL-2.0.10)
+    // so we take full control here
+
+    // we add main 5 libs and its variations for /MD /MDd /MT /MTd flags
+    // (listed in reverse order):
+    // 1. kernel (windows) library - kernel32.lib
+    // 2. libc - ucrt.lib
+    // 3. ms crt - msvcrt.lib
+    // 4. compiler (cl.exe) library - vcruntime.lib
+    // 5. ms std c++ library - msvcprt.lib
+    // 6. concurrency crt (concrt.lib)
+    //
+    // we also add some other libs needed by msvc
+    // 1. oldnames.lib - for backward compat - https://docs.microsoft.com/en-us/cpp/c-runtime-library/backward-compatibility?view=vs-2019
+    // 2. concrt.lib - concurrency crt
+
+    // TODO: push these libs from properties!
+
+    // TODO: libs may have further versions like
+    // libcpmt.lib
+    // libcpmt1.lib
+    //
+    // libcpmtd.lib
+    // libcpmtd0.lib
+    // libcpmtd1.lib
+    //
+    // libconcrt.lib
+    // libconcrt1.lib
+    //
+    // libconcrtd.lib
+    // libconcrtd0.lib
+    // libconcrtd1.lib
+
+    // other libs
+    *this += "oldnames.lib"_slib;
+
+    switch (rt)
     {
-        auto L = Linker->as<VisualStudioLinker*>();
+    case vs::RuntimeLibraryType::MultiThreadedDLL:
+        *this += "concrt.lib"_slib;
+        *this += "msvcprt.lib"_slib;
+        *this += "vcruntime.lib"_slib;
+        *this += "msvcrt.lib"_slib;
+        *this += "ucrt.lib"_slib;
+        break;
+    case vs::RuntimeLibraryType::MultiThreadedDLLDebug:
+        *this += "concrtd.lib"_slib;
+        *this += "msvcprtd.lib"_slib;
+        *this += "vcruntimed.lib"_slib;
+        *this += "msvcrtd.lib"_slib;
+        *this += "ucrtd.lib"_slib;
+        break;
+    case vs::RuntimeLibraryType::MultiThreaded:
+        *this += "libconcrt.lib"_slib;
+        *this += "libcpmt.lib"_slib;
+        *this += "libvcruntime.lib"_slib;
+        *this += "libcmt.lib"_slib;
+        *this += "libucrt.lib"_slib;
+        break;
+    case vs::RuntimeLibraryType::MultiThreadedDebug:
+        *this += "libconcrtd.lib"_slib;
+        *this += "libcpmtd.lib"_slib;
+        *this += "libvcruntimed.lib"_slib;
+        *this += "libcmtd.lib"_slib;
+        *this += "libucrtd.lib"_slib;
+        break;
+    }
+    if (auto L = getSelectedTool()->as<VisualStudioLinker *>())
+    {
+        auto cmd = L->createCommand(getMainBuild());
+        cmd->push_back("-NODEFAULTLIB");
+    }
+}
+
+void NativeCompiledTarget::prepare_pass61()
+{
+    if (*HeaderOnly || isStaticLibrary())
+        return;
+
+    // circular deps detection
+    if (auto L = Linker->as<VisualStudioLinker *>())
+    {
         for (auto &d : getAllActiveDependencies())
         {
             if (&d->getTarget() == this)
@@ -3350,25 +3347,51 @@ void NativeCompiledTarget::prepare_pass6()
             if (d->IncludeDirectoriesOnly)
                 continue;
 
-            auto nt = d->getTarget().template as<NativeCompiledTarget*>();
+            auto nt = d->getTarget().template as<NativeCompiledTarget *>();
             if (!nt)
                 continue;
 
-            // circular deps detection
-            if (L)
+            for (auto &d2 : nt->getAllActiveDependencies())
             {
-                for (auto &d2 : nt->getAllActiveDependencies())
-                {
-                    if (&d2->getTarget() != this)
-                        continue;
-                    if (d2->IncludeDirectoriesOnly)
-                        continue;
+                if (&d2->getTarget() != this)
+                    continue;
+                if (d2->IncludeDirectoriesOnly)
+                    continue;
 
-                    circular_dependency = true;
-                    break;
-                }
+                circular_dependency = true;
+                break;
             }
         }
+    }
+
+    // save our link libs in special
+    auto &s = get(InheritanceType::Special);
+    for (auto &d : s.getRawDependencies())
+    {
+        if (auto t = d->getTarget().as<const NativeCompiledTarget *>())
+        {
+            for (auto &ll : t->LinkLibraries)
+            {
+                if (std::find(s.LinkLibraries.begin(), s.LinkLibraries.end(), ll) == s.LinkLibraries.end())
+                    s.LinkLibraries.insert(ll);
+            }
+
+            //NativeLinkerOptions::System.LinkLibraries.insert(NativeLinkerOptions::System.LinkLibraries.end(),
+            //t->NativeLinkerOptions::System.LinkLibraries.begin(), t->NativeLinkerOptions::System.LinkLibraries.end());
+            for (auto &ll : t->NativeLinkerOptions::System.LinkLibraries)
+            {
+                if (std::find(s.NativeLinkerOptions::System.LinkLibraries.begin(), s.NativeLinkerOptions::System.LinkLibraries.end(), ll) == s.NativeLinkerOptions::System.LinkLibraries.end())
+                    s.NativeLinkerOptions::System.LinkLibraries.insert(ll);
+            }
+
+            s.Frameworks.insert(t->Frameworks.begin(), t->Frameworks.end());
+        }
+        else if (auto t = d->getTarget().as<const PredefinedTarget *>())
+        {
+            //SW_UNIMPLEMENTED;
+        }
+        else
+            throw SW_RUNTIME_ERROR("missing target code");
     }
 }
 
@@ -3383,32 +3406,21 @@ void NativeCompiledTarget::prepare_pass7()
         auto &s = get(InheritanceType::Special);
         for (auto &d : s.getRawDependencies())
         {
-            if (auto t = d->getTarget().as<const NativeCompiledTarget *>())
+            for (auto &ll : s.LinkLibraries)
             {
-                std::scoped_lock lk(m, t->m);
-
-                for (auto &ll : t->LinkLibraries)
-                {
-                    if (std::find(LinkLibraries.begin(), LinkLibraries.end(), ll) == LinkLibraries.end())
-                        LinkLibraries.insert(ll);
-                }
-
-                //NativeLinkerOptions::System.LinkLibraries.insert(NativeLinkerOptions::System.LinkLibraries.end(),
-                    //t->NativeLinkerOptions::System.LinkLibraries.begin(), t->NativeLinkerOptions::System.LinkLibraries.end());
-                for (auto &ll : t->NativeLinkerOptions::System.LinkLibraries)
-                {
-                    if (std::find(NativeLinkerOptions::System.LinkLibraries.begin(), NativeLinkerOptions::System.LinkLibraries.end(), ll) == NativeLinkerOptions::System.LinkLibraries.end())
-                        NativeLinkerOptions::System.LinkLibraries.insert(ll);
-                }
-
-                Frameworks.insert(t->Frameworks.begin(), t->Frameworks.end());
+                if (std::find(LinkLibraries.begin(), LinkLibraries.end(), ll) == LinkLibraries.end())
+                    LinkLibraries.insert(ll);
             }
-            else if (auto t = d->getTarget().as<const PredefinedTarget *>())
+
+            //NativeLinkerOptions::System.LinkLibraries.insert(NativeLinkerOptions::System.LinkLibraries.end(),
+            //t->NativeLinkerOptions::System.LinkLibraries.begin(), t->NativeLinkerOptions::System.LinkLibraries.end());
+            for (auto &ll : s.NativeLinkerOptions::System.LinkLibraries)
             {
-                //SW_UNIMPLEMENTED;
+                if (std::find(NativeLinkerOptions::System.LinkLibraries.begin(), NativeLinkerOptions::System.LinkLibraries.end(), ll) == NativeLinkerOptions::System.LinkLibraries.end())
+                    NativeLinkerOptions::System.LinkLibraries.insert(ll);
             }
-            else
-                throw SW_RUNTIME_ERROR("missing target code");
+
+            Frameworks.insert(s.Frameworks.begin(), s.Frameworks.end());
         }
 
         // clear after use
