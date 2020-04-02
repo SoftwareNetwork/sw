@@ -37,6 +37,7 @@ enum class GeneratorType
     Batch,
     CMake,
     CompilationDatabase,
+    FastBuild,
     Make,
     NMake,
     Ninja,
@@ -110,6 +111,12 @@ struct NinjaGenerator : Generator
 };
 
 struct CMakeGenerator : Generator
+{
+    using Generator::Generator;
+    void generate(const sw::SwBuild &b) override;
+};
+
+struct FastBuildGenerator : Generator
 {
     using Generator::Generator;
     void generate(const sw::SwBuild &b) override;

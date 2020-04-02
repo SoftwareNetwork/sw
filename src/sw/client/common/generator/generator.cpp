@@ -50,6 +50,8 @@ String toPathString(GeneratorType t)
         return "batch";
     case GeneratorType::CMake:
         return "cmake";
+    case GeneratorType::FastBuild:
+        return "fbuild";
     case GeneratorType::Make:
         return "make";
     case GeneratorType::NMake:
@@ -116,6 +118,8 @@ String toString(GeneratorType t)
         return "Make";
     case GeneratorType::CMake:
         return "CMake";
+    case GeneratorType::FastBuild:
+        return "FastBuild";
     case GeneratorType::NMake:
         return "NMake";
     case GeneratorType::QMake:
@@ -177,6 +181,8 @@ static GeneratorType fromString(const String &s)
         return GeneratorType::Make;
     else if (boost::iequals(s, "CMake"))
         return GeneratorType::CMake;
+    else if (boost::iequals(s, "FBuild") || boost::iequals(s, "FastBuild"))
+        return GeneratorType::FastBuild;
     else if (boost::iequals(s, "NMake"))
         return GeneratorType::NMake;
     else if (boost::iequals(s, "Batch"))
@@ -265,6 +271,9 @@ std::unique_ptr<Generator> Generator::create(const Options &options)
         break;
     case GeneratorType::CMake:
         g = CREATE_GENERATOR(CMakeGenerator);
+        break;
+    case GeneratorType::FastBuild:
+        g = CREATE_GENERATOR(FastBuildGenerator);
         break;
     case GeneratorType::NMake:
     case GeneratorType::Make:
@@ -1030,6 +1039,65 @@ void CMakeGenerator::generate(const sw::SwBuild &b)
     ctx.addLine();
 
     write_file(getRootDirectory(b) / "CMakeLists.txt", ctx.getText());
+}
+
+void FastBuildGenerator::generate(const sw::SwBuild &b)
+{
+    // https://www.fastbuild.org/docs/functions/exec.html
+
+    auto ep = b.getExecutionPlan();
+
+    primitives::CppEmitter ctx;
+    for (auto &c1 : ep.getCommands())
+    {
+        auto c = static_cast<builder::Command *>(c1);
+        ctx.addLine("Exec( \"" + std::to_string(c->getHash()) + "\" )");
+        ctx.beginBlock();
+
+        // wdir
+        if (!c->working_directory.empty())
+            ctx.addLine(".ExecWorkingDir = \"" + normalize_path(c->working_directory) + "\"");
+
+        // has no support for env vars?
+        // env
+        for (auto &[k, v] : c->environment)
+            ;
+
+        ctx.addLine(".ExecExecutable = \"" + normalize_path(c->getProgram()) + "\"");
+
+        ctx.addLine(".ExecArguments = \"");
+        bool exe_skipped = false;
+        for (auto &a : c->arguments)
+        {
+            if (!exe_skipped)
+            {
+                exe_skipped = true;
+                continue;
+            }
+            auto s = a->toString();
+            auto q = s[0] == '\"' ? "^" : "^\"";
+            ctx.addText(q + s + q + " ");
+        }
+        ctx.trimEnd(1);
+        ctx.addText("\"");
+
+        ctx.addLine(".ExecInput = \"");
+        for (auto &i : c->inputs)
+            ctx.addText(normalize_path(i) + " ");
+        ctx.trimEnd(1);
+        ctx.addText("\"");
+
+        ctx.addLine(".ExecOutput = \"");
+        for (auto &i : c->outputs)
+            ctx.addText(normalize_path(i) + " ");
+        ctx.trimEnd(1);
+        ctx.addText("\"");
+
+        ctx.endBlock();
+        ctx.emptyLines(1);
+    }
+
+    write_file(getRootDirectory(b) / "fbuild.bff", ctx.getText());
 }
 
 void ShellGenerator::generate(const SwBuild &b)
