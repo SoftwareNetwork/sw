@@ -192,9 +192,11 @@ private:
     using ActiveDeps = std::vector<TargetDependency>;
     std::optional<ActiveDeps> active_deps;
     DependenciesType all_deps;
-    ActiveDeps &getActiveDependencies(); // only this pkg deps!
+    // only this pkg deps!
+    ActiveDeps &getActiveDependencies();
     const ActiveDeps &getActiveDependencies() const;
-    const DependenciesType &getAllDependencies() const { return all_deps; } // deps from all subdeps too
+    // deps from all subdeps too
+    const DependenciesType &getAllActiveDependencies() const { return all_deps; }
 
 protected:
     Commands getCommands1() const override;

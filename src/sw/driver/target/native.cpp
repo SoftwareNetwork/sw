@@ -785,7 +785,7 @@ void NativeCompiledTarget::setupCommand(builder::Command &c) const
     // perform this after prepare?
     auto for_deps = [this, &c](auto f)
     {
-        for (auto &d : getAllDependencies())
+        for (auto &d : getAllActiveDependencies())
         {
             if (&d->getTarget() == this)
                 continue;
@@ -968,7 +968,7 @@ path NativeCompiledTarget::getImportLibrary() const
 NativeCompiledTarget::TargetsSet NativeCompiledTarget::gatherDependenciesTargets() const
 {
     TargetsSet deps;
-    for (auto &d : getAllDependencies())
+    for (auto &d : getAllActiveDependencies())
     {
         if (&d->getTarget() == this)
             continue;
@@ -1520,7 +1520,7 @@ Commands NativeCompiledTarget::getCommands1() const
         auto get_tgts = [this]()
         {
             TargetsSet deps;
-            for (auto &d : getAllDependencies())
+            for (auto &d : getAllActiveDependencies())
             {
                 // this means that for idirs generated commands won't be used!
                 if (d->IncludeDirectoriesOnly && !d->GenerateCommandsBefore)
@@ -2598,7 +2598,7 @@ void NativeCompiledTarget::prepare_pass3()
     auto &s = get(InheritanceType::Special); // call in any case
     if (isStaticLibrary() || *HeaderOnly)
     {
-        for (auto &d : getAllDependencies())
+        for (auto &d : getAllActiveDependencies())
         {
             if (!d->IncludeDirectoriesOnly)
                 s += d; // all deps!!! not matter lib or dll or exe
@@ -2616,7 +2616,7 @@ void NativeCompiledTarget::prepare_pass4()
         std::unordered_set<DependencyPtr, H, EQ> deps(0, H{}, EQ{});
 
         // set our initial deps
-        for (auto &d : getAllDependencies())
+        for (auto &d : getAllActiveDependencies())
         {
             SW_CHECK(d->isResolved());
             if (!d->IncludeDirectoriesOnly)
@@ -2634,7 +2634,7 @@ void NativeCompiledTarget::prepare_pass4()
                     if (t->isStaticLibrary() || *HeaderOnly)
                     {
                         // iterate over child deps
-                        for (auto &d : t->getAllDependencies())
+                        for (auto &d : t->getAllActiveDependencies())
                         {
                             SW_CHECK(d->isResolved());
                             if (!d->IncludeDirectoriesOnly)
@@ -2665,7 +2665,7 @@ void NativeCompiledTarget::prepare_pass4()
     merge();
 
     // merge deps' stuff
-    for (auto &d : getAllDependencies())
+    for (auto &d : getAllActiveDependencies())
     {
         if (auto t = d->getTarget().as<const NativeCompiledTarget *>())
         {
@@ -3343,7 +3343,7 @@ void NativeCompiledTarget::prepare_pass6()
     if (!*HeaderOnly && getSelectedTool() != Librarian.get())
     {
         auto L = Linker->as<VisualStudioLinker*>();
-        for (auto &d : getAllDependencies())
+        for (auto &d : getAllActiveDependencies())
         {
             if (&d->getTarget() == this)
                 continue;
@@ -3357,7 +3357,7 @@ void NativeCompiledTarget::prepare_pass6()
             // circular deps detection
             if (L)
             {
-                for (auto &d2 : nt->getAllDependencies())
+                for (auto &d2 : nt->getAllActiveDependencies())
                 {
                     if (&d2->getTarget() != this)
                         continue;
