@@ -958,16 +958,17 @@ void RcTool::prepareCommand1(const Target &t)
 
     t.template as<NativeCompiledTarget>().NativeCompilerOptions::addDefinitions(*cmd);
 
-    // rc need to have -I arg separate to dir and dir must be taken into quotes
+    // rc need to have -I arg separate to dir
+    // and dir must be taken into quotes (???) maybe this is needed for rsp files?
     auto print_idir = [&c = *cmd](const auto &a, auto &flag)
     {
         for (auto &d : a)
         {
             c.arguments.push_back(flag);
             auto p = normalize_path(d);
-            if (p.find(' ') != p.npos)
+            /*if (p.find(' ') != p.npos)
                 c.arguments.push_back("\"" + p + "\"");
-            else
+            else*/
                 c.arguments.push_back(normalize_path(d));
         }
     };
