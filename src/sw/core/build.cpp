@@ -55,7 +55,37 @@ DECLARE_STATIC_LOGGER(logger, "build");
 namespace sw
 {
 
-std::unordered_map<UnresolvedPackage, PackageId> loadLockFile(const path &fn/*, SwContext &swctx*/)
+static auto get_base_settings_version()
+{
+    return 21;
+}
+
+static auto get_base_settings_name()
+{
+    return "settings." + std::to_string(get_base_settings_version());
+}
+
+static auto use_json()
+{
+    return true;
+}
+
+static auto get_settings_fn()
+{
+    return get_base_settings_name() + (use_json() ? ".json" : ".bin");
+}
+
+static auto can_use_usv(const SwBuild &b)
+{
+    auto &s = b.getSettings();
+    return 1
+        && s["use_saved_configs"] == "true"
+        // allow only in the main build for now
+        && s["master_build"] == "true"
+        ;
+}
+
+static std::unordered_map<UnresolvedPackage, PackageId> loadLockFile(const path &fn/*, SwContext &swctx*/)
 {
     auto j = nlohmann::json::parse(read_file(fn));
     if (j["schema"]["version"].is_null())
@@ -358,32 +388,6 @@ void SwBuild::resolvePackages()
 
     se.~ScopeGuard();
     resolvePackages(upkgs);
-}
-
-static auto get_base_settings_version()
-{
-    return 19;
-}
-
-static auto get_base_settings_name()
-{
-    return "settings." + std::to_string(get_base_settings_version());
-}
-
-static auto use_json()
-{
-    return true;
-}
-
-static auto get_settings_fn()
-{
-    return get_base_settings_name() + (use_json() ? ".json" : ".bin");
-}
-
-static auto can_use_usv(const SwBuild &b)
-{
-    return b.getSettings()["use_saved_configs"] == "true";
-        //&& build_settings["master_build"] == "true" // allow only in the main build for now)
 }
 
 void SwBuild::resolvePackages(const std::vector<IDependency*> &udeps)
