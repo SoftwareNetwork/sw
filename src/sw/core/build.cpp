@@ -78,7 +78,7 @@ static auto get_settings_fn()
 static auto can_use_usv(const SwBuild &b)
 {
     auto &s = b.getSettings();
-    return 1
+    return true
         && s["use_saved_configs"] == "true"
         // allow only in the main build for now
         && s["master_build"] == "true"
