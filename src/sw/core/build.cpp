@@ -695,6 +695,42 @@ void SwBuild::prepare()
 
     while (prepareStep())
         ;
+
+    if (build_settings["master_build"] != "true")
+        return;
+
+    // save after prepare
+    for (const auto &[pkg, tgts] : targets)
+    {
+        if (!pkg.getPath().isAbsolute())
+            continue;
+        for (auto &tgt : tgts)
+        {
+            LocalPackage p(getContext().getLocalStorage(), tgt->getPackage());
+            if (p.isOverridden())
+                continue;
+            // skip predefs - they are already readed from disk or created in sw
+            if (tgt->as<const PredefinedTarget *>())
+                continue;
+            auto cfg = tgt->getSettings().getHash();
+            auto base = p.getDirObj(cfg);
+            auto sfn = base / get_settings_fn();
+            auto sfncfg = base / get_base_settings_name() += ".cfg";
+            auto sptrfn = base / "settings.hash";
+
+            if (!fs::exists(sfn) || !fs::exists(sptrfn) || read_file(sptrfn) != tgt->getInterfaceSettings().getHash())
+            {
+                if (!use_json())
+                    saveSettings(sfn, tgt->getInterfaceSettings());
+                else
+                {
+                    write_file(sfn, nlohmann::json::parse(tgt->getInterfaceSettings().toString()).dump(4));
+                    write_file(sfncfg, nlohmann::json::parse(tgt->getSettings().toString()).dump(4));
+                }
+                write_file(sptrfn, tgt->getInterfaceSettings().getHash());
+            }
+        }
+    }
 }
 
 void SwBuild::execute() const
@@ -739,45 +775,6 @@ void SwBuild::execute(ExecutionPlan &p) const
         path fmtime = ide_fast_path;
         fmtime += ".t";
         write_file(fmtime, std::to_string(mtime));
-    }
-
-    // only after build it is possible to record our targets
-    // to skip many previous steps in the future
-    if (build_settings["master_build"] != "true")
-        return;
-
-    for (const auto &[pkg, tgts] : targets_to_build)
-    {
-        if (!pkg.getPath().isAbsolute())
-            continue;
-        for (auto &tgt : tgts)
-        {
-            // do not overwrite settings again
-            // but settings may change during development, so we should not do this check
-            //if (auto dt = tgt->as<const PredefinedTarget *>())
-                //continue;
-
-            LocalPackage p(getContext().getLocalStorage(), tgt->getPackage());
-            if (p.isOverridden())
-                continue;
-            auto cfg = tgt->getSettings().getHash();
-            auto base = p.getDirObj(cfg);
-            auto sfn = base / get_settings_fn();
-            auto sfncfg = base / get_base_settings_name() += ".cfg";
-            auto sptrfn = base / "settings.hash";
-
-            if (!fs::exists(sfn) || !fs::exists(sptrfn) || read_file(sptrfn) != tgt->getInterfaceSettings().getHash())
-            {
-                if (!use_json())
-                    saveSettings(sfn, tgt->getInterfaceSettings());
-                else
-                {
-                    write_file(sfn, nlohmann::json::parse(tgt->getInterfaceSettings().toString()).dump(4));
-                    write_file(sfncfg, nlohmann::json::parse(tgt->getSettings().toString()).dump(4));
-                }
-                write_file(sptrfn, tgt->getInterfaceSettings().getHash());
-            }
-        }
     }
 }
 
