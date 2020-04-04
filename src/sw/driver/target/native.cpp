@@ -2143,6 +2143,8 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
 
             for (auto &[k,v] : g.Definitions)
                 s["definitions"][k] = v;
+            for (auto &d : g.CompileOptions)
+                s["compile_options"].push_back(d);
             for (auto &d : g.IncludeDirectories)
                 s["include_directories"].push_back(normalize_path(d));
             for (auto &d : g.LinkLibraries)
@@ -2697,6 +2699,8 @@ void NativeCompiledTarget::prepare_pass4()
                     else
                         Definitions[k] = v2.getValue();
                 }
+                for (auto &v2 : v["compile_options"].getArray())
+                    CompileOptions.insert(std::get<String>(v2));
 
                 for (auto &v2 : v["include_directories"].getArray())
                     IncludeDirectories.insert(std::get<String>(v2));
