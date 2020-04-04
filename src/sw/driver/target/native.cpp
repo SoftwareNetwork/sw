@@ -2134,19 +2134,16 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
                 }
             };
 
-            if (i == InheritanceType::Private)
+            // for private, we skip some variables
+            if (i != InheritanceType::Private)
             {
-                // we must also print pvt deps
-                print_deps(g);
-                return;
+                for (auto &[k, v] : g.Definitions)
+                    s["definitions"][k] = v;
+                for (auto &d : g.CompileOptions)
+                    s["compile_options"].push_back(d);
+                for (auto &d : g.IncludeDirectories)
+                    s["include_directories"].push_back(normalize_path(d));
             }
-
-            for (auto &[k,v] : g.Definitions)
-                s["definitions"][k] = v;
-            for (auto &d : g.CompileOptions)
-                s["compile_options"].push_back(d);
-            for (auto &d : g.IncludeDirectories)
-                s["include_directories"].push_back(normalize_path(d));
             for (auto &d : g.LinkLibraries)
                 s["link_libraries"].push_back(normalize_path(d.l));
             for (auto &d : g.NativeLinkerOptions::System.LinkLibraries)
