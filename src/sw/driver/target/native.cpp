@@ -2487,6 +2487,9 @@ void NativeCompiledTarget::prepare_pass3()
             // accepts this driver's Dependency class
             auto calc_deps = [this, &deps, &deps_ordered, &new_dependency](Dependency &d, Dependency &d2, InheritanceType Inheritance)
             {
+                // nothing to do with special inheritance
+                if (Inheritance == InheritanceType::Special)
+                    return;
                 // nothing to do with private inheritance
                 // before d2->getTarget()!
                 if (Inheritance == InheritanceType::Private)
