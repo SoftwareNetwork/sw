@@ -3307,29 +3307,29 @@ void NativeCompiledTarget::prepare_pass6()
     {
     case vs::RuntimeLibraryType::MultiThreadedDLL:
         *this += "concrt.lib"_slib;
-        *this += "msvcprt.lib"_slib;
         *this += "vcruntime.lib"_slib;
+        *this += "msvcprt.lib"_slib;
         *this += "msvcrt.lib"_slib;
         *this += "ucrt.lib"_slib;
         break;
     case vs::RuntimeLibraryType::MultiThreadedDLLDebug:
         *this += "concrtd.lib"_slib;
-        *this += "msvcprtd.lib"_slib;
         *this += "vcruntimed.lib"_slib;
+        *this += "msvcprtd.lib"_slib;
         *this += "msvcrtd.lib"_slib;
         *this += "ucrtd.lib"_slib;
         break;
     case vs::RuntimeLibraryType::MultiThreaded:
         *this += "libconcrt.lib"_slib;
-        *this += "libcpmt.lib"_slib;
         *this += "libvcruntime.lib"_slib;
+        *this += "libcpmt.lib"_slib;
         *this += "libcmt.lib"_slib;
         *this += "libucrt.lib"_slib;
         break;
     case vs::RuntimeLibraryType::MultiThreadedDebug:
         *this += "libconcrtd.lib"_slib;
-        *this += "libcpmtd.lib"_slib;
         *this += "libvcruntimed.lib"_slib;
+        *this += "libcpmtd.lib"_slib;
         *this += "libcmtd.lib"_slib;
         *this += "libucrtd.lib"_slib;
         break;
