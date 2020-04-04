@@ -2570,6 +2570,7 @@ void NativeCompiledTarget::prepare_pass3()
                     for (auto &[package_id, settings] : v["dependencies"].getSettings())
                     {
                         // find our resolved dependency and run
+                        bool found = false;
                         for (auto &d3 : t->getDependencies())
                         {
                             if (d3->getTarget().getPackage() == package_id && d3->getSettings() == settings.getSettings())
