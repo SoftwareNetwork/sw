@@ -2098,6 +2098,8 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
             s["run_command"]["program"] = normalize_path(c.getProgram());
         else
             s["run_command"]["program"] = normalize_path(getOutputFile());
+        if (!c.working_directory.empty())
+            s["run_command"]["working_directory"] = normalize_path(c.working_directory);
         for (auto &a : c.getArguments())
             s["run_command"]["arguments"].push_back(a->toString());
         for (auto &[k, v] : c.environment)
