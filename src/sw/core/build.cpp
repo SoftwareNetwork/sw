@@ -632,6 +632,9 @@ void SwBuild::loadPackages(const TargetMap &predefined)
             {
                 if (tgt->getSettings()["dry-run"] == "true")
                     continue;
+                // for usv skip load only requested targets
+                if (usv && tgt->getPackage() != d.first)
+                    continue; // very slow! optimize?
                 getTargets()[tgt->getPackage()].push_back(tgt);
                 added = true;
             }
