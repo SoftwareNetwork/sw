@@ -2703,11 +2703,18 @@ void NativeCompiledTarget::prepare_pass4()
                     else
                         Definitions[k] = v2.getValue();
                 }
+
+                if (!d->IncludeDirectoriesOnly)
+                {
                 for (auto &v2 : v["compile_options"].getArray())
                     CompileOptions.insert(std::get<String>(v2));
+                }
 
                 for (auto &v2 : v["include_directories"].getArray())
                     IncludeDirectories.insert(std::get<String>(v2));
+
+                if (!d->IncludeDirectoriesOnly)
+                {
                 for (auto &v2 : v["link_libraries"].getArray())
                     LinkLibraries.insert(LinkLibrary{ fs::u8path(std::get<String>(v2)) });
 
@@ -2721,6 +2728,7 @@ void NativeCompiledTarget::prepare_pass4()
                 for (auto &v2 : v["frameworks"].getArray())
                     Frameworks.insert(std::get<String>(v2));
             }
+        }
         }
         else
             throw SW_RUNTIME_ERROR("missing target code");
