@@ -2579,7 +2579,9 @@ void NativeCompiledTarget::prepare_pass3()
                                 Dependency d2(d3->getTarget());
                                 d2.settings = d3->getSettings();
                                 d2.setTarget(d3->getTarget());
-                                d2.IncludeDirectoriesOnly = settings.getSettings()["include_directories_only"] == "true";
+                                //d2.IncludeDirectoriesOnly = d3->getSettings()["include_directories_only"] == "true";
+                                d2.IncludeDirectoriesOnly = settings["include_directories_only"] == "true";
+                                SW_CHECK(d3->getSettings()["include_directories_only"] == settings["include_directories_only"]);
 
                                 calc_deps(*d, d2, inh);
                                 found = true;
@@ -2706,8 +2708,8 @@ void NativeCompiledTarget::prepare_pass4()
 
                 if (!d->IncludeDirectoriesOnly)
                 {
-                for (auto &v2 : v["compile_options"].getArray())
-                    CompileOptions.insert(std::get<String>(v2));
+                    for (auto &v2 : v["compile_options"].getArray())
+                        CompileOptions.insert(std::get<String>(v2));
                 }
 
                 for (auto &v2 : v["include_directories"].getArray())
@@ -2715,20 +2717,20 @@ void NativeCompiledTarget::prepare_pass4()
 
                 if (!d->IncludeDirectoriesOnly)
                 {
-                for (auto &v2 : v["link_libraries"].getArray())
-                    LinkLibraries.insert(LinkLibrary{ fs::u8path(std::get<String>(v2)) });
+                    for (auto &v2 : v["link_libraries"].getArray())
+                        LinkLibraries.insert(LinkLibrary{ fs::u8path(std::get<String>(v2)) });
 
-                for (auto &v2 : v["system_include_directories"].getArray())
-                    NativeCompilerOptions::System.IncludeDirectories.push_back(std::get<TargetSetting::Value>(v2));
-                for (auto &v2 : v["system_link_directories"].getArray())
-                    NativeLinkerOptions::System.LinkDirectories.push_back(std::get<TargetSetting::Value>(v2));
-                for (auto &v2 : v["system_link_libraries"].getArray())
-                    NativeLinkerOptions::System.LinkLibraries.insert(LinkLibrary{ std::get<String>(v2) });
+                    for (auto &v2 : v["system_include_directories"].getArray())
+                        NativeCompilerOptions::System.IncludeDirectories.push_back(std::get<TargetSetting::Value>(v2));
+                    for (auto &v2 : v["system_link_directories"].getArray())
+                        NativeLinkerOptions::System.LinkDirectories.push_back(std::get<TargetSetting::Value>(v2));
+                    for (auto &v2 : v["system_link_libraries"].getArray())
+                        NativeLinkerOptions::System.LinkLibraries.insert(LinkLibrary{ std::get<String>(v2) });
 
-                for (auto &v2 : v["frameworks"].getArray())
-                    Frameworks.insert(std::get<String>(v2));
+                    for (auto &v2 : v["frameworks"].getArray())
+                        Frameworks.insert(std::get<String>(v2));
+                }
             }
-        }
         }
         else
             throw SW_RUNTIME_ERROR("missing target code");
