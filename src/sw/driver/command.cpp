@@ -201,7 +201,12 @@ void Command::prepare()
             if (is["run_command"])
             {
                 for (auto &[k, v] : is["run_command"]["environment"].getSettings())
-                    environment[k] = v.getValue();
+                {
+                    if (k == "PATH")
+                        appendEnvironmentArrayValue(k, v.getValue(), true);
+                    else
+                        environment[k] = v.getValue();
+                }
             }
         }
         else
