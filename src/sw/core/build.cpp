@@ -434,10 +434,11 @@ void SwBuild::resolvePackages(const std::vector<IDependency*> &udeps)
     for (auto &[u, p] : m)
         targets[p];
 
+    auto usv = can_use_usv(*this);
     bool everything_resolved = true;
     for (auto d : udeps)
     {
-        if (can_use_usv(*this))
+        if (usv)
         {
             auto &p = m.find(d->getUnresolvedPackage())->second;
             auto cfg = d->getSettings().getHash();
@@ -524,6 +525,7 @@ void SwBuild::loadPackages()
 void SwBuild::loadPackages(const TargetMap &predefined)
 {
     // load
+    auto usv = can_use_usv(*this);
     int r = 1;
     while (1)
     {
@@ -586,7 +588,7 @@ void SwBuild::loadPackages(const TargetMap &predefined)
             if (s.empty())
                 continue;
 
-            if (can_use_usv(*this))
+            if (usv)
             {
                 LocalPackage p(getContext().getLocalStorage(), d.first);
                 auto cfg = s.getHash();
