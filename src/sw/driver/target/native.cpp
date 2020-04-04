@@ -2581,12 +2581,15 @@ void NativeCompiledTarget::prepare_pass3()
                                 Dependency d2(d3->getTarget());
                                 d2.settings = d3->getSettings();
                                 d2.setTarget(d3->getTarget());
-                                d2.IncludeDirectoriesOnly = d3->getSettings()["include_directories_only"] == "true";
+                                d2.IncludeDirectoriesOnly = settings.getSettings()["include_directories_only"] == "true";
 
                                 calc_deps(*d, d2, inh);
+                                found = true;
                                 break;
                             }
                         }
+                        if (!found)
+                            throw SW_RUNTIME_ERROR("Cannot find predefined target: " + package_id);
                     }
                 }
             }
