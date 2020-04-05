@@ -75,6 +75,36 @@ static auto get_settings_fn()
     return get_base_settings_name() + (use_json() ? ".json" : ".bin");
 }
 
+static auto create_target(const path &sfn, const PackageId &pkg, const TargetSettings &s)
+{
+    LOG_TRACE(logger, "loading " << pkg.toString() << ": " << s.getHash() << " from settings file");
+
+    auto tgt = std::make_shared<PredefinedTarget>(pkg, s);
+    if (!use_json())
+        tgt->public_ts = loadSettings(sfn);
+    else
+    {
+        TargetSettings its;
+        its.mergeFromString(read_file(sfn));
+        tgt->public_ts = its;
+    }
+
+    return tgt;
+}
+
+static std::shared_ptr<PredefinedTarget> create_target(const LocalPackage &p, const TargetSettings &s)
+{
+    auto cfg = s.getHash();
+    auto base = p.getDirObj(cfg);
+    auto sfn = base / get_settings_fn();
+    if (fs::exists(sfn))
+    {
+        auto tgt = create_target(sfn, p, s);
+        return tgt;
+    }
+    return {};
+}
+
 static auto can_use_usv(const SwBuild &b)
 {
     auto &s = b.getSettings();
@@ -434,23 +464,23 @@ void SwBuild::resolvePackages(const std::vector<IDependency*> &udeps)
     for (auto &[u, p] : m)
         targets[p];
 
-    auto usv = can_use_usv(*this);
-    bool everything_resolved = true;
-    for (auto d : udeps)
+    if (can_use_usv(*this))
     {
-        if (usv)
+        bool everything_resolved = true;
+        for (auto d : udeps)
         {
             auto &p = m.find(d->getUnresolvedPackage())->second;
-            auto cfg = d->getSettings().getHash();
-            auto base = p.getDirObj(cfg);
-            auto sfn = base / get_settings_fn();
-            if (fs::exists(sfn))
+            auto tgt = create_target(p, d->getSettings());
+            if (tgt)
+            {
+                getTargets()[tgt->getPackage()].push_back(tgt);
                 continue;
+            }
+            everything_resolved = false;
         }
-        everything_resolved = false;
+        if (everything_resolved)
+            return;
     }
-    if (everything_resolved)
-        return;
 
     if (build_settings["lock_file"].isValue() && must_update_lock_file)
     {
@@ -592,22 +622,9 @@ void SwBuild::loadPackages(const TargetMap &predefined)
             if (usv)
             {
                 LocalPackage p(getContext().getLocalStorage(), d.first);
-                auto cfg = s.getHash();
-                auto base = p.getDirObj(cfg);
-                auto sfn = base / get_settings_fn();
-                if (fs::exists(sfn))
+                auto tgt = create_target(p, s);
+                if (tgt)
                 {
-                    LOG_TRACE(logger, "loading " << d.first.toString() << ": " << s.getHash() << " from settings file");
-
-                    auto tgt = std::make_shared<PredefinedTarget>(d.first, s);
-                    if (!use_json())
-                        tgt->public_ts = loadSettings(sfn);
-                    else
-                    {
-                        TargetSettings its;
-                        its.mergeFromString(read_file(sfn));
-                        tgt->public_ts = its;
-                    }
                     getTargets()[tgt->getPackage()].push_back(tgt);
                     loaded = true;
                     continue;
@@ -649,7 +666,7 @@ void SwBuild::loadPackages(const TargetMap &predefined)
                 if (tgt->getSettings()["dry-run"] == "true")
                     continue;
                 if (tgt->getPackage() == d.first)
-                getTargets()[tgt->getPackage()].push_back(tgt);
+                    getTargets()[tgt->getPackage()].push_back(tgt);
                 else
                     cache[tgt->getPackage()].push_back(tgt);
                 added = true;
