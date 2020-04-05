@@ -191,16 +191,34 @@ int setup_main(const Strings &args, Options &options)
             cmdline += a + " ";
         LOG_TRACE(logger, "command line:\n" + cmdline);
 
+        auto append_file_unique = [](const auto &fn, String cmd)
+        {
+            boost::trim(cmd);
+            auto lines = read_lines(fn);
+            Strings lines_out;
+            String s;
+            for (auto &l : lines)
+            {
+                if (std::find(lines_out.begin(), lines_out.end(), l) == lines_out.end() && l != cmd)
+                {
+                    lines_out.push_back(l);
+                    s += l + "\n";
+                }
+            }
+            s += cmd + "\n";
+            write_file(fn, s);
+        };
+
         if (Settings::get_user_settings().record_commands)
         {
             auto hfn = ".sw_history";
-            append_file(get_home_directory() / hfn, cmdline + "\n");
+            append_file_unique(get_home_directory() / hfn, cmdline);
             if (Settings::get_user_settings().record_commands_in_current_dir)
             {
                 try
                 {
                     // do not work on some commands (uri)
-                    append_file(path(".sw") / hfn, cmdline + "\n");
+                    append_file_unique(path(".sw") / hfn, cmdline);
                 }
                 catch (std::exception &) {}
             }
