@@ -18,4 +18,4 @@
 
 #pragma once
 
-#define SW_MODULE_ABI_VERSION 10
+#define SW_MODULE_ABI_VERSION 11

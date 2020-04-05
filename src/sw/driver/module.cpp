@@ -19,6 +19,8 @@
 #include "module.h"
 
 #include "build.h"
+#define SW_PACKAGE_API
+#include "sw_check_abi_version.h"
 
 #include <boost/dll.hpp>
 #include <boost/dll/import_mangled.hpp>
@@ -97,6 +99,9 @@ Module::Module(const Module::DynamicLibrary &dll, const String &suffix)
     LOAD(check);
     LOAD(configure);
     //LOAD(sw_get_module_abi_version);
+
+    //if (::sw_get_module_abi_version() != sw_get_module_abi_version_())
+        //throw SW_RUNTIME_ERROR("Bad config ABI version");
 
 #undef LOAD
 }
