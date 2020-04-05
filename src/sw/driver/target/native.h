@@ -173,6 +173,7 @@ protected:
 
     bool isHeaderOnly() const;
     bool isStaticLibrary() const override;
+    bool isStaticOrHeaderOnlyLibrary() const;
     TargetType getRealType() const;
 
     path getBinaryParentDir() const override;

@@ -57,7 +57,8 @@ namespace sw
 
 static auto get_base_settings_version()
 {
-    return 35;
+    // move this later to target settings?
+    return 38;
 }
 
 static auto get_base_settings_name()
