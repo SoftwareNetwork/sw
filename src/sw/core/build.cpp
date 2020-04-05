@@ -882,6 +882,10 @@ Commands SwBuild::getCommands() const
             // gather targets to build
             const auto &s = tgt->getInterfaceSettings();
 
+            // skip prebuilt
+            //if (auto t = tgt->as<const PredefinedTarget *>())
+                //continue;
+
             std::function<void(const TargetSettings &)> gather_ttb;
             gather_ttb = [this, &gather_ttb, &ttb](const auto &s) mutable
             {
@@ -903,7 +907,8 @@ Commands SwBuild::getCommands() const
                                 throw SW_RUNTIME_ERROR("dep not found: " + k);
                             auto j = i->second.findSuitable(v.getSettings());
                             if (j == i->second.end())
-                                throw SW_RUNTIME_ERROR("dep+settings not found: " + k + ": " + v.getSettings().toString());
+                                return; // probably was loaded config
+                                //throw SW_RUNTIME_ERROR("dep+settings not found: " + k + ": " + v.getSettings().toString());
 
                             auto m = ttb[PackageId(k)].findEqual((*j)->getSettings());
                             if (m != ttb[PackageId(k)].end())
