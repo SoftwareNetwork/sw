@@ -2160,8 +2160,6 @@ bool NativeCompiledTarget::prepare()
         return false;
     }
 
-    DEBUG_BREAK_IF(getPackage().toString() == "primitives.db.postgresql-master");
-
     switch (prepare_pass)
     {
     case 1:
