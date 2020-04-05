@@ -778,8 +778,8 @@ void SwBuild::prepare()
                     saveSettings(sfn, tgt->getInterfaceSettings());
                 else
                 {
-                    write_file(sfn, nlohmann::json::parse(tgt->getInterfaceSettings().toString()).dump(4));
-                    write_file(sfncfg, nlohmann::json::parse(tgt->getSettings().toString()).dump(4));
+                    write_file(sfn, nlohmann::json::parse(tgt->getInterfaceSettings().toString()).dump(2));
+                    write_file(sfncfg, nlohmann::json::parse(tgt->getSettings().toString()).dump(2));
                 }
                 write_file(sptrfn, tgt->getInterfaceSettings().getHash());
             }
