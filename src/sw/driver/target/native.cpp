@@ -2199,6 +2199,7 @@ bool NativeCompiledTarget::prepare()
     RETURN_PREPARE_MULTIPASS_NEXT_PASS;
     case 10:
         prepare_pass9();
+        call(CallbackType::EndPrepare);
     SW_RETURN_MULTIPASS_END(prepare_pass);
     }
 
@@ -3491,8 +3492,6 @@ void NativeCompiledTarget::prepare_pass8()
         getSelectedTool()->setObjectFiles(files);
         getSelectedTool()->setInputLibraryDependencies(gatherLinkLibraries());
     }
-
-    call(CallbackType::EndPrepare);
 }
 
 void NativeCompiledTarget::prepare_pass9()
