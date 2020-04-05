@@ -115,7 +115,6 @@ public:
     void autoDetectSources();
     void autoDetectIncludeDirectories();
     bool hasSourceFiles() const;
-    Files gatherIncludeDirectories() const;
     TargetsSet gatherAllRelatedDependencies() const;
     NativeLinker *getSelectedTool() const override;
     void setOutputFile() override;

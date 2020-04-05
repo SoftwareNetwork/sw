@@ -1008,18 +1008,6 @@ std::unordered_set<NativeSourceFile*> NativeCompiledTarget::gatherSourceFiles() 
     return ::sw::gatherSourceFiles<NativeSourceFile>(*this);
 }
 
-Files NativeCompiledTarget::gatherIncludeDirectories() const
-{
-    Files idirs;
-    TargetOptionsGroup::iterate_this(
-        [this, &idirs](auto &v, auto i)
-    {
-        for (auto &i2 : v.gatherIncludeDirectories())
-            idirs.insert(i2);
-    });
-    return idirs;
-}
-
 FilesOrdered NativeCompiledTarget::gatherPrecompiledHeaders() const
 {
     FilesOrdered hdrs;
