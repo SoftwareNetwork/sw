@@ -221,6 +221,8 @@ static void detectMsvcCommon(const path &compiler, const Version &in_v,
         auto &libcpp = addTarget<PredefinedTarget>(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.libcpp", v), ts);
         libcpp.public_ts["new"]["6"]["system_include_directories"].push_back(normalize_path(idir));
         libcpp.public_ts["new"]["6"]["system_link_directories"].push_back(normalize_path(root / "lib" / target));
+        // if (v.getMajor() >= 15) ?
+        libcpp.public_ts["new"]["6"]["link_libraries"].push_back(normalize_path(root / "lib" / target / "oldnames.lib"));
 
         if (fs::exists(root / "ATLMFC" / "include"))
         {

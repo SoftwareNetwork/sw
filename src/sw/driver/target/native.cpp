@@ -3314,8 +3314,6 @@ void NativeCompiledTarget::prepare_pass6()
     // libconcrtd0.lib
     // libconcrtd1.lib
 
-    // other libs
-    *this += "oldnames.lib"_slib;
 
     switch (rt)
     {
