@@ -129,6 +129,125 @@ VSInstances &gatherVSInstances()
     return instances;
 }
 
+static void detectMsvcCommon(const path &compiler, const Version &in_v,
+    ArchType target_arch, const path &host_root, const TargetSettings &ts, const path &idir,
+    const path &root, const path &target,
+    DETECT_ARGS)
+{
+    // VS programs inherit cl.exe version (V)
+    // same for VS libs
+    // because ml,ml64,lib,link version (O) has O.Major = V.Major - 5
+    // e.g., V = 19.21..., O = 14.21.... (19 - 5 = 14)
+
+    String msvc_prefix;
+    Version v;
+
+    // C, C++
+    {
+        auto p = std::make_shared<SimpleProgram>();
+        p->file = compiler / "cl.exe";
+        if (fs::exists(p->file))
+        {
+            auto c = p->getCommand();
+            if (s.getHostOs().Arch != target_arch)
+                c->addPathDirectory(host_root);
+            msvc_prefix = detectMsvcPrefix(*c, idir);
+            // run getVersion via prepared command
+            builder::detail::ResolvableCommand c2 = *c;
+            v = getVersion(s, c2);
+            if (in_v.isPreRelease())
+                v.getExtra() = in_v.getExtra();
+            auto &cl = addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.cl", v), ts, p);
+        }
+        else
+            return;
+    }
+
+    // lib, link
+    {
+        auto p = std::make_shared<SimpleProgram>();
+        p->file = compiler / "link.exe";
+        if (fs::exists(p->file))
+            addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.link", v), ts, p);
+
+        if (s.getHostOs().Arch != target_arch)
+        {
+            auto c = p->getCommand();
+            c->addPathDirectory(host_root);
+        }
+
+        p = std::make_shared<SimpleProgram>();
+        p->file = compiler / "lib.exe";
+        if (fs::exists(p->file))
+            addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.lib", v), ts, p);
+
+        if (s.getHostOs().Arch != target_arch)
+        {
+            auto c = p->getCommand();
+            c->addPathDirectory(host_root);
+        }
+    }
+
+    // ASM
+    if (target_arch == ArchType::x86_64 || target_arch == ArchType::x86)
+    {
+        auto p = std::make_shared<SimpleProgram>();
+        p->file = compiler / (target_arch == ArchType::x86_64 ? "ml64.exe" : "ml.exe");
+        if (fs::exists(p->file))
+        {
+            addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.ml", v), ts, p);
+            getMsvcIncludePrefixes()[p->file] = msvc_prefix;
+        }
+    }
+
+    // dumpbin
+    {
+        auto p = std::make_shared<SimpleProgram>();
+        p->file = compiler / "dumpbin.exe";
+        if (fs::exists(p->file))
+        {
+            auto c = p->getCommand();
+            // run getVersion via prepared command
+            builder::detail::ResolvableCommand c2 = *c;
+            auto v = getVersion(s, c2);
+            if (in_v.isPreRelease())
+                v.getExtra() = in_v.getExtra();
+            addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.dumpbin", v), ts, p);
+        }
+    }
+
+    // libc++
+    {
+        auto &libcpp = addTarget<PredefinedTarget>(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.libcpp", v), ts);
+        libcpp.public_ts["new"]["6"]["system_include_directories"].push_back(normalize_path(idir));
+        libcpp.public_ts["new"]["6"]["system_link_directories"].push_back(normalize_path(root / "lib" / target));
+
+        if (fs::exists(root / "ATLMFC" / "include"))
+        {
+            auto &atlmfc = addTarget<PredefinedTarget>(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.ATLMFC", v), ts);
+            atlmfc.public_ts["new"]["6"]["system_include_directories"].push_back(normalize_path(root / "ATLMFC" / "include"));
+            atlmfc.public_ts["new"]["6"]["system_link_directories"].push_back(normalize_path(root / "ATLMFC" / "lib" / target));
+        }
+    }
+
+    if (in_v.getMajor() >= 15)
+    {
+        // concrt
+        if (fs::exists(root / "crt" / "src" / "concrt"))
+        {
+            auto &libcpp = addTarget<PredefinedTarget>(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.concrt", v), ts);
+            libcpp.public_ts["new"]["6"]["system_include_directories"].push_back(normalize_path(root / "crt" / "src" / "concrt"));
+        }
+
+        // vcruntime
+        if (fs::exists(root / "crt" / "src" / "vcruntime"))
+        {
+            auto &libcpp = addTarget<PredefinedTarget>(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.runtime", v), ts);
+            libcpp.public_ts["new"]["6"]["system_include_directories"].push_back(normalize_path(root / "crt" / "src" / "vcruntime"));
+        }
+    }
+}
+
 void detectMsvc15Plus(DETECT_ARGS)
 {
     // https://docs.microsoft.com/en-us/cpp/c-runtime-library/crt-library-features?view=vs-2019
@@ -168,112 +287,7 @@ void detectMsvc15Plus(DETECT_ARGS)
 
             compiler /= path("Host" + host) / target;
 
-            // VS programs inherit cl.exe version (V)
-            // same for VS libs
-            // because ml,ml64,lib,link version (O) has O.Major = V.Major - 5
-            // e.g., V = 19.21..., O = 14.21.... (19 - 5 = 14)
-
-            String msvc_prefix;
-
-            // C, C++
-            {
-                auto p = std::make_shared<SimpleProgram>();
-                p->file = compiler / "cl.exe";
-                if (fs::exists(p->file))
-                {
-                    auto c = p->getCommand();
-                    if (s.getHostOs().Arch != target_arch)
-                        c->addPathDirectory(host_root);
-                    msvc_prefix = detectMsvcPrefix(*c, idir);
-                    // run getVersion via prepared command
-                    builder::detail::ResolvableCommand c2 = *c;
-                    v = getVersion(s, c2);
-                    if (instance.version.isPreRelease())
-                        v.getExtra() = instance.version.getExtra();
-                    auto &cl = addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.cl", v), ts, p);
-                }
-            }
-
-            // lib, link
-            {
-                auto p = std::make_shared<SimpleProgram>();
-                p->file = compiler / "link.exe";
-                if (fs::exists(p->file))
-                    addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.link", v), ts, p);
-
-                if (s.getHostOs().Arch != target_arch)
-                {
-                    auto c = p->getCommand();
-                    c->addPathDirectory(host_root);
-                }
-
-                p = std::make_shared<SimpleProgram>();
-                p->file = compiler / "lib.exe";
-                if (fs::exists(p->file))
-                    addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.lib", v), ts, p);
-
-                if (s.getHostOs().Arch != target_arch)
-                {
-                    auto c = p->getCommand();
-                    c->addPathDirectory(host_root);
-                }
-            }
-
-            // ASM
-            if (target_arch == ArchType::x86_64 || target_arch == ArchType::x86)
-            {
-                auto p = std::make_shared<SimpleProgram>();
-                p->file = compiler / (target_arch == ArchType::x86_64 ? "ml64.exe" : "ml.exe");
-                if (fs::exists(p->file))
-                {
-                    addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.ml", v), ts, p);
-                    getMsvcIncludePrefixes()[p->file] = msvc_prefix;
-                }
-            }
-
-            // dumpbin
-            {
-                auto p = std::make_shared<SimpleProgram>();
-                p->file = compiler / "dumpbin.exe";
-                if (fs::exists(p->file))
-                {
-                    auto c = p->getCommand();
-                    // run getVersion via prepared command
-                    builder::detail::ResolvableCommand c2 = *c;
-                    auto v = getVersion(s, c2);
-                    if (instance.version.isPreRelease())
-                        v.getExtra() = instance.version.getExtra();
-                    addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.dumpbin", v), ts, p);
-                }
-            }
-
-            // libc++
-            {
-                auto &libcpp = addTarget<PredefinedTarget>(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.libcpp", v), ts);
-                libcpp.public_ts["new"]["6"]["system_include_directories"].push_back(normalize_path(idir));
-                libcpp.public_ts["new"]["6"]["system_link_directories"].push_back(normalize_path(root / "lib" / target));
-
-                if (fs::exists(root / "ATLMFC" / "include"))
-                {
-                    auto &atlmfc = addTarget<PredefinedTarget>(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.ATLMFC", v), ts);
-                    atlmfc.public_ts["new"]["6"]["system_include_directories"].push_back(normalize_path(root / "ATLMFC" / "include"));
-                    atlmfc.public_ts["new"]["6"]["system_link_directories"].push_back(normalize_path(root / "ATLMFC" / "lib" / target));
-                }
-            }
-
-            // concrt
-            if (fs::exists(root / "crt" / "src" / "concrt"))
-            {
-                auto &libcpp = addTarget<PredefinedTarget>(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.concrt", v), ts);
-                libcpp.public_ts["new"]["6"]["system_include_directories"].push_back(normalize_path(root / "crt" / "src" / "concrt"));
-            }
-
-            // vcruntime
-            if (fs::exists(root / "crt" / "src" / "vcruntime"))
-            {
-                auto &libcpp = addTarget<PredefinedTarget>(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.runtime", v), ts);
-                libcpp.public_ts["new"]["6"]["system_include_directories"].push_back(normalize_path(root / "crt" / "src" / "vcruntime"));
-            }
+            detectMsvcCommon(compiler, v, target_arch, host_root, ts, idir, root, target, DETECT_ARGS_PASS);
         }
     }
 }
@@ -343,8 +357,7 @@ void detectMsvc14AndOlder(DETECT_ARGS)
             auto compiler = root / "bin";
             auto host_root = compiler;
 
-            path libdir = "lib";
-            libdir /= toStringWindows14AndOlder(target_arch);
+            path libdir = toStringWindows14AndOlder(target_arch);
 
             // VC/bin/ ... x86 files
             // VC/bin/amd64/ ... x86_64 files
@@ -373,91 +386,7 @@ void detectMsvc14AndOlder(DETECT_ARGS)
             // because ml,ml64,lib,link version (O) has O.Major = V.Major - 5
             // e.g., V = 19.21..., O = 14.21.... (19 - 5 = 14)
 
-            String msvc_prefix;
-
-            // C, C++
-            {
-                auto p = std::make_shared<SimpleProgram>();
-                p->file = compiler / "cl.exe";
-                if (fs::exists(p->file))
-                {
-                    auto c = p->getCommand();
-                    if (s.getHostOs().Arch != target_arch)
-                        c->addPathDirectory(host_root);
-                    msvc_prefix = detectMsvcPrefix(*c, idir);
-                    // run getVersion via prepared command
-                    builder::detail::ResolvableCommand c2 = *c;
-                    v = getVersion(s, c2);
-                    addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.cl", v), ts, p);
-                }
-                else
-                    continue;
-            }
-
-            // lib, link
-            {
-                auto p = std::make_shared<SimpleProgram>();
-                p->file = compiler / "link.exe";
-                if (fs::exists(p->file))
-                    addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.link", v), ts, p);
-
-                if (s.getHostOs().Arch != target_arch)
-                {
-                    auto c = p->getCommand();
-                    c->addPathDirectory(host_root);
-                }
-
-                p = std::make_shared<SimpleProgram>();
-                p->file = compiler / "lib.exe";
-                if (fs::exists(p->file))
-                    addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.lib", v), ts, p);
-
-                if (s.getHostOs().Arch != target_arch)
-                {
-                    auto c = p->getCommand();
-                    c->addPathDirectory(host_root);
-                }
-            }
-
-            // ASM
-            if (target_arch == ArchType::x86_64 || target_arch == ArchType::x86)
-            {
-                auto p = std::make_shared<SimpleProgram>();
-                p->file = compiler / (target_arch == ArchType::x86_64 ? "ml64.exe" : "ml.exe");
-                if (fs::exists(p->file))
-                {
-                    auto &ml = addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.ml", v), ts, p);
-                    getMsvcIncludePrefixes()[p->file] = msvc_prefix;
-                }
-            }
-
-            // dumpbin
-            {
-                auto p = std::make_shared<SimpleProgram>();
-                p->file = compiler / "dumpbin.exe";
-                if (fs::exists(p->file))
-                {
-                    auto c = p->getCommand();
-                    // run getVersion via prepared command
-                    builder::detail::ResolvableCommand c2 = *c;
-                    auto v = getVersion(s, c2);
-                    addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.dumpbin", v), ts, p);
-                }
-            }
-
-            // libc++
-            {
-                auto &libcpp = addTarget<PredefinedTarget>(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.libcpp", v), ts);
-                libcpp.public_ts["new"]["6"]["system_include_directories"].push_back(normalize_path(idir));
-                libcpp.public_ts["new"]["6"]["system_link_directories"].push_back(normalize_path(root / libdir));
-
-                if (fs::exists(root / "ATLMFC" / "include"))
-                {
-                    auto &atlmfc = addTarget<PredefinedTarget>(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.ATLMFC", v), ts);
-                    atlmfc.public_ts["new"]["6"]["system_include_directories"].push_back(normalize_path(root / "ATLMFC" / "include"));
-                    atlmfc.public_ts["new"]["6"]["system_link_directories"].push_back(normalize_path(root / "ATLMFC" / libdir));
-                }
-            }
+            detectMsvcCommon(compiler, v, target_arch, host_root, ts, idir, root, libdir, DETECT_ARGS_PASS);
         }
     }
 }
