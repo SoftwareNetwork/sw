@@ -728,6 +728,7 @@ bool NativeCompiledTarget::init()
         {
             v.target = this;
         });
+        getMergeObject().target = this;
 
         // before target init
         addSettingsAndSetPrograms((SwContext&)getContext(), ts);
@@ -1113,7 +1114,7 @@ LinkLibrariesType NativeCompiledTarget::gatherLinkLibraries() const
 {
     LinkLibrariesType libs;
     const auto dirs = gatherLinkDirectories();
-    for (auto &l : LinkLibraries)
+    for (auto &l : getMergeObject().LinkLibraries)
     {
         // reconsider
         // remove resolving?
@@ -2691,34 +2692,34 @@ void NativeCompiledTarget::prepare_pass4()
                 for (auto &[k, v2] : v["definitions"].getSettings())
                 {
                     if (v2.getValue().empty())
-                        Definitions[k];
+                        getMergeObject().Definitions[k];
                     else
-                        Definitions[k] = v2.getValue();
+                        getMergeObject().Definitions[k] = v2.getValue();
                 }
 
                 if (!d->IncludeDirectoriesOnly)
                 {
                     for (auto &v2 : v["compile_options"].getArray())
-                        CompileOptions.insert(std::get<String>(v2));
+                        getMergeObject().CompileOptions.insert(std::get<String>(v2));
                 }
 
                 for (auto &v2 : v["include_directories"].getArray())
-                    IncludeDirectories.insert(std::get<String>(v2));
+                    getMergeObject().IncludeDirectories.insert(std::get<String>(v2));
 
                 if (!d->IncludeDirectoriesOnly)
                 {
                     for (auto &v2 : v["link_libraries"].getArray())
-                        LinkLibraries.insert(LinkLibrary{ fs::u8path(std::get<String>(v2)) });
+                        getMergeObject().LinkLibraries.insert(LinkLibrary{ fs::u8path(std::get<String>(v2)) });
 
                     for (auto &v2 : v["system_include_directories"].getArray())
-                        NativeCompilerOptions::System.IncludeDirectories.push_back(std::get<TargetSetting::Value>(v2));
+                        getMergeObject().NativeCompilerOptions::System.IncludeDirectories.push_back(std::get<TargetSetting::Value>(v2));
                     for (auto &v2 : v["system_link_directories"].getArray())
-                        NativeLinkerOptions::System.LinkDirectories.push_back(std::get<TargetSetting::Value>(v2));
+                        getMergeObject().NativeLinkerOptions::System.LinkDirectories.push_back(std::get<TargetSetting::Value>(v2));
                     for (auto &v2 : v["system_link_libraries"].getArray())
-                        NativeLinkerOptions::System.LinkLibraries.insert(LinkLibrary{ std::get<String>(v2) });
+                        getMergeObject().NativeLinkerOptions::System.LinkLibraries.insert(LinkLibrary{ std::get<String>(v2) });
 
                     for (auto &v2 : v["frameworks"].getArray())
-                        Frameworks.insert(std::get<String>(v2));
+                        getMergeObject().Frameworks.insert(std::get<String>(v2));
                 }
             }
         }
@@ -2851,7 +2852,7 @@ void NativeCompiledTarget::prepare_pass5()
     for (auto &f : files)
     {
         // set everything before merge!
-        f->compiler->merge(*this);
+        f->compiler->merge(getMergeObject());
 
         auto vs_setup = [this](auto *f, auto *c)
         {
@@ -3301,36 +3302,37 @@ void NativeCompiledTarget::prepare_pass6()
     // libconcrtd0.lib
     // libconcrtd1.lib
 
+    auto &t = getMergeObject();
 
     switch (rt)
     {
     case vs::RuntimeLibraryType::MultiThreadedDLL:
-        *this += "concrt.lib"_slib;
-        *this += "vcruntime.lib"_slib;
-        *this += "msvcprt.lib"_slib;
-        *this += "msvcrt.lib"_slib;
-        *this += "ucrt.lib"_slib;
+        t += "concrt.lib"_slib;
+        t += "vcruntime.lib"_slib;
+        t += "msvcprt.lib"_slib;
+        t += "msvcrt.lib"_slib;
+        t += "ucrt.lib"_slib;
         break;
     case vs::RuntimeLibraryType::MultiThreadedDLLDebug:
-        *this += "concrtd.lib"_slib;
-        *this += "vcruntimed.lib"_slib;
-        *this += "msvcprtd.lib"_slib;
-        *this += "msvcrtd.lib"_slib;
-        *this += "ucrtd.lib"_slib;
+        t += "concrtd.lib"_slib;
+        t += "vcruntimed.lib"_slib;
+        t += "msvcprtd.lib"_slib;
+        t += "msvcrtd.lib"_slib;
+        t += "ucrtd.lib"_slib;
         break;
     case vs::RuntimeLibraryType::MultiThreaded:
-        *this += "libconcrt.lib"_slib;
-        *this += "libvcruntime.lib"_slib;
-        *this += "libcpmt.lib"_slib;
-        *this += "libcmt.lib"_slib;
-        *this += "libucrt.lib"_slib;
+        t += "libconcrt.lib"_slib;
+        t += "libvcruntime.lib"_slib;
+        t += "libcpmt.lib"_slib;
+        t += "libcmt.lib"_slib;
+        t += "libucrt.lib"_slib;
         break;
     case vs::RuntimeLibraryType::MultiThreadedDebug:
-        *this += "libconcrtd.lib"_slib;
-        *this += "libvcruntimed.lib"_slib;
-        *this += "libcpmtd.lib"_slib;
-        *this += "libcmtd.lib"_slib;
-        *this += "libucrtd.lib"_slib;
+        t += "libconcrtd.lib"_slib;
+        t += "libvcruntimed.lib"_slib;
+        t += "libcpmtd.lib"_slib;
+        t += "libcmtd.lib"_slib;
+        t += "libucrtd.lib"_slib;
         break;
     }
     if (auto L = getSelectedTool()->as<VisualStudioLinker *>())
@@ -3408,15 +3410,15 @@ void NativeCompiledTarget::prepare_pass7()
         auto &s = get(InheritanceType::Special);
         for (auto &d : s.getRawDependencies())
         {
-            for (auto &ll : s.LinkLibraries)
-                LinkLibraries.insert(ll);
+            getMergeObject().LinkLibraries.insert(s.LinkLibraries.begin(), s.LinkLibraries.end());
 
             //NativeLinkerOptions::System.LinkLibraries.insert(NativeLinkerOptions::System.LinkLibraries.end(),
             //t->NativeLinkerOptions::System.LinkLibraries.begin(), t->NativeLinkerOptions::System.LinkLibraries.end());
-            for (auto &ll : s.NativeLinkerOptions::System.LinkLibraries)
-                NativeLinkerOptions::System.LinkLibraries.insert(ll);
+            getMergeObject().NativeLinkerOptions::System.LinkLibraries.insert(
+                s.NativeLinkerOptions::System.LinkLibraries.begin(),
+                s.NativeLinkerOptions::System.LinkLibraries.end());
 
-            Frameworks.insert(s.Frameworks.begin(), s.Frameworks.end());
+            getMergeObject().Frameworks.insert(s.Frameworks.begin(), s.Frameworks.end());
         }
 
         // clear after use
@@ -3466,7 +3468,7 @@ void NativeCompiledTarget::prepare_pass7()
 
     // after gatherStaticLinkLibraries()!
     if (getSelectedTool())
-        getSelectedTool()->merge(*this);
+        getSelectedTool()->merge(getMergeObject());
 }
 
 void NativeCompiledTarget::prepare_pass8()
@@ -3618,7 +3620,7 @@ void NativeCompiledTarget::processCircular(Files &obj)
     //
     auto exp = Librarian->getImportLibrary();
     exp = exp.parent_path() / (exp.stem().u8string() + ".exp");
-    Librarian->merge(*this);
+    Librarian->merge(getMergeObject());
     Librarian->prepareCommand(*this)->addOutput(exp);
     obj.insert(exp);
 }

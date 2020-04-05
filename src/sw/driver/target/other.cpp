@@ -119,6 +119,7 @@ bool CSharpTarget::init()
     {
         v.target = this;
     });
+    getMergeObject().target = this;
 
     compiler = activateCompiler<VisualStudioCSharpCompiler>(*this, "com.Microsoft.VisualStudio.Roslyn.csc"s, { ".cs" });
     if (!compiler)
@@ -169,6 +170,7 @@ bool RustTarget::init()
     {
         v.target = this;
     });
+    getMergeObject().target = this;
 
     compiler = activateCompiler<decltype(compiler)::element_type>(*this, "org.rust.rustc"s, { ".rs" });
     if (!compiler)
@@ -215,6 +217,7 @@ bool GoTarget::init()
     {
         v.target = this;
     });
+    getMergeObject().target = this;
 
     compiler = activateCompiler<decltype(compiler)::element_type>(*this, "org.google.golang.go"s, { ".go" });
     if (!compiler)
@@ -274,6 +277,7 @@ bool FortranTarget::init()
     {
         v.target = this;
     });
+    getMergeObject().target = this;
 
     /*C->input_extensions = {
     ".f",
@@ -335,6 +339,7 @@ bool JavaTarget::init()
     {
         v.target = this;
     });
+    getMergeObject().target = this;
 
     compiler = activateCompiler<decltype(compiler)::element_type>(*this, "com.oracle.java.javac"s, { ".java" });
     if (!compiler)
@@ -382,6 +387,7 @@ bool KotlinTarget::init()
     {
         v.target = this;
     });
+    getMergeObject().target = this;
 
     compiler = activateCompiler<decltype(compiler)::element_type>(*this, "com.JetBrains.kotlin.kotlinc"s, { ".kt", ".kts" });
     if (!compiler)
@@ -440,6 +446,7 @@ bool DTarget::init()
         {
             v.target = this;
         });
+        getMergeObject().target = this;
 
         compiler = activateCompiler<decltype(compiler)::element_type>(*this, "org.dlang.dmd.dmd"s, { ".d", /*.di*/ });
         if (!compiler)

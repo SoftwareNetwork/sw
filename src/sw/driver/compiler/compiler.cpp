@@ -956,7 +956,7 @@ void RcTool::prepareCommand1(const Target &t)
         cmd->name_short = InputFile().filename().u8string();
     }
 
-    t.template as<NativeCompiledTarget>().NativeCompilerOptions::addDefinitions(*cmd);
+    t.template as<NativeCompiledTarget>().getMergeObject().NativeCompilerOptions::addDefinitions(*cmd);
 
     // rc need to have -I arg separate to dir
     // and dir must be taken into quotes (???) maybe this is needed for rsp files?
@@ -973,7 +973,7 @@ void RcTool::prepareCommand1(const Target &t)
         }
     };
 
-    print_idir(t.template as<NativeCompiledTarget>().NativeCompilerOptions::gatherIncludeDirectories(), "-I");
+    print_idir(t.template as<NativeCompiledTarget>().getMergeObject().NativeCompilerOptions::gatherIncludeDirectories(), "-I");
 
     // ms bug: https://developercommunity.visualstudio.com/content/problem/417189/rcexe-incorrect-behavior-with.html
     //for (auto &i : system_idirs)

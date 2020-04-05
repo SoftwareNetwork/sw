@@ -152,6 +152,7 @@ struct InheritanceGroup : T
 {
 private:
     InheritanceStorage<T> data;
+    T merge_object;
 
 public:
     /**
@@ -197,6 +198,16 @@ public:
         return data[Type];
     }
 
+    T &getMergeObject()
+    {
+        return merge_object;
+    }
+
+    const T &getMergeObject() const
+    {
+        return merge_object;
+    }
+
     template <class F>
     void iterate(F &&f) const
     {
@@ -224,8 +235,9 @@ public:
     // merge self to self, always w/o interface and always merge protected to self!
     void merge()
     {
-        T::merge(Protected);
-        T::merge(Public);
+        getMergeObject().merge(Private);
+        getMergeObject().merge(Protected);
+        getMergeObject().merge(Public);
     }
 
     // merge from other group, always w/ interface
@@ -235,9 +247,9 @@ public:
         auto s = in;
         s.merge_to_self = false;
         if (s.has_same_parent)
-            T::merge(g.Protected, s);
-        T::merge(g.Public, s);
-        T::merge(g.Interface, s);
+            getMergeObject().merge(g.Protected, s);
+        getMergeObject().merge(g.Public, s);
+        getMergeObject().merge(g.Interface, s);
     }
 
     InheritanceStorage<T> &getInheritanceStorage() { return data; }
