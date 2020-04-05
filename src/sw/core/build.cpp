@@ -526,6 +526,7 @@ void SwBuild::loadPackages(const TargetMap &predefined)
 {
     // load
     auto usv = can_use_usv(*this);
+    TargetMap cache;
     int r = 1;
     while (1)
     {
@@ -617,6 +618,21 @@ void SwBuild::loadPackages(const TargetMap &predefined)
 
             loaded = true;
 
+            // from cache
+            {
+                auto i = cache.find(d.first);
+                if (i != cache.end())
+                {
+                    auto k = i->second.findSuitable(s);
+                    if (k != i->second.end())
+                    {
+                        auto &t = *k;
+                        getTargets()[t->getPackage()].push_back(t);
+                        continue;
+                    }
+                }
+            }
+
             auto ep = getEntryPoint(d.first);
             if (!ep)
                 throw SW_RUNTIME_ERROR("no entry point for " + d.first.toString());
@@ -632,10 +648,10 @@ void SwBuild::loadPackages(const TargetMap &predefined)
             {
                 if (tgt->getSettings()["dry-run"] == "true")
                     continue;
-                // for usv skip load only requested targets
-                if (usv && tgt->getPackage() != d.first)
-                    continue; // very slow! optimize?
+                if (tgt->getPackage() == d.first)
                 getTargets()[tgt->getPackage()].push_back(tgt);
+                else
+                    cache[tgt->getPackage()].push_back(tgt);
                 added = true;
             }
 
