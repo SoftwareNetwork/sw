@@ -966,44 +966,6 @@ path NativeCompiledTarget::getImportLibrary() const
     return getSelectedTool()->getImportLibrary();
 }
 
-NativeCompiledTarget::TargetsSet NativeCompiledTarget::gatherDependenciesTargets() const
-{
-    TargetsSet deps;
-    for (auto &d : getAllActiveDependencies())
-    {
-        if (&d->getTarget() == this)
-            continue;
-        if (d->IncludeDirectoriesOnly)
-            continue;
-        deps.insert(&d->getTarget());
-    }
-    return deps;
-}
-
-NativeCompiledTarget::TargetsSet NativeCompiledTarget::gatherAllRelatedDependencies() const
-{
-    auto libs = gatherDependenciesTargets();
-    while (1)
-    {
-        auto sz = libs.size();
-        for (auto &d : libs)
-        {
-            auto dt = d->as<NativeCompiledTarget*>();
-            if (!dt)
-                continue;
-            auto libs2 = dt->gatherDependenciesTargets();
-
-            auto sz2 = libs.size();
-            libs.insert(libs2.begin(), libs2.end());
-            if (sz2 != libs.size())
-                break;
-        }
-        if (sz == libs.size())
-            break;
-    }
-    return libs;
-}
-
 std::unordered_set<NativeSourceFile*> NativeCompiledTarget::gatherSourceFiles() const
 {
     return ::sw::gatherSourceFiles<NativeSourceFile>(*this);

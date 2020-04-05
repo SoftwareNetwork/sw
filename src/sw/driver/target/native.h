@@ -115,7 +115,6 @@ public:
     void autoDetectSources();
     void autoDetectIncludeDirectories();
     bool hasSourceFiles() const;
-    TargetsSet gatherAllRelatedDependencies() const;
     NativeLinker *getSelectedTool() const override;
     void setOutputFile() override;
     //void setOutputFilename(const path &fn);
@@ -167,7 +166,6 @@ protected:
     bool IsSwConfigLocal = false;
 
     Files gatherObjectFilesWithoutLibraries() const;
-    TargetsSet gatherDependenciesTargets() const;
     bool prepareLibrary(LibraryType Type);
     void initLibrary(LibraryType Type);
     void configureFile1(const path &from, const path &to, ConfigureFlags flags);
