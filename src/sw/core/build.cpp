@@ -105,7 +105,7 @@ static std::shared_ptr<PredefinedTarget> create_target(const LocalPackage &p, co
     return {};
 }
 
-static auto can_use_usv(const SwBuild &b)
+static auto can_use_saved_configs(const SwBuild &b)
 {
     auto &s = b.getSettings();
     return true
@@ -464,21 +464,39 @@ void SwBuild::resolvePackages(const std::vector<IDependency*> &udeps)
     for (auto &[u, p] : m)
         targets[p];
 
-    if (can_use_usv(*this))
+    if (can_use_saved_configs(*this))
+    {
+        std::function<bool(const std::vector<IDependency*> &)> load_targets;
+        load_targets = [this, &m, &load_targets](const std::vector<IDependency*> &udeps)
     {
         bool everything_resolved = true;
         for (auto d : udeps)
         {
-            auto &p = m.find(d->getUnresolvedPackage())->second;
+                auto i = swctx.getPredefinedTargets().find(d->getUnresolvedPackage());
+                if (i != swctx.getPredefinedTargets().end())
+                    continue;
+                auto &pi = targets.find(d->getUnresolvedPackage());
+                if (pi == targets.end())
+                {
+                    everything_resolved = false;
+                    continue;
+                }
+                auto p = LocalPackage(getContext().getLocalStorage(), pi->first);
+                if (getTargets().find(p, d->getSettings()))
+                    continue;
             auto tgt = create_target(p, d->getSettings());
             if (tgt)
             {
                 getTargets()[tgt->getPackage()].push_back(tgt);
+                    everything_resolved &= load_targets(tgt->getDependencies());
                 continue;
             }
             everything_resolved = false;
         }
-        if (everything_resolved)
+            return everything_resolved;
+        };
+
+        if (load_targets(udeps))
             return;
     }
 
@@ -555,7 +573,7 @@ void SwBuild::loadPackages()
 void SwBuild::loadPackages(const TargetMap &predefined)
 {
     // load
-    auto usv = can_use_usv(*this);
+    auto usc = can_use_saved_configs(*this);
     TargetMap cache;
     int r = 1;
     while (1)
@@ -619,7 +637,7 @@ void SwBuild::loadPackages(const TargetMap &predefined)
             if (s.empty())
                 continue;
 
-            if (usv)
+            if (usc)
             {
                 LocalPackage p(getContext().getLocalStorage(), d.first);
                 auto tgt = create_target(p, s);
