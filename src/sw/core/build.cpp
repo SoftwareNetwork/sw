@@ -57,7 +57,7 @@ namespace sw
 
 static auto get_base_settings_version()
 {
-    return 30;
+    return 35;
 }
 
 static auto get_base_settings_name()
@@ -468,10 +468,10 @@ void SwBuild::resolvePackages(const std::vector<IDependency*> &udeps)
     {
         std::function<bool(const std::vector<IDependency*> &)> load_targets;
         load_targets = [this, &m, &load_targets](const std::vector<IDependency*> &udeps)
-    {
-        bool everything_resolved = true;
-        for (auto d : udeps)
         {
+            bool everything_resolved = true;
+            for (auto d : udeps)
+            {
                 auto i = swctx.getPredefinedTargets().find(d->getUnresolvedPackage());
                 if (i != swctx.getPredefinedTargets().end())
                     continue;
@@ -484,15 +484,15 @@ void SwBuild::resolvePackages(const std::vector<IDependency*> &udeps)
                 auto p = LocalPackage(getContext().getLocalStorage(), pi->first);
                 if (getTargets().find(p, d->getSettings()))
                     continue;
-            auto tgt = create_target(p, d->getSettings());
-            if (tgt)
-            {
-                getTargets()[tgt->getPackage()].push_back(tgt);
+                auto tgt = create_target(p, d->getSettings());
+                if (tgt)
+                {
+                    getTargets()[tgt->getPackage()].push_back(tgt);
                     everything_resolved &= load_targets(tgt->getDependencies());
-                continue;
+                    continue;
+                }
+                everything_resolved = false;
             }
-            everything_resolved = false;
-        }
             return everything_resolved;
         };
 
