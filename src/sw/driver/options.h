@@ -66,7 +66,7 @@ class UniqueVector : public std::vector<T>
 public:
     std::pair<typename base::iterator, bool> insert(const T &e)
     {
-        auto[_, inserted] = u.insert(e);
+        auto [_, inserted] = u.insert(e);
         if (!inserted)
             return { base::end(), false };
         this->push_back(e);
@@ -91,27 +91,6 @@ private:
     unique_type u;
 };
 
-template <class T>
-struct FancyContainerOrdered : std::vector<T>
-{
-    using base = std::vector<T>;
-
-    using base::insert;
-    using base::erase;
-
-    // fix return type
-    void insert(const T &p)
-    {
-        base::push_back(p);
-    }
-
-    void erase(const T &p)
-    {
-        base::erase(std::remove(base::begin(), base::end(), p), base::end());
-    }
-};
-
-//using PathOptionsType = FilesSorted;
 using PathOptionsType = UniqueVector<path>;
 
 struct SW_DRIVER_CPP_API Variable
@@ -181,6 +160,24 @@ struct SW_DRIVER_CPP_API LinkLibrary
     bool operator==(const LinkLibrary &rhs) const { return std::tie(l, whole_archive) == std::tie(rhs.l, rhs.whole_archive); }
 };
 
+}
+
+namespace std
+{
+
+template<> struct hash<::sw::LinkLibrary>
+{
+    size_t operator()(const ::sw::LinkLibrary &l) const
+    {
+        return std::hash<decltype(l.l)>()(l.l);
+    }
+};
+
+}
+
+namespace sw
+{
+
 struct SW_DRIVER_CPP_API SystemLinkLibrary
 {
     path l;
@@ -239,16 +236,13 @@ struct SW_DRIVER_CPP_API NativeCompilerOptionsData
     void remove(const DefinitionsType &defs);
 };
 
-using FancyFilesOrdered = FancyContainerOrdered<path>;
-using LinkLibrariesType = FancyContainerOrdered<LinkLibrary>;
+using LinkLibrariesType = UniqueVector<LinkLibrary>;
 
 struct SW_DRIVER_CPP_API NativeLinkerOptionsData
 {
     // there are also -weak_framework s
     PathOptionsType Frameworks; // macOS
-    // it is possible to have repeated link libraries on the command line
     LinkLibrariesType LinkLibraries;
-    LinkLibrariesType LinkLibraries2; // untouched link libs
     Strings LinkOptions;
     PathOptionsType PreLinkDirectories;
     PathOptionsType LinkDirectories;
@@ -348,9 +342,9 @@ struct SW_DRIVER_CPP_API NativeOptions : NativeCompilerOptions,
 namespace std
 {
 
-template<> struct hash<sw::Definition>
+template<> struct hash<::sw::Definition>
 {
-    size_t operator()(const sw::Definition& d) const
+    size_t operator()(const ::sw::Definition &d) const
     {
         return std::hash<decltype(d.d)>()(d.d);
     }

@@ -424,13 +424,11 @@ void NativeLinkerOptionsData::remove(const LinkDirectory &l)
 void NativeLinkerOptionsData::add(const LinkLibrary &l)
 {
     LinkLibraries.push_back(l);
-    LinkLibraries2.push_back(l);
 }
 
 void NativeLinkerOptionsData::remove(const LinkLibrary &l)
 {
     LinkLibraries.erase(l);
-    LinkLibraries2.erase(l);
 }
 
 PathOptionsType NativeLinkerOptionsData::gatherLinkDirectories() const
@@ -444,9 +442,7 @@ PathOptionsType NativeLinkerOptionsData::gatherLinkDirectories() const
 
 LinkLibrariesType NativeLinkerOptionsData::gatherLinkLibraries() const
 {
-    LinkLibrariesType d;
-    d.insert(d.end(), LinkLibraries.begin(), LinkLibraries.end());
-    return d;
+    return LinkLibraries;
 }
 
 bool NativeLinkerOptionsData::IsLinkDirectoriesEmpty() const
@@ -461,8 +457,7 @@ void NativeLinkerOptionsData::merge(const NativeLinkerOptionsData &o, const Grou
     // report conflicts?
 
     unique_merge_containers(Frameworks, o.Frameworks);
-    LinkLibraries.insert(LinkLibraries.end(), o.LinkLibraries.begin(), o.LinkLibraries.end());
-    LinkLibraries2.insert(LinkLibraries2.end(), o.LinkLibraries2.begin(), o.LinkLibraries2.end());
+    LinkLibraries.insert(o.LinkLibraries.begin(), o.LinkLibraries.end());
     LinkOptions.insert(LinkOptions.end(), o.LinkOptions.begin(), o.LinkOptions.end());
     unique_merge_containers(PreLinkDirectories, o.PreLinkDirectories);
     unique_merge_containers(LinkDirectories, o.LinkDirectories);
@@ -503,7 +498,7 @@ LinkLibrariesType NativeLinkerOptions::gatherLinkLibraries() const
 {
     LinkLibrariesType llib;
     auto i = NativeLinkerOptionsData::gatherLinkLibraries();
-    llib.insert(llib.end(), i.begin(), i.end());
+    llib.insert(i.begin(), i.end());
     //i = System.gatherLinkLibraries();
     //llib.insert(llib.end(), i.begin(), i.end());
     return llib;

@@ -2039,9 +2039,9 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
     for (auto &d : Interface.IncludeDirectories)
         s["include_directories"].push_back(normalize_path(d));
 
-    for (auto &d : Public.LinkLibraries2)
+    for (auto &d : Public.LinkLibraries)
         s["link_libraries"].push_back(normalize_path(d.l));
-    for (auto &d : Interface.LinkLibraries2)
+    for (auto &d : Interface.LinkLibraries)
         s["link_libraries"].push_back(normalize_path(d.l));
 
     if (getType() == TargetType::NativeStaticLibrary)
@@ -2054,7 +2054,7 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
     }
     for (auto &d : Public.NativeLinkerOptions::System.LinkLibraries)
         s["system_link_libraries"].push_back(normalize_path(d.l));
-    for (auto &d : Interface.NativeLinkerOptions::System.LinkLibraries2)
+    for (auto &d : Interface.NativeLinkerOptions::System.LinkLibraries)
         s["system_link_libraries"].push_back(normalize_path(d.l));
 
     if (prepared)
@@ -2114,6 +2114,10 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
         auto &ts = s["new"];
         TargetOptionsGroup::iterate([&ts](auto &g, auto i)
         {
+            // nothing to do with special inheritance
+            if (i == InheritanceType::Special)
+                return;
+
             auto is = std::to_string((int)i);
             auto &s = ts[is];
 
@@ -2168,8 +2172,7 @@ bool NativeCompiledTarget::prepare()
         return false;
     }
 
-    //if (getSolution().skipTarget(Scope))
-        //return false;
+    DEBUG_BREAK_IF(getPackage().toString() == "primitives.db.postgresql-master");
 
     switch (prepare_pass)
     {
@@ -3390,19 +3393,13 @@ void NativeCompiledTarget::prepare_pass61()
     {
         if (auto t = d->getTarget().as<const NativeCompiledTarget *>())
         {
-            for (auto &ll : t->LinkLibraries)
-            {
-                if (std::find(s.LinkLibraries.begin(), s.LinkLibraries.end(), ll) == s.LinkLibraries.end())
-                    s.LinkLibraries.insert(ll);
-            }
+            s.LinkLibraries.insert(t->LinkLibraries.begin(), t->LinkLibraries.end());
 
             //NativeLinkerOptions::System.LinkLibraries.insert(NativeLinkerOptions::System.LinkLibraries.end(),
             //t->NativeLinkerOptions::System.LinkLibraries.begin(), t->NativeLinkerOptions::System.LinkLibraries.end());
-            for (auto &ll : t->NativeLinkerOptions::System.LinkLibraries)
-            {
-                if (std::find(s.NativeLinkerOptions::System.LinkLibraries.begin(), s.NativeLinkerOptions::System.LinkLibraries.end(), ll) == s.NativeLinkerOptions::System.LinkLibraries.end())
-                    s.NativeLinkerOptions::System.LinkLibraries.insert(ll);
-            }
+            s.NativeLinkerOptions::System.LinkLibraries.insert(
+                t->NativeLinkerOptions::System.LinkLibraries.begin(),
+                t->NativeLinkerOptions::System.LinkLibraries.end());
 
             s.Frameworks.insert(t->Frameworks.begin(), t->Frameworks.end());
         }
@@ -3427,18 +3424,12 @@ void NativeCompiledTarget::prepare_pass7()
         for (auto &d : s.getRawDependencies())
         {
             for (auto &ll : s.LinkLibraries)
-            {
-                if (std::find(LinkLibraries.begin(), LinkLibraries.end(), ll) == LinkLibraries.end())
-                    LinkLibraries.insert(ll);
-            }
+                LinkLibraries.insert(ll);
 
             //NativeLinkerOptions::System.LinkLibraries.insert(NativeLinkerOptions::System.LinkLibraries.end(),
             //t->NativeLinkerOptions::System.LinkLibraries.begin(), t->NativeLinkerOptions::System.LinkLibraries.end());
             for (auto &ll : s.NativeLinkerOptions::System.LinkLibraries)
-            {
-                if (std::find(NativeLinkerOptions::System.LinkLibraries.begin(), NativeLinkerOptions::System.LinkLibraries.end(), ll) == NativeLinkerOptions::System.LinkLibraries.end())
-                    NativeLinkerOptions::System.LinkLibraries.insert(ll);
-            }
+                NativeLinkerOptions::System.LinkLibraries.insert(ll);
 
             Frameworks.insert(s.Frameworks.begin(), s.Frameworks.end());
         }

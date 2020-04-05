@@ -672,7 +672,7 @@ void VisualStudioLinker::getAdditionalOptions(driver::Command *cmd) const
 
 void VisualStudioLinker::setInputLibraryDependencies(const LinkLibrariesType &files)
 {
-    InputLibraryDependencies().insert(InputLibraryDependencies().end(), files.begin(), files.end());
+    InputLibraryDependencies().insert(files.begin(), files.end());
 }
 
 void VisualStudioLinker::prepareCommand1(const Target &t)
@@ -759,7 +759,7 @@ void GNULinker::setInputLibraryDependencies(const LinkLibrariesType &files)
     // https://eli.thegreenplace.net/2013/07/09/library-order-in-static-linking
     if (use_start_end_groups)
         StartGroup = true;
-    InputLibraryDependencies().insert(InputLibraryDependencies().end(), files.begin(), files.end());
+    InputLibraryDependencies().insert(files.begin(), files.end());
     if (use_start_end_groups)
         EndGroup = true;
 }
