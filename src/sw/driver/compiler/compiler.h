@@ -188,6 +188,8 @@ struct SW_DRIVER_CPP_API NativeCompiler : Compiler,
     virtual void setSourceFile(const path &input_file, const path &output_file) = 0;
     String getObjectExtension(const struct OS &) const;
 
+    void merge(const NativeCompiledTarget &t);
+
 protected:
     mutable Files dependencies;
 

@@ -171,6 +171,11 @@ std::shared_ptr<SourceFile> NativeCompiler::createSourceFile(const Target &t, co
     return std::make_shared<NativeSourceFile>(*this, input, ::sw::getOutputFile(t, *this, input));
 }
 
+void NativeCompiler::merge(const NativeCompiledTarget &t)
+{
+    NativeCompilerOptions::merge(t.getMergeObject());
+}
+
 SW_CREATE_COMPILER_COMMAND(VisualStudioCompiler, driver::VSCommand)
 
 void VisualStudioCompiler::prepareCommand1(const Target &t)
