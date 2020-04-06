@@ -453,12 +453,7 @@ bool SourceFileStorage::check_absolute(path &F, bool ignore_errors, bool *source
 
 void SourceFileStorage::merge(const SourceFileStorage &v, const GroupSettings &s)
 {
-    for (auto &s : v)
-    {
-        auto f = getFileInternal(s.first);
-        if (!f)
-            add(s.first);
-    }
+    source_files.insert(v.begin(), v.end());
 }
 
 SourceFileMap<SourceFile>
