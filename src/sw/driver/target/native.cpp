@@ -2884,7 +2884,7 @@ void NativeCompiledTarget::prepare_pass5()
     for (auto &f : files)
     {
         // set everything before merge!
-        f->compiler->merge(getMergeObject());
+        f->compiler->merge(*this);
 
         auto vs_setup = [this](auto *f, auto *c)
         {
