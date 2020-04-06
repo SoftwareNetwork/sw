@@ -476,7 +476,7 @@ void SwBuild::resolvePackages(const std::vector<IDependency*> &udeps)
                 auto i = swctx.getPredefinedTargets().find(d->getUnresolvedPackage());
                 if (i != swctx.getPredefinedTargets().end())
                     continue;
-                auto &pi = targets.find(d->getUnresolvedPackage());
+                const auto &pi = targets.find(d->getUnresolvedPackage());
                 if (pi == targets.end())
                 {
                     everything_resolved = false;
