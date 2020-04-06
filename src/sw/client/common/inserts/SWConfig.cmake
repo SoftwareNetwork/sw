@@ -288,9 +288,13 @@ function(sw_execute)
 
     # add deps targets
     string(REPLACE ";" " " swcmd1 "${swcmd}")
+    set(comment "sw: building dependencies")
+    if (SW_DEBUG)
+        set(comment "${comment}: ${swcmd1}")
+    endif()
     add_custom_target(sw_build_dependencies ALL
         COMMAND ${swcmd}
-        COMMENT ${swcmd1}
+        COMMENT "${comment}"
     )
     set_target_properties(sw_build_dependencies
         PROPERTIES
