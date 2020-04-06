@@ -2264,49 +2264,6 @@ void NativeCompiledTarget::prepare_pass1()
     if (PackageDefinitions)
         addPackageDefinitions(true);
 
-    for (auto &[p, f] : getMergeObject())
-    {
-        if (f->isActive() && !f->postponed)
-        {
-            auto f2 = f->as<NativeSourceFile*>();
-            if (!f2)
-                continue;
-            auto ba = f2->BuildAs;
-            switch (ba)
-            {
-            case NativeSourceFile::BasedOnExtension:
-                break;
-            case NativeSourceFile::C:
-                if (auto p = findProgramByExtension(".c"))
-                {
-                    if (auto c = f2->compiler->as<VisualStudioCompiler*>())
-                        c->CompileAsC = true;
-                }
-                else
-                    throw std::logic_error("no C language found");
-                break;
-            case NativeSourceFile::CPP:
-                if (auto p = findProgramByExtension(".cpp"))
-                {
-                    if (auto c = f2->compiler->as<VisualStudioCompiler*>())
-                        c->CompileAsCPP = true;
-                }
-                else
-                    throw std::logic_error("no CPP language found");
-                break;
-            case NativeSourceFile::ASM:
-                SW_UNIMPLEMENTED; // actually remove this to make noop?
-                                  /*if (auto L = SourceFileStorage::findLanguageByExtension(".asm"); L)
-                                  L->clone()->createSourceFile(f.first, this);
-                                  else
-                                  throw std::logic_error("no ASM language found");*/
-                break;
-            default:
-                throw std::logic_error("not implemented");
-            }
-        }
-    }
-
     // mingw system link libraries must be specified without explicit .lib suffix
     if (getBuildSettings().TargetOS.Type == OSType::Mingw)
     {
@@ -2772,6 +2729,50 @@ void NativeCompiledTarget::prepare_pass5()
 
     while (create_more_source_files())
         ;
+
+    // set build as property
+    for (auto &[p, f] : getMergeObject())
+    {
+        if (f->isActive() && !f->postponed)
+        {
+            auto f2 = f->as<NativeSourceFile*>();
+            if (!f2)
+                continue;
+            auto ba = f2->BuildAs;
+            switch (ba)
+            {
+            case NativeSourceFile::BasedOnExtension:
+                break;
+            case NativeSourceFile::C:
+                if (auto p = findProgramByExtension(".c"))
+                {
+                    if (auto c = f2->compiler->as<VisualStudioCompiler*>())
+                        c->CompileAsC = true;
+                }
+                else
+                    throw std::logic_error("no C language found");
+                break;
+            case NativeSourceFile::CPP:
+                if (auto p = findProgramByExtension(".cpp"))
+                {
+                    if (auto c = f2->compiler->as<VisualStudioCompiler*>())
+                        c->CompileAsCPP = true;
+                }
+                else
+                    throw std::logic_error("no CPP language found");
+                break;
+            case NativeSourceFile::ASM:
+                SW_UNIMPLEMENTED; // actually remove this to make noop?
+                                  /*if (auto L = SourceFileStorage::findLanguageByExtension(".asm"); L)
+                                  L->clone()->createSourceFile(f.first, this);
+                                  else
+                                  throw std::logic_error("no ASM language found");*/
+                break;
+            default:
+                SW_UNREACHABLE;
+            }
+        }
+    }
 
     // now create pch
     createPrecompiledHeader();
