@@ -460,6 +460,8 @@ const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_
             {
                 cast_as_nct(*tgt).getMergeObject() += p;
                 cast_as_nct(*tgt).getMergeObject()[p].skip = t.skip;
+                // also add into private
+                cast_as_nct(*tgt).add(cast_as_nct(*tgt).getMergeObject().getFileInternal(p));
             }
         }
     }
@@ -495,6 +497,8 @@ const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_
             {
                 cast_as_nct(*tgt).getMergeObject() += p;
                 cast_as_nct(*tgt).getMergeObject()[p].skip = t.skip;
+                // also add into private
+                cast_as_nct(*tgt).add(cast_as_nct(*tgt).getMergeObject().getFileInternal(p));
             }
         }
     }
@@ -521,6 +525,8 @@ const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_
         {
             cast_as_nct(*tgt).getMergeObject() += p;
             cast_as_nct(*tgt).getMergeObject()[p].skip = t.skip;
+            // also add into private
+            cast_as_nct(*tgt).add(cast_as_nct(*tgt).getMergeObject().getFileInternal(p));
         }
     }
     for (auto tgt : t.targets)
@@ -552,6 +558,8 @@ const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_
         {
             cast_as_nct(*tgt).getMergeObject() += p;
             cast_as_nct(*tgt).getMergeObject()[p].skip = t.skip;
+            // also add into private
+            cast_as_nct(*tgt).add(cast_as_nct(*tgt).getMergeObject().getFileInternal(p));
         }
     }
     for (auto tgt : t.targets)
@@ -583,6 +591,8 @@ const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_
         {
             cast_as_nct(*tgt).getMergeObject() += p;
             cast_as_nct(*tgt).getMergeObject()[p].skip = t.skip;
+            // also add into private
+            cast_as_nct(*tgt).add(cast_as_nct(*tgt).getMergeObject().getFileInternal(p));
         }
     }
     for (auto tgt : t.targets)

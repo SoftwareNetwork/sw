@@ -189,6 +189,14 @@ void SourceFileStorage::add_unchecked(const path &file_in, bool skip)
         f->skip = skip;
 }
 
+void SourceFileStorage::add(const std::shared_ptr<SourceFile> &f)
+{
+    if (target->DryRun || !f)
+        return;
+
+    source_files[f->file] = f;
+}
+
 void SourceFileStorage::add(const path &file)
 {
     if (target->DryRun)

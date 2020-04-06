@@ -54,10 +54,17 @@ struct SW_DRIVER_CPP_API SourceFileStorage
 public:
     Target *target = nullptr;
 
+    // internal, move to target map?
+    // but we have two parts: stable for sdir files and unknown for bdir files (config specific)
+    mutable std::unordered_map<path, std::map<bool /* recursive */, Files>> glob_cache;
+    mutable FilesMap files_cache;
+
+public:
     SourceFileStorage();
     virtual ~SourceFileStorage();
 
     //void add(const String &file) { add(path(file)); }
+    void add(const std::shared_ptr<SourceFile> &);
     void add(const path &file);
     void add(const Files &files);
     void add(const FileRegex &r);
@@ -86,11 +93,6 @@ public:
 
     bool check_absolute(path &file, bool ignore_errors = false, bool *source_dir = nullptr) const;
 
-    // internal, move to target map?
-    // but we have two parts: stable for sdir files and unknown for bdir files (config specific)
-    mutable std::unordered_map<path, std::map<bool /* recursive */, Files>> glob_cache;
-    mutable FilesMap files_cache;
-
     // redirected ops
     auto begin() { return source_files.begin(); }
     auto end() { return source_files.end(); }
@@ -99,6 +101,8 @@ public:
     auto empty() const { return source_files.empty(); }
     auto size() const { return source_files.size(); }
     void clear() { source_files.clear(); }
+
+    std::shared_ptr<SourceFile> getFileInternal(const path &) const;
 
 protected:
     bool autodetect = false;
@@ -109,7 +113,6 @@ protected:
     // redirected ops2
     void addFile(const path &, const std::shared_ptr<SourceFile> &);
     bool hasFile(const path &) const;
-    std::shared_ptr<SourceFile> getFileInternal(const path &) const;
     void removeFile(const path &);
 
 private:
