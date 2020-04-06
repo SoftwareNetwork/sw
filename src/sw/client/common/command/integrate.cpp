@@ -244,22 +244,34 @@ SUBCOMMAND_DECL(integrate)
                 {
                     // defs
                     if_ctx.increaseIndent("target_compile_definitions(" + pkg2string(pkg) + " INTERFACE");
-                    for (auto &[k, v] : s["definitions"].getSettings())
+                    for (auto &[k, p] : s["properties"].getSettings())
                     {
-                        if_ctx.addLine(cmake_cfg);
-                        if (v.getValue().empty())
-                            if_ctx.addText(k);
-                        else
-                            if_ctx.addText(k + "=" + primitives::command::Argument::quote(v.getValue(), primitives::command::QuoteType::Escape));
-                        if_ctx.addText(cmake_cfg_end);
+                        auto inh = std::stoi(k);
+                        if ((inh & 4) == 0)
+                            continue;
+                        for (auto &[k, v] : p["definitions"].getSettings())
+                        {
+                            if_ctx.addLine(cmake_cfg);
+                            if (v.getValue().empty())
+                                if_ctx.addText(k);
+                            else
+                                if_ctx.addText(k + "=" + primitives::command::Argument::quote(v.getValue(), primitives::command::QuoteType::Escape));
+                            if_ctx.addText(cmake_cfg_end);
+                        }
                     }
                     if_ctx.decreaseIndent(")");
                     if_ctx.emptyLines();
 
                     // idirs
                     if_ctx.increaseIndent("target_include_directories(" + pkg2string(pkg) + " INTERFACE");
-                    for (auto &d : s["include_directories"].getArray())
-                        if_ctx.addLine(cmake_cfg + fix_path(std::get<sw::TargetSetting::Value>(d)) + cmake_cfg_end);
+                    for (auto &[k, p] : s["properties"].getSettings())
+                    {
+                        auto inh = std::stoi(k);
+                        if ((inh & 4) == 0)
+                            continue;
+                        for (auto &d : p["include_directories"].getArray())
+                            if_ctx.addLine(cmake_cfg + fix_path(std::get<sw::TargetSetting::Value>(d)) + cmake_cfg_end);
+                    }
                     if_ctx.decreaseIndent(")");
                     if_ctx.emptyLines();
                 }
@@ -269,12 +281,18 @@ SUBCOMMAND_DECL(integrate)
                     // defs
                     String defs;
                     defs += "\"";
-                    for (auto &[k, v] : s["definitions"].getSettings())
+                    for (auto &[k, p] : s["properties"].getSettings())
                     {
-                        if (v.getValue().empty())
-                            defs += k + ";";
-                        else
-                            defs += k + "=" + primitives::command::Argument::quote(v.getValue(), primitives::command::QuoteType::Escape) + ";";
+                        auto inh = std::stoi(k);
+                        if ((inh & 4) == 0)
+                            continue;
+                        for (auto &[k, v] : p["definitions"].getSettings())
+                        {
+                            if (v.getValue().empty())
+                                defs += k + ";";
+                            else
+                                defs += k + "=" + primitives::command::Argument::quote(v.getValue(), primitives::command::QuoteType::Escape) + ";";
+                        }
                     }
                     defs += "\"";
                     else_ctx.increaseIndent("set_target_properties(" + pkg2string(pkg) + " PROPERTIES");
@@ -285,8 +303,14 @@ SUBCOMMAND_DECL(integrate)
                     // idirs
                     String idirs;
                     idirs += "\"";
-                    for (auto &d : s["include_directories"].getArray())
-                        idirs += fix_path(std::get<sw::TargetSetting::Value>(d)) + ";";
+                    for (auto &[k, p] : s["properties"].getSettings())
+                    {
+                        auto inh = std::stoi(k);
+                        if ((inh & 4) == 0)
+                            continue;
+                        for (auto &d : p["include_directories"].getArray())
+                            idirs += fix_path(std::get<sw::TargetSetting::Value>(d)) + ";";
+                    }
                     idirs += "\"";
                     else_ctx.increaseIndent("set_target_properties(" + pkg2string(pkg) + " PROPERTIES");
                     else_ctx.addLine("INTERFACE_INCLUDE_DIRECTORIES " + idirs);
@@ -301,10 +325,16 @@ SUBCOMMAND_DECL(integrate)
                 {
                     // libs
                     if_ctx.increaseIndent("target_link_libraries(" + pkg2string(pkg) + " INTERFACE");
-                    for (auto &d : s["link_libraries"].getArray())
-                        if_ctx.addLine(cmake_cfg + fix_path(std::get<sw::TargetSetting::Value>(d)) + cmake_cfg_end);
-                    for (auto &d : s["system_link_libraries"].getArray())
-                        if_ctx.addLine(cmake_cfg + fix_path(std::get<sw::TargetSetting::Value>(d)) + cmake_cfg_end);
+                    for (auto &[k, p] : s["properties"].getSettings())
+                    {
+                        auto inh = std::stoi(k);
+                        if ((inh & 4) == 0)
+                            continue;
+                        for (auto &d : p["link_libraries"].getArray())
+                            if_ctx.addLine(cmake_cfg + fix_path(std::get<sw::TargetSetting::Value>(d)) + cmake_cfg_end);
+                        for (auto &d : p["system_link_libraries"].getArray())
+                            if_ctx.addLine(cmake_cfg + fix_path(std::get<sw::TargetSetting::Value>(d)) + cmake_cfg_end);
+                    }
                     if_ctx.decreaseIndent(")");
                     if_ctx.emptyLines();
                 }
@@ -314,10 +344,16 @@ SUBCOMMAND_DECL(integrate)
                     // libs
                     String libs;
                     libs += "\"";
-                    for (auto &d : s["link_libraries"].getArray())
-                        libs += fix_path(std::get<sw::TargetSetting::Value>(d)) + ";";
-                    for (auto &d : s["system_link_libraries"].getArray())
-                        libs += std::get<sw::TargetSetting::Value>(d) + ";";
+                    for (auto &[k, p] : s["properties"].getSettings())
+                    {
+                        auto inh = std::stoi(k);
+                        if ((inh & 4) == 0)
+                            continue;
+                        for (auto &d : p["link_libraries"].getArray())
+                            libs += fix_path(std::get<sw::TargetSetting::Value>(d)) + ";";
+                        for (auto &d : p["system_link_libraries"].getArray())
+                            libs += std::get<sw::TargetSetting::Value>(d) + ";";
+                    }
                     libs += "\"";
                     else_ctx.increaseIndent("set_target_properties(" + pkg2string(pkg) + " PROPERTIES");
                     else_ctx.addLine("INTERFACE_LINK_LIBRARIES " + libs);
@@ -382,8 +418,14 @@ SUBCOMMAND_DECL(integrate)
             if (s["type"] == "native_executable")
                 continue;
 
-            for (auto &[k,v] : s["dependencies"]["link"].getSettings())
-                ctx.addLine("target_link_libraries(" + pkg2string(pkg) + " INTERFACE " + k + ")");
+            for (auto &[k, p] : s["properties"].getSettings())
+            {
+                auto inh = std::stoi(k);
+                if ((inh & 4) == 0)
+                    continue;
+                for (auto &[k, v] : p["dependencies"].getSettings())
+                    ctx.addLine("target_link_libraries(" + pkg2string(pkg) + " INTERFACE " + k + ")");
+            }
         }
         write_file_if_different(getOptions().options_integrate.integrate_cmake_deps.parent_path() / "CMakeLists.txt", ctx.getText());
 
@@ -454,28 +496,35 @@ SUBCOMMAND_DECL(integrate)
                 ctx.addLine("ctx.parse_flags('-l" + normalize_path(remove_ext(s["import_library"].getValue())) + "', lib)");
 
                 // defs
-                for (auto &[k,v] : s["definitions"].getSettings())
+                for (auto &[k, p] : s["properties"].getSettings())
                 {
-                    if (v.getValue().empty())
-                        ctx.addLine("ctx.parse_flags('-D" + k + "', lib)");
-                    else
-                        ctx.addLine("ctx.parse_flags('-D" + k + "=" + primitives::command::Argument::quote(v.getValue(), primitives::command::QuoteType::Escape) + "', lib)");
-                }
+                    auto inh = std::stoi(k);
+                    if ((inh & 4) == 0)
+                        continue;
 
-                // idirs
-                for (auto &d : s["include_directories"].getArray())
-                    ctx.addLine("ctx.parse_flags('-I" + normalize_path(std::get<sw::TargetSetting::Value>(d)) + "', lib)");
+                    for (auto &[k, v] : p["definitions"].getSettings())
+                    {
+                        if (v.getValue().empty())
+                            ctx.addLine("ctx.parse_flags('-D" + k + "', lib)");
+                        else
+                            ctx.addLine("ctx.parse_flags('-D" + k + "=" + primitives::command::Argument::quote(v.getValue(), primitives::command::QuoteType::Escape) + "', lib)");
+                    }
 
-                // libs
-                for (auto &d : s["link_libraries"].getArray())
-                    ctx.addLine("ctx.parse_flags('-l" + normalize_path(remove_ext(std::get<sw::TargetSetting::Value>(d))) + "', lib)");
-                for (auto &d : s["system_link_libraries"].getArray())
-                    ctx.addLine("ctx.parse_flags('-l" + normalize_path(remove_ext(std::get<sw::TargetSetting::Value>(d))) + "', lib)");
+                    // idirs
+                    for (auto &d : p["include_directories"].getArray())
+                        ctx.addLine("ctx.parse_flags('-I" + normalize_path(std::get<sw::TargetSetting::Value>(d)) + "', lib)");
 
-                // deps
-                for (auto &[k,v] : s["dependencies"]["link"].getSettings())
-                {
-                    process({k, v.getSettings()});
+                    // libs
+                    for (auto &d : p["link_libraries"].getArray())
+                        ctx.addLine("ctx.parse_flags('-l" + normalize_path(remove_ext(std::get<sw::TargetSetting::Value>(d))) + "', lib)");
+                    for (auto &d : p["system_link_libraries"].getArray())
+                        ctx.addLine("ctx.parse_flags('-l" + normalize_path(remove_ext(std::get<sw::TargetSetting::Value>(d))) + "', lib)");
+
+                    // deps
+                    for (auto &[k, v] : p["dependencies"].getSettings())
+                    {
+                        process({ k, v.getSettings() });
+                    }
                 }
             };
             process({t.getPackage(), t.getSettings()});

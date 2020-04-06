@@ -1988,37 +1988,7 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
             s["output_dir"] = normalize_path(OutputDir);
     }
 
-    // interface
-    TargetSettings defs;
-    for (auto &[k,v] : Public.Definitions)
-        defs[k] = v;
-    for (auto &[k,v] : Interface.Definitions)
-        defs[k] = v;
-    s["definitions"] = defs;
-
-    for (auto &d : Public.IncludeDirectories)
-        s["include_directories"].push_back(normalize_path(d));
-    for (auto &d : Interface.IncludeDirectories)
-        s["include_directories"].push_back(normalize_path(d));
-
-    for (auto &d : Public.LinkLibraries)
-        s["link_libraries"].push_back(normalize_path(d.l));
-    for (auto &d : Interface.LinkLibraries)
-        s["link_libraries"].push_back(normalize_path(d.l));
-
-    if (getType() == TargetType::NativeStaticLibrary)
-    {
-        // static libs also expose private syslibs and frameworks
-        for (auto &d : NativeLinkerOptions::System.LinkLibraries)
-            s["system_link_libraries"].push_back(normalize_path(d.l));
-        for (auto &d : Frameworks)
-            s["frameworks"].push_back(normalize_path(d));
-    }
-    for (auto &d : Public.NativeLinkerOptions::System.LinkLibraries)
-        s["system_link_libraries"].push_back(normalize_path(d.l));
-    for (auto &d : Interface.NativeLinkerOptions::System.LinkLibraries)
-        s["system_link_libraries"].push_back(normalize_path(d.l));
-
+    // remove deps section?
     if (prepared)
     {
         for (auto &d : getActiveDependencies())
