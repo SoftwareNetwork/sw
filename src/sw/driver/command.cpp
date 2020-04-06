@@ -458,8 +458,8 @@ const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_
         {
             for (auto tgt : all)
             {
-                cast_as_nct(*tgt) += p;
-                cast_as_nct(*tgt)[p].skip = t.skip;
+                cast_as_nct(*tgt).getMergeObject() += p;
+                cast_as_nct(*tgt).getMergeObject()[p].skip = t.skip;
             }
         }
     }
@@ -493,8 +493,8 @@ const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_
         {
             for (auto tgt : all)
             {
-                cast_as_nct(*tgt) += p;
-                cast_as_nct(*tgt)[p].skip = t.skip;
+                cast_as_nct(*tgt).getMergeObject() += p;
+                cast_as_nct(*tgt).getMergeObject()[p].skip = t.skip;
             }
         }
     }
@@ -519,8 +519,8 @@ const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_
     {
         for (auto tgt : all)
         {
-            cast_as_nct(*tgt) += p;
-            cast_as_nct(*tgt)[p].skip = t.skip;
+            cast_as_nct(*tgt).getMergeObject() += p;
+            cast_as_nct(*tgt).getMergeObject()[p].skip = t.skip;
         }
     }
     for (auto tgt : t.targets)
@@ -550,8 +550,8 @@ const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_
     {
         for (auto tgt : all)
         {
-            cast_as_nct(*tgt) += p;
-            cast_as_nct(*tgt)[p].skip = t.skip;
+            cast_as_nct(*tgt).getMergeObject() += p;
+            cast_as_nct(*tgt).getMergeObject()[p].skip = t.skip;
         }
     }
     for (auto tgt : t.targets)
@@ -581,8 +581,8 @@ const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_
     {
         for (auto tgt : all)
         {
-            cast_as_nct(*tgt) += p;
-            cast_as_nct(*tgt)[p].skip = t.skip;
+            cast_as_nct(*tgt).getMergeObject() += p;
+            cast_as_nct(*tgt).getMergeObject()[p].skip = t.skip;
         }
     }
     for (auto tgt : t.targets)

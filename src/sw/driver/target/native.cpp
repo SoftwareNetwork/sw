@@ -973,7 +973,7 @@ path NativeCompiledTarget::getImportLibrary() const
 
 std::unordered_set<NativeSourceFile*> NativeCompiledTarget::gatherSourceFiles() const
 {
-    return ::sw::gatherSourceFiles<NativeSourceFile>(*this);
+    return ::sw::gatherSourceFiles<NativeSourceFile>(getMergeObject());
 }
 
 FilesOrdered NativeCompiledTarget::gatherPrecompiledHeaders() const
@@ -1000,46 +1000,52 @@ Files NativeCompiledTarget::gatherObjectFilesWithoutLibraries() const
             )
             obj.insert(f->output);
     }
-    for (auto &[f, sf] : *this)
+    for (auto &[f, sf] : getMergeObject())
     {
-#ifdef CPPAN_OS_WINDOWS
-        if (f.extension() == ".obj")
-        {
+        if (f.extension() == getBuildSettings().TargetOS.getObjectFileExtension())
             obj.insert(f);
-        }
-#else
-        if (f.extension() == ".o")
-        {
-            obj.insert(f);
-        }
-#endif
     }
     return obj;
 }
 
 bool NativeCompiledTarget::hasSourceFiles() const
 {
-    return std::any_of(this->begin(), this->end(), [](const auto &f) {
-               return f.second->isActive();
-           }) ||
-           std::any_of(this->begin(), this->end(), [](const auto &f) {
-               return f.first.extension() == ".obj"
-                   //|| f.first.extension() == ".def"
-                   ;
-           });
+    bool r = false;
+
+    auto check = [this, &r](auto &o)
+    {
+        if (!r)
+        r |= std::any_of(o.begin(), o.end(), [this](const auto &f) {
+            return f.second->isActive();
+        });
+        if (!r)
+        r |= std::any_of(o.begin(), o.end(), [this](const auto &f) {
+            return f.first.extension() == getBuildSettings().TargetOS.getObjectFileExtension();
+            //|| f.first.extension() == ".def"
+        });
+    };
+
+    TargetOptionsGroup::iterate([this, &check](auto &v, auto i)
+    {
+        if (((int)i & (int)InheritanceScope::Package) == 0)
+            return;
+        check(v);
+    });
+    check(getMergeObject());
+    return r;
 }
 
 void NativeCompiledTarget::resolvePostponedSourceFiles()
 {
     // gather exts
     StringSet exts;
-    for (auto &[f, sf] : *this)
+    for (auto &[f, sf] : getMergeObject())
     {
         if (!sf->isActive() || !sf->postponed)
             continue;
         //exts.insert(sf->file.extension().string());
 
-        *this += sf->file;
+        getMergeObject() += sf->file;
     }
 
     // activate langs
@@ -1048,7 +1054,7 @@ void NativeCompiledTarget::resolvePostponedSourceFiles()
     }
 
     // apply langs
-    /*for (auto &[f, sf] : *this)
+    /*for (auto &[f, sf] : getMergeObject())
     {
         if (!sf->isActive() || !sf->postponed)
             continue;
@@ -1066,8 +1072,8 @@ FilesOrdered NativeCompiledTarget::gatherLinkDirectories() const
             dirs.push_back(d);
     };
 
-    get_ldir(NativeLinkerOptions::gatherLinkDirectories());
-    get_ldir(NativeLinkerOptions::System.gatherLinkDirectories());
+    get_ldir(getMergeObject().NativeLinkerOptions::gatherLinkDirectories());
+    get_ldir(getMergeObject().NativeLinkerOptions::System.gatherLinkDirectories());
 
     FilesOrdered dirs2;
     if (getSelectedTool())
@@ -1182,19 +1188,19 @@ void NativeCompiledTarget::createPrecompiledHeader()
         pch.pdb = pch.get_base_pch_path() += ".pdb";
 
     //
-    *this += pch.source;
+    getMergeObject() += pch.source;
     if (!pch.fancy_name.empty())
-        (*this)[pch.source].fancy_name = pch.fancy_name;
+        getMergeObject()[pch.source].fancy_name = pch.fancy_name;
     else
-        (*this)[pch.source].fancy_name = "[" + getPackage().toString() + "]/[pch]";
-    auto sf = ((*this)[pch.source]).as<NativeSourceFile *>();
+        getMergeObject()[pch.source].fancy_name = "[" + getPackage().toString() + "]/[pch]";
+    auto sf = (getMergeObject()[pch.source]).as<NativeSourceFile *>();
     if (!sf)
         throw SW_RUNTIME_ERROR("Error creating pch");
 
     auto setup_create_vc = [this, &sf](auto &c)
     {
         if (gVerbose)
-            (*this)[pch.source].fancy_name += " (" + normalize_path(pch.source) + ")";
+            getMergeObject()[pch.source].fancy_name += " (" + normalize_path(pch.source) + ")";
 
         sf->setOutputFile(pch.obj);
 
@@ -1210,7 +1216,7 @@ void NativeCompiledTarget::createPrecompiledHeader()
         sf->output = sf->compiler->getOutputFile();
 
         if (gVerbose)
-            (*this)[pch.source].fancy_name += " (" + normalize_path(pch.header) + ")";
+            getMergeObject()[pch.source].fancy_name += " (" + normalize_path(pch.header) + ")";
 
         c->Language = "c++-header"; // FIXME: also c-header sometimes
     };
@@ -1307,7 +1313,7 @@ Commands NativeCompiledTarget::getGeneratedCommands() const
     std::map<int, std::vector<std::shared_ptr<builder::Command>>> order;
 
     // add generated commands
-    for (auto &[f, _] : *this)
+    for (auto &[f, _] : getMergeObject())
     {
         File p(f, getFs());
         if (!p.isGenerated())
@@ -1443,7 +1449,7 @@ Commands NativeCompiledTarget::getCommands1() const
     cmds.insert(generated.begin(), generated.end());
 
     // add install commands
-    for (auto &[p, f] : *this)
+    for (auto &[p, f] : getMergeObject())
     {
         if (f->install_dir.empty())
             continue;
@@ -2288,7 +2294,7 @@ void NativeCompiledTarget::prepare_pass1()
     if (PackageDefinitions)
         addPackageDefinitions(true);
 
-    for (auto &[p, f] : *this)
+    for (auto &[p, f] : getMergeObject())
     {
         if (f->isActive() && !f->postponed)
         {
@@ -2768,7 +2774,7 @@ void NativeCompiledTarget::prepare_pass5()
     auto create_more_source_files = [this]()
     {
         std::vector<std::shared_ptr<NativeSourceFile>> new_files;
-        for (auto &[p, f] : *this)
+        for (auto &[p, f] : getMergeObject())
         {
             if (!f->postponed || f->skip)
                 continue;
@@ -2789,7 +2795,7 @@ void NativeCompiledTarget::prepare_pass5()
         for (auto &f : new_files)
         {
             File(f->output, getFs()).setGenerated();
-            *this += f->output;
+            getMergeObject() += f->output;
         }
         return !new_files.empty();
     };
@@ -2802,7 +2808,7 @@ void NativeCompiledTarget::prepare_pass5()
 
     // before merge
     if (getBuildSettings().Native.ConfigurationType != ConfigurationType::Debug)
-        *this += Definition("NDEBUG");
+        getMergeObject() += Definition("NDEBUG");
 
     // emulate msvc defs for clang
     // https://docs.microsoft.com/en-us/cpp/build/reference/md-mt-ld-use-run-time-library?view=vs-2019
@@ -2848,8 +2854,8 @@ void NativeCompiledTarget::prepare_pass5()
             auto fns = "Module." + std::to_string(fidx++) + d.ext;
             auto fn = BinaryPrivateDir / "unity" / fns;
             write_file_if_different(fn, d.s); // do not trigger rebuilds
-            *this += fn; // after write
-            (*this)[fn].fancy_name = "[" + getPackage().toString() + "]/[unity]/" + fns;
+            getMergeObject() += fn; // after write
+            getMergeObject()[fn].fancy_name = "[" + getPackage().toString() + "]/[unity]/" + fns;
             d.s.clear();
         };
 
@@ -3261,7 +3267,7 @@ void NativeCompiledTarget::prepare_pass5()
     {
         if (auto VSL = getSelectedTool()->as<VisualStudioLibraryTool*>())
         {
-            for (auto &[p, f] : *this)
+            for (auto &[p, f] : getMergeObject())
             {
                 if (!f->skip && p.extension() == ".def")
                 {
