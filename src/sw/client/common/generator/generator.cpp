@@ -968,6 +968,7 @@ void CMakeGenerator::generate(const sw::SwBuild &b)
 
         ctx.addLine("target_compile_definitions(" + pkg.toString() + " PRIVATE");
         ctx.increaseIndent();
+        // TODO: fix properties like in integration
         for (auto &[k, v] : s["this"]["definitions"].getSettings())
         {
             if (k == "NDEBUG")
