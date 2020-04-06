@@ -85,10 +85,10 @@ struct WinKit
                 auto &t = sw::addTarget<sw::PredefinedTarget>(DETECT_ARGS_PASS, sw::PackageId("com.Microsoft.Windows.SDK." + name, v), ts);
                 //t.ts["os"]["version"] = v.toString();
 
-                t.public_ts["new"]["6"]["system_include_directories"].push_back(normalize_path(idir / name));
+                t.public_ts["properties"]["6"]["system_include_directories"].push_back(normalize_path(idir / name));
                 for (auto &i : idirs)
-                    t.public_ts["new"]["6"]["system_include_directories"].push_back(normalize_path(idir / i));
-                t.public_ts["new"]["6"]["system_link_directories"].push_back(normalize_path(libdir));
+                    t.public_ts["properties"]["6"]["system_include_directories"].push_back(normalize_path(idir / i));
+                t.public_ts["properties"]["6"]["system_link_directories"].push_back(normalize_path(libdir));
                 targets.push_back(&t);
             }
             else if (without_ldir)
@@ -96,9 +96,9 @@ struct WinKit
                 auto &t = sw::addTarget<sw::PredefinedTarget>(DETECT_ARGS_PASS, sw::PackageId("com.Microsoft.Windows.SDK." + name, v), ts);
                 //t.ts["os"]["version"] = v.toString();
 
-                t.public_ts["new"]["6"]["system_include_directories"].push_back(normalize_path(idir / name));
+                t.public_ts["properties"]["6"]["system_include_directories"].push_back(normalize_path(idir / name));
                 for (auto &i : idirs)
-                    t.public_ts["new"]["6"]["system_include_directories"].push_back(normalize_path(idir / i));
+                    t.public_ts["properties"]["6"]["system_include_directories"].push_back(normalize_path(idir / i));
                 targets.push_back(&t);
             }
             else
@@ -335,7 +335,7 @@ private:
             wk.ldir_subversion = v.toString();
             wk.idirs.push_back("shared");
             for (auto t : wk.add(DETECT_ARGS_PASS, settings, v))
-                t->public_ts["new"]["6"]["system_link_libraries"].push_back("kernel32.lib");
+                t->public_ts["properties"]["6"]["system_link_libraries"].push_back("kernel32.lib");
         }
 
         // km

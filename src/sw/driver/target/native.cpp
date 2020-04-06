@@ -2073,7 +2073,7 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
     // newer settings
     if (prepared)
     {
-        auto &ts = s["new"];
+        auto &ts = s["properties"];
         TargetOptionsGroup::iterate([this, &ts](auto &g, auto i)
         {
             auto is = std::to_string((int)i);
@@ -2541,7 +2541,7 @@ void NativeCompiledTarget::prepare_pass3()
             {
                 auto &ts = t->getInterfaceSettings();
 
-                for (auto &[k, v] : ts["new"].getSettings())
+                for (auto &[k, v] : ts["properties"].getSettings())
                 {
                     auto inh = (InheritanceType)std::stoi(k);
 
@@ -2653,7 +2653,7 @@ void NativeCompiledTarget::prepare_pass4()
                     /*auto &is = t->getInterfaceSettings();
                     if (is["type"] == "native_static_library" || is["header_only"] == "true")
                     {
-                        for (auto &[k,v] : is["new"].getSettings())
+                        for (auto &[k,v] : is["properties"].getSettings())
                         {
                             for (auto &[package_id, settings] : v["dependencies"].getSettings())
                             {
@@ -2719,7 +2719,7 @@ void NativeCompiledTarget::prepare_pass4()
 
             const auto &is = d->getTarget().getInterfaceSettings();
 
-            for (auto &[k,v] : is["new"].getSettings())
+            for (auto &[k,v] : is["properties"].getSettings())
             {
                 auto inh = (InheritanceType)std::stoi(k);
                 if (inh == InheritanceType::Private)
@@ -3430,7 +3430,7 @@ void NativeCompiledTarget::prepare_pass61()
         }
         else if (auto t = d->getTarget().as<const PredefinedTarget *>())
         {
-            auto &v = t->getInterfaceSettings()["new"]["1"];
+            auto &v = t->getInterfaceSettings()["properties"]["1"];
 
             for (auto &v2 : v["link_libraries"].getArray())
                 s.LinkLibraries.insert(LinkLibrary{ fs::u8path(std::get<String>(v2)) });

@@ -186,7 +186,7 @@ std::vector<IDependency *> PredefinedTarget::getDependencies() const
         //for (auto &[k, v] : public_ts["dependencies"]["link"].getSettings())
             //deps.push_back(std::make_shared<PredefinedDependency>(k, v.getSettings()));
 
-        for (auto &[k, v] : public_ts["new"].getSettings())
+        for (auto &[k, v] : public_ts["properties"].getSettings())
         {
             for (auto &[k2, v2] : v["dependencies"].getSettings())
             {
