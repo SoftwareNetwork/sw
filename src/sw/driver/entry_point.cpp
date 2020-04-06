@@ -663,7 +663,7 @@ path PrepareConfig::one2one(Build &b, const InputData &d)
 
     BuildSettings bs(b.module_data.current_settings);
     if (bs.TargetOS.is(OSType::Windows))
-        lib.NativeLinkerOptions::System.LinkLibraries.insert(LinkLibrary{ "Delayimp.lib"s });
+        lib.NativeLinkerOptions::System.LinkLibraries.insert(LinkLibrary{ "DELAYIMP.LIB"s });
 
     if (auto L = lib.Linker->template as<VisualStudioLinker*>())
     {
