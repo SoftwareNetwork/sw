@@ -335,7 +335,7 @@ private:
             wk.ldir_subversion = v.toString();
             wk.idirs.push_back("shared");
             for (auto t : wk.add(DETECT_ARGS_PASS, settings, v))
-                t->public_ts["properties"]["6"]["system_link_libraries"].push_back("kernel32.lib");
+                t->public_ts["properties"]["6"]["system_link_libraries"].push_back("KERNEL32.LIB");
         }
 
         // km
