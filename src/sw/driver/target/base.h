@@ -469,6 +469,9 @@ struct SW_DRIVER_CPP_API TargetOptions : SourceFileStorage, NativeOptions
     void add(const LinkDirectory &);
     void remove(const LinkDirectory &);
 
+    void add(const SystemLinkLibrary &);
+    void remove(const SystemLinkLibrary &);
+
     void add(const PrecompiledHeader &);
     void remove(const PrecompiledHeader &);
 

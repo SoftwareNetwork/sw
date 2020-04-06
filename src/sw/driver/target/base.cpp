@@ -716,6 +716,22 @@ void TargetOptions::remove(const LinkDirectory &i)
     LinkDirectories.erase(dir);
 }
 
+void TargetOptions::add(const SystemLinkLibrary &l)
+{
+    auto l2 = l;
+    if (l2.l.extension() == ".lib" && target->getBuildSettings().TargetOS.getStaticLibraryExtension() == l2.l.extension())
+        l2.l = boost::to_upper_copy(l.l.u8string());
+    NativeOptions::add(l2);
+}
+
+void TargetOptions::remove(const SystemLinkLibrary &l)
+{
+    auto l2 = l;
+    if (l2.l.extension() == ".lib" && target->getBuildSettings().TargetOS.getStaticLibraryExtension() == l2.l.extension())
+        l2.l = boost::to_upper_copy(l.l.u8string());
+    NativeOptions::remove(l2);
+}
+
 void TargetOptions::add(const PrecompiledHeader &i)
 {
     if (target->DryRun)
