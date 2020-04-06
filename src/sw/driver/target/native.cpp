@@ -3412,15 +3412,15 @@ void NativeCompiledTarget::prepare_pass61()
     {
         if (auto t = d->getTarget().as<const NativeCompiledTarget *>())
         {
-            s.LinkLibraries.insert(t->LinkLibraries.begin(), t->LinkLibraries.end());
+            s.LinkLibraries.insert(t->getMergeObject().LinkLibraries.begin(), t->getMergeObject().LinkLibraries.end());
 
             //NativeLinkerOptions::System.LinkLibraries.insert(NativeLinkerOptions::System.LinkLibraries.end(),
             //t->NativeLinkerOptions::System.LinkLibraries.begin(), t->NativeLinkerOptions::System.LinkLibraries.end());
             s.NativeLinkerOptions::System.LinkLibraries.insert(
-                t->NativeLinkerOptions::System.LinkLibraries.begin(),
-                t->NativeLinkerOptions::System.LinkLibraries.end());
+                t->getMergeObject().NativeLinkerOptions::System.LinkLibraries.begin(),
+                t->getMergeObject().NativeLinkerOptions::System.LinkLibraries.end());
 
-            s.Frameworks.insert(t->Frameworks.begin(), t->Frameworks.end());
+            s.Frameworks.insert(t->getMergeObject().Frameworks.begin(), t->getMergeObject().Frameworks.end());
         }
         else if (auto t = d->getTarget().as<const PredefinedTarget *>())
         {
