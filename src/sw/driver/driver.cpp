@@ -398,7 +398,7 @@ std::vector<std::unique_ptr<Input>> Driver::detectInputs(const path &p, InputTyp
         if (comments.empty())
         {
             const auto &exts = getCppSourceFileExtensions();
-            if (exts.find(p.extension().string()) != exts.end())
+            if (exts.find(p.extension().string()) != exts.end() || p.extension() == ".c")
             {
                 // file ehas cpp extension
                 auto i = std::make_unique<InlineSpecInput>(*this, p, type);
