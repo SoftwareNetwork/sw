@@ -47,7 +47,7 @@
     }
 #define SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD2(n, ...) SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD(n, n, __VA_ARGS__)
 #define SW_VISIBLE_BUILTIN_FUNCTION(f, ...) "sw_" #f, nullptr, __VA_ARGS__
-#define SW_VISIBLE_FUNCTION(f, ...) #f, f, __VA_ARGS__
+#define SW_VISIBLE_FUNCTION(f, ...) #f, (void*)&f, __VA_ARGS__
 #else
 #define SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD(n, f, ...)                                 \
     extern "C" SW_JUMPPAD_API int CONCATENATE(SW_JUMPPAD_PREFIX, n)(const Strings &s) \
@@ -57,7 +57,7 @@
     }
 #define SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD2(n, ...) SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD(n, n, ##__VA_ARGS__)
 #define SW_VISIBLE_BUILTIN_FUNCTION(f, ...) "sw_" #f, nullptr, ##__VA_ARGS__
-#define SW_VISIBLE_FUNCTION(f, ...) #f, f, ##__VA_ARGS__
+#define SW_VISIBLE_FUNCTION(f, ...) #f, (void*)&f, ##__VA_ARGS__
 #endif
 
 namespace sw
