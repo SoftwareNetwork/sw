@@ -897,7 +897,10 @@ path Command::writeCommand(const path &p, bool print_name) const
     if (bat)
         t += "if %ERRORLEVEL% NEQ 0 echo Error code: %ERRORLEVEL% && exit /b %ERRORLEVEL%";
     else
-        t += "if [ $? -ne 0 ]; then echo \"Error code: $?\"; fi";
+    {
+        t += "E=$?\n";
+        t += "if [ $E -ne 0 ]; then echo \"Error code: $E\"; fi";
+    }
     t += "\n";
 
     write_file(pbat, t);
