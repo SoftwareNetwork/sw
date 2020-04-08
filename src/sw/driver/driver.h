@@ -52,7 +52,7 @@ struct SW_DRIVER_CPP_API Driver : IDriver
     virtual ~Driver();
 
     // this driver own api
-    void processConfigureAc(const path &p);
+    static void processConfigureAc(const path &p);
 
     // IDriver api
     void loadInputsBatch(SwContext &, const std::set<Input *> &) const override;

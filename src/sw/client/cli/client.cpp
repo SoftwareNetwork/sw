@@ -243,8 +243,7 @@ int setup_main(const Strings &args, Options &options)
     {
         if (cl_parse_configure_ac.empty())
             cl_parse_configure_ac = "configure.ac";
-        void process_configure_ac2(const path &p);
-        process_configure_ac2(cl_parse_configure_ac);
+        sw::driver::cpp::Driver::processConfigureAc(cl_parse_configure_ac);
         return 0;
     }
 
