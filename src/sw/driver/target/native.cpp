@@ -3691,28 +3691,29 @@ void NativeCompiledTarget::prepare_pass7()
             //
             // Hence, we must provide such paths ourselves.
             //
-            if (getBuildSettings().TargetOS.is(OSType::Linux) /* && getType() == TargetType::NativeExecutable*/)
+            if (getBuildSettings().TargetOS.is(OSType::Linux) && getType() == TargetType::NativeExecutable)
             {
                 //for (auto &d : dirs)
                     //getMergeObject().LinkOptions.push_back("-Wl,-rpath-link," + normalize_path(d));
             }
 
+            String rpath_var = "-Wl,";
+            if (getBuildSettings().TargetOS.is(OSType::Linux))
+                rpath_var += "--enable-new-dtags,";
+            rpath_var += "-rpath,";
+
             for (auto &d : dirs)
-                getMergeObject().LinkOptions.push_back("-Wl,-rpath," + normalize_path(d));
+                getMergeObject().LinkOptions.push_back(rpath_var + normalize_path(d));
 
             // rpaths
             if (getType() == TargetType::NativeExecutable)
             {
+                // rpath: currently we set non macos runpath to $ORIGIN
+                String exe_path = "$ORIGIN";
+                // rpath: currently we set macos rpath to @executable_path
                 if (getBuildSettings().TargetOS.is(OSType::Macos))
-                {
-                    // rpath: currently we set rpath to @executable_path
-                    getMergeObject().LinkOptions.push_back("-Wl,-rpath,@executable_path");
-                }
-                else
-                {
-                    // rpath: currently we set runpath to $ORIGIN
-                    getMergeObject().LinkOptions.push_back("-Wl,--enable-new-dtags,-rpath,$ORIGIN");
-                }
+                    exe_path = "@executable_path";
+                getMergeObject().LinkOptions.push_back(rpath_var + exe_path);
             }
         }
     }
