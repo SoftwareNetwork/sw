@@ -70,6 +70,7 @@ struct SW_DRIVER_CPP_API Dependency : DependencyData
 {
     bool GenerateCommandsBefore = false; // do not make true by default
     bool IncludeDirectoriesOnly = false;
+    bool LinkLibrariesOnly = false;
 
     using DependencyData::DependencyData;
 

@@ -189,12 +189,13 @@ private:
 
     using ActiveDeps = std::vector<TargetDependency>;
     std::optional<ActiveDeps> active_deps;
-    DependenciesType all_deps;
     // only this pkg deps!
     ActiveDeps &getActiveDependencies();
     const ActiveDeps &getActiveDependencies() const;
     // deps from all subdeps too
-    const DependenciesType &getAllActiveDependencies() const { return all_deps; }
+    DependenciesType all_deps_normal;
+    DependenciesType all_deps_idir_only;
+    DependenciesType all_deps_llibs_only;
 
 protected:
     Commands getCommands1() const override;
@@ -226,10 +227,13 @@ private:
     void prepare_pass1();
     void prepare_pass2();
     void prepare_pass3();
+    void prepare_pass3_1();
+    void prepare_pass3_2();
+    void prepare_pass3_3();
     void prepare_pass4();
     void prepare_pass5();
     void prepare_pass6();
-    void prepare_pass61();
+    void prepare_pass6_1();
     void prepare_pass7();
     void prepare_pass8();
     void prepare_pass9();

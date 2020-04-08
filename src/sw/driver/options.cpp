@@ -606,8 +606,7 @@ void NativeLinkerOptions::remove(const PackageId &p)
 void NativeOptions::merge(const NativeOptions &o, const GroupSettings &s)
 {
     NativeCompilerOptions::merge(o, s);
-    if (!s.include_directories_only)
-        NativeLinkerOptions::merge(o, s);
+    NativeLinkerOptions::merge(o, s);
 }
 
 } // namespace sw

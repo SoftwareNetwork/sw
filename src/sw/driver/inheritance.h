@@ -43,10 +43,7 @@ struct InheritanceScope
 
 enum class InheritanceType
 {
-    // 8 types
-
-    // 000 - special type to pass stuff to any user
-    Special,
+    // 7 types, 000 is unused
 
     // 001 - usual private options
     Private = InheritanceScope::Package,
@@ -78,7 +75,7 @@ enum class InheritanceType
     // alternative names
 
     Default = Private,
-    Min = Special,
+    Min = Private,
     Max = Public + 1,
 };
 ENABLE_ENUM_CLASS_BITMASK(InheritanceType);
@@ -230,26 +227,6 @@ public:
             if (s)
                 f(*s, (InheritanceType)i);
         }
-    }
-
-    // merge self to self, always w/o interface and always merge protected to self!
-    void merge()
-    {
-        getMergeObject().merge(Private);
-        getMergeObject().merge(Protected);
-        getMergeObject().merge(Public);
-    }
-
-    // merge from other group, always w/ interface
-    template <class U>
-    void merge(const InheritanceGroup<U> &g, const GroupSettings &in)
-    {
-        auto s = in;
-        s.merge_to_self = false;
-        if (s.has_same_parent)
-            getMergeObject().merge(g.Protected, s);
-        getMergeObject().merge(g.Public, s);
-        getMergeObject().merge(g.Interface, s);
     }
 
     InheritanceStorage<T> &getInheritanceStorage() { return data; }

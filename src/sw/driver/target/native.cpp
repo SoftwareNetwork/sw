@@ -791,16 +791,10 @@ void NativeCompiledTarget::setupCommand(builder::Command &c) const
     // perform this after prepare?
     auto for_deps = [this, &c](auto f)
     {
-        for (auto &d : getAllActiveDependencies())
+        for (auto &d : all_deps_normal)
         {
             if (&d->getTarget() == this)
                 continue;
-            //if (!d->isRuntime())
-            {
-                if (d->IncludeDirectoriesOnly)
-                    continue;
-            }
-
             if (auto nt = d->getTarget().as<NativeCompiledTarget *>())
             {
                 if (!*nt->HeaderOnly && nt->getSelectedTool() == nt->Linker.get())
@@ -1482,10 +1476,12 @@ Commands NativeCompiledTarget::getCommands1() const
         auto get_tgts = [this]()
         {
             TargetsSet deps;
-            for (auto &d : getAllActiveDependencies())
+            for (auto &d : all_deps_normal)
+                deps.insert(&d->getTarget());
+            for (auto &d : all_deps_idir_only)
             {
                 // this means that for idirs generated commands won't be used!
-                if (d->IncludeDirectoriesOnly && !d->GenerateCommandsBefore)
+                if (!d->GenerateCommandsBefore)
                     continue;
                 deps.insert(&d->getTarget());
             }
@@ -1993,7 +1989,7 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
     {
         for (auto &d : getActiveDependencies())
         {
-            if (d.dep->IncludeDirectoriesOnly)
+            if (d.dep->IncludeDirectoriesOnly || d.dep->LinkLibrariesOnly)
                 continue;
             if (auto t = d.dep->getTarget().as<const NativeCompiledTarget *>())
             {
@@ -2063,17 +2059,14 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
                         ds["include_directories_only"].ignoreInComparison(true);
                         ds["include_directories_only"].useInHash(false);
                     }
+                    if (d->LinkLibrariesOnly)
+                    {
+                        ds["link_libraries_only"] = "true";
+                        ds["link_libraries_only"].ignoreInComparison(true);
+                        ds["link_libraries_only"].useInHash(false);
+                    }
                 }
             };
-
-            // we print special inheritance deps
-            // only for static and ho libs
-            if (i == InheritanceType::Special)
-            {
-                if (isStaticOrHeaderOnlyLibrary())
-                    print_deps(g);
-                return;
-            }
 
             // for private, we skip some variables
             // we do not need them completely
@@ -2118,6 +2111,9 @@ bool NativeCompiledTarget::prepare()
         return false;
     }
 
+    //DEBUG_BREAK_IF(getPackage().toString() == "pub.egorpugin.primitives.command-master");
+    //DEBUG_BREAK_IF(getPackage().toString().find("loc") == 0);
+
     switch (prepare_pass)
     {
     case 1:
@@ -2145,7 +2141,7 @@ bool NativeCompiledTarget::prepare()
     RETURN_PREPARE_MULTIPASS_NEXT_PASS;
     case 7:
         // link libraries
-        prepare_pass61();
+        prepare_pass6_1();
         RETURN_PREPARE_MULTIPASS_NEXT_PASS;
     case 8:
         // linker 1
@@ -2348,6 +2344,24 @@ void NativeCompiledTarget::prepare_pass2()
             }
         }
     }
+
+    // propagate deps
+    if (isStaticOrHeaderOnlyLibrary())
+    {
+        auto ad = getActiveDependencies();
+        for (auto &d : ad)
+        {
+            Dependency d2(d.dep->getTarget());
+            d2.settings = d.dep->getSettings();
+            d2.setTarget(d.dep->getTarget());
+            if (d.dep->IncludeDirectoriesOnly)
+                continue;
+            d2.LinkLibrariesOnly = true;
+            auto d3 = std::make_shared<Dependency>(d2);
+            Interface += d3;
+            active_deps->push_back(createDependency(d3, InheritanceType::Interface, *this));
+        }
+    }
 }
 
 struct H
@@ -2357,6 +2371,7 @@ struct H
         return std::hash<PackageId>()(p->getTarget().getPackage());
     }
 };
+
 struct EQ
 {
     size_t operator()(const DependencyPtr &p1, const DependencyPtr &p2) const
@@ -2369,6 +2384,19 @@ void NativeCompiledTarget::prepare_pass3()
 {
     // calculate all (link) dependencies for target
 
+    if (*HeaderOnly)
+        return;
+
+    //DEBUG_BREAK_IF(getPackage().toString().find("primitives.command-master") == 0);
+    DEBUG_BREAK_IF(getPackage().toString().find("exe") == 0);
+
+    prepare_pass3_1(); // normal deps
+    prepare_pass3_2(); // idirs only deps
+    prepare_pass3_3(); // llibs only deps
+}
+
+void NativeCompiledTarget::prepare_pass3_1()
+{
     // we have ptrs, so do custom sorting
     std::unordered_map<DependencyPtr, InheritanceType, H, EQ> deps(0, H{});
     std::vector<DependencyPtr> deps_ordered;
@@ -2376,8 +2404,13 @@ void NativeCompiledTarget::prepare_pass3()
     // set our initial deps
     for (auto &d : getActiveDependencies())
     {
-        deps.emplace(d.dep, d.inhtype);
-        deps_ordered.push_back(d.dep);
+        if (d.dep->IncludeDirectoriesOnly)
+            continue;
+        if (d.dep->LinkLibrariesOnly)
+            continue;
+        auto copy = std::make_shared<Dependency>(*d.dep);
+        deps.emplace(copy, d.inhtype);
+        deps_ordered.push_back(copy);
     }
 
     while (1)
@@ -2386,20 +2419,14 @@ void NativeCompiledTarget::prepare_pass3()
         auto deps2 = deps;
         for (auto &[d, _] : deps2)
         {
-            // accepts this driver's Dependency class
             auto calc_deps = [this, &deps, &deps_ordered, &new_dependency](Dependency &d, Dependency &d2, InheritanceType Inheritance)
             {
-                // nothing to do with special inheritance
-                if (Inheritance == InheritanceType::Special)
-                    return;
                 // nothing to do with private inheritance
                 // before d2->getTarget()!
                 if (Inheritance == InheritanceType::Private)
                     return;
-
                 if (&d2.getTarget() == this)
                     return;
-
                 if (Inheritance == InheritanceType::Protected && !hasSameProject(d2.getTarget()))
                     return;
 
@@ -2411,49 +2438,8 @@ void NativeCompiledTarget::prepare_pass3()
                 if (inserted)
                     deps_ordered.push_back(copy);
 
-                // include directories only handling
-                auto &di = *i->first;
-                if (inserted)
-                {
-                    // new dep is added
-                    if (d.IncludeDirectoriesOnly)
-                    {
-                        // if we inserted 3rd party dep (d2=di) of idir_only dep (d),
-                        // we mark it always as idir_only
-                        di.IncludeDirectoriesOnly = true;
-                    }
-                    else
-                    {
-                        // otherwise we keep idir_only flag as is
-                    }
+                if (inserted) // new dep is added
                     new_dependency = true;
-                }
-                else
-                {
-                    // we already have this dep
-                    if (d.IncludeDirectoriesOnly)
-                    {
-                        // left as is if parent (d) idir_only
-                    }
-                    else
-                    {
-                        // if parent dep is not idir_only, then we choose whether to build dep
-                        if (d2.IncludeDirectoriesOnly)
-                        {
-                            // left as is if d2 idir_only
-                        }
-                        else
-                        {
-                            if (di.IncludeDirectoriesOnly)
-                            {
-                                // also mark as new dependency (!) if processing changed for it
-                                new_dependency = true;
-                            }
-                            // if d2 is not idir_only, we set so for di
-                            di.IncludeDirectoriesOnly = false;
-                        }
-                    }
-                }
             };
 
             if (auto t = d->getTarget().as<const NativeCompiledTarget *>())
@@ -2461,6 +2447,10 @@ void NativeCompiledTarget::prepare_pass3()
                 // iterate over child deps
                 for (auto &dep : t->getActiveDependencies())
                 {
+                    if (dep.dep->IncludeDirectoriesOnly)
+                        continue;
+                    if (dep.dep->LinkLibrariesOnly)
+                        continue;
                     calc_deps(*d, *dep.dep, dep.inhtype);
                 }
             }
@@ -2487,6 +2477,21 @@ void NativeCompiledTarget::prepare_pass3()
                                 //d2.IncludeDirectoriesOnly = d3->getSettings()["include_directories_only"] == "true";
                                 d2.IncludeDirectoriesOnly = settings["include_directories_only"] == "true";
                                 SW_CHECK(d3->getSettings()["include_directories_only"] == settings["include_directories_only"]);
+                                d2.LinkLibrariesOnly = settings["link_libraries_only"] == "true";
+                                SW_CHECK(d3->getSettings()["link_libraries_only"] == settings["link_libraries_only"]);
+
+                                if (d2.IncludeDirectoriesOnly)
+                                {
+                                    // do not process here
+                                    found = true;
+                                    break;
+                                }
+                                if (d2.LinkLibrariesOnly)
+                                {
+                                    // do not process here
+                                    found = true;
+                                    break;
+                                }
 
                                 calc_deps(*d, d2, inh);
                                 found = true;
@@ -2507,143 +2512,322 @@ void NativeCompiledTarget::prepare_pass3()
             for (auto &d : deps_ordered)
             {
                 if (&d->getTarget() != this)
-                    all_deps.insert(deps.find(d)->first);
+                    all_deps_normal.insert(deps.find(d)->first);
             }
             break;
         }
     }
+}
 
-    // for static libs, we must propagate some settings to all users
-    auto &s = get(InheritanceType::Special); // call in any case
-    if (isStaticOrHeaderOnlyLibrary())
+void NativeCompiledTarget::prepare_pass3_2()
+{
+    // idirs only deps
+
+    // we have ptrs, so do custom sorting
+    std::unordered_map<DependencyPtr, InheritanceType, H, EQ> deps(0, H{});
+    std::vector<DependencyPtr> deps_ordered;
+
+    // set our initial deps
+    for (auto &d : getActiveDependencies())
     {
-        for (auto &d : getAllActiveDependencies())
+        if (!d.dep->IncludeDirectoriesOnly)
+            continue;
+        if (d.dep->LinkLibrariesOnly)
+            continue;
+        auto copy = std::make_shared<Dependency>(*d.dep);
+        deps.emplace(copy, d.inhtype);
+        deps_ordered.push_back(copy);
+    }
+    for (auto &d : all_deps_normal)
+    {
+        auto copy = std::make_shared<Dependency>(*d);
+        deps.emplace(copy, InheritanceType::Public); // use public inh
+        deps_ordered.push_back(copy);
+    }
+
+    while (1)
+    {
+        bool new_dependency = false;
+        auto deps2 = deps;
+        for (auto &[d, _] : deps2)
         {
-            if (!d->IncludeDirectoriesOnly)
-                s += d; // all deps!!! not matter lib or dll or exe
+            // accepts this driver's Dependency class
+            auto calc_deps = [this, &deps, &deps_ordered, &new_dependency](Dependency &d, Dependency &d2, InheritanceType Inheritance)
+            {
+                // nothing to do with private inheritance
+                // before d2->getTarget()!
+                if (Inheritance == InheritanceType::Private)
+                    return;
+                if (&d2.getTarget() == this)
+                    return;
+                if (Inheritance == InheritanceType::Protected && !hasSameProject(d2.getTarget()))
+                    return;
+
+                auto copy = std::make_shared<Dependency>(d2);
+                auto [i, inserted] = deps.emplace(copy,
+                    Inheritance == InheritanceType::Interface ?
+                    InheritanceType::Public : Inheritance
+                );
+
+                // include directories only handling
+                auto &di = *i->first;
+                di.IncludeDirectoriesOnly = true;
+
+                if (inserted)
+                {
+                    deps_ordered.push_back(copy);
+                    new_dependency = true;
+                }
+            };
+
+            if (auto t = d->getTarget().as<const NativeCompiledTarget *>())
+            {
+                // iterate over child deps
+                for (auto &dep : t->getActiveDependencies())
+                {
+                    if (!d->IncludeDirectoriesOnly && !dep.dep->IncludeDirectoriesOnly)
+                        continue;
+                    calc_deps(*d, *dep.dep, dep.inhtype);
+                }
+            }
+            else if (auto t = d->getTarget().as<const PredefinedTarget *>())
+            {
+                auto &ts = t->getInterfaceSettings();
+
+                for (auto &[k, v] : ts["properties"].getSettings())
+                {
+                    auto inh = (InheritanceType)std::stoi(k);
+
+                    for (auto &[package_id, settings] : v["dependencies"].getSettings())
+                    {
+                        // find our resolved dependency and run
+                        bool found = false;
+                        for (auto &d3 : t->getDependencies())
+                        {
+                            if (d3->getTarget().getPackage() == package_id && d3->getSettings() == settings.getSettings())
+                            {
+                                // construct
+                                Dependency d2(d3->getTarget());
+                                d2.settings = d3->getSettings();
+                                d2.setTarget(d3->getTarget());
+                                //d2.IncludeDirectoriesOnly = d3->getSettings()["include_directories_only"] == "true";
+                                d2.IncludeDirectoriesOnly = settings["include_directories_only"] == "true";
+                                SW_CHECK(d3->getSettings()["include_directories_only"] == settings["include_directories_only"]);
+                                d2.LinkLibrariesOnly = settings["link_libraries_only"] == "true";
+                                SW_CHECK(d3->getSettings()["link_libraries_only"] == settings["link_libraries_only"]);
+
+                                if (d2.LinkLibrariesOnly)
+                                {
+                                    // do not process here
+                                    found = true;
+                                    break;
+                                }
+
+                                calc_deps(*d, d2, inh);
+                                found = true;
+                                break;
+                            }
+                        }
+                        if (!found)
+                            throw SW_RUNTIME_ERROR("Cannot find predefined target: " + package_id);
+                    }
+                }
+            }
+            else
+                throw SW_RUNTIME_ERROR("missing target code");
+        }
+
+        if (!new_dependency)
+        {
+            for (auto &d : deps_ordered)
+            {
+                if (&d->getTarget() != this && d->IncludeDirectoriesOnly)
+                    all_deps_idir_only.insert(deps.find(d)->first);
+            }
+            break;
+        }
+    }
+}
+
+void NativeCompiledTarget::prepare_pass3_3()
+{
+    // llibs only
+
+    if (isStaticLibrary())
+        return;
+
+    // we have ptrs, so do custom sorting
+    std::unordered_map<DependencyPtr, InheritanceType, H, EQ> deps(0, H{});
+    std::vector<DependencyPtr> deps_ordered;
+
+    // set our initial deps
+    for (auto &d : getActiveDependencies())
+    {
+        if (d.dep->IncludeDirectoriesOnly)
+            continue;
+        if (auto t = d.dep->getTarget().as<const NativeCompiledTarget *>())
+        {
+            if (!t->isStaticOrHeaderOnlyLibrary())
+                continue;
+        }
+        else if (auto t = d.dep->getTarget().as<const PredefinedTarget *>())
+        {
+            auto &ts = t->getInterfaceSettings();
+            if (ts["type"] == "native_shared_library" || ts["type"] == "native_executable")
+            {
+                if (ts["header_only"] != "true")
+                    continue;
+            }
+        }
+        else
+            throw SW_RUNTIME_ERROR("missing target code");
+        auto copy = std::make_shared<Dependency>(*d.dep);
+        copy->LinkLibrariesOnly = true; // force
+        deps.emplace(copy, InheritanceType::Public); // use public inh
+        deps_ordered.push_back(copy);
+    }
+
+    //DEBUG_BREAK_IF(getPackage().toString().find("primitives.command-master") == 0);
+
+    while (1)
+    {
+        bool new_dependency = false;
+        auto deps2 = deps;
+        for (auto &[d, _] : deps2)
+        {
+            // accepts this driver's Dependency class
+            auto calc_deps = [this, &deps, &deps_ordered, &new_dependency](Dependency &d, Dependency &d2, InheritanceType Inheritance)
+            {
+                if (&d2.getTarget() == this)
+                    return;
+
+                auto copy = std::make_shared<Dependency>(d2);
+                auto [i, inserted] = deps.emplace(copy,
+                    Inheritance == InheritanceType::Interface ?
+                    InheritanceType::Public : Inheritance
+                );
+
+                // include directories only handling
+                auto &di = *i->first;
+                di.LinkLibrariesOnly = true;
+
+                if (inserted)
+                {
+                    deps_ordered.push_back(copy);
+                    new_dependency = true;
+                }
+            };
+
+            if (auto t = d->getTarget().as<const NativeCompiledTarget *>())
+            {
+                if (!t->isStaticOrHeaderOnlyLibrary())
+                    continue;
+                // iterate over child deps
+                for (auto &dep : t->getActiveDependencies())
+                {
+                    if (!dep.dep->LinkLibrariesOnly)
+                        continue;
+                    calc_deps(*d, *dep.dep, dep.inhtype);
+                }
+            }
+            else if (auto t = d->getTarget().as<const PredefinedTarget *>())
+            {
+                auto &ts = t->getInterfaceSettings();
+
+                if (ts["type"] == "native_shared_library" || ts["type"] == "native_executable")
+                {
+                    if (ts["header_only"] != "true")
+                        continue;
+                }
+
+                for (auto &[k, v] : ts["properties"].getSettings())
+                {
+                    auto inh = (InheritanceType)std::stoi(k);
+
+                    for (auto &[package_id, settings] : v["dependencies"].getSettings())
+                    {
+                        // find our resolved dependency and run
+                        bool found = false;
+                        for (auto &d3 : t->getDependencies())
+                        {
+                            if (d3->getTarget().getPackage() == package_id && d3->getSettings() == settings.getSettings())
+                            {
+                                // construct
+                                Dependency d2(d3->getTarget());
+                                d2.settings = d3->getSettings();
+                                d2.setTarget(d3->getTarget());
+                                //d2.IncludeDirectoriesOnly = d3->getSettings()["include_directories_only"] == "true";
+                                d2.IncludeDirectoriesOnly = settings["include_directories_only"] == "true";
+                                SW_CHECK(d3->getSettings()["include_directories_only"] == settings["include_directories_only"]);
+                                d2.LinkLibrariesOnly = settings["link_libraries_only"] == "true";
+                                SW_CHECK(d3->getSettings()["link_libraries_only"] == settings["link_libraries_only"]);
+
+                                if (!d2.LinkLibrariesOnly)
+                                {
+                                    // do not process here
+                                    found = true;
+                                    break;
+                                }
+
+                                calc_deps(*d, d2, inh);
+                                found = true;
+                                break;
+                            }
+                        }
+                        if (!found)
+                            throw SW_RUNTIME_ERROR("Cannot find predefined target: " + package_id);
+                    }
+                }
+            }
+            else
+                throw SW_RUNTIME_ERROR("missing target code");
+        }
+
+        if (!new_dependency)
+        {
+            for (auto &d : deps_ordered)
+            {
+                if (&d->getTarget() != this && d->LinkLibrariesOnly)
+                    all_deps_llibs_only.insert(deps.find(d)->first);
+            }
+            break;
         }
     }
 }
 
 void NativeCompiledTarget::prepare_pass4()
 {
-    // find all deps for static libs
-    // only for dll/exe
-    if (getSelectedTool() == Linker.get())
-    {
-        // we have ptrs, so do custom sorting
-        std::unordered_set<DependencyPtr, H, EQ> deps(0, H{}, EQ{});
-
-        // set our initial deps
-        for (auto &d : getAllActiveDependencies())
-        {
-            SW_CHECK(d->isResolved());
-            if (!d->IncludeDirectoriesOnly)
-                deps.emplace(d);
-        }
-
-        while (1)
-        {
-            auto deps2 = deps;
-            bool inserted = false;
-            for (auto &d : deps2)
-            {
-                if (auto t = d->getTarget().as<const NativeCompiledTarget *>())
-                {
-                    if (t->isStaticOrHeaderOnlyLibrary())
-                    {
-                        // iterate over child deps
-                        for (auto &d : t->getAllActiveDependencies())
-                        {
-                            if (d->IncludeDirectoriesOnly)
-                                continue;
-                            SW_CHECK(d->isResolved());
-                            /*if (auto t = d->getTarget().as<const NativeCompiledTarget *>())
-                            {
-                                if (!t->isStaticOrHeaderOnlyLibrary())
-                                    continue;
-                            }
-                            else if (auto t = d->getTarget().as<const PredefinedTarget *>())
-                            {
-                                auto &is = t->getInterfaceSettings();
-                                if (is["type"] == "native_static_library" || is["header_only"] == "true")
-                                    ;
-                                else
-                                    continue;
-                            }*/
-                            inserted |= deps.insert(d).second;
-                        }
-                    }
-                }
-                else if (auto t = d->getTarget().as<const PredefinedTarget *>())
-                {
-                    /*auto &is = t->getInterfaceSettings();
-                    if (is["type"] == "native_static_library" || is["header_only"] == "true")
-                    {
-                        for (auto &[k,v] : is["properties"].getSettings())
-                        {
-                            for (auto &[package_id, settings] : v["dependencies"].getSettings())
-                            {
-                                // find our resolved dependency and run
-                                bool found = false;
-                                for (auto &d3 : t->getDependencies())
-                                {
-                                    if (d3->getTarget().getPackage() == package_id && d3->getSettings() == settings.getSettings())
-                                    {
-                                        // construct
-                                        Dependency d2(d3->getTarget());
-                                        d2.settings = d3->getSettings();
-                                        d2.setTarget(d3->getTarget());
-                                        //d2.IncludeDirectoriesOnly = d3->getSettings()["include_directories_only"] == "true";
-                                        d2.IncludeDirectoriesOnly = settings["include_directories_only"] == "true";
-                                        SW_CHECK(d3->getSettings()["include_directories_only"] == settings["include_directories_only"]);
-                                        if (!d2.IncludeDirectoriesOnly)
-                                            inserted |= deps.insert(std::make_shared<Dependency>(d2)).second;
-
-                                        found = true;
-                                        break;
-                                    }
-                                }
-                                if (!found)
-                                    throw SW_RUNTIME_ERROR("Cannot find predefined target: " + package_id);
-                            }
-                        }
-                    }*/
-                }
-                else
-                    throw SW_RUNTIME_ERROR("missing target code");
-            }
-            if (!inserted)
-            {
-                auto &s = get(InheritanceType::Special);
-                for (auto &d : deps2)
-                    s.getRawDependencies().push_back(d);
-                break;
-            }
-        }
-    }
-
     // merge
 
     // merge self
-    merge();
+    TargetOptionsGroup::iterate_this([this](auto &v, auto i)
+    {
+        getMergeObject().merge(v);
+    });
 
     // merge deps' stuff
-    for (auto &d : getAllActiveDependencies())
+
+    // normal deps
+    // take everything
+    for (auto &d : all_deps_normal)
     {
         if (auto t = d->getTarget().as<const NativeCompiledTarget *>())
         {
+            //DEBUG_BREAK_IF(getPackage().toString().find("loc") == 0);
+
             GroupSettings s;
-            s.include_directories_only = d->IncludeDirectoriesOnly;
             s.has_same_parent = hasSameProject(*t);
-            merge(*t, s);
+            auto &g = *t;
+            // merge from other group
+            s.merge_to_self = false;
+            if (s.has_same_parent)
+                getMergeObject().merge(g.Protected, s);
+            getMergeObject().merge(g.Public, s);
+            // always with interface
+            getMergeObject().merge(g.Interface, s);
         }
         else if (auto t = d->getTarget().as<const PredefinedTarget *>())
         {
-            // this is merge(const InheritanceGroup<U> &g, const GroupSettings &in) function
-            // from inheritance.h
-            // instead of const InheritanceGroup<U> &g, input is our predefined target
-
             const auto &is = d->getTarget().getInterfaceSettings();
 
             for (auto &[k,v] : is["properties"].getSettings())
@@ -2662,30 +2846,109 @@ void NativeCompiledTarget::prepare_pass4()
                         getMergeObject().Definitions[k] = v2.getValue();
                 }
 
-                if (!d->IncludeDirectoriesOnly)
-                {
-                    for (auto &v2 : v["compile_options"].getArray())
-                        getMergeObject().CompileOptions.insert(std::get<String>(v2));
-                }
+                for (auto &v2 : v["compile_options"].getArray())
+                    getMergeObject().CompileOptions.insert(std::get<String>(v2));
+
+                // TODO: add custom options
 
                 for (auto &v2 : v["include_directories"].getArray())
                     getMergeObject().IncludeDirectories.insert(std::get<String>(v2));
 
-                if (!d->IncludeDirectoriesOnly)
+                for (auto &v2 : v["link_libraries"].getArray())
+                    getMergeObject().LinkLibraries.insert(LinkLibrary{ fs::u8path(std::get<String>(v2)) });
+
+                for (auto &v2 : v["system_include_directories"].getArray())
+                    getMergeObject().NativeCompilerOptions::System.IncludeDirectories.push_back(std::get<TargetSetting::Value>(v2));
+                for (auto &v2 : v["system_link_directories"].getArray())
+                    getMergeObject().NativeLinkerOptions::System.LinkDirectories.push_back(std::get<TargetSetting::Value>(v2));
+                for (auto &v2 : v["system_link_libraries"].getArray())
+                    getMergeObject().NativeLinkerOptions::System.LinkLibraries.insert(LinkLibrary{ std::get<String>(v2) });
+
+                for (auto &v2 : v["frameworks"].getArray())
+                    getMergeObject().Frameworks.insert(std::get<String>(v2));
+            }
+        }
+        else
+            throw SW_RUNTIME_ERROR("missing target code");
+    }
+
+    // idirs
+    // take defs and idirs
+    for (auto &d : all_deps_idir_only)
+    {
+        if (auto t = d->getTarget().as<const NativeCompiledTarget *>())
+        {
+            GroupSettings s;
+            s.include_directories_only = true;
+            s.has_same_parent = hasSameProject(*t);
+            auto &g = *t;
+            // merge from other group, always w/ interface
+            s.merge_to_self = false;
+            if (s.has_same_parent)
+                getMergeObject().NativeCompilerOptions::merge(g.Protected, s);
+            getMergeObject().NativeCompilerOptions::merge(g.Public, s);
+            getMergeObject().NativeCompilerOptions::merge(g.Interface, s);
+        }
+        else if (auto t = d->getTarget().as<const PredefinedTarget *>())
+        {
+            const auto &is = d->getTarget().getInterfaceSettings();
+
+            for (auto &[k,v] : is["properties"].getSettings())
+            {
+                auto inh = (InheritanceType)std::stoi(k);
+                if (inh == InheritanceType::Private)
+                    continue;
+                if (inh == InheritanceType::Protected && !hasSameProject(d->getTarget()))
+                    continue;
+
+                for (auto &[k, v2] : v["definitions"].getSettings())
                 {
-                    for (auto &v2 : v["link_libraries"].getArray())
-                        getMergeObject().LinkLibraries.insert(LinkLibrary{ fs::u8path(std::get<String>(v2)) });
-
-                    for (auto &v2 : v["system_include_directories"].getArray())
-                        getMergeObject().NativeCompilerOptions::System.IncludeDirectories.push_back(std::get<TargetSetting::Value>(v2));
-                    for (auto &v2 : v["system_link_directories"].getArray())
-                        getMergeObject().NativeLinkerOptions::System.LinkDirectories.push_back(std::get<TargetSetting::Value>(v2));
-                    for (auto &v2 : v["system_link_libraries"].getArray())
-                        getMergeObject().NativeLinkerOptions::System.LinkLibraries.insert(LinkLibrary{ std::get<String>(v2) });
-
-                    for (auto &v2 : v["frameworks"].getArray())
-                        getMergeObject().Frameworks.insert(std::get<String>(v2));
+                    if (v2.getValue().empty())
+                        getMergeObject().Definitions[k];
+                    else
+                        getMergeObject().Definitions[k] = v2.getValue();
                 }
+
+                for (auto &v2 : v["include_directories"].getArray())
+                    getMergeObject().IncludeDirectories.insert(std::get<String>(v2));
+                for (auto &v2 : v["system_include_directories"].getArray())
+                    getMergeObject().NativeCompilerOptions::System.IncludeDirectories.push_back(std::get<TargetSetting::Value>(v2));
+            }
+        }
+        else
+            throw SW_RUNTIME_ERROR("missing target code");
+    }
+
+    if (isStaticOrHeaderOnlyLibrary())
+        return;
+
+    // llibs
+    // merge from everything (every visibility class)
+    for (auto &d : all_deps_llibs_only)
+    {
+        if (auto t = d->getTarget().as<const NativeCompiledTarget *>())
+        {
+            t->TargetOptionsGroup::iterate([this](auto &v, auto i)
+            {
+                getMergeObject().NativeLinkerOptions::merge(v);
+            });
+        }
+        else if (auto t = d->getTarget().as<const PredefinedTarget *>())
+        {
+            const auto &is = d->getTarget().getInterfaceSettings();
+
+            for (auto &[k,v] : is["properties"].getSettings())
+            {
+                for (auto &v2 : v["link_libraries"].getArray())
+                    getMergeObject().LinkLibraries.insert(LinkLibrary{ fs::u8path(std::get<String>(v2)) });
+
+                for (auto &v2 : v["system_link_directories"].getArray())
+                    getMergeObject().NativeLinkerOptions::System.LinkDirectories.push_back(std::get<TargetSetting::Value>(v2));
+                for (auto &v2 : v["system_link_libraries"].getArray())
+                    getMergeObject().NativeLinkerOptions::System.LinkLibraries.insert(LinkLibrary{ std::get<String>(v2) });
+
+                for (auto &v2 : v["frameworks"].getArray())
+                    getMergeObject().Frameworks.insert(std::get<String>(v2));
             }
         }
         else
@@ -2786,11 +3049,11 @@ void NativeCompiledTarget::prepare_pass5()
     if (getBuildSettings().TargetOS.is(OSType::Windows) && getCompilerType() == CompilerType::Clang)
     {
         // always (except /LD but we do not support it yet)
-        add(Definition("_MT"));
+        getMergeObject() += Definition("_MT");
         if (!getBuildSettings().Native.MT)
-            add(Definition("_DLL"));
+            getMergeObject() += Definition("_DLL");
         if (getBuildSettings().Native.ConfigurationType == ConfigurationType::Debug)
-            add(Definition("_DEBUG"));
+            getMergeObject() += Definition("_DEBUG");
     }
 
     auto files = gatherSourceFiles();
@@ -3080,7 +3343,7 @@ void NativeCompiledTarget::prepare_pass5()
         f->compiler->idirs = NativeCompilerOptions::System.IncludeDirectories;
     }
 
-    //
+    // generate rc, this one does not need idirs above
     if (GenerateWindowsResource
         && !*HeaderOnly
         && ::sw::gatherSourceFiles<RcToolSourceFile>(*this).empty()
@@ -3351,7 +3614,7 @@ void NativeCompiledTarget::prepare_pass6()
     }
 }
 
-void NativeCompiledTarget::prepare_pass61()
+void NativeCompiledTarget::prepare_pass6_1()
 {
     if (isStaticOrHeaderOnlyLibrary())
         return;
@@ -3359,59 +3622,24 @@ void NativeCompiledTarget::prepare_pass61()
     // circular deps detection
     if (auto L = Linker->as<VisualStudioLinker *>())
     {
-        for (auto &d : getAllActiveDependencies())
+        for (auto &d : all_deps_normal)
         {
             if (&d->getTarget() == this)
-                continue;
-            if (d->IncludeDirectoriesOnly)
                 continue;
 
             auto nt = d->getTarget().template as<NativeCompiledTarget *>();
             if (!nt)
                 continue;
 
-            for (auto &d2 : nt->getAllActiveDependencies())
+            for (auto &d2 : nt->all_deps_normal)
             {
                 if (&d2->getTarget() != this)
-                    continue;
-                if (d2->IncludeDirectoriesOnly)
                     continue;
 
                 circular_dependency = true;
                 break;
             }
         }
-    }
-
-    // save our link libs in special
-    auto &s = get(InheritanceType::Special);
-    for (auto &d : s.getRawDependencies())
-    {
-        if (auto t = d->getTarget().as<const NativeCompiledTarget *>())
-        {
-            s.LinkLibraries.insert(t->getMergeObject().LinkLibraries.begin(), t->getMergeObject().LinkLibraries.end());
-
-            //NativeLinkerOptions::System.LinkLibraries.insert(NativeLinkerOptions::System.LinkLibraries.end(),
-            //t->NativeLinkerOptions::System.LinkLibraries.begin(), t->NativeLinkerOptions::System.LinkLibraries.end());
-            s.NativeLinkerOptions::System.LinkLibraries.insert(
-                t->getMergeObject().NativeLinkerOptions::System.LinkLibraries.begin(),
-                t->getMergeObject().NativeLinkerOptions::System.LinkLibraries.end());
-
-            s.Frameworks.insert(t->getMergeObject().Frameworks.begin(), t->getMergeObject().Frameworks.end());
-        }
-        else if (auto t = d->getTarget().as<const PredefinedTarget *>())
-        {
-            auto &v = t->getInterfaceSettings()["properties"]["1"];
-
-            for (auto &v2 : v["link_libraries"].getArray())
-                s.LinkLibraries.insert(LinkLibrary{ fs::u8path(std::get<String>(v2)) });
-            for (auto &v2 : v["system_link_libraries"].getArray())
-                s.NativeLinkerOptions::System.LinkLibraries.insert(LinkLibrary{ std::get<String>(v2) });
-            for (auto &v2 : v["frameworks"].getArray())
-                s.Frameworks.insert(std::get<String>(v2));
-        }
-        else
-            throw SW_RUNTIME_ERROR("missing target code");
     }
 }
 
@@ -3422,24 +3650,6 @@ void NativeCompiledTarget::prepare_pass7()
     // gatherStaticLinkLibraries
     if (!isStaticOrHeaderOnlyLibrary())
     {
-        // we get only deps list from special
-        auto &s = get(InheritanceType::Special);
-        for (auto &d : s.getRawDependencies())
-        {
-            getMergeObject().LinkLibraries.insert(s.LinkLibraries.begin(), s.LinkLibraries.end());
-
-            //NativeLinkerOptions::System.LinkLibraries.insert(NativeLinkerOptions::System.LinkLibraries.end(),
-            //t->NativeLinkerOptions::System.LinkLibraries.begin(), t->NativeLinkerOptions::System.LinkLibraries.end());
-            getMergeObject().NativeLinkerOptions::System.LinkLibraries.insert(
-                s.NativeLinkerOptions::System.LinkLibraries.begin(),
-                s.NativeLinkerOptions::System.LinkLibraries.end());
-
-            getMergeObject().Frameworks.insert(s.Frameworks.begin(), s.Frameworks.end());
-        }
-
-        // clear after use
-        //s.getRawDependencies().clear();
-
         //
         // linux:
         //
@@ -3546,7 +3756,8 @@ void NativeCompiledTarget::processCircular(Files &obj)
                 continue;
             if (d->isDisabledOrDummy())
                 continue;
-            if (d->IncludeDirectoriesOnly)
+            if (d->IncludeDirectoriesOnly// || d->LinkLibrariesOnly
+            )
                 continue;
 
             auto nt = d->target->as<NativeCompiledTarget*>();
@@ -3646,7 +3857,7 @@ void NativeCompiledTarget::gatherRpathLinkDirectories(
 {
     for (auto &d : getActiveDependencies())
     {
-        if (d.dep->IncludeDirectoriesOnly)
+        if (d.dep->IncludeDirectoriesOnly/* || d.dep->LinkLibrariesOnly*/)
             continue;
 
         auto dt = d.dep->getTarget().template as<const NativeCompiledTarget*>();
@@ -3981,9 +4192,7 @@ void NativeCompiledTarget::setChecks(const String &name, bool check_definitions)
         // make private?
         // remove completely?
         if (check_definitions && d)
-        {
             add(Definition{ d.value() });
-        }
         if (pystring::endswith(k, "_CODE"))
             Variables[k] = "#define " + k.substr(0, k.size() - 5) + " " + std::to_string(v);
         else
