@@ -75,25 +75,35 @@ Module::LibraryCall<F, Required>::operator()(Args && ... args) const
     return typename std_function_type::result_type();
 }
 
+template <class F>
+auto get_function(const Module::DynamicLibrary &dll, const String &fn, bool required)
+{
+    auto mangled_name = dll.symbol_storage().get_function<F>(fn);
+    if (mangled_name.empty())
+        mangled_name = fn;
+
+    // we use shlib directly, because we already demangled name (or not)
+    auto &shlib = dll.shared_lib();
+    if (shlib.has(mangled_name))
+        return shlib.get<F>(mangled_name);
+    else if (shlib.has(fn))
+        return shlib.get<F>(fn);
+    else if (required)
+        throw SW_RUNTIME_ERROR("Required function '" + fn + "' is not found in module: " + normalize_path(dll.shared_lib().location()));
+
+    return (F*)nullptr;
+}
+
 Module::Module(const Module::DynamicLibrary &dll, const String &suffix)
     : module(dll)
 {
-#define LOAD(f)                                                                                                                                     \
-    do                                                                                                                                              \
-    {                                                                                                                                               \
-        f##_.name = #f + suffix;                                                                                                                    \
-        f##_.m = this;                                                                                                                              \
-        if (0)                                                                                                                                      \
-            ;                                                                                                                                       \
-        else if (!module.symbol_storage().get_function<decltype(f##_)::function_type>(f##_.name).empty())                                           \
-            f##_ = module.get_function<decltype(f##_)::function_type>(f##_.name);                                                                   \
-        else if (f##_.isRequired())                                                                                                                 \
-            throw SW_RUNTIME_ERROR("Required function '" + f##_.name + "' is not found in module: " + normalize_path(dll.shared_lib().location())); \
+#define LOAD(f)                                                                                   \
+    do                                                                                            \
+    {                                                                                             \
+        f##_.name = #f + suffix;                                                                  \
+        f##_.m = this;                                                                            \
+        f##_ = get_function<decltype(f##_)::function_type>(module, f##_.name, f##_.isRequired()); \
     } while (0)
-
-    // not working
-    //if (module.shared_lib().has(#f))
-        //f##_ = (decltype(f##_)::function_type*)module.shared_lib().get<void*>(#f);
 
     LOAD(build);
     LOAD(check);
