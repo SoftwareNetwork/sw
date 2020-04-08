@@ -22,10 +22,10 @@
 ```
 git clone https://github.com/SoftwareNetwork/sw
 cd sw
-sw build
+sw build -static
 ```
 
-(optional) Run `sw generate` to generate VS solution.
+(optional) Run `sw generate -static` to generate VS solution.
 
 (optional) Run `sw override org.sw` for smooth development.
 
