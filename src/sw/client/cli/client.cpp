@@ -358,6 +358,8 @@ int main(int argc, char **argv)
 {
     //mi_version();
 
+    //sw_enable_crash_server();
+
 #ifdef _WIN32
     CoInitializeEx(0, 0); // vs find helper
 #endif
