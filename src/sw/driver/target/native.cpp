@@ -2214,12 +2214,23 @@ void NativeCompiledTarget::prepare_pass1()
     if (!Publish)
         Publish = Scope == TargetScope::Build;
 
-    if (getBuildSettings().TargetOS.is(OSType::Linux) && NoUndefined)
+    if (NoUndefined)
+    {
+        if (getBuildSettings().TargetOS.is(OSType::Linux))
     {
         if (getCompilerType() == CompilerType::Clang)
             LinkOptions.push_back("--no-undefined");
         else // gcc and others
             LinkOptions.push_back("-Wl,--no-undefined");
+    }
+    }
+    else
+    {
+        if (getBuildSettings().TargetOS.isApple())
+        {
+            LinkOptions.push_back("-undefined");
+            LinkOptions.push_back("dynamic_lookup");
+        }
     }
 
     if (!IsSwConfig)

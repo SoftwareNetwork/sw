@@ -487,12 +487,6 @@ decltype(auto) PrepareConfig::commonActions(Build &b, const InputData &d, const 
     lib.CPPVersion = CPPLanguageStandard::CPP17;
     lib.NoUndefined = false;
 
-    if (lib.getBuildSettings().TargetOS.isApple())
-    {
-        lib.LinkOptions.push_back("-undefined");
-        lib.LinkOptions.push_back("dynamic_lookup");
-    }
-
     lib += fn;
     if (lang == LANG_VALA)
     {
