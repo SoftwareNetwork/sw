@@ -2217,12 +2217,12 @@ void NativeCompiledTarget::prepare_pass1()
     if (NoUndefined)
     {
         if (getBuildSettings().TargetOS.is(OSType::Linux))
-    {
-        if (getCompilerType() == CompilerType::Clang)
-            LinkOptions.push_back("--no-undefined");
-        else // gcc and others
-            LinkOptions.push_back("-Wl,--no-undefined");
-    }
+        {
+            if (getCompilerType() == CompilerType::Clang)
+                LinkOptions.push_back("--no-undefined");
+            else // gcc and others
+                LinkOptions.push_back("-Wl,--no-undefined");
+        }
     }
     else
     {
@@ -2945,6 +2945,7 @@ void NativeCompiledTarget::prepare_pass4()
     {
         if (auto t = d->getTarget().as<const NativeCompiledTarget *>())
         {
+            SwapAndRestore sr(getMergeObject().LinkOptions); // keep unchanged
             t->TargetOptionsGroup::iterate([this](auto &v, auto i)
             {
                 getMergeObject().NativeLinkerOptions::merge(v);
