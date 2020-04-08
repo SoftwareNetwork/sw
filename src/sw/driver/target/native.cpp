@@ -2072,6 +2072,9 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
             // we do not need them completely
             if (i != InheritanceType::Private)
             {
+                for (auto &[p, f] : g)
+                    s["source_files"].push_back(normalize_path(p));
+
                 for (auto &[k, v] : g.Definitions)
                     s["definitions"][k] = v;
                 for (auto &d : g.CompileOptions)
@@ -2828,6 +2831,9 @@ void NativeCompiledTarget::prepare_pass4()
                 if (inh == InheritanceType::Protected && !hasSameProject(d->getTarget()))
                     continue;
 
+                for (auto &v2 : v["source_files"].getArray())
+                    getMergeObject() += path(std::get<String>(v2));
+
                 for (auto &[k, v2] : v["definitions"].getSettings())
                 {
                     if (v2.getValue().empty())
@@ -2896,6 +2902,10 @@ void NativeCompiledTarget::prepare_pass4()
                     continue;
                 if (inh == InheritanceType::Protected && !hasSameProject(d->getTarget()))
                     continue;
+
+                // allow only header only files?
+                for (auto &v2 : v["source_files"].getArray())
+                    getMergeObject() += path(std::get<String>(v2));
 
                 for (auto &[k, v2] : v["definitions"].getSettings())
                 {
