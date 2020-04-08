@@ -2884,6 +2884,12 @@ void NativeCompiledTarget::prepare_pass4()
             auto &g = *t;
             // merge from other group, always w/ interface
             s.merge_to_self = false;
+
+            if (s.has_same_parent)
+                getMergeObject().SourceFileStorage::merge(g.Protected, s);
+            getMergeObject().SourceFileStorage::merge(g.Public, s);
+            getMergeObject().SourceFileStorage::merge(g.Interface, s);
+
             if (s.has_same_parent)
                 getMergeObject().NativeCompilerOptions::merge(g.Protected, s);
             getMergeObject().NativeCompilerOptions::merge(g.Public, s);
