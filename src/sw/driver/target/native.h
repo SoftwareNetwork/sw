@@ -203,7 +203,7 @@ protected:
 private:
     Commands getGeneratedCommands() const;
     void resolvePostponedSourceFiles();
-    void gatherRpathLinkDirectories(Files &added, Files &visited, int round) const;
+    FilesOrdered gatherRpathLinkDirectories() const;
     FilesOrdered gatherLinkDirectories() const;
     LinkLibrariesType gatherLinkLibraries() const;
     void processCircular(Files &objs);

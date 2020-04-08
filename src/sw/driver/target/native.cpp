@@ -275,6 +275,11 @@ bool NativeCompiledTarget::isStaticOrHeaderOnlyLibrary() const
     return isStaticLibrary() || *HeaderOnly;
 }
 
+static bool isStaticOrHeaderOnlyLibrary(const TargetSettings &s)
+{
+    return s["header_only"] == "true" || s["type"] == "native_static_library";
+}
+
 void NativeCompiledTarget::setOutputDir(const path &dir)
 {
     //SwapAndRestore sr(OutputDir, dir);
@@ -2681,11 +2686,8 @@ void NativeCompiledTarget::prepare_pass3_3()
         else if (auto t = d.dep->getTarget().as<const PredefinedTarget *>())
         {
             auto &ts = t->getInterfaceSettings();
-            if (ts["type"] == "native_shared_library" || ts["type"] == "native_executable")
-            {
-                if (ts["header_only"] != "true")
-                    continue;
-            }
+            if (!::sw::isStaticOrHeaderOnlyLibrary(t->getInterfaceSettings()))
+                continue;
         }
         else
             throw SW_RUNTIME_ERROR("missing target code");
@@ -2740,11 +2742,8 @@ void NativeCompiledTarget::prepare_pass3_3()
             {
                 auto &ts = t->getInterfaceSettings();
 
-                if (ts["type"] == "native_shared_library" || ts["type"] == "native_executable")
-                {
-                    if (ts["header_only"] != "true")
-                        continue;
-                }
+                if (!::sw::isStaticOrHeaderOnlyLibrary(ts))
+                    continue;
 
                 for (auto &[k, v] : ts["properties"].getSettings())
                 {
@@ -3668,44 +3667,52 @@ void NativeCompiledTarget::prepare_pass7()
     // gatherStaticLinkLibraries
     if (!isStaticOrHeaderOnlyLibrary())
     {
-        //
-        // linux:
-        //
-        // -rpath-link
-        //
-        // When linking libA.so to libB.so and then libB.so to exeC,
-        // ld requires to provide -rpath or -rpath-link to libA.so.
-        //
-        // Currently we do not set rpath, so ld cannot read automatically from libB.so
-        // where libA.so is located.
-        //
-        // Hence, we must provide such paths ourselves.
-        //
-        if (getBuildSettings().TargetOS.is(OSType::Linux) && getType() == TargetType::NativeExecutable)
-        {
-            Files dirs;
-            Files visited;
-            gatherRpathLinkDirectories(dirs, visited, 1);
-            for (auto &d : dirs)
-                LinkOptions.push_back("-Wl,-rpath-link," + normalize_path(d));
-        }
+        bool setup_rpath =
+            1
+            && !getBuildSettings().TargetOS.is(OSType::Windows)
+            && !getBuildSettings().TargetOS.is(OSType::Cygwin)
+            && !getBuildSettings().TargetOS.is(OSType::Mingw)
+            ;
 
-        // rpaths
-        if (getType() == TargetType::NativeExecutable)
+        if (setup_rpath)
         {
-            if (getBuildSettings().TargetOS.is(OSType::Macos))
+            auto dirs = gatherRpathLinkDirectories();
+
+            //
+            // linux:
+            //
+            // -rpath-link
+            //
+            // When linking libA.so to libB.so and then libB.so to exeC,
+            // ld requires to provide -rpath or -rpath-link to libA.so.
+            //
+            // Currently we do not set rpath, so ld cannot read automatically from libB.so
+            // where libA.so is located.
+            //
+            // Hence, we must provide such paths ourselves.
+            //
+            if (getBuildSettings().TargetOS.is(OSType::Linux) /* && getType() == TargetType::NativeExecutable*/)
             {
-                // rpath: currently we set rpath to @executable_path
-                LinkOptions.push_back("-Wl,-rpath,@executable_path");
+                //for (auto &d : dirs)
+                    //getMergeObject().LinkOptions.push_back("-Wl,-rpath-link," + normalize_path(d));
             }
-            else if (1
-                && !getBuildSettings().TargetOS.is(OSType::Windows)
-                && !getBuildSettings().TargetOS.is(OSType::Cygwin)
-                && !getBuildSettings().TargetOS.is(OSType::Mingw)
-                )
+
+            for (auto &d : dirs)
+                getMergeObject().LinkOptions.push_back("-Wl,-rpath," + normalize_path(d));
+
+            // rpaths
+            if (getType() == TargetType::NativeExecutable)
             {
-                // rpath: currently we set runpath to $ORIGIN
-                LinkOptions.push_back("-Wl,--enable-new-dtags,-rpath,$ORIGIN");
+                if (getBuildSettings().TargetOS.is(OSType::Macos))
+                {
+                    // rpath: currently we set rpath to @executable_path
+                    getMergeObject().LinkOptions.push_back("-Wl,-rpath,@executable_path");
+                }
+                else
+                {
+                    // rpath: currently we set runpath to $ORIGIN
+                    getMergeObject().LinkOptions.push_back("-Wl,--enable-new-dtags,-rpath,$ORIGIN");
+                }
             }
         }
     }
@@ -3870,42 +3877,26 @@ void NativeCompiledTarget::processCircular(Files &obj)
     obj.insert(exp);
 }
 
-void NativeCompiledTarget::gatherRpathLinkDirectories(
-    Files &added, Files &visited, int round) const
+FilesOrdered NativeCompiledTarget::gatherRpathLinkDirectories() const
 {
-    for (auto &d : getActiveDependencies())
+    FilesOrdered rpath;
+    for (auto &d : all_deps_normal)
     {
-        if (d.dep->IncludeDirectoriesOnly/* || d.dep->LinkLibrariesOnly*/)
-            continue;
-
-        auto dt = d.dep->getTarget().template as<const NativeCompiledTarget*>();
-        if (!dt)
-            continue;
-
-        // here we must gather all shared (and header only?) lib deps in recursive manner
-        if (round != 1)
+        if (auto dt = d->getTarget().template as<const NativeCompiledTarget *>())
         {
-            if (!*dt->HeaderOnly && dt->getSelectedTool() == dt->Linker.get() &&
-                dt->getType() != TargetType::NativeExecutable)
-            {
-                auto [_, inserted] = added.insert(dt->getOutputFile().parent_path());
-                if (!inserted)
-                    continue;
-            }
+            if (!dt->isStaticOrHeaderOnlyLibrary())
+                rpath.push_back(dt->getOutputFile().parent_path());
         }
-
-        if (!*dt->HeaderOnly)
+        else if (auto t = d->getTarget().as<const PredefinedTarget *>())
         {
-            if (!visited.insert(dt->getOutputFile().parent_path()).second)
-                continue;
+            auto &ts = t->getInterfaceSettings();
+            if (!::sw::isStaticOrHeaderOnlyLibrary(ts))
+                rpath.push_back(path(ts["output_file"].getValue()).parent_path());
         }
         else
-        {
-            if (!visited.insert(dt->getPackage().toString()).second)
-                continue;
-        }
-        dt->gatherRpathLinkDirectories(added, visited, round + 1);
+            throw SW_RUNTIME_ERROR("missing target code");
     }
+    return rpath;
 }
 
 bool NativeCompiledTarget::prepareLibrary(LibraryType Type)
