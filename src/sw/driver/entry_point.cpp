@@ -38,8 +38,6 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "entry_point");
 
-bool gVerbose;
-
 #define SW_DRIVER_NAME "org.sw." PACKAGE_NAME "-" PACKAGE_VERSION
 #define IMPORT_LIBRARY "sw.dll"
 

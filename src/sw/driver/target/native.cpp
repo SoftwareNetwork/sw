@@ -50,7 +50,7 @@ DECLARE_STATIC_LOGGER(logger, "target.native");
 #define RETURN_PREPARE_MULTIPASS_NEXT_PASS SW_RETURN_MULTIPASS_NEXT_PASS(prepare_pass)
 #define RETURN_INIT_MULTIPASS_NEXT_PASS SW_RETURN_MULTIPASS_NEXT_PASS(init_pass)
 
-extern bool gVerbose;
+bool gVerbose;
 
 bool do_not_mangle_object_names;
 //bool full_build;
