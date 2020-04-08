@@ -76,7 +76,7 @@ Module::LibraryCall<F, Required>::operator()(Args && ... args) const
 }
 
 template <class F>
-auto get_function(const Module::DynamicLibrary &dll, const String &fn, bool required)
+static auto get_function(const Module::DynamicLibrary &dll, const String &fn, bool required)
 {
     auto mangled_name = dll.symbol_storage().get_function<F>(fn);
     if (mangled_name.empty())
