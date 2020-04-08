@@ -546,6 +546,10 @@ command_line:
                 default_value: |-
                     "."
 
+            installed:
+                desc: List installed packages
+                aliases: i
+
     subcommand:
         name: open
         desc: Open package directory.

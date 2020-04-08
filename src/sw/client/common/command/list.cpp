@@ -50,12 +50,21 @@ std::map<sw::PackagePath, sw::VersionSet> getMatchingPackages(const sw::StorageW
 
 SUBCOMMAND_DECL(list)
 {
+    const sw::StorageWithPackagesDatabase *s;
     auto rs = getContext().getRemoteStorages();
-    if (rs.empty())
-        throw SW_RUNTIME_ERROR("No remote storages found");
 
-    auto &s = static_cast<sw::StorageWithPackagesDatabase &>(*rs.front());
-    auto r = getMatchingPackages(s, getOptions().options_list.list_arg);
+    if (getOptions().options_list.installed)
+    {
+        s = &getContext().getLocalStorage();
+    }
+    else
+    {
+        if (rs.empty())
+            throw SW_RUNTIME_ERROR("No remote storages found");
+        s = &static_cast<sw::StorageWithPackagesDatabase &>(*rs.front());
+    }
+
+    auto r = getMatchingPackages(*s, getOptions().options_list.list_arg);
     if (r.empty())
     {
         LOG_INFO(logger, "nothing found");
