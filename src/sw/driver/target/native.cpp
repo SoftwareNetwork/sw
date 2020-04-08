@@ -1500,8 +1500,8 @@ Commands NativeCompiledTarget::getCommands1() const
                     if (auto c2 = c->as<driver::detail::Command*>(); c2 && c2->ignore_deps_generated_commands)
                         continue;
                     c->dependencies.insert(cmds2.begin(), cmds2.end());
-                }
             }
+        }
         }
 
         // link deps
@@ -2111,9 +2111,6 @@ bool NativeCompiledTarget::prepare()
         return false;
     }
 
-    //DEBUG_BREAK_IF(getPackage().toString() == "pub.egorpugin.primitives.command-master");
-    //DEBUG_BREAK_IF(getPackage().toString().find("loc") == 0);
-
     switch (prepare_pass)
     {
     case 1:
@@ -2386,9 +2383,6 @@ void NativeCompiledTarget::prepare_pass3()
 
     if (*HeaderOnly)
         return;
-
-    //DEBUG_BREAK_IF(getPackage().toString().find("primitives.command-master") == 0);
-    DEBUG_BREAK_IF(getPackage().toString().find("exe") == 0);
 
     prepare_pass3_1(); // normal deps
     prepare_pass3_2(); // idirs only deps
@@ -2687,8 +2681,6 @@ void NativeCompiledTarget::prepare_pass3_3()
         deps_ordered.push_back(copy);
     }
 
-    //DEBUG_BREAK_IF(getPackage().toString().find("primitives.command-master") == 0);
-
     while (1)
     {
         bool new_dependency = false;
@@ -2813,8 +2805,6 @@ void NativeCompiledTarget::prepare_pass4()
     {
         if (auto t = d->getTarget().as<const NativeCompiledTarget *>())
         {
-            //DEBUG_BREAK_IF(getPackage().toString().find("loc") == 0);
-
             GroupSettings s;
             s.has_same_parent = hasSameProject(*t);
             auto &g = *t;
