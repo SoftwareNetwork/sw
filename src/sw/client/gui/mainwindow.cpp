@@ -319,6 +319,8 @@ void MainWindow::setupGeneral(QWidget *parent)
 
         connect(apkg, &QPushButton::clicked, [add_input, pkgcb]()
         {
+            if (pkgcb->currentText().isEmpty())
+                return;
             add_input(pkgcb->currentText());
         });
 
