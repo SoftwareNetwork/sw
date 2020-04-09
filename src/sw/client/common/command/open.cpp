@@ -105,19 +105,24 @@ void open_url(const String &url)
 SUBCOMMAND_DECL(open)
 {
     auto &sdb = getContext().getLocalStorage();
-    auto pkgs = getContext().resolve(sw::UnresolvedPackages{ getOptions().options_open.open_arg });
-    auto &p2 = pkgs.find(getOptions().options_open.open_arg)->second;
 
-    if (!sdb.isPackageInstalled(*p2))
+    sw::UnresolvedPackages upkgs;
+    for (auto &a : getOptions().options_open.open_arg)
+        upkgs.insert(a);
+
+    auto pkgs = getContext().resolve(upkgs);
+    for (auto &u : upkgs)
     {
-        LOG_INFO(logger, "Package '" + p2->toString() + "' not installed");
-        return;
+        auto &p = pkgs.find(u)->second;
+        if (!sdb.isPackageInstalled(*p))
+        {
+            LOG_INFO(logger, "Package '" + p->toString() + "' not installed");
+            continue;
+        }
+
+        LOG_INFO(logger, "package: " + p->toString());
+        LOG_INFO(logger, "package dir: " + dynamic_cast<sw::LocalPackage&>(*p).getDir().u8string());
+
+        open_directory(dynamic_cast<sw::LocalPackage&>(*p).getDirSrc() / ""); // on win we must add last slash
     }
-
-    auto p = getContext().resolve(getOptions().options_open.open_arg);
-
-    LOG_INFO(logger, "package: " + p.toString());
-    LOG_INFO(logger, "package dir: " + p.getDir().u8string());
-
-    open_directory(p.getDirSrc() / ""); // on win we must add last slash
 }
