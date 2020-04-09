@@ -38,8 +38,6 @@ void throw_with_trace(const E &e)
     throw boost::enable_error_info(e) << traced_exception(t);
 }
 
-TYPED_EXCEPTION(SupressOutputException);
-
 struct SW_SUPPORT_API ExceptionVector : std::exception
 {
     ExceptionVector(const std::vector<std::exception_ptr> &v);

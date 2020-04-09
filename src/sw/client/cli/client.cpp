@@ -371,10 +371,6 @@ int main(int argc, char **argv)
     {
         r = parse_main(argc, argv);
     }
-    catch (SupressOutputException &)
-    {
-        supress = true;
-    }
     catch (const std::exception &e)
     {
         error = e.what();
