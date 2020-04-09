@@ -826,10 +826,11 @@ void NativeCompiledTarget::setupCommand(builder::Command &c) const
         {
             if (getContext().getHostOs().is(OSType::Windows))
                 c.addPathDirectory(output_file.parent_path());
-            else if (getContext().getHostOs().isApple())
-                c.environment["DYLD_LIBRARY_PATH"] += normalize_path(output_file.parent_path()) + ":";
-            else // linux and others
-                c.environment["LD_LIBRARY_PATH"] += normalize_path(output_file.parent_path()) + ":";
+            // disable for now, because we set rpath
+            //else if (getContext().getHostOs().isApple())
+                //c.environment["DYLD_LIBRARY_PATH"] += normalize_path(output_file.parent_path()) + ":";
+            //else // linux and others
+                //c.environment["LD_LIBRARY_PATH"] += normalize_path(output_file.parent_path()) + ":";
         });
         return;
     }
