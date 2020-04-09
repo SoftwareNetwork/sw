@@ -39,6 +39,10 @@
 #include <primitives/yaml.h>
 #include <toml.hpp>
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "driver.cpp");
 
