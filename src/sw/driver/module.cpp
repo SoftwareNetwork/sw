@@ -65,10 +65,12 @@ Module::Module(const Module::DynamicLibrary &dll, const String &suffix)
     LOAD(build);
     LOAD(check);
     LOAD(configure);
-    //LOAD(sw_get_module_abi_version);
+    LOAD(sw_get_module_abi_version);
 
-    //if (::sw_get_module_abi_version() != sw_get_module_abi_version_())
-        //throw SW_RUNTIME_ERROR("Bad config ABI version");
+    auto current_abi = ::sw_get_module_abi_version();
+    auto module_abi = sw_get_module_abi_version_();
+    if (current_abi != module_abi)
+        throw SW_RUNTIME_ERROR("Bad config ABI version: sw required (" + std::to_string(current_abi) + "), module abi (" + std::to_string(module_abi) + ").");
 
 #undef LOAD
 }
