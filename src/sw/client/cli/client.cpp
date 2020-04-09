@@ -360,10 +360,6 @@ int main(int argc, char **argv)
 
     //sw_enable_crash_server();
 
-#ifdef _WIN32
-    CoInitializeEx(0, 0); // vs find helper
-#endif
-
     int r = 0;
     String error;
     bool supress = false;

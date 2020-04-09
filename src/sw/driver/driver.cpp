@@ -136,10 +136,16 @@ static Strings get_inline_comments(const path &p)
 
 Driver::Driver()
 {
+#ifdef _WIN32
+    CoInitializeEx(0, 0); // vs find helper
+#endif
 }
 
 Driver::~Driver()
 {
+#ifdef _WIN32
+    CoUninitialize();
+#endif
 }
 
 void Driver::processConfigureAc(const path &p)
