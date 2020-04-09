@@ -2689,6 +2689,19 @@ void NativeCompiledTarget::prepare_pass3_3()
     }
     for (auto &d : all_deps_normal)
     {
+        if (auto t = d->getTarget().as<const NativeCompiledTarget *>())
+        {
+            if (!t->isStaticOrHeaderOnlyLibrary())
+                continue;
+        }
+        else if (auto t = d->getTarget().as<const PredefinedTarget *>())
+        {
+            auto &ts = t->getInterfaceSettings();
+            if (!::sw::isStaticOrHeaderOnlyLibrary(ts))
+                continue;
+        }
+        else
+            throw SW_RUNTIME_ERROR("missing target code");
         auto copy = std::make_shared<Dependency>(*d);
         copy->LinkLibrariesOnly = true; // force
         auto [_, inserted] = deps.emplace(copy, InheritanceType::Public); // use public inh
