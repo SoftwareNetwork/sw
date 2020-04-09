@@ -29,7 +29,6 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string_regex.hpp>
-#include <boost/dll.hpp>
 #include <boost/regex.hpp>
 #include <primitives/emitter.h>
 #include <primitives/executor.h>
@@ -42,15 +41,8 @@
 #include <primitives/thread.h>
 #include <primitives/git_rev.h>
 
-#include <iostream>
-
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "main");
-
-#ifdef _WIN32
-#include <primitives/win32helpers.h>
-#include <combaseapi.h>
-#endif
 
 #if _MSC_VER
 #if defined(SW_USE_TBBMALLOC)
@@ -72,49 +64,8 @@ DECLARE_STATIC_LOGGER(logger, "main");
 
 //#include <mimalloc.h>
 
-using namespace sw;
-
-bool bConsoleMode = true;
-bool bUseSystemPause = false;
-
-/*
-// check args here to see if we want gui or not!
-
-// 1. if 'uri' arg - console depends
-// 2. if no args, no sw.cpp, *.sw files in cwd - gui
-*/
-
-#pragma push_macro("main")
-#undef main
-int main(int argc, char **argv);
-#pragma pop_macro("main")
-
 void self_upgrade();
 void self_upgrade_copy(const path &dst);
-
-#ifdef _WIN32
-/*int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine, int nCmdShow)
-{
-    const std::wstring s = GetCommandLine();
-    bConsoleMode = s.find(L"uri sw:") == -1;
-    if (bConsoleMode)
-    {
-        SetupConsole();
-    }
-    else
-    {
-        CoInitialize(0);
-    }
-
-#pragma push_macro("main")
-#undef main
-    return main(__argc, __argv);
-#pragma pop_macro("main")
-}*/
-#endif
-
-#include <boost/asio/io_context.hpp>
-#include <boost/asio/signal_set.hpp>
 
 static bool setConsoleColorProcessing()
 {
@@ -214,11 +165,11 @@ int setup_main(const Strings &args, Options &options)
             write_file(fn, s);
         };
 
-        if (Settings::get_user_settings().record_commands)
+        if (sw::Settings::get_user_settings().record_commands)
         {
             auto hfn = ".sw_history";
             append_file_unique(get_home_directory() / hfn, cmdline);
-            if (Settings::get_user_settings().record_commands_in_current_dir)
+            if (sw::Settings::get_user_settings().record_commands_in_current_dir)
             {
                 try
                 {
@@ -343,7 +294,7 @@ int parse_main(int argc, char **argv)
         args.push_back(sw::builder::getInternalCallBuiltinFunctionName());
         args.push_back(icbf_arg);
         args.insert(args.end(), icbf_args.begin(), icbf_args.end());
-        return jumppad_call(args);
+        return sw::jumppad_call(args);
     }
 
     //
@@ -362,51 +313,19 @@ int parse_main(int argc, char **argv)
 int main(int argc, char **argv)
 {
     //mi_version();
-
     //sw_enable_crash_server();
 
-    int r = 0;
-    String error;
-    bool supress = false;
+    int r;
     try
     {
         r = parse_main(argc, argv);
     }
     catch (const std::exception &e)
     {
-        error = e.what();
-    }
-
-    if (!error.empty() || supress)
-    {
-        if (!supress)
-        {
-            LOG_ERROR(logger, error);
-#ifdef _WIN32
-            //if (IsDebuggerPresent())
-                //system("pause");
-#else
-            //std::cout << "Press any key to continue..." << std::endl;
-            //getchar();
-#endif
-        }
         r = 1;
-
-        if (!bConsoleMode)
-        {
-#ifdef _WIN32
-            if (bUseSystemPause)
-            {
-                system("pause");
-            }
-            else
-                message_box(sw::getProgramName(), error);
-#endif
-        }
+        LOG_ERROR(logger, e.what());
     }
-
     LOG_FLUSH();
-
     return r;
 }
 
