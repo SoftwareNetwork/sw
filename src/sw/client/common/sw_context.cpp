@@ -266,6 +266,39 @@ static std::vector<sw::TargetSettings> getSettingsFromFile(SwClientContext &swct
     return ts;
 }
 
+Inputs::Inputs(const String &s)
+{
+    if (s.empty())
+        throw SW_RUNTIME_ERROR("Empty input");
+    inputs.push_back(s);
+}
+
+Inputs::Inputs(const Strings &s)
+{
+    if (s.empty())
+        throw SW_RUNTIME_ERROR("Empty inputs");
+    inputs = s;
+}
+
+Inputs::Inputs(const Strings &s, const Strings &pairs)
+{
+    if (s.empty() && pairs.empty())
+        throw SW_RUNTIME_ERROR("Empty inputs and input pairs");
+
+    inputs = s;
+
+    if (pairs.size() % 2 == 1)
+        throw SW_RUNTIME_ERROR("Incorrect input settings pairs. Something is missing. Size must be even, but size = " + std::to_string(pairs.size()));
+    for (int i = 0; i < pairs.size(); i += 2)
+    {
+        sw::TargetSettings s;
+        s.mergeFromString(pairs[i + 1]);
+        if (pairs[i].empty())
+            throw SW_RUNTIME_ERROR("Empty input in pair");
+        input_pairs.push_back({s, pairs[i]});
+    }
+}
+
 SwClientContext::SwClientContext()
     : SwClientContext(Options{})
 {

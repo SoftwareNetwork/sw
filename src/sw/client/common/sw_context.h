@@ -53,25 +53,9 @@ using Programs = std::vector<Program>;
 struct Inputs
 {
     Inputs() = default;
-    Inputs(const String &s)
-    {
-        if (s.empty())
-            throw SW_RUNTIME_ERROR("Empty input");
-        inputs.push_back(s);
-    }
-    Inputs(const Strings &s)
-    {
-        if (s.empty())
-            throw SW_RUNTIME_ERROR("Empty inputs");
-        inputs = s;
-    }
-
-    void addInputPair(const sw::TargetSettings &settings, const String &input)
-    {
-        if (input.empty())
-            throw SW_RUNTIME_ERROR("Empty inputs");
-        input_pairs.push_back({settings, input});
-    }
+    Inputs(const String &s);
+    Inputs(const Strings &s);
+    Inputs(const Strings &s, const Strings &input_pairs);
 
     const auto &getInputs() const { return inputs; }
     const auto &getInputPairs() const { return input_pairs; }

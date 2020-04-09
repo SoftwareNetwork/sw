@@ -136,17 +136,7 @@ SUBCOMMAND_DECL(build)
 
     // if -B specified, it is used as is
 
-    Inputs inputs(getInputs());
-    const auto &pairs = getOptions().options_build.input_settings_pairs;
-    if (pairs.size() % 2 == 1)
-        throw SW_RUNTIME_ERROR("Incorrect input settings pairs. Something is missing. Size must be even, but size = " + std::to_string(pairs.size()));
-    for (int i = 0; i < pairs.size(); i += 2)
-    {
-        sw::TargetSettings s;
-        s.mergeFromString(pairs[i + 1]);
-        inputs.addInputPair(s, pairs[i]);
-    }
-
+    Inputs inputs(getInputs(), getOptions().options_build.input_settings_pairs);
     auto b = createBuild(inputs);
     if (getOptions().options_build.build_default_explan)
     {
