@@ -275,17 +275,25 @@ Inputs::Inputs(const String &s)
 
 Inputs::Inputs(const Strings &s)
 {
-    if (s.empty())
+    for (auto &v : s)
+    {
+        if (!v.empty())
+            inputs.push_back(v);
+    }
+    if (inputs.empty())
         throw SW_RUNTIME_ERROR("Empty inputs");
-    inputs = s;
 }
 
 Inputs::Inputs(const Strings &s, const Strings &pairs)
 {
-    if (s.empty() && pairs.empty())
-        throw SW_RUNTIME_ERROR("Empty inputs and input pairs");
+    for (auto &v : s)
+    {
+        if (!v.empty())
+            inputs.push_back(v);
+    }
 
-    inputs = s;
+    if (inputs.empty() && pairs.empty())
+        throw SW_RUNTIME_ERROR("Empty inputs and input pairs");
 
     if (pairs.size() % 2 == 1)
         throw SW_RUNTIME_ERROR("Incorrect input settings pairs. Something is missing. Size must be even, but size = " + std::to_string(pairs.size()));
