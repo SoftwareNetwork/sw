@@ -102,14 +102,6 @@ const ModuleStorage::DynamicLibrary &ModuleStorage::get(const path &dll, const F
 
 ModuleStorage::~ModuleStorage()
 {
-    if (std::uncaught_exceptions())
-    {
-        LOG_DEBUG(logger, "Exception might be thrown from one of the modules, so not unloading them");
-
-        // unknown exception, cannot copy, so do not unload
-        for (auto &[k, v] : modules)
-            v.release();
-    }
 }
 
 }

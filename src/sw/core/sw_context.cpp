@@ -43,11 +43,6 @@ SwCoreContext::SwCoreContext(const path &local_storage_root_dir)
 
 SwCoreContext::~SwCoreContext()
 {
-    // do not clear modules on exception, because it may come from there
-    // TODO: cleanup modules data first
-    // copy exception here and pass further?
-    //if (std::uncaught_exceptions() == 0)
-        //module_storage.release();
 }
 
 ModuleStorage &SwCoreContext::getModuleStorage() const
