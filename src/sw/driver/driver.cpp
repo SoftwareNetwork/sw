@@ -40,7 +40,7 @@
 #include <toml.hpp>
 
 #ifdef _WIN32
-#include <windows.h>
+#include <combaseapi.h>
 #endif
 
 #include <primitives/log.h>
