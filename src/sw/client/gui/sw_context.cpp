@@ -18,17 +18,17 @@
 
 #include "sw_context.h"
 
-#include "mainwindow.h"
+#include "logwindow.h"
 
-#include <cl.llvm.h>
 #include <qthread.h>
+
+#include <primitives/log.h>
+DECLARE_STATIC_LOGGER(logger, "gui.sw_context");
 
 void SwGuiContext::command_build()
 {
     run_with_log("Build Log", [this]()
     {
-        getOptions().options_build.build_inputs.push_back("d:\\dev\\primitives");
-        // TODO: do not run if zero inputs
         Base::command_build();
     });
 }
@@ -37,8 +37,6 @@ void SwGuiContext::command_test()
 {
     run_with_log("Test Log", [this]()
     {
-        getOptions().options_build.build_inputs.push_back("d:\\dev\\primitives");
-        // TODO: do not run if zero inputs
         Base::command_test();
     });
 }
@@ -46,9 +44,26 @@ void SwGuiContext::command_test()
 void SwGuiContext::run_with_log(const QString &title, std::function<void(void)> f)
 {
     auto w = new LogWindow(*this);
+    w->setBaseSize({400,300});
     w->setWindowTitle(title);
     w->show();
 
-    auto t = QThread::create(f);
+    auto t = QThread::create([w, f]
+    {
+        try
+        {
+            f();
+            LOG_INFO(logger, "Finished.");
+        }
+        catch (std::exception &e)
+        {
+            LOG_INFO(logger, e.what());
+        }
+        catch (...)
+        {
+            LOG_INFO(logger, "Unknown exception.");
+        }
+        w->stop();
+    });
     t->start();
 }
