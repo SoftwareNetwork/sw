@@ -827,6 +827,8 @@ Files NativeTargetOptionsGroup::gatherAllFiles() const
         for (auto &f : *s)
             files.insert(f.first);
     }
+    for (auto &f : getMergeObject())
+        files.insert(f.first);
     return files;
 }
 
