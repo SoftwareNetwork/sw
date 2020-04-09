@@ -2423,8 +2423,9 @@ void NativeCompiledTarget::prepare_pass3_1()
         if (d.dep->LinkLibrariesOnly)
             continue;
         auto copy = std::make_shared<Dependency>(*d.dep);
-        deps.emplace(copy, d.inhtype);
-        deps_ordered.push_back(copy);
+        auto [_, inserted] = deps.emplace(copy, d.inhtype);
+        if (inserted)
+            deps_ordered.push_back(copy);
     }
 
     while (1)
@@ -2549,14 +2550,16 @@ void NativeCompiledTarget::prepare_pass3_2()
         if (d.dep->LinkLibrariesOnly)
             continue;
         auto copy = std::make_shared<Dependency>(*d.dep);
-        deps.emplace(copy, d.inhtype);
-        deps_ordered.push_back(copy);
+        auto [_, inserted] = deps.emplace(copy, d.inhtype);
+        if (inserted)
+            deps_ordered.push_back(copy);
     }
     for (auto &d : all_deps_normal)
     {
         auto copy = std::make_shared<Dependency>(*d);
-        deps.emplace(copy, InheritanceType::Public); // use public inh
-        deps_ordered.push_back(copy);
+        auto [_, inserted] = deps.emplace(copy, InheritanceType::Public); // use public inh
+        if (inserted)
+            deps_ordered.push_back(copy);
     }
 
     while (1)
@@ -2677,25 +2680,20 @@ void NativeCompiledTarget::prepare_pass3_3()
     // set our initial deps
     for (auto &d : getActiveDependencies())
     {
-        if (d.dep->IncludeDirectoriesOnly)
+        if (!d.dep->LinkLibrariesOnly)
             continue;
-        if (auto t = d.dep->getTarget().as<const NativeCompiledTarget *>())
-        {
-            if (!t->isStaticOrHeaderOnlyLibrary())
-                continue;
-        }
-        else if (auto t = d.dep->getTarget().as<const PredefinedTarget *>())
-        {
-            auto &ts = t->getInterfaceSettings();
-            if (!::sw::isStaticOrHeaderOnlyLibrary(t->getInterfaceSettings()))
-                continue;
-        }
-        else
-            throw SW_RUNTIME_ERROR("missing target code");
         auto copy = std::make_shared<Dependency>(*d.dep);
+        auto [_, inserted] = deps.emplace(copy, InheritanceType::Public); // use public inh
+        if (inserted)
+            deps_ordered.push_back(copy);
+    }
+    for (auto &d : all_deps_normal)
+    {
+        auto copy = std::make_shared<Dependency>(*d);
         copy->LinkLibrariesOnly = true; // force
-        deps.emplace(copy, InheritanceType::Public); // use public inh
-        deps_ordered.push_back(copy);
+        auto [_, inserted] = deps.emplace(copy, InheritanceType::Public); // use public inh
+        if (inserted)
+            deps_ordered.push_back(copy);
     }
 
     while (1)
