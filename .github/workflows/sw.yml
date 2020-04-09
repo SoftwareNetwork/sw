@@ -25,5 +25,13 @@ jobs:
       run: |
         brew install flex bison
 
-    - name: build
+    - name: build (non macOS)
+      if: runner.os != 'macOS'
       run: ./sw -static build
+
+    - name: build (macOS)
+      if: runner.os == 'macOS'
+      run: |
+        export PATH="/usr/local/opt/flex/bin:$PATH"
+        export PATH="/usr/local/opt/bison/bin:$PATH"
+        ./sw -static build
