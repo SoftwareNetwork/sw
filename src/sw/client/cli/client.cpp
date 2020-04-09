@@ -88,7 +88,7 @@ int sw_main(const Strings &args, Options &options)
     SwClientContext swctx(options);
 
     // for cli we set default input to '.' dir
-    if (swctx.getInputs().empty())
+    if (swctx.getInputs().empty() && options.options_build.input_settings_pairs.empty())
         swctx.getInputs().push_back(".");
     //
 
