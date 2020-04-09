@@ -19,7 +19,7 @@ command_line:
         desc: Lock file path
         type: path
 
-    #
+    # all subcommands
     subcommand:
         name: AllSubCommands
 
@@ -356,7 +356,7 @@ command_line:
             write_log_to_file:
                 option: log-to-file
 
-    #
+    # build
     subcommand:
         name: build
         desc: Build files, dirs or packages.
@@ -367,6 +367,8 @@ command_line:
                 list: true
                 positional: true
                 desc: Files or directories to build (paths to config)
+                external: true
+                location: inputs
 
             #static ::cl::opt<String> build_source_dir("S", ::cl::desc("Explicitly specify a source directory."), ::cl::sub(subcommand_build), ::cl::init("."));
             #static ::cl::opt<String> build_binary_dir("B", ::cl::desc("Explicitly specify a build directory."), ::cl::sub(subcommand_build), ::cl::init(SW_BINARY_DIR));
@@ -407,7 +409,7 @@ command_line:
                 value_desc: <input settings>
                 space_separated: true
 
-
+    # abi
     subcommand:
         name: abi
         desc: List package ABI, check for ABI breakages.
@@ -418,7 +420,10 @@ command_line:
                 list: true
                 positional: true
                 desc: inputs
+                external: true
+                location: inputs
 
+    # configure
     subcommand:
         name: configure
         desc: Create build script.
@@ -431,6 +436,7 @@ command_line:
                 default_value: |-
                     "."
 
+    # create
     subcommand:
         name: create
         desc: Create different projects.
@@ -469,10 +475,12 @@ command_line:
                 desc: Clear current directory
                 aliases: [o, ow]
 
+    # doc
     subcommand:
         name: doc
         desc: Open documentation.
 
+    # fetch
     subcommand:
         name: fetch
         desc: Fetch sources.
@@ -482,6 +490,7 @@ command_line:
                 option: build
                 desc: Build after fetch
 
+    # generate
     subcommand:
         name: generate
         desc: Generate IDE projects.
@@ -492,6 +501,8 @@ command_line:
                 positional: true
                 type: String
                 list: true
+                external: true
+                location: inputs
             generator:
                 option: G
                 type: String
@@ -506,6 +517,7 @@ command_line:
                 type: path
                 hidden: true
 
+    # install
     subcommand:
         name: install
         desc: Add package to lock.
@@ -520,6 +532,7 @@ command_line:
                 type: String
                 list: true
 
+    # integrate
     subcommand:
         name: integrate
         desc: Integrate sw into different tools.
@@ -534,6 +547,7 @@ command_line:
                 option: waf-deps
                 type: path
 
+    # list
     subcommand:
         name: list
         desc: List packages in database.
@@ -550,6 +564,7 @@ command_line:
                 desc: List installed packages
                 aliases: i
 
+    # open
     subcommand:
         name: open
         desc: Open package directory.
@@ -559,7 +574,9 @@ command_line:
                 positional: true
                 type: String
                 desc: package to open
+                list: true
 
+    # override
     subcommand:
         name: override
         desc: Override packages locally.
@@ -591,6 +608,7 @@ command_line:
                 desc: Save overridden packages desc to file.
                 value_desc: fn
 
+    # remote
     subcommand:
         name: remote
         desc: Manage remotes.
@@ -607,6 +625,7 @@ command_line:
                 desc: other remote args
                 consume_after: true
 
+    # remove
     subcommand:
         name: remove
         desc: Remove package.
@@ -616,8 +635,9 @@ command_line:
                 type: String
                 list: true
                 positional: true
-                desc: package to remove
+                desc: Packages to remove
 
+    # run
     subcommand:
         name: run
         desc: Run target (if applicable).
@@ -645,10 +665,12 @@ command_line:
                 type: String
                 list: true
 
+    # setup
     subcommand:
         name: setup
         desc: Used to do some system setup which may require administrator access.
 
+    # test
     subcommand:
         name: test
         desc: Run tests.
@@ -659,7 +681,10 @@ command_line:
                 desc: File or directory to use to generate projects
                 type: String
                 list: true
+                external: true
+                location: inputs
 
+    # update
     subcommand:
         name: update
         desc: Update lock file.
@@ -746,4 +771,3 @@ command_line:
                 type: String
                 positional: true
                 desc: sw uri arguments
-

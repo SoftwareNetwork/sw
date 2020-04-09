@@ -20,9 +20,6 @@
 
 SUBCOMMAND_DECL(test)
 {
-    if (getOptions().options_test.build_arg_test.empty())
-        getOptions().options_test.build_arg_test.push_back(".");
-
-    auto b = createBuildAndPrepare(getOptions().options_test.build_arg_test);
+    auto b = createBuildAndPrepare(getInputs());
     b->test();
 }

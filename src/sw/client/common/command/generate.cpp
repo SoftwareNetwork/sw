@@ -55,9 +55,6 @@ SUBCOMMAND_DECL(generate)
         }
     }
 
-    if (getOptions().options_generate.build_arg_generate.empty())
-        getOptions().options_generate.build_arg_generate.push_back(".");
-
     // actual generate
     if (getOptions().options_generate.generator.empty())
     {
@@ -92,7 +89,7 @@ SUBCOMMAND_DECL(generate)
             g->add_all_packages = true;
     }
 
-    auto b = createBuildAndPrepare({ getOptions().options_generate.build_arg_generate });
+    auto b = createBuildAndPrepare({ getInputs() });
     b->getExecutionPlan(); // prepare commands
     generator->generate(*b);
 }

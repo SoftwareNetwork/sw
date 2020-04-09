@@ -34,7 +34,7 @@ SUBCOMMAND_DECL(abi)
     SW_UNIMPLEMENTED;
 #endif
 
-    auto b = createBuildAndPrepare(getOptions().options_abi.inputs);
+    auto b = createBuildAndPrepare(getInputs());
     auto tgts1 = b->getTargetsToBuild();
     b->build();
 

@@ -34,6 +34,8 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "client.context");
 
+Strings inputs;
+
 void setHttpSettings(const Options &options)
 {
     httpSettings.verbose = options.curl_verbose;
@@ -366,6 +368,11 @@ std::unique_ptr<sw::SwBuild> SwClientContext::createBuildAndPrepare(const Inputs
     b->loadPackages();
     b->prepare();
     return std::move(b);
+}
+
+Strings &SwClientContext::getInputs() const
+{
+    return inputs;
 }
 
 void SwClientContext::addInputs(sw::SwBuild &b, const Inputs &i)

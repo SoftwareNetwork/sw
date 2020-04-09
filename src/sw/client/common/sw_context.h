@@ -55,24 +55,25 @@ struct Inputs
     Inputs() = default;
     Inputs(const String &s)
     {
+        if (s.empty())
+            throw SW_RUNTIME_ERROR("Empty input");
         inputs.push_back(s);
     }
     Inputs(const Strings &s)
     {
+        if (s.empty())
+            throw SW_RUNTIME_ERROR("Empty inputs");
         inputs = s;
     }
 
     void addInputPair(const sw::TargetSettings &settings, const String &input)
     {
+        if (input.empty())
+            throw SW_RUNTIME_ERROR("Empty inputs");
         input_pairs.push_back({settings, input});
     }
 
-    const auto &getInputs() const
-    {
-        if (inputs.empty() && input_pairs.empty())
-            inputs.push_back(".");
-        return inputs;
-    }
+    const auto &getInputs() const { return inputs; }
     const auto &getInputPairs() const { return input_pairs; }
 
 private:
@@ -103,6 +104,7 @@ struct SwClientContext
     std::vector<sw::TargetSettings> createSettings();
 
     void addInputs(sw::SwBuild &b, const Inputs &i);
+    Strings &getInputs() const;
 
     //
     String listPredefinedTargets();
