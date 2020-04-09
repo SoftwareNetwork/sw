@@ -90,6 +90,7 @@ struct SwClientContext
     virtual ~SwClientContext();
 
     sw::SwContext &getContext();
+    void resetContext();
 
     Options &getOptions() { return *options; }
     const Options &getOptions() const { return *options; }

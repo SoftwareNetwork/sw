@@ -637,6 +637,11 @@ sw::SwContext &SwClientContext::getContext()
     return *swctx_;
 }
 
+void SwClientContext::resetContext()
+{
+    swctx_.reset();
+}
+
 const sw::TargetMap &SwClientContext::getPredefinedTargets(sw::SwContext &swctx)
 {
     if (!tm)
