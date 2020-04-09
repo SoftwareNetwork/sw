@@ -51,6 +51,13 @@ static void setup_console()
 #endif
 }
 
+static void free_ctx_and_delete_files(SwClientContext &swctx, const path &d)
+{
+    // free files
+    swctx.resetContext();
+    fs::remove_all(d);
+}
+
 void open_directory(const path &);
 void open_file(const path &);
 
@@ -99,7 +106,7 @@ F(build)
     fs::create_directories(d);
     SCOPE_EXIT
     {
-        //fs::remove_all(d); // FIXME:
+        free_ctx_and_delete_files(swctx, d);
     };
     ScopedCurrentPath scp(d, CurrentPathScope::All);
     auto b = swctx.createBuildAndPrepare({ p.toString() });
@@ -125,7 +132,7 @@ F(run)
     fs::create_directories(d);
     SCOPE_EXIT
     {
-        //fs::remove_all(d); // FIXME:
+        free_ctx_and_delete_files(swctx, d);
     };
     ScopedCurrentPath scp(d, CurrentPathScope::All);
 
@@ -161,9 +168,7 @@ F(upload)
     // before scp
     SCOPE_EXIT
     {
-        // free files
-        //swctx.getContext().reset();
-        fs::remove_all(fn.parent_path());
+        free_ctx_and_delete_files(swctx, fn.parent_path());
     };
 
     // run secure as below?
