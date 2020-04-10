@@ -961,60 +961,41 @@ void RcTool::prepareCommand1(const Target &t)
         cmd->name_short = InputFile().filename().u8string();
     }
 
-    t.template as<NativeCompiledTarget>().getMergeObject().NativeCompilerOptions::addDefinitions(*cmd);
-
-    // rc need to have -I arg separate to dir
-    // and dir must be taken into quotes (???) maybe this is needed for rsp files?
-    auto print_idir = [&c = *cmd](const auto &a, auto &flag)
+    auto print_def = [&c = *cmd](const auto &a)
     {
-        for (auto &d : a)
+        for (auto &[k,v] : a)
         {
-            c.arguments.push_back(flag);
-            auto p = normalize_path(d);
-            /*if (p.find(' ') != p.npos)
-                c.arguments.push_back("\"" + p + "\"");
-            else*/
-                c.arguments.push_back(normalize_path(d));
+            if (v.empty())
+                c.arguments.push_back("-D" + k);
+            else
+            {
+                // protect value because of possible spaces ' ' and braces '(', ')'
+                // only when not escaped
+                String s = "-D" + k + "=";
+                auto v2 = v.toString();
+                if (v2[0] != '\"')
+                    s += "\"";
+                s += v2;
+                if (v2[0] != '\"')
+                    s += "\"";
+                c.arguments.push_back(s);
+            }
         }
     };
 
-    print_idir(t.template as<NativeCompiledTarget>().getMergeObject().NativeCompilerOptions::gatherIncludeDirectories(), "-I");
+    print_def(t.template as<NativeCompiledTarget>().getMergeObject().NativeCompilerOptions::Definitions);
+    print_def(t.template as<NativeCompiledTarget>().getMergeObject().NativeCompilerOptions::System.Definitions);
 
-    // ms bug: https://developercommunity.visualstudio.com/content/problem/417189/rcexe-incorrect-behavior-with.html
-    //for (auto &i : system_idirs)
-        //cmd->args.push_back("-I" + normalize_path(i));
+    // dir must be taken into quotes because of possible spaces
+    for (auto &d : t.template as<NativeCompiledTarget>().getMergeObject().NativeCompilerOptions::gatherIncludeDirectories())
+        cmd->arguments.push_back("-I\""s + normalize_path(d) + "\"");
 
     // use env
     String s;
+    // it is ok when idirs is empty, do not check for it!
     for (auto &i : idirs)
         s += normalize_path(i) + ";";
     cmd->environment["INCLUDE"] = s;
-
-    // fix spaces around defs value:
-    // from: -DSW_PACKAGE_API=extern \"C\" __declspec(dllexport)
-    // to:   -DSW_PACKAGE_API="extern \"C\" __declspec(dllexport)"
-
-    // find better way - protect things in addEverything?
-
-    for (auto &ap : cmd->arguments)
-    {
-        auto a = ap->toString();
-        if (a.find("-D") == 0)
-        {
-            auto ep = a.find("=");
-            if (ep == a.npos || a.find(" ") == a.npos)
-                continue;
-            if (a.size() == ep || a[ep + 1] == '\"')
-                continue;
-            a = a.substr(0, ep) + "=\"" + a.substr(ep + 1) + "\"";
-        }
-        if (a.find("-I") == 0)
-        {
-            if (a.find(" ") == a.npos)
-                continue;
-            a = "-I\"" + a.substr(2) + "\"";
-        }
-    }
 
     getCommandLineOptions<RcToolOptions>(cmd.get(), *this);
 }
