@@ -33,32 +33,20 @@ struct SwBuild;
 
 enum class GeneratorType
 {
-    // everything
-    Batch,
-    CMake,
-    CompilationDatabase,
-    FastBuild,
-    Make,
-    NMake,
-    Ninja,
-    RawBootstrapBuild,
-    QMake,
-    Shell,
-
-    // sw
-    SwExecutionPlan,
-    SwBuildDescription, // simply BDesc?
-
-    // IDE
-    CodeBlocks,
-    VisualStudio,
-    Xcode,
-    // qt creator?
-
-    Max,
+#define GENERATOR(x,y) x,
+#include "generator.inl"
+#undef GENERATOR
 };
 
-String toString(GeneratorType t);
+struct GeneratorDescription
+{
+    GeneratorType type;
+    String name;
+    String path_string;
+    StringSet allowed_names;
+};
+
+const std::vector<GeneratorDescription> &getGenerators();
 
 enum class VsGeneratorType
 {

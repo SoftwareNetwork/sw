@@ -40,46 +40,6 @@ using namespace sw;
 
 int vsVersionFromString(const String &s);
 
-String toPathString(GeneratorType t)
-{
-    switch (t)
-    {
-    case GeneratorType::Ninja:
-        return "ninja";
-    case GeneratorType::Batch:
-        return "batch";
-    case GeneratorType::CMake:
-        return "cmake";
-    case GeneratorType::FastBuild:
-        return "fbuild";
-    case GeneratorType::Make:
-        return "make";
-    case GeneratorType::NMake:
-        return "nmake";
-    case GeneratorType::Shell:
-        return "shell";
-    case GeneratorType::CompilationDatabase:
-        return "compdb";
-    case GeneratorType::RawBootstrapBuild:
-        return "rawbootstrap";
-
-    case GeneratorType::SwExecutionPlan:
-        return "swexplan";
-    case GeneratorType::SwBuildDescription:
-        return "swbdesc";
-
-    case GeneratorType::CodeBlocks:
-        return "cb";
-    case GeneratorType::VisualStudio:
-        return "vs";
-    case GeneratorType::Xcode:
-        return "xcode";
-
-    default:
-        throw SW_LOGIC_ERROR("not implemented");
-    }
-}
-
 String toPathString(VsGeneratorType t)
 {
     switch (t)
@@ -97,54 +57,76 @@ String toPathString(VsGeneratorType t)
     }
 }
 
+static std::vector<GeneratorDescription> createGenerators()
+{
+    std::vector<GeneratorDescription> g;
+
+#define GENERATOR(x, y)                                           \
+    {                                                             \
+        GeneratorDescription d;                                   \
+        d.type = GeneratorType::x;                                \
+        d.name = y;                                               \
+        d.path_string = boost::to_lower_copy(String(y));          \
+        d.allowed_names.insert(boost::to_lower_copy(String(#x))); \
+        d.allowed_names.insert(boost::to_lower_copy(String(y)));  \
+        g.push_back(d);                                           \
+    }
+#include "generator.inl"
+#undef GENERATOR
+
+    // correct path strings
+
+#define SET_PATH_STRING(t, n) \
+    g[(int)t].path_string = boost::to_lower_copy(String(n))
+
+    SET_PATH_STRING(GeneratorType::FastBuild, "fbuild");
+    SET_PATH_STRING(GeneratorType::CompilationDatabase, "compdb");
+    SET_PATH_STRING(GeneratorType::RawBootstrapBuild, "rawbootstrap");
+    SET_PATH_STRING(GeneratorType::SwExecutionPlan, "swexplan");
+    SET_PATH_STRING(GeneratorType::SwBuildDescription, "swbdesc");
+    SET_PATH_STRING(GeneratorType::CodeBlocks, "cb");
+    SET_PATH_STRING(GeneratorType::VisualStudio, "vs");
+
+#undef SET_PATH_STRING
+
+    // additional allowed names
+
+#define ADD_ALLOWED_NAME(t, n) \
+    g[(int)t].allowed_names.insert(boost::to_lower_copy(String(n)))
+
+    ADD_ALLOWED_NAME(GeneratorType::VisualStudio, "VS");
+    ADD_ALLOWED_NAME(GeneratorType::VisualStudio, "VS_IDE");
+    ADD_ALLOWED_NAME(GeneratorType::VisualStudio, "VS_NMake");
+    ADD_ALLOWED_NAME(GeneratorType::VisualStudio, "VSNMake");
+    ADD_ALLOWED_NAME(GeneratorType::CodeBlocks, "cb");
+    ADD_ALLOWED_NAME(GeneratorType::Make, "Makefile");
+    ADD_ALLOWED_NAME(GeneratorType::FastBuild, "FBuild");
+    ADD_ALLOWED_NAME(GeneratorType::CompilationDatabase, "CompDb");
+    ADD_ALLOWED_NAME(GeneratorType::SwExecutionPlan, "SwExPlan");
+    ADD_ALLOWED_NAME(GeneratorType::SwBuildDescription, "SwBDesc");
+    ADD_ALLOWED_NAME(GeneratorType::RawBootstrapBuild, "rawbootstrap");
+    ADD_ALLOWED_NAME(GeneratorType::RawBootstrapBuild, "raw-bootstrap");
+
+    //else if (boost::iequals(s, "qtc"))
+    //return GeneratorType::qtc;
+
+#undef ADD_ALLOWED_NAME
+
+    return g;
+}
+
+const std::vector<GeneratorDescription> &getGenerators()
+{
+    static const auto g = createGenerators();
+    return g;
+}
+
 void checkForSingleSettingsInputs(const SwBuild &b)
 {
     for (auto &i : b.getInputs())
     {
         if (i.getSettings().size() != 1)
             throw SW_RUNTIME_ERROR("This generator supports single config inputs only.");
-    }
-}
-
-String toString(GeneratorType t)
-{
-    switch (t)
-    {
-    case GeneratorType::Ninja:
-        return "Ninja";
-    case GeneratorType::Batch:
-        return "Batch";
-    case GeneratorType::Make:
-        return "Make";
-    case GeneratorType::CMake:
-        return "CMake";
-    case GeneratorType::FastBuild:
-        return "FastBuild";
-    case GeneratorType::NMake:
-        return "NMake";
-    case GeneratorType::QMake:
-        return "QMake";
-    case GeneratorType::Shell:
-        return "Shell";
-    case GeneratorType::CompilationDatabase:
-        return "Compilation Database";
-    case GeneratorType::RawBootstrapBuild:
-        return "Raw Bootstrap Build";
-
-    case GeneratorType::SwExecutionPlan:
-        return "Sw Execution Plan";
-    case GeneratorType::SwBuildDescription:
-        return "Sw Build Description";
-
-    case GeneratorType::CodeBlocks:
-        return "Code Blocks";
-    case GeneratorType::VisualStudio:
-        return "Visual Studio";
-    case GeneratorType::Xcode:
-        return "Xcode";
-
-    default:
-        throw SW_LOGIC_ERROR("not implemented: " + std::to_string((int)t));
     }
 }
 
@@ -167,38 +149,13 @@ static String toString(VsGeneratorType t)
 
 static GeneratorType fromString(const String &s)
 {
-    if (0)
-        ;
-    else if (boost::istarts_with(s, "VS_IDE") || boost::istarts_with(s, "VS"))
-        return GeneratorType::VisualStudio;
-    else if (boost::iequals(s, "cb") || boost::iequals(s, "codeblocks"))
-        return GeneratorType::CodeBlocks;
-    else if (boost::iequals(s, "xcode"))
-        return GeneratorType::Xcode;
-    else if (boost::iequals(s, "Ninja"))
-        return GeneratorType::Ninja;
-    else if (boost::iequals(s, "Make") || boost::iequals(s, "Makefile"))
-        return GeneratorType::Make;
-    else if (boost::iequals(s, "CMake"))
-        return GeneratorType::CMake;
-    else if (boost::iequals(s, "FBuild") || boost::iequals(s, "FastBuild"))
-        return GeneratorType::FastBuild;
-    else if (boost::iequals(s, "NMake"))
-        return GeneratorType::NMake;
-    else if (boost::iequals(s, "Batch"))
-        return GeneratorType::Batch;
-    else if (boost::iequals(s, "Shell"))
-        return GeneratorType::Shell;
-    else if (boost::iequals(s, "CompDb"))
-        return GeneratorType::CompilationDatabase;
-    else if (boost::iequals(s, "SwExPlan"))
-        return GeneratorType::SwExecutionPlan;
-    else if (boost::iequals(s, "SwBDesc"))
-        return GeneratorType::SwBuildDescription;
-    else if (boost::iequals(s, "raw-bootstrap") || boost::iequals(s, "raw-bootstrap"))
-        return GeneratorType::RawBootstrapBuild;
-    //else if (boost::iequals(s, "qtc"))
-    //return GeneratorType::qtc;
+    auto s2 = boost::to_lower_copy(s);
+    for (auto &g : getGenerators())
+    {
+        if (g.allowed_names.find(s2) != g.allowed_names.end())
+            return g.type;
+    }
+
     //String gens;
     //for (int i = 0; i < (int)GeneratorType::Max; i++)
         //gens += "    - " + toString(GeneratorType(i)) + "\n";
@@ -315,7 +272,7 @@ path Generator::getRootDirectory(const sw::SwBuild &b) const
 
 path Generator::getPathString() const
 {
-    return toPathString(getType());
+    return getGenerators()[(int)getType()].path_string;
 }
 
 path VSGenerator::getPathString() const
