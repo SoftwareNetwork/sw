@@ -424,7 +424,12 @@ SUBCOMMAND_DECL(integrate)
                 if ((inh & 4) == 0)
                     continue;
                 for (auto &[k, v] : p["dependencies"].getSettings())
-                    ctx.addLine("target_link_libraries(" + pkg2string(pkg) + " INTERFACE " + k + ")");
+                {
+                    sw::PackageId dep(k);
+                    if (b.getContext().getPredefinedTargets().find(dep) != b.getContext().getPredefinedTargets().end())
+                        continue;
+                    ctx.addLine("target_link_libraries(" + pkg2string(pkg) + " INTERFACE " + dep.toString() + ")");
+                }
             }
         }
         write_file_if_different(getOptions().options_integrate.integrate_cmake_deps.parent_path() / "CMakeLists.txt", ctx.getText());
