@@ -656,7 +656,7 @@ void NativeCompiledTarget::findCompiler()
     activateCompiler(getSettings()["native"]["program"]["c"], { ".c" });
 
     if (ct == CompilerType::UnspecifiedCompiler)
-        throw SW_RUNTIME_ERROR("Unknown compiler: " + get_settings_package_id(getSettings()["native"]["program"]["c"]).toString());
+        throw SW_RUNTIME_ERROR("Cannot find compiler " + get_settings_package_id(getSettings()["native"]["program"]["c"]).toString() + " for settings: " + getSettings().toString());
 
     if (getBuildSettings().TargetOS.is(OSType::Windows))
     {
