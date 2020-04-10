@@ -903,13 +903,18 @@ Commands SwBuild::getCommands() const
                     {
                         for (auto &[k, v] : in)
                         {
+                            if (swctx.getPredefinedTargets().find(PackageId(k)) != swctx.getPredefinedTargets().end())
+                                continue;
                             auto i = getTargets().find(PackageId(k));
                             if (i == getTargets().end())
                                 throw SW_RUNTIME_ERROR("dep not found: " + k);
                             auto j = i->second.findSuitable(v.getSettings());
                             if (j == i->second.end())
-                                return; // probably was loaded config
+                            {
+                                LOG_WARN(logger, "dep+settings not found: " + k + ": " + v.getSettings().toString());
+                                continue; // probably was loaded config
                                 //throw SW_RUNTIME_ERROR("dep+settings not found: " + k + ": " + v.getSettings().toString());
+                            }
 
                             auto m = ttb[PackageId(k)].findEqual((*j)->getSettings());
                             if (m != ttb[PackageId(k)].end())
