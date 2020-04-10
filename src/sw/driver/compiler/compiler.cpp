@@ -953,6 +953,17 @@ SW_DEFINE_PROGRAM_CLONE(RcTool)
 
 void RcTool::prepareCommand1(const Target &t)
 {
+    //
+    // https://docs.microsoft.com/en-us/windows/win32/menurc/resource-compiler
+    // What we know:
+    // - rc can use .rsp files
+    // - include dirs with spaces cannot be placed into rsp and must go into INCLUDE env var
+    //   ms bug: https://developercommunity.visualstudio.com/content/problem/417189/rcexe-incorrect-behavior-with.html
+    // - we do not need to protect args with quotes: "-Dsomevar" - not needed
+    // - definition value MUST be escaped: -DKEY="VALUE" because of possible spaces ' ' and braces '(', ')'
+    // - include dir without spaces MUST NOT be escaped: -IC:/SOME/DIR
+    //
+
     cmd->protect_args_with_quotes = false;
 
     if (InputFile)
@@ -961,6 +972,7 @@ void RcTool::prepareCommand1(const Target &t)
         cmd->name_short = InputFile().filename().u8string();
     }
 
+    // defs
     auto print_def = [&c = *cmd](const auto &a)
     {
         for (auto &[k,v] : a)
@@ -969,8 +981,6 @@ void RcTool::prepareCommand1(const Target &t)
                 c.arguments.push_back("-D" + k);
             else
             {
-                // protect value because of possible spaces ' ' and braces '(', ')'
-                // only when not escaped
                 String s = "-D" + k + "=";
                 auto v2 = v.toString();
                 if (v2[0] != '\"')
@@ -986,13 +996,22 @@ void RcTool::prepareCommand1(const Target &t)
     print_def(t.template as<NativeCompiledTarget>().getMergeObject().NativeCompilerOptions::Definitions);
     print_def(t.template as<NativeCompiledTarget>().getMergeObject().NativeCompilerOptions::System.Definitions);
 
-    // dir must be taken into quotes because of possible spaces
+    // idirs
+    Strings env_idirs;
     for (auto &d : t.template as<NativeCompiledTarget>().getMergeObject().NativeCompilerOptions::gatherIncludeDirectories())
-        cmd->arguments.push_back("-I\""s + normalize_path(d) + "\"");
+    {
+        auto i = normalize_path(d);
+        if (i.find(' ') != i.npos)
+            env_idirs.push_back(i);
+        else
+            cmd->arguments.push_back("-I" + i);
+    }
 
     // use env
     String s;
-    // it is ok when idirs is empty, do not check for it!
+    // it is ok when INCLUDE is empty, do not check for it!
+    for (auto &i : env_idirs)
+        s += i + ";";
     for (auto &i : idirs)
         s += normalize_path(i) + ";";
     cmd->environment["INCLUDE"] = s;
