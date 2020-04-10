@@ -295,13 +295,13 @@ void MainWindow::setupGeneral(QWidget *parent)
             auto b = new QPushButton("x");
             b->setMaximumWidth(30);
 
-            auto sz = swctx.getInputs().size();
             swctx.getInputs().push_back(s.toStdString());
-            connect(b, &QPushButton::clicked, [this, gbl, w, sz]()
+            connect(b, &QPushButton::clicked, [this, gbl, w, s]()
             {
                 //gbl->removeWidget(w);
                 delete w;
-                swctx.getInputs()[sz].clear();
+                auto &var = swctx.getInputs();
+                var.erase(std::remove(var.begin(), var.end(), s.toStdString()), var.end());
             });
             l->addWidget(b);
 
@@ -412,15 +412,40 @@ void MainWindow::setupConfiguration(QWidget *parent)
     cfgLayout->addLayout(middle);
     cfgLayout->addLayout(right);
 
+    auto add_check_box_with_text = [this](auto *parent, const QString &name, const String &val, auto &var)
+    {
+        auto cb = new QCheckBox(name);
+        connect(cb, &QCheckBox::stateChanged, [&var, val](int state)
+        {
+            if (state)
+                var.push_back(val);
+            else
+                var.erase(std::remove(var.begin(), var.end(), val), var.end());
+        });
+        parent->addWidget(cb);
+        return cb;
+    };
+
+    auto add_check_box_bool = [this](auto *parent, const QString &name, auto &var)
+    {
+        auto cb = new QCheckBox(name);
+        connect(cb, &QCheckBox::stateChanged, [&var](int state)
+        {
+            var = state;
+        });
+        parent->addWidget(cb);
+        return cb;
+    };
+
     // configuration
     {
         auto gb = new QGroupBox("Configuration");
         middle->addWidget(gb);
         QVBoxLayout *gbl = new QVBoxLayout;
-        gbl->addWidget(new QCheckBox("Debug"));
-        gbl->addWidget(new QCheckBox("Minimal Size Release"));
-        gbl->addWidget(new QCheckBox("Release With Debug Information"));
-        auto cb = new QCheckBox("Release");
+        add_check_box_with_text(gbl, "Debug", "debug", swctx.getOptions().configuration);
+        add_check_box_with_text(gbl, "Minimal Size Release", "minimalsizerelease", swctx.getOptions().configuration);
+        add_check_box_with_text(gbl, "Release With Debug Information", "releasewithdebuginformation", swctx.getOptions().configuration);
+        auto cb = add_check_box_with_text(gbl, "Release", "release", swctx.getOptions().configuration);
         cb->setChecked(true);
         gbl->addWidget(cb);
         gb->setLayout(gbl);
@@ -431,10 +456,9 @@ void MainWindow::setupConfiguration(QWidget *parent)
         auto gb = new QGroupBox("Linking");
         middle->addWidget(gb);
         QVBoxLayout *gbl = new QVBoxLayout;
-        auto cb = new QCheckBox("Dynamic (.dll/.so/.dylib)");
+        auto cb = add_check_box_bool(gbl, "Dynamic (.dll/.so/.dylib)", swctx.getOptions().shared_build);
         cb->setChecked(true);
-        gbl->addWidget(cb);
-        gbl->addWidget(new QCheckBox("Static (.lib/.a)"));
+        add_check_box_bool(gbl, "Static (.lib/.a)", swctx.getOptions().static_build);
         gb->setLayout(gbl);
     }
 
@@ -443,10 +467,9 @@ void MainWindow::setupConfiguration(QWidget *parent)
         auto gb = new QGroupBox("Runtime");
         middle->addWidget(gb);
         QVBoxLayout *gbl = new QVBoxLayout;
-        auto cb = new QCheckBox("Dynamic (MD/MDd)");
+        auto cb = add_check_box_bool(gbl, "Dynamic (MD/MDd)", swctx.getOptions().win_md);
         cb->setChecked(true);
-        gbl->addWidget(cb);
-        gbl->addWidget(new QCheckBox("Static (MT/MTd)"));
+        add_check_box_bool(gbl, "Static (MT/MTd)", swctx.getOptions().win_mt);
         gb->setLayout(gbl);
     }
 
@@ -456,12 +479,11 @@ void MainWindow::setupConfiguration(QWidget *parent)
         middle->addWidget(gb);
         QVBoxLayout *gbl = new QVBoxLayout;
         // basic list
-        gbl->addWidget(new QCheckBox("x86"));
-        auto cb = new QCheckBox("x64");
+        add_check_box_with_text(gbl, "x86", "x86", swctx.getOptions().platform);
+        auto cb = add_check_box_with_text(gbl, "x64", "x64", swctx.getOptions().platform);
         cb->setChecked(true);
-        gbl->addWidget(cb);
-        gbl->addWidget(new QCheckBox("arm"));
-        gbl->addWidget(new QCheckBox("aarch64"));
+        add_check_box_with_text(gbl, "arm", "arm", swctx.getOptions().platform);
+        add_check_box_with_text(gbl, "aarch64", "aarch64", swctx.getOptions().platform);
         gbl->addStretch(1);
         gb->setLayout(gbl);
     }
@@ -475,24 +497,31 @@ void MainWindow::setupConfiguration(QWidget *parent)
         bool set = false;
         for (auto &cl : cls)
         {
-            auto gb = new QGroupBox(cl.name.c_str());
+            auto gb = new QGroupBox(cl.desc.c_str());
             gbl->addWidget(gb);
             QVBoxLayout *gbl = new QVBoxLayout;
             gb->setLayout(gbl);
-            for (auto &[pkg,_] : cl.releases)
-                gbl->addWidget(new QCheckBox(pkg.getVersion().toString().c_str()));
+            for (auto &[pkg, _] : cl.releases)
+                add_check_box_with_text(gbl, pkg.getVersion().toString().c_str(), pkg.toString(), swctx.getOptions().compiler);
             if (!set && !cl.releases.empty())
             {
                 ((QCheckBox*)gb->children().back())->setChecked(true);
                 set = true;
             }
             for (auto &[pkg,_] : cl.prereleases)
-                gbl->addWidget(new QCheckBox(pkg.getVersion().toString().c_str()));
+                add_check_box_with_text(gbl, pkg.getVersion().toString().c_str(), pkg.toString(), swctx.getOptions().compiler);
             gbl->addStretch(1);
         }
         gbl->addStretch(1);
         gb->setLayout(gbl);
     }
+
+    auto rb = new QPushButton("Reset");
+    connect(rb, &QPushButton::click, []()
+    {
+        //setupConfiguration(cfg);
+    });
+    middle->addWidget(rb);
 
     middle->addStretch(1);
     cfgLayout->addStretch(1);

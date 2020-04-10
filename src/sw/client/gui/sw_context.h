@@ -29,5 +29,8 @@ struct SwGuiContext : SwClientContext
     void command_test() override;
 
 private:
+    bool running = false;
+
     void run_with_log(const QString &title, std::function<void(void)> f);
+    bool check_running() const;
 };

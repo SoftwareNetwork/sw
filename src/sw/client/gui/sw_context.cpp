@@ -20,6 +20,7 @@
 
 #include "logwindow.h"
 
+#include <qmessagebox.h>
 #include <qthread.h>
 
 #include <primitives/log.h>
@@ -27,16 +28,22 @@ DECLARE_STATIC_LOGGER(logger, "gui.sw_context");
 
 void SwGuiContext::command_build()
 {
+    if (check_running())
+        return;
     run_with_log("Build Log", [this]()
     {
+        SwapAndRestore sr(running, true);
         Base::command_build();
     });
 }
 
 void SwGuiContext::command_test()
 {
+    if (check_running())
+        return;
     run_with_log("Test Log", [this]()
     {
+        SwapAndRestore sr(running, true);
         Base::command_test();
     });
 }
@@ -67,4 +74,11 @@ void SwGuiContext::run_with_log(const QString &title, std::function<void(void)> 
         w->stop();
     });
     t->start();
+}
+
+bool SwGuiContext::check_running() const
+{
+    if (running)
+        QMessageBox::warning(0, 0, "Operation is already in progress!");
+    return running;
 }
