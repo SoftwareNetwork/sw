@@ -18,6 +18,7 @@
 
 #include "packages_model.h"
 
+#include <qcompleter.h>
 #include <sw/manager/package_database.h>
 
 PackagesModel::PackagesModel(sw::PackagesDatabase &s, bool lazy)
@@ -38,12 +39,37 @@ void PackagesModel::setFilter(const QString &f)
 {
     beginResetModel();
     std::set<sw::PackageId> pkgs;
-    auto ppaths = s.getMatchingPackages(f.toStdString());
+    std::vector<sw::PackagePath> ppaths;
+    sw::Version ver;
+    bool is_id = false;
+    try
+    {
+        sw::PackageId id(f.toStdString());
+        ppaths = s.getMatchingPackages(id.getPath().toString(), limit);
+        ver = id.getVersion();
+        is_id = true;
+    }
+    catch (std::exception &)
+    {
+        ppaths = s.getMatchingPackages(f.toStdString(), limit);
+    }
     for (auto &ppath : ppaths)
     {
+        bool added = false;
         auto vs = s.getVersionsForPackage(ppath);
         for (auto &v : vs)
-            pkgs.emplace(ppath, v);
+        {
+            if (is_id && v == ver)
+            {
+                pkgs.emplace(ppath, v);
+                added = true;
+            }
+        }
+        if (!added)
+        {
+            for (auto &v : vs)
+                pkgs.emplace(ppath, v);
+        }
     }
     this->pkgs.assign(pkgs.begin(), pkgs.end());
     endResetModel();
@@ -72,12 +98,50 @@ int PackagesModel::rowCount(const QModelIndex &parent) const
 
 int PackagesModel::columnCount(const QModelIndex &parent) const
 {
-    return 1;
+    return single_column_mode ? 1 : 2;
 }
 
 QVariant PackagesModel::data(const QModelIndex &index, int role) const
 {
-    if (role == Qt::DisplayRole)
-        return pkgs[index.row()].toString().c_str();
+    if (!index.isValid())
+        return {};
+
+    if (role == Qt::DisplayRole || role == Qt::EditRole)
+    {
+        if (single_column_mode)
+            return pkgs[index.row()].toString().c_str();
+        else
+        {
+            if (index.column() == 0)
+                return pkgs[index.row()].getPath().toString().c_str();
+            else
+                return pkgs[index.row()].getVersion().toString().c_str();
+        }
+    }
     return {};
+}
+
+PackagesLineEdit::PackagesLineEdit(PackagesModel *cpm, QWidget *parent)
+    : QLineEdit(parent)
+{
+    if (!cpm)
+        return;
+
+    auto completer = new QCompleter();
+    completer->setModel(cpm);
+    completer->setCaseSensitivity(Qt::CaseInsensitive);
+    completer->setFilterMode(Qt::MatchContains);
+    completer->setModelSorting(QCompleter::CaseInsensitivelySortedModel);
+    completer->setMaxVisibleItems(10);
+
+    connect(this, &PackagesLineEdit::textChanged, [this, completer, cpm](const QString &text)
+    {
+        if (text.size() < 2)
+            setCompleter(nullptr);
+        else
+        {
+            cpm->setFilter(text);
+            setCompleter(completer);
+        }
+    });
 }
