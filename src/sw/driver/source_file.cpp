@@ -194,7 +194,7 @@ void SourceFileStorage::add(const std::shared_ptr<SourceFile> &f)
     if (target->DryRun || !f)
         return;
 
-    source_files[f->file] = f;
+    addFile(f->file, f);
 }
 
 void SourceFileStorage::add(const path &file)
