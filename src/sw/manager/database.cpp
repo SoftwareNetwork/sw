@@ -430,14 +430,21 @@ void PackagesDatabase::deleteOverriddenPackageDir(const path &sdir) const
         );
 }
 
-std::vector<PackagePath> PackagesDatabase::getMatchingPackages(const String &name) const
+std::vector<PackagePath> PackagesDatabase::getMatchingPackages(const String &name, int limit, int offset) const
 {
+    String slimit;
+    if (limit > 0)
+        slimit = " LIMIT " + std::to_string(limit);
+    String soffset;
+    if (offset > 0)
+        soffset = " LIMIT " + std::to_string(offset);
+
     std::vector<PackagePath> pkgs2;
     String q;
     if (name.empty())
-        q = "SELECT path FROM package ORDER BY path COLLATE NOCASE";
+        q = "SELECT path FROM package ORDER BY path COLLATE NOCASE" + slimit + soffset;
     else
-        q = "SELECT path FROM package WHERE path like '%" + name + "%' ORDER BY path COLLATE NOCASE";
+        q = "SELECT path FROM package WHERE path like '%" + name + "%' ORDER BY path COLLATE NOCASE" + slimit + soffset;
     for (const auto &row : (*db)(
         custom_query(sqlpp::verbatim(q))
         .with_result_type_of(select(pkgs.path).from(pkgs))

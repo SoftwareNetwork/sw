@@ -51,7 +51,7 @@ struct SW_MANAGER_API PackagesDatabase : Database
     db::PackageId getPackageVersionId(const PackageId &) const;
     String getPackagePath(db::PackageId) const;
 
-    std::vector<PackagePath> getMatchingPackages(const String &name = {}) const;
+    std::vector<PackagePath> getMatchingPackages(const String &name = {}, int limit = 0, int offset = 0) const;
     std::vector<Version> getVersionsForPackage(const PackagePath &) const;
 
 private:
