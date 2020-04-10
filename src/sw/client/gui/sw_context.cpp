@@ -44,7 +44,7 @@ void SwGuiContext::command_test()
 void SwGuiContext::run_with_log(const QString &title, std::function<void(void)> f)
 {
     auto w = new LogWindow(*this);
-    w->setBaseSize({400,300});
+    w->setMinimumSize({400,300});
     w->setWindowTitle(title);
     w->show();
 
@@ -52,6 +52,7 @@ void SwGuiContext::run_with_log(const QString &title, std::function<void(void)> 
     {
         try
         {
+            LOG_INFO(logger, "Starting...");
             f();
             LOG_INFO(logger, "Finished.");
         }

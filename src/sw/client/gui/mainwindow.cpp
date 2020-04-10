@@ -145,6 +145,7 @@ void MainWindow::setupUi()
         auto v = new QTableView;
 
         auto m = new PackagesModel(db, true);
+        m->single_column_mode = false;
         v->setModel(m);
         v->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 
@@ -258,50 +259,49 @@ void MainWindow::setupGeneral(QWidget *parent)
         gb->setLayout(gbl);
         auto afile = new QPushButton("Add File");
         auto adir = new QPushButton("Add Directory");
-        auto pkgcb = new QComboBox();
+
+        PackagesModel *cpm = nullptr;
+        for (auto rs : swctx.getContext().getRemoteStorages())
+        {
+            if (auto s1 = dynamic_cast<sw::StorageWithPackagesDatabase *>(rs))
+            {
+                cpm = new PackagesModel(s1->getPackagesDatabase(), true);
+                //cpm->single_column_mode = false;
+                //cpm->limit = 50;
+                break;
+            }
+        }
+
+        auto pkgcble = new PackagesLineEdit(cpm);
         auto apkg = new QPushButton("Add Package");
         gbl->addWidget(afile);
         gbl->addWidget(adir);
-        gbl->addWidget(pkgcb);
+        gbl->addWidget(pkgcble);
         gbl->addWidget(apkg);
 
-        connect(pkgcb, &QComboBox::currentTextChanged, [this, pkgcb]()
+        auto add_input = [this, gbl](const QString &s)
         {
-            return;
-            auto &rs = swctx.getContext().getRemoteStorages();
-            if (rs.empty())
+            if (std::find(swctx.getInputs().begin(), swctx.getInputs().end(), s.toStdString()) != swctx.getInputs().end())
                 return;
-            if (auto s1 = dynamic_cast<sw::StorageWithPackagesDatabase *>(rs[0]))
-            {
-                pkgcb->clear();
-                auto ppaths = s1->getPackagesDatabase().getMatchingPackages(pkgcb->currentText().toStdString());
-                for (auto &ppath : ppaths)
-                {
-                    auto vs = s1->getPackagesDatabase().getVersionsForPackage(ppath);
-                    for (auto &v : vs)
-                        pkgcb->addItem(sw::PackageId{ ppath, v }.toString().c_str());
-                }
-            }
-        });
-        pkgcb->setAutoCompletion(true);
-        pkgcb->setEditable(true);
 
-        auto add_input = [this, gbl](const auto &s)
-        {
             auto w = new QWidget();
             auto l = new QHBoxLayout();
             l->setMargin(0);
 
             auto le = new QLineEdit(s);
-            //le->setEnabled(false);
+            le->setEnabled(false);
             l->addWidget(le);
 
-            auto b = new QPushButton("X");
+            auto b = new QPushButton("x");
             b->setMaximumWidth(30);
-            connect(b, &QPushButton::clicked, [gbl, w]()
+
+            auto sz = swctx.getInputs().size();
+            swctx.getInputs().push_back(s.toStdString());
+            connect(b, &QPushButton::clicked, [this, gbl, w, sz]()
             {
                 //gbl->removeWidget(w);
                 delete w;
+                swctx.getInputs()[sz].clear();
             });
             l->addWidget(b);
 
@@ -309,11 +309,13 @@ void MainWindow::setupGeneral(QWidget *parent)
             gbl->addWidget(w);
         };
 
-        connect(apkg, &QPushButton::clicked, [add_input, pkgcb]()
+        connect(apkg, &QPushButton::clicked, [add_input, pkgcble, cpm]()
         {
-            if (pkgcb->currentText().isEmpty())
+            if (pkgcble->text().isEmpty())
                 return;
-            add_input(pkgcb->currentText());
+            if (cpm && cpm->data(cpm->index(0, 0)) != pkgcble->text())
+                return;
+            add_input(pkgcble->text());
         });
 
         connect(afile, &QPushButton::clicked, [this, add_input]()
