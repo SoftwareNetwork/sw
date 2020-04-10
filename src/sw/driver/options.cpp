@@ -353,8 +353,6 @@ void NativeCompilerOptions::addDefinitions(builder::Command &c) const
     {
         for (auto &d : a)
         {
-            using namespace sw;
-
             if (d.second.empty())
                 c.arguments.push_back("-D" + d.first);
             else
