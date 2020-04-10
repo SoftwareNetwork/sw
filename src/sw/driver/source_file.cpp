@@ -462,6 +462,34 @@ bool SourceFileStorage::check_absolute(path &F, bool ignore_errors, bool *source
 void SourceFileStorage::merge(const SourceFileStorage &v, const GroupSettings &s)
 {
     source_files.insert(v.begin(), v.end());
+    return;
+
+    // TODO: check type id, if same as just source file, add as is
+    // otherwise add(p);
+    // also copy skip property
+    // copy args or not?
+
+    for (auto &[p, f] : v)
+    {
+        // not created? add ourselves
+        if (!f)
+            add(p);
+        else
+        {
+            // native sf? add ourselves and copy important settings!
+            if (auto f2 = std::dynamic_pointer_cast<NativeSourceFile>(f))
+            {
+                add(p);
+                if (auto p2 = getFileInternal(p))
+                {
+                    p2->args = f2->args; // ignore args?
+                    p2->skip = f2->skip;
+                }
+            }
+            else // usual sf? add as is (clone() should be here probably)
+                add(f);
+        }
+    }
 }
 
 SourceFileMap<SourceFile>
