@@ -380,7 +380,8 @@ Files Target::getSourceFiles() const
     Files files;
     for (auto &f : gatherAllFiles())
     {
-        if (File(f, getFs()).isGeneratedAtAll())
+        // FIXME:                               vvvvvvvvv UGLY HACK vvvvvvvvv
+        if (File(f, getFs()).isGeneratedAtAll() && f.extension() != ".natvis")
             continue;
         files.insert(f);
     }

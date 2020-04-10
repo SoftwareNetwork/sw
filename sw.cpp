@@ -318,6 +318,7 @@ void build(Solution &s)
         gui += "org.sw.demo.qtproject.qt.base.winmain"_dep;
         gui += "org.sw.demo.qtproject.qt.base.plugins.platforms.windows"_dep;
         gui += "org.sw.demo.qtproject.qt.base.plugins.styles.windowsvista"_dep;
+        gui += "org.sw.demo.qtproject.qt.labs.vstools.natvis-dev"_dep;
 
         gui -= "org.sw.demo.qtproject.qt.winextras"_dep;
         if (client.getBuildSettings().TargetOS.Type == OSType::Windows)
