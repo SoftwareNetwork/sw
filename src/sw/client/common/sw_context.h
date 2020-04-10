@@ -21,6 +21,7 @@
 #include <primitives/filesystem.h>
 #include <sw/core/input.h>
 #include <sw/core/settings.h>
+#include <sw/manager/package_path.h>
 #include <sw/manager/source.h>
 
 namespace sw
@@ -34,7 +35,7 @@ struct Options;
 
 struct Program
 {
-    String name;
+    sw::PackagePath ppath;
     String desc;
 
     struct data

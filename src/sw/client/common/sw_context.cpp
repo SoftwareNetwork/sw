@@ -797,7 +797,8 @@ Programs SwClientContext::listCompilers()
     auto print_program = [&m, &progs](const sw::PackagePath &p, const String &title)
     {
         Program prog;
-        prog.name = title;
+        prog.ppath = p;
+        prog.desc = title;
         auto i = m.find(p);
         if (i != m.end(p) && !i->second.empty())
         {
