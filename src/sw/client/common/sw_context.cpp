@@ -69,25 +69,42 @@ static sw::TargetSettings compilerTypeFromStringCaseI(const sw::UnresolvedPackag
     return CompilerType::AppleClang;
     */
     // g++ is not possible for package path
-    else if (compiler.ppath == "gcc" || compiler.ppath == "gnu")
+    else if (0
+        || compiler.ppath == "gcc"
+        || compiler.ppath == "gnu"
+        || compiler.ppath == "org.gnu.gcc"
+        || compiler.ppath == "org.gnu.gpp"
+        )
     {
         ts["native"]["program"]["c"] = set_with_version("org.gnu.gcc");
         ts["native"]["program"]["cpp"] = set_with_version("org.gnu.gpp");
         ts["native"]["program"]["asm"] = ts["native"]["program"]["c"].getValue();
     }
-    else if (compiler.ppath == "clang")
+    else if (0
+        || compiler.ppath == "clang"
+        || compiler.ppath == "org.LLVM.clang"
+        || compiler.ppath == "org.LLVM.clangpp"
+        )
     {
         ts["native"]["program"]["c"] = set_with_version("org.LLVM.clang");
         ts["native"]["program"]["cpp"] = set_with_version("org.LLVM.clangpp");
         ts["native"]["program"]["asm"] = ts["native"]["program"]["c"].getValue();
     }
     // clang-cl is not possible for package path
-    else if (compiler.ppath == "clangcl"/* || compiler.ppath == "clang-cl"*/)
+    else if (0
+        || compiler.ppath == "clangcl"
+        /* || compiler.ppath == "clang-cl"*/
+        || compiler.ppath == "org.LLVM.clangcl"
+        )
     {
         ts["native"]["program"]["c"] = set_with_version("org.LLVM.clangcl");
         ts["native"]["program"]["cpp"] = set_with_version("org.LLVM.clangcl");
     }
-    else if (compiler.ppath == "msvc" || compiler.ppath == "vs")
+    else if (0
+        || compiler.ppath == "msvc"
+        || compiler.ppath == "vs"
+        || compiler.ppath == "com.Microsoft.VisualStudio.VC.cl"
+        )
     {
         ts["native"]["program"]["c"] = set_with_version("com.Microsoft.VisualStudio.VC.cl");
         ts["native"]["program"]["cpp"] = set_with_version("com.Microsoft.VisualStudio.VC.cl");
@@ -96,7 +113,11 @@ static sw::TargetSettings compilerTypeFromStringCaseI(const sw::UnresolvedPackag
         ts["native"]["program"]["link"] = set_with_version("com.Microsoft.VisualStudio.VC.link");
         ts["native"]["stdlib"]["cpp"] = set_with_version("com.Microsoft.VisualStudio.VC.libcpp");
     }
-    else if (compiler.ppath == "intel")
+    else if (0
+        || compiler.ppath == "intel"
+        || compiler.ppath == "com.intel.compiler.c"
+        || compiler.ppath == "com.intel.compiler.cpp"
+        )
     {
         ts["native"]["program"]["c"] = set_with_version("com.intel.compiler.c");
         ts["native"]["program"]["cpp"] = set_with_version("com.intel.compiler.cpp");
@@ -108,8 +129,6 @@ static sw::TargetSettings compilerTypeFromStringCaseI(const sw::UnresolvedPackag
     {
         ts["native"]["program"]["c"] = compiler.toString();
         ts["native"]["program"]["cpp"] = compiler.toString();
-        if (compiler.ppath == "com.Microsoft.VisualStudio.VC.cl")
-            ts["native"]["program"]["asm"] = set_with_version("com.Microsoft.VisualStudio.VC.ml");
     }
     return ts;
 }
