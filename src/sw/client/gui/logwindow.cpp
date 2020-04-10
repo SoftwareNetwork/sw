@@ -34,6 +34,8 @@
 #include <boost/log/trivial.hpp>
 
 #include <qscrollbar.h>
+#include <qstatusbar.h>
+#include <qplaintextedit.h>
 
 BOOST_LOG_ATTRIBUTE_KEYWORD(severity, "Severity", boost::log::trivial::severity_level)
 void logFormatterSimple1(boost::log::record_view const& rec, boost::log::formatting_ostream& strm)
@@ -56,9 +58,11 @@ void qt_text_ostream_backend::flush()
 }
 
 LogWindow::LogWindow(SwGuiContext &swctx, QWidget *parent)
-    : QPlainTextEdit(parent), swctx(swctx)
+    : QMainWindow(parent), swctx(swctx)
 {
-    setReadOnly(true);
+    edit = new QPlainTextEdit();
+    setCentralWidget(edit);
+    edit->setReadOnly(true);
 
     sink = boost::make_shared<text_sink>();
     sink->locked_backend()->auto_flush();
@@ -89,8 +93,8 @@ LogWindow::LogWindow(SwGuiContext &swctx, QWidget *parent)
 
 void LogWindow::appendMessage(const QString &text)
 {
-    appendPlainText(text);
-    verticalScrollBar()->setValue(verticalScrollBar()->maximum());
+    edit->appendPlainText(text);
+    edit->verticalScrollBar()->setValue(edit->verticalScrollBar()->maximum());
 }
 
 void LogWindow::stop()

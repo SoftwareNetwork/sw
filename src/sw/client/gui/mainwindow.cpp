@@ -366,11 +366,13 @@ void MainWindow::setupGeneral(QWidget *parent)
         QVBoxLayout *gbl = new QVBoxLayout;
         //
         auto cb = new QComboBox();
-        cb->setEditable(false);
-        for (GeneratorType g = (GeneratorType)0; g < GeneratorType::Max; ((int&)g)++)
+        connect(cb, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), [this, cb](int i)
         {
-            cb->addItem(toString(g).c_str(), (int)g);
-        }
+            swctx.getOptions().options_generate.generator = getGenerators()[cb->itemData(i).toInt()].name;
+        });
+        cb->setEditable(false);
+        for (auto &g : getGenerators())
+            cb->addItem(g.name.c_str(), (int)g.type);
         cb->model()->sort(0);
 
 #ifdef _WIN32

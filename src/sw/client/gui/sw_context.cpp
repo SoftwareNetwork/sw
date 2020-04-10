@@ -21,6 +21,7 @@
 #include "logwindow.h"
 
 #include <qmessagebox.h>
+#include <qstatusbar.h>
 #include <qthread.h>
 
 #include <primitives/log.h>
@@ -34,6 +35,17 @@ void SwGuiContext::command_build()
     {
         SwapAndRestore sr(running, true);
         Base::command_build();
+    });
+}
+
+void SwGuiContext::command_generate()
+{
+    if (check_running())
+        return;
+    run_with_log("Generate Log", [this]()
+    {
+        SwapAndRestore sr(running, true);
+        Base::command_generate();
     });
 }
 
@@ -55,13 +67,16 @@ void SwGuiContext::run_with_log(const QString &title, std::function<void(void)> 
     w->setWindowTitle(title);
     w->show();
 
+    // first access to status bar must be in main (gui) thread
+    w->statusBar()->showMessage("Starting...");
+    w->statusBar()->showMessage("Working...");
+
     auto t = QThread::create([w, f]
     {
+        LOG_INFO(logger, "Starting...");
         try
         {
-            LOG_INFO(logger, "Starting...");
             f();
-            LOG_INFO(logger, "Finished.");
         }
         catch (std::exception &e)
         {
@@ -71,7 +86,10 @@ void SwGuiContext::run_with_log(const QString &title, std::function<void(void)> 
         {
             LOG_INFO(logger, "Unknown exception.");
         }
+        LOG_INFO(logger, "Finished.");
+        LOG_FLUSH();
         w->stop();
+        w->statusBar()->showMessage("Finished.");
     });
     t->start();
 }

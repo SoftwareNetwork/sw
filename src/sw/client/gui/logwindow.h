@@ -19,7 +19,7 @@
 #pragma once
 
 #include <boost/log/sinks.hpp>
-#include <qplaintextedit.h>
+#include <qmainwindow.h>
 
 namespace sinks = boost::log::sinks;
 class qt_text_ostream_backend :
@@ -77,9 +77,10 @@ private:
     std::function<void(void)> f;
 };*/
 
+class QPlainTextEdit;
 struct SwGuiContext;
 
-class LogWindow : public QPlainTextEdit
+class LogWindow : public QMainWindow
 {
     Q_OBJECT
 
@@ -93,5 +94,6 @@ private:
     using text_sink = boost::log::sinks::synchronous_sink<qt_text_ostream_backend>;
 
     SwGuiContext &swctx;
+    QPlainTextEdit *edit;
     boost::shared_ptr<text_sink> sink;
 };
