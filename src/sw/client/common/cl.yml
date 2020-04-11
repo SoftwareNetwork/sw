@@ -475,6 +475,13 @@ command_line:
                 desc: Clear current directory
                 aliases: [o, ow]
 
+            project_directory:
+                type: path
+
+            dependencies:
+                list: true
+                type: String
+
     # doc
     subcommand:
         name: doc

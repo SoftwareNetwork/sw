@@ -34,10 +34,57 @@ static String get_name(const Options &options)
     return name;
 }
 
+static ProjectTemplates createProjectTemplates()
+{
+    ProjectTemplates t;
+
+    const auto root = YAML::Load(project_templates);
+    for (auto &v : root["templates"])
+    {
+        auto &tpl = v.second;
+
+        ProjectTemplate p;
+        p.name = v.first.template as<String>();
+        p.desc = tpl["name"].template as<String>();
+        p.target = tpl["target"].template as<String>();
+        for (auto &f : tpl["files"])
+        {
+            auto fn = f.first.template as<String>();
+            auto fn2 = f.second.template as<String>();
+            p.files[fn] = fn2;
+        }
+        for (auto &f : tpl["config"])
+        {
+            auto fn = f.first.template as<String>();
+            auto fn2 = f.second.template as<String>();
+            p.config[fn] = fn2;
+        }
+        for (auto &d : get_sequence(tpl["dependencies"]))
+            p.dependencies.insert(d);
+        t.templates[p.name] = p;
+    }
+    for (auto &v : root["files"])
+    {
+        auto fn = v.first.template as<String>();
+        auto contents = v.second.template as<String>();
+        t.files[fn] = contents;
+    }
+
+    return t;
+}
+
+const ProjectTemplates &getProjectTemplates()
+{
+    static const auto t = createProjectTemplates();
+    return t;
+}
+
 SUBCOMMAND_DECL(create)
 {
-    const auto root = YAML::Load(project_templates);
-    auto &tpls = root["templates"];
+    auto dir = getOptions().options_create.project_directory;
+    if (dir.empty())
+        dir = ".";
+    ScopedCurrentPath scp(dir);
 
     if (getOptions().options_create.create_clear_dir)
     {
@@ -49,68 +96,65 @@ SUBCOMMAND_DECL(create)
         }
         if (getOptions().options_create.create_clear_dir_y || boost::iequals(s, "yes") || boost::iequals(s, "Y"))
         {
-            for (auto &p : fs::directory_iterator("."))
+            for (auto &p : fs::directory_iterator(dir))
                 fs::remove_all(p);
         }
         else
         {
-            if (fs::directory_iterator(".") != fs::directory_iterator())
+            if (fs::directory_iterator(dir) != fs::directory_iterator())
                 return;
         }
     }
-    if (!getOptions().options_create.create_overwrite_files && fs::directory_iterator(".") != fs::directory_iterator())
+    if (!getOptions().options_create.create_overwrite_files && fs::directory_iterator(dir) != fs::directory_iterator())
         throw SW_RUNTIME_ERROR("directory is not empty");
 
     if (getOptions().options_create.create_type == "project")
     {
-        auto &tpl = tpls[(String)getOptions().options_create.create_template];
-        if (!tpl.IsDefined())
+        const auto &tpls = getProjectTemplates();
+        auto ti = tpls.templates.find((String)getOptions().options_create.create_template);
+        if (ti == tpls.templates.end())
             throw SW_RUNTIME_ERROR("No such template: " + getOptions().options_create.create_template);
 
+        const auto &tpl = ti->second;
         auto name = get_name(getOptions());
-        auto target = tpl["target"].template as<String>();
         String files;
-        for (auto &p : tpl["files"])
-        {
-            auto fn = p.first.template as<String>();
-            files += "t += \"" + fn + "\";\n";
-        }
+        for (auto &[fn,_] : tpl.files)
+            files += "t += \"" + normalize_path(fn) + "\";\n";
         String deps;
-        for (auto &d : get_sequence(tpl["dependencies"]))
+        for (auto &d : tpl.dependencies)
             deps += "t += \"" + d + "\"_dep;\n";
-        for (auto p : tpl["config"])
+        for (auto &d : getOptions().options_create.dependencies)
+            deps += "t += \"" + d + "\"_dep;\n";
+        for (auto &[fn,fn2] : tpl.config)
         {
-            auto fn = p.first.template as<String>();
-            auto fn2 = p.second.template as<String>();
-            auto &contents = root["files"][fn2];
-            if (!contents.IsDefined())
-                throw SW_RUNTIME_ERROR("No such file: " + fn + " (" + fn2 + ")");
-            auto s = contents.template as<String>();
-            boost::replace_all(s, "{target}", target);
+            const auto &ci = tpls.files.find(fn2);
+            if (ci == tpls.files.end())
+                throw SW_RUNTIME_ERROR("No such file: " + normalize_path(fn) + " (" + normalize_path(fn2) + ")");
+            auto s = ci->second;
+            boost::replace_all(s, "{target}", tpl.target);
             boost::replace_all(s, "{name}", name);
             boost::replace_all(s, "{files}", files);
             boost::replace_all(s, "{deps}", deps);
-            write_file(fn, s);
+            write_file(dir / fn, s);
         }
-        for (auto p : tpl["files"])
+        for (auto &[fn,fn2] : tpl.files)
         {
-            auto fn = p.first.template as<String>();
-            auto fn2 = p.second.template as<String>();
-            auto &contents = root["files"][fn2];
-            if (!contents.IsDefined())
-                throw SW_RUNTIME_ERROR("No such file: " + fn + " (" + fn2 + ")");
-            auto s = contents.template as<String>();
-            write_file(fn, s);
+            const auto &ci = tpls.files.find(fn2);
+            if (ci == tpls.files.end())
+                throw SW_RUNTIME_ERROR("No such file: " + normalize_path(fn) + " (" + normalize_path(fn2) + ")");
+            auto s = ci->second;
+            write_file(dir / fn, s);
         }
+
+        // set our inputs
+        Strings inputs;
+        inputs.push_back(normalize_path(dir));
+        SwapAndRestore sr(getInputs(), inputs);
 
         if (getOptions().options_create.create_build)
             command_build();
         else
-        {
-            // uses current cmd line which is not suitable for VS
-            //cli_generate(*swctx);
-            system("sw generate");
-        }
+            command_generate();
         return;
     }
 
@@ -127,9 +171,9 @@ SUBCOMMAND_DECL(create)
         ctx.addLine("//t += \"src/main.cpp\";");
         ctx.addLine("//t += \"pub.egorpugin.primitives.sw.main-master\"_dep;");
         ctx.endFunction();
-        write_file("sw.cpp", ctx.getText());
+        write_file(dir / "sw.cpp", ctx.getText());
         return;
     }
     else
-        throw SW_RUNTIME_ERROR("Unknown create type");
+        throw SW_RUNTIME_ERROR("Unknown create type: " + getOptions().options_create.create_type);
 }

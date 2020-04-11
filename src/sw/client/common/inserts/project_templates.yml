@@ -1,5 +1,6 @@
 templates:
     c.exe:
+        name: C Executable
         target: Executable
         config:
             sw.cpp: sw.cpp
@@ -7,6 +8,7 @@ templates:
             src/main.c: main.c
 
     cpp.exe:
+        name: C++ Executable
         target: Executable
         config:
             sw.cpp: sw.cpp
@@ -14,6 +16,7 @@ templates:
             src/main.cpp: main.cpp
 
     sw.cpp.exe:
+        name: SW C++ Executable
         target: Executable
         config:
             sw.cpp: sw.cpp
@@ -23,6 +26,7 @@ templates:
             src/main.cpp: sw.main.cpp
 
     cpp.lib:
+        name: C++ Library
         target: Library
         config:
             sw.cpp: sw.cpp
@@ -85,6 +89,9 @@ files:
             auto &t = s.addTarget<{target}>("{name}");
             t += cpp17;
             {files}
+
+            // add deps here
+            // example:
+            // t += "org.sw.demo.someproject"_dep;
             {deps}
         }
-

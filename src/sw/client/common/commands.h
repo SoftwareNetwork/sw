@@ -39,3 +39,22 @@ struct StorageWithPackagesDatabase;
 
 sw::PackageDescriptionMap getPackages(const sw::SwBuild &, const sw::SourceDirMap & = {});
 std::map<sw::PackagePath, sw::VersionSet> getMatchingPackages(const sw::StorageWithPackagesDatabase &, const String &unresolved_arg);
+
+// create command
+struct ProjectTemplate
+{
+    String name;
+    String desc;
+    String target;
+    FilesMap config;
+    FilesMap files;
+    StringSet dependencies;
+};
+
+struct ProjectTemplates
+{
+    std::map<String, ProjectTemplate> templates;
+    std::map<path, String> files;
+};
+
+const ProjectTemplates &getProjectTemplates();
