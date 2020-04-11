@@ -110,8 +110,9 @@ SUBCOMMAND_DECL(build)
     {
         auto b = createBuild();
         b->overrideBuildState(sw::BuildState::Prepared);
-        auto [cmds, p] = sw::ExecutionPlan::load(getOptions().options_build.build_explan, *b);
-        b->execute(p);
+        auto cmds = sw::ExecutionPlan::load(getOptions().options_build.build_explan, *b);
+        auto p = sw::ExecutionPlan::create(cmds);
+        b->execute(*p);
         return;
     }
 

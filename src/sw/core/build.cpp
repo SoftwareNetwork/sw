@@ -569,7 +569,7 @@ void SwBuild::resolvePackages(const std::vector<IDependency*> &udeps)
 
     // set
     for (auto &[p, i] : ivm)
-        setEntryPoint(p, i->getEntryPoints()[0]);
+        setEntryPoint(p, *i->getEntryPoints()[0]);
 }
 
 void SwBuild::loadPackages()
@@ -801,7 +801,7 @@ void SwBuild::prepare()
 void SwBuild::execute() const
 {
     auto p = getExecutionPlan();
-    execute(p);
+    execute(*p);
 }
 
 void SwBuild::execute(ExecutionPlan &p) const
@@ -1089,22 +1089,22 @@ Commands SwBuild::getCommands() const
     return cmds;
 }
 
-ExecutionPlan SwBuild::getExecutionPlan() const
+std::unique_ptr<ExecutionPlan> SwBuild::getExecutionPlan() const
 {
     return getExecutionPlan(getCommands());
 }
 
-ExecutionPlan SwBuild::getExecutionPlan(const Commands &cmds) const
+std::unique_ptr<ExecutionPlan> SwBuild::getExecutionPlan(const Commands &cmds) const
 {
     auto ep = ExecutionPlan::create(cmds);
     if (ep)
-        return ep;
+        return std::move(ep);
 
     // error!
 
     auto d = getBuildDirectory() / "misc";
 
-    auto [g, n, sc] = ep.getStrongComponents();
+    auto [g, n, sc] = ep->getStrongComponents();
 
     using Subgraph = boost::subgraph<ExecutionPlan::Graph>;
 
@@ -1127,8 +1127,8 @@ ExecutionPlan SwBuild::getExecutionPlan(const Commands &cmds) const
             ExecutionPlan::printGraph(subs[i]->m_graph, cyclic_path / ("cycle_" + std::to_string(i)));
     }
 
-    ep.printGraph(ep.getGraph(), cyclic_path / "processed", ep.getCommands(), true);
-    ep.printGraph(ep.getGraphUnprocessed(), cyclic_path / "unprocessed", ep.getUnprocessedCommand(), true);
+    ep->printGraph(ep->getGraph(), cyclic_path / "processed", ep->getCommands(), true);
+    ep->printGraph(ep->getGraphUnprocessed(), cyclic_path / "unprocessed", ep->getUnprocessedCommand(), true);
 
     String error = "Cannot create execution plan because of cyclic dependencies";
     //String error = "Cannot create execution plan because of cyclic dependencies: strong components = " + std::to_string(n);
@@ -1186,12 +1186,13 @@ void SwBuild::saveExecutionPlan(const path &in) const
     CHECK_STATE(BuildState::Prepared);
 
     auto p = getExecutionPlan();
-    p.save(in);
+    p->save(in);
 }
 
 void SwBuild::runSavedExecutionPlan(const path &in) const
 {
-    auto [cmds, p] = ExecutionPlan::load(in, *this);
+    auto cmds = ExecutionPlan::load(in, *this);
+    auto p = ExecutionPlan::create(cmds);
 
     // change state
     overrideBuildState(BuildState::Prepared);
@@ -1201,7 +1202,7 @@ void SwBuild::runSavedExecutionPlan(const path &in) const
         overrideBuildState(BuildState::InputsLoaded);
     };
 
-    execute(p);
+    execute(*p);
 }
 
 const std::vector<InputWithSettings> &SwBuild::getInputs() const
@@ -1311,7 +1312,7 @@ void SwBuild::test()
     }
 
     auto ep = getExecutionPlan(cmds);
-    ep.execute(::getExecutor());
+    ep->execute(::getExecutor());
 }
 
 }

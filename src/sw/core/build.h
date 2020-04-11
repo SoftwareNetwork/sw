@@ -75,7 +75,7 @@ struct SW_CORE_API SwBuild : SwBuilderContext
     // tune
     bool prepareStep();
     void execute(ExecutionPlan &p) const;
-    ExecutionPlan getExecutionPlan(const Commands &cmds) const;
+    std::unique_ptr<ExecutionPlan> getExecutionPlan(const Commands &cmds) const;
     bool step();
     void overrideBuildState(BuildState) const;
     // explans
@@ -83,7 +83,7 @@ struct SW_CORE_API SwBuild : SwBuilderContext
     void runSavedExecutionPlan() const;
     void saveExecutionPlan(const path &) const;
     void runSavedExecutionPlan(const path &) const;
-    ExecutionPlan getExecutionPlan() const;
+    std::unique_ptr<ExecutionPlan> getExecutionPlan() const;
     String getHash() const;
     path getExecutionPlanPath() const;
 

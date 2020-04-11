@@ -379,7 +379,8 @@ struct NinjaEmitter : primitives::Emitter
         addLine("include " + commands_fn);
         emptyLines(1);
 
-        auto ep = b.getExecutionPlan();
+        auto explan = b.getExecutionPlan();
+        auto &ep = *explan;
 
         for (auto &c : ep.getCommands())
             addCommand(b, *static_cast<builder::Command*>(c));
@@ -764,7 +765,8 @@ void MakeGenerator::generate(const SwBuild &b)
 
     const auto d = getRootDirectory(b);
 
-    auto ep = b.getExecutionPlan();
+    auto explan = b.getExecutionPlan();
+    auto &ep = *explan;
 
     MakeEmitter ctx;
     ctx.nmake = getType() == GeneratorType::NMake;
@@ -1005,7 +1007,8 @@ void FastBuildGenerator::generate(const sw::SwBuild &b)
 {
     // https://www.fastbuild.org/docs/functions/exec.html
 
-    auto ep = b.getExecutionPlan();
+    auto explan = b.getExecutionPlan();
+    auto &ep = *explan;
 
     primitives::CppEmitter ctx;
     for (auto &c1 : ep.getCommands())
@@ -1062,7 +1065,8 @@ void FastBuildGenerator::generate(const sw::SwBuild &b)
 
 void ShellGenerator::generate(const SwBuild &b)
 {
-    auto ep = b.getExecutionPlan();
+    auto explan = b.getExecutionPlan();
+    auto &ep = *explan;
 
     primitives::Emitter ctx;
 
@@ -1218,7 +1222,7 @@ void SwExecutionPlanGenerator::generate(const sw::SwBuild &b)
     fs::create_directories(d.parent_path());
 
     auto ep = b.getExecutionPlan();
-    ep.save(fn);
+    ep->save(fn);
 }
 
 void SwBuildDescriptionGenerator::generate(const sw::SwBuild &b)
@@ -1279,7 +1283,7 @@ void RawBootstrapBuildGenerator::generate(const sw::SwBuild &b)
     // gather files (inputs + implicit inputs)
     LOG_INFO(logger, "Gathering files");
     files.reserve(10000);
-    for (auto &c1 : ep.getCommands())
+    for (auto &c1 : ep->getCommands())
     {
         auto &c = dynamic_cast<const sw::builder::Command &>(*c1);
         files.insert(c.inputs.begin(), c.inputs.end());
