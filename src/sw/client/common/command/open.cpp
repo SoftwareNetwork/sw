@@ -113,16 +113,24 @@ SUBCOMMAND_DECL(open)
     auto pkgs = getContext().resolve(upkgs);
     for (auto &u : upkgs)
     {
-        auto &p = pkgs.find(u)->second;
-        if (!sdb.isPackageInstalled(*p))
+        auto ip = pkgs.find(u);
+        if (ip == pkgs.end())
         {
-            LOG_INFO(logger, "Package '" + p->toString() + "' not installed");
+            LOG_WARN(logger, "Cannot get " + u.toString());
+            continue;
+        }
+        auto &p = *ip->second;
+        if (!sdb.isPackageInstalled(p))
+        {
+            LOG_INFO(logger, "Package '" + p.toString() + "' not installed");
             continue;
         }
 
-        LOG_INFO(logger, "package: " + p->toString());
-        LOG_INFO(logger, "package dir: " + dynamic_cast<sw::LocalPackage&>(*p).getDir().u8string());
+        sw::LocalPackage lp(getContext().getLocalStorage(), p);
 
-        open_directory(dynamic_cast<sw::LocalPackage&>(*p).getDirSrc() / ""); // on win we must add last slash
+        LOG_INFO(logger, "package: " + lp.toString());
+        LOG_INFO(logger, "package dir: " + lp.getDir().u8string());
+
+        open_directory(lp.getDirSrc() / ""); // on win we must add last slash
     }
 }
