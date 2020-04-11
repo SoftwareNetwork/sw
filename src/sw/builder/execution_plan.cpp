@@ -49,6 +49,13 @@ ExecutionPlan::~ExecutionPlan()
     break_commands(unprocessed_commands_set);
 }
 
+void ExecutionPlan::stop(bool interrupt_running_commands)
+{
+    if (interrupt_running_commands)
+        SW_UNIMPLEMENTED;
+    stopped = true;
+}
+
 void ExecutionPlan::execute(Executor &e) const
 {
     if (commands.empty())
@@ -57,7 +64,7 @@ void ExecutionPlan::execute(Executor &e) const
     std::mutex m;
     std::vector<Future<void>> fs;
     std::vector<Future<void>> all;
-    std::atomic_bool stopped = false;
+    stopped = false;
     std::atomic_int running = 0;
     std::atomic_int64_t askip_errors = skip_errors;
 
@@ -81,7 +88,7 @@ void ExecutionPlan::execute(Executor &e) const
     }
 
     std::function<void(PtrT)> run;
-    run = [this, &askip_errors, &e, &run, &fs, &all, &m, &stopped, &running](T *c)
+    run = [this, &askip_errors, &e, &run, &fs, &all, &m, &running](T *c)
     {
         if (stopped)
             return;

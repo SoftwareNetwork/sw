@@ -68,11 +68,16 @@ public:
     ExecutionPlan(ExecutionPlan &&) = default;
     ~ExecutionPlan();
 
+    //
     void execute(Executor &e) const;
 
+    // external request to stop execution
+    // running commands will be finished
+    // TODO: break running commands too
+    void stop(bool interrupt_running_commands = false);
+
     // functions for builder::Command's
-    static std::tuple<Commands, ExecutionPlan>
-        load(const path &, const SwBuilderContext &, int type = 0);
+    static Commands load(const path &, const SwBuilderContext &, int type = 0);
     void save(const path &, int type = 0) const;
 
     void saveChromeTrace(const path &) const;
@@ -98,7 +103,7 @@ public:
     static void printGraph(const G &g, const path &base, const VecT &names = {}, bool mangle_names = false);
 
     template <class T>
-    static ExecutionPlan create(const std::unordered_set<T> &in)
+    static std::unique_ptr<ExecutionPlan> create(const std::unordered_set<T> &in)
     {
         USet cmds;
         cmds.reserve(in.size());
@@ -106,7 +111,7 @@ public:
             cmds.insert(c.get());
 
         prepare(cmds);
-        return cmds;
+        return std::make_unique<ExecutionPlan>(cmds);
     }
 
 private:
@@ -116,6 +121,7 @@ private:
     VecT commands;
     VecT unprocessed_commands;
     USet unprocessed_commands_set;
+    mutable std::atomic_bool stopped;
 
     //
     std::optional<Clock::time_point> stop_time;

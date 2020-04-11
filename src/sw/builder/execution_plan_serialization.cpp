@@ -50,8 +50,7 @@ void setup_ar(Ar &ar)
 namespace sw
 {
 
-std::tuple<Commands, ExecutionPlan>
-ExecutionPlan::load(const path &p, const SwBuilderContext &swctx, int type)
+Commands ExecutionPlan::load(const path &p, const SwBuilderContext &swctx, int type)
 {
     Commands commands;
 
@@ -89,7 +88,7 @@ ExecutionPlan::load(const path &p, const SwBuilderContext &swctx, int type)
         c->setContext(swctx);
         c->command_storage = &swctx.getCommandStorage(c->command_storage_root);
     }
-    return { commands, create(commands) };
+    return commands;
 }
 
 void ExecutionPlan::save(const path &p, int type) const
