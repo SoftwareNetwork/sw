@@ -29,6 +29,8 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "module");
 
+bool do_not_remove_bad_module;
+
 namespace sw
 {
 
@@ -51,15 +53,15 @@ static auto get_function(const Module::DynamicLibrary &dll, const String &fn, bo
     return (F*)nullptr;
 }
 
-Module::Module(const Module::DynamicLibrary &dll, const String &suffix)
-    : module(dll)
+Module::Module(std::unique_ptr<Module::DynamicLibrary> dll)
+    : module(std::move(dll))
 {
-#define LOAD(f)                                                                                   \
-    do                                                                                            \
-    {                                                                                             \
-        f##_.name = #f + suffix;                                                                  \
-        f##_.m = this;                                                                            \
-        f##_ = get_function<decltype(f##_)::function_type>(module, f##_.name, f##_.isRequired()); \
+#define LOAD(f)                                                                                    \
+    do                                                                                             \
+    {                                                                                              \
+        f##_.name = #f;                                                                            \
+        f##_.m = this;                                                                             \
+        f##_ = get_function<decltype(f##_)::function_type>(*module, f##_.name, f##_.isRequired()); \
     } while (0)
 
     LOAD(build);
@@ -82,7 +84,7 @@ path Module::getLocation() const
         // for some reason getLocation may fail on windows with
         // GetLastError() == 126 (module not found)
         // so we return this boost error instead
-        return module.shared_lib().location();
+        return module->shared_lib().location();
     }
     catch (std::exception &e)
     {
@@ -157,6 +159,71 @@ int Module::sw_get_module_abi_version() const
 {
     sw_get_module_abi_version_.m = this;
     return sw_get_module_abi_version_();
+}
+
+std::unique_ptr<Module> loadSharedLibrary(const path &dll, const FilesOrdered &PATH)
+{
+    if (dll.empty())
+        throw SW_RUNTIME_ERROR("Empty module path");
+
+#ifdef _WIN32
+    // set dll deps
+    std::vector<void *> cookies;
+    if (!PATH.empty())
+    {
+        SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_USER_DIRS);
+        for (const path &p : PATH)
+            cookies.push_back(AddDllDirectory(p.wstring().c_str()));
+    }
+    SCOPE_EXIT
+    {
+        // restore
+        if (!cookies.empty())
+        {
+            for (auto c : cookies)
+                RemoveDllDirectory(c);
+            SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
+        }
+    };
+#endif
+
+    std::unique_ptr<Module::DynamicLibrary> dl;
+
+    String err;
+    err = "Module " + normalize_path(dll) + " is in bad shape";
+    try
+    {
+        dl = std::make_unique<Module::DynamicLibrary>(dll,
+            boost::dll::load_mode::rtld_now | boost::dll::load_mode::rtld_global
+            //, ec
+            );
+    }
+    catch (std::system_error &e)
+    {
+        err += ": "s + e.what() + " Error code = " + std::to_string(e.code().value()) + ".";
+        err += " Will rebuild on the next run.";
+        if (!do_not_remove_bad_module)
+            fs::remove(dll);
+        throw SW_RUNTIME_ERROR(err);
+    }
+    catch (std::exception &e)
+    {
+        err += ": "s + e.what();
+        err += " Will rebuild on the next run.";
+        if (!do_not_remove_bad_module)
+            fs::remove(dll);
+        throw SW_RUNTIME_ERROR(err);
+    }
+    catch (...)
+    {
+        err += ". Will rebuild on the next run.";
+        LOG_ERROR(logger, err);
+        if (!do_not_remove_bad_module)
+            fs::remove(dll);
+        throw;
+    }
+
+    return std::make_unique<Module>(std::move(dl));
 }
 
 }

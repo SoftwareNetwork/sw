@@ -21,6 +21,9 @@
 #include <cl.llvm.h>
 
 #include <boost/algorithm/string.hpp>
+#include <boost/dll.hpp>
+#include <boost/dll/import_mangled.hpp>
+#include <boost/dll/smart_library.hpp>
 #include <primitives/emitter.h>
 #include <primitives/http.h>
 #include <sw/core/build.h>
@@ -242,12 +245,13 @@ static std::vector<sw::TargetSettings> applySettingsFromCppFile(SwClientContext 
         throw SW_RUNTIME_ERROR("Empty cfg target");
     auto &t = **tc->begin();
     auto is = t.getInterfaceSettings();
-    auto m = swctx.getContext().getModuleStorage().get(is["output_file"].getValue());
-    if (m.symbol_storage().get_function<std::map<std::string, std::string>()>("createJsonSettings").empty())
+    auto m = std::make_unique<boost::dll::experimental::smart_library>(is["output_file"].getValue(),
+        boost::dll::load_mode::rtld_now | boost::dll::load_mode::rtld_global);
+    if (m->symbol_storage().get_function<std::map<std::string, std::string>()>("createJsonSettings").empty())
         throw SW_RUNTIME_ERROR("Cannot find 'std::map<std::string, std::string> createJsonSettings()'");
 
     auto selected_cfgs = std::set<String>(options.settings_file_config.begin(), options.settings_file_config.end());
-    auto result = m.get_function<std::map<std::string, std::string>()>("createJsonSettings")();
+    auto result = m->get_function<std::map<std::string, std::string>()>("createJsonSettings")();
     std::vector<sw::TargetSettings> r;
     for (auto &[k, v] : result)
     {

@@ -34,7 +34,6 @@ namespace sw
 SwCoreContext::SwCoreContext(const path &local_storage_root_dir)
     : SwManagerContext(local_storage_root_dir)
 {
-    module_storage = std::make_unique<ModuleStorage>();
     HostOS = getHostOS();
     host_settings = createHostSettings();
 
@@ -43,11 +42,6 @@ SwCoreContext::SwCoreContext(const path &local_storage_root_dir)
 
 SwCoreContext::~SwCoreContext()
 {
-}
-
-ModuleStorage &SwCoreContext::getModuleStorage() const
-{
-    return *module_storage;
 }
 
 InputDatabase &SwCoreContext::getInputDatabase()

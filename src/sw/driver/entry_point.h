@@ -67,7 +67,7 @@ struct NativeModuleTargetEntryPoint : NativeTargetEntryPoint
     NativeModuleTargetEntryPoint(const Module &m);
 
 private:
-    Module m;
+    const Module &m;
 
     void loadPackages1(Build &) const override;
 };

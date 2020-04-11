@@ -165,6 +165,7 @@ struct DriverInput
 struct SpecFileInput : Input, DriverInput
 {
     Driver *driver = nullptr;
+    std::unique_ptr<Module> module;
 
     using Input::Input;
 
@@ -197,7 +198,8 @@ struct SpecFileInput : Input, DriverInput
         case FrontendType::SwC:
         {
             auto out = driver->build_configs1(swctx, { this }).begin()->second;
-            auto ep = std::make_shared<NativeModuleTargetEntryPoint>(Module(swctx.getModuleStorage().get(out.dll, out.PATH)));
+            module = loadSharedLibrary(out.dll, out.PATH);
+            auto ep = std::make_shared<NativeModuleTargetEntryPoint>(*module);
             ep->source_dir = fn.parent_path();
             return { ep };
         }
@@ -223,7 +225,8 @@ struct SpecFileInput : Input, DriverInput
 
             b->build();
             auto &out = pc.r[getPath()];
-            auto ep = std::make_shared<NativeModuleTargetEntryPoint>(Module(swctx.getModuleStorage().get(out.dll, out.PATH)));
+            module = loadSharedLibrary(out.dll, out.PATH);
+            auto ep = std::make_shared<NativeModuleTargetEntryPoint>(*module);
             ep->source_dir = fn.parent_path();
             return { ep };
         }
@@ -470,7 +473,8 @@ void Driver::loadInputsBatch(SwContext &swctx, const std::set<Input *> &inputs) 
             LOG_WARN(logger, "Bad input");
             continue;
         }
-        auto ep = std::make_shared<NativeModuleTargetEntryPoint>(Module(swctx.getModuleStorage().get(out.dll, out.PATH)));
+        i->module = loadSharedLibrary(out.dll, out.PATH);
+        auto ep = std::make_shared<NativeModuleTargetEntryPoint>(*i->module);
         ep->source_dir = p.parent_path();
         i->setEntryPoints({ ep });
     }

@@ -18,7 +18,6 @@
 
 #pragma once
 
-#include "module_storage.h"
 #include "target.h"
 
 #include <sw/builder/os.h>
@@ -40,7 +39,6 @@ struct SW_CORE_API SwCoreContext : SwManagerContext
 
     // from old builder ctx
     const OS &getHostOs() const { return HostOS; }
-    ModuleStorage &getModuleStorage() const;
 
     TargetMap &getPredefinedTargets() { return predefined_targets; }
     const TargetMap &getPredefinedTargets() const { return predefined_targets; }
@@ -67,7 +65,6 @@ private:
     // rename to detected?
     // not only detected, but also predefined? do not rename?
     OS HostOS;
-    std::unique_ptr<ModuleStorage> module_storage;
     TargetMap predefined_targets;
     std::unordered_map<PackageId, TargetData> target_data;
     TargetSettings host_settings;

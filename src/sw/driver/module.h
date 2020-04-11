@@ -18,15 +18,15 @@
 
 #pragma once
 
-#include "checks.h"
-
 #include <boost/dll/smart_library.hpp>
 #include <boost/thread/shared_mutex.hpp>
+#include <primitives/filesystem.h>
 
 namespace sw
 {
 
 struct Build;
+struct Checker;
 
 struct SW_DRIVER_CPP_API Module
 {
@@ -55,7 +55,7 @@ struct SW_DRIVER_CPP_API Module
         bool isRequired() const { return Required; }
     };
 
-    Module(const Module::DynamicLibrary &, const String &suffix = {});
+    Module(std::unique_ptr<Module::DynamicLibrary>);
 
     // api
     void build(Build &s) const;
@@ -73,7 +73,7 @@ struct SW_DRIVER_CPP_API Module
     }
 
 private:
-    const DynamicLibrary &module;
+    std::unique_ptr<Module::DynamicLibrary> module;
 
     mutable LibraryCall<void(Build &), true> build_;
     mutable LibraryCall<void(Build &)> configure_;
@@ -82,5 +82,7 @@ private:
 
     path getLocation() const;
 };
+
+std::unique_ptr<Module> loadSharedLibrary(const path &dll, const FilesOrdered &PATH = {});
 
 }
