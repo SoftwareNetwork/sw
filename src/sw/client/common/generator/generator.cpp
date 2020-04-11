@@ -168,9 +168,11 @@ static VsGeneratorType fromStringVs(const String &s)
 {
     if (0);
 
-    else if (
-        boost::istarts_with(s, "VS_IDE") ||
-        boost::iequals(s, "VS"))
+    else if (0
+        || boost::istarts_with(s, "VS_IDE")
+        || boost::iequals(s, "VS")
+        || boost::iequals(s, "Visual Studio")
+        )
         return VsGeneratorType::VisualStudio;
 
     else if (
@@ -192,7 +194,7 @@ static VsGeneratorType fromStringVs(const String &s)
         boost::istarts_with(s, "VSNMakeUtil"))
         return VsGeneratorType::VisualStudioNMakeAndUtility;*/
 
-    throw SW_RUNTIME_ERROR("Unknown generator: " + s);
+    throw SW_RUNTIME_ERROR("Unknown VS generator: " + s);
 }
 
 Generator::Generator(const Options &options)
