@@ -69,6 +69,9 @@ struct SW_CORE_API SwBuild : SwBuilderContext
     void prepare();
     void execute() const;
 
+    // stop execution
+    void stop();
+
     // tune
     bool prepareStep();
     void execute(ExecutionPlan &p) const;
@@ -120,6 +123,8 @@ private:
     mutable Commands commands_storage; // we need some place to keep copy cmds
     std::unique_ptr<Executor> build_executor;
     std::unique_ptr<Executor> prepare_executor;
+    bool stopped = false;
+    mutable ExecutionPlan *current_explan = nullptr;
 
     // other data
     String name;

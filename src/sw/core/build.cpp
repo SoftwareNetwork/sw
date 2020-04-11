@@ -40,6 +40,7 @@ DECLARE_STATIC_LOGGER(logger, "build");
                            ", expected = " + std::to_string(toIndex(from)))
 
 #define CHECK_STATE_AND_CHANGE_RAW(from, to, scope_exit) \
+    if (stopped) return;                                 \
     CHECK_STATE(from);                                   \
     scope_exit                                           \
     {                                                    \
@@ -267,6 +268,13 @@ SwBuild::~SwBuild()
 path SwBuild::getBuildDirectory() const
 {
     return build_dir;
+}
+
+void SwBuild::stop()
+{
+    stopped = true;
+    if (current_explan)
+        current_explan->stop();
 }
 
 void SwBuild::build()
@@ -748,8 +756,10 @@ void SwBuild::prepare()
 {
     CHECK_STATE_AND_CHANGE(BuildState::PackagesLoaded, BuildState::Prepared);
 
-    while (prepareStep())
+    while (prepareStep() && !stopped)
         ;
+    if (stopped)
+        return;
 
     if (build_settings["master_build"] != "true")
         return;
@@ -797,6 +807,8 @@ void SwBuild::execute() const
 void SwBuild::execute(ExecutionPlan &p) const
 {
     CHECK_STATE_AND_CHANGE(BuildState::Prepared, BuildState::Executed);
+
+    SwapAndRestore sr(current_explan, &p);
 
     p.build_always |= build_settings["build_always"] == "true";
     p.write_output_to_file |= build_settings["write_output_to_file"] == "true";
