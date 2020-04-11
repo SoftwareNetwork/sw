@@ -159,14 +159,16 @@ void write_build_script(
         auto f = read_file(r.getDirSrc2() / "sw.cpp");
         bool has_checks = f.find("Checker") != f.npos; // more presize than setChecks
 
-        build.beginBlock();
-        build.addLine("auto ep = std::make_shared<sw::NativeBuiltinTargetEntryPoint>(build_" + r.getVariableName() + ");");
-        if (has_checks)
-            build.addLine("ep->cf = check_" + r.getVariableName() + ";");
         // enumerate all other packages in group
         for (auto &p : used_gns[get_gn2(r)])
-            build.addLine("epm[\"" + p.toString() + "\"s] = ep;");
-        build.endBlock();
+        {
+            build.beginBlock();
+            build.addLine("auto ep = std::make_unique<sw::NativeBuiltinTargetEntryPoint>(build_" + r.getVariableName() + ");");
+            if (has_checks)
+                build.addLine("ep->cf = check_" + r.getVariableName() + ";");
+            build.addLine("epm.emplace(\"" + p.toString() + "\"s, std::move(ep));");
+            build.endBlock();
+        }
         build.addLine();
     }
     build.addLine("return epm;");

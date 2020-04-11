@@ -88,18 +88,21 @@ void Input::setHash(size_t h)
     hash = h;
 }
 
-const Input::EntryPointsVector &Input::getEntryPoints() const
+std::vector<TargetEntryPoint*> Input::getEntryPoints() const
 {
     if (!isLoaded())
         throw SW_RUNTIME_ERROR("Input is not loaded");
-    return eps;
+    std::vector<TargetEntryPoint *> v;
+    for (auto &e : eps)
+        v.push_back(e.get());
+    return v;
 }
 
-void Input::setEntryPoints(const EntryPointsVector &in)
+void Input::setEntryPoints(std::vector<std::unique_ptr<TargetEntryPoint>> in)
 {
     SW_ASSERT(!in.empty(), "No entry points provided");
     SW_ASSERT(!isLoaded(), "Input already loaded");
-    eps = in;
+    eps = std::move(in);
 }
 
 std::pair<PackageIdSet, int> Input::getPackages() const
@@ -149,7 +152,7 @@ std::vector<ITargetPtr> InputWithSettings::loadTargets(SwBuild &b) const
     // we register their entry points in swctx
     // because up to this point this is not done
 
-    for (auto &ep : i.getEntryPoints())
+    for (auto ep : i.getEntryPoints())
     {
         // find difference to set entry points
         auto old = b.getTargets();
@@ -173,7 +176,7 @@ std::vector<ITargetPtr> InputWithSettings::loadTargets(SwBuild &b) const
         {
             if (old.find(t->getPackage()) != old.end())
                 continue;
-            b.setEntryPoint(t->getPackage(), ep);
+            b.setEntryPoint(t->getPackage(), *ep);
         }
     }
     return tgts;

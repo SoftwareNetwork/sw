@@ -278,9 +278,9 @@ private:
 };
 
 //
-struct TargetEntryPoint
+struct SW_CORE_API TargetEntryPoint
 {
-    virtual ~TargetEntryPoint() = 0;
+    virtual ~TargetEntryPoint();
 
     [[nodiscard]]
     virtual std::vector<ITargetPtr> loadPackages(SwBuild &, const TargetSettings &, const PackageIdSet &allowed_packages, const PackagePath &prefix) const = 0;
@@ -288,8 +288,6 @@ struct TargetEntryPoint
     // add get group number api?
     // or entry point hash?
 };
-
-using TargetEntryPointPtr = std::shared_ptr<TargetEntryPoint>;
 
 struct TargetData
 {

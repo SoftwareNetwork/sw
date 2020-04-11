@@ -49,8 +49,7 @@ DECLARE_STATIC_LOGGER(logger, "driver.cpp");
 bool debug_configs = true; // true for now
 bool ignore_outdated_configs;
 
-std::unordered_map<sw::PackageId, std::shared_ptr<sw::NativeBuiltinTargetEntryPoint>>
-    load_builtin_entry_points();
+std::unordered_map<sw::PackageId, std::unique_ptr<sw::NativeBuiltinTargetEntryPoint>> load_builtin_entry_points();
 
 void process_configure_ac2(const path &p);
 
@@ -199,9 +198,11 @@ struct SpecFileInput : Input, DriverInput
         {
             auto out = driver->build_configs1(swctx, { this }).begin()->second;
             module = loadSharedLibrary(out.dll, out.PATH);
-            auto ep = std::make_shared<NativeModuleTargetEntryPoint>(*module);
+            auto ep = std::make_unique<NativeModuleTargetEntryPoint>(*module);
             ep->source_dir = fn.parent_path();
-            return { ep };
+            EntryPointsVector v;
+            v.emplace_back(std::move(ep));
+            return v;
         }
         case FrontendType::SwVala:
         {
@@ -226,9 +227,11 @@ struct SpecFileInput : Input, DriverInput
             b->build();
             auto &out = pc.r[getPath()];
             module = loadSharedLibrary(out.dll, out.PATH);
-            auto ep = std::make_shared<NativeModuleTargetEntryPoint>(*module);
+            auto ep = std::make_unique<NativeModuleTargetEntryPoint>(*module);
             ep->source_dir = fn.parent_path();
-            return { ep };
+            EntryPointsVector v;
+            v.emplace_back(std::move(ep));
+            return v;
         }
         case FrontendType::Cppan:
         {
@@ -237,9 +240,11 @@ struct SpecFileInput : Input, DriverInput
             {
                 b.cppan_load(root);
             };
-            auto ep = std::make_shared<NativeBuiltinTargetEntryPoint>(bf);
+            auto ep = std::make_unique<NativeBuiltinTargetEntryPoint>(bf);
             ep->source_dir = fn.parent_path();
-            return { ep };
+            EntryPointsVector v;
+            v.emplace_back(std::move(ep));
+            return v;
         }
         case FrontendType::Cargo:
         {
@@ -251,9 +256,11 @@ struct SpecFileInput : Input, DriverInput
                 auto &t = b.addTarget<RustExecutable>(name, version);
                 t += "src/.*"_rr;
             };
-            auto ep = std::make_shared<NativeBuiltinTargetEntryPoint>(bf);
+            auto ep = std::make_unique<NativeBuiltinTargetEntryPoint>(bf);
             ep->source_dir = fn.parent_path();
-            return { ep };
+            EntryPointsVector v;
+            v.emplace_back(std::move(ep));
+            return v;
         }
         case FrontendType::Dub:
         {
@@ -275,9 +282,11 @@ struct SpecFileInput : Input, DriverInput
                 else
                     throw SW_RUNTIME_ERROR("No source paths found");
             };
-            auto ep = std::make_shared<NativeBuiltinTargetEntryPoint>(bf);
+            auto ep = std::make_unique<NativeBuiltinTargetEntryPoint>(bf);
             ep->source_dir = fn.parent_path();
-            return { ep };
+            EntryPointsVector v;
+            v.emplace_back(std::move(ep));
+            return v;
         }
         case FrontendType::Composer:
         {
@@ -287,16 +296,18 @@ struct SpecFileInput : Input, DriverInput
             {
                 SW_UNIMPLEMENTED;
             };
-            auto ep = std::make_shared<NativeBuiltinTargetEntryPoint>(bf);
+            auto ep = std::make_unique<NativeBuiltinTargetEntryPoint>(bf);
             ep->source_dir = fn.parent_path();
-            return { ep };
+            EntryPointsVector v;
+            v.emplace_back(std::move(ep));
+            return v;
         }
         default:
             SW_UNIMPLEMENTED;
         }
     }
 
-    void setEntryPoints(const EntryPointsVector &in) override { Input::setEntryPoints(in); }
+    void setEntryPoints(EntryPointsVector in) override { Input::setEntryPoints(std::move(in)); }
 };
 
 struct InlineSpecInput : Input, DriverInput
@@ -334,9 +345,11 @@ struct InlineSpecInput : Input, DriverInput
                 auto &t = b.addExecutable(p.stem().string());
                 t += p;
             };
-            auto ep = std::make_shared<NativeBuiltinTargetEntryPoint>(bf);
+            auto ep = std::make_unique<NativeBuiltinTargetEntryPoint>(bf);
             ep->source_dir = p.parent_path();
-            return { ep };
+            EntryPointsVector v;
+            v.emplace_back(std::move(ep));
+            return v;
         }
 
         auto bf = [this, p](Build &b) mutable
@@ -345,9 +358,11 @@ struct InlineSpecInput : Input, DriverInput
             if (tgts.size() == 1)
                 *tgts[0] += p;
         };
-        auto ep = std::make_shared<NativeBuiltinTargetEntryPoint>(bf);
+        auto ep = std::make_unique<NativeBuiltinTargetEntryPoint>(bf);
         ep->source_dir = p.parent_path();
-        return { ep };
+        EntryPointsVector v;
+        v.emplace_back(std::move(ep));
+        return v;
     }
 };
 
@@ -371,9 +386,11 @@ struct DirInput : Input
         {
             auto &t = b.addExecutable(getPath().stem().string());
         };
-        auto ep = std::make_shared<NativeBuiltinTargetEntryPoint>(bf);
+        auto ep = std::make_unique<NativeBuiltinTargetEntryPoint>(bf);
         ep->source_dir = getPath();
-        return { ep };
+        EntryPointsVector v;
+        v.emplace_back(std::move(ep));
+        return v;
     }
 };
 
@@ -474,9 +491,11 @@ void Driver::loadInputsBatch(SwContext &swctx, const std::set<Input *> &inputs) 
             continue;
         }
         i->module = loadSharedLibrary(out.dll, out.PATH);
-        auto ep = std::make_shared<NativeModuleTargetEntryPoint>(*i->module);
+        auto ep = std::make_unique<NativeModuleTargetEntryPoint>(*i->module);
         ep->source_dir = p.parent_path();
-        i->setEntryPoints({ ep });
+        Input::EntryPointsVector v;
+        v.emplace_back(std::move(ep));
+        i->setEntryPoints(std::move(v));
     }
 }
 
@@ -486,6 +505,7 @@ PackageIdSet Driver::getBuiltinPackages(SwContext &swctx) const
     {
         std::unique_lock lk(m_bp);
         builtin_packages = load_builtin_packages(swctx);
+        builin_entry_points = load_builtin_entry_points();
     }
     return *builtin_packages;
 }
@@ -495,11 +515,13 @@ std::unique_ptr<SwBuild> Driver::create_build(SwContext &swctx) const
     auto &ctx = swctx;
     auto b = ctx.createBuild();
 
-    for (auto &[p, ep] : load_builtin_entry_points())
-        b->setServiceEntryPoint(p, ep);
+    auto bpkgs = getBuiltinPackages(ctx);
+
+    for (auto &[p, ep] : builin_entry_points)
+        b->setEntryPoint(p, *ep);
 
     // register
-    for (auto &p : getBuiltinPackages(ctx))
+    for (auto &p : bpkgs)
         b->getTargets()[p];
 
     return std::move(b);

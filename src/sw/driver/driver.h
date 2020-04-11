@@ -35,6 +35,7 @@ struct SwContext;
 struct PrepareConfigEntryPoint;
 struct TargetSettings;
 struct PrepareConfigOutputData;
+struct NativeBuiltinTargetEntryPoint;
 
 path getDriverIncludeDir(Build &solution, Target &lib);
 void addImportLibrary(const Build &b, NativeCompiledTarget &t);
@@ -74,6 +75,7 @@ struct SW_DRIVER_CPP_API Driver : IDriver
 private:
     mutable std::mutex m_bp;
     mutable std::optional<PackageIdSet> builtin_packages;
+    mutable std::unordered_map<sw::PackageId, std::unique_ptr<sw::NativeBuiltinTargetEntryPoint>> builin_entry_points;
     PackageIdSet getBuiltinPackages(SwContext &) const;
 
     mutable std::unique_ptr<SwBuild> b;

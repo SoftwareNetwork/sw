@@ -20,6 +20,9 @@
 
 #include "target.h"
 
+#include <memory>
+#include <vector>
+
 namespace sw
 {
 
@@ -44,9 +47,10 @@ enum class InputType : uint8_t
 
 struct SW_CORE_API Input
 {
-    using EntryPointsVector = std::vector<TargetEntryPointPtr>;
+    using EntryPointsVector = std::vector<std::unique_ptr<TargetEntryPoint>>;
 
     Input(const IDriver &, const path &, InputType);
+    Input(const Input &) = delete;
     virtual ~Input();
 
     void load(SwContext &);
@@ -64,7 +68,7 @@ struct SW_CORE_API Input
     void setOutdated(bool b) { outdated = b; }
     /*virtual */bool isOutdated() const;
     bool isLoaded() const;
-    const EntryPointsVector &getEntryPoints() const;
+    std::vector<TargetEntryPoint*> getEntryPoints() const;
 
     size_t getHash() const;
     void setHash(size_t);
@@ -81,7 +85,7 @@ struct SW_CORE_API Input
     bool operator<(const Input &rhs) const;
 
 protected:
-    virtual void setEntryPoints(const EntryPointsVector &in);
+    virtual void setEntryPoints(EntryPointsVector);
 
 private:
     InputType type;
