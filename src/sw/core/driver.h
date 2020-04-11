@@ -48,8 +48,6 @@ struct SW_CORE_API IDriver
     /// Optimized input loading in a batch.
     /// Inputs are unique and non null.
     /// Inputs will receive their entry points.
-    /// One input may provide several entry points (yml).
-    [[nodiscard]]
     virtual void loadInputsBatch(SwContext &, const std::set<Input*> &) const = 0;
 
     // get features()?
