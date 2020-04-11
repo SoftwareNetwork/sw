@@ -53,11 +53,6 @@ struct SW_CORE_API SwCoreContext : SwManagerContext
     /// original, unmodified host settings
     TargetSettings createHostSettings() const;
 
-    void setEntryPoint(const LocalPackage &, const TargetEntryPointPtr &);
-    void setEntryPoint(const PackageId &, const TargetEntryPointPtr &);
-    TargetEntryPointPtr getEntryPoint(const LocalPackage &) const;
-    TargetEntryPointPtr getEntryPoint(const PackageId &) const;
-
     InputDatabase &getInputDatabase();
     InputDatabase &getInputDatabase() const;
 
@@ -68,7 +63,6 @@ private:
     TargetMap predefined_targets;
     std::unordered_map<PackageId, TargetData> target_data;
     TargetSettings host_settings;
-    std::unordered_map<PackageId, TargetEntryPointPtr> entry_points;
     std::unique_ptr<InputDatabase> idb;
 };
 

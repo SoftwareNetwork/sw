@@ -83,44 +83,6 @@ const TargetData &SwCoreContext::getTargetData(const PackageId &pkg) const
     return i->second;
 }
 
-void SwCoreContext::setEntryPoint(const PackageId &pkgid, const TargetEntryPointPtr &ep)
-{
-    LocalPackage p(getLocalStorage(), pkgid);
-    return setEntryPoint(p, ep);
-}
-
-void SwCoreContext::setEntryPoint(const LocalPackage &p, const TargetEntryPointPtr &ep)
-{
-    if (!ep)
-        return;
-
-    auto iep = entry_points.find(p);
-    if (iep != entry_points.end())
-    {
-        if (iep->second != ep)
-            throw SW_RUNTIME_ERROR("Setting entry point twice for package " + p.toString());
-        //getTargetData(p); // "register" package
-        return;
-    }
-    //getTargetData(p).setEntryPoint(ep);
-    //getTargetData(p); // "register" package
-    entry_points[p] = ep; // after target data
-}
-
-TargetEntryPointPtr SwCoreContext::getEntryPoint(const PackageId &pkgid) const
-{
-    LocalPackage p(getLocalStorage(), pkgid);
-    return getEntryPoint(p);
-}
-
-TargetEntryPointPtr SwCoreContext::getEntryPoint(const LocalPackage &p) const
-{
-    auto i = entry_points.find(p);
-    if (i != entry_points.end())
-        return i->second;
-    return {};
-}
-
 SwContext::SwContext(const path &local_storage_root_dir)
     : SwCoreContext(local_storage_root_dir)
 {

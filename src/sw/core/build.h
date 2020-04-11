@@ -109,8 +109,7 @@ struct SW_CORE_API SwBuild : SwBuilderContext
     void setName(const String &);
     String getName() const; // returns temporary object, so no refs
 
-    void setEntryPoint(const PackageId &, const TargetEntryPointPtr &);
-    void setServiceEntryPoint(const PackageId &, const TargetEntryPointPtr &);
+    void setEntryPoint(const PackageId &, const TargetEntryPoint &);
 
 private:
     SwContext &swctx;
@@ -129,12 +128,11 @@ private:
     // other data
     String name;
     mutable FilesSorted fast_path_files;
-    std::unordered_map<PackageId, TargetEntryPointPtr> entry_points;
-    std::unordered_map<PackageId, TargetEntryPointPtr> service_entry_points;
+    std::unordered_map<PackageId, const TargetEntryPoint *> entry_points;
 
     Commands getCommands() const;
     void loadPackages(const TargetMap &predefined);
-    TargetEntryPointPtr getEntryPoint(const PackageId &) const;
+    const TargetEntryPoint *getEntryPoint(const PackageId &) const;
     void resolvePackages(const std::vector<IDependency*> &upkgs); // [2/2] step
     Executor &getBuildExecutor() const;
     Executor &getPrepareExecutor() const;

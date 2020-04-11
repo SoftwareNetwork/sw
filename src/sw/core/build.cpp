@@ -1238,29 +1238,17 @@ const TargetSettings &SwBuild::getExternalVariables() const
     return getSettings()["D"].getSettings();
 }
 
-void SwBuild::setServiceEntryPoint(const PackageId &p, const TargetEntryPointPtr &ep)
+void SwBuild::setEntryPoint(const PackageId &p, const TargetEntryPoint &ep)
 {
-    service_entry_points[p] = ep;
+    entry_points[p] = &ep;
 }
 
-void SwBuild::setEntryPoint(const PackageId &p, const TargetEntryPointPtr &ep)
+const TargetEntryPoint *SwBuild::getEntryPoint(const PackageId &p) const
 {
-    entry_points[p] = ep;
-}
-
-TargetEntryPointPtr SwBuild::getEntryPoint(const PackageId &p) const
-{
-    {
-        auto i = service_entry_points.find(p);
-        if (i != service_entry_points.end())
-            return i->second;
-    }
-    {
-        auto i = entry_points.find(p);
-        if (i != entry_points.end())
-            return i->second;
-    }
-    return getContext().getEntryPoint(p);
+    auto i = entry_points.find(p);
+    if (i != entry_points.end())
+        return i->second;
+    return {};
 }
 
 path SwBuild::getTestDir() const
