@@ -25,7 +25,10 @@ struct SwGuiContext : SwClientContext
 {
     using Base = SwClientContext;
 
+    SwGuiContext();
+
     void command_build() override;
+    void command_create() override;
     void command_generate() override;
     void command_test() override;
 

@@ -20,48 +20,62 @@
 
 #include "logwindow.h"
 
+#include <qcoreapplication.h>
 #include <qmessagebox.h>
 #include <qstatusbar.h>
 #include <qthread.h>
+#include <qtimer.h>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "gui.sw_context");
 
-void SwGuiContext::command_build()
+template <class F>
+void exception_safe_call(F &&f, String *error = nullptr)
 {
-    if (check_running())
-        return;
-    run_with_log("Build Log", [this]()
+    try
     {
-        SwapAndRestore sr(running, true);
-        Base::command_build();
-    });
+        f();
+    }
+    catch (std::exception &e)
+    {
+        if (error)
+            *error = e.what();
+    }
+    catch (...)
+    {
+        if (error)
+            *error = "Unknown exception.";
+    }
 }
 
-void SwGuiContext::command_generate()
+SwGuiContext::SwGuiContext()
 {
-    if (check_running())
-        return;
-    run_with_log("Generate Log", [this]()
-    {
-        SwapAndRestore sr(running, true);
-        Base::command_generate();
-    });
 }
 
-void SwGuiContext::command_test()
-{
-    if (check_running())
-        return;
-    run_with_log("Test Log", [this]()
-    {
-        SwapAndRestore sr(running, true);
-        Base::command_test();
-    });
-}
+#define ADD_COMMAND(cmd, name)                \
+    void SwGuiContext::command_##cmd()        \
+    {                                         \
+        if (check_running())                  \
+            return;                           \
+        String n = name " Log";               \
+        n[0] = toupper(n[0]);                 \
+        run_with_log(n.c_str(), [this]() {    \
+            SwapAndRestore sr(running, true); \
+            Base::command_##cmd();            \
+        });                                   \
+    }
+
+ADD_COMMAND(build, "Build")
+ADD_COMMAND(create, "Create")
+ADD_COMMAND(generate, "Generate")
+ADD_COMMAND(test, "Test")
 
 void SwGuiContext::run_with_log(const QString &title, std::function<void(void)> f)
 {
+    // we are already working
+    if (QThread::currentThread() != QCoreApplication::instance()->thread())
+        return f();
+
     auto w = new LogWindow(*this);
     w->setMinimumSize({400,300});
     w->setWindowTitle(title);
@@ -69,26 +83,25 @@ void SwGuiContext::run_with_log(const QString &title, std::function<void(void)> 
 
     // first access to status bar must be in main (gui) thread
     w->statusBar()->showMessage("Starting...");
-    w->statusBar()->showMessage("Working...");
+    auto timer = new QTimer(w);
+    w->connect(timer, &QTimer::timeout, [w, i = 0]() mutable
+    {
+        auto sym = "/-\\|";
+        w->statusBar()->showMessage(QString("Working...\t") + sym[i++ % 4]);
+    });
+    timer->start(250);
 
-    auto t = QThread::create([w, f]
+    auto t = QThread::create([w, f, timer]
     {
         LOG_INFO(logger, "Starting...");
-        try
-        {
-            f();
-        }
-        catch (std::exception &e)
-        {
-            LOG_INFO(logger, e.what());
-        }
-        catch (...)
-        {
-            LOG_INFO(logger, "Unknown exception.");
-        }
+        String error;
+        exception_safe_call([f] {f(); }, &error);
+        if (!error.empty())
+            LOG_INFO(logger, error);
         LOG_INFO(logger, "Finished.");
         LOG_FLUSH();
         w->stop();
+        timer->stop(); // Timers cannot be stopped from another thread
         w->statusBar()->showMessage("Finished.");
     });
     t->start();
@@ -96,6 +109,8 @@ void SwGuiContext::run_with_log(const QString &title, std::function<void(void)> 
 
 bool SwGuiContext::check_running() const
 {
+    if (QThread::currentThread() != QCoreApplication::instance()->thread())
+        return false;
     if (running)
         QMessageBox::warning(0, 0, "Operation is already in progress!");
     return running;

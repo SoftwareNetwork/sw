@@ -31,10 +31,12 @@ QString option_to_qstring(int v)
     return std::to_string(v).c_str();
 }
 
-void add_label(const String &name, QLayout *parent, const primitives::cl::Option &o)
+void add_label(const String &name, QBoxLayout *parent, const primitives::cl::Option &o, bool force_name = false)
 {
     auto l = new QLabel();
-    if (!o.HelpStr.empty())
+    if (force_name)
+        l->setText(name.c_str());
+    else if (!o.HelpStr.empty())
     {
         l->setText((o.HelpStr.str() + ":").c_str());
         l->setText(l->text() + (" ("s + name + ")").c_str());
@@ -55,7 +57,7 @@ void add_label(const String &name, QLayout *parent, const primitives::cl::Option
 }
 
 template <class T>
-void cl_option_add_widget(const String &name, QLayout *parent, std::vector<T> &value, const primitives::cl::Option &o)
+void cl_option_add_widget(const String &name, QBoxLayout *parent, std::vector<T> &value, const primitives::cl::Option &o)
 {
     add_label(name, parent, o);
     auto w = new QWidget;
@@ -75,7 +77,7 @@ void cl_option_add_widget(const String &name, QLayout *parent, std::vector<T> &v
 }
 
 template <class T>
-void cl_option_add_widget1(QLayout *parent, T &value, const primitives::cl::Option &o)
+void cl_option_add_widget1(QBoxLayout *parent, T &value, const primitives::cl::Option &o)
 {
     auto w = new QLineEdit();
     //if (o.getNumOccurrences())
@@ -108,7 +110,7 @@ void cl_option_add_widget1(QLayout *parent, T &value, const primitives::cl::Opti
 }
 
 template <>
-void cl_option_add_widget1(QLayout *parent, bool &value, const primitives::cl::Option &o)
+void cl_option_add_widget1(QBoxLayout *parent, bool &value, const primitives::cl::Option &o)
 {
     auto w = new QCheckBox();
     w->setChecked(value);
@@ -120,8 +122,19 @@ void cl_option_add_widget1(QLayout *parent, bool &value, const primitives::cl::O
 }
 
 template <class T>
-void cl_option_add_widget(const String &name, QLayout *parent, T &value, const primitives::cl::Option &o)
+void cl_option_add_widget(const String &name, QBoxLayout *parent, T &value, const primitives::cl::Option &o, bool force_name = false)
 {
-    add_label(name, parent, o);
-    cl_option_add_widget1(parent, value, o);
+    auto p2 = parent;
+    if constexpr (std::is_same_v<T, bool>)
+    {
+        p2 = new QHBoxLayout;
+        parent->addLayout(p2);
+        // inverse order
+        cl_option_add_widget1(p2, value, o);
+        add_label(name, p2, o, force_name);
+        p2->addStretch(1);
+        return;
+    }
+    add_label(name, p2, o, force_name);
+    cl_option_add_widget1(p2, value, o);
 }

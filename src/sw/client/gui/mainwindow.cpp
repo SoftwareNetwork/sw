@@ -111,16 +111,25 @@ MainWindow::MainWindow(SwGuiContext &swctx, QWidget *parent)
     : QMainWindow(parent)
     , swctx(swctx)
 {
-    setWindowTitle("SW GUI");
+    // make switchable
+    for (auto rs : swctx.getContext().getRemoteStorages())
+    {
+        if (auto s1 = dynamic_cast<sw::StorageWithPackagesDatabase *>(rs))
+        {
+            remote_db = &s1->getPackagesDatabase();
+            break;
+        }
+    }
 
     setupUi();
-
     //resize(minimumSizeHint());
     resize(200, 200);
 }
 
 void MainWindow::setupUi()
 {
+    setWindowTitle("SW GUI");
+
     createMenus();
 
     auto mainLayout = new QHBoxLayout;
@@ -134,10 +143,90 @@ void MainWindow::setupUi()
     t->addTab(ctrl, "General");
 
     // Configuration
-
     auto cfg = new QWidget;
     setupConfiguration(cfg);
     t->addTab(cfg, "Configuration");
+
+    // create new project
+    auto cnp = new QWidget;
+    t->addTab(cnp, "Create New Project");
+
+    // create
+    {
+        auto l = new QVBoxLayout;
+        cnp->setLayout(l);
+
+        l->addWidget(new QLabel("Directory"));
+        auto l2 = new QHBoxLayout;
+        l->addLayout(l2);
+        auto le = new QLineEdit();
+        l2->addWidget(le);
+
+        connect(le, &QLineEdit::textChanged, [this](const QString &t)
+        {
+            swctx.getOptions().options_create.create_type = "project";
+            swctx.getOptions().options_create.project_directory = t.toStdString();
+        });
+
+        auto sd = new QPushButton("Select");
+        l2->addWidget(sd);
+
+        connect(sd, &QPushButton::clicked, [this, le]()
+        {
+            QFileDialog dialog(this);
+            dialog.setFileMode(QFileDialog::Directory);
+            if (dialog.exec())
+                le->setText(dialog.selectedFiles()[0]);
+        });
+
+        l->addWidget(new QLabel("Template"));
+        auto cb = new QComboBox();
+        connect(cb, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), [this, cb](int i)
+        {
+            swctx.getOptions().options_create.create_template = cb->itemData(i).toString().toStdString();
+        });
+        for (auto &[n,t] : getProjectTemplates().templates)
+            cb->addItem(t.desc.c_str(), t.name.c_str());
+        cb->setEditable(false);
+        l->addWidget(cb);
+
+        l->addWidget(new QLabel("Dependencies"));
+        auto cpm = remote_db ? new PackagesModel(*remote_db, true) : nullptr;
+        auto le2 = new PackagesLineEdit(cpm);
+        l->addWidget(le2);
+        auto add = new QPushButton("Add Dependency");
+        l->addWidget(add);
+        connect(add, &QPushButton::clicked, [this, cpm, le = le2, l]()
+        {
+            if (le->text().isEmpty())
+                return;
+            if (cpm && cpm->data(cpm->index(0, 0)) != le->text())
+                return;
+
+            if (std::find(
+                swctx.getOptions().options_create.dependencies.begin(),
+                swctx.getOptions().options_create.dependencies.end(), le->text().toStdString()) != swctx.getOptions().options_create.dependencies.end())
+                return;
+
+            swctx.getOptions().options_create.dependencies.push_back(le->text().toStdString());
+
+            auto e = new QLineEdit(le->text());
+            e->setEnabled(false);
+            l->addWidget(e);
+        });
+
+        cl_option_add_widget("Overwrite existing files (THIS WILL OVERWRITE YOUR CHANGES)",
+            l, swctx.getOptions().options_create.create_overwrite_files, cl_create_overwrite_files, true);
+
+        auto create = new QPushButton("Create");
+        connect(create, &QPushButton::clicked, [this]()
+        {
+            swctx.command_create();
+        });
+        l->addWidget(create);
+
+        l->addStretch(1);
+    }
 
     //
     auto add_packages_tab = [this, t](const String &name, auto &db)
@@ -260,18 +349,7 @@ void MainWindow::setupGeneral(QWidget *parent)
         auto afile = new QPushButton("Add File");
         auto adir = new QPushButton("Add Directory");
 
-        PackagesModel *cpm = nullptr;
-        for (auto rs : swctx.getContext().getRemoteStorages())
-        {
-            if (auto s1 = dynamic_cast<sw::StorageWithPackagesDatabase *>(rs))
-            {
-                cpm = new PackagesModel(s1->getPackagesDatabase(), true);
-                //cpm->single_column_mode = false;
-                //cpm->limit = 50;
-                break;
-            }
-        }
-
+        auto cpm = remote_db ? new PackagesModel(*remote_db, true) : nullptr;
         auto pkgcble = new PackagesLineEdit(cpm);
         auto apkg = new QPushButton("Add Package");
         gbl->addWidget(afile);
@@ -344,6 +422,7 @@ void MainWindow::setupGeneral(QWidget *parent)
         QVBoxLayout *gblcmd = new QVBoxLayout;
         gbcmd->setLayout(gblcmd);
 
+        // build
         {
             auto build = new QPushButton("Build");
             connect(build, &QPushButton::clicked, [this]()
@@ -352,6 +431,8 @@ void MainWindow::setupGeneral(QWidget *parent)
             });
             gblcmd->addWidget(build);
         }
+
+        // test
         {
             auto build = new QPushButton("Test");
             connect(build, &QPushButton::clicked, [this]()
@@ -361,46 +442,44 @@ void MainWindow::setupGeneral(QWidget *parent)
             gblcmd->addWidget(build);
         }
 
-        auto gb = new QGroupBox("Generate");
-        gblcmd->addWidget(gb);
-        QVBoxLayout *gbl = new QVBoxLayout;
-        //
-        auto cb = new QComboBox();
-        connect(cb, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), [this, cb](int i)
+        // generate
         {
-            swctx.getOptions().options_generate.generator = getGenerators()[cb->itemData(i).toInt()].name;
-        });
-        cb->setEditable(false);
-        for (auto &g : getGenerators())
-            cb->addItem(g.name.c_str(), (int)g.type);
-        cb->model()->sort(0);
+            gblcmd->addWidget(new QLabel("Generate"));
+            //
+            auto cb = new QComboBox();
+            connect(cb, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), [this, cb](int i)
+            {
+                swctx.getOptions().options_generate.generator = getGenerators()[cb->itemData(i).toInt()].name;
+            });
+            cb->setEditable(false);
+            for (auto &g : getGenerators())
+                cb->addItem(g.name.c_str(), (int)g.type);
+            cb->model()->sort(0);
 
 #ifdef _WIN32
-        int index = cb->findData((int)GeneratorType::VisualStudio);
-        if (index != -1)
-            cb->setCurrentIndex(index);
+            int index = cb->findData((int)GeneratorType::VisualStudio);
+            if (index != -1)
+                cb->setCurrentIndex(index);
 #endif
-        gbl->addWidget(cb);
+            gblcmd->addWidget(cb);
 
-        // btn
-        {
-            auto build = new QPushButton("Generate");
-            connect(build, &QPushButton::clicked, [this]()
+            // btn
             {
-                swctx.command_generate();
-            });
-            gbl->addWidget(build);
+                auto build = new QPushButton("Generate");
+                connect(build, &QPushButton::clicked, [this]()
+                {
+                    swctx.command_generate();
+                });
+                gblcmd->addWidget(build);
+            }
         }
 
         //
-        gbl->addStretch(1);
-        gb->setLayout(gbl);
-
         gblcmd->addStretch(1);
     }
 
     middle->addStretch(1);
-    ctrlLayout->addStretch(1);
+    //ctrlLayout->addStretch(1);
 }
 
 void MainWindow::setupConfiguration(QWidget *parent)
@@ -466,7 +545,7 @@ void MainWindow::setupConfiguration(QWidget *parent)
 
     // mt/md
     {
-        auto gb = new QGroupBox("Runtime");
+        auto gb = new QGroupBox("Runtime (Windows only)");
         middle->addWidget(gb);
         QVBoxLayout *gbl = new QVBoxLayout;
         auto cb = add_check_box_bool(gbl, "Dynamic (MD/MDd)", swctx.getOptions().win_md);
@@ -549,7 +628,7 @@ void MainWindow::createMenus()
     });
 
     auto fileMenu = new QMenu("File");
-    //fileMenu->addAction(newAction);
+    fileMenu->addAction("Settings");
     fileMenu->addSeparator();
     auto exitAction = fileMenu->addAction("Exit");
     connect(exitAction, &QAction::triggered, [this]

@@ -22,6 +22,7 @@
 #include <qmainwindow.h>
 
 struct SwGuiContext;
+namespace sw { struct PackagesDatabase; }
 
 class MainWindow : public QMainWindow
 {
@@ -31,6 +32,7 @@ public:
 
 private:
     SwGuiContext &swctx;
+    sw::PackagesDatabase *remote_db = nullptr;
 
     void setupUi();
 
