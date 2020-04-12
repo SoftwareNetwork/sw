@@ -34,7 +34,8 @@ struct StdVectorEdit
     TToString t_to_string;
     StringToT string_to_t;
 
-    StdVectorEdit(std::vector<T> &data, QBoxLayout *parent, TToString t_to_string,
+    StdVectorEdit(std::vector<T> &data, QBoxLayout *parent,
+        TToString t_to_string = [](const String &s) { return s; },
         StringToT string_to_t = [](const String &s) { return s; }
     )
         : v(data), t_to_string(t_to_string), string_to_t(string_to_t)
@@ -84,15 +85,22 @@ struct StdVectorEdit
         }
     }
 
-    void insertRow(int pos)
+    T &insertRow(int pos)
     {
-        v.emplace(v.begin() + pos);
-        updateWidgets();
+        auto val = v.emplace(v.begin() + pos);
+        return *val;
     }
 
-    void appendRow()
+    T &appendRow()
     {
-        insertRow(v.size());
+        return insertRow(v.size());
+    }
+
+    T &appendRowAndUpdate()
+    {
+        auto &val = appendRow();
+        updateWidgets();
+        return val;
     }
 
     void deleteRow(int pos)

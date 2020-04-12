@@ -71,14 +71,14 @@ void cl_option_add_widget(const String &name, QBoxLayout *parent, std::vector<T>
 
     StdVectorEdit<T> *ve;
     if constexpr (std::is_same_v<T, String>)
-        ve = new StdVectorEdit<T>(vector, wl, [](const String &s) { return s; });
+        ve = new StdVectorEdit<T>(vector, wl);
     else if constexpr (std::is_same_v<T, path>)
         ve = new StdVectorEdit<T>(vector, wl, [](const path &s) { return normalize_path(s); });
     else
         static_assert(false, "Unimplemented type");
 
     auto b = new QPushButton("Add");
-    b->connect(b, &QPushButton::clicked, [ve] { ve->appendRow(); });
+    b->connect(b, &QPushButton::clicked, [ve] { ve->appendRowAndUpdate(); });
     b->connect(b, &QPushButton::destroyed, [ve] { delete ve; });
     wl->addWidget(b);
 }

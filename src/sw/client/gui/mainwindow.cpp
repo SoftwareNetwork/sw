@@ -198,7 +198,12 @@ void MainWindow::setupUi()
         l->addWidget(le2);
         auto add = new QPushButton("Add Dependency");
         l->addWidget(add);
-        connect(add, &QPushButton::clicked, [this, cpm, le = le2, l]()
+
+        auto wl = new QVBoxLayout;
+        l->addLayout(wl);
+        auto ve = new StdVectorEdit<String>(swctx.getOptions().options_create.dependencies, wl);
+
+        connect(add, &QPushButton::clicked, [this, cpm, le = le2, ve]()
         {
             if (le->text().isEmpty())
                 return;
@@ -210,12 +215,11 @@ void MainWindow::setupUi()
                 swctx.getOptions().options_create.dependencies.end(), le->text().toStdString()) != swctx.getOptions().options_create.dependencies.end())
                 return;
 
-            swctx.getOptions().options_create.dependencies.push_back(le->text().toStdString());
-
-            auto e = new QLineEdit(le->text());
-            e->setEnabled(false);
-            l->addWidget(e);
+            ve->appendRow() = le->text().toStdString();
+            ve->updateWidgets();
         });
+
+        l->addStretch(1);
 
         cl_option_add_widget("Overwrite existing files (THIS WILL OVERWRITE YOUR CHANGES)",
             l, swctx.getOptions().options_create.create_overwrite_files, cl_create_overwrite_files, true);
@@ -226,8 +230,6 @@ void MainWindow::setupUi()
             swctx.command_create();
         });
         l->addWidget(create);
-
-        l->addStretch(1);
     }
 
     //
@@ -359,34 +361,15 @@ void MainWindow::setupGeneral(QWidget *parent)
         gbl->addWidget(pkgcble);
         gbl->addWidget(apkg);
 
-        auto add_input = [this, gbl](const QString &s)
+        auto wl = new QVBoxLayout;
+        gbl->addLayout(wl);
+        auto ve = new StdVectorEdit<String>(swctx.getInputs(), wl);
+        auto add_input = [this, ve](const QString &s)
         {
             if (std::find(swctx.getInputs().begin(), swctx.getInputs().end(), s.toStdString()) != swctx.getInputs().end())
                 return;
-
-            auto w = new QWidget();
-            auto l = new QHBoxLayout();
-            l->setMargin(0);
-
-            auto le = new QLineEdit(s);
-            le->setEnabled(false);
-            l->addWidget(le);
-
-            auto b = new QPushButton("x");
-            b->setMaximumWidth(30);
-
-            swctx.getInputs().push_back(s.toStdString());
-            connect(b, &QPushButton::clicked, [this, gbl, w, s]()
-            {
-                //gbl->removeWidget(w);
-                delete w;
-                auto &var = swctx.getInputs();
-                var.erase(std::remove(var.begin(), var.end(), s.toStdString()), var.end());
-            });
-            l->addWidget(b);
-
-            w->setLayout(l);
-            gbl->addWidget(w);
+            ve->appendRow() = s.toStdString();
+            ve->updateWidgets();
         };
 
         connect(apkg, &QPushButton::clicked, [add_input, pkgcble, cpm]()
