@@ -113,6 +113,7 @@ Options &StartupData::getOptions()
 int StartupData::run()
 {
     // try to do as less as possible before log init
+    // TODO: allow console for GUI case?
     setConsoleColorProcessing();
 
     prepareArgs();
@@ -146,6 +147,7 @@ int StartupData::run()
             return *exit_code;
 
         sw_main();
+        exit_code = 0;
     }
     catch (const std::exception &e)
     {
@@ -328,7 +330,6 @@ void StartupData::sw_main()
 #undef SUBCOMMAND
 
     LOG_WARN(logger, "No command was issued");
-    exit_code = 0;
 }
 
 int StartupData::exit(int r)
