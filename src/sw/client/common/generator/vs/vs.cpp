@@ -142,6 +142,11 @@ static String uuid2string(const boost::uuids::uuid &u)
     return boost::to_upper_copy(ss.str());
 }
 
+static String get_current_program()
+{
+    return "\"" + normalize_path(path(boost::dll::program_location().wstring())) + "\"";
+}
+
 static String make_backslashes(String s)
 {
     std::replace(s.begin(), s.end(), '/', '\\');
@@ -408,8 +413,8 @@ void VSGenerator::generate(const SwBuild &b)
                 // sw -config d build -e
                 // sw -config d build -ef .sw\g\swexplan\....explan
 
-                d.nmake_build = "sw " + cmd;
-                d.nmake_rebuild = "sw -B " + cmd;
+                d.nmake_build = get_current_program() + " " + cmd;
+                d.nmake_rebuild = get_current_program() + " -B " + cmd;
                 //d.nmake_clean = "sw "; // not yet implemented
             }
         }
@@ -642,7 +647,7 @@ void VSGenerator::generate(const SwBuild &b)
             auto &r = d.custom_rules_manual.back();
 
             //
-            r.command += "\"" + normalize_path(path(boost::dll::program_location().wstring())) + "\" ";
+            r.command += get_current_program() + " ";
             r.command += "generate -check-stamp-list \"" + normalize_path(fn) + "\" ";
             r.command += "-input-settings-pairs ";
             for (auto &i : inputs)
@@ -756,7 +761,7 @@ void VSGenerator::generate(const SwBuild &b)
             fs::remove(path(basefn) += ".deps", ec); // trigger updates
 
             BuildEvent be;
-            be.command = "\"" + normalize_path(path(boost::dll::program_location().wstring())) + "\" @" + normalize_path(rsp);
+            be.command = get_current_program() + " @" + normalize_path(rsp);
             d.pre_build_event = be;
         }
 
