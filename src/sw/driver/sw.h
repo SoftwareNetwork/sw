@@ -19,7 +19,6 @@
 #ifndef _SW_H_
 #define _SW_H_
 
-#include "module.h"
 #include "build.h"
 #include "command.h"
 #include "suffix.h"
