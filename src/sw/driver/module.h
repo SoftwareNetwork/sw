@@ -69,7 +69,7 @@ struct SW_DRIVER_CPP_API Module
     {
         if (!module)
             throw SW_RUNTIME_ERROR("empty module");
-        return module.get_function<F>(name)(std::forward<Args>(args)...);
+        return module->get_function<F>(name)(std::forward<Args>(args)...);
     }
 
 private:
