@@ -36,6 +36,8 @@
 #include <qscrollbar.h>
 #include <qstatusbar.h>
 #include <qplaintextedit.h>
+#include <qboxlayout.h>
+#include <qpushbutton.h>
 
 BOOST_LOG_ATTRIBUTE_KEYWORD(severity, "Severity", boost::log::trivial::severity_level)
 void logFormatterSimple1(boost::log::record_view const& rec, boost::log::formatting_ostream& strm)
@@ -60,9 +62,21 @@ void qt_text_ostream_backend::flush()
 LogWindow::LogWindow(SwGuiContext &swctx, QWidget *parent)
     : QMainWindow(parent), swctx(swctx)
 {
+    auto w = new QWidget;
+    auto vl = new QVBoxLayout;
+    w->setLayout(vl);
+    setCentralWidget(w);
+
     edit = new QPlainTextEdit();
-    setCentralWidget(edit);
     edit->setReadOnly(true);
+    vl->addWidget(edit);
+
+    auto bc = new QPushButton("Cancel Operation");
+    vl->addWidget(bc);
+    connect(bc, &QPushButton::click, [this]()
+    {
+        //stop();
+    });
 
     sink = boost::make_shared<text_sink>();
     sink->locked_backend()->auto_flush();
