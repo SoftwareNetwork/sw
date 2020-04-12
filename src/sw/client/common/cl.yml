@@ -356,6 +356,13 @@ command_line:
             write_log_to_file:
                 option: log-to-file
 
+            input_settings_pairs:
+                type: String
+                list: true
+                desc: Read settings from json string
+                value_desc: <input settings>
+                space_separated: true
+
     # build
     subcommand:
         name: build
@@ -401,13 +408,6 @@ command_line:
                 type: String
             output_dir:
                 type: path
-
-            input_settings_pairs:
-                type: String
-                list: true
-                desc: Read settings from json string
-                value_desc: <input settings>
-                space_separated: true
 
     # abi
     subcommand:
