@@ -70,6 +70,14 @@ ADD_COMMAND(create, "Create")
 ADD_COMMAND(generate, "Generate")
 ADD_COMMAND(test, "Test")
 
+void SwGuiContext::command_open()
+{
+    String error;
+    exception_safe_call([this] {Base::command_open(); }, &error);
+    if (!error.empty())
+        QMessageBox::critical(0, 0, error.c_str());
+}
+
 void SwGuiContext::run_with_log(const QString &title, std::function<void(void)> f)
 {
     // we are already working

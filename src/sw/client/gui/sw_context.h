@@ -30,6 +30,7 @@ struct SwGuiContext : SwClientContext
     void command_build() override;
     void command_create() override;
     void command_generate() override;
+    void command_open() override;
     void command_test() override;
 
 private:

@@ -409,22 +409,32 @@ void MainWindow::setupGeneral(QWidget *parent)
 
         // build
         {
-            auto build = new QPushButton("Build");
-            connect(build, &QPushButton::clicked, [this]()
+            auto b = new QPushButton("Build");
+            connect(b, &QPushButton::clicked, [this]()
             {
                 swctx.command_build();
             });
-            gblcmd->addWidget(build);
+            gblcmd->addWidget(b);
         }
 
         // test
         {
-            auto build = new QPushButton("Test");
-            connect(build, &QPushButton::clicked, [this]()
+            auto b = new QPushButton("Test");
+            connect(b, &QPushButton::clicked, [this]()
             {
                 swctx.command_test();
             });
-            gblcmd->addWidget(build);
+            gblcmd->addWidget(b);
+        }
+
+        // open
+        {
+            auto b = new QPushButton("Open");
+            connect(b, &QPushButton::clicked, [this]()
+            {
+                swctx.command_open();
+            });
+            gblcmd->addWidget(b);
         }
 
         // generate
