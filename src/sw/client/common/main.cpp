@@ -19,6 +19,7 @@
 #include "main.h"
 
 #include "commands.h"
+#include "self_upgrade.h"
 
 #include <sw/builder/jumppad.h>
 #include <sw/driver/driver.h>
@@ -140,6 +141,17 @@ int StartupData::run()
         print_command_line(args); // after logger; also for builtin call?
         if (after_create_options && after_create_options(*this))
             return exit(0);
+
+        if (!getOptions().self_upgrade_copy.empty())
+        {
+            self_upgrade_copy(getOptions().self_upgrade_copy);
+            return true;
+        }
+        if (getOptions().self_upgrade)
+        {
+            self_upgrade(program_short_name);
+            return true;
+        }
 
         setup();
         if (after_setup && after_setup(*this))

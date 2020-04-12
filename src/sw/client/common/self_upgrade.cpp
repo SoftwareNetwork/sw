@@ -29,14 +29,14 @@
 #include <windows.h>
 #endif
 
-void self_upgrade()
+void self_upgrade(const String &progname)
 {
 #ifdef _WIN32
-    path client = "/client/sw-master-windows-client.zip";
+    path client = "/client/"s + progname + "-master-windows-client.zip";
 #elif __APPLE__
-    path client = "/client/sw-master-macos-client.tar.gz";
+    path client = "/client/"s + progname + "-master-macos-client.tar.gz";
 #else
-    path client = "/client/sw-master-linux-client.tar.gz";
+    path client = "/client/"s + progname + "-master-linux-client.tar.gz";
 #endif
 
     auto &s = sw::Settings::get_user_settings();
@@ -58,14 +58,14 @@ void self_upgrade()
     }
 
     std::cout << "Unpacking" << "\n";
-    auto tmp_dir = fs::temp_directory_path() / "sw.bak";
+    auto tmp_dir = fs::temp_directory_path() / (progname + ".bak");
     unpack_file(fn, tmp_dir);
     fs::remove(fn);
 
     // self update
     auto program = path(boost::dll::program_location().wstring());
 #ifdef _WIN32
-    auto exe = (tmp_dir / "sw.exe").wstring();
+    auto exe = (tmp_dir / (progname + ".exe")).wstring();
     auto arg0 = L"\"" + exe + L"\"";
     auto dst = L"\"" + program.wstring() + L"\"";
     std::cout << "Replacing client" << "\n";
@@ -78,7 +78,7 @@ void self_upgrade()
             "Cannot do a self upgrade. Replace this file with newer SW client manually.");
     }
 #else
-    auto cppan = tmp_dir / "sw";
+    auto cppan = tmp_dir / progname;
     fs::permissions(cppan, fs::perms::owner_all | fs::perms::group_exec | fs::perms::others_exec);
     fs::remove(program);
     fs::copy_file(cppan, program);

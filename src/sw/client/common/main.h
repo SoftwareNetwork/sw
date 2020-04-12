@@ -33,6 +33,7 @@ struct StartupData
     int argc;
     char **argv;
 
+    String program_short_name; // used in updater
     String overview;
     Strings args;
     std::unique_ptr<Options> options;

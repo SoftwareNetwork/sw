@@ -43,34 +43,13 @@
 
 //#include <mimalloc.h>
 
-void self_upgrade();
-void self_upgrade_copy(const path &dst);
-
 int main(int argc, char **argv)
 {
     //mi_version();
     //sw_enable_crash_server();
 
     StartupData sd(argc, argv);
-
-    // self upgrade only cli feature now
-    sd.after_create_options = [](StartupData &sd)
-    {
-        if (!sd.getOptions().self_upgrade_copy.empty())
-        {
-            self_upgrade_copy(sd.getOptions().self_upgrade_copy);
-            return true;
-        }
-
-        if (sd.getOptions().self_upgrade)
-        {
-            self_upgrade();
-            return true;
-        }
-
-        return false;
-    };
-
+    sd.program_short_name = "sw";
     return sd.run();
 }
 
