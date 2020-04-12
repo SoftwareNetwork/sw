@@ -580,8 +580,10 @@ command_line:
             open_arg:
                 positional: true
                 type: String
-                desc: package to open
+                desc: Packages to open
                 list: true
+                external: true
+                location: inputs
 
     # override
     subcommand:

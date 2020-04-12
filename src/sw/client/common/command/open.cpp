@@ -107,7 +107,7 @@ SUBCOMMAND_DECL(open)
     auto &sdb = getContext().getLocalStorage();
 
     sw::UnresolvedPackages upkgs;
-    for (auto &a : getOptions().options_open.open_arg)
+    for (auto &a : getInputs())
         upkgs.insert(a);
 
     auto pkgs = getContext().resolve(upkgs);
