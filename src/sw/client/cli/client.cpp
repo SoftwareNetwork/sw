@@ -16,33 +16,12 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <sw/builder/jumppad.h>
 #include <sw/client/common/commands.h>
-#include <sw/core/input.h>
-#include <sw/driver/driver.h>
-#include <sw/manager/api.h>
-#include <sw/manager/database.h>
-#include <sw/manager/package_data.h>
-#include <sw/manager/settings.h>
-#include <sw/manager/storage.h>
-#include <sw/support/exceptions.h>
+#include <sw/client/common/main.h>
 
-#include <boost/algorithm/string.hpp>
-#include <boost/algorithm/string_regex.hpp>
-#include <boost/regex.hpp>
-#include <primitives/emitter.h>
-#include <primitives/executor.h>
-#include <primitives/file_monitor.h>
-#include <primitives/lock.h>
-#include <primitives/pack.h>
-#include <primitives/sw/cl.h>
 #include <primitives/sw/settings_program_name.h>
 #include <primitives/sw/main.h>
-#include <primitives/thread.h>
 #include <primitives/git_rev.h>
-
-#include <primitives/log.h>
-DECLARE_STATIC_LOGGER(logger, "main");
 
 #if _MSC_VER
 #if defined(SW_USE_TBBMALLOC)
@@ -67,266 +46,32 @@ DECLARE_STATIC_LOGGER(logger, "main");
 void self_upgrade();
 void self_upgrade_copy(const path &dst);
 
-static bool setConsoleColorProcessing()
-{
-    bool r = false;
-#ifdef _WIN32
-    DWORD mode;
-    // Try enabling ANSI escape sequence support on Windows 10 terminals.
-    auto console_ = GetStdHandle(STD_OUTPUT_HANDLE);
-    if (GetConsoleMode(console_, &mode))
-        r |= !!SetConsoleMode(console_, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
-    console_ = GetStdHandle(STD_ERROR_HANDLE);
-    if (GetConsoleMode(console_, &mode))
-        r &= !!SetConsoleMode(console_, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
-#endif
-    return r;
-}
-
-int sw_main(const Strings &args, Options &options)
-{
-    SwClientContext swctx(options);
-
-    // for cli we set default input to '.' dir
-    if (swctx.getInputs().empty() && options.options_build.input_settings_pairs.empty())
-        swctx.getInputs().push_back(".");
-    //
-
-    if (options.list_predefined_targets)
-    {
-        LOG_INFO(logger, swctx.listPredefinedTargets());
-        return 0;
-    }
-
-    if (options.list_programs)
-    {
-        LOG_INFO(logger, swctx.listPrograms());
-        return 0;
-    }
-
-    if (0);
-#define SUBCOMMAND(n) else if (subcommand_##n) { swctx.command_##n(); return 0; }
-#include <sw/client/common/commands.inl>
-#undef SUBCOMMAND
-
-    LOG_WARN(logger, "No command was issued");
-
-    return 0;
-}
-
-int setup_main(const Strings &args, Options &options)
-{
-    // some initial stuff
-    // try to do as less as possible before log init
-
-    setConsoleColorProcessing();
-
-    if (!options.working_directory.empty())
-    {
-        options.working_directory = primitives::filesystem::canonical(options.working_directory);
-        if (fs::is_regular_file(options.working_directory))
-            fs::current_path(options.working_directory.parent_path());
-        else
-            fs::current_path(options.working_directory);
-
-#ifdef _WIN32
-        sw_append_symbol_path(fs::current_path());
-#endif
-    }
-
-    if (options.trace)
-        setupLogger("TRACE", options);// , false); // add modules for trace logger
-    else if (gVerbose)
-        setupLogger("DEBUG", options);
-    else
-        setupLogger("INFO", options);
-
-    {
-        String cmdline;
-        for (auto &a : args)
-            cmdline += a + " ";
-        LOG_TRACE(logger, "command line:\n" + cmdline);
-
-        auto append_file_unique = [](const auto &fn, String cmd)
-        {
-            boost::trim(cmd);
-            auto lines = read_lines(fn);
-            Strings lines_out;
-            String s;
-            for (auto &l : lines)
-            {
-                if (std::find(lines_out.begin(), lines_out.end(), l) == lines_out.end() && l != cmd)
-                {
-                    lines_out.push_back(l);
-                    s += l + "\n";
-                }
-            }
-            s += cmd + "\n";
-            write_file(fn, s);
-        };
-
-        if (sw::Settings::get_user_settings().record_commands)
-        {
-            auto hfn = ".sw_history";
-            append_file_unique(get_home_directory() / hfn, cmdline);
-            if (sw::Settings::get_user_settings().record_commands_in_current_dir)
-            {
-                try
-                {
-                    // do not work on some commands (uri)
-                    append_file_unique(path(".sw") / hfn, cmdline);
-                }
-                catch (std::exception &) {}
-            }
-        }
-    }
-
-    // after log initialized
-
-    if (!options.self_upgrade_copy.empty())
-    {
-        self_upgrade_copy(options.self_upgrade_copy);
-        return 0;
-    }
-
-    if (options.self_upgrade)
-    {
-        self_upgrade();
-        return 0;
-    }
-
-    if (cl_parse_configure_ac.getNumOccurrences())
-    {
-        if (cl_parse_configure_ac.empty())
-            cl_parse_configure_ac = "configure.ac";
-        sw::driver::cpp::Driver::processConfigureAc(cl_parse_configure_ac);
-        return 0;
-    }
-
-    if (!options.internal_sign_file.empty())
-    {
-        SW_UNIMPLEMENTED;
-        //ds_sign_file(internal_sign_file[0], internal_sign_file[1]);
-        return 0;
-    }
-
-    if (!options.internal_verify_file.empty())
-    {
-        SW_UNIMPLEMENTED;
-        //ds_verify_file(internal_verify_file[0], internal_verify_file[1], internal_verify_file[2]);
-        return 0;
-    }
-
-    // before storages
-    // Create QSBR context for the main thread.
-    //auto context = createConcurrentContext();
-    //getConcurrentContext(&context);
-
-    SCOPE_EXIT
-    {
-        // Destroy the QSBR context for the main thread.
-        //destroyConcurrentContext(context);
-    };
-
-    if (!options.options_build.ide_fast_path.empty() && fs::exists(options.options_build.ide_fast_path))
-    {
-        auto files = read_lines(options.options_build.ide_fast_path);
-        uint64_t mtime = 0;
-        bool missing = false;
-        for (auto &f : files)
-        {
-            if (!fs::exists(f))
-            {
-                missing = true;
-                break;
-            }
-            auto lwt = fs::last_write_time(f);
-            mtime ^= file_time_type2time_t(lwt);
-        }
-        if (!missing)
-        {
-            path fmtime = options.options_build.ide_fast_path;
-            fmtime += ".t";
-            if (fs::exists(fmtime) && mtime == std::stoull(read_file(fmtime)))
-                return 0;
-            write_file(fmtime, std::to_string(mtime));
-        }
-    }
-
-    // actual execution
-    return sw_main(args, options);
-}
-
-int parse_main(int argc, char **argv)
-{
-    //args::ValueFlag<int> configuration(parser, "configuration", "Configuration to build", { 'c' });
-
-    String overview = "SW: Software Network Client\n"
-        "\n"
-        "  SW is a Universal Package Manager and Build System\n"
-        "\n"
-        "  Documentation: " SW_DOC_URL "\n"
-        ;
-
-    std::vector<std::string> args0(argv + 1, argv + argc);
-    Strings args;
-    args.push_back(argv[0]);
-    for (auto &a : args0)
-    {
-        std::vector<std::string> t;
-        //boost::replace_all(a, "%5F", "_");
-        boost::split_regex(t, a, boost::regex("%20"));
-        args.insert(args.end(), t.begin(), t.end());
-    }
-
-    if (args.size() > 1 && args[1] == sw::builder::getInternalCallBuiltinFunctionName())
-    {
-        // name of subcommand must outlive it (StringRef is used)
-        auto n = sw::builder::getInternalCallBuiltinFunctionName();
-        ::cl::SubCommand subcommand_icbf(n, "");
-        ::cl::opt<String> icbf_arg(::cl::Positional, ::cl::sub(subcommand_icbf)); // module name
-        ::cl::list<String> icbf_args(::cl::ConsumeAfter, ::cl::sub(subcommand_icbf)); // rest
-
-        ::cl::ParseCommandLineOptions(args);
-
-        Strings args;
-        args.push_back(argv[0]);
-        args.push_back(sw::builder::getInternalCallBuiltinFunctionName());
-        args.push_back(icbf_arg);
-        args.insert(args.end(), icbf_args.begin(), icbf_args.end());
-        return sw::jumppad_call(args);
-    }
-
-    //
-    ::cl::ParseCommandLineOptions(args, overview);
-
-    // post setup args
-
-    // create main options!
-    Options options;
-    // set http settings very early
-    // needed for self-upgrade feature
-    setHttpSettings(options);
-    return setup_main(args, options);
-}
-
 int main(int argc, char **argv)
 {
     //mi_version();
     //sw_enable_crash_server();
 
-    int r;
-    try
+    StartupData sd(argc, argv);
+
+    // self upgrade only cli feature now
+    sd.after_create_options = [](StartupData &sd)
     {
-        r = parse_main(argc, argv);
-    }
-    catch (const std::exception &e)
-    {
-        r = 1;
-        LOG_ERROR(logger, e.what());
-    }
-    LOG_FLUSH();
-    return r;
+        if (!sd.getOptions().self_upgrade_copy.empty())
+        {
+            self_upgrade_copy(sd.getOptions().self_upgrade_copy);
+            return true;
+        }
+
+        if (sd.getOptions().self_upgrade)
+        {
+            self_upgrade();
+            return true;
+        }
+
+        return false;
+    };
+
+    return sd.run();
 }
 
 /*SUBCOMMAND_DECL(mirror)
