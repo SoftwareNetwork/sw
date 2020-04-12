@@ -48,7 +48,7 @@ void win32_hacks();
 int main(int argc, char *argv[])
 {
     // cli mode
-    if (argc != 0)
+    if (argc > 1)
     {
         StartupData sd(argc, argv);
         return sd.run();
