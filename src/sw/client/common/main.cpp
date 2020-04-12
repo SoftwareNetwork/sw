@@ -132,6 +132,7 @@ int StartupData::run()
     parseArgs();
 
     createOptions();
+    setWorkingDir();
     initLogger();
 
     try
