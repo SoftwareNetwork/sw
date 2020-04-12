@@ -31,6 +31,7 @@
 #include <sw/support/filesystem.h>
 
 #include <boost/algorithm/string.hpp>
+#include <boost/dll.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
@@ -640,20 +641,18 @@ void VSGenerator::generate(const SwBuild &b)
 
             auto &r = d.custom_rules_manual.back();
 
-#ifdef _WIN32
-            LPWSTR *szArglist;
-            int nArgs;
-            szArglist = CommandLineToArgvW(GetCommandLineW(), &nArgs);
-            if (!options.options_generate.check_stamp_list.empty())
-                nArgs -= 2;
-            for (int i = 0; i < nArgs; i++)
-                r.command += "\"" + to_string(szArglist[i]) + "\" ";
-            LocalFree(szArglist);
-#else
-            SW_UNIMPLEMENTED;
-#endif
-
-            r.command += " -check-stamp-list \"" + normalize_path(fn) + "\"";
+            //
+            r.command += "\"" + normalize_path(path(boost::dll::program_location().wstring())) + "\" ";
+            r.command += "generate -check-stamp-list \"" + normalize_path(fn) + "\" ";
+            r.command += "-input-settings-pairs ";
+            for (auto &i : inputs)
+            {
+                for (auto &s : i.getSettings())
+                {
+                    r.command += "\"" + normalize_path(i.getInput().getPath()) + "\" ";
+                    r.command += fix_json(s.toString()) + " ";
+                }
+            }
             r.outputs.insert(stampfn);
             r.inputs = cfs;
 
@@ -757,7 +756,7 @@ void VSGenerator::generate(const SwBuild &b)
             fs::remove(path(basefn) += ".deps", ec); // trigger updates
 
             BuildEvent be;
-            be.command = "sw @" + normalize_path(rsp);
+            be.command = "\"" + normalize_path(path(boost::dll::program_location().wstring())) + "\" @" + normalize_path(rsp);
             d.pre_build_event = be;
         }
 
