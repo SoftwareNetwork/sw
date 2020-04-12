@@ -63,15 +63,6 @@ struct SW_DRIVER_CPP_API Module
     void check(Build &s, Checker &c) const;
     int sw_get_module_abi_version() const;
 
-    // needed in scripts
-    template <class F, class ... Args>
-    auto call(const String &name, Args && ... args) const
-    {
-        if (!module)
-            throw SW_RUNTIME_ERROR("empty module");
-        return module->get_function<F>(name)(std::forward<Args>(args)...);
-    }
-
 private:
     std::unique_ptr<Module::DynamicLibrary> module;
 
