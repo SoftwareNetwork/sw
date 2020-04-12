@@ -354,6 +354,11 @@ SwClientContext::~SwClientContext()
 
 std::unique_ptr<sw::SwBuild> SwClientContext::createBuild()
 {
+    return createBuildInternal();
+}
+
+std::unique_ptr<sw::SwBuild> SwClientContext::createBuildInternal()
+{
     auto b = getContext().createBuild();
     auto &options = getOptions();
 
@@ -424,8 +429,7 @@ std::unique_ptr<sw::SwBuild> SwClientContext::createBuild()
 
 std::unique_ptr<sw::SwBuild> SwClientContext::createBuildAndPrepare(const Inputs &i)
 {
-    auto b = createBuild();
-    addInputs(*b, i);
+    auto b = createBuild(i);
     b->loadInputs();
     b->setTargetsToBuild();
     b->resolvePackages();
@@ -463,9 +467,14 @@ void SwClientContext::addInputs(sw::SwBuild &b, const Inputs &i)
     }
 }
 
+std::unique_ptr<sw::SwBuild> SwClientContext::createBuildWithDefaultInputs()
+{
+    return createBuild({getInputs(), getOptions().input_settings_pairs});
+}
+
 std::unique_ptr<sw::SwBuild> SwClientContext::createBuild(const Inputs &i)
 {
-    auto b = createBuild();
+    auto b = createBuildInternal();
     addInputs(*b, i);
     return b;
 }

@@ -137,8 +137,7 @@ SUBCOMMAND_DECL(build)
 
     // if -B specified, it is used as is
 
-    Inputs inputs(getInputs(), getOptions().options_build.input_settings_pairs);
-    auto b = createBuild(inputs);
+    auto b = createBuildWithDefaultInputs();
     if (getOptions().options_build.build_default_explan)
     {
         b->loadInputs();

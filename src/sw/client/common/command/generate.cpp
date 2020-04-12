@@ -89,7 +89,7 @@ SUBCOMMAND_DECL(generate)
             g->add_all_packages = true;
     }
 
-    auto b = createBuildAndPrepare({ getInputs() });
+    auto b = createBuildAndPrepare({getInputs(), getOptions().input_settings_pairs});
     b->getExecutionPlan(); // prepare commands
     generator->generate(*b);
 }

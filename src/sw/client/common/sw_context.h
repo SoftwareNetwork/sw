@@ -82,6 +82,8 @@ struct SwClientContext
     const Options &getOptions() const { return *options; }
 
     std::unique_ptr<sw::SwBuild> createBuild();
+    std::unique_ptr<sw::SwBuild> createBuildInternal();
+    std::unique_ptr<sw::SwBuild> createBuildWithDefaultInputs();
     std::unique_ptr<sw::SwBuild> createBuild(const Inputs &);
     std::unique_ptr<sw::SwBuild> createBuildAndPrepare(const Inputs &);
 
