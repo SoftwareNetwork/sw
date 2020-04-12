@@ -21,6 +21,8 @@
 #include <cl.llvm.h>
 #include "sw_context.h"
 
+#include <sw/client/common/main.h>
+
 #include <qapplication.h>
 #include <qglobal.h>
 #include <qmessagebox.h>
@@ -45,6 +47,13 @@ void win32_hacks();
 
 int main(int argc, char *argv[])
 {
+    // cli mode
+    if (argc != 0)
+    {
+        StartupData sd(argc, argv);
+        return sd.run();
+    }
+
     win32_hacks();
     qsrand(time(0));
 
