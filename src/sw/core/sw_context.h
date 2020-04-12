@@ -80,6 +80,10 @@ struct SW_CORE_API SwContext : SwCoreContext
     std::unique_ptr<SwBuild> createBuild();
     void executeBuild(const path &);
 
+    // stops current operation
+    SwBuild *registerOperation(SwBuild *);
+    void stop(std::thread::id);
+
     // one subject may bring several inputs
     // (one path containing multiple inputs)
     std::vector<Input *> addInput(const String &);
@@ -96,6 +100,8 @@ private:
 
     Drivers drivers;
     Inputs inputs;
+    std::mutex m;
+    std::map<std::thread::id, SwBuild *> active_operations;
 
     std::unique_ptr<SwBuild> createBuild1();
 

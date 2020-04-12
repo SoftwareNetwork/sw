@@ -39,14 +39,17 @@ DECLARE_STATIC_LOGGER(logger, "build");
     throw SW_RUNTIME_ERROR("Unexpected build state = " + std::to_string(toIndex(state)) + \
                            ", expected = " + std::to_string(toIndex(from)))
 
-#define CHECK_STATE_AND_CHANGE_RAW(from, to, scope_exit) \
-    if (stopped) return;                                 \
-    CHECK_STATE(from);                                   \
-    scope_exit                                           \
-    {                                                    \
-        if (std::uncaught_exceptions() == 0)             \
-            state = to;                                  \
-    };                                                   \
+#define CHECK_STATE_AND_CHANGE_RAW(from, to, scope_exit)          \
+    if (stopped)                                                  \
+        throw SW_RUNTIME_ERROR("Interrupted");                    \
+    auto swctx_old_op = swctx.registerOperation((SwBuild *)this); \
+    CHECK_STATE(from);                                            \
+    scope_exit                                                    \
+    {                                                             \
+        swctx.registerOperation(swctx_old_op);                    \
+        if (std::uncaught_exceptions() == 0)                      \
+            state = to;                                           \
+    };                                                            \
     LOG_TRACE(logger, "build id " << this << " performing " << BOOST_CURRENT_FUNCTION)
 
 #define CHECK_STATE_AND_CHANGE(from, to) CHECK_STATE_AND_CHANGE_RAW(from, to, SCOPE_EXIT)
@@ -585,7 +588,7 @@ void SwBuild::loadPackages(const TargetMap &predefined)
     auto usc = can_use_saved_configs(*this);
     TargetMap cache;
     int r = 1;
-    while (1)
+    while (!stopped)
     {
         LOG_TRACE(logger, "build id " << this << " " << BOOST_CURRENT_FUNCTION << " round " << r++);
 

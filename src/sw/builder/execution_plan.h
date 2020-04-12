@@ -121,7 +121,7 @@ private:
     VecT commands;
     VecT unprocessed_commands;
     USet unprocessed_commands_set;
-    mutable std::atomic_bool stopped;
+    mutable std::atomic_bool interrupted;
 
     //
     std::optional<Clock::time_point> stop_time;

@@ -53,7 +53,7 @@ void ExecutionPlan::stop(bool interrupt_running_commands)
 {
     if (interrupt_running_commands)
         SW_UNIMPLEMENTED;
-    stopped = true;
+    interrupted = true;
 }
 
 void ExecutionPlan::execute(Executor &e) const
@@ -64,7 +64,8 @@ void ExecutionPlan::execute(Executor &e) const
     std::mutex m;
     std::vector<Future<void>> fs;
     std::vector<Future<void>> all;
-    stopped = false;
+    std::atomic_bool stopped = false;
+    interrupted = false;
     std::atomic_int running = 0;
     std::atomic_int64_t askip_errors = skip_errors;
 
@@ -88,9 +89,9 @@ void ExecutionPlan::execute(Executor &e) const
     }
 
     std::function<void(PtrT)> run;
-    run = [this, &askip_errors, &e, &run, &fs, &all, &m, &running](T *c)
+    run = [this, &askip_errors, &e, &run, &fs, &all, &m, &running, &stopped](T *c)
     {
-        if (stopped)
+        if (stopped || interrupted)
             return;
         try
         {
@@ -158,7 +159,7 @@ void ExecutionPlan::execute(Executor &e) const
             i++;
             f.wait();
         }
-        if (stopped || fs2.empty())
+        if (stopped || fs2.empty() || interrupted)
             break;
     }
 
@@ -177,10 +178,12 @@ void ExecutionPlan::execute(Executor &e) const
     if (!eptrs.empty() && throw_on_errors)
         throw ExceptionVector(eptrs);
 
-    if (i != sz/* && !stopped*/)
+    if (i != sz)
     {
         if (stop_time && Clock::now() > *stop_time && stopped)
             throw SW_RUNTIME_ERROR("Time limit exceeded");
+        if (interrupted)
+            throw SW_RUNTIME_ERROR("Interrupted");
         throw SW_RUNTIME_ERROR("Executor did not perform all steps (" + std::to_string(i) + "/" + std::to_string(sz) + ")");
     }
 }
