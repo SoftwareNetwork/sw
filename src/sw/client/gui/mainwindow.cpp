@@ -594,7 +594,7 @@ void MainWindow::setupConfiguration(QWidget *parent)
     }
 
     auto rb = new QPushButton("Reset");
-    connect(rb, &QPushButton::click, []()
+    connect(rb, &QPushButton::clicked, []()
     {
         //setupConfiguration(cfg);
     });
