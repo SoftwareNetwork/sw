@@ -51,6 +51,7 @@ int main(int argc, char *argv[])
     if (argc > 1)
     {
         StartupData sd(argc, argv);
+        sd.program_short_name = SHORT_PROGRAM_NAME;
         return sd.run();
     }
 

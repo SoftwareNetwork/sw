@@ -21,6 +21,8 @@
 #include <qabstractitemmodel.h>
 #include <qmainwindow.h>
 
+#define SHORT_PROGRAM_NAME "swgui"
+
 struct SwGuiContext;
 namespace sw { struct PackagesDatabase; }
 

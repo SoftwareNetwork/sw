@@ -48,6 +48,7 @@
 #include <primitives/sw/settings_program_name.h>
 #include <sw/client/common/generator/generator.h>
 #include <sw/client/common/commands.h>
+#include <sw/client/common/self_upgrade.h>
 #include <sw/manager/package_database.h>
 #include <sw/manager/storage.h>
 
@@ -622,6 +623,13 @@ void MainWindow::createMenus()
         swctx.command_doc();
     });
 
+    auto updateAction = new QAction("Check for Updates...");
+    connect(updateAction, &QAction::triggered, [this]
+    {
+        self_upgrade(SHORT_PROGRAM_NAME);
+        close();
+    });
+
     auto fileMenu = new QMenu("File");
     fileMenu->addAction("Settings");
     fileMenu->addSeparator();
@@ -633,6 +641,8 @@ void MainWindow::createMenus()
 
     auto helpMenu = new QMenu("Help");
     helpMenu->addAction(docAction);
+    helpMenu->addSeparator();
+    helpMenu->addAction(updateAction);
     helpMenu->addSeparator();
     helpMenu->addAction(aboutAction);
 
