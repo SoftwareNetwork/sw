@@ -72,7 +72,14 @@ Module::Module(std::unique_ptr<Module::DynamicLibrary> dll)
     auto current_abi = ::sw_get_module_abi_version();
     auto module_abi = sw_get_module_abi_version_();
     if (current_abi != module_abi)
-        throw SW_RUNTIME_ERROR("Bad config ABI version: sw required (" + std::to_string(current_abi) + "), module abi (" + std::to_string(module_abi) + ").");
+    {
+        auto p = module->shared_lib().location();
+        module.reset();
+        if (!do_not_remove_bad_module)
+            fs::remove(p);
+        throw SW_RUNTIME_ERROR("Bad config ABI version: sw required (" + std::to_string(current_abi) +
+            "), module abi (" + std::to_string(module_abi) + "). Will rebuild on the next run.");
+    }
 
 #undef LOAD
 }
