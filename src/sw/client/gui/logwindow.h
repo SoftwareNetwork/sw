@@ -65,15 +65,27 @@ class LogWindow : public QMainWindow
     Q_OBJECT
 
 public:
+    std::thread::id tid;
+    bool cancelled = false;
+
     LogWindow(SwGuiContext &swctx, QWidget *parent = 0);
 
     void appendMessage(const QString &text);
-    void stop();
+    void stopLogging();
+    void stopOperation();
+
+    void closeEvent(QCloseEvent *event) override;
+
+Q_SIGNALS:
+    void hideCancelButton();
 
 private:
     using text_sink = boost::log::sinks::synchronous_sink<qt_text_ostream_backend>;
 
     SwGuiContext &swctx;
     QPlainTextEdit *edit;
+    class QPushButton *bc;
     boost::shared_ptr<text_sink> sink;
+
+    void hideCancelButtonSlot();
 };

@@ -101,6 +101,7 @@ void SwGuiContext::run_with_log(const QString &title, std::function<void(void)> 
 
     auto t = QThread::create([w, f, timer]
     {
+        w->tid = std::this_thread::get_id();
         LOG_INFO(logger, "Starting...");
         String error;
         exception_safe_call([f] {f(); }, &error);
@@ -108,9 +109,10 @@ void SwGuiContext::run_with_log(const QString &title, std::function<void(void)> 
             LOG_INFO(logger, error);
         LOG_INFO(logger, "Finished.");
         LOG_FLUSH();
-        w->stop();
+        w->stopLogging();
+        emit w->hideCancelButton();
         timer->stop(); // Timers cannot be stopped from another thread
-        w->statusBar()->showMessage("Finished.");
+        w->statusBar()->showMessage(w->cancelled ? "Cancelled." : "Finished.");
     });
     t->start();
 }

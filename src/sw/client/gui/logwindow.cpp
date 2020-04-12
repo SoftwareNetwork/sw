@@ -24,6 +24,7 @@
 #include <primitives/string.h>
 #include <primitives/sw/cl.h>
 #include <sw/client/common/sw_context.h>
+#include <sw/core/sw_context.h>
 
 #include <cl.llvm.h>
 
@@ -71,12 +72,16 @@ LogWindow::LogWindow(SwGuiContext &swctx, QWidget *parent)
     edit->setReadOnly(true);
     vl->addWidget(edit);
 
-    auto bc = new QPushButton("Cancel Operation");
+    bc = new QPushButton("Cancel Operation");
     vl->addWidget(bc);
-    connect(bc, &QPushButton::click, [this]()
+    connect(bc, &QPushButton::clicked, [this, &swctx]()
     {
-        //stop();
+        cancelled = true;
+        emit hideCancelButton();
+        stopOperation();
     });
+
+    connect(this, &LogWindow::hideCancelButton, this, &LogWindow::hideCancelButtonSlot);
 
     sink = boost::make_shared<text_sink>();
     sink->locked_backend()->auto_flush();
@@ -96,9 +101,10 @@ LogWindow::LogWindow(SwGuiContext &swctx, QWidget *parent)
     sink->set_filter(boost::log::trivial::severity >= sev);
 
     connect(sink->locked_backend().get(), &qt_text_ostream_backend::updateText, this, &LogWindow::appendMessage);
-    connect(this, &LogWindow::close, [this]()
+    connect(this, &LogWindow::destroyed, [this]()
     {
-        stop();
+        stopOperation();
+        stopLogging();
     });
 
     // Register the sink in the logging core
@@ -111,7 +117,24 @@ void LogWindow::appendMessage(const QString &text)
     edit->verticalScrollBar()->setValue(edit->verticalScrollBar()->maximum());
 }
 
-void LogWindow::stop()
+void LogWindow::stopOperation()
+{
+    swctx.getContext().stop(tid);
+}
+
+void LogWindow::stopLogging()
 {
     boost::log::core::get()->remove_sink(sink);
+}
+
+void LogWindow::hideCancelButtonSlot()
+{
+    bc->hide();
+}
+
+void LogWindow::closeEvent(QCloseEvent *event)
+{
+    cancelled = true;
+    stopOperation();
+    event->accept();
 }
