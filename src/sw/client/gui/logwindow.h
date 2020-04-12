@@ -57,26 +57,6 @@ private:
     QString t;
 };
 
-/*class SwWorker : public QObject
-{
-    Q_OBJECT
-public:
-    SwWorker(std::function<void(void)> f) : f(f) {}
-
-public slots:
-    void doWork(std::function<void(void)> f)
-    {
-        f();
-        emit finished();
-    }
-
-signals:
-    void finished();
-
-private:
-    std::function<void(void)> f;
-};*/
-
 class QPlainTextEdit;
 struct SwGuiContext;
 
