@@ -16,6 +16,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#pragma once
+
+#include "stdvectoredit.h"
+
 QString option_to_qstring(const String &v)
 {
     return v.c_str();
@@ -34,6 +38,7 @@ QString option_to_qstring(int v)
 void add_label(const String &name, QBoxLayout *parent, const primitives::cl::Option &o, bool force_name = false)
 {
     auto l = new QLabel();
+    //l->setWordWrap(true);
     if (force_name)
         l->setText(name.c_str());
     else if (!o.HelpStr.empty())
@@ -57,23 +62,25 @@ void add_label(const String &name, QBoxLayout *parent, const primitives::cl::Opt
 }
 
 template <class T>
-void cl_option_add_widget(const String &name, QBoxLayout *parent, std::vector<T> &value, const primitives::cl::Option &o)
+void cl_option_add_widget(const String &name, QBoxLayout *parent, std::vector<T> &vector, const primitives::cl::Option &o)
 {
     add_label(name, parent, o);
-    auto w = new QWidget;
+
     auto wl = new QVBoxLayout;
-    wl->setMargin(0);
-    w->setLayout(wl);
-    for (auto &v : value)
-        cl_option_add_widget1(wl, v, o);
+    parent->addLayout(wl);
+
+    StdVectorEdit<T> *ve;
+    if constexpr (std::is_same_v<T, String>)
+        ve = new StdVectorEdit<T>(vector, wl, [](const String &s) { return s; });
+    else if constexpr (std::is_same_v<T, path>)
+        ve = new StdVectorEdit<T>(vector, wl, [](const path &s) { return normalize_path(s); });
+    else
+        static_assert(false, "Unimplemented type");
+
     auto b = new QPushButton("Add");
-    b->connect(b, &QPushButton::clicked, [wl, &value, &o]()
-    {
-        value.push_back({});
-        cl_option_add_widget1(wl, value.back(), o);
-    });
-    parent->addWidget(w);
-    parent->addWidget(b);
+    b->connect(b, &QPushButton::clicked, [ve] { ve->appendRow(); });
+    b->connect(b, &QPushButton::destroyed, [ve] { delete ve; });
+    wl->addWidget(b);
 }
 
 template <class T>

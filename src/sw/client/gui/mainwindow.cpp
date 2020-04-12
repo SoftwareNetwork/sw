@@ -19,6 +19,7 @@
 #include "mainwindow.h"
 
 #include "packages_model.h"
+#include "stdvectoredit.h"
 #include "sw_context.h"
 
 #include <qaction.h>
@@ -123,7 +124,8 @@ MainWindow::MainWindow(SwGuiContext &swctx, QWidget *parent)
 
     setupUi();
     //resize(minimumSizeHint());
-    resize(200, 200);
+    //resize(200, 200);
+    setMinimumSize(850, 500);
 }
 
 void MainWindow::setupUi()
