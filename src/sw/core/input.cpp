@@ -36,7 +36,6 @@ Input::Input(const IDriver &driver, const path &p, InputType t)
     //if (p.empty())
         //throw SW_RUNTIME_ERROR("empty path");
     this->p = p;
-    type = t;
 }
 
 Input::~Input()

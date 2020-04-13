@@ -463,6 +463,7 @@ std::vector<std::unique_ptr<Input>> Driver::detectInputs(const path &p, InputTyp
     case InputType::Directory:
     {
         auto i = std::make_unique<DirInput>(*this, p, type);
+        i->setHash(std::hash<path>()(i->getPath()));
         LOG_TRACE(logger, "dir input " << p);
         inputs.push_back(std::move(i));
         break;

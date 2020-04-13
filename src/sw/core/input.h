@@ -73,7 +73,6 @@ struct SW_CORE_API Input
     size_t getHash() const;
     void setHash(size_t);
 
-    InputType getType() const { return type; }
     path getPath() const;
 
     // same input may be used to load multiple packages
@@ -88,7 +87,6 @@ protected:
     virtual void setEntryPoints(EntryPointsVector);
 
 private:
-    InputType type;
     path p;
     PackageIdSet pkgs;
     int prefix = -1;
@@ -102,9 +100,6 @@ private:
 
     virtual EntryPointsVector load1(SwContext &) = 0;
 };
-
-static_assert(!std::is_copy_constructible_v<Input>, "must not be copied");
-static_assert(!std::is_copy_assignable_v<Input>, "must not be copied");
 
 struct SW_CORE_API InputWithSettings
 {

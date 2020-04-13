@@ -98,13 +98,6 @@ size_t InputDatabase::addInputFile(const path &p) const
 
 void InputDatabase::setupInput(Input &i) const
 {
-    if (i.getType() == InputType::Directory)
-    {
-        // set hash by path
-        i.setHash(std::hash<path>()(i.getPath()));
-        return;
-    }
-
     const ::db::inputs::File file{};
 
     auto set_input = [&]()
