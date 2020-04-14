@@ -108,7 +108,6 @@ void write_build_script(
             throw SW_RUNTIME_ERROR("Cannot find dependency: " + u.toString());
 
         auto &r = *lp;
-        auto &d = r.getData();
         if (used_gns.find(get_gn(u)) != used_gns.end())
         {
             used_gns[get_gn(u)].insert(*lp);
@@ -120,7 +119,6 @@ void write_build_script(
 
     for (auto &[u, r] : m)
     {
-        auto &d = r.getData();
         if (used_gns.find(get_gn(u)) != used_gns.end())
         {
             used_gns[get_gn(u)].insert(r);
