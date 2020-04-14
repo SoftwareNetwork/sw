@@ -19,7 +19,6 @@
 #include "module.h"
 
 #include "build.h"
-#define SW_PACKAGE_API
 #include "sw_check_abi_version.h"
 
 #include <boost/dll.hpp>
@@ -69,16 +68,34 @@ Module::Module(std::unique_ptr<Module::DynamicLibrary> dll)
     LOAD(configure);
     LOAD(sw_get_module_abi_version);
 
-    auto current_abi = ::sw_get_module_abi_version();
+    // regardless of config version we must check abi
+    // example: new abi pushed to SW Network, but user has old client
+    // this is abi mismatch or a crash without this check
+    auto current_driver_abi = ::sw_get_module_abi_version();
     auto module_abi = sw_get_module_abi_version_();
-    if (current_abi != module_abi)
+    if (current_driver_abi != module_abi)
     {
         auto p = module->shared_lib().location();
         module.reset();
+        String rebuild;
         if (!do_not_remove_bad_module)
+        {
             fs::remove(p);
-        throw SW_RUNTIME_ERROR("Bad config ABI version: sw required (" + std::to_string(current_abi) +
-            "), module abi (" + std::to_string(module_abi) + "). Will rebuild on the next run.");
+            rebuild = " Will rebuild on the next run.";
+        }
+
+        if (module_abi > current_driver_abi)
+        {
+            throw SW_RUNTIME_ERROR("Bad config ABI version. Module ABI (" + std::to_string(module_abi) +
+                ") is greater than binary ABI (" + std::to_string(current_driver_abi) +
+                "). Update your sw binary." + rebuild);
+        }
+        if (module_abi < current_driver_abi)
+        {
+            throw SW_RUNTIME_ERROR("Bad config ABI version. Module ABI (" + std::to_string(module_abi) +
+                ") is less than binary ABI (" + std::to_string(current_driver_abi) +
+                "). Update sw driver headers (or ask driver maintainer)." + rebuild);
+        }
     }
 
 #undef LOAD

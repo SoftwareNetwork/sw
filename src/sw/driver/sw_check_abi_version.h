@@ -20,8 +20,12 @@
 
 #include "sw_abi_version.h"
 
+#ifndef SW_PACKAGE_API
+#define SW_PACKAGE_API
+#endif
+
 SW_PACKAGE_API
-int sw_get_module_abi_version()
+inline int sw_get_module_abi_version()
 {
     return SW_MODULE_ABI_VERSION;
 }

@@ -23,6 +23,7 @@
 #include "driver.h"
 #include "suffix.h"
 #include "target/all.h"
+#include "sw_check_abi_version.h"
 
 #include <sw/core/sw_context.h>
 #include <sw/core/input_database.h>
@@ -464,10 +465,11 @@ private:
 SharedLibraryTarget &PrepareConfig::createTarget(Build &b, const InputData &d)
 {
     auto name = getSelfTargetName(b, { d.fn });
+    Version v(0, 0, ::sw_get_module_abi_version());
     auto &lib =
         lang == LANG_VALA
-        ? (SharedLibraryTarget&)b.addTarget<ConfigSharedLibraryTarget<ValaSharedLibrary>>(name, "local", *this, d, b.getContext().getLocalStorage().storage_dir)
-        : b.addTarget<ConfigSharedLibraryTarget<SharedLibraryTarget>>(name, "local", *this, d, b.getContext().getLocalStorage().storage_dir);
+        ? (SharedLibraryTarget&)b.addTarget<ConfigSharedLibraryTarget<ValaSharedLibrary>>(name, v, *this, d, b.getContext().getLocalStorage().storage_dir)
+        : b.addTarget<ConfigSharedLibraryTarget<SharedLibraryTarget>>(name, v, *this, d, b.getContext().getLocalStorage().storage_dir);
     tgt = lib.getPackage();
     targets.insert(&lib);
     return lib;
