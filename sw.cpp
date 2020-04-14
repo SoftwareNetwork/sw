@@ -254,7 +254,6 @@ void build(Solution &s)
         client_common += "src/sw/client/common/.*"_rr;
         client_common.CPPVersion = CPPLanguageStandard::CPP17;
         client_common.Public += core, cpp_driver;
-        client_common.Public += "org.sw.demo.giovannidicanio.winreg"_dep;
 
         embed2("pub.egorpugin.primitives.tools.embedder2-master"_dep, client_common, "src/sw/client/common/inserts/SWConfig.cmake");
         embed2("pub.egorpugin.primitives.tools.embedder2-master"_dep, client_common, "src/sw/client/common/inserts/project_templates.yml");
