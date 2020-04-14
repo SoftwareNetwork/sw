@@ -69,7 +69,7 @@ size_t InputDatabase::getFileHash(const path &p) const
     {
         (*db)(insert_into(file).set(
             file.path = np,
-            file.hash = h,
+            file.hash = (int64_t)h,
             file.lastWriteTime = lwtdata
         ));
     }
