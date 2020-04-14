@@ -209,8 +209,8 @@ int main(int argc, char **argv)
     auto &idb = swctx.getInputDatabase();
     for (auto &[u, r] : m)
     {
-        gns[u] = idb.addInputFile(r.getDirSrc2() / "sw.cpp");
-        gns2[r] = idb.addInputFile(r.getDirSrc2() / "sw.cpp");
+        gns[u] = idb.getFileHash(r.getDirSrc2() / "sw.cpp");
+        gns2[r] = idb.getFileHash(r.getDirSrc2() / "sw.cpp");
     }
 
     write_required_packages(m);
