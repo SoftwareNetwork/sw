@@ -26,6 +26,7 @@
 #include <sw/builder/execution_plan.h>
 #include <sw/core/build.h>
 #include <sw/core/input.h>
+#include <sw/core/specification.h>
 #include <sw/core/sw_context.h>
 #include <sw/driver/build_settings.h>
 #include <sw/support/filesystem.h>
@@ -373,10 +374,10 @@ void VSGenerator::generate(const SwBuild &b)
         Project p(all_build_name);
         p.g = this;
         p.directory = &s.directories.find(predefined_targets_dir)->second;
-        if (input.getInput().getType() == InputType::SpecificationFile ||
-            input.getInput().getType() == InputType::InlineSpecification)
+        for (auto &i : inputs)
         {
-            p.files.insert({ input.getInput().getPath(), SourceFilesFilter });
+            for (auto &[_, f] : i.getInput().getSpecification()->files.getData())
+                p.files.insert({f.absolute_path, SourceFilesFilter});
         }
         p.settings = s.settings;
         if (vstype != VsGeneratorType::VisualStudio)
@@ -399,14 +400,11 @@ void VSGenerator::generate(const SwBuild &b)
                 cmd = "-d " + normalize_path(fs::current_path()) + " build -input-settings-pairs ";
                 for (auto &i : inputs)
                 {
-                    if (i.getInput().getType() == sw::InputType::SpecificationFile ||
-                        i.getInput().getType() == sw::InputType::InlineSpecification)
+                    for (auto &[_, f] : i.getInput().getSpecification()->files.getData())
                     {
-                        cmd += "\"" + normalize_path(i.getInput().getPath()) + "\" ";
+                        cmd += "\"" + normalize_path(f.absolute_path) + "\" ";
                         cmd += fix_json(st.toString()) + " ";
                     }
-                    else
-                        SW_UNIMPLEMENTED;
                 }
 
                 // TODO: switch to swexplans
@@ -435,11 +433,10 @@ void VSGenerator::generate(const SwBuild &b)
     std::map<sw::TargetSettings, Files> configure_files;
     for (auto &i : inputs)
     {
-        if (i.getInput().getType() == sw::InputType::SpecificationFile ||
-            i.getInput().getType() == sw::InputType::InlineSpecification)
+        for (auto &[_, f] : i.getInput().getSpecification()->files.getData())
         {
             for (auto &st : s.settings)
-                configure_files[st].insert(i.getInput().getPath());
+                configure_files[st].insert(f.absolute_path);
         }
     }
 
@@ -654,8 +651,11 @@ void VSGenerator::generate(const SwBuild &b)
             {
                 for (auto &s : i.getSettings())
                 {
-                    r.command += "\"" + normalize_path(i.getInput().getPath()) + "\" ";
-                    r.command += fix_json(s.toString()) + " ";
+                    for (auto &[_, f] : i.getInput().getSpecification()->files.getData())
+                    {
+                        r.command += "\"" + normalize_path(f.absolute_path) + "\" ";
+                        r.command += fix_json(s.toString()) + " ";
+                    }
                 }
             }
             r.outputs.insert(stampfn);

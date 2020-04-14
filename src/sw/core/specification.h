@@ -77,7 +77,7 @@ struct SW_CORE_API Specification
 
     String getName() const;
 
-private:
+//private: // temporarily (TODO: update upload)
     SpecificationFiles files;
     path dir;
 };

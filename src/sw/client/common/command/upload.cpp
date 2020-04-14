@@ -18,8 +18,8 @@
 
 #include "../commands.h"
 
-#include <sw/core/driver.h>
 #include <sw/core/input.h>
+#include <sw/core/specification.h>
 #include <sw/manager/api.h>
 #include <sw/manager/settings.h>
 
@@ -111,10 +111,14 @@ SUBCOMMAND_DECL(upload)
 {
     auto b = createBuild();
 
-    // get spec early, so changes won't be considered
+    // get spec early, so changes won't be noticed
+    // do not move to the bottom
     auto inputs = getContext().addInput(fs::current_path());
     SW_CHECK(inputs.size() == 1); // for now
-    auto spec = inputs[0]->getSpecification()->files.begin()->second;
+    auto spec1 = inputs[0]->getSpecification();
+    SW_CHECK(spec1->files.getData().size() == 1); // for now
+    auto spec = read_file(spec1->files.getData().begin()->second.absolute_path);
+    auto script_name = spec1->files.getData().begin()->first.filename().string();
 
     // detect from options
     bool cmdline_source_present = 0
@@ -175,16 +179,6 @@ SUBCOMMAND_DECL(upload)
         write_file(b->getBuildDirectory() / "upload" / id.toString() += ".json", d->getString());
         auto id2 = sw::PackageId(sw::PackagePath(getOptions().options_upload.upload_prefix) / id.getPath(), id.getVersion());
         LOG_INFO(logger, "Uploading " + id2.toString());
-    }
-
-    String script_name;
-    switch (i[0]->getType())
-    {
-    case sw::InputType::SpecificationFile:
-        script_name = i[0]->getPath().filename().string();
-        break;
-    default:
-        SW_UNIMPLEMENTED;
     }
 
     if (getOptions().options_upload.upload_dry)

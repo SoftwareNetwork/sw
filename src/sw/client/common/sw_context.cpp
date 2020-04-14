@@ -711,7 +711,7 @@ sw::SwContext &SwClientContext::getContext()
         // before default?
         //for (auto &d : drivers)
         //swctx->registerDriver(std::make_unique<sw::driver::cpp::Driver>());
-        swctx_->registerDriver("org.sw.sw.driver.cpp-0.4.1"s, std::make_unique<sw::driver::cpp::Driver>());
+        swctx_->registerDriver("org.sw.sw.driver.cpp-0.4.1"s, std::make_unique<sw::driver::cpp::Driver>(*swctx_));
         //swctx->registerDriver(std::make_unique<sw::CDriver>(sw_create_driver));
     }
     return *swctx_;
