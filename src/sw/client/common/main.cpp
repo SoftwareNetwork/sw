@@ -41,6 +41,11 @@ static void print_command_line(const Strings &args)
 
     auto append_file_unique = [](const auto &fn, String cmd)
     {
+        if (!fs::exists(fn))
+        {
+            write_file(fn, cmd + "\n");
+            return;
+        }
         boost::trim(cmd);
         auto lines = read_lines(fn);
         Strings lines_out;
