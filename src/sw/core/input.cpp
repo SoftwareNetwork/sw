@@ -31,8 +31,8 @@ DECLARE_STATIC_LOGGER(logger, "input");
 namespace sw
 {
 
-Input::Input(SwContext &swctx, const IDriver &driver)
-    : swctx(swctx), driver(driver)
+Input::Input(SwContext &swctx, const IDriver &driver, std::unique_ptr<Specification> spec)
+    : swctx(swctx), driver(driver), specification(std::move(spec))
 {
 }
 
@@ -66,17 +66,22 @@ bool Input::isLoaded() const
 
 bool Input::isOutdated(const fs::file_time_type &t) const
 {
-    return getSpecification()->isOutdated(t);
+    return getSpecification().isOutdated(t);
 }
 
 String Input::getName() const
 {
-    return getSpecification()->getName();
+    return getSpecification().getName();
 }
 
 size_t Input::getHash() const
 {
-    return getSpecification()->getHash(swctx.getInputDatabase());
+    return getSpecification().getHash(swctx.getInputDatabase());
+}
+
+const Specification &Input::getSpecification() const
+{
+    return *specification;
 }
 
 std::vector<TargetEntryPoint*> Input::getEntryPoints() const
@@ -89,7 +94,7 @@ std::vector<TargetEntryPoint*> Input::getEntryPoints() const
     return v;
 }
 
-void Input::setEntryPoints(std::vector<std::unique_ptr<TargetEntryPoint>> in)
+void Input::setEntryPoints(EntryPointsVector &&in)
 {
     SW_ASSERT(!in.empty(), "No entry points provided");
     SW_ASSERT(!isLoaded(), "Input already loaded");

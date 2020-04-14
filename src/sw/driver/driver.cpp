@@ -167,7 +167,6 @@ struct SpecFileInput : Input, DriverInput
 {
     Driver *driver = nullptr;
     std::unique_ptr<Module> module;
-    path sw_fn;
 
     using Input::Input;
 
@@ -183,18 +182,9 @@ struct SpecFileInput : Input, DriverInput
     // everything else is parallel loadable
     bool isParallelLoadable() const override { return !isBatchLoadable(); }
 
-    std::unique_ptr<Specification> getSpecification() const override
-    {
-        SpecificationFiles f;
-        f.addFile(sw_fn.filename(), sw_fn);
-
-        auto spec = std::make_unique<Specification>(f);
-        return spec;
-    }
-
     EntryPointsVector load1(SwContext &swctx) override
     {
-        auto fn = sw_fn;
+        auto fn = getSpecification().files.getData().begin()->second.absolute_path;
         switch (fe_type)
         {
         case FrontendType::Sw:
@@ -311,39 +301,23 @@ struct SpecFileInput : Input, DriverInput
         }
     }
 
-    void setEntryPoints(EntryPointsVector in) override { Input::setEntryPoints(std::move(in)); }
+    void setEntryPoints(EntryPointsVector &&in) override { Input::setEntryPoints(std::move(in)); }
 };
 
 struct InlineSpecInput : Input, DriverInput
 {
     yaml root;
-    path fn;
-    path virtual_fn;
 
     using Input::Input;
 
     bool isBatchLoadable() const override { return false; }
     bool isParallelLoadable() const override { return !isBatchLoadable(); }
 
-    std::unique_ptr<Specification> getSpecification() const override
-    {
-        SW_ASSERT(fe_type == FrontendType::Cppan, "not implemented");
-
-        String s;
-        if (!root.IsNull())
-            s = YAML::Dump(root);
-
-        SpecificationFiles f;
-        f.addFile(virtual_fn, fn, s);
-
-        auto spec = std::make_unique<Specification>(f);
-        return spec;
-    }
-
     EntryPointsVector load1(SwContext &swctx) override
     {
         SW_ASSERT(fe_type == FrontendType::Cppan, "not implemented");
 
+        auto fn = getSpecification().files.getData().begin()->second.absolute_path;
         auto p = fn;
         if (root.IsNull())
         {
@@ -375,22 +349,15 @@ struct InlineSpecInput : Input, DriverInput
 
 struct DirInput : Input
 {
-    path dir;
-
     using Input::Input;
 
     bool isBatchLoadable() const override { return false; }
     bool isParallelLoadable() const override { return !isBatchLoadable(); }
 
-    std::unique_ptr<Specification> getSpecification() const override
-    {
-        auto spec = std::make_unique<Specification>(dir);
-        return spec;
-    }
-
     EntryPointsVector load1(SwContext &swctx) override
     {
-        auto bf = [this](Build &b)
+        auto dir = getSpecification().dir;
+        auto bf = [this, dir](Build &b)
         {
             auto &t = b.addExecutable(dir.stem().string());
         };
@@ -413,8 +380,11 @@ std::vector<std::unique_ptr<Input>> Driver::detectInputs(const path &p, InputTyp
         if (!fe)
             break;
 
-        auto i = std::make_unique<SpecFileInput>(swctx, *this);
-        i->sw_fn = p;
+        SpecificationFiles f;
+        f.addFile(p.filename(), p);
+        auto spec = std::make_unique<Specification>(f);
+
+        auto i = std::make_unique<SpecFileInput>(swctx, *this, std::move(spec));
         i->driver = (Driver*)this;
         i->fe_type = *fe;
         LOG_TRACE(logger, "using " << toString(i->fe_type) << " frontend for input " << p);
@@ -439,10 +409,12 @@ std::vector<std::unique_ptr<Input>> Driver::detectInputs(const path &p, InputTyp
             const auto &exts = getCppSourceFileExtensions();
             if (exts.find(p.extension().string()) != exts.end() || p.extension() == ".c")
             {
-                // file ehas cpp extension
-                auto i = std::make_unique<InlineSpecInput>(swctx, *this);
-                i->fn = p;
-                i->virtual_fn = "cppan.yml";
+                SpecificationFiles f;
+                f.addFile("cppan.yml", p, String{});
+                auto spec = std::make_unique<Specification>(f);
+
+                // file has cpp extension
+                auto i = std::make_unique<InlineSpecInput>(swctx, *this, std::move(spec));
                 i->fe_type = FrontendType::Cppan;
                 LOG_TRACE(logger, "using inline " << toString(i->fe_type) << " frontend for input " << p);
                 inputs.push_back(std::move(i));
@@ -455,13 +427,13 @@ std::vector<std::unique_ptr<Input>> Driver::detectInputs(const path &p, InputTyp
         {
             try
             {
-                auto root = YAML::Load(c);
+                SpecificationFiles f;
+                f.addFile("cppan.yml", p, c);
+                auto spec = std::make_unique<Specification>(f);
 
-                auto i = std::make_unique<InlineSpecInput>(swctx, *this);
-                i->fn = p;
-                i->virtual_fn = "cppan.yml";
+                auto i = std::make_unique<InlineSpecInput>(swctx, *this, std::move(spec));
                 i->fe_type = FrontendType::Cppan;
-                i->root = root;
+                i->root = YAML::Load(c);
                 LOG_TRACE(logger, "using inline " << toString(i->fe_type) << " frontend for input " << p);
                 inputs.push_back(std::move(i));
 
@@ -475,8 +447,8 @@ std::vector<std::unique_ptr<Input>> Driver::detectInputs(const path &p, InputTyp
     }
     case InputType::Directory:
     {
-        auto i = std::make_unique<DirInput>(swctx, *this);
-        i->dir = p;
+        auto spec = std::make_unique<Specification>(p);
+        auto i = std::make_unique<DirInput>(swctx, *this, std::move(spec));
         LOG_TRACE(logger, "dir input " << p);
         inputs.push_back(std::move(i));
         break;
@@ -494,7 +466,7 @@ void Driver::loadInputsBatch(const std::set<Input *> &inputs) const
     {
         auto i2 = dynamic_cast<SpecFileInput *>(i);
         SW_ASSERT(i2, "Bad input type");
-        m[i2->sw_fn] = i;
+        m[i2->getSpecification().files.getData().begin()->second.absolute_path] = i;
     }
 
     for (auto &[p, out] : build_configs1(swctx, inputs))
@@ -572,12 +544,12 @@ std::unordered_map<path, PrepareConfigOutputData> Driver::build_configs1(SwConte
             std::ofstream ofs(fn, std::ios_base::out | std::ios_base::binary);
             if (ofs)
             {
-                auto files = i->getSpecification()->getFiles();
+                auto files = i->getSpecification().files.getData();
                 SW_CHECK(!files.empty());
                 auto fn = *files.begin();
 
                 std::unordered_map<path, PrepareConfigOutputData> m2;
-                m2[fn] = m.find(fn)->second;
+                m2[fn.second.absolute_path] = m.find(fn.second.absolute_path)->second;
                 boost::archive::binary_oarchive oa(ofs);
                 oa << m2;
             }

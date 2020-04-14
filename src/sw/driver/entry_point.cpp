@@ -372,7 +372,7 @@ static void addDeps(Build &solution, NativeCompiledTarget &lib)
 void PrepareConfig::addInput(Build &b, const Input &i)
 {
     InputData d;
-    auto files = i.getSpecification()->getFiles();
+    auto files = i.getSpecification().getFiles();
     SW_CHECK(!files.empty());
     d.fn = d.cfn = *files.begin();
     if (auto [pkgs, prefix] = i.getPackages(); !pkgs.empty())

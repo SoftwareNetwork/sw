@@ -115,10 +115,10 @@ SUBCOMMAND_DECL(upload)
     // do not move to the bottom
     auto inputs = getContext().addInput(fs::current_path());
     SW_CHECK(inputs.size() == 1); // for now
-    auto spec1 = inputs[0]->getSpecification();
-    SW_CHECK(spec1->files.getData().size() == 1); // for now
-    auto spec = read_file(spec1->files.getData().begin()->second.absolute_path);
-    auto script_name = spec1->files.getData().begin()->first.filename().string();
+    auto &spec1 = inputs[0]->getSpecification();
+    SW_CHECK(spec1.files.getData().size() == 1); // for now
+    auto spec = read_file(spec1.files.getData().begin()->second.absolute_path);
+    auto script_name = spec1.files.getData().begin()->first.filename().string();
 
     // detect from options
     bool cmdline_source_present = 0
