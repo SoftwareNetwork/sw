@@ -29,6 +29,7 @@
 #include "module.h"
 
 #include <sw/core/input.h>
+#include <sw/core/specification.h>
 #include <sw/core/sw_context.h>
 #include <sw/manager/storage.h>
 #include <sw/support/serialization.h>
@@ -137,7 +138,8 @@ static Strings get_inline_comments(const path &p)
     return comments;
 }
 
-Driver::Driver()
+Driver::Driver(SwContext &swctx)
+    : swctx(swctx)
 {
 #ifdef _WIN32
     CoInitializeEx(0, 0); // vs find helper
@@ -165,6 +167,7 @@ struct SpecFileInput : Input, DriverInput
 {
     Driver *driver = nullptr;
     std::unique_ptr<Module> module;
+    path sw_fn;
 
     using Input::Input;
 
@@ -182,15 +185,16 @@ struct SpecFileInput : Input, DriverInput
 
     std::unique_ptr<Specification> getSpecification() const override
     {
-        auto spec = std::make_unique<Specification>();
-        // TODO: take relative path here
-        spec->addFile(getPath(), read_file(getPath()));
+        SpecificationFiles f;
+        f.addFile(sw_fn.filename(), sw_fn);
+
+        auto spec = std::make_unique<Specification>(f);
         return spec;
     }
 
     EntryPointsVector load1(SwContext &swctx) override
     {
-        auto fn = getPath();
+        auto fn = sw_fn;
         switch (fe_type)
         {
         case FrontendType::Sw:
@@ -225,7 +229,7 @@ struct SpecFileInput : Input, DriverInput
                 b->getTargetsToBuild()[tgt->getPackage()] = b->getTargets()[tgt->getPackage()]; // set our targets
 
             b->build();
-            auto &out = pc.r[getPath()];
+            auto &out = pc.r[fn];
             module = loadSharedLibrary(out.dll, out.PATH);
             auto ep = std::make_unique<NativeModuleTargetEntryPoint>(*module);
             ep->source_dir = fn.parent_path();
@@ -313,6 +317,8 @@ struct SpecFileInput : Input, DriverInput
 struct InlineSpecInput : Input, DriverInput
 {
     yaml root;
+    path fn;
+    path virtual_fn;
 
     using Input::Input;
 
@@ -323,13 +329,14 @@ struct InlineSpecInput : Input, DriverInput
     {
         SW_ASSERT(fe_type == FrontendType::Cppan, "not implemented");
 
-        auto spec = std::make_unique<Specification>();
         String s;
         if (!root.IsNull())
             s = YAML::Dump(root);
-        // TODO: mark as inline path (spec)
-        // add spec type?
-        spec->addFile(getPath(), s);
+
+        SpecificationFiles f;
+        f.addFile(virtual_fn, fn, s);
+
+        auto spec = std::make_unique<Specification>(f);
         return spec;
     }
 
@@ -337,7 +344,7 @@ struct InlineSpecInput : Input, DriverInput
     {
         SW_ASSERT(fe_type == FrontendType::Cppan, "not implemented");
 
-        auto p = getPath();
+        auto p = fn;
         if (root.IsNull())
         {
             auto bf = [p](Build &b)
@@ -368,6 +375,8 @@ struct InlineSpecInput : Input, DriverInput
 
 struct DirInput : Input
 {
+    path dir;
+
     using Input::Input;
 
     bool isBatchLoadable() const override { return false; }
@@ -375,8 +384,7 @@ struct DirInput : Input
 
     std::unique_ptr<Specification> getSpecification() const override
     {
-        auto spec = std::make_unique<Specification>();
-        spec->addFile(getPath(), {}); // empty
+        auto spec = std::make_unique<Specification>(dir);
         return spec;
     }
 
@@ -384,10 +392,10 @@ struct DirInput : Input
     {
         auto bf = [this](Build &b)
         {
-            auto &t = b.addExecutable(getPath().stem().string());
+            auto &t = b.addExecutable(dir.stem().string());
         };
         auto ep = std::make_unique<NativeBuiltinTargetEntryPoint>(bf);
-        ep->source_dir = getPath();
+        ep->source_dir = dir;
         EntryPointsVector v;
         v.emplace_back(std::move(ep));
         return v;
@@ -405,7 +413,8 @@ std::vector<std::unique_ptr<Input>> Driver::detectInputs(const path &p, InputTyp
         if (!fe)
             break;
 
-        auto i = std::make_unique<SpecFileInput>(*this, p, type);
+        auto i = std::make_unique<SpecFileInput>(swctx, *this);
+        i->sw_fn = p;
         i->driver = (Driver*)this;
         i->fe_type = *fe;
         LOG_TRACE(logger, "using " << toString(i->fe_type) << " frontend for input " << p);
@@ -431,7 +440,9 @@ std::vector<std::unique_ptr<Input>> Driver::detectInputs(const path &p, InputTyp
             if (exts.find(p.extension().string()) != exts.end() || p.extension() == ".c")
             {
                 // file ehas cpp extension
-                auto i = std::make_unique<InlineSpecInput>(*this, p, type);
+                auto i = std::make_unique<InlineSpecInput>(swctx, *this);
+                i->fn = p;
+                i->virtual_fn = "cppan.yml";
                 i->fe_type = FrontendType::Cppan;
                 LOG_TRACE(logger, "using inline " << toString(i->fe_type) << " frontend for input " << p);
                 inputs.push_back(std::move(i));
@@ -446,7 +457,9 @@ std::vector<std::unique_ptr<Input>> Driver::detectInputs(const path &p, InputTyp
             {
                 auto root = YAML::Load(c);
 
-                auto i = std::make_unique<InlineSpecInput>(*this, p, type);
+                auto i = std::make_unique<InlineSpecInput>(swctx, *this);
+                i->fn = p;
+                i->virtual_fn = "cppan.yml";
                 i->fe_type = FrontendType::Cppan;
                 i->root = root;
                 LOG_TRACE(logger, "using inline " << toString(i->fe_type) << " frontend for input " << p);
@@ -462,8 +475,8 @@ std::vector<std::unique_ptr<Input>> Driver::detectInputs(const path &p, InputTyp
     }
     case InputType::Directory:
     {
-        auto i = std::make_unique<DirInput>(*this, p, type);
-        i->setHash(std::hash<path>()(i->getPath()));
+        auto i = std::make_unique<DirInput>(swctx, *this);
+        i->dir = p;
         LOG_TRACE(logger, "dir input " << p);
         inputs.push_back(std::move(i));
         break;
@@ -474,13 +487,14 @@ std::vector<std::unique_ptr<Input>> Driver::detectInputs(const path &p, InputTyp
     return inputs;
 }
 
-void Driver::loadInputsBatch(SwContext &swctx, const std::set<Input *> &inputs) const
+void Driver::loadInputsBatch(const std::set<Input *> &inputs) const
 {
     std::map<path, Input *> m;
     for (auto &i : inputs)
     {
-        SW_ASSERT(dynamic_cast<SpecFileInput *>(i), "Bad input type");
-        m[i->getPath()] = i;
+        auto i2 = dynamic_cast<SpecFileInput *>(i);
+        SW_ASSERT(i2, "Bad input type");
+        m[i2->sw_fn] = i;
     }
 
     for (auto &[p, out] : build_configs1(swctx, inputs))
@@ -558,8 +572,12 @@ std::unordered_map<path, PrepareConfigOutputData> Driver::build_configs1(SwConte
             std::ofstream ofs(fn, std::ios_base::out | std::ios_base::binary);
             if (ofs)
             {
+                auto files = i->getSpecification()->getFiles();
+                SW_CHECK(!files.empty());
+                auto fn = *files.begin();
+
                 std::unordered_map<path, PrepareConfigOutputData> m2;
-                m2[i->getPath()] = m.find(i->getPath())->second;
+                m2[fn] = m.find(fn)->second;
                 boost::archive::binary_oarchive oa(ofs);
                 oa << m2;
             }
@@ -568,7 +586,7 @@ std::unordered_map<path, PrepareConfigOutputData> Driver::build_configs1(SwConte
     };
 
     // fast path
-    {
+    /*{
         std::unordered_map<path, PrepareConfigOutputData> m;
         bool ok = true;
         for (auto &i : inputs)
@@ -587,7 +605,7 @@ std::unordered_map<path, PrepareConfigOutputData> Driver::build_configs1(SwConte
         }
         if (ignore_outdated_configs && ok)
             return m;
-    }
+    }*/
 
     //
 

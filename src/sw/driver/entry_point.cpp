@@ -27,6 +27,7 @@
 #include <sw/core/sw_context.h>
 #include <sw/core/input_database.h>
 #include <sw/core/input.h>
+#include <sw/core/specification.h>
 #include <sw/manager/storage.h>
 
 #include <boost/dll.hpp>
@@ -239,7 +240,7 @@ getFileDependencies(const SwCoreContext &swctx, const path &p, std::set<size_t> 
         {
             auto upkg = extractFromString(m[3].str());
             auto pkg = swctx.resolve(upkg);
-            auto gn = swctx.getInputDatabase().addInputFile(pkg.getDirSrc2() / "sw.cpp");
+            auto gn = swctx.getInputDatabase().getFileHash(pkg.getDirSrc2() / "sw.cpp");
             if (!gns.insert(gn).second)
                 throw SW_RUNTIME_ERROR("#pragma sw header: trying to add same header twice, last one: " + upkg.toString());
             auto h = getPackageHeader(pkg, upkg);
@@ -376,7 +377,9 @@ static void addDeps(Build &solution, NativeCompiledTarget &lib)
 void PrepareConfig::addInput(Build &b, const Input &i)
 {
     InputData d;
-    d.fn = d.cfn = i.getPath();
+    auto files = i.getSpecification()->getFiles();
+    SW_CHECK(!files.empty());
+    d.fn = d.cfn = *files.begin();
     if (auto [pkgs, prefix] = i.getPackages(); !pkgs.empty())
     {
         d.link_name = "[" + pkgs.begin()->toString() + "]/[config]";
@@ -395,7 +398,10 @@ void PrepareConfig::addInput(Build &b, const Input &i)
         lang = LANG_CPP;
         //SW_UNIMPLEMENTED;
     r[d.fn].dll = one2one(b, d);
-    inputs_outdated |= i.isOutdated();
+    if (fs::exists(r[d.fn].dll))
+        inputs_outdated |= i.isOutdated(fs::last_write_time(r[d.fn].dll));
+    else
+        inputs_outdated = true;
 }
 
 template <class T>

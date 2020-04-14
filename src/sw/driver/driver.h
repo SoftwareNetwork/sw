@@ -47,7 +47,7 @@ enum class FrontendType;
 
 struct SW_DRIVER_CPP_API Driver : IDriver
 {
-    Driver();
+    Driver(SwContext &);
     Driver(const Driver &) = delete;
     Driver &operator=(const Driver &) = delete;
     virtual ~Driver();
@@ -56,7 +56,7 @@ struct SW_DRIVER_CPP_API Driver : IDriver
     static void processConfigureAc(const path &p);
 
     // IDriver api
-    void loadInputsBatch(SwContext &, const std::set<Input *> &) const override;
+    void loadInputsBatch(const std::set<Input *> &) const override;
     std::vector<std::unique_ptr<Input>> detectInputs(const path &, InputType) const override;
 
     // frontends
@@ -73,6 +73,7 @@ struct SW_DRIVER_CPP_API Driver : IDriver
     TargetSettings getDllConfigSettings(SwContext &swctx) const;
 
 private:
+    SwContext &swctx;
     mutable std::mutex m_bp;
     mutable std::optional<PackageIdSet> builtin_packages;
     mutable std::unordered_map<sw::PackageId, std::unique_ptr<sw::NativeBuiltinTargetEntryPoint>> builin_entry_points;
