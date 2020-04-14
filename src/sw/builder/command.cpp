@@ -1186,20 +1186,23 @@ void BuiltinCommand::execute1(std::error_code *ec)
 
 size_t BuiltinCommand::getHash1() const
 {
-    size_t h = 0;
-    // ignore program!
+    // we have args:
+    // 0: prog
+    // 1: special keyword - internal-call-builtin-function
+    // 2: module name
+    // 3: function name
+    // 4: version
 
-    auto start = getFirstResponseFileArgument();
-    hash_combine(h, std::hash<String>()(arguments[start + 1]->toString())); // include function name
-    hash_combine(h, std::hash<String>()(arguments[start + 2]->toString())); // include version
+    size_t h = 0;
 
     // must sort arguments first
     // because some command may generate args in unspecified order
     std::set<String> args_sorted;
 
-    Strings sa;
-    for (auto &a : arguments)
-        args_sorted.insert(a->toString());
+    // we ignore args 0-2 inclusive, so our start arg is 3
+    auto start = 3;
+    for (auto a = arguments.begin() + start; a != arguments.end(); a++)
+        args_sorted.insert((*a)->toString());
 
     for (auto &a : args_sorted)
         hash_combine(h, std::hash<String>()(a));
