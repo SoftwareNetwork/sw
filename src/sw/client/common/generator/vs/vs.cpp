@@ -240,10 +240,6 @@ void VSGenerator::generate(const SwBuild &b)
     const String zero_check_name = "ZERO_CHECK"s;
 
     auto inputs = b.getInputs();
-    if (inputs.size() != 1)
-        throw SW_RUNTIME_ERROR("unsupported number of inputs, must be 1");
-    auto &input = *inputs.begin();
-
     PackagePathTree path_tree;
     Solution s;
 
