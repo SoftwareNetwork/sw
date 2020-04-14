@@ -25,12 +25,17 @@
 namespace sw
 {
 
+// we store:
+//  - path
+//  - contents hash
+//  - last write time
 struct InputDatabase : Database
 {
-    InputDatabase(const path &p);
+    InputDatabase(const path &dbfn);
+
+    size_t getFileHash(const path &) const;
 
     void setupInput(Input &) const;
-
     // helper
     size_t addInputFile(const path &file) const;
 };

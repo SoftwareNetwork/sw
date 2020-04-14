@@ -20,23 +20,12 @@
 
 #include <primitives/filesystem.h>
 
-#include <optional>
-
 namespace sw
 {
 
 struct Input;
 struct SwContext;
 enum class InputType : uint8_t;
-
-struct SW_CORE_API Specification
-{
-    void addFile(const path &relative_path, const String &contents);
-    int64_t getHash() const;
-
-//private:
-    std::map<path, String> files;
-};
 
 struct SW_CORE_API IDriver
 {
@@ -48,7 +37,7 @@ struct SW_CORE_API IDriver
     /// Optimized input loading in a batch.
     /// Inputs are unique and non null.
     /// Inputs will receive their entry points.
-    virtual void loadInputsBatch(SwContext &, const std::set<Input*> &) const = 0;
+    virtual void loadInputsBatch(const std::set<Input*> &) const = 0;
 
     // get features()?
 };

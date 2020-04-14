@@ -18,7 +18,7 @@
 
 #include "input_database.h"
 
-#include "driver.h"
+#include "specification.h"
 
 #include <db_inputs.h>
 #include "inserts.h"
@@ -34,13 +34,57 @@ InputDatabase::InputDatabase(const path &p)
 {
 }
 
+size_t InputDatabase::getFileHash(const path &p) const
+{
+    const ::db::inputs::File file{};
+
+    bool update_db = false;
+    auto lwt = fs::last_write_time(p);
+    auto np = normalize_path(p);
+
+    auto q = (*db)(
+        select(file.hash, file.lastWriteTime)
+        .from(file)
+        .where(file.path == np));
+    if (!q.empty())
+    {
+        if (memcmp(q.front().lastWriteTime.value().data(), &lwt, sizeof(lwt)) == 0)
+            return q.front().hash.value();
+        update_db = true;
+    }
+
+    auto c = read_file(p);
+    auto h = std::hash<String>()(c);
+
+    std::vector<uint8_t> lwtdata(sizeof(lwt));
+    memcpy(lwtdata.data(), &lwt, lwtdata.size());
+    if (update_db)
+    {
+        (*db)(update(file).set(
+            file.hash = h,
+            file.lastWriteTime = lwtdata
+        ).where(file.path == np));
+    }
+    else
+    {
+        (*db)(insert_into(file).set(
+            file.path = np,
+            file.hash = h,
+            file.lastWriteTime = lwtdata
+        ));
+    }
+
+    return h;
+}
+
 size_t InputDatabase::addInputFile(const path &p) const
 {
     const ::db::inputs::File file{};
 
-    auto set_input = [&]()
+    SW_UNIMPLEMENTED;
+    /*auto set_input = [&]()
     {
-        Specification s;
+        SpecificationFiles s;
         s.addFile(p, read_file(p));
         auto h = s.getHash();
 
@@ -93,14 +137,15 @@ size_t InputDatabase::addInputFile(const path &p) const
         for (const auto &row : q2)
             (*db)(remove_from(file).where(file.fileId == row.fileId));
         return set_input();
-    }
+    }*/
 }
 
 void InputDatabase::setupInput(Input &i) const
 {
     const ::db::inputs::File file{};
 
-    auto set_input = [&]()
+    SW_UNIMPLEMENTED;
+    /*auto set_input = [&]()
     {
         auto spec = i.getSpecification();
         auto h = spec->getHash();
@@ -159,7 +204,7 @@ void InputDatabase::setupInput(Input &i) const
         for (const auto &row : q2)
             (*db)(remove_from(file).where(file.fileId == row.fileId));
         set_input();
-    }
+    }*/
 }
 
 } // namespace sw

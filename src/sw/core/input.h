@@ -49,12 +49,13 @@ struct SW_CORE_API Input
 {
     using EntryPointsVector = std::vector<std::unique_ptr<TargetEntryPoint>>;
 
-    Input(const IDriver &, const path &, InputType);
+    Input(SwContext &, const IDriver &);
     Input(const Input &) = delete;
     virtual ~Input();
 
-    void load(SwContext &);
+    void load();
 
+    //
     virtual std::unique_ptr<Specification> getSpecification() const = 0;
 
     // used for batch loading inputs (if applicable)
@@ -65,15 +66,12 @@ struct SW_CORE_API Input
     /// allow to throw input->load() into thread pool
     virtual bool isParallelLoadable() const = 0;
 
-    void setOutdated(bool b) { outdated = b; }
-    /*virtual */bool isOutdated() const;
+    bool isOutdated(const fs::file_time_type &) const;
     bool isLoaded() const;
     std::vector<TargetEntryPoint*> getEntryPoints() const;
 
+    String getName() const;
     size_t getHash() const;
-    void setHash(size_t);
-
-    path getPath() const;
 
     // same input may be used to load multiple packages
     // they all share same prefix
@@ -84,10 +82,11 @@ struct SW_CORE_API Input
     bool operator<(const Input &rhs) const;
 
 protected:
+    SwContext &swctx;
+
     virtual void setEntryPoints(EntryPointsVector);
 
 private:
-    path p;
     PackageIdSet pkgs;
     int prefix = -1;
     //
@@ -95,8 +94,7 @@ private:
     // one input may have several eps
     // example: .yml frontend - 1 document, but multiple eps, one per package
     EntryPointsVector eps;
-    size_t hash = 0;
-    bool outdated = true;
+    //size_t hash = 0; cache spec hash?
 
     virtual EntryPointsVector load1(SwContext &) = 0;
 };

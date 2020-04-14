@@ -195,7 +195,7 @@ std::vector<Input *> SwContext::addInput(const path &in)
                 auto [p,inserted] = registerInput(std::move(i));
                 inputs_local.push_back(p);
                 if (inserted)
-                    LOG_TRACE(logger, "Selecting driver " + dp.toString() + " for input " + normalize_path(inputs_local.back()->getPath()));
+                    LOG_TRACE(logger, "Selecting driver " << dp.toString() << " for input " << inputs_local.back()->getName());
             }
             return true;
         }
@@ -243,9 +243,6 @@ std::vector<Input *> SwContext::addInput(const path &in)
 
 std::pair<Input *, bool> SwContext::registerInput(std::unique_ptr<Input> i)
 {
-    auto &idb = getInputDatabase();
-    if (i->getHash() == 0) // otherwise, hash was set manually
-        idb.setupInput(*i);
     auto h = i->getHash();
     auto [it,inserted] = inputs.emplace(h, std::move(i));
     return { &*it->second, inserted };
@@ -267,12 +264,12 @@ void SwContext::loadEntryPointsBatch(const std::set<Input *> &inputs)
             parallel_inputs.insert(i);
         else
             // perform single loads
-            i->load(*this);
+            i->load();
     }
 
     // perform batch loads
     for (auto &[d, g] : batch_inputs)
-        d->loadInputsBatch(*this, g);
+        d->loadInputsBatch(g);
 
     // perform parallel loads
     auto &e = getExecutor();
@@ -281,7 +278,7 @@ void SwContext::loadEntryPointsBatch(const std::set<Input *> &inputs)
     {
         fs.push_back(e.push([i, this]
         {
-            i->load(*this);
+            i->load();
         }));
     }
     waitAndGet(fs);

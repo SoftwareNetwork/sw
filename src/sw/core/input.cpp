@@ -20,6 +20,7 @@
 
 #include "build.h"
 #include "driver.h"
+#include "specification.h"
 #include "sw_context.h"
 
 #include <regex>
@@ -30,21 +31,13 @@ DECLARE_STATIC_LOGGER(logger, "input");
 namespace sw
 {
 
-Input::Input(const IDriver &driver, const path &p, InputType t)
-    : driver(driver)
+Input::Input(SwContext &swctx, const IDriver &driver)
+    : swctx(swctx), driver(driver)
 {
-    //if (p.empty())
-        //throw SW_RUNTIME_ERROR("empty path");
-    this->p = p;
 }
 
 Input::~Input()
 {
-}
-
-path Input::getPath() const
-{
-    return p;
 }
 
 bool Input::operator==(const Input &rhs) const
@@ -57,7 +50,7 @@ bool Input::operator<(const Input &rhs) const
     return getHash() < rhs.getHash();
 }
 
-void Input::load(SwContext &swctx)
+void Input::load()
 {
     if (isLoaded())
         return;
@@ -66,25 +59,24 @@ void Input::load(SwContext &swctx)
         throw SW_RUNTIME_ERROR("Empty entry points");
 }
 
-bool Input::isOutdated() const
-{
-    return outdated;
-}
-
 bool Input::isLoaded() const
 {
     return !eps.empty();
 }
 
-size_t Input::getHash() const
+bool Input::isOutdated(const fs::file_time_type &t) const
 {
-    //SW_ASSERT(hash, "Hash was not set");
-    return hash;
+    return getSpecification()->isOutdated(t);
 }
 
-void Input::setHash(size_t h)
+String Input::getName() const
 {
-    hash = h;
+    return getSpecification()->getName();
+}
+
+size_t Input::getHash() const
+{
+    return getSpecification()->getHash(swctx.getInputDatabase());
 }
 
 std::vector<TargetEntryPoint*> Input::getEntryPoints() const
@@ -137,7 +129,7 @@ void InputWithSettings::addSettings(const TargetSettings &s)
 String InputWithSettings::getHash() const
 {
     String s;
-    s = normalize_path(i.getPath());
+    s = std::to_string(i.getHash());
     for (auto &ss : settings)
         s += ss.getHash();
     return s;
@@ -158,7 +150,9 @@ std::vector<ITargetPtr> InputWithSettings::loadTargets(SwBuild &b) const
 
         for (auto &s : settings)
         {
-            LOG_TRACE(logger, "Loading input " << i.getPath() << ", settings = " << s.toString());
+            path p;
+            //i.getSpecification()->files[0]
+            LOG_TRACE(logger, "Loading input " << p << ", settings = " << s.toString());
 
             PackagePath prefix;
             auto [pkgs, iprefix] = i.getPackages();
