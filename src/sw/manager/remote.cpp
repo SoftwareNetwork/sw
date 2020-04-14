@@ -116,25 +116,18 @@ GrpcChannel Remote::getGrpcChannel() const
 
     static const grpc::SslCredentialsOptions ssl_options = []()
     {
-        static const path cert_dir = get_root_directory() / "certs";
-        path cert_file = cert_dir / "roots.pem";
-
         grpc::SslCredentialsOptions ssl_options;
-#ifdef _WIN32
-        if (!fs::exists(cert_file))
-            download_file("https://raw.githubusercontent.com/grpc/grpc/master/etc/roots.pem", cert_file);
-        ssl_options.pem_root_certs = read_file(cert_file);
-#else
-        cert_file = "/etc/ssl/certs/ca-certificates.crt";
-        if (!fs::exists(cert_file))
-            cert_file = "/etc/ssl/certs/ca-bundle.crt";
-        if (!fs::exists(cert_file))
+        path certsfn;
+        // system's certs first?
+        if (auto f = primitives::http::getCaCertificatesBundleFileName())
+            certsfn = *f;
+        else
         {
-            cert_file = cert_dir / "roots.pem";
-            download_file("https://raw.githubusercontent.com/grpc/grpc/master/etc/roots.pem", cert_file);
+            certsfn = sw::get_ca_certs_filename();
+            if (!fs::exists(certsfn))
+                throw SW_RUNTIME_ERROR("No ca certs file was found for GRPC.");
         }
-        ssl_options.pem_root_certs = read_file(cert_file);
-#endif
+        ssl_options.pem_root_certs = read_file(certsfn);
         return ssl_options;
     }();
 

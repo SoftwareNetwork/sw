@@ -39,11 +39,20 @@ DECLARE_STATIC_LOGGER(logger, "client.context");
 
 Strings inputs;
 
+static void setHttpTlsSettings()
+{
+    // set strict to true later
+    primitives::http::setupSafeTls(false, false, sw::get_ca_certs_filename());
+}
+
 void setHttpSettings(const Options &options)
 {
     httpSettings.verbose = options.curl_verbose;
     httpSettings.ignore_ssl_checks = options.ignore_ssl_checks;
     httpSettings.proxy = sw::Settings::get_local_settings().proxy;
+
+    static std::once_flag f;
+    std::call_once(f, setHttpTlsSettings);
 }
 
 static void applySettingsFromJson(sw::TargetSettings &s, const String &jsonstr)

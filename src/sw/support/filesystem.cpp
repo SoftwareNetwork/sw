@@ -37,6 +37,13 @@ path get_temp_filename(const path &subdir)
     return temp_directory_path(subdir) / unique_path();
 }
 
+path get_ca_certs_filename()
+{
+    const path cert_dir = get_root_directory() / "certs";
+    path cert_file = cert_dir / "roots.pem";
+    return cert_file;
+}
+
 String make_archive_name(const String &fn)
 {
     if (!fn.empty())
