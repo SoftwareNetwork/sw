@@ -205,16 +205,14 @@ private:
     {
         auto getWindowsKitRootFromReg = [](const std::wstring &root, const std::wstring &key, int access) -> path
         {
-            try
+            winreg::RegKey kits;
+            if (kits.TryOpen(HKEY_LOCAL_MACHINE, root, access).IsOk())
             {
-                // may throw if not installed
-                winreg::RegKey kits(HKEY_LOCAL_MACHINE, root, access);
-                return kits.GetStringValue(L"KitsRoot" + key);
+                std::wstring result;
+                if (kits.TryGetStringValue(L"KitsRoot" + key, result).IsOk())
+                    return result;
             }
-            catch (std::exception &e)
-            {
-                LOG_TRACE(logger, "getWindowsKitRootFromReg: "s + e.what());
-            }
+            LOG_TRACE(logger, "getWindowsKitRootFromReg error: "s);// +e.what());
             return {};
         };
 
@@ -236,16 +234,18 @@ private:
     {
         auto list_kits = [](auto &kits, int access)
         {
-            try
+            winreg::RegKey kits10;
+            if (kits10.TryOpen(HKEY_LOCAL_MACHINE, reg_root, access).IsOk())
             {
-                winreg::RegKey kits10(HKEY_LOCAL_MACHINE, reg_root, access);
-                for (auto &k : kits10.EnumSubKeys())
-                    kits.insert(to_string(k));
+                std::vector<std::wstring> keys;
+                if (kits10.TryEnumSubKeys(keys).IsOk())
+                {
+                    for (auto &k : keys)
+                        kits.insert(to_string(k));
+                    return;
+                }
             }
-            catch (std::exception & e)
-            {
-                LOG_TRACE(logger, "listWindows10KitsFromReg: "s + e.what());
-            }
+            LOG_TRACE(logger, "listWindows10KitsFromReg error: "s);// +e.what());
         };
 
         sw::VersionSet kits;
