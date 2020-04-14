@@ -61,6 +61,7 @@ struct SW_DRIVER_CPP_API Module
     void build(Build &s) const;
     void configure(Build &s) const;
     void check(Build &s, Checker &c) const;
+    int sw_get_module_abi_version() const;
 
 private:
     std::unique_ptr<Module::DynamicLibrary> module;
@@ -68,6 +69,7 @@ private:
     mutable LibraryCall<void(Build &), true> build_;
     mutable LibraryCall<void(Build &)> configure_;
     mutable LibraryCall<void(Checker &)> check_;
+    mutable LibraryCall<int(), true> sw_get_module_abi_version_;
 
     path getLocation() const;
 };

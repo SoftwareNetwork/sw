@@ -19,6 +19,8 @@
 #include "module.h"
 
 #include "build.h"
+#define SW_PACKAGE_API
+#include "sw_check_abi_version.h"
 
 #include <boost/dll.hpp>
 #include <boost/dll/import_mangled.hpp>
@@ -65,6 +67,19 @@ Module::Module(std::unique_ptr<Module::DynamicLibrary> dll)
     LOAD(build);
     LOAD(check);
     LOAD(configure);
+    LOAD(sw_get_module_abi_version);
+
+    auto current_abi = ::sw_get_module_abi_version();
+    auto module_abi = sw_get_module_abi_version_();
+    if (current_abi != module_abi)
+    {
+        auto p = module->shared_lib().location();
+        module.reset();
+        if (!do_not_remove_bad_module)
+            fs::remove(p);
+        throw SW_RUNTIME_ERROR("Bad config ABI version: sw required (" + std::to_string(current_abi) +
+            "), module abi (" + std::to_string(module_abi) + "). Will rebuild on the next run.");
+    }
 
 #undef LOAD
 }
@@ -145,6 +160,12 @@ void Module::check(Build &s, Checker &c) const
     check_.s = &s;
     check_.m = this;
     check_(c);
+}
+
+int Module::sw_get_module_abi_version() const
+{
+    sw_get_module_abi_version_.m = this;
+    return sw_get_module_abi_version_();
 }
 
 std::unique_ptr<Module> loadSharedLibrary(const path &dll, const FilesOrdered &PATH)
