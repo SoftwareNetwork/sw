@@ -168,11 +168,6 @@ static path getSw1Header()
     return getSwDir() / "sw1.h";
 }
 
-static path getSwCheckAbiVersionHeader()
-{
-    return getSwDir() / "sw_check_abi_version.h";
-}
-
 static path getPackageHeader(const LocalPackage &p, const UnresolvedPackage &up)
 {
     // TODO: add '#pragma sw driver ...' ?
@@ -464,10 +459,11 @@ private:
 SharedLibraryTarget &PrepareConfig::createTarget(Build &b, const InputData &d)
 {
     auto name = getSelfTargetName(b, { d.fn });
+    Version v(0, 0, 15); // abi version
     auto &lib =
         lang == LANG_VALA
-        ? (SharedLibraryTarget&)b.addTarget<ConfigSharedLibraryTarget<ValaSharedLibrary>>(name, "local", *this, d, b.getContext().getLocalStorage().storage_dir)
-        : b.addTarget<ConfigSharedLibraryTarget<SharedLibraryTarget>>(name, "local", *this, d, b.getContext().getLocalStorage().storage_dir);
+        ? (SharedLibraryTarget&)b.addTarget<ConfigSharedLibraryTarget<ValaSharedLibrary>>(name, v, *this, d, b.getContext().getLocalStorage().storage_dir)
+        : b.addTarget<ConfigSharedLibraryTarget<SharedLibraryTarget>>(name, v, *this, d, b.getContext().getLocalStorage().storage_dir);
     tgt = lib.getPackage();
     targets.insert(&lib);
     return lib;
@@ -598,13 +594,11 @@ path PrepareConfig::one2one(Build &b, const InputData &d)
     if (lang == LANG_CPP)
     {
         fi_files.push_back(driver_idir / getSw1Header());
-        fi_files.push_back(driver_idir / getSwCheckAbiVersionHeader());
     }
     else
     {
         fi_files.push_back(driver_idir / getSwDir() / "c" / "c.h"); // main include, goes first
         fi_files.push_back(driver_idir / getSwDir() / "c" / "swc.h");
-        fi_files.push_back(driver_idir / getSwCheckAbiVersionHeader()); // TODO: remove it, we don't need abi here
     }
 
     if (auto sf = lib[fn].template as<NativeSourceFile*>())

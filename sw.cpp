@@ -202,7 +202,6 @@ void build(Solution &s)
         }
 
         embed2("pub.egorpugin.primitives.tools.embedder2-master"_dep, cpp_driver, "src/sw/driver/sw1.h");
-        embed2("pub.egorpugin.primitives.tools.embedder2-master"_dep, cpp_driver, "src/sw/driver/sw_check_abi_version.h");
         embed2("pub.egorpugin.primitives.tools.embedder2-master"_dep, cpp_driver, "src/sw/driver/misc/delay_load_helper.cpp");
 
         // preprocess sw.h
