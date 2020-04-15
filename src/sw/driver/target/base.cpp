@@ -142,28 +142,13 @@ PackagePath TargetBase::constructTargetName(const PackagePath &Name) const
 
 TargetBase &TargetBase::addTarget2(bool add, const TargetBaseTypePtr &t, const PackagePath &Name, const Version &V)
 {
-    auto N = constructTargetName(Name);
-
-    t->pkg = std::make_unique<LocalPackage>(getMainBuild().getContext().getLocalStorage(), N, V);
-
-    //TargetSettings tid{ getSolution().getSettings().getTargetSettings() };
-    //t->ts = &tid;
-    t->ts = getSolution().module_data.current_settings;
-    t->bs = t->ts;
+    t->pkg = std::make_unique<LocalPackage>(getMainBuild().getContext().getLocalStorage(), constructTargetName(Name), V);
 
     // set some general settings, then init, then register
     setupTarget(t.get());
 
+    // after setup
     t->call(CallbackType::CreateTarget);
-
-    t->Local = 0
-        //|| getSolution().getCurrentGroupNumber() == 0
-        || getSolution().NamePrefix.empty()
-        //|| t->pkg->getPath().isRelative()
-        //|| t->pkg->getPath().is_loc()
-        //|| t->pkg->getOverriddenDir()
-        ////|| t->pkg->getData().group_number == 0
-        ;
 
     // sdir
     if (!t->isLocal())
@@ -239,6 +224,11 @@ TargetBase &TargetBase::addChild(const TargetBaseTypePtr &t)
 
 void TargetBase::setupTarget(TargetBaseType *t) const
 {
+    //TargetSettings tid{ getSolution().getSettings().getTargetSettings() };
+    //t->ts = &tid;
+    t->ts = getSolution().module_data.current_settings;
+    t->bs = t->ts;
+
     // find automatic way of copying data?
 
     // inherit from this
@@ -257,6 +247,8 @@ void TargetBase::setupTarget(TargetBaseType *t) const
     t->current_project = current_project; // ok, take from here (this, parent)
     if (!t->current_project)
         t->current_project = t->getPackage();
+
+    t->Local = getSolution().NamePrefix.empty();
 }
 
 const SwContext &TargetBase::getContext() const
@@ -407,27 +399,6 @@ TargetSettings Target::getHostSettings() const
     auto hs = getMainBuild().getContext().getHostSettings();
     addSettingsAndSetHostPrograms(getContext(), hs);
     return hs;
-
-    /*bool use_current_settings =
-        (
-            // same os & arch can run apps
-            ts["os"]["kernel"] == hs["os"]["kernel"] && ts["os"]["arch"] == hs["os"]["arch"]
-            )
-        ||
-        (
-            // 64-bit windows can run 32-bit apps
-            hs["os"]["kernel"] == "com.Microsoft.Windows.NT" && hs["os"]["arch"] == "x86_64" &&
-            ts["os"]["arch"] == "x86"
-            )
-        ;
-
-    // also compare compilers
-    use_current_settings &= hs["native"]["program"]["c"] == ts["native"]["program"]["c"];
-
-    // in case of different mt, do not use current settings!
-    use_current_settings &= hs["native"]["mt"] == ts["native"]["mt"];
-
-    return use_current_settings ? ts : hs;*/
 }
 
 Program *Target::findProgramByExtension(const String &ext) const
@@ -621,38 +592,12 @@ bool Target::init()
 
 path Target::getBinaryParentDir() const
 {
-    auto get_config_with_deps = [this]() -> String
-    {
-        StringSet ss;
-        /*for (const auto &[unr, res] : getPackageStore().resolved_packages)
-        {
-            if (res == getPackage())
-            {
-                for (const auto &[ppath, dep] : res.db_dependencies)
-                    ss.insert(dep.toString());
-                break;
-            }
-        }*/
-        String s;
-        for (auto &v : ss)
-            s += v + "\n";
-        auto c = getConfig();
-        return c;
-    };
-
-    if (0);
-    else if (auto d = getPackage().getOverriddenDir(); d)
-    {
+    if (auto d = getPackage().getOverriddenDir(); d)
         return getTargetDirShort(d.value() / SW_BINARY_DIR);
-    }
     else if (isLocal())
-    {
         return getTargetDirShort(getMainBuild().getBuildDirectory());
-    }
-    else /* package from network */
-    {
-        return getObjectDir(getPackage(), get_config_with_deps()); // remove 'build' part?
-    }
+    else
+        return getObjectDir(getPackage(), getConfig());
 }
 
 DependencyPtr Target::getDependency() const
