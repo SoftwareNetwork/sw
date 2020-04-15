@@ -431,6 +431,11 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
         c = C;
         create_command();
         C->Target = getBuildSettings().getTargetTriplet();
+        if (getBuildSettings().TargetOS.is(OSType::Windows))
+        {
+            auto c = C->createCommand(getMainBuild());
+            c->push_back("-nostdinc");
+        }
         /*if (getBuildSettings().TargetOS.isApple())
         {
             C->VisibilityHidden = false;
