@@ -45,6 +45,9 @@ enum class InputType : uint8_t
     DirectorySpecificationFile,
 };
 
+//
+// one input may have several eps
+// example: .yml frontend - 1 document, but multiple eps, one per package
 struct SW_CORE_API Input
 {
     using EntryPointsVector = std::vector<std::unique_ptr<TargetEntryPoint>>;
@@ -78,9 +81,6 @@ struct SW_CORE_API Input
     std::pair<PackageIdSet, int> getPackages() const;
     void addPackage(const LocalPackage &);
 
-    bool operator==(const Input &rhs) const;
-    bool operator<(const Input &rhs) const;
-
 protected:
     SwContext &swctx;
 
@@ -91,11 +91,7 @@ private:
     std::unique_ptr<Specification> specification;
     PackageIdSet pkgs;
     int prefix = -1;
-    //
-    // one input may have several eps
-    // example: .yml frontend - 1 document, but multiple eps, one per package
     EntryPointsVector eps;
-    //size_t hash = 0; cache spec hash?
 
     virtual EntryPointsVector load1(SwContext &) = 0;
 };

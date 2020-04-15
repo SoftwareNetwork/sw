@@ -40,16 +40,6 @@ Input::~Input()
 {
 }
 
-bool Input::operator==(const Input &rhs) const
-{
-    return getHash() == rhs.getHash();
-}
-
-bool Input::operator<(const Input &rhs) const
-{
-    return getHash() < rhs.getHash();
-}
-
 void Input::load()
 {
     if (isLoaded())
