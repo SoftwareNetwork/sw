@@ -1244,6 +1244,7 @@ const TargetSettings &SwBuild::getExternalVariables() const
 
 void SwBuild::setEntryPoint(const PackageId &p, const TargetEntryPoint &ep)
 {
+    // do not set eps twice?
     entry_points[p] = &ep;
 }
 

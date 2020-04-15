@@ -136,18 +136,13 @@ std::vector<ITargetPtr> InputWithSettings::loadTargets(SwBuild &b) const
 
     // for non installed packages we do special handling
     // we register their entry points in swctx
-    // because up to this point this is not done
+    // because up to this point it is not done
 
     for (auto ep : i.getEntryPoints())
     {
-        // find difference to set entry points
-        auto old = b.getTargets();
-
         for (auto &s : settings)
         {
-            path p;
-            //i.getSpecification()->files[0]
-            LOG_TRACE(logger, "Loading input " << p << ", settings = " << s.toString());
+            LOG_TRACE(logger, "Loading input " << i.getName() << ", settings = " << s.toString());
 
             PackagePath prefix;
             auto [pkgs, iprefix] = i.getPackages();
@@ -160,6 +155,7 @@ std::vector<ITargetPtr> InputWithSettings::loadTargets(SwBuild &b) const
         }
 
         // don't forget to set EPs for loaded targets
+        auto &old = b.getTargets();
         for (const auto &t : tgts)
         {
             if (old.find(t->getPackage()) != old.end())
