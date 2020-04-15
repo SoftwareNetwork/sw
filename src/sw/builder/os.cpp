@@ -455,6 +455,8 @@ String toTripletString(OSType e)
 
 String toTripletString(ArchType e)
 {
+    if (e == ArchType::x86)
+        return "i386"; // clang
     return boost::to_lower_copy(toString(e));
 }
 
