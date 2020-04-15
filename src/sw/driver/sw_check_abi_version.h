@@ -20,9 +20,10 @@
 
 #include "sw_abi_version.h"
 
-#ifndef SW_PACKAGE_API
-#define SW_PACKAGE_API
-#endif
+// don't do this here, it breaks linux/macos config build
+//#ifndef SW_PACKAGE_API
+//#define SW_PACKAGE_API
+//#endif
 
 SW_PACKAGE_API
 inline int sw_get_module_abi_version()
