@@ -206,13 +206,17 @@ private:
         auto getWindowsKitRootFromReg = [](const std::wstring &root, const std::wstring &key, int access) -> path
         {
             winreg::RegKey kits;
-            if (kits.TryOpen(HKEY_LOCAL_MACHINE, root, access).IsOk())
+            auto r = kits.TryOpen(HKEY_LOCAL_MACHINE, root, access);
+            if (r.IsOk())
             {
                 std::wstring result;
-                if (kits.TryGetStringValue(L"KitsRoot" + key, result).IsOk())
+                auto r = kits.TryGetStringValue(L"KitsRoot" + key, result);
+                if (r.IsOk())
                     return result;
+                LOG_TRACE(logger, "getWindowsKitRootFromReg::TryGetStringValue error: "s + to_string(r.ErrorMessage()));
             }
-            LOG_TRACE(logger, "getWindowsKitRootFromReg error: "s);// +e.what());
+            else
+                LOG_TRACE(logger, "getWindowsKitRootFromReg::TryOpen error: "s + to_string(r.ErrorMessage()));
             return {};
         };
 
@@ -235,17 +239,21 @@ private:
         auto list_kits = [](auto &kits, int access)
         {
             winreg::RegKey kits10;
-            if (kits10.TryOpen(HKEY_LOCAL_MACHINE, reg_root, access).IsOk())
+            auto r = kits10.TryOpen(HKEY_LOCAL_MACHINE, reg_root, access);
+            if (r.IsOk())
             {
                 std::vector<std::wstring> keys;
-                if (kits10.TryEnumSubKeys(keys).IsOk())
+                auto r = kits10.TryEnumSubKeys(keys);
+                if (r.IsOk())
                 {
                     for (auto &k : keys)
                         kits.insert(to_string(k));
                     return;
                 }
+                LOG_TRACE(logger, "listWindows10KitsFromReg::TryEnumSubKeys error: "s + to_string(r.ErrorMessage()));
             }
-            LOG_TRACE(logger, "listWindows10KitsFromReg error: "s);// +e.what());
+            else
+                LOG_TRACE(logger, "listWindows10KitsFromReg::TryOpen error: "s + to_string(r.ErrorMessage()));
         };
 
         sw::VersionSet kits;
