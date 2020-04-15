@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include <primitives/constants.h>
 #include <primitives/filesystem.h>
 
 namespace sw
@@ -40,5 +41,8 @@ void pushBackToFileOnce(const path &fn, const String &text, const path &lock_dir
 
 SW_DRIVER_CPP_API
 bool patch(const path &fn, const String &text, const path &lock_dir);
+
+SW_DRIVER_CPP_API
+void downloadFile(const String &url, const path &fn, int64_t file_size_limit = 1_MB);
 
 }

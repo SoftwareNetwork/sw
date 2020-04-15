@@ -21,6 +21,7 @@
 #include <sw/builder/file.h>
 
 #include <primitives/hash.h>
+#include <primitives/http.h>
 #include <primitives/lock.h>
 #include <primitives/patch.h>
 
@@ -151,6 +152,11 @@ bool patch(const path &fn, const String &patch, const path &lock_dir)
     write_file(fn_patch, t); // save orig
 
     return true;
+}
+
+void downloadFile(const String &url, const path &fn, int64_t file_size_limit)
+{
+    ::download_file(url, fn, file_size_limit);
 }
 
 }

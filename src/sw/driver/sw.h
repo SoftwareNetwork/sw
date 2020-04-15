@@ -21,6 +21,7 @@
 
 #include "build.h"
 #include "command.h"
+#include "functions.h"
 #include "suffix.h"
 #include "target/all.h"
 #include "compiler/compiler_helpers.h"
@@ -168,6 +169,7 @@ using sw::CPPLanguageStandard;
 
 // functions
 using sw::toString;
+using sw::downloadFile;
 
 // disable custom pragma warnings
 #ifdef _MSC_VER
