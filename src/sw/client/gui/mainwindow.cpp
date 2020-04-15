@@ -19,6 +19,7 @@
 #include "mainwindow.h"
 
 #include "packages_model.h"
+#include "settingswindow.h"
 #include "stdvectoredit.h"
 #include "sw_context.h"
 
@@ -630,14 +631,25 @@ void MainWindow::createMenus()
         close();
     });
 
-    auto fileMenu = new QMenu("File");
-    fileMenu->addAction("Settings");
-    fileMenu->addSeparator();
-    auto exitAction = fileMenu->addAction("Exit");
+    auto settingsAction = new QAction("Settings");
+    connect(settingsAction, &QAction::triggered, [this]
+    {
+        auto sw = new SettingsWindow(swctx, this);
+        sw->setWindowTitle("Settings");
+        sw->setWindowModality(Qt::WindowModal);
+        sw->show();
+    });
+
+    auto exitAction = new QAction("Exit");
     connect(exitAction, &QAction::triggered, [this]
     {
         close();
     });
+
+    auto fileMenu = new QMenu("File");
+    fileMenu->addAction(settingsAction);
+    fileMenu->addSeparator();
+    fileMenu->addAction(exitAction);
 
     auto helpMenu = new QMenu("Help");
     helpMenu->addAction(docAction);
