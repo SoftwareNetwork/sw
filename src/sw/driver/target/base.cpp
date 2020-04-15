@@ -557,7 +557,15 @@ bool Target::init()
         ReproducibleBuild = ts["reproducible-build"] == "true";
 
     ts_export = ts;
-    //DEBUG_BREAK_IF(getOptions()["alligned-allocator"] == "1");
+
+    // add deps into config
+    /*if (!isLocal() && getPackage().toString().find("org.sw.demo.glennrp.png-1.6.36") == 0)
+    {
+        auto m = getContext().resolve(UnresolvedPackages{ getPackage() });
+        m.erase(getPackage()); // erase self
+        for (auto &[u, p] : m)
+            ts["dependencies"].push_back(p->toString());
+    }*/
 
     // this rd must come from parent!
     // but we take it in copy ctor
