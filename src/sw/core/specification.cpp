@@ -33,8 +33,8 @@ void SpecificationFiles::addFile(const path &relative_path, const path &abspath,
 fs::file_time_type SpecificationFiles::getLastWriteTime() const
 {
     auto lwt = fs::file_time_type::min();
-    for (auto &[p, _] : data)
-        lwt = std::max(lwt, fs::last_write_time(p));
+    for (auto &[_, f] : data)
+        lwt = std::max(lwt, fs::last_write_time(f.absolute_path));
     return lwt;
 }
 
