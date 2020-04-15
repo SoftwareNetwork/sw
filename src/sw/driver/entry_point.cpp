@@ -23,7 +23,6 @@
 #include "driver.h"
 #include "suffix.h"
 #include "target/all.h"
-#define SW_PACKAGE_API
 #include "sw_check_abi_version.h"
 
 #include <sw/core/sw_context.h>

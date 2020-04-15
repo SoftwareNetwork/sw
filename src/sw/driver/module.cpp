@@ -19,7 +19,6 @@
 #include "module.h"
 
 #include "build.h"
-#define SW_PACKAGE_API
 #include "sw_check_abi_version.h"
 
 #include <boost/dll.hpp>
