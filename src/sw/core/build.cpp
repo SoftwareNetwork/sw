@@ -283,7 +283,6 @@ void SwBuild::stop()
 void SwBuild::build()
 {
     /*
-
         General build process:
         1) Load provided inputs.
         2) Set all targets to build from input.
@@ -292,18 +291,10 @@ void SwBuild::build()
         5) Prepare build.
         6) Run build.
 
-        Input = file | directory
-        InputHash =
-                    Directory: Path Hash
-                    File: Specification Hash (from Driver)
-        Some inputs may be equal, but have different paths, so we compare by hash.
-        Specification may include several files.
-
         ---
 
         Each package has exactly one entry point.
         Entry point may include several packages.
-
     */
 
     ScopedTime t;
