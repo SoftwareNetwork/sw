@@ -374,12 +374,7 @@ void SwBuild::loadInputs()
     {
         auto tgts = i.loadTargets(*this);
         for (auto &tgt : tgts)
-        {
-            // do not remove this cond, it really filters some targets
-            if (tgt->getSettings()["dry-run"] == "true")
-                continue;
             getTargets()[tgt->getPackage()].push_back(tgt);
-        }
     }
 }
 
@@ -685,6 +680,7 @@ void SwBuild::loadPackages(const TargetMap &predefined)
                 throw SW_RUNTIME_ERROR("no entry point for " + d.first.toString());
             //auto tgts = ep->loadPackages(*this, s, { d.first }, pp);
             auto tgts = ep->loadPackages(*this, s, getTargets().getPackagesSet(),
+            auto tgts = ep.loadPackagesReal(*this, s, getTargets().getPackagesSet(),
                 d.first.getPath().isAbsolute()
                 ? d.first.getPath().slice(0, LocalPackage(getContext().getLocalStorage(), d.first).getData().prefix)
                 : PackagePath{}
@@ -693,8 +689,6 @@ void SwBuild::loadPackages(const TargetMap &predefined)
             bool added = false;
             for (auto &tgt : tgts)
             {
-                if (tgt->getSettings()["dry-run"] == "true")
-                    continue;
                 if (tgt->getPackage() == d.first)
                     getTargets()[tgt->getPackage()].push_back(tgt);
                 else
@@ -709,11 +703,7 @@ void SwBuild::loadPackages(const TargetMap &predefined)
                 e += d.first.toString() + " with current settings\n" + s.toString();
                 e += "\navailable targets:\n";
                 for (auto &tgt : tgts)
-                {
-                    if (tgt->getSettings()["dry-run"] == "true")
-                        continue;
                     e += tgt->getSettings().toString() + "\n";
-                }
                 e.resize(e.size() - 1);
 
                 // We add this check inside if (k == d.second->end()) condition,

@@ -149,8 +149,8 @@ std::vector<ITargetPtr> InputWithSettings::loadTargets(SwBuild &b) const
             if (!pkgs.empty())
                 prefix = pkgs.begin()->getPath().slice(0, iprefix);
 
-            // load all packages here
-            auto t = ep->loadPackages(b, s, pkgs, prefix);
+            //
+            auto t = ep->loadPackagesReal(b, s, pkgs, prefix);
             tgts.insert(tgts.end(), t.begin(), t.end());
         }
 
