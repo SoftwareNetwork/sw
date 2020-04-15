@@ -222,6 +222,9 @@ void Settings::save(const path &p) const
     }
     root["storage_dir"] = storage_dir.string();
 
+    root["record_commands"] = record_commands;
+    root["record_commands_in_current_dir"] = record_commands_in_current_dir;
+
     std::ofstream o(p);
     if (!o)
         throw SW_RUNTIME_ERROR("Cannot open file: " + p.string());
