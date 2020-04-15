@@ -9,6 +9,7 @@
 #include <sw/manager/storage.h>
 #include <sw/core/sw_context.h>
 #include <sw/core/input_database.h>
+#include <sw/core/specification.h>
 
 #include <primitives/emitter.h>
 #include <primitives/executor.h>
@@ -51,12 +52,20 @@ void write_required_packages(const std::unordered_map<UnresolvedPackage, LocalPa
     write_file(packages, ctx_packages.getText());
 }
 
-void write_build_script(
-    const std::unordered_map<UnresolvedPackage, LocalPackage> &m,
-    const std::unordered_map<UnresolvedPackage, size_t> &gns,
-    const std::unordered_map<LocalPackage, size_t> &gns2
-    )
+void write_build_script(SwCoreContext &swctx, const std::unordered_map<UnresolvedPackage, LocalPackage> &m)
 {
+    // calc GNs
+    std::unordered_map<UnresolvedPackage, size_t> gns;
+    std::unordered_map<LocalPackage, size_t> gns2;
+    auto &idb = swctx.getInputDatabase();
+    for (auto &[u, r] : m)
+    {
+        SpecificationFiles f;
+        f.addFile("sw.cpp", r.getDirSrc2() / "sw.cpp");
+        Specification s(f);
+        gns2[r] = gns[u] = s.getHash(idb);
+    }
+
     auto get_gn = [&gns](auto &u)
     {
         auto i = gns.find(u);
@@ -201,18 +210,8 @@ int main(int argc, char **argv)
         {"org.sw.demo.llvm_project.libcxx"},
     });
 
-    // calc GNs
-    std::unordered_map<UnresolvedPackage, size_t> gns;
-    std::unordered_map<LocalPackage, size_t> gns2;
-    auto &idb = swctx.getInputDatabase();
-    for (auto &[u, r] : m)
-    {
-        gns[u] = idb.getFileHash(r.getDirSrc2() / "sw.cpp");
-        gns2[r] = idb.getFileHash(r.getDirSrc2() / "sw.cpp");
-    }
-
     write_required_packages(m);
-    write_build_script(m, gns, gns2);
+    write_build_script(swctx, m);
 
     return 0;
 }
