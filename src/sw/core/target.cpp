@@ -37,6 +37,7 @@ std::vector<ITargetPtr> TargetEntryPoint::loadPackagesReal(SwBuild &b, const Tar
             continue;
         tgts.push_back(tgt);
     }
+    SW_ASSERT(!tgts.empty(), "No packages loaded.");
     return tgts;
 }
 

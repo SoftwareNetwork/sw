@@ -675,25 +675,19 @@ void SwBuild::loadPackages(const TargetMap &predefined)
                 }
             }
 
-            auto ep = getEntryPoint(d.first);
-            if (!ep)
-                throw SW_RUNTIME_ERROR("no entry point for " + d.first.toString());
-            //auto tgts = ep->loadPackages(*this, s, { d.first }, pp);
-            auto tgts = ep->loadPackages(*this, s, getTargets().getPackagesSet(),
+            auto &ep = getEntryPoint(d.first);
             auto tgts = ep.loadPackagesReal(*this, s, getTargets().getPackagesSet(),
                 d.first.getPath().isAbsolute()
                 ? d.first.getPath().slice(0, LocalPackage(getContext().getLocalStorage(), d.first).getData().prefix)
                 : PackagePath{}
                 );
 
-            bool added = false;
             for (auto &tgt : tgts)
             {
                 if (tgt->getPackage() == d.first)
                     getTargets()[tgt->getPackage()].push_back(tgt);
                 else
                     cache[tgt->getPackage()].push_back(tgt);
-                added = true;
             }
 
             auto k = d.second->findSuitable(s);
@@ -705,16 +699,6 @@ void SwBuild::loadPackages(const TargetMap &predefined)
                 for (auto &tgt : tgts)
                     e += tgt->getSettings().toString() + "\n";
                 e.resize(e.size() - 1);
-
-                // We add this check inside if (k == d.second->end()) condition,
-                // because 'load' variable may contain more than 1 request
-                // and needed target will be loaded with another (previous) one.
-                // So, added check will not pass, but k == d.second->end() passes.
-
-                // assert in fact
-                if (!added)
-                    throw SW_LOGIC_ERROR("no packages loaded " + e);
-
                 throw SW_RUNTIME_ERROR("cannot load package " + e);
             }
         }
@@ -1238,12 +1222,12 @@ void SwBuild::setEntryPoint(const PackageId &p, const TargetEntryPoint &ep)
     entry_points[p] = &ep;
 }
 
-const TargetEntryPoint *SwBuild::getEntryPoint(const PackageId &p) const
+const TargetEntryPoint &SwBuild::getEntryPoint(const PackageId &p) const
 {
     auto i = entry_points.find(p);
-    if (i != entry_points.end())
-        return i->second;
-    return {};
+    if (i != entry_points.end() && i->second)
+        return *i->second;
+    throw SW_RUNTIME_ERROR("no entry point for " + p.toString());
 }
 
 path SwBuild::getTestDir() const

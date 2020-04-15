@@ -132,7 +132,7 @@ private:
 
     Commands getCommands() const;
     void loadPackages(const TargetMap &predefined);
-    const TargetEntryPoint *getEntryPoint(const PackageId &) const;
+    const TargetEntryPoint &getEntryPoint(const PackageId &) const;
     void resolvePackages(const std::vector<IDependency*> &upkgs); // [2/2] step
     Executor &getBuildExecutor() const;
     Executor &getPrepareExecutor() const;
