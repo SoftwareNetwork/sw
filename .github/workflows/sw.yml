@@ -39,4 +39,4 @@ jobs:
     - uses: actions/upload-artifact@v1
       with:
         name: sw
-        path: .sw/out/**/sw.client.sw-*
+        path: .sw/out
