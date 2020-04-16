@@ -61,6 +61,7 @@ bool Input::isOutdated(const fs::file_time_type &t) const
 
 String Input::getName() const
 {
+    // maybe print current packages?
     return getSpecification().getName();
 }
 
@@ -71,6 +72,8 @@ size_t Input::getHash() const
 
 const Specification &Input::getSpecification() const
 {
+    if (!specification)
+        throw SW_LOGIC_ERROR("Empty spec");
     return *specification;
 }
 
