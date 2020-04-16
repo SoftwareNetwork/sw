@@ -299,8 +299,6 @@ struct SpecFileInput : Input, DriverInput
             SW_UNIMPLEMENTED;
         }
     }
-
-    void setEntryPoints(EntryPointsVector &&in) override { Input::setEntryPoints(std::move(in)); }
 };
 
 struct InlineSpecInput : Input, DriverInput

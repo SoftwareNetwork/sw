@@ -81,12 +81,10 @@ struct SW_CORE_API Input
     std::pair<PackageIdSet, int> getPackages() const;
     void addPackage(const LocalPackage &);
 
-protected:
-    SwContext &swctx;
-
-    virtual void setEntryPoints(EntryPointsVector &&);
+    void setEntryPoints(EntryPointsVector &&);
 
 private:
+    SwContext &swctx;
     const IDriver &driver;
     std::unique_ptr<Specification> specification;
     PackageIdSet pkgs;

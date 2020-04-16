@@ -47,8 +47,7 @@ struct BuiltinInput : Input
 
     bool isParallelLoadable() const { return true; }
     size_t getHash() const override { return h; }
-    EntryPointsVector load1(SwContext &) override { SW_UNREACHABLE; };
-    void setEntryPoints(EntryPointsVector &&in) override { Input::setEntryPoints(std::move(in)); }
+    EntryPointsVector load1(SwContext &) override { SW_UNREACHABLE; }
 };
 
 using BuiltinInputs = std::vector<std::unique_ptr<sw::Input>>;
