@@ -94,11 +94,6 @@ void Input::setEntryPoints(EntryPointsVector &&in)
     eps = std::move(in);
 }
 
-std::pair<PackageIdSet, int> Input::getPackages() const
-{
-    return { pkgs, prefix };
-}
-
 void Input::addPackage(const LocalPackage &in)
 {
     if (prefix != -1 && in.getData().prefix != prefix)
@@ -148,9 +143,9 @@ std::vector<ITargetPtr> InputWithSettings::loadTargets(SwBuild &b) const
             LOG_TRACE(logger, "Loading input " << i.getName() << ", settings = " << s.toString());
 
             PackagePath prefix;
-            auto [pkgs, iprefix] = i.getPackages();
+            auto pkgs = i.getPackages();
             if (!pkgs.empty())
-                prefix = pkgs.begin()->getPath().slice(0, iprefix);
+                prefix = pkgs.begin()->getPath().slice(0, i.getPrefix());
 
             //
             auto t = ep->loadPackagesReal(b, s, pkgs, prefix);

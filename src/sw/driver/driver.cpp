@@ -506,7 +506,7 @@ std::unique_ptr<SwBuild> Driver::create_build(SwContext &swctx) const
 
     for (auto i : builin_inputs)
     {
-        for (auto &p : i->getPackages().first)
+        for (auto &p : i->getPackages())
             b->setEntryPoint(p, *i->getEntryPoints()[0]);
     }
 

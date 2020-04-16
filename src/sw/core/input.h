@@ -78,7 +78,8 @@ struct SW_CORE_API Input
 
     // same input may be used to load multiple packages
     // they all share same prefix
-    std::pair<PackageIdSet, int> getPackages() const;
+    PackageIdSet getPackages() const { return pkgs; }
+    int getPrefix() const { return prefix; }
     void addPackage(const LocalPackage &);
 
     void setEntryPoints(EntryPointsVector &&);
