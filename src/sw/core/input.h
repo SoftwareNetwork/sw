@@ -74,7 +74,7 @@ struct SW_CORE_API Input
     std::vector<TargetEntryPoint*> getEntryPoints() const;
 
     String getName() const;
-    size_t getHash() const;
+    virtual size_t getHash() const;
 
     // same input may be used to load multiple packages
     // they all share same prefix
