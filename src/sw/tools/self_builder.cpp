@@ -133,7 +133,7 @@ void write_build_script(SwCoreContext &swctx, const std::unordered_map<Unresolve
 
     for (auto &[u, r] : m)
     {
-        auto &s = get_gn(u);
+        const auto &s = get_gn(u);
         auto h = s.getHash(idb);
         if (used_gns.find(h) != used_gns.end())
         {
