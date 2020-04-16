@@ -119,7 +119,7 @@ void write_build_script(SwCoreContext &swctx, const std::unordered_map<Unresolve
         if (!lp)
             throw SW_RUNTIME_ERROR("Cannot find dependency: " + u.toString());
 
-        auto &s = get_gn(u);
+        const auto &s = get_gn(u);
         auto h = s.getHash(idb);
         auto &r = *lp;
         if (used_gns.find(h) != used_gns.end())
