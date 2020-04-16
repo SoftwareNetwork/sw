@@ -65,9 +65,9 @@ struct SW_CORE_API Input
     const IDriver &getDriver() const { return driver; }
 
     /// allow to load several inputs via driver
-    virtual bool isBatchLoadable() const = 0;
+    virtual bool isBatchLoadable() const { return false; }
     /// allow to throw input->load() into thread pool
-    virtual bool isParallelLoadable() const = 0;
+    virtual bool isParallelLoadable() const { return false; }
 
     bool isOutdated(const fs::file_time_type &) const;
     bool isLoaded() const;

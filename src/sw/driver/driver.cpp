@@ -310,8 +310,7 @@ struct InlineSpecInput : Input, DriverInput
 
     using Input::Input;
 
-    bool isBatchLoadable() const override { return false; }
-    bool isParallelLoadable() const override { return !isBatchLoadable(); }
+    bool isParallelLoadable() const override { return true; }
 
     EntryPointsVector load1(SwContext &swctx) override
     {
@@ -351,8 +350,7 @@ struct DirInput : Input
 {
     using Input::Input;
 
-    bool isBatchLoadable() const override { return false; }
-    bool isParallelLoadable() const override { return !isBatchLoadable(); }
+    bool isParallelLoadable() const override { return true; }
 
     EntryPointsVector load1(SwContext &swctx) override
     {
