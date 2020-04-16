@@ -54,16 +54,18 @@ void write_required_packages(const std::unordered_map<UnresolvedPackage, LocalPa
 
 void write_build_script(SwCoreContext &swctx, const std::unordered_map<UnresolvedPackage, LocalPackage> &m)
 {
-    // calc GNs
-    std::unordered_map<UnresolvedPackage, size_t> gns;
-    std::unordered_map<LocalPackage, size_t> gns2;
     auto &idb = swctx.getInputDatabase();
+
+    // create specs
+    std::unordered_map<UnresolvedPackage, Specification> gns;
+    std::unordered_map<LocalPackage, Specification> gns2;
     for (auto &[u, r] : m)
     {
         SpecificationFiles f;
         f.addFile("sw.cpp", r.getDirSrc2() / "sw.cpp");
         Specification s(f);
-        gns2[r] = gns[u] = s.getHash(idb);
+        gns2.emplace(r, s);
+        gns.emplace(u, s);
     }
 
     auto get_gn = [&gns](auto &u)
@@ -80,30 +82,31 @@ void write_build_script(SwCoreContext &swctx, const std::unordered_map<Unresolve
     };
 
     std::map<size_t, std::set<LocalPackage>> used_gns;
-    std::vector<LocalPackage> lpkgs;
+    std::vector<std::pair<LocalPackage, Specification>> lpkgs;
 
     // some packages must be before others
     std::vector<UnresolvedPackage> prepkgs;
+    {
+        // goes before primitives
+        prepkgs.push_back("org.sw.demo.ragel-6"s); // keep upkg same as in deps!!!
 
-    // goes before primitives
-    prepkgs.push_back("org.sw.demo.ragel-6"s); // keep upkg same as in deps!!!
+    //#ifdef _WIN32
+        // goes before primitives
+        prepkgs.push_back("org.sw.demo.lexxmark.winflexbison.bison"s);
+        //#endif
 
-//#ifdef _WIN32
-    // goes before primitives
-    prepkgs.push_back("org.sw.demo.lexxmark.winflexbison.bison"s);
-//#endif
+            // goes before grpc
+        prepkgs.push_back("org.sw.demo.google.protobuf.protobuf"s);
 
-    // goes before grpc
-    prepkgs.push_back("org.sw.demo.google.protobuf.protobuf"s);
+        // goes before sw cpp driver (client)
+        prepkgs.push_back("org.sw.demo.google.grpc.cpp.plugin"s);
 
-    // goes before sw cpp driver (client)
-    prepkgs.push_back("org.sw.demo.google.grpc.cpp.plugin"s);
+        // goes before sw cpp driver (client)
+        prepkgs.push_back("pub.egorpugin.primitives.filesystem-master"s);
 
-    // goes before sw cpp driver (client)
-    prepkgs.push_back("pub.egorpugin.primitives.filesystem-master"s);
-
-    // cpp driver
-    prepkgs.push_back({SW_DRIVER_NAME});
+        // cpp driver
+        prepkgs.push_back({ SW_DRIVER_NAME });
+    }
 
     for (auto &u : prepkgs)
     {
@@ -116,32 +119,38 @@ void write_build_script(SwCoreContext &swctx, const std::unordered_map<Unresolve
         if (!lp)
             throw SW_RUNTIME_ERROR("Cannot find dependency: " + u.toString());
 
+        auto &s = get_gn(u);
+        auto h = s.getHash(idb);
         auto &r = *lp;
-        if (used_gns.find(get_gn(u)) != used_gns.end())
+        if (used_gns.find(h) != used_gns.end())
         {
-            used_gns[get_gn(u)].insert(*lp);
+            used_gns[h].insert(*lp);
             continue;
         }
-        used_gns[get_gn(u)].insert(*lp);
-        lpkgs.emplace_back(r);
+        used_gns[h].insert(*lp);
+        lpkgs.emplace_back(r, s);
     }
 
     for (auto &[u, r] : m)
     {
-        if (used_gns.find(get_gn(u)) != used_gns.end())
+        auto &s = get_gn(u);
+        auto h = s.getHash(idb);
+        if (used_gns.find(h) != used_gns.end())
         {
-            used_gns[get_gn(u)].insert(r);
+            used_gns[h].insert(r);
             continue;
         }
-        used_gns[get_gn(u)].insert(r);
-        lpkgs.emplace_back(r);
+        used_gns[h].insert(r);
+        lpkgs.emplace_back(r, s);
     }
 
+    // includes
     primitives::CppEmitter build;
     primitives::CppEmitter ctx;
-    for (auto &r : lpkgs)
+    for (auto &[r,s] : lpkgs)
     {
-        auto f = read_file(r.getDirSrc2() / "sw.cpp");
+        auto fn = s.files.getData().begin()->second.absolute_path;
+        auto f = read_file(fn);
         bool has_checks = f.find("Checker") != f.npos; // more presize than setChecks
 
         auto &d = r.getData();
@@ -149,7 +158,7 @@ void write_build_script(SwCoreContext &swctx, const std::unordered_map<Unresolve
         ctx.addLine("#define build build_" + r.getVariableName());
         if (has_checks)
             ctx.addLine("#define check check_" + r.getVariableName());
-        ctx.addLine("#include \"" + normalize_path(r.getDirSrc2() / "sw.cpp") + "\"");
+        ctx.addLine("#include \"" + normalize_path(fn) + "\"");
         ctx.addLine("#undef configure");
         ctx.addLine("#undef build");
         if (has_checks)
@@ -157,29 +166,38 @@ void write_build_script(SwCoreContext &swctx, const std::unordered_map<Unresolve
         ctx.addLine();
     }
 
-    //
-    build.beginFunction("TargetEntryPointMap load_builtin_entry_points()");
-    build.addLine("TargetEntryPointMap epm;");
+    // function
+    build.beginNamespace("sw");
+    build.beginFunction("BuiltinInputs load_builtin_entry_points(SwContext &swctx, const IDriver &d)");
+    build.addLine("BuiltinInputs epm;");
     build.addLine();
-    for (auto &r : lpkgs)
+    for (auto &[r,s] : lpkgs)
     {
-        auto f = read_file(r.getDirSrc2() / "sw.cpp");
+        auto fn = s.files.getData().begin()->second.absolute_path;
+        auto f = read_file(fn);
         bool has_checks = f.find("Checker") != f.npos; // more presize than setChecks
 
+        build.beginBlock();
+        build.addLine("SpecificationFiles f;");
+        build.addLine("auto spec = std::make_unique<Specification>(f);");
+        build.addLine("auto i = std::make_unique<BuiltinInput>(swctx, d, std::move(spec), " + std::to_string(s.getHash(idb)) + ");");
+        build.addLine("auto ep = std::make_unique<sw::NativeBuiltinTargetEntryPoint>(build_" + r.getVariableName() + ");");
+        if (has_checks)
+            build.addLine("ep->cf = check_" + r.getVariableName() + ";");
+        build.addLine("Input::EntryPointsVector epv;");
+        build.addLine("epv.push_back(std::move(ep));");
+        build.addLine("i->setEntryPoints(std::move(epv));");
+
         // enumerate all other packages in group
-        for (auto &p : used_gns[get_gn2(r)])
-        {
-            build.beginBlock();
-            build.addLine("auto ep = std::make_unique<sw::NativeBuiltinTargetEntryPoint>(build_" + r.getVariableName() + ");");
-            if (has_checks)
-                build.addLine("ep->cf = check_" + r.getVariableName() + ";");
-            build.addLine("epm.emplace(\"" + p.toString() + "\"s, std::move(ep));");
-            build.endBlock();
-        }
-        build.addLine();
+        for (auto &p : used_gns[get_gn2(r).getHash(idb)])
+            build.addLine("i->addPackage(LocalPackage(swctx.getLocalStorage(), \"" + p.toString() + "\"s));");
+        build.addLine("epm.push_back(std::move(i));");
+        build.endBlock();
+        build.emptyLines();
     }
     build.addLine("return epm;");
     build.endFunction();
+    build.endNamespace();
 
     ctx += build;
 

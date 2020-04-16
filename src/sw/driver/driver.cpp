@@ -50,14 +50,13 @@ DECLARE_STATIC_LOGGER(logger, "driver.cpp");
 bool debug_configs = true; // true for now
 bool ignore_outdated_configs;
 
-std::unordered_map<sw::PackageId, std::unique_ptr<sw::NativeBuiltinTargetEntryPoint>> load_builtin_entry_points();
-
 void process_configure_ac2(const path &p);
 
 namespace sw
 {
 
-PackageIdSet load_builtin_packages(SwContext &swctx);
+PackageIdSet load_builtin_packages(SwContext &);
+std::vector<std::unique_ptr<sw::Input>> load_builtin_entry_points(SwContext &, const IDriver &);
 
 namespace driver::cpp
 {
@@ -490,7 +489,12 @@ PackageIdSet Driver::getBuiltinPackages(SwContext &swctx) const
     {
         std::unique_lock lk(m_bp);
         builtin_packages = load_builtin_packages(swctx);
-        builin_entry_points = load_builtin_entry_points();
+        auto builin_inputs_points = load_builtin_entry_points(swctx, *this);
+        for (auto &e : builin_inputs_points)
+        {
+            auto [i,_] = swctx.registerInput(std::move(e));
+            builin_inputs.push_back(i);
+        }
     }
     return *builtin_packages;
 }
@@ -502,10 +506,14 @@ std::unique_ptr<SwBuild> Driver::create_build(SwContext &swctx) const
 
     auto bpkgs = getBuiltinPackages(ctx);
 
-    for (auto &[p, ep] : builin_entry_points)
-        b->setEntryPoint(p, *ep);
+    for (auto i : builin_inputs)
+    {
+        for (auto &p : i->getPackages().first)
+            b->setEntryPoint(p, *i->getEntryPoints()[0]);
+    }
 
     // register
+    // remove later?
     for (auto &p : bpkgs)
         b->getTargets()[p];
 

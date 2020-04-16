@@ -18,6 +18,8 @@
 
 #include "entry_point.h"
 
+#include <sw/core/input.h>
+#include <sw/core/specification.h>
 #include <sw/core/sw_context.h>
 #include <sw/core/target.h>
 
@@ -32,7 +34,26 @@ DECLARE_STATIC_LOGGER(logger, "build.self");
 #pragma warning(disable : 4005) // warning C4005: 'XXX': macro redefinition
 #endif
 
-using TargetEntryPointMap = std::unordered_map<sw::PackageId, std::unique_ptr<sw::NativeBuiltinTargetEntryPoint>>;
+namespace sw
+{
+
+struct BuiltinInput : Input
+{
+    size_t h;
+
+    BuiltinInput(SwContext &swctx, const IDriver &d, std::unique_ptr<Specification> spec, size_t hash)
+        : Input(swctx, d, std::move(spec)), h(hash)
+    {}
+
+    bool isParallelLoadable() const { return true; }
+    size_t getHash() const override { return h; }
+    EntryPointsVector load1(SwContext &) override { SW_UNREACHABLE; };
+    void setEntryPoints(EntryPointsVector &&in) override { Input::setEntryPoints(std::move(in)); }
+};
+
+using BuiltinInputs = std::vector<std::unique_ptr<sw::Input>>;
+
+}
 
 #define SW_DRIVER_ADD_SELF
 #include <build_self.generated.h>

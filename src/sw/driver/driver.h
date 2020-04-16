@@ -76,7 +76,7 @@ private:
     SwContext &swctx;
     mutable std::mutex m_bp;
     mutable std::optional<PackageIdSet> builtin_packages;
-    mutable std::unordered_map<sw::PackageId, std::unique_ptr<sw::NativeBuiltinTargetEntryPoint>> builin_entry_points;
+    mutable std::vector<sw::Input*> builin_inputs;
     PackageIdSet getBuiltinPackages(SwContext &) const;
 
     mutable std::unique_ptr<SwBuild> b;
