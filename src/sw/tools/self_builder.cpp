@@ -178,9 +178,7 @@ void write_build_script(SwCoreContext &swctx, const std::unordered_map<Unresolve
         bool has_checks = f.find("Checker") != f.npos; // more presize than setChecks
 
         build.beginBlock();
-        build.addLine("SpecificationFiles f;");
-        build.addLine("auto spec = std::make_unique<Specification>(f);");
-        build.addLine("auto i = std::make_unique<BuiltinInput>(swctx, d, std::move(spec), " + std::to_string(s.getHash(idb)) + ");");
+        build.addLine("auto i = std::make_unique<BuiltinInput>(swctx, d, " + std::to_string(s.getHash(idb)) + ");");
         build.addLine("auto ep = std::make_unique<sw::NativeBuiltinTargetEntryPoint>(build_" + r.getVariableName() + ");");
         if (has_checks)
             build.addLine("ep->cf = check_" + r.getVariableName() + ";");

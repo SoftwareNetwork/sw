@@ -41,8 +41,8 @@ struct BuiltinInput : Input
 {
     size_t h;
 
-    BuiltinInput(SwContext &swctx, const IDriver &d, std::unique_ptr<Specification> spec, size_t hash)
-        : Input(swctx, d, std::move(spec)), h(hash)
+    BuiltinInput(SwContext &swctx, const IDriver &d, size_t hash)
+        : Input(swctx, d, {}), h(hash)
     {}
 
     bool isParallelLoadable() const { return true; }
