@@ -34,6 +34,8 @@ namespace sw
 Input::Input(SwContext &swctx, const IDriver &driver, std::unique_ptr<Specification> spec)
     : swctx(swctx), driver(driver), specification(std::move(spec))
 {
+    if (!specification)
+        throw SW_LOGIC_ERROR("Empty spec");
 }
 
 Input::~Input()
@@ -72,8 +74,6 @@ size_t Input::getHash() const
 
 const Specification &Input::getSpecification() const
 {
-    if (!specification)
-        throw SW_LOGIC_ERROR("Empty spec");
     return *specification;
 }
 
