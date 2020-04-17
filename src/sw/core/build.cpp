@@ -365,7 +365,10 @@ void SwBuild::loadInputs()
     {
         auto tgts = i.loadTargets(*this);
         for (auto &tgt : tgts)
+        {
             getTargets()[tgt->getPackage()].push_back(tgt);
+            targets[tgt->getPackage()].setInput(i.getInput());
+        }
     }
 }
 
@@ -533,20 +536,16 @@ void SwBuild::resolvePackages(const std::vector<IDependency*> &udeps)
 
     // now we know all drivers
     std::set<Input *> iv;
-    std::map<PackageId, Input *> ivm;
     for (auto &[u,p] : m)
     {
-        // this marks package as known;
-        targets[p];
-
         // use addInput to prevent doubling already existing and loaded inputs
         // like when we loading dependency that is already loaded from the input
         // test: sw build org.sw.demo.gnome.pango.pangocairo-1.44
-        for (auto i : swctx.addInput(p))
-        {
-            iv.insert(i);
-            ivm[p] = i;
-        }
+        auto i = swctx.addInput(p);
+        SW_CHECK(i.size() == 1);
+        iv.insert(i[0]);
+        // this also marks package as known
+        targets[p].setInput(*i[0]);
     }
 
     {
@@ -555,10 +554,6 @@ void SwBuild::resolvePackages(const std::vector<IDependency*> &udeps)
         if (build_settings["measure"] == "true")
             LOG_DEBUG(logger, "load entry points time: " << t.getTimeFloat() << " s.");
     }
-
-    // set
-    for (auto &[p, i] : ivm)
-        setEntryPoint(p, *i->getEntryPoints()[0]);
 }
 
 void SwBuild::loadPackages()
@@ -666,8 +661,8 @@ void SwBuild::loadPackages(const TargetMap &predefined)
                 }
             }
 
-            auto &ep = getEntryPoint(d.first);
-            auto tgts = ep.loadPackagesReal(*this, s, getTargets().getPackagesSet(),
+            const auto &input = getTargets()[d.first].getInput();
+            auto tgts = input.loadPackages(*this, s, getTargets().getPackagesSet(),
                 d.first.getPath().isAbsolute()
                 ? d.first.getPath().slice(0, LocalPackage(getContext().getLocalStorage(), d.first).getData().prefix)
                 : PackagePath{}
@@ -1205,20 +1200,6 @@ Executor &SwBuild::getPrepareExecutor() const
 const TargetSettings &SwBuild::getExternalVariables() const
 {
     return getSettings()["D"].getSettings();
-}
-
-void SwBuild::setEntryPoint(const PackageId &p, const TargetEntryPoint &ep)
-{
-    // do not set eps twice?
-    entry_points[p] = &ep;
-}
-
-const TargetEntryPoint &SwBuild::getEntryPoint(const PackageId &p) const
-{
-    auto i = entry_points.find(p);
-    if (i != entry_points.end() && i->second)
-        return *i->second;
-    throw SW_RUNTIME_ERROR("no entry point for " + p.toString());
 }
 
 path SwBuild::getTestDir() const

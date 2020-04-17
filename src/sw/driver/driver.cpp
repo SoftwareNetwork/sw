@@ -504,16 +504,12 @@ std::unique_ptr<SwBuild> Driver::create_build(SwContext &swctx) const
 
     auto bpkgs = getBuiltinPackages(ctx);
 
+    // register targets and set inputs
     for (auto i : builin_inputs)
     {
         for (auto &p : i->getPackages())
-            b->setEntryPoint(p, *i->getEntryPoints()[0]);
+            b->getTargets()[p].setInput(*i);
     }
-
-    // register
-    // remove later?
-    for (auto &p : bpkgs)
-        b->getTargets()[p];
 
     return std::move(b);
 }
