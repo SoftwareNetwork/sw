@@ -143,6 +143,13 @@ Driver::Driver(SwContext &swctx)
 #ifdef _WIN32
     CoInitializeEx(0, 0); // vs find helper
 #endif
+
+    auto builin_inputs_points = load_builtin_entry_points(swctx, *this);
+    for (auto &e : builin_inputs_points)
+    {
+        auto [i,_] = swctx.registerInput(std::move(e));
+        builin_inputs.push_back(i);
+    }
 }
 
 Driver::~Driver()
@@ -487,12 +494,6 @@ PackageIdSet Driver::getBuiltinPackages(SwContext &swctx) const
     {
         std::unique_lock lk(m_bp);
         builtin_packages = load_builtin_packages(swctx);
-        auto builin_inputs_points = load_builtin_entry_points(swctx, *this);
-        for (auto &e : builin_inputs_points)
-        {
-            auto [i,_] = swctx.registerInput(std::move(e));
-            builin_inputs.push_back(i);
-        }
     }
     return *builtin_packages;
 }
