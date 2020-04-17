@@ -91,7 +91,7 @@ String Specification::getName() const
         return normalize_path(dir);
     for (auto &[_, f] : this->files.getData())
         return normalize_path(f.absolute_path);
-    SW_UNIMPLEMENTED;
+    return "Empty specification";
 }
 
 /*const String &Specification::getFileContents(const path &p)
