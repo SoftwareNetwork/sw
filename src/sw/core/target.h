@@ -31,6 +31,7 @@
 namespace sw
 {
 
+struct Input;
 struct ITarget;
 struct SwBuild;
 
@@ -196,7 +197,11 @@ struct SW_CORE_API TargetContainer
 
     Base::iterator erase(Base::iterator begin, Base::iterator end);
 
+    const Input &getInput() const;
+    void setInput(const Input &);
+
 private:
+    const Input *input = nullptr;
     std::vector<ITargetPtr> targets;
 };
 

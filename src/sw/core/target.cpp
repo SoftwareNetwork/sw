@@ -18,6 +18,8 @@
 
 #include "target.h"
 
+#include "input.h"
+
 namespace sw
 {
 
@@ -37,7 +39,7 @@ std::vector<ITargetPtr> TargetEntryPoint::loadPackagesReal(SwBuild &b, const Tar
             continue;
         tgts.push_back(tgt);
     }
-    SW_ASSERT(!tgts.empty(), "No packages loaded.");
+    //SW_ASSERT(!tgts.empty(), "No packages loaded.");
     return tgts;
 }
 
@@ -103,6 +105,20 @@ bool TargetContainer::empty() const
 TargetContainer::Base::iterator TargetContainer::erase(Base::iterator begin, Base::iterator end)
 {
     return targets.erase(begin, end);
+}
+
+const Input &TargetContainer::getInput() const
+{
+    if (!input)
+        throw SW_RUNTIME_ERROR("No input was set");
+    return *input;
+}
+
+void TargetContainer::setInput(const Input &i)
+{
+    if (input && &i != input)
+        throw SW_RUNTIME_ERROR("Setting input twice: " + i.getName());
+    input = &i;
 }
 
 TargetMap::~TargetMap()
