@@ -77,18 +77,10 @@ const Specification &Input::getSpecification() const
     return *specification;
 }
 
-std::vector<TargetEntryPoint*> Input::getEntryPoints() const
-{
-    if (!isLoaded())
-        throw SW_RUNTIME_ERROR("Input is not loaded");
-    std::vector<TargetEntryPoint *> v;
-    for (auto &e : eps)
-        v.push_back(e.get());
-    return v;
-}
-
 void Input::setEntryPoints(EntryPointsVector &&in)
 {
+    if (isLoaded())
+        throw SW_RUNTIME_ERROR("Input already loaded");
     SW_ASSERT(!in.empty(), "No entry points provided");
     SW_ASSERT(in.size() == 1, "EP > 1 not implemented for now");
     SW_ASSERT(!isLoaded(), "Input already loaded");
@@ -105,6 +97,8 @@ void Input::addPackage(const LocalPackage &in)
 
 std::vector<ITargetPtr> Input::loadPackages(SwBuild &b, const TargetSettings &s, const PackageIdSet &allowed_packages, const PackagePath &prefix) const
 {
+    if (!isLoaded())
+        throw SW_RUNTIME_ERROR("Input is not loaded");
     SW_CHECK(eps.size() == 1);
 
     LOG_TRACE(logger, "Loading input " << getName() << ", settings = " << s.toString());
@@ -158,21 +152,18 @@ std::vector<ITargetPtr> InputWithSettings::loadTargets(SwBuild &b) const
     // we register their entry points in swctx
     // because up to this point it is not done
 
-    //for (auto ep : i.getEntryPoints())
+    for (auto &s : settings)
     {
-        for (auto &s : settings)
-        {
-            LOG_TRACE(logger, "Loading input " << i.getName() << ", settings = " << s.toString());
+        LOG_TRACE(logger, "Loading input " << i.getName() << ", settings = " << s.toString());
 
-            PackagePath prefix;
-            auto pkgs = i.getPackages();
-            if (!pkgs.empty())
-                prefix = pkgs.begin()->getPath().slice(0, i.getPrefix());
+        PackagePath prefix;
+        auto pkgs = i.getPackages();
+        if (!pkgs.empty())
+            prefix = pkgs.begin()->getPath().slice(0, i.getPrefix());
 
-            //
-            auto t = i.loadPackages(b, s, pkgs, prefix);
-            tgts.insert(tgts.end(), t.begin(), t.end());
-        }
+        //
+        auto t = i.loadPackages(b, s, pkgs, prefix);
+        tgts.insert(tgts.end(), t.begin(), t.end());
     }
     return tgts;
 }

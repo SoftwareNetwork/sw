@@ -71,7 +71,6 @@ struct SW_CORE_API Input
 
     bool isOutdated(const fs::file_time_type &) const;
     bool isLoaded() const;
-    std::vector<TargetEntryPoint*> getEntryPoints() const;
 
     String getName() const;
     virtual size_t getHash() const;
