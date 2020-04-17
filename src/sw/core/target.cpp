@@ -105,6 +105,11 @@ void TargetContainer::setInput(const Input &i)
     input = &i;
 }
 
+std::vector<ITargetPtr> TargetContainer::loadPackages(SwBuild &b, const TargetSettings &s, const PackageIdSet &allowed_packages, const PackagePath &prefix) const
+{
+    return getInput().loadPackages(b, s, allowed_packages, prefix);
+}
+
 TargetMap::~TargetMap()
 {
 }

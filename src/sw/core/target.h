@@ -197,12 +197,16 @@ struct SW_CORE_API TargetContainer
 
     Base::iterator erase(Base::iterator begin, Base::iterator end);
 
-    const Input &getInput() const;
     void setInput(const Input &);
+
+    [[nodiscard]]
+    std::vector<ITargetPtr> loadPackages(SwBuild &, const TargetSettings &, const PackageIdSet &allowed_packages, const PackagePath &prefix) const;
 
 private:
     const Input *input = nullptr;
     std::vector<ITargetPtr> targets;
+
+    const Input &getInput() const;
 };
 
 namespace detail

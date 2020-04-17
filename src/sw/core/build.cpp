@@ -661,8 +661,7 @@ void SwBuild::loadPackages(const TargetMap &predefined)
                 }
             }
 
-            const auto &input = getTargets()[d.first].getInput();
-            auto tgts = input.loadPackages(*this, s, getTargets().getPackagesSet(),
+            auto tgts = getTargets()[d.first].loadPackages(*this, s, getTargets().getPackagesSet(),
                 d.first.getPath().isAbsolute()
                 ? d.first.getPath().slice(0, LocalPackage(getContext().getLocalStorage(), d.first).getData().prefix)
                 : PackagePath{}
