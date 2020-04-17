@@ -27,22 +27,6 @@ IDependency::~IDependency() = default;
 ITarget::~ITarget() = default;
 TargetEntryPoint::~TargetEntryPoint() = default;
 
-std::vector<ITargetPtr> TargetEntryPoint::loadPackagesReal(SwBuild &b, const TargetSettings &s, const PackageIdSet &allowed_packages, const PackagePath &prefix) const
-{
-    // are we sure that load package can return dry-run?
-    // if it cannot return dry run packages, we cannot remove this wrapper
-    std::vector<ITargetPtr> tgts;
-    auto t = loadPackages(b, s, allowed_packages, prefix);
-    for (auto &tgt : t)
-    {
-        if (tgt->getSettings()["dry-run"] == "true")
-            continue;
-        tgts.push_back(tgt);
-    }
-    //SW_ASSERT(!tgts.empty(), "No packages loaded.");
-    return tgts;
-}
-
 TargetData::~TargetData()
 {
 }

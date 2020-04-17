@@ -289,10 +289,6 @@ struct SW_CORE_API TargetEntryPoint
 
     [[nodiscard]]
     virtual std::vector<ITargetPtr> loadPackages(SwBuild &, const TargetSettings &, const PackageIdSet &allowed_packages, const PackagePath &prefix) const = 0;
-
-    // no dry-run targets
-    [[nodiscard]]
-    std::vector<ITargetPtr> loadPackagesReal(SwBuild &, const TargetSettings &, const PackageIdSet &allowed_packages, const PackagePath &prefix) const;
 };
 
 struct TargetData

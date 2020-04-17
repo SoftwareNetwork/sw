@@ -109,7 +109,19 @@ std::vector<ITargetPtr> Input::loadPackages(SwBuild &b, const TargetSettings &s,
 
     LOG_TRACE(logger, "Loading input " << getName() << ", settings = " << s.toString());
 
-    return eps[0]->loadPackagesReal(b, s, pkgs, prefix);
+    // are we sure that load package can return dry-run?
+    // if it cannot return dry run packages, we cannot remove this wrapper
+    std::vector<ITargetPtr> tgts;
+    auto t = eps[0]->loadPackages(b, s, allowed_packages, prefix);
+    for (auto &tgt : t)
+    {
+        if (tgt->getSettings()["dry-run"] == "true")
+            continue;
+        tgts.push_back(tgt);
+    }
+    // it is possible to get all targets dry run for some reason
+    // why?
+    return tgts;
 }
 
 InputWithSettings::InputWithSettings(Input &i)
