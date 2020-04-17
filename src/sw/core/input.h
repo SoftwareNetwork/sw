@@ -84,6 +84,10 @@ struct SW_CORE_API Input
 
     void setEntryPoints(EntryPointsVector &&);
 
+    // no dry-run targets
+    [[nodiscard]]
+    std::vector<ITargetPtr> loadPackages(SwBuild &, const TargetSettings &, const PackageIdSet &allowed_packages, const PackagePath &prefix) const;
+
 private:
     SwContext &swctx;
     const IDriver &driver;

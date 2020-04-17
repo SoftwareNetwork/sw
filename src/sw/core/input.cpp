@@ -90,6 +90,7 @@ std::vector<TargetEntryPoint*> Input::getEntryPoints() const
 void Input::setEntryPoints(EntryPointsVector &&in)
 {
     SW_ASSERT(!in.empty(), "No entry points provided");
+    SW_ASSERT(in.size() == 1, "EP > 1 not implemented for now");
     SW_ASSERT(!isLoaded(), "Input already loaded");
     eps = std::move(in);
 }
@@ -100,6 +101,15 @@ void Input::addPackage(const LocalPackage &in)
         throw SW_RUNTIME_ERROR("Trying to add different prefix");
     prefix = in.getData().prefix;
     pkgs.insert(in);
+}
+
+std::vector<ITargetPtr> Input::loadPackages(SwBuild &b, const TargetSettings &s, const PackageIdSet &allowed_packages, const PackagePath &prefix) const
+{
+    SW_CHECK(eps.size() == 1);
+
+    LOG_TRACE(logger, "Loading input " << getName() << ", settings = " << s.toString());
+
+    return eps[0]->loadPackagesReal(b, s, pkgs, prefix);
 }
 
 InputWithSettings::InputWithSettings(Input &i)
@@ -136,7 +146,7 @@ std::vector<ITargetPtr> InputWithSettings::loadTargets(SwBuild &b) const
     // we register their entry points in swctx
     // because up to this point it is not done
 
-    for (auto ep : i.getEntryPoints())
+    //for (auto ep : i.getEntryPoints())
     {
         for (auto &s : settings)
         {
@@ -148,17 +158,8 @@ std::vector<ITargetPtr> InputWithSettings::loadTargets(SwBuild &b) const
                 prefix = pkgs.begin()->getPath().slice(0, i.getPrefix());
 
             //
-            auto t = ep->loadPackagesReal(b, s, pkgs, prefix);
+            auto t = i.loadPackages(b, s, pkgs, prefix);
             tgts.insert(tgts.end(), t.begin(), t.end());
-        }
-
-        // don't forget to set EPs for loaded targets
-        auto &old = b.getTargets();
-        for (const auto &t : tgts)
-        {
-            if (old.find(t->getPackage()) != old.end())
-                continue;
-            b.setEntryPoint(t->getPackage(), *ep);
         }
     }
     return tgts;
