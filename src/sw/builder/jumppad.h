@@ -22,6 +22,7 @@
 #include <primitives/filesystem.h>
 
 #include <gsl/span>
+#include <gsl/span_ext>
 
 #include <functional>
 
