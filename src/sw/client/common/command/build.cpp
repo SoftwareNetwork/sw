@@ -26,7 +26,7 @@ DECLARE_STATIC_LOGGER(logger, "build");
 
 static decltype(auto) getInput(sw::SwBuild &b)
 {
-    return b.getContext().addInput(fs::current_path());
+    return b.addInput(fs::current_path());
 }
 
 static void isolated_build(SwClientContext &swctx)
@@ -42,7 +42,7 @@ static void isolated_build(SwClientContext &swctx)
     auto ts = swctx.createInitialSettings();
     for (auto &ii : getInput(b))
     {
-        sw::InputWithSettings i(*ii);
+        sw::InputWithSettings i(ii);
         i.addSettings(ts);
         b.addInput(i);
     }
@@ -96,7 +96,7 @@ static void isolated_build(SwClientContext &swctx)
 
         for (auto &ii : getInput(b))
         {
-            sw::InputWithSettings i(*ii);
+            sw::InputWithSettings i(ii);
             i.addSettings(ts);
             b.addInput(i);
         }

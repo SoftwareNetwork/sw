@@ -135,37 +135,7 @@ void SwContext::executeBuild(const path &in)
     b->runSavedExecutionPlan(in);
 }
 
-std::vector<Input *> SwContext::addInput(const String &i)
-{
-    path p(i);
-    if (fs::exists(p))
-        return addInput(p);
-    else
-    {
-        UnresolvedPackage p;
-        try
-        {
-            p = extractFromString(i);
-        }
-        catch (std::exception &)
-        {
-            throw SW_RUNTIME_ERROR("No such file, directory or suitable package: " + i);
-        }
-        return addInput(resolve(p));
-    }
-}
-
-std::vector<Input *> SwContext::addInput(const LocalPackage &p)
-{
-    LOG_TRACE(logger, "Loading input: " + p.toString());
-
-    auto v = addInput(p.getDirSrc2());
-    SW_CHECK(v.size() == 1);
-    v[0]->addPackage(p);
-    return v;
-}
-
-std::vector<Input *> SwContext::addInput(const path &in)
+std::vector<Input *> SwContext::addInputInternal(const path &in)
 {
     path p = in;
     if (!p.is_absolute())

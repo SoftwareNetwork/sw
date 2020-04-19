@@ -31,7 +31,7 @@
 namespace sw
 {
 
-struct Input;
+struct BuildInput;
 struct ITarget;
 struct SwBuild;
 
@@ -175,6 +175,11 @@ struct SW_CORE_API TargetContainer
 {
     using Base = std::vector<ITargetPtr>;
 
+    TargetContainer();
+    TargetContainer(const TargetContainer &);
+    TargetContainer &operator=(const TargetContainer &);
+    ~TargetContainer();
+
     // find target with equal settings
     Base::iterator findEqual(const TargetSettings &);
     Base::const_iterator findEqual(const TargetSettings &) const;
@@ -197,16 +202,16 @@ struct SW_CORE_API TargetContainer
 
     Base::iterator erase(Base::iterator begin, Base::iterator end);
 
-    void setInput(const Input &);
+    void setInput(const BuildInput &);
 
     [[nodiscard]]
-    std::vector<ITargetPtr> loadPackages(SwBuild &, const TargetSettings &, const PackageIdSet &allowed_packages, const PackagePath &prefix) const;
+    std::vector<ITargetPtr> loadPackages(SwBuild &, const TargetSettings &, const PackageIdSet &allowed_packages) const;
 
 private:
-    const Input *input = nullptr;
+    std::unique_ptr<BuildInput> input;
     std::vector<ITargetPtr> targets;
 
-    const Input &getInput() const;
+    const BuildInput &getInput() const;
 };
 
 namespace detail

@@ -70,11 +70,11 @@ static void override_package_perform(SwClientContext &swctx, sw::PackagePath pre
     }
 
     auto b = swctx.createBuild();
-    auto inputs = swctx.getContext().addInput(fs::current_path());
+    auto inputs = b->addInput(fs::current_path());
     SW_CHECK(inputs.size() == 1); // for now
     for (auto &i : inputs)
     {
-        sw::InputWithSettings ii(*i);
+        sw::InputWithSettings ii(i);
         auto ts = b->getContext().getHostSettings();
         ii.addSettings(ts);
         b->addInput(ii);

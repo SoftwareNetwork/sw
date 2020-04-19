@@ -19,6 +19,7 @@
 #pragma once
 
 #include <sw/core/driver.h>
+#include <sw/core/input.h>
 #include <sw/manager/package_id.h>
 
 #include <boost/bimap.hpp>
@@ -76,7 +77,7 @@ private:
     SwContext &swctx;
     mutable std::mutex m_bp;
     mutable std::optional<PackageIdSet> builtin_packages;
-    mutable std::vector<sw::Input*> builin_inputs;
+    mutable std::vector<sw::BuildInput> builin_inputs;
     PackageIdSet getBuiltinPackages(SwContext &) const;
 
     mutable std::unique_ptr<SwBuild> b;

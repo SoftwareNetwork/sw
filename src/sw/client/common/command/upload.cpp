@@ -113,9 +113,9 @@ SUBCOMMAND_DECL(upload)
 
     // get spec early, so changes won't be noticed
     // do not move to the bottom
-    auto inputs = getContext().addInput(fs::current_path());
+    auto inputs = b->addInput(fs::current_path());
     SW_CHECK(inputs.size() == 1); // for now
-    auto &spec1 = inputs[0]->getSpecification();
+    auto &spec1 = inputs[0].getInput().getSpecification();
     SW_CHECK(spec1.files.getData().size() == 1); // for now
     auto spec = read_file(spec1.files.getData().begin()->second.absolute_path);
     auto script_name = spec1.files.getData().begin()->first.filename().string();

@@ -381,11 +381,11 @@ void PrepareConfig::addInput(Build &b, const Input &i)
     auto files = i.getSpecification().getFiles();
     SW_CHECK(!files.empty());
     d.fn = d.cfn = *files.begin();
-    if (auto pkgs = i.getPackages(); !pkgs.empty())
+    /*if (auto pkgs = i.getPackages(); !pkgs.empty())
     {
         d.link_name = "[" + pkgs.begin()->toString() + "]/[config]";
         d.cl_name = d.link_name + "/" + d.fn.filename().string();
-    }
+    }*/
 
     if (d.fn.extension() == ".vala")
         lang = LANG_VALA;

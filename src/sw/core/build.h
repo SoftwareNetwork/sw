@@ -57,6 +57,13 @@ struct SW_CORE_API SwBuild : SwBuilderContext
     const SwContext &getContext() const { return swctx; }
 
     void addInput(const InputWithSettings &);
+    // select between package and path
+    std::vector<BuildInput> addInput(const String &);
+    // one subject may bring several inputs
+    // (one path containing multiple inputs)
+    std::vector<BuildInput> addInput(const path &);
+    // single input
+    BuildInput addInput(const LocalPackage &);
 
     // complete
     void build();

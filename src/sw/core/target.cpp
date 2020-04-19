@@ -31,6 +31,29 @@ TargetData::~TargetData()
 {
 }
 
+TargetContainer::TargetContainer()
+{
+}
+
+TargetContainer::TargetContainer(const TargetContainer &rhs)
+{
+    operator=(rhs);
+}
+
+TargetContainer &TargetContainer::operator=(const TargetContainer &rhs)
+{
+    if (this == &rhs)
+        return *this;
+    targets = rhs.targets;
+    if (rhs.input)
+        input = std::make_unique<BuildInput>(rhs.getInput());
+    return *this;
+}
+
+TargetContainer::~TargetContainer()
+{
+}
+
 void TargetContainer::push_back(const ITargetPtr &t)
 {
     // on the same settings, we take input target and overwrite old one
@@ -91,23 +114,23 @@ TargetContainer::Base::iterator TargetContainer::erase(Base::iterator begin, Bas
     return targets.erase(begin, end);
 }
 
-const Input &TargetContainer::getInput() const
+const BuildInput &TargetContainer::getInput() const
 {
     if (!input)
         throw SW_RUNTIME_ERROR("No input was set");
     return *input;
 }
 
-void TargetContainer::setInput(const Input &i)
+void TargetContainer::setInput(const BuildInput &i)
 {
-    if (input && &i != input)
-        throw SW_RUNTIME_ERROR("Setting input twice: " + i.getName());
-    input = &i;
+    if (input && i != *input)
+        throw SW_RUNTIME_ERROR("Setting input twice: " + i.getInput().getName());
+    input = std::make_unique<BuildInput>(i);
 }
 
-std::vector<ITargetPtr> TargetContainer::loadPackages(SwBuild &b, const TargetSettings &s, const PackageIdSet &allowed_packages, const PackagePath &prefix) const
+std::vector<ITargetPtr> TargetContainer::loadPackages(SwBuild &b, const TargetSettings &s, const PackageIdSet &allowed_packages) const
 {
-    return getInput().loadPackages(b, s, allowed_packages, prefix);
+    return getInput().loadPackages(b, s, allowed_packages);
 }
 
 TargetMap::~TargetMap()

@@ -46,14 +46,14 @@ void Input::load()
 {
     if (isLoaded())
         return;
-    eps = load1(swctx);
-    if (eps.empty())
-        throw SW_RUNTIME_ERROR("Empty entry points");
+    ep = load1(swctx);
+    if (!ep)
+        throw SW_RUNTIME_ERROR("Empty entry point");
 }
 
 bool Input::isLoaded() const
 {
-    return !eps.empty();
+    return !!ep;
 }
 
 bool Input::isOutdated(const fs::file_time_type &t) const
@@ -77,36 +77,27 @@ const Specification &Input::getSpecification() const
     return *specification;
 }
 
-void Input::setEntryPoints(EntryPointsVector &&in)
+void Input::setEntryPoint(EntryPointPtr in)
 {
     if (isLoaded())
         throw SW_RUNTIME_ERROR("Input already loaded");
-    SW_ASSERT(!in.empty(), "No entry points provided");
-    SW_ASSERT(in.size() == 1, "EP > 1 not implemented for now");
-    SW_ASSERT(!isLoaded(), "Input already loaded");
-    eps = std::move(in);
-}
-
-void Input::addPackage(const LocalPackage &in)
-{
-    if (prefix != -1 && in.getData().prefix != prefix)
-        throw SW_RUNTIME_ERROR("Trying to add different prefix");
-    prefix = in.getData().prefix;
-    pkgs.insert(in);
+    SW_ASSERT(in, "No entry points provided");
+    ep = std::move(in);
 }
 
 std::vector<ITargetPtr> Input::loadPackages(SwBuild &b, const TargetSettings &s, const PackageIdSet &allowed_packages, const PackagePath &prefix) const
 {
+    // maybe save all targets on load?
+
     if (!isLoaded())
         throw SW_RUNTIME_ERROR("Input is not loaded");
-    SW_CHECK(eps.size() == 1);
 
     LOG_TRACE(logger, "Loading input " << getName() << ", settings = " << s.toString());
 
     // are we sure that load package can return dry-run?
     // if it cannot return dry run packages, we cannot remove this wrapper
     std::vector<ITargetPtr> tgts;
-    auto t = eps[0]->loadPackages(b, s, allowed_packages, prefix);
+    auto t = ep->loadPackages(b, s, allowed_packages, prefix);
     for (auto &tgt : t)
     {
         if (tgt->getSettings()["dry-run"] == "true")
@@ -118,7 +109,34 @@ std::vector<ITargetPtr> Input::loadPackages(SwBuild &b, const TargetSettings &s,
     return tgts;
 }
 
-InputWithSettings::InputWithSettings(Input &i)
+BuildInput::BuildInput(Input &i)
+    : i(i)
+{
+}
+
+void BuildInput::addPackage(const LocalPackage &in)
+{
+    auto in_prefix = in.getPath().slice(0, in.getData().prefix);
+
+    if (prefix && in_prefix != getPrefix())
+        throw SW_RUNTIME_ERROR("Trying to add different prefix");
+    prefix = in_prefix;
+    pkgs.insert(in);
+}
+
+std::vector<ITargetPtr> BuildInput::loadPackages(SwBuild &b, const TargetSettings &s, const PackageIdSet &allowed_packages) const
+{
+    return i.loadPackages(b, s, allowed_packages.empty() ? pkgs : allowed_packages, getPrefix());
+}
+
+bool BuildInput::operator==(const BuildInput &rhs) const
+{
+    auto h = i.getHash();
+    auto rh = rhs.i.getHash();
+    return std::tie(pkgs, prefix, h) == std::tie(rhs.pkgs, rhs.prefix, rh);
+}
+
+InputWithSettings::InputWithSettings(const BuildInput &i)
     : i(i)
 {
 }
@@ -138,7 +156,7 @@ void InputWithSettings::addSettings(const TargetSettings &s)
 String InputWithSettings::getHash() const
 {
     String s;
-    s = std::to_string(i.getHash());
+    s = std::to_string(i.getInput().getHash());
     for (auto &ss : settings)
         s += ss.getHash();
     return s;
@@ -154,15 +172,9 @@ std::vector<ITargetPtr> InputWithSettings::loadTargets(SwBuild &b) const
 
     for (auto &s : settings)
     {
-        LOG_TRACE(logger, "Loading input " << i.getName() << ", settings = " << s.toString());
+        LOG_TRACE(logger, "Loading input " << i.getInput().getName() << ", settings = " << s.toString());
 
-        PackagePath prefix;
-        auto pkgs = i.getPackages();
-        if (!pkgs.empty())
-            prefix = pkgs.begin()->getPath().slice(0, i.getPrefix());
-
-        //
-        auto t = i.loadPackages(b, s, pkgs, prefix);
+        auto t = i.loadPackages(b, s);
         tgts.insert(tgts.end(), t.begin(), t.end());
     }
     return tgts;

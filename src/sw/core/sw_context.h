@@ -84,11 +84,8 @@ struct SW_CORE_API SwContext : SwCoreContext
     SwBuild *registerOperation(SwBuild *);
     void stop(std::thread::id);
 
-    // one subject may bring several inputs
-    // (one path containing multiple inputs)
-    std::vector<Input *> addInput(const String &);
-    std::vector<Input *> addInput(const LocalPackage &);
-    std::vector<Input *> addInput(const path &);
+    //
+    std::vector<Input *> addInputInternal(const path &);
     //                inserted
     std::pair<Input *, bool> registerInput(std::unique_ptr<Input>);
 

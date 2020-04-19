@@ -230,9 +230,9 @@ static void applySettings(sw::TargetSettings &s, const String &in_settings)
 static std::vector<sw::TargetSettings> applySettingsFromCppFile(SwClientContext &swctx, const Options &options, const path &fn)
 {
     auto b = swctx.createBuild();
-    auto inputs = swctx.getContext().addInput(fn);
+    auto inputs = b->addInput(fn);
     SW_CHECK(inputs.size() == 1);
-    sw::InputWithSettings i(*inputs[0]);
+    sw::InputWithSettings i(inputs[0]);
     auto ts = swctx.createInitialSettings();
 #ifdef NDEBUG
     ts["native"]["configuration"] = "releasewithdebuginformation";
@@ -456,9 +456,9 @@ void SwClientContext::addInputs(sw::SwBuild &b, const Inputs &i)
 {
     for (auto &[ts,in] : i.getInputPairs())
     {
-        for (auto i : b.getContext().addInput(in))
+        for (auto i : b.addInput(in))
         {
-            sw::InputWithSettings p(*i);
+            sw::InputWithSettings p(i);
             p.addSettings(ts);
             b.addInput(p);
         }
@@ -466,9 +466,9 @@ void SwClientContext::addInputs(sw::SwBuild &b, const Inputs &i)
 
     for (auto &a : i.getInputs())
     {
-        for (auto i : b.getContext().addInput(a))
+        for (auto i : b.addInput(a))
         {
-            sw::InputWithSettings ii(*i);
+            sw::InputWithSettings ii(i);
             for (auto &s : createSettings())
                 ii.addSettings(s);
             b.addInput(ii);

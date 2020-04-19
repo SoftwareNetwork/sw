@@ -357,7 +357,7 @@ void SwBuild::loadInputs()
 
     std::set<Input *> iv;
     for (auto &i : inputs)
-        iv.insert(&i.getInput());
+        iv.insert(&i.getInput().getInput());
     swctx.loadEntryPointsBatch(iv);
 
     // and load packages
@@ -541,11 +541,10 @@ void SwBuild::resolvePackages(const std::vector<IDependency*> &udeps)
         // use addInput to prevent doubling already existing and loaded inputs
         // like when we loading dependency that is already loaded from the input
         // test: sw build org.sw.demo.gnome.pango.pangocairo-1.44
-        auto i = swctx.addInput(p);
-        SW_CHECK(i.size() == 1);
-        iv.insert(i[0]);
+        auto i = addInput(p);
+        iv.insert(&i.getInput());
         // this also marks package as known
-        targets[p].setInput(*i[0]);
+        targets[p].setInput(i);
     }
 
     {
@@ -661,12 +660,7 @@ void SwBuild::loadPackages(const TargetMap &predefined)
                 }
             }
 
-            auto tgts = getTargets()[d.first].loadPackages(*this, s, getTargets().getPackagesSet(),
-                d.first.getPath().isAbsolute()
-                ? d.first.getPath().slice(0, LocalPackage(getContext().getLocalStorage(), d.first).getData().prefix)
-                : PackagePath{}
-                );
-
+            auto tgts = getTargets()[d.first].loadPackages(*this, s, getTargets().getPackagesSet());
             for (auto &tgt : tgts)
             {
                 if (tgt->getPackage() == d.first)
@@ -850,7 +844,7 @@ Commands SwBuild::getCommands() const
             continue;
         }
 
-        ttb[p] = tgts;
+        ttb.emplace(p, tgts);
 
         for (auto &tgt : tgts)
         {
@@ -1123,6 +1117,47 @@ String SwBuild::getName() const
 void SwBuild::addInput(const InputWithSettings &i)
 {
     inputs.push_back(i);
+}
+
+std::vector<BuildInput> SwBuild::addInput(const String &i)
+{
+    path p(i);
+    if (fs::exists(p))
+        return addInput(p);
+    else
+    {
+        try
+        {
+            auto p = extractFromString(i);
+            auto bi = addInput(getContext().resolve(p));
+            std::vector<BuildInput> v;
+            v.push_back(bi);
+            return v;
+        }
+        catch (std::exception &)
+        {
+            throw SW_RUNTIME_ERROR("No such file, directory or suitable package: " + i);
+        }
+    }
+}
+
+BuildInput SwBuild::addInput(const LocalPackage &p)
+{
+    LOG_TRACE(logger, "Loading input: " + p.toString());
+
+    auto v = addInput(p.getDirSrc2());
+    SW_CHECK(v.size() == 1);
+    v[0].addPackage(p);
+    return v[0];
+}
+
+std::vector<BuildInput> SwBuild::addInput(const path &p)
+{
+    auto v = getContext().addInputInternal(p);
+    std::vector<BuildInput> inputs;
+    for (auto i : v)
+        inputs.emplace_back(*i);
+    return inputs;
 }
 
 path SwBuild::getExecutionPlanPath() const

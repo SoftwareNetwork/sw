@@ -45,12 +45,10 @@ enum class InputType : uint8_t
     DirectorySpecificationFile,
 };
 
-//
-// one input may have several eps
-// example: .yml frontend - 1 document, but multiple eps, one per package
+// one input - one ep
 struct SW_CORE_API Input
 {
-    using EntryPointsVector = std::vector<std::unique_ptr<TargetEntryPoint>>;
+    using EntryPointPtr = std::unique_ptr<TargetEntryPoint>;
 
     Input(SwContext &, const IDriver &, std::unique_ptr<Specification>);
     Input(const Input &) = delete;
@@ -75,13 +73,7 @@ struct SW_CORE_API Input
     String getName() const;
     virtual size_t getHash() const;
 
-    // same input may be used to load multiple packages
-    // they all share same prefix
-    PackageIdSet getPackages() const { return pkgs; }
-    int getPrefix() const { return prefix; }
-    void addPackage(const LocalPackage &);
-
-    void setEntryPoints(EntryPointsVector &&);
+    void setEntryPoint(EntryPointPtr);
 
     // no dry-run targets
     [[nodiscard]]
@@ -91,29 +83,53 @@ private:
     SwContext &swctx;
     const IDriver &driver;
     std::unique_ptr<Specification> specification;
-    PackageIdSet pkgs;
-    int prefix = -1;
-    EntryPointsVector eps;
+    EntryPointPtr ep;
 
-    virtual EntryPointsVector load1(SwContext &) = 0;
+    virtual EntryPointPtr load1(SwContext &) = 0;
+};
+
+struct SW_CORE_API BuildInput
+{
+    BuildInput(Input &);
+
+    // same input may be used to load multiple packages
+    // they all share same prefix
+    const PackageIdSet &getPackages() const { return pkgs; }
+    PackagePath getPrefix() const { return prefix ? *prefix : PackagePath{}; }
+    void addPackage(const LocalPackage &);
+
+    // no dry-run targets
+    [[nodiscard]]
+    std::vector<ITargetPtr> loadPackages(SwBuild &, const TargetSettings &, const PackageIdSet &allowed_packages = {}) const;
+
+    Input &getInput() { return i; }
+    const Input &getInput() const { return i; }
+
+    bool operator==(const BuildInput &rhs) const;
+    bool operator!=(const BuildInput &rhs) const { return !operator==(rhs); }
+
+private:
+    PackageIdSet pkgs;
+    std::optional<PackagePath> prefix;
+    Input &i;
 };
 
 struct SW_CORE_API InputWithSettings
 {
-    InputWithSettings(Input &);
+    InputWithSettings(const BuildInput &);
 
     const std::set<TargetSettings> &getSettings() const;
     void addSettings(const TargetSettings &s);
     void clearSettings() { settings.clear(); }
     String getHash() const;
-    Input &getInput() { return i; }
-    const Input &getInput() const { return i; }
+    BuildInput &getInput() { return i; }
+    const BuildInput &getInput() const { return i; }
 
     [[nodiscard]]
     std::vector<ITargetPtr> loadTargets(SwBuild &) const;
 
 protected:
-    Input &i;
+    BuildInput i;
     std::set<TargetSettings> settings;
 };
 

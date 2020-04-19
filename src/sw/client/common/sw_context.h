@@ -104,8 +104,8 @@ struct SwClientContext
 #undef SUBCOMMAND
 
     // extensions
-    std::pair<sw::SourceDirMap, std::vector<sw::Input*>> fetch();
-    std::pair<sw::SourceDirMap, std::vector<sw::Input*>> fetch(sw::SwBuild &);
+    std::pair<sw::SourceDirMap, std::vector<sw::BuildInput>> fetch();
+    std::pair<sw::SourceDirMap, std::vector<sw::BuildInput>> fetch(sw::SwBuild &);
     void run(const sw::PackageId &pkg, primitives::Command &c);
 
 private:

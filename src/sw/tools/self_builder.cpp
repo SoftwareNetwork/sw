@@ -168,7 +168,7 @@ void write_build_script(SwCoreContext &swctx, const std::unordered_map<Unresolve
 
     // function
     build.beginNamespace("sw");
-    build.beginFunction("BuiltinInputs load_builtin_entry_points(SwContext &swctx, const IDriver &d)");
+    build.beginFunction("BuiltinInputs load_builtin_inputs(SwContext &swctx, const IDriver &d)");
     build.addLine("BuiltinInputs epm;");
     build.addLine();
     for (auto &[r,s] : lpkgs)
@@ -182,14 +182,14 @@ void write_build_script(SwCoreContext &swctx, const std::unordered_map<Unresolve
         build.addLine("auto ep = std::make_unique<sw::NativeBuiltinTargetEntryPoint>(build_" + r.getVariableName() + ");");
         if (has_checks)
             build.addLine("ep->cf = check_" + r.getVariableName() + ";");
-        build.addLine("Input::EntryPointsVector epv;");
-        build.addLine("epv.push_back(std::move(ep));");
-        build.addLine("i->setEntryPoints(std::move(epv));");
+        build.addLine("i->setEntryPoint(std::move(ep));");
+        build.addLine("auto [ii, _] = swctx.registerInput(std::move(i));");
+        build.addLine("BuildInput bi(*ii);");
 
         // enumerate all other packages in group
         for (auto &p : used_gns[get_gn2(r).getHash(idb)])
-            build.addLine("i->addPackage(LocalPackage(swctx.getLocalStorage(), \"" + p.toString() + "\"s));");
-        build.addLine("epm.push_back(std::move(i));");
+            build.addLine("bi.addPackage(LocalPackage(swctx.getLocalStorage(), \"" + p.toString() + "\"s));");
+        build.addLine("epm.push_back(std::move(bi));");
         build.endBlock();
         build.emptyLines();
     }

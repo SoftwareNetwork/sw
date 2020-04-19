@@ -56,7 +56,7 @@ namespace sw
 {
 
 PackageIdSet load_builtin_packages(SwContext &);
-std::vector<std::unique_ptr<sw::Input>> load_builtin_entry_points(SwContext &, const IDriver &);
+std::vector<sw::BuildInput> load_builtin_inputs(SwContext &, const IDriver &);
 
 namespace driver::cpp
 {
@@ -144,12 +144,7 @@ Driver::Driver(SwContext &swctx)
     CoInitializeEx(0, 0); // vs find helper
 #endif
 
-    auto builin_inputs_points = load_builtin_entry_points(swctx, *this);
-    for (auto &e : builin_inputs_points)
-    {
-        auto [i,_] = swctx.registerInput(std::move(e));
-        builin_inputs.push_back(i);
-    }
+    builin_inputs = load_builtin_inputs(swctx, *this);
 }
 
 Driver::~Driver()
@@ -188,7 +183,7 @@ struct SpecFileInput : Input, DriverInput
     // everything else is parallel loadable
     bool isParallelLoadable() const override { return !isBatchLoadable(); }
 
-    EntryPointsVector load1(SwContext &swctx) override
+    EntryPointPtr load1(SwContext &swctx) override
     {
         auto fn = getSpecification().files.getData().begin()->second.absolute_path;
         switch (fe_type)
@@ -200,9 +195,7 @@ struct SpecFileInput : Input, DriverInput
             module = loadSharedLibrary(out.dll, out.PATH);
             auto ep = std::make_unique<NativeModuleTargetEntryPoint>(*module);
             ep->source_dir = fn.parent_path();
-            EntryPointsVector v;
-            v.emplace_back(std::move(ep));
-            return v;
+            return ep;
         }
         case FrontendType::SwVala:
         {
@@ -229,9 +222,7 @@ struct SpecFileInput : Input, DriverInput
             module = loadSharedLibrary(out.dll, out.PATH);
             auto ep = std::make_unique<NativeModuleTargetEntryPoint>(*module);
             ep->source_dir = fn.parent_path();
-            EntryPointsVector v;
-            v.emplace_back(std::move(ep));
-            return v;
+            return ep;
         }
         case FrontendType::Cppan:
         {
@@ -242,9 +233,7 @@ struct SpecFileInput : Input, DriverInput
             };
             auto ep = std::make_unique<NativeBuiltinTargetEntryPoint>(bf);
             ep->source_dir = fn.parent_path();
-            EntryPointsVector v;
-            v.emplace_back(std::move(ep));
-            return v;
+            return ep;
         }
         case FrontendType::Cargo:
         {
@@ -258,9 +247,7 @@ struct SpecFileInput : Input, DriverInput
             };
             auto ep = std::make_unique<NativeBuiltinTargetEntryPoint>(bf);
             ep->source_dir = fn.parent_path();
-            EntryPointsVector v;
-            v.emplace_back(std::move(ep));
-            return v;
+            return ep;
         }
         case FrontendType::Dub:
         {
@@ -284,9 +271,7 @@ struct SpecFileInput : Input, DriverInput
             };
             auto ep = std::make_unique<NativeBuiltinTargetEntryPoint>(bf);
             ep->source_dir = fn.parent_path();
-            EntryPointsVector v;
-            v.emplace_back(std::move(ep));
-            return v;
+            return ep;
         }
         case FrontendType::Composer:
         {
@@ -298,9 +283,7 @@ struct SpecFileInput : Input, DriverInput
             };
             auto ep = std::make_unique<NativeBuiltinTargetEntryPoint>(bf);
             ep->source_dir = fn.parent_path();
-            EntryPointsVector v;
-            v.emplace_back(std::move(ep));
-            return v;
+            return ep;
         }
         default:
             SW_UNIMPLEMENTED;
@@ -316,7 +299,7 @@ struct InlineSpecInput : Input, DriverInput
 
     bool isParallelLoadable() const override { return true; }
 
-    EntryPointsVector load1(SwContext &swctx) override
+    EntryPointPtr load1(SwContext &swctx) override
     {
         SW_ASSERT(fe_type == FrontendType::Cppan, "not implemented");
 
@@ -331,9 +314,7 @@ struct InlineSpecInput : Input, DriverInput
             };
             auto ep = std::make_unique<NativeBuiltinTargetEntryPoint>(bf);
             ep->source_dir = p.parent_path();
-            EntryPointsVector v;
-            v.emplace_back(std::move(ep));
-            return v;
+            return ep;
         }
 
         auto bf = [this, p](Build &b) mutable
@@ -344,9 +325,7 @@ struct InlineSpecInput : Input, DriverInput
         };
         auto ep = std::make_unique<NativeBuiltinTargetEntryPoint>(bf);
         ep->source_dir = p.parent_path();
-        EntryPointsVector v;
-        v.emplace_back(std::move(ep));
-        return v;
+        return ep;
     }
 };
 
@@ -356,7 +335,7 @@ struct DirInput : Input
 
     bool isParallelLoadable() const override { return true; }
 
-    EntryPointsVector load1(SwContext &swctx) override
+    EntryPointPtr load1(SwContext &swctx) override
     {
         auto dir = getSpecification().dir;
         auto bf = [this, dir](Build &b)
@@ -365,9 +344,7 @@ struct DirInput : Input
         };
         auto ep = std::make_unique<NativeBuiltinTargetEntryPoint>(bf);
         ep->source_dir = dir;
-        EntryPointsVector v;
-        v.emplace_back(std::move(ep));
-        return v;
+        return ep;
     }
 };
 
@@ -482,9 +459,7 @@ void Driver::loadInputsBatch(const std::set<Input *> &inputs) const
         i->module = loadSharedLibrary(out.dll, out.PATH);
         auto ep = std::make_unique<NativeModuleTargetEntryPoint>(*i->module);
         ep->source_dir = p.parent_path();
-        Input::EntryPointsVector v;
-        v.emplace_back(std::move(ep));
-        i->setEntryPoints(std::move(v));
+        i->setEntryPoint(std::move(ep));
     }
 }
 
@@ -508,8 +483,8 @@ std::unique_ptr<SwBuild> Driver::create_build(SwContext &swctx) const
     // register targets and set inputs
     for (auto i : builin_inputs)
     {
-        for (auto &p : i->getPackages())
-            b->getTargets()[p].setInput(*i);
+        for (auto &p : i.getPackages())
+            b->getTargets()[p].setInput(i);
     }
 
     return std::move(b);

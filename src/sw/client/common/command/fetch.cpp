@@ -29,7 +29,7 @@
 
 static decltype(auto) getInput(sw::SwBuild &b)
 {
-    return b.getContext().addInput(fs::current_path());
+    return b.addInput(fs::current_path());
 }
 
 static sw::SourcePtr createSource(const Options &options)
@@ -139,7 +139,7 @@ static sw::SourceDirMap getSources(SwClientContext &swctx)
 
     auto inputs = getInput(b);
     SW_CHECK(inputs.size() == 1); // for now?
-    sw::InputWithSettings i(*inputs[0]);
+    sw::InputWithSettings i(inputs[0]);
     i.addSettings(ts);
     b.addInput(i);
     b.loadInputs();
@@ -177,7 +177,7 @@ static sw::SourceDirMap getSources(const path &bdir, const Options &options)
     return getSources(bdir, sources, srcs);
 }
 
-std::pair<sw::SourceDirMap, std::vector<sw::Input*>> SwClientContext::fetch(sw::SwBuild &b)
+std::pair<sw::SourceDirMap, std::vector<sw::BuildInput>> SwClientContext::fetch(sw::SwBuild &b)
 {
     auto srcs = getOptions().options_upload.source.empty()
         ? getSources(*this) // from config
@@ -201,7 +201,7 @@ std::pair<sw::SourceDirMap, std::vector<sw::Input*>> SwClientContext::fetch(sw::
 
     auto inputs = getInput(b);
     SW_CHECK(inputs.size() == 1); // for now?
-    sw::InputWithSettings i(*inputs[0]);
+    sw::InputWithSettings i(inputs[0]);
     for (auto &ts : tss)
         i.addSettings(ts);
     b.addInput(i);
@@ -213,7 +213,7 @@ std::pair<sw::SourceDirMap, std::vector<sw::Input*>> SwClientContext::fetch(sw::
     return { srcs, inputs };
 }
 
-std::pair<sw::SourceDirMap, std::vector<sw::Input*>> SwClientContext::fetch()
+std::pair<sw::SourceDirMap, std::vector<sw::BuildInput>> SwClientContext::fetch()
 {
     return fetch(*createBuild());
 }
