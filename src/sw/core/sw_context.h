@@ -86,6 +86,7 @@ struct SW_CORE_API SwContext : SwCoreContext
 
     //
     std::vector<std::unique_ptr<Input>> detectInputs(const path &) const;
+    Input *getInput(size_t hash) const;
     std::vector<Input *> addInputInternal(const path &);
     //                inserted
     std::pair<Input *, bool> registerInput(std::unique_ptr<Input>);

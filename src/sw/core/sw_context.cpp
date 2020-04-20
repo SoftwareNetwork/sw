@@ -228,6 +228,14 @@ std::pair<Input *, bool> SwContext::registerInput(std::unique_ptr<Input> i)
     return { &*it->second, inserted };
 }
 
+Input *SwContext::getInput(size_t hash) const
+{
+    auto it = inputs.find(hash);
+    if (it == inputs.end())
+        return nullptr;
+    return it->second.get();
+}
+
 void SwContext::loadEntryPointsBatch(const std::set<Input *> &inputs)
 {
     std::map<const IDriver *, std::set<Input*>> batch_inputs;
