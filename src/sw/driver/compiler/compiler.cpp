@@ -983,11 +983,11 @@ void RcTool::prepareCommand1(const Target &t)
             {
                 String s = "-D" + k + "=";
                 auto v2 = v.toString();
-                if (v2[0] != '\"')
-                    s += "\"";
+                //if (v2[0] != '\"')
+                    //s += "\"";
                 s += v2;
-                if (v2[0] != '\"')
-                    s += "\"";
+                //if (v2[0] != '\"')
+                    //s += "\"";
                 c.arguments.push_back(s);
             }
         }
