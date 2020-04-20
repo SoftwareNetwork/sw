@@ -412,6 +412,12 @@ void Command::execute(std::error_code &ec)
             command_storage->free_user();
     };*/
 
+    SCOPE_EXIT
+    {
+        if (pool && executed_)
+            pool->unlock();
+    };
+
     if (!beforeCommand())
         return;
     execute1(&ec); // main thing
@@ -448,11 +454,6 @@ bool Command::beforeCommand()
     // check our resources (before log)
     if (pool)
         pool->lock();
-    SCOPE_EXIT
-    {
-        if (pool)
-        pool->unlock();
-    };
 
     printLog();
     return true;
