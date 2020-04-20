@@ -24,9 +24,6 @@ DECLARE_STATIC_LOGGER(logger, "self_builder");
 
 using namespace sw;
 
-static cl::opt<path> p(cl::Positional, cl::Required);
-static cl::opt<path> packages(cl::Positional, cl::Required);
-
 void setup_log(const std::string &log_level)
 {
     LoggerSettings log_settings;
@@ -40,7 +37,7 @@ void setup_log(const std::string &log_level)
     LOG_TRACE(logger, "Starting sw...");
 }
 
-void write_required_packages(const std::unordered_map<UnresolvedPackage, LocalPackage> &m)
+String write_required_packages(const std::unordered_map<UnresolvedPackage, LocalPackage> &m)
 {
     StringSet pkgs_sorted;
     for (auto &[p, d] : m)
@@ -49,11 +46,15 @@ void write_required_packages(const std::unordered_map<UnresolvedPackage, LocalPa
     primitives::CppEmitter ctx_packages;
     for (auto &s : pkgs_sorted)
         ctx_packages.addLine("\"" + s + "\"s,");
-    write_file(packages, ctx_packages.getText());
+    return ctx_packages.getText();
 }
 
-void write_build_script(SwCoreContext &swctx, const std::unordered_map<UnresolvedPackage, LocalPackage> &m)
+String write_build_script(SwCoreContext &swctx,
+    const std::unordered_map<UnresolvedPackage, LocalPackage> &m_in,
+    bool headers
+)
 {
+    const std::map<UnresolvedPackage, LocalPackage> m(m_in.begin(), m_in.end()); // keep order
     auto &idb = swctx.getInputDatabase();
 
     // create specs
@@ -87,28 +88,35 @@ void write_build_script(SwCoreContext &swctx, const std::unordered_map<Unresolve
     // some packages must be before others
     std::vector<UnresolvedPackage> prepkgs;
     {
-        // goes before primitives
-        prepkgs.push_back("org.sw.demo.ragel-6"s); // keep upkg same as in deps!!!
+        // keep block order
 
-    //#ifdef _WIN32
-        // goes before primitives
-        prepkgs.push_back("org.sw.demo.lexxmark.winflexbison.bison"s);
-        //#endif
+        {
+            // goes before primitives
+            prepkgs.push_back("org.sw.demo.ragel-6"s); // keep upkg same as in deps!!!
+
+            // goes before primitives
+            prepkgs.push_back("org.sw.demo.lexxmark.winflexbison.bison"s);
 
             // goes before grpc
-        prepkgs.push_back("org.sw.demo.google.protobuf.protobuf"s);
+            prepkgs.push_back("org.sw.demo.google.protobuf.protobuf"s);
 
-        // goes before sw cpp driver (client)
-        prepkgs.push_back("org.sw.demo.google.grpc.cpp.plugin"s);
+            // goes before sw cpp driver (client)
+            prepkgs.push_back("org.sw.demo.google.grpc.cpp.plugin"s);
 
-        // goes before sw cpp driver (client)
-        prepkgs.push_back("pub.egorpugin.primitives.filesystem-master"s);
+            // goes before sw cpp driver (client)
+            prepkgs.push_back("pub.egorpugin.primitives.filesystem-master"s);
+        }
 
-        // for gui
-        prepkgs.push_back("org.sw.demo.qtproject.qt.base.tools.moc"s);
+        if (headers)
+        {
+            // for gui
+            prepkgs.push_back("org.sw.demo.qtproject.qt.base.tools.moc"s);
+        }
 
-        // cpp driver
-        prepkgs.push_back({ SW_DRIVER_NAME });
+        {
+            // cpp driver
+            prepkgs.push_back({ SW_DRIVER_NAME });
+        }
     }
 
     for (auto &u : prepkgs)
@@ -148,26 +156,40 @@ void write_build_script(SwCoreContext &swctx, const std::unordered_map<Unresolve
     }
 
     // includes
-    primitives::CppEmitter build;
     primitives::CppEmitter ctx;
-    for (auto &[r,s] : lpkgs)
+    if (headers)
     {
-        auto fn = s.files.getData().begin()->second.absolute_path;
-        auto f = read_file(fn);
-        bool has_checks = f.find("Checker") != f.npos; // more presize than setChecks
+        for (auto &[r, s] : lpkgs)
+        {
+            auto fn = s.files.getData().begin()->second.absolute_path;
+            auto f = read_file(fn);
+            bool has_checks = f.find("Checker") != f.npos; // more presize than setChecks
 
-        auto &d = r.getData();
-        ctx.addLine("#define configure configure_" + r.getVariableName());
-        ctx.addLine("#define build build_" + r.getVariableName());
-        if (has_checks)
-            ctx.addLine("#define check check_" + r.getVariableName());
-        ctx.addLine("#include \"" + normalize_path(fn) + "\"");
-        ctx.addLine("#undef configure");
-        ctx.addLine("#undef build");
-        if (has_checks)
-            ctx.addLine("#undef check");
-        ctx.addLine();
+            auto &d = r.getData();
+            ctx.addLine("#define configure configure_" + r.getVariableName());
+            ctx.addLine("#define build build_" + r.getVariableName());
+            if (has_checks)
+                ctx.addLine("#define check check_" + r.getVariableName());
+            ctx.addLine("#include \"" + normalize_path(fn) + "\"");
+            ctx.addLine("#undef configure");
+            ctx.addLine("#undef build");
+            if (has_checks)
+                ctx.addLine("#undef check");
+            ctx.addLine();
+        }
     }
+
+    auto &build = ctx.createInlineEmitter<primitives::CppEmitter>();
+
+    if (headers)
+    {
+        ctx.addLine("#undef build");
+        ctx.addLine("#undef check");
+        ctx.addLine("#undef configure");
+    }
+
+    if (headers)
+        return ctx.getText();
 
     // function
     build.beginNamespace("sw");
@@ -198,18 +220,15 @@ void write_build_script(SwCoreContext &swctx, const std::unordered_map<Unresolve
     build.endFunction();
     build.endNamespace();
 
-    ctx += build;
-
-    ctx.addLine("#undef build");
-    ctx.addLine("#undef check");
-    ctx.addLine("#undef configure");
-
-    write_file(p, ctx.getText());
+    return ctx.getText();
 }
 
 int main(int argc, char **argv)
 {
     setup_log("INFO");
+
+    static cl::opt<path> p(cl::Positional, cl::Required);
+    static cl::opt<path> packages(cl::Positional, cl::Required);
 
     cl::ParseCommandLineOptions(argc, argv);
 
@@ -223,11 +242,12 @@ int main(int argc, char **argv)
         // our main cpp driver target
         {SW_DRIVER_NAME},
     });
-    write_required_packages(m);
+    auto t1 = write_required_packages(m);
+    write_file(packages, t1);
 
     // we do second install, because we need this packages to be included before driver's sw.cpp,
     // but we do not need to install them on user system
-    m = swctx.install(
+    auto m_headers = swctx.install(
     {
         // our main cpp driver target
         {SW_DRIVER_NAME},
@@ -238,7 +258,9 @@ int main(int argc, char **argv)
         // for gui
         {"org.sw.demo.qtproject.qt.base.tools.moc"},
     });
-    write_build_script(swctx, m);
+    auto t2 = write_build_script(swctx, m_headers, true);
+    auto t3 = write_build_script(swctx, m, false);
+    write_file(p, t2 + t3);
 
     return 0;
 }
