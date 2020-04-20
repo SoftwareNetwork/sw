@@ -166,7 +166,6 @@ struct DriverInput
 
 struct SpecFileInput : Input, DriverInput
 {
-    Driver *driver = nullptr;
     std::unique_ptr<Module> module;
 
     using Input::Input;
@@ -191,7 +190,7 @@ struct SpecFileInput : Input, DriverInput
         case FrontendType::Sw:
         case FrontendType::SwC:
         {
-            auto out = driver->build_configs1(swctx, { this }).begin()->second;
+            auto out = static_cast<const Driver&>(getDriver()).build_configs1(swctx, { this }).begin()->second;
             module = loadSharedLibrary(out.dll, out.PATH);
             auto ep = std::make_unique<NativeModuleTargetEntryPoint>(*module);
             ep->source_dir = fn.parent_path();
@@ -201,7 +200,7 @@ struct SpecFileInput : Input, DriverInput
         {
             auto b = swctx.createBuild();
 
-            auto ts = driver->getDllConfigSettings(swctx);
+            auto ts = static_cast<const Driver&>(getDriver()).getDllConfigSettings(swctx);
             //ts["native"]["library"] = "shared"; // why?
             NativeTargetEntryPoint ep1;
             auto b2 = ep1.createBuild(*b, ts, {}, {});
@@ -364,7 +363,6 @@ std::vector<std::unique_ptr<Input>> Driver::detectInputs(const path &p, InputTyp
         auto spec = std::make_unique<Specification>(f);
 
         auto i = std::make_unique<SpecFileInput>(swctx, *this, std::move(spec));
-        i->driver = (Driver*)this;
         i->fe_type = *fe;
         LOG_TRACE(logger, "using " << toString(i->fe_type) << " frontend for input " << p);
         inputs.push_back(std::move(i));
