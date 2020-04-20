@@ -57,6 +57,7 @@ struct SW_CORE_API Input
     void load();
 
     //
+    Specification &getSpecification();
     const Specification &getSpecification() const;
 
     // used for batch loading inputs (if applicable)

@@ -72,6 +72,11 @@ size_t Input::getHash() const
     return getSpecification().getHash(swctx.getInputDatabase());
 }
 
+Specification &Input::getSpecification()
+{
+    return *specification;
+}
+
 const Specification &Input::getSpecification() const
 {
     return *specification;
