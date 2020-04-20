@@ -135,7 +135,7 @@ void SwContext::executeBuild(const path &in)
     b->runSavedExecutionPlan(in);
 }
 
-std::vector<Input *> SwContext::addInputInternal(const path &in)
+std::vector<std::unique_ptr<Input>> SwContext::detectInputs(const path &in) const
 {
     path p = in;
     if (!p.is_absolute())
@@ -151,22 +151,16 @@ std::vector<Input *> SwContext::addInputInternal(const path &in)
     p = fs::u8path(normalize_path(primitives::filesystem::canonical(p)));
 
     //
-    std::vector<Input *> inputs_local;
+    std::vector<std::unique_ptr<Input>> inputs;
 
-    auto findDriver = [this, &p, &inputs_local](auto type) -> bool
+    auto findDriver = [this, &p, &inputs](auto type) -> bool
     {
         for (auto &[dp, d] : drivers)
         {
             auto inpts = d->detectInputs(p, type);
             if (inpts.empty())
                 continue;
-            for (auto &i : inpts)
-            {
-                auto [p,inserted] = registerInput(std::move(i));
-                inputs_local.push_back(p);
-                if (inserted)
-                    LOG_TRACE(logger, "Selecting driver " << dp.toString() << " for input " << inputs_local.back()->getName());
-            }
+            inputs = std::move(inpts);
             return true;
         }
         return false;
@@ -187,14 +181,14 @@ std::vector<Input *> SwContext::addInputInternal(const path &in)
             std::smatch m;
             if (std::regex_search(f, m, r))
             {
-                SW_UNIMPLEMENTED;
+            SW_UNIMPLEMENTED;
 
-                //- install driver
-                //- load & register it
-                //- re-run this ctor
+            //- install driver
+            //- load & register it
+            //- re-run this ctor
 
-                auto driver_pkg = swctx.install({ m[1].str() }).find(m[1].str());
-                return;
+            auto driver_pkg = swctx.install({ m[1].str() }).find(m[1].str());
+            return;
             }*/
         }
     }
@@ -207,7 +201,23 @@ std::vector<Input *> SwContext::addInputInternal(const path &in)
         }
     }
 
-    SW_ASSERT(!inputs_local.empty(), "Inputs empty for " + normalize_path(p));
+    return inputs;
+}
+
+std::vector<Input *> SwContext::addInputInternal(const path &in)
+{
+    auto inpts = detectInputs(in);
+
+    std::vector<Input *> inputs_local;
+    for (auto &i : inpts)
+    {
+        auto [p,inserted] = registerInput(std::move(i));
+        inputs_local.push_back(p);
+        //if (inserted)
+            //LOG_TRACE(logger, "Selecting driver " << dp.toString() << " for input " << inputs_local.back()->getName());
+    }
+
+    SW_ASSERT(!inputs_local.empty(), "Inputs empty for " + normalize_path(in));
     return inputs_local;
 }
 
