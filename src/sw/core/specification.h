@@ -32,6 +32,8 @@ struct SW_CORE_API SpecificationFile
 {
     path absolute_path;
     std::optional<String> contents;
+
+    void read();
 };
 
 struct SW_CORE_API SpecificationFiles
@@ -43,6 +45,7 @@ struct SW_CORE_API SpecificationFiles
     // absolute_path - path on disk, may differ from relative, example: main.cpp where we take inline cppan.yml from
     void addFile(const path &relative_path, const path &absolute_path, const std::optional<String> &contents = std::optional<String>{});
 
+    std::map<path, SpecificationFile> &getData() { return data; }
     const std::map<path, SpecificationFile> &getData() const { return data; }
     fs::file_time_type getLastWriteTime() const;
 

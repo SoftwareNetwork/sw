@@ -25,6 +25,13 @@
 namespace sw
 {
 
+void SpecificationFile::read()
+{
+    if (contents)
+        return;
+    contents = read_file(absolute_path);
+}
+
 void SpecificationFiles::addFile(const path &relative_path, const path &abspath, const std::optional<String> &contents)
 {
     if (relative_path.is_absolute())
