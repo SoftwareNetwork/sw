@@ -225,7 +225,11 @@ SUBCOMMAND_DECL(upload)
         auto pkgs = bi.listPackages(getContext());
         decltype(m) m2;
         for (auto &p : pkgs)
-            m2[p] = std::move(m[p]);
+        {
+            // move only existing packages, do not create new
+            if (m.find(p) != m.end())
+                m2[p] = std::move(m[p]);
+        }
 
         // send signatures (gpg etc.)?
         // -k KEY1 -k KEY2
