@@ -50,7 +50,7 @@ struct BuiltinInput : Input
     EntryPointPtr load1(SwContext &) override { SW_UNREACHABLE; }
 };
 
-using BuiltinInputs = std::vector<sw::BuildInput>;
+using BuiltinInputs = std::unordered_map<Input*, PackageIdSet>;
 
 }
 

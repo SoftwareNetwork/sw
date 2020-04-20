@@ -187,12 +187,10 @@ void write_build_script(SwCoreContext &swctx, const std::unordered_map<Unresolve
             build.addLine("ep->cf = check_" + r.getVariableName() + ";");
         build.addLine("i->setEntryPoint(std::move(ep));");
         build.addLine("auto [ii, _] = swctx.registerInput(std::move(i));");
-        build.addLine("BuildInput bi(*ii);");
 
         // enumerate all other packages in group
         for (auto &p : used_gns[get_gn2(r).getHash(idb)])
-            build.addLine("bi.addPackage(LocalPackage(swctx.getLocalStorage(), \"" + p.toString() + "\"s));");
-        build.addLine("epm.push_back(std::move(bi));");
+            build.addLine("epm[ii].insert(\"" + p.toString() + "\"s);");
         build.endBlock();
         build.emptyLines();
     }
@@ -224,6 +222,15 @@ int main(int argc, char **argv)
     {
         // our main cpp driver target
         {SW_DRIVER_NAME},
+    });
+    write_required_packages(m);
+
+    // we do second install, because we need this packages to be included before driver's sw.cpp,
+    // but we do not need to install them on user system
+    m = swctx.install(
+    {
+        // our main cpp driver target
+        {SW_DRIVER_NAME},
 
         // other needed stuff (libcxx)
         {"org.sw.demo.llvm_project.libcxx"},
@@ -231,8 +238,6 @@ int main(int argc, char **argv)
         // for gui
         {"org.sw.demo.qtproject.qt.base.tools.moc"},
     });
-
-    write_required_packages(m);
     write_build_script(swctx, m);
 
     return 0;

@@ -56,7 +56,7 @@ namespace sw
 {
 
 PackageIdSet load_builtin_packages(SwContext &);
-std::vector<sw::BuildInput> load_builtin_inputs(SwContext &, const IDriver &);
+std::unordered_map<Input*, PackageIdSet> load_builtin_inputs(SwContext &, const IDriver &);
 
 namespace driver::cpp
 {
@@ -479,10 +479,13 @@ std::unique_ptr<SwBuild> Driver::create_build(SwContext &swctx) const
     auto bpkgs = getBuiltinPackages(ctx);
 
     // register targets and set inputs
-    for (auto i : builin_inputs)
+    for (auto &[i, pkgs] : builin_inputs)
     {
-        for (auto &p : i.getPackages())
-            b->getTargets()[p].setInput(i);
+        BuildInput bi(*i);
+        for (auto &p : pkgs)
+            bi.addPackage(LocalPackage(swctx.getLocalStorage(), p));
+        for (auto &p : pkgs)
+            b->getTargets()[p].setInput(bi);
     }
 
     return std::move(b);
