@@ -54,7 +54,6 @@ using BuiltinInputs = std::vector<sw::BuildInput>;
 
 }
 
-#define SW_DRIVER_ADD_SELF
 #include <build_self.generated.h>
 
 namespace sw

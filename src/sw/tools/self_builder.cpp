@@ -104,6 +104,9 @@ void write_build_script(SwCoreContext &swctx, const std::unordered_map<Unresolve
         // goes before sw cpp driver (client)
         prepkgs.push_back("pub.egorpugin.primitives.filesystem-master"s);
 
+        // for gui
+        prepkgs.push_back("org.sw.demo.qtproject.qt.base.tools.moc"s);
+
         // cpp driver
         prepkgs.push_back({ SW_DRIVER_NAME });
     }
@@ -224,6 +227,9 @@ int main(int argc, char **argv)
 
         // other needed stuff (libcxx)
         {"org.sw.demo.llvm_project.libcxx"},
+
+        // for gui
+        {"org.sw.demo.qtproject.qt.base.tools.moc"},
     });
 
     write_required_packages(m);

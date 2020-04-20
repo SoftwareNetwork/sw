@@ -307,7 +307,6 @@ void build(Solution &s)
     if (s.getExternalVariables()["with-gui"] != "true")
         return;
 
-#ifndef SW_DRIVER_ADD_SELF
     auto &gui = client.addTarget<ExecutableTarget>("gui", "0.4.0");
     {
         gui.PackageDefinitions = true;
@@ -334,5 +333,4 @@ void build(Solution &s)
 
         create_git_revision("pub.egorpugin.primitives.tools.create_git_rev-master"_dep, gui);
     }
-#endif
 }
