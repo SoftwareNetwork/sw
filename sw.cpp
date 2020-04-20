@@ -297,11 +297,29 @@ void build(Solution &s)
     {
         // at the moment tests cannot run in parallel
         auto p = new sw::ResourcePool;
+        p->n = 1;
 
-        auto t = cpp_driver.addTest(client);
-        t.c->push_back("build");
-        t.c->push_back(client.SourceDir / "test/build/simple/sw.cpp");
-        t.c->pool = p;
+        auto add_build_test = [&cpp_driver, &client, &p](const path &dir)
+        {
+            auto t = cpp_driver.addTest(client);
+            t.c->pool = p;
+            t.c->push_back("build");
+            t.c->push_back(dir);
+            return t;
+        };
+
+        auto add_configs = [](auto &c)
+        {
+            c->push_back("-static");
+            c->push_back("-shared");
+            c->push_back("-config=d,msr,rwdi,r");
+        };
+
+        auto root = client.SourceDir / "test" / "build";
+        auto t = add_build_test(root);
+        add_configs(t.c);
+        t = add_build_test(root / "simple/sw.cpp");
+        add_configs(t.c);
     }
 
     if (s.getExternalVariables()["with-gui"] != "true")
