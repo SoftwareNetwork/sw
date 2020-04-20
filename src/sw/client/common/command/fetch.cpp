@@ -138,10 +138,12 @@ static sw::SourceDirMap getSources(SwClientContext &swctx)
     ts["driver"]["dry-run"] = "true"; // only used to get sources
 
     auto inputs = getInput(b);
-    SW_CHECK(inputs.size() == 1); // for now?
-    sw::InputWithSettings i(inputs[0]);
-    i.addSettings(ts);
-    b.addInput(i);
+    for (auto &ii : inputs)
+    {
+        sw::InputWithSettings i(ii);
+        i.addSettings(ts);
+        b.addInput(i);
+    }
     b.loadInputs();
     b.setTargetsToBuild();
 
@@ -200,11 +202,13 @@ std::pair<sw::SourceDirMap, std::vector<sw::BuildInput>> SwClientContext::fetch(
     }
 
     auto inputs = getInput(b);
-    SW_CHECK(inputs.size() == 1); // for now?
-    sw::InputWithSettings i(inputs[0]);
-    for (auto &ts : tss)
-        i.addSettings(ts);
-    b.addInput(i);
+    for (auto &ii : inputs)
+    {
+        sw::InputWithSettings i(ii);
+        for (auto &ts : tss)
+            i.addSettings(ts);
+        b.addInput(i);
+    }
     b.loadInputs();
 
     if (getOptions().options_fetch.build_after_fetch)
