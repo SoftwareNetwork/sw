@@ -103,6 +103,8 @@ struct SW_CORE_API BuildInput
     [[nodiscard]]
     std::vector<ITargetPtr> loadPackages(SwBuild &, const TargetSettings &, const PackageIdSet &allowed_packages = {}) const;
 
+    PackageIdSet listPackages(SwContext &) const;
+
     Input &getInput() { return i; }
     const Input &getInput() const { return i; }
 

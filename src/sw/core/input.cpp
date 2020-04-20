@@ -134,6 +134,16 @@ std::vector<ITargetPtr> BuildInput::loadPackages(SwBuild &b, const TargetSetting
     return i.loadPackages(b, s, allowed_packages.empty() ? pkgs : allowed_packages, getPrefix());
 }
 
+PackageIdSet BuildInput::listPackages(SwContext &swctx) const
+{
+    auto b = swctx.createBuild();
+    auto tgts = loadPackages(*b, swctx.getHostSettings());
+    PackageIdSet s;
+    for (auto &t : tgts)
+        s.insert(t->getPackage());
+    return s;
+}
+
 bool BuildInput::operator==(const BuildInput &rhs) const
 {
     auto h = i.getHash();
