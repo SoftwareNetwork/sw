@@ -107,6 +107,14 @@ sw::PackageDescriptionMap getPackages(const sw::SwBuild &b, const sw::SourceDirM
     return m;
 }
 
+static void input_check(const sw::Specification &spec)
+{
+    // single file for now
+    SW_CHECK(spec.files.getData().size() == 1);
+    // do not allow dirs for now
+    SW_CHECK(spec.dir.empty());
+}
+
 SUBCOMMAND_DECL(upload)
 {
     auto b = createBuild();
@@ -114,11 +122,20 @@ SUBCOMMAND_DECL(upload)
     // get spec early, so changes won't be noticed
     // do not move to the bottom
     auto inputs = b->getContext().detectInputs(fs::current_path());
-    SW_CHECK(inputs.size() == 1); // for now
-    auto &spec1 = inputs[0]->getSpecification();
-    SW_CHECK(spec1.files.getData().size() == 1); // for now
-    auto spec = read_file(spec1.files.getData().begin()->second.absolute_path);
-    auto script_name = spec1.files.getData().begin()->first.filename().string();
+    if (inputs.size() > 1)
+        LOG_INFO(logger, "Multiple inputs detected:");
+
+    for (const auto &[idx, i] : enumerate(inputs))
+    {
+        auto &spec = i->getSpecification();
+        input_check(spec);
+
+        if (inputs.size() > 1)
+            LOG_INFO(logger, "Input #" << idx << ": " << spec.files.getData().begin()->first);
+
+        for (auto &[_, f] : spec.files.getData())
+            f.read();
+    }
 
     // detect from options
     bool cmdline_source_present = 0
@@ -152,7 +169,7 @@ SUBCOMMAND_DECL(upload)
         }
     }
 
-    auto [sources, i] = fetch(*b);
+    auto [sources, _] = fetch(*b);
     if (sources.empty())
         throw SW_RUNTIME_ERROR("Empty target sources");
 
@@ -193,8 +210,26 @@ SUBCOMMAND_DECL(upload)
     if (!getOptions().options_upload.upload_remote.empty())
         current_remote = find_remote(us, getOptions().options_upload.upload_remote);
 
-    // send signatures (gpg)
-    // -k KEY1 -k KEY2
-    auto api = current_remote->getApi();
-    api->addVersion(getOptions().options_upload.upload_prefix, m, script_name, spec);
+    for (auto &i : inputs)
+    {
+        auto &spec = i->getSpecification();
+        input_check(spec);
+
+        auto &spec_contents = *spec.files.getData().begin()->second.contents;
+        auto script_name = spec.files.getData().begin()->first.filename().string();
+
+        // select this input packages
+        auto i2 = getContext().getInput(i->getHash());
+        SW_CHECK(i2);
+        sw::BuildInput bi(*i2);
+        auto pkgs = bi.listPackages(getContext());
+        decltype(m) m2;
+        for (auto &p : pkgs)
+            m2[p] = std::move(m[p]);
+
+        // send signatures (gpg etc.)?
+        // -k KEY1 -k KEY2
+        auto api = current_remote->getApi();
+        api->addVersion(getOptions().options_upload.upload_prefix, m2, script_name, spec_contents);
+    }
 }
