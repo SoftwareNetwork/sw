@@ -164,9 +164,10 @@ void Database::open(bool read_only, bool in_memory)
     db->execute("PRAGMA foreign_keys = ON");
     if (!in_memory)
     {
-        // disable for now
-        //db->execute("PRAGMA journal_mode = WAL");
-        //db->execute("PRAGMA synchronous = NORMAL");
+        // allows to use db from separate processes
+        db->execute("PRAGMA journal_mode = WAL");
+        // better WAL sync to disk
+        db->execute("PRAGMA synchronous = NORMAL");
     }
 }
 
