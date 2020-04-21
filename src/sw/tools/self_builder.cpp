@@ -13,6 +13,7 @@
 
 #include <primitives/emitter.h>
 #include <primitives/executor.h>
+#include <primitives/http.h>
 #include <primitives/sw/main.h>
 #include <primitives/sw/cl.h>
 #include <primitives/sw/settings_program_name.h>
@@ -225,17 +226,20 @@ String write_build_script(SwCoreContext &swctx,
 
 int main(int argc, char **argv)
 {
-    setup_log("INFO");
-
+    static cl::opt<String> loglevel("log-level", cl::init("INFO"));
     static cl::opt<path> p(cl::Positional, cl::Required);
     static cl::opt<path> packages(cl::Positional, cl::Required);
 
     cl::ParseCommandLineOptions(argc, argv);
 
     // init
+    setup_log(loglevel);
+    primitives::http::setupSafeTls(false, false, sw::get_ca_certs_filename());
+
     Executor e(select_number_of_threads());
     getExecutor(&e);
 
+    //
     SwCoreContext swctx(Settings::get_user_settings().storage_dir);
     auto m = swctx.install(
     {
