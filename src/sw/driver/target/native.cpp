@@ -4812,6 +4812,8 @@ void NativeCompiledTarget::cppan_load_project(const yaml &root)
 
     bs_insertions.load(root);*/
     auto options = cppan::loadOptionsMap(root);
+    for (auto &[k, v] : options["shared"].definitions)
+        add(Definition(v));
     for (auto &[k, v] : options["any"].system_definitions["win32"])
         add(Definition(v));
     for (auto &[k, v] : options["any"].system_link_libraries["win32"])
