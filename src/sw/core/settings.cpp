@@ -83,6 +83,16 @@ TargetSettings toTargetSettings(const OS &o)
     SW_UNIMPLEMENTED;
     }*/
 
+    switch (o.EnvironmentType1)
+    {
+    case EnvironmentType::GNUEABI:
+        s["os"]["environment"] = "gnueabi";
+        break;
+    case EnvironmentType::GNUEABIHF:
+        s["os"]["environment"] = "gnueabihf";
+        break;
+    }
+
     // we might not have sdk version installed
     //s["os"]["version"] = o.Version.toString();
 

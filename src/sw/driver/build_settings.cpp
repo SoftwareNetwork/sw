@@ -72,6 +72,14 @@ static OS fromTargetSettings(const TargetSettings &ts)
             throw SW_RUNTIME_ERROR("Unknown arch: " + v.getValue());
     IF_END
 
+    IF_KEY("os"]["environment")
+        if (0);
+        IF_SETTING("gnueabi", os.EnvironmentType1, EnvironmentType::GNUEABI);
+        IF_SETTING("gnueabihf", os.EnvironmentType1, EnvironmentType::GNUEABIHF);
+        else
+            throw SW_RUNTIME_ERROR("Unknown arch: " + v.getValue());
+    IF_END
+
     return os;
 }
 
@@ -141,17 +149,34 @@ String BuildSettings::getTargetTriplet() const
     // vendor
     if (TargetOS.isApple())
         target += "-apple";
+    else if (TargetOS.Type == OSType::Linux)
+        target += "-linux";
     else
         target += "-unknown";
 
     // os
-    target += "-" + toTripletString(TargetOS.Type);
-    if (TargetOS.isApple() && TargetOS.Version > Version(1))
-        target += TargetOS.Version.toString(TargetOS.Version.getRealLevel());
-    if (TargetOS.Type == OSType::Android)
-        target += "-android";
-    if (TargetOS.Arch == ArchType::arm)
-        target += "eabi";
+    if (TargetOS.EnvironmentType1 != EnvironmentType::UnknownEnvironment)
+    {
+        switch (TargetOS.EnvironmentType1)
+        {
+        case EnvironmentType::GNUEABI:
+            target += "-gnueabi";
+            break;
+        case EnvironmentType::GNUEABIHF:
+            target += "-gnueabihf";
+            break;
+        }
+    }
+    else
+    {
+        target += "-" + toTripletString(TargetOS.Type);
+        if (TargetOS.isApple() && TargetOS.Version > Version(1))
+            target += TargetOS.Version.toString(TargetOS.Version.getRealLevel());
+        if (TargetOS.Type == OSType::Android)
+            target += "-android";
+        if (TargetOS.Arch == ArchType::arm)
+            target += "eabi";
+    }
     if (TargetOS.Type == OSType::Android)
     {
         SW_UNIMPLEMENTED;
