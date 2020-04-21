@@ -232,7 +232,7 @@ struct SW_BUILDER_API OS
     OSType Type = OSType::UnknownOS;
     ArchType Arch = ArchType::UnknownArch;
     SubArchType SubArch = SubArchType::NoSubArch;
-    EnvironmentType EnvironmentType1 = EnvironmentType::UnknownEnvironment;
+    EnvironmentType EnvType = EnvironmentType::UnknownEnvironment;
     ObjectFormatType ObjectFormatType1 = ObjectFormatType::UnknownObjectFormat;
     ::primitives::version::Version Version;
 
@@ -243,7 +243,7 @@ struct SW_BUILDER_API OS
     bool isApple() const;
     bool is(ArchType t) const { return Arch == t; }
     bool is(SubArchType t) const { return SubArch == t; }
-    bool is(EnvironmentType t) const { return EnvironmentType1 == t; }
+    bool is(EnvironmentType t) const { return EnvType == t; }
     bool is(ObjectFormatType t) const { return ObjectFormatType1 == t; }
 
     // rename?

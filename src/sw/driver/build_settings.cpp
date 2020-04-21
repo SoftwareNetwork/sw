@@ -74,8 +74,8 @@ static OS fromTargetSettings(const TargetSettings &ts)
 
     IF_KEY("os"]["environment")
         if (0);
-        IF_SETTING("gnueabi", os.EnvironmentType1, EnvironmentType::GNUEABI);
-        IF_SETTING("gnueabihf", os.EnvironmentType1, EnvironmentType::GNUEABIHF);
+        IF_SETTING("gnueabi", os.EnvType, EnvironmentType::GNUEABI);
+        IF_SETTING("gnueabihf", os.EnvType, EnvironmentType::GNUEABIHF);
         else
             throw SW_RUNTIME_ERROR("Unknown arch: " + v.getValue());
     IF_END
@@ -155,9 +155,9 @@ String BuildSettings::getTargetTriplet() const
         target += "-unknown";
 
     // os
-    if (TargetOS.EnvironmentType1 != EnvironmentType::UnknownEnvironment)
+    if (TargetOS.EnvType != EnvironmentType::UnknownEnvironment)
     {
-        switch (TargetOS.EnvironmentType1)
+        switch (TargetOS.EnvType)
         {
         case EnvironmentType::GNUEABI:
             target += "-gnueabi";

@@ -83,7 +83,7 @@ TargetSettings toTargetSettings(const OS &o)
     SW_UNIMPLEMENTED;
     }*/
 
-    switch (o.EnvironmentType1)
+    switch (o.EnvType)
     {
     case EnvironmentType::GNUEABI:
         s["os"]["environment"] = "gnueabi";
