@@ -20,4 +20,6 @@ Steps to reproduce the behavior:
 **Information:**
  - Paste `sw --version` output.
  - Write OS, its version (host/target)
- - Write your compiler, its version
+ - Describe your compiler, its version
+ - (optional, nix systems) Post backtrace if you know how to (using gdb, lldb).
+ - (optional) Post sw logs using `-trace` parameter.
