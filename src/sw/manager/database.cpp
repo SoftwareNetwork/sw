@@ -140,7 +140,8 @@ void Database::open(bool read_only, bool in_memory)
 {
     sql::connection_config config;
     config.flags = 0;
-    config.flags |= SQLITE_OPEN_FULLMUTEX;// SQLITE_OPEN_NOMUTEX;
+    //config.flags |= SQLITE_OPEN_NOMUTEX; // sets multithreaded db access, must protect all connection uses with mutex
+    config.flags |= SQLITE_OPEN_FULLMUTEX; // sets serialized db access
     if (read_only && !in_memory)
         config.flags |= SQLITE_OPEN_READONLY;
     else
