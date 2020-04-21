@@ -1053,7 +1053,7 @@ std::unique_ptr<ExecutionPlan> SwBuild::getExecutionPlan() const
 std::unique_ptr<ExecutionPlan> SwBuild::getExecutionPlan(const Commands &cmds) const
 {
     auto ep = ExecutionPlan::create(cmds);
-    if (ep)
+    if (ep->isValid())
         return std::move(ep);
 
     // error!

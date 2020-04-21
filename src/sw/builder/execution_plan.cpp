@@ -58,6 +58,8 @@ void ExecutionPlan::stop(bool interrupt_running_commands)
 
 void ExecutionPlan::execute(Executor &e) const
 {
+    if (!isValid())
+        throw SW_RUNTIME_ERROR("Invalid execution plan");
     if (commands.empty())
         return;
 
@@ -235,7 +237,7 @@ void ExecutionPlan::saveChromeTrace(const path &p) const
     write_file(p, trace.dump(2));
 }
 
-ExecutionPlan::operator bool() const
+bool ExecutionPlan::isValid() const
 {
     return unprocessed_commands.empty();
 }

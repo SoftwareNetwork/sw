@@ -87,7 +87,7 @@ public:
     const VecT &getUnprocessedCommand() const { return unprocessed_commands; }
     const USet &getUnprocessedCommandSet() const { return unprocessed_commands_set; }
 
-    explicit operator bool() const;
+    bool isValid() const;
 
     Graph getGraph() const;
     Graph getGraphUnprocessed() const;
