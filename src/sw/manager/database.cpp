@@ -162,7 +162,10 @@ void Database::open(bool read_only, bool in_memory)
 
     // explicit
     db->execute("PRAGMA foreign_keys = ON");
-    if (!in_memory)
+    if (1
+        && !in_memory // in memory does not need WAL at all
+        && !read_only // read only with WAL will work only if -wal and -shm db files already exist
+        )
     {
         // allows to use db from separate processes
         db->execute("PRAGMA journal_mode = WAL");
