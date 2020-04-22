@@ -184,36 +184,6 @@ DependencyData::DependencyData(const UnresolvedPackage &p)
     package = p;
 }
 
-/*Dependency &Dependency::operator=(const Target &t)
-{
-    setTarget(t);
-    return *this;
-}*/
-
-/*bool DependencyData::operator==(const DependencyData &t) const
-{
-    return std::tie(package) == std::tie(t.package);
-}
-
-bool DependencyData::operator<(const DependencyData &t) const
-{
-    return std::tie(package) < std::tie(t.package);
-}
-
-bool Dependency::operator==(const Dependency &t) const
-{
-    auto t1 = target;
-    auto t2 = t.target;
-    return std::tie(package, t1) == std::tie(t.package, t2);
-}
-
-bool Dependency::operator<(const Dependency &t) const
-{
-    auto t1 = target;
-    auto t2 = t.target;
-    return std::tie(package, t1) < std::tie(t.package, t2);
-}*/
-
 UnresolvedPackage DependencyData::getPackage() const
 {
     /*auto t = target;
