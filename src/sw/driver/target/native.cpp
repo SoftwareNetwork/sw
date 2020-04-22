@@ -1362,7 +1362,6 @@ Commands NativeCompiledTarget::getCommands1() const
     Commands cmds;
     if (HeaderOnly && *HeaderOnly)
     {
-        //LOG_TRACE(logger, "target " << getPackage().toString() << " is header only");
         cmds.insert(generated.begin(), generated.end());
         return cmds;
     }
@@ -1511,8 +1510,8 @@ Commands NativeCompiledTarget::getCommands1() const
                     if (auto c2 = c->as<driver::detail::Command*>(); c2 && c2->ignore_deps_generated_commands)
                         continue;
                     c->dependencies.insert(cmds2.begin(), cmds2.end());
+                }
             }
-        }
         }
 
         // link deps
