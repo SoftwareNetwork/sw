@@ -245,6 +245,7 @@ private:
     Arguments rsp_args;
     mutable String log_string;
 
+    void execute0(std::error_code *ec);
     virtual void execute1(std::error_code *ec = nullptr);
     virtual size_t getHash1() const;
 

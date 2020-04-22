@@ -390,20 +390,15 @@ void Command::prepare()
 
 void Command::execute()
 {
-    /*SCOPE_EXIT
-    {
-        // free cs to release files (logs, cs)
-        if (command_storage)
-            command_storage->free_user();
-    };*/
-
-    if (!beforeCommand())
-        return;
-    execute1(); // main call
-    afterCommand();
+    execute0(nullptr);
 }
 
 void Command::execute(std::error_code &ec)
+{
+    execute0(&ec);
+}
+
+void Command::execute0(std::error_code *ec)
 {
     /*SCOPE_EXIT
     {
@@ -420,8 +415,8 @@ void Command::execute(std::error_code &ec)
 
     if (!beforeCommand())
         return;
-    execute1(&ec); // main thing
-    if (ec)
+    execute1(ec); // main thing
+    if (ec && *ec)
         return;
     afterCommand();
 }
