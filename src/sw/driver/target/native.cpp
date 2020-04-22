@@ -2163,6 +2163,8 @@ bool NativeCompiledTarget::prepare()
     RETURN_PREPARE_MULTIPASS_NEXT_PASS;
     case 10:
         prepare_pass9();
+        // TODO: create prepare endgames method that always will be the last one
+        getGeneratedCommands(); // create g.commands
         call(CallbackType::EndPrepare);
     SW_RETURN_MULTIPASS_END(prepare_pass);
     }
