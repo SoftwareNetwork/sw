@@ -84,8 +84,8 @@ public:
     void setTimeLimit(const Clock::duration &);
 
     const VecT &getCommands() const { return commands; }
-    const VecT &getUnprocessedCommand() const { return unprocessed_commands; }
-    const USet &getUnprocessedCommandSet() const { return unprocessed_commands_set; }
+    const VecT &getUnprocessedCommands() const { return unprocessed_commands; }
+    const USet &getUnprocessedCommandsSet() const { return unprocessed_commands_set; }
 
     bool isValid() const;
 

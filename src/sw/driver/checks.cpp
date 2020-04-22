@@ -586,11 +586,11 @@ int main() { return IsBigEndian(); }
     // print our deps graph
     String s;
     s += "digraph G {\n";
-    for (auto &c : ep->getUnprocessedCommandSet())
+    for (auto &c : ep->getUnprocessedCommandsSet())
     {
         for (auto &d : c->dependencies)
         {
-            if (ep->getUnprocessedCommandSet().find(static_cast<Check*>(d.get())) == ep->getUnprocessedCommandSet().end())
+            if (ep->getUnprocessedCommandsSet().find(static_cast<Check*>(d.get())) == ep->getUnprocessedCommandsSet().end())
                 continue;
             s += *static_cast<Check*>(c)->Definitions.begin() + "->" + *std::static_pointer_cast<Check>(d)->Definitions.begin() + ";";
         }

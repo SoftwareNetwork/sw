@@ -1084,7 +1084,7 @@ std::unique_ptr<ExecutionPlan> SwBuild::getExecutionPlan(const Commands &cmds) c
     }
 
     ep->printGraph(ep->getGraph(), cyclic_path / "processed", ep->getCommands(), true);
-    ep->printGraph(ep->getGraphUnprocessed(), cyclic_path / "unprocessed", ep->getUnprocessedCommand(), true);
+    ep->printGraph(ep->getGraphUnprocessed(), cyclic_path / "unprocessed", ep->getUnprocessedCommands(), true);
 
     String error = "Cannot create execution plan because of cyclic dependencies";
     //String error = "Cannot create execution plan because of cyclic dependencies: strong components = " + std::to_string(n);
