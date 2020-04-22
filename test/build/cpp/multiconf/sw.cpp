@@ -41,4 +41,23 @@ void build(Solution &s)
     auto &t5 = s.addExecutable("test5");
     t5 += "src/main5.cpp";
     t5 += l7;
+
+    // test generated command in dep (t8) executed before main target (t6)
+    {
+        auto &t8 = s.addLibrary("lib8");
+        {
+            t8 += "src/1.txt";
+            auto c = t8.addCommand();
+            c << cmd::prog(t3)
+                << cmd::std_out("main8.inc");
+        }
+
+        auto &t6 = s.addStaticLibrary("test6");
+        t6 += "src/main6.cpp";
+        t6.Public += t8;
+
+        auto &t7 = s.addStaticLibrary("test7");
+        t7 += "src/main6.cpp";
+        t7 += t6;
+    }
 }
