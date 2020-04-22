@@ -496,15 +496,17 @@ void ExecutionPlan::init(USet &cmds)
         bool added = false;
         for (auto it = cmds.begin(); it != cmds.end();)
         {
-            if (std::all_of((*it)->dependencies.begin(), (*it)->dependencies.end(),
-                [this, &cmds](auto &d) { return cmds.find((T *)d.get()) == cmds.end(); }))
+            // count number of deps
+            auto n = std::count_if((*it)->dependencies.begin(), (*it)->dependencies.end(),
+                [this, &cmds](auto &d) { return cmds.find(d.get()) != cmds.end(); });
+            if (n)
             {
-                added = true;
-                commands.push_back(*it);
-                it = cmds.erase(it);
-            }
-            else
                 it++;
+                continue;
+            }
+            added = true;
+            commands.push_back(*it);
+            it = cmds.erase(it);
         }
         if (!added)
         {
