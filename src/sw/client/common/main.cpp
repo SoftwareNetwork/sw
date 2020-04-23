@@ -27,6 +27,7 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string_regex.hpp>
+#include <boost/dll.hpp>
 #include <boost/regex.hpp>
 
 #include <primitives/log.h>
@@ -123,6 +124,19 @@ int StartupData::run()
     setConsoleColorProcessing();
 
     prepareArgs();
+
+    // set executable to pass to child commands
+    // how it will be set on build server?
+    // probably via this code too
+    {
+#ifdef _WIN32
+        auto r = _wputenv_s(L"SW_EXECUTABLE", wnormalize_path(boost::dll::program_location()).c_str());
+#else
+        auto r = setenv("SW_EXECUTABLE", boost::dll::program_location().u8string().c_str(), 1);
+#endif
+        if (r)
+            throw SW_RUNTIME_ERROR("putenv failed");
+    }
 
     try
     {
