@@ -26,6 +26,7 @@
 #include <primitives/patch.h>
 
 #include <boost/algorithm/string.hpp>
+#include <boost/dll.hpp>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "functions");
@@ -157,6 +158,11 @@ bool patch(const path &fn, const String &patch, const path &lock_dir)
 void downloadFile(const String &url, const path &fn, int64_t file_size_limit)
 {
     ::download_file(url, fn, file_size_limit);
+}
+
+path getProgramLocation()
+{
+    return boost::dll::program_location();
 }
 
 }
