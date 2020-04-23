@@ -9,6 +9,7 @@ assignees: ''
 
 **Describe the bug**
 A clear and concise description of what the bug is.
+Before you start, ensure you have the latest sw client (run `sw --self-upgrade`) and the bug is present there.
 
 **Expected behavior**
 A clear and concise description of what you expected to happen.
