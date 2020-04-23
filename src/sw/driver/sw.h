@@ -126,6 +126,8 @@ using sw::ValaStaticLibrary;
 using sw::ValaSharedLibrary;
 using sw::ValaExecutable;
 
+using sw::PythonLibrary;
+
 //
 using sw::ConfigureFlags;
 using sw::PrecompiledHeader;

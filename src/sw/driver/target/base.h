@@ -451,6 +451,25 @@ struct SW_DRIVER_CPP_API ProjectTarget : ProjDirBase
     TargetType getType() const override { return TargetType::Project; }
 };
 
+struct SW_DRIVER_CPP_API SourceFileTargetOptions : SourceFileStorage
+{
+    using SourceFileStorage::add;
+    using SourceFileStorage::remove;
+    using SourceFileStorage::operator=;
+
+private:
+    ASSIGN_WRAPPER_SIMPLE(add, SourceFileTargetOptions);
+    ASSIGN_WRAPPER_SIMPLE(remove, SourceFileTargetOptions);
+    ASSIGN_WRAPPER_SIMPLE(remove_exclude, SourceFileTargetOptions);
+
+public:
+    // source files
+    //ASSIGN_TYPES(String)
+    ASSIGN_TYPES_AND_EXCLUDE(path)
+    ASSIGN_TYPES_AND_EXCLUDE(Files)
+    ASSIGN_TYPES_AND_EXCLUDE(FileRegex)
+};
+
 //template <class ... Args>
 //struct SW_DRIVER_CPP_API TargetOptions : Args...
 struct SW_DRIVER_CPP_API TargetOptions : SourceFileStorage, NativeOptions

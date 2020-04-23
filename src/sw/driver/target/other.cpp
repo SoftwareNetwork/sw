@@ -503,4 +503,19 @@ bool DExecutable::init()
     return r;
 }
 
+bool PythonLibrary::init()
+{
+    auto r = Target::init();
+    target = this;
+    return r;
+}
+
+Files PythonLibrary::gatherAllFiles() const
+{
+    Files files;
+    for (auto &f : *this)
+        files.insert(f.first);
+    return files;
+}
+
 }

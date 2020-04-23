@@ -26,6 +26,22 @@
 
 // move things below into separate header without pragma once
 
+#define ASSIGN_WRAPPER_SIMPLE(f, t) \
+    struct f##_files                \
+    {                               \
+        t &r;                       \
+                                    \
+        f##_files(t &r) : r(r)      \
+        {                           \
+        }                           \
+                                    \
+        template <class U>          \
+        void operator()(const U &v) \
+        {                           \
+            r.f(v);                 \
+        }                           \
+    }
+
 #define ASSIGN_WRAPPER(f, t)          \
     struct f##_files : Assigner       \
     {                                 \

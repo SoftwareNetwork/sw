@@ -214,4 +214,13 @@ struct SW_DRIVER_CPP_API DExecutable : DTarget
     TargetType getType() const override { return TargetType::DExecutable; }
 };
 
+// Python
+
+struct SW_DRIVER_CPP_API PythonLibrary : Target
+    , SourceFileTargetOptions
+{
+    bool init() override;
+    Files gatherAllFiles() const override;
+};
+
 }
