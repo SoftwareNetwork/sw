@@ -617,6 +617,23 @@ command_line:
                 desc: Save overridden packages desc to file.
                 value_desc: fn
 
+    # path
+    subcommand:
+        name: path
+        desc: Get different paths of packages.
+
+        command_line:
+            type:
+                type: String
+                desc: Path type
+                default_value: |-
+                    "sdir"
+
+            path_arg:
+                type: String
+                positional: true
+                required: true
+
     # remote
     subcommand:
         name: remote

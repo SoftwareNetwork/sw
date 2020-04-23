@@ -51,6 +51,7 @@ SUBCOMMAND(open) COMMA
 SUBCOMMAND(override) COMMA
 //SUBCOMMAND(mirror, "Manage software mirrors.") COMMA
 //SUBCOMMAND(pack, "Used to prepare distribution packages.") COMMA
+SUBCOMMAND(path) COMMA
 SUBCOMMAND(remote) COMMA
 SUBCOMMAND(remove) COMMA
 SUBCOMMAND(run) COMMA
