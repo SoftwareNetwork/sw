@@ -654,8 +654,14 @@ void SwBuild::loadPackages(const TargetMap &predefined)
                     if (k != i->second.end())
                     {
                         auto &t = *k;
-                        getTargets()[t->getPackage()].push_back(t);
-                        continue;
+                        // only if inputs the same
+                        // (we might change something in one of the inputs, do not take wrong targets from cache)
+                        if (i->second.hasInput() &&
+                            &i->second.getInput().getInput() == &getTargets()[t->getPackage()].getInput().getInput())
+                        {
+                            getTargets()[t->getPackage()].push_back(t);
+                            continue;
+                        }
                     }
                 }
             }
@@ -666,7 +672,10 @@ void SwBuild::loadPackages(const TargetMap &predefined)
                 if (tgt->getPackage() == d.first)
                     getTargets()[tgt->getPackage()].push_back(tgt);
                 else
+                {
                     cache[tgt->getPackage()].push_back(tgt);
+                    cache[tgt->getPackage()].setInput(getTargets()[tgt->getPackage()].getInput());
+                }
             }
 
             auto k = d.second->findSuitable(s);

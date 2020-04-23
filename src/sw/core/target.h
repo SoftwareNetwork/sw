@@ -203,6 +203,8 @@ struct SW_CORE_API TargetContainer
     Base::iterator erase(Base::iterator begin, Base::iterator end);
 
     void setInput(const BuildInput &);
+    const BuildInput &getInput() const;
+    bool hasInput() const { return !!input; }
 
     [[nodiscard]]
     std::vector<ITargetPtr> loadPackages(SwBuild &, const TargetSettings &, const PackageIdSet &allowed_packages) const;
@@ -210,8 +212,6 @@ struct SW_CORE_API TargetContainer
 private:
     std::unique_ptr<BuildInput> input;
     std::vector<ITargetPtr> targets;
-
-    const BuildInput &getInput() const;
 };
 
 namespace detail
