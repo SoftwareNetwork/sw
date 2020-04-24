@@ -432,10 +432,9 @@ private:
 struct SW_DRIVER_CPP_API CommandBuilder
 {
     mutable std::shared_ptr<::sw::builder::Command> c;
-    mutable Target *target = nullptr;
     mutable bool stopped = false;
 
-    CommandBuilder(const SwBuilderContext &swctx);
+    CommandBuilder(Target &);
     CommandBuilder(const CommandBuilder &) = default;
     CommandBuilder &operator=(const CommandBuilder &) = default;
 
@@ -443,13 +442,15 @@ struct SW_DRIVER_CPP_API CommandBuilder
     const CommandBuilder &operator|(::sw::builder::Command &) const;
 
     Target &getTarget() const;
+
+private:
+    Target *target;
 };
 
 #define DECLARE_STREAM_OP(t) \
     SW_DRIVER_CPP_API        \
     const CommandBuilder &operator<<(const CommandBuilder &, const t &)
 
-DECLARE_STREAM_OP(Target);
 DECLARE_STREAM_OP(::sw::cmd::tag_in);
 DECLARE_STREAM_OP(::sw::cmd::tag_out);
 DECLARE_STREAM_OP(::sw::cmd::tag_stdin);
@@ -488,10 +489,6 @@ const CommandBuilder &operator<<(const CommandBuilder &cb, const T &t)
     {
         if (!cb.stopped)
             add_arg(std::to_string(t));
-    }
-    else if constexpr (std::is_base_of_v<Target, T>)
-    {
-        return cb << (const Target&)t;
     }
     else if constexpr (std::is_invocable_v<T>)
     {

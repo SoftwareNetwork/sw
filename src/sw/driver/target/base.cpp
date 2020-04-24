@@ -867,9 +867,9 @@ const TargetSettings &Target::getExportOptions() const
     return ts_export;
 }
 
-driver::CommandBuilder Target::addCommand(const std::shared_ptr<builder::Command> &in) const
+driver::CommandBuilder Target::addCommand(const std::shared_ptr<builder::Command> &in)
 {
-    driver::CommandBuilder cb(getMainBuild());
+    driver::CommandBuilder cb(*this);
     if (in)
         cb.c = in;
     // set as default
@@ -879,14 +879,13 @@ driver::CommandBuilder Target::addCommand(const std::shared_ptr<builder::Command
     //setupCommand(*cb.c);
     if (!DryRun)
     {
-        cb << *this; // this adds to storage
         cb.c->command_storage = getCommandStorage();
         cb.c->setContext(getMainBuild());
     }
     return cb;
 }
 
-driver::CommandBuilder Target::addCommand(const String &func_name, void *f, int version) const
+driver::CommandBuilder Target::addCommand(const String &func_name, void *f, int version)
 {
     auto c = std::make_shared<BuiltinCommand>(getMainBuild(), func_name, f, version);
     return addCommand(c);

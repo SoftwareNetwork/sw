@@ -392,15 +392,15 @@ void GNUCommand::postProcess1(bool ok)
 
 ///
 
-CommandBuilder::CommandBuilder(const SwBuilderContext &swctx)
+CommandBuilder::CommandBuilder(Target &t)
+    : target(&t)
 {
-    c = std::make_shared<Command>(swctx);
+    c = std::make_shared<Command>();
+    getTarget().Storage.push_back(c);
 }
 
 Target &CommandBuilder::getTarget() const
 {
-    if (!target)
-        throw SW_RUNTIME_ERROR("CommandBuilder target was not set");
     return *target;
 }
 
@@ -414,15 +414,6 @@ const CommandBuilder &CommandBuilder::operator|(::sw::builder::Command &c2) cons
 {
     *c | c2;
     return *this;
-}
-
-const CommandBuilder &operator<<(const CommandBuilder &cb, const Target &t)
-{
-    if (cb.target)
-        throw SW_RUNTIME_ERROR("Target already set");
-    cb.target = (Target *)&t;
-    cb.target->Storage.push_back(cb.c);
-    return cb;
 }
 
 const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_wdir &t)
@@ -446,7 +437,7 @@ static NativeCompiledTarget *cast_as_nct(Target *t)
 const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_in &t)
 {
     decltype(t.targets) all;
-    all.push_back(cb.target);
+    all.push_back(&cb.getTarget());
     all.insert(all.end(), t.targets.begin(), t.targets.end());
 
     if (!all.empty() && all[0]->DryRun)
@@ -472,15 +463,13 @@ const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_
             }
         }
     }
-    for (auto tgt : t.targets)
-        tgt->Storage.push_back(cb.c);
     return cb;
 }
 
 const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_out &t)
 {
     decltype(t.targets) all;
-    all.push_back(cb.target);
+    all.push_back(&cb.getTarget());
     all.insert(all.end(), t.targets.begin(), t.targets.end());
 
     bool dry_run = std::all_of(all.begin(), all.end(), [](const auto &t)
@@ -509,15 +498,13 @@ const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_
             }
         }
     }
-    for (auto tgt : t.targets)
-        tgt->Storage.push_back(cb.c);
     return cb;
 }
 
 const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_stdin &t)
 {
     decltype(t.targets) all;
-    all.push_back(cb.target);
+    all.push_back(&cb.getTarget());
     all.insert(all.end(), t.targets.begin(), t.targets.end());
 
     auto p = t.p;
@@ -536,15 +523,13 @@ const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_
             cast_as_nct(*tgt).add(cast_as_nct(*tgt).getMergeObject().getFileInternal(p));
         }
     }
-    for (auto tgt : t.targets)
-        tgt->Storage.push_back(cb.c);
     return cb;
 }
 
 const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_stdout &t)
 {
     decltype(t.targets) all;
-    all.push_back(cb.target);
+    all.push_back(&cb.getTarget());
     all.insert(all.end(), t.targets.begin(), t.targets.end());
 
     bool dry_run = std::all_of(all.begin(), all.end(), [](const auto &t)
@@ -569,15 +554,13 @@ const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_
             cast_as_nct(*tgt).add(cast_as_nct(*tgt).getMergeObject().getFileInternal(p));
         }
     }
-    for (auto tgt : t.targets)
-        tgt->Storage.push_back(cb.c);
     return cb;
 }
 
 const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_stderr &t)
 {
     decltype(t.targets) all;
-    all.push_back(cb.target);
+    all.push_back(&cb.getTarget());
     all.insert(all.end(), t.targets.begin(), t.targets.end());
 
     bool dry_run = std::all_of(all.begin(), all.end(), [](const auto &t)
@@ -602,8 +585,6 @@ const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_
             cast_as_nct(*tgt).add(cast_as_nct(*tgt).getMergeObject().getFileInternal(p));
         }
     }
-    for (auto tgt : t.targets)
-        tgt->Storage.push_back(cb.c);
     return cb;
 }
 
@@ -615,7 +596,11 @@ const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_
 
 const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_dep &t)
 {
-    SW_UNIMPLEMENTED;
+    for (auto &d : t.targets)
+        cb.getTarget().addSourceDependency(*d);
+    for (auto &d : t.target_ptrs)
+        cb.getTarget().addSourceDependency(d);
+    return cb;
 }
 
 const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_env &t)
@@ -627,7 +612,7 @@ const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_
 const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_prog_dep &t)
 {
     std::dynamic_pointer_cast<::sw::driver::Command>(cb.c)->setProgram(t.d);
-    cb.target->addDummyDependency(t.d);
+    cb.getTarget().addDummyDependency(t.d);
     return cb;
 }
 

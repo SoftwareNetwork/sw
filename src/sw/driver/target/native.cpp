@@ -1453,7 +1453,7 @@ Commands NativeCompiledTarget::getCommands1() const
     cmds.insert(generated.begin(), generated.end());
 
     // add install commands
-    for (auto &[p, f] : getMergeObject())
+    /*for (auto &[p, f] : getMergeObject())
     {
         if (f->install_dir.empty())
             continue;
@@ -1466,7 +1466,7 @@ Commands NativeCompiledTarget::getCommands1() const
         c << cmd::out(o);
         c.c->name = "copy: " + normalize_path(o);
         cmds.insert(c.c);
-    }
+    }*/
 
     // this library, check if nothing to link
     if (auto c = getCommand())

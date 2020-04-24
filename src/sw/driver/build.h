@@ -52,9 +52,10 @@ struct SW_DRIVER_CPP_API Test : driver::CommandBuilder
 {
     using driver::CommandBuilder::CommandBuilder;
 
-    Test() = default;
-    Test(const driver::CommandBuilder &cb)
-        : driver::CommandBuilder(cb)
+    Test(const Test &) = default;
+    Test &operator=(const Test &) = default;
+    Test(const driver::CommandBuilder &b)
+        : driver::CommandBuilder(b)
     {}
 
     void prepare(const Build &s)

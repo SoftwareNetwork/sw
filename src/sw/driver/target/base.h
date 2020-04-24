@@ -300,12 +300,10 @@ struct SW_DRIVER_CPP_API Target : ITarget, TargetBase, ProgramStorage,
 
     DependencyPtr addDummyDependency(const Target &);
     DependencyPtr addDummyDependency(const DependencyPtr &);
-private:
     void addSourceDependency(const Target &);
     void addSourceDependency(const DependencyPtr &);
-public:
-    //
 
+public:
     using TargetBase::TargetBase;
     Target() = default;
     virtual ~Target() = default;
@@ -375,8 +373,8 @@ public:
     bool isReproducibleBuild() const { return ReproducibleBuild; }
 
     // commands
-    driver::CommandBuilder addCommand(const std::shared_ptr<builder::Command> &in = {}) const;
-    driver::CommandBuilder addCommand(const String &func_name, void *symbol, int version = 0) const; // builtin command
+    driver::CommandBuilder addCommand(const std::shared_ptr<builder::Command> &in = {});
+    driver::CommandBuilder addCommand(const String &func_name, void *symbol, int version = 0); // builtin command
 
     // tests
     // TODO: implement some of https://cmake.org/cmake/help/latest/manual/cmake-properties.7.html#properties-on-tests
