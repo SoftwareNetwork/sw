@@ -92,17 +92,15 @@ struct tag_files_data
     void populate(const Prefix &p) { prefix = p.v; }
 };
 
-struct tag_io_file : tag_path, tag_targets, tag_files_data
+struct tag_io_file : tag_path, tag_files_data
 {
     using tag_path::populate;
-    using tag_targets::populate;
     using tag_files_data::populate;
 };
 
-struct tag_io_files : tag_files, tag_targets, tag_files_data
+struct tag_io_files : tag_files, tag_files_data
 {
     using tag_files::populate;
-    using tag_targets::populate;
     using tag_files_data::populate;
 };
 
@@ -210,41 +208,35 @@ inline tag_end end()
     return {};
 }
 
-#define ADD(X)                                                                              \
-    inline tag_##X X(const path &file, bool add_to_targets)                                 \
-    {                                                                                       \
-        std::vector<Target *> targets;                                        \
-        return {FilesOrdered{file}, targets, add_to_targets};                               \
-    }                                                                                       \
-                                                                                            \
-    inline tag_##X X(const path &file, const String &prefix, bool add_to_targets)           \
-    {                                                                                       \
-        std::vector<Target *> targets;                                        \
-        return {FilesOrdered{file}, targets, add_to_targets, prefix};                       \
-    }                                                                                       \
-                                                                                            \
-    inline tag_##X X(const FilesOrdered &files, bool add_to_targets)                        \
-    {                                                                                       \
-        std::vector<Target *> targets;                                        \
-        return {files, targets, add_to_targets};                                            \
-    }                                                                                       \
-                                                                                            \
-    inline tag_##X X(const FilesOrdered &files, const String &prefix, bool add_to_targets)  \
-    {                                                                                       \
-        std::vector<Target *> targets;                                        \
-        return {files, targets, add_to_targets, prefix};                                    \
-    }                                                                                       \
-                                                                                            \
-    inline tag_##X X(const Files &files, bool add_to_targets)                               \
-    {                                                                                       \
-        std::vector<Target *> targets;                                        \
-        return {FilesOrdered{files.begin(), files.end()}, targets, add_to_targets};         \
-    }                                                                                       \
-                                                                                            \
-    inline tag_##X X(const Files &files, const String &prefix, bool add_to_targets)         \
-    {                                                                                       \
-        std::vector<Target *> targets;                                        \
-        return {FilesOrdered{files.begin(), files.end()}, targets, add_to_targets, prefix}; \
+#define ADD(X)                                                                             \
+    inline tag_##X X(const path &file, bool add_to_targets)                                \
+    {                                                                                      \
+        return {FilesOrdered{file}, add_to_targets};                                       \
+    }                                                                                      \
+                                                                                           \
+    inline tag_##X X(const path &file, const String &prefix, bool add_to_targets)          \
+    {                                                                                      \
+        return {FilesOrdered{file}, add_to_targets, prefix};                               \
+    }                                                                                      \
+                                                                                           \
+    inline tag_##X X(const FilesOrdered &files, bool add_to_targets)                       \
+    {                                                                                      \
+        return {files, add_to_targets};                                                    \
+    }                                                                                      \
+                                                                                           \
+    inline tag_##X X(const FilesOrdered &files, const String &prefix, bool add_to_targets) \
+    {                                                                                      \
+        return {files, add_to_targets, prefix};                                            \
+    }                                                                                      \
+                                                                                           \
+    inline tag_##X X(const Files &files, bool add_to_targets)                              \
+    {                                                                                      \
+        return {FilesOrdered{files.begin(), files.end()}, add_to_targets};                 \
+    }                                                                                      \
+                                                                                           \
+    inline tag_##X X(const Files &files, const String &prefix, bool add_to_targets)        \
+    {                                                                                      \
+        return {FilesOrdered{files.begin(), files.end()}, add_to_targets, prefix};         \
     }
 
 ADD(in)
@@ -266,23 +258,19 @@ ADD2(out)
 inline
 tag_stdin std_in(const path &file, bool add_to_targets)
 {
-    std::vector<Target*> targets;
-    return { file, targets, add_to_targets };
+    return { file, add_to_targets };
 }
 
 template <class ... Args>
-tag_stdin std_in(const path &file, Args && ... args)
+tag_stdin std_in(const path &file)
 {
-    std::vector<Target*> targets;
-    (targets.push_back(&args), ...);
-    return { file, targets };
+    return { file };
 }
 
 inline
 tag_stdout std_out(const path &file, bool add_to_targets)
 {
-    std::vector<Target*> targets;
-    return { file, targets, add_to_targets };
+    return { file, add_to_targets };
 }
 
 /*template <class ... Args>
@@ -304,8 +292,7 @@ tag_stdout std_out(Args &&... args)
 inline
 tag_stderr std_err(const path &file, bool add_to_targets)
 {
-    std::vector<Target*> targets;
-    return { file, targets, add_to_targets };
+    return { file, add_to_targets };
 }
 
 /*template <class ... Args>

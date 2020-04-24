@@ -436,31 +436,24 @@ static NativeCompiledTarget *cast_as_nct(Target *t)
 
 const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_in &t)
 {
-    decltype(t.targets) all;
-    all.push_back(&cb.getTarget());
-    all.insert(all.end(), t.targets.begin(), t.targets.end());
-
-    if (!all.empty() && all[0]->DryRun)
+    auto &tt = cb.getTarget();
+    if (tt.DryRun)
         return cb;
 
     for (auto p : t.files)
     {
-        if (p.is_relative() && !all.empty())
-            if (!cast_as_nct(all[0])->check_absolute(p, true))
-                p = all[0]->SourceDir / p;
+        if (p.is_relative() && !cast_as_nct(tt).check_absolute(p, true))
+            p = tt.SourceDir / p;
 
         if (!cb.stopped)
             cb.c->arguments.push_back(t.prefix + (t.normalize ? normalize_path(p) : p.u8string()));
         cb.c->addInput(p);
         if (t.add_to_targets)
         {
-            for (auto tgt : all)
-            {
-                cast_as_nct(*tgt).getMergeObject() += p;
-                cast_as_nct(*tgt).getMergeObject()[p].skip = t.skip;
-                // also add into private
-                cast_as_nct(*tgt).add(cast_as_nct(*tgt).getMergeObject().getFileInternal(p));
-            }
+            cast_as_nct(tt).getMergeObject() += p;
+            cast_as_nct(tt).getMergeObject()[p].skip = t.skip;
+            // also add into private
+            cast_as_nct(tt).add(cast_as_nct(tt).getMergeObject().getFileInternal(p));
         }
     }
     return cb;
@@ -468,34 +461,24 @@ const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_
 
 const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_out &t)
 {
-    decltype(t.targets) all;
-    all.push_back(&cb.getTarget());
-    all.insert(all.end(), t.targets.begin(), t.targets.end());
-
-    bool dry_run = std::all_of(all.begin(), all.end(), [](const auto &t)
-    {
-        return t->DryRun;
-    });
+    auto &tt = cb.getTarget();
+    if (tt.DryRun)
+        return cb;
 
     for (auto p : t.files)
     {
-        if (p.is_relative() && !all.empty())
-            if (!cast_as_nct(all[0])->check_absolute(p, true))
-                p = all[0]->BinaryDir / p;
+        if (p.is_relative() && !cast_as_nct(tt).check_absolute(p, true))
+            p = tt.BinaryDir / p;
 
         if (!cb.stopped)
             cb.c->arguments.push_back(t.prefix + (t.normalize ? normalize_path(p) : p.u8string()));
-        if (!dry_run)
-            cb.c->addOutput(p);
+        cb.c->addOutput(p);
         if (t.add_to_targets)
         {
-            for (auto tgt : all)
-            {
-                cast_as_nct(*tgt).getMergeObject() += p;
-                cast_as_nct(*tgt).getMergeObject()[p].skip = t.skip;
-                // also add into private
-                cast_as_nct(*tgt).add(cast_as_nct(*tgt).getMergeObject().getFileInternal(p));
-            }
+            cast_as_nct(tt).getMergeObject() += p;
+            cast_as_nct(tt).getMergeObject()[p].skip = t.skip;
+            // also add into private
+            cast_as_nct(tt).add(cast_as_nct(tt).getMergeObject().getFileInternal(p));
         }
     }
     return cb;
@@ -503,87 +486,63 @@ const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_
 
 const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_stdin &t)
 {
-    decltype(t.targets) all;
-    all.push_back(&cb.getTarget());
-    all.insert(all.end(), t.targets.begin(), t.targets.end());
+    auto &tt = cb.getTarget();
+    if (tt.DryRun)
+        return cb;
 
     auto p = t.p;
-    if (p.is_relative() && !all.empty())
-        if (!cast_as_nct(all[0])->check_absolute(p, true))
-            p = all[0]->SourceDir / p;
+    if (p.is_relative() && !cast_as_nct(tt).check_absolute(p, true))
+        p = tt.SourceDir / p;
 
     cb.c->redirectStdin(p);
     if (t.add_to_targets)
     {
-        for (auto tgt : all)
-        {
-            cast_as_nct(*tgt).getMergeObject() += p;
-            cast_as_nct(*tgt).getMergeObject()[p].skip = t.skip;
-            // also add into private
-            cast_as_nct(*tgt).add(cast_as_nct(*tgt).getMergeObject().getFileInternal(p));
-        }
+        cast_as_nct(tt).getMergeObject() += p;
+        cast_as_nct(tt).getMergeObject()[p].skip = t.skip;
+        // also add into private
+        cast_as_nct(tt).add(cast_as_nct(tt).getMergeObject().getFileInternal(p));
     }
     return cb;
 }
 
 const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_stdout &t)
 {
-    decltype(t.targets) all;
-    all.push_back(&cb.getTarget());
-    all.insert(all.end(), t.targets.begin(), t.targets.end());
-
-    bool dry_run = std::all_of(all.begin(), all.end(), [](const auto &t)
-    {
-        return t->DryRun;
-    });
+    auto &tt = cb.getTarget();
+    if (tt.DryRun)
+        return cb;
 
     auto p = t.p;
-    if (p.is_relative() && !all.empty())
-        if (!cast_as_nct(all[0])->check_absolute(p, true))
-            p = all[0]->BinaryDir / p;
+    if (p.is_relative() && !cast_as_nct(tt).check_absolute(p, true))
+        p = tt.BinaryDir / p;
 
-    if (!dry_run)
-        cb.c->redirectStdout(p, t.append);
+    cb.c->redirectStdout(p, t.append);
     if (t.add_to_targets)
     {
-        for (auto tgt : all)
-        {
-            cast_as_nct(*tgt).getMergeObject() += p;
-            cast_as_nct(*tgt).getMergeObject()[p].skip = t.skip;
-            // also add into private
-            cast_as_nct(*tgt).add(cast_as_nct(*tgt).getMergeObject().getFileInternal(p));
-        }
+        cast_as_nct(tt).getMergeObject() += p;
+        cast_as_nct(tt).getMergeObject()[p].skip = t.skip;
+        // also add into private
+        cast_as_nct(tt).add(cast_as_nct(tt).getMergeObject().getFileInternal(p));
     }
     return cb;
 }
 
 const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_stderr &t)
 {
-    decltype(t.targets) all;
-    all.push_back(&cb.getTarget());
-    all.insert(all.end(), t.targets.begin(), t.targets.end());
-
-    bool dry_run = std::all_of(all.begin(), all.end(), [](const auto &t)
-    {
-        return t->DryRun;
-    });
+    auto &tt = cb.getTarget();
+    if (tt.DryRun)
+        return cb;
 
     auto p = t.p;
-    if (p.is_relative() && !all.empty())
-        if (!cast_as_nct(all[0])->check_absolute(p, true))
-            p = all[0]->BinaryDir / p;
+    if (p.is_relative() && !cast_as_nct(tt).check_absolute(p, true))
+        p = tt.BinaryDir / p;
 
-    if (!dry_run)
-        cb.c->redirectStderr(p, t.append);
+    cb.c->redirectStderr(p, t.append);
     if (t.add_to_targets)
     {
-        for (auto tgt : all)
-        {
-            cast_as_nct(*tgt).getMergeObject() += p;
-            cast_as_nct(*tgt).getMergeObject()[p].skip = t.skip;
-            // also add into private
-            cast_as_nct(*tgt).add(cast_as_nct(*tgt).getMergeObject().getFileInternal(p));
-        }
+        cast_as_nct(tt).getMergeObject() += p;
+        cast_as_nct(tt).getMergeObject()[p].skip = t.skip;
+        // also add into private
+        cast_as_nct(tt).add(cast_as_nct(tt).getMergeObject().getFileInternal(p));
     }
     return cb;
 }
