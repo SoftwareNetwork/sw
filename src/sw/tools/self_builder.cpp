@@ -240,7 +240,7 @@ int main(int argc, char **argv)
     getExecutor(&e);
 
     //
-    SwCoreContext swctx(Settings::get_user_settings().storage_dir);
+    SwCoreContext swctx(Settings::get_user_settings().storage_dir, true);
     auto m = swctx.install(
     {
         // our main cpp driver target
