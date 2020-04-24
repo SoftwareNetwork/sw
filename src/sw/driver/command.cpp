@@ -397,6 +397,13 @@ CommandBuilder::CommandBuilder(const SwBuilderContext &swctx)
     c = std::make_shared<Command>(swctx);
 }
 
+Target &CommandBuilder::getTarget() const
+{
+    if (!target)
+        throw SW_RUNTIME_ERROR("CommandBuilder target was not set");
+    return *target;
+}
+
 const CommandBuilder &CommandBuilder::operator|(const CommandBuilder &c2) const
 {
     operator|(*c2.c);
@@ -411,18 +418,18 @@ const CommandBuilder &CommandBuilder::operator|(::sw::builder::Command &c2) cons
 
 const CommandBuilder &operator<<(const CommandBuilder &cb, const Target &t)
 {
-    auto nt = (Target *)&t;
-    cb.targets.push_back(nt);
-    nt->Storage.push_back(cb.c);
+    if (cb.target)
+        throw SW_RUNTIME_ERROR("Target already set");
+    cb.target = (Target *)&t;
+    cb.target->Storage.push_back(cb.c);
     return cb;
 }
 
 const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_wdir &t)
 {
     auto p = t.p;
-    if (p.is_relative() && !cb.targets.empty())
-        p = cb.targets[0]->SourceDir / p;
-
+    if (p.is_relative())
+        p = cb.getTarget().SourceDir / p;
     cb.c->working_directory = p;
     return cb;
 }
@@ -438,8 +445,8 @@ static NativeCompiledTarget *cast_as_nct(Target *t)
 
 const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_in &t)
 {
-    decltype(cb.targets) all;
-    all.insert(all.end(), cb.targets.begin(), cb.targets.end());
+    decltype(t.targets) all;
+    all.push_back(cb.target);
     all.insert(all.end(), t.targets.begin(), t.targets.end());
 
     if (!all.empty() && all[0]->DryRun)
@@ -472,8 +479,8 @@ const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_
 
 const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_out &t)
 {
-    decltype(cb.targets) all;
-    all.insert(all.end(), cb.targets.begin(), cb.targets.end());
+    decltype(t.targets) all;
+    all.push_back(cb.target);
     all.insert(all.end(), t.targets.begin(), t.targets.end());
 
     bool dry_run = std::all_of(all.begin(), all.end(), [](const auto &t)
@@ -509,8 +516,8 @@ const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_
 
 const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_stdin &t)
 {
-    decltype(cb.targets) all;
-    all.insert(all.end(), cb.targets.begin(), cb.targets.end());
+    decltype(t.targets) all;
+    all.push_back(cb.target);
     all.insert(all.end(), t.targets.begin(), t.targets.end());
 
     auto p = t.p;
@@ -536,8 +543,8 @@ const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_
 
 const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_stdout &t)
 {
-    decltype(cb.targets) all;
-    all.insert(all.end(), cb.targets.begin(), cb.targets.end());
+    decltype(t.targets) all;
+    all.push_back(cb.target);
     all.insert(all.end(), t.targets.begin(), t.targets.end());
 
     bool dry_run = std::all_of(all.begin(), all.end(), [](const auto &t)
@@ -569,8 +576,8 @@ const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_
 
 const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_stderr &t)
 {
-    decltype(cb.targets) all;
-    all.insert(all.end(), cb.targets.begin(), cb.targets.end());
+    decltype(t.targets) all;
+    all.push_back(cb.target);
     all.insert(all.end(), t.targets.begin(), t.targets.end());
 
     bool dry_run = std::all_of(all.begin(), all.end(), [](const auto &t)
@@ -620,8 +627,7 @@ const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_
 const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_prog_dep &t)
 {
     std::dynamic_pointer_cast<::sw::driver::Command>(cb.c)->setProgram(t.d);
-    for (auto tgt : cb.targets)
-        tgt->addDummyDependency(t.d);
+    cb.target->addDummyDependency(t.d);
     return cb;
 }
 

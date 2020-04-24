@@ -432,7 +432,7 @@ private:
 struct SW_DRIVER_CPP_API CommandBuilder
 {
     mutable std::shared_ptr<::sw::builder::Command> c;
-    mutable std::vector<Target*> targets;
+    mutable Target *target = nullptr;
     mutable bool stopped = false;
 
     CommandBuilder(const SwBuilderContext &swctx);
@@ -441,6 +441,8 @@ struct SW_DRIVER_CPP_API CommandBuilder
 
     const CommandBuilder &operator|(const CommandBuilder &) const;
     const CommandBuilder &operator|(::sw::builder::Command &) const;
+
+    Target &getTarget() const;
 };
 
 #define DECLARE_STREAM_OP(t) \
