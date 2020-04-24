@@ -871,7 +871,7 @@ driver::CommandBuilder Target::addCommand(const std::shared_ptr<builder::Command
 {
     driver::CommandBuilder cb(*this);
     if (in)
-        cb.c = in;
+        cb.setCommand(in);
     // set as default
     // source dir contains more files than bdir?
     // sdir or bdir?

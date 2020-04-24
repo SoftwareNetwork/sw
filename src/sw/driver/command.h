@@ -429,6 +429,7 @@ struct SW_DRIVER_CPP_API CommandBuilder
     const CommandBuilder &operator|(::sw::builder::Command &) const;
 
     Target &getTarget() const;
+    void setCommand(const std::shared_ptr<::sw::builder::Command> &);
 
 private:
     Target *target;

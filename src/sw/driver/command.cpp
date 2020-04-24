@@ -395,7 +395,12 @@ void GNUCommand::postProcess1(bool ok)
 CommandBuilder::CommandBuilder(Target &t)
     : target(&t)
 {
-    c = std::make_shared<Command>();
+    setCommand(std::make_shared<Command>());
+}
+
+void CommandBuilder::setCommand(const std::shared_ptr<::sw::builder::Command> &c2)
+{
+    c = c2;
     getTarget().Storage.push_back(c);
 }
 
