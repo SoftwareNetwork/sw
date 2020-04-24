@@ -23,7 +23,7 @@ DECLARE_STATIC_LOGGER(logger, "command.path");
 
 SUBCOMMAND_DECL(path)
 {
-    auto m = getContext().install(sw::UnresolvedPackages{getOptions().options_path.path_arg});
+    auto m = getContext(false).install(sw::UnresolvedPackages{getOptions().options_path.path_arg});
     auto i = m.find(getOptions().options_path.path_arg);
     if (i == m.end())
         return;
