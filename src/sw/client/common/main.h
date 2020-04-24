@@ -62,4 +62,5 @@ private:
     int builtinCall();
     void initLogger();
     void setWorkingDir();
+    void setHttpSettings();
 };

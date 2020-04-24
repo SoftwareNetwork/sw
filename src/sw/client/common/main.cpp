@@ -155,6 +155,7 @@ int StartupData::run()
         }
         if (getOptions().self_upgrade)
         {
+            setHttpSettings();
             self_upgrade(program_short_name);
             return true;
         }
@@ -222,9 +223,11 @@ void StartupData::createOptions()
 {
     // create main options!
     options = std::make_unique<Options>();
-    // set http settings very early
-    // needed for self-upgrade feature
-    setHttpSettings(getOptions());
+}
+
+void StartupData::setHttpSettings()
+{
+    ::setHttpSettings(getOptions());
 }
 
 void StartupData::initLogger()
