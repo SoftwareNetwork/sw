@@ -34,7 +34,7 @@ struct SwBuild;
 // core context for drivers
 struct SW_CORE_API SwCoreContext : SwManagerContext
 {
-    SwCoreContext(const path &local_storage_root_dir);
+    SwCoreContext(const path &local_storage_root_dir, bool allow_network);
     virtual ~SwCoreContext();
 
     // from old builder ctx
@@ -71,7 +71,7 @@ struct SW_CORE_API SwContext : SwCoreContext
 {
     using Drivers = std::map<PackageId, std::unique_ptr<IDriver>>;
 
-    SwContext(const path &local_storage_root_dir);
+    SwContext(const path &local_storage_root_dir, bool allow_network);
     virtual ~SwContext();
 
     void registerDriver(const PackageId &pkg, std::unique_ptr<IDriver> &&driver);

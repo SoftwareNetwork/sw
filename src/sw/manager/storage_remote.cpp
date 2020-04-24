@@ -73,23 +73,26 @@ void writePackagesDbVersion(const path &dir, int version)
     write_file(dir / PACKAGES_DB_VERSION_FILE, std::to_string(version));
 }
 
-RemoteStorage::RemoteStorage(LocalStorage &ls, const Remote &r)
+RemoteStorage::RemoteStorage(LocalStorage &ls, const Remote &r, bool allow_network)
     : StorageWithPackagesDatabase(r.name, ls.getDatabaseRootDir() / "remote")
-    , r(r), ls(ls)
+    , r(r), ls(ls), allow_network(allow_network)
 {
     db_repo_dir = ls.getDatabaseRootDir() / "remote" / r.name / "repository";
 
     static const auto db_loaded_var = "db_loaded";
 
-    if (!getPackagesDatabase().getIntValue(db_loaded_var))
+    if (isNetworkAllowed())
     {
-        LOG_DEBUG(logger, "Packages database was not found");
-        download();
-        load();
-        getPackagesDatabase().setIntValue(db_loaded_var, 1);
+        if (!getPackagesDatabase().getIntValue(db_loaded_var))
+        {
+            LOG_DEBUG(logger, "Packages database was not found");
+            download();
+            load();
+            getPackagesDatabase().setIntValue(db_loaded_var, 1);
+        }
+        else
+            updateDb();
     }
-    else
-        updateDb();
 
     // at the end we always reopen packages db as read only
     getPackagesDatabase().open(true, true);
@@ -371,6 +374,9 @@ void RemoteStorage::updateDb() const
 
 void RemoteStorage::preInitFindDependencies() const
 {
+    if (!isNetworkAllowed())
+        return;
+
     // !
     updateDb();
 
@@ -536,8 +542,8 @@ std::unique_ptr<vfs::File> RemoteStorage::getFile(const PackageId &id, StorageFi
     }
 }
 
-RemoteStorageWithFallbackToRemoteResolving::RemoteStorageWithFallbackToRemoteResolving(LocalStorage &ls, const Remote &r)
-    : RemoteStorage(ls, r)
+RemoteStorageWithFallbackToRemoteResolving::RemoteStorageWithFallbackToRemoteResolving(LocalStorage &ls, const Remote &r, bool allow_network)
+    : RemoteStorage(ls, r, allow_network)
 {
 }
 
@@ -546,6 +552,8 @@ RemoteStorageWithFallbackToRemoteResolving::resolve(const UnresolvedPackages &pk
 {
     auto m = RemoteStorage::resolve(pkgs, unresolved_pkgs);
     if (unresolved_pkgs.empty())
+        return m;
+    if (!isNetworkAllowed())
         return m;
 
     // clear dirty output

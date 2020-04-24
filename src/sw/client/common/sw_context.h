@@ -75,11 +75,13 @@ struct SwClientContext
     SwClientContext(const Options &options);
     virtual ~SwClientContext();
 
-    sw::SwContext &getContext();
+    sw::SwContext &getContext(bool allow_network = true);
     void resetContext();
 
     Options &getOptions() { return *options; }
     const Options &getOptions() const { return *options; }
+
+    void initNetwork();
 
     std::unique_ptr<sw::SwBuild> createBuild();
     std::unique_ptr<sw::SwBuild> createBuildInternal();

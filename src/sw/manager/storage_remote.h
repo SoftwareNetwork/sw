@@ -16,7 +16,7 @@ struct SW_MANAGER_API RemoteStorage : StorageWithPackagesDatabase
 {
     // also pass url, etc.
     // maybe pass root_db_dir / name directly
-    RemoteStorage(LocalStorage &, const Remote &);
+    RemoteStorage(LocalStorage &, const Remote &, bool allow_network);
     virtual ~RemoteStorage();
 
     const StorageSchema &getSchema() const override { return schema; }
@@ -27,11 +27,14 @@ struct SW_MANAGER_API RemoteStorage : StorageWithPackagesDatabase
 
     const Remote &getRemote() const { return r; }
 
+    bool isNetworkAllowed() const { return allow_network; }
+
 private:
     const Remote &r;
     LocalStorage &ls;
     SoftwareNetworkStorageSchema schema;
     path db_repo_dir;
+    bool allow_network;
 
     void download() const;
     void load() const;
@@ -44,7 +47,7 @@ private:
 
 struct SW_MANAGER_API RemoteStorageWithFallbackToRemoteResolving : RemoteStorage
 {
-    RemoteStorageWithFallbackToRemoteResolving(LocalStorage &, const Remote &);
+    RemoteStorageWithFallbackToRemoteResolving(LocalStorage &, const Remote &, bool allow_network);
 
     PackageDataPtr loadData(const PackageId &) const override;
     std::unordered_map<UnresolvedPackage, PackagePtr> resolveFromRemote(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const;

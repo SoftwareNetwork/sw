@@ -348,9 +348,6 @@ SwClientContext::SwClientContext(const Options &options)
     : local_storage_root_dir(options.storage_dir.empty() ? sw::Settings::get_user_settings().storage_dir : options.storage_dir)
     , options(std::make_unique<Options>(options))
 {
-    // load proxy settings before getContext()
-    setHttpSettings(options);
-
     // maybe put outside ctx, because it will be recreated every time
     // but since this is a rare operation, maybe it's fine
     executor = std::make_unique<Executor>(select_number_of_threads(options.global_jobs));
@@ -711,11 +708,20 @@ std::vector<sw::TargetSettings> SwClientContext::createSettings()
     return settings;
 }
 
-sw::SwContext &SwClientContext::getContext()
+void SwClientContext::initNetwork()
+{
+    setHttpSettings(getOptions());
+}
+
+sw::SwContext &SwClientContext::getContext(bool allow_network)
 {
     if (!swctx_)
     {
-        swctx_ = std::make_unique<sw::SwContext>(local_storage_root_dir);
+        // load proxy settings before SwContext
+        if (allow_network)
+            initNetwork();
+
+        swctx_ = std::make_unique<sw::SwContext>(local_storage_root_dir, allow_network);
         // TODO:
         // before default?
         //for (auto &d : drivers)

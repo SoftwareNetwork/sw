@@ -20,7 +20,7 @@ namespace sw
 
 //ISwContext::~ISwContext() = default;
 
-SwManagerContext::SwManagerContext(const path &local_storage_root_dir)
+SwManagerContext::SwManagerContext(const path &local_storage_root_dir, bool allow_network)
 {
     // first goes resolve cache
     cache_storage_id = storages.size();
@@ -34,7 +34,7 @@ SwManagerContext::SwManagerContext(const path &local_storage_root_dir)
     {
         storages.emplace_back(
             std::make_unique<RemoteStorageWithFallbackToRemoteResolving>(
-                getLocalStorage(), r));
+                getLocalStorage(), r, allow_network));
     }
 }
 

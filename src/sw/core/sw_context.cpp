@@ -31,8 +31,8 @@ DECLARE_STATIC_LOGGER(logger, "context");
 namespace sw
 {
 
-SwCoreContext::SwCoreContext(const path &local_storage_root_dir)
-    : SwManagerContext(local_storage_root_dir)
+SwCoreContext::SwCoreContext(const path &local_storage_root_dir, bool allow_network)
+    : SwManagerContext(local_storage_root_dir, allow_network)
 {
     HostOS = getHostOS();
     host_settings = createHostSettings();
@@ -83,8 +83,8 @@ const TargetData &SwCoreContext::getTargetData(const PackageId &pkg) const
     return i->second;
 }
 
-SwContext::SwContext(const path &local_storage_root_dir)
-    : SwCoreContext(local_storage_root_dir)
+SwContext::SwContext(const path &local_storage_root_dir, bool allow_network)
+    : SwCoreContext(local_storage_root_dir, allow_network)
 {
 }
 

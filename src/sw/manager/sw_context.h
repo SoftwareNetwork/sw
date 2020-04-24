@@ -32,7 +32,7 @@ struct LocalStorage;
 
 struct SW_MANAGER_API SwManagerContext// : ISwContext
 {
-    SwManagerContext(const path &local_storage_root_dir);
+    SwManagerContext(const path &local_storage_root_dir, bool allow_network);
     virtual ~SwManagerContext();
 
     LocalStorage &getLocalStorage();
