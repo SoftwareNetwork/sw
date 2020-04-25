@@ -231,7 +231,7 @@ void Command::addProgramDependency(const DependencyPtr &d)
 
 Command &Command::operator|(CommandBuilder &c)
 {
-    Base::operator|(*c.c);
+    Base::operator|(*c.getCommand());
     return *this;
 }
 
@@ -421,13 +421,13 @@ const CommandBuilder &CommandBuilder::operator|(::sw::builder::Command &c2) cons
     return *this;
 }
 
-const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_wdir &t)
+CommandBuilder &CommandBuilder::operator<<(const ::sw::cmd::tag_wdir &t)
 {
     auto p = t.p;
     if (p.is_relative())
-        p = cb.getTarget().SourceDir / p;
-    cb.c->working_directory = p;
-    return cb;
+        p = getTarget().SourceDir / p;
+    c->working_directory = p;
+    return *this;
 }
 
 static NativeCompiledTarget &cast_as_nct(Target &t)
@@ -439,20 +439,20 @@ static NativeCompiledTarget *cast_as_nct(Target *t)
     return &cast_as_nct(*t);
 }
 
-const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_in &t)
+CommandBuilder &CommandBuilder::operator<<(const ::sw::cmd::tag_in &t)
 {
-    auto &tt = cb.getTarget();
+    auto &tt = getTarget();
     if (tt.DryRun)
-        return cb;
+        return *this;
 
     for (auto p : t.files)
     {
         if (p.is_relative() && !cast_as_nct(tt).check_absolute(p, true))
             p = tt.SourceDir / p;
 
-        if (!cb.stopped)
-            cb.c->arguments.push_back(t.prefix + (t.normalize ? normalize_path(p) : p.u8string()));
-        cb.c->addInput(p);
+        if (!stopped)
+            c->arguments.push_back(t.prefix + (t.normalize ? normalize_path(p) : p.u8string()));
+        c->addInput(p);
         if (t.add_to_targets)
         {
             cast_as_nct(tt).getMergeObject() += p;
@@ -461,23 +461,23 @@ const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_
             cast_as_nct(tt).add(cast_as_nct(tt).getMergeObject().getFileInternal(p));
         }
     }
-    return cb;
+    return *this;
 }
 
-const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_out &t)
+CommandBuilder &CommandBuilder::operator<<(const ::sw::cmd::tag_out &t)
 {
-    auto &tt = cb.getTarget();
+    auto &tt = getTarget();
     if (tt.DryRun)
-        return cb;
+        return *this;
 
     for (auto p : t.files)
     {
         if (p.is_relative() && !cast_as_nct(tt).check_absolute(p, true))
             p = tt.BinaryDir / p;
 
-        if (!cb.stopped)
-            cb.c->arguments.push_back(t.prefix + (t.normalize ? normalize_path(p) : p.u8string()));
-        cb.c->addOutput(p);
+        if (!stopped)
+            c->arguments.push_back(t.prefix + (t.normalize ? normalize_path(p) : p.u8string()));
+        c->addOutput(p);
         if (t.add_to_targets)
         {
             cast_as_nct(tt).getMergeObject() += p;
@@ -486,20 +486,20 @@ const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_
             cast_as_nct(tt).add(cast_as_nct(tt).getMergeObject().getFileInternal(p));
         }
     }
-    return cb;
+    return *this;
 }
 
-const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_stdin &t)
+CommandBuilder &CommandBuilder::operator<<(const ::sw::cmd::tag_stdin &t)
 {
-    auto &tt = cb.getTarget();
+    auto &tt = getTarget();
     if (tt.DryRun)
-        return cb;
+        return *this;
 
     auto p = t.p;
     if (p.is_relative() && !cast_as_nct(tt).check_absolute(p, true))
         p = tt.SourceDir / p;
 
-    cb.c->redirectStdin(p);
+    c->redirectStdin(p);
     if (t.add_to_targets)
     {
         cast_as_nct(tt).getMergeObject() += p;
@@ -507,20 +507,20 @@ const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_
         // also add into private
         cast_as_nct(tt).add(cast_as_nct(tt).getMergeObject().getFileInternal(p));
     }
-    return cb;
+    return *this;
 }
 
-const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_stdout &t)
+CommandBuilder &CommandBuilder::operator<<(const ::sw::cmd::tag_stdout &t)
 {
-    auto &tt = cb.getTarget();
+    auto &tt = getTarget();
     if (tt.DryRun)
-        return cb;
+        return *this;
 
     auto p = t.p;
     if (p.is_relative() && !cast_as_nct(tt).check_absolute(p, true))
         p = tt.BinaryDir / p;
 
-    cb.c->redirectStdout(p, t.append);
+    c->redirectStdout(p, t.append);
     if (t.add_to_targets)
     {
         cast_as_nct(tt).getMergeObject() += p;
@@ -528,20 +528,20 @@ const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_
         // also add into private
         cast_as_nct(tt).add(cast_as_nct(tt).getMergeObject().getFileInternal(p));
     }
-    return cb;
+    return *this;
 }
 
-const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_stderr &t)
+CommandBuilder &CommandBuilder::operator<<(const ::sw::cmd::tag_stderr &t)
 {
-    auto &tt = cb.getTarget();
+    auto &tt = getTarget();
     if (tt.DryRun)
-        return cb;
+        return *this;
 
     auto p = t.p;
     if (p.is_relative() && !cast_as_nct(tt).check_absolute(p, true))
         p = tt.BinaryDir / p;
 
-    cb.c->redirectStderr(p, t.append);
+    c->redirectStderr(p, t.append);
     if (t.add_to_targets)
     {
         cast_as_nct(tt).getMergeObject() += p;
@@ -549,55 +549,55 @@ const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_
         // also add into private
         cast_as_nct(tt).add(cast_as_nct(tt).getMergeObject().getFileInternal(p));
     }
-    return cb;
+    return *this;
 }
 
-const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_end &t)
+CommandBuilder &CommandBuilder::operator<<(const ::sw::cmd::tag_end &t)
 {
-    cb.stopped = true;
-    return cb;
+    stopped = true;
+    return *this;
 }
 
-const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_dep &t)
+CommandBuilder &CommandBuilder::operator<<(const ::sw::cmd::tag_dep &t)
 {
     for (auto &d : t.targets)
-        cb.getTarget().addSourceDependency(*d);
+        getTarget().addSourceDependency(*d);
     for (auto &d : t.target_ptrs)
-        cb.getTarget().addSourceDependency(d);
-    return cb;
+        getTarget().addSourceDependency(d);
+    return *this;
 }
 
-const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_env &t)
+CommandBuilder &CommandBuilder::operator<<(const ::sw::cmd::tag_env &t)
 {
-    cb.c->environment[t.k] = t.v;
-    return cb;
+    c->environment[t.k] = t.v;
+    return *this;
 }
 
-const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_prog_dep &t)
+CommandBuilder &CommandBuilder::operator<<(const ::sw::cmd::tag_prog_dep &t)
 {
-    std::dynamic_pointer_cast<::sw::driver::Command>(cb.c)->setProgram(t.d);
-    cb.getTarget().addDummyDependency(t.d);
-    return cb;
+    std::dynamic_pointer_cast<::sw::driver::Command>(c)->setProgram(t.d);
+    getTarget().addDummyDependency(t.d);
+    return *this;
 }
 
-const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_prog_prog &t)
+CommandBuilder &CommandBuilder::operator<<(const ::sw::cmd::tag_prog_prog &t)
 {
-    cb.c->setProgram(t.p);
-    return cb;
+    c->setProgram(t.p);
+    return *this;
 }
 
-const CommandBuilder &operator<<(const CommandBuilder &cb, const ::sw::cmd::tag_prog_tgt &t)
+CommandBuilder &CommandBuilder::operator<<(const ::sw::cmd::tag_prog_tgt &t)
 {
     auto d = std::make_shared<Dependency>(*t.t);
-    cb << cmd::prog(d);
-    return cb;
+    *this << cmd::prog(d);
+    return *this;
 }
 
-const CommandBuilder &operator<<(const CommandBuilder &cb, const Command::LazyCallback &t)
+CommandBuilder &CommandBuilder::operator<<(const Command::LazyCallback &t)
 {
-    if (!cb.stopped)
-        cb.c->arguments.push_back(std::make_unique<LazyArgument>(t));
-    return cb;
+    if (!stopped)
+        c->arguments.push_back(std::make_unique<LazyArgument>(t));
+    return *this;
 }
 
 } // namespace driver

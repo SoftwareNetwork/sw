@@ -192,7 +192,7 @@ void build(Solution &s)
                 << cmd::out("options_cl.generated.h")
                 << cmd::out("options_cl.generated.cpp", cmd::Skip)
                 ;
-            std::dynamic_pointer_cast<::sw::driver::Command>(c.c)->ignore_deps_generated_commands = true;
+            std::dynamic_pointer_cast<::sw::driver::Command>(c.getCommand())->ignore_deps_generated_commands = true;
             // make sure this is exported header, so we depend on it
             cpp_driver.Public += "options_cl.generated.h";
         }
@@ -302,9 +302,9 @@ void build(Solution &s)
         auto add_build_test = [&cpp_driver, &client, &p](const path &dir)
         {
             auto t = cpp_driver.addTest(client);
-            t.c->pool = p;
-            t.c->push_back("build");
-            t.c->push_back(dir);
+            t->pool = p;
+            t->push_back("build");
+            t->push_back(dir);
             return t;
         };
 
@@ -317,9 +317,9 @@ void build(Solution &s)
 
         auto root = client.SourceDir / "test" / "build";
         auto t = add_build_test(root);
-        add_configs(t.c);
+        add_configs(t.getCommand());
         t = add_build_test(root / "simple/sw.cpp");
-        add_configs(t.c);
+        add_configs(t.getCommand());
     }
 
     if (s.getExternalVariables()["with-gui"] != "true")

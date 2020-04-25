@@ -145,7 +145,7 @@ void addImportLibrary(const Build &b, NativeCompiledTarget &t)
     write_file_if_different(getImportDefinitionsFile(b), defs);
 
     auto c = t.addCommand();
-    c.c->working_directory = getImportDefinitionsFile(b).parent_path();
+    c->working_directory = getImportDefinitionsFile(b).parent_path();
     c << t.Librarian->file
         << cmd::in(getImportDefinitionsFile(b), cmd::Prefix{ "-DEF:" }, cmd::Skip)
         << cmd::out(getImportLibraryFile(b), cmd::Prefix{ "-OUT:" })

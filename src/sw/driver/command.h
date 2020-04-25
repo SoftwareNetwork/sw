@@ -418,9 +418,6 @@ private:
 
 struct SW_DRIVER_CPP_API CommandBuilder
 {
-    mutable std::shared_ptr<::sw::builder::Command> c;
-    mutable bool stopped = false;
-
     CommandBuilder(Target &);
     CommandBuilder(const CommandBuilder &) = default;
     CommandBuilder &operator=(const CommandBuilder &) = default;
@@ -429,69 +426,63 @@ struct SW_DRIVER_CPP_API CommandBuilder
     const CommandBuilder &operator|(::sw::builder::Command &) const;
 
     Target &getTarget() const;
+
     void setCommand(const std::shared_ptr<::sw::builder::Command> &);
+    auto &getCommand() { return c; }
+    const auto &getCommand() const { return c; }
 
-private:
-    Target *target;
-};
+    ::sw::builder::Command *operator->() { return c.get(); }
+    const ::sw::builder::Command *operator->() const { return c.get(); }
 
+    //
 #define DECLARE_STREAM_OP(t) \
-    SW_DRIVER_CPP_API        \
-    const CommandBuilder &operator<<(const CommandBuilder &, const t &)
+    CommandBuilder &operator<<(const t &)
 
-DECLARE_STREAM_OP(::sw::cmd::tag_in);
-DECLARE_STREAM_OP(::sw::cmd::tag_out);
-DECLARE_STREAM_OP(::sw::cmd::tag_stdin);
-DECLARE_STREAM_OP(::sw::cmd::tag_stdout);
-DECLARE_STREAM_OP(::sw::cmd::tag_stderr);
-DECLARE_STREAM_OP(::sw::cmd::tag_wdir);
-DECLARE_STREAM_OP(::sw::cmd::tag_end);
-DECLARE_STREAM_OP(::sw::cmd::tag_dep);
-DECLARE_STREAM_OP(::sw::cmd::tag_env);
-DECLARE_STREAM_OP(::sw::cmd::tag_prog_dep);
-DECLARE_STREAM_OP(::sw::cmd::tag_prog_prog);
-DECLARE_STREAM_OP(::sw::cmd::tag_prog_tgt);
-DECLARE_STREAM_OP(Command::LazyCallback);
+    DECLARE_STREAM_OP(::sw::cmd::tag_in);
+    DECLARE_STREAM_OP(::sw::cmd::tag_out);
+    DECLARE_STREAM_OP(::sw::cmd::tag_stdin);
+    DECLARE_STREAM_OP(::sw::cmd::tag_stdout);
+    DECLARE_STREAM_OP(::sw::cmd::tag_stderr);
+    DECLARE_STREAM_OP(::sw::cmd::tag_wdir);
+    DECLARE_STREAM_OP(::sw::cmd::tag_end);
+    DECLARE_STREAM_OP(::sw::cmd::tag_dep);
+    DECLARE_STREAM_OP(::sw::cmd::tag_env);
+    DECLARE_STREAM_OP(::sw::cmd::tag_prog_dep);
+    DECLARE_STREAM_OP(::sw::cmd::tag_prog_prog);
+    DECLARE_STREAM_OP(::sw::cmd::tag_prog_tgt);
+    DECLARE_STREAM_OP(Command::LazyCallback);
 
-template <class T>
-const CommandBuilder &operator<<(const CommandBuilder &cb, const T &t)
-{
-    auto add_arg = [&cb](const String &s)
+    template <class T>
+    CommandBuilder &operator<<(const T &t)
     {
-        if (cb.stopped)
-            return;
-        cb.c->arguments.push_back(s);
-    };
+        auto add_arg = [this](const String &s)
+        {
+            if (stopped)
+                return;
+            c->arguments.push_back(s);
+        };
 
-    if constexpr (std::is_same_v<T, path>)
-    {
-        if (!cb.stopped)
+        if constexpr (std::is_same_v<T, path>)
             add_arg(t.u8string());
-    }
-    else if constexpr (std::is_same_v<T, String>)
-    {
-        if (!cb.stopped)
+        else if constexpr (std::is_same_v<T, String>)
             add_arg(t);
-    }
-    else if constexpr (std::is_arithmetic_v<T>)
-    {
-        if (!cb.stopped)
+        else if constexpr (std::is_arithmetic_v<T>)
             add_arg(std::to_string(t));
-    }
-    else if constexpr (std::is_invocable_v<T>)
-    {
-        return cb << Command::LazyCallback(t);
-    }
-    else
-    {
-        // add static assert?
-        if (!cb.stopped)
+        else if constexpr (std::is_invocable_v<T>)
+            *this << Command::LazyCallback(t);
+        else
+            // add static assert?
             add_arg(t);
+        return *this;
     }
-    return cb;
-}
 
 #undef DECLARE_STREAM_OP
+
+private:
+    std::shared_ptr<::sw::builder::Command> c;
+    bool stopped = false;
+    Target *target;
+};
 
 } // namespace driver
 

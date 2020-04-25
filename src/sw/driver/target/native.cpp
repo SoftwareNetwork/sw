@@ -3527,8 +3527,8 @@ void NativeCompiledTarget::prepare_pass5()
             objs.insert(f->output);
         auto c = addCommand(SW_VISIBLE_BUILTIN_FUNCTION(create_def_file));
         c << cmd::out(def);
-        std::dynamic_pointer_cast<builder::BuiltinCommand>(c.c)->push_back(objs);
-        c.c->addInput(objs);
+        std::dynamic_pointer_cast<builder::BuiltinCommand>(c.getCommand())->push_back(objs);
+        c->addInput(objs);
     }
 
     // add def file to linker
@@ -3860,10 +3860,10 @@ void NativeCompiledTarget::processCircular(Files &obj)
         c << cmd::out(out);
 
         auto cmd = Linker->createCommand(getMainBuild());
-        cmd->dependent_commands.insert(c.c);
-        std::dynamic_pointer_cast<builder::BuiltinCommand>(c.c)->push_back(dlls);
-        c.c->addInput(dlls);
-        cmds.insert(c.c);
+        cmd->dependent_commands.insert(c.getCommand());
+        std::dynamic_pointer_cast<builder::BuiltinCommand>(c.getCommand())->push_back(dlls);
+        c->addInput(dlls);
+        cmds.insert(c.getCommand());
         outputfile = out;
     }
 

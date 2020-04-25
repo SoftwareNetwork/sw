@@ -875,12 +875,12 @@ driver::CommandBuilder Target::addCommand(const std::shared_ptr<builder::Command
     // set as default
     // source dir contains more files than bdir?
     // sdir or bdir?
-    cb.c->working_directory = SourceDir;
+    cb->working_directory = SourceDir;
     //setupCommand(*cb.c);
     if (!DryRun)
     {
-        cb.c->command_storage = getCommandStorage();
-        cb.c->setContext(getMainBuild());
+        cb->command_storage = getCommandStorage();
+        cb->setContext(getMainBuild());
     }
     return cb;
 }
@@ -927,7 +927,7 @@ Test Target::addTest1(const String &name, const Target &tgt)
     d->getSettings() = getSettings(); // same settings!
     d->setTarget(tgt); // "resolve" right here
     // manual setup
-    std::dynamic_pointer_cast<::sw::driver::Command>(c.c)->setProgram(d);
+    std::dynamic_pointer_cast<::sw::driver::Command>(c.getCommand())->setProgram(d);
     Storage.push_back(d); // keep dependency safe, because there's weak ptr in command
     Test t(c);
     addTest(t, name);
@@ -936,9 +936,9 @@ Test Target::addTest1(const String &name, const Target &tgt)
 
 void Target::addTest(Test &cb, const String &name)
 {
-    auto &c = *cb.c;
-    c.name = name;
-    tests.insert(cb.c);
+    auto &c = cb.getCommand();
+    c->name = name;
+    tests.insert(c);
 }
 
 bool ProjectTarget::init()
