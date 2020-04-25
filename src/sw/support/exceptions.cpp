@@ -23,5 +23,6 @@ const char *ExceptionVector::what() const noexcept
         catch (std::exception &e2) { s += e2.what() + "\n"s; }
         catch (...) { s += "Unhandled exception\n"; }
     }
+    s += "Total errors: " + std::to_string(v.size()) + "\n";
     return s.c_str();
 }
