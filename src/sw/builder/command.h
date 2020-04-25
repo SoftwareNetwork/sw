@@ -26,26 +26,6 @@
 #include <condition_variable>
 #include <mutex>
 
-#define SW_INTERNAL_ADD_COMMAND(name, target) \
-    (target).Storage.push_back(name)
-
-#define SW_MAKE_CUSTOM_COMMAND(type, name, target, ...) \
-    auto name = std::make_shared<type>((target).getContext(), __VA_ARGS__); \
-    name->setContext((target).getMainBuild())
-
-#ifdef _MSC_VER
-#define SW_MAKE_CUSTOM_COMMAND_AND_ADD(type, name, target, ...) \
-    SW_MAKE_CUSTOM_COMMAND(type, name, target, __VA_ARGS__);    \
-    SW_INTERNAL_ADD_COMMAND(name, target)
-#else
-#define SW_MAKE_CUSTOM_COMMAND_AND_ADD(type, name, target, ...) \
-    SW_MAKE_CUSTOM_COMMAND(type, name, target, ##__VA_ARGS__);  \
-    SW_INTERNAL_ADD_COMMAND(name, target)
-#endif
-
-#define SW_MAKE_COMMAND_AND_ADD(name, target) \
-    SW_MAKE_CUSTOM_COMMAND_AND_ADD(Command, name, target)
-
 namespace sw
 {
 
