@@ -1039,10 +1039,7 @@ Files Command::getGeneratedDirs() const
     for (auto &d : outputs)
         dirs.insert(get_parent(d));
     for (auto &d : output_dirs)
-    {
-        if (!d.empty())
-            dirs.insert(d);
-    }
+        dirs.insert(d);
     return dirs;
 }
 
