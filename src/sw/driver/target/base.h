@@ -367,6 +367,9 @@ public:
     path getFile(const Target &dep, const path &fn = {});
 
     //
+    DependencyPtr constructThisPackageDependency(const String &name);
+
+    //
     virtual TargetType getType() const { return TargetType::Unspecified; }
     String getTypeName() const { return toString(getType()); }
     bool hasSameProject(const ITarget &t) const;

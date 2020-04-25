@@ -941,6 +941,12 @@ void Target::addTest(Test &cb, const String &name)
     tests.insert(c);
 }
 
+DependencyPtr Target::constructThisPackageDependency(const String &name)
+{
+    PackageId id(NamePrefix / name, getPackage().getVersion());
+    return std::make_shared<Dependency>(id);
+}
+
 bool ProjectTarget::init()
 {
     current_project = getPackage();
