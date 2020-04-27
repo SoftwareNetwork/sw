@@ -819,11 +819,19 @@ bool Check::execute(SwBuild &b) const
     auto s = setupSolution(*b, f);                                \
     s.module_data.current_settings = getSettings()
 
-#define EXECUTE_SOLUTION()                             \
-    for (auto &t : s.module_data.added_targets)        \
-        b->getTargets()[t->getPackage()].push_back(t); \
-    if (!execute(*b))                                  \
+#define ADD_TARGETS                             \
+    for (auto &t : s.module_data.added_targets) \
+    b->getTargets()[t->getPackage()].push_back(t)
+
+#define EXECUTE_SOLUTION() \
+    ADD_TARGETS;           \
+    if (!execute(*b))      \
     return
+
+// without exception
+#define EXECUTE_SOLUTION_RET() \
+    ADD_TARGETS;               \
+    auto r = execute(*b)
 
 FunctionExists::FunctionExists(const String &f, const String &def)
 {
@@ -1334,7 +1342,7 @@ void SourceCompiles::run() const
         e.CompileOptions.push_back(f);
     e += f;
 
-    EXECUTE_SOLUTION();
+    EXECUTE_SOLUTION_RET();
 
     auto cmds = e.getCommands();
     cmds.erase(e.getCommand());
