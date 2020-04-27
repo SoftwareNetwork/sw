@@ -906,12 +906,7 @@ Test Target::addTest(const String &name)
     return addTest1(getTestName(name), *this);
 }
 
-Test Target::addTest(const Target &t)
-{
-    return addTest1(getTestName(), t);
-}
-
-Test Target::addTest(const String &name, const Target &tgt)
+Test Target::addTest(const Target &tgt, const String &name)
 {
     return addTest1(getTestName(name), tgt);
 }

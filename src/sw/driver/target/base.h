@@ -383,8 +383,7 @@ public:
     // TODO: implement some of https://cmake.org/cmake/help/latest/manual/cmake-properties.7.html#properties-on-tests
     Test addTest();
     Test addTest(const String &name);
-    Test addTest(const String &name, const Target &t);
-    Test addTest(const Target &t);
+    Test addTest(const Target &runnable_test, const String &name = {});
 
 private:
     void addTest(Test &cb, const String &name);
