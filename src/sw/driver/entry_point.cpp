@@ -508,6 +508,10 @@ decltype(auto) PrepareConfig::commonActions(Build &b, const InputData &d, const 
 
     if (lib.getCompilerType() == CompilerType::MSVC)
         lib.CompileOptions.push_back("/utf-8");
+    // for checks
+    // prevent "" be convered into bools
+    if (lib.getCompilerType() == CompilerType::Clang)
+        lib.CompileOptions.push_back("-Werror=string-conversion");
 
     if (lib.getBuildSettings().TargetOS.is(OSType::Windows))
     {
