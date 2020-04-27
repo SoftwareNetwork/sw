@@ -99,9 +99,6 @@ struct SW_DRIVER_CPP_API Check : CommandNode
     // otherwise define as HAVE_SOMETHING=0
     bool DefineIfZero = false;
 
-    // all checks could be C or CPP
-    bool CPP = false;
-
     // all checks have their parameters
     CheckParameters Parameters;
 
@@ -118,7 +115,7 @@ struct SW_DRIVER_CPP_API Check : CommandNode
     mutable bool manual_setup_use_stdout = false;
     mutable path executable; // for cc copying
 
-    Check() = default;
+    Check();
     Check(const Check &) = delete;
     Check &operator=(const Check &) = delete;
     virtual ~Check();
@@ -138,10 +135,15 @@ struct SW_DRIVER_CPP_API Check : CommandNode
     virtual String getSourceFileContents() const = 0;
     virtual CheckType getType() const = 0;
     void clean() const;
+    void setFileName(const path &fn) { filename = fn; }
+    void setCpp();
+    virtual int getVersion() const { return 1; }
 
     bool lessDuringExecution(const CommandNode &rhs) const override;
 
 protected:
+    path filename;
+
     virtual void run() const {}
     path getOutputFilename() const;
     Build setupSolution(SwBuild &b, const path &f) const;
@@ -155,7 +157,6 @@ private:
     mutable std::vector<std::shared_ptr<builder::Command>> commands; // for cleanup
     mutable path uniq_name;
 
-private:
     const path &getUniqueName() const;
 };
 
@@ -347,8 +348,11 @@ struct SW_DRIVER_CPP_API CheckSet1
     Check &checkTypeAlignment(const String &type, const String &def, bool cpp = false);
 
     Check &checkSourceCompiles(const String &def, const String &src, bool cpp = false);
+    Check &checkSourceCompiles(const String &def, const String &src, const path &fn);
     Check &checkSourceLinks(const String &def, const String &src, bool cpp = false);
+    Check &checkSourceLinks(const String &def, const String &src, const path &fn);
     Check &checkSourceRuns(const String &def, const String &src, bool cpp = false);
+    Check &checkSourceRuns(const String &def, const String &src, const path &fn);
 
     auto begin() { return all.begin(); }
     auto end() { return all.end(); }

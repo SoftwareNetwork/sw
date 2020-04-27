@@ -604,9 +604,19 @@ int main() { return IsBigEndian(); }
     throw SW_RUNTIME_ERROR("Cannot create execution plan because of cyclic dependencies");
 }
 
+Check::Check()
+{
+    setFileName("x.c");
+}
+
 Check::~Check()
 {
     clean();
+}
+
+void Check::setCpp()
+{
+    setFileName("x.cpp");
 }
 
 void Check::clean() const
@@ -661,7 +671,8 @@ size_t Check::getHash() const
     size_t h = 0;
     hash_combine(h, data);
     hash_combine(h, Parameters.getHash());
-    hash_combine(h, CPP);
+    hash_combine(h, filename);
+    hash_combine(h, getVersion());
     return h;
 }
 
@@ -724,10 +735,7 @@ path Check::getOutputFilename() const
     auto up = getUniqueName();
     d /= up;
     auto f = d;
-    if (!CPP)
-        f /= "x.c";
-    else
-        f /= "x.cpp";
+    f /= filename;
     return f;
 }
 
@@ -905,7 +913,7 @@ IncludeExists::IncludeExists(const String &i, const String &def)
 String IncludeExists::getSourceFileContents() const
 {
     String src = "#include <" + data + ">";
-    if (!CPP)
+    if (filename.extension() == ".c")
         src += R"(
 #ifdef __CLASSIC_C__
 int main()
@@ -1430,42 +1438,48 @@ CompilerFlag::CompilerFlag(const String &def, const Strings &compiler_flags)
 FunctionExists &CheckSet1::checkFunctionExists(const String &function, bool cpp)
 {
     auto c = add<FunctionExists>(function);
-    c->CPP = cpp;
+    if (cpp)
+        c->setCpp();
     return *c;
 }
 
 FunctionExists &CheckSet1::checkFunctionExists(const String &function, const String &def, bool cpp)
 {
     auto c = add<FunctionExists>(function, def);
-    c->CPP = cpp;
+    if (cpp)
+        c->setCpp();
     return *c;
 }
 
 Check &CheckSet1::checkIncludeExists(const String &include, bool cpp)
 {
     auto c = add<IncludeExists>(include);
-    c->CPP = cpp;
+    if (cpp)
+        c->setCpp();
     return *c;
 }
 
 Check &CheckSet1::checkIncludeExists(const String &include, const String &def, bool cpp)
 {
     auto c = add<IncludeExists>(include, def);
-    c->CPP = cpp;
+    if (cpp)
+        c->setCpp();
     return *c;
 }
 
 Check &CheckSet1::checkLibraryFunctionExists(const String &library, const String &function, bool cpp)
 {
     auto c = add<LibraryFunctionExists>(library, function);
-    c->CPP = cpp;
+    if (cpp)
+        c->setCpp();
     return *c;
 }
 
 Check &CheckSet1::checkLibraryFunctionExists(const String &library, const String &function, const String &def, bool cpp)
 {
     auto c = add<LibraryFunctionExists>(library, function, def);
-    c->CPP = cpp;
+    if (cpp)
+        c->setCpp();
     return *c;
 }
 
@@ -1482,91 +1496,125 @@ Check &CheckSet1::checkLibraryExists(const String &library, const String &def, b
 Check &CheckSet1::checkSymbolExists(const String &symbol, bool cpp)
 {
     auto c = add<SymbolExists>(symbol);
-    c->CPP = cpp;
+    if (cpp)
+        c->setCpp();
     return *c;
 }
 
 Check &CheckSet1::checkSymbolExists(const String &symbol, const String &def, bool cpp)
 {
     auto c = add<SymbolExists>(symbol, def);
-    c->CPP = cpp;
+    if (cpp)
+        c->setCpp();
     return *c;
 }
 
 Check &CheckSet1::checkStructMemberExists(const String &s, const String &member, bool cpp)
 {
     auto c = add<StructMemberExists>(s, member);
-    c->CPP = cpp;
+    if (cpp)
+        c->setCpp();
     return *c;
 }
 
 Check &CheckSet1::checkStructMemberExists(const String &s, const String &member, const String &def, bool cpp)
 {
     auto c = add<StructMemberExists>(s, member, def);
-    c->CPP = cpp;
+    if (cpp)
+        c->setCpp();
     return *c;
 }
 
 Check &CheckSet1::checkDeclarationExists(const String &decl, bool cpp)
 {
     auto c = add<DeclarationExists>(decl);
-    c->CPP = cpp;
+    if (cpp)
+        c->setCpp();
     return *c;
 }
 
 Check &CheckSet1::checkDeclarationExists(const String &decl, const String &def, bool cpp)
 {
     auto c = add<DeclarationExists>(decl, def);
-    c->CPP = cpp;
+    if (cpp)
+        c->setCpp();
     return *c;
 }
 
 Check &CheckSet1::checkTypeSize(const String &type, bool cpp)
 {
     auto c = add<TypeSize>(type);
-    c->CPP = cpp;
+    if (cpp)
+        c->setCpp();
     return *c;
 }
 
 Check &CheckSet1::checkTypeSize(const String &type, const String &def, bool cpp)
 {
     auto c = add<TypeSize>(type, def);
-    c->CPP = cpp;
+    if (cpp)
+        c->setCpp();
     return *c;
 }
 
 Check &CheckSet1::checkTypeAlignment(const String &type, bool cpp)
 {
     auto c = add<TypeAlignment>(type);
-    c->CPP = cpp;
+    if (cpp)
+        c->setCpp();
     return *c;
 }
 
 Check &CheckSet1::checkTypeAlignment(const String &type, const String &def, bool cpp)
 {
     auto c = add<TypeAlignment>(type, def);
-    c->CPP = cpp;
+    if (cpp)
+        c->setCpp();
     return *c;
 }
 
 Check &CheckSet1::checkSourceCompiles(const String &def, const String &src, bool cpp)
 {
     auto c = add<SourceCompiles>(def, src);
-    c->CPP = cpp;
+    if (cpp)
+        c->setCpp();
+    return *c;
+}
+
+Check &CheckSet1::checkSourceCompiles(const String &def, const String &src, const path &fn)
+{
+    auto c = add<SourceCompiles>(def, src);
+    c->setFileName(fn);
     return *c;
 }
 
 Check &CheckSet1::checkSourceLinks(const String &def, const String &src, bool cpp)
 {
     auto c = add<SourceLinks>(def, src);
-    c->CPP = cpp;
+    if (cpp)
+        c->setCpp();
+    return *c;
+}
+
+Check &CheckSet1::checkSourceLinks(const String &def, const String &src, const path &fn)
+{
+    auto c = add<SourceLinks>(def, src);
+    c->setFileName(fn);
     return *c;
 }
 
 Check &CheckSet1::checkSourceRuns(const String &def, const String &src, bool cpp)
 {
     auto c = add<SourceRuns>(def, src);
-    c->CPP = cpp;
+    if (cpp)
+        c->setCpp();
+    return *c;
+}
+
+Check &CheckSet1::checkSourceRuns(const String &def, const String &src, const path &fn)
+{
+    auto c = add<SourceRuns>(def, src);
+    c->setFileName(fn);
     return *c;
 }
 

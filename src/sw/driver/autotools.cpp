@@ -762,15 +762,15 @@ void ac_processor::process_AC_CHECK_DECLS(command &c)
 void ac_processor::process_AC_COMPILE_IFELSE(command &c)
 {
     auto p = ifdef_add<sw::SourceCompiles>(c);
-    if (p)
-        p->CPP = p;
+    if (cpp)
+        p->setCpp();
 }
 
 void ac_processor::process_AC_RUN_IFELSE(command &c)
 {
     auto p = ifdef_add<sw::SourceRuns>(c);
-    if (p)
-        p->CPP = p;
+    if (cpp)
+        p->setCpp();
 }
 
 void ac_processor::process_AC_TRY_COMPILE(command &c)
@@ -785,8 +785,8 @@ void ac_processor::process_AC_TRY_COMPILE(command &c)
     }
 
     auto p = try_add<sw::SourceCompiles>(c);
-    if (p)
-        p->CPP = cpp;
+    if (cpp)
+        p->setCpp();
 }
 
 void ac_processor::process_AC_TRY_LINK(command &c)
@@ -801,8 +801,8 @@ void ac_processor::process_AC_TRY_LINK(command &c)
     }
 
     auto p = try_add<sw::SourceLinks>(c);
-    if (p)
-        p->CPP = cpp;
+    if (cpp)
+        p->setCpp();
 }
 
 void ac_processor::process_AC_TRY_RUN(command &c)
@@ -817,8 +817,8 @@ void ac_processor::process_AC_TRY_RUN(command &c)
     }
 
     auto p = try_add<sw::SourceRuns>(c);
-    if (p)
-        p->CPP = cpp;
+    if (cpp)
+        p->setCpp();
 }
 
 void ac_processor::process_AC_CHECK_HEADER(command &c)
@@ -829,7 +829,10 @@ void ac_processor::process_AC_CHECK_HEADER(command &c)
         if (cpp)
         {
             for (auto &o : out)
-                o->CPP = cpp;
+            {
+                if (cpp)
+                    o->setCpp();
+            }
         }
     }
     else
@@ -848,13 +851,13 @@ void ac_processor::process_AC_CHECK_HEADER(command &c)
                 auto params = parse_arguments(c.params[1].substr(cmd.size() + 1));
                 auto p = checks.add<sw::IncludeExists>(c.params[0], params[0]);
                 if (cpp)
-                    p->CPP = cpp;
+                    p->setCpp();
             }
             else if (cmd == "AC_CHECK_HEADER")
             {
                 auto p = checks.add<sw::IncludeExists>(c.params[0]);
                 if (cpp)
-                    p->CPP = cpp;
+                    p->setCpp();
 
                 command c2;
                 c2.name = cmd;
@@ -870,7 +873,7 @@ void ac_processor::process_AC_CHECK_HEADER(command &c)
         {
             auto p = checks.add<sw::IncludeExists>(c.params[0]);
             if (cpp)
-                p->CPP = cpp;
+                p->setCpp();
         }
     }
 }
