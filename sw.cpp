@@ -319,7 +319,7 @@ void build(Solution &s)
         auto add_build_test_with_configs = [&add_build_test, &add_configs, &root](const auto &dir)
         {
             auto t = add_build_test(root / dir);
-            t.name = dir;
+            t.getCommand()->name = dir;
             add_configs(t.getCommand());
             return t;
         };
