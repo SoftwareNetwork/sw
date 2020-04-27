@@ -316,10 +316,20 @@ void build(Solution &s)
         };
 
         auto root = client.SourceDir / "test" / "build";
-        auto t = add_build_test(root);
-        add_configs(t.getCommand());
-        t = add_build_test(root / "simple/sw.cpp");
-        add_configs(t.getCommand());
+        auto add_build_test_with_configs = [&add_build_test, &add_configs, &root](const auto &dir)
+        {
+            auto t = add_build_test(root / dir);
+            t.name = dir;
+            add_configs(t.getCommand());
+            return t;
+        };
+
+        add_build_test_with_configs("simple/sw.cpp");
+        add_build_test_with_configs("c/exe");
+        add_build_test_with_configs("c/api");
+        add_build_test_with_configs("cpp/static");
+        add_build_test_with_configs("cpp/multiconf");
+        add_build_test_with_configs("cpp/pch");
     }
 
     if (s.getExternalVariables()["with-gui"] != "true")
