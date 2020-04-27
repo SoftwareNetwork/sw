@@ -28,6 +28,8 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "abi");
 
+// libabigail for ELF
+
 SUBCOMMAND_DECL(abi)
 {
 #ifndef _WIN32
