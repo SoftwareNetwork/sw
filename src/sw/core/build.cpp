@@ -1279,7 +1279,11 @@ void SwBuild::test()
         {
             for (auto &c : tgt->getTests())
             {
-                auto test_dir = dir / tgt->getSettings().getHash() / tgt->getPackage().toString() / c->getName();
+                auto test_dir_name = c->getName();
+                // don't go deeper for now?
+                boost::replace_all(test_dir_name, "/", ".");
+                boost::replace_all(test_dir_name, "\\", ".");
+                auto test_dir = dir / tgt->getSettings().getHash() / tgt->getPackage().toString() / test_dir_name;
                 fs::create_directories(test_dir);
 
                 //
