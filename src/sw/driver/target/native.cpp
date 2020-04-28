@@ -434,7 +434,10 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
         if (getBuildSettings().TargetOS.is(OSType::Windows))
         {
             auto c = C->createCommand(getMainBuild());
-            c->push_back("-nostdinc");
+            // this one leaves default clang runtime library include path (from installed dir)
+            c->push_back("-nostdlibinc");
+            // this one cleans all default include dirs
+            //c->push_back("-nostdinc");
         }
         /*if (getBuildSettings().TargetOS.isApple())
         {
