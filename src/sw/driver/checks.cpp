@@ -66,8 +66,8 @@ static String toString(CheckType t)
         return "type";
     case CheckType::TypeAlignment:
         return "alignment";
-    case CheckType::Library:
-        return "library";
+    //case CheckType::Library:
+        //return "library";
     case CheckType::LibraryFunction:
         return "library function";
     case CheckType::Symbol:
@@ -1443,186 +1443,75 @@ CompilerFlag::CompilerFlag(const String &def, const Strings &compiler_flags)
         this->compiler_flags.push_back(f);
 }
 
-FunctionExists &CheckSet1::checkFunctionExists(const String &function, bool cpp)
-{
-    auto c = add<FunctionExists>(function);
-    if (cpp)
-        c->setCpp();
-    return *c;
-}
-
-FunctionExists &CheckSet1::checkFunctionExists(const String &function, const String &def, bool cpp)
+FunctionExists &CheckSet1::checkFunctionExists(const String &function, const String &def)
 {
     auto c = add<FunctionExists>(function, def);
-    if (cpp)
-        c->setCpp();
     return *c;
 }
 
-Check &CheckSet1::checkIncludeExists(const String &include, bool cpp)
-{
-    auto c = add<IncludeExists>(include);
-    if (cpp)
-        c->setCpp();
-    return *c;
-}
-
-Check &CheckSet1::checkIncludeExists(const String &include, const String &def, bool cpp)
+IncludeExists &CheckSet1::checkIncludeExists(const String &include, const String &def)
 {
     auto c = add<IncludeExists>(include, def);
-    if (cpp)
-        c->setCpp();
     return *c;
 }
 
-Check &CheckSet1::checkLibraryFunctionExists(const String &library, const String &function, bool cpp)
+/*FunctionExists &CheckSet1::checkLibraryExists(const String &library, const String &def)
 {
-    auto c = add<LibraryFunctionExists>(library, function);
-    if (cpp)
-        c->setCpp();
+    auto c = add<FunctionExists>(library, def);
     return *c;
-}
+}*/
 
-Check &CheckSet1::checkLibraryFunctionExists(const String &library, const String &function, const String &def, bool cpp)
+LibraryFunctionExists &CheckSet1::checkLibraryFunctionExists(const String &library, const String &function, const String &def)
 {
     auto c = add<LibraryFunctionExists>(library, function, def);
-    if (cpp)
-        c->setCpp();
     return *c;
 }
 
-Check &CheckSet1::checkLibraryExists(const String &library, bool cpp)
-{
-    return *add<FunctionExists>(library);
-}
-
-Check &CheckSet1::checkLibraryExists(const String &library, const String &def, bool cpp)
-{
-    return *add<FunctionExists>(library);
-}
-
-Check &CheckSet1::checkSymbolExists(const String &symbol, bool cpp)
-{
-    auto c = add<SymbolExists>(symbol);
-    if (cpp)
-        c->setCpp();
-    return *c;
-}
-
-Check &CheckSet1::checkSymbolExists(const String &symbol, const String &def, bool cpp)
+SymbolExists &CheckSet1::checkSymbolExists(const String &symbol, const String &def)
 {
     auto c = add<SymbolExists>(symbol, def);
-    if (cpp)
-        c->setCpp();
     return *c;
 }
 
-Check &CheckSet1::checkStructMemberExists(const String &s, const String &member, bool cpp)
-{
-    auto c = add<StructMemberExists>(s, member);
-    if (cpp)
-        c->setCpp();
-    return *c;
-}
-
-Check &CheckSet1::checkStructMemberExists(const String &s, const String &member, const String &def, bool cpp)
+StructMemberExists &CheckSet1::checkStructMemberExists(const String &s, const String &member, const String &def)
 {
     auto c = add<StructMemberExists>(s, member, def);
-    if (cpp)
-        c->setCpp();
     return *c;
 }
 
-Check &CheckSet1::checkDeclarationExists(const String &decl, bool cpp)
-{
-    auto c = add<DeclarationExists>(decl);
-    if (cpp)
-        c->setCpp();
-    return *c;
-}
-
-Check &CheckSet1::checkDeclarationExists(const String &decl, const String &def, bool cpp)
+DeclarationExists &CheckSet1::checkDeclarationExists(const String &decl, const String &def)
 {
     auto c = add<DeclarationExists>(decl, def);
-    if (cpp)
-        c->setCpp();
     return *c;
 }
 
-Check &CheckSet1::checkTypeSize(const String &type, bool cpp)
-{
-    auto c = add<TypeSize>(type);
-    if (cpp)
-        c->setCpp();
-    return *c;
-}
-
-Check &CheckSet1::checkTypeSize(const String &type, const String &def, bool cpp)
+TypeSize &CheckSet1::checkTypeSize(const String &type, const String &def)
 {
     auto c = add<TypeSize>(type, def);
-    if (cpp)
-        c->setCpp();
     return *c;
 }
 
-Check &CheckSet1::checkTypeAlignment(const String &type, bool cpp)
-{
-    auto c = add<TypeAlignment>(type);
-    if (cpp)
-        c->setCpp();
-    return *c;
-}
-
-Check &CheckSet1::checkTypeAlignment(const String &type, const String &def, bool cpp)
+TypeAlignment &CheckSet1::checkTypeAlignment(const String &type, const String &def)
 {
     auto c = add<TypeAlignment>(type, def);
-    if (cpp)
-        c->setCpp();
     return *c;
 }
 
-Check &CheckSet1::checkSourceCompiles(const String &def, const String &src, bool cpp)
+SourceCompiles &CheckSet1::checkSourceCompiles(const String &def, const String &src)
 {
     auto c = add<SourceCompiles>(def, src);
-    if (cpp)
-        c->setCpp();
     return *c;
 }
 
-Check &CheckSet1::checkSourceCompiles(const String &def, const String &src, const path &fn)
-{
-    auto c = add<SourceCompiles>(def, src);
-    c->setFileName(fn);
-    return *c;
-}
-
-Check &CheckSet1::checkSourceLinks(const String &def, const String &src, bool cpp)
+SourceLinks &CheckSet1::checkSourceLinks(const String &def, const String &src)
 {
     auto c = add<SourceLinks>(def, src);
-    if (cpp)
-        c->setCpp();
     return *c;
 }
 
-Check &CheckSet1::checkSourceLinks(const String &def, const String &src, const path &fn)
-{
-    auto c = add<SourceLinks>(def, src);
-    c->setFileName(fn);
-    return *c;
-}
-
-Check &CheckSet1::checkSourceRuns(const String &def, const String &src, bool cpp)
+SourceRuns &CheckSet1::checkSourceRuns(const String &def, const String &src)
 {
     auto c = add<SourceRuns>(def, src);
-    if (cpp)
-        c->setCpp();
-    return *c;
-}
-
-Check &CheckSet1::checkSourceRuns(const String &def, const String &src, const path &fn)
-{
-    auto c = add<SourceRuns>(def, src);
-    c->setFileName(fn);
     return *c;
 }
 

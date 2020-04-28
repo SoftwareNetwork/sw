@@ -51,7 +51,7 @@ enum class CheckType
     Include,
     Type,
     TypeAlignment,
-    Library,
+    //Library,
     LibraryFunction,
     Symbol,
     StructMember,
@@ -320,39 +320,19 @@ struct SW_DRIVER_CPP_API CheckSet1
         return std::static_pointer_cast<T>(i->second);
     }
 
-    FunctionExists &checkFunctionExists(const String &function, bool cpp = false);
-    FunctionExists &checkFunctionExists(const String &function, const String &def, bool cpp = false);
+    FunctionExists &checkFunctionExists(const String &function, const String &def = {});
+    IncludeExists &checkIncludeExists(const String &function, const String &def = {});
+    //FunctionExists &checkLibraryExists(const String &library, const String &def = {});
+    LibraryFunctionExists &checkLibraryFunctionExists(const String &library, const String &function, const String &def = {});
+    SymbolExists &checkSymbolExists(const String &symbol, const String &def = {});
+    StructMemberExists &checkStructMemberExists(const String &s, const String &member, const String &def = {});
+    DeclarationExists &checkDeclarationExists(const String &decl, const String &def = {});
+    TypeSize &checkTypeSize(const String &type, const String &def = {});
+    TypeAlignment &checkTypeAlignment(const String &type, const String &def = {});
 
-    Check &checkIncludeExists(const String &function, bool cpp = false);
-    Check &checkIncludeExists(const String &function, const String &def, bool cpp = false);
-
-    Check &checkLibraryExists(const String &library, bool cpp = false);
-    Check &checkLibraryExists(const String &library, const String &def, bool cpp = false);
-
-    Check &checkLibraryFunctionExists(const String &library, const String &function, bool cpp = false);
-    Check &checkLibraryFunctionExists(const String &library, const String &function, const String &def, bool cpp = false);
-
-    Check &checkSymbolExists(const String &symbol, bool cpp = false);
-    Check &checkSymbolExists(const String &symbol, const String &def, bool cpp = false);
-
-    Check &checkStructMemberExists(const String &s, const String &member, bool cpp = false);
-    Check &checkStructMemberExists(const String &s, const String &member, const String &def, bool cpp = false);
-
-    Check &checkDeclarationExists(const String &decl, bool cpp = false);
-    Check &checkDeclarationExists(const String &decl, const String &def, bool cpp = false);
-
-    Check &checkTypeSize(const String &type, bool cpp = false);
-    Check &checkTypeSize(const String &type, const String &def, bool cpp = false);
-
-    Check &checkTypeAlignment(const String &type, bool cpp = false);
-    Check &checkTypeAlignment(const String &type, const String &def, bool cpp = false);
-
-    Check &checkSourceCompiles(const String &def, const String &src, bool cpp = false);
-    Check &checkSourceCompiles(const String &def, const String &src, const path &fn);
-    Check &checkSourceLinks(const String &def, const String &src, bool cpp = false);
-    Check &checkSourceLinks(const String &def, const String &src, const path &fn);
-    Check &checkSourceRuns(const String &def, const String &src, bool cpp = false);
-    Check &checkSourceRuns(const String &def, const String &src, const path &fn);
+    SourceCompiles &checkSourceCompiles(const String &def, const String &src);
+    SourceLinks &checkSourceLinks(const String &def, const String &src);
+    SourceRuns &checkSourceRuns(const String &def, const String &src);
 
     auto begin() { return all.begin(); }
     auto end() { return all.end(); }
