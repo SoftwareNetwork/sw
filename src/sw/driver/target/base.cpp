@@ -56,39 +56,6 @@ sys.kernel
 namespace sw
 {
 
-bool isExecutable(TargetType t)
-{
-    return
-        0
-        || t == TargetType::NativeExecutable
-        || t == TargetType::CSharpExecutable
-        || t == TargetType::RustExecutable
-        || t == TargetType::GoExecutable
-        || t == TargetType::FortranExecutable
-        || t == TargetType::JavaExecutable
-        || t == TargetType::KotlinExecutable
-        || t == TargetType::DExecutable
-        ;
-}
-
-String toString(TargetType T)
-{
-    switch (T)
-    {
-#define CASE(x) \
-    case TargetType::x: \
-        return #x
-
-        CASE(Project);
-        CASE(Directory);
-        CASE(NativeLibrary);
-        CASE(NativeExecutable);
-
-#undef CASE
-    }
-    throw SW_RUNTIME_ERROR("unreachable code");
-}
-
 void TargetEvents::add(CallbackType t, const std::function<void()> &cb)
 {
     events.push_back({ t, cb });

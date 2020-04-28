@@ -47,12 +47,6 @@ namespace driver
 struct CommandBuilder;
 }
 
-SW_DRIVER_CPP_API
-bool isExecutable(TargetType T);
-
-SW_DRIVER_CPP_API
-String toString(TargetType T);
-
 struct FileStorage;
 struct NativeCompiledTarget;
 struct Build;
@@ -345,7 +339,6 @@ public:
 
     //
     virtual TargetType getType() const { return TargetType::Unspecified; }
-    String getTypeName() const { return toString(getType()); }
     bool hasSameProject(const ITarget &t) const;
     bool isReproducibleBuild() const { return ReproducibleBuild; }
 
