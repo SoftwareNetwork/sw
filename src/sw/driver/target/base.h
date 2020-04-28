@@ -205,7 +205,6 @@ private:
     void addTarget2(Target &t, const PackageId &pkg);
 
     PackagePath constructTargetName(const PackagePath &Name) const;
-    void setupTarget(Target &t) const;
 
     friend struct Assigner;
 };

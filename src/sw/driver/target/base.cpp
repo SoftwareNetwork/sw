@@ -82,8 +82,19 @@ TargetBase::TargetBase()
 }
 
 TargetBase::TargetBase(const TargetBase &rhs)
-    : TargetBaseData(rhs)
 {
+    auto &parent = rhs;
+
+    // take from parent
+    build = &parent.getSolution();
+    main_build_ = parent.main_build_;
+    Scope = parent.Scope;
+    current_project = parent.current_project;
+
+    // take from solution
+    DryRun = getSolution().DryRun;
+    command_storage = getSolution().command_storage;
+    Local = getSolution().NamePrefix.empty();
 }
 
 TargetBase::~TargetBase()
@@ -111,8 +122,15 @@ void TargetBase::addTarget2(Target &t, const PackageId &inpkg)
 {
     t.pkg = std::make_unique<LocalPackage>(getMainBuild().getContext().getLocalStorage(), inpkg);
 
+    // setupTarget
     // set some general settings, then init, then register
-    setupTarget(t);
+    t.ts = getSolution().module_data.current_settings;
+    t.bs = t.ts;
+
+    // find automatic way of copying data?
+    if (!t.current_project)
+        t.current_project = t.getPackage();
+    // setupTarget
 
     // after setup
     t.call(CallbackType::CreateTarget);
@@ -180,35 +198,6 @@ void TargetBase::addTarget2(Target &t, const PackageId &inpkg)
     getSolution().module_data.added_targets.push_back(t.shared_from_this());
 }
 
-void TargetBase::setupTarget(Target &t) const
-{
-    //TargetSettings tid{ getSolution().getSettings().getTargetSettings() };
-    //t->ts = &tid;
-    t.ts = getSolution().module_data.current_settings;
-    t.bs = t.ts;
-
-    // find automatic way of copying data?
-
-    // inherit from this
-    t.build = &getSolution();
-
-    if (auto t0 = dynamic_cast<const Target*>(this))
-        t.source = t0->source ? t0->source->clone() : nullptr;
-
-    t.DryRun = getSolution().DryRun; // ok, take from Solution (Build)
-    t.command_storage = getSolution().command_storage; // ok, take from Solution (Build)
-
-    t.main_build_ = main_build_; // ok, take from here (this, parent)
-
-    t.Scope = Scope; // ok, take from here (this, parent)
-
-    t.current_project = current_project; // ok, take from here (this, parent)
-    if (!t.current_project)
-        t.current_project = t.getPackage();
-
-    t.Local = getSolution().NamePrefix.empty();
-}
-
 const SwContext &TargetBase::getContext() const
 {
     return getMainBuild().getContext();
@@ -237,7 +226,10 @@ const LocalPackage &TargetBase::getPackage() const
 }
 
 Target::Target(TargetBase &parent)
+    : TargetBase(parent)
 {
+    if (auto t0 = dynamic_cast<const Target*>(&parent))
+        source = t0->source ? t0->source->clone() : nullptr;
 }
 
 Target::~Target()
