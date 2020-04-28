@@ -140,115 +140,110 @@ PackagePath TargetBase::constructTargetName(const PackagePath &Name) const
     return NamePrefix / (pkg ? getPackage().getPath() / Name : Name);
 }
 
-TargetBase &TargetBase::addTarget2(bool add, const TargetBaseTypePtr &t, const PackagePath &Name, const Version &V)
+void TargetBase::addTarget2(bool add, Target &t, const PackagePath &Name, const Version &V)
 {
-    t->pkg = std::make_unique<LocalPackage>(getMainBuild().getContext().getLocalStorage(), constructTargetName(Name), V);
+    t.pkg = std::make_unique<LocalPackage>(getMainBuild().getContext().getLocalStorage(), constructTargetName(Name), V);
 
     // set some general settings, then init, then register
-    setupTarget(t.get());
+    setupTarget(t);
 
     // after setup
-    t->call(CallbackType::CreateTarget);
+    t.call(CallbackType::CreateTarget);
 
     // sdir
-    if (!t->isLocal())
-        t->setSourceDirectory(getSolution().getSourceDir(t->getPackage()));
-    if (auto d = t->getPackage().getOverriddenDir())
-        t->setSourceDirectory(*d);
+    if (!t.isLocal())
+        t.setSourceDirectory(getSolution().getSourceDir(t.getPackage()));
+    if (auto d = t.getPackage().getOverriddenDir())
+        t.setSourceDirectory(*d);
 
     // set source dir
-    if (t->SourceDir.empty())
+    if (t.SourceDir.empty())
     {
         if (getSolution().dd)
         {
-            auto i = getSolution().dd->source_dirs_by_package.find(t->getPackage());
+            auto i = getSolution().dd->source_dirs_by_package.find(t.getPackage());
             if (i != getSolution().dd->source_dirs_by_package.end())
-                t->setSourceDirectory(i->second);
+                t.setSourceDirectory(i->second);
         }
 
         // try to get solution provided source dir
         if (getSolution().dd && getSolution().dd->force_source)
-            t->setSource(*getSolution().dd->force_source);
-        if (t->source)
+            t.setSource(*getSolution().dd->force_source);
+        if (t.source)
         {
-            if (auto sd = getSolution().getSourceDir(t->getSource(), t->getPackage().getVersion()); sd)
-                t->setSourceDirectory(sd.value());
+            if (auto sd = getSolution().getSourceDir(t.getSource(), t.getPackage().getVersion()); sd)
+                t.setSourceDirectory(sd.value());
         }
-        if (t->SourceDir.empty())
+        if (t.SourceDir.empty())
         {
             //t->SourceDir = SourceDir.empty() ? getSolution().SourceDir : SourceDir;
             //t->SourceDir = getSolution().SourceDir;
-            t->setSourceDirectory(/*getSolution().*/SourceDirBase); // take from this
+            t.setSourceDirectory(/*getSolution().*/SourceDirBase); // take from this
         }
     }
 
     // before init
     if (!add)
-        return *t;
+        return;
 
-    while (t->init())
+    while (t.init())
         ;
 
-    t->call(CallbackType::CreateTargetInitialized);
+    t.call(CallbackType::CreateTargetInitialized);
 
-    return addChild(t);
-}
-
-TargetBase &TargetBase::addChild(const TargetBaseTypePtr &t)
-{
-    if (t->getType() == TargetType::Directory || t->getType() == TargetType::Project)
+    // add child
+    if (t.getType() == TargetType::Directory || t.getType() == TargetType::Project)
     {
-        dummy_children.push_back(t);
-        return *t;
+        dummy_children.push_back(t.shared_from_this());
+        return;
     }
 
     bool dummy = false;
-    auto it = getMainBuild().getTargets().find(t->getPackage());
+    auto it = getMainBuild().getTargets().find(t.getPackage());
     if (it != getMainBuild().getTargets().end())
     {
-        auto i = it->second.findEqual(t->ts);
+        auto i = it->second.findEqual(t.ts);
         dummy = i != it->second.end();
     }
 
     // we do not activate targets that are not selected for current builds
     if (/*!isLocal() && */
-        dummy || !getSolution().isKnownTarget(t->getPackage()))
+        dummy || !getSolution().isKnownTarget(t.getPackage()))
     {
-        t->DryRun = true;
-        t->ts["dry-run"] = "true";
+        t.DryRun = true;
+        t.ts["dry-run"] = "true";
     }
 
-    getSolution().module_data.added_targets.push_back(t);
-    return *t;
+    getSolution().module_data.added_targets.push_back(t.shared_from_this());
 }
 
-void TargetBase::setupTarget(TargetBaseType *t) const
+void TargetBase::setupTarget(Target &t) const
 {
     //TargetSettings tid{ getSolution().getSettings().getTargetSettings() };
     //t->ts = &tid;
-    t->ts = getSolution().module_data.current_settings;
-    t->bs = t->ts;
+    t.ts = getSolution().module_data.current_settings;
+    t.bs = t.ts;
 
     // find automatic way of copying data?
 
     // inherit from this
-    t->build = &getSolution();
+    t.build = &getSolution();
 
     if (auto t0 = dynamic_cast<const Target*>(this))
-        t->source = t0->source ? t0->source->clone() : nullptr;
+        t.source = t0->source ? t0->source->clone() : nullptr;
 
-    t->DryRun = getSolution().DryRun; // ok, take from Solution (Build)
-    t->command_storage = getSolution().command_storage; // ok, take from Solution (Build)
+    t.DryRun = getSolution().DryRun; // ok, take from Solution (Build)
+    t.command_storage = getSolution().command_storage; // ok, take from Solution (Build)
 
-    t->main_build_ = main_build_; // ok, take from here (this, parent)
+    t.main_build_ = main_build_; // ok, take from here (this, parent)
 
-    t->Scope = Scope; // ok, take from here (this, parent)
+    t.Scope = Scope; // ok, take from here (this, parent)
 
-    t->current_project = current_project; // ok, take from here (this, parent)
-    if (!t->current_project)
-        t->current_project = t->getPackage();
+    t.current_project = current_project; // ok, take from here (this, parent)
+    if (!t.current_project)
+        t.current_project = t.getPackage();
 
-    t->Local = getSolution().NamePrefix.empty();
+    t.Local = getSolution().NamePrefix.empty();
 }
 
 const SwContext &TargetBase::getContext() const

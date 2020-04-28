@@ -222,7 +222,7 @@ private:
         static_assert(std::is_base_of_v<Target, T>, "Provide a valid Target type.");
 
         auto t = createTarget<T>(std::forward<Args>(args)...);
-        addTarget2(true, t, Name, V);
+        addTarget2(true, *t, Name, V);
         return *t;
     }
 
@@ -232,15 +232,14 @@ private:
         static_assert(std::is_base_of_v<Target, T>, "Provide a valid Target type.");
 
         auto t = createTarget<T>(std::forward<Args>(args)...);
-        addTarget2(false, t, Name, V);
+        addTarget2(false, *t, Name, V);
         return t;
     }
 
-    TargetBase &addTarget2(bool add, const TargetBaseTypePtr &t, const PackagePath &Name, const Version &V);
+    void addTarget2(bool add, Target &t, const PackagePath &Name, const Version &V);
 
     PackagePath constructTargetName(const PackagePath &Name) const;
-    TargetBase &addChild(const TargetBaseTypePtr &t);
-    virtual void setupTarget(TargetBaseType *t) const;
+    void setupTarget(Target &t) const;
 
     friend struct Assigner;
 };
