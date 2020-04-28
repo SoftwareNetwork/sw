@@ -187,7 +187,6 @@ protected:
 
     TargetBase(const TargetBase &);
 
-    LocalPackage &getPackageMutable();
     const LocalPackage &getPackage() const;
 
 private:

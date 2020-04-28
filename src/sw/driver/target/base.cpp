@@ -236,13 +236,6 @@ const LocalPackage &TargetBase::getPackage() const
     return *pkg;
 }
 
-LocalPackage &TargetBase::getPackageMutable()
-{
-    if (!pkg)
-        throw SW_LOGIC_ERROR("pkg not created");
-    return *pkg;
-}
-
 Target::Target(TargetBase &parent)
 {
 }
