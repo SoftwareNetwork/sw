@@ -285,6 +285,14 @@ LocalPackage &TargetBase::getPackageMutable()
     return *pkg;
 }
 
+Target::Target(TargetBase &parent)
+{
+}
+
+Target::~Target()
+{
+}
+
 const Source &Target::getSource() const
 {
     if (!source)
@@ -630,9 +638,9 @@ void TargetOptions::add(const IncludeDirectory &i)
     if (!dir.is_absolute())
     {
         //&& !fs::exists(dir))
-        dir = target->SourceDir / dir;
-        if (!target->DryRun && target->isLocal() && !fs::exists(dir))
-            throw SW_RUNTIME_ERROR(target->getPackage().toString() + ": include directory does not exist: " + normalize_path(dir));
+        dir = getTarget().SourceDir / dir;
+        if (!getTarget().DryRun && getTarget().isLocal() && !fs::exists(dir))
+            throw SW_RUNTIME_ERROR(getTarget().getPackage().toString() + ": include directory does not exist: " + normalize_path(dir));
 
         // check if exists, if not add bdir?
     }
@@ -643,7 +651,7 @@ void TargetOptions::remove(const IncludeDirectory &i)
 {
     path dir = i.i;
     if (!dir.is_absolute() && !fs::exists(dir))
-        dir = target->SourceDir / dir;
+        dir = getTarget().SourceDir / dir;
     IncludeDirectories.erase(dir);
 }
 
@@ -653,9 +661,9 @@ void TargetOptions::add(const LinkDirectory &i)
     if (!dir.is_absolute())
     {
         //&& !fs::exists(dir))
-        dir = target->SourceDir / dir;
-        if (!target->DryRun && target->isLocal() && !fs::exists(dir))
-            throw SW_RUNTIME_ERROR(target->getPackage().toString() + ": link directory does not exist: " + normalize_path(dir));
+        dir = getTarget().SourceDir / dir;
+        if (!getTarget().DryRun && getTarget().isLocal() && !fs::exists(dir))
+            throw SW_RUNTIME_ERROR(getTarget().getPackage().toString() + ": link directory does not exist: " + normalize_path(dir));
 
         // check if exists, if not add bdir?
     }
@@ -666,14 +674,14 @@ void TargetOptions::remove(const LinkDirectory &i)
 {
     path dir = i.d;
     if (!dir.is_absolute() && !fs::exists(dir))
-        dir = target->SourceDir / dir;
+        dir = getTarget().SourceDir / dir;
     LinkDirectories.erase(dir);
 }
 
 void TargetOptions::add(const SystemLinkLibrary &l)
 {
     auto l2 = l;
-    if (l2.l.extension() == ".lib" && target->getBuildSettings().TargetOS.getStaticLibraryExtension() == l2.l.extension())
+    if (l2.l.extension() == ".lib" && getTarget().getBuildSettings().TargetOS.getStaticLibraryExtension() == l2.l.extension())
         l2.l = boost::to_upper_copy(l.l.u8string());
     NativeOptions::add(l2);
 }
@@ -681,14 +689,14 @@ void TargetOptions::add(const SystemLinkLibrary &l)
 void TargetOptions::remove(const SystemLinkLibrary &l)
 {
     auto l2 = l;
-    if (l2.l.extension() == ".lib" && target->getBuildSettings().TargetOS.getStaticLibraryExtension() == l2.l.extension())
+    if (l2.l.extension() == ".lib" && getTarget().getBuildSettings().TargetOS.getStaticLibraryExtension() == l2.l.extension())
         l2.l = boost::to_upper_copy(l.l.u8string());
     NativeOptions::remove(l2);
 }
 
 void TargetOptions::add(const PrecompiledHeader &i)
 {
-    if (target->DryRun)
+    if (getTarget().DryRun)
         return;
 
     if (i.h.empty())
@@ -711,7 +719,7 @@ void TargetOptions::add(const PrecompiledHeader &i)
 
 void TargetOptions::remove(const PrecompiledHeader &i)
 {
-    if (target->DryRun)
+    if (getTarget().DryRun)
         return;
 
     if (i.h.empty())

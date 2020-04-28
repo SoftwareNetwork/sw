@@ -52,6 +52,7 @@ protected:
     struct SW_DRIVER_CPP_API Vala##t : t##Target, detail::ValaBase \
     {                                                              \
         using Base = t##Target;                                    \
+        using Base::Base;                                          \
         bool init() override;                                      \
         bool prepare() override;                                   \
                                                                    \

@@ -410,8 +410,8 @@ struct ConfigSharedLibraryTarget : T
 {
     using Base = T;
 
-    ConfigSharedLibraryTarget(const PrepareConfig &ep, const PrepareConfig::InputData &d, const path &storage_dir)
-        : ep(ep), d(d)
+    ConfigSharedLibraryTarget(TargetBase &parent, const PrepareConfig &ep, const PrepareConfig::InputData &d, const path &storage_dir)
+        : T(parent), ep(ep), d(d)
     {
         Base::IsSwConfig = true;
         Base::IsSwConfigLocal = !is_under_root(d.fn, storage_dir);

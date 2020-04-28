@@ -28,6 +28,8 @@ namespace sw
 struct SW_DRIVER_CPP_API CSharpTarget : Target
     , NativeTargetOptionsGroup
 {
+    CSharpTarget(TargetBase &parent);
+
     SW_TARGET_USING_ASSIGN_OPS(NativeTargetOptionsGroup);
 
     std::shared_ptr<CSharpCompiler> compiler;
@@ -44,6 +46,9 @@ private:
 
 struct SW_DRIVER_CPP_API CSharpExecutable : CSharpTarget
 {
+    using Base = CSharpTarget;
+    using Base::Base;
+
     TargetType getType() const override { return TargetType::CSharpExecutable; }
 };
 
@@ -52,6 +57,8 @@ struct SW_DRIVER_CPP_API CSharpExecutable : CSharpTarget
 struct SW_DRIVER_CPP_API RustTarget : Target
     , NativeTargetOptionsGroup
 {
+    RustTarget(TargetBase &parent);
+
     SW_TARGET_USING_ASSIGN_OPS(NativeTargetOptionsGroup);
 
     std::shared_ptr<RustCompiler> compiler;
@@ -68,6 +75,8 @@ private:
 
 struct SW_DRIVER_CPP_API RustExecutable : RustTarget
 {
+    using Base = RustTarget;
+    using Base::Base;
     TargetType getType() const override { return TargetType::RustExecutable; }
 };
 
@@ -76,6 +85,8 @@ struct SW_DRIVER_CPP_API RustExecutable : RustTarget
 struct SW_DRIVER_CPP_API GoTarget : Target
     , NativeTargetOptionsGroup
 {
+    GoTarget(TargetBase &parent);
+
     SW_TARGET_USING_ASSIGN_OPS(NativeTargetOptionsGroup);
 
     std::shared_ptr<GoCompiler> compiler;
@@ -92,6 +103,8 @@ private:
 
 struct SW_DRIVER_CPP_API GoExecutable : GoTarget
 {
+    using Base = GoTarget;
+    using Base::Base;
     TargetType getType() const override { return TargetType::GoExecutable; }
 };
 
@@ -100,6 +113,8 @@ struct SW_DRIVER_CPP_API GoExecutable : GoTarget
 struct SW_DRIVER_CPP_API FortranTarget : Target
     , NativeTargetOptionsGroup
 {
+    FortranTarget(TargetBase &parent);
+
     SW_TARGET_USING_ASSIGN_OPS(NativeTargetOptionsGroup);
 
     std::shared_ptr<FortranCompiler> compiler;
@@ -116,6 +131,8 @@ private:
 
 struct SW_DRIVER_CPP_API FortranExecutable : FortranTarget
 {
+    using Base = FortranTarget;
+    using Base::Base;
     TargetType getType() const override { return TargetType::FortranExecutable; }
 };
 
@@ -124,6 +141,8 @@ struct SW_DRIVER_CPP_API FortranExecutable : FortranTarget
 struct SW_DRIVER_CPP_API JavaTarget : Target
     , NativeTargetOptionsGroup
 {
+    JavaTarget(TargetBase &parent);
+
     SW_TARGET_USING_ASSIGN_OPS(NativeTargetOptionsGroup);
 
     std::shared_ptr<JavaCompiler> compiler;
@@ -140,6 +159,8 @@ private:
 
 struct SW_DRIVER_CPP_API JavaExecutable : JavaTarget
 {
+    using Base = JavaTarget;
+    using Base::Base;
     TargetType getType() const override { return TargetType::JavaExecutable; }
 };
 
@@ -148,6 +169,8 @@ struct SW_DRIVER_CPP_API JavaExecutable : JavaTarget
 struct SW_DRIVER_CPP_API KotlinTarget : Target
     , NativeTargetOptionsGroup
 {
+    KotlinTarget(TargetBase &parent);
+
     SW_TARGET_USING_ASSIGN_OPS(NativeTargetOptionsGroup);
 
     std::shared_ptr<KotlinCompiler> compiler;
@@ -164,6 +187,8 @@ private:
 
 struct SW_DRIVER_CPP_API KotlinExecutable : KotlinTarget
 {
+    using Base = KotlinTarget;
+    using Base::Base;
     TargetType getType() const override { return TargetType::KotlinExecutable; }
 };
 
@@ -172,6 +197,8 @@ struct SW_DRIVER_CPP_API KotlinExecutable : KotlinTarget
 struct SW_DRIVER_CPP_API DTarget : NativeTarget
     , NativeTargetOptionsGroup
 {
+    DTarget(TargetBase &parent);
+
     SW_TARGET_USING_ASSIGN_OPS(NativeTargetOptionsGroup);
 
     std::shared_ptr<DCompiler> compiler;
@@ -192,10 +219,14 @@ private:
 
 struct SW_DRIVER_CPP_API DLibrary : DTarget
 {
+    using Base = DTarget;
+    using Base::Base;
 };
 
 struct SW_DRIVER_CPP_API DStaticLibrary : DLibrary
 {
+    using Base = DLibrary;
+    using Base::Base;
     bool init() override;
     TargetType getType() const override { return TargetType::DStaticLibrary; }
 
@@ -204,12 +235,16 @@ struct SW_DRIVER_CPP_API DStaticLibrary : DLibrary
 
 struct SW_DRIVER_CPP_API DSharedLibrary : DLibrary
 {
+    using Base = DLibrary;
+    using Base::Base;
     bool init() override;
     TargetType getType() const override { return TargetType::DSharedLibrary; }
 };
 
 struct SW_DRIVER_CPP_API DExecutable : DTarget
 {
+    using Base = DTarget;
+    using Base::Base;
     bool init() override;
     TargetType getType() const override { return TargetType::DExecutable; }
 };
@@ -219,6 +254,8 @@ struct SW_DRIVER_CPP_API DExecutable : DTarget
 struct SW_DRIVER_CPP_API PythonLibrary : Target
     , SourceFileTargetOptions
 {
+    PythonLibrary(TargetBase &parent);
+
     bool init() override;
     Files gatherAllFiles() const override;
 };

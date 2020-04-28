@@ -225,6 +225,11 @@ path NativeTarget::getOutputFile() const
     return t->getOutputFile();
 }
 
+NativeCompiledTarget::NativeCompiledTarget(TargetBase &parent)
+    : NativeTarget(parent), NativeTargetOptionsGroup((Target &)*this)
+{
+}
+
 NativeCompiledTarget::~NativeCompiledTarget()
 {
     // incomplete type cannot be in default dtor
@@ -743,13 +748,6 @@ bool NativeCompiledTarget::init()
     {
     case 1:
     {
-        // propagate this pointer to all
-        TargetOptionsGroup::iterate([this](auto &v, auto i)
-        {
-            v.target = this;
-        });
-        getMergeObject().target = this;
-
         // before target init
         addSettingsAndSetPrograms((SwContext&)getContext(), ts);
 

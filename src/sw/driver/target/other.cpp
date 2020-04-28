@@ -107,19 +107,17 @@ void detectCSharpCompilers(DETECT_ARGS)
     }
 }
 
+CSharpTarget::CSharpTarget(TargetBase &parent)
+    : Target(parent), NativeTargetOptionsGroup((Target &)*this)
+{
+}
+
 bool CSharpTarget::init()
 {
     static std::once_flag f;
     std::call_once(f, [this] {detectCSharpCompilers(DETECT_ARGS_PASS_FIRST_CALL_SIMPLE); });
 
     Target::init();
-
-    // propagate this pointer to all
-    TargetOptionsGroup::iterate([this](auto &v, auto i)
-    {
-        v.target = this;
-    });
-    getMergeObject().target = this;
 
     compiler = activateCompiler<VisualStudioCSharpCompiler>(*this, "com.Microsoft.VisualStudio.Roslyn.csc"s, { ".cs" });
     if (!compiler)
@@ -158,19 +156,17 @@ void detectRustCompilers(DETECT_ARGS)
     addProgram(DETECT_ARGS_PASS, PackageId("org.rust.rustc", v), {}, p);
 }
 
+RustTarget::RustTarget(TargetBase &parent)
+    : Target(parent), NativeTargetOptionsGroup((Target &)*this)
+{
+}
+
 bool RustTarget::init()
 {
     static std::once_flag f;
     std::call_once(f, [this] {detectRustCompilers(DETECT_ARGS_PASS_FIRST_CALL_SIMPLE); });
 
     Target::init();
-
-    // propagate this pointer to all
-    TargetOptionsGroup::iterate([this](auto &v, auto i)
-    {
-        v.target = this;
-    });
-    getMergeObject().target = this;
 
     compiler = activateCompiler<decltype(compiler)::element_type>(*this, "org.rust.rustc"s, { ".rs" });
     if (!compiler)
@@ -205,19 +201,17 @@ void detectGoCompilers(DETECT_ARGS)
     addProgram(DETECT_ARGS_PASS, PackageId("org.google.golang.go", v), {}, p);
 }
 
+GoTarget::GoTarget(TargetBase &parent)
+    : Target(parent), NativeTargetOptionsGroup((Target &)*this)
+{
+}
+
 bool GoTarget::init()
 {
     static std::once_flag f;
     std::call_once(f, [this] {detectGoCompilers(DETECT_ARGS_PASS_FIRST_CALL_SIMPLE); });
 
     Target::init();
-
-    // propagate this pointer to all
-    TargetOptionsGroup::iterate([this](auto &v, auto i)
-    {
-        v.target = this;
-    });
-    getMergeObject().target = this;
 
     compiler = activateCompiler<decltype(compiler)::element_type>(*this, "org.google.golang.go"s, { ".go" });
     if (!compiler)
@@ -265,19 +259,17 @@ void detectFortranCompilers(DETECT_ARGS)
     addProgram(DETECT_ARGS_PASS, PackageId("org.gnu.gcc.fortran", v), {}, p);
 }
 
+FortranTarget::FortranTarget(TargetBase &parent)
+    : Target(parent), NativeTargetOptionsGroup((Target &)*this)
+{
+}
+
 bool FortranTarget::init()
 {
     static std::once_flag f;
     std::call_once(f, [this] {detectFortranCompilers(DETECT_ARGS_PASS_FIRST_CALL_SIMPLE); });
 
     Target::init();
-
-    // propagate this pointer to all
-    TargetOptionsGroup::iterate([this](auto &v, auto i)
-    {
-        v.target = this;
-    });
-    getMergeObject().target = this;
 
     /*C->input_extensions = {
     ".f",
@@ -327,19 +319,17 @@ void detectJavaCompilers(DETECT_ARGS)
     addProgram(DETECT_ARGS_PASS, PackageId("com.oracle.java.javac", v), {}, p);
 }
 
+JavaTarget::JavaTarget(TargetBase &parent)
+    : Target(parent), NativeTargetOptionsGroup((Target &)*this)
+{
+}
+
 bool JavaTarget::init()
 {
     static std::once_flag f;
     std::call_once(f, [this] {detectJavaCompilers(DETECT_ARGS_PASS_FIRST_CALL_SIMPLE); });
 
     Target::init();
-
-    // propagate this pointer to all
-    TargetOptionsGroup::iterate([this](auto &v, auto i)
-    {
-        v.target = this;
-    });
-    getMergeObject().target = this;
 
     compiler = activateCompiler<decltype(compiler)::element_type>(*this, "com.oracle.java.javac"s, { ".java" });
     if (!compiler)
@@ -375,19 +365,17 @@ void detectKotlinCompilers(DETECT_ARGS)
     addProgram(DETECT_ARGS_PASS, PackageId("com.JetBrains.kotlin.kotlinc", v), {}, p);
 }
 
+KotlinTarget::KotlinTarget(TargetBase &parent)
+    : Target(parent), NativeTargetOptionsGroup((Target &)*this)
+{
+}
+
 bool KotlinTarget::init()
 {
     static std::once_flag f;
     std::call_once(f, [this] {detectKotlinCompilers(DETECT_ARGS_PASS_FIRST_CALL_SIMPLE); });
 
     Target::init();
-
-    // propagate this pointer to all
-    TargetOptionsGroup::iterate([this](auto &v, auto i)
-    {
-        v.target = this;
-    });
-    getMergeObject().target = this;
 
     compiler = activateCompiler<decltype(compiler)::element_type>(*this, "com.JetBrains.kotlin.kotlinc"s, { ".kt", ".kts" });
     if (!compiler)
@@ -428,6 +416,11 @@ void detectDCompilers(DETECT_ARGS)
     addProgram(DETECT_ARGS_PASS, PackageId("org.dlang.dmd.dmd", v), {}, p);
 }
 
+DTarget::DTarget(TargetBase &parent)
+    : NativeTarget(parent), NativeTargetOptionsGroup((Target &)*this)
+{
+}
+
 bool DTarget::init()
 {
     static std::once_flag f;
@@ -440,13 +433,6 @@ bool DTarget::init()
     case 1:
     {
         Target::init();
-
-        // propagate this pointer to all
-        TargetOptionsGroup::iterate([this](auto &v, auto i)
-        {
-            v.target = this;
-        });
-        getMergeObject().target = this;
 
         compiler = activateCompiler<decltype(compiler)::element_type>(*this, "org.dlang.dmd.dmd"s, { ".d", /*.di*/ });
         if (!compiler)
@@ -503,10 +489,14 @@ bool DExecutable::init()
     return r;
 }
 
+PythonLibrary::PythonLibrary(TargetBase &parent)
+    : Target(parent), SourceFileTargetOptions(*this)
+{
+}
+
 bool PythonLibrary::init()
 {
     auto r = Target::init();
-    target = this;
     return r;
 }
 

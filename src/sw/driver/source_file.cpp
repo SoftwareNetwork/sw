@@ -100,7 +100,8 @@ static Files enumerate_files_fast(const path &dir, bool recursive = true)
 #endif
 }
 
-SourceFileStorage::SourceFileStorage()
+SourceFileStorage::SourceFileStorage(Target &t)
+    : target(t)
 {
 }
 
@@ -137,15 +138,15 @@ void SourceFileStorage::add_unchecked(const path &file_in, bool skip)
     auto file = file_in;
 
     // ignore missing file when file is skipped and non local
-    if (!check_absolute(file, !target->isLocal() && skip))
+    if (!check_absolute(file, !target.isLocal() && skip))
         return;
 
     auto f = getFileInternal(file);
 
     auto ext = file.extension().string();
-    auto nt = target->as<NativeCompiledTarget*>();
+    auto nt = target.as<NativeCompiledTarget*>();
     auto ho = nt && nt->HeaderOnly && nt->HeaderOnly.value();
-    if (!target->hasExtension(ext) || ho)
+    if (!target.hasExtension(ext) || ho)
     {
         f = std::make_shared<SourceFile>(file);
         addFile(file, f);
@@ -155,7 +156,7 @@ void SourceFileStorage::add_unchecked(const path &file_in, bool skip)
     {
         if (!f || f->postponed)
         {
-            if (!target->getProgram(ext))
+            if (!target.getProgram(ext))
             {
                 // only unresolved dep for now
                 //if (f && f->postponed)
@@ -167,12 +168,12 @@ void SourceFileStorage::add_unchecked(const path &file_in, bool skip)
             else
             {
                 // program was provided
-                auto p = target->findProgramByExtension(ext);
+                auto p = target.findProgramByExtension(ext);
                 auto f2 = f;
                 auto p2 = dynamic_cast<FileToFileTransformProgram*>(p);
                 if (!p2)
                     throw SW_RUNTIME_ERROR("Bad program type");
-                f = p2->createSourceFile(*target, file);
+                f = p2->createSourceFile(target, file);
                 addFile(file, f);
                 if (f2 && f2->postponed)
                 {
@@ -191,7 +192,7 @@ void SourceFileStorage::add_unchecked(const path &file_in, bool skip)
 
 void SourceFileStorage::add(const std::shared_ptr<SourceFile> &f)
 {
-    if (target->DryRun || !f)
+    if (target.DryRun || !f)
         return;
 
     addFile(f->file, f);
@@ -199,7 +200,7 @@ void SourceFileStorage::add(const std::shared_ptr<SourceFile> &f)
 
 void SourceFileStorage::add(const path &file)
 {
-    if (target->DryRun)
+    if (target.DryRun)
         return;
 
     add_unchecked(file);
@@ -213,15 +214,15 @@ void SourceFileStorage::add(const Files &Files)
 
 void SourceFileStorage::add(const FileRegex &r)
 {
-    if (target->DryRun)
+    if (target.DryRun)
         return;
 
-    add(target->SourceDir, r);
+    add(target.SourceDir, r);
 }
 
 void SourceFileStorage::add(const path &root, const FileRegex &r)
 {
-    if (target->DryRun)
+    if (target.DryRun)
         return;
 
     auto r2 = r;
@@ -231,7 +232,7 @@ void SourceFileStorage::add(const path &root, const FileRegex &r)
 
 void SourceFileStorage::remove(const path &file)
 {
-    if (target->DryRun)
+    if (target.DryRun)
         return;
 
     add_unchecked(file, true);
@@ -245,15 +246,15 @@ void SourceFileStorage::remove(const Files &files)
 
 void SourceFileStorage::remove(const FileRegex &r)
 {
-    if (target->DryRun)
+    if (target.DryRun)
         return;
 
-    remove(target->SourceDir, r);
+    remove(target.SourceDir, r);
 }
 
 void SourceFileStorage::remove(const path &root, const FileRegex &r)
 {
-    if (target->DryRun)
+    if (target.DryRun)
         return;
 
     auto r2 = r;
@@ -274,12 +275,12 @@ void SourceFileStorage::remove_exclude(const Files &files)
 
 void SourceFileStorage::remove_exclude(const FileRegex &r)
 {
-    remove_exclude(target->SourceDir, r);
+    remove_exclude(target.SourceDir, r);
 }
 
 void SourceFileStorage::remove_exclude(const path &root, const FileRegex &r)
 {
-    if (target->DryRun)
+    if (target.DryRun)
         return;
 
     auto r2 = r;
@@ -289,15 +290,15 @@ void SourceFileStorage::remove_exclude(const path &root, const FileRegex &r)
 
 void SourceFileStorage::remove_full(const path &file)
 {
-    if (target->DryRun)
+    if (target.DryRun)
         return;
 
     auto F = file;
     // ignore missing file only when non local
     // nope, ignore always
-    if (check_absolute(F, true/*!target->isLocal()*/))
+    if (check_absolute(F, true/*!target.isLocal()*/))
         removeFile(F);
-    else if (target->isLocal())
+    else if (target.isLocal())
         LOG_WARN(logger, "excluded file is missing: " + normalize_path(file));
 }
 
@@ -320,7 +321,7 @@ void SourceFileStorage::op(const FileRegex &r, Op func)
 {
     auto dir = r.dir;
     if (!dir.is_absolute())
-        dir = target->SourceDir / dir;
+        dir = target.SourceDir / dir;
     auto root_s = normalize_path(dir);
     if (root_s.back() == '/')
         root_s.resize(root_s.size() - 1);
@@ -343,9 +344,9 @@ void SourceFileStorage::op(const FileRegex &r, Op func)
             matches = true;
         }
     }
-    if (!matches && target->isLocal() && !target->AllowEmptyRegexes)
+    if (!matches && target.isLocal() && !target.AllowEmptyRegexes)
     {
-        String err = target->getPackage().toString() + ": No files matching regex: " + r.getRegexString();
+        String err = target.getPackage().toString() + ": No files matching regex: " + r.getRegexString();
         if (ignore_source_files_errors)
         {
             LOG_INFO(logger, err);
@@ -369,14 +370,14 @@ size_t SourceFileStorage::sizeSkipped() const
 SourceFile &SourceFileStorage::operator[](path F)
 {
     static SourceFile sf("static_source_file");
-    if (target->DryRun)
+    if (target.DryRun)
         return sf;
     check_absolute(F);
     auto f = getFileInternal(F);
     if (!f)
     {
         // here we may let other fibers progress until language is registered
-        throw SW_RUNTIME_ERROR(target->getPackage().toString() + ": Empty source file: " + F.u8string());
+        throw SW_RUNTIME_ERROR(target.getPackage().toString() + ": Empty source file: " + F.u8string());
     }
     return *f;
 }
@@ -396,21 +397,21 @@ bool SourceFileStorage::check_absolute(path &F, bool ignore_errors, bool *source
     // apply EnforcementType::CheckFiles
     if (!F.is_absolute())
     {
-        auto p = target->SourceDir / F;
+        auto p = target.SourceDir / F;
         if (source_dir)
             *source_dir = true;
         if (!fs::exists(p))
         {
-            p = target->BinaryDir / F;
+            p = target.BinaryDir / F;
             if (source_dir)
                 *source_dir = false;
             if (!fs::exists(p))
             {
-                if (!File(p, target->getFs()).isGeneratedAtAll())
+                if (!File(p, target.getFs()).isGeneratedAtAll())
                 {
                     if (ignore_errors)
                         return false;
-                    String err = target->getPackage().toString() + ": Cannot find source file: " + (target->SourceDir / F).u8string();
+                    String err = target.getPackage().toString() + ": Cannot find source file: " + (target.SourceDir / F).u8string();
                     if (ignore_source_files_errors)
                     {
                         LOG_INFO(logger, err);
@@ -427,11 +428,11 @@ bool SourceFileStorage::check_absolute(path &F, bool ignore_errors, bool *source
     {
         if (!found && !fs::exists(F))
         {
-            if (!File(F, target->getFs()).isGeneratedAtAll())
+            if (!File(F, target.getFs()).isGeneratedAtAll())
             {
                 if (ignore_errors)
                     return false;
-                String err = target->getPackage().toString() + ": Cannot find source file: " + F.u8string();
+                String err = target.getPackage().toString() + ": Cannot find source file: " + F.u8string();
                 if (ignore_source_files_errors)
                 {
                     LOG_INFO(logger, err);
@@ -442,9 +443,9 @@ bool SourceFileStorage::check_absolute(path &F, bool ignore_errors, bool *source
         }
         if (source_dir)
         {
-            if (is_under_root(F, target->SourceDir))
+            if (is_under_root(F, target.SourceDir))
                 *source_dir = true;
-            else if (is_under_root(F, target->BinaryDir) || is_under_root(F, target->BinaryPrivateDir))
+            else if (is_under_root(F, target.BinaryDir) || is_under_root(F, target.BinaryPrivateDir))
                 *source_dir = false;
             else
             {
@@ -497,7 +498,7 @@ SourceFileStorage::enumerate_files(const FileRegex &r, bool allow_empty) const
 {
     auto dir = r.dir;
     if (!dir.is_absolute())
-        dir = target->SourceDir / dir;
+        dir = target.SourceDir / dir;
     auto root_s = normalize_path(dir);
     if (root_s.back() == '/')
         root_s.resize(root_s.size() - 1);
@@ -514,10 +515,10 @@ SourceFileStorage::enumerate_files(const FileRegex &r, bool allow_empty) const
         if (std::regex_match(s, r.r))
             files[p] = f;
     }
-    if (!target->DryRun) // special case
-    if (files.empty() && target->isLocal() && !target->AllowEmptyRegexes && !allow_empty)
+    if (!target.DryRun) // special case
+    if (files.empty() && target.isLocal() && !target.AllowEmptyRegexes && !allow_empty)
     {
-        String err = target->getPackage().toString() + ": No files matching regex: " + r.getRegexString();
+        String err = target.getPackage().toString() + ": No files matching regex: " + r.getRegexString();
         if (ignore_source_files_errors)
         {
             LOG_INFO(logger, err);

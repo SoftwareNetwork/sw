@@ -27,6 +27,8 @@
 namespace sw
 {
 
+struct Target;
+
 struct InheritanceScope
 {
     enum
@@ -95,8 +97,8 @@ struct InheritanceStorage : std::vector<T*>
 {
     using base = std::vector<T*>;
 
-    InheritanceStorage(T *pvt)
-        : base(toIndex(InheritanceType::Max), nullptr)
+    InheritanceStorage(T *pvt, Target &t)
+        : base(toIndex(InheritanceType::Max), nullptr), t(t)
     {
         base::operator[](toIndex(InheritanceType::Private)) = pvt;
     }
@@ -115,7 +117,7 @@ struct InheritanceStorage : std::vector<T*>
     {
         auto &e = base::operator[](i);
         if (!e)
-            e = new T;
+            e = new T(t);
         return *e;
     }
 
@@ -139,6 +141,9 @@ struct InheritanceStorage : std::vector<T*>
 
     base &raw() { return *this; }
     const base &raw() const { return *this; }
+
+private:
+    Target &t;
 };
 
 /**
@@ -173,9 +178,10 @@ public:
     */
     T &Interface;
 
-    InheritanceGroup()
-        : T()
-        , data(this)
+    InheritanceGroup(Target &t)
+        : T(t)
+        , data(this, t)
+        , merge_object(t)
         , Private(*this)
         , Protected(data[InheritanceType::Protected])
         , Public(data[InheritanceType::Public])

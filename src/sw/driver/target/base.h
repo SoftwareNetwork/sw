@@ -213,7 +213,7 @@ private:
     template <typename T, typename ... Args>
     auto createTarget(Args && ... args)
     {
-        return std::make_shared<T>(std::forward<Args>(args)...);
+        return std::make_shared<T>(*this, std::forward<Args>(args)...);
     }
 
     template <typename T, typename ... Args>
@@ -304,9 +304,8 @@ struct SW_DRIVER_CPP_API Target : ITarget, TargetBase, ProgramStorage,
     void addSourceDependency(const DependencyPtr &);
 
 public:
-    using TargetBase::TargetBase;
-    Target() = default;
-    virtual ~Target() = default;
+    Target(TargetBase &parent);
+    virtual ~Target();
 
     // api
     const LocalPackage &getPackage() const override { return TargetBase::getPackage(); }
@@ -482,6 +481,8 @@ struct SW_DRIVER_CPP_API TargetOptions : SourceFileStorage, NativeOptions
     using NativeOptions::remove;
     using NativeOptions::operator=;
 
+    TargetOptions(Target &t) : SourceFileStorage(t) {}
+
     void add(const IncludeDirectory &);
     void remove(const IncludeDirectory &);
 
@@ -545,6 +546,8 @@ struct SW_DRIVER_CPP_API TargetOptionsGroup :
 {
     using Base = InheritanceGroup<T>;
 
+    TargetOptionsGroup(Target &t) : Base(t) {}
+
 private:
     ASSIGN_WRAPPER(add, TargetOptionsGroup);
     ASSIGN_WRAPPER(remove, TargetOptionsGroup);
@@ -555,7 +558,11 @@ public:
 
 struct SW_DRIVER_CPP_API NativeTargetOptionsGroup : TargetOptionsGroup<TargetOptions>
 {
-    SW_TARGET_USING_ASSIGN_OPS(TargetOptionsGroup<TargetOptions>);
+    using Base = TargetOptionsGroup<TargetOptions>;
+
+    NativeTargetOptionsGroup(Target &t) : Base(t) {}
+
+    SW_TARGET_USING_ASSIGN_OPS(Base);
 
 private:
     ASSIGN_WRAPPER(add, NativeTargetOptionsGroup);

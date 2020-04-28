@@ -40,6 +40,8 @@ private:
 public:
     using TargetsSet = std::unordered_set<const ITarget*>;
 
+public:
+    NativeCompiledTarget(TargetBase &parent);
     using TargetEvents::add;
 
     ASSIGN_TYPES(ApiNameType)
@@ -247,6 +249,7 @@ private:
 */
 struct SW_DRIVER_CPP_API LibraryTarget : NativeCompiledTarget
 {
+    using NativeCompiledTarget::NativeCompiledTarget;
     using NativeCompiledTarget::operator=;
 
     bool init() override;
@@ -260,6 +263,7 @@ struct SW_DRIVER_CPP_API LibraryTarget : NativeCompiledTarget
 */
 struct SW_DRIVER_CPP_API ExecutableTarget : NativeCompiledTarget, PredefinedProgram
 {
+    using NativeCompiledTarget::NativeCompiledTarget;
     using PredefinedProgram::getProgram;
 
     TargetType getType() const override { return TargetType::NativeExecutable; }
@@ -275,6 +279,8 @@ struct SW_DRIVER_CPP_API ExecutableTarget : NativeCompiledTarget, PredefinedProg
 */
 struct SW_DRIVER_CPP_API StaticLibraryTarget : NativeCompiledTarget
 {
+    using NativeCompiledTarget::NativeCompiledTarget;
+
     bool init() override;
 
     TargetType getType() const override { return TargetType::NativeStaticLibrary; }
@@ -291,6 +297,8 @@ struct SW_DRIVER_CPP_API StaticLibraryTarget : NativeCompiledTarget
 */
 struct SW_DRIVER_CPP_API SharedLibraryTarget : NativeCompiledTarget
 {
+    using NativeCompiledTarget::NativeCompiledTarget;
+
     bool init() override;
 
     TargetType getType() const override { return TargetType::NativeSharedLibrary; }

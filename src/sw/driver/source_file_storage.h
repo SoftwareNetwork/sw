@@ -51,16 +51,17 @@ using SourceFileMap = std::unordered_map<path, std::shared_ptr<T>>;
  */
 struct SW_DRIVER_CPP_API SourceFileStorage
 {
-public:
-    Target *target = nullptr;
+private:
+    Target &target;
 
+public:
     // internal, move to target map?
     // but we have two parts: stable for sdir files and unknown for bdir files (config specific)
     mutable std::unordered_map<path, std::map<bool /* recursive */, Files>> glob_cache;
     mutable FilesMap files_cache;
 
 public:
-    SourceFileStorage();
+    SourceFileStorage(Target &);
     virtual ~SourceFileStorage();
 
     //void add(const String &file) { add(path(file)); }
@@ -103,6 +104,9 @@ public:
     void clear() { source_files.clear(); }
 
     std::shared_ptr<SourceFile> getFileInternal(const path &) const;
+
+    Target &getTarget() { return target; }
+    const Target &getTarget() const { return target; }
 
 protected:
     bool autodetect = false;
