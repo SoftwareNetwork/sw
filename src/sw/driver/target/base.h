@@ -29,7 +29,6 @@
 #include <sw/builder/node.h>
 #include <sw/builder/os.h>
 #include <sw/manager/package.h>
-#include <sw/manager/package_path.h>
 #include <sw/manager/package_version_map.h>
 #include <sw/manager/source.h>
 
