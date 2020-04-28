@@ -124,10 +124,6 @@ void TargetBase::addTarget2(Target &t, const PackageId &inpkg)
 
     // setupTarget
     // set some general settings, then init, then register
-    t.ts = getSolution().module_data.current_settings;
-    t.bs = t.ts;
-
-    // find automatic way of copying data?
     if (!t.current_project)
         t.current_project = t.getPackage();
     // setupTarget
@@ -140,7 +136,6 @@ void TargetBase::addTarget2(Target &t, const PackageId &inpkg)
         t.setSourceDirectory(getSolution().getSourceDir(t.getPackage()));
     if (auto d = t.getPackage().getOverriddenDir())
         t.setSourceDirectory(*d);
-
     // set source dir
     if (t.SourceDir.empty())
     {
@@ -228,6 +223,9 @@ const LocalPackage &TargetBase::getPackage() const
 Target::Target(TargetBase &parent)
     : TargetBase(parent)
 {
+    ts = getSolution().module_data.current_settings;
+    bs = ts;
+
     if (auto t0 = dynamic_cast<const Target*>(&parent))
         source = t0->source ? t0->source->clone() : nullptr;
 }
