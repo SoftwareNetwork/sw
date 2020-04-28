@@ -166,13 +166,6 @@ struct SW_DRIVER_CPP_API TargetBase : TargetBaseData
         return make<T>(std::forward<Args>(args)...);
     }
 
-    template <typename T>
-    T &registerTarget(const std::shared_ptr<T> &t)
-    {
-        addChild(t);
-        return *t;
-    }
-
 #define ADD_TARGET(t)                                       \
     template <typename... Args>                             \
     t##Target &add##t(Args &&... args)                      \
