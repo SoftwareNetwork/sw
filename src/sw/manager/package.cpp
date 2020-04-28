@@ -35,11 +35,6 @@ String getSourceDirectoryName()
     return "sdir";
 }
 
-Package::Package(const IStorage &storage, const PackagePath &p, const Version &v)
-    : storage(storage), PackageId(p, v)
-{
-}
-
 Package::Package(const IStorage &storage, const PackageId &id)
     : storage(storage), PackageId(id)
 {
@@ -91,11 +86,6 @@ const PackageData &Package::getData() const
 const IStorage &Package::getStorage() const
 {
     return storage;
-}
-
-LocalPackage::LocalPackage(const LocalStorage &storage, const PackagePath &p, const Version &v)
-    : Package(storage, p, v)
-{
 }
 
 LocalPackage::LocalPackage(const LocalStorage &storage, const PackageId &id)

@@ -51,7 +51,6 @@ struct OverriddenPackagesStorage;
 
 struct SW_MANAGER_API Package : PackageId
 {
-    Package(const IStorage &, const PackagePath &, const Version &);
     Package(const IStorage &, const PackageId &);
 
     Package(const Package &);
@@ -79,7 +78,6 @@ using PackagePtr = std::unique_ptr<Package>;
 
 struct SW_MANAGER_API LocalPackage : Package
 {
-    LocalPackage(const LocalStorage &, const PackagePath &, const Version &);
     LocalPackage(const LocalStorage &, const PackageId &);
 
     LocalPackage(const LocalPackage &) = default;
