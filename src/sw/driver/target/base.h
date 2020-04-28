@@ -204,14 +204,15 @@ private:
     bool Local = true; // local projects
 
     template <typename T, typename ... Args>
-    std::shared_ptr<T> addTarget1(const PackagePath &Name, const Version &V, Args && ... args)
+    std::shared_ptr<T> addTarget1(const PackagePath &Name, const Version &v, Args && ... args)
     {
+        PackageId pkg(constructTargetName(Name), v);
         auto t = std::make_shared<T>(*this, std::forward<Args>(args)...);
-        addTarget2(*t, Name, V);
+        addTarget2(*t, pkg);
         return t;
     }
 
-    void addTarget2(Target &t, const PackagePath &Name, const Version &V);
+    void addTarget2(Target &t, const PackageId &pkg);
 
     PackagePath constructTargetName(const PackagePath &Name) const;
     void setupTarget(Target &t) const;

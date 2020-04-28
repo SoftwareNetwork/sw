@@ -140,9 +140,9 @@ PackagePath TargetBase::constructTargetName(const PackagePath &Name) const
     return NamePrefix / (pkg ? getPackage().getPath() / Name : Name);
 }
 
-void TargetBase::addTarget2(Target &t, const PackagePath &Name, const Version &V)
+void TargetBase::addTarget2(Target &t, const PackageId &inpkg)
 {
-    t.pkg = std::make_unique<LocalPackage>(getMainBuild().getContext().getLocalStorage(), constructTargetName(Name), V);
+    t.pkg = std::make_unique<LocalPackage>(getMainBuild().getContext().getLocalStorage(), inpkg);
 
     // set some general settings, then init, then register
     setupTarget(t);
