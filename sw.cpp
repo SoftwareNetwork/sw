@@ -13,8 +13,9 @@ void build(Solution &s)
         support.CPPVersion = CPPLanguageStandard::CPP17;
         support += "src/sw/support/.*"_rr;
         auto cmddep = "pub.egorpugin.primitives.command-master"_dep;
+        auto verdep = "pub.egorpugin.primitives.version-master"_dep;
         support.Public +=
-            cmddep,
+            cmddep, verdep,
             "pub.egorpugin.primitives.http-master"_dep,
             "pub.egorpugin.primitives.hash-master"_dep,
             "pub.egorpugin.primitives.log-master"_dep,
@@ -24,6 +25,8 @@ void build(Solution &s)
             "org.sw.demo.boost.stacktrace"_dep;
         //cmddep->getSettings()["export-if-static"] = "true";
         //cmddep->getSettings()["export-if-static"].setRequired();
+        verdep->getSettings()["export-if-static"] = "true";
+        verdep->getSettings()["export-if-static"].setRequired();
         support.ApiName = "SW_SUPPORT_API";
         if (support.getBuildSettings().TargetOS.Type == OSType::Windows)
         {
@@ -57,24 +60,21 @@ void build(Solution &s)
         manager.Public += "BOOST_DLL_USE_STD_FS"_def;
 
         auto srcdep = "pub.egorpugin.primitives.source-master"_dep;
-        auto verdep = "pub.egorpugin.primitives.version-master"_dep;
         manager.Public += support, protos,
-            srcdep, verdep,
+            srcdep,
             "pub.egorpugin.primitives.date_time-master"_dep,
             "pub.egorpugin.primitives.db.sqlite3-master"_dep,
             "pub.egorpugin.primitives.lock-master"_dep,
             "pub.egorpugin.primitives.pack-master"_dep,
             "pub.egorpugin.primitives.sw.settings-master"_dep,
             "pub.egorpugin.primitives.yaml-master"_dep,
-            "org.sw.demo.nlohmann.json-3"_dep,
+            "org.sw.demo.nlohmann.json"_dep,
             "org.sw.demo.boost.variant"_dep,
             "org.sw.demo.boost.dll"_dep,
             "org.sw.demo.rbock.sqlpp11_connector_sqlite3-master"_dep
             ;
         srcdep->getSettings()["export-if-static"] = "true";
         srcdep->getSettings()["export-if-static"].setRequired();
-        verdep->getSettings()["export-if-static"] = "true";
-        verdep->getSettings()["export-if-static"].setRequired();
 
         manager.Public -= "pub.egorpugin.primitives.win32helpers-master"_dep;
         if (manager.getBuildSettings().TargetOS.Type == OSType::Windows)

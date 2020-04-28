@@ -47,7 +47,6 @@ struct CommandBuilder;
 }
 
 struct FileStorage;
-struct NativeCompiledTarget;
 struct Build;
 struct SwContext;
 struct SwBuild;
@@ -56,7 +55,6 @@ struct ProjectTarget;
 struct DirectoryTarget;
 using TargetBaseType = Target;
 using TargetBaseTypePtr = std::shared_ptr<TargetBaseType>;
-//using TargetBaseTypePtr = ITargetPtr;
 
 struct ExecutableTarget;
 struct LibraryTarget;

@@ -7,7 +7,6 @@
 #pragma once
 
 #include "package.h"
-#include "enums.h"
 #include "package_data.h"
 
 namespace sw

@@ -21,9 +21,9 @@
 //#include "dependency.h"
 #include "yaml.h"
 
-#include <sw/manager/package_path.h>
 #include <sw/manager/source.h>
-#include <sw/manager/version.h>
+#include <sw/support/package_path.h>
+#include <sw/support/version.h>
 
 #include <optional>
 

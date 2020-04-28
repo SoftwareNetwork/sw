@@ -26,7 +26,7 @@ using primitives::version::VersionSet;
 using primitives::version::VersionMap;
 using primitives::version::UnorderedVersionMap;
 
-struct SW_MANAGER_API VersionRange : primitives::version::VersionRange
+struct SW_SUPPORT_API VersionRange : primitives::version::VersionRange
 {
     using Base = primitives::version::VersionRange;
 

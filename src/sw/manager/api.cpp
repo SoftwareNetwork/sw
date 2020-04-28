@@ -7,12 +7,12 @@
 #include "api.h"
 #include "api_protobuf.h"
 
-#include "package_path.h"
 #include "remote.h"
 #include "settings.h"
 
 #include <sw/protocol/grpc_helpers.h>
 #include <sw/support/exceptions.h>
+#include <sw/support/package_path.h>
 
 #include <nlohmann/json.hpp>
 #include <primitives/templates.h>

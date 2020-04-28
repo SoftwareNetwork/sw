@@ -20,7 +20,7 @@
 
 #include "node.h"
 
-#include <sw/manager/version.h>
+#include <sw/support/version.h>
 
 #include <optional>
 

@@ -12,7 +12,7 @@
 namespace sw
 {
 
-struct SW_MANAGER_API PackageId
+struct SW_SUPPORT_API PackageId
 {
     // try to extract from string
     PackageId(const String &);
@@ -38,7 +38,7 @@ private:
 
 using PackageIdSet = std::unordered_set<PackageId>;
 
-SW_MANAGER_API
+SW_SUPPORT_API
 PackageId extractPackageIdFromString(const String &target);
 
 }

@@ -19,7 +19,7 @@
 #pragma once
 
 #include <sw/builder/configuration.h>
-#include <sw/manager/enums.h>
+#include <sw/support/enums.h>
 
 #include <boost/assign.hpp>
 #include <primitives/filesystem.h>

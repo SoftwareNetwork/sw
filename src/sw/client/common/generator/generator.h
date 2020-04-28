@@ -18,8 +18,8 @@
 
 #pragma once
 
-#include <sw/manager/package_path.h>
-#include <sw/manager/version.h>
+#include <sw/support/package_path.h>
+#include <sw/support/version.h>
 
 #include <primitives/emitter.h>
 #include <primitives/filesystem.h>

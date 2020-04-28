@@ -6,7 +6,6 @@
 
 #include "package_database.h"
 
-#include "enums.h"
 #include "inserts.h"
 #include "settings.h"
 #include "stamp.h"

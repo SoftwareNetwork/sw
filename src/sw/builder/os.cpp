@@ -18,8 +18,6 @@
 
 #include "os.h"
 
-#include <sw/manager/version.h>
-
 #include <primitives/command.h>
 #include <primitives/templates.h>
 #include <primitives/sw/settings.h>

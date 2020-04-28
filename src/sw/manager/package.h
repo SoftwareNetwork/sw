@@ -6,8 +6,8 @@
 
 #pragma once
 
-#include "enums.h"
-#include "package_id.h"
+#include <sw/support/enums.h>
+#include <sw/support/package_id.h>
 
 namespace sw
 {

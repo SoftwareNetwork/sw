@@ -6,8 +6,9 @@
 
 #pragma once
 
-#include "package_id.h"
 #include "source.h"
+
+#include <sw/support/package_id.h>
 
 // !!! see more fields here https://github.com/aws/aws-sdk-cpp/blob/master/aws-cpp-sdk-s3/nuget/aws-cpp-sdk-s3.autopkg
 

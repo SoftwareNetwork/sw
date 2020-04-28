@@ -25,7 +25,6 @@
 #include "../types.h"
 
 #include <sw/builder/os.h>
-#include <sw/manager/version.h>
 
 #include <primitives/exceptions.h>
 

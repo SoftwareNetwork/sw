@@ -20,7 +20,7 @@
 
 #include <sw/core/driver.h>
 #include <sw/core/input.h>
-#include <sw/manager/package_id.h>
+#include <sw/support/package_id.h>
 
 #include <boost/bimap.hpp>
 #include <boost/bimap/multiset_of.hpp>

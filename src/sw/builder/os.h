@@ -20,7 +20,7 @@
 
 #include "platform.h"
 
-#include <sw/manager/version.h>
+#include <sw/support/version.h>
 
 namespace sw
 {

@@ -8,11 +8,11 @@
 
 #include <map>
 
-#include "enums.h"
 #include "remote.h"
 #include "version.h"
 #include "yaml.h"
 
+#include <sw/support/enums.h>
 #include <sw/support/filesystem.h>
 
 #include <primitives/http.h>

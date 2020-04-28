@@ -19,7 +19,7 @@
 namespace sw
 {
 
-SW_MANAGER_API
+SW_SUPPORT_API
 bool isValidPackagePathSymbol(int c);
 
 template <class ThisType, class PathElement = std::string, bool CaseSensitive = false>
@@ -203,7 +203,7 @@ struct InsecureSplitablePath : PathBase<ThisType>
     }
 };
 
-struct SW_MANAGER_API InsecurePath : InsecureSplitablePath<InsecurePath>
+struct SW_SUPPORT_API InsecurePath : InsecureSplitablePath<InsecurePath>
 {
     using Base = InsecureSplitablePath<InsecurePath>;
     using Base::Base;
@@ -213,7 +213,7 @@ struct SW_MANAGER_API InsecurePath : InsecureSplitablePath<InsecurePath>
 #if defined(__APPLE__)
 SW_MANAGER_API_EXTERN
 #endif
-template struct SW_MANAGER_API PathBase<InsecurePath>;
+template struct SW_SUPPORT_API PathBase<InsecurePath>;
 #elif defined(__APPLE__)
 #else
 template struct PathBase<InsecurePath>;
@@ -237,7 +237,7 @@ struct SecureSplitablePath : PathBase<ThisType>
     }
 };
 
-struct SW_MANAGER_API Path : SecureSplitablePath<Path>
+struct SW_SUPPORT_API Path : SecureSplitablePath<Path>
 {
     using Base = SecureSplitablePath<Path>;
     using Base::Base;
@@ -247,13 +247,13 @@ struct SW_MANAGER_API Path : SecureSplitablePath<Path>
 #if defined(__APPLE__)
 SW_MANAGER_API_EXTERN
 #endif
-template struct SW_MANAGER_API PathBase<Path>;
+template struct SW_SUPPORT_API PathBase<Path>;
 #elif defined(__APPLE__)
 #else
 template struct PathBase<Path>;
 #endif
 
-struct SW_MANAGER_API PackagePath : SecureSplitablePath<PackagePath>
+struct SW_SUPPORT_API PackagePath : SecureSplitablePath<PackagePath>
 {
     using Base = SecureSplitablePath<PackagePath>;
 
@@ -315,7 +315,7 @@ private:
 #if defined(__APPLE__)
 SW_MANAGER_API_EXTERN
 #endif
-template struct SW_MANAGER_API PathBase<PackagePath>;
+template struct SW_SUPPORT_API PathBase<PackagePath>;
 #elif defined(__APPLE__)
 #else
 template struct PathBase<PackagePath>;

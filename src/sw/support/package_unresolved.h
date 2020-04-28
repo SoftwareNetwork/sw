@@ -16,7 +16,7 @@ namespace sw
 
 struct PackageId;
 
-struct SW_MANAGER_API UnresolvedPackage
+struct SW_SUPPORT_API UnresolvedPackage
 {
     PackagePath ppath;
     VersionRange range;
@@ -42,7 +42,7 @@ struct SW_MANAGER_API UnresolvedPackage
 
 using UnresolvedPackages = std::unordered_set<UnresolvedPackage>;
 
-SW_MANAGER_API
+SW_SUPPORT_API
 UnresolvedPackage extractFromString(const String &target);
 
 }

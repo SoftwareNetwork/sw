@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include <sw/manager/version.h>
+#include <sw/support/version.h>
 
 #include <primitives/emitter.h>
 

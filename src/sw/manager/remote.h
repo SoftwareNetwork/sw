@@ -6,8 +6,7 @@
 
 #pragma once
 
-#include "enums.h"
-
+#include <sw/support/enums.h>
 #include <sw/support/filesystem.h>
 
 #include <functional>
