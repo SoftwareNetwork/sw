@@ -123,12 +123,12 @@ struct SW_DRIVER_CPP_API TargetBase : TargetBaseData
         if constexpr (sizeof...(Args) > 0)
         {
             if constexpr (std::is_convertible_v<std::tuple_element_t<0, std::tuple<Args...>>, Version>)
-                return addTarget1<T>(Name, std::forward<Args>(args)...);
+                return *addTarget1<T>(Name, std::forward<Args>(args)...);
             else
-                return addTarget1<T>(Name, pkg ? getPackage().getVersion() : Version(), std::forward<Args>(args)...);
+                return *addTarget1<T>(Name, pkg ? getPackage().getVersion() : Version(), std::forward<Args>(args)...);
         }
         else
-            return addTarget1<T>(Name, pkg ? getPackage().getVersion() : Version(), std::forward<Args>(args)...);
+            return *addTarget1<T>(Name, pkg ? getPackage().getVersion() : Version(), std::forward<Args>(args)...);
     }
 
     /**
@@ -149,12 +149,12 @@ struct SW_DRIVER_CPP_API TargetBase : TargetBaseData
         if constexpr (sizeof...(Args) > 0)
         {
             if constexpr (std::is_convertible_v<std::tuple_element_t<0, std::tuple<Args...>>, Version>)
-                return makeTarget1<T>(Name, std::forward<Args>(args)...);
+                return addTarget1<T>(Name, std::forward<Args>(args)...);
             else
-                return makeTarget1<T>(Name, pkg ? getPackage().getVersion() : Version(), std::forward<Args>(args)...);
+                return addTarget1<T>(Name, pkg ? getPackage().getVersion() : Version(), std::forward<Args>(args)...);
         }
         else
-            return makeTarget1<T>(Name, pkg ? getPackage().getVersion() : Version(), std::forward<Args>(args)...);
+            return addTarget1<T>(Name, pkg ? getPackage().getVersion() : Version(), std::forward<Args>(args)...);
     }
 
     /**
@@ -204,32 +204,14 @@ private:
     bool Local = true; // local projects
 
     template <typename T, typename ... Args>
-    auto createTarget(Args && ... args)
+    std::shared_ptr<T> addTarget1(const PackagePath &Name, const Version &V, Args && ... args)
     {
-        return std::make_shared<T>(*this, std::forward<Args>(args)...);
-    }
-
-    template <typename T, typename ... Args>
-    T &addTarget1(const PackagePath &Name, const Version &V, Args && ... args)
-    {
-        static_assert(std::is_base_of_v<Target, T>, "Provide a valid Target type.");
-
-        auto t = createTarget<T>(std::forward<Args>(args)...);
-        addTarget2(true, *t, Name, V);
-        return *t;
-    }
-
-    template <typename T, typename ... Args>
-    std::shared_ptr<T> makeTarget1(const PackagePath &Name, const Version &V, Args && ... args)
-    {
-        static_assert(std::is_base_of_v<Target, T>, "Provide a valid Target type.");
-
-        auto t = createTarget<T>(std::forward<Args>(args)...);
-        addTarget2(false, *t, Name, V);
+        auto t = std::make_shared<T>(*this, std::forward<Args>(args)...);
+        addTarget2(*t, Name, V);
         return t;
     }
 
-    void addTarget2(bool add, Target &t, const PackagePath &Name, const Version &V);
+    void addTarget2(Target &t, const PackagePath &Name, const Version &V);
 
     PackagePath constructTargetName(const PackagePath &Name) const;
     void setupTarget(Target &t) const;

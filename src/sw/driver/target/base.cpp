@@ -140,7 +140,7 @@ PackagePath TargetBase::constructTargetName(const PackagePath &Name) const
     return NamePrefix / (pkg ? getPackage().getPath() / Name : Name);
 }
 
-void TargetBase::addTarget2(bool add, Target &t, const PackagePath &Name, const Version &V)
+void TargetBase::addTarget2(Target &t, const PackagePath &Name, const Version &V)
 {
     t.pkg = std::make_unique<LocalPackage>(getMainBuild().getContext().getLocalStorage(), constructTargetName(Name), V);
 
@@ -181,10 +181,6 @@ void TargetBase::addTarget2(bool add, Target &t, const PackagePath &Name, const 
             t.setSourceDirectory(/*getSolution().*/SourceDirBase); // take from this
         }
     }
-
-    // before init
-    if (!add)
-        return;
 
     while (t.init())
         ;
