@@ -82,6 +82,11 @@ TargetBase::TargetBase()
 }
 
 TargetBase::TargetBase(const TargetBase &rhs)
+    : TargetBaseData(rhs)
+{
+}
+
+TargetBase::TargetBase(const TargetBase &rhs, const PackageId &inpkg)
 {
     auto &parent = rhs;
 
@@ -95,6 +100,15 @@ TargetBase::TargetBase(const TargetBase &rhs)
     DryRun = getSolution().DryRun;
     command_storage = getSolution().command_storage;
     Local = getSolution().NamePrefix.empty();
+
+    // other computations
+
+    // pkg
+    pkg = std::make_unique<LocalPackage>(getMainBuild().getContext().getLocalStorage(), inpkg);
+
+    // after pkg
+    if (!current_project)
+        current_project = getPackage();
 }
 
 TargetBase::~TargetBase()
@@ -118,54 +132,13 @@ PackagePath TargetBase::constructTargetName(const PackagePath &Name) const
     return NamePrefix / (pkg ? getPackage().getPath() / Name : Name);
 }
 
-void TargetBase::addTarget2(Target &t, const PackageId &inpkg)
+void TargetBase::addTarget2(Target &t)
 {
-    t.pkg = std::make_unique<LocalPackage>(getMainBuild().getContext().getLocalStorage(), inpkg);
-
-    // setupTarget
-    // set some general settings, then init, then register
-    if (!t.current_project)
-        t.current_project = t.getPackage();
-    // setupTarget
-
-    // after setup
-    t.call(CallbackType::CreateTarget);
-
-    // sdir
-    if (!t.isLocal())
-        t.setSourceDirectory(getSolution().getSourceDir(t.getPackage()));
-    if (auto d = t.getPackage().getOverriddenDir())
-        t.setSourceDirectory(*d);
-    // set source dir
-    if (t.SourceDir.empty())
-    {
-        if (getSolution().dd)
-        {
-            auto i = getSolution().dd->source_dirs_by_package.find(t.getPackage());
-            if (i != getSolution().dd->source_dirs_by_package.end())
-                t.setSourceDirectory(i->second);
-        }
-
-        // try to get solution provided source dir
-        if (getSolution().dd && getSolution().dd->force_source)
-            t.setSource(*getSolution().dd->force_source);
-        if (t.source)
-        {
-            if (auto sd = getSolution().getSourceDir(t.getSource(), t.getPackage().getVersion()); sd)
-                t.setSourceDirectory(sd.value());
-        }
-        if (t.SourceDir.empty())
-        {
-            //t->SourceDir = SourceDir.empty() ? getSolution().SourceDir : SourceDir;
-            //t->SourceDir = getSolution().SourceDir;
-            t.setSourceDirectory(/*getSolution().*/SourceDirBase); // take from this
-        }
-    }
-
     while (t.init())
         ;
 
-    t.call(CallbackType::CreateTargetInitialized);
+    // after setup
+    t.call(CallbackType::CreateTarget);
 
     // add child
     if (t.getType() == TargetType::Directory || t.getType() == TargetType::Project)
@@ -220,14 +193,45 @@ const LocalPackage &TargetBase::getPackage() const
     return *pkg;
 }
 
-Target::Target(TargetBase &parent)
-    : TargetBase(parent)
+Target::Target(TargetBase &parent, const PackageId &pkg)
+    : TargetBase(parent, pkg)
 {
     ts = getSolution().module_data.current_settings;
     bs = ts;
 
     if (auto t0 = dynamic_cast<const Target*>(&parent))
         source = t0->source ? t0->source->clone() : nullptr;
+
+    // sdir
+    if (!isLocal())
+        setSourceDirectory(getSolution().getSourceDir(getPackage()));
+    if (auto d = getPackage().getOverriddenDir())
+        setSourceDirectory(*d);
+    // set source dir
+    if (SourceDir.empty())
+    {
+        if (getSolution().dd)
+        {
+            auto i = getSolution().dd->source_dirs_by_package.find(getPackage());
+            if (i != getSolution().dd->source_dirs_by_package.end())
+                setSourceDirectory(i->second);
+        }
+
+        // try to get solution provided source dir
+        if (getSolution().dd && getSolution().dd->force_source)
+            setSource(*getSolution().dd->force_source);
+        if (source)
+        {
+            if (auto sd = getSolution().getSourceDir(getSource(), getPackage().getVersion()); sd)
+                setSourceDirectory(sd.value());
+        }
+        if (SourceDir.empty())
+        {
+            //t->SourceDir = SourceDir.empty() ? getSolution().SourceDir : SourceDir;
+            //t->SourceDir = getSolution().SourceDir;
+            setSourceDirectory(/*getSolution().*/parent.SourceDirBase); // take from parent
+        }
+    }
 }
 
 Target::~Target()

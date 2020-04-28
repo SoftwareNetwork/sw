@@ -225,8 +225,8 @@ path NativeTarget::getOutputFile() const
     return t->getOutputFile();
 }
 
-NativeCompiledTarget::NativeCompiledTarget(TargetBase &parent)
-    : NativeTarget(parent), NativeTargetOptionsGroup((Target &)*this)
+NativeCompiledTarget::NativeCompiledTarget(TargetBase &parent, const PackageId &id)
+    : NativeTarget(parent, id), NativeTargetOptionsGroup((Target &)*this)
 {
 }
 

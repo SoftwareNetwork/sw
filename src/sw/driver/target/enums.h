@@ -43,7 +43,6 @@ enum class TargetScope
 enum class CallbackType
 {
     CreateTarget,
-    CreateTargetInitialized,
     BeginPrepare,
     EndPrepare,
 

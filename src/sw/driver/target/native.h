@@ -41,7 +41,8 @@ public:
     using TargetsSet = std::unordered_set<const ITarget*>;
 
 public:
-    NativeCompiledTarget(TargetBase &parent);
+    NativeCompiledTarget(TargetBase &parent, const PackageId &);
+
     using TargetEvents::add;
 
     ASSIGN_TYPES(ApiNameType)

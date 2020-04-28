@@ -107,8 +107,8 @@ void detectCSharpCompilers(DETECT_ARGS)
     }
 }
 
-CSharpTarget::CSharpTarget(TargetBase &parent)
-    : Target(parent), NativeTargetOptionsGroup((Target &)*this)
+CSharpTarget::CSharpTarget(TargetBase &parent, const PackageId &id)
+    : Target(parent, id), NativeTargetOptionsGroup((Target &)*this)
 {
 }
 
@@ -156,8 +156,8 @@ void detectRustCompilers(DETECT_ARGS)
     addProgram(DETECT_ARGS_PASS, PackageId("org.rust.rustc", v), {}, p);
 }
 
-RustTarget::RustTarget(TargetBase &parent)
-    : Target(parent), NativeTargetOptionsGroup((Target &)*this)
+RustTarget::RustTarget(TargetBase &parent, const PackageId &id)
+    : Target(parent, id), NativeTargetOptionsGroup((Target &)*this)
 {
 }
 
@@ -201,8 +201,8 @@ void detectGoCompilers(DETECT_ARGS)
     addProgram(DETECT_ARGS_PASS, PackageId("org.google.golang.go", v), {}, p);
 }
 
-GoTarget::GoTarget(TargetBase &parent)
-    : Target(parent), NativeTargetOptionsGroup((Target &)*this)
+GoTarget::GoTarget(TargetBase &parent, const PackageId &id)
+    : Target(parent, id), NativeTargetOptionsGroup((Target &)*this)
 {
 }
 
@@ -259,8 +259,8 @@ void detectFortranCompilers(DETECT_ARGS)
     addProgram(DETECT_ARGS_PASS, PackageId("org.gnu.gcc.fortran", v), {}, p);
 }
 
-FortranTarget::FortranTarget(TargetBase &parent)
-    : Target(parent), NativeTargetOptionsGroup((Target &)*this)
+FortranTarget::FortranTarget(TargetBase &parent, const PackageId &id)
+    : Target(parent, id), NativeTargetOptionsGroup((Target &)*this)
 {
 }
 
@@ -319,8 +319,8 @@ void detectJavaCompilers(DETECT_ARGS)
     addProgram(DETECT_ARGS_PASS, PackageId("com.oracle.java.javac", v), {}, p);
 }
 
-JavaTarget::JavaTarget(TargetBase &parent)
-    : Target(parent), NativeTargetOptionsGroup((Target &)*this)
+JavaTarget::JavaTarget(TargetBase &parent, const PackageId &id)
+    : Target(parent, id), NativeTargetOptionsGroup((Target &)*this)
 {
 }
 
@@ -365,8 +365,8 @@ void detectKotlinCompilers(DETECT_ARGS)
     addProgram(DETECT_ARGS_PASS, PackageId("com.JetBrains.kotlin.kotlinc", v), {}, p);
 }
 
-KotlinTarget::KotlinTarget(TargetBase &parent)
-    : Target(parent), NativeTargetOptionsGroup((Target &)*this)
+KotlinTarget::KotlinTarget(TargetBase &parent, const PackageId &id)
+    : Target(parent, id), NativeTargetOptionsGroup((Target &)*this)
 {
 }
 
@@ -416,8 +416,8 @@ void detectDCompilers(DETECT_ARGS)
     addProgram(DETECT_ARGS_PASS, PackageId("org.dlang.dmd.dmd", v), {}, p);
 }
 
-DTarget::DTarget(TargetBase &parent)
-    : NativeTarget(parent), NativeTargetOptionsGroup((Target &)*this)
+DTarget::DTarget(TargetBase &parent, const PackageId &id)
+    : NativeTarget(parent, id), NativeTargetOptionsGroup((Target &)*this)
 {
 }
 
@@ -489,8 +489,8 @@ bool DExecutable::init()
     return r;
 }
 
-PythonLibrary::PythonLibrary(TargetBase &parent)
-    : Target(parent), SourceFileTargetOptions(*this)
+PythonLibrary::PythonLibrary(TargetBase &parent, const PackageId &id)
+    : Target(parent, id), SourceFileTargetOptions(*this)
 {
 }
 

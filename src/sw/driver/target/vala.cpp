@@ -46,7 +46,7 @@ void ValaBase::init()
     t_ = dynamic_cast<NativeCompiledTarget*>(this);
     auto &t = *t_;
 
-    t.add(CallbackType::CreateTargetInitialized, [this, &t]()
+    t.add(CallbackType::CreateTarget, [this, &t]()
     {
         if (t.getType() == TargetType::NativeSharedLibrary)
             t.ExportAllSymbols = true;

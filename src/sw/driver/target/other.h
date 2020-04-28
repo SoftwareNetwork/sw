@@ -28,7 +28,7 @@ namespace sw
 struct SW_DRIVER_CPP_API CSharpTarget : Target
     , NativeTargetOptionsGroup
 {
-    CSharpTarget(TargetBase &parent);
+    CSharpTarget(TargetBase &parent, const PackageId &);
 
     SW_TARGET_USING_ASSIGN_OPS(NativeTargetOptionsGroup);
 
@@ -57,7 +57,7 @@ struct SW_DRIVER_CPP_API CSharpExecutable : CSharpTarget
 struct SW_DRIVER_CPP_API RustTarget : Target
     , NativeTargetOptionsGroup
 {
-    RustTarget(TargetBase &parent);
+    RustTarget(TargetBase &parent, const PackageId &);
 
     SW_TARGET_USING_ASSIGN_OPS(NativeTargetOptionsGroup);
 
@@ -85,7 +85,7 @@ struct SW_DRIVER_CPP_API RustExecutable : RustTarget
 struct SW_DRIVER_CPP_API GoTarget : Target
     , NativeTargetOptionsGroup
 {
-    GoTarget(TargetBase &parent);
+    GoTarget(TargetBase &parent, const PackageId &);
 
     SW_TARGET_USING_ASSIGN_OPS(NativeTargetOptionsGroup);
 
@@ -113,7 +113,7 @@ struct SW_DRIVER_CPP_API GoExecutable : GoTarget
 struct SW_DRIVER_CPP_API FortranTarget : Target
     , NativeTargetOptionsGroup
 {
-    FortranTarget(TargetBase &parent);
+    FortranTarget(TargetBase &parent, const PackageId &);
 
     SW_TARGET_USING_ASSIGN_OPS(NativeTargetOptionsGroup);
 
@@ -141,7 +141,7 @@ struct SW_DRIVER_CPP_API FortranExecutable : FortranTarget
 struct SW_DRIVER_CPP_API JavaTarget : Target
     , NativeTargetOptionsGroup
 {
-    JavaTarget(TargetBase &parent);
+    JavaTarget(TargetBase &parent, const PackageId &);
 
     SW_TARGET_USING_ASSIGN_OPS(NativeTargetOptionsGroup);
 
@@ -169,7 +169,7 @@ struct SW_DRIVER_CPP_API JavaExecutable : JavaTarget
 struct SW_DRIVER_CPP_API KotlinTarget : Target
     , NativeTargetOptionsGroup
 {
-    KotlinTarget(TargetBase &parent);
+    KotlinTarget(TargetBase &parent, const PackageId &);
 
     SW_TARGET_USING_ASSIGN_OPS(NativeTargetOptionsGroup);
 
@@ -197,7 +197,7 @@ struct SW_DRIVER_CPP_API KotlinExecutable : KotlinTarget
 struct SW_DRIVER_CPP_API DTarget : NativeTarget
     , NativeTargetOptionsGroup
 {
-    DTarget(TargetBase &parent);
+    DTarget(TargetBase &parent, const PackageId &);
 
     SW_TARGET_USING_ASSIGN_OPS(NativeTargetOptionsGroup);
 
@@ -254,7 +254,7 @@ struct SW_DRIVER_CPP_API DExecutable : DTarget
 struct SW_DRIVER_CPP_API PythonLibrary : Target
     , SourceFileTargetOptions
 {
-    PythonLibrary(TargetBase &parent);
+    PythonLibrary(TargetBase &parent, const PackageId &);
 
     bool init() override;
     Files gatherAllFiles() const override;

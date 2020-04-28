@@ -186,6 +186,7 @@ protected:
     mutable std::mutex m; // some internal mutex
 
     TargetBase(const TargetBase &);
+    TargetBase(const TargetBase &, const PackageId &);
 
     const LocalPackage &getPackage() const;
 
@@ -197,12 +198,12 @@ private:
     std::shared_ptr<T> addTarget1(const PackagePath &Name, const Version &v, Args && ... args)
     {
         PackageId pkg(constructTargetName(Name), v);
-        auto t = std::make_shared<T>(*this, std::forward<Args>(args)...);
-        addTarget2(*t, pkg);
+        auto t = std::make_shared<T>(*this, pkg, std::forward<Args>(args)...);
+        addTarget2(*t);
         return t;
     }
 
-    void addTarget2(Target &t, const PackageId &pkg);
+    void addTarget2(Target &t);
 
     PackagePath constructTargetName(const PackagePath &Name) const;
 
@@ -268,7 +269,7 @@ struct SW_DRIVER_CPP_API Target : ITarget, TargetBase, ProgramStorage,
     void addSourceDependency(const DependencyPtr &);
 
 public:
-    Target(TargetBase &parent);
+    Target(TargetBase &parent, const PackageId &);
     virtual ~Target();
 
     // api
