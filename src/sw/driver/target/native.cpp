@@ -438,6 +438,8 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
             c->push_back("-nostdlibinc");
             // this one cleans all default include dirs
             //c->push_back("-nostdinc");
+            // clang gives error on reinterpret cast in offsetof macro in win ucrt
+            *this += "_CRT_USE_BUILTIN_OFFSETOF"_def;
         }
         /*if (getBuildSettings().TargetOS.isApple())
         {
