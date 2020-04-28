@@ -48,7 +48,6 @@ struct CommandBuilder;
 }
 
 struct FileStorage;
-struct NativeCompiledTarget;
 struct Build;
 struct SwContext;
 struct SwBuild;
@@ -57,13 +56,6 @@ struct ProjectTarget;
 struct DirectoryTarget;
 using TargetBaseType = Target;
 using TargetBaseTypePtr = std::shared_ptr<TargetBaseType>;
-//using TargetBaseTypePtr = ITargetPtr;
-
-struct ExecutableTarget;
-struct LibraryTarget;
-struct StaticLibraryTarget;
-struct SharedLibraryTarget;
-
 struct Test;
 
 struct SW_DRIVER_CPP_API TargetEvent
