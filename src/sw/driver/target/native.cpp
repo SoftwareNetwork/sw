@@ -2067,7 +2067,8 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
                 {
                     if (d->isDisabled())
                         continue;
-                    auto &ds = s["dependencies"][boost::to_lower_copy(d->getTarget().getPackage().toString())];
+                    TargetSettings j;
+                    auto &ds = j[boost::to_lower_copy(d->getTarget().getPackage().toString())];
                     ds = d->getTarget().getSettings();
                     if (d->IncludeDirectoriesOnly)
                     {
@@ -2081,6 +2082,7 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
                         ds["link_libraries_only"].ignoreInComparison(true);
                         ds["link_libraries_only"].useInHash(false);
                     }
+                    s["dependencies"].push_back(j);
                 }
             };
 
@@ -2380,7 +2382,7 @@ void NativeCompiledTarget::prepare_pass2()
         auto ad = getActiveDependencies();
         for (auto &d : ad)
         {
-            Dependency d2(d.dep->getTarget());
+            Dependency d2(d.dep->getUnresolvedPackage());
             d2.settings = d.dep->getSettings();
             d2.setTarget(d.dep->getTarget());
             if (d.dep->IncludeDirectoriesOnly)
@@ -2496,39 +2498,42 @@ void NativeCompiledTarget::prepare_pass3_1()
                 {
                     auto inh = (InheritanceType)std::stoi(k);
 
-                    for (auto &[package_id, settings] : v["dependencies"].getSettings())
+                    for (auto &v1 : v["dependencies"].getArray())
                     {
-                        // find our resolved dependency and run
-                        bool found = false;
-                        for (auto &d3 : t->getDependencies())
+                        for (auto &[package_id, settings] : std::get<TargetSetting::Map>(v1))
                         {
-                            if (d3->getTarget().getPackage() == package_id && d3->getSettings() == settings.getSettings())
+                            // find our resolved dependency and run
+                            bool found = false;
+                            for (auto &d3 : t->getDependencies())
                             {
-                                // construct
-                                Dependency d2(d3->getTarget());
-                                d2.settings = d3->getSettings();
-                                d2.setTarget(d3->getTarget());
-                                //d2.IncludeDirectoriesOnly = d3->getSettings()["include_directories_only"] == "true";
-                                d2.IncludeDirectoriesOnly = settings["include_directories_only"] == "true";
-                                SW_CHECK(d3->getSettings()["include_directories_only"] == settings["include_directories_only"]);
-                                d2.LinkLibrariesOnly = settings["link_libraries_only"] == "true";
-                                SW_CHECK(d3->getSettings()["link_libraries_only"] == settings["link_libraries_only"]);
-
-                                // skip both of idir only libs and llibs only
-                                if (d2.IncludeDirectoriesOnly || d2.LinkLibrariesOnly)
+                                if (d3->getTarget().getPackage() == package_id && d3->getSettings() == settings.getSettings())
                                 {
-                                    // do not process here
+                                    // construct
+                                    Dependency d2(d3->getUnresolvedPackage());
+                                    d2.settings = d3->getSettings();
+                                    d2.setTarget(d3->getTarget());
+                                    //d2.IncludeDirectoriesOnly = d3->getSettings()["include_directories_only"] == "true";
+                                    d2.IncludeDirectoriesOnly = settings["include_directories_only"] == "true";
+                                    SW_CHECK(d3->getSettings()["include_directories_only"] == settings["include_directories_only"]);
+                                    d2.LinkLibrariesOnly = settings["link_libraries_only"] == "true";
+                                    SW_CHECK(d3->getSettings()["link_libraries_only"] == settings["link_libraries_only"]);
+
+                                    // skip both of idir only libs and llibs only
+                                    if (d2.IncludeDirectoriesOnly || d2.LinkLibrariesOnly)
+                                    {
+                                        // do not process here
+                                        found = true;
+                                        break;
+                                    }
+
+                                    calc_deps(*d, d2, inh);
                                     found = true;
                                     break;
                                 }
-
-                                calc_deps(*d, d2, inh);
-                                found = true;
-                                break;
                             }
+                            if (!found)
+                                throw SW_RUNTIME_ERROR("Cannot find predefined target: " + package_id);
                         }
-                        if (!found)
-                            throw SW_RUNTIME_ERROR("Cannot find predefined target: " + package_id);
                     }
                 }
             }
@@ -2632,40 +2637,43 @@ void NativeCompiledTarget::prepare_pass3_2()
                 {
                     auto inh = (InheritanceType)std::stoi(k);
 
-                    for (auto &[package_id, settings] : v["dependencies"].getSettings())
+                    for (auto &v1 : v["dependencies"].getArray())
                     {
-                        // find our resolved dependency and run
-                        bool found = false;
-                        for (auto &d3 : t->getDependencies())
+                        for (auto &[package_id, settings] : std::get<TargetSetting::Map>(v1))
                         {
-                            if (d3->getTarget().getPackage() == package_id && d3->getSettings() == settings.getSettings())
+                            // find our resolved dependency and run
+                            bool found = false;
+                            for (auto &d3 : t->getDependencies())
                             {
-                                // construct
-                                Dependency d2(d3->getTarget());
-                                d2.settings = d3->getSettings();
-                                d2.setTarget(d3->getTarget());
-                                //d2.IncludeDirectoriesOnly = d3->getSettings()["include_directories_only"] == "true";
-                                d2.IncludeDirectoriesOnly = settings["include_directories_only"] == "true";
-                                SW_CHECK(d3->getSettings()["include_directories_only"] == settings["include_directories_only"]);
-
-                                // exit early before llibs only
-                                if (!d->IncludeDirectoriesOnly && !d2.IncludeDirectoriesOnly)
+                                if (d3->getTarget().getPackage() == package_id && d3->getSettings() == settings.getSettings())
                                 {
-                                    // do not process here
+                                    // construct
+                                    Dependency d2(d3->getUnresolvedPackage());
+                                    d2.settings = d3->getSettings();
+                                    d2.setTarget(d3->getTarget());
+                                    //d2.IncludeDirectoriesOnly = d3->getSettings()["include_directories_only"] == "true";
+                                    d2.IncludeDirectoriesOnly = settings["include_directories_only"] == "true";
+                                    SW_CHECK(d3->getSettings()["include_directories_only"] == settings["include_directories_only"]);
+
+                                    // exit early before llibs only
+                                    if (!d->IncludeDirectoriesOnly && !d2.IncludeDirectoriesOnly)
+                                    {
+                                        // do not process here
+                                        found = true;
+                                        continue;
+                                    }
+
+                                    d2.LinkLibrariesOnly = settings["link_libraries_only"] == "true";
+                                    SW_CHECK(d3->getSettings()["link_libraries_only"] == settings["link_libraries_only"]);
+
+                                    calc_deps(*d, d2, inh);
                                     found = true;
-                                    continue;
+                                    break;
                                 }
-
-                                d2.LinkLibrariesOnly = settings["link_libraries_only"] == "true";
-                                SW_CHECK(d3->getSettings()["link_libraries_only"] == settings["link_libraries_only"]);
-
-                                calc_deps(*d, d2, inh);
-                                found = true;
-                                break;
                             }
+                            if (!found)
+                                throw SW_RUNTIME_ERROR("Cannot find predefined target: " + package_id);
                         }
-                        if (!found)
-                            throw SW_RUNTIME_ERROR("Cannot find predefined target: " + package_id);
                     }
                 }
             }
@@ -2780,38 +2788,41 @@ void NativeCompiledTarget::prepare_pass3_3()
                 {
                     auto inh = (InheritanceType)std::stoi(k);
 
-                    for (auto &[package_id, settings] : v["dependencies"].getSettings())
+                    for (auto &v1 : v["dependencies"].getArray())
                     {
-                        // find our resolved dependency and run
-                        bool found = false;
-                        for (auto &d3 : t->getDependencies())
+                        for (auto &[package_id, settings] : std::get<TargetSetting::Map>(v1))
                         {
-                            if (d3->getTarget().getPackage() == package_id && d3->getSettings() == settings.getSettings())
+                            // find our resolved dependency and run
+                            bool found = false;
+                            for (auto &d3 : t->getDependencies())
                             {
-                                // construct
-                                Dependency d2(d3->getTarget());
-                                d2.settings = d3->getSettings();
-                                d2.setTarget(d3->getTarget());
-                                //d2.IncludeDirectoriesOnly = d3->getSettings()["include_directories_only"] == "true";
-                                d2.IncludeDirectoriesOnly = settings["include_directories_only"] == "true";
-                                SW_CHECK(d3->getSettings()["include_directories_only"] == settings["include_directories_only"]);
-                                d2.LinkLibrariesOnly = settings["link_libraries_only"] == "true";
-                                SW_CHECK(d3->getSettings()["link_libraries_only"] == settings["link_libraries_only"]);
-
-                                if (!d2.LinkLibrariesOnly)
+                                if (d3->getTarget().getPackage() == package_id && d3->getSettings() == settings.getSettings())
                                 {
-                                    // do not process here
+                                    // construct
+                                    Dependency d2(d3->getUnresolvedPackage());
+                                    d2.settings = d3->getSettings();
+                                    d2.setTarget(d3->getTarget());
+                                    //d2.IncludeDirectoriesOnly = d3->getSettings()["include_directories_only"] == "true";
+                                    d2.IncludeDirectoriesOnly = settings["include_directories_only"] == "true";
+                                    SW_CHECK(d3->getSettings()["include_directories_only"] == settings["include_directories_only"]);
+                                    d2.LinkLibrariesOnly = settings["link_libraries_only"] == "true";
+                                    SW_CHECK(d3->getSettings()["link_libraries_only"] == settings["link_libraries_only"]);
+
+                                    if (!d2.LinkLibrariesOnly)
+                                    {
+                                        // do not process here
+                                        found = true;
+                                        break;
+                                    }
+
+                                    calc_deps(*d, d2, inh);
                                     found = true;
                                     break;
                                 }
-
-                                calc_deps(*d, d2, inh);
-                                found = true;
-                                break;
                             }
+                            if (!found)
+                                throw SW_RUNTIME_ERROR("Cannot find predefined target: " + package_id);
                         }
-                        if (!found)
-                            throw SW_RUNTIME_ERROR("Cannot find predefined target: " + package_id);
                     }
                 }
             }

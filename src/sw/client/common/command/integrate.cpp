@@ -423,12 +423,16 @@ SUBCOMMAND_DECL(integrate)
                 auto inh = std::stoi(k);
                 if ((inh & 4) == 0)
                     continue;
-                for (auto &[k, v] : p["dependencies"].getSettings())
+
+                for (auto &p1 : p["dependencies"].getArray())
                 {
-                    sw::PackageId dep(k);
-                    if (b.getContext().getPredefinedTargets().find(dep) != b.getContext().getPredefinedTargets().end())
-                        continue;
-                    ctx.addLine("target_link_libraries(" + pkg2string(pkg) + " INTERFACE " + dep.toString() + ")");
+                    for (auto &[k, v] : std::get<sw::TargetSetting::Map>(p1))
+                    {
+                        sw::PackageId dep(k);
+                        if (b.getContext().getPredefinedTargets().find(dep) != b.getContext().getPredefinedTargets().end())
+                            continue;
+                        ctx.addLine("target_link_libraries(" + pkg2string(pkg) + " INTERFACE " + dep.toString() + ")");
+                    }
                 }
             }
         }
@@ -526,9 +530,12 @@ SUBCOMMAND_DECL(integrate)
                         ctx.addLine("ctx.parse_flags('-l" + normalize_path(remove_ext(std::get<sw::TargetSetting::Value>(d))) + "', lib)");
 
                     // deps
-                    for (auto &[k, v] : p["dependencies"].getSettings())
+                    for (auto &p1 : p["dependencies"].getArray())
                     {
-                        process({ k, v.getSettings() });
+                        for (auto &[k, v] : std::get<sw::TargetSetting::Map>(p1))
+                        {
+                            process({ k, v.getSettings() });
+                        }
                     }
                 }
             };
