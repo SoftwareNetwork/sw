@@ -292,8 +292,7 @@ Build NativeTargetEntryPoint::createBuild(SwBuild &swb, const TargetSettings &s,
     b.DryRun = settings["driver"]["dry-run"] == "true";
 
     //settings.erase("driver");
-    settings["driver"].useInHash(false);
-    settings["driver"].ignoreInComparison(true);
+    settings["driver"].serializable(false);
 
     b.module_data.known_targets = pkgs;
     b.module_data.current_settings = settings;

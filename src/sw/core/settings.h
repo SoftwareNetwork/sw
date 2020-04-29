@@ -167,6 +167,9 @@ struct SW_CORE_API TargetSetting
     void ignoreInComparison(bool);
     bool ignoreInComparison() const { return ignore_in_comparison; }
 
+    void serializable(bool);
+    bool serializable() const { return serializable_; }
+
     void mergeAndAssign(const TargetSetting &);
     void mergeMissing(const TargetSetting &);
     void mergeFromJson(const nlohmann::json &);
@@ -180,6 +183,7 @@ private:
     bool required = false;
     bool used_in_hash = true;
     bool ignore_in_comparison = false;
+    bool serializable_ = true;
     // when adding new member, add it to copy_fields()!
     std::variant<std::monostate, Value, Array, Map, NullType> value;
 

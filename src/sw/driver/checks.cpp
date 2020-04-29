@@ -772,8 +772,7 @@ TargetSettings Check::getSettings() const
     auto up = getUniqueName();
     d /= up;
     ss["output_dir"] = normalize_path(d);
-    ss["output_dir"].useInHash(false);
-    ss["output_dir"].ignoreInComparison(true);
+    ss["output_dir"].serializable(false);
 
     return ss;
 }

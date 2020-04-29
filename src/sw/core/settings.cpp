@@ -110,6 +110,7 @@ void TargetSetting::copy_fields(const TargetSetting &rhs)
     use_count = rhs.use_count;
     used_in_hash = rhs.used_in_hash;
     ignore_in_comparison = rhs.ignore_in_comparison;
+    serializable_ = rhs.serializable_;
 }
 
 bool TargetSetting::isEmpty() const
@@ -235,6 +236,21 @@ void TargetSetting::useInHash(bool b)
 void TargetSetting::ignoreInComparison(bool b)
 {
     ignore_in_comparison = b;
+}
+
+// rename to serializable?
+void TargetSetting::serializable(bool b)
+{
+    serializable_ = b;
+
+    // not serializing means no round trip,
+    // so it cannot be used in hash and
+    // must be ignored in comparisons
+    if (!serializable())
+    {
+        useInHash(false);
+        ignoreInComparison(true);
+    }
 }
 
 void TargetSetting::mergeMissing(const TargetSetting &rhs)
@@ -438,6 +454,8 @@ nlohmann::json TargetSettings::toJson() const
     nlohmann::json j;
     for (auto &[k, v] : *this)
     {
+        if (!v.serializable())
+            continue;
         auto j2 = v.toJson();
         if (j2.is_null() && !v.isNull())
             continue;

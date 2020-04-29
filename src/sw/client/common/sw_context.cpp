@@ -681,8 +681,7 @@ std::vector<sw::TargetSettings> SwClientContext::createSettings()
         for (auto &s : settings)
         {
             s["output_dir"] = normalize_path(d);
-            s["output_dir"].useInHash(false);
-            s["output_dir"].ignoreInComparison(true);
+            s["output_dir"].serializable(false);
         }
     }
 
@@ -698,8 +697,7 @@ std::vector<sw::TargetSettings> SwClientContext::createSettings()
             if (s["name"])
                 throw SW_RUNTIME_ERROR("Some config already has its name");
             s["name"] = options.config_name[i];
-            s["name"].useInHash(false);
-            s["name"].ignoreInComparison(true);
+            s["name"].serializable(false);
         }
         LOG_DEBUG(logger, "WARNING: Setting config names may result in wrong config-name pair assignment, "
             "because of unspecified config creation order.");
