@@ -116,7 +116,7 @@ static auto can_use_saved_configs(const SwBuild &b)
     return true
         && s["use_saved_configs"] == "true"
         // allow only in the main build for now
-        //&& s["master_build"] == "true"
+        && s["master_build"] == "true"
         ;
 }
 

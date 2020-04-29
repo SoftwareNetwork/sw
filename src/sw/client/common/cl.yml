@@ -46,7 +46,7 @@ command_line:
 
             use_saved_configs:
                 aliases: usc
-                default_value: true
+                #default_value: true
 
             #
             save_failed_commands:
