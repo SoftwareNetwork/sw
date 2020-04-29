@@ -888,7 +888,7 @@ Commands SwBuild::getCommands() const
                             auto j = i->second.findSuitable(v.getSettings());
                             if (j == i->second.end())
                             {
-                                LOG_WARN(logger, "dep+settings not found: " + k + ": " + v.getSettings().toString());
+                                LOG_TRACE(logger, "dep+settings not found: " + k + ": " + v.getSettings().toString());
                                 continue; // probably was loaded config
                                 //throw SW_RUNTIME_ERROR("dep+settings not found: " + k + ": " + v.getSettings().toString());
                             }
