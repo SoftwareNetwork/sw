@@ -2424,13 +2424,17 @@ void NativeCompiledTarget::prepare_pass3()
 
 void NativeCompiledTarget::prepare_pass3_1()
 {
+    // process normal deps
+
     // we have ptrs, so do custom sorting
     std::unordered_map<DependencyPtr, InheritanceType, H, EQ> deps(0, H{});
     std::vector<DependencyPtr> deps_ordered;
 
     // set our initial deps
+    // we have only active deps now
     for (auto &d : getActiveDependencies())
     {
+        // skip both of idir only libs and llibs only
         if (d.dep->IncludeDirectoriesOnly)
             continue;
         if (d.dep->LinkLibrariesOnly)
@@ -2441,6 +2445,7 @@ void NativeCompiledTarget::prepare_pass3_1()
             deps_ordered.push_back(copy);
     }
 
+    //
     while (1)
     {
         bool new_dependency = false;
@@ -2475,6 +2480,7 @@ void NativeCompiledTarget::prepare_pass3_1()
                 // iterate over child deps
                 for (auto &dep : t->getActiveDependencies())
                 {
+                    // skip both of idir only libs and llibs only
                     if (dep.dep->IncludeDirectoriesOnly)
                         continue;
                     if (dep.dep->LinkLibrariesOnly)
@@ -2508,13 +2514,8 @@ void NativeCompiledTarget::prepare_pass3_1()
                                 d2.LinkLibrariesOnly = settings["link_libraries_only"] == "true";
                                 SW_CHECK(d3->getSettings()["link_libraries_only"] == settings["link_libraries_only"]);
 
-                                if (d2.IncludeDirectoriesOnly)
-                                {
-                                    // do not process here
-                                    found = true;
-                                    break;
-                                }
-                                if (d2.LinkLibrariesOnly)
+                                // skip both of idir only libs and llibs only
+                                if (d2.IncludeDirectoriesOnly || d2.LinkLibrariesOnly)
                                 {
                                     // do not process here
                                     found = true;
@@ -2556,6 +2557,7 @@ void NativeCompiledTarget::prepare_pass3_2()
     std::vector<DependencyPtr> deps_ordered;
 
     // set our initial deps
+    // take active idir only deps
     for (auto &d : getActiveDependencies())
     {
         if (!d.dep->IncludeDirectoriesOnly)
@@ -2567,6 +2569,7 @@ void NativeCompiledTarget::prepare_pass3_2()
         if (inserted)
             deps_ordered.push_back(copy);
     }
+    // and processed normal deps also
     for (auto &d : all_deps_normal)
     {
         auto copy = std::make_shared<Dependency>(*d);
@@ -2575,6 +2578,7 @@ void NativeCompiledTarget::prepare_pass3_2()
             deps_ordered.push_back(copy);
     }
 
+    //
     while (1)
     {
         bool new_dependency = false;
@@ -2643,15 +2647,17 @@ void NativeCompiledTarget::prepare_pass3_2()
                                 //d2.IncludeDirectoriesOnly = d3->getSettings()["include_directories_only"] == "true";
                                 d2.IncludeDirectoriesOnly = settings["include_directories_only"] == "true";
                                 SW_CHECK(d3->getSettings()["include_directories_only"] == settings["include_directories_only"]);
-                                d2.LinkLibrariesOnly = settings["link_libraries_only"] == "true";
-                                SW_CHECK(d3->getSettings()["link_libraries_only"] == settings["link_libraries_only"]);
 
-                                if (d2.LinkLibrariesOnly)
+                                // exit early before llibs only
+                                if (!d->IncludeDirectoriesOnly && !d2.IncludeDirectoriesOnly)
                                 {
                                     // do not process here
                                     found = true;
-                                    break;
+                                    continue;
                                 }
+
+                                d2.LinkLibrariesOnly = settings["link_libraries_only"] == "true";
+                                SW_CHECK(d3->getSettings()["link_libraries_only"] == settings["link_libraries_only"]);
 
                                 calc_deps(*d, d2, inh);
                                 found = true;
