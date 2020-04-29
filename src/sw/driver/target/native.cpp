@@ -1903,7 +1903,7 @@ DependenciesType NativeCompiledTarget::gatherDependencies() const
 {
     // take all
     // while getActiveDependencies() takes only active
-    ActiveDeps deps;
+    std::vector<TargetDependency> deps;
     TargetOptionsGroup::iterate([this, &deps](auto &v, auto i)
     {
         for (auto &d : v.getRawDependencies())
@@ -1911,7 +1911,10 @@ DependenciesType NativeCompiledTarget::gatherDependencies() const
     });
     DependenciesType deps2;
     for (auto &d : deps)
-        deps2.insert(d.dep);
+    {
+        if (!d.dep->artificial_)
+            deps2.insert(d.dep);
+    }
     return deps2;
 }
 
@@ -2384,6 +2387,7 @@ void NativeCompiledTarget::prepare_pass2()
                 continue;
             d2.LinkLibrariesOnly = true;
             auto d3 = std::make_shared<Dependency>(d2);
+            d3->artificial_ = true;
             Interface += d3;
             active_deps->push_back(createDependency(d3, InheritanceType::Interface, *this));
         }
