@@ -345,7 +345,7 @@ bool TargetSetting::isObject() const
     return std::get_if<Map>(&value);
 }
 
-void TargetSetting::push_back(const Value &v)
+void TargetSetting::push_back(const ArrayValue &v)
 {
     if (value.index() == 0)
     {

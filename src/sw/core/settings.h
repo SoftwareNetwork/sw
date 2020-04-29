@@ -99,7 +99,8 @@ struct SW_CORE_API TargetSetting
 
     using Value = TargetSettingValue;
     using Map = TargetSettings;
-    using Array = std::vector<std::variant<Value, Map>>;
+    using ArrayValue = std::variant<Value, Map>;
+    using Array = std::vector<ArrayValue>;
     using NullType = nulltag_t;
 
     TargetSetting() = default;
@@ -152,7 +153,7 @@ struct SW_CORE_API TargetSetting
     Map &getSettings();
     const Map &getSettings() const;
 
-    void push_back(const Value &);
+    void push_back(const ArrayValue &);
     void reset();
 
     void use();
