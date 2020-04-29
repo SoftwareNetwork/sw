@@ -528,25 +528,31 @@ bool Target::init()
 
     BinaryDir = getBinaryParentDir();
 
-    if (DryRun)
+    // remove whole condition block?
+    /*if (DryRun)
     {
         // we doing some download on server or whatever
         // so, we do not want to touch real existing bdirs
         BinaryDir = getMainBuild().getBuildDirectory() / "dry" / shorten_hash(blake2b_512(BinaryDir.u8string()), 6);
-        fs::remove_all(BinaryDir);
-        fs::create_directories(BinaryDir);
-    }
+        std::error_code ec;
+        fs::remove_all(BinaryDir, ec);
+        //fs::create_directories(BinaryDir);
+    }*/
 
     BinaryPrivateDir = BinaryDir / SW_BDIR_PRIVATE_NAME;
     BinaryDir /= SW_BDIR_NAME;
 
     // we must create it because users probably want to write to it immediately
-    fs::create_directories(BinaryDir);
-    fs::create_directories(BinaryPrivateDir);
+    //fs::create_directories(BinaryDir);
+    //fs::create_directories(BinaryPrivateDir);
 
     // make sure we always use absolute paths
-    BinaryDir = fs::absolute(BinaryDir);
-    BinaryPrivateDir = fs::absolute(BinaryPrivateDir);
+    //BinaryDir = fs::absolute(BinaryDir);
+    //BinaryPrivateDir = fs::absolute(BinaryPrivateDir);
+    if (!BinaryDir.is_absolute())
+        throw SW_LOGIC_ERROR("not absolute");
+    if (!BinaryPrivateDir.is_absolute())
+        throw SW_LOGIC_ERROR("not absolute");
 
     SW_RETURN_MULTIPASS_END(init_pass);
 }
