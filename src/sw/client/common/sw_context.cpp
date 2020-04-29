@@ -397,8 +397,7 @@ std::unique_ptr<sw::SwBuild> SwClientContext::createBuildInternal()
     //
     if (options.build_always)
         bs["build_always"] = "true";
-    if (options.use_saved_configs)
-        bs["use_saved_configs"] = "true";
+    bs["use_saved_configs"] = options.use_saved_configs ? "true" : "false";
     if (!options.options_build.ide_copy_to_dir.empty())
         bs["build_ide_copy_to_dir"] = normalize_path(options.options_build.ide_copy_to_dir);
     if (!options.options_build.ide_fast_path.empty())
