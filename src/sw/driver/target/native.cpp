@@ -1911,10 +1911,7 @@ DependenciesType NativeCompiledTarget::gatherDependencies() const
     });
     DependenciesType deps2;
     for (auto &d : deps)
-    {
-        if (!d.dep->artificial_)
-            deps2.insert(d.dep);
-    }
+        deps2.insert(d.dep);
     return deps2;
 }
 
@@ -2405,7 +2402,6 @@ void NativeCompiledTarget::prepare_pass2()
                 continue;
             d2.LinkLibrariesOnly = true;
             auto d3 = std::make_shared<Dependency>(d2);
-            d3->artificial_ = true;
             Interface += d3;
             active_deps->push_back(createDependency(d3, InheritanceType::Interface, *this));
         }

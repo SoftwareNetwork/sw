@@ -76,10 +76,6 @@ struct SW_DRIVER_CPP_API Dependency : DependencyData
 
     // for backwards compat
     void setDummy(bool) {}
-
-    // internals
-public:
-    bool artificial_ = false;
 };
 
 using DependencyPtr = std::shared_ptr<Dependency>;

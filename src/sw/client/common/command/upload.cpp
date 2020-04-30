@@ -88,16 +88,20 @@ sw::PackageDescriptionMap getPackages(const sw::SwBuild &b, const sw::SourceDirM
             j["files"].push_back(jf);
         }
 
-        // deps
+        // unique deps
+        std::set<UnresolvedPackage> upkgs;
         for (auto &d : t.getDependencies())
         {
             // filter out predefined targets
             if (b.getContext().getPredefinedTargets().find(d->getUnresolvedPackage().ppath) != b.getContext().getPredefinedTargets().end(d->getUnresolvedPackage().ppath))
                 continue;
-
+            upkgs.insert(d->getUnresolvedPackage());
+        }
+        for (auto &u : upkgs)
+        {
             nlohmann::json jd;
-            jd["path"] = d->getUnresolvedPackage().ppath.toString();
-            jd["range"] = d->getUnresolvedPackage().range.toString();
+            jd["path"] = u.getPath().toString();
+            jd["range"] = u.getRange().toString();
             j["dependencies"].push_back(jd);
         }
 
