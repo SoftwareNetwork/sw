@@ -36,6 +36,7 @@
 
 #include <sw/builder/platform.h>
 #include <sw/core/sw_context.h>
+#include <sw/manager/storage.h>
 
 #include <primitives/symbol.h>
 
@@ -169,7 +170,7 @@ void Command::prepare()
                     auto &of = nt->getInterfaceSettings()["output_file"];
                     if (!of)
                         throw SW_RUNTIME_ERROR("Empty output file in target: " + nt->getPackage().toString());
-                    p = of.getValue();
+                    p = of.getPathValue(nt->getPackage().getStorage());
                 }
                 else
                     throw SW_RUNTIME_ERROR("Package: " + t.getPackage().toString() + " has unknown type");
