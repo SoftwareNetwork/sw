@@ -163,13 +163,13 @@ String LocalPackage::getStampHash() const
     return hash;
 }
 
-path LocalPackage::getDirObjWdir(
+/*path LocalPackage::getDirObjWdir(
 // version level, project level (app or project)
 ) const
 {
     //return getDir(getStorage().storage_dir_dat) / "wd"; // working directory, was wdir
     return getDir() / "wd"; // working directory, was wdir
-}
+}*/
 
 void LocalPackage::remove() const
 {
