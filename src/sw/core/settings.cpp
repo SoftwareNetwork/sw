@@ -228,6 +228,16 @@ void TargetSetting::setPathValue(const path &root, const path &value)
     *this = normalize_path(value.lexically_relative(root));
 }
 
+path TargetSetting::getAbsolutePathValue() const
+{
+    return fs::u8path(getValue());
+}
+
+void TargetSetting::setAbsolutePathValue(const path &value)
+{
+    *this = normalize_path(value);
+}
+
 bool TargetSetting::operator==(const TargetSetting &rhs) const
 {
     if (ignore_in_comparison)

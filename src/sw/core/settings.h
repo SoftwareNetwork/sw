@@ -115,6 +115,9 @@ struct SW_CORE_API TargetSetting
     template <class U>
     TargetSetting(const U &u)
     {
+        if constexpr (std::is_same_v<U, path>)
+            setAbsolutePathValue(u);
+        else
         operator=(u);
     }
 
@@ -166,6 +169,8 @@ struct SW_CORE_API TargetSetting
     path getPathValue(const path &root) const;
     void setPathValue(const Directories &, const path &value);
     void setPathValue(const path &root, const path &value);
+    path getAbsolutePathValue() const;
+    void setAbsolutePathValue(const path &value);
 
     void push_back(const ArrayValue &);
     void reset();
