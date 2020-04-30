@@ -75,9 +75,12 @@ private:
 
 struct SW_BUILDER_API ResourcePool
 {
-    int n = -1; // unlimited
-    std::condition_variable cv;
-    std::mutex m;
+    ResourcePool(int n_resources)
+    {
+        if (n_resources < 1)
+            return;
+        n = n_resources;
+    }
 
     void lock()
     {
@@ -97,6 +100,11 @@ struct SW_BUILDER_API ResourcePool
         lk.unlock();
         cv.notify_one();
     }
+
+private:
+    int n = -1; // unlimited
+    std::condition_variable cv;
+    std::mutex m;
 };
 
 namespace builder
@@ -152,7 +160,7 @@ struct SW_BUILDER_API Command : ICastable, CommandNode, detail::ResolvableComman
     bool show_output = false; // no command output
     bool write_output_to_file = false;
     int strict_order = 0; // used to execute this before other commands
-    ResourcePool *pool = nullptr;
+    std::shared_ptr<ResourcePool> pool;
 
     std::thread::id tid;
     Clock::time_point t_begin;

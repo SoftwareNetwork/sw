@@ -297,8 +297,7 @@ void build(Solution &s)
     // tests
     {
         // at the moment tests cannot run in parallel
-        auto p = new sw::ResourcePool;
-        p->n = 1;
+        auto p = std::make_shared<sw::ResourcePool>(1);
 
         auto add_build_test = [&cpp_driver, &client, &p](const path &dir)
         {
