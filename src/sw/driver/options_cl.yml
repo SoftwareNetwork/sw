@@ -29,6 +29,9 @@ flags:
         properties:
             - output_dependency
 
+    # https://fedoraproject.org/wiki/Changes/Harden_All_Packages#Detailed_Harden_Flags_Description
+    # TODO:
+    # add -fPIE for executable target (compiler only), -pie for linking
     fpic:
         name: PositionIndependentCode
         flag: fPIC
