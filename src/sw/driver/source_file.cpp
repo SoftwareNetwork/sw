@@ -443,15 +443,19 @@ bool SourceFileStorage::check_absolute(path &F, bool ignore_errors, bool *source
         }
         if (source_dir)
         {
-            if (is_under_root(F, target.SourceDir))
+            // source file is checked
+            if (is_under_root_by_prefix_path(F, target.SourceDir))
                 *source_dir = true;
-            else if (is_under_root(F, target.BinaryDir) || is_under_root(F, target.BinaryPrivateDir))
+            else if (is_under_root_by_prefix_path(F, target.BinaryDir) || is_under_root_by_prefix_path(F, target.BinaryPrivateDir))
                 *source_dir = false;
             else
             {
+                // this is an error!
+                throw SW_RUNTIME_ERROR(normalize_path(F) + " is not under src or bin dir");
+
                 // other path
-                LOG_DEBUG(logger, F << " is not under src or bin dir");
-                *source_dir = true;
+                //LOG_DEBUG(logger, F << " is not under src or bin dir");
+                //*source_dir = true;
             }
         }
         if (!found)

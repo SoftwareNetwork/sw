@@ -225,9 +225,7 @@ void TargetSetting::setPathValue(const Directories &d, const path &value)
 
 void TargetSetting::setPathValue(const path &root, const path &value)
 {
-    auto r = normalize_path(root);
-    auto v = normalize_path(value);
-    if (v.find(r) == 0)
+    if (is_under_root_by_prefix_path(value, root))
         *this = normalize_path(value.lexically_relative(root));
     else
         setAbsolutePathValue(value);
