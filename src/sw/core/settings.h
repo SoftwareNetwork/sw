@@ -28,6 +28,8 @@
 namespace sw
 {
 
+struct Directories;
+
 using TargetSettingKey = String;
 using TargetSettingValue = String;
 struct TargetSetting;
@@ -152,6 +154,12 @@ struct SW_CORE_API TargetSetting
     const Array &getArray() const;
     Map &getSettings();
     const Map &getSettings() const;
+
+    // path helpers
+    path getPathValue(const Directories &) const;
+    path getPathValue(const path &root) const;
+    void setPathValue(const Directories &, const path &value);
+    void setPathValue(const path &root, const path &value);
 
     void push_back(const ArrayValue &);
     void reset();

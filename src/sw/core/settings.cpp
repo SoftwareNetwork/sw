@@ -19,6 +19,7 @@
 #include "settings.h"
 
 #include <sw/builder/os.h>
+#include <sw/manager/storage.h>
 #include <sw/support/hash.h>
 
 #include <nlohmann/json.hpp>
@@ -205,6 +206,26 @@ const TargetSetting::Map &TargetSetting::getSettings() const
         return ts;
     }
     return *s;
+}
+
+path TargetSetting::getPathValue(const Directories &d) const
+{
+    return getPathValue(d.storage_dir_pkg);
+}
+
+path TargetSetting::getPathValue(const path &root) const
+{
+    return normalize_path(root / fs::u8path(getValue()));
+}
+
+void TargetSetting::setPathValue(const Directories &d, const path &value)
+{
+    setPathValue(d.storage_dir_pkg, value);
+}
+
+void TargetSetting::setPathValue(const path &root, const path &value)
+{
+    *this = normalize_path(value.lexically_relative(root));
 }
 
 bool TargetSetting::operator==(const TargetSetting &rhs) const
