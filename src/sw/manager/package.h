@@ -111,9 +111,10 @@ struct SW_MANAGER_API LocalPackage : Package
 
     void remove() const;
 
+    const LocalStorage &getStorage() const;
+
 private:
     path getDir(const path &root) const;
-    const LocalStorage &getLocalStorage() const;
 };
 
 using LocalPackagePtr = std::unique_ptr<LocalPackage>;
