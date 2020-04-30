@@ -91,13 +91,21 @@ struct SW_MANAGER_API LocalPackage : Package
     bool isOverridden() const;
     std::optional<path> getOverriddenDir() const;
 
+    /// main package dir
     path getDir() const;
+
+    /// source archive root
     path getDirSrc() const;
+    /// actual sources root
     path getDirSrc2() const;
+
+    //
     path getDirObj() const;
     path getDirObj(const String &cfg) const;
-    path getDirObjWdir() const;
+
+    //path getDirObjWdir() const;
     path getDirInfo() const;
+
     path getStampFilename() const;
     String getStampHash() const;
 
