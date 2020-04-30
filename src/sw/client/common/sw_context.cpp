@@ -710,10 +710,12 @@ void SwClientContext::initNetwork()
     setHttpSettings(getOptions());
 }
 
-sw::SwContext &SwClientContext::getContext(bool allow_network)
+sw::SwContext &SwClientContext::getContext(bool in_allow_network)
 {
     if (!swctx_)
     {
+        bool allow_network = in_allow_network && !getOptions().no_network;
+
         // load proxy settings before SwContext
         if (allow_network)
             initNetwork();

@@ -30,6 +30,8 @@ command_line:
 
             curl_verbose:
             ignore_ssl_checks:
+            no_network:
+                description: Completely prohibit network connections.
 
             # from libs
             default_remote:
