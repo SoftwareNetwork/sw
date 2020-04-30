@@ -322,16 +322,9 @@ void TargetSetting::mergeFromJson(const nlohmann::json &j)
         v->clear();
         for (auto &e : j)
         {
-            if (e.is_string())
-                v->push_back(e);
-            else if (e.is_object())
-            {
-                Map m;
-                m.mergeFromJson(e);
-                v->push_back(m);
-            }
-            else
-                SW_UNIMPLEMENTED;
+            TargetSetting s;
+            s.mergeFromJson(e);
+            v->push_back(s);
         }
         return;
     }
@@ -453,12 +446,7 @@ nlohmann::json TargetSetting::toJson() const
         return getValue();
     case 2:
         for (auto &v2 : std::get<Array>(value))
-        {
-            if (v2.index() == 0)
-                j.push_back(std::get<Value>(v2));
-            else
-                j.push_back(std::get<Map>(v2).toJson());
-        }
+            j.push_back(v2.toJson());
         break;
     case 3:
         return std::get<Map>(value).toJson();
@@ -500,12 +488,7 @@ size_t TargetSetting::getHash1() const
         return hash_combine(h, getValue());
     case 2:
         for (auto &v2 : std::get<Array>(value))
-        {
-            if (v2.index() == 0)
-                hash_combine(h, std::get<Value>(v2));
-            else
-                hash_combine(h, std::get<Map>(v2).getHash1());
-        }
+            hash_combine(h, v2.getHash1());
         break;
     case 3:
         return hash_combine(h, std::get<Map>(value).getHash1());

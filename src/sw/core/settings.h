@@ -101,7 +101,7 @@ struct SW_CORE_API TargetSetting
 
     using Value = TargetSettingValue;
     using Map = TargetSettings;
-    using ArrayValue = std::variant<Value, Map>;
+    using ArrayValue = TargetSetting;
     using Array = std::vector<ArrayValue>;
     using NullType = nulltag_t;
 
@@ -226,32 +226,9 @@ private:
             break;
         case 2:
         {
-            size_t idx;
-            ar & idx;
             Array v1;
-            v1.resize(idx);
-            for (auto &v2 : v1)
-            {
-                size_t idx;
-                ar & idx;
-                switch (idx)
-                {
-                case 0:
-                {
-                    Value v;
-                    ar & v;
-                    v2 = v;
-                }
-                    break;
-                case 1:
-                {
-                    Map v;
-                    ar & v;
-                    v2 = v;
-                }
-                    break;
-                }
-            }
+            ar & v1;
+            value = v1;
         }
             break;
         case 3:
@@ -266,6 +243,8 @@ private:
     template <class Ar>
     void save(Ar &ar, unsigned) const
     {
+        if (!serializable_)
+            return;
         ar & used_in_hash;
         ar & ignore_in_comparison;
         //
@@ -278,23 +257,7 @@ private:
             ar & std::get<Value>(value);
             break;
         case 2:
-        {
-            auto &v1 = std::get<Array>(value);
-            ar & v1.size();
-            for (auto &v : v1)
-            {
-                ar & v.index();
-                switch (v.index())
-                {
-                case 0:
-                    ar & std::get<Value>(v);
-                    break;
-                case 1:
-                    ar & std::get<Map>(v);
-                    break;
-                }
-            }
-        }
+            ar & std::get<Array>(value);
             break;
         case 3:
             ar & std::get<Map>(value);
