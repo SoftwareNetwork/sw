@@ -74,7 +74,7 @@ T &addTarget(DETECT_ARGS, const PackageId &id, const TargetSettings &ts)
 {
     log_msg_detect_target("Detected target: " + id.toString() + ": " + ts.toString());
 
-    auto t = std::make_shared<T>(id, ts);
+    auto t = std::make_shared<T>(sw::LocalPackage(s.getLocalStorage(), id), ts);
     tm[id].push_back(t);
     return *t;
 }

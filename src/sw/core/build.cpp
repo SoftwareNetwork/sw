@@ -81,7 +81,7 @@ static auto get_settings_fn()
     return get_base_settings_name() + (use_json() ? ".json" : ".bin");
 }
 
-static auto create_target(const path &sfn, const PackageId &pkg, const TargetSettings &s)
+static auto create_target(const path &sfn, const LocalPackage &pkg, const TargetSettings &s)
 {
     LOG_TRACE(logger, "loading " << pkg.toString() << ": " << s.getHash() << " from settings file");
 

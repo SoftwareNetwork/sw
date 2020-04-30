@@ -59,7 +59,7 @@ struct SW_CORE_API ITarget : ICastable
     // basic info/description section
     //
 
-    virtual const PackageId &getPackage() const = 0;
+    virtual const LocalPackage &getPackage() const = 0;
 
     // merge getSource(), getFiles() and getDependencies() into single call returning json/target settings?
     // into getDescription() or getInformation() or something similar
@@ -147,13 +147,13 @@ struct SW_CORE_API PredefinedTarget : ITarget
 {
     TargetSettings public_ts;
 
-    PredefinedTarget(const PackageId &, const TargetSettings &);
+    PredefinedTarget(const LocalPackage &, const TargetSettings &);
     virtual ~PredefinedTarget();
 
     std::vector<IDependency *> getDependencies() const override;
 
     // return what we know
-    const PackageId &getPackage() const override { return pkg; }
+    const LocalPackage &getPackage() const override { return pkg; }
     const TargetSettings &getSettings() const override { return ts; }
     const TargetSettings &getInterfaceSettings() const override { return public_ts; }
 
@@ -165,7 +165,7 @@ struct SW_CORE_API PredefinedTarget : ITarget
     Commands getTests() const override { return {}; }                               // no tests
 
 private:
-    PackageId pkg;
+    LocalPackage pkg;
     TargetSettings ts;
     mutable bool deps_set = false;
     mutable std::vector<IDependencyPtr> deps;

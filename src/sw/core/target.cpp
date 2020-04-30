@@ -192,7 +192,7 @@ ITarget *TargetMap::find(const UnresolvedPackage &pkg, const TargetSettings &ts)
     return k->get();
 }
 
-PredefinedTarget::PredefinedTarget(const PackageId &id, const TargetSettings &ts)
+PredefinedTarget::PredefinedTarget(const LocalPackage &id, const TargetSettings &ts)
     : pkg(id), ts(ts)
 {
 }
