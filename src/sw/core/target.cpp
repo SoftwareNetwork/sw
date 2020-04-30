@@ -235,7 +235,7 @@ std::vector<IDependency *> PredefinedTarget::getDependencies() const
         {
             for (auto &v : v["dependencies"].getArray())
             {
-                for (auto &[k2, v2] : std::get<TargetSetting::Map>(v))
+                for (auto &[k2, v2] : v.getSettings())
                     deps.push_back(std::make_shared<PredefinedDependency>(k2, v2.getSettings()));
             }
         }

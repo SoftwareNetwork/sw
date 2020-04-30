@@ -24,6 +24,7 @@
 
 #include <sw/builder/execution_plan.h>
 #include <sw/builder/jumppad.h>
+#include <sw/manager/storage.h>
 
 #include <boost/current_function.hpp>
 #include <magic_enum.hpp>
@@ -825,12 +826,12 @@ Commands SwBuild::getCommands() const
     StringSet in_ttb;
     StringSet in_ttb_exclude;
     for (auto &t : build_settings["target-to-build"].getArray())
-        in_ttb.insert(std::get<TargetSetting::Value>(t));
+        in_ttb.insert(t.getValue());
     for (auto &t : build_settings["target-to-exclude"].getArray())
     {
-        if (in_ttb.find(std::get<sw::TargetSetting::Value>(t)) != in_ttb.end())
-            throw SW_RUNTIME_ERROR("Target " + std::get<sw::TargetSetting::Value>(t) + " specified both in include and exclude lists");
-        in_ttb_exclude.insert(std::get<sw::TargetSetting::Value>(t));
+        if (in_ttb.find(t.getValue()) != in_ttb.end())
+            throw SW_RUNTIME_ERROR("Target " + t.getValue() + " specified both in include and exclude lists");
+        in_ttb_exclude.insert(t.getValue());
     }
     bool in_ttb_used = !in_ttb.empty();
 
@@ -969,7 +970,7 @@ Commands SwBuild::getCommands() const
                     continue;
                 if (!(s["type"] == "native_shared_library" || s["type"] == "native_static_library" || s["type"] == "native_executable"))
                     continue;
-                copy_dir = path(s["output_file"].getValue()).parent_path();
+                copy_dir = s["output_file"].getPathValue(getContext().getLocalStorage()).parent_path();
             }
 
             PackageIdSet visited_pkgs;
@@ -982,7 +983,7 @@ Commands SwBuild::getCommands() const
                 if (!(s["type"] == "native_shared_library" || s["type"] == "native_static_library" || s["type"] == "native_executable"))
                     return;
 
-                path in = s["output_file"].getValue();
+                auto in = s["output_file"].getPathValue(getContext().getLocalStorage());
                 fast_path_files.insert(in);
 
                 if (s["import_library"].isValue())
@@ -998,7 +999,7 @@ Commands SwBuild::getCommands() const
                 {
                     auto o = copy_dir;
                     if (s["output_dir"].isValue())
-                        o /= s["output_dir"].getValue();
+                        o /= s["output_dir"].getPathValue(getContext().getLocalStorage());
                     o /= in.filename();
                     if (in == o)
                         return;
