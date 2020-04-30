@@ -244,12 +244,12 @@ SUBCOMMAND_DECL(integrate)
                 {
                     // defs
                     if_ctx.increaseIndent("target_compile_definitions(" + pkg2string(pkg) + " INTERFACE");
-                    for (auto &[k, p] : s["properties"].getSettings())
+                    for (auto &[k, p] : s["properties"].getMap())
                     {
                         auto inh = std::stoi(k);
                         if ((inh & 4) == 0)
                             continue;
-                        for (auto &[k, v] : p["definitions"].getSettings())
+                        for (auto &[k, v] : p["definitions"].getMap())
                         {
                             if_ctx.addLine(cmake_cfg);
                             if (v.getValue().empty())
@@ -264,7 +264,7 @@ SUBCOMMAND_DECL(integrate)
 
                     // idirs
                     if_ctx.increaseIndent("target_include_directories(" + pkg2string(pkg) + " INTERFACE");
-                    for (auto &[k, p] : s["properties"].getSettings())
+                    for (auto &[k, p] : s["properties"].getMap())
                     {
                         auto inh = std::stoi(k);
                         if ((inh & 4) == 0)
@@ -281,12 +281,12 @@ SUBCOMMAND_DECL(integrate)
                     // defs
                     String defs;
                     defs += "\"";
-                    for (auto &[k, p] : s["properties"].getSettings())
+                    for (auto &[k, p] : s["properties"].getMap())
                     {
                         auto inh = std::stoi(k);
                         if ((inh & 4) == 0)
                             continue;
-                        for (auto &[k, v] : p["definitions"].getSettings())
+                        for (auto &[k, v] : p["definitions"].getMap())
                         {
                             if (v.getValue().empty())
                                 defs += k + ";";
@@ -303,7 +303,7 @@ SUBCOMMAND_DECL(integrate)
                     // idirs
                     String idirs;
                     idirs += "\"";
-                    for (auto &[k, p] : s["properties"].getSettings())
+                    for (auto &[k, p] : s["properties"].getMap())
                     {
                         auto inh = std::stoi(k);
                         if ((inh & 4) == 0)
@@ -325,7 +325,7 @@ SUBCOMMAND_DECL(integrate)
                 {
                     // libs
                     if_ctx.increaseIndent("target_link_libraries(" + pkg2string(pkg) + " INTERFACE");
-                    for (auto &[k, p] : s["properties"].getSettings())
+                    for (auto &[k, p] : s["properties"].getMap())
                     {
                         auto inh = std::stoi(k);
                         if ((inh & 4) == 0)
@@ -344,7 +344,7 @@ SUBCOMMAND_DECL(integrate)
                     // libs
                     String libs;
                     libs += "\"";
-                    for (auto &[k, p] : s["properties"].getSettings())
+                    for (auto &[k, p] : s["properties"].getMap())
                     {
                         auto inh = std::stoi(k);
                         if ((inh & 4) == 0)
@@ -418,7 +418,7 @@ SUBCOMMAND_DECL(integrate)
             if (s["type"] == "native_executable")
                 continue;
 
-            for (auto &[k, p] : s["properties"].getSettings())
+            for (auto &[k, p] : s["properties"].getMap())
             {
                 auto inh = std::stoi(k);
                 if ((inh & 4) == 0)
@@ -426,7 +426,7 @@ SUBCOMMAND_DECL(integrate)
 
                 for (auto &p1 : p["dependencies"].getArray())
                 {
-                    for (auto &[k, v] : std::get<sw::TargetSetting::Map>(p1))
+                    for (auto &[k, v] : p1.getMap())
                     {
                         sw::PackageId dep(k);
                         if (b.getContext().getPredefinedTargets().find(dep) != b.getContext().getPredefinedTargets().end())
@@ -505,13 +505,13 @@ SUBCOMMAND_DECL(integrate)
                 ctx.addLine("ctx.parse_flags('-l" + normalize_path(remove_ext(s["import_library"].getValue())) + "', lib)");
 
                 // defs
-                for (auto &[k, p] : s["properties"].getSettings())
+                for (auto &[k, p] : s["properties"].getMap())
                 {
                     auto inh = std::stoi(k);
                     if ((inh & 4) == 0)
                         continue;
 
-                    for (auto &[k, v] : p["definitions"].getSettings())
+                    for (auto &[k, v] : p["definitions"].getMap())
                     {
                         if (v.getValue().empty())
                             ctx.addLine("ctx.parse_flags('-D" + k + "', lib)");
@@ -532,9 +532,9 @@ SUBCOMMAND_DECL(integrate)
                     // deps
                     for (auto &p1 : p["dependencies"].getArray())
                     {
-                        for (auto &[k, v] : std::get<sw::TargetSetting::Map>(p1))
+                        for (auto &[k, v] : p1.getMap())
                         {
-                            process({ k, v.getSettings() });
+                            process({ k, v.getMap() });
                         }
                     }
                 }

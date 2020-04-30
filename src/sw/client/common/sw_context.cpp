@@ -210,7 +210,7 @@ static void applySettings(sw::TargetSettings &s, const String &in_settings)
             boost::split(key_parts, p, boost::is_any_of("."));
             auto *ts = &s;
             for (int i = 0; i < key_parts.size() - 1; i++)
-                ts = &((*ts)[key_parts[i]].getSettings());
+                ts = &((*ts)[key_parts[i]].getMap());
             (*ts)[key_parts[key_parts.size() - 1]].reset();
             continue;
         }
@@ -222,7 +222,7 @@ static void applySettings(sw::TargetSettings &s, const String &in_settings)
         boost::split(key_parts, key, boost::is_any_of("."));
         auto *ts = &s;
         for (int i = 0; i < key_parts.size() - 1; i++)
-            ts = &((*ts)[key_parts[i]].getSettings());
+            ts = &((*ts)[key_parts[i]].getMap());
         (*ts)[key_parts[key_parts.size() - 1]] = value;
     }
 }
@@ -665,7 +665,7 @@ std::vector<sw::TargetSettings> SwClientContext::createSettings()
     if (settings.size() == 1 && settings[0]["host"])
     {
         auto s = getContext().getHostSettings();
-        s.mergeAndAssign(settings[0]["host"].getSettings());
+        s.mergeAndAssign(settings[0]["host"].getMap());
         getContext().setHostSettings(s);
         settings[0]["host"].reset();
     }

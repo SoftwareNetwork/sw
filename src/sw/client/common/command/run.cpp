@@ -55,7 +55,7 @@ static void run(sw::SwBuild &b, const sw::PackageId &pkg, primitives::Command &c
     auto &s = (*i)->getInterfaceSettings();
     if (!s["run_command"])
         throw SW_RUNTIME_ERROR("Target is not runnable: " + pkg.toString());
-    auto &sc = s["run_command"].getSettings();
+    auto &sc = s["run_command"].getMap();
 
     c.setProgram(sc["program"].getValue());
     if (sc["arguments"])
@@ -65,7 +65,7 @@ static void run(sw::SwBuild &b, const sw::PackageId &pkg, primitives::Command &c
     }
     if (sc["environment"])
     {
-        for (auto &[k, v] : sc["environment"].getSettings())
+        for (auto &[k, v] : sc["environment"].getMap())
             c.environment[k] = v.getValue();
     }
     //if (sc["create_new_console"] && sc["create_new_console"] == "true")

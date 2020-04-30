@@ -442,7 +442,7 @@ void SwBuild::resolvePackages(const std::vector<IDependency*> &udeps)
         auto m = loadLockFile(build_settings["lock_file"].getValue());
         if (build_settings["update_lock_file_packages"])
         {
-            for (auto &[u, p] : build_settings["update_lock_file_packages"].getSettings())
+            for (auto &[u, p] : build_settings["update_lock_file_packages"].getMap())
             {
                 m.erase(u);
                 must_update_lock_file = true; // must update lock file here
@@ -886,12 +886,12 @@ Commands SwBuild::getCommands() const
                             auto i = getTargets().find(PackageId(k));
                             if (i == getTargets().end())
                                 throw SW_RUNTIME_ERROR("dep not found: " + k);
-                            auto j = i->second.findSuitable(v.getSettings());
+                            auto j = i->second.findSuitable(v.getMap());
                             if (j == i->second.end())
                             {
-                                LOG_TRACE(logger, "dep+settings not found: " + k + ": " + v.getSettings().toString());
+                                LOG_TRACE(logger, "dep+settings not found: " + k + ": " + v.getMap().toString());
                                 continue; // probably was loaded config
-                                //throw SW_RUNTIME_ERROR("dep+settings not found: " + k + ": " + v.getSettings().toString());
+                                //throw SW_RUNTIME_ERROR("dep+settings not found: " + k + ": " + v.getMap().toString());
                             }
 
                             auto m = ttb[PackageId(k)].findEqual((*j)->getSettings());
@@ -905,8 +905,8 @@ Commands SwBuild::getCommands() const
                         }
                     };
 
-                    get_deps(s["dependencies"]["link"].getSettings());
-                    get_deps(s["dependencies"]["dummy"].getSettings());
+                    get_deps(s["dependencies"]["link"].getMap());
+                    get_deps(s["dependencies"]["dummy"].getMap());
                 };
 
                 process_deps(s);
@@ -1012,7 +1012,7 @@ Commands SwBuild::getCommands() const
                 std::function<void(const TargetSettings &)> process_deps;
                 process_deps = [this, &copy_file, &process_deps, &visited_pkgs](const auto &s)
                 {
-                    for (auto &[k, v] : s["dependencies"]["link"].getSettings())
+                    for (auto &[k, v] : s["dependencies"]["link"].getMap())
                     {
                         PackageId p(k);
                         if (visited_pkgs.find(p) != visited_pkgs.end())
@@ -1021,7 +1021,7 @@ Commands SwBuild::getCommands() const
                         auto i = getTargets().find(p);
                         if (i == getTargets().end())
                             throw SW_RUNTIME_ERROR("dep not found");
-                        auto j = i->second.findSuitable(v.getSettings());
+                        auto j = i->second.findSuitable(v.getMap());
                         if (j == i->second.end())
                             throw SW_RUNTIME_ERROR("dep+settings not found");
 
@@ -1243,7 +1243,7 @@ Executor &SwBuild::getPrepareExecutor() const
 
 const TargetSettings &SwBuild::getExternalVariables() const
 {
-    return getSettings()["D"].getSettings();
+    return getSettings()["D"].getMap();
 }
 
 path SwBuild::getTestDir() const

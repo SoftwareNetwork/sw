@@ -930,7 +930,7 @@ void CMakeGenerator::generate(const sw::SwBuild &b)
         ctx.addLine("target_compile_definitions(" + pkg.toString() + " PRIVATE");
         ctx.increaseIndent();
         // TODO: fix properties like in integration
-        for (auto &[k, v] : s["this"]["definitions"].getSettings())
+        for (auto &[k, v] : s["this"]["definitions"].getMap())
         {
             if (k == "NDEBUG")
                 continue;
@@ -950,13 +950,13 @@ void CMakeGenerator::generate(const sw::SwBuild &b)
 
         ctx.addLine("target_link_libraries(" + pkg.toString() + " PRIVATE");
         ctx.increaseIndent();
-        for (auto &[k, _] : s["dependencies"]["link"].getSettings())
+        for (auto &[k, _] : s["dependencies"]["link"].getMap())
         {
             if (sw::PackageId(k).getPath().isAbsolute())
                 deps.insert(k);
             ctx.addLine(k);
         }
-        if (!s["dependencies"]["link"].getSettings().empty())
+        if (!s["dependencies"]["link"].getMap().empty())
             ctx.addLine();
         for (auto &f : s["this"]["system_link_libraries"].getArray())
             ctx.addLine("\"" + normalize_path(std::get<sw::TargetSetting::Value>(f)) + "\"");

@@ -808,12 +808,12 @@ path Target::getFile(const DependencyPtr &dep, const path &fn)
 TargetSettings &Target::getOptions()
 {
     // only export options are changeable
-    return getExportOptions()["options"].getSettings();
+    return getExportOptions()["options"].getMap();
 }
 
 const TargetSettings &Target::getOptions() const
 {
-    return getSettings()["options"].getSettings();
+    return getSettings()["options"].getMap();
 }
 
 TargetSettings &Target::getExportOptions()

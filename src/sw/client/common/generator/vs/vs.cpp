@@ -585,7 +585,7 @@ void VSGenerator::generate(const SwBuild &b)
                     auto &pd = ttb;
                     if (pd.find(d) == pd.end())
                     {
-                        auto i = b.getTargets().find(d, v.getSettings());
+                        auto i = b.getTargets().find(d, v.getMap());
                         if (!i)
                             throw SW_LOGIC_ERROR("Cannot find dependency: " + d.toString());
                         data.dependencies.insert(i);
@@ -595,8 +595,8 @@ void VSGenerator::generate(const SwBuild &b)
                 }
             };
 
-            add_deps(is["dependencies"]["link"].getSettings());
-            add_deps(is["dependencies"]["dummy"].getSettings());
+            add_deps(is["dependencies"]["link"].getMap());
+            add_deps(is["dependencies"]["dummy"].getMap());
 
             //
             if (!s.first_project && n_executables == 1 && tgt->getInterfaceSettings()["type"] == "native_executable")

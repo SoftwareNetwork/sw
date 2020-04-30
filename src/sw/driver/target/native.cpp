@@ -2494,19 +2494,19 @@ void NativeCompiledTarget::prepare_pass3_1()
             {
                 auto &ts = t->getInterfaceSettings();
 
-                for (auto &[k, v] : ts["properties"].getSettings())
+                for (auto &[k, v] : ts["properties"].getMap())
                 {
                     auto inh = (InheritanceType)std::stoi(k);
 
                     for (auto &v1 : v["dependencies"].getArray())
                     {
-                        for (auto &[package_id, settings] : std::get<TargetSetting::Map>(v1))
+                        for (auto &[package_id, settings] : v1.getMap())
                         {
                             // find our resolved dependency and run
                             bool found = false;
                             for (auto &d3 : t->getDependencies())
                             {
-                                if (d3->getTarget().getPackage() == package_id && d3->getSettings() == settings.getSettings())
+                                if (d3->getTarget().getPackage() == package_id && d3->getSettings() == settings.getMap())
                                 {
                                     // construct
                                     Dependency d2(d3->getUnresolvedPackage());
@@ -2633,19 +2633,19 @@ void NativeCompiledTarget::prepare_pass3_2()
             {
                 auto &ts = t->getInterfaceSettings();
 
-                for (auto &[k, v] : ts["properties"].getSettings())
+                for (auto &[k, v] : ts["properties"].getMap())
                 {
                     auto inh = (InheritanceType)std::stoi(k);
 
                     for (auto &v1 : v["dependencies"].getArray())
                     {
-                        for (auto &[package_id, settings] : std::get<TargetSetting::Map>(v1))
+                        for (auto &[package_id, settings] : v1.getMap())
                         {
                             // find our resolved dependency and run
                             bool found = false;
                             for (auto &d3 : t->getDependencies())
                             {
-                                if (d3->getTarget().getPackage() == package_id && d3->getSettings() == settings.getSettings())
+                                if (d3->getTarget().getPackage() == package_id && d3->getSettings() == settings.getMap())
                                 {
                                     // construct
                                     Dependency d2(d3->getUnresolvedPackage());
@@ -2784,19 +2784,19 @@ void NativeCompiledTarget::prepare_pass3_3()
                 if (!::sw::isStaticOrHeaderOnlyLibrary(ts))
                     continue;
 
-                for (auto &[k, v] : ts["properties"].getSettings())
+                for (auto &[k, v] : ts["properties"].getMap())
                 {
                     auto inh = (InheritanceType)std::stoi(k);
 
                     for (auto &v1 : v["dependencies"].getArray())
                     {
-                        for (auto &[package_id, settings] : std::get<TargetSetting::Map>(v1))
+                        for (auto &[package_id, settings] : v1.getMap())
                         {
                             // find our resolved dependency and run
                             bool found = false;
                             for (auto &d3 : t->getDependencies())
                             {
-                                if (d3->getTarget().getPackage() == package_id && d3->getSettings() == settings.getSettings())
+                                if (d3->getTarget().getPackage() == package_id && d3->getSettings() == settings.getMap())
                                 {
                                     // construct
                                     Dependency d2(d3->getUnresolvedPackage());
@@ -2875,7 +2875,7 @@ void NativeCompiledTarget::prepare_pass4()
         {
             const auto &is = d->getTarget().getInterfaceSettings();
 
-            for (auto &[k,v] : is["properties"].getSettings())
+            for (auto &[k,v] : is["properties"].getMap())
             {
                 auto inh = (InheritanceType)std::stoi(k);
                 if (inh == InheritanceType::Private)
@@ -2886,7 +2886,7 @@ void NativeCompiledTarget::prepare_pass4()
                 for (auto &v2 : v["source_files"].getArray())
                     getMergeObject() += path(std::get<String>(v2));
 
-                for (auto &[k, v2] : v["definitions"].getSettings())
+                for (auto &[k, v2] : v["definitions"].getMap())
                 {
                     if (v2.getValue().empty())
                         getMergeObject().Definitions[k];
@@ -2947,7 +2947,7 @@ void NativeCompiledTarget::prepare_pass4()
         {
             const auto &is = d->getTarget().getInterfaceSettings();
 
-            for (auto &[k,v] : is["properties"].getSettings())
+            for (auto &[k,v] : is["properties"].getMap())
             {
                 auto inh = (InheritanceType)std::stoi(k);
                 if (inh == InheritanceType::Private)
@@ -2959,7 +2959,7 @@ void NativeCompiledTarget::prepare_pass4()
                 for (auto &v2 : v["source_files"].getArray())
                     getMergeObject() += path(std::get<String>(v2));
 
-                for (auto &[k, v2] : v["definitions"].getSettings())
+                for (auto &[k, v2] : v["definitions"].getMap())
                 {
                     if (v2.getValue().empty())
                         getMergeObject().Definitions[k];
@@ -2996,7 +2996,7 @@ void NativeCompiledTarget::prepare_pass4()
         {
             const auto &is = d->getTarget().getInterfaceSettings();
 
-            for (auto &[k,v] : is["properties"].getSettings())
+            for (auto &[k,v] : is["properties"].getMap())
             {
                 for (auto &v2 : v["link_libraries"].getArray())
                     getMergeObject().LinkLibraries.insert(LinkLibrary{ fs::u8path(std::get<String>(v2)) });

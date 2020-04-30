@@ -184,7 +184,7 @@ const TargetSetting::Array &TargetSetting::getArray() const
     return *v;
 }
 
-TargetSetting::Map &TargetSetting::getSettings()
+TargetSetting::Map &TargetSetting::getMap()
 {
     auto s = std::get_if<Map>(&value);
     if (!s)
@@ -197,7 +197,7 @@ TargetSetting::Map &TargetSetting::getSettings()
     return *s;
 }
 
-const TargetSetting::Map &TargetSetting::getSettings() const
+const TargetSetting::Map &TargetSetting::getMap() const
 {
     auto s = std::get_if<Map>(&value);
     if (!s)

@@ -135,7 +135,7 @@ void Command::prepare()
                 const auto &is = nt->getInterfaceSettings();
                 if (is["run_command"])
                 {
-                    for (auto &[k, v] : is["run_command"]["environment"].getSettings())
+                    for (auto &[k, v] : is["run_command"]["environment"].getMap())
                         environment[k] = v.getValue();
                 }
             }
@@ -200,7 +200,7 @@ void Command::prepare()
             const auto &is = nt->getInterfaceSettings();
             if (is["run_command"])
             {
-                for (auto &[k, v] : is["run_command"]["environment"].getSettings())
+                for (auto &[k, v] : is["run_command"]["environment"].getMap())
                 {
                     if (k == "PATH")
                         appendEnvironmentArrayValue(k, v.getValue(), true);

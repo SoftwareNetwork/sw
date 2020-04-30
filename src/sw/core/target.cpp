@@ -231,12 +231,12 @@ std::vector<IDependency *> PredefinedTarget::getDependencies() const
             //deps.push_back(std::make_shared<PredefinedDependency>(k, v.getSettings()));
 
         // we take only link libs now, is it correct?
-        for (auto &[k, v] : public_ts["properties"].getSettings())
+        for (auto &[k, v] : public_ts["properties"].getMap())
         {
             for (auto &v : v["dependencies"].getArray())
             {
-                for (auto &[k2, v2] : v.getSettings())
-                    deps.push_back(std::make_shared<PredefinedDependency>(k2, v2.getSettings()));
+                for (auto &[k2, v2] : v.getMap())
+                    deps.push_back(std::make_shared<PredefinedDependency>(k2, v2.getMap()));
             }
         }
 
