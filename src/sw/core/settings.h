@@ -113,6 +113,12 @@ struct SW_CORE_API TargetSetting
     const TargetSetting &operator[](const TargetSettingKey &k) const;
 
     template <class U>
+    TargetSetting(const U &u)
+    {
+        operator=(u);
+    }
+
+    template <class U>
     TargetSetting &operator=(const U &u)
     {
         if constexpr (std::is_same_v<U, std::nullptr_t>)
