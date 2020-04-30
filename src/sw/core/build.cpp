@@ -988,7 +988,7 @@ Commands SwBuild::getCommands() const
 
                 if (s["import_library"].isValue())
                 {
-                    path il = s["import_library"].getValue();
+                    path il = s["import_library"].getPathValue(getContext().getLocalStorage());
                     fast_path_files.insert(il);
                 }
 
