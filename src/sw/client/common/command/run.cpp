@@ -57,11 +57,11 @@ static void run(sw::SwBuild &b, const sw::PackageId &pkg, primitives::Command &c
         throw SW_RUNTIME_ERROR("Target is not runnable: " + pkg.toString());
     auto &sc = s["run_command"].getMap();
 
-    c.setProgram(sc["program"].getValue());
+    c.setProgram(sc["program"].getPathValue(b.getContext().getLocalStorage()));
     if (sc["arguments"])
     {
         for (auto &a : sc["arguments"].getArray())
-            c.push_back(std::get<sw::TargetSetting::Value>(a));
+            c.push_back(a.getValue());
     }
     if (sc["environment"])
     {

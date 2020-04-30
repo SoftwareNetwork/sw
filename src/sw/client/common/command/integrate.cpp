@@ -25,6 +25,7 @@
 #include <sw/core/sw_context.h>
 #include <sw/driver/build_settings.h>
 #include <sw/driver/types.h>
+#include <sw/manager/storage.h>
 
 struct CMakeEmitter : primitives::Emitter
 {
@@ -110,7 +111,7 @@ int getSwCmakeConfigVersion()
 SUBCOMMAND_DECL(integrate)
 {
     bool cygwin = false;
-    auto fix_path = [&cygwin](const auto &p)
+    auto fix_path = [&cygwin](const String &p)
     {
         if (!cygwin)
             return p;
@@ -270,7 +271,7 @@ SUBCOMMAND_DECL(integrate)
                         if ((inh & 4) == 0)
                             continue;
                         for (auto &d : p["include_directories"].getArray())
-                            if_ctx.addLine(cmake_cfg + fix_path(std::get<sw::TargetSetting::Value>(d)) + cmake_cfg_end);
+                            if_ctx.addLine(cmake_cfg + fix_path(normalize_path(d.getPathValue(getContext().getLocalStorage()))) + cmake_cfg_end);
                     }
                     if_ctx.decreaseIndent(")");
                     if_ctx.emptyLines();
@@ -309,7 +310,7 @@ SUBCOMMAND_DECL(integrate)
                         if ((inh & 4) == 0)
                             continue;
                         for (auto &d : p["include_directories"].getArray())
-                            idirs += fix_path(std::get<sw::TargetSetting::Value>(d)) + ";";
+                            idirs += fix_path(normalize_path(d.getPathValue(getContext().getLocalStorage()))) + ";";
                     }
                     idirs += "\"";
                     else_ctx.increaseIndent("set_target_properties(" + pkg2string(pkg) + " PROPERTIES");
@@ -331,9 +332,9 @@ SUBCOMMAND_DECL(integrate)
                         if ((inh & 4) == 0)
                             continue;
                         for (auto &d : p["link_libraries"].getArray())
-                            if_ctx.addLine(cmake_cfg + fix_path(std::get<sw::TargetSetting::Value>(d)) + cmake_cfg_end);
+                            if_ctx.addLine(cmake_cfg + fix_path(normalize_path(d.getPathValue(getContext().getLocalStorage()))) + cmake_cfg_end);
                         for (auto &d : p["system_link_libraries"].getArray())
-                            if_ctx.addLine(cmake_cfg + fix_path(std::get<sw::TargetSetting::Value>(d)) + cmake_cfg_end);
+                            if_ctx.addLine(cmake_cfg + fix_path(d.getValue()) + cmake_cfg_end);
                     }
                     if_ctx.decreaseIndent(")");
                     if_ctx.emptyLines();
@@ -350,9 +351,9 @@ SUBCOMMAND_DECL(integrate)
                         if ((inh & 4) == 0)
                             continue;
                         for (auto &d : p["link_libraries"].getArray())
-                            libs += fix_path(std::get<sw::TargetSetting::Value>(d)) + ";";
+                            libs += fix_path(normalize_path(d.getPathValue(getContext().getLocalStorage()))) + ";";
                         for (auto &d : p["system_link_libraries"].getArray())
-                            libs += std::get<sw::TargetSetting::Value>(d) + ";";
+                            libs += d.getValue() + ";";
                     }
                     libs += "\"";
                     else_ctx.increaseIndent("set_target_properties(" + pkg2string(pkg) + " PROPERTIES");
@@ -485,7 +486,7 @@ SUBCOMMAND_DECL(integrate)
             using f_param = const tgt_type &;
             std::function<void(f_param)> process;
             std::set<tgt_type> visited;
-            process = [&process, &s, &b, &ctx, &visited](f_param nt)
+            process = [this, &process, &s, &b, &ctx, &visited](f_param nt)
             {
                 if (visited.find(nt) != visited.end())
                     return;
@@ -521,13 +522,13 @@ SUBCOMMAND_DECL(integrate)
 
                     // idirs
                     for (auto &d : p["include_directories"].getArray())
-                        ctx.addLine("ctx.parse_flags('-I" + normalize_path(std::get<sw::TargetSetting::Value>(d)) + "', lib)");
+                        ctx.addLine("ctx.parse_flags('-I" + normalize_path(d.getPathValue(getContext().getLocalStorage())) + "', lib)");
 
                     // libs
                     for (auto &d : p["link_libraries"].getArray())
-                        ctx.addLine("ctx.parse_flags('-l" + normalize_path(remove_ext(std::get<sw::TargetSetting::Value>(d))) + "', lib)");
+                        ctx.addLine("ctx.parse_flags('-l" + normalize_path(remove_ext(d.getPathValue(getContext().getLocalStorage()))) + "', lib)");
                     for (auto &d : p["system_link_libraries"].getArray())
-                        ctx.addLine("ctx.parse_flags('-l" + normalize_path(remove_ext(std::get<sw::TargetSetting::Value>(d))) + "', lib)");
+                        ctx.addLine("ctx.parse_flags('-l" + normalize_path(remove_ext(d.getPathValue(getContext().getLocalStorage()))) + "', lib)");
 
                     // deps
                     for (auto &p1 : p["dependencies"].getArray())

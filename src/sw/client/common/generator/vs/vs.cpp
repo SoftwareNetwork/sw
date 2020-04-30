@@ -29,6 +29,7 @@
 #include <sw/core/specification.h>
 #include <sw/core/sw_context.h>
 #include <sw/driver/build_settings.h>
+#include <sw/manager/storage.h>
 #include <sw/support/filesystem.h>
 
 #include <boost/algorithm/string.hpp>
@@ -480,7 +481,7 @@ void VSGenerator::generate(const SwBuild &b)
 
             auto cfs = d.target->getInterfaceSettings()["ide"]["configure_files"].getArray();
             for (auto &cf : cfs)
-                configure_files[d.target->getSettings()].insert(std::get<sw::TargetSetting::Value>(cf));
+                configure_files[d.target->getSettings()].insert(cf.getPathValue(b.getContext().getLocalStorage()));
 
             auto cmds = d.target->getCommands();
 

@@ -301,11 +301,11 @@ static void targetSettings2Command(primitives::Command &c, const TargetSetting &
     {
         for (auto &a : s["arguments"].getArray())
         {
-            if (a.index() == 0)
-                c.push_back(std::get<TargetSetting::Value>(a));
+            if (a.isValue())
+                c.push_back(a.getValue());
             else
             {
-                auto &m = std::get<TargetSetting::Map>(a);
+                auto &m = a.getMap();
 
                 auto a2 = std::make_unique<::primitives::command::SimplePositionalArgument>(m["argument"].getValue());
                 if (m["position"].isValue())
@@ -313,7 +313,7 @@ static void targetSettings2Command(primitives::Command &c, const TargetSetting &
                 else if (m["position"].isArray())
                 {
                     for (auto &p : m["position"].getArray())
-                        a2->getPosition().push_back(std::stoi(std::get<TargetSetting::Value>(p)));
+                        a2->getPosition().push_back(std::stoi(p.getValue()));
                 }
                 c.push_back(std::move(a2));
             }
@@ -730,7 +730,7 @@ void NativeCompiledTarget::findCompiler()
         else if (getSettings()["native"]["stdlib"]["compiler"].isArray())
         {
             for (auto &s : getSettings()["native"]["stdlib"]["compiler"].getArray())
-                *this += UnresolvedPackage(std::get<TargetSetting::Value>(s));
+                *this += UnresolvedPackage(s.getValue());
         }
     }
 
@@ -820,7 +820,7 @@ void NativeCompiledTarget::setupCommand(builder::Command &c) const
                 auto &ts = nt->getInterfaceSettings();
                 if (ts["header_only"] != "true" && ts["type"] == "native_shared_library")
                 {
-                    f(fs::u8path(ts["output_file"].getValue()));
+                    f(ts["output_file"].getPathValue(getContext().getLocalStorage()));
                 }
             }
             else
@@ -1961,9 +1961,9 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
     bool prepared = prepare_pass_done;
     s = {};
 
-    s["source_dir"] = normalize_path(SourceDirBase);
-    s["binary_dir"] = normalize_path(BinaryDir);
-    s["binary_private_dir"] = normalize_path(BinaryPrivateDir);
+    s["source_dir"].setPathValue(getContext().getLocalStorage(), SourceDirBase);
+    s["binary_dir"].setPathValue(getContext().getLocalStorage(), BinaryDir);
+    s["binary_private_dir"].setPathValue(getContext().getLocalStorage(), BinaryPrivateDir);
 
     if (Publish && !*Publish)
         s["skip_upload"] = "true";
@@ -1994,10 +1994,10 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
     else
     {
         if (getType() != TargetType::NativeExecutable) // skip for exe atm
-            s["import_library"] = normalize_path(getImportLibrary());
-        s["output_file"] = normalize_path(getOutputFile());
+            s["import_library"].setPathValue(getContext().getLocalStorage(), getImportLibrary());
+        s["output_file"].setPathValue(getContext().getLocalStorage(), getOutputFile());
         if (!OutputDir.empty())
-            s["output_dir"] = normalize_path(OutputDir);
+            s["output_dir"].setPathValue(getContext().getLocalStorage(), OutputDir);
     }
 
     // remove deps section?
@@ -2032,18 +2032,22 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
     if (StartupProject)
         s["ide"]["startup_project"] = "true";
     for (auto &f : configure_files)
-        s["ide"]["configure_files"].push_back(normalize_path(f));
+    {
+        TargetSetting ts;
+        ts.setPathValue(getContext().getLocalStorage(), f);
+        s["ide"]["configure_files"].push_back(ts);
+    }
 
     if (getType() == TargetType::NativeExecutable)
     {
         builder::Command c;
         setupCommandForRun(c);
         if (c.isProgramSet())
-            s["run_command"]["program"] = normalize_path(c.getProgram());
+            s["run_command"]["program"].setPathValue(getContext().getLocalStorage(), c.getProgram());
         else
-            s["run_command"]["program"] = normalize_path(getOutputFile());
+            s["run_command"]["program"].setPathValue(getContext().getLocalStorage(), getOutputFile());
         if (!c.working_directory.empty())
-            s["run_command"]["working_directory"] = normalize_path(c.working_directory);
+            s["run_command"]["working_directory"].setPathValue(getContext().getLocalStorage(), c.working_directory);
         for (auto &a : c.getArguments())
             s["run_command"]["arguments"].push_back(a->toString());
         for (auto &[k, v] : c.environment)
@@ -2091,14 +2095,22 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
             if (i != InheritanceType::Private)
             {
                 for (auto &[p, f] : g)
-                    s["source_files"].push_back(normalize_path(p));
+                {
+                    TargetSetting ts;
+                    ts.setPathValue(getContext().getLocalStorage(), p);
+                    s["source_files"].push_back(ts);
+                }
 
                 for (auto &[k, v] : g.Definitions)
                     s["definitions"][k] = v;
                 for (auto &d : g.CompileOptions)
                     s["compile_options"].push_back(d);
                 for (auto &d : g.IncludeDirectories)
-                    s["include_directories"].push_back(normalize_path(d));
+                {
+                    TargetSetting ts;
+                    ts.setPathValue(getContext().getLocalStorage(), d);
+                    s["include_directories"].push_back(ts);
+                }
             }
 
             // for static libs we print their linker settings,
@@ -2106,11 +2118,15 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
             if (i != InheritanceType::Private || isStaticOrHeaderOnlyLibrary())
             {
                 for (auto &d : g.LinkLibraries)
-                    s["link_libraries"].push_back(normalize_path(d.l));
+                {
+                    TargetSetting ts;
+                    ts.setPathValue(getContext().getLocalStorage(), d.l);
+                    s["link_libraries"].push_back(ts);
+                }
                 for (auto &d : g.NativeLinkerOptions::System.LinkLibraries)
-                    s["system_link_libraries"].push_back(normalize_path(d.l));
+                    s["system_link_libraries"].push_back(d.l);
                 for (auto &d : g.Frameworks)
-                    s["frameworks"].push_back(normalize_path(d));
+                    s["frameworks"].push_back(d);
             }
 
             if (i != InheritanceType::Private)
@@ -2884,7 +2900,7 @@ void NativeCompiledTarget::prepare_pass4()
                     continue;
 
                 for (auto &v2 : v["source_files"].getArray())
-                    getMergeObject() += path(std::get<String>(v2));
+                    getMergeObject() += v2.getPathValue(getContext().getLocalStorage());
 
                 for (auto &[k, v2] : v["definitions"].getMap())
                 {
@@ -2895,25 +2911,25 @@ void NativeCompiledTarget::prepare_pass4()
                 }
 
                 for (auto &v2 : v["compile_options"].getArray())
-                    getMergeObject().CompileOptions.insert(std::get<String>(v2));
+                    getMergeObject().CompileOptions.insert(v2.getValue());
 
                 // TODO: add custom options
 
                 for (auto &v2 : v["include_directories"].getArray())
-                    getMergeObject().IncludeDirectories.insert(std::get<String>(v2));
+                    getMergeObject().IncludeDirectories.insert(v2.getPathValue(getContext().getLocalStorage()));
 
                 for (auto &v2 : v["link_libraries"].getArray())
-                    getMergeObject().LinkLibraries.insert(LinkLibrary{ fs::u8path(std::get<String>(v2)) });
+                    getMergeObject().LinkLibraries.insert(LinkLibrary{ v2.getPathValue(getContext().getLocalStorage()) });
 
                 for (auto &v2 : v["system_include_directories"].getArray())
-                    getMergeObject().NativeCompilerOptions::System.IncludeDirectories.push_back(std::get<TargetSetting::Value>(v2));
+                    getMergeObject().NativeCompilerOptions::System.IncludeDirectories.push_back(v2.getAbsolutePathValue());
                 for (auto &v2 : v["system_link_directories"].getArray())
-                    getMergeObject().NativeLinkerOptions::System.LinkDirectories.push_back(std::get<TargetSetting::Value>(v2));
+                    getMergeObject().NativeLinkerOptions::System.LinkDirectories.push_back(v2.getAbsolutePathValue());
                 for (auto &v2 : v["system_link_libraries"].getArray())
-                    getMergeObject().NativeLinkerOptions::System.LinkLibraries.insert(LinkLibrary{ std::get<String>(v2) });
+                    getMergeObject().NativeLinkerOptions::System.LinkLibraries.insert(LinkLibrary{ v2.getAbsolutePathValue() });
 
                 for (auto &v2 : v["frameworks"].getArray())
-                    getMergeObject().Frameworks.insert(std::get<String>(v2));
+                    getMergeObject().Frameworks.insert(v2.getValue());
             }
         }
         else
@@ -2957,7 +2973,7 @@ void NativeCompiledTarget::prepare_pass4()
 
                 // allow only header only files?
                 for (auto &v2 : v["source_files"].getArray())
-                    getMergeObject() += path(std::get<String>(v2));
+                    getMergeObject() += v2.getPathValue(getContext().getLocalStorage());
 
                 for (auto &[k, v2] : v["definitions"].getMap())
                 {
@@ -2968,9 +2984,9 @@ void NativeCompiledTarget::prepare_pass4()
                 }
 
                 for (auto &v2 : v["include_directories"].getArray())
-                    getMergeObject().IncludeDirectories.insert(std::get<String>(v2));
+                    getMergeObject().IncludeDirectories.insert(v2.getPathValue(getContext().getLocalStorage()));
                 for (auto &v2 : v["system_include_directories"].getArray())
-                    getMergeObject().NativeCompilerOptions::System.IncludeDirectories.push_back(std::get<TargetSetting::Value>(v2));
+                    getMergeObject().NativeCompilerOptions::System.IncludeDirectories.push_back(v2.getAbsolutePathValue());
             }
         }
         else
@@ -2999,15 +3015,15 @@ void NativeCompiledTarget::prepare_pass4()
             for (auto &[k,v] : is["properties"].getMap())
             {
                 for (auto &v2 : v["link_libraries"].getArray())
-                    getMergeObject().LinkLibraries.insert(LinkLibrary{ fs::u8path(std::get<String>(v2)) });
+                    getMergeObject().LinkLibraries.insert(LinkLibrary{ v2.getPathValue(getContext().getLocalStorage()) });
 
                 for (auto &v2 : v["system_link_directories"].getArray())
-                    getMergeObject().NativeLinkerOptions::System.LinkDirectories.push_back(std::get<TargetSetting::Value>(v2));
+                    getMergeObject().NativeLinkerOptions::System.LinkDirectories.push_back(v2.getAbsolutePathValue());
                 for (auto &v2 : v["system_link_libraries"].getArray())
-                    getMergeObject().NativeLinkerOptions::System.LinkLibraries.insert(LinkLibrary{ std::get<String>(v2) });
+                    getMergeObject().NativeLinkerOptions::System.LinkLibraries.insert(LinkLibrary{ v2.getAbsolutePathValue() });
 
                 for (auto &v2 : v["frameworks"].getArray())
-                    getMergeObject().Frameworks.insert(std::get<String>(v2));
+                    getMergeObject().Frameworks.insert(v2.getValue());
             }
         }
         else
@@ -3934,7 +3950,7 @@ FilesOrdered NativeCompiledTarget::gatherRpathLinkDirectories() const
         {
             auto &ts = t->getInterfaceSettings();
             if (!::sw::isStaticOrHeaderOnlyLibrary(ts))
-                rpath.push_back(path(ts["output_file"].getValue()).parent_path());
+                rpath.push_back(ts["output_file"].getPathValue(getContext().getLocalStorage()).parent_path());
         }
         else
             throw SW_RUNTIME_ERROR("missing target code");
