@@ -1997,7 +1997,7 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
             s["import_library"].setPathValue(getContext().getLocalStorage(), getImportLibrary());
         s["output_file"].setPathValue(getContext().getLocalStorage(), getOutputFile());
         if (!OutputDir.empty())
-            s["output_dir"].setPathValue(getContext().getLocalStorage(), OutputDir);
+            s["output_dir"] = normalize_path(OutputDir);
     }
 
     // remove deps section?

@@ -999,7 +999,7 @@ Commands SwBuild::getCommands() const
                 {
                     auto o = copy_dir;
                     if (s["output_dir"].isValue())
-                        o /= s["output_dir"].getPathValue(getContext().getLocalStorage());
+                        o /= s["output_dir"].getValue();
                     o /= in.filename();
                     if (in == o)
                         return;
