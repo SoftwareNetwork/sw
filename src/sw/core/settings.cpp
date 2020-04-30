@@ -215,7 +215,7 @@ path TargetSetting::getPathValue(const Directories &d) const
 
 path TargetSetting::getPathValue(const path &root) const
 {
-    return normalize_path(root / fs::u8path(getValue()));
+    return normalize_path(root / getAbsolutePathValue());
 }
 
 void TargetSetting::setPathValue(const Directories &d, const path &value)
@@ -225,7 +225,12 @@ void TargetSetting::setPathValue(const Directories &d, const path &value)
 
 void TargetSetting::setPathValue(const path &root, const path &value)
 {
-    *this = normalize_path(value.lexically_relative(root));
+    auto r = normalize_path(root);
+    auto v = normalize_path(value);
+    if (v.find(r) == 0)
+        *this = normalize_path(value.lexically_relative(root));
+    else
+        setAbsolutePathValue(value);
 }
 
 path TargetSetting::getAbsolutePathValue() const
