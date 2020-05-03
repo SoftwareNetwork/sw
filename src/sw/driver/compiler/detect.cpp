@@ -221,8 +221,15 @@ static void detectMsvcCommon(const path &compiler, const Version &in_v,
         auto &libcpp = addTarget<PredefinedTarget>(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.libcpp", v), ts);
         libcpp.public_ts["properties"]["6"]["system_include_directories"].push_back(idir);
         libcpp.public_ts["properties"]["6"]["system_link_directories"].push_back(root / "lib" / target);
-        // if (v.getMajor() >= 15) ?
-        libcpp.public_ts["properties"]["6"]["system_link_libraries"].push_back("OLDNAMES.LIB");
+        if (v.getMajor() >= 15)
+        {
+            // under cond?
+            libcpp.public_ts["properties"]["6"]["system_link_libraries"].push_back(boost::to_upper_copy("oldnames.lib"s));
+
+            // 100% under cond
+            libcpp.public_ts["properties"]["6"]["system_link_libraries"].push_back(boost::to_upper_copy("legacy_stdio_definitions.lib"s));
+            libcpp.public_ts["properties"]["6"]["system_link_libraries"].push_back(boost::to_upper_copy("legacy_stdio_wide_specifiers.lib"s));
+        }
 
         if (fs::exists(root / "ATLMFC" / "include"))
         {
