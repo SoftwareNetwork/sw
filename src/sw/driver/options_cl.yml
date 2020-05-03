@@ -32,11 +32,21 @@ flags:
     # https://fedoraproject.org/wiki/Changes/Harden_All_Packages#Detailed_Harden_Flags_Description
     # TODO:
     # add -fPIE for executable target (compiler only), -pie for linking
-    fpic:
+    fPIC:
         name: PositionIndependentCode
         flag: fPIC
         type: bool
         default: true
+    fPIE:
+        name: PositionIndependentExecutable
+        flag: fPIE
+        type: bool
+        #default: true
+    fpie:
+        name: PositionIndependentExecutableLinker
+        flag: fpie
+        type: bool
+        #default: true
 
     nologo:
         name: Nologo
@@ -810,7 +820,8 @@ types:
             - input
             - compile
             - preprocess
-            - fpic
+            - fPIC
+            - fPIE
 
         flags:
             lng:
@@ -979,7 +990,9 @@ types:
 
         using:
             - ifiles
-            - fpic
+            - fPIC
+            - fPIE
+            - fpie
 
         flags:
             nostdlib:
