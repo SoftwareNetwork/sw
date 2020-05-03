@@ -105,8 +105,13 @@ SUBCOMMAND_DECL(create)
                 return;
         }
     }
-    if (!getOptions().options_create.create_overwrite_files && fs::directory_iterator(dir) != fs::directory_iterator())
-        throw SW_RUNTIME_ERROR("directory is not empty");
+
+    auto write_file = [this](const path &fn, const String &s)
+    {
+        if (fs::exists(fn) && !getOptions().options_create.create_overwrite_files)
+            throw SW_RUNTIME_ERROR("File already exists: " + normalize_path(fn));
+        ::write_file(fn, s);
+    };
 
     if (getOptions().options_create.create_type == "project")
     {
