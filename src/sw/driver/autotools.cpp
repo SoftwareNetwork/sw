@@ -47,7 +47,9 @@ struct if_expr
             S_EQ,
             S_NE,
             S_LT,
+            S_LE,
             S_GT,
+            S_GE,
         };
 
         String var;
@@ -263,18 +265,22 @@ static auto parse_conditions(String f)
         a.value = val;
         a.start = (int)(m[0].first - s.begin());
 
-        if (sign == "=")
+        if (sign == "=" || sign == "-eq")
             a.sign = if_expr::if_action::S_EQ;
         else if (sign == "!=")
             a.sign = if_expr::if_action::S_NE;
         else if (sign == "-lt")
             a.sign = if_expr::if_action::S_LT;
+        else if (sign == "-le")
+            a.sign = if_expr::if_action::S_LE;
         else if (sign == "-gt")
             a.sign = if_expr::if_action::S_GT;
+        else if (sign == "-ge")
+            a.sign = if_expr::if_action::S_GE;
         else
             a.sign = if_expr::if_action::S_UNK;
 
-        if (a.sign == if_expr::if_action::S_UNK) // TODO: implement other signs (-le, -ge)
+        if (a.sign == if_expr::if_action::S_UNK)
             std::cerr << "Unknown sign " << sign << "\n";
         else
         {
