@@ -26,6 +26,8 @@
 #include <primitives/http.h>
 #include <primitives/sw/settings_program_name.h>
 
+#include <iostream>
+
 #ifdef _WIN32
 #include <primitives/win32helpers.h>
 #include <windows.h>
