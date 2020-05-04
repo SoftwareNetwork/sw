@@ -26,6 +26,8 @@
 #include <primitives/emitter.h>
 #include <primitives/yaml.h>
 
+#include <iostream>
+
 static String get_name(const Options &options)
 {
     String name = fs::current_path().filename().u8string();

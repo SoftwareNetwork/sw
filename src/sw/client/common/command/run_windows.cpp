@@ -24,6 +24,8 @@
 
 #include <primitives/command.h>
 
+#include <boost/algorithm/string.hpp>
+
 #include <vector>
 
 #include <primitives/log.h>

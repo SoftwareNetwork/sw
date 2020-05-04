@@ -30,6 +30,7 @@
 #include <sw/manager/storage.h>
 #include <sw/support/hash.h>
 
+#include <boost/algorithm/string.hpp>
 #include <nlohmann/json.hpp>
 
 #include <primitives/log.h>

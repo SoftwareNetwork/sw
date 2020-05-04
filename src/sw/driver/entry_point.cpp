@@ -31,6 +31,7 @@
 #include <sw/core/specification.h>
 #include <sw/manager/storage.h>
 
+#include <boost/algorithm/string.hpp>
 #include <boost/dll.hpp>
 #include <nlohmann/json.hpp>
 #include <primitives/emitter.h>
