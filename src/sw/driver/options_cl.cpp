@@ -129,15 +129,18 @@ DECLARE_OPTION_SPECIALIZATION(LinkLibrariesType)
             c->addOutput(v.l);
         if (cmd_flag_before_each_value)
         {
-            if (v.whole_archive && v.style == v.GNU)
-                cmds.push_back("-Wl,--whole-archive");
             if (v.whole_archive && v.style == v.AppleLD)
             {
+                // https://www.manpagez.com/man/1/ld/Xcode-5.0.php
                 // load next objects from archive
-                // -all_load - loads all objects from all archives (following the option or any previous too?)
+                // -all_load - loads all objects from ALL archives on cmdline
                 // -noall_load - default and obsolete
-                cmds.push_back("-Wl,-force_load");
+                // must provide full path on fs
+                cmds.push_back("-Wl,-force_load," + normalize_path(v.l));
+                continue;
             }
+            if (v.whole_archive && v.style == v.GNU)
+                cmds.push_back("-Wl,--whole-archive");
             if (separate_prefix)
             {
                 cmds.push_back(getCommandLineFlag());

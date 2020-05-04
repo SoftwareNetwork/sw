@@ -830,6 +830,8 @@ void GNULinker::prepareCommand1(const Target &t)
                     continue;
                 if (add_inputs)
                     cmd->addInput(ll.l);
+                if (ll.whole_archive && ll.style == ll.AppleLD)
+                    continue; // on whole archive + apple ld we do not change path
                 dirs.insert(ll.l.parent_path());
                 if (sys)
                     ll.l = remove_prefix_and_suffix(ll.l);
