@@ -132,10 +132,7 @@ DECLARE_OPTION_SPECIALIZATION(LinkLibrariesType)
             if (v.whole_archive && v.style == v.AppleLD)
             {
                 // https://www.manpagez.com/man/1/ld/Xcode-5.0.php
-                // load next objects from archive
-                // -all_load - loads all objects from ALL archives on cmdline
-                // -noall_load - default and obsolete
-                // must provide full path on fs
+                // must provide full path of input archive
                 cmds.push_back("-Wl,-force_load," + normalize_path(v.l));
                 continue;
             }
