@@ -72,9 +72,6 @@ private:
 using PackagePtr = std::unique_ptr<Package>;
 //using Packages = std::unordered_set<Package>;
 
-SW_SUPPORT_API
-String getSourceDirectoryName();
-
 }
 
 namespace std

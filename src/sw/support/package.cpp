@@ -26,13 +26,6 @@ static path getHashPathFromHash(const String &h, int nsubdirs, int chars_per_sub
     return p;
 }
 
-String getSourceDirectoryName()
-{
-    // we cannot change it, because server already has such packages
-    // introduce versions to change this or smth
-    return "sdir";
-}
-
 Package::Package(const IStorage &storage, const PackageId &id)
     : storage(storage), PackageId(id)
 {
