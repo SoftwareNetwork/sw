@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include "package.h"
+#include "package_id.h"
 
 #include <type_traits>
 

@@ -8,9 +8,7 @@
 
 #include "package.h"
 
-#include <sw/support/filesystem.h>
-
-#include <primitives/date_time.h>
+#include <sw/support/storage.h>
 
 namespace sw
 {
@@ -62,18 +60,6 @@ struct SW_MANAGER_API FileWithHashVerification : vfs::File
 
 } // namespace vfs
 
-struct SW_MANAGER_API Directories
-{
-    path storage_dir;
-#define DIR(x) path storage_dir_##x;
-#include "storage_directories.inl"
-#undef DIR
-
-    Directories(const path &root);
-
-    path getDatabaseRootDir() const;
-};
-
 enum class StorageFileType
 {
     //
@@ -104,42 +90,9 @@ String toUserString(StorageFileType);
 struct PackagesDatabase;
 struct ServiceDatabase;
 
-struct StorageSchema
-{
-    StorageSchema(int hash_version, int hash_path_version)
-        : hash_version(hash_version), hash_path_version(hash_path_version)
-    {}
-
-    int getHashVersion() const { return hash_version; }
-    int getHashPathFromHashVersion() const { return hash_path_version; }
-
-private:
-    int hash_version;
-    int hash_path_version;
-};
-
 struct SoftwareNetworkStorageSchema : StorageSchema
 {
     SoftwareNetworkStorageSchema() : StorageSchema(1, 1) {}
-};
-
-struct SW_MANAGER_API IStorage
-{
-    virtual ~IStorage() = default;
-
-    /// storage schema/settings/capabilities/versions
-    virtual const StorageSchema &getSchema() const = 0;
-
-    /// resolve packages from this storage
-    virtual std::unordered_map<UnresolvedPackage, PackagePtr> resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const = 0;
-
-    /// load package data from this storage
-    virtual PackageDataPtr loadData(const PackageId &) const = 0;
-
-    // non virtual methods
-
-    /// resolve packages from this storage with their dependencies
-    std::unordered_map<UnresolvedPackage, PackagePtr> resolveWithDependencies(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const;
 };
 
 struct SW_MANAGER_API IResolvableStorageWithName : IStorage
