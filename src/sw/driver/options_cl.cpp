@@ -132,7 +132,12 @@ DECLARE_OPTION_SPECIALIZATION(LinkLibrariesType)
             if (v.whole_archive && v.style == v.GNU)
                 cmds.push_back("-Wl,--whole-archive");
             if (v.whole_archive && v.style == v.AppleLD)
-                cmds.push_back("-Wl,-all_load");
+            {
+                // load next objects from archive
+                // -all_load - loads all objects from all archives (following the option or any previous too?)
+                // -noall_load - default and obsolete
+                cmds.push_back("-Wl,-force_load");
+            }
             if (separate_prefix)
             {
                 cmds.push_back(getCommandLineFlag());
@@ -142,8 +147,6 @@ DECLARE_OPTION_SPECIALIZATION(LinkLibrariesType)
                 cmds.push_back((v.whole_archive && v.style == v.MSVC ? "/WHOLEARCHIVE:" : "") + getCommandLineFlag() + normalize_path(v.l));
             if (v.whole_archive && v.style == v.GNU)
                 cmds.push_back("-Wl,--no-whole-archive");
-            if (v.whole_archive && v.style == v.AppleLD)
-                cmds.push_back("-Wl,-noall_load");
         }
         else
             cmds.push_back((v.whole_archive && v.style == v.MSVC ? "/WHOLEARCHIVE:" : "") + normalize_path(v.l));
