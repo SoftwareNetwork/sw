@@ -932,10 +932,6 @@ Commands SwBuild::getCommands() const
     //
     auto cl_show_output = build_settings["show_output"] == "true";
     auto cl_write_output_to_file = build_settings["write_output_to_file"] == "true";
-    path copy_dir = build_settings["build_ide_copy_to_dir"].isValue() ? build_settings["build_ide_copy_to_dir"].getValue() : "";
-    //bool copy_deps_of_local_pkgs = false;
-    bool copy_deps_of_local_pkgs = copy_dir.empty();
-    std::unordered_map<path, path> copy_files;
 
     // gather commands
     Commands cmds;
@@ -949,21 +945,26 @@ Commands SwBuild::getCommands() const
                 c2->show_output = cl_show_output || cl_write_output_to_file; // only for selected targets
             }
             cmds.insert(c.begin(), c.end());
+        }
+    }
 
-            if (copy_dir.empty() && !copy_deps_of_local_pkgs)
-                continue;
-
-            // copy output files
-            const auto &s = tgt->getInterfaceSettings();
-
-            // do not copy such deps
-            // example: when processing qt plugins, without the condition we'll copy
-            // main dlls to plugins dir which is not desirable
-            if (s["output_dir"].isValue())
-                continue;
-
-            if (copy_deps_of_local_pkgs)
+    // copy output files
+    path copy_dir = build_settings["build_ide_copy_to_dir"].isValue() ? build_settings["build_ide_copy_to_dir"].getValue() : "";
+    if (!copy_dir.empty())
+    {
+        std::unordered_map<path, path> copy_files;
+        for (auto &[p, tgts] : ttb)
+        {
+            for (auto &tgt : tgts)
             {
+                const auto &s = tgt->getInterfaceSettings();
+
+                // do not copy such deps
+                // example: when processing qt plugins, without the condition we'll copy
+                // main dlls to plugins dir which is not desirable
+                if (s["output_dir"].isValue())
+                    continue;
+
                 if (p.getPath().isAbsolute())
                     continue;
                 if (s["header_only"] == "true")
@@ -971,85 +972,85 @@ Commands SwBuild::getCommands() const
                 if (!(s["type"] == "native_shared_library" || s["type"] == "native_static_library" || s["type"] == "native_executable"))
                     continue;
                 copy_dir = s["output_file"].getPathValue(getContext().getLocalStorage()).parent_path();
-            }
 
-            PackageIdSet visited_pkgs;
-            std::function<void(const TargetSettings &)> copy_file;
-            copy_file = [this, &cmds, &copy_dir, &copy_files, &copy_file, &visited_pkgs](const auto &s)
-            {
-                if (s["header_only"] == "true")
-                    return;
-
-                if (!(s["type"] == "native_shared_library" || s["type"] == "native_static_library" || s["type"] == "native_executable"))
-                    return;
-
-                auto in = s["output_file"].getPathValue(getContext().getLocalStorage());
-                fast_path_files.insert(in);
-
-                if (s["import_library"].isValue())
+                PackageIdSet visited_pkgs;
+                std::function<void(const TargetSettings &)> copy_file;
+                copy_file = [this, &cmds, &copy_dir, &copy_files, &copy_file, &visited_pkgs](const auto &s)
                 {
-                    path il = s["import_library"].getPathValue(getContext().getLocalStorage());
-                    fast_path_files.insert(il);
-                }
-
-                if (s["type"] == "native_shared_library"
-                    // copy only for wintgt?
-                    //&& PackagePath(s["os"]["kernel"].getValue()) == PackagePath("com.Microsoft.Windows.NT")
-                    )
-                {
-                    auto o = copy_dir;
-                    if (s["output_dir"].isValue())
-                        o /= s["output_dir"].getValue();
-                    o /= in.filename();
-                    if (in == o)
+                    if (s["header_only"] == "true")
                         return;
-                    if (copy_files.find(in) != copy_files.end())
-                        return;
-                    copy_files[in] = o;
-                    fast_path_files.insert(o);
-                }
 
-                std::function<void(const TargetSettings &)> process_deps;
-                process_deps = [this, &copy_file, &process_deps, &visited_pkgs](const auto &s)
-                {
-                    for (auto &[k, v] : s["dependencies"]["link"].getMap())
+                    if (!(s["type"] == "native_shared_library" || s["type"] == "native_static_library" || s["type"] == "native_executable"))
+                        return;
+
+                    auto in = s["output_file"].getPathValue(getContext().getLocalStorage());
+                    fast_path_files.insert(in);
+
+                    if (s["import_library"].isValue())
                     {
-                        PackageId p(k);
-                        if (visited_pkgs.find(p) != visited_pkgs.end())
-                            continue;
-                        visited_pkgs.insert(p);
-                        auto i = getTargets().find(p);
-                        if (i == getTargets().end())
-                            throw SW_RUNTIME_ERROR("dep not found");
-                        auto j = i->second.findSuitable(v.getMap());
-                        if (j == i->second.end())
-                            throw SW_RUNTIME_ERROR("dep+settings not found");
-
-                        const auto &s = (*j)->getInterfaceSettings();
-                        copy_file(s);
-                        process_deps(s);
+                        path il = s["import_library"].getPathValue(getContext().getLocalStorage());
+                        fast_path_files.insert(il);
                     }
+
+                    if (s["type"] == "native_shared_library"
+                        // copy only for wintgt?
+                        //&& PackagePath(s["os"]["kernel"].getValue()) == PackagePath("com.Microsoft.Windows.NT")
+                        )
+                    {
+                        auto o = copy_dir;
+                        if (s["output_dir"].isValue())
+                            o /= s["output_dir"].getValue();
+                        o /= in.filename();
+                        if (in == o)
+                            return;
+                        if (copy_files.find(in) != copy_files.end())
+                            return;
+                        copy_files[in] = o;
+                        fast_path_files.insert(o);
+                    }
+
+                    std::function<void(const TargetSettings &)> process_deps;
+                    process_deps = [this, &copy_file, &process_deps, &visited_pkgs](const auto &s)
+                    {
+                        for (auto &[k, v] : s["dependencies"]["link"].getMap())
+                        {
+                            PackageId p(k);
+                            if (visited_pkgs.find(p) != visited_pkgs.end())
+                                continue;
+                            visited_pkgs.insert(p);
+                            auto i = getTargets().find(p);
+                            if (i == getTargets().end())
+                                throw SW_RUNTIME_ERROR("dep not found");
+                            auto j = i->second.findSuitable(v.getMap());
+                            if (j == i->second.end())
+                                throw SW_RUNTIME_ERROR("dep+settings not found");
+
+                            const auto &s = (*j)->getInterfaceSettings();
+                            copy_file(s);
+                            process_deps(s);
+                        }
+                    };
+
+                    process_deps(s);
                 };
 
-                process_deps(s);
-            };
-
-            copy_file(s);
+                copy_file(s);
+            }
         }
-    }
 
-    for (auto &[f, t] : copy_files)
-    {
-        auto copy_cmd = std::make_shared<::sw::builder::BuiltinCommand>(*this, SW_VISIBLE_BUILTIN_FUNCTION(copy_file));
-        copy_cmd->arguments.push_back(f);
-        copy_cmd->arguments.push_back(t);
-        copy_cmd->addInput(f);
-        copy_cmd->addOutput(t);
-        //copy_cmd->dependencies.insert(nt->getCommand());
-        copy_cmd->name = "copy: " + normalize_path(t);
-        copy_cmd->command_storage = &getCommandStorage(getBuildDirectory() / "cs");
-        cmds.insert(copy_cmd);
-        commands_storage.insert(copy_cmd); // prevents early destruction
+        for (auto &[f, t] : copy_files)
+        {
+            auto copy_cmd = std::make_shared<::sw::builder::BuiltinCommand>(*this, SW_VISIBLE_BUILTIN_FUNCTION(copy_file));
+            copy_cmd->arguments.push_back(f);
+            copy_cmd->arguments.push_back(t);
+            copy_cmd->addInput(f);
+            copy_cmd->addOutput(t);
+            //copy_cmd->dependencies.insert(nt->getCommand());
+            copy_cmd->name = "copy: " + normalize_path(t);
+            copy_cmd->command_storage = &getCommandStorage(getBuildDirectory() / "cs");
+            cmds.insert(copy_cmd);
+            commands_storage.insert(copy_cmd); // prevents early destruction
+        }
     }
 
     return cmds;
