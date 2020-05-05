@@ -692,6 +692,9 @@ command_line:
                 value_desc: <Command args>
                 type: String
                 list: true
+            print_command:
+                aliases: p
+                desc: Prints command
 
     # setup
     subcommand:

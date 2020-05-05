@@ -45,7 +45,7 @@ void run1(const sw::LocalPackage &pkg, primitives::Command &c)
 }
 #endif
 
-static void run(sw::SwBuild &b, const sw::PackageId &pkg, primitives::Command &c)
+static void run(sw::SwBuild &b, const sw::PackageId &pkg, primitives::Command &c, bool print)
 {
     if (b.getTargetsToBuild()[pkg].empty())
         throw SW_RUNTIME_ERROR("No such target: " + pkg.toString());
@@ -71,6 +71,12 @@ static void run(sw::SwBuild &b, const sw::PackageId &pkg, primitives::Command &c
     //if (sc["create_new_console"] && sc["create_new_console"] == "true")
     //c.create_new_console = true;
 
+    SCOPE_EXIT
+    {
+        if (print)
+            LOG_INFO(logger, c.print());
+    };
+
     sw::LocalPackage p(b.getContext().getLocalStorage(), pkg);
     run1(p, c);
 }
@@ -93,7 +99,7 @@ void SwClientContext::run(const sw::PackageId &pkg, primitives::Command &c)
     auto b = createBuildAndPrepare(inputs);
     b->build();
 
-    ::run(*b, pkg, c);
+    ::run(*b, pkg, c, getOptions().options_run.print_command);
 }
 
 SUBCOMMAND_DECL(run)
@@ -138,7 +144,7 @@ SUBCOMMAND_DECL(run)
         if (tgts.size() != 1)
             throw SW_RUNTIME_ERROR("More than one target provided in input");
 
-        ::run(*b, (*tgts.begin())->getPackage(), c);
+        ::run(*b, (*tgts.begin())->getPackage(), c, getOptions().options_run.print_command);
         return;
     }
 
