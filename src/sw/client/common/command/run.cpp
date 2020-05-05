@@ -143,8 +143,15 @@ SUBCOMMAND_DECL(run)
     }
 
     // resolve
-    auto p = getContext().resolve(sw::UnresolvedPackages{ getOptions().options_run.target });
-    getOptions().options_run.target = p[getOptions().options_run.target]->toString();
+    try
+    {
+        auto p = getContext().resolve(sw::UnresolvedPackages{ getOptions().options_run.target });
+        getOptions().options_run.target = p[getOptions().options_run.target]->toString();
+    }
+    catch (...)
+    {
+        // local package won't be resolved
+    }
 
     //
     run(getOptions().options_run.target, c);
