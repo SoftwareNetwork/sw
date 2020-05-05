@@ -25,15 +25,12 @@ DECLARE_STATIC_LOGGER(logger, "storage");
 
 #define PACKAGES_DB_REFRESH_TIME_MINUTES 15
 
-#define PACKAGES_DB_SCHEMA_VERSION 4
-#define PACKAGES_DB_SCHEMA_VERSION_FILE "schema.version"
-#define PACKAGES_DB_VERSION_FILE "db.version"
 #define PACKAGES_DB_DOWNLOAD_TIME_FILE "packages.time"
 
 const String db_repo_name = "SoftwareNetwork/database";
 const String db_repo_url = "https://github.com/" + db_repo_name;
 const String db_master_url = db_repo_url + "/archive/master.zip";
-const String db_version_url = "https://raw.githubusercontent.com/" + db_repo_name + "/master/" PACKAGES_DB_VERSION_FILE;
+const String db_version_url = "https://raw.githubusercontent.com/" + db_repo_name + "/master/" + sw::getPackagesDatabaseVersionFileName();
 
 // save current time during crt startup
 // it is used for detecting young packages
@@ -46,32 +43,6 @@ static const String packages_db_name = "packages.db";
 
 namespace sw
 {
-
-int readPackagesDbSchemaVersion(const path &dir)
-{
-    auto p = dir / PACKAGES_DB_SCHEMA_VERSION_FILE;
-    if (!fs::exists(p))
-        return 0;
-    return std::stoi(read_file(p));
-}
-
-void writePackagesDbSchemaVersion(const path &dir)
-{
-    write_file(dir / PACKAGES_DB_SCHEMA_VERSION_FILE, std::to_string(PACKAGES_DB_SCHEMA_VERSION));
-}
-
-int readPackagesDbVersion(const path &dir)
-{
-    auto p = dir / PACKAGES_DB_VERSION_FILE;
-    if (!fs::exists(p))
-        return 0;
-    return std::stoi(read_file(p));
-}
-
-void writePackagesDbVersion(const path &dir, int version)
-{
-    write_file(dir / PACKAGES_DB_VERSION_FILE, std::to_string(version));
-}
 
 RemoteStorage::RemoteStorage(LocalStorage &ls, const Remote &r, bool allow_network)
     : StorageWithPackagesDatabase(r.name, ls.getDatabaseRootDir() / "remote")
@@ -185,22 +156,6 @@ static std::istream &safe_getline(std::istream &i, String &s)
 
 void RemoteStorage::load() const
 {
-    /*auto &sdb = ls.getServiceDatabase();
-    auto sver_old = sdb.getPackagesDbSchemaVersion();
-    int sver = readPackagesDbSchemaVersion(db_repo_dir);
-    if (sver && sver != PACKAGES_DB_SCHEMA_VERSION)
-    {
-    if (sver > PACKAGES_DB_SCHEMA_VERSION)
-    throw SW_RUNTIME_ERROR("Client's packages db schema version is older than remote one. Please, upgrade the cppan client from site or via --self-upgrade");
-    if (sver < PACKAGES_DB_SCHEMA_VERSION)
-    throw SW_RUNTIME_ERROR("Client's packages db schema version is newer than remote one. Please, wait for server upgrade");
-    }
-    if (sver > sver_old)
-    {
-    // recreate(); ?
-    sdb.setPackagesDbSchemaVersion(sver);
-    }*/
-
     struct Column
     {
         String name;
@@ -362,7 +317,7 @@ void RemoteStorage::updateDb() const
         }
         return 0;
     }();
-    if (version_remote > readPackagesDbVersion(db_repo_dir))
+    if (version_remote > readPackagesDatabaseVersion(db_repo_dir))
     {
         // multiprocess aware
         single_process_job(getPackagesDatabase().fn.parent_path() / "db_update", [this] {

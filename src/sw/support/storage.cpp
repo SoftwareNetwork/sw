@@ -48,4 +48,27 @@ Directories::Directories(const path &p)
 #undef SET
 }
 
+int getPackagesDatabaseSchemaVersion()
+{
+    return 4;
+}
+
+String getPackagesDatabaseSchemaVersionFileName()
+{
+    return "schema.version";
+}
+
+String getPackagesDatabaseVersionFileName()
+{
+    return "db.version";
+}
+
+int readPackagesDatabaseVersion(const path &dir)
+{
+    auto p = dir / getPackagesDatabaseVersionFileName();
+    if (!fs::exists(p))
+        return 0;
+    return std::stoi(read_file(p));
+}
+
 }

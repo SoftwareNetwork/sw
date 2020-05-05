@@ -59,16 +59,4 @@ private:
     mutable std::unordered_map<PackageId, PackageData> data;
 };
 
-SW_MANAGER_API
-int readPackagesDbSchemaVersion(const path &dir);
-
-SW_MANAGER_API
-void writePackagesDbSchemaVersion(const path &dir);
-
-SW_MANAGER_API
-int readPackagesDbVersion(const path &dir);
-
-SW_MANAGER_API
-void writePackagesDbVersion(const path &dir, int version);
-
 } // namespace sw

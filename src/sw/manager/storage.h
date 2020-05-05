@@ -90,11 +90,6 @@ String toUserString(StorageFileType);
 struct PackagesDatabase;
 struct ServiceDatabase;
 
-struct SoftwareNetworkStorageSchema : StorageSchema
-{
-    SoftwareNetworkStorageSchema() : StorageSchema(1, 1) {}
-};
-
 struct SW_MANAGER_API IResolvableStorageWithName : IStorage
 {
     virtual ~IResolvableStorageWithName() = default;

@@ -16,6 +16,13 @@ DECLARE_STATIC_LOGGER(logger, "package");
 namespace sw
 {
 
+String getSourceDirectoryName()
+{
+    // we cannot change it, because server already has such packages
+    // introduce versions to change this or smth
+    return "sdir";
+}
+
 static path getHashPathFromHash(const String &h, int nsubdirs, int chars_per_subdir)
 {
     path p;

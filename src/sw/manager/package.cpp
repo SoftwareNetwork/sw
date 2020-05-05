@@ -18,13 +18,6 @@ DECLARE_STATIC_LOGGER(logger, "package");
 namespace sw
 {
 
-String getSourceDirectoryName()
-{
-    // we cannot change it, because server already has such packages
-    // introduce versions to change this or smth
-    return "sdir";
-}
-
 LocalPackage::LocalPackage(const LocalStorage &storage, const PackageId &id)
     : Package(storage, id)
 {

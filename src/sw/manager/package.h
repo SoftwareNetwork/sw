@@ -59,9 +59,6 @@ private:
 
 using LocalPackagePtr = std::unique_ptr<LocalPackage>;
 
-SW_MANAGER_API
-String getSourceDirectoryName();
-
 }
 
 namespace std

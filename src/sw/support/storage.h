@@ -42,6 +42,11 @@ private:
     int hash_path_version;
 };
 
+struct SoftwareNetworkStorageSchema : StorageSchema
+{
+    SoftwareNetworkStorageSchema() : StorageSchema(1, 1) {}
+};
+
 struct SW_SUPPORT_API IStorage
 {
     virtual ~IStorage() = default;
@@ -60,5 +65,17 @@ struct SW_SUPPORT_API IStorage
     /// resolve packages from this storage with their dependencies
     std::unordered_map<UnresolvedPackage, PackagePtr> resolveWithDependencies(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const;
 };
+
+SW_SUPPORT_API
+int readPackagesDatabaseVersion(const path &dir);
+
+SW_SUPPORT_API
+String getPackagesDatabaseVersionFileName();
+
+SW_SUPPORT_API
+int getPackagesDatabaseSchemaVersion();
+
+SW_SUPPORT_API
+String getPackagesDatabaseSchemaVersionFileName();
 
 } // namespace sw
