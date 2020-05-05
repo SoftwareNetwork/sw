@@ -71,7 +71,7 @@ message Notifications {
 message NewPackage {
     message RawScript {
         string script = 1;
-        string prefix_path = 2;
+        //string prefix_path = 2;
     }
 
     message NewVersion {
@@ -80,14 +80,23 @@ message NewPackage {
     }
 
     message PackageData {
+        message Specification {
+            message SpecificationFile {
+                string relative_path = 1;
+                string contents = 2;
+            }
+            repeated SpecificationFile files = 1;
+        }
+
         string data = 1; // json string
-        RawScript script = 2;
+        //RawScript script = 2;
+        Specification specification = 3;
     }
 
     //
     oneof package {
-        RawScript script = 1;
-        NewVersion version = 2; // add new ver for existing package
+        //RawScript script = 1;
+        //NewVersion version = 2; // add new ver for existing package
         PackageData package_data = 3;
     }
 }

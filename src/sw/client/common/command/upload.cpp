@@ -235,9 +235,12 @@ SUBCOMMAND_DECL(upload)
                 m2[p] = std::move(m[p]);
         }
 
+        // read spec files
+        spec.read();
+
         // send signatures (gpg etc.)?
         // -k KEY1 -k KEY2
         auto api = current_remote->getApi();
-        api->addVersion(getOptions().options_upload.upload_prefix, m2, script_name, spec_contents);
+        api->addVersion(getOptions().options_upload.upload_prefix, m2, spec.files);
     }
 }

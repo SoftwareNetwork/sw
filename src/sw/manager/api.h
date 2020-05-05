@@ -9,6 +9,7 @@
 #include "package.h"
 
 #include <sw/support/package_data.h>
+#include <sw/support/specification.h>
 
 namespace sw
 {
@@ -24,7 +25,7 @@ struct Api
         const UnresolvedPackages &pkgs,
         UnresolvedPackages &unresolved_pkgs,
         std::unordered_map<PackageId, PackageData> &data, const IStorage &) const = 0;
-    virtual void addVersion(PackagePath prefix, const PackageDescriptionMap &pkgs, const String &script_name, const String &script) const = 0;
+    virtual void addVersion(const PackagePath &prefix, const PackageDescriptionMap &pkgs, const SpecificationFiles &) const = 0;
 };
 
 }

@@ -105,12 +105,17 @@ std::unordered_map<UnresolvedPackage, PackagePtr> ProtobufApi::resolvePackages(c
     return m;
 }
 
-void ProtobufApi::addVersion(PackagePath prefix, const PackageDescriptionMap &pkgs, const String &script_name, const String &script) const
+void ProtobufApi::addVersion(const PackagePath &prefix, const PackageDescriptionMap &pkgs, const SpecificationFiles &spec_files) const
 {
     api::NewPackage request;
-    request.mutable_package_data()->mutable_script()->set_script(script);
-    request.mutable_package_data()->mutable_script()->set_prefix_path(prefix.toString());
+    for (auto &[relpath, sf] : spec_files.getData())
+    {
+        auto f = request.mutable_package_data()->mutable_specification()->mutable_files()->Add();
+        f->set_relative_path(normalize_path(relpath));
+        f->set_contents(sf.getContents());
+    }
     nlohmann::json jm;
+    jm["prefix"] = prefix.toString();
     for (auto &[pkg, d] : pkgs)
     {
         auto j = nlohmann::json::parse(d->getString());
@@ -127,7 +132,6 @@ void ProtobufApi::addVersion(PackagePath prefix, const PackageDescriptionMap &pk
         }
         jm["packages"][pkg.toString()] = j;
     }
-    jm["script_name"] = script_name;
     request.mutable_package_data()->set_data(jm.dump());
     auto context = getContextWithAuth();
     GRPC_SET_DEADLINE(10);
@@ -136,17 +140,19 @@ void ProtobufApi::addVersion(PackagePath prefix, const PackageDescriptionMap &pk
 
 void ProtobufApi::addVersion(const PackagePath &prefix, const String &script)
 {
-    api::NewPackage request;
+    SW_UNIMPLEMENTED;
+    /*api::NewPackage request;
     request.mutable_script()->set_script(script);
     request.mutable_script()->set_prefix_path(prefix.toString());
     auto context = getContextWithAuth();
     GRPC_SET_DEADLINE(10);
-    GRPC_CALL_THROWS(user_, AddPackage, google::protobuf::Empty);
+    GRPC_CALL_THROWS(user_, AddPackage, google::protobuf::Empty);*/
 }
 
 void ProtobufApi::addVersion(PackagePath p, const Version &vnew, const std::optional<Version> &vold)
 {
-    check_relative(r, p);
+    SW_UNIMPLEMENTED;
+    /*check_relative(r, p);
 
     api::NewPackage request;
     request.mutable_version()->mutable_package()->set_path(p.toString());
@@ -156,7 +162,7 @@ void ProtobufApi::addVersion(PackagePath p, const Version &vnew, const std::opti
 
     auto context = getContextWithAuth();
     GRPC_SET_DEADLINE(300);
-    GRPC_CALL_THROWS(user_, AddPackage, google::protobuf::Empty);
+    GRPC_CALL_THROWS(user_, AddPackage, google::protobuf::Empty);*/
 }
 
 void ProtobufApi::updateVersion(PackagePath p, const Version &v)

@@ -26,7 +26,7 @@ struct ProtobufApi : Api
 
     std::unordered_map<UnresolvedPackage, PackagePtr> resolvePackages(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs,
         std::unordered_map<PackageId, PackageData> &data, const IStorage &) const override;
-    void addVersion(PackagePath prefix, const PackageDescriptionMap &pkgs, const String &script_name, const String &script) const override;
+    void addVersion(const PackagePath &prefix, const PackageDescriptionMap &pkgs, const SpecificationFiles &) const override;
 
     void addVersion(const PackagePath &prefix, const String &script);
     void addVersion(PackagePath p, const Version &vnew, const std::optional<Version> &vold = {});
