@@ -2074,13 +2074,13 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
                     if (d->IncludeDirectoriesOnly)
                     {
                         ds["include_directories_only"] = "true";
-                        ds["include_directories_only"].ignoreInComparison(true);
+                        //ds["include_directories_only"].ignoreInComparison(true);
                         ds["include_directories_only"].useInHash(false);
                     }
                     if (d->LinkLibrariesOnly)
                     {
                         ds["link_libraries_only"] = "true";
-                        ds["link_libraries_only"].ignoreInComparison(true);
+                        //ds["link_libraries_only"].ignoreInComparison(true);
                         ds["link_libraries_only"].useInHash(false);
                     }
                     s["dependencies"].push_back(j);
@@ -2520,15 +2520,19 @@ void NativeCompiledTarget::prepare_pass3_1()
                             {
                                 if (d3->getTarget().getPackage() == package_id && d3->getSettings() == settings.getMap())
                                 {
+                                    String err = getPackage().toString() + ": ";
+                                    err += "dependency: " + t->getPackage().toString() + ": ";
+                                    err += "dependency: " + d3->getUnresolvedPackage().toString();
+
                                     // construct
                                     Dependency d2(d3->getUnresolvedPackage());
                                     d2.settings = d3->getSettings();
                                     d2.setTarget(d3->getTarget());
                                     //d2.IncludeDirectoriesOnly = d3->getSettings()["include_directories_only"] == "true";
                                     d2.IncludeDirectoriesOnly = settings["include_directories_only"] == "true";
-                                    SW_CHECK(d3->getSettings()["include_directories_only"] == settings["include_directories_only"]);
+                                    //SW_ASSERT(d3->getSettings()["include_directories_only"] == settings["include_directories_only"], err);
                                     d2.LinkLibrariesOnly = settings["link_libraries_only"] == "true";
-                                    SW_CHECK(d3->getSettings()["link_libraries_only"] == settings["link_libraries_only"]);
+                                    //SW_ASSERT(d3->getSettings()["link_libraries_only"] == settings["link_libraries_only"], err);
 
                                     // skip both of idir only libs and llibs only
                                     if (d2.IncludeDirectoriesOnly || d2.LinkLibrariesOnly)
@@ -2638,6 +2642,8 @@ void NativeCompiledTarget::prepare_pass3_2()
                 {
                     if (!d->IncludeDirectoriesOnly && !dep.dep->IncludeDirectoriesOnly)
                         continue;
+                    if (dep.dep->LinkLibrariesOnly)
+                        continue;
                     calc_deps(*d, *dep.dep, dep.inhtype);
                 }
             }
@@ -2663,20 +2669,22 @@ void NativeCompiledTarget::prepare_pass3_2()
                                     Dependency d2(d3->getUnresolvedPackage());
                                     d2.settings = d3->getSettings();
                                     d2.setTarget(d3->getTarget());
-                                    //d2.IncludeDirectoriesOnly = d3->getSettings()["include_directories_only"] == "true";
                                     d2.IncludeDirectoriesOnly = settings["include_directories_only"] == "true";
-                                    SW_CHECK(d3->getSettings()["include_directories_only"] == settings["include_directories_only"]);
+                                    d2.LinkLibrariesOnly = settings["link_libraries_only"] == "true";
 
-                                    // exit early before llibs only
+                                    //// exit early before llibs only
                                     if (!d->IncludeDirectoriesOnly && !d2.IncludeDirectoriesOnly)
                                     {
                                         // do not process here
                                         found = true;
                                         continue;
                                     }
-
-                                    d2.LinkLibrariesOnly = settings["link_libraries_only"] == "true";
-                                    SW_CHECK(d3->getSettings()["link_libraries_only"] == settings["link_libraries_only"]);
+                                    if (d2.LinkLibrariesOnly)
+                                    {
+                                        // do not process here
+                                        found = true;
+                                        continue;
+                                    }
 
                                     calc_deps(*d, d2, inh);
                                     found = true;
@@ -2814,11 +2822,8 @@ void NativeCompiledTarget::prepare_pass3_3()
                                     Dependency d2(d3->getUnresolvedPackage());
                                     d2.settings = d3->getSettings();
                                     d2.setTarget(d3->getTarget());
-                                    //d2.IncludeDirectoriesOnly = d3->getSettings()["include_directories_only"] == "true";
                                     d2.IncludeDirectoriesOnly = settings["include_directories_only"] == "true";
-                                    SW_CHECK(d3->getSettings()["include_directories_only"] == settings["include_directories_only"]);
                                     d2.LinkLibrariesOnly = settings["link_libraries_only"] == "true";
-                                    SW_CHECK(d3->getSettings()["link_libraries_only"] == settings["link_libraries_only"]);
 
                                     if (!d2.LinkLibrariesOnly)
                                     {
