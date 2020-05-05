@@ -18,6 +18,8 @@
 
 #pragma once
 
+#include <sw/support/specification.h>
+
 #include <primitives/filesystem.h>
 
 #include <optional>
@@ -27,32 +29,6 @@ namespace sw
 
 struct InputDatabase;
 struct SwContext;
-
-struct SW_CORE_API SpecificationFile
-{
-    path absolute_path;
-    std::optional<String> contents;
-
-    void read();
-};
-
-struct SW_CORE_API SpecificationFiles
-{
-    // For inline spec we may pass virtual file name and actual contents
-    // that cannot be read from fs.
-    // Example, inline cppan.yml: addFile(someroot, "cppan.yml", extracted yml contents from comments);
-    // relative_path - path relative to package root, may be virtual
-    // absolute_path - path on disk, may differ from relative, example: main.cpp where we take inline cppan.yml from
-    void addFile(const path &relative_path, const path &absolute_path, const std::optional<String> &contents = std::optional<String>{});
-
-    std::map<path, SpecificationFile> &getData() { return data; }
-    const std::map<path, SpecificationFile> &getData() const { return data; }
-    fs::file_time_type getLastWriteTime() const;
-
-private:
-    //       rel.
-    std::map<path, SpecificationFile> data;
-};
 
 // Represents set of specification files for single input.
 // It may be set of sw (make, cmake, qmake etc.) files.
@@ -79,6 +55,8 @@ struct SW_CORE_API Specification
     Files getFiles() const;
 
     String getName() const;
+
+    void read();
 
 //private: // temporarily (TODO: update upload)
     SpecificationFiles files;

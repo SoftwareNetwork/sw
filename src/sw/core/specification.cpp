@@ -25,28 +25,6 @@
 namespace sw
 {
 
-void SpecificationFile::read()
-{
-    if (contents)
-        return;
-    contents = read_file(absolute_path);
-}
-
-void SpecificationFiles::addFile(const path &relative_path, const path &abspath, const std::optional<String> &contents)
-{
-    if (relative_path.is_absolute())
-        throw SW_RUNTIME_ERROR("Not a relative path: " + normalize_path(relative_path));
-    data[relative_path] = { abspath, contents };
-}
-
-fs::file_time_type SpecificationFiles::getLastWriteTime() const
-{
-    auto lwt = fs::file_time_type::min();
-    for (auto &[_, f] : data)
-        lwt = std::max(lwt, fs::last_write_time(f.absolute_path));
-    return lwt;
-}
-
 Specification::Specification(const SpecificationFiles &files)
     : files(files)
 {
@@ -99,6 +77,11 @@ String Specification::getName() const
     for (auto &[_, f] : this->files.getData())
         return normalize_path(f.absolute_path);
     return "Empty specification";
+}
+
+void Specification::read()
+{
+    files.read();
 }
 
 /*const String &Specification::getFileContents(const path &p)
