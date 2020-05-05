@@ -6,8 +6,6 @@
 
 #include "package_data.h"
 
-#include "source.h"
-
 #include <nlohmann/json.hpp>
 #include <primitives/yaml.h>
 

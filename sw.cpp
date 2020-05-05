@@ -16,8 +16,10 @@ void build(Solution &s)
         support += "src/sw/support/.*"_rr;
         auto cmddep = "pub.egorpugin.primitives.command-master"_dep;
         auto verdep = "pub.egorpugin.primitives.version-master"_dep;
+        auto srcdep = "pub.egorpugin.primitives.source-master"_dep;
         support.Public +=
-            cmddep, verdep,
+            cmddep, verdep, srcdep,
+            "pub.egorpugin.primitives.date_time-master"_dep,
             "pub.egorpugin.primitives.http-master"_dep,
             "pub.egorpugin.primitives.hash-master"_dep,
             "pub.egorpugin.primitives.log-master"_dep,
@@ -29,6 +31,8 @@ void build(Solution &s)
         //cmddep->getSettings()["export-if-static"].setRequired();
         verdep->getSettings()["export-if-static"] = "true";
         verdep->getSettings()["export-if-static"].setRequired();
+        srcdep->getSettings()["export-if-static"] = "true";
+        srcdep->getSettings()["export-if-static"].setRequired();
         if (support.getBuildSettings().TargetOS.Type == OSType::Windows)
         {
             support.Protected += "_CRT_SECURE_NO_WARNINGS"_d;
@@ -60,10 +64,7 @@ void build(Solution &s)
         manager += cpp17;
         manager.Public += "BOOST_DLL_USE_STD_FS"_def;
 
-        auto srcdep = "pub.egorpugin.primitives.source-master"_dep;
         manager.Public += support, protos,
-            srcdep,
-            "pub.egorpugin.primitives.date_time-master"_dep,
             "pub.egorpugin.primitives.db.sqlite3-master"_dep,
             "pub.egorpugin.primitives.lock-master"_dep,
             "pub.egorpugin.primitives.pack-master"_dep,
@@ -74,8 +75,6 @@ void build(Solution &s)
             "org.sw.demo.boost.dll"_dep,
             "org.sw.demo.rbock.sqlpp11_connector_sqlite3-master"_dep
             ;
-        srcdep->getSettings()["export-if-static"] = "true";
-        srcdep->getSettings()["export-if-static"].setRequired();
 
         manager.Public -= "pub.egorpugin.primitives.win32helpers-master"_dep;
         if (manager.getBuildSettings().TargetOS.Type == OSType::Windows)

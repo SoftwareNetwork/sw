@@ -104,7 +104,7 @@ struct PackageData
 /**
 * generic pkg desc
 */
-struct SW_MANAGER_API PackageDescription
+struct SW_SUPPORT_API PackageDescription
 {
     PackageDescription(const std::string &);
     virtual ~PackageDescription() = default;
@@ -122,7 +122,7 @@ private:
 using PackageDescriptionPtr = std::unique_ptr<PackageDescription>;
 using PackageDescriptionMap = std::unordered_map<PackageId, PackageDescriptionPtr>;
 
-struct SW_MANAGER_API JsonPackageDescription : PackageDescription
+struct SW_SUPPORT_API JsonPackageDescription : PackageDescription
 {
     JsonPackageDescription(const std::string &);
     virtual ~JsonPackageDescription() = default;
@@ -130,7 +130,7 @@ struct SW_MANAGER_API JsonPackageDescription : PackageDescription
     detail::PackageData getData() const override;
 };
 
-struct SW_MANAGER_API YamlPackageDescription : PackageDescription
+struct SW_SUPPORT_API YamlPackageDescription : PackageDescription
 {
     YamlPackageDescription(const std::string &);
     virtual ~YamlPackageDescription() = default;

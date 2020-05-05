@@ -26,7 +26,6 @@
 #include <sw/builder/jumppad.h>
 #include <sw/core/sw_context.h>
 #include <sw/manager/database.h>
-#include <sw/manager/package_data.h>
 #include <sw/manager/storage.h>
 #include <sw/support/hash.h>
 

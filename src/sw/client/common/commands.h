@@ -24,7 +24,7 @@
 
 #include <sw/core/build.h>
 #include <sw/core/sw_context.h>
-#include <sw/manager/package_data.h>
+#include <sw/support/package_data.h>
 
 #define SW_DOC_URL "https://software-network.org/client/sw.pdf"
 

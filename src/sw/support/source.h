@@ -27,7 +27,7 @@ using primitives::source::Svn;
 using primitives::source::RemoteFile;
 using primitives::source::RemoteFiles;
 
-struct SW_MANAGER_API Git : primitives::source::Git
+struct SW_SUPPORT_API Git : primitives::source::Git
 {
     using primitives::source::Git::Git;
 
@@ -41,7 +41,7 @@ private:
 };
 
 /// load from current (passed) object, detects 'getString()' subobject
-SW_MANAGER_API
+SW_SUPPORT_API
 std::unique_ptr<Source> load(const nlohmann::json &j);
 
 }
@@ -73,10 +73,10 @@ struct SourceDownloadOptions
 };
 
 // returns true if downloaded
-SW_MANAGER_API
+SW_SUPPORT_API
 bool download(const std::unordered_set<SourcePtr> &sources, SourceDirMap &source_dirs, const SourceDownloadOptions &opts = {});
 
-SW_MANAGER_API
+SW_SUPPORT_API
 SourceDirMap download(const std::unordered_set<SourcePtr> &sources, const SourceDownloadOptions &opts = {});
 
 }

@@ -23,8 +23,8 @@
 #include <sw/builder/command.h>
 #include <sw/builder/node.h>
 #include <sw/manager/package.h>
-#include <sw/manager/source.h>
 #include <sw/support/package_version_map.h>
+#include <sw/support/source.h>
 
 #include <any>
 #include <variant>

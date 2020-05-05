@@ -7,7 +7,8 @@
 #pragma once
 
 #include "package.h"
-#include "package_data.h"
+
+#include <sw/support/package_data.h>
 
 namespace sw
 {

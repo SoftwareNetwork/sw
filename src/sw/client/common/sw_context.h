@@ -21,8 +21,8 @@
 #include <primitives/filesystem.h>
 #include <sw/core/input.h>
 #include <sw/core/settings.h>
-#include <sw/manager/source.h>
 #include <sw/support/package_path.h>
+#include <sw/support/source.h>
 
 namespace sw
 {
