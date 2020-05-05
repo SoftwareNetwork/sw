@@ -208,9 +208,14 @@ const TargetSetting::Map &TargetSetting::getMap() const
     return *s;
 }
 
+static const path &get_root_dir(const Directories &d)
+{
+    return d.storage_dir;
+}
+
 path TargetSetting::getPathValue(const Directories &d) const
 {
-    return getPathValue(d.storage_dir_pkg);
+    return getPathValue(get_root_dir(d));
 }
 
 path TargetSetting::getPathValue(const path &root) const
@@ -220,7 +225,7 @@ path TargetSetting::getPathValue(const path &root) const
 
 void TargetSetting::setPathValue(const Directories &d, const path &value)
 {
-    setPathValue(d.storage_dir_pkg, value);
+    setPathValue(get_root_dir(d), value);
 }
 
 void TargetSetting::setPathValue(const path &root, const path &value)
