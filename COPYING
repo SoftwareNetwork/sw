@@ -1,10 +1,8 @@
-Different parts of this repository (project) are subject to different licences.
+Different parts of SW project (this repository) are subject to different licences.
 
-src/sw/support:     MPLv2
-src/sw/protocol:    MPLv2
-src/sw/manager:     MPLv2
-other code:         GPLv3+
+main code:          GPLv3+
 server code:        AGPLv3+
+small libs:         MPLv2 (src/sw/protocol, src/sw/support)
 utilities, helpers: APLv2
 
 See specific files for detailed information about their license.
