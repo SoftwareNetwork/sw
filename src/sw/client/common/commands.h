@@ -37,7 +37,7 @@ struct StorageWithPackagesDatabase;
 
 #define SUBCOMMAND_DECL(n) void SwClientContext::command_##n()
 
-sw::PackageDescriptionMap getPackages(const sw::SwBuild &, const sw::SourceDirMap & = {});
+sw::PackageDescriptionMap getPackages(const sw::SwBuild &, const sw::SourceDirMap & = {}, std::map<const sw::Input*, std::vector<sw::PackageId>> * = nullptr);
 std::map<sw::PackagePath, sw::VersionSet> getMatchingPackages(const sw::StorageWithPackagesDatabase &, const String &unresolved_arg);
 
 // create command

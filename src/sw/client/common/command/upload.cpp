@@ -22,6 +22,7 @@
 #include <sw/core/specification.h>
 #include <sw/manager/api.h>
 #include <sw/manager/settings.h>
+#include <sw/manager/remote.h>
 
 #include <nlohmann/json.hpp>
 #include <primitives/pack.h>
@@ -31,7 +32,7 @@ DECLARE_STATIC_LOGGER(logger, "upload");
 
 sw::Remote *find_remote(sw::Settings &s, const String &name);
 
-sw::PackageDescriptionMap getPackages(const sw::SwBuild &b, const sw::SourceDirMap &sources)
+sw::PackageDescriptionMap getPackages(const sw::SwBuild &b, const sw::SourceDirMap &sources, std::map<const sw::Input*, std::vector<sw::PackageId>> *iv)
 {
     using namespace sw;
 
@@ -107,6 +108,8 @@ sw::PackageDescriptionMap getPackages(const sw::SwBuild &b, const sw::SourceDirM
 
         auto s = j.dump();
         m[pkg] = std::make_unique<JsonPackageDescription>(s);
+        if (iv)
+            (*iv)[&tgts.getInput().getInput()].push_back(pkg);
     }
     return m;
 }
@@ -128,7 +131,7 @@ SUBCOMMAND_DECL(upload)
     auto inputs = b->getContext().detectInputs(fs::current_path());
     if (inputs.size() > 1)
         LOG_INFO(logger, "Multiple inputs detected:");
-
+    std::unordered_map<size_t, sw::Input *> input_map;
     for (const auto &[idx, i] : enumerate(inputs))
     {
         auto &spec = i->getSpecification();
@@ -139,6 +142,7 @@ SUBCOMMAND_DECL(upload)
 
         for (auto &[_, f] : spec.files.getData())
             f.read();
+        input_map[i->getHash()] = i.get();
     }
 
     // detect from options
@@ -192,7 +196,8 @@ SUBCOMMAND_DECL(upload)
     b->loadPackages();
     b->prepare();
 
-    auto m = getPackages(*b, sources);
+    std::map<const sw::Input *, std::vector<sw::PackageId>> iv;
+    auto m = getPackages(*b, sources, &iv);
 
     // dbg purposes
     for (auto &[id, d] : m)
@@ -210,23 +215,17 @@ SUBCOMMAND_DECL(upload)
 
     // select remote
     auto &us = sw::Settings::get_user_settings();
-    auto current_remote = &*us.remotes.begin();
+    auto current_remote = us.getRemotes().begin()->get();
     if (!getOptions().options_upload.upload_remote.empty())
         current_remote = find_remote(us, getOptions().options_upload.upload_remote);
 
-    for (auto &i : inputs)
+    for (auto &[i, pkgs] : iv)
     {
-        auto &spec = i->getSpecification();
-        input_check(spec);
-
-        auto &spec_contents = *spec.files.getData().begin()->second.contents;
-        auto script_name = spec.files.getData().begin()->first.filename().string();
+        auto i2 = input_map[i->getHash()];
+        SW_CHECK(i2);
+        auto &spec = i2->getSpecification();
 
         // select this input packages
-        auto i2 = getContext().getInput(i->getHash());
-        SW_CHECK(i2);
-        sw::BuildInput bi(*i2);
-        auto pkgs = bi.listPackages(getContext());
         decltype(m) m2;
         for (auto &p : pkgs)
         {
@@ -234,9 +233,6 @@ SUBCOMMAND_DECL(upload)
             if (m.find(p) != m.end())
                 m2[p] = std::move(m[p]);
         }
-
-        // read spec files
-        spec.read();
 
         // send signatures (gpg etc.)?
         // -k KEY1 -k KEY2
