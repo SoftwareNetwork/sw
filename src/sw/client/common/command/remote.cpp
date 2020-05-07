@@ -24,11 +24,11 @@
 sw::Remote *find_remote(sw::Settings &s, const String &name)
 {
     sw::Remote *current_remote = nullptr;
-    for (auto &r : s.remotes)
+    for (auto &r : s.getRemotes())
     {
-        if (r.name == name)
+        if (r->name == name)
         {
-            current_remote = &r;
+            current_remote = r.get();
             break;
         }
     }

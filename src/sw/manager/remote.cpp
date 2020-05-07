@@ -23,27 +23,29 @@
 #include "package.h"
 
 #include <sw/support/hash.h>
+#include <sw/support/storage.h>
 
 #include <boost/dll.hpp>
 #include <fmt/ostream.h>
+#include <nlohmann/json.hpp>
 #include <primitives/http.h>
 #include <primitives/templates.h>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "remote");
 
+#define SPECIFICATIONS_FILENAME "specification.json"
+
 namespace sw
 {
 
-Remotes get_default_remotes()
+std::vector<std::shared_ptr<Remote>> get_default_remotes()
 {
-    static Remotes rms;
+    static std::vector<std::shared_ptr<Remote>> rms;
     RUN_ONCE
     {
-        Remote r;
-        r.name = DEFAULT_REMOTE_NAME;
-        r.url = "https://software-network.org/";
-        rms.push_back(r);
+        auto r = std::make_shared<Remote>(DEFAULT_REMOTE_NAME, "https://software-network.org/");
+        rms.push_back(std::move(r));
     };
     return rms;
 }
@@ -97,6 +99,51 @@ bool DataSource::downloadPackage(const Package &d, const path &fn, String &dl_ha
     return false;
 }
 
+Remote::Remote(const String &name, const String &u)
+    : name(name), url(u)
+{
+    path up = url;
+    //if (up.filename() != SPECIFICATIONS_FILENAME)
+    {
+        if (!url.empty() && url.back() != '/')
+            url += "/";
+    }
+    String spec_url = url + "static/" SPECIFICATIONS_FILENAME;
+    auto fn = get_root_directory() / "remotes" / name / SPECIFICATIONS_FILENAME;
+    if (!fs::exists(fn))
+        download_file(spec_url, fn);
+    auto j = nlohmann::json::parse(read_file(fn));
+    auto &spec = j["specification"];
+    api_url = spec["api_url"];
+    auto &jdb = spec["database"];
+    if (jdb.contains("url"))
+        db.url = jdb["url"];
+    if (jdb.contains("git_url"))
+        db.git_repo_url = jdb["git_url"];
+    if (jdb.contains("local_dir"))
+        db.local_dir = jdb["local_dir"];
+    db.version_root_url = jdb["version_root_url"];
+    if (!db.version_root_url.empty() && db.version_root_url.back() != '/')
+        db.version_root_url += "/";
+
+    auto &ds = spec["data_sources"];
+    for (const auto &row : ds)
+    {
+        for (auto &[k, v] : row.items())
+        {
+            DataSource s;
+            s.raw_url = v["url"];
+            if (v.contains("flags"))
+                s.flags = v["flags"].get<int64_t>();
+            if (s.flags[DataSource::fDisabled])
+                continue;
+            dss.push_back(s);
+        }
+    }
+    if (dss.empty())
+        throw SW_RUNTIME_ERROR("No data sources available");
+}
+
 std::unique_ptr<Api> Remote::getApi() const
 {
     switch (getApiType())
@@ -116,16 +163,6 @@ GrpcChannel Remote::getGrpcChannel() const
     static std::mutex m;
     std::unique_lock lk(m);
 
-    auto p = url.find("://");
-    auto host = url.substr(p == url.npos ? 0 : p + 3);
-    host = host.substr(0, host.find('/'));
-    if (host.find(':') == host.npos)
-    {
-        //host = host.substr(0, host.find(':')); // remove port
-        if (host.find("api") != 0)
-            host = "api." + host;
-    }
-
     static const grpc::SslCredentialsOptions ssl_options = []()
     {
         grpc::SslCredentialsOptions ssl_options;
@@ -144,8 +181,39 @@ GrpcChannel Remote::getGrpcChannel() const
     }();
 
     auto creds = grpc::SslCredentials(ssl_options);
-    auto channel = grpc::CreateChannel(host, secure ? creds : grpc::InsecureChannelCredentials());
+    auto channel = grpc::CreateChannel(api_url, secure ? creds : grpc::InsecureChannelCredentials());
     return channel;
+}
+
+String Remote::DatabaseInformation::getVersionUrl() const
+{
+    return version_root_url + "/" + sw::getPackagesDatabaseVersionFileName();
+}
+
+int Remote::DatabaseInformation::getVersion() const
+{
+    static std::mutex m;
+    std::unique_lock lk(m);
+
+    if (version != -1)
+        return version;
+
+    version = [this]()
+    {
+        LOG_TRACE(logger, "Checking remote version");
+        try
+        {
+            auto ver = local_dir.empty() ? download_file(getVersionUrl()) : read_file(getVersionUrl());
+            return std::stoi(ver);
+        }
+        catch (std::exception &e)
+        {
+            LOG_DEBUG(logger, "Couldn't download db version file: " << e.what());
+        }
+        return 0;
+    }();
+
+    return version;
 }
 
 }

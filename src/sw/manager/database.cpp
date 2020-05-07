@@ -513,21 +513,4 @@ String PackagesDatabase::getPackagePath(db::PackageId id) const
     throw SW_RUNTIME_ERROR("No such package: " + std::to_string(id));
 }
 
-DataSources PackagesDatabase::getDataSources() const
-{
-    DataSources dss;
-    for (const auto &row : (*db)(select(ds.url, ds.flags).from(ds).unconditionally()))
-    {
-        DataSource s;
-        s.raw_url = row.url;
-        s.flags = row.flags.value();
-        if (s.flags[DataSource::fDisabled])
-            continue;
-        dss.push_back(s);
-    }
-    if (dss.empty())
-        throw SW_RUNTIME_ERROR("No data sources available");
-    return dss;
-}
-
 }

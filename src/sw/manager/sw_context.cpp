@@ -18,6 +18,7 @@
 
 #include "sw_context.h"
 
+#include "remote.h"
 #include "settings.h"
 #include "storage.h"
 #include "storage_remote.h"
@@ -30,8 +31,6 @@ DECLARE_STATIC_LOGGER(logger, "icontext");
 namespace sw
 {
 
-//ISwContext::~ISwContext() = default;
-
 SwManagerContext::SwManagerContext(const path &local_storage_root_dir, bool allow_network)
 {
     // first goes resolve cache
@@ -42,11 +41,11 @@ SwManagerContext::SwManagerContext(const path &local_storage_root_dir, bool allo
     storages.emplace_back(std::make_unique<LocalStorage>(local_storage_root_dir));
 
     first_remote_storage_id = storages.size();
-    for (auto &r : Settings::get_user_settings().remotes)
+    for (auto &r : Settings::get_user_settings().getRemotes())
     {
         storages.emplace_back(
             std::make_unique<RemoteStorageWithFallbackToRemoteResolving>(
-                getLocalStorage(), r, allow_network));
+                getLocalStorage(), *r, allow_network));
     }
 }
 

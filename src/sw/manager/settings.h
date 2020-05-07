@@ -18,10 +18,6 @@
 
 #pragma once
 
-#include <map>
-
-#include "remote.h"
-#include "version.h"
 #include "yaml.h"
 
 #include <sw/support/enums.h>
@@ -30,13 +26,16 @@
 #include <primitives/http.h>
 #include <primitives/sw/settings.h>
 
+#include <map>
+
 namespace sw
 {
+
+struct Remote;
 
 struct SW_MANAGER_API Settings
 {
     // connection
-    Remotes remotes{ get_default_remotes() };
     ProxySettings proxy;
 
     path storage_dir;
@@ -50,6 +49,7 @@ struct SW_MANAGER_API Settings
 
 public:
     Settings();
+    ~Settings();
 
     void load(const path &p, const SettingsType type);
     void load(const yaml &root, const SettingsType type);
@@ -57,7 +57,12 @@ public:
 
     bool checkForUpdates() const;
 
+    const std::vector<std::shared_ptr<Remote>> &getRemotes() const;
+
 private:
+    yaml root;
+    mutable std::vector<std::shared_ptr<Remote>> remotes;
+
     void load_main(const yaml &root, const SettingsType type);
 
 public:

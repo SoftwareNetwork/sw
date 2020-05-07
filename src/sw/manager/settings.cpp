@@ -19,6 +19,7 @@
 #include "settings.h"
 
 #include "database.h"
+#include "remote.h"
 #include "stamp.h"
 #include "storage.h"
 
@@ -46,9 +47,13 @@ Settings::Settings()
     storage_dir = get_root_directory() / "storage";
 }
 
+Settings::~Settings()
+{
+}
+
 void Settings::load(const path &p, const SettingsType type)
 {
-    auto root = load_yaml_config(p);
+    root = load_yaml_config(p);
     load(root, type);
 }
 
@@ -59,43 +64,6 @@ void Settings::load(const yaml &root, const SettingsType type)
 
 void Settings::load_main(const yaml &root, const SettingsType type)
 {
-    get_map_and_iterate(root, "remotes", [this](auto &kv) {
-        auto n = kv.first.template as<String>();
-        bool o = n == DEFAULT_REMOTE_NAME; // origin
-        Remote rm;
-        Remote *prm = o ? &remotes[0] : &rm;
-        prm->name = n;
-        String provider;
-        YAML_EXTRACT_VAR(kv.second, prm->url, "url", String);
-        YAML_EXTRACT_VAR(kv.second, prm->secure, "secure", bool);
-        //YAML_EXTRACT_VAR(kv.second, prm->data_dir, "data_dir", String);
-        YAML_EXTRACT_VAR(kv.second, provider, "provider", String);
-        if (!provider.empty())
-        {
-            /*if (provider == "sw")
-                prm->default_source = &Remote::sw_source_provider;*/
-        }
-        get_map_and_iterate(kv.second, "publishers", [&prm](auto &kv) {
-            Remote::Publisher p;
-            YAML_EXTRACT_VAR(kv.second, p.name, "name", String);
-            YAML_EXTRACT_VAR(kv.second, p.token, "token", String);
-            prm->publishers[p.name] = p;
-        });
-        if (!o)
-            remotes.push_back(*prm);
-    });
-
-    if (!default_remote.empty())
-    {
-        auto i = std::find_if(remotes.begin(), remotes.end(), [](const auto &r)
-        {
-            return r.name == default_remote;
-        });
-        if (i == remotes.end())
-            throw SW_RUNTIME_ERROR("Remote not found: " + default_remote);
-        std::swap(*i, *remotes.begin());
-    }
-
     YAML_EXTRACT_AUTO(disable_update_checks);
     YAML_EXTRACT_AUTO(record_commands);
     YAML_EXTRACT_AUTO(record_commands_in_current_dir);
@@ -109,6 +77,58 @@ void Settings::load_main(const yaml &root, const SettingsType type)
         YAML_EXTRACT_VAR(p, proxy.host, "host", String);
         YAML_EXTRACT_VAR(p, proxy.user, "user", String);
     }
+}
+
+const std::vector<std::shared_ptr<Remote>> &Settings::getRemotes() const
+{
+    static std::mutex m;
+    std::unique_lock lk(m);
+    if (!remotes.empty())
+        return remotes;
+
+    remotes = get_default_remotes();
+
+    get_map_and_iterate(root, "remotes", [this](auto &kv)
+    {
+        Remote *pr;
+
+        auto n = kv.first.template as<String>();
+        if (n == DEFAULT_REMOTE_NAME) // origin
+        {
+            pr = remotes[0].get();
+        }
+        else
+        {
+            String url;
+            YAML_EXTRACT_VAR(kv.second, url, "url", String);
+            auto r = std::make_shared<Remote>(n, url);
+            remotes.push_back(r);
+            pr = r.get();
+        }
+
+        YAML_EXTRACT_VAR(kv.second, pr->secure, "secure", bool);
+        //YAML_EXTRACT_VAR(kv.second, prm.data_dir, "data_dir", String);
+        get_map_and_iterate(kv.second, "publishers", [pr](auto &kv)
+        {
+            Remote::Publisher p;
+            YAML_EXTRACT_VAR(kv.second, p.name, "name", String);
+            YAML_EXTRACT_VAR(kv.second, p.token, "token", String);
+            pr->publishers[p.name] = p;
+        });
+    });
+
+    if (!default_remote.empty())
+    {
+        auto i = std::find_if(remotes.begin(), remotes.end(), [](const auto &r)
+        {
+            return r->name == default_remote;
+        });
+        if (i == remotes.end())
+            throw SW_RUNTIME_ERROR("Remote not found: " + default_remote);
+        std::swap(*i, *remotes.begin());
+    }
+
+    return remotes;
 }
 
 bool Settings::checkForUpdates() const
@@ -125,7 +145,7 @@ bool Settings::checkForUpdates() const
 #endif
 
     auto fn = fs::temp_directory_path() / unique_path();
-    download_file(remotes[0].url + stamp_file, fn);
+    download_file(remotes[0]->url + stamp_file, fn);
     auto stamp_remote = boost::trim_copy(read_file(fn));
     fs::remove(fn);
     boost::replace_all(stamp_remote, "\"", "");
@@ -176,7 +196,7 @@ Settings &Settings::get(SettingsType type)
                 fs::create_directories(fn.parent_path(), ec);
                 if (ec)
                     throw SW_RUNTIME_ERROR(ec.message());
-                auto ss = get(SettingsType::System);
+                auto &ss = get(SettingsType::System);
                 ss.save(fn);
             }
             s.load(fn, SettingsType::User);
@@ -223,13 +243,13 @@ void Settings::save(const path &p) const
     yaml root;
     for (auto &r : remotes)
     {
-        root["remotes"][r.name]["url"] = r.url;
-        if (!r.secure)
-            root["remotes"][r.name]["secure"] = r.secure;
-        for (auto &[n, p] : r.publishers)
+        root["remotes"][r->name]["url"] = r->url;
+        if (!r->secure)
+            root["remotes"][r->name]["secure"] = r->secure;
+        for (auto &[n, p] : r->publishers)
         {
-            root["remotes"][r.name]["publishers"][p.name]["name"] = p.name;
-            root["remotes"][r.name]["publishers"][p.name]["token"] = p.token;
+            root["remotes"][r->name]["publishers"][p.name]["name"] = p.name;
+            root["remotes"][r->name]["publishers"][p.name]["token"] = p.token;
         }
     }
     root["storage_dir"] = storage_dir.string();

@@ -24,7 +24,6 @@ namespace
 const auto pkgs = ::db::packages::Package{};
 const auto pkg_ver = ::db::packages::PackageVersion{};
 const auto pkg_deps = ::db::packages::PackageVersionDependency{};
-const auto ds = ::db::packages::DataSource{};
 
 template <typename SelectType>
 using PreparedStatement = decltype(((sql::connection*)nullptr)->prepare(*((SelectType*)nullptr)));

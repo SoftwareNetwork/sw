@@ -50,7 +50,13 @@ struct DataSource
         fHasPrebuiltPackages    =   2,
     };
 
+    enum Type
+    {
+        tHttp   = 0,
+    };
+
     String raw_url;
+    int type = tHttp;
     SomeFlags flags;
     String location; // other type?
 
@@ -82,15 +88,35 @@ struct Remote
         String token;
     };
 
+    struct DatabaseInformation
+    {
+        // from spec
+        String git_repo_url;
+        String url;
+        String local_dir;
+        String version_root_url;
+
+        // other
+        mutable int version = -1;
+
+        String getVersionUrl() const;
+        int getVersion() const;
+    };
+
     using Url = String;
     using SourcesUrls = std::vector<Url>;
 
     String name;
     Url url;
+    Url api_url;
+    DatabaseInformation db;
 
+    DataSources dss;
     std::map<String, Publisher> publishers;
     bool secure = true;
     ApiType type = ApiType::Protobuf;
+
+    Remote(const String &name, const String &url);
 
     std::unique_ptr<Api> getApi() const;
     ApiType getApiType() const { return type; }
@@ -101,7 +127,6 @@ private:
     friend struct ProtobufApi;
 };
 
-using Remotes = std::vector<Remote>;
-Remotes get_default_remotes();
+std::vector<std::shared_ptr<Remote>> get_default_remotes();
 
 }

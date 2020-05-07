@@ -66,19 +66,6 @@ CREATE TABLE package_version_dependency (
 --
 --------------------------------------------------------------------------------
 
-CREATE TABLE data_source (
-    data_source_id INTEGER PRIMARY KEY,
-    data_source_name TEXT(255) NOT NULL,
-    url TEXT(4096) NOT NULL,
-    flags INTEGER NOT NULL,
-    location TEXT(255),
-    created TEXT NOT NULL
-);
-
---------------------------------------------------------------------------------
---
---------------------------------------------------------------------------------
-
 --------------------------------------------------------------------------------
 --
 --
@@ -111,6 +98,12 @@ CREATE INDEX ix_package_id ON package_version (package_id ASC);
 --------------------------------------------------------------------------------
 
 -- removed, do not delete empty split, to prevent version downgrade
+
+--------------------------------------------------------------------------------
+-- %split
+--------------------------------------------------------------------------------
+
+DROP TABLE data_source;
 
 --------------------------------------------------------------------------------
 -- % split - merge '%' and 'split' together when patches are available

@@ -20,6 +20,7 @@
 
 #include "api.h"
 #include "package_database.h"
+#include "remote.h"
 #include "settings.h"
 
 #include <primitives/command.h>
@@ -36,13 +37,7 @@
 DECLARE_STATIC_LOGGER(logger, "storage");
 
 #define PACKAGES_DB_REFRESH_TIME_MINUTES 15
-
 #define PACKAGES_DB_DOWNLOAD_TIME_FILE "packages.time"
-
-const String db_repo_name = "SoftwareNetwork/database";
-const String db_repo_url = "https://github.com/" + db_repo_name;
-const String db_master_url = db_repo_url + "/archive/master.zip";
-const String db_version_url = "https://raw.githubusercontent.com/" + db_repo_name + "/master/" + sw::getPackagesDatabaseVersionFileName();
 
 // save current time during crt startup
 // it is used for detecting young packages
@@ -61,6 +56,8 @@ RemoteStorage::RemoteStorage(LocalStorage &ls, const Remote &r, bool allow_netwo
     , r(r), ls(ls), allow_network(allow_network)
 {
     db_repo_dir = ls.getDatabaseRootDir() / "remote" / r.name / "repository";
+    if (!r.db.local_dir.empty())
+        db_repo_dir = r.db.local_dir;
 
     static const auto db_loaded_var = "db_loaded";
 
@@ -99,12 +96,15 @@ void RemoteStorage::download() const
 {
     LOG_INFO(logger, "Downloading database from " + getRemote().name + " remote");
 
+    if (!r.db.local_dir.empty())
+        return;
+
     fs::create_directories(db_repo_dir);
 
     auto download_archive = [this]()
     {
         auto fn = get_temp_filename();
-        download_file(db_master_url, fn, 1_GB);
+        download_file(r.db.url, fn, 1_GB);
         auto unpack_dir = get_temp_filename();
         auto files = unpack_file(fn, unpack_dir);
         for (auto &f : files)
@@ -114,11 +114,11 @@ void RemoteStorage::download() const
     };
 
     const String git = "git";
-    if (!primitives::resolve_executable(git).empty())
+    if (!primitives::resolve_executable(git).empty() && !r.db.git_repo_url.empty())
     {
         auto git_init = [this, &git]() {
             primitives::Command::execute({git, "-C", db_repo_dir.string(), "init", "."});
-            primitives::Command::execute({git, "-C", db_repo_dir.string(), "remote", "add", "github", db_repo_url});
+            primitives::Command::execute({git, "-C", db_repo_dir.string(), "remote", "add", "github", r.db.git_repo_url});
             primitives::Command::execute({git, "-C", db_repo_dir.string(), "pull", "github", "master"});
         };
 
@@ -316,20 +316,7 @@ void RemoteStorage::updateDb() const
             return;
     }
 
-    static int version_remote = []()
-    {
-        LOG_TRACE(logger, "Checking remote version");
-        try
-        {
-            return std::stoi(download_file(db_version_url));
-        }
-        catch (std::exception &e)
-        {
-            LOG_DEBUG(logger, "Couldn't download db version file: " << e.what());
-        }
-        return 0;
-    }();
-    if (version_remote > readPackagesDatabaseVersion(db_repo_dir))
+    if (r.db.getVersion() > readPackagesDatabaseVersion(db_repo_dir))
     {
         // multiprocess aware
         single_process_job(getPackagesDatabase().fn.parent_path() / "db_update", [this] {
@@ -497,7 +484,7 @@ std::unique_ptr<vfs::File> RemoteStorage::getFile(const PackageId &id, StorageFi
     {
     case StorageFileType::SourceArchive:
     {
-        auto provs = getPackagesDatabase().getDataSources();
+        auto provs = r.dss;
         Package pkg(*this, id);
         auto rf = std::make_unique<RemoteFileWithHashVerification>(pkg);
         for (auto &p : provs)

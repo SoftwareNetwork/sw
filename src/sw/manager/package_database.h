@@ -20,7 +20,6 @@
 
 #include "database.h"
 #include "package.h"
-#include "remote.h"
 
 #include <chrono>
 #include <memory>
@@ -56,8 +55,6 @@ struct SW_MANAGER_API PackagesDatabase : Database
     std::optional<path> getOverriddenDir(const Package &p) const;
     std::unordered_set<PackageId> getOverriddenPackages() const;
     void deleteOverriddenPackageDir(const path &sdir) const;
-
-    DataSources getDataSources() const;
 
     db::PackageId getPackageId(const PackagePath &) const;
     db::PackageId getPackageVersionId(const PackageId &) const;
