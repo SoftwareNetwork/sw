@@ -53,18 +53,27 @@ SUBCOMMAND_DECL(list)
     const sw::StorageWithPackagesDatabase *s;
     auto rs = getContext().getRemoteStorages();
 
+    std::map<sw::PackagePath, sw::VersionSet> r;
     if (getOptions().options_list.installed)
     {
         s = &getContext().getLocalStorage();
+        r = getMatchingPackages(*s, getOptions().options_list.list_arg);
     }
     else
     {
         if (rs.empty())
             throw SW_RUNTIME_ERROR("No remote storages found");
-        s = &static_cast<sw::StorageWithPackagesDatabase &>(*rs.front());
+
+        // merge from
+        // add overridden storage too?
+        for (auto &s : rs)
+        {
+            auto m = getMatchingPackages(static_cast<sw::StorageWithPackagesDatabase &>(*s), getOptions().options_list.list_arg);
+            for (auto &[p, v] : m)
+                r[p].merge(v);
+        }
     }
 
-    auto r = getMatchingPackages(*s, getOptions().options_list.list_arg);
     if (r.empty())
     {
         LOG_INFO(logger, "nothing found");
