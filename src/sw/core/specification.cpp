@@ -43,10 +43,10 @@ size_t Specification::getHash(const InputDatabase &db) const
     size_t h = 0;
     for (auto &[rel, f] : files.getData())
     {
-        if (f.contents)
+        if (f.absolute_path.empty())
         {
             // for virtual files
-            hash_combine(h, std::hash<String>()(*f.contents));
+            hash_combine(h, std::hash<String>()(f.getContents()));
             continue;
         }
 
