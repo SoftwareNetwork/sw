@@ -69,6 +69,7 @@ struct SW_MANAGER_API RemoteStorageWithFallbackToRemoteResolving : RemoteStorage
 
 private:
     mutable std::unordered_map<PackageId, PackageData> data;
+    mutable bool remote_resolving_is_not_working = false;
 };
 
 } // namespace sw

@@ -516,6 +516,8 @@ RemoteStorageWithFallbackToRemoteResolving::resolve(const UnresolvedPackages &pk
         return m;
     if (!isNetworkAllowed())
         return m;
+    if (remote_resolving_is_not_working)
+        return m;
 
     // clear dirty output
     unresolved_pkgs.clear();
@@ -532,6 +534,8 @@ RemoteStorageWithFallbackToRemoteResolving::resolve(const UnresolvedPackages &pk
         // we ignore remote storage errors, print them,
         // mark all deps as unresolved and
         // return empty result
+        // we also mark remove resolving as not working, so we won't be trying this again
+        remote_resolving_is_not_working = true;
         LOG_TRACE(logger, e.what());
         unresolved_pkgs = pkgs;
         return {};
