@@ -56,8 +56,6 @@ RemoteStorage::RemoteStorage(LocalStorage &ls, const Remote &r, bool allow_netwo
     , r(r), ls(ls), allow_network(allow_network)
 {
     db_repo_dir = ls.getDatabaseRootDir() / "remote" / r.name / "repository";
-    if (!r.db.local_dir.empty())
-        db_repo_dir = r.db.local_dir;
 
     static const auto db_loaded_var = "db_loaded";
 
@@ -96,10 +94,19 @@ void RemoteStorage::download() const
 {
     LOG_INFO(logger, "Downloading database from " + getRemote().name + " remote");
 
-    if (!r.db.local_dir.empty())
-        return;
-
     fs::create_directories(db_repo_dir);
+
+    if (!r.db.local_dir.empty())
+    {
+        for (auto &p : fs::directory_iterator(r.db.local_dir))
+        {
+            if (p.is_directory())
+                continue;
+            fs::copy_file(p, db_repo_dir / p.path().filename(), fs::copy_options::overwrite_existing);
+        }
+        writeDownloadTime();
+        return;
+    }
 
     auto download_archive = [this]()
     {
