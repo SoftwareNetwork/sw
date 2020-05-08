@@ -1154,6 +1154,13 @@ void BuiltinCommand::push_back(const Files &files)
         arguments.push_back(normalize_path(o));
 }
 
+void BuiltinCommand::push_back(const FilesOrdered &files)
+{
+    arguments.push_back(std::to_string(files.size()));
+    for (auto &o : files)
+        arguments.push_back(normalize_path(o));
+}
+
 void BuiltinCommand::push_back(const Strings &strings)
 {
     arguments.push_back(std::to_string(strings.size()));

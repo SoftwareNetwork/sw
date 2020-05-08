@@ -56,6 +56,7 @@ using sw::Checker;
 
 using sw::builder::CommandSequence;
 using sw::driver::Command;
+using sw::BuiltinCommand;
 
 // options
 using sw::File;

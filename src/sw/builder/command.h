@@ -317,6 +317,7 @@ struct SW_BUILDER_API BuiltinCommand : Command
     using Command::push_back;
     void push_back(const Strings &strings);
     void push_back(const Files &files);
+    void push_back(const FilesOrdered &files);
 
 private:
     void execute1(std::error_code *ec = nullptr) override;

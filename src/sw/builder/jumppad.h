@@ -115,6 +115,18 @@ inline Files from_string(gsl::span<const String> &s)
     return f;
 }
 
+template <>
+inline FilesOrdered from_string(gsl::span<const String> &s)
+{
+    auto b = s.begin();
+    FilesOrdered f;
+    auto n = std::stoi(*b++);
+    while (n--)
+        f.push_back(*b++);
+    s = s.subspan(b - s.begin());
+    return f;
+}
+
 template <typename Tuple, std::size_t... I>
 inline auto strings2tuple(gsl::span<const String> &s, std::index_sequence<I...>)
 {
