@@ -147,16 +147,20 @@ static void cleanup(CleanMask level_mask, const sw::SwContext &swctx)
             cmd,
             "/c",
             fn.c_str(),
+            nullptr,
         };
+        execve(cmd, args, 0);
 #else
         const char *cmd = "rm";
         const char *args[] =
         {
             cmd,
             fn.c_str(),
+            nullptr,
         };
+        const char *newenviron[] = { nullptr };
+        execve(cmd, (char*const*)args, (char*const*)newenviron);
 #endif
-        execve(cmd, args, 0);
     }
 }
 
