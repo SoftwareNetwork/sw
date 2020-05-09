@@ -2273,10 +2273,12 @@ void NativeCompiledTarget::prepare_pass1()
     if (!IsSwConfig)
     {
         // add pvt binary dir
-        IncludeDirectories.insert(BinaryPrivateDir);
+        if (fs::exists(BinaryPrivateDir)) // too slow check?
+            IncludeDirectories.insert(BinaryPrivateDir);
 
         // always add bdir to include dirs
-        Public.IncludeDirectories.insert(BinaryDir);
+        if (fs::exists(BinaryDir)) // too slow check?
+            Public.IncludeDirectories.insert(BinaryDir);
     }
 
     resolvePostponedSourceFiles();
