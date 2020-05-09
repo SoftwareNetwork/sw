@@ -701,6 +701,20 @@ command_line:
         name: setup
         desc: Used to do some system setup which may require administrator access.
 
+        command_line:
+            uninstall:
+                desc: Cleanup SW from the system. Removes storage and system integration settings.
+            level:
+                desc: |
+                    Use the following values or write list separated by commas:
+                    1   - Remove storage.
+                    2   - Remove sw system integration settings.
+                    4   - Remove sw settings.
+                    8   - Remove sw executable (if possible).
+                    16  - All of the above.
+                type: int
+                list: true
+
     # test
     subcommand:
         name: test
