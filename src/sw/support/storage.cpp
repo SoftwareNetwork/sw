@@ -6,8 +6,8 @@
 
 #include "storage.h"
 
-#include <primitives/log.h>
-DECLARE_STATIC_LOGGER(logger, "storage");
+//#include <primitives/log.h>
+//DECLARE_STATIC_LOGGER(logger, "storage");
 
 namespace sw
 {

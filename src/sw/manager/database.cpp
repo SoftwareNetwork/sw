@@ -238,7 +238,6 @@ std::unordered_map<UnresolvedPackage, PackageId> PackagesDatabase::resolve(const
             continue;
         }
 
-        db::PackageVersionId id = 0;
         VersionSet versions;
         UnorderedVersionMap<db::PackageVersionId> version_ids;
 

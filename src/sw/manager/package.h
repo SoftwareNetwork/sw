@@ -35,7 +35,7 @@ struct SW_MANAGER_API LocalPackage : Package
     LocalPackage(const LocalPackage &) = default;
     LocalPackage &operator=(const LocalPackage &) = delete;
     LocalPackage(LocalPackage &&) = default;
-    LocalPackage &operator=(LocalPackage &&) = default;
+    LocalPackage &operator=(LocalPackage &&) = delete;
     virtual ~LocalPackage() = default;
 
     virtual std::unique_ptr<Package> clone() const { return std::make_unique<LocalPackage>(*this); }

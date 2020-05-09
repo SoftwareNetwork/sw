@@ -10,8 +10,8 @@
 
 #include <fstream>
 
-#include <primitives/log.h>
-DECLARE_STATIC_LOGGER(logger, "package");
+//#include <primitives/log.h>
+//DECLARE_STATIC_LOGGER(logger, "package");
 
 namespace sw
 {
@@ -34,7 +34,7 @@ static path getHashPathFromHash(const String &h, int nsubdirs, int chars_per_sub
 }
 
 Package::Package(const IStorage &storage, const PackageId &id)
-    : storage(storage), PackageId(id)
+    : PackageId(id), storage(storage)
 {
 }
 
@@ -77,7 +77,7 @@ String Package::getHashShort() const
 const PackageData &Package::getData() const
 {
     if (!data)
-        data = std::move(storage.loadData(*this));
+        data = storage.loadData(*this);
     return *data;
 }
 

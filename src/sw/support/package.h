@@ -52,7 +52,7 @@ struct SW_SUPPORT_API Package : PackageId
     Package(const Package &);
     Package &operator=(const Package &) = delete;
     Package(Package &&) = default;
-    Package &operator=(Package &&) = default;
+    Package &operator=(Package &&) = delete;
     virtual ~Package() = default;
 
     String getHash() const;

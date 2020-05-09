@@ -151,6 +151,7 @@ path Directories::getDatabaseRootDir() const
 
     auto p = getDatabaseRootDir1(storage_dir_etc) / "1";
 
+    [[maybe_unused]]
     static bool once = [this, &new_root = p]()
     {
         for (auto &u : upgrade_from)
