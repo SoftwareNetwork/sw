@@ -908,6 +908,7 @@ types:
 
     # keep structure as in
     # https://clang.llvm.org/docs/ClangCommandLineReference.html
+    # maybe add --system-header-prefix only for local targets?
     clangopt:
         name: ClangOptions
         parent: GNUClangCommonOptions
