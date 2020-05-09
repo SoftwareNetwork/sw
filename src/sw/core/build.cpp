@@ -469,7 +469,7 @@ void SwBuild::resolvePackages(const std::vector<IDependency*> &udeps)
     if (can_use_saved_configs(*this))
     {
         std::function<bool(const std::vector<IDependency*> &)> load_targets;
-        load_targets = [this, &m, &load_targets](const std::vector<IDependency*> &udeps)
+        load_targets = [this, &load_targets](const std::vector<IDependency*> &udeps)
         {
             bool everything_resolved = true;
             for (auto d : udeps)
@@ -987,7 +987,7 @@ Commands SwBuild::getCommands() const
 
                 PackageIdSet visited_pkgs;
                 std::function<void(const TargetSettings &)> copy_file;
-                copy_file = [this, &cmds, &copy_dir_current, &copy_files, &copy_file, &visited_pkgs](const auto &s)
+                copy_file = [this, &copy_dir_current, &copy_files, &copy_file, &visited_pkgs](const auto &s)
                 {
                     if (s["header_only"] == "true")
                         return;
@@ -1276,11 +1276,8 @@ void SwBuild::test()
     {
         for (auto &tgt : tgts)
         {
-            for (auto &c : tgt->getTests())
-            {
-                auto test_dir = dir / tgt->getSettings().getHash();
-                tdirs.insert(test_dir);
-            }
+            auto test_dir = dir / tgt->getSettings().getHash();
+            tdirs.insert(test_dir);
         }
     }
     for (auto &d : tdirs)

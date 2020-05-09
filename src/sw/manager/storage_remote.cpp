@@ -536,7 +536,7 @@ RemoteStorageWithFallbackToRemoteResolving::resolve(const UnresolvedPackages &pk
         // return empty result
         // we also mark remove resolving as not working, so we won't be trying this again
         remote_resolving_is_not_working = true;
-        LOG_TRACE(logger, e.what());
+        LOG_WARN(logger, "Remote: " << getName() << ": " << e.what());
         unresolved_pkgs = pkgs;
         return {};
     }
