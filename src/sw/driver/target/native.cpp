@@ -484,6 +484,10 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
         default:
             throw SW_RUNTIME_ERROR("Unknown arch");
         }
+
+        auto c = C->createCommand(getMainBuild());
+        // clang gives error on reinterpret cast in offsetof macro in win ucrt
+        *this += "_CRT_USE_BUILTIN_OFFSETOF"_def;
     }
     else if (id.ppath == "com.intel.compiler.c" || id.ppath == "com.intel.compiler.cpp")
     {
