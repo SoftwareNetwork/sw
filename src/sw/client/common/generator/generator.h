@@ -78,6 +78,15 @@ private:
 
 struct VSGenerator : Generator
 {
+    enum CompilerType
+    {
+        MSVC,
+        ClangCl,
+        Clang,
+    };
+
+    const sw::SwBuild *b = nullptr;
+    CompilerType compiler_type = MSVC;
     sw::Version vs_version;
     sw::Version toolset_version;
     path sln_root;

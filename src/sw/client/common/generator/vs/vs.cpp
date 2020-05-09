@@ -239,6 +239,7 @@ void VSGenerator::generate(const SwBuild &b)
     const String all_build_name = "ALL_BUILD"s;
     const String build_dependencies_name = "BUILD_DEPENDENCIES"s;
     const String zero_check_name = "ZERO_CHECK"s;
+    this->b = &b;
 
     auto inputs = b.getInputs();
     PackagePathTree path_tree;
@@ -280,11 +281,33 @@ void VSGenerator::generate(const SwBuild &b)
     }
 
     UnresolvedPackage compiler = (*s.settings.begin())["native"]["program"]["cpp"].getValue();
-    auto compiler_id = b.getContext().getPredefinedTargets().find(compiler)->first;
-    auto compiler_id_max = b.getContext().getPredefinedTargets().find(UnresolvedPackage(compiler.getPath().toString()))->first;
+    if (compiler.getPath() == "com.Microsoft.VisualStudio.VC.cl")
+        ;
+    else if (compiler.getPath() == "org.LLVM.clangcl")
+        compiler_type = ClangCl;
+    else if (compiler.getPath() == "org.LLVM.clangpp" || compiler.getPath() == "org.LLVM.clang")
+    {
+        compiler_type = Clang;
+        LOG_INFO(logger, "Not yet fully supported");
+    }
+    else
+        throw SW_RUNTIME_ERROR("Compiler is not supported (yet?): " + compiler.toString());
 
-    vs_version = clver2vsver(compiler_id.getVersion(), compiler_id_max.getVersion());
-    toolset_version = compiler_id.getVersion();
+    auto compiler_id = b.getContext().getPredefinedTargets().find(compiler)->first;
+    auto compiler_id_max_version = b.getContext().getPredefinedTargets().find(UnresolvedPackage(compiler.getPath().toString()))->first;
+
+    if (compiler_type == MSVC)
+    {
+        vs_version = clver2vsver(compiler_id.getVersion(), compiler_id_max_version.getVersion());
+        toolset_version = compiler_id.getVersion();
+    }
+    else
+    {
+        // otherwise just generate maximum found version for msvc compiler
+        auto compiler_id_max_version = b.getContext().getPredefinedTargets().find(UnresolvedPackage("com.Microsoft.VisualStudio.VC.cl"))->first;
+        vs_version = clver2vsver(compiler_id_max_version.getVersion(), compiler_id_max_version.getVersion());
+        toolset_version = compiler_id_max_version.getVersion();
+    }
     // this removes hash part      vvvvvvvvvvvvv
     sln_root = getRootDirectory(b).parent_path() / vs_version.toString(1);
 
@@ -871,6 +894,8 @@ void Solution::emit(const VSGenerator &g) const
         bat += "set UseMultiToolTask=true\n";
         //bat += "set EnforceProcessCountAcrossBuilds=true\n";
         bat += "start " + normalize_path_windows(g.sln_root / fn) + "\n";
+        // for preview cl versions run preview VS later
+        // start "c:\Program Files (x86)\Microsoft Visual Studio\2019\Preview\Common7\IDE\devenv.exe" fn
         fn += ".bat"; // we now make a link to bat file
         write_file_if_different(g.sln_root / fn, bat);
     }
@@ -1129,18 +1154,31 @@ void Project::emitProject(const VSGenerator &g) const
             {
                 ctx.beginBlock("ClCompile");
 
-                ctx.beginBlock("MultiProcessorCompilation");
-                ctx.addText("true");
-                ctx.endBlock(true);
+                //if (g.compiler_type != VSGenerator::Clang)
+                {
+                    ctx.beginBlock("MultiProcessorCompilation");
+                    ctx.addText("true");
+                    ctx.endBlock(true);
+                }
 
                 // common opts
                 for (auto &[k, v] : common_cl_options[s]["cl"])
                 {
                     ctx.beginBlockWithConfiguration(k, s);
                     ctx.addText(v);
+                    if (g.compiler_type == VSGenerator::ClangCl && k == "AdditionalOptions")
+                        ctx.addText("-showFilenames ");
                     ctx.endBlock(true);
                 }
                 used_flag_tables.insert("cl");
+
+                for (auto &[k, v] : common_cl_options[s]["clang"])
+                {
+                    ctx.beginBlockWithConfiguration(k, s);
+                    ctx.addText(v);
+                    ctx.endBlock(true);
+                }
+                used_flag_tables.insert("clang");
 
                 ctx.endBlock();
             }
@@ -1366,6 +1404,77 @@ void Project::emitProject(const VSGenerator &g) const
 
     ctx.addBlock("Import", "", {{"Project", "$(VCTargetsPath)\\Microsoft.Cpp.targets"}});
 
+    if (g.compiler_type == VSGenerator::ClangCl || g.compiler_type == VSGenerator::Clang)
+    {
+        UnresolvedPackage compiler = (*settings.begin())["native"]["program"]["cpp"].getValue();
+        auto &target = **g.b->getContext().getPredefinedTargets().find(compiler)->second.begin();
+        auto fn = normalize_path_windows(target.as<sw::PredefinedProgram &>().getProgram().file);
+
+        ctx.beginBlock("PropertyGroup");
+        ctx.addBlock("CLToolExe", fn);
+        //ctx.addBlock("LinkToolExe", fn);
+        //ctx.addBlock("LIBToolExe", fn);
+        ctx.endBlock();
+
+        // taken from llvm/tools/msbuild/LLVM.Cpp.Common.targets
+        String clangprops = R"xxx(
+    <ItemDefinitionGroup>
+      <ClCompile>
+        <!-- Map /ZI and /Zi to /Z7.  Clang internally does this, so if we were
+             to just pass the option through, clang would work.  The problem is
+             that MSBuild would not.  MSBuild detects /ZI and /Zi and then
+             assumes (rightly) that there will be a compiler-generated PDB (e.g.
+             vc141.pdb).  Since clang-cl will not emit this, MSBuild will always
+             think that the compiler-generated PDB needs to be re-generated from
+             scratch and trigger a full build.  The way to avoid this is to
+             always give MSBuild accurate information about how we plan to
+             generate debug info (which is to always using /Z7 semantics).
+             -->
+        <!-- disable for now
+        <DebugInformationFormat Condition="'%(ClCompile.DebugInformationFormat)' == 'ProgramDatabase'">OldStyle</DebugInformationFormat>
+        <DebugInformationFormat Condition="'%(ClCompile.DebugInformationFormat)' == 'EditAndContinue'">OldStyle</DebugInformationFormat> -->
+
+        <!-- Unset any options that we either silently ignore or warn about due to compatibility.
+             Generally when an option is set to no value, that means "Don't pass an option to the
+             compiler at all."
+             -->
+        <MinimalRebuild/>
+
+        <!-- <WholeProgramOptimization/>
+        <EnableFiberSafeOptimizations/>
+        <IgnoreStandardIncludePath/>
+        <EnableParallelCodeGeneration/>
+        <ForceConformanceInForLoopScope/>
+        <TreatWChar_tAsBuiltInType/>
+        <SDLCheck/>
+        <GenerateXMLDocumentationFiles/>
+        <BrowseInformation/>
+        <EnablePREfast/>
+        <StringPooling/>
+        <ExpandAttributedSource/>
+        <EnforceTypeConversionRules/>
+        <ErrorReporting/>
+        <DisableLanguageExtensions/>
+        <ProgramDataBaseFileName/>
+        <DisableSpecificWarnings/>
+        <TreatSpecificWarningsAsErrors/>
+        <ForcedUsingFiles/>
+        <PREfastLog/>
+        <PREfastAdditionalOptions/>
+        <PREfastAdditionalPlugins/>
+        <MultiProcessorCompilation/>
+        <UseFullPaths/>
+        <RemoveUnreferencedCodeData/> -->
+
+        <!-- We can't just unset BasicRuntimeChecks, as that will pass /RTCu to the compiler.
+             We have to explicitly set it to 'Default' to avoid passing anything. -->
+        <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      </ClCompile>
+    </ItemDefinitionGroup>
+)xxx";
+        ctx.addLine(clangprops);
+    }
+
     ctx.endProject();
     write_file_if_different(g.sln_root / vs_project_dir / name += vs_project_ext, ctx.getText());
 }
@@ -1523,6 +1632,13 @@ String Project::get_flag_table(const primitives::Command &c, bool throw_on_error
     auto ft = path(c.getProgram()).stem().u8string();
     if (ft == "ml64")
         ft = "ml";
+    else if (ft == "clang-cl")
+        ft = "cl";
+    if (ft == "clang" || ft == "clang++")
+    {
+        ft = "clang";
+        flag_tables[ft]; // create empty table, so all flags will go to additional options
+    }
     if (flag_tables.find(ft) == flag_tables.end())
     {
         if (throw_on_error)
@@ -1542,18 +1658,19 @@ std::map<String, String> Project::printProperties(const sw::builder::Command &c,
         auto &o = c.arguments[na];
         auto arg = o->toString();
 
-        auto add_additional_args = [&args, &ft, &c, &exclude_props](const auto &arg)
+        auto add_additional_args = [&args, &ft, &c, &exclude_props, &o](const auto &arg)
         {
             if (exclude_props.exclude_exts.find(path(arg).extension().string()) != exclude_props.exclude_exts.end())
                 return;
-            if (ft == "cl")
+            if (ft == "cl" || ft == "clang")
             {
                 if (arg == "-c" || arg == "-FS")
                     return;
                 auto i = c.inputs.find(normalize_path(arg));
                 if (i != c.inputs.end())
                     return;
-                args["AdditionalOptions"] += arg + " ";
+                args["AdditionalOptions"] += o->quote();
+                args["AdditionalOptions"] += " ";
                 return;
             }
             args["AdditionalDependencies"] += arg + ";";
@@ -1567,7 +1684,7 @@ std::map<String, String> Project::printProperties(const sw::builder::Command &c,
 
         auto &tbl = flag_tables[ft].ftable;
 
-        auto print = [&arg, &args, &exclude_props, &c, &na, &ft](auto &d)
+        auto print = [&args, &exclude_props, &c, &na, &ft](auto &d, const String &arg)
         {
             if (exclude_props.exclude_flags.find(d.name) != exclude_props.exclude_flags.end())
                 return;
@@ -1608,33 +1725,59 @@ std::map<String, String> Project::printProperties(const sw::builder::Command &c,
             continue;
         }
 
+        // clang
+        if (arg == "-fcolor-diagnostics" || arg == "-fansi-escape-codes")
+            continue;
+
+        // clang cl
+        if (arg == "-Xclang" && na + 1 < c.arguments.size() &&
+            (c.arguments[na+1]->toString() == "-fcolor-diagnostics" ||
+                c.arguments[na+1]->toString() == "-fansi-escape-codes"))
+        {
+            na++;
+            continue;
+        }
+
+        auto find_arg = [&tbl, &print](const String &arg)
+        {
+            // TODO: we must find the longest match
+            bool found = false;
+            for (auto &[_, d] : tbl)
+            {
+                if (d.argument.empty())
+                    continue;
+                if (arg.find(d.argument, 1) != 1)
+                    continue;
+
+                // if flag is matched, but it does not expect user value, we skip it
+                // distinct -u vs -utf8
+                //                                                                        '/'
+                if (!bitmask_includes(d.flags, FlagTableFlags::UserValue) && arg.size() > (1 + d.argument.size()))
+                    continue;
+
+                print(d, arg);
+                found = true;
+                break;
+            }
+            return found;
+        };
+
+        // add system dir both to vs include dirs and additional options
+        if (arg.find("-imsvc") == 0)
+        {
+            auto argi = "-I" + arg.substr(6);
+            find_arg(argi);
+        }
+
         // fast lookup first
         auto i = tbl.find(arg.substr(1));
         if (i != tbl.end())
         {
-            print(i->second);
+            print(i->second, arg);
             continue;
         }
 
-        // TODO: we must find the longest match
-        bool found = false;
-        for (auto &[_, d] : tbl)
-        {
-            if (d.argument.empty())
-                continue;
-            if (arg.find(d.argument, 1) != 1)
-                continue;
-
-            // if flag is matched, but it does not expect user value, we skip it
-            // distinct -u vs -utf8
-            //                                                                        '/'
-            if (!bitmask_includes(d.flags, FlagTableFlags::UserValue) && arg.size() > (1 + d.argument.size()))
-                continue;
-
-            print(d);
-            found = true;
-            break;
-        }
+        auto found = find_arg(arg);
         if (!found)
         {
             //LOG_WARN(logger, "arg not found: " + arg);

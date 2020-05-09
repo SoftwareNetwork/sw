@@ -279,7 +279,16 @@ path Generator::getPathString() const
 
 path VSGenerator::getPathString() const
 {
-    return toPathString(vstype);
+    auto s = toPathString(vstype);
+    if (compiler_type == ClangCl)
+        s += "_clangcl";
+    else if (compiler_type == Clang)
+        s += "_clang";
+    else if (compiler_type == MSVC)
+        ;// s += "_msvc";
+    else
+        SW_UNIMPLEMENTED;
+    return s;
 }
 
 struct ProgramShortCutter1
