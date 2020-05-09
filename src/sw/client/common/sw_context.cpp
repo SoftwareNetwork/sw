@@ -639,6 +639,8 @@ std::vector<sw::TargetSettings> SwClientContext::createSettings()
     // compiler
     mult_and_action(options.compiler.size(), [&options](auto &s, int i)
     {
+        if (options.compiler[i] == "clang-cl")
+            options.compiler[i] = "clangcl";
         s.mergeAndAssign(compilerTypeFromStringCaseI(options.compiler[i]));
     });
 
