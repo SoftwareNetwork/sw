@@ -272,10 +272,10 @@ struct SW_DRIVER_CPP_API NativeCompilerOptions : NativeCompilerOptionsData
     //void unique();
 
     void addDefinitions(builder::Command &c) const;
-    void addIncludeDirectories(builder::Command &c) const;
-    void addDefinitionsAndIncludeDirectories(builder::Command &c) const;
+    void addIncludeDirectories(builder::Command &c, const String &system_idirs_prefix = {}) const;
+    void addDefinitionsAndIncludeDirectories(builder::Command &c, const String &system_idirs_prefix = {}) const;
     void addCompileOptions(builder::Command &c) const;
-    void addEverything(builder::Command &c) const;
+    void addEverything(builder::Command &c, const String &system_idirs_prefix = {}) const;
     PathOptionsType gatherIncludeDirectories() const;
 };
 

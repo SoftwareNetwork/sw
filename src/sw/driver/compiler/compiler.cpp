@@ -345,7 +345,7 @@ void ClangCompiler::prepareCommand1(const ::sw::Target &t)
     CPPStandard.skip = true;
 
     getCommandLineOptions<ClangOptions>(cmd.get(), *this);
-    addEverything(*this->cmd);
+    addEverything(*this->cmd/*, "-isystem"*/);
     getCommandLineOptions<ClangOptions>(cmd.get(), *this, "", true);
 }
 
@@ -427,7 +427,7 @@ void ClangClCompiler::prepareCommand1(const Target &t)
     if (preprocessed_file)
         addCompileOptions(*cmd);
     else
-        addEverything(*cmd);
+        addEverything(*cmd/*, "-imsvc"*/);
 }
 
 void ClangClCompiler::setOutputFile(const path &output_file)
@@ -546,7 +546,7 @@ void GNUCompiler::prepareCommand1(const Target &t)
     CPPStandard.skip = true;
 
     getCommandLineOptions<GNUOptions>(cmd.get(), *this);
-    addEverything(*this->cmd);
+    addEverything(*this->cmd/*, "-isystem"*/);
     getCommandLineOptions<GNUOptions>(cmd.get(), *this, "", true);
 
     if (t.isReproducibleBuild())

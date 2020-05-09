@@ -89,6 +89,7 @@ struct GroupSettings
     InheritanceType Inheritance = InheritanceType::Private;
     bool has_same_parent = false;
     bool merge_to_self = true;
+    //bool merge_to_system = false;
     bool include_directories_only = false;
 };
 

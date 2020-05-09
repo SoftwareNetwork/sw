@@ -315,6 +315,13 @@ void NativeCompilerOptions::merge(const NativeCompilerOptions &o, const GroupSet
 {
     NativeCompilerOptionsData::merge(o, s);
     System.merge(o.System, s);
+
+    /*if (!s.merge_to_self)
+    {
+        unique_merge_containers(System.IncludeDirectories, o.PreIncludeDirectories); // merge to System.PreIncludeDirectories?
+        unique_merge_containers(System.IncludeDirectories, o.IncludeDirectories);
+        unique_merge_containers(System.IncludeDirectories, o.PostIncludeDirectories); // merge to System.PostIncludeDirectories?
+    }*/
 }
 
 void NativeCompilerOptions::addDefinitions(builder::Command &c) const
@@ -334,7 +341,7 @@ void NativeCompilerOptions::addDefinitions(builder::Command &c) const
     print_def(Definitions);
 }
 
-void NativeCompilerOptions::addIncludeDirectories(builder::Command &c) const
+void NativeCompilerOptions::addIncludeDirectories(builder::Command &c, const String &system_idirs_prefix) const
 {
     auto print_idir = [&c](const auto &a, auto &flag)
     {
@@ -342,13 +349,21 @@ void NativeCompilerOptions::addIncludeDirectories(builder::Command &c) const
             c.arguments.push_back(flag + normalize_path(d));
     };
 
-    print_idir(gatherIncludeDirectories(), "-I");
+    if (system_idirs_prefix.empty())
+    {
+        print_idir(gatherIncludeDirectories(), "-I");
+    }
+    else
+    {
+        print_idir(NativeCompilerOptionsData::gatherIncludeDirectories(), "-I");
+        print_idir(System.gatherIncludeDirectories(), system_idirs_prefix);
+    }
 }
 
-void NativeCompilerOptions::addDefinitionsAndIncludeDirectories(builder::Command &c) const
+void NativeCompilerOptions::addDefinitionsAndIncludeDirectories(builder::Command &c, const String &system_idirs_prefix) const
 {
     addDefinitions(c);
-    addIncludeDirectories(c);
+    addIncludeDirectories(c, system_idirs_prefix);
 }
 
 void NativeCompilerOptions::addCompileOptions(builder::Command &c) const
@@ -363,9 +378,9 @@ void NativeCompilerOptions::addCompileOptions(builder::Command &c) const
     print_idir(CompileOptions, "");
 }
 
-void NativeCompilerOptions::addEverything(builder::Command &c) const
+void NativeCompilerOptions::addEverything(builder::Command &c, const String &system_idirs_prefix) const
 {
-    addDefinitionsAndIncludeDirectories(c);
+    addDefinitionsAndIncludeDirectories(c, system_idirs_prefix);
     addCompileOptions(c);
 }
 
@@ -536,7 +551,7 @@ void NativeLinkerOptions::remove(const DependencyPtr &t)
     deps.push_back(t);
 
     if (auto t2 = dynamic_cast<TargetOptions *>(this))
-        t->settings.mergeMissing(t2->getTarget().getExportOptions()); // add only missing fields!
+        t->settings.mergeMissing(t2->getTarget().getExportOptions()); // add only missing fields!f
 }
 
 void NativeLinkerOptions::add(const UnresolvedPackage &t)
