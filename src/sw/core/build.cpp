@@ -950,7 +950,6 @@ Commands SwBuild::getCommands() const
 
     // copy output files
     path copy_dir = build_settings["build_ide_copy_to_dir"].isValue() ? build_settings["build_ide_copy_to_dir"].getValue() : "";
-    if (!copy_dir.empty())
     {
         std::unordered_map<path, path> copy_files;
         for (auto &[p, tgts] : ttb)
@@ -965,17 +964,30 @@ Commands SwBuild::getCommands() const
                 if (s["output_dir"].isValue())
                     continue;
 
-                if (p.getPath().isAbsolute())
+                bool copy_ok = 0
+                    || tgt->getSettings()["os"]["kernel"] == "com.Microsoft.Windows.NT"
+                    || tgt->getSettings()["os"]["kernel"] == "org.cygwin"
+                    || tgt->getSettings()["os"]["kernel"] == "org.mingw"
+                    ;
+                if (!copy_ok)
                     continue;
-                if (s["header_only"] == "true")
-                    continue;
-                if (!(s["type"] == "native_shared_library" || s["type"] == "native_static_library" || s["type"] == "native_executable"))
-                    continue;
-                copy_dir = s["output_file"].getPathValue(getContext().getLocalStorage()).parent_path();
+
+                auto copy_dir_current = copy_dir;
+                // copy only for local targets
+                if (copy_dir_current.empty())
+                {
+                    if (p.getPath().isAbsolute())
+                        continue;
+                    if (s["header_only"] == "true")
+                        continue;
+                    if (!(s["type"] == "native_shared_library" || s["type"] == "native_static_library" || s["type"] == "native_executable"))
+                        continue;
+                    copy_dir_current = s["output_file"].getPathValue(getContext().getLocalStorage()).parent_path();
+                }
 
                 PackageIdSet visited_pkgs;
                 std::function<void(const TargetSettings &)> copy_file;
-                copy_file = [this, &cmds, &copy_dir, &copy_files, &copy_file, &visited_pkgs](const auto &s)
+                copy_file = [this, &cmds, &copy_dir_current, &copy_files, &copy_file, &visited_pkgs](const auto &s)
                 {
                     if (s["header_only"] == "true")
                         return;
@@ -997,7 +1009,7 @@ Commands SwBuild::getCommands() const
                         //&& PackagePath(s["os"]["kernel"].getValue()) == PackagePath("com.Microsoft.Windows.NT")
                         )
                     {
-                        auto o = copy_dir;
+                        auto o = copy_dir_current;
                         if (s["output_dir"].isValue())
                             o /= s["output_dir"].getValue();
                         o /= in.filename();
