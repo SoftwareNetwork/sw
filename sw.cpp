@@ -38,10 +38,18 @@ void build(Solution &s)
             support.Protected += "_CRT_SECURE_NO_WARNINGS"_d;
             support.Public += "UNICODE"_d;
         }
-        if (support.getCompilerType() != CompilerType::MSVC)
+        if (support.getCompilerType() != CompilerType::MSVC &&
+            support.getCompilerType() != CompilerType::ClangCl)
         {
             support.Protected.CompileOptions.push_back("-Wall");
             support.Protected.CompileOptions.push_back("-Wextra");
+        }
+        if (support.getCompilerType() == CompilerType::ClangCl)
+        {
+            support.Protected.CompileOptions.push_back("-Wno-macro-redefined");
+            support.Protected.CompileOptions.push_back("-Wno-microsoft-template");
+            support.Protected.CompileOptions.push_back("-Wno-deprecated-declarations"); // maybe use STL define instead?
+            support.Protected.CompileOptions.push_back("-Wno-assume");
         }
     }
 
