@@ -616,6 +616,38 @@ Project will be fetched from your version control system using specified tag/ver
 
 Create templated project.
 
+\subsection{sw setup}
+
+Integrate or remove sw from the system.
+
+Integrate sw into system.
+
+\begin{command}
+sw setup
+\end{command}
+
+Remove sw into system.
+
+\begin{command}
+sw setup --uninstall
+\end{command}
+
+To control what is cleaned up, use `--level` option with comma separated list of flags.
+
+\begin{command}
+sw setup --uninstall --level 1,4
+\end{command}
+
+Available levels:
+\begin{itemize}
+\item 1 - Remove storage.
+\item 2 - Remove sw system integration settings.
+\item 4 - Remove sw settings.
+\item 8 - Remove sw executable (if possible).
+\item 16 - All of the above.
+\end{itemize}
+
+
 \subsection{sw -help}
 
 CLI help.
