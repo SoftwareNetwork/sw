@@ -899,6 +899,11 @@ types:
                 name: WriteDependenciesNearOutputWithoutSystemFiles
                 flag: MMD
                 type: bool
+
+            wdnosys:
+                name: WriteDependenciesNearOutput
+                flag: MD
+                type: bool
                 default: true
 
     # keep structure as in
