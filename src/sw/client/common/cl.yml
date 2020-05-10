@@ -365,6 +365,20 @@ command_line:
                 value_desc: <input settings>
                 space_separated: true
 
+    # abi
+    subcommand:
+        name: abi
+        desc: List package ABI, check for ABI breakages.
+
+        command_line:
+            inputs:
+                type: String
+                list: true
+                positional: true
+                desc: inputs
+                external: true
+                location: inputs
+
     # alias
     subcommand:
         name: alias
@@ -431,20 +445,6 @@ command_line:
                 type: String
             output_dir:
                 type: path
-
-    # abi
-    subcommand:
-        name: abi
-        desc: List package ABI, check for ABI breakages.
-
-        command_line:
-            inputs:
-                type: String
-                list: true
-                positional: true
-                desc: inputs
-                external: true
-                location: inputs
 
     # configure
     subcommand:
