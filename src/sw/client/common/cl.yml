@@ -365,6 +365,27 @@ command_line:
                 value_desc: <input settings>
                 space_separated: true
 
+    # alias
+    subcommand:
+        name: alias
+        desc: Create command aliases.
+
+        command_line:
+            name:
+                positional: true
+                type: String
+                required: true
+                desc: Alias name.
+            arguments:
+                positional: true
+                type: String
+                list: true
+                required: true
+                consume_after: true
+            delete_alias:
+                aliases: d
+                desc: Delete alias.
+
     # build
     subcommand:
         name: build

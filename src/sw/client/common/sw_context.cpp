@@ -872,6 +872,15 @@ Programs SwClientContext::listCompilers()
     return progs;
 }
 
+StringSet SwClientContext::listCommands()
+{
+    StringSet cmds;
+#define SUBCOMMAND(n) cmds.insert(#n);
+#include "commands.inl"
+#undef SUBCOMMAND
+    return cmds;
+}
+
 void setupLogger(const std::string &log_level, const Options &options, bool simple)
 {
     LoggerSettings log_settings;

@@ -109,6 +109,7 @@ struct SwClientContext
     std::pair<sw::SourceDirMap, std::vector<sw::BuildInput>> fetch();
     std::pair<sw::SourceDirMap, std::vector<sw::BuildInput>> fetch(sw::SwBuild &);
     void run(const sw::PackageId &pkg, primitives::Command &c);
+    static Strings getAliasArguments(const String &aliasname);
 
 private:
     path local_storage_root_dir;
@@ -119,6 +120,7 @@ private:
     std::optional<sw::TargetMap> tm;
 
     const sw::TargetMap &getPredefinedTargets(sw::SwContext &swctx);
+    static StringSet listCommands();
 };
 
 void setHttpSettings(const Options &);

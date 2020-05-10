@@ -216,7 +216,33 @@ int StartupData::builtinCall()
 
 void StartupData::parseArgs()
 {
-    ::cl::ParseCommandLineOptions(args, overview);
+    String s;
+    llvm::raw_string_ostream errs(s);
+    if (!::cl::ParseCommandLineOptions(args, overview, &errs))
+    {
+        // try alias
+        if (args.size() > 1)
+        {
+            auto alias_args = SwClientContext::getAliasArguments(args[1]);
+            if (!alias_args.empty())
+            {
+                Strings args2;
+                args2.push_back(args[0]);
+                args2.insert(args2.end(), alias_args.begin(), alias_args.end());
+
+                // reset stream
+                errs.flush();
+                s.clear();
+                if (::cl::ParseCommandLineOptions(args2, overview, &errs))
+                    return;
+            }
+        }
+
+        errs.flush();
+        boost::trim(s);
+        // no need to throw SW_RUNTIME_ERROR with file and line info
+        throw std::runtime_error(s);
+    }
 }
 
 void StartupData::createOptions()

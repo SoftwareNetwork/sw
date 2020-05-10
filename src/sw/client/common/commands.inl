@@ -36,6 +36,7 @@ self-upgrade - upgrade the client. implement via upgrade?
 */
 
 SUBCOMMAND(abi) COMMA // rename? move to --option?
+SUBCOMMAND(alias) COMMA
 SUBCOMMAND(build) COMMA
 //SUBCOMMAND(b) COMMA // alias for build
 SUBCOMMAND(configure) COMMA
