@@ -387,14 +387,12 @@ command_line:
         command_line:
             name:
                 positional: true
-                type: String
                 required: true
+                type: String
                 desc: Alias name.
             arguments:
-                positional: true
                 type: String
                 list: true
-                required: true
                 consume_after: true
             delete_alias:
                 aliases: d
