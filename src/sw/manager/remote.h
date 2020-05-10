@@ -110,10 +110,12 @@ struct Remote
     Url url;
     Url api_url;
     DatabaseInformation db;
-
     DataSources dss;
     std::map<String, Publisher> publishers;
     bool secure = true;
+    // access pubkey
+    // db pubkey
+    // single pubkey?
     ApiType type = ApiType::Protobuf;
 
     Remote(const String &name, const String &url);
