@@ -117,11 +117,14 @@ struct Remote
     // db pubkey
     // single pubkey?
     ApiType type = ApiType::Protobuf;
+    bool disabled = false;
 
     Remote(const String &name, const String &url);
 
     std::unique_ptr<Api> getApi() const;
     ApiType getApiType() const { return type; }
+
+    bool isDisabled() const { return disabled; }
 
 private:
     GrpcChannel getGrpcChannel() const;

@@ -30,7 +30,7 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "upload");
 
-sw::Remote *find_remote(sw::Settings &s, const String &name);
+sw::Remote &find_remote(sw::Settings &s, const String &name);
 
 sw::PackageDescriptionMap getPackages(const sw::SwBuild &b, const sw::SourceDirMap &sources, std::map<const sw::Input*, std::vector<sw::PackageId>> *iv)
 {
@@ -217,7 +217,7 @@ SUBCOMMAND_DECL(upload)
     auto &us = sw::Settings::get_user_settings();
     auto current_remote = us.getRemotes().begin()->get();
     if (!getOptions().options_upload.upload_remote.empty())
-        current_remote = find_remote(us, getOptions().options_upload.upload_remote);
+        current_remote = &find_remote(us, getOptions().options_upload.upload_remote);
 
     for (auto &[i, pkgs] : iv)
     {

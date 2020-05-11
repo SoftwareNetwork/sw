@@ -107,6 +107,7 @@ const std::vector<std::shared_ptr<Remote>> &Settings::getRemotes() const
         }
 
         YAML_EXTRACT_VAR(kv.second, pr->secure, "secure", bool);
+        YAML_EXTRACT_VAR(kv.second, pr->disabled, "disabled", bool);
         //YAML_EXTRACT_VAR(kv.second, prm.data_dir, "data_dir", String);
         get_map_and_iterate(kv.second, "publishers", [pr](auto &kv)
         {
@@ -246,6 +247,8 @@ void Settings::save(const path &p) const
         root["remotes"][r->name]["url"] = r->url;
         if (!r->secure)
             root["remotes"][r->name]["secure"] = r->secure;
+        if (r->disabled)
+            root["remotes"][r->name]["disabled"] = r->disabled;
         for (auto &[n, p] : r->publishers)
         {
             root["remotes"][r->name]["publishers"][p.name]["name"] = p.name;

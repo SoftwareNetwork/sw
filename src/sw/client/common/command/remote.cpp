@@ -21,7 +21,7 @@
 #include <sw/manager/remote.h>
 #include <sw/manager/settings.h>
 
-sw::Remote *find_remote(sw::Settings &s, const String &name)
+static sw::Remote &find_remote_raw(sw::Settings &s, const String &name)
 {
     sw::Remote *current_remote = nullptr;
     for (auto &r : s.getRemotes())
@@ -34,17 +34,27 @@ sw::Remote *find_remote(sw::Settings &s, const String &name)
     }
     if (!current_remote)
         throw SW_RUNTIME_ERROR("Remote not found: " + name);
+    return *current_remote;
+}
+
+sw::Remote &find_remote(sw::Settings &s, const String &name)
+{
+    sw::Remote &current_remote = find_remote_raw(s, name);
+    if (current_remote.isDisabled())
+        throw SW_RUNTIME_ERROR("Remote is disabled: " + name);
     return current_remote;
 }
 
 SUBCOMMAND_DECL(remote)
 {
-    // subcommands: add, alter, rename, remove
+    // subcommands: add, alter, rename, remove, enable, disable
 
     // sw remote add origin url:port
     // sw remote remove origin
     // sw remote rename origin origin2
     // sw remote alter origin add token TOKEN
+    // sw remote enable origin
+    // sw remote disable origin
 
     if (getOptions().options_remote.remote_subcommand == "alter" || getOptions().options_remote.remote_subcommand == "change")
     {
@@ -53,7 +63,7 @@ SUBCOMMAND_DECL(remote)
         {
             auto token = getOptions().options_remote.remote_rest[i];
             auto &us = sw::Settings::get_user_settings();
-            auto r = find_remote(us, getOptions().options_remote.remote_rest[i]);
+            auto &r = find_remote(us, getOptions().options_remote.remote_rest[i]);
 
             i++;
             if (getOptions().options_remote.remote_rest.size() > i + 1)
@@ -71,7 +81,7 @@ SUBCOMMAND_DECL(remote)
                                 sw::Remote::Publisher p;
                                 p.name = getOptions().options_remote.remote_rest[i];
                                 p.token = getOptions().options_remote.remote_rest[i+1];
-                                r->publishers[p.name] = p;
+                                r.publishers[p.name] = p;
                                 us.save(sw::get_config_filename());
                             }
                             else
@@ -93,4 +103,38 @@ SUBCOMMAND_DECL(remote)
             throw SW_RUNTIME_ERROR("missing remote name");
         return;
     }
+
+    if (getOptions().options_remote.remote_subcommand == "enable")
+    {
+        int i = 0;
+        if (getOptions().options_remote.remote_rest.size() > i)
+        {
+            auto name = getOptions().options_remote.remote_rest[i];
+            auto &us = sw::Settings::get_user_settings();
+            auto &r = find_remote_raw(us, name);
+            r.disabled = false;
+            us.save(sw::get_config_filename());
+        }
+        else
+            throw SW_RUNTIME_ERROR("missing remote name");
+        return;
+    }
+
+    if (getOptions().options_remote.remote_subcommand == "disable")
+    {
+        int i = 0;
+        if (getOptions().options_remote.remote_rest.size() > i)
+        {
+            auto name = getOptions().options_remote.remote_rest[i];
+            auto &us = sw::Settings::get_user_settings();
+            auto &r = find_remote_raw(us, name);
+            r.disabled = true;
+            us.save(sw::get_config_filename());
+        }
+        else
+            throw SW_RUNTIME_ERROR("missing remote name");
+        return;
+    }
+
+    throw SW_RUNTIME_ERROR("Unknown subcommand: " + getOptions().options_remote.remote_subcommand);
 }

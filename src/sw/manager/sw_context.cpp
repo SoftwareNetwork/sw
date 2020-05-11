@@ -43,6 +43,8 @@ SwManagerContext::SwManagerContext(const path &local_storage_root_dir, bool allo
     first_remote_storage_id = storages.size();
     for (auto &r : Settings::get_user_settings().getRemotes())
     {
+        if (r->isDisabled())
+            continue;
         storages.emplace_back(
             std::make_unique<RemoteStorageWithFallbackToRemoteResolving>(
                 getLocalStorage(), *r, allow_network));
