@@ -2,6 +2,11 @@ settings:
     prefix: cl_
     generate_struct: true
 
+categories:
+    build:
+        name: Build Options
+        description: Controls build process when used in appropriate subcommands.
+
 command_line:
     working_directory:
         option: d
@@ -54,29 +59,36 @@ command_line:
             save_failed_commands:
                 external: true
                 aliases: sfc
+                cat: build
             save_all_commands:
                 external: true
                 aliases: sac
+                cat: build
             save_executed_commands:
                 external: true
                 aliases: sec
+                cat: build
 
             # explain
             explain_outdated:
                 external: true
                 description: Explain outdated commands
+                cat: build
             explain_outdated_full:
                 external: true
                 description: Explain outdated commands with more info
+                cat: build
             explain_outdated_to_trace:
                 external: true
                 description: Explain outdated commands with more info
                 location: gExplainOutdatedToTrace
+                cat: build
 
             save_command_format:
                 type: String
                 external: true
                 description: Explicitly set saved command format (bat or sh)
+                cat: build
 
             debug_configs:
                 external: true
@@ -125,10 +137,12 @@ command_line:
             build_always:
                 option: B
                 desc: Build always
+                cat: build
             skip_errors:
                 option: k
                 type: int
                 desc: Skip errors
+                cat: build
             time_trace:
                 desc: Record chrome time trace events
 
@@ -142,14 +156,17 @@ command_line:
                 type: String
                 list: true
                 desc: Targets to build
+                cat: build
             targets_to_ignore:
                 option: exclude-target
                 type: String
                 list: true
                 desc: Targets to ignore
+                cat: build
 
             reproducible_build:
                 desc: Perform reproducible build.
+                cat: build
 
             Dvariables:
                 option: D
@@ -158,6 +175,7 @@ command_line:
                 desc: Input variables
                 prefix: true
                 zero_or_more: true
+                cat: build
 
             #////////////////////////////////////////////////////////////////////////////////
             #//
@@ -172,11 +190,13 @@ command_line:
                 list: true
                 comma_separated: true
                 desc: Set build target os
+                cat: build
             compiler:
                 type: String
                 list: true
                 comma_separated: true
                 desc: Set compiler
+                cat: build
             configuration:
                 type: String
                 list: true
@@ -191,6 +211,7 @@ command_line:
                     Default is release.
                     Specify multiple using a comma: "d,r".
                 aliases: config
+                cat: build
             platform:
                 type: String
                 list: true
@@ -199,6 +220,7 @@ command_line:
                     Set build platform.
                     Examples: x86, x64, arm, arm64
                 aliases: arch
+                cat: build
 
             #// rename to stdc, stdcpp?
             libc:
@@ -206,24 +228,29 @@ command_line:
                 list: true
                 comma_separated: true
                 desc: Set build libc
+                cat: build
             libcpp:
                 type: String
                 list: true
                 comma_separated: true
                 desc: Set build libcpp
+                cat: build
 
             static_dependencies:
                 desc: Build static dependencies of inputs
                 aliases: static-deps
+                cat: build
 
             build_name:
                 type: String
                 desc: Set meaningful build name instead of hash
+                cat: build
             config_name:
                 list: true
                 type: String
                 desc: Set meaningful config names instead of hash
                 comma_separated: true
+                cat: build
 
             #// -setting k1=v1,k2=v2,k3="v3,v3" -setting k4=v4,k5,k6 etc.
             #// settings in one setting applied simultaneosly
@@ -244,42 +271,51 @@ command_line:
                 list: true
                 desc: Read settings from file
                 zero_or_more: true
+                cat: build
             settings_file_config:
                 type: String
                 list: true
                 desc: Select settings from file
                 zero_or_more: true
+                cat: build
             settings_json:
                 type: String
                 list: true
                 desc: Read settings from json string
                 zero_or_more: true
+                cat: build
             host_settings_file:
                 type: path
                 desc: Read host settings from file
+                cat: build
 
 
             #// static/shared
             static_build:
                 desc: Set static build
                 aliases: static
+                cat: build
             shared_build:
                 desc: Set shared build (default)
                 aliases: shared
+                cat: build
 
             #//mt/md
             win_mt:
                 desc: Set /MT or /MTd build
                 aliases: mt
+                cat: build
             win_md:
                 desc: Set /MD or /MDd build
                 aliases: md
+                cat: build
 
             #
 
             toolset:
                 type: String
                 desc: Set VS generator toolset
+                cat: build
 
             #
 
@@ -303,10 +339,12 @@ command_line:
                 option: j
                 desc: Number of main build jobs
                 type: int
+                cat: build
             prepare_jobs:
                 option: jp
                 desc: Number of main build prepare jobs
                 type: int
+                cat: build
             global_jobs:
                 option: jg
                 desc: Global number of jobs
