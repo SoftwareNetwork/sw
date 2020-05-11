@@ -84,8 +84,8 @@ SUBCOMMAND_DECL(list)
     {
         String out = ppath.toString();
         out += " (";
-        for (auto &v : versions)
-            out += v.toString() + ", ";
+        for (auto vi = versions.rbegin(); vi != versions.rend(); vi++)
+            out += vi->toString() + ", ";
         out.resize(out.size() - 2);
         out += ")";
         LOG_INFO(logger, out);
