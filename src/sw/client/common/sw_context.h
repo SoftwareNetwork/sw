@@ -72,7 +72,6 @@ struct SwClientContext
 {
     using Base = sw::SwContext;
 
-    //SwClientContext();
     SwClientContext(const Options &options, const ClOptions &cloptions);
     virtual ~SwClientContext();
 
@@ -81,6 +80,7 @@ struct SwClientContext
 
     Options &getOptions() { return *options; }
     const Options &getOptions() const { return *options; }
+    const ClOptions &getClOptions() const { return cloptions; }
 
     void initNetwork();
 

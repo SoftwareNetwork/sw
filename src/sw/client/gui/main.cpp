@@ -68,7 +68,9 @@ int main(int argc, char *argv[])
 
     try
     {
-        SwGuiContext swctx;
+        ClOptions cloptions;
+        Options options(cloptions);
+        SwGuiContext swctx(options, cloptions);
         MainWindow w(swctx);
         w.show();
         return a.exec();

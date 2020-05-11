@@ -339,11 +339,6 @@ Inputs::Inputs(const Strings &s, const Strings &pairs)
     }
 }
 
-/*SwClientContext::SwClientContext()
-    : SwClientContext(Options{})
-{
-}*/
-
 SwClientContext::SwClientContext(const Options &options, const ClOptions &cloptions)
     : local_storage_root_dir(options.storage_dir.empty() ? sw::Settings::get_user_settings().storage_dir : options.storage_dir)
     , options(std::make_unique<Options>(options))
