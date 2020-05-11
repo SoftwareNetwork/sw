@@ -122,7 +122,7 @@ SUBCOMMAND_DECL(build)
         return command_fetch();
     }
 
-    if (cl_isolated_build)
+    if (getOptions().options_build.isolated_build)
     {
         isolated_build(*this);
         return;

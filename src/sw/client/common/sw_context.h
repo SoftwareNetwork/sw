@@ -31,6 +31,7 @@ struct SwBuild;
 }
 
 struct Executor;
+struct ClOptions;
 struct Options;
 
 struct Program
@@ -71,8 +72,8 @@ struct SwClientContext
 {
     using Base = sw::SwContext;
 
-    SwClientContext();
-    SwClientContext(const Options &options);
+    //SwClientContext();
+    SwClientContext(const Options &options, const ClOptions &cloptions);
     virtual ~SwClientContext();
 
     sw::SwContext &getContext(bool allow_network = true);
@@ -117,6 +118,7 @@ private:
     std::unique_ptr<sw::SwContext> swctx_;
     // we can copy options into unique ptr also
     std::unique_ptr<Options> options;
+    const ClOptions &cloptions;
     std::optional<sw::TargetMap> tm;
 
     const sw::TargetMap &getPredefinedTargets(sw::SwContext &swctx);

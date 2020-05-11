@@ -25,6 +25,7 @@
 #include <optional>
 
 struct Options;
+struct ClOptions;
 
 struct StartupData
 {
@@ -36,6 +37,7 @@ struct StartupData
     String program_short_name; // used in updater
     String overview;
     Strings args;
+    std::unique_ptr<ClOptions> cloptions;
     std::unique_ptr<Options> options;
     std::optional<int> exit_code;
 
@@ -56,6 +58,7 @@ struct StartupData
     void sw_main();
 
     Options &getOptions();
+    ClOptions &getClOptions();
 
 private:
     int exit(int);

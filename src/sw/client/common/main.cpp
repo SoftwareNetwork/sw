@@ -117,6 +117,13 @@ Options &StartupData::getOptions()
     throw SW_RUNTIME_ERROR("Options was not created");
 }
 
+ClOptions &StartupData::getClOptions()
+{
+    if (cloptions)
+        return *cloptions;
+    throw SW_RUNTIME_ERROR("ClOptions was not created");
+}
+
 int StartupData::run()
 {
     // try to do as less as possible before log init
@@ -216,6 +223,9 @@ int StartupData::builtinCall()
 
 void StartupData::parseArgs()
 {
+    // create and register cl options
+    cloptions = std::make_unique<ClOptions>();
+
     String s;
     llvm::raw_string_ostream errs(s);
     if (!::cl::ParseCommandLineOptions(args, overview, &errs))
@@ -229,6 +239,11 @@ void StartupData::parseArgs()
                 Strings args2;
                 args2.push_back(args[0]);
                 args2.insert(args2.end(), alias_args.begin(), alias_args.end());
+                args2.insert(args2.end(), args.begin() + 2, args.end()); // add rest of args
+
+                // reset cl options
+                cloptions.reset(); // reset first!!!
+                cloptions = std::make_unique<ClOptions>();
 
                 // reset stream
                 errs.flush();
@@ -248,7 +263,7 @@ void StartupData::parseArgs()
 void StartupData::createOptions()
 {
     // create main options!
-    options = std::make_unique<Options>();
+    options = std::make_unique<Options>(getClOptions());
 }
 
 void StartupData::setHttpSettings()
@@ -284,11 +299,11 @@ void StartupData::setWorkingDir()
 
 void StartupData::setup()
 {
-    if (cl_parse_configure_ac.getNumOccurrences())
+    if (getClOptions().parse_configure_ac.getNumOccurrences())
     {
-        if (cl_parse_configure_ac.empty())
-            cl_parse_configure_ac = "configure.ac";
-        sw::driver::cpp::Driver::processConfigureAc(cl_parse_configure_ac);
+        if (getClOptions().parse_configure_ac.empty())
+            getClOptions().parse_configure_ac = "configure.ac";
+        sw::driver::cpp::Driver::processConfigureAc(getClOptions().parse_configure_ac);
         exit_code = 0;
         return;
     }
@@ -351,7 +366,7 @@ void StartupData::setup()
 
 void StartupData::sw_main()
 {
-    SwClientContext swctx(getOptions());
+    SwClientContext swctx(getOptions(), getClOptions());
 
     // for cli we set default input to '.' dir
     if (swctx.getInputs().empty() && getOptions().input_settings_pairs.empty())
@@ -373,7 +388,7 @@ void StartupData::sw_main()
     }
 
     if (0);
-#define SUBCOMMAND(n) else if (subcommand_##n) { swctx.command_##n(); return; }
+#define SUBCOMMAND(n) else if (getClOptions().subcommand_##n) { swctx.command_##n(); return; }
 #include <sw/client/common/commands.inl>
 #undef SUBCOMMAND
 

@@ -339,14 +339,15 @@ Inputs::Inputs(const Strings &s, const Strings &pairs)
     }
 }
 
-SwClientContext::SwClientContext()
+/*SwClientContext::SwClientContext()
     : SwClientContext(Options{})
 {
-}
+}*/
 
-SwClientContext::SwClientContext(const Options &options)
+SwClientContext::SwClientContext(const Options &options, const ClOptions &cloptions)
     : local_storage_root_dir(options.storage_dir.empty() ? sw::Settings::get_user_settings().storage_dir : options.storage_dir)
     , options(std::make_unique<Options>(options))
+    , cloptions(cloptions)
 {
     // maybe put outside ctx, because it will be recreated every time
     // but since this is a rare operation, maybe it's fine
@@ -377,7 +378,7 @@ std::unique_ptr<sw::SwBuild> SwClientContext::createBuildInternal()
     bs["master_build"] = "true";
 
     std::optional<bool> use_lock;
-    if (cl_use_lock_file.getNumOccurrences()) // always respect when specified
+    if (cloptions.use_lock_file.getNumOccurrences()) // always respect when specified
         use_lock = options.use_lock_file;
     if (!use_lock) // try heuristics
     {
@@ -406,9 +407,9 @@ std::unique_ptr<sw::SwBuild> SwClientContext::createBuildInternal()
         bs["skip_errors"] = std::to_string(options.skip_errors);
     if (options.time_trace)
         bs["time_trace"] = "true";
-    if (cl_show_output)
+    if (options.show_output)
         bs["show_output"] = "true";
-    if (cl_write_output_to_file)
+    if (options.write_output_to_file)
         bs["write_output_to_file"] = "true";
     if (!options.options_build.time_limit.empty())
         bs["time_limit"] = options.options_build.time_limit;
@@ -565,7 +566,7 @@ std::vector<sw::TargetSettings> SwClientContext::createSettings()
     {
         // preserve order
         int st = 0, sh = 1;
-        if (cl_static_build.getPosition() > cl_shared_build.getPosition())
+        if (cloptions.static_build.getPosition() > cloptions.shared_build.getPosition())
             st = 1, sh = 0;
         mult_and_action(2, [st,sh](auto &s, int i)
         {
@@ -591,7 +592,7 @@ std::vector<sw::TargetSettings> SwClientContext::createSettings()
     {
         // preserve order
         int mt = 0, md = 1;
-        if (cl_win_mt.getPosition() > cl_win_md.getPosition())
+        if (cloptions.win_mt.getPosition() > cloptions.win_md.getPosition())
             mt = 1, md = 0;
         mult_and_action(2, [mt, md](auto &s, int i)
         {
