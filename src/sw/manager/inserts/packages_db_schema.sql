@@ -94,6 +94,11 @@ CREATE TABLE package_version_file (
     flags INTEGER NOT NULL DEFAULT 0,
     archive_version INTEGER NOT NULL
 );
+-- allow only one source archive for package version
+-- ssa = single_source_archive
+CREATE UNIQUE INDEX package_version_file_package_version_id_ssa_idx
+ON package_version_file (package_version_id)
+WHERE (type = 1);
 
 --------------------------------------------------------------------------------
 --
@@ -158,6 +163,16 @@ CREATE TABLE package_version_file (
     flags INTEGER NOT NULL DEFAULT 0,
     archive_version INTEGER NOT NULL
 );
+
+--------------------------------------------------------------------------------
+-- %split
+--------------------------------------------------------------------------------
+
+-- allow only one source archive for package version
+-- ssa = single_source_archive
+CREATE UNIQUE INDEX package_version_file_package_version_id_ssa_idx
+ON package_version_file (package_version_id)
+WHERE (type = 1);
 
 --------------------------------------------------------------------------------
 -- % split - merge '%' and 'split' together when patches are available
