@@ -66,6 +66,35 @@ CREATE TABLE package_version_dependency (
 --
 --------------------------------------------------------------------------------
 
+CREATE TABLE config (
+    config_id INTEGER PRIMARY KEY,
+    hash INTEGER NOT NULL
+);
+
+--------------------------------------------------------------------------------
+--
+--------------------------------------------------------------------------------
+
+CREATE TABLE file (
+    file_id INTEGER PRIMARY KEY,
+    hash INTEGER NOT NULL,
+    size TEXT
+);
+
+--------------------------------------------------------------------------------
+--
+--------------------------------------------------------------------------------
+
+CREATE TABLE package_version_file (
+    package_version_file_id INTEGER PRIMARY KEY,
+    package_version_id INTEGER NOT NULL REFERENCES package_version (package_version_id) ON UPDATE CASCADE ON DELETE CASCADE,
+    file_id INTEGER NOT NULL REFERENCES file (file_id) ON UPDATE CASCADE ON DELETE CASCADE,
+    type INTEGER NOT NULL,
+    config_id INTEGER NOT NULL REFERENCES config (config_id) ON UPDATE CASCADE ON DELETE CASCADE,
+    flags INTEGER NOT NULL DEFAULT 0,
+    archive_version INTEGER NOT NULL
+);
+
 --------------------------------------------------------------------------------
 --
 --
@@ -104,6 +133,31 @@ CREATE INDEX ix_package_id ON package_version (package_id ASC);
 --------------------------------------------------------------------------------
 
 DROP TABLE data_source;
+
+--------------------------------------------------------------------------------
+-- %split
+--------------------------------------------------------------------------------
+
+CREATE TABLE config (
+    config_id INTEGER PRIMARY KEY,
+    hash INTEGER NOT NULL
+);
+
+CREATE TABLE file (
+    file_id INTEGER PRIMARY KEY,
+    hash INTEGER NOT NULL,
+    size TEXT
+);
+
+CREATE TABLE package_version_file (
+    package_version_file_id INTEGER PRIMARY KEY,
+    package_version_id INTEGER NOT NULL REFERENCES package_version (package_version_id) ON UPDATE CASCADE ON DELETE CASCADE,
+    file_id INTEGER NOT NULL REFERENCES file (file_id) ON UPDATE CASCADE ON DELETE CASCADE,
+    type INTEGER NOT NULL,
+    config_id INTEGER NOT NULL REFERENCES config (config_id) ON UPDATE CASCADE ON DELETE CASCADE,
+    flags INTEGER NOT NULL DEFAULT 0,
+    archive_version INTEGER NOT NULL
+);
 
 --------------------------------------------------------------------------------
 -- % split - merge '%' and 'split' together when patches are available
