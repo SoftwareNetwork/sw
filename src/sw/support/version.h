@@ -18,6 +18,7 @@ namespace db
 
 using PackageId = int64_t;
 using PackageVersionId = int64_t;
+using FileId = int64_t;
 
 }
 

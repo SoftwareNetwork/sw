@@ -71,4 +71,15 @@ int readPackagesDatabaseVersion(const path &dir)
     return std::stoi(read_file(p));
 }
 
+String toString(StorageFileType t)
+{
+    switch (t)
+    {
+    case StorageFileType::SourceArchive:
+        return "Source Archive";
+    default:
+        return "Unknown source type";
+    }
+}
+
 }
