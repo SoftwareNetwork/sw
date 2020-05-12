@@ -435,6 +435,9 @@ command_line:
             delete_alias:
                 aliases: d
                 desc: Delete alias.
+            print_alias:
+                aliases: p
+                desc: Print alias.
 
     # build
     subcommand:

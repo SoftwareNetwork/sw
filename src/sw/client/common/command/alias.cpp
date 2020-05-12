@@ -64,6 +64,21 @@ SUBCOMMAND_DECL(alias)
         return;
     }
 
+    if (getOptions().options_alias.print_alias)
+    {
+        auto aliases_db = get_aliases_fn();
+        if (!fs::exists(aliases_db))
+            return;
+        auto j = nlohmann::json::parse(read_file(aliases_db));
+        if (!j.contains(name))
+            throw SW_RUNTIME_ERROR("No such alias");
+        String s;
+        for (auto &a : j[name])
+            s += a.get<String>() + " ";
+        LOG_INFO(logger, s);
+        return;
+    }
+
     auto &args = getOptions().options_alias.arguments;
     if (args.empty())
         throw SW_RUNTIME_ERROR("Empty arguments");
