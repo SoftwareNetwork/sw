@@ -567,7 +567,8 @@ void SwBuild::loadPackages(const TargetMap &predefined)
 {
     // load
     auto usc = can_use_saved_configs(*this);
-    TargetMap cache;
+    //               input hash
+    std::unordered_map<size_t, TargetMap> cache;
     int r = 1;
     while (!stopped)
     {
@@ -648,21 +649,18 @@ void SwBuild::loadPackages(const TargetMap &predefined)
 
             // from cache
             {
-                auto i = cache.find(d.first);
-                if (i != cache.end())
+                // only if inputs the same
+                // (we might change something in one of the inputs, do not take wrong targets from cache)
+                auto h = getTargets()[d.first].getInput().getInput().getHash();
+                auto i = cache[h].find(d.first);
+                if (i != cache[h].end())
                 {
                     auto k = i->second.findSuitable(s);
                     if (k != i->second.end())
                     {
                         auto &t = *k;
-                        // only if inputs the same
-                        // (we might change something in one of the inputs, do not take wrong targets from cache)
-                        if (i->second.hasInput() &&
-                            &i->second.getInput().getInput() == &getTargets()[t->getPackage()].getInput().getInput())
-                        {
-                            getTargets()[t->getPackage()].push_back(t);
-                            continue;
-                        }
+                        getTargets()[t->getPackage()].push_back(t);
+                        continue;
                     }
                 }
             }
@@ -674,8 +672,8 @@ void SwBuild::loadPackages(const TargetMap &predefined)
                     getTargets()[tgt->getPackage()].push_back(tgt);
                 else
                 {
-                    cache[tgt->getPackage()].push_back(tgt);
-                    cache[tgt->getPackage()].setInput(getTargets()[tgt->getPackage()].getInput());
+                    auto h = getTargets()[d.first].getInput().getInput().getHash();
+                    cache[h][tgt->getPackage()].push_back(tgt);
                 }
             }
 
