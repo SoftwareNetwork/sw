@@ -21,7 +21,7 @@
 
 #include "command.h"
 
-#include "options_cl.generated.cpp"
+#include <options_cl.generated.cpp>
 
 namespace sw
 {
