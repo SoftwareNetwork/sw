@@ -292,7 +292,7 @@ PackageData PackagesDatabase::getPackageData(const PackageId &p) const
     return d;
 }
 
-int64_t PackagesDatabase::getInstalledPackageId(const PackageId &p) const
+db::PackageVersionId PackagesDatabase::getInstalledPackageId(const PackageId &p) const
 {
     return getPackageVersionId(p);
 }
@@ -489,7 +489,7 @@ db::PackageId PackagesDatabase::getPackageId(const PackagePath &ppath) const
     return q.front().packageId.value();
 }
 
-db::PackageId PackagesDatabase::getPackageVersionId(const PackageId &p) const
+db::PackageVersionId PackagesDatabase::getPackageVersionId(const PackageId &p) const
 {
     auto q = (*db)(
         select(pkg_ver.packageVersionId)
