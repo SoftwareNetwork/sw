@@ -67,7 +67,7 @@ sw::PackageDescriptionMap getPackages(const sw::SwBuild &b, const sw::SourceDirM
         }
 
         // double check files (normalize them)
-        Files files;
+        FilesSorted files;
         for (auto &f : t.getSourceFiles())
             files.insert(f.lexically_normal());
 

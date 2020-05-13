@@ -1305,8 +1305,8 @@ void RawBootstrapBuildGenerator::generate(const sw::SwBuild &b)
     const auto sd = b.getContext().getLocalStorage().storage_dir;
 
     // filter out files not in current dir and not in storage
-    std::unordered_map<path /* real file */, path /* path in archive */> files2;
-    std::set<path> files_ordered;
+    std::map<path /* real file */, path /* path in archive */> files2;
+    FilesSorted files_ordered;
     for (auto &f : files)
     {
         if (File(f, b.getFileStorage()).isGenerated())
