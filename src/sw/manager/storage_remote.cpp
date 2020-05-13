@@ -184,6 +184,8 @@ void RemoteStorage::load() const
     static const std::vector<std::pair<String, String>> skip_cols
     {
         {"package_version", "group_number"},
+        {"package_version", "archive_version"},
+        {"package_version", "hash"},
     };
 
     auto mdb = getPackagesDatabase().db->native_handle();

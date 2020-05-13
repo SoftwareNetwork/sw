@@ -276,7 +276,7 @@ PackageData PackagesDatabase::getPackageData(const PackageId &p) const
         throw SW_RUNTIME_ERROR("No such package in db: " + p.toString());
     }
     auto &row = q.front();
-    d.hash = row.hash.value();
+    d.hash = getInstalledPackageHash(row.packageVersionId);
     d.flags = row.flags.value();
     d.prefix = (int)row.prefix.value();
     d.sdir = row.sdir.value();
@@ -299,13 +299,24 @@ db::PackageVersionId PackagesDatabase::getInstalledPackageId(const PackageId &p)
 
 String PackagesDatabase::getInstalledPackageHash(const PackageId &p) const
 {
-    auto q = (*db)(
-        select(pkg_ver.hash)
-        .from(pkg_ver)
-        .where(pkg_ver.packageId == getPackageId(p.getPath()) && pkg_ver.version == p.getVersion().toString()));
-    if (q.empty())
-        return {};
-    return q.front().hash.value();
+    return getInstalledPackageHash(getInstalledPackageId(p));
+}
+
+String PackagesDatabase::getInstalledPackageHash(db::PackageVersionId vid) const
+{
+    auto q2 = (*db)(
+        select(t_pkg_ver_files.fileId)
+        .from(t_pkg_ver_files)
+        .where(t_pkg_ver_files.packageVersionId == vid));
+    if (q2.empty())
+        throw SW_LOGIC_ERROR("no pkg ver file");
+    auto q3 = (*db)(
+        select(t_files.hash)
+        .from(t_files)
+        .where(t_files.fileId == q2.front().fileId));
+    if (q3.empty())
+        throw SW_LOGIC_ERROR("no file");
+    return q3.front().hash.value();
 }
 
 bool PackagesDatabase::isPackageInstalled(const Package &p) const
@@ -356,10 +367,6 @@ void PackagesDatabase::installPackage(const PackageId &p, const PackageData &d)
 
         // extended
         pkg_ver.prefix = d.prefix,
-        pkg_ver.hash = d.hash,
-
-        // TODO:
-        pkg_ver.archiveVersion = 1,
 
         // misc
         pkg_ver.updated = "",
@@ -368,10 +375,29 @@ void PackagesDatabase::installPackage(const PackageId &p, const PackageData &d)
     ));
 
     // get version id
-    auto q2 = (*db)(select(pkg_ver.packageVersionId).from(pkg_ver).where(
+    auto q2 =
+        (*db)(select(pkg_ver.packageVersionId).from(pkg_ver).where(
         pkg_ver.packageId == package_id &&
         pkg_ver.version == p.getVersion().toString()
         ));
+    auto vid = q2.front().packageVersionId.value();
+
+    // insert file
+    (*db)(insert_into(t_files).set(
+        t_files.hash = d.getHash(StorageFileType::SourceArchive)
+    ));
+    auto fid = db->last_insert_id();
+
+    // inser pkg ver file
+    (*db)(insert_into(t_pkg_ver_files).set(
+        t_pkg_ver_files.packageVersionId = vid,
+        t_pkg_ver_files.fileId = fid,
+        t_pkg_ver_files.type = 1,
+        t_pkg_ver_files.configId = 1,
+        t_pkg_ver_files.archiveVersion = 1
+    ));
+
+    //
     for (auto &d : d.dependencies)
     {
         // get package id
@@ -393,7 +419,7 @@ void PackagesDatabase::installPackage(const PackageId &p, const PackageData &d)
 
         // insert deps
         (*db)(insert_into(pkg_deps).set(
-            pkg_deps.packageVersionId = q2.front().packageVersionId.value(),
+            pkg_deps.packageVersionId = vid,
             pkg_deps.packageId = q.front().packageId.value(),
             pkg_deps.versionRange = d.range.toString()
         ));

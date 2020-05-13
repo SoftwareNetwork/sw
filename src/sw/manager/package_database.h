@@ -66,6 +66,10 @@ struct SW_MANAGER_API PackagesDatabase : Database
 private:
     std::mutex m;
     std::unique_ptr<struct PreparedStatements> pps;
+
+    // add type and config later
+    // rename to get package version file hash ()
+    String getInstalledPackageHash(db::PackageVersionId) const;
 };
 
 }
