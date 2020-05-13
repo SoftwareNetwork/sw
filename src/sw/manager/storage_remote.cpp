@@ -181,9 +181,9 @@ void RemoteStorage::load() const
         bool skip = false;
     };
 
-    static const Strings skip_cols
+    static const std::vector<std::pair<String, String>> skip_cols
     {
-        "group_number",
+        {"package_version", "group_number"},
     };
 
     auto mdb = getPackagesDatabase().db->native_handle();
@@ -231,12 +231,9 @@ void RemoteStorage::load() const
         safe_getline(ifile, s);
         split_csv_line(s);
 
-        auto is_skipped_column = [](const String &name)
+        auto is_skipped_column = [](const String &tablename, const String &name)
         {
-            return std::find_if(skip_cols.begin(), skip_cols.end(), [&name](const auto &col)
-            {
-                return col == name;
-            }) != skip_cols.end();
+            return std::find(skip_cols.begin(), skip_cols.end(), std::pair<String, String>{ tablename,name }) != skip_cols.end();
         };
 
         // read fields
@@ -244,7 +241,7 @@ void RemoteStorage::load() const
         auto e = &s.back() + 1;
         std::vector<Column> cols;
         cols.push_back({ b });
-        if (is_skipped_column(cols.back().name))
+        if (is_skipped_column(td, cols.back().name))
             cols.back().skip = true;
         while (1)
         {
@@ -253,7 +250,7 @@ void RemoteStorage::load() const
             if (*b++ == 0)
             {
                 cols.push_back({ b });
-                if (is_skipped_column(cols.back().name))
+                if (is_skipped_column(td, cols.back().name))
                     cols.back().skip = true;
             }
         }
