@@ -21,7 +21,7 @@ struct PackageData
 
     SomeFlags flags;
 
-    // package hash (sw.tar.gz)
+    // source package hash (sw.tar.gz)
     String hash;
 
     // length of prefix path
@@ -41,6 +41,8 @@ struct PackageData
     virtual ~PackageData() = default;
 
     virtual std::unique_ptr<PackageData> clone() const { return std::make_unique<PackageData>(*this); }
+
+    virtual String getHash(StorageFileType type, size_t config_hash = 0) const;
 };
 
 using PackageDataPtr = std::unique_ptr<PackageData>;

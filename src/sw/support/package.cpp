@@ -33,6 +33,13 @@ static path getHashPathFromHash(const String &h, int nsubdirs, int chars_per_sub
     return p;
 }
 
+String PackageData::getHash(StorageFileType type, size_t config_hash) const
+{
+    if (type == StorageFileType::SourceArchive)
+        return hash;
+    throw SW_RUNTIME_ERROR("Cannot return other hashes");
+}
+
 Package::Package(const IStorage &storage, const PackageId &id)
     : PackageId(id), storage(storage)
 {
