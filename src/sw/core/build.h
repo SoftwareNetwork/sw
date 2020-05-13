@@ -21,7 +21,6 @@
 #include "target.h"
 
 #include <sw/builder/sw_context.h>
-#include <sw/support/package_data.h>
 
 namespace sw
 {
