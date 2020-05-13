@@ -7,6 +7,7 @@
 #include "package_data.h"
 
 #include <nlohmann/json.hpp>
+#include <primitives/yaml.h> // for Source::load
 
 namespace sw
 {

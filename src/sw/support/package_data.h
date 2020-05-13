@@ -6,9 +6,8 @@
 
 #pragma once
 
-#include "source.h"
-
 #include "package_id.h"
+#include "source.h"
 
 #include <nlohmann/json_fwd.hpp>
 
