@@ -183,7 +183,7 @@ SUBCOMMAND_DECL(upload)
     // dbg purposes
     for (auto &[id, d] : m)
     {
-        write_file(b->getBuildDirectory() / "upload" / id.toString() += ".json", d->toJson());
+        write_file(b->getBuildDirectory() / "upload" / id.toString() += ".json", d->toJson().dump());
         auto id2 = sw::PackageId(sw::PackagePath(getOptions().options_upload.upload_prefix) / id.getPath(), id.getVersion());
         LOG_INFO(logger, "Uploading " + id2.toString());
     }

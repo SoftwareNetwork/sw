@@ -24,19 +24,28 @@ PackageData::PackageData(const String &json)
 {
 }
 
-PackageData::PackageData(const nlohmann::json &j)
-    : PackageData(PackageId{ j["path"].get<std::string>(), j["version"].get<std::string>() })
+PackageData::PackageData(nlohmann::json j)
+    : PackageData(PackageId{ j["package"].get<std::string>() })
 {
     source = Source::load(j["source"]);
-    for (auto &v : j["files"])
-        files_map[fs::u8path(v["from"].get<std::string>())] = fs::u8path(v["to"].get<std::string>());
+    if (!source)
+        throw SW_RUNTIME_ERROR("bad source");
+    for (auto &[f,t] : j["files"].items())
+        files_map[fs::u8path(f)] = fs::u8path(t.get<std::string>());
     for (auto &v : j["dependencies"])
-        dependencies.emplace(v["path"].get<std::string>(), v["range"].get<std::string>());
+        dependencies.emplace(v.get<std::string>());
 }
 
-String detail::PackageData::toJson() const
+nlohmann::json detail::PackageData::toJson() const
 {
-    SW_UNIMPLEMENTED;
+    nlohmann::json j;
+    j["package"] = id.toString();
+    source->save(j["source"]);
+    for (auto &[f, t] : files_map)
+        j["files"][normalize_path(f)] = normalize_path(t);
+    for (auto &d : dependencies)
+        j["dependencies"].push_back(d.toString());
+    return j;
 }
 
 PackageId PackageData::getPackageId(const PackagePath &prefix) const

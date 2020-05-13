@@ -88,7 +88,7 @@ static void override_package_perform(SwClientContext &swctx, sw::PackagePath pre
         j["sdir"] = normalize_path(dir);
         j["prefix"] = prefix.toString();
         for (auto &[pkg, desc] : pm)
-            j["packages"][pkg.toString()] = nlohmann::json::parse(desc->toJson());
+            j["packages"][pkg.toString()] = desc->toJson();
         write_file(swctx.getOptions().options_override.save_overridden_packages_to_file, j.dump(4));
         return;
     }

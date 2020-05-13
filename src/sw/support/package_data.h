@@ -36,13 +36,15 @@ struct SW_SUPPORT_API PackageData
 public:
     PackageData(const PackageId &);
     PackageData(const String &json);
-    PackageData(const nlohmann::json &);
+    // if passed by const ref, there is undefined behavior if key is missing
+    // so we copy for reliability
+    PackageData(nlohmann::json);
 
     PackageId getPackageId(const PackagePath &prefix = PackagePath()) const;
     void applyPrefix(const PackagePath &prefix);
     void applyVersion();
-    String toJson() const;
     void addFile(const path &root, const path &from, const path &to);
+    nlohmann::json toJson() const;
 };
 
 // unused for now

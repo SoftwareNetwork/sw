@@ -129,7 +129,7 @@ void ProtobufApi::addVersion(const PackagePath &prefix, const PackageDescription
     nlohmann::json jm;
     jm["prefix"] = prefix.toString();
     for (auto &[pkg, d] : pkgs)
-        jm["packages"][pkg.toString()] = nlohmann::json::parse(d->toJson());
+        jm["packages"].push_back(d->toJson());
     request.mutable_package_data()->set_data(jm.dump());
     auto context = getContextWithAuth();
     GRPC_SET_DEADLINE(10);
