@@ -57,3 +57,35 @@ enum class NotificationType
 };
 
 using SomeFlags = std::bitset<sizeof(uint64_t) * 8>;
+
+namespace sw
+{
+
+enum class StorageFileType
+{
+    //
+    SourceArchive = 1,
+
+    // everything below is not stable yet
+
+    // binaries + runtime data
+    // or split?
+    RuntimeArchive = 2,
+
+    RuntimeDataArchive,
+
+    // RuntimeArchive + headers + implib
+    DevelopmentArchive,
+
+    // symbols, pdb, dbg info
+    SymbolArchive,
+
+    // data files
+    // config files
+    // used files
+};
+
+SW_SUPPORT_API
+String toString(StorageFileType);
+
+}

@@ -5,3 +5,19 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "enums.h"
+
+namespace sw
+{
+
+String toString(StorageFileType t)
+{
+    switch (t)
+    {
+    case StorageFileType::SourceArchive:
+        return "Source Archive";
+    default:
+        return "Unknown source type";
+    }
+}
+
+}

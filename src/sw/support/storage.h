@@ -78,31 +78,4 @@ int getPackagesDatabaseSchemaVersion();
 SW_SUPPORT_API
 String getPackagesDatabaseSchemaVersionFileName();
 
-enum class StorageFileType
-{
-    //
-    SourceArchive       =   1,
-
-    // everything below is not stable yet
-
-    // binaries + runtime data
-    // or split?
-    RuntimeArchive      =   2,
-
-    RuntimeDataArchive,
-
-    // RuntimeArchive + headers + implib
-    DevelopmentArchive,
-
-    // symbols, pdb, dbg info
-    SymbolArchive,
-
-    // data files
-    // config files
-    // used files
-};
-
-SW_SUPPORT_API
-String toString(StorageFileType);
-
 } // namespace sw
