@@ -51,12 +51,8 @@ sw::PackageDescriptionMap getPackages(const sw::SwBuild &b, const sw::SourceDirM
         if (t.getInterfaceSettings()["skip_upload"] == "true")
             continue;
 
-        nlohmann::json j;
-
-        // source, version, path
-        t.getSource().save(j["source"]);
-        j["version"] = pkg.getVersion().toString();
-        j["path"] = pkg.getPath().toString();
+        auto d = std::make_unique<PackageDescription>(pkg);
+        d->source = t.getSource().clone();
 
         // find root dir
         path rd;
@@ -69,7 +65,6 @@ sw::PackageDescriptionMap getPackages(const sw::SwBuild &b, const sw::SourceDirM
                 throw SW_RUNTIME_ERROR("no such source");
             rd = si->second.getRequestedDirectory();
         }
-        j["root_dir"] = normalize_path(rd);
 
         // double check files (normalize them)
         Files files;
@@ -79,35 +74,21 @@ sw::PackageDescriptionMap getPackages(const sw::SwBuild &b, const sw::SourceDirM
         // we put files under SW_SDIR_NAME to keep space near it
         // e.g. for patch dir or other dirs (server provided files)
         // we might unpack to other dir, but server could push service files in neighbor dirs like gpg keys etc
-        nlohmann::json jm;
         auto files_map1 = primitives::pack::prepare_files(files, rd.lexically_normal());
         for (const auto &[f1, f2] : files_map1)
-        {
-            nlohmann::json jf;
-            jf["from"] = normalize_path(f1);
-            jf["to"] = normalize_path(f2);
-            j["files"].push_back(jf);
-        }
+            d->addFile(rd, f1, f2);
 
         // unique deps
-        std::set<UnresolvedPackage> upkgs;
-        for (auto &d : t.getDependencies())
+        for (auto &dep : t.getDependencies())
         {
             // filter out predefined targets
-            if (b.getContext().getPredefinedTargets().find(d->getUnresolvedPackage().ppath) != b.getContext().getPredefinedTargets().end(d->getUnresolvedPackage().ppath))
+            if (b.getContext().getPredefinedTargets().find(dep->getUnresolvedPackage().ppath) !=
+                b.getContext().getPredefinedTargets().end(dep->getUnresolvedPackage().ppath))
                 continue;
-            upkgs.insert(d->getUnresolvedPackage());
-        }
-        for (auto &u : upkgs)
-        {
-            nlohmann::json jd;
-            jd["path"] = u.getPath().toString();
-            jd["range"] = u.getRange().toString();
-            j["dependencies"].push_back(jd);
+            d->dependencies.insert(dep->getUnresolvedPackage());
         }
 
-        auto s = j.dump();
-        m[pkg] = std::make_unique<JsonPackageDescription>(s);
+        m.emplace(pkg, std::move(d));
         if (iv)
             (*iv)[&tgts.getInput().getInput()].push_back(pkg);
     }
@@ -202,7 +183,7 @@ SUBCOMMAND_DECL(upload)
     // dbg purposes
     for (auto &[id, d] : m)
     {
-        write_file(b->getBuildDirectory() / "upload" / id.toString() += ".json", d->getString());
+        write_file(b->getBuildDirectory() / "upload" / id.toString() += ".json", d->toJson());
         auto id2 = sw::PackageId(sw::PackagePath(getOptions().options_upload.upload_prefix) / id.getPath(), id.getVersion());
         LOG_INFO(logger, "Uploading " + id2.toString());
     }

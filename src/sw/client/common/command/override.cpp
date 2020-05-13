@@ -43,7 +43,7 @@ static void override_package_perform(SwClientContext &swctx, sw::PackagePath pre
             LOG_INFO(logger, "Overriding " + pkg2.toString() + " to " + dir.u8string());
             // fix deps' prefix
             sw::UnresolvedPackages deps;
-            for (auto &d : desc->getData().dependencies)
+            for (auto &d : desc->dependencies)
             {
                 if (d.ppath.isAbsolute())
                     deps.insert(d);
@@ -65,7 +65,7 @@ static void override_package_perform(SwClientContext &swctx, sw::PackagePath pre
         dir = j["sdir"].get<String>();
         prefix = j["prefix"].get<String>();
         for (auto &[k,v] : j["packages"].items())
-            pm[k] = std::make_unique<sw::JsonPackageDescription>(v.dump());
+            pm.emplace(k, std::make_unique<sw::PackageDescription>(v));
         return;
     }
 
@@ -88,7 +88,7 @@ static void override_package_perform(SwClientContext &swctx, sw::PackagePath pre
         j["sdir"] = normalize_path(dir);
         j["prefix"] = prefix.toString();
         for (auto &[pkg, desc] : pm)
-            j["packages"][pkg.toString()] = nlohmann::json::parse(desc->getString());
+            j["packages"][pkg.toString()] = nlohmann::json::parse(desc->toJson());
         write_file(swctx.getOptions().options_override.save_overridden_packages_to_file, j.dump(4));
         return;
     }

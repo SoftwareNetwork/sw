@@ -129,21 +129,7 @@ void ProtobufApi::addVersion(const PackagePath &prefix, const PackageDescription
     nlohmann::json jm;
     jm["prefix"] = prefix.toString();
     for (auto &[pkg, d] : pkgs)
-    {
-        auto j = nlohmann::json::parse(d->getString());
-        auto rd = j["root_dir"].get<String>();
-        auto sz = rd.size();
-        if (rd.back() != '\\' && rd.back() != '/')
-            sz++;
-        for (auto &f : j["files"])
-        {
-            auto s = f["from"].get<String>();
-            if (s.find(rd) != 0)
-                throw SW_RUNTIME_ERROR("bad file path: " + s);
-            f["from"] = s.substr(sz);
-        }
-        jm["packages"][pkg.toString()] = j;
-    }
+        jm["packages"][pkg.toString()] = nlohmann::json::parse(d->toJson());
     request.mutable_package_data()->set_data(jm.dump());
     auto context = getContextWithAuth();
     GRPC_SET_DEADLINE(10);

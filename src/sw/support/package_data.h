@@ -8,9 +8,9 @@
 
 #include "source.h"
 
-#include <sw/support/package_id.h>
+#include "package_id.h"
 
-// !!! see more fields here https://github.com/aws/aws-sdk-cpp/blob/master/aws-cpp-sdk-s3/nuget/aws-cpp-sdk-s3.autopkg
+#include <nlohmann/json_fwd.hpp>
 
 namespace sw
 {
@@ -18,37 +18,39 @@ namespace sw
 namespace detail
 {
 
-// TODO: rename PackageData
-
-/** internal data structure
-
-* variants:
-* local package: source is local and files are present
-* remote to be downloaded: source present
-* remote already downloaded: source and files are present
-*/
-struct PackageData
+struct SW_SUPPORT_API PackageData
 {
-    // basic fields, but not mandatory
-
+    PackageId id;
     std::unique_ptr<Source> source;
-
-    /// by default is 0.0.1
-    Version version;
 
     /// all package files mapped to disk file
     // from path on disk, to path in archive
     // optional for stored package
+    // package may have different root dirs, source dir
+    // so destination of file (to) may differ from the origin (from)
     std::unordered_map<path, path> files_map;
 
-    /// all deps, does not show conditionals
+    /// all deps
     UnresolvedPackages dependencies;
 
+public:
+    PackageData(const PackageId &);
+    PackageData(const String &json);
+    PackageData(const nlohmann::json &);
+
+    PackageId getPackageId(const PackagePath &prefix = PackagePath()) const;
+    void applyPrefix(const PackagePath &prefix);
+    void applyVersion();
+    String toJson() const;
+    void addFile(const path &root, const path &from, const path &to);
+};
+
+// unused for now
+// see more fields here https://github.com/aws/aws-sdk-cpp/blob/master/aws-cpp-sdk-s3/nuget/aws-cpp-sdk-s3.autopkg
+struct ExtendedPackageData
+{
+    //
     // extended fields
-
-    // basic?
-    PackagePath ppath;
-
     String name; // user-friendly name
     String type; // type: exe, lib, python lib etc.
 
@@ -93,49 +95,13 @@ struct PackageData
     // internal service fields?
 
     //PackageType getType();
-
-    PackageId getPackageId(const PackagePath &prefix = PackagePath()) const;
-    void applyPrefix(const PackagePath &prefix);
-    void applyVersion();
 };
 
 }
 
-/**
-* generic pkg desc
-*/
-struct SW_SUPPORT_API PackageDescription
-{
-    PackageDescription(const std::string &);
-    virtual ~PackageDescription() = default;
-
-    /// convert to internal data
-    virtual detail::PackageData getData() const = 0;
-
-    //
-    const String &getString() const;
-
-private:
-    std::string data;
-};
-
+// generic pkg desc
+using PackageDescription = detail::PackageData;
 using PackageDescriptionPtr = std::unique_ptr<PackageDescription>;
 using PackageDescriptionMap = std::unordered_map<PackageId, PackageDescriptionPtr>;
-
-struct SW_SUPPORT_API JsonPackageDescription : PackageDescription
-{
-    JsonPackageDescription(const std::string &);
-    virtual ~JsonPackageDescription() = default;
-
-    detail::PackageData getData() const override;
-};
-
-struct SW_SUPPORT_API YamlPackageDescription : PackageDescription
-{
-    YamlPackageDescription(const std::string &);
-    virtual ~YamlPackageDescription() = default;
-
-    detail::PackageData getData() const override;
-};
 
 }

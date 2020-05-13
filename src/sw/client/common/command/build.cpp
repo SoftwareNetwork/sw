@@ -78,7 +78,7 @@ static void isolated_build(SwClientContext &swctx)
             throw SW_RUNTIME_ERROR("Empty targets");
 
         auto dir = d / pkg.toString();
-        for (auto &[from, to] : m[pkg]->getData().files_map)
+        for (auto &[from, to] : m[pkg]->files_map)
         {
             fs::create_directories((dir / to).parent_path());
             fs::copy_file(from, dir / to, fs::copy_options::update_existing);

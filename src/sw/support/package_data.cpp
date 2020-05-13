@@ -7,19 +7,48 @@
 #include "package_data.h"
 
 #include <nlohmann/json.hpp>
-#include <primitives/yaml.h>
 
 namespace sw
 {
 
-PackageId detail::PackageData::getPackageId(const PackagePath &prefix) const
+namespace detail
 {
-    return {prefix / ppath, version};
+
+PackageData::PackageData(const PackageId &id)
+    : id(id)
+{
 }
 
-void detail::PackageData::applyPrefix(const PackagePath &prefix)
+PackageData::PackageData(const String &json)
+    : PackageData(nlohmann::json::parse(json))
 {
-    ppath = prefix / ppath;
+}
+
+PackageData::PackageData(const nlohmann::json &j)
+    : PackageData(PackageId{ j["path"].get<std::string>(), j["version"].get<std::string>() })
+{
+    source = Source::load(j["source"]);
+    for (auto &v : j["files"])
+        files_map[fs::u8path(v["from"].get<std::string>())] = fs::u8path(v["to"].get<std::string>());
+    for (auto &v : j["dependencies"])
+        dependencies.emplace(v["path"].get<std::string>(), v["range"].get<std::string>());
+}
+
+String detail::PackageData::toJson() const
+{
+    SW_UNIMPLEMENTED;
+}
+
+PackageId PackageData::getPackageId(const PackagePath &prefix) const
+{
+    if (prefix.empty())
+        return id;
+    return { prefix / id.getPath(), id.getVersion() };
+}
+
+void PackageData::applyPrefix(const PackagePath &prefix)
+{
+    id = getPackageId(prefix);
 
     // also fix deps
     decltype(dependencies) deps2;
@@ -33,50 +62,23 @@ void detail::PackageData::applyPrefix(const PackagePath &prefix)
     dependencies = deps2;
 }
 
-void detail::PackageData::applyVersion()
+void PackageData::applyVersion()
 {
-    source->applyVersion(version);
+    source->applyVersion(id.getVersion());
 }
 
-PackageDescription::PackageDescription(const std::string &s)
-    : data(s)
+void PackageData::addFile(const path &root, const path &from, const path &to)
 {
+    auto rd = normalize_path(root);
+    auto sz = rd.size();
+    if (rd.back() != '\\' && rd.back() != '/')
+        sz++;
+    auto s = normalize_path(from);
+    if (s.find(rd) != 0)
+        throw SW_RUNTIME_ERROR("bad file path: " + s);
+    files_map[s.substr(sz)] = normalize_path(to);
 }
 
-const String &PackageDescription::getString() const
-{
-    return data;
-}
+} // namespace detail
 
-JsonPackageDescription::JsonPackageDescription(const std::string &s)
-    : PackageDescription(s)
-{
-}
-
-detail::PackageData JsonPackageDescription::getData() const
-{
-    auto j = nlohmann::json::parse(getString());
-    detail::PackageData d;
-    d.source = Source::load(j["source"]);
-    d.version = j["version"].get<std::string>();
-    d.ppath = j["path"].get<std::string>();
-    for (auto &v : j["files"])
-        d.files_map[fs::u8path(v["from"].get<std::string>())] = fs::u8path(v["to"].get<std::string>());
-    for (auto &v : j["dependencies"])
-        d.dependencies.emplace(v["path"].get<std::string>(), v["range"].get<std::string>());
-    return d;
-}
-
-YamlPackageDescription::YamlPackageDescription(const std::string &s)
-    : PackageDescription(s)
-{
-}
-
-detail::PackageData YamlPackageDescription::getData() const
-{
-    //const auto &s = *this;
-    detail::PackageData d;
-    throw SW_RUNTIME_ERROR("Not implemented");
-}
-
-}
+} // namespace sw
