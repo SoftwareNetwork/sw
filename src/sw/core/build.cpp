@@ -1155,9 +1155,9 @@ std::vector<BuildInput> SwBuild::addInput(const String &i)
             v.push_back(bi);
             return v;
         }
-        catch (std::exception &)
+        catch (std::exception &e)
         {
-            throw SW_RUNTIME_ERROR("No such file, directory or suitable package: " + i);
+            throw SW_RUNTIME_ERROR("No such file, directory or suitable package: " + i + ": " + e.what());
         }
     }
 }
