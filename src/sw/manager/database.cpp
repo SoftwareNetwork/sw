@@ -310,7 +310,7 @@ String PackagesDatabase::getInstalledPackageHash(const PackageId &p) const
 
 bool PackagesDatabase::isPackageInstalled(const Package &p) const
 {
-    return getInstalledPackageId(p) != 0 && getInstalledPackageHash(p) == p.getData().hash;
+    return getInstalledPackageId(p) != 0 && getInstalledPackageHash(p) == p.getData().getHash(StorageFileType::SourceArchive);
 }
 
 void PackagesDatabase::installPackage(const PackageId &p, const PackageData &d)

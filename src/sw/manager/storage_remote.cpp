@@ -417,7 +417,7 @@ struct RemoteFileWithHashVerification : vfs::FileWithHashVerification
             });
         };*/
 
-        if (copy(fn, p.getData().hash))
+        if (copy(fn, p.getData().getHash(StorageFileType::SourceArchive)))
         {
             //add_downloads();
             return true;
@@ -430,7 +430,7 @@ struct RemoteFileWithHashVerification : vfs::FileWithHashVerification
             auto m = remote_storage->resolveFromRemote({ u }, upkgs);
             if (upkgs.empty())
             {
-                if (copy(fn, m.find(u)->second->getData().hash))
+                if (copy(fn, m.find(u)->second->getData().getHash(StorageFileType::SourceArchive)))
                 {
                     //add_downloads();
                     return true;

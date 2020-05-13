@@ -82,14 +82,14 @@ bool DataSource::downloadPackage(const Package &d, const path &fn, String &dl_ha
     auto url = getUrl(d);
     if (download_from_source(url))
     {
-        auto sfh = get_strong_file_hash(fn, d.getData().hash);
-        if (sfh == d.getData().hash)
+        auto sfh = get_strong_file_hash(fn, d.getData().getHash(StorageFileType::SourceArchive));
+        if (sfh == d.getData().getHash(StorageFileType::SourceArchive))
         {
             dl_hash = sfh;
             return true;
         }
         auto fh = get_file_hash(fn);
-        if (fh == d.getData().hash)
+        if (fh == d.getData().getHash(StorageFileType::SourceArchive))
         {
             dl_hash = fh;
             return true;
