@@ -24,6 +24,7 @@
 #include "settings.h"
 
 #include <primitives/command.h>
+#include <primitives/csv.h>
 #include <primitives/exceptions.h>
 #include <primitives/executor.h>
 #include <primitives/lock.h>
@@ -187,6 +188,10 @@ void RemoteStorage::load() const
         {"package_version", "archive_version"},
         {"package_version", "hash"},
     };
+    auto is_skipped_column = [](const String &tablename, const String &name)
+    {
+        return std::find(skip_cols.begin(), skip_cols.end(), std::pair<String, String>{ tablename,name }) != skip_cols.end();
+    };
 
     auto mdb = getPackagesDatabase().db->native_handle();
     sqlite3_stmt *stmt = nullptr;
@@ -212,9 +217,9 @@ void RemoteStorage::load() const
     getPackagesDatabase().db->execute("PRAGMA foreign_keys = OFF;");
     getPackagesDatabase().db->execute("BEGIN;");
 
-    auto split_csv_line = [](auto &s)
+    auto split_csv_line = [](const auto &s)
     {
-        std::replace(s.begin(), s.end(), ',', '\0');
+        return primitives::csv::parse_line(s, ',', '\"', '\"');
     };
 
     for (auto &td : data_tables)
@@ -226,35 +231,18 @@ void RemoteStorage::load() const
         if (!ifile)
             throw SW_RUNTIME_ERROR("Cannot open file " + fn.string() + " for reading");
 
+        // read first line - header
         String s;
-        int rc;
-
-        // read first line
         safe_getline(ifile, s);
-        split_csv_line(s);
+        auto csvcols = split_csv_line(s);
 
-        auto is_skipped_column = [](const String &tablename, const String &name)
-        {
-            return std::find(skip_cols.begin(), skip_cols.end(), std::pair<String, String>{ tablename,name }) != skip_cols.end();
-        };
-
-        // read fields
-        auto b = s.c_str();
-        auto e = &s.back() + 1;
+        // read fields from header
         std::vector<Column> cols;
-        cols.push_back({ b });
-        if (is_skipped_column(td, cols.back().name))
-            cols.back().skip = true;
-        while (1)
+        for (auto &c : csvcols)
         {
-            if (b == e)
-                break;
-            if (*b++ == 0)
-            {
-                cols.push_back({ b });
-                if (is_skipped_column(td, cols.back().name))
-                    cols.back().skip = true;
-            }
+            cols.push_back({ *c });
+            if (is_skipped_column(td, cols.back().name))
+                cols.back().skip = true;
         }
         auto n_cols = cols.size();
 
@@ -280,22 +268,18 @@ void RemoteStorage::load() const
 
         while (safe_getline(ifile, s))
         {
-            auto b = s.c_str();
-            split_csv_line(s);
-
-            for (int i = 1, col = 1; i <= n_cols; i++)
+            int col = 1;
+            for (const auto &[i,c] : enumerate(split_csv_line(s)))
             {
-                if (!cols[i - 1].skip)
-                {
-                    if (*b)
-                        sqlite3_bind_text(stmt, col, b, -1, SQLITE_TRANSIENT);
-                    else
-                        sqlite3_bind_null(stmt, col);
-                    col++;
-                }
-
-                // skip ahead
-                while (*b++);
+                if (cols[i].skip)
+                    continue;
+                if (c)
+                    rc = sqlite3_bind_text(stmt, col, c->c_str(), -1, SQLITE_TRANSIENT);
+                else
+                    rc = sqlite3_bind_null(stmt, col);
+                if (rc != SQLITE_OK)
+                    throw SW_RUNTIME_ERROR("bad bind");
+                col++;
             }
 
             rc = sqlite3_step(stmt);
