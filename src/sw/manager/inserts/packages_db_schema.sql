@@ -88,7 +88,8 @@ CREATE TABLE package_version_file (
     type INTEGER NOT NULL,
     config_id INTEGER NOT NULL REFERENCES config (config_id) ON UPDATE CASCADE ON DELETE CASCADE,
     flags INTEGER NOT NULL DEFAULT 0,
-    archive_version INTEGER NOT NULL
+    archive_version INTEGER NOT NULL,
+    source TEXT
 );
 -- allow only one source archive for package version
 -- ssa = single_source_archive
@@ -220,6 +221,13 @@ PRAGMA foreign_keys = ON;
 -- this is bad, but as is
 BEGIN;
 --
+
+--------------------------------------------------------------------------------
+-- %split
+--------------------------------------------------------------------------------
+
+ALTER TABLE package_version_file
+ADD COLUMN source TEXT;
 
 --------------------------------------------------------------------------------
 -- % split - merge '%' and 'split' together when patches are available
