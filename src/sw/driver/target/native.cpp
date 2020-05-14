@@ -2272,15 +2272,20 @@ void NativeCompiledTarget::prepare_pass1()
 
     if (!IsSwConfig)
     {
+        // if we add include dir, we MUST create it
+        // some programs consider an error if idir does not exist (cmake)
+
         // add pvt binary dir
         // do not check for existence, because generated files may go there
         // and we do not know about it right now
         IncludeDirectories.insert(BinaryPrivateDir);
+        fs::create_directories(BinaryPrivateDir);
 
         // always add bdir to include dirs
         // do not check for existence, because generated files may go there
         // and we do not know about it right now
         Public.IncludeDirectories.insert(BinaryDir);
+        fs::create_directories(BinaryDir);
     }
 
     resolvePostponedSourceFiles();
