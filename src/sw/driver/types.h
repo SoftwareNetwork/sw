@@ -18,7 +18,6 @@
 
 #pragma once
 
-#include <sw/builder/configuration.h>
 #include <sw/support/enums.h>
 
 #include <boost/assign.hpp>

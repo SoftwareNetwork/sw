@@ -21,7 +21,6 @@
 #include "dependency.h"
 #include "types.h"
 
-#include <sw/builder/configuration.h>
 #include <sw/manager/package.h>
 #include <sw/manager/property.h>
 

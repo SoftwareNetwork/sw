@@ -114,27 +114,6 @@ BuildSettings::BuildSettings(const TargetSettings &ts)
 #undef IF_END
 }
 
-String BuildSettings::getConfig() const
-{
-    // TODO: add get real config, lengthy and with all info
-
-    String c;
-
-    addConfigElement(c, toString(TargetOS.Type));
-    //if (TargetOS.Type == OSType::Android)
-        //addConfigElement(c, Native.SDK.Version.string());
-    addConfigElement(c, toString(TargetOS.Arch));
-    if (TargetOS.Arch == ArchType::arm || TargetOS.Arch == ArchType::aarch64)
-        addConfigElement(c, toString(TargetOS.SubArch)); // concat with previous?
-
-    addConfigElement(c, toString(Native.LibrariesType));
-    if (TargetOS.Type == OSType::Windows && Native.MT)
-        addConfigElement(c, "mt");
-    addConfigElement(c, toString(Native.ConfigurationType));
-
-    return c;
-}
-
 String BuildSettings::getTargetTriplet() const
 {
     // See https://clang.llvm.org/docs/CrossCompilation.html

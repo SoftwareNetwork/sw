@@ -37,13 +37,8 @@ struct SW_DRIVER_CPP_API BuildSettings
     BuildSettings() = default;
     BuildSettings(const TargetSettings &);
 
-    String getConfig() const;
     String getTargetTriplet() const;
-
     TargetSettings getTargetSettings() const;
-
-    //bool operator<(const BuildSettings &rhs) const;
-    //bool operator==(const BuildSettings &rhs) const;
 };
 
 }
