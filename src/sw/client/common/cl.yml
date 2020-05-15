@@ -56,36 +56,28 @@ command_line:
 
             #
             save_failed_commands:
-                external: true
                 aliases: sfc
                 cat: build
             save_all_commands:
-                external: true
                 aliases: sac
                 cat: build
             save_executed_commands:
-                external: true
                 aliases: sec
                 cat: build
 
             # explain
             explain_outdated:
-                external: true
                 description: Explain outdated commands
                 cat: build
             explain_outdated_full:
-                external: true
                 description: Explain outdated commands with more info
                 cat: build
             explain_outdated_to_trace:
-                external: true
                 description: Explain outdated commands with more info
-                location: gExplainOutdatedToTrace
                 cat: build
 
             save_command_format:
                 type: String
-                external: true
                 description: Explicitly set saved command format (bat or sh)
                 cat: build
 

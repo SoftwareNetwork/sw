@@ -48,8 +48,21 @@ struct SW_MANAGER_API Settings
     bool record_commands_in_current_dir = false;
 
     // not from file (local settings?)
+
+    // db
     bool gForceServerQuery;
     bool gForceServerDatabaseUpdate;
+
+    // command
+    bool save_failed_commands;
+    bool save_all_commands;
+    bool save_executed_commands;
+
+    bool explain_outdated;
+    bool explain_outdated_full;
+    bool gExplainOutdatedToTrace;
+
+    String save_command_format;
 
 public:
     Settings();

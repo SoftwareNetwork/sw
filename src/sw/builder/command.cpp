@@ -29,6 +29,7 @@
 #include "program.h"
 #include "sw_context.h"
 
+#include <sw/manager/settings.h>
 #include <sw/support/filesystem.h>
 #include <sw/support/hash.h>
 
@@ -45,17 +46,6 @@
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "command");
-
-//
-bool save_failed_commands;
-bool save_all_commands;
-bool save_executed_commands;
-
-bool explain_outdated;
-bool explain_outdated_full;
-bool gExplainOutdatedToTrace;
-
-String save_command_format;
 
 namespace sw
 {
@@ -91,13 +81,15 @@ Command::~Command()
 
 static bool isExplainNeeded()
 {
-    return explain_outdated || explain_outdated_full || gExplainOutdatedToTrace;
+    return sw::Settings::get_user_settings().explain_outdated
+        || sw::Settings::get_user_settings().explain_outdated_full
+        || sw::Settings::get_user_settings().gExplainOutdatedToTrace;
 }
 
 static String getCommandId(const Command &c)
 {
     String s = c.getName() + ", " + std::to_string(c.getHash()) + ", # of arguments " + std::to_string(c.arguments.size());
-    if (explain_outdated_full)
+    if (sw::Settings::get_user_settings().explain_outdated_full)
     {
         s += "\n";
         s += "bdir: " + normalize_path(c.working_directory) + "\n";
@@ -627,7 +619,7 @@ void Command::execute1(std::error_code *ec)
         }
     }
 
-    if (save_executed_commands || save_all_commands)
+    if (sw::Settings::get_user_settings().save_executed_commands || sw::Settings::get_user_settings().save_all_commands)
     {
         saveCommand();
     }
@@ -688,7 +680,7 @@ String Command::makeErrorString(const String &e)
     s += "\n";
     s += e;
     boost::trim(s);
-    if (save_failed_commands || save_executed_commands || save_all_commands)
+    if (sw::Settings::get_user_settings().save_failed_commands || sw::Settings::get_user_settings().save_executed_commands || sw::Settings::get_user_settings().save_all_commands)
     {
         s += saveCommand();
     }
@@ -718,11 +710,11 @@ path Command::writeCommand(const path &p, bool print_name) const
     String t;
 
     bool bat = getHostOS().getShellType() == ShellType::Batch;
-    if (!save_command_format.empty())
+    if (!sw::Settings::get_user_settings().save_command_format.empty())
     {
-        if (save_command_format == "bat")
+        if (sw::Settings::get_user_settings().save_command_format == "bat")
             bat = true;
-        else if (save_command_format == "sh")
+        else if (sw::Settings::get_user_settings().save_command_format == "sh")
             bat = false;
         else
             LOG_ERROR(logger, "Unknown save_command_format");
