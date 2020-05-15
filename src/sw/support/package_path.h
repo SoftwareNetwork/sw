@@ -23,11 +23,12 @@ SW_SUPPORT_API
 bool isValidPackagePathSymbol(int c);
 
 template <class ThisType, class PathElement = std::string, bool CaseSensitive = false>
-struct PathBase : protected std::vector<PathElement>
+struct PathBase
 {
     using Base = std::vector<PathElement>;
     using value_type = PathElement;
     using element_type = typename PathElement::value_type;
+    using iterator = typename Base::iterator;
     using const_iterator = typename Base::const_iterator;
 
     using CheckSymbol = bool(*)(int);
@@ -50,16 +51,16 @@ struct PathBase : protected std::vector<PathElement>
                 throw SW_RUNTIME_ERROR("Bad symbol '"s + c + "' in path: '" + s + "'");
             if (c == '.')
             {
-                Base::emplace_back(prev, i);
+                data.emplace_back(prev, i);
                 prev = std::next(i);
             }
         }
         if (!s.empty())
-            Base::emplace_back(prev, s.end());
+            data.emplace_back(prev, s.end());
     }
 
     PathBase(const PathBase &p)
-        : Base(p)
+        : data(p.data)
     {
     }
 
@@ -96,11 +97,11 @@ struct PathBase : protected std::vector<PathElement>
             return ThisType{ begin() + start, begin() + end };
     }
 
-    using Base::empty;
-    using Base::size;
-    using Base::back;
-    using Base::front;
-    using Base::clear;
+    auto empty() const { return data.empty(); }
+    auto size() const { return data.size(); }
+    auto back() const { return data.back(); }
+    auto front() const { return data.front(); }
+    auto clear() { return data.clear(); }
 
     bool operator==(const ThisType &rhs) const
     {
@@ -137,7 +138,7 @@ struct PathBase : protected std::vector<PathElement>
 
     ThisType &operator=(const ThisType &s)
     {
-        Base::operator=(s);
+        data.operator=(s.data);
         return (ThisType &)*this;
     }
 
@@ -158,8 +159,8 @@ struct PathBase : protected std::vector<PathElement>
         return toString();
     }
 
-    const_iterator begin() const { return Base::begin(); }
-    const_iterator end() const { return Base::end(); }
+    const_iterator begin() const { return data.begin(); }
+    const_iterator end() const { return data.end(); }
 
     size_t hash() const
     {
@@ -174,9 +175,15 @@ struct PathBase : protected std::vector<PathElement>
     }
 
 protected:
-    using Base::Base;
-    using Base::operator[];
-    using Base::push_back;
+    PathBase(const_iterator b, const_iterator e) : data(b, e) {}
+    void insert(const_iterator w, const_iterator b, const_iterator e) { data.insert(w, b, e); }
+    void assign(const_iterator b, const_iterator e) { data.assign(b, e); }
+    void push_back(const value_type &t) { data.push_back(t); }
+    value_type &operator[](int i) { return data[i]; }
+    const value_type &operator[](int i) const { return data[i]; }
+
+private:
+    std::vector<PathElement> data;
 };
 
 // able to split input on addition operations
@@ -308,7 +315,8 @@ struct SW_SUPPORT_API PackagePath : SecureSplitablePath<PackagePath>
 #undef PACKAGE_PATH
 
 private:
-    using Base::operator[];
+    value_type &operator[](int i) { return Base::operator[](i); }
+    const value_type &operator[](int i) const { return Base::operator[](i); }
 };
 
 #if defined(_WIN32)// || defined(__APPLE__)
