@@ -50,17 +50,17 @@ struct SW_MANAGER_API Settings
     // not from file (local settings?)
 
     // db
-    bool gForceServerQuery;
-    bool gForceServerDatabaseUpdate;
+    bool gForceServerQuery = false;
+    bool gForceServerDatabaseUpdate = false;
 
     // command
-    bool save_failed_commands;
-    bool save_all_commands;
-    bool save_executed_commands;
+    bool save_failed_commands = false;
+    bool save_all_commands = false;
+    bool save_executed_commands = false;
 
-    bool explain_outdated;
-    bool explain_outdated_full;
-    bool gExplainOutdatedToTrace;
+    bool explain_outdated = false;
+    bool explain_outdated_full = false;
+    bool gExplainOutdatedToTrace = false;
 
     String save_command_format;
 

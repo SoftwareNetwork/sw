@@ -718,23 +718,25 @@ sw::SwContext &SwClientContext::getContext(bool in_allow_network)
         if (allow_network)
             initNetwork();
 
+        auto &u = sw::Settings::get_user_settings();
+
         // remotes
-        sw::Settings::get_user_settings().setDefaultRemote(getOptions().default_remote);
+        u.setDefaultRemote(getOptions().default_remote);
 
         // db
-        sw::Settings::get_user_settings().gForceServerQuery = getOptions().force_server_query;
-        sw::Settings::get_user_settings().gForceServerDatabaseUpdate = getOptions().force_server_db_check;
+        u.gForceServerQuery = getOptions().force_server_query;
+        u.gForceServerDatabaseUpdate = getOptions().force_server_db_check;
 
         // commands
-        sw::Settings::get_user_settings().save_failed_commands = getOptions().save_failed_commands;
-        sw::Settings::get_user_settings().save_all_commands = getOptions().save_all_commands;
-        sw::Settings::get_user_settings().save_executed_commands = getOptions().save_executed_commands;
+        u.save_failed_commands = getOptions().save_failed_commands;
+        u.save_all_commands = getOptions().save_all_commands;
+        u.save_executed_commands = getOptions().save_executed_commands;
 
-        sw::Settings::get_user_settings().explain_outdated = getOptions().explain_outdated;
-        sw::Settings::get_user_settings().explain_outdated_full = getOptions().explain_outdated_full;
-        sw::Settings::get_user_settings().gExplainOutdatedToTrace = getOptions().explain_outdated_to_trace;
+        u.explain_outdated = getOptions().explain_outdated;
+        u.explain_outdated_full = getOptions().explain_outdated_full;
+        u.gExplainOutdatedToTrace = getOptions().explain_outdated_to_trace;
 
-        sw::Settings::get_user_settings().save_command_format = getOptions().save_command_format;
+        u.save_command_format = getOptions().save_command_format;
 
         // create ctx
         swctx_ = std::make_unique<sw::SwContext>(local_storage_root_dir, allow_network);

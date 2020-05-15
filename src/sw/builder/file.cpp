@@ -21,6 +21,8 @@
 #include "command.h"
 #include "file_storage.h"
 
+#include <sw/manager/settings.h>
+
 #include <primitives/executor.h>
 
 #include <fstream>
@@ -30,8 +32,6 @@
 DECLARE_STATIC_LOGGER(logger, "file");
 
 #define SW_EXPLAIN_FILE ".sw/misc/explain.txt"
-
-extern bool gExplainOutdatedToTrace;
 
 namespace sw
 {
@@ -55,7 +55,7 @@ void explainMessage(const String &subject, bool outdated, const String &reason, 
             o << "reason = " << reason << "\n" << std::endl;
         };
         print(o);
-        if (gExplainOutdatedToTrace)
+        if (sw::Settings::get_user_settings().gExplainOutdatedToTrace)
         {
             std::ostringstream ss;
             print(ss);
