@@ -865,6 +865,18 @@ command_line:
             module:
                 type: String
 
+    # verify
+    subcommand:
+        name: verify
+        desc: Verify packages.
+
+        command_line:
+            verify_arg:
+                type: String
+                positional: true
+                required: true
+                desc: Package name.
+
     # uri
     subcommand:
         name: uri
