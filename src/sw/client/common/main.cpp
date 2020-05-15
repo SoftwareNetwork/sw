@@ -275,7 +275,7 @@ void StartupData::initLogger()
 {
     if (getOptions().trace)
         setupLogger("TRACE", getOptions());// , false); // add modules for trace logger
-    else if (gVerbose)
+    else if (getOptions().verbose)
         setupLogger("DEBUG", getOptions());
     else
         setupLogger("INFO", getOptions());

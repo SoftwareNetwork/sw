@@ -50,8 +50,6 @@ DECLARE_STATIC_LOGGER(logger, "target.native");
 #define RETURN_PREPARE_MULTIPASS_NEXT_PASS SW_RETURN_MULTIPASS_NEXT_PASS(prepare_pass)
 #define RETURN_INIT_MULTIPASS_NEXT_PASS SW_RETURN_MULTIPASS_NEXT_PASS(init_pass)
 
-bool gVerbose;
-
 bool do_not_mangle_object_names;
 //bool full_build;
 //static cl::opt<bool> full_build("full", cl::desc("Full build (check all conditions)"));
@@ -1211,8 +1209,8 @@ void NativeCompiledTarget::createPrecompiledHeader()
 
     auto setup_create_vc = [this, &sf](auto &c)
     {
-        if (gVerbose)
-            getMergeObject()[pch.source].fancy_name += " (" + normalize_path(pch.source) + ")";
+        //if (gVerbose)
+            //getMergeObject()[pch.source].fancy_name += " (" + normalize_path(pch.source) + ")";
 
         sf->setOutputFile(pch.obj);
 
@@ -1227,8 +1225,8 @@ void NativeCompiledTarget::createPrecompiledHeader()
         sf->compiler->setSourceFile(pch.header, pch.pch);
         sf->output = sf->compiler->getOutputFile();
 
-        if (gVerbose)
-            getMergeObject()[pch.source].fancy_name += " (" + normalize_path(pch.header) + ")";
+        //if (gVerbose)
+            //getMergeObject()[pch.source].fancy_name += " (" + normalize_path(pch.header) + ")";
 
         c->Language = "c++-header"; // FIXME: also c-header sometimes
     };

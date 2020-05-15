@@ -320,7 +320,6 @@ command_line:
 
             verbose:
                 desc: Verbose output
-                location: gVerbose
                 aliases: v
             trace:
                 desc: Trace output
