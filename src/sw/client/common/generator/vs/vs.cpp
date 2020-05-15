@@ -232,8 +232,6 @@ bool is_generated_ext(const path &f)
 
 void VSGenerator::generate(const SwBuild &b)
 {
-    const sw::InsecurePath deps_subdir = "Dependencies";
-    const sw::InsecurePath overridden_deps_subdir = "Overridden Packages";
     const String predefined_targets_dir = ". SW Predefined Targets"s;
     const String visualizers_dir = "Visualizers"s;
     const String all_build_name = "ALL_BUILD"s;
