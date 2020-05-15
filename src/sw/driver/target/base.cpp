@@ -208,7 +208,7 @@ Target::Target(TargetBase &parent, const PackageId &pkg)
     if (auto d = getPackage().getOverriddenDir())
         setSourceDirectory(*d);
     // set source dir
-    if (SourceDir.empty())
+    if (SourceDir.empty() || (getSolution().dd && getSolution().dd->force_source))
     {
         if (getSolution().dd)
         {
