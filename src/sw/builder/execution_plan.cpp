@@ -335,6 +335,8 @@ void ExecutionPlan::printGraph(const G &g, const path &base, const VecT &names, 
     }
 }
 
+template void ExecutionPlan::printGraph(const ExecutionPlan::Graph &, const path &base, const ExecutionPlan::VecT &, bool);
+
 void ExecutionPlan::printGraph(path p) const
 {
     printGraph(getGraph(), p);

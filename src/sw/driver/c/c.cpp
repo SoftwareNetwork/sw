@@ -34,7 +34,7 @@ void sw_driver_load(sw_driver_input_t **)
     SW_UNIMPLEMENTED;
 }
 
-SW_CORE_API
+/*SW_DRIVER_CPP_API
 sw_driver_t sw_create_driver(void)
 {
     sw_driver_t d;
@@ -42,7 +42,7 @@ sw_driver_t sw_create_driver(void)
     d.can_load = sw_driver_can_load;
     d.load = sw_driver_load;
     return d;
-}
+}*/
 
 namespace sw
 {

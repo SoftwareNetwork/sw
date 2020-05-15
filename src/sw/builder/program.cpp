@@ -48,4 +48,18 @@ Program &Program::operator=(const Program &rhs)
     return *this;
 }
 
+Program &PredefinedProgram::getProgram()
+{
+    if (!program)
+        throw SW_RUNTIME_ERROR("Program was not set");
+    return *program;
+}
+
+const Program &PredefinedProgram::getProgram() const
+{
+    if (!program)
+        throw SW_RUNTIME_ERROR("Program was not set");
+    return *program;
+}
+
 }

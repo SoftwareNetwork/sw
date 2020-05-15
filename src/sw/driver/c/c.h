@@ -31,19 +31,19 @@ extern "C" {
 
 /* memory allocations */
 
-SW_CORE_API
+SW_DRIVER_CPP_API
 void *sw_malloc(size_t);
 
-SW_CORE_API
+SW_DRIVER_CPP_API
 void sw_free(void *);
 
-SW_CORE_API
+SW_DRIVER_CPP_API
 void *sw_realloc(void *, size_t);
 
-SW_CORE_API
+SW_DRIVER_CPP_API
 void *sw_calloc(size_t, size_t);
 
-//SW_CORE_API
+//SW_DRIVER_CPP_API
 //void *sw_aligned_alloc(size_t, size_t);
 
 /* ...  */
@@ -73,16 +73,16 @@ typedef struct
 #undef TYPE
 #endif
 
-SW_CORE_API sw_executable_target_t *sw_add_executable(sw_build_t *, const char *name);
-SW_CORE_API sw_library_target_t *sw_add_library(sw_build_t *, const char *name);
-SW_CORE_API sw_static_library_target_t *sw_add_static_library(sw_build_t *, const char *name);
-SW_CORE_API sw_shared_library_target_t *sw_add_shared_library(sw_build_t *, const char *name);
+SW_DRIVER_CPP_API sw_executable_target_t *sw_add_executable(sw_build_t *, const char *name);
+SW_DRIVER_CPP_API sw_library_target_t *sw_add_library(sw_build_t *, const char *name);
+SW_DRIVER_CPP_API sw_static_library_target_t *sw_add_static_library(sw_build_t *, const char *name);
+SW_DRIVER_CPP_API sw_shared_library_target_t *sw_add_shared_library(sw_build_t *, const char *name);
 
-SW_CORE_API void sw_set_target_property(sw_target_t *, const char *property, const char *value);
+SW_DRIVER_CPP_API void sw_set_target_property(sw_target_t *, const char *property, const char *value);
 
-SW_CORE_API void sw_add_target_source(sw_target_t *, const char *filename);
-SW_CORE_API void sw_add_target_regex(sw_target_t *, const char *regex);
-SW_CORE_API void sw_add_target_recursive_regex(sw_target_t *, const char *regex);
+SW_DRIVER_CPP_API void sw_add_target_source(sw_target_t *, const char *filename);
+SW_DRIVER_CPP_API void sw_add_target_regex(sw_target_t *, const char *regex);
+SW_DRIVER_CPP_API void sw_add_target_recursive_regex(sw_target_t *, const char *regex);
 
 #ifdef __cplusplus
 }

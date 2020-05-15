@@ -134,4 +134,6 @@ private:
     void init(USet &cmds);
 };
 
+extern template SW_BUILDER_API void ExecutionPlan::printGraph(const ExecutionPlan::Graph &, const path &base, const ExecutionPlan::VecT &, bool);
+
 }

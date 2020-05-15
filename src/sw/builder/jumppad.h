@@ -29,7 +29,7 @@
 #ifdef SW_PACKAGE_API
 #define SW_JUMPPAD_API SW_PACKAGE_API
 #else
-#define SW_JUMPPAD_API SW_BUILDER_API
+#define SW_JUMPPAD_API SW_EXPORT
 #endif
 
 #define SW_JUMPPAD_PREFIX _sw_fn_jumppad_

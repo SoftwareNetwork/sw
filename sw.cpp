@@ -108,7 +108,7 @@ void build(Solution &s)
         }*/
     }
 
-    auto &builder = p.addTarget<StaticLibraryTarget>("builder");
+    auto &builder = p.addTarget<SharedLibraryTarget>("builder");
     {
         builder.ApiName = "SW_BUILDER_API";
         builder.ExportIfStatic = true;
@@ -129,7 +129,7 @@ void build(Solution &s)
         }
     }
 
-    auto &core = p.addTarget<StaticLibraryTarget>("core");
+    auto &core = p.addTarget<SharedLibraryTarget>("core");
     {
         core.ApiName = "SW_CORE_API";
         core.ExportIfStatic = true;

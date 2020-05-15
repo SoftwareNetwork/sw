@@ -29,7 +29,7 @@ namespace sw
 //  - path
 //  - contents hash
 //  - last write time
-struct InputDatabase : Database
+struct SW_CORE_API InputDatabase : Database
 {
     InputDatabase(const path &dbfn);
 

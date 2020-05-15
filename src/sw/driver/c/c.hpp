@@ -24,7 +24,7 @@
 namespace sw
 {
 
-/*struct SW_CORE_API CDriver : IDriver
+/*struct SW_DRIVER_CPP_API CDriver : IDriver
 {
     using create_driver = sw_driver_t(*)(void);
 
