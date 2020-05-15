@@ -72,8 +72,9 @@ void build(Solution &s)
         manager += cpp17;
         manager.Public += "BOOST_DLL_USE_STD_FS"_def;
 
+        manager +=
+            "pub.egorpugin.primitives.csv-master"_dep;
         manager.Public += support, protos,
-            "pub.egorpugin.primitives.csv-master"_dep,
             "pub.egorpugin.primitives.db.sqlite3-master"_dep,
             "pub.egorpugin.primitives.lock-master"_dep,
             "pub.egorpugin.primitives.pack-master"_dep,
