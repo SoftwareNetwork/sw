@@ -142,7 +142,7 @@ void build(Solution &s)
             core, core.SourceDir / "src/sw/core/inserts/input_db_schema.sql", "db_inputs.h", "db::inputs");
     }
 
-    auto &cpp_driver = p.addTarget<StaticLibraryTarget>("driver.cpp");
+    auto &cpp_driver = p.addTarget<SharedLibraryTarget>("driver.cpp");
     {
         cpp_driver.ApiName = "SW_DRIVER_CPP_API";
         cpp_driver.ExportIfStatic = true;
