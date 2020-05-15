@@ -617,6 +617,10 @@ To get build and dependencies graphs, run:
 sw -print-graph build
 \end{command}
 
+\subsection{sw create}
+
+Create templated project.
+
 \subsection{sw generate}
 
 Generate IDE project.
@@ -625,10 +629,6 @@ Generate IDE project.
 
 Upload current project to Software Network.
 Project will be fetched from your version control system using specified tag/version/branch.
-
-\subsection{sw create}
-
-Create templated project.
 
 \subsection{sw setup}
 
@@ -660,6 +660,14 @@ Available levels:
 \item 8 - Remove sw executable (if possible).
 \item 16 - All of the above.
 \end{itemize}
+
+\subsection{sw verify}
+
+Verify uploaded file.
+
+Sw provides byte to byte verification for files uploaded to Software Network.
+If you want to check that someone is not changed project files, you can run this command.
+It will download original source from the internet, create the archive and compare its hash with file on the Software Network.
 
 
 \subsection{sw -help}
