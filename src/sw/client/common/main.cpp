@@ -366,7 +366,7 @@ void StartupData::setup()
 
 void StartupData::sw_main()
 {
-    SwClientContext swctx(getOptions(), getClOptions());
+    SwClientContext swctx(getOptions());
 
     // for cli we set default input to '.' dir
     if (swctx.getInputs().empty() && getOptions().input_settings_pairs.empty())
