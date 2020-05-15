@@ -93,12 +93,16 @@ struct SW_CORE_API SwContext : SwCoreContext
 
     void loadEntryPointsBatch(const std::set<Input*> &inputs);
 
+    const TargetSettings &getSettings() const { return settings; }
+    void setSettings(const TargetSettings &s) { settings = s; }
+
 private:
     using InputPtr = std::unique_ptr<Input>;
     using Inputs = std::map<size_t, InputPtr>;
 
     Drivers drivers;
     Inputs inputs;
+    TargetSettings settings;
     std::mutex m;
     std::map<std::thread::id, SwBuild *> active_operations;
 
