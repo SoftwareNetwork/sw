@@ -393,7 +393,6 @@ command_line:
                 list: true
                 positional: true
                 desc: inputs
-                external: true
                 location: inputs
 
     # alias
@@ -429,7 +428,6 @@ command_line:
                 list: true
                 positional: true
                 desc: Files or directories to build (paths to config)
-                external: true
                 location: inputs
 
             #static ::cl::opt<String> build_source_dir("S", ::cl::desc("Explicitly specify a source directory."), ::cl::sub(subcommand_build), ::cl::init("."));
@@ -549,7 +547,6 @@ command_line:
                 positional: true
                 type: String
                 list: true
-                external: true
                 location: inputs
             generator:
                 option: G
@@ -623,7 +620,6 @@ command_line:
                 type: String
                 desc: Packages to open
                 list: true
-                external: true
                 location: inputs
 
     # override
@@ -764,7 +760,6 @@ command_line:
                 desc: File or directory to use to generate projects
                 type: String
                 list: true
-                external: true
                 location: inputs
 
     # update

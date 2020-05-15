@@ -37,8 +37,6 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "client.context");
 
-Strings inputs;
-
 static void setHttpTlsSettings()
 {
     // set strict to true later
@@ -453,9 +451,14 @@ std::unique_ptr<sw::SwBuild> SwClientContext::createBuildAndPrepare(const Inputs
     return std::move(b);
 }
 
-Strings &SwClientContext::getInputs() const
+Strings &SwClientContext::getInputs()
 {
-    return inputs;
+    return getOptions().getClOptions().getStorage().inputs;
+}
+
+const Strings &SwClientContext::getInputs() const
+{
+    return getOptions().getClOptions().getStorage().inputs;
 }
 
 void SwClientContext::addInputs(sw::SwBuild &b, const Inputs &i)

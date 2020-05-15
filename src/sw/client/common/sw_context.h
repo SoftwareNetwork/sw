@@ -94,7 +94,8 @@ struct SW_CLIENT_COMMON_API SwClientContext
     std::vector<sw::TargetSettings> createSettings();
 
     void addInputs(sw::SwBuild &b, const Inputs &i);
-    Strings &getInputs() const;
+    Strings &getInputs();
+    const Strings &getInputs() const;
 
     //
     String listPredefinedTargets();
