@@ -92,9 +92,9 @@ struct PathBase
     ThisType slice(int start, int end = -1) const
     {
         if (end == -1)
-            return ThisType{ begin() + start, this->end() };
+            return ThisType(PathBase{ begin() + start, this->end() });
         else
-            return ThisType{ begin() + start, begin() + end };
+            return ThisType(PathBase{ begin() + start, begin() + end });
     }
 
     auto empty() const { return data.empty(); }
