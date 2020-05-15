@@ -40,10 +40,6 @@ DECLARE_STATIC_LOGGER(logger, "storage");
 #define PACKAGES_DB_REFRESH_TIME_MINUTES 15
 #define PACKAGES_DB_DOWNLOAD_TIME_FILE "packages.time"
 
-// save current time during crt startup
-// it is used for detecting young packages
-static TimePoint tstart;
-
 bool gForceServerQuery;
 bool gForceServerDatabaseUpdate;
 
@@ -323,9 +319,6 @@ void RemoteStorage::preInitFindDependencies() const
 
     // !
     updateDb();
-
-    // set current time
-    tstart = getUtc();
 }
 
 void RemoteStorage::writeDownloadTime() const
