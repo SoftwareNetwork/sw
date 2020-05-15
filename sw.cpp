@@ -136,8 +136,6 @@ void build(Solution &s)
         core += cpp17;
         core.Public += builder;
         core += "src/sw/core/.*"_rr;
-        if (core.getBuildSettings().TargetOS.Type == OSType::Windows)
-            core += "OleAut32.lib"_slib;
         core += "org.sw.demo.Neargye.magic_enum"_dep;
         embed2("pub.egorpugin.primitives.tools.embedder2-master"_dep, core, "src/sw/core/inserts/input_db_schema.sql");
         gen_sqlite2cpp("pub.egorpugin.primitives.tools.sqlpp11.sqlite2cpp-master"_dep,
@@ -167,6 +165,7 @@ void build(Solution &s)
         {
             cpp_driver.Public += "org.sw.demo.giovannidicanio.winreg"_dep;
             cpp_driver += "dbghelp.lib"_slib;
+            cpp_driver += "OleAut32.lib"_slib;
         }
         //else if (s.getBuildSettings().Native.CompilerType == CompilerType::GNU)
             //cpp_driver.CompileOptions.push_back("-Wa,-mbig-obj");
