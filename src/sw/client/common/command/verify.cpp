@@ -19,6 +19,7 @@
 #include "../commands.h"
 
 #include <primitives/pack.h>
+#include <primitives/yaml.h>
 #include <nlohmann/json.hpp>
 #include <sw/core/specification.h>
 #include <sw/support/source.h>
