@@ -846,6 +846,7 @@ command_line:
         command_line:
             verify_arg:
                 type: String
+                list: true
                 positional: true
                 required: true
                 desc: Package name.
