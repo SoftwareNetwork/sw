@@ -8,7 +8,7 @@ void build(Solution &s)
     auto &p = s.addProject("sw.client", "0.4.2");
     p += Git("https://github.com/SoftwareNetwork/sw", "", "master");
 
-    auto &support = p.addTarget<StaticLibraryTarget>("support");
+    auto &support = p.addTarget<SharedLibraryTarget>("support");
     {
         support.ApiName = "SW_SUPPORT_API";
         support.ExportIfStatic = true;
@@ -65,7 +65,7 @@ void build(Solution &s)
             gen_grpc_cpp("org.sw.demo.google.protobuf"_dep, "org.sw.demo.google.grpc.cpp.plugin"_dep, protos, p, d);
     }
 
-    auto &manager = p.addTarget<StaticLibraryTarget>("manager");
+    auto &manager = p.addTarget<SharedLibraryTarget>("manager");
     {
         manager.ApiName = "SW_MANAGER_API";
         manager.ExportIfStatic = true;
@@ -144,7 +144,7 @@ void build(Solution &s)
             core, core.SourceDir / "src/sw/core/inserts/input_db_schema.sql", "db_inputs.h", "db::inputs");
     }
 
-    auto &cpp_driver = p.addTarget<LibraryTarget>("driver.cpp");
+    auto &cpp_driver = p.addTarget<StaticLibraryTarget>("driver.cpp");
     {
         cpp_driver.ApiName = "SW_DRIVER_CPP_API";
         cpp_driver.ExportIfStatic = true;
