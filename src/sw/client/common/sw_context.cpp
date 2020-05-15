@@ -390,45 +390,39 @@ std::unique_ptr<sw::SwBuild> SwClientContext::createBuildInternal()
             bs["lock_file"] = normalize_path(options.lock_file);
     }
 
+#define SET_BOOL_OPTION(x) bs[#x] = options.x ? "true" : ""
+
     //
-    if (options.build_always)
-        bs["build_always"] = "true";
-    bs["use_saved_configs"] = options.use_saved_configs ? "true" : "false";
+    SET_BOOL_OPTION(build_always);
+    SET_BOOL_OPTION(use_saved_configs);
     if (!options.options_build.ide_copy_to_dir.empty())
         bs["build_ide_copy_to_dir"] = normalize_path(options.options_build.ide_copy_to_dir);
     if (!options.options_build.ide_fast_path.empty())
         bs["build_ide_fast_path"] = normalize_path(options.options_build.ide_fast_path);
     if (options.skip_errors)
         bs["skip_errors"] = std::to_string(options.skip_errors);
-    if (options.time_trace)
-        bs["time_trace"] = "true";
-    if (options.show_output)
-        bs["show_output"] = "true";
-    if (options.write_output_to_file)
-        bs["write_output_to_file"] = "true";
+
+    SET_BOOL_OPTION(time_trace);
+    SET_BOOL_OPTION(show_output);
+    SET_BOOL_OPTION(write_output_to_file);
+
     if (!options.options_build.time_limit.empty())
         bs["time_limit"] = options.options_build.time_limit;
     if (options.verbose || options.trace)
         bs["measure"] = "true";
+    bs["verbose"] = (options.verbose || options.trace) ? "true" : "";
 
-    if (options.verbose || options.trace)
-        bs["verbose"] = "true";
-
-    if (options.standalone)
-        bs["standalone"] = "true";
-    if (options.do_not_mangle_object_names)
-        bs["do_not_mangle_object_names"] = "true";
-    if (options.ignore_source_files_errors)
-        bs["ignore_source_files_errors"] = "true";
+    SET_BOOL_OPTION(standalone);
+    SET_BOOL_OPTION(do_not_mangle_object_names);
+    SET_BOOL_OPTION(ignore_source_files_errors);
 
     // checks
-    if (options.checks_single_thread)
-        bs["checks_single_thread"] = "true";
-    if (options.print_checks)
-        bs["print_checks"] = "true";
-    if (options.wait_for_cc_checks)
-        bs["wait_for_cc_checks"] = "true";
+    SET_BOOL_OPTION(checks_single_thread);
+    SET_BOOL_OPTION(print_checks);
+    SET_BOOL_OPTION(wait_for_cc_checks);
     bs["cc_checks_command"] = options.cc_checks_command;
+
+#undef SET_BOOL_OPTION
 
     for (auto &t : options.targets_to_build)
         bs["target-to-build"].push_back(t);
@@ -760,12 +754,11 @@ sw::SwContext &SwClientContext::getContext(bool in_allow_network)
 
         //
         sw::TargetSettings cs;
-        if (getOptions().debug_configs)
-            cs["debug_configs"] = "true";
-        if (getOptions().ignore_outdated_configs)
-            cs["ignore_outdated_configs"] = "true";
-        if (getOptions().do_not_remove_bad_module)
-            cs["do_not_remove_bad_module"] = "true";
+#define SET_BOOL_OPTION(x) cs[#x] = getOptions().x ? "true" : ""
+        SET_BOOL_OPTION(debug_configs);
+        SET_BOOL_OPTION(ignore_outdated_configs);
+        SET_BOOL_OPTION(do_not_remove_bad_module);
+#undef SET_BOOL_OPTION
 
         // create ctx
         swctx_ = std::make_unique<sw::SwContext>(local_storage_root_dir, allow_network);
