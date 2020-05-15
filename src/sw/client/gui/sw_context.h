@@ -25,7 +25,7 @@ struct SwGuiContext : SwClientContext
 {
     using Base = SwClientContext;
 
-    SwGuiContext(const Options &options, const ClOptions &cloptions);
+    SwGuiContext(const Options &options);
 
     void command_build() override;
     void command_create() override;

@@ -70,7 +70,7 @@ int main(int argc, char *argv[])
     {
         ClOptions cloptions;
         Options options(cloptions);
-        SwGuiContext swctx(options, cloptions);
+        SwGuiContext swctx(options);
         MainWindow w(swctx);
         w.show();
         return a.exec();

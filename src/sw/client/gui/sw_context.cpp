@@ -48,8 +48,8 @@ void exception_safe_call(F &&f, String *error = nullptr)
     }
 }
 
-SwGuiContext::SwGuiContext(const Options &options, const ClOptions &cloptions)
-    : SwClientContext(options, cloptions)
+SwGuiContext::SwGuiContext(const Options &options)
+    : SwClientContext(options)
 {
 }
 
