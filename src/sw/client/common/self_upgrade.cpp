@@ -16,6 +16,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "self_upgrade.h"
+
 #include "sig.h"
 
 #include <sw/manager/settings.h>
