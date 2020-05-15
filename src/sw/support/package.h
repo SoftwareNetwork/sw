@@ -14,7 +14,7 @@ namespace sw
 
 struct IStorage;
 
-struct PackageData
+struct SW_SUPPORT_API PackageData
 {
     // internal id?
     //db::PackageVersionId id = 0;
