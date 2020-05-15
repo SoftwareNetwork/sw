@@ -269,7 +269,7 @@ void MainWindow::setupUi()
     for (auto rs : swctx.getContext().getRemoteStorages())
     {
         if (auto s1 = dynamic_cast<sw::StorageWithPackagesDatabase *>(rs))
-            add_packages_tab("Remote Packages: " + rs->getName(), s1->getPackagesDatabase());
+            add_packages_tab("Remote Packages: " + s1->getName(), s1->getPackagesDatabase());
     }
 
     //

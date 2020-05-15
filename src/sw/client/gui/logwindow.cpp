@@ -91,7 +91,7 @@ LogWindow::LogWindow(SwGuiContext &swctx, QWidget *parent)
     String level;
     if (swctx.getOptions().trace)
         level = "TRACE";
-    else if (gVerbose)
+    else if (swctx.getOptions().verbose)
         level = "DEBUG";
     else
         level = "INFO";
