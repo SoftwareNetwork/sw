@@ -30,7 +30,6 @@ namespace sw
 {
 
 struct IResolvableStorage;
-struct Storage;
 struct CachedStorage;
 struct LocalStorage;
 
@@ -49,8 +48,7 @@ struct SW_MANAGER_API SwManagerContext// : ISwContext
 
     LocalStorage &getLocalStorage();
     const LocalStorage &getLocalStorage() const;
-    std::vector<Storage *> getRemoteStorages();
-    std::vector<const Storage *> getRemoteStorages() const;
+    std::vector<IStorage *> getRemoteStorages() const;
 
     //
     std::unordered_map<UnresolvedPackage, LocalPackage> install(const UnresolvedPackages &, bool use_cache = true) const;
@@ -58,6 +56,7 @@ struct SW_MANAGER_API SwManagerContext// : ISwContext
 
     std::unordered_map<UnresolvedPackage, PackagePtr> resolve(const UnresolvedPackages &, bool use_cache = true) const;
     LocalPackage resolve(const UnresolvedPackage &) const;
+    std::unordered_map<UnresolvedPackage, PackagePtr> resolve(const UnresolvedPackages &, const std::vector<IStorage*> &) const;
 
     // lock file related
     void setCachedPackages(const std::unordered_map<UnresolvedPackage, PackageId> &) const;
@@ -70,7 +69,6 @@ private:
     mutable std::mutex resolve_mutex;
 
     CachedStorage &getCachedStorage() const;
-    std::unordered_map<UnresolvedPackage, PackagePtr> resolve(const UnresolvedPackages &, const std::vector<IStorage*> &) const;
 };
 
 } // namespace sw

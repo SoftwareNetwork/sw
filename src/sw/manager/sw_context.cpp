@@ -68,19 +68,11 @@ const LocalStorage &SwManagerContext::getLocalStorage() const
     return static_cast<const LocalStorage&>(*storages[local_storage_id]);
 }
 
-std::vector<Storage *> SwManagerContext::getRemoteStorages()
+std::vector<IStorage *> SwManagerContext::getRemoteStorages() const
 {
-    std::vector<Storage *> r;
+    std::vector<IStorage *> r;
     for (int i = first_remote_storage_id; i < storages.size(); i++)
-        r.push_back(static_cast<Storage*>(storages[i].get()));
-    return r;
-}
-
-std::vector<const Storage *> SwManagerContext::getRemoteStorages() const
-{
-    std::vector<const Storage *> r;
-    for (int i = first_remote_storage_id; i < storages.size(); i++)
-        r.push_back(static_cast<const Storage*>(storages[i].get()));
+        r.push_back(storages[i].get());
     return r;
 }
 
