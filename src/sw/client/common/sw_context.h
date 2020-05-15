@@ -68,7 +68,7 @@ private:
 };
 
 // not thread safe
-struct SwClientContext
+struct SW_CLIENT_COMMON_API SwClientContext
 {
     using Base = sw::SwContext;
 

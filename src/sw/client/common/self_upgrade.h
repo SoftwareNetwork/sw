@@ -20,5 +20,7 @@
 
 #include <primitives/filesystem.h>
 
+SW_CLIENT_COMMON_API
 void self_upgrade(const String &progname);
+
 void self_upgrade_copy(const path &dst);

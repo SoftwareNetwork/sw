@@ -57,4 +57,5 @@ struct ProjectTemplates
     std::map<path, String> files;
 };
 
+SW_CLIENT_COMMON_API
 const ProjectTemplates &getProjectTemplates();

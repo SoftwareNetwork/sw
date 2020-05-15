@@ -46,6 +46,7 @@ struct GeneratorDescription
     StringSet allowed_names;
 };
 
+SW_CLIENT_COMMON_API
 const std::vector<GeneratorDescription> &getGenerators();
 
 enum class VsGeneratorType

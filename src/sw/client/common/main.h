@@ -27,7 +27,7 @@
 struct Options;
 struct ClOptions;
 
-struct StartupData
+struct SW_CLIENT_COMMON_API StartupData
 {
     using UserFunction = std::function<bool /* stop execution */(StartupData &)>;
 

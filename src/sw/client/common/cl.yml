@@ -1,6 +1,7 @@
 settings:
     prefix: cl_
     generate_struct: true
+    api_name: SW_CLIENT_COMMON_API
 
 categories:
     build:

@@ -255,8 +255,9 @@ void build(Solution &s)
     }
 
     auto &client = p.addTarget<ExecutableTarget>("sw", "1.0.0");
-    auto &client_common = client.addTarget<StaticLibrary>("common");
+    auto &client_common = client.addTarget<SharedLibraryTarget>("common");
     {
+        client_common.ApiName = "SW_CLIENT_COMMON_API";
         client_common.PackageDefinitions = true;
         client_common.SwDefinitions = true;
         client_common.StartupProject = true;
