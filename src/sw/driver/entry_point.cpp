@@ -57,6 +57,20 @@ namespace sw
     return v;
 }*/
 
+static bool isDriverDllBuild()
+{
+#ifdef SW_DRIVER_SHARED_BUILD
+    return true;
+#else
+    return false;
+#endif
+}
+
+static bool isDriverStaticBuild()
+{
+    return !isDriverDllBuild();
+}
+
 static String getCurrentModuleId()
 {
     return shorten_hash(sha1(getProgramName()), 6);
@@ -134,7 +148,7 @@ static CommandStorage &getDriverCommandStorage(const Build &b)
 void addImportLibrary(const Build &b, NativeCompiledTarget &t)
 {
 #ifdef _WIN32
-    auto lib = (HMODULE)primitives::getModuleForSymbol();
+    auto lib = (HMODULE)primitives::getModuleForSymbol(&isDriverDllBuild);
     auto syms = getExports(lib);
     if (syms.empty())
         throw SW_RUNTIME_ERROR("No exports found");
@@ -490,7 +504,8 @@ decltype(auto) PrepareConfig::commonActions(Build &b, const InputData &d, const 
         driver_idir = getDriverIncludeDir(b, lib);
 
     addDeps(b, lib);
-    addImportLibrary(b, lib);
+    if (isDriverStaticBuild())
+        addImportLibrary(b, lib);
     lib.AutoDetectOptions = false;
     lib.CPPVersion = CPPLanguageStandard::CPP17;
     lib.NoUndefined = false;
@@ -513,7 +528,7 @@ decltype(auto) PrepareConfig::commonActions(Build &b, const InputData &d, const 
     if (lib.getCompilerType() == CompilerType::Clang)
         lib.CompileOptions.push_back("-Werror=string-conversion");
 
-    if (lib.getBuildSettings().TargetOS.is(OSType::Windows))
+    if (lib.getBuildSettings().TargetOS.is(OSType::Windows) && isDriverStaticBuild())
     {
         lib += Definition("IMPORT_LIBRARY=\""s + IMPORT_LIBRARY + "\"");
         auto fn = driver_idir / getSwDir() / "misc" / "delay_load_helper.cpp";
@@ -675,7 +690,10 @@ path PrepareConfig::one2one(Build &b, const InputData &d)
         //#ifdef CPPAN_DEBUG
         L->GenerateDebugInformation = vs::link::Debug::Full;
         //#endif
-        L->Force = vs::ForceType::Multiple;
+        if (isDriverStaticBuild())
+            L->Force = vs::ForceType::Multiple;
+        else
+            L->Force = vs::ForceType::Unresolved;
         L->IgnoreWarnings().insert(4006); // warning LNK4006: X already defined in Y; second definition ignored
         L->IgnoreWarnings().insert(4070); // warning LNK4070: /OUT:X.dll directive in .EXP differs from output filename 'Y.dll'; ignoring directive
                                           // cannot be ignored https://docs.microsoft.com/en-us/cpp/build/reference/ignore-ignore-specific-warnings?view=vs-2017

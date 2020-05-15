@@ -169,6 +169,10 @@ void build(Solution &s)
         }
         //else if (s.getBuildSettings().Native.CompilerType == CompilerType::GNU)
             //cpp_driver.CompileOptions.push_back("-Wa,-mbig-obj");
+
+        if (cpp_driver.getBuildSettings().Native.LibrariesType == LibraryType::Shared)
+            cpp_driver += "SW_DRIVER_SHARED_BUILD"_def;
+
         {
             auto &self_builder = cpp_driver.addTarget<ExecutableTarget>("self_builder");
             self_builder.PackageDefinitions = true;
