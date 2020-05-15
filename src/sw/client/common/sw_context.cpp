@@ -718,6 +718,8 @@ sw::SwContext &SwClientContext::getContext(bool in_allow_network)
         if (allow_network)
             initNetwork();
 
+        sw::Settings::get_user_settings().setDefaultRemote(getOptions().default_remote);
+
         swctx_ = std::make_unique<sw::SwContext>(local_storage_root_dir, allow_network);
         // TODO:
         // before default?

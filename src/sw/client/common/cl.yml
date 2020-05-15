@@ -42,7 +42,6 @@ command_line:
             default_remote:
                 option: r
                 type: String
-                external: true
                 description: Select default remote
 
             do_not_remove_bad_module:

@@ -70,7 +70,7 @@ using DataSources = std::vector<DataSource>;
 
 struct Api;
 
-struct Remote
+struct SW_MANAGER_API Remote
 {
     enum class ApiType
     {

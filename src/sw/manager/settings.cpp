@@ -37,8 +37,6 @@ DECLARE_STATIC_LOGGER(logger, "settings");
 
 #define CONFIG_ROOT "/etc/sw/"
 
-String default_remote;
-
 namespace sw
 {
 
@@ -120,7 +118,7 @@ const std::vector<std::shared_ptr<Remote>> &Settings::getRemotes() const
 
     if (!default_remote.empty())
     {
-        auto i = std::find_if(remotes.begin(), remotes.end(), [](const auto &r)
+        auto i = std::find_if(remotes.begin(), remotes.end(), [this](const auto &r)
         {
             return r->name == default_remote;
         });

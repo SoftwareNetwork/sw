@@ -58,9 +58,11 @@ public:
     bool checkForUpdates() const;
 
     const std::vector<std::shared_ptr<Remote>> &getRemotes() const;
+    void setDefaultRemote(const String &r) { default_remote = r; }
 
 private:
     yaml root;
+    String default_remote;
     mutable std::vector<std::shared_ptr<Remote>> remotes;
 
     void load_main(const yaml &root, const SettingsType type);
