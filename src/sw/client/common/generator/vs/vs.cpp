@@ -1406,14 +1406,17 @@ void Project::emitProject(const VSGenerator &g) const
 
     if (g.compiler_type == VSGenerator::ClangCl || g.compiler_type == VSGenerator::Clang)
     {
-        UnresolvedPackage compiler = (*settings.begin())["native"]["program"]["cpp"].getValue();
-        auto &target = **g.b->getContext().getPredefinedTargets().find(compiler)->second.begin();
-        auto fn = normalize_path_windows(target.as<sw::PredefinedProgram &>().getProgram().file);
+        auto get_prog = [&g](const sw::UnresolvedPackage &u)
+        {
+            auto &target = **g.b->getContext().getPredefinedTargets().find(u)->second.begin();
+            auto fn = normalize_path_windows(target.as<sw::PredefinedProgram &>().getProgram().file);
+            return fn;
+        };
 
         ctx.beginBlock("PropertyGroup");
-        ctx.addBlock("CLToolExe", fn);
-        //ctx.addBlock("LinkToolExe", fn);
-        //ctx.addBlock("LIBToolExe", fn);
+        ctx.addBlock("CLToolExe", get_prog((*settings.begin())["native"]["program"]["cpp"].getValue()));
+        ctx.addBlock("LIBToolExe", get_prog((*settings.begin())["native"]["program"]["lib"].getValue()));
+        ctx.addBlock("LinkToolExe", get_prog((*settings.begin())["native"]["program"]["link"].getValue()));
         ctx.endBlock();
 
         // taken from llvm/tools/msbuild/LLVM.Cpp.Common.targets
