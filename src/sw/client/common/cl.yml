@@ -321,12 +321,10 @@ command_line:
             force_server_query:
                 option: s
                 desc: Force server resolving
-                location: gForceServerQuery
                 aliases: server
             force_server_db_check:
                 option: sd
                 desc: Force server db check
-                location: gForceServerDatabaseUpdate
 
             verbose:
                 desc: Verbose output

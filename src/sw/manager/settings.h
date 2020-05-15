@@ -47,6 +47,10 @@ struct SW_MANAGER_API Settings
     bool record_commands = false;
     bool record_commands_in_current_dir = false;
 
+    // not from file (local settings?)
+    bool gForceServerQuery;
+    bool gForceServerDatabaseUpdate;
+
 public:
     Settings();
     ~Settings();

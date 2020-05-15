@@ -40,9 +40,6 @@ DECLARE_STATIC_LOGGER(logger, "storage");
 #define PACKAGES_DB_REFRESH_TIME_MINUTES 15
 #define PACKAGES_DB_DOWNLOAD_TIME_FILE "packages.time"
 
-bool gForceServerQuery;
-bool gForceServerDatabaseUpdate;
-
 static const String packages_db_name = "packages.db";
 
 namespace sw
@@ -79,7 +76,7 @@ std::unordered_map<UnresolvedPackage, PackagePtr>
 RemoteStorage::resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
 {
     preInitFindDependencies();
-    if (gForceServerQuery)
+    if (Settings::get_user_settings().gForceServerQuery)
     {
         unresolved_pkgs = pkgs;
         return {};
@@ -296,7 +293,7 @@ void RemoteStorage::load() const
 
 void RemoteStorage::updateDb() const
 {
-    if (!gForceServerDatabaseUpdate)
+    if (!Settings::get_user_settings().gForceServerDatabaseUpdate)
     {
         if (!Settings::get_system_settings().can_update_packages_db || !isCurrentDbOld())
             return;
