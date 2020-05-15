@@ -188,46 +188,6 @@ private:
 
 // able to split input on addition operations
 template <class ThisType>
-struct InsecureSplitablePath : PathBase<ThisType>
-{
-    using Base = PathBase<ThisType>;
-    using Base::Base;
-
-    ThisType operator/(const String &e) const
-    {
-        if (e.empty())
-            return ThisType((ThisType&)*this);
-        ThisType tmp = (ThisType&)*this;
-        tmp.push_back(e);
-        return tmp;
-    }
-
-    ThisType &operator/=(const String &e)
-    {
-        if (!e.empty())
-            Base::push_back(e);
-        return (ThisType &)*this;
-    }
-};
-
-struct SW_SUPPORT_API InsecurePath : InsecureSplitablePath<InsecurePath>
-{
-    using Base = InsecureSplitablePath<InsecurePath>;
-    using Base::Base;
-};
-
-#if defined(_WIN32)// || defined(__APPLE__)
-#if defined(__APPLE__)
-SW_MANAGER_API_EXTERN
-#endif
-template struct SW_SUPPORT_API PathBase<InsecurePath>;
-#elif defined(__APPLE__)
-#else
-template struct PathBase<InsecurePath>;
-#endif
-
-// able to split input on addition operations
-template <class ThisType>
 struct SecureSplitablePath : PathBase<ThisType>
 {
     using Base = PathBase<ThisType>;
@@ -243,22 +203,6 @@ struct SecureSplitablePath : PathBase<ThisType>
         return Base::operator/=(ThisType(e));
     }
 };
-
-struct SW_SUPPORT_API Path : SecureSplitablePath<Path>
-{
-    using Base = SecureSplitablePath<Path>;
-    using Base::Base;
-};
-
-#if defined(_WIN32)// || defined(__APPLE__)
-#if defined(__APPLE__)
-SW_MANAGER_API_EXTERN
-#endif
-template struct SW_SUPPORT_API PathBase<Path>;
-#elif defined(__APPLE__)
-#else
-template struct PathBase<Path>;
-#endif
 
 struct SW_SUPPORT_API PackagePath : SecureSplitablePath<PackagePath>
 {
@@ -333,14 +277,6 @@ template struct PathBase<PackagePath>;
 
 namespace std
 {
-
-template<> struct hash<sw::Path>
-{
-    size_t operator()(const sw::Path& path) const
-    {
-        return path.hash();
-    }
-};
 
 template<> struct hash<sw::PackagePath>
 {

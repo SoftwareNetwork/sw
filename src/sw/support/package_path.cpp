@@ -210,8 +210,6 @@ String PackagePath::getHash() const
 }
 
 #if defined(_WIN32) || defined(__APPLE__)
-template struct PathBase<InsecurePath>;
-template struct PathBase<Path>;
 template struct PathBase<PackagePath>;
 #endif
 
