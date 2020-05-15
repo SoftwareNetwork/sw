@@ -281,6 +281,15 @@ PackageData PackagesDatabase::getPackageData(const PackageId &p) const
     d.prefix = (int)row.prefix.value();
     d.sdir = row.sdir.value();
 
+    auto q2 = (*db)(
+        select(t_pkg_ver_files.source)
+        .from(t_pkg_ver_files)
+        .where(t_pkg_ver_files.packageVersionId == row.packageVersionId));
+    if (q2.empty())
+        throw SW_LOGIC_ERROR("no pkg ver file");
+    if (!q2.front().source.is_null())
+        d.source = q2.front().source.value();
+
     for (const auto &row : (*db)(
         select(pkgs.packageId, pkgs.path, pkg_deps.versionRange)
         .from(pkg_deps.join(pkgs).on(pkg_deps.packageId == pkgs.packageId))

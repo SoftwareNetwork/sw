@@ -23,6 +23,7 @@ struct PackageData
 
     // source package hash (sw.tar.gz)
     String hash;
+    String source;
 
     // length of prefix path
     // e.g., if package path is 'myproject.pkg' and it's added to 'org.sw',
