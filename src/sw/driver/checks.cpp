@@ -36,11 +36,6 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "checks");
 
-bool checks_single_thread;
-bool print_checks;
-bool wait_for_cc_checks;
-String cc_checks_command;
-
 namespace sw
 {
 
@@ -265,7 +260,7 @@ CheckSet &Checker::addSet(const String &name)
     return *p.first->second;
 }
 
-void CheckSet::performChecks(const TargetSettings &ts)
+void CheckSet::performChecks(const SwBuild &mb, const TargetSettings &ts)
 {
     static const auto checks_dir = checker.swbld.getContext().getLocalStorage().storage_dir_etc / "sw" / "checks";
 
@@ -361,7 +356,7 @@ int main() { return IsBigEndian(); }
     SCOPE_EXIT
     {
         prepareChecksForUse();
-        if (print_checks)
+        if (mb.getSettings()["print_checks"] == "true")
         {
             std::ofstream o(fn.parent_path() / (t->getPackage().toString() + "." + name + ".txt"));
             if (!o)
@@ -380,7 +375,7 @@ int main() { return IsBigEndian(); }
         }
     };
 
-    if (print_checks)
+    if (mb.getSettings()["print_checks"] == "true")
     {
         write_file(checks_dir / config / "cfg.json", nlohmann::json::parse(ts.toString(TargetSettings::Json)).dump(4));
     }
@@ -406,7 +401,7 @@ int main() { return IsBigEndian(); }
         };
 
         //auto &e = getExecutor();
-        static Executor e(checks_single_thread ? 1 : getExecutor().numberOfThreads()); // separate executor!
+        static Executor e(mb.getSettings()["checks_single_thread"] == "true" ? 1 : getExecutor().numberOfThreads()); // separate executor!
 
         try
         {
@@ -473,7 +468,7 @@ int main() { return IsBigEndian(); }
             }
 
             ctx.addLine("OUTF=\"" + mfn + "\"");
-            ctx.addLine("OUT=\""s + (wait_for_cc_checks ? "../" : "") + "$OUTF\"");
+            ctx.addLine("OUT=\""s + (mb.getSettings()["wait_for_cc_checks"] == "true" ? "../" : "") + "$OUTF\"");
             ctx.addLine();
 
             mfn = "$OUT";
@@ -544,12 +539,12 @@ int main() { return IsBigEndian(); }
             path out = (cc_dir / "run") += os.getShellExtension();
             write_file(out, ctx.getText());
 
-            if (wait_for_cc_checks)
+            if (mb.getSettings()["wait_for_cc_checks"] == "true")
             {
-                if (!cc_checks_command.empty())
+                if (!mb.getSettings()["cc_checks_command"].getValue().empty())
                 {
                     ScopedCurrentPath scp(cc_dir);
-                    int r = system(cc_checks_command.c_str());
+                    int r = system(mb.getSettings()["cc_checks_command"].getValue().c_str());
                     if (r)
                         throw SW_RUNTIME_ERROR("cc_checks_command exited abnormally: " + std::to_string(r));
                 }
@@ -567,7 +562,7 @@ int main() { return IsBigEndian(); }
                     c->requires_manual_setup = false;
                 }
                 cs.manual_checks.clear();
-                return performChecks(ts);
+                return performChecks(mb, ts);
             }
 
             throw SW_RUNTIME_ERROR("Some manual checks are missing, please set them in order to continue. "

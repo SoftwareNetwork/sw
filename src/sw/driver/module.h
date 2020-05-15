@@ -55,7 +55,7 @@ struct SW_DRIVER_CPP_API Module
         bool isRequired() const { return Required; }
     };
 
-    Module(std::unique_ptr<Module::DynamicLibrary>);
+    Module(std::unique_ptr<Module::DynamicLibrary>, bool do_not_remove_bad_module);
 
     // api
     void build(Build &s) const;
@@ -65,6 +65,7 @@ struct SW_DRIVER_CPP_API Module
 
 private:
     std::unique_ptr<Module::DynamicLibrary> module;
+    bool do_not_remove_bad_module;
 
     mutable LibraryCall<void(Build &), true> build_;
     mutable LibraryCall<void(Build &)> configure_;
@@ -74,6 +75,6 @@ private:
     path getLocation() const;
 };
 
-std::unique_ptr<Module> loadSharedLibrary(const path &dll, const FilesOrdered &PATH = {});
+std::unique_ptr<Module> loadSharedLibrary(const path &dll, const FilesOrdered &PATH, bool do_not_remove_bad_module);
 
 }

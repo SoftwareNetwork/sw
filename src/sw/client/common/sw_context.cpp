@@ -410,14 +410,26 @@ std::unique_ptr<sw::SwBuild> SwClientContext::createBuildInternal()
         bs["time_limit"] = options.options_build.time_limit;
     if (options.verbose || options.trace)
         bs["measure"] = "true";
+
     if (options.verbose || options.trace)
         bs["verbose"] = "true";
+
     if (options.standalone)
         bs["standalone"] = "true";
     if (options.do_not_mangle_object_names)
         bs["do_not_mangle_object_names"] = "true";
     if (options.ignore_source_files_errors)
         bs["ignore_source_files_errors"] = "true";
+
+    // checks
+    if (options.checks_single_thread)
+        bs["checks_single_thread"] = "true";
+    if (options.print_checks)
+        bs["print_checks"] = "true";
+    if (options.wait_for_cc_checks)
+        bs["wait_for_cc_checks"] = "true";
+    bs["cc_checks_command"] = options.cc_checks_command;
+
     for (auto &t : options.targets_to_build)
         bs["target-to-build"].push_back(t);
     for (auto &t : options.targets_to_ignore)
@@ -746,8 +758,18 @@ sw::SwContext &SwClientContext::getContext(bool in_allow_network)
 
         u.save_command_format = getOptions().save_command_format;
 
+        //
+        sw::TargetSettings cs;
+        if (getOptions().debug_configs)
+            cs["debug_configs"] = "true";
+        if (getOptions().ignore_outdated_configs)
+            cs["ignore_outdated_configs"] = "true";
+        if (getOptions().do_not_remove_bad_module)
+            cs["do_not_remove_bad_module"] = "true";
+
         // create ctx
         swctx_ = std::make_unique<sw::SwContext>(local_storage_root_dir, allow_network);
+        swctx_->setSettings(cs);
         // TODO:
         // before default?
         //for (auto &d : drivers)

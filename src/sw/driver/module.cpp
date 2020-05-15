@@ -28,8 +28,6 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "module");
 
-bool do_not_remove_bad_module;
-
 namespace sw
 {
 
@@ -52,8 +50,8 @@ static auto get_function(const Module::DynamicLibrary &dll, const String &fn, bo
     return (F*)nullptr;
 }
 
-Module::Module(std::unique_ptr<Module::DynamicLibrary> dll)
-    : module(std::move(dll))
+Module::Module(std::unique_ptr<Module::DynamicLibrary> dll, bool do_not_remove_bad_module)
+    : module(std::move(dll)), do_not_remove_bad_module(do_not_remove_bad_module)
 {
 #define LOAD(f)                                                                                    \
     do                                                                                             \
@@ -185,7 +183,7 @@ int Module::sw_get_module_abi_version() const
     return sw_get_module_abi_version_();
 }
 
-std::unique_ptr<Module> loadSharedLibrary(const path &dll, const FilesOrdered &PATH)
+std::unique_ptr<Module> loadSharedLibrary(const path &dll, const FilesOrdered &PATH, bool do_not_remove_bad_module)
 {
     if (dll.empty())
         throw SW_RUNTIME_ERROR("Empty module path");
@@ -247,7 +245,7 @@ std::unique_ptr<Module> loadSharedLibrary(const path &dll, const FilesOrdered &P
         throw;
     }
 
-    return std::make_unique<Module>(std::move(dl));
+    return std::make_unique<Module>(std::move(dl), do_not_remove_bad_module);
 }
 
 }

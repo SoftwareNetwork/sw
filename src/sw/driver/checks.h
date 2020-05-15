@@ -360,7 +360,7 @@ struct SW_DRIVER_CPP_API CheckSet : CheckSet1
     CheckSet &operator=(const CheckSet &) = delete;
 
     void prepareChecksForUse();
-    void performChecks(const TargetSettings &);
+    void performChecks(const SwBuild &, const TargetSettings &);
 };
 
 struct SW_DRIVER_CPP_API Checker

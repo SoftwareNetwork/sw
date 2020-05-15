@@ -45,7 +45,6 @@ command_line:
                 description: Select default remote
 
             do_not_remove_bad_module:
-                external: true
                 description: Keep bad compiled config module file
 
             use_same_config_for_host_dependencies:
@@ -82,11 +81,9 @@ command_line:
                 cat: build
 
             debug_configs:
-                external: true
                 description: Build configs in debug mode
-
+                default: true # true for now
             ignore_outdated_configs:
-                external: true
                 description: Do not rebuild configs
                 hidden: true
 
@@ -104,17 +101,13 @@ command_line:
             # checks
             checks_single_thread:
                 option: checks-st
-                external: true
                 description: Perform checks in one thread (for cc)
             print_checks:
-                external: true
                 description: Save extended checks info to file
             wait_for_cc_checks:
-                external: true
                 description: Do not exit on missing cc checks, wait for user input
             cc_checks_command:
                 type: String
-                external: true
                 description: Automatically execute cc checks command
 
 

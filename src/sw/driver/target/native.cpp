@@ -4257,7 +4257,7 @@ void NativeCompiledTarget::setChecks(const String &name, bool check_definitions)
 
     auto &checks_set = getChecks(name);
     checks_set.t = this;
-    checks_set.performChecks(getSettings());
+    checks_set.performChecks(getMainBuild(), getSettings());
 
     // set results
     for (auto &[k, c] : checks_set.check_values)

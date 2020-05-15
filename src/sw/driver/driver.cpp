@@ -47,9 +47,6 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "driver.cpp");
 
-bool debug_configs = true; // true for now
-bool ignore_outdated_configs;
-
 void process_configure_ac2(const path &p);
 
 namespace sw
@@ -191,7 +188,7 @@ struct SpecFileInput : Input, DriverInput
         case FrontendType::SwC:
         {
             auto out = static_cast<const Driver&>(getDriver()).build_configs1(swctx, { this }).begin()->second;
-            module = loadSharedLibrary(out.dll, out.PATH);
+            module = loadSharedLibrary(out.dll, out.PATH, swctx.getSettings()["do_not_remove_bad_module"] == "true");
             auto ep = std::make_unique<NativeModuleTargetEntryPoint>(*module);
             ep->source_dir = fn.parent_path();
             return ep;
@@ -218,7 +215,7 @@ struct SpecFileInput : Input, DriverInput
 
             b->build();
             auto &out = pc.r[fn];
-            module = loadSharedLibrary(out.dll, out.PATH);
+            module = loadSharedLibrary(out.dll, out.PATH, swctx.getSettings()["do_not_remove_bad_module"] == "true");
             auto ep = std::make_unique<NativeModuleTargetEntryPoint>(*module);
             ep->source_dir = fn.parent_path();
             return ep;
@@ -454,7 +451,7 @@ void Driver::loadInputsBatch(const std::set<Input *> &inputs) const
             LOG_WARN(logger, "Bad input");
             continue;
         }
-        i->module = loadSharedLibrary(out.dll, out.PATH);
+        i->module = loadSharedLibrary(out.dll, out.PATH, swctx.getSettings()["do_not_remove_bad_module"] == "true");
         auto ep = std::make_unique<NativeModuleTargetEntryPoint>(*i->module);
         ep->source_dir = p.parent_path();
         i->setEntryPoint(std::move(ep));
@@ -496,7 +493,7 @@ TargetSettings Driver::getDllConfigSettings(SwContext &swctx) const
     auto ts = swctx.createHostSettings();
     ts["native"]["library"] = "static"; // why not shared?
     //ts["native"]["mt"] = "true";
-    if (debug_configs)
+    if (swctx.getSettings()["debug_configs"] == "true")
     {
 #ifndef NDEBUG
         ts["native"]["configuration"] = "debug";
@@ -570,7 +567,7 @@ std::unordered_map<path, PrepareConfigOutputData> Driver::build_configs1(SwConte
         pc.addInput(b2, *i);
 
     // fast path
-    if (ignore_outdated_configs || !pc.isOutdated())
+    if (swctx.getSettings()["ignore_outdated_configs"] == "true" || !pc.isOutdated())
         return save_and_return(pc.r);
 
     auto &tgts = b2.module_data.added_targets;
