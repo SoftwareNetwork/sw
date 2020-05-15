@@ -8,7 +8,7 @@ void build(Solution &s)
     auto &p = s.addProject("sw.client", "0.4.2");
     p += Git("https://github.com/SoftwareNetwork/sw", "", "master");
 
-    auto &support = p.addTarget<SharedLibraryTarget>("support");
+    auto &support = p.addTarget<LibraryTarget>("support");
     {
         support.ApiName = "SW_SUPPORT_API";
         support.ExportIfStatic = true;
@@ -65,7 +65,7 @@ void build(Solution &s)
             gen_grpc_cpp("org.sw.demo.google.protobuf"_dep, "org.sw.demo.google.grpc.cpp.plugin"_dep, protos, p, d);
     }
 
-    auto &manager = p.addTarget<SharedLibraryTarget>("manager");
+    auto &manager = p.addTarget<LibraryTarget>("manager");
     {
         manager.ApiName = "SW_MANAGER_API";
         manager.ExportIfStatic = true;
@@ -108,7 +108,7 @@ void build(Solution &s)
         }*/
     }
 
-    auto &builder = p.addTarget<SharedLibraryTarget>("builder");
+    auto &builder = p.addTarget<LibraryTarget>("builder");
     {
         builder.ApiName = "SW_BUILDER_API";
         builder.ExportIfStatic = true;
@@ -129,7 +129,7 @@ void build(Solution &s)
         }
     }
 
-    auto &core = p.addTarget<SharedLibraryTarget>("core");
+    auto &core = p.addTarget<LibraryTarget>("core");
     {
         core.ApiName = "SW_CORE_API";
         core.ExportIfStatic = true;
@@ -142,7 +142,7 @@ void build(Solution &s)
             core, core.SourceDir / "src/sw/core/inserts/input_db_schema.sql", "db_inputs.h", "db::inputs");
     }
 
-    auto &cpp_driver = p.addTarget<SharedLibraryTarget>("driver.cpp");
+    auto &cpp_driver = p.addTarget<LibraryTarget>("driver.cpp");
     {
         cpp_driver.ApiName = "SW_DRIVER_CPP_API";
         cpp_driver.ExportIfStatic = true;
@@ -255,7 +255,7 @@ void build(Solution &s)
     }
 
     auto &client = p.addTarget<ExecutableTarget>("sw", "1.0.0");
-    auto &client_common = client.addTarget<SharedLibraryTarget>("common");
+    auto &client_common = client.addTarget<LibraryTarget>("common");
     {
         client_common.ApiName = "SW_CLIENT_COMMON_API";
         client_common.PackageDefinitions = true;
