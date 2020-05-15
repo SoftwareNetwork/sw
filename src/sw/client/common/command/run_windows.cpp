@@ -68,8 +68,6 @@ std::vector<WELL_KNOWN_SID_TYPE> app_capabilities
     //WinCapabilityPrivateNetworkClientServerSid,
 };
 
-extern bool gRunAppInContainer;
-
 static BOOL SetSecurityCapabilities(PSID container_sid, SECURITY_CAPABILITIES *capabilities, PDWORD num_capabilities)
 {
     DWORD sid_size = SECURITY_MAX_SID_SIZE;
@@ -168,7 +166,7 @@ static BOOL GrantNamedObjectAccess(PSID appcontainer_sid, const path &object_nam
     return success;
 }
 
-void run1(const sw::LocalPackage &pkg, primitives::Command &c)
+void run1(const sw::LocalPackage &pkg, primitives::Command &c, bool gRunAppInContainer)
 {
     PSID sid = NULL;
     SECURITY_CAPABILITIES SecurityCapabilities = { 0 };

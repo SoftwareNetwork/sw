@@ -34,18 +34,16 @@ TODO:
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "sw.cli.run");
 
-bool gRunAppInContainer = false;
-
-void run1(const sw::LocalPackage &pkg, primitives::Command &c);
+void run1(const sw::LocalPackage &pkg, primitives::Command &c, bool gRunAppInContainer);
 
 #ifndef _WIN32
-void run1(const sw::LocalPackage &pkg, primitives::Command &c)
+void run1(const sw::LocalPackage &pkg, primitives::Command &c, bool gRunAppInContainer)
 {
     throw SW_RUNTIME_ERROR("not implemented");
 }
 #endif
 
-static void run(sw::SwBuild &b, const sw::PackageId &pkg, primitives::Command &c, bool print)
+static void run(sw::SwBuild &b, const sw::PackageId &pkg, primitives::Command &c, bool print, bool gRunAppInContainer)
 {
     if (b.getTargetsToBuild()[pkg].empty())
         throw SW_RUNTIME_ERROR("No such target: " + pkg.toString());
@@ -78,7 +76,7 @@ static void run(sw::SwBuild &b, const sw::PackageId &pkg, primitives::Command &c
     };
 
     sw::LocalPackage p(b.getContext().getLocalStorage(), pkg);
-    run1(p, c);
+    run1(p, c, gRunAppInContainer);
 }
 
 void SwClientContext::run(const sw::PackageId &pkg, primitives::Command &c)
@@ -99,7 +97,7 @@ void SwClientContext::run(const sw::PackageId &pkg, primitives::Command &c)
     auto b = createBuildAndPrepare(inputs);
     b->build();
 
-    ::run(*b, pkg, c, getOptions().options_run.print_command);
+    ::run(*b, pkg, c, getOptions().options_run.print_command, getOptions().options_run.run_app_in_container);
 }
 
 SUBCOMMAND_DECL(run)
@@ -144,7 +142,7 @@ SUBCOMMAND_DECL(run)
         if (tgts.size() != 1)
             throw SW_RUNTIME_ERROR("More than one target provided in input");
 
-        ::run(*b, (*tgts.begin())->getPackage(), c, getOptions().options_run.print_command);
+        ::run(*b, (*tgts.begin())->getPackage(), c, getOptions().options_run.print_command, getOptions().options_run.run_app_in_container);
         return;
     }
 

@@ -712,7 +712,6 @@ command_line:
         command_line:
             run_app_in_container:
                 option: in-container
-                location: gRunAppInContainer
                 desc: Run app in secure container
             wdir:
                 type: path
