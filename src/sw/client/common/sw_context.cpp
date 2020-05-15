@@ -410,6 +410,14 @@ std::unique_ptr<sw::SwBuild> SwClientContext::createBuildInternal()
         bs["time_limit"] = options.options_build.time_limit;
     if (options.verbose || options.trace)
         bs["measure"] = "true";
+    if (options.verbose || options.trace)
+        bs["verbose"] = "true";
+    if (options.standalone)
+        bs["standalone"] = "true";
+    if (options.do_not_mangle_object_names)
+        bs["do_not_mangle_object_names"] = "true";
+    if (options.ignore_source_files_errors)
+        bs["ignore_source_files_errors"] = "true";
     for (auto &t : options.targets_to_build)
         bs["target-to-build"].push_back(t);
     for (auto &t : options.targets_to_ignore)

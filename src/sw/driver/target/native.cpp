@@ -50,11 +50,6 @@ DECLARE_STATIC_LOGGER(logger, "target.native");
 #define RETURN_PREPARE_MULTIPASS_NEXT_PASS SW_RETURN_MULTIPASS_NEXT_PASS(prepare_pass)
 #define RETURN_INIT_MULTIPASS_NEXT_PASS SW_RETURN_MULTIPASS_NEXT_PASS(init_pass)
 
-bool do_not_mangle_object_names;
-//bool full_build;
-//static cl::opt<bool> full_build("full", cl::desc("Full build (check all conditions)"));
-bool standalone;
-
 void createDefFile(const path &def, const Files &obj_files)
 #if defined(CPPAN_OS_WINDOWS)
 ;
@@ -830,7 +825,7 @@ void NativeCompiledTarget::setupCommand(builder::Command &c) const
         }
     };
 
-    if (standalone)
+    if (getMainBuild().getSettings()["standalone"] == "true")
     {
         for_deps([this, &c](const path &output_file)
         {
@@ -1209,8 +1204,8 @@ void NativeCompiledTarget::createPrecompiledHeader()
 
     auto setup_create_vc = [this, &sf](auto &c)
     {
-        //if (gVerbose)
-            //getMergeObject()[pch.source].fancy_name += " (" + normalize_path(pch.source) + ")";
+        if (getMainBuild().getSettings()["verbose"] == "true")
+            getMergeObject()[pch.source].fancy_name += " (" + normalize_path(pch.source) + ")";
 
         sf->setOutputFile(pch.obj);
 
@@ -1225,8 +1220,8 @@ void NativeCompiledTarget::createPrecompiledHeader()
         sf->compiler->setSourceFile(pch.header, pch.pch);
         sf->output = sf->compiler->getOutputFile();
 
-        //if (gVerbose)
-            //getMergeObject()[pch.source].fancy_name += " (" + normalize_path(pch.header) + ")";
+        if (getMainBuild().getSettings()["verbose"] == "true")
+            getMergeObject()[pch.source].fancy_name += " (" + normalize_path(pch.header) + ")";
 
         c->Language = "c++-header"; // FIXME: also c-header sometimes
     };
@@ -1382,7 +1377,7 @@ Commands NativeCompiledTarget::getCommands1() const
             c->arguments.push_back(f->args);
 
             // set fancy name
-            if (!IsSwConfig && !do_not_mangle_object_names)
+            if (!IsSwConfig && !(getMainBuild().getSettings()["do_not_mangle_object_names"] == "true"))
             {
                 auto p = normalize_path(f->file);
                 if (bdp.size() < p.size() && p.find(bdp) == 0)
@@ -1408,7 +1403,7 @@ Commands NativeCompiledTarget::getCommands1() const
                     c->name = prefix + "[" + getPackage().toString() + "]" + n;
                 }
             }
-            if (!do_not_mangle_object_names && !f->fancy_name.empty())
+            if (!(getMainBuild().getSettings()["do_not_mangle_object_names"] == "true") && !f->fancy_name.empty())
                 c->name = f->fancy_name;
             cmds.insert(c);
         };
@@ -1526,7 +1521,7 @@ Commands NativeCompiledTarget::getCommands1() const
         cmds.insert(c);
 
         // set fancy name
-        if (!IsSwConfig && !do_not_mangle_object_names)
+        if (!IsSwConfig && !(getMainBuild().getSettings()["do_not_mangle_object_names"] == "true"))
         {
             c->name.clear();
 
@@ -1594,7 +1589,7 @@ bool NativeCompiledTarget::createWindowsRpath() const
         && !IsSwConfig
         && getBuildSettings().TargetOS.is(OSType::Windows)
         && getSelectedTool() == Linker.get()
-        && !standalone
+        && !(getMainBuild().getSettings()["standalone"] == "true")
         ;
 }
 
@@ -3325,9 +3320,9 @@ void NativeCompiledTarget::prepare_pass5()
     {
         for (auto &f : files)
         {
-            auto set_fancy_name = [](auto &t, auto &cmd, auto *f)
+            auto set_fancy_name = [this](auto &t, auto &cmd, auto *f)
             {
-                if (do_not_mangle_object_names)
+                if (getMainBuild().getSettings()["do_not_mangle_object_names"] == "true")
                     return;
 
                 auto sd = normalize_path(t.SourceDir);

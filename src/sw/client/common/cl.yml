@@ -91,14 +91,11 @@ command_line:
                 hidden: true
 
             ignore_source_files_errors:
-                external: true
                 description: Useful for debugging
 
             do_not_mangle_object_names:
-                external: true
 
             standalone:
-                external: true
                 default_value: true
                 description: Build standalone binaries
                 aliases: sa
