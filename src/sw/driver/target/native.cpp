@@ -825,7 +825,7 @@ void NativeCompiledTarget::setupCommand(builder::Command &c) const
         }
     };
 
-    if (getMainBuild().getSettings()["standalone"] == "true")
+    if (1/*getMainBuild().getSettings()["standalone"] == "true"*/)
     {
         for_deps([this, &c](const path &output_file)
         {
@@ -1589,7 +1589,7 @@ bool NativeCompiledTarget::createWindowsRpath() const
         && !IsSwConfig
         && getBuildSettings().TargetOS.is(OSType::Windows)
         && getSelectedTool() == Linker.get()
-        && !(getMainBuild().getSettings()["standalone"] == "true")
+        && 0//!(getMainBuild().getSettings()["standalone"] == "true")
         ;
 }
 
@@ -3595,7 +3595,7 @@ void NativeCompiledTarget::prepare_pass5()
     }
 
     // also fix rpath libname here
-    if (createWindowsRpath())
+    if (getSelectedTool() && createWindowsRpath())
     {
         getSelectedTool()->setImportLibrary(getOutputFileName2("lib") += ".rp");
     }
