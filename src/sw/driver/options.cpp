@@ -343,20 +343,28 @@ void NativeCompilerOptions::addDefinitions(builder::Command &c) const
 
 void NativeCompilerOptions::addIncludeDirectories(builder::Command &c, const String &system_idirs_prefix) const
 {
-    auto print_idir = [&c](const auto &a, auto &flag)
+    auto print_idir = [&c](const auto &a, auto &flag, int priority)
     {
         for (auto &d : a)
-            c.arguments.push_back(flag + normalize_path(d));
+        {
+            auto arg = std::make_unique<primitives::command::SimplePositionalArgument>(flag + normalize_path(d));
+            arg->getPosition().push_back(priority);
+            c.arguments.push_back(std::move(arg));
+        }
     };
+
+    constexpr int idir_priority = 100;
+    constexpr int sys_idir_priority = 200;
 
     if (system_idirs_prefix.empty())
     {
-        print_idir(gatherIncludeDirectories(), "-I");
+        print_idir(NativeCompilerOptionsData::gatherIncludeDirectories(), "-I", idir_priority);
+        print_idir(System.gatherIncludeDirectories(), "-I", sys_idir_priority);
     }
     else
     {
-        print_idir(NativeCompilerOptionsData::gatherIncludeDirectories(), "-I");
-        print_idir(System.gatherIncludeDirectories(), system_idirs_prefix);
+        print_idir(NativeCompilerOptionsData::gatherIncludeDirectories(), "-I", idir_priority);
+        print_idir(System.gatherIncludeDirectories(), system_idirs_prefix, sys_idir_priority);
     }
 }
 
