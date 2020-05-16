@@ -119,7 +119,7 @@ struct SW_MANAGER_API Remote
     ApiType type = ApiType::Protobuf;
     bool disabled = false;
 
-    Remote(const String &name, const String &url);
+    Remote(const String &name, const String &url, bool allow_network);
 
     std::unique_ptr<Api> getApi() const;
     ApiType getApiType() const { return type; }
@@ -132,6 +132,6 @@ private:
     friend struct ProtobufApi;
 };
 
-std::vector<std::shared_ptr<Remote>> get_default_remotes();
+std::vector<std::shared_ptr<Remote>> get_default_remotes(bool allow_network);
 
 }

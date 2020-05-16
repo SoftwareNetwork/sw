@@ -24,7 +24,7 @@
 static sw::Remote &find_remote_raw(sw::Settings &s, const String &name)
 {
     sw::Remote *current_remote = nullptr;
-    for (auto &r : s.getRemotes())
+    for (auto &r : s.getRemotes(false))
     {
         if (r->name == name)
         {

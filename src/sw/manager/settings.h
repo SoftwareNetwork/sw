@@ -74,7 +74,7 @@ public:
 
     bool checkForUpdates() const;
 
-    const std::vector<std::shared_ptr<Remote>> &getRemotes() const;
+    const std::vector<std::shared_ptr<Remote>> &getRemotes(bool allow_network) const;
     void setDefaultRemote(const String &r) { default_remote = r; }
 
 private:

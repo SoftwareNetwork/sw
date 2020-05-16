@@ -77,16 +77,16 @@ void Settings::load_main(const yaml &root, const SettingsType type)
     }
 }
 
-const std::vector<std::shared_ptr<Remote>> &Settings::getRemotes() const
+const std::vector<std::shared_ptr<Remote>> &Settings::getRemotes(bool allow_network) const
 {
     static std::mutex m;
     std::unique_lock lk(m);
     if (!remotes.empty())
         return remotes;
 
-    remotes = get_default_remotes();
+    remotes = get_default_remotes(allow_network);
 
-    get_map_and_iterate(root, "remotes", [this](auto &kv)
+    get_map_and_iterate(root, "remotes", [this, &allow_network](auto &kv)
     {
         Remote *pr;
 
@@ -99,7 +99,7 @@ const std::vector<std::shared_ptr<Remote>> &Settings::getRemotes() const
         {
             String url;
             YAML_EXTRACT_VAR(kv.second, url, "url", String);
-            auto r = std::make_shared<Remote>(n, url);
+            auto r = std::make_shared<Remote>(n, url, allow_network);
             remotes.push_back(r);
             pr = r.get();
         }

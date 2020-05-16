@@ -39,12 +39,12 @@ DECLARE_STATIC_LOGGER(logger, "remote");
 namespace sw
 {
 
-std::vector<std::shared_ptr<Remote>> get_default_remotes()
+std::vector<std::shared_ptr<Remote>> get_default_remotes(bool allow_network)
 {
     static std::vector<std::shared_ptr<Remote>> rms;
     RUN_ONCE
     {
-        auto r = std::make_shared<Remote>(DEFAULT_REMOTE_NAME, "https://software-network.org/");
+        auto r = std::make_shared<Remote>(DEFAULT_REMOTE_NAME, "https://software-network.org/", allow_network);
         rms.push_back(std::move(r));
     };
     return rms;
@@ -99,15 +99,19 @@ bool DataSource::downloadPackage(const Package &d, const path &fn, String &dl_ha
     return false;
 }
 
-Remote::Remote(const String &name, const String &u)
+Remote::Remote(const String &name, const String &u, bool allow_network)
     : name(name), url(u)
 {
-    path up = url;
+    //path up = url;
     //if (up.filename() != SPECIFICATIONS_FILENAME)
     {
         if (!url.empty() && url.back() != '/')
             url += "/";
     }
+
+    if (!allow_network)
+        return;
+
     String spec_url = url + "static/" SPECIFICATIONS_FILENAME;
     auto fn = get_root_directory() / "remotes" / name / SPECIFICATIONS_FILENAME;
     if (!fs::exists(fn))

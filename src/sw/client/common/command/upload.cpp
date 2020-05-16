@@ -196,7 +196,7 @@ SUBCOMMAND_DECL(upload)
 
     // select remote
     auto &us = sw::Settings::get_user_settings();
-    auto current_remote = us.getRemotes().begin()->get();
+    auto current_remote = us.getRemotes(true).begin()->get();
     if (!getOptions().options_upload.upload_remote.empty())
         current_remote = &find_remote(us, getOptions().options_upload.upload_remote);
 
