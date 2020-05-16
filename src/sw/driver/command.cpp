@@ -648,7 +648,7 @@ String detectMsvcPrefix(builder::detail::ResolvableCommand c, const path &idir)
     return p[c.getProgram()] = m[1].str();
 }
 
-static Version gatherVersion1(builder::detail::ResolvableCommand &c, const String &in_regex)
+static String getOutput(builder::detail::ResolvableCommand &c)
 {
     error_code ec;
     c.execute(ec);
@@ -656,19 +656,26 @@ static Version gatherVersion1(builder::detail::ResolvableCommand &c, const Strin
     if (c.pid == -1)
         throw SW_RUNTIME_ERROR(normalize_path(c.getProgram()) + ": " + ec.message());
 
+    return c.err.text.empty() ? c.out.text : c.err.text;
+}
+
+static std::pair<String, Version> gatherVersion1(builder::detail::ResolvableCommand &c, const String &in_regex)
+{
+    auto o = getOutput(c);
+
     Version v;
     if (!in_regex.empty())
     {
         std::regex r_in(in_regex);
         std::smatch m;
-        if (std::regex_search(c.err.text.empty() ? c.out.text : c.err.text, m, r_in))
+        if (std::regex_search(o, m, r_in))
             v = m[0].str();
     }
     else
     {
         static std::regex r_default("(\\d+)(\\.(\\d+)){2,}(-[[:alnum:]]+([.-][[:alnum:]]+)*)?");
         std::smatch m;
-        if (std::regex_search(c.err.text.empty() ? c.out.text : c.err.text, m, r_default))
+        if (std::regex_search(o, m, r_default))
         {
             auto s = m[0].str();
             if (m[4].matched)
@@ -680,10 +687,10 @@ static Version gatherVersion1(builder::detail::ResolvableCommand &c, const Strin
             v = s;
         }
     }
-    return v;
+    return { o,v };
 }
 
-static Version gatherVersion(const path &program, const String &arg, const String &in_regex)
+static auto gatherVersion(const path &program, const String &arg, const String &in_regex)
 {
     builder::detail::ResolvableCommand c; // for nice program resolving
     c.setProgram(program);
@@ -706,11 +713,12 @@ Version getVersion(const SwManagerContext &swctx, builder::detail::ResolvableCom
 
     boost::upgrade_to_unique_lock lk2(lk);
 
-    vs.addVersion(program, gatherVersion1(c, in_regex));
+    auto [o, v] = gatherVersion1(c, in_regex);
+    vs.addVersion(program, v, o);
     return vs.versions[program];
 }
 
-Version getVersion(const SwManagerContext &swctx, const path &program, const String &arg, const String &in_regex)
+std::pair<String, Version> getVersionAndOutput(const SwManagerContext &swctx, const path &program, const String &arg, const String &in_regex)
 {
     auto &vs = getVersionStorage(swctx);
     static boost::upgrade_mutex m;
@@ -718,12 +726,18 @@ Version getVersion(const SwManagerContext &swctx, const path &program, const Str
     boost::upgrade_lock lk(m);
     auto i = vs.versions.find(program);
     if (i != vs.versions.end())
-        return i->second;
+        return { i->second.output, i->second.v };
 
     boost::upgrade_to_unique_lock lk2(lk);
 
-    vs.addVersion(program, gatherVersion(program, arg, in_regex));
-    return vs.versions[program];
+    auto [o, v] = gatherVersion(program, arg, in_regex);
+    vs.addVersion(program, v, o);
+    return { o, v };
+}
+
+Version getVersion(const SwManagerContext &swctx, const path &program, const String &arg, const String &in_regex)
+{
+    return getVersionAndOutput(swctx, program, arg, in_regex).second;
 }
 
 } // namespace sw

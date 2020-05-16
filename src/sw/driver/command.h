@@ -497,4 +497,8 @@ Version getVersion(
     const SwManagerContext &swctx, const path &program,
     const String &arg = "--version", const String &in_regex = {});
 
+std::pair<String, Version> getVersionAndOutput(
+    const SwManagerContext &swctx, const path &program,
+    const String &arg = "--version", const String &in_regex = {});
+
 } // namespace sw
