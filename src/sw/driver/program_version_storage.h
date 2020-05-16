@@ -29,6 +29,7 @@ struct ProgramVersionStorage
 {
     struct ProgramInfo
     {
+        String output;
         Version v;
         fs::file_time_type t;
 
@@ -36,15 +37,12 @@ struct ProgramVersionStorage
     };
 
     path fn;
-    std::unordered_map<path, ProgramInfo> versions;
+    std::map<path, ProgramInfo> versions;
 
     ProgramVersionStorage(const path &fn);
     ~ProgramVersionStorage();
 
-    void addVersion(const path &p, const Version &v)
-    {
-        versions[p] = {v,fs::last_write_time(p)};
-    }
+    void addVersion(const path &p, const Version &v, const String &output);
 };
 
 ProgramVersionStorage &getVersionStorage(const SwManagerContext &);

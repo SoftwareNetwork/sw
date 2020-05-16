@@ -22,38 +22,53 @@
 #include <sw/manager/sw_context.h>
 #include <sw/manager/storage.h>
 
+#include <nlohmann/json.hpp>
+
 #include <fstream>
 
 namespace sw
 {
 
-ProgramVersionStorage::ProgramVersionStorage(const path &fn)
-    : fn(fn)
+ProgramVersionStorage::ProgramVersionStorage(const path &in_fn)
 {
-    path p;
-    String v;
-    time_t t;
-    std::ifstream ifile(fn);
-    while (1)
+    fn = in_fn.parent_path() / in_fn.stem() += ".json";
+    if (!fs::exists(fn))
+        return;
+
+    auto j = nlohmann::json::parse(read_file(fn));
+    auto &jd = j["data"];
+    for (auto &[prog, d] : jd.items())
     {
-        ifile >> p;
-        if (!ifile)
-            break;
-        ifile >> v;
-        ifile >> t;
+        String o = d["output"];
+        String v = d["version"];
+        time_t t = d["lwt"];
+        path p = prog;
         if (!fs::exists(p))
             continue;
         auto lwt = fs::last_write_time(p);
-        if (t && file_time_type2time_t(lwt) <= t)
-            versions[p] = {v,lwt};
+        if (file_time_type2time_t(lwt) <= t)
+            versions[p] = {o,v,lwt};
     }
 }
 
 ProgramVersionStorage::~ProgramVersionStorage()
 {
-    std::ofstream ofile(fn);
-    for (auto &[p, v] : std::map<path, ProgramInfo>(versions.begin(), versions.end()))
-        ofile << p << " " << v.v.toString() << " " << file_time_type2time_t(v.t) << "\n";
+    nlohmann::json j;
+    j["schema"]["version"] = 1;
+    auto &jd = j["data"];
+    for (auto &[p, v] : versions)
+    {
+        auto s = normalize_path(p);
+        jd[s]["output"] = v.output;
+        jd[s]["version"] = v.v.toString();
+        jd[s]["lwt"] = file_time_type2time_t(v.t);
+    }
+    write_file(fn, j.dump());
+}
+
+void ProgramVersionStorage::addVersion(const path &p, const Version &v, const String &output)
+{
+    versions[normalize_path(p)] = {output, v, fs::last_write_time(p)};
 }
 
 ProgramVersionStorage &getVersionStorage(const SwManagerContext &swctx)
