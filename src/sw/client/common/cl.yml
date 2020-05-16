@@ -179,6 +179,12 @@ command_line:
                 comma_separated: true
                 desc: Set compiler
                 cat: build
+            linker:
+                type: String
+                list: true
+                comma_separated: true
+                desc: Set linker. Must match compiler list.
+                cat: build
             configuration:
                 type: String
                 list: true

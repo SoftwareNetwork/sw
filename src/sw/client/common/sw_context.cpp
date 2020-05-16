@@ -109,7 +109,7 @@ static sw::TargetSettings compilerTypeFromStringCaseI(const sw::UnresolvedPackag
     {
         ts["native"]["program"]["c"] = set_with_version("org.LLVM.clangcl");
         ts["native"]["program"]["cpp"] = set_with_version("org.LLVM.clangcl");
-        ts["native"]["program"]["link"] = set_with_version("org.LLVM.lld.link");
+        //ts["native"]["program"]["link"] = set_with_version("org.LLVM.lld.link");
     }
     else if (0
         || compiler.ppath == "msvc"
@@ -141,6 +141,17 @@ static sw::TargetSettings compilerTypeFromStringCaseI(const sw::UnresolvedPackag
         ts["native"]["program"]["c"] = compiler.toString();
         ts["native"]["program"]["cpp"] = compiler.toString();
     }
+
+    return ts;
+}
+
+static sw::TargetSettings linkerTypeFromStringCaseI(const sw::UnresolvedPackage &linker)
+{
+    sw::TargetSettings ts;
+
+    //ts["native"]["program"]["lib"] = linker->toString();
+    ts["native"]["program"]["link"] = linker.toString();
+
     return ts;
 }
 
@@ -649,13 +660,31 @@ std::vector<sw::TargetSettings> SwClientContext::createSettings()
         s["native"]["stdlib"]["cpp"] = archTypeFromStringCaseI(options.libcpp[i]);
     });
 
-    // compiler
-    mult_and_action(options.compiler.size(), [&options](auto &s, int i)
+    // compiler & linker
     {
-        if (options.compiler[i] == "clang-cl")
-            options.compiler[i] = "clangcl";
-        s.mergeAndAssign(compilerTypeFromStringCaseI(options.compiler[i]));
-    });
+        auto csz = options.compiler.size();
+        auto lsz = options.linker.size();
+        if (csz != 0 && lsz != 0 && csz != lsz)
+            throw SW_RUNTIME_ERROR("Number of linker entries must match compiler entries.");
+        if (csz == 0 && lsz != 0 && lsz != 1)
+            throw SW_RUNTIME_ERROR("You cannot provide more than one linker if compilers are not explicit.");
+
+        mult_and_action(csz, [&options, &csz, &lsz](auto &s, int i)
+        {
+            if (options.compiler[i] == "clang-cl")
+                options.compiler[i] = "clangcl";
+            s.mergeAndAssign(compilerTypeFromStringCaseI(options.compiler[i]));
+            if (csz == lsz)
+                s.mergeAndAssign(linkerTypeFromStringCaseI(options.linker[i]));
+        });
+
+        // set only linker
+        if (csz == 0 && lsz != 0 && lsz == 1)
+        {
+            for (auto &s : settings)
+                s.mergeAndAssign(linkerTypeFromStringCaseI(options.linker[0]));
+        }
+    }
 
     // settings
     mult_and_action(options.settings.size(), [&options](auto &s, int i)
