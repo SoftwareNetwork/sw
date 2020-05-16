@@ -550,7 +550,7 @@ std::shared_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetS
         c = std::make_shared<VisualStudioLibrarian>();
         c->Type = LinkerType::MSVC;
     }
-    else if (id.ppath == "com.Microsoft.VisualStudio.VC.link")
+    else if (id.ppath == "com.Microsoft.VisualStudio.VC.link" || id.ppath == "org.LLVM.lld.link")
     {
         c = std::make_shared<VisualStudioLinker>();
         c->Type = LinkerType::MSVC;

@@ -109,6 +109,7 @@ static sw::TargetSettings compilerTypeFromStringCaseI(const sw::UnresolvedPackag
     {
         ts["native"]["program"]["c"] = set_with_version("org.LLVM.clangcl");
         ts["native"]["program"]["cpp"] = set_with_version("org.LLVM.clangcl");
+        ts["native"]["program"]["link"] = set_with_version("org.LLVM.lld.link");
     }
     else if (0
         || compiler.ppath == "msvc"
