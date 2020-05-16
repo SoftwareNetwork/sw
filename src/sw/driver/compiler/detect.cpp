@@ -484,10 +484,26 @@ static void detectWindowsClang(DETECT_ARGS)
         {
             auto v = getVersion(s, p->file);
             addProgram(DETECT_ARGS_PASS, PackageId("org.LLVM.lld", v), {}, p);
+        }
+    }
 
-            // this must go into lld-link
-            //auto c2 = p->getCommand();
-            //c2->push_back("-lldignoreenv"); // prevents libs dirs autodetection (from msvc)
+    // lld-link
+    {
+        auto p = std::make_shared<SimpleProgram>();
+        p->file = bin_llvm_path / "lld-link.exe";
+        if (!fs::exists(p->file))
+        {
+            auto f = resolveExecutable("lld-link");
+            if (fs::exists(f))
+                p->file = f;
+        }
+        if (fs::exists(p->file))
+        {
+            auto v = getVersion(s, p->file);
+            addProgram(DETECT_ARGS_PASS, PackageId("org.LLVM.lld.link", v), {}, p);
+
+            auto c2 = p->getCommand();
+            c2->push_back("-lldignoreenv"); // prevents libs dirs autodetection (from msvc)
         }
     }
 
