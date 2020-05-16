@@ -452,6 +452,13 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
         c = C;
         create_command();
 
+        {
+            // we do everything ourselves
+            // otherwise we get wrong order on clang includes and msvc includes (intrinsics and such)
+            auto c = C->createCommand(getMainBuild());
+            c->push_back("-nostdinc");
+        }
+
         switch (getBuildSettings().TargetOS.Arch)
         {
         case ArchType::x86_64:
