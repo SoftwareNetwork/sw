@@ -6,8 +6,6 @@
 
 syntax = "proto3";
 
-option cc_enable_arenas = true;
-
 package sw.api.build;
 
 //import "google/protobuf/empty.proto";

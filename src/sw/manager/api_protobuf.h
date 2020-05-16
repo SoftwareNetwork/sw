@@ -22,10 +22,7 @@
 
 #include <grpcpp/grpcpp.h>
 
-#undef ERROR
 #include <sw/protocol/api.grpc.pb.h>
-#undef strtoll
-#undef strtoull
 
 namespace sw
 {
