@@ -151,6 +151,11 @@ struct SW_DRIVER_CPP_API LinkLibrary
         GNU,
         AppleLD,
     } style = NONE;
+    // *nix linkers (ld etc.) will link to shared libs first
+    // if static and shared library will be in the same directory for some reason,
+    // it will choose shared library
+    // we control the behavior using this field
+    bool static_ = false;
 
     LinkLibrary() = default;
     explicit LinkLibrary(const String &p);

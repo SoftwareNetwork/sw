@@ -129,6 +129,10 @@ DECLARE_OPTION_SPECIALIZATION(LinkLibrariesType)
             c->addOutput(v.l);
         if (cmd_flag_before_each_value)
         {
+            auto static_cond = v.static_ && v.style != v.MSVC;
+            //if (static_cond)
+                //cmds.push_back("-Wl,-Bstatic");
+
             if (v.whole_archive && v.style == v.AppleLD)
             {
                 // https://www.manpagez.com/man/1/ld/Xcode-5.0.php
@@ -140,13 +144,22 @@ DECLARE_OPTION_SPECIALIZATION(LinkLibrariesType)
                 cmds.push_back("-Wl,--whole-archive");
             if (separate_prefix)
             {
-                cmds.push_back(getCommandLineFlag());
+                if (!static_cond)
+                    cmds.push_back(getCommandLineFlag());
                 cmds.push_back((v.whole_archive && v.style == v.MSVC ? "/WHOLEARCHIVE:" : "") + normalize_path(v.l));
             }
             else
-                cmds.push_back((v.whole_archive && v.style == v.MSVC ? "/WHOLEARCHIVE:" : "") + getCommandLineFlag() + normalize_path(v.l));
+            {
+                if (!static_cond)
+                    cmds.push_back((v.whole_archive && v.style == v.MSVC ? "/WHOLEARCHIVE:" : "") + getCommandLineFlag() + normalize_path(v.l));
+                else
+                    cmds.push_back((v.whole_archive && v.style == v.MSVC ? "/WHOLEARCHIVE:" : "") + normalize_path(v.l));
+            }
             if (v.whole_archive && v.style == v.GNU)
                 cmds.push_back("-Wl,--no-whole-archive");
+
+            //if (static_cond)
+                //cmds.push_back("-Wl,-Bdynamic");
         }
         else
             cmds.push_back((v.whole_archive && v.style == v.MSVC ? "/WHOLEARCHIVE:" : "") + normalize_path(v.l));
