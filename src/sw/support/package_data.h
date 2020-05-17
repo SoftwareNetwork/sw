@@ -33,7 +33,7 @@ struct SW_SUPPORT_API PackageData
     UnresolvedPackages dependencies;
 
 public:
-    PackageData(const PackageId &);
+    PackageData(const PackageId &id, const PackageId &driver_id);
     PackageData(const String &json);
     // if passed by const ref, there is undefined behavior if key is missing
     // so we copy for reliability

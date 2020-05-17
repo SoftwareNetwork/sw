@@ -15,8 +15,8 @@ namespace sw
 namespace detail
 {
 
-PackageData::PackageData(const PackageId &id)
-    : id(id)
+PackageData::PackageData(const PackageId &id, const PackageId &driver_id)
+    : id(id), driver_id(driver_id)
 {
 }
 
@@ -26,7 +26,7 @@ PackageData::PackageData(const String &json)
 }
 
 PackageData::PackageData(nlohmann::json j)
-    : PackageData(PackageId{ j["package"].get<std::string>() })
+    : PackageData(PackageId{ j["package"].get<std::string>()}, PackageId{ j["driver"].get<std::string>() })
 {
     source = Source::load(j["source"]);
     if (!source)
@@ -41,6 +41,7 @@ nlohmann::json detail::PackageData::toJson() const
 {
     nlohmann::json j;
     j["package"] = id.toString();
+    j["driver"] = driver_id.toString();
     source->save(j["source"]);
     for (auto &[f, t] : files_map)
         j["files"][normalize_path(f)] = normalize_path(t);

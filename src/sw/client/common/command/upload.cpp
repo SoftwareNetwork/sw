@@ -51,7 +51,7 @@ sw::PackageDescriptionMap getPackages(const sw::SwBuild &b, const sw::SourceDirM
         if (t.getInterfaceSettings()["skip_upload"] == "true")
             continue;
 
-        auto d = std::make_unique<PackageDescription>(pkg);
+        auto d = std::make_unique<PackageDescription>(pkg, "todo-driver"s);
         d->source = t.getSource().clone();
 
         // find root dir
