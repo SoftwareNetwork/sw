@@ -370,10 +370,10 @@ SUBCOMMAND_DECL(integrate)
 
                 // IMPORTED_LOCATION = path to .dll/.so or static .lib/.a
                 ctx.addLine("IMPORTED_LOCATION_" + toCmakeString(bs.Native.ConfigurationType) + " \"" +
-                    fix_path(normalize_path(s[st == "SHARED" ? "output_file" : "import_library"].getValue())) + "\"");
+                    fix_path(normalize_path(s[st == "SHARED" ? "output_file" : "import_library"].getPathValue(getContext().getLocalStorage()))) + "\"");
                 // IMPORTED_IMPLIB = path to .lib (import)
                 ctx.addLine("IMPORTED_IMPLIB_" + toCmakeString(bs.Native.ConfigurationType) + " \"" +
-                    fix_path(normalize_path(s["import_library"].getValue())) + "\"");
+                    fix_path(normalize_path(s["import_library"].getPathValue(getContext().getLocalStorage()))) + "\"");
 
                 ctx.decreaseIndent(")");
                 ctx.emptyLines();
@@ -503,7 +503,7 @@ SUBCOMMAND_DECL(integrate)
                     return p.parent_path() / p.stem();
                 };
 
-                ctx.addLine("ctx.parse_flags('-l" + normalize_path(remove_ext(s["import_library"].getValue())) + "', lib)");
+                ctx.addLine("ctx.parse_flags('-l" + normalize_path(remove_ext(s["import_library"].getPathValue(getContext().getLocalStorage()))) + "', lib)");
 
                 // defs
                 for (auto &[k, p] : s["properties"].getMap())
