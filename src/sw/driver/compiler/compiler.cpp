@@ -833,6 +833,11 @@ void GNULinker::prepareCommand1(const Target &t)
                 if (ll.whole_archive && ll.style == ll.AppleLD)
                     continue; // on whole archive + apple ld we do not change path
 
+                // may be set earlier
+                if (ll.static_)
+                    continue;
+
+                // if comes from saved config
                 // more reliable condition?
                 if (ll.l.extension() == ".a")
                 {

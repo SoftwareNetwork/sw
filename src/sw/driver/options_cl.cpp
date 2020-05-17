@@ -130,8 +130,6 @@ DECLARE_OPTION_SPECIALIZATION(LinkLibrariesType)
         if (cmd_flag_before_each_value)
         {
             auto static_cond = v.static_ && v.style != v.MSVC;
-            //if (static_cond)
-                //cmds.push_back("-Wl,-Bstatic");
 
             if (v.whole_archive && v.style == v.AppleLD)
             {
@@ -157,9 +155,6 @@ DECLARE_OPTION_SPECIALIZATION(LinkLibrariesType)
             }
             if (v.whole_archive && v.style == v.GNU)
                 cmds.push_back("-Wl,--no-whole-archive");
-
-            //if (static_cond)
-                //cmds.push_back("-Wl,-Bdynamic");
         }
         else
             cmds.push_back((v.whole_archive && v.style == v.MSVC ? "/WHOLEARCHIVE:" : "") + normalize_path(v.l));

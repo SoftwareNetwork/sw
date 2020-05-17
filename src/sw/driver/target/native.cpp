@@ -2311,6 +2311,8 @@ void NativeCompiledTarget::prepare_pass1()
             else
                 l.style = l.GNU;
         }
+        if (isStaticLibrary())
+            l.static_ = true;
         Interface += l;
     }
 
