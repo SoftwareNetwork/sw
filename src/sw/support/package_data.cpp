@@ -35,6 +35,13 @@ PackageData::PackageData(nlohmann::json j)
         files_map[fs::u8path(f)] = fs::u8path(t.get<std::string>());
     for (auto &v : j["dependencies"])
         dependencies.emplace(v.get<std::string>());
+    for (auto &v : j["signatures"])
+    {
+        Signature s;
+        s.fingerprint = v["fingerprint"].get<std::string>();
+        s.signature = v["signature"].get<std::string>();
+        signatures.push_back(s);
+    }
 }
 
 nlohmann::json detail::PackageData::toJson() const
@@ -47,6 +54,13 @@ nlohmann::json detail::PackageData::toJson() const
         j["files"][normalize_path(f)] = normalize_path(t);
     for (auto &d : dependencies)
         j["dependencies"].push_back(d.toString());
+    for (auto &s : signatures)
+    {
+        nlohmann::json js;
+        js["fingerprint"] = s.fingerprint;
+        js["signature"] = s.signature;
+        j["signatures"].push_back(js);
+    }
     return j;
 }
 

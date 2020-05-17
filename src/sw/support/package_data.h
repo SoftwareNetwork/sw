@@ -19,6 +19,12 @@ namespace detail
 
 struct SW_SUPPORT_API PackageData
 {
+    struct Signature
+    {
+        String fingerprint;
+        String signature;
+    };
+
     PackageId id;
     std::unique_ptr<Source> source;
 
@@ -31,6 +37,9 @@ struct SW_SUPPORT_API PackageData
 
     /// all deps
     UnresolvedPackages dependencies;
+
+    PackageId driver_id;
+    std::vector<Signature> signatures;
 
 public:
     PackageData(const PackageId &id, const PackageId &driver_id);
