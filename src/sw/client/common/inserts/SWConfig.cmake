@@ -187,10 +187,18 @@ function(sw_execute)
         endif()
     endif()
 
+    set(storage_dir)
+    if (SW_STORAGE_DIR)
+        set(storage_dir "${SW_STORAGE_DIR}")
+        sw_internal_fix_path(storage_dir)
+        set(storage_dir --storage-dir "${storage_dir}")
+    endif()
+
     set(wdir "${SW_DEPS_DIR}")
     sw_internal_fix_path(wdir)
 
     set(sw_platform_args
+        ${storage_dir}
         ${stsh}
         -platform ${platform}
         ${mt_flag}
