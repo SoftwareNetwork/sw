@@ -22,32 +22,47 @@
 #include <sw/manager/sw_context.h>
 #include <sw/manager/storage.h>
 
+#include <base64.h>
 #include <nlohmann/json.hpp>
 
 #include <fstream>
+
+#include <primitives/log.h>
+DECLARE_STATIC_LOGGER(logger, "pvs");
 
 namespace sw
 {
 
 ProgramVersionStorage::ProgramVersionStorage(const path &in_fn)
 {
-    fn = in_fn.parent_path() / in_fn.stem() += ".json";
+    fn = in_fn.parent_path() / in_fn.stem() += ".2.json";
     if (!fs::exists(fn))
         return;
 
-    auto j = nlohmann::json::parse(read_file(fn));
-    auto &jd = j["data"];
-    for (auto &[prog, d] : jd.items())
+    try
     {
-        String o = d["output"];
-        String v = d["version"];
-        time_t t = d["lwt"];
-        path p = prog;
-        if (!fs::exists(p))
-            continue;
-        auto lwt = fs::last_write_time(p);
-        if (file_time_type2time_t(lwt) <= t)
-            versions[p] = {o,v,lwt};
+        auto j = nlohmann::json::parse(read_file(fn));
+        auto &jd = j["data"];
+        for (auto &[prog, d] : jd.items())
+        {
+            String o = d["output"];
+            o = base64_decode(o);
+            String v = d["version"];
+            time_t t = d["lwt"];
+            path p = prog;
+            if (!fs::exists(p))
+                continue;
+            auto lwt = fs::last_write_time(p);
+            if (file_time_type2time_t(lwt) <= t)
+                versions[p] = {o,v,lwt};
+        }
+    }
+    // uncomment when base64 will be fixed
+    //catch (std::exception &)
+    catch (...)
+    {
+        std::error_code ec;
+        fs::remove(fn, ec);
     }
 }
 
@@ -59,11 +74,26 @@ ProgramVersionStorage::~ProgramVersionStorage()
     for (auto &[p, v] : versions)
     {
         auto s = normalize_path(p);
-        jd[s]["output"] = v.output;
+        jd[s]["output"] = base64_encode(v.output);
         jd[s]["version"] = v.v.toString();
         jd[s]["lwt"] = file_time_type2time_t(v.t);
     }
-    write_file(fn, j.dump());
+
+    bool e = fs::exists(fn);
+    try
+    {
+        write_file(fn, j.dump());
+    }
+    catch (std::exception &ex)
+    {
+        if (!e)
+            LOG_WARN(logger, "pvs write error: " << ex.what());
+        else
+        {
+            std::error_code ec;
+            fs::remove(fn, ec);
+        }
+    }
 }
 
 void ProgramVersionStorage::addVersion(const path &p, const Version &v, const String &output)
