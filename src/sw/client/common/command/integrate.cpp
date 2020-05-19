@@ -125,18 +125,14 @@ SUBCOMMAND_DECL(integrate)
         return "/"s + s2 + p.substr(2);
     };
 
-    std::optional<sw::ConfigurationType> our_config;
-    auto create_build = [this, &cygwin, &our_config](const Strings &lines)
+    std::set<sw::TargetSettings> our_settings;
+    auto create_build = [this, &cygwin, &our_settings](const Strings &lines)
     {
         auto build = getContext().createBuild();
         auto &b = *build;
 
         auto settings = createSettings();
         cygwin = settings[0]["os"]["kernel"] == "org.cygwin";
-
-        // single config
-        if (settings.size() == 1)
-            our_config = sw::BuildSettings(settings[0]).Native.ConfigurationType;
 
         for (auto &l : lines)
         {
@@ -152,6 +148,20 @@ SUBCOMMAND_DECL(integrate)
         b.resolvePackages();
         b.loadPackages();
         b.prepare();
+
+        // find better algo
+        size_t minsz = SIZE_MAX;
+        for (auto &[pkg,tgts] : b.getTargetsToBuild())
+        {
+            minsz = std::min(minsz, tgts.size());
+        }
+        for (auto &[pkg,tgts] : b.getTargetsToBuild())
+        {
+            if (tgts.size() != minsz)
+                continue;
+            for (auto &tgt : tgts)
+                our_settings.insert(tgt->getSettings());
+        }
 
         return build;
     };
@@ -209,11 +219,11 @@ SUBCOMMAND_DECL(integrate)
             for (auto &tgt : tgts)
             {
                 const auto &s = tgt->getInterfaceSettings();
-                sw::BuildSettings bs(tgt->getSettings());
-                if (our_config && *our_config != bs.Native.ConfigurationType)
+                if (our_settings.find(tgt->getSettings()) == our_settings.end())
                     continue;
 
                 // not needed?
+                sw::BuildSettings bs(tgt->getSettings());
                 ctx.addLine("set_property(TARGET " + pkg2string(pkg) + " APPEND PROPERTY IMPORTED_CONFIGURATIONS " +
                     toCmakeString(bs.Native.ConfigurationType) + ")");
             }
@@ -222,8 +232,7 @@ SUBCOMMAND_DECL(integrate)
             for (auto &tgt : tgts)
             {
                 const auto &s = tgt->getInterfaceSettings();
-                sw::BuildSettings bs(tgt->getSettings());
-                if (our_config && *our_config != bs.Native.ConfigurationType)
+                if (our_settings.find(tgt->getSettings()) == our_settings.end())
                     continue;
 
                 ctx.increaseIndent("if (" + multiconf_gen_var + ")");
@@ -238,6 +247,7 @@ SUBCOMMAND_DECL(integrate)
                 // gen.exprs (CONFIG) are available only for multi-config generators
                 // they are vs and xcode at the moment
 
+                sw::BuildSettings bs(tgt->getSettings());
                 auto cmake_cfg = "$<$<CONFIG:" + toCmakeStringCapital(bs.Native.ConfigurationType) + ">: \"";
                 auto cmake_cfg_end = "\" >";
 

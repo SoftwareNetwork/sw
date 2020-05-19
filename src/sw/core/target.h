@@ -194,6 +194,7 @@ struct SW_CORE_API TargetContainer
 
     void clear();
     bool empty() const;
+    size_t size() const { return targets.size(); }
 
     auto begin() { return targets.begin(); }
     auto end() { return targets.end(); }
