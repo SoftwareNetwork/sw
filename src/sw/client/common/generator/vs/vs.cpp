@@ -278,6 +278,9 @@ void VSGenerator::generate(const SwBuild &b)
         add();
     }
 
+    if (s.settings.empty())
+        throw SW_RUNTIME_ERROR("Empty settings");
+
     UnresolvedPackage compiler = (*s.settings.begin())["native"]["program"]["cpp"].getValue();
     if (compiler.getPath() == "com.Microsoft.VisualStudio.VC.cl")
         ;
