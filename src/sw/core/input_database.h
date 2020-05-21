@@ -18,8 +18,6 @@
 
 #pragma once
 
-#include "input.h"
-
 #include <sw/manager/database.h>
 
 namespace sw
