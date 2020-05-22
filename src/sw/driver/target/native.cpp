@@ -69,7 +69,7 @@ static int copy_file(path in, path out)
     error_code ec;
     fs::create_directories(out.parent_path());
     fs::copy_file(in, out, fs::copy_options::overwrite_existing, ec);
-    return 0;
+    return !!ec;
 }
 SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD(sw_copy_file, copy_file)
 
