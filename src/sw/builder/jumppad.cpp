@@ -29,7 +29,6 @@ namespace sw
 int jumppad_call(const path &module, const String &name, int version, const Strings &s)
 {
     auto n = STRINGIFY(SW_JUMPPAD_PREFIX) + name;
-    //n += "_" + std::to_string(version);
     boost::dll::shared_library lib(module.u8string(),
         boost::dll::load_mode::rtld_now | boost::dll::load_mode::rtld_global);
     return lib.get<int(const Strings &)>(n.c_str())(s);
