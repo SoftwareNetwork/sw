@@ -16,18 +16,6 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
- // for serialization
-#include <primitives/filesystem.h>
-#include <boost/serialization/access.hpp>
-#include <sw/support/serialization.h>
-#include <boost/serialization/export.hpp>
-#include <boost/serialization/void_cast.hpp>
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/binary_oarchive.hpp>
-#include <boost/archive/binary_iarchive.hpp>
-#include <sw/builder/command_storage.h>
-//
 #include "command.h"
 
 #include "build.h"
@@ -48,10 +36,6 @@
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "cpp.command");
-
-BOOST_CLASS_EXPORT(::sw::driver::Command)
-BOOST_CLASS_EXPORT(::sw::driver::VSCommand)
-BOOST_CLASS_EXPORT(::sw::driver::GNUCommand)
 
 struct LazyArgument : ::primitives::command::Argument
 {
@@ -75,35 +59,7 @@ struct LazyArgument : ::primitives::command::Argument
 
 private:
     mutable String cached_value;
-
-#ifdef BOOST_SERIALIZATION_ACCESS_HPP
-    friend class boost::serialization::access;
-    template <class Ar>
-    void serialize(Ar &ar, unsigned)
-    {
-        ar & boost::serialization::base_object<::primitives::command::Argument>(*this);
-        auto s = toString();
-        ar & s;
-        cached_value = s;
-    }
-#endif
 };
-BOOST_CLASS_EXPORT(LazyArgument)
-
-static struct register_s11n_casts
-{
-    register_s11n_casts()
-    {
-        boost::serialization::void_cast_register((::sw::builder::Command*)0, (::sw::CommandNode*)0);
-        boost::serialization::void_cast_register((::sw::driver::detail::Command*)0, (::sw::builder::Command*)0);
-        boost::serialization::void_cast_register((::sw::driver::Command*)0, (::sw::driver::detail::Command*)0);
-        boost::serialization::void_cast_register((::sw::driver::VSCommand*)0, (::sw::driver::Command*)0);
-        boost::serialization::void_cast_register((::sw::driver::GNUCommand*)0, (::sw::driver::Command*)0);
-        boost::serialization::void_cast_register((LazyArgument*)0, (::primitives::command::Argument*)0);
-        boost::serialization::void_cast_register((::primitives::command::SimpleArgument*)0, (::primitives::command::Argument*)0);
-        boost::serialization::void_cast_register((::primitives::command::SimplePositionalArgument*)0, (::primitives::command::SimpleArgument*)0);
-    }
-} _______x;
 
 namespace sw
 {
