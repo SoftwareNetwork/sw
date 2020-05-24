@@ -18,6 +18,7 @@ bin*
 .s
 
 *.bat
+*.sh
 
 *~
 *.user
