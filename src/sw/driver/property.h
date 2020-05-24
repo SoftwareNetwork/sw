@@ -3,14 +3,8 @@
 
 #pragma once
 
-//#include <property_tree.h>
-
-//#include <boost/any.hpp>
-//#include <boost/variant.hpp>
 #include <primitives/filesystem.h>
 #include <variant>
-
-//#include <any>
 
 namespace sw
 {

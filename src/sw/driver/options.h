@@ -19,10 +19,10 @@
 #pragma once
 
 #include "dependency.h"
+#include "property.h"
 #include "types.h"
 
 #include <sw/manager/package.h>
-#include <sw/manager/property.h>
 
 #include <regex>
 #include <unordered_set>
