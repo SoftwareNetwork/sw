@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Copyright (C) 2016-2018 Egor Pugin
+// Copyright (C) 2016-2018 Egor Pugin <egor.pugin@gmail.com>
 
 #include "yaml.h"
 
