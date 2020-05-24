@@ -1,4 +1,4 @@
-//
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 #ifndef GENERATOR2
 #define GENERATOR2(x) GENERATOR(x, #x)
