@@ -62,15 +62,6 @@ struct SW_BUILDER_API CommandNode : std::enable_shared_from_this<CommandNode>
         dependent_commands.clear();
         dependencies.clear();
     }
-
-private:
-#ifdef BOOST_SERIALIZATION_ACCESS_HPP
-    friend class boost::serialization::access;
-    template <class Ar>
-    void serialize(Ar &ar, unsigned)
-    {
-    }
-#endif
 };
 
 struct SW_BUILDER_API ResourcePool
@@ -255,7 +246,6 @@ private:
     template <class Ar>
     void serialize(Ar &ar, unsigned)
     {
-        ar & boost::serialization::base_object<CommandNode>(*this);
         ar & boost::serialization::base_object<::primitives::Command>(*this);
 
         ar & name;
@@ -266,6 +256,12 @@ private:
             ar & command_storage->root;
         command_storage = (::sw::CommandStorage*)flag;
 
+        ar & deps_processor;
+        ar & deps_module;
+        ar & deps_function;
+        ar & deps_file;
+        ar & msvc_prefix;
+
         ar & first_response_file_argument;
         ar & always;
         ar & remove_outputs_before_execution;
@@ -274,6 +270,9 @@ private:
 
         ar & inputs;
         ar & outputs;
+
+        ar & dependent_commands;
+        ar & dependencies;
 
         // TODO: add program set
     }
@@ -375,5 +374,5 @@ template<> struct hash<sw::builder::Command>
 
 #ifdef BOOST_SERIALIZATION_ACCESS_HPP
 // change when you update serialization
-//BOOST_CLASS_VERSION(::sw::builder::Command, 3)
+//BOOST_CLASS_VERSION(::sw::builder::Command, 4)
 #endif
