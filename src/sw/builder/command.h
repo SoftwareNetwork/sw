@@ -258,43 +258,6 @@ private:
     String makeErrorString(const String &e);
     String saveCommand() const;
     void printOutputs();
-
-#ifdef BOOST_SERIALIZATION_ACCESS_HPP
-    friend class boost::serialization::access;
-    template <class Ar>
-    void serialize(Ar &ar, unsigned)
-    {
-        ar & boost::serialization::base_object<::primitives::Command>(*this);
-
-        ar & name;
-
-        size_t flag = (size_t)command_storage;
-        ar & flag;
-        if (flag != 1)
-            ar & command_storage->root;
-        command_storage = (::sw::CommandStorage*)flag;
-
-        ar & deps_processor;
-        ar & deps_module;
-        ar & deps_function;
-        ar & deps_file;
-        ar & msvc_prefix;
-
-        ar & first_response_file_argument;
-        ar & always;
-        ar & remove_outputs_before_execution;
-        ar & strict_order;
-        ar & output_dirs;
-
-        ar & inputs;
-        ar & outputs;
-
-        ar & dependent_commands;
-        ar & dependencies;
-
-        // TODO: add program set
-    }
-#endif
 };
 
 struct SW_BUILDER_API CommandSequence : Command

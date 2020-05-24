@@ -35,17 +35,84 @@
 
 #include <sw/support/serialization.h>
 
-BOOST_CLASS_EXPORT(::sw::builder::BuiltinCommand)
-BOOST_CLASS_EXPORT(::primitives::command::SimpleArgument)
-BOOST_CLASS_EXPORT(::primitives::command::SimplePositionalArgument)
+#define SERIALIZATION_TYPE sw::builder::Command
+SERIALIZATION_BEGIN_UNIFIED
+    ar & boost::serialization::base_object<::primitives::Command>(v);
 
-template <class Ar>
-void setup_ar(Ar &ar)
-{
-    ar.template register_type<::sw::builder::BuiltinCommand>();
-    ar.template register_type<::primitives::command::SimpleArgument>();
-    ar.template register_type<::primitives::command::SimplePositionalArgument>();
-}
+    ar & v.name;
+
+    size_t flag = (size_t)v.command_storage;
+    ar & flag;
+    if (flag > 1)
+    {
+        if (v.command_storage)
+            ar & v.command_storage->root;
+        else
+        {
+            path p;
+            ar & p;
+            v.command_storage_root = p;
+        }
+    }
+    v.command_storage = (::sw::CommandStorage*)flag;
+
+    ar & v.deps_processor;
+    ar & v.deps_module;
+    ar & v.deps_function;
+    ar & v.deps_file;
+    ar & v.msvc_prefix;
+
+    ar & v.first_response_file_argument;
+    ar & v.always;
+    ar & v.remove_outputs_before_execution;
+    ar & v.strict_order;
+    ar & v.output_dirs;
+
+    ar & v.inputs;
+    ar & v.outputs;
+
+    //ar & dependent_commands;
+    //ar & dependencies;
+SERIALIZATION_UNIFIED_END
+
+#define SERIALIZATION_TYPE primitives::Command::Arguments
+SERIALIZATION_BEGIN_SPLIT
+    size_t sz;
+    ar & sz;
+    while (sz--)
+    {
+        String s;
+        ar & s;
+        v.push_back(std::make_unique<primitives::command::SimpleArgument>(s));
+    }
+SERIALIZATION_SPLIT_CONTINUE
+    ar & v.size();
+    for (auto &a : v)
+        ar & a->toString();
+SERIALIZATION_SPLIT_END
+
+#define SERIALIZATION_TYPE sw::ExecutionPlan::VecT
+SERIALIZATION_BEGIN_SPLIT
+    SW_UNIMPLEMENTED;
+SERIALIZATION_SPLIT_CONTINUE
+    ar & v.size();
+    for (auto &a : v)
+        ar & (sw::builder::Command&)*a;
+SERIALIZATION_SPLIT_END
+
+#define SERIALIZATION_TYPE sw::Commands
+SERIALIZATION_BEGIN_SPLIT
+    size_t sz;
+    ar & sz;
+    while (sz--)
+    {
+        auto c = std::make_shared<sw::builder::Command>();
+        ar & *c;
+        v.insert(c);
+    }
+SERIALIZATION_SPLIT_CONTINUE
+    SW_UNIMPLEMENTED;
+SERIALIZATION_SPLIT_END
 
 namespace sw
 {
@@ -69,7 +136,6 @@ Commands ExecutionPlan::load(const path &p, const SwBuilderContext &swctx, int t
         if (!ifs)
             throw SW_RUNTIME_ERROR("Cannot read file: " + normalize_path(p));
         boost::archive::binary_iarchive ar(ifs);
-        setup_ar(ar);
         load(ar);
     }
     else if (type == 1)
@@ -78,7 +144,6 @@ Commands ExecutionPlan::load(const path &p, const SwBuilderContext &swctx, int t
         if (!ifs)
             throw SW_RUNTIME_ERROR("Cannot read file: " + normalize_path(p));
         boost::archive::text_iarchive ar(ifs);
-        setup_ar(ar);
         load(ar);
     }
 
@@ -108,7 +173,6 @@ void ExecutionPlan::save(const path &p, int type) const
         if (!ofs)
             throw SW_RUNTIME_ERROR("Cannot write file: " + normalize_path(p));
         boost::archive::binary_oarchive ar(ofs);
-        setup_ar(ar);
         save(ar);
     }
     else if (type == 1)
@@ -117,7 +181,6 @@ void ExecutionPlan::save(const path &p, int type) const
         if (!ofs)
             throw SW_RUNTIME_ERROR("Cannot write file: " + normalize_path(p));
         boost::archive::text_oarchive ar(ofs);
-        setup_ar(ar);
         save(ar);
     }
 }
