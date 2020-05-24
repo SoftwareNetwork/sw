@@ -1053,6 +1053,7 @@ void Command::postProcess(bool ok)
     case DepsProcessor::Gnu:
         if (ok)
             addImplicitInput(process_deps_gnu(*this, deps_file));
+        break;
     case DepsProcessor::Custom:
     {
         boost::dll::shared_library lib(deps_module.u8string(),
