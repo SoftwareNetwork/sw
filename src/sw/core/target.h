@@ -256,7 +256,12 @@ struct SimpleExpected : std::variant<SimpleExpectedErrorCode, T, Args...>
 
 } // namespace detail
 
-struct SW_CORE_API TargetMap : PackageVersionMapBase<TargetContainer, std::unordered_map, primitives::version::VersionMap>
+struct
+    // workaround msvc bug
+#ifndef _MSC_VER
+    SW_CORE_API
+#endif
+    TargetMap : PackageVersionMapBase<TargetContainer, std::unordered_map, primitives::version::VersionMap>
 {
     using Base = PackageVersionMapBase<TargetContainer, std::unordered_map, primitives::version::VersionMap>;
 
