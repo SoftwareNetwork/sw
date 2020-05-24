@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 STD(ansi)
 STD(89)
 STD(90)

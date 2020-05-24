@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 // https://wiki.gnome.org/Projects/Vala/ManualBindings
 
 [CCode]
