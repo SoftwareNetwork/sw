@@ -16,9 +16,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "frontend/cppan/yaml.h"
-#include "build.h"
-#include "target/native.h"
+#include "yaml.h"
+
+#include <sw/driver/build.h>
+#include <sw/driver/target/native.h>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "solution_cppan");
