@@ -463,6 +463,8 @@ private:
         addLine("rule c" + std::to_string(c.getHash()));
         increaseIndent();
         addLine("description = " + c.getName());
+        if (!c.msvc_prefix.empty())
+            addLine("msvc_deps_prefix = \"" + c.msvc_prefix + "\"");
         addLine("command = ");
         if (b.getContext().getHostOs().Type == OSType::Windows)
         {
