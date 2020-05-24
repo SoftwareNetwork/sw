@@ -70,6 +70,8 @@ enum class FrontendType
     SwVala,
 
     Cppan,
+    Cmake,
+
     Cargo, // rust
     Dub, // d
     Composer, // php
@@ -103,6 +105,8 @@ static String toString(FrontendType t)
         return "sw.vala";
     case FrontendType::Cppan:
         return "cppan";
+    case FrontendType::Cmake:
+        return "cmake";
     case FrontendType::Cargo:
         return "cargo";
     case FrontendType::Dub:
@@ -230,6 +234,10 @@ struct SpecFileInput : Input, DriverInput
             auto ep = std::make_unique<NativeBuiltinTargetEntryPoint>(bf);
             ep->source_dir = fn.parent_path();
             return ep;
+        }
+        case FrontendType::Cmake:
+        {
+            SW_UNIMPLEMENTED;
         }
         case FrontendType::Cargo:
         {
@@ -638,6 +646,9 @@ const Driver::AvailableFrontends &Driver::getAvailableFrontends()
 
         // cppan fe
         m.insert({ FrontendType::Cppan, "cppan.yml" });
+
+        // disable for now, we must print message when loading more that one input from directory
+        //m.insert({ FrontendType::Cmake, "CMakeLists.txt" });
 
         // rust fe
         m.insert({ FrontendType::Cargo, "Cargo.toml" });
