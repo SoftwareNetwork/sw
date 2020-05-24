@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 /*
  * SW - Build System and Package Manager
  * Copyright (C) 2016-2018 Egor Pugin
