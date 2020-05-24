@@ -46,6 +46,17 @@ DECLARE_STATIC_LOGGER(logger, "compiler");
 namespace sw
 {
 
+std::map<path, String> &getMsvcIncludePrefixes();
+
+static String get_msvc_prefix(const path &prog)
+{
+    auto &p = getMsvcIncludePrefixes();
+    auto i = p.find(prog);
+    if (i == p.end())
+        throw SW_RUNTIME_ERROR("Cannot find msvc prefix");
+    return i->second;
+}
+
 static void add_args(driver::Command &c, const Strings &args)
 {
     for (auto &a : args)
@@ -176,12 +187,15 @@ void NativeCompiler::merge(const NativeCompiledTarget &t)
     NativeCompilerOptions::merge(t.getMergeObject());
 }
 
-SW_CREATE_COMPILER_COMMAND(VisualStudioCompiler, driver::VSCommand)
+SW_CREATE_COMPILER_COMMAND(VisualStudioCompiler, driver::Command)
 
 void VisualStudioCompiler::prepareCommand1(const Target &t)
 {
     // msvc compilers - _MSC_VER
     // https://en.wikipedia.org/wiki/Microsoft_Visual_C%2B%2B#Internal_version_numbering
+
+    cmd->deps_processor = builder::Command::DepsProcessor::Msvc;
+    cmd->msvc_prefix = get_msvc_prefix(cmd->getProgram());
 
     if (InputFile)
     {
@@ -260,12 +274,15 @@ path VisualStudioCompiler::getOutputFile() const
     return Output();
 }
 
-SW_CREATE_COMPILER_COMMAND(VisualStudioASMCompiler, driver::VSCommand)
+SW_CREATE_COMPILER_COMMAND(VisualStudioASMCompiler, driver::Command)
 
 void VisualStudioASMCompiler::prepareCommand1(const Target &t)
 {
     if (file.filename() == "ml64.exe")
         ((VisualStudioASMCompiler*)this)->SafeSEH = false;
+
+    cmd->deps_processor = builder::Command::DepsProcessor::Msvc;
+    cmd->msvc_prefix = get_msvc_prefix(cmd->getProgram());
 
     if (InputFile)
     {
@@ -307,11 +324,13 @@ void VisualStudioASMCompiler::setSourceFile(const path &input_file, const path &
     setOutputFile(output_file);
 }
 
-SW_CREATE_COMPILER_COMMAND(ClangCompiler, driver::GNUCommand)
+SW_CREATE_COMPILER_COMMAND(ClangCompiler, driver::Command)
 
 void ClangCompiler::prepareCommand1(const ::sw::Target &t)
 {
-    auto cmd = std::static_pointer_cast<driver::GNUCommand>(this->cmd);
+    auto cmd = std::static_pointer_cast<driver::Command>(this->cmd);
+
+    cmd->deps_processor = builder::Command::DepsProcessor::Gnu;
 
     if (InputFile)
     {
@@ -367,10 +386,13 @@ void ClangCompiler::setSourceFile(const path &input_file, const path &output_fil
     setOutputFile(output_file);
 }
 
-SW_CREATE_COMPILER_COMMAND(ClangClCompiler, driver::VSCommand)
+SW_CREATE_COMPILER_COMMAND(ClangClCompiler, driver::Command)
 
 void ClangClCompiler::prepareCommand1(const Target &t)
 {
+    cmd->deps_processor = builder::Command::DepsProcessor::Msvc;
+    cmd->msvc_prefix = get_msvc_prefix(cmd->getProgram());
+
     if (InputFile)
     {
         cmd->name = normalize_path(InputFile());
@@ -448,7 +470,7 @@ void ClangClCompiler::setSourceFile(const path &input_file, const path &output_f
     setOutputFile(output_file);
 }
 
-SW_CREATE_COMPILER_COMMAND(GNUASMCompiler, driver::GNUCommand)
+SW_CREATE_COMPILER_COMMAND(GNUASMCompiler, driver::Command)
 
 static String getRandomSeed(const path &p, const path &sw_storage_dir)
 {
@@ -464,6 +486,8 @@ static String getRandomSeed(const path &p, const path &sw_storage_dir)
 
 void GNUASMCompiler::prepareCommand1(const Target &t)
 {
+    cmd->deps_processor = builder::Command::DepsProcessor::Gnu;
+
     bool assembly = false;
     if (InputFile)
     {
@@ -476,7 +500,7 @@ void GNUASMCompiler::prepareCommand1(const Target &t)
         cmd->working_directory = OutputFile().parent_path();
 
     // asm files does not have deps AFAIK
-    std::dynamic_pointer_cast<driver::GNUCommand>(cmd)->has_deps = false;
+    //std::dynamic_pointer_cast<driver::GNUCommand>(cmd)->deps_file.clear();
 
     //if (cmd->file.empty())
         //return nullptr;
@@ -515,11 +539,13 @@ void GNUASMCompiler::setSourceFile(const path &input_file, const path &output_fi
 
 SW_DEFINE_PROGRAM_CLONE(ClangASMCompiler)
 
-SW_CREATE_COMPILER_COMMAND(GNUCompiler, driver::GNUCommand)
+SW_CREATE_COMPILER_COMMAND(GNUCompiler, driver::Command)
 
 void GNUCompiler::prepareCommand1(const Target &t)
 {
-    auto cmd = std::static_pointer_cast<driver::GNUCommand>(this->cmd);
+    auto cmd = std::static_pointer_cast<driver::Command>(this->cmd);
+
+    cmd->deps_processor = builder::Command::DepsProcessor::Gnu;
 
     if (InputFile)
     {

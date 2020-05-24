@@ -36,6 +36,57 @@ DECLARE_STATIC_LOGGER(logger, "compiler.detect");
 namespace sw
 {
 
+std::map<path, String> &getMsvcIncludePrefixes()
+{
+    static std::map<path, String> prefixes;
+    return prefixes;
+}
+
+static String detectMsvcPrefix(builder::detail::ResolvableCommand c, const path &idir)
+{
+    // examples:
+    // "Note: including file: filename\r" (english)
+    // "Some: other lang: filename\r"
+    // "Some: other lang  filename\r" (ita)
+
+    auto &p = getMsvcIncludePrefixes();
+    if (!p[c.getProgram()].empty())
+        return p[c.getProgram()];
+
+    String contents = "#include <iostream>\r\nint dummy;";
+    auto fn = get_temp_filename("cliprefix") += ".cpp";
+    auto obj = path(fn) += ".obj";
+    write_file(fn, contents);
+    c.push_back("/showIncludes");
+    c.push_back("/c");
+    c.push_back(fn);
+    c.push_back("/Fo" + normalize_path_windows(obj));
+    c.push_back("/I");
+    c.push_back(idir);
+    std::error_code ec;
+    c.execute(ec);
+    fs::remove(obj);
+    fs::remove(fn);
+
+    auto error = [&c](const String &reason)
+    {
+        return "Cannot match VS include prefix (" + reason + "):\n" + c.out.text + "\nstderr:\n" + c.err.text;
+    };
+
+    auto lines = split_lines(c.out.text);
+    if (lines.size() < 2)
+        throw SW_RUNTIME_ERROR(error("bad output"));
+
+    static std::regex r(R"((.*\s)[a-zA-Z]:\\.*iostream)");
+    std::smatch m;
+    if (!std::regex_search(lines[1], m, r) &&
+        !std::regex_search(lines[0], m, r) // clang-cl does not output filename
+        )
+        throw SW_RUNTIME_ERROR(error("regex_search failed"));
+    return p[c.getProgram()] = m[1].str();
+}
+
+
 const StringSet &getCppHeaderFileExtensions()
 {
     static const StringSet header_file_extensions{

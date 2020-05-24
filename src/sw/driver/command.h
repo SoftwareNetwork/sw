@@ -332,25 +332,13 @@ inline tag_env env(const String &k, const String &v)
 namespace driver
 {
 
-namespace detail
-{
-
 struct SW_DRIVER_CPP_API Command : ::sw::builder::Command
 {
     using Base = ::sw::builder::Command;
-
-    bool ignore_deps_generated_commands = false;
-
-    using Base::Base;
-};
-
-}
-
-struct SW_DRIVER_CPP_API Command : detail::Command
-{
-    using Base = detail::Command;
     using LazyCallback = std::function<String(void)>;
     using LazyAction = std::function<void(void)>;
+
+    bool ignore_deps_generated_commands = false;
 
     using Base::Base;
     virtual ~Command() = default;
@@ -371,29 +359,6 @@ private:
     bool dependency_set = false;
     std::weak_ptr<Dependency> dependency; // main
     std::vector<std::weak_ptr<Dependency>> dependencies; // others
-};
-
-struct SW_DRIVER_CPP_API VSCommand : Command
-{
-    using Command::Command;
-
-    std::shared_ptr<Command> clone() const override;
-
-private:
-    void postProcess1(bool ok) override;
-};
-
-struct SW_DRIVER_CPP_API GNUCommand : Command
-{
-    path deps_file;
-    bool has_deps = true;
-
-    using Command::Command;
-
-    std::shared_ptr<Command> clone() const override;
-
-private:
-    void postProcess1(bool ok) override;
 };
 
 struct SW_DRIVER_CPP_API CommandBuilder
@@ -465,9 +430,6 @@ private:
 };
 
 } // namespace driver
-
-std::map<path, String> &getMsvcIncludePrefixes();
-String detectMsvcPrefix(builder::detail::ResolvableCommand c, const path &idir);
 
 Version getVersion(
     const SwManagerContext &swctx, builder::detail::ResolvableCommand &c,

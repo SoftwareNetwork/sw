@@ -41,6 +41,7 @@
 #include <primitives/symbol.h>
 #include <primitives/templates.h>
 #include <primitives/sw/settings_program_name.h>
+#include <pystring.h>
 
 #include <regex>
 
@@ -49,6 +50,143 @@ DECLARE_STATIC_LOGGER(logger, "command");
 
 namespace sw
 {
+
+static Files process_deps_msvc(builder::Command &c)
+{
+    // deps are placed into command output,
+    // so we can't skip this filtering
+
+    // filter out includes and file name
+    // but locales!
+    auto &prefix = c.msvc_prefix;
+    if (prefix.empty())
+        throw SW_RUNTIME_ERROR("msvc prefix is not set");
+
+    Files deps;
+    auto perform = [&deps, &prefix](auto &text)
+    {
+        std::deque<String> lines;
+        boost::split(lines, text, boost::is_any_of("\n"));
+        text.clear();
+        // remove filename
+        lines.pop_front();
+
+        for (auto &line : lines)
+        {
+            if (line.find(prefix) != 0)
+            {
+                text += line + "\n";
+                continue;
+            }
+            auto include = line.substr(prefix.size());
+            boost::trim(include);
+            //if (fs::exists(include)) // slow check? but correct?
+            deps.insert(include);
+        }
+    };
+
+    // on errors msvc puts everything to stderr instead of stdout
+    // https://docs.microsoft.com/en-us/cpp/build/reference/showincludes-list-include-files?view=vs-2019
+    // link says only stderr used for show includes
+    // but we do not see it
+    perform(c.out.text); // remove?
+    perform(c.err.text);
+
+    return deps;
+}
+
+static Files process_deps_gnu(builder::Command &c, const path &deps_file)
+{
+    if (deps_file.empty())
+        return {};
+    if (!fs::exists(deps_file))
+    {
+        LOG_DEBUG(logger, "Missing deps file: " + normalize_path(deps_file));
+        return {};
+    }
+
+    static const std::regex space_r("[^\\\\] ");
+
+    // deps file is a make in form
+    // target: dependencies
+    // deps are split by spaces on several lines with \ at the end of each line except the last one
+    //
+    // example:
+    //
+    // file.o: dep1.cpp dep2.cpp \
+            //  dep1.h dep2.h \
+    //  dep3.h \
+    //  dep4.h
+//
+
+    auto f = read_file(deps_file);
+
+    // skip target
+    //  use exactly ": " because on windows target is 'C:/path/to/file: '
+    //                                           skip up to this space ^
+    f = f.substr(f.find(": ") + 1);
+
+    FilesOrdered files;
+
+    enum
+    {
+        EMPTY,
+        FILE,
+    };
+    int state = EMPTY;
+    auto p = f.c_str();
+    auto begin = p;
+    while (*p)
+    {
+        switch (state)
+        {
+        case EMPTY:
+            if (isspace(*p) || *p == '\\')
+                break;
+            state = FILE;
+            begin = p;
+            break;
+        case FILE:
+            if (!isspace(*p))
+                break;
+            if (*(p - 1) == '\\')
+                break;
+            String s(begin, p);
+            if (!s.empty())
+            {
+                boost::replace_all(s, "\\ ", " ");
+                if (pystring::endswith(s, "\\\n")) // protobuf does not put space after filename
+                    s.resize(s.size() - 2);
+                files.push_back(fs::u8path(s));
+            }
+            state = EMPTY;
+            break;
+        }
+        p++;
+    }
+
+    Files deps;
+#ifndef _WIN32
+    for (auto &f : files)
+        deps.insert(f);
+#else
+    for (auto &f2 : files)
+    {
+        auto f3 = normalize_path(f2);
+#ifdef CPPAN_OS_WINDOWS_NO_CYGWIN
+        static const String cyg = "/cygdrive/";
+        if (f3.find(cyg) == 0)
+        {
+            f3 = f3.substr(cyg.size());
+            f3 = toupper(f3[0]) + ":" + f3.substr(1);
+        }
+#endif
+        //if (!fs::exists(fs::u8path(f3)))
+        deps.insert(fs::u8path(f3));
+    }
+#endif
+    return deps;
+}
 
 CommandNode::CommandNode()
 {
@@ -448,6 +586,8 @@ bool Command::beforeCommand()
 
 void Command::afterCommand()
 {
+    // command executed successfully
+
     //if (always)
         //return;
 
@@ -904,7 +1044,26 @@ void Command::postProcess(bool ok)
     // clear deps, otherwise they will stack up
     implicit_inputs.clear();
 
-    postProcess1(ok);
+    switch (deps_processor)
+    {
+    case DepsProcessor::Msvc:
+        // process anyway to filter out deps
+        addImplicitInput(process_deps_msvc(*this));
+        break;
+    case DepsProcessor::Gnu:
+        if (ok)
+            addImplicitInput(process_deps_gnu(*this, deps_file));
+    case DepsProcessor::Custom:
+    {
+        boost::dll::shared_library lib(deps_module.u8string(),
+            boost::dll::load_mode::rtld_now | boost::dll::load_mode::rtld_global);
+        auto &f = lib.get<ImplicitDependenciesProcessor>(deps_function);
+        addImplicitInput(f(*this));
+    }
+        break;
+    default:
+        break;
+    }
 }
 
 bool Command::needsResponseFile() const

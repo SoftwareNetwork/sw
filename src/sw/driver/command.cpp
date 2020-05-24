@@ -29,10 +29,8 @@
 #include <primitives/symbol.h>
 
 #include <boost/algorithm/string.hpp>
-#include <boost/dll.hpp>
 #include <boost/thread/locks.hpp>
 #include <boost/thread/shared_mutex.hpp>
-#include <pystring.h>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "cpp.command");
@@ -190,161 +188,6 @@ Command &Command::operator|(CommandBuilder &c)
 {
     Base::operator|(*c.getCommand());
     return *this;
-}
-
-std::shared_ptr<Command> VSCommand::clone() const
-{
-    return std::make_shared<VSCommand>(*this);
-}
-
-void VSCommand::postProcess1(bool)
-{
-    // deps are placed into command output,
-    // so we can't skip this filtering
-
-    // filter out includes and file name
-    // but locales!
-    // "Note: including file: filename\r" (english)
-    // "Some: other lang: filename\r"
-    // "Some: other lang  filename\r" (ita)
-    String prefix;
-    auto &p = getMsvcIncludePrefixes();
-    auto i = p.find(getProgram());
-    if (i == p.end())
-    {
-        // clangcl uses this one (default)
-        // with or without space? clang has some code with '.' instead of ' '
-        //prefix = "Note: including file: ";
-        throw SW_RUNTIME_ERROR("Cannot find msvc prefix");
-    }
-    else
-        prefix = i->second;
-
-    auto perform = [this, &prefix](auto &text)
-    {
-        std::deque<String> lines;
-        boost::split(lines, text, boost::is_any_of("\n"));
-        text.clear();
-        // remove filename
-        lines.pop_front();
-
-        for (auto &line : lines)
-        {
-            if (line.find(prefix) != 0)
-            {
-                text += line + "\n";
-                continue;
-            }
-            auto include = line.substr(prefix.size());
-            boost::trim(include);
-            //if (fs::exists(include)) // slow check? but correct?
-            addImplicitInput(include);
-        }
-    };
-
-    // on errors msvc puts everything to stderr instead of stdout
-    perform(out.text);
-    perform(err.text);
-}
-
-std::shared_ptr<Command> GNUCommand::clone() const
-{
-    return std::make_shared<GNUCommand>(*this);
-}
-
-void GNUCommand::postProcess1(bool ok)
-{
-    // deps are placed into separate file, so we can skip our jobs
-    if (!ok)
-        return;
-
-    if (deps_file.empty() || !has_deps)
-        return;
-    if (!fs::exists(deps_file))
-    {
-        LOG_DEBUG(logger, "Missing deps file: " + normalize_path(deps_file));
-        return;
-    }
-
-    static const std::regex space_r("[^\\\\] ");
-
-    // deps file is a make in form
-    // target: dependencies
-    // deps are split by spaces on several lines with \ at the end of each line except the last one
-    //
-    // example:
-    //
-    // file.o: dep1.cpp dep2.cpp \
-    //  dep1.h dep2.h \
-    //  dep3.h \
-    //  dep4.h
-    //
-
-    auto f = read_file(deps_file);
-
-    // skip target
-    //  use exactly ": " because on windows target is 'C:/path/to/file: '
-    //                                           skip up to this space ^
-    f = f.substr(f.find(": ") + 1);
-
-    FilesOrdered files;
-
-    enum
-    {
-        EMPTY,
-        FILE,
-    };
-    int state = EMPTY;
-    auto p = f.c_str();
-    auto begin = p;
-    while (*p)
-    {
-        switch (state)
-        {
-        case EMPTY:
-            if (isspace(*p) || *p == '\\')
-                break;
-            state = FILE;
-            begin = p;
-            break;
-        case FILE:
-            if (!isspace(*p))
-                break;
-            if (*(p - 1) == '\\')
-                break;
-            String s(begin, p);
-            if (!s.empty())
-            {
-                boost::replace_all(s, "\\ ", " ");
-                if (pystring::endswith(s, "\\\n")) // protobuf does not put space after filename
-                    s.resize(s.size() - 2);
-                files.push_back(fs::u8path(s));
-            }
-            state = EMPTY;
-            break;
-        }
-        p++;
-    }
-
-#ifndef _WIN32
-    for (auto &f : files)
-        addImplicitInput(f);
-#else
-    for (auto &f2 : files)
-    {
-        auto f3 = normalize_path(f2);
-#ifdef CPPAN_OS_WINDOWS_NO_CYGWIN
-        static const String cyg = "/cygdrive/";
-        if (f3.find(cyg) == 0)
-        {
-            f3 = f3.substr(cyg.size());
-            f3 = toupper(f3[0]) + ":" + f3.substr(1);
-        }
-#endif
-        //if (!fs::exists(fs::u8path(f3)))
-        addImplicitInput(fs::u8path(f3));
-    }
-#endif
 }
 
 ///
@@ -558,51 +401,6 @@ CommandBuilder &CommandBuilder::operator<<(const Command::LazyCallback &t)
 }
 
 } // namespace driver
-
-std::map<path, String> &getMsvcIncludePrefixes()
-{
-    static std::map<path, String> prefixes;
-    return prefixes;
-}
-
-String detectMsvcPrefix(builder::detail::ResolvableCommand c, const path &idir)
-{
-    auto &p = getMsvcIncludePrefixes();
-    if (!p[c.getProgram()].empty())
-        return p[c.getProgram()];
-
-    String contents = "#include <iostream>\r\nint dummy;";
-    auto fn = get_temp_filename("cliprefix") += ".cpp";
-    auto obj = path(fn) += ".obj";
-    write_file(fn, contents);
-    c.push_back("/showIncludes");
-    c.push_back("/c");
-    c.push_back(fn);
-    c.push_back("/Fo" + normalize_path_windows(obj));
-    c.push_back("/I");
-    c.push_back(idir);
-    std::error_code ec;
-    c.execute(ec);
-    fs::remove(obj);
-    fs::remove(fn);
-
-    auto error = [&c](const String &reason)
-    {
-        return "Cannot match VS include prefix (" + reason + "):\n" + c.out.text + "\nstderr:\n" + c.err.text;
-    };
-
-    auto lines = split_lines(c.out.text);
-    if (lines.size() < 2)
-        throw SW_RUNTIME_ERROR(error("bad output"));
-
-    static std::regex r(R"((.*\s)[a-zA-Z]:\\.*iostream)");
-    std::smatch m;
-    if (!std::regex_search(lines[1], m, r) &&
-        !std::regex_search(lines[0], m, r) // clang-cl does not output filename
-        )
-        throw SW_RUNTIME_ERROR(error("regex_search failed"));
-    return p[c.getProgram()] = m[1].str();
-}
 
 static String getOutput(builder::detail::ResolvableCommand &c)
 {

@@ -123,7 +123,17 @@ struct SW_BUILDER_API Command : ICastable, CommandNode, detail::ResolvableComman
 {
     using Base = detail::ResolvableCommand;
     using Clock = std::chrono::high_resolution_clock;
+    using ImplicitDependenciesProcessor = std::function<Files(Command &)>;
 
+    enum class DepsProcessor
+    {
+        Undefined,
+        Gnu,
+        Msvc,
+        Custom,
+    };
+
+public:
     String name;
     String name_short;
 
@@ -157,9 +167,19 @@ struct SW_BUILDER_API Command : ICastable, CommandNode, detail::ResolvableComman
     Clock::time_point t_begin;
     Clock::time_point t_end;
 
+    // cs
     path command_storage_root; // used during deserialization to restore command_storage
     CommandStorage *command_storage = nullptr;
 
+    // deps
+    DepsProcessor deps_processor = DepsProcessor::Undefined;
+    path deps_module; // custom processor
+    String deps_function; // custom processor
+    path deps_file; // gnu
+    String msvc_prefix; // msvc
+    //ImplicitDependenciesProcessor implicit_dependencies_processor;
+
+public:
     Command() = default;
     Command(const SwBuilderContext &swctx);
     virtual ~Command();
@@ -229,8 +249,6 @@ private:
     virtual size_t getHash1() const;
 
     void postProcess(bool ok = true);
-    virtual void postProcess1(bool ok) {}
-
     bool beforeCommand();
     void afterCommand();
     bool isTimeChanged() const;
