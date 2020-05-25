@@ -738,6 +738,21 @@ command_line:
                 aliases: p
                 desc: Prints command
 
+    # server
+    subcommand:
+        name: server
+        desc: Run different servers.
+
+        command_line:
+            distributed_builder:
+                desc: Run distributed builder.
+
+            endpoint:
+                type: String
+                desc: Server endpoint to listen on.
+                default: |-
+                    "0.0.0.0:12345"
+
     # setup
     subcommand:
         name: setup
