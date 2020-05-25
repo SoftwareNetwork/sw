@@ -56,13 +56,18 @@ static void override_package_perform(SwClientContext &swctx, sw::PackagePath pre
 
     auto b = swctx.createBuild();
     auto inputs = b->addInput(fs::current_path());
-    SW_CHECK(inputs.size() == 1); // for now
     for (auto &i : inputs)
     {
         sw::InputWithSettings ii(i);
         auto ts = b->getContext().getHostSettings();
         ii.addSettings(ts);
         b->addInput(ii);
+        // take only first for now
+        if (inputs.size() != 1)
+        {
+            LOG_WARN(logger, "Multiple inputs detected. Taking first one.");
+            break;
+        }
     }
     b->loadInputs();
     pm = getPackages(*b);

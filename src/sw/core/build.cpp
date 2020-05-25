@@ -1152,7 +1152,7 @@ BuildInput SwBuild::addInput(const LocalPackage &p)
     LOG_TRACE(logger, "Loading input: " + p.toString());
 
     auto v = addInput(p.getDirSrc2());
-    SW_CHECK(v.size() == 1);
+    //SW_CHECK(v.size() == 1); // allow multiple inputs for now, take only first
     v[0].addPackage(p);
     return v[0];
 }
