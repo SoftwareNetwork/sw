@@ -14,38 +14,38 @@
     </Type>
 
     <Type Name="sw::PackagePath">
-        <DisplayString Condition="_Mypair._Myval2._Mylast - _Mypair._Myval2._Myfirst == 0">
+        <DisplayString Condition="data._Mypair._Myval2._Mylast - data._Mypair._Myval2._Myfirst == 0">
             empty
         </DisplayString>
-        <DisplayString Condition="_Mypair._Myval2._Mylast - _Mypair._Myval2._Myfirst == 1">
-            {_Mypair._Myval2._Myfirst[0],sb}
+        <DisplayString Condition="data._Mypair._Myval2._Mylast - data._Mypair._Myval2._Myfirst == 1">
+            {data._Mypair._Myval2._Myfirst[0],sb}
         </DisplayString>
-        <DisplayString Condition="_Mypair._Myval2._Mylast - _Mypair._Myval2._Myfirst == 2">
-            {_Mypair._Myval2._Myfirst[0],sb}.{_Mypair._Myval2._Myfirst[1],sb}
+        <DisplayString Condition="data._Mypair._Myval2._Mylast - data._Mypair._Myval2._Myfirst == 2">
+            {data._Mypair._Myval2._Myfirst[0],sb}.{data._Mypair._Myval2._Myfirst[1],sb}
         </DisplayString>
-        <DisplayString Condition="_Mypair._Myval2._Mylast - _Mypair._Myval2._Myfirst == 3">
-            {_Mypair._Myval2._Myfirst[0],sb}.{_Mypair._Myval2._Myfirst[1],sb}.{_Mypair._Myval2._Myfirst[2],sb}
+        <DisplayString Condition="data._Mypair._Myval2._Mylast - data._Mypair._Myval2._Myfirst == 3">
+            {data._Mypair._Myval2._Myfirst[0],sb}.{data._Mypair._Myval2._Myfirst[1],sb}.{data._Mypair._Myval2._Myfirst[2],sb}
         </DisplayString>
-        <DisplayString Condition="_Mypair._Myval2._Mylast - _Mypair._Myval2._Myfirst == 4">
-            {_Mypair._Myval2._Myfirst[0],sb}.{_Mypair._Myval2._Myfirst[1],sb}.{_Mypair._Myval2._Myfirst[2],sb}.{_Mypair._Myval2._Myfirst[3],sb}
+        <DisplayString Condition="data._Mypair._Myval2._Mylast - data._Mypair._Myval2._Myfirst == 4">
+            {data._Mypair._Myval2._Myfirst[0],sb}.{data._Mypair._Myval2._Myfirst[1],sb}.{data._Mypair._Myval2._Myfirst[2],sb}.{data._Mypair._Myval2._Myfirst[3],sb}
         </DisplayString>
-        <DisplayString Condition="_Mypair._Myval2._Mylast - _Mypair._Myval2._Myfirst == 5">
-            {_Mypair._Myval2._Myfirst[0],sb}.{_Mypair._Myval2._Myfirst[1],sb}.{_Mypair._Myval2._Myfirst[2],sb}.{_Mypair._Myval2._Myfirst[3],sb}.{_Mypair._Myval2._Myfirst[4],sb}
+        <DisplayString Condition="data._Mypair._Myval2._Mylast - data._Mypair._Myval2._Myfirst == 5">
+            {data._Mypair._Myval2._Myfirst[0],sb}.{data._Mypair._Myval2._Myfirst[1],sb}.{data._Mypair._Myval2._Myfirst[2],sb}.{data._Mypair._Myval2._Myfirst[3],sb}.{data._Mypair._Myval2._Myfirst[4],sb}
         </DisplayString>
-        <DisplayString Condition="_Mypair._Myval2._Mylast - _Mypair._Myval2._Myfirst == 6">
-            {_Mypair._Myval2._Myfirst[0],sb}.{_Mypair._Myval2._Myfirst[1],sb}.{_Mypair._Myval2._Myfirst[2],sb}.{_Mypair._Myval2._Myfirst[3],sb}.{_Mypair._Myval2._Myfirst[4],sb}.{_Mypair._Myval2._Myfirst[5],sb}
+        <DisplayString Condition="data._Mypair._Myval2._Mylast - data._Mypair._Myval2._Myfirst == 6">
+            {data._Mypair._Myval2._Myfirst[0],sb}.{data._Mypair._Myval2._Myfirst[1],sb}.{data._Mypair._Myval2._Myfirst[2],sb}.{data._Mypair._Myval2._Myfirst[3],sb}.{data._Mypair._Myval2._Myfirst[4],sb}.{data._Mypair._Myval2._Myfirst[5],sb}
         </DisplayString>
-        <DisplayString Condition="_Mypair._Myval2._Mylast - _Mypair._Myval2._Myfirst == 7">
-            {_Mypair._Myval2._Myfirst[0],sb}.{_Mypair._Myval2._Myfirst[1],sb}.{_Mypair._Myval2._Myfirst[2],sb}.{_Mypair._Myval2._Myfirst[3],sb}.{_Mypair._Myval2._Myfirst[4],sb}.{_Mypair._Myval2._Myfirst[5],sb}.{_Mypair._Myval2._Myfirst[6],sb}
+        <DisplayString Condition="data._Mypair._Myval2._Mylast - data._Mypair._Myval2._Myfirst == 7">
+            {data._Mypair._Myval2._Myfirst[0],sb}.{data._Mypair._Myval2._Myfirst[1],sb}.{data._Mypair._Myval2._Myfirst[2],sb}.{data._Mypair._Myval2._Myfirst[3],sb}.{data._Mypair._Myval2._Myfirst[4],sb}.{data._Mypair._Myval2._Myfirst[5],sb}.{data._Mypair._Myval2._Myfirst[6],sb}
         </DisplayString>
-        <DisplayString Condition="_Mypair._Myval2._Mylast - _Mypair._Myval2._Myfirst == 8">
-            {_Mypair._Myval2._Myfirst[0],sb}.{_Mypair._Myval2._Myfirst[1],sb}.{_Mypair._Myval2._Myfirst[2],sb}.{_Mypair._Myval2._Myfirst[3],sb}.{_Mypair._Myval2._Myfirst[4],sb}.{_Mypair._Myval2._Myfirst[5],sb}.{_Mypair._Myval2._Myfirst[6],sb}.{_Mypair._Myval2._Myfirst[7],sb}
+        <DisplayString Condition="data._Mypair._Myval2._Mylast - data._Mypair._Myval2._Myfirst == 8">
+            {data._Mypair._Myval2._Myfirst[0],sb}.{data._Mypair._Myval2._Myfirst[1],sb}.{data._Mypair._Myval2._Myfirst[2],sb}.{data._Mypair._Myval2._Myfirst[3],sb}.{data._Mypair._Myval2._Myfirst[4],sb}.{data._Mypair._Myval2._Myfirst[5],sb}.{data._Mypair._Myval2._Myfirst[6],sb}.{data._Mypair._Myval2._Myfirst[7],sb}
         </DisplayString>
-        <DisplayString Condition="_Mypair._Myval2._Mylast - _Mypair._Myval2._Myfirst == 9">
-            {_Mypair._Myval2._Myfirst[0],sb}.{_Mypair._Myval2._Myfirst[1],sb}.{_Mypair._Myval2._Myfirst[2],sb}.{_Mypair._Myval2._Myfirst[3],sb}.{_Mypair._Myval2._Myfirst[4],sb}.{_Mypair._Myval2._Myfirst[5],sb}.{_Mypair._Myval2._Myfirst[6],sb}.{_Mypair._Myval2._Myfirst[7],sb}.{_Mypair._Myval2._Myfirst[8],sb}
+        <DisplayString Condition="data._Mypair._Myval2._Mylast - data._Mypair._Myval2._Myfirst == 9">
+            {data._Mypair._Myval2._Myfirst[0],sb}.{data._Mypair._Myval2._Myfirst[1],sb}.{data._Mypair._Myval2._Myfirst[2],sb}.{data._Mypair._Myval2._Myfirst[3],sb}.{data._Mypair._Myval2._Myfirst[4],sb}.{data._Mypair._Myval2._Myfirst[5],sb}.{data._Mypair._Myval2._Myfirst[6],sb}.{data._Mypair._Myval2._Myfirst[7],sb}.{data._Mypair._Myval2._Myfirst[8],sb}
         </DisplayString>
-        <DisplayString Condition="_Mypair._Myval2._Mylast - _Mypair._Myval2._Myfirst == 10">
-            {_Mypair._Myval2._Myfirst[0],sb}.{_Mypair._Myval2._Myfirst[1],sb}.{_Mypair._Myval2._Myfirst[2],sb}.{_Mypair._Myval2._Myfirst[3],sb}.{_Mypair._Myval2._Myfirst[4],sb}.{_Mypair._Myval2._Myfirst[5],sb}.{_Mypair._Myval2._Myfirst[6],sb}.{_Mypair._Myval2._Myfirst[7],sb}.{_Mypair._Myval2._Myfirst[8],sb}.{_Mypair._Myval2._Myfirst[9],sb}
+        <DisplayString Condition="data._Mypair._Myval2._Mylast - data._Mypair._Myval2._Myfirst == 10">
+            {data._Mypair._Myval2._Myfirst[0],sb}.{data._Mypair._Myval2._Myfirst[1],sb}.{data._Mypair._Myval2._Myfirst[2],sb}.{data._Mypair._Myval2._Myfirst[3],sb}.{data._Mypair._Myval2._Myfirst[4],sb}.{data._Mypair._Myval2._Myfirst[5],sb}.{data._Mypair._Myval2._Myfirst[6],sb}.{data._Mypair._Myval2._Myfirst[7],sb}.{data._Mypair._Myval2._Myfirst[8],sb}.{data._Mypair._Myval2._Myfirst[9],sb}
         </DisplayString>
         <DisplayString>empty</DisplayString>
     </Type>
