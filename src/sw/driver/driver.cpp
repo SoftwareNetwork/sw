@@ -360,8 +360,13 @@ std::vector<std::unique_ptr<Input>> Driver::detectInputs(const path &p, InputTyp
     }
     case InputType::DirectorySpecificationFile:
     {
-        for (auto &f : findConfig(p, getAvailableFrontendConfigFilenames()))
+        auto configs = findConfig(p, getAvailableFrontendConfigFilenames());
+        if (configs.size() > 1)
+            LOG_DEBUG(logger, "Multiple configs detected:");
+        for (const auto &[idx,f] : enumerate(configs))
         {
+            if (configs.size() > 1)
+                LOG_DEBUG(logger, "Input #" << idx << ": " << f);
             for (auto &i : detectInputs(f, InputType::SpecificationFile))
                 inputs.push_back(std::move(i));
         }
