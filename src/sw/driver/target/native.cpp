@@ -2474,7 +2474,8 @@ void NativeCompiledTarget::prepare_pass3_1()
                     return;
                 if (&d2.getTarget() == this)
                     return;
-                if (Inheritance == InheritanceType::Protected && !hasSameProject(d2.getTarget()))
+                // check same with d, not d2!
+                if (Inheritance == InheritanceType::Protected && !hasSameProject(d.getTarget()))
                     return;
 
                 auto copy = std::make_shared<Dependency>(d2);
@@ -2615,7 +2616,8 @@ void NativeCompiledTarget::prepare_pass3_2()
                     return;
                 if (&d2.getTarget() == this)
                     return;
-                if (Inheritance == InheritanceType::Protected && !hasSameProject(d2.getTarget()))
+                // check same with d, not d2!
+                if (Inheritance == InheritanceType::Protected && !hasSameProject(d.getTarget()))
                     return;
 
                 auto copy = std::make_shared<Dependency>(d2);
