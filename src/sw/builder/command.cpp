@@ -695,7 +695,7 @@ void Command::execute1(std::error_code *ec)
     if (remove_outputs_before_execution)
     {
         // Some programs won't update their binaries even in case of updated sources/deps.
-        // E.g., msvc bug: https://developercommunity.visualstudio.com/content/problem/97608/libexe-does-not-update-import-library.html
+        // E.g., ar program
         error_code ec;
         for (auto &o : outputs)
             fs::remove(o, ec);
