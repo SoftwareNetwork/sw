@@ -5,6 +5,9 @@
 
 #include "cmVSSetupHelper.h"
 
+namespace sw
+{
+
 #ifndef VSSetupConstants
 #define VSSetupConstants
 /* clang-format off */
@@ -261,6 +264,8 @@ bool cmVSSetupAPIHelper::Initialize()
 
   initializationFailure = false;
   return true;
+}
+
 }
 
 #endif

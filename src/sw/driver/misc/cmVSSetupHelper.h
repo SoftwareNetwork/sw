@@ -17,6 +17,9 @@
 
 #include <windows.h>
 
+namespace sw
+{
+
 template <class T>
 class SmartCOMPtr
 {
@@ -144,6 +147,8 @@ private:
   // used to indicate failure in Initialize(), so we don't have to call again
   bool initializationFailure;
 };
+
+}
 
 #endif // #ifdef _WIN32
 
