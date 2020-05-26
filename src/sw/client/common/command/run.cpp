@@ -24,7 +24,11 @@ void run1(const sw::LocalPackage &pkg, primitives::Command &c, bool gRunAppInCon
 #ifndef _WIN32
 void run1(const sw::LocalPackage &pkg, primitives::Command &c, bool gRunAppInContainer)
 {
-    throw SW_RUNTIME_ERROR("not implemented");
+    error_code ec;
+    c.execute(ec);
+
+    if (ec)
+        throw SW_RUNTIME_ERROR(c.getError());
 }
 #endif
 
