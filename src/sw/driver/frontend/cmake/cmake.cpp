@@ -52,6 +52,10 @@ CmakeTargetEntryPoint::CmakeTargetEntryPoint(const path &fn)
         throw SW_RUNTIME_ERROR("Cannot parse " + normalize_path(fn));
 }
 
+CmakeTargetEntryPoint::~CmakeTargetEntryPoint()
+{
+}
+
 void CmakeTargetEntryPoint::loadPackages1(Build &b) const
 {
     auto &mfs = cm->GetGlobalGenerator()->GetMakefiles();

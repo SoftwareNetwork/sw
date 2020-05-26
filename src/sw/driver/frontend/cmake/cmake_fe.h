@@ -13,6 +13,7 @@ namespace sw::driver::cpp
 struct CmakeTargetEntryPoint : NativeTargetEntryPoint
 {
     CmakeTargetEntryPoint(const path &fn);
+    ~CmakeTargetEntryPoint();
 
 private:
     path rootfn;
