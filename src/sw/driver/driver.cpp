@@ -12,6 +12,7 @@
 #include "target/all.h"
 #include "entry_point.h"
 #include "module.h"
+#include "frontend/cmake/cmake_fe.h"
 
 #include <sw/core/input.h>
 #include <sw/core/specification.h>
@@ -20,8 +21,6 @@
 #include <sw/support/serialization.h>
 
 #include <boost/algorithm/string.hpp>
-#include <cmake.h>
-#include <cmMakefile.h>
 #include <nlohmann/json.hpp>
 #include <primitives/lock.h>
 #include <primitives/yaml.h>
@@ -224,13 +223,8 @@ struct SpecFileInput : Input, DriverInput
         }
         case FrontendType::Cmake:
         {
-            cmake cm(cmake::RoleProject, cmState::Mode::Project);
-            cm.SetHomeDirectory(normalize_path(fn.parent_path()));
-            cm.SetHomeOutputDirectory(normalize_path(fn.parent_path() / ".sw" / "cmake"));
-            auto r = cm.Configure();
-            if (r < 0)
-                throw SW_RUNTIME_ERROR("Cannot parse " + normalize_path(fn));
-            SW_UNIMPLEMENTED;
+            auto ep = std::make_unique<CmakeTargetEntryPoint>(fn);
+            return ep;
         }
         case FrontendType::Cargo:
         {
