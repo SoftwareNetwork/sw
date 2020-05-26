@@ -2409,7 +2409,7 @@ void NativeCompiledTarget::prepare_pass2()
 }
 
 struct H
-{
+    {
     size_t operator()(const DependencyPtr &p) const
     {
         return std::hash<PackageId>()(p->getTarget().getPackage());
@@ -2458,9 +2458,11 @@ void NativeCompiledTarget::prepare_pass3_1()
         if (d.dep->LinkLibrariesOnly)
             continue;
         auto copy = std::make_shared<Dependency>(*d.dep);
-        auto [_, inserted] = deps.emplace(copy, d.inhtype);
+        auto [i, inserted] = deps.emplace(copy, d.inhtype);
         if (inserted)
             deps_ordered.push_back(copy);
+        else
+            i->second |= d.inhtype;
     }
 
     //
@@ -2483,15 +2485,16 @@ void NativeCompiledTarget::prepare_pass3_1()
                     return;
 
                 auto copy = std::make_shared<Dependency>(d2);
-                auto [i, inserted] = deps.emplace(copy,
-                    Inheritance == InheritanceType::Interface ?
-                    InheritanceType::Public : Inheritance
-                );
+                auto newinh = Inheritance == InheritanceType::Interface ? InheritanceType::Public : Inheritance;
+                auto [i, inserted] = deps.emplace(copy, newinh);
                 if (inserted)
+                {
                     deps_ordered.push_back(copy);
-
-                if (inserted) // new dep is added
+                    // new dep is added
                     new_dependency = true;
+                }
+                else
+                    i->second |= newinh;
             };
 
             if (auto t = d->getTarget().as<const NativeCompiledTarget *>())
@@ -2591,17 +2594,21 @@ void NativeCompiledTarget::prepare_pass3_2()
         if (d.dep->LinkLibrariesOnly)
             continue;
         auto copy = std::make_shared<Dependency>(*d.dep);
-        auto [_, inserted] = deps.emplace(copy, d.inhtype);
+        auto [i, inserted] = deps.emplace(copy, d.inhtype);
         if (inserted)
             deps_ordered.push_back(copy);
+        else
+            i->second |= d.inhtype;
     }
     // and processed normal deps also
     for (auto &d : all_deps_normal)
     {
         auto copy = std::make_shared<Dependency>(*d);
-        auto [_, inserted] = deps.emplace(copy, InheritanceType::Public); // use public inh
+        auto [i, inserted] = deps.emplace(copy, InheritanceType::Public); // use public inh
         if (inserted)
             deps_ordered.push_back(copy);
+        else
+            i->second |= InheritanceType::Public;
     }
 
     //
@@ -2625,10 +2632,8 @@ void NativeCompiledTarget::prepare_pass3_2()
                     return;
 
                 auto copy = std::make_shared<Dependency>(d2);
-                auto [i, inserted] = deps.emplace(copy,
-                    Inheritance == InheritanceType::Interface ?
-                    InheritanceType::Public : Inheritance
-                );
+                auto newinh = Inheritance == InheritanceType::Interface ? InheritanceType::Public : Inheritance;
+                auto [i, inserted] = deps.emplace(copy, newinh);
 
                 // include directories only handling
                 auto &di = *i->first;
@@ -2639,6 +2644,8 @@ void NativeCompiledTarget::prepare_pass3_2()
                     deps_ordered.push_back(copy);
                     new_dependency = true;
                 }
+                else
+                    i->second |= newinh;
             };
 
             if (auto t = d->getTarget().as<const NativeCompiledTarget *>())
@@ -2736,9 +2743,11 @@ void NativeCompiledTarget::prepare_pass3_3()
         if (!d.dep->LinkLibrariesOnly)
             continue;
         auto copy = std::make_shared<Dependency>(*d.dep);
-        auto [_, inserted] = deps.emplace(copy, InheritanceType::Public); // use public inh
+        auto [i, inserted] = deps.emplace(copy, InheritanceType::Public); // use public inh
         if (inserted)
             deps_ordered.push_back(copy);
+        else
+            i->second |= InheritanceType::Public;
     }
     for (auto &d : all_deps_normal)
     {
@@ -2757,9 +2766,11 @@ void NativeCompiledTarget::prepare_pass3_3()
             throw SW_RUNTIME_ERROR("missing target code");
         auto copy = std::make_shared<Dependency>(*d);
         copy->LinkLibrariesOnly = true; // force
-        auto [_, inserted] = deps.emplace(copy, InheritanceType::Public); // use public inh
+        auto [i, inserted] = deps.emplace(copy, InheritanceType::Public); // use public inh
         if (inserted)
             deps_ordered.push_back(copy);
+        else
+            i->second |= InheritanceType::Public;
     }
 
     while (1)
@@ -2775,10 +2786,8 @@ void NativeCompiledTarget::prepare_pass3_3()
                     return;
 
                 auto copy = std::make_shared<Dependency>(d2);
-                auto [i, inserted] = deps.emplace(copy,
-                    Inheritance == InheritanceType::Interface ?
-                    InheritanceType::Public : Inheritance
-                );
+                auto newinh = Inheritance == InheritanceType::Interface ? InheritanceType::Public : Inheritance;
+                auto [i, inserted] = deps.emplace(copy, newinh);
 
                 // include directories only handling
                 auto &di = *i->first;
@@ -2789,6 +2798,8 @@ void NativeCompiledTarget::prepare_pass3_3()
                     deps_ordered.push_back(copy);
                     new_dependency = true;
                 }
+                else
+                    i->second |= newinh;
             };
 
             if (auto t = d->getTarget().as<const NativeCompiledTarget *>())
