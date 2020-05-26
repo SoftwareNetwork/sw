@@ -2424,6 +2424,10 @@ struct EQ
     }
 };
 
+using PreparePass3Deps = DependencyPtr;
+using PreparePass3DepsType = std::unordered_map<PreparePass3Deps, InheritanceType, H, EQ>;
+using PreparePass3DepsOrderedType = std::vector<PreparePass3Deps>;
+
 void NativeCompiledTarget::prepare_pass3()
 {
     // calculate all (link) dependencies for target
@@ -2441,8 +2445,8 @@ void NativeCompiledTarget::prepare_pass3_1()
     // process normal deps
 
     // we have ptrs, so do custom sorting
-    std::unordered_map<DependencyPtr, InheritanceType, H, EQ> deps(0, H{});
-    std::vector<DependencyPtr> deps_ordered;
+    PreparePass3DepsType deps(0, H{});
+    PreparePass3DepsOrderedType deps_ordered;
 
     // set our initial deps
     // we have only active deps now
@@ -2575,8 +2579,8 @@ void NativeCompiledTarget::prepare_pass3_2()
     // idirs only deps
 
     // we have ptrs, so do custom sorting
-    std::unordered_map<DependencyPtr, InheritanceType, H, EQ> deps(0, H{});
-    std::vector<DependencyPtr> deps_ordered;
+    PreparePass3DepsType deps(0, H{});
+    PreparePass3DepsOrderedType deps_ordered;
 
     // set our initial deps
     // take active idir only deps
@@ -2723,8 +2727,8 @@ void NativeCompiledTarget::prepare_pass3_3()
         return;
 
     // we have ptrs, so do custom sorting
-    std::unordered_map<DependencyPtr, InheritanceType, H, EQ> deps(0, H{});
-    std::vector<DependencyPtr> deps_ordered;
+    PreparePass3DepsType deps(0, H{});
+    PreparePass3DepsOrderedType deps_ordered;
 
     // set our initial deps
     for (auto &d : getActiveDependencies())
