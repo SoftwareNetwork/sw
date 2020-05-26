@@ -157,6 +157,7 @@ void build(Solution &s)
         cpp_driver.PackageDefinitions = true;
         cpp_driver.WholeArchive = true;
         cpp_driver += cpp17;
+        cpp_driver += "org.sw.demo.Kitware.CMake.lib"_dep; // cmake fe
         cpp_driver += "org.sw.demo.ReneNyffenegger.cpp_base64-master"_dep;
         cpp_driver.Public += core,
             "pub.egorpugin.primitives.patch-master"_dep,

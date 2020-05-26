@@ -20,6 +20,8 @@
 #include <sw/support/serialization.h>
 
 #include <boost/algorithm/string.hpp>
+#include <cmake.h>
+#include <cmMakefile.h>
 #include <nlohmann/json.hpp>
 #include <primitives/lock.h>
 #include <primitives/yaml.h>
@@ -222,6 +224,12 @@ struct SpecFileInput : Input, DriverInput
         }
         case FrontendType::Cmake:
         {
+            cmake cm(cmake::RoleProject, cmState::Mode::Project);
+            cm.SetHomeDirectory(normalize_path(fn.parent_path()));
+            cm.SetHomeOutputDirectory(normalize_path(fn.parent_path() / ".sw" / "cmake"));
+            auto r = cm.Configure();
+            if (r < 0)
+                throw SW_RUNTIME_ERROR("Cannot parse " + normalize_path(fn));
             SW_UNIMPLEMENTED;
         }
         case FrontendType::Cargo:
@@ -637,8 +645,8 @@ const Driver::AvailableFrontends &Driver::getAvailableFrontends()
         // cppan fe
         m.insert({ FrontendType::Cppan, "cppan.yml" });
 
-        // disable for now, we must print message when loading more that one input from directory
-        //m.insert({ FrontendType::Cmake, "CMakeLists.txt" });
+        //
+        m.insert({ FrontendType::Cmake, "CMakeLists.txt" }); // swCMakeLists.txt? CMakeLists.sw?
 
         // rust fe
         m.insert({ FrontendType::Cargo, "Cargo.toml" });
