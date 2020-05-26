@@ -87,9 +87,9 @@ void CmakeTargetEntryPoint::loadPackages1(Build &b) const
             cmListFileBacktrace bt;
             auto prop = cmTargetPropertyComputer::GetProperty(&cmt, "SOURCES", cm->GetMessenger(), bt);
             for (auto &sf : cmExpandedList(*prop))
-            {
                 t += path(sf);
-            }
+            for (auto &[n,type] : cmt.GetOriginalLinkLibraries())
+                t += std::make_shared<Dependency>(n);
         }
     }
 }
