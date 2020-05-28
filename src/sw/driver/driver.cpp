@@ -363,14 +363,15 @@ std::vector<std::unique_ptr<Input>> Driver::detectInputs(const path &p, InputTyp
     case InputType::DirectorySpecificationFile:
     {
         auto configs = findConfig(p, getAvailableFrontendConfigFilenames());
-        if (configs.size() > 1)
-            LOG_DEBUG(logger, "Multiple configs detected:");
+        //if (configs.size() > 1)
+            //LOG_DEBUG(logger, "Multiple configs detected. Taking only the first one (using priority).");
         for (const auto &[idx,f] : enumerate(configs))
         {
-            if (configs.size() > 1)
-                LOG_DEBUG(logger, "Input #" << idx << ": " << f);
+            //if (configs.size() > 1)
+                //LOG_DEBUG(logger, "Input #" << idx << ": " << f);
             for (auto &i : detectInputs(f, InputType::SpecificationFile))
                 inputs.push_back(std::move(i));
+            break;
         }
         break;
     }
