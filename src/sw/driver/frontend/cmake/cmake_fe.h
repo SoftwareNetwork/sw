@@ -6,6 +6,8 @@
 #include <sw/driver/entry_point.h>
 
 class cmake;
+class cmTarget;
+class cmMakefile;
 
 namespace sw::driver::cpp
 {
@@ -31,6 +33,9 @@ private:
 
     void init() const;
     void loadPackages1(Build &) const override;
+
+    static NativeCompiledTarget *addTarget(Build &, cmTarget &);
+    void setupTarget(cmMakefile &, cmTarget &, NativeCompiledTarget &, const StringSet &list_of_targets) const;
 };
 
 }
