@@ -628,7 +628,6 @@ bool Check::isChecked() const
 size_t CheckParameters::getHash() const
 {
     size_t h = 0;
-    hash_combine(h, cpp);
     for (auto &d : Definitions)
         hash_combine(h, d);
     for (auto &d : Includes)

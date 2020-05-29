@@ -57,7 +57,6 @@ struct SW_DRIVER_CPP_API CheckParameters
     PathOptionsType IncludeDirectories;
     PathOptionsType Libraries;
     StringSet Options;
-    bool cpp = false;
 
     size_t getHash() const;
 };
