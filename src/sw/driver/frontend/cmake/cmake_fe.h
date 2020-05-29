@@ -12,13 +12,24 @@ namespace sw::driver::cpp
 
 struct CmakeTargetEntryPoint : NativeTargetEntryPoint
 {
+    using Base = NativeTargetEntryPoint;
+
+    std::unique_ptr<cmake> cm;
+    mutable SwBuild *b = nullptr;
+    mutable TargetSettings ts;
+    mutable NativeCompiledTarget *t = nullptr;
+
     CmakeTargetEntryPoint(const path &fn);
     ~CmakeTargetEntryPoint();
 
+    [[nodiscard]]
+    std::vector<ITargetPtr> loadPackages(SwBuild &, const TargetSettings &, const PackageIdSet &pkgs, const PackagePath &prefix) const override;
+
 private:
     path rootfn;
-    std::unique_ptr<cmake> cm;
+    mutable std::once_flag f;
 
+    void init() const;
     void loadPackages1(Build &) const override;
 };
 
