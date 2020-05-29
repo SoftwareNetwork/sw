@@ -251,6 +251,9 @@ void CheckSet::performChecks(const SwBuild &mb, const TargetSettings &ts)
 
     //std::unique_lock lk(m);
 
+    if (!t)
+        throw SW_RUNTIME_ERROR("Target was not set");
+
     auto config = ts.getHash();
 
     /*static std::mutex m;
