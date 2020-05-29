@@ -267,14 +267,7 @@ void CheckSet::performChecks(const SwBuild &mb, const TargetSettings &ts)
     auto &cs = getChecksStorage(config, fn);
 
     // add common checks
-    checkSourceRuns("WORDS_BIGENDIAN", R"(
-int IsBigEndian()
-{
-    volatile int i=1;
-    return ! *((char *)&i);
-}
-int main() { return IsBigEndian(); }
-)");
+    testBigEndian();
 
     // returns true if inserted
     auto add_dep = [this, &cs](auto &c)
@@ -1492,6 +1485,23 @@ SourceRuns &CheckSet1::checkSourceRuns(const String &def, const String &src)
 {
     auto c = add<SourceRuns>(def, src);
     return *c;
+}
+
+SourceRuns &CheckSet1::testBigEndian(const String &def)
+{
+    return testBigEndian(def, R"(
+int IsBigEndian()
+{
+    volatile int i=1;
+    return ! *((char *)&i);
+}
+int main() { return IsBigEndian(); }
+)");
+}
+
+SourceRuns &CheckSet1::testBigEndian(const String &def, const String &src)
+{
+    return checkSourceRuns(def, src);
 }
 
 void CheckSet::prepareChecksForUse()

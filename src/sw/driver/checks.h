@@ -306,7 +306,7 @@ struct SW_DRIVER_CPP_API CheckSet1
     }
 
     FunctionExists &checkFunctionExists(const String &function, const String &def = {});
-    IncludeExists &checkIncludeExists(const String &function, const String &def = {});
+    IncludeExists &checkIncludeExists(const String &include, const String &def = {});
     //FunctionExists &checkLibraryExists(const String &library, const String &def = {});
     LibraryFunctionExists &checkLibraryFunctionExists(const String &library, const String &function, const String &def = {});
     SymbolExists &checkSymbolExists(const String &symbol, const String &def = {});
@@ -319,6 +319,10 @@ struct SW_DRIVER_CPP_API CheckSet1
     SourceLinks &checkSourceLinks(const String &def, const String &src);
     SourceRuns &checkSourceRuns(const String &def, const String &src);
 
+    SourceRuns &testBigEndian(const String &def = "WORDS_BIGENDIAN");
+    SourceRuns &testBigEndian(const String &def, const String &src);
+
+    //
     auto begin() { return all.begin(); }
     auto end() { return all.end(); }
 
@@ -344,8 +348,10 @@ struct SW_DRIVER_CPP_API CheckSet : CheckSet1
     CheckSet(const CheckSet &) = delete;
     CheckSet &operator=(const CheckSet &) = delete;
 
-    void prepareChecksForUse();
     void performChecks(const SwBuild &, const TargetSettings &);
+
+private:
+    void prepareChecksForUse();
 };
 
 struct SW_DRIVER_CPP_API Checker
