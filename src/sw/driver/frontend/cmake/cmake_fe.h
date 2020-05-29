@@ -16,7 +16,7 @@ struct CmakeTargetEntryPoint : NativeTargetEntryPoint
 {
     using Base = NativeTargetEntryPoint;
 
-    std::unique_ptr<cmake> cm;
+    mutable std::unique_ptr<cmake> cm;
     mutable SwBuild *b = nullptr;
     mutable TargetSettings ts;
     mutable NativeCompiledTarget *t = nullptr;
@@ -29,7 +29,6 @@ struct CmakeTargetEntryPoint : NativeTargetEntryPoint
 
 private:
     path rootfn;
-    mutable std::once_flag f;
 
     void init() const;
     void loadPackages1(Build &) const override;

@@ -177,7 +177,6 @@ namespace sw::driver::cpp
 CmakeTargetEntryPoint::CmakeTargetEntryPoint(const path &fn)
     : rootfn(fn)
 {
-    cm = std::make_unique<cmake>(cmake::RoleProject, cmState::Mode::Project);
 }
 
 CmakeTargetEntryPoint::~CmakeTargetEntryPoint()
@@ -197,6 +196,7 @@ void CmakeTargetEntryPoint::init() const
         override_command(name, [](std::vector<std::string> const &, cmExecutionStatus &){return true;});
     };
 
+    cm = std::make_unique<cmake>(cmake::RoleProject, cmState::Mode::Project);
     cm->SetHomeDirectory(normalize_path(rootfn.parent_path()));
     cm->SetHomeOutputDirectory(normalize_path(rootfn.parent_path() / ".sw" / "cmake"));
 
@@ -232,6 +232,9 @@ void CmakeTargetEntryPoint::init() const
 
 std::vector<ITargetPtr> CmakeTargetEntryPoint::loadPackages(SwBuild &mb, const TargetSettings &ts, const PackageIdSet &pkgs, const PackagePath &prefix) const
 {
+    // init every time because we set settings specific to current request
+    init();
+
     this->b = &mb;
     this->ts = ts;
 
@@ -250,8 +253,6 @@ std::vector<ITargetPtr> CmakeTargetEntryPoint::loadPackages(SwBuild &mb, const T
 
 void CmakeTargetEntryPoint::loadPackages1(Build &b) const
 {
-    std::call_once(f, &CmakeTargetEntryPoint::init, this);
-
     //
     auto &mfs = cm->GetGlobalGenerator()->GetMakefiles();
 
