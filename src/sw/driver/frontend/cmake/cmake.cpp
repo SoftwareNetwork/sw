@@ -16,6 +16,9 @@
 // commands
 #include <cmIncludeCommand.h>
 
+#include <primitives/log.h>
+DECLARE_STATIC_LOGGER(logger, "fe.cmake");
+
 #define DEFINE_CMAKE_COMMAND(x)                  \
     bool x(std::vector<std::string> const &args, \
            cmExecutionStatus &status)
@@ -76,6 +79,9 @@ DEFINE_STATIC_CMAKE_COMMAND(sw_cm_check)
     }
     static_assert(NArgs <= 2);
 
+    //if (!i->Definitions.empty())
+        //LOG_INFO(logger, "Performing check " << *i->Definitions.begin());
+
     try
     {
         s.t = cmep->t;
@@ -97,6 +103,10 @@ DEFINE_STATIC_CMAKE_COMMAND(sw_cm_check_test_big_endian)
     sw::Check *i = &s.testBigEndian();
     if (!args.empty())
         i->Definitions.insert(args[0]);
+
+    ///if (!i->Definitions.empty())
+        //LOG_INFO(logger, "Performing check " << *i->Definitions.begin());
+
     try
     {
         s.t = cmep->t;
