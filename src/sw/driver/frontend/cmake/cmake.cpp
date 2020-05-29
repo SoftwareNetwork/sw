@@ -242,9 +242,7 @@ void CmakeTargetEntryPoint::init() const
 
 std::vector<ITargetPtr> CmakeTargetEntryPoint::loadPackages(SwBuild &mb, const TargetSettings &ts, const PackageIdSet &pkgs, const PackagePath &prefix) const
 {
-    // init every time because we set settings specific to current request
-    init();
-
+    // before init
     this->b = &mb;
     this->ts = ts;
 
@@ -253,6 +251,9 @@ std::vector<ITargetPtr> CmakeTargetEntryPoint::loadPackages(SwBuild &mb, const T
     b.setSourceDirectory(mb.getBuildDirectory());
     b.BinaryDir = mb.getBuildDirectory();
     t = &b.addLibrary("dummy");
+
+    // init every time because we set settings specific to current request
+    init();
 
     // per settings configuration
     // by default BUILD_SHARED_LIBS is off in cmake, we follow that
