@@ -235,7 +235,8 @@ private:
 
 struct SW_DRIVER_CPP_API SourceCompiles : Check
 {
-    Strings compiler_flags;
+    // Some compilers do not fail with a bad flag
+    Strings fail_regex;
 
     SourceCompiles(const String &def, const String &source);
 

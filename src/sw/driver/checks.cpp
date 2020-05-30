@@ -1316,7 +1316,7 @@ void SourceCompiles::run() const
 
     auto &e = s.addTarget<ExecutableTarget>(getTargetName(f));
     setupTarget(e);
-    for (auto &f : compiler_flags)
+    for (auto &f : Parameters.CompileOptions)
         e.CompileOptions.push_back(f);
     e += f;
 
@@ -1328,6 +1328,27 @@ void SourceCompiles::run() const
         return;
     auto &cmd = *cmds.begin();
     Value = (cmd && cmd->exit_code && cmd->exit_code.value() == 0) ? 1 : 0;
+
+    // fast return on fail
+    if (*Value == 0)
+        return;
+
+    // skip fail checks
+    if (fail_regex.empty())
+        return;
+
+    for (auto &fr : fail_regex)
+    {
+        std::regex r(fr);
+        if (std::regex_search(cmd->out.text, r) || std::regex_search(cmd->err.text, r))
+        {
+            // if we found failed regex, this means we have no such flag
+            // and we mark command as failed
+            Value = 0;
+            return;
+        }
+    }
+    // leave value as is
 }
 
 SourceLinks::SourceLinks(const String &def, const String &source)
@@ -1411,14 +1432,14 @@ void SourceRuns::run() const
 CompilerFlag::CompilerFlag(const String &def, const String &compiler_flag)
     : SourceCompiles(def, "int main() {return 0;}")
 {
-    compiler_flags.push_back(compiler_flag);
+    Parameters.CompileOptions.push_back(compiler_flag);
 }
 
 CompilerFlag::CompilerFlag(const String &def, const Strings &compiler_flags)
     : SourceCompiles(def, "int main() {return 0;}")
 {
     for (auto &f : compiler_flags)
-        this->compiler_flags.push_back(f);
+        Parameters.CompileOptions.push_back(f);
 }
 
 FunctionExists &CheckSet1::checkFunctionExists(const String &function, const String &def)
