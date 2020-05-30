@@ -638,7 +638,9 @@ size_t CheckParameters::getHash() const
         hash_combine(h, d);
     for (auto &d : Libraries)
         hash_combine(h, d);
-    for (auto &d : Options)
+    for (auto &d : CompileOptions)
+        hash_combine(h, d);
+    for (auto &d : LinkOptions)
         hash_combine(h, d);
     return h;
 }

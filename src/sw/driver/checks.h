@@ -55,8 +55,9 @@ struct SW_DRIVER_CPP_API CheckParameters
     DefinitionsType Definitions;
     Strings Includes;
     PathOptionsType IncludeDirectories;
+    Strings CompileOptions;
+    Strings LinkOptions;
     PathOptionsType Libraries;
-    StringSet Options;
 
     size_t getHash() const;
 };
