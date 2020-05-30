@@ -63,13 +63,16 @@ static Files process_deps_msvc(builder::Command &c)
         throw SW_RUNTIME_ERROR("msvc prefix is not set");
 
     Files deps;
-    auto perform = [&deps, &prefix](auto &text)
+    auto perform = [&deps, &prefix](auto &text, bool out)
     {
         std::deque<String> lines;
         boost::split(lines, text, boost::is_any_of("\n"));
         text.clear();
-        // remove filename
-        lines.pop_front();
+        if (out)
+        {
+            // remove filename
+            lines.pop_front();
+        }
 
         for (auto &line : lines)
         {
@@ -89,8 +92,8 @@ static Files process_deps_msvc(builder::Command &c)
     // https://docs.microsoft.com/en-us/cpp/build/reference/showincludes-list-include-files?view=vs-2019
     // link says only stderr used for show includes
     // but we do not see it
-    perform(c.out.text); // remove?
-    perform(c.err.text);
+    perform(c.out.text, true); // remove?
+    perform(c.err.text, false);
 
     return deps;
 }
