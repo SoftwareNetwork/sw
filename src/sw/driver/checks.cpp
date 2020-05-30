@@ -62,6 +62,8 @@ static String toString(CheckType t)
         return "source runs";
     case CheckType::Declaration:
         return "source declaration";
+    case CheckType::CompilerFlag:
+        return "compiler flag";
     case CheckType::Custom:
         return "custom";
     default:
