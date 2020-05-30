@@ -196,49 +196,36 @@ const ITarget &DependencyData::getTarget() const
     return *target;
 }
 
+std::pair<String, String> string2definition(const String &d)
+{
+    auto p = d.find('=');
+    if (p == d.npos)
+        return { d, {} }; // = 1
+    auto f = d.substr(0, p);
+    auto s = d.substr(p + 1);
+    if (s.empty())
+        return { f + "=", {} };
+    else
+    {
+        PropertyValue v;
+        v = s;
+        return { f, v };
+    }
+}
+
 void NativeCompilerOptionsData::add(const Definition &d)
 {
-    auto add_def = [this](const String &k, const String &v = {})
-    {
-        if (v.empty())
-            Definitions[k];
-        else
-            Definitions[k] = v;
-    };
-
-    auto p = d.d.find('=');
-    if (p == d.d.npos)
-    {
-        add_def(d.d); // = 1;
-        return;
-    }
-    auto f = d.d.substr(0, p);
-    auto s = d.d.substr(p + 1);
-    if (s.empty())
-        add_def(f + "=");
+    auto [k, v] = string2definition(d.d);
+    if (v.empty())
+        Definitions[k];
     else
-        add_def(f, s);
+        Definitions[k] = v;
 }
 
 void NativeCompilerOptionsData::remove(const Definition &d)
 {
-    auto erase_def = [this](const String &k)
-    {
-        Definitions.erase(k);
-    };
-
-    auto p = d.d.find('=');
-    if (p == d.d.npos)
-    {
-        erase_def(d.d);
-        return;
-    }
-    auto f = d.d.substr(0, p);
-    auto s = d.d.substr(p + 1);
-    if (s.empty())
-        erase_def(f + "=");
-    else
-        erase_def(f);
+    auto [k, v] = string2definition(d.d);
+    Definitions.erase(k);
 }
 
 void NativeCompilerOptionsData::add(const DefinitionsType &defs)

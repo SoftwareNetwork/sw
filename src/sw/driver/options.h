@@ -26,10 +26,12 @@ struct NativeOptions;
 struct Target;
 struct Package;
 
-using DefinitionKey = std::string;
+using DefinitionKey = String;
 //using DefinitionValue = PropertyValue;
 using VariableValue = PropertyValue;
 using DefinitionsType = std::map<DefinitionKey, VariableValue>;
+
+std::pair<String, String> string2definition(const String &);
 
 struct VariablesType : std::map<DefinitionKey, VariableValue>
 {
