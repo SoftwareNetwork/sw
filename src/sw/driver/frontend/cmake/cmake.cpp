@@ -7,6 +7,7 @@
 #include <sw/driver/sw.h>
 
 #include <cmake.h>
+#include <cmExecutionStatus.h>
 #include <cmGlobalGenerator.h>
 #include <cmMakefile.h>
 #include <cmSourceFile.h>
@@ -25,102 +26,6 @@ DECLARE_STATIC_LOGGER(logger, "fe.cmake");
 #define DEFINE_STATIC_CMAKE_COMMAND(x) static DEFINE_CMAKE_COMMAND(x)
 #define DEFAULT_CMAKE_CHECK_SET_NAME "cmake"
 
-static thread_local sw::driver::cpp::CmakeTargetEntryPoint *cmep;
-
-DEFINE_STATIC_CMAKE_COMMAND(sw_cmIncludeCommand)
-{
-    if (args.empty())
-        return cmIncludeCommand(args, status);
-
-    static StringSet overridden_includes
-    {
-        "CheckCCompilerFlag",
-        "CheckCXXCompilerFlag",
-        "CheckCSourceCompiles",
-        "CheckCSourceRuns",
-        "CheckCXXSourceCompiles",
-        "CheckCXXSourceRuns",
-        "CheckFunctionExists",
-        "CheckIncludeFiles",
-        "CheckIncludeFileCXX",
-        "CheckLibraryExists",
-        "CheckPrototypeDefinition",
-        "CheckStructHasMember",
-        "CheckSymbolExists",
-        "CheckTypeSize",
-        "TestBigEndian",
-    };
-    path i = args[0];
-    if (overridden_includes.find(i.filename().u8string()) != overridden_includes.end())
-        return true;
-    return cmIncludeCommand(args, status);
-}
-
-template <class Check, int NArgs = 0>
-DEFINE_STATIC_CMAKE_COMMAND(sw_cm_check)
-{
-    if (args.size() == 0)
-        return true;
-
-    sw::Checker c(*cmep->b);
-    auto &s = c.addSet(DEFAULT_CMAKE_CHECK_SET_NAME);
-
-    sw::Check *i;
-    if constexpr (NArgs == 0)
-    {
-        if (args.size() == 1)
-            i = &*s.add<Check>(args[0]);
-        else
-            i = &*s.add<Check>(args[0], args[1]);
-    }
-    else if constexpr (NArgs == 2)
-    {
-        i = &*s.add<Check>(args[0], args[1]);
-    }
-    static_assert(NArgs <= 2);
-
-    //if (!i->Definitions.empty())
-        //LOG_INFO(logger, "Performing check " << *i->Definitions.begin());
-
-    try
-    {
-        s.t = cmep->t;
-        s.performChecks(*cmep->b, cmep->ts);
-    }
-    catch (std::exception &)
-    {
-        return false;
-    }
-    for (auto &d : i->Definitions)
-        cmep->cm->AddCacheEntry(d, std::to_string(*i->Value).c_str(), "", cmStateEnums::STRING);
-    return true;
-}
-
-DEFINE_STATIC_CMAKE_COMMAND(sw_cm_check_test_big_endian)
-{
-    sw::Checker c(*cmep->b);
-    auto &s = c.addSet(DEFAULT_CMAKE_CHECK_SET_NAME);
-    sw::Check *i = &s.testBigEndian();
-    if (!args.empty())
-        i->Definitions.insert(args[0]);
-
-    ///if (!i->Definitions.empty())
-        //LOG_INFO(logger, "Performing check " << *i->Definitions.begin());
-
-    try
-    {
-        s.t = cmep->t;
-        s.performChecks(*cmep->b, cmep->ts);
-    }
-    catch (std::exception &)
-    {
-        return false;
-    }
-    for (auto &d : i->Definitions)
-        cmep->cm->AddCacheEntry(d, std::to_string(*i->Value).c_str(), "", cmStateEnums::STRING);
-    return true;
-}
-
 namespace
 {
 
@@ -128,12 +33,8 @@ struct cmakeCxxSourceCompiles : sw::SourceCompiles
 {
     using Base = sw::SourceCompiles;
 
-    cmakeCxxSourceCompiles(const String &def, const String &source)
-        : Base(source, def) // exchange
-    {
-    }
-
-    void prepare() override
+    cmakeCxxSourceCompiles(const String &source, const String &def)
+        : Base(def, source) // swap
     {
         setCpp();
     }
@@ -142,9 +43,9 @@ struct cmakeCxxSourceCompiles : sw::SourceCompiles
 struct cmakeCxxCompilerFlag : sw::CompilerFlag
 {
     using Base = sw::CompilerFlag;
-    using Base::Base;
 
-    void prepare() override
+    cmakeCxxCompilerFlag(const String &flag, const String &def)
+        : Base(def, flag) // swap
     {
         setCpp();
     }
@@ -179,6 +80,135 @@ struct SwCmakeGenerator : cmGlobalGenerator
     }
 };
 
+}
+
+static thread_local sw::driver::cpp::CmakeTargetEntryPoint *cmep;
+
+DEFINE_STATIC_CMAKE_COMMAND(sw_cmIncludeCommand)
+{
+    static StringSet overridden_includes
+    {
+        "CheckCCompilerFlag",
+        "CheckCXXCompilerFlag",
+        "CheckCSourceCompiles",
+        "CheckCSourceRuns",
+        "CheckCXXSourceCompiles",
+        "CheckCXXSourceRuns",
+        "CheckFunctionExists",
+        "CheckIncludeFiles",
+        "CheckIncludeFileCXX",
+        "CheckLibraryExists",
+        "CheckPrototypeDefinition",
+        "CheckStructHasMember",
+        "CheckSymbolExists",
+        "CheckTypeSize",
+        "TestBigEndian",
+    };
+
+    if (args.empty())
+        return cmIncludeCommand(args, status);
+
+    path i = args[0];
+
+    // pass through
+    if (i.is_absolute())
+        return cmIncludeCommand(args, status);
+
+    // filter out
+    if (overridden_includes.find(i.stem().u8string()) != overridden_includes.end())
+        return true;
+
+    // swallow errors
+    if (!cmIncludeCommand(args, status))
+        LOG_WARN(logger, "Cannot open: " << args[0]);
+    return true;
+}
+
+template <class Check, int NArgs = 0>
+DEFINE_STATIC_CMAKE_COMMAND(sw_cm_check)
+{
+    if (args.size() == 0)
+        return true;
+
+    sw::Check *i;
+    if constexpr (NArgs == 0)
+    {
+        if (args.size() == 1)
+            i = &*cmep->cs->add<Check>(args[0]);
+        else
+            i = &*cmep->cs->add<Check>(args[0], args[1]);
+    }
+    else if constexpr (NArgs == 2)
+    {
+        i = &*cmep->cs->add<Check>(args[0], args[1]);
+
+        for (int n = 2; n < args.size(); n++)
+        {
+            if (args[n] == "FAIL_REGEX" && n + 1 < args.size())
+            {
+                static_cast<sw::CompilerFlag *>(i)->fail_regex.push_back(args[n + 1]);
+            }
+        }
+    }
+    static_assert(NArgs <= 2);
+
+    auto get_prop = [&status](const String &s) -> Strings
+    {
+        if (auto prop = status.GetMakefile().GetDef(s))
+            return cmExpandedList(*prop);
+        return {};
+    };
+
+    for (auto &p : get_prop("CMAKE_REQUIRED_FLAGS"))
+        i->Parameters.CompileOptions.push_back(p);
+    for (auto &p : get_prop("CMAKE_REQUIRED_DEFINITIONS"))
+    {
+        if (!p.empty() && p[0] == '-')
+        {
+            // pass directly
+            i->Parameters.CompileOptions.push_back(p);
+            continue;
+        }
+        auto [k, v] = sw::string2definition(p);
+        i->Parameters.Definitions[k] = v;
+    }
+    for (auto &p : get_prop("CMAKE_REQUIRED_INCLUDES"))
+        i->Parameters.IncludeDirectories.push_back(p);
+    for (auto &p : get_prop("CMAKE_REQUIRED_LINK_OPTIONS"))
+        i->Parameters.LinkOptions.push_back(p);
+    for (auto &p : get_prop("CMAKE_REQUIRED_LIBRARIES"))
+        i->Parameters.Libraries.push_back(p);
+
+    try
+    {
+        cmep->cs->performChecks(*cmep->b, cmep->ts);
+    }
+    catch (std::exception &)
+    {
+        return false;
+    }
+    for (auto &d : i->Definitions)
+        cmep->cm->AddCacheEntry(d, std::to_string(*i->Value).c_str(), "", cmStateEnums::STRING);
+    return true;
+}
+
+DEFINE_STATIC_CMAKE_COMMAND(sw_cm_check_test_big_endian)
+{
+    sw::Check *i = &cmep->cs->testBigEndian();
+    if (!args.empty())
+        i->Definitions.insert(args[0]);
+
+    try
+    {
+        cmep->cs->performChecks(*cmep->b, cmep->ts);
+    }
+    catch (std::exception &)
+    {
+        return false;
+    }
+    for (auto &d : i->Definitions)
+        cmep->cm->AddCacheEntry(d, std::to_string(*i->Value).c_str(), "", cmStateEnums::STRING);
+    return true;
 }
 
 namespace sw::driver::cpp
@@ -251,6 +281,9 @@ std::vector<ITargetPtr> CmakeTargetEntryPoint::loadPackages(SwBuild &mb, const T
     b.setSourceDirectory(mb.getBuildDirectory());
     b.BinaryDir = mb.getBuildDirectory();
     t = &b.addLibrary("dummy");
+    // checks
+    cs = &b.checker.addSet(DEFAULT_CMAKE_CHECK_SET_NAME);
+    cs->t = t;
 
     // init every time because we set settings specific to current request
     init();

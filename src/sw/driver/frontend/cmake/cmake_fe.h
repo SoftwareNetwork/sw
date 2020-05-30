@@ -9,6 +9,11 @@ class cmake;
 class cmTarget;
 class cmMakefile;
 
+namespace sw
+{
+struct CheckSet;
+}
+
 namespace sw::driver::cpp
 {
 
@@ -20,6 +25,7 @@ struct CmakeTargetEntryPoint : NativeTargetEntryPoint
     mutable SwBuild *b = nullptr;
     mutable TargetSettings ts;
     mutable NativeCompiledTarget *t = nullptr;
+    mutable CheckSet *cs = nullptr;
 
     CmakeTargetEntryPoint(const path &fn);
     ~CmakeTargetEntryPoint();
