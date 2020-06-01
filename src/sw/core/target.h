@@ -241,12 +241,7 @@ struct SimpleExpected : std::variant<SimpleExpectedErrorCode, T, Args...>
 
 } // namespace detail
 
-struct
-    // workaround msvc bug
-#ifndef _MSC_VER
-    SW_CORE_API
-#endif
-    TargetMap : PackageVersionMapBase<TargetContainer, std::unordered_map, primitives::version::VersionMap>
+struct TargetMap : PackageVersionMapBase<TargetContainer, std::unordered_map, primitives::version::VersionMap>
 {
     using Base = PackageVersionMapBase<TargetContainer, std::unordered_map, primitives::version::VersionMap>;
 
@@ -258,12 +253,16 @@ struct
         TargetNotCreated, // by settings
     };
 
+    SW_CORE_API
     ~TargetMap();
 
     using Base::find;
 
+    SW_CORE_API
     detail::SimpleExpected<std::pair<Version, ITarget *>> find(const PackagePath &pp, const TargetSettings &ts) const;
+    SW_CORE_API
     ITarget *find(const PackageId &pkg, const TargetSettings &ts) const;
+    SW_CORE_API
     ITarget *find(const UnresolvedPackage &pkg, const TargetSettings &ts) const;
 
     //
