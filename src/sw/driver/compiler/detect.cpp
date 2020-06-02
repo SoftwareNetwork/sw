@@ -71,7 +71,6 @@ static String detectMsvcPrefix(builder::detail::ResolvableCommand c, const path 
     return p[c.getProgram()] = m[1].str();
 }
 
-
 const StringSet &getCppHeaderFileExtensions()
 {
     static const StringSet header_file_extensions{
