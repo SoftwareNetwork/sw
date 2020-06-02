@@ -234,6 +234,18 @@ struct SW_DRIVER_CPP_API DExecutable : DTarget
     TargetType getType() const override { return TargetType::DExecutable; }
 };
 
+// Pascal
+
+struct SW_DRIVER_CPP_API PascalTarget : NativeTarget
+    , NativeTargetOptionsGroup
+{
+    PascalTarget(TargetBase &parent, const PackageId &);
+
+    SW_TARGET_USING_ASSIGN_OPS(NativeTargetOptionsGroup);
+
+    bool init() override;
+};
+
 // Python
 
 struct SW_DRIVER_CPP_API PythonLibrary : Target
