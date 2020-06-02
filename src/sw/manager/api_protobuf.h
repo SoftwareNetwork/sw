@@ -18,7 +18,8 @@ struct ProtobufApi : Api
 {
     ProtobufApi(const Remote &);
 
-    std::unordered_map<UnresolvedPackage, PackagePtr> resolvePackages(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs,
+    ResolveResult resolvePackages(
+        const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs,
         std::unordered_map<PackageId, PackageData> &data, const IStorage &) const override;
     void addVersion(const PackagePath &prefix, const PackageDescriptionMap &pkgs, const SpecificationFiles &) const override;
 

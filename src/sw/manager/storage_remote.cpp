@@ -57,8 +57,7 @@ RemoteStorage::RemoteStorage(LocalStorage &ls, const Remote &r, bool allow_netwo
 
 RemoteStorage::~RemoteStorage() = default;
 
-std::unordered_map<UnresolvedPackage, PackagePtr>
-RemoteStorage::resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
+ResolveResult RemoteStorage::resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
 {
     preInitFindDependencies();
     if (Settings::get_user_settings().gForceServerQuery)
@@ -464,8 +463,7 @@ RemoteStorageWithFallbackToRemoteResolving::RemoteStorageWithFallbackToRemoteRes
 {
 }
 
-std::unordered_map<UnresolvedPackage, PackagePtr>
-RemoteStorageWithFallbackToRemoteResolving::resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
+ResolveResult RemoteStorageWithFallbackToRemoteResolving::resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
 {
     auto m = RemoteStorage::resolve(pkgs, unresolved_pkgs);
     if (unresolved_pkgs.empty())
@@ -498,8 +496,7 @@ RemoteStorageWithFallbackToRemoteResolving::resolve(const UnresolvedPackages &pk
     }
 }
 
-std::unordered_map<UnresolvedPackage, PackagePtr>
-RemoteStorageWithFallbackToRemoteResolving::resolveFromRemote(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
+ResolveResult RemoteStorageWithFallbackToRemoteResolving::resolveFromRemote(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
 {
     return getRemote().getApi()->resolvePackages(pkgs, unresolved_pkgs, data, *this);
 }

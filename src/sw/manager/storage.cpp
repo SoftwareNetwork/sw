@@ -153,24 +153,6 @@ path Directories::getDatabaseRootDir() const
     return p;
 }
 
-std::unordered_map<UnresolvedPackage, PackagePtr>
-IStorage::resolveWithDependencies(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
-{
-    auto r = resolve(pkgs, unresolved_pkgs);
-    while (1)
-    {
-        std::unordered_map<UnresolvedPackage, Package*> r2;
-        for (auto &[u, p] : r)
-            r2.emplace(u, p.get());
-        auto sz = r.size();
-        for (auto &[u, p] : r2)
-            r.merge(resolve(p->getData().dependencies, unresolved_pkgs));
-        if (r.size() == sz)
-            break;
-    }
-    return r;
-}
-
 Storage::Storage(const String &name)
     : name(name)
 {
@@ -198,15 +180,9 @@ PackagesDatabase &StorageWithPackagesDatabase::getPackagesDatabase() const
     return *pkgdb;
 }
 
-/*void StorageWithPackagesDatabase::get(const IStorage &source, const PackageId &id, StorageFileType)
+ResolveResult StorageWithPackagesDatabase::resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
 {
-    SW_UNIMPLEMENTED;
-}*/
-
-std::unordered_map<UnresolvedPackage, PackagePtr>
-StorageWithPackagesDatabase::resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
-{
-    std::unordered_map<UnresolvedPackage, PackagePtr> r;
+    ResolveResult r;
     for (auto &[ud, pkg] : pkgdb->resolve(pkgs, unresolved_pkgs))
         r.emplace(ud, std::make_unique<Package>(*this, pkg));
     return r;
@@ -423,8 +399,7 @@ const OverriddenPackagesStorage &LocalStorage::getOverriddenPackagesStorage() co
     return ovs;
 }
 
-std::unordered_map<UnresolvedPackage, PackagePtr>
-LocalStorage::resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
+ResolveResult LocalStorage::resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
 {
     return ovs.resolve(pkgs, unresolved_pkgs);
 }
@@ -482,10 +457,9 @@ bool OverriddenPackagesStorage::isPackageInstalled(const Package &p) const
     return getPackagesDatabase().getInstalledPackageId(p) != 0;
 }
 
-std::unordered_map<UnresolvedPackage, PackagePtr>
-CachedStorage::resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
+ResolveResult CachedStorage::resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
 {
-    std::unordered_map<UnresolvedPackage, PackagePtr> r;
+    ResolveResult r;
     for (auto &u : pkgs)
     {
         auto i = resolved_packages.find(u);

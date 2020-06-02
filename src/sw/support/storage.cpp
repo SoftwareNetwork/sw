@@ -45,6 +45,40 @@ Directories::Directories(const path &p)
 #undef SET
 }
 
+size_t ResolveResultWithDependencies::getHash(const UnresolvedPackage &u)
+{
+    auto hi = h.find(u);
+    if (hi != h.end())
+        return hi->second;
+    auto mi = m.find(u);
+    if (mi == m.end())
+        return h[u] = 0;
+    size_t hash = 0;
+    for (auto &d : mi->second->getData().dependencies)
+    {
+        if (u != d)
+            hash_combine(hash, getHash(d));
+    }
+    return hash;
+}
+
+ResolveResultWithDependencies IStorage::resolveWithDependencies(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
+{
+    auto r = resolve(pkgs, unresolved_pkgs);
+    while (1)
+    {
+        std::unordered_map<UnresolvedPackage, Package*> r2;
+        for (auto &[u, p] : r)
+            r2.emplace(u, p.get());
+        auto sz = r.size();
+        for (auto &[u, p] : r2)
+            r.merge(resolve(p->getData().dependencies, unresolved_pkgs));
+        if (r.size() == sz)
+            break;
+    }
+    return ResolveResultWithDependencies{ std::move(r) };
+}
+
 int getPackagesDatabaseSchemaVersion()
 {
     return 4;

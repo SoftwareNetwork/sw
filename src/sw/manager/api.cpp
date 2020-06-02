@@ -62,7 +62,8 @@ std::unique_ptr<grpc::ClientContext> ProtobufApi::getContextWithAuth() const
     return ctx;
 }
 
-std::unordered_map<UnresolvedPackage, PackagePtr> ProtobufApi::resolvePackages(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs,
+ResolveResult ProtobufApi::resolvePackages(
+    const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs,
     std::unordered_map<PackageId, PackageData> &data, const IStorage &s) const
 {
     api::UnresolvedPackages request;
@@ -82,7 +83,7 @@ std::unordered_map<UnresolvedPackage, PackagePtr> ProtobufApi::resolvePackages(c
         unresolved_pkgs.emplace(u.path(), u.range());
 
     // read resolved
-    std::unordered_map<UnresolvedPackage, PackagePtr> m;
+    ResolveResult m;
     for (auto &pair : response.resolved_packages())
     {
         auto &pkg = pair.resolved_package();

@@ -22,7 +22,7 @@ struct SW_MANAGER_API RemoteStorage : StorageWithPackagesDatabase
     //LocalPackage download(const PackageId &) const override;
     //LocalPackage install(const Package &) const;
     std::unique_ptr<vfs::File> getFile(const PackageId &id, StorageFileType) const override;
-    std::unordered_map<UnresolvedPackage, PackagePtr> resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const override;
+    ResolveResult resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const override;
 
     const Remote &getRemote() const { return r; }
 
@@ -49,8 +49,8 @@ struct SW_MANAGER_API RemoteStorageWithFallbackToRemoteResolving : RemoteStorage
     RemoteStorageWithFallbackToRemoteResolving(LocalStorage &, const Remote &, bool allow_network);
 
     PackageDataPtr loadData(const PackageId &) const override;
-    std::unordered_map<UnresolvedPackage, PackagePtr> resolveFromRemote(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const;
-    std::unordered_map<UnresolvedPackage, PackagePtr> resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const override;
+    ResolveResult resolveFromRemote(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const;
+    ResolveResult resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const override;
 
 private:
     mutable std::unordered_map<PackageId, PackageData> data;

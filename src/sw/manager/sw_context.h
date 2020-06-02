@@ -17,6 +17,7 @@ namespace sw
 struct IResolvableStorage;
 struct CachedStorage;
 struct LocalStorage;
+struct ResolveResultWithDependencies;
 
 // sw_context_t?
 /*struct SW_MANAGER_API ISwContext
@@ -39,9 +40,9 @@ struct SW_MANAGER_API SwManagerContext// : ISwContext
     std::unordered_map<UnresolvedPackage, LocalPackage> install(const UnresolvedPackages &, bool use_cache = true) const;
     LocalPackage install(const Package &) const;
 
-    std::unordered_map<UnresolvedPackage, PackagePtr> resolve(const UnresolvedPackages &, bool use_cache = true) const;
+    ResolveResultWithDependencies resolve(const UnresolvedPackages &, bool use_cache = true) const;
     LocalPackage resolve(const UnresolvedPackage &) const;
-    std::unordered_map<UnresolvedPackage, PackagePtr> resolve(const UnresolvedPackages &, const std::vector<IStorage*> &) const;
+    ResolveResultWithDependencies resolve(const UnresolvedPackages &, const std::vector<IStorage*> &) const;
 
     // lock file related
     void setCachedPackages(const std::unordered_map<UnresolvedPackage, PackageId> &) const;

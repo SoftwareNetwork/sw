@@ -8,6 +8,7 @@
 #include <nlohmann/json.hpp>
 #include <sw/core/specification.h>
 #include <sw/support/source.h>
+#include <sw/support/storage.h>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "verify");

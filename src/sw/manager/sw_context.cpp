@@ -61,7 +61,7 @@ std::vector<IStorage *> SwManagerContext::getRemoteStorages() const
     return r;
 }
 
-std::unordered_map<UnresolvedPackage, PackagePtr> SwManagerContext::resolve(const UnresolvedPackages &in_pkgs, bool use_cache) const
+ResolveResultWithDependencies SwManagerContext::resolve(const UnresolvedPackages &in_pkgs, bool use_cache) const
 {
     if (in_pkgs.empty())
         return {};
@@ -75,15 +75,15 @@ std::unordered_map<UnresolvedPackage, PackagePtr> SwManagerContext::resolve(cons
     return resolve(in_pkgs, s2);
 }
 
-std::unordered_map<UnresolvedPackage, PackagePtr> SwManagerContext::resolve(const UnresolvedPackages &in_pkgs, const std::vector<IStorage*> &storages) const
+ResolveResultWithDependencies SwManagerContext::resolve(const UnresolvedPackages &in_pkgs, const std::vector<IStorage*> &storages) const
 {
     std::lock_guard lk(resolve_mutex);
 
-    std::unordered_map<UnresolvedPackage, PackagePtr> resolved;
+    ResolveResultWithDependencies resolved;
     auto upkgs = in_pkgs;
     while (1)
     {
-        std::unordered_map<UnresolvedPackage, PackagePtr> resolved_step;
+        ResolveResultWithDependencies resolved_step;
         for (auto &p : upkgs)
         {
             if (resolved.find(p) != resolved.end())
@@ -135,7 +135,7 @@ std::unordered_map<UnresolvedPackage, PackagePtr> SwManagerContext::resolve(cons
     }
 
     // save existing results
-    getCachedStorage().storePackages(resolved);
+    getCachedStorage().storePackages(resolved.m);
 
     return resolved;
 }
@@ -179,11 +179,9 @@ LocalPackage SwManagerContext::resolve(const UnresolvedPackage &pkg) const
 void SwManagerContext::setCachedPackages(const std::unordered_map<UnresolvedPackage, PackageId> &pkgs) const
 {
     auto &s = getCachedStorage();
-    std::unordered_map<UnresolvedPackage, PackagePtr> pkgs2;
+    ResolveResult pkgs2;
     for (auto &[u, p] : pkgs)
-    {
         pkgs2.emplace(u, std::make_unique<LocalPackage>(getLocalStorage(), p));
-    }
     s.storePackages(pkgs2);
 }
 
