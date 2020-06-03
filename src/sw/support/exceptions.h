@@ -3,17 +3,8 @@
 
 #pragma once
 
-#ifdef BOOST_USE_WINDOWS_H
-#undef BOOST_USE_WINDOWS_H
-#define REDEFINE_BOOST_USE_WINDOWS_H
-#endif
-
 #include <boost/stacktrace.hpp>
 #include <boost/exception/errinfo_errno.hpp>
-
-#ifdef REDEFINE_BOOST_USE_WINDOWS_H
-#define BOOST_USE_WINDOWS_H
-#endif
 
 #include <exception>
 
