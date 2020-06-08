@@ -363,6 +363,7 @@ private:
     BuildSettings bs;
     std::unique_ptr<Source> source;
     String provided_cfg;
+    mutable Commands commands;
     Commands tests;
 
     void applyRootDirectory();

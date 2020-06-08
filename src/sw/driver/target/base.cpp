@@ -443,8 +443,10 @@ CommandStorage *Target::getCommandStorage() const
 
 Commands Target::getCommands() const
 {
-    auto cmds = getCommands1();
-    for (auto &c : cmds)
+    if (!commands.empty())
+        return commands;
+    commands = getCommands1();
+    for (auto &c : commands)
     {
         if (!c->command_storage)
         {
@@ -453,7 +455,7 @@ Commands Target::getCommands() const
                 c->always = true;
         }
     }
-    return cmds;
+    return commands;
 }
 
 void Target::registerCommand(builder::Command &c)
