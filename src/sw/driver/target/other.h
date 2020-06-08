@@ -13,11 +13,11 @@ namespace sw
 struct SW_DRIVER_CPP_API AdaTarget : NativeTarget
     , NativeTargetOptionsGroup
 {
+    std::shared_ptr<AdaCompiler> compiler;
+
     AdaTarget(TargetBase &parent, const PackageId &);
 
     SW_TARGET_USING_ASSIGN_OPS(NativeTargetOptionsGroup);
-
-    std::shared_ptr<AdaCompiler> compiler;
 
     bool init() override;
     DependenciesType gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
@@ -38,11 +38,11 @@ struct SW_DRIVER_CPP_API AdaExecutable : AdaTarget
 struct SW_DRIVER_CPP_API CSharpTarget : Target
     , NativeTargetOptionsGroup
 {
+    std::shared_ptr<CSharpCompiler> compiler;
+
     CSharpTarget(TargetBase &parent, const PackageId &);
 
     SW_TARGET_USING_ASSIGN_OPS(NativeTargetOptionsGroup);
-
-    std::shared_ptr<CSharpCompiler> compiler;
 
     TargetType getType() const override { return TargetType::CSharpLibrary; }
 
@@ -67,11 +67,11 @@ struct SW_DRIVER_CPP_API CSharpExecutable : CSharpTarget
 struct SW_DRIVER_CPP_API RustTarget : Target
     , NativeTargetOptionsGroup
 {
+    std::shared_ptr<RustCompiler> compiler;
+
     RustTarget(TargetBase &parent, const PackageId &);
 
     SW_TARGET_USING_ASSIGN_OPS(NativeTargetOptionsGroup);
-
-    std::shared_ptr<RustCompiler> compiler;
 
     TargetType getType() const override { return TargetType::RustLibrary; }
 
@@ -95,11 +95,11 @@ struct SW_DRIVER_CPP_API RustExecutable : RustTarget
 struct SW_DRIVER_CPP_API GoTarget : Target
     , NativeTargetOptionsGroup
 {
+    std::shared_ptr<GoCompiler> compiler;
+
     GoTarget(TargetBase &parent, const PackageId &);
 
     SW_TARGET_USING_ASSIGN_OPS(NativeTargetOptionsGroup);
-
-    std::shared_ptr<GoCompiler> compiler;
 
     TargetType getType() const override { return TargetType::GoLibrary; }
 
@@ -123,11 +123,11 @@ struct SW_DRIVER_CPP_API GoExecutable : GoTarget
 struct SW_DRIVER_CPP_API FortranTarget : Target
     , NativeTargetOptionsGroup
 {
+    std::shared_ptr<FortranCompiler> compiler;
+
     FortranTarget(TargetBase &parent, const PackageId &);
 
     SW_TARGET_USING_ASSIGN_OPS(NativeTargetOptionsGroup);
-
-    std::shared_ptr<FortranCompiler> compiler;
 
     TargetType getType() const override { return TargetType::FortranLibrary; }
 
@@ -151,11 +151,11 @@ struct SW_DRIVER_CPP_API FortranExecutable : FortranTarget
 struct SW_DRIVER_CPP_API JavaTarget : Target
     , NativeTargetOptionsGroup
 {
+    std::shared_ptr<JavaCompiler> compiler;
+
     JavaTarget(TargetBase &parent, const PackageId &);
 
     SW_TARGET_USING_ASSIGN_OPS(NativeTargetOptionsGroup);
-
-    std::shared_ptr<JavaCompiler> compiler;
 
     TargetType getType() const override { return TargetType::JavaLibrary; }
 
@@ -179,11 +179,11 @@ struct SW_DRIVER_CPP_API JavaExecutable : JavaTarget
 struct SW_DRIVER_CPP_API KotlinTarget : Target
     , NativeTargetOptionsGroup
 {
+    std::shared_ptr<KotlinCompiler> compiler;
+
     KotlinTarget(TargetBase &parent, const PackageId &);
 
     SW_TARGET_USING_ASSIGN_OPS(NativeTargetOptionsGroup);
-
-    std::shared_ptr<KotlinCompiler> compiler;
 
     TargetType getType() const override { return TargetType::KotlinLibrary; }
 
@@ -207,11 +207,11 @@ struct SW_DRIVER_CPP_API KotlinExecutable : KotlinTarget
 struct SW_DRIVER_CPP_API DTarget : NativeTarget
     , NativeTargetOptionsGroup
 {
+    std::shared_ptr<DCompiler> compiler;
+
     DTarget(TargetBase &parent, const PackageId &);
 
     SW_TARGET_USING_ASSIGN_OPS(NativeTargetOptionsGroup);
-
-    std::shared_ptr<DCompiler> compiler;
 
     TargetType getType() const override { return TargetType::DLibrary; }
 
