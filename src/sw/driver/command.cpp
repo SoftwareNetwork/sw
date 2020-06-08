@@ -215,11 +215,11 @@ CommandBuilder &CommandBuilder::operator<<(const ::sw::cmd::tag_wdir &t)
     return *this;
 }
 
-static NativeCompiledTarget &cast_as_nct(Target &t)
+static NativeTargetOptionsGroup &cast_as_nct(Target &t)
 {
-    return dynamic_cast<NativeCompiledTarget &>(t);
+    return dynamic_cast<NativeTargetOptionsGroup &>(t);
 }
-static NativeCompiledTarget *cast_as_nct(Target *t)
+static NativeTargetOptionsGroup *cast_as_nct(Target *t)
 {
     return &cast_as_nct(*t);
 }
