@@ -1062,6 +1062,24 @@ std::shared_ptr<SourceFile> RcTool::createSourceFile(const Target &t, const path
     return std::make_shared<RcToolSourceFile>(*this, input, ::sw::getOutputFile(t, *this, input));
 }
 
+SW_DEFINE_PROGRAM_CLONE(AdaCompiler)
+
+void AdaCompiler::prepareCommand1(const ::sw::Target &t)
+{
+    getCommandLineOptions<AdaCompilerOptions>(cmd.get(), *this);
+}
+
+void AdaCompiler::setOutputFile(const path &output_file)
+{
+    Output = output_file;
+    Output() += Extension;
+}
+
+void AdaCompiler::setSourceFile(const path &input_file)
+{
+    InputFile() = input_file;
+}
+
 SW_DEFINE_PROGRAM_CLONE(VisualStudioCSharpCompiler)
 
 void VisualStudioCSharpCompiler::prepareCommand1(const ::sw::Target &t)

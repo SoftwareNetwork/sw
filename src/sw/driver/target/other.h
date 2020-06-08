@@ -8,6 +8,31 @@
 namespace sw
 {
 
+// Ada
+
+struct SW_DRIVER_CPP_API AdaTarget : NativeTarget
+    , NativeTargetOptionsGroup
+{
+    AdaTarget(TargetBase &parent, const PackageId &);
+
+    SW_TARGET_USING_ASSIGN_OPS(NativeTargetOptionsGroup);
+
+    std::shared_ptr<AdaCompiler> compiler;
+
+    bool init() override;
+    DependenciesType gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
+    Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
+
+private:
+    Commands getCommands1() const override;
+};
+
+struct SW_DRIVER_CPP_API AdaExecutable : AdaTarget
+{
+    using Base = AdaTarget;
+    using Base::Base;
+};
+
 // C#
 
 struct SW_DRIVER_CPP_API CSharpTarget : Target

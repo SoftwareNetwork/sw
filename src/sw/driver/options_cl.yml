@@ -614,6 +614,20 @@ types:
             - input:
                 order: 100
 
+    ada:
+        name: AdaCompilerOptions
+
+        using:
+            - input
+
+        flags:
+            output:
+                name: Output
+                flag: o
+                type: path
+                properties:
+                    - output_dependency
+
     csharp:
         name: VisualStudioCSharpCompilerOptions
 

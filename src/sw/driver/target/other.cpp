@@ -66,6 +66,59 @@ static std::shared_ptr<CompilerType> activateCompiler(Target &t, const Unresolve
     return compiler;
 }
 
+void detectAdaCompilers(DETECT_ARGS)
+{
+    // gcc, gnat, gnatmake, gnatbind, gnatlink?
+
+    auto p = std::make_shared<SimpleProgram>();
+    auto f = resolveExecutable("gnat");
+    if (!fs::exists(f))
+        return;
+    p->file = f;
+
+    auto v = getVersion(s, p->file);
+    addProgram(DETECT_ARGS_PASS, PackageId("org.gnu.gcc.ada", v), {}, p);
+}
+
+AdaTarget::AdaTarget(TargetBase &parent, const PackageId &id)
+    : NativeTarget(parent, id), NativeTargetOptionsGroup((Target &)*this)
+{
+}
+
+bool AdaTarget::init()
+{
+    static std::once_flag f;
+    std::call_once(f, [this] {detectAdaCompilers(DETECT_ARGS_PASS_FIRST_CALL_SIMPLE); });
+
+    Target::init();
+
+    compiler = activateCompiler<AdaCompiler>(*this, "org.gnu.gcc.ada"s, { ".adb", ".ads" });
+    if (!compiler)
+        throw SW_RUNTIME_ERROR("No Ada compiler found");
+
+    compiler->Extension = getBuildSettings().TargetOS.getExecutableExtension();
+    compiler->setOutputFile(getBaseOutputFileName(*this, {}, "bin"));
+
+    SW_RETURN_MULTIPASS_END(init_pass);
+}
+
+Commands AdaTarget::getCommands1() const
+{
+    Commands cmds;
+
+    // https://gcc.gnu.org/onlinedocs/gcc-6.5.0/gnat_ugn.pdf
+    // gnat compile hello.adb
+    // gnat bind -x hello.ali
+    // gnat link hello.ali
+
+    // how to change output file?
+    // works:
+    // gnatmake -o ... input.adb
+    // but...?
+
+    return cmds;
+}
+
 void detectCSharpCompilers(DETECT_ARGS)
 {
     auto &instances = gatherVSInstances();

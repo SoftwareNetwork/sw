@@ -476,6 +476,19 @@ private:
     std::shared_ptr<SourceFile> createSourceFile(const Target &t, const path &input) const override;
 };
 
+// Ada
+
+struct SW_DRIVER_CPP_API AdaCompiler : Compiler,
+    CommandLineOptions<AdaCompilerOptions>
+{
+    using Compiler::Compiler;
+
+    SW_COMMON_COMPILER_API;
+
+    void setOutputFile(const path &output_file);
+    void setSourceFile(const path &input_file);
+};
+
 // C#
 
 struct SW_DRIVER_CPP_API CSharpCompiler : Compiler
