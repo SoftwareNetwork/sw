@@ -396,6 +396,11 @@ path Target::getTargetDirShort(const path &root) const
     return root / "t" / getConfig() / shorten_hash(blake2b_512(getPackage().toString()), 6);
 }
 
+path Target::getObjectDir() const
+{
+    return getObjectDir(getPackage());
+}
+
 path Target::getObjectDir(const LocalPackage &in) const
 {
     return getObjectDir(in, getConfig());
