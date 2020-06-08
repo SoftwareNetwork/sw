@@ -632,6 +632,9 @@ types:
     csharp:
         name: VisualStudioCSharpCompilerOptions
 
+        using:
+            - ifiles
+
         flags:
             tgt:
                 name: Target
@@ -645,9 +648,6 @@ types:
                 flag: "out:"
                 properties:
                     - output_dependency
-
-        using:
-            - ifiles
 
     rust:
         name: RustCompilerOptions
