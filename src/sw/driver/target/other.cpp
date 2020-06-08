@@ -68,10 +68,8 @@ static std::shared_ptr<CompilerType> activateCompiler(Target &t, const Unresolve
 
 void detectAdaCompilers(DETECT_ARGS)
 {
-    // gcc, gnat, gnatmake, gnatbind, gnatlink?
-
     auto p = std::make_shared<SimpleProgram>();
-    auto f = resolveExecutable("gnat");
+    auto f = resolveExecutable("gnatmake");
     if (!fs::exists(f))
         return;
     p->file = f;
@@ -104,9 +102,7 @@ bool AdaTarget::init()
 
 Commands AdaTarget::getCommands1() const
 {
-    Commands cmds;
-
-    // https://gcc.gnu.org/onlinedocs/gcc-6.5.0/gnat_ugn.pdf
+    // https://gcc.gnu.org/onlinedocs/gcc-10.1.0/gnat_ugn.pdf
     // gnat compile hello.adb
     // gnat bind -x hello.ali
     // gnat link hello.ali
@@ -114,71 +110,13 @@ Commands AdaTarget::getCommands1() const
     // how to change output file?
     // works:
     // gnatmake -o ... input.adb
-    // but...?
 
-    auto &p = (AdaTarget &)(*this);
-    auto files1 = gatherSourceFiles<SourceFile>(*this, { ".adb", ".ads" });
-    FilesOrdered files;
-    for (auto f : files1)
-        files.push_back(f->file);
-    auto objdir = getObjectDir() / "obj";
-
-    // gnat compile hello.adb
-    {
-        auto c = p.addCommand();
-        c << cmd::prog(compiler->file);
-        c << cmd::wdir(objdir);
-        c << "compile";
-        for (auto &f : files)
-            c << cmd::in(f);
-        c << cmd::end();
-        for (auto &f : files)
-        {
-            c << cmd::out(objdir / f.stem() += ".o");
-            c << cmd::out(objdir / f.stem() += ".ali"); // single ali file for target?
-        }
-        cmds.insert(c.getCommand());
-    }
-
-    // gnat bind -x hello.ali
-    {
-        auto c = p.addCommand();
-        c << cmd::prog(compiler->file);
-        c << cmd::wdir(objdir);
-        c << "bind" << "-x";
-        for (auto &f : files)
-            c << cmd::in(objdir / f.stem() += ".ali");
-        c << cmd::end();
-        for (auto &f : files)
-        {
-            c << cmd::out(objdir / ("b~" + f.stem().u8string() += ".adb"));
-            c << cmd::out(objdir / ("b~" + f.stem().u8string() += ".ads"));
-        }
-        cmds.insert(c.getCommand());
-    }
-
-    // gnat link hello.ali
-    {
-        auto c = p.addCommand();
-        c << cmd::prog(compiler->file);
-        c << cmd::wdir(objdir);
-        c << "link";
-        for (auto &f : files)
-            c << cmd::in(objdir / f.stem() += ".ali");
-        c << cmd::end();
-        for (auto &f : files)
-        {
-            c << cmd::in(objdir / f.stem() += ".o");
-            c << cmd::in(objdir / ("b~" + f.stem().u8string() + ".adb"));
-            c << cmd::in(objdir / ("b~" + f.stem().u8string() + ".ads"));
-
-            // for single file case
-            c << cmd::out(objdir / f.stem() += getBuildSettings().TargetOS.getExecutableExtension());
-            break;
-        }
-        cmds.insert(c.getCommand());
-    }
-
+    for (auto f : gatherSourceFiles<SourceFile>(*this, { ".adb", ".ads" }))
+        compiler->addSourceFile(f->file);
+    Commands cmds;
+    auto c = compiler->getCommand(*this);
+    c->working_directory = getObjectDir();
+    cmds.insert(c);
     return cmds;
 }
 

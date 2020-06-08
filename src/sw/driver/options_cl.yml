@@ -618,7 +618,7 @@ types:
         name: AdaCompilerOptions
 
         using:
-            - input
+            - ifiles
 
         flags:
             output:
@@ -627,6 +627,7 @@ types:
                 type: path
                 properties:
                     - output_dependency
+                    - separate_prefix
 
     csharp:
         name: VisualStudioCSharpCompilerOptions

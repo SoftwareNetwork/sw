@@ -1075,9 +1075,9 @@ void AdaCompiler::setOutputFile(const path &output_file)
     Output() += Extension;
 }
 
-void AdaCompiler::setSourceFile(const path &input_file)
+void AdaCompiler::addSourceFile(const path &input_file)
 {
-    InputFile() = input_file;
+    InputFiles().push_back(input_file);
 }
 
 SW_DEFINE_PROGRAM_CLONE(VisualStudioCSharpCompiler)

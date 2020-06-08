@@ -486,7 +486,7 @@ struct SW_DRIVER_CPP_API AdaCompiler : Compiler,
     SW_COMMON_COMPILER_API;
 
     void setOutputFile(const path &output_file);
-    void setSourceFile(const path &input_file);
+    void addSourceFile(const path &input_file);
 };
 
 // C#
