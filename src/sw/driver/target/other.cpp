@@ -76,12 +76,12 @@ void detectAdaCompilers(DETECT_ARGS)
         return;
     p->file = f;
 
-    auto v = getVersion(s, p->file);
+    auto v = getVersion(s, p->file, "--version", "(\\d{4})(\\d{2})(\\d{2})");
     addProgram(DETECT_ARGS_PASS, PackageId("org.gnu.gcc.ada", v), {}, p);
 }
 
 AdaTarget::AdaTarget(TargetBase &parent, const PackageId &id)
-    : NativeTarget(parent, id), NativeTargetOptionsGroup((Target &)*this)
+    : Target(parent, id), NativeTargetOptionsGroup((Target &)*this)
 {
 }
 
@@ -115,6 +115,69 @@ Commands AdaTarget::getCommands1() const
     // works:
     // gnatmake -o ... input.adb
     // but...?
+
+    auto &p = (AdaTarget &)(*this);
+    auto files1 = gatherSourceFiles<SourceFile>(*this, { ".adb", ".ads" });
+    FilesOrdered files;
+    for (auto f : files1)
+        files.push_back(f->file);
+    auto objdir = getObjectDir() / "obj";
+
+    // gnat compile hello.adb
+    {
+        auto c = p.addCommand();
+        c << cmd::prog(compiler->file);
+        c << cmd::wdir(objdir);
+        c << "compile";
+        for (auto &f : files)
+            c << cmd::in(f);
+        c << cmd::end();
+        for (auto &f : files)
+        {
+            c << cmd::out(objdir / f.stem() += ".o");
+            c << cmd::out(objdir / f.stem() += ".ali"); // single ali file for target?
+        }
+        cmds.insert(c.getCommand());
+    }
+
+    // gnat bind -x hello.ali
+    {
+        auto c = p.addCommand();
+        c << cmd::prog(compiler->file);
+        c << cmd::wdir(objdir);
+        c << "bind" << "-x";
+        for (auto &f : files)
+            c << cmd::in(objdir / f.stem() += ".ali");
+        c << cmd::end();
+        for (auto &f : files)
+        {
+            c << cmd::out(objdir / ("b~" + f.stem().u8string() += ".adb"));
+            c << cmd::out(objdir / ("b~" + f.stem().u8string() += ".ads"));
+        }
+        cmds.insert(c.getCommand());
+    }
+
+    // gnat link hello.ali
+    {
+        auto c = p.addCommand();
+        c << cmd::prog(compiler->file);
+        c << cmd::wdir(objdir);
+        c << "link";
+        for (auto &f : files)
+            c << cmd::in(objdir / f.stem() += ".ali");
+        c << cmd::end();
+        for (auto &f : files)
+        {
+            c << cmd::in(objdir / f.stem() += ".o");
+            c << cmd::in(objdir / ("b~" + f.stem().u8string() + ".adb"));
+            c << cmd::in(objdir / ("b~" + f.stem().u8string() + ".ads"));
+
+            // for single file case
+            c << cmd::out(objdir / f.stem() += getBuildSettings().TargetOS.getExecutableExtension());
+            break;
+        }
+        cmds.insert(c.getCommand());
+    }
 
     return cmds;
 }

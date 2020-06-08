@@ -10,7 +10,7 @@ namespace sw
 
 // Ada
 
-struct SW_DRIVER_CPP_API AdaTarget : NativeTarget
+struct SW_DRIVER_CPP_API AdaTarget : Target
     , NativeTargetOptionsGroup
 {
     std::shared_ptr<AdaCompiler> compiler;
