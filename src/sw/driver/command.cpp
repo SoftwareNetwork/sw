@@ -408,7 +408,18 @@ static std::pair<String, Version> gatherVersion1(builder::detail::ResolvableComm
         std::regex r_in(in_regex);
         std::smatch m;
         if (std::regex_search(o, m, r_in))
-            v = m[0].str();
+        {
+            if (m.size() >= 4)
+            {
+                auto make_int = [&m](int i)
+                {
+                    return std::stoi(m[i].str());
+                };
+                v = Version(make_int(1), make_int(2), make_int(3));
+            }
+            else
+                v = m[0].str();
+        }
     }
     else
     {
