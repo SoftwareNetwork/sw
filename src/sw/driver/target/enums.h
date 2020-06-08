@@ -52,6 +52,7 @@ enum class TargetType : int
     NativeSharedLibrary,
     NativeExecutable,
 
+    // remove below?
     CSharpLibrary,
     CSharpExecutable,
 
