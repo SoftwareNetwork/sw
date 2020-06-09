@@ -261,14 +261,27 @@ struct SW_DRIVER_CPP_API DExecutable : DTarget
 
 // Pascal
 
-struct SW_DRIVER_CPP_API PascalTarget : NativeTarget
+struct SW_DRIVER_CPP_API PascalTarget : Target
     , NativeTargetOptionsGroup
 {
+    std::shared_ptr<PascalCompiler> compiler;
+
     PascalTarget(TargetBase &parent, const PackageId &);
 
     SW_TARGET_USING_ASSIGN_OPS(NativeTargetOptionsGroup);
 
     bool init() override;
+    DependenciesType gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
+    Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
+
+private:
+    Commands getCommands1() const override;
+};
+
+struct SW_DRIVER_CPP_API PascalExecutable : PascalTarget
+{
+    using Base = PascalTarget;
+    using Base::Base;
 };
 
 // Python

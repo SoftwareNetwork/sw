@@ -539,11 +539,11 @@ void detectPascalCompilers(DETECT_ARGS)
     p->file = f;
 
     auto v = getVersion(s, p->file, "-version");
-    addProgram(DETECT_ARGS_PASS, PackageId("org.dlang.dmd.dmd", v), {}, p);
+    addProgram(DETECT_ARGS_PASS, PackageId("org.pascal.fpc", v), {}, p);
 }
 
 PascalTarget::PascalTarget(TargetBase &parent, const PackageId &id)
-    : NativeTarget(parent, id), NativeTargetOptionsGroup((Target &)*this)
+    : Target(parent, id), NativeTargetOptionsGroup((Target &)*this)
 {
 }
 
@@ -552,7 +552,33 @@ bool PascalTarget::init()
     static std::once_flag f;
     std::call_once(f, [this] {detectPascalCompilers(DETECT_ARGS_PASS_FIRST_CALL_SIMPLE); });
 
-    return Target::init();
+    Target::init();
+
+    compiler = activateCompiler<PascalCompiler>(*this, "org.pascal.fpc"s, { ".pas", ".pp" });
+    if (!compiler)
+        throw SW_RUNTIME_ERROR("No Pascal compiler found");
+
+    compiler->Extension = getBuildSettings().TargetOS.getExecutableExtension();
+    compiler->setOutputFile(getBaseOutputFileName(*this, {}, "bin"));
+
+    SW_RETURN_MULTIPASS_END(init_pass);
+}
+
+Commands PascalTarget::getCommands1() const
+{
+    // fpc hello.adb
+
+    // how to change output file?
+    // works:
+    // gnatmake -o ... input.adb
+
+    for (auto f : gatherSourceFiles<SourceFile>(*this, { ".pas", ".pp" }))
+        compiler->addSourceFile(f->file);
+    Commands cmds;
+    auto c = compiler->getCommand(*this);
+    c->working_directory = getObjectDir();
+    cmds.insert(c);
+    return cmds;
 }
 
 PythonLibrary::PythonLibrary(TargetBase &parent, const PackageId &id)

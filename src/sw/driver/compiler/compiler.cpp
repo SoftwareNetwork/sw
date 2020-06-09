@@ -1221,6 +1221,24 @@ void DCompiler::setSourceFile(const path &input_file)
     InputFiles().push_back(input_file);
 }
 
+SW_DEFINE_PROGRAM_CLONE(PascalCompiler)
+
+void PascalCompiler::prepareCommand1(const ::sw::Target &t)
+{
+    getCommandLineOptions<PascalCompilerOptions>(cmd.get(), *this);
+}
+
+void PascalCompiler::setOutputFile(const path &output_file)
+{
+    Output = output_file;
+    Output() += Extension;
+}
+
+void PascalCompiler::addSourceFile(const path &input_file)
+{
+    InputFiles().push_back(input_file);
+}
+
 SW_DEFINE_PROGRAM_CLONE(ValaCompiler)
 
 void ValaCompiler::prepareCommand1(const Target &t)

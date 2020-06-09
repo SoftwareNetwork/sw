@@ -597,6 +597,21 @@ struct SW_DRIVER_CPP_API DCompiler : NativeLinker,
     void setImportLibrary(const path &out) override {}
 };
 
+// Pascal
+
+struct SW_DRIVER_CPP_API PascalCompiler : Compiler,
+    CommandLineOptions<PascalCompilerOptions>
+{
+    using Compiler::Compiler;
+
+    SW_COMMON_COMPILER_API;
+
+    void setOutputFile(const path &output_file);
+    void addSourceFile(const path &input_file);
+};
+
+// Vala
+
 struct SW_DRIVER_CPP_API ValaCompiler : Compiler,
     CommandLineOptions<ValaOptions>
 {

@@ -811,6 +811,20 @@ types:
                 flag: m64
                 type: bool
 
+    pascal:
+        name: PascalCompilerOptions
+
+        using:
+            - ifiles
+
+        flags:
+            output:
+                name: Output
+                flag: o
+                type: path
+                properties:
+                    - output_dependency
+
     vala:
         name: ValaOptions
 
