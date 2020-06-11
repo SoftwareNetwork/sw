@@ -165,7 +165,7 @@ void build(Solution &s)
             "org.sw.demo.boost.assign"_dep,
             "org.sw.demo.boost.bimap"_dep,
             "org.sw.demo.boost.uuid"_dep;
-        cpp_driver.Public -= "org.sw.demo.giovannidicanio.winreg"_dep;
+        cpp_driver.Public -= "org.sw.demo.giovannidicanio.winreg-2"_dep;
         cpp_driver += "src/sw/driver/.*"_rr;
         cpp_driver -= "src/sw/driver/misc/delay_load_helper.cpp";
         gen_flex_bison("org.sw.demo.lexxmark.winflexbison"_dep, cpp_driver, "src/sw/driver/bazel/lexer.ll", "src/sw/driver/bazel/grammar.yy");
@@ -173,7 +173,7 @@ void build(Solution &s)
             cpp_driver.CompileOptions.push_back("-bigobj");
         if (cpp_driver.getBuildSettings().TargetOS.Type == OSType::Windows)
         {
-            cpp_driver.Public += "org.sw.demo.giovannidicanio.winreg"_dep;
+            cpp_driver.Public += "org.sw.demo.giovannidicanio.winreg-2"_dep;
             cpp_driver += "dbghelp.lib"_slib;
             cpp_driver += "OleAut32.lib"_slib;
         }
