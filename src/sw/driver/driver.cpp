@@ -13,6 +13,7 @@
 #include "entry_point.h"
 #include "module.h"
 #include "frontend/cmake/cmake_fe.h"
+#include "frontend/cppan/cppan.h"
 
 #include <sw/core/input.h>
 #include <sw/core/specification.h>
@@ -215,7 +216,7 @@ struct SpecFileInput : Input, DriverInput
             auto root = YAML::Load(read_file(fn));
             auto bf = [root](Build &b) mutable
             {
-                b.cppan_load(root);
+                frontend::cppan::cppan_load(b, root);
             };
             auto ep = std::make_unique<NativeBuiltinTargetEntryPoint>(bf);
             ep->source_dir = fn.parent_path();
@@ -310,7 +311,7 @@ struct InlineSpecInput : Input, DriverInput
 
         auto bf = [this, p](Build &b) mutable
         {
-            auto tgts = b.cppan_load(root, p.stem().u8string());
+            auto tgts = frontend::cppan::cppan_load(b, root, p.stem().u8string());
             if (tgts.size() == 1)
                 *tgts[0] += p;
         };

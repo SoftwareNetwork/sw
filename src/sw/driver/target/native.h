@@ -130,9 +130,6 @@ public:
     void setupCommand(builder::Command &c) const override;
 
     //
-    virtual void cppan_load_project(const yaml &root);
-
-    //
     bool hasCircularDependency() const;
 
     using TargetBase::operator=;
@@ -255,8 +252,6 @@ struct SW_DRIVER_CPP_API ExecutableTarget : NativeCompiledTarget, PredefinedProg
     TargetType getType() const override { return TargetType::NativeExecutable; }
 
     bool init() override;
-    void cppan_load_project(const yaml &root) override;
-
     bool prepare() override;
 };
 

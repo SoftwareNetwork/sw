@@ -63,23 +63,13 @@ struct SW_DRIVER_CPP_API Build : SimpleBuild
     Checker checker;
 
     //
+    Build(SwBuild &);
+
     bool isKnownTarget(const LocalPackage &p) const;
     path getSourceDir(const LocalPackage &p) const;
     std::optional<path> getSourceDir(const Source &s, const Version &v) const;
 
     const TargetSettings &getExternalVariables() const;
-
-    //
-public:
-    Build(SwBuild &);
-
-    //Module loadModule(const path &fn) const;
-
-    // move to some other place?
-    std::vector<NativeCompiledTarget *> cppan_load(yaml &root, const String &root_name = {});
-
-private:
-    std::vector<NativeCompiledTarget *> cppan_load1(const yaml &root, const String &root_name);
 };
 
 }
