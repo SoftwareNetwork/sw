@@ -22,7 +22,7 @@ SwCoreContext::SwCoreContext(const path &local_storage_root_dir, bool allow_netw
     // we must increase the limits for:
     // 1) manager (unpacker)
     // 2) builder
-    set_max_open_files_limit(20 * 1024);
+    set_max_open_files_limit(10 * 1024);
 
     //
     HostOS = getHostOS();
