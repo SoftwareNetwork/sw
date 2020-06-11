@@ -42,4 +42,9 @@ path findRootDirectory(const path &p);
 SW_SUPPORT_API
 void create_directories(const path &p);
 
+// will not shrink if old limit is lower
+// return old limit?
+SW_SUPPORT_API
+int set_max_open_files_limit(int newlimit);
+
 }

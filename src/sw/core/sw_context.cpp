@@ -19,6 +19,12 @@ namespace sw
 SwCoreContext::SwCoreContext(const path &local_storage_root_dir, bool allow_network)
     : SwManagerContext(local_storage_root_dir, allow_network)
 {
+    // we must increase the limits for:
+    // 1) manager (unpacker)
+    // 2) builder
+    set_max_open_files_limit(20 * 1024);
+
+    //
     HostOS = getHostOS();
     host_settings = createHostSettings();
 

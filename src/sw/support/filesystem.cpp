@@ -6,6 +6,11 @@
 #include <boost/system/error_code.hpp>
 #include <boost/thread/shared_mutex.hpp>
 #include <boost/thread/lock_types.hpp>
+#include <primitives/exceptions.h>
+
+#ifndef _WIN32
+#include <sys/resource.h>
+#endif
 
 #define SW_NAME "sw"
 
@@ -100,6 +105,26 @@ void create_directories(const path &p)
     fs::create_directories(p);
     boost::upgrade_to_unique_lock lk2(lk);
     dirs.insert(p);
+}
+
+int set_max_open_files_limit(int new_limit)
+{
+#ifdef _WIN32
+    auto old = _getmaxstdio();
+    // windows cannot set more than 8192
+    if (new_limit > 8192)
+        new_limit = 8192;
+    if (_setmaxstdio(new_limit) == -1)
+        throw SW_RUNTIME_ERROR("Cannot raise number of maximum opened files");
+#else
+    struct rlimit rlp;
+    getrlimit(RLIMIT_NOFILE, &rlp);
+    auto old = rlp.rlim_cur;
+    rlp.rlim_cur = new_limit;
+    if (setrlimit(RLIMIT_NOFILE, &rlp) == -1)
+        throw SW_RUNTIME_ERROR("Cannot raise number of maximum opened files");
+#endif
+    return old;
 }
 
 }

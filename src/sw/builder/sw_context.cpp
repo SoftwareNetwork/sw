@@ -37,14 +37,6 @@ namespace sw
 
 SwBuilderContext::SwBuilderContext()
 {
-#ifdef _WIN32
-    // with per pkg command log we must increase the limits
-    //auto new_limit = 8192;
-    //if (_setmaxstdio(new_limit) == -1)
-        //LOG_ERROR(logger, "Cannot raise number of maximum opened files");
-#endif
-
-    //
     file_storage_executor = std::make_unique<Executor>("async log writer", 1);
 }
 
