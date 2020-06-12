@@ -256,7 +256,7 @@ static void cppan_load_project(NativeCompiledTarget &t, const yaml &root)
             },
                 [&t, &read_single_dep, &read_version, &relative_name_to_absolute](const auto &dall)
             {
-                auto get_dep = [this, &read_version, &read_single_dep, &relative_name_to_absolute](const auto &d)
+                auto get_dep = [&t, &read_version, &read_single_dep, &relative_name_to_absolute](const auto &d)
                 {
                     UnresolvedPackage dependency;
 
