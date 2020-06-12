@@ -3,4 +3,5 @@
 
 #pragma once
 
-#define SW_MODULE_ABI_VERSION 22
+// 22 -> 23: remove virtual method
+#define SW_MODULE_ABI_VERSION 23
