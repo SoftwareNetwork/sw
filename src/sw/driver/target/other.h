@@ -118,34 +118,6 @@ struct SW_DRIVER_CPP_API GoExecutable : GoTarget
     TargetType getType() const override { return TargetType::GoExecutable; }
 };
 
-// Fortran
-
-struct SW_DRIVER_CPP_API FortranTarget : Target
-    , NativeTargetOptionsGroup
-{
-    std::shared_ptr<FortranCompiler> compiler;
-
-    FortranTarget(TargetBase &parent, const PackageId &);
-
-    SW_TARGET_USING_ASSIGN_OPS(NativeTargetOptionsGroup);
-
-    TargetType getType() const override { return TargetType::FortranLibrary; }
-
-    bool init() override;
-    DependenciesType gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
-    Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
-
-private:
-    Commands getCommands1() const override;
-};
-
-struct SW_DRIVER_CPP_API FortranExecutable : FortranTarget
-{
-    using Base = FortranTarget;
-    using Base::Base;
-    TargetType getType() const override { return TargetType::FortranExecutable; }
-};
-
 // Java
 
 struct SW_DRIVER_CPP_API JavaTarget : Target

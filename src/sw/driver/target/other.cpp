@@ -3,6 +3,8 @@
 
 #include "other.h"
 
+#include "common.h"
+
 #include "sw/driver/build.h"
 #include "sw/driver/compiler/detect.h"
 
@@ -11,60 +13,6 @@
 
 namespace sw
 {
-
-template <class CompilerType>
-static std::shared_ptr<CompilerType> activateCompiler(Target &t, const UnresolvedPackage &id, const StringSet &exts)
-{
-    auto &cld = t.getMainBuild().getTargets();
-
-    TargetSettings oss; // empty for now
-    auto i = cld.find(id, oss);
-    if (!i)
-    {
-        i = t.getContext().getPredefinedTargets().find(id, oss);
-        if (!i)
-        {
-            for (auto &e : exts)
-                t.setExtensionProgram(e, id);
-            return {};
-        }
-    }
-    auto prog = i->as<PredefinedProgram *>();
-    if (!prog)
-        throw SW_RUNTIME_ERROR("Target without PredefinedProgram: " + i->getPackage().toString());
-
-    auto set_compiler_type = [&t, &id, &exts](const auto &c)
-    {
-        for (auto &e : exts)
-            t.setExtensionProgram(e, c->clone());
-    };
-
-    auto c = std::dynamic_pointer_cast<CompilerBaseProgram>(prog->getProgram().clone());
-    if (c)
-    {
-        set_compiler_type(c);
-        return {};
-    }
-
-    bool created = false;
-    auto create_command = [&prog, &created, &t, &c]()
-    {
-        if (created)
-            return;
-        c->file = prog->getProgram().file;
-        auto C = c->createCommand(t.getMainBuild());
-        static_cast<primitives::Command&>(*C) = *prog->getProgram().getCommand();
-        created = true;
-    };
-
-    auto compiler = std::make_shared<CompilerType>();
-    c = compiler;
-    create_command();
-
-    set_compiler_type(c);
-
-    return compiler;
-}
 
 void detectAdaCompilers(DETECT_ARGS)
 {
@@ -265,77 +213,6 @@ bool GoTarget::init()
 Commands GoTarget::getCommands1() const
 {
     for (auto f : gatherSourceFiles<SourceFile>(*this, {".go"}))
-        compiler->setSourceFile(f->file);
-
-    Commands cmds;
-    auto c = compiler->getCommand(*this);
-    cmds.insert(c);
-    return cmds;
-}
-
-void detectFortranCompilers(DETECT_ARGS)
-{
-    // TODO: gfortran, flang, ifort, pgfortran, f90 (Oracle Sun), xlf, bgxlf, ...
-    // aocc, armflang
-
-    // TODO: add each program separately
-
-    auto p = std::make_shared<SimpleProgram>();
-    auto f = resolveExecutable("gfortran");
-    if (!fs::exists(f))
-    {
-        auto f = resolveExecutable("f95");
-        if (!fs::exists(f))
-        {
-            auto f = resolveExecutable("g95");
-            if (!fs::exists(f))
-                return;
-        }
-    }
-    p->file = f;
-
-    auto v = getVersion(s, p->file);
-    addProgram(DETECT_ARGS_PASS, PackageId("org.gnu.gcc.fortran", v), {}, p);
-}
-
-FortranTarget::FortranTarget(TargetBase &parent, const PackageId &id)
-    : Target(parent, id), NativeTargetOptionsGroup((Target &)*this)
-{
-}
-
-bool FortranTarget::init()
-{
-    static std::once_flag f;
-    std::call_once(f, [this] {detectFortranCompilers(DETECT_ARGS_PASS_FIRST_CALL_SIMPLE); });
-
-    Target::init();
-
-    /*C->input_extensions = {
-    ".f",
-    ".FOR",
-    ".for",
-    ".f77",
-    ".f90",
-    ".f95",
-
-    // support Preprocessing
-    ".F",
-    ".fpp",
-    ".FPP",
-    };*/
-    compiler = activateCompiler<decltype(compiler)::element_type>(*this, "org.gnu.gcc.fortran"s, { ".f" });
-    if (!compiler)
-        throw SW_RUNTIME_ERROR("No Fortran compiler found");
-
-    compiler->Extension = getBuildSettings().TargetOS.getExecutableExtension();
-    compiler->setOutputFile(getBaseOutputFileName(*this, {}, "bin"));
-
-    SW_RETURN_MULTIPASS_END(init_pass);
-}
-
-Commands FortranTarget::getCommands1() const
-{
-    for (auto f : gatherSourceFiles<SourceFile>(*this, {".f"}))
         compiler->setSourceFile(f->file);
 
     Commands cmds;
