@@ -238,7 +238,10 @@ void CmakeTargetEntryPoint::init() const
 
     cm = std::make_unique<cmake>(cmake::RoleProject, cmState::Mode::Project);
     cm->SetHomeDirectory(normalize_path(rootfn.parent_path()));
-    cm->SetHomeOutputDirectory(normalize_path(rootfn.parent_path() / ".sw" / "cmake"));
+    auto bdir = rootfn.parent_path() / ".sw" / "cmake";
+    cm->SetHomeOutputDirectory(normalize_path(bdir));
+    // set install dir, some packages require that
+    cm->AddCacheEntry("CMAKE_INSTALL_PREFIX", normalize_path(bdir / "install").c_str(), "", cmStateEnums::STRING);
 
     override_command("include", sw_cmIncludeCommand);
     reset_command("find_package");
