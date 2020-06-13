@@ -7,6 +7,8 @@
 
 #include "sw/driver/compiler/detect.h"
 
+#include <sw/core/build.h>
+
 namespace sw
 {
 
