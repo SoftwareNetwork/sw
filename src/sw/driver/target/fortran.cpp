@@ -103,6 +103,11 @@ Commands FortranTarget::getCommands1() const
 
 Commands FortranStaticLibrary::getCommands1() const
 {
+    // create ar here
+    SW_UNIMPLEMENTED;
+
+    // it's better to use common facilities from native targets
+
     Commands cmds;
     return cmds;
 }
