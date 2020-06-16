@@ -2023,7 +2023,7 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
         s["ide"]["configure_files"].push_back(ts);
     }
 
-    if (getType() == TargetType::NativeExecutable)
+    if (getType() == TargetType::NativeExecutable && !*HeaderOnly)
     {
         builder::Command c;
         setupCommandForRun(c);
