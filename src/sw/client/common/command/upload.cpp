@@ -82,6 +82,12 @@ sw::PackageDescriptionMap getPackages(const sw::SwBuild &b, const sw::SourceDirM
 
 static void input_check(const sw::Specification &spec)
 {
+    // if we have empty spec, we must provide source somehow
+    // we have command line options for this:
+    // TODO: implement necessary checks
+
+    if (spec.files.getData().empty())
+        throw SW_RUNTIME_ERROR("Specification must contain at least one file.");
     // single file for now
     SW_CHECK(spec.files.getData().size() == 1);
     // do not allow dirs for now
