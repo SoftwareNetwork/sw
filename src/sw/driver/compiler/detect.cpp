@@ -506,7 +506,7 @@ static void detectWindowsClang(DETECT_ARGS)
             static std::regex r("InstalledDir: (.*)\\r?\\n?");
             std::smatch m;
             if (!std::regex_search(o, m, r))
-                throw SW_RUNTIME_ERROR("Cannot get clang-cl installed dir (InstalledDir)");
+                throw SW_RUNTIME_ERROR("Cannot get clang-cl installed dir (InstalledDir): " + o);
             // returns path to /bin dir
             path dir = m[1].str();
             dir = dir.parent_path() / "lib/clang" / v.toString() / "include";
