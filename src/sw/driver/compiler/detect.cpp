@@ -490,30 +490,37 @@ static void detectWindowsClang(DETECT_ARGS)
             getMsvcIncludePrefixes()[p->file] = msvc_prefix;
 
             auto [o,v] = getVersionAndOutput(s, p->file);
-            auto &c = addProgram(DETECT_ARGS_PASS, PackageId("org.LLVM.clangcl", v), {}, p);
 
-            auto c2 = p->getCommand();
-            //c2->push_back("-X"); // prevents include dirs autodetection
-            // we use --nostdinc, so -X is not needed
-            if (colored_output)
-            {
-                c2->push_back("-Xclang");
-                c2->push_back("-fcolor-diagnostics");
-                c2->push_back("-Xclang");
-                c2->push_back("-fansi-escape-codes");
-            }
-
+            // check before adding target
             static std::regex r("InstalledDir: (.*)\\r?\\n?");
             std::smatch m;
-            if (!std::regex_search(o, m, r))
-                throw SW_RUNTIME_ERROR("Cannot get clang-cl installed dir (InstalledDir): " + o);
-            // returns path to /bin dir
-            path dir = m[1].str();
-            dir = dir.parent_path() / "lib/clang" / v.toString() / "include";
-            auto s = normalize_path(dir);
-            auto arg = std::make_unique<primitives::command::SimplePositionalArgument>("-I" + s);
-            arg->getPosition().push_back(150);
-            c2->push_back(std::move(arg));
+            if (std::regex_search(o, m, r))
+            {
+                auto &c = addProgram(DETECT_ARGS_PASS, PackageId("org.LLVM.clangcl", v), {}, p);
+
+                auto c2 = p->getCommand();
+                //c2->push_back("-X"); // prevents include dirs autodetection
+                // we use --nostdinc, so -X is not needed
+                if (colored_output)
+                {
+                    c2->push_back("-Xclang");
+                    c2->push_back("-fcolor-diagnostics");
+                    c2->push_back("-Xclang");
+                    c2->push_back("-fansi-escape-codes");
+                }
+
+                // returns path to /bin dir
+                path dir = m[1].str();
+                dir = dir.parent_path() / "lib/clang" / v.toString() / "include";
+                auto s = normalize_path(dir);
+                auto arg = std::make_unique<primitives::command::SimplePositionalArgument>("-I" + s);
+                arg->getPosition().push_back(150);
+                c2->push_back(std::move(arg));
+            }
+            else
+            {
+                LOG_ERROR(logger, "Cannot get clang-cl installed dir (InstalledDir): " + o);
+            }
         }
     }
 
