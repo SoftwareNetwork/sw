@@ -24,8 +24,7 @@ DECLARE_STATIC_LOGGER(logger, "client.context");
 
 static void setHttpTlsSettings()
 {
-    // set strict to true later
-    primitives::http::setupSafeTls(false, false, sw::get_ca_certs_filename());
+    primitives::http::setupSafeTls();
 }
 
 void setHttpSettings(const Options &options)
