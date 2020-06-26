@@ -33,7 +33,7 @@ SUBCOMMAND_DECL(verify)
     LOG_INFO(logger, "Downloading remote source:");
     LOG_INFO(logger, js.dump(4));
     s->download(dir);
-    dir /= sw::findRootDirectory(dir); // pass found regex or files for better root dir lookup
+    dir /= sw::support::findRootDirectory(dir); // pass found regex or files for better root dir lookup
 
     // setup build to get package files
     auto b = getContext().createBuild();

@@ -942,7 +942,7 @@ void setupLogger(const std::string &log_level, const Options &options, bool simp
     LoggerSettings log_settings;
     log_settings.log_level = log_level;
     if (options.write_log_to_file && 1/*bConsoleMode*/)
-        log_settings.log_file = (sw::get_root_directory() / "sw").string();
+        log_settings.log_file = (sw::support::get_root_directory() / "sw").string();
     log_settings.simple_logger = simple;
     log_settings.print_trace = true;
     initLogger(log_settings);

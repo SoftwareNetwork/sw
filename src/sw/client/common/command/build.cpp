@@ -38,7 +38,7 @@ static void isolated_build(SwClientContext &swctx)
     b.prepare();
 
     // get sources to pass them into getPackages()
-    sw::SourceDirMap srcs;
+    sw::support::SourceDirMap srcs;
     for (const auto &[pkg, tgts] : b.getTargetsToBuild())
     {
         if (tgts.empty())

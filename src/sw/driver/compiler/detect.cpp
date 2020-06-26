@@ -39,7 +39,7 @@ static String detectMsvcPrefix(builder::detail::ResolvableCommand c, const path 
         return p[c.getProgram()];
 
     String contents = "#include <iostream>\r\nint dummy;";
-    auto fn = get_temp_filename("cliprefix") += ".cpp";
+    auto fn = support::get_temp_filename("cliprefix") += ".cpp";
     auto obj = path(fn) += ".obj";
     write_file(fn, contents);
     c.push_back("/showIncludes");

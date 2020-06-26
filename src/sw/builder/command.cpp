@@ -710,7 +710,7 @@ void Command::execute1(std::error_code *ec)
     path rsp_file;
     if (needsResponseFile())
     {
-        auto t = temp_directory_path() / getResponseFilename();
+        auto t = support::temp_directory_path() / getResponseFilename();
         auto fn = t.filename();
         t = t.parent_path();
         rsp_file = t / getProgramName() / "rsp" / fn;

@@ -43,6 +43,9 @@ std::unique_ptr<Source> load(const nlohmann::json &j);
 
 }
 
+namespace support
+{
+
 namespace detail
 {
 
@@ -76,4 +79,6 @@ bool download(const std::unordered_set<SourcePtr> &sources, SourceDirMap &source
 SW_SUPPORT_API
 SourceDirMap download(const std::unordered_set<SourcePtr> &sources, const SourceDownloadOptions &opts = {});
 
-}
+} // namespace support
+
+} // namespace sw

@@ -144,7 +144,7 @@ F(upload)
 
     String url = "https://raw.githubusercontent.com/SoftwareNetwork/specifications/master/";
     url += normalize_path(pkg.getHashPath() / "sw.cpp");
-    auto fn = sw::get_temp_filename("uploads") / "sw.cpp";
+    auto fn = sw::support::get_temp_filename("uploads") / "sw.cpp";
     auto spec_data = download_file(url);
     boost::replace_all(spec_data, pkg.getVersion().toString(), new_version.toString());
     write_file(fn, spec_data);
@@ -210,7 +210,7 @@ static void dispatcher(SwClientContext &swctx)
 
 SUBCOMMAND_DECL(uri)
 {
-    fs::current_path(sw::temp_directory_path());
+    fs::current_path(sw::support::temp_directory_path());
 
 #if defined(__linux__)
     if (getOptions().options_uri.uri_args.size() != 1)

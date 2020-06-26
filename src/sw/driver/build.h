@@ -28,9 +28,9 @@ struct ModuleSwappableData
 
 struct DriverData
 {
-    SourceDirMap source_dirs_by_source;
+    support::SourceDirMap source_dirs_by_source;
     std::unordered_map<PackageId, path> source_dirs_by_package;
-    SourcePtr force_source;
+    support::SourcePtr force_source;
 };
 
 struct SW_DRIVER_CPP_API Test : driver::CommandBuilder

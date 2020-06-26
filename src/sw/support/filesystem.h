@@ -11,11 +11,8 @@
 // so we leave .sw for some misc but important files to include into repositories
 #define SW_BINARY_DIR ".sw"
 
-namespace sw
+namespace sw::support
 {
-
-using Stamps = std::unordered_map<path, time_t>;
-using SourceGroups = std::map<String, std::set<String>>;
 
 SW_SUPPORT_API
 path get_root_directory();

@@ -91,8 +91,8 @@ struct SW_CLIENT_COMMON_API SwClientContext
 #undef SUBCOMMAND
 
     // extensions
-    std::pair<sw::SourceDirMap, std::vector<sw::BuildInput>> fetch();
-    std::pair<sw::SourceDirMap, std::vector<sw::BuildInput>> fetch(sw::SwBuild &);
+    std::pair<sw::support::SourceDirMap, std::vector<sw::BuildInput>> fetch();
+    std::pair<sw::support::SourceDirMap, std::vector<sw::BuildInput>> fetch(sw::SwBuild &);
     void run(const sw::PackageId &pkg, primitives::Command &c);
     static Strings getAliasArguments(const String &aliasname);
 

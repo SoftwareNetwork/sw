@@ -178,7 +178,7 @@ void ExecutionPlan::execute(Executor &e) const
 
     // ... or it will crash here in throw
     if (!eptrs.empty() && throw_on_errors)
-        throw ExceptionVector(eptrs);
+        throw support::ExceptionVector(eptrs);
 
     if (i != sz)
     {

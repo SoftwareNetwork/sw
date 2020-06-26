@@ -231,7 +231,7 @@ int main(int argc, char **argv)
 
     // init
     setup_log(loglevel);
-    primitives::http::setupSafeTls(false, false, sw::get_ca_certs_filename());
+    primitives::http::setupSafeTls();
 
     Executor e(select_number_of_threads());
     getExecutor(&e);

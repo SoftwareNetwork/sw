@@ -6,8 +6,13 @@
 #include <primitives/hash.h>
 #include <primitives/hash_combine.h>
 
+namespace sw::support
+{
+
 SW_SUPPORT_API
 String get_file_hash(const path &fn);
 
 SW_SUPPORT_API
 bool check_file_hash(const path &fn, const String &hash);
+
+}

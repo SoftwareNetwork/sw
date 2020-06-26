@@ -15,7 +15,7 @@ DECLARE_STATIC_LOGGER(logger, "alias");
 
 static auto get_aliases_fn()
 {
-    return sw::get_root_directory() / "aliases.json";
+    return sw::support::get_root_directory() / "aliases.json";
 }
 
 Strings SwClientContext::getAliasArguments(const String &name)

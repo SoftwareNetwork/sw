@@ -17,6 +17,9 @@
 
 #define TYPED_EXCEPTION(x) TYPED_EXCEPTION_WITH_STD_PARENT(x, runtime_error)
 
+namespace sw::support
+{
+
 using traced_exception = boost::error_info<struct tag_stacktrace, boost::stacktrace::stacktrace>;
 
 template <class E>
@@ -38,3 +41,5 @@ private:
     std::vector<std::exception_ptr> v;
     mutable std::string s;
 };
+
+}

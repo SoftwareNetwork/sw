@@ -118,7 +118,7 @@ static void cleanup(CleanMask level_mask, const sw::SwContext &swctx)
     }
     if (level_mask & CLEAN_SETTINGS)
     {
-        fs::remove_all(sw::get_root_directory());
+        fs::remove_all(sw::support::get_root_directory());
     }
     if (level_mask & CLEAN_EXECUTABLE)
     {

@@ -3,6 +3,9 @@
 
 #include "hash.h"
 
+namespace sw::support
+{
+
 String get_file_hash(const path &fn)
 {
     return strong_file_hash(fn);
@@ -11,4 +14,6 @@ String get_file_hash(const path &fn)
 bool check_file_hash(const path &fn, const String &hash)
 {
     return hash == get_file_hash(fn);
+}
+
 }

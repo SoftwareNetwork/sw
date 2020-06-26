@@ -280,7 +280,7 @@ void Target::fetch()
         return;
 
     // move to getContext()?
-    static SourceDirMap fetched_dirs;
+    static support::SourceDirMap fetched_dirs;
 
     auto s2 = getSource().clone(); // make a copy!
     auto i = fetched_dirs.find(s2->getHash());
@@ -294,7 +294,7 @@ void Target::fetch()
             s2->download(d);
         }
         fetched_dirs[s2->getHash()].root_dir = d;
-        d = d / findRootDirectory(d);
+        d = d / support::findRootDirectory(d);
         setSourceDirectory(d);
 
         fetched_dirs[s2->getHash()].requested_dir = d;

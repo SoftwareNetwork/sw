@@ -27,7 +27,7 @@ namespace sw
 
 Settings::Settings()
 {
-    storage_dir = get_root_directory() / "storage";
+    storage_dir = support::get_root_directory() / "storage";
 }
 
 Settings::~Settings()
@@ -173,7 +173,7 @@ Settings &Settings::get(SettingsType type)
         {
             s = get(SettingsType::System);
 
-            auto fn = get_config_filename();
+            auto fn = support::get_config_filename();
             if (!fs::exists(fn))
             {
                 error_code ec;

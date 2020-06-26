@@ -5,6 +5,9 @@
 
 using namespace std::string_literals;
 
+namespace sw::support
+{
+
 ExceptionVector::ExceptionVector(const std::vector<std::exception_ptr> &v)
     : v(v)
 {
@@ -22,4 +25,6 @@ const char *ExceptionVector::what() const noexcept
     }
     s += "Total errors: " + std::to_string(v.size()) + "\n";
     return s.c_str();
+}
+
 }

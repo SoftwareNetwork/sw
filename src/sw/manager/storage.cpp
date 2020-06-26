@@ -342,7 +342,7 @@ void LocalStorage::get(const IStorage2 &source, const PackageId &id, StorageFile
     switch (t)
     {
     case StorageFileType::SourceArchive:
-        dst = lp.getDir() / make_archive_name();
+        dst = lp.getDir() / support::make_archive_name();
         //dst += ".new"; // without this storage can be left in inconsistent state
         break;
     }

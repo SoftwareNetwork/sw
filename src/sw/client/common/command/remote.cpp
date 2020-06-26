@@ -67,7 +67,7 @@ SUBCOMMAND_DECL(remote)
                                 p.name = getOptions().options_remote.remote_rest[i];
                                 p.token = getOptions().options_remote.remote_rest[i+1];
                                 r.publishers[p.name] = p;
-                                us.save(sw::get_config_filename());
+                                us.save(sw::support::get_config_filename());
                             }
                             else
                                 throw SW_RUNTIME_ERROR("missing publisher or token");
@@ -98,7 +98,7 @@ SUBCOMMAND_DECL(remote)
             auto &us = sw::Settings::get_user_settings();
             auto &r = find_remote_raw(us, name);
             r.disabled = false;
-            us.save(sw::get_config_filename());
+            us.save(sw::support::get_config_filename());
         }
         else
             throw SW_RUNTIME_ERROR("missing remote name");
@@ -114,7 +114,7 @@ SUBCOMMAND_DECL(remote)
             auto &us = sw::Settings::get_user_settings();
             auto &r = find_remote_raw(us, name);
             r.disabled = true;
-            us.save(sw::get_config_filename());
+            us.save(sw::support::get_config_filename());
         }
         else
             throw SW_RUNTIME_ERROR("missing remote name");

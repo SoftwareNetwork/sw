@@ -17,7 +17,7 @@ DECLARE_STATIC_LOGGER(logger, "upload");
 
 sw::Remote &find_remote(sw::Settings &s, const String &name);
 
-sw::PackageDescriptionMap getPackages(const sw::SwBuild &b, const sw::SourceDirMap &sources, std::map<const sw::Input*, std::vector<sw::PackageId>> *iv)
+sw::PackageDescriptionMap getPackages(const sw::SwBuild &b, const sw::support::SourceDirMap &sources, std::map<const sw::Input*, std::vector<sw::PackageId>> *iv)
 {
     using namespace sw;
 

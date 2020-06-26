@@ -14,7 +14,7 @@
 
 #define SW_NAME "sw"
 
-namespace sw
+namespace sw::support
 {
 
 path get_config_filename()

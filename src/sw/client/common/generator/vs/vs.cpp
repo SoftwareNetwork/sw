@@ -309,7 +309,7 @@ void VSGenerator::generate(const SwBuild &b)
         {
             auto fn = ts + "_" + t + ".json";
             auto url = ft_base_url + fn;
-            auto out = get_root_directory() / "FlagTables" / fn;
+            auto out = support::get_root_directory() / "FlagTables" / fn;
             if (!fs::exists(out))
                 download_file(url, out);
             auto ft = read_flag_table(out);

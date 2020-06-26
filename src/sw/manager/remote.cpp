@@ -43,7 +43,7 @@ String DataSource::getUrl(const Package &pkg) const
     return fmt::format(raw_url,
         fmt::arg("PHPF", normalize_path(pkg.getHashPath())),
         fmt::arg("PH64", pkg.getHash().substr(0, 64)),
-        fmt::arg("FN", make_archive_name())
+        fmt::arg("FN", support::make_archive_name())
     );
 }
 
@@ -73,7 +73,7 @@ bool DataSource::downloadPackage(const Package &d, const path &fn, String &dl_ha
             dl_hash = sfh;
             return true;
         }
-        auto fh = get_file_hash(fn);
+        auto fh = support::get_file_hash(fn);
         if (fh == d.getData().getHash(StorageFileType::SourceArchive))
         {
             dl_hash = fh;
@@ -98,7 +98,7 @@ Remote::Remote(const String &name, const String &u, bool allow_network)
         return;
 
     String spec_url = url + "static/" SPECIFICATIONS_FILENAME;
-    auto fn = get_root_directory() / "remotes" / name / SPECIFICATIONS_FILENAME;
+    auto fn = support::get_root_directory() / "remotes" / name / SPECIFICATIONS_FILENAME;
     if (!fs::exists(fn))
         download_file(spec_url, fn);
     auto j = nlohmann::json::parse(read_file(fn));
@@ -161,7 +161,7 @@ GrpcChannel Remote::getGrpcChannel() const
             certsfn = *f;
         else
         {
-            certsfn = sw::get_ca_certs_filename();
+            certsfn = support::get_ca_certs_filename();
             if (!fs::exists(certsfn))
                 throw SW_RUNTIME_ERROR("No ca certs file was found for GRPC.");
         }

@@ -94,6 +94,6 @@ void SettingsWindow::save()
 {
     for (auto &s : settings)
         s->flush();
-    sw::Settings::get_user_settings().save(sw::get_config_filename());
+    sw::Settings::get_user_settings().save(sw::support::get_config_filename());
     swctx.resetContext(); // apply ctx changes
 }

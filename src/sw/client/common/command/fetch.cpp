@@ -17,9 +17,9 @@ static decltype(auto) getInput(sw::SwBuild &b)
     return b.addInput(fs::current_path());
 }
 
-static sw::SourcePtr createSource(const Options &options)
+static sw::support::SourcePtr createSource(const Options &options)
 {
-    sw::SourcePtr s;
+    sw::support::SourcePtr s;
     if (0);
     else if (options.options_upload.source == "git")
     {
@@ -94,9 +94,9 @@ static sw::SourcePtr createSource(const Options &options)
     return s;
 }
 
-static sw::SourceDirMap getSources(const path &bdir, const std::unordered_set<sw::SourcePtr> &sources, sw::SourceDirMap &srcs)
+static sw::support::SourceDirMap getSources(const path &bdir, const std::unordered_set<sw::support::SourcePtr> &sources, sw::support::SourceDirMap &srcs)
 {
-    sw::SourceDownloadOptions opts;
+    sw::support::SourceDownloadOptions opts;
     opts.ignore_existing_dirs = true;
     opts.existing_dirs_age = std::chrono::hours(1);
 
@@ -114,7 +114,7 @@ static auto get_source_dir(const path &bdir)
 }
 
 // get sources extracted from config
-static sw::SourceDirMap getSources(SwClientContext &swctx)
+static sw::support::SourceDirMap getSources(SwClientContext &swctx)
 {
     auto b1 = swctx.createBuild();
     auto &b = *b1;
@@ -134,8 +134,8 @@ static sw::SourceDirMap getSources(SwClientContext &swctx)
 
     auto d = get_source_dir(b.getBuildDirectory());
 
-    sw::SourceDirMap srcs;
-    std::unordered_set<sw::SourcePtr> sources;
+    sw::support::SourceDirMap srcs;
+    std::unordered_set<sw::support::SourcePtr> sources;
     for (const auto &[pkg, tgts] : b.getTargetsToBuild())
     {
         if (tgts.empty())
@@ -154,17 +154,17 @@ static sw::SourceDirMap getSources(SwClientContext &swctx)
 }
 
 // get sources extracted from options
-static sw::SourceDirMap getSources(const path &bdir, const Options &options)
+static sw::support::SourceDirMap getSources(const path &bdir, const Options &options)
 {
     auto s = createSource(options);
-    sw::SourceDirMap srcs;
-    std::unordered_set<sw::SourcePtr> sources;
+    sw::support::SourceDirMap srcs;
+    std::unordered_set<sw::support::SourcePtr> sources;
     srcs[s->getHash()].root_dir = get_source_dir(bdir) / s->getHash();
     sources.emplace(std::move(s));
     return getSources(bdir, sources, srcs);
 }
 
-std::pair<sw::SourceDirMap, std::vector<sw::BuildInput>> SwClientContext::fetch(sw::SwBuild &b)
+std::pair<sw::support::SourceDirMap, std::vector<sw::BuildInput>> SwClientContext::fetch(sw::SwBuild &b)
 {
     auto srcs = getOptions().options_upload.source.empty()
         ? getSources(*this) // from config
@@ -202,7 +202,7 @@ std::pair<sw::SourceDirMap, std::vector<sw::BuildInput>> SwClientContext::fetch(
     return { srcs, inputs };
 }
 
-std::pair<sw::SourceDirMap, std::vector<sw::BuildInput>> SwClientContext::fetch()
+std::pair<sw::support::SourceDirMap, std::vector<sw::BuildInput>> SwClientContext::fetch()
 {
     return fetch(*createBuild());
 }

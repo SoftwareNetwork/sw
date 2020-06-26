@@ -88,9 +88,9 @@ void RemoteStorage::download() const
 
     auto download_archive = [this]()
     {
-        auto fn = get_temp_filename();
+        auto fn = support::get_temp_filename();
         download_file(r.db.url, fn, 1_GB);
-        auto unpack_dir = get_temp_filename();
+        auto unpack_dir = support::get_temp_filename();
         auto files = unpack_file(fn, unpack_dir);
         for (auto &f : files)
             fs::copy_file(f, db_repo_dir / f.filename(), fs::copy_options::overwrite_existing);
@@ -427,7 +427,7 @@ struct RemoteFileWithHashVerification : vfs::FileWithHashVerification
                 LOG_TRACE(logger, "Downloaded file: " << url << " hash = " << sfh);
                 return true;
             }
-            auto fh = get_file_hash(fn);
+            auto fh = support::get_file_hash(fn);
             if (fh == hash)
             {
                 this->hash = fh;
