@@ -115,16 +115,16 @@ int set_max_open_files_limit(int new_limit)
     if (new_limit > 8192)
         new_limit = 8192;
     if (_setmaxstdio(new_limit) == -1)
-        throw SW_RUNTIME_ERROR("Cannot raise number of maximum opened files");
+        return old;
 #else
     struct rlimit rlp;
     getrlimit(RLIMIT_NOFILE, &rlp);
     auto old = rlp.rlim_cur;
     rlp.rlim_cur = new_limit;
     if (setrlimit(RLIMIT_NOFILE, &rlp) == -1)
-        throw SW_RUNTIME_ERROR("Cannot raise number of maximum opened files");
+        return old;
 #endif
-    return old;
+    return new_limit;
 }
 
 }

@@ -22,7 +22,11 @@ SwCoreContext::SwCoreContext(const path &local_storage_root_dir, bool allow_netw
     // we must increase the limits for:
     // 1) manager (unpacker)
     // 2) builder
-    support::set_max_open_files_limit(10 * 1024);
+    // does not work on gentoo (works on ubuntu, fedora)
+#ifdef __APPLE__
+    if (support::set_max_open_files_limit(10 * 1024) != 10 * 1024)
+        LOG_ERROR(logger, "Cannot raise number of maximum opened files");
+#endif
 
     //
     HostOS = getHostOS();
