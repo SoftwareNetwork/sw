@@ -1324,8 +1324,19 @@ void SourceCompiles::run() const
 
     auto cmds = e.getCommands();
     cmds.erase(e.getCommand());
-    if (cmds.size() != 1)
+    if (cmds.empty())
+    {
+        // no commands - we can't build provided file
+        // this means zero result
+        Value = 0;
         return;
+    }
+    if (cmds.size() != 1)
+    {
+        // cmds.size() > 1
+        // TODO: select needed command without return
+        SW_UNIMPLEMENTED;
+    }
     auto &cmd = *cmds.begin();
     Value = (cmd && cmd->exit_code && cmd->exit_code.value() == 0) ? 1 : 0;
 
