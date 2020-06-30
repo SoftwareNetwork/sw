@@ -6,6 +6,7 @@
 #include "../misc/cmVSSetupHelper.h"
 #include "../command.h"
 #include "../program_version_storage.h"
+#include "../target/target2.h"
 
 #include <boost/algorithm/string.hpp>
 #include <primitives/command.h>
@@ -194,6 +195,13 @@ static void detectMsvcCommon(const path &compiler, const Version &in_v,
             if (in_v.isPreRelease())
                 v.getExtra() = in_v.getExtra();
             auto &cl = addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.cl", v), ts, p);
+
+            // rule based msvc
+            if (s.getHostOs().Arch == target_arch)
+            {
+                auto &t = addTarget<PredefinedTargetWithRule>(DETECT_ARGS_PASS, PackageId{"msvc", v}, ts);
+                t.public_ts["output_file"] = normalize_path(p->file);
+            }
         }
         else
             return;

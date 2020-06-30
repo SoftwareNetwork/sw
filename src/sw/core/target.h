@@ -18,6 +18,7 @@ namespace sw
 {
 
 struct BuildInput;
+struct IRule;
 struct ITarget;
 struct SwBuild;
 
@@ -39,7 +40,7 @@ using IDependencyPtr = std::shared_ptr<IDependency>;
 /// Instead, text interface for querying data will be available.
 struct SW_CORE_API ITarget : ICastable
 {
-    virtual ~ITarget() = 0;
+    virtual ~ITarget();
 
     //
     // basic info/description section
@@ -112,6 +113,11 @@ struct SW_CORE_API ITarget : ICastable
 
     // result may be null
     // getLoadableModule()
+
+    // getRunRule()?
+    // getExecutableRule()?
+    // by default returns nullptr
+    virtual std::unique_ptr<IRule> getRule() const;
 };
 
 // shared_ptr for vector storage

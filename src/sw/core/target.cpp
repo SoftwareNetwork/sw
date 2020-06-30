@@ -4,13 +4,16 @@
 #include "target.h"
 
 #include "input.h"
+#include "rule.h"
 
 namespace sw
 {
 
 IDependency::~IDependency() = default;
-ITarget::~ITarget() = default;
+ITarget::~ITarget() {}
 TargetEntryPoint::~TargetEntryPoint() = default;
+
+std::unique_ptr<IRule> ITarget::getRule() const { return nullptr; }
 
 TargetData::~TargetData()
 {
