@@ -39,10 +39,13 @@ static String detectMsvcPrefix(builder::detail::ResolvableCommand c, const path 
     if (!p[c.getProgram()].empty())
         return p[c.getProgram()];
 
-    String contents = "#include <iostream>\r\nint dummy;";
-    auto fn = support::get_temp_filename("cliprefix") += ".cpp";
+    auto basefn = support::get_temp_filename("cliprefix");
+    auto fn = path(basefn) += ".c";
+    auto hfn = path(basefn) += ".h";
+    String contents = "#include \"" + normalize_path(hfn) + "\"\r\nint dummy;";
     auto obj = path(fn) += ".obj";
     write_file(fn, contents);
+    write_file(hfn, "");
     c.push_back("/showIncludes");
     c.push_back("/c");
     c.push_back(fn);
@@ -53,6 +56,7 @@ static String detectMsvcPrefix(builder::detail::ResolvableCommand c, const path 
     c.execute(ec);
     fs::remove(obj);
     fs::remove(fn);
+    fs::remove(hfn);
 
     auto error = [&c](const String &reason)
     {
@@ -60,15 +64,18 @@ static String detectMsvcPrefix(builder::detail::ResolvableCommand c, const path 
     };
 
     auto lines = split_lines(c.out.text);
-    if (lines.size() < 2)
+    if (lines.size() < 1)
         throw SW_RUNTIME_ERROR(error("bad output"));
 
-    static std::regex r(R"((.*\s)[a-zA-Z]:\\.*iostream)");
+    String s = R"((.*\s)[a-zA-Z]:[\/].*)" + hfn.stem().string() + "\\" + hfn.extension().string();
+    std::regex r(s);
     std::smatch m;
-    if (!std::regex_search(lines[1], m, r) &&
+    if ((lines.size() > 1 && !std::regex_search(lines[1], m, r)) &&
         !std::regex_search(lines[0], m, r) // clang-cl does not output filename
         )
+    {
         throw SW_RUNTIME_ERROR(error("regex_search failed"));
+    }
     return p[c.getProgram()] = m[1].str();
 }
 
