@@ -11,7 +11,6 @@
 #include <sw/support/storage.h>
 
 #include <boost/dll.hpp>
-#include <fmt/ostream.h>
 #include <nlohmann/json.hpp>
 #include <primitives/http.h>
 #include <primitives/templates.h>
@@ -37,14 +36,7 @@ std::vector<std::shared_ptr<Remote>> get_default_remotes(bool allow_network)
 
 String DataSource::getUrl(const Package &pkg) const
 {
-    // {PHPF} = package hash path full
-    // {PH64} = package hash, length = 64
-    // {FN} = archive name
-    return fmt::format(raw_url,
-        fmt::arg("PHPF", normalize_path(pkg.getHashPath())),
-        fmt::arg("PH64", pkg.getHash().substr(0, 64)),
-        fmt::arg("FN", support::make_archive_name())
-    );
+    return pkg.formatPath(raw_url);
 }
 
 bool DataSource::downloadPackage(const Package &d, const path &fn, String &dl_hash) const

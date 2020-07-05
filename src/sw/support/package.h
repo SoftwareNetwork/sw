@@ -59,6 +59,8 @@ struct SW_SUPPORT_API Package : PackageId
     String getHashShort() const;
     path getHashPath() const;
 
+    String formatPath(const String &) const;
+
     const PackageData &getData() const;
     const IStorage &getStorage() const;
 
