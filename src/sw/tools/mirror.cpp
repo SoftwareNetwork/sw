@@ -34,6 +34,8 @@ int main(int argc, char **argv)
 {
     static cl::opt<String> loglevel("log-level", cl::init("INFO"));
     static cl::opt<path> dir("dir", cl::Required, cl::desc("Dir to store files"));
+    // this probably must be read from specifications.json for this storage (as well as dir?)
+    static cl::opt<String> path_format("path-format", cl::desc("Storage path format"), cl::init("{PHPF}/{FN}"));
     // filters:
     // - file size
     // - package path
@@ -57,25 +59,48 @@ int main(int argc, char **argv)
         auto s2 = dynamic_cast<sw::StorageWithPackagesDatabase *>(s);
         if (!s2)
             continue;
+
+        sw::PackageIdSet pkgs;
         auto &db = s2->getPackagesDatabase();
         auto ppaths = db.getMatchingPackages();
         for (auto &p : ppaths)
         {
             auto versions = db.getVersionsForPackage(p);
             for (auto &v : versions)
+                pkgs.insert({ p,v });
+        }
+
+        LOG_DEBUG(logger, "Total packages: " << pkgs.size());
+
+        auto &e = getExecutor();
+        std::atomic_size_t i = 0;
+        Futures<void> jobs;
+        for (auto &pkg : pkgs)
+        {
+            sw::Package pkgid{ *s2, pkg };
+            auto dst = dir / pkgid.formatPath(path_format);
+            if (fs::exists(dst))
+                continue;
+            jobs.emplace_back(e.push([dst, pkgid = std::move(pkgid), s2, &i, &jobs]()
             {
-                sw::PackageId pkgid{ p,v };
+                auto bak = path(dst) += ".bak";
+                // maybe we should create target storage?
+                // SwManagerContext or just Directories to get pkg dir and to keep standard layout
+                // and the operation will download from storage to storage
                 auto f = s2->getFile(pkgid, sw::StorageFileType::SourceArchive);
-                if (f->copy(dir / "1.tar.gz"))
+                if (f->copy(bak))
                 {
-                    LOG_DEBUG(logger, "Download ok for: " + pkgid.toString() + ": source archive");
+                    fs::rename(bak, dst);
+                    LOG_DEBUG(logger, "[" << ++i << "/" << jobs.size() << "] Download ok for: " + pkgid.toString() + ": source archive");
                 }
                 else
                 {
-                    LOG_WARN(logger, "Download failed for: " + pkgid.toString() + ": source archive");
+                    LOG_WARN(logger, "[" << ++i << "/" << jobs.size() << "] Download failed for: " + pkgid.toString() + ": source archive");
                 }
-            }
+            }));
         }
+        LOG_DEBUG(logger, "Total files to download: " << jobs.size());
+        waitAndGet(jobs);
     }
 
     return 0;
