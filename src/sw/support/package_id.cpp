@@ -3,8 +3,6 @@
 
 #include "package_id.h"
 
-#include <fstream>
-
 //#include <primitives/log.h>
 //DECLARE_STATIC_LOGGER(logger, "package_id");
 
