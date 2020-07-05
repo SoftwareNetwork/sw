@@ -22,6 +22,10 @@ void PackagesModel::init()
 
 void PackagesModel::setFilter(const QString &f)
 {
+    auto filter = f;
+    // this will incorrectly replace version
+    //filter.replace("-", "_");
+
     beginResetModel();
     std::set<sw::PackageId> pkgs;
     std::vector<sw::PackagePath> ppaths;
@@ -29,14 +33,14 @@ void PackagesModel::setFilter(const QString &f)
     bool is_id = false;
     try
     {
-        sw::PackageId id(f.toStdString());
+        sw::PackageId id(filter.toStdString());
         ppaths = s.getMatchingPackages(id.getPath().toString(), limit);
         ver = id.getVersion();
         is_id = true;
     }
     catch (std::exception &)
     {
-        ppaths = s.getMatchingPackages(f.toStdString(), limit);
+        ppaths = s.getMatchingPackages(filter.toStdString(), limit);
     }
     for (auto &ppath : ppaths)
     {
