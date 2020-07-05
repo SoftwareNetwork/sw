@@ -5,8 +5,10 @@
 
 void build(Solution &s)
 {
-    auto &p = s.addProject("sw.client", "0.4.2");
-    p += Git("https://github.com/SoftwareNetwork/sw", "", "master");
+    auto &sw = s.addProject("sw", "0.4.2");
+    sw += Git("https://github.com/SoftwareNetwork/sw", "", "master");
+
+    auto &p = sw.addProject("client");
 
     auto &support = p.addTarget<LibraryTarget>("support");
     {
@@ -354,6 +356,17 @@ void build(Solution &s)
         add_build_test_with_configs("cpp/static");
         add_build_test_with_configs("cpp/multiconf");
         add_build_test_with_configs("cpp/pch");
+    }
+
+    auto &sp = sw.addProject("server");
+    auto &mirror = sp.addTarget<ExecutableTarget>("mirror");
+    {
+        // move to src/sw/server/tools?
+        mirror.PackageDefinitions = true;
+        mirror += cpp17;
+        mirror += "src/sw/tools/mirror.cpp";
+        mirror += manager;
+        mirror += "pub.egorpugin.primitives.sw.main-master"_dep;
     }
 
     if (s.getExternalVariables()["with-gui"] != "true")
