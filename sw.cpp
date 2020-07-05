@@ -167,6 +167,7 @@ void build(Solution &s)
             "org.sw.demo.boost.uuid"_dep;
         cpp_driver.Public -= "org.sw.demo.giovannidicanio.winreg-2"_dep;
         cpp_driver += "src/sw/driver/.*"_rr;
+        cpp_driver -= "src/sw/driver/tools/.*"_rr;
         cpp_driver -= "src/sw/driver/misc/delay_load_helper.cpp";
         gen_flex_bison("org.sw.demo.lexxmark.winflexbison"_dep, cpp_driver, "src/sw/driver/bazel/lexer.ll", "src/sw/driver/bazel/grammar.yy");
         if (cpp_driver.getCompilerType() == CompilerType::MSVC || cpp_driver.getCompilerType() == CompilerType::ClangCl)
@@ -187,7 +188,7 @@ void build(Solution &s)
             auto &self_builder = cpp_driver.addTarget<ExecutableTarget>("self_builder");
             self_builder.PackageDefinitions = true;
             self_builder += cpp17;
-            self_builder += "src/sw/tools/self_builder.cpp";
+            self_builder += "src/sw/driver/tools/self_builder.cpp";
             self_builder +=
                 core,
                 "pub.egorpugin.primitives.emitter-master"_dep,
@@ -203,7 +204,7 @@ void build(Solution &s)
             auto &cl_generator = cpp_driver.addTarget<ExecutableTarget>("cl_generator");
             cl_generator.PackageDefinitions = true;
             cl_generator += cpp17;
-            cl_generator += "src/sw/tools/cl_generator.*"_rr;
+            cl_generator += "src/sw/driver/tools/cl_generator.*"_rr;
             cl_generator +=
                 "pub.egorpugin.primitives.emitter-master"_dep,
                 "pub.egorpugin.primitives.yaml-master"_dep,
