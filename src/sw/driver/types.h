@@ -217,6 +217,10 @@ struct SW_DRIVER_CPP_API ProjectDirectories
     path BinaryDir;
     path BinaryPrivateDir;
 
+//protected:
+    // ?
+    // this is really not for everyone
+    // target users must call setRootDirectory()
     void setSourceDirectory(const path &d);
 };
 
