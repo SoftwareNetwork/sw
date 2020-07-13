@@ -308,15 +308,15 @@ void Target::fetch()
 Files Target::getSourceFiles() const
 {
     Files files;
-    for (auto &f : gatherAllFiles())
-    {
+        for (auto &f : gatherAllFiles())
+        {
         // FIXME:                               vvvvvvvvv UGLY HACK vvvvvvvvv
         if (File(f, getFs()).isGeneratedAtAll() && f.extension() != ".natvis")
             continue;
         files.insert(f);
+        }
+        return files;
     }
-    return files;
-}
 
 std::vector<IDependency *> Target::getDependencies() const
 {
@@ -417,19 +417,11 @@ void Target::setRootDirectory(const path &p)
 
     // set always
     RootDirectory = p;
-    applyRootDirectory();
-}
 
-void Target::applyRootDirectory()
-{
-    // but append only in some cases
-    //if (!DryRun)
-    {
-        // prevent adding last delimeter
-        if (!RootDirectory.empty())
-            //setSourceDirectory(SourceDir / RootDirectory);
-            SourceDir /= RootDirectory;
-    }
+    // prevent adding last delimeter
+    if (!RootDirectory.empty())
+        //setSourceDirectory(SourceDir / RootDirectory);
+        SourceDir /= RootDirectory;
 }
 
 CommandStorage *Target::getCommandStorage() const
@@ -515,8 +507,6 @@ bool Target::init()
     // this rd must come from parent!
     // but we take it in copy ctor
     setRootDirectory(RootDirectory); // keep root dir growing
-    //t->applyRootDirectory();
-    //t->SourceDirBase = t->SourceDir;
 
     BinaryDir = getBinaryParentDir();
 

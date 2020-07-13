@@ -366,7 +366,6 @@ private:
     mutable Commands commands;
     Commands tests;
 
-    void applyRootDirectory();
     TargetSettings getHostSettings() const;
 
     virtual Commands getCommands1() const { return Commands{}; }
