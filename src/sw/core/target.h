@@ -22,6 +22,24 @@ struct IRule;
 struct ITarget;
 struct SwBuild;
 
+struct TargetFile
+{
+    TargetFile(const path &p, bool is_generated = false, bool is_from_other_target = false)
+        : relative_fn(p), is_generated(is_generated), is_from_other_target(is_from_other_target)
+    {}
+
+    const path &getPath() const { return relative_fn; }
+    bool isGenerated() const { return is_generated; }
+    bool isFromOtherTarget() const { return is_from_other_target; }
+
+private:
+    path relative_fn;
+    bool is_generated;
+    bool is_from_other_target;
+};
+
+using TargetFiles = std::unordered_map<path, TargetFile>;
+
 struct SW_CORE_API IDependency
 {
     virtual ~IDependency() = 0;
@@ -55,12 +73,8 @@ struct SW_CORE_API ITarget : ICastable
     ///
     virtual const Source &getSource() const = 0;
 
-    /// all input (for creating an input package) non-generated files under base source dir
-    virtual Files getSourceFiles() const = 0;
-    // better to call getFiles() because source files = files for specific configuration
-    // and such sets may differ for different configs
-    // getFiles()? some langs does not have 'sources'
-    // also add get binary files?
+    /// get target files to create archives
+    virtual TargetFiles getFiles(StorageFileType) const = 0;
 
     /// get all direct dependencies
     virtual std::vector<IDependency *> getDependencies() const = 0;
@@ -151,7 +165,7 @@ struct SW_CORE_API PredefinedTarget : ITarget
 
     // lightweight target
     const Source &getSource() const override { static EmptySource es; return es; }  // empty source
-    Files getSourceFiles() const override { return {}; }                            // no source files
+    TargetFiles getFiles(StorageFileType) const override { return {}; }             // no files
     bool prepare() override { return false; }                                       // no prepare
     Commands getCommands() const override { return {}; }                            // no commands
     Commands getTests() const override { return {}; }                               // no tests

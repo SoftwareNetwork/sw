@@ -305,18 +305,23 @@ void Target::fetch()
     }
 }
 
-Files Target::getSourceFiles() const
+TargetFiles Target::getFiles(StorageFileType t) const
 {
-    Files files;
+    switch (t)
+    {
+    case StorageFileType::SourceArchive:
+    {
+        TargetFiles files;
         for (auto &f : gatherAllFiles())
         {
-        // FIXME:                               vvvvvvvvv UGLY HACK vvvvvvvvv
-        if (File(f, getFs()).isGeneratedAtAll() && f.extension() != ".natvis")
-            continue;
-        files.insert(f);
+            //SourceDirBase
+            files.emplace(f, TargetFile(f, File(f, getFs()).isGeneratedAtAll()));
         }
         return files;
     }
+    }
+    SW_UNIMPLEMENTED;
+}
 
 std::vector<IDependency *> Target::getDependencies() const
 {

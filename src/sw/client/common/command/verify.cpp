@@ -53,8 +53,12 @@ SUBCOMMAND_DECL(verify)
 
     // get files and normalize them
     FilesSorted files;
-    for (auto &f : t.getSourceFiles())
+    for (auto &[f, tf] : t.getFiles(sw::StorageFileType::SourceArchive))
+    {
+        if (tf.isGenerated())
+            continue;
         files.insert(f.lexically_normal());
+    }
 
     // we put files under SW_SDIR_NAME to keep space near it
     // e.g. for patch dir or other dirs (server provided files)
