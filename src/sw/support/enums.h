@@ -60,14 +60,18 @@ namespace sw
 
 enum class StorageFileType
 {
-    //
+    /// all input (for creating an input package) non-generated files under base source dir
     SourceArchive = 1,
 
     // everything below is not stable yet
 
+    // binary archive must be always stripped if possible
+    // debug symbols to be in separate archive
+
     // binaries + runtime data
     // or split?
     RuntimeArchive = 2,
+    BinaryArchive = RuntimeArchive, // better name?
 
     RuntimeDataArchive,
 
