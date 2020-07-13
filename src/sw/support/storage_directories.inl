@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 
+//DIR(arh) // archive storage (mirrors etc.)?
 //DIR(bin) // files are moved to pkg dir
 //DIR(cfg) // moved to etc/sw/checks
 //DIR(dat)
