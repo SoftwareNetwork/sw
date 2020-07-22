@@ -704,7 +704,16 @@ bool Check::lessDuringExecution(const CommandNode &in) const
 const path &Check::getUniqueName() const
 {
     if (uniq_name.empty())
-        uniq_name = std::to_string(getHash());
+    {
+        // two parts:
+        // 1. check hash
+        // 2. some unique string.
+        //
+        // Second part is needed to prevent file use when running the following same check
+        // of other config. On Windows old executables may still exist and not removed by the system,
+        // so linking a new one will result in error.
+        uniq_name = std::to_string(getHash()) / unique_path();
+    }
     return uniq_name;
 }
 
