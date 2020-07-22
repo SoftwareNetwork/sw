@@ -90,6 +90,7 @@ public:
     bool prepare() override;
     Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
     DependenciesType gatherDependencies() const override;
+    TargetFiles getFiles(StorageFileType t) const override;
 
     void addPackageDefinitions(bool defs = false);
     virtual std::shared_ptr<builder::Command> getCommand() const;

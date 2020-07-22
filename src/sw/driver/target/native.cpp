@@ -936,6 +936,29 @@ void NativeCompiledTarget::remove(const ApiNameType &i)
         ApiName.clear();
 }
 
+TargetFiles NativeCompiledTarget::getFiles(StorageFileType t) const
+{
+    switch (t)
+    {
+    case StorageFileType::SourceArchive:
+    {
+        return Target::getFiles(t);
+    }
+    case StorageFileType::BinaryArchive:
+    {
+        TargetFiles files;
+        auto add_file = [this, &files](const path &f)
+        {
+            files.emplace(f, TargetFile(f, getPackage().getDirObj(), File(f, getFs()).isGeneratedAtAll()));
+        };
+        add_file(getOutputFile());
+        add_file(getImportLibrary());
+        return files;
+    }
+    }
+    SW_UNIMPLEMENTED;
+}
+
 bool NativeCompiledTarget::isHeaderOnly() const
 {
     return HeaderOnly && *HeaderOnly;

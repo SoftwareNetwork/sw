@@ -13,6 +13,29 @@ IDependency::~IDependency() = default;
 ITarget::~ITarget() {}
 TargetEntryPoint::~TargetEntryPoint() = default;
 
+TargetFile::TargetFile(const path &p, bool is_generated, bool is_from_other_target)
+    : fn(p), is_generated(is_generated), is_from_other_target(is_from_other_target)
+{
+    if (p.is_absolute() && !is_generated && !is_from_other_target)
+        throw SW_RUNTIME_ERROR("Only generated/other target absolute files are allowed: " + normalize_path(p));
+}
+
+TargetFile::TargetFile(const path &inp, const path &rootdir, bool is_generated, bool is_from_other_target)
+    : fn(inp), is_generated(is_generated), is_from_other_target(is_from_other_target)
+{
+    if (fn.is_relative())
+        throw SW_RUNTIME_ERROR("path must be absolute: " + normalize_path(fn));
+    if (!is_generated)
+    {
+        if (is_under_root(fn, rootdir))
+            fn = fn.lexically_relative(rootdir);
+        else
+            is_from_other_target = true; // hack! sdir files from this target for bdir package will be from other tgt
+    }
+    if (fn.is_absolute() && !is_generated && !is_from_other_target)
+        throw SW_RUNTIME_ERROR("Only generated/other target absolute files are allowed: " + normalize_path(fn));
+}
+
 std::unique_ptr<IRule> ITarget::getRule() const { return nullptr; }
 
 TargetData::~TargetData()
