@@ -209,7 +209,7 @@ void MainWindow::setupUi()
         l->addStretch(1);
 
         cl_option_add_widget("Overwrite existing files (THIS WILL OVERWRITE YOUR CHANGES)",
-            l, swctx.getOptions().options_create.create_overwrite_files, swctx.getOptions().getClOptions().create_overwrite_files, true);
+            l, swctx.getOptions().options_create.create_overwrite_files, swctx.getOptions().getClOptions().subcommand_create_create_overwrite_files, true);
 
         auto create = new QPushButton("Create");
         connect(create, &QPushButton::clicked, [this]()
