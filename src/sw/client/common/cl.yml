@@ -617,6 +617,11 @@ command_line:
                 desc: List installed packages
                 aliases: i
 
+    # mirror
+    subcommand:
+        name: mirror
+        desc: Manage software mirrors.
+
     # open
     subcommand:
         name: open
@@ -661,6 +666,29 @@ command_line:
                 type: path
                 desc: Save overridden packages desc to file.
                 value_desc: fn
+
+    # pack
+    subcommand:
+        name: pack
+        desc: Used to prepare package archives.
+
+        command_line:
+            build_arg_pack:
+                positional: true
+                desc: File or directory to use to pack projects
+                type: String
+                list: true
+                location: inputs
+
+            typei:
+                type: int
+                list: true
+                desc: Types of archives (integers).
+
+            type:
+                type: String
+                list: true
+                desc: Types of archives.
 
     # path
     subcommand:

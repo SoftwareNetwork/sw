@@ -35,8 +35,8 @@ SUBCOMMAND(integrate) COMMA
 SUBCOMMAND(list) COMMA
 SUBCOMMAND(open) COMMA
 SUBCOMMAND(override) COMMA
-//SUBCOMMAND(mirror, "Manage software mirrors.") COMMA
-//SUBCOMMAND(pack, "Used to prepare distribution packages.") COMMA
+SUBCOMMAND(mirror) COMMA
+SUBCOMMAND(pack) COMMA
 SUBCOMMAND(path) COMMA
 SUBCOMMAND(remote) COMMA
 SUBCOMMAND(remove) COMMA
