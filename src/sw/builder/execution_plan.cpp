@@ -212,15 +212,18 @@ void ExecutionPlan::saveChromeTrace(const path &p) const
     nlohmann::json events;
     for (auto &c : commands)
     {
-        if (static_cast<builder::Command*>(c)->t_begin.time_since_epoch().count() == 0)
+        auto c2 = static_cast<builder::Command *>(c);
+        if (!c2)
+            continue;
+        if (c2->t_begin.time_since_epoch().count() == 0)
             continue;
 
         nlohmann::json b;
         b["name"] = c->getName();
         b["cat"] = "BUILD";
         b["pid"] = 1;
-        b["tid"] = tid_to_ll(static_cast<builder::Command*>(c)->tid);
-        b["ts"] = std::chrono::duration_cast<std::chrono::microseconds>(static_cast<builder::Command*>(c)->t_begin - min).count();
+        b["tid"] = tid_to_ll(c2->tid);
+        b["ts"] = std::chrono::duration_cast<std::chrono::microseconds>(c2->t_begin - min).count();
         b["ph"] = "B";
         events.push_back(b);
 
@@ -228,9 +231,13 @@ void ExecutionPlan::saveChromeTrace(const path &p) const
         e["name"] = c->getName();
         e["cat"] = "BUILD";
         e["pid"] = 1;
-        e["tid"] = tid_to_ll(static_cast<builder::Command*>(c)->tid);
-        e["ts"] = std::chrono::duration_cast<std::chrono::microseconds>(static_cast<builder::Command*>(c)->t_end - min).count();
+        e["tid"] = tid_to_ll(c2->tid);
+        e["ts"] = std::chrono::duration_cast<std::chrono::microseconds>(c2->t_end - min).count();
         e["ph"] = "E";
+        for (auto &a : c2->getArguments())
+            e["args"]["command_line"].push_back(a->toString());
+        for (auto &[k, v] : c2->environment)
+            e["args"]["environment"][k] = v;
         events.push_back(e);
     }
     trace["traceEvents"] = events;
