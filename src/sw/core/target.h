@@ -22,7 +22,7 @@ struct IRule;
 struct ITarget;
 struct SwBuild;
 
-struct TargetFile
+struct SW_CORE_API TargetFile
 {
     TargetFile(const path &p, bool is_generated = false, bool is_from_other_target = false);
     /// calculates relpath from abspath and rootdir if abspath is under root
