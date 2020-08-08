@@ -16,11 +16,13 @@ TargetEntryPoint::~TargetEntryPoint() = default;
 TargetFile::TargetFile(const path &p, bool is_generated, bool is_from_other_target)
     : fn(p), is_generated(is_generated), is_from_other_target(is_from_other_target)
 {
-    if (p.is_absolute() && !is_generated && !is_from_other_target)
-        throw SW_RUNTIME_ERROR("Only generated/other target absolute files are allowed: " + normalize_path(p));
+    //if (p.is_absolute() && !is_generated && !is_from_other_target)
+        //throw SW_RUNTIME_ERROR("Only generated/other target absolute files are allowed: " + normalize_path(p));
+    if (!p.is_absolute())
+        throw SW_RUNTIME_ERROR("Only absolute paths accepted");
 }
 
-TargetFile::TargetFile(const path &inp, const path &rootdir, bool is_generated, bool is_from_other_target)
+/*TargetFile::TargetFile(const path &inp, const path &rootdir, bool is_generated, bool is_from_other_target)
     : fn(inp), is_generated(is_generated), is_from_other_target(is_from_other_target)
 {
     if (fn.is_relative())
@@ -34,7 +36,7 @@ TargetFile::TargetFile(const path &inp, const path &rootdir, bool is_generated, 
     }
     if (fn.is_absolute() && !is_generated && !is_from_other_target)
         throw SW_RUNTIME_ERROR("Only generated/other target absolute files are allowed: " + normalize_path(fn));
-}
+}*/
 
 std::unique_ptr<IRule> ITarget::getRule() const { return nullptr; }
 

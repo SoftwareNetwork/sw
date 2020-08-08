@@ -24,17 +24,17 @@ struct SwBuild;
 
 struct SW_CORE_API TargetFile
 {
-    TargetFile(const path &p, bool is_generated = false, bool is_from_other_target = false);
+    TargetFile(const path &abspath, bool is_generated = false, bool is_from_other_target = false);
     /// calculates relpath from abspath and rootdir if abspath is under root
     /// leaves abspath as is if it's not under root
-    TargetFile(const path &abspath, const path &rootdir, bool is_generated = false, bool is_from_other_target = false);
+    //TargetFile(const path &abspath, const path &rootdir, bool is_generated = false, bool is_from_other_target = false);
 
     const path &getPath() const { return fn; }
     bool isGenerated() const { return is_generated; }
     bool isFromOtherTarget() const { return is_from_other_target; }
 
 private:
-    path fn;
+    path fn; // abs
     bool is_generated;
     bool is_from_other_target;
 };
