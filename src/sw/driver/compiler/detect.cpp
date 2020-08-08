@@ -818,8 +818,8 @@ void detectNativeCompilers(DETECT_ARGS)
     auto &os = s.getHostOs();
     if (os.is(OSType::Windows) || os.is(OSType::Cygwin) || os.is(OSType::Mingw))
     {
-        // we should pass target settings here and check accroding target os (cygwin)
-        if (os.is(OSType::Cygwin) || os.is(OSType::Mingw))
+        // we should pass target settings here and check according target os (cygwin)
+        if (os.is(OSType::Cygwin) || os.is(OSType::Mingw) || os.isMingwShell())
             detectNonWindowsCompilers(DETECT_ARGS_PASS);
         detectWindowsCompilers(DETECT_ARGS_PASS);
     }

@@ -260,6 +260,8 @@ struct SW_BUILDER_API OS
 
     bool operator<(const OS &rhs) const;
     bool operator==(const OS &rhs) const;
+
+    static bool isMingwShell();
 };
 
 SW_BUILDER_API

@@ -66,6 +66,11 @@ OS detectOS()
 
 #if defined(CPPAN_OS_WINDOWS)
     os.Type = OSType::Windows;
+
+    // do not force it?
+    // some users may integrate mingw into normal cmd, so they won't build binaries for VS by default in this case
+    //if (os.isMingwShell())
+        //os.Type = OSType::Mingw;
 #endif
 
 #ifdef CPPAN_OS_CYGWIN
@@ -121,6 +126,12 @@ const OS &getHostOS()
 {
     static const auto os = detectOS();
     return os;
+}
+
+bool OS::isMingwShell()
+{
+    static auto is_mingw_shell = getenv("MSYSTEM");
+    return is_mingw_shell;
 }
 
 bool OS::canRunTargetExecutables(const OS &TargetOS) const
