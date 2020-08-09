@@ -24,7 +24,10 @@ DECLARE_STATIC_LOGGER(logger, "client.context");
 
 static void setHttpTlsSettings()
 {
-    primitives::http::setupSafeTls();
+    // 1. old systems may not have our letsencrypt certs
+    // 2. grpc require explicit certs file
+    //primitives::http::setupSafeTls();
+    primitives::http::setupSafeTls(false, false, sw::support::get_ca_certs_filename());
 }
 
 void setHttpSettings(const Options &options)
