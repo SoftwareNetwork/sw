@@ -67,6 +67,9 @@ SUBCOMMAND_DECL(pack)
 
             for (auto ty : types)
             {
+                if (ty != sw::StorageFileType::SourceArchive && t->getPackage().getPath().isRelative())
+                    throw SW_RUNTIME_ERROR("Only Source Archives are available for local packages");
+
                 auto files = t->getFiles(ty);
                 std::map<path, path> files2;
                 for (auto &[k, v] : files)
