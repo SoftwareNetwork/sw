@@ -12,6 +12,8 @@ String toString(StorageFileType t)
     {
     case StorageFileType::SourceArchive:
         return "Source Archive";
+    case StorageFileType::BinaryArchive:
+        return "Binary Archive";
     default:
         return "Unknown source type";
     }
