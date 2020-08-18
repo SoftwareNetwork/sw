@@ -684,11 +684,13 @@ command_line:
                 type: int
                 list: true
                 desc: Types of archives (integers).
+                comma_separated: true
 
             type:
                 type: String
                 list: true
                 desc: Types of archives.
+                comma_separated: true
 
     # path
     subcommand:
