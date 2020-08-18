@@ -17,6 +17,9 @@ struct SW_CORE_API IDriver
     virtual ~IDriver();
 
     /// Detect available inputs on path.
+    //virtual std::vector<std::unique_ptr<Input>> detectInputs(const path &abspath) const = 0;
+
+    /// Detect available inputs of specified type on path.
     virtual std::vector<std::unique_ptr<Input>> detectInputs(const path &abspath, InputType) const = 0;
 
     /// Optimized input loading in a batch.
@@ -24,7 +27,8 @@ struct SW_CORE_API IDriver
     /// Inputs will receive their entry points.
     virtual void loadInputsBatch(const std::set<Input*> &) const = 0;
 
-    // get features()?
+    /// returns driver capabilities
+    //virtual uint64_t getCapabilities() const { return 0; }
 };
 
 } // namespace sw
