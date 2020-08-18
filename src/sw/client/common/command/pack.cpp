@@ -3,12 +3,36 @@
 
 #include "../commands.h"
 
-#include <sw/support/filesystem.h>
+#include <sw/manager/storage.h>
 
 #include <primitives/pack.h>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "pack");
+
+struct ChildPathExtractor
+{
+    String root;
+
+    ChildPathExtractor(const path &in_root)
+    {
+        root = normalize_path(in_root);
+    }
+
+    bool isUnderRoot(const path &p) const
+    {
+        auto s = normalize_path(p);
+        return s.find(root) == 0;
+    }
+
+    path getRelativePath(const path &p) const
+    {
+        auto s = normalize_path(p);
+        if (s.find(root) == 0)
+            return s.substr(root.size() + 1); // plus slash
+        throw SW_RUNTIME_ERROR("Not a relative path: " + s + ", root = " + root);
+    }
+};
 
 SUBCOMMAND_DECL(pack)
 {
@@ -34,6 +58,13 @@ SUBCOMMAND_DECL(pack)
     {
         for (auto &t : tgts)
         {
+            auto &is = t->getInterfaceSettings();
+            auto sdir = is["source_dir"].getPathValue(getContext().getLocalStorage().storage_dir);
+            auto bdir = is["binary_dir"].getPathValue(getContext().getLocalStorage().storage_dir).parent_path();
+
+            ChildPathExtractor spe(sdir);
+            ChildPathExtractor bpe(bdir);
+
             for (auto ty : types)
             {
                 auto files = t->getFiles(ty);
@@ -42,7 +73,14 @@ SUBCOMMAND_DECL(pack)
                 {
                     if ((ty == sw::StorageFileType::SourceArchive && v.isGenerated()) || v.isFromOtherTarget())
                         continue;
-                    files2[k] = v.getPath();
+                    auto p = v.getPath();
+                    if (ty == sw::StorageFileType::SourceArchive)
+                        p = spe.getRelativePath(p);
+                    else
+                        p = bpe.getRelativePath(p);
+                    if (p.empty())
+                        throw SW_RUNTIME_ERROR("Cannot calc relative path");
+                    files2[k] = p;
                 }
                 if (files2.empty())
                 {
@@ -50,6 +88,8 @@ SUBCOMMAND_DECL(pack)
                     continue;
                 }
                 LOG_INFO(logger, "Packing " << pkg.toString() << ": " << toString(ty));
+                for (auto &[k, v] : files2)
+                    LOG_TRACE(logger, k << ": " << v);
                 pack_files(std::to_string((int)ty) + "-" + sw::support::make_archive_name(pkg.toString()), files2);
             }
         }
