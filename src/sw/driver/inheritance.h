@@ -79,14 +79,14 @@ struct GroupSettings
 };
 
 template <class T>
-struct InheritanceStorage : std::vector<T*>
+struct InheritanceStorage
 {
     using base = std::vector<T*>;
 
     InheritanceStorage(T *pvt, Target &t)
-        : base(toIndex(InheritanceType::Max), nullptr), t(t)
+        : v(toIndex(InheritanceType::Max), nullptr), t(t)
     {
-        base::operator[](toIndex(InheritanceType::Private)) = pvt;
+        v[toIndex(InheritanceType::Private)] = pvt;
     }
 
     ~InheritanceStorage()
@@ -95,13 +95,13 @@ struct InheritanceStorage : std::vector<T*>
         {
             // private is our target
             if ((InheritanceType)i != InheritanceType::Private)
-                delete base::operator[](i);
+                delete v[i];
         }
     }
 
     T &operator[](int i)
     {
-        auto &e = base::operator[](i);
+        auto &e = v[i];
         if (!e)
             e = new T(t);
         return *e;
@@ -109,7 +109,7 @@ struct InheritanceStorage : std::vector<T*>
 
     const T &operator[](int i) const
     {
-        auto &e = base::operator[](i);
+        auto &e = v[i];
         if (!e)
             throw SW_RUNTIME_ERROR("Empty instance: " + std::to_string(i));
         return *e;
@@ -125,10 +125,11 @@ struct InheritanceStorage : std::vector<T*>
         return operator[](toIndex(i));
     }
 
-    base &raw() { return *this; }
-    const base &raw() const { return *this; }
+    base &raw() { return v; }
+    const base &raw() const { return v; }
 
 private:
+    base v;
     Target &t;
 };
 

@@ -44,19 +44,20 @@ struct VariablesType : std::map<DefinitionKey, VariableValue>
 };
 
 template <class T>
-class UniqueVector : public std::vector<T>
+class UniqueVector
 {
     using unique_type = std::unordered_set<T>;
     using base = std::vector<T>;
+    using this_type = UniqueVector;
 
 public:
     std::pair<typename base::iterator, bool> insert(const T &e)
     {
         auto [_, inserted] = u.insert(e);
         if (!inserted)
-            return { base::end(), false };
+            return { v.end(), false };
         this->push_back(e);
-        return { --base::end(), true };
+        return { --v.end(), true };
     }
 
     template <class B, class E>
@@ -70,10 +71,23 @@ public:
     {
         if (!u.erase(e))
             return;
-        base::erase(std::remove(base::begin(), base::end(), e), base::end());
+        v.erase(std::remove(v.begin(), v.end(), e), v.end());
     }
 
+    auto begin() { return v.begin(); }
+    auto end() { return v.end(); }
+
+    auto begin() const { return v.begin(); }
+    auto end() const { return v.end(); }
+
+    bool empty() const { return v.empty(); }
+    void push_back(const T &e) { v.push_back(e); }
+
+    //this_type &operator=(const this_type &rhs) { v = rhs.v; u = rhs.u; return *this; }
+    operator base &() { return v; }
+
 private:
+    base v;
     unique_type u;
 };
 
