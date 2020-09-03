@@ -111,7 +111,7 @@ SUBCOMMAND_DECL(integrate)
     };
 
     std::set<sw::TargetSettings> our_settings;
-    auto create_build = [this, &cygwin, &our_settings](const Strings &lines)
+    auto create_build = [this, &cygwin, &our_settings](const path &deps_file)
     {
         auto build = getContext().createBuild();
         auto &b = *build;
@@ -119,6 +119,7 @@ SUBCOMMAND_DECL(integrate)
         auto settings = createSettings();
         cygwin = settings[0]["os"]["kernel"] == "org.cygwin";
 
+        auto lines = read_lines(deps_file);
         for (auto &l : lines)
         {
             for (auto c : l)
@@ -128,6 +129,14 @@ SUBCOMMAND_DECL(integrate)
             }
         }
         addInputs(b, lines);
+        // cache
+        /*auto cachefn = path(deps_file) += ".cache.txt";
+        sw::PackageIdSet s;
+        for (auto &i : b.getInputs())
+        {
+            auto s2 = i.getInput().getPackages();
+            s.merge(s2);
+        }*/
         b.loadInputs();
         b.setTargetsToBuild();
         b.resolvePackages();
@@ -156,8 +165,7 @@ SUBCOMMAND_DECL(integrate)
         if (getOptions().options_integrate.cmake_file_version < getSwCmakeConfigVersion())
             throw SW_RUNTIME_ERROR("Old cmake integration file detected. Run 'sw setup' to upgrade it.");
 
-        auto lines = read_lines(getOptions().options_integrate.integrate_cmake_deps);
-        auto build = create_build(lines);
+        auto build = create_build(getOptions().options_integrate.integrate_cmake_deps);
         auto &b = *build;
 
         const String multiconf_gen_var = "SW_MULTI_CONFIG_GENERATOR";
@@ -439,8 +447,7 @@ SUBCOMMAND_DECL(integrate)
 
     if (!getOptions().options_integrate.integrate_waf_deps.empty())
     {
-        auto lines = read_lines(getOptions().options_integrate.integrate_waf_deps);
-        auto build = create_build(lines);
+        auto build = create_build(getOptions().options_integrate.integrate_waf_deps);
         auto &b = *build;
 
         // https://waf.io/apidocs/_modules/waflib/Tools/c_config.html#parse_flags
