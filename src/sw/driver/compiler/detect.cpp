@@ -67,7 +67,7 @@ static String detectMsvcPrefix(builder::detail::ResolvableCommand c, const path 
     if (lines.size() < 1)
         throw SW_RUNTIME_ERROR(error("bad output"));
 
-    String s = R"((.*\s)[a-zA-Z]:[\/].*)" + hfn.stem().string() + "\\" + hfn.extension().string();
+    String s = R"((.*?\s)[a-zA-Z]:[\\\/].*)" + hfn.stem().string() + "\\" + hfn.extension().string();
     std::regex r(s);
     std::smatch m;
     if ((lines.size() > 1 && !std::regex_search(lines[1], m, r)) &&
