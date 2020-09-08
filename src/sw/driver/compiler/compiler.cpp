@@ -119,6 +119,7 @@ static Strings getCStdOption(CLanguageStandard std, bool gnuext)
     return { s };
 }
 
+// what about appleclang?
 static Strings getCppStdOption(CPPLanguageStandard std, bool gnuext, bool clang, const Version &clver)
 {
     String s = "-std="s + (gnuext ? "gnu" : "c") + "++";
@@ -131,13 +132,13 @@ static Strings getCppStdOption(CPPLanguageStandard std, bool gnuext, bool clang,
         s += "14";
         break;
     case CPPLanguageStandard::CPP17:
-        if (clang && clver > Version(5) || clver > Version(6))
+        if (clang && clver > Version(5) || !clang && clver > Version(6))
             s += "17";
         else
             s += "1z";
         break;
     case CPPLanguageStandard::CPP20:
-        if (clang && clver > Version(10) || clver > Version(9))
+        if (clang && clver > Version(10) || !clang && clver > Version(9))
             s += "20";
         else
             s += "2a";
