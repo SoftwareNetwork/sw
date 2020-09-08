@@ -180,6 +180,11 @@ void build(Solution &s)
             cpp_driver += "dbghelp.lib"_slib;
             cpp_driver += "OleAut32.lib"_slib;
         }
+        if (cpp_driver.getCompilerType() == CompilerType::MSVC)
+        {
+            // for toml dependency
+            cpp_driver.CompileOptions.push_back("/Zc:__cplusplus");
+        }
         //else if (s.getBuildSettings().Native.CompilerType == CompilerType::GNU)
             //cpp_driver.CompileOptions.push_back("-Wa,-mbig-obj");
 
