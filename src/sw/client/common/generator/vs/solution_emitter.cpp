@@ -73,7 +73,7 @@ void SolutionEmitter::addDirectory(const Directory &d)
     {
         beginBlock("ProjectSection(SolutionItems) = preProject");
         for (auto &f : d.files)
-            addLine(normalize_path(f.p) + " = " + normalize_path(f.p));
+            addLine(to_string(normalize_path(f.p)) + " = " + to_string(normalize_path(f.p)));
         endBlock("EndProjectSection");
     }
     endBlock("EndProject");
@@ -82,7 +82,7 @@ void SolutionEmitter::addDirectory(const Directory &d)
 void SolutionEmitter::beginProject(const Project &p)
 {
     beginBlock("Project(\"" + project_type_uuids[p.type] + "\") = \"" + p.name/*p.getVisibleName()*/ +
-        "\", \"" + (vs_project_dir / (p.name + vs_project_ext)).u8string() + "\", \"" + p.uuid + "\"");
+        "\", \"" + to_string((vs_project_dir / (p.name + vs_project_ext)).u8string()) + "\", \"" + p.uuid + "\"");
 }
 
 void SolutionEmitter::endProject()

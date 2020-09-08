@@ -48,7 +48,7 @@ nlohmann::json detail::PackageData::toJson() const
     j["driver"] = driver_id.toString();
     source->save(j["source"]);
     for (auto &[f, t] : files_map)
-        j["files"][normalize_path(f)] = normalize_path(t);
+        j["files"][to_string(normalize_path(f))] = to_string(normalize_path(t));
     for (auto &d : dependencies)
         j["dependencies"].push_back(d.toString());
     for (auto &s : signatures)
@@ -97,7 +97,7 @@ void PackageData::addFile(const path &root, const path &from, const path &to)
         sz++;
     auto s = normalize_path(from);
     if (s.find(rd) != 0)
-        throw SW_RUNTIME_ERROR("bad file path: " + s);
+        throw SW_RUNTIME_ERROR("bad file path: " + to_string(s));
     files_map[s.substr(sz)] = normalize_path(to);
 }
 

@@ -79,7 +79,7 @@ bool download(const std::unordered_set<SourcePtr> &sset, SourceDirMap &source_di
                 }
                 else if (!opts.ignore_existing_dirs)
                 {
-                    throw SW_RUNTIME_ERROR("Directory exists " + normalize_path(d.root_dir) + " for source " + src->print());
+                    throw SW_RUNTIME_ERROR("Directory exists " + to_string(d.root_dir) + " for source " + src->print());
                 }
                 else
                 {

@@ -84,7 +84,7 @@ String Package::formatPath(const String &s) const
     // {PH64} = package hash, length = 64
     // {FN} = archive name
     return fmt::format(s,
-        fmt::arg("PHPF", normalize_path(getHashPath())),
+        fmt::arg("PHPF", to_string(normalize_path(getHashPath()))),
         fmt::arg("PH64", getHash().substr(0, 64)),
         fmt::arg("FN", support::make_archive_name())
     );

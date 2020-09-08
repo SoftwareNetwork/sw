@@ -168,7 +168,7 @@ String write_build_script(SwCoreContext &swctx,
             ctx.addLine("#define build build_" + r.getVariableName());
             if (has_checks)
                 ctx.addLine("#define check check_" + r.getVariableName());
-            ctx.addLine("#include \"" + normalize_path(fn) + "\"");
+            ctx.addLine("#include \"" + to_string(normalize_path(fn)) + "\"");
             ctx.addLine("#undef configure");
             ctx.addLine("#undef build");
             if (has_checks)

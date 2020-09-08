@@ -274,7 +274,7 @@ SUBCOMMAND_DECL(integrate)
                         if ((inh & 4) == 0)
                             continue;
                         for (auto &d : p["include_directories"].getArray())
-                            if_ctx.addLine(cmake_cfg + fix_path(normalize_path(d.getPathValue(getContext().getLocalStorage()))) + cmake_cfg_end);
+                            if_ctx.addLine(cmake_cfg + fix_path(to_string(normalize_path(d.getPathValue(getContext().getLocalStorage())))) + cmake_cfg_end);
                     }
                     if_ctx.decreaseIndent(")");
                     if_ctx.emptyLines();
@@ -313,7 +313,7 @@ SUBCOMMAND_DECL(integrate)
                         if ((inh & 4) == 0)
                             continue;
                         for (auto &d : p["include_directories"].getArray())
-                            idirs += fix_path(normalize_path(d.getPathValue(getContext().getLocalStorage()))) + ";";
+                            idirs += fix_path(to_string(normalize_path(d.getPathValue(getContext().getLocalStorage())))) + ";";
                     }
                     idirs += "\"";
                     else_ctx.increaseIndent("set_target_properties(" + pkg2string(pkg) + " PROPERTIES");
@@ -335,7 +335,7 @@ SUBCOMMAND_DECL(integrate)
                         if ((inh & 4) == 0)
                             continue;
                         for (auto &d : p["link_libraries"].getArray())
-                            if_ctx.addLine(cmake_cfg + fix_path(normalize_path(d.getPathValue(getContext().getLocalStorage()))) + cmake_cfg_end);
+                            if_ctx.addLine(cmake_cfg + fix_path(to_string(normalize_path(d.getPathValue(getContext().getLocalStorage())))) + cmake_cfg_end);
                         for (auto &d : p["system_link_libraries"].getArray())
                             if_ctx.addLine(cmake_cfg + fix_path(d.getValue()) + cmake_cfg_end);
                     }
@@ -354,7 +354,7 @@ SUBCOMMAND_DECL(integrate)
                         if ((inh & 4) == 0)
                             continue;
                         for (auto &d : p["link_libraries"].getArray())
-                            libs += fix_path(normalize_path(d.getPathValue(getContext().getLocalStorage()))) + ";";
+                            libs += fix_path(to_string(normalize_path(d.getPathValue(getContext().getLocalStorage())))) + ";";
                         for (auto &d : p["system_link_libraries"].getArray())
                             libs += d.getValue() + ";";
                     }
@@ -373,10 +373,10 @@ SUBCOMMAND_DECL(integrate)
 
                 // IMPORTED_LOCATION = path to .dll/.so or static .lib/.a
                 ctx.addLine("IMPORTED_LOCATION_" + toCmakeString(bs.Native.ConfigurationType) + " \"" +
-                    fix_path(normalize_path(s[st == "SHARED" ? "output_file" : "import_library"].getPathValue(getContext().getLocalStorage()))) + "\"");
+                    fix_path(to_string(normalize_path(s[st == "SHARED" ? "output_file" : "import_library"].getPathValue(getContext().getLocalStorage())))) + "\"");
                 // IMPORTED_IMPLIB = path to .lib (import)
                 ctx.addLine("IMPORTED_IMPLIB_" + toCmakeString(bs.Native.ConfigurationType) + " \"" +
-                    fix_path(normalize_path(s["import_library"].getPathValue(getContext().getLocalStorage()))) + "\"");
+                    fix_path(to_string(normalize_path(s["import_library"].getPathValue(getContext().getLocalStorage())))) + "\"");
 
                 ctx.decreaseIndent(")");
                 ctx.emptyLines();
@@ -505,7 +505,7 @@ SUBCOMMAND_DECL(integrate)
                     return p.parent_path() / p.stem();
                 };
 
-                ctx.addLine("ctx.parse_flags('-l" + normalize_path(remove_ext(s["import_library"].getPathValue(getContext().getLocalStorage()))) + "', lib)");
+                ctx.addLine("ctx.parse_flags('-l" + to_string(normalize_path(remove_ext(s["import_library"].getPathValue(getContext().getLocalStorage())))) + "', lib)");
 
                 // defs
                 for (auto &[k, p] : s["properties"].getMap())
@@ -524,13 +524,13 @@ SUBCOMMAND_DECL(integrate)
 
                     // idirs
                     for (auto &d : p["include_directories"].getArray())
-                        ctx.addLine("ctx.parse_flags('-I" + normalize_path(d.getPathValue(getContext().getLocalStorage())) + "', lib)");
+                        ctx.addLine("ctx.parse_flags('-I" + to_string(normalize_path(d.getPathValue(getContext().getLocalStorage()))) + "', lib)");
 
                     // libs
                     for (auto &d : p["link_libraries"].getArray())
-                        ctx.addLine("ctx.parse_flags('-l" + normalize_path(remove_ext(d.getPathValue(getContext().getLocalStorage()))) + "', lib)");
+                        ctx.addLine("ctx.parse_flags('-l" + to_string(normalize_path(remove_ext(d.getPathValue(getContext().getLocalStorage())))) + "', lib)");
                     for (auto &d : p["system_link_libraries"].getArray())
-                        ctx.addLine("ctx.parse_flags('-l" + normalize_path(remove_ext(d.getPathValue(getContext().getLocalStorage()))) + "', lib)");
+                        ctx.addLine("ctx.parse_flags('-l" + to_string(normalize_path(remove_ext(d.getPathValue(getContext().getLocalStorage())))) + "', lib)");
 
                     // deps
                     for (auto &p1 : p["dependencies"].getArray())

@@ -39,6 +39,8 @@ struct PropertyVariant : std::variant<std::monostate, Types...>
     {
         if (auto v = std::get_if<std::string>(this))
             return *v;
+        else if (auto v = std::get_if<path>(this))
+            return to_string(v->u8string());
         else if (auto v = std::get_if<bool>(this))
             return *v ? "true" : "false";
 #define IF_OP(T) else if (auto v = std::get_if<T>(this)) return std::to_string(*v)

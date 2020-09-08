@@ -15,7 +15,7 @@
 
 static String get_name(const Options &options)
 {
-    String name = fs::current_path().filename().u8string();
+    String name = to_string(fs::current_path().filename().u8string());
     if (!options.options_create.create_proj_name.empty())
         name = options.options_create.create_proj_name;
     return name;
@@ -96,7 +96,7 @@ SUBCOMMAND_DECL(create)
     auto write_file = [this](const path &fn, const String &s)
     {
         if (fs::exists(fn) && !getOptions().options_create.create_overwrite_files)
-            throw SW_RUNTIME_ERROR("File already exists: " + normalize_path(fn));
+            throw SW_RUNTIME_ERROR("File already exists: " + to_string(normalize_path(fn)));
         ::write_file(fn, s);
     };
 
@@ -111,7 +111,7 @@ SUBCOMMAND_DECL(create)
         auto name = get_name(getOptions());
         String files;
         for (auto &[fn,_] : tpl.files)
-            files += "t += \"" + normalize_path(fn) + "\";\n";
+            files += "t += \"" + to_string(normalize_path(fn)) + "\";\n";
         String deps;
         for (auto &d : tpl.dependencies)
             deps += "t += \"" + d + "\"_dep;\n";
@@ -121,7 +121,7 @@ SUBCOMMAND_DECL(create)
         {
             const auto &ci = tpls.files.find(fn2);
             if (ci == tpls.files.end())
-                throw SW_RUNTIME_ERROR("No such file: " + normalize_path(fn) + " (" + normalize_path(fn2) + ")");
+                throw SW_RUNTIME_ERROR("No such file: " + to_string(normalize_path(fn)) + " (" + to_string(normalize_path(fn2)) + ")");
             auto s = ci->second;
             boost::replace_all(s, "{target}", tpl.target);
             boost::replace_all(s, "{name}", name);
@@ -133,14 +133,14 @@ SUBCOMMAND_DECL(create)
         {
             const auto &ci = tpls.files.find(fn2);
             if (ci == tpls.files.end())
-                throw SW_RUNTIME_ERROR("No such file: " + normalize_path(fn) + " (" + normalize_path(fn2) + ")");
+                throw SW_RUNTIME_ERROR("No such file: " + to_string(normalize_path(fn)) + " (" + to_string(normalize_path(fn2)) + ")");
             auto s = ci->second;
             write_file(dir / fn, s);
         }
 
         // set our inputs
         Strings inputs;
-        inputs.push_back(normalize_path(dir));
+        inputs.push_back(to_string(normalize_path(dir)));
         SwapAndRestore sr(getInputs(), inputs);
 
         if (getOptions().options_create.create_build)

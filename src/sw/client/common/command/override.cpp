@@ -25,7 +25,7 @@ static void override_package_perform(SwClientContext &swctx, sw::PackagePath pre
         for (auto &[pkg, desc] : pm)
         {
             sw::PackageId pkg2{ prefix / pkg.getPath(), pkg.getVersion() };
-            LOG_INFO(logger, "Overriding " + pkg2.toString() + " to " + dir.u8string());
+            LOG_INFO(logger, "Overriding " + pkg2.toString() + " to " + to_string(dir.u8string()));
             // fix deps' prefix
             sw::UnresolvedPackages deps;
             for (auto &d : desc->dependencies)
@@ -75,7 +75,7 @@ static void override_package_perform(SwClientContext &swctx, sw::PackagePath pre
     if (!swctx.getOptions().options_override.save_overridden_packages_to_file.empty())
     {
         nlohmann::json j;
-        j["sdir"] = normalize_path(dir);
+        j["sdir"] = to_string(normalize_path(dir));
         j["prefix"] = prefix.toString();
         for (auto &[pkg, desc] : pm)
             j["packages"][pkg.toString()] = desc->toJson();
@@ -101,7 +101,7 @@ SUBCOMMAND_DECL(override)
 
     if (!getOptions().options_override.delete_overridden_package_dir.empty())
     {
-        LOG_INFO(logger, "Delete override for sdir " + getOptions().options_override.delete_overridden_package_dir.u8string());
+        LOG_INFO(logger, "Delete override for sdir " + to_string(getOptions().options_override.delete_overridden_package_dir.u8string()));
 
         auto d = primitives::filesystem::canonical(getOptions().options_override.delete_overridden_package_dir);
 

@@ -24,7 +24,7 @@ static void open_nix(const String &p)
 #ifdef __linux__
     s += "xdg-";
 #endif
-    s += "open \"" + normalize_path(p) + "\"";
+    s += "open \"" + to_string(normalize_path(p)) + "\"";
     if (system(s.c_str()) != 0)
     {
 #if !(defined(__linux__) || defined(__APPLE__))
@@ -114,7 +114,7 @@ SUBCOMMAND_DECL(open)
         sw::LocalPackage lp(getContext().getLocalStorage(), p);
 
         LOG_INFO(logger, "package: " + lp.toString());
-        LOG_INFO(logger, "package dir: " + lp.getDir().u8string());
+        LOG_INFO(logger, "package dir: " + to_string(lp.getDir().u8string()));
 
         open_directory(lp.getDirSrc() / ""); // on win we must add last slash
     }

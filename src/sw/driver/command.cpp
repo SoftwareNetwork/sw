@@ -94,8 +94,8 @@ void Command::prepare()
                         if (*nt->HeaderOnly)
                             throw SW_RUNTIME_ERROR("Program is used from package: " + t.getPackage().toString() + " which is header only");
                         if (!File(p, getContext().getFileStorage()).isGeneratedAtAll())
-                            throw SW_RUNTIME_ERROR("Program from package: " + t.getPackage().toString() + " is not generated at all: " + normalize_path(p));
-                        throw SW_RUNTIME_ERROR("Program from package: " + t.getPackage().toString() + " is not generated: " + normalize_path(p));
+                            throw SW_RUNTIME_ERROR("Program from package: " + t.getPackage().toString() + " is not generated at all: " + to_string(normalize_path(p)));
+                        throw SW_RUNTIME_ERROR("Program from package: " + t.getPackage().toString() + " is not generated: " + to_string(normalize_path(p)));
                     }
                 }
                 else if (auto nt = t.as<NativeTarget *>())
@@ -236,7 +236,7 @@ CommandBuilder &CommandBuilder::operator<<(const ::sw::cmd::tag_in &t)
             p = tt.SourceDir / p;
 
         if (!stopped)
-            c->arguments.push_back(t.prefix + (t.normalize ? normalize_path(p) : p.u8string()));
+            c->arguments.push_back(t.prefix + to_string(t.normalize ? normalize_path(p) : p.u8string()));
         c->addInput(p);
         if (t.add_to_targets)
         {
@@ -261,7 +261,7 @@ CommandBuilder &CommandBuilder::operator<<(const ::sw::cmd::tag_out &t)
             p = tt.BinaryDir / p;
 
         if (!stopped)
-            c->arguments.push_back(t.prefix + (t.normalize ? normalize_path(p) : p.u8string()));
+            c->arguments.push_back(t.prefix + to_string(t.normalize ? normalize_path(p) : p.u8string()));
         c->addOutput(p);
         if (t.add_to_targets)
         {
@@ -393,7 +393,7 @@ static String getOutput(builder::detail::ResolvableCommand &c)
     c.execute(ec);
 
     if (c.pid == -1)
-        throw SW_RUNTIME_ERROR(normalize_path(c.getProgram()) + ": " + ec.message());
+        throw SW_RUNTIME_ERROR(to_string(normalize_path(c.getProgram())) + ": " + ec.message());
 
     return c.err.text.empty() ? c.out.text : c.err.text;
 }

@@ -290,7 +290,7 @@ static std::vector<sw::TargetSettings> getSettingsFromFile(SwClientContext &swct
             ts.insert(ts.end(), ts1.begin(), ts1.end());
         }
         else
-            throw SW_RUNTIME_ERROR("Unknown settings file: " + normalize_path(fn));
+            throw SW_RUNTIME_ERROR("Unknown settings file: " + to_string(normalize_path(fn)));
     }
     return ts;
 }
@@ -381,9 +381,9 @@ std::unique_ptr<sw::SwBuild> SwClientContext::createBuildInternal()
     {
         // save lock file near input? what if we have multiple inputs?
         if (options.lock_file.empty())
-            bs["lock_file"] = normalize_path(fs::current_path() / "sw.lock");
+            bs["lock_file"] = to_string(normalize_path(fs::current_path() / "sw.lock"));
         else
-            bs["lock_file"] = normalize_path(options.lock_file);
+            bs["lock_file"] = to_string(normalize_path(options.lock_file));
     }
 
 #define SET_BOOL_OPTION(x) bs[#x] = options.x ? "true" : ""
@@ -392,9 +392,9 @@ std::unique_ptr<sw::SwBuild> SwClientContext::createBuildInternal()
     SET_BOOL_OPTION(build_always);
     SET_BOOL_OPTION(use_saved_configs);
     if (!options.options_build.ide_copy_to_dir.empty())
-        bs["build_ide_copy_to_dir"] = normalize_path(options.options_build.ide_copy_to_dir);
+        bs["build_ide_copy_to_dir"] = to_string(normalize_path(options.options_build.ide_copy_to_dir));
     if (!options.options_build.ide_fast_path.empty())
-        bs["build_ide_fast_path"] = normalize_path(options.options_build.ide_fast_path);
+        bs["build_ide_fast_path"] = to_string(normalize_path(options.options_build.ide_fast_path));
     if (options.skip_errors)
         bs["skip_errors"] = std::to_string(options.skip_errors);
 
@@ -710,7 +710,7 @@ std::vector<sw::TargetSettings> SwClientContext::createSettings()
         d = fs::canonical(d);
         for (auto &s : settings)
         {
-            s["output_dir"] = normalize_path(d);
+            s["output_dir"] = to_string(normalize_path(d));
             s["output_dir"].serializable(false);
         }
     }

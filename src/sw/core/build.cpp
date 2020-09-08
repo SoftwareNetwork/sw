@@ -779,7 +779,7 @@ void SwBuild::execute(ExecutionPlan &p) const
     {
         String s;
         for (auto &f : fast_path_files)
-            s += normalize_path(f) + "\n";
+            s += to_string(normalize_path(f)) + "\n";
         write_file(ide_fast_path, s);
 
         uint64_t mtime = 0;
@@ -1041,7 +1041,7 @@ Commands SwBuild::getCommands() const
             copy_cmd->addInput(f);
             copy_cmd->addOutput(t);
             //copy_cmd->dependencies.insert(nt->getCommand());
-            copy_cmd->name = "copy: " + normalize_path(t);
+            copy_cmd->name = "copy: " + to_string(normalize_path(t));
             copy_cmd->command_storage = &getCommandStorage(getBuildDirectory() / "cs");
             cmds.insert(copy_cmd);
             commands_storage.insert(copy_cmd); // prevents early destruction

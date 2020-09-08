@@ -307,7 +307,7 @@ private:
 
     void add10Kit(DETECT_ARGS, const path &kr, const sw::Version &v) const
     {
-        LOG_TRACE(logger, "Found Windows Kit " + v.toString() + " at " + normalize_path(kr));
+        LOG_TRACE(logger, "Found Windows Kit " + v.toString() + " at " + to_string(normalize_path(kr)));
 
         // ucrt
         {
@@ -362,7 +362,7 @@ private:
 
     void addKit(DETECT_ARGS, const path &kr, const String &k) const
     {
-        LOG_TRACE(logger, "Found Windows Kit " + k + " at " + normalize_path(kr));
+        LOG_TRACE(logger, "Found Windows Kit " + k + " at " + to_string(normalize_path(kr)));
 
         // um + shared
         {

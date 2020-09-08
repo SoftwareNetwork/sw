@@ -120,21 +120,21 @@ static BOOL GrantNamedObjectAccess(PSID appcontainer_sid, const path &object_nam
             NULL, NULL);
         if (status != ERROR_SUCCESS)
         {
-            printf("GetNamedSecurityInfo() failed for %s, error: %d\n", object_name.u8string().c_str(), status);
+            printf("GetNamedSecurityInfo() failed for %s, error: %d\n", to_string(object_name.u8string()).c_str(), status);
             break;
         }
 
         status = SetEntriesInAcl(1, &explicit_access, original_acl, &new_acl);
         if (status != ERROR_SUCCESS)
         {
-            printf("SetEntriesInAcl() failed for %s, error: %d\n", object_name.u8string().c_str(), status);
+            printf("SetEntriesInAcl() failed for %s, error: %d\n", to_string(object_name.u8string()).c_str(), status);
             break;
         }
 
         status = SetNamedSecurityInfo((LPTSTR)object_name.wstring().c_str(), object_type, DACL_SECURITY_INFORMATION, NULL, NULL, new_acl, NULL);
         if (status != ERROR_SUCCESS)
         {
-            printf("SetNamedSecurityInfo() failed for %s, error: %d\n", object_name.u8string().c_str(), status);
+            printf("SetNamedSecurityInfo() failed for %s, error: %d\n", to_string(object_name.u8string()).c_str(), status);
             break;
         }
 
@@ -224,7 +224,7 @@ void run1(const sw::LocalPackage &pkg, primitives::Command &c, bool gRunAppInCon
                 {
                     if (!GrantNamedObjectAccess(sid, p, SE_FILE_OBJECT, mode))
                     {
-                        snprintf(err.data(), err.size(), "Failed to grant explicit access to '%s'\n", p.u8string().c_str());
+                        snprintf(err.data(), err.size(), "Failed to grant explicit access to '%s'\n", to_string(p.u8string()).c_str());
                         return false;
                     }
                     return true;
@@ -252,7 +252,7 @@ void run1(const sw::LocalPackage &pkg, primitives::Command &c, bool gRunAppInCon
                 for (auto &d : dirs)
                 {
                     // we cannot set rights on c:\\windows
-                    if (boost::to_upper_copy(normalize_path_windows(d)).find("C:\\WINDOWS") == 0)
+                    if (boost::to_upper_copy(to_string(normalize_path_windows(d))).find("C:\\WINDOWS") == 0)
                         continue;
                     paths.insert(d);
                 }

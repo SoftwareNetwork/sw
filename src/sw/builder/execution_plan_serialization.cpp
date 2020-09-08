@@ -134,7 +134,7 @@ Commands ExecutionPlan::load(const path &p, const SwBuilderContext &swctx, int t
     {
         std::ifstream ifs(p, std::ios_base::in | std::ios_base::binary);
         if (!ifs)
-            throw SW_RUNTIME_ERROR("Cannot read file: " + normalize_path(p));
+            throw SW_RUNTIME_ERROR("Cannot read file: " + to_string(p));
         boost::archive::binary_iarchive ar(ifs);
         load(ar);
     }
@@ -142,7 +142,7 @@ Commands ExecutionPlan::load(const path &p, const SwBuilderContext &swctx, int t
     {
         std::ifstream ifs(p);
         if (!ifs)
-            throw SW_RUNTIME_ERROR("Cannot read file: " + normalize_path(p));
+            throw SW_RUNTIME_ERROR("Cannot read file: " + to_string(p));
         boost::archive::text_iarchive ar(ifs);
         load(ar);
     }
@@ -171,7 +171,7 @@ void ExecutionPlan::save(const path &p, int type) const
     {
         std::ofstream ofs(p, std::ios_base::out | std::ios_base::binary);
         if (!ofs)
-            throw SW_RUNTIME_ERROR("Cannot write file: " + normalize_path(p));
+            throw SW_RUNTIME_ERROR("Cannot write file: " + to_string(p));
         boost::archive::binary_oarchive ar(ofs);
         save(ar);
     }
@@ -179,7 +179,7 @@ void ExecutionPlan::save(const path &p, int type) const
     {
         std::ofstream ofs(p);
         if (!ofs)
-            throw SW_RUNTIME_ERROR("Cannot write file: " + normalize_path(p));
+            throw SW_RUNTIME_ERROR("Cannot write file: " + to_string(p));
         boost::archive::text_oarchive ar(ofs);
         save(ar);
     }

@@ -30,7 +30,7 @@ static auto get_function(const Module::DynamicLibrary &dll, const String &fn, bo
     else if (shlib.has(fn))
         return shlib.get<F>(fn);
     else if (required)
-        throw SW_RUNTIME_ERROR("Required function '" + fn + "' is not found in module: " + normalize_path(dll.shared_lib().location()));
+        throw SW_RUNTIME_ERROR("Required function '" + fn + "' is not found in module: " + to_string(normalize_path(dll.shared_lib().location())));
 
     return (F*)nullptr;
 }
@@ -114,7 +114,7 @@ Module::LibraryCall<F, Required>::operator()(Args && ... args) const
         {
             String err = "error in module";
             if (m)
-                err += " (" + normalize_path(m->getLocation()) + ")";
+                err += " (" + to_string(normalize_path(m->getLocation())) + ")";
             err += ": ";
             err += e.what();
             throw SW_RUNTIME_ERROR(err);
@@ -123,7 +123,7 @@ Module::LibraryCall<F, Required>::operator()(Args && ... args) const
         {
             String err = "error in module";
             if (m)
-                err += " (" + normalize_path(m->getLocation()) + ")";
+                err += " (" + to_string(normalize_path(m->getLocation())) + ")";
             err += ": ";
             err += "unknown error";
             throw SW_RUNTIME_ERROR(err);
@@ -136,7 +136,7 @@ Module::LibraryCall<F, Required>::operator()(Args && ... args) const
             err += " '" + name + "'";
         err += " is not present in the module";
         if (m)
-            err += " (" + normalize_path(m->getLocation()) + ")";
+            err += " (" + to_string(normalize_path(m->getLocation())) + ")";
         throw SW_RUNTIME_ERROR(err);
     }
     return typename std_function_type::result_type();
@@ -197,7 +197,7 @@ std::unique_ptr<Module> loadSharedLibrary(const path &dll, const FilesOrdered &P
     std::unique_ptr<Module::DynamicLibrary> dl;
 
     String err;
-    err = "Module " + normalize_path(dll) + " is in bad shape";
+    err = "Module " + to_string(normalize_path(dll)) + " is in bad shape";
     try
     {
         dl = std::make_unique<Module::DynamicLibrary>(dll,

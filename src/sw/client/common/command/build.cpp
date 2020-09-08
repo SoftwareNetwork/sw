@@ -69,7 +69,7 @@ static void isolated_build(SwClientContext &swctx)
             fs::copy_file(from, dir / to, fs::copy_options::update_existing);
         }
 
-        ts["driver"]["source-dir-for-package"][pkg.toString()] = normalize_path(dir);
+        ts["driver"]["source-dir-for-package"][pkg.toString()] = to_string(normalize_path(dir));
     }
 
     LOG_INFO(logger, "Building in isolated environment");

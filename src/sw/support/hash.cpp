@@ -8,7 +8,7 @@ namespace sw::support
 
 String get_file_hash(const path &fn)
 {
-    return strong_file_hash(fn);
+    return strong_file_hash_file(fn);
 }
 
 bool check_file_hash(const path &fn, const String &hash)

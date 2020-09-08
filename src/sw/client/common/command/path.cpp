@@ -16,6 +16,6 @@ SUBCOMMAND_DECL(path)
 
     if (getOptions().options_path.type == "sdir")
     {
-        LOG_INFO(logger, normalize_path(p.getDirSrc2()));
+        LOG_INFO(logger, to_string(normalize_path(p.getDirSrc2())));
     }
 }

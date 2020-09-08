@@ -184,20 +184,20 @@ void VisualStudioCompiler::prepareCommand1(const Target &t)
 
     if (InputFile)
     {
-        cmd->name = normalize_path(InputFile());
-        cmd->name_short = InputFile().filename().u8string();
+        cmd->name = to_string(normalize_path(InputFile()));
+        cmd->name_short = to_string(InputFile().filename().u8string());
     }
 
     bool preprocessed_file = false;
     if (CSourceFile)
     {
-        cmd->name = normalize_path(CSourceFile());
-        cmd->name_short = CSourceFile().filename().u8string();
+        cmd->name = to_string(normalize_path(CSourceFile()));
+        cmd->name_short = to_string(CSourceFile().filename().u8string());
     }
     else if (CPPSourceFile)
     {
-        cmd->name = normalize_path(CPPSourceFile());
-        cmd->name_short = CPPSourceFile().filename().u8string();
+        cmd->name = to_string(normalize_path(CPPSourceFile()));
+        cmd->name_short = to_string(CPPSourceFile().filename().u8string());
     }
     else if (InputFile && !CompileAsC && !CompileAsCPP)
     {
@@ -228,7 +228,7 @@ void VisualStudioCompiler::prepareCommand1(const Target &t)
         if (CompileAsCPP)
             ext = ".ii";
         if (!PreprocessFileName)
-            PreprocessFileName = Output().parent_path() / (Output().stem().u8string() + ext);
+            PreprocessFileName = Output().parent_path() / (to_string(Output().stem().u8string()) + ext);
         Output.clear();
     }
 
@@ -271,8 +271,8 @@ void VisualStudioASMCompiler::prepareCommand1(const Target &t)
 
     if (InputFile)
     {
-        cmd->name = normalize_path(InputFile());
-        cmd->name_short = InputFile().filename().u8string();
+        cmd->name = to_string(normalize_path(InputFile()));
+        cmd->name_short = to_string(InputFile().filename().u8string());
         //cmd->file = InputFile;
     }
     if (Output)
@@ -319,8 +319,8 @@ void ClangCompiler::prepareCommand1(const ::sw::Target &t)
 
     if (InputFile)
     {
-        cmd->name = normalize_path(InputFile());
-        cmd->name_short = InputFile().filename().u8string();
+        cmd->name = to_string(normalize_path(InputFile()));
+        cmd->name_short = to_string(InputFile().filename().u8string());
         //cmd->file = InputFile;
     }
     if (OutputFile)
@@ -380,20 +380,20 @@ void ClangClCompiler::prepareCommand1(const Target &t)
 
     if (InputFile)
     {
-        cmd->name = normalize_path(InputFile());
-        cmd->name_short = InputFile().filename().u8string();
+        cmd->name = to_string(normalize_path(InputFile()));
+        cmd->name_short = to_string(InputFile().filename().u8string());
     }
 
     bool preprocessed_file = false;
     if (CSourceFile)
     {
-        cmd->name = normalize_path(CSourceFile());
-        cmd->name_short = CSourceFile().filename().u8string();
+        cmd->name = to_string(normalize_path(CSourceFile()));
+        cmd->name_short = to_string(CSourceFile().filename().u8string());
     }
     else if (CPPSourceFile)
     {
-        cmd->name = normalize_path(CPPSourceFile());
-        cmd->name_short = CPPSourceFile().filename().u8string();
+        cmd->name = to_string(normalize_path(CPPSourceFile()));
+        cmd->name_short = to_string(CPPSourceFile().filename().u8string());
     }
     else if (InputFile && !CompileAsC && !CompileAsCPP)
     {
@@ -423,7 +423,7 @@ void ClangClCompiler::prepareCommand1(const Target &t)
         if (CompileAsCPP)
             ext = ".ii";
         if (!PreprocessFileName)
-            PreprocessFileName = Output().parent_path() / (Output().stem().u8string() + ext);
+            PreprocessFileName = Output().parent_path() / (to_string(Output().stem().u8string()) + ext);
         Output.clear();
     }
 
@@ -461,8 +461,8 @@ static String getRandomSeed(const path &p, const path &sw_storage_dir)
 {
     if (p.empty())
         return "0"s;
-    auto np = normalize_path(p);
-    auto nsp = normalize_path(sw_storage_dir);
+    auto np = to_string(normalize_path(p));
+    auto nsp = to_string(normalize_path(sw_storage_dir));
     if (np.find(nsp) != 0)
         return "0"s;
     // size() + next slash
@@ -476,8 +476,8 @@ void GNUASMCompiler::prepareCommand1(const Target &t)
     bool assembly = false;
     if (InputFile)
     {
-        cmd->name = normalize_path(InputFile());
-        cmd->name_short = InputFile().filename().u8string();
+        cmd->name = to_string(normalize_path(InputFile()));
+        cmd->name_short = to_string(InputFile().filename().u8string());
         //cmd->file = InputFile;
         assembly = InputFile().extension() == ".s";
     }
@@ -534,8 +534,8 @@ void GNUCompiler::prepareCommand1(const Target &t)
 
     if (InputFile)
     {
-        cmd->name = normalize_path(InputFile());
-        cmd->name_short = InputFile().filename().u8string();
+        cmd->name = to_string(normalize_path(InputFile()));
+        cmd->name_short = to_string(InputFile().filename().u8string());
         //cmd->file = InputFile;
     }
     if (OutputFile)
@@ -666,8 +666,8 @@ void VisualStudioLibraryTool::prepareCommand1(const Target &t)
     if (Output)
     {
         cmd->working_directory = Output().parent_path();
-        cmd->name = normalize_path(Output());
-        cmd->name_short = Output().filename().u8string();
+        cmd->name = to_string(normalize_path(Output()));
+        cmd->name_short = to_string(Output().filename().u8string());
     }
 
     ((VisualStudioLibraryTool*)this)->VisualStudioLibraryToolOptions::LinkDirectories() = gatherLinkDirectories();
@@ -708,8 +708,8 @@ void VisualStudioLinker::prepareCommand1(const Target &t)
     if (Output)
     {
         cmd->working_directory = Output().parent_path();
-        cmd->name = normalize_path(Output());
-        cmd->name_short = Output().filename().u8string();
+        cmd->name = to_string(normalize_path(Output()));
+        cmd->name_short = to_string(Output().filename().u8string());
     }
 
     ((VisualStudioLibraryTool*)this)->VisualStudioLibraryToolOptions::LinkDirectories() = gatherLinkDirectories();
@@ -740,13 +740,13 @@ void GNULinker::setObjectFiles(const FilesOrdered &files)
 
 static auto add_prefix_and_suffix(const path &p, const String &prefix, const String &ext)
 {
-    return p.parent_path() / (prefix + p.filename().u8string() + ext);
+    return p.parent_path() / (prefix + to_string(p.filename().u8string()) + ext);
 }
 
 static auto remove_prefix_and_suffix(const path &p)
 {
     auto s = p.stem().u8string();
-    if (s.find("lib") == 0)
+    if (s.find(u8"lib") == 0)
         s = s.substr(3);
     return s;
 }
@@ -891,8 +891,8 @@ void GNULinker::prepareCommand1(const Target &t)
     if (Output)
     {
         cmd->working_directory = Output().parent_path();
-        cmd->name = normalize_path(Output());
-        cmd->name_short = Output().filename().u8string();
+        cmd->name = to_string(normalize_path(Output()));
+        cmd->name_short = to_string(Output().filename().u8string());
     }
 
     getCommandLineOptions<GNULinkerOptions>(cmd.get(), *this);
@@ -961,8 +961,8 @@ void GNULibrarian::prepareCommand1(const Target &t)
     if (Output)
     {
         cmd->working_directory = Output().parent_path();
-        cmd->name = normalize_path(Output());
-        cmd->name_short = Output().filename().u8string();
+        cmd->name = to_string(normalize_path(Output()));
+        cmd->name_short = to_string(Output().filename().u8string());
     }
 
     //((GNULibraryTool*)this)->GNULibraryToolOptions::LinkDirectories() = gatherLinkDirectories();
@@ -996,8 +996,8 @@ void RcTool::prepareCommand1(const Target &t)
 
     if (InputFile)
     {
-        cmd->name = normalize_path(InputFile());
-        cmd->name_short = InputFile().filename().u8string();
+        cmd->name = to_string(normalize_path(InputFile()));
+        cmd->name_short = to_string(InputFile().filename().u8string());
     }
 
     // defs
@@ -1028,7 +1028,7 @@ void RcTool::prepareCommand1(const Target &t)
     Strings env_idirs;
     for (auto &d : t.template as<NativeCompiledTarget>().getMergeObject().NativeCompilerOptions::gatherIncludeDirectories())
     {
-        auto i = normalize_path(d);
+        auto i = to_string(normalize_path(d));
         if (i.find(' ') != i.npos)
             env_idirs.push_back(i);
         else
@@ -1041,7 +1041,7 @@ void RcTool::prepareCommand1(const Target &t)
     for (auto &i : env_idirs)
         s += i + ";";
     for (auto &i : idirs)
-        s += normalize_path(i) + ";";
+        s += to_string(normalize_path(i)) + ";";
     cmd->environment["INCLUDE"] = s;
 
     getCommandLineOptions<RcToolOptions>(cmd.get(), *this);

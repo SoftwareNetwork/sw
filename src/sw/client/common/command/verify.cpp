@@ -41,7 +41,7 @@ SUBCOMMAND_DECL(verify)
     SW_CHECK(inputs.size() == 1);
 
     auto ts = createInitialSettings();
-    ts["driver"]["source-dir-for-source"][s->getHash()] = normalize_path(dir);
+    ts["driver"]["source-dir-for-source"][s->getHash()] = to_string(normalize_path(dir));
     ts["driver"]["force-source"] = src;
     sw::InputWithSettings i(inputs[0]);
     i.addSettings(ts);
@@ -82,7 +82,7 @@ SUBCOMMAND_DECL(verify)
         throw SW_RUNTIME_ERROR(p->toString() + ": archive write failed: " + pack_err);
 
     // get hash
-    auto hash = strong_file_hash_blake2b_sha3(archive_name);
+    auto hash = strong_file_hash_file_blake2b_sha3(archive_name);
     if (hash != p->getData().getHash(sw::StorageFileType::SourceArchive))
         throw SW_RUNTIME_ERROR("Archives do not match!");
 

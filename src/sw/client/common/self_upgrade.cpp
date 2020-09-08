@@ -32,11 +32,11 @@ void self_upgrade(const String &progname)
     std::cout << "Downloading signature file" << "\n";
     static const auto algo = "sha512"s;
     auto &r = s.getRemotes(true)[0];
-    auto sig = download_file(r->url + client.u8string() + "." + algo + ".sig");
+    auto sig = download_file(r->url + to_string(client.u8string()) + "." + algo + ".sig");
 
     auto fn = fs::temp_directory_path() / (unique_path() += client.extension());
     std::cout << "Downloading the latest client" << "\n";
-    download_file(r->url + client.u8string(), fn, 100_MB);
+    download_file(r->url + to_string(client.u8string()), fn, 100_MB);
     try
     {
         ds_verify_sw_file(fn, algo, sig);

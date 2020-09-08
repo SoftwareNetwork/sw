@@ -145,11 +145,11 @@ void Database::open(bool read_only, bool in_memory)
     if (in_memory)
         config.path_to_database = ":memory:";
     else
-        config.path_to_database = normalize_path(fn);
+        config.path_to_database = to_string(normalize_path(fn));
     //config.debug = true;
     db = std::make_unique<sql::connection>(config);
     if (in_memory)
-        loadOrSaveDb(db->native_handle(), normalize_path(fn).c_str(), 0);
+        loadOrSaveDb(db->native_handle(), (const char *)normalize_path(fn).c_str(), 0);
 
     // prevent SQLITE_BUSY rc
     // hope 1 min is enough to wait for write operation
@@ -365,7 +365,7 @@ void PackagesDatabase::installPackage(const PackageId &p, const PackageData &d)
         // misc
         pkg_ver.updated = "",
 
-        pkg_ver.sdir = sqlpp::tvin(d.sdir.u8string())
+        pkg_ver.sdir = sqlpp::tvin(to_string(d.sdir.u8string()))
     ));
 
     // get version id
@@ -461,7 +461,7 @@ void PackagesDatabase::deleteOverriddenPackageDir(const path &sdir) const
 {
     (*db)(
         remove_from(pkg_ver)
-        .where(pkg_ver.sdir == sdir.u8string())
+        .where(pkg_ver.sdir == to_string(sdir.u8string()))
         );
 }
 

@@ -58,7 +58,7 @@ ProgramVersionStorage::~ProgramVersionStorage()
     auto &jd = j["data"];
     for (auto &[p, v] : versions)
     {
-        auto s = normalize_path(p);
+        auto s = to_string(normalize_path(p));
         jd[s]["output"] = base64_encode(v.output);
         jd[s]["version"] = v.v.toString();
         jd[s]["lwt"] = file_time_type2time_t(v.t);

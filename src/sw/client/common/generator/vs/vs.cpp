@@ -131,7 +131,7 @@ static String uuid2string(const boost::uuids::uuid &u)
 
 static String get_current_program()
 {
-    return "\"" + normalize_path(path(boost::dll::program_location().wstring())) + "\"";
+    return "\"" + to_string(normalize_path(path(boost::dll::program_location().wstring()))) + "\"";
 }
 
 static String make_backslashes(String s)
@@ -368,7 +368,7 @@ void VSGenerator::generate(const SwBuild &b)
             r.name = "generate.stamp";
             r.message = "Checking Build System";
             r.command += "setlocal\r\n";
-            r.command += "cd \"" + normalize_path_windows(fs::current_path()) + "\"\r\n";
+            r.command += "cd \"" + to_string(normalize_path_windows(fs::current_path())) + "\"\r\n";
             d.custom_rules_manual.push_back(r);
         }
 
@@ -403,12 +403,12 @@ void VSGenerator::generate(const SwBuild &b)
                 auto &d = p.getData(st);
 
                 String cmd;
-                cmd = "-d " + normalize_path(fs::current_path()) + " build -input-settings-pairs ";
+                cmd = "-d " + to_string(normalize_path(fs::current_path())) + " build -input-settings-pairs ";
                 for (auto &i : inputs)
                 {
                     for (auto &[_, f] : i.getInput().getInput().getSpecification().files.getData())
                     {
-                        cmd += "\"" + normalize_path(f.absolute_path) + "\" ";
+                        cmd += "\"" + to_string(normalize_path(f.absolute_path)) + "\" ";
                         cmd += fix_json(st.toString()) + " ";
                     }
                 }
@@ -653,7 +653,7 @@ void VSGenerator::generate(const SwBuild &b)
 
             //
             r.command += get_current_program() + " ";
-            r.command += "generate -check-stamp-list \"" + normalize_path(fn) + "\" ";
+            r.command += "generate -check-stamp-list \"" + to_string(normalize_path(fn)) + "\" ";
             r.command += "-input-settings-pairs ";
             for (auto &i : inputs)
             {
@@ -661,7 +661,7 @@ void VSGenerator::generate(const SwBuild &b)
                 {
                     for (auto &[_, f] : i.getInput().getInput().getSpecification().files.getData())
                     {
-                        r.command += "\"" + normalize_path(f.absolute_path) + "\" ";
+                        r.command += "\"" + to_string(normalize_path(f.absolute_path)) + "\" ";
                         r.command += fix_json(s.toString()) + " ";
                     }
                 }
@@ -673,10 +673,10 @@ void VSGenerator::generate(const SwBuild &b)
             uint64_t mtime = 0;
             for (auto &f : cfs)
             {
-                s += normalize_path(f) + "\n";
+                s += to_string(normalize_path(f)) + "\n";
 
                 if (!fs::exists(f))
-                    throw SW_RUNTIME_ERROR("Input file does not exist: " + normalize_path(s));
+                    throw SW_RUNTIME_ERROR("Input file does not exist: " + to_string(normalize_path(s)));
                 auto lwt = fs::last_write_time(f);
                 mtime ^= file_time_type2time_t(lwt);
             }
@@ -743,7 +743,7 @@ void VSGenerator::generate(const SwBuild &b)
 
             Strings args;
             args.push_back("-d");
-            args.push_back(normalize_path(fs::current_path()));
+            args.push_back(to_string(normalize_path(fs::current_path())));
             args.push_back("build");
             args.push_back("-input-settings-pairs");
             for (auto &[d, s] : deps)
@@ -752,12 +752,12 @@ void VSGenerator::generate(const SwBuild &b)
                 args.push_back(fix_json(s));
             }
             args.push_back("-ide-fast-path");
-            args.push_back(normalize_path(path(basefn) += ".deps"));
+            args.push_back(to_string(normalize_path(path(basefn) += ".deps")));
             args.push_back("-ide-copy-to-dir");
             if (st["name"])
-                args.push_back(normalize_path(b.getBuildDirectory() / "out" / st["name"].getValue()));
+                args.push_back(to_string(normalize_path(b.getBuildDirectory() / "out" / st["name"].getValue())));
             else
-                args.push_back(normalize_path(b.getBuildDirectory() / "out" / st.getHash()));
+                args.push_back(to_string(normalize_path(b.getBuildDirectory() / "out" / st.getHash())));
 
             String s;
             for (auto &a : args)
@@ -769,7 +769,7 @@ void VSGenerator::generate(const SwBuild &b)
             fs::remove(path(basefn) += ".deps", ec); // trigger updates
 
             BuildEvent be;
-            be.command = get_current_program() + " @" + normalize_path(rsp);
+            be.command = get_current_program() + " @" + to_string(normalize_path(rsp));
             d.pre_build_event = be;
         }
 
@@ -866,7 +866,7 @@ void Solution::emit(const VSGenerator &g) const
 
     //const auto compiler_name = boost::to_lower_copy(toString(b.solutions[0].Settings.Native.CompilerType));
     const String compiler_name = "msvc";
-    String fn = fs::current_path().filename().u8string() + "_";
+    String fn = to_string(fs::current_path().filename().u8string()) + "_";
     fn += compiler_name + "_" + g.getPathString().string() + "_" + g.vs_version.toString(1);
     fn += ".sln";
     auto visible_lnk_name = fn;
@@ -881,7 +881,7 @@ void Solution::emit(const VSGenerator &g) const
         bat += ":: turn on multiprocess compilation\n";
         bat += "set UseMultiToolTask=true\n";
         //bat += "set EnforceProcessCountAcrossBuilds=true\n";
-        bat += "start " + normalize_path_windows(g.sln_root / fn) + "\n";
+        bat += "start " + to_string(normalize_path_windows(g.sln_root / fn)) + "\n";
         // for preview cl versions run preview VS later
         // start "c:\Program Files (x86)\Microsoft Visual Studio\2019\Preview\Common7\IDE\devenv.exe" fn
         fn += ".bat"; // we now make a link to bat file
@@ -1050,7 +1050,7 @@ void Project::emitProject(const VSGenerator &g) const
             auto ft = get_flag_table(*c, false);
             if (ft.empty())
             {
-                LOG_TRACE(logger, "No flag table for file: " + normalize_path(f));
+                LOG_TRACE(logger, "No flag table for file: " + to_string(normalize_path(f)));
                 continue;
             }
 
@@ -1081,10 +1081,10 @@ void Project::emitProject(const VSGenerator &g) const
         ctx.beginBlockWithConfiguration("PropertyGroup", s);
         {
             if (d.main_command)
-                ctx.addBlock("OutDir", normalize_path_windows(d.main_command->outputs.begin()->parent_path()) + "\\");
+                ctx.addBlock("OutDir", to_string(normalize_path_windows(d.main_command->outputs.begin()->parent_path())) + "\\");
             //else
                 //ctx.addBlock("OutDir", normalize_path_windows(get_out_dir(g.sln_root, vs_project_dir, s)) + "\\");
-            ctx.addBlock("IntDir", normalize_path_windows(get_int_dir(s)) + "\\int\\");
+            ctx.addBlock("IntDir", to_string(normalize_path_windows(get_int_dir(s))) + "\\int\\");
             // full name of target, keep as is (it might have subdirs)
             ctx.addBlock("TargetName", name);
             //addBlock("TargetExt", ext);
@@ -1133,7 +1133,7 @@ void Project::emitProject(const VSGenerator &g) const
 
                 ctx.beginBlock("PreLinkEvent");
                 ctx.beginBlock("Command");
-                ctx.addText("call \"" + normalize_path_windows(cmd) + "\"");
+                ctx.addText("call \"" + to_string(normalize_path_windows(cmd)) + "\"");
                 ctx.endBlock(true);
                 ctx.endBlock();
             }
@@ -1295,18 +1295,18 @@ void Project::emitProject(const VSGenerator &g) const
 
                 ctx.beginBlockWithConfiguration("AdditionalInputs", s);
                 for (auto &o : c->inputs)
-                    ctx.addText(normalize_path_windows(o) + ";");
+                    ctx.addText(to_string(normalize_path_windows(o)) + ";");
                 ctx.endBlock(true);
 
                 ctx.beginBlockWithConfiguration("Outputs", s);
                 for (auto &o : c->outputs)
-                    ctx.addText(normalize_path_windows(o) + ";");
+                    ctx.addText(to_string(normalize_path_windows(o)) + ";");
                 if (c->always)
-                    ctx.addText(normalize_path_windows(int_dir / "rules" / "intentionally_missing.file") + ";");
+                    ctx.addText(to_string(normalize_path_windows(int_dir / "rules" / "intentionally_missing.file")) + ";");
                 ctx.endBlock(true);
 
                 ctx.beginBlockWithConfiguration("Command", s);
-                ctx.addText("call \"" + normalize_path_windows(cmd) + "\"");
+                ctx.addText("call \"" + to_string(normalize_path_windows(cmd)) + "\"");
                 ctx.endBlock(true);
 
                 ctx.beginBlockWithConfiguration("BuildInParallel", s);
@@ -1349,12 +1349,12 @@ void Project::emitProject(const VSGenerator &g) const
 
             ctx.beginBlockWithConfiguration("Outputs", s);
             for (auto &o : c.outputs)
-                ctx.addText(normalize_path_windows(o) + ";");
+                ctx.addText(to_string(normalize_path_windows(o)) + ";");
             ctx.endBlock(true);
 
             ctx.beginBlockWithConfiguration("AdditionalInputs", s);
             for (auto &o : c.inputs)
-                ctx.addText(normalize_path_windows(o) + ";");
+                ctx.addText(to_string(normalize_path_windows(o)) + ";");
             ctx.endBlock(true);
 
             ctx.beginBlockWithConfiguration("Command", s);
@@ -1397,7 +1397,7 @@ void Project::emitProject(const VSGenerator &g) const
         auto get_prog = [&g](const sw::UnresolvedPackage &u)
         {
             auto &target = **g.b->getContext().getPredefinedTargets().find(u)->second.begin();
-            auto fn = normalize_path_windows(target.as<sw::PredefinedProgram &>().getProgram().file);
+            auto fn = to_string(normalize_path_windows(target.as<sw::PredefinedProgram &>().getProgram().file));
             return fn;
         };
 
@@ -1474,7 +1474,7 @@ void Project::emitFilters(const VSGenerator &g) const
 {
     StringSet filters; // dirs
 
-    String sd = normalize_path(source_dir);
+    String sd = to_string(normalize_path(source_dir));
 
     FiltersEmitter ctx;
     ctx.beginProject();
@@ -1499,7 +1499,7 @@ void Project::emitFilters(const VSGenerator &g) const
         bool bdir_private = false;
         bool bdir_parent = false;
         size_t p = 0;
-        auto fd = normalize_path(f.p);
+        auto fd = to_string(normalize_path(f.p));
 
         auto calc = [&fd, &p, &d](auto &s)
         {
@@ -1520,9 +1520,9 @@ void Project::emitFilters(const VSGenerator &g) const
 
         for (const auto &d1 : data)
         {
-            String bd = normalize_path(d1.second.binary_dir);
-            String bdp = normalize_path(d1.second.binary_private_dir);
-            String bdparent = normalize_path(d1.second.binary_dir.parent_path());
+            String bd = to_string(normalize_path(d1.second.binary_dir));
+            String bdp = to_string(normalize_path(d1.second.binary_private_dir));
+            String bdparent = to_string(normalize_path(d1.second.binary_dir.parent_path()));
 
             calc(bdparent); // must go first, as shorter path
             calc(bd);
@@ -1620,7 +1620,7 @@ void Project::emitFilters(const VSGenerator &g) const
 
 String Project::get_flag_table(const primitives::Command &c, bool throw_on_error)
 {
-    auto ft = path(c.getProgram()).stem().u8string();
+    auto ft = to_string(path(c.getProgram()).stem().u8string());
     if (ft == "ml64")
         ft = "ml";
     else if (ft == "clang-cl")

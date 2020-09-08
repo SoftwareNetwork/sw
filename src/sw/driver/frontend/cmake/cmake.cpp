@@ -115,7 +115,7 @@ DEFINE_STATIC_CMAKE_COMMAND(sw_cmIncludeCommand)
         return cmIncludeCommand(args, status);
 
     // filter out
-    if (overridden_includes.find(i.stem().u8string()) != overridden_includes.end())
+    if (overridden_includes.find(i.stem().string()) != overridden_includes.end())
         return true;
 
     // swallow errors
@@ -237,11 +237,11 @@ void CmakeTargetEntryPoint::init() const
     };
 
     cm = std::make_unique<cmake>(cmake::RoleProject, cmState::Mode::Project);
-    cm->SetHomeDirectory(normalize_path(rootfn.parent_path()));
+    cm->SetHomeDirectory(to_string(normalize_path(rootfn.parent_path())));
     auto bdir = rootfn.parent_path() / ".sw" / "cmake";
-    cm->SetHomeOutputDirectory(normalize_path(bdir));
+    cm->SetHomeOutputDirectory(to_string(normalize_path(bdir)));
     // set install dir, some packages require that
-    cm->AddCacheEntry("CMAKE_INSTALL_PREFIX", normalize_path(bdir / "install").c_str(), "", cmStateEnums::STRING);
+    cm->AddCacheEntry("CMAKE_INSTALL_PREFIX", to_string(normalize_path(bdir / "install")).c_str(), "", cmStateEnums::STRING);
 
     override_command("include", sw_cmIncludeCommand);
     reset_command("find_package");
@@ -270,7 +270,7 @@ void CmakeTargetEntryPoint::init() const
     cmep = (sw::driver::cpp::CmakeTargetEntryPoint *)this;
     auto r = cm->Configure();
     if (r < 0)
-        throw SW_RUNTIME_ERROR("Cannot parse " + normalize_path(rootfn));
+        throw SW_RUNTIME_ERROR("Cannot parse " + to_string(normalize_path(rootfn)));
 }
 
 std::vector<ITargetPtr> CmakeTargetEntryPoint::loadPackages(SwBuild &mb, const TargetSettings &ts, const PackageIdSet &pkgs, const PackagePath &prefix) const

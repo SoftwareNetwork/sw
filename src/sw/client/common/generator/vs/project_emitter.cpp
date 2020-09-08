@@ -319,7 +319,7 @@ void ProjectEmitter::addPropertySheets(const Project &p)
 VSFileType ProjectEmitter::beginFileBlock(const path &p)
 {
     auto t = get_vs_file_type_by_ext(p);
-    beginBlock(toString(t), { { "Include", p.u8string() } });
+    beginBlock(toString(t), { { "Include", to_string(p.u8string()) } });
     return t;
 }
 

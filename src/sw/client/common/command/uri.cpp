@@ -143,7 +143,7 @@ F(upload)
     sw::Version new_version(swctx.getOptions().options_uri.uri_args[2]);
 
     String url = "https://raw.githubusercontent.com/SoftwareNetwork/specifications/master/";
-    url += normalize_path(pkg.getHashPath() / "sw.cpp");
+    url += to_string(normalize_path(pkg.getHashPath() / "sw.cpp"));
     auto fn = sw::support::get_temp_filename("uploads") / "sw.cpp";
     auto spec_data = download_file(url);
     boost::replace_all(spec_data, pkg.getVersion().toString(), new_version.toString());

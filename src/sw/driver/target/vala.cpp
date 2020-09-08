@@ -42,7 +42,7 @@ void ValaBase::init()
         if (t.getType() != TargetType::NativeExecutable)
         {
             t.Interface.CustomTargetOptions[VALA_OPTIONS_NAME]
-                .push_back(normalize_path(t.BinaryDir.parent_path() / "obj" / t.getPackage().toString() += ".vapi"));
+                .push_back(to_string(normalize_path(t.BinaryDir.parent_path() / "obj" / t.getPackage().toString() += ".vapi")));
             t.Interface.IncludeDirectories.push_back(t.BinaryDir.parent_path() / "obj");
         }
 

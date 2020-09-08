@@ -891,7 +891,7 @@ void NativeCompiledTarget::addPackageDefinitions(bool defs)
         a["PACKAGE_YEAR"] = std::to_string(1900 + t.tm_year); // custom
         a["PACKAGE_COPYRIGHT_YEAR"] = std::to_string(1900 + t.tm_year);
 
-        a["PACKAGE_ROOT_DIR"] = q + normalize_path(getPackage().getPath().is_loc() ? RootDirectory : getPackage().getDirSrc()) + q;
+        a["PACKAGE_ROOT_DIR"] = q + to_string(normalize_path(getPackage().getPath().is_loc() ? RootDirectory : getPackage().getDirSrc())) + q;
         a["PACKAGE_NAME_WITHOUT_OWNER"] = q/* + getPackage().getPath().slice(2).toString()*/ + q;
         a["PACKAGE_NAME_CLEAN"] = q + (getPackage().getPath().is_loc() ? getPackage().getPath().slice(2).toString() : getPackage().getPath().toString()) + q;
 
@@ -1128,7 +1128,7 @@ LinkLibrariesType NativeCompiledTarget::gatherLinkLibraries() const
         }))
         {
             //LOG_TRACE(logger, "Cannot resolve library: " << l);
-            throw SW_RUNTIME_ERROR(getPackage().toString() + ": Cannot resolve library: " + normalize_path(l.l));
+            throw SW_RUNTIME_ERROR(getPackage().toString() + ": Cannot resolve library: " + to_string(normalize_path(l.l)));
         }
 
         //if (!getBuildSettings().TargetOS.is(OSType::Windows))
@@ -1175,7 +1175,7 @@ void NativeCompiledTarget::createPrecompiledHeader()
         if (f.string()[0] == '<' || f.string()[0] == '\"')
             h += "#include " + f.string() + "\n";
         else
-            h += "#include \"" + normalize_path(f) + "\"\n";
+            h += "#include \"" + to_string(normalize_path(f)) + "\"\n";
     }
     pch.header = pch.get_base_pch_path() += ".h";
     {
@@ -1187,7 +1187,7 @@ void NativeCompiledTarget::createPrecompiledHeader()
     pch.source = pch.get_base_pch_path() += ".cpp"; // msvc
     {
         ScopedFileLock lk(pch.source);
-        write_file_if_different(pch.source, "#include \"" + normalize_path(pch.header) + "\"");
+        write_file_if_different(pch.source, "#include \"" + to_string(normalize_path(pch.header)) + "\"");
     }
     File(pch.source, getFs()).setGenerated(true); // prevents resolving issues
 
@@ -1219,7 +1219,7 @@ void NativeCompiledTarget::createPrecompiledHeader()
     auto setup_create_vc = [this, &sf](auto &c)
     {
         if (getMainBuild().getSettings()["verbose"] == "true")
-            getMergeObject()[pch.source].fancy_name += " (" + normalize_path(pch.source) + ")";
+            getMergeObject()[pch.source].fancy_name += " (" + to_string(normalize_path(pch.source)) + ")";
 
         sf->setOutputFile(pch.obj);
 
@@ -1235,7 +1235,7 @@ void NativeCompiledTarget::createPrecompiledHeader()
         sf->output = sf->compiler->getOutputFile();
 
         if (getMainBuild().getSettings()["verbose"] == "true")
-            getMergeObject()[pch.source].fancy_name += " (" + normalize_path(pch.header) + ")";
+            getMergeObject()[pch.source].fancy_name += " (" + to_string(normalize_path(pch.header)) + ")";
 
         c->Language = "c++-header"; // FIXME: also c-header sometimes
     };
@@ -1382,9 +1382,9 @@ Commands NativeCompiledTarget::getCommands1() const
 
     // this source files
     {
-        auto sd = normalize_path(SourceDir);
-        auto bd = normalize_path(BinaryDir);
-        auto bdp = normalize_path(BinaryPrivateDir);
+        auto sd = to_string(normalize_path(SourceDir));
+        auto bd = to_string(normalize_path(BinaryDir));
+        auto bdp = to_string(normalize_path(BinaryPrivateDir));
 
         auto prepare_command = [this, &cmds, &sd, &bd, &bdp](auto f, auto c)
         {
@@ -1393,7 +1393,7 @@ Commands NativeCompiledTarget::getCommands1() const
             // set fancy name
             if (!IsSwConfig && !(getMainBuild().getSettings()["do_not_mangle_object_names"] == "true"))
             {
-                auto p = normalize_path(f->file);
+                auto p = to_string(normalize_path(f->file));
                 if (bdp.size() < p.size() && p.find(bdp) == 0)
                 {
                     auto n = p.substr(bdp.size());
@@ -1622,7 +1622,7 @@ void NativeCompiledTarget::findSources()
             }
         }
         if (bfn.empty())
-            throw SW_RUNTIME_ERROR("No bazel file found in SourceDir: " + normalize_path(SourceDir));
+            throw SW_RUNTIME_ERROR("No bazel file found in SourceDir: " + to_string(normalize_path(SourceDir)));
 
         auto b = read_file(bfn);
         auto f = bazel::parse(b);
@@ -2005,7 +2005,7 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
             s["import_library"].setPathValue(getContext().getLocalStorage(), getImportLibrary());
         s["output_file"].setPathValue(getContext().getLocalStorage(), getOutputFile());
         if (!OutputDir.empty())
-            s["output_dir"] = normalize_path(OutputDir);
+            s["output_dir"] = to_string(normalize_path(OutputDir));
     }
 
     // remove deps section?
@@ -2234,7 +2234,7 @@ void NativeCompiledTarget::prepare_pass1()
         if (getCompilerType() == CompilerType::GNU)
         {
             CompileOptions.push_back("-ffile-prefix-map="
-                + normalize_path(getContext().getLocalStorage().storage_dir)
+                + to_string(normalize_path(getContext().getLocalStorage().storage_dir))
                 + "="
                 // on windows we use the same path, but the root disk is also must be provided
                 // not here, but in general
@@ -3223,7 +3223,7 @@ void NativeCompiledTarget::prepare_pass5()
 
             // asm won't work here right now
             data &d = cext ? c : cpp;
-            d.s += "#include \"" + normalize_path(f->file) + "\"\n";
+            d.s += "#include \"" + to_string(normalize_path(f->file)) + "\"\n";
             *this -= f->file;
             if (++d.idx % UnityBuildBatchSize == 0)
                 writef(d);
@@ -3358,11 +3358,11 @@ void NativeCompiledTarget::prepare_pass5()
                 if (getMainBuild().getSettings()["do_not_mangle_object_names"] == "true")
                     return;
 
-                auto sd = normalize_path(t.SourceDir);
-                auto bd = normalize_path(t.BinaryDir);
-                auto bdp = normalize_path(t.BinaryPrivateDir);
+                auto sd = to_string(normalize_path(t.SourceDir));
+                auto bd = to_string(normalize_path(t.BinaryDir));
+                auto bdp = to_string(normalize_path(t.BinaryPrivateDir));
 
-                auto p = normalize_path(f->file);
+                auto p = to_string(normalize_path(f->file));
                 if (bdp.size() < p.size() && p.find(bdp) == 0)
                 {
                     auto n = p.substr(bdp.size());
@@ -3801,7 +3801,7 @@ void NativeCompiledTarget::prepare_pass7()
             rpath_var += "-rpath,";
 
             for (auto &d : dirs)
-                getMergeObject().LinkOptions.push_back(rpath_var + normalize_path(d));
+                getMergeObject().LinkOptions.push_back(rpath_var + to_string(normalize_path(d)));
 
             // rpaths
             if (getType() == TargetType::NativeExecutable)
@@ -3869,7 +3869,7 @@ void NativeCompiledTarget::processCircular(Files &obj)
     // protect output file renaming
     static std::mutex m;
 
-    auto name = Linker->getOutputFile().filename().u8string();
+    auto name = to_string(Linker->getOutputFile().filename().u8string());
     if (createWindowsRpath())
     {
         Files dlls;
@@ -3933,7 +3933,7 @@ void NativeCompiledTarget::processCircular(Files &obj)
             out = Linker->getOutputFile();
             Linker->setOutputFile(path(out) += ".1");
         }
-        out += ".rp" + out.extension().u8string();
+        out += ".rp" + to_string(out.extension().u8string());
 
         auto c = addCommand(SW_VISIBLE_BUILTIN_FUNCTION(replace_dll_import));
         c << cmd::in(Linker->getOutputFile());
@@ -3970,7 +3970,7 @@ void NativeCompiledTarget::processCircular(Files &obj)
 
     //
     auto exp = Librarian->getImportLibrary();
-    exp = exp.parent_path() / (exp.stem().u8string() + ".exp");
+    exp = exp.parent_path() / (exp.stem() += ".exp");
     Librarian->merge(getMergeObject());
     Librarian->prepareCommand(*this)->addOutput(exp);
     obj.insert(exp);

@@ -55,14 +55,14 @@ void SpecificationFile::setContents(const String &s)
 void SpecificationFiles::addFile(const path &relative_path, const path &abspath, const std::optional<String> &contents)
 {
     if (relative_path.is_absolute())
-        throw SW_RUNTIME_ERROR("Not a relative path: " + normalize_path(relative_path));
+        throw SW_RUNTIME_ERROR("Not a relative path: " + to_string(relative_path));
     data[relative_path] = { abspath, contents };
 }
 
 void SpecificationFiles::addFile(const path &relative_path, const String &contents)
 {
     if (relative_path.is_absolute())
-        throw SW_RUNTIME_ERROR("Not a relative path: " + normalize_path(relative_path));
+        throw SW_RUNTIME_ERROR("Not a relative path: " + to_string(relative_path));
     data[relative_path] = { {}, contents };
 }
 

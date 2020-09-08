@@ -27,7 +27,7 @@ size_t InputDatabase::getFileHash(const path &p) const
 
     bool update_db = false;
     auto lwt = fs::last_write_time(p);
-    auto np = normalize_path(p);
+    auto np = to_string(normalize_path(p));
 
     auto q = (*db)(
         select(file.hash, file.lastWriteTime)

@@ -229,7 +229,7 @@ struct SpecFileInput : Input, DriverInput
         }
         case FrontendType::Cargo:
         {
-            auto root = toml::parse(normalize_path(fn));
+            auto root = toml::parse(to_string(normalize_path(fn)));
             auto bf = [root](Build &b) mutable
             {
                 std::string name = toml::find<std::string>(root["package"], "name");
@@ -311,7 +311,7 @@ struct InlineSpecInput : Input, DriverInput
 
         auto bf = [this, p](Build &b) mutable
         {
-            auto tgts = frontend::cppan::cppan_load(b, root, p.stem().u8string());
+            auto tgts = frontend::cppan::cppan_load(b, root, to_string(p.stem().u8string()));
             if (tgts.size() == 1)
                 *tgts[0] += p;
         };

@@ -282,7 +282,7 @@ void SourceFileStorage::remove_full(const path &file)
     if (check_absolute(F, true/*!target.isLocal()*/))
         removeFile(F);
     else if (target.isLocal())
-        LOG_WARN(logger, "excluded file is missing: " + normalize_path(file));
+        LOG_WARN(logger, "excluded file is missing: " + to_string(normalize_path(file)));
 }
 
 void SourceFileStorage::add1(const FileRegex &r)
@@ -305,7 +305,7 @@ void SourceFileStorage::op(const FileRegex &r, Op func)
     auto dir = r.dir;
     if (!dir.is_absolute())
         dir = target.SourceDir / dir;
-    auto root_s = normalize_path(dir);
+    auto root_s = to_string(normalize_path(dir));
     if (root_s.back() == '/')
         root_s.resize(root_s.size() - 1);
     auto &files = glob_cache[dir][r.recursive];
@@ -315,7 +315,7 @@ void SourceFileStorage::op(const FileRegex &r, Op func)
     bool matches = false;
     for (auto &f : files)
     {
-        auto s = normalize_path(f);
+        auto s = to_string(normalize_path(f));
         if (s.size() < root_s.size() + 1)
             continue; // file is in bdir or somthing like that
         if (s.find(root_s) != 0)
@@ -360,7 +360,7 @@ SourceFile &SourceFileStorage::operator[](path F)
     if (!f)
     {
         // here we may let other fibers progress until language is registered
-        throw SW_RUNTIME_ERROR(target.getPackage().toString() + ": Empty source file: " + F.u8string());
+        throw SW_RUNTIME_ERROR(target.getPackage().toString() + ": Empty source file: " + to_string(F.u8string()));
     }
     return *f;
 }
@@ -394,7 +394,7 @@ bool SourceFileStorage::check_absolute(path &F, bool ignore_errors, bool *source
                 {
                     if (ignore_errors)
                         return false;
-                    String err = target.getPackage().toString() + ": Cannot find source file: " + (target.SourceDir / F).u8string();
+                    String err = target.getPackage().toString() + ": Cannot find source file: " + to_string((target.SourceDir / F).u8string());
                     if (target.getMainBuild().getSettings()["ignore_source_files_errors"] == "true")
                     {
                         LOG_INFO(logger, err);
@@ -415,7 +415,7 @@ bool SourceFileStorage::check_absolute(path &F, bool ignore_errors, bool *source
             {
                 if (ignore_errors)
                     return false;
-                String err = target.getPackage().toString() + ": Cannot find source file: " + F.u8string();
+                String err = target.getPackage().toString() + ": Cannot find source file: " + to_string(F.u8string());
                 if (target.getMainBuild().getSettings()["ignore_source_files_errors"] == "true")
                 {
                     LOG_INFO(logger, err);
@@ -434,7 +434,7 @@ bool SourceFileStorage::check_absolute(path &F, bool ignore_errors, bool *source
             else
             {
                 // this is an error!
-                throw SW_RUNTIME_ERROR(normalize_path(F) + " is not under src or bin dir");
+                throw SW_RUNTIME_ERROR(to_string(normalize_path(F)) + " is not under src or bin dir");
 
                 // other path
                 //LOG_DEBUG(logger, F << " is not under src or bin dir");
@@ -486,14 +486,14 @@ SourceFileStorage::enumerate_files(const FileRegex &r, bool allow_empty) const
     auto dir = r.dir;
     if (!dir.is_absolute())
         dir = target.SourceDir / dir;
-    auto root_s = normalize_path(dir);
+    auto root_s = to_string(normalize_path(dir));
     if (root_s.back() == '/')
         root_s.resize(root_s.size() - 1);
 
     std::unordered_map<path, std::shared_ptr<SourceFile>> files;
     for (auto &[p, f] : *this)
     {
-        auto s = normalize_path(p);
+        auto s = to_string(normalize_path(p));
         if (s.size() < root_s.size() + 1)
             continue; // file is in bdir or something like that
         if (s.find(root_s) != 0)
@@ -533,7 +533,7 @@ path SourceFile::getObjectFilename(const Target &t, const path &p)
     // so files must be concatenated with its target name
     // ^^^ wrong?
     // target push files, they'll use local definitions etc.
-    return fs::u8path(p.filename().u8string() + "." + sha256(/*t.pkg.toString() + */p.u8string()).substr(0, 8));
+    return to_string(p.filename().u8string()) + "." + sha256(/*t.pkg.toString() + */to_string(p.u8string())).substr(0, 8);
 }
 
 bool SourceFile::isActive() const

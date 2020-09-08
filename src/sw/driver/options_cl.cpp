@@ -43,8 +43,8 @@ DECLARE_OPTION_SPECIALIZATION(path)
     if (create_directory)
         c->output_dirs.insert(value().parent_path());
     if (separate_prefix)
-        return { getCommandLineFlag(), normalize_path(value()) };
-    return { getCommandLineFlag() + normalize_path(value()) };
+        return { getCommandLineFlag(), to_string(normalize_path(value())) };
+    return { getCommandLineFlag() + to_string(normalize_path(value())) };
 }
 
 DECLARE_OPTION_SPECIALIZATION(FilesOrdered)
@@ -63,13 +63,13 @@ DECLARE_OPTION_SPECIALIZATION(FilesOrdered)
             if (separate_prefix)
             {
                 cmds.push_back(getCommandLineFlag());
-                cmds.push_back(normalize_path(v));
+                cmds.push_back(to_string(normalize_path(v)));
             }
             else
-                cmds.push_back(getCommandLineFlag() + normalize_path(v));
+                cmds.push_back(getCommandLineFlag() + to_string(normalize_path(v)));
         }
         else
-            cmds.push_back(normalize_path(v));
+            cmds.push_back(to_string(normalize_path(v)));
     }
     return cmds;
 }
@@ -90,13 +90,13 @@ DECLARE_OPTION_SPECIALIZATION(Files)
             if (separate_prefix)
             {
                 cmds.push_back(getCommandLineFlag());
-                cmds.push_back(normalize_path(v));
+                cmds.push_back(to_string(normalize_path(v)));
             }
             else
-                cmds.push_back(getCommandLineFlag() + normalize_path(v));
+                cmds.push_back(getCommandLineFlag() + to_string(normalize_path(v)));
         }
         else
-            cmds.push_back(normalize_path(v));
+            cmds.push_back(to_string(normalize_path(v)));
     }
     return cmds;
 }
@@ -120,7 +120,7 @@ DECLARE_OPTION_SPECIALIZATION(LinkLibrariesType)
             {
                 // https://www.manpagez.com/man/1/ld/Xcode-5.0.php
                 // must provide full path of input archive
-                cmds.push_back("-Wl,-force_load," + normalize_path(v.l));
+                cmds.push_back("-Wl,-force_load," + to_string(normalize_path(v.l)));
                 continue;
             }
             if (v.whole_archive && v.style == v.GNU)
@@ -129,20 +129,20 @@ DECLARE_OPTION_SPECIALIZATION(LinkLibrariesType)
             {
                 if (!static_cond)
                     cmds.push_back(getCommandLineFlag());
-                cmds.push_back((v.whole_archive && v.style == v.MSVC ? "/WHOLEARCHIVE:" : "") + normalize_path(v.l));
+                cmds.push_back((v.whole_archive && v.style == v.MSVC ? "/WHOLEARCHIVE:" : "") + to_string(normalize_path(v.l)));
             }
             else
             {
                 if (!static_cond)
-                    cmds.push_back((v.whole_archive && v.style == v.MSVC ? "/WHOLEARCHIVE:" : "") + getCommandLineFlag() + normalize_path(v.l));
+                    cmds.push_back((v.whole_archive && v.style == v.MSVC ? "/WHOLEARCHIVE:" : "") + getCommandLineFlag() + to_string(normalize_path(v.l)));
                 else
-                    cmds.push_back((v.whole_archive && v.style == v.MSVC ? "/WHOLEARCHIVE:" : "") + normalize_path(v.l));
+                    cmds.push_back((v.whole_archive && v.style == v.MSVC ? "/WHOLEARCHIVE:" : "") + to_string(normalize_path(v.l)));
             }
             if (v.whole_archive && v.style == v.GNU)
                 cmds.push_back("-Wl,--no-whole-archive");
         }
         else
-            cmds.push_back((v.whole_archive && v.style == v.MSVC ? "/WHOLEARCHIVE:" : "") + normalize_path(v.l));
+            cmds.push_back((v.whole_archive && v.style == v.MSVC ? "/WHOLEARCHIVE:" : "") + to_string(normalize_path(v.l)));
     }
     return cmds;
 }

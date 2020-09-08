@@ -414,7 +414,7 @@ void CheckSet::performChecks(const SwBuild &mb, const TargetSettings &ts)
             std::error_code ec;
             fs::remove_all(cc_dir, ec);
             if (ec)
-                LOG_WARN(logger, "Cannot remove checks dir: " + cc_dir.u8string());
+                LOG_WARN(logger, "Cannot remove checks dir: " + to_string(cc_dir.u8string()));
             fs::create_directories(cc_dir, ec);
 
             for (auto &[h, c] : checks)
@@ -439,7 +439,7 @@ void CheckSet::performChecks(const SwBuild &mb, const TargetSettings &ts)
 
             // save executables
             auto os = BuildSettings(ts).TargetOS;
-            auto mfn = (path(fn) += MANUAL_CHECKS).filename().u8string();
+            auto mfn = to_string((path(fn) += MANUAL_CHECKS).filename().u8string());
 
             auto bat = os.getShellType() == ShellType::Batch;
 
@@ -534,7 +534,7 @@ void CheckSet::performChecks(const SwBuild &mb, const TargetSettings &ts)
                 else
                 {
                     std::cout << "Waiting for completing cc checks.\n";
-                    std::cout << "Run '" << normalize_path(out) << "' and press and key to continue...\n";
+                    std::cout << "Run '" << to_string(normalize_path(out)) << "' and press and key to continue...\n";
                     getchar();
                 }
                 cs.load_manual(fn);
@@ -549,10 +549,10 @@ void CheckSet::performChecks(const SwBuild &mb, const TargetSettings &ts)
             }
 
             throw SW_RUNTIME_ERROR("Some manual checks are missing, please set them in order to continue. "
-                "Manual checks file: " + (path(fn) += MANUAL_CHECKS).u8string() + ". "
+                "Manual checks file: " + to_string((path(fn) += MANUAL_CHECKS).u8string()) + ". "
                 "You also may copy produced binaries to target platform and run them there using prepared script. "
                 "Results will be gathered into required file. "
-                "Binaries directory: " + cc_dir.u8string()
+                "Binaries directory: " + to_string(cc_dir.u8string())
             );
         }
 
@@ -759,7 +759,7 @@ TargetSettings Check::getSettings() const
     auto d = getChecksDir(check_set->checker.swbld.getBuildDirectory());
     auto up = getUniqueName();
     d /= up;
-    ss["output_dir"] = normalize_path(d);
+    ss["output_dir"] = to_string(normalize_path(d));
     ss["output_dir"].serializable(false);
 
     return ss;

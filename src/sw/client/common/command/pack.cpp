@@ -16,18 +16,18 @@ struct ChildPathExtractor
 
     ChildPathExtractor(const path &in_root)
     {
-        root = normalize_path(in_root);
+        root = to_string(normalize_path(in_root));
     }
 
     bool isUnderRoot(const path &p) const
     {
-        auto s = normalize_path(p);
+        auto s = to_string(normalize_path(p));
         return s.find(root) == 0;
     }
 
     path getRelativePath(const path &p) const
     {
-        auto s = normalize_path(p);
+        auto s = to_string(normalize_path(p));
         if (s.find(root) == 0)
             return s.substr(root.size() + 1); // plus slash
         throw SW_RUNTIME_ERROR("Not a relative path: " + s + ", root = " + root);

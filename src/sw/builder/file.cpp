@@ -193,7 +193,7 @@ void File::setGenerator(const std::shared_ptr<builder::Command> &g, bool ignore_
         gold->getHash() != g->getHash()))
     {
         String err;
-        err += "Setting generator twice on file: " + file.u8string() + "\n";
+        err += "Setting generator twice on file: " + to_string(file) + "\n";
         if (gold)
         {
             err += "first generator:\n " + gold->print() + "\n";

@@ -109,7 +109,7 @@ void ProtobufApi::addVersion(const PackagePath &prefix, const PackageDescription
     for (auto &[relpath, sf] : spec_files.getData())
     {
         auto f = request.mutable_package_data()->mutable_specification()->mutable_files()->Add();
-        f->set_relative_path(normalize_path(relpath));
+        f->set_relative_path(to_string(normalize_path(relpath)));
         f->set_contents(sf.getContents());
     }
     nlohmann::json jm;

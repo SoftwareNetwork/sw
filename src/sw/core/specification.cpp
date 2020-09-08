@@ -58,9 +58,9 @@ bool Specification::isOutdated(const fs::file_time_type &t) const
 String Specification::getName() const
 {
     if (!dir.empty())
-        return normalize_path(dir);
+        return to_string(normalize_path(dir));
     for (auto &[_, f] : this->files.getData())
-        return normalize_path(f.absolute_path);
+        return to_string(normalize_path(f.absolute_path));
     return "Empty specification";
 }
 

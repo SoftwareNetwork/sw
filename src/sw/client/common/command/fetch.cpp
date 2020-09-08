@@ -175,7 +175,7 @@ std::pair<sw::support::SourceDirMap, std::vector<sw::BuildInput>> SwClientContex
     {
         for (auto &[h, d] : srcs)
         {
-            ts["driver"]["source-dir-for-source"][h] = normalize_path(d.getRequestedDirectory());
+            ts["driver"]["source-dir-for-source"][h] = to_string(normalize_path(d.getRequestedDirectory()));
             if (!getOptions().options_upload.source.empty())
             {
                 // TODO: if version is empty, load it from config

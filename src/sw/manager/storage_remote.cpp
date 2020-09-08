@@ -178,8 +178,8 @@ void RemoteStorage::load() const
     // but we don't do this
     Strings data_tables;
     sqlite3 *db2;
-    if (sqlite3_open_v2(getPackagesDatabase().fn.u8string().c_str(), &db2, SQLITE_OPEN_READONLY, 0) != SQLITE_OK)
-        throw SW_RUNTIME_ERROR("cannot open db: " + getPackagesDatabase().fn.u8string());
+    if (sqlite3_open_v2((const char *)getPackagesDatabase().fn.u8string().c_str(), &db2, SQLITE_OPEN_READONLY, 0) != SQLITE_OK)
+        throw SW_RUNTIME_ERROR("cannot open db: " + to_string(getPackagesDatabase().fn));
     int rc = sqlite3_exec(db2, "select name from sqlite_master as tables where type='table' and name not like '/_%' ESCAPE '/';",
         [](void *o, int, char **cols, char **)
         {
@@ -189,7 +189,7 @@ void RemoteStorage::load() const
         }, &data_tables, 0);
     sqlite3_close(db2);
     if (rc != SQLITE_OK)
-        throw SW_RUNTIME_ERROR("cannot query db for tables: " + getPackagesDatabase().fn.u8string());
+        throw SW_RUNTIME_ERROR("cannot query db for tables: " + to_string(getPackagesDatabase().fn));
 
     getPackagesDatabase().db->execute("PRAGMA foreign_keys = OFF;");
     getPackagesDatabase().db->execute("BEGIN;");

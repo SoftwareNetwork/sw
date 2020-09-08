@@ -42,14 +42,14 @@ static String detectMsvcPrefix(builder::detail::ResolvableCommand c, const path 
     auto basefn = support::get_temp_filename("cliprefix");
     auto fn = path(basefn) += ".c";
     auto hfn = path(basefn) += ".h";
-    String contents = "#include \"" + normalize_path(hfn) + "\"\r\nint dummy;";
+    String contents = "#include \"" + to_string(normalize_path(hfn)) + "\"\r\nint dummy;";
     auto obj = path(fn) += ".obj";
     write_file(fn, contents);
     write_file(hfn, "");
     c.push_back("/showIncludes");
     c.push_back("/c");
     c.push_back(fn);
-    c.push_back("/Fo" + normalize_path_windows(obj));
+    c.push_back("/Fo" + to_string(normalize_path_windows(obj)));
     c.push_back("/I");
     c.push_back(idir);
     std::error_code ec;
@@ -127,9 +127,9 @@ void log_msg_detect_target(const String &m)
 PredefinedProgramTarget &addProgram(DETECT_ARGS, const PackageId &id, const TargetSettings &ts, const std::shared_ptr<Program> &p)
 {
     auto &t = addTarget<PredefinedProgramTarget>(DETECT_ARGS_PASS, id, ts);
-    t.public_ts["output_file"] = normalize_path(p->file);
+    t.public_ts["output_file"] = to_string(normalize_path(p->file));
     t.setProgram(p);
-    LOG_TRACE(logger, "Detected program: " + p->file.u8string());
+    LOG_TRACE(logger, "Detected program: " + to_string(p->file.u8string()));
     return t;
 }
 
@@ -207,7 +207,7 @@ static void detectMsvcCommon(const path &compiler, const Version &in_v,
             if (s.getHostOs().Arch == target_arch)
             {
                 auto &t = addTarget<PredefinedTargetWithRule>(DETECT_ARGS_PASS, PackageId{"msvc", v}, ts);
-                t.public_ts["output_file"] = normalize_path(p->file);
+                t.public_ts["output_file"] = to_string(normalize_path(p->file));
             }
         }
         else
@@ -527,7 +527,7 @@ static void detectWindowsClang(DETECT_ARGS)
                 // returns path to /bin dir
                 path dir = m[1].str();
                 dir = dir.parent_path() / "lib/clang" / v.toString() / "include";
-                auto s = normalize_path(dir);
+                auto s = to_string(normalize_path(dir));
                 auto arg = std::make_unique<primitives::command::SimplePositionalArgument>("-I" + s);
                 arg->getPosition().push_back(150);
                 c2->push_back(std::move(arg));
@@ -716,7 +716,7 @@ static void detectIntelCompilers(DETECT_ARGS)
             add_prog_from_path(bin / "xilib", "com.intel.compiler.lib");
 
             p = add_prog_from_path(bin / "xilink", "com.intel.compiler.link");
-            p->getCommand()->push_back("-LIBPATH:" + (root / "compiler" / "lib" / arch).u8string());
+            p->getCommand()->push_back("-LIBPATH:" + to_string((root / "compiler" / "lib" / arch).u8string()));
             p->getCommand()->push_back("libirc.lib");
         }
 

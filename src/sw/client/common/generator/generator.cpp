@@ -412,10 +412,10 @@ private:
         path p2 = normalize_path_windows(p);
         if (!GetShortPathName(p2.wstring().c_str(), buf.data(), buf.size()))
             //throw SW_RUNTIME_ERROR("GetShortPathName failed for path: " + p.u8string());
-            return normalize_path(p);
-        return normalize_path(to_string(buf));
+            return to_string(normalize_path(p));
+        return to_string(normalize_path(to_string(buf)));
 #else
-        return normalize_path(p);
+        return to_string(normalize_path(p));
 #endif
     }
 
@@ -498,7 +498,7 @@ private:
         }
         else
         {
-            addText("@" + rsp_file.u8string() + " ");
+            addText("@" + to_string(rsp_file.u8string()) + " ");
         }
 
         // redirections
@@ -515,10 +515,10 @@ private:
         if (prog.find("cl.exe") != prog.npos)
             addLine("deps = msvc");
         else if (has_mmd)
-            addLine("depfile = " + (c.outputs.begin()->parent_path() / (c.outputs.begin()->stem().string() + ".d")).u8string());
+            addLine("depfile = " + to_string((c.outputs.begin()->parent_path() / (c.outputs.begin()->stem().string() + ".d")).u8string()));
         if (rsp)
         {
-            addLine("rspfile = " + rsp_file.u8string());
+            addLine("rspfile = " + to_string(rsp_file.u8string()));
             addLine("rspfile_content = ");
             int i = 0;
             for (auto &a : c.arguments)
@@ -582,12 +582,12 @@ struct MakeEmitter : primitives::Emitter
 
     void addKeyValue(const String &key, const path &value)
     {
-        addKeyValue(key, "\"" + normalize_path(value) + "\"");
+        addKeyValue(key, "\"" + to_string(normalize_path(value)) + "\"");
     }
 
     void include(const path &fn)
     {
-        addLine("include " + normalize_path(fn));
+        addLine("include " + to_string(normalize_path(fn)));
     }
 
     void addComment(const String &s)
@@ -656,7 +656,7 @@ struct MakeEmitter : primitives::Emitter
         String s;
         s += "@";
         if (!c.working_directory.empty())
-            s += "cd \"" + normalize_path(c.working_directory) + "\" && ";
+            s += "cd \"" + to_string(normalize_path(c.working_directory)) + "\" && ";
 
         for (auto &[k, v] : c.environment)
         {
@@ -686,14 +686,14 @@ struct MakeEmitter : primitives::Emitter
             s.resize(s.size() - 1);
         }
         else
-            s += "@" + normalize_path(rsp);
+            s += "@" + to_string(normalize_path(rsp));
 
         if (!c.in.file.empty())
-            s += " < " + normalize_path(c.in.file);
+            s += " < " + to_string(normalize_path(c.in.file));
         if (!c.out.file.empty())
-            s += " > " + normalize_path(c.out.file);
+            s += " > " + to_string(normalize_path(c.out.file));
         if (!c.err.file.empty())
-            s += " 2> " + normalize_path(c.err.file);
+            s += " 2> " + to_string(normalize_path(c.err.file));
 
         // end of command
         commands.push_back(s);
@@ -738,7 +738,7 @@ struct MakeEmitter : primitives::Emitter
         String s;
         if (quotes)
             s += "\"";
-        s += normalize_path(p);
+        s += to_string(normalize_path(p));
         if (!quotes)
             boost::replace_all(s, " ", "\\\\ ");
         if (quotes)
@@ -749,7 +749,10 @@ struct MakeEmitter : primitives::Emitter
     String mkdir(const Files &p, bool gen = false)
     {
         if (nmake)
-            return "@-if not exist " + normalize_path_windows(printFiles(p, gen)) + " mkdir " + normalize_path_windows(printFiles(p, gen));
+        {
+            return "@-if not exist " + to_string(normalize_path_windows(printFiles(p, gen))) +
+                " mkdir " + to_string(normalize_path_windows(printFiles(p, gen)));
+        }
         return "@-mkdir -p " + printFiles(p, gen);
     }
 };
@@ -785,7 +788,7 @@ void MakeGenerator::generate(const SwBuild &b)
 
     // clean
     if (ctx.nmake)
-        ctx.addTarget("clean", {}, { "@del " + normalize_path_windows(MakeEmitter::printFiles(outputs, true)) });
+        ctx.addTarget("clean", {}, { "@del " + to_string(normalize_path_windows(MakeEmitter::printFiles(outputs, true))) });
     else
         ctx.addTarget("clean", {}, { "@rm -f " + MakeEmitter::printFiles(outputs, true) });
 
@@ -918,7 +921,7 @@ void CMakeGenerator::generate(const sw::SwBuild &b)
         ctx.addLine("target_sources(" + pkg.toString() + " PRIVATE");
         ctx.increaseIndent();
         for (auto &f : files)
-            ctx.addLine(normalize_path(f));
+            ctx.addLine(to_string(normalize_path(f)));
         ctx.decreaseIndent();
         ctx.addLine(")");
         ctx.addLine();
@@ -939,7 +942,7 @@ void CMakeGenerator::generate(const sw::SwBuild &b)
         ctx.addLine("target_include_directories(" + pkg.toString() + " PRIVATE");
         ctx.increaseIndent();
         for (auto &f : s["this"]["include_directories"].getArray())
-            ctx.addLine("\"" + normalize_path(f.getPathValue(b.getContext().getLocalStorage())) + "\"");
+            ctx.addLine("\"" + to_string(normalize_path(f.getPathValue(b.getContext().getLocalStorage()))) + "\"");
         ctx.decreaseIndent();
         ctx.addLine(")");
         ctx.addLine();
@@ -955,7 +958,7 @@ void CMakeGenerator::generate(const sw::SwBuild &b)
         if (!s["dependencies"]["link"].getMap().empty())
             ctx.addLine();
         for (auto &f : s["this"]["system_link_libraries"].getArray())
-            ctx.addLine("\"" + normalize_path(f.getValue()) + "\"");
+            ctx.addLine("\"" + to_string(normalize_path(f.getValue())) + "\"");
         ctx.decreaseIndent();
         ctx.addLine(")");
         ctx.addLine();
@@ -1015,14 +1018,14 @@ void FastBuildGenerator::generate(const sw::SwBuild &b)
 
         // wdir
         if (!c->working_directory.empty())
-            ctx.addLine(".ExecWorkingDir = \"" + normalize_path(c->working_directory) + "\"");
+            ctx.addLine(".ExecWorkingDir = \"" + to_string(normalize_path(c->working_directory)) + "\"");
 
         // has no support for env vars?
         // env
         for (auto &[k, v] : c->environment)
             ;
 
-        ctx.addLine(".ExecExecutable = \"" + normalize_path(c->getProgram()) + "\"");
+        ctx.addLine(".ExecExecutable = \"" + to_string(normalize_path(c->getProgram())) + "\"");
 
         ctx.addLine(".ExecArguments = \"");
         bool exe_skipped = false;
@@ -1042,13 +1045,13 @@ void FastBuildGenerator::generate(const sw::SwBuild &b)
 
         ctx.addLine(".ExecInput = \"");
         for (auto &i : c->inputs)
-            ctx.addText(normalize_path(i) + " ");
+            ctx.addText(to_string(normalize_path(i)) + " ");
         ctx.trimEnd(1);
         ctx.addText("\"");
 
         ctx.addLine(".ExecOutput = \"");
         for (auto &i : c->outputs)
-            ctx.addText(normalize_path(i) + " ");
+            ctx.addText(to_string(normalize_path(i)) + " ");
         ctx.trimEnd(1);
         ctx.addText("\"");
 
@@ -1093,7 +1096,7 @@ void ShellGenerator::generate(const SwBuild &b)
 
         // wdir
         if (!c->working_directory.empty())
-            ctx.addText("cd \"" + normalize_path(c->working_directory) + "\" && ");
+            ctx.addText("cd \"" + to_string(normalize_path(c->working_directory)) + "\" && ");
 
         // env
         for (auto &[k, v] : c->environment)
@@ -1123,11 +1126,11 @@ void ShellGenerator::generate(const SwBuild &b)
             }
 
             if (!c->in.file.empty())
-                ctx.addText(" < " + normalize_path(c->in.file));
+                ctx.addText(" < " + to_string(normalize_path(c->in.file)));
             if (!c->out.file.empty())
-                ctx.addText(" > " + normalize_path(c->out.file));
+                ctx.addText(" > " + to_string(normalize_path(c->out.file)));
             if (!c->err.file.empty())
-                ctx.addText(" 2> " + normalize_path(c->err.file));
+                ctx.addText(" 2> " + to_string(normalize_path(c->err.file)));
         }
         else
         {
@@ -1150,7 +1153,7 @@ void ShellGenerator::generate(const SwBuild &b)
     {
         if (batch)
             ctx.addLine("set ");
-        ctx.addLine(alias + "=\"" + normalize_path(prog) + "\"");
+        ctx.addLine(alias + "=\"" + to_string(normalize_path(prog)) + "\"");
     });
 
     write_file(getRootDirectory(b) / ("commands"s + (batch ? ".bat" : ".sh")), ctx.getText());
@@ -1312,7 +1315,7 @@ void RawBootstrapBuildGenerator::generate(const sw::SwBuild &b)
 
     String s;
     for (auto &f : files_ordered)
-        s += normalize_path(f) + "\n";
+        s += to_string(normalize_path(f)) + "\n";
     // remove last \n?
     write_file(dir / "files.txt", s);
 
@@ -1327,8 +1330,8 @@ void RawBootstrapBuildGenerator::generate(const sw::SwBuild &b)
         script_fn += ".sh";
     if (bat)
         script += "@setlocal\n";
-    script += "cd \"" + normalize_path(fs::current_path()) + "\"\n";
-    script += "ninja -C \"" + normalize_path(dir) + "\"\n";
+    script += "cd \"" + to_string(normalize_path(fs::current_path())) + "\"\n";
+    script += "ninja -C \"" + to_string(normalize_path(dir)) + "\"\n";
     write_file(script_fn, script);
 
     pack_files("bootstrap.tar.xz", files2);

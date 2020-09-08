@@ -31,7 +31,7 @@ Framework::Framework(const String &s)
 
 Framework::Framework(const path &p)
 {
-    f = p.u8string();
+    f = to_string(p.u8string());
 }
 
 IncludeDirectory::IncludeDirectory(const String &s)
@@ -41,7 +41,7 @@ IncludeDirectory::IncludeDirectory(const String &s)
 
 IncludeDirectory::IncludeDirectory(const path &p)
 {
-    i = p.u8string();
+    i = to_string(p.u8string());
 }
 
 LinkDirectory::LinkDirectory(const String &s)
@@ -51,7 +51,7 @@ LinkDirectory::LinkDirectory(const String &s)
 
 LinkDirectory::LinkDirectory(const path &p)
 {
-    d = p.u8string();
+    d = to_string(p.u8string());
 }
 
 LinkLibrary::LinkLibrary(const String &s)
@@ -81,7 +81,7 @@ PrecompiledHeader::PrecompiledHeader(const String &s)
 
 PrecompiledHeader::PrecompiledHeader(const path &p)
 {
-    h = p.u8string();
+    h = to_string(p.u8string());
 }
 
 FileRegex::FileRegex(const String &fn, bool recursive)
@@ -145,7 +145,7 @@ FileRegex::FileRegex(const path &d, const std::regex &r, bool recursive)
 
 String FileRegex::getRegexString() const
 {
-    return normalize_path(dir / "") + regex_string;
+    return to_string(normalize_path(dir / "")) + regex_string;
 }
 
 template <class C>
@@ -319,7 +319,7 @@ void NativeCompilerOptions::addIncludeDirectories(builder::Command &c, const Str
     {
         for (auto &d : a)
         {
-            auto arg = std::make_unique<primitives::command::SimplePositionalArgument>(flag + normalize_path(d));
+            auto arg = std::make_unique<primitives::command::SimplePositionalArgument>(flag + to_string(normalize_path(d)));
             arg->getPosition().push_back(priority);
             c.arguments.push_back(std::move(arg));
         }
@@ -351,7 +351,7 @@ void NativeCompilerOptions::addCompileOptions(builder::Command &c) const
     auto print_idir = [&c](const auto &a, auto &flag)
     {
         for (auto &d : a)
-            c.arguments.push_back(flag + normalize_path(d));
+            c.arguments.push_back(flag + to_string(normalize_path(d)));
     };
 
     print_idir(System.CompileOptions, "");
@@ -450,7 +450,7 @@ void NativeLinkerOptions::addEverything(builder::Command &c) const
     auto print_idir = [&c](const auto &a, auto &flag)
     {
         for (auto &d : a)
-            c.arguments.push_back(flag + normalize_path(d));
+            c.arguments.push_back(flag + to_string(normalize_path(d)));
     };
 
     print_idir(System.LinkOptions, "");

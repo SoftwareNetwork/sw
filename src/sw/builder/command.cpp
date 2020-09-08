@@ -104,7 +104,7 @@ static Files process_deps_gnu(builder::Command &c, const path &deps_file)
         return {};
     if (!fs::exists(deps_file))
     {
-        LOG_DEBUG(logger, "Missing deps file: " + normalize_path(deps_file));
+        LOG_DEBUG(logger, "Missing deps file: " + to_string(deps_file));
         return {};
     }
 
@@ -177,15 +177,15 @@ static Files process_deps_gnu(builder::Command &c, const path &deps_file)
     {
         auto f3 = normalize_path(f2);
 #ifdef CPPAN_OS_WINDOWS_NO_CYGWIN
-        static const String cyg = "/cygdrive/";
+        static const auto cyg = u8"/cygdrive/"s;
         if (f3.find(cyg) == 0)
         {
             f3 = f3.substr(cyg.size());
-            f3 = toupper(f3[0]) + ":" + f3.substr(1);
+            f3 = toupper(f3[0]) + u8":" + f3.substr(1);
         }
 #endif
         //if (!fs::exists(fs::u8path(f3)))
-        deps.insert(fs::u8path(f3));
+        deps.insert(f3);
     }
 #endif
     return deps;
@@ -233,7 +233,7 @@ static String getCommandId(const Command &c)
     if (sw::Settings::get_user_settings().explain_outdated_full)
     {
         s += "\n";
-        s += "bdir: " + normalize_path(c.working_directory) + "\n";
+        s += "bdir: " + to_string(c.working_directory) + "\n";
         s += "env:\n";
         for (auto &[k, v] : c.environment)
             s += k + "\n" + v + "\n";
@@ -249,8 +249,8 @@ bool Command::check_if_file_newer(const path &p, const String &what, bool throw_
     auto s = File(p, getContext().getFileStorage()).isChanged(mtime, throw_on_missing);
     if (s && isExplainNeeded())
     {
-        EXPLAIN_OUTDATED("command", true, what + " changed " + normalize_path(p) + " (command_storage = " +
-            normalize_path(command_storage->root) + ") : " + *s, getCommandId(*this));
+        EXPLAIN_OUTDATED("command", true, what + " changed " + to_string(p) + " (command_storage = " +
+            to_string(command_storage->root) + ") : " + *s, getCommandId(*this));
     }
     return !!s;
 }
@@ -278,7 +278,7 @@ bool Command::isOutdated() const
         // we have insertion, no previous value available
         // so outdated
         if (isExplainNeeded())
-            EXPLAIN_OUTDATED("command", true, "new command (command_storage = " + normalize_path(command_storage->root) + "): " + print(), getCommandId(*this));
+            EXPLAIN_OUTDATED("command", true, "new command (command_storage = " + to_string(command_storage->root) + "): " + print(), getCommandId(*this));
         return true;
     }
     else
@@ -611,7 +611,7 @@ void Command::afterCommand()
         f.isChanged();
         if (!fs::exists(i))
         {
-            auto e = "Output file was not created: " + normalize_path(i) + "\n" + getError();
+            auto e = "Output file was not created: " + to_string(i) + "\n" + getError();
             throw SW_RUNTIME_ERROR(makeErrorString(e));
         }
         mtime = std::max(mtime, fr.last_write_time);
@@ -718,7 +718,7 @@ void Command::execute1(std::error_code *ec)
 
         for (int i = 0; i < getFirstResponseFileArgument(); i++)
             rsp_args.push_back(arguments[i]->clone());
-        rsp_args.push_back("@" + rsp_file.u8string());
+        rsp_args.push_back(u8"@" + rsp_file.u8string());
     }
 
     SCOPE_EXIT
@@ -842,7 +842,7 @@ String Command::saveCommand() const
     String s;
     s += "\n";
     //s += "pid = " + std::to_string(pid) + "\n";
-    s += "command is copied to " + p.u8string() + "\n";
+    s += "command is copied to " + to_string(p.u8string()) + "\n";
 
     return s;
 }
@@ -942,7 +942,7 @@ path Command::writeCommand(const path &p, bool print_name) const
 
     // wdir
     if (!working_directory.empty())
-        t += "cd " + norm(working_directory) + "\n\n";
+        t += "cd " + to_string(norm(working_directory)) + "\n\n";
 
     bool need_rsp = needsResponseFile();
     if (getHostOS().is(OSType::Windows))
@@ -955,7 +955,7 @@ path Command::writeCommand(const path &p, bool print_name) const
 
         for (int i = 0; i < getFirstResponseFileArgument(); i++)
             t += arguments[i]->quote() + " ";
-        t += "\"@" + normalize_path(rsp_name) + "\" ";
+        t += "\"@" + to_string(normalize_path(rsp_name)) + "\" ";
     }
     else
     {
@@ -1017,11 +1017,11 @@ path Command::writeCommand(const path &p, bool print_name) const
     t += "*";
 
     if (!in.file.empty())
-        t += " < " + norm(in.file);
+        t += " < " + to_string(norm(in.file));
     if (!out.file.empty())
-        t += " > " + norm(out.file);
+        t += " > " + to_string(norm(out.file));
     if (!err.file.empty())
-        t += " 2> " + norm(err.file);
+        t += " 2> " + to_string(norm(err.file));
 
     t += "\n";
     t += "\n";
@@ -1123,7 +1123,7 @@ String Command::getName(bool short_name) const
         {
             if (!outputs.empty())
             {
-                return normalize_path(*outputs.begin());
+                return to_string(normalize_path(*outputs.begin()));
             }
             return std::to_string((uint64_t)this);
         }
@@ -1135,7 +1135,7 @@ String Command::getName(bool short_name) const
         {
             String s = "generate: ";
             for (auto &o : outputs)
-                s += "\"" + normalize_path(o) + "\", ";
+                s += "\"" + to_string(normalize_path(o)) + "\", ";
             s.resize(s.size() - 2);
             return s;
         }
@@ -1400,7 +1400,7 @@ path resolveExecutable(const path &in)
     static const auto p_where = primitives::resolve_executable("where");
 
     if (p_which.empty() && p_where.empty())
-        throw SW_RUNTIME_ERROR("which and where were not found, cannot resolve executable: " + in.u8string());
+        throw SW_RUNTIME_ERROR("which and where were not found, cannot resolve executable: " + to_string(in.u8string()));
 
     String result;
 

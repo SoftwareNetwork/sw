@@ -575,7 +575,7 @@ void TargetOptions::add(const IncludeDirectory &i)
         //&& !fs::exists(dir))
         dir = getTarget().SourceDir / dir;
         if (!getTarget().DryRun && getTarget().isLocal() && !fs::exists(dir))
-            throw SW_RUNTIME_ERROR(getTarget().getPackage().toString() + ": include directory does not exist: " + normalize_path(dir));
+            throw SW_RUNTIME_ERROR(getTarget().getPackage().toString() + ": include directory does not exist: " + to_string(normalize_path(dir)));
 
         // check if exists, if not add bdir?
     }
@@ -598,7 +598,7 @@ void TargetOptions::add(const LinkDirectory &i)
         //&& !fs::exists(dir))
         dir = getTarget().SourceDir / dir;
         if (!getTarget().DryRun && getTarget().isLocal() && !fs::exists(dir))
-            throw SW_RUNTIME_ERROR(getTarget().getPackage().toString() + ": link directory does not exist: " + normalize_path(dir));
+            throw SW_RUNTIME_ERROR(getTarget().getPackage().toString() + ": link directory does not exist: " + to_string(normalize_path(dir)));
 
         // check if exists, if not add bdir?
     }

@@ -204,7 +204,7 @@ static path getPackageHeader(const LocalPackage &p, const UnresolvedPackage &up)
         primitives::Emitter ctx;
         ctx.addLine("#pragma once");
         ctx.addLine();
-        ctx.addLine("#line " + std::to_string(nlines) + " \"" + normalize_path(cfg) + "\"");
+        ctx.addLine("#line " + std::to_string(nlines) + " \"" + to_string(normalize_path(cfg)) + "\"");
 
         primitives::Emitter prefix;
         auto ins_pre = "#pragma sw header insert prefix";
@@ -343,7 +343,7 @@ static PackagePath getSelfTargetName(Build &b, const FilesSorted &files)
 {
     String h = b.module_data.current_settings.getHash();
     for (auto &fn : files)
-        h += normalize_path(fn);
+        h += to_string(normalize_path(fn));
     h = shorten_hash(blake2b_512(h), 6);
     return "loc.sw.self." + h;
 }
@@ -492,7 +492,7 @@ decltype(auto) PrepareConfig::commonActions(Build &b, const InputData &d, const 
     if (isDriverStaticBuild())
         addImportLibrary(b, lib);
     lib.AutoDetectOptions = false;
-    lib.CPPVersion = CPPLanguageStandard::CPP17;
+    lib.CPPVersion = CPPLanguageStandard::CPP20;
     lib.NoUndefined = false;
 
     lib += fn;
@@ -525,7 +525,7 @@ decltype(auto) PrepareConfig::commonActions(Build &b, const InputData &d, const 
     if (lang == LANG_VALA)
     {
         lib.CustomTargetOptions[VALA_OPTIONS_NAME].push_back("--vapidir");
-        lib.CustomTargetOptions[VALA_OPTIONS_NAME].push_back(normalize_path(getDriverIncludeDir(b, lib) / "sw/driver/frontend/vala"));
+        lib.CustomTargetOptions[VALA_OPTIONS_NAME].push_back(to_string(normalize_path(getDriverIncludeDir(b, lib) / "sw/driver/frontend/vala")));
         lib.CustomTargetOptions[VALA_OPTIONS_NAME].push_back("--pkg");
         lib.CustomTargetOptions[VALA_OPTIONS_NAME].push_back("sw");
         // when (cheader_filename = "sw/driver/c/c.h") is present

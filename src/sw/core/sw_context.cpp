@@ -140,10 +140,10 @@ std::vector<std::unique_ptr<Input>> SwContext::detectInputs(const path &in) cons
     if (status.type() != fs::file_type::regular &&
         status.type() != fs::file_type::directory)
     {
-        throw SW_RUNTIME_ERROR("Bad file type: " + normalize_path(p));
+        throw SW_RUNTIME_ERROR("Bad file type: " + to_string(normalize_path(p)));
     }
 
-    p = fs::u8path(normalize_path(primitives::filesystem::canonical(p)));
+    p = normalize_path(primitives::filesystem::canonical(p));
 
     //
     std::vector<std::unique_ptr<Input>> inputs;
@@ -212,7 +212,7 @@ std::vector<Input *> SwContext::addInputInternal(const path &in)
             //LOG_TRACE(logger, "Selecting driver " << dp.toString() << " for input " << inputs_local.back()->getName());
     }
 
-    SW_ASSERT(!inputs_local.empty(), "Inputs empty for " + normalize_path(in));
+    SW_ASSERT(!inputs_local.empty(), "Inputs empty for " + to_string(normalize_path(in)));
     return inputs_local;
 }
 

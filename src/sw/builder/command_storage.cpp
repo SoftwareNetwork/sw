@@ -35,7 +35,7 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "db_file");
 
-#define COMMAND_DB_FORMAT_VERSION 4
+#define COMMAND_DB_FORMAT_VERSION 6
 
 namespace sw
 {
@@ -47,7 +47,7 @@ static path getCurrentModuleName()
 
 static String getCurrentModuleNameHash()
 {
-    return shorten_hash(blake2b_512(getCurrentModuleName().u8string()), 12);
+    return shorten_hash(blake2b_512(to_string(getCurrentModuleName().u8string())), 12);
 }
 
 static path getDir(const path &root)
@@ -107,7 +107,7 @@ void CommandRecord::setImplicitInputs(const Files &files, detail::Storage &s)
     for (auto &f : files)
     {
         auto str = normalize_path(f);
-        auto h = std::hash<String>()(str);
+        auto h = std::hash<std::u8string>()(str);
         implicit_inputs.insert(h);
 
         boost::upgrade_lock lk(s.m_file_storage_by_hash);
@@ -115,7 +115,7 @@ void CommandRecord::setImplicitInputs(const Files &files, detail::Storage &s)
         if (i == s.file_storage_by_hash.end())
         {
             boost::upgrade_to_unique_lock lk2(lk);
-            s.file_storage_by_hash[h] = fs::u8path(str);
+            s.file_storage_by_hash[h] = str;
         }
     }
 }
@@ -148,7 +148,7 @@ void FileDb::write(std::vector<uint8_t> &v, const CommandRecord &f, const detail
             throw SW_RUNTIME_ERROR("no such file");
         auto p = i->second;
         lk.unlock();
-        write_int(v, std::hash<String>()(normalize_path(p)));
+        write_int(v, std::hash<std::u8string>()(normalize_path(p)));
     }
 }
 
@@ -160,17 +160,18 @@ static String getFilesSuffix()
 static void load(const path &fn, Files &files, std::unordered_map<size_t, path> &files2, ConcurrentCommandStorage &commands)
 {
     // files
-    if (fs::exists(path(fn) += getFilesSuffix()))
+    auto fn_with_suffix = path(fn) += getFilesSuffix();
+    if (fs::exists(fn_with_suffix))
     {
         primitives::BinaryStream b;
-        b.load(path(fn) += getFilesSuffix());
+        b.load(fn_with_suffix);
         while (!b.eof())
         {
             size_t sz; // record size
             b.read(sz);
             if (!b.has(sz))
             {
-                fs::resize_file(path(fn) += getFilesSuffix(), b.index() - sizeof(sz));
+                fs::resize_file(fn_with_suffix, b.index() - sizeof(sz));
                 break; // record is in bad shape
             }
 
@@ -198,7 +199,8 @@ static void load(const path &fn, Files &files, std::unordered_map<size_t, path> 
             b.read(sz);
             if (!b.has(sz))
             {
-                fs::resize_file(path(fn) += getFilesSuffix(), b.index() - sizeof(sz));
+                // truncate
+                fs::resize_file(fn, b.index() - sizeof(sz));
                 break; // record is in bad shape
             }
 
@@ -248,7 +250,7 @@ void FileDb::save(const Files &files, const detail::Storage &s, ConcurrentComman
         primitives::BinaryStream b(10'000'000); // reserve amount
         for (auto &f : files)
         {
-            auto s = normalize_path(f);
+            auto s = to_string(normalize_path(f));
             auto sz = s.size() + 1;
             b.write(sz);
             b.write(s);
@@ -349,7 +351,7 @@ void CommandStorage::async_command_log(const CommandRecord &r)
                 auto r = s.file_storage.insert(f);
                 if (!r.second)
                     continue;
-                auto s = normalize_path(f);
+                auto s = to_string(normalize_path(f));
                 auto sz = s.size() + 1;
                 fwrite(&sz, sizeof(sz), 1, l.f.getHandle());
                 fwrite(&s[0], sz, 1, l.f.getHandle());

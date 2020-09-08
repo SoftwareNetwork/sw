@@ -12,6 +12,7 @@
 #include <boost/serialization/vector.hpp>
 //
 #include <primitives/exceptions.h>
+#include <primitives/filesystem.h>
 
 #include <fstream>
 
@@ -62,9 +63,9 @@
 SERIALIZATION_BEGIN_SPLIT
     String s;
     ar >> s;
-    v = fs::u8path(s);
+    v = ::to_u8string(s);
 SERIALIZATION_SPLIT_CONTINUE
-    ar << v.u8string();
+    ar << ::to_string(v.u8string());
 SERIALIZATION_SPLIT_END
 
 ////////////////////////////////////////
@@ -94,7 +95,7 @@ T deserialize(const path &archive_fn, int type = 0)
     {
         std::ifstream ifs(archive_fn, std::ios_base::in | std::ios_base::binary);
         if (!ifs)
-            throw SW_RUNTIME_ERROR("Cannot read file: " + normalize_path(archive_fn));
+            throw SW_RUNTIME_ERROR("Cannot read file: " + to_string(normalize_path(archive_fn)));
         boost::archive::binary_iarchive ia(ifs);
         load(ia, data);
     }
@@ -102,7 +103,7 @@ T deserialize(const path &archive_fn, int type = 0)
     {
         std::ifstream ifs(archive_fn);
         if (!ifs)
-            throw SW_RUNTIME_ERROR("Cannot read file: " + normalize_path(archive_fn));
+            throw SW_RUNTIME_ERROR("Cannot read file: " + to_string(normalize_path(archive_fn)));
         boost::archive::text_iarchive ia(ifs);
         load(ia, data);
     }
@@ -118,7 +119,7 @@ void serialize(const path &archive_fn, const T &v, int type = 0)
     {
         std::ofstream ofs(archive_fn, std::ios_base::out | std::ios_base::binary);
         if (!ofs)
-            throw SW_RUNTIME_ERROR("Cannot write file: " + normalize_path(archive_fn));
+            throw SW_RUNTIME_ERROR("Cannot write file: " + to_string(normalize_path(archive_fn)));
         boost::archive::binary_oarchive oa(ofs);
         return save(oa, v);
     }
@@ -126,7 +127,7 @@ void serialize(const path &archive_fn, const T &v, int type = 0)
     {
         std::ofstream ofs(archive_fn);
         if (!ofs)
-            throw SW_RUNTIME_ERROR("Cannot write file: " + normalize_path(archive_fn));
+            throw SW_RUNTIME_ERROR("Cannot write file: " + to_string(normalize_path(archive_fn)));
         boost::archive::text_oarchive oa(ofs);
         return save(oa, v);
     }

@@ -46,10 +46,11 @@ struct SoftwareNetworkStorageSchema : StorageSchema
 
 struct SW_SUPPORT_API ResolveResultWithDependencies
 {
-    std::unordered_map<UnresolvedPackage, PackagePtr> m;
+    ResolveResult m;
     std::unordered_map<UnresolvedPackage, size_t> h;
 
     ResolveResultWithDependencies() = default;
+    ResolveResultWithDependencies(ResolveResult &&in_m) { m = std::move(in_m); }
     ResolveResultWithDependencies(const ResolveResultWithDependencies &) = delete;
     ResolveResultWithDependencies &operator=(const ResolveResultWithDependencies &) = delete;
     ResolveResultWithDependencies(ResolveResultWithDependencies &&) = default;

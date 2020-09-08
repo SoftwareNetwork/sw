@@ -23,7 +23,7 @@ void writeFileOnce(const path &fn, const String &content, const path &lock_dir)
 {
     auto h = sha1(content);
 
-    auto hf = sha1(normalize_path(fn));
+    auto hf = sha1(to_string(normalize_path(fn)));
     const auto once = lock_dir / (hf + ".once");
     const auto lock = lock_dir / hf;
 
@@ -37,7 +37,7 @@ void writeFileOnce(const path &fn, const String &content, const path &lock_dir)
 
 void writeFileSafe(const path &fn, const String &content, const path &lock_dir)
 {
-    auto hf = sha1(normalize_path(fn));
+    auto hf = sha1(to_string(normalize_path(fn)));
     const auto lock = lock_dir / hf;
 
     ScopedFileLock fl(lock);
@@ -46,9 +46,9 @@ void writeFileSafe(const path &fn, const String &content, const path &lock_dir)
 
 void replaceInFileOnce(const path &fn, const String &from, const String &to, const path &lock_dir)
 {
-    auto hf = sha1(normalize_path(fn));
+    auto hf = sha1(to_string(normalize_path(fn)));
 
-    auto uniq = normalize_path(fn) + from + to;
+    auto uniq = to_string(normalize_path(fn)) + from + to;
     auto h = sha1(uniq).substr(0, 5);
     auto hfn = lock_dir / (hf + "." + h);
 
@@ -70,9 +70,9 @@ void replaceInFileOnce(const path &fn, const String &from, const String &to, con
 
 void pushFrontToFileOnce(const path &fn, const String &text, const path &lock_dir)
 {
-    auto hf = sha1(normalize_path(fn));
+    auto hf = sha1(to_string(normalize_path(fn)));
 
-    auto uniq = normalize_path(fn) + text;
+    auto uniq = to_string(normalize_path(fn)) + text;
     auto h = sha1(uniq).substr(0, 5);
     auto hfn = lock_dir / (hf + "." + h);
 
@@ -94,9 +94,9 @@ void pushFrontToFileOnce(const path &fn, const String &text, const path &lock_di
 
 void pushBackToFileOnce(const path &fn, const String &text, const path &lock_dir)
 {
-    auto hf = sha1(normalize_path(fn));
+    auto hf = sha1(to_string(normalize_path(fn)));
 
-    auto uniq = normalize_path(fn) + text;
+    auto uniq = to_string(normalize_path(fn)) + text;
     auto h = sha1(uniq).substr(0, 5);
     auto hfn = lock_dir / (hf + "." + h);
 
@@ -121,7 +121,7 @@ bool patch(const path &fn, const String &patch, const path &lock_dir)
     auto t = read_file(fn);
 
     auto fn_patch = fn;
-    fn_patch += ".orig." + sha1(normalize_path(fn)).substr(0, 8);
+    fn_patch += ".orig." + sha1(to_string(normalize_path(fn))).substr(0, 8);
 
     if (fs::exists(fn_patch))
         return true;

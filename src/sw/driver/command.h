@@ -383,7 +383,7 @@ struct SW_DRIVER_CPP_API CommandBuilder
     template <class T>
     CommandBuilder &operator<<(const T &t)
     {
-        auto add_arg = [this](const String &s)
+        auto add_arg = [this](const auto &s)
         {
             if (stopped)
                 return;
@@ -391,7 +391,7 @@ struct SW_DRIVER_CPP_API CommandBuilder
         };
 
         if constexpr (std::is_same_v<T, path>)
-            add_arg(t.u8string());
+            add_arg(t);
         else if constexpr (std::is_same_v<T, String>)
             add_arg(t);
         else if constexpr (std::is_arithmetic_v<T>)

@@ -57,7 +57,7 @@ static void registerCmakePackage(SwClientContext &swctx)
     auto write_cmake = [](const path &dir)
     {
         auto sw_cmake_dir = get_cmake_dir(dir);
-        write_file_if_different(sw_cmake_dir / get_cmake_dir_name() / "1", sw_cmake_dir.u8string());
+        write_file_if_different(sw_cmake_dir / get_cmake_dir_name() / "1", to_string(sw_cmake_dir.u8string()));
         write_file_if_different(sw_cmake_dir / get_sw_cmake_config_filename(), getCmakeConfig());
     };
 
@@ -123,7 +123,7 @@ static void cleanup(CleanMask level_mask, const sw::SwContext &swctx)
     if (level_mask & CLEAN_EXECUTABLE)
     {
         auto prog = boost::dll::program_location().u8string();
-        String fn = prog;
+        String fn = to_string(prog);
 #ifdef _WIN32
         fn = "timeout /t 3 && del \"" + fn + "\"";
         const char *cmd = "cmd";
