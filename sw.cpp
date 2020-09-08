@@ -85,7 +85,7 @@ void build(Solution &s)
             "org.sw.demo.nlohmann.json"_dep,
             "org.sw.demo.boost.variant"_dep,
             "org.sw.demo.boost.dll"_dep,
-            "org.sw.demo.rbock.sqlpp11_connector_sqlite3-master"_dep
+            "org.sw.demo.rbock.sqlpp11_connector_sqlite3"_dep
             ;
 
         manager.Public -= "pub.egorpugin.primitives.win32helpers-master"_dep;
