@@ -27,7 +27,7 @@ std::unique_ptr<ValueFlusherBase> add_path_selector(const String &title, path &v
 
     auto e = new QLineEdit;
     p2->addWidget(e);
-    e->setText(normalize_path(var).c_str());
+    e->setText(to_string(to_path_string(var)).c_str());
     e->connect(e, &QLineEdit::textChanged, [&vf = *vf](const QString &t)
     {
         vf.set(t.toStdString());
