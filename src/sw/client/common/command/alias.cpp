@@ -5,6 +5,8 @@
 
 #include <nlohmann/json.hpp>
 
+#include <iostream>
+
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "alias");
 
@@ -67,6 +69,17 @@ SUBCOMMAND_DECL(alias)
     nlohmann::json j;
     if (fs::exists(aliases_db))
         j = nlohmann::json::parse(read_file(aliases_db));
+    if (j.contains(name))
+    {
+        std::cout << "You are about to overwrite alias '" << name << "'. Are you sure? [y/N]\n";
+        String a;
+        std::getline(std::cin, a);
+        if (!(a == "y" || a == "Y"))
+        {
+            std::cout << "Canceled\n";
+            return;
+        }
+    }
     j[name].clear();
     for (auto &a : args)
         j[name].push_back(a);
