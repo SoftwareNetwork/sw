@@ -6,4 +6,4 @@
 // 23: remove virtual method
 // 24: add virtual method to core.target
 // 25: core.target virtual methods update
-#define SW_MODULE_ABI_VERSION 25
+#define SW_MODULE_ABI_VERSION 26
