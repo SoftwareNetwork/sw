@@ -133,7 +133,15 @@ bool BuildInput::operator==(const BuildInput &rhs) const
 {
     auto h = i.getHash();
     auto rh = rhs.i.getHash();
-    return std::tie(pkgs, prefix, h) == std::tie(rhs.pkgs, rhs.prefix, rh);
+    // macos compilation issue
+    //return std::tie(pkgs, prefix, h) == std::tie(rhs.pkgs, rhs.prefix, rh);
+    if (std::tie(pkgs, h) != std::tie(rhs.pkgs, rh))
+        return false;
+    if (!prefix && !rhs.prefix)
+        return true;
+    if (prefix && rhs.prefix && *prefix == *rhs.prefix)
+        return true;
+    return false;
 }
 
 InputWithSettings::InputWithSettings(const BuildInput &i)
