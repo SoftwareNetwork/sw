@@ -63,9 +63,13 @@
 SERIALIZATION_BEGIN_SPLIT
     String s;
     ar >> s;
+#if PRIMITIVES_FS_USE_UTF8_PATH_STRINGS
     v = ::to_u8string(s);
+#else
+    v = s;
+#endif
 SERIALIZATION_SPLIT_CONTINUE
-    ar << ::to_string(v.u8string());
+    ar << ::to_string(::to_string(v));
 SERIALIZATION_SPLIT_END
 
 ////////////////////////////////////////

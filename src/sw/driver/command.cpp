@@ -236,7 +236,7 @@ CommandBuilder &CommandBuilder::operator<<(const ::sw::cmd::tag_in &t)
             p = tt.SourceDir / p;
 
         if (!stopped)
-            c->arguments.push_back(t.prefix + to_string(t.normalize ? normalize_path(p) : p.u8string()));
+            c->arguments.push_back(t.prefix + to_printable_string(t.normalize ? normalize_path(p) : p));
         c->addInput(p);
         if (t.add_to_targets)
         {
@@ -261,7 +261,7 @@ CommandBuilder &CommandBuilder::operator<<(const ::sw::cmd::tag_out &t)
             p = tt.BinaryDir / p;
 
         if (!stopped)
-            c->arguments.push_back(t.prefix + to_string(t.normalize ? normalize_path(p) : p.u8string()));
+            c->arguments.push_back(t.prefix + to_printable_string(t.normalize ? normalize_path(p) : p));
         c->addOutput(p);
         if (t.add_to_targets)
         {

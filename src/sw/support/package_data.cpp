@@ -91,13 +91,13 @@ void PackageData::applyVersion()
 
 void PackageData::addFile(const path &root, const path &from, const path &to)
 {
-    auto rd = normalize_path(root);
+    auto rd = to_printable_string(normalize_path(root));
     auto sz = rd.size();
     if (rd.back() != '\\' && rd.back() != '/')
         sz++;
-    auto s = normalize_path(from);
+    auto s = to_printable_string(normalize_path(from));
     if (s.find(rd) != 0)
-        throw SW_RUNTIME_ERROR("bad file path: " + to_string(s));
+        throw SW_RUNTIME_ERROR("bad file path: " + to_printable_string(s));
     files_map[s.substr(sz)] = normalize_path(to);
 }
 

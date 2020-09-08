@@ -175,7 +175,7 @@ static Files process_deps_gnu(builder::Command &c, const path &deps_file)
 #else
     for (auto &f2 : files)
     {
-        auto f3 = normalize_path(f2);
+        auto f3 = to_path_string(normalize_path(f2));
 #ifdef CPPAN_OS_WINDOWS_NO_CYGWIN
         static const auto cyg = u8"/cygdrive/"s;
         if (f3.find(cyg) == 0)
@@ -718,7 +718,7 @@ void Command::execute1(std::error_code *ec)
 
         for (int i = 0; i < getFirstResponseFileArgument(); i++)
             rsp_args.push_back(arguments[i]->clone());
-        rsp_args.push_back(u8"@" + rsp_file.u8string());
+        rsp_args.push_back("@" + to_string(to_path_string(rsp_file)));
     }
 
     SCOPE_EXIT

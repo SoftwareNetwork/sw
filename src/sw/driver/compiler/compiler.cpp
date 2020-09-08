@@ -745,8 +745,8 @@ static auto add_prefix_and_suffix(const path &p, const String &prefix, const Str
 
 static auto remove_prefix_and_suffix(const path &p)
 {
-    auto s = p.stem().u8string();
-    if (s.find(u8"lib") == 0)
+    auto s = to_path_string(p.stem());
+    if (to_printable_string(s).find("lib") == 0)
         s = s.substr(3);
     return s;
 }

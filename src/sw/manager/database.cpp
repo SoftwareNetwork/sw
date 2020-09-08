@@ -145,11 +145,11 @@ void Database::open(bool read_only, bool in_memory)
     if (in_memory)
         config.path_to_database = ":memory:";
     else
-        config.path_to_database = to_string(normalize_path(fn));
+        config.path_to_database = to_string(to_path_string(fn));
     //config.debug = true;
     db = std::make_unique<sql::connection>(config);
     if (in_memory)
-        loadOrSaveDb(db->native_handle(), (const char *)normalize_path(fn).c_str(), 0);
+        loadOrSaveDb(db->native_handle(), (const char *)to_path_string(fn).c_str(), 0);
 
     // prevent SQLITE_BUSY rc
     // hope 1 min is enough to wait for write operation

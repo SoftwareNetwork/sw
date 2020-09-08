@@ -107,7 +107,7 @@ void CommandRecord::setImplicitInputs(const Files &files, detail::Storage &s)
     for (auto &f : files)
     {
         auto str = normalize_path(f);
-        auto h = std::hash<std::u8string>()(str);
+        auto h = std::hash<path>()(str);
         implicit_inputs.insert(h);
 
         boost::upgrade_lock lk(s.m_file_storage_by_hash);
@@ -148,7 +148,7 @@ void FileDb::write(std::vector<uint8_t> &v, const CommandRecord &f, const detail
             throw SW_RUNTIME_ERROR("no such file");
         auto p = i->second;
         lk.unlock();
-        write_int(v, std::hash<std::u8string>()(normalize_path(p)));
+        write_int(v, std::hash<path>()(normalize_path(p)));
     }
 }
 
