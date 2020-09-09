@@ -400,9 +400,27 @@ static String getOutput(builder::detail::ResolvableCommand &c)
 
 static std::pair<String, Version> gatherVersion1(builder::detail::ResolvableCommand &c, const String &in_regex)
 {
+    static std::regex r_default("(\\d+)(\\.(\\d+)){2,}(-[[:alnum:]]+([.-][[:alnum:]]+)*)?");
+
     auto o = getOutput(c);
 
     Version v;
+    auto get_default_version = [&o, &v](const String &in_string)
+    {
+        std::smatch m;
+        if (!std::regex_search(in_string, m, r_default))
+            return;
+        auto s = m[0].str();
+        if (m[4].matched)
+        {
+            // some programs write extra as 'beta2-123-123' when we expect 'beta2.123.123'
+            // this math skips until m[4] started plus first '-'
+            std::replace(s.begin() + (m[4].first - m[0].first) + 1, s.end(), '-', '.');
+        }
+        v = s;
+        o = in_string;
+    };
+
     if (!in_regex.empty())
     {
         std::regex r_in(in_regex);
@@ -418,25 +436,22 @@ static std::pair<String, Version> gatherVersion1(builder::detail::ResolvableComm
                 v = Version(make_int(1), make_int(2), make_int(3));
             }
             else
-                v = m[0].str();
+            {
+                try
+                {
+                    v = m[0].str();
+                }
+                catch (std::exception &)
+                {
+                    // we got exception from converting provided string into version
+                    // now we try to find standard regex in found string
+                    get_default_version(m[0].str());
+                }
+            }
         }
     }
     else
-    {
-        static std::regex r_default("(\\d+)(\\.(\\d+)){2,}(-[[:alnum:]]+([.-][[:alnum:]]+)*)?");
-        std::smatch m;
-        if (std::regex_search(o, m, r_default))
-        {
-            auto s = m[0].str();
-            if (m[4].matched)
-            {
-                // some programs write extra as 'beta2-123-123' when we expect 'beta2.123.123'
-                // this math skips until m[4] started plus first '-'
-                std::replace(s.begin() + (m[4].first - m[0].first) + 1, s.end(), '-', '.');
-            }
-            v = s;
-        }
-    }
+        get_default_version(o);
     return { o,v };
 }
 
