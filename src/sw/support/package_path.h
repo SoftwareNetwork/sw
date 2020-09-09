@@ -114,11 +114,6 @@ struct PathBase
             return std::operator==(*this, rhs);
     }
 
-    bool operator!=(const ThisType &rhs) const
-    {
-        return !operator==(rhs);
-    }
-
     bool operator<(const ThisType &rhs) const
     {
         if constexpr (!CaseSensitive)
