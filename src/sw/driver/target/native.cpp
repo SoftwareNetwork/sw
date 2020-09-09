@@ -349,6 +349,8 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
             ct = CompilerType::GNU;
         else if (id.ppath == "org.LLVM.clang" || id.ppath == "org.LLVM.clangpp")
             ct = CompilerType::Clang;
+        else if (id.ppath == "com.Apple.clang" || id.ppath == "com.Apple.clangpp")
+            ct = CompilerType::AppleClang;
         else if (id.ppath == "org.LLVM.clangcl")
             ct = CompilerType::ClangCl;
         else if (id.ppath == "com.intel.compiler.c" || id.ppath == "com.intel.compiler.cpp")
@@ -407,7 +409,10 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
             C->PositionIndependentCode = false;
         }*/
     }
-    else if (id.ppath == "org.LLVM.clang" || id.ppath == "org.LLVM.clangpp")
+    else if (
+        id.ppath == "org.LLVM.clang" || id.ppath == "org.LLVM.clangpp" ||
+        id.ppath == "com.Apple.clang" || id.ppath == "com.Apple.clangpp"
+        )
     {
         auto C = std::make_shared<ClangCompiler>();
         c = C;
@@ -423,6 +428,8 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
             // clang gives error on reinterpret cast in offsetof macro in win ucrt
             *this += "_CRT_USE_BUILTIN_OFFSETOF"_def;
         }
+        if (id.ppath == "com.Apple.clang" || id.ppath == "com.Apple.clangpp")
+            C->appleclang = true;
         /*if (getBuildSettings().TargetOS.isApple())
         {
             C->VisibilityHidden = false;
@@ -557,7 +564,9 @@ std::shared_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetS
         id.ppath == "org.gnu.gcc" ||
         id.ppath == "org.gnu.gpp" ||
         id.ppath == "org.LLVM.clang" ||
-        id.ppath == "org.LLVM.clangpp"
+        id.ppath == "org.LLVM.clangpp" ||
+        id.ppath == "com.Apple.clang" ||
+        id.ppath == "com.Apple.clangpp"
         )
     {
         auto C = std::make_shared<GNULinker>();
@@ -571,7 +580,9 @@ std::shared_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetS
         if (getBuildSettings().TargetOS.isApple())
             C->use_start_end_groups = false;
         if (id.ppath == "org.LLVM.clang" ||
-            id.ppath == "org.LLVM.clangpp")
+            id.ppath == "org.LLVM.clangpp" ||
+            id.ppath == "com.Apple.clang" ||
+            id.ppath == "com.Apple.clangpp")
         {
             create_command();
             auto cmd = c->createCommand(getMainBuild());
@@ -2262,7 +2273,7 @@ void NativeCompiledTarget::prepare_pass1()
     {
         if (getBuildSettings().TargetOS.is(OSType::Linux))
         {
-            if (getCompilerType() == CompilerType::Clang)
+            if (getCompilerType() == CompilerType::Clang || getCompilerType() == CompilerType::AppleClang)
                 LinkOptions.push_back("--no-undefined");
             else // gcc and others
                 LinkOptions.push_back("-Wl,--no-undefined");
@@ -2313,7 +2324,9 @@ void NativeCompiledTarget::prepare_pass1()
             if (getCompilerType() == CompilerType::MSVC || getCompilerType() == CompilerType::ClangCl)
                 l.style = l.MSVC;
             // remove clang check? any apple platform?
-            else if (getBuildSettings().TargetOS.isApple() && getCompilerType() == CompilerType::Clang)
+            else if (getBuildSettings().TargetOS.isApple() &&
+                (getCompilerType() == CompilerType::Clang || getCompilerType() == CompilerType::AppleClang)
+                )
                 l.style = l.AppleLD;
             else
                 l.style = l.GNU;

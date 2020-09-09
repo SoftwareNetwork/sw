@@ -60,11 +60,6 @@ static sw::TargetSettings compilerTypeFromStringCaseI(const sw::UnresolvedPackag
     };
 
     if (0);
-    /*
-    // starts with
-    else if (boost::istarts_with(compiler, "appleclang") || boost::iequals(compiler, "apple-clang"))
-    return CompilerType::AppleClang;
-    */
     // g++ is not possible for package path
     else if (0
         || compiler.ppath == "gcc"
@@ -85,6 +80,16 @@ static sw::TargetSettings compilerTypeFromStringCaseI(const sw::UnresolvedPackag
     {
         ts["native"]["program"]["c"] = set_with_version("org.LLVM.clang");
         ts["native"]["program"]["cpp"] = set_with_version("org.LLVM.clangpp");
+        ts["native"]["program"]["asm"] = ts["native"]["program"]["c"].getValue();
+    }
+    else if (0
+        || compiler.ppath == "appleclang"
+        || compiler.ppath == "com.Apple.clang"
+        || compiler.ppath == "com.Apple.clangpp"
+        )
+    {
+        ts["native"]["program"]["c"] = set_with_version("com.Apple.clang");
+        ts["native"]["program"]["cpp"] = set_with_version("com.Apple.clangpp");
         ts["native"]["program"]["asm"] = ts["native"]["program"]["c"].getValue();
     }
     // clang-cl is not possible for package path
@@ -886,6 +891,7 @@ String SwClientContext::listPrograms()
     print_program("com.Microsoft.VisualStudio.VC.cl", "Microsoft Visual Studio C/C++ Compiler (short form - msvc)");
     print_program("org.LLVM.clang", "Clang C/C++ Compiler (short form - clang)");
     print_program("org.LLVM.clangcl", "Clang C/C++ Compiler in MSVC compatibility mode (short form - clangcl)");
+    print_program("com.Apple.clang", "Apple Clang C/C++ Compiler");
 
     ctx.addLine();
     ctx.addLine("Use short program form plus version to select it for use.");
@@ -927,6 +933,7 @@ Programs SwClientContext::listCompilers()
     print_program("com.Microsoft.VisualStudio.VC.cl", "Microsoft Visual Studio C/C++ Compiler");
     print_program("org.LLVM.clang", "Clang C/C++ Compiler");
     print_program("org.LLVM.clangcl", "Clang C/C++ Compiler in MSVC compatibility mode (clang-cl)");
+    print_program("com.Apple.clang", "Apple Clang C/C++ Compiler");
 
     return progs;
 }
