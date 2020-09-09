@@ -758,30 +758,31 @@ static void detectNonWindowsCompilers(DETECT_ARGS)
 {
     bool colored_output = hasConsoleColorProcessing();
 
-    auto resolve_and_add = [DETECT_ARGS_PASS_TO_LAMBDA, &colored_output](const path &prog, const String &ppath, int color_diag = 0)
+    auto resolve_and_add = [DETECT_ARGS_PASS_TO_LAMBDA, &colored_output]
+    (const path &prog, const String &ppath, int color_diag = 0, const String &regex_prefix = {})
     {
         auto p = std::make_shared<SimpleProgram>();
         p->file = resolveExecutable(prog);
-        if (fs::exists(p->file))
+        if (!fs::exists(p->file))
+            return false;
+        // use simple regex for now, because ubuntu may have
+        // the following version 7.4.0-1ubuntu1~18.04.1
+        // which will be parsed as pre-release
+        auto v = getVersion(s, p->file, "--version", regex_prefix + "\\d+(\\.\\d+){2,}");
+        auto &c = addProgram(DETECT_ARGS_PASS, PackageId(ppath, v), {}, p);
+        //-fdiagnostics-color=always // gcc
+        if (colored_output)
         {
-            // use simple regex for now, because ubuntu may have
-            // the following version 7.4.0-1ubuntu1~18.04.1
-            // which will be parsed as pre-release
-            auto v = getVersion(s, p->file, "--version", "\\d+(\\.\\d+){2,}");
-            auto &c = addProgram(DETECT_ARGS_PASS, PackageId(ppath, v), {}, p);
-            //-fdiagnostics-color=always // gcc
-            if (colored_output)
+            auto c2 = p->getCommand();
+            if (color_diag == 1)
+                c2->push_back("-fdiagnostics-color=always");
+            else if (color_diag == 2)
             {
-                auto c2 = p->getCommand();
-                if (color_diag == 1)
-                    c2->push_back("-fdiagnostics-color=always");
-                else if (color_diag == 2)
-                {
-                    c2->push_back("-fcolor-diagnostics");
-                    c2->push_back("-fansi-escape-codes");
-                }
+                c2->push_back("-fcolor-diagnostics");
+                c2->push_back("-fansi-escape-codes");
             }
         }
+        return true;
     };
 
     resolve_and_add("ar", "org.gnu.binutils.ar");
@@ -801,16 +802,30 @@ static void detectNonWindowsCompilers(DETECT_ARGS)
     //resolve_and_add("llvm-ar", "org.LLVM.ar"); // not needed
     //resolve_and_add("lld", "org.LLVM.ld"); // not needed
 
-    resolve_and_add("clang", "org.LLVM.clang", 2);
-    resolve_and_add("clang++", "org.LLVM.clangpp", 2);
+    // start of the line (^) does not work currently,
+    // so we can't differentiate clang and appleclang
+    auto clang_regex_prefix = "^clang version ";
+    auto apple_clang_regex_prefix = "Apple clang version ";
+
+    // detect apple clang
+    bool apple_clang_found =
+        resolve_and_add("clang", "com.Apple.clang", 2, apple_clang_regex_prefix);
+    resolve_and_add("clang++", "com.Apple.clangpp", 2, apple_clang_regex_prefix);
+
+    // usual clang
+    // if apple clang is found first, we do not check same binaries again
+    // because at the moment we gen false positives
+    if (!apple_clang_found)
+    {
+        resolve_and_add("clang", "org.LLVM.clang", 2, clang_regex_prefix);
+        resolve_and_add("clang++", "org.LLVM.clangpp", 2, clang_regex_prefix);
+    }
 
     for (int i = 3; i < 16; i++)
     {
-        resolve_and_add("clang-" + std::to_string(i), "org.LLVM.clang", 2);
-        resolve_and_add("clang++-" + std::to_string(i), "org.LLVM.clangpp", 2);
+        resolve_and_add("clang-" + std::to_string(i), "org.LLVM.clang", 2, clang_regex_prefix);
+        resolve_and_add("clang++-" + std::to_string(i), "org.LLVM.clangpp", 2, clang_regex_prefix);
     }
-
-    // detect apple clang?
 }
 
 void detectNativeCompilers(DETECT_ARGS)
@@ -953,7 +968,18 @@ void addSettingsAndSetHostPrograms(const SwCoreContext &swctx, TargetSettings &t
 
         // must be the same compiler as current!
 #if defined(__clang__)
+        bool ok = false;
         if (!(
+            if_add(ts["native"]["program"]["c"], "com.Apple.clang"s) &&
+            if_add(ts["native"]["program"]["cpp"], "com.Apple.clangpp"s)
+            ))
+        {
+            // no error, we want to check second condition
+            //throw SW_RUNTIME_ERROR(err_msg("appleclang"));
+        }
+        else
+            ok = true;
+        if (!ok && !(
             if_add(ts["native"]["program"]["c"], "org.LLVM.clang"s) &&
             if_add(ts["native"]["program"]["cpp"], "org.LLVM.clangpp"s)
             ))
@@ -1094,18 +1120,20 @@ void addSettingsAndSetPrograms(const SwCoreContext &swctx, TargetSettings &ts)
             return true;
         };
 
-        auto try_clang = [&check_and_assign_dependency, &ts]()
+        auto try_clang = [&if_add, &ts]()
         {
-            check_and_assign_dependency(ts["native"]["program"]["c"], "org.LLVM.clang"s);
-            check_and_assign_dependency(ts["native"]["program"]["cpp"], "org.LLVM.clangpp"s);
+            if_add(ts["native"]["program"]["c"], "org.LLVM.clang"s);
+            if_add(ts["native"]["program"]["cpp"], "org.LLVM.clangpp"s);
+            if_add(ts["native"]["program"]["c"], "com.Apple.clang"s);
+            if_add(ts["native"]["program"]["cpp"], "com.Apple.clangpp"s);
             //if (getHostOs().is(OSType::Linux))
             //ts["native"]["stdlib"]["cpp"] = to_upkg("org.sw.demo.llvm_project.libcxx");
         };
 
-        auto try_gcc = [&check_and_assign_dependency, &ts]()
+        auto try_gcc = [&if_add, &ts]()
         {
-            check_and_assign_dependency(ts["native"]["program"]["c"], "org.gnu.gcc"s);
-            check_and_assign_dependency(ts["native"]["program"]["cpp"], "org.gnu.gpp"s);
+            if_add(ts["native"]["program"]["c"], "org.gnu.gcc"s);
+            if_add(ts["native"]["program"]["cpp"], "org.gnu.gpp"s);
         };
 
         if (bs.TargetOS.is(OSType::Mingw))

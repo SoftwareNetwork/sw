@@ -20,7 +20,10 @@ namespace sw
 
 ProgramVersionStorage::ProgramVersionStorage(const path &in_fn)
 {
-    fn = in_fn.parent_path() / in_fn.stem() += ".2.json";
+    // v0 - initial
+    // v1, v2 - see git history
+    // v3 - detect appleclang properly
+    fn = in_fn.parent_path() / in_fn.stem() += ".3.json";
     if (!fs::exists(fn))
         return;
 
