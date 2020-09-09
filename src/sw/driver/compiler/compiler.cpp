@@ -119,9 +119,11 @@ static Strings getCStdOption(CLanguageStandard std, bool gnuext)
     return { s };
 }
 
-// what about appleclang?
-static Strings getCppStdOption(CPPLanguageStandard std, bool gnuext, bool clang, const Version &clver)
+static Strings getCppStdOption(CPPLanguageStandard std, bool gnuext, bool clang, bool appleclang, const Version &clver)
 {
+    // for apple clang versions
+    // see https://en.wikipedia.org/wiki/Xcode#Toolchain_versions
+
     String s = "-std="s + (gnuext ? "gnu" : "c") + "++";
     switch (std)
     {
@@ -132,13 +134,22 @@ static Strings getCppStdOption(CPPLanguageStandard std, bool gnuext, bool clang,
         s += "14";
         break;
     case CPPLanguageStandard::CPP17:
-        if (clang && clver > Version(5) || !clang && clver > Version(6))
+        if (
+            appleclang && clver > Version(9) ||
+            clang && clver > Version(5) ||
+            !appleclang && !clang && clver > Version(6)
+            )
             s += "17";
         else
             s += "1z";
         break;
     case CPPLanguageStandard::CPP20:
-        if (clang && clver > Version(10) || !clang && clver > Version(9))
+        if (
+            // appleclang 12.0.0 = llvm (clang) 10.0.0 which does not have c++20 flag (only >= 11)
+            //appleclang && clver >= Version(12) ||
+            clang && clver > Version(10) ||
+            !appleclang && !clang && clver > Version(9)
+            )
             s += "20";
         else
             s += "2a";
@@ -346,7 +357,7 @@ void ClangCompiler::prepareCommand1(const ::sw::Target &t)
     add_args(*cmd, getCStdOption(CStandard(), dynamic_cast<const NativeCompiledTarget&>(t).CExtensions));
     CStandard.skip = true;
     add_args(*cmd, getCppStdOption(CPPStandard(), dynamic_cast<const NativeCompiledTarget&>(t).CPPExtensions,
-        true, getVersion(t.getContext(), file)));
+        !appleclang, appleclang, getVersion(t.getContext(), file)));
     CPPStandard.skip = true;
 
     getCommandLineOptions<ClangOptions>(cmd.get(), *this);
@@ -554,7 +565,7 @@ void GNUCompiler::prepareCommand1(const Target &t)
     add_args(*cmd, getCStdOption(CStandard(), dynamic_cast<const NativeCompiledTarget&>(t).CExtensions));
     CStandard.skip = true;
     add_args(*cmd, getCppStdOption(CPPStandard(), dynamic_cast<const NativeCompiledTarget&>(t).CPPExtensions,
-        false, getVersion(t.getContext(), file)));
+        false, false, getVersion(t.getContext(), file)));
     CPPStandard.skip = true;
 
     getCommandLineOptions<GNUOptions>(cmd.get(), *this);

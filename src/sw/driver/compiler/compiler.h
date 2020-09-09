@@ -239,6 +239,8 @@ struct SW_DRIVER_CPP_API Clang
 struct SW_DRIVER_CPP_API ClangCompiler : Clang, NativeCompiler,
     CommandLineOptions<ClangOptions>
 {
+    bool appleclang = false;
+
     using NativeCompiler::NativeCompiler;
     using NativeCompilerOptions::operator=;
 
