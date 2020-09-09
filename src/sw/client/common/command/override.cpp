@@ -25,7 +25,6 @@ static void override_package_perform(SwClientContext &swctx, sw::PackagePath pre
         for (auto &[pkg, desc] : pm)
         {
             sw::PackageId pkg2{ prefix / pkg.getPath(), pkg.getVersion() };
-            LOG_INFO(logger, "Overriding " + pkg2.toString() + " to " + to_string(dir.u8string()));
             // fix deps' prefix
             sw::UnresolvedPackages deps;
             for (auto &d : desc->dependencies)
@@ -40,6 +39,7 @@ static void override_package_perform(SwClientContext &swctx, sw::PackagePath pre
             d.sdir = dir;
             d.dependencies = deps;
             d.prefix = (int)prefix.size();
+            LOG_INFO(logger, "Overriding " + pkg2.toString() + " to " + to_string(d.sdir.u8string()));
             swctx.getContext().getLocalStorage().getOverriddenPackagesStorage().install(lp, d);
         }
     };
