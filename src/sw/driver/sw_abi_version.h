@@ -7,4 +7,5 @@
 // 24: add virtual method to core.target
 // 25: core.target virtual methods update
 // 26: C++20 transition
-#define SW_MODULE_ABI_VERSION 26
+// 27: change OS::Version field to optional<>
+#define SW_MODULE_ABI_VERSION 27
