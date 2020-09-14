@@ -63,7 +63,7 @@ static String getCurrentModuleId()
 
 static path getPchDir(const Build &b)
 {
-    return b.getContext().getLocalStorage().storage_dir_tmp / "pch";
+    return b.getContext().getLocalStorage().storage_dir_tmp / "pch" / std::to_string(sw_get_module_abi_version());
 }
 
 static path getImportFilePrefix(const Build &b)
