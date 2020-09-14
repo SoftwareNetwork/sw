@@ -570,6 +570,17 @@ command_line:
                 type: path
                 hidden: true
 
+    # get
+    subcommand:
+        name: get
+        desc: Get different information. # add simple query lang?
+
+        command_line:
+            args:
+                type: String
+                list: true
+                positional: true
+
     # install
     subcommand:
         name: install

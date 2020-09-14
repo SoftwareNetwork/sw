@@ -28,6 +28,8 @@ SUBCOMMAND(configure) COMMA
 SUBCOMMAND(create) COMMA
 SUBCOMMAND(doc) COMMA // invokes documentation (hopefully)
 SUBCOMMAND(generate) COMMA
+// rename to query?
+SUBCOMMAND(get) COMMA // returns different information
 SUBCOMMAND(fetch) COMMA
 SUBCOMMAND(install) COMMA
 //SUBCOMMAND(i) COMMA // alias for install
