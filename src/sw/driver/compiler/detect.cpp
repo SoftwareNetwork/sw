@@ -1047,9 +1047,12 @@ void addSettingsAndSetPrograms(const SwCoreContext &swctx, TargetSettings &ts)
     if (bs.TargetOS.is(OSType::Windows))
     {
         //if (!ts["native"]["program"]["c"] || ts["native"]["program"]["c"].isValue())
-        check_and_assign_dependency(ts["native"]["stdlib"]["c"], to_upkg("com.Microsoft.Windows.SDK.ucrt"));
+        String sver;
+        if (bs.TargetOS.Version)
+            sver = "-" + bs.TargetOS.Version->toString();
+        check_and_assign_dependency(ts["native"]["stdlib"]["c"], to_upkg("com.Microsoft.Windows.SDK.ucrt" + sver));
         check_and_assign_dependency(ts["native"]["stdlib"]["cpp"], to_upkg("com.Microsoft.VisualStudio.VC.libcpp"));
-        check_and_assign_dependency(ts["native"]["stdlib"]["kernel"], to_upkg("com.Microsoft.Windows.SDK.um"));
+        check_and_assign_dependency(ts["native"]["stdlib"]["kernel"], to_upkg("com.Microsoft.Windows.SDK.um" + sver));
 
         // now find the latest available sdk (ucrt) and select it
         //TargetSettings oss;

@@ -22,6 +22,8 @@
 
 #include <sw/support/version.h>
 
+#include <optional>
+
 namespace sw
 {
 
@@ -234,7 +236,7 @@ struct SW_BUILDER_API OS
     SubArchType SubArch = SubArchType::NoSubArch;
     EnvironmentType EnvType = EnvironmentType::UnknownEnvironment;
     ObjectFormatType ObjectFormatType1 = ObjectFormatType::UnknownObjectFormat;
-    ::primitives::version::Version Version;
+    std::optional<::primitives::version::Version> Version;
 
     // TODO:
     bool support_dynamic_loading = true;

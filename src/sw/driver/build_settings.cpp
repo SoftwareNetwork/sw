@@ -134,8 +134,8 @@ String BuildSettings::getTargetTriplet() const
     else
     {
         target += "-" + toTripletString(TargetOS.Type);
-        if (TargetOS.isApple() && TargetOS.Version > Version(1))
-            target += TargetOS.Version.toString(TargetOS.Version.getRealLevel());
+        if (TargetOS.isApple() && TargetOS.Version)
+            target += TargetOS.Version->toString(TargetOS.Version->getRealLevel());
         if (TargetOS.Type == OSType::Android)
             target += "-android";
         if (TargetOS.Arch == ArchType::arm)

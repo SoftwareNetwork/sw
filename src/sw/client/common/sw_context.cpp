@@ -183,20 +183,27 @@ static String archTypeFromStringCaseI(const String &in)
     return platform;
 }
 
-static String osTypeFromStringCaseI(const String &in)
+static std::tuple<String, std::optional<sw::Version>> osTypeFromStringCaseI(const String &in)
 {
     auto os = boost::to_lower_copy(in);
+    std::optional<sw::Version> v;
+    auto p = os.find("-");
+    if (p != os.npos)
+    {
+        v = sw::Version(os.substr(p + 1));
+        os = os.substr(0, p);
+    }
     if (os == "win" || os == "windows")
-        return "com.Microsoft.Windows.NT";
+        return {"com.Microsoft.Windows.NT", v};
     else if (os == "linux")
-        return "org.torvalds.linux";
+        return {"org.torvalds.linux", v};
     else if (os == "mac" || os == "macos")
-        return "com.Apple.Macos"; // XNU? Darwin?
+        return {"com.Apple.Macos", v}; // XNU? Darwin?
     else if (os == "cyg" || os == "cygwin")
-        return "org.cygwin";
+        return {"org.cygwin", v};
     else if (os == "mingw" || os == "mingw32" || os == "mingw64" || os == "msys")
-        return "org.mingw";
-    return os;
+        return {"org.mingw", v};
+    return {os, v};
 }
 
 static void applySettings(sw::TargetSettings &s, const String &in_settings)
@@ -637,7 +644,10 @@ std::vector<sw::TargetSettings> SwClientContext::createSettings()
     // target_os
     mult_and_action(options.os.size(), [&options](auto &s, int i)
     {
-        s["os"]["kernel"] = osTypeFromStringCaseI(options.os[i]);
+        auto [k, v] = osTypeFromStringCaseI(options.os[i]);
+        s["os"]["kernel"] = k;
+        if (v)
+            s["os"]["version"] = v->toString();
     });
 
     // libc

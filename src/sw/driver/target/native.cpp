@@ -402,12 +402,17 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
     {
         auto C = std::make_shared<GNUCompiler>();
         c = C;
-        /*if (getBuildSettings().TargetOS.isApple())
+        if (getBuildSettings().TargetOS.isApple())
         {
-            C->VisibilityHidden = false;
-            C->VisibilityInlinesHidden = false;
-            C->PositionIndependentCode = false;
-        }*/
+            if (getBuildSettings().TargetOS.Version)
+            {
+                auto c = C->createCommand(getMainBuild());
+                c->push_back("-mmacosx-version-min=" + getBuildSettings().TargetOS.Version->toString());
+            }
+            //C->VisibilityHidden = false;
+            //C->VisibilityInlinesHidden = false;
+            //C->PositionIndependentCode = false;
+        }
     }
     else if (
         id.ppath == "org.LLVM.clang" || id.ppath == "org.LLVM.clangpp" ||
@@ -430,12 +435,17 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
         }
         if (id.ppath == "com.Apple.clang" || id.ppath == "com.Apple.clangpp")
             C->appleclang = true;
-        /*if (getBuildSettings().TargetOS.isApple())
+        if (getBuildSettings().TargetOS.isApple())
         {
-            C->VisibilityHidden = false;
-            C->VisibilityInlinesHidden = false;
-            C->PositionIndependentCode = false;
-        }*/
+            if (getBuildSettings().TargetOS.Version)
+            {
+                auto c = C->createCommand(getMainBuild());
+                c->push_back("-mmacosx-version-min=" + getBuildSettings().TargetOS.Version->toString());
+            }
+            //C->VisibilityHidden = false;
+            //C->VisibilityInlinesHidden = false;
+            //C->PositionIndependentCode = false;
+        }
     }
     else if (id.ppath == "org.LLVM.clangcl")
     {
@@ -578,7 +588,16 @@ std::shared_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetS
         c->Type = LinkerType::GNU;
         C->Prefix = getBuildSettings().TargetOS.getLibraryPrefix();
         if (getBuildSettings().TargetOS.isApple())
+        {
             C->use_start_end_groups = false;
+
+            // for linker also!
+            if (getBuildSettings().TargetOS.Version)
+            {
+                auto c = C->createCommand(getMainBuild());
+                c->push_back("-mmacosx-version-min=" + getBuildSettings().TargetOS.Version->toString());
+            }
+        }
         if (id.ppath == "org.LLVM.clang" ||
             id.ppath == "org.LLVM.clangpp" ||
             id.ppath == "com.Apple.clang" ||
