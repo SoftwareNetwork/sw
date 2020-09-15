@@ -125,6 +125,8 @@ FileDb::FileDb(const SwBuilderContext &swctx)
 {
 }
 
+static auto file_hash(const path &p) { return std::hash<path>()(p); }
+
 void FileDb::write(std::vector<uint8_t> &v, const CommandRecord &f, const detail::Storage &s)
 {
     v.clear();
@@ -148,7 +150,7 @@ void FileDb::write(std::vector<uint8_t> &v, const CommandRecord &f, const detail
             throw SW_RUNTIME_ERROR("no such file");
         auto p = i->second;
         lk.unlock();
-        write_int(v, std::hash<path>()(normalize_path(p)));
+        write_int(v, file_hash(normalize_path(p)));
     }
 }
 
@@ -184,7 +186,7 @@ static void load(const path &fn, Files &files, std::unordered_map<size_t, path> 
             auto p = fs::u8path(s);
             files.insert(p);
 
-            files2[std::hash<String>()(s)] = p;
+            files2[file_hash(p)] = p;
         }
     }
 
