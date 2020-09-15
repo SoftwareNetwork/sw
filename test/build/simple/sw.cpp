@@ -11,4 +11,9 @@ void build(Solution &s)
         e.ApiName = "API";
         e += "main.cpp";
     }
+
+    {
+        auto &e = s.addExecutable("cpp.test3");
+        e += "main3.cpp";
+    }
 }
