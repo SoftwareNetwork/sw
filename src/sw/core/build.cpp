@@ -325,7 +325,9 @@ bool SwBuild::step()
     }
 
     if (build_settings["measure"] == "true")
-        LOG_DEBUG(logger, "build step " << magic_enum::enum_name(state) << " time: " << t.getTimeFloat() << " s.");
+        // not working atm: magic_enum bug
+        //LOG_DEBUG(logger, "build step " << magic_enum::enum_name(state) << " time: " << t.getTimeFloat() << " s.");
+        LOG_DEBUG(logger, "build step " << toIndex(state) << " time: " << t.getTimeFloat() << " s.");
 
     return true;
 }
