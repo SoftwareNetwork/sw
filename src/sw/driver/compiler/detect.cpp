@@ -28,7 +28,7 @@ std::map<path, String> &getMsvcIncludePrefixes()
     return prefixes;
 }
 
-static String detectMsvcPrefix(builder::detail::ResolvableCommand c, const path &idir)
+static String detectMsvcPrefix(builder::detail::ResolvableCommand c)
 {
     // examples:
     // "Note: including file: filename\r" (english)
@@ -50,8 +50,6 @@ static String detectMsvcPrefix(builder::detail::ResolvableCommand c, const path 
     c.push_back("/c");
     c.push_back(fn);
     c.push_back("/Fo" + to_string(normalize_path_windows(obj)));
-    c.push_back("/I");
-    c.push_back(idir);
     std::error_code ec;
     c.execute(ec);
     fs::remove(obj);
@@ -64,18 +62,15 @@ static String detectMsvcPrefix(builder::detail::ResolvableCommand c, const path 
     };
 
     auto lines = split_lines(c.out.text);
-    if (lines.size() < 1)
+    if (lines.empty())
         throw SW_RUNTIME_ERROR(error("bad output"));
 
     String s = R"((.*?\s)[a-zA-Z]:[\\\/].*)" + hfn.stem().string() + "\\" + hfn.extension().string();
     std::regex r(s);
     std::smatch m;
-    if ((lines.size() > 1 && !std::regex_search(lines[1], m, r)) &&
-        !std::regex_search(lines[0], m, r) // clang-cl does not output filename
-        )
-    {
+    // clang-cl does not output filename -> lines.size() == 1
+    if (!std::regex_search(lines.size() > 1 ? lines[1] : lines[0], m, r))
         throw SW_RUNTIME_ERROR(error("regex_search failed"));
-    }
     return p[c.getProgram()] = m[1].str();
 }
 
@@ -195,7 +190,7 @@ static void detectMsvcCommon(const path &compiler, const Version &in_v,
             auto c = p->getCommand();
             if (s.getHostOs().Arch != target_arch)
                 c->addPathDirectory(host_root);
-            msvc_prefix = detectMsvcPrefix(*c, idir);
+            msvc_prefix = detectMsvcPrefix(*c);
             // run getVersion via prepared command
             builder::detail::ResolvableCommand c2 = *c;
             v = getVersion(s, c2);
@@ -501,7 +496,7 @@ static void detectWindowsClang(DETECT_ARGS)
         if (fs::exists(p->file))
         {
             auto cmd = p->getCommand();
-            auto msvc_prefix = detectMsvcPrefix(*cmd, ".");
+            auto msvc_prefix = detectMsvcPrefix(*cmd);
             getMsvcIncludePrefixes()[p->file] = msvc_prefix;
 
             auto [o,v] = getVersionAndOutput(s, p->file);
