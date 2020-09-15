@@ -35,7 +35,7 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "db_file");
 
-#define COMMAND_DB_FORMAT_VERSION 6
+#define COMMAND_DB_FORMAT_VERSION 8
 
 namespace sw
 {
