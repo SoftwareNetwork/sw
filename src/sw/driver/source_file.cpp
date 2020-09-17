@@ -447,6 +447,16 @@ bool SourceFileStorage::check_absolute(path &F, bool ignore_errors, bool *source
     return true;
 }
 
+void SourceFileStorage::mergeFiles(const SourceFileStorage &v, const GroupSettings &s)
+{
+    auto &t = getTarget();
+    auto nt = t.as<NativeCompiledTarget *>();
+    if (!nt)
+        return;
+    for (auto &f : v)
+         *nt += f.first;
+}
+
 void SourceFileStorage::merge(const SourceFileStorage &v, const GroupSettings &s)
 {
     source_files.insert(v.begin(), v.end());

@@ -2934,6 +2934,42 @@ void NativeCompiledTarget::prepare_pass4()
 {
     // merge
 
+    // merge files early
+    for (auto &d : all_deps_normal)
+    {
+        if (auto t = d->getTarget().as<const NativeCompiledTarget *>())
+        {
+            GroupSettings s;
+            s.has_same_parent = hasSameProject(*t);
+            auto &g = *t;
+            // merge from other group
+            s.merge_to_self = false;
+            if (s.has_same_parent)
+                mergeFiles(g.Protected, s);
+            mergeFiles(g.Public, s);
+            // always with interface
+            mergeFiles(g.Interface, s);
+        }
+        else if (auto t = d->getTarget().as<const PredefinedTarget *>())
+        {
+            const auto &is = d->getTarget().getInterfaceSettings();
+
+            for (auto &[k,v] : is["properties"].getMap())
+            {
+                auto inh = (InheritanceType)std::stoi(k);
+                if (inh == InheritanceType::Private)
+                    continue;
+                if (inh == InheritanceType::Protected && !hasSameProject(d->getTarget()))
+                    continue;
+
+                for (auto &v2 : v["source_files"].getArray())
+                    *this += v2.getPathValue(getContext().getLocalStorage());
+            }
+        }
+        else
+            throw SW_RUNTIME_ERROR("missing target code");
+    }
+
     // merge self
     TargetOptionsGroup::iterate_this([this](auto &v, auto i)
     {

@@ -76,6 +76,7 @@ public:
 
     // for option groups
     void merge(const SourceFileStorage &v, const GroupSettings &s = GroupSettings());
+    void mergeFiles(const SourceFileStorage &v, const GroupSettings &s = GroupSettings());
 
     bool check_absolute(path &file, bool ignore_errors = false, bool *source_dir = nullptr) const;
 
