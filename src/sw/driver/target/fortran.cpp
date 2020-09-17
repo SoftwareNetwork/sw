@@ -84,12 +84,13 @@ Commands FortranTarget::getCommands1() const
     Commands cmds;
     for (auto f : gatherSourceFiles<SourceFile>(*this, { ".f" }))
     {
-        auto c = std::dynamic_pointer_cast<decltype(compiler)::element_type>(compiler->clone());
-        c->setSourceFile(f->file);
-        c->Extension = getBuildSettings().TargetOS.getObjectFileExtension();
-        c->setOutputFile(get_output_file(f->file));
+        auto c = compiler->clone();
+        auto &nc = (FortranCompiler &)*c;
+        nc.setSourceFile(f->file);
+        nc.Extension = getBuildSettings().TargetOS.getObjectFileExtension();
+        nc.setOutputFile(get_output_file(f->file));
 
-        auto cmd = c->getCommand(*this);
+        auto cmd = nc.getCommand(*this);
         cmd->push_back("-c"); // for gfortran
         cmds.insert(cmd);
     }

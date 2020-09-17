@@ -39,15 +39,15 @@ static std::shared_ptr<CompilerType> activateCompiler(Target &t, const Unresolve
             t.setExtensionProgram(e, c->clone());
     };
 
-    auto c = std::dynamic_pointer_cast<CompilerBaseProgram>(prog->getProgram().clone());
-    if (c)
+    auto c1 = prog->getProgram().clone();
+    if (auto c = dynamic_cast<CompilerBaseProgram*>(c1.get()))
     {
         set_compiler_type(c);
         return {};
     }
 
     bool created = false;
-    auto create_command = [&prog, &created, &t, &c]()
+    auto create_command = [&prog, &created, &t](auto &c)
     {
         if (created)
             return;
@@ -58,11 +58,8 @@ static std::shared_ptr<CompilerType> activateCompiler(Target &t, const Unresolve
     };
 
     auto compiler = std::make_shared<CompilerType>();
-    c = compiler;
-    create_command();
-
-    set_compiler_type(c);
-
+    create_command(compiler);
+    set_compiler_type(compiler);
     return compiler;
 }
 

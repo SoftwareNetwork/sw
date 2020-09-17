@@ -28,7 +28,7 @@ struct SimpleProgram : Program
 {
     using Program::Program;
 
-    std::shared_ptr<Program> clone() const override { return std::make_shared<SimpleProgram>(*this); }
+    std::unique_ptr<Program> clone() const override { return std::make_unique<SimpleProgram>(*this); }
     std::shared_ptr<builder::Command> getCommand() const override
     {
         if (!cmd)

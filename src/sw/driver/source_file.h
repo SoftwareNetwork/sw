@@ -59,7 +59,7 @@ struct SW_DRIVER_CPP_API NativeSourceFile : SourceFile
     };
 
     path output; // object file
-    std::shared_ptr<NativeCompiler> compiler;
+    std::unique_ptr<Program> compiler;
     std::unordered_set<SourceFile*> dependencies; // explicit file deps? currently used for pchs
     BuildAsType BuildAs = BuildAsType::BasedOnExtension;
     bool skip_linking = false; // produce object file only
@@ -70,6 +70,7 @@ struct SW_DRIVER_CPP_API NativeSourceFile : SourceFile
     virtual ~NativeSourceFile();
 
     std::shared_ptr<builder::Command> getCommand(const Target &t) const override;
+    NativeCompiler &getCompiler() const;
 
     //void setSourceFile(const path &input, const path &output);
     void setOutputFile(const Target &t, const path &input, const path &output_dir); // bad name?
@@ -80,11 +81,12 @@ struct SW_DRIVER_CPP_API NativeSourceFile : SourceFile
 struct SW_DRIVER_CPP_API RcToolSourceFile : SourceFile
 {
     path output;
-    std::shared_ptr<RcTool> compiler;
+    std::unique_ptr<Program> compiler;
 
     RcToolSourceFile(const RcTool &c, const path &input, const path &output);
 
     std::shared_ptr<builder::Command> getCommand(const Target &t) const override;
+    RcTool &getCompiler() const;
 };
 
 }

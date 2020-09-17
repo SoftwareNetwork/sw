@@ -359,15 +359,15 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
             //throw SW_RUNTIME_ERROR("Unknown compiler type: " + id.toString());
     };
 
-    auto c = std::dynamic_pointer_cast<CompilerBaseProgram>(t->getProgram().clone());
-    if (c)
+    auto c1 = t->getProgram().clone();
+    if (auto c = dynamic_cast<CompilerBaseProgram*>(c1.get()))
     {
         set_compiler_type(c);
         return;
     }
 
     bool created = false;
-    auto create_command = [this, &created, &t, &c, &s, extended_desc]()
+    auto create_command = [this, &created, &t, &s, extended_desc](auto &c)
     {
         if (created)
             return;
@@ -380,9 +380,10 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
             targetSettings2Command(*C, s["command"]);
     };
 
+    std::unique_ptr<CompilerBaseProgram> c;
     if (id.ppath == "com.Microsoft.VisualStudio.VC.cl")
     {
-        c = std::make_shared<VisualStudioCompiler>();
+        c = std::make_unique<VisualStudioCompiler>();
         if (getSettings()["native"]["stdlib"]["cpp"].getValue() == "com.Microsoft.VisualStudio.VC.libcpp")
         {
             // take same ver as cl
@@ -393,20 +394,20 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
         }
     }
     else if (id.ppath == "com.Microsoft.VisualStudio.VC.ml")
-        c = std::make_shared<VisualStudioASMCompiler>();
+        c = std::make_unique<VisualStudioASMCompiler>();
     else if (id.ppath == "com.Microsoft.Windows.rc")
-        c = std::make_shared<RcTool>();
+        c = std::make_unique<RcTool>();
     else if (id.ppath == "org.gnu.gcc.as")
-        c = std::make_shared<GNUASMCompiler>();
+        c = std::make_unique<GNUASMCompiler>();
     else if (id.ppath == "org.gnu.gcc" || id.ppath == "org.gnu.gpp")
     {
-        auto C = std::make_shared<GNUCompiler>();
-        c = C;
+        c = std::make_unique<GNUCompiler>();
+        auto &nc = (GNUCompiler&)*c;
         if (getBuildSettings().TargetOS.isApple())
         {
             if (getBuildSettings().TargetOS.Version)
             {
-                auto c = C->createCommand(getMainBuild());
+                auto c = nc.createCommand(getMainBuild());
                 c->push_back("-mmacosx-version-min=" + getBuildSettings().TargetOS.Version->toString());
             }
             //C->VisibilityHidden = false;
@@ -419,13 +420,13 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
         id.ppath == "com.Apple.clang" || id.ppath == "com.Apple.clangpp"
         )
     {
-        auto C = std::make_shared<ClangCompiler>();
-        c = C;
-        create_command();
-        C->Target = getBuildSettings().getTargetTriplet();
+        c = std::make_unique<ClangCompiler>();
+        auto &nc = (ClangCompiler&)*c;
+        create_command(c);
+        nc.Target = getBuildSettings().getTargetTriplet();
         if (getBuildSettings().TargetOS.is(OSType::Windows))
         {
-            auto c = C->createCommand(getMainBuild());
+            auto c = nc.createCommand(getMainBuild());
             // this one leaves default clang runtime library include path (from installed dir)
             c->push_back("-nostdlibinc");
             // this one cleans all default include dirs
@@ -434,12 +435,12 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
             *this += "_CRT_USE_BUILTIN_OFFSETOF"_def;
         }
         if (id.ppath == "com.Apple.clang" || id.ppath == "com.Apple.clangpp")
-            C->appleclang = true;
+            nc.appleclang = true;
         if (getBuildSettings().TargetOS.isApple())
         {
             if (getBuildSettings().TargetOS.Version)
             {
-                auto c = C->createCommand(getMainBuild());
+                auto c = nc.createCommand(getMainBuild());
                 c->push_back("-mmacosx-version-min=" + getBuildSettings().TargetOS.Version->toString());
             }
             //C->VisibilityHidden = false;
@@ -449,35 +450,35 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
     }
     else if (id.ppath == "org.LLVM.clangcl")
     {
-        auto C = std::make_shared<ClangClCompiler>();
-        c = C;
-        create_command();
+        c = std::make_unique<ClangClCompiler>();
+        auto &nc = (ClangClCompiler&)*c;
+        create_command(c);
 
         {
             // we do everything ourselves
             // otherwise we get wrong order on clang includes and msvc includes (intrinsics and such)
-            auto c = C->createCommand(getMainBuild());
+            auto c = nc.createCommand(getMainBuild());
             c->push_back("-nostdinc");
         }
 
         switch (getBuildSettings().TargetOS.Arch)
         {
         case ArchType::x86_64:
-            C->CommandLineOptions<ClangClOptions>::Arch = clang::ArchType::m64;
+            nc.CommandLineOptions<ClangClOptions>::Arch = clang::ArchType::m64;
             break;
         case ArchType::x86:
-            C->CommandLineOptions<ClangClOptions>::Arch = clang::ArchType::m32;
+            nc.CommandLineOptions<ClangClOptions>::Arch = clang::ArchType::m32;
             break;
         case ArchType::arm:
         {
-            auto c = C->createCommand(getMainBuild());
+            auto c = nc.createCommand(getMainBuild());
             c->push_back("--target=arm-pc-windows-msvc");
             // set using target? check correctness then: improve getTargetTriplet()
         }
         break;
         case ArchType::aarch64:
         {
-            auto c = C->createCommand(getMainBuild());
+            auto c = nc.createCommand(getMainBuild());
             c->push_back("--target=aarch64-pc-windows-msvc");
             // set using target? check correctness then: improve getTargetTriplet()
         }
@@ -486,15 +487,15 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
             throw SW_RUNTIME_ERROR("Unknown arch");
         }
 
-        auto c = C->createCommand(getMainBuild());
+        auto c = nc.createCommand(getMainBuild());
         // clang gives error on reinterpret cast in offsetof macro in win ucrt
         *this += "_CRT_USE_BUILTIN_OFFSETOF"_def;
     }
     else if (id.ppath == "com.intel.compiler.c" || id.ppath == "com.intel.compiler.cpp")
     {
-        auto C = std::make_shared<VisualStudioCompiler>();
-        c = C;
-        C->ForceSynchronousPDBWrites = false;
+        c = std::make_unique<VisualStudioCompiler>();
+        auto &nc = (VisualStudioCompiler&)*c;
+        nc.ForceSynchronousPDBWrites = false;
         if (getSettings()["native"]["stdlib"]["cpp"].getValue() == "com.Microsoft.VisualStudio.VC.libcpp")
         {
             // take same ver as cl
@@ -507,8 +508,7 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
     else
         throw SW_RUNTIME_ERROR("Unknown compiler: " + id.toString());
 
-    create_command();
-
+    create_command(c);
     set_compiler_type(c);
 }
 
@@ -1261,8 +1261,8 @@ void NativeCompiledTarget::createPrecompiledHeader()
 
     auto setup_create_gcc_clang = [this, &sf](auto &c)
     {
-        sf->compiler->setSourceFile(pch.header, pch.pch);
-        sf->output = sf->compiler->getOutputFile();
+        sf->getCompiler().setSourceFile(pch.header, pch.pch);
+        sf->output = sf->getCompiler().getOutputFile();
 
         if (getMainBuild().getSettings()["verbose"] == "true")
             getMergeObject()[pch.source].fancy_name += " (" + to_string(normalize_path(pch.header)) + ")";
@@ -3271,7 +3271,7 @@ void NativeCompiledTarget::prepare_pass5()
     for (auto &f : files)
     {
         // set everything before merge!
-        f->compiler->merge(*this);
+        f->getCompiler().merge(*this);
 
         auto vs_setup = [this](auto *f, auto *c)
         {
@@ -3418,16 +3418,16 @@ void NativeCompiledTarget::prepare_pass5()
             auto vs_setup = [&set_fancy_name](auto &t, auto *f, auto *c, auto &pp_command)
             {
                 // create new cmd
-                t.Storage.push_back(pp_command);
+                //t.Storage.push_back(pp_command);
 
                 // set pp
-                pp_command->PreprocessToFile() = true;
+                pp_command.PreprocessToFile() = true;
                 // prepare & register
-                auto cmd = pp_command->getCommand(t);
+                auto cmd = pp_command.getCommand(t);
                 t.registerCommand(*cmd);
 
                 // set input file for old command
-                c->setSourceFile(pp_command->PreprocessFileName(), c->getOutputFile());
+                c->setSourceFile(pp_command.PreprocessFileName(), c->getOutputFile());
 
                 set_fancy_name(t, cmd, f);
             };
@@ -3435,20 +3435,20 @@ void NativeCompiledTarget::prepare_pass5()
             auto gnu_setup = [&set_fancy_name](auto &t, auto *f, auto *c, auto &pp_command)
             {
                 // create new cmd
-                t.Storage.push_back(pp_command);
+                //t.Storage.push_back(pp_command);
 
                 // set pp
-                pp_command->CompileWithoutLinking = false;
-                pp_command->Preprocess = true;
-                auto o = pp_command->getOutputFile();
+                pp_command.CompileWithoutLinking = false;
+                pp_command.Preprocess = true;
+                auto o = pp_command.getOutputFile();
                 o = o.parent_path() / o.stem() += ".i";
-                pp_command->setOutputFile(o);
+                pp_command.setOutputFile(o);
                 // prepare & register
-                auto cmd = pp_command->getCommand(t);
+                auto cmd = pp_command.getCommand(t);
                 t.registerCommand(*cmd);
 
                 // set input file for old command
-                c->setSourceFile(pp_command->getOutputFile(), c->getOutputFile());
+                c->setSourceFile(pp_command.getOutputFile(), c->getOutputFile());
 
                 set_fancy_name(t, cmd, f);
             };
@@ -3457,25 +3457,25 @@ void NativeCompiledTarget::prepare_pass5()
             if (auto c = f->compiler->as<VisualStudioCompiler *>())
             {
                 auto pp_command = f->compiler->clone();
-                auto pp_command2 = std::static_pointer_cast<VisualStudioCompiler>(pp_command);
+                auto pp_command2 = (VisualStudioCompiler&)*pp_command;
                 vs_setup(*this, f, c, pp_command2);
             }
             else if (auto c = f->compiler->as<ClangClCompiler *>())
             {
                 auto pp_command = f->compiler->clone();
-                auto pp_command2 = std::static_pointer_cast<ClangClCompiler>(pp_command);
+                auto pp_command2 = (ClangClCompiler&)*pp_command;
                 vs_setup(*this, f, c, pp_command2);
             }
             else if (auto c = f->compiler->as<ClangCompiler *>())
             {
                 auto pp_command = f->compiler->clone();
-                auto pp_command2 = std::static_pointer_cast<ClangCompiler>(pp_command);
+                auto pp_command2 = (ClangCompiler&)*pp_command;
                 gnu_setup(*this, f, c, pp_command2);
             }
             else if (auto c = f->compiler->as<GNUCompiler *>())
             {
                 auto pp_command = f->compiler->clone();
-                auto pp_command2 = std::static_pointer_cast<GNUCompiler>(pp_command);
+                auto pp_command2 = (GNUCompiler&)*pp_command;
                 gnu_setup(*this, f, c, pp_command2);
             }
             else
@@ -3487,7 +3487,7 @@ void NativeCompiledTarget::prepare_pass5()
     for (auto &f : ::sw::gatherSourceFiles<RcToolSourceFile>(*this))
     {
         // add casual idirs?
-        f->compiler->idirs = NativeCompilerOptions::System.IncludeDirectories;
+        f->getCompiler().idirs = NativeCompilerOptions::System.IncludeDirectories;
     }
 
     // generate rc, this one does not need idirs above

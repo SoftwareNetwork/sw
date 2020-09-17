@@ -25,18 +25,18 @@
 #include <optional>
 
 #define SW_DECLARE_PROGRAM_CLONE \
-    std::shared_ptr<Program> clone() const override
+    std::unique_ptr<Program> clone() const override
 
 #define SW_DEFINE_PROGRAM_CLONE(t)            \
-    std::shared_ptr<Program> t::clone() const \
+    std::unique_ptr<Program> t::clone() const \
     {                                         \
-        return std::make_shared<t>(*this);    \
+        return std::make_unique<t>(*this);    \
     }
 
 #define SW_DEFINE_PROGRAM_CLONE_INLINE(t)           \
-    std::shared_ptr<Program> clone() const override \
+    std::unique_ptr<Program> clone() const override \
     {                                               \
-        return std::make_shared<t>(*this);          \
+        return std::make_unique<t>(*this);          \
     }
 
 namespace sw
@@ -53,7 +53,7 @@ struct SW_BUILDER_API Program : ICastable, detail::Executable
     Program &operator=(const Program &);
     virtual ~Program() = default;
 
-    virtual std::shared_ptr<Program> clone() const = 0;
+    virtual std::unique_ptr<Program> clone() const = 0;
 };
 
 using ProgramPtr = std::shared_ptr<Program>;

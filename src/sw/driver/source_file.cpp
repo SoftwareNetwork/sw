@@ -543,27 +543,34 @@ bool SourceFile::isActive() const
 
 NativeSourceFile::NativeSourceFile(const NativeCompiler &c, const path &input, const path &o)
     : SourceFile(input)
-    , compiler(std::static_pointer_cast<NativeCompiler>(c.clone()))
+    , compiler(c.clone())
     , output(o)
 {
-    compiler->setSourceFile(input, output);
+    getCompiler().setSourceFile(input, output);
 }
 
 NativeSourceFile::NativeSourceFile(const NativeSourceFile &rhs)
     : SourceFile(rhs)
 {
     output = rhs.output;
-    compiler = std::static_pointer_cast<NativeCompiler>(rhs.compiler->clone());
+    compiler = rhs.compiler->clone();
 }
 
 NativeSourceFile::~NativeSourceFile()
 {
 }
 
+NativeCompiler &NativeSourceFile::getCompiler() const
+{
+    if (!compiler)
+        throw SW_RUNTIME_ERROR("Compiler was not set");
+    return static_cast<NativeCompiler &>(*compiler);
+}
+
 void NativeSourceFile::setOutputFile(const path &o)
 {
     output = o;
-    compiler->setSourceFile(file, output);
+    getCompiler().setSourceFile(file, output);
 }
 
 void NativeSourceFile::setOutputFile(const Target &t, const path &input, const path &output_dir)
@@ -573,12 +580,12 @@ void NativeSourceFile::setOutputFile(const Target &t, const path &input, const p
 
 path NativeSourceFile::getObjectFilename(const Target &t, const path &p) const
 {
-    return SourceFile::getObjectFilename(t, p) += compiler->getObjectExtension(t.getBuildSettings().TargetOS);
+    return SourceFile::getObjectFilename(t, p) += getCompiler().getObjectExtension(t.getBuildSettings().TargetOS);
 }
 
 std::shared_ptr<builder::Command> NativeSourceFile::getCommand(const Target &t) const
 {
-    auto cmd = compiler->getCommand(t);
+    auto cmd = getCompiler().getCommand(t);
     for (auto &d : dependencies)
     {
         if (d)
@@ -589,17 +596,24 @@ std::shared_ptr<builder::Command> NativeSourceFile::getCommand(const Target &t) 
 
 RcToolSourceFile::RcToolSourceFile(const RcTool &c, const path &input, const path &o)
     : SourceFile(input)
-    , compiler(std::static_pointer_cast<RcTool>(c.clone()))
+    , compiler(c.clone())
     , output(o)
 {
-    compiler->setSourceFile(input);
-    compiler->setOutputFile(output);
+    getCompiler().setSourceFile(input);
+    getCompiler().setOutputFile(output);
 }
 
 std::shared_ptr<builder::Command> RcToolSourceFile::getCommand(const Target &t) const
 {
-    auto cmd = compiler->getCommand(t);
+    auto cmd = getCompiler().getCommand(t);
     return cmd;
+}
+
+RcTool &RcToolSourceFile::getCompiler() const
+{
+    if (!compiler)
+        throw SW_RUNTIME_ERROR("Compiler was not set");
+    return static_cast<RcTool &>(*compiler);
 }
 
 }
