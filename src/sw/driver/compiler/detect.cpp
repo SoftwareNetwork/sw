@@ -266,7 +266,11 @@ static void detectMsvcCommon(const path &compiler, const Version &in_v,
     {
         auto &libcpp = addTarget<PredefinedTarget>(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.libcpp", v), ts);
         libcpp.public_ts["properties"]["6"]["system_include_directories"].push_back(idir);
-        libcpp.public_ts["properties"]["6"]["system_link_directories"].push_back(root / "lib" / target);
+        auto no_target_libdir = v.getMajor() < 16 && target == "x86";
+        if (no_target_libdir)
+            libcpp.public_ts["properties"]["6"]["system_link_directories"].push_back(root / "lib");
+        else
+            libcpp.public_ts["properties"]["6"]["system_link_directories"].push_back(root / "lib" / target);
         if (v.getMajor() >= 15)
         {
             // under cond?
@@ -281,7 +285,10 @@ static void detectMsvcCommon(const path &compiler, const Version &in_v,
         {
             auto &atlmfc = addTarget<PredefinedTarget>(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.ATLMFC", v), ts);
             atlmfc.public_ts["properties"]["6"]["system_include_directories"].push_back(root / "ATLMFC" / "include");
-            atlmfc.public_ts["properties"]["6"]["system_link_directories"].push_back(root / "ATLMFC" / "lib" / target);
+            if (no_target_libdir)
+                atlmfc.public_ts["properties"]["6"]["system_link_directories"].push_back(root / "ATLMFC" / "lib");
+            else
+                atlmfc.public_ts["properties"]["6"]["system_link_directories"].push_back(root / "ATLMFC" / "lib" / target);
         }
     }
 
