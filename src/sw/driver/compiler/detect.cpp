@@ -251,15 +251,8 @@ static void detectMsvcCommon(const path &compiler, const Version &in_v,
         auto p = std::make_shared<SimpleProgram>();
         p->file = compiler / "dumpbin.exe";
         if (fs::exists(p->file))
-        {
-            auto c = p->getCommand();
-            // run getVersion via prepared command
-            builder::detail::ResolvableCommand c2 = *c;
-            auto v = getVersion(s, c2);
-            if (in_v.isPreRelease())
-                v.getExtra() = in_v.getExtra();
             addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.dumpbin", v), ts, p);
-        }
+        // should we add path dir here?
     }
 
     // libc++
