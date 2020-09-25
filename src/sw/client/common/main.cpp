@@ -136,6 +136,8 @@ int StartupData::run()
 
     try
     {
+        if (!version.empty())
+            LOG_TRACE(logger, "version:\n" + version);
         print_command_line(args); // after logger; also for builtin call?
         if (after_create_options && after_create_options(*this))
             return exit(0);

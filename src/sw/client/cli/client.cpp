@@ -28,12 +28,16 @@
 
 //#include <mimalloc.h>
 
+EXPORT_FROM_EXECUTABLE
+std::string getVersionString();
+
 int main(int argc, char **argv)
 {
     //mi_version();
     //sw_enable_crash_server();
 
     StartupData sd(argc, argv);
+    sd.version = getVersionString();
     sd.program_short_name = "sw";
     return sd.run();
 }

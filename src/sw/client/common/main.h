@@ -22,6 +22,7 @@ struct SW_CLIENT_COMMON_API StartupData
     String program_short_name; // used in updater
     String overview;
     Strings args;
+    String version;
     std::unique_ptr<ClOptions> cloptions;
     std::unique_ptr<Options> options;
     std::optional<int> exit_code;
