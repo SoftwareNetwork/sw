@@ -168,7 +168,7 @@ VSInstances &gatherVSInstances()
     return instances;
 }
 
-static void detectMsvcCommon(const path &compiler, const Version &in_v,
+static void detectMsvcCommon(const path &compiler, const Version &vs_version,
     ArchType target_arch, const path &host_root, const TargetSettings &ts, const path &idir,
     const path &root, const path &target,
     DETECT_ARGS)
@@ -194,8 +194,8 @@ static void detectMsvcCommon(const path &compiler, const Version &in_v,
             // run getVersion via prepared command
             builder::detail::ResolvableCommand c2 = *c;
             v = getVersion(s, c2);
-            if (in_v.isPreRelease())
-                v.getExtra() = in_v.getExtra();
+            if (vs_version.isPreRelease())
+                v.getExtra() = vs_version.getExtra();
             auto &cl = addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.cl", v), ts, p);
 
             // rule based msvc
@@ -259,12 +259,12 @@ static void detectMsvcCommon(const path &compiler, const Version &in_v,
     {
         auto &libcpp = addTarget<PredefinedTarget>(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.libcpp", v), ts);
         libcpp.public_ts["properties"]["6"]["system_include_directories"].push_back(idir);
-        auto no_target_libdir = v.getMajor() < 16 && target == "x86";
+        auto no_target_libdir = vs_version.getMajor() < 16 && target == "x86";
         if (no_target_libdir)
             libcpp.public_ts["properties"]["6"]["system_link_directories"].push_back(root / "lib");
         else
             libcpp.public_ts["properties"]["6"]["system_link_directories"].push_back(root / "lib" / target);
-        if (v.getMajor() >= 15)
+        if (vs_version.getMajor() >= 15)
         {
             // under cond?
             libcpp.public_ts["properties"]["6"]["system_link_libraries"].push_back(boost::to_upper_copy("oldnames.lib"s));
@@ -285,7 +285,7 @@ static void detectMsvcCommon(const path &compiler, const Version &in_v,
         }
     }
 
-    if (in_v.getMajor() >= 15)
+    if (vs_version.getMajor() >= 15)
     {
         // concrt
         if (fs::exists(root / "crt" / "src" / "concrt"))
