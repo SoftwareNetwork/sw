@@ -264,7 +264,7 @@ static void detectMsvcCommon(const path &compiler, const Version &vs_version,
             libcpp.public_ts["properties"]["6"]["system_link_directories"].push_back(root / "lib");
         else
             libcpp.public_ts["properties"]["6"]["system_link_directories"].push_back(root / "lib" / target);
-        if (vs_version.getMajor() >= 15)
+        if (cl_exe_version.getMajor() >= 19)
         {
             // under cond?
             libcpp.public_ts["properties"]["6"]["system_link_libraries"].push_back(boost::to_upper_copy("oldnames.lib"s));
@@ -285,7 +285,7 @@ static void detectMsvcCommon(const path &compiler, const Version &vs_version,
         }
     }
 
-    if (vs_version.getMajor() >= 15)
+    if (cl_exe_version.getMajor() >= 19)
     {
         // concrt
         if (fs::exists(root / "crt" / "src" / "concrt"))
