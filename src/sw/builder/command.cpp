@@ -26,7 +26,7 @@
 #include "file_storage.h"
 #include "jumppad.h"
 #include "os.h"
-#include "program.h"
+//#include "program.h"
 #include "sw_context.h"
 
 #include <sw/manager/settings.h>
@@ -1166,11 +1166,11 @@ void Command::printLog() const
     }
 }
 
-void Command::setProgram(std::shared_ptr<Program> p)
+/*void Command::setProgram(std::shared_ptr<Program> p)
 {
     if (p)
         setProgram(p->file);
-}
+}*/
 
 Files Command::getGeneratedDirs() const
 {

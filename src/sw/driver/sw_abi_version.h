@@ -9,4 +9,5 @@
 // 26: C++20 transition
 // 27: change OS::Version field to optional<>
 // 28: Program::clone() result shared -> unique ptr
-#define SW_MODULE_ABI_VERSION 28
+// 29: remove virtual method from core.target
+#define SW_MODULE_ABI_VERSION 29

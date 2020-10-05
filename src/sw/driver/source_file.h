@@ -24,10 +24,10 @@ struct Target;
 struct SW_DRIVER_CPP_API SourceFile : /*TargetFile, */ICastable
 {
     path file;
-    bool created = true;
+    //bool created = true;
     bool skip = false;
-    bool postponed = false; // remove later?
-    bool show_in_ide = true;
+    //bool postponed = false; // remove later?
+    //bool show_in_ide = true;
     path install_dir;
     Strings args; // additional args to job, move to native?
     String fancy_name; // for output
@@ -38,17 +38,17 @@ struct SW_DRIVER_CPP_API SourceFile : /*TargetFile, */ICastable
     SourceFile(const SourceFile &) = default;
     virtual ~SourceFile() = default;
 
-    virtual std::shared_ptr<builder::Command> getCommand(const Target &t) const { return nullptr; }
+    //virtual std::shared_ptr<builder::Command> getCommand(const Target &t) const { return nullptr; }
 
     bool isActive() const;
 
-    void showInIde(bool s) { show_in_ide = s; }
-    bool showInIde() { return show_in_ide; }
+    //void showInIde(bool s) { show_in_ide = s; }
+    //bool showInIde() { return show_in_ide; }
 
-    static path getObjectFilename(const Target &t, const path &p);
+    //static path getObjectFilename(const Target &t, const path &p);
 };
 
-struct SW_DRIVER_CPP_API NativeSourceFile : SourceFile
+/*struct SW_DRIVER_CPP_API NativeSourceFile : SourceFile
 {
     enum BuildAsType
     {
@@ -69,16 +69,16 @@ struct SW_DRIVER_CPP_API NativeSourceFile : SourceFile
     NativeSourceFile(const NativeSourceFile &rhs);
     virtual ~NativeSourceFile();
 
-    std::shared_ptr<builder::Command> getCommand(const Target &t) const override;
+    //std::shared_ptr<builder::Command> getCommand(const Target &t) const override;
     NativeCompiler &getCompiler() const;
 
     //void setSourceFile(const path &input, const path &output);
     void setOutputFile(const Target &t, const path &input, const path &output_dir); // bad name?
     void setOutputFile(const path &output);
     path getObjectFilename(const Target &t, const path &p) const;
-};
+};*/
 
-struct SW_DRIVER_CPP_API RcToolSourceFile : SourceFile
+/*struct SW_DRIVER_CPP_API RcToolSourceFile : SourceFile
 {
     path output;
     std::unique_ptr<Program> compiler;
@@ -87,6 +87,6 @@ struct SW_DRIVER_CPP_API RcToolSourceFile : SourceFile
 
     std::shared_ptr<builder::Command> getCommand(const Target &t) const override;
     RcTool &getCompiler() const;
-};
+};*/
 
 }

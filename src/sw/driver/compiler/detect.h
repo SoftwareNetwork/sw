@@ -3,10 +3,10 @@
 
 #pragma once
 
-#include "sw/core/sw_context.h"
+#include "../program.h"
 
 #include <sw/builder/command.h>
-#include <sw/builder/program.h>
+#include <sw/core/sw_context.h>
 
 // TODO: actually detect.cpp may be rewritten as entry point
 

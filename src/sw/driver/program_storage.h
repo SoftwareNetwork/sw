@@ -5,7 +5,7 @@
 
 #include "options.h"
 
-#include <sw/builder/program.h>
+//#include <sw/builder/program.h>
 
 #include <optional>
 #include <variant>
@@ -15,7 +15,7 @@ namespace sw
 
 struct Target;
 
-struct SW_DRIVER_CPP_API ProgramStorage
+/*struct SW_DRIVER_CPP_API ProgramStorage
 {
     // make type polymorphic for dyncasts
     virtual ~ProgramStorage();
@@ -35,6 +35,6 @@ struct SW_DRIVER_CPP_API ProgramStorage
 
 private:
     std::map<String, std::variant<DependencyPtr, ProgramPtr>> extensions;
-};
+};*/
 
 }

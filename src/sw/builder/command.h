@@ -200,7 +200,7 @@ public:
 
     using Base::push_back;
     using Base::setProgram;
-    void setProgram(std::shared_ptr<Program> p);
+    //void setProgram(std::shared_ptr<Program> p);
     void addInput(const path &p);
     void addInput(const Files &p);
     void addImplicitInput(const path &p);

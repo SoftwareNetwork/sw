@@ -3,7 +3,24 @@
 
 #pragma once
 
-#include <sw/builder/program.h>
+#include <sw/builder/node.h>
+
+#include <primitives/filesystem.h>
+
+#define SW_DECLARE_PROGRAM_CLONE \
+    std::unique_ptr<Program> clone() const override
+
+#define SW_DEFINE_PROGRAM_CLONE(t)            \
+    std::unique_ptr<Program> t::clone() const \
+    {                                         \
+        return std::make_unique<t>(*this);    \
+    }
+
+#define SW_DEFINE_PROGRAM_CLONE_INLINE(t)           \
+    std::unique_ptr<Program> clone() const override \
+    {                                               \
+        return std::make_unique<t>(*this);          \
+    }
 
 namespace sw
 {
@@ -11,6 +28,31 @@ namespace sw
 struct Build;
 struct SourceFile;
 struct Target;
+
+struct SW_DRIVER_CPP_API Program : ICastable, detail::Executable
+{
+    path file;
+
+    Program();
+    Program(const Program &);
+    Program &operator=(const Program &);
+    virtual ~Program() = default;
+
+    virtual std::unique_ptr<Program> clone() const = 0;
+};
+
+using ProgramPtr = std::unique_ptr<Program>;
+
+// reconsider
+struct SW_DRIVER_CPP_API PredefinedProgram
+{
+    void setProgram(ProgramPtr &&p) { program = std::move(p); }
+    Program &getProgram();
+    const Program &getProgram() const;
+
+private:
+    ProgramPtr program;
+};
 
 /*enum class TransformType
 {

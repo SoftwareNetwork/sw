@@ -13,12 +13,7 @@
 namespace sw
 {
 
-ProgramStorage::~ProgramStorage() = default;
-
-/*void ProgramStorage::setExtensionProgram(const String &ext, const PackageId &pkg)
-{
-    extensions.insert_or_assign(ext, pkg);
-}*/
+/*ProgramStorage::~ProgramStorage() = default;
 
 void ProgramStorage::setExtensionProgram(const String &ext, const ProgramPtr &p)
 {
@@ -27,7 +22,6 @@ void ProgramStorage::setExtensionProgram(const String &ext, const ProgramPtr &p)
 
 void ProgramStorage::setExtensionProgram(const String &ext, const DependencyPtr &d)
 {
-    //setExtensionProgram(ext, d->getPackage());
     extensions.insert_or_assign(ext, d);
 
     // also add (yes, duplicate!) passed dptr
@@ -39,20 +33,6 @@ void ProgramStorage::setExtensionProgram(const String &ext, const DependencyPtr 
 void ProgramStorage::setExtensionProgram(const String &ext, const UnresolvedPackage &p)
 {
     setExtensionProgram(ext, std::make_shared<Dependency>(p));
-    return;
-
-    auto t = dynamic_cast<Target*>(this);
-    if (!t)
-        throw SW_RUNTIME_ERROR("not a target");
-
-    // late resolve version
-    //auto pkg = t->getSolution().swctx.resolve(p);
-    SW_UNIMPLEMENTED;
-    //extensions.insert_or_assign(ext, p);
-
-    // add a dependency to current target
-    if (auto t = dynamic_cast<NativeCompiledTarget *>(this); t)
-        t->addDummyDependency(std::make_shared<Dependency>(p));
 }
 
 Program *ProgramStorage::getProgram(const String &ext) const
@@ -90,6 +70,6 @@ void ProgramStorage::clearExtensions()
 void ProgramStorage::removeExtension(const String &ext)
 {
     extensions.erase(ext);
-}
+}*/
 
 }

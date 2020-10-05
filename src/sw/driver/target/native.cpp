@@ -8,6 +8,7 @@
 #include "../functions.h"
 #include "../build.h"
 #include "../command.h"
+#include "../rule.h"
 #include "../compiler/detect.h"
 
 #include <sw/builder/jumppad.h>
@@ -146,34 +147,28 @@ SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD(sw_replace_dll_import, replace_dll_import)
 namespace sw
 {
 
+NativeTarget::~NativeTarget()
+{
+    for (auto &r : rules)
+        delete r;
+}
+
 void NativeTarget::setOutputFile()
 {
-    /* || add a condition so user could change non build output dir*/
-    //if (Scope == TargetScope::Build)
-    {
-        if (isStaticLibrary())
-            getSelectedTool()->setOutputFile(getOutputFileName2("lib"));
-        else
-        {
-            getSelectedTool()->setOutputFile(getOutputFileName2("bin"));
-            getSelectedTool()->setImportLibrary(getOutputFileName2("lib"));
-        }
-    }
-    /*else
-    {
+    //SW_UNIMPLEMENTED;
+    path ofile;
+    if (isStaticLibrary())
         SW_UNIMPLEMENTED;
-
-        auto base = BinaryDir.parent_path() / "out" / ::sw::getOutputFileName(*this);
-        getSelectedTool()->setOutputFile(base);
-        if (getSelectedTool() != Librarian.get())
-            getSelectedTool()->setImportLibrary(base);
-    }*/
+        //getSelectedTool()->setOutputFile(getOutputFileName2("lib"));
+    else
+    {
+        ofile = getOutputFileName2("bin");
+        //getSelectedTool()->setOutputFile(getOutputFileName2("bin"));
+        //getSelectedTool()->setImportLibrary(getOutputFileName2("lib"));
+    }
 
     // set generated early
-    if (auto f = getOutputFile(); !f.empty())
-        File(f, getFs()).setGenerated(true);
-    if (auto f = getOutputFile(); !f.empty())
-        File(f, getFs()).setGenerated(true);
+    File(ofile, getFs()).setGenerated(true);
 
     if (!isLocal())
     try
@@ -196,10 +191,7 @@ path NativeTarget::getOutputFileName2(const path &subdir) const
 
 path NativeTarget::getOutputFile() const
 {
-    auto t = getSelectedTool();
-    if (!t)
-        throw SW_RUNTIME_ERROR("Empty selected tool: " + getPackage().toString());
-    return t->getOutputFile();
+    return getSelectedTool()->getOutputFile();
 }
 
 NativeCompiledTarget::NativeCompiledTarget(TargetBase &parent, const PackageId &id)
@@ -249,7 +241,9 @@ path NativeCompiledTarget::getOutputFileName2(const path &subdir) const
 
 bool NativeCompiledTarget::isStaticLibrary() const
 {
-    return getSelectedTool() && getSelectedTool() == Librarian.get();
+    return false;
+    //SW_UNIMPLEMENTED;
+    //return getSelectedTool() && getSelectedTool() == Librarian.get();
 }
 
 bool NativeCompiledTarget::isStaticOrHeaderOnlyLibrary() const
@@ -309,14 +303,40 @@ static auto get_settings_package_id(const TargetSetting &s)
     return id;
 }
 
-void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const StringSet &exts)
+static auto get_compiler_type(const PackagePath &p)
+{
+    auto ct = CompilerType::UnspecifiedCompiler;
+    if (0);
+    else if (p == "com.Microsoft.VisualStudio.VC.cl")
+        ct = CompilerType::MSVC;
+    else if (p == "org.gnu.gcc" || p == "org.gnu.gpp")
+        ct = CompilerType::GNU;
+    else if (p == "org.LLVM.clang" || p == "org.LLVM.clangpp")
+        ct = CompilerType::Clang;
+    else if (p == "com.Apple.clang" || p == "com.Apple.clangpp")
+        ct = CompilerType::AppleClang;
+    else if (p == "org.LLVM.clangcl")
+        ct = CompilerType::ClangCl;
+    else if (p == "com.intel.compiler.c" || p == "com.intel.compiler.cpp")
+        ct = CompilerType::Intel;
+    //else
+        //throw SW_RUNTIME_ERROR("Unknown compiler type: " + id.toString());
+    return ct;
+}
+
+static auto get_compiler_type(const UnresolvedPackage &id)
+{
+    return get_compiler_type(id.getPath());
+}
+
+ProgramPtr NativeCompiledTarget::activateCompiler(const TargetSetting &s, const StringSet &exts)
 {
     bool extended_desc = s.isObject();
     auto id = get_settings_package_id(s);
-    activateCompiler(s, id, exts, extended_desc);
+    return activateCompiler(s, id, exts, extended_desc);
 }
 
-void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const UnresolvedPackage &id, const StringSet &exts, bool extended_desc)
+ProgramPtr NativeCompiledTarget::activateCompiler(const TargetSetting &s, const UnresolvedPackage &id, const StringSet &exts, bool extended_desc)
 {
     auto &cld = getMainBuild().getTargets();
 
@@ -328,9 +348,10 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
         i = getContext().getPredefinedTargets().find(id, oss);
         if (!i)
         {
-            for (auto &e : exts)
-                setExtensionProgram(e, id);
-            return;
+            SW_UNIMPLEMENTED;
+            //for (auto &e : exts)
+                //setExtensionProgram(e, id);
+            return {};
         }
     }
     auto t = i->as<PredefinedProgram *>();
@@ -339,32 +360,21 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
 
     auto set_compiler_type = [this, &id, &exts](const auto &c)
     {
-        for (auto &e : exts)
-            setExtensionProgram(e, c->clone());
-
-        if (0);
-        else if (id.ppath == "com.Microsoft.VisualStudio.VC.cl")
-            ct = CompilerType::MSVC;
-        else if (id.ppath == "org.gnu.gcc" || id.ppath == "org.gnu.gpp")
-            ct = CompilerType::GNU;
-        else if (id.ppath == "org.LLVM.clang" || id.ppath == "org.LLVM.clangpp")
-            ct = CompilerType::Clang;
-        else if (id.ppath == "com.Apple.clang" || id.ppath == "com.Apple.clangpp")
-            ct = CompilerType::AppleClang;
-        else if (id.ppath == "org.LLVM.clangcl")
-            ct = CompilerType::ClangCl;
-        else if (id.ppath == "com.intel.compiler.c" || id.ppath == "com.intel.compiler.cpp")
-            ct = CompilerType::Intel;
-        //else
-            //throw SW_RUNTIME_ERROR("Unknown compiler type: " + id.toString());
+        //for (auto &e : exts)
+            //setExtensionProgram(e, c->clone());
+        ct = get_compiler_type(id);
     };
 
     auto c1 = t->getProgram().clone();
-    if (auto c = dynamic_cast<CompilerBaseProgram*>(c1.get()))
+    if (auto c = dynamic_cast<CompilerBaseProgram *>(c1.get()))
     {
+        SW_UNIMPLEMENTED;
         set_compiler_type(c);
-        return;
+        return c1;
     }
+    //else
+        // create such programs outside of this function
+        //SW_UNIMPLEMENTED;
 
     bool created = false;
     auto create_command = [this, &created, &t, &s, extended_desc](auto &c)
@@ -510,16 +520,18 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
 
     create_command(c);
     set_compiler_type(c);
+
+    return c;
 }
 
-std::shared_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetSetting &s)
+ProgramPtr NativeCompiledTarget::activateLinker(const TargetSetting &s)
 {
     bool extended_desc = s.isObject();
     auto id = get_settings_package_id(s);
     return activateLinker(s, id, extended_desc);
 }
 
-std::shared_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetSetting &s, const UnresolvedPackage &id, bool extended_desc)
+ProgramPtr NativeCompiledTarget::activateLinker(const TargetSetting &s, const UnresolvedPackage &id, bool extended_desc)
 {
     auto &cld = getMainBuild().getTargets();
 
@@ -536,7 +548,7 @@ std::shared_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetS
     if (!t)
         return {};
 
-    std::shared_ptr<NativeLinker> c;
+    std::unique_ptr<NativeLinker> c;
 
     bool created = false;
     auto create_command = [this, &created, &t, &c, &s, &extended_desc]()
@@ -555,20 +567,20 @@ std::shared_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetS
     if (0);
     else if (id.ppath == "com.Microsoft.VisualStudio.VC.lib")
     {
-        c = std::make_shared<VisualStudioLibrarian>();
+        c = std::make_unique<VisualStudioLibrarian>();
         c->Type = LinkerType::MSVC;
     }
     else if (id.ppath == "com.Microsoft.VisualStudio.VC.link" || id.ppath == "org.LLVM.lld.link")
     {
-        c = std::make_shared<VisualStudioLinker>();
+        c = std::make_unique<VisualStudioLinker>();
         c->Type = LinkerType::MSVC;
     }
     else if (id.ppath == "org.gnu.binutils.ar" || id.ppath == "org.LLVM.ar")
     {
-        auto C = std::make_shared<GNULibrarian>();
-        c = C;
-        c->Type = LinkerType::GNU;
+        auto C = std::make_unique<GNULibrarian>();
+        C->Type = LinkerType::GNU;
         C->Prefix = getBuildSettings().TargetOS.getLibraryPrefix();
+        c = std::move(C);
     }
     else if (
         id.ppath == "org.gnu.gcc" ||
@@ -579,13 +591,12 @@ std::shared_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetS
         id.ppath == "com.Apple.clangpp"
         )
     {
-        auto C = std::make_shared<GNULinker>();
-        c = C;
+        auto C = std::make_unique<GNULinker>();
         // actually it is depends on -fuse-ld option
         // do we need it at all?
         // probably yes, because user might provide different commands to ld and lld
         // is it true?
-        c->Type = LinkerType::GNU;
+        C->Type = LinkerType::GNU;
         C->Prefix = getBuildSettings().TargetOS.getLibraryPrefix();
         if (getBuildSettings().TargetOS.isApple())
         {
@@ -609,24 +620,25 @@ std::shared_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetS
             cmd->push_back(getBuildSettings().getTargetTriplet());
         }
         // TODO: find -fuse-ld option and set c->Type accordingly
+        c = std::move(C);
     }
     else if (id.ppath == "org.gnu.gcc.ld")
     {
         SW_UNIMPLEMENTED;
 
-        auto C = std::make_shared<GNULinker>();
-        c = C;
-        c->Type = LinkerType::GNU;
+        auto C = std::make_unique<GNULinker>();
+        C->Type = LinkerType::GNU;
         C->Prefix = getBuildSettings().TargetOS.getLibraryPrefix();
+        c = std::move(C);
     }
     else if (id.ppath == "org.LLVM.lld")
     {
         SW_UNIMPLEMENTED;
 
-        auto C = std::make_shared<GNULinker>();
-        c = C;
-        c->Type = LinkerType::GNU;
+        auto C = std::make_unique<GNULinker>();
+        C->Type = LinkerType::GNU;
         C->Prefix = getBuildSettings().TargetOS.getLibraryPrefix();
+        c = std::move(C);
 
         create_command();
 
@@ -646,12 +658,12 @@ std::shared_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetS
     }
     else if (id.ppath == "com.intel.compiler.lib")
     {
-        c = std::make_shared<VisualStudioLibrarian>();
+        c = std::make_unique<VisualStudioLibrarian>();
         c->Type = LinkerType::MSVC;
     }
     else if (id.ppath == "com.intel.compiler.link")
     {
-        c = std::make_shared<VisualStudioLinker>();
+        c = std::make_unique<VisualStudioLinker>();
         c->Type = LinkerType::MSVC;
     }
     else
@@ -659,57 +671,39 @@ std::shared_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetS
 
     create_command();
 
-    if (auto L = c->as<VisualStudioLibraryTool *>())
-    {
-        switch (getBuildSettings().TargetOS.Arch)
-        {
-        case ArchType::x86_64:
-            L->Machine = vs::MachineType::X64;
-            break;
-        case ArchType::x86:
-            L->Machine = vs::MachineType::X86;
-            break;
-        case ArchType::arm:
-            L->Machine = vs::MachineType::ARM;
-            break;
-        case ArchType::aarch64:
-            L->Machine = vs::MachineType::ARM64;
-            break;
-        default:
-            SW_UNIMPLEMENTED;
-        }
-    }
-
     return c;
 }
 
 void NativeCompiledTarget::findCompiler()
 {
-    activateCompiler(getSettings()["native"]["program"]["cpp"], getCppSourceFileExtensions());
-    activateCompiler(getSettings()["native"]["program"]["c"], { ".c" });
+    auto cppexts = getCppSourceFileExtensions();
+    if (!getBuildSettings().TargetOS.isApple())
+    {
+        cppexts.erase(".m");
+        cppexts.erase(".mm");
+    }
+    rules.push_back(new NativeCompilerRule(activateCompiler(getSettings()["native"]["program"]["cpp"], cppexts), cppexts));
+    //rules.push_back(new NativeCompilerRule(activateCompiler(getSettings()["native"]["program"]["c"], { ".c" }), { ".c" }));
 
     if (ct == CompilerType::UnspecifiedCompiler)
         throw SW_RUNTIME_ERROR("Cannot find compiler " + get_settings_package_id(getSettings()["native"]["program"]["c"]).toString() + " for settings: " + getSettings().toString());
 
     if (getBuildSettings().TargetOS.is(OSType::Windows))
     {
-        activateCompiler(getSettings()["native"]["program"]["asm"], { ".asm" });
+        //rules.push_back(new NativeCompilerRule(activateCompiler(getSettings()["native"]["program"]["asm"], { ".asm" })));
 
         // actually a missing setting
-        activateCompiler(getSettings()["native"]["program"]["rc"], "com.Microsoft.Windows.rc"s, { ".rc" }, false);
+        //rules.push_back(new NativeCompilerRule(activateCompiler(getSettings()["native"]["program"]["rc"], "com.Microsoft.Windows.rc"s, { ".rc" }, false)));
     }
     else
     {
-        activateCompiler(getSettings()["native"]["program"]["asm"], { ".s", ".S", ".sx" });
+        //rules.push_back(new NativeCompilerRule(activateCompiler(getSettings()["native"]["program"]["asm"], { ".s", ".S", ".sx" })));
     }
 
-    if (!getBuildSettings().TargetOS.isApple())
-    {
-        removeExtension(".m");
-        removeExtension(".mm");
-    }
+    //rules.push_back(new NativeCompilerRule(activateLinker(getSettings()["native"]["program"]["lib"])));
+    rules.push_back(new NativeLinkerRule(activateLinker(getSettings()["native"]["program"]["link"])));
 
-    Librarian = activateLinker(getSettings()["native"]["program"]["lib"]);
+    /*Librarian = activateLinker(getSettings()["native"]["program"]["lib"]);
     if (!Librarian)
         throw SW_RUNTIME_ERROR("Librarian not found");
 
@@ -718,7 +712,7 @@ void NativeCompiledTarget::findCompiler()
         throw SW_RUNTIME_ERROR("Linker not found");
 
     Librarian->Extension = getBuildSettings().TargetOS.getStaticLibraryExtension();
-    Linker->Extension = getBuildSettings().TargetOS.getSharedLibraryExtension();
+    Linker->Extension = getBuildSettings().TargetOS.getSharedLibraryExtension();*/
 
     // c++ goes first for correct include order
     if (!libstdcppset && getSettings()["native"]["stdlib"]["cpp"].isValue())
@@ -828,10 +822,9 @@ void NativeCompiledTarget::setupCommand(builder::Command &c) const
                 continue;
             if (auto nt = d->getTarget().as<NativeCompiledTarget *>())
             {
-                if (!*nt->HeaderOnly && nt->getSelectedTool() == nt->Linker.get())
-                {
-                    f(nt->getOutputFile());
-                }
+                SW_UNIMPLEMENTED;
+                //if (!*nt->HeaderOnly && nt->getSelectedTool() == nt->Linker.get())
+                    //f(nt->getOutputFile());
             }
             else if (auto nt = d->getTarget().as<PredefinedTarget *>())
             {
@@ -1017,13 +1010,15 @@ path NativeCompiledTarget::getOutputFile() const
 
 path NativeCompiledTarget::getImportLibrary() const
 {
-    return getSelectedTool()->getImportLibrary();
+    if (getSelectedTool())
+        return getSelectedTool()->getImportLibrary();
+    SW_UNIMPLEMENTED;
 }
 
-std::unordered_set<NativeSourceFile*> NativeCompiledTarget::gatherSourceFiles() const
+/*std::unordered_set<NativeSourceFile*> NativeCompiledTarget::gatherSourceFiles() const
 {
     return ::sw::gatherSourceFiles<NativeSourceFile>(getMergeObject());
-}
+}*/
 
 FilesOrdered NativeCompiledTarget::gatherPrecompiledHeaders() const
 {
@@ -1040,7 +1035,8 @@ FilesOrdered NativeCompiledTarget::gatherPrecompiledHeaders() const
 Files NativeCompiledTarget::gatherObjectFilesWithoutLibraries() const
 {
     Files obj;
-    for (auto &f : gatherSourceFiles())
+    //SW_UNIMPLEMENTED;
+    /*for (auto &f : gatherSourceFiles())
     {
         if (f->skip_linking)
             continue;
@@ -1053,7 +1049,7 @@ Files NativeCompiledTarget::gatherObjectFilesWithoutLibraries() const
     {
         if (f.extension() == getBuildSettings().TargetOS.getObjectFileExtension())
             obj.insert(f);
-    }
+    }*/
     return obj;
 }
 
@@ -1090,26 +1086,11 @@ void NativeCompiledTarget::resolvePostponedSourceFiles()
     StringSet exts;
     for (auto &[f, sf] : getMergeObject())
     {
-        if (!sf->isActive() || !sf->postponed)
-            continue;
-        //exts.insert(sf->file.extension().string());
-
+        SW_UNIMPLEMENTED;
+        //if (!sf->isActive() || !sf->postponed)
+            //continue;
         getMergeObject() += sf->file;
     }
-
-    // activate langs
-    for (auto &e : exts)
-    {
-    }
-
-    // apply langs
-    /*for (auto &[f, sf] : getMergeObject())
-    {
-        if (!sf->isActive() || !sf->postponed)
-            continue;
-        sf->file.extension();
-        solution->getTarget();
-    }*/
 }
 
 FilesOrdered NativeCompiledTarget::gatherLinkDirectories() const
@@ -1169,7 +1150,8 @@ LinkLibrariesType NativeCompiledTarget::gatherLinkLibraries() const
 
 NativeLinker *NativeCompiledTarget::getSelectedTool() const
 {
-    if (SelectedTool)
+    SW_UNIMPLEMENTED;
+    /*if (SelectedTool)
         return SelectedTool;
     if (Linker)
         return Linker.get();
@@ -1177,7 +1159,7 @@ NativeLinker *NativeCompiledTarget::getSelectedTool() const
         return Librarian.get();
     if (isHeaderOnly())
         return {};
-    throw SW_RUNTIME_ERROR("No tool selected");
+    throw SW_RUNTIME_ERROR("No tool selected");*/
 }
 
 void NativeCompiledTarget::createPrecompiledHeader()
@@ -1242,7 +1224,8 @@ void NativeCompiledTarget::createPrecompiledHeader()
         getMergeObject()[pch.source].fancy_name = pch.fancy_name;
     else
         getMergeObject()[pch.source].fancy_name = "[" + getPackage().toString() + "]/[pch]";
-    auto sf = (getMergeObject()[pch.source]).as<NativeSourceFile *>();
+    SW_UNIMPLEMENTED;
+    /*auto sf = (getMergeObject()[pch.source]).as<NativeSourceFile *>();
     if (!sf)
         throw SW_RUNTIME_ERROR("Error creating pch");
 
@@ -1285,7 +1268,7 @@ void NativeCompiledTarget::createPrecompiledHeader()
     else if (auto c = sf->compiler->as<GNUCompiler*>())
     {
         setup_create_gcc_clang(c);
-    }
+    }*/
 }
 
 void NativeCompiledTarget::addPrecompiledHeader()
@@ -1294,7 +1277,8 @@ void NativeCompiledTarget::addPrecompiledHeader()
         return;
 
     // on this step we setup compilers to USE our created pch
-    for (auto &f : gatherSourceFiles())
+    SW_UNIMPLEMENTED;
+    /*for (auto &f : gatherSourceFiles())
     {
         auto sf = f->as<NativeSourceFile *>();
         if (!sf)
@@ -1336,14 +1320,16 @@ void NativeCompiledTarget::addPrecompiledHeader()
         {
             setup_use_gcc_clang(c);
         }
-    }
+    }*/
 }
 
 std::shared_ptr<builder::Command> NativeCompiledTarget::getCommand() const
 {
     if (HeaderOnly && *HeaderOnly)
         return nullptr;
-    return getSelectedTool()->getCommand(*this);
+    if (getSelectedTool())
+        return getSelectedTool()->getCommand(*this);
+    SW_UNIMPLEMENTED;
 }
 
 Commands NativeCompiledTarget::getGeneratedCommands() const
@@ -1452,7 +1438,8 @@ Commands NativeCompiledTarget::getCommands1() const
             cmds.insert(c);
         };
 
-        for (auto &f : gatherSourceFiles())
+        //SW_UNIMPLEMENTED;
+        /*for (auto &f : gatherSourceFiles())
         {
             auto c = f->getCommand(*this);
             prepare_command(f, c);
@@ -1462,7 +1449,10 @@ Commands NativeCompiledTarget::getCommands1() const
         {
             auto c = f->getCommand(*this);
             prepare_command(f, c);
-        }
+        }*/
+
+        for (auto &r : rules)
+            cmds.merge(r->getCommands());
     }
 
     // add generated files
@@ -1495,6 +1485,8 @@ Commands NativeCompiledTarget::getCommands1() const
         }
     }
     cmds.insert(generated.begin(), generated.end());
+
+    return cmds;
 
     // add install commands
     /*for (auto &[p, f] : getMergeObject())
@@ -1560,7 +1552,8 @@ Commands NativeCompiledTarget::getCommands1() const
 
         // link deps
         if (hasCircularDependency() || createWindowsRpath())
-            cmds.insert(Librarian->getCommand(*this));
+            SW_UNIMPLEMENTED;
+            //cmds.insert(Librarian->getCommand(*this));
 
         cmds.insert(c);
 
@@ -1612,15 +1605,15 @@ Commands NativeCompiledTarget::getCommands1() const
     }*/
 
     cmds.insert(this->cmds.begin(), this->cmds.end());
-
     return cmds;
 }
 
 bool NativeCompiledTarget::hasCircularDependency() const
 {
+    //SW_UNIMPLEMENTED;
     return
         1
-        && getSelectedTool() == Linker.get()
+        //&& getSelectedTool() == Linker.get()
         && circular_dependency
         ;
 }
@@ -1628,11 +1621,14 @@ bool NativeCompiledTarget::hasCircularDependency() const
 bool NativeCompiledTarget::createWindowsRpath() const
 {
     // http://nibblestew.blogspot.com/2019/05/emulating-rpath-on-windows-via-binary.html
+
+    //SW_UNIMPLEMENTED;
+    return false;
     return
         1
         && !IsSwConfig
         && getBuildSettings().TargetOS.is(OSType::Windows)
-        && getSelectedTool() == Linker.get()
+        //&& getSelectedTool() == Linker.get()
         && 0//!(getMainBuild().getSettings()["standalone"] == "true")
         ;
 }
@@ -2330,13 +2326,14 @@ void NativeCompiledTarget::prepare_pass1()
         HeaderOnly = !hasSourceFiles();
     if (*HeaderOnly)
     {
-        Linker.reset();
+        SW_UNIMPLEMENTED;
+        /*Linker.reset();
         Librarian.reset();
-        SelectedTool = nullptr;
+        SelectedTool = nullptr;*/
     }
     else
     {
-        LinkLibrary l(getImportLibrary());
+        /*LinkLibrary l(getImportLibrary());
         l.whole_archive = WholeArchive;
         if (l.whole_archive)
         {
@@ -2352,7 +2349,7 @@ void NativeCompiledTarget::prepare_pass1()
         }
         if (isStaticLibrary())
             l.static_ = true;
-        Interface += l;
+        Interface += l;*/
     }
 
     if (PackageDefinitions)
@@ -3144,7 +3141,8 @@ void NativeCompiledTarget::prepare_pass5()
     // source files
 
     // check postponed files first
-    auto create_more_source_files = [this]()
+    //SW_UNIMPLEMENTED;
+    /*auto create_more_source_files = [this]()
     {
         std::vector<std::shared_ptr<NativeSourceFile>> new_files;
         for (auto &[p, f] : getMergeObject())
@@ -3209,10 +3207,10 @@ void NativeCompiledTarget::prepare_pass5()
                 break;
             case NativeSourceFile::ASM:
                 SW_UNIMPLEMENTED; // actually remove this to make noop?
-                                  /*if (auto L = SourceFileStorage::findLanguageByExtension(".asm"); L)
-                                  L->clone()->createSourceFile(f.first, this);
-                                  else
-                                  throw std::logic_error("no ASM language found");*/
+                                  //if (auto L = SourceFileStorage::findLanguageByExtension(".asm"); L)
+                                  //L->clone()->createSourceFile(f.first, this);
+                                  //else
+                                  //throw std::logic_error("no ASM language found");
                 break;
             default:
                 SW_UNREACHABLE;
@@ -3338,18 +3336,18 @@ void NativeCompiledTarget::prepare_pass5()
 
             // for static libs, we gather and put pdb near output file
             // btw, VS is clever enough to take this info from .lib
-            /*if (getSelectedTool() == Librarian.get())
-            {
-            if ((getBuildSettings().Native.ConfigurationType == ConfigurationType::Debug ||
-            getBuildSettings().Native.ConfigurationType == ConfigurationType::ReleaseWithDebugInformation) &&
-            c->PDBFilename.empty())
-            {
-            auto f = getOutputFile();
-            f = f.parent_path() / f.filename().stem();
-            f += ".pdb";
-            c->PDBFilename = f;// BinaryDir.parent_path() / "obj" / (getPackage().getPath().toString() + ".pdb");
-            }
-            }*/
+            //if (getSelectedTool() == Librarian.get())
+            //{
+            //if ((getBuildSettings().Native.ConfigurationType == ConfigurationType::Debug ||
+            //getBuildSettings().Native.ConfigurationType == ConfigurationType::ReleaseWithDebugInformation) &&
+            //c->PDBFilename.empty())
+            //{
+            //auto f = getOutputFile();
+            //f = f.parent_path() / f.filename().stem();
+            //f += ".pdb";
+            //c->PDBFilename = f;// BinaryDir.parent_path() / "obj" / (getPackage().getPath().toString() + ".pdb");
+            //}
+            //}
         };
 
         auto gnu_setup = [this](auto *f, auto *c)
@@ -3598,7 +3596,9 @@ void NativeCompiledTarget::prepare_pass5()
         ctx.beginBlock("StringFileInfo");
         ctx.beginBlock("040904b0");
         //VALUE "CompanyName", "TODO: <Company name>"
-        ctx.addValueQuoted("FileDescription", { getPackage().getPath().back()/* + " - " + getConfig()*/ }); // remove config for now
+        ctx.addValueQuoted("FileDescription", { getPackage().getPath().back()
+        // + " - " + getConfig()
+        }); // remove config for now
         ctx.addValueQuoted("FileVersion", { getPackage().getVersion().toString() });
         //VALUE "InternalName", "@PACKAGE@"
         ctx.addValueQuoted("LegalCopyright", { "Powered by Software Network" });
@@ -3623,10 +3623,10 @@ void NativeCompiledTarget::prepare_pass5()
         operator+=(p);
     }
 
-    addPrecompiledHeader();
+    addPrecompiledHeader();*/
 
     // pdb
-    if (getSelectedTool())
+    /*if (getSelectedTool())
     {
         if (auto c = getSelectedTool()->as<VisualStudioLinker *>())
         {
@@ -3635,9 +3635,9 @@ void NativeCompiledTarget::prepare_pass5()
                 if (getBuildSettings().Native.ConfigurationType == ConfigurationType::Debug ||
                     getBuildSettings().Native.ConfigurationType == ConfigurationType::ReleaseWithDebugInformation)
                 {
-                    /*if (auto g = getSolution().getGenerator(); g && g->type == GeneratorType::VisualStudio)
-                    c->GenerateDebugInformation = vs::link::Debug::FastLink;
-                    else*/
+                    //if (auto g = getSolution().getGenerator(); g && g->type == GeneratorType::VisualStudio)
+                    //c->GenerateDebugInformation = vs::link::Debug::FastLink;
+                    //else
                     c->GenerateDebugInformation = vs::link::Debug::Full;
                 }
                 else
@@ -3656,31 +3656,35 @@ void NativeCompiledTarget::prepare_pass5()
             else
                 c->PDBFilename.output_dependency = false;
 
-            if (Linker->Type == LinkerType::LLD)
-            {
-                if (c->GenerateDebugInformation)
-                    c->InputFiles().push_back("msvcrtd.lib");
-                else
-                    c->InputFiles().push_back("msvcrt.lib");
-            }
+            //SW_UNIMPLEMENTED;
+            //if (Linker->Type == LinkerType::LLD)
+            //{
+                //if (c->GenerateDebugInformation)
+                    //c->InputFiles().push_back("msvcrtd.lib");
+                //else
+                    //c->InputFiles().push_back("msvcrt.lib");
+            //}
         }
-    }
+    }*/
 
     // export all symbols
-    if (ExportAllSymbols && getBuildSettings().TargetOS.Type == OSType::Windows && getSelectedTool() == Linker.get())
+    //SW_UNIMPLEMENTED;
+    /*if (ExportAllSymbols && getBuildSettings().TargetOS.Type == OSType::Windows && getSelectedTool() == Linker.get())
     {
         const path def = NATIVE_TARGET_DEF_SYMBOLS_FILE;
         Files objs;
-        for (auto &f : files)
-            objs.insert(f->output);
+        SW_UNIMPLEMENTED;
+        //for (auto &f : files)
+            //objs.insert(f->output);
         auto c = addCommand(SW_VISIBLE_BUILTIN_FUNCTION(create_def_file));
         c << cmd::out(def);
         std::dynamic_pointer_cast<builder::BuiltinCommand>(c.getCommand())->push_back(objs);
         c->addInput(objs);
-    }
+    }*/
 
     // add def file to linker
-    if (getSelectedTool() && getSelectedTool() == Linker.get())
+    //SW_UNIMPLEMENTED;
+    /*if (getSelectedTool() && getSelectedTool() == Linker.get())
     {
         if (auto VSL = getSelectedTool()->as<VisualStudioLibraryTool*>())
         {
@@ -3693,13 +3697,13 @@ void NativeCompiledTarget::prepare_pass5()
                 }
             }
         }
-    }
+    }*/
 
     // also fix rpath libname here
-    if (getSelectedTool() && createWindowsRpath())
+    /*if (getSelectedTool() && createWindowsRpath())
     {
         getSelectedTool()->setImportLibrary(getOutputFileName2("lib") += ".rp");
-    }
+    }*/
 }
 
 void NativeCompiledTarget::prepare_pass6()
@@ -3790,11 +3794,11 @@ void NativeCompiledTarget::prepare_pass6()
         t += "libucrtd.lib"_slib;
         break;
     }
-    if (auto L = getSelectedTool()->as<VisualStudioLinker *>())
+    /*if (auto L = getSelectedTool()->as<VisualStudioLinker *>())
     {
         auto cmd = L->createCommand(getMainBuild());
         cmd->push_back("-NODEFAULTLIB");
-    }
+    }*/
 }
 
 void NativeCompiledTarget::prepare_pass6_1()
@@ -3803,7 +3807,8 @@ void NativeCompiledTarget::prepare_pass6_1()
         return;
 
     // circular deps detection
-    if (auto L = Linker->as<VisualStudioLinker *>())
+    //SW_UNIMPLEMENTED;
+    /*if (auto L = Linker->as<VisualStudioLinker *>())
     {
         for (auto &d : all_deps_normal)
         {
@@ -3823,7 +3828,7 @@ void NativeCompiledTarget::prepare_pass6_1()
                 break;
             }
         }
-    }
+    }*/
 }
 
 void NativeCompiledTarget::prepare_pass7()
@@ -3885,8 +3890,8 @@ void NativeCompiledTarget::prepare_pass7()
     }
 
     // after gatherStaticLinkLibraries()!
-    if (getSelectedTool())
-        getSelectedTool()->merge(getMergeObject());
+    //if (getSelectedTool())
+        //getSelectedTool()->merge(getMergeObject());
 }
 
 void NativeCompiledTarget::prepare_pass8()
@@ -3898,20 +3903,61 @@ void NativeCompiledTarget::prepare_pass8()
 
     if (!isStaticOrHeaderOnlyLibrary())
     {
-        for (auto &f : ::sw::gatherSourceFiles<RcToolSourceFile>(*this))
-            obj.insert(f->output);
+        //SW_UNIMPLEMENTED;
+        //for (auto &f : ::sw::gatherSourceFiles<RcToolSourceFile>(*this))
+            //obj.insert(f->output);
     }
 
     // circular and windows rpath processing
     processCircular(obj);
 
-    if (getSelectedTool())
+    /*if (getSelectedTool())
     {
         FilesOrdered files(obj.begin(), obj.end());
         std::sort(files.begin(), files.end());
         getSelectedTool()->setObjectFiles(files);
         getSelectedTool()->setInputLibraryDependencies(gatherLinkLibraries());
+    }*/
+
+    // setup rules
+    for (auto &r : rules)
+    {
+        if (auto nr = dynamic_cast<NativeRule*>(r))
+            nr->setup(*this);
+        if (auto nr = dynamic_cast<NativeLinkerRule*>(r))
+            nr->setOutputFile(getOutputFileName2("bin") += ".exe");
     }
+
+    // rules!
+    std::set<RuleFile> rfs;
+    for (auto &[p, f] : getMergeObject())
+    {
+        RuleFile rf(p);
+        rf.getAdditionalArguments() = f->args;
+        rfs.insert(rf);
+    }
+    path last_output;
+    while (1)
+    {
+        bool newf = false;
+        for (auto &r : rules)
+        {
+            auto nr = dynamic_cast<NativeRule*>(r);
+            if (!nr)
+                continue;
+            auto outputs = nr->addInputs(*this, rfs);
+            for (auto &o : outputs)
+            {
+                auto [_, inserted] = rfs.insert(o);
+                newf |= inserted;
+                if (inserted)
+                    last_output = o;
+            }
+        }
+        if (!newf)
+            break;
+    }
+    outputfile = last_output;
 }
 
 void NativeCompiledTarget::prepare_pass9()
@@ -3926,7 +3972,8 @@ void NativeCompiledTarget::processCircular(Files &obj)
     if (isStaticOrHeaderOnlyLibrary())
         return;
 
-    auto lib_exe = Librarian->as<VisualStudioLibrarian*>();
+    SW_UNIMPLEMENTED;
+    /*auto lib_exe = Librarian->as<VisualStudioLibrarian*>();
     if (!lib_exe)
         throw SW_RUNTIME_ERROR("Unsupported librarian");
 
@@ -3942,45 +3989,45 @@ void NativeCompiledTarget::processCircular(Files &obj)
     {
         Files dlls;
         SW_UNIMPLEMENTED;
-        /*for (auto &d : Dependencies)
-        {
-            if (d->target == this)
-                continue;
-            if (d->isDisabledOrDummy())
-                continue;
-            if (d->IncludeDirectoriesOnly// || d->LinkLibrariesOnly
-            )
-                continue;
+        //for (auto &d : Dependencies)
+        //{
+        //    if (d->target == this)
+        //        continue;
+        //    if (d->isDisabledOrDummy())
+        //        continue;
+        //    if (d->IncludeDirectoriesOnly// || d->LinkLibrariesOnly
+        //    )
+        //        continue;
 
-            auto nt = d->target->as<NativeCompiledTarget*>();
+        //    auto nt = d->target->as<NativeCompiledTarget*>();
 
-            if (!*nt->HeaderOnly)
-            {
-                if (nt->getSelectedTool() == nt->Linker.get())
-                {
-                    dlls.push_back(nt->getPackage().toString() + ".dll"); // in
+        //    if (!*nt->HeaderOnly)
+        //    {
+        //        if (nt->getSelectedTool() == nt->Linker.get())
+        //        {
+        //            dlls.push_back(nt->getPackage().toString() + ".dll"); // in
 
-                    // don't replace local targets' deps
-                    if (d->target->isLocal())
-                    {
-                        // same as in
-                        dlls.push_back(nt->getPackage().toString() + ".dll"); // out
-                        continue;
-                    }
+        //            // don't replace local targets' deps
+        //            if (d->target->isLocal())
+        //            {
+        //                // same as in
+        //                dlls.push_back(nt->getPackage().toString() + ".dll"); // out
+        //                continue;
+        //            }
 
-                    path out;
-                    String ext;
-                    {
-                        std::lock_guard lk(m);
-                        ext = nt->getOutputFile().extension().u8string();
-                        out = nt->getOutputFile().parent_path();
-                    }
-                    out = out.lexically_relative(getSolution().getContext().getLocalStorage().storage_dir);
-                    out /= nt->getPackage().toString() + ext + ".rp" + ext;
-                    dlls.push_back(out.u8string()); // out
-                }
-            }
-        }*/
+        //            path out;
+        //            String ext;
+        //            {
+        //                std::lock_guard lk(m);
+        //                ext = nt->getOutputFile().extension().u8string();
+        //                out = nt->getOutputFile().parent_path();
+        //            }
+        //            out = out.lexically_relative(getSolution().getContext().getLocalStorage().storage_dir);
+        //            out /= nt->getPackage().toString() + ext + ".rp" + ext;
+        //            dlls.push_back(out.u8string()); // out
+        //        }
+        //    }
+        //}
 
         // even if dlls are empty we still need to do this!
 
@@ -4041,7 +4088,7 @@ void NativeCompiledTarget::processCircular(Files &obj)
     exp = exp.parent_path() / (exp.stem() += ".exp");
     Librarian->merge(getMergeObject());
     Librarian->prepareCommand(*this)->addOutput(exp);
-    obj.insert(exp);
+    obj.insert(exp);*/
 }
 
 FilesOrdered NativeCompiledTarget::gatherRpathLinkDirectories() const
@@ -4133,7 +4180,9 @@ void NativeCompiledTarget::initLibrary(LibraryType Type)
 {
     if (isHeaderOnly())
         return;
-    if (Type == LibraryType::Shared)
+
+    SW_UNIMPLEMENTED;
+    /*if (Type == LibraryType::Shared)
     {
         if (Linker->Type == LinkerType::MSVC)
         {
@@ -4154,7 +4203,7 @@ void NativeCompiledTarget::initLibrary(LibraryType Type)
     else
     {
         SelectedTool = Librarian.get();
-    }
+    }*/
 }
 
 void NativeCompiledTarget::removeFile(const path &fn, bool binary_dir)
@@ -4565,7 +4614,8 @@ bool ExecutableTarget::init()
     {
     case 2:
     {
-        Linker->Prefix.clear();
+        //SW_UNIMPLEMENTED;
+        /*Linker->Prefix.clear();
         Linker->Extension = getBuildSettings().TargetOS.getExecutableExtension();
 
         if (getSelectedTool())
@@ -4580,7 +4630,7 @@ bool ExecutableTarget::init()
                 L->PositionIndependentCode = false;
                 L->SharedObject = false;
             }
-        }
+        }*/
     }
     break;
     }

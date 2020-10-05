@@ -37,8 +37,6 @@ public:
 
     std::optional<bool> HeaderOnly;
     std::optional<bool> AutoDetectOptions;
-    std::shared_ptr<NativeLinker> Linker;
-    std::shared_ptr<NativeLinker> Librarian;
 
     String ApiName;
     StringSet ApiNames;
@@ -109,7 +107,7 @@ public:
     //void setOutputFilename(const path &fn);
     path getOutputDir1() const;
     void removeFile(const path &fn, bool binary_dir = false) override;
-    std::unordered_set<NativeSourceFile*> gatherSourceFiles() const;
+    //std::unordered_set<NativeSourceFile*> gatherSourceFiles() const;
     bool mustResolveDeps() const override { return prepare_pass == 2; }
     void setOutputDir(const path &dir);
     bool createWindowsRpath() const;
@@ -146,10 +144,12 @@ public:
     detail::PrecompiledHeader pch;
 
 protected:
-    mutable NativeLinker *SelectedTool = nullptr;
+    //mutable NativeLinker *SelectedTool = nullptr;
     bool circular_dependency = false;
     bool IsSwConfig = false;
     bool IsSwConfigLocal = false;
+    //std::shared_ptr<NativeLinker> Linker;
+    //std::shared_ptr<NativeLinker> Librarian;
 
     Files gatherObjectFilesWithoutLibraries() const;
     bool prepareLibrary(LibraryType Type);
@@ -205,10 +205,10 @@ private:
 
     bool libstdcppset = false;
     void findCompiler();
-    void activateCompiler(const TargetSetting &s, const StringSet &exts);
-    void activateCompiler(const TargetSetting &s, const UnresolvedPackage &id, const StringSet &exts, bool extended_desc);
-    std::shared_ptr<NativeLinker> activateLinker(const TargetSetting &s);
-    std::shared_ptr<NativeLinker> activateLinker(const TargetSetting &s, const UnresolvedPackage &id, bool extended_desc);
+    ProgramPtr activateCompiler(const TargetSetting &s, const StringSet &exts);
+    ProgramPtr activateCompiler(const TargetSetting &s, const UnresolvedPackage &id, const StringSet &exts, bool extended_desc);
+    ProgramPtr activateLinker(const TargetSetting &s);
+    ProgramPtr activateLinker(const TargetSetting &s, const UnresolvedPackage &id, bool extended_desc);
 
     void prepare_pass1();
     void prepare_pass2();

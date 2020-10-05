@@ -4,7 +4,7 @@
 #include "target.h"
 
 #include "input.h"
-#include "rule.h"
+//#include "rule.h"
 
 namespace sw
 {
@@ -38,7 +38,7 @@ TargetFile::TargetFile(const path &p, bool is_generated, bool is_from_other_targ
         throw SW_RUNTIME_ERROR("Only generated/other target absolute files are allowed: " + normalize_path(fn));
 }*/
 
-std::unique_ptr<IRule> ITarget::getRule() const { return nullptr; }
+//std::unique_ptr<IRule> ITarget::getRule() const { return nullptr; }
 
 TargetData::~TargetData()
 {

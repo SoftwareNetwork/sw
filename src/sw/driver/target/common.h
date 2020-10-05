@@ -24,8 +24,9 @@ static std::shared_ptr<CompilerType> activateCompiler(Target &t, const Unresolve
         i = t.getContext().getPredefinedTargets().find(id, oss);
         if (!i)
         {
-            for (auto &e : exts)
-                t.setExtensionProgram(e, id);
+            SW_UNIMPLEMENTED;
+            //for (auto &e : exts)
+                //t.setExtensionProgram(e, id);
             return {};
         }
     }
@@ -35,8 +36,9 @@ static std::shared_ptr<CompilerType> activateCompiler(Target &t, const Unresolve
 
     auto set_compiler_type = [&t, &id, &exts](const auto &c)
     {
-        for (auto &e : exts)
-            t.setExtensionProgram(e, c->clone());
+        SW_UNIMPLEMENTED;
+        //for (auto &e : exts)
+            //t.setExtensionProgram(e, c->clone());
     };
 
     auto c1 = prog->getProgram().clone();

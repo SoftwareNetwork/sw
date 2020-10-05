@@ -18,17 +18,7 @@
 
 #include "program.h"
 
-#include "command.h"
-#include "file_storage.h"
-#include "sw_context.h"
-
-#include <sw/manager/storage.h>
-
-#include <boost/thread/shared_mutex.hpp>
-#include <boost/thread/lock_types.hpp>
-
-#include <fstream>
-#include <regex>
+#include <primitives/exceptions.h>
 
 namespace sw
 {

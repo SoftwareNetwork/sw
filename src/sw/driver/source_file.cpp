@@ -129,15 +129,17 @@ void SourceFileStorage::add_unchecked(const path &file_in, bool skip)
     auto ext = file.extension().string();
     auto nt = target.as<NativeCompiledTarget*>();
     auto ho = nt && nt->HeaderOnly && nt->HeaderOnly.value();
-    if (!target.hasExtension(ext) || ho)
+    //if (!target.hasExtension(ext) || ho)
     {
         f = std::make_shared<SourceFile>(file);
         addFile(file, f);
-        f->created = false;
+        //f->created = false;
     }
-    else
+    /*else
     {
-        if (!f || f->postponed)
+        if (!f
+            // || f->postponed
+            )
         {
             if (!target.getProgram(ext))
             {
@@ -146,7 +148,7 @@ void SourceFileStorage::add_unchecked(const path &file_in, bool skip)
                     //throw SW_RUNTIME_ERROR("Postponing postponed file");
                 f = std::make_shared<SourceFile>(file);
                 addFile(file, f);
-                f->postponed = true;
+                //f->postponed = true;
             }
             else
             {
@@ -158,7 +160,9 @@ void SourceFileStorage::add_unchecked(const path &file_in, bool skip)
                     throw SW_RUNTIME_ERROR("Bad program type");
                 f = p2->createSourceFile(target, file);
                 addFile(file, f);
-                if (f2 && f2->postponed)
+                if (f2
+                    // && f2->postponed
+                    )
                 {
                     // retain some data
                     f->args = f2->args;
@@ -166,7 +170,7 @@ void SourceFileStorage::add_unchecked(const path &file_in, bool skip)
                 }
             }
         }
-    }
+    }*/
     if (autodetect)
         f->skip |= skip;
     else
@@ -460,34 +464,6 @@ void SourceFileStorage::mergeFiles(const SourceFileStorage &v, const GroupSettin
 void SourceFileStorage::merge(const SourceFileStorage &v, const GroupSettings &s)
 {
     source_files.insert(v.begin(), v.end());
-    return;
-
-    // TODO: check type id, if same as just source file, add as is
-    // otherwise add(p);
-    // also copy skip property
-    // copy args or not?
-
-    for (auto &[p, f] : v)
-    {
-        // not created? add ourselves
-        if (!f)
-            add(p);
-        else
-        {
-            // native sf? add ourselves and copy important settings!
-            if (auto f2 = std::dynamic_pointer_cast<NativeSourceFile>(f))
-            {
-                add(p);
-                if (auto p2 = getFileInternal(p))
-                {
-                    p2->args = f2->args; // ignore args?
-                    p2->skip = f2->skip;
-                }
-            }
-            else // usual sf? add as is (clone() should be here probably)
-                add(f);
-        }
-    }
 }
 
 SourceFileMap<SourceFile>
@@ -537,21 +513,23 @@ SourceFile::SourceFile(const path &input)
 {
 }
 
-path SourceFile::getObjectFilename(const Target &t, const path &p)
+/*path SourceFile::getObjectFilename(const Target &t, const path &p)
 {
     // target may push its files to outer packages,
     // so files must be concatenated with its target name
     // ^^^ wrong?
     // target push files, they'll use local definitions etc.
-    return to_string(p.filename().u8string()) + "." + sha256(/*t.pkg.toString() + */to_string(p.u8string())).substr(0, 8);
-}
+    return to_string(p.filename().u8string()) + "." + sha256(
+        //t.pkg.toString() +
+        to_string(p.u8string())).substr(0, 8);
+}*/
 
 bool SourceFile::isActive() const
 {
-    return created && !skip /* && !isRemoved(f.first)*/;
+    return /*created && */!skip /* && !isRemoved(f.first)*/;
 }
 
-NativeSourceFile::NativeSourceFile(const NativeCompiler &c, const path &input, const path &o)
+/*NativeSourceFile::NativeSourceFile(const NativeCompiler &c, const path &input, const path &o)
     : SourceFile(input)
     , compiler(c.clone())
     , output(o)
@@ -602,9 +580,9 @@ std::shared_ptr<builder::Command> NativeSourceFile::getCommand(const Target &t) 
             cmd->dependencies.insert(d->getCommand(t));
     }
     return cmd;
-}
+}*/
 
-RcToolSourceFile::RcToolSourceFile(const RcTool &c, const path &input, const path &o)
+/*RcToolSourceFile::RcToolSourceFile(const RcTool &c, const path &input, const path &o)
     : SourceFile(input)
     , compiler(c.clone())
     , output(o)
@@ -624,6 +602,6 @@ RcTool &RcToolSourceFile::getCompiler() const
     if (!compiler)
         throw SW_RUNTIME_ERROR("Compiler was not set");
     return static_cast<RcTool &>(*compiler);
-}
+}*/
 
 }

@@ -176,7 +176,8 @@ static path getOutputFile(const Target &t, const C &c, const path &input)
 
 std::shared_ptr<SourceFile> NativeCompiler::createSourceFile(const Target &t, const path &input) const
 {
-    return std::make_shared<NativeSourceFile>(*this, input, ::sw::getOutputFile(t, *this, input));
+    SW_UNIMPLEMENTED;
+    //return std::make_shared<NativeSourceFile>(*this, input, ::sw::getOutputFile(t, *this, input));
 }
 
 void NativeCompiler::merge(const NativeCompiledTarget &t)
@@ -666,6 +667,27 @@ path VisualStudioLibraryTool::getImportLibrary() const
 
 void VisualStudioLibraryTool::prepareCommand1(const Target &t)
 {
+    if (auto nt = t.as<NativeCompiledTarget *>())
+    {
+        switch (nt->getBuildSettings().TargetOS.Arch)
+        {
+        case ArchType::x86_64:
+            Machine = vs::MachineType::X64;
+            break;
+        case ArchType::x86:
+            Machine = vs::MachineType::X86;
+            break;
+        case ArchType::arm:
+            Machine = vs::MachineType::ARM;
+            break;
+        case ArchType::aarch64:
+            Machine = vs::MachineType::ARM64;
+            break;
+        default:
+            SW_UNIMPLEMENTED;
+        }
+    }
+
     // can be zero imput files actually: lib.exe /DEF:my.def /OUT:x.lib
     //if (InputFiles().empty())
         //return nullptr;
@@ -705,6 +727,27 @@ void VisualStudioLinker::setInputLibraryDependencies(const LinkLibrariesType &fi
 
 void VisualStudioLinker::prepareCommand1(const Target &t)
 {
+    if (auto nt = t.as<NativeCompiledTarget *>())
+    {
+        switch (nt->getBuildSettings().TargetOS.Arch)
+        {
+        case ArchType::x86_64:
+            Machine = vs::MachineType::X64;
+            break;
+        case ArchType::x86:
+            Machine = vs::MachineType::X86;
+            break;
+        case ArchType::arm:
+            Machine = vs::MachineType::ARM;
+            break;
+        case ArchType::aarch64:
+            Machine = vs::MachineType::ARM64;
+            break;
+        default:
+            SW_UNIMPLEMENTED;
+        }
+    }
+
     // can be zero imput files actually: lib.exe /DEF:my.def /OUT:x.lib
     //if (InputFiles().empty())
         //return nullptr;
@@ -1071,7 +1114,8 @@ void RcTool::setSourceFile(const path &input_file)
 
 std::shared_ptr<SourceFile> RcTool::createSourceFile(const Target &t, const path &input) const
 {
-    return std::make_shared<RcToolSourceFile>(*this, input, ::sw::getOutputFile(t, *this, input));
+    SW_UNIMPLEMENTED;
+    //return std::make_shared<RcToolSourceFile>(*this, input, ::sw::getOutputFile(t, *this, input));
 }
 
 SW_DEFINE_PROGRAM_CLONE(AdaCompiler)

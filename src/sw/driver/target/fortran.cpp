@@ -76,7 +76,8 @@ bool FortranTarget::init()
 
 Commands FortranTarget::getCommands1() const
 {
-    auto get_output_file = [this](const path &in)
+    SW_UNIMPLEMENTED;
+    /*auto get_output_file = [this](const path &in)
     {
         return BinaryDir.parent_path() / "obj" / SourceFile::getObjectFilename(*this, in);
     };
@@ -99,7 +100,7 @@ Commands FortranTarget::getCommands1() const
     for (auto f : gatherSourceFiles<SourceFile>(*this, { ".f" }))
         compiler->setSourceFile(get_output_file(f->file) += getBuildSettings().TargetOS.getObjectFileExtension());
     cmds.insert(compiler->getCommand(*this));
-    return cmds;
+    return cmds;*/
 }
 
 Commands FortranStaticLibrary::getCommands1() const

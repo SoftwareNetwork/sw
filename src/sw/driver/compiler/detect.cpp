@@ -123,7 +123,7 @@ PredefinedProgramTarget &addProgram(DETECT_ARGS, const PackageId &id, const Targ
 {
     auto &t = addTarget<PredefinedProgramTarget>(DETECT_ARGS_PASS, id, ts);
     t.public_ts["output_file"] = to_string(normalize_path(p->file));
-    t.setProgram(p);
+    t.setProgram(p->clone());
     LOG_TRACE(logger, "Detected program: " + to_string(p->file.u8string()));
     return t;
 }

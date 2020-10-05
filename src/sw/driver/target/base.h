@@ -220,8 +220,11 @@ struct SW_DRIVER_CPP_API TargetDescription
 /**
 * \brief Single project target.
 */
-struct SW_DRIVER_CPP_API Target : ITarget, TargetBase, ProgramStorage,
-    std::enable_shared_from_this<Target>
+struct SW_DRIVER_CPP_API Target
+    : ITarget
+    , TargetBase
+    //, ProgramStorage
+    , std::enable_shared_from_this<Target>
 {
     /*struct TargetSettings
     {

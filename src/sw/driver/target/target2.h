@@ -12,7 +12,7 @@ struct PredefinedTargetWithRule : PredefinedTarget
 {
     using PredefinedTarget::PredefinedTarget;
 
-    std::unique_ptr<IRule> getRule() const override;
+    //std::unique_ptr<IRule> getRule() const override;
 };
 
 struct SW_DRIVER_CPP_API Target2 : Target

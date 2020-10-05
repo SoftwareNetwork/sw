@@ -3,7 +3,7 @@
 
 #include "../commands.h"
 
-#include <sw/builder/program.h>
+//#include <sw/builder/program.h>
 #include <sw/core/input.h>
 #include <sw/manager/storage.h>
 #include <sw/support/filesystem.h>
@@ -29,12 +29,13 @@ SUBCOMMAND_DECL(abi)
     if (i == getContext().getPredefinedTargets().end() || i->second.empty())
         throw SW_RUNTIME_ERROR("No dumpbin program");
     auto j = i->second.end() - 1;
-    auto p = (*j)->as<const sw::PredefinedProgram *>();
+    SW_UNIMPLEMENTED;
+    /*auto p = (*j)->as<const sw::PredefinedProgram *>();
     if (!p)
         throw SW_RUNTIME_ERROR("No dumpbin program set");
-    /*auto &ds = (*j)->getInterfaceSettings();
-    if (!ds["output_file"])
-        throw SW_RUNTIME_ERROR("No dumpbin 'output_file' set");*/
+    //auto &ds = (*j)->getInterfaceSettings();
+    //if (!ds["output_file"])
+        //throw SW_RUNTIME_ERROR("No dumpbin 'output_file' set");
 
     for (auto &[pkg, tgts] : tgts1)
     {
@@ -67,5 +68,5 @@ SUBCOMMAND_DECL(abi)
                     LOG_INFO(logger, "    - " + s);
             }
         }
-    }
+    }*/
 }

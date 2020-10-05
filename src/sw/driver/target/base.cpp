@@ -343,19 +343,14 @@ TargetSettings Target::getHostSettings() const
 
 Program *Target::findProgramByExtension(const String &ext) const
 {
-    if (!hasExtension(ext))
+    SW_UNIMPLEMENTED;
+    /*if (!hasExtension(ext))
         return {};
     if (auto p = getProgram(ext))
         return p;
     auto u = getExtPackage(ext);
     if (!u)
         return {};
-    // resolve via getContext() because it might provide other version rather than cld.find(*u)
-    /*auto pkg = getMainBuild().getContext().resolve(*u);
-    auto &cld = getMainBuild().getTargets();
-    auto tgt = cld.find(pkg, getHostSettings());
-    if (!tgt)
-        return {};*/
     if (!(*u)->isResolved())
         throw SW_LOGIC_ERROR("unresolved program");
     auto &tgt = (*u)->getTarget();
@@ -363,7 +358,7 @@ Program *Target::findProgramByExtension(const String &ext) const
     {
         return (Program*)&t->getProgram();
     }
-    throw SW_RUNTIME_ERROR("Target without PredefinedProgram: " + tgt.getPackage().toString());
+    throw SW_RUNTIME_ERROR("Target without PredefinedProgram: " + tgt.getPackage().toString());*/
 }
 
 String Target::getConfig() const

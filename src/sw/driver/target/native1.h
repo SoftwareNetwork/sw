@@ -51,6 +51,8 @@ enum class ConfigureFlags
     Default = Empty, //AddToBuild,
 };
 
+struct IRule;
+
 /**
 * \brief Native Target is a binary target that produces binary files (probably executables).
 */
@@ -58,6 +60,7 @@ struct SW_DRIVER_CPP_API NativeTarget : Target
     //,protected NativeOptions
 {
     using Target::Target;
+    ~NativeTarget();
 
     virtual path getOutputFile() const;
 
@@ -67,8 +70,9 @@ struct SW_DRIVER_CPP_API NativeTarget : Target
     virtual void setupCommandForRun(builder::Command &c) const { setupCommand(c); } // for Launch?
 
 protected:
-    //
     path OutputDir; // output subdir
+    std::vector<IRule*> rules;
+
     virtual path getOutputFileName(const path &root) const;
     virtual path getOutputFileName2(const path &subdir) const;
 

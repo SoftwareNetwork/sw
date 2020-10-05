@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include "options.h"
+
 #include <sw/manager/package.h>
 
 namespace sw
