@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2017-2020 Egor Pugin <egor.pugin@gmail.com>
 
+#include "builtin_input.h"
 #include "entry_point.h"
 
 #include <sw/core/input.h>
@@ -18,26 +19,6 @@ DECLARE_STATIC_LOGGER(logger, "build.self");
 #pragma warning(push)
 #pragma warning(disable : 4005) // warning C4005: 'XXX': macro redefinition
 #endif
-
-namespace sw
-{
-
-struct BuiltinInput : Input
-{
-    size_t h;
-
-    BuiltinInput(SwContext &swctx, const IDriver &d, size_t hash)
-        : Input(swctx, d, std::make_unique<Specification>(SpecificationFiles{})), h(hash)
-    {}
-
-    bool isParallelLoadable() const { return true; }
-    size_t getHash() const override { return h; }
-    EntryPointPtr load1(SwContext &) override { SW_UNREACHABLE; }
-};
-
-using BuiltinInputs = std::unordered_map<Input*, PackageIdSet>;
-
-}
 
 #include <build_self.generated.h>
 
