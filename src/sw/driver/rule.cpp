@@ -13,25 +13,19 @@ namespace sw
 
 IRule::~IRule() = default;
 
-NativeRule::NativeRule(ProgramPtr p)
-    : program(std::move(p))
+NativeRule::NativeRule(RuleProgram p)
+    : program(p)
 {
-    if (!program)
-        throw SW_RUNTIME_ERROR("Empty program");
 }
 
-NativeCompilerRule::NativeCompilerRule(ProgramPtr p, const StringSet &exts)
-    : NativeRule(std::move(p)), exts(exts)
+NativeCompilerRule::NativeCompilerRule(RuleProgram p, const StringSet &exts)
+    : NativeRule(p), exts(exts)
 {
-    if (!program)
-        throw SW_RUNTIME_ERROR("Empty program");
 }
 
 NativeCompiler &NativeCompilerRule::getCompiler() const
 {
-    if (!program)
-        throw SW_RUNTIME_ERROR("Compiler was not set");
-    return static_cast<NativeCompiler &>(*program);
+    return static_cast<NativeCompiler &>(program);
 }
 
 Commands NativeRule::getCommands() const
@@ -40,11 +34,6 @@ Commands NativeRule::getCommands() const
     for (auto &c : commands)
         cmds.insert(c->getCommand());
     return cmds;
-}
-
-void NativeCompilerRule::setup(const Target &t)
-{
-    getCompiler().merge(dynamic_cast<const NativeCompiledTarget &>(t));
 }
 
 static path getObjectFilename(const Target &t, const path &p)
@@ -58,13 +47,17 @@ static path getObjectFilename(const Target &t, const path &p)
         to_string(p.u8string())).substr(0, 8);
 }
 
+static path getOutputFile(const Target &t, const path &input)
+{
+    auto o = t.BinaryDir.parent_path() / "obj" / getObjectFilename(t, input);
+    o = fs::absolute(o);
+    return o;
+}
+
 template <class C>
 static path getOutputFile(const Target &t, const C &c, const path &input)
 {
-    auto o = t.BinaryDir.parent_path() / "obj" /
-        (getObjectFilename(t, input) += c.getObjectExtension(t.getBuildSettings().TargetOS));
-    o = fs::absolute(o);
-    return o;
+    return getOutputFile(t, input) += c.getObjectExtension(t.getBuildSettings().TargetOS);
 }
 
 Files NativeCompilerRule::addInputs(const Target &t, const RuleFiles &rfs)
@@ -89,14 +82,7 @@ Files NativeCompilerRule::addInputs(const Target &t, const RuleFiles &rfs)
 
 NativeLinker &NativeLinkerRule::getLinker() const
 {
-    if (!program)
-        throw SW_RUNTIME_ERROR("Compiler was not set");
-    return static_cast<NativeLinker &>(*program);
-}
-
-void NativeLinkerRule::setup(const Target &t)
-{
-    getLinker().merge(dynamic_cast<const NativeCompiledTarget &>(t).getMergeObject());
+    return static_cast<NativeLinker &>(program);
 }
 
 Files NativeLinkerRule::addInputs(const Target &t, const RuleFiles &rfs)
@@ -104,8 +90,10 @@ Files NativeLinkerRule::addInputs(const Target &t, const RuleFiles &rfs)
     FilesOrdered files;
     for (auto &rf : rfs)
     {
-        if (rf.getFile().extension() != ".obj"
+        if (1
+            && rf.getFile().extension() != ".obj"
             && rf.getFile().extension() != ".lib"
+            && rf.getFile().extension() != ".res"
             )
             continue;
         if (used_files.contains(rf))
@@ -128,9 +116,25 @@ Files NativeLinkerRule::addInputs(const Target &t, const RuleFiles &rfs)
     return outputs;
 }
 
-void NativeLinkerRule::setOutputFile(const path &p)
+Files RcRule::addInputs(const Target &t, const RuleFiles &rfs)
 {
-    getLinker().setOutputFile(p);
+    Files outputs;
+    for (auto &rf : rfs)
+    {
+        if (rf.getFile().extension() != ".rc")
+            continue;
+        if (used_files.contains(rf))
+            continue;
+        auto output = getOutputFile(t, rf.getFile()) += ".res";
+        outputs.insert(output);
+        auto c = program.clone();
+        static_cast<RcTool &>(*c).setSourceFile(rf.getFile());
+        static_cast<RcTool &>(*c).setOutputFile(output);
+        static_cast<RcTool &>(*c).prepareCommand(t);
+        commands.emplace_back(std::move(c));
+        used_files.insert(rf);
+    }
+    return outputs;
 }
 
 }

@@ -160,6 +160,7 @@ protected:
     bool isHeaderOnly() const;
     bool isStaticLibrary() const override;
     bool isStaticOrHeaderOnlyLibrary() const;
+    virtual bool isExecutable() const { return false; }
     TargetType getRealType() const;
 
     path getBinaryParentDir() const override;
@@ -203,12 +204,18 @@ private:
     void createPrecompiledHeader();
     void addPrecompiledHeader();
 
+    std::unique_ptr<NativeCompiler> prog_cl_cpp;
+    std::unique_ptr<NativeCompiler> prog_cl_c;
+    std::unique_ptr<NativeCompiler> prog_cl_asm;
+    std::unique_ptr<RcTool> prog_cl_rc;
+    std::unique_ptr<NativeLinker> prog_link;
+    std::unique_ptr<NativeLinker> prog_lib;
     bool libstdcppset = false;
     void findCompiler();
-    ProgramPtr activateCompiler(const TargetSetting &s, const StringSet &exts);
-    ProgramPtr activateCompiler(const TargetSetting &s, const UnresolvedPackage &id, const StringSet &exts, bool extended_desc);
-    ProgramPtr activateLinker(const TargetSetting &s);
-    ProgramPtr activateLinker(const TargetSetting &s, const UnresolvedPackage &id, bool extended_desc);
+    std::unique_ptr<NativeCompiler> activateCompiler(const TargetSetting &s, const StringSet &exts);
+    std::unique_ptr<NativeCompiler> activateCompiler(const TargetSetting &s, const UnresolvedPackage &id, const StringSet &exts, bool extended_desc);
+    std::unique_ptr<NativeLinker> activateLinker(const TargetSetting &s);
+    std::unique_ptr<NativeLinker> activateLinker(const TargetSetting &s, const UnresolvedPackage &id, bool extended_desc);
 
     void prepare_pass1();
     void prepare_pass2();
@@ -226,6 +233,8 @@ private:
 
     path getOutputFileName(const path &root) const override;
     path getOutputFileName2(const path &subdir) const override;
+
+    path generate_rc();
 };
 
 /**
@@ -254,6 +263,9 @@ struct SW_DRIVER_CPP_API ExecutableTarget : NativeCompiledTarget, PredefinedProg
 
     bool init() override;
     bool prepare() override;
+
+private:
+    bool isExecutable() const override { return true; }
 };
 
 /**

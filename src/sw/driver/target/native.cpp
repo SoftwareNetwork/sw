@@ -329,14 +329,76 @@ static auto get_compiler_type(const UnresolvedPackage &id)
     return get_compiler_type(id.getPath());
 }
 
-ProgramPtr NativeCompiledTarget::activateCompiler(const TargetSetting &s, const StringSet &exts)
+static std::unique_ptr<RcTool> activateRcCompiler(NativeCompiledTarget &nt, const UnresolvedPackage &id, const StringSet &exts)
+{
+    auto &cld = nt.getMainBuild().getTargets();
+
+    TargetSettings oss;
+    oss["os"] = nt.getSettings()["os"];
+    auto i = cld.find(id, oss);
+    if (!i)
+    {
+        i = nt.getContext().getPredefinedTargets().find(id, oss);
+        if (!i)
+        {
+            SW_UNIMPLEMENTED;
+            //for (auto &e : exts)
+            //setExtensionProgram(e, id);
+            return {};
+        }
+    }
+    auto t = i->as<PredefinedProgram *>();
+    if (!t)
+        throw SW_RUNTIME_ERROR("Target without PredefinedProgram: " + i->getPackage().toString());
+
+    auto set_compiler_type = [&id, &exts](const auto &c)
+    {
+        //for (auto &e : exts)
+        //setExtensionProgram(e, c->clone());
+    };
+
+    auto c1 = t->getProgram().clone();
+    if (auto c = dynamic_cast<CompilerBaseProgram *>(c1.get()))
+    {
+        SW_UNIMPLEMENTED;
+        set_compiler_type(c);
+        //return c1;
+    }
+    //else
+    // create such programs outside of this function
+    //SW_UNIMPLEMENTED;
+
+    bool created = false;
+    auto create_command = [&nt, &created, &t](auto &c)
+    {
+        if (created)
+            return;
+        c->file = t->getProgram().file;
+        auto C = c->createCommand(nt.getMainBuild());
+        static_cast<primitives::Command&>(*C) = *t->getProgram().getCommand();
+        created = true;
+    };
+
+    std::unique_ptr<RcTool> c;
+    if (id.ppath == "com.Microsoft.Windows.rc")
+        c = std::make_unique<RcTool>();
+    else
+        throw SW_RUNTIME_ERROR("Unknown compiler: " + id.toString());
+
+    create_command(c);
+    set_compiler_type(c);
+
+    return c;
+}
+
+std::unique_ptr<NativeCompiler> NativeCompiledTarget::activateCompiler(const TargetSetting &s, const StringSet &exts)
 {
     bool extended_desc = s.isObject();
     auto id = get_settings_package_id(s);
     return activateCompiler(s, id, exts, extended_desc);
 }
 
-ProgramPtr NativeCompiledTarget::activateCompiler(const TargetSetting &s, const UnresolvedPackage &id, const StringSet &exts, bool extended_desc)
+std::unique_ptr<NativeCompiler> NativeCompiledTarget::activateCompiler(const TargetSetting &s, const UnresolvedPackage &id, const StringSet &exts, bool extended_desc)
 {
     auto &cld = getMainBuild().getTargets();
 
@@ -362,7 +424,6 @@ ProgramPtr NativeCompiledTarget::activateCompiler(const TargetSetting &s, const 
     {
         //for (auto &e : exts)
             //setExtensionProgram(e, c->clone());
-        ct = get_compiler_type(id);
     };
 
     auto c1 = t->getProgram().clone();
@@ -370,7 +431,7 @@ ProgramPtr NativeCompiledTarget::activateCompiler(const TargetSetting &s, const 
     {
         SW_UNIMPLEMENTED;
         set_compiler_type(c);
-        return c1;
+        //return c1;
     }
     //else
         // create such programs outside of this function
@@ -390,7 +451,7 @@ ProgramPtr NativeCompiledTarget::activateCompiler(const TargetSetting &s, const 
             targetSettings2Command(*C, s["command"]);
     };
 
-    std::unique_ptr<CompilerBaseProgram> c;
+    std::unique_ptr<NativeCompiler> c;
     if (id.ppath == "com.Microsoft.VisualStudio.VC.cl")
     {
         c = std::make_unique<VisualStudioCompiler>();
@@ -405,8 +466,6 @@ ProgramPtr NativeCompiledTarget::activateCompiler(const TargetSetting &s, const 
     }
     else if (id.ppath == "com.Microsoft.VisualStudio.VC.ml")
         c = std::make_unique<VisualStudioASMCompiler>();
-    else if (id.ppath == "com.Microsoft.Windows.rc")
-        c = std::make_unique<RcTool>();
     else if (id.ppath == "org.gnu.gcc.as")
         c = std::make_unique<GNUASMCompiler>();
     else if (id.ppath == "org.gnu.gcc" || id.ppath == "org.gnu.gpp")
@@ -524,14 +583,14 @@ ProgramPtr NativeCompiledTarget::activateCompiler(const TargetSetting &s, const 
     return c;
 }
 
-ProgramPtr NativeCompiledTarget::activateLinker(const TargetSetting &s)
+std::unique_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetSetting &s)
 {
     bool extended_desc = s.isObject();
     auto id = get_settings_package_id(s);
     return activateLinker(s, id, extended_desc);
 }
 
-ProgramPtr NativeCompiledTarget::activateLinker(const TargetSetting &s, const UnresolvedPackage &id, bool extended_desc)
+std::unique_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetSetting &s, const UnresolvedPackage &id, bool extended_desc)
 {
     auto &cld = getMainBuild().getTargets();
 
@@ -674,45 +733,48 @@ ProgramPtr NativeCompiledTarget::activateLinker(const TargetSetting &s, const Un
     return c;
 }
 
-void NativeCompiledTarget::findCompiler()
+static auto get_cpp_exts(const NativeCompiledTarget &t)
 {
     auto cppexts = getCppSourceFileExtensions();
-    if (!getBuildSettings().TargetOS.isApple())
+    if (!t.getBuildSettings().TargetOS.isApple())
     {
         cppexts.erase(".m");
         cppexts.erase(".mm");
     }
-    rules.push_back(new NativeCompilerRule(activateCompiler(getSettings()["native"]["program"]["cpp"], cppexts), cppexts));
-    //rules.push_back(new NativeCompilerRule(activateCompiler(getSettings()["native"]["program"]["c"], { ".c" }), { ".c" }));
+    return cppexts;
+}
 
+static StringSet get_asm_exts(const NativeCompiledTarget &t)
+{
+    if (t.getBuildSettings().TargetOS.is(OSType::Windows))
+        return { ".asm" };
+    else
+        return { ".s", ".S", ".sx" };
+}
+
+void NativeCompiledTarget::findCompiler()
+{
+    ct = get_compiler_type(get_settings_package_id(getSettings()["native"]["program"]["cpp"]));
+    if (ct == CompilerType::UnspecifiedCompiler)
+        ct = get_compiler_type(get_settings_package_id(getSettings()["native"]["program"]["c"]));
     if (ct == CompilerType::UnspecifiedCompiler)
         throw SW_RUNTIME_ERROR("Cannot find compiler " + get_settings_package_id(getSettings()["native"]["program"]["c"]).toString() + " for settings: " + getSettings().toString());
 
+    prog_cl_cpp = activateCompiler(getSettings()["native"]["program"]["cpp"], get_cpp_exts(*this));
+    prog_cl_c = activateCompiler(getSettings()["native"]["program"]["c"], { ".c" });
+    prog_cl_asm = activateCompiler(getSettings()["native"]["program"]["asm"], get_asm_exts(*this));
     if (getBuildSettings().TargetOS.is(OSType::Windows))
     {
-        //rules.push_back(new NativeCompilerRule(activateCompiler(getSettings()["native"]["program"]["asm"], { ".asm" })));
-
         // actually a missing setting
-        //rules.push_back(new NativeCompilerRule(activateCompiler(getSettings()["native"]["program"]["rc"], "com.Microsoft.Windows.rc"s, { ".rc" }, false)));
-    }
-    else
-    {
-        //rules.push_back(new NativeCompilerRule(activateCompiler(getSettings()["native"]["program"]["asm"], { ".s", ".S", ".sx" })));
+        prog_cl_rc = activateRcCompiler(*this, "com.Microsoft.Windows.rc"s, {".rc"});
     }
 
-    //rules.push_back(new NativeCompilerRule(activateLinker(getSettings()["native"]["program"]["lib"])));
-    rules.push_back(new NativeLinkerRule(activateLinker(getSettings()["native"]["program"]["link"])));
-
-    /*Librarian = activateLinker(getSettings()["native"]["program"]["lib"]);
-    if (!Librarian)
+    prog_link = activateLinker(getSettings()["native"]["program"]["link"]);
+    prog_lib = activateLinker(getSettings()["native"]["program"]["lib"]);
+    if (!prog_lib)
         throw SW_RUNTIME_ERROR("Librarian not found");
-
-    Linker = activateLinker(getSettings()["native"]["program"]["link"]);
-    if (!Linker)
+    if (!prog_link)
         throw SW_RUNTIME_ERROR("Linker not found");
-
-    Librarian->Extension = getBuildSettings().TargetOS.getStaticLibraryExtension();
-    Linker->Extension = getBuildSettings().TargetOS.getSharedLibraryExtension();*/
 
     // c++ goes first for correct include order
     if (!libstdcppset && getSettings()["native"]["stdlib"]["cpp"].isValue())
@@ -3522,108 +3584,9 @@ void NativeCompiledTarget::prepare_pass5()
     {
         // add casual idirs?
         f->getCompiler().idirs = NativeCompilerOptions::System.IncludeDirectories;
-    }
+    }*/
 
-    // generate rc, this one does not need idirs above
-    if (GenerateWindowsResource
-        && !*HeaderOnly
-        && ::sw::gatherSourceFiles<RcToolSourceFile>(*this).empty()
-        && getSelectedTool() == Linker.get()
-        && getBuildSettings().TargetOS.is(OSType::Windows)
-        && Scope == TargetScope::Build
-        )
-    {
-        struct RcEmitter : primitives::Emitter
-        {
-            using Base = primitives::Emitter;
-
-            RcEmitter(Version file_ver, Version product_ver)
-            {
-                if (file_ver.isBranch())
-                    file_ver = Version();
-                if (product_ver.isBranch())
-                    product_ver = Version();
-
-                file_ver = Version(file_ver.getMajor(), file_ver.getMinor(), file_ver.getPatch(), file_ver.getTweak());
-                product_ver = Version(product_ver.getMajor(), product_ver.getMinor(), product_ver.getPatch(), product_ver.getTweak());
-
-                addLine("1 VERSIONINFO");
-                addLine("  FILEVERSION " + file_ver.toString(","s));
-                addLine("  PRODUCTVERSION " + product_ver.toString(","s));
-            }
-
-            void beginBlock(const String &name)
-            {
-                addLine("BLOCK \"" + name + "\"");
-                begin();
-            }
-
-            void endBlock()
-            {
-                end();
-            }
-
-            void addValue(const String &name, const Strings &vals)
-            {
-                addLine("VALUE \"" + name + "\", ");
-                for (auto &v : vals)
-                    addText(v + ", ");
-                trimEnd(2);
-            }
-
-            void addValueQuoted(const String &name, const Strings &vals)
-            {
-                Strings vals2;
-                for (auto &v : vals)
-                    vals2.push_back("\"" + v + "\"");
-                addValue(name, vals2);
-            }
-
-            void begin()
-            {
-                increaseIndent("BEGIN");
-            }
-
-            void end()
-            {
-                decreaseIndent("END");
-            }
-        };
-
-        RcEmitter ctx(getPackage().getVersion(), getPackage().getVersion());
-        ctx.begin();
-
-        ctx.beginBlock("StringFileInfo");
-        ctx.beginBlock("040904b0");
-        //VALUE "CompanyName", "TODO: <Company name>"
-        ctx.addValueQuoted("FileDescription", { getPackage().getPath().back()
-        // + " - " + getConfig()
-        }); // remove config for now
-        ctx.addValueQuoted("FileVersion", { getPackage().getVersion().toString() });
-        //VALUE "InternalName", "@PACKAGE@"
-        ctx.addValueQuoted("LegalCopyright", { "Powered by Software Network" });
-        ctx.addValueQuoted("OriginalFilename", { getPackage().toString() });
-        ctx.addValueQuoted("ProductName", { getPackage().getPath().toString() });
-        ctx.addValueQuoted("ProductVersion", { getPackage().getVersion().toString() });
-        ctx.endBlock();
-        ctx.endBlock();
-
-        ctx.beginBlock("VarFileInfo");
-        ctx.addValue("Translation", { "0x409","1200" });
-        ctx.endBlock();
-
-        ctx.end();
-
-        path p = BinaryPrivateDir / "sw.rc";
-        write_file_if_different(p, ctx.getText());
-
-        // more info for generators
-        File(p, getFs()).setGenerated(true);
-
-        operator+=(p);
-    }
-
-    addPrecompiledHeader();*/
+    //addPrecompiledHeader();
 
     // pdb
     /*if (getSelectedTool())
@@ -3919,19 +3882,77 @@ void NativeCompiledTarget::prepare_pass8()
         getSelectedTool()->setInputLibraryDependencies(gatherLinkLibraries());
     }*/
 
-    // setup rules
-    for (auto &r : rules)
+    // setup programs
+    if (!isHeaderOnly())
     {
-        if (auto nr = dynamic_cast<NativeRule*>(r))
-            nr->setup(*this);
-        if (auto nr = dynamic_cast<NativeLinkerRule*>(r))
-            nr->setOutputFile(getOutputFileName2("bin") += ".exe");
+        prog_cl_cpp->merge(*this);
+        prog_cl_c->merge(*this);
+        prog_cl_asm->merge(*this);
+    }
+    // rc
+    // add casual idirs?
+    prog_cl_rc->idirs = NativeCompilerOptions::System.IncludeDirectories;
+    prog_link->merge(getMergeObject());
+    prog_lib->merge(getMergeObject());
+    prog_lib->Extension = getBuildSettings().TargetOS.getStaticLibraryExtension();
+    if (isExecutable())
+    {
+        prog_link->Prefix.clear();
+        prog_link->Extension = getBuildSettings().TargetOS.getExecutableExtension();
+        if (auto c = prog_link->as<VisualStudioLinker*>())
+        {
+            c->ImportLibrary.output_dependency = false; // become optional
+            c->ImportLibrary.create_directory = true; // but create always
+        }
+        else if (auto L = prog_link->as<GNULinker*>())
+        {
+            L->PositionIndependentCode = false;
+            L->SharedObject = false;
+        }
+    }
+    else
+        prog_link->Extension = getBuildSettings().TargetOS.getSharedLibraryExtension();
+    prog_lib->setOutputFile(getOutputFileName2("lib"));
+    prog_link->setOutputFile(getOutputFileName2("bin"));
+    prog_link->setImportLibrary(getOutputFileName2("lib"));
+
+    // add rules
+    rules.push_back(new NativeCompilerRule(*prog_cl_cpp, get_cpp_exts(*this)));
+    rules.push_back(new NativeCompilerRule(*prog_cl_c, { ".c" }));
+    rules.push_back(new NativeCompilerRule(*prog_cl_asm, get_asm_exts(*this)));
+    if (getBuildSettings().TargetOS.is(OSType::Windows))
+        rules.push_back(new RcRule(*prog_cl_rc));
+    if (isStaticLibrary())
+    {
+        if (!isHeaderOnly())
+            rules.push_back(new NativeLinkerRule(*prog_lib));
+    }
+    else
+    {
+        // generate rc
+        if (GenerateWindowsResource
+            && !isHeaderOnly()
+            && ::sw::gatherSourceFiles<SourceFile>(*this, { ".rc" }).empty()
+            && getBuildSettings().TargetOS.is(OSType::Windows)
+            && Scope == TargetScope::Build
+            )
+        {
+            auto p = generate_rc();
+            // more info for generators
+            File(p, getFs()).setGenerated(true);
+            getMergeObject() += p;
+        }
+
+        if (isExecutable() || !isHeaderOnly())
+            rules.push_back(new NativeLinkerRule(*prog_link));
     }
 
     // rules!
     std::set<RuleFile> rfs;
     for (auto &[p, f] : getMergeObject())
     {
+        if (!f->isActive())
+            continue;
         RuleFile rf(p);
         rf.getAdditionalArguments() = f->args;
         rfs.insert(rf);
@@ -3963,6 +3984,95 @@ void NativeCompiledTarget::prepare_pass8()
 void NativeCompiledTarget::prepare_pass9()
 {
     clearGlobCache();
+}
+
+path NativeCompiledTarget::generate_rc()
+{
+    struct RcEmitter : primitives::Emitter
+    {
+        using Base = primitives::Emitter;
+
+        RcEmitter(Version file_ver, Version product_ver)
+        {
+            if (file_ver.isBranch())
+                file_ver = Version();
+            if (product_ver.isBranch())
+                product_ver = Version();
+
+            file_ver = Version(file_ver.getMajor(), file_ver.getMinor(), file_ver.getPatch(), file_ver.getTweak());
+            product_ver = Version(product_ver.getMajor(), product_ver.getMinor(), product_ver.getPatch(), product_ver.getTweak());
+
+            addLine("1 VERSIONINFO");
+            addLine("  FILEVERSION " + file_ver.toString(","s));
+            addLine("  PRODUCTVERSION " + product_ver.toString(","s));
+        }
+
+        void beginBlock(const String &name)
+        {
+            addLine("BLOCK \"" + name + "\"");
+            begin();
+        }
+
+        void endBlock()
+        {
+            end();
+        }
+
+        void addValue(const String &name, const Strings &vals)
+        {
+            addLine("VALUE \"" + name + "\", ");
+            for (auto &v : vals)
+                addText(v + ", ");
+            trimEnd(2);
+        }
+
+        void addValueQuoted(const String &name, const Strings &vals)
+        {
+            Strings vals2;
+            for (auto &v : vals)
+                vals2.push_back("\"" + v + "\"");
+            addValue(name, vals2);
+        }
+
+        void begin()
+        {
+            increaseIndent("BEGIN");
+        }
+
+        void end()
+        {
+            decreaseIndent("END");
+        }
+    };
+
+    RcEmitter ctx(getPackage().getVersion(), getPackage().getVersion());
+    ctx.begin();
+
+    ctx.beginBlock("StringFileInfo");
+    ctx.beginBlock("040904b0");
+    //VALUE "CompanyName", "TODO: <Company name>"
+    ctx.addValueQuoted("FileDescription", { getPackage().getPath().back()
+        // + " - " + getConfig()
+        }); // remove config for now
+    ctx.addValueQuoted("FileVersion", { getPackage().getVersion().toString() });
+    //VALUE "InternalName", "@PACKAGE@"
+    ctx.addValueQuoted("LegalCopyright", { "Powered by Software Network" });
+    ctx.addValueQuoted("OriginalFilename", { getPackage().toString() });
+    ctx.addValueQuoted("ProductName", { getPackage().getPath().toString() });
+    ctx.addValueQuoted("ProductVersion", { getPackage().getVersion().toString() });
+    ctx.endBlock();
+    ctx.endBlock();
+
+    ctx.beginBlock("VarFileInfo");
+    ctx.addValue("Translation", { "0x409","1200" });
+    ctx.endBlock();
+
+    ctx.end();
+
+    path p = BinaryPrivateDir / "sw.rc";
+    write_file_if_different(p, ctx.getText());
+
+    return p;
 }
 
 void NativeCompiledTarget::processCircular(Files &obj)
@@ -4609,32 +4719,6 @@ TargetType NativeCompiledTarget::getRealType() const
 bool ExecutableTarget::init()
 {
     auto r = NativeCompiledTarget::init();
-
-    switch (init_pass)
-    {
-    case 2:
-    {
-        //SW_UNIMPLEMENTED;
-        /*Linker->Prefix.clear();
-        Linker->Extension = getBuildSettings().TargetOS.getExecutableExtension();
-
-        if (getSelectedTool())
-        {
-            if (auto c = getSelectedTool()->as<VisualStudioLinker*>())
-            {
-                c->ImportLibrary.output_dependency = false; // become optional
-                c->ImportLibrary.create_directory = true; // but create always
-            }
-            else if (auto L = Linker->as<GNULinker*>())
-            {
-                L->PositionIndependentCode = false;
-                L->SharedObject = false;
-            }
-        }*/
-    }
-    break;
-    }
-
     return r;
 }
 

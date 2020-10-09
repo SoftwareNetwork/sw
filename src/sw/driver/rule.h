@@ -56,11 +56,12 @@ struct IRule : ICastable
 
 struct NativeRule : IRule
 {
-    ProgramPtr program;
+    using RuleProgram = Program &;
 
-    NativeRule(ProgramPtr);
+    RuleProgram program;
 
-    virtual void setup(const Target &t) = 0;
+    NativeRule(RuleProgram);
+
     virtual Files addInputs(const Target &t, const RuleFiles &) = 0;
 
     Commands getCommands() const override;
@@ -74,9 +75,8 @@ struct NativeCompilerRule : NativeRule
 {
     StringSet exts;
 
-    NativeCompilerRule(ProgramPtr, const StringSet &exts);
+    NativeCompilerRule(RuleProgram, const StringSet &exts);
 
-    void setup(const Target &t) override;
     Files addInputs(const Target &t, const RuleFiles &) override;
 
 private:
@@ -87,13 +87,17 @@ struct NativeLinkerRule : NativeRule
 {
     using NativeRule::NativeRule;
 
-    void setup(const Target &t) override;
     Files addInputs(const Target &t, const RuleFiles &) override;
-
-    void setOutputFile(const path &);
 
 private:
     NativeLinker &getLinker() const;
+};
+
+struct RcRule : NativeRule
+{
+    using NativeRule::NativeRule;
+
+    Files addInputs(const Target &t, const RuleFiles &) override;
 };
 
 } // namespace sw
