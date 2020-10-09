@@ -1077,11 +1077,6 @@ path NativeCompiledTarget::getImportLibrary() const
     SW_UNIMPLEMENTED;
 }
 
-/*std::unordered_set<NativeSourceFile*> NativeCompiledTarget::gatherSourceFiles() const
-{
-    return ::sw::gatherSourceFiles<NativeSourceFile>(getMergeObject());
-}*/
-
 FilesOrdered NativeCompiledTarget::gatherPrecompiledHeaders() const
 {
     FilesOrdered hdrs;

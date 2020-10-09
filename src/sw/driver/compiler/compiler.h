@@ -129,12 +129,12 @@ struct SW_DRIVER_CPP_API NativeToolchain
 
 // compilers
 
-struct SW_DRIVER_CPP_API CompilerBaseProgram : FileToFileTransformProgram
+struct SW_DRIVER_CPP_API CompilerBaseProgram : Program
 {
     String Prefix;
     String Extension;
 
-    using FileToFileTransformProgram::FileToFileTransformProgram;
+    using Program::Program;
     CompilerBaseProgram(const CompilerBaseProgram &);
 
     std::shared_ptr<builder::Command> prepareCommand(const Target &t);
@@ -149,9 +149,6 @@ protected:
 
     virtual void prepareCommand1(const Target &t) = 0;
     virtual std::shared_ptr<driver::Command> createCommand1(const SwBuilderContext &swctx) const;
-
-private:
-    std::shared_ptr<SourceFile> createSourceFile(const Target &t, const path &input) const override;
 };
 
 struct SW_DRIVER_CPP_API Compiler : CompilerBaseProgram
@@ -176,9 +173,6 @@ struct SW_DRIVER_CPP_API NativeCompiler : Compiler,
 
 protected:
     mutable Files dependencies;
-
-private:
-    std::shared_ptr<SourceFile> createSourceFile(const Target &t, const path &input) const override;
 };
 
 struct SW_DRIVER_CPP_API VisualStudio
@@ -473,9 +467,6 @@ struct SW_DRIVER_CPP_API RcTool :
 
 protected:
     //Version gatherVersion() const override { return Program::gatherVersion(file, "/?"); }
-
-private:
-    std::shared_ptr<SourceFile> createSourceFile(const Target &t, const path &input) const override;
 };
 
 // Ada

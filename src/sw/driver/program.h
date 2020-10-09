@@ -54,31 +54,6 @@ private:
     ProgramPtr program;
 };
 
-/*enum class TransformType
-{
-    Unspecified,
-
-    FileToFile,     // 1-to-1    (compilers)
-    FilesToFile,    // many-to-1 (linkers)
-};*/
-
-struct SW_DRIVER_CPP_API TransformProgram : Program
-{
-    //TransformType type = TransformType::Unspecified;
-    //StringSet input_extensions;
-
-    using Program::Program;
-};
-
-struct SW_DRIVER_CPP_API FileToFileTransformProgram : TransformProgram
-{
-    using TransformProgram::TransformProgram;
-
-    virtual std::shared_ptr<SourceFile> createSourceFile(const Target &t, const path &input) const = 0;
-};
-
-using FileToFileTransformProgramPtr = std::shared_ptr<FileToFileTransformProgram>;
-
 struct ProgramGroup : Program
 {
     using Program::Program;
