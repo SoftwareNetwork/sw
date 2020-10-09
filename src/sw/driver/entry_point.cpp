@@ -130,7 +130,7 @@ static CommandStorage &getDriverCommandStorage(const Build &b)
     return b.getMainBuild().getCommandStorage(b.getContext().getLocalStorage().storage_dir_tmp / "db" / "service");
 }
 
-void addImportLibrary(const Build &b, NativeCompiledTarget &t)
+static void addImportLibrary(Build &b, NativeCompiledTarget &t)
 {
 #ifdef _WIN32
     auto lib = (HMODULE)primitives::getModuleForSymbol(&isDriverDllBuild);
@@ -355,7 +355,7 @@ static auto getDriverDep()
 }
 
 // add Dirs?
-path getDriverIncludeDir(Build &solution, Target &lib)
+static path getDriverIncludeDir(Build &solution, Target &lib)
 {
     return lib.getFile(getDriverDep()) / "src";
 }

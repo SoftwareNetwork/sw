@@ -23,9 +23,6 @@ struct TargetSettings;
 struct PrepareConfigOutputData;
 struct NativeBuiltinTargetEntryPoint;
 
-path getDriverIncludeDir(Build &solution, Target &lib);
-void addImportLibrary(const Build &b, NativeCompiledTarget &t);
-
 namespace driver::cpp
 {
 
