@@ -236,6 +236,9 @@ void VisualStudioCompiler::prepareCommand1(const Target &t)
 
     ReproducibleBuild = t.isReproducibleBuild();
 
+    // this will probably overwrite previous settings
+    if (ForcedIncludeFiles && !ForcedIncludeFiles().empty())
+        throw SW_LOGIC_ERROR("reconsider");
     ForcedIncludeFiles = ForceIncludes;
 
     getCommandLineOptions<VisualStudioCompilerOptions>(cmd.get(), *this);
@@ -692,7 +695,7 @@ void VisualStudioLibraryTool::prepareCommand1(const Target &t)
         cmd->name_short = to_string(Output().filename().u8string());
     }
 
-    ((VisualStudioLibraryTool*)this)->VisualStudioLibraryToolOptions::LinkDirectories() = gatherLinkDirectories();
+    //((VisualStudioLibraryTool*)this)->VisualStudioLibraryToolOptions::LinkDirectories() = gatherLinkDirectories();
     //LinkLibraries = gatherLinkLibraries();
 
     ReproducibleBuild = t.isReproducibleBuild();

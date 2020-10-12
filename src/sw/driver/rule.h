@@ -37,7 +37,7 @@ private:
     AdditionalArguments additional_arguments;
 };
 
-struct IRule : ICastable
+struct SW_DRIVER_CPP_API IRule : ICastable
 {
     using RuleFiles = std::set<RuleFile>;
 

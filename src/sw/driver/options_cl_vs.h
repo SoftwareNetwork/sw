@@ -45,23 +45,13 @@ enum class RuntimeLibraryType
 enum class DebugInformationFormatType
 {
     None,
-    ObjectFile,
-    ProgramDatabase,
+    ProgramDatabaseInObjectFile,
+    ProgramDatabaseInSeparateFile,
     ProgramDatabaseEditAndContinue,
 
-    Z7 = ObjectFile,
-    Zi = ProgramDatabase,
+    Z7 = ProgramDatabaseInObjectFile,
+    Zi = ProgramDatabaseInSeparateFile,
     ZI = ProgramDatabaseEditAndContinue,
-};
-
-struct PrecompiledHeaderVs
-{
-    bool ignore = false;
-    bool with_debug_info = false;
-    std::optional<path> create;
-    std::optional<path> use;
-
-    Strings getCommandLine(::sw::builder::Command *c) const;
 };
 
 enum class ForceType
@@ -99,7 +89,6 @@ enum class Target
 DECLARE_OPTION_SPECIALIZATION(vs::ExceptionHandlingVector);
 DECLARE_OPTION_SPECIALIZATION(vs::RuntimeLibraryType);
 DECLARE_OPTION_SPECIALIZATION(vs::DebugInformationFormatType);
-DECLARE_OPTION_SPECIALIZATION(vs::PrecompiledHeaderVs);
 DECLARE_OPTION_SPECIALIZATION(vs::ForceType);
 DECLARE_OPTION_SPECIALIZATION(vs::Optimizations);
 DECLARE_OPTION_SPECIALIZATION(CLanguageStandard);

@@ -280,6 +280,7 @@ void NativeCompilerOptionsData::merge(const NativeCompilerOptionsData &o, const 
     }
 
     ForceIncludes.insert(ForceIncludes.end(), o.ForceIncludes.begin(), o.ForceIncludes.end());
+    unique_merge_containers(PrecompiledHeaders, o.PrecompiledHeaders);
 
     if (s.merge_to_self)
     {
@@ -437,7 +438,6 @@ void NativeLinkerOptionsData::merge(const NativeLinkerOptionsData &o, const Grou
     unique_merge_containers(PreLinkDirectories, o.PreLinkDirectories);
     unique_merge_containers(LinkDirectories, o.LinkDirectories);
     unique_merge_containers(PostLinkDirectories, o.PostLinkDirectories);
-    unique_merge_containers(PrecompiledHeaders, o.PrecompiledHeaders);
 }
 
 void NativeLinkerOptions::add(const SystemLinkLibrary &l)

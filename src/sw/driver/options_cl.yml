@@ -182,7 +182,7 @@ types:
             dbgfmt:
                 name: DebugInformationFormat
                 type: vs::DebugInformationFormatType
-                default: vs::DebugInformationFormatType::ProgramDatabase
+                default: vs::DebugInformationFormatType::ProgramDatabaseInSeparateFile
 
                 x:
                     struct: |
@@ -310,24 +310,19 @@ types:
                 flag: Fp
                 type: path
 
-            pch:
-                name: PrecompiledHeader
-                type: vs::PrecompiledHeaderVs
+            pchcreate:
+                name: CreatePrecompiledHeader
+                flag: Yc
+                type: path
+                properties:
+                    - input_dependency
 
-                x:
-                    struct: |
-                        struct PrecompiledHeaderVs
-                        {
-                            bool ignore = false;
-                            bool with_debug_info = false;
-                            std::optional<path> create;
-                            std::optional<path> use;
-
-                            Strings getCommandLine(::sw::builder::Command *c) const;
-                        };
-
-                    function: |
-                        return value().getCommandLine(c);
+            pchuse:
+                name: UsePrecompiledHeader
+                flag: Yu
+                type: path
+                properties:
+                    - input_dependency
 
             pp_to_stdout:
                 name: PreprocessToStdout

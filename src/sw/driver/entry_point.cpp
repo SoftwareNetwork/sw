@@ -488,7 +488,7 @@ decltype(auto) PrepareConfig::commonActions(Build &b, const InputData &d, const 
     if (isDriverStaticBuild())
         lib += "implib"_dep;
     lib.AutoDetectOptions = false;
-    lib += cpp20;
+    lib.CPPVersion = CPPLanguageStandard::CPP20;
     lib.NoUndefined = false;
 
     lib += fn;
@@ -542,13 +542,14 @@ decltype(auto) PrepareConfig::commonActions(Build &b, const InputData &d, const 
     // pch
     if (lang == LANG_CPP)
     {
-        lib += PrecompiledHeader(driver_idir / getSwHeader());
+        lib += ForceInclude(driver_idir / getSwHeader());
+        /*lib += PrecompiledHeader(driver_idir / getSwHeader());
 
         detail::PrecompiledHeader pch;
         pch.name = getImportPchFile(*this, lib, deps).stem();
         pch.dir = getPchDir(b);
         pch.fancy_name = "[config pch]";
-        lib.pch = pch;
+        lib.pch = pch;*/
     }
 
     return lib;

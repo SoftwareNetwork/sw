@@ -1095,14 +1095,7 @@ path NativeCompiledTarget::getImportLibrary() const
 
 FilesOrdered NativeCompiledTarget::gatherPrecompiledHeaders() const
 {
-    FilesOrdered hdrs;
-    TargetOptionsGroup::iterate_this(
-        [this, &hdrs](auto &v, auto i)
-    {
-        for (auto &i2 : v.PrecompiledHeaders)
-            hdrs.push_back(i2);
-    });
-    return hdrs;
+    SW_UNIMPLEMENTED;
 }
 
 Files NativeCompiledTarget::gatherObjectFilesWithoutLibraries() const
@@ -1244,12 +1237,12 @@ void NativeCompiledTarget::createPrecompiledHeader()
     if (PreprocessStep)
         return;
 
-    auto files = gatherPrecompiledHeaders();
+    auto &files = getMergeObject().PrecompiledHeaders;
     if (files.empty())
         return;
 
     if (pch.name.empty())
-        pch.name = "sw_pch";
+        pch.name = "sw.pch";
 
     if (pch.dir.empty())
         pch.dir = BinaryDir.parent_path() / "pch";
@@ -1269,13 +1262,18 @@ void NativeCompiledTarget::createPrecompiledHeader()
     {
         ScopedFileLock lk(pch.header);
         write_file_if_different(pch.header, h);
+        // pch goes first on force includes list
+        getMergeObject().ForceIncludes.insert(getMergeObject().ForceIncludes.begin(), pch.header);
     }
     File(pch.header, getFs()).setGenerated(true); // prevents resolving issues
 
     pch.source = pch.get_base_pch_path() += ".cpp"; // msvc
     {
         ScopedFileLock lk(pch.source);
-        write_file_if_different(pch.source, "#include \"" + to_string(normalize_path(pch.header)) + "\"");
+        write_file_if_different(pch.source,
+            //"#include \"" + to_string(normalize_path(pch.header)) + "\""
+            ""
+        );
     }
     File(pch.source, getFs()).setGenerated(true); // prevents resolving issues
 
@@ -1301,14 +1299,14 @@ void NativeCompiledTarget::createPrecompiledHeader()
     else
         getMergeObject()[pch.source].fancy_name = "[" + getPackage().toString() + "]/[pch]";
 
-    auto sf = (getMergeObject()[pch.source]).as<NativeSourceFile *>();
+    /*auto sf = (getMergeObject()[pch.source]).as<NativeSourceFile *>();
     if (!sf)
         throw SW_RUNTIME_ERROR("Error creating pch");
 
     auto setup_create_vc = [this, &sf](auto &c)
     {
-        if (getMainBuild().getSettings()["verbose"] == "true")
-            getMergeObject()[pch.source].fancy_name += " (" + to_string(normalize_path(pch.source)) + ")";
+        //if (getMainBuild().getSettings()["verbose"] == "true")
+            //getMergeObject()[pch.source].fancy_name += " (" + to_string(normalize_path(pch.source)) + ")";
 
         sf->setOutputFile(pch.obj);
 
@@ -1344,7 +1342,7 @@ void NativeCompiledTarget::createPrecompiledHeader()
     else if (auto c = sf->compiler->as<GNUCompiler*>())
     {
         setup_create_gcc_clang(c);
-    }
+    }*/
 }
 
 void NativeCompiledTarget::addPrecompiledHeader()
@@ -1353,7 +1351,6 @@ void NativeCompiledTarget::addPrecompiledHeader()
         return;
 
     // on this step we setup compilers to USE our created pch
-    SW_UNIMPLEMENTED;
     /*for (auto &f : gatherSourceFiles())
     {
         auto sf = f->as<NativeSourceFile *>();
@@ -1561,6 +1558,9 @@ Commands NativeCompiledTarget::getCommands1() const
         }
     }
     cmds.insert(generated.begin(), generated.end());
+
+    for (auto &c : cmds)
+        ((NativeCompiledTarget*)this)->registerCommand(*c);
 
     return cmds;
 
@@ -3952,8 +3952,6 @@ void NativeCompiledTarget::prepare_pass8()
     rules.push_back(new NativeCompilerRule(*prog_cl_cpp, get_cpp_exts(*this)));
     rules.push_back(new NativeCompilerRule(*prog_cl_c, { ".c" }));
     rules.push_back(new NativeCompilerRule(*prog_cl_asm, get_asm_exts(*this)));
-    if (getBuildSettings().TargetOS.is(OSType::Windows))
-        rules.push_back(new RcRule(*prog_cl_rc));
     if (isStaticLibrary())
     {
         if (!isHeaderOnly())
@@ -3974,10 +3972,15 @@ void NativeCompiledTarget::prepare_pass8()
             File(p, getFs()).setGenerated(true);
             getMergeObject() += p;
         }
+        // add rc rule
+        if (getBuildSettings().TargetOS.is(OSType::Windows))
+            rules.push_back(new RcRule(*prog_cl_rc));
 
         if (isExecutable() || !isHeaderOnly())
             rules.push_back(new NativeLinkerRule(*prog_link));
     }
+
+    //DEBUG_BREAK_IF(getPackage().toString() == "implib-0.0.1");
 
     // rules!
     std::set<RuleFile> rfs;
@@ -4138,21 +4141,9 @@ void NativeCompiledTarget::setup_compiler(NativeCompiler &prog)
         // else
         // TODO: ms now has C standard since VS16.8?
 
-
-        // for static libs, we gather and put pdb near output file
-        // btw, VS is clever enough to take this info from .lib
-        //if (getSelectedTool() == Librarian.get())
-        //{
-        //if ((getBuildSettings().Native.ConfigurationType == ConfigurationType::Debug ||
-        //getBuildSettings().Native.ConfigurationType == ConfigurationType::ReleaseWithDebugInformation) &&
-        //c->PDBFilename.empty())
-        //{
-        //auto f = getOutputFile();
-        //f = f.parent_path() / f.filename().stem();
-        //f += ".pdb";
-        //c->PDBFilename = f;// BinaryDir.parent_path() / "obj" / (getPackage().getPath().toString() + ".pdb");
-        //}
-        //}
+        // set pdb explicitly
+        // this is needed when using pch files sometimes
+        c->PDBFilename = BinaryDir.parent_path() / "obj" / "sw.pdb";
     };
 
     auto gnu_setup = [this, &prog](auto *c)

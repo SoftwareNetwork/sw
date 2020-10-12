@@ -33,37 +33,6 @@ String ExceptionHandling::getCommandLine() const
     return s;
 }
 
-Strings PrecompiledHeaderVs::getCommandLine(builder::Command *c) const
-{
-    Strings s;
-    if (create)
-    {
-        String o = "-Yc";
-        if (!create->empty())
-        {
-            o += to_string(normalize_path(*create));
-            //c->addOutput(create.value());
-        }
-        s.push_back(o);
-    }
-    if (use)
-    {
-        String o = "-Yu";
-        if (!use->empty())
-        {
-            o += to_string(normalize_path(*use));
-            //c->addInput(use.value());
-        }
-        // TODO: add autocreated name by cl.exe or whatever
-        s.push_back(o);
-    }
-    if (with_debug_info)
-        s.push_back("-Yd");
-    if (ignore)
-        s.push_back("-Y-");
-    return s;
-}
-
 }
 
 DECLARE_OPTION_SPECIALIZATION(vs::ExceptionHandlingVector)
@@ -145,10 +114,10 @@ DECLARE_OPTION_SPECIALIZATION(vs::DebugInformationFormatType)
     {
     case DebugInformationFormatType::None:
         return {};
-    case DebugInformationFormatType::ObjectFile:
+    case DebugInformationFormatType::ProgramDatabaseInObjectFile:
         s += "Z7";
         break;
-    case DebugInformationFormatType::ProgramDatabase:
+    case DebugInformationFormatType::ProgramDatabaseInSeparateFile:
         s += "Zi";
         break;
     case DebugInformationFormatType::ProgramDatabaseEditAndContinue:
@@ -214,11 +183,6 @@ DECLARE_OPTION_SPECIALIZATION(vs::ForceType)
         throw SW_RUNTIME_ERROR("unreachable code");
     }
     return { s };
-}
-
-DECLARE_OPTION_SPECIALIZATION(vs::PrecompiledHeaderVs)
-{
-    return value().getCommandLine(c);
 }
 
 DECLARE_OPTION_SPECIALIZATION(vs::Optimizations)

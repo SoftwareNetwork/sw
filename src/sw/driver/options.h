@@ -237,6 +237,7 @@ struct SW_DRIVER_CPP_API NativeCompilerOptionsData
     PathOptionsType PreIncludeDirectories;
     PathOptionsType IncludeDirectories;
     PathOptionsType PostIncludeDirectories;
+    PathOptionsType PrecompiledHeaders;
 
     // other langs and targets may use this
     std::map<String, UniqueVector<String>> CustomTargetOptions;
@@ -262,7 +263,6 @@ struct SW_DRIVER_CPP_API NativeLinkerOptionsData
     PathOptionsType PreLinkDirectories;
     PathOptionsType LinkDirectories;
     PathOptionsType PostLinkDirectories;
-    PathOptionsType PrecompiledHeaders;
 
     PathOptionsType gatherLinkDirectories() const;
     LinkLibrariesType gatherLinkLibraries() const;
