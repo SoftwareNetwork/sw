@@ -2293,7 +2293,7 @@ void NativeCompiledTarget::prepare_pass1()
         fs::create_directories(BinaryDir);
     }
 
-    DEBUG_BREAK_IF(getPackage().toString() == "org.sw.demo.nlohmann.json-3.9.1");
+    //DEBUG_BREAK_IF(getPackage().toString() == "org.sw.demo.nlohmann.json-3.9.1");
 
     resolvePostponedSourceFiles();
     if (!HeaderOnly || !*HeaderOnly)
@@ -3223,48 +3223,6 @@ void NativeCompiledTarget::prepare_pass5()
     }
     */
 
-    // pdb
-    /*if (getSelectedTool())
-    {
-        if (auto c = getSelectedTool()->as<VisualStudioLinker *>())
-        {
-            if (!c->GenerateDebugInformation)
-            {
-                if (getBuildSettings().Native.ConfigurationType == ConfigurationType::Debug ||
-                    getBuildSettings().Native.ConfigurationType == ConfigurationType::ReleaseWithDebugInformation)
-                {
-                    //if (auto g = getSolution().getGenerator(); g && g->type == GeneratorType::VisualStudio)
-                    //c->GenerateDebugInformation = vs::link::Debug::FastLink;
-                    //else
-                    c->GenerateDebugInformation = vs::link::Debug::Full;
-                }
-                else
-                    c->GenerateDebugInformation = vs::link::Debug::None;
-            }
-
-            //if ((!c->GenerateDebugInformation || c->GenerateDebugInformation() != vs::link::Debug::None) &&
-            if ((c->GenerateDebugInformation && c->GenerateDebugInformation() != vs::link::Debug::None) &&
-                c->PDBFilename.empty())
-            {
-                auto f = getOutputFile();
-                f = f.parent_path() / f.filename().stem();
-                f += ".pdb";
-                c->PDBFilename = f;// BinaryDir.parent_path() / "obj" / (getPackage().getPath().toString() + ".pdb");
-            }
-            else
-                c->PDBFilename.output_dependency = false;
-
-            //SW_UNIMPLEMENTED;
-            //if (Linker->Type == LinkerType::LLD)
-            //{
-                //if (c->GenerateDebugInformation)
-                    //c->InputFiles().push_back("msvcrtd.lib");
-                //else
-                    //c->InputFiles().push_back("msvcrt.lib");
-            //}
-        }
-    }*/
-
     // export all symbols
     //SW_UNIMPLEMENTED;
     /*if (ExportAllSymbols && getBuildSettings().TargetOS.Type == OSType::Windows && getSelectedTool() == Linker.get())
@@ -3375,11 +3333,6 @@ void NativeCompiledTarget::prepare_pass6()
         t += "libucrtd.lib"_slib;
         break;
     }
-    /*if (auto L = getSelectedTool()->as<VisualStudioLinker *>())
-    {
-        auto cmd = L->createCommand(getMainBuild());
-        cmd->push_back("-NODEFAULTLIB");
-    }*/
 }
 
 void NativeCompiledTarget::prepare_pass6_1()
@@ -3560,6 +3513,35 @@ void NativeCompiledTarget::prepare_pass8()
     prog_lib->setOutputFile(getOutputFileName2("lib"));
     prog_link->setOutputFile(getOutputFileName2("bin"));
     prog_link->setImportLibrary(getOutputFileName2("lib"));
+    if (auto L = prog_link->as<VisualStudioLinker *>())
+    {
+        auto cmd = L->createCommand(getMainBuild());
+        cmd->push_back("-NODEFAULTLIB");
+
+        if (!L->GenerateDebugInformation)
+        {
+            if (getBuildSettings().Native.ConfigurationType == ConfigurationType::Debug ||
+                getBuildSettings().Native.ConfigurationType == ConfigurationType::ReleaseWithDebugInformation)
+            {
+                //if (auto g = getSolution().getGenerator(); g && g->type == GeneratorType::VisualStudio)
+                //c->GenerateDebugInformation = vs::link::Debug::FastLink;
+                //else
+                L->GenerateDebugInformation = vs::link::Debug::Full;
+            }
+            else
+                L->GenerateDebugInformation = vs::link::Debug::None;
+        }
+
+        if (L->GenerateDebugInformation() != vs::link::Debug::None && !L->PDBFilename)
+        {
+            auto f = getOutputFile();
+            f = f.parent_path() / f.filename().stem();
+            f += ".pdb";
+            L->PDBFilename = f;// BinaryDir.parent_path() / "obj" / (getPackage().getPath().toString() + ".pdb");
+        }
+        else
+            L->PDBFilename.output_dependency = false;
+    }
 
     // merge settings
     if (!isHeaderOnly())
@@ -3571,7 +3553,7 @@ void NativeCompiledTarget::prepare_pass8()
     prog_link->merge(getMergeObject());
     prog_lib->merge(getMergeObject());
 
-    DEBUG_BREAK_IF(getPackage().toString() == "org.sw.demo.nlohmann.json-3.9.1");
+    //DEBUG_BREAK_IF(getPackage().toString() == "org.sw.demo.nlohmann.json-3.9.1");
 
     // add rules
     rules.push_back(new NativeCompilerRule(*prog_cl_cpp, get_cpp_exts(*this)));
