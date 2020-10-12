@@ -4,8 +4,6 @@
 #include "builtin_input.h"
 #include "entry_point.h"
 
-#include <sw/core/input.h>
-#include <sw/core/specification.h>
 #include <sw/core/sw_context.h>
 #include <sw/core/target.h>
 

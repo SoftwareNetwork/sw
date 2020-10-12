@@ -156,10 +156,9 @@ NativeTarget::~NativeTarget()
 void NativeTarget::setOutputFile()
 {
     //SW_UNIMPLEMENTED;
-    path ofile;
+    /*path ofile;
     if (isStaticLibrary())
-        SW_UNIMPLEMENTED;
-        //getSelectedTool()->setOutputFile(getOutputFileName2("lib"));
+        ofile = getOutputFileName2("lib");
     else
     {
         ofile = getOutputFileName2("bin");
@@ -168,7 +167,8 @@ void NativeTarget::setOutputFile()
     }
 
     // set generated early
-    File(ofile, getFs()).setGenerated(true);
+    // FIXME: add proper extension
+    File(ofile, getFs()).setGenerated(true);*/
 
     if (!isLocal())
     try
@@ -241,7 +241,7 @@ path NativeCompiledTarget::getOutputFileName2(const path &subdir) const
 
 bool NativeCompiledTarget::isStaticLibrary() const
 {
-    return false;
+    return getType() == TargetType::NativeStaticLibrary;
     //SW_UNIMPLEMENTED;
     //return getSelectedTool() && getSelectedTool() == Librarian.get();
 }
@@ -884,9 +884,8 @@ void NativeCompiledTarget::setupCommand(builder::Command &c) const
                 continue;
             if (auto nt = d->getTarget().as<NativeCompiledTarget *>())
             {
-                SW_UNIMPLEMENTED;
-                //if (!*nt->HeaderOnly && nt->getSelectedTool() == nt->Linker.get())
-                    //f(nt->getOutputFile());
+                if (!*nt->HeaderOnly && nt->getSelectedTool() == nt->prog_link.get())
+                    f(nt->getOutputFile());
             }
             else if (auto nt = d->getTarget().as<PredefinedTarget *>())
             {
@@ -1060,6 +1059,21 @@ void NativeCompiledTarget::setOutputFile()
 {
     if (isHeaderOnly())
         return;
+
+    implibfile = getOutputFileName2("lib") += getBuildSettings().TargetOS.getStaticLibraryExtension();
+    if (isStaticLibrary())
+        outputfile = implibfile;
+    else
+    {
+        if (isExecutable())
+            outputfile = getOutputFileName2("bin") += getBuildSettings().TargetOS.getExecutableExtension();
+        else
+            outputfile = getOutputFileName2("bin") += getBuildSettings().TargetOS.getSharedLibraryExtension();
+
+        if (getBuildSettings().TargetOS.Type != OSType::Windows)
+            implibfile = outputfile;
+    }
+
     NativeTarget::setOutputFile();
 }
 
@@ -1072,6 +1086,8 @@ path NativeCompiledTarget::getOutputFile() const
 
 path NativeCompiledTarget::getImportLibrary() const
 {
+    if (!implibfile.empty())
+        return implibfile;
     if (getSelectedTool())
         return getSelectedTool()->getImportLibrary();
     SW_UNIMPLEMENTED;
@@ -1143,10 +1159,10 @@ void NativeCompiledTarget::resolvePostponedSourceFiles()
     StringSet exts;
     for (auto &[f, sf] : getMergeObject())
     {
-        SW_UNIMPLEMENTED;
+        //SW_UNIMPLEMENTED;
         //if (!sf->isActive() || !sf->postponed)
             //continue;
-        getMergeObject() += sf->file;
+        //getMergeObject() += sf->file;
     }
 }
 
@@ -1207,7 +1223,10 @@ LinkLibrariesType NativeCompiledTarget::gatherLinkLibraries() const
 
 NativeLinker *NativeCompiledTarget::getSelectedTool() const
 {
-    SW_UNIMPLEMENTED;
+    if (isStaticLibrary())
+        return prog_lib.get();
+    return prog_link.get();
+
     /*if (SelectedTool)
         return SelectedTool;
     if (Linker)
@@ -1281,8 +1300,8 @@ void NativeCompiledTarget::createPrecompiledHeader()
         getMergeObject()[pch.source].fancy_name = pch.fancy_name;
     else
         getMergeObject()[pch.source].fancy_name = "[" + getPackage().toString() + "]/[pch]";
-    SW_UNIMPLEMENTED;
-    /*auto sf = (getMergeObject()[pch.source]).as<NativeSourceFile *>();
+
+    auto sf = (getMergeObject()[pch.source]).as<NativeSourceFile *>();
     if (!sf)
         throw SW_RUNTIME_ERROR("Error creating pch");
 
@@ -1325,7 +1344,7 @@ void NativeCompiledTarget::createPrecompiledHeader()
     else if (auto c = sf->compiler->as<GNUCompiler*>())
     {
         setup_create_gcc_clang(c);
-    }*/
+    }
 }
 
 void NativeCompiledTarget::addPrecompiledHeader()
@@ -2383,14 +2402,14 @@ void NativeCompiledTarget::prepare_pass1()
         HeaderOnly = !hasSourceFiles();
     if (*HeaderOnly)
     {
-        SW_UNIMPLEMENTED;
+        //SW_UNIMPLEMENTED;
         /*Linker.reset();
         Librarian.reset();
         SelectedTool = nullptr;*/
     }
     else
     {
-        /*LinkLibrary l(getImportLibrary());
+        LinkLibrary l(getImportLibrary());
         l.whole_archive = WholeArchive;
         if (l.whole_archive)
         {
@@ -2406,7 +2425,7 @@ void NativeCompiledTarget::prepare_pass1()
         }
         if (isStaticLibrary())
             l.static_ = true;
-        Interface += l;*/
+        Interface += l;
     }
 
     if (PackageDefinitions)
@@ -2517,7 +2536,7 @@ void NativeCompiledTarget::prepare_pass2()
 }
 
 struct H
-    {
+{
     size_t operator()(const DependencyPtr &p) const
     {
         return std::hash<PackageId>()(p->getTarget().getPackage());
@@ -3275,25 +3294,6 @@ void NativeCompiledTarget::prepare_pass5()
         }
     }
 
-    // now create pch
-    createPrecompiledHeader();
-
-    // before merge
-    if (getBuildSettings().Native.ConfigurationType != ConfigurationType::Debug)
-        getMergeObject() += Definition("NDEBUG");
-
-    // emulate msvc defs for clang
-    // https://docs.microsoft.com/en-us/cpp/build/reference/md-mt-ld-use-run-time-library?view=vs-2019
-    if (getBuildSettings().TargetOS.is(OSType::Windows) && getCompilerType() == CompilerType::Clang)
-    {
-        // always (except /LD but we do not support it yet)
-        getMergeObject() += Definition("_MT");
-        if (!getBuildSettings().Native.MT)
-            getMergeObject() += Definition("_DLL");
-        if (getBuildSettings().Native.ConfigurationType == ConfigurationType::Debug)
-            getMergeObject() += Definition("_DEBUG");
-    }
-
     auto files = gatherSourceFiles();
 
     // unity build
@@ -3859,13 +3859,6 @@ void NativeCompiledTarget::prepare_pass8()
     // linker setup
     auto obj = gatherObjectFilesWithoutLibraries();
 
-    if (!isStaticOrHeaderOnlyLibrary())
-    {
-        //SW_UNIMPLEMENTED;
-        //for (auto &f : ::sw::gatherSourceFiles<RcToolSourceFile>(*this))
-            //obj.insert(f->output);
-    }
-
     // circular and windows rpath processing
     processCircular(obj);
 
@@ -3877,18 +3870,35 @@ void NativeCompiledTarget::prepare_pass8()
         getSelectedTool()->setInputLibraryDependencies(gatherLinkLibraries());
     }*/
 
-    // setup programs
-    if (!isHeaderOnly())
+    // setup target
+
+    // now create pch
+    createPrecompiledHeader();
+
+    // before merge
+    if (getBuildSettings().Native.ConfigurationType != ConfigurationType::Debug)
+        getMergeObject() += Definition("NDEBUG");
+
+    // emulate msvc defs for clang
+    // https://docs.microsoft.com/en-us/cpp/build/reference/md-mt-ld-use-run-time-library?view=vs-2019
+    if (getBuildSettings().TargetOS.is(OSType::Windows) && getCompilerType() == CompilerType::Clang)
     {
-        prog_cl_cpp->merge(*this);
-        prog_cl_c->merge(*this);
-        prog_cl_asm->merge(*this);
+        // always (except /LD but we do not support it yet)
+        getMergeObject() += Definition("_MT");
+        if (!getBuildSettings().Native.MT)
+            getMergeObject() += Definition("_DLL");
+        if (getBuildSettings().Native.ConfigurationType == ConfigurationType::Debug)
+            getMergeObject() += Definition("_DEBUG");
     }
+
+    setup_compiler(*prog_cl_c);
+    setup_compiler(*prog_cl_cpp);
+    setup_compiler(*prog_cl_asm);
+
+    // setup programs
     // rc
     // add casual idirs?
     prog_cl_rc->idirs = NativeCompilerOptions::System.IncludeDirectories;
-    prog_link->merge(getMergeObject());
-    prog_lib->merge(getMergeObject());
     prog_lib->Extension = getBuildSettings().TargetOS.getStaticLibraryExtension();
     if (isExecutable())
     {
@@ -3906,10 +3916,37 @@ void NativeCompiledTarget::prepare_pass8()
         }
     }
     else
+    {
         prog_link->Extension = getBuildSettings().TargetOS.getSharedLibraryExtension();
+        if (prog_link->Type == LinkerType::MSVC)
+        {
+            // set machine to target os arch
+            auto L = prog_link->as<VisualStudioLinker*>();
+            L->Dll = true;
+        }
+        else if (prog_link->Type == LinkerType::GNU)
+        {
+            auto L = prog_link->as<GNULinker*>();
+            L->SharedObject = true;
+            if (getBuildSettings().TargetOS.Type == OSType::Linux)
+                L->AsNeeded = true;
+        }
+        if (getBuildSettings().TargetOS.Type == OSType::Windows)
+            getMergeObject() += "_WINDLL"_def;
+    }
     prog_lib->setOutputFile(getOutputFileName2("lib"));
     prog_link->setOutputFile(getOutputFileName2("bin"));
     prog_link->setImportLibrary(getOutputFileName2("lib"));
+
+    // merge settings
+    if (!isHeaderOnly())
+    {
+        prog_cl_cpp->merge(*this);
+        prog_cl_c->merge(*this);
+        prog_cl_asm->merge(*this);
+    }
+    prog_link->merge(getMergeObject());
+    prog_lib->merge(getMergeObject());
 
     // add rules
     rules.push_back(new NativeCompilerRule(*prog_cl_cpp, get_cpp_exts(*this)));
@@ -4068,6 +4105,132 @@ path NativeCompiledTarget::generate_rc()
     write_file_if_different(p, ctx.getText());
 
     return p;
+}
+
+void NativeCompiledTarget::setup_compiler(NativeCompiler &prog)
+{
+    auto vs_setup = [this, &prog](auto *c)
+    {
+        if (getBuildSettings().Native.MT)
+            c->RuntimeLibrary = vs::RuntimeLibraryType::MultiThreaded;
+
+        switch (getBuildSettings().Native.ConfigurationType)
+        {
+        case ConfigurationType::Debug:
+            c->RuntimeLibrary =
+                getBuildSettings().Native.MT ?
+                vs::RuntimeLibraryType::MultiThreadedDebug :
+                vs::RuntimeLibraryType::MultiThreadedDLLDebug;
+            c->Optimizations().Disable = true;
+            break;
+        case ConfigurationType::Release:
+            c->Optimizations().FastCode = true;
+            break;
+        case ConfigurationType::ReleaseWithDebugInformation:
+            c->Optimizations().FastCode = true;
+            break;
+        case ConfigurationType::MinimalSizeRelease:
+            c->Optimizations().SmallCode = true;
+            break;
+        }
+        if (&prog != prog_cl_c.get())
+            c->CPPStandard = CPPVersion;
+        // else
+        // TODO: ms now has C standard since VS16.8?
+
+
+        // for static libs, we gather and put pdb near output file
+        // btw, VS is clever enough to take this info from .lib
+        //if (getSelectedTool() == Librarian.get())
+        //{
+        //if ((getBuildSettings().Native.ConfigurationType == ConfigurationType::Debug ||
+        //getBuildSettings().Native.ConfigurationType == ConfigurationType::ReleaseWithDebugInformation) &&
+        //c->PDBFilename.empty())
+        //{
+        //auto f = getOutputFile();
+        //f = f.parent_path() / f.filename().stem();
+        //f += ".pdb";
+        //c->PDBFilename = f;// BinaryDir.parent_path() / "obj" / (getPackage().getPath().toString() + ".pdb");
+        //}
+        //}
+    };
+
+    auto gnu_setup = [this, &prog](auto *c)
+    {
+        switch (getBuildSettings().Native.ConfigurationType)
+        {
+        case ConfigurationType::Debug:
+            c->GenerateDebugInformation = true;
+            //c->Optimizations().Level = 0; this is the default
+            break;
+        case ConfigurationType::Release:
+            c->Optimizations().Level = 3;
+            break;
+        case ConfigurationType::ReleaseWithDebugInformation:
+            c->GenerateDebugInformation = true;
+            c->Optimizations().Level = 2;
+            break;
+        case ConfigurationType::MinimalSizeRelease:
+            c->Optimizations().SmallCode = true;
+            c->Optimizations().Level = 2;
+            break;
+        }
+        if (&prog != prog_cl_c.get())
+            c->CPPStandard = CPPVersion;
+        else
+            c->CStandard = CVersion;
+
+        if (ExportAllSymbols && getRealType() != TargetType::NativeStaticLibrary)
+            c->VisibilityHidden = false;
+    };
+
+    if (auto c = prog.as<VisualStudioCompiler*>())
+    {
+        /*if (UseModules)
+        {
+        c->UseModules = UseModules;
+        //c->stdIfcDir = c->System.IncludeDirectories.begin()->parent_path() / "ifc" / (getBuildSettings().TargetOS.Arch == ArchType::x86_64 ? "x64" : "x86");
+        c->stdIfcDir = c->System.IncludeDirectories.begin()->parent_path() / "ifc" / c->file.parent_path().filename();
+        c->UTF8 = false; // utf8 is not used in std modules and produce a warning
+
+        auto s = read_file(f->file);
+        std::smatch m;
+        static std::regex r("export module (\\w+)");
+        if (std::regex_search(s, m, r))
+        {
+        c->ExportModule = true;
+        }
+        }*/
+
+        vs_setup(c);
+    }
+    else if (auto c = prog.as<ClangClCompiler*>())
+    {
+        vs_setup(c);
+    }
+    // clang compiler is not working atm, gnu is created instead
+    else if (auto c = prog.as<ClangCompiler*>())
+    {
+        gnu_setup(c);
+    }
+    else if (auto c = prog.as<GNUCompiler*>())
+    {
+        gnu_setup(c);
+    }
+}
+
+NativeLinker &NativeCompiledTarget::getLinker()
+{
+    if (!prog_link)
+        SW_UNIMPLEMENTED;
+    return *prog_link;
+}
+
+const NativeLinker &NativeCompiledTarget::getLinker() const
+{
+    if (!prog_link)
+        SW_UNIMPLEMENTED;
+    return *prog_link;
 }
 
 void NativeCompiledTarget::processCircular(Files &obj)
@@ -4279,36 +4442,6 @@ bool NativeCompiledTarget::prepareLibrary(LibraryType Type)
     }
 
     return NativeCompiledTarget::prepare();
-}
-
-void NativeCompiledTarget::initLibrary(LibraryType Type)
-{
-    if (isHeaderOnly())
-        return;
-
-    SW_UNIMPLEMENTED;
-    /*if (Type == LibraryType::Shared)
-    {
-        if (Linker->Type == LinkerType::MSVC)
-        {
-            // set machine to target os arch
-            auto L = Linker->as<VisualStudioLinker*>();
-            L->Dll = true;
-        }
-        else if (Linker->Type == LinkerType::GNU)
-        {
-            auto L = Linker->as<GNULinker*>();
-            L->SharedObject = true;
-            if (getBuildSettings().TargetOS.Type == OSType::Linux)
-                L->AsNeeded = true;
-        }
-        if (getBuildSettings().TargetOS.Type == OSType::Windows)
-            Definitions["_WINDLL"];
-    }
-    else
-    {
-        SelectedTool = Librarian.get();
-    }*/
 }
 
 void NativeCompiledTarget::removeFile(const path &fn, bool binary_dir)
@@ -4711,12 +4844,6 @@ TargetType NativeCompiledTarget::getRealType() const
 #include "cppstd.inl"
 #undef STD
 
-bool ExecutableTarget::init()
-{
-    auto r = NativeCompiledTarget::init();
-    return r;
-}
-
 bool ExecutableTarget::prepare()
 {
     switch (prepare_pass)
@@ -4762,30 +4889,20 @@ bool LibraryTarget::prepare()
 
 bool LibraryTarget::init()
 {
+    if (getBuildSettings().Native.LibrariesType == LibraryType::Shared)
+        target_type = TargetType::NativeSharedLibrary;
+    else
+        target_type = TargetType::NativeStaticLibrary;
+
     auto r = NativeCompiledTarget::init();
-    initLibrary(getBuildSettings().Native.LibrariesType);
     return r;
 }
 
-path LibraryTarget::getImportLibrary() const
+/*path LibraryTarget::getImportLibrary() const
 {
     if (isStaticLibrary())
         return getOutputFile();
     return getSelectedTool()->getImportLibrary();
-}
-
-bool StaticLibraryTarget::init()
-{
-    auto r = NativeCompiledTarget::init();
-    initLibrary(LibraryType::Static);
-    return r;
-}
-
-bool SharedLibraryTarget::init()
-{
-    auto r = NativeCompiledTarget::init();
-    initLibrary(LibraryType::Shared);
-    return r;
-}
+}*/
 
 }

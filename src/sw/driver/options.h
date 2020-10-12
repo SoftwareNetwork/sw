@@ -132,6 +132,15 @@ struct SW_DRIVER_CPP_API IncludeDirectory
     explicit IncludeDirectory(const path &p);
 };
 
+struct SW_DRIVER_CPP_API ForceInclude
+{
+    String i;
+
+    ForceInclude() = default;
+    explicit ForceInclude(const String &p);
+    explicit ForceInclude(const path &p);
+};
+
 struct SW_DRIVER_CPP_API LinkDirectory
 {
     String d;
@@ -224,6 +233,7 @@ struct SW_DRIVER_CPP_API NativeCompilerOptionsData
 {
     DefinitionsType Definitions;
     UniqueVector<String> CompileOptions;
+    FilesOrdered ForceIncludes;
     PathOptionsType PreIncludeDirectories;
     PathOptionsType IncludeDirectories;
     PathOptionsType PostIncludeDirectories;

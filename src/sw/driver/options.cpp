@@ -44,6 +44,16 @@ IncludeDirectory::IncludeDirectory(const path &p)
     i = to_string(p.u8string());
 }
 
+ForceInclude::ForceInclude(const String &s)
+{
+    i = s;
+}
+
+ForceInclude::ForceInclude(const path &p)
+{
+    i = to_string(p.u8string());
+}
+
 LinkDirectory::LinkDirectory(const String &s)
 {
     d = s;
@@ -268,6 +278,8 @@ void NativeCompilerOptionsData::merge(const NativeCompilerOptionsData &o, const 
         for (auto &[k, v] : o.CustomTargetOptions)
             CustomTargetOptions[k].insert(v.begin(), v.end());
     }
+
+    ForceIncludes.insert(ForceIncludes.end(), o.ForceIncludes.begin(), o.ForceIncludes.end());
 
     if (s.merge_to_self)
     {

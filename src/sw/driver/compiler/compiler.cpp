@@ -236,6 +236,8 @@ void VisualStudioCompiler::prepareCommand1(const Target &t)
 
     ReproducibleBuild = t.isReproducibleBuild();
 
+    ForcedIncludeFiles = ForceIncludes;
+
     getCommandLineOptions<VisualStudioCompilerOptions>(cmd.get(), *this);
     if (preprocessed_file)
         addCompileOptions(*cmd);
@@ -681,9 +683,6 @@ void VisualStudioLibraryTool::prepareCommand1(const Target &t)
     //if (InputFiles().empty())
         //return nullptr;
 
-    //LinkDirectories() = gatherLinkDirectories();
-    //LinkLibraries() = gatherLinkLibraries();
-
     //cmd->out.capture = true;
     //cmd->base = clone();
     if (Output)
@@ -694,6 +693,7 @@ void VisualStudioLibraryTool::prepareCommand1(const Target &t)
     }
 
     ((VisualStudioLibraryTool*)this)->VisualStudioLibraryToolOptions::LinkDirectories() = gatherLinkDirectories();
+    //LinkLibraries = gatherLinkLibraries();
 
     ReproducibleBuild = t.isReproducibleBuild();
 
@@ -741,11 +741,12 @@ void VisualStudioLinker::prepareCommand1(const Target &t)
     //if (InputFiles().empty())
         //return nullptr;
 
-    //LinkDirectories() = gatherLinkDirectories();
-    //LinkLibraries() = gatherLinkLibraries();
     ((VisualStudioLinker *)this)->VisualStudioLinkerOptions::SystemLinkLibraries.value().clear();
     for (auto &l : gatherLinkLibraries(true))
         ((VisualStudioLinker *)this)->VisualStudioLinkerOptions::SystemLinkLibraries().push_back(l.l);
+
+    ((VisualStudioLinker*)this)->VisualStudioLibraryToolOptions::LinkDirectories() = gatherLinkDirectories();
+    ((VisualStudioLinker *)this)->VisualStudioLinkerOptions::InputLibraryDependencies = gatherLinkLibraries();
 
     //cmd->out.capture = true;
     //cmd->base = clone();
@@ -756,7 +757,6 @@ void VisualStudioLinker::prepareCommand1(const Target &t)
         cmd->name_short = to_string(Output().filename().u8string());
     }
 
-    ((VisualStudioLibraryTool*)this)->VisualStudioLibraryToolOptions::LinkDirectories() = gatherLinkDirectories();
 
     ReproducibleBuild = t.isReproducibleBuild();
 
@@ -858,7 +858,7 @@ void GNULinker::prepareCommand1(const Target &t)
     }
 
     ((GNULinker*)this)->GNULinkerOptions::LinkDirectories = gatherLinkDirectories();
-    //((GNULinker*)this)->GNULinkerOptions::LinkLibraries() = gatherLinkLibraries();
+    ((GNULinker*)this)->GNULinkerOptions::LinkLibraries = gatherLinkLibraries();
     ((GNULinker*)this)->GNULinkerOptions::SystemLinkLibraries = gatherLinkLibraries(true);
 
     //if (t.getSolution().getHostOs().is(OSType::Windows))

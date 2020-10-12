@@ -8,6 +8,7 @@
 #include "driver.h"
 
 #include "build.h"
+#include "builtin_input.h"
 #include "suffix.h"
 #include "target/all.h"
 #include "entry_point.h"
@@ -41,6 +42,7 @@ namespace sw
 
 PackageIdSet load_builtin_packages(SwContext &);
 std::unordered_map<Input*, PackageIdSet> load_builtin_inputs(SwContext &, const IDriver &);
+void addImportLibrary(Build &b);
 
 namespace driver::cpp
 {
@@ -132,7 +134,18 @@ Driver::Driver(SwContext &swctx)
     CoInitializeEx(0, 0); // vs find helper
 #endif
 
-    builin_inputs = load_builtin_inputs(swctx, *this);
+    builtin_inputs = load_builtin_inputs(swctx, *this);
+
+    // add implib entry point
+    {
+        auto name = "implib"s;
+        auto h = std::hash<String>()(name);
+        auto i = std::make_unique<BuiltinInput>(swctx, *this, h);
+        auto ep = std::make_unique<sw::NativeBuiltinTargetEntryPoint>(addImportLibrary);
+        i->setEntryPoint(std::move(ep));
+        auto [ii, _] = swctx.registerInput(std::move(i));
+        builtin_inputs[ii].insert("implib-0.0.1"s);
+    }
 }
 
 Driver::~Driver()
@@ -478,7 +491,7 @@ std::unique_ptr<SwBuild> Driver::create_build(SwContext &swctx) const
     auto bpkgs = getBuiltinPackages(ctx);
 
     // register targets and set inputs
-    for (auto &[i, pkgs] : builin_inputs)
+    for (auto &[i, pkgs] : builtin_inputs)
     {
         BuildInput bi(*i);
         for (auto &p : pkgs)

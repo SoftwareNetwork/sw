@@ -2,6 +2,7 @@
 // Copyright (C) 2020 Egor Pugin <egor.pugin@gmail.com>
 
 #include <sw/core/input.h>
+#include <sw/core/specification.h>
 
 namespace sw
 {

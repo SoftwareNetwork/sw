@@ -82,7 +82,7 @@ public:
     //
     virtual ~NativeCompiledTarget();
 
-    TargetType getType() const override { return TargetType::NativeLibrary; }
+    TargetType getType() const override { return target_type; }
 
     bool init() override;
     bool prepare() override;
@@ -128,6 +128,9 @@ public:
 
     void setupCommand(builder::Command &c) const override;
 
+    NativeLinker &getLinker();
+    const NativeLinker &getLinker() const;
+
     //
     bool hasCircularDependency() const;
 
@@ -148,12 +151,12 @@ protected:
     bool circular_dependency = false;
     bool IsSwConfig = false;
     bool IsSwConfigLocal = false;
+    TargetType target_type = TargetType::NativeLibrary;
     //std::shared_ptr<NativeLinker> Linker;
     //std::shared_ptr<NativeLinker> Librarian;
 
     Files gatherObjectFilesWithoutLibraries() const;
     bool prepareLibrary(LibraryType Type);
-    void initLibrary(LibraryType Type);
     void configureFile1(const path &from, const path &to, ConfigureFlags flags);
     void detectLicenseFile();
 
@@ -171,6 +174,7 @@ private:
     std::map<path, path> break_gch_deps;
     mutable std::optional<Commands> generated_commands;
     path outputfile;
+    path implibfile;
     Commands cmds;
     Files configure_files; // needed by IDEs, move to base target later
 
@@ -235,6 +239,7 @@ private:
     path getOutputFileName2(const path &subdir) const override;
 
     path generate_rc();
+    void setup_compiler(NativeCompiler &);
 };
 
 /**
@@ -246,8 +251,7 @@ struct SW_DRIVER_CPP_API LibraryTarget : NativeCompiledTarget
     using NativeCompiledTarget::operator=;
 
     bool init() override;
-    path getImportLibrary() const override;
-
+    //path getImportLibrary() const override;
     bool prepare() override;
 };
 
@@ -260,8 +264,6 @@ struct SW_DRIVER_CPP_API ExecutableTarget : NativeCompiledTarget, PredefinedProg
     using PredefinedProgram::getProgram;
 
     TargetType getType() const override { return TargetType::NativeExecutable; }
-
-    bool init() override;
     bool prepare() override;
 
 private:
@@ -275,11 +277,8 @@ struct SW_DRIVER_CPP_API StaticLibraryTarget : NativeCompiledTarget
 {
     using NativeCompiledTarget::NativeCompiledTarget;
 
-    bool init() override;
-
     TargetType getType() const override { return TargetType::NativeStaticLibrary; }
-    path getImportLibrary() const override { return getOutputFile(); }
-
+    //path getImportLibrary() const override { return getOutputFile(); }
     bool prepare() override
     {
         return prepareLibrary(LibraryType::Static);
@@ -293,10 +292,7 @@ struct SW_DRIVER_CPP_API SharedLibraryTarget : NativeCompiledTarget
 {
     using NativeCompiledTarget::NativeCompiledTarget;
 
-    bool init() override;
-
     TargetType getType() const override { return TargetType::NativeSharedLibrary; }
-
     bool prepare() override
     {
         return prepareLibrary(LibraryType::Shared);

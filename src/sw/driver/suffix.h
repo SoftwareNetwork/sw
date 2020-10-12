@@ -19,7 +19,8 @@ reference:
 _api - add api definition
 _d, _def - definition
 _dep - dependency
-_f, _fr? - framework (macos)
+_fi, _force_include? - force include file
+_framework, _f? - framework (macos)
 _id, _idir - include directory: system, after??, before
 _id_s, _idir_s - system include directory: system, after??, before
 // _s_id? s_idir?
@@ -63,6 +64,13 @@ inline Definition operator "" _def(const char *s, size_t)
 inline DependencyPtr operator "" _dep(const char *s, size_t)
 {
     return std::make_shared<Dependency>(extractFromString(s));
+}
+
+// force include file
+// _fi (_force_include?)
+inline ForceInclude operator "" _fi(const char *s, size_t)
+{
+    return ForceInclude(String(s));
 }
 
 // framework (macos)

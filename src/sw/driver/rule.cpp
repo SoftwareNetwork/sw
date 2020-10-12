@@ -96,10 +96,10 @@ Files NativeLinkerRule::addInputs(const Target &t, const RuleFiles &rfs)
             && rf.getFile().extension() != ".res"
             )
             continue;
-        if (used_files.contains(rf))
-            continue;
+        //if (used_files.contains(rf))
+            //continue;
         files.push_back(rf.getFile());
-        used_files.insert(rf);
+        //used_files.insert(rf);
     }
     std::sort(files.begin(), files.end());
     if (files.empty())
@@ -111,6 +111,8 @@ Files NativeLinkerRule::addInputs(const Target &t, const RuleFiles &rfs)
     static_cast<NativeLinker &>(*c).setObjectFiles(files);
     static_cast<NativeLinker &>(*c).prepareCommand(t);
     outputs.insert(static_cast<NativeLinker &>(*c).getOutputFile());
+    c->getCommand()->prepare(); // why?
+    commands.clear();
     commands.emplace_back(std::move(c));
 
     return outputs;

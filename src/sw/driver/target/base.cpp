@@ -585,6 +585,21 @@ void TargetOptions::remove(const IncludeDirectory &i)
     IncludeDirectories.erase(dir);
 }
 
+void TargetOptions::add(const ForceInclude &i)
+{
+    path fi = i.i;
+    check_absolute(fi);
+    ForceIncludes.push_back(fi);
+}
+
+void TargetOptions::remove(const ForceInclude &i)
+{
+    SW_UNIMPLEMENTED;
+    path fi = i.i;
+    check_absolute(fi);
+    //ForceIncludes.erase(fi);
+}
+
 void TargetOptions::add(const LinkDirectory &i)
 {
     path dir = i.d;

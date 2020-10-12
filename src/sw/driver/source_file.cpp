@@ -131,8 +131,11 @@ void SourceFileStorage::add_unchecked(const path &file_in, bool skip)
     auto ho = nt && nt->HeaderOnly && nt->HeaderOnly.value();
     //if (!target.hasExtension(ext) || ho)
     {
-        f = std::make_shared<SourceFile>(file);
-        addFile(file, f);
+        if (!f)
+        {
+            f = std::make_shared<SourceFile>(file);
+            addFile(file, f);
+        }
         //f->created = false;
     }
     /*else

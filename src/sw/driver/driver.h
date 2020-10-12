@@ -59,7 +59,7 @@ private:
     SwContext &swctx;
     mutable std::mutex m_bp;
     mutable std::optional<PackageIdSet> builtin_packages;
-    std::unordered_map<Input*, PackageIdSet> builin_inputs;
+    std::unordered_map<Input*, PackageIdSet> builtin_inputs;
     PackageIdSet getBuiltinPackages(SwContext &) const;
 
     mutable std::unique_ptr<SwBuild> b;

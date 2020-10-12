@@ -130,7 +130,7 @@ static CommandStorage &getDriverCommandStorage(const Build &b)
     return b.getMainBuild().getCommandStorage(b.getContext().getLocalStorage().storage_dir_tmp / "db" / "service");
 }
 
-static void addImportLibrary(Build &b, NativeCompiledTarget &t)
+void addImportLibrary(Build &b)
 {
 #ifdef _WIN32
     auto lib = (HMODULE)primitives::getModuleForSymbol(&isDriverDllBuild);
@@ -144,14 +144,9 @@ static void addImportLibrary(Build &b, NativeCompiledTarget &t)
         defs += "    "s + s + "\n";
     write_file_if_different(getImportDefinitionsFile(b), defs);
 
-    auto c = t.addCommand();
-    c->working_directory = getImportDefinitionsFile(b).parent_path();
-    SW_UNIMPLEMENTED;
-    /*c << t.Librarian->file
-        << cmd::in(getImportDefinitionsFile(b), cmd::Prefix{ "-DEF:" }, cmd::Skip)
-        << cmd::out(getImportLibraryFile(b), cmd::Prefix{ "-OUT:" })
-        ;*/
-    t.LinkLibraries.push_back(LinkLibrary{ getImportLibraryFile(b) });
+    auto &i = b.addStaticLibrary("implib");
+    i.AutoDetectOptions = false;
+    i += getImportDefinitionsFile(b);
 #endif
 }
 
@@ -491,9 +486,9 @@ decltype(auto) PrepareConfig::commonActions(Build &b, const InputData &d, const 
 
     addDeps(b, lib);
     if (isDriverStaticBuild())
-        addImportLibrary(b, lib);
+        lib += "implib"_dep;
     lib.AutoDetectOptions = false;
-    lib.CPPVersion = CPPLanguageStandard::CPP20;
+    lib += cpp20;
     lib.NoUndefined = false;
 
     lib += fn;
@@ -519,7 +514,6 @@ decltype(auto) PrepareConfig::commonActions(Build &b, const InputData &d, const 
         lib += Definition("IMPORT_LIBRARY=\""s + IMPORT_LIBRARY + "\"");
         auto fn = driver_idir / getSwDir() / "misc" / "delay_load_helper.cpp";
         lib += fn;
-        SW_UNIMPLEMENTED;
         //if (auto nsf = lib[fn].as<NativeSourceFile *>())
             //nsf->setOutputFile(getPchDir(b) / ("delay_load_helper" + getDepsSuffix(*this, lib, deps) + ".obj"));
     }
@@ -575,29 +569,7 @@ path PrepareConfig::one2one(Build &b, const InputData &d)
     // file deps
     {
         for (auto &h : headers)
-        {
-            // TODO: refactor this and same cases below
-            SW_UNIMPLEMENTED;
-            /*if (auto sf = lib[fn].template as<NativeSourceFile *>())
-            {
-                if (auto c = sf->compiler->template as<VisualStudioCompiler *>())
-                {
-                    c->ForcedIncludeFiles().push_back(h);
-                }
-                else if (auto c = sf->compiler->template as<ClangClCompiler *>())
-                {
-                    c->ForcedIncludeFiles().push_back(h);
-                }
-                else if (auto c = sf->compiler->template as<ClangCompiler *>())
-                {
-                    c->ForcedIncludeFiles().push_back(h);
-                }
-                else if (auto c = sf->compiler->template as<GNUCompiler *>())
-                {
-                    c->ForcedIncludeFiles().push_back(h);
-                }
-            }*/
-        }
+            lib += ForceInclude(h);
         // sort deps first!
         for (auto &d : std::set<UnresolvedPackage>(udeps.begin(), udeps.end()))
             lib += std::make_shared<Dependency>(d);
@@ -616,36 +588,14 @@ path PrepareConfig::one2one(Build &b, const InputData &d)
         fi_files.push_back(driver_idir / getSwCheckAbiVersionHeader()); // TODO: remove it, we don't need abi here
     }
 
-    SW_UNIMPLEMENTED;
-    /*if (auto sf = lib[fn].template as<NativeSourceFile*>())
-    {
-        if (auto c = sf->compiler->template as<VisualStudioCompiler*>())
-        {
-            for (auto &f : fi_files)
-                c->ForcedIncludeFiles().push_back(f);
-
-            // deprecated warning
-            // activate later
-            // this causes cl warning (PCH is built without it)
-            // we must build two PCHs? for storage pks and local pkgs
-            //c->Warnings().TreatAsError.push_back(4996);
-        }
-        else if (auto c = sf->compiler->template as<ClangClCompiler*>())
-        {
-            for (auto &f : fi_files)
-                c->ForcedIncludeFiles().push_back(f);
-        }
-        else if (auto c = sf->compiler->template as<ClangCompiler*>())
-        {
-            for (auto &f : fi_files)
-                c->ForcedIncludeFiles().push_back(f);
-        }
-        else if (auto c = sf->compiler->template as<GNUCompiler*>())
-        {
-            for (auto &f : fi_files)
-                c->ForcedIncludeFiles().push_back(f);
-        }
-    }*/
+    //
+    for (auto &f : fi_files)
+        lib += ForceInclude(f);
+    // deprecated warning
+    // activate later
+    // this causes cl warning (PCH is built without it)
+    // we must build two PCHs? for storage pks and local pkgs
+    //c->Warnings().TreatAsError.push_back(4996);
 
     //commonActions2
     if (lib.getBuildSettings().TargetOS.is(OSType::Windows))
@@ -673,8 +623,7 @@ path PrepareConfig::one2one(Build &b, const InputData &d)
     if (bs.TargetOS.is(OSType::Windows))
         lib.NativeLinkerOptions::System.LinkLibraries.insert(LinkLibrary{ "DELAYIMP.LIB"s });
 
-    SW_UNIMPLEMENTED;
-    /*if (auto L = lib.Linker->template as<VisualStudioLinker*>())
+    if (auto L = lib.getLinker().as<VisualStudioLinker*>())
     {
         L->DelayLoadDlls().push_back(IMPORT_LIBRARY);
         //#ifdef CPPAN_DEBUG
@@ -688,7 +637,7 @@ path PrepareConfig::one2one(Build &b, const InputData &d)
         L->IgnoreWarnings().insert(4070); // warning LNK4070: /OUT:X.dll directive in .EXP differs from output filename 'Y.dll'; ignoring directive
                                           // cannot be ignored https://docs.microsoft.com/en-us/cpp/build/reference/ignore-ignore-specific-warnings?view=vs-2017
                                           //L->IgnoreWarnings().insert(4088); // warning LNK4088: image being generated due to /FORCE option; image may not run
-    }*/
+    }
 
     return lib.getOutputFile();
 }
