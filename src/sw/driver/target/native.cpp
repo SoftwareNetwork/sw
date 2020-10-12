@@ -1243,15 +1243,11 @@ void NativeCompiledTarget::createPrecompiledHeader()
 
     if (pch.name.empty())
         pch.name = "sw.pch";
-
     if (pch.dir.empty())
         pch.dir = BinaryDir.parent_path() / "pch";
 
-    if (pch.files.empty())
-        pch.files = files;
-
     String h;
-    for (auto &f : pch.files)
+    for (auto &f : files)
     {
         if (f.string()[0] == '<' || f.string()[0] == '\"')
             h += "#include " + f.string() + "\n";
@@ -1262,20 +1258,16 @@ void NativeCompiledTarget::createPrecompiledHeader()
     {
         ScopedFileLock lk(pch.header);
         write_file_if_different(pch.header, h);
-        // pch goes first on force includes list
-        getMergeObject().ForceIncludes.insert(getMergeObject().ForceIncludes.begin(), pch.header);
     }
-    File(pch.header, getFs()).setGenerated(true); // prevents resolving issues
 
     pch.source = pch.get_base_pch_path() += ".cpp"; // msvc
     {
         ScopedFileLock lk(pch.source);
-        write_file_if_different(pch.source,
-            //"#include \"" + to_string(normalize_path(pch.header)) + "\""
-            ""
-        );
+        write_file_if_different(pch.source, "");
     }
-    File(pch.source, getFs()).setGenerated(true); // prevents resolving issues
+
+    // pch goes first on force includes list
+    getMergeObject().ForceIncludes.insert(getMergeObject().ForceIncludes.begin(), pch.header);
 
     //
     if (pch.pch.empty())
@@ -1298,102 +1290,6 @@ void NativeCompiledTarget::createPrecompiledHeader()
         getMergeObject()[pch.source].fancy_name = pch.fancy_name;
     else
         getMergeObject()[pch.source].fancy_name = "[" + getPackage().toString() + "]/[pch]";
-
-    /*auto sf = (getMergeObject()[pch.source]).as<NativeSourceFile *>();
-    if (!sf)
-        throw SW_RUNTIME_ERROR("Error creating pch");
-
-    auto setup_create_vc = [this, &sf](auto &c)
-    {
-        //if (getMainBuild().getSettings()["verbose"] == "true")
-            //getMergeObject()[pch.source].fancy_name += " (" + to_string(normalize_path(pch.source)) + ")";
-
-        sf->setOutputFile(pch.obj);
-
-        c->PrecompiledHeaderFilename() = pch.pch;
-        c->PrecompiledHeaderFilename.output_dependency = true;
-        c->PrecompiledHeader().create = pch.header;
-        c->PDBFilename = pch.pdb;
-    };
-
-    auto setup_create_gcc_clang = [this, &sf](auto &c)
-    {
-        sf->getCompiler().setSourceFile(pch.header, pch.pch);
-        sf->output = sf->getCompiler().getOutputFile();
-
-        if (getMainBuild().getSettings()["verbose"] == "true")
-            getMergeObject()[pch.source].fancy_name += " (" + to_string(normalize_path(pch.header)) + ")";
-
-        c->Language = "c++-header"; // FIXME: also c-header sometimes
-    };
-
-    if (auto c = sf->compiler->as<VisualStudioCompiler*>())
-    {
-        setup_create_vc(c);
-    }
-    else if (auto c = sf->compiler->as<ClangClCompiler*>())
-    {
-        setup_create_vc(c);
-    }
-    else if (auto c = sf->compiler->as<ClangCompiler*>())
-    {
-        setup_create_gcc_clang(c);
-    }
-    else if (auto c = sf->compiler->as<GNUCompiler*>())
-    {
-        setup_create_gcc_clang(c);
-    }*/
-}
-
-void NativeCompiledTarget::addPrecompiledHeader()
-{
-    if (pch.dir.empty())
-        return;
-
-    // on this step we setup compilers to USE our created pch
-    /*for (auto &f : gatherSourceFiles())
-    {
-        auto sf = f->as<NativeSourceFile *>();
-        if (!sf)
-            continue;
-        if (sf->skip_pch)
-            continue;
-        if (f->file == pch.source)
-            continue;
-
-        auto setup_use_vc = [this](auto &c)
-        {
-            c->ForcedIncludeFiles().insert(c->ForcedIncludeFiles().begin(), pch.header);
-            c->PrecompiledHeaderFilename() = pch.pch;
-            c->PrecompiledHeaderFilename.input_dependency = true;
-            c->PrecompiledHeader().use = pch.header;
-            c->PDBFilename = pch.pdb;
-        };
-
-        auto setup_use_gcc_clang = [this](auto &c)
-        {
-            c->ForcedIncludeFiles().insert(c->ForcedIncludeFiles().begin(), pch.header);
-            // we must add this explicitly
-            c->createCommand(getMainBuild())->addInput(pch.pch);
-        };
-
-        if (auto c = sf->compiler->as<VisualStudioCompiler*>())
-        {
-            setup_use_vc(c);
-        }
-        else if (auto c = sf->compiler->as<ClangClCompiler*>())
-        {
-            setup_use_vc(c);
-        }
-        else if (auto c = sf->compiler->as<ClangCompiler*>())
-        {
-            setup_use_gcc_clang(c);
-        }
-        else if (auto c = sf->compiler->as<GNUCompiler*>())
-        {
-            setup_use_gcc_clang(c);
-        }
-    }*/
 }
 
 std::shared_ptr<builder::Command> NativeCompiledTarget::getCommand() const
@@ -3580,8 +3476,6 @@ void NativeCompiledTarget::prepare_pass5()
         // add casual idirs?
         f->getCompiler().idirs = NativeCompilerOptions::System.IncludeDirectories;
     }*/
-
-    //addPrecompiledHeader();
 
     // pdb
     /*if (getSelectedTool())

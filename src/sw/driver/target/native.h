@@ -206,7 +206,6 @@ private:
 
     FilesOrdered gatherPrecompiledHeaders() const;
     void createPrecompiledHeader();
-    void addPrecompiledHeader();
 
     std::unique_ptr<NativeCompiler> prog_cl_cpp;
     std::unique_ptr<NativeCompiler> prog_cl_c;

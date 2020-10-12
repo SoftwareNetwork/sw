@@ -236,10 +236,9 @@ void VisualStudioCompiler::prepareCommand1(const Target &t)
 
     ReproducibleBuild = t.isReproducibleBuild();
 
-    // this will probably overwrite previous settings
-    if (ForcedIncludeFiles && !ForcedIncludeFiles().empty())
-        throw SW_LOGIC_ERROR("reconsider");
-    ForcedIncludeFiles = ForceIncludes;
+    // do not overwrite
+    if (!ForcedIncludeFiles)
+        ForcedIncludeFiles = ForceIncludes;
 
     getCommandLineOptions<VisualStudioCompilerOptions>(cmd.get(), *this);
     if (preprocessed_file)
@@ -349,6 +348,10 @@ void ClangCompiler::prepareCommand1(const ::sw::Target &t)
         //cmd->push_back("-stdlib=libstdc++");
     }
 
+    // do not overwrite
+    if (!ForcedIncludeFiles)
+        ForcedIncludeFiles = ForceIncludes;
+
     add_args(*cmd, getCStdOption(CStandard(), dynamic_cast<const NativeCompiledTarget&>(t).CExtensions));
     CStandard.skip = true;
     add_args(*cmd, getCppStdOption(CPPStandard(), dynamic_cast<const NativeCompiledTarget&>(t).CPPExtensions,
@@ -435,6 +438,10 @@ void ClangClCompiler::prepareCommand1(const Target &t)
     }
 
     ReproducibleBuild = t.isReproducibleBuild();
+
+    // do not overwrite
+    if (!ForcedIncludeFiles)
+        ForcedIncludeFiles = ForceIncludes;
 
     getCommandLineOptions<VisualStudioCompilerOptions>(cmd.get(), *this);
     getCommandLineOptions<ClangClOptions>(cmd.get(), *this/*, "-Xclang"*/);
@@ -562,6 +569,10 @@ void GNUCompiler::prepareCommand1(const Target &t)
     add_args(*cmd, getCppStdOption(CPPStandard(), dynamic_cast<const NativeCompiledTarget&>(t).CPPExtensions,
         false, false, getVersion(t.getContext(), file)));
     CPPStandard.skip = true;
+
+    // do not overwrite
+    if (!ForcedIncludeFiles)
+        ForcedIncludeFiles = ForceIncludes;
 
     getCommandLineOptions<GNUOptions>(cmd.get(), *this);
     addEverything(*this->cmd/*, "-isystem"*/);

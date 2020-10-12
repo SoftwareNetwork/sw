@@ -19,7 +19,6 @@ struct PrecompiledHeader
 {
     path header;
     path source;
-    FilesOrdered files;
 
     //
     path name; // base filename

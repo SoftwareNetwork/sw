@@ -3,6 +3,7 @@
 
 #include "rule.h"
 
+#include "build.h"
 #include "compiler/compiler.h"
 #include "target/native.h"
 
@@ -88,21 +89,65 @@ Files NativeCompilerRule::addInputs(const Target &t, const RuleFiles &rfs)
         static_cast<NativeCompiler &>(*c).setSourceFile(rf.getFile(), output);
         if (rf.getFile().filename() == "sw.pch.cpp")
         {
-            if (auto C = c->as<VisualStudioCompiler *>())
+            auto setup_vs = [&pch_basename](auto C)
             {
                 C->CreatePrecompiledHeader = path(*pch_basename) += ".h";
                 C->PrecompiledHeaderFilename = path(*pch_basename) += ".pch";
                 C->PrecompiledHeaderFilename.output_dependency = true;
-            }
+            };
+            auto setup_gnu = [&pch_basename, &c, &outputs, &output, &t](auto C, auto ext)
+            {
+                C->Language = "c++-header";
+
+                // set new input and output
+                static_cast<NativeCompiler &>(*c).setSourceFile(path(*pch_basename) += ".h", path(*pch_basename) += ".h"s += ext);
+
+                // skip .obj output
+                outputs.erase(output);
+
+                // we also remove here our same input file
+                if (auto nt = t.as<NativeCompiledTarget *>())
+                {
+                    auto fi = nt->getMergeObject().ForceIncludes;
+                    if (!fi.empty())
+                    {
+                        fi.erase(fi.begin());
+                        C->ForcedIncludeFiles = fi;
+                    }
+                }
+            };
+
+            if (auto C = c->as<VisualStudioCompiler *>())
+                setup_vs(C);
+            else if (auto C = c->as<ClangClCompiler *>())
+                setup_vs(C);
+            else if (auto C = c->as<ClangCompiler *>())
+                setup_gnu(C, ".pch");
+            else if (auto C = c->as<GNUCompiler *>())
+                setup_gnu(C, ".gch");
         }
         else if (pch_basename)
         {
-            if (auto C = c->as<VisualStudioCompiler *>())
+            auto setup_vs = [&pch_basename](auto C)
             {
                 C->UsePrecompiledHeader = path(*pch_basename) += ".h";
                 C->PrecompiledHeaderFilename = path(*pch_basename) += ".pch";
                 C->PrecompiledHeaderFilename.input_dependency = true;
-            }
+            };
+            auto setup_gnu = [&pch_basename, &t](auto C, auto ext)
+            {
+                // we must add this explicitly
+                C->createCommand(t.getMainBuild())->addInput(path(*pch_basename) += ".h"s += ext);
+            };
+
+            if (auto C = c->as<VisualStudioCompiler *>())
+                setup_vs(C);
+            else if (auto C = c->as<ClangClCompiler *>())
+                setup_vs(C);
+            else if (auto C = c->as<ClangCompiler *>())
+                setup_gnu(C, ".pch");
+            else if (auto C = c->as<GNUCompiler *>())
+                setup_gnu(C, ".gch");
         }
         static_cast<NativeCompiler &>(*c).prepareCommand(t);
         commands.emplace_back(std::move(c));
