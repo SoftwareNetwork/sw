@@ -252,6 +252,11 @@ Files NativeLinkerRule::addInputs(const Target &t, const RuleFiles &rfs)
     if (files.empty() && !def)
         return {};
 
+    // objs must go into object files
+    // libs into library deps
+    //getSelectedTool()->setObjectFiles(files);
+    //getSelectedTool()->setInputLibraryDependencies(gatherLinkLibraries());
+
     Files outputs;
 
     auto c = getLinker().clone();

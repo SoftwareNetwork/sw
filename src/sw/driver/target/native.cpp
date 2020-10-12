@@ -1093,32 +1093,6 @@ path NativeCompiledTarget::getImportLibrary() const
     SW_UNIMPLEMENTED;
 }
 
-FilesOrdered NativeCompiledTarget::gatherPrecompiledHeaders() const
-{
-    SW_UNIMPLEMENTED;
-}
-
-Files NativeCompiledTarget::gatherObjectFilesWithoutLibraries() const
-{
-    Files obj;
-    //SW_UNIMPLEMENTED;
-    /*for (auto &f : gatherSourceFiles())
-    {
-        if (f->skip_linking)
-            continue;
-        if (f->output.extension() != ".gch" &&
-            f->output.extension() != ".pch"
-            )
-            obj.insert(f->output);
-    }
-    for (auto &[f, sf] : getMergeObject())
-    {
-        if (f.extension() == getBuildSettings().TargetOS.getObjectFileExtension())
-            obj.insert(f);
-    }*/
-    return obj;
-}
-
 bool NativeCompiledTarget::hasSourceFiles() const
 {
     bool r = false;
@@ -1144,19 +1118,6 @@ bool NativeCompiledTarget::hasSourceFiles() const
     });
     check(getMergeObject());
     return r;
-}
-
-void NativeCompiledTarget::resolvePostponedSourceFiles()
-{
-    // gather exts
-    StringSet exts;
-    for (auto &[f, sf] : getMergeObject())
-    {
-        //SW_UNIMPLEMENTED;
-        //if (!sf->isActive() || !sf->postponed)
-            //continue;
-        //getMergeObject() += sf->file;
-    }
 }
 
 FilesOrdered NativeCompiledTarget::gatherLinkDirectories() const
@@ -1219,16 +1180,6 @@ NativeLinker *NativeCompiledTarget::getSelectedTool() const
     if (isStaticLibrary())
         return prog_lib.get();
     return prog_link.get();
-
-    /*if (SelectedTool)
-        return SelectedTool;
-    if (Linker)
-        return Linker.get();
-    if (Librarian)
-        return Librarian.get();
-    if (isHeaderOnly())
-        return {};
-    throw SW_RUNTIME_ERROR("No tool selected");*/
 }
 
 void NativeCompiledTarget::createPrecompiledHeader()
@@ -1365,64 +1316,9 @@ Commands NativeCompiledTarget::getCommands1() const
         return cmds;
     }
 
-    // this source files
-    {
-        auto sd = to_string(normalize_path(SourceDir));
-        auto bd = to_string(normalize_path(BinaryDir));
-        auto bdp = to_string(normalize_path(BinaryPrivateDir));
-
-        auto prepare_command = [this, &cmds, &sd, &bd, &bdp](auto f, auto c)
-        {
-            c->arguments.push_back(f->args);
-
-            // set fancy name
-            if (!IsSwConfig && !(getMainBuild().getSettings()["do_not_mangle_object_names"] == "true"))
-            {
-                auto p = to_string(normalize_path(f->file));
-                if (bdp.size() < p.size() && p.find(bdp) == 0)
-                {
-                    auto n = p.substr(bdp.size());
-                    c->name = "[" + getPackage().toString() + "]/[bdir_pvt]" + n;
-                }
-                else if (bd.size() < p.size() && p.find(bd) == 0)
-                {
-                    auto n = p.substr(bd.size());
-                    c->name = "[" + getPackage().toString() + "]/[bdir]" + n;
-                }
-                if (sd.size() < p.size() && p.find(sd) == 0)
-                {
-                    String prefix;
-                    /*if (f->compiler == getBuildSettings().Native.CCompiler)
-                        prefix = "Building C object ";
-                    else if (f->compiler == getBuildSettings().Native.CPPCompiler)
-                        prefix = "Building CXX object ";*/
-                    auto n = p.substr(sd.size());
-                    if (!n.empty() && n[0] != '/')
-                        n = "/" + n;
-                    c->name = prefix + "[" + getPackage().toString() + "]" + n;
-                }
-            }
-            if (!(getMainBuild().getSettings()["do_not_mangle_object_names"] == "true") && !f->fancy_name.empty())
-                c->name = f->fancy_name;
-            cmds.insert(c);
-        };
-
-        //SW_UNIMPLEMENTED;
-        /*for (auto &f : gatherSourceFiles())
-        {
-            auto c = f->getCommand(*this);
-            prepare_command(f, c);
-        }
-
-        for (auto &f : ::sw::gatherSourceFiles<RcToolSourceFile>(*this))
-        {
-            auto c = f->getCommand(*this);
-            prepare_command(f, c);
-        }*/
-
-        for (auto &r : rules)
-            cmds.merge(r->getCommands());
-    }
+    //
+    for (auto &r : rules)
+        cmds.merge(r->getCommands());
 
     // add generated files
     for (auto &cmd : cmds)
@@ -1460,21 +1356,10 @@ Commands NativeCompiledTarget::getCommands1() const
 
     return cmds;
 
-    // add install commands
-    /*for (auto &[p, f] : getMergeObject())
-    {
-        if (f->install_dir.empty())
-            continue;
 
-        auto o = getOutputDir1();
-        o /= f->install_dir / p.filename();
 
-        auto c = addCommand(SW_VISIBLE_BUILTIN_FUNCTION(copy_file));
-        c << cmd::in(p);
-        c << cmd::out(o);
-        c.c->name = "copy: " + normalize_path(o);
-        cmds.insert(c.c);
-    }*/
+
+
 
     // this library, check if nothing to link
     if (auto c = getCommand())
@@ -2295,7 +2180,6 @@ void NativeCompiledTarget::prepare_pass1()
 
     //DEBUG_BREAK_IF(getPackage().toString() == "org.sw.demo.nlohmann.json-3.9.1");
 
-    resolvePostponedSourceFiles();
     if (!HeaderOnly || !*HeaderOnly)
         HeaderOnly = !hasSourceFiles();
     if (isHeaderOnly())
@@ -3422,10 +3306,6 @@ void NativeCompiledTarget::prepare_pass7()
             }
         }
     }
-
-    // after gatherStaticLinkLibraries()!
-    //if (getSelectedTool())
-        //getSelectedTool()->merge(getMergeObject());
 }
 
 void NativeCompiledTarget::prepare_pass8()
@@ -3433,18 +3313,8 @@ void NativeCompiledTarget::prepare_pass8()
     // linker 2
 
     // linker setup
-    auto obj = gatherObjectFilesWithoutLibraries();
-
     // circular and windows rpath processing
-    processCircular(obj);
-
-    /*if (getSelectedTool())
-    {
-        FilesOrdered files(obj.begin(), obj.end());
-        std::sort(files.begin(), files.end());
-        getSelectedTool()->setObjectFiles(files);
-        getSelectedTool()->setInputLibraryDependencies(gatherLinkLibraries());
-    }*/
+    //processCircular(obj);
 
     // setup target
 
@@ -4494,12 +4364,5 @@ bool LibraryTarget::init()
     auto r = NativeCompiledTarget::init();
     return r;
 }
-
-/*path LibraryTarget::getImportLibrary() const
-{
-    if (isStaticLibrary())
-        return getOutputFile();
-    return getSelectedTool()->getImportLibrary();
-}*/
 
 }

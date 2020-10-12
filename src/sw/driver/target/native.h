@@ -155,7 +155,6 @@ protected:
     //std::shared_ptr<NativeLinker> Linker;
     //std::shared_ptr<NativeLinker> Librarian;
 
-    Files gatherObjectFilesWithoutLibraries() const;
     bool prepareLibrary(LibraryType Type);
     void configureFile1(const path &from, const path &to, ConfigureFlags flags);
     void detectLicenseFile();
@@ -193,7 +192,6 @@ protected:
 
 private:
     Commands getGeneratedCommands() const;
-    void resolvePostponedSourceFiles();
     FilesOrdered gatherRpathLinkDirectories() const;
     FilesOrdered gatherLinkDirectories() const;
     LinkLibrariesType gatherLinkLibraries() const;
@@ -204,7 +202,6 @@ private:
     mutable bool interface_settings_set = false;
     const TargetSettings &getInterfaceSettings() const override;
 
-    FilesOrdered gatherPrecompiledHeaders() const;
     void createPrecompiledHeader();
 
     std::unique_ptr<NativeCompiler> prog_cl_cpp;
@@ -250,7 +247,6 @@ struct SW_DRIVER_CPP_API LibraryTarget : NativeCompiledTarget
     using NativeCompiledTarget::operator=;
 
     bool init() override;
-    //path getImportLibrary() const override;
     bool prepare() override;
 };
 
@@ -277,7 +273,6 @@ struct SW_DRIVER_CPP_API StaticLibraryTarget : NativeCompiledTarget
     using NativeCompiledTarget::NativeCompiledTarget;
 
     TargetType getType() const override { return TargetType::NativeStaticLibrary; }
-    //path getImportLibrary() const override { return getOutputFile(); }
     bool prepare() override
     {
         return prepareLibrary(LibraryType::Static);
