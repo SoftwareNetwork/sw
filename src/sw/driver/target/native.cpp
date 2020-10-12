@@ -248,7 +248,7 @@ bool NativeCompiledTarget::isStaticLibrary() const
 
 bool NativeCompiledTarget::isStaticOrHeaderOnlyLibrary() const
 {
-    return isStaticLibrary() || *HeaderOnly;
+    return isStaticLibrary() || isHeaderOnly();
 }
 
 static bool isStaticOrHeaderOnlyLibrary(const TargetSettings &s)
@@ -884,7 +884,7 @@ void NativeCompiledTarget::setupCommand(builder::Command &c) const
                 continue;
             if (auto nt = d->getTarget().as<NativeCompiledTarget *>())
             {
-                if (!*nt->HeaderOnly && nt->getSelectedTool() == nt->prog_link.get())
+                if (!nt->isHeaderOnly() && nt->getSelectedTool() == nt->prog_link.get())
                     f(nt->getOutputFile());
             }
             else if (auto nt = d->getTarget().as<PredefinedTarget *>())
@@ -1294,7 +1294,7 @@ void NativeCompiledTarget::createPrecompiledHeader()
 
 std::shared_ptr<builder::Command> NativeCompiledTarget::getCommand() const
 {
-    if (HeaderOnly && *HeaderOnly)
+    if (isHeaderOnly())
         return nullptr;
     if (getSelectedTool())
         return getSelectedTool()->getCommand(*this);
@@ -1359,7 +1359,7 @@ Commands NativeCompiledTarget::getCommands1() const
     auto generated = getGeneratedCommands();
 
     Commands cmds;
-    if (HeaderOnly && *HeaderOnly)
+    if (isHeaderOnly())
     {
         cmds.insert(generated.begin(), generated.end());
         return cmds;
@@ -1995,7 +1995,7 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
         SW_UNIMPLEMENTED;
     }
 
-    if (*HeaderOnly)
+    if (isHeaderOnly())
         s["header_only"] = "true";
     else
     {
@@ -2044,7 +2044,7 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
         s["ide"]["configure_files"].push_back(ts);
     }
 
-    if (getType() == TargetType::NativeExecutable && !*HeaderOnly)
+    if (getType() == TargetType::NativeExecutable && !isHeaderOnly())
     {
         builder::Command c;
         setupCommandForRun(c);
@@ -2293,10 +2293,12 @@ void NativeCompiledTarget::prepare_pass1()
         fs::create_directories(BinaryDir);
     }
 
+    DEBUG_BREAK_IF(getPackage().toString() == "org.sw.demo.nlohmann.json-3.9.1");
+
     resolvePostponedSourceFiles();
     if (!HeaderOnly || !*HeaderOnly)
         HeaderOnly = !hasSourceFiles();
-    if (*HeaderOnly)
+    if (isHeaderOnly())
     {
         //SW_UNIMPLEMENTED;
         /*Linker.reset();
@@ -2455,7 +2457,7 @@ void NativeCompiledTarget::prepare_pass3()
 {
     // calculate all (link) dependencies for target
 
-    if (*HeaderOnly)
+    if (isHeaderOnly())
         return;
 
     prepare_pass3_1(); // normal deps
@@ -3112,42 +3114,8 @@ void NativeCompiledTarget::prepare_pass5()
 {
     // source files
 
-    // check postponed files first
-    //SW_UNIMPLEMENTED;
-    /*auto create_more_source_files = [this]()
-    {
-        std::vector<std::shared_ptr<NativeSourceFile>> new_files;
-        for (auto &[p, f] : getMergeObject())
-        {
-            if (!f->postponed || f->skip)
-                continue;
-
-            auto ext = p.extension().string();
-            auto prog = findProgramByExtension(ext);
-            if (!prog)
-                throw std::logic_error("User defined program not registered for " + ext);
-
-            auto p2 = dynamic_cast<FileToFileTransformProgram *>(prog);
-            if (!p2)
-                throw SW_RUNTIME_ERROR("Bad program type");
-            f = p2->createSourceFile(*this, p);
-            addFile(p, f);
-            if (auto f2 = std::dynamic_pointer_cast<NativeSourceFile>(f))
-                new_files.push_back(f2);
-        }
-        for (auto &f : new_files)
-        {
-            File(f->output, getFs()).setGenerated();
-            getMergeObject() += f->output;
-        }
-        return !new_files.empty();
-    };
-
-    while (create_more_source_files())
-        ;
-
     // set build as property
-    for (auto &[p, f] : getMergeObject())
+    /*for (auto &[p, f] : getMergeObject())
     {
         if (f->isActive() && !f->postponed)
         {
@@ -3253,229 +3221,7 @@ void NativeCompiledTarget::prepare_pass5()
         // again
         files = gatherSourceFiles();
     }
-
-    // merge file compiler options with target compiler options
-    for (auto &f : files)
-    {
-        // set everything before merge!
-        f->getCompiler().merge(*this);
-
-        auto vs_setup = [this](auto *f, auto *c)
-        {
-            if (getBuildSettings().Native.MT)
-                c->RuntimeLibrary = vs::RuntimeLibraryType::MultiThreaded;
-
-            switch (getBuildSettings().Native.ConfigurationType)
-            {
-            case ConfigurationType::Debug:
-                c->RuntimeLibrary =
-                    getBuildSettings().Native.MT ?
-                    vs::RuntimeLibraryType::MultiThreadedDebug :
-                    vs::RuntimeLibraryType::MultiThreadedDLLDebug;
-                c->Optimizations().Disable = true;
-                break;
-            case ConfigurationType::Release:
-                c->Optimizations().FastCode = true;
-                break;
-            case ConfigurationType::ReleaseWithDebugInformation:
-                c->Optimizations().FastCode = true;
-                break;
-            case ConfigurationType::MinimalSizeRelease:
-                c->Optimizations().SmallCode = true;
-                break;
-            }
-            if (f->file.extension() != ".c")
-                c->CPPStandard = CPPVersion;
-
-            // for static libs, we gather and put pdb near output file
-            // btw, VS is clever enough to take this info from .lib
-            //if (getSelectedTool() == Librarian.get())
-            //{
-            //if ((getBuildSettings().Native.ConfigurationType == ConfigurationType::Debug ||
-            //getBuildSettings().Native.ConfigurationType == ConfigurationType::ReleaseWithDebugInformation) &&
-            //c->PDBFilename.empty())
-            //{
-            //auto f = getOutputFile();
-            //f = f.parent_path() / f.filename().stem();
-            //f += ".pdb";
-            //c->PDBFilename = f;// BinaryDir.parent_path() / "obj" / (getPackage().getPath().toString() + ".pdb");
-            //}
-            //}
-        };
-
-        auto gnu_setup = [this](auto *f, auto *c)
-        {
-            switch (getBuildSettings().Native.ConfigurationType)
-            {
-            case ConfigurationType::Debug:
-                c->GenerateDebugInformation = true;
-                //c->Optimizations().Level = 0; this is the default
-                break;
-            case ConfigurationType::Release:
-                c->Optimizations().Level = 3;
-                break;
-            case ConfigurationType::ReleaseWithDebugInformation:
-                c->GenerateDebugInformation = true;
-                c->Optimizations().Level = 2;
-                break;
-            case ConfigurationType::MinimalSizeRelease:
-                c->Optimizations().SmallCode = true;
-                c->Optimizations().Level = 2;
-                break;
-            }
-            if (f->file.extension() != ".c")
-                c->CPPStandard = CPPVersion;
-            else
-                c->CStandard = CVersion;
-
-            if (ExportAllSymbols && getSelectedTool() == Linker.get())
-                c->VisibilityHidden = false;
-        };
-
-        if (auto c = f->compiler->as<VisualStudioCompiler*>())
-        {
-            if (UseModules)
-            {
-                c->UseModules = UseModules;
-                //c->stdIfcDir = c->System.IncludeDirectories.begin()->parent_path() / "ifc" / (getBuildSettings().TargetOS.Arch == ArchType::x86_64 ? "x64" : "x86");
-                c->stdIfcDir = c->System.IncludeDirectories.begin()->parent_path() / "ifc" / c->file.parent_path().filename();
-                c->UTF8 = false; // utf8 is not used in std modules and produce a warning
-
-                auto s = read_file(f->file);
-                std::smatch m;
-                static std::regex r("export module (\\w+)");
-                if (std::regex_search(s, m, r))
-                {
-                    c->ExportModule = true;
-                }
-            }
-
-            vs_setup(f, c);
-        }
-        else if (auto c = f->compiler->as<ClangClCompiler*>())
-        {
-            vs_setup(f, c);
-        }
-        // clang compiler is not working atm, gnu is created instead
-        else if (auto c = f->compiler->as<ClangCompiler*>())
-        {
-            gnu_setup(f, c);
-        }
-        else if (auto c = f->compiler->as<GNUCompiler*>())
-        {
-            gnu_setup(f, c);
-        }
-    }
-
-    // after merge
-    if (PreprocessStep)
-    {
-        for (auto &f : files)
-        {
-            auto set_fancy_name = [this](auto &t, auto &cmd, auto *f)
-            {
-                if (getMainBuild().getSettings()["do_not_mangle_object_names"] == "true")
-                    return;
-
-                auto sd = to_string(normalize_path(t.SourceDir));
-                auto bd = to_string(normalize_path(t.BinaryDir));
-                auto bdp = to_string(normalize_path(t.BinaryPrivateDir));
-
-                auto p = to_string(normalize_path(f->file));
-                if (bdp.size() < p.size() && p.find(bdp) == 0)
-                {
-                    auto n = p.substr(bdp.size());
-                    cmd->name = "[bdir_pvt]" + n;
-                }
-                else if (bd.size() < p.size() && p.find(bd) == 0)
-                {
-                    auto n = p.substr(bd.size());
-                    cmd->name = "[bdir]" + n;
-                }
-                if (sd.size() < p.size() && p.find(sd) == 0)
-                {
-                    auto n = p.substr(sd.size());
-                    if (!n.empty() && n[0] == '/')
-                        n = n.substr(1);
-                    cmd->name = n;
-                }
-                cmd->name = "[" + t.getPackage().toString() + "]/[preprocess]/" + cmd->name;
-            };
-
-            auto vs_setup = [&set_fancy_name](auto &t, auto *f, auto *c, auto &pp_command)
-            {
-                // create new cmd
-                //t.Storage.push_back(pp_command);
-
-                // set pp
-                pp_command.PreprocessToFile() = true;
-                // prepare & register
-                auto cmd = pp_command.getCommand(t);
-                t.registerCommand(*cmd);
-
-                // set input file for old command
-                c->setSourceFile(pp_command.PreprocessFileName(), c->getOutputFile());
-
-                set_fancy_name(t, cmd, f);
-            };
-
-            auto gnu_setup = [&set_fancy_name](auto &t, auto *f, auto *c, auto &pp_command)
-            {
-                // create new cmd
-                //t.Storage.push_back(pp_command);
-
-                // set pp
-                pp_command.CompileWithoutLinking = false;
-                pp_command.Preprocess = true;
-                auto o = pp_command.getOutputFile();
-                o = o.parent_path() / o.stem() += ".i";
-                pp_command.setOutputFile(o);
-                // prepare & register
-                auto cmd = pp_command.getCommand(t);
-                t.registerCommand(*cmd);
-
-                // set input file for old command
-                c->setSourceFile(pp_command.getOutputFile(), c->getOutputFile());
-
-                set_fancy_name(t, cmd, f);
-            };
-
-            //
-            if (auto c = f->compiler->as<VisualStudioCompiler *>())
-            {
-                auto pp_command = f->compiler->clone();
-                auto pp_command2 = (VisualStudioCompiler&)*pp_command;
-                vs_setup(*this, f, c, pp_command2);
-            }
-            else if (auto c = f->compiler->as<ClangClCompiler *>())
-            {
-                auto pp_command = f->compiler->clone();
-                auto pp_command2 = (ClangClCompiler&)*pp_command;
-                vs_setup(*this, f, c, pp_command2);
-            }
-            else if (auto c = f->compiler->as<ClangCompiler *>())
-            {
-                auto pp_command = f->compiler->clone();
-                auto pp_command2 = (ClangCompiler&)*pp_command;
-                gnu_setup(*this, f, c, pp_command2);
-            }
-            else if (auto c = f->compiler->as<GNUCompiler *>())
-            {
-                auto pp_command = f->compiler->clone();
-                auto pp_command2 = (GNUCompiler&)*pp_command;
-                gnu_setup(*this, f, c, pp_command2);
-            }
-            else
-                SW_UNIMPLEMENTED;
-        }
-    }
-
-    // also merge rc files
-    for (auto &f : ::sw::gatherSourceFiles<RcToolSourceFile>(*this))
-    {
-        // add casual idirs?
-        f->getCompiler().idirs = NativeCompilerOptions::System.IncludeDirectories;
-    }*/
+    */
 
     // pdb
     /*if (getSelectedTool())
@@ -3532,23 +3278,6 @@ void NativeCompiledTarget::prepare_pass5()
         c << cmd::out(def);
         std::dynamic_pointer_cast<builder::BuiltinCommand>(c.getCommand())->push_back(objs);
         c->addInput(objs);
-    }*/
-
-    // add def file to linker
-    //SW_UNIMPLEMENTED;
-    /*if (getSelectedTool() && getSelectedTool() == Linker.get())
-    {
-        if (auto VSL = getSelectedTool()->as<VisualStudioLibraryTool*>())
-        {
-            for (auto &[p, f] : getMergeObject())
-            {
-                if (!f->skip && p.extension() == ".def")
-                {
-                    VSL->ModuleDefinitionFile = p;
-                    HeaderOnly = false;
-                }
-            }
-        }
     }*/
 
     // also fix rpath libname here
@@ -3842,14 +3571,17 @@ void NativeCompiledTarget::prepare_pass8()
     prog_link->merge(getMergeObject());
     prog_lib->merge(getMergeObject());
 
+    DEBUG_BREAK_IF(getPackage().toString() == "org.sw.demo.nlohmann.json-3.9.1");
+
     // add rules
     rules.push_back(new NativeCompilerRule(*prog_cl_cpp, get_cpp_exts(*this)));
     rules.push_back(new NativeCompilerRule(*prog_cl_c, { ".c" }));
     rules.push_back(new NativeCompilerRule(*prog_cl_asm, get_asm_exts(*this)));
-    if (isStaticLibrary())
+    if (isHeaderOnly())
+        ;
+    else if (isStaticLibrary())
     {
-        if (!isHeaderOnly())
-            rules.push_back(new NativeLinkerRule(*prog_lib));
+        rules.push_back(new NativeLinkerRule(*prog_lib));
     }
     else
     {
@@ -3873,8 +3605,6 @@ void NativeCompiledTarget::prepare_pass8()
         if (isExecutable() || !isHeaderOnly())
             rules.push_back(new NativeLinkerRule(*prog_link));
     }
-
-    //DEBUG_BREAK_IF(getPackage().toString() == "implib-0.0.1");
 
     // rules!
     std::set<RuleFile> rfs;

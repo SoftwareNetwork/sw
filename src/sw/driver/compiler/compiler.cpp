@@ -184,22 +184,22 @@ void VisualStudioCompiler::prepareCommand1(const Target &t)
     cmd->deps_processor = builder::Command::DepsProcessor::Msvc;
     cmd->msvc_prefix = get_msvc_prefix(cmd->getProgram());
 
-    if (InputFile)
+    /*if (InputFile)
     {
         cmd->name = to_string(normalize_path(InputFile()));
         cmd->name_short = to_string(InputFile().filename().u8string());
-    }
+    }*/
 
     bool preprocessed_file = false;
     if (CSourceFile)
     {
-        cmd->name = to_string(normalize_path(CSourceFile()));
-        cmd->name_short = to_string(CSourceFile().filename().u8string());
+        //cmd->name = to_string(normalize_path(CSourceFile()));
+        //cmd->name_short = to_string(CSourceFile().filename().u8string());
     }
     else if (CPPSourceFile)
     {
-        cmd->name = to_string(normalize_path(CPPSourceFile()));
-        cmd->name_short = to_string(CPPSourceFile().filename().u8string());
+        //cmd->name = to_string(normalize_path(CPPSourceFile()));
+        //cmd->name_short = to_string(CPPSourceFile().filename().u8string());
     }
     else if (InputFile && !CompileAsC && !CompileAsCPP)
     {
@@ -223,16 +223,6 @@ void VisualStudioCompiler::prepareCommand1(const Target &t)
 
     if (Output)
         cmd->working_directory = Output().parent_path();
-
-    if (PreprocessToFile)
-    {
-        auto ext = ".i";
-        if (CompileAsCPP)
-            ext = ".ii";
-        if (!PreprocessFileName)
-            PreprocessFileName = Output().parent_path() / (to_string(Output().stem().u8string()) + ext);
-        Output.clear();
-    }
 
     ReproducibleBuild = t.isReproducibleBuild();
 
@@ -277,9 +267,8 @@ void VisualStudioASMCompiler::prepareCommand1(const Target &t)
 
     if (InputFile)
     {
-        cmd->name = to_string(normalize_path(InputFile()));
-        cmd->name_short = to_string(InputFile().filename().u8string());
-        //cmd->file = InputFile;
+        //cmd->name = to_string(normalize_path(InputFile()));
+        //cmd->name_short = to_string(InputFile().filename().u8string());
     }
     if (Output)
         cmd->working_directory = Output().parent_path();
@@ -325,9 +314,8 @@ void ClangCompiler::prepareCommand1(const ::sw::Target &t)
 
     if (InputFile)
     {
-        cmd->name = to_string(normalize_path(InputFile()));
-        cmd->name_short = to_string(InputFile().filename().u8string());
-        //cmd->file = InputFile;
+        //cmd->name = to_string(normalize_path(InputFile()));
+        //cmd->name_short = to_string(InputFile().filename().u8string());
     }
     if (OutputFile)
     {
@@ -390,20 +378,20 @@ void ClangClCompiler::prepareCommand1(const Target &t)
 
     if (InputFile)
     {
-        cmd->name = to_string(normalize_path(InputFile()));
-        cmd->name_short = to_string(InputFile().filename().u8string());
+        //cmd->name = to_string(normalize_path(InputFile()));
+        //cmd->name_short = to_string(InputFile().filename().u8string());
     }
 
     bool preprocessed_file = false;
     if (CSourceFile)
     {
-        cmd->name = to_string(normalize_path(CSourceFile()));
-        cmd->name_short = to_string(CSourceFile().filename().u8string());
+        //cmd->name = to_string(normalize_path(CSourceFile()));
+        //cmd->name_short = to_string(CSourceFile().filename().u8string());
     }
     else if (CPPSourceFile)
     {
-        cmd->name = to_string(normalize_path(CPPSourceFile()));
-        cmd->name_short = to_string(CPPSourceFile().filename().u8string());
+        //cmd->name = to_string(normalize_path(CPPSourceFile()));
+        //cmd->name_short = to_string(CPPSourceFile().filename().u8string());
     }
     else if (InputFile && !CompileAsC && !CompileAsCPP)
     {
@@ -426,16 +414,6 @@ void ClangClCompiler::prepareCommand1(const Target &t)
     }
     if (Output)
         cmd->working_directory = Output().parent_path();
-
-    if (PreprocessToFile)
-    {
-        auto ext = ".i";
-        if (CompileAsCPP)
-            ext = ".ii";
-        if (!PreprocessFileName)
-            PreprocessFileName = Output().parent_path() / (to_string(Output().stem().u8string()) + ext);
-        Output.clear();
-    }
 
     ReproducibleBuild = t.isReproducibleBuild();
 
@@ -490,9 +468,9 @@ void GNUASMCompiler::prepareCommand1(const Target &t)
     bool assembly = false;
     if (InputFile)
     {
-        cmd->name = to_string(normalize_path(InputFile()));
-        cmd->name_short = to_string(InputFile().filename().u8string());
-        //cmd->file = InputFile;
+        //cmd->name = to_string(normalize_path(InputFile()));
+        //cmd->name_short = to_string(InputFile().filename().u8string());
+
         assembly = InputFile().extension() == ".s";
     }
     if (OutputFile)
@@ -548,9 +526,8 @@ void GNUCompiler::prepareCommand1(const Target &t)
 
     if (InputFile)
     {
-        cmd->name = to_string(normalize_path(InputFile()));
-        cmd->name_short = to_string(InputFile().filename().u8string());
-        //cmd->file = InputFile;
+        //cmd->name = to_string(normalize_path(InputFile()));
+        //cmd->name_short = to_string(InputFile().filename().u8string());
     }
     if (OutputFile)
     {
@@ -702,8 +679,8 @@ void VisualStudioLibraryTool::prepareCommand1(const Target &t)
     if (Output)
     {
         cmd->working_directory = Output().parent_path();
-        cmd->name = to_string(normalize_path(Output()));
-        cmd->name_short = to_string(Output().filename().u8string());
+        //cmd->name = to_string(normalize_path(Output()));
+        //cmd->name_short = to_string(Output().filename().u8string());
     }
 
     //((VisualStudioLibraryTool*)this)->VisualStudioLibraryToolOptions::LinkDirectories() = gatherLinkDirectories();
@@ -767,8 +744,8 @@ void VisualStudioLinker::prepareCommand1(const Target &t)
     if (Output)
     {
         cmd->working_directory = Output().parent_path();
-        cmd->name = to_string(normalize_path(Output()));
-        cmd->name_short = to_string(Output().filename().u8string());
+        //cmd->name = to_string(normalize_path(Output()));
+        //cmd->name_short = to_string(Output().filename().u8string());
     }
 
 
@@ -949,8 +926,8 @@ void GNULinker::prepareCommand1(const Target &t)
     if (Output)
     {
         cmd->working_directory = Output().parent_path();
-        cmd->name = to_string(normalize_path(Output()));
-        cmd->name_short = to_string(Output().filename().u8string());
+        //cmd->name = to_string(normalize_path(Output()));
+        //cmd->name_short = to_string(Output().filename().u8string());
     }
 
     getCommandLineOptions<GNULinkerOptions>(cmd.get(), *this);
@@ -1019,8 +996,8 @@ void GNULibrarian::prepareCommand1(const Target &t)
     if (Output)
     {
         cmd->working_directory = Output().parent_path();
-        cmd->name = to_string(normalize_path(Output()));
-        cmd->name_short = to_string(Output().filename().u8string());
+        //cmd->name = to_string(normalize_path(Output()));
+        //cmd->name_short = to_string(Output().filename().u8string());
     }
 
     //((GNULibraryTool*)this)->GNULibraryToolOptions::LinkDirectories() = gatherLinkDirectories();
@@ -1052,11 +1029,11 @@ void RcTool::prepareCommand1(const Target &t)
 
     cmd->protect_args_with_quotes = false;
 
-    if (InputFile)
+    /*if (InputFile)
     {
         cmd->name = to_string(normalize_path(InputFile()));
         cmd->name_short = to_string(InputFile().filename().u8string());
-    }
+    }*/
 
     // defs
     auto print_def = [&c = *cmd](const auto &a)

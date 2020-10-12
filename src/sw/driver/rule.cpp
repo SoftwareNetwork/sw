@@ -63,8 +63,10 @@ static path getOutputFile(const Target &t, const C &c, const path &input)
 
 Files NativeCompilerRule::addInputs(const Target &t, const RuleFiles &rfs)
 {
+    auto nt = t.as<NativeCompiledTarget *>();
     std::optional<path> pch_basename;
     Files outputs;
+
     // find pch
     for (auto &rf : rfs)
     {
@@ -76,6 +78,7 @@ Files NativeCompilerRule::addInputs(const Target &t, const RuleFiles &rfs)
         if (rf.getFile().filename() == "sw.pch.cpp")
             pch_basename = normalize_path(rf.getFile().parent_path() / rf.getFile().stem());
     }
+
     // main loop
     for (auto &rf : rfs)
     {
@@ -85,8 +88,12 @@ Files NativeCompilerRule::addInputs(const Target &t, const RuleFiles &rfs)
             continue;
         auto output = getOutputFile(t, getCompiler(), rf.getFile());
         outputs.insert(output);
+
         auto c = getCompiler().clone();
-        static_cast<NativeCompiler &>(*c).setSourceFile(rf.getFile(), output);
+        auto &nc = static_cast<NativeCompiler &>(*c);
+        nc.setSourceFile(rf.getFile(), output);
+
+        // pch
         if (rf.getFile().filename() == "sw.pch.cpp")
         {
             auto setup_vs = [&pch_basename](auto C)
@@ -95,18 +102,18 @@ Files NativeCompilerRule::addInputs(const Target &t, const RuleFiles &rfs)
                 C->PrecompiledHeaderFilename = path(*pch_basename) += ".pch";
                 C->PrecompiledHeaderFilename.output_dependency = true;
             };
-            auto setup_gnu = [&pch_basename, &c, &outputs, &output, &t](auto C, auto ext)
+            auto setup_gnu = [&pch_basename, &nc, &outputs, &output, nt](auto C, auto ext)
             {
                 C->Language = "c++-header";
 
                 // set new input and output
-                static_cast<NativeCompiler &>(*c).setSourceFile(path(*pch_basename) += ".h", path(*pch_basename) += ".h"s += ext);
+                nc.setSourceFile(path(*pch_basename) += ".h", path(*pch_basename) += ".h"s += ext);
 
                 // skip .obj output
                 outputs.erase(output);
 
                 // we also remove here our same input file
-                if (auto nt = t.as<NativeCompiledTarget *>())
+                if (nt)
                 {
                     auto fi = nt->getMergeObject().ForceIncludes;
                     if (!fi.empty())
@@ -125,6 +132,8 @@ Files NativeCompilerRule::addInputs(const Target &t, const RuleFiles &rfs)
                 setup_gnu(C, ".pch");
             else if (auto C = c->as<GNUCompiler *>())
                 setup_gnu(C, ".gch");
+            else
+                SW_UNIMPLEMENTED;
         }
         else if (pch_basename)
         {
@@ -148,8 +157,55 @@ Files NativeCompilerRule::addInputs(const Target &t, const RuleFiles &rfs)
                 setup_gnu(C, ".pch");
             else if (auto C = c->as<GNUCompiler *>())
                 setup_gnu(C, ".gch");
+            else
+                SW_UNIMPLEMENTED;
         }
-        static_cast<NativeCompiler &>(*c).prepareCommand(t);
+
+        //
+        if (nt->PreprocessStep)
+        {
+            // pp   command: .c  -> .pp
+            // base command: .pp -> .obj
+            auto vs_setup = [&rf](NativeCompiler &base_command, auto &pp_command)
+            {
+                auto c = rf.getFile().extension() == ".c";
+
+                pp_command.PreprocessToFile = true;
+                pp_command.PreprocessFileName = base_command.getOutputFile() += (c ? ".i" : ".ii");
+                pp_command.Output.clear();
+                base_command.setSourceFile(pp_command.PreprocessFileName(), base_command.getOutputFile());
+            };
+            auto gnu_setup = [](NativeCompiler &base_command, auto &pp_command)
+            {
+                SW_UNIMPLEMENTED;
+                // set pp
+                pp_command.CompileWithoutLinking = false;
+                pp_command.Preprocess = true;
+                auto o = pp_command.getOutputFile();
+                o = o.parent_path() / o.stem() += ".i";
+                pp_command.setOutputFile(o);
+
+                // set input file for old command
+                base_command.setSourceFile(pp_command.getOutputFile(), base_command.getOutputFile());
+            };
+
+            //
+            auto pp_command = c->clone();
+            if (auto C = pp_command->as<VisualStudioCompiler *>())
+                vs_setup(nc, *C);
+            else if (auto C = pp_command->as<ClangClCompiler *>())
+                vs_setup(nc, *C);
+            else if (auto C = pp_command->as<ClangCompiler *>())
+                gnu_setup(nc, *C);
+            else if (auto C = pp_command->as<GNUCompiler *>())
+                gnu_setup(nc, *C);
+            else
+                SW_UNIMPLEMENTED;
+            static_cast<NativeCompiler &>(*pp_command).prepareCommand(t);
+            commands.emplace_back(std::move(pp_command));
+        }
+
+        nc.prepareCommand(t);
         commands.emplace_back(std::move(c));
         used_files.insert(rf);
     }
