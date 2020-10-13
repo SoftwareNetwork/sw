@@ -84,6 +84,7 @@ Files NativeCompilerRule::addInputs(Target &t, const RuleFiles &rfs)
 {
     auto nt = t.as<NativeCompiledTarget *>();
     std::optional<path> pch_basename;
+    RuleFiles rfs_new;
     Files outputs;
 
     // find pch
@@ -98,8 +99,67 @@ Files NativeCompilerRule::addInputs(Target &t, const RuleFiles &rfs)
             pch_basename = normalize_path(rf.getFile().parent_path() / rf.getFile().stem());
     }
 
+    // unity build
+    if (nt && nt->UnityBuild)
+    {
+        /*std::vector<NativeSourceFile *> files2(files.begin(), files.end());
+        std::sort(files2.begin(), files2.end(), [](const auto f1, const auto f2)
+        {
+            return f1->index < f2->index;
+        });*/
+
+        struct data
+        {
+            String s;
+            int idx = 0;
+            String ext;
+        };
+
+        data c, cpp;
+        c.ext = ".c";
+        cpp.ext = ".cpp";
+        int fidx = 1; // for humans
+        auto writef = [nt, &fidx, &rfs_new](auto &d)
+        {
+            if (d.s.empty())
+                return;
+            auto fns = "Module." + std::to_string(fidx++) + d.ext;
+            auto fn = nt->BinaryPrivateDir / "unity" / fns;
+            write_file_if_different(fn, d.s); // do not trigger rebuilds
+            //getMergeObject()[fn].fancy_name = "[" + getPackage().toString() + "]/[unity]/" + fns;
+            d.s.clear();
+            rfs_new.insert(fn);
+        };
+
+        for (auto &rf : rfs)
+        {
+            // skip when args are populated
+            if (!rf.getAdditionalArguments().empty())
+            {
+                rfs_new.insert(rf);
+                continue;
+            }
+
+            auto ext = rf.getFile().extension().string();
+            auto cext = ext == ".c";
+            // TODO: .m .mm files?
+            auto cppext = getCppSourceFileExtensions().find(ext) != getCppSourceFileExtensions().end();
+            // skip asm etc.
+            if (!cext && !cppext)
+                continue;
+
+            // asm won't work here right now
+            data &d = cext ? c : cpp;
+            d.s += "#include \"" + to_string(normalize_path(rf.getFile())) + "\"\n";
+            if (++d.idx % nt->UnityBuildBatchSize == 0)
+                writef(d);
+        }
+        writef(c);
+        writef(cpp);
+    }
+
     // main loop
-    for (auto &rf : rfs)
+    for (auto &rf : rfs_new.empty() ? rfs : rfs_new)
     {
         if (!exts.contains(rf.getFile().extension().string()))
             continue;

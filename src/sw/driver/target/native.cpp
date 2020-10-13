@@ -2186,6 +2186,9 @@ void NativeCompiledTarget::prepare_pass1()
         Interface += l;
     }
 
+    if (UnityBuildBatchSize < 0)
+        UnityBuildBatchSize = 0;
+
     if (PackageDefinitions)
         addPackageDefinitions(true);
 
@@ -3019,68 +3022,6 @@ void NativeCompiledTarget::prepare_pass5()
     }
 
     auto files = gatherSourceFiles();
-
-    // unity build
-    if (UnityBuild)
-    {
-        std::vector<NativeSourceFile *> files2(files.begin(), files.end());
-        std::sort(files2.begin(), files2.end(), [](const auto f1, const auto f2)
-        {
-            return f1->index < f2->index;
-        });
-
-        if (UnityBuildBatchSize < 0)
-            UnityBuildBatchSize = 0;
-
-        struct data
-        {
-            String s;
-            int idx = 0;
-            String ext;
-        };
-
-        data c, cpp;
-        c.ext = ".c";
-        cpp.ext = ".cpp";
-        int fidx = 1; // for humans
-        auto writef = [this, &fidx](auto &d)
-        {
-            if (d.s.empty())
-                return;
-            auto fns = "Module." + std::to_string(fidx++) + d.ext;
-            auto fn = BinaryPrivateDir / "unity" / fns;
-            write_file_if_different(fn, d.s); // do not trigger rebuilds
-            getMergeObject() += fn; // after write
-            getMergeObject()[fn].fancy_name = "[" + getPackage().toString() + "]/[unity]/" + fns;
-            d.s.clear();
-        };
-
-        for (auto f : files2)
-        {
-            // skip when args are populated
-            if (!f->args.empty())
-                continue;
-
-            auto ext = f->file.extension().string();
-            auto cext = ext == ".c";
-            auto cppext = getCppSourceFileExtensions().find(ext) != getCppSourceFileExtensions().end();
-            // skip asm etc.
-            if (!cext && !cppext)
-                continue;
-
-            // asm won't work here right now
-            data &d = cext ? c : cpp;
-            d.s += "#include \"" + to_string(normalize_path(f->file)) + "\"\n";
-            *this -= f->file;
-            if (++d.idx % UnityBuildBatchSize == 0)
-                writef(d);
-        }
-        writef(c);
-        writef(cpp);
-
-        // again
-        files = gatherSourceFiles();
-    }
     */
 
     // also fix rpath libname here
