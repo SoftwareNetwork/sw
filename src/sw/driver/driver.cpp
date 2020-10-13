@@ -495,7 +495,15 @@ std::unique_ptr<SwBuild> Driver::create_build(SwContext &swctx) const
     {
         BuildInput bi(*i);
         for (auto &p : pkgs)
-            bi.addPackage(LocalPackage(swctx.getLocalStorage(), p));
+        {
+            if (p.getPath().isAbsolute())
+            {
+                LocalPackage lp(swctx.getLocalStorage(), p);
+                bi.addPackage(lp, lp.getPath().slice(0, lp.getData().prefix));
+            }
+            else
+                bi.addPackage(p, {});
+        }
         for (auto &p : pkgs)
             b->getTargets()[p].setInput(bi);
     }

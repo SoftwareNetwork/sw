@@ -104,18 +104,8 @@ BuildInput::BuildInput(Input &i)
 {
 }
 
-void BuildInput::addPackage(const LocalPackage &in)
+void BuildInput::addPackage(const PackageId &in, const PackagePath &in_prefix)
 {
-    PackagePath in_prefix;
-    try
-    {
-        in_prefix = in.getPath().slice(0, in.getData().prefix);
-    }
-    catch (std::exception &)
-    {
-        // ignore local package errors, they do not have prefix
-    }
-
     if (prefix && in_prefix != getPrefix())
         throw SW_RUNTIME_ERROR("Trying to add different prefix");
     prefix = in_prefix;

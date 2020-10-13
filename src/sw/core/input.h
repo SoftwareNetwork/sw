@@ -82,7 +82,7 @@ struct SW_CORE_API BuildInput
     // they all share same prefix
     const PackageIdSet &getPackages() const { return pkgs; }
     PackagePath getPrefix() const { return prefix ? *prefix : PackagePath{}; }
-    void addPackage(const LocalPackage &);
+    void addPackage(const PackageId &, const PackagePath &);
 
     // no dry-run targets
     [[nodiscard]]

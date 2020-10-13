@@ -1155,7 +1155,7 @@ BuildInput SwBuild::addInput(const LocalPackage &p)
 
     auto v = addInput(p.getDirSrc2());
     //SW_CHECK(v.size() == 1); // allow multiple inputs for now, take only first
-    v[0].addPackage(p);
+    v[0].addPackage(p, p.getPath().slice(0, p.getData().prefix));
     return v[0];
 }
 
