@@ -155,7 +155,7 @@ GrpcChannel Remote::getGrpcChannel() const
         {
             certsfn = support::get_ca_certs_filename();
             if (!fs::exists(certsfn))
-                throw SW_RUNTIME_ERROR("No ca certs file was found for GRPC.");
+                throw SW_RUNTIME_ERROR("No ca certs file was found for GRPC: " + to_printable_string(certsfn));
         }
         ssl_options.pem_root_certs = read_file(certsfn);
         return ssl_options;
