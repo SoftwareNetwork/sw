@@ -129,51 +129,11 @@ void SourceFileStorage::add_unchecked(const path &file_in, bool skip)
     auto ext = file.extension().string();
     auto nt = target.as<NativeCompiledTarget*>();
     auto ho = nt && nt->HeaderOnly && nt->HeaderOnly.value();
-    //if (!target.hasExtension(ext) || ho)
+    if (!f)
     {
-        if (!f)
-        {
-            f = std::make_shared<SourceFile>(file);
-            addFile(file, f);
-        }
-        //f->created = false;
+        f = std::make_shared<SourceFile>(file);
+        addFile(file, f);
     }
-    /*else
-    {
-        if (!f
-            // || f->postponed
-            )
-        {
-            if (!target.getProgram(ext))
-            {
-                // only unresolved dep for now
-                //if (f && f->postponed)
-                    //throw SW_RUNTIME_ERROR("Postponing postponed file");
-                f = std::make_shared<SourceFile>(file);
-                addFile(file, f);
-                //f->postponed = true;
-            }
-            else
-            {
-                // program was provided
-                auto p = target.findProgramByExtension(ext);
-                auto f2 = f;
-                auto p2 = dynamic_cast<FileToFileTransformProgram*>(p);
-                if (!p2)
-                    throw SW_RUNTIME_ERROR("Bad program type");
-                f = p2->createSourceFile(target, file);
-                addFile(file, f);
-                if (f2
-                    // && f2->postponed
-                    )
-                {
-                    // retain some data
-                    f->args = f2->args;
-                    f->skip = f2->skip;
-                }
-            }
-        }
-    }*/
     if (autodetect)
         f->skip |= skip;
     else
@@ -516,95 +476,9 @@ SourceFile::SourceFile(const path &input)
 {
 }
 
-/*path SourceFile::getObjectFilename(const Target &t, const path &p)
-{
-    // target may push its files to outer packages,
-    // so files must be concatenated with its target name
-    // ^^^ wrong?
-    // target push files, they'll use local definitions etc.
-    return to_string(p.filename().u8string()) + "." + sha256(
-        //t.pkg.toString() +
-        to_string(p.u8string())).substr(0, 8);
-}*/
-
 bool SourceFile::isActive() const
 {
     return /*created && */!skip /* && !isRemoved(f.first)*/;
 }
-
-/*NativeSourceFile::NativeSourceFile(const NativeCompiler &c, const path &input, const path &o)
-    : SourceFile(input)
-    , compiler(c.clone())
-    , output(o)
-{
-    getCompiler().setSourceFile(input, output);
-}
-
-NativeSourceFile::NativeSourceFile(const NativeSourceFile &rhs)
-    : SourceFile(rhs)
-{
-    output = rhs.output;
-    compiler = rhs.compiler->clone();
-}
-
-NativeSourceFile::~NativeSourceFile()
-{
-}
-
-NativeCompiler &NativeSourceFile::getCompiler() const
-{
-    if (!compiler)
-        throw SW_RUNTIME_ERROR("Compiler was not set");
-    return static_cast<NativeCompiler &>(*compiler);
-}
-
-void NativeSourceFile::setOutputFile(const path &o)
-{
-    output = o;
-    getCompiler().setSourceFile(file, output);
-}
-
-void NativeSourceFile::setOutputFile(const Target &t, const path &input, const path &output_dir)
-{
-    setOutputFile(output_dir / getObjectFilename(t, input));
-}
-
-path NativeSourceFile::getObjectFilename(const Target &t, const path &p) const
-{
-    return SourceFile::getObjectFilename(t, p) += getCompiler().getObjectExtension(t.getBuildSettings().TargetOS);
-}
-
-std::shared_ptr<builder::Command> NativeSourceFile::getCommand(const Target &t) const
-{
-    auto cmd = getCompiler().getCommand(t);
-    for (auto &d : dependencies)
-    {
-        if (d)
-            cmd->dependencies.insert(d->getCommand(t));
-    }
-    return cmd;
-}*/
-
-/*RcToolSourceFile::RcToolSourceFile(const RcTool &c, const path &input, const path &o)
-    : SourceFile(input)
-    , compiler(c.clone())
-    , output(o)
-{
-    getCompiler().setSourceFile(input);
-    getCompiler().setOutputFile(output);
-}
-
-std::shared_ptr<builder::Command> RcToolSourceFile::getCommand(const Target &t) const
-{
-    auto cmd = getCompiler().getCommand(t);
-    return cmd;
-}
-
-RcTool &RcToolSourceFile::getCompiler() const
-{
-    if (!compiler)
-        throw SW_RUNTIME_ERROR("Compiler was not set");
-    return static_cast<RcTool &>(*compiler);
-}*/
 
 }
