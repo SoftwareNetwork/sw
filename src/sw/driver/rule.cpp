@@ -4,10 +4,27 @@
 #include "rule.h"
 
 #include "build.h"
+#include "command.h"
 #include "compiler/compiler.h"
 #include "target/native.h"
 
+#include <sw/builder/jumppad.h>
+
 #include <primitives/exceptions.h>
+
+void createDefFile(const path &def, const Files &obj_files)
+#if defined(CPPAN_OS_WINDOWS)
+;
+#else
+{}
+#endif
+
+static int create_def_file(path def, Files obj_files)
+{
+    createDefFile(def, obj_files);
+    return 0;
+}
+SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD(sw_create_def_file, create_def_file)
 
 namespace sw
 {
@@ -34,6 +51,8 @@ Commands NativeRule::getCommands() const
     Commands cmds;
     for (auto &c : commands)
         cmds.insert(c->getCommand());
+    for (auto &c : commands2)
+        cmds.insert(c);
     return cmds;
 }
 
@@ -61,7 +80,7 @@ static path getOutputFile(const Target &t, const C &c, const path &input)
     return getOutputFile(t, input) += c.getObjectExtension(t.getBuildSettings().TargetOS);
 }
 
-Files NativeCompilerRule::addInputs(const Target &t, const RuleFiles &rfs)
+Files NativeCompilerRule::addInputs(Target &t, const RuleFiles &rfs)
 {
     auto nt = t.as<NativeCompiledTarget *>();
     std::optional<path> pch_basename;
@@ -217,8 +236,10 @@ NativeLinker &NativeLinkerRule::getLinker() const
     return static_cast<NativeLinker &>(program);
 }
 
-Files NativeLinkerRule::addInputs(const Target &t, const RuleFiles &rfs)
+Files NativeLinkerRule::addInputs(Target &t, const RuleFiles &rfs)
 {
+    auto nt = t.as<NativeCompiledTarget *>();
+
     std::optional<path> def;
     FilesOrdered files;
     for (auto &rf : rfs)
@@ -252,6 +273,7 @@ Files NativeLinkerRule::addInputs(const Target &t, const RuleFiles &rfs)
     if (files.empty() && !def)
         return {};
 
+
     // objs must go into object files
     // libs into library deps
     //getSelectedTool()->setObjectFiles(files);
@@ -261,8 +283,37 @@ Files NativeLinkerRule::addInputs(const Target &t, const RuleFiles &rfs)
 
     auto c = getLinker().clone();
     static_cast<NativeLinker &>(*c).setObjectFiles(files);
-    if (auto VSL = c->as<VisualStudioLibraryTool*>(); VSL && def)
-        VSL->ModuleDefinitionFile = *def;
+    if (auto VSL = c->as<VisualStudioLibraryTool *>())
+    {
+        // export all symbols
+        if (1
+            // ignore if def is already present
+            && !def
+            // check setting
+            && nt && nt->ExportAllSymbols
+            // win only
+            && nt->getBuildSettings().TargetOS.Type == OSType::Windows
+            // linker only
+            && &getLinker() == &nt->getLinker()
+            )
+        {
+            const path deffn = nt->BinaryPrivateDir / ".sw.symbols.def";
+            Files objs;
+            for (auto &f : files)
+            {
+                if (f.extension() == ".obj")
+                    objs.insert(f);
+            }
+            auto c = nt->addCommand(SW_VISIBLE_BUILTIN_FUNCTION(create_def_file));
+            c << cmd::out(deffn);
+            std::dynamic_pointer_cast<builder::BuiltinCommand>(c.getCommand())->push_back(objs);
+            c->addInput(objs);
+            def = deffn;
+            commands2.insert(c.getCommand());
+        }
+        if (def)
+            VSL->ModuleDefinitionFile = *def;
+    }
     static_cast<NativeLinker &>(*c).prepareCommand(t);
     outputs.insert(static_cast<NativeLinker &>(*c).getOutputFile());
     c->getCommand()->prepare(); // why?
@@ -272,7 +323,7 @@ Files NativeLinkerRule::addInputs(const Target &t, const RuleFiles &rfs)
     return outputs;
 }
 
-Files RcRule::addInputs(const Target &t, const RuleFiles &rfs)
+Files RcRule::addInputs(Target &t, const RuleFiles &rfs)
 {
     Files outputs;
     for (auto &rf : rfs)

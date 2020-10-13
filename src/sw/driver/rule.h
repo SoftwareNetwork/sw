@@ -62,12 +62,13 @@ struct NativeRule : IRule
 
     NativeRule(RuleProgram);
 
-    virtual Files addInputs(const Target &t, const RuleFiles &) = 0;
+    virtual Files addInputs(Target &t, const RuleFiles &) = 0;
 
     Commands getCommands() const override;
 
 protected:
     std::vector<ProgramPtr> commands;
+    Commands commands2;
     RuleFiles used_files;
 };
 
@@ -77,7 +78,7 @@ struct NativeCompilerRule : NativeRule
 
     NativeCompilerRule(RuleProgram, const StringSet &exts);
 
-    Files addInputs(const Target &t, const RuleFiles &) override;
+    Files addInputs(Target &t, const RuleFiles &) override;
 
 private:
     NativeCompiler &getCompiler() const;
@@ -87,7 +88,7 @@ struct NativeLinkerRule : NativeRule
 {
     using NativeRule::NativeRule;
 
-    Files addInputs(const Target &t, const RuleFiles &) override;
+    Files addInputs(Target &t, const RuleFiles &) override;
 
 private:
     NativeLinker &getLinker() const;
@@ -97,7 +98,7 @@ struct RcRule : NativeRule
 {
     using NativeRule::NativeRule;
 
-    Files addInputs(const Target &t, const RuleFiles &) override;
+    Files addInputs(Target &t, const RuleFiles &) override;
 };
 
 } // namespace sw

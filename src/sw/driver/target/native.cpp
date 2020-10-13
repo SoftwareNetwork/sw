@@ -29,25 +29,8 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "target.native");
 
-#define NATIVE_TARGET_DEF_SYMBOLS_FILE \
-    (BinaryPrivateDir / ".sw.symbols.def")
-
 #define RETURN_PREPARE_MULTIPASS_NEXT_PASS SW_RETURN_MULTIPASS_NEXT_PASS(prepare_pass)
 #define RETURN_INIT_MULTIPASS_NEXT_PASS SW_RETURN_MULTIPASS_NEXT_PASS(init_pass)
-
-void createDefFile(const path &def, const Files &obj_files)
-#if defined(CPPAN_OS_WINDOWS)
-;
-#else
-{}
-#endif
-
-static int create_def_file(path def, Files obj_files)
-{
-    createDefFile(def, obj_files);
-    return 0;
-}
-SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD(sw_create_def_file, create_def_file)
 
 static int copy_file(path in, path out)
 {
@@ -1095,6 +1078,8 @@ path NativeCompiledTarget::getImportLibrary() const
 
 bool NativeCompiledTarget::hasSourceFiles() const
 {
+    return true;
+
     bool r = false;
 
     auto exts = get_cpp_exts(*this);
@@ -1103,14 +1088,18 @@ bool NativeCompiledTarget::hasSourceFiles() const
     auto check = [this, &r, &exts](auto &o)
     {
         if (!r)
-        r |= std::any_of(o.begin(), o.end(), [&exts](const auto &f) {
-            return exts.contains(f.second->file.extension().string());
-        });
+        {
+            r |= std::any_of(o.begin(), o.end(), [&exts](const auto &f) {
+                return exts.contains(f.second->file.extension().string());
+            });
+        }
         if (!r)
-        r |= std::any_of(o.begin(), o.end(), [this](const auto &f) {
-            return f.first.extension() == getBuildSettings().TargetOS.getObjectFileExtension();
-            //|| f.first.extension() == ".def"
-        });
+        {
+            r |= std::any_of(o.begin(), o.end(), [this](const auto &f) {
+                return f.first.extension() == getBuildSettings().TargetOS.getObjectFileExtension();
+                //|| f.first.extension() == ".def"
+            });
+        }
     };
 
     TargetOptionsGroup::iterate([this, &check](auto &v, auto i)
@@ -1263,36 +1252,32 @@ Commands NativeCompiledTarget::getGeneratedCommands() const
 
     Commands generated;
 
-    const path def = NATIVE_TARGET_DEF_SYMBOLS_FILE;
-
     // still some generated commands must be run before others,
     // (syncqt must be run before mocs when building qt)
     // so we introduce this order
     std::map<int, std::vector<std::shared_ptr<builder::Command>>> order;
 
     // add generated commands
-    for (auto &[f, _] : getMergeObject())
+    /*for (auto &[f, _] : getMergeObject())
     {
         File p(f, getFs());
         if (!p.isGenerated())
-            continue;
-        if (f == def)
             continue;
         auto c = p.getGenerator();
         if (c->strict_order > 0)
             order[c->strict_order].push_back(c);
         else
             generated.insert(c);
-    }
+    }*/
 
     // respect ordering
-    for (auto i = order.rbegin(); i != order.rend(); i++)
+    /*for (auto i = order.rbegin(); i != order.rend(); i++)
     {
         auto &cmds = i->second;
         for (auto &c : generated)
             c->dependencies.insert(cmds.begin(), cmds.end());
         generated.insert(cmds.begin(), cmds.end());
-    }
+    }*/
 
     generated_commands = generated;
     return generated;
@@ -1306,8 +1291,6 @@ Commands NativeCompiledTarget::getCommands1() const
         return {};
     if (already_built)
         return {};
-
-    const path def = NATIVE_TARGET_DEF_SYMBOLS_FILE;
 
     // add generated files
     auto generated = getGeneratedCommands();
@@ -1324,7 +1307,7 @@ Commands NativeCompiledTarget::getCommands1() const
         cmds.merge(r->getCommands());
 
     // add generated files
-    for (auto &cmd : cmds)
+    /*for (auto &cmd : cmds)
     {
         cmd->dependencies.insert(generated.begin(), generated.end());
 
@@ -1352,7 +1335,7 @@ Commands NativeCompiledTarget::getCommands1() const
             }
         }
     }
-    cmds.insert(generated.begin(), generated.end());
+    cmds.insert(generated.begin(), generated.end());*/
 
     for (auto &c : cmds)
         ((NativeCompiledTarget*)this)->registerCommand(*c);
@@ -1368,16 +1351,6 @@ Commands NativeCompiledTarget::getCommands1() const
     if (auto c = getCommand())
     {
         c->dependencies.insert(cmds.begin(), cmds.end());
-
-        File d(def, getFs());
-        if (d.isGenerated())
-        {
-            auto g = d.getGenerator();
-            c->dependencies.insert(g);
-            for (auto &c1 : cmds)
-                g->dependencies.insert(c1);
-            cmds.insert(g);
-        }
 
         auto get_tgts = [this]()
         {
@@ -3109,21 +3082,6 @@ void NativeCompiledTarget::prepare_pass5()
         files = gatherSourceFiles();
     }
     */
-
-    // export all symbols
-    //SW_UNIMPLEMENTED;
-    /*if (ExportAllSymbols && getBuildSettings().TargetOS.Type == OSType::Windows && getSelectedTool() == Linker.get())
-    {
-        const path def = NATIVE_TARGET_DEF_SYMBOLS_FILE;
-        Files objs;
-        SW_UNIMPLEMENTED;
-        //for (auto &f : files)
-            //objs.insert(f->output);
-        auto c = addCommand(SW_VISIBLE_BUILTIN_FUNCTION(create_def_file));
-        c << cmd::out(def);
-        std::dynamic_pointer_cast<builder::BuiltinCommand>(c.getCommand())->push_back(objs);
-        c->addInput(objs);
-    }*/
 
     // also fix rpath libname here
     /*if (getSelectedTool() && createWindowsRpath())
