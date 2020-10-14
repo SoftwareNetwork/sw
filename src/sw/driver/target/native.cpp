@@ -1443,12 +1443,7 @@ Commands NativeCompiledTarget::getCommands1() const
 
 bool NativeCompiledTarget::hasCircularDependency() const
 {
-    //SW_UNIMPLEMENTED;
-    return
-        1
-        //&& getSelectedTool() == Linker.get()
-        && circular_dependency
-        ;
+    return circular_dependency;
 }
 
 bool NativeCompiledTarget::createWindowsRpath() const
@@ -3127,8 +3122,7 @@ void NativeCompiledTarget::prepare_pass6_1()
         return;
 
     // circular deps detection
-    //SW_UNIMPLEMENTED;
-    /*if (auto L = Linker->as<VisualStudioLinker *>())
+    if (auto L = getLinker().as<VisualStudioLinker *>())
     {
         for (auto &d : all_deps_normal)
         {
@@ -3148,7 +3142,7 @@ void NativeCompiledTarget::prepare_pass6_1()
                 break;
             }
         }
-    }*/
+    }
 }
 
 void NativeCompiledTarget::prepare_pass7()
@@ -3285,11 +3279,12 @@ void NativeCompiledTarget::prepare_pass8()
     prog_lib->setOutputFile(getOutputFileName2("lib"));
     prog_link->setOutputFile(getOutputFileName2("bin"));
     prog_link->setImportLibrary(getOutputFileName2("lib"));
+    if (auto L = prog_link->as<VisualStudioLibraryTool *>())
+    {
+        L->NoDefaultLib = true;
+    }
     if (auto L = prog_link->as<VisualStudioLinker *>())
     {
-        auto cmd = L->createCommand(getMainBuild());
-        cmd->push_back("-NODEFAULTLIB");
-
         if (!L->GenerateDebugInformation)
         {
             if (getBuildSettings().Native.ConfigurationType == ConfigurationType::Debug ||
@@ -3359,6 +3354,8 @@ void NativeCompiledTarget::prepare_pass8()
         if (isExecutable() || !isHeaderOnly())
             rules.push_back(new NativeLinkerRule(*prog_link));
     }
+    if (circular_dependency)
+        rules.push_back(new NativeLinkerRule(*prog_lib));
 
     // rules!
     std::set<RuleFile> rfs;
@@ -3370,7 +3367,7 @@ void NativeCompiledTarget::prepare_pass8()
         rf.getAdditionalArguments() = f->args;
         rfs.insert(rf);
     }
-    path last_output;
+    //path last_output;
     while (1)
     {
         bool newf = false;
@@ -3384,14 +3381,14 @@ void NativeCompiledTarget::prepare_pass8()
             {
                 auto [_, inserted] = rfs.insert(o);
                 newf |= inserted;
-                if (inserted)
-                    last_output = o;
+                //if (inserted)
+                    //last_output = o;
             }
         }
         if (!newf)
             break;
     }
-    outputfile = last_output;
+    //outputfile = last_output;
 }
 
 void NativeCompiledTarget::prepare_pass9()

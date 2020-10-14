@@ -299,6 +299,8 @@ NativeLinker &NativeLinkerRule::getLinker() const
 Files NativeLinkerRule::addInputs(Target &t, const RuleFiles &rfs)
 {
     auto nt = t.as<NativeCompiledTarget *>();
+    // librarian otherwise
+    auto is_linker = &getLinker() == &nt->getLinker();
 
     std::optional<path> def;
     FilesOrdered files;
@@ -313,6 +315,7 @@ Files NativeLinkerRule::addInputs(Target &t, const RuleFiles &rfs)
             && rf.getFile().extension() != ".lib"
             && rf.getFile().extension() != ".res"
             && rf.getFile().extension() != ".def"
+            && rf.getFile().extension() != ".exp"
             )
             continue;
 
@@ -324,6 +327,13 @@ Files NativeLinkerRule::addInputs(Target &t, const RuleFiles &rfs)
             continue;
         }
 
+        // lib skips these
+        if (!is_linker &&
+            (rf.getFile().extension() == ".res" ||
+            rf.getFile().extension() == ".exp")
+            )
+            continue;
+
         //if (used_files.contains(rf))
             //continue;
         files.push_back(rf.getFile());
@@ -333,7 +343,6 @@ Files NativeLinkerRule::addInputs(Target &t, const RuleFiles &rfs)
     if (files.empty() && !def)
         return {};
 
-
     // objs must go into object files
     // libs into library deps
     //getSelectedTool()->setObjectFiles(files);
@@ -342,7 +351,7 @@ Files NativeLinkerRule::addInputs(Target &t, const RuleFiles &rfs)
     Files outputs;
 
     auto c = getLinker().clone();
-    static_cast<NativeLinker &>(*c).setObjectFiles(files);
+    auto &nc = static_cast<NativeLinker &>(*c);
     if (auto VSL = c->as<VisualStudioLibraryTool *>())
     {
         // export all symbols
@@ -354,7 +363,7 @@ Files NativeLinkerRule::addInputs(Target &t, const RuleFiles &rfs)
             // win only
             && nt->getBuildSettings().TargetOS.Type == OSType::Windows
             // linker only
-            && &getLinker() == &nt->getLinker()
+            && is_linker
             )
         {
             const path deffn = nt->BinaryPrivateDir / ".sw.symbols.def";
@@ -373,10 +382,45 @@ Files NativeLinkerRule::addInputs(Target &t, const RuleFiles &rfs)
         }
         if (def)
             VSL->ModuleDefinitionFile = *def;
+        if (nt && nt->hasCircularDependency())
+        {
+            if (auto VSL = c->as<VisualStudioLibrarian *>())
+            {
+                // add -DEF
+                VSL->CreateImportLibrary = true;
+                // set proper name (default is not suitable for .exe case)
+                VSL->DllName = nt->getOutputFile().filename();
+
+                // add llibs and ldirs
+                for (auto &l : VSL->gatherLinkLibraries(true))
+                    files.push_back(l.l);
+                VSL->VisualStudioLibraryToolOptions::LinkDirectories = VSL->gatherLinkDirectories();
+            }
+            if (is_linker)
+            {
+                auto exp = nt->getImportLibrary();
+                exp = exp.parent_path() / (exp.stem() += ".exp");
+                files.erase(std::remove(files.begin(), files.end(), nt->getImportLibrary()), files.end());
+                files.push_back(exp);
+                VSL->ImportLibrary.clear(); // clear implib
+            }
+        }
     }
-    static_cast<NativeLinker &>(*c).prepareCommand(t);
-    outputs.insert(static_cast<NativeLinker &>(*c).getOutputFile());
+    nc.setObjectFiles(files);
+    nc.prepareCommand(t);
+    if (nt && nt->hasCircularDependency())
+    {
+        if (auto VSL = c->as<VisualStudioLibrarian *>())
+        {
+            auto exp = nt->getImportLibrary();
+            exp = exp.parent_path() / (exp.stem() += ".exp");
+            c->getCommand()->addOutput(exp);
+            //outputs.insert(exp); // we can live without it
+        }
+    }
+    outputs.insert(nc.getOutputFile());
     c->getCommand()->prepare(); // why?
+    nt->registerCommand(*c->getCommand());
     commands.clear();
     commands.emplace_back(std::move(c));
 

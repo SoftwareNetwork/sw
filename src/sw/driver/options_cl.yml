@@ -498,6 +498,11 @@ types:
                 properties:
                     - output_dependency
 
+            nodefaultlib:
+                name: NoDefaultLib
+                type: bool
+                flag: NODEFAULTLIB
+
     vslib:
         name: VisualStudioLibrarianOptions
 
@@ -509,8 +514,8 @@ types:
 
             name:
                 name: DllName
-                type: String
-                flag: "Name:"
+                type: path
+                flag: "NAME:"
 
     # https://docs.microsoft.com/en-us/cpp/build/reference/linker-options
     vslink:
