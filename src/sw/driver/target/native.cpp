@@ -1393,35 +1393,8 @@ Commands NativeCompiledTarget::getCommands1() const
         // set fancy name
         if (!IsSwConfig && !(getMainBuild().getSettings()["do_not_mangle_object_names"] == "true"))
         {
-            c->name.clear();
-
-            // not implemented
-            /*if (getSolution().solutions.size() > 1)
-            {
-                auto i = std::find_if(getSolution().build->solutions.begin(), getSolution().build->solutions.end(), [this](auto &s)
-                {
-                    return &s == getSolution();
-                });
-                if (i == getSolution().build->solutions.end())
-                    // add trace message?
-                    ;// throw SW_RUNTIME_ERROR("Wrong sln");
-                else
-                    c->name += "sln [" + std::to_string(i - getSolution().build->solutions.begin() + 1) +
-                        "/" + std::to_string(getSolution().build->solutions.size()) + "] ";
-            }*/
-            c->name += "[" + getPackage().toString() + "]" + getSelectedTool()->Extension;
+            c->name = "[" + getPackage().toString() + "]" + getSelectedTool()->Extension;
         }
-
-        // copy deps
-        /*auto cdb = std::make_shared<ExecuteCommand>(true, [p = getPackage()(), c = getConfig()]
-        {
-            auto &sdb = getServiceDatabase();
-            auto f = sdb.getInstalledPackageFlags(p, c);
-            f.set(pfBuilt, true);
-            sdb.setInstalledPackageFlags(p, c, f);
-        });
-        cdb->dependencies.insert(c);
-        cmds.insert(cdb);*/
     }
 
     /*if (auto evs = Events.getCommands(); !evs.empty())
