@@ -1332,21 +1332,18 @@ void SourceCompiles::run() const
     EXECUTE_SOLUTION_RET();
 
     auto cmds = e.getCommands();
-    cmds.erase(e.getCommand());
-    if (cmds.empty())
+    auto i = std::find_if(cmds.begin(), cmds.end(), [&f](auto &c)
     {
-        // no commands - we can't build provided file
+        return c->inputs.contains(f);
+    });
+    if (i == cmds.end())
+    {
+        // no command found - we can't build provided file
         // this means zero result
         Value = 0;
         return;
     }
-    if (cmds.size() != 1)
-    {
-        // cmds.size() > 1
-        // TODO: select needed command without return
-        SW_UNIMPLEMENTED;
-    }
-    auto &cmd = *cmds.begin();
+    auto &cmd = *i;
     Value = (cmd && cmd->exit_code && cmd->exit_code.value() == 0) ? 1 : 0;
 
     // fast return on fail
