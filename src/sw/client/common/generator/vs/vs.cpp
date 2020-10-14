@@ -63,6 +63,18 @@ int vsVersionFromString(const String &s)
     auto v = std::stoi(t);
     if (t.size() == 4)
     {
+        /*
+        //VS7 = 71,
+        VS8 = 80,
+        VS9 = 90,
+        VS10 = 100,
+        VS11 = 110,
+        VS12 = 120,
+        //VS13 = 130 was skipped
+        VS14 = 140,
+        VS15 = 150,
+        VS16 = 160,
+        */
         switch (v)
         {
             // 2003

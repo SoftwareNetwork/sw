@@ -39,22 +39,6 @@ struct Target;
 struct NativeCompiledTarget;
 struct NativeLinker;
 
-/*enum class VisualStudioVersion
-{
-    Unspecified,
-
-    //VS7 = 71,
-    VS8 = 80,
-    VS9 = 90,
-    VS10 = 100,
-    VS11 = 110,
-    VS12 = 120,
-    //VS13 = 130 was skipped
-    VS14 = 140,
-    VS15 = 150,
-    VS16 = 160,
-};*/
-
 SW_DRIVER_CPP_API
 const StringSet &getCppHeaderFileExtensions();
 
@@ -66,24 +50,6 @@ bool isCppHeaderFileExtension(const String &);
 
 SW_DRIVER_CPP_API
 bool isCppSourceFileExtensions(const String &);
-
-// maybe add Object type?
-/*struct VSInstance : ProgramGroup
-{
-    path root;
-    Version version;
-
-    // one installation may have more that one versions (tool sets)
-    VersionSet cl_versions; // cl has 19.xx versions (19.15, 19.16, 19.20 etc.)
-    VersionSet link_versions; // tools has 14.xx versions (14.15, 14.16, 14.20 etc.)
-
-    using ProgramGroup::ProgramGroup;
-
-    std::shared_ptr<Program> clone() const override { return std::make_shared<VSInstance>(*this); }
-    Version &getVersion() override { return version; }
-
-    void activate(Build &s) const override;
-};*/
 
 // toolchain
 

@@ -18,7 +18,6 @@
 
 #pragma once
 
-#include <memory>
 #include <type_traits>
 
 namespace sw
@@ -53,20 +52,5 @@ struct SW_BUILDER_API ICastable
         return dynamic_cast<const std::decay_t<T> &>(*this);
     }
 };
-
-namespace builder { struct Command; }
-
-namespace detail
-{
-
-struct SW_BUILDER_API Executable
-{
-    virtual ~Executable() = default;
-
-    virtual std::shared_ptr<builder::Command> getCommand() const = 0;
-    virtual void execute() const;
-};
-
-}
 
 }

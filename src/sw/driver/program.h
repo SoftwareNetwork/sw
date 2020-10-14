@@ -7,6 +7,8 @@
 
 #include <primitives/filesystem.h>
 
+#include <memory>
+
 #define SW_DECLARE_PROGRAM_CLONE \
     std::unique_ptr<Program> clone() const override
 
@@ -28,8 +30,9 @@ namespace sw
 struct Build;
 struct SourceFile;
 struct Target;
+namespace builder { struct Command; }
 
-struct SW_DRIVER_CPP_API Program : ICastable, detail::Executable
+struct SW_DRIVER_CPP_API Program : ICastable
 {
     path file;
 
@@ -39,6 +42,7 @@ struct SW_DRIVER_CPP_API Program : ICastable, detail::Executable
     virtual ~Program() = default;
 
     virtual std::unique_ptr<Program> clone() const = 0;
+    virtual std::shared_ptr<builder::Command> getCommand() const = 0;
 };
 
 using ProgramPtr = std::unique_ptr<Program>;
@@ -53,17 +57,5 @@ struct SW_DRIVER_CPP_API PredefinedProgram
 private:
     ProgramPtr program;
 };
-
-struct ProgramGroup : Program
-{
-    using Program::Program;
-
-    std::shared_ptr<builder::Command> getCommand() const override { return nullptr; }
-    //Version &getVersion() override { SW_UNIMPLEMENTED; }
-
-    virtual void activate(Build &s) const = 0;
-};
-
-using ProgramGroupPtr = std::shared_ptr<ProgramGroup>;
 
 }

@@ -27,10 +27,4 @@ ICastable::~ICastable()
 {
 }
 
-void detail::Executable::execute() const
-{
-    if (auto c = getCommand())
-        return c->execute();
-}
-
 }
