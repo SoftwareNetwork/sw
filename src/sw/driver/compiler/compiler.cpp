@@ -748,7 +748,6 @@ void VisualStudioLinker::prepareCommand1(const Target &t)
         //cmd->name_short = to_string(Output().filename().u8string());
     }
 
-
     ReproducibleBuild = t.isReproducibleBuild();
 
     getCommandLineOptions<VisualStudioLibraryToolOptions>(cmd.get(), *this);

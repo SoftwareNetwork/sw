@@ -152,8 +152,6 @@ protected:
     bool IsSwConfig = false;
     bool IsSwConfigLocal = false;
     TargetType target_type = TargetType::NativeLibrary;
-    //std::shared_ptr<NativeLinker> Linker;
-    //std::shared_ptr<NativeLinker> Librarian;
 
     bool prepareLibrary(LibraryType Type);
     void configureFile1(const path &from, const path &to, ConfigureFlags flags);
