@@ -28,6 +28,7 @@ static void setHttpTlsSettings()
     // 2. grpc require explicit certs file
     //primitives::http::setupSafeTls();
     primitives::http::setupSafeTls(false, false, sw::support::get_ca_certs_filename());
+    //httpSettings.ca_certs_file = sw::support::get_ca_certs_filename();
 }
 
 void setHttpSettings(const Options &options)
