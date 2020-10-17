@@ -328,7 +328,7 @@ void ExecutionPlan::printGraph(const G &g, const path &base, const VecT &names, 
             if (mangle_names)
                 o << " [" << "label=\"" << std::to_string(v) << "\"]";
             else
-                o << " [" << "label=" << names[v]->getName(true) << "]";
+                o << " [" << "label=" << names[v]->getName() << "]";
         });
         if (mangle_names)
         {
@@ -337,7 +337,7 @@ void ExecutionPlan::printGraph(const G &g, const path &base, const VecT &names, 
             std::ofstream o(p);
             int i = 0;
             for (auto &n : names)
-                o << i++ << " = " << n->getName(true) << "\n";
+                o << i++ << " = " << n->getName() << "\n";
         }
     }
 }

@@ -1115,33 +1115,17 @@ bool Command::needsResponseFile(size_t selected_size) const
     return sz > selected_size;
 }
 
-String Command::getName(bool short_name) const
+String Command::getName() const
 {
-    if (short_name)
-    {
-        if (name_short.empty())
-        {
-            if (!outputs.empty())
-            {
-                return to_string(normalize_path(*outputs.begin()));
-            }
-            return std::to_string((uint64_t)this);
-        }
-        return name_short;
-    }
-    if (name.empty())
-    {
-        if (!outputs.empty())
-        {
-            String s = "generate: ";
-            for (auto &o : outputs)
-                s += "\"" + to_string(normalize_path(o)) + "\", ";
-            s.resize(s.size() - 2);
-            return s;
-        }
-        return std::to_string((uint64_t)this);
-    }
-    return name;
+    if (!name.empty())
+        return name;
+    if (outputs.empty())
+        return print();
+    String s = "generate: ";
+    for (auto &o : outputs)
+        s += "\"" + to_string(normalize_path(o)) + "\", ";
+    s.resize(s.size() - 2);
+    return s;
 }
 
 void Command::printLog() const

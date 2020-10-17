@@ -108,7 +108,7 @@ struct SW_DRIVER_CPP_API Check : CommandNode
     // for comparison
     size_t getHash() const override;
 
-    String getName(bool short_name = false) const override;
+    String getName() const override;
     String getData() const { return data; }
     bool isChecked() const;
     std::vector<std::shared_ptr<Check>> gatherDependencies();

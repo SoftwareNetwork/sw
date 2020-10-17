@@ -602,7 +602,7 @@ void Check::clean() const
     commands.clear();
 }
 
-String Check::getName(bool short_name) const
+String Check::getName() const
 {
     auto d = getDefinition();
     if (d)

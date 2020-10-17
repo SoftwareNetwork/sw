@@ -50,7 +50,7 @@ struct SW_BUILDER_API CommandNode : std::enable_shared_from_this<CommandNode>
     CommandNode &operator=(const CommandNode &);
     virtual ~CommandNode();
 
-    virtual String getName(bool short_name = false) const = 0;
+    virtual String getName() const = 0;
     virtual size_t getHash() const = 0;
     virtual void execute() = 0;
     virtual void prepare() = 0; // some internal preparations, command may not be executed still
@@ -135,7 +135,6 @@ struct SW_BUILDER_API Command : ICastable, CommandNode, detail::ResolvableComman
 
 public:
     String name;
-    String name_short;
 
     Files inputs;
     // byproducts
@@ -191,7 +190,7 @@ public:
     void clean() const;
     bool isExecuted() const { return pid != -1 || executed_; }
 
-    String getName(bool short_name = false) const override;
+    String getName() const override;
     size_t getHash() const override;
 
     virtual bool isOutdated() const;
