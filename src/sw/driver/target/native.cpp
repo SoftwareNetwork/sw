@@ -1315,36 +1315,36 @@ Commands NativeCompiledTarget::getCommands1() const
     cmds.insert(generated.begin(), generated.end());
 
     // deps' generated commands
-        auto get_tgts = [this]()
+    auto get_tgts = [this]()
+    {
+        TargetsSet deps;
+        for (auto &d : all_deps_normal)
+            deps.insert(&d->getTarget());
+        for (auto &d : all_deps_idir_only)
         {
-            TargetsSet deps;
-            for (auto &d : all_deps_normal)
-                deps.insert(&d->getTarget());
-            for (auto &d : all_deps_idir_only)
-            {
-                // this means that for idirs generated commands won't be used!
-                if (!d->GenerateCommandsBefore)
-                    continue;
-                deps.insert(&d->getTarget());
-            }
-            return deps;
-        };
+            // this means that for idirs generated commands won't be used!
+            if (!d->GenerateCommandsBefore)
+                continue;
+            deps.insert(&d->getTarget());
+        }
+        return deps;
+    };
 
-        // add dependencies on generated commands from dependent targets
-        for (auto &l : get_tgts())
+    // add dependencies on generated commands from dependent targets
+    for (auto &l : get_tgts())
+    {
+        if (auto nt = l->as<NativeCompiledTarget*>())
         {
-            if (auto nt = l->as<NativeCompiledTarget*>())
+            // for idir deps generated commands won't be used!
+            auto cmds2 = nt->getGeneratedCommands();
+            for (auto &c : cmds)
             {
-                // for idir deps generated commands won't be used!
-                auto cmds2 = nt->getGeneratedCommands();
-                for (auto &c : cmds)
-                {
-                    if (auto c2 = c->as<driver::Command*>(); c2 && c2->ignore_deps_generated_commands)
-                        continue;
-                    c->dependencies.insert(cmds2.begin(), cmds2.end());
-                }
+                if (auto c2 = c->as<driver::Command*>(); c2 && c2->ignore_deps_generated_commands)
+                    continue;
+                c->dependencies.insert(cmds2.begin(), cmds2.end());
             }
         }
+    }
 
     for (auto &c : cmds)
         ((NativeCompiledTarget*)this)->registerCommand(*c);
@@ -3161,7 +3161,7 @@ void NativeCompiledTarget::prepare_pass8()
     // rc
     // add casual idirs?
     if (prog_cl_rc)
-    prog_cl_rc->idirs = NativeCompilerOptions::System.IncludeDirectories;
+        prog_cl_rc->idirs = NativeCompilerOptions::System.IncludeDirectories;
     prog_lib->Extension = getBuildSettings().TargetOS.getStaticLibraryExtension();
     if (isExecutable())
     {
