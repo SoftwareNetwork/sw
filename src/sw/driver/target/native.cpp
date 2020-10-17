@@ -651,6 +651,10 @@ std::unique_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetS
                 c->push_back("-mmacosx-version-min=" + getBuildSettings().TargetOS.Version->toString());
             }
         }
+
+        //
+        c = std::move(C);
+
         if (id.ppath == "org.LLVM.clang" ||
             id.ppath == "org.LLVM.clangpp" ||
             id.ppath == "com.Apple.clang" ||
@@ -662,7 +666,6 @@ std::unique_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetS
             cmd->push_back(getBuildSettings().getTargetTriplet());
         }
         // TODO: find -fuse-ld option and set c->Type accordingly
-        c = std::move(C);
     }
     else if (id.ppath == "org.gnu.gcc.ld")
     {
