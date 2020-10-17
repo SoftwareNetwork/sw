@@ -54,13 +54,14 @@ struct SW_DRIVER_CPP_API IRule : ICastable
     //virtual Files addInputs(const RuleFiles &) = 0;
 };
 
-struct NativeRule : IRule
+struct SW_DRIVER_CPP_API NativeRule : IRule
 {
     using RuleProgram = Program &;
 
     RuleProgram program;
 
     NativeRule(RuleProgram);
+    NativeRule(const NativeRule &) = delete;
 
     virtual Files addInputs(Target &t, const RuleFiles &) = 0;
 
@@ -72,7 +73,7 @@ protected:
     RuleFiles used_files;
 };
 
-struct NativeCompilerRule : NativeRule
+struct SW_DRIVER_CPP_API NativeCompilerRule : NativeRule
 {
     StringSet exts;
 
@@ -84,7 +85,7 @@ private:
     NativeCompiler &getCompiler() const;
 };
 
-struct NativeLinkerRule : NativeRule
+struct SW_DRIVER_CPP_API NativeLinkerRule : NativeRule
 {
     using NativeRule::NativeRule;
 
