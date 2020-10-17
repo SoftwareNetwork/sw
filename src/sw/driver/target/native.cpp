@@ -1235,14 +1235,14 @@ void NativeCompiledTarget::createPrecompiledHeader()
         getMergeObject()[pch.source].fancy_name = "[" + getPackage().toString() + "]/[pch]";
 }
 
-std::shared_ptr<builder::Command> NativeCompiledTarget::getCommand() const
+/*std::shared_ptr<builder::Command> NativeCompiledTarget::getCommand() const
 {
     if (isHeaderOnly())
         return nullptr;
     if (getSelectedTool())
         return getSelectedTool()->getCommand(*this);
     SW_UNIMPLEMENTED;
-}
+}*/
 
 Commands NativeCompiledTarget::getGeneratedCommands() const
 {

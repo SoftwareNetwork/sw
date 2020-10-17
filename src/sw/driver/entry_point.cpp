@@ -416,13 +416,13 @@ private:
     const PrepareConfig &ep;
     PrepareConfig::InputData d;
 
-    std::shared_ptr<builder::Command> getCommand() const override
+    /*std::shared_ptr<builder::Command> getCommand() const override
     {
         auto c = T::getCommand();
         if (!d.link_name.empty())
             c->name = d.link_name + Base::getSelectedTool()->Extension;
         return c;
-    }
+    }*/
 
     Commands getCommands() const override
     {
@@ -434,17 +434,18 @@ private:
             // link.exe uses pdb file and cl.exe cannot proceed
             // fatal error C1041: cannot open program database '*.pdb';
             // if multiple CL.EXE write to the same .PDB file, please use /FS
-            auto c = getCommand();
+            // use /Z7 instead?
+            /*auto c = getLinker().getCommand();
             for (auto t : ep.targets)
             {
-                auto cmd = t->getCommand();
+                auto cmd = t->getLinker().getCommand();
                 auto cmds = ((ConfigSharedLibraryTarget*)t)->Base::getCommands();
                 for (auto &c2 : cmds)
                 {
                     if (c2 != cmd)
                         c->dependencies.insert(c2);
                 }
-            }
+            }*/
         }
         return Base::getCommands();
     }
