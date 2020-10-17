@@ -1088,26 +1088,19 @@ path NativeCompiledTarget::getImportLibrary() const
 
 bool NativeCompiledTarget::hasSourceFiles() const
 {
-    return true;
-
     bool r = false;
 
     auto exts = get_cpp_exts(*this);
     exts.insert(".c");
+    exts.insert(".def");
+    exts.insert(getBuildSettings().TargetOS.getObjectFileExtension());
 
     auto check = [this, &r, &exts](auto &o)
     {
         if (!r)
         {
             r |= std::any_of(o.begin(), o.end(), [&exts](const auto &f) {
-                return exts.contains(f.second->file.extension().string());
-            });
-        }
-        if (!r)
-        {
-            r |= std::any_of(o.begin(), o.end(), [this](const auto &f) {
-                return f.first.extension() == getBuildSettings().TargetOS.getObjectFileExtension();
-                //|| f.first.extension() == ".def"
+                return f.second->isActive() && exts.contains(f.second->file.extension().string());
             });
         }
     };
