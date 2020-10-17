@@ -223,7 +223,7 @@ struct SW_DRIVER_CPP_API TargetDescription
 struct SW_DRIVER_CPP_API Target
     : ITarget
     , TargetBase
-    //, ProgramStorage
+    , ProgramStorage
     , std::enable_shared_from_this<Target>
 {
     /*struct TargetSettings
@@ -308,7 +308,7 @@ public:
     //auto getPreparePass() const { return prepare_pass; }
     virtual bool mustResolveDeps() const { return deps_resolved ? false : (deps_resolved = true); }
 
-    Program *findProgramByExtension(const String &ext) const;
+    const Program *findProgramByExtension(const String &ext) const;
 
     // using in build, move to protected when not used
     path getObjectDir() const;

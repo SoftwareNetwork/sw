@@ -749,6 +749,13 @@ void NativeCompiledTarget::findCompiler()
     prog_cl_cpp = activateCompiler(getSettings()["native"]["program"]["cpp"], get_cpp_exts(*this));
     prog_cl_c = activateCompiler(getSettings()["native"]["program"]["c"], { ".c" });
     prog_cl_asm = activateCompiler(getSettings()["native"]["program"]["asm"], get_asm_exts(*this));
+
+    setExtensionProgram(".c", *prog_cl_c);
+    for (auto &e : get_cpp_exts(*this))
+        setExtensionProgram(e, *prog_cl_cpp);
+    for (auto &e : get_asm_exts(*this))
+        setExtensionProgram(e, *prog_cl_asm);
+
     if (getBuildSettings().TargetOS.is(OSType::Windows))
     {
         // actually a missing setting

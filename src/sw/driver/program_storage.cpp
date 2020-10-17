@@ -13,11 +13,11 @@
 namespace sw
 {
 
-/*ProgramStorage::~ProgramStorage() = default;
+ProgramStorage::~ProgramStorage() = default;
 
-void ProgramStorage::setExtensionProgram(const String &ext, const ProgramPtr &p)
+void ProgramStorage::setExtensionProgram(const String &ext, const Program &p)
 {
-    extensions.insert_or_assign(ext, p);
+    extensions.insert_or_assign(ext, &p);
 }
 
 void ProgramStorage::setExtensionProgram(const String &ext, const DependencyPtr &d)
@@ -35,15 +35,15 @@ void ProgramStorage::setExtensionProgram(const String &ext, const UnresolvedPack
     setExtensionProgram(ext, std::make_shared<Dependency>(p));
 }
 
-Program *ProgramStorage::getProgram(const String &ext) const
+const Program *ProgramStorage::getProgram(const String &ext) const
 {
     auto i = extensions.find(ext);
     if (i == extensions.end())
         return {};
-    auto p = std::get_if<ProgramPtr>(&i->second);
+    auto p = std::get_if<const Program *>(&i->second);
     if (!p)
         return {};
-    return p->get();
+    return *p;
 }
 
 std::optional<DependencyPtr> ProgramStorage::getExtPackage(const String &ext) const
@@ -70,6 +70,6 @@ void ProgramStorage::clearExtensions()
 void ProgramStorage::removeExtension(const String &ext)
 {
     extensions.erase(ext);
-}*/
+}
 
 }
