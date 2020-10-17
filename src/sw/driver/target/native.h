@@ -78,6 +78,7 @@ public:
 
     bool UseModules = false;
     // bool Framework = false; // TODO: macos framework
+    //bool ObjectLibrary = false;
 
     //
     virtual ~NativeCompiledTarget();
