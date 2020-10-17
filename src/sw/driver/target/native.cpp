@@ -2085,8 +2085,6 @@ void NativeCompiledTarget::prepare_pass1()
         fs::create_directories(BinaryDir);
     }
 
-    //DEBUG_BREAK_IF(getPackage().toString() == "org.sw.demo.nlohmann.json-3.9.1");
-
     if (!HeaderOnly || !*HeaderOnly)
         HeaderOnly = !hasSourceFiles();
     if (isHeaderOnly())
@@ -3255,8 +3253,6 @@ void NativeCompiledTarget::prepare_pass8()
     }
     prog_link->merge(getMergeObject());
     prog_lib->merge(getMergeObject());
-
-    //DEBUG_BREAK_IF(getPackage().toString() == "org.sw.demo.nlohmann.json-3.9.1");
 
     // add rules
     auto r = new NativeCompilerRule(*prog_cl_cpp, get_cpp_exts(*this));
