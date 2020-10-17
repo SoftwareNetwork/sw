@@ -1261,7 +1261,7 @@ Commands NativeCompiledTarget::getGeneratedCommands() const
     std::map<int, std::vector<std::shared_ptr<builder::Command>>> order;
 
     // add generated commands
-    /*for (auto &[f, _] : getMergeObject())
+    for (auto &[f, _] : getMergeObject())
     {
         File p(f, getFs());
         if (!p.isGenerated())
@@ -1271,16 +1271,16 @@ Commands NativeCompiledTarget::getGeneratedCommands() const
             order[c->strict_order].push_back(c);
         else
             generated.insert(c);
-    }*/
+    }
 
     // respect ordering
-    /*for (auto i = order.rbegin(); i != order.rend(); i++)
+    for (auto i = order.rbegin(); i != order.rend(); i++)
     {
         auto &cmds = i->second;
         for (auto &c : generated)
             c->dependencies.insert(cmds.begin(), cmds.end());
         generated.insert(cmds.begin(), cmds.end());
-    }*/
+    }
 
     generated_commands = generated;
     return generated;
@@ -1346,32 +1346,18 @@ Commands NativeCompiledTarget::getCommands1() const
             }
         }
 
-        // link deps
-        if (hasCircularDependency() || createWindowsRpath())
-            SW_UNIMPLEMENTED;
-            //cmds.insert(Librarian->getCommand(*this));
+    for (auto &c : cmds)
+        ((NativeCompiledTarget*)this)->registerCommand(*c);
 
-        cmds.insert(c);
+    return cmds;
 
-        // set fancy name
-        if (!IsSwConfig && !(getMainBuild().getSettings()["do_not_mangle_object_names"] == "true"))
-        {
-            c->name = "[" + getPackage().toString() + "]" + getSelectedTool()->Extension;
-        }
-    }
 
-    /*if (auto evs = Events.getCommands(); !evs.empty())
-    {
-        for (auto &c : cmds)
-            c->dependencies.insert(evs.begin(), evs.end());
-        cmds.insert(evs.begin(), evs.end());
-    }*/
 
-    /*if (!IsSwConfig && !Local)
-    {
-        if (!File(getOutputFile(), getFs()).isChanged())
-            return {};
-    }*/
+
+    // link deps
+    if (hasCircularDependency() || createWindowsRpath())
+        SW_UNIMPLEMENTED;
+        //cmds.insert(Librarian->getCommand(*this));
 
     cmds.insert(this->cmds.begin(), this->cmds.end());
     return cmds;
