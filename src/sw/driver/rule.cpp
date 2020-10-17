@@ -412,7 +412,9 @@ Files NativeLinkerRule::addInputs(Target &t, const RuleFiles &rfs)
                     objs.insert(f);
             }
             auto c = nt->addCommand(SW_VISIBLE_BUILTIN_FUNCTION(create_def_file));
-            c << cmd::out(deffn);
+            c->push_back(deffn);
+            c->addOutput(deffn);
+            //c << cmd::out(deffn);
             std::dynamic_pointer_cast<builder::BuiltinCommand>(c.getCommand())->push_back(objs);
             c->addInput(objs);
             def = deffn;
