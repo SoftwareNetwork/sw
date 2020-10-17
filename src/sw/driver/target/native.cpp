@@ -3266,9 +3266,16 @@ void NativeCompiledTarget::prepare_pass8()
     //DEBUG_BREAK_IF(getPackage().toString() == "org.sw.demo.nlohmann.json-3.9.1");
 
     // add rules
-    rules.push_back(new NativeCompilerRule(*prog_cl_cpp, get_cpp_exts(*this)));
-    rules.push_back(new NativeCompilerRule(*prog_cl_c, { ".c" }));
-    rules.push_back(new NativeCompilerRule(*prog_cl_asm, get_asm_exts(*this)));
+    auto r = new NativeCompilerRule(*prog_cl_cpp, get_cpp_exts(*this));
+    r->rulename = "[C++]"; // CXX?
+    rules.push_back(r);
+    r = new NativeCompilerRule(*prog_cl_c, { ".c" });
+    r->rulename = "[C]";
+    rules.push_back(r);
+    r = new NativeCompilerRule(*prog_cl_asm, get_asm_exts(*this));
+    r->rulename = "[ASM]";
+    rules.push_back(r);
+
     if (isHeaderOnly())
         ;
     else if (isStaticLibrary())

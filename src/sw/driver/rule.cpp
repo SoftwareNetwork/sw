@@ -29,6 +29,39 @@ SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD(sw_create_def_file, create_def_file)
 namespace sw
 {
 
+struct TargetFilenames
+{
+    String sd, bd, bdp;
+
+    TargetFilenames(const Target &t)
+    {
+        sd = to_string(normalize_path(t.SourceDir));
+        bd = to_string(normalize_path(t.BinaryDir));
+        bdp = to_string(normalize_path(t.BinaryPrivateDir));
+    }
+
+    String getName(const path &fn) const
+    {
+        auto p = to_string(normalize_path(fn));
+        if (bdp.size() < p.size() && p.find(bdp) == 0)
+        {
+            auto n = p.substr(bdp.size());
+            return "[bdir_pvt]" + n;
+        }
+        else if (bd.size() < p.size() && p.find(bd) == 0)
+        {
+            auto n = p.substr(bd.size());
+            return "[bdir]" + n;
+        }
+        if (sd.size() < p.size() && p.find(sd) == 0)
+        {
+            auto n = p.substr(sd.size());
+            return n;
+        }
+        return p;
+    }
+};
+
 IRule::~IRule() = default;
 
 NativeRule::NativeRule(RuleProgram p)
@@ -85,7 +118,7 @@ Files NativeCompilerRule::addInputs(Target &t, const RuleFiles &rfs)
     auto nt = t.as<NativeCompiledTarget *>();
     std::optional<path> pch_basename;
     RuleFiles rfs_new;
-    Files outputs;
+    TargetFilenames tfns(t);
 
     // find pch
     for (auto &rf : rfs)
@@ -159,6 +192,7 @@ Files NativeCompilerRule::addInputs(Target &t, const RuleFiles &rfs)
     }
 
     // main loop
+    Files outputs;
     for (auto &rf : rfs_new.empty() ? rfs : rfs_new)
     {
         if (!exts.contains(rf.getFile().extension().string()))
@@ -285,6 +319,10 @@ Files NativeCompilerRule::addInputs(Target &t, const RuleFiles &rfs)
         }
 
         nc.prepareCommand(t);
+        /*nc.getCommand()->name = rulename;
+        if (!rulename.empty())
+            nc.getCommand()->name += " ";*/
+        nc.getCommand()->name += "[" + t.getPackage().toString() + "]" + tfns.getName(rf.getFile());
         commands.emplace_back(std::move(c));
         used_files.insert(rf);
     }
@@ -420,6 +458,8 @@ Files NativeLinkerRule::addInputs(Target &t, const RuleFiles &rfs)
     }
     outputs.insert(nc.getOutputFile());
     c->getCommand()->prepare(); // why?
+    c->getCommand()->name = //(is_linker ? "[LINK]"s : "[LIB]"s) + " " +
+        "[" + t.getPackage().toString() + "]" + nt->getOutputFile().extension().string();
     nt->registerCommand(*c->getCommand());
     commands.clear();
     commands.emplace_back(std::move(c));
