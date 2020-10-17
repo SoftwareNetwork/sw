@@ -3174,6 +3174,7 @@ void NativeCompiledTarget::prepare_pass8()
     // setup programs
     // rc
     // add casual idirs?
+    if (prog_cl_rc)
     prog_cl_rc->idirs = NativeCompilerOptions::System.IncludeDirectories;
     prog_lib->Extension = getBuildSettings().TargetOS.getStaticLibraryExtension();
     if (isExecutable())
