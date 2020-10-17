@@ -773,6 +773,22 @@ void Check::setupTarget(NativeCompiledTarget &t) const
     t.command_storage = nullptr;
 }
 
+static std::shared_ptr<builder::Command> getLinkerCommand(const NativeCompiledTarget &t, const path &srcfn)
+{
+    auto cmds = t.getCommands();
+    auto i = std::find_if(cmds.begin(), cmds.end(), [&srcfn](auto &c)
+    {
+        return !c->inputs.contains(srcfn);
+    });
+    if (i == cmds.end())
+    {
+        // no command found
+        // this means zero result
+        return {};
+    }
+    return *i;
+}
+
 bool Check::execute(SwBuild &b) const
 {
     b.overrideBuildState(BuildState::InputsLoaded);
@@ -877,7 +893,7 @@ void FunctionExists::run() const
 
     EXECUTE_SOLUTION();
 
-    auto cmd = e.getCommand();
+    auto cmd = getLinkerCommand(e, f);
     Value = (cmd && cmd->exit_code && cmd->exit_code.value() == 0) ? 1 : 0;
 }
 
@@ -946,7 +962,7 @@ void IncludeExists::run() const
 
     EXECUTE_SOLUTION();
 
-    auto cmd = e.getCommand();
+    auto cmd = getLinkerCommand(e, f);
     Value = (cmd && cmd->exit_code && cmd->exit_code.value() == 0) ? 1 : 0;
 }
 
@@ -1006,7 +1022,7 @@ void TypeSize::run() const
 
     EXECUTE_SOLUTION();
 
-    auto cmd = e.getCommand();
+    auto cmd = getLinkerCommand(e, f);
     if (!cmd)
     {
         Value = 0;
@@ -1084,7 +1100,7 @@ void TypeAlignment::run() const
 
     EXECUTE_SOLUTION();
 
-    auto cmd = e.getCommand();
+    auto cmd = getLinkerCommand(e, f);
     if (!cmd)
     {
         Value = 0;
@@ -1214,7 +1230,7 @@ void DeclarationExists::run() const
 
     EXECUTE_SOLUTION();
 
-    auto cmd = e.getCommand();
+    auto cmd = getLinkerCommand(e, f);
     Value = (cmd && cmd->exit_code && cmd->exit_code.value() == 0) ? 1 : 0;
 }
 
@@ -1268,7 +1284,7 @@ void StructMemberExists::run() const
 
     EXECUTE_SOLUTION();
 
-    auto cmd = e.getCommand();
+    auto cmd = getLinkerCommand(e, f);
     Value = (cmd && cmd->exit_code && cmd->exit_code.value() == 0) ? 1 : 0;
 }
 
@@ -1425,7 +1441,7 @@ void SourceRuns::run() const
 
     EXECUTE_SOLUTION();
 
-    auto cmd = e.getCommand();
+    auto cmd = getLinkerCommand(e, f);
     if (!cmd)
     {
         Value = 0;
