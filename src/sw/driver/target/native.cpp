@@ -1307,51 +1307,11 @@ Commands NativeCompiledTarget::getCommands1() const
         cmds.merge(r->getCommands());
 
     // add generated files
-    /*for (auto &cmd : cmds)
-    {
+    for (auto &cmd : cmds)
         cmd->dependencies.insert(generated.begin(), generated.end());
+    cmds.insert(generated.begin(), generated.end());
 
-        for (auto &[k, v] : break_gch_deps)
-        {
-            auto input_pch = std::find_if(cmd->inputs.begin(), cmd->inputs.end(),
-                [k = std::ref(k)](const auto &p)
-            {
-                return p == k;
-            });
-            if (input_pch == cmd->inputs.end())
-                continue;
-
-            for (auto &c : generated)
-            {
-                auto output_gch = std::find_if(c->outputs.begin(), c->outputs.end(),
-                    [v = std::ref(v)](const auto &p)
-                {
-                    return p == v;
-                });
-                if (output_gch == c->outputs.end())
-                    continue;
-
-                cmd->dependencies.erase(c);
-            }
-        }
-    }
-    cmds.insert(generated.begin(), generated.end());*/
-
-    for (auto &c : cmds)
-        ((NativeCompiledTarget*)this)->registerCommand(*c);
-
-    return cmds;
-
-
-
-
-
-
-    // this library, check if nothing to link
-    if (auto c = getCommand())
-    {
-        c->dependencies.insert(cmds.begin(), cmds.end());
-
+    // deps' generated commands
         auto get_tgts = [this]()
         {
             TargetsSet deps;

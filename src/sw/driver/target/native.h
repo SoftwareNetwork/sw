@@ -169,7 +169,6 @@ protected:
 private:
     CompilerType ct = CompilerType::UnspecifiedCompiler;
     bool already_built = false;
-    std::map<path, path> break_gch_deps;
     mutable std::optional<Commands> generated_commands;
     path outputfile;
     path implibfile;
