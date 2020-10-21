@@ -543,10 +543,10 @@ decltype(auto) PrepareConfig::commonActions(Build &b, const InputData &d, const 
     // pch
     if (lang == LANG_CPP)
     {
-        lib += ForceInclude(driver_idir / getSwHeader());
-        /*lib += PrecompiledHeader(driver_idir / getSwHeader());
+        //lib += ForceInclude(driver_idir / getSwHeader());
+        lib += PrecompiledHeader(driver_idir / getSwHeader());
 
-        detail::PrecompiledHeader pch;
+        /*detail::PrecompiledHeader pch;
         pch.name = getImportPchFile(*this, lib, deps).stem();
         pch.dir = getPchDir(b);
         pch.fancy_name = "[config pch]";
