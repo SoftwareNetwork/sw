@@ -130,10 +130,13 @@ SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD(sw_replace_dll_import, replace_dll_import)
 namespace sw
 {
 
+NativeTarget::NativeTarget(TargetBase &parent, const PackageId &id)
+    : Target(parent, id)
+{
+}
+
 NativeTarget::~NativeTarget()
 {
-    for (auto &r : rules)
-        delete r;
 }
 
 void NativeTarget::setOutputFile()
@@ -176,6 +179,13 @@ path NativeTarget::getOutputFile() const
 {
     return getSelectedTool()->getOutputFile();
 }
+
+/*void NativeTarget::addRule(const String &name, const DependencyPtr &from_dep, const String &from_name)
+{
+    addDummyDependency(from_dep);
+
+    addRule(name);
+}*/
 
 NativeCompiledTarget::NativeCompiledTarget(TargetBase &parent, const PackageId &id)
     : NativeTarget(parent, id), NativeTargetOptionsGroup((Target &)*this)
@@ -1306,8 +1316,7 @@ Commands NativeCompiledTarget::getCommands1() const
     }
 
     //
-    for (auto &r : rules)
-        cmds.merge(r->getCommands());
+    cmds.merge(RuleSystem::getRuleCommands());
 
     // add generated files
     for (auto &cmd : cmds)
@@ -3242,21 +3251,24 @@ void NativeCompiledTarget::prepare_pass8()
     prog_lib->merge(getMergeObject());
 
     // add rules
-    auto r = new NativeCompilerRule(*prog_cl_cpp, get_cpp_exts(*this));
-    r->rulename = "[C++]"; // CXX?
-    rules.push_back(r);
-    r = new NativeCompilerRule(*prog_cl_c, { ".c" });
-    r->rulename = "[C]";
-    rules.push_back(r);
-    r = new NativeCompilerRule(*prog_cl_asm, get_asm_exts(*this));
-    r->rulename = "[ASM]";
-    rules.push_back(r);
+    std::vector<NativeRule *> rules;
+    auto add_rule = [this, &rules](const auto &n, auto &&r)
+    {
+        auto &v = addRule(n, std::move(r));
+        rules.push_back(&v);
+    };
+    add_rule("cpp", std::make_unique<NativeCompilerRule>(*prog_cl_cpp, get_cpp_exts(*this)));
+    add_rule("c", std::make_unique<NativeCompilerRule>(*prog_cl_c, StringSet{ ".c" }));
+    add_rule("asm", std::make_unique<NativeCompilerRule>(*prog_cl_asm, get_asm_exts(*this)));
+    //r->rulename = "[C++]"; // CXX?
+    //r->rulename = "[C]";
+    //r->rulename = "[ASM]";
 
     if (isHeaderOnly())
         ;
     else if (isStaticLibrary())
     {
-        rules.push_back(new NativeLinkerRule(*prog_lib));
+        add_rule("lib", std::make_unique<NativeLinkerRule>(*prog_lib));
     }
     else
     {
@@ -3275,13 +3287,13 @@ void NativeCompiledTarget::prepare_pass8()
         }
         // add rc rule
         if (getBuildSettings().TargetOS.is(OSType::Windows))
-            rules.push_back(new RcRule(*prog_cl_rc));
+            add_rule("rc", std::make_unique<RcRule>(*prog_cl_rc));
 
         if (isExecutable() || !isHeaderOnly())
-            rules.push_back(new NativeLinkerRule(*prog_link));
+            add_rule("link", std::make_unique<NativeLinkerRule>(*prog_link));
     }
     if (circular_dependency)
-        rules.push_back(new NativeLinkerRule(*prog_lib));
+        add_rule("link_circular", std::make_unique<NativeLinkerRule>(*prog_lib));
 
     // rules!
     std::set<RuleFile> rfs;

@@ -4,6 +4,7 @@
 #pragma once
 
 #include "base.h"
+#include "../rule_storage.h"
 
 namespace sw
 {
@@ -50,15 +51,14 @@ enum class ConfigureFlags
     Default = Empty, //AddToBuild,
 };
 
-struct IRule;
-
 /**
 * \brief Native Target is a binary target that produces binary files (probably executables).
 */
 struct SW_DRIVER_CPP_API NativeTarget : Target
+    , RuleSystem
     //,protected NativeOptions
 {
-    using Target::Target;
+    NativeTarget(TargetBase &parent, const PackageId &);
     ~NativeTarget();
 
     virtual path getOutputFile() const;
@@ -68,9 +68,10 @@ struct SW_DRIVER_CPP_API NativeTarget : Target
     // move to runnable target? since we might have data only targets
     virtual void setupCommandForRun(builder::Command &c) const { setupCommand(c); } // for Launch?
 
+    //void addRule(const String &name, const DependencyPtr &from_dep, const String &from_name);
+
 protected:
     path OutputDir; // output subdir
-    std::vector<IRule*> rules;
 
     virtual path getOutputFileName(const path &root) const;
     virtual path getOutputFileName2(const path &subdir) const;
