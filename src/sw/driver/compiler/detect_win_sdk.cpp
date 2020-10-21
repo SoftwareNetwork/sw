@@ -67,7 +67,7 @@ struct WinKit
             auto libdir = kit_root / "Lib" / ldir_subversion / name / toStringWindows(target_arch);
             if (fs::exists(libdir))
             {
-                auto &t = sw::addTarget<sw::PredefinedTarget>(DETECT_ARGS_PASS, sw::LocalPackage(s.getLocalStorage(), sw::PackageId("com.Microsoft.Windows.SDK." + name, v)), ts);
+                auto &t = sw::ProgramDetector::addTarget<sw::PredefinedTarget>(DETECT_ARGS_PASS, sw::LocalPackage(s.getLocalStorage(), sw::PackageId("com.Microsoft.Windows.SDK." + name, v)), ts);
                 //t.ts["os"]["version"] = v.toString();
 
                 t.public_ts["properties"]["6"]["system_include_directories"].push_back(idir / name);
@@ -78,7 +78,7 @@ struct WinKit
             }
             else if (without_ldir)
             {
-                auto &t = sw::addTarget<sw::PredefinedTarget>(DETECT_ARGS_PASS, sw::LocalPackage(s.getLocalStorage(), sw::PackageId("com.Microsoft.Windows.SDK." + name, v)), ts);
+                auto &t = sw::ProgramDetector::addTarget<sw::PredefinedTarget>(DETECT_ARGS_PASS, sw::LocalPackage(s.getLocalStorage(), sw::PackageId("com.Microsoft.Windows.SDK." + name, v)), ts);
                 //t.ts["os"]["version"] = v.toString();
 
                 t.public_ts["properties"]["6"]["system_include_directories"].push_back(idir / name);
@@ -104,7 +104,7 @@ struct WinKit
                 sw::TargetSettings ts2;
                 auto ts1 = toTargetSettings(s.getHostOs());
                 ts2["os"]["kernel"] = ts1["os"]["kernel"];
-                auto &rc = addProgram(DETECT_ARGS_PASS, sw::PackageId("com.Microsoft.Windows.rc", v), ts2, p);
+                auto &rc = sw::ProgramDetector::addProgram(DETECT_ARGS_PASS, sw::PackageId("com.Microsoft.Windows.rc", v), ts2, p);
             }
             // these are passed from compiler during merge?
             //for (auto &idir : COpts.System.IncludeDirectories)
@@ -121,7 +121,7 @@ struct WinKit
                 auto ts1 = toTargetSettings(s.getHostOs());
                 sw::TargetSettings ts2;
                 ts2["os"]["kernel"] = ts1["os"]["kernel"];
-                auto &rc = addProgram(DETECT_ARGS_PASS, sw::PackageId("com.Microsoft.Windows.mc", v), ts2, p);
+                auto &rc = sw::ProgramDetector::addProgram(DETECT_ARGS_PASS, sw::PackageId("com.Microsoft.Windows.mc", v), ts2, p);
             }
             // these are passed from compiler during merge?
             //for (auto &idir : COpts.System.IncludeDirectories)
@@ -403,19 +403,18 @@ private:
 };
 
 }
+#endif // #ifdef _WIN32
 
 namespace sw
 {
 
-void detectWindowsSdk(DETECT_ARGS)
+void ProgramDetector::detectWindowsSdk(DETECT_ARGS)
 {
+#ifdef _WIN32
     WinSdkInfo info;
     info.settings = s.getHostOs();
     info.listWindowsKits(DETECT_ARGS_PASS);
-}
-
-}
-
-#else
-namespace sw { void detectWindowsSdk(DETECT_ARGS) {} } // noop
 #endif // #ifdef _WIN32
+}
+
+}

@@ -8,8 +8,6 @@
 #include <sw/builder/command.h>
 #include <sw/core/sw_context.h>
 
-// TODO: actually detect.cpp may be rewritten as entry point
-
 #define DETECT_ARGS ::sw::SwCoreContext &s, ::sw::TargetMap &tm
 #define DETECT_ARGS_PASS s, tm
 #define DETECT_ARGS_PASS_TO_LAMBDA &s, &tm
@@ -43,36 +41,62 @@ private:
     mutable std::shared_ptr<builder::Command> cmd;
 };
 
-PredefinedProgramTarget &addProgram(DETECT_ARGS, const PackageId &id, const TargetSettings &ts, const std::shared_ptr<Program> &p);
-
-struct VSInstance
+struct SW_DRIVER_CPP_API ProgramDetector
 {
-    path root;
-    Version version;
-};
+    // combined function for users
+    void detectProgramsAndLibraries(DETECT_ARGS);
 
-using VSInstances = VersionMap<VSInstance>;
-VSInstances &gatherVSInstances();
+    String getMsvcPrefix(const path &program) const;
 
-void log_msg_detect_target(const String &m);
+    static PredefinedProgramTarget &addProgram(DETECT_ARGS, const PackageId &id, const TargetSettings &ts, const std::shared_ptr<Program> &p);
 
-template <class T>
-T &addTarget(DETECT_ARGS, const PackageId &id, const TargetSettings &ts)
-{
-    log_msg_detect_target("Detected target: " + id.toString() + ": " + ts.toString());
+    template <class T>
+    static T &addTarget(DETECT_ARGS, const PackageId &id, const TargetSettings &ts)
+    {
+        log_msg_detect_target("Detected target: " + id.toString() + ": " + ts.toString());
 
-    auto t = std::make_shared<T>(sw::LocalPackage(s.getLocalStorage(), id), ts);
-    tm[id].push_back(t);
-    return *t;
-}
+        auto t = std::make_shared<T>(sw::LocalPackage(s.getLocalStorage(), id), ts);
+        tm[id].push_back(t);
+        return *t;
+    }
 
-// combined function for users
-SW_DRIVER_CPP_API
-void detectProgramsAndLibraries(DETECT_ARGS);
+private:
+    struct VSInstance
+    {
+        path root;
+        Version version;
+    };
+    using VSInstances = VersionMap<VSInstance>;
+
+    VSInstances vsinstances;
+    std::map<path, String> msvc_prefixes;
+
+    void gatherVSInstances();
+    static void log_msg_detect_target(const String &m);
+    String getMsvcPrefix(builder::detail::ResolvableCommand c);
+    auto &getMsvcIncludePrefixes() { return msvc_prefixes; }
+    const auto &getMsvcIncludePrefixes() const { return msvc_prefixes; }
+
+    void detectMsvc(DETECT_ARGS);
+    void detectMsvc15Plus(DETECT_ARGS);
+    void detectMsvc14AndOlder(DETECT_ARGS);
+    void detectWindowsSdk(DETECT_ARGS);
+    void detectMsvcCommon(const path &compiler, const Version &vs_version,
+        ArchType target_arch, const path &host_root, const TargetSettings &ts, const path &idir,
+        const path &root, const path &target,
+        DETECT_ARGS);
+
+    void detectWindowsClang(DETECT_ARGS);
+    void detectIntelCompilers(DETECT_ARGS);
+    void detectWindowsCompilers(DETECT_ARGS);
+    void detectNonWindowsCompilers(DETECT_ARGS);
 
 #define DETECT(x) void detect##x##Compilers(DETECT_ARGS);
 #include "detect.inl"
 #undef DETECT
+};
+
+ProgramDetector &getProgramDetector();
 
 void addSettingsAndSetPrograms(const SwCoreContext &, TargetSettings &);
 void addSettingsAndSetHostPrograms(const SwCoreContext &, TargetSettings &);

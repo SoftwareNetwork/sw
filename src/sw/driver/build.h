@@ -18,6 +18,7 @@ namespace driver::cpp { struct Driver; }
 struct Module;
 struct ModuleStorage;
 struct SwContext;
+struct ProgramDetector;
 
 struct ModuleSwappableData
 {
@@ -61,15 +62,18 @@ struct SW_DRIVER_CPP_API Build : SimpleBuild
     ModuleSwappableData module_data;
     DriverData *dd = nullptr;
     Checker checker;
+    //const ProgramDetector &pd;
 
     //
-    Build(SwBuild &);
+    Build(SwBuild &/*, const ProgramDetector &*/);
 
     bool isKnownTarget(const LocalPackage &p) const;
     path getSourceDir(const LocalPackage &p) const;
     std::optional<path> getSourceDir(const Source &s, const Version &v) const;
 
     const TargetSettings &getExternalVariables() const;
+
+    //const ProgramDetector &getProgramDetector() const { return pd; }
 };
 
 }

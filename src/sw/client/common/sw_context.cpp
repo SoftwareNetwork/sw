@@ -818,7 +818,7 @@ const sw::TargetMap &SwClientContext::getPredefinedTargets(sw::SwContext &swctx)
     if (!tm)
     {
         sw::TargetMap tm;
-        sw::detectProgramsAndLibraries(swctx, tm);
+        sw::getProgramDetector().detectProgramsAndLibraries(swctx, tm);
         this->tm = tm;
     }
     return *tm;

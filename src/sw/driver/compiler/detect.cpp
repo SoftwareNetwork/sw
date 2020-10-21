@@ -22,10 +22,10 @@ DECLARE_STATIC_LOGGER(logger, "compiler.detect");
 namespace sw
 {
 
-std::map<path, String> &getMsvcIncludePrefixes()
+ProgramDetector &getProgramDetector()
 {
-    static std::map<path, String> prefixes;
-    return prefixes;
+    static ProgramDetector pd;
+    return pd;
 }
 
 static String detectMsvcPrefix(builder::detail::ResolvableCommand c)
@@ -34,10 +34,6 @@ static String detectMsvcPrefix(builder::detail::ResolvableCommand c)
     // "Note: including file: filename\r" (english)
     // "Some: other lang: filename\r"
     // "Some: other lang  filename\r" (ita)
-
-    auto &p = getMsvcIncludePrefixes();
-    if (!p[c.getProgram()].empty())
-        return p[c.getProgram()];
 
     auto basefn = support::get_temp_filename("cliprefix");
     auto fn = path(basefn) += ".c";
@@ -71,15 +67,32 @@ static String detectMsvcPrefix(builder::detail::ResolvableCommand c)
     // clang-cl does not output filename -> lines.size() == 1
     if (!std::regex_search(lines.size() > 1 ? lines[1] : lines[0], m, r))
         throw SW_RUNTIME_ERROR(error("regex_search failed"));
-    return p[c.getProgram()] = m[1].str();
+    return m[1].str();
 }
 
-void log_msg_detect_target(const String &m)
+String ProgramDetector::getMsvcPrefix(builder::detail::ResolvableCommand c)
+{
+    auto &p = getMsvcIncludePrefixes();
+    if (!p[c.getProgram()].empty())
+        return p[c.getProgram()];
+    return p[c.getProgram()] = detectMsvcPrefix(c);
+}
+
+String ProgramDetector::getMsvcPrefix(const path &prog) const
+{
+    auto &p = getMsvcIncludePrefixes();
+    auto i = p.find(prog);
+    if (i == p.end())
+        throw SW_RUNTIME_ERROR("Cannot find msvc prefix");
+    return i->second;
+}
+
+void ProgramDetector::log_msg_detect_target(const String &m)
 {
     LOG_TRACE(logger, m);
 }
 
-PredefinedProgramTarget &addProgram(DETECT_ARGS, const PackageId &id, const TargetSettings &ts, const std::shared_ptr<Program> &p)
+PredefinedProgramTarget &ProgramDetector::addProgram(DETECT_ARGS, const PackageId &id, const TargetSettings &ts, const std::shared_ptr<Program> &p)
 {
     auto &t = addTarget<PredefinedProgramTarget>(DETECT_ARGS_PASS, id, ts);
     t.public_ts["output_file"] = to_string(normalize_path(p->file));
@@ -88,47 +101,29 @@ PredefinedProgramTarget &addProgram(DETECT_ARGS, const PackageId &id, const Targ
     return t;
 }
 
-bool isCppHeaderFileExtension(const String &e)
+void ProgramDetector::gatherVSInstances()
 {
-    auto &exts = getCppHeaderFileExtensions();
-    return exts.find(e) != exts.end();
-}
-
-bool isCppSourceFileExtensions(const String &e)
-{
-    auto &exts = getCppSourceFileExtensions();
-    return exts.find(e) != exts.end();
-}
-
-VSInstances &gatherVSInstances()
-{
-    static VSInstances instances = []()
-    {
-        VSInstances instances;
 #ifdef _WIN32
-        cmVSSetupAPIHelper h;
-        h.EnumerateVSInstances();
-        for (auto &i : h.instances)
-        {
-            path root = i.VSInstallLocation;
-            Version v = to_string(i.Version);
+    cmVSSetupAPIHelper h;
+    h.EnumerateVSInstances();
+    for (auto &i : h.instances)
+    {
+        path root = i.VSInstallLocation;
+        Version v = to_string(i.Version);
 
-            // actually, it does not affect cl.exe or other tool versions
-            if (i.VSInstallLocation.find(L"Preview") != std::wstring::npos)
-                v = v.toString() + "-preview";
+        // actually, it does not affect cl.exe or other tool versions
+        if (i.VSInstallLocation.find(L"Preview") != std::wstring::npos)
+            v = v.toString() + "-preview";
 
-            VSInstance inst;
-            inst.root = root;
-            inst.version = v;
-            instances.emplace(v, inst);
-        }
+        VSInstance inst;
+        inst.root = root;
+        inst.version = v;
+        vsinstances.emplace(v, inst);
+    }
 #endif
-        return instances;
-    }();
-    return instances;
 }
 
-static void detectMsvcCommon(const path &compiler, const Version &vs_version,
+void ProgramDetector::detectMsvcCommon(const path &compiler, const Version &vs_version,
     ArchType target_arch, const path &host_root, const TargetSettings &ts, const path &idir,
     const path &root, const path &target,
     DETECT_ARGS)
@@ -150,7 +145,7 @@ static void detectMsvcCommon(const path &compiler, const Version &vs_version,
             auto c = p->getCommand();
             if (s.getHostOs().Arch != target_arch)
                 c->addPathDirectory(host_root);
-            msvc_prefix = detectMsvcPrefix(*c);
+            msvc_prefix = getMsvcPrefix(*c);
             // run getVersion via prepared command
             builder::detail::ResolvableCommand c2 = *c;
             cl_exe_version = getVersion(s, c2);
@@ -263,11 +258,10 @@ static void detectMsvcCommon(const path &compiler, const Version &vs_version,
     }
 }
 
-void detectMsvc15Plus(DETECT_ARGS)
+void ProgramDetector::detectMsvc15Plus(DETECT_ARGS)
 {
     // https://docs.microsoft.com/en-us/cpp/c-runtime-library/crt-library-features?view=vs-2019
 
-    auto &instances = gatherVSInstances();
     const auto host = toStringWindows(s.getHostOs().Arch);
     auto new_settings = s.getHostOs();
 
@@ -280,7 +274,7 @@ void detectMsvc15Plus(DETECT_ARGS)
         ts["os"]["kernel"] = ts1["os"]["kernel"];
         ts["os"]["arch"] = ts1["os"]["arch"];
 
-        for (auto &[_, instance] : instances)
+        for (auto &[_, instance] : vsinstances)
         {
             auto root = instance.root / "VC";
             auto v = instance.version;
@@ -307,7 +301,7 @@ void detectMsvc15Plus(DETECT_ARGS)
     }
 }
 
-void detectMsvc14AndOlder(DETECT_ARGS)
+void ProgramDetector::detectMsvc14AndOlder(DETECT_ARGS)
 {
     auto find_comn_tools = [](const Version &v) -> path
     {
@@ -406,9 +400,7 @@ void detectMsvc14AndOlder(DETECT_ARGS)
     }
 }
 
-void detectWindowsSdk(DETECT_ARGS);
-
-static void detectMsvc(DETECT_ARGS)
+void ProgramDetector::detectMsvc(DETECT_ARGS)
 {
     detectMsvc15Plus(DETECT_ARGS_PASS);
     detectMsvc14AndOlder(DETECT_ARGS_PASS);
@@ -432,7 +424,7 @@ static bool hasConsoleColorProcessing()
     return true;
 }
 
-static void detectWindowsClang(DETECT_ARGS)
+void ProgramDetector::detectWindowsClang(DETECT_ARGS)
 {
     // create programs
     const path base_llvm_path = path("c:") / "Program Files" / "LLVM";
@@ -456,7 +448,7 @@ static void detectWindowsClang(DETECT_ARGS)
         if (fs::exists(p->file))
         {
             auto cmd = p->getCommand();
-            auto msvc_prefix = detectMsvcPrefix(*cmd);
+            auto msvc_prefix = getMsvcPrefix(*cmd);
             getMsvcIncludePrefixes()[p->file] = msvc_prefix;
 
             auto [o,v] = getVersionAndOutput(s, p->file);
@@ -605,7 +597,7 @@ static void detectWindowsClang(DETECT_ARGS)
     }
 }
 
-static void detectIntelCompilers(DETECT_ARGS)
+void ProgramDetector::detectIntelCompilers(DETECT_ARGS)
 {
     // some info at https://gitlab.com/ita1024/waf/blob/master/waflib/Tools/msvc.py#L521
 
@@ -703,13 +695,13 @@ static void detectIntelCompilers(DETECT_ARGS)
     }
 }
 
-static void detectWindowsCompilers(DETECT_ARGS)
+void ProgramDetector::detectWindowsCompilers(DETECT_ARGS)
 {
     detectMsvc(DETECT_ARGS_PASS);
     detectWindowsClang(DETECT_ARGS_PASS);
 }
 
-static void detectNonWindowsCompilers(DETECT_ARGS)
+void ProgramDetector::detectNonWindowsCompilers(DETECT_ARGS)
 {
     bool colored_output = hasConsoleColorProcessing();
 
@@ -783,7 +775,7 @@ static void detectNonWindowsCompilers(DETECT_ARGS)
     }
 }
 
-void detectNativeCompilers(DETECT_ARGS)
+void ProgramDetector::detectNativeCompilers(DETECT_ARGS)
 {
     auto &os = s.getHostOs();
     if (os.is(OSType::Windows) || os.is(OSType::Cygwin) || os.is(OSType::Mingw))
@@ -798,7 +790,7 @@ void detectNativeCompilers(DETECT_ARGS)
     detectIntelCompilers(DETECT_ARGS_PASS);
 }
 
-void detectProgramsAndLibraries(DETECT_ARGS)
+void ProgramDetector::detectProgramsAndLibraries(DETECT_ARGS)
 {
 #define DETECT(x) detect##x##Compilers(DETECT_ARGS_PASS);
 #include "detect.inl"

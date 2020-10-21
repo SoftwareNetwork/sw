@@ -7,6 +7,7 @@
 #include "../bazel/bazel.h"
 #include "../functions.h"
 #include "../build.h"
+#include "../extensions.h"
 #include "../command.h"
 #include "../rule.h"
 #include "../compiler/detect.h"
@@ -818,8 +819,8 @@ void NativeCompiledTarget::findCompiler()
 
 bool NativeCompiledTarget::init()
 {
-    static std::once_flag f;
-    std::call_once(f, [this] {detectNativeCompilers(DETECT_ARGS_PASS_FIRST_CALL_SIMPLE); });
+    //static std::once_flag f;
+    //std::call_once(f, [this] {detectNativeCompilers(DETECT_ARGS_PASS_FIRST_CALL_SIMPLE); });
 
     switch (init_pass)
     {

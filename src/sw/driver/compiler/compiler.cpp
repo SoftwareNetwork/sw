@@ -33,17 +33,6 @@ DECLARE_STATIC_LOGGER(logger, "compiler");
 namespace sw
 {
 
-std::map<path, String> &getMsvcIncludePrefixes();
-
-static String get_msvc_prefix(const path &prog)
-{
-    auto &p = getMsvcIncludePrefixes();
-    auto i = p.find(prog);
-    if (i == p.end())
-        throw SW_RUNTIME_ERROR("Cannot find msvc prefix");
-    return i->second;
-}
-
 static void add_args(driver::Command &c, const Strings &args)
 {
     for (auto &a : args)
@@ -184,7 +173,7 @@ void VisualStudioCompiler::prepareCommand1(const Target &t)
     // https://en.wikipedia.org/wiki/Microsoft_Visual_C%2B%2B#Internal_version_numbering
 
     cmd->deps_processor = builder::Command::DepsProcessor::Msvc;
-    cmd->msvc_prefix = get_msvc_prefix(cmd->getProgram());
+    cmd->msvc_prefix = getProgramDetector().getMsvcPrefix(cmd->getProgram());
 
     /*if (InputFile)
     {
@@ -265,7 +254,7 @@ void VisualStudioASMCompiler::prepareCommand1(const Target &t)
         ((VisualStudioASMCompiler*)this)->SafeSEH = false;
 
     cmd->deps_processor = builder::Command::DepsProcessor::Msvc;
-    cmd->msvc_prefix = get_msvc_prefix(cmd->getProgram());
+    cmd->msvc_prefix = getProgramDetector().getMsvcPrefix(cmd->getProgram());
 
     if (InputFile)
     {
@@ -376,7 +365,7 @@ SW_CREATE_COMPILER_COMMAND(ClangClCompiler, driver::Command)
 void ClangClCompiler::prepareCommand1(const Target &t)
 {
     cmd->deps_processor = builder::Command::DepsProcessor::Msvc;
-    cmd->msvc_prefix = get_msvc_prefix(cmd->getProgram());
+    cmd->msvc_prefix = getProgramDetector().getMsvcPrefix(cmd->getProgram());
 
     if (InputFile)
     {

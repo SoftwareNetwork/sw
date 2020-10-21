@@ -14,7 +14,7 @@
 namespace sw
 {
 
-void detectAdaCompilers(DETECT_ARGS)
+void ProgramDetector::detectAdaCompilers(DETECT_ARGS)
 {
     auto p = std::make_shared<SimpleProgram>();
     auto f = resolveExecutable("gnatmake");
@@ -33,8 +33,8 @@ AdaTarget::AdaTarget(TargetBase &parent, const PackageId &id)
 
 bool AdaTarget::init()
 {
-    static std::once_flag f;
-    std::call_once(f, [this] {detectAdaCompilers(DETECT_ARGS_PASS_FIRST_CALL_SIMPLE); });
+    //static std::once_flag f;
+    //std::call_once(f, [this] {detectAdaCompilers(DETECT_ARGS_PASS_FIRST_CALL_SIMPLE); });
 
     Target::init();
 
@@ -68,10 +68,9 @@ Commands AdaTarget::getCommands1() const
     return cmds;
 }
 
-void detectCSharpCompilers(DETECT_ARGS)
+void ProgramDetector::detectCSharpCompilers(DETECT_ARGS)
 {
-    auto &instances = gatherVSInstances();
-    for (auto &[v, i] : instances)
+    for (auto &[v, i] : vsinstances)
     {
         auto root = i.root;
         switch (v.getMajor())
@@ -101,8 +100,8 @@ CSharpTarget::CSharpTarget(TargetBase &parent, const PackageId &id)
 
 bool CSharpTarget::init()
 {
-    static std::once_flag f;
-    std::call_once(f, [this] {detectCSharpCompilers(DETECT_ARGS_PASS_FIRST_CALL_SIMPLE); });
+    //static std::once_flag f;
+    //std::call_once(f, [this] {detectCSharpCompilers(DETECT_ARGS_PASS_FIRST_CALL_SIMPLE); });
 
     Target::init();
 
@@ -127,7 +126,7 @@ Commands CSharpTarget::getCommands1() const
     return cmds;
 }
 
-void detectRustCompilers(DETECT_ARGS)
+void ProgramDetector::detectRustCompilers(DETECT_ARGS)
 {
     auto p = std::make_shared<SimpleProgram>();
     auto f = resolveExecutable("rustc");
@@ -150,8 +149,8 @@ RustTarget::RustTarget(TargetBase &parent, const PackageId &id)
 
 bool RustTarget::init()
 {
-    static std::once_flag f;
-    std::call_once(f, [this] {detectRustCompilers(DETECT_ARGS_PASS_FIRST_CALL_SIMPLE); });
+    //static std::once_flag f;
+    //std::call_once(f, [this] {detectRustCompilers(DETECT_ARGS_PASS_FIRST_CALL_SIMPLE); });
 
     Target::init();
 
@@ -176,7 +175,7 @@ Commands RustTarget::getCommands1() const
     return cmds;
 }
 
-void detectGoCompilers(DETECT_ARGS)
+void ProgramDetector::detectGoCompilers(DETECT_ARGS)
 {
     auto p = std::make_shared<SimpleProgram>();
     auto f = resolveExecutable("go");
@@ -195,8 +194,8 @@ GoTarget::GoTarget(TargetBase &parent, const PackageId &id)
 
 bool GoTarget::init()
 {
-    static std::once_flag f;
-    std::call_once(f, [this] {detectGoCompilers(DETECT_ARGS_PASS_FIRST_CALL_SIMPLE); });
+    //static std::once_flag f;
+    //std::call_once(f, [this] {detectGoCompilers(DETECT_ARGS_PASS_FIRST_CALL_SIMPLE); });
 
     Target::init();
 
@@ -221,7 +220,7 @@ Commands GoTarget::getCommands1() const
     return cmds;
 }
 
-void detectJavaCompilers(DETECT_ARGS)
+void ProgramDetector::detectJavaCompilers(DETECT_ARGS)
 {
     //compiler = resolveExecutable("jar"); // later
 
@@ -242,8 +241,8 @@ JavaTarget::JavaTarget(TargetBase &parent, const PackageId &id)
 
 bool JavaTarget::init()
 {
-    static std::once_flag f;
-    std::call_once(f, [this] {detectJavaCompilers(DETECT_ARGS_PASS_FIRST_CALL_SIMPLE); });
+    //static std::once_flag f;
+    //std::call_once(f, [this] {detectJavaCompilers(DETECT_ARGS_PASS_FIRST_CALL_SIMPLE); });
 
     Target::init();
 
@@ -269,7 +268,7 @@ Commands JavaTarget::getCommands1() const
     return cmds;
 }
 
-void detectKotlinCompilers(DETECT_ARGS)
+void ProgramDetector::detectKotlinCompilers(DETECT_ARGS)
 {
     auto p = std::make_shared<SimpleProgram>();
     auto f = resolveExecutable("kotlinc");
@@ -288,8 +287,8 @@ KotlinTarget::KotlinTarget(TargetBase &parent, const PackageId &id)
 
 bool KotlinTarget::init()
 {
-    static std::once_flag f;
-    std::call_once(f, [this] {detectKotlinCompilers(DETECT_ARGS_PASS_FIRST_CALL_SIMPLE); });
+    //static std::once_flag f;
+    //std::call_once(f, [this] {detectKotlinCompilers(DETECT_ARGS_PASS_FIRST_CALL_SIMPLE); });
 
     Target::init();
 
@@ -318,7 +317,7 @@ NativeLinker *DTarget::getSelectedTool() const
     return compiler.get();
 }
 
-void detectDCompilers(DETECT_ARGS)
+void ProgramDetector::detectDCompilers(DETECT_ARGS)
 {
     // also todo LDC, GDC compiler
 
@@ -339,8 +338,8 @@ DTarget::DTarget(TargetBase &parent, const PackageId &id)
 
 bool DTarget::init()
 {
-    static std::once_flag f;
-    std::call_once(f, [this] {detectDCompilers(DETECT_ARGS_PASS_FIRST_CALL_SIMPLE); });
+    //static std::once_flag f;
+    //std::call_once(f, [this] {detectDCompilers(DETECT_ARGS_PASS_FIRST_CALL_SIMPLE); });
 
     // https://dlang.org/dmd-windows.html
     // https://wiki.dlang.org/Win32_DLLs_in_D
@@ -405,7 +404,7 @@ bool DExecutable::init()
     return r;
 }
 
-void detectPascalCompilers(DETECT_ARGS)
+void ProgramDetector::detectPascalCompilers(DETECT_ARGS)
 {
     // free pascal for now
 
@@ -426,8 +425,8 @@ PascalTarget::PascalTarget(TargetBase &parent, const PackageId &id)
 
 bool PascalTarget::init()
 {
-    static std::once_flag f;
-    std::call_once(f, [this] {detectPascalCompilers(DETECT_ARGS_PASS_FIRST_CALL_SIMPLE); });
+    //static std::once_flag f;
+    //std::call_once(f, [this] {detectPascalCompilers(DETECT_ARGS_PASS_FIRST_CALL_SIMPLE); });
 
     Target::init();
 

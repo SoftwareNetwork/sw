@@ -14,7 +14,7 @@
 namespace sw
 {
 
-void detectFortranCompilers(DETECT_ARGS)
+void ProgramDetector::detectFortranCompilers(DETECT_ARGS)
 {
     // TODO: gfortran, flang, ifort, pgfortran, f90 (Oracle Sun), xlf, bgxlf, ...
     // aocc, armflang
@@ -46,8 +46,8 @@ FortranTarget::FortranTarget(TargetBase &parent, const PackageId &id)
 
 bool FortranTarget::init()
 {
-    static std::once_flag f;
-    std::call_once(f, [this] {detectFortranCompilers(DETECT_ARGS_PASS_FIRST_CALL_SIMPLE); });
+    //static std::once_flag f;
+    //std::call_once(f, [this] {detectFortranCompilers(DETECT_ARGS_PASS_FIRST_CALL_SIMPLE); });
 
     Target::init();
 
