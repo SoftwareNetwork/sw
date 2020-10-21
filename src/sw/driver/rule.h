@@ -76,7 +76,7 @@ protected:
 struct SW_DRIVER_CPP_API NativeCompilerRule : NativeRule
 {
     StringSet exts;
-    String rulename;
+    //String rulename;
 
     NativeCompilerRule(RuleProgram, const StringSet &exts);
 
