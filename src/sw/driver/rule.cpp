@@ -5,6 +5,7 @@
 
 #include "build.h"
 #include "command.h"
+#include "extensions.h"
 #include "compiler/compiler.h"
 #include "target/native.h"
 

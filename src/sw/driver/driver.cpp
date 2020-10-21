@@ -9,6 +9,7 @@
 
 #include "build.h"
 #include "builtin_input.h"
+#include "extensions.h"
 #include "suffix.h"
 #include "target/all.h"
 #include "entry_point.h"

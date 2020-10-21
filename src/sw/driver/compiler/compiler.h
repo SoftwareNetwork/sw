@@ -39,18 +39,6 @@ struct Target;
 struct NativeCompiledTarget;
 struct NativeLinker;
 
-SW_DRIVER_CPP_API
-const StringSet &getCppHeaderFileExtensions();
-
-SW_DRIVER_CPP_API
-const StringSet &getCppSourceFileExtensions();
-
-SW_DRIVER_CPP_API
-bool isCppHeaderFileExtension(const String &);
-
-SW_DRIVER_CPP_API
-bool isCppSourceFileExtensions(const String &);
-
 // toolchain
 
 struct SW_DRIVER_CPP_API NativeToolchain

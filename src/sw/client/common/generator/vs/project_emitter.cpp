@@ -8,6 +8,7 @@
 
 #include <sw/builder/os.h>
 #include <sw/driver/build_settings.h>
+#include <sw/driver/extensions.h>
 #include <sw/driver/types.h>
 
 #include <primitives/sw/cl.h>

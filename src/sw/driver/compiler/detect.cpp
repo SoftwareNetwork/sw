@@ -74,46 +74,6 @@ static String detectMsvcPrefix(builder::detail::ResolvableCommand c)
     return p[c.getProgram()] = m[1].str();
 }
 
-const StringSet &getCppHeaderFileExtensions()
-{
-    static const StringSet header_file_extensions{
-        ".h",
-        ".hh",
-        ".hm",
-        ".hpp",
-        ".hxx",
-        ".tcc",
-        ".h++",
-        ".H++",
-        ".HPP",
-        ".H",
-    };
-    return header_file_extensions;
-}
-
-const StringSet &getCppSourceFileExtensions()
-{
-    static const StringSet cpp_source_file_extensions{
-        ".cc",
-        ".CC",
-        ".cpp",
-        ".cp",
-        ".cxx",
-        //".ixx", // msvc modules?
-        // cppm - clang?
-        // mxx, mpp - build2?
-        ".c++",
-        ".C++",
-        ".CPP",
-        ".CXX",
-        ".C", // old ext (Wt)
-        // Objective-C
-        ".m",
-        ".mm",
-    };
-    return cpp_source_file_extensions;
-}
-
 void log_msg_detect_target(const String &m)
 {
     LOG_TRACE(logger, m);

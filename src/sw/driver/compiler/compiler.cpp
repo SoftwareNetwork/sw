@@ -3,9 +3,11 @@
 
 #include "compiler.h"
 
+#include "compiler_helpers.h"
+#include "detect.h"
 #include "../build.h"
 #include "../command.h"
-#include "compiler_helpers.h"
+#include "../extensions.h"
 #include "../target/native.h"
 
 #include <sw/core/sw_context.h>
