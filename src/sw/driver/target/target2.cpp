@@ -32,11 +32,11 @@ Target2::Target2(TargetBase &parent, const PackageId &id)
 
 Commands Target2::getCommands1() const
 {
-    auto it = getMainBuild().getContext().getPredefinedTargets().find(UnresolvedPackage{ "msvc" });
+    /*auto it = getMainBuild().getContext().getPredefinedTargets().find(UnresolvedPackage{ "msvc" });
     if (it == getMainBuild().getContext().getPredefinedTargets().end())
         throw SW_RUNTIME_ERROR("no rule found");
     if (it->second.empty())
-        throw SW_RUNTIME_ERROR("no rules inside pkg");
+        throw SW_RUNTIME_ERROR("no rules inside pkg");*/
 
     /*auto r = (*it->second.begin())->getRule();
     if (!r)

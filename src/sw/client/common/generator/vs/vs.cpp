@@ -291,7 +291,9 @@ void VSGenerator::generate(const SwBuild &b)
     else
         throw SW_RUNTIME_ERROR("Compiler is not supported (yet?): " + compiler.toString());
 
-    auto compiler_id = b.getContext().getPredefinedTargets().find(compiler)->first;
+    SW_UNIMPLEMENTED;
+
+    /*auto compiler_id = b.getContext().getPredefinedTargets().find(compiler)->first;
     auto compiler_id_max_version = b.getContext().getPredefinedTargets().find(UnresolvedPackage(compiler.getPath().toString()))->first;
 
     if (compiler_type == MSVC)
@@ -305,7 +307,7 @@ void VSGenerator::generate(const SwBuild &b)
         auto compiler_id_max_version = b.getContext().getPredefinedTargets().find(UnresolvedPackage("com.Microsoft.VisualStudio.VC.cl"))->first;
         vs_version = clver2vsver(compiler_id_max_version.getVersion(), compiler_id_max_version.getVersion());
         toolset_version = compiler_id_max_version.getVersion();
-    }
+    }*/
     // this removes hash part      vvvvvvvvvvvvv
     sln_root = getRootDirectory(b).parent_path() / vs_version.toString(1);
 
@@ -601,8 +603,8 @@ void VSGenerator::generate(const SwBuild &b)
                 {
                     PackageId d(id);
                     // filter out predefined targets
-                    if (b.getContext().getPredefinedTargets().find(d) != b.getContext().getPredefinedTargets().end())
-                        continue;
+                    //if (b.getContext().getPredefinedTargets().find(d) != b.getContext().getPredefinedTargets().end())
+                        //continue;
 
                     // filter out NON TARGET TO BUILD deps
                     // add them to just deps list
@@ -1406,11 +1408,12 @@ void Project::emitProject(const VSGenerator &g) const
 
     if (g.compiler_type == VSGenerator::ClangCl || g.compiler_type == VSGenerator::Clang)
     {
-        auto get_prog = [&g](const sw::UnresolvedPackage &u)
+        auto get_prog = [&g](const sw::UnresolvedPackage &u) -> String
         {
-            auto &target = **g.b->getContext().getPredefinedTargets().find(u)->second.begin();
+            SW_UNIMPLEMENTED;
+            /*auto &target = **g.b->getContext().getPredefinedTargets().find(u)->second.begin();
             auto fn = to_string(normalize_path_windows(target.as<sw::PredefinedProgram &>().getProgram().file));
-            return fn;
+            return fn;*/
         };
 
         ctx.beginBlock("PropertyGroup");

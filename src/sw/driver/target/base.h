@@ -223,7 +223,7 @@ struct SW_DRIVER_CPP_API TargetDescription
 struct SW_DRIVER_CPP_API Target
     : ITarget
     , TargetBase
-    , ProgramStorage
+    //, ProgramStorage
     , std::enable_shared_from_this<Target>
 {
     /*struct TargetSettings

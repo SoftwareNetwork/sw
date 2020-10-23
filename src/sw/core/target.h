@@ -22,6 +22,8 @@ struct IRule;
 struct ITarget;
 struct SwBuild;
 
+using AllowedPackages = UnresolvedPackages;
+
 struct SW_CORE_API TargetFile
 {
     TargetFile(const path &abspath, bool is_generated = false, bool is_from_other_target = false);
@@ -182,7 +184,25 @@ private:
     mutable std::vector<IDependencyPtr> deps;
 };
 
-struct SW_CORE_API TargetContainer
+struct SW_CORE_API InputLoader
+{
+    InputLoader();
+    InputLoader(const InputLoader &);
+    InputLoader &operator=(const InputLoader &);
+    ~InputLoader();
+
+    void setInput(const BuildInput &);
+    const BuildInput &getInput() const;
+    bool hasInput() const { return !!input; }
+
+    [[nodiscard]]
+    std::vector<ITargetPtr> loadPackages(SwBuild &, const TargetSettings &, const AllowedPackages &allowed_packages) const;
+
+private:
+    std::unique_ptr<BuildInput> input;
+};
+
+struct SW_CORE_API TargetContainer : InputLoader
 {
     using Base = std::vector<ITargetPtr>;
 
@@ -214,15 +234,7 @@ struct SW_CORE_API TargetContainer
 
     Base::iterator erase(Base::iterator begin, Base::iterator end);
 
-    void setInput(const BuildInput &);
-    const BuildInput &getInput() const;
-    bool hasInput() const { return !!input; }
-
-    [[nodiscard]]
-    std::vector<ITargetPtr> loadPackages(SwBuild &, const TargetSettings &, const PackageIdSet &allowed_packages) const;
-
 private:
-    std::unique_ptr<BuildInput> input;
     std::vector<ITargetPtr> targets;
 };
 
@@ -266,9 +278,14 @@ struct SimpleExpected : std::variant<SimpleExpectedErrorCode, T, Args...>
 
 } // namespace detail
 
-struct TargetMap : PackageVersionMapBase<TargetContainer, std::unordered_map, primitives::version::VersionMap>
+template <class ... Args>
+struct ExtendedVersionMap : ::primitives::version::VersionMap<Args...>, InputLoader
 {
-    using Base = PackageVersionMapBase<TargetContainer, std::unordered_map, primitives::version::VersionMap>;
+};
+
+struct TargetMap : PackageVersionMapBase<TargetContainer, std::unordered_map, ExtendedVersionMap>
+{
+    using Base = PackageVersionMapBase<TargetContainer, std::unordered_map, ExtendedVersionMap>;
 
     enum
     {
@@ -313,7 +330,7 @@ struct SW_CORE_API TargetEntryPoint
     virtual ~TargetEntryPoint();
 
     [[nodiscard]]
-    virtual std::vector<ITargetPtr> loadPackages(SwBuild &, const TargetSettings &, const PackageIdSet &allowed_packages, const PackagePath &prefix) const = 0;
+    virtual std::vector<ITargetPtr> loadPackages(SwBuild &, const TargetSettings &, const AllowedPackages &allowed_packages, const PackagePath &prefix) const = 0;
 };
 
 struct TargetData

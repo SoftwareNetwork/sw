@@ -21,8 +21,8 @@ static std::shared_ptr<CompilerType> activateCompiler(Target &t, const Unresolve
     auto i = cld.find(id, oss);
     if (!i)
     {
-        i = t.getContext().getPredefinedTargets().find(id, oss);
-        if (!i)
+        //i = t.getContext().getPredefinedTargets().find(id, oss);
+        //if (!i)
         {
             SW_UNIMPLEMENTED;
             //for (auto &e : exts)

@@ -70,7 +70,7 @@ Commands AdaTarget::getCommands1() const
 
 void ProgramDetector::detectCSharpCompilers(DETECT_ARGS)
 {
-    for (auto &[v, i] : vsinstances)
+    for (auto &[v, i] : getVSInstances())
     {
         auto root = i.root;
         switch (v.getMajor())

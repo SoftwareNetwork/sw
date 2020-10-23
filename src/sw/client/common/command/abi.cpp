@@ -25,10 +25,10 @@ SUBCOMMAND_DECL(abi)
     auto tgts1 = b->getTargetsToBuild();
     b->build();
 
-    auto i = getContext().getPredefinedTargets().find(sw::UnresolvedPackage("com.Microsoft.VisualStudio.VC.dumpbin-*"));
+    /*auto i = getContext().getPredefinedTargets().find(sw::UnresolvedPackage("com.Microsoft.VisualStudio.VC.dumpbin-*"));
     if (i == getContext().getPredefinedTargets().end() || i->second.empty())
         throw SW_RUNTIME_ERROR("No dumpbin program");
-    auto j = i->second.end() - 1;
+    auto j = i->second.end() - 1;*/
     SW_UNIMPLEMENTED;
     /*auto p = (*j)->as<const sw::PredefinedProgram *>();
     if (!p)

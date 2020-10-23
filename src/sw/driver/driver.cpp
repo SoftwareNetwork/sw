@@ -16,6 +16,7 @@
 #include "module.h"
 #include "frontend/cmake/cmake_fe.h"
 #include "frontend/cppan/cppan.h"
+#include "compiler/detect.h"
 
 #include <sw/core/input.h>
 #include <sw/core/specification.h>
@@ -131,29 +132,10 @@ static Strings get_inline_comments(const path &p)
 Driver::Driver(SwContext &swctx)
     : swctx(swctx)
 {
-#ifdef _WIN32
-    CoInitializeEx(0, 0); // vs find helper
-#endif
-
-    builtin_inputs = load_builtin_inputs(swctx, *this);
-
-    // add implib entry point
-    {
-        auto name = "implib"s;
-        auto h = std::hash<String>()(name);
-        auto i = std::make_unique<BuiltinInput>(swctx, *this, h);
-        auto ep = std::make_unique<sw::NativeBuiltinTargetEntryPoint>(addImportLibrary);
-        i->setEntryPoint(std::move(ep));
-        auto [ii, _] = swctx.registerInput(std::move(i));
-        builtin_inputs[ii].insert("implib-0.0.1"s);
-    }
 }
 
 Driver::~Driver()
 {
-#ifdef _WIN32
-    CoUninitialize();
-#endif
 }
 
 void Driver::processConfigureAc(const path &p)
@@ -354,6 +336,24 @@ struct DirInput : Input
     }
 };
 
+void Driver::setupBuild(SwBuild &b) const
+{
+    // add predefined entry points
+    auto pkgs = getProgramDetector().getDetectablePackages();
+
+    for (auto &[p, epl] : pkgs)
+    {
+        auto name = p.toString();
+        auto h = std::hash<String>()(name);
+        auto i = std::make_unique<BuiltinInput>(swctx, *this, h);
+        auto ep = std::make_unique<sw::NativeBuiltinTargetEntryPoint>(epl);
+        i->setEntryPoint(std::move(ep));
+        auto [ptr,_] = b.getContext().registerInput(std::move(i));
+        // TODO: check if there's package in storages, so we do not set input in that case?
+        b.getTargets()[p.getPath()].setInput(BuildInput(*ptr));
+    }
+}
+
 std::vector<std::unique_ptr<Input>> Driver::detectInputs(const path &p, InputType type) const
 {
     std::vector<std::unique_ptr<Input>> inputs;
@@ -480,8 +480,32 @@ PackageIdSet Driver::getBuiltinPackages(SwContext &swctx) const
     {
         std::unique_lock lk(m_bp);
         builtin_packages = load_builtin_packages(swctx);
+
+        // add more builtin packages
+        // detected - programs, compilers, tools
+        //getProgramDetector()
     }
     return *builtin_packages;
+}
+
+void Driver::getBuiltinInputs(SwContext &) const
+{
+    if (!builtin_inputs.empty())
+        return;
+    builtin_inputs = load_builtin_inputs(swctx, *this);
+
+    getProgramDetector();
+
+    // add implib entry point
+    {
+        auto name = "implib"s;
+        auto h = std::hash<String>()(name);
+        auto i = std::make_unique<BuiltinInput>(swctx, *this, h);
+        auto ep = std::make_unique<sw::NativeBuiltinTargetEntryPoint>(addImportLibrary);
+        i->setEntryPoint(std::move(ep));
+        auto [ii, _] = swctx.registerInput(std::move(i));
+        builtin_inputs[ii].insert("implib-0.0.1"s);
+    }
 }
 
 std::unique_ptr<SwBuild> Driver::create_build(SwContext &swctx) const
@@ -489,7 +513,9 @@ std::unique_ptr<SwBuild> Driver::create_build(SwContext &swctx) const
     auto &ctx = swctx;
     auto b = ctx.createBuild();
 
-    auto bpkgs = getBuiltinPackages(ctx);
+    //
+    getBuiltinInputs(swctx);
+    getBuiltinPackages(ctx); // installs packages
 
     // register targets and set inputs
     for (auto &[i, pkgs] : builtin_inputs)
@@ -585,7 +611,10 @@ std::unordered_map<path, PrepareConfigOutputData> Driver::build_configs1(SwConte
 
     NativeTargetEntryPoint ep;
     //                                                        load all our known targets
-    auto b2 = ep.createBuild(*b, getDllConfigSettings(swctx), getBuiltinPackages(ctx), {});
+    AllowedPackages pkgs2;
+    for (auto &p : getBuiltinPackages(ctx))
+        pkgs2.insert(p);
+    auto b2 = ep.createBuild(*b, getDllConfigSettings(swctx), pkgs2, {});
     PrepareConfig pc;
     for (auto &i : inputs)
         pc.addInput(b2, *i);

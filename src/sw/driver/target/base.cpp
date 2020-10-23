@@ -343,7 +343,8 @@ TargetSettings Target::getHostSettings() const
 
 const Program *Target::findProgramByExtension(const String &ext) const
 {
-    if (!hasExtension(ext))
+    SW_UNIMPLEMENTED;
+    /*if (!hasExtension(ext))
         return {};
     if (auto p = getProgram(ext))
         return p;
@@ -355,7 +356,7 @@ const Program *Target::findProgramByExtension(const String &ext) const
     auto &tgt = (*u)->getTarget();
     if (auto t = tgt.as<PredefinedProgram*>())
         return &t->getProgram();
-    throw SW_RUNTIME_ERROR("Target without PredefinedProgram: " + tgt.getPackage().toString());
+    throw SW_RUNTIME_ERROR("Target without PredefinedProgram: " + tgt.getPackage().toString());*/
 }
 
 String Target::getConfig() const

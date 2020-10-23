@@ -288,6 +288,8 @@ static void targetSettings2Command(primitives::Command &c, const TargetSetting &
 
 static auto get_settings_package_id(const TargetSetting &s)
 {
+    if (!s)
+        throw SW_RUNTIME_ERROR("Empty setting");
     bool extended_desc = s.isObject();
     UnresolvedPackage id;
     if (extended_desc)
@@ -323,6 +325,15 @@ static auto get_compiler_type(const UnresolvedPackage &id)
     return get_compiler_type(id.getPath());
 }
 
+static auto get_compiler_type2(const String &p)
+{
+    auto ct = CompilerType::UnspecifiedCompiler;
+    if (0);
+    else if (p == "msvc")
+        ct = CompilerType::MSVC;
+    return ct;
+}
+
 static std::unique_ptr<RcTool> activateRcCompiler(NativeCompiledTarget &nt, const UnresolvedPackage &id, const StringSet &exts)
 {
     auto &cld = nt.getMainBuild().getTargets();
@@ -332,8 +343,8 @@ static std::unique_ptr<RcTool> activateRcCompiler(NativeCompiledTarget &nt, cons
     auto i = cld.find(id, oss);
     if (!i)
     {
-        i = nt.getContext().getPredefinedTargets().find(id, oss);
-        if (!i)
+        //i = nt.getContext().getPredefinedTargets().find(id, oss);
+        //if (!i)
         {
             SW_UNIMPLEMENTED;
             //for (auto &e : exts)
@@ -401,8 +412,8 @@ std::unique_ptr<NativeCompiler> NativeCompiledTarget::activateCompiler(const Tar
     auto i = cld.find(id, oss);
     if (!i)
     {
-        i = getContext().getPredefinedTargets().find(id, oss);
-        if (!i)
+        //i = getContext().getPredefinedTargets().find(id, oss);
+        //if (!i)
         {
             SW_UNIMPLEMENTED;
             //for (auto &e : exts)
@@ -593,8 +604,9 @@ std::unique_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetS
     auto i = cld.find(id, oss);
     if (!i)
     {
-        i = getContext().getPredefinedTargets().find(id, oss);
-        if (!i)
+        SW_UNIMPLEMENTED;
+        //i = getContext().getPredefinedTargets().find(id, oss);
+        //if (!i)
             return {};
     }
     auto t = i->as<PredefinedProgram*>();
@@ -751,34 +763,23 @@ static StringSet get_asm_exts(const NativeCompiledTarget &t)
 
 void NativeCompiledTarget::findCompiler()
 {
-    ct = get_compiler_type(get_settings_package_id(getSettings()["native"]["program"]["cpp"]));
+    ct = get_compiler_type2(getSettings()["rule"]["cpp"]["type"].getValue());
     if (ct == CompilerType::UnspecifiedCompiler)
-        ct = get_compiler_type(get_settings_package_id(getSettings()["native"]["program"]["c"]));
+        ct = get_compiler_type2(getSettings()["native"]["program"]["c"].getValue());
     if (ct == CompilerType::UnspecifiedCompiler)
-        throw SW_RUNTIME_ERROR("Cannot find compiler " + get_settings_package_id(getSettings()["native"]["program"]["c"]).toString() + " for settings: " + getSettings().toString());
+        throw SW_RUNTIME_ERROR("Cannot determine compiler type " + get_settings_package_id(getSettings()["rule"]["cpp"]["package"]).toString() + " for settings: " + getSettings().toString());
 
-    prog_cl_cpp = activateCompiler(getSettings()["native"]["program"]["cpp"], get_cpp_exts(*this));
-    prog_cl_c = activateCompiler(getSettings()["native"]["program"]["c"], { ".c" });
-    prog_cl_asm = activateCompiler(getSettings()["native"]["program"]["asm"], get_asm_exts(*this));
-
-    setExtensionProgram(".c", *prog_cl_c);
-    for (auto &e : get_cpp_exts(*this))
-        setExtensionProgram(e, *prog_cl_cpp);
-    for (auto &e : get_asm_exts(*this))
-        setExtensionProgram(e, *prog_cl_asm);
-
+    Strings rules = { "c", "cpp", "asm", "lib", "link" };
     if (getBuildSettings().TargetOS.is(OSType::Windows))
-    {
-        // actually a missing setting
-        prog_cl_rc = activateRcCompiler(*this, "com.Microsoft.Windows.rc"s, {".rc"});
-    }
+        rules.push_back("rc");
+    for (auto &r : rules)
+        addDummyDependency(std::make_shared<Dependency>(UnresolvedPackage{ getSettings()["rule"]["cpp"]["package"].getValue() }));
 
-    prog_link = activateLinker(getSettings()["native"]["program"]["link"]);
-    prog_lib = activateLinker(getSettings()["native"]["program"]["lib"]);
-    if (!prog_lib)
-        throw SW_RUNTIME_ERROR("Librarian not found");
-    if (!prog_link)
-        throw SW_RUNTIME_ERROR("Linker not found");
+    //ct = get_compiler_type(get_settings_package_id(getSettings()["native"]["program"]["cpp"]));
+    //if (ct == CompilerType::UnspecifiedCompiler)
+        //ct = get_compiler_type(get_settings_package_id(getSettings()["native"]["program"]["c"]));
+    //if (ct == CompilerType::UnspecifiedCompiler)
+        //throw SW_RUNTIME_ERROR("Cannot find compiler " + get_settings_package_id(getSettings()["native"]["program"]["c"]).toString() + " for settings: " + getSettings().toString());
 
     // c++ goes first for correct include order
     if (!libstdcppset && getSettings()["native"]["stdlib"]["cpp"].isValue())
@@ -2178,9 +2179,10 @@ void NativeCompiledTarget::prepare_pass2()
         auto t = getMainBuild().getTargets().find(d.dep->getPackage(), d.dep->settings);
         if (!t)
         {
-            t = getContext().getPredefinedTargets().find(d.dep->getPackage(), d.dep->settings);
-            if (!t)
-                throw SW_RUNTIME_ERROR("No such target: " + d.dep->getPackage().toString());
+            SW_UNIMPLEMENTED;
+            //t = getContext().getPredefinedTargets().find(d.dep->getPackage(), d.dep->settings);
+            //if (!t)
+                //throw SW_RUNTIME_ERROR("No such target: " + d.dep->getPackage().toString());
         }
         d.dep->setTarget(*t);
     }
@@ -3052,7 +3054,8 @@ void NativeCompiledTarget::prepare_pass6_1()
         return;
 
     // circular deps detection
-    if (auto L = getLinker().as<VisualStudioLinker *>())
+    //SW_UNIMPLEMENTED;
+    /*if (auto L = getLinker().as<VisualStudioLinker *>())
     {
         for (auto &d : all_deps_normal)
         {
@@ -3072,7 +3075,7 @@ void NativeCompiledTarget::prepare_pass6_1()
                 break;
             }
         }
-    }
+    }*/
 }
 
 void NativeCompiledTarget::prepare_pass7()
@@ -3163,6 +3166,31 @@ void NativeCompiledTarget::prepare_pass8()
             getMergeObject() += Definition("_DEBUG");
     }
 
+    // create
+    prog_cl_cpp = activateCompiler(getSettings()["rule"]["cpp"], get_cpp_exts(*this));
+    prog_cl_c = activateCompiler(getSettings()["rule"]["c"], { ".c" });
+    prog_cl_asm = activateCompiler(getSettings()["rule"]["asm"], get_asm_exts(*this));
+
+    /*setExtensionProgram(".c", *prog_cl_c);
+    for (auto &e : get_cpp_exts(*this))
+    setExtensionProgram(e, *prog_cl_cpp);
+    for (auto &e : get_asm_exts(*this))
+    setExtensionProgram(e, *prog_cl_asm);*/
+
+    if (getBuildSettings().TargetOS.is(OSType::Windows))
+    {
+        // actually a missing setting
+        prog_cl_rc = activateRcCompiler(*this, "com.Microsoft.Windows.rc"s, {".rc"});
+    }
+
+    prog_link = activateLinker(getSettings()["native"]["program"]["link"]);
+    prog_lib = activateLinker(getSettings()["native"]["program"]["lib"]);
+    if (!prog_lib)
+        throw SW_RUNTIME_ERROR("Librarian not found");
+    if (!prog_link)
+        throw SW_RUNTIME_ERROR("Linker not found");
+
+    // setup
     setup_compiler(*prog_cl_c);
     setup_compiler(*prog_cl_cpp);
     setup_compiler(*prog_cl_asm);

@@ -9,7 +9,8 @@ namespace sw
 {
 
 struct Input;
-struct SwContext;
+//struct SwContext;
+struct SwBuild;
 enum class InputType : uint8_t;
 
 struct SW_CORE_API IDriver
@@ -29,6 +30,10 @@ struct SW_CORE_API IDriver
 
     /// returns driver capabilities
     //virtual uint64_t getCapabilities() const { return 0; }
+
+    //virtual std::vector<std::unique_ptr<Input>> getPredefinedInputs() const { return {}; }
+    // add predefined targets etc.
+    virtual void setupBuild(SwBuild &) const {}
 };
 
 } // namespace sw

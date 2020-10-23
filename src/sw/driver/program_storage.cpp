@@ -13,7 +13,7 @@
 namespace sw
 {
 
-ProgramStorage::~ProgramStorage() = default;
+/*ProgramStorage::~ProgramStorage() = default;
 
 void ProgramStorage::setExtensionProgram(const String &ext, const Program &p)
 {
@@ -70,6 +70,6 @@ void ProgramStorage::clearExtensions()
 void ProgramStorage::removeExtension(const String &ext)
 {
     extensions.erase(ext);
-}
+}*/
 
 }

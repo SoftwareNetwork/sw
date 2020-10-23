@@ -267,7 +267,7 @@ static std::pair<FilesOrdered, UnresolvedPackages> getFileDependencies(const SwC
     return getFileDependencies(swctx, in_config_file, gns);
 }
 
-Build NativeTargetEntryPoint::createBuild(SwBuild &swb, const TargetSettings &s, const PackageIdSet &pkgs, const PackagePath &prefix) const
+Build NativeTargetEntryPoint::createBuild(SwBuild &swb, const TargetSettings &s, const AllowedPackages &pkgs, const PackagePath &prefix) const
 {
     // we need to fix some settings before they go to targets
     auto settings = s;
@@ -303,7 +303,7 @@ Build NativeTargetEntryPoint::createBuild(SwBuild &swb, const TargetSettings &s,
     return b;
 }
 
-std::vector<ITargetPtr> NativeTargetEntryPoint::loadPackages(SwBuild &swb, const TargetSettings &s, const PackageIdSet &pkgs, const PackagePath &prefix) const
+std::vector<ITargetPtr> NativeTargetEntryPoint::loadPackages(SwBuild &swb, const TargetSettings &s, const AllowedPackages &pkgs, const PackagePath &prefix) const
 {
     auto b = createBuild(swb, s, pkgs, prefix);
     loadPackages1(b);

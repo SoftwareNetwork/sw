@@ -22,7 +22,7 @@ struct ProgramDetector;
 
 struct ModuleSwappableData
 {
-    PackageIdSet known_targets;
+    AllowedPackages known_targets;
     TargetSettings current_settings;
     std::vector<ITargetPtr> added_targets;
 };

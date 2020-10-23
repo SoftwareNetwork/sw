@@ -96,7 +96,8 @@ std::unique_ptr<SwBuild> SwContext::createBuild1()
 std::unique_ptr<SwBuild> SwContext::createBuild()
 {
     auto b = createBuild1();
-    b->getTargets() = getPredefinedTargets();
+    for (auto &[_, d] : drivers)
+        d->setupBuild(*b);
     return std::move(b);
 }
 

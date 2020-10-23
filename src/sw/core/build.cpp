@@ -351,6 +351,8 @@ void SwBuild::loadInputs()
     // and load packages
     for (auto &i : inputs)
     {
+        //if (i.getInput().getInput().isPredefinedInput())
+            //continue;
         auto tgts = i.loadTargets(*this);
         for (auto &tgt : tgts)
         {
@@ -369,8 +371,6 @@ void SwBuild::setTargetsToBuild()
     if (!targets_to_build.empty())
         return;
     targets_to_build = getTargets();
-    for (auto &[pkg, d] : swctx.getPredefinedTargets())
-        targets_to_build.erase(pkg.getPath());
 }
 
 void SwBuild::resolvePackages()
@@ -390,10 +390,12 @@ void SwBuild::resolvePackages()
 
                 // filter out existing targets as they come from same module
                 // reconsider?
-                if (auto id = u.toPackageId(); id && getTargets().find(*id) != getTargets().end())
+                if (auto id = u.toPackageId();
+                    id && getTargets().find(*id) != getTargets().end())
                     continue;
-                // filter out predefined targets
-                if (swctx.getPredefinedTargets().find(u.getPath()) != swctx.getPredefinedTargets().end(u.getPath()))
+                // filter out predefined packages
+                if (auto i = getTargets().find(u.getPath());
+                    i != getTargets().end(u.getPath()) && i->second.hasInput())
                     continue;
                 // filter out local targets
                 if (u.getPath().isRelative() || u.getPath().is_loc())
@@ -461,9 +463,9 @@ void SwBuild::resolvePackages(const std::vector<IDependency*> &udeps)
             bool everything_resolved = true;
             for (auto d : udeps)
             {
-                auto i = swctx.getPredefinedTargets().find(d->getUnresolvedPackage());
+                /*auto i = swctx.getPredefinedTargets().find(d->getUnresolvedPackage());
                 if (i != swctx.getPredefinedTargets().end())
-                    continue;
+                    continue;*/
                 const auto &pi = targets.find(d->getUnresolvedPackage());
                 if (pi == targets.end())
                 {
@@ -547,11 +549,6 @@ void SwBuild::loadPackages()
 {
     CHECK_STATE_AND_CHANGE(BuildState::PackagesResolved, BuildState::PackagesLoaded);
 
-    loadPackages(swctx.getPredefinedTargets());
-}
-
-void SwBuild::loadPackages(const TargetMap &predefined)
-{
     // load
     auto usc = can_use_saved_configs(*this);
     //               input hash
@@ -562,6 +559,7 @@ void SwBuild::loadPackages(const TargetMap &predefined)
         LOG_TRACE(logger, "build id " << this << " " << BOOST_CURRENT_FUNCTION << " round " << r++);
 
         std::map<TargetSettings, std::pair<PackageId, TargetContainer *>> load;
+        std::map<TargetSettings, std::pair<PackagePath, InputLoader *>> load2;
         for (const auto &[pkg, tgts] : getTargets())
         {
             for (const auto &tgt : tgts)
@@ -575,18 +573,13 @@ void SwBuild::loadPackages(const TargetMap &predefined)
                     auto i = getTargets().find(d->getUnresolvedPackage());
                     if (i == getTargets().end())
                     {
-                        auto i = predefined.find(d->getUnresolvedPackage());
-                        if (i != predefined.end())
+                        auto j = getTargets().find(d->getUnresolvedPackage().getPath());
+                        if (j != getTargets().end(d->getUnresolvedPackage().getPath())
+                            && j->second.hasInput()
+                            )
                         {
-                            auto k = i->second.findSuitable(d->getSettings());
-                            if (k != i->second.end())
-                            {
-                                d->setTarget(**k);
-                                continue;
-                            }
-
-                            // package was not resolved
-                            throw SW_RUNTIME_ERROR(tgt->getPackage().toString() + ": " + tgt->getSettings().toString() + ": predefined target is not resolved: " + d->getUnresolvedPackage().toString());
+                            load2.insert({ d->getSettings(), { j->first, &j->second } });
+                            continue;
                         }
 
                         // package was not resolved
@@ -600,16 +593,11 @@ void SwBuild::loadPackages(const TargetMap &predefined)
                         continue;
                     }
 
-                    if (predefined.find(d->getUnresolvedPackage().ppath) != predefined.end(d->getUnresolvedPackage().ppath))
-                    {
-                        throw SW_LOGIC_ERROR(tgt->getPackage().toString() + ": " + tgt->getSettings().toString() + ": predefined target is not resolved: " + d->getUnresolvedPackage().toString());
-                    }
-
                     load.insert({ d->getSettings(), { i->first, &i->second } });
                 }
             }
         }
-        if (load.empty())
+        if (load.empty() && load2.empty())
             break;
         bool loaded = false;
         for (auto &[s, d] : load)
@@ -652,7 +640,10 @@ void SwBuild::loadPackages(const TargetMap &predefined)
                 }
             }
 
-            auto tgts = getTargets()[d.first].loadPackages(*this, s, getTargets().getPackagesSet());
+            AllowedPackages pkgs2;
+            for (auto &p : getTargets().getPackagesSet())
+                pkgs2.insert(p);
+            auto tgts = getTargets()[d.first].loadPackages(*this, s, pkgs2);
             for (auto &tgt : tgts)
             {
                 if (tgt->getPackage() == d.first)
@@ -675,6 +666,13 @@ void SwBuild::loadPackages(const TargetMap &predefined)
                 e.resize(e.size() - 1);
                 throw SW_RUNTIME_ERROR("cannot load package " + e);
             }
+        }
+        for (auto &[s, d] : load2)
+        {
+            auto tgts = d.second->getInput().loadPackages(*this, s, { UnresolvedPackage{d.first} });
+            for (auto &tgt : tgts)
+                getTargets()[tgt->getPackage()].push_back(tgt);
+            loaded = true;
         }
         if (!loaded)
             break;
@@ -866,8 +864,6 @@ Commands SwBuild::getCommands() const
                     {
                         for (auto &[k, v] : in)
                         {
-                            if (swctx.getPredefinedTargets().find(PackageId(k)) != swctx.getPredefinedTargets().end())
-                                continue;
                             auto i = getTargets().find(PackageId(k));
                             if (i == getTargets().end())
                                 throw SW_RUNTIME_ERROR("dep not found: " + k);

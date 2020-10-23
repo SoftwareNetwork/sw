@@ -119,7 +119,6 @@ private:
     mutable FilesSorted fast_path_files;
 
     Commands getCommands() const;
-    void loadPackages(const TargetMap &predefined);
     void resolvePackages(const std::vector<IDependency*> &upkgs); // [2/2] step
     Executor &getBuildExecutor() const;
     Executor &getPrepareExecutor() const;

@@ -75,7 +75,7 @@ void Input::setEntryPoint(EntryPointPtr in)
     ep = std::move(in);
 }
 
-std::vector<ITargetPtr> Input::loadPackages(SwBuild &b, const TargetSettings &s, const PackageIdSet &allowed_packages, const PackagePath &prefix) const
+std::vector<ITargetPtr> Input::loadPackages(SwBuild &b, const TargetSettings &s, const AllowedPackages &allowed_packages, const PackagePath &prefix) const
 {
     // maybe save all targets on load?
 
@@ -112,9 +112,12 @@ void BuildInput::addPackage(const PackageId &in, const PackagePath &in_prefix)
     pkgs.insert(in);
 }
 
-std::vector<ITargetPtr> BuildInput::loadPackages(SwBuild &b, const TargetSettings &s, const PackageIdSet &allowed_packages) const
+std::vector<ITargetPtr> BuildInput::loadPackages(SwBuild &b, const TargetSettings &s, const AllowedPackages &allowed_packages) const
 {
-    return i.loadPackages(b, s, allowed_packages.empty() ? pkgs : allowed_packages, getPrefix());
+    AllowedPackages pkgs2;
+    for (auto &p : pkgs)
+        pkgs2.insert(p);
+    return i.loadPackages(b, s, allowed_packages.empty() ? pkgs2 : allowed_packages, getPrefix());
 }
 
 PackageIdSet BuildInput::listPackages(SwContext &swctx) const

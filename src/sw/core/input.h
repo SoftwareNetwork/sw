@@ -53,6 +53,8 @@ struct SW_CORE_API Input
     /// allow to throw input->load() into thread pool
     virtual bool isParallelLoadable() const { return false; }
 
+    //virtual bool isPredefinedInput() const { return false; }
+
     bool isOutdated(const fs::file_time_type &) const;
     bool isLoaded() const;
 
@@ -63,7 +65,7 @@ struct SW_CORE_API Input
 
     // no dry-run targets
     [[nodiscard]]
-    std::vector<ITargetPtr> loadPackages(SwBuild &, const TargetSettings &, const PackageIdSet &allowed_packages, const PackagePath &prefix) const;
+    std::vector<ITargetPtr> loadPackages(SwBuild &, const TargetSettings &, const AllowedPackages &allowed_packages, const PackagePath &prefix) const;
 
 private:
     SwContext &swctx;
@@ -86,7 +88,7 @@ struct SW_CORE_API BuildInput
 
     // no dry-run targets
     [[nodiscard]]
-    std::vector<ITargetPtr> loadPackages(SwBuild &, const TargetSettings &, const PackageIdSet &allowed_packages = {}) const;
+    std::vector<ITargetPtr> loadPackages(SwBuild &, const TargetSettings &, const AllowedPackages &allowed_packages = {}) const;
 
     PackageIdSet listPackages(SwContext &) const;
 

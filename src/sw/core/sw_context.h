@@ -25,9 +25,6 @@ struct SW_CORE_API SwCoreContext : SwManagerContext
     // from old builder ctx
     const OS &getHostOs() const { return HostOS; }
 
-    TargetMap &getPredefinedTargets() { return predefined_targets; }
-    const TargetMap &getPredefinedTargets() const { return predefined_targets; }
-
     const std::unordered_map<PackageId, TargetData> &getTargetData() const { return target_data; }
     TargetData &getTargetData(const PackageId &);
     const TargetData &getTargetData(const PackageId &) const;
@@ -45,7 +42,6 @@ private:
     // rename to detected?
     // not only detected, but also predefined? do not rename?
     OS HostOS;
-    TargetMap predefined_targets;
     std::unordered_map<PackageId, TargetData> target_data;
     TargetSettings host_settings;
     std::unique_ptr<InputDatabase> idb;

@@ -43,6 +43,8 @@ private:
 
 struct SW_DRIVER_CPP_API ProgramDetector
 {
+    ProgramDetector();
+
     // combined function for users
     void detectProgramsAndLibraries(DETECT_ARGS);
 
@@ -60,6 +62,10 @@ struct SW_DRIVER_CPP_API ProgramDetector
         return *t;
     }
 
+    using DetectablePackageEntryPoint = std::function<void(Build &)>;
+    using DetectablePackageEntryPoints = std::unordered_map<UnresolvedPackage, DetectablePackageEntryPoint>;
+    static DetectablePackageEntryPoints getDetectablePackages();
+
 private:
     struct VSInstance
     {
@@ -68,10 +74,11 @@ private:
     };
     using VSInstances = VersionMap<VSInstance>;
 
-    VSInstances vsinstances;
+    VSInstances vsinstances1;
     std::map<path, String> msvc_prefixes;
 
-    void gatherVSInstances();
+    static VSInstances gatherVSInstances();
+    VSInstances &getVSInstances();
     static void log_msg_detect_target(const String &m);
     String getMsvcPrefix(builder::detail::ResolvableCommand c);
     auto &getMsvcIncludePrefixes() { return msvc_prefixes; }

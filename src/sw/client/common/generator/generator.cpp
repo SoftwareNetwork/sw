@@ -846,8 +846,8 @@ void CMakeGenerator::generate(const sw::SwBuild &b)
             //throw SW_RUNTIME_ERROR("No targets in " + pkg.toString());
         }
         // filter out predefined targets
-        if (b.getContext().getPredefinedTargets().find(pkg) != b.getContext().getPredefinedTargets().end())
-            continue;
+        //if (b.getContext().getPredefinedTargets().find(pkg) != b.getContext().getPredefinedTargets().end())
+            //continue;
         if (!abs_pkg && pkg.getPath().isAbsolute())
             continue;
 
@@ -1242,8 +1242,8 @@ void SwBuildDescriptionGenerator::generate(const sw::SwBuild &b)
             //throw SW_RUNTIME_ERROR("No targets in " + pkg.toString());
         }
         // filter out predefined targets
-        if (b.getContext().getPredefinedTargets().find(pkg) != b.getContext().getPredefinedTargets().end())
-            continue;
+        //if (b.getContext().getPredefinedTargets().find(pkg) != b.getContext().getPredefinedTargets().end())
+            //continue;
 
         for (auto &t : tgts)
         {

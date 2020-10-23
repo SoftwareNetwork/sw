@@ -70,6 +70,10 @@ static String detectMsvcPrefix(builder::detail::ResolvableCommand c)
     return m[1].str();
 }
 
+ProgramDetector::ProgramDetector()
+{
+}
+
 String ProgramDetector::getMsvcPrefix(builder::detail::ResolvableCommand c)
 {
     auto &p = getMsvcIncludePrefixes();
@@ -87,9 +91,16 @@ String ProgramDetector::getMsvcPrefix(const path &prog) const
     return i->second;
 }
 
+ProgramDetector::DetectablePackageEntryPoints ProgramDetector::getDetectablePackages()
+{
+    DetectablePackageEntryPoints s;
+    s["com.Microsoft.VisualStudio.VC.cl"s] = [](Build &) {SW_UNIMPLEMENTED; };
+    return s;
+}
+
 void ProgramDetector::log_msg_detect_target(const String &m)
 {
-    LOG_TRACE(logger, m);
+    //LOG_TRACE(logger, m);
 }
 
 PredefinedProgramTarget &ProgramDetector::addProgram(DETECT_ARGS, const PackageId &id, const TargetSettings &ts, const std::shared_ptr<Program> &p)
@@ -101,9 +112,12 @@ PredefinedProgramTarget &ProgramDetector::addProgram(DETECT_ARGS, const PackageI
     return t;
 }
 
-void ProgramDetector::gatherVSInstances()
+ProgramDetector::VSInstances ProgramDetector::gatherVSInstances()
 {
+    VSInstances instances;
 #ifdef _WIN32
+    CoInitializeEx(0, 0);
+
     cmVSSetupAPIHelper h;
     h.EnumerateVSInstances();
     for (auto &i : h.instances)
@@ -118,9 +132,19 @@ void ProgramDetector::gatherVSInstances()
         VSInstance inst;
         inst.root = root;
         inst.version = v;
-        vsinstances.emplace(v, inst);
+        instances.emplace(v, inst);
     }
+
+    CoUninitialize();
 #endif
+    return instances;
+}
+
+ProgramDetector::VSInstances &ProgramDetector::getVSInstances()
+{
+    if (vsinstances1.empty())
+        vsinstances1 = gatherVSInstances();
+    return vsinstances1;
 }
 
 void ProgramDetector::detectMsvcCommon(const path &compiler, const Version &vs_version,
@@ -274,7 +298,7 @@ void ProgramDetector::detectMsvc15Plus(DETECT_ARGS)
         ts["os"]["kernel"] = ts1["os"]["kernel"];
         ts["os"]["arch"] = ts1["os"]["arch"];
 
-        for (auto &[_, instance] : vsinstances)
+        for (auto &[_, instance] : getVSInstances())
         {
             auto root = instance.root / "VC";
             auto v = instance.version;
@@ -615,7 +639,8 @@ void ProgramDetector::detectIntelCompilers(DETECT_ARGS)
                 addProgram(DETECT_ARGS_PASS, PackageId(ppath, v), {}, p);
 
                 // icl/xilib/xilink on win wants VC in PATH
-                auto &cld = s.getPredefinedTargets();
+                SW_UNIMPLEMENTED;
+                /*auto &cld = s.getPredefinedTargets();
                 auto i = cld["com.Microsoft.VisualStudio.VC.cl"].rbegin_releases();
                 if (i != cld["com.Microsoft.VisualStudio.VC.cl"].rend_releases())
                 {
@@ -627,7 +652,7 @@ void ProgramDetector::detectIntelCompilers(DETECT_ARGS)
                             p->getCommand()->addPathDirectory(x.parent_path());
                         }
                     }
-                }
+                }*/
             }
             return p;
         };
@@ -819,6 +844,7 @@ static void addSettings(TargetSettings &ts, bool force)
 void addSettingsAndSetHostPrograms(const SwCoreContext &swctx, TargetSettings &ts)
 {
     addSettings(ts, true);
+    return;
 
     auto to_upkg = [](const auto &s)
     {
@@ -833,10 +859,10 @@ void addSettingsAndSetHostPrograms(const SwCoreContext &swctx, TargetSettings &t
             k = v;
         };
 
-        auto i = swctx.getPredefinedTargets().find(UnresolvedPackage(v), ts);
+        /*auto i = swctx.getPredefinedTargets().find(UnresolvedPackage(v), ts);
         if (i)
             check_and_assign(k, version_level ? i->getPackage().toString(version_level) : i->getPackage().toString());
-        else
+        else*/
             check_and_assign(k, v);
     };
 
@@ -856,17 +882,17 @@ void addSettingsAndSetHostPrograms(const SwCoreContext &swctx, TargetSettings &t
         //ts["os"]["version"] = sdkver->toString(3); // cut off the last (fourth) number
 
         auto clpkg = "com.Microsoft.VisualStudio.VC.cl";
-        auto cl = swctx.getPredefinedTargets().find(clpkg);
+        //auto cl = swctx.getPredefinedTargets().find(clpkg);
 
         auto clangpppkg = "org.LLVM.clangpp";
-        auto clangpp = swctx.getPredefinedTargets().find(clpkg);
+        //auto clangpp = swctx.getPredefinedTargets().find(clpkg);
 
         if (0);
 #ifdef _MSC_VER
         // msvc + clangcl
         // clangcl must be compatible with msvc
         // and also clang actually
-        else if (cl != swctx.getPredefinedTargets().end(clpkg) && !cl->second.empty())
+        else if (0/*cl != swctx.getPredefinedTargets().end(clpkg) && !cl->second.empty()*/)
         {
             check_and_assign_dependency(ts["native"]["program"]["c"], to_upkg("com.Microsoft.VisualStudio.VC.cl"));
             check_and_assign_dependency(ts["native"]["program"]["cpp"], to_upkg("com.Microsoft.VisualStudio.VC.cl"));
@@ -876,7 +902,7 @@ void addSettingsAndSetHostPrograms(const SwCoreContext &swctx, TargetSettings &t
         }
         // separate?
 #else __clang__
-        else if (clangpp != swctx.getPredefinedTargets().end(clangpppkg) && !clangpp->second.empty())
+        else if (0/*clangpp != swctx.getPredefinedTargets().end(clangpppkg) && !clangpp->second.empty()*/)
         {
             check_and_assign_dependency(ts["native"]["program"]["c"], to_upkg("org.LLVM.clang"));
             check_and_assign_dependency(ts["native"]["program"]["cpp"], to_upkg("org.LLVM.clangpp"));
@@ -887,8 +913,8 @@ void addSettingsAndSetHostPrograms(const SwCoreContext &swctx, TargetSettings &t
         }
 #endif
         // add more defaults (clangcl, clang)
-        else
-            throw SW_RUNTIME_ERROR("Seems like you do not have Visual Studio installed.\nPlease, install the latest Visual Studio first.");
+        //else
+            //throw SW_RUNTIME_ERROR("Seems like you do not have Visual Studio installed.\nPlease, install the latest Visual Studio first.");
     }
     // add more defaults
     else
@@ -900,10 +926,10 @@ void addSettingsAndSetHostPrograms(const SwCoreContext &swctx, TargetSettings &t
 
         auto if_add = [&swctx, &check_and_assign_dependency](auto &s, const UnresolvedPackage &name)
         {
-            auto &pd = swctx.getPredefinedTargets();
+            /*auto &pd = swctx.getPredefinedTargets();
             auto i = pd.find(name);
             if (i == pd.end() || i->second.empty())
-                return false;
+                return false;*/
             check_and_assign_dependency(s, name.toString());
             return true;
         };
@@ -982,10 +1008,10 @@ void addSettingsAndSetPrograms(const SwCoreContext &swctx, TargetSettings &ts)
         };
 
         bool use_k = k && k.isValue();
-        auto i = swctx.getPredefinedTargets().find(UnresolvedPackage(use_k ? k.getValue() : v), ts);
+        /*auto i = swctx.getPredefinedTargets().find(UnresolvedPackage(use_k ? k.getValue() : v), ts);
         if (i)
             check_and_assign(k, version_level ? i->getPackage().toString(version_level) : i->getPackage().toString(), use_k);
-        else
+        else*/
             check_and_assign(k, v);
     };
 
@@ -997,9 +1023,9 @@ void addSettingsAndSetPrograms(const SwCoreContext &swctx, TargetSettings &ts)
         String sver;
         if (bs.TargetOS.Version)
             sver = "-" + bs.TargetOS.Version->toString();
-        check_and_assign_dependency(ts["native"]["stdlib"]["c"], to_upkg("com.Microsoft.Windows.SDK.ucrt" + sver));
-        check_and_assign_dependency(ts["native"]["stdlib"]["cpp"], to_upkg("com.Microsoft.VisualStudio.VC.libcpp"));
-        check_and_assign_dependency(ts["native"]["stdlib"]["kernel"], to_upkg("com.Microsoft.Windows.SDK.um" + sver));
+        //check_and_assign_dependency(ts["native"]["stdlib"]["c"], to_upkg("com.Microsoft.Windows.SDK.ucrt" + sver));
+        //check_and_assign_dependency(ts["native"]["stdlib"]["cpp"], to_upkg("com.Microsoft.VisualStudio.VC.libcpp"));
+        //check_and_assign_dependency(ts["native"]["stdlib"]["kernel"], to_upkg("com.Microsoft.Windows.SDK.um" + sver));
 
         // now find the latest available sdk (ucrt) and select it
         //TargetSettings oss;
@@ -1011,17 +1037,17 @@ void addSettingsAndSetPrograms(const SwCoreContext &swctx, TargetSettings &ts)
         //ts["os"]["version"] = sdkver->toString(3); // cut off the last (fourth) number
 
         auto clpkg = "com.Microsoft.VisualStudio.VC.cl";
-        auto cl = swctx.getPredefinedTargets().find(clpkg);
+        //auto cl = swctx.getPredefinedTargets().find(clpkg);
 
         auto clangpppkg = "org.LLVM.clangpp";
-        auto clangpp = swctx.getPredefinedTargets().find(clpkg);
+        //auto clangpp = swctx.getPredefinedTargets().find(clpkg);
 
         auto clangclpkg = "org.LLVM.clangcl";
-        auto clangcl = swctx.getPredefinedTargets().find(clangclpkg);
+        //auto clangcl = swctx.getPredefinedTargets().find(clangclpkg);
 
         if (0);
         // msvc
-        else if (cl != swctx.getPredefinedTargets().end(clpkg) && !cl->second.empty())
+        else if (0/*cl != swctx.getPredefinedTargets().end(clpkg) && !cl->second.empty()*/)
         {
             check_and_assign_dependency(ts["native"]["program"]["c"], to_upkg("com.Microsoft.VisualStudio.VC.cl"));
             check_and_assign_dependency(ts["native"]["program"]["cpp"], to_upkg("com.Microsoft.VisualStudio.VC.cl"));
@@ -1030,7 +1056,7 @@ void addSettingsAndSetPrograms(const SwCoreContext &swctx, TargetSettings &ts)
             check_and_assign_dependency(ts["native"]["program"]["link"], to_upkg("com.Microsoft.VisualStudio.VC.link"));
         }
         // clang
-        else if (clangpp != swctx.getPredefinedTargets().end(clangpppkg) && !clangpp->second.empty())
+        else if (0/*clangpp != swctx.getPredefinedTargets().end(clangpppkg) && !clangpp->second.empty()*/)
         {
             check_and_assign_dependency(ts["native"]["program"]["c"], to_upkg("org.LLVM.clang"));
             check_and_assign_dependency(ts["native"]["program"]["cpp"], to_upkg("org.LLVM.clangpp"));
@@ -1040,7 +1066,7 @@ void addSettingsAndSetPrograms(const SwCoreContext &swctx, TargetSettings &ts)
             check_and_assign_dependency(ts["native"]["program"]["link"], to_upkg("com.Microsoft.VisualStudio.VC.link"));
         }
         // clangcl
-        else if (clangcl != swctx.getPredefinedTargets().end(clangclpkg) && !clangcl->second.empty())
+        else if (0/*clangcl != swctx.getPredefinedTargets().end(clangclpkg) && !clangcl->second.empty()*/)
         {
             check_and_assign_dependency(ts["native"]["program"]["c"], to_upkg("org.LLVM.clangcl"));
             check_and_assign_dependency(ts["native"]["program"]["cpp"], to_upkg("org.LLVM.clangcl"));
@@ -1049,8 +1075,25 @@ void addSettingsAndSetPrograms(const SwCoreContext &swctx, TargetSettings &ts)
             check_and_assign_dependency(ts["native"]["program"]["lib"], to_upkg("com.Microsoft.VisualStudio.VC.lib"));
             check_and_assign_dependency(ts["native"]["program"]["link"], to_upkg("com.Microsoft.VisualStudio.VC.link"));
         }
-        else
-            throw SW_RUNTIME_ERROR("No suitable compilers found.\nPlease, install one first.");
+        //else
+            //throw SW_RUNTIME_ERROR("No suitable compilers found.\nPlease, install one first.");
+
+        ts["rule"]["c"]["package"] = "com.Microsoft.VisualStudio.VC.cl";
+        ts["rule"]["c"]["type"] = "msvc";
+
+        ts["rule"]["cpp"]["package"] = "com.Microsoft.VisualStudio.VC.cl";
+        ts["rule"]["cpp"]["type"] = "msvc";
+
+        ts["rule"]["asm"]["package"] = "com.Microsoft.VisualStudio.VC.ml";
+        ts["rule"]["asm"]["type"] = "msvc";
+
+        ts["rule"]["lib"]["package"] = "com.Microsoft.VisualStudio.VC.lib";
+        ts["rule"]["lib"]["type"] = "msvc";
+
+        ts["rule"]["link"]["package"] = "com.Microsoft.VisualStudio.VC.link";
+        ts["rule"]["link"]["type"] = "msvc";
+
+        ts["rule"]["rc"]["package"] = "com.Microsoft.Windows.rc";
     }
     // add more defaults
     else
@@ -1062,10 +1105,10 @@ void addSettingsAndSetPrograms(const SwCoreContext &swctx, TargetSettings &ts)
 
         auto if_add = [&swctx, &check_and_assign_dependency](auto &s, const UnresolvedPackage &name)
         {
-            auto &pd = swctx.getPredefinedTargets();
+            /*auto &pd = swctx.getPredefinedTargets();
             auto i = pd.find(name);
             if (i == pd.end() || i->second.empty())
-                return false;
+                return false;*/
             check_and_assign_dependency(s, name.toString());
             return true;
         };

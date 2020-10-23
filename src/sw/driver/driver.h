@@ -41,6 +41,8 @@ struct SW_DRIVER_CPP_API Driver : IDriver
     // IDriver api
     void loadInputsBatch(const std::set<Input *> &) const override;
     std::vector<std::unique_ptr<Input>> detectInputs(const path &, InputType) const override;
+    //std::vector<std::unique_ptr<Input>> getPredefinedInputs() const override;
+    void setupBuild(SwBuild &) const override;
 
     // frontends
     using AvailableFrontends = boost::bimap<boost::bimaps::multiset_of<FrontendType>, path>;
@@ -59,8 +61,10 @@ private:
     SwContext &swctx;
     mutable std::mutex m_bp;
     mutable std::optional<PackageIdSet> builtin_packages;
-    std::unordered_map<Input*, PackageIdSet> builtin_inputs;
+    using BuiltinInputs = std::unordered_map<Input*, PackageIdSet>;
+    mutable BuiltinInputs builtin_inputs;
     PackageIdSet getBuiltinPackages(SwContext &) const;
+    void getBuiltinInputs(SwContext &) const;
 
     mutable std::unique_ptr<SwBuild> b;
     std::unique_ptr<SwBuild> create_build(SwContext &swctx) const;

@@ -12,6 +12,7 @@ namespace sw
 IDependency::~IDependency() = default;
 ITarget::~ITarget() {}
 TargetEntryPoint::~TargetEntryPoint() = default;
+TargetData::~TargetData() = default;
 
 TargetFile::TargetFile(const path &p, bool is_generated, bool is_from_other_target)
     : fn(p), is_generated(is_generated), is_from_other_target(is_from_other_target)
@@ -40,15 +41,46 @@ TargetFile::TargetFile(const path &p, bool is_generated, bool is_from_other_targ
 
 //std::unique_ptr<IRule> ITarget::getRule() const { return nullptr; }
 
-TargetData::~TargetData()
+InputLoader::InputLoader() = default;
+InputLoader::~InputLoader() = default;
+
+InputLoader::InputLoader(const InputLoader &rhs)
 {
+    operator=(rhs);
 }
 
-TargetContainer::TargetContainer()
+InputLoader &InputLoader::operator=(const InputLoader &rhs)
 {
+    if (this == &rhs)
+        return *this;
+    if (rhs.input)
+        input = std::make_unique<BuildInput>(rhs.getInput());
+    return *this;
 }
+
+const BuildInput &InputLoader::getInput() const
+{
+    if (!input)
+        throw SW_RUNTIME_ERROR("No input was set");
+    return *input;
+}
+
+void InputLoader::setInput(const BuildInput &i)
+{
+    if (input && i != *input)
+        throw SW_RUNTIME_ERROR("Setting input twice: " + i.getInput().getName());
+    input = std::make_unique<BuildInput>(i);
+}
+
+std::vector<ITargetPtr> InputLoader::loadPackages(SwBuild &b, const TargetSettings &s, const AllowedPackages &allowed_packages) const
+{
+    return getInput().loadPackages(b, s, allowed_packages);
+}
+
+TargetContainer::TargetContainer() = default;
 
 TargetContainer::TargetContainer(const TargetContainer &rhs)
+    : InputLoader(rhs)
 {
     operator=(rhs);
 }
@@ -58,8 +90,6 @@ TargetContainer &TargetContainer::operator=(const TargetContainer &rhs)
     if (this == &rhs)
         return *this;
     targets = rhs.targets;
-    if (rhs.input)
-        input = std::make_unique<BuildInput>(rhs.getInput());
     return *this;
 }
 
@@ -125,25 +155,6 @@ bool TargetContainer::empty() const
 TargetContainer::Base::iterator TargetContainer::erase(Base::iterator begin, Base::iterator end)
 {
     return targets.erase(begin, end);
-}
-
-const BuildInput &TargetContainer::getInput() const
-{
-    if (!input)
-        throw SW_RUNTIME_ERROR("No input was set");
-    return *input;
-}
-
-void TargetContainer::setInput(const BuildInput &i)
-{
-    if (input && i != *input)
-        throw SW_RUNTIME_ERROR("Setting input twice: " + i.getInput().getName());
-    input = std::make_unique<BuildInput>(i);
-}
-
-std::vector<ITargetPtr> TargetContainer::loadPackages(SwBuild &b, const TargetSettings &s, const PackageIdSet &allowed_packages) const
-{
-    return getInput().loadPackages(b, s, allowed_packages);
 }
 
 TargetMap::~TargetMap()

@@ -186,8 +186,8 @@ SUBCOMMAND_DECL(integrate)
                 //throw SW_RUNTIME_ERROR("No targets in " + pkg2string(pkg));
             }
             // filter out predefined targets
-            if (b.getContext().getPredefinedTargets().find(pkg) != b.getContext().getPredefinedTargets().end())
-                continue;
+            //if (b.getContext().getPredefinedTargets().find(pkg) != b.getContext().getPredefinedTargets().end())
+                //continue;
 
             auto &t = **tgts.begin();
             const auto &s = t.getInterfaceSettings();
@@ -413,8 +413,8 @@ SUBCOMMAND_DECL(integrate)
                 //throw SW_RUNTIME_ERROR("No targets in " + pkg2string(pkg));
             }
             // filter out predefined targets
-            if (b.getContext().getPredefinedTargets().find(pkg) != b.getContext().getPredefinedTargets().end())
-                continue;
+            //if (b.getContext().getPredefinedTargets().find(pkg) != b.getContext().getPredefinedTargets().end())
+                //continue;
 
             auto &t = **tgts.begin();
             const auto &s = t.getInterfaceSettings();
@@ -433,8 +433,8 @@ SUBCOMMAND_DECL(integrate)
                     for (auto &[k, v] : p1.getMap())
                     {
                         sw::PackageId dep(k);
-                        if (b.getContext().getPredefinedTargets().find(dep) != b.getContext().getPredefinedTargets().end())
-                            continue;
+                        //if (b.getContext().getPredefinedTargets().find(dep) != b.getContext().getPredefinedTargets().end())
+                            //continue;
                         ctx.addLine("target_link_libraries(" + pkg2string(pkg) + " INTERFACE " + dep.toString() + ")");
                     }
                 }
@@ -463,8 +463,8 @@ SUBCOMMAND_DECL(integrate)
                 //throw SW_RUNTIME_ERROR("No targets in " + pkg2string(pkg));
             }
             // filter out predefined targets
-            if (b.getContext().getPredefinedTargets().find(pkg) != b.getContext().getPredefinedTargets().end())
-                continue;
+            //if (b.getContext().getPredefinedTargets().find(pkg) != b.getContext().getPredefinedTargets().end())
+                //continue;
 
             auto &t = **tgts.begin();
             const auto &s = t.getInterfaceSettings();
