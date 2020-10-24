@@ -114,10 +114,7 @@ void BuildInput::addPackage(const PackageId &in, const PackagePath &in_prefix)
 
 std::vector<ITargetPtr> BuildInput::loadPackages(SwBuild &b, const TargetSettings &s, const AllowedPackages &allowed_packages) const
 {
-    AllowedPackages pkgs2;
-    for (auto &p : pkgs)
-        pkgs2.insert(p);
-    return i.loadPackages(b, s, allowed_packages.empty() ? pkgs2 : allowed_packages, getPrefix());
+    return i.loadPackages(b, s, allowed_packages.empty() ? pkgs : allowed_packages, getPrefix());
 }
 
 PackageIdSet BuildInput::listPackages(SwContext &swctx) const

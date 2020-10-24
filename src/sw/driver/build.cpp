@@ -58,7 +58,7 @@ bool Build::isKnownTarget(const LocalPackage &p) const
 {
     return module_data.known_targets.empty() ||
         p.getPath().is_loc() || // used by cfg targets and checks
-        module_data.known_targets.find(p) != module_data.known_targets.end();
+        module_data.known_targets.contains(p);
 }
 
 path Build::getSourceDir(const LocalPackage &p) const

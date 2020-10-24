@@ -22,7 +22,19 @@ struct IRule;
 struct ITarget;
 struct SwBuild;
 
-using AllowedPackages = UnresolvedPackages;
+struct SW_CORE_API AllowedPackages
+{
+    AllowedPackages() = default;
+    AllowedPackages(const UnresolvedPackages &);
+    AllowedPackages(const PackageIdSet &);
+
+    bool contains(const PackageId &) const;
+    bool empty() const;
+
+private:
+    std::unordered_map<PackagePath, VersionRange> pkgs;
+    UnresolvedPackages branches;
+};
 
 struct SW_CORE_API TargetFile
 {

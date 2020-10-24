@@ -640,10 +640,7 @@ void SwBuild::loadPackages()
                 }
             }
 
-            AllowedPackages pkgs2;
-            for (auto &p : getTargets().getPackagesSet())
-                pkgs2.insert(p);
-            auto tgts = getTargets()[d.first].loadPackages(*this, s, pkgs2);
+            auto tgts = getTargets()[d.first].loadPackages(*this, s, getTargets().getPackagesSet());
             for (auto &tgt : tgts)
             {
                 if (tgt->getPackage() == d.first)
@@ -669,7 +666,7 @@ void SwBuild::loadPackages()
         }
         for (auto &[s, d] : load2)
         {
-            auto tgts = d.second->getInput().loadPackages(*this, s, { UnresolvedPackage{d.first} });
+            auto tgts = d.second->getInput().loadPackages(*this, s, UnresolvedPackages{ UnresolvedPackage{d.first} });
             for (auto &tgt : tgts)
                 getTargets()[tgt->getPackage()].push_back(tgt);
             loaded = true;

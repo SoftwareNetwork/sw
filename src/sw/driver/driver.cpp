@@ -611,10 +611,7 @@ std::unordered_map<path, PrepareConfigOutputData> Driver::build_configs1(SwConte
 
     NativeTargetEntryPoint ep;
     //                                                        load all our known targets
-    AllowedPackages pkgs2;
-    for (auto &p : getBuiltinPackages(ctx))
-        pkgs2.insert(p);
-    auto b2 = ep.createBuild(*b, getDllConfigSettings(swctx), pkgs2, {});
+    auto b2 = ep.createBuild(*b, getDllConfigSettings(swctx), getBuiltinPackages(ctx), {});
     PrepareConfig pc;
     for (auto &i : inputs)
         pc.addInput(b2, *i);

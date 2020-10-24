@@ -14,6 +14,51 @@ ITarget::~ITarget() {}
 TargetEntryPoint::~TargetEntryPoint() = default;
 TargetData::~TargetData() = default;
 
+AllowedPackages::AllowedPackages(const UnresolvedPackages &in)
+{
+    for (auto &u : in)
+    {
+        if (u.getRange().isBranch())
+            branches.insert(u);
+        else
+        {
+            if (pkgs.contains(u.getPath()))
+                pkgs[u.getPath()] |= u.getRange();
+            else
+                pkgs.emplace(u.getPath(), u.getRange());
+        }
+    }
+}
+
+AllowedPackages::AllowedPackages(const PackageIdSet &in)
+{
+    for (auto &u : in)
+    {
+        if (u.getVersion().isBranch())
+            branches.insert(u);
+        else
+        {
+            if (pkgs.contains(u.getPath()))
+                pkgs[u.getPath()] |= u.getVersion();
+            else
+                pkgs.emplace(u.getPath(), u.getVersion());
+        }
+    }
+}
+
+bool AllowedPackages::contains(const PackageId &p) const
+{
+    auto i = pkgs.find(p.getPath());
+    return (i != pkgs.end() && i->second.hasVersion(p.getVersion()))
+        || branches.contains(p);
+        ;
+}
+
+bool AllowedPackages::empty() const
+{
+    return pkgs.empty();
+}
+
 TargetFile::TargetFile(const path &p, bool is_generated, bool is_from_other_target)
     : fn(p), is_generated(is_generated), is_from_other_target(is_from_other_target)
 {
