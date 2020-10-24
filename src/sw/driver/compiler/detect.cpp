@@ -4,6 +4,7 @@
 #include "detect.h"
 
 #include "../misc/cmVSSetupHelper.h"
+#include "../build.h"
 #include "../command.h"
 #include "../program_version_storage.h"
 #include "../target/target2.h"
@@ -70,6 +71,23 @@ static String detectMsvcPrefix(builder::detail::ResolvableCommand c)
     return m[1].str();
 }
 
+static bool hasConsoleColorProcessing()
+{
+#ifdef _WIN32
+    bool r = false;
+    DWORD mode;
+    // Try enabling ANSI escape sequence support on Windows 10 terminals.
+    auto console_ = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (GetConsoleMode(console_, &mode))
+        r |= (bool)(mode & ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+    console_ = GetStdHandle(STD_ERROR_HANDLE);
+    if (GetConsoleMode(console_, &mode))
+        r &= (bool)(mode & ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+    return r;
+#endif
+    return true;
+}
+
 ProgramDetector::ProgramDetector()
 {
 }
@@ -94,7 +112,31 @@ String ProgramDetector::getMsvcPrefix(const path &prog) const
 ProgramDetector::DetectablePackageEntryPoints ProgramDetector::getDetectablePackages()
 {
     DetectablePackageEntryPoints s;
-    s["com.Microsoft.VisualStudio.VC.cl"s] = [](Build &) {SW_UNIMPLEMENTED; };
+    s["com.Microsoft.VisualStudio.VC.cl"s] = [](Build &b)
+    {
+        getProgramDetector().detectMsvc15Plus(DETECT_ARGS_PASS);
+        //getProgramDetector().detectMsvc14AndOlder(DETECT_ARGS_PASS);
+    };
+    s["com.Microsoft.VisualStudio.VC.link"s] = [](Build &b)
+    {
+        getProgramDetector().detectMsvc15Plus(DETECT_ARGS_PASS);
+        //getProgramDetector().detectMsvc14AndOlder(DETECT_ARGS_PASS);
+    };
+    s["com.Microsoft.VisualStudio.VC.libcpp"s] = [](Build &b)
+    {
+        getProgramDetector().detectMsvc15Plus(DETECT_ARGS_PASS);
+        //getProgramDetector().detectMsvc14AndOlder(DETECT_ARGS_PASS);
+    };
+    s["com.Microsoft.Windows.SDK.ucrt"s] = [](Build &b)
+    {
+        getProgramDetector().detectWindowsSdk(DETECT_ARGS_PASS);
+        //getProgramDetector().detectMsvc14AndOlder(DETECT_ARGS_PASS);
+    };
+    s["com.Microsoft.Windows.SDK.um"s] = [](Build &b)
+    {
+        getProgramDetector().detectWindowsSdk(DETECT_ARGS_PASS);
+        //getProgramDetector().detectMsvc14AndOlder(DETECT_ARGS_PASS);
+    };
     return s;
 }
 
@@ -108,8 +150,18 @@ PredefinedProgramTarget &ProgramDetector::addProgram(DETECT_ARGS, const PackageI
     auto &t = addTarget<PredefinedProgramTarget>(DETECT_ARGS_PASS, id, ts);
     t.public_ts["output_file"] = to_string(normalize_path(p->file));
     t.setProgram(p->clone());
-    LOG_TRACE(logger, "Detected program: " + to_string(p->file.u8string()));
+    //LOG_TRACE(logger, "Detected program: " + to_string(p->file.u8string()));
     return t;
+}
+
+template <class T>
+static T &ProgramDetector::addTarget(DETECT_ARGS, const PackageId &id, const TargetSettings &ts)
+{
+    log_msg_detect_target("Detected target: " + id.toString() + ": " + ts.toString());
+
+    auto t = std::make_shared<T>(sw::LocalPackage(b.getContext().getLocalStorage(), id), ts);
+    static_cast<ExtendedBuild &>(b).addTarget(t);
+    return *t;
 }
 
 ProgramDetector::VSInstances ProgramDetector::gatherVSInstances()
@@ -164,28 +216,27 @@ void ProgramDetector::detectMsvcCommon(const path &compiler, const Version &vs_v
     {
         auto p = std::make_shared<SimpleProgram>();
         p->file = compiler / "cl.exe";
-        if (fs::exists(p->file))
-        {
-            auto c = p->getCommand();
-            if (s.getHostOs().Arch != target_arch)
-                c->addPathDirectory(host_root);
-            msvc_prefix = getMsvcPrefix(*c);
-            // run getVersion via prepared command
-            builder::detail::ResolvableCommand c2 = *c;
-            cl_exe_version = getVersion(s, c2);
-            if (vs_version.isPreRelease())
-                cl_exe_version.getExtra() = vs_version.getExtra();
-            auto &cl = addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.cl", cl_exe_version), ts, p);
-
-            // rule based msvc
-            if (s.getHostOs().Arch == target_arch)
-            {
-                auto &t = addTarget<PredefinedTargetWithRule>(DETECT_ARGS_PASS, PackageId{"msvc", cl_exe_version}, ts);
-                t.public_ts["output_file"] = to_string(normalize_path(p->file));
-            }
-        }
-        else
+        if (!fs::exists(p->file))
             return;
+
+        auto c = p->getCommand();
+        if (b.getContext().getHostOs().Arch != target_arch)
+            c->addPathDirectory(host_root);
+        msvc_prefix = getMsvcPrefix(*c);
+        // run getVersion via prepared command
+        builder::detail::ResolvableCommand c2 = *c;
+        cl_exe_version = getVersion(b.getContext(), c2);
+        if (vs_version.isPreRelease())
+            cl_exe_version.getExtra() = vs_version.getExtra();
+        auto &cl = addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.cl", cl_exe_version), ts, p);
+
+        // rule based msvc
+        /*if (b.getContext().getHostOs().Arch == target_arch)
+        {
+            SW_UNIMPLEMENTED;
+            auto &t = addTarget<PredefinedTargetWithRule>(DETECT_ARGS_PASS, PackageId{"msvc", cl_exe_version}, ts);
+            t.public_ts["output_file"] = to_string(normalize_path(p->file));
+        }*/
     }
 
     // lib, link
@@ -194,8 +245,7 @@ void ProgramDetector::detectMsvcCommon(const path &compiler, const Version &vs_v
         p->file = compiler / "link.exe";
         if (fs::exists(p->file))
             addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.link", cl_exe_version), ts, p);
-
-        if (s.getHostOs().Arch != target_arch)
+        if (b.getContext().getHostOs().Arch != target_arch)
         {
             auto c = p->getCommand();
             c->addPathDirectory(host_root);
@@ -205,8 +255,7 @@ void ProgramDetector::detectMsvcCommon(const path &compiler, const Version &vs_v
         p->file = compiler / "lib.exe";
         if (fs::exists(p->file))
             addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.lib", cl_exe_version), ts, p);
-
-        if (s.getHostOs().Arch != target_arch)
+        if (b.getContext().getHostOs().Arch != target_arch)
         {
             auto c = p->getCommand();
             c->addPathDirectory(host_root);
@@ -214,7 +263,7 @@ void ProgramDetector::detectMsvcCommon(const path &compiler, const Version &vs_v
     }
 
     // ASM
-    if (target_arch == ArchType::x86_64 || target_arch == ArchType::x86)
+    /*if (target_arch == ArchType::x86_64 || target_arch == ArchType::x86)
     {
         auto p = std::make_shared<SimpleProgram>();
         p->file = compiler / (target_arch == ArchType::x86_64 ? "ml64.exe" : "ml.exe");
@@ -232,7 +281,7 @@ void ProgramDetector::detectMsvcCommon(const path &compiler, const Version &vs_v
         if (fs::exists(p->file))
             addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.dumpbin", cl_exe_version), ts, p);
         // should we add path dir here?
-    }
+    }*/
 
     // libc++
     {
@@ -286,42 +335,40 @@ void ProgramDetector::detectMsvc15Plus(DETECT_ARGS)
 {
     // https://docs.microsoft.com/en-us/cpp/c-runtime-library/crt-library-features?view=vs-2019
 
-    const auto host = toStringWindows(s.getHostOs().Arch);
-    auto new_settings = s.getHostOs();
+    auto &eb = static_cast<ExtendedBuild &>(b);
+    BuildSettings new_settings = eb.getSettings();
+    const auto host = toStringWindows(b.getContext().getHostOs().Arch);
+    const auto target_arch = new_settings.TargetOS.Arch;
 
-    for (auto target_arch : {ArchType::x86_64,ArchType::x86,ArchType::arm,ArchType::aarch64})
+    // create settings with minimal data
+    auto &ts1 = eb.getSettings();
+    TargetSettings ts;
+    ts["os"]["kernel"] = ts1["os"]["kernel"];
+    ts["os"]["arch"] = ts1["os"]["arch"];
+
+    for (auto &[_, instance] : getVSInstances())
     {
-        new_settings.Arch = target_arch;
+        auto root = instance.root / "VC";
+        auto v = instance.version;
 
-        auto ts1 = toTargetSettings(new_settings);
-        TargetSettings ts;
-        ts["os"]["kernel"] = ts1["os"]["kernel"];
-        ts["os"]["arch"] = ts1["os"]["arch"];
-
-        for (auto &[_, instance] : getVSInstances())
+        if (v.getMajor() < 15)
         {
-            auto root = instance.root / "VC";
-            auto v = instance.version;
-
-            if (v.getMajor() < 15)
-            {
-                // continue; // instead of throw ?
-                throw SW_RUNTIME_ERROR("VS < 15 must be handled differently");
-            }
-
-            root = root / "Tools" / "MSVC" / boost::trim_copy(read_file(root / "Auxiliary" / "Build" / "Microsoft.VCToolsVersion.default.txt"));
-            auto idir = root / "include";
-
-            // get suffix
-            auto target = toStringWindows(target_arch);
-
-            auto compiler = root / "bin";
-            auto host_root = compiler / ("Host" + host) / host;
-
-            compiler /= path("Host" + host) / target;
-
-            detectMsvcCommon(compiler, v, target_arch, host_root, ts, idir, root, target, DETECT_ARGS_PASS);
+            // continue; // instead of throw ?
+            throw SW_RUNTIME_ERROR("VS < 15 must be handled differently");
         }
+
+        root = root / "Tools" / "MSVC" / boost::trim_copy(read_file(root / "Auxiliary" / "Build" / "Microsoft.VCToolsVersion.default.txt"));
+        auto idir = root / "include";
+
+        // get suffix
+        auto target = toStringWindows(target_arch);
+
+        auto compiler = root / "bin";
+        auto host_root = compiler / ("Host" + host) / host;
+
+        compiler /= path("Host" + host) / target;
+
+        detectMsvcCommon(compiler, v, target_arch, host_root, ts, idir, root, target, DETECT_ARGS_PASS);
     }
 }
 
@@ -359,7 +406,8 @@ void ProgramDetector::detectMsvc14AndOlder(DETECT_ARGS)
         }
     };
 
-    auto new_settings = s.getHostOs();
+    SW_UNIMPLEMENTED;
+    /*auto new_settings = s.getHostOs();
 
     // no ArchType::aarch64?
     for (auto target_arch : { ArchType::x86_64,ArchType::x86,ArchType::arm, })
@@ -421,32 +469,15 @@ void ProgramDetector::detectMsvc14AndOlder(DETECT_ARGS)
 
             detectMsvcCommon(compiler, v, target_arch, host_root, ts, idir, root, libdir, DETECT_ARGS_PASS);
         }
-    }
+    }*/
 }
 
-void ProgramDetector::detectMsvc(DETECT_ARGS)
+/*void ProgramDetector::detectMsvc(DETECT_ARGS)
 {
     detectMsvc15Plus(DETECT_ARGS_PASS);
     detectMsvc14AndOlder(DETECT_ARGS_PASS);
     detectWindowsSdk(DETECT_ARGS_PASS);
-}
-
-static bool hasConsoleColorProcessing()
-{
-#ifdef _WIN32
-    bool r = false;
-    DWORD mode;
-    // Try enabling ANSI escape sequence support on Windows 10 terminals.
-    auto console_ = GetStdHandle(STD_OUTPUT_HANDLE);
-    if (GetConsoleMode(console_, &mode))
-        r |= (bool)(mode & ENABLE_VIRTUAL_TERMINAL_PROCESSING);
-    console_ = GetStdHandle(STD_ERROR_HANDLE);
-    if (GetConsoleMode(console_, &mode))
-        r &= (bool)(mode & ENABLE_VIRTUAL_TERMINAL_PROCESSING);
-    return r;
-#endif
-    return true;
-}
+}*/
 
 void ProgramDetector::detectWindowsClang(DETECT_ARGS)
 {
@@ -459,7 +490,7 @@ void ProgramDetector::detectWindowsClang(DETECT_ARGS)
     // clang-cl, move to msvc?
 
     // C, C++
-    {
+    /*{
         auto p = std::make_shared<SimpleProgram>();
         p->file = bin_llvm_path / "clang-cl.exe";
         //C->file = base_llvm_path / "msbuild-bin" / "cl.exe";
@@ -618,7 +649,7 @@ void ProgramDetector::detectWindowsClang(DETECT_ARGS)
             // is it able to find VC STL itself?
             //COpts2.System.IncludeDirectories.insert(base_llvm_path / "lib" / "clang" / C->getVersion().toString() / "include");
         }
-    }
+    }*/
 }
 
 void ProgramDetector::detectIntelCompilers(DETECT_ARGS)
@@ -627,8 +658,10 @@ void ProgramDetector::detectIntelCompilers(DETECT_ARGS)
 
     // C, C++
 
+    SW_UNIMPLEMENTED;
+
     // win
-    {
+    /*{
         auto add_prog_from_path = [DETECT_ARGS_PASS_TO_LAMBDA](const path &name, const String &ppath)
         {
             auto p = std::make_shared<SimpleProgram>();
@@ -639,8 +672,7 @@ void ProgramDetector::detectIntelCompilers(DETECT_ARGS)
                 addProgram(DETECT_ARGS_PASS, PackageId(ppath, v), {}, p);
 
                 // icl/xilib/xilink on win wants VC in PATH
-                SW_UNIMPLEMENTED;
-                /*auto &cld = s.getPredefinedTargets();
+                auto &cld = s.getPredefinedTargets();
                 auto i = cld["com.Microsoft.VisualStudio.VC.cl"].rbegin_releases();
                 if (i != cld["com.Microsoft.VisualStudio.VC.cl"].rend_releases())
                 {
@@ -652,7 +684,7 @@ void ProgramDetector::detectIntelCompilers(DETECT_ARGS)
                             p->getCommand()->addPathDirectory(x.parent_path());
                         }
                     }
-                }*/
+                }
             }
             return p;
         };
@@ -717,12 +749,13 @@ void ProgramDetector::detectIntelCompilers(DETECT_ARGS)
                 addProgram(DETECT_ARGS_PASS, PackageId("com.intel.compiler.cpp", v), {}, p);
             }
         }
-    }
+    }*/
 }
 
 void ProgramDetector::detectWindowsCompilers(DETECT_ARGS)
 {
-    detectMsvc(DETECT_ARGS_PASS);
+    SW_UNIMPLEMENTED;
+    //detectMsvc(DETECT_ARGS_PASS);
     detectWindowsClang(DETECT_ARGS_PASS);
 }
 
@@ -730,7 +763,8 @@ void ProgramDetector::detectNonWindowsCompilers(DETECT_ARGS)
 {
     bool colored_output = hasConsoleColorProcessing();
 
-    auto resolve_and_add = [DETECT_ARGS_PASS_TO_LAMBDA, &colored_output]
+    SW_UNIMPLEMENTED;
+    /*auto resolve_and_add = [DETECT_ARGS_PASS_TO_LAMBDA, &colored_output]
     (const path &prog, const String &ppath, int color_diag = 0, const String &regex_prefix = {})
     {
         auto p = std::make_shared<SimpleProgram>();
@@ -797,12 +831,13 @@ void ProgramDetector::detectNonWindowsCompilers(DETECT_ARGS)
     {
         resolve_and_add("clang-" + std::to_string(i), "org.LLVM.clang", 2, clang_regex_prefix);
         resolve_and_add("clang++-" + std::to_string(i), "org.LLVM.clangpp", 2, clang_regex_prefix);
-    }
+    }*/
 }
 
 void ProgramDetector::detectNativeCompilers(DETECT_ARGS)
 {
-    auto &os = s.getHostOs();
+    SW_UNIMPLEMENTED;
+    /*auto &os = s.getHostOs();
     if (os.is(OSType::Windows) || os.is(OSType::Cygwin) || os.is(OSType::Mingw))
     {
         // we should pass target settings here and check according target os (cygwin)
@@ -812,7 +847,7 @@ void ProgramDetector::detectNativeCompilers(DETECT_ARGS)
     }
     else
         detectNonWindowsCompilers(DETECT_ARGS_PASS);
-    detectIntelCompilers(DETECT_ARGS_PASS);
+    detectIntelCompilers(DETECT_ARGS_PASS);*/
 }
 
 void ProgramDetector::detectProgramsAndLibraries(DETECT_ARGS)

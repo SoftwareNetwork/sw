@@ -818,7 +818,8 @@ const sw::TargetMap &SwClientContext::getPredefinedTargets(sw::SwContext &swctx)
     if (!tm)
     {
         sw::TargetMap tm;
-        sw::getProgramDetector().detectProgramsAndLibraries(swctx, tm);
+        SW_UNIMPLEMENTED;
+        //sw::getProgramDetector().detectProgramsAndLibraries(swctx, tm);
         this->tm = tm;
     }
     return *tm;

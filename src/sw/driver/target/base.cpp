@@ -148,7 +148,7 @@ void TargetBase::addTarget2(Target &t)
         t.ts["dry-run"] = "true";
     }
 
-    getSolution().module_data.added_targets.push_back(t.shared_from_this());
+    static_cast<ExtendedBuild&>(getSolution()).addTarget(t.shared_from_this());
 }
 
 const SwContext &TargetBase::getContext() const
@@ -181,7 +181,7 @@ const LocalPackage &TargetBase::getPackage() const
 Target::Target(TargetBase &parent, const PackageId &pkg)
     : TargetBase(parent, pkg)
 {
-    ts = getSolution().module_data.current_settings;
+    ts = static_cast<ExtendedBuild &>(getSolution()).getSettings();
     bs = ts;
 
     if (auto t0 = dynamic_cast<const Target*>(&parent))

@@ -267,7 +267,7 @@ static std::pair<FilesOrdered, UnresolvedPackages> getFileDependencies(const SwC
     return getFileDependencies(swctx, in_config_file, gns);
 }
 
-Build NativeTargetEntryPoint::createBuild(SwBuild &swb, const TargetSettings &s, const AllowedPackages &pkgs, const PackagePath &prefix) const
+ExtendedBuild NativeTargetEntryPoint::createBuild(SwBuild &swb, const TargetSettings &s, const AllowedPackages &pkgs, const PackagePath &prefix) const
 {
     // we need to fix some settings before they go to targets
     auto settings = s;
@@ -282,7 +282,7 @@ Build NativeTargetEntryPoint::createBuild(SwBuild &swb, const TargetSettings &s,
     if (settings["driver"]["force-source"].isValue())
         dd->force_source = load(nlohmann::json::parse(settings["driver"]["force-source"].getValue()));
 
-    Build b(swb);
+    ExtendedBuild b(swb);
     b.dd = dd.get();
     // leave as b. setting
     b.DryRun = settings["driver"]["dry-run"] == "true";

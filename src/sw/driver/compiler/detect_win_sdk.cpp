@@ -3,6 +3,7 @@
 
 #include "detect.h"
 
+#include "../build.h"
 #include "../command.h"
 #include "../program_version_storage.h"
 
@@ -45,7 +46,7 @@ struct WinKit
     Strings idirs; // additional idirs
     bool without_ldir = false; // when there's not libs
 
-    std::vector<sw::PredefinedTarget*> add(DETECT_ARGS, sw::OS settings, const sw::Version &v)
+    sw::PredefinedTarget *add(DETECT_ARGS, const sw::Version &v)
     {
         auto idir = kit_root / "Include" / idir_subversion;
         if (!fs::exists(idir / name))
@@ -54,48 +55,45 @@ struct WinKit
             return {};
         }
 
-        std::vector<sw::PredefinedTarget *> targets;
-        for (auto target_arch : { sw::ArchType::x86_64,sw::ArchType::x86,sw::ArchType::arm,sw::ArchType::aarch64 })
+        auto &eb = static_cast<sw::ExtendedBuild &>(b);
+        sw::BuildSettings new_settings = eb.getSettings();
+        const auto target_arch = new_settings.TargetOS.Arch;
+
+        // create settings with minimal data
+        auto &ts1 = eb.getSettings();
+        sw::TargetSettings ts;
+        ts["os"]["kernel"] = ts1["os"]["kernel"];
+        ts["os"]["arch"] = ts1["os"]["arch"];
+
+        auto libdir = kit_root / "Lib" / ldir_subversion / name / toStringWindows(target_arch);
+        if (fs::exists(libdir))
         {
-            settings.Arch = target_arch;
-
-            auto ts1 = toTargetSettings(settings);
-            sw::TargetSettings ts;
-            ts["os"]["kernel"] = ts1["os"]["kernel"];
-            ts["os"]["arch"] = ts1["os"]["arch"];
-
-            auto libdir = kit_root / "Lib" / ldir_subversion / name / toStringWindows(target_arch);
-            if (fs::exists(libdir))
-            {
-                auto &t = sw::ProgramDetector::addTarget<sw::PredefinedTarget>(DETECT_ARGS_PASS, sw::LocalPackage(s.getLocalStorage(), sw::PackageId("com.Microsoft.Windows.SDK." + name, v)), ts);
-                //t.ts["os"]["version"] = v.toString();
-
-                t.public_ts["properties"]["6"]["system_include_directories"].push_back(idir / name);
-                for (auto &i : idirs)
-                    t.public_ts["properties"]["6"]["system_include_directories"].push_back(idir / i);
-                t.public_ts["properties"]["6"]["system_link_directories"].push_back(libdir);
-                targets.push_back(&t);
-            }
-            else if (without_ldir)
-            {
-                auto &t = sw::ProgramDetector::addTarget<sw::PredefinedTarget>(DETECT_ARGS_PASS, sw::LocalPackage(s.getLocalStorage(), sw::PackageId("com.Microsoft.Windows.SDK." + name, v)), ts);
-                //t.ts["os"]["version"] = v.toString();
-
-                t.public_ts["properties"]["6"]["system_include_directories"].push_back(idir / name);
-                for (auto &i : idirs)
-                    t.public_ts["properties"]["6"]["system_include_directories"].push_back(idir / i);
-                targets.push_back(&t);
-            }
-            else
-                LOG_TRACE(logger, "Libdir " << libdir << " not found for library: " << name);
+            auto &t = sw::ProgramDetector::addTarget<sw::PredefinedTarget>(DETECT_ARGS_PASS,
+                sw::LocalPackage(b.getContext().getLocalStorage(), sw::PackageId("com.Microsoft.Windows.SDK." + name, v)), ts);
+            t.public_ts["properties"]["6"]["system_include_directories"].push_back(idir / name);
+            for (auto &i : idirs)
+                t.public_ts["properties"]["6"]["system_include_directories"].push_back(idir / i);
+            t.public_ts["properties"]["6"]["system_link_directories"].push_back(libdir);
+            return &t;
         }
-        return targets;
+        else if (without_ldir)
+        {
+            auto &t = sw::ProgramDetector::addTarget<sw::PredefinedTarget>(DETECT_ARGS_PASS,
+                sw::LocalPackage(b.getContext().getLocalStorage(), sw::PackageId("com.Microsoft.Windows.SDK." + name, v)), ts);
+            t.public_ts["properties"]["6"]["system_include_directories"].push_back(idir / name);
+            for (auto &i : idirs)
+                t.public_ts["properties"]["6"]["system_include_directories"].push_back(idir / i);
+            return &t;
+        }
+        else
+            LOG_TRACE(logger, "Libdir " << libdir << " not found for library: " << name);
+        return {};
     }
 
     void addTools(DETECT_ARGS)
     {
         // .rc
-        {
+        /*{
             auto p = std::make_shared<sw::SimpleProgram>();
             p->file = kit_root / "bin" / bdir_subversion / toStringWindows(s.getHostOs().Arch) / "rc.exe";
             if (fs::exists(p->file))
@@ -126,7 +124,7 @@ struct WinKit
             // these are passed from compiler during merge?
             //for (auto &idir : COpts.System.IncludeDirectories)
             //C->system_idirs.push_back(idir);
-        }
+        }*/
     }
 };
 
@@ -316,7 +314,7 @@ private:
             wk.kit_root = kr;
             wk.idir_subversion = v.toString();
             wk.ldir_subversion = v.toString();
-            wk.add(DETECT_ARGS_PASS, settings, v);
+            wk.add(DETECT_ARGS_PASS, v);
         }
 
         // um + shared
@@ -327,7 +325,7 @@ private:
             wk.idir_subversion = v.toString();
             wk.ldir_subversion = v.toString();
             wk.idirs.push_back("shared");
-            for (auto t : wk.add(DETECT_ARGS_PASS, settings, v))
+            if (auto t = wk.add(DETECT_ARGS_PASS, v))
                 t->public_ts["properties"]["6"]["system_link_libraries"].push_back("KERNEL32.LIB");
         }
 
@@ -338,7 +336,7 @@ private:
             wk.kit_root = kr;
             wk.idir_subversion = v.toString();
             wk.ldir_subversion = v.toString();
-            wk.add(DETECT_ARGS_PASS, settings, v);
+            wk.add(DETECT_ARGS_PASS, v);
         }
 
         // winrt
@@ -348,7 +346,7 @@ private:
             wk.kit_root = kr;
             wk.idir_subversion = v.toString();
             wk.without_ldir = true;
-            wk.add(DETECT_ARGS_PASS, settings, v);
+            wk.add(DETECT_ARGS_PASS, v);
         }
 
         // tools
@@ -376,7 +374,7 @@ private:
             else
                 LOG_DEBUG(logger, "TODO: Windows Kit " + k + " is not implemented yet. Report this issue.");
             wk.idirs.push_back("shared");
-            wk.add(DETECT_ARGS_PASS, settings, k);
+            wk.add(DETECT_ARGS_PASS, k);
         }
 
         // km
@@ -390,7 +388,7 @@ private:
                 wk.ldir_subversion = "Win8";
             else
                 LOG_DEBUG(logger, "TODO: Windows Kit " + k + " is not implemented yet. Report this issue.");
-            wk.add(DETECT_ARGS_PASS, settings, k);
+            wk.add(DETECT_ARGS_PASS, k);
         }
 
         // tools
@@ -412,7 +410,7 @@ void ProgramDetector::detectWindowsSdk(DETECT_ARGS)
 {
 #ifdef _WIN32
     WinSdkInfo info;
-    info.settings = s.getHostOs();
+    info.settings = b.getContext().getHostOs();
     info.listWindowsKits(DETECT_ARGS_PASS);
 #endif // #ifdef _WIN32
 }

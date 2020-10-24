@@ -8,10 +8,10 @@
 #include <sw/builder/command.h>
 #include <sw/core/sw_context.h>
 
-#define DETECT_ARGS ::sw::SwCoreContext &s, ::sw::TargetMap &tm
-#define DETECT_ARGS_PASS s, tm
-#define DETECT_ARGS_PASS_TO_LAMBDA &s, &tm
-#define DETECT_ARGS_PASS_FIRST_CALL(ctx) (::sw::SwContext&)(ctx), ((::sw::SwContext&)ctx).getPredefinedTargets()
+#define DETECT_ARGS ::sw::Build &b
+#define DETECT_ARGS_PASS b
+#define DETECT_ARGS_PASS_TO_LAMBDA &b
+#define DETECT_ARGS_PASS_FIRST_CALL(ctx) (::sw::SwContext&)(ctx)
 #define DETECT_ARGS_PASS_FIRST_CALL_SIMPLE DETECT_ARGS_PASS_FIRST_CALL(getContext())
 
 namespace sw
@@ -52,19 +52,12 @@ struct SW_DRIVER_CPP_API ProgramDetector
 
     static PredefinedProgramTarget &addProgram(DETECT_ARGS, const PackageId &id, const TargetSettings &ts, const std::shared_ptr<Program> &p);
 
-    template <class T>
-    static T &addTarget(DETECT_ARGS, const PackageId &id, const TargetSettings &ts)
-    {
-        log_msg_detect_target("Detected target: " + id.toString() + ": " + ts.toString());
-
-        auto t = std::make_shared<T>(sw::LocalPackage(s.getLocalStorage(), id), ts);
-        tm[id].push_back(t);
-        return *t;
-    }
-
     using DetectablePackageEntryPoint = std::function<void(Build &)>;
     using DetectablePackageEntryPoints = std::unordered_map<UnresolvedPackage, DetectablePackageEntryPoint>;
     static DetectablePackageEntryPoints getDetectablePackages();
+
+    template <class T>
+    static T &addTarget(DETECT_ARGS, const PackageId &id, const TargetSettings &ts);
 
 private:
     struct VSInstance
@@ -84,7 +77,7 @@ private:
     auto &getMsvcIncludePrefixes() { return msvc_prefixes; }
     const auto &getMsvcIncludePrefixes() const { return msvc_prefixes; }
 
-    void detectMsvc(DETECT_ARGS);
+    //void detectMsvc(DETECT_ARGS);
     void detectMsvc15Plus(DETECT_ARGS);
     void detectMsvc14AndOlder(DETECT_ARGS);
     void detectWindowsSdk(DETECT_ARGS);

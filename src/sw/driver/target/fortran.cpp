@@ -21,7 +21,8 @@ void ProgramDetector::detectFortranCompilers(DETECT_ARGS)
 
     // TODO: add each program separately
 
-    auto p = std::make_shared<SimpleProgram>();
+    SW_UNIMPLEMENTED;
+    /*auto p = std::make_shared<SimpleProgram>();
     auto f = resolveExecutable("gfortran");
     if (!fs::exists(f))
     {
@@ -36,7 +37,7 @@ void ProgramDetector::detectFortranCompilers(DETECT_ARGS)
     p->file = f;
 
     auto v = getVersion(s, p->file);
-    addProgram(DETECT_ARGS_PASS, PackageId("org.gnu.gcc.fortran", v), {}, p);
+    addProgram(DETECT_ARGS_PASS, PackageId("org.gnu.gcc.fortran", v), {}, p);*/
 }
 
 FortranTarget::FortranTarget(TargetBase &parent, const PackageId &id)

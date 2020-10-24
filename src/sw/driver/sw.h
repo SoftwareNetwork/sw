@@ -33,7 +33,6 @@ namespace vs = sw::vs;
 namespace cl = sw::cl;
 
 // general
-//using Build = sw::SimpleBuild;
 using sw::Build;
 using Solution = Build;
 using sw::Checker;

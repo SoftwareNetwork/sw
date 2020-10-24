@@ -50,15 +50,8 @@ struct SW_DRIVER_CPP_API Test : driver::CommandBuilder
     }
 };
 
-struct SW_DRIVER_CPP_API SimpleBuild : TargetBase
+struct SW_DRIVER_CPP_API Build : TargetBase
 {
-    // public functions for sw frontend
-};
-
-struct SW_DRIVER_CPP_API Build : SimpleBuild
-{
-    using Base = SimpleBuild;
-
     ModuleSwappableData module_data;
     DriverData *dd = nullptr;
     Checker checker;
@@ -74,6 +67,16 @@ struct SW_DRIVER_CPP_API Build : SimpleBuild
     const TargetSettings &getExternalVariables() const;
 
     //const ProgramDetector &getProgramDetector() const { return pd; }
+};
+
+struct SW_DRIVER_CPP_API ExtendedBuild : Build
+{
+    using Base = Build;
+
+    using Base::Base;
+
+    const TargetSettings &getSettings() const { return module_data.current_settings; }
+    void addTarget(const ITargetPtr &t) { module_data.added_targets.push_back(t); }
 };
 
 }

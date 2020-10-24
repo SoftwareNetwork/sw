@@ -11,20 +11,20 @@
 namespace sw
 {
 
-struct MsvcRule : IRule
+/*struct MsvcRule : IRule
 {
     Commands getCommands() const override
     {
         return {};
     }
-};
+};*/
 
 /*std::unique_ptr<IRule> PredefinedTargetWithRule::getRule() const
 {
     return std::make_unique<MsvcRule>();
 }*/
 
-Target2::Target2(TargetBase &parent, const PackageId &id)
+/*Target2::Target2(TargetBase &parent, const PackageId &id)
     : Target(parent, id), NativeTargetOptionsGroup((Target &)*this)
 {
 
@@ -32,7 +32,7 @@ Target2::Target2(TargetBase &parent, const PackageId &id)
 
 Commands Target2::getCommands1() const
 {
-    /*auto it = getMainBuild().getContext().getPredefinedTargets().find(UnresolvedPackage{ "msvc" });
+    auto it = getMainBuild().getContext().getPredefinedTargets().find(UnresolvedPackage{ "msvc" });
     if (it == getMainBuild().getContext().getPredefinedTargets().end())
         throw SW_RUNTIME_ERROR("no rule found");
     if (it->second.empty())
@@ -42,8 +42,8 @@ Commands Target2::getCommands1() const
     if (!r)
         throw SW_RUNTIME_ERROR("empty rule");
 
-    return r->getCommands();*/
+    return r->getCommands();
     SW_UNIMPLEMENTED;
-}
+}*/
 
 } // namespace sw

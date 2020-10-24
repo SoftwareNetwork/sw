@@ -460,14 +460,14 @@ std::unique_ptr<NativeCompiler> NativeCompiledTarget::activateCompiler(const Tar
     if (id.ppath == "com.Microsoft.VisualStudio.VC.cl")
     {
         c = std::make_unique<VisualStudioCompiler>();
-        if (getSettings()["native"]["stdlib"]["cpp"].getValue() == "com.Microsoft.VisualStudio.VC.libcpp")
+        /*if (getSettings()["native"]["stdlib"]["cpp"].getValue() == "com.Microsoft.VisualStudio.VC.libcpp")
         {
             // take same ver as cl
             UnresolvedPackage up(getSettings()["native"]["stdlib"]["cpp"].getValue());
             up.range = id.range;
             *this += up;
             libstdcppset = true;
-        }
+        }*/
     }
     else if (id.ppath == "com.Microsoft.VisualStudio.VC.ml")
         c = std::make_unique<VisualStudioASMCompiler>();
@@ -769,11 +769,11 @@ void NativeCompiledTarget::findCompiler()
     if (ct == CompilerType::UnspecifiedCompiler)
         throw SW_RUNTIME_ERROR("Cannot determine compiler type " + get_settings_package_id(getSettings()["rule"]["cpp"]["package"]).toString() + " for settings: " + getSettings().toString());
 
-    Strings rules = { "c", "cpp", "asm", "lib", "link" };
-    if (getBuildSettings().TargetOS.is(OSType::Windows))
-        rules.push_back("rc");
+    Strings rules = { /*"c", */"cpp", /*"asm", "lib", */"link" };
+    //if (getBuildSettings().TargetOS.is(OSType::Windows))
+        //rules.push_back("rc");
     for (auto &r : rules)
-        addDummyDependency(std::make_shared<Dependency>(UnresolvedPackage{ getSettings()["rule"]["cpp"]["package"].getValue() }));
+        addDummyDependency(std::make_shared<Dependency>(UnresolvedPackage{ getSettings()["rule"][r]["package"].getValue() }));
 
     //ct = get_compiler_type(get_settings_package_id(getSettings()["native"]["program"]["cpp"]));
     //if (ct == CompilerType::UnspecifiedCompiler)
@@ -782,6 +782,15 @@ void NativeCompiledTarget::findCompiler()
         //throw SW_RUNTIME_ERROR("Cannot find compiler " + get_settings_package_id(getSettings()["native"]["program"]["c"]).toString() + " for settings: " + getSettings().toString());
 
     // c++ goes first for correct include order
+    UnresolvedPackage cppcl = getSettings()["rule"]["cpp"]["package"].getValue();
+    if (cppcl.getPath() == "com.Microsoft.VisualStudio.VC.cl")
+    {
+        // take same ver as cl
+        UnresolvedPackage up("com.Microsoft.VisualStudio.VC.libcpp");
+        up.range = cppcl.range;
+        *this += up;
+        libstdcppset = true;
+    }
     if (!libstdcppset && getSettings()["native"]["stdlib"]["cpp"].isValue())
     {
         if (IsSwConfig && getBuildSettings().TargetOS.is(OSType::Linux))
@@ -814,8 +823,13 @@ void NativeCompiledTarget::findCompiler()
     }
 
     // kernel headers
-    if (getSettings()["native"]["stdlib"]["kernel"].isValue())
-        *this += UnresolvedPackage(getSettings()["native"]["stdlib"]["kernel"].getValue());
+    //if (getSettings()["native"]["stdlib"]["kernel"].isValue())
+        //*this += UnresolvedPackage(getSettings()["native"]["stdlib"]["kernel"].getValue());
+    if (getBuildSettings().TargetOS.is(OSType::Windows))
+    {
+        *this += UnresolvedPackage("com.Microsoft.Windows.SDK.ucrt"s); // c
+        *this += UnresolvedPackage("com.Microsoft.Windows.SDK.um"s); // kernel
+    }
 }
 
 bool NativeCompiledTarget::init()
@@ -3168,8 +3182,8 @@ void NativeCompiledTarget::prepare_pass8()
 
     // create
     prog_cl_cpp = activateCompiler(getSettings()["rule"]["cpp"], get_cpp_exts(*this));
-    prog_cl_c = activateCompiler(getSettings()["rule"]["c"], { ".c" });
-    prog_cl_asm = activateCompiler(getSettings()["rule"]["asm"], get_asm_exts(*this));
+    //prog_cl_c = activateCompiler(getSettings()["rule"]["c"], { ".c" });
+    //prog_cl_asm = activateCompiler(getSettings()["rule"]["asm"], get_asm_exts(*this));
 
     /*setExtensionProgram(".c", *prog_cl_c);
     for (auto &e : get_cpp_exts(*this))
@@ -3180,13 +3194,13 @@ void NativeCompiledTarget::prepare_pass8()
     if (getBuildSettings().TargetOS.is(OSType::Windows))
     {
         // actually a missing setting
-        prog_cl_rc = activateRcCompiler(*this, "com.Microsoft.Windows.rc"s, {".rc"});
+        //prog_cl_rc = activateRcCompiler(*this, "com.Microsoft.Windows.rc"s, {".rc"});
     }
 
-    prog_link = activateLinker(getSettings()["native"]["program"]["link"]);
-    prog_lib = activateLinker(getSettings()["native"]["program"]["lib"]);
-    if (!prog_lib)
-        throw SW_RUNTIME_ERROR("Librarian not found");
+    prog_link = activateLinker(getSettings()["rule"]["link"]);
+    //prog_lib = activateLinker(getSettings()["rule"]["lib"]);
+    //if (!prog_lib)
+        //throw SW_RUNTIME_ERROR("Librarian not found");
     if (!prog_link)
         throw SW_RUNTIME_ERROR("Linker not found");
 
@@ -3200,7 +3214,7 @@ void NativeCompiledTarget::prepare_pass8()
     // add casual idirs?
     if (prog_cl_rc)
         prog_cl_rc->idirs = NativeCompilerOptions::System.IncludeDirectories;
-    prog_lib->Extension = getBuildSettings().TargetOS.getStaticLibraryExtension();
+    //prog_lib->Extension = getBuildSettings().TargetOS.getStaticLibraryExtension();
     if (isExecutable())
     {
         prog_link->Prefix.clear();
@@ -3235,7 +3249,7 @@ void NativeCompiledTarget::prepare_pass8()
         if (getBuildSettings().TargetOS.Type == OSType::Windows)
             getMergeObject() += "_WINDLL"_def;
     }
-    prog_lib->setOutputFile(getOutputFileName2("lib"));
+    //prog_lib->setOutputFile(getOutputFileName2("lib"));
     prog_link->setOutputFile(getOutputFileName2("bin"));
     prog_link->setImportLibrary(getOutputFileName2("lib"));
     if (auto L = prog_link->as<VisualStudioLibraryTool *>())
@@ -3273,11 +3287,11 @@ void NativeCompiledTarget::prepare_pass8()
     if (!isHeaderOnly())
     {
         prog_cl_cpp->merge(*this);
-        prog_cl_c->merge(*this);
-        prog_cl_asm->merge(*this);
+        //prog_cl_c->merge(*this);
+        //prog_cl_asm->merge(*this);
     }
     prog_link->merge(getMergeObject());
-    prog_lib->merge(getMergeObject());
+    //prog_lib->merge(getMergeObject());
 
     // add rules
     std::vector<NativeRule *> rules;
@@ -3287,8 +3301,8 @@ void NativeCompiledTarget::prepare_pass8()
         rules.push_back(&v);
     };
     add_rule("cpp", std::make_unique<NativeCompilerRule>(*prog_cl_cpp, get_cpp_exts(*this)));
-    add_rule("c", std::make_unique<NativeCompilerRule>(*prog_cl_c, StringSet{ ".c" }));
-    add_rule("asm", std::make_unique<NativeCompilerRule>(*prog_cl_asm, get_asm_exts(*this)));
+    //add_rule("c", std::make_unique<NativeCompilerRule>(*prog_cl_c, StringSet{ ".c" }));
+    //add_rule("asm", std::make_unique<NativeCompilerRule>(*prog_cl_asm, get_asm_exts(*this)));
     //r->rulename = "[C++]"; // CXX?
     //r->rulename = "[C]";
     //r->rulename = "[ASM]";
@@ -3302,7 +3316,7 @@ void NativeCompiledTarget::prepare_pass8()
     else
     {
         // generate rc
-        if (GenerateWindowsResource
+        /*if (GenerateWindowsResource
             && !isHeaderOnly()
             && ::sw::gatherSourceFiles<SourceFile>(*this, { ".rc" }).empty()
             && getBuildSettings().TargetOS.is(OSType::Windows)
@@ -3316,7 +3330,7 @@ void NativeCompiledTarget::prepare_pass8()
         }
         // add rc rule
         if (getBuildSettings().TargetOS.is(OSType::Windows))
-            add_rule("rc", std::make_unique<RcRule>(*prog_cl_rc));
+            add_rule("rc", std::make_unique<RcRule>(*prog_cl_rc));*/
 
         if (isExecutable() || !isHeaderOnly())
             add_rule("link", std::make_unique<NativeLinkerRule>(*prog_link));

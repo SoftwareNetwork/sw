@@ -8,7 +8,7 @@
 namespace sw
 {
 
-struct PredefinedTargetWithRule : PredefinedTarget
+/*struct PredefinedTargetWithRule : PredefinedTarget
 {
     using PredefinedTarget::PredefinedTarget;
 
@@ -24,6 +24,6 @@ struct SW_DRIVER_CPP_API Target2 : Target
 
 private:
     Commands getCommands1() const override;
-};
+};*/
 
 } // namespace sw

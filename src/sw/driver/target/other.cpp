@@ -16,14 +16,15 @@ namespace sw
 
 void ProgramDetector::detectAdaCompilers(DETECT_ARGS)
 {
-    auto p = std::make_shared<SimpleProgram>();
+    SW_UNIMPLEMENTED;
+    /*auto p = std::make_shared<SimpleProgram>();
     auto f = resolveExecutable("gnatmake");
     if (!fs::exists(f))
         return;
     p->file = f;
 
     auto v = getVersion(s, p->file, "--version", "(\\d{4})(\\d{2})(\\d{2})");
-    addProgram(DETECT_ARGS_PASS, PackageId("org.gnu.gcc.ada", v), {}, p);
+    addProgram(DETECT_ARGS_PASS, PackageId("org.gnu.gcc.ada", v), {}, p);*/
 }
 
 AdaTarget::AdaTarget(TargetBase &parent, const PackageId &id)
@@ -70,7 +71,8 @@ Commands AdaTarget::getCommands1() const
 
 void ProgramDetector::detectCSharpCompilers(DETECT_ARGS)
 {
-    for (auto &[v, i] : getVSInstances())
+    SW_UNIMPLEMENTED;
+    /*for (auto &[v, i] : getVSInstances())
     {
         auto root = i.root;
         switch (v.getMajor())
@@ -90,7 +92,7 @@ void ProgramDetector::detectCSharpCompilers(DETECT_ARGS)
 
         auto v1 = getVersion(s, p->file);
         addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.Roslyn.csc", v1), {}, p);
-    }
+    }*/
 }
 
 CSharpTarget::CSharpTarget(TargetBase &parent, const PackageId &id)
@@ -128,7 +130,8 @@ Commands CSharpTarget::getCommands1() const
 
 void ProgramDetector::detectRustCompilers(DETECT_ARGS)
 {
-    auto p = std::make_shared<SimpleProgram>();
+    SW_UNIMPLEMENTED;
+    /*auto p = std::make_shared<SimpleProgram>();
     auto f = resolveExecutable("rustc");
     if (!fs::exists(f))
     {
@@ -139,7 +142,7 @@ void ProgramDetector::detectRustCompilers(DETECT_ARGS)
     p->file = f;
 
     auto v = getVersion(s, p->file);
-    addProgram(DETECT_ARGS_PASS, PackageId("org.rust.rustc", v), {}, p);
+    addProgram(DETECT_ARGS_PASS, PackageId("org.rust.rustc", v), {}, p);*/
 }
 
 RustTarget::RustTarget(TargetBase &parent, const PackageId &id)
@@ -177,14 +180,15 @@ Commands RustTarget::getCommands1() const
 
 void ProgramDetector::detectGoCompilers(DETECT_ARGS)
 {
-    auto p = std::make_shared<SimpleProgram>();
+    SW_UNIMPLEMENTED;
+    /*auto p = std::make_shared<SimpleProgram>();
     auto f = resolveExecutable("go");
     if (!fs::exists(f))
         return;
     p->file = f;
 
     auto v = getVersion(s, p->file, "version");
-    addProgram(DETECT_ARGS_PASS, PackageId("org.google.golang.go", v), {}, p);
+    addProgram(DETECT_ARGS_PASS, PackageId("org.google.golang.go", v), {}, p);*/
 }
 
 GoTarget::GoTarget(TargetBase &parent, const PackageId &id)
@@ -224,14 +228,15 @@ void ProgramDetector::detectJavaCompilers(DETECT_ARGS)
 {
     //compiler = resolveExecutable("jar"); // later
 
-    auto p = std::make_shared<SimpleProgram>();
+    SW_UNIMPLEMENTED;
+    /*auto p = std::make_shared<SimpleProgram>();
     auto f = resolveExecutable("javac");
     if (!fs::exists(f))
         return;
     p->file = f;
 
     auto v = getVersion(s, p->file);
-    addProgram(DETECT_ARGS_PASS, PackageId("com.oracle.java.javac", v), {}, p);
+    addProgram(DETECT_ARGS_PASS, PackageId("com.oracle.java.javac", v), {}, p);*/
 }
 
 JavaTarget::JavaTarget(TargetBase &parent, const PackageId &id)
@@ -270,14 +275,15 @@ Commands JavaTarget::getCommands1() const
 
 void ProgramDetector::detectKotlinCompilers(DETECT_ARGS)
 {
-    auto p = std::make_shared<SimpleProgram>();
+    SW_UNIMPLEMENTED;
+    /*auto p = std::make_shared<SimpleProgram>();
     auto f = resolveExecutable("kotlinc");
     if (!fs::exists(f))
         return;
     p->file = f;
 
     auto v = getVersion(s, p->file, "-version");
-    addProgram(DETECT_ARGS_PASS, PackageId("com.JetBrains.kotlin.kotlinc", v), {}, p);
+    addProgram(DETECT_ARGS_PASS, PackageId("com.JetBrains.kotlin.kotlinc", v), {}, p);*/
 }
 
 KotlinTarget::KotlinTarget(TargetBase &parent, const PackageId &id)
@@ -321,14 +327,15 @@ void ProgramDetector::detectDCompilers(DETECT_ARGS)
 {
     // also todo LDC, GDC compiler
 
-    auto p = std::make_shared<SimpleProgram>();
+    SW_UNIMPLEMENTED;
+    /*auto p = std::make_shared<SimpleProgram>();
     auto f = resolveExecutable("dmd");
     if (!fs::exists(f))
         return;
     p->file = f;
 
     auto v = getVersion(s, p->file);
-    addProgram(DETECT_ARGS_PASS, PackageId("org.dlang.dmd.dmd", v), {}, p);
+    addProgram(DETECT_ARGS_PASS, PackageId("org.dlang.dmd.dmd", v), {}, p);*/
 }
 
 DTarget::DTarget(TargetBase &parent, const PackageId &id)
@@ -408,14 +415,15 @@ void ProgramDetector::detectPascalCompilers(DETECT_ARGS)
 {
     // free pascal for now
 
-    auto p = std::make_shared<SimpleProgram>();
+    SW_UNIMPLEMENTED;
+    /*auto p = std::make_shared<SimpleProgram>();
     auto f = resolveExecutable("fpc");
     if (!fs::exists(f))
         return;
     p->file = f;
 
     auto v = getVersion(s, p->file, "-version");
-    addProgram(DETECT_ARGS_PASS, PackageId("org.pascal.fpc", v), {}, p);
+    addProgram(DETECT_ARGS_PASS, PackageId("org.pascal.fpc", v), {}, p);*/
 }
 
 PascalTarget::PascalTarget(TargetBase &parent, const PackageId &id)
