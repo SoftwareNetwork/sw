@@ -17,6 +17,9 @@
 namespace sw
 {
 
+struct BuildSettings;
+namespace vs { enum class RuntimeLibraryType; }
+
 struct PredefinedProgramTarget : PredefinedTarget, PredefinedProgram
 {
     using PredefinedTarget::PredefinedTarget;
@@ -58,6 +61,9 @@ struct SW_DRIVER_CPP_API ProgramDetector
 
     template <class T>
     static T &addTarget(DETECT_ARGS, const PackageId &id, const TargetSettings &ts);
+
+    static vs::RuntimeLibraryType getMsvcLibraryType(const BuildSettings &bs);
+    static String getMsvcLibraryName(const String &base, const BuildSettings &bs);
 
 private:
     struct VSInstance

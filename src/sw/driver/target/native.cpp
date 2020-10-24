@@ -407,9 +407,7 @@ std::unique_ptr<NativeCompiler> NativeCompiledTarget::activateCompiler(const Tar
 {
     auto &cld = getMainBuild().getTargets();
 
-    TargetSettings oss;
-    oss["os"] = getSettings()["os"];
-    auto i = cld.find(id, oss);
+    auto i = cld.find(id, getSettings());
     if (!i)
     {
         //i = getContext().getPredefinedTargets().find(id, oss);
@@ -599,9 +597,7 @@ std::unique_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetS
 {
     auto &cld = getMainBuild().getTargets();
 
-    TargetSettings oss;
-    oss["os"] = getSettings()["os"];
-    auto i = cld.find(id, oss);
+    auto i = cld.find(id, getSettings());
     if (!i)
     {
         SW_UNIMPLEMENTED;
@@ -769,7 +765,7 @@ void NativeCompiledTarget::findCompiler()
     if (ct == CompilerType::UnspecifiedCompiler)
         throw SW_RUNTIME_ERROR("Cannot determine compiler type " + get_settings_package_id(getSettings()["rule"]["cpp"]["package"]).toString() + " for settings: " + getSettings().toString());
 
-    Strings rules = { /*"c", */"cpp", /*"asm", "lib", */"link" };
+    Strings rules = { "c", "cpp", /*"asm", "lib", */"link" };
     //if (getBuildSettings().TargetOS.is(OSType::Windows))
         //rules.push_back("rc");
     for (auto &r : rules)
@@ -785,11 +781,19 @@ void NativeCompiledTarget::findCompiler()
     UnresolvedPackage cppcl = getSettings()["rule"]["cpp"]["package"].getValue();
     if (cppcl.getPath() == "com.Microsoft.VisualStudio.VC.cl")
     {
-        // take same ver as cl
-        UnresolvedPackage up("com.Microsoft.VisualStudio.VC.libcpp");
-        up.range = cppcl.range;
-        *this += up;
         libstdcppset = true;
+
+        // take same ver as cl
+        {
+            UnresolvedPackage up("com.Microsoft.VisualStudio.VC.libcpp");
+            up.range = cppcl.range;
+            *this += up;
+        }
+        {
+            UnresolvedPackage up("com.Microsoft.VisualStudio.VC.runtime");
+            up.range = cppcl.range;
+            *this += up;
+        }
     }
     if (!libstdcppset && getSettings()["native"]["stdlib"]["cpp"].isValue())
     {
@@ -2975,91 +2979,6 @@ void NativeCompiledTarget::prepare_pass5()
 void NativeCompiledTarget::prepare_pass6()
 {
     // link libraries
-
-    // link libs
-    if (!getBuildSettings().TargetOS.is(OSType::Windows))
-        return;
-
-    auto rt = vs::RuntimeLibraryType::MultiThreadedDLL;
-    if (getBuildSettings().Native.MT)
-        rt = vs::RuntimeLibraryType::MultiThreaded;
-    if (getBuildSettings().Native.ConfigurationType == ConfigurationType::Debug)
-    {
-        rt = vs::RuntimeLibraryType::MultiThreadedDLLDebug;
-        if (getBuildSettings().Native.MT)
-            rt = vs::RuntimeLibraryType::MultiThreadedDebug;
-    }
-
-    // TODO: move vs _slib to detect.cpp from native.cpp
-
-    // https://docs.microsoft.com/en-us/cpp/c-runtime-library/crt-library-features?view=vs-2019
-
-    // sometimes link.exe fails to add libs (SDL-2.0.10)
-    // so we take full control here
-
-    // we add main 5 libs and its variations for /MD /MDd /MT /MTd flags
-    // (listed in reverse order):
-    // 1. kernel (windows) library - kernel32.lib
-    // 2. libc - ucrt.lib
-    // 3. ms crt - msvcrt.lib
-    // 4. compiler (cl.exe) library - vcruntime.lib
-    // 5. ms std c++ library - msvcprt.lib
-    // 6. concurrency crt (concrt.lib)
-    //
-    // we also add some other libs needed by msvc
-    // 1. oldnames.lib - for backward compat - https://docs.microsoft.com/en-us/cpp/c-runtime-library/backward-compatibility?view=vs-2019
-    // 2. concrt.lib - concurrency crt
-
-    // TODO: push these libs from properties!
-
-    // TODO: libs may have further versions like
-    // libcpmt.lib
-    // libcpmt1.lib
-    //
-    // libcpmtd.lib
-    // libcpmtd0.lib
-    // libcpmtd1.lib
-    //
-    // libconcrt.lib
-    // libconcrt1.lib
-    //
-    // libconcrtd.lib
-    // libconcrtd0.lib
-    // libconcrtd1.lib
-
-    auto &t = getMergeObject();
-
-    switch (rt)
-    {
-    case vs::RuntimeLibraryType::MultiThreadedDLL:
-        t += "concrt.lib"_slib;
-        t += "vcruntime.lib"_slib;
-        t += "msvcprt.lib"_slib;
-        t += "msvcrt.lib"_slib;
-        t += "ucrt.lib"_slib;
-        break;
-    case vs::RuntimeLibraryType::MultiThreadedDLLDebug:
-        t += "concrtd.lib"_slib;
-        t += "vcruntimed.lib"_slib;
-        t += "msvcprtd.lib"_slib;
-        t += "msvcrtd.lib"_slib;
-        t += "ucrtd.lib"_slib;
-        break;
-    case vs::RuntimeLibraryType::MultiThreaded:
-        t += "libconcrt.lib"_slib;
-        t += "libvcruntime.lib"_slib;
-        t += "libcpmt.lib"_slib;
-        t += "libcmt.lib"_slib;
-        t += "libucrt.lib"_slib;
-        break;
-    case vs::RuntimeLibraryType::MultiThreadedDebug:
-        t += "libconcrtd.lib"_slib;
-        t += "libvcruntimed.lib"_slib;
-        t += "libcpmtd.lib"_slib;
-        t += "libcmtd.lib"_slib;
-        t += "libucrtd.lib"_slib;
-        break;
-    }
 }
 
 void NativeCompiledTarget::prepare_pass6_1()

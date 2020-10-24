@@ -46,48 +46,50 @@ struct WinKit
     Strings idirs; // additional idirs
     bool without_ldir = false; // when there's not libs
 
-    sw::PredefinedTarget *add(DETECT_ARGS, const sw::Version &v)
+    void add(DETECT_ARGS, const sw::Version &v)
     {
         auto idir = kit_root / "Include" / idir_subversion;
         if (!fs::exists(idir / name))
         {
             LOG_TRACE(logger, "Include dir " << (idir / name) << " not found for library: " << name);
-            return {};
+            return;
         }
 
         auto &eb = static_cast<sw::ExtendedBuild &>(b);
         sw::BuildSettings new_settings = eb.getSettings();
         const auto target_arch = new_settings.TargetOS.Arch;
 
-        // create settings with minimal data
-        auto &ts1 = eb.getSettings();
-        sw::TargetSettings ts;
-        ts["os"]["kernel"] = ts1["os"]["kernel"];
-        ts["os"]["arch"] = ts1["os"]["arch"];
-
         auto libdir = kit_root / "Lib" / ldir_subversion / name / toStringWindows(target_arch);
+        sw::PredefinedTarget *target = nullptr;
         if (fs::exists(libdir))
         {
             auto &t = sw::ProgramDetector::addTarget<sw::PredefinedTarget>(DETECT_ARGS_PASS,
-                sw::LocalPackage(b.getContext().getLocalStorage(), sw::PackageId("com.Microsoft.Windows.SDK." + name, v)), ts);
+                sw::LocalPackage(b.getContext().getLocalStorage(), sw::PackageId("com.Microsoft.Windows.SDK." + name, v)), eb.getSettings());
             t.public_ts["properties"]["6"]["system_include_directories"].push_back(idir / name);
             for (auto &i : idirs)
                 t.public_ts["properties"]["6"]["system_include_directories"].push_back(idir / i);
             t.public_ts["properties"]["6"]["system_link_directories"].push_back(libdir);
-            return &t;
+            target = &t;
         }
         else if (without_ldir)
         {
             auto &t = sw::ProgramDetector::addTarget<sw::PredefinedTarget>(DETECT_ARGS_PASS,
-                sw::LocalPackage(b.getContext().getLocalStorage(), sw::PackageId("com.Microsoft.Windows.SDK." + name, v)), ts);
+                sw::LocalPackage(b.getContext().getLocalStorage(), sw::PackageId("com.Microsoft.Windows.SDK." + name, v)), eb.getSettings());
             t.public_ts["properties"]["6"]["system_include_directories"].push_back(idir / name);
             for (auto &i : idirs)
                 t.public_ts["properties"]["6"]["system_include_directories"].push_back(idir / i);
-            return &t;
+            target = &t;
         }
         else
+        {
             LOG_TRACE(logger, "Libdir " << libdir << " not found for library: " << name);
-        return {};
+            return;
+        }
+        if (name == "um")
+            target->public_ts["properties"]["6"]["system_link_libraries"].push_back(boost::to_upper_copy("kernel32.lib"s));
+        if (name == "ucrt")
+            target->public_ts["properties"]["6"]["system_link_libraries"].push_back(
+                boost::to_upper_copy(sw::getProgramDetector().getMsvcLibraryName("ucrt", new_settings)));
     }
 
     void addTools(DETECT_ARGS)
@@ -325,8 +327,7 @@ private:
             wk.idir_subversion = v.toString();
             wk.ldir_subversion = v.toString();
             wk.idirs.push_back("shared");
-            if (auto t = wk.add(DETECT_ARGS_PASS, v))
-                t->public_ts["properties"]["6"]["system_link_libraries"].push_back("KERNEL32.LIB");
+            wk.add(DETECT_ARGS_PASS, v);
         }
 
         // km

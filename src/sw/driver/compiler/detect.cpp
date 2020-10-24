@@ -109,6 +109,37 @@ String ProgramDetector::getMsvcPrefix(const path &prog) const
     return i->second;
 }
 
+vs::RuntimeLibraryType ProgramDetector::getMsvcLibraryType(const BuildSettings &bs)
+{
+    auto rt = vs::RuntimeLibraryType::MultiThreadedDLL;
+    if (bs.Native.MT)
+        rt = vs::RuntimeLibraryType::MultiThreaded;
+    if (bs.Native.ConfigurationType == ConfigurationType::Debug)
+    {
+        rt = vs::RuntimeLibraryType::MultiThreadedDLLDebug;
+        if (bs.Native.MT)
+            rt = vs::RuntimeLibraryType::MultiThreadedDebug;
+    }
+    return rt;
+}
+
+String ProgramDetector::getMsvcLibraryName(const String &base, const BuildSettings &bs)
+{
+    switch (getMsvcLibraryType(bs))
+    {
+    case vs::RuntimeLibraryType::MultiThreadedDLL:
+        return base + ".lib";
+    case vs::RuntimeLibraryType::MultiThreadedDLLDebug:
+        return base + "d.lib";
+    case vs::RuntimeLibraryType::MultiThreaded:
+        return "lib" + base + ".lib";
+    case vs::RuntimeLibraryType::MultiThreadedDebug:
+        return "lib" + base + "d.lib";
+    default:
+        SW_UNIMPLEMENTED;
+    }
+}
+
 ProgramDetector::DetectablePackageEntryPoints ProgramDetector::getDetectablePackages()
 {
     DetectablePackageEntryPoints s;
@@ -123,6 +154,11 @@ ProgramDetector::DetectablePackageEntryPoints ProgramDetector::getDetectablePack
         //getProgramDetector().detectMsvc14AndOlder(DETECT_ARGS_PASS);
     };
     s["com.Microsoft.VisualStudio.VC.libcpp"s] = [](Build &b)
+    {
+        getProgramDetector().detectMsvc15Plus(DETECT_ARGS_PASS);
+        //getProgramDetector().detectMsvc14AndOlder(DETECT_ARGS_PASS);
+    };
+    s["com.Microsoft.VisualStudio.VC.runtime"s] = [](Build &b)
     {
         getProgramDetector().detectMsvc15Plus(DETECT_ARGS_PASS);
         //getProgramDetector().detectMsvc14AndOlder(DETECT_ARGS_PASS);
@@ -283,6 +319,27 @@ void ProgramDetector::detectMsvcCommon(const path &compiler, const Version &vs_v
         // should we add path dir here?
     }*/
 
+    auto &eb = static_cast<sw::ExtendedBuild &>(b);
+    sw::BuildSettings new_settings = eb.getSettings();
+
+    // msvc libs
+    // https://docs.microsoft.com/en-us/cpp/c-runtime-library/crt-library-features?view=vs-2019
+
+    // TODO: libs may have further versions like
+    // libcpmt.lib
+    // libcpmt1.lib
+    //
+    // libcpmtd.lib
+    // libcpmtd0.lib
+    // libcpmtd1.lib
+    //
+    // libconcrt.lib
+    // libconcrt1.lib
+    //
+    // libconcrtd.lib
+    // libconcrtd0.lib
+    // libconcrtd1.lib
+
     // libc++
     {
         auto &libcpp = addTarget<PredefinedTarget>(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.libcpp", cl_exe_version), ts);
@@ -294,12 +351,50 @@ void ProgramDetector::detectMsvcCommon(const path &compiler, const Version &vs_v
             libcpp.public_ts["properties"]["6"]["system_link_directories"].push_back(root / "lib" / target);
         if (cl_exe_version.getMajor() >= 19)
         {
+            // we also add some other libs needed by msvc
+            // oldnames.lib - for backward compat - https://docs.microsoft.com/en-us/cpp/c-runtime-library/backward-compatibility?view=vs-2019
+
             // under cond?
             libcpp.public_ts["properties"]["6"]["system_link_libraries"].push_back(boost::to_upper_copy("oldnames.lib"s));
 
             // 100% under cond
             libcpp.public_ts["properties"]["6"]["system_link_libraries"].push_back(boost::to_upper_copy("legacy_stdio_definitions.lib"s));
             libcpp.public_ts["properties"]["6"]["system_link_libraries"].push_back(boost::to_upper_copy("legacy_stdio_wide_specifiers.lib"s));
+        }
+        switch (sw::getProgramDetector().getMsvcLibraryType(new_settings))
+        {
+        case vs::RuntimeLibraryType::MultiThreadedDLL:
+            libcpp.public_ts["properties"]["6"]["system_link_libraries"].push_back(boost::to_upper_copy("msvcprt.lib"s));
+            break;
+        case vs::RuntimeLibraryType::MultiThreadedDLLDebug:
+            libcpp.public_ts["properties"]["6"]["system_link_libraries"].push_back(boost::to_upper_copy("msvcprtd.lib"s));
+            break;
+        case vs::RuntimeLibraryType::MultiThreaded:
+            libcpp.public_ts["properties"]["6"]["system_link_libraries"].push_back(boost::to_upper_copy("libcpmt.lib"s));
+            break;
+        case vs::RuntimeLibraryType::MultiThreadedDebug:
+            libcpp.public_ts["properties"]["6"]["system_link_libraries"].push_back(boost::to_upper_copy("libcpmtd.lib"s));
+            break;
+        default:
+            SW_UNIMPLEMENTED;
+        }
+        // add to separate lib?
+        switch (sw::getProgramDetector().getMsvcLibraryType(new_settings))
+        {
+        case vs::RuntimeLibraryType::MultiThreadedDLL:
+            libcpp.public_ts["properties"]["6"]["system_link_libraries"].push_back(boost::to_upper_copy("msvcrt.lib"s));
+            break;
+        case vs::RuntimeLibraryType::MultiThreadedDLLDebug:
+            libcpp.public_ts["properties"]["6"]["system_link_libraries"].push_back(boost::to_upper_copy("msvcrtd.lib"s));
+            break;
+        case vs::RuntimeLibraryType::MultiThreaded:
+            libcpp.public_ts["properties"]["6"]["system_link_libraries"].push_back(boost::to_upper_copy("libcmt.lib"s));
+            break;
+        case vs::RuntimeLibraryType::MultiThreadedDebug:
+            libcpp.public_ts["properties"]["6"]["system_link_libraries"].push_back(boost::to_upper_copy("libcmtd.lib"s));
+            break;
+        default:
+            SW_UNIMPLEMENTED;
         }
 
         if (fs::exists(root / "ATLMFC" / "include"))
@@ -318,15 +413,21 @@ void ProgramDetector::detectMsvcCommon(const path &compiler, const Version &vs_v
         // concrt
         if (fs::exists(root / "crt" / "src" / "concrt"))
         {
-            auto &libcpp = addTarget<PredefinedTarget>(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.concrt", cl_exe_version), ts);
-            libcpp.public_ts["properties"]["6"]["system_include_directories"].push_back(root / "crt" / "src" / "concrt");
+            auto &concrt = addTarget<PredefinedTarget>(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.concrt", cl_exe_version), ts);
+            // protected?
+            concrt.public_ts["properties"]["6"]["system_include_directories"].push_back(root / "crt" / "src" / "concrt");
+            concrt.public_ts["properties"]["6"]["system_link_libraries"].push_back(
+                boost::to_upper_copy(sw::getProgramDetector().getMsvcLibraryName("concrt", new_settings)));
         }
 
         // vcruntime
         if (fs::exists(root / "crt" / "src" / "vcruntime"))
         {
-            auto &libcpp = addTarget<PredefinedTarget>(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.runtime", cl_exe_version), ts);
-            libcpp.public_ts["properties"]["6"]["system_include_directories"].push_back(root / "crt" / "src" / "vcruntime");
+            auto &vcruntime = addTarget<PredefinedTarget>(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.runtime", cl_exe_version), ts);
+            // protected?
+            //vcruntime.public_ts["properties"]["6"]["system_include_directories"].push_back(root / "crt" / "src" / "vcruntime");
+            vcruntime.public_ts["properties"]["6"]["system_link_libraries"].push_back(
+                boost::to_upper_copy(sw::getProgramDetector().getMsvcLibraryName("vcruntime", new_settings)));
         }
     }
 }
@@ -339,12 +440,6 @@ void ProgramDetector::detectMsvc15Plus(DETECT_ARGS)
     BuildSettings new_settings = eb.getSettings();
     const auto host = toStringWindows(b.getContext().getHostOs().Arch);
     const auto target_arch = new_settings.TargetOS.Arch;
-
-    // create settings with minimal data
-    auto &ts1 = eb.getSettings();
-    TargetSettings ts;
-    ts["os"]["kernel"] = ts1["os"]["kernel"];
-    ts["os"]["arch"] = ts1["os"]["arch"];
 
     for (auto &[_, instance] : getVSInstances())
     {
@@ -368,7 +463,7 @@ void ProgramDetector::detectMsvc15Plus(DETECT_ARGS)
 
         compiler /= path("Host" + host) / target;
 
-        detectMsvcCommon(compiler, v, target_arch, host_root, ts, idir, root, target, DETECT_ARGS_PASS);
+        detectMsvcCommon(compiler, v, target_arch, host_root, eb.getSettings(), idir, root, target, DETECT_ARGS_PASS);
     }
 }
 
