@@ -94,17 +94,16 @@ struct WinKit
 
     void addTools(DETECT_ARGS)
     {
+        auto &eb = static_cast<sw::ExtendedBuild &>(b);
+
         // .rc
-        /*{
+        {
             auto p = std::make_shared<sw::SimpleProgram>();
-            p->file = kit_root / "bin" / bdir_subversion / toStringWindows(s.getHostOs().Arch) / "rc.exe";
+            p->file = kit_root / "bin" / bdir_subversion / toStringWindows(b.getContext().getHostOs().Arch) / "rc.exe";
             if (fs::exists(p->file))
             {
-                auto v = getVersion(s, p->file, "/?");
-                sw::TargetSettings ts2;
-                auto ts1 = toTargetSettings(s.getHostOs());
-                ts2["os"]["kernel"] = ts1["os"]["kernel"];
-                auto &rc = sw::ProgramDetector::addProgram(DETECT_ARGS_PASS, sw::PackageId("com.Microsoft.Windows.rc", v), ts2, p);
+                auto v = getVersion(b.getContext(), p->file, "/?");
+                auto &rc = sw::ProgramDetector::addProgram(DETECT_ARGS_PASS, sw::PackageId("com.Microsoft.Windows.rc", v), eb.getSettings(), p);
             }
             // these are passed from compiler during merge?
             //for (auto &idir : COpts.System.IncludeDirectories)
@@ -114,19 +113,16 @@ struct WinKit
         // .mc
         {
             auto p = std::make_shared<sw::SimpleProgram>();
-            p->file = kit_root / "bin" / bdir_subversion / toStringWindows(s.getHostOs().Arch) / "mc.exe";
+            p->file = kit_root / "bin" / bdir_subversion / toStringWindows(b.getContext().getHostOs().Arch) / "mc.exe";
             if (fs::exists(p->file))
             {
-                auto v = getVersion(s, p->file, "/?");
-                auto ts1 = toTargetSettings(s.getHostOs());
-                sw::TargetSettings ts2;
-                ts2["os"]["kernel"] = ts1["os"]["kernel"];
-                auto &rc = sw::ProgramDetector::addProgram(DETECT_ARGS_PASS, sw::PackageId("com.Microsoft.Windows.mc", v), ts2, p);
+                auto v = getVersion(b.getContext(), p->file, "/?");
+                auto &rc = sw::ProgramDetector::addProgram(DETECT_ARGS_PASS, sw::PackageId("com.Microsoft.Windows.mc", v), eb.getSettings(), p);
             }
             // these are passed from compiler during merge?
             //for (auto &idir : COpts.System.IncludeDirectories)
             //C->system_idirs.push_back(idir);
-        }*/
+        }
     }
 };
 

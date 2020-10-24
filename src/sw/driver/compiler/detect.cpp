@@ -148,6 +148,16 @@ ProgramDetector::DetectablePackageEntryPoints ProgramDetector::getDetectablePack
         getProgramDetector().detectMsvc15Plus(DETECT_ARGS_PASS);
         //getProgramDetector().detectMsvc14AndOlder(DETECT_ARGS_PASS);
     };
+    s["com.Microsoft.VisualStudio.VC.ml"s] = [](Build &b)
+    {
+        getProgramDetector().detectMsvc15Plus(DETECT_ARGS_PASS);
+        //getProgramDetector().detectMsvc14AndOlder(DETECT_ARGS_PASS);
+    };
+    s["com.Microsoft.VisualStudio.VC.lib"s] = [](Build &b)
+    {
+        getProgramDetector().detectMsvc15Plus(DETECT_ARGS_PASS);
+        //getProgramDetector().detectMsvc14AndOlder(DETECT_ARGS_PASS);
+    };
     s["com.Microsoft.VisualStudio.VC.link"s] = [](Build &b)
     {
         getProgramDetector().detectMsvc15Plus(DETECT_ARGS_PASS);
@@ -169,6 +179,11 @@ ProgramDetector::DetectablePackageEntryPoints ProgramDetector::getDetectablePack
         //getProgramDetector().detectMsvc14AndOlder(DETECT_ARGS_PASS);
     };
     s["com.Microsoft.Windows.SDK.um"s] = [](Build &b)
+    {
+        getProgramDetector().detectWindowsSdk(DETECT_ARGS_PASS);
+        //getProgramDetector().detectMsvc14AndOlder(DETECT_ARGS_PASS);
+    };
+    s["com.Microsoft.Windows.rc"s] = [](Build &b)
     {
         getProgramDetector().detectWindowsSdk(DETECT_ARGS_PASS);
         //getProgramDetector().detectMsvc14AndOlder(DETECT_ARGS_PASS);
@@ -299,7 +314,7 @@ void ProgramDetector::detectMsvcCommon(const path &compiler, const Version &vs_v
     }
 
     // ASM
-    /*if (target_arch == ArchType::x86_64 || target_arch == ArchType::x86)
+    if (target_arch == ArchType::x86_64 || target_arch == ArchType::x86)
     {
         auto p = std::make_shared<SimpleProgram>();
         p->file = compiler / (target_arch == ArchType::x86_64 ? "ml64.exe" : "ml.exe");
@@ -311,7 +326,7 @@ void ProgramDetector::detectMsvcCommon(const path &compiler, const Version &vs_v
     }
 
     // dumpbin
-    {
+    /*{
         auto p = std::make_shared<SimpleProgram>();
         p->file = compiler / "dumpbin.exe";
         if (fs::exists(p->file))

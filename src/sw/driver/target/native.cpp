@@ -338,9 +338,7 @@ static std::unique_ptr<RcTool> activateRcCompiler(NativeCompiledTarget &nt, cons
 {
     auto &cld = nt.getMainBuild().getTargets();
 
-    TargetSettings oss;
-    oss["os"] = nt.getSettings()["os"];
-    auto i = cld.find(id, oss);
+    auto i = cld.find(id, nt.getSettings());
     if (!i)
     {
         //i = nt.getContext().getPredefinedTargets().find(id, oss);
@@ -761,13 +759,13 @@ void NativeCompiledTarget::findCompiler()
 {
     ct = get_compiler_type2(getSettings()["rule"]["cpp"]["type"].getValue());
     if (ct == CompilerType::UnspecifiedCompiler)
-        ct = get_compiler_type2(getSettings()["native"]["program"]["c"].getValue());
+        ct = get_compiler_type2(getSettings()["rule"]["c"]["type"].getValue());
     if (ct == CompilerType::UnspecifiedCompiler)
         throw SW_RUNTIME_ERROR("Cannot determine compiler type " + get_settings_package_id(getSettings()["rule"]["cpp"]["package"]).toString() + " for settings: " + getSettings().toString());
 
-    Strings rules = { "c", "cpp", /*"asm", "lib", */"link" };
-    //if (getBuildSettings().TargetOS.is(OSType::Windows))
-        //rules.push_back("rc");
+    Strings rules = { "c", "cpp", "asm", "lib", "link" };
+    if (getBuildSettings().TargetOS.is(OSType::Windows))
+        rules.push_back("rc");
     for (auto &r : rules)
         addDummyDependency(std::make_shared<Dependency>(UnresolvedPackage{ getSettings()["rule"][r]["package"].getValue() }));
 
@@ -3101,8 +3099,8 @@ void NativeCompiledTarget::prepare_pass8()
 
     // create
     prog_cl_cpp = activateCompiler(getSettings()["rule"]["cpp"], get_cpp_exts(*this));
-    //prog_cl_c = activateCompiler(getSettings()["rule"]["c"], { ".c" });
-    //prog_cl_asm = activateCompiler(getSettings()["rule"]["asm"], get_asm_exts(*this));
+    prog_cl_c = activateCompiler(getSettings()["rule"]["c"], { ".c" });
+    prog_cl_asm = activateCompiler(getSettings()["rule"]["asm"], get_asm_exts(*this));
 
     /*setExtensionProgram(".c", *prog_cl_c);
     for (auto &e : get_cpp_exts(*this))
@@ -3113,13 +3111,13 @@ void NativeCompiledTarget::prepare_pass8()
     if (getBuildSettings().TargetOS.is(OSType::Windows))
     {
         // actually a missing setting
-        //prog_cl_rc = activateRcCompiler(*this, "com.Microsoft.Windows.rc"s, {".rc"});
+        prog_cl_rc = activateRcCompiler(*this, "com.Microsoft.Windows.rc"s, {".rc"});
     }
 
     prog_link = activateLinker(getSettings()["rule"]["link"]);
-    //prog_lib = activateLinker(getSettings()["rule"]["lib"]);
-    //if (!prog_lib)
-        //throw SW_RUNTIME_ERROR("Librarian not found");
+    prog_lib = activateLinker(getSettings()["rule"]["lib"]);
+    if (!prog_lib)
+        throw SW_RUNTIME_ERROR("Librarian not found");
     if (!prog_link)
         throw SW_RUNTIME_ERROR("Linker not found");
 
@@ -3133,7 +3131,7 @@ void NativeCompiledTarget::prepare_pass8()
     // add casual idirs?
     if (prog_cl_rc)
         prog_cl_rc->idirs = NativeCompilerOptions::System.IncludeDirectories;
-    //prog_lib->Extension = getBuildSettings().TargetOS.getStaticLibraryExtension();
+    prog_lib->Extension = getBuildSettings().TargetOS.getStaticLibraryExtension();
     if (isExecutable())
     {
         prog_link->Prefix.clear();
@@ -3168,7 +3166,7 @@ void NativeCompiledTarget::prepare_pass8()
         if (getBuildSettings().TargetOS.Type == OSType::Windows)
             getMergeObject() += "_WINDLL"_def;
     }
-    //prog_lib->setOutputFile(getOutputFileName2("lib"));
+    prog_lib->setOutputFile(getOutputFileName2("lib"));
     prog_link->setOutputFile(getOutputFileName2("bin"));
     prog_link->setImportLibrary(getOutputFileName2("lib"));
     if (auto L = prog_link->as<VisualStudioLibraryTool *>())
@@ -3206,11 +3204,11 @@ void NativeCompiledTarget::prepare_pass8()
     if (!isHeaderOnly())
     {
         prog_cl_cpp->merge(*this);
-        //prog_cl_c->merge(*this);
-        //prog_cl_asm->merge(*this);
+        prog_cl_c->merge(*this);
+        prog_cl_asm->merge(*this);
     }
     prog_link->merge(getMergeObject());
-    //prog_lib->merge(getMergeObject());
+    prog_lib->merge(getMergeObject());
 
     // add rules
     std::vector<NativeRule *> rules;
@@ -3220,8 +3218,8 @@ void NativeCompiledTarget::prepare_pass8()
         rules.push_back(&v);
     };
     add_rule("cpp", std::make_unique<NativeCompilerRule>(*prog_cl_cpp, get_cpp_exts(*this)));
-    //add_rule("c", std::make_unique<NativeCompilerRule>(*prog_cl_c, StringSet{ ".c" }));
-    //add_rule("asm", std::make_unique<NativeCompilerRule>(*prog_cl_asm, get_asm_exts(*this)));
+    add_rule("c", std::make_unique<NativeCompilerRule>(*prog_cl_c, StringSet{ ".c" }));
+    add_rule("asm", std::make_unique<NativeCompilerRule>(*prog_cl_asm, get_asm_exts(*this)));
     //r->rulename = "[C++]"; // CXX?
     //r->rulename = "[C]";
     //r->rulename = "[ASM]";
@@ -3235,7 +3233,7 @@ void NativeCompiledTarget::prepare_pass8()
     else
     {
         // generate rc
-        /*if (GenerateWindowsResource
+        if (GenerateWindowsResource
             && !isHeaderOnly()
             && ::sw::gatherSourceFiles<SourceFile>(*this, { ".rc" }).empty()
             && getBuildSettings().TargetOS.is(OSType::Windows)
@@ -3249,7 +3247,7 @@ void NativeCompiledTarget::prepare_pass8()
         }
         // add rc rule
         if (getBuildSettings().TargetOS.is(OSType::Windows))
-            add_rule("rc", std::make_unique<RcRule>(*prog_cl_rc));*/
+            add_rule("rc", std::make_unique<RcRule>(*prog_cl_rc));
 
         if (isExecutable() || !isHeaderOnly())
             add_rule("link", std::make_unique<NativeLinkerRule>(*prog_link));
@@ -3267,7 +3265,6 @@ void NativeCompiledTarget::prepare_pass8()
         rf.getAdditionalArguments() = f->args;
         rfs.insert(rf);
     }
-    //path last_output;
     while (1)
     {
         bool newf = false;
@@ -3281,14 +3278,11 @@ void NativeCompiledTarget::prepare_pass8()
             {
                 auto [_, inserted] = rfs.insert(o);
                 newf |= inserted;
-                //if (inserted)
-                    //last_output = o;
             }
         }
         if (!newf)
             break;
     }
-    //outputfile = last_output;
 }
 
 void NativeCompiledTarget::prepare_pass9()
