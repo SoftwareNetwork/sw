@@ -65,6 +65,8 @@ struct SW_DRIVER_CPP_API ProgramDetector
     static vs::RuntimeLibraryType getMsvcLibraryType(const BuildSettings &bs);
     static String getMsvcLibraryName(const String &base, const BuildSettings &bs);
 
+    bool hasVsInstances() const { return !getVSInstances().empty(); }
+
 private:
     struct VSInstance
     {
@@ -73,11 +75,11 @@ private:
     };
     using VSInstances = VersionMap<VSInstance>;
 
-    VSInstances vsinstances1;
+    mutable VSInstances vsinstances1;
     std::map<path, String> msvc_prefixes;
 
     static VSInstances gatherVSInstances();
-    VSInstances &getVSInstances();
+    VSInstances &getVSInstances() const;
     static void log_msg_detect_target(const String &m);
     String getMsvcPrefix(builder::detail::ResolvableCommand c);
     auto &getMsvcIncludePrefixes() { return msvc_prefixes; }
@@ -106,5 +108,6 @@ ProgramDetector &getProgramDetector();
 
 void addSettingsAndSetPrograms(const SwCoreContext &, TargetSettings &);
 void addSettingsAndSetHostPrograms(const SwCoreContext &, TargetSettings &);
+void addSettingsAndSetConfigPrograms(const SwContext &, TargetSettings &);
 
 }

@@ -7,6 +7,7 @@
 #include "command.h"
 #include "extensions.h"
 #include "compiler/compiler.h"
+#include "compiler/rc.h"
 #include "target/native.h"
 
 #include <sw/builder/jumppad.h>
@@ -112,6 +113,11 @@ template <class C>
 static path getOutputFile(const Target &t, const C &c, const path &input)
 {
     return getOutputFile(t, input) += c.getObjectExtension(t.getBuildSettings().TargetOS);
+}
+
+void NativeCompilerRule::setup(const Target &t)
+{
+
 }
 
 Files NativeCompilerRule::addInputs(Target &t, const RuleFiles &rfs)
@@ -320,6 +326,7 @@ Files NativeCompilerRule::addInputs(Target &t, const RuleFiles &rfs)
         }
 
         nc.prepareCommand(t);
+        nc.getCommand()->push_back(arguments);
         /*nc.getCommand()->name = rulename;
         if (!rulename.empty())
             nc.getCommand()->name += " ";*/
@@ -333,6 +340,11 @@ Files NativeCompilerRule::addInputs(Target &t, const RuleFiles &rfs)
 NativeLinker &NativeLinkerRule::getLinker() const
 {
     return static_cast<NativeLinker &>(program);
+}
+
+void NativeLinkerRule::setup(const Target &t)
+{
+
 }
 
 Files NativeLinkerRule::addInputs(Target &t, const RuleFiles &rfs)
@@ -449,6 +461,7 @@ Files NativeLinkerRule::addInputs(Target &t, const RuleFiles &rfs)
     }
     nc.setObjectFiles(files);
     nc.prepareCommand(t);
+    nc.getCommand()->push_back(arguments);
     if (nt && nt->hasCircularDependency())
     {
         if (auto VSL = c->as<VisualStudioLibrarian *>())
@@ -470,6 +483,15 @@ Files NativeLinkerRule::addInputs(Target &t, const RuleFiles &rfs)
     return outputs;
 }
 
+RcRule::RcRule(ProgramPtr p)
+    : NativeRule(*p), p(std::move(p))
+{
+}
+
+void RcRule::setup(const Target &t)
+{
+}
+
 Files RcRule::addInputs(Target &t, const RuleFiles &rfs)
 {
     Files outputs;
@@ -482,9 +504,11 @@ Files RcRule::addInputs(Target &t, const RuleFiles &rfs)
         auto output = getOutputFile(t, rf.getFile()) += ".res";
         outputs.insert(output);
         auto c = program.clone();
+        // add casual idirs?
         static_cast<RcTool &>(*c).setSourceFile(rf.getFile());
         static_cast<RcTool &>(*c).setOutputFile(output);
         static_cast<RcTool &>(*c).prepareCommand(t);
+        static_cast<RcTool &>(*c).getCommand()->push_back(arguments);
         commands.emplace_back(std::move(c));
         used_files.insert(rf);
     }

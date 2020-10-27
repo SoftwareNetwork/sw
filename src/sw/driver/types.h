@@ -16,7 +16,7 @@ namespace sw
 
 enum class CompilerType
 {
-    UnspecifiedCompiler,
+    Unspecified,
 
     AppleClang,
     Clang,
@@ -44,7 +44,7 @@ bool isMsvcFamily(CompilerType);
 
 enum class LinkerType
 {
-    UnspecifiedLinker,
+    Unspecified,
 
     Gold,
     GNU,

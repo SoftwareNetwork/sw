@@ -95,7 +95,6 @@ struct SW_DRIVER_CPP_API CompilerBaseProgram : Program
     std::shared_ptr<builder::Command> getCommand(const Target &t);
     std::shared_ptr<builder::Command> getCommand() const override;
     std::shared_ptr<builder::Command> createCommand(const SwBuilderContext &swctx);
-    //std::shared_ptr<builder::Command> createCommand(const std::shared_ptr<builder::Command> &);
 
 protected:
     std::shared_ptr<driver::Command> cmd;
@@ -114,7 +113,7 @@ struct SW_DRIVER_CPP_API Compiler : CompilerBaseProgram
 struct SW_DRIVER_CPP_API NativeCompiler : Compiler,
     NativeCompilerOptions//, OptionsGroup<NativeCompilerOptions>
 {
-    CompilerType Type = CompilerType::UnspecifiedCompiler;
+    CompilerType Type = CompilerType::Unspecified;
 
     using Compiler::Compiler;
     virtual ~NativeCompiler() = default;
@@ -280,7 +279,7 @@ struct SW_DRIVER_CPP_API Linker : CompilerBaseProgram
 struct SW_DRIVER_CPP_API NativeLinker : Linker,
     NativeLinkerOptions
 {
-    LinkerType Type = LinkerType::UnspecifiedLinker;
+    LinkerType Type = LinkerType::Unspecified;
 
     String Prefix;
     String Suffix;
@@ -400,27 +399,6 @@ struct SW_DRIVER_CPP_API GNULibrarian : GNULibraryTool,
 
 protected:
     //Version gatherVersion() const override { return Program::gatherVersion(file, "-V"); }
-};
-
-// other tools
-
-// win resources
-struct SW_DRIVER_CPP_API RcTool :
-    CompilerBaseProgram,
-    CommandLineOptions<RcToolOptions>
-{
-    FilesOrdered idirs;
-
-    using CompilerBaseProgram::CompilerBaseProgram;
-
-    SW_COMMON_COMPILER_API;
-
-    void setOutputFile(const path &output_file);
-    void setSourceFile(const path &input_file);
-    String getObjectExtension(const OS &) const { return ".res"; }
-
-protected:
-    //Version gatherVersion() const override { return Program::gatherVersion(file, "/?"); }
 };
 
 // Ada

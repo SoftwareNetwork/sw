@@ -85,6 +85,7 @@ public:
 
     //this_type &operator=(const this_type &rhs) { v = rhs.v; u = rhs.u; return *this; }
     operator base &() { return v; }
+    operator const base &() const { return v; }
 
 private:
     base v;

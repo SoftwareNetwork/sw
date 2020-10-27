@@ -59,11 +59,13 @@ struct SW_DRIVER_CPP_API NativeRule : IRule
     using RuleProgram = Program &;
 
     RuleProgram program;
+    decltype(builder::Command::arguments) arguments; // move to rule promise?
 
     NativeRule(RuleProgram);
     NativeRule(const NativeRule &) = delete;
 
     virtual Files addInputs(Target &t, const RuleFiles &) = 0;
+    virtual void setup(const Target &t) {}
 
     Commands getCommands() const override;
 
@@ -81,6 +83,7 @@ struct SW_DRIVER_CPP_API NativeCompilerRule : NativeRule
     NativeCompilerRule(RuleProgram, const StringSet &exts);
 
     Files addInputs(Target &t, const RuleFiles &) override;
+    void setup(const Target &t) override;
 
 private:
     NativeCompiler &getCompiler() const;
@@ -91,6 +94,7 @@ struct SW_DRIVER_CPP_API NativeLinkerRule : NativeRule
     using NativeRule::NativeRule;
 
     Files addInputs(Target &t, const RuleFiles &) override;
+    void setup(const Target &t) override;
 
 private:
     NativeLinker &getLinker() const;
@@ -98,9 +102,13 @@ private:
 
 struct RcRule : NativeRule
 {
-    using NativeRule::NativeRule;
+    RcRule(ProgramPtr);
 
     Files addInputs(Target &t, const RuleFiles &) override;
+    void setup(const Target &t) override;
+
+private:
+    ProgramPtr p;
 };
 
 } // namespace sw

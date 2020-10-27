@@ -12,6 +12,13 @@ namespace sw
 {
 
 struct IRule;
+using RulePtr = std::unique_ptr<IRule>;
+
+struct RulePromise
+{
+    RulePtr rule;
+    primitives::command::Arguments arguments;
+};
 
 struct RuleStorage
 {
@@ -19,10 +26,11 @@ struct RuleStorage
     ~RuleStorage();
 
     // or set rule?
-    void push(const String &name, std::unique_ptr<IRule>);
-    std::unique_ptr<IRule> pop(const String &name);
+    void push(const String &name, RulePtr);
+    RulePtr pop(const String &name);
 
     bool contains(const String &name) const;
+    IRule *getRule(const String &n) const;
 
     void clear(); // everything
     void clear(const String &name); // only name
@@ -30,7 +38,7 @@ struct RuleStorage
     Commands getCommands() const;
 
 private:
-    std::map<String, std::stack<std::unique_ptr<IRule>>> rules;
+    std::map<String, std::stack<RulePtr>> rules;
 };
 
 struct RuleSystem
@@ -52,6 +60,18 @@ struct RuleSystem
         return addRule(n, std::move(r));
     }*/
 
+    IRule *getRule(const String &n) const { return rules.getRule(n); }
+
+    template <class T>
+    T getRule(const String &n) const
+    {
+        auto r = getRule(n);
+        if (!r)
+            return {};
+        return r->as<T>();
+    }
+
+protected:
     Commands getRuleCommands() const;
 
 private:

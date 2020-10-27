@@ -97,7 +97,7 @@ String toString(CompilerType Type)
         CASE(MSVC);
         CASE(Other);
 
-    case CompilerType::UnspecifiedCompiler:
+    case CompilerType::Unspecified:
         throw std::logic_error("Compiler type was not set");
     default:
         throw std::logic_error("TODO: implement compiler type");

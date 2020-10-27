@@ -11,16 +11,16 @@ namespace sw
 RuleStorage::RuleStorage() = default;
 RuleStorage::~RuleStorage() = default;
 
-void RuleStorage::push(const String &name, std::unique_ptr<IRule> r)
+void RuleStorage::push(const String &name, RulePtr r)
 {
     rules[name].emplace(std::move(r));
 }
 
-std::unique_ptr<IRule> RuleStorage::pop(const String &name)
+RulePtr RuleStorage::pop(const String &name)
 {
     if (!contains(name))
         return {};
-    std::unique_ptr<IRule> r = std::move(rules[name].top());
+    RulePtr r = std::move(rules[name].top());
     rules[name].pop();
     return r;
 }
@@ -51,6 +51,14 @@ Commands RuleStorage::getCommands() const
 Commands RuleSystem::getRuleCommands() const
 {
     return rules.getCommands();
+}
+
+IRule *RuleStorage::getRule(const String &n) const
+{
+    auto i = rules.find(n);
+    if (i != rules.end())
+        return i->second.top().get();
+    return {};
 }
 
 } // namespace sw

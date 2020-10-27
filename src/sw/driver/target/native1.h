@@ -54,7 +54,8 @@ enum class ConfigureFlags
 /**
 * \brief Native Target is a binary target that produces binary files (probably executables).
 */
-struct SW_DRIVER_CPP_API NativeTarget : Target
+struct SW_DRIVER_CPP_API NativeTarget
+    : Target
     , RuleSystem
     //,protected NativeOptions
 {

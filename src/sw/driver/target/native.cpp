@@ -11,6 +11,7 @@
 #include "../command.h"
 #include "../rule.h"
 #include "../compiler/detect.h"
+#include "../compiler/rc.h"
 
 #include <sw/builder/jumppad.h>
 #include <sw/core/sw_context.h>
@@ -301,7 +302,7 @@ static auto get_settings_package_id(const TargetSetting &s)
 
 static auto get_compiler_type(const PackagePath &p)
 {
-    auto ct = CompilerType::UnspecifiedCompiler;
+    auto ct = CompilerType::Unspecified;
     if (0);
     else if (p == "com.Microsoft.VisualStudio.VC.cl")
         ct = CompilerType::MSVC;
@@ -327,49 +328,31 @@ static auto get_compiler_type(const UnresolvedPackage &id)
 
 static auto get_compiler_type2(const String &p)
 {
-    auto ct = CompilerType::UnspecifiedCompiler;
+    auto t = CompilerType::Unspecified;
     if (0);
     else if (p == "msvc")
-        ct = CompilerType::MSVC;
-    return ct;
+        t = CompilerType::MSVC;
+    return t;
+}
+
+static auto get_linker_type(const String &p)
+{
+    auto t = LinkerType::Unspecified;
+    if (0);
+    else if (p == "msvc")
+        t = LinkerType::MSVC;
+    return t;
 }
 
 static std::unique_ptr<RcTool> activateRcCompiler(NativeCompiledTarget &nt, const UnresolvedPackage &id, const StringSet &exts)
 {
     auto &cld = nt.getMainBuild().getTargets();
-
     auto i = cld.find(id, nt.getSettings());
     if (!i)
-    {
-        //i = nt.getContext().getPredefinedTargets().find(id, oss);
-        //if (!i)
-        {
-            SW_UNIMPLEMENTED;
-            //for (auto &e : exts)
-            //setExtensionProgram(e, id);
-            return {};
-        }
-    }
+        SW_UNIMPLEMENTED;
     auto t = i->as<PredefinedProgram *>();
     if (!t)
         throw SW_RUNTIME_ERROR("Target without PredefinedProgram: " + i->getPackage().toString());
-
-    auto set_compiler_type = [&id, &exts](const auto &c)
-    {
-        //for (auto &e : exts)
-        //setExtensionProgram(e, c->clone());
-    };
-
-    auto c1 = t->getProgram().clone();
-    if (auto c = dynamic_cast<CompilerBaseProgram *>(c1.get()))
-    {
-        SW_UNIMPLEMENTED;
-        set_compiler_type(c);
-        //return c1;
-    }
-    //else
-    // create such programs outside of this function
-    //SW_UNIMPLEMENTED;
 
     bool created = false;
     auto create_command = [&nt, &created, &t](auto &c)
@@ -382,15 +365,8 @@ static std::unique_ptr<RcTool> activateRcCompiler(NativeCompiledTarget &nt, cons
         created = true;
     };
 
-    std::unique_ptr<RcTool> c;
-    if (id.ppath == "com.Microsoft.Windows.rc")
-        c = std::make_unique<RcTool>();
-    else
-        throw SW_RUNTIME_ERROR("Unknown compiler: " + id.toString());
-
+    auto c = std::make_unique<RcTool>();
     create_command(c);
-    set_compiler_type(c);
-
     return c;
 }
 
@@ -594,23 +570,17 @@ std::unique_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetS
 std::unique_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetSetting &s, const UnresolvedPackage &id, bool extended_desc)
 {
     auto &cld = getMainBuild().getTargets();
-
     auto i = cld.find(id, getSettings());
     if (!i)
-    {
         SW_UNIMPLEMENTED;
-        //i = getContext().getPredefinedTargets().find(id, oss);
-        //if (!i)
-            return {};
-    }
-    auto t = i->as<PredefinedProgram*>();
+    auto t = i->as<PredefinedProgram *>();
     if (!t)
-        return {};
+        throw SW_RUNTIME_ERROR("Target without PredefinedProgram: " + i->getPackage().toString());
 
     std::unique_ptr<NativeLinker> c;
 
     bool created = false;
-    auto create_command = [this, &created, &t, &c, &s, &extended_desc]()
+    auto create_command = [this, &created, &t, &c]()
     {
         if (created)
             return;
@@ -618,37 +588,15 @@ std::unique_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetS
         auto C = c->createCommand(getMainBuild());
         static_cast<primitives::Command&>(*C) = *t->getProgram().getCommand();
         created = true;
-
-        if (extended_desc && s["command"])
-            targetSettings2Command(*C, s["command"]);
     };
 
     if (0);
-    else if (id.ppath == "com.Microsoft.VisualStudio.VC.lib")
-    {
-        c = std::make_unique<VisualStudioLibrarian>();
-        c->Type = LinkerType::MSVC;
-    }
-    else if (id.ppath == "com.Microsoft.VisualStudio.VC.link" || id.ppath == "org.LLVM.lld.link")
+    else if (lt == LinkerType::MSVC)
     {
         c = std::make_unique<VisualStudioLinker>();
         c->Type = LinkerType::MSVC;
     }
-    else if (id.ppath == "org.gnu.binutils.ar" || id.ppath == "org.LLVM.ar")
-    {
-        auto C = std::make_unique<GNULibrarian>();
-        C->Type = LinkerType::GNU;
-        C->Prefix = getBuildSettings().TargetOS.getLibraryPrefix();
-        c = std::move(C);
-    }
-    else if (
-        id.ppath == "org.gnu.gcc" ||
-        id.ppath == "org.gnu.gpp" ||
-        id.ppath == "org.LLVM.clang" ||
-        id.ppath == "org.LLVM.clangpp" ||
-        id.ppath == "com.Apple.clang" ||
-        id.ppath == "com.Apple.clangpp"
-        )
+    else if (lt != LinkerType::Unspecified)
     {
         auto C = std::make_unique<GNULinker>();
         // actually it is depends on -fuse-ld option
@@ -672,10 +620,7 @@ std::unique_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetS
         //
         c = std::move(C);
 
-        if (id.ppath == "org.LLVM.clang" ||
-            id.ppath == "org.LLVM.clangpp" ||
-            id.ppath == "com.Apple.clang" ||
-            id.ppath == "com.Apple.clangpp")
+        if (lt == LinkerType::LLD)
         {
             create_command();
             auto cmd = c->createCommand(getMainBuild());
@@ -684,52 +629,106 @@ std::unique_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetS
         }
         // TODO: find -fuse-ld option and set c->Type accordingly
     }
-    else if (id.ppath == "org.gnu.gcc.ld")
+    else
+        throw SW_RUNTIME_ERROR("Unknown librarian/linker");
+
+    create_command();
+
+    return c;
+}
+
+std::unique_ptr<NativeLinker> NativeCompiledTarget::activateLibrarian(LinkerType t)
+{
+    std::unique_ptr<NativeLinker> c;
+
+    bool created = false;
+    auto create_command = [this, &created, &t, &c]()
     {
-        SW_UNIMPLEMENTED;
+        if (created)
+            return;
+        /*c->file = t->getProgram().file;
+        auto C = c->createCommand(getMainBuild());
+        static_cast<primitives::Command&>(*C) = *t->getProgram().getCommand();
+        created = true;*/
+    };
 
-        auto C = std::make_unique<GNULinker>();
-        C->Type = LinkerType::GNU;
-        C->Prefix = getBuildSettings().TargetOS.getLibraryPrefix();
-        c = std::move(C);
-    }
-    else if (id.ppath == "org.LLVM.lld")
-    {
-        SW_UNIMPLEMENTED;
-
-        auto C = std::make_unique<GNULinker>();
-        C->Type = LinkerType::GNU;
-        C->Prefix = getBuildSettings().TargetOS.getLibraryPrefix();
-        c = std::move(C);
-
-        create_command();
-
-        auto cmd = c->createCommand(getMainBuild());
-        //cmd->push_back("-fuse-ld=lld");
-        cmd->push_back("-flavor");
-        cmd->push_back("ld"); // for linux, TODO: add checks
-        cmd->push_back("-eh-frame-hdr"); // needed
-        if (getBuildSettings().TargetOS.is(OSType::Linux))
-        {
-            cmd->push_back("-dynamic-linker"); // needed
-            cmd->push_back("/lib64/ld-linux-x86-64.so.2"); // needed
-        }
-        cmd->first_response_file_argument = 2;
-        //cmd->push_back("-target");
-        //cmd->push_back(getBuildSettings().getTargetTriplet());
-    }
-    else if (id.ppath == "com.intel.compiler.lib")
+    if (0);
+    else if (t == LinkerType::MSVC)
     {
         c = std::make_unique<VisualStudioLibrarian>();
         c->Type = LinkerType::MSVC;
     }
-    else if (id.ppath == "com.intel.compiler.link")
+    else if (t != LinkerType::Unspecified)
+    {
+        auto C = std::make_unique<GNULibrarian>();
+        C->Type = LinkerType::GNU;
+        C->Prefix = getBuildSettings().TargetOS.getLibraryPrefix();
+        c = std::move(C);
+    }
+    else
+        throw SW_RUNTIME_ERROR("Unknown librarian/linker");
+
+    create_command();
+
+    return c;
+}
+
+std::unique_ptr<NativeLinker> NativeCompiledTarget::activateLinker(LinkerType t)
+{
+    std::unique_ptr<NativeLinker> c;
+
+    bool created = false;
+    auto create_command = [this, &created, &t, &c]()
+    {
+        if (created)
+            return;
+        /*c->file = t->getProgram().file;
+        auto C = c->createCommand(getMainBuild());
+        static_cast<primitives::Command&>(*C) = *t->getProgram().getCommand();
+        created = true;*/
+    };
+
+    if (0);
+    else if (t == LinkerType::MSVC)
     {
         c = std::make_unique<VisualStudioLinker>();
         c->Type = LinkerType::MSVC;
     }
+    else if (t != LinkerType::Unspecified)
+    {
+        auto C = std::make_unique<GNULinker>();
+        // actually it is depends on -fuse-ld option
+        // do we need it at all?
+        // probably yes, because user might provide different commands to ld and lld
+        // is it true?
+        C->Type = LinkerType::GNU;
+        C->Prefix = getBuildSettings().TargetOS.getLibraryPrefix();
+        if (getBuildSettings().TargetOS.isApple())
+        {
+            C->use_start_end_groups = false;
+
+            // for linker also!
+            if (getBuildSettings().TargetOS.Version)
+            {
+                auto c = C->createCommand(getMainBuild());
+                c->push_back("-mmacosx-version-min=" + getBuildSettings().TargetOS.Version->toString());
+            }
+        }
+
+        //
+        c = std::move(C);
+
+        if (t == LinkerType::LLD)
+        {
+            create_command();
+            auto cmd = c->createCommand(getMainBuild());
+            cmd->push_back("-target");
+            cmd->push_back(getBuildSettings().getTargetTriplet());
+        }
+        // TODO: find -fuse-ld option and set c->Type accordingly
+    }
     else
-        throw SW_RUNTIME_ERROR("Unknown librarian/linker: " + id.toString());
+        throw SW_RUNTIME_ERROR("Unknown librarian/linker");
 
     create_command();
 
@@ -758,15 +757,20 @@ static StringSet get_asm_exts(const NativeCompiledTarget &t)
 void NativeCompiledTarget::findCompiler()
 {
     ct = get_compiler_type2(getSettings()["rule"]["cpp"]["type"].getValue());
-    if (ct == CompilerType::UnspecifiedCompiler)
+    if (ct == CompilerType::Unspecified)
         ct = get_compiler_type2(getSettings()["rule"]["c"]["type"].getValue());
-    if (ct == CompilerType::UnspecifiedCompiler)
+    if (ct == CompilerType::Unspecified)
         throw SW_RUNTIME_ERROR("Cannot determine compiler type " + get_settings_package_id(getSettings()["rule"]["cpp"]["package"]).toString() + " for settings: " + getSettings().toString());
 
+    lt = get_linker_type(getSettings()["rule"]["link"]["type"].getValue());
+    if (lt == LinkerType::Unspecified)
+        throw SW_RUNTIME_ERROR("Cannot determine compiler type " + get_settings_package_id(getSettings()["rule"]["link"]["package"]).toString() + " for settings: " + getSettings().toString());
+
     Strings rules = { "c", "cpp", "asm", "lib", "link" };
-    if (getBuildSettings().TargetOS.is(OSType::Windows))
+    if (getBuildSettings().TargetOS.is(OSType::Windows) && getSettings()["rule"]["rc"])
         rules.push_back("rc");
     for (auto &r : rules)
+        //addRule(r, , r);
         addDummyDependency(std::make_shared<Dependency>(UnresolvedPackage{ getSettings()["rule"][r]["package"].getValue() }));
 
     //ct = get_compiler_type(get_settings_package_id(getSettings()["native"]["program"]["cpp"]));
@@ -3099,8 +3103,8 @@ void NativeCompiledTarget::prepare_pass8()
 
     // create
     prog_cl_cpp = activateCompiler(getSettings()["rule"]["cpp"], get_cpp_exts(*this));
-    prog_cl_c = activateCompiler(getSettings()["rule"]["c"], { ".c" });
-    prog_cl_asm = activateCompiler(getSettings()["rule"]["asm"], get_asm_exts(*this));
+    //prog_cl_c = activateCompiler(getSettings()["rule"]["c"], { ".c" });
+    //prog_cl_asm = activateCompiler(getSettings()["rule"]["asm"], get_asm_exts(*this));
 
     /*setExtensionProgram(".c", *prog_cl_c);
     for (auto &e : get_cpp_exts(*this))
@@ -3108,30 +3112,21 @@ void NativeCompiledTarget::prepare_pass8()
     for (auto &e : get_asm_exts(*this))
     setExtensionProgram(e, *prog_cl_asm);*/
 
-    if (getBuildSettings().TargetOS.is(OSType::Windows))
-    {
-        // actually a missing setting
-        prog_cl_rc = activateRcCompiler(*this, "com.Microsoft.Windows.rc"s, {".rc"});
-    }
-
+    //prog_link = activateLinker(getLinkerType());
     prog_link = activateLinker(getSettings()["rule"]["link"]);
-    prog_lib = activateLinker(getSettings()["rule"]["lib"]);
-    if (!prog_lib)
-        throw SW_RUNTIME_ERROR("Librarian not found");
+    //prog_lib = activateLinker(getSettings()["rule"]["lib"]);
+    //if (!prog_lib)
+    //throw SW_RUNTIME_ERROR("Librarian not found");
     if (!prog_link)
         throw SW_RUNTIME_ERROR("Linker not found");
 
     // setup
-    setup_compiler(*prog_cl_c);
+    //setup_compiler(*prog_cl_c);
     setup_compiler(*prog_cl_cpp);
-    setup_compiler(*prog_cl_asm);
+    //setup_compiler(*prog_cl_asm);
 
     // setup programs
-    // rc
-    // add casual idirs?
-    if (prog_cl_rc)
-        prog_cl_rc->idirs = NativeCompilerOptions::System.IncludeDirectories;
-    prog_lib->Extension = getBuildSettings().TargetOS.getStaticLibraryExtension();
+    //prog_lib->Extension = getBuildSettings().TargetOS.getStaticLibraryExtension();
     if (isExecutable())
     {
         prog_link->Prefix.clear();
@@ -3166,7 +3161,7 @@ void NativeCompiledTarget::prepare_pass8()
         if (getBuildSettings().TargetOS.Type == OSType::Windows)
             getMergeObject() += "_WINDLL"_def;
     }
-    prog_lib->setOutputFile(getOutputFileName2("lib"));
+    //prog_lib->setOutputFile(getOutputFileName2("lib"));
     prog_link->setOutputFile(getOutputFileName2("bin"));
     prog_link->setImportLibrary(getOutputFileName2("lib"));
     if (auto L = prog_link->as<VisualStudioLibraryTool *>())
@@ -3204,11 +3199,11 @@ void NativeCompiledTarget::prepare_pass8()
     if (!isHeaderOnly())
     {
         prog_cl_cpp->merge(*this);
-        prog_cl_c->merge(*this);
-        prog_cl_asm->merge(*this);
+        //prog_cl_c->merge(*this);
+        //prog_cl_asm->merge(*this);
     }
     prog_link->merge(getMergeObject());
-    prog_lib->merge(getMergeObject());
+    //prog_lib->merge(getMergeObject());
 
     // add rules
     std::vector<NativeRule *> rules;
@@ -3218,8 +3213,8 @@ void NativeCompiledTarget::prepare_pass8()
         rules.push_back(&v);
     };
     add_rule("cpp", std::make_unique<NativeCompilerRule>(*prog_cl_cpp, get_cpp_exts(*this)));
-    add_rule("c", std::make_unique<NativeCompilerRule>(*prog_cl_c, StringSet{ ".c" }));
-    add_rule("asm", std::make_unique<NativeCompilerRule>(*prog_cl_asm, get_asm_exts(*this)));
+    //add_rule("c", std::make_unique<NativeCompilerRule>(*prog_cl_c, StringSet{ ".c" }));
+    //add_rule("asm", std::make_unique<NativeCompilerRule>(*prog_cl_asm, get_asm_exts(*this)));
     //r->rulename = "[C++]"; // CXX?
     //r->rulename = "[C]";
     //r->rulename = "[ASM]";
@@ -3242,12 +3237,17 @@ void NativeCompiledTarget::prepare_pass8()
         {
             auto p = generate_rc();
             // more info for generators
-            File(p, getFs()).setGenerated(true);
+            // but we already wrote this file, no need to mark as generated
+            //File(p, getFs()).setGenerated(true);
             getMergeObject() += p;
         }
         // add rc rule
-        if (getBuildSettings().TargetOS.is(OSType::Windows))
-            add_rule("rc", std::make_unique<RcRule>(*prog_cl_rc));
+        if (getBuildSettings().TargetOS.is(OSType::Windows) && getSettings()["rule"]["rc"])
+        {
+            // actually a missing setting
+            auto prog_cl_rc = activateRcCompiler(*this, getSettings()["rule"]["rc"]["package"].getValue(), {".rc"});
+            add_rule("rc", std::make_unique<RcRule>(std::move(prog_cl_rc)));
+        }
 
         if (isExecutable() || !isHeaderOnly())
             add_rule("link", std::make_unique<NativeLinkerRule>(*prog_link));
@@ -3264,6 +3264,13 @@ void NativeCompiledTarget::prepare_pass8()
         RuleFile rf(p);
         rf.getAdditionalArguments() = f->args;
         rfs.insert(rf);
+    }
+    for (auto &r : rules)
+    {
+        auto nr = dynamic_cast<NativeRule*>(r);
+        if (!nr)
+            continue;
+        nr->setup(*this);
     }
     while (1)
     {
@@ -4057,6 +4064,11 @@ void NativeCompiledTarget::pushBackToFileOnce(const path &fn, const String &text
 CompilerType NativeCompiledTarget::getCompilerType() const
 {
     return ct;
+}
+
+LinkerType NativeCompiledTarget::getLinkerType() const
+{
+    return lt;
 }
 
 TargetType NativeCompiledTarget::getRealType() const

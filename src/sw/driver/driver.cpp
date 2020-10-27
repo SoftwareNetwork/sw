@@ -541,16 +541,7 @@ std::unique_ptr<SwBuild> Driver::create_build(SwContext &swctx) const
 TargetSettings Driver::getDllConfigSettings(SwContext &swctx) const
 {
     auto ts = swctx.createHostSettings();
-    ts["native"]["library"] = "static"; // why not shared?
-    //ts["native"]["mt"] = "true";
-    if (swctx.getSettings()["debug_configs"] == "true")
-    {
-#ifndef NDEBUG
-        ts["native"]["configuration"] = "debug";
-#else
-        ts["native"]["configuration"] = "releasewithdebuginformation";
-#endif
-    }
+    addSettingsAndSetConfigPrograms(swctx, ts);
     return ts;
 }
 

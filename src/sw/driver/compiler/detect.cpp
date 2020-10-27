@@ -243,7 +243,7 @@ ProgramDetector::VSInstances ProgramDetector::gatherVSInstances()
     return instances;
 }
 
-ProgramDetector::VSInstances &ProgramDetector::getVSInstances()
+ProgramDetector::VSInstances &ProgramDetector::getVSInstances() const
 {
     if (vsinstances1.empty())
         vsinstances1 = gatherVSInstances();
@@ -984,8 +984,21 @@ static void addSettings(TargetSettings &ts, bool force)
     check_and_assign(ts["native"]["mt"], "false");
 }
 
+static void setRuleCompareRules(TargetSettings &ts)
+{
+    // mandatory rules
+    for (auto &v : {"c","cpp","link"})
+    {
+        if (ts["rule"][v])
+        {
+            ts["rule"].ignoreInComparison(true);
+            ts["rule"].useInHash(false);
+        }
+    }
+}
+
 // remember! only host tools
-// they must be the same as used when building sw
+// TODO: load host settings from file
 void addSettingsAndSetHostPrograms(const SwCoreContext &swctx, TargetSettings &ts)
 {
     addSettings(ts, true);
@@ -1192,17 +1205,21 @@ void addSettingsAndSetPrograms(const SwCoreContext &swctx, TargetSettings &ts)
 
         if (0);
         // msvc
-        else if (0/*cl != swctx.getPredefinedTargets().end(clpkg) && !cl->second.empty()*/)
+        else if (getProgramDetector().hasVsInstances())
         {
-            check_and_assign_dependency(ts["native"]["program"]["c"], to_upkg("com.Microsoft.VisualStudio.VC.cl"));
-            check_and_assign_dependency(ts["native"]["program"]["cpp"], to_upkg("com.Microsoft.VisualStudio.VC.cl"));
-            check_and_assign_dependency(ts["native"]["program"]["asm"], to_upkg("com.Microsoft.VisualStudio.VC.ml"));
-            check_and_assign_dependency(ts["native"]["program"]["lib"], to_upkg("com.Microsoft.VisualStudio.VC.lib"));
-            check_and_assign_dependency(ts["native"]["program"]["link"], to_upkg("com.Microsoft.VisualStudio.VC.link"));
+            ts["rule"]["c"]["package"] = "com.Microsoft.VisualStudio.VC.cl";
+            ts["rule"]["c"]["type"] = "msvc";
+
+            ts["rule"]["cpp"]["package"] = "com.Microsoft.VisualStudio.VC.cl";
+            ts["rule"]["cpp"]["type"] = "msvc";
+
+            ts["rule"]["asm"]["package"] = "com.Microsoft.VisualStudio.VC.ml";
+            ts["rule"]["asm"]["type"] = "msvc";
         }
         // clang
         else if (0/*clangpp != swctx.getPredefinedTargets().end(clangpppkg) && !clangpp->second.empty()*/)
         {
+            SW_UNIMPLEMENTED;
             check_and_assign_dependency(ts["native"]["program"]["c"], to_upkg("org.LLVM.clang"));
             check_and_assign_dependency(ts["native"]["program"]["cpp"], to_upkg("org.LLVM.clangpp"));
             check_and_assign_dependency(ts["native"]["program"]["asm"], to_upkg("org.LLVM.clang"));
@@ -1213,6 +1230,7 @@ void addSettingsAndSetPrograms(const SwCoreContext &swctx, TargetSettings &ts)
         // clangcl
         else if (0/*clangcl != swctx.getPredefinedTargets().end(clangclpkg) && !clangcl->second.empty()*/)
         {
+            SW_UNIMPLEMENTED;
             check_and_assign_dependency(ts["native"]["program"]["c"], to_upkg("org.LLVM.clangcl"));
             check_and_assign_dependency(ts["native"]["program"]["cpp"], to_upkg("org.LLVM.clangcl"));
             check_and_assign_dependency(ts["native"]["program"]["asm"], to_upkg("org.LLVM.clangcl"));
@@ -1223,21 +1241,14 @@ void addSettingsAndSetPrograms(const SwCoreContext &swctx, TargetSettings &ts)
         //else
             //throw SW_RUNTIME_ERROR("No suitable compilers found.\nPlease, install one first.");
 
-        ts["rule"]["c"]["package"] = "com.Microsoft.VisualStudio.VC.cl";
-        ts["rule"]["c"]["type"] = "msvc";
-
-        ts["rule"]["cpp"]["package"] = "com.Microsoft.VisualStudio.VC.cl";
-        ts["rule"]["cpp"]["type"] = "msvc";
-
-        ts["rule"]["asm"]["package"] = "com.Microsoft.VisualStudio.VC.ml";
-        ts["rule"]["asm"]["type"] = "msvc";
-
+        // use msvc's lib and link until llvm tools are not working
         ts["rule"]["lib"]["package"] = "com.Microsoft.VisualStudio.VC.lib";
         ts["rule"]["lib"]["type"] = "msvc";
 
         ts["rule"]["link"]["package"] = "com.Microsoft.VisualStudio.VC.link";
         ts["rule"]["link"]["type"] = "msvc";
 
+        // always use this rc
         ts["rule"]["rc"]["package"] = "com.Microsoft.Windows.rc";
     }
     // add more defaults
@@ -1292,6 +1303,27 @@ void addSettingsAndSetPrograms(const SwCoreContext &swctx, TargetSettings &ts)
         if (ts["native"]["program"]["cpp"].isValue())
             if_add(ts["native"]["program"]["link"], ts["native"]["program"]["cpp"].getValue());
     }
+
+    setRuleCompareRules(ts);
+}
+
+// they must be the same as used when building sw
+void addSettingsAndSetConfigPrograms(const SwContext &swctx, TargetSettings &ts)
+{
+    ts["native"]["library"] = "static"; // why not shared?
+                                        //ts["native"]["mt"] = "true";
+    if (swctx.getSettings()["debug_configs"] == "true")
+    {
+#ifndef NDEBUG
+        ts["native"]["configuration"] = "debug";
+#else
+        ts["native"]["configuration"] = "releasewithdebuginformation";
+#endif
+    }
+
+#ifdef _MSC_VER
+    Version clver(_MSC_VER / 100, _MSC_VER % 100);
+#endif
 }
 
 }

@@ -15,8 +15,9 @@ namespace sw
 * \brief Native Executed Target is a binary target that must be built.
 */
 // actually this is asm/c/cpp target
-struct SW_DRIVER_CPP_API NativeCompiledTarget : NativeTarget,
-    NativeTargetOptionsGroup
+struct SW_DRIVER_CPP_API NativeCompiledTarget
+    : NativeTarget
+    , NativeTargetOptionsGroup
 {
 private:
     ASSIGN_WRAPPER(add, NativeCompiledTarget);
@@ -115,6 +116,7 @@ public:
 
     // reconsider?
     CompilerType getCompilerType() const;
+    LinkerType getLinkerType() const;
 
     void writeFileOnce(const path &fn, const String &content = {});
     void writeFileSafe(const path &fn, const String &content);
@@ -167,7 +169,8 @@ protected:
     path getBinaryParentDir() const override;
 
 private:
-    CompilerType ct = CompilerType::UnspecifiedCompiler;
+    CompilerType ct = CompilerType::Unspecified;
+    LinkerType lt = LinkerType::Unspecified;
     bool already_built = false;
     mutable std::optional<Commands> generated_commands;
     path outputfile;
@@ -205,13 +208,14 @@ private:
     std::unique_ptr<NativeCompiler> prog_cl_cpp;
     std::unique_ptr<NativeCompiler> prog_cl_c;
     std::unique_ptr<NativeCompiler> prog_cl_asm;
-    std::unique_ptr<RcTool> prog_cl_rc;
     std::unique_ptr<NativeLinker> prog_link;
     std::unique_ptr<NativeLinker> prog_lib;
     bool libstdcppset = false;
     void findCompiler();
     std::unique_ptr<NativeCompiler> activateCompiler(const TargetSetting &s, const StringSet &exts);
     std::unique_ptr<NativeCompiler> activateCompiler(const TargetSetting &s, const UnresolvedPackage &id, const StringSet &exts, bool extended_desc);
+    std::unique_ptr<NativeLinker> activateLibrarian(LinkerType);
+    std::unique_ptr<NativeLinker> activateLinker(LinkerType);
     std::unique_ptr<NativeLinker> activateLinker(const TargetSetting &s);
     std::unique_ptr<NativeLinker> activateLinker(const TargetSetting &s, const UnresolvedPackage &id, bool extended_desc);
 
