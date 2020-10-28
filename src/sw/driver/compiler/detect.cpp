@@ -7,7 +7,6 @@
 #include "../build.h"
 #include "../command.h"
 #include "../program_version_storage.h"
-#include "../target/target2.h"
 
 #include <boost/algorithm/string.hpp>
 #include <primitives/command.h>

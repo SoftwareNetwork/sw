@@ -66,21 +66,9 @@ void RcTool::prepareCommand1(const Target &t)
     // it is ok when INCLUDE is empty, do not check for it!
     for (auto &i : env_idirs)
         s += i + ";";
-    for (auto &i : idirs)
-        s += to_string(normalize_path(i)) + ";";
     cmd->environment["INCLUDE"] = s;
 
     getCommandLineOptions<RcToolOptions>(cmd.get(), *this);
-}
-
-void RcTool::setOutputFile(const path &output_file)
-{
-    Output = output_file;
-}
-
-void RcTool::setSourceFile(const path &input_file)
-{
-    InputFile = input_file;
 }
 
 }

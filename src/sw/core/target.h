@@ -12,6 +12,8 @@
 #include <sw/support/source.h>
 
 #include <any>
+#include <map>
+#include <memory>
 #include <variant>
 
 namespace sw
@@ -165,6 +167,26 @@ using ITargetPtr = std::shared_ptr<ITarget>;
     // get link args?
 };*/
 
+struct SW_CORE_API IRule : ICastable
+{
+    //using RuleFiles = std::set<RuleFile>;
+    //RuleFiles files;
+
+    virtual ~IRule() = 0;
+
+    // get commands for ... (building?)
+    ///
+    virtual Commands getCommands() const = 0;
+
+    /// add inputs to rule
+    /// returns outputs
+    //virtual Files addInputs(const RuleFiles &) = 0;
+
+    virtual std::unique_ptr<IRule> clone() const = 0;
+};
+
+using IRulePtr = std::unique_ptr<IRule>;
+
 // this target will be created by core
 // when saved settings loaded
 // when program detection occurs
@@ -173,6 +195,7 @@ struct SW_CORE_API PredefinedTarget : ITarget
     TargetSettings public_ts;
 
     PredefinedTarget(const LocalPackage &, const TargetSettings &);
+    PredefinedTarget(const PredefinedTarget &) = delete;
     virtual ~PredefinedTarget();
 
     std::vector<IDependency *> getDependencies() const override;
@@ -189,11 +212,15 @@ struct SW_CORE_API PredefinedTarget : ITarget
     Commands getCommands() const override { return {}; }                            // no commands
     Commands getTests() const override { return {}; }                               // no tests
 
+    void setRule(const String &name, IRulePtr r) { rules[name] = std::move(r); }
+    IRulePtr getRule(const String &name) const;
+
 private:
     LocalPackage pkg;
     TargetSettings ts;
     mutable bool deps_set = false;
     mutable std::vector<IDependencyPtr> deps;
+    std::map<String, IRulePtr> rules;
 };
 
 struct SW_CORE_API InputLoader

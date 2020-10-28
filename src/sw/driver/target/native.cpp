@@ -11,7 +11,6 @@
 #include "../command.h"
 #include "../rule.h"
 #include "../compiler/detect.h"
-#include "../compiler/rc.h"
 
 #include <sw/builder/jumppad.h>
 #include <sw/core/sw_context.h>
@@ -182,12 +181,29 @@ path NativeTarget::getOutputFile() const
     return getSelectedTool()->getOutputFile();
 }
 
-/*void NativeTarget::addRule(const String &name, const DependencyPtr &from_dep, const String &from_name)
+void NativeTarget::addRule1(const String &name, const DependencyPtr &from_dep, const String &from_name)
 {
     addDummyDependency(from_dep);
+    rules2[name].dep = from_dep;
+    rules2[name].target_rule_name = from_name;
+}
 
-    addRule(name);
-}*/
+DependencyPtr NativeTarget::getRuleDependency(const String &name) const
+{
+    auto i = rules2.find(name);
+    if (i == rules2.end())
+        throw SW_RUNTIME_ERROR("No rule dep: " + name);
+    return i->second.dep;
+}
+
+IRulePtr NativeTarget::getRuleFromDependency(const String &ruledepname, const String &rulename) const
+{
+    auto dep = getRuleDependency(ruledepname);
+    if (auto t = dep->getTarget().as<PredefinedTarget *>())
+        return t->getRule(rulename);
+    else
+        SW_UNIMPLEMENTED;
+}
 
 NativeCompiledTarget::NativeCompiledTarget(TargetBase &parent, const PackageId &id)
     : NativeTarget(parent, id), NativeTargetOptionsGroup((Target &)*this)
@@ -342,32 +358,6 @@ static auto get_linker_type(const String &p)
     else if (p == "msvc")
         t = LinkerType::MSVC;
     return t;
-}
-
-static std::unique_ptr<RcTool> activateRcCompiler(NativeCompiledTarget &nt, const UnresolvedPackage &id, const StringSet &exts)
-{
-    auto &cld = nt.getMainBuild().getTargets();
-    auto i = cld.find(id, nt.getSettings());
-    if (!i)
-        SW_UNIMPLEMENTED;
-    auto t = i->as<PredefinedProgram *>();
-    if (!t)
-        throw SW_RUNTIME_ERROR("Target without PredefinedProgram: " + i->getPackage().toString());
-
-    bool created = false;
-    auto create_command = [&nt, &created, &t](auto &c)
-    {
-        if (created)
-            return;
-        c->file = t->getProgram().file;
-        auto C = c->createCommand(nt.getMainBuild());
-        static_cast<primitives::Command&>(*C) = *t->getProgram().getCommand();
-        created = true;
-    };
-
-    auto c = std::make_unique<RcTool>();
-    create_command(c);
-    return c;
 }
 
 std::unique_ptr<NativeCompiler> NativeCompiledTarget::activateCompiler(const TargetSetting &s, const StringSet &exts)
@@ -768,9 +758,11 @@ void NativeCompiledTarget::findCompiler()
 
     Strings rules = { "c", "cpp", "asm", "lib", "link" };
     if (getBuildSettings().TargetOS.is(OSType::Windows) && getSettings()["rule"]["rc"])
-        rules.push_back("rc");
+    {
+        auto d = std::make_shared<Dependency>(UnresolvedPackage{ getSettings()["rule"]["rc"]["package"].getValue() });
+        addRule1("rc", d, "rc");
+    }
     for (auto &r : rules)
-        //addRule(r, , r);
         addDummyDependency(std::make_shared<Dependency>(UnresolvedPackage{ getSettings()["rule"][r]["package"].getValue() }));
 
     //ct = get_compiler_type(get_settings_package_id(getSettings()["native"]["program"]["cpp"]));
@@ -3072,6 +3064,32 @@ void NativeCompiledTarget::prepare_pass7()
     }
 }
 
+/*static std::unique_ptr<RcTool> activateRcCompiler(NativeCompiledTarget &nt, const UnresolvedPackage &id, const StringSet &exts)
+{
+    auto &cld = nt.getMainBuild().getTargets();
+    auto i = cld.find(id, nt.getSettings());
+    if (!i)
+        SW_UNIMPLEMENTED;
+    auto t = i->as<PredefinedProgram *>();
+    if (!t)
+        throw SW_RUNTIME_ERROR("Target without PredefinedProgram: " + i->getPackage().toString());
+
+    bool created = false;
+    auto create_command = [&nt, &created, &t](auto &c)
+    {
+        if (created)
+            return;
+        c->file = t->getProgram().file;
+        auto C = c->createCommand(nt.getMainBuild());
+        static_cast<primitives::Command&>(*C) = *t->getProgram().getCommand();
+        created = true;
+    };
+
+    auto c = std::make_unique<RcTool>();
+    create_command(c);
+    return c;
+}*/
+
 void NativeCompiledTarget::prepare_pass8()
 {
     // linker 2
@@ -3206,7 +3224,7 @@ void NativeCompiledTarget::prepare_pass8()
     //prog_lib->merge(getMergeObject());
 
     // add rules
-    std::vector<NativeRule *> rules;
+    std::vector<IRule *> rules;
     auto add_rule = [this, &rules](const auto &n, auto &&r)
     {
         auto &v = addRule(n, std::move(r));
@@ -3244,9 +3262,7 @@ void NativeCompiledTarget::prepare_pass8()
         // add rc rule
         if (getBuildSettings().TargetOS.is(OSType::Windows) && getSettings()["rule"]["rc"])
         {
-            // actually a missing setting
-            auto prog_cl_rc = activateRcCompiler(*this, getSettings()["rule"]["rc"]["package"].getValue(), {".rc"});
-            add_rule("rc", std::make_unique<RcRule>(std::move(prog_cl_rc)));
+            add_rule("rc", getRuleFromDependency("rc", "rc"));
         }
 
         if (isExecutable() || !isHeaderOnly())

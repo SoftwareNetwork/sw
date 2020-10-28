@@ -603,7 +603,7 @@ types:
                 properties:
                     - flag_before_each_value
 
-    # https://docs.microsoft.com/en-us/windows/desktop/menurc/using-rc-the-rc-command-line-
+    # https://docs.microsoft.com/en-us/windows/win32/menurc/resource-compiler
     rctool:
         name: RcToolOptions
         parent: VisualStudioCommonOptions

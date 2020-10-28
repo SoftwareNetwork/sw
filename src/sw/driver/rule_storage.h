@@ -14,7 +14,7 @@ namespace sw
 struct IRule;
 using RulePtr = std::unique_ptr<IRule>;
 
-struct RulePromise
+struct RuleData1
 {
     RulePtr rule;
     primitives::command::Arguments arguments;

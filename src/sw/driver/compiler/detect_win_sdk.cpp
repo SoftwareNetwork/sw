@@ -3,6 +3,8 @@
 
 #include "detect.h"
 
+#include "rc.h"
+#include "../rule.h"
 #include "../build.h"
 #include "../command.h"
 #include "../program_version_storage.h"
@@ -35,6 +37,7 @@ namespace
 
 struct WinKit
 {
+    sw::Version v;
     path kit_root;
 
     String name;
@@ -46,7 +49,7 @@ struct WinKit
     Strings idirs; // additional idirs
     bool without_ldir = false; // when there's not libs
 
-    void add(DETECT_ARGS, const sw::Version &v)
+    void add(DETECT_ARGS)
     {
         auto idir = kit_root / "Include" / idir_subversion;
         if (!fs::exists(idir / name))
@@ -97,20 +100,20 @@ struct WinKit
         auto &eb = static_cast<sw::ExtendedBuild &>(b);
 
         // .rc
+        //if (name == "rc")
         {
-            auto p = std::make_shared<sw::SimpleProgram>();
+            auto p = std::make_shared<sw::RcTool>();
             p->file = kit_root / "bin" / bdir_subversion / toStringWindows(b.getContext().getHostOs().Arch) / "rc.exe";
             if (fs::exists(p->file))
             {
                 auto v = getVersion(b.getContext(), p->file, "/?");
                 auto &rc = sw::ProgramDetector::addProgram(DETECT_ARGS_PASS, sw::PackageId("com.Microsoft.Windows.rc", v), eb.getSettings(), p);
+                rc.setRule("rc", std::make_unique<sw::RcRule>(rc.getProgram().clone()));
             }
-            // these are passed from compiler during merge?
-            //for (auto &idir : COpts.System.IncludeDirectories)
-            //C->system_idirs.push_back(idir);
         }
 
         // .mc
+        //if (name == "mc")
         {
             auto p = std::make_shared<sw::SimpleProgram>();
             p->file = kit_root / "bin" / bdir_subversion / toStringWindows(b.getContext().getHostOs().Arch) / "mc.exe";
@@ -119,36 +122,42 @@ struct WinKit
                 auto v = getVersion(b.getContext(), p->file, "/?");
                 auto &rc = sw::ProgramDetector::addProgram(DETECT_ARGS_PASS, sw::PackageId("com.Microsoft.Windows.mc", v), eb.getSettings(), p);
             }
-            // these are passed from compiler during merge?
-            //for (auto &idir : COpts.System.IncludeDirectories)
-            //C->system_idirs.push_back(idir);
         }
     }
 };
 
 struct WinSdkInfo
 {
-    sw::OS settings;
-
     WinSdkInfo()
     {
         default_sdk_roots = getDefaultSdkRoots();
         win10_sdk_roots = getWindowsKitRootFromReg(L"10");
         win81_sdk_roots = getWindowsKitRootFromReg(L"81");
+        listWindowsKits();
     }
 
-    void listWindowsKits(DETECT_ARGS)
+    void listWindowsKits()
     {
         // we have now possible double detections, but this is fine for now
 
-        listWindows10Kits(DETECT_ARGS_PASS);
-        listWindowsKitsOld(DETECT_ARGS_PASS);
+        listWindows10Kits();
+        listWindowsKitsOld();
+    }
+
+    void addWindowsKits(DETECT_ARGS)
+    {
+        for (auto &[_,k] : libs)
+            k.add(DETECT_ARGS_PASS);
+        for (auto &[_,k] : programs)
+            k.addTools(DETECT_ARGS_PASS);
     }
 
 private:
     Files default_sdk_roots;
     Files win10_sdk_roots;
     Files win81_sdk_roots;
+    mutable std::multimap<String, WinKit> libs;
+    mutable std::multimap<String, WinKit> programs;
 
     static Files getProgramFilesDirs()
     {
@@ -243,7 +252,7 @@ private:
         return kits;
     }
 
-    void listWindows10Kits(DETECT_ARGS) const
+    void listWindows10Kits() const
     {
         auto kits = listWindows10KitsFromReg();
 
@@ -273,14 +282,14 @@ private:
         for (auto &kr10 : win10_roots)
         {
             for (auto &v : kits)
-                add10Kit(DETECT_ARGS_PASS, kr10, v);
+                add10Kit(kr10, v);
         }
     }
 
-    void listWindowsKitsOld(DETECT_ARGS) const
+    void listWindowsKitsOld() const
     {
         for (auto &kr : win81_sdk_roots)
-            addKit(DETECT_ARGS_PASS, kr, "8.1");
+            addKit(kr, "8.1");
 
         for (auto &kr : default_sdk_roots)
         {
@@ -288,7 +297,7 @@ private:
             {
                 auto p = kr / k;
                 if (fs::exists(p))
-                    addKit(DETECT_ARGS_PASS, p, k);
+                    addKit(p, k);
             }
         }
     }
@@ -301,67 +310,73 @@ private:
     // shared - some of these and some of these
     //
 
-    void add10Kit(DETECT_ARGS, const path &kr, const sw::Version &v) const
+    void add10Kit(const path &kr, const sw::Version &v) const
     {
         LOG_TRACE(logger, "Found Windows Kit " + v.toString() + " at " + to_string(normalize_path(kr)));
 
         // ucrt
         {
             WinKit wk;
+            wk.v = v;
             wk.name = "ucrt";
             wk.kit_root = kr;
             wk.idir_subversion = v.toString();
             wk.ldir_subversion = v.toString();
-            wk.add(DETECT_ARGS_PASS, v);
+            libs.emplace(wk.name, wk);
         }
 
         // um + shared
         {
             WinKit wk;
+            wk.v = v;
             wk.name = "um";
             wk.kit_root = kr;
             wk.idir_subversion = v.toString();
             wk.ldir_subversion = v.toString();
             wk.idirs.push_back("shared");
-            wk.add(DETECT_ARGS_PASS, v);
+            libs.emplace(wk.name, wk);
         }
 
         // km
         {
             WinKit wk;
+            wk.v = v;
             wk.name = "km";
             wk.kit_root = kr;
             wk.idir_subversion = v.toString();
             wk.ldir_subversion = v.toString();
-            wk.add(DETECT_ARGS_PASS, v);
+            libs.emplace(wk.name, wk);
         }
 
         // winrt
         {
             WinKit wk;
+            wk.v = v;
             wk.name = "winrt";
             wk.kit_root = kr;
             wk.idir_subversion = v.toString();
             wk.without_ldir = true;
-            wk.add(DETECT_ARGS_PASS, v);
+            libs.emplace(wk.name, wk);
         }
 
         // tools
         {
             WinKit wk;
+            wk.v = v;
             wk.kit_root = kr;
             wk.bdir_subversion = v.toString();
-            wk.addTools(DETECT_ARGS_PASS);
+            programs.emplace(wk.name, wk);
         }
     }
 
-    void addKit(DETECT_ARGS, const path &kr, const String &k) const
+    void addKit(const path &kr, const String &k) const
     {
         LOG_TRACE(logger, "Found Windows Kit " + k + " at " + to_string(normalize_path(kr)));
 
         // um + shared
         {
             WinKit wk;
+            wk.v = k;
             wk.name = "um";
             wk.kit_root = kr;
             if (k == "8.1")
@@ -371,12 +386,13 @@ private:
             else
                 LOG_DEBUG(logger, "TODO: Windows Kit " + k + " is not implemented yet. Report this issue.");
             wk.idirs.push_back("shared");
-            wk.add(DETECT_ARGS_PASS, k);
+            libs.emplace(wk.name, wk);
         }
 
         // km
         {
             WinKit wk;
+            wk.v = k;
             wk.name = "km";
             wk.kit_root = kr;
             if (k == "8.1")
@@ -385,14 +401,15 @@ private:
                 wk.ldir_subversion = "Win8";
             else
                 LOG_DEBUG(logger, "TODO: Windows Kit " + k + " is not implemented yet. Report this issue.");
-            wk.add(DETECT_ARGS_PASS, k);
+            libs.emplace(wk.name, wk);
         }
 
         // tools
         {
             WinKit wk;
+            wk.v = k;
             wk.kit_root = kr;
-            wk.addTools(DETECT_ARGS_PASS);
+            programs.emplace(wk.name, wk);
         }
     }
 };
@@ -406,9 +423,8 @@ namespace sw
 void ProgramDetector::detectWindowsSdk(DETECT_ARGS)
 {
 #ifdef _WIN32
-    WinSdkInfo info;
-    info.settings = b.getContext().getHostOs();
-    info.listWindowsKits(DETECT_ARGS_PASS);
+    static WinSdkInfo info;
+    info.addWindowsKits(DETECT_ARGS_PASS);
 #endif // #ifdef _WIN32
 }
 

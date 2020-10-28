@@ -51,6 +51,12 @@ enum class ConfigureFlags
     Default = Empty, //AddToBuild,
 };
 
+struct RuleData
+{
+    DependencyPtr dep;
+    String target_rule_name;
+};
+
 /**
 * \brief Native Target is a binary target that produces binary files (probably executables).
 */
@@ -69,7 +75,9 @@ struct SW_DRIVER_CPP_API NativeTarget
     // move to runnable target? since we might have data only targets
     virtual void setupCommandForRun(builder::Command &c) const { setupCommand(c); } // for Launch?
 
-    //void addRule(const String &name, const DependencyPtr &from_dep, const String &from_name);
+    void addRule1(const String &rulename, const DependencyPtr &from_dep, const String &from_name);
+    DependencyPtr getRuleDependency(const String &rulename) const;
+    IRulePtr getRuleFromDependency(const String &ruledepname, const String &rulename) const;
 
 protected:
     path OutputDir; // output subdir
@@ -80,6 +88,9 @@ protected:
     virtual void setOutputFile();
     virtual NativeLinker *getSelectedTool() const = 0;
     virtual bool isStaticLibrary() const = 0;
+
+private:
+    std::map<String, RuleData> rules2;
 };
 
 }

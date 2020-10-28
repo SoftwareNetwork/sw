@@ -64,8 +64,6 @@ struct TargetFilenames
     }
 };
 
-IRule::~IRule() = default;
-
 NativeRule::NativeRule(RuleProgram p)
     : program(p)
 {
@@ -120,7 +118,7 @@ void NativeCompilerRule::setup(const Target &t)
 
 }
 
-Files NativeCompilerRule::addInputs(Target &t, const RuleFiles &rfs)
+Files NativeCompilerRule::addInputs(const Target &t, const RuleFiles &rfs)
 {
     auto nt = t.as<NativeCompiledTarget *>();
     std::optional<path> pch_basename;
@@ -347,7 +345,7 @@ void NativeLinkerRule::setup(const Target &t)
 
 }
 
-Files NativeLinkerRule::addInputs(Target &t, const RuleFiles &rfs)
+Files NativeLinkerRule::addInputs(const Target &t, const RuleFiles &rfs)
 {
     auto nt = t.as<NativeCompiledTarget *>();
     // librarian otherwise
@@ -424,14 +422,14 @@ Files NativeLinkerRule::addInputs(Target &t, const RuleFiles &rfs)
                 if (f.extension() == ".obj")
                     objs.insert(f);
             }
-            auto c = nt->addCommand(SW_VISIBLE_BUILTIN_FUNCTION(create_def_file));
+            auto c = std::make_shared<builder::BuiltinCommand>(t.getMainBuild(), SW_VISIBLE_BUILTIN_FUNCTION(create_def_file));
             c->push_back(deffn);
             c->addOutput(deffn);
             //c << cmd::out(deffn);
-            std::dynamic_pointer_cast<builder::BuiltinCommand>(c.getCommand())->push_back(objs);
+            c->push_back(objs);
             c->addInput(objs);
             def = deffn;
-            commands2.insert(c.getCommand());
+            commands2.insert(c);
         }
         if (def)
             VSL->ModuleDefinitionFile = *def;
@@ -476,7 +474,7 @@ Files NativeLinkerRule::addInputs(Target &t, const RuleFiles &rfs)
     c->getCommand()->prepare(); // why?
     c->getCommand()->name = //(is_linker ? "[LINK]"s : "[LIB]"s) + " " +
         "[" + t.getPackage().toString() + "]" + nt->getOutputFile().extension().string();
-    nt->registerCommand(*c->getCommand());
+    //nt->registerCommand(*c->getCommand());
     commands.clear();
     commands.emplace_back(std::move(c));
 
@@ -484,7 +482,8 @@ Files NativeLinkerRule::addInputs(Target &t, const RuleFiles &rfs)
 }
 
 RcRule::RcRule(ProgramPtr p)
-    : NativeRule(*p), p(std::move(p))
+    : NativeRule(*p)
+    , p(std::move(p))
 {
 }
 
@@ -492,7 +491,7 @@ void RcRule::setup(const Target &t)
 {
 }
 
-Files RcRule::addInputs(Target &t, const RuleFiles &rfs)
+Files RcRule::addInputs(const Target &t, const RuleFiles &rfs)
 {
     Files outputs;
     for (auto &rf : rfs)
@@ -503,10 +502,10 @@ Files RcRule::addInputs(Target &t, const RuleFiles &rfs)
             continue;
         auto output = getOutputFile(t, rf.getFile()) += ".res";
         outputs.insert(output);
-        auto c = program.clone();
+        auto c = p->clone();
         // add casual idirs?
-        static_cast<RcTool &>(*c).setSourceFile(rf.getFile());
-        static_cast<RcTool &>(*c).setOutputFile(output);
+        static_cast<RcTool &>(*c).InputFile = rf.getFile();
+        static_cast<RcTool &>(*c).Output = output;
         static_cast<RcTool &>(*c).prepareCommand(t);
         static_cast<RcTool &>(*c).getCommand()->push_back(arguments);
         commands.emplace_back(std::move(c));
