@@ -53,7 +53,7 @@ struct SW_DRIVER_CPP_API ProgramDetector
 
     String getMsvcPrefix(const path &program) const;
 
-    static PredefinedProgramTarget &addProgram(DETECT_ARGS, const PackageId &id, const TargetSettings &ts, const std::shared_ptr<Program> &p);
+    static PredefinedProgramTarget &addProgram(DETECT_ARGS, const PackageId &, const TargetSettings &, const Program &);
 
     using DetectablePackageEntryPoint = std::function<void(Build &)>;
     using DetectablePackageEntryPoints = std::unordered_map<UnresolvedPackage, DetectablePackageEntryPoint>;
@@ -61,7 +61,14 @@ struct SW_DRIVER_CPP_API ProgramDetector
     static DetectablePackageEntryPoints getDetectablePackages();
 
     template <class T>
-    static T &addTarget(DETECT_ARGS, const PackageId &id, const TargetSettings &ts);
+    static T &addTarget(DETECT_ARGS, const PackageId &id, const TargetSettings &ts)
+    {
+        log_msg_detect_target("Detected target: " + id.toString() + ": " + ts.toString());
+
+        auto t = std::make_shared<T>(sw::LocalPackage(b.getContext().getLocalStorage(), id), ts);
+        static_cast<ExtendedBuild &>(b).addTarget(t);
+        return *t;
+    }
 
     static vs::RuntimeLibraryType getMsvcLibraryType(const BuildSettings &bs);
     static String getMsvcLibraryName(const String &base, const BuildSettings &bs);
@@ -76,6 +83,25 @@ private:
     };
     using VSInstances = VersionMap<VSInstance>;
 
+    struct MsvcInstance
+    {
+        VSInstance i;
+        path root;
+        path compiler;
+        path idir;
+        path host_root;
+        String target;
+        ArchType target_arch;
+
+        //
+        Version cl_exe_version;
+        String msvc_prefix;
+
+        MsvcInstance(const VSInstance &);
+
+        void process(DETECT_ARGS);
+    };
+
     mutable VSInstances vsinstances1;
     std::map<path, String> msvc_prefixes;
 
@@ -86,14 +112,11 @@ private:
     auto &getMsvcIncludePrefixes() { return msvc_prefixes; }
     const auto &getMsvcIncludePrefixes() const { return msvc_prefixes; }
 
+    DetectablePackageMultiEntryPoints detectMsvc();
+    DetectablePackageMultiEntryPoints detectMsvc15Plus();
+    DetectablePackageMultiEntryPoints detectMsvc14AndOlder();
     DetectablePackageMultiEntryPoints detectWindowsSdk();
-    //void detectMsvc(DETECT_ARGS);
-    void detectMsvc15Plus(DETECT_ARGS);
-    void detectMsvc14AndOlder(DETECT_ARGS);
-    void detectMsvcCommon(const path &compiler, const Version &vs_version,
-        ArchType target_arch, const path &host_root, const TargetSettings &ts, const path &idir,
-        const path &root, const path &target,
-        DETECT_ARGS);
+    DetectablePackageMultiEntryPoints detectMsvcCommon(const MsvcInstance &);
 
     void detectWindowsClang(DETECT_ARGS);
     void detectIntelCompilers(DETECT_ARGS);

@@ -113,13 +113,13 @@ struct WinKit
         eps.emplace("com.Microsoft.Windows.rc", [this](DETECT_ARGS)
         {
             auto &eb = static_cast<sw::ExtendedBuild &>(b);
-            auto p = std::make_shared<sw::RcTool>();
+            auto p = std::make_unique<sw::RcTool>();
             p->file = kit_root / "bin" / bdir_subversion / toStringWindows(b.getContext().getHostOs().Arch) / "rc.exe";
             if (fs::exists(p->file))
             {
                 auto v = getVersion(b.getContext(), p->file, "/?");
-                auto &rc = sw::ProgramDetector::addProgram(DETECT_ARGS_PASS, sw::PackageId("com.Microsoft.Windows.rc", v), eb.getSettings(), p);
-                rc.setRule("rc", std::make_unique<sw::RcRule>(rc.getProgram().clone()));
+                auto &rc = sw::ProgramDetector::addProgram(DETECT_ARGS_PASS, sw::PackageId("com.Microsoft.Windows.rc", v), eb.getSettings(), *p);
+                rc.setRule("rc", std::make_unique<sw::RcRule>(std::move(p)));
             }
         });
 
@@ -128,12 +128,13 @@ struct WinKit
         {
             SW_UNIMPLEMENTED;
             auto &eb = static_cast<sw::ExtendedBuild &>(b);
-            auto p = std::make_shared<sw::SimpleProgram>(); // TODO: needs proper rule
+            auto p = std::make_unique<sw::SimpleProgram>(); // TODO: needs proper rule
             p->file = kit_root / "bin" / bdir_subversion / toStringWindows(b.getContext().getHostOs().Arch) / "mc.exe";
             if (fs::exists(p->file))
             {
                 auto v = getVersion(b.getContext(), p->file, "/?");
-                auto &rc = sw::ProgramDetector::addProgram(DETECT_ARGS_PASS, sw::PackageId("com.Microsoft.Windows.mc", v), eb.getSettings(), p);
+                auto &rc = sw::ProgramDetector::addProgram(DETECT_ARGS_PASS, sw::PackageId("com.Microsoft.Windows.mc", v), eb.getSettings(), *p);
+                rc.setRule("mc", std::make_unique<sw::RcRule>(std::move(p)));
             }
         });
 
