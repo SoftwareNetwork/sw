@@ -777,11 +777,12 @@ void NativeCompiledTarget::findCompiler()
     if (lt == LinkerType::Unspecified)
         throw SW_RUNTIME_ERROR("Cannot determine compiler type " + get_settings_package_id(getSettings()["rule"]["link"]["package"]).toString() + " for settings: " + getSettings().toString());
 
-    Strings rules = { "c", "cpp", "asm", "lib" };
+    Strings rules = { "c", "cpp", "asm" };
     if (getBuildSettings().TargetOS.is(OSType::Windows) && getSettings()["rule"]["rc"])
         addRuleDependency("rc");
     for (auto &r : rules)
         addDummyDependency(std::make_shared<Dependency>(UnresolvedPackage{ getSettings()["rule"][r]["package"].getValue() }));
+    addRuleDependency("lib");
     addRuleDependency("link");
 
     //ct = get_compiler_type(get_settings_package_id(getSettings()["native"]["program"]["cpp"]));
@@ -3155,18 +3156,10 @@ void NativeCompiledTarget::prepare_pass8()
     for (auto &e : get_asm_exts(*this))
     setExtensionProgram(e, *prog_cl_asm);*/
 
-    //auto prog_lib = activateLinker(getSettings()["rule"]["lib"]);
-    //if (!prog_lib)
-    //throw SW_RUNTIME_ERROR("Librarian not found");
-
     // setup
     //setup_compiler(*prog_cl_c);
     setup_compiler(*prog_cl_cpp);
     //setup_compiler(*prog_cl_asm);
-
-    // setup programs
-    //prog_lib->Extension = getBuildSettings().TargetOS.getStaticLibraryExtension();
-    //prog_lib->setOutputFile(getOutputFileName2("lib"));
 
     // merge settings
     if (!isHeaderOnly())
@@ -3175,7 +3168,6 @@ void NativeCompiledTarget::prepare_pass8()
         //prog_cl_c->merge(*this);
         //prog_cl_asm->merge(*this);
     }
-    //prog_lib->merge(getMergeObject());
 
     // add rules
     std::vector<IRule *> rules;
@@ -3199,10 +3191,7 @@ void NativeCompiledTarget::prepare_pass8()
     if (isHeaderOnly())
         ;
     else if (isStaticLibrary())
-    {
-        //auto r = add_rule("lib", std::make_unique<NativeLinkerRule>(*prog_lib));
-        //r->is_linker = false;
-    }
+        add_rule2("lib");
     else
     {
         // generate rc

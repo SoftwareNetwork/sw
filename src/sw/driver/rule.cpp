@@ -348,71 +348,79 @@ void NativeLinkerRule::setup(const Target &t)
     if (!nt)
         return;
 
-    if (nt->isExecutable())
+    if (!is_linker)
     {
-        prog_link.Prefix.clear();
-        prog_link.Extension = nt->getBuildSettings().TargetOS.getExecutableExtension();
-        if (auto c = prog_link.as<VisualStudioLinker*>())
-        {
-            c->ImportLibrary.output_dependency = false; // become optional
-            c->ImportLibrary.create_directory = true; // but create always
-        }
-        else if (auto L = prog_link.as<GNULinker*>())
-        {
-            L->PositionIndependentCode = false;
-            L->SharedObject = false;
-        }
+        prog_link.Extension = nt->getBuildSettings().TargetOS.getStaticLibraryExtension();
+        prog_link.setOutputFile(nt->getOutputFileName2("lib"));
     }
     else
     {
-        prog_link.Extension = nt->getBuildSettings().TargetOS.getSharedLibraryExtension();
-        if (prog_link.Type == LinkerType::MSVC)
+        if (nt->isExecutable())
         {
-            // set machine to target os arch
-            auto L = prog_link.as<VisualStudioLinker*>();
-            L->Dll = true;
-        }
-        else if (prog_link.Type == LinkerType::GNU)
-        {
-            auto L = prog_link.as<GNULinker*>();
-            L->SharedObject = true;
-            if (nt->getBuildSettings().TargetOS.Type == OSType::Linux)
-                L->AsNeeded = true;
-        }
-    }
-
-    prog_link.setOutputFile(nt->getOutputFileName2("bin"));
-    prog_link.setImportLibrary(nt->getOutputFileName2("lib"));
-
-    if (auto L = prog_link.as<VisualStudioLibraryTool *>())
-    {
-        L->NoDefaultLib = true;
-    }
-    if (auto L = prog_link.as<VisualStudioLinker *>())
-    {
-        if (!L->GenerateDebugInformation)
-        {
-            if (nt->getBuildSettings().Native.ConfigurationType == ConfigurationType::Debug ||
-                nt->getBuildSettings().Native.ConfigurationType == ConfigurationType::ReleaseWithDebugInformation)
+            prog_link.Prefix.clear();
+            prog_link.Extension = nt->getBuildSettings().TargetOS.getExecutableExtension();
+            if (auto c = prog_link.as<VisualStudioLinker *>())
             {
-                //if (auto g = getSolution().getGenerator(); g && g->type == GeneratorType::VisualStudio)
-                //c->GenerateDebugInformation = vs::link::Debug::FastLink;
-                //else
-                L->GenerateDebugInformation = vs::link::Debug::Full;
+                c->ImportLibrary.output_dependency = false; // become optional
+                c->ImportLibrary.create_directory = true; // but create always
             }
-            else
-                L->GenerateDebugInformation = vs::link::Debug::None;
-        }
-
-        if (L->GenerateDebugInformation() != vs::link::Debug::None && !L->PDBFilename)
-        {
-            auto f = nt->getOutputFile();
-            f = f.parent_path() / f.filename().stem();
-            f += ".pdb";
-            L->PDBFilename = f;// BinaryDir.parent_path() / "obj" / (getPackage().getPath().toString() + ".pdb");
+            else if (auto L = prog_link.as<GNULinker *>())
+            {
+                L->PositionIndependentCode = false;
+                L->SharedObject = false;
+            }
         }
         else
-            L->PDBFilename.output_dependency = false;
+        {
+            prog_link.Extension = nt->getBuildSettings().TargetOS.getSharedLibraryExtension();
+            if (prog_link.Type == LinkerType::MSVC)
+            {
+                // set machine to target os arch
+                auto L = prog_link.as<VisualStudioLinker *>();
+                L->Dll = true;
+            }
+            else if (prog_link.Type == LinkerType::GNU)
+            {
+                auto L = prog_link.as<GNULinker *>();
+                L->SharedObject = true;
+                if (nt->getBuildSettings().TargetOS.Type == OSType::Linux)
+                    L->AsNeeded = true;
+            }
+        }
+
+        prog_link.setOutputFile(nt->getOutputFileName2("bin"));
+        prog_link.setImportLibrary(nt->getOutputFileName2("lib"));
+
+        if (auto L = prog_link.as<VisualStudioLibraryTool *>())
+        {
+            L->NoDefaultLib = true;
+        }
+        if (auto L = prog_link.as<VisualStudioLinker *>())
+        {
+            if (!L->GenerateDebugInformation)
+            {
+                if (nt->getBuildSettings().Native.ConfigurationType == ConfigurationType::Debug ||
+                    nt->getBuildSettings().Native.ConfigurationType == ConfigurationType::ReleaseWithDebugInformation)
+                {
+                    //if (auto g = getSolution().getGenerator(); g && g->type == GeneratorType::VisualStudio)
+                    //c->GenerateDebugInformation = vs::link::Debug::FastLink;
+                    //else
+                    L->GenerateDebugInformation = vs::link::Debug::Full;
+                }
+                else
+                    L->GenerateDebugInformation = vs::link::Debug::None;
+            }
+
+            if (L->GenerateDebugInformation() != vs::link::Debug::None && !L->PDBFilename)
+            {
+                auto f = nt->getOutputFile();
+                f = f.parent_path() / f.filename().stem();
+                f += ".pdb";
+                L->PDBFilename = f;// BinaryDir.parent_path() / "obj" / (getPackage().getPath().toString() + ".pdb");
+            }
+            else
+                L->PDBFilename.output_dependency = false;
+        }
     }
 
     // at last

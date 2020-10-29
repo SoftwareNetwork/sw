@@ -351,7 +351,7 @@ ProgramDetector::DetectablePackageMultiEntryPoints ProgramDetector::detectMsvcCo
         auto &eb = static_cast<ExtendedBuild &>(b);
         m.process(DETECT_ARGS_PASS);
 
-        auto p = std::make_unique<SimpleProgram>();
+        auto p = std::make_unique<VisualStudioLibrarian>();
         p->file = m.compiler / "lib.exe";
         if (!fs::exists(p->file))
             return;
@@ -360,7 +360,10 @@ ProgramDetector::DetectablePackageMultiEntryPoints ProgramDetector::detectMsvcCo
             auto c = p->getCommand();
             c->addPathDirectory(m.host_root);
         }
-        addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.lib", m.cl_exe_version), eb.getSettings(), *p);
+        auto &t = addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.lib", m.cl_exe_version), eb.getSettings(), *p);
+        auto r = std::make_unique<NativeLinkerRule>(std::move(p));
+        r->is_linker = false;
+        t.setRule("lib", std::move(r));
     });
 
     // ASM
