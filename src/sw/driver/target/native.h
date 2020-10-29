@@ -160,10 +160,12 @@ protected:
     void configureFile1(const path &from, const path &to, ConfigureFlags flags);
     void detectLicenseFile();
 
+public:
     bool isHeaderOnly() const;
     bool isStaticLibrary() const override;
     bool isStaticOrHeaderOnlyLibrary() const;
     virtual bool isExecutable() const { return false; }
+protected:
     TargetType getRealType() const;
 
     path getBinaryParentDir() const override;
@@ -234,7 +236,9 @@ private:
     void prepare_pass9();
 
     path getOutputFileName(const path &root) const override;
+public:
     path getOutputFileName2(const path &subdir) const override;
+private:
 
     path generate_rc();
     void setup_compiler(NativeCompiler &);

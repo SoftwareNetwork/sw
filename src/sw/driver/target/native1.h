@@ -79,6 +79,7 @@ struct SW_DRIVER_CPP_API NativeTarget
     void addRuleDependency(const String &rulename, const DependencyPtr &from_dep, const String &from_name);
     void addRuleDependency(const String &rulename, const DependencyPtr &from_dep);
     void addRuleDependency(const String &rulename, const UnresolvedPackage &from_dep);
+    void addRuleDependency(const String &name);
     DependencyPtr getRuleDependency(const String &rulename) const;
     IRulePtr getRuleFromDependency(const String &ruledepname, const String &rulename) const;
     IRulePtr getRuleFromDependency(const String &rulename) const;

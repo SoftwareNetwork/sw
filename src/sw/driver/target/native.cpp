@@ -196,7 +196,12 @@ void NativeTarget::addRuleDependency(const String &name, const DependencyPtr &fr
 
 void NativeTarget::addRuleDependency(const String &name, const UnresolvedPackage &from_dep)
 {
-    addRuleDependency("rc", std::make_shared<Dependency>(from_dep));
+    addRuleDependency(name, std::make_shared<Dependency>(from_dep));
+}
+
+void NativeTarget::addRuleDependency(const String &name)
+{
+    addRuleDependency(name, getSettings()["rule"][name]["package"].getValue());
 }
 
 DependencyPtr NativeTarget::getRuleDependency(const String &name) const
@@ -772,11 +777,12 @@ void NativeCompiledTarget::findCompiler()
     if (lt == LinkerType::Unspecified)
         throw SW_RUNTIME_ERROR("Cannot determine compiler type " + get_settings_package_id(getSettings()["rule"]["link"]["package"]).toString() + " for settings: " + getSettings().toString());
 
-    Strings rules = { "c", "cpp", "asm", "lib", "link" };
+    Strings rules = { "c", "cpp", "asm", "lib" };
     if (getBuildSettings().TargetOS.is(OSType::Windows) && getSettings()["rule"]["rc"])
-        addRuleDependency("rc", getSettings()["rule"]["rc"]["package"].getValue());
+        addRuleDependency("rc");
     for (auto &r : rules)
         addDummyDependency(std::make_shared<Dependency>(UnresolvedPackage{ getSettings()["rule"][r]["package"].getValue() }));
+    addRuleDependency("link");
 
     //ct = get_compiler_type(get_settings_package_id(getSettings()["native"]["program"]["cpp"]));
     //if (ct == CompilerType::UnspecifiedCompiler)
@@ -3132,6 +3138,12 @@ void NativeCompiledTarget::prepare_pass8()
             getMergeObject() += Definition("_DEBUG");
     }
 
+    if (!isExecutable())
+    {
+        if (getBuildSettings().TargetOS.Type == OSType::Windows)
+            getMergeObject() += "_WINDLL"_def;
+    }
+
     // create
     prog_cl_cpp = activateCompiler(getSettings()["rule"]["cpp"], get_cpp_exts(*this));
     //prog_cl_c = activateCompiler(getSettings()["rule"]["c"], { ".c" });
@@ -3143,13 +3155,9 @@ void NativeCompiledTarget::prepare_pass8()
     for (auto &e : get_asm_exts(*this))
     setExtensionProgram(e, *prog_cl_asm);*/
 
-    //prog_link = activateLinker(getLinkerType());
-    auto prog_link = activateLinker(getSettings()["rule"]["link"]);
     //auto prog_lib = activateLinker(getSettings()["rule"]["lib"]);
     //if (!prog_lib)
     //throw SW_RUNTIME_ERROR("Librarian not found");
-    if (!prog_link)
-        throw SW_RUNTIME_ERROR("Linker not found");
 
     // setup
     //setup_compiler(*prog_cl_c);
@@ -3158,73 +3166,7 @@ void NativeCompiledTarget::prepare_pass8()
 
     // setup programs
     //prog_lib->Extension = getBuildSettings().TargetOS.getStaticLibraryExtension();
-    if (isExecutable())
-    {
-        prog_link->Prefix.clear();
-        prog_link->Extension = getBuildSettings().TargetOS.getExecutableExtension();
-        if (auto c = prog_link->as<VisualStudioLinker*>())
-        {
-            c->ImportLibrary.output_dependency = false; // become optional
-            c->ImportLibrary.create_directory = true; // but create always
-        }
-        else if (auto L = prog_link->as<GNULinker*>())
-        {
-            L->PositionIndependentCode = false;
-            L->SharedObject = false;
-        }
-    }
-    else
-    {
-        prog_link->Extension = getBuildSettings().TargetOS.getSharedLibraryExtension();
-        if (prog_link->Type == LinkerType::MSVC)
-        {
-            // set machine to target os arch
-            auto L = prog_link->as<VisualStudioLinker*>();
-            L->Dll = true;
-        }
-        else if (prog_link->Type == LinkerType::GNU)
-        {
-            auto L = prog_link->as<GNULinker*>();
-            L->SharedObject = true;
-            if (getBuildSettings().TargetOS.Type == OSType::Linux)
-                L->AsNeeded = true;
-        }
-        if (getBuildSettings().TargetOS.Type == OSType::Windows)
-            getMergeObject() += "_WINDLL"_def;
-    }
     //prog_lib->setOutputFile(getOutputFileName2("lib"));
-    prog_link->setOutputFile(getOutputFileName2("bin"));
-    prog_link->setImportLibrary(getOutputFileName2("lib"));
-    if (auto L = prog_link->as<VisualStudioLibraryTool *>())
-    {
-        L->NoDefaultLib = true;
-    }
-    if (auto L = prog_link->as<VisualStudioLinker *>())
-    {
-        if (!L->GenerateDebugInformation)
-        {
-            if (getBuildSettings().Native.ConfigurationType == ConfigurationType::Debug ||
-                getBuildSettings().Native.ConfigurationType == ConfigurationType::ReleaseWithDebugInformation)
-            {
-                //if (auto g = getSolution().getGenerator(); g && g->type == GeneratorType::VisualStudio)
-                //c->GenerateDebugInformation = vs::link::Debug::FastLink;
-                //else
-                L->GenerateDebugInformation = vs::link::Debug::Full;
-            }
-            else
-                L->GenerateDebugInformation = vs::link::Debug::None;
-        }
-
-        if (L->GenerateDebugInformation() != vs::link::Debug::None && !L->PDBFilename)
-        {
-            auto f = getOutputFile();
-            f = f.parent_path() / f.filename().stem();
-            f += ".pdb";
-            L->PDBFilename = f;// BinaryDir.parent_path() / "obj" / (getPackage().getPath().toString() + ".pdb");
-        }
-        else
-            L->PDBFilename.output_dependency = false;
-    }
 
     // merge settings
     if (!isHeaderOnly())
@@ -3233,7 +3175,6 @@ void NativeCompiledTarget::prepare_pass8()
         //prog_cl_c->merge(*this);
         //prog_cl_asm->merge(*this);
     }
-    prog_link->merge(getMergeObject());
     //prog_lib->merge(getMergeObject());
 
     // add rules
@@ -3283,7 +3224,7 @@ void NativeCompiledTarget::prepare_pass8()
             add_rule2("rc");
 
         if (isExecutable() || !isHeaderOnly())
-            add_rule("link", std::make_unique<NativeLinkerRule>(*prog_link));
+            add_rule2("link");
     }
     //if (circular_dependency)
         //add_rule("link_circular", std::make_unique<NativeLinkerRule>(*prog_lib));

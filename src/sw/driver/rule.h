@@ -81,14 +81,20 @@ struct SW_DRIVER_CPP_API NativeLinkerRule : NativeRule
     // librarian otherwise
     bool is_linker = true;
 
-    using NativeRule::NativeRule;
+    NativeLinkerRule(ProgramPtr);
+    NativeLinkerRule(const NativeLinkerRule &rhs)
+        : NativeRule(rhs)
+    {
+        if (rhs.p)
+            p = rhs.p->clone();
+    }
 
     IRulePtr clone() const override { return std::make_unique<NativeLinkerRule>(*this); }
     Files addInputs(const Target &t, const RuleFiles &) override;
     void setup(const Target &t) override;
 
 private:
-    NativeLinker &getLinker() const;
+    ProgramPtr p;
 };
 
 struct RcRule : NativeRule

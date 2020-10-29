@@ -335,18 +335,93 @@ Files NativeCompilerRule::addInputs(const Target &t, const RuleFiles &rfs)
     return outputs;
 }
 
-NativeLinker &NativeLinkerRule::getLinker() const
+NativeLinkerRule::NativeLinkerRule(ProgramPtr p)
+    : NativeRule(*p)
+    , p(std::move(p))
 {
-    return static_cast<NativeLinker &>(program);
 }
 
 void NativeLinkerRule::setup(const Target &t)
 {
+    auto &prog_link = static_cast<NativeLinker &>(program);
+    auto nt = t.as<NativeCompiledTarget *>();
+    if (!nt)
+        return;
 
+    if (nt->isExecutable())
+    {
+        prog_link.Prefix.clear();
+        prog_link.Extension = nt->getBuildSettings().TargetOS.getExecutableExtension();
+        if (auto c = prog_link.as<VisualStudioLinker*>())
+        {
+            c->ImportLibrary.output_dependency = false; // become optional
+            c->ImportLibrary.create_directory = true; // but create always
+        }
+        else if (auto L = prog_link.as<GNULinker*>())
+        {
+            L->PositionIndependentCode = false;
+            L->SharedObject = false;
+        }
+    }
+    else
+    {
+        prog_link.Extension = nt->getBuildSettings().TargetOS.getSharedLibraryExtension();
+        if (prog_link.Type == LinkerType::MSVC)
+        {
+            // set machine to target os arch
+            auto L = prog_link.as<VisualStudioLinker*>();
+            L->Dll = true;
+        }
+        else if (prog_link.Type == LinkerType::GNU)
+        {
+            auto L = prog_link.as<GNULinker*>();
+            L->SharedObject = true;
+            if (nt->getBuildSettings().TargetOS.Type == OSType::Linux)
+                L->AsNeeded = true;
+        }
+    }
+
+    prog_link.setOutputFile(nt->getOutputFileName2("bin"));
+    prog_link.setImportLibrary(nt->getOutputFileName2("lib"));
+
+    if (auto L = prog_link.as<VisualStudioLibraryTool *>())
+    {
+        L->NoDefaultLib = true;
+    }
+    if (auto L = prog_link.as<VisualStudioLinker *>())
+    {
+        if (!L->GenerateDebugInformation)
+        {
+            if (nt->getBuildSettings().Native.ConfigurationType == ConfigurationType::Debug ||
+                nt->getBuildSettings().Native.ConfigurationType == ConfigurationType::ReleaseWithDebugInformation)
+            {
+                //if (auto g = getSolution().getGenerator(); g && g->type == GeneratorType::VisualStudio)
+                //c->GenerateDebugInformation = vs::link::Debug::FastLink;
+                //else
+                L->GenerateDebugInformation = vs::link::Debug::Full;
+            }
+            else
+                L->GenerateDebugInformation = vs::link::Debug::None;
+        }
+
+        if (L->GenerateDebugInformation() != vs::link::Debug::None && !L->PDBFilename)
+        {
+            auto f = nt->getOutputFile();
+            f = f.parent_path() / f.filename().stem();
+            f += ".pdb";
+            L->PDBFilename = f;// BinaryDir.parent_path() / "obj" / (getPackage().getPath().toString() + ".pdb");
+        }
+        else
+            L->PDBFilename.output_dependency = false;
+    }
+
+    // at last
+    prog_link.merge(nt->getMergeObject());
 }
 
 Files NativeLinkerRule::addInputs(const Target &t, const RuleFiles &rfs)
 {
+    auto &nl = static_cast<NativeLinker &>(program);
     auto nt = t.as<NativeCompiledTarget *>();
 
     std::optional<path> def;
@@ -393,7 +468,7 @@ Files NativeLinkerRule::addInputs(const Target &t, const RuleFiles &rfs)
 
     Files outputs;
 
-    auto c = getLinker().clone();
+    auto c = nl.clone();
     auto &nc = static_cast<NativeLinker &>(*c);
     if (auto VSL = c->as<VisualStudioLibraryTool *>())
     {
