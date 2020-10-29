@@ -3,7 +3,7 @@
 
 #include "rule_storage.h"
 
-#include "rule.h"
+#include "target/base.h"
 
 namespace sw
 {
@@ -11,16 +11,16 @@ namespace sw
 RuleStorage::RuleStorage() = default;
 RuleStorage::~RuleStorage() = default;
 
-void RuleStorage::push(const String &name, RulePtr r)
+void RuleStorage::push(const String &name, IRulePtr r)
 {
     rules[name].emplace(std::move(r));
 }
 
-RulePtr RuleStorage::pop(const String &name)
+IRulePtr RuleStorage::pop(const String &name)
 {
     if (!contains(name))
         return {};
-    RulePtr r = std::move(rules[name].top());
+    IRulePtr r = std::move(rules[name].top());
     rules[name].pop();
     return r;
 }
@@ -48,17 +48,46 @@ Commands RuleStorage::getCommands() const
     return c;
 }
 
-Commands RuleSystem::getRuleCommands() const
-{
-    return rules.getCommands();
-}
-
 IRule *RuleStorage::getRule(const String &n) const
 {
     auto i = rules.find(n);
     if (i != rules.end())
         return i->second.top().get();
     return {};
+}
+
+Commands RuleSystem::getRuleCommands() const
+{
+    return rules.getCommands();
+}
+
+void RuleSystem::runRules(RuleFiles rfs, const Target &t)
+{
+    for (auto &r : rules)
+    {
+        auto nr = dynamic_cast<NativeRule*>(&r);
+        if (!nr)
+            continue;
+        nr->setup(t);
+    }
+    while (1)
+    {
+        bool newf = false;
+        for (auto &r : rules)
+        {
+            auto nr = dynamic_cast<NativeRule*>(&r);
+            if (!nr)
+                continue;
+            auto outputs = nr->addInputs(t, rfs);
+            for (auto &o : outputs)
+            {
+                auto [_, inserted] = rfs.insert(o);
+                newf |= inserted;
+            }
+        }
+        if (!newf)
+            break;
+    }
 }
 
 } // namespace sw

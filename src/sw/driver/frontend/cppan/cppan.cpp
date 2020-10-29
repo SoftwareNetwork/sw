@@ -486,8 +486,9 @@ static void cppan_load_project(ExecutableTarget &t, const yaml &root)
     YAML_EXTRACT_VAR(root, et2, "win32", bool);
     if (et == "win32" || et2)
     {
-        if (auto L = t.getSelectedTool()->as<VisualStudioLinker *>(); L)
-            L->Subsystem = vs::Subsystem::Windows;
+        SW_UNIMPLEMENTED;
+        //if (auto L = t.getSelectedTool()->as<VisualStudioLinker *>(); L)
+            //L->Subsystem = vs::Subsystem::Windows;
     }
 
     cppan_load_project((NativeCompiledTarget&)t, root);

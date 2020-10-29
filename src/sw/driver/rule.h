@@ -78,6 +78,9 @@ private:
 
 struct SW_DRIVER_CPP_API NativeLinkerRule : NativeRule
 {
+    // librarian otherwise
+    bool is_linker = true;
+
     using NativeRule::NativeRule;
 
     IRulePtr clone() const override { return std::make_unique<NativeLinkerRule>(*this); }

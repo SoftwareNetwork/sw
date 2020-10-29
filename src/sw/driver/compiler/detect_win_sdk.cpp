@@ -20,6 +20,8 @@ DECLARE_STATIC_LOGGER(logger, "compiler.detect.win.sdk");
 #ifdef _WIN32
 #include <WinReg.hpp>
 
+using DetectablePackageMultiEntryPoints = sw::ProgramDetector::DetectablePackageMultiEntryPoints;
+
 // https://en.wikipedia.org/wiki/Microsoft_Windows_SDK
 static const Strings known_kits{ "8.1A", "8.1", "8.0", "7.1A", "7.1", "7.0A", "7.0A","6.0A" };
 static const auto reg_root = L"SOFTWARE\\Microsoft\\Windows Kits\\Installed Roots";
@@ -49,59 +51,68 @@ struct WinKit
     Strings idirs; // additional idirs
     bool without_ldir = false; // when there's not libs
 
-    void add(DETECT_ARGS)
+    DetectablePackageMultiEntryPoints add()
     {
-        auto idir = kit_root / "Include" / idir_subversion;
-        if (!fs::exists(idir / name))
-        {
-            LOG_TRACE(logger, "Include dir " << (idir / name) << " not found for library: " << name);
-            return;
-        }
+        DetectablePackageMultiEntryPoints eps;
+        auto tname = "com.Microsoft.Windows.SDK." + name;
 
-        auto &eb = static_cast<sw::ExtendedBuild &>(b);
-        sw::BuildSettings new_settings = eb.getSettings();
-        const auto target_arch = new_settings.TargetOS.Arch;
+        eps.emplace(tname, [this, tname](DETECT_ARGS)
+        {
+            auto idir = kit_root / "Include" / idir_subversion;
+            if (!fs::exists(idir / name))
+            {
+                LOG_TRACE(logger, "Include dir " << (idir / name) << " not found for library: " << name);
+                return;
+            }
 
-        auto libdir = kit_root / "Lib" / ldir_subversion / name / toStringWindows(target_arch);
-        sw::PredefinedTarget *target = nullptr;
-        if (fs::exists(libdir))
-        {
-            auto &t = sw::ProgramDetector::addTarget<sw::PredefinedTarget>(DETECT_ARGS_PASS,
-                sw::LocalPackage(b.getContext().getLocalStorage(), sw::PackageId("com.Microsoft.Windows.SDK." + name, v)), eb.getSettings());
-            t.public_ts["properties"]["6"]["system_include_directories"].push_back(idir / name);
-            for (auto &i : idirs)
-                t.public_ts["properties"]["6"]["system_include_directories"].push_back(idir / i);
-            t.public_ts["properties"]["6"]["system_link_directories"].push_back(libdir);
-            target = &t;
-        }
-        else if (without_ldir)
-        {
-            auto &t = sw::ProgramDetector::addTarget<sw::PredefinedTarget>(DETECT_ARGS_PASS,
-                sw::LocalPackage(b.getContext().getLocalStorage(), sw::PackageId("com.Microsoft.Windows.SDK." + name, v)), eb.getSettings());
-            t.public_ts["properties"]["6"]["system_include_directories"].push_back(idir / name);
-            for (auto &i : idirs)
-                t.public_ts["properties"]["6"]["system_include_directories"].push_back(idir / i);
-            target = &t;
-        }
-        else
-        {
-            LOG_TRACE(logger, "Libdir " << libdir << " not found for library: " << name);
-            return;
-        }
-        if (name == "um")
-            target->public_ts["properties"]["6"]["system_link_libraries"].push_back(boost::to_upper_copy("kernel32.lib"s));
-        if (name == "ucrt")
-            target->public_ts["properties"]["6"]["system_link_libraries"].push_back(
-                boost::to_upper_copy(sw::getProgramDetector().getMsvcLibraryName("ucrt", new_settings)));
+            auto &eb = static_cast<sw::ExtendedBuild &>(b);
+            sw::BuildSettings new_settings = eb.getSettings();
+            const auto target_arch = new_settings.TargetOS.Arch;
+
+            auto libdir = kit_root / "Lib" / ldir_subversion / name / toStringWindows(target_arch);
+            sw::PredefinedTarget *target = nullptr;
+            if (fs::exists(libdir))
+            {
+                auto &t = sw::ProgramDetector::addTarget<sw::PredefinedTarget>(DETECT_ARGS_PASS,
+                    sw::LocalPackage(b.getContext().getLocalStorage(), sw::PackageId(tname, v)), eb.getSettings());
+                t.public_ts["properties"]["6"]["system_include_directories"].push_back(idir / name);
+                for (auto &i : idirs)
+                    t.public_ts["properties"]["6"]["system_include_directories"].push_back(idir / i);
+                t.public_ts["properties"]["6"]["system_link_directories"].push_back(libdir);
+                target = &t;
+            }
+            else if (without_ldir)
+            {
+                auto &t = sw::ProgramDetector::addTarget<sw::PredefinedTarget>(DETECT_ARGS_PASS,
+                    sw::LocalPackage(b.getContext().getLocalStorage(), sw::PackageId(tname, v)), eb.getSettings());
+                t.public_ts["properties"]["6"]["system_include_directories"].push_back(idir / name);
+                for (auto &i : idirs)
+                    t.public_ts["properties"]["6"]["system_include_directories"].push_back(idir / i);
+                target = &t;
+            }
+            else
+            {
+                LOG_TRACE(logger, "Libdir " << libdir << " not found for library: " << name);
+                return;
+            }
+            if (name == "um")
+                target->public_ts["properties"]["6"]["system_link_libraries"].push_back(boost::to_upper_copy("kernel32.lib"s));
+            if (name == "ucrt")
+                target->public_ts["properties"]["6"]["system_link_libraries"].push_back(
+                    boost::to_upper_copy(sw::getProgramDetector().getMsvcLibraryName("ucrt", new_settings)));
+        });
+
+        return eps;
     }
 
-    void addTools(DETECT_ARGS)
+    DetectablePackageMultiEntryPoints addTools()
     {
-        auto &eb = static_cast<sw::ExtendedBuild &>(b);
+        DetectablePackageMultiEntryPoints eps;
 
         // .rc
-        //if (name == "rc")
+        eps.emplace("com.Microsoft.Windows.rc", [this](DETECT_ARGS)
         {
+            auto &eb = static_cast<sw::ExtendedBuild &>(b);
             auto p = std::make_shared<sw::RcTool>();
             p->file = kit_root / "bin" / bdir_subversion / toStringWindows(b.getContext().getHostOs().Arch) / "rc.exe";
             if (fs::exists(p->file))
@@ -110,19 +121,23 @@ struct WinKit
                 auto &rc = sw::ProgramDetector::addProgram(DETECT_ARGS_PASS, sw::PackageId("com.Microsoft.Windows.rc", v), eb.getSettings(), p);
                 rc.setRule("rc", std::make_unique<sw::RcRule>(rc.getProgram().clone()));
             }
-        }
+        });
 
         // .mc
-        //if (name == "mc")
+        eps.emplace("com.Microsoft.Windows.mc", [this](DETECT_ARGS)
         {
-            auto p = std::make_shared<sw::SimpleProgram>();
+            SW_UNIMPLEMENTED;
+            auto &eb = static_cast<sw::ExtendedBuild &>(b);
+            auto p = std::make_shared<sw::SimpleProgram>(); // TODO: needs proper rule
             p->file = kit_root / "bin" / bdir_subversion / toStringWindows(b.getContext().getHostOs().Arch) / "mc.exe";
             if (fs::exists(p->file))
             {
                 auto v = getVersion(b.getContext(), p->file, "/?");
                 auto &rc = sw::ProgramDetector::addProgram(DETECT_ARGS_PASS, sw::PackageId("com.Microsoft.Windows.mc", v), eb.getSettings(), p);
             }
-        }
+        });
+
+        return eps;
     }
 };
 
@@ -136,20 +151,14 @@ struct WinSdkInfo
         listWindowsKits();
     }
 
-    void listWindowsKits()
+    DetectablePackageMultiEntryPoints addWindowsKits()
     {
-        // we have now possible double detections, but this is fine for now
-
-        listWindows10Kits();
-        listWindowsKitsOld();
-    }
-
-    void addWindowsKits(DETECT_ARGS)
-    {
+        DetectablePackageMultiEntryPoints eps;
         for (auto &[_,k] : libs)
-            k.add(DETECT_ARGS_PASS);
+            eps.merge(k.add());
         for (auto &[_,k] : programs)
-            k.addTools(DETECT_ARGS_PASS);
+            eps.merge(k.addTools());
+        return eps;
     }
 
 private:
@@ -250,6 +259,14 @@ private:
         for (auto k : reg_access_list)
             list_kits(kits, k);
         return kits;
+    }
+
+    void listWindowsKits()
+    {
+        // we have now possible double detections, but this is fine for now
+
+        listWindows10Kits();
+        listWindowsKitsOld();
     }
 
     void listWindows10Kits() const
@@ -420,12 +437,13 @@ private:
 namespace sw
 {
 
-void ProgramDetector::detectWindowsSdk(DETECT_ARGS)
+ProgramDetector::DetectablePackageMultiEntryPoints ProgramDetector::detectWindowsSdk()
 {
 #ifdef _WIN32
-    static WinSdkInfo info;
-    info.addWindowsKits(DETECT_ARGS_PASS);
-#endif // #ifdef _WIN32
+    static WinSdkInfo info; // TODO: move into program detector later
+    return info.addWindowsKits();
+#endif
+    return {};
 }
 
 }

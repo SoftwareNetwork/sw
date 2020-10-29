@@ -768,8 +768,8 @@ TargetSettings Check::getSettings() const
 void Check::setupTarget(NativeCompiledTarget &t) const
 {
     t.GenerateWindowsResource = false;
-    if (auto L = t.getSelectedTool()->as<VisualStudioLinker*>())
-        L->DisableIncrementalLink = true;
+    //if (auto L = t.getSelectedTool()->as<VisualStudioLinker*>())
+        //L->DisableIncrementalLink = true; // do not create .ilk?
     t.command_storage = nullptr;
 }
 

@@ -57,6 +57,7 @@ struct SW_DRIVER_CPP_API ProgramDetector
 
     using DetectablePackageEntryPoint = std::function<void(Build &)>;
     using DetectablePackageEntryPoints = std::unordered_map<UnresolvedPackage, DetectablePackageEntryPoint>;
+    using DetectablePackageMultiEntryPoints = std::unordered_multimap<UnresolvedPackage, DetectablePackageEntryPoint>;
     static DetectablePackageEntryPoints getDetectablePackages();
 
     template <class T>
@@ -85,10 +86,10 @@ private:
     auto &getMsvcIncludePrefixes() { return msvc_prefixes; }
     const auto &getMsvcIncludePrefixes() const { return msvc_prefixes; }
 
+    DetectablePackageMultiEntryPoints detectWindowsSdk();
     //void detectMsvc(DETECT_ARGS);
     void detectMsvc15Plus(DETECT_ARGS);
     void detectMsvc14AndOlder(DETECT_ARGS);
-    void detectWindowsSdk(DETECT_ARGS);
     void detectMsvcCommon(const path &compiler, const Version &vs_version,
         ArchType target_arch, const path &host_root, const TargetSettings &ts, const path &idir,
         const path &root, const path &target,

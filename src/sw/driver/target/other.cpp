@@ -318,10 +318,10 @@ Commands KotlinTarget::getCommands1() const
     return cmds;
 }
 
-NativeLinker *DTarget::getSelectedTool() const
+/*NativeLinker *DTarget::getSelectedTool() const
 {
     return compiler.get();
-}
+}*/
 
 void ProgramDetector::detectDCompilers(DETECT_ARGS)
 {

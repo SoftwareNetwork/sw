@@ -196,7 +196,7 @@ private:
 
     //
     bool isStaticLibrary() const override { return false; }
-    NativeLinker *getSelectedTool() const override;
+    //NativeLinker *getSelectedTool() const override;
 };
 
 struct SW_DRIVER_CPP_API DLibrary : DTarget

@@ -395,8 +395,9 @@ void build(Solution &s)
         if (client.getBuildSettings().TargetOS.Type == OSType::Windows)
             gui += "org.sw.demo.qtproject.qt.winextras"_dep;
 
-        if (auto L = gui.getSelectedTool()->as<VisualStudioLinker*>(); L)
-            L->Subsystem = vs::Subsystem::Windows;
+        SW_UNIMPLEMENTED;
+        //if (auto L = gui.getSelectedTool()->as<VisualStudioLinker*>(); L)
+            //L->Subsystem = vs::Subsystem::Windows;
 
         qt_moc_rcc_uic("org.sw.demo.qtproject.qt"_dep, gui);
         qt_tr("org.sw.demo.qtproject.qt"_dep, gui);

@@ -178,14 +178,25 @@ path NativeTarget::getOutputFileName2(const path &subdir) const
 
 path NativeTarget::getOutputFile() const
 {
-    return getSelectedTool()->getOutputFile();
+    SW_UNIMPLEMENTED;
+    //return getSelectedTool()->getOutputFile();
 }
 
-void NativeTarget::addRule1(const String &name, const DependencyPtr &from_dep, const String &from_name)
+void NativeTarget::addRuleDependency(const String &name, const DependencyPtr &from_dep, const String &from_name)
 {
     addDummyDependency(from_dep);
     rules2[name].dep = from_dep;
     rules2[name].target_rule_name = from_name;
+}
+
+void NativeTarget::addRuleDependency(const String &name, const DependencyPtr &from_dep)
+{
+    addRuleDependency(name, from_dep, name);
+}
+
+void NativeTarget::addRuleDependency(const String &name, const UnresolvedPackage &from_dep)
+{
+    addRuleDependency("rc", std::make_shared<Dependency>(from_dep));
 }
 
 DependencyPtr NativeTarget::getRuleDependency(const String &name) const
@@ -203,6 +214,11 @@ IRulePtr NativeTarget::getRuleFromDependency(const String &ruledepname, const St
         return t->getRule(rulename);
     else
         SW_UNIMPLEMENTED;
+}
+
+IRulePtr NativeTarget::getRuleFromDependency(const String &rulename) const
+{
+    return getRuleFromDependency(rulename, rulename);
 }
 
 NativeCompiledTarget::NativeCompiledTarget(TargetBase &parent, const PackageId &id)
@@ -758,10 +774,7 @@ void NativeCompiledTarget::findCompiler()
 
     Strings rules = { "c", "cpp", "asm", "lib", "link" };
     if (getBuildSettings().TargetOS.is(OSType::Windows) && getSettings()["rule"]["rc"])
-    {
-        auto d = std::make_shared<Dependency>(UnresolvedPackage{ getSettings()["rule"]["rc"]["package"].getValue() });
-        addRule1("rc", d, "rc");
-    }
+        addRuleDependency("rc", getSettings()["rule"]["rc"]["package"].getValue());
     for (auto &r : rules)
         addDummyDependency(std::make_shared<Dependency>(UnresolvedPackage{ getSettings()["rule"][r]["package"].getValue() }));
 
@@ -901,7 +914,7 @@ void NativeCompiledTarget::setupCommand(builder::Command &c) const
                 continue;
             if (auto nt = d->getTarget().as<NativeCompiledTarget *>())
             {
-                if (!nt->isHeaderOnly() && nt->getSelectedTool() == nt->prog_link.get())
+                if (!isStaticOrHeaderOnlyLibrary())
                     f(nt->getOutputFile());
             }
             else if (auto nt = d->getTarget().as<PredefinedTarget *>())
@@ -1105,8 +1118,8 @@ path NativeCompiledTarget::getImportLibrary() const
 {
     if (!implibfile.empty())
         return implibfile;
-    if (getSelectedTool())
-        return getSelectedTool()->getImportLibrary();
+    //if (getSelectedTool())
+        //return getSelectedTool()->getImportLibrary();
     SW_UNIMPLEMENTED;
 }
 
@@ -1152,8 +1165,8 @@ FilesOrdered NativeCompiledTarget::gatherLinkDirectories() const
     get_ldir(getMergeObject().NativeLinkerOptions::System.gatherLinkDirectories());
 
     FilesOrdered dirs2;
-    if (getSelectedTool())
-        dirs2 = getSelectedTool()->gatherLinkDirectories();
+    //if (getSelectedTool())
+        //dirs2 = getSelectedTool()->gatherLinkDirectories();
     // tool dirs + lib dirs, not vice versa
     dirs2.insert(dirs2.end(), dirs.begin(), dirs.end());
     return dirs2;
@@ -1194,12 +1207,12 @@ LinkLibrariesType NativeCompiledTarget::gatherLinkLibraries() const
     return libs;
 }
 
-NativeLinker *NativeCompiledTarget::getSelectedTool() const
+/*NativeLinker *NativeCompiledTarget::getSelectedTool() const
 {
     if (isStaticLibrary())
         return prog_lib.get();
     return prog_link.get();
-}
+}*/
 
 void NativeCompiledTarget::createPrecompiledHeader()
 {
@@ -3131,8 +3144,8 @@ void NativeCompiledTarget::prepare_pass8()
     setExtensionProgram(e, *prog_cl_asm);*/
 
     //prog_link = activateLinker(getLinkerType());
-    prog_link = activateLinker(getSettings()["rule"]["link"]);
-    //prog_lib = activateLinker(getSettings()["rule"]["lib"]);
+    auto prog_link = activateLinker(getSettings()["rule"]["link"]);
+    //auto prog_lib = activateLinker(getSettings()["rule"]["lib"]);
     //if (!prog_lib)
     //throw SW_RUNTIME_ERROR("Librarian not found");
     if (!prog_link)
@@ -3229,6 +3242,11 @@ void NativeCompiledTarget::prepare_pass8()
     {
         auto &v = addRule(n, std::move(r));
         rules.push_back(&v);
+        return &v;
+    };
+    auto add_rule2 = [this, &add_rule](const auto &n)
+    {
+        add_rule(n, getRuleFromDependency(n));
     };
     add_rule("cpp", std::make_unique<NativeCompilerRule>(*prog_cl_cpp, get_cpp_exts(*this)));
     //add_rule("c", std::make_unique<NativeCompilerRule>(*prog_cl_c, StringSet{ ".c" }));
@@ -3241,7 +3259,8 @@ void NativeCompiledTarget::prepare_pass8()
         ;
     else if (isStaticLibrary())
     {
-        add_rule("lib", std::make_unique<NativeLinkerRule>(*prog_lib));
+        //auto r = add_rule("lib", std::make_unique<NativeLinkerRule>(*prog_lib));
+        //r->is_linker = false;
     }
     else
     {
@@ -3261,18 +3280,16 @@ void NativeCompiledTarget::prepare_pass8()
         }
         // add rc rule
         if (getBuildSettings().TargetOS.is(OSType::Windows) && getSettings()["rule"]["rc"])
-        {
-            add_rule("rc", getRuleFromDependency("rc", "rc"));
-        }
+            add_rule2("rc");
 
         if (isExecutable() || !isHeaderOnly())
             add_rule("link", std::make_unique<NativeLinkerRule>(*prog_link));
     }
-    if (circular_dependency)
-        add_rule("link_circular", std::make_unique<NativeLinkerRule>(*prog_lib));
+    //if (circular_dependency)
+        //add_rule("link_circular", std::make_unique<NativeLinkerRule>(*prog_lib));
 
     // rules!
-    std::set<RuleFile> rfs;
+    RuleFiles rfs;
     for (auto &[p, f] : getMergeObject())
     {
         if (!f->isActive())
@@ -3281,31 +3298,7 @@ void NativeCompiledTarget::prepare_pass8()
         rf.getAdditionalArguments() = f->args;
         rfs.insert(rf);
     }
-    for (auto &r : rules)
-    {
-        auto nr = dynamic_cast<NativeRule*>(r);
-        if (!nr)
-            continue;
-        nr->setup(*this);
-    }
-    while (1)
-    {
-        bool newf = false;
-        for (auto &r : rules)
-        {
-            auto nr = dynamic_cast<NativeRule*>(r);
-            if (!nr)
-                continue;
-            auto outputs = nr->addInputs(*this, rfs);
-            for (auto &o : outputs)
-            {
-                auto [_, inserted] = rfs.insert(o);
-                newf |= inserted;
-            }
-        }
-        if (!newf)
-            break;
-    }
+    runRules(rfs, *this);
 }
 
 void NativeCompiledTarget::prepare_pass9()
@@ -3504,16 +3497,16 @@ void NativeCompiledTarget::setup_compiler(NativeCompiler &prog)
 
 NativeLinker &NativeCompiledTarget::getLinker()
 {
-    if (!prog_link)
+    //if (!prog_link)
         SW_UNIMPLEMENTED;
-    return *prog_link;
+    //return *prog_link;
 }
 
 const NativeLinker &NativeCompiledTarget::getLinker() const
 {
-    if (!prog_link)
+    //if (!prog_link)
         SW_UNIMPLEMENTED;
-    return *prog_link;
+    //return *prog_link;
 }
 
 void NativeCompiledTarget::processCircular(Files &obj)

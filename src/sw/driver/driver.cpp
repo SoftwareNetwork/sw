@@ -339,9 +339,7 @@ struct DirInput : Input
 void Driver::setupBuild(SwBuild &b) const
 {
     // add predefined entry points
-    auto pkgs = getProgramDetector().getDetectablePackages();
-
-    for (auto &[p, epl] : pkgs)
+    for (auto &[p, epl] : getProgramDetector().getDetectablePackages())
     {
         auto name = p.toString();
         auto h = std::hash<String>()(name);

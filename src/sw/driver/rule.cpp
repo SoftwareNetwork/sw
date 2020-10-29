@@ -348,15 +348,12 @@ void NativeLinkerRule::setup(const Target &t)
 Files NativeLinkerRule::addInputs(const Target &t, const RuleFiles &rfs)
 {
     auto nt = t.as<NativeCompiledTarget *>();
-    // librarian otherwise
-    auto is_linker = &getLinker() == &nt->getLinker();
 
     std::optional<path> def;
     FilesOrdered files;
     for (auto &rf : rfs)
     {
-        // do not import our output
-        if (rf.getFile() == getLinker().getOutputFile())
+        if (used_files.contains(rf))
             continue;
 
         if (1
@@ -383,10 +380,7 @@ Files NativeLinkerRule::addInputs(const Target &t, const RuleFiles &rfs)
             )
             continue;
 
-        //if (used_files.contains(rf))
-            //continue;
         files.push_back(rf.getFile());
-        //used_files.insert(rf);
     }
     std::sort(files.begin(), files.end());
     if (files.empty() && !def)
@@ -471,6 +465,7 @@ Files NativeLinkerRule::addInputs(const Target &t, const RuleFiles &rfs)
         }
     }
     outputs.insert(nc.getOutputFile());
+    used_files.insert(nc.getOutputFile());
     c->getCommand()->prepare(); // why?
     c->getCommand()->name = //(is_linker ? "[LINK]"s : "[LIB]"s) + " " +
         "[" + t.getPackage().toString() + "]" + nt->getOutputFile().extension().string();

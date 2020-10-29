@@ -142,51 +142,54 @@ String ProgramDetector::getMsvcLibraryName(const String &base, const BuildSettin
 ProgramDetector::DetectablePackageEntryPoints ProgramDetector::getDetectablePackages()
 {
     DetectablePackageEntryPoints s;
-    s["com.Microsoft.VisualStudio.VC.cl"s] = [](Build &b)
+    s["com.Microsoft.VisualStudio.VC.cl"s] = [](DETECT_ARGS)
     {
         getProgramDetector().detectMsvc15Plus(DETECT_ARGS_PASS);
         //getProgramDetector().detectMsvc14AndOlder(DETECT_ARGS_PASS);
     };
-    s["com.Microsoft.VisualStudio.VC.ml"s] = [](Build &b)
+    s["com.Microsoft.VisualStudio.VC.ml"s] = [](DETECT_ARGS)
     {
         getProgramDetector().detectMsvc15Plus(DETECT_ARGS_PASS);
         //getProgramDetector().detectMsvc14AndOlder(DETECT_ARGS_PASS);
     };
-    s["com.Microsoft.VisualStudio.VC.lib"s] = [](Build &b)
+    s["com.Microsoft.VisualStudio.VC.lib"s] = [](DETECT_ARGS)
     {
         getProgramDetector().detectMsvc15Plus(DETECT_ARGS_PASS);
         //getProgramDetector().detectMsvc14AndOlder(DETECT_ARGS_PASS);
     };
-    s["com.Microsoft.VisualStudio.VC.link"s] = [](Build &b)
+    s["com.Microsoft.VisualStudio.VC.link"s] = [](DETECT_ARGS)
     {
         getProgramDetector().detectMsvc15Plus(DETECT_ARGS_PASS);
         //getProgramDetector().detectMsvc14AndOlder(DETECT_ARGS_PASS);
     };
-    s["com.Microsoft.VisualStudio.VC.libcpp"s] = [](Build &b)
+    s["com.Microsoft.VisualStudio.VC.libcpp"s] = [](DETECT_ARGS)
     {
         getProgramDetector().detectMsvc15Plus(DETECT_ARGS_PASS);
         //getProgramDetector().detectMsvc14AndOlder(DETECT_ARGS_PASS);
     };
-    s["com.Microsoft.VisualStudio.VC.runtime"s] = [](Build &b)
+    s["com.Microsoft.VisualStudio.VC.runtime"s] = [](DETECT_ARGS)
     {
         getProgramDetector().detectMsvc15Plus(DETECT_ARGS_PASS);
         //getProgramDetector().detectMsvc14AndOlder(DETECT_ARGS_PASS);
     };
-    s["com.Microsoft.Windows.SDK.ucrt"s] = [](Build &b)
+
+    auto add_eps = [&s](auto &eps)
     {
-        getProgramDetector().detectWindowsSdk(DETECT_ARGS_PASS);
-        //getProgramDetector().detectMsvc14AndOlder(DETECT_ARGS_PASS);
+        using Map = std::unordered_map<UnresolvedPackage, std::vector<DetectablePackageEntryPoint>>;
+        Map m;
+        for (auto &[u, f] : eps)
+            m[u].push_back(std::move(f));
+        for (auto &[u, v] : m)
+        {
+            s[u] = [v = std::move(v)](DETECT_ARGS)
+            {
+                for (auto &f : v)
+                    f(DETECT_ARGS_PASS);
+            };
+        }
     };
-    s["com.Microsoft.Windows.SDK.um"s] = [](Build &b)
-    {
-        getProgramDetector().detectWindowsSdk(DETECT_ARGS_PASS);
-        //getProgramDetector().detectMsvc14AndOlder(DETECT_ARGS_PASS);
-    };
-    s["com.Microsoft.Windows.rc"s] = [](Build &b)
-    {
-        getProgramDetector().detectWindowsSdk(DETECT_ARGS_PASS);
-        //getProgramDetector().detectMsvc14AndOlder(DETECT_ARGS_PASS);
-    };
+    add_eps(getProgramDetector().detectWindowsSdk());
+
     return s;
 }
 

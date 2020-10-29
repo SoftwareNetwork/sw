@@ -104,7 +104,7 @@ public:
     void autoDetectSources();
     void autoDetectIncludeDirectories();
     bool hasSourceFiles() const;
-    NativeLinker *getSelectedTool() const override;
+    //NativeLinker *getSelectedTool() const override;
     void setOutputFile() override;
     //void setOutputFilename(const path &fn);
     path getOutputDir1() const;
@@ -208,8 +208,8 @@ private:
     std::unique_ptr<NativeCompiler> prog_cl_cpp;
     std::unique_ptr<NativeCompiler> prog_cl_c;
     std::unique_ptr<NativeCompiler> prog_cl_asm;
-    std::unique_ptr<NativeLinker> prog_link;
-    std::unique_ptr<NativeLinker> prog_lib;
+    //std::unique_ptr<NativeLinker> prog_link;
+    //std::unique_ptr<NativeLinker> prog_lib;
     bool libstdcppset = false;
     void findCompiler();
     std::unique_ptr<NativeCompiler> activateCompiler(const TargetSetting &s, const StringSet &exts);

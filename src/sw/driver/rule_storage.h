@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include "rule.h"
+
 #include <sw/builder/command.h>
 
 #include <memory>
@@ -11,23 +13,22 @@
 namespace sw
 {
 
-struct IRule;
-using RulePtr = std::unique_ptr<IRule>;
-
 struct RuleData1
 {
-    RulePtr rule;
+    IRulePtr rule;
     primitives::command::Arguments arguments;
 };
 
 struct RuleStorage
 {
+    using Rules = std::map<String, std::stack<IRulePtr>>;
+
     RuleStorage();
     ~RuleStorage();
 
     // or set rule?
-    void push(const String &name, RulePtr);
-    RulePtr pop(const String &name);
+    void push(const String &name, IRulePtr);
+    IRulePtr pop(const String &name);
 
     bool contains(const String &name) const;
     IRule *getRule(const String &n) const;
@@ -37,8 +38,20 @@ struct RuleStorage
 
     Commands getCommands() const;
 
+    struct iter
+    {
+        using iterator = typename Rules::iterator;
+        iterator i;
+        iter(iterator i) : i(i) {}
+        auto operator<=>(const iter &) const = default;
+        iter &operator++() { ++i; return *this; }
+        auto &operator*() { return *i->second.top(); }
+    };
+    iter begin() { return iter{ rules.begin() }; }
+    iter end() { return iter{ rules.end() }; }
+
 private:
-    std::map<String, std::stack<RulePtr>> rules;
+    Rules rules;
 };
 
 struct RuleSystem
@@ -70,6 +83,8 @@ struct RuleSystem
             return {};
         return r->as<T>();
     }
+
+    void runRules(RuleFiles rfs, const Target &);
 
 protected:
     Commands getRuleCommands() const;

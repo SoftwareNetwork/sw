@@ -75,9 +75,13 @@ struct SW_DRIVER_CPP_API NativeTarget
     // move to runnable target? since we might have data only targets
     virtual void setupCommandForRun(builder::Command &c) const { setupCommand(c); } // for Launch?
 
-    void addRule1(const String &rulename, const DependencyPtr &from_dep, const String &from_name);
+    // rules
+    void addRuleDependency(const String &rulename, const DependencyPtr &from_dep, const String &from_name);
+    void addRuleDependency(const String &rulename, const DependencyPtr &from_dep);
+    void addRuleDependency(const String &rulename, const UnresolvedPackage &from_dep);
     DependencyPtr getRuleDependency(const String &rulename) const;
     IRulePtr getRuleFromDependency(const String &ruledepname, const String &rulename) const;
+    IRulePtr getRuleFromDependency(const String &rulename) const;
 
 protected:
     path OutputDir; // output subdir
@@ -86,7 +90,7 @@ protected:
     virtual path getOutputFileName2(const path &subdir) const;
 
     virtual void setOutputFile();
-    virtual NativeLinker *getSelectedTool() const = 0;
+    //virtual NativeLinker *getSelectedTool() const = 0;
     virtual bool isStaticLibrary() const = 0;
 
 private:
