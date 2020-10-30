@@ -315,15 +315,25 @@ ProgramDetector::DetectablePackageMultiEntryPoints ProgramDetector::detectMsvcCo
         auto &eb = static_cast<ExtendedBuild &>(b);
         m.process(DETECT_ARGS_PASS);
 
-        auto p = std::make_unique<SimpleProgram>();
+        auto p = std::make_unique<VisualStudioCompiler>();
         p->file = m.compiler / "cl.exe";
         if (!fs::exists(p->file))
             return;
 
-        auto c = p->getCommand();
+        //auto c = p->getCommand();
         if (b.getContext().getHostOs().Arch != m.target_arch)
-            c->addPathDirectory(m.host_root);
+        {
+            SW_UNIMPLEMENTED;
+            //c->addPathDirectory(m.host_root);
+        }
         auto &cl = addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.cl", m.cl_exe_version), eb.getSettings(), *p);
+        auto r = std::make_unique<NativeCompilerRule>(p->clone());
+        r->is_c = true;
+        cl.setRule("c", std::move(r));
+        r = std::make_unique<NativeCompilerRule>(p->clone());
+        cl.setRule("cpp", std::move(r));
+        //r->rulename = "[C++]"; // CXX?
+        //r->rulename = "[C]";
     });
 
     // lib, link
@@ -376,11 +386,11 @@ ProgramDetector::DetectablePackageMultiEntryPoints ProgramDetector::detectMsvcCo
         {
             auto p = std::make_shared<SimpleProgram>();
             p->file = m.compiler / (m.target_arch == ArchType::x86_64 ? "ml64.exe" : "ml.exe");
-            if (fs::exists(p->file))
-            {
-                addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.ml", m.cl_exe_version), eb.getSettings(), *p);
-                getMsvcIncludePrefixes()[p->file] = m.msvc_prefix;
-            }
+            if (!fs::exists(p->file))
+                return;
+            addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.ml", m.cl_exe_version), eb.getSettings(), *p);
+            getMsvcIncludePrefixes()[p->file] = m.msvc_prefix;
+            //r->rulename = "[ASM]";
         }
     });
 

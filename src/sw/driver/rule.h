@@ -42,13 +42,17 @@ using RuleFiles = std::set<RuleFile>;
 
 struct SW_DRIVER_CPP_API NativeRule : IRule
 {
-    using RuleProgram = Program &;
+    using RuleProgram = ProgramPtr;
 
-    RuleProgram program;
     decltype(builder::Command::arguments) arguments; // move to rule promise?
 
     NativeRule(RuleProgram);
-    NativeRule(const NativeRule &rhs) : program(rhs.program) { arguments = rhs.arguments; }
+    NativeRule(const NativeRule &rhs)
+    {
+        if (rhs.program)
+            program = rhs.program->clone();
+        arguments = rhs.arguments;
+    }
 
     virtual Files addInputs(const Target &t, const RuleFiles &) = 0;
     virtual void setup(const Target &t) {}
@@ -56,6 +60,7 @@ struct SW_DRIVER_CPP_API NativeRule : IRule
     Commands getCommands() const override;
 
 protected:
+    RuleProgram program;
     std::vector<ProgramPtr> commands;
     RuleFiles used_files;
     Commands commands2;
@@ -65,15 +70,13 @@ struct SW_DRIVER_CPP_API NativeCompilerRule : NativeRule
 {
     StringSet exts;
     //String rulename;
+    bool is_c = false;
 
-    NativeCompilerRule(RuleProgram, const StringSet &exts);
+    using NativeRule::NativeRule;
 
     IRulePtr clone() const override { return std::make_unique<NativeCompilerRule>(*this); }
     Files addInputs(const Target &t, const RuleFiles &) override;
     void setup(const Target &t) override;
-
-private:
-    NativeCompiler &getCompiler() const;
 };
 
 struct SW_DRIVER_CPP_API NativeLinkerRule : NativeRule
@@ -81,38 +84,20 @@ struct SW_DRIVER_CPP_API NativeLinkerRule : NativeRule
     // librarian otherwise
     bool is_linker = true;
 
-    NativeLinkerRule(ProgramPtr);
-    NativeLinkerRule(const NativeLinkerRule &rhs)
-        : NativeRule(rhs)
-    {
-        if (rhs.p)
-            p = rhs.p->clone();
-    }
+    using NativeRule::NativeRule;
 
     IRulePtr clone() const override { return std::make_unique<NativeLinkerRule>(*this); }
     Files addInputs(const Target &t, const RuleFiles &) override;
     void setup(const Target &t) override;
-
-private:
-    ProgramPtr p;
 };
 
 struct RcRule : NativeRule
 {
-    RcRule(ProgramPtr);
-    RcRule(const RcRule &rhs)
-        : NativeRule(rhs)
-    {
-        if (rhs.p)
-            p = rhs.p->clone();
-    }
+    using NativeRule::NativeRule;
 
     IRulePtr clone() const override { return std::make_unique<RcRule>(*this); }
     Files addInputs(const Target &t, const RuleFiles &) override;
     void setup(const Target &t) override;
-
-private:
-    ProgramPtr p;
 };
 
 } // namespace sw

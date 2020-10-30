@@ -58,4 +58,15 @@ bool isCppSourceFileExtensions(const String &e)
     return exts.find(e) != exts.end();
 }
 
+StringSet get_cpp_exts(bool apple)
+{
+    auto cppexts = getCppSourceFileExtensions();
+    if (!apple)
+    {
+        cppexts.erase(".m");
+        cppexts.erase(".mm");
+    }
+    return cppexts;
+}
+
 }

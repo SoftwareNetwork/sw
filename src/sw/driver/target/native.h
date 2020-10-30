@@ -165,9 +165,9 @@ public:
     bool isStaticLibrary() const override;
     bool isStaticOrHeaderOnlyLibrary() const;
     virtual bool isExecutable() const { return false; }
-protected:
     TargetType getRealType() const;
 
+protected:
     path getBinaryParentDir() const override;
 
 private:
@@ -207,9 +207,9 @@ private:
 
     void createPrecompiledHeader();
 
-    std::unique_ptr<NativeCompiler> prog_cl_cpp;
-    std::unique_ptr<NativeCompiler> prog_cl_c;
-    std::unique_ptr<NativeCompiler> prog_cl_asm;
+    //std::unique_ptr<NativeCompiler> prog_cl_cpp;
+    //std::unique_ptr<NativeCompiler> prog_cl_c;
+    //std::unique_ptr<NativeCompiler> prog_cl_asm;
     //std::unique_ptr<NativeLinker> prog_link;
     //std::unique_ptr<NativeLinker> prog_lib;
     bool libstdcppset = false;

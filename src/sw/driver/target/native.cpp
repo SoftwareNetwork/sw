@@ -746,17 +746,6 @@ std::unique_ptr<NativeLinker> NativeCompiledTarget::activateLinker(LinkerType t)
     return c;
 }
 
-static auto get_cpp_exts(const NativeCompiledTarget &t)
-{
-    auto cppexts = getCppSourceFileExtensions();
-    if (!t.getBuildSettings().TargetOS.isApple())
-    {
-        cppexts.erase(".m");
-        cppexts.erase(".mm");
-    }
-    return cppexts;
-}
-
 static StringSet get_asm_exts(const NativeCompiledTarget &t)
 {
     if (t.getBuildSettings().TargetOS.is(OSType::Windows))
@@ -777,13 +766,11 @@ void NativeCompiledTarget::findCompiler()
     if (lt == LinkerType::Unspecified)
         throw SW_RUNTIME_ERROR("Cannot determine compiler type " + get_settings_package_id(getSettings()["rule"]["link"]["package"]).toString() + " for settings: " + getSettings().toString());
 
-    Strings rules = { "c", "cpp", "asm" };
+    Strings rules = { "c", "cpp", "asm", "lib", "link" };
     if (getBuildSettings().TargetOS.is(OSType::Windows) && getSettings()["rule"]["rc"])
         addRuleDependency("rc");
     for (auto &r : rules)
-        addDummyDependency(std::make_shared<Dependency>(UnresolvedPackage{ getSettings()["rule"][r]["package"].getValue() }));
-    addRuleDependency("lib");
-    addRuleDependency("link");
+        addRuleDependency(r);
 
     //ct = get_compiler_type(get_settings_package_id(getSettings()["native"]["program"]["cpp"]));
     //if (ct == CompilerType::UnspecifiedCompiler)
@@ -1134,7 +1121,7 @@ bool NativeCompiledTarget::hasSourceFiles() const
 {
     bool r = false;
 
-    auto exts = get_cpp_exts(*this);
+    auto exts = get_cpp_exts(getBuildSettings().TargetOS.isApple());
     exts.insert(".c");
     exts.insert(".def");
     exts.insert(getBuildSettings().TargetOS.getObjectFileExtension());
@@ -3146,8 +3133,6 @@ void NativeCompiledTarget::prepare_pass8()
     }
 
     // create
-    prog_cl_cpp = activateCompiler(getSettings()["rule"]["cpp"], get_cpp_exts(*this));
-    //prog_cl_c = activateCompiler(getSettings()["rule"]["c"], { ".c" });
     //prog_cl_asm = activateCompiler(getSettings()["rule"]["asm"], get_asm_exts(*this));
 
     /*setExtensionProgram(".c", *prog_cl_c);
@@ -3157,15 +3142,11 @@ void NativeCompiledTarget::prepare_pass8()
     setExtensionProgram(e, *prog_cl_asm);*/
 
     // setup
-    //setup_compiler(*prog_cl_c);
-    setup_compiler(*prog_cl_cpp);
     //setup_compiler(*prog_cl_asm);
 
     // merge settings
     if (!isHeaderOnly())
     {
-        prog_cl_cpp->merge(*this);
-        //prog_cl_c->merge(*this);
         //prog_cl_asm->merge(*this);
     }
 
@@ -3181,12 +3162,9 @@ void NativeCompiledTarget::prepare_pass8()
     {
         add_rule(n, getRuleFromDependency(n));
     };
-    add_rule("cpp", std::make_unique<NativeCompilerRule>(*prog_cl_cpp, get_cpp_exts(*this)));
-    //add_rule("c", std::make_unique<NativeCompilerRule>(*prog_cl_c, StringSet{ ".c" }));
+    add_rule2("c");
+    add_rule2("cpp");
     //add_rule("asm", std::make_unique<NativeCompilerRule>(*prog_cl_asm, get_asm_exts(*this)));
-    //r->rulename = "[C++]"; // CXX?
-    //r->rulename = "[C]";
-    //r->rulename = "[ASM]";
 
     if (isHeaderOnly())
         ;
@@ -3327,102 +3305,7 @@ path NativeCompiledTarget::generate_rc()
 
 void NativeCompiledTarget::setup_compiler(NativeCompiler &prog)
 {
-    auto vs_setup = [this, &prog](auto *c)
-    {
-        if (getBuildSettings().Native.MT)
-            c->RuntimeLibrary = vs::RuntimeLibraryType::MultiThreaded;
-
-        switch (getBuildSettings().Native.ConfigurationType)
-        {
-        case ConfigurationType::Debug:
-            c->RuntimeLibrary =
-                getBuildSettings().Native.MT ?
-                vs::RuntimeLibraryType::MultiThreadedDebug :
-                vs::RuntimeLibraryType::MultiThreadedDLLDebug;
-            c->Optimizations().Disable = true;
-            break;
-        case ConfigurationType::Release:
-            c->Optimizations().FastCode = true;
-            break;
-        case ConfigurationType::ReleaseWithDebugInformation:
-            c->Optimizations().FastCode = true;
-            break;
-        case ConfigurationType::MinimalSizeRelease:
-            c->Optimizations().SmallCode = true;
-            break;
-        }
-        if (&prog != prog_cl_c.get())
-            c->CPPStandard = CPPVersion;
-        // else
-        // TODO: ms now has C standard since VS16.8?
-
-        // set pdb explicitly
-        // this is needed when using pch files sometimes
-        c->PDBFilename = BinaryDir.parent_path() / "obj" / "sw.pdb";
-    };
-
-    auto gnu_setup = [this, &prog](auto *c)
-    {
-        switch (getBuildSettings().Native.ConfigurationType)
-        {
-        case ConfigurationType::Debug:
-            c->GenerateDebugInformation = true;
-            //c->Optimizations().Level = 0; this is the default
-            break;
-        case ConfigurationType::Release:
-            c->Optimizations().Level = 3;
-            break;
-        case ConfigurationType::ReleaseWithDebugInformation:
-            c->GenerateDebugInformation = true;
-            c->Optimizations().Level = 2;
-            break;
-        case ConfigurationType::MinimalSizeRelease:
-            c->Optimizations().SmallCode = true;
-            c->Optimizations().Level = 2;
-            break;
-        }
-        if (&prog != prog_cl_c.get())
-            c->CPPStandard = CPPVersion;
-        else
-            c->CStandard = CVersion;
-
-        if (ExportAllSymbols && getRealType() != TargetType::NativeStaticLibrary)
-            c->VisibilityHidden = false;
-    };
-
-    if (auto c = prog.as<VisualStudioCompiler*>())
-    {
-        /*if (UseModules)
-        {
-        c->UseModules = UseModules;
-        //c->stdIfcDir = c->System.IncludeDirectories.begin()->parent_path() / "ifc" / (getBuildSettings().TargetOS.Arch == ArchType::x86_64 ? "x64" : "x86");
-        c->stdIfcDir = c->System.IncludeDirectories.begin()->parent_path() / "ifc" / c->file.parent_path().filename();
-        c->UTF8 = false; // utf8 is not used in std modules and produce a warning
-
-        auto s = read_file(f->file);
-        std::smatch m;
-        static std::regex r("export module (\\w+)");
-        if (std::regex_search(s, m, r))
-        {
-        c->ExportModule = true;
-        }
-        }*/
-
-        vs_setup(c);
-    }
-    else if (auto c = prog.as<ClangClCompiler*>())
-    {
-        vs_setup(c);
-    }
-    // clang compiler is not working atm, gnu is created instead
-    else if (auto c = prog.as<ClangCompiler*>())
-    {
-        gnu_setup(c);
-    }
-    else if (auto c = prog.as<GNUCompiler*>())
-    {
-        gnu_setup(c);
-    }
+    SW_UNIMPLEMENTED;
 }
 
 NativeLinker &NativeCompiledTarget::getLinker()

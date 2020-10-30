@@ -65,18 +65,8 @@ struct TargetFilenames
 };
 
 NativeRule::NativeRule(RuleProgram p)
-    : program(p)
+    : program(std::move(p))
 {
-}
-
-NativeCompilerRule::NativeCompilerRule(RuleProgram p, const StringSet &exts)
-    : NativeRule(p), exts(exts)
-{
-}
-
-NativeCompiler &NativeCompilerRule::getCompiler() const
-{
-    return static_cast<NativeCompiler &>(program);
 }
 
 Commands NativeRule::getCommands() const
@@ -115,11 +105,124 @@ static path getOutputFile(const Target &t, const C &c, const path &input)
 
 void NativeCompilerRule::setup(const Target &t)
 {
+    auto &prog = static_cast<NativeCompiler &>(*program);
+    auto nt = t.as<NativeCompiledTarget *>();
+    if (!nt)
+        return;
 
+    if (is_c)
+        exts.insert(".c");
+    else
+        exts = get_cpp_exts(nt->getBuildSettings().TargetOS.isApple());
+
+    // setup
+    auto vs_setup = [this, nt, &prog](auto *c)
+    {
+        if (nt->getBuildSettings().Native.MT)
+            c->RuntimeLibrary = vs::RuntimeLibraryType::MultiThreaded;
+
+        switch (nt->getBuildSettings().Native.ConfigurationType)
+        {
+        case ConfigurationType::Debug:
+            c->RuntimeLibrary =
+                nt->getBuildSettings().Native.MT ?
+                vs::RuntimeLibraryType::MultiThreadedDebug :
+                vs::RuntimeLibraryType::MultiThreadedDLLDebug;
+            c->Optimizations().Disable = true;
+            break;
+        case ConfigurationType::Release:
+            c->Optimizations().FastCode = true;
+            break;
+        case ConfigurationType::ReleaseWithDebugInformation:
+            c->Optimizations().FastCode = true;
+            break;
+        case ConfigurationType::MinimalSizeRelease:
+            c->Optimizations().SmallCode = true;
+            break;
+        }
+        if (!is_c)
+            c->CPPStandard = nt->CPPVersion;
+        // else
+        // TODO: ms now has C standard since VS16.8?
+
+        // set pdb explicitly
+        // this is needed when using pch files sometimes
+        c->PDBFilename = nt->BinaryDir.parent_path() / "obj" / "sw.pdb";
+    };
+
+    auto gnu_setup = [this, nt, &prog](auto *c)
+    {
+        switch (nt->getBuildSettings().Native.ConfigurationType)
+        {
+        case ConfigurationType::Debug:
+            c->GenerateDebugInformation = true;
+            //c->Optimizations().Level = 0; this is the default
+            break;
+        case ConfigurationType::Release:
+            c->Optimizations().Level = 3;
+            break;
+        case ConfigurationType::ReleaseWithDebugInformation:
+            c->GenerateDebugInformation = true;
+            c->Optimizations().Level = 2;
+            break;
+        case ConfigurationType::MinimalSizeRelease:
+            c->Optimizations().SmallCode = true;
+            c->Optimizations().Level = 2;
+            break;
+        }
+        if (!is_c)
+            c->CPPStandard = nt->CPPVersion;
+        else
+            c->CStandard = nt->CVersion;
+
+        if (nt->ExportAllSymbols && nt->getRealType() != TargetType::NativeStaticLibrary)
+            c->VisibilityHidden = false;
+    };
+
+    if (auto c = prog.as<VisualStudioCompiler*>())
+    {
+        /*if (UseModules)
+        {
+        c->UseModules = UseModules;
+        //c->stdIfcDir = c->System.IncludeDirectories.begin()->parent_path() / "ifc" / (getBuildSettings().TargetOS.Arch == ArchType::x86_64 ? "x64" : "x86");
+        c->stdIfcDir = c->System.IncludeDirectories.begin()->parent_path() / "ifc" / c->file.parent_path().filename();
+        c->UTF8 = false; // utf8 is not used in std modules and produce a warning
+
+        auto s = read_file(f->file);
+        std::smatch m;
+        static std::regex r("export module (\\w+)");
+        if (std::regex_search(s, m, r))
+        {
+        c->ExportModule = true;
+        }
+        }*/
+
+        vs_setup(c);
+    }
+    else if (auto c = prog.as<ClangClCompiler*>())
+    {
+        vs_setup(c);
+    }
+    // clang compiler is not working atm, gnu is created instead
+    else if (auto c = prog.as<ClangCompiler*>())
+    {
+        gnu_setup(c);
+    }
+    else if (auto c = prog.as<GNUCompiler*>())
+    {
+        gnu_setup(c);
+    }
+
+    // merge settings
+    if (!nt->isHeaderOnly())
+    {
+        prog.merge(*nt);
+    }
 }
 
 Files NativeCompilerRule::addInputs(const Target &t, const RuleFiles &rfs)
 {
+    auto &cl = static_cast<NativeCompiler &>(*program);
     auto nt = t.as<NativeCompiledTarget *>();
     std::optional<path> pch_basename;
     RuleFiles rfs_new;
@@ -204,10 +307,10 @@ Files NativeCompilerRule::addInputs(const Target &t, const RuleFiles &rfs)
             continue;
         if (used_files.contains(rf))
             continue;
-        auto output = getOutputFile(t, getCompiler(), rf.getFile());
+        auto output = getOutputFile(t, cl, rf.getFile());
         outputs.insert(output);
 
-        auto c = getCompiler().clone();
+        auto c = cl.clone();
         auto &nc = static_cast<NativeCompiler &>(*c);
         nc.setSourceFile(rf.getFile(), output);
 
@@ -335,15 +438,9 @@ Files NativeCompilerRule::addInputs(const Target &t, const RuleFiles &rfs)
     return outputs;
 }
 
-NativeLinkerRule::NativeLinkerRule(ProgramPtr p)
-    : NativeRule(*p)
-    , p(std::move(p))
-{
-}
-
 void NativeLinkerRule::setup(const Target &t)
 {
-    auto &prog_link = static_cast<NativeLinker &>(program);
+    auto &prog_link = static_cast<NativeLinker &>(*program);
     auto nt = t.as<NativeCompiledTarget *>();
     if (!nt)
         return;
@@ -429,7 +526,7 @@ void NativeLinkerRule::setup(const Target &t)
 
 Files NativeLinkerRule::addInputs(const Target &t, const RuleFiles &rfs)
 {
-    auto &nl = static_cast<NativeLinker &>(program);
+    auto &nl = static_cast<NativeLinker &>(*program);
     auto nt = t.as<NativeCompiledTarget *>();
 
     std::optional<path> def;
@@ -559,12 +656,6 @@ Files NativeLinkerRule::addInputs(const Target &t, const RuleFiles &rfs)
     return outputs;
 }
 
-RcRule::RcRule(ProgramPtr p)
-    : NativeRule(*p)
-    , p(std::move(p))
-{
-}
-
 void RcRule::setup(const Target &t)
 {
 }
@@ -580,7 +671,7 @@ Files RcRule::addInputs(const Target &t, const RuleFiles &rfs)
             continue;
         auto output = getOutputFile(t, rf.getFile()) += ".res";
         outputs.insert(output);
-        auto c = p->clone();
+        auto c = program->clone();
         // add casual idirs?
         static_cast<RcTool &>(*c).InputFile = rf.getFile();
         static_cast<RcTool &>(*c).Output = output;

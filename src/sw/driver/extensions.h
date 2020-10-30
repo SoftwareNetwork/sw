@@ -20,4 +20,7 @@ bool isCppHeaderFileExtension(const String &);
 SW_DRIVER_CPP_API
 bool isCppSourceFileExtensions(const String &);
 
+// internals for now
+StringSet get_cpp_exts(bool apple);
+
 }
