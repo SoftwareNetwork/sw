@@ -13,14 +13,22 @@ RuleStorage::~RuleStorage() = default;
 
 void RuleStorage::push(const String &name, IRulePtr r)
 {
-    rules[name].emplace(std::move(r));
+    RuleData rd;
+    rd.rule = std::move(r);
+    if (!rules[name].empty())
+    {
+        auto nr = dynamic_cast<NativeRule *>(rd.rule.get());
+        if (nr)
+            nr->arguments.push_back(rules[name].top().arguments);
+    }
+    rules[name].emplace(std::move(rd));
 }
 
 IRulePtr RuleStorage::pop(const String &name)
 {
     if (!contains(name))
         return {};
-    IRulePtr r = std::move(rules[name].top());
+    IRulePtr r = std::move(rules[name].top().rule);
     rules[name].pop();
     return r;
 }
@@ -44,16 +52,23 @@ Commands RuleStorage::getCommands() const
 {
     Commands c;
     for (auto &[_,s] : rules)
-        c.merge(s.top()->getCommands());
+        c.merge(s.top().rule->getCommands());
     return c;
 }
 
-IRule *RuleStorage::getRule(const String &n) const
+RuleStorage::RuleData &RuleStorage::getRule(const String &n)
+{
+    if (rules[n].empty())
+        rules[n].push({});
+    return rules[n].top();
+}
+
+const RuleStorage::RuleData &RuleStorage::getRule(const String &n) const
 {
     auto i = rules.find(n);
-    if (i != rules.end())
-        return i->second.top().get();
-    return {};
+    if (i == rules.end())
+        throw SW_RUNTIME_ERROR("No such rule: " + n);
+    return i->second.top();
 }
 
 Commands RuleSystem::getRuleCommands() const
@@ -65,7 +80,7 @@ void RuleSystem::runRules(RuleFiles rfs, const Target &t)
 {
     for (auto &r : rules)
     {
-        auto nr = dynamic_cast<NativeRule*>(&r);
+        auto nr = dynamic_cast<NativeRule*>(r.rule.get());
         if (!nr)
             continue;
         nr->setup(t);
@@ -75,7 +90,7 @@ void RuleSystem::runRules(RuleFiles rfs, const Target &t)
         bool newf = false;
         for (auto &r : rules)
         {
-            auto nr = dynamic_cast<NativeRule*>(&r);
+            auto nr = dynamic_cast<NativeRule*>(r.rule.get());
             if (!nr)
                 continue;
             auto outputs = nr->addInputs(t, rfs);

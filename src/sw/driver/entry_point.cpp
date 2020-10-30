@@ -626,14 +626,20 @@ path PrepareConfig::one2one(Build &b, const InputData &d)
     if (bs.TargetOS.is(OSType::Windows))
         lib.NativeLinkerOptions::System.LinkLibraries.insert(LinkLibrary{ "DELAYIMP.LIB"s });
 
-    /*if (lib.getLinkerType() == LinkerType::MSVC)
-    //if (auto r = lib.getRule<NativeRule*>("link"))
+    if (lib.getLinkerType() == LinkerType::MSVC)
     //if (auto L = r->program.as<VisualStudioLinker*>())
-    if (auto L = lib.getLinker().as<VisualStudioLinker*>())
     {
-        //r->arguments.push_back("/DELAYLOAD:"s + IMPORT_LIBRARY);
+        auto &r = lib.getRule("link");
+        r.arguments.push_back("/DELAYLOAD:"s + IMPORT_LIBRARY);
+        //#ifdef CPPAN_DEBUG
+        r.arguments.push_back("/DEBUG:FULL");
+        //#endif
+        if (isDriverStaticBuild())
+            r.arguments.push_back("/FORCE:MULTIPLE");
+        else
+            r.arguments.push_back("/FORCE:UNRESOLVED");
 
-        L->DelayLoadDlls().push_back(IMPORT_LIBRARY);
+        /*L->DelayLoadDlls().push_back(IMPORT_LIBRARY);
         //#ifdef CPPAN_DEBUG
         L->GenerateDebugInformation = vs::link::Debug::Full;
         //#endif
@@ -643,9 +649,10 @@ path PrepareConfig::one2one(Build &b, const InputData &d)
             L->Force = vs::ForceType::Unresolved;
         L->IgnoreWarnings().insert(4006); // warning LNK4006: X already defined in Y; second definition ignored
         L->IgnoreWarnings().insert(4070); // warning LNK4070: /OUT:X.dll directive in .EXP differs from output filename 'Y.dll'; ignoring directive
-                                          // cannot be ignored https://docs.microsoft.com/en-us/cpp/build/reference/ignore-ignore-specific-warnings?view=vs-2017
-                                          //L->IgnoreWarnings().insert(4088); // warning LNK4088: image being generated due to /FORCE option; image may not run
-    }*/
+        // cannot be ignored https://docs.microsoft.com/en-us/cpp/build/reference/ignore-ignore-specific-warnings?view=vs-2017
+        //L->IgnoreWarnings().insert(4088); // warning LNK4088: image being generated due to /FORCE option; image may not run
+        */
+    }
 
     return lib.getOutputFile();
 }

@@ -3135,12 +3135,9 @@ void NativeCompiledTarget::prepare_pass8()
     setExtensionProgram(e, *prog_cl_asm);*/
 
     // add rules
-    std::vector<IRule *> rules;
-    auto add_rule = [this, &rules](const auto &n, auto &&r)
+    auto add_rule = [this](const auto &n, auto &&r)
     {
-        auto &v = addRule(n, std::move(r));
-        rules.push_back(&v);
-        return &v;
+        addRule(n, std::move(r));
     };
     auto add_rule2 = [this, &add_rule](const auto &n)
     {

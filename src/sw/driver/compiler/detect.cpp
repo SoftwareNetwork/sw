@@ -224,6 +224,10 @@ ProgramDetector::MsvcInstance::MsvcInstance(const VSInstance &i)
 
 void ProgramDetector::MsvcInstance::process(DETECT_ARGS)
 {
+    if (processed)
+        return;
+    processed = true;
+
     bool vs15plus = i.version.getMajor() >= 15;
     auto &eb = static_cast<ExtendedBuild &>(b);
     BuildSettings new_settings = eb.getSettings();

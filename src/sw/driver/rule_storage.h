@@ -21,7 +21,8 @@ struct RuleData1
 
 struct RuleStorage
 {
-    using Rules = std::map<String, std::stack<IRulePtr>>;
+    using RuleData = RuleData1;
+    using Rules = std::map<String, std::stack<RuleData>>;
 
     RuleStorage();
     ~RuleStorage();
@@ -31,7 +32,8 @@ struct RuleStorage
     IRulePtr pop(const String &name);
 
     bool contains(const String &name) const;
-    IRule *getRule(const String &n) const;
+    RuleData &getRule(const String &n);
+    const RuleData &getRule(const String &n) const;
 
     void clear(); // everything
     void clear(const String &name); // only name
@@ -45,7 +47,7 @@ struct RuleStorage
         iter(iterator i) : i(i) {}
         auto operator<=>(const iter &) const = default;
         iter &operator++() { ++i; return *this; }
-        auto &operator*() { return *i->second.top(); }
+        auto &operator*() { return i->second.top(); }
     };
     iter begin() { return iter{ rules.begin() }; }
     iter end() { return iter{ rules.end() }; }
@@ -73,7 +75,8 @@ struct RuleSystem
         return addRule(n, std::move(r));
     }*/
 
-    IRule *getRule(const String &n) const { return rules.getRule(n); }
+    RuleStorage::RuleData &getRule(const String &n) { return rules.getRule(n); }
+    const RuleStorage::RuleData &getRule(const String &n) const { return rules.getRule(n); }
 
     template <class T>
     T getRule(const String &n) const
