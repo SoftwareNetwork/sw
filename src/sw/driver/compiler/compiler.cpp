@@ -338,7 +338,9 @@ void ClangCompiler::prepareCommand1(const ::sw::Target &t)
     CPPStandard.skip = true;
 
     getCommandLineOptions<ClangOptions>(cmd.get(), *this);
-    addEverything(*this->cmd/*, "-isystem"*/);
+    addEverything(*this->cmd
+    //, "-isystem"
+    );
     getCommandLineOptions<ClangOptions>(cmd.get(), *this, "", true);
 }
 
@@ -413,11 +415,15 @@ void ClangClCompiler::prepareCommand1(const Target &t)
         ForcedIncludeFiles = ForceIncludes;
 
     getCommandLineOptions<VisualStudioCompilerOptions>(cmd.get(), *this);
-    getCommandLineOptions<ClangClOptions>(cmd.get(), *this/*, "-Xclang"*/);
+    getCommandLineOptions<ClangClOptions>(cmd.get(), *this
+    //, "-Xclang"
+    );
     if (preprocessed_file)
         addCompileOptions(*cmd);
     else
-        addEverything(*cmd/*, "-imsvc"*/);
+        addEverything(*cmd
+        //, "-imsvc"
+        );
 }
 
 void ClangClCompiler::setOutputFile(const path &output_file)
@@ -543,7 +549,9 @@ void GNUCompiler::prepareCommand1(const Target &t)
         ForcedIncludeFiles = ForceIncludes;
 
     getCommandLineOptions<GNUOptions>(cmd.get(), *this);
-    addEverything(*this->cmd/*, "-isystem"*/);
+    addEverything(*this->cmd
+    //, "-isystem"
+    );
     getCommandLineOptions<GNUOptions>(cmd.get(), *this, "", true);
 
     if (t.isReproducibleBuild())

@@ -128,6 +128,47 @@ SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD(sw_replace_dll_import, replace_dll_import)
 
 #endif
 
+// these are the same on win/macos, maybe change somehow?
+static const Strings include_dir_names =
+{
+    // sort by rarity
+    "include",
+    "includes",
+
+    "Include",
+    "Includes",
+
+    "headers",
+    "Headers",
+
+    "inc",
+    "Inc",
+
+    "hdr",
+    "Hdr",
+};
+
+// these are the same on win/macos, maybe change somehow?
+static const Strings source_dir_names =
+{
+    // sort by rarity
+    "src",
+    "source",
+    "sources",
+    "lib",
+    "library",
+
+    "Src",
+    "Source",
+    "Sources",
+    "Lib",
+    "Library",
+
+    // keep the empty entry at the end
+    // this will add current source dir as include directory
+    "",
+};
+
 namespace sw
 {
 
@@ -142,21 +183,6 @@ NativeTarget::~NativeTarget()
 
 void NativeTarget::setOutputFile()
 {
-    //SW_UNIMPLEMENTED;
-    /*path ofile;
-    if (isStaticLibrary())
-        ofile = getOutputFileName2("lib");
-    else
-    {
-        ofile = getOutputFileName2("bin");
-        //getSelectedTool()->setOutputFile(getOutputFileName2("bin"));
-        //getSelectedTool()->setImportLibrary(getOutputFileName2("lib"));
-    }
-
-    // set generated early
-    // FIXME: add proper extension
-    File(ofile, getFs()).setGenerated(true);*/
-
     if (!isLocal())
     try
     {
@@ -179,7 +205,6 @@ path NativeTarget::getOutputFileName2(const path &subdir) const
 path NativeTarget::getOutputFile() const
 {
     SW_UNIMPLEMENTED;
-    //return getSelectedTool()->getOutputFile();
 }
 
 void NativeTarget::addRuleDependency(const String &name, const DependencyPtr &from_dep, const String &from_name)
@@ -274,8 +299,6 @@ path NativeCompiledTarget::getOutputFileName2(const path &subdir) const
 bool NativeCompiledTarget::isStaticLibrary() const
 {
     return getType() == TargetType::NativeStaticLibrary;
-    //SW_UNIMPLEMENTED;
-    //return getSelectedTool() && getSelectedTool() == Librarian.get();
 }
 
 bool NativeCompiledTarget::isStaticOrHeaderOnlyLibrary() const
@@ -337,32 +360,6 @@ static auto get_settings_package_id(const TargetSetting &s)
     return id;
 }
 
-static auto get_compiler_type(const PackagePath &p)
-{
-    auto ct = CompilerType::Unspecified;
-    if (0);
-    else if (p == "com.Microsoft.VisualStudio.VC.cl")
-        ct = CompilerType::MSVC;
-    else if (p == "org.gnu.gcc" || p == "org.gnu.gpp")
-        ct = CompilerType::GNU;
-    else if (p == "org.LLVM.clang" || p == "org.LLVM.clangpp")
-        ct = CompilerType::Clang;
-    else if (p == "com.Apple.clang" || p == "com.Apple.clangpp")
-        ct = CompilerType::AppleClang;
-    else if (p == "org.LLVM.clangcl")
-        ct = CompilerType::ClangCl;
-    else if (p == "com.intel.compiler.c" || p == "com.intel.compiler.cpp")
-        ct = CompilerType::Intel;
-    //else
-        //throw SW_RUNTIME_ERROR("Unknown compiler type: " + id.toString());
-    return ct;
-}
-
-static auto get_compiler_type(const UnresolvedPackage &id)
-{
-    return get_compiler_type(id.getPath());
-}
-
 static auto get_compiler_type2(const String &p)
 {
     auto t = CompilerType::Unspecified;
@@ -383,50 +380,14 @@ static auto get_linker_type(const String &p)
 
 std::unique_ptr<NativeCompiler> NativeCompiledTarget::activateCompiler(const TargetSetting &s, const StringSet &exts)
 {
-    bool extended_desc = s.isObject();
-    auto id = get_settings_package_id(s);
-    return activateCompiler(s, id, exts, extended_desc);
+    SW_UNIMPLEMENTED;
 }
 
 std::unique_ptr<NativeCompiler> NativeCompiledTarget::activateCompiler(const TargetSetting &s, const UnresolvedPackage &id, const StringSet &exts, bool extended_desc)
 {
-    auto &cld = getMainBuild().getTargets();
+    SW_UNIMPLEMENTED;
 
-    auto i = cld.find(id, getSettings());
-    if (!i)
-    {
-        //i = getContext().getPredefinedTargets().find(id, oss);
-        //if (!i)
-        {
-            SW_UNIMPLEMENTED;
-            //for (auto &e : exts)
-                //setExtensionProgram(e, id);
-            return {};
-        }
-    }
-    auto t = i->as<PredefinedProgram *>();
-    if (!t)
-        throw SW_RUNTIME_ERROR("Target without PredefinedProgram: " + i->getPackage().toString());
-
-    auto set_compiler_type = [this, &id, &exts](const auto &c)
-    {
-        //for (auto &e : exts)
-            //setExtensionProgram(e, c->clone());
-    };
-
-    auto c1 = t->getProgram().clone();
-    if (auto c = dynamic_cast<CompilerBaseProgram *>(c1.get()))
-    {
-        SW_UNIMPLEMENTED;
-        set_compiler_type(c);
-        //return c1;
-    }
-    //else
-        // create such programs outside of this function
-        //SW_UNIMPLEMENTED;
-
-    bool created = false;
-    auto create_command = [this, &created, &t, &s, extended_desc](auto &c)
+    /*auto create_command = [this, &created, &t, &s, extended_desc](auto &c)
     {
         if (created)
             return;
@@ -437,12 +398,12 @@ std::unique_ptr<NativeCompiler> NativeCompiledTarget::activateCompiler(const Tar
 
         if (extended_desc && s["command"])
             targetSettings2Command(*C, s["command"]);
-    };
+    };*/
 
-    std::unique_ptr<NativeCompiler> c;
-    if (id.ppath == "com.Microsoft.VisualStudio.VC.cl")
+    //std::unique_ptr<NativeCompiler> c;
+    //if (id.ppath == "com.Microsoft.VisualStudio.VC.cl")
     {
-        c = std::make_unique<VisualStudioCompiler>();
+        //c = std::make_unique<VisualStudioCompiler>();
         /*if (getSettings()["native"]["stdlib"]["cpp"].getValue() == "com.Microsoft.VisualStudio.VC.libcpp")
         {
             // take same ver as cl
@@ -452,11 +413,7 @@ std::unique_ptr<NativeCompiler> NativeCompiledTarget::activateCompiler(const Tar
             libstdcppset = true;
         }*/
     }
-    else if (id.ppath == "com.Microsoft.VisualStudio.VC.ml")
-        c = std::make_unique<VisualStudioASMCompiler>();
-    else if (id.ppath == "org.gnu.gcc.as")
-        c = std::make_unique<GNUASMCompiler>();
-    else if (id.ppath == "org.gnu.gcc" || id.ppath == "org.gnu.gpp")
+    /*else if (id.ppath == "org.gnu.gcc" || id.ppath == "org.gnu.gpp")
     {
         c = std::make_unique<GNUCompiler>();
         auto &nc = (GNUCompiler&)*c;
@@ -561,56 +518,13 @@ std::unique_ptr<NativeCompiler> NativeCompiledTarget::activateCompiler(const Tar
             *this += up;
             libstdcppset = true;
         }
-    }
-    else
-        throw SW_RUNTIME_ERROR("Unknown compiler: " + id.toString());
-
-    create_command(c);
-    set_compiler_type(c);
-
-    return c;
-}
-
-std::unique_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetSetting &s)
-{
-    SW_UNIMPLEMENTED;
-    /*bool extended_desc = s.isObject();
-    auto id = get_settings_package_id(s);
-    return activateLinker(s, id, extended_desc);*/
+    }*/
 }
 
 std::unique_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetSetting &s, const UnresolvedPackage &id, bool extended_desc)
 {
     SW_UNIMPLEMENTED;
-    /*auto &cld = getMainBuild().getTargets();
-    auto i = cld.find(id, getSettings());
-    if (!i)
-        SW_UNIMPLEMENTED;
-    auto t = i->as<PredefinedProgram *>();
-    if (!t)
-        throw SW_RUNTIME_ERROR("Target without PredefinedProgram: " + i->getPackage().toString());
-
-    std::unique_ptr<NativeLinker> c;
-
-    bool created = false;
-    auto create_command = [this, &created, &t, &c]()
-    {
-        if (created)
-            return;
-        c->file = t->getProgram().file;
-        auto C = c->createCommand(getMainBuild());
-        static_cast<primitives::Command&>(*C) = *t->getProgram().getCommand();
-        created = true;
-    };
-
-    if (0);
-    else if (lt == LinkerType::MSVC)
-    {
-        c = std::make_unique<VisualStudioLinker>();
-        c->Type = LinkerType::MSVC;
-    }
-    else if (lt != LinkerType::Unspecified)
-    {
+    /*
         auto C = std::make_unique<GNULinker>();
         // actually it is depends on -fuse-ld option
         // do we need it at all?
@@ -641,37 +555,13 @@ std::unique_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetS
             cmd->push_back(getBuildSettings().getTargetTriplet());
         }
         // TODO: find -fuse-ld option and set c->Type accordingly
-    }
-    else
-        throw SW_RUNTIME_ERROR("Unknown librarian/linker");
-
-    create_command();
-
-    return c;*/
+    */
 }
 
 std::unique_ptr<NativeLinker> NativeCompiledTarget::activateLibrarian(LinkerType t)
 {
     SW_UNIMPLEMENTED;
-    /*std::unique_ptr<NativeLinker> c;
-
-    bool created = false;
-    auto create_command = [this, &created, &t, &c]()
-    {
-        if (created)
-            return;
-        c->file = t->getProgram().file;
-        auto C = c->createCommand(getMainBuild());
-        static_cast<primitives::Command&>(*C) = *t->getProgram().getCommand();
-        created = true;
-    };
-
-    if (0);
-    else if (t == LinkerType::MSVC)
-    {
-        c = std::make_unique<VisualStudioLibrarian>();
-        c->Type = LinkerType::MSVC;
-    }
+    /*
     else if (t != LinkerType::Unspecified)
     {
         auto C = std::make_unique<GNULibrarian>();
@@ -679,36 +569,13 @@ std::unique_ptr<NativeLinker> NativeCompiledTarget::activateLibrarian(LinkerType
         C->Prefix = getBuildSettings().TargetOS.getLibraryPrefix();
         c = std::move(C);
     }
-    else
-        throw SW_RUNTIME_ERROR("Unknown librarian/linker");
-
-    create_command();
-
-    return c;*/
+    */
 }
 
 std::unique_ptr<NativeLinker> NativeCompiledTarget::activateLinker(LinkerType t)
 {
     SW_UNIMPLEMENTED;
-    /*std::unique_ptr<NativeLinker> c;
-
-    bool created = false;
-    auto create_command = [this, &created, &t, &c]()
-    {
-        if (created)
-            return;
-        c->file = t->getProgram().file;
-        auto C = c->createCommand(getMainBuild());
-        static_cast<primitives::Command&>(*C) = *t->getProgram().getCommand();
-        created = true;
-    };
-
-    if (0);
-    else if (t == LinkerType::MSVC)
-    {
-        c = std::make_unique<VisualStudioLinker>();
-        c->Type = LinkerType::MSVC;
-    }
+    /*
     else if (t != LinkerType::Unspecified)
     {
         auto C = std::make_unique<GNULinker>();
@@ -742,12 +609,7 @@ std::unique_ptr<NativeLinker> NativeCompiledTarget::activateLinker(LinkerType t)
         }
         // TODO: find -fuse-ld option and set c->Type accordingly
     }
-    else
-        throw SW_RUNTIME_ERROR("Unknown librarian/linker");
-
-    create_command();
-
-    return c;*/
+    */
 }
 
 void NativeCompiledTarget::findCompiler()
@@ -767,12 +629,6 @@ void NativeCompiledTarget::findCompiler()
         addRuleDependency("rc");
     for (auto &r : rules)
         addRuleDependency(r);
-
-    //ct = get_compiler_type(get_settings_package_id(getSettings()["native"]["program"]["cpp"]));
-    //if (ct == CompilerType::UnspecifiedCompiler)
-        //ct = get_compiler_type(get_settings_package_id(getSettings()["native"]["program"]["c"]));
-    //if (ct == CompilerType::UnspecifiedCompiler)
-        //throw SW_RUNTIME_ERROR("Cannot find compiler " + get_settings_package_id(getSettings()["native"]["program"]["c"]).toString() + " for settings: " + getSettings().toString());
 
     // c++ goes first for correct include order
     UnresolvedPackage cppcl = getSettings()["rule"]["cpp"]["package"].getValue();
@@ -1108,8 +964,6 @@ path NativeCompiledTarget::getImportLibrary() const
 {
     if (!implibfile.empty())
         return implibfile;
-    //if (getSelectedTool())
-        //return getSelectedTool()->getImportLibrary();
     SW_UNIMPLEMENTED;
 }
 
@@ -1144,65 +998,13 @@ bool NativeCompiledTarget::hasSourceFiles() const
 
 FilesOrdered NativeCompiledTarget::gatherLinkDirectories() const
 {
-    FilesOrdered dirs;
-    auto get_ldir = [&dirs](const auto &a)
-    {
-        for (auto &d : a)
-            dirs.push_back(d);
-    };
-
-    get_ldir(getMergeObject().NativeLinkerOptions::gatherLinkDirectories());
-    get_ldir(getMergeObject().NativeLinkerOptions::System.gatherLinkDirectories());
-
-    FilesOrdered dirs2;
-    //if (getSelectedTool())
-        //dirs2 = getSelectedTool()->gatherLinkDirectories();
-    // tool dirs + lib dirs, not vice versa
-    dirs2.insert(dirs2.end(), dirs.begin(), dirs.end());
-    return dirs2;
+    SW_UNIMPLEMENTED;
 }
 
 LinkLibrariesType NativeCompiledTarget::gatherLinkLibraries() const
 {
-    LinkLibrariesType libs;
-    const auto dirs = gatherLinkDirectories();
-    for (auto &l : getMergeObject().LinkLibraries)
-    {
-        // reconsider
-        // remove resolving?
-
-        //if (l.is_absolute())
-        {
-            libs.push_back(LinkLibrary{ l });
-            continue;
-        }
-
-        if (std::none_of(dirs.begin(), dirs.end(), [&l, &libs](auto &d)
-        {
-            if (fs::exists(d / l.l))
-            {
-                libs.push_back(LinkLibrary{ d / l.l });
-                return true;
-            }
-            return false;
-        }))
-        {
-            //LOG_TRACE(logger, "Cannot resolve library: " << l);
-            throw SW_RUNTIME_ERROR(getPackage().toString() + ": Cannot resolve library: " + to_string(normalize_path(l.l)));
-        }
-
-        //if (!getBuildSettings().TargetOS.is(OSType::Windows))
-            //libs.push_back("-l" + l.u8string());
-    }
-    return libs;
+    SW_UNIMPLEMENTED;
 }
-
-/*NativeLinker *NativeCompiledTarget::getSelectedTool() const
-{
-    if (isStaticLibrary())
-        return prog_lib.get();
-    return prog_link.get();
-}*/
 
 void NativeCompiledTarget::createPrecompiledHeader()
 {
@@ -1264,15 +1066,6 @@ void NativeCompiledTarget::createPrecompiledHeader()
     else
         getMergeObject()[pch.source].fancy_name = "[" + getPackage().toString() + "]/[pch]";
 }
-
-/*std::shared_ptr<builder::Command> NativeCompiledTarget::getCommand() const
-{
-    if (isHeaderOnly())
-        return nullptr;
-    if (getSelectedTool())
-        return getSelectedTool()->getCommand(*this);
-    SW_UNIMPLEMENTED;
-}*/
 
 Commands NativeCompiledTarget::getGeneratedCommands() const
 {
@@ -1468,52 +1261,8 @@ void NativeCompiledTarget::findSources()
     detectLicenseFile();
 }
 
-// these are the same on win/macos, maybe change somehow?
-static const Strings include_dir_names =
-{
-    // sort by rarity
-    "include",
-    "includes",
-
-    "Include",
-    "Includes",
-
-    "headers",
-    "Headers",
-
-    "inc",
-    "Inc",
-
-    "hdr",
-    "Hdr",
-};
-
-// these are the same on win/macos, maybe change somehow?
-static const Strings source_dir_names =
-{
-    // sort by rarity
-    "src",
-    "source",
-    "sources",
-    "lib",
-    "library",
-
-    "Src",
-    "Source",
-    "Sources",
-    "Lib",
-    "Library",
-
-    // keep the empty entry at the end
-    // this will add current source dir as include directory
-    "",
-};
-
 void NativeCompiledTarget::autoDetectOptions()
 {
-    // TODO: add dirs with first capital letter:
-    // Include, Source etc.
-
     autodetect = true;
 
     autoDetectSources(); // sources first
@@ -3067,32 +2816,6 @@ void NativeCompiledTarget::prepare_pass7()
     }
 }
 
-/*static std::unique_ptr<RcTool> activateRcCompiler(NativeCompiledTarget &nt, const UnresolvedPackage &id, const StringSet &exts)
-{
-    auto &cld = nt.getMainBuild().getTargets();
-    auto i = cld.find(id, nt.getSettings());
-    if (!i)
-        SW_UNIMPLEMENTED;
-    auto t = i->as<PredefinedProgram *>();
-    if (!t)
-        throw SW_RUNTIME_ERROR("Target without PredefinedProgram: " + i->getPackage().toString());
-
-    bool created = false;
-    auto create_command = [&nt, &created, &t](auto &c)
-    {
-        if (created)
-            return;
-        c->file = t->getProgram().file;
-        auto C = c->createCommand(nt.getMainBuild());
-        static_cast<primitives::Command&>(*C) = *t->getProgram().getCommand();
-        created = true;
-    };
-
-    auto c = std::make_unique<RcTool>();
-    create_command(c);
-    return c;
-}*/
-
 void NativeCompiledTarget::prepare_pass8()
 {
     // linker 2
@@ -3127,12 +2850,6 @@ void NativeCompiledTarget::prepare_pass8()
         if (getBuildSettings().TargetOS.Type == OSType::Windows)
             getMergeObject() += "_WINDLL"_def;
     }
-
-    /*setExtensionProgram(".c", *prog_cl_c);
-    for (auto &e : get_cpp_exts(*this))
-    setExtensionProgram(e, *prog_cl_cpp);
-    for (auto &e : get_asm_exts(*this))
-    setExtensionProgram(e, *prog_cl_asm);*/
 
     // add rules
     auto add_rule = [this](const auto &n, auto &&r)

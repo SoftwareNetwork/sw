@@ -91,7 +91,6 @@ protected:
     virtual path getOutputFileName2(const path &subdir) const;
 
     virtual void setOutputFile();
-    //virtual NativeLinker *getSelectedTool() const = 0;
     virtual bool isStaticLibrary() const = 0;
 
 private:

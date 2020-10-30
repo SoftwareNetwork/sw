@@ -5,7 +5,6 @@
 
 #include "enums.h"
 #include "../build_settings.h"
-#include "../program_storage.h"
 #include "../license.h"
 #include "../dependency.h"
 #include "../types.h"
@@ -223,7 +222,6 @@ struct SW_DRIVER_CPP_API TargetDescription
 struct SW_DRIVER_CPP_API Target
     : ITarget
     , TargetBase
-    //, ProgramStorage
     , std::enable_shared_from_this<Target>
 {
     /*struct TargetSettings

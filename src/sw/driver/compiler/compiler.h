@@ -110,8 +110,10 @@ struct SW_DRIVER_CPP_API Compiler : CompilerBaseProgram
     virtual ~Compiler() = default;
 };
 
-struct SW_DRIVER_CPP_API NativeCompiler : Compiler,
-    NativeCompilerOptions//, OptionsGroup<NativeCompilerOptions>
+struct SW_DRIVER_CPP_API NativeCompiler
+    : Compiler
+    , NativeCompilerOptions
+    //, OptionsGroup<NativeCompilerOptions>
 {
     CompilerType Type = CompilerType::Unspecified;
 
@@ -153,9 +155,6 @@ struct SW_DRIVER_CPP_API VisualStudioCompiler : VisualStudio,
 
 protected:
     std::shared_ptr<driver::Command> createCommand1(const SwBuilderContext &swctx) const override;
-
-private:
-    //Version gatherVersion() const override { return Program::gatherVersion(file, "/?"); }
 };
 
 struct SW_DRIVER_CPP_API VisualStudioASMCompiler : VisualStudio, NativeCompiler,
@@ -174,9 +173,6 @@ struct SW_DRIVER_CPP_API VisualStudioASMCompiler : VisualStudio, NativeCompiler,
 
 protected:
     std::shared_ptr<driver::Command> createCommand1(const SwBuilderContext &swctx) const override;
-
-private:
-    //Version gatherVersion() const override { return Program::gatherVersion(file, "/?"); }
 };
 
 struct SW_DRIVER_CPP_API Clang
@@ -320,9 +316,6 @@ protected:
     virtual void getAdditionalOptions(driver::Command *c) const = 0;
 
     void prepareCommand1(const Target &t) override;
-
-private:
-    //Version gatherVersion() const override { return Program::gatherVersion(file, "/?"); }
 };
 
 struct SW_DRIVER_CPP_API VisualStudioLinker : VisualStudioLibraryTool,
@@ -353,7 +346,10 @@ struct SW_DRIVER_CPP_API GNULibraryTool : GNU,
     NativeLinker,
     CommandLineOptions<GNULibraryToolOptions>
 {
-    using NativeLinker::NativeLinker;
+    GNULibraryTool()
+    {
+        Type = LinkerType::GNU;
+    }
 
 protected:
     virtual void getAdditionalOptions(driver::Command *c) const = 0;
@@ -399,9 +395,6 @@ struct SW_DRIVER_CPP_API GNULibrarian : GNULibraryTool,
     virtual path getImportLibrary() const override;
 
     SW_COMMON_COMPILER_API;
-
-protected:
-    //Version gatherVersion() const override { return Program::gatherVersion(file, "-V"); }
 };
 
 // Ada
@@ -438,9 +431,6 @@ struct SW_DRIVER_CPP_API VisualStudioCSharpCompiler :
 
     void setOutputFile(const path &output_file) override;
     void addSourceFile(const path &input_file) override;
-
-protected:
-    //Version gatherVersion() const override { return Program::gatherVersion(file, "/?"); }
 };
 
 struct SW_DRIVER_CPP_API RustCompiler : Compiler,
@@ -463,9 +453,6 @@ struct SW_DRIVER_CPP_API GoCompiler : Compiler,
 
     void setOutputFile(const path &output_file);
     void setSourceFile(const path &input_file);
-
-private:
-    //Version gatherVersion() const override { return Program::gatherVersion(file, "version"); }
 };
 
 struct SW_DRIVER_CPP_API FortranCompiler : Compiler,
@@ -488,9 +475,6 @@ struct SW_DRIVER_CPP_API JavaCompiler : Compiler,
 
     void setOutputDir(const path &output_dir);
     void setSourceFile(const path &input_file);
-
-private:
-    //Version gatherVersion() const override { return Program::gatherVersion(file, "-version", "(\\d+)\\.(\\d+)\\.(\\d+)(_(\\d+))?"); }
 };
 
 struct SW_DRIVER_CPP_API KotlinCompiler : Compiler,
@@ -502,9 +486,6 @@ struct SW_DRIVER_CPP_API KotlinCompiler : Compiler,
 
     void setOutputFile(const path &output_file);
     void setSourceFile(const path &input_file);
-
-private:
-    //Version gatherVersion() const override { return Program::gatherVersion(file, "-version"); }
 };
 
 struct SW_DRIVER_CPP_API DCompiler : NativeLinker,
