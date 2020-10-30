@@ -69,16 +69,6 @@ NativeRule::NativeRule(RuleProgram p)
 {
 }
 
-Commands NativeRule::getCommands() const
-{
-    Commands cmds;
-    for (auto &c : commands)
-        cmds.insert(c->getCommand());
-    for (auto &c : commands2)
-        cmds.insert(c);
-    return cmds;
-}
-
 static path getObjectFilename(const Target &t, const path &p)
 {
     // target may push its files to outer packages,
@@ -375,7 +365,8 @@ Files NativeCompilerRule::addInputs(const Target &t, const RuleFiles &rfs)
             auto setup_gnu = [&pch_basename, &t](auto C, auto ext)
             {
                 // we must add this explicitly
-                C->createCommand(t.getMainBuild())->addInput(path(*pch_basename) += ".h"s += ext);
+                SW_UNIMPLEMENTED;
+                //C->createCommand(t.getMainBuild())->addInput(path(*pch_basename) += ".h"s += ext);
             };
 
             if (auto C = c->as<VisualStudioCompiler *>())
@@ -431,7 +422,7 @@ Files NativeCompilerRule::addInputs(const Target &t, const RuleFiles &rfs)
             else
                 SW_UNIMPLEMENTED;
             static_cast<NativeCompiler &>(*pp_command).prepareCommand(t);
-            commands.emplace_back(std::move(pp_command));
+            commands.emplace(pp_command->getCommand());
         }
 
         nc.prepareCommand(t);
@@ -440,7 +431,7 @@ Files NativeCompilerRule::addInputs(const Target &t, const RuleFiles &rfs)
         if (!rulename.empty())
             nc.getCommand()->name += " ";*/
         nc.getCommand()->name += "[" + t.getPackage().toString() + "]" + tfns.getName(rf.getFile());
-        commands.emplace_back(std::move(c));
+        commands.emplace(c->getCommand());
         used_files.insert(rf);
     }
     return outputs;
@@ -611,7 +602,7 @@ Files NativeLinkerRule::addInputs(const Target &t, const RuleFiles &rfs)
             c->push_back(objs);
             c->addInput(objs);
             def = deffn;
-            commands2.insert(c);
+            command_lib = c;
         }
         if (def)
             VSL->ModuleDefinitionFile = *def;
@@ -658,8 +649,7 @@ Files NativeLinkerRule::addInputs(const Target &t, const RuleFiles &rfs)
     c->getCommand()->name = //(is_linker ? "[LINK]"s : "[LIB]"s) + " " +
         "[" + t.getPackage().toString() + "]" + nt->getOutputFile().extension().string();
     //nt->registerCommand(*c->getCommand());
-    commands.clear();
-    commands.emplace_back(std::move(c));
+    command = c->getCommand();
 
     return outputs;
 }
@@ -685,7 +675,7 @@ Files RcRule::addInputs(const Target &t, const RuleFiles &rfs)
         static_cast<RcTool &>(*c).Output = output;
         static_cast<RcTool &>(*c).prepareCommand(t);
         static_cast<RcTool &>(*c).getCommand()->push_back(arguments);
-        commands.emplace_back(std::move(c));
+        commands.emplace(c->getCommand());
         used_files.insert(rf);
     }
     return outputs;
