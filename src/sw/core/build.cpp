@@ -668,7 +668,10 @@ void SwBuild::loadPackages()
         {
             auto tgts = d.second->getInput().loadPackages(*this, s, UnresolvedPackages{ UnresolvedPackage{d.first} });
             for (auto &tgt : tgts)
+            {
+                getTargets()[tgt->getPackage()].setInput(d.second->getInput());
                 getTargets()[tgt->getPackage()].push_back(tgt);
+            }
             loaded = true;
         }
         if (!loaded)
