@@ -131,9 +131,6 @@ public:
 
     void setupCommand(builder::Command &c) const override;
 
-    NativeLinker &getLinker();
-    const NativeLinker &getLinker() const;
-
     //
     bool hasCircularDependency() const;
 
@@ -239,9 +236,7 @@ private:
 public:
     path getOutputFileName2(const path &subdir) const override;
 private:
-
     path generate_rc();
-    void setup_compiler(NativeCompiler &);
 };
 
 /**

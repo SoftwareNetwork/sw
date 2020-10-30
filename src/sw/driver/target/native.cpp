@@ -1168,6 +1168,7 @@ Commands NativeCompiledTarget::getCommands1() const
     for (auto &c : cmds)
         ((NativeCompiledTarget*)this)->registerCommand(*c);
 
+    //cmds.insert(this->cmds.begin(), this->cmds.end());
     return cmds;
 
 
@@ -2999,25 +3000,6 @@ path NativeCompiledTarget::generate_rc()
     write_file_if_different(p, ctx.getText());
 
     return p;
-}
-
-void NativeCompiledTarget::setup_compiler(NativeCompiler &prog)
-{
-    SW_UNIMPLEMENTED;
-}
-
-NativeLinker &NativeCompiledTarget::getLinker()
-{
-    //if (!prog_link)
-        SW_UNIMPLEMENTED;
-    //return *prog_link;
-}
-
-const NativeLinker &NativeCompiledTarget::getLinker() const
-{
-    //if (!prog_link)
-        SW_UNIMPLEMENTED;
-    //return *prog_link;
 }
 
 void NativeCompiledTarget::processCircular(Files &obj)
