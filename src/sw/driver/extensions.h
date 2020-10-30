@@ -22,5 +22,6 @@ bool isCppSourceFileExtensions(const String &);
 
 // internals for now
 StringSet get_cpp_exts(bool apple);
+StringSet get_asm_exts(bool windows);
 
 }

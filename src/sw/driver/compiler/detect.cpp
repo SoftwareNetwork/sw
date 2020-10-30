@@ -328,9 +328,10 @@ ProgramDetector::DetectablePackageMultiEntryPoints ProgramDetector::detectMsvcCo
         }
         auto &cl = addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.cl", m.cl_exe_version), eb.getSettings(), *p);
         auto r = std::make_unique<NativeCompilerRule>(p->clone());
-        r->is_c = true;
+        r->lang = NativeCompilerRule::LANG_C;
         cl.setRule("c", std::move(r));
         r = std::make_unique<NativeCompilerRule>(p->clone());
+        r->lang = NativeCompilerRule::LANG_CPP;
         cl.setRule("cpp", std::move(r));
         //r->rulename = "[C++]"; // CXX?
         //r->rulename = "[C]";
@@ -384,12 +385,15 @@ ProgramDetector::DetectablePackageMultiEntryPoints ProgramDetector::detectMsvcCo
 
         if (m.target_arch == ArchType::x86_64 || m.target_arch == ArchType::x86)
         {
-            auto p = std::make_shared<SimpleProgram>();
+            auto p = std::make_shared<VisualStudioASMCompiler>();
             p->file = m.compiler / (m.target_arch == ArchType::x86_64 ? "ml64.exe" : "ml.exe");
             if (!fs::exists(p->file))
                 return;
-            addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.ml", m.cl_exe_version), eb.getSettings(), *p);
             getMsvcIncludePrefixes()[p->file] = m.msvc_prefix;
+            auto &t = addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.ml", m.cl_exe_version), eb.getSettings(), *p);
+            auto r = std::make_unique<NativeCompilerRule>(p->clone());
+            r->lang = NativeCompilerRule::LANG_ASM;
+            t.setRule("asm", std::move(r));
             //r->rulename = "[ASM]";
         }
     });

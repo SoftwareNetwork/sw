@@ -69,4 +69,12 @@ StringSet get_cpp_exts(bool apple)
     return cppexts;
 }
 
+StringSet get_asm_exts(bool windows)
+{
+    if (windows)
+        return { ".asm" };
+    else
+        return { ".s", ".S", ".sx" };
+}
+
 }

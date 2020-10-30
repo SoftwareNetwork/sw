@@ -110,10 +110,18 @@ void NativeCompilerRule::setup(const Target &t)
     if (!nt)
         return;
 
-    if (is_c)
+    switch (lang)
+    {
+    case LANG_ASM:
+        exts = get_asm_exts(nt->getBuildSettings().TargetOS.is(OSType::Windows));
+        break;
+    case LANG_C:
         exts.insert(".c");
-    else
+        break;
+    case LANG_CPP:
         exts = get_cpp_exts(nt->getBuildSettings().TargetOS.isApple());
+        break;
+    }
 
     // setup
     auto vs_setup = [this, nt, &prog](auto *c)
@@ -140,7 +148,7 @@ void NativeCompilerRule::setup(const Target &t)
             c->Optimizations().SmallCode = true;
             break;
         }
-        if (!is_c)
+        if (!isC())
             c->CPPStandard = nt->CPPVersion;
         // else
         // TODO: ms now has C standard since VS16.8?
@@ -170,7 +178,7 @@ void NativeCompilerRule::setup(const Target &t)
             c->Optimizations().Level = 2;
             break;
         }
-        if (!is_c)
+        if (!isC())
             c->CPPStandard = nt->CPPVersion;
         else
             c->CStandard = nt->CVersion;

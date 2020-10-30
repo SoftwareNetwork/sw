@@ -68,15 +68,26 @@ protected:
 
 struct SW_DRIVER_CPP_API NativeCompilerRule : NativeRule
 {
+    enum
+    {
+        LANG_ASM,
+        LANG_C,
+        LANG_CPP,
+    };
+
     StringSet exts;
-    //String rulename;
-    bool is_c = false;
+    //String rulename; // this can be now set ourselves?
+    int lang = LANG_CPP;
 
     using NativeRule::NativeRule;
 
     IRulePtr clone() const override { return std::make_unique<NativeCompilerRule>(*this); }
     Files addInputs(const Target &t, const RuleFiles &) override;
     void setup(const Target &t) override;
+
+    bool isC() const { return lang == LANG_C; }
+    bool isCpp() const { return lang == LANG_CPP; }
+    bool isAsm() const { return lang == LANG_ASM; }
 };
 
 struct SW_DRIVER_CPP_API NativeLinkerRule : NativeRule

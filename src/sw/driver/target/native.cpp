@@ -746,14 +746,6 @@ std::unique_ptr<NativeLinker> NativeCompiledTarget::activateLinker(LinkerType t)
     return c;
 }
 
-static StringSet get_asm_exts(const NativeCompiledTarget &t)
-{
-    if (t.getBuildSettings().TargetOS.is(OSType::Windows))
-        return { ".asm" };
-    else
-        return { ".s", ".S", ".sx" };
-}
-
 void NativeCompiledTarget::findCompiler()
 {
     ct = get_compiler_type2(getSettings()["rule"]["cpp"]["type"].getValue());
@@ -3132,23 +3124,11 @@ void NativeCompiledTarget::prepare_pass8()
             getMergeObject() += "_WINDLL"_def;
     }
 
-    // create
-    //prog_cl_asm = activateCompiler(getSettings()["rule"]["asm"], get_asm_exts(*this));
-
     /*setExtensionProgram(".c", *prog_cl_c);
     for (auto &e : get_cpp_exts(*this))
     setExtensionProgram(e, *prog_cl_cpp);
     for (auto &e : get_asm_exts(*this))
     setExtensionProgram(e, *prog_cl_asm);*/
-
-    // setup
-    //setup_compiler(*prog_cl_asm);
-
-    // merge settings
-    if (!isHeaderOnly())
-    {
-        //prog_cl_asm->merge(*this);
-    }
 
     // add rules
     std::vector<IRule *> rules;
@@ -3162,9 +3142,10 @@ void NativeCompiledTarget::prepare_pass8()
     {
         add_rule(n, getRuleFromDependency(n));
     };
+    add_rule2("asm");
     add_rule2("c");
     add_rule2("cpp");
-    //add_rule("asm", std::make_unique<NativeCompilerRule>(*prog_cl_asm, get_asm_exts(*this)));
+    //add_rule("asm", std::make_unique<NativeCompilerRule>(*prog_cl_asm, ));
 
     if (isHeaderOnly())
         ;
