@@ -132,6 +132,11 @@ static Strings get_inline_comments(const path &p)
 Driver::Driver(SwContext &swctx)
     : swctx(swctx)
 {
+    // register builtins early!!!
+    // do not remove
+    // When we are building the same config as built-in,
+    // without this line it will be loaded first and won't get its entry point
+    getBuiltinInputs(swctx);
 }
 
 Driver::~Driver()
@@ -513,7 +518,7 @@ std::unique_ptr<SwBuild> Driver::create_build(SwContext &swctx) const
 
     //
     getBuiltinInputs(swctx);
-    getBuiltinPackages(ctx); // installs packages
+    //getBuiltinPackages(ctx); // installs packages
 
     // register targets and set inputs
     for (auto &[i, pkgs] : builtin_inputs)
