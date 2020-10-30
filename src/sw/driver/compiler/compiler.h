@@ -304,7 +304,10 @@ struct SW_DRIVER_CPP_API VisualStudioLibraryTool : VisualStudio,
     NativeLinker,
     CommandLineOptions<VisualStudioLibraryToolOptions>
 {
-    using NativeLinker::NativeLinker;
+    VisualStudioLibraryTool()
+    {
+        Type = LinkerType::MSVC;
+    }
 
     void setObjectFiles(const FilesOrdered &files) override;
     void setOutputFile(const path &out) override;
