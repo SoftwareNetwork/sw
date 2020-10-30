@@ -62,11 +62,12 @@ Commands AdaTarget::getCommands1() const
 
     for (auto f : gatherSourceFiles<SourceFile>(*this, { ".adb", ".ads" }))
         compiler->addSourceFile(f->file);
-    Commands cmds;
+    SW_UNIMPLEMENTED;
+    /*Commands cmds;
     auto c = compiler->getCommand(*this);
     c->working_directory = getObjectDir();
     cmds.insert(c);
-    return cmds;
+    return cmds;*/
 }
 
 void ProgramDetector::detectCSharpCompilers(DETECT_ARGS)
@@ -122,10 +123,11 @@ Commands CSharpTarget::getCommands1() const
     for (auto f : gatherSourceFiles<SourceFile>(*this, { ".cs" }))
         compiler->addSourceFile(f->file);
 
-    Commands cmds;
+    SW_UNIMPLEMENTED;
+    /*Commands cmds;
     auto c = compiler->getCommand(*this);
     cmds.insert(c);
-    return cmds;
+    return cmds;*/
 }
 
 void ProgramDetector::detectRustCompilers(DETECT_ARGS)
@@ -172,10 +174,11 @@ Commands RustTarget::getCommands1() const
     for (auto f : gatherSourceFiles<SourceFile>(*this, {".rs"}))
         compiler->setSourceFile(f->file);
 
-    Commands cmds;
+    SW_UNIMPLEMENTED;
+    /*Commands cmds;
     auto c = compiler->getCommand(*this);
     cmds.insert(c);
-    return cmds;
+    return cmds;*/
 }
 
 void ProgramDetector::detectGoCompilers(DETECT_ARGS)
@@ -218,10 +221,11 @@ Commands GoTarget::getCommands1() const
     for (auto f : gatherSourceFiles<SourceFile>(*this, {".go"}))
         compiler->setSourceFile(f->file);
 
-    Commands cmds;
+    SW_UNIMPLEMENTED;
+    /*Commands cmds;
     auto c = compiler->getCommand(*this);
     cmds.insert(c);
-    return cmds;
+    return cmds;*/
 }
 
 void ProgramDetector::detectJavaCompilers(DETECT_ARGS)
@@ -268,9 +272,10 @@ Commands JavaTarget::getCommands1() const
         compiler->setSourceFile(f->file);
     }
 
-    auto c = compiler->getCommand(*this);
+    SW_UNIMPLEMENTED;
+    /*auto c = compiler->getCommand(*this);
     cmds.insert(c);
-    return cmds;
+    return cmds;*/
 }
 
 void ProgramDetector::detectKotlinCompilers(DETECT_ARGS)
@@ -312,10 +317,11 @@ Commands KotlinTarget::getCommands1() const
     for (auto f : gatherSourceFiles<SourceFile>(*this, { ".kt", ".kts" }))
         compiler->setSourceFile(f->file);
 
-    Commands cmds;
+    SW_UNIMPLEMENTED;
+    /*Commands cmds;
     auto c = compiler->getCommand(*this);
     cmds.insert(c);
-    return cmds;
+    return cmds;*/
 }
 
 /*NativeLinker *DTarget::getSelectedTool() const
@@ -382,10 +388,11 @@ Commands DTarget::getCommands1() const
     for (auto &d : this->gatherDependencies())
         compiler->setSourceFile(d->getTarget().as<DTarget &>().compiler->getOutputFile());
 
-    Commands cmds;
+    SW_UNIMPLEMENTED;
+    /*Commands cmds;
     auto c = compiler->getCommand(*this);
     cmds.insert(c);
-    return cmds;
+    return cmds;*/
 }
 
 bool DStaticLibrary::init()
@@ -458,11 +465,13 @@ Commands PascalTarget::getCommands1() const
 
     for (auto f : gatherSourceFiles<SourceFile>(*this, { ".pas", ".pp" }))
         compiler->addSourceFile(f->file);
-    Commands cmds;
+
+    SW_UNIMPLEMENTED;
+    /*Commands cmds;
     auto c = compiler->getCommand(*this);
     c->working_directory = getObjectDir();
     cmds.insert(c);
-    return cmds;
+    return cmds;*/
 }
 
 PythonLibrary::PythonLibrary(TargetBase &parent, const PackageId &id)

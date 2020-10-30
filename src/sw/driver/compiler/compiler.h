@@ -92,16 +92,16 @@ struct SW_DRIVER_CPP_API CompilerBaseProgram : Program
     CompilerBaseProgram(const CompilerBaseProgram &);
 
     std::shared_ptr<builder::Command> prepareCommand(const Target &t);
-    std::shared_ptr<builder::Command> getCommand(const Target &t);
+    //std::shared_ptr<builder::Command> getCommand(const Target &t);
     std::shared_ptr<builder::Command> getCommand() const override;
-    std::shared_ptr<builder::Command> createCommand(const SwBuilderContext &swctx);
+    //std::shared_ptr<builder::Command> createCommand(const SwBuilderContext &swctx);
 
 protected:
     std::shared_ptr<driver::Command> cmd;
     bool prepared = false;
 
     virtual void prepareCommand1(const Target &t) = 0;
-    virtual std::shared_ptr<driver::Command> createCommand1(const SwBuilderContext &swctx) const;
+    //virtual std::shared_ptr<driver::Command> createCommand1(const SwBuilderContext &swctx) const;
 };
 
 struct SW_DRIVER_CPP_API Compiler : CompilerBaseProgram
@@ -154,7 +154,7 @@ struct SW_DRIVER_CPP_API VisualStudioCompiler : VisualStudio,
     void setSourceFile(const path &input_file, const path &output_file) override;
 
 protected:
-    std::shared_ptr<driver::Command> createCommand1(const SwBuilderContext &swctx) const override;
+    //std::shared_ptr<driver::Command> createCommand1(const SwBuilderContext &swctx) const override;
 };
 
 struct SW_DRIVER_CPP_API VisualStudioASMCompiler : VisualStudio, NativeCompiler,
@@ -172,7 +172,7 @@ struct SW_DRIVER_CPP_API VisualStudioASMCompiler : VisualStudio, NativeCompiler,
     void setOutputFile(const path &output_file);
 
 protected:
-    std::shared_ptr<driver::Command> createCommand1(const SwBuilderContext &swctx) const override;
+    //std::shared_ptr<driver::Command> createCommand1(const SwBuilderContext &swctx) const override;
 };
 
 struct SW_DRIVER_CPP_API Clang
@@ -194,7 +194,7 @@ struct SW_DRIVER_CPP_API ClangCompiler : Clang, NativeCompiler,
     path getOutputFile() const override;
 
 protected:
-    std::shared_ptr<driver::Command> createCommand1(const SwBuilderContext &swctx) const override;
+    //std::shared_ptr<driver::Command> createCommand1(const SwBuilderContext &swctx) const override;
 };
 
 struct SW_DRIVER_CPP_API ClangCl : Clang
@@ -217,7 +217,7 @@ struct SW_DRIVER_CPP_API ClangClCompiler : ClangCl,
     path getOutputFile() const override;
 
 protected:
-    std::shared_ptr<driver::Command> createCommand1(const SwBuilderContext &swctx) const override;
+    //std::shared_ptr<driver::Command> createCommand1(const SwBuilderContext &swctx) const override;
 };
 
 struct SW_DRIVER_CPP_API GNU
@@ -239,7 +239,7 @@ struct SW_DRIVER_CPP_API GNUASMCompiler : GNU, NativeCompiler,
     path getOutputFile() const override;
 
 protected:
-    std::shared_ptr<driver::Command> createCommand1(const SwBuilderContext &swctx) const override;
+    //std::shared_ptr<driver::Command> createCommand1(const SwBuilderContext &swctx) const override;
 };
 
 struct SW_DRIVER_CPP_API ClangASMCompiler : GNUASMCompiler
@@ -261,7 +261,7 @@ struct SW_DRIVER_CPP_API GNUCompiler : GNU, NativeCompiler,
     path getOutputFile() const override;
 
 protected:
-    std::shared_ptr<driver::Command> createCommand1(const SwBuilderContext &swctx) const override;
+    //std::shared_ptr<driver::Command> createCommand1(const SwBuilderContext &swctx) const override;
 };
 
 // linkers

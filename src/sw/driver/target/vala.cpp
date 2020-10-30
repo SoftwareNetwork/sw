@@ -70,7 +70,8 @@ void ValaBase::prepare()
 
     compiler = std::make_shared<ValaCompiler>();
     auto &dt = d->getTarget();
-    if (auto t2 = dt.as<ExecutableTarget *>())
+    SW_UNIMPLEMENTED;
+    /*if (auto t2 = dt.as<ExecutableTarget *>())
     {
         compiler->file = t2->getOutputFile();
         auto c = compiler->createCommand(t.getMainBuild());
@@ -112,14 +113,15 @@ void ValaBase::prepare()
     {
         for (auto &o : i->second)
             c->push_back(o);
-    }
+    }*/
 }
 
 void ValaBase::getCommands1(Commands &cmds) const
 {
-    auto c = compiler->getCommand(dynamic_cast<const Target &>(*this));
+    SW_UNIMPLEMENTED;
+    /*auto c = compiler->getCommand(dynamic_cast<const Target &>(*this));
     c->use_response_files = false;
-    cmds.insert(c);
+    cmds.insert(c);*/
 }
 
 }

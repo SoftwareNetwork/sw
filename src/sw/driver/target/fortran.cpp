@@ -120,9 +120,10 @@ Commands FortranSharedLibrary::getCommands1() const
     compiler->Extension = getBuildSettings().TargetOS.getSharedLibraryExtension();
     compiler->setOutputFile(getBaseOutputFileName(*this, {}, "bin"));
 
-    auto cmds = FortranTarget::getCommands1();
+    SW_UNIMPLEMENTED;
+    /*auto cmds = FortranTarget::getCommands1();
     compiler->getCommand(*this)->push_back("-shared");
-    return cmds;
+    return cmds;*/
 }
 
 }

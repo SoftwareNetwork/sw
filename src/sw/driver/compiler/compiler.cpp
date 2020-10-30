@@ -22,14 +22,6 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "compiler");
 
-#define SW_CREATE_COMPILER_COMMAND(t, ct)                                                   \
-    std::shared_ptr<driver::Command> t::createCommand1(const SwBuilderContext &swctx) const \
-    {                                                                                       \
-        auto c = std::make_shared<ct>(swctx);                                               \
-        c->setProgram(file);                                                                \
-        return c;                                                                           \
-    }
-
 namespace sw
 {
 
@@ -57,30 +49,31 @@ std::shared_ptr<builder::Command> CompilerBaseProgram::getCommand() const
     return cmd;
 }
 
-std::shared_ptr<builder::Command> CompilerBaseProgram::createCommand(const SwBuilderContext &swctx)
+/*std::shared_ptr<builder::Command> CompilerBaseProgram::createCommand(const SwBuilderContext &swctx)
 {
     if (cmd)
         return cmd;
     return cmd = createCommand1(swctx);
-}
+}*/
 
-std::shared_ptr<builder::Command> CompilerBaseProgram::getCommand(const Target &t)
+/*std::shared_ptr<builder::Command> CompilerBaseProgram::getCommand(const Target &t)
 {
     prepareCommand(t);
     return getCommand();
-}
+}*/
 
 std::shared_ptr<builder::Command> CompilerBaseProgram::prepareCommand(const Target &t)
 {
     if (prepared)
         return cmd;
-    createCommand(t.getMainBuild()); // do some init
+    cmd = std::make_shared<driver::Command>(t.getMainBuild());
+    cmd->setProgram(file);
     prepareCommand1(t);
     prepared = true;
     return cmd;
 }
 
-SW_CREATE_COMPILER_COMMAND(CompilerBaseProgram, driver::Command)
+//SW_CREATE_COMPILER_COMMAND(CompilerBaseProgram, driver::Command)
 
 static Strings getCStdOption(CLanguageStandard std, bool gnuext)
 {
@@ -165,7 +158,7 @@ void NativeCompiler::merge(const NativeCompiledTarget &t)
     NativeCompilerOptions::merge(t.getMergeObject());
 }
 
-SW_CREATE_COMPILER_COMMAND(VisualStudioCompiler, driver::Command)
+//SW_CREATE_COMPILER_COMMAND(VisualStudioCompiler, driver::Command)
 
 void VisualStudioCompiler::prepareCommand1(const Target &t)
 {
@@ -246,7 +239,7 @@ path VisualStudioCompiler::getOutputFile() const
     return Output();
 }
 
-SW_CREATE_COMPILER_COMMAND(VisualStudioASMCompiler, driver::Command)
+//SW_CREATE_COMPILER_COMMAND(VisualStudioASMCompiler, driver::Command)
 
 void VisualStudioASMCompiler::prepareCommand1(const Target &t)
 {
@@ -295,7 +288,7 @@ void VisualStudioASMCompiler::setSourceFile(const path &input_file, const path &
     setOutputFile(output_file);
 }
 
-SW_CREATE_COMPILER_COMMAND(ClangCompiler, driver::Command)
+//SW_CREATE_COMPILER_COMMAND(ClangCompiler, driver::Command)
 
 void ClangCompiler::prepareCommand1(const ::sw::Target &t)
 {
@@ -362,7 +355,7 @@ void ClangCompiler::setSourceFile(const path &input_file, const path &output_fil
     setOutputFile(output_file);
 }
 
-SW_CREATE_COMPILER_COMMAND(ClangClCompiler, driver::Command)
+//SW_CREATE_COMPILER_COMMAND(ClangClCompiler, driver::Command)
 
 void ClangClCompiler::prepareCommand1(const Target &t)
 {
@@ -444,7 +437,7 @@ void ClangClCompiler::setSourceFile(const path &input_file, const path &output_f
     setOutputFile(output_file);
 }
 
-SW_CREATE_COMPILER_COMMAND(GNUASMCompiler, driver::Command)
+//SW_CREATE_COMPILER_COMMAND(GNUASMCompiler, driver::Command)
 
 static String getRandomSeed(const path &p, const path &sw_storage_dir)
 {
@@ -513,7 +506,7 @@ void GNUASMCompiler::setSourceFile(const path &input_file, const path &output_fi
 
 SW_DEFINE_PROGRAM_CLONE(ClangASMCompiler)
 
-SW_CREATE_COMPILER_COMMAND(GNUCompiler, driver::Command)
+//SW_CREATE_COMPILER_COMMAND(GNUCompiler, driver::Command)
 
 void GNUCompiler::prepareCommand1(const Target &t)
 {

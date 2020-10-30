@@ -15,7 +15,8 @@ namespace sw
 template <class CompilerType>
 static std::shared_ptr<CompilerType> activateCompiler(Target &t, const UnresolvedPackage &id, const StringSet &exts)
 {
-    auto &cld = t.getMainBuild().getTargets();
+    SW_UNIMPLEMENTED;
+    /*auto &cld = t.getMainBuild().getTargets();
 
     TargetSettings oss; // empty for now
     auto i = cld.find(id, oss);
@@ -62,7 +63,7 @@ static std::shared_ptr<CompilerType> activateCompiler(Target &t, const Unresolve
     auto compiler = std::make_shared<CompilerType>();
     create_command(compiler);
     set_compiler_type(compiler);
-    return compiler;
+    return compiler;*/
 }
 
 }
