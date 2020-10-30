@@ -626,7 +626,7 @@ path PrepareConfig::one2one(Build &b, const InputData &d)
     if (bs.TargetOS.is(OSType::Windows))
         lib.NativeLinkerOptions::System.LinkLibraries.insert(LinkLibrary{ "DELAYIMP.LIB"s });
 
-    if (lib.getLinkerType() == LinkerType::MSVC)
+    /*if (lib.getLinkerType() == LinkerType::MSVC)
     //if (auto r = lib.getRule<NativeRule*>("link"))
     //if (auto L = r->program.as<VisualStudioLinker*>())
     if (auto L = lib.getLinker().as<VisualStudioLinker*>())
@@ -645,7 +645,7 @@ path PrepareConfig::one2one(Build &b, const InputData &d)
         L->IgnoreWarnings().insert(4070); // warning LNK4070: /OUT:X.dll directive in .EXP differs from output filename 'Y.dll'; ignoring directive
                                           // cannot be ignored https://docs.microsoft.com/en-us/cpp/build/reference/ignore-ignore-specific-warnings?view=vs-2017
                                           //L->IgnoreWarnings().insert(4088); // warning LNK4088: image being generated due to /FORCE option; image may not run
-    }
+    }*/
 
     return lib.getOutputFile();
 }

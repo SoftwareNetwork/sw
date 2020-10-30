@@ -573,14 +573,16 @@ std::unique_ptr<NativeCompiler> NativeCompiledTarget::activateCompiler(const Tar
 
 std::unique_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetSetting &s)
 {
-    bool extended_desc = s.isObject();
+    SW_UNIMPLEMENTED;
+    /*bool extended_desc = s.isObject();
     auto id = get_settings_package_id(s);
-    return activateLinker(s, id, extended_desc);
+    return activateLinker(s, id, extended_desc);*/
 }
 
 std::unique_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetSetting &s, const UnresolvedPackage &id, bool extended_desc)
 {
-    auto &cld = getMainBuild().getTargets();
+    SW_UNIMPLEMENTED;
+    /*auto &cld = getMainBuild().getTargets();
     auto i = cld.find(id, getSettings());
     if (!i)
         SW_UNIMPLEMENTED;
@@ -645,22 +647,23 @@ std::unique_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetS
 
     create_command();
 
-    return c;
+    return c;*/
 }
 
 std::unique_ptr<NativeLinker> NativeCompiledTarget::activateLibrarian(LinkerType t)
 {
-    std::unique_ptr<NativeLinker> c;
+    SW_UNIMPLEMENTED;
+    /*std::unique_ptr<NativeLinker> c;
 
     bool created = false;
     auto create_command = [this, &created, &t, &c]()
     {
         if (created)
             return;
-        /*c->file = t->getProgram().file;
+        c->file = t->getProgram().file;
         auto C = c->createCommand(getMainBuild());
         static_cast<primitives::Command&>(*C) = *t->getProgram().getCommand();
-        created = true;*/
+        created = true;
     };
 
     if (0);
@@ -681,22 +684,23 @@ std::unique_ptr<NativeLinker> NativeCompiledTarget::activateLibrarian(LinkerType
 
     create_command();
 
-    return c;
+    return c;*/
 }
 
 std::unique_ptr<NativeLinker> NativeCompiledTarget::activateLinker(LinkerType t)
 {
-    std::unique_ptr<NativeLinker> c;
+    SW_UNIMPLEMENTED;
+    /*std::unique_ptr<NativeLinker> c;
 
     bool created = false;
     auto create_command = [this, &created, &t, &c]()
     {
         if (created)
             return;
-        /*c->file = t->getProgram().file;
+        c->file = t->getProgram().file;
         auto C = c->createCommand(getMainBuild());
         static_cast<primitives::Command&>(*C) = *t->getProgram().getCommand();
-        created = true;*/
+        created = true;
     };
 
     if (0);
@@ -743,7 +747,7 @@ std::unique_ptr<NativeLinker> NativeCompiledTarget::activateLinker(LinkerType t)
 
     create_command();
 
-    return c;
+    return c;*/
 }
 
 void NativeCompiledTarget::findCompiler()
@@ -3145,7 +3149,6 @@ void NativeCompiledTarget::prepare_pass8()
     add_rule2("asm");
     add_rule2("c");
     add_rule2("cpp");
-    //add_rule("asm", std::make_unique<NativeCompilerRule>(*prog_cl_asm, ));
 
     if (isHeaderOnly())
         ;
