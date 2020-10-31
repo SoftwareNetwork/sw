@@ -1071,7 +1071,8 @@ Commands NativeCompiledTarget::getGeneratedCommands() const
 {
     if (generated_commands)
         return generated_commands.value();
-    generated_commands.emplace();
+    generated_commands = Target::generated_commands1;
+    return *generated_commands;
 
     Commands generated;
 
@@ -1168,14 +1169,6 @@ Commands NativeCompiledTarget::getCommands1() const
     for (auto &c : cmds)
         ((NativeCompiledTarget*)this)->registerCommand(*c);
 
-    // sanity check, remove later
-    for (auto &c : Target::generated_commands1)
-    {
-        //c->prepare();
-        if (c->arguments.size() == 0)
-            throw SW_RUNTIME_ERROR(getPackage().toString() + ": empty command");
-    }
-    cmds.insert(Target::generated_commands1.begin(), Target::generated_commands1.end());
     return cmds;
 
 
