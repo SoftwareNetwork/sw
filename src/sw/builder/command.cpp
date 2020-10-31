@@ -406,7 +406,8 @@ void Command::addOutput(const path &p)
     if (p.empty())
         return;
     outputs.insert(p);
-    File(p, getContext().getFileStorage()).setGenerator(std::static_pointer_cast<Command>(shared_from_this()), true);
+    File(p, getContext().getFileStorage()).setGenerated();
+    //File(p, getContext().getFileStorage()).setGenerator(std::static_pointer_cast<Command>(shared_from_this()), true);
 }
 
 void Command::addOutput(const Files &files)
@@ -440,12 +441,13 @@ path Command::redirectStderr(const path &p, bool append)
 
 void Command::addInputOutputDeps()
 {
-    for (auto &p : inputs)
+    SW_UNIMPLEMENTED;
+    /*for (auto &p : inputs)
     {
         File f(p, getContext().getFileStorage());
         if (f.isGenerated())
             dependencies.insert(f.getGenerator());
-    }
+    }*/
 }
 
 path detail::ResolvableCommand::resolveProgram(const path &in) const
@@ -488,13 +490,13 @@ void Command::prepare()
     getHashAndSave();
 
     // add more deps
-    addInputOutputDeps();
+    //addInputOutputDeps();
 
     // late add real generator
     for (auto &p : outputs)
     {
         // there must be no error, because previous generator == this
-        File(p, getContext().getFileStorage()).setGenerator(std::static_pointer_cast<Command>(shared_from_this()), false);
+        //File(p, getContext().getFileStorage()).setGenerator(std::static_pointer_cast<Command>(shared_from_this()), false);
     }
 
     prepared = true;

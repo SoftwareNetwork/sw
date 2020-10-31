@@ -169,7 +169,8 @@ std::optional<String> File::isChanged(const fs::file_time_type &in, bool throw_o
 
 bool File::isGenerated() const
 {
-    return !!data->generator.lock();
+    return isGeneratedAtAll();
+    //return !!data->generator.lock();
 }
 
 bool File::isGeneratedAtAll() const
@@ -184,13 +185,21 @@ void File::setGenerated(bool g)
 
 void File::setGenerator(const std::shared_ptr<builder::Command> &g, bool ignore_errors)
 {
+    SW_UNIMPLEMENTED;
+
     if (!g)
         return;
 
     auto gold = data->generator.lock();
-    if (!ignore_errors && gold && (gold != g &&
-        !gold->isExecuted() &&
-        gold->getHash() != g->getHash()))
+    if (1
+        && !ignore_errors
+        && gold
+        && (1
+            //&& gold != g
+            //&& !gold->isExecuted()
+            //&& gold->getHash() != g->getHash()
+            )
+        )
     {
         String err;
         err += "Setting generator twice on file: " + to_string(file) + "\n";
@@ -217,6 +226,7 @@ void File::setGenerator(const std::shared_ptr<builder::Command> &g, bool ignore_
 
 std::shared_ptr<builder::Command> File::getGenerator() const
 {
+    SW_UNIMPLEMENTED;
     return data->generator.lock();
 }
 

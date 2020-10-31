@@ -427,10 +427,27 @@ void ExecutionPlan::prepare(USet &cmds)
         // some commands get its i/o deps in wrong order,
         // so we explicitly call this once more
         // do not remove!
+        std::unordered_map<path, CommandNode *> generators;
+        generators.reserve(cmds.size());
         for (auto &c : cmds)
         {
-            if (auto c1 = dynamic_cast<builder::Command*>(c))
-                c1->addInputOutputDeps();
+            if (auto c1 = dynamic_cast<builder::Command *>(c))
+            {
+                for (auto &o : c1->outputs)
+                    generators[o] = c1;
+            }
+        }
+        for (auto &c : cmds)
+        {
+            if (auto c1 = dynamic_cast<builder::Command *>(c))
+            {
+                for (auto &i : c1->inputs)
+                {
+                    auto it = generators.find(i);
+                    if (it != generators.end())
+                        c1->dependencies.insert(it->second->shared_from_this());
+                }
+            }
         }
 
         // separate loop for additional deps tracking (programs, inputs, outputs etc.)
