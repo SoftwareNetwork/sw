@@ -81,13 +81,13 @@ struct SW_DRIVER_CPP_API RuleSystem
         return *ptr;
     }
 
-    template <class T>
+    /*template <class T>
     T &overrideRule(const String &n, std::unique_ptr<T> r)
     {
         if (!rules.contains(n))
             throw SW_RUNTIME_ERROR("No previous rule: " + n);
         return addRule(n, std::move(r));
-    }
+    }*/
 
     RuleStorage::RuleData &getRule(const String &n) { return rules.getRule(n); }
     const RuleStorage::RuleData &getRule(const String &n) const { return rules.getRule(n); }
