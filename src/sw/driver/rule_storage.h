@@ -13,19 +13,30 @@
 namespace sw
 {
 
-struct RuleData1
+struct SW_DRIVER_CPP_API RuleData1
 {
     IRulePtr rule;
+
+    RuleData1() = default;
+    RuleData1(RuleData1 &&) = default;
+    RuleData1(const RuleData1 &) = delete;
+    RuleData1 &operator=(const RuleData1 &) = delete;
+
+    auto &getArguments() { return arguments; }
+    const auto &getArguments() const { return arguments; }
+
+private:
     primitives::command::Arguments arguments;
 };
 
-struct RuleStorage
+struct SW_DRIVER_CPP_API RuleStorage
 {
     using RuleData = RuleData1;
     using Rules = std::map<String, std::stack<RuleData>>;
 
-    RuleStorage();
-    ~RuleStorage();
+    RuleStorage() = default;
+    RuleStorage(const RuleStorage &) = delete;
+    RuleStorage &operator=(const RuleStorage &) = delete;
 
     // or set rule?
     void push(const String &name, IRulePtr);
@@ -56,8 +67,11 @@ private:
     Rules rules;
 };
 
-struct RuleSystem
+struct SW_DRIVER_CPP_API RuleSystem
 {
+    RuleSystem() = default;
+    RuleSystem(const RuleSystem &) = delete;
+
     // return ptr?
     template <class T>
     T &addRule(const String &n, std::unique_ptr<T> r)
@@ -67,13 +81,13 @@ struct RuleSystem
         return *ptr;
     }
 
-    /*template <class T>
+    template <class T>
     T &overrideRule(const String &n, std::unique_ptr<T> r)
     {
         if (!rules.contains(n))
             throw SW_RUNTIME_ERROR("No previous rule: " + n);
         return addRule(n, std::move(r));
-    }*/
+    }
 
     RuleStorage::RuleData &getRule(const String &n) { return rules.getRule(n); }
     const RuleStorage::RuleData &getRule(const String &n) const { return rules.getRule(n); }
@@ -81,7 +95,7 @@ struct RuleSystem
     template <class T>
     T getRule(const String &n) const
     {
-        auto r = getRule(n);
+        auto &r = getRule(n);
         if (!r)
             return {};
         return r->as<T>();

@@ -8,9 +8,6 @@
 namespace sw
 {
 
-RuleStorage::RuleStorage() = default;
-RuleStorage::~RuleStorage() = default;
-
 void RuleStorage::push(const String &name, IRulePtr r)
 {
     RuleData rd;
@@ -19,7 +16,7 @@ void RuleStorage::push(const String &name, IRulePtr r)
     {
         auto nr = dynamic_cast<NativeRule *>(rd.rule.get());
         if (nr)
-            nr->arguments.push_back(rules[name].top().arguments);
+            nr->arguments.push_back(rules[name].top().getArguments());
     }
     rules[name].emplace(std::move(rd));
 }
@@ -87,7 +84,7 @@ void RuleSystem::runRules(RuleFiles rfs, const Target &t)
     }
     while (1)
     {
-        bool newf = false;
+        bool newfile = false;
         for (auto &r : rules)
         {
             auto nr = dynamic_cast<NativeRule*>(r.rule.get());
@@ -97,10 +94,10 @@ void RuleSystem::runRules(RuleFiles rfs, const Target &t)
             for (auto &o : outputs)
             {
                 auto [_, inserted] = rfs.insert(o);
-                newf |= inserted;
+                newfile |= inserted;
             }
         }
-        if (!newf)
+        if (!newfile)
             break;
     }
 }
