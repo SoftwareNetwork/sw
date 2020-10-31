@@ -306,8 +306,6 @@ public:
     //auto getPreparePass() const { return prepare_pass; }
     virtual bool mustResolveDeps() const { return deps_resolved ? false : (deps_resolved = true); }
 
-    const Program *findProgramByExtension(const String &ext) const;
-
     // using in build, move to protected when not used
     path getObjectDir() const;
     path getObjectDir(const LocalPackage &pkg) const;

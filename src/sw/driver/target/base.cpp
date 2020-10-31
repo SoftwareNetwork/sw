@@ -341,24 +341,6 @@ TargetSettings Target::getHostSettings() const
     return hs;
 }
 
-const Program *Target::findProgramByExtension(const String &ext) const
-{
-    SW_UNIMPLEMENTED;
-    /*if (!hasExtension(ext))
-        return {};
-    if (auto p = getProgram(ext))
-        return p;
-    auto u = getExtPackage(ext);
-    if (!u)
-        return {};
-    if (!(*u)->isResolved())
-        throw SW_LOGIC_ERROR("unresolved program");
-    auto &tgt = (*u)->getTarget();
-    if (auto t = tgt.as<PredefinedProgram*>())
-        return &t->getProgram();
-    throw SW_RUNTIME_ERROR("Target without PredefinedProgram: " + tgt.getPackage().toString());*/
-}
-
 String Target::getConfig() const
 {
     if (isLocal() && !provided_cfg.empty())
