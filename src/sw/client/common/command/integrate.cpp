@@ -186,8 +186,8 @@ SUBCOMMAND_DECL(integrate)
                 //throw SW_RUNTIME_ERROR("No targets in " + pkg2string(pkg));
             }
             // filter out predefined targets
-            //if (b.getContext().getPredefinedTargets().find(pkg) != b.getContext().getPredefinedTargets().end())
-                //continue;
+            if (b.isPredefinedTarget(pkg))
+                continue;
 
             auto &t = **tgts.begin();
             const auto &s = t.getInterfaceSettings();
@@ -413,8 +413,8 @@ SUBCOMMAND_DECL(integrate)
                 //throw SW_RUNTIME_ERROR("No targets in " + pkg2string(pkg));
             }
             // filter out predefined targets
-            //if (b.getContext().getPredefinedTargets().find(pkg) != b.getContext().getPredefinedTargets().end())
-                //continue;
+            if (b.isPredefinedTarget(pkg))
+                continue;
 
             auto &t = **tgts.begin();
             const auto &s = t.getInterfaceSettings();
@@ -463,8 +463,8 @@ SUBCOMMAND_DECL(integrate)
                 //throw SW_RUNTIME_ERROR("No targets in " + pkg2string(pkg));
             }
             // filter out predefined targets
-            //if (b.getContext().getPredefinedTargets().find(pkg) != b.getContext().getPredefinedTargets().end())
-                //continue;
+            if (b.isPredefinedTarget(pkg))
+                continue;
 
             auto &t = **tgts.begin();
             const auto &s = t.getInterfaceSettings();

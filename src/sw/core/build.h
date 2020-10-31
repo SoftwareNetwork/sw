@@ -100,6 +100,13 @@ struct SW_CORE_API SwBuild : SwBuilderContext
     void setName(const String &);
     String getName() const; // returns temporary object, so no refs
 
+    bool isPredefinedTarget(const PackagePath &) const;
+    template <class T>
+    bool isPredefinedTarget(const T &p) const
+    {
+        return isPredefinedTarget(p.getPath());
+    }
+
 private:
     SwContext &swctx;
     path build_dir;

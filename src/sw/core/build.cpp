@@ -394,8 +394,7 @@ void SwBuild::resolvePackages()
                     id && getTargets().find(*id) != getTargets().end())
                     continue;
                 // filter out predefined packages
-                if (auto i = getTargets().find(u.getPath());
-                    i != getTargets().end(u.getPath()) && i->second.hasInput())
+                if (isPredefinedTarget(u))
                     continue;
                 // filter out local targets
                 if (u.getPath().isRelative() || u.getPath().is_loc())
@@ -1302,6 +1301,12 @@ void SwBuild::test()
 
     auto ep = getExecutionPlan(cmds);
     ep->execute(::getExecutor());
+}
+
+bool SwBuild::isPredefinedTarget(const PackagePath &pp) const
+{
+    auto i = getTargets().find(pp);
+    return i != getTargets().end(pp) && i->second.hasInput();
 }
 
 }

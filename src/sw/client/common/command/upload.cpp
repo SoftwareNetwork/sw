@@ -71,9 +71,8 @@ sw::PackageDescriptionMap getPackages(const sw::SwBuild &b, const sw::support::S
         for (auto &dep : t.getDependencies())
         {
             // filter out predefined targets
-            /*if (b.getContext().getPredefinedTargets().find(dep->getUnresolvedPackage().ppath) !=
-                b.getContext().getPredefinedTargets().end(dep->getUnresolvedPackage().ppath))
-                continue;*/
+            if (b.isPredefinedTarget(dep->getUnresolvedPackage()))
+                continue;
             d->dependencies.insert(dep->getUnresolvedPackage());
         }
 

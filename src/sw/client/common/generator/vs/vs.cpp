@@ -603,8 +603,8 @@ void VSGenerator::generate(const SwBuild &b)
                 {
                     PackageId d(id);
                     // filter out predefined targets
-                    //if (b.getContext().getPredefinedTargets().find(d) != b.getContext().getPredefinedTargets().end())
-                        //continue;
+                    if (b.isPredefinedTarget(d))
+                        continue;
 
                     // filter out NON TARGET TO BUILD deps
                     // add them to just deps list
