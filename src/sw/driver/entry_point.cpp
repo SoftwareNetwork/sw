@@ -630,14 +630,14 @@ path PrepareConfig::one2one(Build &b, const InputData &d)
     //if (auto L = r->program.as<VisualStudioLinker*>())
     {
         auto &r = lib.getRule("link");
-        r.arguments.push_back("/DELAYLOAD:"s + IMPORT_LIBRARY);
+        r.getArguments().push_back("/DELAYLOAD:"s + IMPORT_LIBRARY);
         //#ifdef CPPAN_DEBUG
-        r.arguments.push_back("/DEBUG:FULL");
+        r.getArguments().push_back("/DEBUG:FULL");
         //#endif
         if (isDriverStaticBuild())
-            r.arguments.push_back("/FORCE:MULTIPLE");
+            r.getArguments().push_back("/FORCE:MULTIPLE");
         else
-            r.arguments.push_back("/FORCE:UNRESOLVED");
+            r.getArguments().push_back("/FORCE:UNRESOLVED");
 
         /*L->DelayLoadDlls().push_back(IMPORT_LIBRARY);
         //#ifdef CPPAN_DEBUG
