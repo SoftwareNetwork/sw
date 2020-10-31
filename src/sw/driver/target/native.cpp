@@ -1086,11 +1086,11 @@ Commands NativeCompiledTarget::getGeneratedCommands() const
         File p(f, getFs());
         if (!p.isGenerated())
             continue;
-        auto c = p.getGenerator();
+        /*auto c = p.getGenerator();
         if (c->strict_order > 0)
             order[c->strict_order].push_back(c);
         else
-            generated.insert(c);
+            generated.insert(c);*/
     }
 
     // respect ordering
@@ -1168,7 +1168,14 @@ Commands NativeCompiledTarget::getCommands1() const
     for (auto &c : cmds)
         ((NativeCompiledTarget*)this)->registerCommand(*c);
 
-    //cmds.insert(this->cmds.begin(), this->cmds.end());
+    // sanity check, remove later
+    for (auto &c : Target::generated_commands1)
+    {
+        //c->prepare();
+        if (c->arguments.size() == 0)
+            throw SW_RUNTIME_ERROR(getPackage().toString() + ": empty command");
+    }
+    cmds.insert(Target::generated_commands1.begin(), Target::generated_commands1.end());
     return cmds;
 
 
@@ -1179,7 +1186,7 @@ Commands NativeCompiledTarget::getCommands1() const
         SW_UNIMPLEMENTED;
         //cmds.insert(Librarian->getCommand(*this));
 
-    cmds.insert(this->cmds.begin(), this->cmds.end());
+    //cmds.insert(this->cmds.begin(), this->cmds.end());
     return cmds;
 }
 

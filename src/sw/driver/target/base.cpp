@@ -820,9 +820,7 @@ const TargetSettings &Target::getExportOptions() const
 
 driver::CommandBuilder Target::addCommand(const std::shared_ptr<builder::Command> &in)
 {
-    driver::CommandBuilder cb(*this);
-    if (in)
-        cb.setCommand(in);
+    driver::CommandBuilder cb(*this, in);
     // set as default
     // source dir contains more files than bdir?
     // sdir or bdir?
@@ -840,6 +838,12 @@ driver::CommandBuilder Target::addCommand(const String &func_name, void *f, int 
 {
     auto c = std::make_shared<BuiltinCommand>(getMainBuild(), func_name, f, version);
     return addCommand(c);
+}
+
+void Target::addGeneratedCommand(const std::shared_ptr<::sw::builder::Command> &c)
+{
+    generated_commands1.insert(c);
+    //Storage.push_back(c);
 }
 
 String Target::getTestName(const String &name) const
@@ -866,9 +870,15 @@ Test Target::addTest1(const String &name, const Target &tgt)
 {
     // add into that target, so executable will be set up correctly?
     auto c = /*tgt.*/addCommand();
+
+    // erase from gencom and put into storage
+    generated_commands1.erase(c.getCommand());
+    Storage.push_back(c.getCommand());
+
     // test only local targets
     if (!isLocal() || getPackage().getOverriddenDir())
         return c;
+
     auto d = std::make_shared<Dependency>(tgt);
     d->getSettings() = getSettings(); // same settings!
     d->setTarget(tgt); // "resolve" right here

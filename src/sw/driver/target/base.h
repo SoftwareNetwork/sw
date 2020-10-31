@@ -328,6 +328,7 @@ public:
     // commands
     driver::CommandBuilder addCommand(const std::shared_ptr<builder::Command> &in = {});
     driver::CommandBuilder addCommand(const String &func_name, void *symbol, int version = 0); // builtin command
+    void addGeneratedCommand(const std::shared_ptr<::sw::builder::Command> &c2);
 
     // tests
     // TODO: implement some of https://cmake.org/cmake/help/latest/manual/cmake-properties.7.html#properties-on-tests
@@ -359,6 +360,7 @@ protected:
     // export settings may be different
     // example: we set 'static-deps' setting which changes
     // ["native"]["library"] to "static";
+    Commands generated_commands1;
 private:
     TargetSettings ts_export;
     BuildSettings bs;

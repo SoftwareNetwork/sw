@@ -346,7 +346,7 @@ private:
 
 struct SW_DRIVER_CPP_API CommandBuilder
 {
-    CommandBuilder(Target &);
+    CommandBuilder(Target &, const std::shared_ptr<::sw::builder::Command> & = {});
     CommandBuilder(const CommandBuilder &) = default;
     CommandBuilder &operator=(const CommandBuilder &) = default;
 
@@ -355,7 +355,6 @@ struct SW_DRIVER_CPP_API CommandBuilder
 
     Target &getTarget() const;
 
-    void setCommand(const std::shared_ptr<::sw::builder::Command> &);
     auto &getCommand() { return c; }
     const auto &getCommand() const { return c; }
 
@@ -410,6 +409,8 @@ private:
     std::shared_ptr<::sw::builder::Command> c;
     bool stopped = false;
     Target *target;
+
+    void setCommand(const std::shared_ptr<::sw::builder::Command> &);
 };
 
 } // namespace driver

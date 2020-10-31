@@ -177,16 +177,16 @@ Command &Command::operator|(CommandBuilder &c)
 
 ///
 
-CommandBuilder::CommandBuilder(Target &t)
+CommandBuilder::CommandBuilder(Target &t, const std::shared_ptr<::sw::builder::Command> &in)
     : target(&t)
 {
-    setCommand(std::make_shared<Command>());
+    setCommand(in ? in : std::make_shared<Command>());
 }
 
 void CommandBuilder::setCommand(const std::shared_ptr<::sw::builder::Command> &c2)
 {
     c = c2;
-    getTarget().Storage.push_back(c);
+    getTarget().addGeneratedCommand(c);
 }
 
 Target &CommandBuilder::getTarget() const
