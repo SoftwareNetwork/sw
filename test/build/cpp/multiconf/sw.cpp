@@ -8,6 +8,17 @@ void configure(Solution &s)
 
 void build(Solution &s)
 {
+    auto &t9 = s.addExecutable("test9");
+    t9 += cpp11;
+    t9 += "src/main9.cpp";
+
+    auto &t10 = s.addExecutable("test10");
+    {
+        auto c = t10.addCommand();
+        c << cmd::prog(t9)
+            << cmd::std_out("main4.cpp");
+    }
+
     auto &t1 = s.addExecutable("test");
     t1 += "src/main.cpp";
 
