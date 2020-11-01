@@ -25,7 +25,7 @@ static void check_and_assign(K &k, const V &v, bool force = false)
 // actually we cannot move this to client,
 // because we support different languages and packages
 // scripting languages do not have os, arch, kernel, configuration etc.
-static void addSettings(TargetSettings &ts, bool force)
+static void addNativeSettings(TargetSettings &ts, bool force)
 {
     check_and_assign(ts["native"]["configuration"], "release", force);
     check_and_assign(ts["native"]["library"], "shared", force);
@@ -34,7 +34,7 @@ static void addSettings(TargetSettings &ts, bool force)
 
 static void setRuleCompareRules(TargetSettings &ts)
 {
-    //return;
+    return;
 
     // mandatory rules
     for (auto &v : {"c","cpp","link"})
@@ -47,11 +47,76 @@ static void setRuleCompareRules(TargetSettings &ts)
     }
 }
 
+static void addSettingsCommon(const SwCoreContext &swctx, TargetSettings &ts, bool force)
+{
+    addNativeSettings(ts, force);
+
+    BuildSettings bs(ts);
+    // on win we select msvc, clang, clangcl
+    if (bs.TargetOS.is(OSType::Windows))
+    {
+        if (0);
+        // msvc
+        else if (getProgramDetector().hasVsInstances())
+        {
+            ts["rule"]["c"]["package"] = "com.Microsoft.VisualStudio.VC.cl";
+            ts["rule"]["c"]["type"] = "msvc";
+
+            ts["rule"]["cpp"]["package"] = "com.Microsoft.VisualStudio.VC.cl";
+            ts["rule"]["cpp"]["type"] = "msvc";
+
+            ts["rule"]["asm"]["package"] = "com.Microsoft.VisualStudio.VC.ml";
+            ts["rule"]["asm"]["type"] = "msvc";
+        }
+
+        // use msvc's lib and link until llvm tools are not working
+        ts["rule"]["lib"]["package"] = "com.Microsoft.VisualStudio.VC.lib";
+        ts["rule"]["lib"]["type"] = "msvc";
+
+        ts["rule"]["link"]["package"] = "com.Microsoft.VisualStudio.VC.link";
+        ts["rule"]["link"]["type"] = "msvc";
+
+        // always use this rc
+        ts["rule"]["rc"]["package"] = "com.Microsoft.Windows.rc";
+    }
+
+    setRuleCompareRules(ts);
+}
+
 // remember! only host tools
 // TODO: load host settings from file
 void addSettingsAndSetHostPrograms(const SwCoreContext &swctx, TargetSettings &ts)
 {
-    addSettings(ts, true);
+    addSettingsCommon(swctx, ts, true);
+}
+
+void addSettingsAndSetPrograms(const SwCoreContext &swctx, TargetSettings &ts)
+{
+    addSettingsCommon(swctx, ts, false);
+}
+
+// they must be the same as used when building sw
+void addSettingsAndSetConfigPrograms(const SwContext &swctx, TargetSettings &ts)
+{
+    ts["native"]["library"] = "static"; // why not shared?
+                                        //ts["native"]["mt"] = "true";
+    if (swctx.getSettings()["debug_configs"] == "true")
+    {
+#ifndef NDEBUG
+        ts["native"]["configuration"] = "debug";
+#else
+        ts["native"]["configuration"] = "releasewithdebuginformation";
+#endif
+    }
+
+#ifdef _MSC_VER
+    Version clver(_MSC_VER / 100, _MSC_VER % 100);
+#endif
+}
+
+void addSettingsAndSetHostPrograms1(const SwCoreContext &swctx, TargetSettings &ts)
+{
+    addNativeSettings(ts, true);
     return;
 
     if (swctx.getHostOs().Type == OSType::Windows)
@@ -65,7 +130,7 @@ void addSettingsAndSetHostPrograms(const SwCoreContext &swctx, TargetSettings &t
         //oss["os"] = ts["os"];
         //auto sdk = swctx.getPredefinedTargets().find(UnresolvedPackage(ts["native"]["stdlib"]["c"].getValue()), oss);
         //if (!sdk)
-            //throw SW_RUNTIME_ERROR("No suitable installed WinSDK found for this host");
+        //throw SW_RUNTIME_ERROR("No suitable installed WinSDK found for this host");
         //ts["native"]["stdlib"]["c"] = sdk->getPackage().toString(); // assign always
         //ts["os"]["version"] = sdkver->toString(3); // cut off the last (fourth) number
 
@@ -102,7 +167,7 @@ void addSettingsAndSetHostPrograms(const SwCoreContext &swctx, TargetSettings &t
 #endif
         // add more defaults (clangcl, clang)
         //else
-            //throw SW_RUNTIME_ERROR("Seems like you do not have Visual Studio installed.\nPlease, install the latest Visual Studio first.");
+        //throw SW_RUNTIME_ERROR("Seems like you do not have Visual Studio installed.\nPlease, install the latest Visual Studio first.");
     }
     // add more defaults
     else
@@ -173,9 +238,9 @@ void addSettingsAndSetHostPrograms(const SwCoreContext &swctx, TargetSettings &t
 }
 
 //
-void addSettingsAndSetPrograms(const SwCoreContext &swctx, TargetSettings &ts)
+void addSettingsAndSetPrograms1(const SwCoreContext &swctx, TargetSettings &ts)
 {
-    addSettings(ts, false);
+    addNativeSettings(ts, false);
 
     BuildSettings bs(ts);
     // on win we select msvc, clang, clangcl
@@ -243,7 +308,7 @@ void addSettingsAndSetPrograms(const SwCoreContext &swctx, TargetSettings &ts)
             check_and_assign(ts["native"]["program"]["link"], to_upkg("com.Microsoft.VisualStudio.VC.link"));
         }
         //else
-            //throw SW_RUNTIME_ERROR("No suitable compilers found.\nPlease, install one first.");
+        //throw SW_RUNTIME_ERROR("No suitable compilers found.\nPlease, install one first.");
 
         // use msvc's lib and link until llvm tools are not working
         ts["rule"]["lib"]["package"] = "com.Microsoft.VisualStudio.VC.lib";
@@ -268,7 +333,7 @@ void addSettingsAndSetPrograms(const SwCoreContext &swctx, TargetSettings &ts)
             /*auto &pd = swctx.getPredefinedTargets();
             auto i = pd.find(name);
             if (i == pd.end() || i->second.empty())
-                return false;*/
+            return false;*/
             check_and_assign(s, name.toString());
             return true;
         };
@@ -309,25 +374,6 @@ void addSettingsAndSetPrograms(const SwCoreContext &swctx, TargetSettings &ts)
     }
 
     setRuleCompareRules(ts);
-}
-
-// they must be the same as used when building sw
-void addSettingsAndSetConfigPrograms(const SwContext &swctx, TargetSettings &ts)
-{
-    ts["native"]["library"] = "static"; // why not shared?
-                                        //ts["native"]["mt"] = "true";
-    if (swctx.getSettings()["debug_configs"] == "true")
-    {
-#ifndef NDEBUG
-        ts["native"]["configuration"] = "debug";
-#else
-        ts["native"]["configuration"] = "releasewithdebuginformation";
-#endif
-    }
-
-#ifdef _MSC_VER
-    Version clver(_MSC_VER / 100, _MSC_VER % 100);
-#endif
 }
 
 }
