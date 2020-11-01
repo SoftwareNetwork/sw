@@ -733,14 +733,17 @@ DependenciesType NativeTargetOptionsGroup::gatherDependencies() const
     return deps;
 }
 
-DependencyPtr Target::addDummyDependency(const DependencyPtr &t)
+DependencyPtr Target::addDummyDependencyRaw(const DependencyPtr &t)
 {
     DummyDependencies.push_back(t);
-
-    auto hs = getHostSettings();
-    auto &ds = DummyDependencies.back()->settings;
-    ds.mergeMissing(hs);
     return t;
+}
+
+DependencyPtr Target::addDummyDependency(const DependencyPtr &t)
+{
+    auto t2 = addDummyDependencyRaw(t);
+    t2->getSettings().mergeMissing(getHostSettings());
+    return t2;
 }
 
 DependencyPtr Target::addDummyDependency(const Target &t)

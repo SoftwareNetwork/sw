@@ -251,6 +251,7 @@ struct SW_DRIVER_CPP_API Target
 
     DependencyPtr addDummyDependency(const Target &);
     DependencyPtr addDummyDependency(const DependencyPtr &);
+    DependencyPtr addDummyDependencyRaw(const DependencyPtr &);
     void addSourceDependency(const Target &);
     void addSourceDependency(const DependencyPtr &);
 
