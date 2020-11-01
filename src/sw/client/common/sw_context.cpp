@@ -69,9 +69,11 @@ static sw::TargetSettings compilerTypeFromStringCaseI(const sw::UnresolvedPackag
         || compiler.ppath == "org.gnu.gpp"
         )
     {
-        ts["native"]["program"]["c"] = set_with_version("org.gnu.gcc");
-        ts["native"]["program"]["cpp"] = set_with_version("org.gnu.gpp");
-        ts["native"]["program"]["asm"] = ts["native"]["program"]["c"].getValue();
+        ts["rule"]["c"]["package"] = set_with_version("org.gnu.gcc");
+        ts["rule"]["cpp"]["package"] = set_with_version("org.gnu.gpp");
+        ts["rule"]["asm"]["package"] = ts["rule"]["c"]["package"].getValue();
+        for (auto &[k, v] : ts["rule"].getMap())
+            v["type"] = "gnu";
     }
     else if (0
         || compiler.ppath == "clang"
@@ -79,9 +81,11 @@ static sw::TargetSettings compilerTypeFromStringCaseI(const sw::UnresolvedPackag
         || compiler.ppath == "org.LLVM.clangpp"
         )
     {
-        ts["native"]["program"]["c"] = set_with_version("org.LLVM.clang");
-        ts["native"]["program"]["cpp"] = set_with_version("org.LLVM.clangpp");
-        ts["native"]["program"]["asm"] = ts["native"]["program"]["c"].getValue();
+        ts["rule"]["c"]["package"] = set_with_version("org.LLVM.clang");
+        ts["rule"]["cpp"]["package"] = set_with_version("org.LLVM.clangpp");
+        ts["rule"]["asm"]["package"] = ts["rule"]["c"]["package"].getValue();
+        for (auto &[k, v] : ts["rule"].getMap())
+            v["type"] = "clang";
     }
     else if (0
         || compiler.ppath == "appleclang"
@@ -89,9 +93,11 @@ static sw::TargetSettings compilerTypeFromStringCaseI(const sw::UnresolvedPackag
         || compiler.ppath == "com.Apple.clangpp"
         )
     {
-        ts["native"]["program"]["c"] = set_with_version("com.Apple.clang");
-        ts["native"]["program"]["cpp"] = set_with_version("com.Apple.clangpp");
-        ts["native"]["program"]["asm"] = ts["native"]["program"]["c"].getValue();
+        ts["rule"]["c"]["package"] = set_with_version("com.Apple.clang");
+        ts["rule"]["cpp"]["package"] = set_with_version("com.Apple.clangpp");
+        ts["rule"]["asm"]["package"] = ts["rule"]["c"]["package"].getValue();
+        for (auto &[k, v] : ts["rule"].getMap())
+            v["type"] = "appleclang";
     }
     // clang-cl is not possible for package path
     else if (0
@@ -100,9 +106,11 @@ static sw::TargetSettings compilerTypeFromStringCaseI(const sw::UnresolvedPackag
         || compiler.ppath == "org.LLVM.clangcl"
         )
     {
-        ts["native"]["program"]["c"] = set_with_version("org.LLVM.clangcl");
-        ts["native"]["program"]["cpp"] = set_with_version("org.LLVM.clangcl");
-        //ts["native"]["program"]["link"] = set_with_version("org.LLVM.lld.link");
+        ts["rule"]["c"]["package"] = set_with_version("org.LLVM.clangcl");
+        ts["rule"]["cpp"]["package"] = set_with_version("org.LLVM.clangcl");
+        //ts["rule"]["link"]["package"] = set_with_version("org.LLVM.lld.link");
+        for (auto &[k, v] : ts["rule"].getMap())
+            v["type"] = "clangcl";
     }
     else if (0
         || compiler.ppath == "msvc"
@@ -110,11 +118,13 @@ static sw::TargetSettings compilerTypeFromStringCaseI(const sw::UnresolvedPackag
         || compiler.ppath == "com.Microsoft.VisualStudio.VC.cl"
         )
     {
-        ts["native"]["program"]["c"] = set_with_version("com.Microsoft.VisualStudio.VC.cl");
-        ts["native"]["program"]["cpp"] = set_with_version("com.Microsoft.VisualStudio.VC.cl");
-        ts["native"]["program"]["asm"] = set_with_version("com.Microsoft.VisualStudio.VC.ml");
-        ts["native"]["program"]["lib"] = set_with_version("com.Microsoft.VisualStudio.VC.lib");
-        ts["native"]["program"]["link"] = set_with_version("com.Microsoft.VisualStudio.VC.link");
+        ts["rule"]["c"]["package"] = set_with_version("com.Microsoft.VisualStudio.VC.cl");
+        ts["rule"]["cpp"]["package"] = set_with_version("com.Microsoft.VisualStudio.VC.cl");
+        ts["rule"]["asm"]["package"] = set_with_version("com.Microsoft.VisualStudio.VC.ml");
+        ts["rule"]["lib"]["package"] = set_with_version("com.Microsoft.VisualStudio.VC.lib");
+        ts["rule"]["link"]["package"] = set_with_version("com.Microsoft.VisualStudio.VC.link");
+        for (auto &[k, v] : ts["rule"].getMap())
+            v["type"] = "msvc";
         ts["native"]["stdlib"]["cpp"] = set_with_version("com.Microsoft.VisualStudio.VC.libcpp");
     }
     else if (0
@@ -123,16 +133,19 @@ static sw::TargetSettings compilerTypeFromStringCaseI(const sw::UnresolvedPackag
         || compiler.ppath == "com.intel.compiler.cpp"
         )
     {
-        ts["native"]["program"]["c"] = set_with_version("com.intel.compiler.c");
-        ts["native"]["program"]["cpp"] = set_with_version("com.intel.compiler.cpp");
-        ts["native"]["program"]["asm"] = set_with_version("com.Microsoft.VisualStudio.VC.ml");
-        ts["native"]["program"]["lib"] = sw::UnresolvedPackage("com.intel.compiler.lib").toString();
-        ts["native"]["program"]["link"] = sw::UnresolvedPackage("com.intel.compiler.link").toString();
+        ts["rule"]["c"]["package"] = set_with_version("com.intel.compiler.c");
+        ts["rule"]["cpp"]["package"] = set_with_version("com.intel.compiler.cpp");
+        ts["rule"]["asm"]["package"] = set_with_version("com.Microsoft.VisualStudio.VC.ml");
+        ts["rule"]["lib"]["package"] = sw::UnresolvedPackage("com.intel.compiler.lib").toString();
+        ts["rule"]["link"]["package"] = sw::UnresolvedPackage("com.intel.compiler.link").toString();
+        for (auto &[k, v] : ts["rule"].getMap())
+            v["type"] = "intel";
+        ts["rule"]["asm"]["type"] = "msvc";
     }
     else
     {
-        ts["native"]["program"]["c"] = compiler.toString();
-        ts["native"]["program"]["cpp"] = compiler.toString();
+        ts["rule"]["c"]["package"] = compiler.toString();
+        ts["rule"]["cpp"]["package"] = compiler.toString();
     }
 
     return ts;
@@ -142,8 +155,8 @@ static sw::TargetSettings linkerTypeFromStringCaseI(const sw::UnresolvedPackage 
 {
     sw::TargetSettings ts;
 
-    //ts["native"]["program"]["lib"] = linker->toString();
-    ts["native"]["program"]["link"] = linker.toString();
+    //ts["rule"]["lib"] = linker->toString();
+    ts["rule"]["link"]["package"] = linker.toString();
 
     return ts;
 }
