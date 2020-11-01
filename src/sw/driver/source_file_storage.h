@@ -3,7 +3,8 @@
 
 #pragma once
 
-#include "compiler/compiler.h"
+//#include "compiler/compiler.h"
+#include "options.h"
 #include "types.h"
 
 #include <sw/builder/node.h>

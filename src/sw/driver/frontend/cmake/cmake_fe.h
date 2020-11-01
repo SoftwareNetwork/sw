@@ -12,6 +12,7 @@ class cmMakefile;
 namespace sw
 {
 struct CheckSet;
+struct NativeCompiledTarget;
 }
 
 namespace sw::driver::cpp

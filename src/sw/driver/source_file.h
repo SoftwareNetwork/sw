@@ -3,14 +3,13 @@
 
 #pragma once
 
-#include "compiler/compiler.h"
+//#include "compiler/compiler.h"
+#include "source_file_storage.h"
 #include "types.h"
 
 #include <sw/builder/node.h>
 
 #include <memory>
-
-#include "source_file_storage.h"
 
 namespace sw
 {

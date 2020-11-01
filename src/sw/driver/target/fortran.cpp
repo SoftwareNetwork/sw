@@ -65,12 +65,13 @@ bool FortranTarget::init()
     ".fpp",
     ".FPP",
     };*/
-    compiler = activateCompiler<decltype(compiler)::element_type>(*this, "org.gnu.gcc.fortran"s, { ".f" });
+    SW_UNIMPLEMENTED;
+    /*compiler = activateCompiler<decltype(compiler)::element_type>(*this, "org.gnu.gcc.fortran"s, { ".f" });
     if (!compiler)
         throw SW_RUNTIME_ERROR("No Fortran compiler found");
 
     compiler->Extension = getBuildSettings().TargetOS.getExecutableExtension();
-    compiler->setOutputFile(getBaseOutputFileName(*this, {}, "bin"));
+    compiler->setOutputFile(getBaseOutputFileName(*this, {}, "bin"));*/
 
     SW_RETURN_MULTIPASS_END(init_pass);
 }
@@ -117,11 +118,11 @@ Commands FortranStaticLibrary::getCommands1() const
 
 Commands FortranSharedLibrary::getCommands1() const
 {
-    compiler->Extension = getBuildSettings().TargetOS.getSharedLibraryExtension();
+    SW_UNIMPLEMENTED;
+    /*compiler->Extension = getBuildSettings().TargetOS.getSharedLibraryExtension();
     compiler->setOutputFile(getBaseOutputFileName(*this, {}, "bin"));
 
-    SW_UNIMPLEMENTED;
-    /*auto cmds = FortranTarget::getCommands1();
+    auto cmds = FortranTarget::getCommands1();
     compiler->getCommand(*this)->push_back("-shared");
     return cmds;*/
 }

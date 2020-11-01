@@ -68,9 +68,9 @@ void ValaBase::prepare()
 {
     auto &t = *t_;
 
-    compiler = std::make_shared<ValaCompiler>();
-    auto &dt = d->getTarget();
     SW_UNIMPLEMENTED;
+    //compiler = std::make_shared<ValaCompiler>();
+    //auto &dt = d->getTarget();
     /*if (auto t2 = dt.as<ExecutableTarget *>())
     {
         compiler->file = t2->getOutputFile();

@@ -39,12 +39,13 @@ bool AdaTarget::init()
 
     Target::init();
 
-    compiler = activateCompiler<AdaCompiler>(*this, "org.gnu.gcc.ada"s, { ".adb", ".ads" });
+    SW_UNIMPLEMENTED;
+    /*compiler = activateCompiler<AdaCompiler>(*this, "org.gnu.gcc.ada"s, { ".adb", ".ads" });
     if (!compiler)
         throw SW_RUNTIME_ERROR("No Ada compiler found");
 
     compiler->Extension = getBuildSettings().TargetOS.getExecutableExtension();
-    compiler->setOutputFile(getBaseOutputFileName(*this, {}, "bin"));
+    compiler->setOutputFile(getBaseOutputFileName(*this, {}, "bin"));*/
 
     SW_RETURN_MULTIPASS_END(init_pass);
 }
@@ -60,10 +61,10 @@ Commands AdaTarget::getCommands1() const
     // works:
     // gnatmake -o ... input.adb
 
-    for (auto f : gatherSourceFiles<SourceFile>(*this, { ".adb", ".ads" }))
-        compiler->addSourceFile(f->file);
     SW_UNIMPLEMENTED;
-    /*Commands cmds;
+    /*for (auto f : gatherSourceFiles<SourceFile>(*this, { ".adb", ".ads" }))
+        compiler->addSourceFile(f->file);
+    Commands cmds;
     auto c = compiler->getCommand(*this);
     c->working_directory = getObjectDir();
     cmds.insert(c);
@@ -108,22 +109,23 @@ bool CSharpTarget::init()
 
     Target::init();
 
-    compiler = activateCompiler<VisualStudioCSharpCompiler>(*this, "com.Microsoft.VisualStudio.Roslyn.csc"s, { ".cs" });
+    SW_UNIMPLEMENTED;
+    /*compiler = activateCompiler<VisualStudioCSharpCompiler>(*this, "com.Microsoft.VisualStudio.Roslyn.csc"s, { ".cs" });
     if (!compiler)
         throw SW_RUNTIME_ERROR("No C# compiler found");
 
     compiler->Extension = getBuildSettings().TargetOS.getExecutableExtension();
-    compiler->setOutputFile(getBaseOutputFileName(*this, {}, "bin"));
+    compiler->setOutputFile(getBaseOutputFileName(*this, {}, "bin"));*/
 
     SW_RETURN_MULTIPASS_END(init_pass);
 }
 
 Commands CSharpTarget::getCommands1() const
 {
-    for (auto f : gatherSourceFiles<SourceFile>(*this, { ".cs" }))
-        compiler->addSourceFile(f->file);
-
     SW_UNIMPLEMENTED;
+    //for (auto f : gatherSourceFiles<SourceFile>(*this, { ".cs" }))
+        //compiler->addSourceFile(f->file);
+
     /*Commands cmds;
     auto c = compiler->getCommand(*this);
     cmds.insert(c);
@@ -159,22 +161,23 @@ bool RustTarget::init()
 
     Target::init();
 
-    compiler = activateCompiler<decltype(compiler)::element_type>(*this, "org.rust.rustc"s, { ".rs" });
+    SW_UNIMPLEMENTED;
+    /*compiler = activateCompiler<decltype(compiler)::element_type>(*this, "org.rust.rustc"s, { ".rs" });
     if (!compiler)
         throw SW_RUNTIME_ERROR("No Rust compiler found");
 
     compiler->Extension = getBuildSettings().TargetOS.getExecutableExtension();
-    compiler->setOutputFile(getBaseOutputFileName(*this, {}, "bin"));
+    compiler->setOutputFile(getBaseOutputFileName(*this, {}, "bin"));*/
 
     SW_RETURN_MULTIPASS_END(init_pass);
 }
 
 Commands RustTarget::getCommands1() const
 {
-    for (auto f : gatherSourceFiles<SourceFile>(*this, {".rs"}))
+    SW_UNIMPLEMENTED;
+    /*for (auto f : gatherSourceFiles<SourceFile>(*this, {".rs"}))
         compiler->setSourceFile(f->file);
 
-    SW_UNIMPLEMENTED;
     /*Commands cmds;
     auto c = compiler->getCommand(*this);
     cmds.insert(c);
@@ -206,20 +209,21 @@ bool GoTarget::init()
 
     Target::init();
 
-    compiler = activateCompiler<decltype(compiler)::element_type>(*this, "org.google.golang.go"s, { ".go" });
+    SW_UNIMPLEMENTED;
+    /*compiler = activateCompiler<decltype(compiler)::element_type>(*this, "org.google.golang.go"s, { ".go" });
     if (!compiler)
         throw SW_RUNTIME_ERROR("No Go compiler found");
 
     compiler->Extension = getBuildSettings().TargetOS.getExecutableExtension();
-    compiler->setOutputFile(getBaseOutputFileName(*this, {}, "bin"));
+    compiler->setOutputFile(getBaseOutputFileName(*this, {}, "bin"));*/
 
     SW_RETURN_MULTIPASS_END(init_pass);
 }
 
 Commands GoTarget::getCommands1() const
 {
-    for (auto f : gatherSourceFiles<SourceFile>(*this, {".go"}))
-        compiler->setSourceFile(f->file);
+    //for (auto f : gatherSourceFiles<SourceFile>(*this, {".go"}))
+        //compiler->setSourceFile(f->file);
 
     SW_UNIMPLEMENTED;
     /*Commands cmds;
@@ -255,11 +259,12 @@ bool JavaTarget::init()
 
     Target::init();
 
-    compiler = activateCompiler<decltype(compiler)::element_type>(*this, "com.oracle.java.javac"s, { ".java" });
+    SW_UNIMPLEMENTED;
+    /*compiler = activateCompiler<decltype(compiler)::element_type>(*this, "com.oracle.java.javac"s, { ".java" });
     if (!compiler)
         throw SW_RUNTIME_ERROR("No Java compiler found");
 
-    compiler->setOutputDir(getBaseOutputDirName(*this, {}, "bin"));
+    compiler->setOutputDir(getBaseOutputDirName(*this, {}, "bin"));*/
 
     SW_RETURN_MULTIPASS_END(init_pass);
 }
@@ -267,10 +272,8 @@ bool JavaTarget::init()
 Commands JavaTarget::getCommands1() const
 {
     Commands cmds;
-    for (auto f : gatherSourceFiles<SourceFile>(*this, {".java"}))
-    {
-        compiler->setSourceFile(f->file);
-    }
+    /*for (auto f : gatherSourceFiles<SourceFile>(*this, {".java"}))
+        compiler->setSourceFile(f->file);*/
 
     SW_UNIMPLEMENTED;
     /*auto c = compiler->getCommand(*this);
@@ -303,19 +306,20 @@ bool KotlinTarget::init()
 
     Target::init();
 
-    compiler = activateCompiler<decltype(compiler)::element_type>(*this, "com.JetBrains.kotlin.kotlinc"s, { ".kt", ".kts" });
+    SW_UNIMPLEMENTED;
+    /*compiler = activateCompiler<decltype(compiler)::element_type>(*this, "com.JetBrains.kotlin.kotlinc"s, { ".kt", ".kts" });
     if (!compiler)
         throw SW_RUNTIME_ERROR("No Kotlin compiler found");
 
-    compiler->setOutputFile(getBaseOutputFileName(*this, {}, "bin"));
+    compiler->setOutputFile(getBaseOutputFileName(*this, {}, "bin"));*/
 
     SW_RETURN_MULTIPASS_END(init_pass);
 }
 
 Commands KotlinTarget::getCommands1() const
 {
-    for (auto f : gatherSourceFiles<SourceFile>(*this, { ".kt", ".kts" }))
-        compiler->setSourceFile(f->file);
+    //for (auto f : gatherSourceFiles<SourceFile>(*this, { ".kt", ".kts" }))
+        //compiler->setSourceFile(f->file);
 
     SW_UNIMPLEMENTED;
     /*Commands cmds;
@@ -362,11 +366,12 @@ bool DTarget::init()
     {
         Target::init();
 
-        compiler = activateCompiler<decltype(compiler)::element_type>(*this, "org.dlang.dmd.dmd"s, { ".d", /*.di*/ });
-        if (!compiler)
-            throw SW_RUNTIME_ERROR("No D compiler found");
+        SW_UNIMPLEMENTED;
+        //compiler = activateCompiler<decltype(compiler)::element_type>(*this, "org.dlang.dmd.dmd"s, { ".d", /*.di*/ });
+        //if (!compiler)
+            //throw SW_RUNTIME_ERROR("No D compiler found");
 
-        compiler->setObjectDir(BinaryDir.parent_path() / "obj");
+        //compiler->setObjectDir(BinaryDir.parent_path() / "obj");
     }
     SW_RETURN_MULTIPASS_NEXT_PASS(init_pass);
     case 2:
@@ -380,13 +385,13 @@ bool DTarget::init()
 
 Commands DTarget::getCommands1() const
 {
-    for (auto f : gatherSourceFiles<SourceFile>(*this, {".d"}))
-        compiler->setSourceFile(f->file/*, BinaryDir.parent_path() / "obj" / f->file.filename()*/);
+    //for (auto f : gatherSourceFiles<SourceFile>(*this, {".d"}))
+        //compiler->setSourceFile(f->file/*, BinaryDir.parent_path() / "obj" / f->file.filename()*/);
 
     // add prepare() to propagate deps
     // here we check only our deps
-    for (auto &d : this->gatherDependencies())
-        compiler->setSourceFile(d->getTarget().as<DTarget &>().compiler->getOutputFile());
+    //for (auto &d : this->gatherDependencies())
+        //compiler->setSourceFile(d->getTarget().as<DTarget &>().compiler->getOutputFile());
 
     SW_UNIMPLEMENTED;
     /*Commands cmds;
@@ -398,23 +403,26 @@ Commands DTarget::getCommands1() const
 bool DStaticLibrary::init()
 {
     auto r = DTarget::init();
-    compiler->Extension = getBuildSettings().TargetOS.getStaticLibraryExtension();
-    compiler->BuildLibrary = true;
+    SW_UNIMPLEMENTED;
+    //compiler->Extension = getBuildSettings().TargetOS.getStaticLibraryExtension();
+    //compiler->BuildLibrary = true;
     return r;
 }
 
 bool DSharedLibrary::init()
 {
     auto r = DTarget::init();
-    compiler->Extension = getBuildSettings().TargetOS.getSharedLibraryExtension();
-    compiler->BuildDll = true;
+    SW_UNIMPLEMENTED;
+    //compiler->Extension = getBuildSettings().TargetOS.getSharedLibraryExtension();
+    //compiler->BuildDll = true;
     return r;
 }
 
 bool DExecutable::init()
 {
     auto r = DTarget::init();
-    compiler->Extension = getBuildSettings().TargetOS.getExecutableExtension();
+    SW_UNIMPLEMENTED;
+    //compiler->Extension = getBuildSettings().TargetOS.getExecutableExtension();
     return r;
 }
 
@@ -445,12 +453,13 @@ bool PascalTarget::init()
 
     Target::init();
 
-    compiler = activateCompiler<PascalCompiler>(*this, "org.pascal.fpc"s, { ".pas", ".pp" });
+    SW_UNIMPLEMENTED;
+    /*compiler = activateCompiler<PascalCompiler>(*this, "org.pascal.fpc"s, { ".pas", ".pp" });
     if (!compiler)
         throw SW_RUNTIME_ERROR("No Pascal compiler found");
 
     compiler->Extension = getBuildSettings().TargetOS.getExecutableExtension();
-    compiler->setOutputFile(getBaseOutputFileName(*this, {}, "bin"));
+    compiler->setOutputFile(getBaseOutputFileName(*this, {}, "bin"));*/
 
     SW_RETURN_MULTIPASS_END(init_pass);
 }
@@ -463,8 +472,8 @@ Commands PascalTarget::getCommands1() const
     // works:
     // gnatmake -o ... input.adb
 
-    for (auto f : gatherSourceFiles<SourceFile>(*this, { ".pas", ".pp" }))
-        compiler->addSourceFile(f->file);
+    //for (auto f : gatherSourceFiles<SourceFile>(*this, { ".pas", ".pp" }))
+        //compiler->addSourceFile(f->file);
 
     SW_UNIMPLEMENTED;
     /*Commands cmds;

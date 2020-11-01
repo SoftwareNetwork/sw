@@ -13,7 +13,7 @@ namespace sw
 struct SW_DRIVER_CPP_API AdaTarget : Target
     , NativeTargetOptionsGroup
 {
-    std::shared_ptr<AdaCompiler> compiler;
+    //std::shared_ptr<AdaCompiler> compiler;
 
     AdaTarget(TargetBase &parent, const PackageId &);
 
@@ -38,7 +38,7 @@ struct SW_DRIVER_CPP_API AdaExecutable : AdaTarget
 struct SW_DRIVER_CPP_API CSharpTarget : Target
     , NativeTargetOptionsGroup
 {
-    std::shared_ptr<CSharpCompiler> compiler;
+    //std::shared_ptr<CSharpCompiler> compiler;
 
     CSharpTarget(TargetBase &parent, const PackageId &);
 
@@ -67,7 +67,7 @@ struct SW_DRIVER_CPP_API CSharpExecutable : CSharpTarget
 struct SW_DRIVER_CPP_API RustTarget : Target
     , NativeTargetOptionsGroup
 {
-    std::shared_ptr<RustCompiler> compiler;
+    //std::shared_ptr<RustCompiler> compiler;
 
     RustTarget(TargetBase &parent, const PackageId &);
 
@@ -95,7 +95,7 @@ struct SW_DRIVER_CPP_API RustExecutable : RustTarget
 struct SW_DRIVER_CPP_API GoTarget : Target
     , NativeTargetOptionsGroup
 {
-    std::shared_ptr<GoCompiler> compiler;
+    //std::shared_ptr<GoCompiler> compiler;
 
     GoTarget(TargetBase &parent, const PackageId &);
 
@@ -123,7 +123,7 @@ struct SW_DRIVER_CPP_API GoExecutable : GoTarget
 struct SW_DRIVER_CPP_API JavaTarget : Target
     , NativeTargetOptionsGroup
 {
-    std::shared_ptr<JavaCompiler> compiler;
+    //std::shared_ptr<JavaCompiler> compiler;
 
     JavaTarget(TargetBase &parent, const PackageId &);
 
@@ -151,7 +151,7 @@ struct SW_DRIVER_CPP_API JavaExecutable : JavaTarget
 struct SW_DRIVER_CPP_API KotlinTarget : Target
     , NativeTargetOptionsGroup
 {
-    std::shared_ptr<KotlinCompiler> compiler;
+    //std::shared_ptr<KotlinCompiler> compiler;
 
     KotlinTarget(TargetBase &parent, const PackageId &);
 
@@ -179,7 +179,7 @@ struct SW_DRIVER_CPP_API KotlinExecutable : KotlinTarget
 struct SW_DRIVER_CPP_API DTarget : NativeTarget
     , NativeTargetOptionsGroup
 {
-    std::shared_ptr<DCompiler> compiler;
+    //std::shared_ptr<DCompiler> compiler;
 
     DTarget(TargetBase &parent, const PackageId &);
 
@@ -236,7 +236,7 @@ struct SW_DRIVER_CPP_API DExecutable : DTarget
 struct SW_DRIVER_CPP_API PascalTarget : Target
     , NativeTargetOptionsGroup
 {
-    std::shared_ptr<PascalCompiler> compiler;
+    //std::shared_ptr<PascalCompiler> compiler;
 
     PascalTarget(TargetBase &parent, const PackageId &);
 

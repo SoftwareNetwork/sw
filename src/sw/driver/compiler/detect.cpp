@@ -3,10 +3,13 @@
 
 #include "detect.h"
 
+#include "compiler.h"
 #include "../misc/cmVSSetupHelper.h"
 #include "../build.h"
 #include "../command.h"
 #include "../program_version_storage.h"
+#include "../options_cl_vs.h"
+#include "../rule.h"
 
 #include <boost/algorithm/string.hpp>
 #include <primitives/command.h>
@@ -15,9 +18,7 @@
 #include <string>
 
 #include <primitives/log.h>
-DECLARE_STATIC_LOGGER(logger, "compiler.detect");
-
-// TODO: actually detect.cpp may be rewritten as entry point
+DECLARE_STATIC_LOGGER(logger, "detect");
 
 namespace sw
 {

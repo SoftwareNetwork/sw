@@ -9,7 +9,7 @@
 #include "functions.h"
 #include "suffix.h"
 #include "target/all.h"
-#include "compiler/compiler_helpers.h"
+//#include "compiler/compiler_helpers.h"
 
 #include <sw/builder/jumppad.h>
 #include <sw/core/sw_context.h> // needed for execute commands
@@ -29,8 +29,8 @@ using namespace sw::source;
 
 namespace cmd = sw::cmd;
 namespace builder = sw::builder;
-namespace vs = sw::vs;
-namespace cl = sw::cl;
+//namespace vs = sw::vs;
+//namespace cl = sw::cl;
 
 // general
 using sw::Build;
@@ -129,21 +129,21 @@ using sw::InheritanceType;
 
 // command line options
 //using sw::Program;
-using sw::Compiler;
+/*using sw::Compiler;
 //using sw::NativeCompiler;
 using sw::VisualStudioCompiler;
 using sw::VisualStudioASMCompiler;
 using sw::VisualStudioLinker;
 using sw::GNUCompiler;
 using sw::GNULibrarian;
-using sw::GNULinker;
+using sw::GNULinker;*/
 
 //using sw::NativeSourceFile;
 using sw::NativeLinkerOptions;
 
 //
 
-using sw::CommandLineOption;
+//using sw::CommandLineOption;
 //using sw::CommandLineOptions;
 
 // language standards

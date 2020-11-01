@@ -25,7 +25,7 @@ struct SW_DRIVER_CPP_API ValaBase
 
 protected:
     DependencyPtr d;
-    std::shared_ptr<ValaCompiler> compiler;
+    //std::shared_ptr<ValaCompiler> compiler;
     path OutputDir;
     NativeCompiledTarget *t_ = nullptr;
     void getCommands1(Commands &) const;

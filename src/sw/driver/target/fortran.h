@@ -13,7 +13,7 @@ namespace sw
 struct SW_DRIVER_CPP_API FortranTarget : Target
     , NativeTargetOptionsGroup
 {
-    std::shared_ptr<FortranCompiler> compiler;
+    //std::shared_ptr<FortranCompiler> compiler;
 
     FortranTarget(TargetBase &parent, const PackageId &);
 

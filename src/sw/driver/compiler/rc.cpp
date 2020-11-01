@@ -5,6 +5,7 @@
 
 #include "compiler_helpers.h"
 #include "../command.h"
+#include "../target/native.h"
 
 namespace sw
 {

@@ -4,7 +4,6 @@
 #pragma once
 
 #include "options.h"
-#include "target/native.h"
 
 #include <sw/builder/command.h>
 #include <sw/builder/file.h>

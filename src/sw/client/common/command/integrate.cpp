@@ -12,6 +12,8 @@
 #include <sw/driver/types.h>
 #include <sw/manager/storage.h>
 
+#include <regex>
+
 struct CMakeEmitter : primitives::Emitter
 {
     void if_(const String &s)
