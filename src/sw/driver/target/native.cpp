@@ -207,11 +207,16 @@ path NativeTarget::getOutputFile() const
     SW_UNIMPLEMENTED;
 }
 
+void NativeTarget::addRuleDependencyRaw(const String &name, const DependencyPtr &from_dep, const String &from_name)
+{
+    rules2[name].dep = from_dep;
+    rules2[name].target_rule_name = from_name;
+}
+
 void NativeTarget::addRuleDependency(const String &name, const DependencyPtr &from_dep, const String &from_name)
 {
     addDummyDependency(from_dep);
-    rules2[name].dep = from_dep;
-    rules2[name].target_rule_name = from_name;
+    addRuleDependencyRaw(name, from_dep, from_name);
 }
 
 void NativeTarget::addRuleDependency(const String &name, const DependencyPtr &from_dep)
@@ -628,7 +633,28 @@ void NativeCompiledTarget::findCompiler()
     if (getBuildSettings().TargetOS.is(OSType::Windows) && getSettings()["rule"]["rc"])
         addRuleDependency("rc");
     for (auto &r : rules)
-        addRuleDependency(r);
+    {
+        // actually must check proper rule type
+        if (ct == CompilerType::MSVC
+            // we take raw settings to get ml instead of ml64 on x86 config
+            // and other listed rules (programs) from x86 toolchain
+            && (r == "c" || r == "cpp" || r == "asm")
+            )
+        {
+            if (r == "asm" &&
+                getBuildSettings().TargetOS.Arch != ArchType::x86 &&
+                getBuildSettings().TargetOS.Arch != ArchType::x86_64
+                )
+                continue;
+            auto u = getSettings()["rule"][r]["package"].getValue();
+            auto d = std::make_shared<Dependency>(u);
+            d->getSettings() = getSettings();
+            addRuleDependencyRaw(r, d, r);
+            addDummyDependencyRaw(d);
+        }
+        else
+            addRuleDependency(r);
+    }
 
     // c++ goes first for correct include order
     UnresolvedPackage cppcl = getSettings()["rule"]["cpp"]["package"].getValue();
@@ -2861,7 +2887,11 @@ void NativeCompiledTarget::prepare_pass8()
     {
         add_rule(n, getRuleFromDependency(n));
     };
-    add_rule2("asm");
+    if (!(ct == CompilerType::MSVC &&
+        getBuildSettings().TargetOS.Arch != ArchType::x86 &&
+        getBuildSettings().TargetOS.Arch != ArchType::x86_64
+        ))
+        add_rule2("asm");
     add_rule2("c");
     add_rule2("cpp");
 

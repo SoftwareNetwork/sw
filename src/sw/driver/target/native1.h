@@ -76,6 +76,7 @@ struct SW_DRIVER_CPP_API NativeTarget
     virtual void setupCommandForRun(builder::Command &c) const { setupCommand(c); } // for Launch?
 
     // rules
+    void addRuleDependencyRaw(const String &rulename, const DependencyPtr &from_dep, const String &from_name);
     void addRuleDependency(const String &rulename, const DependencyPtr &from_dep, const String &from_name);
     void addRuleDependency(const String &rulename, const DependencyPtr &from_dep);
     void addRuleDependency(const String &rulename, const UnresolvedPackage &from_dep);
