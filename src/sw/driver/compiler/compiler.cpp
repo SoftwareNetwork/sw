@@ -31,6 +31,11 @@ static void add_args(driver::Command &c, const Strings &args)
         c.arguments.push_back(a);
 }
 
+CompilerBaseProgram::CompilerBaseProgram()
+{
+    cmd = std::make_shared<driver::Command>();
+}
+
 CompilerBaseProgram::CompilerBaseProgram(const CompilerBaseProgram &rhs)
     : Program(rhs)
 {
@@ -38,14 +43,14 @@ CompilerBaseProgram::CompilerBaseProgram(const CompilerBaseProgram &rhs)
     Extension = rhs.Extension;
     if (rhs.cmd)
         cmd = rhs.cmd->clone();
+    else
+        cmd = std::make_shared<driver::Command>();
 }
 
 std::shared_ptr<builder::Command> CompilerBaseProgram::getCommand() const
 {
-    if (!cmd)
-        throw SW_RUNTIME_ERROR("Command is not created");
-    if (!prepared)
-        throw SW_RUNTIME_ERROR("Command is not prepared");
+    //if (!prepared)
+        //throw SW_RUNTIME_ERROR("Command is not prepared");
     return cmd;
 }
 
@@ -66,7 +71,7 @@ std::shared_ptr<builder::Command> CompilerBaseProgram::prepareCommand(const Targ
 {
     if (prepared)
         return cmd;
-    cmd = std::make_shared<driver::Command>(t.getMainBuild());
+    cmd->setContext(t.getMainBuild());
     cmd->setProgram(file);
     prepareCommand1(t);
     prepared = true;

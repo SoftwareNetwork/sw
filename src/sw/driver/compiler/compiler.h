@@ -88,7 +88,7 @@ struct SW_DRIVER_CPP_API CompilerBaseProgram : Program
     String Prefix;
     String Extension;
 
-    using Program::Program;
+    CompilerBaseProgram();
     CompilerBaseProgram(const CompilerBaseProgram &);
 
     std::shared_ptr<builder::Command> prepareCommand(const Target &t);
