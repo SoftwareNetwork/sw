@@ -392,11 +392,6 @@ static auto get_linker_type(const String &p)
     return t;
 }
 
-std::unique_ptr<NativeCompiler> NativeCompiledTarget::activateCompiler(const TargetSetting &s, const StringSet &exts)
-{
-    SW_UNIMPLEMENTED;
-}
-
 std::unique_ptr<NativeCompiler> NativeCompiledTarget::activateCompiler(const TargetSetting &s, const UnresolvedPackage &id, const StringSet &exts, bool extended_desc)
 {
     SW_UNIMPLEMENTED;
@@ -940,16 +935,6 @@ bool NativeCompiledTarget::hasSourceFiles() const
     });
     check(getMergeObject());
     return r;
-}
-
-FilesOrdered NativeCompiledTarget::gatherLinkDirectories() const
-{
-    SW_UNIMPLEMENTED;
-}
-
-LinkLibrariesType NativeCompiledTarget::gatherLinkLibraries() const
-{
-    SW_UNIMPLEMENTED;
 }
 
 void NativeCompiledTarget::createPrecompiledHeader()

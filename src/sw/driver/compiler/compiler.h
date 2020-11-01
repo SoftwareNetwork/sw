@@ -6,20 +6,16 @@
 #include "base.h"
 #include "../options_cl_vs.h"
 
+#define SW_COMMON_COMPILER_API                          \
+    SW_DECLARE_PROGRAM_CLONE;                           \
+    void prepareCommand1(const ::sw::Target &t) override
+
 namespace sw
 {
 
-struct SW_DRIVER_CPP_API VisualStudio
-{
-    //VisualStudioVersion vs_version = VisualStudioVersion::Unspecified;
-    String toolset;
-
-    virtual ~VisualStudio() = default;
-};
-
-struct SW_DRIVER_CPP_API VisualStudioCompiler : VisualStudio,
-    NativeCompiler,
-    CommandLineOptions<VisualStudioCompilerOptions>
+struct SW_DRIVER_CPP_API VisualStudioCompiler
+    : NativeCompiler
+    , CommandLineOptions<VisualStudioCompilerOptions>
 {
     using NativeCompiler::NativeCompiler;
     virtual ~VisualStudioCompiler() = default;
@@ -29,15 +25,12 @@ struct SW_DRIVER_CPP_API VisualStudioCompiler : VisualStudio,
     SW_COMMON_COMPILER_API;
 
     void setOutputFile(const path &output_file);
-    //path getOutputFile() const override;
     void setSourceFile(const path &input_file, const path &output_file) override;
-
-protected:
-    //std::shared_ptr<driver::Command> createCommand1(const SwBuilderContext &swctx) const override;
 };
 
-struct SW_DRIVER_CPP_API VisualStudioASMCompiler : VisualStudio, NativeCompiler,
-    CommandLineOptions<VisualStudioAssemblerOptions>
+struct SW_DRIVER_CPP_API VisualStudioASMCompiler
+    : NativeCompiler
+    , CommandLineOptions<VisualStudioAssemblerOptions>
 {
     using NativeCompiler::NativeCompiler;
     virtual ~VisualStudioASMCompiler() = default;
@@ -46,20 +39,13 @@ struct SW_DRIVER_CPP_API VisualStudioASMCompiler : VisualStudio, NativeCompiler,
 
     SW_COMMON_COMPILER_API;
 
-    //path getOutputFile() const override;
     void setSourceFile(const path &input_file, const path &output_file) override;
     void setOutputFile(const path &output_file);
-
-protected:
-    //std::shared_ptr<driver::Command> createCommand1(const SwBuilderContext &swctx) const override;
 };
 
-struct SW_DRIVER_CPP_API Clang
-{
-};
-
-struct SW_DRIVER_CPP_API ClangCompiler : Clang, NativeCompiler,
-    CommandLineOptions<ClangOptions>
+struct SW_DRIVER_CPP_API ClangCompiler
+    : NativeCompiler
+    , CommandLineOptions<ClangOptions>
 {
     bool appleclang = false;
 
@@ -70,21 +56,12 @@ struct SW_DRIVER_CPP_API ClangCompiler : Clang, NativeCompiler,
 
     void setOutputFile(const path &output_file);
     void setSourceFile(const path &input_file, const path &output_file) override;
-    //path getOutputFile() const override;
-
-protected:
-    //std::shared_ptr<driver::Command> createCommand1(const SwBuilderContext &swctx) const override;
 };
 
-struct SW_DRIVER_CPP_API ClangCl : Clang
-{
-    //Version vs_target_version;
-};
-
-struct SW_DRIVER_CPP_API ClangClCompiler : ClangCl,
-    NativeCompiler,
-    CommandLineOptions<VisualStudioCompilerOptions>,
-    CommandLineOptions<ClangClOptions>
+struct SW_DRIVER_CPP_API ClangClCompiler
+    : NativeCompiler
+    , CommandLineOptions<VisualStudioCompilerOptions>
+    , CommandLineOptions<ClangClOptions>
 {
     using NativeCompiler::NativeCompiler;
     using NativeCompilerOptions::operator=;
@@ -93,18 +70,11 @@ struct SW_DRIVER_CPP_API ClangClCompiler : ClangCl,
 
     void setOutputFile(const path &output_file);
     void setSourceFile(const path &input_file, const path &output_file) override;
-    //path getOutputFile() const override;
-
-protected:
-    //std::shared_ptr<driver::Command> createCommand1(const SwBuilderContext &swctx) const override;
 };
 
-struct SW_DRIVER_CPP_API GNU
-{
-};
-
-struct SW_DRIVER_CPP_API GNUASMCompiler : GNU, NativeCompiler,
-    CommandLineOptions<GNUAssemblerOptions>
+struct SW_DRIVER_CPP_API GNUASMCompiler
+    : NativeCompiler
+    , CommandLineOptions<GNUAssemblerOptions>
 {
     using NativeCompiler::NativeCompiler;
     virtual ~GNUASMCompiler() = default;
@@ -115,10 +85,6 @@ struct SW_DRIVER_CPP_API GNUASMCompiler : GNU, NativeCompiler,
 
     void setSourceFile(const path &input_file, const path &output_file) override;
     void setOutputFile(const path &output_file);
-    //path getOutputFile() const override;
-
-protected:
-    //std::shared_ptr<driver::Command> createCommand1(const SwBuilderContext &swctx) const override;
 };
 
 struct SW_DRIVER_CPP_API ClangASMCompiler : GNUASMCompiler
@@ -127,8 +93,9 @@ struct SW_DRIVER_CPP_API ClangASMCompiler : GNUASMCompiler
     SW_DECLARE_PROGRAM_CLONE;
 };
 
-struct SW_DRIVER_CPP_API GNUCompiler : GNU, NativeCompiler,
-    CommandLineOptions<GNUOptions>
+struct SW_DRIVER_CPP_API GNUCompiler
+    : NativeCompiler
+    , CommandLineOptions<GNUOptions>
 {
     using NativeCompiler::NativeCompiler;
     using NativeCompilerOptions::operator=;
@@ -137,17 +104,13 @@ struct SW_DRIVER_CPP_API GNUCompiler : GNU, NativeCompiler,
 
     void setOutputFile(const path &output_file);
     void setSourceFile(const path &input_file, const path &output_file) override;
-    //path getOutputFile() const override;
-
-protected:
-    //std::shared_ptr<driver::Command> createCommand1(const SwBuilderContext &swctx) const override;
 };
 
 // linkers
 
-struct SW_DRIVER_CPP_API VisualStudioLibraryTool : VisualStudio,
-    NativeLinker,
-    CommandLineOptions<VisualStudioLibraryToolOptions>
+struct SW_DRIVER_CPP_API VisualStudioLibraryTool
+    : NativeLinker
+    , CommandLineOptions<VisualStudioLibraryToolOptions>
 {
     VisualStudioLibraryTool()
     {
@@ -175,7 +138,6 @@ struct SW_DRIVER_CPP_API VisualStudioLinker : VisualStudioLibraryTool,
 
     SW_DECLARE_PROGRAM_CLONE;
     void getAdditionalOptions(driver::Command *c) const override;
-    //void setInputLibraryDependencies(const LinkLibrariesType &files) override;
 
 protected:
     void prepareCommand1(const Target &t) override;
@@ -191,9 +153,9 @@ struct SW_DRIVER_CPP_API VisualStudioLibrarian : VisualStudioLibraryTool,
     void getAdditionalOptions(driver::Command *c) const override;
 };
 
-struct SW_DRIVER_CPP_API GNULibraryTool : GNU,
-    NativeLinker,
-    CommandLineOptions<GNULibraryToolOptions>
+struct SW_DRIVER_CPP_API GNULibraryTool
+    : NativeLinker
+    , CommandLineOptions<GNULibraryToolOptions>
 {
     GNULibraryTool()
     {
@@ -216,11 +178,9 @@ struct SW_DRIVER_CPP_API GNULinker : GNULibraryTool,
 
     void getAdditionalOptions(driver::Command *c) const override;
 
-    //void setInputLibraryDependencies(const LinkLibrariesType &files) override;
     void setObjectFiles(const FilesOrdered &files) override;
     void setOutputFile(const path &out) override;
     void setImportLibrary(const path &out) override;
-    //void setLinkLibraries(const LinkLibrariesType &in) override;
 
     path getOutputFile() const override;
     path getImportLibrary() const override;

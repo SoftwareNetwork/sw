@@ -49,23 +49,8 @@ CompilerBaseProgram::CompilerBaseProgram(const CompilerBaseProgram &rhs)
 
 std::shared_ptr<builder::Command> CompilerBaseProgram::getCommand() const
 {
-    //if (!prepared)
-        //throw SW_RUNTIME_ERROR("Command is not prepared");
     return cmd;
 }
-
-/*std::shared_ptr<builder::Command> CompilerBaseProgram::createCommand(const SwBuilderContext &swctx)
-{
-    if (cmd)
-        return cmd;
-    return cmd = createCommand1(swctx);
-}*/
-
-/*std::shared_ptr<builder::Command> CompilerBaseProgram::getCommand(const Target &t)
-{
-    prepareCommand(t);
-    return getCommand();
-}*/
 
 std::shared_ptr<builder::Command> CompilerBaseProgram::prepareCommand(const Target &t)
 {
@@ -77,8 +62,6 @@ std::shared_ptr<builder::Command> CompilerBaseProgram::prepareCommand(const Targ
     prepared = true;
     return cmd;
 }
-
-//SW_CREATE_COMPILER_COMMAND(CompilerBaseProgram, driver::Command)
 
 static Strings getCStdOption(CLanguageStandard std, bool gnuext)
 {
@@ -144,26 +127,10 @@ static Strings getCppStdOption(CPPLanguageStandard std, bool gnuext, bool clang,
     return { s };
 }
 
-/*String NativeCompiler::getObjectExtension(const OS &o) const
-{
-    return o.getObjectFileExtension();
-}*/
-
-/*template <class C>
-static path getOutputFile(const Target &t, const C &c, const path &input)
-{
-    auto o = t.BinaryDir.parent_path() / "obj" /
-        (SourceFile::getObjectFilename(t, input) += c.getObjectExtension(t.getBuildSettings().TargetOS));
-    o = fs::absolute(o);
-    return o;
-}*/
-
 void NativeCompiler::merge(const NativeCompiledTarget &t)
 {
     NativeCompilerOptions::merge(t.getMergeObject());
 }
-
-//SW_CREATE_COMPILER_COMMAND(VisualStudioCompiler, driver::Command)
 
 void VisualStudioCompiler::prepareCommand1(const Target &t)
 {
@@ -239,13 +206,6 @@ void VisualStudioCompiler::setSourceFile(const path &input_file, const path &out
     VisualStudioCompiler::setOutputFile(output_file);
 }
 
-/*path VisualStudioCompiler::getOutputFile() const
-{
-    return Output();
-}*/
-
-//SW_CREATE_COMPILER_COMMAND(VisualStudioASMCompiler, driver::Command)
-
 void VisualStudioASMCompiler::prepareCommand1(const Target &t)
 {
     if (file.filename() == "ml64.exe")
@@ -282,18 +242,11 @@ void VisualStudioASMCompiler::setOutputFile(const path &output_file)
     Output = output_file;
 }
 
-/*path VisualStudioASMCompiler::getOutputFile() const
-{
-    return Output();
-}*/
-
 void VisualStudioASMCompiler::setSourceFile(const path &input_file, const path &output_file)
 {
     InputFile = input_file;
     setOutputFile(output_file);
 }
-
-//SW_CREATE_COMPILER_COMMAND(ClangCompiler, driver::Command)
 
 void ClangCompiler::prepareCommand1(const ::sw::Target &t)
 {
@@ -347,11 +300,6 @@ void ClangCompiler::setOutputFile(const path &output_file)
     OutputFile = output_file;
 }
 
-/*path ClangCompiler::getOutputFile() const
-{
-    return OutputFile();
-}*/
-
 SW_DEFINE_PROGRAM_CLONE(ClangCompiler)
 
 void ClangCompiler::setSourceFile(const path &input_file, const path &output_file)
@@ -359,8 +307,6 @@ void ClangCompiler::setSourceFile(const path &input_file, const path &output_fil
     InputFile = input_file;
     setOutputFile(output_file);
 }
-
-//SW_CREATE_COMPILER_COMMAND(ClangClCompiler, driver::Command)
 
 void ClangClCompiler::prepareCommand1(const Target &t)
 {
@@ -429,11 +375,6 @@ void ClangClCompiler::setOutputFile(const path &output_file)
     Output = output_file;
 }
 
-/*path ClangClCompiler::getOutputFile() const
-{
-    return Output();
-}*/
-
 SW_DEFINE_PROGRAM_CLONE(ClangClCompiler)
 
 void ClangClCompiler::setSourceFile(const path &input_file, const path &output_file)
@@ -441,8 +382,6 @@ void ClangClCompiler::setSourceFile(const path &input_file, const path &output_f
     InputFile = input_file;
     setOutputFile(output_file);
 }
-
-//SW_CREATE_COMPILER_COMMAND(GNUASMCompiler, driver::Command)
 
 static String getRandomSeed(const path &p, const path &sw_storage_dir)
 {
@@ -498,11 +437,6 @@ void GNUASMCompiler::setOutputFile(const path &output_file)
     OutputFile = output_file;
 }
 
-/*path GNUASMCompiler::getOutputFile() const
-{
-    return OutputFile();
-}*/
-
 void GNUASMCompiler::setSourceFile(const path &input_file, const path &output_file)
 {
     InputFile = input_file;
@@ -510,8 +444,6 @@ void GNUASMCompiler::setSourceFile(const path &input_file, const path &output_fi
 }
 
 SW_DEFINE_PROGRAM_CLONE(ClangASMCompiler)
-
-//SW_CREATE_COMPILER_COMMAND(GNUCompiler, driver::Command)
 
 void GNUCompiler::prepareCommand1(const Target &t)
 {
@@ -563,11 +495,6 @@ void GNUCompiler::setOutputFile(const path &output_file)
 {
     OutputFile = output_file;
 }
-
-/*path GNUCompiler::getOutputFile() const
-{
-    return OutputFile();
-}*/
 
 SW_DEFINE_PROGRAM_CLONE(GNUCompiler)
 
@@ -663,11 +590,6 @@ void VisualStudioLinker::getAdditionalOptions(driver::Command *cmd) const
     getCommandLineOptions<VisualStudioLinkerOptions>(cmd, *this);
 }
 
-/*void VisualStudioLinker::setInputLibraryDependencies(const LinkLibrariesType &files)
-{
-    InputLibraryDependencies().insert(files.begin(), files.end());
-}*/
-
 void VisualStudioLinker::prepareCommand1(const Target &t)
 {
     if (auto nt = t.as<NativeCompiledTarget *>())
@@ -758,12 +680,6 @@ void GNULinker::setImportLibrary(const path &out)
     //ImportLibrary = out.u8string();// + ".lib";
 }
 
-/*void GNULinker::setLinkLibraries(const LinkLibrariesType &in)
-{
-    for (auto &lib : in)
-        NativeLinker::LinkLibraries.push_back(lib);
-}*/
-
 /*void GNULinker::setInputLibraryDependencies(const LinkLibrariesType &files)
 {
     if (files.empty())
@@ -784,10 +700,6 @@ path GNULinker::getOutputFile() const
 
 path GNULinker::getImportLibrary() const
 {
-    //if (ImportLibrary)
-        //return ImportLibrary();
-    //path p = Output;
-    //return p.parent_path() / (p.filename().stem() += ".a");
     return Output;
 }
 
@@ -926,8 +838,6 @@ path GNULibrarian::getOutputFile() const
 
 path GNULibrarian::getImportLibrary() const
 {
-    //if (ImportLibrary)
-        //return ImportLibrary();
     path p = Output;
     return p.parent_path() / (p.filename().stem() += ".a");
 }

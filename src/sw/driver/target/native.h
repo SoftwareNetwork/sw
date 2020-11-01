@@ -193,8 +193,6 @@ protected:
 private:
     Commands getGeneratedCommands() const;
     FilesOrdered gatherRpathLinkDirectories() const;
-    FilesOrdered gatherLinkDirectories() const;
-    LinkLibrariesType gatherLinkLibraries() const;
     void processCircular(Files &objs);
     path getPatchDir(bool binary_dir) const;
     void addFileSilently(const path &);
@@ -211,7 +209,6 @@ private:
     //std::unique_ptr<NativeLinker> prog_lib;
     bool libstdcppset = false;
     void findCompiler();
-    std::unique_ptr<NativeCompiler> activateCompiler(const TargetSetting &s, const StringSet &exts);
     std::unique_ptr<NativeCompiler> activateCompiler(const TargetSetting &s, const UnresolvedPackage &id, const StringSet &exts, bool extended_desc);
     std::unique_ptr<NativeLinker> activateLibrarian(LinkerType);
     std::unique_ptr<NativeLinker> activateLinker(LinkerType);
