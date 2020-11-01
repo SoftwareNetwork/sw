@@ -310,7 +310,8 @@ struct SW_DRIVER_CPP_API NativeLinkerOptions : NativeLinkerOptionsData
 
     void merge(const NativeLinkerOptions &o, const GroupSettings &s = GroupSettings());
     void addEverything(builder::Command &c) const;
-    LinkLibrariesType gatherLinkLibraries() const;
+    //LinkLibrariesType gatherLinkLibraries() const;
+    FilesOrdered gatherLinkDirectories() const;
 
     //
     void add(const Target &t);

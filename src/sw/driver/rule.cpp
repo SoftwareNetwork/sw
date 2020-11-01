@@ -83,14 +83,9 @@ static path getObjectFilename(const Target &t, const path &p)
 static path getOutputFile(const Target &t, const path &input)
 {
     auto o = t.BinaryDir.parent_path() / "obj" / getObjectFilename(t, input);
+    o += t.getBuildSettings().TargetOS.getObjectFileExtension();
     o = fs::absolute(o);
     return o;
-}
-
-template <class C>
-static path getOutputFile(const Target &t, const C &c, const path &input)
-{
-    return getOutputFile(t, input) += c.getObjectExtension(t.getBuildSettings().TargetOS);
 }
 
 void NativeCompilerRule::setup(const Target &t)
@@ -357,7 +352,7 @@ Files NativeCompilerRule::addInputs(const Target &t, const RuleFiles &rfs)
             continue;
         if (used_files.contains(rf))
             continue;
-        auto output = getOutputFile(t, cl, rf.getFile());
+        const auto output = getOutputFile(t, rf.getFile());
         outputs.insert(output);
 
         auto c = cl.clone();
@@ -440,25 +435,26 @@ Files NativeCompilerRule::addInputs(const Target &t, const RuleFiles &rfs)
             // base command: .pp -> .obj
             auto vs_setup = [&rf](NativeCompiler &base_command, auto &pp_command)
             {
-                auto c = rf.getFile().extension() == ".c";
+                SW_UNIMPLEMENTED;
+                /*auto c = rf.getFile().extension() == ".c";
 
                 pp_command.PreprocessToFile = true;
                 pp_command.PreprocessFileName = base_command.getOutputFile() += (c ? ".i" : ".ii");
                 pp_command.Output.clear();
-                base_command.setSourceFile(pp_command.PreprocessFileName(), base_command.getOutputFile());
+                base_command.setSourceFile(pp_command.PreprocessFileName(), base_command.getOutputFile());*/
             };
             auto gnu_setup = [](NativeCompiler &base_command, auto &pp_command)
             {
                 SW_UNIMPLEMENTED;
                 // set pp
-                pp_command.CompileWithoutLinking = false;
+                /*pp_command.CompileWithoutLinking = false;
                 pp_command.Preprocess = true;
                 auto o = pp_command.getOutputFile();
                 o = o.parent_path() / o.stem() += ".i";
                 pp_command.setOutputFile(o);
 
                 // set input file for old command
-                base_command.setSourceFile(pp_command.getOutputFile(), base_command.getOutputFile());
+                base_command.setSourceFile(pp_command.getOutputFile(), base_command.getOutputFile());*/
             };
 
             //
@@ -668,7 +664,7 @@ Files NativeLinkerRule::addInputs(const Target &t, const RuleFiles &rfs)
                 VSL->DllName = nt->getOutputFile().filename();
 
                 // add llibs and ldirs
-                for (auto &l : VSL->gatherLinkLibraries(true))
+                for (auto &l : VSL->System.LinkLibraries)
                     files.push_back(l.l);
                 VSL->VisualStudioLibraryToolOptions::LinkDirectories = VSL->gatherLinkDirectories();
             }

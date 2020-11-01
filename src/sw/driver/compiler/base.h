@@ -77,9 +77,9 @@ struct SW_DRIVER_CPP_API NativeCompiler
     using Compiler::Compiler;
     virtual ~NativeCompiler() = default;
 
-    virtual path getOutputFile() const = 0;
+    //virtual path getOutputFile() const = 0;
     virtual void setSourceFile(const path &input_file, const path &output_file) = 0;
-    String getObjectExtension(const struct OS &) const;
+    //String getObjectExtension(const struct OS &) const;
 
     void merge(const NativeCompiledTarget &t);
 
@@ -106,17 +106,14 @@ struct SW_DRIVER_CPP_API NativeLinker : Linker,
     using Linker::Linker;
 
     virtual void setObjectFiles(const FilesOrdered &files) = 0; // actually this is addObjectFiles()
-    virtual void setInputLibraryDependencies(const LinkLibrariesType &files) {}
-    virtual void setLinkLibraries(const LinkLibrariesType &in) {}
+    //virtual void setInputLibraryDependencies(const LinkLibrariesType &files) {}
+    //virtual void setLinkLibraries(const LinkLibrariesType &in) {}
 
     virtual path getOutputFile() const = 0;
     virtual void setOutputFile(const path &out) = 0;
 
     virtual path getImportLibrary() const = 0;
     virtual void setImportLibrary(const path &out) = 0;
-
-    FilesOrdered gatherLinkDirectories() const;
-    LinkLibrariesType gatherLinkLibraries(bool system = false) const;
 };
 
 }

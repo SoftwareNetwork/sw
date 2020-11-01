@@ -144,19 +144,19 @@ static Strings getCppStdOption(CPPLanguageStandard std, bool gnuext, bool clang,
     return { s };
 }
 
-String NativeCompiler::getObjectExtension(const OS &o) const
+/*String NativeCompiler::getObjectExtension(const OS &o) const
 {
     return o.getObjectFileExtension();
-}
+}*/
 
-template <class C>
+/*template <class C>
 static path getOutputFile(const Target &t, const C &c, const path &input)
 {
     auto o = t.BinaryDir.parent_path() / "obj" /
         (SourceFile::getObjectFilename(t, input) += c.getObjectExtension(t.getBuildSettings().TargetOS));
     o = fs::absolute(o);
     return o;
-}
+}*/
 
 void NativeCompiler::merge(const NativeCompiledTarget &t)
 {
@@ -239,10 +239,10 @@ void VisualStudioCompiler::setSourceFile(const path &input_file, const path &out
     VisualStudioCompiler::setOutputFile(output_file);
 }
 
-path VisualStudioCompiler::getOutputFile() const
+/*path VisualStudioCompiler::getOutputFile() const
 {
     return Output();
-}
+}*/
 
 //SW_CREATE_COMPILER_COMMAND(VisualStudioASMCompiler, driver::Command)
 
@@ -282,10 +282,10 @@ void VisualStudioASMCompiler::setOutputFile(const path &output_file)
     Output = output_file;
 }
 
-path VisualStudioASMCompiler::getOutputFile() const
+/*path VisualStudioASMCompiler::getOutputFile() const
 {
     return Output();
-}
+}*/
 
 void VisualStudioASMCompiler::setSourceFile(const path &input_file, const path &output_file)
 {
@@ -347,10 +347,10 @@ void ClangCompiler::setOutputFile(const path &output_file)
     OutputFile = output_file;
 }
 
-path ClangCompiler::getOutputFile() const
+/*path ClangCompiler::getOutputFile() const
 {
     return OutputFile();
-}
+}*/
 
 SW_DEFINE_PROGRAM_CLONE(ClangCompiler)
 
@@ -429,10 +429,10 @@ void ClangClCompiler::setOutputFile(const path &output_file)
     Output = output_file;
 }
 
-path ClangClCompiler::getOutputFile() const
+/*path ClangClCompiler::getOutputFile() const
 {
     return Output();
-}
+}*/
 
 SW_DEFINE_PROGRAM_CLONE(ClangClCompiler)
 
@@ -498,10 +498,10 @@ void GNUASMCompiler::setOutputFile(const path &output_file)
     OutputFile = output_file;
 }
 
-path GNUASMCompiler::getOutputFile() const
+/*path GNUASMCompiler::getOutputFile() const
 {
     return OutputFile();
-}
+}*/
 
 void GNUASMCompiler::setSourceFile(const path &input_file, const path &output_file)
 {
@@ -564,10 +564,10 @@ void GNUCompiler::setOutputFile(const path &output_file)
     OutputFile = output_file;
 }
 
-path GNUCompiler::getOutputFile() const
+/*path GNUCompiler::getOutputFile() const
 {
     return OutputFile();
-}
+}*/
 
 SW_DEFINE_PROGRAM_CLONE(GNUCompiler)
 
@@ -578,40 +578,6 @@ void GNUCompiler::setSourceFile(const path &input_file, const path &output_file)
     if (input_file.extension() == ".c")
         VisibilityInlinesHidden = false;
     setOutputFile(output_file);
-}
-
-FilesOrdered NativeLinker::gatherLinkDirectories() const
-{
-    FilesOrdered dirs;
-
-    auto get_ldir = [&dirs](const auto &a)
-    {
-        for (auto &d : a)
-            dirs.push_back(d);
-    };
-
-    get_ldir(NativeLinkerOptions::gatherLinkDirectories());
-    get_ldir(NativeLinkerOptions::System.gatherLinkDirectories());
-
-    return dirs;
-}
-
-LinkLibrariesType NativeLinker::gatherLinkLibraries(bool system) const
-{
-    LinkLibrariesType dirs;
-
-    auto get_ldir = [&dirs](const auto &a)
-    {
-        for (auto &d : a)
-            dirs.push_back(d);
-    };
-
-    if (system)
-        get_ldir(NativeLinkerOptions::System.gatherLinkLibraries());
-    else
-        get_ldir(NativeLinkerOptions::gatherLinkLibraries());
-
-    return dirs;
 }
 
 void VisualStudioLibraryTool::setObjectFiles(const FilesOrdered &files)
@@ -697,10 +663,10 @@ void VisualStudioLinker::getAdditionalOptions(driver::Command *cmd) const
     getCommandLineOptions<VisualStudioLinkerOptions>(cmd, *this);
 }
 
-void VisualStudioLinker::setInputLibraryDependencies(const LinkLibrariesType &files)
+/*void VisualStudioLinker::setInputLibraryDependencies(const LinkLibrariesType &files)
 {
     InputLibraryDependencies().insert(files.begin(), files.end());
-}
+}*/
 
 void VisualStudioLinker::prepareCommand1(const Target &t)
 {
@@ -730,7 +696,7 @@ void VisualStudioLinker::prepareCommand1(const Target &t)
         //return nullptr;
 
     ((VisualStudioLinker *)this)->VisualStudioLinkerOptions::SystemLinkLibraries.value().clear();
-    for (auto &l : gatherLinkLibraries(true))
+    for (auto &l : System.LinkLibraries)
         ((VisualStudioLinker *)this)->VisualStudioLinkerOptions::SystemLinkLibraries().push_back(l.l);
 
     ((VisualStudioLinker*)this)->VisualStudioLibraryToolOptions::LinkDirectories() = gatherLinkDirectories();
@@ -792,13 +758,13 @@ void GNULinker::setImportLibrary(const path &out)
     //ImportLibrary = out.u8string();// + ".lib";
 }
 
-void GNULinker::setLinkLibraries(const LinkLibrariesType &in)
+/*void GNULinker::setLinkLibraries(const LinkLibrariesType &in)
 {
     for (auto &lib : in)
         NativeLinker::LinkLibraries.push_back(lib);
-}
+}*/
 
-void GNULinker::setInputLibraryDependencies(const LinkLibrariesType &files)
+/*void GNULinker::setInputLibraryDependencies(const LinkLibrariesType &files)
 {
     if (files.empty())
 		return;
@@ -809,7 +775,7 @@ void GNULinker::setInputLibraryDependencies(const LinkLibrariesType &files)
     InputLibraryDependencies().insert(files.begin(), files.end());
     if (use_start_end_groups)
         EndGroup = true;
-}
+}*/
 
 path GNULinker::getOutputFile() const
 {
@@ -846,7 +812,7 @@ void GNULinker::prepareCommand1(const Target &t)
 
     ((GNULinker*)this)->GNULinkerOptions::LinkDirectories = gatherLinkDirectories();
     ((GNULinker*)this)->GNULinkerOptions::LinkLibraries = gatherLinkLibraries();
-    ((GNULinker*)this)->GNULinkerOptions::SystemLinkLibraries = gatherLinkLibraries(true);
+    ((GNULinker*)this)->GNULinkerOptions::SystemLinkLibraries = System.LinkLibraries;
 
     //if (t.getSolution().getHostOs().is(OSType::Windows))
     {

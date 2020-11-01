@@ -469,14 +469,36 @@ void NativeLinkerOptions::addEverything(builder::Command &c) const
     print_idir(LinkOptions, "");
 }
 
-LinkLibrariesType NativeLinkerOptions::gatherLinkLibraries() const
+/*LinkLibrariesType NativeLinkerOptions::gatherLinkLibraries() const
 {
-    LinkLibrariesType llib;
-    auto i = NativeLinkerOptionsData::gatherLinkLibraries();
-    llib.insert(i.begin(), i.end());
-    //i = System.gatherLinkLibraries();
-    //llib.insert(llib.end(), i.begin(), i.end());
-    return llib;
+    LinkLibrariesType dirs;
+
+    auto get_ldir = [&dirs](const auto &a)
+    {
+        for (auto &d : a)
+            dirs.push_back(d);
+    };
+
+    get_ldir(System.gatherLinkLibraries());
+    get_ldir(gatherLinkLibraries());
+
+    return dirs;
+}*/
+
+FilesOrdered NativeLinkerOptions::gatherLinkDirectories() const
+{
+    FilesOrdered dirs;
+
+    auto get_ldir = [&dirs](const auto &a)
+    {
+        for (auto &d : a)
+            dirs.push_back(d);
+    };
+
+    get_ldir(NativeLinkerOptionsData::gatherLinkDirectories());
+    get_ldir(System.gatherLinkDirectories());
+
+    return dirs;
 }
 
 DependencyPtr NativeLinkerOptions::operator+(const ITarget &t)

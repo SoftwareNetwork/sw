@@ -29,7 +29,7 @@ struct SW_DRIVER_CPP_API VisualStudioCompiler : VisualStudio,
     SW_COMMON_COMPILER_API;
 
     void setOutputFile(const path &output_file);
-    path getOutputFile() const override;
+    //path getOutputFile() const override;
     void setSourceFile(const path &input_file, const path &output_file) override;
 
 protected:
@@ -46,7 +46,7 @@ struct SW_DRIVER_CPP_API VisualStudioASMCompiler : VisualStudio, NativeCompiler,
 
     SW_COMMON_COMPILER_API;
 
-    path getOutputFile() const override;
+    //path getOutputFile() const override;
     void setSourceFile(const path &input_file, const path &output_file) override;
     void setOutputFile(const path &output_file);
 
@@ -70,7 +70,7 @@ struct SW_DRIVER_CPP_API ClangCompiler : Clang, NativeCompiler,
 
     void setOutputFile(const path &output_file);
     void setSourceFile(const path &input_file, const path &output_file) override;
-    path getOutputFile() const override;
+    //path getOutputFile() const override;
 
 protected:
     //std::shared_ptr<driver::Command> createCommand1(const SwBuilderContext &swctx) const override;
@@ -93,7 +93,7 @@ struct SW_DRIVER_CPP_API ClangClCompiler : ClangCl,
 
     void setOutputFile(const path &output_file);
     void setSourceFile(const path &input_file, const path &output_file) override;
-    path getOutputFile() const override;
+    //path getOutputFile() const override;
 
 protected:
     //std::shared_ptr<driver::Command> createCommand1(const SwBuilderContext &swctx) const override;
@@ -115,7 +115,7 @@ struct SW_DRIVER_CPP_API GNUASMCompiler : GNU, NativeCompiler,
 
     void setSourceFile(const path &input_file, const path &output_file) override;
     void setOutputFile(const path &output_file);
-    path getOutputFile() const override;
+    //path getOutputFile() const override;
 
 protected:
     //std::shared_ptr<driver::Command> createCommand1(const SwBuilderContext &swctx) const override;
@@ -137,7 +137,7 @@ struct SW_DRIVER_CPP_API GNUCompiler : GNU, NativeCompiler,
 
     void setOutputFile(const path &output_file);
     void setSourceFile(const path &input_file, const path &output_file) override;
-    path getOutputFile() const override;
+    //path getOutputFile() const override;
 
 protected:
     //std::shared_ptr<driver::Command> createCommand1(const SwBuilderContext &swctx) const override;
@@ -175,7 +175,7 @@ struct SW_DRIVER_CPP_API VisualStudioLinker : VisualStudioLibraryTool,
 
     SW_DECLARE_PROGRAM_CLONE;
     void getAdditionalOptions(driver::Command *c) const override;
-    void setInputLibraryDependencies(const LinkLibrariesType &files) override;
+    //void setInputLibraryDependencies(const LinkLibrariesType &files) override;
 
 protected:
     void prepareCommand1(const Target &t) override;
@@ -216,11 +216,11 @@ struct SW_DRIVER_CPP_API GNULinker : GNULibraryTool,
 
     void getAdditionalOptions(driver::Command *c) const override;
 
-    void setInputLibraryDependencies(const LinkLibrariesType &files) override;
+    //void setInputLibraryDependencies(const LinkLibrariesType &files) override;
     void setObjectFiles(const FilesOrdered &files) override;
     void setOutputFile(const path &out) override;
     void setImportLibrary(const path &out) override;
-    void setLinkLibraries(const LinkLibrariesType &in) override;
+    //void setLinkLibraries(const LinkLibrariesType &in) override;
 
     path getOutputFile() const override;
     path getImportLibrary() const override;
