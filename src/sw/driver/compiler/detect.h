@@ -118,9 +118,9 @@ private:
     DetectablePackageMultiEntryPoints detectWindowsSdk();
     DetectablePackageMultiEntryPoints detectMsvcCommon(const MsvcInstance &);
 
-    void detectWindowsClang(DETECT_ARGS);
+    ProgramDetector::DetectablePackageMultiEntryPoints detectWindowsClang();
     void detectIntelCompilers(DETECT_ARGS);
-    void detectWindowsCompilers(DETECT_ARGS);
+    ProgramDetector::DetectablePackageMultiEntryPoints detectWindowsCompilers();
     void detectNonWindowsCompilers(DETECT_ARGS);
 
 #define DETECT(x) void detect##x##Compilers(DETECT_ARGS);

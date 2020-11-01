@@ -200,11 +200,63 @@ void NativeCompilerRule::setup(const Target &t)
     else if (auto c = prog.as<ClangClCompiler*>())
     {
         vs_setup(c);
+
+        // we do everything ourselves
+        // otherwise we get wrong order on clang includes and msvc includes (intrinsics and such)
+        c->getCommand()->push_back("-nostdinc");
+
+        // clang gives error on reinterpret cast in offsetof macro in win ucrt
+        c->add(Definition("_CRT_USE_BUILTIN_OFFSETOF"));
+
+        switch (nt->getBuildSettings().TargetOS.Arch)
+        {
+        case ArchType::x86_64:
+            c->CommandLineOptions<ClangClOptions>::Arch = clang::ArchType::m64;
+            break;
+        case ArchType::x86:
+            c->CommandLineOptions<ClangClOptions>::Arch = clang::ArchType::m32;
+            break;
+        case ArchType::arm:
+        {
+            c->getCommand()->push_back("--target=arm-pc-windows-msvc");
+            // set using target? check correctness then: improve getTargetTriplet()
+        }
+        break;
+        case ArchType::aarch64:
+        {
+            c->getCommand()->push_back("--target=aarch64-pc-windows-msvc");
+            // set using target? check correctness then: improve getTargetTriplet()
+        }
+        break;
+        default:
+            throw SW_RUNTIME_ERROR("Unknown arch");
+        }
     }
     // clang compiler is not working atm, gnu is created instead
     else if (auto c = prog.as<ClangCompiler*>())
     {
         gnu_setup(c);
+
+        c->Target = nt->getBuildSettings().getTargetTriplet();
+        if (nt->getBuildSettings().TargetOS.is(OSType::Windows))
+        {
+            // this one leaves default clang runtime library include path (from installed dir)
+            c->getCommand()->push_back("-nostdlibinc");
+            // this one cleans all default include dirs
+            //c->push_back("-nostdinc");
+            // clang gives error on reinterpret cast in offsetof macro in win ucrt
+            c->add(Definition("_CRT_USE_BUILTIN_OFFSETOF"));
+        }
+        if (nt->getBuildSettings().TargetOS.isApple())
+        {
+            if (nt->getBuildSettings().TargetOS.Version)
+            {
+                c->getCommand()->push_back("-mmacosx-version-min=" + nt->getBuildSettings().TargetOS.Version->toString());
+            }
+            //C->VisibilityHidden = false;
+            //C->VisibilityInlinesHidden = false;
+            //C->PositionIndependentCode = false;
+        }
     }
     else if (auto c = prog.as<GNUCompiler*>())
     {

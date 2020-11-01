@@ -158,7 +158,7 @@ ProgramDetector::DetectablePackageEntryPoints ProgramDetector::getDetectablePack
             };
         }
     };
-    add_eps(getProgramDetector().detectMsvc());
+    add_eps(getProgramDetector().detectWindowsCompilers());
     return s;
 }
 
@@ -282,7 +282,7 @@ void ProgramDetector::MsvcInstance::process(DETECT_ARGS)
     }
 
     // now get real cl version
-    auto p = std::make_shared<SimpleProgram>();
+    auto p = std::make_unique<SimpleProgram>();
     p->file = compiler / "cl.exe";
     if (!fs::exists(p->file))
         return;
@@ -391,7 +391,7 @@ ProgramDetector::DetectablePackageMultiEntryPoints ProgramDetector::detectMsvcCo
 
         if (m.target_arch == ArchType::x86_64 || m.target_arch == ArchType::x86)
         {
-            auto p = std::make_shared<VisualStudioASMCompiler>();
+            auto p = std::make_unique<VisualStudioASMCompiler>();
             p->file = m.compiler / (m.target_arch == ArchType::x86_64 ? "ml64.exe" : "ml.exe");
             if (!fs::exists(p->file))
                 return;
@@ -406,7 +406,7 @@ ProgramDetector::DetectablePackageMultiEntryPoints ProgramDetector::detectMsvcCo
 
     // dumpbin
     /*{
-        auto p = std::make_shared<SimpleProgram>();
+        auto p = std::make_unique<SimpleProgram>();
         p->file = compiler / "dumpbin.exe";
         if (fs::exists(p->file))
             addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.dumpbin", cl_exe_version), ts, p);
@@ -617,177 +617,194 @@ ProgramDetector::DetectablePackageMultiEntryPoints ProgramDetector::detectMsvc()
     return eps;
 }
 
-void ProgramDetector::detectWindowsClang(DETECT_ARGS)
+ProgramDetector::DetectablePackageMultiEntryPoints ProgramDetector::detectWindowsClang()
 {
-    // create programs
-    const path base_llvm_path = path("c:") / "Program Files" / "LLVM";
-    const path bin_llvm_path = base_llvm_path / "bin";
+    DetectablePackageMultiEntryPoints eps;
 
-    bool colored_output = hasConsoleColorProcessing();
+    static const path base_llvm_path = path("c:") / "Program Files" / "LLVM";
+    static const path bin_llvm_path = base_llvm_path / "bin";
+    static bool colored_output = hasConsoleColorProcessing();
 
-    // clang-cl, move to msvc?
+    // clang-cl
 
     // C, C++
-    /*{
-        auto p = std::make_shared<SimpleProgram>();
+    eps.emplace("org.LLVM.clangcl", [this](DETECT_ARGS)
+    {
+        auto p = std::make_unique<ClangClCompiler>();
         p->file = bin_llvm_path / "clang-cl.exe";
         //C->file = base_llvm_path / "msbuild-bin" / "cl.exe";
         if (!fs::exists(p->file))
         {
-            auto f = resolveExecutable("clang-cl");
-            if (fs::exists(f))
-                p->file = f;
+            static auto f = resolveExecutable("clang-cl");
+            if (!fs::exists(f))
+                return;
+            p->file = f;
         }
-        if (fs::exists(p->file))
+        auto cmd = p->getCommand();
+        cmd->setProgram(p->file);
+        auto msvc_prefix = getMsvcPrefix(*cmd);
+        getMsvcIncludePrefixes()[p->file] = msvc_prefix;
+
+        auto [o, v] = getVersionAndOutput(b.getContext(), p->file);
+
+        // check before adding target
+        static std::regex r("InstalledDir: (.*)\\r?\\n?");
+        std::smatch m;
+        if (!std::regex_search(o, m, r))
         {
-            auto cmd = p->getCommand();
-            auto msvc_prefix = getMsvcPrefix(*cmd);
-            getMsvcIncludePrefixes()[p->file] = msvc_prefix;
-
-            auto [o,v] = getVersionAndOutput(s, p->file);
-
-            // check before adding target
-            static std::regex r("InstalledDir: (.*)\\r?\\n?");
-            std::smatch m;
-            if (std::regex_search(o, m, r))
-            {
-                auto &c = addProgram(DETECT_ARGS_PASS, PackageId("org.LLVM.clangcl", v), {}, p);
-
-                auto c2 = p->getCommand();
-                //c2->push_back("-X"); // prevents include dirs autodetection
-                // we use --nostdinc, so -X is not needed
-                if (colored_output)
-                {
-                    c2->push_back("-Xclang");
-                    c2->push_back("-fcolor-diagnostics");
-                    c2->push_back("-Xclang");
-                    c2->push_back("-fansi-escape-codes");
-                }
-
-                // returns path to /bin dir
-                path dir = m[1].str();
-                dir = dir.parent_path() / "lib/clang" / v.toString() / "include";
-                auto s = to_string(normalize_path(dir));
-                auto arg = std::make_unique<primitives::command::SimplePositionalArgument>("-I" + s);
-                arg->getPosition().push_back(150);
-                c2->push_back(std::move(arg));
-            }
-            else
-            {
-                LOG_ERROR(logger, "Cannot get clang-cl installed dir (InstalledDir): " + o);
-            }
+            LOG_ERROR(logger, "Cannot get clang-cl installed dir (InstalledDir): " + o);
+            return;
         }
-    }
+
+        auto &c = addProgram(DETECT_ARGS_PASS, PackageId("org.LLVM.clangcl", v), {}, *p);
+        auto c2 = p->getCommand();
+        //c2->push_back("-X"); // prevents include dirs autodetection
+        // we use --nostdinc, so -X is not needed
+        if (colored_output)
+        {
+            c2->push_back("-Xclang");
+            c2->push_back("-fcolor-diagnostics");
+            c2->push_back("-Xclang");
+            c2->push_back("-fansi-escape-codes");
+        }
+
+        // returns path to /bin dir
+        path dir = m[1].str();
+        dir = dir.parent_path() / "lib/clang" / v.toString() / "include";
+        auto s = to_string(normalize_path(dir));
+        auto arg = std::make_unique<primitives::command::SimplePositionalArgument>("-I" + s);
+        arg->getPosition().push_back(150);
+        c2->push_back(std::move(arg));
+
+        // rules
+        auto ru = std::make_unique<NativeCompilerRule>(p->clone());
+        ru->lang = NativeCompilerRule::LANG_C;
+        c.setRule("c", std::move(ru));
+        ru = std::make_unique<NativeCompilerRule>(p->clone());
+        ru->lang = NativeCompilerRule::LANG_CPP;
+        c.setRule("cpp", std::move(ru));
+    });
 
     // clang
 
     // link
+    eps.emplace("org.LLVM.lld", [this](DETECT_ARGS)
     {
-        auto p = std::make_shared<SimpleProgram>();
+        auto p = std::make_unique<SimpleProgram>();
         p->file = bin_llvm_path / "lld.exe";
         if (!fs::exists(p->file))
         {
             auto f = resolveExecutable("lld");
-            if (fs::exists(f))
-                p->file = f;
+            if (!fs::exists(f))
+                return;
+            p->file = f;
         }
-        if (fs::exists(p->file))
-        {
-            auto v = getVersion(s, p->file);
-            addProgram(DETECT_ARGS_PASS, PackageId("org.LLVM.lld", v), {}, p);
-        }
-    }
+        auto v = getVersion(b.getContext(), p->file);
+        addProgram(DETECT_ARGS_PASS, PackageId("org.LLVM.lld", v), {}, *p);
+    });
 
     // lld-link
+    eps.emplace("org.LLVM.lld.link", [this](DETECT_ARGS)
     {
-        auto p = std::make_shared<SimpleProgram>();
+        auto p = std::make_unique<SimpleProgram>();
         p->file = bin_llvm_path / "lld-link.exe";
         if (!fs::exists(p->file))
         {
             auto f = resolveExecutable("lld-link");
-            if (fs::exists(f))
-                p->file = f;
+            if (!fs::exists(f))
+                return;
+            p->file = f;
         }
-        if (fs::exists(p->file))
-        {
-            auto v = getVersion(s, p->file);
-            addProgram(DETECT_ARGS_PASS, PackageId("org.LLVM.lld.link", v), {}, p);
 
-            auto c2 = p->getCommand();
-            c2->push_back("-lldignoreenv"); // prevents libs dirs autodetection (from msvc)
-        }
-    }
+        auto v = getVersion(b.getContext(), p->file);
+        addProgram(DETECT_ARGS_PASS, PackageId("org.LLVM.lld.link", v), {}, *p);
+
+        auto c2 = p->getCommand();
+        c2->push_back("-lldignoreenv"); // prevents libs dirs autodetection (from msvc)
+    });
 
     // ar
+    eps.emplace("org.LLVM.ar", [this](DETECT_ARGS)
     {
-        auto p = std::make_shared<SimpleProgram>();
+        auto p = std::make_unique<SimpleProgram>();
         p->file = bin_llvm_path / "llvm-ar.exe";
         if (!fs::exists(p->file))
         {
             auto f = resolveExecutable("llvm-ar");
-            if (fs::exists(f))
-                p->file = f;
+            if (!fs::exists(f))
+                return;
+            p->file = f;
         }
-        if (fs::exists(p->file))
-        {
-            auto v = getVersion(s, p->file);
-            addProgram(DETECT_ARGS_PASS, PackageId("org.LLVM.ar", v), {}, p);
-        }
-    }
+        auto v = getVersion(b.getContext(), p->file);
+        addProgram(DETECT_ARGS_PASS, PackageId("org.LLVM.ar", v), {}, *p);
+    });
 
     // C
+    eps.emplace("org.LLVM.clang", [this](DETECT_ARGS)
     {
-        auto p = std::make_shared<SimpleProgram>();
+        auto p = std::make_unique<ClangCompiler>();
         p->file = bin_llvm_path / "clang.exe";
         if (!fs::exists(p->file))
         {
             auto f = resolveExecutable("clang");
-            if (fs::exists(f))
-                p->file = f;
+            if (!fs::exists(f))
+                return;
+            p->file = f;
         }
-        if (fs::exists(p->file))
-        {
-            auto v = getVersion(s, p->file);
-            addProgram(DETECT_ARGS_PASS, PackageId("org.LLVM.clang", v), {}, p);
 
-            if (colored_output)
-            {
-                auto c2 = p->getCommand();
-                c2->push_back("-fcolor-diagnostics");
-                c2->push_back("-fansi-escape-codes");
-            }
-            //c->push_back("-Wno-everything");
-            // is it able to find VC STL itself?
-            //COpts2.System.IncludeDirectories.insert(base_llvm_path / "lib" / "clang" / C->getVersion().toString() / "include");
+        auto v = getVersion(b.getContext(), p->file);
+        auto &c = addProgram(DETECT_ARGS_PASS, PackageId("org.LLVM.clang", v), {}, *p);
+
+        if (colored_output)
+        {
+            auto c2 = p->getCommand();
+            c2->push_back("-fcolor-diagnostics");
+            c2->push_back("-fansi-escape-codes");
         }
-    }
+        //c->push_back("-Wno-everything");
+        // is it able to find VC STL itself?
+        //COpts2.System.IncludeDirectories.insert(base_llvm_path / "lib" / "clang" / C->getVersion().toString() / "include");
+
+        auto ru = std::make_unique<NativeCompilerRule>(p->clone());
+        ru->lang = NativeCompilerRule::LANG_C;
+        c.setRule("c", std::move(ru));
+        ru = std::make_unique<NativeCompilerRule>(p->clone());
+        ru->lang = NativeCompilerRule::LANG_ASM;
+        c.setRule("asm", std::move(ru));
+    });
 
     // C++
+    eps.emplace("org.LLVM.clangpp", [this](DETECT_ARGS)
     {
-        auto p = std::make_shared<SimpleProgram>();
+        auto p = std::make_unique<ClangCompiler>();
         p->file = bin_llvm_path / "clang++.exe";
         if (!fs::exists(p->file))
         {
             auto f = resolveExecutable("clang++");
-            if (fs::exists(f))
-                p->file = f;
+            if (!fs::exists(f))
+                return;
+            p->file = f;
         }
-        if (fs::exists(p->file))
-        {
-            auto v = getVersion(s, p->file);
-            auto &c = addProgram(DETECT_ARGS_PASS, PackageId("org.LLVM.clangpp", v), {}, p);
 
-            if (colored_output)
-            {
-                auto c2 = p->getCommand();
-                c2->push_back("-fcolor-diagnostics");
-                c2->push_back("-fansi-escape-codes");
-            }
-            //c->push_back("-Wno-everything");
-            // is it able to find VC STL itself?
-            //COpts2.System.IncludeDirectories.insert(base_llvm_path / "lib" / "clang" / C->getVersion().toString() / "include");
+        auto v = getVersion(b.getContext(), p->file);
+        auto &c = addProgram(DETECT_ARGS_PASS, PackageId("org.LLVM.clangpp", v), {}, *p);
+
+        if (colored_output)
+        {
+            auto c2 = p->getCommand();
+            c2->push_back("-fcolor-diagnostics");
+            c2->push_back("-fansi-escape-codes");
         }
-    }*/
+        //c->push_back("-Wno-everything");
+        // is it able to find VC STL itself?
+        //COpts2.System.IncludeDirectories.insert(base_llvm_path / "lib" / "clang" / C->getVersion().toString() / "include");
+
+        auto ru = std::make_unique<NativeCompilerRule>(p->clone());
+        ru->lang = NativeCompilerRule::LANG_CPP;
+        c.setRule("cpp", std::move(ru));
+    });
+
+    return eps;
 }
 
 void ProgramDetector::detectIntelCompilers(DETECT_ARGS)
@@ -802,7 +819,7 @@ void ProgramDetector::detectIntelCompilers(DETECT_ARGS)
     /*{
         auto add_prog_from_path = [DETECT_ARGS_PASS_TO_LAMBDA](const path &name, const String &ppath)
         {
-            auto p = std::make_shared<SimpleProgram>();
+            auto p = std::make_unique<SimpleProgram>();
             p->file = resolveExecutable(name);
             if (fs::exists(p->file))
             {
@@ -869,7 +886,7 @@ void ProgramDetector::detectIntelCompilers(DETECT_ARGS)
     // *nix
     {
         {
-            auto p = std::make_shared<SimpleProgram>(); // new object
+            auto p = std::make_unique<SimpleProgram>(); // new object
             p->file = resolveExecutable("icc");
             if (fs::exists(p->file))
             {
@@ -879,7 +896,7 @@ void ProgramDetector::detectIntelCompilers(DETECT_ARGS)
         }
 
         {
-            auto p = std::make_shared<SimpleProgram>(); // new object
+            auto p = std::make_unique<SimpleProgram>(); // new object
             p->file = resolveExecutable("icpc");
             if (fs::exists(p->file))
             {
@@ -890,11 +907,12 @@ void ProgramDetector::detectIntelCompilers(DETECT_ARGS)
     }*/
 }
 
-void ProgramDetector::detectWindowsCompilers(DETECT_ARGS)
+ProgramDetector::DetectablePackageMultiEntryPoints ProgramDetector::detectWindowsCompilers()
 {
-    SW_UNIMPLEMENTED;
-    //detectMsvc(DETECT_ARGS_PASS);
-    detectWindowsClang(DETECT_ARGS_PASS);
+    DetectablePackageMultiEntryPoints eps;
+    eps.merge(detectMsvc());
+    eps.merge(detectWindowsClang());
+    return eps;
 }
 
 void ProgramDetector::detectNonWindowsCompilers(DETECT_ARGS)
@@ -905,7 +923,7 @@ void ProgramDetector::detectNonWindowsCompilers(DETECT_ARGS)
     /*auto resolve_and_add = [DETECT_ARGS_PASS_TO_LAMBDA, &colored_output]
     (const path &prog, const String &ppath, int color_diag = 0, const String &regex_prefix = {})
     {
-        auto p = std::make_shared<SimpleProgram>();
+        auto p = std::make_unique<SimpleProgram>();
         p->file = resolveExecutable(prog);
         if (!fs::exists(p->file))
             return false;
@@ -955,6 +973,7 @@ void ProgramDetector::detectNonWindowsCompilers(DETECT_ARGS)
     bool apple_clang_found =
         resolve_and_add("clang", "com.Apple.clang", 2, apple_clang_regex_prefix);
     resolve_and_add("clang++", "com.Apple.clangpp", 2, apple_clang_regex_prefix);
+    nc.appleclang = true;
 
     // usual clang
     // if apple clang is found first, we do not check same binaries again
