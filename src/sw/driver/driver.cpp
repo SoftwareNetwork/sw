@@ -17,6 +17,7 @@
 #include "frontend/cmake/cmake_fe.h"
 #include "frontend/cppan/cppan.h"
 #include "compiler/detect.h"
+#include "compiler/set_settings.h"
 
 #include <sw/core/input.h>
 #include <sw/core/specification.h>

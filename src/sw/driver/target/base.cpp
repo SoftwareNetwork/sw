@@ -7,6 +7,7 @@
 #include "../command.h"
 #include "../build.h"
 #include "../compiler/detect.h"
+#include "../compiler/set_settings.h"
 
 #include <sw/builder/jumppad.h>
 #include <sw/core/sw_context.h>

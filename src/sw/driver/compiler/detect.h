@@ -130,8 +130,4 @@ private:
 
 ProgramDetector &getProgramDetector();
 
-void addSettingsAndSetPrograms(const SwCoreContext &, TargetSettings &);
-void addSettingsAndSetHostPrograms(const SwCoreContext &, TargetSettings &);
-void addSettingsAndSetConfigPrograms(const SwContext &, TargetSettings &);
-
 }
