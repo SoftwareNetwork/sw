@@ -100,9 +100,6 @@ private:
         MsvcInstance(const VSInstance &);
 
         void process(DETECT_ARGS);
-
-    private:
-        bool processed = false;
     };
 
     mutable VSInstances vsinstances1;

@@ -224,10 +224,6 @@ ProgramDetector::MsvcInstance::MsvcInstance(const VSInstance &i)
 
 void ProgramDetector::MsvcInstance::process(DETECT_ARGS)
 {
-    if (processed)
-        return;
-    processed = true;
-
     bool vs15plus = i.version.getMajor() >= 15;
     auto &eb = static_cast<ExtendedBuild &>(b);
     BuildSettings new_settings = eb.getSettings();
@@ -314,9 +310,10 @@ ProgramDetector::DetectablePackageMultiEntryPoints ProgramDetector::detectMsvcCo
     //Version cl_exe_version;
 
     // C, C++
-    eps.emplace("com.Microsoft.VisualStudio.VC.cl", [this, m = m](DETECT_ARGS) mutable
+    eps.emplace("com.Microsoft.VisualStudio.VC.cl", [this, inm = m](DETECT_ARGS)
     {
         auto &eb = static_cast<ExtendedBuild &>(b);
+        auto m = inm;
         m.process(DETECT_ARGS_PASS);
 
         auto p = std::make_unique<VisualStudioCompiler>();
@@ -324,11 +321,10 @@ ProgramDetector::DetectablePackageMultiEntryPoints ProgramDetector::detectMsvcCo
         if (!fs::exists(p->file))
             return;
 
-        //auto c = p->getCommand();
         if (b.getContext().getHostOs().Arch != m.target_arch)
         {
-            SW_UNIMPLEMENTED;
-            //c->addPathDirectory(m.host_root);
+            auto c = p->getCommand();
+            c->addPathDirectory(m.host_root);
         }
         auto &cl = addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.cl", m.cl_exe_version), eb.getSettings(), *p);
         auto r = std::make_unique<NativeCompilerRule>(p->clone());
@@ -342,9 +338,11 @@ ProgramDetector::DetectablePackageMultiEntryPoints ProgramDetector::detectMsvcCo
     });
 
     // lib, link
-    eps.emplace("com.Microsoft.VisualStudio.VC.link", [this, m = m](DETECT_ARGS) mutable
+    // actually we can use all host link program
+    eps.emplace("com.Microsoft.VisualStudio.VC.link", [this, inm = m](DETECT_ARGS)
     {
         auto &eb = static_cast<ExtendedBuild &>(b);
+        auto m = inm;
         m.process(DETECT_ARGS_PASS);
 
         auto p = std::make_unique<VisualStudioLinker>();
@@ -361,9 +359,11 @@ ProgramDetector::DetectablePackageMultiEntryPoints ProgramDetector::detectMsvcCo
         t.setRule("link", std::make_unique<NativeLinkerRule>(std::move(p)));
     });
 
-    eps.emplace("com.Microsoft.VisualStudio.VC.lib", [this, m = m](DETECT_ARGS) mutable
+    // actually we can use all host lib program
+    eps.emplace("com.Microsoft.VisualStudio.VC.lib", [this, inm = m](DETECT_ARGS)
     {
         auto &eb = static_cast<ExtendedBuild &>(b);
+        auto m = inm;
         m.process(DETECT_ARGS_PASS);
 
         auto p = std::make_unique<VisualStudioLibrarian>();
@@ -382,9 +382,10 @@ ProgramDetector::DetectablePackageMultiEntryPoints ProgramDetector::detectMsvcCo
     });
 
     // ASM
-    eps.emplace("com.Microsoft.VisualStudio.VC.ml", [this, m = m](DETECT_ARGS) mutable
+    eps.emplace("com.Microsoft.VisualStudio.VC.ml", [this, inm = m](DETECT_ARGS)
     {
         auto &eb = static_cast<ExtendedBuild &>(b);
+        auto m = inm;
         m.process(DETECT_ARGS_PASS);
 
         if (m.target_arch == ArchType::x86_64 || m.target_arch == ArchType::x86)
@@ -430,10 +431,11 @@ ProgramDetector::DetectablePackageMultiEntryPoints ProgramDetector::detectMsvcCo
     // libconcrtd1.lib
 
     // libc++
-    eps.emplace("com.Microsoft.VisualStudio.VC.libcpp", [this, m = m](DETECT_ARGS) mutable
+    eps.emplace("com.Microsoft.VisualStudio.VC.libcpp", [this, inm = m](DETECT_ARGS)
     {
         auto &eb = static_cast<ExtendedBuild &>(b);
         BuildSettings new_settings = eb.getSettings();
+        auto m = inm;
         m.process(DETECT_ARGS_PASS);
 
         auto &libcpp = addTarget<PredefinedTarget>(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.libcpp", m.cl_exe_version), eb.getSettings());
@@ -492,12 +494,13 @@ ProgramDetector::DetectablePackageMultiEntryPoints ProgramDetector::detectMsvcCo
         }
     });
 
-    eps.emplace("com.Microsoft.VisualStudio.VC.ATLMFC", [this, m = m](DETECT_ARGS) mutable
+    eps.emplace("com.Microsoft.VisualStudio.VC.ATLMFC", [this, inm = m](DETECT_ARGS)
     {
-        if (!fs::exists(m.root / "ATLMFC" / "include"))
+        if (!fs::exists(inm.root / "ATLMFC" / "include"))
             return;
 
         auto &eb = static_cast<ExtendedBuild &>(b);
+        auto m = inm;
         m.process(DETECT_ARGS_PASS);
         auto no_target_libdir = m.i.version.getMajor() < 16 && m.target == "x86";
 
@@ -510,13 +513,14 @@ ProgramDetector::DetectablePackageMultiEntryPoints ProgramDetector::detectMsvcCo
     });
 
     // concrt
-    eps.emplace("com.Microsoft.VisualStudio.VC.concrt", [this, m = m](DETECT_ARGS) mutable
+    eps.emplace("com.Microsoft.VisualStudio.VC.concrt", [this, inm = m](DETECT_ARGS)
     {
-        if (!fs::exists(m.root / "crt" / "src" / "concrt"))
+        if (!fs::exists(inm.root / "crt" / "src" / "concrt"))
             return;
 
         auto &eb = static_cast<ExtendedBuild &>(b);
         BuildSettings new_settings = eb.getSettings();
+        auto m = inm;
         m.process(DETECT_ARGS_PASS);
 
         if (m.cl_exe_version.getMajor() < 19)
@@ -530,13 +534,14 @@ ProgramDetector::DetectablePackageMultiEntryPoints ProgramDetector::detectMsvcCo
     });
 
     // vcruntime
-    eps.emplace("com.Microsoft.VisualStudio.VC.runtime", [this, m = m](DETECT_ARGS) mutable
+    eps.emplace("com.Microsoft.VisualStudio.VC.runtime", [this, inm = m](DETECT_ARGS)
     {
-        if (!fs::exists(m.root / "crt" / "src" / "vcruntime"))
+        if (!fs::exists(inm.root / "crt" / "src" / "vcruntime"))
             return;
 
         auto &eb = static_cast<ExtendedBuild &>(b);
         BuildSettings new_settings = eb.getSettings();
+        auto m = inm;
         m.process(DETECT_ARGS_PASS);
 
         if (m.cl_exe_version.getMajor() < 19)
