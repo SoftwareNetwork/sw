@@ -16,10 +16,14 @@ static auto to_upkg(const T &s)
 }
 
 template <class K, class V>
-static void check_and_assign(K &k, const V &v, bool force = false)
+static bool check_and_assign(K &k, const V &v, bool force = false)
 {
     if (!k || force)
+    {
         k = v;
+        return true;
+    }
+    return false;
 }
 
 // actually we cannot move this to client,
@@ -51,34 +55,64 @@ static void addSettingsCommon(const SwCoreContext &swctx, TargetSettings &ts, bo
 {
     addNativeSettings(ts, force);
 
+    auto set_rule = [&ts, &force](auto &r, auto &s)
+    {
+        return check_and_assign(ts["rule"][r], s, force);
+    };
+
     BuildSettings bs(ts);
     // on win we select msvc, clang, clangcl
     if (bs.TargetOS.is(OSType::Windows))
     {
+        TargetSettings msvc;
+        msvc["type"] = "msvc";
+
         if (0);
         // msvc
         else if (getProgramDetector().hasVsInstances())
         {
-            ts["rule"]["c"]["package"] = "com.Microsoft.VisualStudio.VC.cl";
-            ts["rule"]["c"]["type"] = "msvc";
+            msvc["package"] = "com.Microsoft.VisualStudio.VC.cl";
+            set_rule("c", msvc);
+            set_rule("cpp", msvc);
 
-            ts["rule"]["cpp"]["package"] = "com.Microsoft.VisualStudio.VC.cl";
-            ts["rule"]["cpp"]["type"] = "msvc";
-
-            ts["rule"]["asm"]["package"] = "com.Microsoft.VisualStudio.VC.ml";
-            ts["rule"]["asm"]["type"] = "msvc";
+            msvc["package"] = "com.Microsoft.VisualStudio.VC.ml";
+            set_rule("asm", msvc);
         }
 
         // use msvc's lib and link until llvm tools are not working
-        ts["rule"]["lib"]["package"] = "com.Microsoft.VisualStudio.VC.lib";
-        ts["rule"]["lib"]["type"] = "msvc";
-
-        ts["rule"]["link"]["package"] = "com.Microsoft.VisualStudio.VC.link";
-        ts["rule"]["link"]["type"] = "msvc";
+        msvc["package"] = "com.Microsoft.VisualStudio.VC.lib";
+        set_rule("lib", msvc);
+        msvc["package"] = "com.Microsoft.VisualStudio.VC.link";
+        set_rule("link", msvc);
 
         // always use this rc
         ts["rule"]["rc"]["package"] = "com.Microsoft.Windows.rc";
+
+        // libs
+        check_and_assign(ts["native"]["stdlib"]["c"], to_upkg("com.Microsoft.Windows.SDK.ucrt"), force);
+        auto cppset = check_and_assign(ts["native"]["stdlib"]["cpp"], to_upkg("com.Microsoft.VisualStudio.VC.libcpp"), force);
+        if (cppset)
+            check_and_assign(ts["native"]["stdlib"]["compiler"], to_upkg("com.Microsoft.VisualStudio.VC.runtime"), force);
+        check_and_assign(ts["native"]["stdlib"]["kernel"], to_upkg("com.Microsoft.Windows.SDK.um"), force);
+
+        UnresolvedPackage cppcl = ts["rule"]["cpp"]["package"].getValue();
+        if (cppcl.getPath() == "com.Microsoft.VisualStudio.VC.cl")
+        {
+            // take same ver as cl
+            {
+                UnresolvedPackage up("com.Microsoft.VisualStudio.VC.libcpp");
+                up.range = cppcl.range;
+                check_and_assign(ts["native"]["stdlib"]["cpp"], to_upkg("com.Microsoft.VisualStudio.VC.libcpp"), force || cppset);
+            }
+            {
+                UnresolvedPackage up("com.Microsoft.VisualStudio.VC.runtime");
+                up.range = cppcl.range;
+                check_and_assign(ts["native"]["stdlib"]["compiler"], to_upkg("com.Microsoft.VisualStudio.VC.runtime"), force || cppset);
+            }
+        }
     }
+    else
+        SW_UNIMPLEMENTED;
 
     setRuleCompareRules(ts);
 }

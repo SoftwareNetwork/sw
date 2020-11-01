@@ -658,7 +658,7 @@ void NativeCompiledTarget::findCompiler()
     }
 
     // c++ goes first for correct include order
-    UnresolvedPackage cppcl = getSettings()["rule"]["cpp"]["package"].getValue();
+    /*UnresolvedPackage cppcl = getSettings()["rule"]["cpp"]["package"].getValue();
     if (cppcl.getPath() == "com.Microsoft.VisualStudio.VC.cl")
     {
         libstdcppset = true;
@@ -674,7 +674,7 @@ void NativeCompiledTarget::findCompiler()
             up.range = cppcl.range;
             *this += up;
         }
-    }
+    }*/
     if (!libstdcppset && getSettings()["native"]["stdlib"]["cpp"].isValue())
     {
         if (IsSwConfig && getBuildSettings().TargetOS.is(OSType::Linux))
@@ -707,13 +707,13 @@ void NativeCompiledTarget::findCompiler()
     }
 
     // kernel headers
-    //if (getSettings()["native"]["stdlib"]["kernel"].isValue())
-        //*this += UnresolvedPackage(getSettings()["native"]["stdlib"]["kernel"].getValue());
-    if (getBuildSettings().TargetOS.is(OSType::Windows))
+    if (getSettings()["native"]["stdlib"]["kernel"].isValue())
+        *this += UnresolvedPackage(getSettings()["native"]["stdlib"]["kernel"].getValue());
+    /*if (getBuildSettings().TargetOS.is(OSType::Windows))
     {
         *this += UnresolvedPackage("com.Microsoft.Windows.SDK.ucrt"s); // c
         *this += UnresolvedPackage("com.Microsoft.Windows.SDK.um"s); // kernel
-    }
+    }*/
 }
 
 bool NativeCompiledTarget::init()
