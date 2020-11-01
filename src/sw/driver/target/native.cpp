@@ -366,12 +366,20 @@ static auto get_settings_package_id(const TargetSetting &s)
     return id;
 }
 
-static auto get_compiler_type2(const String &p)
+static auto get_compiler_type(const String &p)
 {
     auto t = CompilerType::Unspecified;
     if (0);
     else if (p == "msvc")
         t = CompilerType::MSVC;
+    else if (p == "clang")
+        t = CompilerType::Clang;
+    else if (p == "clangcl")
+        t = CompilerType::ClangCl;
+    else if (p == "appleclang")
+        t = CompilerType::AppleClang;
+    else if (p == "gnu")
+        t = CompilerType::GNU;
     return t;
 }
 
@@ -406,19 +414,6 @@ std::unique_ptr<NativeCompiler> NativeCompiledTarget::activateCompiler(const Tar
             targetSettings2Command(*C, s["command"]);
     };*/
 
-    //std::unique_ptr<NativeCompiler> c;
-    //if (id.ppath == "com.Microsoft.VisualStudio.VC.cl")
-    {
-        //c = std::make_unique<VisualStudioCompiler>();
-        /*if (getSettings()["native"]["stdlib"]["cpp"].getValue() == "com.Microsoft.VisualStudio.VC.libcpp")
-        {
-            // take same ver as cl
-            UnresolvedPackage up(getSettings()["native"]["stdlib"]["cpp"].getValue());
-            up.range = id.range;
-            *this += up;
-            libstdcppset = true;
-        }*/
-    }
     /*else if (id.ppath == "org.gnu.gcc" || id.ppath == "org.gnu.gpp")
     {
         c = std::make_unique<GNUCompiler>();
@@ -434,82 +429,6 @@ std::unique_ptr<NativeCompiler> NativeCompiledTarget::activateCompiler(const Tar
             //C->VisibilityInlinesHidden = false;
             //C->PositionIndependentCode = false;
         }
-    }
-    else if (
-        id.ppath == "org.LLVM.clang" || id.ppath == "org.LLVM.clangpp" ||
-        id.ppath == "com.Apple.clang" || id.ppath == "com.Apple.clangpp"
-        )
-    {
-        c = std::make_unique<ClangCompiler>();
-        auto &nc = (ClangCompiler&)*c;
-        create_command(c);
-        nc.Target = getBuildSettings().getTargetTriplet();
-        if (getBuildSettings().TargetOS.is(OSType::Windows))
-        {
-            auto c = nc.createCommand(getMainBuild());
-            // this one leaves default clang runtime library include path (from installed dir)
-            c->push_back("-nostdlibinc");
-            // this one cleans all default include dirs
-            //c->push_back("-nostdinc");
-            // clang gives error on reinterpret cast in offsetof macro in win ucrt
-            *this += "_CRT_USE_BUILTIN_OFFSETOF"_def;
-        }
-        if (id.ppath == "com.Apple.clang" || id.ppath == "com.Apple.clangpp")
-            nc.appleclang = true;
-        if (getBuildSettings().TargetOS.isApple())
-        {
-            if (getBuildSettings().TargetOS.Version)
-            {
-                auto c = nc.createCommand(getMainBuild());
-                c->push_back("-mmacosx-version-min=" + getBuildSettings().TargetOS.Version->toString());
-            }
-            //C->VisibilityHidden = false;
-            //C->VisibilityInlinesHidden = false;
-            //C->PositionIndependentCode = false;
-        }
-    }
-    else if (id.ppath == "org.LLVM.clangcl")
-    {
-        c = std::make_unique<ClangClCompiler>();
-        auto &nc = (ClangClCompiler&)*c;
-        create_command(c);
-
-        {
-            // we do everything ourselves
-            // otherwise we get wrong order on clang includes and msvc includes (intrinsics and such)
-            auto c = nc.createCommand(getMainBuild());
-            c->push_back("-nostdinc");
-        }
-
-        switch (getBuildSettings().TargetOS.Arch)
-        {
-        case ArchType::x86_64:
-            nc.CommandLineOptions<ClangClOptions>::Arch = clang::ArchType::m64;
-            break;
-        case ArchType::x86:
-            nc.CommandLineOptions<ClangClOptions>::Arch = clang::ArchType::m32;
-            break;
-        case ArchType::arm:
-        {
-            auto c = nc.createCommand(getMainBuild());
-            c->push_back("--target=arm-pc-windows-msvc");
-            // set using target? check correctness then: improve getTargetTriplet()
-        }
-        break;
-        case ArchType::aarch64:
-        {
-            auto c = nc.createCommand(getMainBuild());
-            c->push_back("--target=aarch64-pc-windows-msvc");
-            // set using target? check correctness then: improve getTargetTriplet()
-        }
-        break;
-        default:
-            throw SW_RUNTIME_ERROR("Unknown arch");
-        }
-
-        auto c = nc.createCommand(getMainBuild());
-        // clang gives error on reinterpret cast in offsetof macro in win ucrt
-        *this += "_CRT_USE_BUILTIN_OFFSETOF"_def;
     }
     else if (id.ppath == "com.intel.compiler.c" || id.ppath == "com.intel.compiler.cpp")
     {
@@ -620,9 +539,9 @@ std::unique_ptr<NativeLinker> NativeCompiledTarget::activateLinker(LinkerType t)
 
 void NativeCompiledTarget::findCompiler()
 {
-    ct = get_compiler_type2(getSettings()["rule"]["cpp"]["type"].getValue());
+    ct = get_compiler_type(getSettings()["rule"]["cpp"]["type"].getValue());
     if (ct == CompilerType::Unspecified)
-        ct = get_compiler_type2(getSettings()["rule"]["c"]["type"].getValue());
+        ct = get_compiler_type(getSettings()["rule"]["c"]["type"].getValue());
     if (ct == CompilerType::Unspecified)
         throw SW_RUNTIME_ERROR("Cannot determine compiler type " + get_settings_package_id(getSettings()["rule"]["cpp"]["package"]).toString() + " for settings: " + getSettings().toString());
 
