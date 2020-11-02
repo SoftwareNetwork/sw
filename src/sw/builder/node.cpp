@@ -18,8 +18,6 @@
 
 #include "node.h"
 
-#include <sw/builder/command.h>
-
 namespace sw
 {
 
