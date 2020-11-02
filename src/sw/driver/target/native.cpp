@@ -1665,18 +1665,14 @@ bool NativeCompiledTarget::prepare()
         prepare_pass6();
     RETURN_PREPARE_MULTIPASS_NEXT_PASS;
     case 7:
-        // link libraries
-        prepare_pass6_1();
-        RETURN_PREPARE_MULTIPASS_NEXT_PASS;
-    case 8:
         // linker 1
         prepare_pass7();
     RETURN_PREPARE_MULTIPASS_NEXT_PASS;
-    case 9:
+    case 8:
         // linker 2
         prepare_pass8();
     RETURN_PREPARE_MULTIPASS_NEXT_PASS;
-    case 10:
+    case 9:
         prepare_pass9();
         // TODO: create prepare endgames method that always will be the last one
         getGeneratedCommands(); // create g.commands
@@ -2657,10 +2653,6 @@ void NativeCompiledTarget::prepare_pass5()
 void NativeCompiledTarget::prepare_pass6()
 {
     // link libraries
-}
-
-void NativeCompiledTarget::prepare_pass6_1()
-{
     if (isStaticOrHeaderOnlyLibrary())
         return;
 
