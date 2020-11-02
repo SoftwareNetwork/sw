@@ -396,9 +396,9 @@ void build(Solution &s)
         //if (auto L = gui.getSelectedTool()->as<VisualStudioLinker*>(); L)
             //L->Subsystem = vs::Subsystem::Windows;
 
-        qt_moc_rcc_uic("org.sw.demo.qtproject.qt"_dep, gui);
+        /*qt_moc_rcc_uic("org.sw.demo.qtproject.qt"_dep, gui);
         qt_tr("org.sw.demo.qtproject.qt"_dep, gui);
 
-        create_git_revision("pub.egorpugin.primitives.tools.create_git_rev-master"_dep, gui);
+        create_git_revision("pub.egorpugin.primitives.tools.create_git_rev-master"_dep, gui);*/
     }
 }
