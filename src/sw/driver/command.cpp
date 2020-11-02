@@ -117,6 +117,7 @@ void Command::prepare()
                 if (p.empty())
                     throw SW_RUNTIME_ERROR("Empty program from package: " + t.getPackage().toString());
                 setProgram(p);
+                addInput(p);
             }
         }
         else if (dependency_set)
