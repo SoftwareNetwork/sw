@@ -223,9 +223,6 @@ void build(Solution &s)
                 << cmd::out("options_cl.generated.h")
                 << cmd::out("options_cl.generated.cpp", cmd::Skip)
                 ;
-            std::dynamic_pointer_cast<::sw::driver::Command>(c.getCommand())->ignore_deps_generated_commands = true;
-            // make sure this is exported header, so we depend on it
-            cpp_driver.Public += "options_cl.generated.h";
         }
         //if (!s.Variables["SW_SELF_BUILD"])
         {

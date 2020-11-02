@@ -320,8 +320,6 @@ struct SW_DRIVER_CPP_API Command : ::sw::builder::Command
     using LazyCallback = std::function<String(void)>;
     using LazyAction = std::function<void(void)>;
 
-    bool ignore_deps_generated_commands = false;
-
     using Base::Base;
     virtual ~Command() = default;
 

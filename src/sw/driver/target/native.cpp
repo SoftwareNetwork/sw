@@ -1089,11 +1089,7 @@ Commands NativeCompiledTarget::getCommands1() const
             // for idir deps generated commands won't be used!
             auto cmds2 = nt->getGeneratedCommands();
             for (auto &c : cmds)
-            {
-                if (auto c2 = c->as<driver::Command*>(); c2 && c2->ignore_deps_generated_commands)
-                    continue;
                 c->dependencies.insert(cmds2.begin(), cmds2.end());
-            }
         }
     }
 
