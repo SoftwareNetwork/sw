@@ -105,13 +105,23 @@ public:
     static void printGraph(const G &g, const path &base, const VecT &names = {}, bool mangle_names = false);
 
     template <class T>
-    static std::unique_ptr<ExecutionPlan> create(const std::unordered_set<T> &in)
+    static std::unique_ptr<ExecutionPlan> create(const std::unordered_set<std::shared_ptr<T>> &in)
     {
         USet cmds;
         cmds.reserve(in.size());
         for (auto &c : in)
             cmds.insert(c.get());
+        prepare(cmds);
+        return std::make_unique<ExecutionPlan>(cmds);
+    }
 
+    template <class T>
+    static std::unique_ptr<ExecutionPlan> create(const std::unordered_set<T> &in)
+    {
+        USet cmds;
+        cmds.reserve(in.size());
+        for (auto &c : in)
+            cmds.insert(c);
         prepare(cmds);
         return std::make_unique<ExecutionPlan>(cmds);
     }

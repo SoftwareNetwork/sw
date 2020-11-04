@@ -34,12 +34,12 @@ struct CommandStorage;
 
 struct SW_BUILDER_API CommandNode : std::enable_shared_from_this<CommandNode>
 {
-    using SPtr = std::shared_ptr<CommandNode>;
+    using Ptr = CommandNode*;
 
-    std::unordered_set<SPtr> dependencies;
+    std::unordered_set<Ptr> dependencies;
 
     std::atomic_size_t dependencies_left = 0;
-    std::unordered_set<SPtr> dependent_commands;
+    std::unordered_set<Ptr> dependent_commands;
 
     std::atomic_size_t *current_command = nullptr;
     std::atomic_size_t *total_commands = nullptr;

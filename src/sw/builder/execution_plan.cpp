@@ -38,12 +38,12 @@ ExecutionPlan::~ExecutionPlan()
     {
         // FIXME: clear() may destroy our next pointer in 'a' variable,
         // so we make a copy of everything :(
-        std::vector<std::shared_ptr<T>> copy;
+        /*std::vector<std::shared_ptr<T>> copy;
         copy.reserve(a.size());
         for (auto &c : a)
             copy.emplace_back(c->shared_from_this());
         for (auto &c : a)
-            c->clear();
+            c->clear();*/
     };
     break_commands(commands);
     break_commands(unprocessed_commands);
@@ -115,7 +115,7 @@ void ExecutionPlan::execute(Executor &e) const
             if (--d->dependencies_left == 0)
             {
                 std::unique_lock<std::mutex> lk(m);
-                fs.push_back(e.push([&run, d] {run((T *)d.get()); }));
+                fs.push_back(e.push([&run, d] {run(d); }));
                 all.push_back(fs.back());
             }
         }
@@ -144,6 +144,9 @@ void ExecutionPlan::execute(Executor &e) const
             all.push_back(fs.back());
         }
     }
+
+    if (fs.empty())
+        throw SW_RUNTIME_ERROR("No commands without deps were added");
 
     // wait for all commands until exception
     int i = 0;
@@ -366,7 +369,7 @@ ExecutionPlan::Graph ExecutionPlan::getGraph(const VecT &v, GraphMapping &gm)
     {
         g.m_vertices[gm[c]].m_property = c;
         for (auto &d : c->dependencies)
-            boost::add_edge(gm[c], gm[d.get()], g);
+            boost::add_edge(gm[c], gm[d], g);
     }
     return g;
 }
@@ -388,7 +391,7 @@ void ExecutionPlan::transitiveReduction()
         auto c = commands[from];
         c->dependencies.clear();
         for (auto &e : tr.m_vertices[to].m_out_edges)
-            c->dependencies.insert(tr.m_vertices[e.m_target].m_property->shared_from_this());
+            c->dependencies.insert(tr.m_vertices[e.m_target].m_property);
     }
 }
 
@@ -446,25 +449,41 @@ void ExecutionPlan::prepare(USet &cmds)
                 {
                     auto it = generators.find(i);
                     if (it != generators.end())
-                        c1->dependencies.insert(it->second->shared_from_this());
+                        c1->dependencies.insert(it->second);
                 }
             }
         }
 
+        // remove chained commands
+        // keep only the last one
+        for (auto i = cmds.begin(); i != cmds.end();)
+        {
+            if (auto c1 = dynamic_cast<builder::Command *>(*i))
+            {
+                if (c1->next)
+                    i = cmds.erase(i);
+                else
+                    i++;
+            }
+            else
+                i++;
+        }
+
         // separate loop for additional deps tracking (programs, inputs, outputs etc.)
+        // every cmd must be passed
         auto cmds2 = cmds;
         reserve(cmds2);
         for (auto &c : cmds)
         {
             for (auto &d : c->dependencies)
             {
-                cmds2.insert((T *)d.get());
+                cmds2.insert(d);
                 for (auto &d2 : d->dependencies)
-                    cmds2.insert((T *)d2.get());
+                    cmds2.insert(d2);
             }
             // also take explicit dependent commands
             for (auto &d : c->dependent_commands)
-                cmds2.insert((T *)d.get());
+                cmds2.insert(d);
         }
         cmds = std::move(cmds2);
 
@@ -474,7 +493,7 @@ void ExecutionPlan::prepare(USet &cmds)
 
     // remove self deps
     for (auto &c : cmds)
-        c->dependencies.erase(c->shared_from_this());
+        c->dependencies.erase(c);
 
     // 3. remove duplicates
     {
@@ -493,7 +512,7 @@ void ExecutionPlan::prepare(USet &cmds)
             auto i = cmds3.find(d->getHash());
             SW_CHECK(i != cmds3.end());
             //if (i->second != d.get())
-                return i->second->shared_from_this();
+                return i->second;
         };
 
         auto replace2 = [&replace](auto &a)
@@ -525,7 +544,7 @@ void ExecutionPlan::init(USet &cmds)
         {
             // count number of deps
             auto n = std::count_if((*it)->dependencies.begin(), (*it)->dependencies.end(),
-                [this, &cmds](auto &d) { return cmds.find(d.get()) != cmds.end(); });
+                [this, &cmds](auto &d) { return cmds.find(d) != cmds.end(); });
             if (n)
             {
                 it++;
@@ -558,7 +577,7 @@ void ExecutionPlan::init(USet &cmds)
     {
         c->dependencies_left = c->dependencies.size();
         for (auto &d : c->dependencies)
-            d->dependent_commands.insert(c->shared_from_this());
+            d->dependent_commands.insert(c);
     }
 
     std::sort(commands.begin(), commands.end(), [](const auto &c1, const auto &c2)
