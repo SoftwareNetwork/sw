@@ -1026,13 +1026,13 @@ Commands NativeCompiledTarget::getGeneratedCommands() const
     }
 
     // respect ordering
-    for (auto i = order.rbegin(); i != order.rend(); i++)
+    /*for (auto i = order.rbegin(); i != order.rend(); i++)
     {
         auto &cmds = i->second;
         for (auto &c : generated)
             c->dependencies.insert(cmds.begin(), cmds.end());
         generated.insert(cmds.begin(), cmds.end());
-    }
+    }*/
 
     generated_commands = generated;
     return generated;
@@ -1053,7 +1053,7 @@ Commands NativeCompiledTarget::getCommands1() const
     Commands cmds;
     if (isHeaderOnly())
     {
-        cmds.insert(generated.begin(), generated.end());
+        cmds.merge(generated);
         return cmds;
     }
 
@@ -1062,8 +1062,11 @@ Commands NativeCompiledTarget::getCommands1() const
 
     // add generated files
     for (auto &cmd : cmds)
-        cmd->dependencies.insert(generated.begin(), generated.end());
-    cmds.insert(generated.begin(), generated.end());
+    {
+        for (auto &g : generated)
+            cmd->dependencies.insert(g.get());
+    }
+    cmds.merge(generated);
 
     // deps' generated commands
     auto get_tgts = [this]()
@@ -1089,7 +1092,10 @@ Commands NativeCompiledTarget::getCommands1() const
             // for idir deps generated commands won't be used!
             auto cmds2 = nt->getGeneratedCommands();
             for (auto &c : cmds)
-                c->dependencies.insert(cmds2.begin(), cmds2.end());
+            {
+                for (auto &g : cmds2)
+                    c->dependencies.insert(g.get());
+            }
         }
     }
 
@@ -2825,7 +2831,7 @@ void NativeCompiledTarget::prepare_pass8()
         if (!f->isActive())
             continue;
         RuleFile rf(p);
-        rf.getAdditionalArguments() = f->args;
+        //rf.getAdditionalArguments() = f->args;
         rfs.insert(rf);
     }
     runRules(rfs, *this);
@@ -3340,7 +3346,7 @@ void NativeCompiledTarget::setChecks(const String &name, bool check_definitions)
     checks_set.performChecks(getMainBuild(), getSettings());
 
     // set results
-    for (auto &&[d, v] : checks_set.getResult())
+    for (auto &&[d, v] : checks_set.getResults())
     {
         // make private?
         // remove completely?
