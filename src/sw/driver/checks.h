@@ -111,7 +111,7 @@ struct SW_DRIVER_CPP_API Check : CommandNode
     String getName() const override;
     String getData() const { return data; }
     bool isChecked() const;
-    std::vector<std::shared_ptr<Check>> gatherDependencies();
+    std::vector<std::unique_ptr<Check>> gatherDependencies() const;
     void execute() override;
     void prepare() override {}
     void addInputOutputDeps() {} // compat with command
@@ -144,8 +144,6 @@ private:
 
     const path &getUniqueName() const;
 };
-
-using CheckPtr = std::shared_ptr<Check>;
 
 struct SW_DRIVER_CPP_API FunctionExists : Check
 {
@@ -273,11 +271,13 @@ struct SW_DRIVER_CPP_API CompilerFlag : SourceCompiles
 
 struct CheckSet;
 
-struct SW_DRIVER_CPP_API CheckSet1
+struct SW_DRIVER_CPP_API CheckSet
 {
+    using CheckStorage = std::unordered_map<size_t, Check *>;
+
     String name;
     const NativeCompiledTarget *t = nullptr;
-    std::unordered_map<String, CheckPtr> check_values;
+    //std::unordered_map<String, CheckPtr> check_values;
 
     // we store all checks first, because they are allowed to have post setup
     // so we cant calculate hash after ctor
@@ -285,25 +285,47 @@ struct SW_DRIVER_CPP_API CheckSet1
     // make public, so it is possible to batch add prefixes, for example
     // for (auto &[s, check] : s.checks)
     //   check->Prefixes.insert("U_");
-    std::list<CheckPtr> all;
+    std::list<std::unique_ptr<Check>> all;
+
+    Checker *checker = nullptr;
+
+public:
+    // for tools purposes
+    CheckSet();
+    // normal usage
+    CheckSet(Checker &checker);
+    CheckSet(const CheckSet &) = delete;
+    CheckSet &operator=(const CheckSet &) = delete;
+
+    Checker &getChecker() const;
+    std::unordered_map<String, CheckValue> getResult() const;
 
     template <class T, class ... Args>
-    std::shared_ptr<T> add(Args && ... args)
+    std::unique_ptr<T> addRaw(Args && ... args)
     {
-        auto t = std::make_shared<T>(std::forward<Args>(args)...);
-        t->check_set = (CheckSet*)this;
-        all.push_back(t);
-        return t;
+        auto t = std::make_unique<T>(std::forward<Args>(args)...);
+        t->check_set = this;
+        auto &ref = *t;
+        return std::move(t);
     }
 
     template <class T, class ... Args>
-    std::shared_ptr<T> get(Args && ... args)
+    T &add(Args && ... args)
     {
-        auto t = std::make_shared<T>(std::forward<Args>(args)...);
-        auto i = checks.find(t->getHash());
-        if (i == checks.end())
+        auto t = addRaw<T>(std::forward<Args>(args)...);
+        auto &ref = *t;
+        all.emplace_back(std::move(t));
+        return ref;
+    }
+
+    template <class T, class ... Args>
+    T &get(Args && ... args)
+    {
+        auto t = std::make_unique<T>(std::forward<Args>(args)...);
+        auto i = getChecker().all_checks.find(t->getHash());
+        if (i == getChecker().all_checks.end())
             throw SW_RUNTIME_ERROR("Missing check: " + *t->Definitions.begin());
-        return std::static_pointer_cast<T>(i->second);
+        return static_cast<T&>(*i->second);
     }
 
     FunctionExists &checkFunctionExists(const String &function, const String &def = {});
@@ -330,29 +352,12 @@ struct SW_DRIVER_CPP_API CheckSet1
     auto begin() const { return all.begin(); }
     auto end() const { return all.end(); }
 
-private:
-    // set's checks
-    std::unordered_map<size_t /* hash */, CheckPtr> checks;
-    // prevents recursive checking on complex queries, complex settings
-    // in crosscompilation tasks and environments
-    //std::mutex m;
-
-    friend struct Checker;
-    friend struct CheckSet;
-};
-
-struct SW_DRIVER_CPP_API CheckSet : CheckSet1
-{
-    Checker &checker;
-
-    CheckSet(Checker &checker);
-    CheckSet(const CheckSet &) = delete;
-    CheckSet &operator=(const CheckSet &) = delete;
-
     void performChecks(const SwBuild &, const TargetSettings &);
 
 private:
     void prepareChecksForUse();
+    Check &registerCheck(Check &) const;
+    static Check &registerCheck(CheckStorage &, Check &);
 };
 
 struct SW_DRIVER_CPP_API Checker
@@ -360,15 +365,15 @@ struct SW_DRIVER_CPP_API Checker
     SwBuild &swbld;
 
     /// child sets
-    std::unordered_map<String /* set name */, std::shared_ptr<CheckSet>> sets;
+    std::unordered_map<String, std::unique_ptr<CheckSet>> sets;
 
     Checker(SwBuild &swbld);
+    Checker(const Checker &) = delete;
 
     CheckSet &addSet(const String &name);
 
-private:
-    // all checks are stored here
-    std::unordered_map<size_t /* hash */, CheckPtr> checks;
+//private:
+    CheckSet::CheckStorage all_checks;
 };
 
 }

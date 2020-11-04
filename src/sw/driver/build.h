@@ -54,7 +54,7 @@ struct SW_DRIVER_CPP_API Build : TargetBase
 {
     ModuleSwappableData module_data;
     DriverData *dd = nullptr;
-    Checker checker;
+    std::shared_ptr<Checker> checker;
     //const ProgramDetector &pd;
 
     //

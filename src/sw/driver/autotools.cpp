@@ -55,7 +55,7 @@ struct ac_processor
 
     String file;
     std::vector<command> commands;
-    sw::CheckSet1 checks;
+    sw::CheckSet checks;
     std::map<String, std::set<value>> vars;
     std::map<String, if_expr> conditions;
     bool cpp = false;
@@ -299,7 +299,7 @@ ac_processor::ac_processor(const path &p)
     conditions = parse_conditions(file);
 }
 
-static void print_checks2(primitives::CppEmitter &ctx, const sw::CheckSet1 &checks, const String &name)
+static void print_checks2(primitives::CppEmitter &ctx, const sw::CheckSet &checks, const String &name)
 {
     ctx.beginBlock("void check(Checker &c)");
     ctx.addLine("auto &s = c.addSet(\"" + name + "\");");
@@ -505,13 +505,13 @@ auto ac_processor::split_and_add(command &c, std::function<bool(String)> fun)
         {
             if (f == "snprintf")
             {
-                auto c = checks.add<sw::SymbolExists>(f);
-                c->Parameters.Includes = { "stdio.h" };
+                auto &c = checks.add<sw::SymbolExists>(f);
+                c.Parameters.Includes = { "stdio.h" };
                 continue;
             }
             if constexpr (std::is_same_v<T, sw::TypeSize>)
                 prepare_type(f);
-            out.push_back(checks.add<T>(f).get());
+            out.push_back(&checks.add<T>(f));
         }
     }
     return out;
@@ -681,9 +681,9 @@ T *ac_processor::ifdef_add(command &c)
     if (var.empty() || input.empty())
         return nullptr;
 
-    auto p = checks.add<T>(var, input);
-    p->DefineIfZero = invert;
-    return p.get();
+    auto &p = checks.add<T>(var, input);
+    p.DefineIfZero = invert;
+    return &p;
 }
 
 template <class T>
@@ -723,8 +723,8 @@ T *ac_processor::try_add(command &c)
     if (var.empty() || input.empty())
         return nullptr;
 
-    auto p = checks.add<T>(var, input);
-    return p.get();
+    auto &p = checks.add<T>(var, input);
+    return &p;
 }
 
 void ac_processor::process_AC_LANG(command &c)
@@ -840,15 +840,15 @@ void ac_processor::process_AC_CHECK_HEADER(command &c)
             else if (cmd == "AC_DEFINE")
             {
                 auto params = parse_arguments(c.params[1].substr(cmd.size() + 1));
-                auto p = checks.add<sw::IncludeExists>(c.params[0], params[0]);
+                auto &p = checks.add<sw::IncludeExists>(c.params[0], params[0]);
                 if (cpp)
-                    p->setCpp();
+                    p.setCpp();
             }
             else if (cmd == "AC_CHECK_HEADER")
             {
-                auto p = checks.add<sw::IncludeExists>(c.params[0]);
+                auto &p = checks.add<sw::IncludeExists>(c.params[0]);
                 if (cpp)
-                    p->setCpp();
+                    p.setCpp();
 
                 command c2;
                 c2.name = cmd;
@@ -862,9 +862,9 @@ void ac_processor::process_AC_CHECK_HEADER(command &c)
         }
         else
         {
-            auto p = checks.add<sw::IncludeExists>(c.params[0]);
+            auto &p = checks.add<sw::IncludeExists>(c.params[0]);
             if (cpp)
-                p->setCpp();
+                p.setCpp();
         }
     }
 }
@@ -951,11 +951,11 @@ int main() { makedev(0, 0); return 0; }
 
 void ac_processor::process_AC_STRUCT_TM(command &c)
 {
-    auto p = checks.add<sw::SourceCompiles>("TM_IN_SYS_TIME", R"(
+    auto &p = checks.add<sw::SourceCompiles>("TM_IN_SYS_TIME", R"(
 #include <time.h>
 int main() { struct tm t; return 0; }
 )");
-    p->DefineIfZero = true;
+    p.DefineIfZero = true;
 }
 
 void ac_processor::process_AC_STRUCT_TIMEZONE(command &c)
@@ -963,8 +963,8 @@ void ac_processor::process_AC_STRUCT_TIMEZONE(command &c)
     // Figure out how to get the current timezone.If struct tm has a tm_zone member,
     // define HAVE_STRUCT_TM_TM_ZONE(and the obsoleted HAVE_TM_ZONE).
     // Otherwise, if the external array tzname is found, define HAVE_TZNAME.
-    auto c2 = checks.add<sw::SymbolExists>("tzname");
-    c2->Parameters.Includes = { "time.h" };
+    auto &c2 = checks.add<sw::SymbolExists>("tzname");
+    c2.Parameters.Includes = { "time.h" };
 }
 
 void ac_processor::process_AC_CHECK_LIB(command &c)
@@ -995,9 +995,9 @@ void ac_processor::process_AC_CHECK_MEMBERS(command &c)
             header = "dirent.h";
         // add more headers here
 
-        auto c2 = checks.add<sw::StructMemberExists>(member, struct_);
+        auto &c2 = checks.add<sw::StructMemberExists>(member, struct_);
         if (!header.empty())
-            c2->Parameters.Includes.push_back(header);
+            c2.Parameters.Includes.push_back(header);
     }
 }
 
@@ -1008,6 +1008,6 @@ void ac_processor::process_AC_CHECK_ALIGNOF(command &c)
 
 void ac_processor::process_AC_CHECK_SYMBOL(command &c)
 {
-    auto c2 = checks.add<sw::SymbolExists>(c.params[0]);
-    c2->Parameters.Includes = { c.params[1] };
+    auto &c2 = checks.add<sw::SymbolExists>(c.params[0]);
+    c2.Parameters.Includes = { c.params[1] };
 }

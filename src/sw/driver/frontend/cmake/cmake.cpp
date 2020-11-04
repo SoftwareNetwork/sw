@@ -134,13 +134,13 @@ DEFINE_STATIC_CMAKE_COMMAND(sw_cm_check)
     if constexpr (NArgs == 0)
     {
         if (args.size() == 1)
-            i = &*cmep->cs->add<Check>(args[0]);
+            i = &cmep->cs->add<Check>(args[0]);
         else
-            i = &*cmep->cs->add<Check>(args[0], args[1]);
+            i = &cmep->cs->add<Check>(args[0], args[1]);
     }
     else if constexpr (NArgs == 2)
     {
-        i = &*cmep->cs->add<Check>(args[0], args[1]);
+        i = &cmep->cs->add<Check>(args[0], args[1]);
 
         for (int n = 2; n < args.size(); n++)
         {
@@ -285,7 +285,7 @@ std::vector<ITargetPtr> CmakeTargetEntryPoint::loadPackages(SwBuild &mb, const T
     b.BinaryDir = mb.getBuildDirectory();
     t = &b.addLibrary("dummy");
     // checks
-    cs = &b.checker.addSet(DEFAULT_CMAKE_CHECK_SET_NAME);
+    cs = &b.checker->addSet(DEFAULT_CMAKE_CHECK_SET_NAME);
     cs->t = t;
 
     // init every time because we set settings specific to current request

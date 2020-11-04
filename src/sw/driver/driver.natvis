@@ -19,4 +19,10 @@
         </DisplayString>
     </Type>
 
+    <Type Name="sw::Check">
+        <DisplayString>
+            {data}
+        </DisplayString>
+    </Type>
+
 </AutoVisualizer>

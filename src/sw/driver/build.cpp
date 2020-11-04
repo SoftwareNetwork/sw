@@ -38,7 +38,7 @@ namespace sw
 {
 
 Build::Build(SwBuild &mb)
-    : checker(mb)
+    : checker(std::make_shared<Checker>(mb))
 {
     main_build_ = &mb;
 }

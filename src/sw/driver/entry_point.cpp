@@ -319,7 +319,7 @@ NativeBuiltinTargetEntryPoint::NativeBuiltinTargetEntryPoint(BuildFunction bf)
 void NativeBuiltinTargetEntryPoint::loadPackages1(Build &b) const
 {
     if (cf)
-        cf(b.checker);
+        cf(*b.checker);
     if (!bf)
         throw SW_RUNTIME_ERROR("No internal build function set");
     bf(b);
@@ -332,7 +332,7 @@ NativeModuleTargetEntryPoint::NativeModuleTargetEntryPoint(const Module &m)
 
 void NativeModuleTargetEntryPoint::loadPackages1(Build &b) const
 {
-    m.check(b, b.checker);
+    m.check(b, *b.checker);
     m.build(b);
 }
 

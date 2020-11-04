@@ -229,53 +229,53 @@ static void check_def(const String &d)
         throw SW_RUNTIME_ERROR("Empty check definition");
 }
 
+CheckSet::CheckSet()
+{
+}
+
 CheckSet::CheckSet(Checker &checker)
-    : checker(checker)
+    : checker(&checker)
 {
+    // add common checks
+    testBigEndian();
 }
 
-Checker::Checker(SwBuild &swbld)
-    : swbld(swbld)
+Checker &CheckSet::getChecker() const
 {
+    if (!checker)
+        throw SW_RUNTIME_ERROR("CheckSet was not prepared for this!");
+    return *checker;
 }
 
-CheckSet &Checker::addSet(const String &name)
+Check &CheckSet::registerCheck(CheckStorage &s, Check &c)
 {
-    auto cs = std::make_shared<CheckSet>(*this);
-    auto p = sets.emplace(name, cs);
-    p.first->second->name = name;
-    return *p.first->second;
+    auto i = s.find(c.getHash());
+    if (i == s.end())
+    {
+        s.emplace(c.getHash(), &c);
+        return c;
+    }
+    return *i->second;
+}
+
+Check &CheckSet::registerCheck(Check &c) const
+{
+    return registerCheck(getChecker().all_checks, c);
 }
 
 void CheckSet::performChecks(const SwBuild &mb, const TargetSettings &ts)
 {
-    static const auto checks_dir = checker.swbld.getContext().getLocalStorage().storage_dir_etc / "sw" / "checks";
-
-    //std::unique_lock lk(m);
+    static const auto checks_dir = getChecker().swbld.getContext().getLocalStorage().storage_dir_etc / "sw" / "checks";
 
     if (!t)
         throw SW_RUNTIME_ERROR("Target was not set");
 
     auto config = ts.getHash();
-
-    /*static std::mutex m;
-    static std::map<String, std::mutex> checks_mutex;
-    std::mutex *m2;
-    {
-        std::unique_lock lk(m);
-        m2 = &checks_mutex[config];
-    }
-    std::unique_lock lk(*m2);
-    //std::unique_lock lk2(m);*/
-
     auto fn = checks_dir / config / "checks.3.txt";
     auto &cs = getChecksStorage(config, fn);
 
-    // add common checks
-    testBigEndian();
-
     // returns true if inserted
-    auto add_dep = [this, &cs](auto &c)
+    /*auto add_dep = [this, &cs](auto &c)
     {
         auto h = c->getHash();
         auto ic = checks.find(h);
@@ -299,17 +299,61 @@ void CheckSet::performChecks(const SwBuild &mb, const TargetSettings &ts)
         if (i != cs.all_checks.end())
             c->Value = i->second;
         return std::pair{ true, c };
-    };
+    };*/
 
-    // prepare loaded checks
+    // gather deps
+    {
+        std::unordered_map<size_t, std::unique_ptr<Check>> deps;
+        // initial deps
+        for (auto &c : all)
+        {
+            for (auto &d : c->gatherDependencies())
+                deps.emplace(d->getHash(), std::move(d));
+        }
+        while (1)
+        {
+            auto sz = deps.size();
+            decltype(deps) deps2;
+            for (auto &[_, c] : deps)
+            {
+                for (auto &d : c->gatherDependencies())
+                    deps2.emplace(d->getHash(), std::move(d));
+            }
+            deps.merge(deps2);
+            if (sz == deps.size())
+                break;
+        }
+
+        // store deps
+        for (auto &[_, c] : deps)
+            all.emplace_back(std::move(c));
+    }
+
+    // register checks in global storage, gather unchecked
+    std::unordered_set<Check*> unchecked;
     for (auto &c : all)
     {
-        auto[inserted, dep] = add_dep(c);
+        auto &c2 = registerCheck(*c);
+        if (!c2.isChecked())
+            unchecked.insert(&c2);
+    }
+
+    // set deps
+    for (auto &&c : unchecked)
+    {
+        for (auto &d : c->gatherDependencies())
+            c->dependencies.insert(&registerCheck(*d));
+    }
+
+    // prepare loaded checks
+    /*for (auto &c : all)
+    {
+        //auto [inserted, dep] = add_dep(c);
         auto deps = c->gatherDependencies();
         for (auto &d : deps)
         {
-            auto [inserted, dep2] = add_dep(d);
-            dep->dependencies.insert(dep2);
+            //auto [inserted, dep2] = add_dep(d);
+            //dep->dependencies.insert(dep2);
         }
 
         // add to check_values only requested defs
@@ -320,28 +364,27 @@ void CheckSet::performChecks(const SwBuild &mb, const TargetSettings &ts)
             for (auto &p : c->Prefixes)
                 check_values[p + d];
         }
-    }
-
-    // remove this?
-    SCOPE_EXIT
-    {
-        this->all.clear();
-    };
+    }*/
 
     // perform
-    std::unordered_set<CheckPtr> unchecked;
-    for (auto &[h, c] : checks)
+    //std::unordered_set<Check*> unchecked;
+    /*for (auto &c : all)
+    {
+        registerCheck(this_checks, *d)
+    }*/
+    /*for (auto &[h, c] : checks)
     {
         if (!c->isChecked())
             unchecked.insert(c);
-    }
+    }*/
 
     SCOPE_EXIT
     {
-        prepareChecksForUse();
+        //prepareChecksForUse();
         if (mb.getSettings()["print_checks"] == "true")
         {
-            std::ofstream o(fn.parent_path() / (t->getPackage().toString() + "." + name + ".txt"));
+            SW_UNIMPLEMENTED;
+            /*std::ofstream o(fn.parent_path() / (t->getPackage().toString() + "." + name + ".txt"));
             if (!o)
                 return;
             std::map<String, CheckPtr> cv(check_values.begin(), check_values.end());
@@ -349,13 +392,11 @@ void CheckSet::performChecks(const SwBuild &mb, const TargetSettings &ts)
             {
                 if (c->Value)
                     o << d << " " << c->Value.value() << " " << c->getHash() << "\n";
-            }
+            }*/
         }
         // cleanup
-        for (auto &[h, c] : checks)
-        {
-            c->clean();
-        }
+        for (auto &c1 : all)
+            c1->clean();
     };
 
     if (mb.getSettings()["print_checks"] == "true")
@@ -380,7 +421,7 @@ void CheckSet::performChecks(const SwBuild &mb, const TargetSettings &ts)
         {
             // remove tmp dir
             error_code ec;
-            fs::remove_all(getChecksDir(checker.swbld.getBuildDirectory()), ec);
+            fs::remove_all(getChecksDir(getChecker().swbld.getBuildDirectory()), ec);
         };
 
         //auto &e = getExecutor();
@@ -390,21 +431,22 @@ void CheckSet::performChecks(const SwBuild &mb, const TargetSettings &ts)
         {
             ep->execute(e);
         }
-        catch (...)
+        catch (std::exception &)
         {
             // in case of error, some checks may be unchecked
             // and we record only checked checks
-            for (auto &[h, c] : checks)
+            for (auto &&c1 : all)
             {
-                if (c->Value)
-                    cs.add(*c);
+                auto &c2 = registerCheck(*c1);
+                if (c2.Value)
+                    cs.add(c2);
             }
             cs.save(fn);
             throw;
         }
 
-        for (auto &[h, c] : checks)
-            cs.add(*c);
+        for (auto &&c1 : all)
+            cs.add(registerCheck(*c1));
 
         auto cc_dir = fn.parent_path() / "cc";
 
@@ -417,13 +459,14 @@ void CheckSet::performChecks(const SwBuild &mb, const TargetSettings &ts)
                 LOG_WARN(logger, "Cannot remove checks dir: " + to_string(cc_dir.u8string()));
             fs::create_directories(cc_dir, ec);
 
-            for (auto &[h, c] : checks)
+            for (auto &&c1 : all)
             {
-                if (c->requires_manual_setup)
+                auto &c2 = registerCheck(*c1);
+                if (c2.requires_manual_setup)
                 {
-                    auto dst = (cc_dir / std::to_string(c->getHash())) += BuildSettings(ts).TargetOS.getExecutableExtension();
+                    auto dst = (cc_dir / std::to_string(c2.getHash())) += BuildSettings(ts).TargetOS.getExecutableExtension();
                     if (!fs::exists(dst))
-                        fs::copy_file(c->executable, dst, fs::copy_options::overwrite_existing);
+                        fs::copy_file(c2.executable, dst, fs::copy_options::overwrite_existing);
                 }
             }
         }
@@ -568,18 +611,32 @@ void CheckSet::performChecks(const SwBuild &mb, const TargetSettings &ts)
     {
         for (auto &d : c->dependencies)
         {
-            if (ep->getUnprocessedCommandsSet().find(static_cast<Check*>(d.get())) == ep->getUnprocessedCommandsSet().end())
+            if (ep->getUnprocessedCommandsSet().find(static_cast<Check*>(d)) == ep->getUnprocessedCommandsSet().end())
                 continue;
-            s += *static_cast<Check*>(c)->Definitions.begin() + "->" + *std::static_pointer_cast<Check>(d)->Definitions.begin() + ";";
+            s += *static_cast<Check*>(c)->Definitions.begin() + "->" + *static_cast<Check*>(d)->Definitions.begin() + ";";
         }
     }
     s += "}";
 
-    auto d = getServiceDir(checker.swbld.getBuildDirectory());
+    auto d = getServiceDir(getChecker().swbld.getBuildDirectory());
     auto cyclic_path = d / "cyclic";
     write_file(cyclic_path / "deps_checks.dot", s);
 
     throw SW_RUNTIME_ERROR("Cannot create execution plan because of cyclic dependencies");
+}
+
+std::unordered_map<String, CheckValue> CheckSet::getResult() const
+{
+    std::unordered_map<String, CheckValue> r;
+    for (auto &&c1 : all)
+    {
+        auto &c2 = registerCheck(*c1);
+        SW_CHECK(c2.isChecked());
+
+        SW_UNIMPLEMENTED;
+        //auto d = c->getDefinition(k);
+    }
+    return r;
 }
 
 Check::Check()
@@ -681,11 +738,11 @@ void Check::execute()
     LOG_DEBUG(logger, log_string + "Checking " << toString(getType()) << " " << *Definitions.begin() << ": " << Value.value());
 }
 
-std::vector<CheckPtr> Check::gatherDependencies()
+std::vector<std::unique_ptr<Check>> Check::gatherDependencies() const
 {
-    std::vector<CheckPtr> deps;
+    std::vector<std::unique_ptr<Check>> deps;
     for (auto &d : Parameters.Includes)
-        deps.push_back(check_set->add<IncludeExists>(d));
+        deps.emplace_back(check_set->addRaw<IncludeExists>(d));
     return deps;
 }
 
@@ -719,7 +776,7 @@ const path &Check::getUniqueName() const
 
 path Check::getOutputFilename() const
 {
-    auto d = getChecksDir(check_set->checker.swbld.getBuildDirectory());
+    auto d = getChecksDir(check_set->getChecker().swbld.getBuildDirectory());
     auto up = getUniqueName();
     d /= up;
     auto f = d;
@@ -756,7 +813,7 @@ TargetSettings Check::getSettings() const
         ss["native"]["configuration"] = "debug";
 
     // set output dir for check binaries
-    auto d = getChecksDir(check_set->checker.swbld.getBuildDirectory());
+    auto d = getChecksDir(check_set->getChecker().swbld.getBuildDirectory());
     auto up = getUniqueName();
     d /= up;
     ss["output_dir"] = to_string(normalize_path(d));
@@ -768,6 +825,7 @@ TargetSettings Check::getSettings() const
 void Check::setupTarget(NativeCompiledTarget &t) const
 {
     t.GenerateWindowsResource = false;
+    // TODO: restore!
     //if (auto L = t.getSelectedTool()->as<VisualStudioLinker*>())
         //L->DisableIncrementalLink = true; // do not create .ilk?
     t.command_storage = nullptr;
@@ -818,7 +876,7 @@ bool Check::execute(SwBuild &b) const
 }
 
 #define SETUP_SOLUTION()                                          \
-    auto b = check_set->checker.swbld.getContext().createBuild(); \
+    auto b = check_set->getChecker().swbld.getContext().createBuild(); \
     auto s = setupSolution(*b, f);                                \
     s.module_data.current_settings = getSettings()
 
@@ -998,8 +1056,8 @@ String TypeSize::getSourceFileContents() const
     String src;
     for (auto &d : Parameters.Includes)
     {
-        auto c = check_set->get<IncludeExists>(d);
-        if (c->Value && c->Value.value())
+        auto &c = check_set->get<IncludeExists>(d);
+        if (c.Value && c.Value.value())
             src += "#include <" + d + ">\n";
     }
     // use printf because size of some struct may be greater than 128
@@ -1069,8 +1127,8 @@ String TypeAlignment::getSourceFileContents() const
     String src;
     for (auto &d : Parameters.Includes)
     {
-        auto c = check_set->get<IncludeExists>(d);
-        if (c->Value && c->Value.value())
+        auto &c = check_set->get<IncludeExists>(d);
+        if (c.Value && c.Value.value())
             src += "#include <" + d + ">\n";
     }
     src += R"(
@@ -1140,8 +1198,8 @@ String SymbolExists::getSourceFileContents() const
     String src;
     for (auto &d : Parameters.Includes)
     {
-        auto c = check_set->get<IncludeExists>(d);
-        if (c->Value && c->Value.value())
+        auto &c = check_set->get<IncludeExists>(d);
+        if (c.Value && c.Value.value())
             src += "#include <" + d + ">\n";
     }
     src += R"(
@@ -1208,8 +1266,8 @@ String DeclarationExists::getSourceFileContents() const
     String src;
     for (auto &d : Parameters.Includes)
     {
-        auto c = check_set->get<IncludeExists>(d);
-        if (c->Value && c->Value.value())
+        auto &c = check_set->get<IncludeExists>(d);
+        if (c.Value && c.Value.value())
             src += "#include <" + d + ">\n";
     }
     src += "int main() { (void)" + data + "; return 0; }";
@@ -1262,8 +1320,8 @@ String StructMemberExists::getSourceFileContents() const
     String src;
     for (auto &d : Parameters.Includes)
     {
-        auto c = check_set->get<IncludeExists>(d);
-        if (c->Value && c->Value.value())
+        auto &c = check_set->get<IncludeExists>(d);
+        if (c.Value && c.Value.value())
             src += "#include <" + d + ">\n";
     }
     src += "int main() { sizeof(((" + struct_ + " *)0)->" + member + "); return 0; }";
@@ -1475,79 +1533,68 @@ CompilerFlag::CompilerFlag(const String &def, const Strings &compiler_flags)
         Parameters.CompileOptions.push_back(f);
 }
 
-FunctionExists &CheckSet1::checkFunctionExists(const String &function, const String &def)
+FunctionExists &CheckSet::checkFunctionExists(const String &function, const String &def)
 {
-    auto c = add<FunctionExists>(function, def);
-    return *c;
+    return add<FunctionExists>(function, def);
 }
 
-IncludeExists &CheckSet1::checkIncludeExists(const String &include, const String &def)
+IncludeExists &CheckSet::checkIncludeExists(const String &include, const String &def)
 {
-    auto c = add<IncludeExists>(include, def);
-    return *c;
+    return add<IncludeExists>(include, def);
 }
 
-/*FunctionExists &CheckSet1::checkLibraryExists(const String &library, const String &def)
+/*FunctionExists &CheckSet::checkLibraryExists(const String &library, const String &def)
 {
     auto c = add<FunctionExists>(library, def);
     return *c;
 }*/
 
-LibraryFunctionExists &CheckSet1::checkLibraryFunctionExists(const String &library, const String &function, const String &def)
+LibraryFunctionExists &CheckSet::checkLibraryFunctionExists(const String &library, const String &function, const String &def)
 {
-    auto c = add<LibraryFunctionExists>(library, function, def);
-    return *c;
+    return add<LibraryFunctionExists>(library, function, def);
 }
 
-SymbolExists &CheckSet1::checkSymbolExists(const String &symbol, const String &def)
+SymbolExists &CheckSet::checkSymbolExists(const String &symbol, const String &def)
 {
-    auto c = add<SymbolExists>(symbol, def);
-    return *c;
+    return add<SymbolExists>(symbol, def);
 }
 
-StructMemberExists &CheckSet1::checkStructMemberExists(const String &s, const String &member, const String &def)
+StructMemberExists &CheckSet::checkStructMemberExists(const String &s, const String &member, const String &def)
 {
-    auto c = add<StructMemberExists>(s, member, def);
-    return *c;
+    return add<StructMemberExists>(s, member, def);
 }
 
-DeclarationExists &CheckSet1::checkDeclarationExists(const String &decl, const String &def)
+DeclarationExists &CheckSet::checkDeclarationExists(const String &decl, const String &def)
 {
-    auto c = add<DeclarationExists>(decl, def);
-    return *c;
+    return add<DeclarationExists>(decl, def);
 }
 
-TypeSize &CheckSet1::checkTypeSize(const String &type, const String &def)
+TypeSize &CheckSet::checkTypeSize(const String &type, const String &def)
 {
-    auto c = add<TypeSize>(type, def);
-    return *c;
+    return add<TypeSize>(type, def);
 }
 
-TypeAlignment &CheckSet1::checkTypeAlignment(const String &type, const String &def)
+TypeAlignment &CheckSet::checkTypeAlignment(const String &type, const String &def)
 {
-    auto c = add<TypeAlignment>(type, def);
-    return *c;
+    return add<TypeAlignment>(type, def);
 }
 
-SourceCompiles &CheckSet1::checkSourceCompiles(const String &def, const String &src)
+SourceCompiles &CheckSet::checkSourceCompiles(const String &def, const String &src)
 {
-    auto c = add<SourceCompiles>(def, src);
-    return *c;
+    return add<SourceCompiles>(def, src);
 }
 
-SourceLinks &CheckSet1::checkSourceLinks(const String &def, const String &src)
+SourceLinks &CheckSet::checkSourceLinks(const String &def, const String &src)
 {
-    auto c = add<SourceLinks>(def, src);
-    return *c;
+    return add<SourceLinks>(def, src);
 }
 
-SourceRuns &CheckSet1::checkSourceRuns(const String &def, const String &src)
+SourceRuns &CheckSet::checkSourceRuns(const String &def, const String &src)
 {
-    auto c = add<SourceRuns>(def, src);
-    return *c;
+    return add<SourceRuns>(def, src);
 }
 
-SourceRuns &CheckSet1::testBigEndian(const String &def)
+SourceRuns &CheckSet::testBigEndian(const String &def)
 {
     return testBigEndian(def, R"(
 int IsBigEndian()
@@ -1559,14 +1606,15 @@ int main() { return IsBigEndian(); }
 )");
 }
 
-SourceRuns &CheckSet1::testBigEndian(const String &def, const String &src)
+SourceRuns &CheckSet::testBigEndian(const String &def, const String &src)
 {
     return checkSourceRuns(def, src);
 }
 
 void CheckSet::prepareChecksForUse()
 {
-    for (auto &[h, c] : checks)
+    SW_UNIMPLEMENTED;
+    /*for (auto &[h, c] : checks)
     {
         for (auto &d : c->Definitions)
         {
@@ -1578,7 +1626,19 @@ void CheckSet::prepareChecksForUse()
                     check_values[p + d] = c;
             }
         }
-    }
+    }*/
+}
+
+Checker::Checker(SwBuild &swbld)
+    : swbld(swbld)
+{
+}
+
+CheckSet &Checker::addSet(const String &name)
+{
+    auto [i,_] = sets.emplace(name, std::make_unique<CheckSet>(*this));
+    i->second->name = name;
+    return *i->second;
 }
 
 }
