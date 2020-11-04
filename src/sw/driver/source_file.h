@@ -22,7 +22,7 @@ struct SW_DRIVER_CPP_API SourceFile : /*TargetFile, */ICastable
     path file;
     bool skip = false;
     path install_dir;
-    Strings args; // additional args to job, move to native?
+    std::map<String, primitives::command::Arguments> args; // additional args per rule, move to native?
     String fancy_name; // for output
     bool skip_unity_build = false;
     int index; // index of file during addition
