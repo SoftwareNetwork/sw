@@ -88,7 +88,6 @@ FileData &FileData::operator=(const FileData &rhs)
 
 void FileData::reset()
 {
-    generator.reset();
     refreshed = FileData::RefreshType::Unrefreshed;
 }
 
@@ -169,65 +168,12 @@ std::optional<String> File::isChanged(const fs::file_time_type &in, bool throw_o
 
 bool File::isGenerated() const
 {
-    return isGeneratedAtAll();
-    //return !!data->generator.lock();
-}
-
-bool File::isGeneratedAtAll() const
-{
     return data->generated;
 }
 
 void File::setGenerated(bool g)
 {
     data->generated = g;
-}
-
-void File::setGenerator(const std::shared_ptr<builder::Command> &g, bool ignore_errors)
-{
-    SW_UNIMPLEMENTED;
-
-    if (!g)
-        return;
-
-    auto gold = data->generator.lock();
-    if (1
-        && !ignore_errors
-        && gold
-        && (1
-            //&& gold != g
-            //&& !gold->isExecuted()
-            //&& gold->getHash() != g->getHash()
-            )
-        )
-    {
-        String err;
-        err += "Setting generator twice on file: " + to_string(file) + "\n";
-        if (gold)
-        {
-            err += "first generator:\n " + gold->print() + "\n";
-            err += "first generator hash:\n " + std::to_string(gold->getHash());
-        }
-        else
-            err += "first generator is empty";
-        err += "\n";
-        if (g)
-        {
-            err += "second generator:\n " + g->print() + "\n";
-            err += "second generator hash:\n " + std::to_string(g->getHash());
-        }
-        else
-            err += "second generator is empty";
-        throw SW_RUNTIME_ERROR(err);
-    }
-    data->generator = g;
-    data->generated = true;
-}
-
-std::shared_ptr<builder::Command> File::getGenerator() const
-{
-    SW_UNIMPLEMENTED;
-    return data->generator.lock();
 }
 
 }

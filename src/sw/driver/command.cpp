@@ -93,7 +93,7 @@ void Command::prepare()
                     {
                         if (*nt->HeaderOnly)
                             throw SW_RUNTIME_ERROR("Program is used from package: " + t.getPackage().toString() + " which is header only");
-                        if (!File(p, getContext().getFileStorage()).isGeneratedAtAll())
+                        if (!File(p, getContext().getFileStorage()).isGenerated())
                             throw SW_RUNTIME_ERROR("Program from package: " + t.getPackage().toString() + " is not generated at all: " + to_string(normalize_path(p)));
                         throw SW_RUNTIME_ERROR("Program from package: " + t.getPackage().toString() + " is not generated: " + to_string(normalize_path(p)));
                     }

@@ -52,7 +52,6 @@ struct FileData
     //int64_t size = -1;
     //String hash;
     //SomeFlags flags;
-    std::weak_ptr<builder::Command> generator;
     bool generated = false;
 
     // downloaded etc.
@@ -90,12 +89,7 @@ struct SW_BUILDER_API File : virtual ICastable
     std::optional<String> isChanged(const fs::file_time_type &t, bool throw_on_missing);
 
     bool isGenerated() const;
-    bool isGeneratedAtAll() const;
-    void setGenerator(const std::shared_ptr<builder::Command> &, bool ignore_errors);
     void setGenerated(bool g = true);
-    std::shared_ptr<builder::Command> getGenerator() const;
-
-    //bool operator<(const File &r) const;
 
 private:
     mutable FileData *data = nullptr;

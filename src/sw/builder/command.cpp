@@ -439,17 +439,6 @@ path Command::redirectStderr(const path &p, bool append)
     return p;
 }
 
-void Command::addInputOutputDeps()
-{
-    SW_UNIMPLEMENTED;
-    /*for (auto &p : inputs)
-    {
-        File f(p, getContext().getFileStorage());
-        if (f.isGenerated())
-            dependencies.insert(f.getGenerator());
-    }*/
-}
-
 path detail::ResolvableCommand::resolveProgram(const path &in) const
 {
     return resolveExecutable(in);
@@ -471,7 +460,7 @@ void Command::prepare()
 
     // user entered commands may be in form 'git'
     // so, it is not empty, not generated and does not exist
-    if (!getProgram().empty() && !File(getProgram(), getContext().getFileStorage()).isGeneratedAtAll() &&
+    if (!getProgram().empty() && !File(getProgram(), getContext().getFileStorage()).isGenerated() &&
         !path(getProgram()).is_absolute() && !fs::exists(getProgram()))
     {
         auto new_prog = resolveExecutable(getProgram());
@@ -488,9 +477,6 @@ void Command::prepare()
     inputs.insert(getProgram());
 
     getHashAndSave();
-
-    // add more deps
-    //addInputOutputDeps();
 
     // late add real generator
     for (auto &p : outputs)

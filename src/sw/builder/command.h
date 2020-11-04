@@ -209,7 +209,6 @@ public:
     path redirectStdout(const path &p, bool append = false);
     path redirectStderr(const path &p, bool append = false);
     Files getGeneratedDirs() const; // used by generators
-    void addInputOutputDeps();
     path writeCommand(const path &basename, bool print_name = true) const;
 
     bool lessDuringExecution(const CommandNode &rhs) const override;

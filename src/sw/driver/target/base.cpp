@@ -314,7 +314,7 @@ TargetFiles Target::getFiles(StorageFileType t) const
     {
         TargetFiles files;
         for (auto &f : gatherAllFiles())
-            files.emplace(f, TargetFile(f/*, SourceDirBase*/, File(f, getFs()).isGeneratedAtAll()));
+            files.emplace(f, TargetFile(f/*, SourceDirBase*/, File(f, getFs()).isGenerated()));
         return files;
     }
     }

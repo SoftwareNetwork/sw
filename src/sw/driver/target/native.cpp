@@ -850,7 +850,7 @@ TargetFiles NativeCompiledTarget::getFiles(StorageFileType t) const
         TargetFiles files;
         auto add_file = [this, &files](const path &f)
         {
-            files.emplace(f, TargetFile(f/*, getPackage().getDirObj()*/, File(f, getFs()).isGeneratedAtAll()));
+            files.emplace(f, TargetFile(f/*, getPackage().getDirObj()*/, File(f, getFs()).isGenerated()));
         };
         add_file(getOutputFile());
         add_file(getImportLibrary());
