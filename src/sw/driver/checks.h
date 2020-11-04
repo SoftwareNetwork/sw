@@ -298,8 +298,7 @@ public:
     CheckSet &operator=(const CheckSet &) = delete;
 
     Checker &getChecker() const;
-    std::unordered_map<String, Check*> getResultsRaw(bool allow_partial = false) const;
-    std::unordered_map<String, CheckValue> getResults(bool allow_partial = false) const;
+    std::unordered_map<String, Check*> getResults(bool allow_partial = false) const;
 
     template <class T, class ... Args>
     std::unique_ptr<T> addRaw(Args && ... args)

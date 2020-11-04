@@ -3346,16 +3346,19 @@ void NativeCompiledTarget::setChecks(const String &name, bool check_definitions)
     checks_set.performChecks(getMainBuild(), getSettings());
 
     // set results
-    for (auto &&[d, v] : checks_set.getResults())
+    for (auto &&[k, c] : checks_set.getResults())
     {
+        auto d = c->getDefinition(k);
+        const auto v = c->Value.value();
+
         // make private?
         // remove completely?
-        if (check_definitions)
-            add(Definition{ d });
-        if (pystring::endswith(d, "_CODE"))
-            Variables[d] = "#define " + d.substr(0, d.size() - 5) + " " + std::to_string(v);
+        if (check_definitions && d)
+            add(Definition{ d.value() });
+        if (pystring::endswith(k, "_CODE"))
+            Variables[k] = "#define " + k.substr(0, k.size() - 5) + " " + std::to_string(v);
         else
-            Variables[d] = v;
+            Variables[k] = v;
     }
 }
 

@@ -17,6 +17,7 @@
 #include <boost/algorithm/string.hpp>
 #include <nlohmann/json.hpp>
 #include <primitives/emitter.h>
+#include <primitives/executor.h>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "checks");
@@ -338,7 +339,7 @@ void CheckSet::performChecks(const SwBuild &mb, const TargetSettings &ts)
             std::ofstream o(fn.parent_path() / (t->getPackage().toString() + "." + name + ".txt"));
             if (!o)
                 return;
-            auto r = getResultsRaw(true);
+            auto r = getResults(true);
             std::map<String, Check*> cv(r.begin(), r.end());
             for (auto &[d, c] : cv)
             {
@@ -577,7 +578,7 @@ void CheckSet::performChecks(const SwBuild &mb, const TargetSettings &ts)
     throw SW_RUNTIME_ERROR("Cannot create execution plan because of cyclic dependencies");
 }
 
-std::unordered_map<String, Check*> CheckSet::getResultsRaw(bool allow_partial) const
+std::unordered_map<String, Check*> CheckSet::getResults(bool allow_partial) const
 {
     std::unordered_map<String, Check*> r;
     auto add_val = [&r](auto &&def, auto &&val)
@@ -599,14 +600,6 @@ std::unordered_map<String, Check*> CheckSet::getResultsRaw(bool allow_partial) c
                 add_val(p + d, c2);
         }
     }
-    return r;
-}
-
-std::unordered_map<String, CheckValue> CheckSet::getResults(bool allow_partial) const
-{
-    std::unordered_map<String, CheckValue> r;
-    for (auto &&[d,c] : getResultsRaw(allow_partial))
-        r[d] = c->Value.value();
     return r;
 }
 
