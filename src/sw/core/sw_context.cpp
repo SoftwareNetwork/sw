@@ -10,6 +10,8 @@
 
 #include <sw/manager/storage.h>
 
+#include <primitives/executor.h>
+
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "context");
 

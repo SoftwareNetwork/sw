@@ -10,6 +10,7 @@
 #include <boost/dll/import_mangled.hpp>
 #include <boost/dll/smart_library.hpp>
 #include <primitives/emitter.h>
+#include <primitives/executor.h>
 #include <primitives/http.h>
 #include <sw/core/build.h>
 #include <sw/core/input.h>

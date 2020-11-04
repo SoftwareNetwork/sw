@@ -22,6 +22,7 @@
 
 #include <nlohmann/json.hpp>
 #include <primitives/exceptions.h>
+#include <primitives/executor.h>
 
 namespace sw
 {

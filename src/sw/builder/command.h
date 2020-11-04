@@ -21,7 +21,6 @@
 #include "node.h"
 
 #include <primitives/command.h>
-#include <primitives/executor.h>
 
 #include <condition_variable>
 #include <mutex>

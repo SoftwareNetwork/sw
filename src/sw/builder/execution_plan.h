@@ -30,6 +30,8 @@
 
 #include <chrono>
 
+struct Executor;
+
 namespace sw
 {
 
