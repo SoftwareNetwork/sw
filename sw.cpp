@@ -1,7 +1,7 @@
 #pragma sw require header pub.egorpugin.primitives.tools.embedder-master
 #pragma sw require header org.sw.demo.google.grpc.cpp.plugin
 #pragma sw require header org.sw.demo.lexxmark.winflexbison.bison
-#pragma sw require header org.sw.demo.qtproject.qt.base.tools.moc
+//#pragma sw require header org.sw.demo.qtproject.qt.base.tools.moc
 
 void build(Solution &s)
 {
