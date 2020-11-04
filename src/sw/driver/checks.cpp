@@ -274,33 +274,6 @@ void CheckSet::performChecks(const SwBuild &mb, const TargetSettings &ts)
     auto fn = checks_dir / config / "checks.3.txt";
     auto &cs = getChecksStorage(config, fn);
 
-    // returns true if inserted
-    /*auto add_dep = [this, &cs](auto &c)
-    {
-        auto h = c->getHash();
-        auto ic = checks.find(h);
-        if (ic != checks.end())
-        {
-            checks[h] = ic->second;
-            ic->second->Definitions.insert(c->Definitions.begin(), c->Definitions.end());
-            ic->second->Prefixes.insert(c->Prefixes.begin(), c->Prefixes.end());
-
-            // maybe we already know it?
-            // this path is used with wait_for_cc_checks
-            auto i = cs.all_checks.find(h);
-            if (i != cs.all_checks.end())
-                ic->second->Value = i->second;
-
-            return std::pair{ false, ic->second };
-        }
-        checks[h] = c;
-
-        auto i = cs.all_checks.find(h);
-        if (i != cs.all_checks.end())
-            c->Value = i->second;
-        return std::pair{ true, c };
-    };*/
-
     // gather deps
     {
         std::unordered_map<size_t, std::unique_ptr<Check>> deps;
@@ -334,8 +307,17 @@ void CheckSet::performChecks(const SwBuild &mb, const TargetSettings &ts)
     for (auto &c : all)
     {
         auto &c2 = registerCheck(*c);
-        if (!c2.isChecked())
-            unchecked.insert(&c2);
+        if (c2.isChecked())
+            continue;
+        // maybe we already know it?
+        // this path is used with wait_for_cc_checks
+        auto i = cs.all_checks.find(c2.getHash());
+        if (i != cs.all_checks.end())
+        {
+            c2.Value = i->second;
+            continue;
+        }
+        unchecked.insert(&c2);
     }
 
     // set deps
@@ -344,39 +326,6 @@ void CheckSet::performChecks(const SwBuild &mb, const TargetSettings &ts)
         for (auto &d : c->gatherDependencies())
             c->dependencies.insert(&registerCheck(*d));
     }
-
-    // prepare loaded checks
-    /*for (auto &c : all)
-    {
-        //auto [inserted, dep] = add_dep(c);
-        auto deps = c->gatherDependencies();
-        for (auto &d : deps)
-        {
-            //auto [inserted, dep2] = add_dep(d);
-            //dep->dependencies.insert(dep2);
-        }
-
-        // add to check_values only requested defs
-        // otherwise we'll get also defs from other sets (e.g. with prefixes from ICU 'U_')
-        for (auto &d : c->Definitions)
-        {
-            check_values[d];
-            for (auto &p : c->Prefixes)
-                check_values[p + d];
-        }
-    }*/
-
-    // perform
-    //std::unordered_set<Check*> unchecked;
-    /*for (auto &c : all)
-    {
-        registerCheck(this_checks, *d)
-    }*/
-    /*for (auto &[h, c] : checks)
-    {
-        if (!c->isChecked())
-            unchecked.insert(c);
-    }*/
 
     SCOPE_EXIT
     {
@@ -628,13 +577,23 @@ void CheckSet::performChecks(const SwBuild &mb, const TargetSettings &ts)
 std::unordered_map<String, CheckValue> CheckSet::getResult() const
 {
     std::unordered_map<String, CheckValue> r;
+    auto add_val = [&r](auto &&def, auto &&val)
+    {
+        r[def] = val;
+    };
     for (auto &&c1 : all)
     {
         auto &c2 = registerCheck(*c1);
         SW_CHECK(c2.isChecked());
 
-        SW_UNIMPLEMENTED;
-        //auto d = c->getDefinition(k);
+        // add to check_values only requested defs
+        // otherwise we'll get also defs from other sets (e.g. with prefixes from ICU 'U_')
+        for (auto &d : c1->Definitions)
+        {
+            add_val(d, c2.Value.value());
+            for (auto &p : c1->Prefixes)
+                add_val(p + d, c2.Value.value());
+        }
     }
     return r;
 }
