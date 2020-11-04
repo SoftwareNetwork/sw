@@ -2831,7 +2831,7 @@ void NativeCompiledTarget::prepare_pass8()
         if (!f->isActive())
             continue;
         RuleFile rf(p);
-        //rf.getAdditionalArguments() = f->args;
+        rf.getAdditionalArguments() = f->args;
         rfs.insert(rf);
     }
     runRules(rfs, *this);

@@ -3,7 +3,7 @@
 
 #pragma once
 
-//#include "compiler/compiler.h"
+#include "rule_file.h"
 #include "source_file_storage.h"
 #include "types.h"
 
@@ -22,7 +22,7 @@ struct SW_DRIVER_CPP_API SourceFile : /*TargetFile, */ICastable
     path file;
     bool skip = false;
     path install_dir;
-    std::map<String, primitives::command::Arguments> args; // additional args per rule, move to native?
+    RuleFile::AdditionalArguments args; // additional args per rule, move to native?
     String fancy_name; // for output
     bool skip_unity_build = false;
     int index; // index of file during addition
@@ -32,6 +32,9 @@ struct SW_DRIVER_CPP_API SourceFile : /*TargetFile, */ICastable
     virtual ~SourceFile() = default;
 
     bool isActive() const;
+
+    auto &getAdditionalArguments() { return args; }
+    const auto &getAdditionalArguments() const { return args; }
 };
 
 /*struct SW_DRIVER_CPP_API NativeSourceFile : SourceFile

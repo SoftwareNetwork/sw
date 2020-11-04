@@ -4,6 +4,7 @@
 #pragma once
 
 #include "program.h"
+#include "rule_file.h"
 
 #include <sw/builder/command.h>
 #include <sw/core/settings.h>
@@ -17,28 +18,6 @@ struct NativeLinker;
 struct NativeCompiler;
 struct NativeCompiledTarget;
 struct Target;
-
-struct RuleFile
-{
-    using AdditionalArguments = std::vector<String>;
-
-    RuleFile(const path &fn) : file(fn) {}
-
-    AdditionalArguments &getAdditionalArguments() { return additional_arguments; }
-    const AdditionalArguments &getAdditionalArguments() const { return additional_arguments; }
-
-    bool operator<(const RuleFile &rhs) const { return std::tie(file, additional_arguments) < std::tie(rhs.file, rhs.additional_arguments); }
-    bool operator==(const RuleFile &rhs) const { return std::tie(file, additional_arguments) == std::tie(rhs.file, rhs.additional_arguments); }
-    //auto operator<=>(const RuleFile &rhs) const = default;
-
-    const path &getFile() const { return file; }
-
-private:
-    path file;
-    AdditionalArguments additional_arguments;
-};
-
-using RuleFiles = std::set<RuleFile>;
 
 struct SW_DRIVER_CPP_API NativeRule : IRule
 {
