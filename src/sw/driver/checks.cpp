@@ -324,7 +324,10 @@ void CheckSet::performChecks(const SwBuild &mb, const TargetSettings &ts)
     for (auto &&c : unchecked)
     {
         for (auto &d : c->gatherDependencies())
-            c->dependencies.insert(&registerCheck(*d));
+        {
+            if (auto &c2 = registerCheck(*d); !c2.isChecked())
+                c->dependencies.insert(&c2);
+        }
     }
 
     SCOPE_EXIT
