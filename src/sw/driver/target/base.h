@@ -335,6 +335,9 @@ public:
     Test addTest(const String &name);
     Test addTest(const Target &runnable_test, const String &name = {});
 
+    bool isPostConfigureActionsCalled() const { return post_configure_called; }
+    virtual void postConfigureActions();
+
 private:
     void addTest(Test &cb, const String &name);
     Test addTest1(const String &name, const Target &t);
@@ -367,6 +370,7 @@ private:
     String provided_cfg;
     mutable Commands commands;
     Commands tests;
+    bool post_configure_called = false;
 
     TargetSettings getHostSettings() const;
 

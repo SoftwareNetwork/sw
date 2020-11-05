@@ -22,9 +22,17 @@ struct ProgramDetector;
 
 struct ModuleSwappableData
 {
+    using AddedTargets = std::vector<ITargetPtr>;
+
     AllowedPackages known_targets;
     TargetSettings current_settings;
-    std::vector<ITargetPtr> added_targets;
+
+    void addTarget(ITargetPtr p);
+    AddedTargets &getTargets();
+
+private:
+    AddedTargets added_targets;
+    bool post_actions_performed = false;
 };
 
 struct DriverData
@@ -76,7 +84,7 @@ struct SW_DRIVER_CPP_API ExtendedBuild : Build
     using Base::Base;
 
     const TargetSettings &getSettings() const { return module_data.current_settings; }
-    void addTarget(const ITargetPtr &t) { module_data.added_targets.push_back(t); }
+    void addTarget(const ITargetPtr &t) { module_data.addTarget(t); }
 };
 
 }

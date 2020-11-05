@@ -845,7 +845,7 @@ bool Check::execute(SwBuild &b) const
     s.module_data.current_settings = getSettings()
 
 #define ADD_TARGETS                             \
-    for (auto &t : s.module_data.added_targets) \
+    for (auto &t : s.module_data.getTargets()) \
     b->getTargets()[t->getPackage()].push_back(t)
 
 #define EXECUTE_SOLUTION() \

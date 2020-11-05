@@ -198,7 +198,7 @@ struct SpecFileInput : Input, DriverInput
             PrepareConfig pc;
             pc.addInput(b2, *this);
 
-            auto &tgts = b2.module_data.added_targets;
+            auto &tgts = b2.module_data.getTargets();
             for (auto &tgt : tgts)
                 b->getTargets()[tgt->getPackage()].push_back(tgt);
 
@@ -654,7 +654,7 @@ std::unordered_map<path, PrepareConfigOutputData> Driver::build_configs1(SwConte
     if (swctx.getSettings()["ignore_outdated_configs"] == "true" || !pc.isOutdated())
         return save_and_return(pc.r);
 
-    auto &tgts = b2.module_data.added_targets;
+    auto &tgts = b2.module_data.getTargets();
     for (auto &tgt : tgts)
         b->getTargets()[tgt->getPackage()].push_back(tgt);
 

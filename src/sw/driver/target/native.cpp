@@ -543,137 +543,34 @@ void NativeCompiledTarget::findCompiler()
     lt = get_linker_type(getSettings()["rule"]["link"]["type"].getValue());
     if (lt == LinkerType::Unspecified)
         throw SW_RUNTIME_ERROR("Cannot determine compiler type " + get_settings_package_id(getSettings()["rule"]["link"]["package"]).toString() + " for settings: " + getSettings().toString());
-
-    Strings rules = { "c", "cpp", "asm", "lib", "link" };
-    if (getBuildSettings().TargetOS.is(OSType::Windows) && getSettings()["rule"]["rc"])
-        addRuleDependency("rc");
-    for (auto &r : rules)
-    {
-        // actually must check proper rule type
-        if (ct == CompilerType::MSVC
-            // we take raw settings to get ml instead of ml64 on x86 config
-            // and other listed rules (programs) from x86 toolchain
-            && (r == "c" || r == "cpp" || r == "asm")
-            )
-        {
-            if (r == "asm" &&
-                getBuildSettings().TargetOS.Arch != ArchType::x86 &&
-                getBuildSettings().TargetOS.Arch != ArchType::x86_64
-                )
-                continue;
-            auto u = getSettings()["rule"][r]["package"].getValue();
-            auto d = std::make_shared<Dependency>(u);
-            d->getSettings() = getSettings();
-            addRuleDependencyRaw(r, d, r);
-            addDummyDependencyRaw(d);
-        }
-        else
-            addRuleDependency(r);
-    }
-
-    // c++ goes first for correct include order
-    /*UnresolvedPackage cppcl = getSettings()["rule"]["cpp"]["package"].getValue();
-    if (cppcl.getPath() == "com.Microsoft.VisualStudio.VC.cl")
-    {
-        libstdcppset = true;
-
-        // take same ver as cl
-        {
-            UnresolvedPackage up("com.Microsoft.VisualStudio.VC.libcpp");
-            up.range = cppcl.range;
-            *this += up;
-        }
-        {
-            UnresolvedPackage up("com.Microsoft.VisualStudio.VC.runtime");
-            up.range = cppcl.range;
-            *this += up;
-        }
-    }*/
-    if (!libstdcppset && getSettings()["native"]["stdlib"]["cpp"].isValue())
-    {
-        if (IsSwConfig && getBuildSettings().TargetOS.is(OSType::Linux))
-        {
-            // to prevent ODR violation
-            // we have stdlib builtin into sw binary
-            auto d = *this + UnresolvedPackage(getSettings()["native"]["stdlib"]["cpp"].getValue());
-            d->IncludeDirectoriesOnly = true;
-        }
-        else
-        {
-            *this += UnresolvedPackage(getSettings()["native"]["stdlib"]["cpp"].getValue());
-        }
-    }
-
-    // goes last
-    if (getSettings()["native"]["stdlib"]["c"].isValue())
-        *this += UnresolvedPackage(getSettings()["native"]["stdlib"]["c"].getValue());
-
-    // compiler runtime
-    if (getSettings()["native"]["stdlib"]["compiler"])
-    {
-        if (getSettings()["native"]["stdlib"]["compiler"].isValue())
-            *this += UnresolvedPackage(getSettings()["native"]["stdlib"]["compiler"].getValue());
-        else if (getSettings()["native"]["stdlib"]["compiler"].isArray())
-        {
-            for (auto &s : getSettings()["native"]["stdlib"]["compiler"].getArray())
-                *this += UnresolvedPackage(s.getValue());
-        }
-    }
-
-    // kernel headers
-    if (getSettings()["native"]["stdlib"]["kernel"].isValue())
-        *this += UnresolvedPackage(getSettings()["native"]["stdlib"]["kernel"].getValue());
-    /*if (getBuildSettings().TargetOS.is(OSType::Windows))
-    {
-        *this += UnresolvedPackage("com.Microsoft.Windows.SDK.ucrt"s); // c
-        *this += UnresolvedPackage("com.Microsoft.Windows.SDK.um"s); // kernel
-    }*/
 }
 
 bool NativeCompiledTarget::init()
 {
-    //static std::once_flag f;
-    //std::call_once(f, [this] {detectNativeCompilers(DETECT_ARGS_PASS_FIRST_CALL_SIMPLE); });
+    // before target init
+    addSettingsAndSetPrograms((SwContext&)getContext(), ts);
 
-    switch (init_pass)
+    if (!isHeaderOnly())
+        findCompiler();
+
+    // after compilers
+    Target::init();
+
+    if (getSettings()["export-if-static"] == "true")
     {
-    case 1:
+        ExportIfStatic = true;
+        getExportOptions()["export-if-static"].use();
+    }
+
+    if (getSettings()["static-deps"] == "true")
     {
-        // before target init
-        addSettingsAndSetPrograms((SwContext&)getContext(), ts);
-
-        if (!isHeaderOnly())
-            findCompiler();
-
-        // after compilers
-        Target::init();
-
-        if (getSettings()["export-if-static"] == "true")
-        {
-            ExportIfStatic = true;
-            getExportOptions()["export-if-static"].use();
-        }
-
-        if (getSettings()["static-deps"] == "true")
-        {
-            getExportOptions()["native"]["library"] = "static";
-            getExportOptions()["static-deps"].use();
-        }
-
-        addPackageDefinitions();
-
-        // we set output file, but sometimes overridden call must set it later
-        // (libraries etc.)
-        // this one is used for executables
-        setOutputFile();
+        getExportOptions()["native"]["library"] = "static";
+        getExportOptions()["static-deps"].use();
     }
-    RETURN_INIT_MULTIPASS_NEXT_PASS;
-    case 2:
-    {
-        setOutputFile();
-    }
-    SW_RETURN_MULTIPASS_END(init_pass);
-    }
+
+    addPackageDefinitions();
+    setOutputFile();
+
     SW_RETURN_MULTIPASS_END(init_pass);
 }
 
@@ -1630,8 +1527,105 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
     return s;
 }
 
+void NativeCompiledTarget::postConfigureActions()
+{
+    Strings rules = { "c", "cpp", "asm", "lib", "link" };
+    if (getBuildSettings().TargetOS.is(OSType::Windows) && getSettings()["rule"]["rc"])
+        addRuleDependency("rc");
+    for (auto &r : rules)
+    {
+        // was populated
+        if (getRuleDependencies().contains(r))
+            continue;
+
+        // actually must check proper rule type
+        if (ct == CompilerType::MSVC
+            // we take raw settings to get ml instead of ml64 on x86 config
+            // and other listed rules (programs) from x86 toolchain
+            && (r == "c" || r == "cpp" || r == "asm")
+            )
+        {
+            if (r == "asm" &&
+                getBuildSettings().TargetOS.Arch != ArchType::x86 &&
+                getBuildSettings().TargetOS.Arch != ArchType::x86_64
+                )
+                continue;
+            auto u = getSettings()["rule"][r]["package"].getValue();
+            auto d = std::make_shared<Dependency>(u);
+            d->getSettings() = getSettings();
+            addRuleDependencyRaw(r, d, r);
+            addDummyDependencyRaw(d);
+        }
+        else
+            addRuleDependency(r);
+    }
+
+    // c++ goes first for correct include order
+    /*UnresolvedPackage cppcl = getSettings()["rule"]["cpp"]["package"].getValue();
+    if (cppcl.getPath() == "com.Microsoft.VisualStudio.VC.cl")
+    {
+        libstdcppset = true;
+
+        // take same ver as cl
+        {
+            UnresolvedPackage up("com.Microsoft.VisualStudio.VC.libcpp");
+            up.range = cppcl.range;
+            *this += up;
+        }
+        {
+            UnresolvedPackage up("com.Microsoft.VisualStudio.VC.runtime");
+            up.range = cppcl.range;
+            *this += up;
+        }
+    }*/
+    if (!libstdcppset && getSettings()["native"]["stdlib"]["cpp"].isValue())
+    {
+        if (IsSwConfig && getBuildSettings().TargetOS.is(OSType::Linux))
+        {
+            // to prevent ODR violation
+            // we have stdlib builtin into sw binary
+            auto d = *this + UnresolvedPackage(getSettings()["native"]["stdlib"]["cpp"].getValue());
+            d->IncludeDirectoriesOnly = true;
+        }
+        else
+        {
+            *this += UnresolvedPackage(getSettings()["native"]["stdlib"]["cpp"].getValue());
+        }
+    }
+
+    // goes last
+    if (getSettings()["native"]["stdlib"]["c"].isValue())
+        *this += UnresolvedPackage(getSettings()["native"]["stdlib"]["c"].getValue());
+
+    // compiler runtime
+    if (getSettings()["native"]["stdlib"]["compiler"])
+    {
+        if (getSettings()["native"]["stdlib"]["compiler"].isValue())
+            *this += UnresolvedPackage(getSettings()["native"]["stdlib"]["compiler"].getValue());
+        else if (getSettings()["native"]["stdlib"]["compiler"].isArray())
+        {
+            for (auto &s : getSettings()["native"]["stdlib"]["compiler"].getArray())
+                *this += UnresolvedPackage(s.getValue());
+        }
+    }
+
+    // kernel headers
+    if (getSettings()["native"]["stdlib"]["kernel"].isValue())
+        *this += UnresolvedPackage(getSettings()["native"]["stdlib"]["kernel"].getValue());
+    /*if (getBuildSettings().TargetOS.is(OSType::Windows))
+    {
+        *this += UnresolvedPackage("com.Microsoft.Windows.SDK.ucrt"s); // c
+        *this += UnresolvedPackage("com.Microsoft.Windows.SDK.um"s); // kernel
+    }*/
+
+    Target::postConfigureActions();
+}
+
 bool NativeCompiledTarget::prepare()
 {
+    if (!isPostConfigureActionsCalled())
+        throw SW_RUNTIME_ERROR("post configure action was not called");
+
     if (DryRun)
     {
         getActiveDependencies();

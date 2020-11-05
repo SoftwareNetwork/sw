@@ -892,6 +892,11 @@ DependencyPtr Target::constructThisPackageDependency(const String &name)
     return std::make_shared<Dependency>(id);
 }
 
+void Target::postConfigureActions()
+{
+    post_configure_called = true;
+}
+
 bool ProjectTarget::init()
 {
     current_project = getPackage();
