@@ -82,12 +82,16 @@ static path getObjectFilename(const Target &t, const path &p)
         to_string(p.u8string())).substr(0, 8);
 }
 
-static path getOutputFile(const Target &t, const path &input)
+path NativeRule::getOutputFileBase(const Target &t, const path &input)
 {
     auto o = t.BinaryDir.parent_path() / "obj" / getObjectFilename(t, input);
-    o += t.getBuildSettings().TargetOS.getObjectFileExtension();
     o = fs::absolute(o);
     return o;
+}
+
+path NativeRule::getOutputFile(const Target &t, const path &input)
+{
+    return getOutputFileBase(t, input) += t.getBuildSettings().TargetOS.getObjectFileExtension();
 }
 
 void NativeCompilerRule::setup(const Target &t)
@@ -717,7 +721,7 @@ Files RcRule::addInputs(const Target &t, const RuleFiles &rfs)
             continue;
         if (used_files.contains(rf))
             continue;
-        auto output = getOutputFile(t, rf.getFile()) += ".res";
+        auto output = getOutputFileBase(t, rf.getFile()) += ".res";
         outputs.insert(output);
         auto c = program->clone();
         // add casual idirs?

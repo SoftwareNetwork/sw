@@ -59,6 +59,10 @@ struct SW_DRIVER_CPP_API NativeRule : IRule
 protected:
     RuleProgram program;
     RuleFiles used_files;
+
+    Program &getProgram() const { return *program; }
+    static path getOutputFileBase(const Target &t, const path &input);
+    static path getOutputFile(const Target &t, const path &input);
 };
 
 struct SW_DRIVER_CPP_API NativeCompilerRule : NativeRule
