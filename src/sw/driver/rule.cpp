@@ -500,15 +500,15 @@ void NativeLinkerRule::setup(const Target &t)
 
     if (!is_linker)
     {
-        prog_link.Extension = nt->getBuildSettings().TargetOS.getStaticLibraryExtension();
-        prog_link.setOutputFile(nt->getOutputFileName2("lib"));
+        prog_link.setOutputFile(nt->getOutputFileName2("lib") += nt->getBuildSettings().TargetOS.getStaticLibraryExtension());
     }
     else
     {
+        auto ext = nt->getBuildSettings().TargetOS.getExecutableExtension();
         if (nt->isExecutable())
         {
             prog_link.Prefix.clear();
-            prog_link.Extension = nt->getBuildSettings().TargetOS.getExecutableExtension();
+            //prog_link.Extension =
             if (auto c = prog_link.as<VisualStudioLinker *>())
             {
                 c->ImportLibrary.output_dependency = false; // become optional
@@ -522,7 +522,7 @@ void NativeLinkerRule::setup(const Target &t)
         }
         else
         {
-            prog_link.Extension = nt->getBuildSettings().TargetOS.getSharedLibraryExtension();
+            ext = nt->getBuildSettings().TargetOS.getSharedLibraryExtension();
             if (prog_link.Type == LinkerType::MSVC)
             {
                 // set machine to target os arch
@@ -538,7 +538,7 @@ void NativeLinkerRule::setup(const Target &t)
             }
         }
 
-        prog_link.setOutputFile(nt->getOutputFileName2("bin"));
+        prog_link.setOutputFile(nt->getOutputFileName2("bin") += ext);
         prog_link.setImportLibrary(nt->getOutputFileName2("lib"));
 
         if (auto L = prog_link.as<VisualStudioLibraryTool *>())

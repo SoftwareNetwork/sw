@@ -38,8 +38,8 @@ struct NativeLinker;
 
 struct SW_DRIVER_CPP_API CompilerBaseProgram : Program
 {
-    String Prefix;
-    String Extension;
+    //String Prefix;
+    //String Extension;
 
     CompilerBaseProgram();
     CompilerBaseProgram(const CompilerBaseProgram &);

@@ -39,8 +39,8 @@ CompilerBaseProgram::CompilerBaseProgram()
 CompilerBaseProgram::CompilerBaseProgram(const CompilerBaseProgram &rhs)
     : Program(rhs)
 {
-    Prefix = rhs.Prefix;
-    Extension = rhs.Extension;
+    //Prefix = rhs.Prefix;
+    //Extension = rhs.Extension;
     if (rhs.cmd)
         cmd = rhs.cmd->clone();
     else
@@ -56,7 +56,7 @@ std::shared_ptr<builder::Command> CompilerBaseProgram::prepareCommand(const Targ
 {
     if (prepared)
         return cmd;
-    cmd->setContext(t.getMainBuild());
+    cmd->setContext(t.getMainBuild()); // used in prepareCommand1()
     cmd->setProgram(file);
     prepareCommand1(t);
     prepared = true;
@@ -515,7 +515,7 @@ void VisualStudioLibraryTool::setObjectFiles(const FilesOrdered &files)
 void VisualStudioLibraryTool::setOutputFile(const path &out)
 {
     Output = out;
-    Output() += Extension;
+    //Output() += Extension;
 }
 
 void VisualStudioLibraryTool::setImportLibrary(const path &out)
@@ -672,7 +672,8 @@ static auto remove_prefix_and_suffix(const path &p)
 
 void GNULinker::setOutputFile(const path &out)
 {
-    Output = add_prefix_and_suffix(out, Prefix, Extension).u8string();
+    SW_UNIMPLEMENTED;
+    //Output = add_prefix_and_suffix(out, Prefix, Extension).u8string();
 }
 
 void GNULinker::setImportLibrary(const path &out)
@@ -823,7 +824,8 @@ void GNULibrarian::setObjectFiles(const FilesOrdered &files)
 
 void GNULibrarian::setOutputFile(const path &out)
 {
-    Output = add_prefix_and_suffix(out, Prefix, Extension).u8string();
+    SW_UNIMPLEMENTED;
+    //Output = add_prefix_and_suffix(out, Prefix, Extension).u8string();
 }
 
 void GNULibrarian::setImportLibrary(const path &out)
@@ -894,7 +896,7 @@ void AdaCompiler::prepareCommand1(const ::sw::Target &t)
 void AdaCompiler::setOutputFile(const path &output_file)
 {
     Output = output_file;
-    Output() += Extension;
+    //Output() += Extension;
 }
 
 void AdaCompiler::addSourceFile(const path &input_file)
@@ -912,7 +914,7 @@ void VisualStudioCSharpCompiler::prepareCommand1(const ::sw::Target &t)
 void VisualStudioCSharpCompiler::setOutputFile(const path &output_file)
 {
     Output = output_file;
-    Output() += Extension;
+    //Output() += Extension;
 }
 
 void VisualStudioCSharpCompiler::addSourceFile(const path &input_file)
@@ -930,7 +932,7 @@ void RustCompiler::prepareCommand1(const Target &t)
 void RustCompiler::setOutputFile(const path &output_file)
 {
     Output = output_file;
-    Output() += Extension;
+    //Output() += Extension;
 }
 
 void RustCompiler::setSourceFile(const path &input_file)
@@ -948,7 +950,7 @@ void GoCompiler::prepareCommand1(const Target &t)
 void GoCompiler::setOutputFile(const path &output_file)
 {
     Output = output_file;
-    Output() += Extension;
+    //Output() += Extension;
 }
 
 void GoCompiler::setSourceFile(const path &input_file)
@@ -966,7 +968,7 @@ void FortranCompiler::prepareCommand1(const Target &t)
 void FortranCompiler::setOutputFile(const path &output_file)
 {
     Output = output_file;
-    Output() += Extension;
+    //Output() += Extension;
 }
 
 void FortranCompiler::setSourceFile(const path &input_file)
@@ -1035,7 +1037,7 @@ path DCompiler::getOutputFile() const
 void DCompiler::setOutputFile(const path &output_file)
 {
     Output = output_file;
-    Output() += Extension;
+    //Output() += Extension;
 }
 
 void DCompiler::setSourceFile(const path &input_file)
@@ -1053,7 +1055,7 @@ void PascalCompiler::prepareCommand1(const ::sw::Target &t)
 void PascalCompiler::setOutputFile(const path &output_file)
 {
     Output = output_file;
-    Output() += Extension;
+    //Output() += Extension;
 }
 
 void PascalCompiler::addSourceFile(const path &input_file)
