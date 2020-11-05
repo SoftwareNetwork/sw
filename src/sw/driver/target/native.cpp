@@ -1099,9 +1099,6 @@ Commands NativeCompiledTarget::getCommands1() const
         }
     }
 
-    for (auto &c : cmds)
-        ((NativeCompiledTarget*)this)->registerCommand(*c);
-
     return cmds;
 
 

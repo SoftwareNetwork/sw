@@ -425,11 +425,14 @@ Commands Target::getCommands() const
                 c->always = true;
         }
     }
+    for (auto &c : commands)
+        ((Target*)this)->registerCommand(*c);
     return commands;
 }
 
 void Target::registerCommand(builder::Command &c)
 {
+    c.setContext(getMainBuild());
     if (!c.command_storage)
     {
         c.command_storage = getCommandStorage();
