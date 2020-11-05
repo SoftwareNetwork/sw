@@ -7,6 +7,7 @@
 
 #include <primitives/filesystem.h>
 
+#include <map>
 #include <memory>
 
 #define SW_DECLARE_PROGRAM_CLONE \
@@ -29,8 +30,11 @@ namespace sw
 
 struct Build;
 struct SourceFile;
+struct IRule;
 struct Target;
 namespace builder { struct Command; }
+
+using IRulePtr = std::unique_ptr<IRule>;
 
 struct SW_DRIVER_CPP_API Program : ICastable
 {
@@ -50,12 +54,19 @@ using ProgramPtr = std::unique_ptr<Program>;
 // reconsider
 struct SW_DRIVER_CPP_API PredefinedProgram
 {
+    PredefinedProgram();
+    ~PredefinedProgram();
+
     void setProgram(ProgramPtr &&p) { program = std::move(p); }
     Program &getProgram();
     const Program &getProgram() const;
 
+    void setRule(const String &name, IRulePtr r);
+    IRulePtr getRule(const String &name) const;
+
 private:
     ProgramPtr program;
+    std::map<String, IRulePtr> rules;
 };
 
 }

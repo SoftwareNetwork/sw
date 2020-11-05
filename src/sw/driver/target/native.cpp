@@ -246,7 +246,7 @@ DependencyPtr NativeTarget::getRuleDependency(const String &name) const
 IRulePtr NativeTarget::getRuleFromDependency(const String &ruledepname, const String &rulename) const
 {
     auto dep = getRuleDependency(ruledepname);
-    if (auto t = dep->getTarget().as<PredefinedTarget *>())
+    if (auto t = dep->getTarget().as<PredefinedProgram *>())
         return t->getRule(rulename);
     else
         SW_UNIMPLEMENTED;

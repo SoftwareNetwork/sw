@@ -31,6 +31,8 @@ SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD(sw_create_def_file, create_def_file)
 namespace sw
 {
 
+IRule::~IRule() = default;
+
 struct TargetFilenames
 {
     String sd, bd, bdp;

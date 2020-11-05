@@ -13,7 +13,6 @@ IDependency::~IDependency() = default;
 ITarget::~ITarget() {}
 TargetEntryPoint::~TargetEntryPoint() = default;
 TargetData::~TargetData() = default;
-IRule::~IRule() = default;
 
 AllowedPackages::AllowedPackages(const UnresolvedPackages &in)
 {
@@ -312,14 +311,6 @@ std::vector<IDependency *> PredefinedTarget::getDependencies() const
     for (auto &d : this->deps)
         deps.push_back(d.get());
     return deps;
-}
-
-IRulePtr PredefinedTarget::getRule(const String &name) const
-{
-    auto i = rules.find(name);
-    if (i == rules.end())
-        throw SW_RUNTIME_ERROR(getPackage().toString() + ": No such rule: " + name);
-    return i->second->clone();
 }
 
 }

@@ -18,6 +18,8 @@
 
 #include "program.h"
 
+#include "rule.h"
+
 #include <primitives/exceptions.h>
 
 namespace sw
@@ -38,6 +40,9 @@ Program &Program::operator=(const Program &rhs)
     return *this;
 }
 
+PredefinedProgram::PredefinedProgram() = default;
+PredefinedProgram::~PredefinedProgram() = default;
+
 Program &PredefinedProgram::getProgram()
 {
     if (!program)
@@ -50,6 +55,19 @@ const Program &PredefinedProgram::getProgram() const
     if (!program)
         throw SW_RUNTIME_ERROR("Program was not set");
     return *program;
+}
+
+IRulePtr PredefinedProgram::getRule(const String &name) const
+{
+    auto i = rules.find(name);
+    if (i == rules.end())
+        throw SW_RUNTIME_ERROR("No such rule: " + name);
+    return i->second->clone();
+}
+
+void PredefinedProgram::setRule(const String &name, IRulePtr r)
+{
+    rules[name] = std::move(r);
 }
 
 }

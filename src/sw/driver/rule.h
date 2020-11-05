@@ -19,6 +19,26 @@ struct NativeCompiler;
 struct NativeCompiledTarget;
 struct Target;
 
+struct SW_DRIVER_CPP_API IRule : ICastable
+{
+    //using RuleFiles = std::set<RuleFile>;
+    //RuleFiles files;
+
+    virtual ~IRule() = 0;
+
+    // get commands for ... (building?)
+    ///
+    virtual Commands getCommands() const = 0;
+
+    /// add inputs to rule
+    /// returns outputs
+    //virtual Files addInputs(const RuleFiles &) = 0;
+
+    virtual std::unique_ptr<IRule> clone() const = 0;
+};
+
+using IRulePtr = std::unique_ptr<IRule>;
+
 struct SW_DRIVER_CPP_API NativeRule : IRule
 {
     using RuleProgram = ProgramPtr;
