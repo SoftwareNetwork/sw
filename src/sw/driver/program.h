@@ -62,7 +62,7 @@ struct SW_DRIVER_CPP_API PredefinedProgram
     const Program &getProgram() const;
 
     void setRule(const String &name, IRulePtr r);
-    IRulePtr getRule(const String &name) const;
+    IRulePtr getRule1(const String &name) const;
 
 private:
     ProgramPtr program;

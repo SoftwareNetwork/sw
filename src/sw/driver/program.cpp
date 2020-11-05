@@ -57,7 +57,7 @@ const Program &PredefinedProgram::getProgram() const
     return *program;
 }
 
-IRulePtr PredefinedProgram::getRule(const String &name) const
+IRulePtr PredefinedProgram::getRule1(const String &name) const
 {
     auto i = rules.find(name);
     if (i == rules.end())
