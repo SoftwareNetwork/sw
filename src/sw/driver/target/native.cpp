@@ -210,8 +210,8 @@ path NativeTarget::getOutputFile() const
 
 void NativeTarget::addRuleDependencyRaw(const String &name, const DependencyPtr &from_dep, const String &from_name)
 {
-    rules2[name].dep = from_dep;
-    rules2[name].target_rule_name = from_name;
+    rule_dependencies[name].dep = from_dep;
+    rule_dependencies[name].target_rule_name = from_name;
 }
 
 void NativeTarget::addRuleDependency(const String &name, const DependencyPtr &from_dep, const String &from_name)
@@ -237,8 +237,8 @@ void NativeTarget::addRuleDependency(const String &name)
 
 DependencyPtr NativeTarget::getRuleDependency(const String &name) const
 {
-    auto i = rules2.find(name);
-    if (i == rules2.end())
+    auto i = rule_dependencies.find(name);
+    if (i == rule_dependencies.end())
         throw SW_RUNTIME_ERROR("No rule dep: " + name);
     return i->second.dep;
 }
@@ -2831,6 +2831,7 @@ void NativeCompiledTarget::prepare_pass8()
         rf.getAdditionalArguments() = f->args;
         rfs.insert(rf);
     }
+    DEBUG_BREAK_IF(getPackage().toString() == "qtproject.qt.base.core-5.15.0.1");
     runRules(rfs, *this);
 }
 

@@ -95,7 +95,7 @@ protected:
     virtual bool isStaticLibrary() const = 0;
 
 private:
-    std::map<String, RuleData> rules2;
+    std::map<String, RuleData> rule_dependencies;
 };
 
 }
