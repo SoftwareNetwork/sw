@@ -369,9 +369,48 @@ std::vector<std::unique_ptr<Input>> Driver::detectInputs(const path &p, InputTyp
         if (!fe)
             break;
 
-        SpecificationFiles f;
-        f.addFile(p.filename(), p);
-        auto spec = std::make_unique<Specification>(f);
+        SpecificationFiles files;
+        files.addFile(p.filename(), p);
+        //
+        // TODO: make it lazy only when uploading or managing spec (spec files)
+        switch (*fe)
+        {
+        case FrontendType::Sw:
+        {
+            auto f = read_file(p);
+            size_t pos = 0;
+            const char s[] = "#pragma sw include ";
+            while (1)
+            {
+                pos = f.find(s, pos);
+                if (pos == f.npos)
+                    break;
+                auto start = pos + sizeof(s) - 1;
+                pos++;
+                auto pos2 = f.find("\n", start);
+                if (pos2 == f.npos)
+                    throw SW_RUNTIME_ERROR("'#pragma sw include' ended unexpectedly");
+                auto fn = f.substr(start, pos2 - start);
+                if (fn.empty())
+                    throw SW_RUNTIME_ERROR("Empty fn");
+                if (fn[0] == '\"')
+                    fn = fn.substr(1);
+                if (fn.empty())
+                    throw SW_RUNTIME_ERROR("Empty fn");
+                if (fn.back() == '\"')
+                    fn = fn.substr(0, fn.size() - 1);
+                if (fn.empty())
+                    throw SW_RUNTIME_ERROR("Empty fn");
+                auto absfn = p.parent_path() / fn;
+                if (!is_under_root(absfn, p.parent_path()))
+                    throw SW_RUNTIME_ERROR("Pointing to file outside current dir");
+                files.addFile(fn, absfn);
+            }
+        }
+            break;
+        }
+        //
+        auto spec = std::make_unique<Specification>(files);
 
         auto i = std::make_unique<SpecFileInput>(swctx, *this, std::move(spec));
         i->fe_type = *fe;
