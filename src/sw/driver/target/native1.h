@@ -84,6 +84,8 @@ struct SW_DRIVER_CPP_API NativeTarget
     DependencyPtr getRuleDependency(const String &rulename) const;
     IRulePtr getRuleFromDependency(const String &ruledepname, const String &rulename) const;
     IRulePtr getRuleFromDependency(const String &rulename) const;
+    auto &getRuleDependencies() { return rule_dependencies; }
+    const auto &getRuleDependencies() const { return rule_dependencies; }
 
 protected:
     path OutputDir; // output subdir

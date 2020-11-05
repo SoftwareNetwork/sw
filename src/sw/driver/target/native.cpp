@@ -2775,13 +2775,10 @@ void NativeCompiledTarget::prepare_pass8()
     }
 
     // add rules
-    auto add_rule = [this](const auto &n, auto &&r)
+    auto add_rule2 = [this](const auto &n)
     {
-        addRule(n, std::move(r));
-    };
-    auto add_rule2 = [this, &add_rule](const auto &n)
-    {
-        add_rule(n, getRuleFromDependency(n));
+        addRule(n, getRuleFromDependency(n));
+        getRuleDependencies().erase(n);
     };
     if (!(ct == CompilerType::MSVC &&
         getBuildSettings().TargetOS.Arch != ArchType::x86 &&
