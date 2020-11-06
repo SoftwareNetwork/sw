@@ -934,6 +934,8 @@ Commands SwBuild::getCommands() const
         std::unordered_map<path, path> copy_files;
         for (auto &[p, tgts] : ttb)
         {
+            // BUG: currently we copy several configs into single files, this is wrong
+            // https://github.com/SoftwareNetwork/sw/issues/43#issuecomment-723162721
             for (auto &tgt : tgts)
             {
                 const auto &s = tgt->getInterfaceSettings();
