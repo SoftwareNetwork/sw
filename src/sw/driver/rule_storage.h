@@ -51,7 +51,7 @@ public:
 protected:
     void runRules(RuleFiles rfs, const Target &t);
     Commands getRuleCommands() const;
-    std::vector<IDependency *> getRuleDependencies() const;
+    std::vector<DependencyPtr> getRuleDependencies() const;
 
 private:
     std::map<String, RuleDescription> rule_dependencies;

@@ -89,11 +89,11 @@ IRulePtr RuleSystem::getRuleFromDependency(const String &rulename) const
     return getRuleFromDependency(rulename, rulename);
 }
 
-std::vector<IDependency *> RuleSystem::getRuleDependencies() const
+std::vector<DependencyPtr> RuleSystem::getRuleDependencies() const
 {
-    std::vector<IDependency *> r;
+    std::vector<DependencyPtr> r;
     for (auto &[_, rd] : rule_dependencies)
-        r.push_back(rd.dep.get());
+        r.push_back(rd.dep);
     return r;
 }
 

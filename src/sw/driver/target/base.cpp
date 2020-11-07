@@ -331,7 +331,12 @@ std::vector<IDependency *> Target::getDependencies() const
     for (auto &d : SourceDependencies)
         deps.push_back(d.get());
     auto rd = getRuleDependencies();
-    deps.insert(deps.end(), rd.begin(), rd.end());
+    for (auto &d : rd)
+    {
+        if (d->getSettings().empty())
+            setDummyDependencySettings(d);
+        deps.push_back(d.get());
+    }
     return deps;
 }
 
