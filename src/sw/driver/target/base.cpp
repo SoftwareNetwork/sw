@@ -330,6 +330,8 @@ std::vector<IDependency *> Target::getDependencies() const
         deps.push_back(d.get());
     for (auto &d : SourceDependencies)
         deps.push_back(d.get());
+    for (auto &[_,d] : getRuleDependencies())
+        deps.push_back(d.dep.get());
     return deps;
 }
 
@@ -746,13 +748,18 @@ DependencyPtr Target::addDummyDependencyRaw(const DependencyPtr &t)
 DependencyPtr Target::addDummyDependency(const DependencyPtr &t)
 {
     auto t2 = addDummyDependencyRaw(t);
-    t2->getSettings().mergeMissing(getHostSettings());
+    setDummyDependencySettings(t2);
     return t2;
 }
 
 DependencyPtr Target::addDummyDependency(const Target &t)
 {
     return addDummyDependency(std::make_shared<Dependency>(t));
+}
+
+void Target::setDummyDependencySettings(DependencyPtr &t2)
+{
+    t2->getSettings().mergeMissing(getHostSettings());
 }
 
 void Target::addSourceDependency(const DependencyPtr &t)

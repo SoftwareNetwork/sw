@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include "dependency.h"
 #include "rule.h"
 
 #include <sw/builder/command.h>
@@ -108,6 +109,57 @@ protected:
 
 private:
     RuleStorage rules;
+};
+
+struct SW_DRIVER_CPP_API RuleSystem2
+{
+    struct RuleDescription
+    {
+        String rule_name;
+        DependencyPtr dep;
+        String target_rule_name;
+
+        RuleDescription(const String &name, const TargetSettings &);
+        RuleDescription(const String &name, const UnresolvedPackage &from_dep);
+        RuleDescription(const String &name, const DependencyPtr &from_dep);
+        RuleDescription(const String &name, const DependencyPtr &from_dep, const String &from_name);
+
+        IRule &getRule() const;
+
+    private:
+        mutable std::shared_ptr<IRule> ptr;
+    };
+    struct RuleProperties
+    {
+        auto &getArguments() { return arguments; }
+        const auto &getArguments() const { return arguments; }
+
+    private:
+        primitives::command::Arguments arguments;
+    };
+
+    void addRuleDependency(const String &rulename, const DependencyPtr &from_dep, const String &from_name);
+    void addRuleDependency(const String &rulename, const DependencyPtr &from_dep);
+protected:
+    void addRuleDependency(const RuleDescription &, bool overwrite = false);
+public:
+
+    auto &getRuleDependencies() { return rule_dependencies; }
+    const auto &getRuleDependencies() const { return rule_dependencies; }
+
+    RuleProperties &getRule(const String &n) { return rule_properties[n]; }
+
+protected:
+    void runRules2(RuleFiles rfs, const Target &t);
+    Commands getRuleCommands() const;
+
+private:
+    std::map<String, RuleDescription> rule_dependencies;
+    std::map<String, RuleProperties> rule_properties;
+
+    DependencyPtr getRuleDependency(const String &rulename) const;
+    IRulePtr getRuleFromDependency(const String &ruledepname, const String &rulename) const;
+    IRulePtr getRuleFromDependency(const String &rulename) const;
 };
 
 } // namespace sw

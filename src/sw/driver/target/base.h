@@ -7,8 +7,9 @@
 #include "../build_settings.h"
 #include "../license.h"
 #include "../dependency.h"
-#include "../types.h"
+#include "../rule_storage.h"
 #include "../source_file.h"
+#include "../types.h"
 
 #include <sw/builder/node.h>
 #include <sw/builder/os.h>
@@ -222,6 +223,8 @@ struct SW_DRIVER_CPP_API TargetDescription
 struct SW_DRIVER_CPP_API Target
     : ITarget
     , TargetBase
+    //, RuleSystem
+    , RuleSystem2
     , std::enable_shared_from_this<Target>
 {
     /*struct TargetSettings
@@ -252,6 +255,7 @@ struct SW_DRIVER_CPP_API Target
     DependencyPtr addDummyDependency(const Target &);
     DependencyPtr addDummyDependency(const DependencyPtr &);
     DependencyPtr addDummyDependencyRaw(const DependencyPtr &);
+    void setDummyDependencySettings(DependencyPtr &);
     void addSourceDependency(const Target &);
     void addSourceDependency(const DependencyPtr &);
 

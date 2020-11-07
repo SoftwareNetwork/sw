@@ -4,7 +4,6 @@
 #pragma once
 
 #include "base.h"
-#include "../rule_storage.h"
 
 namespace sw
 {
@@ -51,18 +50,11 @@ enum class ConfigureFlags
     Default = Empty, //AddToBuild,
 };
 
-struct RuleData
-{
-    DependencyPtr dep;
-    String target_rule_name;
-};
-
 /**
 * \brief Native Target is a binary target that produces binary files (probably executables).
 */
 struct SW_DRIVER_CPP_API NativeTarget
     : Target
-    , RuleSystem
     //,protected NativeOptions
 {
     NativeTarget(TargetBase &parent, const PackageId &);
@@ -75,18 +67,6 @@ struct SW_DRIVER_CPP_API NativeTarget
     // move to runnable target? since we might have data only targets
     virtual void setupCommandForRun(builder::Command &c) const { setupCommand(c); } // for Launch?
 
-    // rules
-    void addRuleDependencyRaw(const String &rulename, const DependencyPtr &from_dep, const String &from_name);
-    void addRuleDependency(const String &rulename, const DependencyPtr &from_dep, const String &from_name);
-    void addRuleDependency(const String &rulename, const DependencyPtr &from_dep);
-    void addRuleDependency(const String &rulename, const UnresolvedPackage &from_dep);
-    void addRuleDependency(const String &name);
-    DependencyPtr getRuleDependency(const String &rulename) const;
-    IRulePtr getRuleFromDependency(const String &ruledepname, const String &rulename) const;
-    IRulePtr getRuleFromDependency(const String &rulename) const;
-    auto &getRuleDependencies() { return rule_dependencies; }
-    const auto &getRuleDependencies() const { return rule_dependencies; }
-
 protected:
     path OutputDir; // output subdir
 
@@ -95,9 +75,6 @@ protected:
 
     virtual void setOutputFile();
     virtual bool isStaticLibrary() const = 0;
-
-private:
-    std::map<String, RuleData> rule_dependencies;
 };
 
 }

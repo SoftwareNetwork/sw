@@ -208,55 +208,6 @@ path NativeTarget::getOutputFile() const
     SW_UNIMPLEMENTED;
 }
 
-void NativeTarget::addRuleDependencyRaw(const String &name, const DependencyPtr &from_dep, const String &from_name)
-{
-    rule_dependencies[name].dep = from_dep;
-    rule_dependencies[name].target_rule_name = from_name;
-}
-
-void NativeTarget::addRuleDependency(const String &name, const DependencyPtr &from_dep, const String &from_name)
-{
-    addDummyDependency(from_dep);
-    addRuleDependencyRaw(name, from_dep, from_name);
-}
-
-void NativeTarget::addRuleDependency(const String &name, const DependencyPtr &from_dep)
-{
-    addRuleDependency(name, from_dep, name);
-}
-
-void NativeTarget::addRuleDependency(const String &name, const UnresolvedPackage &from_dep)
-{
-    addRuleDependency(name, std::make_shared<Dependency>(from_dep));
-}
-
-void NativeTarget::addRuleDependency(const String &name)
-{
-    addRuleDependency(name, getSettings()["rule"][name]["package"].getValue());
-}
-
-DependencyPtr NativeTarget::getRuleDependency(const String &name) const
-{
-    auto i = rule_dependencies.find(name);
-    if (i == rule_dependencies.end())
-        throw SW_RUNTIME_ERROR("No rule dep: " + name);
-    return i->second.dep;
-}
-
-IRulePtr NativeTarget::getRuleFromDependency(const String &ruledepname, const String &rulename) const
-{
-    auto dep = getRuleDependency(ruledepname);
-    if (auto t = dep->getTarget().as<PredefinedProgram *>())
-        return t->getRule1(rulename);
-    else
-        SW_UNIMPLEMENTED;
-}
-
-IRulePtr NativeTarget::getRuleFromDependency(const String &rulename) const
-{
-    return getRuleFromDependency(rulename, rulename);
-}
-
 NativeCompiledTarget::NativeCompiledTarget(TargetBase &parent, const PackageId &id)
     : NativeTarget(parent, id), NativeTargetOptionsGroup((Target &)*this)
 {
@@ -955,7 +906,7 @@ Commands NativeCompiledTarget::getCommands1() const
     }
 
     //
-    cmds.merge(RuleSystem::getRuleCommands());
+    cmds.merge(RuleSystem2::getRuleCommands());
 
     // add generated files
     for (auto &cmd : cmds)
@@ -1529,15 +1480,20 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
 
 void NativeCompiledTarget::postConfigureActions()
 {
-    Strings rules = { "c", "cpp", "asm", "lib", "link" };
-    if (getBuildSettings().TargetOS.is(OSType::Windows) && getSettings()["rule"]["rc"])
-        addRuleDependency("rc");
-    for (auto &r : rules)
-    {
-        // was populated
-        if (getRuleDependencies().contains(r))
-            continue;
+    Target::postConfigureActions();
 
+    // no our rules
+    if (isHeaderOnly())
+        return;
+
+    auto add_dep = [this](auto &&name)
+    {
+        auto d = std::make_shared<Dependency>(getSettings()["rule"][name]["package"].getValue());
+        setDummyDependencySettings(d);
+        addRuleDependency({ name, d });
+    };
+    auto add_dep2 = [this, &add_dep](const String &r, bool overwrite)
+    {
         // actually must check proper rule type
         if (ct == CompilerType::MSVC
             // we take raw settings to get ml instead of ml64 on x86 config
@@ -1549,16 +1505,41 @@ void NativeCompiledTarget::postConfigureActions()
                 getBuildSettings().TargetOS.Arch != ArchType::x86 &&
                 getBuildSettings().TargetOS.Arch != ArchType::x86_64
                 )
-                continue;
+                return;
             auto u = getSettings()["rule"][r]["package"].getValue();
             auto d = std::make_shared<Dependency>(u);
             d->getSettings() = getSettings();
-            addRuleDependencyRaw(r, d, r);
-            addDummyDependencyRaw(d);
+            addRuleDependency({ r, d, r });
         }
         else
-            addRuleDependency(r);
+            add_dep(r);
+    };
+
+    // force c, cpp compiler
+    add_dep2("c", true);
+    add_dep2("cpp", true);
+    if (!(ct == CompilerType::MSVC &&
+        getBuildSettings().TargetOS.Arch != ArchType::x86 &&
+        getBuildSettings().TargetOS.Arch != ArchType::x86_64
+        ))
+    {
+        // relax asm
+        add_dep2("asm", false);
     }
+    // force lib, link
+    if (isStaticLibrary())
+        add_dep2("lib", true);
+    else
+    {
+        add_dep2("link", true);
+        // relax rc
+        if (getBuildSettings().TargetOS.is(OSType::Windows) && getSettings()["rule"]["rc"])
+            add_dep("rc");
+    }
+    // for circular, we must also activate "lib" rule
+    // maybe activate always on windows?
+    //if (circular_dependency)
+    //add_rule2("link_circular", std::make_unique<NativeLinkerRule>(*prog_lib));
 
     // c++ goes first for correct include order
     /*UnresolvedPackage cppcl = getSettings()["rule"]["cpp"]["package"].getValue();
@@ -1617,8 +1598,6 @@ void NativeCompiledTarget::postConfigureActions()
         *this += UnresolvedPackage("com.Microsoft.Windows.SDK.ucrt"s); // c
         *this += UnresolvedPackage("com.Microsoft.Windows.SDK.um"s); // kernel
     }*/
-
-    Target::postConfigureActions();
 }
 
 bool NativeCompiledTarget::prepare()
@@ -2769,50 +2748,28 @@ void NativeCompiledTarget::prepare_pass8()
     }
 
     // add rules
-    auto add_rule2 = [this](const auto &n)
+    /*auto add_rule2 = [this](const auto &n)
     {
         addRule(n, getRuleFromDependency(n));
         getRuleDependencies().erase(n);
-    };
-    if (!(ct == CompilerType::MSVC &&
-        getBuildSettings().TargetOS.Arch != ArchType::x86 &&
-        getBuildSettings().TargetOS.Arch != ArchType::x86_64
-        ))
-        add_rule2("asm");
-    add_rule2("c");
-    add_rule2("cpp");
+    };*/
 
-    if (isHeaderOnly())
-        ;
-    else if (isStaticLibrary())
-        add_rule2("lib");
-    else
+    // generate rc
+    if (GenerateWindowsResource
+        && !isStaticOrHeaderOnlyLibrary()
+        && ::sw::gatherSourceFiles<SourceFile>(*this, { ".rc" }).empty()
+        && getBuildSettings().TargetOS.is(OSType::Windows)
+        && Scope == TargetScope::Build
+        )
     {
-        // generate rc
-        if (GenerateWindowsResource
-            && !isHeaderOnly()
-            && ::sw::gatherSourceFiles<SourceFile>(*this, { ".rc" }).empty()
-            && getBuildSettings().TargetOS.is(OSType::Windows)
-            && Scope == TargetScope::Build
-            )
-        {
-            auto p = generate_rc();
-            // more info for generators
-            // but we already wrote this file, no need to mark as generated
-            //File(p, getFs()).setGenerated(true);
-            getMergeObject() += p;
-        }
-        // add rc rule
-        if (getBuildSettings().TargetOS.is(OSType::Windows) && getSettings()["rule"]["rc"])
-            add_rule2("rc");
-
-        if (isExecutable() || !isHeaderOnly())
-            add_rule2("link");
+        auto p = generate_rc();
+        // more info for generators
+        // but we already wrote this file, no need to mark as generated
+        //File(p, getFs()).setGenerated(true);
+        getMergeObject() += p;
     }
-    //if (circular_dependency)
-        //add_rule("link_circular", std::make_unique<NativeLinkerRule>(*prog_lib));
 
-    // rules!
+    // gather files
     RuleFiles rfs;
     for (auto &[p, f] : getMergeObject())
     {
@@ -2822,8 +2779,14 @@ void NativeCompiledTarget::prepare_pass8()
         rf.getAdditionalArguments() = f->args;
         rfs.insert(rf);
     }
-    DEBUG_BREAK_IF(getPackage().toString() == "qtproject.qt.base.core-5.15.0.1");
-    runRules(rfs, *this);
+
+    //
+    /*for (auto &[n, d] : getRuleDependencies())
+    {
+        SW_UNIMPLEMENTED;
+    }*/
+    //DEBUG_BREAK_IF(getPackage().toString() == "qtproject.qt.base.core-5.15.0.1");
+    runRules2(rfs, *this);
 }
 
 void NativeCompiledTarget::prepare_pass9()
