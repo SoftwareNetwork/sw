@@ -762,7 +762,7 @@ DependencyPtr Target::addDummyDependency(const Target &t)
     return addDummyDependency(std::make_shared<Dependency>(t));
 }
 
-void Target::setDummyDependencySettings(DependencyPtr &t2)
+void Target::setDummyDependencySettings(DependencyPtr &t2) const
 {
     t2->getSettings().mergeMissing(getHostSettings());
 }
