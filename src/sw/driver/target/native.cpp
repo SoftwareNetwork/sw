@@ -906,7 +906,7 @@ Commands NativeCompiledTarget::getCommands1() const
     }
 
     //
-    cmds.merge(RuleSystem2::getRuleCommands());
+    cmds.merge(getRuleCommands());
 
     // add generated files
     for (auto &cmd : cmds)
@@ -2747,13 +2747,6 @@ void NativeCompiledTarget::prepare_pass8()
             getMergeObject() += "_WINDLL"_def;
     }
 
-    // add rules
-    /*auto add_rule2 = [this](const auto &n)
-    {
-        addRule(n, getRuleFromDependency(n));
-        getRuleDependencies().erase(n);
-    };*/
-
     // generate rc
     if (GenerateWindowsResource
         && !isStaticOrHeaderOnlyLibrary()
@@ -2780,13 +2773,8 @@ void NativeCompiledTarget::prepare_pass8()
         rfs.insert(rf);
     }
 
-    //
-    /*for (auto &[n, d] : getRuleDependencies())
-    {
-        SW_UNIMPLEMENTED;
-    }*/
     //DEBUG_BREAK_IF(getPackage().toString() == "qtproject.qt.base.core-5.15.0.1");
-    runRules2(rfs, *this);
+    runRules(rfs, *this);
 }
 
 void NativeCompiledTarget::prepare_pass9()

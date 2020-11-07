@@ -330,8 +330,8 @@ std::vector<IDependency *> Target::getDependencies() const
         deps.push_back(d.get());
     for (auto &d : SourceDependencies)
         deps.push_back(d.get());
-    for (auto &[_,d] : getRuleDependencies())
-        deps.push_back(d.dep.get());
+    auto rd = getRuleDependencies();
+    deps.insert(deps.end(), rd.begin(), rd.end());
     return deps;
 }
 

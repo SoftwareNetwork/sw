@@ -223,8 +223,7 @@ struct SW_DRIVER_CPP_API TargetDescription
 struct SW_DRIVER_CPP_API Target
     : ITarget
     , TargetBase
-    //, RuleSystem
-    , RuleSystem2
+    , RuleSystem
     , std::enable_shared_from_this<Target>
 {
     /*struct TargetSettings

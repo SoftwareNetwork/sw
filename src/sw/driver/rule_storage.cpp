@@ -13,123 +13,29 @@ DECLARE_STATIC_LOGGER(logger, "rule_storage");
 namespace sw
 {
 
-void RuleStorage::push(const String &name, IRulePtr r)
-{
-    RuleData rd;
-    rd.rule = std::move(r);
-    if (!rules[name].empty())
-    {
-        auto nr = dynamic_cast<NativeRule *>(rd.rule.get());
-        if (nr)
-            nr->arguments.push_back(rules[name].top().getArguments());
-    }
-    rules[name].emplace(std::move(rd));
-}
-
-IRulePtr RuleStorage::pop(const String &name)
-{
-    if (!contains(name))
-        return {};
-    IRulePtr r = std::move(rules[name].top().rule);
-    rules[name].pop();
-    return r;
-}
-
-bool RuleStorage::contains(const String &name) const
-{
-    return rules.contains(name);
-}
-
-void RuleStorage::clear()
-{
-    rules.clear();
-}
-
-void RuleStorage::clear(const String &name)
-{
-    rules.erase(name);
-}
-
-Commands RuleStorage::getCommands() const
-{
-    Commands c;
-    for (auto &[_,s] : rules)
-        c.merge(s.top().rule->getCommands());
-    return c;
-}
-
-RuleStorage::RuleData &RuleStorage::getRule(const String &n)
-{
-    if (rules[n].empty())
-        rules[n].push({});
-    return rules[n].top();
-}
-
-const RuleStorage::RuleData &RuleStorage::getRule(const String &n) const
-{
-    auto i = rules.find(n);
-    if (i == rules.end())
-        throw SW_RUNTIME_ERROR("No such rule: " + n);
-    return i->second.top();
-}
-
-Commands RuleSystem::getRuleCommands() const
-{
-    return rules.getCommands();
-}
-
-void RuleSystem::runRules(RuleFiles rfs, const Target &t)
-{
-    for (auto &r : rules)
-    {
-        auto nr = dynamic_cast<NativeRule*>(r.rule.get());
-        if (!nr)
-            continue;
-        nr->setup(t);
-    }
-    while (1)
-    {
-        bool newfile = false;
-        for (auto &r : rules)
-        {
-            auto nr = dynamic_cast<NativeRule*>(r.rule.get());
-            if (!nr)
-                continue;
-            auto outputs = nr->addInputs(t, rfs);
-            for (auto &o : outputs)
-            {
-                auto [_, inserted] = rfs.insert(o);
-                newfile |= inserted;
-            }
-        }
-        if (!newfile)
-            break;
-    }
-}
-
-RuleSystem2::RuleDescription::RuleDescription(const String &name, const DependencyPtr &from_dep, const String &from_name)
+RuleSystem::RuleDescription::RuleDescription(const String &name, const DependencyPtr &from_dep, const String &from_name)
 {
     rule_name = name;
     dep = from_dep;
     target_rule_name = from_name;
 }
 
-RuleSystem2::RuleDescription::RuleDescription(const String &name, const DependencyPtr &from_dep)
+RuleSystem::RuleDescription::RuleDescription(const String &name, const DependencyPtr &from_dep)
     : RuleDescription(name, from_dep, name)
 {
 }
 
-RuleSystem2::RuleDescription::RuleDescription(const String &name, const UnresolvedPackage &from_dep)
+RuleSystem::RuleDescription::RuleDescription(const String &name, const UnresolvedPackage &from_dep)
     : RuleDescription(name, std::make_shared<Dependency>(from_dep))
 {
 }
 
-RuleSystem2::RuleDescription::RuleDescription(const String &name, const TargetSettings &ts)
+RuleSystem::RuleDescription::RuleDescription(const String &name, const TargetSettings &ts)
     : RuleDescription(name, ts["rule"][name]["package"].getValue())
 {
 }
 
-IRule &RuleSystem2::RuleDescription::getRule() const
+IRule &RuleSystem::RuleDescription::getRule() const
 {
     if (ptr)
         return *ptr;
@@ -140,7 +46,7 @@ IRule &RuleSystem2::RuleDescription::getRule() const
     return *ptr;
 }
 
-void RuleSystem2::addRuleDependency(const RuleDescription &d, bool overwrite)
+void RuleSystem::addRuleDependency(const RuleDescription &d, bool overwrite)
 {
     auto [i,inserted] = rule_dependencies.emplace(d.rule_name, d);
     if (inserted)
@@ -151,17 +57,17 @@ void RuleSystem2::addRuleDependency(const RuleDescription &d, bool overwrite)
     i->second = d;
 }
 
-void RuleSystem2::addRuleDependency(const String &name, const DependencyPtr &from_dep, const String &from_name)
+void RuleSystem::addRuleDependency(const String &name, const DependencyPtr &from_dep, const String &from_name)
 {
     addRuleDependency({ name, from_dep, name });
 }
 
-void RuleSystem2::addRuleDependency(const String &name, const DependencyPtr &from_dep)
+void RuleSystem::addRuleDependency(const String &name, const DependencyPtr &from_dep)
 {
     addRuleDependency(name, from_dep, name);
 }
 
-DependencyPtr RuleSystem2::getRuleDependency(const String &name) const
+DependencyPtr RuleSystem::getRuleDependency(const String &name) const
 {
     auto i = rule_dependencies.find(name);
     if (i == rule_dependencies.end())
@@ -169,7 +75,7 @@ DependencyPtr RuleSystem2::getRuleDependency(const String &name) const
     return i->second.dep;
 }
 
-IRulePtr RuleSystem2::getRuleFromDependency(const String &ruledepname, const String &rulename) const
+IRulePtr RuleSystem::getRuleFromDependency(const String &ruledepname, const String &rulename) const
 {
     auto dep = getRuleDependency(ruledepname);
     if (auto t = dep->getTarget().as<PredefinedProgram *>())
@@ -178,15 +84,22 @@ IRulePtr RuleSystem2::getRuleFromDependency(const String &ruledepname, const Str
         SW_UNIMPLEMENTED;
 }
 
-IRulePtr RuleSystem2::getRuleFromDependency(const String &rulename) const
+IRulePtr RuleSystem::getRuleFromDependency(const String &rulename) const
 {
     return getRuleFromDependency(rulename, rulename);
 }
 
-void RuleSystem2::runRules2(RuleFiles rfs, const Target &t)
+std::vector<IDependency *> RuleSystem::getRuleDependencies() const
 {
-    auto &rules = getRuleDependencies();
-    for (auto &[_,rd] : rules)
+    std::vector<IDependency *> r;
+    for (auto &[_, rd] : rule_dependencies)
+        r.push_back(rd.dep.get());
+    return r;
+}
+
+void RuleSystem::runRules(RuleFiles rfs, const Target &t)
+{
+    for (auto &[_,rd] : rule_dependencies)
     {
         auto nr = dynamic_cast<NativeRule*>(&rd.getRule());
         if (!nr)
@@ -197,7 +110,7 @@ void RuleSystem2::runRules2(RuleFiles rfs, const Target &t)
     while (1)
     {
         bool newfile = false;
-        for (auto &[_,rd] : rules)
+        for (auto &[_,rd] : rule_dependencies)
         {
             auto nr = dynamic_cast<NativeRule*>(&rd.getRule());
             if (!nr)
@@ -214,10 +127,10 @@ void RuleSystem2::runRules2(RuleFiles rfs, const Target &t)
     }
 }
 
-Commands RuleSystem2::getRuleCommands() const
+Commands RuleSystem::getRuleCommands() const
 {
     Commands c;
-    for (auto &[_,rd] : getRuleDependencies())
+    for (auto &[_,rd] : rule_dependencies)
         c.merge(rd.getRule().getCommands());
     return c;
 }
