@@ -2853,6 +2853,12 @@ path NativeCompiledTarget::generate_rc()
         }
     };
 
+    const path p = BinaryPrivateDir / "sw.rc";
+    // fast path
+    // maybe use only write_file_if_different as before?
+    if (fs::exists(p))
+        return p;
+
     RcEmitter ctx(getPackage().getVersion(), getPackage().getVersion());
     ctx.begin();
 
@@ -2877,7 +2883,6 @@ path NativeCompiledTarget::generate_rc()
 
     ctx.end();
 
-    path p = BinaryPrivateDir / "sw.rc";
     write_file_if_different(p, ctx.getText());
 
     return p;
