@@ -137,7 +137,7 @@ void ExecutionPlan::execute(Executor &e) const
         std::unique_lock<std::mutex> lk(m);
         for (auto &c : commands)
         {
-            if (!c->dependencies.empty())
+            if (!c->getDependencies().empty())
                 //continue;
                 break;
             fs.push_back(e.push([&run, c] {run(c); }));
@@ -368,7 +368,7 @@ ExecutionPlan::Graph ExecutionPlan::getGraph(const VecT &v, GraphMapping &gm)
     for (auto &c : v)
     {
         g.m_vertices[gm[c]].m_property = c;
-        for (auto &d : c->dependencies)
+        for (auto &d : c->getDependencies())
             boost::add_edge(gm[c], gm[d], g);
     }
     return g;
@@ -385,13 +385,13 @@ void ExecutionPlan::transitiveReduction()
     for (auto &[from, to] : vm)
         tr.m_vertices[to].m_property = g.m_vertices[from].m_property;
 
-    // make new edges (dependencies)
+    // make new edges (getDependencies())
     for (auto &[from, to] : vm)
     {
         auto c = commands[from];
-        c->dependencies.clear();
+        c->clearDependencies();
         for (auto &e : tr.m_vertices[to].m_out_edges)
-            c->dependencies.insert(tr.m_vertices[e.m_target].m_property);
+            c->addDependency(*tr.m_vertices[e.m_target].m_property);
     }
 }
 
@@ -409,129 +409,64 @@ std::tuple<ExecutionPlan::Graph, ExecutionPlan::VertexMap> ExecutionPlan::transi
 
 void ExecutionPlan::prepare(USet &cmds)
 {
-    // 1. prepare all commands
-    // 2. extract all deps commands
-    // 3. remove duplicates?
+    // prepare commands
+    for (auto &c : cmds)
+        c->prepare();
 
-    // try to lower number of rehashes
-    auto reserve = [](auto &a)
+    // 1. check that we have all of deps too
+    // 2. check that we do not have duplicates by hash
+    std::unordered_set<size_t> hashes;
+    for (auto &c : cmds)
     {
-        a.reserve((a.size() / 10000 + 1) * 20000);
-    };
-    reserve(cmds);
+        if (!hashes.emplace(c->getHash()).second)
+            throw SW_RUNTIME_ERROR("Duplicate command passed: " + c->getName());
 
-    while (1)
-    {
-        size_t sz = cmds.size();
-
-        // initial prepare
-        for (auto &c : cmds)
-            c->prepare();
-
-        // some commands get its i/o deps in wrong order,
-        // so we explicitly call this once more
-        // do not remove!
-        std::unordered_map<path, CommandNode *> generators;
-        generators.reserve(cmds.size());
-        for (auto &c : cmds)
+        for (auto &d : c->getDependencies())
         {
-            if (auto c1 = dynamic_cast<builder::Command *>(c))
+            if (!cmds.contains(d))
+                throw SW_RUNTIME_ERROR("You did not pass command that is in dependency: " + d->getName());
+        }
+    }
+
+    // some commands get its i/o deps in wrong order,
+    // so we explicitly call this once more
+    // do not remove!
+    std::unordered_map<path, CommandNode *> generators;
+    generators.reserve(cmds.size());
+    for (auto &c : cmds)
+    {
+        if (auto c1 = dynamic_cast<builder::Command *>(c))
+        {
+            for (auto &o : c1->outputs)
+                generators[o] = c1;
+        }
+    }
+    for (auto &c : cmds)
+    {
+        if (auto c1 = dynamic_cast<builder::Command *>(c))
+        {
+            for (auto &i : c1->inputs)
             {
-                for (auto &o : c1->outputs)
-                    generators[o] = c1;
+                auto it = generators.find(i);
+                if (it != generators.end())
+                    c1->addDependency(*it->second);
             }
         }
-        for (auto &c : cmds)
-        {
-            if (auto c1 = dynamic_cast<builder::Command *>(c))
-            {
-                for (auto &i : c1->inputs)
-                {
-                    auto it = generators.find(i);
-                    if (it != generators.end())
-                        c1->dependencies.insert(it->second);
-                }
-            }
-        }
+    }
 
-        // remove chained commands
-        // keep only the last one
-        for (auto i = cmds.begin(); i != cmds.end();)
+    // remove chained commands
+    // keep only the last one
+    for (auto i = cmds.begin(); i != cmds.end();)
+    {
+        if (auto c1 = dynamic_cast<builder::Command *>(*i))
         {
-            if (auto c1 = dynamic_cast<builder::Command *>(*i))
-            {
-                if (c1->next)
-                    i = cmds.erase(i);
-                else
-                    i++;
-            }
+            if (c1->next)
+                i = cmds.erase(i);
             else
                 i++;
         }
-
-        // separate loop for additional deps tracking (programs, inputs, outputs etc.)
-        // every cmd must be passed
-        auto cmds2 = cmds;
-        reserve(cmds2);
-        for (auto &c : cmds)
-        {
-            for (auto &d : c->dependencies)
-            {
-                cmds2.insert(d);
-                for (auto &d2 : d->dependencies)
-                    cmds2.insert(d2);
-            }
-            // also take explicit dependent commands
-            for (auto &d : c->dependent_commands)
-                cmds2.insert(d);
-        }
-        cmds = std::move(cmds2);
-
-        if (cmds.size() == sz)
-            break;
-    }
-
-    // remove self deps
-    for (auto &c : cmds)
-        c->dependencies.erase(c);
-
-    // 3. remove duplicates
-    {
-        // gather hashes
-        std::unordered_map<size_t, T *> cmds3;
-        cmds3.reserve(cmds.size());
-        for (auto &c : cmds)
-        {
-            //if (cmds3[c->getHash()])
-                //throw SW_RUNTIME_ERROR("Duplicate commands!");
-            cmds3[c->getHash()] = c;
-        }
-
-        auto replace = [&cmds3](const auto &d)
-        {
-            auto i = cmds3.find(d->getHash());
-            SW_CHECK(i != cmds3.end());
-            //if (i->second != d.get())
-                return i->second;
-        };
-
-        auto replace2 = [&replace](auto &a)
-        {
-            auto copy = a;
-            a.clear();
-            for (auto &d : copy)
-                a.insert(replace(d));
-        };
-
-        // replace commands and set them back
-        cmds.clear();
-        cmds.reserve(cmds3.size());
-        for (auto &[_,c] : cmds3)
-        {
-            replace2(c->dependencies);
-            replace2(c->dependent_commands);
-            cmds.insert(c);
-        }
+        else
+            i++;
     }
 }
 
@@ -543,7 +478,7 @@ void ExecutionPlan::init(USet &cmds)
         for (auto it = cmds.begin(); it != cmds.end();)
         {
             // count number of deps
-            auto n = std::count_if((*it)->dependencies.begin(), (*it)->dependencies.end(),
+            auto n = std::count_if((*it)->getDependencies().begin(), (*it)->getDependencies().end(),
                 [this, &cmds](auto &d) { return cmds.find(d) != cmds.end(); });
             if (n)
             {
@@ -575,8 +510,8 @@ void ExecutionPlan::init(USet &cmds)
     // set number of deps and dependent commands
     for (auto &c : commands)
     {
-        c->dependencies_left = c->dependencies.size();
-        for (auto &d : c->dependencies)
+        c->dependencies_left = c->getDependencies().size();
+        for (auto &d : c->getDependencies())
             d->dependent_commands.insert(c);
     }
 

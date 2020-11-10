@@ -40,7 +40,8 @@ Commands RuleFiles::getCommands() const
             {
                 if (c->inputs.contains(rf.getFile()))
                 {
-                    c->dependencies.insert(d);
+                    if (c.get() != d)
+                        c->addDependency(*d);
                 }
             }
         }

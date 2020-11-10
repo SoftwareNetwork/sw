@@ -327,7 +327,7 @@ void CheckSet::performChecks(const SwBuild &mb, const TargetSettings &ts)
         for (auto &d : c->gatherDependencies())
         {
             if (auto &c2 = registerCheck(*d); !c2.isChecked())
-                c->dependencies.insert(&c2);
+                c->addDependency(c2);
         }
     }
 
@@ -562,7 +562,7 @@ void CheckSet::performChecks(const SwBuild &mb, const TargetSettings &ts)
     s += "digraph G {\n";
     for (auto &c : ep->getUnprocessedCommandsSet())
     {
-        for (auto &d : c->dependencies)
+        for (auto &d : c->getDependencies())
         {
             if (ep->getUnprocessedCommandsSet().find(static_cast<Check*>(d)) == ep->getUnprocessedCommandsSet().end())
                 continue;
@@ -717,8 +717,8 @@ bool Check::lessDuringExecution(const CommandNode &in) const
 
     auto &rhs = (const Check &)in;
 
-    if (dependencies.size() != rhs.dependencies.size())
-        return dependencies.size() < rhs.dependencies.size();
+    if (getDependencies().size() != rhs.getDependencies().size())
+        return getDependencies().size() < rhs.getDependencies().size();
     return dependent_commands.size() > dependent_commands.size();
 }
 

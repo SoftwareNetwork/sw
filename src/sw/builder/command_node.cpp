@@ -26,13 +26,13 @@ namespace sw
 void CommandNode::addDependency(CommandNode &c)
 {
     if (&c == this)
-        throw SW_RUNTIME_ERROR("Trying to add self dependency");
-    getDependencies().insert(&c);
+        throw SW_LOGIC_ERROR("Trying to add self dependency");
+    dependencies.insert(&c);
 }
 
-void CommandNode::addDependency(const std::shared_ptr<CommandNode> &c)
+/*void CommandNode::addDependency(const std::shared_ptr<CommandNode> &c)
 {
     addDependency(*c);
-}
+}*/
 
 } // namespace sw

@@ -912,7 +912,7 @@ Commands NativeCompiledTarget::getCommands1() const
     for (auto &cmd : cmds)
     {
         for (auto &g : generated)
-            cmd->dependencies.insert(g.get());
+            cmd->addDependency(*g);
     }
     cmds.merge(generated);
 
@@ -942,7 +942,7 @@ Commands NativeCompiledTarget::getCommands1() const
             for (auto &c : cmds)
             {
                 for (auto &g : cmds2)
-                    c->dependencies.insert(g.get());
+                    c->addDependency(*g);
             }
         }
     }

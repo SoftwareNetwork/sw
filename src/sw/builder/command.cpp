@@ -493,7 +493,8 @@ void Command::prepare()
         {
             c->prepare();
             // take only deps from prev command
-            getDependencies().insert(c->getDependencies().begin(), c->getDependencies().end());
+            for (auto &d : c->getDependencies())
+                addDependency(*d);
         }
     }
     if (next)

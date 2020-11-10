@@ -53,9 +53,10 @@ public:
     virtual bool lessDuringExecution(const CommandNode &) const = 0;
 
     void addDependency(CommandNode &);
-    void addDependency(const std::shared_ptr<CommandNode> &);
-    USet &getDependencies() { return dependencies; }
+    //void addDependency(const std::shared_ptr<CommandNode> &);
+    //USet &getDependencies() { return dependencies; }
     const USet &getDependencies() const { return dependencies; }
+    void clearDependencies() { dependencies.clear(); }
 };
 
 } // namespace sw
