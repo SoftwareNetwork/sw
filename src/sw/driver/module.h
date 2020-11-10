@@ -41,6 +41,7 @@ struct SW_DRIVER_CPP_API Module
     };
 
     Module(std::unique_ptr<Module::DynamicLibrary>, bool do_not_remove_bad_module);
+    ~Module();
 
     // api
     void build(Build &s) const;

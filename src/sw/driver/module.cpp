@@ -84,6 +84,13 @@ Module::Module(std::unique_ptr<Module::DynamicLibrary> dll, bool do_not_remove_b
 #undef LOAD
 }
 
+Module::~Module()
+{
+    // exception might come from module (custom rule etc.)
+    if (std::uncaught_exceptions())
+        module.release();
+}
+
 path Module::getLocation() const
 {
     try
