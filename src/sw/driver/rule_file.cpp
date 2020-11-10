@@ -12,6 +12,11 @@ RuleFile &RuleFiles::addFile(const RuleFile &rf)
     return i->second;
 }
 
+void RuleFiles::merge(RuleFiles &rhs)
+{
+    rfs.merge(rhs.rfs);
+}
+
 void RuleFiles::addCommand(const std::shared_ptr<builder::Command> &c)
 {
     commands.insert(c);
@@ -20,13 +25,13 @@ void RuleFiles::addCommand(const std::shared_ptr<builder::Command> &c)
 Commands RuleFiles::getCommands() const
 {
     auto cmds = commands;
-    for (auto &[_, rf] : *this)
+    for (auto &[_, rf] : rfs)
     {
         if (rf.command)
             cmds.insert(rf.command);
     }
     // set deps, naive way
-    for (auto &[_, rf] : *this)
+    for (auto &[_, rf] : rfs)
     {
         // only for non-generated files
         // like original .cpp -> .obj

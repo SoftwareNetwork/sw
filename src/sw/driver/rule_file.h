@@ -65,7 +65,7 @@ struct SW_DRIVER_CPP_API RuleFiles
 
     void clear() { rfs.clear(); }
     auto erase(const path &p) { return rfs.erase(p); }
-    auto merge(RuleFiles &rhs) { return rfs.merge(rhs.rfs); }
+    void merge(RuleFiles &rhs);
 
 private:
     RFS rfs;
