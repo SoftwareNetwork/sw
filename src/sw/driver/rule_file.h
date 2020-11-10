@@ -40,7 +40,8 @@ private:
     path file;
     AdditionalArguments additional_arguments;
 public:
-    builder::Command *command = nullptr;
+    std::shared_ptr<builder::Command> command;
+    std::unordered_set<builder::Command*> dependencies;
 };
 
 } // namespace sw

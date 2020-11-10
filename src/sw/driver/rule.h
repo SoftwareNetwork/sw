@@ -28,7 +28,7 @@ struct SW_DRIVER_CPP_API IRule : ICastable
 
     // get commands for ... (building?)
     ///
-    virtual Commands getCommands() const = 0;
+    //virtual Commands getCommands() const = 0;
 
     /// add inputs to rule
     /// returns outputs
@@ -87,10 +87,10 @@ struct SW_DRIVER_CPP_API NativeCompilerRule : NativeRule
     bool isCpp() const { return lang == LANG_CPP; }
     bool isAsm() const { return lang == LANG_ASM; }
 
-    Commands getCommands() const override { return commands; }
+    //Commands getCommands() const override { return commands; }
 
 protected:
-    Commands commands;
+    //Commands commands;
 };
 
 struct SW_DRIVER_CPP_API NativeLinkerRule : NativeRule
@@ -104,7 +104,7 @@ struct SW_DRIVER_CPP_API NativeLinkerRule : NativeRule
     void addInputs(const Target &t, RuleFiles &) override;
     void setup(const Target &t) override;
 
-    Commands getCommands() const override
+    /*Commands getCommands() const override
     {
         Commands commands;
         if (command)
@@ -112,11 +112,11 @@ struct SW_DRIVER_CPP_API NativeLinkerRule : NativeRule
         if (command_lib)
             commands.insert(command_lib);
         return commands;
-    }
+    }*/
 
 protected:
-    std::shared_ptr<builder::Command> command;
-    std::shared_ptr<builder::Command> command_lib;
+    //std::shared_ptr<builder::Command> command;
+    //std::shared_ptr<builder::Command> command_lib;
 };
 
 struct RcRule : NativeRule
@@ -127,10 +127,10 @@ struct RcRule : NativeRule
     void addInputs(const Target &t, RuleFiles &) override;
     void setup(const Target &t) override;
 
-    Commands getCommands() const override { return commands; }
+    //Commands getCommands() const override { return commands; }
 
 protected:
-    Commands commands;
+    //Commands commands;
 };
 
 } // namespace sw

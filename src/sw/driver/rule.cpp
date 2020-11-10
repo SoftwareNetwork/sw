@@ -472,7 +472,8 @@ void NativeCompilerRule::addInputs(const Target &t, RuleFiles &rfs)
             else
                 SW_UNIMPLEMENTED;
             static_cast<NativeCompiler &>(*pp_command).prepareCommand(t);
-            commands.emplace(pp_command->getCommand());
+            SW_UNIMPLEMENTED;
+            //commands.emplace(pp_command->getCommand());
         }
 
         nc.prepareCommand(t);
@@ -481,7 +482,8 @@ void NativeCompilerRule::addInputs(const Target &t, RuleFiles &rfs)
         if (!rulename.empty())
             nc.getCommand()->name += " ";*/
         nc.getCommand()->name += "[" + t.getPackage().toString() + "]" + tfns.getName(rf.getFile());
-        commands.emplace(c->getCommand());
+        auto [i, _] = rfs.emplace(output, output);
+        i->second.command = c->getCommand();
     }
 }
 
@@ -644,11 +646,12 @@ void NativeLinkerRule::addInputs(const Target &t, RuleFiles &rfs)
             auto c = std::make_shared<builder::BuiltinCommand>(t.getMainBuild(), SW_VISIBLE_BUILTIN_FUNCTION(create_def_file));
             c->push_back(deffn);
             c->addOutput(deffn);
-            //c << cmd::out(deffn);
             c->push_back(objs);
             c->addInput(objs);
             def = deffn;
-            command_lib = c;
+            //command_lib = c;
+            auto [i, _] = rfs.emplace(deffn, deffn);
+            i->second.command = c;
         }
         if (def)
             VSL->ModuleDefinitionFile = *def;
@@ -676,6 +679,7 @@ void NativeLinkerRule::addInputs(const Target &t, RuleFiles &rfs)
             }
         }
     }
+    files.erase(std::remove(files.begin(), files.end(), nt->getImportLibrary()), files.end());
     nc.setObjectFiles(files);
     nc.prepareCommand(t);
     nc.getCommand()->push_back(arguments);
@@ -696,7 +700,9 @@ void NativeLinkerRule::addInputs(const Target &t, RuleFiles &rfs)
     c->getCommand()->name = //(is_linker ? "[LINK]"s : "[LIB]"s) + " " +
         "[" + t.getPackage().toString() + "]" + nt->getOutputFile().extension().string();
     //nt->registerCommand(*c->getCommand());
-    command = c->getCommand();
+    //command = c->getCommand();
+    auto [i,_] = rfs.emplace(nc.getOutputFile(), nc.getOutputFile());
+    i->second.command = c->getCommand();
 }
 
 void RcRule::setup(const Target &t)
@@ -718,7 +724,8 @@ void RcRule::addInputs(const Target &t, RuleFiles &rfs)
         static_cast<RcTool &>(*c).Output = output;
         static_cast<RcTool &>(*c).prepareCommand(t);
         static_cast<RcTool &>(*c).getCommand()->push_back(arguments);
-        commands.emplace(c->getCommand());
+        auto [i, _] = rfs.emplace(output, output);
+        i->second.command = c->getCommand();
     }
 }
 

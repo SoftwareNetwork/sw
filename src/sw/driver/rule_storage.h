@@ -49,13 +49,14 @@ public:
     RuleProperties &getRule(const String &n) { return rule_properties[n]; }
 
 protected:
-    void runRules(RuleFiles rfs, const Target &t);
+    void runRules(const RuleFiles &, const Target &);
     Commands getRuleCommands() const;
     std::vector<DependencyPtr> getRuleDependencies() const;
 
 private:
     std::map<String, RuleDescription> rule_dependencies;
     std::map<String, RuleProperties> rule_properties;
+    RuleFiles rfs;
 
     DependencyPtr getRuleDependency(const String &rulename) const;
     IRulePtr getRuleFromDependency(const String &ruledepname, const String &rulename) const;
