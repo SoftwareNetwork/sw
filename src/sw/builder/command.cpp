@@ -117,10 +117,10 @@ static Files process_deps_gnu(builder::Command &c, const path &deps_file)
     // example:
     //
     // file.o: dep1.cpp dep2.cpp \
-            //  dep1.h dep2.h \
+    //  dep1.h dep2.h \
     //  dep3.h \
     //  dep4.h
-//
+    //
 
     auto f = read_file(deps_file);
 
@@ -493,7 +493,7 @@ void Command::prepare()
         {
             c->prepare();
             // take only deps from prev command
-            dependencies.insert(c->dependencies.begin(), c->dependencies.end());
+            getDependencies().insert(c->getDependencies().begin(), c->getDependencies().end());
         }
     }
     if (next)
@@ -1177,8 +1177,8 @@ bool Command::lessDuringExecution(const CommandNode &in) const
 
     auto &rhs = (const Command &)in;
 
-    if (dependencies.size() != rhs.dependencies.size())
-        return dependencies.size() < rhs.dependencies.size();
+    if (getDependencies().size() != rhs.getDependencies().size())
+        return getDependencies().size() < rhs.getDependencies().size();
     if (strict_order && rhs.strict_order)
         return strict_order < rhs.strict_order;
     else if (strict_order)

@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include "command_node.h"
 #include "node.h"
 
 #include <primitives/command.h>
@@ -31,37 +32,6 @@ namespace sw
 struct Program;
 struct SwBuilderContext;
 struct CommandStorage;
-
-struct SW_BUILDER_API CommandNode : std::enable_shared_from_this<CommandNode>
-{
-    using Ptr = CommandNode*;
-
-    std::unordered_set<Ptr> dependencies;
-
-    std::atomic_size_t dependencies_left = 0;
-    std::unordered_set<Ptr> dependent_commands;
-
-    std::atomic_size_t *current_command = nullptr;
-    std::atomic_size_t *total_commands = nullptr;
-
-    CommandNode();
-    CommandNode(const CommandNode &);
-    CommandNode &operator=(const CommandNode &);
-    virtual ~CommandNode();
-
-    virtual String getName() const = 0;
-    virtual size_t getHash() const = 0;
-    virtual void execute() = 0;
-    virtual void prepare() = 0; // some internal preparations, command may not be executed still
-    //virtual void markForExecution() {} // not command can be sure, it will be executed
-    virtual bool lessDuringExecution(const CommandNode &) const = 0;
-
-    void clear()
-    {
-        dependent_commands.clear();
-        dependencies.clear();
-    }
-};
 
 struct SW_BUILDER_API ResourcePool
 {
