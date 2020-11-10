@@ -276,7 +276,7 @@ void NativeCompilerRule::addInputs(const Target &t, RuleFiles &rfs)
     auto &cl = static_cast<NativeCompiler &>(*program);
     auto nt = t.as<NativeCompiledTarget *>();
     std::optional<path> pch_basename;
-    RuleFiles rfs_new;
+    RuleFiles rfs_unity;
     TargetFilenames tfns(t);
 
     // find pch
@@ -309,7 +309,7 @@ void NativeCompilerRule::addInputs(const Target &t, RuleFiles &rfs)
         c.ext = ".c";
         cpp.ext = ".cpp";
         int fidx = 1; // for humans
-        auto writef = [nt, &fidx, &rfs_new](auto &d)
+        auto writef = [nt, &fidx, &rfs_unity](auto &d)
         {
             if (d.s.empty())
                 return;
@@ -318,7 +318,7 @@ void NativeCompilerRule::addInputs(const Target &t, RuleFiles &rfs)
             write_file_if_different(fn, d.s); // do not trigger rebuilds
             //getMergeObject()[fn].fancy_name = "[" + getPackage().toString() + "]/[unity]/" + fns;
             d.s.clear();
-            rfs_new.emplace(fn, fn);
+            rfs_unity.addFile(fn);
         };
 
         for (auto &[n,rf] : rfs)
@@ -326,7 +326,7 @@ void NativeCompilerRule::addInputs(const Target &t, RuleFiles &rfs)
             // skip when args are populated
             if (!rf.getAdditionalArguments().empty())
             {
-                rfs_new.insert_or_assign(n, rf);
+                rfs_unity.addFile(rf);
                 continue;
             }
 
@@ -349,12 +349,12 @@ void NativeCompilerRule::addInputs(const Target &t, RuleFiles &rfs)
     }
 
     // main loop
-    for (auto &[_,rf] : rfs_new.empty() ? rfs : rfs_new)
+    for (auto &[_,rf] : rfs_unity.empty() ? rfs : rfs_unity)
     {
         if (!exts.contains(rf.getFile().extension().string()))
             continue;
         const auto output = getOutputFile(t, rf.getFile());
-        if (!rfs.emplace(output, output).second)
+        if (rfs.contains(output))
             continue;
 
         auto c = cl.clone();
@@ -482,8 +482,8 @@ void NativeCompilerRule::addInputs(const Target &t, RuleFiles &rfs)
         if (!rulename.empty())
             nc.getCommand()->name += " ";*/
         nc.getCommand()->name += "[" + t.getPackage().toString() + "]" + tfns.getName(rf.getFile());
-        auto [i, _] = rfs.emplace(output, output);
-        i->second.command = c->getCommand();
+        auto &rf = rfs.addFile(output);
+        rf.command = c->getCommand();
     }
 }
 
@@ -650,8 +650,8 @@ void NativeLinkerRule::addInputs(const Target &t, RuleFiles &rfs)
             c->addInput(objs);
             def = deffn;
             //command_lib = c;
-            auto [i, _] = rfs.emplace(deffn, deffn);
-            i->second.command = c;
+            auto &rf = rfs.addFile(deffn);
+            rf.command = c;
         }
         if (def)
             VSL->ModuleDefinitionFile = *def;
@@ -701,8 +701,8 @@ void NativeLinkerRule::addInputs(const Target &t, RuleFiles &rfs)
         "[" + t.getPackage().toString() + "]" + nt->getOutputFile().extension().string();
     //nt->registerCommand(*c->getCommand());
     //command = c->getCommand();
-    auto [i,_] = rfs.emplace(nc.getOutputFile(), nc.getOutputFile());
-    i->second.command = c->getCommand();
+    auto &rf = rfs.addFile(nc.getOutputFile());
+    rf.command = c->getCommand();
 }
 
 void RcRule::setup(const Target &t)
@@ -711,12 +711,13 @@ void RcRule::setup(const Target &t)
 
 void RcRule::addInputs(const Target &t, RuleFiles &rfs)
 {
+    RuleFiles rfs_new;
     for (auto &[_,rf] : rfs)
     {
         if (rf.getFile().extension() != ".rc")
             continue;
         auto output = getOutputFileBase(t, rf.getFile()) += ".res";
-        if (!rfs.emplace(output, output).second)
+        if (rfs.contains(output))
             continue;
         auto c = program->clone();
         // add casual idirs?
@@ -724,9 +725,10 @@ void RcRule::addInputs(const Target &t, RuleFiles &rfs)
         static_cast<RcTool &>(*c).Output = output;
         static_cast<RcTool &>(*c).prepareCommand(t);
         static_cast<RcTool &>(*c).getCommand()->push_back(arguments);
-        auto [i, _] = rfs.emplace(output, output);
-        i->second.command = c->getCommand();
+        auto &rf = rfs_new.addFile(output);
+        rf.command = c->getCommand();
     }
+    rfs.merge(rfs_new);
 }
 
 }

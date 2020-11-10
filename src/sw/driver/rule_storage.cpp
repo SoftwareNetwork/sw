@@ -123,33 +123,7 @@ void RuleSystem::runRules(const RuleFiles &inrfs, const Target &t)
 
 Commands RuleSystem::getRuleCommands() const
 {
-    Commands cmds;
-    for (auto &[_, rf] : rfs)
-    {
-        if (rf.command)
-            cmds.insert(rf.command);
-    }
-    // set deps, naive way
-    for (auto &[_, rf] : rfs)
-    {
-        // only for non-generated files
-        // like original .cpp -> .obj
-        // actually we must set dependency to .obj, but we cannot do that directly,
-        // since we do not have outputs (generated) list
-        if (rf.command)
-            continue;
-        for (auto &d : rf.dependencies)
-        {
-            for (auto &c : cmds)
-            {
-                if (c->inputs.contains(rf.getFile()))
-                {
-                    c->dependencies.insert(d);
-                }
-            }
-        }
-    }
-    return cmds;
+    return rfs.getCommands();
 }
 
 } // namespace sw

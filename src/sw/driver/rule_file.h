@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include <primitives/filesystem.h>
+#include <sw/builder/command.h>
 
 #include <tuple>
 
@@ -12,7 +12,7 @@ namespace sw
 
 namespace builder { struct Command; }
 
-struct RuleFile
+struct SW_DRIVER_CPP_API RuleFile
 {
     //using AdditionalArguments = std::map<String, primitives::command::Arguments>;
     using AdditionalArguments = std::map<String, Strings>;
@@ -44,24 +44,32 @@ public:
     std::unordered_set<builder::Command*> dependencies;
 };
 
-} // namespace sw
-
-/*namespace std
+struct SW_DRIVER_CPP_API RuleFiles
 {
+    using RFS = std::unordered_map<path, RuleFile>;
 
-template<> struct hash<::sw::RuleFile>
-{
-    size_t operator()(const ::sw::RuleFile &f) const
-    {
-        return f.getHash();
-    }
+    RuleFile &addFile(const RuleFile &);
+    auto contains(const path &p) const { return rfs.contains(p); }
+
+    void addCommand(const std::shared_ptr<builder::Command> &);
+    Commands getCommands() const;
+
+    auto begin() { return rfs.begin(); }
+    auto end() { return rfs.end(); }
+
+    auto begin() const { return rfs.begin(); }
+    auto end() const { return rfs.end(); }
+
+    auto empty() const { return rfs.empty(); }
+    auto size() const { return rfs.size(); }
+
+    void clear() { rfs.clear(); }
+    auto erase(const path &p) { return rfs.erase(p); }
+    auto merge(RuleFiles &rhs) { return rfs.merge(rhs.rfs); }
+
+private:
+    RFS rfs;
+    Commands commands;
 };
-
-}*/
-
-namespace sw
-{
-
-using RuleFiles = std::unordered_map<path, RuleFile>;
 
 } // namespace sw
