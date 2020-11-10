@@ -53,12 +53,11 @@ struct SW_DRIVER_CPP_API NativeRule : IRule
         arguments = rhs.arguments;
     }
 
-    virtual Files addInputs(const Target &t, const RuleFiles &) = 0;
+    virtual void addInputs(const Target &t, RuleFiles &) = 0;
     virtual void setup(const Target &t) {}
 
 protected:
     RuleProgram program;
-    RuleFiles used_files;
 
     Program &getProgram() const { return *program; }
     static path getOutputFileBase(const Target &t, const path &input);
@@ -81,7 +80,7 @@ struct SW_DRIVER_CPP_API NativeCompilerRule : NativeRule
     using NativeRule::NativeRule;
 
     IRulePtr clone() const override { return std::make_unique<NativeCompilerRule>(*this); }
-    Files addInputs(const Target &t, const RuleFiles &) override;
+    void addInputs(const Target &t, RuleFiles &) override;
     void setup(const Target &t) override;
 
     bool isC() const { return lang == LANG_C; }
@@ -102,7 +101,7 @@ struct SW_DRIVER_CPP_API NativeLinkerRule : NativeRule
     using NativeRule::NativeRule;
 
     IRulePtr clone() const override { return std::make_unique<NativeLinkerRule>(*this); }
-    Files addInputs(const Target &t, const RuleFiles &) override;
+    void addInputs(const Target &t, RuleFiles &) override;
     void setup(const Target &t) override;
 
     Commands getCommands() const override
@@ -125,7 +124,7 @@ struct RcRule : NativeRule
     using NativeRule::NativeRule;
 
     IRulePtr clone() const override { return std::make_unique<RcRule>(*this); }
-    Files addInputs(const Target &t, const RuleFiles &) override;
+    void addInputs(const Target &t, RuleFiles &) override;
     void setup(const Target &t) override;
 
     Commands getCommands() const override { return commands; }

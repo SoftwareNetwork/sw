@@ -271,7 +271,7 @@ void NativeCompilerRule::setup(const Target &t)
     }
 }
 
-Files NativeCompilerRule::addInputs(const Target &t, const RuleFiles &rfs)
+void NativeCompilerRule::addInputs(const Target &t, RuleFiles &rfs)
 {
     auto &cl = static_cast<NativeCompiler &>(*program);
     auto nt = t.as<NativeCompiledTarget *>();
@@ -280,11 +280,9 @@ Files NativeCompilerRule::addInputs(const Target &t, const RuleFiles &rfs)
     TargetFilenames tfns(t);
 
     // find pch
-    for (auto &rf : rfs)
+    for (auto &[_,rf] : rfs)
     {
         if (!exts.contains(rf.getFile().extension().string()))
-            continue;
-        if (used_files.contains(rf))
             continue;
         // pch are only c++ feature
         if (rf.getFile().filename() == "sw.pch.cpp")
@@ -320,15 +318,15 @@ Files NativeCompilerRule::addInputs(const Target &t, const RuleFiles &rfs)
             write_file_if_different(fn, d.s); // do not trigger rebuilds
             //getMergeObject()[fn].fancy_name = "[" + getPackage().toString() + "]/[unity]/" + fns;
             d.s.clear();
-            rfs_new.insert(fn);
+            rfs_new.emplace(fn, fn);
         };
 
-        for (auto &rf : rfs)
+        for (auto &[n,rf] : rfs)
         {
             // skip when args are populated
             if (!rf.getAdditionalArguments().empty())
             {
-                rfs_new.insert(rf);
+                rfs_new.insert_or_assign(n, rf);
                 continue;
             }
 
@@ -351,15 +349,13 @@ Files NativeCompilerRule::addInputs(const Target &t, const RuleFiles &rfs)
     }
 
     // main loop
-    Files outputs;
-    for (auto &rf : rfs_new.empty() ? rfs : rfs_new)
+    for (auto &[_,rf] : rfs_new.empty() ? rfs : rfs_new)
     {
         if (!exts.contains(rf.getFile().extension().string()))
             continue;
-        if (used_files.contains(rf))
-            continue;
         const auto output = getOutputFile(t, rf.getFile());
-        outputs.insert(output);
+        if (!rfs.emplace(output, output).second)
+            continue;
 
         auto c = cl.clone();
         auto &nc = static_cast<NativeCompiler &>(*c);
@@ -374,7 +370,7 @@ Files NativeCompilerRule::addInputs(const Target &t, const RuleFiles &rfs)
                 C->PrecompiledHeaderFilename = path(*pch_basename) += ".pch";
                 C->PrecompiledHeaderFilename.output_dependency = true;
             };
-            auto setup_gnu = [&pch_basename, &nc, &outputs, &output, nt](auto C, auto ext)
+            auto setup_gnu = [&pch_basename, &nc, &rfs, &output, nt](auto C, auto ext)
             {
                 C->Language = "c++-header";
 
@@ -382,7 +378,7 @@ Files NativeCompilerRule::addInputs(const Target &t, const RuleFiles &rfs)
                 nc.setSourceFile(path(*pch_basename) += ".h", path(*pch_basename) += ".h"s += ext);
 
                 // skip .obj output
-                outputs.erase(output);
+                rfs.erase(output);
 
                 // we also remove here our same input file
                 if (nt)
@@ -486,9 +482,7 @@ Files NativeCompilerRule::addInputs(const Target &t, const RuleFiles &rfs)
             nc.getCommand()->name += " ";*/
         nc.getCommand()->name += "[" + t.getPackage().toString() + "]" + tfns.getName(rf.getFile());
         commands.emplace(c->getCommand());
-        used_files.insert(rf);
     }
-    return outputs;
 }
 
 void NativeLinkerRule::setup(const Target &t)
@@ -577,17 +571,17 @@ void NativeLinkerRule::setup(const Target &t)
     prog_link.merge(nt->getMergeObject());
 }
 
-Files NativeLinkerRule::addInputs(const Target &t, const RuleFiles &rfs)
+void NativeLinkerRule::addInputs(const Target &t, RuleFiles &rfs)
 {
     auto &nl = static_cast<NativeLinker &>(*program);
     auto nt = t.as<NativeCompiledTarget *>();
 
     std::optional<path> def;
     FilesOrdered files;
-    for (auto &rf : rfs)
+    for (auto &[_,rf] : rfs)
     {
-        if (used_files.contains(rf))
-            continue;
+        //if (used_files.contains(rf))
+            //continue;
 
         if (1
             && rf.getFile().extension() != ".obj"
@@ -617,14 +611,12 @@ Files NativeLinkerRule::addInputs(const Target &t, const RuleFiles &rfs)
     }
     std::sort(files.begin(), files.end());
     if (files.empty() && !def)
-        return {};
+        return;
 
     // objs must go into object files
     // libs into library deps
     //getSelectedTool()->setObjectFiles(files);
     //getSelectedTool()->setInputLibraryDependencies(gatherLinkLibraries());
-
-    Files outputs;
 
     auto c = nl.clone();
     auto &nc = static_cast<NativeLinker &>(*c);
@@ -697,32 +689,29 @@ Files NativeLinkerRule::addInputs(const Target &t, const RuleFiles &rfs)
             //outputs.insert(exp); // we can live without it
         }
     }
-    outputs.insert(nc.getOutputFile());
-    used_files.insert(nc.getOutputFile());
+    //if (!rfs.emplace(nc.getOutputFile(), nc.getOutputFile()).second)
+        //return;
+    //used_files.insert(nc.getOutputFile());
     c->getCommand()->prepare(); // why?
     c->getCommand()->name = //(is_linker ? "[LINK]"s : "[LIB]"s) + " " +
         "[" + t.getPackage().toString() + "]" + nt->getOutputFile().extension().string();
     //nt->registerCommand(*c->getCommand());
     command = c->getCommand();
-
-    return outputs;
 }
 
 void RcRule::setup(const Target &t)
 {
 }
 
-Files RcRule::addInputs(const Target &t, const RuleFiles &rfs)
+void RcRule::addInputs(const Target &t, RuleFiles &rfs)
 {
-    Files outputs;
-    for (auto &rf : rfs)
+    for (auto &[_,rf] : rfs)
     {
         if (rf.getFile().extension() != ".rc")
             continue;
-        if (used_files.contains(rf))
-            continue;
         auto output = getOutputFileBase(t, rf.getFile()) += ".res";
-        outputs.insert(output);
+        if (!rfs.emplace(output, output).second)
+            continue;
         auto c = program->clone();
         // add casual idirs?
         static_cast<RcTool &>(*c).InputFile = rf.getFile();
@@ -730,9 +719,7 @@ Files RcRule::addInputs(const Target &t, const RuleFiles &rfs)
         static_cast<RcTool &>(*c).prepareCommand(t);
         static_cast<RcTool &>(*c).getCommand()->push_back(arguments);
         commands.emplace(c->getCommand());
-        used_files.insert(rf);
     }
-    return outputs;
 }
 
 }

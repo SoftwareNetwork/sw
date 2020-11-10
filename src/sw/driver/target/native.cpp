@@ -2770,7 +2770,7 @@ void NativeCompiledTarget::prepare_pass8()
             continue;
         RuleFile rf(p);
         rf.getAdditionalArguments() = f->args;
-        rfs.insert(rf);
+        rfs.insert_or_assign(p, rf);
     }
 
     //DEBUG_BREAK_IF(getPackage().toString() == "qtproject.qt.base.core-5.15.0.1");

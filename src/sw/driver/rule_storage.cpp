@@ -109,20 +109,13 @@ void RuleSystem::runRules(RuleFiles rfs, const Target &t)
     }
     while (1)
     {
-        bool newfile = false;
+        auto sz = rfs.size();
         for (auto &[_,rd] : rule_dependencies)
         {
-            auto nr = dynamic_cast<NativeRule*>(&rd.getRule());
-            if (!nr)
-                continue;
-            auto outputs = nr->addInputs(t, rfs);
-            for (auto &o : outputs)
-            {
-                auto [_, inserted] = rfs.insert(o);
-                newfile |= inserted;
-            }
+            if (auto nr = dynamic_cast<NativeRule*>(&rd.getRule()))
+                nr->addInputs(t, rfs);
         }
-        if (!newfile)
+        if (sz == rfs.size())
             break;
     }
 }

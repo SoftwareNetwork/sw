@@ -3,14 +3,14 @@
 
 #pragma once
 
-#include <primitives/command.h>
+#include <primitives/filesystem.h>
 
-#include <map>
-#include <set>
 #include <tuple>
 
 namespace sw
 {
+
+namespace builder { struct Command; }
 
 struct RuleFile
 {
@@ -39,6 +39,8 @@ struct RuleFile
 private:
     path file;
     AdditionalArguments additional_arguments;
+public:
+    builder::Command *command = nullptr;
 };
 
 } // namespace sw
@@ -59,6 +61,6 @@ template<> struct hash<::sw::RuleFile>
 namespace sw
 {
 
-using RuleFiles = std::set<RuleFile>;
+using RuleFiles = std::unordered_map<path, RuleFile>;
 
 } // namespace sw
