@@ -147,11 +147,11 @@ void RuleSystem::runRules(const RuleFiles &inrfs, const Target &t)
         auto r = rd.getRule();
         if (!r)
             continue;
+        r->setup(t);
         auto nr = r->as<NativeRule *>();
         if (!nr)
             continue;
         nr->arguments.push_back(rd.getArguments());
-        nr->setup(t);
     }
     while (1)
     {
