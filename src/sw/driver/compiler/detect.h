@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include "../build.h"
 #include "../program.h"
 
 #include <sw/builder/command.h>

@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include "../command.h"
 #include "../options_cl.h"
 
 namespace sw

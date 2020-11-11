@@ -143,7 +143,7 @@ String ProgramDetector::getMsvcLibraryName(const String &base, const BuildSettin
 ProgramDetector::DetectablePackageEntryPoints ProgramDetector::getDetectablePackages()
 {
     DetectablePackageEntryPoints s;
-    auto add_eps = [&s](auto &eps)
+    auto add_eps = [&s](const auto &eps)
     {
         using Map = std::unordered_map<UnresolvedPackage, std::vector<DetectablePackageEntryPoint>>;
         Map m;
