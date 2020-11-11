@@ -3,8 +3,17 @@
 
 #include "rule_file.h"
 
+#include <primitives/exceptions.h>
+
 namespace sw
 {
+
+void RuleFile::setCommand(const std::shared_ptr<builder::Command> &c)
+{
+    if (command)
+        throw SW_RUNTIME_ERROR("Setting output command twice for file: " + to_printable_string(normalize_path(getFile())));
+    command = c;
+}
 
 RuleFile &RuleFiles::addFile(const RuleFile &rf)
 {
@@ -17,18 +26,21 @@ void RuleFiles::merge(RuleFiles &rhs)
     rfs.merge(rhs.rfs);
 }
 
-void RuleFiles::addCommand(const std::shared_ptr<builder::Command> &c)
+void RuleFiles::addCommand(const path &output, const std::shared_ptr<builder::Command> &c)
 {
-    commands.insert(c);
+    if (!commands.emplace(output, c).second)
+        throw SW_RUNTIME_ERROR("Setting output command twice for file: " + to_printable_string(normalize_path(output)));
 }
 
 Commands RuleFiles::getCommands() const
 {
-    auto cmds = commands;
+    Commands cmds;
+    for (auto &[p, c] : commands)
+        cmds.insert(c);
     for (auto &[_, rf] : rfs)
     {
-        if (rf.command)
-            cmds.insert(rf.command);
+        if (auto c = rf.getCommand())
+            cmds.insert(c);
     }
     // set deps, naive way
     for (auto &[_, rf] : rfs)

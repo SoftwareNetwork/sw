@@ -42,12 +42,15 @@ struct SW_DRIVER_CPP_API RuleFile
     //bool isNew() const {}
     //void setAge(int i) { age = i; }
 
+    void setCommand(const std::shared_ptr<builder::Command> &);
+    auto getCommand() const { return command; }
+
 private:
     path file;
     AdditionalArguments additional_arguments;
     //int new_ = true; // iteration
-public:
     std::shared_ptr<builder::Command> command;
+public:
     std::unordered_set<builder::Command*> dependencies;
 };
 
@@ -58,7 +61,7 @@ struct SW_DRIVER_CPP_API RuleFiles
     RuleFile &addFile(const RuleFile &);
     auto contains(const path &p) const { return rfs.contains(p); }
 
-    void addCommand(const std::shared_ptr<builder::Command> &);
+    void addCommand(const path &output, const std::shared_ptr<builder::Command> &);
     Commands getCommands() const;
 
     auto begin() { return rfs.begin(); }
@@ -76,7 +79,7 @@ struct SW_DRIVER_CPP_API RuleFiles
 
 private:
     RFS rfs;
-    Commands commands;
+    std::unordered_map<path, std::shared_ptr<builder::Command>> commands;
 };
 
 } // namespace sw

@@ -495,7 +495,7 @@ void NativeCompilerRule::addInputs(const Target &t, RuleFiles &rfs)
             nc.getCommand()->name += " ";*/
         nc.getCommand()->name += "[" + t.getPackage().toString() + "]" + tfns.getName(rf.getFile());
         auto &rf = rfs.addFile(output);
-        rf.command = c->getCommand();
+        rf.setCommand(c->getCommand());
     }
 }
 
@@ -663,7 +663,7 @@ void NativeLinkerRule::addInputs(const Target &t, RuleFiles &rfs)
             def = deffn;
             //command_lib = c;
             auto &rf = rfs.addFile(deffn);
-            rf.command = c;
+            rf.setCommand(c);
         }
         if (def)
             VSL->ModuleDefinitionFile = *def;
@@ -714,7 +714,7 @@ void NativeLinkerRule::addInputs(const Target &t, RuleFiles &rfs)
     //nt->registerCommand(*c->getCommand());
     //command = c->getCommand();
     auto &rf = rfs.addFile(nc.getOutputFile());
-    rf.command = c->getCommand();
+    rf.setCommand(c->getCommand());
 }
 
 void RcRule::setup(const Target &t)
@@ -740,7 +740,7 @@ RuleFiles RcRule::addInput(const Target &t, const RuleFiles &rfs, RuleFile &rf)
 
     RuleFiles rfs_new;
     auto &rf2 = rfs_new.addFile(output);
-    rf2.command = c->getCommand();
+    rf2.setCommand(c->getCommand());
     return rfs_new;
 }
 
