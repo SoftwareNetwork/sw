@@ -36,9 +36,16 @@ struct SW_DRIVER_CPP_API RuleFile
         return h;
     }*/
 
+    // think, how we can implement this
+    // new file is considered on loop or per rule when first seen?
+    // seems like second option is correct
+    //bool isNew() const {}
+    //void setAge(int i) { age = i; }
+
 private:
     path file;
     AdditionalArguments additional_arguments;
+    //int new_ = true; // iteration
 public:
     std::shared_ptr<builder::Command> command;
     std::unordered_set<builder::Command*> dependencies;
