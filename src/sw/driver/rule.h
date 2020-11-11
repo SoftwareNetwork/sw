@@ -34,6 +34,8 @@ struct SW_DRIVER_CPP_API IRule : ICastable
     /// returns outputs
     //virtual Files addInputs(const RuleFiles &) = 0;
 
+    virtual void setup(const Target &t) {}
+
     virtual std::unique_ptr<IRule> clone() const = 0;
 };
 
@@ -54,7 +56,7 @@ struct SW_DRIVER_CPP_API NativeRule : IRule
     }
 
     virtual void addInputs(const Target &t, RuleFiles &) = 0;
-    virtual void setup(const Target &t) {}
+    virtual void addInput(const Target &t, RuleFile &) { SW_UNREACHABLE; }
 
 protected:
     RuleProgram program;

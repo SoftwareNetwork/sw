@@ -37,8 +37,8 @@ Commands RuleFiles::getCommands() const
         // like original .cpp -> .obj
         // actually we must set dependency to .obj, but we cannot do that directly,
         // since we do not have outputs (generated) list
-        if (rf.command)
-            continue;
+        //if (rf.command)
+            //continue;
         for (auto &d : rf.dependencies)
         {
             for (auto &c : cmds)
