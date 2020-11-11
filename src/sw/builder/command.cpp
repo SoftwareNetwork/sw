@@ -838,6 +838,10 @@ String Command::saveCommand() const
 
 path Command::writeCommand(const path &p, bool print_name) const
 {
+    // TODO:
+    // save chained commands as json
+    // add usage: sw run commands --json cmdhash.json
+
     auto pbat = p;
     String t;
 
