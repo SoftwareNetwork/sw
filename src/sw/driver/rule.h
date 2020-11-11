@@ -55,8 +55,8 @@ struct SW_DRIVER_CPP_API NativeRule : IRule
         arguments = rhs.arguments;
     }
 
-    virtual void addInputs(const Target &t, RuleFiles &) = 0;
-    virtual void addInput(const Target &t, RuleFile &) { SW_UNREACHABLE; }
+    virtual void addInputs(const Target &t, RuleFiles &rfs);
+    virtual RuleFiles addInput(const Target &t, const RuleFiles &, RuleFile &) { SW_UNREACHABLE; }
 
 protected:
     RuleProgram program;
@@ -126,8 +126,8 @@ struct RcRule : NativeRule
     using NativeRule::NativeRule;
 
     IRulePtr clone() const override { return std::make_unique<RcRule>(*this); }
-    void addInputs(const Target &t, RuleFiles &) override;
-    void setup(const Target &t) override;
+    RuleFiles addInput(const Target &, const RuleFiles &, RuleFile &) override;
+    void setup(const Target &) override;
 
     //Commands getCommands() const override { return commands; }
 

@@ -94,6 +94,18 @@ path NativeRule::getOutputFile(const Target &t, const path &input)
     return getOutputFileBase(t, input) += t.getBuildSettings().TargetOS.getObjectFileExtension();
 }
 
+void NativeRule::addInputs(const Target &t, RuleFiles &rfs)
+{
+    RuleFiles rfs_new;
+    for (auto &[_, rf] : rfs)
+    {
+        //if (!rf.isNew()) continue;
+        auto rfs2 = addInput(t, rfs, rf);
+        rfs_new.merge(rfs2);
+    }
+    rfs.merge(rfs_new);
+}
+
 void NativeCompilerRule::setup(const Target &t)
 {
     auto &prog = static_cast<NativeCompiler &>(*program);
@@ -709,26 +721,27 @@ void RcRule::setup(const Target &t)
 {
 }
 
-void RcRule::addInputs(const Target &t, RuleFiles &rfs)
+RuleFiles RcRule::addInput(const Target &t, const RuleFiles &rfs, RuleFile &rf)
 {
+    if (rf.getFile().extension() != ".rc")
+        return {};
+
+    auto output = getOutputFileBase(t, rf.getFile()) += ".res";
+    if (rfs.contains(output))
+        return {};
+
+    auto c = program->clone();
+    auto &rc = static_cast<RcTool &>(*c);
+    // add casual idirs?
+    rc.InputFile = rf.getFile();
+    rc.Output = output;
+    rc.prepareCommand(t);
+    rc.getCommand()->push_back(arguments);
+
     RuleFiles rfs_new;
-    for (auto &[_,rf] : rfs)
-    {
-        if (rf.getFile().extension() != ".rc")
-            continue;
-        auto output = getOutputFileBase(t, rf.getFile()) += ".res";
-        if (rfs.contains(output))
-            continue;
-        auto c = program->clone();
-        // add casual idirs?
-        static_cast<RcTool &>(*c).InputFile = rf.getFile();
-        static_cast<RcTool &>(*c).Output = output;
-        static_cast<RcTool &>(*c).prepareCommand(t);
-        static_cast<RcTool &>(*c).getCommand()->push_back(arguments);
-        auto &rf = rfs_new.addFile(output);
-        rf.command = c->getCommand();
-    }
-    rfs.merge(rfs_new);
+    auto &rf2 = rfs_new.addFile(output);
+    rf2.command = c->getCommand();
+    return rfs_new;
 }
 
 }
