@@ -64,6 +64,12 @@ void Command::prepare()
     // so we don't check other conditions below
     if (!isProgramSet())
     {
+        if (rd)
+        {
+            if (!rd->dep)
+                throw SW_RUNTIME_ERROR("No dependency set for rule: " + rd->rule_name);
+            dependency = rd->dep;
+        }
         auto d = dependency.lock();
         if (d)
         {
@@ -369,6 +375,12 @@ CommandBuilder &CommandBuilder::operator<<(const ::sw::cmd::tag_prog_dep &t)
 CommandBuilder &CommandBuilder::operator<<(const ::sw::cmd::tag_prog_prog &t)
 {
     c->setProgram(t.p);
+    return *this;
+}
+
+CommandBuilder &CommandBuilder::operator<<(const ::sw::cmd::tag_prog_rule &t)
+{
+    std::dynamic_pointer_cast<::sw::driver::Command>(c)->setProgram(t.rd);
     return *this;
 }
 

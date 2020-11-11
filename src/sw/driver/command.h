@@ -15,6 +15,7 @@ namespace sw
 
 struct Target;
 struct SwManagerContext;
+struct RuleData;
 
 namespace cmd
 {
@@ -121,6 +122,7 @@ static detail::tag_normalize_path NormalizePath;
 
 struct tag_prog_dep { DependencyPtr d; };
 struct tag_prog_prog { path p; };
+struct tag_prog_rule { const RuleData &rd; };
 struct tag_prog_tgt { const ITarget *t; };
 struct tag_wdir : detail::tag_path {};
 struct tag_in : detail::tag_io_files {};
@@ -168,6 +170,11 @@ struct tag_dep : detail::tag_targets
 inline tag_prog_dep prog(const DependencyPtr &d)
 {
     return { d };
+}
+
+inline tag_prog_rule prog(const RuleData &rd)
+{
+    return { rd };
 }
 
 inline tag_prog_prog prog(const path &p)
@@ -328,6 +335,7 @@ struct SW_DRIVER_CPP_API Command : ::sw::builder::Command
 
     using Base::setProgram;
     void setProgram(const DependencyPtr &);
+    void setProgram(const RuleData &r) { rd = &r; }
 
     // additional dependencies will be used to set up the command
     void addProgramDependency(const DependencyPtr &);
@@ -339,6 +347,7 @@ private:
     bool dependency_set = false;
     std::weak_ptr<Dependency> dependency; // main
     std::vector<std::weak_ptr<Dependency>> dependencies; // others
+    const RuleData *rd = nullptr;
 };
 
 struct SW_DRIVER_CPP_API CommandBuilder
@@ -373,6 +382,7 @@ struct SW_DRIVER_CPP_API CommandBuilder
     DECLARE_STREAM_OP(::sw::cmd::tag_env);
     DECLARE_STREAM_OP(::sw::cmd::tag_prog_dep);
     DECLARE_STREAM_OP(::sw::cmd::tag_prog_prog);
+    DECLARE_STREAM_OP(::sw::cmd::tag_prog_rule);
     DECLARE_STREAM_OP(::sw::cmd::tag_prog_tgt);
     DECLARE_STREAM_OP(Command::LazyCallback);
 
