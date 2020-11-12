@@ -573,7 +573,10 @@ void VisualStudioLibraryTool::prepareCommand1(const Target &t)
         //cmd->name_short = to_string(Output().filename().u8string());
     }
 
-    //((VisualStudioLibraryTool*)this)->VisualStudioLibraryToolOptions::LinkDirectories() = gatherLinkDirectories();
+    // source files might contain
+    // #pragma comment(lib, "uuid.lib")
+    // in such cases, we must provide link dirs to lib.exe to be able to find those imports
+    ((VisualStudioLibraryTool*)this)->VisualStudioLibraryToolOptions::LinkDirectories() = gatherLinkDirectories();
     //LinkLibraries = gatherLinkLibraries();
 
     ReproducibleBuild = t.isReproducibleBuild();
