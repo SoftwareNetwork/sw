@@ -278,23 +278,22 @@ void VSGenerator::generate(const SwBuild &b)
     if (s.settings.empty())
         throw SW_RUNTIME_ERROR("Empty settings");
 
-    UnresolvedPackage compiler = (*s.settings.begin())["native"]["program"]["cpp"].getValue();
-    if (compiler.getPath() == "com.Microsoft.VisualStudio.VC.cl")
+    auto compiler_type_s = (*s.settings.begin())["rule"]["cpp"]["type"].getValue();
+    if (compiler_type_s == "msvc")
         ;
-    else if (compiler.getPath() == "org.LLVM.clangcl")
+    else if (compiler_type_s == "clangcl")
         compiler_type = ClangCl;
-    else if (compiler.getPath() == "org.LLVM.clangpp" || compiler.getPath() == "org.LLVM.clang")
+    else if (compiler_type_s == "clang")
     {
         compiler_type = Clang;
         LOG_INFO(logger, "Not yet fully supported");
     }
     else
-        throw SW_RUNTIME_ERROR("Compiler is not supported (yet?): " + compiler.toString());
+        throw SW_RUNTIME_ERROR("Compiler is not supported (yet?): " + compiler_type_s);
 
-    SW_UNIMPLEMENTED;
-
-    /*auto compiler_id = b.getContext().getPredefinedTargets().find(compiler)->first;
-    auto compiler_id_max_version = b.getContext().getPredefinedTargets().find(UnresolvedPackage(compiler.getPath().toString()))->first;
+    UnresolvedPackage compiler = (*s.settings.begin())["rule"]["cpp"]["package"].getValue();
+    auto compiler_id = b.getTargets().find(compiler)->first;
+    auto compiler_id_max_version = b.getTargets().find(UnresolvedPackage(compiler.getPath().toString()))->first;
 
     if (compiler_type == MSVC)
     {
@@ -304,10 +303,10 @@ void VSGenerator::generate(const SwBuild &b)
     else
     {
         // otherwise just generate maximum found version for msvc compiler
-        auto compiler_id_max_version = b.getContext().getPredefinedTargets().find(UnresolvedPackage("com.Microsoft.VisualStudio.VC.cl"))->first;
+        auto compiler_id_max_version = b.getTargets().find(UnresolvedPackage("com.Microsoft.VisualStudio.VC.cl"))->first;
         vs_version = clver2vsver(compiler_id_max_version.getVersion(), compiler_id_max_version.getVersion());
         toolset_version = compiler_id_max_version.getVersion();
-    }*/
+    }
     // this removes hash part      vvvvvvvvvvvvv
     sln_root = getRootDirectory(b).parent_path() / vs_version.toString(1);
 
@@ -1022,8 +1021,12 @@ void Project::emitProject(const VSGenerator &g) const
     ctx.addBlock("Keyword", "Win32Proj");
     if (g.vstype == VsGeneratorType::VisualStudio)
     {
+        UnresolvedPackage ucrt = (*settings.begin())["native"]["stdlib"]["c"].getValue();
+        auto ucrt_id = g.b->getTargets().find(ucrt)->first;
+
         ctx.addBlock("RootNamespace", getVisibleName());
-        ctx.addBlock("WindowsTargetPlatformVersion", PackageId((*settings.begin())["native"]["stdlib"]["c"].getValue()).getVersion().toString());
+        ctx.addBlock("WindowsTargetPlatformVersion", ucrt_id.getVersion().toString());
+        //ctx.addBlock("WindowsTargetPlatformVersion", PackageId((*settings.begin())["native"]["stdlib"]["c"].getValue()).getVersion().toString());
     }
     ctx.addBlock("ProjectName", getVisibleName());
     ctx.addBlock("PreferredToolArchitecture", "x64"); // also x86
