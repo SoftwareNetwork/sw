@@ -44,6 +44,8 @@ struct SW_DRIVER_CPP_API RuleFile
     //void setAge(int i) { age = i; }
 
     void setCommand(const std::shared_ptr<builder::Command> &);
+    // user knows what he is doing
+    void resetCommand(const std::shared_ptr<builder::Command> &);
     std::shared_ptr<builder::Command> getCommand(const RuleFiles &) const;
 
     void addDependency(const path &fn);

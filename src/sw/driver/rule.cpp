@@ -717,7 +717,7 @@ void NativeLinkerRule::addInputs(const Target &t, RuleFiles &rfs)
     //nt->registerCommand(*c->getCommand());
     //command = c->getCommand();
     auto &rf = rfs.addFile(nc.getOutputFile());
-    rf.setCommand(c->getCommand());
+    rf.resetCommand(c->getCommand());
 }
 
 void RcRule::setup(const Target &t)

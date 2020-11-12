@@ -12,6 +12,11 @@ void RuleFile::setCommand(const std::shared_ptr<builder::Command> &c)
 {
     if (command)
         throw SW_RUNTIME_ERROR("Setting output command twice for file: " + to_printable_string(normalize_path(getFile())));
+    resetCommand(c);
+}
+
+void RuleFile::resetCommand(const std::shared_ptr<builder::Command> &c)
+{
     command = c;
 }
 
