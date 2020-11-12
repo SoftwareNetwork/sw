@@ -3,7 +3,7 @@
 
     <Type Name="sw::builder::Command">
         <DisplayString Condition="name._Mypair._Myval2._Mysize == 0">{arguments}</DisplayString>
-        <DisplayString Condition="name._Mypair._Myval2._Mysize == 0">{name}{arguments}</DisplayString>
+        <DisplayString Condition="name._Mypair._Myval2._Mysize != 0">{name} {arguments}</DisplayString>
         <Expand>
             <ExpandedItem Condition="name._Mypair._Myval2._Mysize == 0">arguments</ExpandedItem>
         </Expand>
