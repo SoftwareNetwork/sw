@@ -15,9 +15,56 @@ void RuleFile::setCommand(const std::shared_ptr<builder::Command> &c)
     command = c;
 }
 
-RuleFile &RuleFiles::addFile(const RuleFile &rf)
+void RuleFile::addDependency(const path &fn)
 {
-    auto [i, _] = rfs.insert_or_assign(rf.getFile(), rf);
+    if (fn == file)
+        throw SW_RUNTIME_ERROR("Adding self dependency: " + to_printable_string(normalize_path(fn)));
+    dependencies.insert(fn);
+}
+
+std::shared_ptr<builder::Command> RuleFile::getCommand(const RuleFiles &rfs) const
+{
+    if (!command)
+        return {};
+    DEBUG_BREAK_IF(file.filename().string().find("qtimer") != -1);
+    auto deps = getDependencies1(rfs);
+    for (auto &d : deps)
+        command->addDependency(*d);
+    return command;
+}
+
+Commands RuleFile::getDependencies1(const RuleFiles &rfs) const
+{
+    Commands cmds;
+    for (auto &d : getDependencies())
+    {
+        bool processed = false;
+        // process normal deps (files)
+        auto i = rfs.rfs.find(d);
+        if (i != rfs.rfs.end())
+        {
+            if (i->second.command)
+                cmds.insert(i->second.command);
+            else
+                // no stack overflow guard atm
+                cmds.merge(i->second.getDependencies1(rfs));
+            processed = true;
+        }
+        // process free deps (files)
+        if (auto i = rfs.commands.find(d); i != rfs.commands.end())
+        {
+            cmds.insert(i->second);
+            processed = true;
+        }
+        if (!processed)
+            throw SW_RUNTIME_ERROR("Dependency was set on file '" + to_printable_string(normalize_path(d)) + "', but not added to rule files");
+    }
+    return cmds;
+}
+
+RuleFile &RuleFiles::addFile(const path &p)
+{
+    auto [i, _] = rfs.emplace(p, p);
     return i->second;
 }
 
@@ -39,11 +86,11 @@ Commands RuleFiles::getCommands() const
         cmds.insert(c);
     for (auto &[_, rf] : rfs)
     {
-        if (auto c = rf.getCommand())
+        if (auto c = rf.getCommand(*this))
             cmds.insert(c);
     }
     // set deps, naive way
-    for (auto &[_, rf] : rfs)
+    /*for (auto &[_, rf] : rfs)
     {
         // only for non-generated files
         // like original .cpp -> .obj
@@ -51,7 +98,7 @@ Commands RuleFiles::getCommands() const
         // since we do not have outputs (generated) list
         //if (rf.command)
             //continue;
-        for (auto &d : rf.dependencies)
+        for (auto &d : rf.getDependencies())
         {
             for (auto &c : cmds)
             {
@@ -62,7 +109,7 @@ Commands RuleFiles::getCommands() const
                 }
             }
         }
-    }
+    }*/
     return cmds;
 }
 

@@ -2768,9 +2768,8 @@ void NativeCompiledTarget::prepare_pass8()
     {
         if (!f->isActive())
             continue;
-        RuleFile rf(p);
+        auto &rf = rfs.addFile(p);
         rf.getAdditionalArguments() = f->args;
-        rfs.addFile(rf);
     }
 
     //DEBUG_BREAK_IF(getPackage().toString() == "qtproject.qt.base.core-5.15.0.1");

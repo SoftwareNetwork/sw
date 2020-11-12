@@ -338,7 +338,9 @@ void NativeCompilerRule::addInputs(const Target &t, RuleFiles &rfs)
             // skip when args are populated
             if (!rf.getAdditionalArguments().empty())
             {
-                rfs_unity.addFile(rf);
+                auto &rf2 = rfs_unity.addFile(rf.getFile());
+                SW_UNIMPLEMENTED;
+                rf2 = rf; // what about deps?
                 continue;
             }
 
@@ -361,7 +363,7 @@ void NativeCompilerRule::addInputs(const Target &t, RuleFiles &rfs)
     }
 
     // main loop
-    for (auto &[_,rf] : rfs_unity.empty() ? rfs : rfs_unity)
+    for (auto &[fn,rf] : rfs_unity.empty() ? rfs : rfs_unity)
     {
         if (!exts.contains(rf.getFile().extension().string()))
             continue;
@@ -496,6 +498,7 @@ void NativeCompilerRule::addInputs(const Target &t, RuleFiles &rfs)
         nc.getCommand()->name += "[" + t.getPackage().toString() + "]" + tfns.getName(rf.getFile());
         auto &rf = rfs.addFile(output);
         rf.setCommand(c->getCommand());
+        rf.addDependency(fn);
     }
 }
 

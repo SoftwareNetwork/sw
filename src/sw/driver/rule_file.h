@@ -10,6 +10,7 @@
 namespace sw
 {
 
+struct RuleFiles;
 namespace builder { struct Command; }
 
 struct SW_DRIVER_CPP_API RuleFile
@@ -43,22 +44,26 @@ struct SW_DRIVER_CPP_API RuleFile
     //void setAge(int i) { age = i; }
 
     void setCommand(const std::shared_ptr<builder::Command> &);
-    auto getCommand() const { return command; }
+    std::shared_ptr<builder::Command> getCommand(const RuleFiles &) const;
+
+    void addDependency(const path &fn);
+    const auto &getDependencies() const { return dependencies; }
 
 private:
     path file;
     AdditionalArguments additional_arguments;
     //int new_ = true; // iteration
     std::shared_ptr<builder::Command> command;
-public:
-    std::unordered_set<builder::Command*> dependencies;
+    Files dependencies;
+
+    Commands getDependencies1(const RuleFiles &) const;
 };
 
 struct SW_DRIVER_CPP_API RuleFiles
 {
     using RFS = std::unordered_map<path, RuleFile>;
 
-    RuleFile &addFile(const RuleFile &);
+    RuleFile &addFile(const path &);
     auto contains(const path &p) const { return rfs.contains(p); }
 
     void addCommand(const path &output, const std::shared_ptr<builder::Command> &);
@@ -80,6 +85,8 @@ struct SW_DRIVER_CPP_API RuleFiles
 private:
     RFS rfs;
     std::unordered_map<path, std::shared_ptr<builder::Command>> commands;
+
+    friend struct RuleFile;
 };
 
 } // namespace sw
