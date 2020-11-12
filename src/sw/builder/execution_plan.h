@@ -20,13 +20,14 @@
 
 #include "command.h"
 
-#include <iso646.h> // for #include <boost/graph/transitive_reduction.hpp>
 #include <boost/graph/graph_traits.hpp>
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/strong_components.hpp>
 #include <boost/graph/transitive_reduction.hpp>
 #include <boost/graph/graph_utility.hpp> // dumping graphs
 #include <boost/graph/graphviz.hpp>      // generating pictures
+
+#include <primitives/exceptions.h>
 
 #include <chrono>
 
@@ -110,7 +111,11 @@ public:
         USet cmds;
         cmds.reserve(in.size());
         for (auto &c : in)
+        {
+            if (!c)
+                throw SW_RUNTIME_ERROR("Empty command was passed");
             cmds.insert(c.get());
+        }
         prepare(cmds);
         return std::make_unique<ExecutionPlan>(cmds);
     }
@@ -121,7 +126,11 @@ public:
         USet cmds;
         cmds.reserve(in.size());
         for (auto &c : in)
+        {
+            if (!c)
+                throw SW_RUNTIME_ERROR("Empty command was passed");
             cmds.insert(c);
+        }
         prepare(cmds);
         return std::make_unique<ExecutionPlan>(cmds);
     }
