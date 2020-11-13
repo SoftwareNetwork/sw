@@ -435,24 +435,28 @@ void ExecutionPlan::prepare(USet &cmds)
     generators.reserve(cmds.size());
     for (auto &c : cmds)
     {
-        if (auto c1 = dynamic_cast<builder::Command *>(c))
+        auto c1 = dynamic_cast<builder::Command *>(c);
+        if (!c1)
+            continue;
+        for (auto &o : c1->outputs)
         {
-            for (auto &o : c1->outputs)
-                generators[o] = c1;
+            if (!generators.emplace(o, c1).second)
+                throw SW_RUNTIME_ERROR("Output file is generated with more than one command: " + to_printable_string(o));
         }
     }
     for (auto &c : cmds)
     {
-        if (auto c1 = dynamic_cast<builder::Command *>(c))
+        auto c1 = dynamic_cast<builder::Command *>(c);
+        if (!c1)
+            continue;
+        for (auto &i : c1->inputs)
         {
-            for (auto &i : c1->inputs)
-            {
-                auto it = generators.find(i);
-                if (it != generators.end())
-                    c1->addDependency(*it->second);
-            }
+            auto it = generators.find(i);
+            if (it != generators.end())
+                c1->addDependency(*it->second);
         }
     }
+}
 
 void ExecutionPlan::init(USet &cmds)
 {
