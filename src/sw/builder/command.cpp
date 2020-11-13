@@ -478,13 +478,6 @@ void Command::prepare()
 
     getHashAndSave();
 
-    // late add real generator
-    for (auto &p : outputs)
-    {
-        // there must be no error, because previous generator == this
-        //File(p, getContext().getFileStorage()).setGenerator(std::static_pointer_cast<Command>(shared_from_this()), false);
-    }
-
     prepared = true;
 
     if (prev)
@@ -522,12 +515,7 @@ void Command::execute(std::error_code &ec)
 
 void Command::execute0(std::error_code *ec)
 {
-    /*SCOPE_EXIT
     {
-        // free cs to release files (logs, cs)
-        if (command_storage)
-            command_storage->free_user();
-    };*/
 
     SCOPE_EXIT
     {
