@@ -519,7 +519,7 @@ void Command::execute0(std::error_code *ec)
 
     SCOPE_EXIT
     {
-        if (pool && executed_)
+        if (pool && executed_.v)
             pool->unlock();
     };
 
@@ -554,7 +554,9 @@ bool Command::beforeCommand()
     if (isExecuted())
         throw std::logic_error("Trying to execute command twice: " + getName());
 
-    executed_ = true;
+    bool e = false;
+    if (!executed_.v.compare_exchange_strong(e, true))
+        return false;
 
     // check our resources (before log)
     if (pool)

@@ -157,7 +157,7 @@ public:
     void execute() override;
     void execute(std::error_code &ec) override;
     void clean() const;
-    bool isExecuted() const { return pid != -1 || executed_; }
+    bool isExecuted() const { return pid != -1 || executed_.v; }
 
     String getName() const override;
     size_t getHash() const override;
@@ -201,7 +201,18 @@ public:
 
 protected:
     bool prepared = false;
-    bool executed_ = false;
+    template <class T> struct simple_atomic
+    {
+        T v;
+
+        template <class U>
+        simple_atomic(U &&v) : v(v) {}
+        simple_atomic(const simple_atomic &rhs) { operator=(rhs); }
+        simple_atomic &operator=(const simple_atomic &rhs) { v = rhs.v.load(); return *this; }
+        //operator T() const { return v; }
+        //operator const T &() const { return v; }
+    };
+    simple_atomic<std::atomic_bool> executed_{ false };
 
     virtual bool check_if_file_newer(const path &, const String &what, bool throw_on_missing) const;
 
