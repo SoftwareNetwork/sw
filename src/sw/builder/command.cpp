@@ -490,6 +490,17 @@ void Command::prepare()
                 addDependency(*d);
         }
     }
+    else if (next) // exactly first command in the chain
+    {
+        // go through the chain and move all outputs from there
+        auto n = next;
+        while (n)
+        {
+            if (auto c = static_cast<Command *>(n))
+                outputs.merge(c->outputs);
+            n = n->next;
+        }
+    }
     if (next)
     {
         if (auto c = static_cast<Command*>(next))
@@ -515,7 +526,15 @@ void Command::execute(std::error_code &ec)
 
 void Command::execute0(std::error_code *ec)
 {
+    if (prev)
     {
+        if (auto c = dynamic_cast<Command *>(prev))
+        {
+            if (c->executed_.v)
+                return;
+            return c->execute0(ec);
+        }
+    }
 
     SCOPE_EXIT
     {
