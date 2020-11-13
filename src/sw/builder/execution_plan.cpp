@@ -454,22 +454,6 @@ void ExecutionPlan::prepare(USet &cmds)
         }
     }
 
-    // remove chained commands
-    // keep only the last one
-    for (auto i = cmds.begin(); i != cmds.end();)
-    {
-        if (auto c1 = dynamic_cast<builder::Command *>(*i))
-        {
-            if (c1->next)
-                i = cmds.erase(i);
-            else
-                i++;
-        }
-        else
-            i++;
-    }
-}
-
 void ExecutionPlan::init(USet &cmds)
 {
     while (!cmds.empty())
