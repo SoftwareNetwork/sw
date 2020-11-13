@@ -500,6 +500,7 @@ void Command::prepare()
                 outputs.merge(c->outputs);
             n = n->next;
         }
+        // FIXME: we'll fail still in case where deps are set on the last chained command
     }
     if (next)
     {
