@@ -558,7 +558,7 @@ void SwBuild::loadPackages()
         LOG_TRACE(logger, "build id " << this << " " << BOOST_CURRENT_FUNCTION << " round " << r++);
 
         std::map<TargetSettings, std::pair<PackageId, TargetContainer *>> load;
-        std::map<TargetSettings, std::pair<PackagePath, InputLoader *>> load2;
+        std::map<TargetSettings, std::pair<UnresolvedPackage, InputLoader *>> load2;
         for (const auto &[pkg, tgts] : getTargets())
         {
             for (const auto &tgt : tgts)
@@ -577,7 +577,7 @@ void SwBuild::loadPackages()
                             && j->second.hasInput()
                             )
                         {
-                            load2.insert({ d->getSettings(), { j->first, &j->second } });
+                            load2.insert({ d->getSettings(), { d->getUnresolvedPackage(), &j->second } });
                             continue;
                         }
 
@@ -665,12 +665,17 @@ void SwBuild::loadPackages()
         }
         for (auto &[s, d] : load2)
         {
-            auto tgts = d.second->getInput().loadPackages(*this, s, UnresolvedPackages{ UnresolvedPackage{d.first} });
+            auto tgts = d.second->getInput().loadPackages(*this, s, UnresolvedPackages{ d.first });
+            if (tgts.empty())
+                throw SW_RUNTIME_ERROR("No requested packages loaded: " + d.first.toString());
             for (auto &tgt : tgts)
             {
                 getTargets()[tgt->getPackage()].setInput(d.second->getInput());
                 getTargets()[tgt->getPackage()].push_back(tgt);
             }
+            auto i = getTargets().find(d.first);
+            if (i == getTargets().end())
+                throw SW_RUNTIME_ERROR("No requested packages loaded: " + d.first.toString());
             loaded = true;
         }
         if (!loaded)
