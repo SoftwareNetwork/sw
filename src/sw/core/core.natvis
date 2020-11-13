@@ -39,6 +39,12 @@
         </Expand>
     </Type>
 
+    <Type Name="sw::PredefinedTarget">
+        <DisplayString>
+            {pkg}
+        </DisplayString>
+    </Type>
+
     <!--
     <Type Name="std::pair&lt;*,*&gt;">
         <DisplayString Condition="strcmp(&quot;$T2&quot;,&quot;sw::TargetSetting&quot;)==0">123</DisplayString>
