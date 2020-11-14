@@ -1316,5 +1316,10 @@ bool SwBuild::isPredefinedTarget(const PackagePath &pp) const
     return i != getTargets().end(pp) && i->second.hasInput();
 }
 
+PackageId SwBuild::resolve(const UnresolvedPackage &u) const
+{
+    return getContext().resolve(u);
+}
+
 }
 

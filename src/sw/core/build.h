@@ -107,6 +107,9 @@ struct SW_CORE_API SwBuild : SwBuilderContext
         return isPredefinedTarget(p.getPath());
     }
 
+    // stable resolve during whole build
+    PackageId resolve(const UnresolvedPackage &) const;
+
 private:
     SwContext &swctx;
     path build_dir;
