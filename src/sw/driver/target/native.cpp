@@ -4316,7 +4316,7 @@ void NativeCompiledTarget::configureFile1(const path &from, const path &to, Conf
         {
             // make additional log level for this
             //LOG_TRACE(logger, "configure #cmakedefine " << m[1].str() << ": replacement not found");
-            repl = {};
+            repl = ""s;
         }
         if (offValues.find(boost::to_upper_copy(*repl)) != offValues.end())
             s = m.prefix().str() + "/* #undef " + m[1].str() + m[2].str() + " */\n" + m.suffix().str();
@@ -4332,7 +4332,7 @@ void NativeCompiledTarget::configureFile1(const path &from, const path &to, Conf
         {
             // make additional log level for this
             //LOG_TRACE(logger, "configure #cmakedefine01 " << m[1].str() << ": replacement not found");
-            repl = {};
+            repl = ""s;
         }
         if (offValues.find(boost::to_upper_copy(*repl)) != offValues.end())
             s = m.prefix().str() + "#define " + m[1].str() + " 0" + "\n" + m.suffix().str();
