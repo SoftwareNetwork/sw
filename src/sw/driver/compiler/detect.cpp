@@ -298,6 +298,11 @@ void ProgramDetector::MsvcInstance::process(DETECT_ARGS)
         cl_exe_version.getExtra() = i.version.getExtra();
 }
 
+bool ProgramDetector::MsvcInstance::is_no_target_libdir() const
+{
+    return i.version.getMajor() < 15 && target == "x86";
+}
+
 ProgramDetector::DetectablePackageMultiEntryPoints ProgramDetector::detectMsvcCommon(const MsvcInstance &m)
 {
     DetectablePackageMultiEntryPoints eps;
@@ -441,8 +446,7 @@ ProgramDetector::DetectablePackageMultiEntryPoints ProgramDetector::detectMsvcCo
 
         auto &libcpp = addTarget<PredefinedTarget>(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.libcpp", m.cl_exe_version), eb.getSettings());
         libcpp.public_ts["properties"]["6"]["system_include_directories"].push_back(m.idir);
-        auto no_target_libdir = m.i.version.getMajor() < 16 && m.target == "x86";
-        if (no_target_libdir)
+        if (m.is_no_target_libdir())
             libcpp.public_ts["properties"]["6"]["system_link_directories"].push_back(m.root / "lib");
         else
             libcpp.public_ts["properties"]["6"]["system_link_directories"].push_back(m.root / "lib" / m.target);
@@ -503,11 +507,9 @@ ProgramDetector::DetectablePackageMultiEntryPoints ProgramDetector::detectMsvcCo
         auto &eb = static_cast<ExtendedBuild &>(b);
         auto m = inm;
         m.process(DETECT_ARGS_PASS);
-        auto no_target_libdir = m.i.version.getMajor() < 16 && m.target == "x86";
-
         auto &atlmfc = addTarget<PredefinedTarget>(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.ATLMFC", m.cl_exe_version), eb.getSettings());
         atlmfc.public_ts["properties"]["6"]["system_include_directories"].push_back(m.root / "ATLMFC" / "include");
-        if (no_target_libdir)
+        if (m.is_no_target_libdir())
             atlmfc.public_ts["properties"]["6"]["system_link_directories"].push_back(m.root / "ATLMFC" / "lib");
         else
             atlmfc.public_ts["properties"]["6"]["system_link_directories"].push_back(m.root / "ATLMFC" / "lib" / m.target);

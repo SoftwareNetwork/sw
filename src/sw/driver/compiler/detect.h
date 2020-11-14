@@ -101,6 +101,7 @@ private:
         MsvcInstance(const VSInstance &);
 
         void process(DETECT_ARGS);
+        bool is_no_target_libdir() const;
     };
 
     mutable VSInstances vsinstances1;
