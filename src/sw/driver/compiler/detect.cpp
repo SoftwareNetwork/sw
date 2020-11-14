@@ -259,7 +259,7 @@ static void detectMsvcCommon(const path &compiler, const Version &vs_version,
     {
         auto &libcpp = addTarget<PredefinedTarget>(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.libcpp", cl_exe_version), ts);
         libcpp.public_ts["properties"]["6"]["system_include_directories"].push_back(idir);
-        auto no_target_libdir = vs_version.getMajor() < 16 && target == "x86";
+        auto no_target_libdir = vs_version.getMajor() < 15 && target == "x86";
         if (no_target_libdir)
             libcpp.public_ts["properties"]["6"]["system_link_directories"].push_back(root / "lib");
         else
