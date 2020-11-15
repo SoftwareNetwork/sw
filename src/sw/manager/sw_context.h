@@ -47,6 +47,8 @@ struct SW_MANAGER_API SwManagerContext// : ISwContext
     // lock file related
     void setCachedPackages(const std::unordered_map<UnresolvedPackage, PackageId> &) const;
 
+    void addStorage(std::unique_ptr<IStorage>);
+
 private:
     int cache_storage_id;
     int local_storage_id;

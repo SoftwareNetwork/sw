@@ -20,23 +20,28 @@ SwManagerContext::SwManagerContext(const path &local_storage_root_dir, bool allo
 {
     // first goes resolve cache
     cache_storage_id = storages.size();
-    storages.emplace_back(std::make_unique<CachedStorage>());
+    addStorage(std::make_unique<CachedStorage>());
 
     local_storage_id = storages.size();
-    storages.emplace_back(std::make_unique<LocalStorage>(local_storage_root_dir));
+    addStorage(std::make_unique<LocalStorage>(local_storage_root_dir));
 
     first_remote_storage_id = storages.size();
     for (auto &r : Settings::get_user_settings().getRemotes(allow_network))
     {
         if (r->isDisabled())
             continue;
-        storages.emplace_back(
+        addStorage(
             std::make_unique<RemoteStorageWithFallbackToRemoteResolving>(
                 getLocalStorage(), *r, allow_network));
     }
 }
 
 SwManagerContext::~SwManagerContext() = default;
+
+void SwManagerContext::addStorage(std::unique_ptr<IStorage> s)
+{
+    storages.emplace_back(std::move(s));
+}
 
 CachedStorage &SwManagerContext::getCachedStorage() const
 {
