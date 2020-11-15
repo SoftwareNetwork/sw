@@ -175,12 +175,10 @@ String write_build_script(SwCoreContext &swctx,
                 ctx.addLine("#undef check");
             ctx.addLine();
         }
+        return ctx.getText();
     }
 
     auto &build = ctx.createInlineEmitter<primitives::CppEmitter>();
-
-    if (headers)
-        return ctx.getText();
 
     // function
     build.beginNamespace("sw");
