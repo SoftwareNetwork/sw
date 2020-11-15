@@ -180,13 +180,6 @@ String write_build_script(SwCoreContext &swctx,
     auto &build = ctx.createInlineEmitter<primitives::CppEmitter>();
 
     if (headers)
-    {
-        ctx.addLine("#undef build");
-        ctx.addLine("#undef check");
-        ctx.addLine("#undef configure");
-    }
-
-    if (headers)
         return ctx.getText();
 
     // function
