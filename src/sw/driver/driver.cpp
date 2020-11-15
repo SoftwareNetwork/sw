@@ -557,7 +557,7 @@ std::unique_ptr<SwBuild> Driver::create_build(SwContext &swctx) const
     auto b = ctx.createBuild();
 
     //
-    getBuiltinInputs(swctx);
+    //getBuiltinInputs(swctx);
     //getBuiltinPackages(ctx); // installs packages
 
     // register targets and set inputs
