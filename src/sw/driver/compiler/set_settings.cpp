@@ -6,6 +6,8 @@
 #include "detect.h"
 #include "../build_settings.h"
 
+#include <sw/core/build.h>
+
 namespace sw
 {
 
@@ -51,7 +53,7 @@ static void setRuleCompareRules(TargetSettings &ts)
     }
 }
 
-static void addSettingsCommon(const SwCoreContext &swctx, TargetSettings &ts, bool force)
+static void addSettingsCommon(const SwBuild &b, TargetSettings &ts, bool force)
 {
     addNativeSettings(ts, force);
 
@@ -119,22 +121,22 @@ static void addSettingsCommon(const SwCoreContext &swctx, TargetSettings &ts, bo
 
 // remember! only host tools
 // TODO: load host settings from file
-void addSettingsAndSetHostPrograms(const SwCoreContext &swctx, TargetSettings &ts)
+void addSettingsAndSetHostPrograms(const SwBuild &b, TargetSettings &ts)
 {
-    addSettingsCommon(swctx, ts, true);
+    addSettingsCommon(b, ts, true);
 }
 
-void addSettingsAndSetPrograms(const SwCoreContext &swctx, TargetSettings &ts)
+void addSettingsAndSetPrograms(const SwBuild &b, TargetSettings &ts)
 {
-    addSettingsCommon(swctx, ts, false);
+    addSettingsCommon(b, ts, false);
 }
 
 // they must be the same as used when building sw
-void addSettingsAndSetConfigPrograms(const SwContext &swctx, TargetSettings &ts)
+void addSettingsAndSetConfigPrograms(const SwBuild &b, TargetSettings &ts)
 {
     ts["native"]["library"] = "static"; // why not shared?
                                         //ts["native"]["mt"] = "true";
-    if (swctx.getSettings()["debug_configs"] == "true")
+    if (b.getContext().getSettings()["debug_configs"] == "true")
     {
 #ifndef NDEBUG
         ts["native"]["configuration"] = "debug";
@@ -148,7 +150,7 @@ void addSettingsAndSetConfigPrograms(const SwContext &swctx, TargetSettings &ts)
 #endif
 }
 
-void addSettingsAndSetHostPrograms1(const SwCoreContext &swctx, TargetSettings &ts)
+/*void addSettingsAndSetHostPrograms1(const SwCoreContext &swctx, TargetSettings &ts)
 {
     addNativeSettings(ts, true);
     return;
@@ -179,7 +181,9 @@ void addSettingsAndSetHostPrograms1(const SwCoreContext &swctx, TargetSettings &
         // msvc + clangcl
         // clangcl must be compatible with msvc
         // and also clang actually
-        else if (0/*cl != swctx.getPredefinedTargets().end(clpkg) && !cl->second.empty()*/)
+        else if (0
+        //cl != swctx.getPredefinedTargets().end(clpkg) && !cl->second.empty()
+        )
         {
             check_and_assign(ts["native"]["program"]["c"], to_upkg("com.Microsoft.VisualStudio.VC.cl"));
             check_and_assign(ts["native"]["program"]["cpp"], to_upkg("com.Microsoft.VisualStudio.VC.cl"));
@@ -189,7 +193,9 @@ void addSettingsAndSetHostPrograms1(const SwCoreContext &swctx, TargetSettings &
         }
         // separate?
 #else __clang__
-        else if (0/*clangpp != swctx.getPredefinedTargets().end(clangpppkg) && !clangpp->second.empty()*/)
+        else if (0
+        //clangpp != swctx.getPredefinedTargets().end(clangpppkg) && !clangpp->second.empty()
+        )
         {
             check_and_assign(ts["native"]["program"]["c"], to_upkg("org.LLVM.clang"));
             check_and_assign(ts["native"]["program"]["cpp"], to_upkg("org.LLVM.clangpp"));
@@ -207,9 +213,9 @@ void addSettingsAndSetHostPrograms1(const SwCoreContext &swctx, TargetSettings &
     else
     {
         // set default libs?
-        /*ts["native"]["stdlib"]["c"] = to_upkg("com.Microsoft.Windows.SDK.ucrt");
-        ts["native"]["stdlib"]["cpp"] = to_upkg("com.Microsoft.VisualStudio.VC.libcpp");
-        ts["native"]["stdlib"]["kernel"] = to_upkg("com.Microsoft.Windows.SDK.um");*/
+        //ts["native"]["stdlib"]["c"] = to_upkg("com.Microsoft.Windows.SDK.ucrt");
+        //ts["native"]["stdlib"]["cpp"] = to_upkg("com.Microsoft.VisualStudio.VC.libcpp");
+        //ts["native"]["stdlib"]["kernel"] = to_upkg("com.Microsoft.Windows.SDK.um");
 
         auto if_add = [&swctx](auto &s, const UnresolvedPackage &name)
         {
@@ -320,7 +326,9 @@ void addSettingsAndSetPrograms1(const SwCoreContext &swctx, TargetSettings &ts)
             ts["rule"]["asm"]["type"] = "msvc";
         }
         // clang
-        else if (0/*clangpp != swctx.getPredefinedTargets().end(clangpppkg) && !clangpp->second.empty()*/)
+        else if (0
+        //clangpp != swctx.getPredefinedTargets().end(clangpppkg) && !clangpp->second.empty()
+        )
         {
             SW_UNIMPLEMENTED;
             check_and_assign(ts["native"]["program"]["c"], to_upkg("org.LLVM.clang"));
@@ -331,7 +339,9 @@ void addSettingsAndSetPrograms1(const SwCoreContext &swctx, TargetSettings &ts)
             check_and_assign(ts["native"]["program"]["link"], to_upkg("com.Microsoft.VisualStudio.VC.link"));
         }
         // clangcl
-        else if (0/*clangcl != swctx.getPredefinedTargets().end(clangclpkg) && !clangcl->second.empty()*/)
+        else if (0
+        //clangcl != swctx.getPredefinedTargets().end(clangclpkg) && !clangcl->second.empty()
+        )
         {
             SW_UNIMPLEMENTED;
             check_and_assign(ts["native"]["program"]["c"], to_upkg("org.LLVM.clangcl"));
@@ -358,16 +368,16 @@ void addSettingsAndSetPrograms1(const SwCoreContext &swctx, TargetSettings &ts)
     else
     {
         // set default libs?
-        /*ts["native"]["stdlib"]["c"] = to_upkg("com.Microsoft.Windows.SDK.ucrt");
-        ts["native"]["stdlib"]["cpp"] = to_upkg("com.Microsoft.VisualStudio.VC.libcpp");
-        ts["native"]["stdlib"]["kernel"] = to_upkg("com.Microsoft.Windows.SDK.um");*/
+        //ts["native"]["stdlib"]["c"] = to_upkg("com.Microsoft.Windows.SDK.ucrt");
+        //ts["native"]["stdlib"]["cpp"] = to_upkg("com.Microsoft.VisualStudio.VC.libcpp");
+        //ts["native"]["stdlib"]["kernel"] = to_upkg("com.Microsoft.Windows.SDK.um");
 
         auto if_add = [&swctx](auto &s, const UnresolvedPackage &name)
         {
-            /*auto &pd = swctx.getPredefinedTargets();
-            auto i = pd.find(name);
-            if (i == pd.end() || i->second.empty())
-            return false;*/
+            //auto &pd = swctx.getPredefinedTargets();
+            //auto i = pd.find(name);
+            //if (i == pd.end() || i->second.empty())
+            //return false;
             check_and_assign(s, name.toString());
             return true;
         };
@@ -408,6 +418,6 @@ void addSettingsAndSetPrograms1(const SwCoreContext &swctx, TargetSettings &ts)
     }
 
     setRuleCompareRules(ts);
-}
+}*/
 
 }

@@ -3,13 +3,14 @@
 
 #pragma once
 
-#include <sw/core/sw_context.h>
-
 namespace sw
 {
 
-void addSettingsAndSetPrograms(const SwCoreContext &, TargetSettings &);
-void addSettingsAndSetHostPrograms(const SwCoreContext &, TargetSettings &);
-void addSettingsAndSetConfigPrograms(const SwContext &, TargetSettings &);
+struct TargetSettings;
+struct SwBuild;
+
+void addSettingsAndSetPrograms(const SwBuild &, TargetSettings &);
+void addSettingsAndSetHostPrograms(const SwBuild &, TargetSettings &);
+void addSettingsAndSetConfigPrograms(const SwBuild &, TargetSettings &);
 
 }

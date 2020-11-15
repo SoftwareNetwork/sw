@@ -190,7 +190,7 @@ struct SpecFileInput : Input, DriverInput
         {
             auto b = swctx.createBuild();
 
-            auto ts = static_cast<const Driver&>(getDriver()).getDllConfigSettings(swctx);
+            auto ts = static_cast<const Driver&>(getDriver()).getDllConfigSettings(*b);
             //ts["native"]["library"] = "shared"; // why?
             NativeTargetEntryPoint ep1;
             auto b2 = ep1.createBuild(*b, ts, {}, {});
@@ -581,10 +581,10 @@ std::unique_ptr<SwBuild> Driver::create_build(SwContext &swctx) const
     return std::move(b);
 }
 
-TargetSettings Driver::getDllConfigSettings(SwContext &swctx) const
+TargetSettings Driver::getDllConfigSettings(SwBuild &b) const
 {
-    auto ts = swctx.createHostSettings();
-    addSettingsAndSetConfigPrograms(swctx, ts);
+    auto ts = b.getContext().createHostSettings();
+    addSettingsAndSetConfigPrograms(b, ts);
     return ts;
 }
 
@@ -645,7 +645,7 @@ std::unordered_map<path, PrepareConfigOutputData> Driver::build_configs1(SwConte
 
     NativeTargetEntryPoint ep;
     //                                                        load all our known targets
-    auto b2 = ep.createBuild(*b, getDllConfigSettings(swctx), getBuiltinPackages(ctx), {});
+    auto b2 = ep.createBuild(*b, getDllConfigSettings(*b), getBuiltinPackages(ctx), {});
     PrepareConfig pc;
     for (auto &i : inputs)
         pc.addInput(b2, *i);

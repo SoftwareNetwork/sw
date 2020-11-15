@@ -499,7 +499,7 @@ void NativeCompiledTarget::findCompiler()
 bool NativeCompiledTarget::init()
 {
     // before target init
-    addSettingsAndSetPrograms((SwContext&)getContext(), ts);
+    addSettingsAndSetPrograms(getMainBuild(), ts);
 
     if (!isHeaderOnly())
         findCompiler();

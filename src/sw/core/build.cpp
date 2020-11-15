@@ -1318,8 +1318,8 @@ bool SwBuild::isPredefinedTarget(const PackagePath &pp) const
 
 PackageId SwBuild::resolve(const UnresolvedPackage &u) const
 {
+    SW_UNIMPLEMENTED;
     return getContext().resolve(u);
 }
 
 }
-

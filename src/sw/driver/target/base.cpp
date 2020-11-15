@@ -345,7 +345,7 @@ TargetSettings Target::getHostSettings() const
     if (ts_export["use_same_config_for_host_dependencies"] == "true")
         return ts_export;
     auto hs = getMainBuild().getContext().getHostSettings();
-    addSettingsAndSetHostPrograms(getContext(), hs);
+    addSettingsAndSetHostPrograms(getMainBuild(), hs);
     return hs;
 }
 
