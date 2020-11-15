@@ -374,7 +374,7 @@ void build(Solution &s)
     if (s.getExternalVariables()["with-gui"] != "true")
         return;
 
-    auto &gui = client.addTarget<ExecutableTarget>("gui", "0.4.0");
+    /*auto &gui = client.addTarget<ExecutableTarget>("gui", "0.4.0");
     {
         gui.PackageDefinitions = true;
         gui.SwDefinitions = true;
@@ -392,13 +392,12 @@ void build(Solution &s)
         if (client.getBuildSettings().TargetOS.Type == OSType::Windows)
             gui += "org.sw.demo.qtproject.qt.winextras"_dep;
 
-        SW_UNIMPLEMENTED;
-        //if (auto L = gui.getSelectedTool()->as<VisualStudioLinker*>(); L)
-            //L->Subsystem = vs::Subsystem::Windows;
+        if (auto L = gui.getSelectedTool()->as<VisualStudioLinker*>(); L)
+            L->Subsystem = vs::Subsystem::Windows;
 
-        /*qt_moc_rcc_uic("org.sw.demo.qtproject.qt"_dep, gui);
+        qt_moc_rcc_uic("org.sw.demo.qtproject.qt"_dep, gui);
         qt_tr("org.sw.demo.qtproject.qt"_dep, gui);
 
-        create_git_revision("pub.egorpugin.primitives.tools.create_git_rev-master"_dep, gui);*/
-    }
+        create_git_revision("pub.egorpugin.primitives.tools.create_git_rev-master"_dep, gui);
+    }*/
 }
