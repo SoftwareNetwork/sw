@@ -1312,6 +1312,7 @@ void SwBuild::test()
 
 bool SwBuild::isPredefinedTarget(const PackagePath &pp) const
 {
+    //return false;
     auto i = getTargets().find(pp);
     return i != getTargets().end(pp) && i->second.hasInput();
 }
