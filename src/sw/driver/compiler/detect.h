@@ -56,9 +56,11 @@ struct SW_DRIVER_CPP_API ProgramDetector
 
     static PredefinedProgramTarget &addProgram(DETECT_ARGS, const PackageId &, const TargetSettings &, const Program &);
 
+    // actually should be PackagePath?
+    using DetectablePackageEntryPointKey = UnresolvedPackage;
     using DetectablePackageEntryPoint = std::function<void(Build &)>;
-    using DetectablePackageEntryPoints = std::unordered_map<UnresolvedPackage, DetectablePackageEntryPoint>;
-    using DetectablePackageMultiEntryPoints = std::unordered_multimap<UnresolvedPackage, DetectablePackageEntryPoint>;
+    using DetectablePackageEntryPoints = std::unordered_map<DetectablePackageEntryPointKey, DetectablePackageEntryPoint>;
+    using DetectablePackageMultiEntryPoints = std::unordered_multimap<DetectablePackageEntryPointKey, DetectablePackageEntryPoint>;
     static DetectablePackageEntryPoints getDetectablePackages();
 
     template <class T>
