@@ -19,7 +19,7 @@ struct NativeCompiledTarget;
 struct SwBuild;
 struct SwContext;
 struct PrepareConfigEntryPoint;
-struct TargetSettings;
+struct PackageSettings;
 struct PrepareConfigOutputData;
 struct NativeBuiltinTargetEntryPoint;
 
@@ -55,7 +55,7 @@ struct SW_DRIVER_CPP_API Driver : IDriver
 
     // service methods
     std::unordered_map<path, PrepareConfigOutputData> build_configs1(SwContext &, const std::set<Input *> &inputs) const;
-    TargetSettings getDllConfigSettings(SwBuild &swctx) const;
+    PackageSettings getDllConfigSettings(SwBuild &swctx) const;
 
 private:
     SwContext &swctx;

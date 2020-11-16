@@ -10,8 +10,8 @@
 namespace sw
 {
 
-TargetSettings commandToTargetSettings(const primitives::Command &);
+PackageSettings commandToPackageSettings(const primitives::Command &);
 // builder::command?
-//TargetSettings targetSettingsToCommand(const primitives::Command &);
+//PackageSettings targetSettingsToCommand(const primitives::Command &);
 
 } // namespace sw

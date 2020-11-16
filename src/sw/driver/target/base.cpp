@@ -340,7 +340,7 @@ std::vector<IDependency *> Target::getDependencies() const
     return deps;
 }
 
-TargetSettings Target::getHostSettings() const
+PackageSettings Target::getHostSettings() const
 {
     if (ts_export["use_same_config_for_host_dependencies"] == "true")
         return ts_export;
@@ -366,7 +366,7 @@ path Target::getLocalOutputBinariesDirectory() const
     try
     {
         if (!fs::exists(d / "cfg.json"))
-            write_file(d / "cfg.json", nlohmann::json::parse(ts.toString(TargetSettings::Json)).dump(4));
+            write_file(d / "cfg.json", nlohmann::json::parse(ts.toString(PackageSettings::Json)).dump(4));
     }
     catch (...) {} // write once
     return d;
@@ -543,12 +543,12 @@ DependencyPtr Target::getDependency() const
     return d;
 }
 
-const TargetSettings &Target::getSettings() const
+const PackageSettings &Target::getSettings() const
 {
     return ts;
 }
 
-const TargetSettings &Target::getInterfaceSettings() const
+const PackageSettings &Target::getInterfaceSettings() const
 {
     return interface_settings;
 }
@@ -798,23 +798,23 @@ path Target::getFile(const DependencyPtr &dep, const path &fn)
     return p;
 }
 
-TargetSettings &Target::getOptions()
+PackageSettings &Target::getOptions()
 {
     // only export options are changeable
     return getExportOptions()["options"].getMap();
 }
 
-const TargetSettings &Target::getOptions() const
+const PackageSettings &Target::getOptions() const
 {
     return getSettings()["options"].getMap();
 }
 
-TargetSettings &Target::getExportOptions()
+PackageSettings &Target::getExportOptions()
 {
     return ts_export;
 }
 
-const TargetSettings &Target::getExportOptions() const
+const PackageSettings &Target::getExportOptions() const
 {
     return ts_export;
 }

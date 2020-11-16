@@ -8,9 +8,9 @@
 namespace sw
 {
 
-TargetSettings toTargetSettings(const OS &o)
+PackageSettings toPackageSettings(const OS &o)
 {
-    TargetSettings s;
+    PackageSettings s;
     switch (o.Type)
     {
     case OSType::Windows:

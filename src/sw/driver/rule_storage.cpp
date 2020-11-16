@@ -30,7 +30,7 @@ RuleData::RuleData(const String &name, const UnresolvedPackage &from_dep)
 {
 }
 
-RuleData::RuleData(const String &name, const TargetSettings &ts)
+RuleData::RuleData(const String &name, const PackageSettings &ts)
     : RuleData(name, ts["rule"][name]["package"].getValue())
 {
 }

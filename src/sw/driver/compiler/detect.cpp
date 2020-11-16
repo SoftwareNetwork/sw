@@ -167,7 +167,7 @@ void ProgramDetector::log_msg_detect_target(const String &m)
     //LOG_TRACE(logger, m);
 }
 
-PredefinedProgramTarget &ProgramDetector::addProgram(DETECT_ARGS, const PackageId &id, const TargetSettings &ts, const Program &p)
+PredefinedProgramTarget &ProgramDetector::addProgram(DETECT_ARGS, const PackageId &id, const PackageSettings &ts, const Program &p)
 {
     auto &t = addTarget<PredefinedProgramTarget>(DETECT_ARGS_PASS, id, ts);
     t.public_ts["output_file"] = to_string(normalize_path(p.file));

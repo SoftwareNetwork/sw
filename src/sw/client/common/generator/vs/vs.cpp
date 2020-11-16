@@ -449,7 +449,7 @@ void VSGenerator::generate(const SwBuild &b)
     int n_executables = 0;
 
     // write basic config files
-    std::map<sw::TargetSettings, Files> configure_files;
+    std::map<sw::PackageSettings, Files> configure_files;
     for (auto &i : inputs)
     {
         for (auto &[_, f] : i.getInput().getInput().getSpecification().files.getData())
@@ -950,12 +950,12 @@ Project::Project(const String &name)
     type = VSProjectType::Utility;
 }
 
-ProjectData &Project::getData(const sw::TargetSettings &s)
+ProjectData &Project::getData(const sw::PackageSettings &s)
 {
     return data[s];
 }
 
-const ProjectData &Project::getData(const sw::TargetSettings &s) const
+const ProjectData &Project::getData(const sw::PackageSettings &s) const
 {
     auto itd = data.find(s);
     if (itd == data.end())
@@ -1055,8 +1055,8 @@ void Project::emitProject(const VSGenerator &g) const
     };
 
     // build files
-    std::map<path, std::map<const sw::TargetSettings *, Command>> bfiles;
-    std::map<sw::TargetSettings, std::map<String /*ft*/, std::map<String /*opt*/, String /*val*/>>> common_cl_options;
+    std::map<path, std::map<const sw::PackageSettings *, Command>> bfiles;
+    std::map<sw::PackageSettings, std::map<String /*ft*/, std::map<String /*opt*/, String /*val*/>>> common_cl_options;
     for (auto &[s, d] : data)
     {
         std::map<String /*opt*/, std::map<std::pair<String, String> /*command line argument*/, int /*count*/>> cl_opts;
@@ -1512,7 +1512,7 @@ void Project::emitFilters(const VSGenerator &g) const
         }
 
         String *d = nullptr;
-        const sw::TargetSettings *s = nullptr; // also mark generated files
+        const sw::PackageSettings *s = nullptr; // also mark generated files
         bool bdir_private = false;
         bool bdir_parent = false;
         size_t p = 0;

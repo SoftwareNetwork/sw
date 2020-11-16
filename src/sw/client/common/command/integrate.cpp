@@ -112,7 +112,7 @@ SUBCOMMAND_DECL(integrate)
         return "/"s + s2 + p.substr(2);
     };
 
-    std::set<sw::TargetSettings> our_settings;
+    std::set<sw::PackageSettings> our_settings;
     auto create_build = [this, &cygwin, &our_settings](const path &deps_file)
     {
         auto build = getContext().createBuild();
@@ -486,7 +486,7 @@ SUBCOMMAND_DECL(integrate)
             ctx.decreaseIndent("]:");
             ctx.increaseIndent();
 
-            using tgt_type = std::pair<sw::PackageId, sw::TargetSettings>;
+            using tgt_type = std::pair<sw::PackageId, sw::PackageSettings>;
             using f_param = const tgt_type &;
             std::function<void(f_param)> process;
             std::set<tgt_type> visited;

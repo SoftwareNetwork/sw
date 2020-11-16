@@ -65,7 +65,7 @@ struct SW_CORE_API Input
 
     // no dry-run targets
     [[nodiscard]]
-    std::vector<ITargetPtr> loadPackages(SwBuild &, const TargetSettings &, const AllowedPackages &allowed_packages, const PackagePath &prefix) const;
+    std::vector<ITargetPtr> loadPackages(SwBuild &, const PackageSettings &, const AllowedPackages &allowed_packages, const PackagePath &prefix) const;
 
 private:
     SwContext &swctx;
@@ -88,7 +88,7 @@ struct SW_CORE_API BuildInput
 
     // no dry-run targets
     [[nodiscard]]
-    std::vector<ITargetPtr> loadPackages(SwBuild &, const TargetSettings &, const AllowedPackages &allowed_packages = {}) const;
+    std::vector<ITargetPtr> loadPackages(SwBuild &, const PackageSettings &, const AllowedPackages &allowed_packages = {}) const;
 
     PackageIdSet listPackages(SwContext &) const;
 
@@ -108,8 +108,8 @@ struct SW_CORE_API InputWithSettings
 {
     InputWithSettings(const BuildInput &);
 
-    const std::set<TargetSettings> &getSettings() const;
-    void addSettings(const TargetSettings &s);
+    const std::set<PackageSettings> &getSettings() const;
+    void addSettings(const PackageSettings &s);
     void clearSettings() { settings.clear(); }
     String getHash() const;
     BuildInput &getInput() { return i; }
@@ -120,7 +120,7 @@ struct SW_CORE_API InputWithSettings
 
 protected:
     BuildInput i;
-    std::set<TargetSettings> settings;
+    std::set<PackageSettings> settings;
 };
 
 } // namespace sw

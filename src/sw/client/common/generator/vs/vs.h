@@ -25,7 +25,7 @@ struct ProjectEmitter;
 struct SolutionEmitter;
 struct VSGenerator;
 
-using Settings = std::set<sw::TargetSettings>;
+using Settings = std::set<sw::PackageSettings>;
 
 enum class VSProjectType
 {
@@ -151,7 +151,7 @@ struct Project : CommonProjectData
     // settings
     std::set<const Project *> dependencies; // solution deps
     Settings settings;
-    std::map<sw::TargetSettings, ProjectData> data;
+    std::map<sw::PackageSettings, ProjectData> data;
     bool build = false;
     path source_dir;
 
@@ -161,8 +161,8 @@ struct Project : CommonProjectData
     void emit(const VSGenerator &) const;
 
     const Settings &getSettings() const { return settings; }
-    ProjectData &getData(const sw::TargetSettings &);
-    const ProjectData &getData(const sw::TargetSettings &) const;
+    ProjectData &getData(const sw::PackageSettings &);
+    const ProjectData &getData(const sw::PackageSettings &) const;
 
 private:
     struct Properties

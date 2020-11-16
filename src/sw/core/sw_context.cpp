@@ -54,12 +54,12 @@ InputDatabase &SwCoreContext::getInputDatabase() const
     return *idb;
 }
 
-TargetSettings SwCoreContext::createHostSettings() const
+PackageSettings SwCoreContext::createHostSettings() const
 {
-    return toTargetSettings(getHostOs());
+    return toPackageSettings(getHostOs());
 }
 
-void SwCoreContext::setHostSettings(const TargetSettings &s)
+void SwCoreContext::setHostSettings(const PackageSettings &s)
 {
     host_settings = s;
 

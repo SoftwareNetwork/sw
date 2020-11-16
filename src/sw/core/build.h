@@ -93,9 +93,9 @@ struct SW_CORE_API SwBuild : SwBuilderContext
 
     const std::vector<InputWithSettings> &getInputs() const;
 
-    const TargetSettings &getExternalVariables() const;
-    const TargetSettings &getSettings() const { return build_settings; }
-    void setSettings(const TargetSettings &build_settings);
+    const PackageSettings &getExternalVariables() const;
+    const PackageSettings &getSettings() const { return build_settings; }
+    void setSettings(const PackageSettings &build_settings);
 
     void setName(const String &);
     String getName() const; // returns temporary object, so no refs
@@ -116,7 +116,7 @@ private:
     TargetMap targets;
     mutable TargetMap targets_to_build;
     std::vector<InputWithSettings> inputs;
-    TargetSettings build_settings;
+    PackageSettings build_settings;
     mutable BuildState state = BuildState::NotStarted;
     mutable Commands commands_storage; // we need some place to keep copy cmds
     std::unique_ptr<Executor> build_executor;

@@ -6,11 +6,11 @@
 namespace sw
 {
 
-struct TargetSettings;
+struct PackageSettings;
 struct SwBuild;
 
-void addSettingsAndSetPrograms(const SwBuild &, TargetSettings &);
-void addSettingsAndSetHostPrograms(const SwBuild &, TargetSettings &);
-void addSettingsAndSetConfigPrograms(const SwBuild &, TargetSettings &);
+void addSettingsAndSetPrograms(const SwBuild &, PackageSettings &);
+void addSettingsAndSetHostPrograms(const SwBuild &, PackageSettings &);
+void addSettingsAndSetConfigPrograms(const SwBuild &, PackageSettings &);
 
 }

@@ -31,14 +31,14 @@ static bool check_and_assign(K &k, const V &v, bool force = false)
 // actually we cannot move this to client,
 // because we support different languages and packages
 // scripting languages do not have os, arch, kernel, configuration etc.
-static void addNativeSettings(TargetSettings &ts, bool force)
+static void addNativeSettings(PackageSettings &ts, bool force)
 {
     check_and_assign(ts["native"]["configuration"], "release", force);
     check_and_assign(ts["native"]["library"], "shared", force);
     check_and_assign(ts["native"]["mt"], "false", force);
 }
 
-static void setRuleCompareRules(TargetSettings &ts)
+static void setRuleCompareRules(PackageSettings &ts)
 {
     return;
 
@@ -53,7 +53,7 @@ static void setRuleCompareRules(TargetSettings &ts)
     }
 }
 
-static void addSettingsCommon(const SwBuild &b, TargetSettings &ts, bool force)
+static void addSettingsCommon(const SwBuild &b, PackageSettings &ts, bool force)
 {
     addNativeSettings(ts, force);
 
@@ -66,7 +66,7 @@ static void addSettingsCommon(const SwBuild &b, TargetSettings &ts, bool force)
     // on win we select msvc, clang, clangcl
     if (bs.TargetOS.is(OSType::Windows))
     {
-        TargetSettings msvc;
+        PackageSettings msvc;
         msvc["type"] = "msvc";
 
         if (0);
@@ -121,18 +121,18 @@ static void addSettingsCommon(const SwBuild &b, TargetSettings &ts, bool force)
 
 // remember! only host tools
 // TODO: load host settings from file
-void addSettingsAndSetHostPrograms(const SwBuild &b, TargetSettings &ts)
+void addSettingsAndSetHostPrograms(const SwBuild &b, PackageSettings &ts)
 {
     addSettingsCommon(b, ts, true);
 }
 
-void addSettingsAndSetPrograms(const SwBuild &b, TargetSettings &ts)
+void addSettingsAndSetPrograms(const SwBuild &b, PackageSettings &ts)
 {
     addSettingsCommon(b, ts, false);
 }
 
 // they must be the same as used when building sw
-void addSettingsAndSetConfigPrograms(const SwBuild &b, TargetSettings &ts)
+void addSettingsAndSetConfigPrograms(const SwBuild &b, PackageSettings &ts)
 {
     ts["native"]["library"] = "static"; // why not shared?
                                         //ts["native"]["mt"] = "true";
@@ -150,7 +150,7 @@ void addSettingsAndSetConfigPrograms(const SwBuild &b, TargetSettings &ts)
 #endif
 }
 
-/*void addSettingsAndSetHostPrograms1(const SwCoreContext &swctx, TargetSettings &ts)
+/*void addSettingsAndSetHostPrograms1(const SwCoreContext &swctx, PackageSettings &ts)
 {
     addNativeSettings(ts, true);
     return;
@@ -162,7 +162,7 @@ void addSettingsAndSetConfigPrograms(const SwBuild &b, TargetSettings &ts)
         check_and_assign(ts["native"]["stdlib"]["kernel"], to_upkg("com.Microsoft.Windows.SDK.um"));
 
         // now find the latest available sdk (ucrt) and select it
-        //TargetSettings oss;
+        //PackageSettings oss;
         //oss["os"] = ts["os"];
         //auto sdk = swctx.getPredefinedTargets().find(UnresolvedPackage(ts["native"]["stdlib"]["c"].getValue()), oss);
         //if (!sdk)
@@ -278,7 +278,7 @@ void addSettingsAndSetConfigPrograms(const SwBuild &b, TargetSettings &ts)
 }
 
 //
-void addSettingsAndSetPrograms1(const SwCoreContext &swctx, TargetSettings &ts)
+void addSettingsAndSetPrograms1(const SwCoreContext &swctx, PackageSettings &ts)
 {
     addNativeSettings(ts, false);
 
@@ -295,7 +295,7 @@ void addSettingsAndSetPrograms1(const SwCoreContext &swctx, TargetSettings &ts)
         //check_and_assign(ts["native"]["stdlib"]["kernel"], to_upkg("com.Microsoft.Windows.SDK.um" + sver));
 
         // now find the latest available sdk (ucrt) and select it
-        //TargetSettings oss;
+        //PackageSettings oss;
         //oss["os"] = ts["os"];
         //auto sdk = swctx.getPredefinedTargets().find(UnresolvedPackage(ts["native"]["stdlib"]["c"].getValue()), oss);
         //if (!sdk)

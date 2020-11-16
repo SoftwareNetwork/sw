@@ -226,13 +226,13 @@ struct SW_DRIVER_CPP_API Target
     , RuleSystem
     , std::enable_shared_from_this<Target>
 {
-    /*struct TargetSettings
+    /*struct PackageSettings
     {
         BuildSettings ss;
         std::set<PackageId> dependencies;
         StringSet features; // make map with values?
     };
-    const TargetSettings *ts = nullptr;*/
+    const PackageSettings *ts = nullptr;*/
 
     // Data storage for objects that must be alive with the target.
     // For example, program clones etc.
@@ -267,16 +267,16 @@ public:
     const Source &getSource() const override;
     TargetFiles getFiles(StorageFileType) const override;
     std::vector<IDependency *> getDependencies() const override;
-    const TargetSettings &getSettings() const override;
-    const TargetSettings &getInterfaceSettings() const override;
+    const PackageSettings &getSettings() const override;
+    const PackageSettings &getInterfaceSettings() const override;
 
-    const TargetSettings &getTargetSettings() const { return getSettings(); }
+    const PackageSettings &getPackageSettings() const { return getSettings(); }
     const BuildSettings &getBuildSettings() const;
 
-    TargetSettings &getOptions();
-    const TargetSettings &getOptions() const;
-    TargetSettings &getExportOptions();
-    const TargetSettings &getExportOptions() const;
+    PackageSettings &getOptions();
+    const PackageSettings &getOptions() const;
+    PackageSettings &getExportOptions();
+    const PackageSettings &getExportOptions() const;
 
     //
     Commands getCommands() const override;
@@ -351,7 +351,7 @@ protected:
     SW_MULTIPASS_VARIABLE(prepare_pass);
     SW_MULTIPASS_VARIABLE(init_pass);
     mutable bool deps_resolved = false;
-    mutable TargetSettings interface_settings;
+    mutable PackageSettings interface_settings;
     // http://blog.llvm.org/2019/11/deterministic-builds-with-clang-and-lld.html
     bool ReproducibleBuild = false;
 
@@ -361,13 +361,13 @@ protected:
     virtual path getBinaryParentDir() const;
 
 protected:
-    TargetSettings ts; // this settings
+    PackageSettings ts; // this settings
     // export settings may be different
     // example: we set 'static-deps' setting which changes
     // ["native"]["library"] to "static";
     Commands generated_commands1;
 private:
-    TargetSettings ts_export;
+    PackageSettings ts_export;
     BuildSettings bs;
     std::unique_ptr<Source> source;
     String provided_cfg;
@@ -375,7 +375,7 @@ private:
     Commands tests;
     bool post_configure_called = false;
 
-    TargetSettings getHostSettings() const;
+    PackageSettings getHostSettings() const;
 
     virtual Commands getCommands1() const { return Commands{}; }
     Commands getTests() const override { return tests; }

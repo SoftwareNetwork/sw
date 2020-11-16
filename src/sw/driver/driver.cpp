@@ -624,7 +624,7 @@ std::unique_ptr<SwBuild> Driver::create_build(SwContext &swctx) const
     return std::move(b);
 }
 
-TargetSettings Driver::getDllConfigSettings(SwBuild &b) const
+PackageSettings Driver::getDllConfigSettings(SwBuild &b) const
 {
     auto ts = b.getContext().createHostSettings();
     addSettingsAndSetConfigPrograms(b, ts);

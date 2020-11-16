@@ -18,7 +18,7 @@ static std::shared_ptr<CompilerType> activateCompiler(Target &t, const Unresolve
     SW_UNIMPLEMENTED;
     /*auto &cld = t.getMainBuild().getTargets();
 
-    TargetSettings oss; // empty for now
+    PackageSettings oss; // empty for now
     auto i = cld.find(id, oss);
     if (!i)
     {

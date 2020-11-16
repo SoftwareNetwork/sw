@@ -19,7 +19,7 @@ struct ITarget;
 struct SW_DRIVER_CPP_API DependencyData : IDependency
 {
     UnresolvedPackage package;
-    TargetSettings settings;
+    PackageSettings settings;
     bool Disabled = false;
 
     DependencyData(const ITarget &t);
@@ -37,15 +37,15 @@ struct SW_DRIVER_CPP_API DependencyData : IDependency
 
     PackageId getResolvedPackage() const;
 
-    TargetSetting &getOption(const String &name) { return getOptions()[name]; }
-    const TargetSetting &getOption(const String &name) const { return getOptions()[name]; }
-    void setOption(const String &name, const TargetSetting &value) { getOption(name) = value; }
+    PackageSetting &getOption(const String &name) { return getOptions()[name]; }
+    const PackageSetting &getOption(const String &name) const { return getOptions()[name]; }
+    void setOption(const String &name, const PackageSetting &value) { getOption(name) = value; }
 
-    TargetSettings &getOptions() { return getSettings()["options"].getMap(); }
-    const TargetSettings &getOptions() const { return getSettings()["options"].getMap(); }
+    PackageSettings &getOptions() { return getSettings()["options"].getMap(); }
+    const PackageSettings &getOptions() const { return getSettings()["options"].getMap(); }
 
-    TargetSettings &getSettings() { return settings; }
-    const TargetSettings &getSettings() const override { return settings; }
+    PackageSettings &getSettings() { return settings; }
+    const PackageSettings &getSettings() const override { return settings; }
 
 private:
     const ITarget *target = nullptr;

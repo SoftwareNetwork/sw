@@ -273,7 +273,7 @@ void CmakeTargetEntryPoint::init() const
         throw SW_RUNTIME_ERROR("Cannot parse " + to_string(normalize_path(rootfn)));
 }
 
-std::vector<ITargetPtr> CmakeTargetEntryPoint::loadPackages(SwBuild &mb, const TargetSettings &ts, const AllowedPackages &pkgs, const PackagePath &prefix) const
+std::vector<ITargetPtr> CmakeTargetEntryPoint::loadPackages(SwBuild &mb, const PackageSettings &ts, const AllowedPackages &pkgs, const PackagePath &prefix) const
 {
     // before init
     this->b = &mb;

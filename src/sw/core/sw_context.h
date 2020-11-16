@@ -29,11 +29,11 @@ struct SW_CORE_API SwCoreContext : SwManagerContext
     TargetData &getTargetData(const PackageId &);
     const TargetData &getTargetData(const PackageId &) const;
 
-    void setHostSettings(const TargetSettings &s);
+    void setHostSettings(const PackageSettings &s);
     /// these host settings may be changed by the user
-    const TargetSettings &getHostSettings() const { return host_settings; }
+    const PackageSettings &getHostSettings() const { return host_settings; }
     /// original, unmodified host settings
-    TargetSettings createHostSettings() const;
+    PackageSettings createHostSettings() const;
 
     InputDatabase &getInputDatabase();
     InputDatabase &getInputDatabase() const;
@@ -43,7 +43,7 @@ private:
     // not only detected, but also predefined? do not rename?
     OS HostOS;
     std::unordered_map<PackageId, TargetData> target_data;
-    TargetSettings host_settings;
+    PackageSettings host_settings;
     std::unique_ptr<InputDatabase> idb;
 };
 
@@ -74,8 +74,8 @@ struct SW_CORE_API SwContext : SwCoreContext
 
     void loadEntryPointsBatch(const std::set<Input*> &inputs);
 
-    const TargetSettings &getSettings() const { return settings; }
-    void setSettings(const TargetSettings &s) { settings = s; }
+    const PackageSettings &getSettings() const { return settings; }
+    void setSettings(const PackageSettings &s) { settings = s; }
 
 private:
     using InputPtr = std::unique_ptr<Input>;
@@ -83,7 +83,7 @@ private:
 
     Drivers drivers;
     Inputs inputs;
-    TargetSettings settings;
+    PackageSettings settings;
     std::mutex m;
     std::map<std::thread::id, SwBuild *> active_operations;
 

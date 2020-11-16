@@ -75,7 +75,7 @@ void Input::setEntryPoint(EntryPointPtr in)
     ep = std::move(in);
 }
 
-std::vector<ITargetPtr> Input::loadPackages(SwBuild &b, const TargetSettings &s, const AllowedPackages &allowed_packages, const PackagePath &prefix) const
+std::vector<ITargetPtr> Input::loadPackages(SwBuild &b, const PackageSettings &s, const AllowedPackages &allowed_packages, const PackagePath &prefix) const
 {
     // maybe save all targets on load?
 
@@ -112,7 +112,7 @@ void BuildInput::addPackage(const PackageId &in, const PackagePath &in_prefix)
     pkgs.insert(in);
 }
 
-std::vector<ITargetPtr> BuildInput::loadPackages(SwBuild &b, const TargetSettings &s, const AllowedPackages &allowed_packages) const
+std::vector<ITargetPtr> BuildInput::loadPackages(SwBuild &b, const PackageSettings &s, const AllowedPackages &allowed_packages) const
 {
     return i.loadPackages(b, s, allowed_packages.empty() ? pkgs : allowed_packages, getPrefix());
 }
@@ -147,14 +147,14 @@ InputWithSettings::InputWithSettings(const BuildInput &i)
 {
 }
 
-const std::set<TargetSettings> &InputWithSettings::getSettings() const
+const std::set<PackageSettings> &InputWithSettings::getSettings() const
 {
     if (settings.empty())
         throw SW_RUNTIME_ERROR("No input settings provided");
     return settings;
 }
 
-void InputWithSettings::addSettings(const TargetSettings &s)
+void InputWithSettings::addSettings(const PackageSettings &s)
 {
     settings.insert(s);
 }

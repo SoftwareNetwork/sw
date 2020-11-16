@@ -188,7 +188,7 @@ void NativeTarget::setOutputFile()
     try
     {
         if (!fs::exists(BinaryDir.parent_path() / "cfg.json"))
-            write_file(BinaryDir.parent_path() / "cfg.json", nlohmann::json::parse(ts.toString(TargetSettings::Json)).dump(4));
+            write_file(BinaryDir.parent_path() / "cfg.json", nlohmann::json::parse(ts.toString(PackageSettings::Json)).dump(4));
     }
     catch (...) {} // write once
 }
@@ -263,7 +263,7 @@ bool NativeCompiledTarget::isStaticOrHeaderOnlyLibrary() const
     return isStaticLibrary() || isHeaderOnly();
 }
 
-static bool isStaticOrHeaderOnlyLibrary(const TargetSettings &s)
+static bool isStaticOrHeaderOnlyLibrary(const PackageSettings &s)
 {
     return s["header_only"] == "true" || s["type"] == "native_static_library";
 }
@@ -275,7 +275,7 @@ void NativeCompiledTarget::setOutputDir(const path &dir)
     setOutputFile();
 }
 
-static void targetSettings2Command(primitives::Command &c, const TargetSetting &s)
+static void targetSettings2Command(primitives::Command &c, const PackageSetting &s)
 {
     if (s["program"])
         c.setProgram(s["program"].getValue());
@@ -304,7 +304,7 @@ static void targetSettings2Command(primitives::Command &c, const TargetSetting &
     }
 }
 
-static auto get_settings_package_id(const TargetSetting &s)
+static auto get_settings_package_id(const PackageSetting &s)
 {
     if (!s)
         throw SW_RUNTIME_ERROR("Empty setting");
@@ -343,7 +343,7 @@ static auto get_linker_type(const String &p)
     return t;
 }
 
-std::unique_ptr<NativeCompiler> NativeCompiledTarget::activateCompiler(const TargetSetting &s, const UnresolvedPackage &id, const StringSet &exts, bool extended_desc)
+std::unique_ptr<NativeCompiler> NativeCompiledTarget::activateCompiler(const PackageSetting &s, const UnresolvedPackage &id, const StringSet &exts, bool extended_desc)
 {
     SW_UNIMPLEMENTED;
 
@@ -392,7 +392,7 @@ std::unique_ptr<NativeCompiler> NativeCompiledTarget::activateCompiler(const Tar
     }*/
 }
 
-std::unique_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetSetting &s, const UnresolvedPackage &id, bool extended_desc)
+std::unique_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const PackageSetting &s, const UnresolvedPackage &id, bool extended_desc)
 {
     SW_UNIMPLEMENTED;
     /*
@@ -1285,7 +1285,7 @@ const NativeCompiledTarget::ActiveDeps &NativeCompiledTarget::getActiveDependenc
     return *active_deps;
 }
 
-const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
+const PackageSettings &NativeCompiledTarget::getInterfaceSettings() const
 {
     // Do not export any private information.
     // It MUST be extracted from getCommands() call.
@@ -1371,7 +1371,7 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
         s["ide"]["startup_project"] = "true";
     for (auto &f : configure_files)
     {
-        TargetSetting ts;
+        PackageSetting ts;
         ts.setPathValue(getContext().getLocalStorage(), f);
         s["ide"]["configure_files"].push_back(ts);
     }
@@ -1409,7 +1409,7 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
                 {
                     if (d->isDisabled())
                         continue;
-                    TargetSettings j;
+                    PackageSettings j;
                     auto &ds = j[boost::to_lower_copy(d->getTarget().getPackage().toString())];
                     ds = d->getTarget().getSettings();
                     if (d->IncludeDirectoriesOnly)
@@ -1434,7 +1434,7 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
             {
                 for (auto &[p, f] : g)
                 {
-                    TargetSetting ts;
+                    PackageSetting ts;
                     ts.setPathValue(getContext().getLocalStorage(), p);
                     s["source_files"].push_back(ts);
                 }
@@ -1445,7 +1445,7 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
                     s["compile_options"].push_back(d);
                 for (auto &d : g.IncludeDirectories)
                 {
-                    TargetSetting ts;
+                    PackageSetting ts;
                     ts.setPathValue(getContext().getLocalStorage(), d);
                     s["include_directories"].push_back(ts);
                 }
@@ -1457,7 +1457,7 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
             {
                 for (auto &d : g.LinkLibraries)
                 {
-                    TargetSetting ts;
+                    PackageSetting ts;
                     ts.setPathValue(getContext().getLocalStorage(), d.l);
                     s["link_libraries"].push_back(ts);
                 }

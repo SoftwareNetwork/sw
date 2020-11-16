@@ -132,7 +132,7 @@ protected:
     virtual void run() const {}
     path getOutputFilename() const;
     Build setupSolution(SwBuild &b, const path &f) const;
-    TargetSettings getSettings() const;
+    PackageSettings getSettings() const;
     virtual void setupTarget(NativeCompiledTarget &t) const;
 
     [[nodiscard]]
@@ -352,7 +352,7 @@ public:
     auto begin() const { return all.begin(); }
     auto end() const { return all.end(); }
 
-    void performChecks(const SwBuild &, const TargetSettings &);
+    void performChecks(const SwBuild &, const PackageSettings &);
 
 private:
     void prepareChecksForUse();

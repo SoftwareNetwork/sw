@@ -66,7 +66,7 @@ static auto get_settings_fn()
     return get_base_settings_name() + (use_json() ? ".json" : ".bin");
 }
 
-static auto create_target(const path &sfn, const LocalPackage &pkg, const TargetSettings &s)
+static auto create_target(const path &sfn, const LocalPackage &pkg, const PackageSettings &s)
 {
     LOG_TRACE(logger, "loading " << pkg.toString() << ": " << s.getHash() << " from settings file");
 
@@ -75,7 +75,7 @@ static auto create_target(const path &sfn, const LocalPackage &pkg, const Target
         tgt->public_ts = loadSettings(sfn);
     else
     {
-        TargetSettings its;
+        PackageSettings its;
         its.mergeFromString(read_file(sfn));
         tgt->public_ts = its;
     }
@@ -83,7 +83,7 @@ static auto create_target(const path &sfn, const LocalPackage &pkg, const Target
     return tgt;
 }
 
-static std::shared_ptr<PredefinedTarget> create_target(const LocalPackage &p, const TargetSettings &s)
+static std::shared_ptr<PredefinedTarget> create_target(const LocalPackage &p, const PackageSettings &s)
 {
     auto cfg = s.getHash();
     auto base = p.getDirObj(cfg);
@@ -557,8 +557,8 @@ void SwBuild::loadPackages()
     {
         LOG_TRACE(logger, "build id " << this << " " << BOOST_CURRENT_FUNCTION << " round " << r++);
 
-        std::map<TargetSettings, std::pair<PackageId, TargetContainer *>> load;
-        std::map<TargetSettings, std::pair<UnresolvedPackage, InputLoader *>> load2;
+        std::map<PackageSettings, std::pair<PackageId, TargetContainer *>> load;
+        std::map<PackageSettings, std::pair<UnresolvedPackage, InputLoader *>> load2;
         for (const auto &[pkg, tgts] : getTargets())
         {
             for (const auto &tgt : tgts)
@@ -852,7 +852,7 @@ Commands SwBuild::getCommands() const
             //if (auto t = tgt->as<const PredefinedTarget *>())
                 //continue;
 
-            std::function<void(const TargetSettings &)> gather_ttb;
+            std::function<void(const PackageSettings &)> gather_ttb;
             gather_ttb = [this, &gather_ttb, &ttb](const auto &s) mutable
             {
                 if (s["header_only"] == "true")
@@ -861,7 +861,7 @@ Commands SwBuild::getCommands() const
                 if (!(s["type"] == "native_shared_library" || s["type"] == "native_static_library" || s["type"] == "native_executable"))
                     return;
 
-                std::function<void(const TargetSettings &)> process_deps;
+                std::function<void(const PackageSettings &)> process_deps;
                 process_deps = [this, &gather_ttb, &process_deps, &ttb](const auto &s) mutable
                 {
                     auto get_deps = [this, &gather_ttb, &process_deps, &ttb](const auto &in)
@@ -973,7 +973,7 @@ Commands SwBuild::getCommands() const
                 }
 
                 PackageIdSet visited_pkgs;
-                std::function<void(const TargetSettings &)> copy_file;
+                std::function<void(const PackageSettings &)> copy_file;
                 copy_file = [this, &copy_dir_current, &copy_files, &copy_file, &visited_pkgs](const auto &s)
                 {
                     if (s["header_only"] == "true")
@@ -1008,7 +1008,7 @@ Commands SwBuild::getCommands() const
                         fast_path_files.insert(o);
                     }
 
-                    std::function<void(const TargetSettings &)> process_deps;
+                    std::function<void(const PackageSettings &)> process_deps;
                     process_deps = [this, &copy_file, &process_deps, &visited_pkgs](const auto &s)
                     {
                         for (auto &[k, v] : s["dependencies"]["link"].getMap())
@@ -1217,7 +1217,7 @@ const std::vector<InputWithSettings> &SwBuild::getInputs() const
     return inputs;
 }
 
-void SwBuild::setSettings(const TargetSettings &bs)
+void SwBuild::setSettings(const PackageSettings &bs)
 {
     build_settings = bs;
 
@@ -1241,7 +1241,7 @@ Executor &SwBuild::getPrepareExecutor() const
     return ::getExecutor();
 }
 
-const TargetSettings &SwBuild::getExternalVariables() const
+const PackageSettings &SwBuild::getExternalVariables() const
 {
     return getSettings()["D"].getMap();
 }

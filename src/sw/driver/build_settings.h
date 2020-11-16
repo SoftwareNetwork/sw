@@ -64,10 +64,10 @@ struct SW_DRIVER_CPP_API BuildSettings
     // make polymorphic?
 
     BuildSettings() = default;
-    BuildSettings(const TargetSettings &);
+    BuildSettings(const PackageSettings &);
 
     String getTargetTriplet() const;
-    TargetSettings getTargetSettings() const;
+    PackageSettings getPackageSettings() const;
 };
 
 }

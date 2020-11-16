@@ -12,7 +12,7 @@ namespace sw
 {
 
 // move to OS?
-static OS fromTargetSettings(const TargetSettings &ts)
+static OS fromPackageSettings(const PackageSettings &ts)
 {
     OS os;
 
@@ -68,9 +68,9 @@ static OS fromTargetSettings(const TargetSettings &ts)
     return os;
 }
 
-BuildSettings::BuildSettings(const TargetSettings &ts)
+BuildSettings::BuildSettings(const PackageSettings &ts)
 {
-    TargetOS = fromTargetSettings(ts);
+    TargetOS = fromPackageSettings(ts);
 
     IF_KEY("native"]["library")
         if (0);
@@ -149,7 +149,7 @@ String BuildSettings::getTargetTriplet() const
     return target;
 }
 
-TargetSettings BuildSettings::getTargetSettings() const
+PackageSettings BuildSettings::getPackageSettings() const
 {
     // DO NOT REMOVE any fields, because they do must be set in order to not fail relaxed comparison!
     //
@@ -165,7 +165,7 @@ TargetSettings BuildSettings::getTargetSettings() const
     // then: same as above
     //
 
-    auto s = toTargetSettings(TargetOS);
+    auto s = toPackageSettings(TargetOS);
 
     switch (Native.LibrariesType)
     {

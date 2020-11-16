@@ -42,14 +42,14 @@ void setHttpSettings(const Options &options)
     std::call_once(f, setHttpTlsSettings);
 }
 
-static void applySettingsFromJson(sw::TargetSettings &s, const String &jsonstr)
+static void applySettingsFromJson(sw::PackageSettings &s, const String &jsonstr)
 {
     s.mergeFromString(jsonstr);
 }
 
-static sw::TargetSettings compilerTypeFromStringCaseI(const sw::UnresolvedPackage &compiler)
+static sw::PackageSettings compilerTypeFromStringCaseI(const sw::UnresolvedPackage &compiler)
 {
-    sw::TargetSettings ts;
+    sw::PackageSettings ts;
 
     auto with_version = [&compiler](const sw::PackagePath &ppath)
     {
@@ -152,9 +152,9 @@ static sw::TargetSettings compilerTypeFromStringCaseI(const sw::UnresolvedPackag
     return ts;
 }
 
-static sw::TargetSettings linkerTypeFromStringCaseI(const sw::UnresolvedPackage &linker)
+static sw::PackageSettings linkerTypeFromStringCaseI(const sw::UnresolvedPackage &linker)
 {
-    sw::TargetSettings ts;
+    sw::PackageSettings ts;
 
     //ts["rule"]["lib"] = linker->toString();
     ts["rule"]["link"]["package"] = linker.toString();
@@ -221,7 +221,7 @@ static std::tuple<String, std::optional<sw::Version>> osTypeFromStringCaseI(cons
     return {os, v};
 }
 
-static void applySettings(sw::TargetSettings &s, const String &in_settings)
+static void applySettings(sw::PackageSettings &s, const String &in_settings)
 {
     Strings pairs;
     boost::split(pairs, in_settings, boost::is_any_of(","));
@@ -251,7 +251,7 @@ static void applySettings(sw::TargetSettings &s, const String &in_settings)
     }
 }
 
-static std::vector<sw::TargetSettings> applySettingsFromCppFile(SwClientContext &swctx, const Options &options, const path &fn)
+static std::vector<sw::PackageSettings> applySettingsFromCppFile(SwClientContext &swctx, const Options &options, const path &fn)
 {
     auto b = swctx.createBuild();
     auto inputs = b->addInput(fn);
@@ -285,14 +285,14 @@ static std::vector<sw::TargetSettings> applySettingsFromCppFile(SwClientContext 
 
     auto selected_cfgs = std::set<String>(options.settings_file_config.begin(), options.settings_file_config.end());
     auto result = m->get_function<std::map<std::string, std::string>()>("createJsonSettings")();
-    std::vector<sw::TargetSettings> r;
+    std::vector<sw::PackageSettings> r;
     for (auto &[k, v] : result)
     {
         if (v.empty())
             throw SW_RUNTIME_ERROR("Empty settings");
         if (selected_cfgs.empty() || selected_cfgs.find(k) != selected_cfgs.end())
         {
-            sw::TargetSettings ts;
+            sw::PackageSettings ts;
             ts.mergeFromString(v);
             r.push_back(ts);
         }
@@ -300,14 +300,14 @@ static std::vector<sw::TargetSettings> applySettingsFromCppFile(SwClientContext 
     return r;
 }
 
-static std::vector<sw::TargetSettings> getSettingsFromFile(SwClientContext &swctx, const Options &options)
+static std::vector<sw::PackageSettings> getSettingsFromFile(SwClientContext &swctx, const Options &options)
 {
-    std::vector<sw::TargetSettings> ts;
+    std::vector<sw::PackageSettings> ts;
     for (auto &fn : options.settings_file)
     {
         if (fn.extension() == ".json")
         {
-            sw::TargetSettings s;
+            sw::PackageSettings s;
             applySettingsFromJson(s, read_file(fn));
             ts.push_back(s);
         }
@@ -355,7 +355,7 @@ Inputs::Inputs(const Strings &s, const Strings &pairs)
         throw SW_RUNTIME_ERROR("Incorrect input settings pairs. Something is missing. Size must be even, but size = " + std::to_string(pairs.size()));
     for (int i = 0; i < pairs.size(); i += 2)
     {
-        sw::TargetSettings s;
+        sw::PackageSettings s;
         s.mergeFromString(pairs[i + 1]);
         if (pairs[i].empty())
             throw SW_RUNTIME_ERROR("Empty input in pair");
@@ -389,7 +389,7 @@ std::unique_ptr<sw::SwBuild> SwClientContext::createBuildInternal()
 
     b->setName(options.build_name);
 
-    sw::TargetSettings bs;
+    sw::PackageSettings bs;
 
     // this is coming from the outside to distinguish from
     // internal builds (checks, scripts builds)
@@ -522,13 +522,13 @@ std::unique_ptr<sw::SwBuild> SwClientContext::createBuild(const Inputs &i)
     return b;
 }
 
-sw::TargetSettings SwClientContext::createInitialSettings()
+sw::PackageSettings SwClientContext::createInitialSettings()
 {
     auto s = getContext().getHostSettings();
     return s;
 }
 
-std::vector<sw::TargetSettings> SwClientContext::createSettings()
+std::vector<sw::PackageSettings> SwClientContext::createSettings()
 {
     auto &options = getOptions();
 
@@ -555,7 +555,7 @@ std::vector<sw::TargetSettings> SwClientContext::createSettings()
     if (options.reproducible_build)
         initial_settings["reproducible-build"] = "true";
 
-    std::vector<sw::TargetSettings> settings;
+    std::vector<sw::PackageSettings> settings;
     settings.push_back(initial_settings);
 
     auto times = [&settings](int n)
@@ -802,7 +802,7 @@ sw::SwContext &SwClientContext::getContext(bool in_allow_network)
         u.save_command_format = getOptions().save_command_format;
 
         //
-        sw::TargetSettings cs;
+        sw::PackageSettings cs;
 #define SET_BOOL_OPTION(x) cs[#x] = getOptions().x ? "true" : ""
         SET_BOOL_OPTION(debug_configs);
         SET_BOOL_OPTION(ignore_outdated_configs);

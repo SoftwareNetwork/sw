@@ -24,7 +24,7 @@ struct CmakeTargetEntryPoint : NativeTargetEntryPoint
 
     mutable std::unique_ptr<cmake> cm;
     mutable SwBuild *b = nullptr;
-    mutable TargetSettings ts;
+    mutable PackageSettings ts;
     mutable NativeCompiledTarget *t = nullptr;
     mutable CheckSet *cs = nullptr;
 
@@ -32,7 +32,7 @@ struct CmakeTargetEntryPoint : NativeTargetEntryPoint
     ~CmakeTargetEntryPoint();
 
     [[nodiscard]]
-    std::vector<ITargetPtr> loadPackages(SwBuild &, const TargetSettings &, const AllowedPackages &pkgs, const PackagePath &prefix) const override;
+    std::vector<ITargetPtr> loadPackages(SwBuild &, const PackageSettings &, const AllowedPackages &pkgs, const PackagePath &prefix) const override;
 
 private:
     path rootfn;

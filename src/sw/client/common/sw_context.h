@@ -48,7 +48,7 @@ struct Inputs
 
 private:
     mutable Strings inputs;
-    std::vector<std::pair<sw::TargetSettings, String>> input_pairs;
+    std::vector<std::pair<sw::PackageSettings, String>> input_pairs;
 };
 
 // not thread safe
@@ -73,8 +73,8 @@ struct SW_CLIENT_COMMON_API SwClientContext
     std::unique_ptr<sw::SwBuild> createBuild(const Inputs &);
     std::unique_ptr<sw::SwBuild> createBuildAndPrepare(const Inputs &);
 
-    sw::TargetSettings createInitialSettings();
-    std::vector<sw::TargetSettings> createSettings();
+    sw::PackageSettings createInitialSettings();
+    std::vector<sw::PackageSettings> createSettings();
 
     void addInputs(sw::SwBuild &b, const Inputs &i);
     Strings &getInputs();

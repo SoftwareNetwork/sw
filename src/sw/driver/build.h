@@ -25,7 +25,7 @@ struct ModuleSwappableData
     using AddedTargets = std::vector<ITargetPtr>;
 
     AllowedPackages known_targets;
-    TargetSettings current_settings;
+    PackageSettings current_settings;
 
     void addTarget(ITargetPtr p);
     AddedTargets &getTargets();
@@ -72,7 +72,7 @@ struct SW_DRIVER_CPP_API Build : TargetBase
     path getSourceDir(const LocalPackage &p) const;
     std::optional<path> getSourceDir(const Source &s, const Version &v) const;
 
-    const TargetSettings &getExternalVariables() const;
+    const PackageSettings &getExternalVariables() const;
 
     //const ProgramDetector &getProgramDetector() const { return pd; }
 };
@@ -83,7 +83,7 @@ struct SW_DRIVER_CPP_API ExtendedBuild : Build
 
     using Base::Base;
 
-    const TargetSettings &getSettings() const { return module_data.current_settings; }
+    const PackageSettings &getSettings() const { return module_data.current_settings; }
     void addTarget(const ITargetPtr &t) { module_data.addTarget(t); }
 };
 

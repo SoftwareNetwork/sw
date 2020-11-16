@@ -8,10 +8,10 @@
 namespace sw
 {
 
-using TargetSettings = PackageSettings;
+struct PackageSettings;
 
 // move to builder probably
 SW_CORE_API
-TargetSettings toTargetSettings(const struct OS &);
+PackageSettings toPackageSettings(const struct OS &);
 
 }

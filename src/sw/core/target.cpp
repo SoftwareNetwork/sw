@@ -117,7 +117,7 @@ void InputLoader::setInput(const BuildInput &i)
     input = std::make_unique<BuildInput>(i);
 }
 
-std::vector<ITargetPtr> InputLoader::loadPackages(SwBuild &b, const TargetSettings &s, const AllowedPackages &allowed_packages) const
+std::vector<ITargetPtr> InputLoader::loadPackages(SwBuild &b, const PackageSettings &s, const AllowedPackages &allowed_packages) const
 {
     return getInput().loadPackages(b, s, allowed_packages);
 }
@@ -160,7 +160,7 @@ void TargetContainer::clear()
     targets.clear();
 }
 
-TargetContainer::Base::iterator TargetContainer::findEqual(const TargetSettings &s)
+TargetContainer::Base::iterator TargetContainer::findEqual(const PackageSettings &s)
 {
     return std::find_if(begin(), end(), [&s](const auto &t)
     {
@@ -168,7 +168,7 @@ TargetContainer::Base::iterator TargetContainer::findEqual(const TargetSettings 
     });
 }
 
-TargetContainer::Base::const_iterator TargetContainer::findEqual(const TargetSettings &s) const
+TargetContainer::Base::const_iterator TargetContainer::findEqual(const PackageSettings &s) const
 {
     return std::find_if(begin(), end(), [&s](const auto &t)
     {
@@ -176,7 +176,7 @@ TargetContainer::Base::const_iterator TargetContainer::findEqual(const TargetSet
     });
 }
 
-TargetContainer::Base::iterator TargetContainer::findSuitable(const TargetSettings &s)
+TargetContainer::Base::iterator TargetContainer::findSuitable(const PackageSettings &s)
 {
     return std::find_if(begin(), end(), [&s](const auto &t)
     {
@@ -184,7 +184,7 @@ TargetContainer::Base::iterator TargetContainer::findSuitable(const TargetSettin
     });
 }
 
-TargetContainer::Base::const_iterator TargetContainer::findSuitable(const TargetSettings &s) const
+TargetContainer::Base::const_iterator TargetContainer::findSuitable(const PackageSettings &s) const
 {
     return std::find_if(begin(), end(), [&s](const auto &t)
     {
@@ -228,7 +228,7 @@ detail::SimpleExpected<TargetMap::Base::version_map_type::const_iterator> Target
     return i->second.find(*vo);
 }
 
-detail::SimpleExpected<std::pair<Version, ITarget*>> TargetMap::find(const PackagePath &pp, const TargetSettings &ts) const
+detail::SimpleExpected<std::pair<Version, ITarget*>> TargetMap::find(const PackagePath &pp, const PackageSettings &ts) const
 {
     auto i = find_and_select_version(pp);
     if (!i)
@@ -239,7 +239,7 @@ detail::SimpleExpected<std::pair<Version, ITarget*>> TargetMap::find(const Packa
     return std::pair<Version, ITarget*>{ i->first, j->get() };
 }
 
-ITarget *TargetMap::find(const PackageId &pkg, const TargetSettings &ts) const
+ITarget *TargetMap::find(const PackageId &pkg, const PackageSettings &ts) const
 {
     auto i = find(pkg);
     if (i == end())
@@ -250,7 +250,7 @@ ITarget *TargetMap::find(const PackageId &pkg, const TargetSettings &ts) const
     return k->get();
 }
 
-ITarget *TargetMap::find(const UnresolvedPackage &pkg, const TargetSettings &ts) const
+ITarget *TargetMap::find(const UnresolvedPackage &pkg, const PackageSettings &ts) const
 {
     auto i = find(pkg);
     if (i == end())
@@ -261,7 +261,7 @@ ITarget *TargetMap::find(const UnresolvedPackage &pkg, const TargetSettings &ts)
     return k->get();
 }
 
-PredefinedTarget::PredefinedTarget(const LocalPackage &id, const TargetSettings &ts)
+PredefinedTarget::PredefinedTarget(const LocalPackage &id, const PackageSettings &ts)
     : pkg(id), ts(ts)
 {
 }
@@ -272,10 +272,10 @@ PredefinedTarget::~PredefinedTarget()
 
 struct PredefinedDependency : IDependency
 {
-    PredefinedDependency(const PackageId &unresolved_pkg, const TargetSettings &ts) : unresolved_pkg(unresolved_pkg), ts(ts) {}
+    PredefinedDependency(const PackageId &unresolved_pkg, const PackageSettings &ts) : unresolved_pkg(unresolved_pkg), ts(ts) {}
     virtual ~PredefinedDependency() {}
 
-    const TargetSettings &getSettings() const override { return ts; }
+    const PackageSettings &getSettings() const override { return ts; }
     UnresolvedPackage getUnresolvedPackage() const override { return unresolved_pkg; }
     bool isResolved() const override { return t; }
     void setTarget(const ITarget &t) override { this->t = &t; }
@@ -288,7 +288,7 @@ struct PredefinedDependency : IDependency
 
 private:
     PackageId unresolved_pkg;
-    TargetSettings ts;
+    PackageSettings ts;
     const ITarget *t = nullptr;
 };
 

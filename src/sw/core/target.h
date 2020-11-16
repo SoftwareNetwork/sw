@@ -61,7 +61,7 @@ struct SW_CORE_API IDependency
 {
     virtual ~IDependency() = 0;
 
-    virtual const TargetSettings &getSettings() const = 0;
+    virtual const PackageSettings &getSettings() const = 0;
     virtual UnresolvedPackage getUnresolvedPackage() const = 0;
     virtual bool isResolved() const = 0;
     virtual void setTarget(const ITarget &) = 0;
@@ -126,16 +126,16 @@ struct SW_CORE_API ITarget : ICastable
     /// final (output) configuration
     /// available before prepare or after?
     /// round trips
-    //virtual const TargetSettings &getConfiguration() const = 0;
+    //virtual const PackageSettings &getConfiguration() const = 0;
 
     /// input settings
     /// do not round trip
-    virtual const TargetSettings &getSettings() const = 0;
+    virtual const PackageSettings &getSettings() const = 0;
 
     // settings for consumers (targets) and users?
     // output command or module name
     ///
-    virtual const TargetSettings &getInterfaceSettings() const = 0;
+    virtual const PackageSettings &getInterfaceSettings() const = 0;
 
     // get binary settings, get doc settings?
     // String get package settings(); // json coded or whatever via interface?
@@ -172,9 +172,9 @@ using ITargetPtr = std::shared_ptr<ITarget>;
 // when program detection occurs
 struct SW_CORE_API PredefinedTarget : ITarget
 {
-    TargetSettings public_ts;
+    PackageSettings public_ts;
 
-    PredefinedTarget(const LocalPackage &, const TargetSettings &);
+    PredefinedTarget(const LocalPackage &, const PackageSettings &);
     PredefinedTarget(const PredefinedTarget &) = delete;
     virtual ~PredefinedTarget();
 
@@ -182,8 +182,8 @@ struct SW_CORE_API PredefinedTarget : ITarget
 
     // return what we know
     const LocalPackage &getPackage() const override { return pkg; }
-    const TargetSettings &getSettings() const override { return ts; }
-    const TargetSettings &getInterfaceSettings() const override { return public_ts; }
+    const PackageSettings &getSettings() const override { return ts; }
+    const PackageSettings &getInterfaceSettings() const override { return public_ts; }
 
     // lightweight target
     const Source &getSource() const override { static EmptySource es; return es; }  // empty source
@@ -194,7 +194,7 @@ struct SW_CORE_API PredefinedTarget : ITarget
 
 private:
     LocalPackage pkg;
-    TargetSettings ts;
+    PackageSettings ts;
     mutable bool deps_set = false;
     mutable std::vector<IDependencyPtr> deps;
 };
@@ -211,7 +211,7 @@ struct SW_CORE_API InputLoader
     bool hasInput() const { return !!input; }
 
     [[nodiscard]]
-    std::vector<ITargetPtr> loadPackages(SwBuild &, const TargetSettings &, const AllowedPackages &allowed_packages) const;
+    std::vector<ITargetPtr> loadPackages(SwBuild &, const PackageSettings &, const AllowedPackages &allowed_packages) const;
 
 private:
     std::unique_ptr<BuildInput> input;
@@ -227,13 +227,13 @@ struct SW_CORE_API TargetContainer : InputLoader
     ~TargetContainer();
 
     // find target with equal settings
-    Base::iterator findEqual(const TargetSettings &);
-    Base::const_iterator findEqual(const TargetSettings &) const;
+    Base::iterator findEqual(const PackageSettings &);
+    Base::const_iterator findEqual(const PackageSettings &) const;
 
     // find target with equal subset of provided settings
     // findEqualSubset()
-    Base::iterator findSuitable(const TargetSettings &);
-    Base::const_iterator findSuitable(const TargetSettings &) const;
+    Base::iterator findSuitable(const PackageSettings &);
+    Base::const_iterator findSuitable(const PackageSettings &) const;
 
     void push_back(const ITargetPtr &);
 
@@ -316,11 +316,11 @@ struct TargetMap : PackageVersionMapBase<TargetContainer, std::unordered_map, Ex
     using Base::find;
 
     SW_CORE_API
-    detail::SimpleExpected<std::pair<Version, ITarget *>> find(const PackagePath &pp, const TargetSettings &ts) const;
+    detail::SimpleExpected<std::pair<Version, ITarget *>> find(const PackagePath &pp, const PackageSettings &ts) const;
     SW_CORE_API
-    ITarget *find(const PackageId &pkg, const TargetSettings &ts) const;
+    ITarget *find(const PackageId &pkg, const PackageSettings &ts) const;
     SW_CORE_API
-    ITarget *find(const UnresolvedPackage &pkg, const TargetSettings &ts) const;
+    ITarget *find(const UnresolvedPackage &pkg, const PackageSettings &ts) const;
 
     //
 
@@ -345,7 +345,7 @@ struct SW_CORE_API TargetEntryPoint
     virtual ~TargetEntryPoint();
 
     [[nodiscard]]
-    virtual std::vector<ITargetPtr> loadPackages(SwBuild &, const TargetSettings &, const AllowedPackages &allowed_packages, const PackagePath &prefix) const = 0;
+    virtual std::vector<ITargetPtr> loadPackages(SwBuild &, const PackageSettings &, const AllowedPackages &allowed_packages, const PackagePath &prefix) const = 0;
 };
 
 struct TargetData

@@ -21,7 +21,7 @@ struct SW_DRIVER_CPP_API RuleData
     String target_rule_name;
 
     RuleData(const String &name);
-    RuleData(const String &name, const TargetSettings &);
+    RuleData(const String &name, const PackageSettings &);
     RuleData(const String &name, const UnresolvedPackage &from_dep);
     RuleData(const String &name, const DependencyPtr &from_dep);
     RuleData(const String &name, const DependencyPtr &from_dep, const String &from_name);

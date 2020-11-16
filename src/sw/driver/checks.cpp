@@ -264,7 +264,7 @@ Check &CheckSet::registerCheck(Check &c) const
     return registerCheck(getChecker().all_checks, c);
 }
 
-void CheckSet::performChecks(const SwBuild &mb, const TargetSettings &ts)
+void CheckSet::performChecks(const SwBuild &mb, const PackageSettings &ts)
 {
     static const auto checks_dir = getChecker().swbld.getContext().getLocalStorage().storage_dir_etc / "sw" / "checks";
 
@@ -354,7 +354,7 @@ void CheckSet::performChecks(const SwBuild &mb, const TargetSettings &ts)
 
     if (mb.getSettings()["print_checks"] == "true")
     {
-        write_file(checks_dir / config / "cfg.json", nlohmann::json::parse(ts.toString(TargetSettings::Json)).dump(4));
+        write_file(checks_dir / config / "cfg.json", nlohmann::json::parse(ts.toString(PackageSettings::Json)).dump(4));
     }
 
     if (unchecked.empty())
@@ -767,7 +767,7 @@ Build Check::setupSolution(SwBuild &b, const path &f) const
     return s;
 }
 
-TargetSettings Check::getSettings() const
+PackageSettings Check::getSettings() const
 {
     auto ss = check_set->t->getSettings();
 
