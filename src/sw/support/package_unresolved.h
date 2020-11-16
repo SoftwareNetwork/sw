@@ -25,8 +25,8 @@ struct SW_SUPPORT_API UnresolvedPackage
 
     UnresolvedPackage &operator=(const String &s);
 
-    PackagePath getPath() const { return ppath; }
-    VersionRange getRange() const { return range; }
+    const PackagePath &getPath() const { return ppath; }
+    const VersionRange &getRange() const { return range; }
 
     std::optional<PackageId> toPackageId() const;
     String toString(const String &delim = "-") const;

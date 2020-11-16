@@ -15,8 +15,8 @@ struct SW_SUPPORT_API PackageId
     PackageId(const String &);
     PackageId(const PackagePath &, const Version &);
 
-    PackagePath getPath() const { return ppath; }
-    Version getVersion() const { return version; }
+    const PackagePath &getPath() const { return ppath; }
+    const Version &getVersion() const { return version; }
 
     bool operator<(const PackageId &rhs) const { return std::tie(ppath, version) < std::tie(rhs.ppath, rhs.version); }
     bool operator==(const PackageId &rhs) const { return std::tie(ppath, version) == std::tie(rhs.ppath, rhs.version); }
