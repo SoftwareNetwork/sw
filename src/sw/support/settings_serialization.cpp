@@ -25,12 +25,12 @@
 namespace sw
 {
 
-TargetSettings loadSettings(const path &archive_fn, int type)
+PackageSettings loadSettings(const path &archive_fn, int type)
 {
-    return deserialize<TargetSettings>(archive_fn, type);
+    return deserialize<PackageSettings>(archive_fn, type);
 }
 
-void saveSettings(const path &archive_fn, const TargetSettings &s, int type)
+void saveSettings(const path &archive_fn, const PackageSettings &s, int type)
 {
     serialize(archive_fn, s, type);
 }
