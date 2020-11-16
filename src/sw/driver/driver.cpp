@@ -130,6 +130,47 @@ static Strings get_inline_comments(const path &p)
     return comments;
 }
 
+// actually this is system storage
+// or storage for programs found in the system
+struct BuiltinStorage : IStorage
+{
+    SwContext &swctx;
+    ProgramDetector::DetectablePackageEntryPoints eps;
+    using PackageMap = PackageVersionMapBase<ProgramDetector::DetectablePackageEntryPoint, std::unordered_map, ::primitives::version::VersionMap>;
+    PackageMap m;
+
+    BuiltinStorage(SwContext &swctx)
+        : swctx(swctx)
+    {
+        eps = getProgramDetector().getDetectablePackages();
+    }
+
+    const StorageSchema &getSchema() const override { SW_UNREACHABLE; }
+    PackageDataPtr loadData(const PackageId &) const override { SW_UNREACHABLE; }
+
+    ResolveResult resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const override
+    {
+        for (auto &u : pkgs)
+        {
+            auto i = eps.find(u);
+            if (i == eps.end())
+            {
+                unresolved_pkgs.insert(u);
+                continue;
+            }
+            auto sb = swctx.createBuild();
+            Build b(*sb);
+            i->second(b);
+            auto tgts = b.module_data.getTargets();
+            for (auto &t : tgts)
+            {
+                t->getPackage();
+            }
+        }
+        return {};
+    }
+};
+
 Driver::Driver(SwContext &swctx)
     : swctx(swctx)
 {
@@ -138,6 +179,8 @@ Driver::Driver(SwContext &swctx)
     // When we are building the same config as built-in,
     // without this line it will be loaded first and won't get its entry point
     getBuiltinInputs(swctx);
+
+    //swctx.addStorage(std::make_unique<BuiltinStorage>(swctx));
 }
 
 Driver::~Driver()
