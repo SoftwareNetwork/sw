@@ -104,6 +104,7 @@ private:
 
         void process(DETECT_ARGS);
         bool is_no_target_libdir() const;
+        bool is_vs15plus() const;
     };
 
     mutable VSInstances vsinstances1;

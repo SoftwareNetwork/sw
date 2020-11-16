@@ -214,10 +214,8 @@ ProgramDetector::VSInstances &ProgramDetector::getVSInstances() const
 ProgramDetector::MsvcInstance::MsvcInstance(const VSInstance &i)
     : i(i)
 {
-    bool vs15plus = i.version.getMajor() >= 15;
-
     root = i.root / "VC";
-    if (vs15plus)
+    if (is_vs15plus())
         root = root / "Tools" / "MSVC" / boost::trim_copy(read_file(root / "Auxiliary" / "Build" / "Microsoft.VCToolsVersion.default.txt"));
     compiler = root / "bin";
     idir = root / "include";
@@ -225,14 +223,13 @@ ProgramDetector::MsvcInstance::MsvcInstance(const VSInstance &i)
 
 void ProgramDetector::MsvcInstance::process(DETECT_ARGS)
 {
-    bool vs15plus = i.version.getMajor() >= 15;
     auto &eb = static_cast<ExtendedBuild &>(b);
     BuildSettings new_settings = eb.getSettings();
     const auto host = toStringWindows(b.getContext().getHostOs().Arch);
 
     // get suffix
     target_arch = new_settings.TargetOS.Arch;
-    if (vs15plus)
+    if (is_vs15plus())
     {
         target = toStringWindows(target_arch);
         compiler /= "Host" + host;
@@ -298,9 +295,14 @@ void ProgramDetector::MsvcInstance::process(DETECT_ARGS)
         cl_exe_version.getExtra() = i.version.getExtra();
 }
 
+bool ProgramDetector::MsvcInstance::is_vs15plus() const
+{
+    return i.version.getMajor() >= 15;
+}
+
 bool ProgramDetector::MsvcInstance::is_no_target_libdir() const
 {
-    return i.version.getMajor() < 15 && target == "x86";
+    return !is_vs15plus() && target == "x86";
 }
 
 ProgramDetector::DetectablePackageMultiEntryPoints ProgramDetector::detectMsvcCommon(const MsvcInstance &m)
