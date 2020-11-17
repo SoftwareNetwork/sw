@@ -103,13 +103,26 @@ std::unique_ptr<SwBuild> SwContext::createBuild()
     return std::move(b);
 }
 
-SwBuild *SwContext::registerOperation(SwBuild *b)
+SwBuild *SwContext::registerOperation(SwBuild &b)
 {
     std::unique_lock lk(m);
+    if (stopped)
+    {
+        b.stop();
+        return {};
+    }
     auto &v = active_operations[std::this_thread::get_id()];
     auto old = v;
-    v = b;
+    v = &b;
     return old;
+}
+
+void SwContext::stop()
+{
+    std::unique_lock lk(m);
+    stopped = true;
+    for (auto &[_, o] : active_operations)
+        o->stop();
 }
 
 void SwContext::stop(std::thread::id id)

@@ -62,8 +62,9 @@ struct SW_CORE_API SwContext : SwCoreContext
     void executeBuild(const path &);
 
     // stops current operation
-    SwBuild *registerOperation(SwBuild *);
+    SwBuild *registerOperation(SwBuild &);
     void stop(std::thread::id);
+    void stop();
 
     //
     std::vector<std::unique_ptr<Input>> detectInputs(const path &) const;
@@ -86,6 +87,7 @@ private:
     PackageSettings settings;
     std::mutex m;
     std::map<std::thread::id, SwBuild *> active_operations;
+    bool stopped = false;
 
     std::unique_ptr<SwBuild> createBuild1();
 

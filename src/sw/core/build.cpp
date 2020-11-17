@@ -28,11 +28,11 @@ DECLARE_STATIC_LOGGER(logger, "build");
 #define CHECK_STATE_AND_CHANGE_RAW(from, to, scope_exit)          \
     if (stopped)                                                  \
         throw SW_RUNTIME_ERROR("Interrupted");                    \
-    auto swctx_old_op = swctx.registerOperation((SwBuild *)this); \
+    auto swctx_old_op = swctx.registerOperation((SwBuild&)*this); \
     CHECK_STATE(from);                                            \
     scope_exit                                                    \
     {                                                             \
-        swctx.registerOperation(swctx_old_op);                    \
+        swctx.registerOperation(*swctx_old_op);                   \
         if (std::uncaught_exceptions() == 0)                      \
             state = to;                                           \
     };                                                            \
