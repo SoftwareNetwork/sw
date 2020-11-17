@@ -12,8 +12,11 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string_regex.hpp>
+#include <boost/asio/signal_set.hpp>
 #include <boost/dll.hpp>
 #include <boost/regex.hpp>
+
+#include <thread>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "main");
@@ -354,6 +357,19 @@ void StartupData::setup()
 void StartupData::sw_main()
 {
     SwClientContext swctx(getOptions());
+
+    // graceful exit handler
+    // but can't use without io context
+    /*boost::asio::signal_set signals(io_context, SIGINT, SIGTERM);
+    signals.async_wait([&swctx](
+        const std::error_code &error,
+        int signal_number)
+    {
+        if (error)
+            return;
+        if (swctx.hasContext())
+            swctx.getContext().stop(std::this_thread::get_id());
+    });*/
 
     // for cli we set default input to '.' dir
     if (swctx.getInputs().empty() && getOptions().input_settings_pairs.empty())

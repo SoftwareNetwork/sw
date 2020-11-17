@@ -61,6 +61,7 @@ struct SW_CLIENT_COMMON_API SwClientContext
 
     sw::SwContext &getContext(bool allow_network = true);
     void resetContext();
+    bool hasContext() const { return !!swctx_; }
 
     Options &getOptions() { return *options; }
     const Options &getOptions() const { return *options; }
