@@ -45,12 +45,6 @@ struct SoftwareNetworkStorageSchema : StorageSchema
     SoftwareNetworkStorageSchema() : StorageSchema(1, 1) {}
 };
 
-struct SecurityContext
-{
-    // TODO:
-    bool check() { return true; }
-};
-
 struct SW_SUPPORT_API ResolveRequest
 {
     UnresolvedPackage u;
