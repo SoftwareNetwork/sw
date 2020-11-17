@@ -359,8 +359,8 @@ void StartupData::sw_main()
     SwClientContext swctx(getOptions());
 
     // graceful exit handler
-    // but can't use without io context
-    /*boost::asio::signal_set signals(io_context, SIGINT, SIGTERM);
+    boost::asio::io_context io_context;
+    boost::asio::signal_set signals(io_context, SIGINT, SIGTERM);
     signals.async_wait([&swctx](
         const std::error_code &error,
         int signal_number)
@@ -368,8 +368,10 @@ void StartupData::sw_main()
         if (error)
             return;
         if (swctx.hasContext())
-            swctx.getContext().stop(std::this_thread::get_id());
-    });*/
+            swctx.getContext().stop();
+    });
+    std::thread t([&io_context] { io_context.run(); });
+    t.detach();
 
     // for cli we set default input to '.' dir
     if (swctx.getInputs().empty() && getOptions().input_settings_pairs.empty())
