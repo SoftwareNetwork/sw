@@ -111,7 +111,8 @@ struct SW_MANAGER_API StorageWithPackagesDatabase : Storage
 
     PackageDataPtr loadData(const PackageId &) const override;
     //void get(const IStorage &source, const PackageId &id, StorageFileType) override;
-    ResolveResult resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const override;
+    //ResolveResult resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const override;
+    void resolve(ResolveRequest &) const override;
 
 //protected:?
     PackagesDatabase &getPackagesDatabase() const;
@@ -167,7 +168,8 @@ struct SW_MANAGER_API LocalStorage : Directories, LocalStorageBase
     bool isPackageOverridden(const PackageId &id) const;
     bool isPackageLocal(const PackageId &id) const;
     PackageDataPtr loadData(const PackageId &) const override;
-    ResolveResult resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const override;
+    //ResolveResult resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const override;
+    void resolve(ResolveRequest &) const override;
 
     OverriddenPackagesStorage &getOverriddenPackagesStorage();
     const OverriddenPackagesStorage &getOverriddenPackagesStorage() const;
@@ -179,6 +181,12 @@ private:
     void migrateStorage(int from, int to);
 };
 
+// if our app is working for a long time,
+// our cache will become outdated fast enough
+// To overcome this, we can reset it every N minutes,
+// but in this case we break per SwBuild stability of resolving.
+// Thus it may worth it of movig cache storage into SwBuild
+// and use it only in that resolver without any cache resets.
 struct CachedStorage : IStorage
 {
     using StoredPackages = ResolveResult;
@@ -186,7 +194,10 @@ struct CachedStorage : IStorage
     virtual ~CachedStorage() = default;
 
     void storePackages(const StoredPackages &);
-    ResolveResult resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const override;
+    // accepts only resolved packages
+    void storePackages(const ResolveRequest &);
+    //ResolveResult resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const override;
+    void resolve(ResolveRequest &) const override;
 
     const StorageSchema &getSchema() const override { SW_UNREACHABLE; }
     PackageDataPtr loadData(const PackageId &) const override { SW_UNREACHABLE; }

@@ -138,8 +138,9 @@ SUBCOMMAND_DECL(run)
     // resolve
     try
     {
-        auto p = getContext().resolve(sw::UnresolvedPackages{ getOptions().options_run.target });
-        getOptions().options_run.target = p[getOptions().options_run.target]->toString();
+        SW_UNIMPLEMENTED;
+        //auto p = getContext().resolve(sw::UnresolvedPackages{ getOptions().options_run.target });
+        //getOptions().options_run.target = p[getOptions().options_run.target]->toString();
     }
     catch (...)
     {

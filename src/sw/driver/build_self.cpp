@@ -7,6 +7,8 @@
 #include <sw/core/sw_context.h>
 #include <sw/core/target.h>
 
+#include <primitives/executor.h>
+
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "build.self");
 
@@ -30,11 +32,29 @@ PackageIdSet load_builtin_packages(SwContext &swctx)
 #include <build_self.packages.generated.h>
     };
 
-    auto m = swctx.install(required_packages);
-
     PackageIdSet builtin_packages;
     for (auto &p : required_packages)
-        builtin_packages.insert(m.find(p)->second);
+    {
+        ResolveRequest rr{p};
+        swctx.resolve(rr);
+        if (!rr.isResolved())
+            throw SW_RUNTIME_ERROR("Cannot resolve: " + p.toString());
+        builtin_packages.insert(rr.getPackage());
+    }
+
+    // mass (threaded) install!
+    auto &e = getExecutor();
+    Futures<void> fs;
+    for (auto &p : builtin_packages)
+    {
+        fs.push_back(e.push([&swctx, &p]
+        {
+            ResolveRequest rr{p};
+            swctx.install(rr);
+        }));
+    }
+    waitAndGet(fs);
+
     return builtin_packages;
 }
 

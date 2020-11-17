@@ -18,6 +18,7 @@ struct IResolvableStorage;
 struct CachedStorage;
 struct LocalStorage;
 struct ResolveResultWithDependencies;
+struct ResolveRequest;
 
 // sw_context_t?
 /*struct SW_MANAGER_API ISwContext
@@ -37,12 +38,14 @@ struct SW_MANAGER_API SwManagerContext// : ISwContext
     std::vector<IStorage *> getRemoteStorages() const;
 
     //
-    std::unordered_map<UnresolvedPackage, LocalPackage> install(const UnresolvedPackages &, bool use_cache = true) const;
+    void install(ResolveRequest &) const;
+    //std::unordered_map<UnresolvedPackage, LocalPackage> install(const UnresolvedPackages &, bool use_cache = true) const;
     LocalPackage install(const Package &) const;
 
-    ResolveResultWithDependencies resolve(const UnresolvedPackages &, bool use_cache = true) const;
-    LocalPackage resolve(const UnresolvedPackage &) const;
-    ResolveResultWithDependencies resolve(const UnresolvedPackages &, const std::vector<IStorage*> &) const;
+    //ResolveResultWithDependencies resolve(const UnresolvedPackages &, bool use_cache = true) const;
+    //LocalPackage resolve(const UnresolvedPackage &) const;
+    //ResolveResultWithDependencies resolve(const UnresolvedPackages &, const std::vector<IStorage*> &) const;
+    void resolve(ResolveRequest &) const;
 
     // lock file related
     void setCachedPackages(const std::unordered_map<UnresolvedPackage, PackageId> &) const;

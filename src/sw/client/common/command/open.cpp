@@ -95,7 +95,8 @@ SUBCOMMAND_DECL(open)
     for (auto &a : getInputs())
         upkgs.insert(a);
 
-    auto pkgs = getContext().resolve(upkgs);
+    SW_UNIMPLEMENTED;
+    /*auto pkgs = getContext().resolve(upkgs);
     for (auto &u : upkgs)
     {
         auto ip = pkgs.find(u);
@@ -117,5 +118,5 @@ SUBCOMMAND_DECL(open)
         LOG_INFO(logger, "package dir: " + to_string(lp.getDir().u8string()));
 
         open_directory(lp.getDirSrc() / ""); // on win we must add last slash
-    }
+    }*/
 }

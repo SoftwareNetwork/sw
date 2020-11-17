@@ -148,7 +148,7 @@ struct BuiltinStorage : IStorage
     const StorageSchema &getSchema() const override { SW_UNREACHABLE; }
     PackageDataPtr loadData(const PackageId &) const override { SW_UNREACHABLE; }
 
-    ResolveResult resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const override
+    /*ResolveResult resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const override
     {
         for (auto &u : pkgs)
         {
@@ -168,6 +168,11 @@ struct BuiltinStorage : IStorage
             }
         }
         return {};
+    }*/
+
+    void resolve(ResolveRequest &) const override
+    {
+        SW_UNIMPLEMENTED;
     }
 };
 
@@ -580,7 +585,7 @@ void Driver::getBuiltinInputs(SwContext &) const
         return;
     builtin_inputs = load_builtin_inputs(swctx, *this);
 
-    getProgramDetector();
+    //getProgramDetector();
 
     // add implib entry point
     {
@@ -596,12 +601,11 @@ void Driver::getBuiltinInputs(SwContext &) const
 
 std::unique_ptr<SwBuild> Driver::create_build(SwContext &swctx) const
 {
-    auto &ctx = swctx;
-    auto b = ctx.createBuild();
+    auto b = swctx.createBuild();
 
-    //
-    //getBuiltinInputs(swctx);
-    //getBuiltinPackages(ctx); // installs packages
+    // installs packages, do not remove
+    // it works on empty storage (test it in doubt)
+    getBuiltinPackages(swctx);
 
     // register targets and set inputs
     for (auto &[i, pkgs] : builtin_inputs)

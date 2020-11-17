@@ -8,7 +8,8 @@ DECLARE_STATIC_LOGGER(logger, "command.path");
 
 SUBCOMMAND_DECL(path)
 {
-    auto m = getContext(false).install(sw::UnresolvedPackages{getOptions().options_path.path_arg});
+    SW_UNIMPLEMENTED;
+    /*auto m = getContext(false).install(sw::UnresolvedPackages{getOptions().options_path.path_arg});
     auto i = m.find(getOptions().options_path.path_arg);
     if (i == m.end())
         return;
@@ -17,5 +18,5 @@ SUBCOMMAND_DECL(path)
     if (getOptions().options_path.type == "sdir")
     {
         LOG_INFO(logger, to_string(normalize_path(p.getDirSrc2())));
-    }
+    }*/
 }

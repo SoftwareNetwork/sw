@@ -17,6 +17,7 @@ namespace sw
 
 struct LocalStorage;
 struct PackageId;
+struct ResolveRequest;
 
 struct SW_MANAGER_API PackagesDatabase : Database
 {
@@ -26,6 +27,7 @@ struct SW_MANAGER_API PackagesDatabase : Database
     void open(bool read_only = false, bool in_memory = false);
 
     std::unordered_map<UnresolvedPackage, PackageId> resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const;
+    std::optional<PackageId> resolve(ResolveRequest &rr) const;
 
     PackageData getPackageData(const PackageId &) const;
 
@@ -55,6 +57,7 @@ private:
     // add type and config later
     // rename to get package version file hash ()
     String getInstalledPackageHash(db::PackageVersionId) const;
+    std::optional<PackageId> resolve(const UnresolvedPackage &) const;
 };
 
 }

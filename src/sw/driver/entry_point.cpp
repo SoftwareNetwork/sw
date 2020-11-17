@@ -237,7 +237,8 @@ getFileDependencies(const SwCoreContext &swctx, const path &p, std::set<size_t> 
         if (m1 == "header")
         {
             auto upkg = extractFromString(m[3].str());
-            auto pkg = swctx.resolve(upkg);
+            SW_UNIMPLEMENTED;
+            /*auto pkg = swctx.resolve(upkg);
             auto gn = swctx.getInputDatabase().getFileHash(pkg.getDirSrc2() / "sw.cpp");
             if (!gns.insert(gn).second)
                 throw SW_RUNTIME_ERROR("#pragma sw header: trying to add same header twice, last one: " + upkg.toString());
@@ -245,7 +246,7 @@ getFileDependencies(const SwCoreContext &swctx, const path &p, std::set<size_t> 
             auto [headers2,udeps2] = getFileDependencies(swctx, h, gns);
             headers.insert(headers.end(), headers2.begin(), headers2.end());
             udeps.insert(udeps2.begin(), udeps2.end());
-            headers.push_back(h);
+            headers.push_back(h);*/
         }
         else if (m1 == "local")
         {

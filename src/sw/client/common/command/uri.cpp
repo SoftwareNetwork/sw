@@ -72,7 +72,8 @@ F(install)
     if (sdb.isPackageInstalled(p))
         throw SW_RUNTIME_ERROR("Package '" + p.toString() + "' is already installed");
     setup_console();
-    swctx.getContext().install(sw::UnresolvedPackages{ p });
+    SW_UNIMPLEMENTED;
+    //swctx.getContext().install(sw::UnresolvedPackages{ p });
 }
 
 F(remove)
@@ -88,7 +89,8 @@ F(build)
     if (p.getPath().isRelative() || p.getPath().getOwner() != "sw")
         throw SW_RUNTIME_ERROR("Insecure operation. Aborting...");
 
-    swctx.getContext().install(sw::UnresolvedPackages{ p });
+    SW_UNIMPLEMENTED;
+    //swctx.getContext().install(sw::UnresolvedPackages{ p });
     auto d = swctx.getContext().getLocalStorage().storage_dir_tmp / "build" / unique_path();
     fs::create_directories(d);
     SCOPE_EXIT
@@ -111,7 +113,8 @@ F(run)
     if (p.getPath().isRelative() || p.getPath().getOwner() != "sw")
         throw SW_RUNTIME_ERROR("Insecure operation. Aborting...");
 
-    swctx.getContext().install(sw::UnresolvedPackages{ p });
+    SW_UNIMPLEMENTED;
+    //swctx.getContext().install(sw::UnresolvedPackages{ p });
     auto d = swctx.getContext().getLocalStorage().storage_dir_tmp / "build" / unique_path();
     fs::create_directories(d);
     SCOPE_EXIT

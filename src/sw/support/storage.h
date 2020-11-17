@@ -6,6 +6,7 @@
 #include "filesystem.h"
 #include "package.h"
 #include "package_unresolved.h"
+#include "settings.h"
 
 namespace sw
 {
@@ -44,6 +45,35 @@ struct SoftwareNetworkStorageSchema : StorageSchema
     SoftwareNetworkStorageSchema() : StorageSchema(1, 1) {}
 };
 
+struct SecurityContext
+{
+    // TODO:
+    bool check() { return true; }
+};
+
+struct SW_SUPPORT_API ResolveRequest
+{
+    UnresolvedPackage u;
+    // value or ref?
+    PackageSettings settings;
+    // value or ref?
+    // or take it from swctx?
+    // or from sw build - one security ctx for build
+    //SecurityContext sctx;
+
+    PackagePtr r;
+
+    bool isResolved() const { return !!r; }
+
+    Package &getPackage() const { return *r; }
+
+    // if package version higher than current, overwrite
+    // if both are branches, do not accept new
+    // assuming passed package has same package path and branch/version matches
+    // input is not null
+    void setPackage(PackagePtr);
+};
+
 struct SW_SUPPORT_API ResolveResultWithDependencies
 {
     ResolveResult m;
@@ -69,7 +99,11 @@ struct SW_SUPPORT_API ResolveResultWithDependencies
 
     auto &operator[](const UnresolvedPackage &u) { return m[u]; }
 
-    void merge(ResolveResultWithDependencies &m2) { m.merge(m2.m); }
+    void merge(ResolveResultWithDependencies &m2)
+    {
+        m.merge(m2.m);
+        h.merge(m2.h);
+    }
 
     Package &get(const UnresolvedPackage &u)
     {
@@ -98,7 +132,10 @@ struct SW_SUPPORT_API IStorage
     virtual const StorageSchema &getSchema() const = 0;
 
     /// resolve packages from this storage
-    virtual ResolveResult resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const = 0;
+    //virtual ResolveResult resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const = 0;
+
+    /// modern resolve call
+    virtual void resolve(ResolveRequest &) const = 0;
 
     /// load package data from this storage
     virtual PackageDataPtr loadData(const PackageId &) const = 0;

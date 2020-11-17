@@ -66,7 +66,7 @@ std::vector<IStorage *> SwManagerContext::getRemoteStorages() const
     return r;
 }
 
-ResolveResultWithDependencies SwManagerContext::resolve(const UnresolvedPackages &in_pkgs, bool use_cache) const
+/*ResolveResultWithDependencies SwManagerContext::resolve(const UnresolvedPackages &in_pkgs, bool use_cache) const
 {
     if (in_pkgs.empty())
         return {};
@@ -78,13 +78,14 @@ ResolveResultWithDependencies SwManagerContext::resolve(const UnresolvedPackages
             s2.push_back(s.get());
     }
     return resolve(in_pkgs, s2);
-}
+}*/
 
-ResolveResultWithDependencies SwManagerContext::resolve(const UnresolvedPackages &in_pkgs, const std::vector<IStorage*> &storages) const
+/*ResolveResultWithDependencies SwManagerContext::resolve(const UnresolvedPackages &in_pkgs, const std::vector<IStorage*> &storages) const
 {
     std::lock_guard lk(resolve_mutex);
 
     ResolveResultWithDependencies resolved;
+    SW_UNIMPLEMENTED;
     auto upkgs = in_pkgs;
     while (1)
     {
@@ -143,10 +144,45 @@ ResolveResultWithDependencies SwManagerContext::resolve(const UnresolvedPackages
     getCachedStorage().storePackages(resolved.m);
 
     return resolved;
+}*/
+
+void SwManagerContext::resolve(ResolveRequest &rr) const
+{
+    std::lock_guard lk(resolve_mutex);
+
+    // select the best candidate from all storages
+    for (const auto &[i, s] : enumerate(storages))
+    {
+        s->resolve(rr);
+        if (!rr.isResolved())
+            continue;
+        if (0
+            // when we found a branch, we stop, because following storages cannot give us more preferable branch
+            || rr.u.getRange().isBranch()
+            // cache hit, we stop immediately
+            || i == cache_storage_id
+            )
+        {
+            break;
+        }
+    }
+
+    // save existing results
+    getCachedStorage().storePackages(rr);
 }
 
-std::unordered_map<UnresolvedPackage, LocalPackage> SwManagerContext::install(const UnresolvedPackages &pkgs, bool use_cache) const
+void SwManagerContext::install(ResolveRequest &rr) const
 {
+    resolve(rr);
+    if (!rr.isResolved())
+        throw SW_RUNTIME_ERROR("Not resolved: " + rr.u.toString());
+    auto lp = install(rr.getPackage());
+    rr.r = lp.clone(); // force overwrite with local package
+}
+
+/*std::unordered_map<UnresolvedPackage, LocalPackage> SwManagerContext::install(const UnresolvedPackages &pkgs, bool use_cache) const
+{
+    SW_UNIMPLEMENTED;
     auto m = resolve(pkgs, use_cache);
 
     // two unresolved pkgs may point to single pkg,
@@ -169,17 +205,17 @@ std::unordered_map<UnresolvedPackage, LocalPackage> SwManagerContext::install(co
         pkgs3.emplace(u, install(*p));
 
     return pkgs3;
-}
+}*/
 
 LocalPackage SwManagerContext::install(const Package &p) const
 {
     return getLocalStorage().install(p);
 }
 
-LocalPackage SwManagerContext::resolve(const UnresolvedPackage &pkg) const
+/*LocalPackage SwManagerContext::resolve(const UnresolvedPackage &pkg) const
 {
     return install(*resolve(UnresolvedPackages{ pkg }).find(pkg)->second);
-}
+}*/
 
 void SwManagerContext::setCachedPackages(const std::unordered_map<UnresolvedPackage, PackageId> &pkgs) const
 {

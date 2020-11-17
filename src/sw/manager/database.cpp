@@ -211,38 +211,45 @@ void PackagesDatabase::open(bool read_only, bool in_memory)
     pps = std::make_unique<PreparedStatements>(*db);
 }
 
+std::optional<PackageId> PackagesDatabase::resolve(const UnresolvedPackage &pkg) const
+{
+    auto pid = getPackageId(pkg.ppath);
+    if (!pid)
+        return {};
+
+    VersionSet versions;
+    UnorderedVersionMap<db::PackageVersionId> version_ids;
+
+    for (const auto &row : (*db)(
+        select(pkg_ver.packageVersionId, pkg_ver.version)
+        .from(pkg_ver)
+        .where(pkg_ver.packageId == pid)))
+    {
+        versions.insert(row.version.value());
+        version_ids[row.version.value()] = row.packageVersionId.value();
+    }
+
+    auto v = pkg.range.getMaxSatisfyingVersion(versions);
+    if (!v)
+        return {};
+
+    return PackageId{ pkg.ppath, *v };
+}
+
+std::optional<PackageId> PackagesDatabase::resolve(ResolveRequest &rr) const
+{
+    return resolve(rr.u);
+}
+
 std::unordered_map<UnresolvedPackage, PackageId> PackagesDatabase::resolve(const UnresolvedPackages &in_pkgs, UnresolvedPackages &unresolved_pkgs) const
 {
     std::unordered_map<UnresolvedPackage, PackageId> r;
     for (auto &pkg : in_pkgs)
     {
-        auto pid = getPackageId(pkg.ppath);
-        if (!pid)
-        {
+        if (auto r2 = resolve(pkg))
+            r.emplace(pkg, *r2);
+        else
             unresolved_pkgs.insert(pkg);
-            continue;
-        }
-
-        VersionSet versions;
-        UnorderedVersionMap<db::PackageVersionId> version_ids;
-
-        for (const auto &row : (*db)(
-            select(pkg_ver.packageVersionId, pkg_ver.version)
-            .from(pkg_ver)
-            .where(pkg_ver.packageId == pid)))
-        {
-            versions.insert(row.version.value());
-            version_ids[row.version.value()] = row.packageVersionId.value();
-        }
-
-        auto v = pkg.range.getMaxSatisfyingVersion(versions);
-        if (!v)
-        {
-            unresolved_pkgs.insert(pkg);
-            continue;
-        }
-
-        r.emplace(pkg, PackageId{ pkg.ppath, *v });
     }
     return r;
 }

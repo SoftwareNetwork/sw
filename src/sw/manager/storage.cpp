@@ -180,12 +180,18 @@ PackagesDatabase &StorageWithPackagesDatabase::getPackagesDatabase() const
     return *pkgdb;
 }
 
-ResolveResult StorageWithPackagesDatabase::resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
+/*ResolveResult StorageWithPackagesDatabase::resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
 {
     ResolveResult r;
     for (auto &[ud, pkg] : pkgdb->resolve(pkgs, unresolved_pkgs))
         r.emplace(ud, std::make_unique<Package>(*this, pkg));
     return r;
+}*/
+
+void StorageWithPackagesDatabase::resolve(ResolveRequest &rr) const
+{
+    if (auto pkg = pkgdb->resolve(rr))
+        rr.setPackage(std::make_unique<Package>(*this, *pkg));
 }
 
 LocalStorageBase::LocalStorageBase(const String &name, const path &db_dir)
@@ -399,9 +405,14 @@ const OverriddenPackagesStorage &LocalStorage::getOverriddenPackagesStorage() co
     return ovs;
 }
 
-ResolveResult LocalStorage::resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
+/*ResolveResult LocalStorage::resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
 {
     return ovs.resolve(pkgs, unresolved_pkgs);
+}*/
+
+void LocalStorage::resolve(ResolveRequest &rr) const
+{
+    return ovs.resolve(rr);
 }
 
 void LocalStorage::remove(const LocalPackage &p) const
@@ -457,7 +468,7 @@ bool OverriddenPackagesStorage::isPackageInstalled(const Package &p) const
     return getPackagesDatabase().getInstalledPackageId(p) != 0;
 }
 
-ResolveResult CachedStorage::resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
+/*ResolveResult CachedStorage::resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
 {
     ResolveResult r;
     for (auto &u : pkgs)
@@ -471,12 +482,25 @@ ResolveResult CachedStorage::resolve(const UnresolvedPackages &pkgs, UnresolvedP
         r.emplace(u, i->second->clone());
     }
     return r;
-}
+}*/
 
 void CachedStorage::storePackages(const StoredPackages &pkgs)
 {
     for (auto &[u,p] : pkgs)
         resolved_packages.emplace(u, p->clone());
+}
+
+void CachedStorage::storePackages(const ResolveRequest &rr)
+{
+    SW_CHECK(rr.isResolved());
+    resolved_packages.emplace(rr.u, rr.getPackage().clone());
+}
+
+void CachedStorage::resolve(ResolveRequest &rr) const
+{
+    auto i = resolved_packages.find(rr.u);
+    if (i != resolved_packages.end())
+        rr.setPackage(i->second->clone());
 }
 
 }

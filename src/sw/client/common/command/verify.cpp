@@ -17,7 +17,8 @@ SUBCOMMAND_DECL(verify)
 {
     // get package infos
     sw::UnresolvedPackage u = getOptions().options_verify.verify_arg[0];
-    auto ml = getContext().install(sw::UnresolvedPackages{ u });
+    SW_UNIMPLEMENTED;
+    /*auto ml = getContext().install(sw::UnresolvedPackages{ u });
     auto &lp = ml.find(u)->second;
     auto m = getContext().resolve(sw::UnresolvedPackages{ u }, getContext().getRemoteStorages());
     auto &p = m[u];
@@ -88,5 +89,5 @@ SUBCOMMAND_DECL(verify)
 
     // success!
     LOG_INFO(logger, "Archives are the same.");
-    LOG_INFO(logger, "Verified OK!");
+    LOG_INFO(logger, "Verified OK!");*/
 }

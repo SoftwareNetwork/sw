@@ -440,19 +440,22 @@ void SwBuild::resolvePackages(const std::vector<IDependency*> &udeps)
         UnresolvedPackages upkgs;
         for (auto &[u, p] : m)
             upkgs.insert(p); // add exactly p, not u!
-        swctx.install(upkgs, false);
+        SW_UNIMPLEMENTED;
+        //swctx.install(upkgs, false);
     }
 
-    UnresolvedPackages upkgs;
-    for (auto &d : udeps)
-        upkgs.insert(d->getUnresolvedPackage());
-
     // install
-    std::unordered_map<UnresolvedPackage, LocalPackage> m;
-    m.merge(swctx.install(upkgs));
-    // mark packages as known right after resolve
-    for (auto &[u, p] : m)
-        targets[p];
+    std::vector<ResolveRequest> rrs;
+    for (auto &d : udeps)
+    {
+        auto &rr = rrs.emplace_back(d->getUnresolvedPackage());
+        rr.settings = d->getSettings();
+        getContext().resolve(rr);
+        if (!rr.isResolved())
+            throw SW_RUNTIME_ERROR("Cannot resolve: " + rr.u.toString());
+        // mark packages as known right after resolve
+        targets[rr.getPackage()];
+    }
 
     if (can_use_saved_configs(*this))
     {
@@ -496,7 +499,7 @@ void SwBuild::resolvePackages(const std::vector<IDependency*> &udeps)
         SW_UNIMPLEMENTED;
 
         // show fancy diffs during update lock file
-        if (build_settings["update_lock_file"] == "true")
+        /*if (build_settings["update_lock_file"] == "true")
         try
         {
             // may throw
@@ -520,20 +523,35 @@ void SwBuild::resolvePackages(const std::vector<IDependency*> &udeps)
         {
         }
 
-        saveLockFile(build_settings["lock_file"].getValue(), m);
+        saveLockFile(build_settings["lock_file"].getValue(), m);*/
+    }
+
+    // install goes here - after saved configs, lock files etc.
+    {
+        // mass (threaded) install!
+        auto &e = getExecutor();
+        Futures<void> fs;
+        for (auto &rr : rrs)
+        {
+            fs.push_back(e.push([this, &rr]
+            {
+                getContext().install(rr);
+            }));
+        }
+        waitAndGet(fs);
     }
 
     // now we know all drivers
     std::set<Input *> iv;
-    for (auto &[u,p] : m)
+    for (auto &rr : rrs)
     {
         // use addInput to prevent doubling already existing and loaded inputs
         // like when we loading dependency that is already loaded from the input
         // test: sw build org.sw.demo.gnome.pango.pangocairo-1.44
-        auto i = addInput(p);
+        auto i = addInput(static_cast<LocalPackage&>(rr.getPackage()));
         iv.insert(&i.getInput());
         // this also marks package as known
-        targets[p].setInput(i);
+        targets[rr.getPackage()].setInput(i);
     }
 
     {
@@ -1139,10 +1157,11 @@ std::vector<BuildInput> SwBuild::addInput(const String &i)
         try
         {
             auto p = extractFromString(i);
-            auto bi = addInput(getContext().resolve(p));
+            SW_UNIMPLEMENTED;
+            /*auto bi = addInput(getContext().resolve(p));
             std::vector<BuildInput> v;
             v.push_back(bi);
-            return v;
+            return v;*/
         }
         catch (std::exception &e)
         {
@@ -1320,7 +1339,7 @@ bool SwBuild::isPredefinedTarget(const PackagePath &pp) const
 PackageId SwBuild::resolve(const UnresolvedPackage &u) const
 {
     SW_UNIMPLEMENTED;
-    return getContext().resolve(u);
+    //return getContext().resolve(u);
 }
 
 }

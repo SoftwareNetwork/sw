@@ -45,6 +45,13 @@ Directories::Directories(const path &p)
 #undef SET
 }
 
+void ResolveRequest::setPackage(PackagePtr in)
+{
+    SW_CHECK(in);
+    if (!r || r->getVersion() < in->getVersion())
+        r = std::move(in);
+}
+
 size_t ResolveResultWithDependencies::getHash(const UnresolvedPackage &u)
 {
     auto hi = h.find(u);
@@ -64,7 +71,8 @@ size_t ResolveResultWithDependencies::getHash(const UnresolvedPackage &u)
 
 ResolveResultWithDependencies IStorage::resolveWithDependencies(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
 {
-    auto r = resolve(pkgs, unresolved_pkgs);
+    SW_UNIMPLEMENTED;
+    /*auto r = resolve(pkgs, unresolved_pkgs);
     while (1)
     {
         std::unordered_map<UnresolvedPackage, Package*> r2;
@@ -76,7 +84,7 @@ ResolveResultWithDependencies IStorage::resolveWithDependencies(const Unresolved
         if (r.size() == sz)
             break;
     }
-    return ResolveResultWithDependencies{ std::move(r) };
+    return ResolveResultWithDependencies{ std::move(r) };*/
 }
 
 int getPackagesDatabaseSchemaVersion()

@@ -11,8 +11,9 @@ SUBCOMMAND_DECL(install)
     getOptions().options_install.install_args.push_back(getOptions().options_install.install_arg);
     for (auto &p : getOptions().options_install.install_args)
         pkgs.insert(sw::extractFromString(p));
-    auto m = getContext().install(pkgs);
-    for (auto &[p1, d] : m)
+    SW_UNIMPLEMENTED;
+    //auto m = getContext().install(pkgs);
+    //for (auto &[p1, d] : m)
     {
         //for (auto &p2 : install_args)
         //if (p1 == p2)

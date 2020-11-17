@@ -792,7 +792,11 @@ path Target::getFile(const Target &dep, const path &fn)
 path Target::getFile(const DependencyPtr &dep, const path &fn)
 {
     addSourceDependency(dep); // main trick is to add a dependency
-    auto p = getMainBuild().getContext().resolve(dep->getPackage()).getDirSrc2();
+    ResolveRequest rr{dep->getUnresolvedPackage()};
+    rr.settings = dep->getSettings();
+    getMainBuild().getContext().install(rr);
+    auto p = static_cast<LocalPackage&>(rr.getPackage()).getDirSrc2();
+    // allow to get dirs
     if (!fn.empty())
         p /= fn;
     return p;
