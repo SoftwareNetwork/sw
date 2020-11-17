@@ -181,12 +181,21 @@ private:
     void migrateStorage(int from, int to);
 };
 
+//
 // if our app is working for a long time,
 // our cache will become outdated fast enough
 // To overcome this, we can reset it every N minutes,
 // but in this case we break per SwBuild stability of resolving.
 // Thus it may worth it of movig cache storage into SwBuild
 // and use it only in that resolver without any cache resets.
+//
+// on the other hand lots of deps resolving will be slow without caching
+// and we won't be able to create SwBuild always (different cli commands)
+//
+// To overcome this we added 'use_cache' parameter to SwContext::resolve() method.
+// Now SwBuild is able to disable SwContext caching for its purposes, and others can enable it.
+//
+// We also can reset() our cache when needed.
 struct CachedStorage : IStorage
 {
     using StoredPackages = ResolveResult;
@@ -201,6 +210,9 @@ struct CachedStorage : IStorage
 
     const StorageSchema &getSchema() const override { SW_UNREACHABLE; }
     PackageDataPtr loadData(const PackageId &) const override { SW_UNREACHABLE; }
+
+    void clear();
+    void reset() { clear(); }
 
 private:
     mutable StoredPackages resolved_packages;

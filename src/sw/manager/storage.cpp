@@ -503,4 +503,9 @@ void CachedStorage::resolve(ResolveRequest &rr) const
         rr.setPackage(i->second->clone());
 }
 
+void CachedStorage::clear()
+{
+    resolved_packages.clear();
+}
+
 }

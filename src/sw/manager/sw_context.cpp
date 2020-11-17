@@ -146,16 +146,20 @@ std::vector<IStorage *> SwManagerContext::getRemoteStorages() const
     return resolved;
 }*/
 
-void SwManagerContext::resolve(ResolveRequest &rr) const
+void SwManagerContext::resolve(ResolveRequest &rr, bool use_cache) const
 {
     std::lock_guard lk(resolve_mutex);
 
     // select the best candidate from all storages
     for (auto &&s : storages)
     {
+        if (!use_cache && s.get() == &getCachedStorage())
+            continue;
+
         s->resolve(rr);
         if (!rr.isResolved())
             continue;
+
         if (0
             // when we found a branch, we stop, because following storages cannot give us more preferable branch
             || rr.u.getRange().isBranch()
@@ -173,7 +177,8 @@ void SwManagerContext::resolve(ResolveRequest &rr) const
 
 void SwManagerContext::install(ResolveRequest &rr) const
 {
-    resolve(rr);
+    //          for now
+    resolve(rr, true);
     if (!rr.isResolved())
         throw SW_RUNTIME_ERROR("Not resolved: " + rr.u.toString());
     auto lp = install(rr.getPackage());
