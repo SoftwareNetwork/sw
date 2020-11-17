@@ -14,6 +14,8 @@ struct ExecutionPlan;
 struct Input;
 struct InputWithSettings;
 struct SwContext;
+struct ResolveRequest;
+struct CachedStorage;
 
 enum class BuildState
 {
@@ -108,7 +110,7 @@ struct SW_CORE_API SwBuild : SwBuilderContext
     }
 
     // stable resolve during whole build
-    PackageId resolve(const UnresolvedPackage &) const;
+    void resolve(ResolveRequest &) const;
 
 private:
     SwContext &swctx;
@@ -123,6 +125,7 @@ private:
     std::unique_ptr<Executor> prepare_executor;
     bool stopped = false;
     mutable ExecutionPlan *current_explan = nullptr;
+    std::unique_ptr<CachedStorage> cached_storage;
 
     // other data
     String name;

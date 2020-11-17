@@ -248,6 +248,7 @@ SwBuild::SwBuild(SwContext &swctx, const path &build_dir)
     : swctx(swctx)
     , build_dir(build_dir)
 {
+    cached_storage = std::make_unique<CachedStorage>();
 }
 
 SwBuild::~SwBuild()
@@ -450,7 +451,7 @@ void SwBuild::resolvePackages(const std::vector<IDependency*> &udeps)
     {
         auto &rr = rrs.emplace_back(d->getUnresolvedPackage());
         rr.settings = d->getSettings();
-        getContext().resolve(rr);
+        resolve(rr);
         if (!rr.isResolved())
             throw SW_RUNTIME_ERROR("Cannot resolve: " + rr.u.toString());
         // mark packages as known right after resolve
@@ -1336,10 +1337,13 @@ bool SwBuild::isPredefinedTarget(const PackagePath &pp) const
     return i != getTargets().end(pp) && i->second.hasInput();
 }
 
-PackageId SwBuild::resolve(const UnresolvedPackage &u) const
+void SwBuild::resolve(ResolveRequest &rr) const
 {
-    SW_UNIMPLEMENTED;
-    //return getContext().resolve(u);
+    cached_storage->resolve(rr);
+    // cache hit, we stop immediately
+    if (rr.isResolved())
+        return;
+    getContext().resolve(rr, false);
 }
 
 }
