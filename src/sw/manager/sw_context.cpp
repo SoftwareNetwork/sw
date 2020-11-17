@@ -19,11 +19,11 @@ namespace sw
 SwManagerContext::SwManagerContext(const path &local_storage_root_dir, bool allow_network)
 {
     // first goes resolve cache
-    cache_storage_id = storages.size();
     addStorage(std::make_unique<CachedStorage>());
+    cache_storage = (CachedStorage*)storages.back().get();
 
-    local_storage_id = storages.size();
     addStorage(std::make_unique<LocalStorage>(local_storage_root_dir));
+    local_storage = (LocalStorage*)storages.back().get();
 
     first_remote_storage_id = storages.size();
     for (auto &r : Settings::get_user_settings().getRemotes(allow_network))
@@ -45,17 +45,17 @@ void SwManagerContext::addStorage(std::unique_ptr<IStorage> s)
 
 CachedStorage &SwManagerContext::getCachedStorage() const
 {
-    return dynamic_cast<CachedStorage&>(*storages[cache_storage_id]);
+    return *cache_storage;
 }
 
 LocalStorage &SwManagerContext::getLocalStorage()
 {
-    return static_cast<LocalStorage&>(*storages[local_storage_id]);
+    return *local_storage;
 }
 
 const LocalStorage &SwManagerContext::getLocalStorage() const
 {
-    return static_cast<const LocalStorage&>(*storages[local_storage_id]);
+    return *local_storage;
 }
 
 std::vector<IStorage *> SwManagerContext::getRemoteStorages() const
@@ -151,7 +151,7 @@ void SwManagerContext::resolve(ResolveRequest &rr) const
     std::lock_guard lk(resolve_mutex);
 
     // select the best candidate from all storages
-    for (const auto &[i, s] : enumerate(storages))
+    for (auto &&s : storages)
     {
         s->resolve(rr);
         if (!rr.isResolved())
@@ -160,7 +160,7 @@ void SwManagerContext::resolve(ResolveRequest &rr) const
             // when we found a branch, we stop, because following storages cannot give us more preferable branch
             || rr.u.getRange().isBranch()
             // cache hit, we stop immediately
-            || i == cache_storage_id
+            || s.get() == &getCachedStorage()
             )
         {
             break;
@@ -219,11 +219,10 @@ LocalPackage SwManagerContext::install(const Package &p) const
 
 void SwManagerContext::setCachedPackages(const std::unordered_map<UnresolvedPackage, PackageId> &pkgs) const
 {
-    auto &s = getCachedStorage();
     ResolveResult pkgs2;
     for (auto &[u, p] : pkgs)
         pkgs2.emplace(u, std::make_unique<LocalPackage>(getLocalStorage(), p));
-    s.storePackages(pkgs2);
+    getCachedStorage().storePackages(pkgs2);
 }
 
 }

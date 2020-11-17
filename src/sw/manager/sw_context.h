@@ -53,8 +53,8 @@ struct SW_MANAGER_API SwManagerContext// : ISwContext
     void addStorage(std::unique_ptr<IStorage>);
 
 private:
-    int cache_storage_id;
-    int local_storage_id;
+    CachedStorage *cache_storage = nullptr;
+    LocalStorage *local_storage = nullptr;
     int first_remote_storage_id;
     std::vector<std::unique_ptr<IStorage>> storages;
     mutable std::mutex resolve_mutex;
