@@ -370,7 +370,7 @@ void StartupData::sw_main()
         if (swctx.hasContext())
             swctx.getContext().stop();
     });
-    std::thread t([&io_context] { io_context.run(); });
+    std::thread t([&io_context] { try { io_context.run(); } catch (...) {} });
     t.detach();
 
     // for cli we set default input to '.' dir
