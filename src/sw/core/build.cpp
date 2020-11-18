@@ -1159,11 +1159,14 @@ std::vector<BuildInput> SwBuild::addInput(const String &i)
         try
         {
             auto p = extractFromString(i);
-            SW_UNIMPLEMENTED;
-            /*auto bi = addInput(getContext().resolve(p));
+            ResolveRequest rr{ p };
+            resolve(rr);
+            if (!rr.isResolved())
+                throw SW_RUNTIME_ERROR("Cannot resolve: " + rr.u.toString());
+            auto bi = addInput(getContext().install(rr.getPackage()));
             std::vector<BuildInput> v;
             v.push_back(bi);
-            return v;*/
+            return v;
         }
         catch (std::exception &e)
         {
