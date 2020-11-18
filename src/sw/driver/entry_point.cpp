@@ -131,24 +131,38 @@ static CommandStorage &getDriverCommandStorage(const Build &b)
     return b.getMainBuild().getCommandStorage(b.getContext().getLocalStorage().storage_dir_tmp / "db" / "service");
 }
 
-void addImportLibrary(Build &b)
+static PackagePath getSelfTargetName(Build &b, const FilesSorted &files)
 {
-#ifdef _WIN32
-    auto lib = (HMODULE)primitives::getModuleForSymbol(&isDriverDllBuild);
-    auto syms = getExports(lib);
-    if (syms.empty())
-        throw SW_RUNTIME_ERROR("No exports found");
-    String defs;
-    defs += "LIBRARY " IMPORT_LIBRARY "\n";
-    defs += "EXPORTS\n";
-    for (auto &s : syms)
-        defs += "    "s + s + "\n";
-    write_file_if_different(getImportDefinitionsFile(b), defs);
+    String h = b.module_data.current_settings.getHash();
+    for (auto &fn : files)
+        h += to_string(normalize_path(fn));
+    h = shorten_hash(blake2b_512(h), 6);
+    return "loc.sw.self." + h;
+}
 
-    auto &i = b.addStaticLibrary("implib");
-    i.AutoDetectOptions = false;
-    i += getImportDefinitionsFile(b);
-#endif
+static auto getDriverDep()
+{
+    return std::make_shared<Dependency>(UnresolvedPackage(SW_DRIVER_NAME));
+}
+
+static void addDeps(Build &solution, NativeCompiledTarget &lib)
+{
+    lib += "pub.egorpugin.primitives.templates-master"_dep; // for SW_RUNTIME_ERROR
+
+    // uncomment when you need help
+    //lib += "pub.egorpugin.primitives.source-master"_dep;
+    //lib += "pub.egorpugin.primitives.version-master"_dep;
+    lib += "pub.egorpugin.primitives.command-master"_dep;
+    lib += "pub.egorpugin.primitives.filesystem-master"_dep;
+
+    auto d = lib + UnresolvedPackage(SW_DRIVER_NAME);
+    d->IncludeDirectoriesOnly = true;
+}
+
+// add Dirs?
+static path getDriverIncludeDir(Build &solution, Target &lib)
+{
+    return lib.getFile(getDriverDep()) / "src";
 }
 
 static path getSwDir()
@@ -218,7 +232,8 @@ static path getPackageHeader(const LocalPackage &p, const UnresolvedPackage &up)
     return h;
 }
 
-static std::pair<FilesOrdered, UnresolvedPackages>
+static
+std::pair<FilesOrdered, UnresolvedPackages>
 getFileDependencies(const SwCoreContext &swctx, const path &p, std::set<size_t> &gns)
 {
     UnresolvedPackages udeps;
@@ -241,7 +256,7 @@ getFileDependencies(const SwCoreContext &swctx, const path &p, std::set<size_t> 
             /*auto pkg = swctx.resolve(upkg);
             auto gn = swctx.getInputDatabase().getFileHash(pkg.getDirSrc2() / "sw.cpp");
             if (!gns.insert(gn).second)
-                throw SW_RUNTIME_ERROR("#pragma sw header: trying to add same header twice, last one: " + upkg.toString());
+            throw SW_RUNTIME_ERROR("#pragma sw header: trying to add same header twice, last one: " + upkg.toString());
             auto h = getPackageHeader(pkg, upkg);
             auto [headers2,udeps2] = getFileDependencies(swctx, h, gns);
             headers.insert(headers.end(), headers2.begin(), headers2.end());
@@ -267,6 +282,26 @@ static std::pair<FilesOrdered, UnresolvedPackages> getFileDependencies(const SwC
 {
     std::set<size_t> gns;
     return getFileDependencies(swctx, in_config_file, gns);
+}
+
+void addImportLibrary(Build &b)
+{
+#ifdef _WIN32
+    auto lib = (HMODULE)primitives::getModuleForSymbol(&isDriverDllBuild);
+    auto syms = getExports(lib);
+    if (syms.empty())
+        throw SW_RUNTIME_ERROR("No exports found");
+    String defs;
+    defs += "LIBRARY " IMPORT_LIBRARY "\n";
+    defs += "EXPORTS\n";
+    for (auto &s : syms)
+        defs += "    "s + s + "\n";
+    write_file_if_different(getImportDefinitionsFile(b), defs);
+
+    auto &i = b.addStaticLibrary("implib");
+    i.AutoDetectOptions = false;
+    i += getImportDefinitionsFile(b);
+#endif
 }
 
 ExtendedBuild NativeTargetEntryPoint::createBuild(SwBuild &swb, const PackageSettings &s, const AllowedPackages &pkgs, const PackagePath &prefix) const
@@ -335,41 +370,6 @@ void NativeModuleTargetEntryPoint::loadPackages1(Build &b) const
 {
     m.check(b, *b.checker);
     m.build(b);
-}
-
-static PackagePath getSelfTargetName(Build &b, const FilesSorted &files)
-{
-    String h = b.module_data.current_settings.getHash();
-    for (auto &fn : files)
-        h += to_string(normalize_path(fn));
-    h = shorten_hash(blake2b_512(h), 6);
-    return "loc.sw.self." + h;
-}
-
-static auto getDriverDep()
-{
-    return std::make_shared<Dependency>(UnresolvedPackage(SW_DRIVER_NAME));
-}
-
-// add Dirs?
-static path getDriverIncludeDir(Build &solution, Target &lib)
-{
-    return lib.getFile(getDriverDep()) / "src";
-}
-
-static void addDeps(Build &solution, NativeCompiledTarget &lib)
-{
-    lib += "pub.egorpugin.primitives.templates-master"_dep; // for SW_RUNTIME_ERROR
-
-    // uncomment when you need help
-    //lib += "pub.egorpugin.primitives.source-master"_dep;
-    //lib += "pub.egorpugin.primitives.version-master"_dep;
-    lib += "pub.egorpugin.primitives.command-master"_dep;
-    lib += "pub.egorpugin.primitives.filesystem-master"_dep;
-
-    auto d = lib + UnresolvedPackage(SW_DRIVER_NAME);
-    d->IncludeDirectoriesOnly = true;
-    //d->GenerateCommandsBefore = true;
 }
 
 void PrepareConfig::addInput(Build &b, const Input &i)
