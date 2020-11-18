@@ -135,6 +135,8 @@ private:
     void resolvePackages(const std::vector<IDependency*> &upkgs); // [2/2] step
     Executor &getBuildExecutor() const;
     Executor &getPrepareExecutor() const;
+
+    void resolveWithDependencies(std::vector<ResolveRequest> &) const;
 };
 
 } // namespace sw

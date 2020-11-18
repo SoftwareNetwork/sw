@@ -451,9 +451,10 @@ void SwBuild::resolvePackages(const std::vector<IDependency*> &udeps)
     {
         auto &rr = rrs.emplace_back(d->getUnresolvedPackage());
         rr.settings = d->getSettings();
-        resolve(rr);
-        if (!rr.isResolved())
-            throw SW_RUNTIME_ERROR("Cannot resolve: " + rr.u.toString());
+    }
+    resolveWithDependencies(rrs);
+    for (auto &rr : rrs)
+    {
         // mark packages as known right after resolve
         targets[rr.getPackage()];
     }
@@ -1344,6 +1345,52 @@ void SwBuild::resolve(ResolveRequest &rr) const
     if (rr.isResolved())
         return;
     getContext().resolve(rr, false);
+}
+
+void SwBuild::resolveWithDependencies(std::vector<ResolveRequest> &v) const
+{
+    // simple unresolved package for now
+    // (without settings)
+    UnresolvedPackages s;
+    while (1)
+    {
+        bool new_resolve = false;
+        std::vector<ResolveRequest *> v2;
+        for (auto &&rr : v)
+        {
+            if (rr.isResolved())
+            {
+                s.insert(rr.u);
+                continue;
+            }
+            resolve(rr);
+            if (!rr.isResolved())
+                throw SW_RUNTIME_ERROR("Cannot resolve: " + rr.u.toString());
+            auto inserted = s.insert(rr.u).second;
+            new_resolve |= inserted;
+            if (!inserted)
+                continue;
+            v2.push_back(&rr);
+        }
+        std::vector<ResolveRequest> v3;
+        for (auto &&rr : v2)
+        {
+            auto &p = rr->getPackage();
+            for (auto &d : p.getData().dependencies)
+            {
+                if (s.contains(d))
+                    continue;
+                ResolveRequest rr2;
+                rr2.u = d;
+                rr2.settings = rr->settings;
+                v3.emplace_back(std::move(rr2));
+            }
+        }
+        for (auto &&rr : v3)
+            v.emplace_back(std::move(rr));
+        if (!new_resolve)
+            break;
+    }
 }
 
 }
