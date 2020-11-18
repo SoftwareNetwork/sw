@@ -371,7 +371,11 @@ void StartupData::sw_main()
             swctx.getContext().stop();
     });
     std::thread t([&io_context] { try { io_context.run(); } catch (...) {} });
-    t.detach();
+    SCOPE_EXIT
+    {
+        io_context.stop();
+        t.join();
+    };
 
     // for cli we set default input to '.' dir
     if (swctx.getInputs().empty() && getOptions().input_settings_pairs.empty())
