@@ -66,6 +66,9 @@ struct SW_SUPPORT_API ResolveRequest
     // assuming passed package has same package path and branch/version matches
     // input is not null
     void setPackage(PackagePtr);
+
+    bool operator<(const ResolveRequest &rhs) const { return std::tie(u, settings) < std::tie(rhs.u, rhs.settings); }
+    bool operator==(const ResolveRequest &rhs) const { return std::tie(u, settings) == std::tie(rhs.u, rhs.settings); }
 };
 
 struct SW_SUPPORT_API ResolveResultWithDependencies
