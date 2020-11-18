@@ -46,6 +46,7 @@ namespace sw
 PackageIdSet load_builtin_packages(SwContext &);
 std::unordered_map<Input*, PackageIdSet> load_builtin_inputs(SwContext &, const IDriver &);
 void addImportLibrary(Build &b);
+void addDelayLoadLibrary(Build &b);
 
 namespace driver::cpp
 {
@@ -595,7 +596,17 @@ void Driver::getBuiltinInputs(SwContext &) const
         auto ep = std::make_unique<sw::NativeBuiltinTargetEntryPoint>(addImportLibrary);
         i->setEntryPoint(std::move(ep));
         auto [ii, _] = swctx.registerInput(std::move(i));
-        builtin_inputs[ii].insert("implib-0.0.1"s);
+        builtin_inputs[ii].insert(name + "-0.0.1"s);
+    }
+
+    {
+        auto name = "delay_loader"s;
+        auto h = std::hash<String>()(name);
+        auto i = std::make_unique<BuiltinInput>(swctx, *this, h);
+        auto ep = std::make_unique<sw::NativeBuiltinTargetEntryPoint>(addDelayLoadLibrary);
+        i->setEntryPoint(std::move(ep));
+        auto [ii, _] = swctx.registerInput(std::move(i));
+        builtin_inputs[ii].insert(name + "-0.0.1"s);
     }
 }
 

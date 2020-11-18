@@ -304,6 +304,18 @@ void addImportLibrary(Build &b)
 #endif
 }
 
+void addDelayLoadLibrary(Build &b)
+{
+#ifdef _WIN32
+    auto &lib = b.addStaticLibrary("delay_loader");
+    lib += Definition("IMPORT_LIBRARY=\""s + IMPORT_LIBRARY + "\"");
+    auto driver_idir = getDriverIncludeDir(b, lib);
+    auto fn = driver_idir / getSwDir() / "misc" / "delay_load_helper.cpp";
+    lib += fn;
+    lib.WholeArchive = true;
+#endif
+}
+
 ExtendedBuild NativeTargetEntryPoint::createBuild(SwBuild &swb, const PackageSettings &s, const AllowedPackages &pkgs, const PackagePath &prefix) const
 {
     // we need to fix some settings before they go to targets
@@ -514,9 +526,10 @@ decltype(auto) PrepareConfig::commonActions(Build &b, const InputData &d, const 
 
     if (lib.getBuildSettings().TargetOS.is(OSType::Windows) && isDriverStaticBuild())
     {
-        lib += Definition("IMPORT_LIBRARY=\""s + IMPORT_LIBRARY + "\"");
-        auto fn = driver_idir / getSwDir() / "misc" / "delay_load_helper.cpp";
-        lib += fn;
+        lib += "delay_loader"_dep;
+        //lib += Definition("IMPORT_LIBRARY=\""s + IMPORT_LIBRARY + "\"");
+        //auto fn = driver_idir / getSwDir() / "misc" / "delay_load_helper.cpp";
+        //lib += fn;
         //if (auto nsf = lib[fn].as<NativeSourceFile *>())
             //nsf->setOutputFile(getPchDir(b) / ("delay_load_helper" + getDepsSuffix(*this, lib, deps) + ".obj"));
     }
