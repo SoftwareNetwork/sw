@@ -312,6 +312,8 @@ void addDelayLoadLibrary(Build &b)
     auto driver_idir = getDriverIncludeDir(b, lib);
     auto fn = driver_idir / getSwDir() / "misc" / "delay_load_helper.cpp";
     lib += fn;
+    //if (auto nsf = lib[fn].as<NativeSourceFile *>())
+        //nsf->setOutputFile(getPchDir(b) / ("delay_load_helper" + getDepsSuffix(*this, lib, deps) + ".obj"));
     lib.WholeArchive = true;
 #endif
 }
@@ -525,14 +527,7 @@ decltype(auto) PrepareConfig::commonActions(Build &b, const InputData &d, const 
         lib.CompileOptions.push_back("-Werror=string-conversion");
 
     if (lib.getBuildSettings().TargetOS.is(OSType::Windows) && isDriverStaticBuild())
-    {
         lib += "delay_loader"_dep;
-        //lib += Definition("IMPORT_LIBRARY=\""s + IMPORT_LIBRARY + "\"");
-        //auto fn = driver_idir / getSwDir() / "misc" / "delay_load_helper.cpp";
-        //lib += fn;
-        //if (auto nsf = lib[fn].as<NativeSourceFile *>())
-            //nsf->setOutputFile(getPchDir(b) / ("delay_load_helper" + getDepsSuffix(*this, lib, deps) + ".obj"));
-    }
 
     if (lang == LANG_VALA)
     {
