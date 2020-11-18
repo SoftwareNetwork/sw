@@ -172,7 +172,8 @@ void SwManagerContext::resolve(ResolveRequest &rr, bool use_cache) const
     }
 
     // save existing results
-    getCachedStorage().storePackages(rr);
+    if (rr.isResolved())
+        getCachedStorage().storePackages(rr);
 }
 
 void SwManagerContext::install(ResolveRequest &rr) const
