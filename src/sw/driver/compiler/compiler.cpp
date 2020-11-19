@@ -208,8 +208,8 @@ void VisualStudioCompiler::setSourceFile(const path &input_file, const path &out
 
 void VisualStudioASMCompiler::prepareCommand1(const Target &t)
 {
-    if (file.filename() == "ml64.exe")
-        ((VisualStudioASMCompiler*)this)->SafeSEH = false;
+    //if (file.filename() == "ml64.exe")
+        //((VisualStudioASMCompiler*)this)->SafeSEH = false;
 
     cmd->deps_processor = builder::Command::DepsProcessor::Msvc;
     cmd->msvc_prefix = getProgramDetector().getMsvcPrefix(cmd->getProgram());
