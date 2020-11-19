@@ -117,6 +117,8 @@ void NativeCompilerRule::setup(const Target &t)
     {
     case LANG_ASM:
         exts = get_asm_exts(nt->getBuildSettings().TargetOS.is(OSType::Windows));
+        if (auto c = prog.as<VisualStudioASMCompiler *>(); c && nt->getBuildSettings().TargetOS.Arch == ArchType::x86)
+            c->SafeSEH = true;
         break;
     case LANG_C:
         exts.insert(".c");
