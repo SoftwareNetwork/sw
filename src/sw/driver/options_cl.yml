@@ -382,6 +382,7 @@ types:
                 name: Warnings
                 type: Warnings
                 namespace: vs
+                default: Warnings{}
 
                 struct: |
                     bool DisableAll = false;
