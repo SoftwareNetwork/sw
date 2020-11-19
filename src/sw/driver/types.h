@@ -210,7 +210,7 @@ struct SW_DRIVER_CPP_API Assigner
     void operator()(bool allow) { this->allow = allow; }
 };
 
-struct SW_DRIVER_CPP_API ProjectDirectories
+struct ProjectDirectories
 {
     path SourceDirBase; // "root" real source dir
     path SourceDir; // "current" source dir
@@ -221,6 +221,8 @@ struct SW_DRIVER_CPP_API ProjectDirectories
     // ?
     // this is really not for everyone
     // target users must call setRootDirectory()
+    // hide this later removing api spec (qt uses it atm)
+    SW_DRIVER_CPP_API
     void setSourceDirectory(const path &d);
 };
 
