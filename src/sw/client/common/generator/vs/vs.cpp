@@ -1670,6 +1670,11 @@ std::map<String, String> Project::printProperties(const sw::builder::Command &c,
         {
             if (exclude_props.exclude_exts.find(path(arg).extension().string()) != exclude_props.exclude_exts.end())
                 return;
+            if (ft == "ml")
+            {
+                if (arg == "-c")
+                    return;
+            }
             if (ft == "cl" || ft == "clang")
             {
                 if (arg == "-c" || arg == "-FS")
