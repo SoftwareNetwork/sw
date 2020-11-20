@@ -2772,7 +2772,6 @@ void NativeCompiledTarget::prepare_pass8()
         rf.getAdditionalArguments() = f->args;
     }
 
-    //DEBUG_BREAK_IF(getPackage().toString() == "qtproject.qt.base.core-5.15.0.1");
     runRules(rfs, *this);
 }
 

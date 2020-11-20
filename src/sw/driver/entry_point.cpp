@@ -258,7 +258,7 @@ getFileDependencies(SwBuild &b, const path &p, std::set<size_t> &gns)
             auto pkg = b.getContext().install(rr.getPackage());
             auto gn = b.getContext().getInputDatabase().getFileHash(pkg.getDirSrc2() / "sw.cpp");
             if (!gns.insert(gn).second)
-            throw SW_RUNTIME_ERROR("#pragma sw header: trying to add same header twice, last one: " + upkg.toString());
+                throw SW_RUNTIME_ERROR("#pragma sw header: trying to add same header twice, last one: " + upkg.toString());
             auto h = getPackageHeader(pkg, upkg);
             auto [headers2,udeps2] = getFileDependencies(b, h, gns);
             headers.insert(headers.end(), headers2.begin(), headers2.end());
