@@ -84,7 +84,7 @@ String write_build_script_headers(SwCoreContext &swctx)
         }
 
         // for gui
-        prepkgs.emplace_back("org.sw.demo.qtproject.qt.base.tools.moc"s);
+        //prepkgs.emplace_back("org.sw.demo.qtproject.qt.base.tools.moc"s);
 
         {
             // cpp driver
@@ -115,12 +115,17 @@ String write_build_script_headers(SwCoreContext &swctx)
         auto f = read_file(fn);
         bool has_checks = f.find("Checker") != f.npos; // more presize than setChecks
 
-        hdr_vars[h] = localpkg.getVariableName();
-        ctx.addLine("#define configure configure_" + localpkg.getVariableName());
-        ctx.addLine("#define build build_" + localpkg.getVariableName());
+        auto var = localpkg.getVariableName();
+        hdr_vars[h] = var;
+
+        ctx.addLine("#define configure configure_" + var);
+        ctx.addLine("#define build build_" + var);
         if (has_checks)
-            ctx.addLine("#define check check_" + localpkg.getVariableName());
+            ctx.addLine("#define check check_" + var);
+        //ctx.beginNamespace(var);
         ctx.addLine("#include \"" + to_string(normalize_path(fn)) + "\"");
+        //ctx.addLine();
+        //ctx.endNamespace();
         ctx.addLine("#undef configure");
         ctx.addLine("#undef build");
         if (has_checks)
@@ -168,7 +173,7 @@ String write_build_script(SwCoreContext &swctx, const std::vector<ResolveRequest
         auto var = hdr_vars[h];
         ctx.beginBlock();
         ctx.addLine("auto i = std::make_unique<BuiltinInput>(swctx, d, " + std::to_string(h) + ");");
-        ctx.addLine("auto ep = std::make_unique<sw::NativeBuiltinTargetEntryPoint>(build_" + var + ");");
+        ctx.addLine("auto ep = std::make_unique<sw::NativeBuiltinTargetEntryPoint>("s/* + var +  "::"*/ + "build_" + var + ");");
         if (has_checks)
             ctx.addLine("ep->cf = check_" + var + ";");
         ctx.addLine("i->setEntryPoint(std::move(ep));");
