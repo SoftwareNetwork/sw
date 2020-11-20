@@ -656,6 +656,7 @@ command_line:
         name: override
         desc: Override packages locally.
 
+        # TODO: allow to pass list of overridden packages (targets)
         command_line:
             prefix:
                 positional: true
