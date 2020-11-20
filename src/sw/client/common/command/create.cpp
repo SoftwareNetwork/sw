@@ -161,7 +161,7 @@ SUBCOMMAND_DECL(create)
         ctx.addLine("auto &t = s.addTarget<Executable>(\"project\");");
         ctx.addLine("t += cpp17;");
         ctx.addLine("//t += \"src/main.cpp\";");
-        ctx.addLine("//t += \"pub.egorpugin.primitives.sw.main-master\"_dep;");
+        ctx.addLine("//t += \"pub.egorpugin.primitives.sw.main\"_dep;");
         ctx.endFunction();
         write_file(dir / "sw.cpp", ctx.getText());
         return;
