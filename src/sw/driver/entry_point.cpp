@@ -234,7 +234,7 @@ static path getPackageHeader(const LocalPackage &p, const UnresolvedPackage &up)
 
 static
 std::pair<FilesOrdered, UnresolvedPackages>
-getFileDependencies(const SwCoreContext &swctx, const path &p, std::set<size_t> &gns)
+getFileDependencies(SwBuild &b, const path &p, std::set<size_t> &gns)
 {
     UnresolvedPackages udeps;
     FilesOrdered headers;
@@ -252,21 +252,23 @@ getFileDependencies(const SwCoreContext &swctx, const path &p, std::set<size_t> 
         if (m1 == "header")
         {
             auto upkg = extractFromString(m[3].str());
-            SW_UNIMPLEMENTED;
-            /*auto pkg = swctx.resolve(upkg);
-            auto gn = swctx.getInputDatabase().getFileHash(pkg.getDirSrc2() / "sw.cpp");
+            ResolveRequest rr{ upkg };
+            if (!b.resolve(rr))
+                throw SW_RUNTIME_ERROR("Not resolved: " + rr.u.toString());
+            auto pkg = b.getContext().install(rr.getPackage());
+            auto gn = b.getContext().getInputDatabase().getFileHash(pkg.getDirSrc2() / "sw.cpp");
             if (!gns.insert(gn).second)
             throw SW_RUNTIME_ERROR("#pragma sw header: trying to add same header twice, last one: " + upkg.toString());
             auto h = getPackageHeader(pkg, upkg);
-            auto [headers2,udeps2] = getFileDependencies(swctx, h, gns);
+            auto [headers2,udeps2] = getFileDependencies(b, h, gns);
             headers.insert(headers.end(), headers2.begin(), headers2.end());
             udeps.insert(udeps2.begin(), udeps2.end());
-            headers.push_back(h);*/
+            headers.push_back(h);
         }
         else if (m1 == "local")
         {
             SW_UNIMPLEMENTED;
-            auto [headers2, udeps2] = getFileDependencies(swctx, m[3].str(), gns);
+            auto [headers2, udeps2] = getFileDependencies(b, m[3].str(), gns);
             headers.insert(headers.end(), headers2.begin(), headers2.end());
             udeps.insert(udeps2.begin(), udeps2.end());
         }
@@ -278,10 +280,10 @@ getFileDependencies(const SwCoreContext &swctx, const path &p, std::set<size_t> 
     return { headers, udeps };
 }
 
-static std::pair<FilesOrdered, UnresolvedPackages> getFileDependencies(const SwCoreContext &swctx, const path &in_config_file)
+static std::pair<FilesOrdered, UnresolvedPackages> getFileDependencies(SwBuild &b, const path &in_config_file)
 {
     std::set<size_t> gns;
-    return getFileDependencies(swctx, in_config_file, gns);
+    return getFileDependencies(b, in_config_file, gns);
 }
 
 void addImportLibrary(Build &b)
@@ -570,7 +572,7 @@ decltype(auto) PrepareConfig::commonActions(Build &b, const InputData &d, const 
 path PrepareConfig::one2one(Build &b, const InputData &d)
 {
     auto &fn = d.cfn;
-    auto [headers, udeps] = getFileDependencies(b.getContext(), fn);
+    auto [headers, udeps] = getFileDependencies(b.getMainBuild(), fn);
 
     auto &lib = commonActions(b, d, udeps);
 
