@@ -36,8 +36,7 @@ PackageIdSet load_builtin_packages(SwContext &swctx)
     for (auto &p : required_packages)
     {
         ResolveRequest rr{p};
-        swctx.resolve(rr, true);
-        if (!rr.isResolved())
+        if (!swctx.resolve(rr, true))
             throw SW_RUNTIME_ERROR("Cannot resolve: " + p.toString());
         builtin_packages.insert(rr.getPackage());
     }
