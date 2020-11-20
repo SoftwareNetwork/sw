@@ -141,12 +141,15 @@ command_line:
                 list: true
                 desc: Targets to build
                 cat: build
+                comma_separated: true
+
             targets_to_ignore:
                 option: exclude-target
                 type: String
                 list: true
                 desc: Targets to ignore
                 cat: build
+                comma_separated: true
 
             reproducible_build:
                 desc: Perform reproducible build.
