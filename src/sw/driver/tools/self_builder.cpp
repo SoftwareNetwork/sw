@@ -51,20 +51,88 @@ auto get_base_rr_vector()
 {
     std::vector<ResolveRequest> rrs;
     // our main cpp driver target
-    rrs.emplace_back().u = SW_DRIVER_NAME;
+    rrs.emplace_back(String(SW_DRIVER_NAME));
     return rrs;
 }
 
-String write_build_script(SwCoreContext &swctx,
-    const std::vector<ResolveRequest> &m_in,
-    bool headers
-)
+String write_build_script_headers(SwCoreContext &swctx)
 {
-    const std::map<UnresolvedPackage, LocalPackage> m(m_in.begin(), m_in.end()); // keep order
+    auto &idb = swctx.getInputDatabase();
+
+    // some packages must be before others
+    std::vector<ResolveRequest> prepkgs;
+    {
+        // keep block order
+
+        {
+            // goes before primitives
+            prepkgs.emplace_back("org.sw.demo.ragel-6"s); // keep upkg same as in deps!!!
+
+                                                          // goes before primitives
+            prepkgs.emplace_back("org.sw.demo.lexxmark.winflexbison.bison"s);
+
+            // goes before grpc
+            prepkgs.emplace_back("org.sw.demo.google.protobuf.protobuf"s);
+
+            // goes before sw cpp driver (client)
+            prepkgs.emplace_back("org.sw.demo.google.grpc.cpp.plugin"s);
+
+            // goes before sw cpp driver (client)
+            prepkgs.emplace_back("pub.egorpugin.primitives.filesystem"s);
+        }
+
+        // for gui
+        prepkgs.emplace_back("org.sw.demo.qtproject.qt.base.tools.moc"s);
+
+        {
+            // cpp driver
+            prepkgs.emplace_back(String(SW_DRIVER_NAME));
+        }
+
+        resolveWithDependencies(prepkgs, [&swctx](auto &rr) { return swctx.resolve(rr, true); });
+    }
+
+    primitives::CppEmitter ctx;
+    std::unordered_set<size_t> hashes;
+    for (auto &rr : prepkgs)
+    {
+        if (!swctx.getLocalStorage().isPackageInstalled(rr.getPackage()) &&
+            !swctx.getLocalStorage().isPackageOverridden(rr.getPackage()))
+            continue;
+
+        LocalPackage localpkg(swctx.getLocalStorage(), rr.getPackage());
+
+        SpecificationFiles sf;
+        sf.addFile("sw.cpp", localpkg.getDirSrc2() / "sw.cpp");
+        Specification s(sf);
+        auto h = s.getHash(idb);
+        if (!hashes.insert(h).second)
+            continue;
+
+        auto fn = s.files.getData().begin()->second.absolute_path;
+        auto f = read_file(fn);
+        bool has_checks = f.find("Checker") != f.npos; // more presize than setChecks
+
+        ctx.addLine("#define configure configure_" + localpkg.getVariableName());
+        ctx.addLine("#define build build_" + localpkg.getVariableName());
+        if (has_checks)
+            ctx.addLine("#define check check_" + localpkg.getVariableName());
+        ctx.addLine("#include \"" + to_string(normalize_path(fn)) + "\"");
+        ctx.addLine("#undef configure");
+        ctx.addLine("#undef build");
+        if (has_checks)
+            ctx.addLine("#undef check");
+        ctx.addLine();
+    }
+    return ctx.getText();
+}
+
+String write_build_script(SwCoreContext &swctx, const std::vector<ResolveRequest> &m_in)
+{
     auto &idb = swctx.getInputDatabase();
 
     // create specs
-    std::unordered_map<UnresolvedPackage, Specification> gns;
+    /*std::unordered_map<UnresolvedPackage, Specification> gns;
     std::unordered_map<LocalPackage, Specification> gns2;
     for (auto &[u, r] : m)
     {
@@ -86,46 +154,11 @@ String write_build_script(SwCoreContext &swctx,
         auto i = gns2.find(u);
         SW_ASSERT(i != gns2.end(), "not found 2: " + u.toString());
         return i->second;
-    };
+    };*/
 
-    std::map<size_t, std::set<LocalPackage>> used_gns;
-    std::vector<std::pair<LocalPackage, Specification>> lpkgs;
+    //std::map<size_t, std::set<LocalPackage>> used_gns;
+    //std::vector<std::pair<LocalPackage, Specification>> lpkgs;
 
-    // some packages must be before others
-    std::vector<UnresolvedPackage> prepkgs;
-    {
-        // keep block order
-
-        {
-            // goes before primitives
-            prepkgs.push_back("org.sw.demo.ragel-6"s); // keep upkg same as in deps!!!
-
-            // goes before primitives
-            prepkgs.push_back("org.sw.demo.lexxmark.winflexbison.bison"s);
-
-            // goes before grpc
-            prepkgs.push_back("org.sw.demo.google.protobuf.protobuf"s);
-
-            // goes before sw cpp driver (client)
-            prepkgs.push_back("org.sw.demo.google.grpc.cpp.plugin"s);
-
-            // goes before sw cpp driver (client)
-            prepkgs.push_back("pub.egorpugin.primitives.filesystem"s);
-        }
-
-        if (headers)
-        {
-            // for gui
-            prepkgs.push_back("org.sw.demo.qtproject.qt.base.tools.moc"s);
-        }
-
-        {
-            // cpp driver
-            prepkgs.push_back({ SW_DRIVER_NAME });
-        }
-    }
-
-    SW_UNIMPLEMENTED;
     /*for (auto &u : prepkgs)
     {
         const LocalPackage *lp = nullptr;
@@ -160,65 +193,59 @@ String write_build_script(SwCoreContext &swctx,
         }
         used_gns[h].insert(r);
         lpkgs.emplace_back(r, s);
+    }*/
+
+    std::unordered_map<size_t, std::set<PackageId>> hash_pkgs;
+    for (auto &rr : m_in)
+    {
+        auto &lp = dynamic_cast<LocalPackage &>(rr.getPackage());
+        SpecificationFiles sf;
+        sf.addFile("sw.cpp", lp.getDirSrc2() / "sw.cpp");
+        Specification s(sf);
+        auto h = s.getHash(idb);
+        hash_pkgs[h].insert(lp);
     }
 
-    // includes
     primitives::CppEmitter ctx;
-    if (headers)
-    {
-        for (auto &[r, s] : lpkgs)
-        {
-            auto fn = s.files.getData().begin()->second.absolute_path;
-            auto f = read_file(fn);
-            bool has_checks = f.find("Checker") != f.npos; // more presize than setChecks
-
-            auto &d = r.getData();
-            ctx.addLine("#define configure configure_" + r.getVariableName());
-            ctx.addLine("#define build build_" + r.getVariableName());
-            if (has_checks)
-                ctx.addLine("#define check check_" + r.getVariableName());
-            ctx.addLine("#include \"" + to_string(normalize_path(fn)) + "\"");
-            ctx.addLine("#undef configure");
-            ctx.addLine("#undef build");
-            if (has_checks)
-                ctx.addLine("#undef check");
-            ctx.addLine();
-        }
-        return ctx.getText();
-    }
-
-    auto &build = ctx.createInlineEmitter<primitives::CppEmitter>();
-
     // function
-    build.beginNamespace("sw");
-    build.beginFunction("BuiltinInputs load_builtin_inputs(SwContext &swctx, const IDriver &d)");
-    build.addLine("BuiltinInputs epm;");
-    build.addLine();
-    for (auto &[r,s] : lpkgs)
+    ctx.beginNamespace("sw");
+    ctx.beginFunction("BuiltinInputs load_builtin_inputs(SwContext &swctx, const IDriver &d)");
+    ctx.addLine("BuiltinInputs epm;");
+    ctx.addLine();
+    for (auto &rr : m_in)
     {
+        auto &lp = dynamic_cast<LocalPackage&>(rr.getPackage());
+        SpecificationFiles sf;
+        sf.addFile("sw.cpp", lp.getDirSrc2() / "sw.cpp");
+        Specification s(sf);
+        auto h = s.getHash(idb);
+        if (!hash_pkgs.contains(h))
+            continue;
+
         auto fn = s.files.getData().begin()->second.absolute_path;
         auto f = read_file(fn);
         bool has_checks = f.find("Checker") != f.npos; // more presize than setChecks
 
-        build.beginBlock();
-        build.addLine("auto i = std::make_unique<BuiltinInput>(swctx, d, " + std::to_string(s.getHash(idb)) + ");");
-        build.addLine("auto ep = std::make_unique<sw::NativeBuiltinTargetEntryPoint>(build_" + r.getVariableName() + ");");
+        ctx.beginBlock();
+        ctx.addLine("auto i = std::make_unique<BuiltinInput>(swctx, d, " + std::to_string(h) + ");");
+        ctx.addLine("auto ep = std::make_unique<sw::NativeBuiltinTargetEntryPoint>(build_" + lp.getVariableName() + ");");
         if (has_checks)
-            build.addLine("ep->cf = check_" + r.getVariableName() + ";");
-        build.addLine("i->setEntryPoint(std::move(ep));");
-        build.addLine("auto [ii, _] = swctx.registerInput(std::move(i));");
+            ctx.addLine("ep->cf = check_" + lp.getVariableName() + ";");
+        ctx.addLine("i->setEntryPoint(std::move(ep));");
+        ctx.addLine("auto [ii, _] = swctx.registerInput(std::move(i));");
 
         // enumerate all other packages in group
-        for (auto &p : used_gns[get_gn2(r).getHash(idb)])
-            build.addLine("epm[ii].insert(\"" + p.toString() + "\"s);");
-        build.endBlock();
-        build.emptyLines();
+        for (auto &p : hash_pkgs[h])
+            ctx.addLine("epm[ii].insert(\"" + p.toString() + "\"s);");
+        hash_pkgs.erase(h);
+        ctx.endBlock();
+        ctx.emptyLines();
     }
-    build.addLine("return epm;");
-    build.endFunction();
-    build.endNamespace();
+    ctx.addLine("return epm;");
+    ctx.endFunction();
+    ctx.endNamespace();
 
-    return ctx.getText();*/
+    return ctx.getText();
 }
 
 int main(int argc, char **argv)
@@ -259,15 +286,13 @@ int main(int argc, char **argv)
     // we do second resolve, because we need this packages to be included before driver's sw.cpp,
     // but we do not need to install them on user system
     //
-    auto m_headers_rrs = get_base_rr_vector();
-    // other needed stuff (libcxx)
-    m_headers_rrs.emplace_back().u = "org.sw.demo.llvm_project.libcxx";
-    // for gui
-    m_headers_rrs.emplace_back().u = "org.sw.demo.qtproject.qt.base.tools.moc";
-    resolveWithDependencies(m_headers_rrs, [&swctx](auto &rr) { return swctx.resolve(rr, true); });
+    //auto m_headers_rrs = get_base_rr_vector();
+    //m_headers_rrs.emplace_back("org.sw.demo.llvm_project.libcxx"s); // other needed stuff (libcxx)
+    //m_headers_rrs.emplace_back("org.sw.demo.qtproject.qt.base.tools.moc"s); // for gui
+    //resolveWithDependencies(m_headers_rrs, [&swctx](auto &rr) { return swctx.resolve(rr, true); });
 
-    auto t2 = write_build_script(swctx, m_headers_rrs, true);
-    auto t3 = write_build_script(swctx, m_rrs, false);
+    auto t2 = write_build_script_headers(swctx);
+    auto t3 = write_build_script(swctx, m_rrs);
     write_file(p, t2 + t3);
 
     return 0;
