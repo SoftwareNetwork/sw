@@ -171,7 +171,7 @@ struct BuiltinStorage : IStorage
         return {};
     }*/
 
-    void resolve(ResolveRequest &) const override
+    bool resolve(ResolveRequest &) const override
     {
         SW_UNIMPLEMENTED;
     }

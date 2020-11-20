@@ -188,10 +188,13 @@ PackagesDatabase &StorageWithPackagesDatabase::getPackagesDatabase() const
     return r;
 }*/
 
-void StorageWithPackagesDatabase::resolve(ResolveRequest &rr) const
+bool StorageWithPackagesDatabase::resolve(ResolveRequest &rr) const
 {
-    if (auto pkg = pkgdb->resolve(rr))
-        rr.setPackage(std::make_unique<Package>(*this, *pkg));
+    auto pkg = pkgdb->resolve(rr);
+    if (!pkg)
+        return false;
+    rr.setPackage(std::make_unique<Package>(*this, *pkg));
+    return true;
 }
 
 LocalStorageBase::LocalStorageBase(const String &name, const path &db_dir)
@@ -410,7 +413,7 @@ const OverriddenPackagesStorage &LocalStorage::getOverriddenPackagesStorage() co
     return ovs.resolve(pkgs, unresolved_pkgs);
 }*/
 
-void LocalStorage::resolve(ResolveRequest &rr) const
+bool LocalStorage::resolve(ResolveRequest &rr) const
 {
     return ovs.resolve(rr);
 }
@@ -496,11 +499,13 @@ void CachedStorage::storePackages(const ResolveRequest &rr)
     resolved_packages.emplace(rr.u, rr.getPackage().clone());
 }
 
-void CachedStorage::resolve(ResolveRequest &rr) const
+bool CachedStorage::resolve(ResolveRequest &rr) const
 {
     auto i = resolved_packages.find(rr.u);
-    if (i != resolved_packages.end())
-        rr.setPackage(i->second->clone());
+    if (i == resolved_packages.end())
+        return false;
+    rr.setPackage(i->second->clone());
+    return true;
 }
 
 void CachedStorage::clear()

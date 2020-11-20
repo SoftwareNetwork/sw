@@ -110,7 +110,7 @@ struct SW_CORE_API SwBuild : SwBuilderContext
     }
 
     // stable resolve during whole build
-    void resolve(ResolveRequest &) const;
+    bool resolve(ResolveRequest &) const;
 
 private:
     SwContext &swctx;

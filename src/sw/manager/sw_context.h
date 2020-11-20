@@ -46,7 +46,7 @@ struct SW_MANAGER_API SwManagerContext// : ISwContext
     //ResolveResultWithDependencies resolve(const UnresolvedPackages &, bool use_cache = true) const;
     //LocalPackage resolve(const UnresolvedPackage &) const;
     //ResolveResultWithDependencies resolve(const UnresolvedPackages &, const std::vector<IStorage*> &) const;
-    void resolve(ResolveRequest &, bool use_cache) const;
+    bool resolve(ResolveRequest &, bool use_cache) const;
 
     // lock file related
     void setCachedPackages(const std::unordered_map<UnresolvedPackage, PackageId> &) const;

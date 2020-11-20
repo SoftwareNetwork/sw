@@ -146,7 +146,7 @@ std::vector<IStorage *> SwManagerContext::getRemoteStorages() const
     return resolved;
 }*/
 
-void SwManagerContext::resolve(ResolveRequest &rr, bool use_cache) const
+bool SwManagerContext::resolve(ResolveRequest &rr, bool use_cache) const
 {
     std::lock_guard lk(resolve_mutex);
 
@@ -174,13 +174,13 @@ void SwManagerContext::resolve(ResolveRequest &rr, bool use_cache) const
     // save existing results
     if (rr.isResolved())
         getCachedStorage().storePackages(rr);
+    return rr.isResolved();
 }
 
 void SwManagerContext::install(ResolveRequest &rr) const
 {
-    //          for now
-    resolve(rr, true);
-    if (!rr.isResolved())
+    // true for now
+    if (!resolve(rr, true))
         throw SW_RUNTIME_ERROR("Not resolved: " + rr.u.toString());
     auto lp = install(rr.getPackage());
     rr.r = lp.clone(); // force overwrite with local package

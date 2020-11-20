@@ -68,12 +68,12 @@ RemoteStorage::~RemoteStorage() = default;
     return StorageWithPackagesDatabase::resolve(pkgs, unresolved_pkgs);
 }*/
 
-void RemoteStorage::resolve(ResolveRequest &rr) const
+bool RemoteStorage::resolve(ResolveRequest &rr) const
 {
     preInitFindDependencies();
     if (Settings::get_user_settings().gForceServerQuery)
-        return;
-    StorageWithPackagesDatabase::resolve(rr);
+        return false;
+    return StorageWithPackagesDatabase::resolve(rr);
 }
 
 void RemoteStorage::download() const
@@ -504,9 +504,9 @@ RemoteStorageWithFallbackToRemoteResolving::RemoteStorageWithFallbackToRemoteRes
     }
 }*/
 
-void RemoteStorageWithFallbackToRemoteResolving::resolve(ResolveRequest &rr) const
+bool RemoteStorageWithFallbackToRemoteResolving::resolve(ResolveRequest &rr) const
 {
-    RemoteStorage::resolve(rr);
+    return RemoteStorage::resolve(rr);
     // remote resolving is disabled for now
 }
 

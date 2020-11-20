@@ -1160,8 +1160,7 @@ std::vector<BuildInput> SwBuild::addInput(const String &i)
         {
             auto p = extractFromString(i);
             ResolveRequest rr{ p };
-            resolve(rr);
-            if (!rr.isResolved())
+            if (!resolve(rr))
                 throw SW_RUNTIME_ERROR("Cannot resolve: " + rr.u.toString());
             auto bi = addInput(getContext().install(rr.getPackage()));
             std::vector<BuildInput> v;
@@ -1341,13 +1340,10 @@ bool SwBuild::isPredefinedTarget(const PackagePath &pp) const
     return i != getTargets().end(pp) && i->second.hasInput();
 }
 
-void SwBuild::resolve(ResolveRequest &rr) const
+bool SwBuild::resolve(ResolveRequest &rr) const
 {
-    cached_storage->resolve(rr);
     // cache hit, we stop immediately
-    if (rr.isResolved())
-        return;
-    getContext().resolve(rr, false);
+    return cached_storage->resolve(rr) || getContext().resolve(rr, false);
 }
 
 void SwBuild::resolveWithDependencies(std::vector<ResolveRequest> &v) const
@@ -1366,8 +1362,7 @@ void SwBuild::resolveWithDependencies(std::vector<ResolveRequest> &v) const
                 s.insert(rr.u);
                 continue;
             }
-            resolve(rr);
-            if (!rr.isResolved())
+            if (!resolve(rr))
                 throw SW_RUNTIME_ERROR("Cannot resolve: " + rr.u.toString());
             auto inserted = s.insert(rr.u).second;
             new_resolve |= inserted;
