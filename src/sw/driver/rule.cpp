@@ -494,6 +494,21 @@ void NativeCompilerRule::addInputs(const Target &t, RuleFiles &rfs)
 
         nc.prepareCommand(t);
         nc.getCommand()->push_back(arguments);
+        if (!rf.getAdditionalArguments().empty())
+        {
+            switch (lang)
+            {
+            case LANG_ASM:
+                nc.getCommand()->push_back(rf.getAdditionalArguments()["asm"]);
+                break;
+            case LANG_C:
+                nc.getCommand()->push_back(rf.getAdditionalArguments()["c"]);
+                break;
+            case LANG_CPP:
+                nc.getCommand()->push_back(rf.getAdditionalArguments()["cpp"]);
+                break;
+            }
+        }
         /*nc.getCommand()->name = rulename;
         if (!rulename.empty())
             nc.getCommand()->name += " ";*/
