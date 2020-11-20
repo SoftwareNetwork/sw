@@ -278,6 +278,9 @@ path VSGenerator::getPathString() const
 
 struct ProgramShortCutter1
 {
+    using path_type = path;
+    using alias_type = String;
+
     struct iter
     {
         ProgramShortCutter1 &sc;
@@ -297,9 +300,9 @@ struct ProgramShortCutter1
         : prefix(prefix)
     {}
 
-    String getProgramName(const String &in)
+    auto getProgramName(const path_type &in)
     {
-        if (programs[in].empty())
+        if (!programs.contains(in))
         {
             programs[in] = prefix + std::to_string(programs.size());
             nprograms[programs.size()] = in;
@@ -314,40 +317,42 @@ struct ProgramShortCutter1
 
 private:
     String prefix;
-    std::map<String, String> programs;
-    std::map<size_t, String> nprograms;
+    std::map<path_type, alias_type> programs;
+    std::map<size_t, path_type> nprograms;
 };
 
 struct ProgramShortCutter
 {
-    //                                                           program           alias
-    using F = std::function<void(primitives::Emitter &ctx, const String &, const String &)>;
+    using F = std::function<void(
+        primitives::Emitter &ctx,
+        const ProgramShortCutter1::path_type &,     // program
+        const ProgramShortCutter1::alias_type &)>;   // alias
 
     ProgramShortCutter(bool print_sc_generated = false)
         : sc_generated("SW_PROGRAM_GENERATED_")
         , print_sc_generated(print_sc_generated)
     {}
 
-    String getProgramName(const String &in, const builder::Command &c, bool *untouched = nullptr)
+    String getProgramName(const path &in, const builder::Command &c, bool *untouched = nullptr)
     {
         bool gen = File(c.getProgram(), c.getContext().getFileStorage()).isGenerated();
         if (gen && !print_sc_generated)
         {
             if (untouched)
                 *untouched = true;
-            return in;
+            return to_printable_string(in);
         }
         if (untouched)
             *untouched = false;
         auto &progs = gen ? sc_generated : sc;
-        return progs.getProgramName(in);
+        return to_printable_string(progs.getProgramName(in));
     }
 
     void printPrograms(primitives::Emitter &ctx, F f) const
     {
         auto print_progs = [&ctx, &f](const auto &a)
         {
-            for (const auto &kv : a)
+            for (auto &&kv : a)
                 f(ctx, kv->first, kv->second);
         };
 
@@ -382,7 +387,7 @@ struct NinjaEmitter : primitives::Emitter
         primitives::Emitter ctx_progs;
         sc.printPrograms(ctx_progs, [](auto &ctx, auto &prog, auto &alias)
         {
-            ctx.addLine(alias + " = " + prog);
+            ctx.addLine(alias + " = " + to_printable_string(prog));
         });
         write_file(dir / commands_fn, ctx_progs.getText());
     }
@@ -443,7 +448,7 @@ private:
             fs::create_directories(rsp_dir);
 
         auto has_mmd = false;
-        auto prog = c.getProgram();
+        auto prog = to_printable_string(c.getProgram());
 
         addLine("rule c" + std::to_string(c.getHash()));
         increaseIndent();
@@ -669,7 +674,7 @@ struct MakeEmitter : primitives::Emitter
                 s += " \\";
         }
 
-        auto prog = c.getProgram();
+        auto prog = to_printable_string(c.getProgram());
         s += "$(" + sc.getProgramName("\"" + prog + "\"", c) + ") ";
 
         if (!c.needsResponseFile())
@@ -796,7 +801,7 @@ void MakeGenerator::generate(const SwBuild &b)
     ctx.clear();
     ctx.sc.printPrograms(ctx, [](auto &ctx, auto &prog, auto &alias)
     {
-        ctx.addLine(alias + " = " + prog);
+        ctx.addLine(alias + " = " + to_printable_string(prog));
     });
     write_file(d / commands_fn, ctx.getText());
 }
@@ -1197,7 +1202,7 @@ void CompilationDatabaseGenerator::generate(const SwBuild &b)
                     {
                         for (auto &input : c->inputs)
                         {
-                            if (normalize_path(input) != normalize_path(c->getProgram()))
+                            if (input != c->getProgram())
                             {
                                 j2["file"] = normalize_path(input);
                                 break;

@@ -465,7 +465,7 @@ void Command::prepare()
     {
         auto new_prog = resolveExecutable(getProgram());
         if (new_prog.empty())
-            throw SW_RUNTIME_ERROR("passed program '" + getProgram() + "' is not resolved (missing): " + getCommandId(*this));
+            throw SW_RUNTIME_ERROR("passed program '" + to_printable_string(getProgram()) + "' is not resolved (missing): " + getCommandId(*this));
         setProgram(new_prog);
     }
 
@@ -1102,7 +1102,7 @@ bool Command::needsResponseFile() const
 bool Command::needsResponseFile(size_t selected_size) const
 {
     // 3 = 1 + 2 = space + quotes
-    size_t sz = getProgram().size() + 3;
+    size_t sz = to_printable_string(getProgram()).size() + 3;
     for (auto a = arguments.begin() + getFirstResponseFileArgument(); a != arguments.end(); a++)
         sz += (*a)->toString().size() + 3;
 
