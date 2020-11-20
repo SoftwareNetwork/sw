@@ -35,20 +35,28 @@ void setup_log(const std::string &log_level)
     LOG_TRACE(logger, "Starting sw...");
 }
 
-String write_required_packages(const std::unordered_map<UnresolvedPackage, LocalPackage> &m)
+String write_required_packages(const std::vector<ResolveRequest> &rrs)
 {
-    StringSet pkgs_sorted;
-    for (auto &[p, d] : m)
-        pkgs_sorted.insert(d.toString());
+    StringSet upkgs_sorted;
+    for (auto &rr : rrs)
+        upkgs_sorted.insert(rr.u.toString());
 
     primitives::CppEmitter ctx_packages;
-    for (auto &s : pkgs_sorted)
+    for (auto &s : upkgs_sorted)
         ctx_packages.addLine("\"" + s + "\"s,");
     return ctx_packages.getText();
 }
 
+auto get_base_rr_vector()
+{
+    std::vector<ResolveRequest> rrs;
+    // our main cpp driver target
+    rrs.emplace_back().u = SW_DRIVER_NAME;
+    return rrs;
+}
+
 String write_build_script(SwCoreContext &swctx,
-    const std::unordered_map<UnresolvedPackage, LocalPackage> &m_in,
+    const std::vector<ResolveRequest> &m_in,
     bool headers
 )
 {
@@ -102,7 +110,7 @@ String write_build_script(SwCoreContext &swctx,
             prepkgs.push_back("org.sw.demo.google.grpc.cpp.plugin"s);
 
             // goes before sw cpp driver (client)
-            prepkgs.push_back("pub.egorpugin.primitives.filesystem-master"s);
+            prepkgs.push_back("pub.egorpugin.primitives.filesystem"s);
         }
 
         if (headers)
@@ -117,7 +125,8 @@ String write_build_script(SwCoreContext &swctx,
         }
     }
 
-    for (auto &u : prepkgs)
+    SW_UNIMPLEMENTED;
+    /*for (auto &u : prepkgs)
     {
         const LocalPackage *lp = nullptr;
         for (auto &[u2, lp2] : m)
@@ -209,7 +218,7 @@ String write_build_script(SwCoreContext &swctx,
     build.endFunction();
     build.endNamespace();
 
-    return ctx.getText();
+    return ctx.getText();*/
 }
 
 int main(int argc, char **argv)
@@ -229,29 +238,36 @@ int main(int argc, char **argv)
 
     //
     SwCoreContext swctx(Settings::get_user_settings().storage_dir, true);
-    auto m = swctx.install(
+    auto m_rrs = get_base_rr_vector();
+    resolveWithDependencies(m_rrs, [&swctx](auto &rr) { return swctx.resolve(rr, true); });
     {
-        // our main cpp driver target
-        {SW_DRIVER_NAME},
-    });
-    auto t1 = write_required_packages(m);
+        // mass (threaded) install!
+        auto &e = getExecutor();
+        Futures<void> fs;
+        for (auto &rr : m_rrs)
+        {
+            fs.push_back(e.push([&swctx, &rr]
+            {
+                swctx.install(rr);
+            }));
+        }
+        waitAndGet(fs);
+    }
+    auto t1 = write_required_packages(m_rrs);
     write_file(packages, t1);
 
-    // we do second install, because we need this packages to be included before driver's sw.cpp,
+    // we do second resolve, because we need this packages to be included before driver's sw.cpp,
     // but we do not need to install them on user system
-    auto m_headers = swctx.install(
-    {
-        // our main cpp driver target
-        {SW_DRIVER_NAME},
+    //
+    auto m_headers_rrs = get_base_rr_vector();
+    // other needed stuff (libcxx)
+    m_headers_rrs.emplace_back().u = "org.sw.demo.llvm_project.libcxx";
+    // for gui
+    m_headers_rrs.emplace_back().u = "org.sw.demo.qtproject.qt.base.tools.moc";
+    resolveWithDependencies(m_headers_rrs, [&swctx](auto &rr) { return swctx.resolve(rr, true); });
 
-        // other needed stuff (libcxx)
-        {"org.sw.demo.llvm_project.libcxx"},
-
-        // for gui
-        {"org.sw.demo.qtproject.qt.base.tools.moc"},
-    });
-    auto t2 = write_build_script(swctx, m_headers, true);
-    auto t3 = write_build_script(swctx, m, false);
+    auto t2 = write_build_script(swctx, m_headers_rrs, true);
+    auto t3 = write_build_script(swctx, m_rrs, false);
     write_file(p, t2 + t3);
 
     return 0;
