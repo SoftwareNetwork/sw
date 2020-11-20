@@ -22,6 +22,8 @@ DECLARE_STATIC_LOGGER(logger, "self_builder");
 
 using namespace sw;
 
+std::unordered_map<size_t, String> hdr_vars;
+
 void setup_log(const std::string &log_level)
 {
     LoggerSettings log_settings;
@@ -113,6 +115,7 @@ String write_build_script_headers(SwCoreContext &swctx)
         auto f = read_file(fn);
         bool has_checks = f.find("Checker") != f.npos; // more presize than setChecks
 
+        hdr_vars[h] = localpkg.getVariableName();
         ctx.addLine("#define configure configure_" + localpkg.getVariableName());
         ctx.addLine("#define build build_" + localpkg.getVariableName());
         if (has_checks)
@@ -162,11 +165,12 @@ String write_build_script(SwCoreContext &swctx, const std::vector<ResolveRequest
         auto f = read_file(fn);
         bool has_checks = f.find("Checker") != f.npos; // more presize than setChecks
 
+        auto var = hdr_vars[h];
         ctx.beginBlock();
         ctx.addLine("auto i = std::make_unique<BuiltinInput>(swctx, d, " + std::to_string(h) + ");");
-        ctx.addLine("auto ep = std::make_unique<sw::NativeBuiltinTargetEntryPoint>(build_" + lp.getVariableName() + ");");
+        ctx.addLine("auto ep = std::make_unique<sw::NativeBuiltinTargetEntryPoint>(build_" + var + ");");
         if (has_checks)
-            ctx.addLine("ep->cf = check_" + lp.getVariableName() + ";");
+            ctx.addLine("ep->cf = check_" + var + ";");
         ctx.addLine("i->setEntryPoint(std::move(ep));");
         ctx.addLine("auto [ii, _] = swctx.registerInput(std::move(i));");
 
