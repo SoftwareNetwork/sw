@@ -830,17 +830,18 @@ Commands SwBuild::getCommands() const
     if (targets_to_build.empty())
         throw SW_RUNTIME_ERROR("no targets were selected for building");
 
-    StringSet in_ttb;
-    StringSet in_ttb_exclude;
+    auto upkgs_contains_pkg = [](const UnresolvedPackages &upkgs, const PackageId &p)
+    {
+        return std::any_of(upkgs.begin(), upkgs.end(), [&p](auto &u) { return u.canBe(p); });
+    };
+    UnresolvedPackages in_ttb;
+    UnresolvedPackages in_ttb_exclude;
     for (auto &t : build_settings["target-to-build"].getArray())
         in_ttb.insert(t.getValue());
     for (auto &t : build_settings["target-to-exclude"].getArray())
-    {
-        if (in_ttb.find(t.getValue()) != in_ttb.end())
-            throw SW_RUNTIME_ERROR("Target " + t.getValue() + " specified both in include and exclude lists");
         in_ttb_exclude.insert(t.getValue());
-    }
     bool in_ttb_used = !in_ttb.empty();
+    bool targets_selected = false;
 
     decltype(targets_to_build) ttb;
 
@@ -851,15 +852,12 @@ Commands SwBuild::getCommands() const
     {
         if (in_ttb_used)
         {
-            auto i = in_ttb.find(p.toString());
-            if (i == in_ttb.end())
+            if (!upkgs_contains_pkg(in_ttb, p))
                 continue;
-            in_ttb.erase(i);
+            targets_selected = true;
         }
-        if (in_ttb_exclude.find(p.toString()) != in_ttb_exclude.end())
-        {
+        if (upkgs_contains_pkg(in_ttb_exclude, p))
             continue;
-        }
 
         ttb.emplace(p, tgts);
 
@@ -921,14 +919,16 @@ Commands SwBuild::getCommands() const
         }
     }
 
-    if (!in_ttb.empty())
+    /*
+    // error about unused filters
+    if (in_ttb_used && !targets_selected)
     {
         String s;
         for (auto &t : in_ttb)
-            s += t + ", ";
+            s += t.toString() + ", ";
         s.resize(s.size() - 2);
         throw SW_RUNTIME_ERROR("Cannot make targets: " + s + ": no such targets");
-    }
+    }*/
 
     // update public ttb
     // reconsider? remove?
