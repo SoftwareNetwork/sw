@@ -304,8 +304,8 @@ private:
 void addImportLibrary(Build &b)
 {
 #ifdef _WIN32
-    auto lib = (HMODULE)primitives::getModuleForSymbol(&isDriverDllBuild);
-    auto syms = getExports(lib);
+    auto mod = (HMODULE)primitives::getModuleForSymbol(&isDriverDllBuild);
+    auto syms = getExports(mod);
     if (syms.empty())
         throw SW_RUNTIME_ERROR("No exports found");
     String defs;
@@ -315,9 +315,10 @@ void addImportLibrary(Build &b)
         defs += "    "s + s + "\n";
     write_file_if_different(getImportDefinitionsFile(b), defs);
 
-    auto &i = b.add<ConfigBuiltinLibraryTarget>("implib");
-    i.AutoDetectOptions = false;
-    i += getImportDefinitionsFile(b);
+    auto &lib = b.add<ConfigBuiltinLibraryTarget>("implib");
+    lib.command_storage = &getDriverCommandStorage(b);
+    lib.AutoDetectOptions = false;
+    lib += getImportDefinitionsFile(b);
 #endif
 }
 
@@ -325,12 +326,71 @@ void addDelayLoadLibrary(Build &b)
 {
 #ifdef _WIN32
     auto &lib = b.add<ConfigBuiltinLibraryTarget>("delay_loader");
+    lib.command_storage = &getDriverCommandStorage(b);
     lib += Definition("IMPORT_LIBRARY=\""s + IMPORT_LIBRARY + "\"");
     auto driver_idir = getDriverIncludeDir(b, lib);
     auto fn = driver_idir / getSwDir() / "misc" / "delay_load_helper.cpp";
     lib += fn;
     //if (auto nsf = lib[fn].as<NativeSourceFile *>())
         //nsf->setOutputFile(getPchDir(b) / ("delay_load_helper" + getDepsSuffix(*this, lib, deps) + ".obj"));
+    lib.WholeArchive = true;
+#endif
+}
+
+static void addConfigDefs(NativeCompiledTarget &lib)
+{
+    if (lib.getBuildSettings().TargetOS.is(OSType::Windows))
+    {
+        lib.Definitions["SW_SUPPORT_API"] = "__declspec(dllimport)";
+        lib.Definitions["SW_MANAGER_API"] = "__declspec(dllimport)";
+        lib.Definitions["SW_BUILDER_API"] = "__declspec(dllimport)";
+        lib.Definitions["SW_CORE_API"] = "__declspec(dllimport)";
+        lib.Definitions["SW_DRIVER_CPP_API"] = "__declspec(dllimport)";
+        // do not use api name because we use C linkage
+        lib.Definitions["SW_PACKAGE_API"] = "__declspec(dllexport)";
+    }
+    else
+    {
+        lib.Definitions["SW_SUPPORT_API="];
+        lib.Definitions["SW_MANAGER_API="];
+        lib.Definitions["SW_BUILDER_API="];
+        lib.Definitions["SW_CORE_API="];
+        lib.Definitions["SW_DRIVER_CPP_API="];
+        // do not use api name because we use C linkage
+        lib.Definitions["SW_PACKAGE_API"] = "__attribute__ ((visibility (\"default\")))";
+    }
+
+    if (lib.getCompilerType() == CompilerType::MSVC)
+        lib.CompileOptions.push_back("/utf-8");
+    // for checks
+    // prevent "" be convered into bools
+    if (lib.getCompilerType() == CompilerType::Clang)
+        lib.CompileOptions.push_back("-Werror=string-conversion");
+}
+
+void addConfigPchLibrary(Build &b)
+{
+#ifdef _WIN32
+    auto &lib = b.add<ConfigBuiltinLibraryTarget>("config_pch");
+    lib.AutoDetectOptions = false;
+    lib.CPPVersion = CPPLanguageStandard::CPP20;
+    lib.command_storage = &getDriverCommandStorage(b);
+
+    auto driver_idir = getDriverIncludeDir(b, lib);
+    auto swh = driver_idir / getSwHeader();
+    //lib.Interface += ForceInclude(swh);
+    lib += PrecompiledHeader(swh);
+    PathOptionsType files;
+    files.insert(swh);
+    lib.pch.setup(lib, files);
+    lib.Interface += lib.pch.pch;
+    lib.Interface += lib.pch.pdb;
+    auto swhpch = swh += ".hpch";
+    File(swhpch, lib.getFs()).setGenerated();
+    lib.Interface += swhpch;
+    //lib.pch.use_only = true;
+    addDeps(b, lib);
+    addConfigDefs(lib);
     lib.WholeArchive = true;
 #endif
 }
@@ -536,13 +596,6 @@ decltype(auto) PrepareConfig::commonActions(Build &b, const InputData &d, const 
     if (!d.cl_name.empty())
         lib[fn].fancy_name = d.cl_name;
 
-    if (lib.getCompilerType() == CompilerType::MSVC)
-        lib.CompileOptions.push_back("/utf-8");
-    // for checks
-    // prevent "" be convered into bools
-    if (lib.getCompilerType() == CompilerType::Clang)
-        lib.CompileOptions.push_back("-Werror=string-conversion");
-
     if (lib.getBuildSettings().TargetOS.is(OSType::Windows) && isDriverStaticBuild())
         lib += "delay_loader"_dep;
 
@@ -570,8 +623,9 @@ decltype(auto) PrepareConfig::commonActions(Build &b, const InputData &d, const 
     // pch
     if (lang == LANG_CPP)
     {
+        lib += "config_pch"_dep;
         //lib += ForceInclude(driver_idir / getSwHeader());
-        lib += PrecompiledHeader(driver_idir / getSwHeader());
+        //lib += PrecompiledHeader(driver_idir / getSwHeader());
 
         /*detail::PrecompiledHeader pch;
         pch.name = getImportPchFile(*this, lib, deps).stem();
@@ -627,26 +681,7 @@ path PrepareConfig::one2one(Build &b, const InputData &d)
     //c->Warnings().TreatAsError.push_back(4996);
 
     //commonActions2
-    if (lib.getBuildSettings().TargetOS.is(OSType::Windows))
-    {
-        lib.Definitions["SW_SUPPORT_API"] = "__declspec(dllimport)";
-        lib.Definitions["SW_MANAGER_API"] = "__declspec(dllimport)";
-        lib.Definitions["SW_BUILDER_API"] = "__declspec(dllimport)";
-        lib.Definitions["SW_CORE_API"] = "__declspec(dllimport)";
-        lib.Definitions["SW_DRIVER_CPP_API"] = "__declspec(dllimport)";
-        // do not use api name because we use C linkage
-        lib.Definitions["SW_PACKAGE_API"] = "__declspec(dllexport)";
-    }
-    else
-    {
-        lib.Definitions["SW_SUPPORT_API="];
-        lib.Definitions["SW_MANAGER_API="];
-        lib.Definitions["SW_BUILDER_API="];
-        lib.Definitions["SW_CORE_API="];
-        lib.Definitions["SW_DRIVER_CPP_API="];
-        // do not use api name because we use C linkage
-        lib.Definitions["SW_PACKAGE_API"] = "__attribute__ ((visibility (\"default\")))";
-    }
+    addConfigDefs(lib);
 
     BuildSettings bs(b.module_data.current_settings);
     if (bs.TargetOS.is(OSType::Windows))

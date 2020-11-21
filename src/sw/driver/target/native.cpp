@@ -173,6 +173,52 @@ static const Strings source_dir_names =
 namespace sw
 {
 
+void detail::PrecompiledHeader::setup(const NativeCompiledTarget &t, const PathOptionsType &pch_headers)
+{
+    if (name.empty())
+        name = "sw.pch";
+    if (dir.empty())
+        dir = t.BinaryDir.parent_path() / "pch";
+
+    String h;
+    for (auto &f : pch_headers)
+    {
+        if (f.string()[0] == '<' || f.string()[0] == '\"')
+            h += "#include " + f.string() + "\n";
+        else
+            h += "#include \"" + to_string(normalize_path(f)) + "\"\n";
+    }
+    header = get_base_pch_path() += ".h";
+    {
+        ScopedFileLock lk(header);
+        write_file_if_different(header, h);
+    }
+    source = get_base_pch_path() += ".cpp"; // msvc
+    {
+        ScopedFileLock lk(source);
+        write_file_if_different(source, "");
+    }
+
+    //
+    if (pch.empty())
+    {
+        if (t.getCompilerType() == CompilerType::MSVC || t.getCompilerType() == CompilerType::ClangCl)
+            pch = get_base_pch_path() += ".pch";
+        else if (isClangFamily(t.getCompilerType()))
+            pch = path(header) += ".pch";
+        else // gcc
+            pch = path(header) += ".gch";
+    }
+    File(pch, t.getFs()).setGenerated();
+
+    if (obj.empty())
+        obj = get_base_pch_path() += ".obj";
+
+    if (pdb.empty())
+        pdb = get_base_pch_path() += ".pdb";
+    File(pdb, t.getFs()).setGenerated();
+}
+
 NativeTarget::NativeTarget(TargetBase &parent, const PackageId &id)
     : Target(parent, id)
 {
@@ -775,14 +821,21 @@ bool NativeCompiledTarget::hasSourceFiles() const
         }
     };
 
-    TargetOptionsGroup::iterate([this, &check](auto &v, auto i)
+    TargetOptionsGroup::iterate([this, &check, &r](auto &v, auto i)
     {
         if (((int)i & (int)InheritanceScope::Package) == 0)
             return;
         check(v);
+        r |= !v.PrecompiledHeaders.empty();
+
     });
     check(getMergeObject());
     return r;
+}
+
+bool NativeCompiledTarget::hasOwnPrecompiledHeader() const
+{
+    return getMergeObject().PrecompiledHeaders.empty();
 }
 
 void NativeCompiledTarget::createPrecompiledHeader()
@@ -790,53 +843,13 @@ void NativeCompiledTarget::createPrecompiledHeader()
     // disabled with PP
     if (PreprocessStep)
         return;
-
-    auto &files = getMergeObject().PrecompiledHeaders;
-    if (files.empty())
+    if (hasOwnPrecompiledHeader())
         return;
 
-    if (pch.name.empty())
-        pch.name = "sw.pch";
-    if (pch.dir.empty())
-        pch.dir = BinaryDir.parent_path() / "pch";
-
-    String h;
-    for (auto &f : files)
-    {
-        if (f.string()[0] == '<' || f.string()[0] == '\"')
-            h += "#include " + f.string() + "\n";
-        else
-            h += "#include \"" + to_string(normalize_path(f)) + "\"\n";
-    }
-    pch.header = pch.get_base_pch_path() += ".h";
-    {
-        ScopedFileLock lk(pch.header);
-        write_file_if_different(pch.header, h);
-    }
-
-    pch.source = pch.get_base_pch_path() += ".cpp"; // msvc
-    {
-        ScopedFileLock lk(pch.source);
-        write_file_if_different(pch.source, "");
-    }
+    pch.setup(*this, getMergeObject().PrecompiledHeaders);
 
     // pch goes first on force includes list
     getMergeObject().ForceIncludes.insert(getMergeObject().ForceIncludes.begin(), pch.header);
-
-    //
-    if (pch.pch.empty())
-    {
-        if (getCompilerType() == CompilerType::MSVC || getCompilerType() == CompilerType::ClangCl)
-            pch.pch = pch.get_base_pch_path() += ".pch";
-        else if (isClangFamily(getCompilerType()))
-            pch.pch = path(pch.header) += ".pch";
-        else // gcc
-            pch.pch = path(pch.header) += ".gch";
-    }
-    if (pch.obj.empty())
-        pch.obj = pch.get_base_pch_path() += ".obj";
-    if (pch.pdb.empty())
-        pch.pdb = pch.get_base_pch_path() += ".pdb";
 
     //
     getMergeObject() += pch.source;

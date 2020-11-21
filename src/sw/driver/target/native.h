@@ -8,6 +8,37 @@
 namespace sw
 {
 
+struct NativeCompiledTarget;
+
+namespace detail
+{
+
+struct PrecompiledHeader
+{
+    bool use_only = false;
+
+    path header;
+    path source;
+
+    //
+    path name; // base filename
+    String fancy_name;
+    //
+    path dir;
+    path obj; // obj file (msvc)
+    path pdb; // pdb file (msvc)
+    path pch; // file itself
+
+    path get_base_pch_path() const
+    {
+        return dir / name;
+    }
+
+    void setup(const NativeCompiledTarget &, const PathOptionsType &pch_headers);
+};
+
+}
+
 // target without linking?
 //struct SW_DRIVER_CPP_API ObjectTarget : NativeTarget {};
 
@@ -202,6 +233,9 @@ private:
     const PackageSettings &getInterfaceSettings() const override;
 
     void createPrecompiledHeader();
+public:
+    bool hasOwnPrecompiledHeader() const;
+private:
 
     //std::unique_ptr<NativeCompiler> prog_cl_cpp;
     //std::unique_ptr<NativeCompiler> prog_cl_c;

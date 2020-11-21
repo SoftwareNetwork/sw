@@ -15,26 +15,6 @@ namespace detail
 #include "std.inl"
 #undef STD_MACRO
 
-struct PrecompiledHeader
-{
-    path header;
-    path source;
-
-    //
-    path name; // base filename
-    String fancy_name;
-    //
-    path dir;
-    path obj; // obj file (msvc)
-    path pdb; // pdb file (msvc)
-    path pch; // file itself
-
-    path get_base_pch_path() const
-    {
-        return dir / name;
-    }
-};
-
 }
 
 enum class ConfigureFlags

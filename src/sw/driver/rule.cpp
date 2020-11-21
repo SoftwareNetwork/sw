@@ -157,11 +157,6 @@ void NativeCompilerRule::setup(const Target &t)
             c->CPPStandard = nt->CPPVersion;
         // else
         // TODO: ms now has C standard since VS16.8?
-
-        // set pdb explicitly
-        // this is needed when using pch files sometimes
-        c->PDBFilename = nt->BinaryDir.parent_path() / "obj" / "sw.pdb";
-        c->getCommand()->simultaneous_outputs.insert(c->PDBFilename());
     };
 
     auto gnu_setup = [this, nt, &prog](auto *c)
@@ -290,18 +285,61 @@ void NativeCompilerRule::addInputs(const Target &t, RuleFiles &rfs)
 {
     auto &cl = static_cast<NativeCompiler &>(*program);
     auto nt = t.as<NativeCompiledTarget *>();
-    std::optional<path> pch_basename;
+    std::optional<path> provided_pdb;
+    std::optional<path> provided_pch;
+    std::optional<path> provided_pchh;
     RuleFiles rfs_unity;
     TargetFilenames tfns(t);
 
-    // find pch
+    // find pch/pdb
     for (auto &[_,rf] : rfs)
     {
-        if (!exts.contains(rf.getFile().extension().string()))
-            continue;
-        // pch are only c++ feature
-        if (rf.getFile().filename() == "sw.pch.cpp")
-            pch_basename = normalize_path(rf.getFile().parent_path() / rf.getFile().stem());
+        if (rf.getFile().extension() == ".pdb")
+        {
+            if (provided_pdb)
+                throw SW_RUNTIME_ERROR("More than one pdb passed");
+            provided_pdb = rf.getFile();
+        }
+        if (rf.getFile().extension() == ".pch")
+        {
+            if (provided_pch)
+                throw SW_RUNTIME_ERROR("More than one pch passed");
+            provided_pch = rf.getFile();
+        }
+        if (rf.getFile().extension() == ".hpch")
+        {
+            if (provided_pchh)
+                throw SW_RUNTIME_ERROR("More than one pch passed");
+            provided_pchh = rf.getFile();
+        }
+    }
+
+    // more setup
+    auto vs_setup = [this, nt, &provided_pdb, &provided_pch](auto *c)
+    {
+        // set pdb explicitly
+        // this is needed when using pch files sometimes
+        if (provided_pdb)
+            c->PDBFilename = *provided_pdb;
+        else if (!nt->pch.pch.empty())
+            c->PDBFilename = nt->pch.pdb;
+        else
+            c->PDBFilename = nt->BinaryDir.parent_path() / "obj" / "sw.pdb";
+        c->getCommand()->simultaneous_outputs.insert(c->PDBFilename());
+
+        if (provided_pch && !nt->pch.name.empty())
+        {
+            throw SW_RUNTIME_ERROR(nt->getPackage().toString() + "You have two pchs: provided (" +
+                to_printable_string(*provided_pch) + ") and from current target");
+        }
+    };
+    if (auto c = cl.as<VisualStudioCompiler*>())
+    {
+        vs_setup(c);
+    }
+    else if (auto c = cl.as<ClangClCompiler *>())
+    {
+        vs_setup(c);
     }
 
     // unity build
@@ -379,20 +417,20 @@ void NativeCompilerRule::addInputs(const Target &t, RuleFiles &rfs)
         nc.setSourceFile(rf.getFile(), output);
 
         // pch
-        if (rf.getFile().filename() == "sw.pch.cpp")
+        if (rf.getFile() == nt->pch.source)
         {
-            auto setup_vs = [&pch_basename](auto C)
+            auto setup_vs = [nt](auto C)
             {
-                C->CreatePrecompiledHeader = path(*pch_basename) += ".h";
-                C->PrecompiledHeaderFilename = path(*pch_basename) += ".pch";
+                C->CreatePrecompiledHeader = nt->pch.header;
+                C->PrecompiledHeaderFilename = nt->pch.pch;
                 C->PrecompiledHeaderFilename.output_dependency = true;
             };
-            auto setup_gnu = [&pch_basename, &nc, &rfs, &output, nt](auto C, auto ext)
+            auto setup_gnu = [nt, &nc, &rfs, &output](auto C)
             {
                 C->Language = "c++-header";
 
                 // set new input and output
-                nc.setSourceFile(path(*pch_basename) += ".h", path(*pch_basename) += ".h"s += ext);
+                nc.setSourceFile(nt->pch.header, nt->pch.pch);
 
                 // skip .obj output
                 rfs.erase(output);
@@ -414,21 +452,36 @@ void NativeCompilerRule::addInputs(const Target &t, RuleFiles &rfs)
             else if (auto C = c->as<ClangClCompiler *>())
                 setup_vs(C);
             else if (auto C = c->as<ClangCompiler *>())
-                setup_gnu(C, ".pch");
+                setup_gnu(C);
             else if (auto C = c->as<GNUCompiler *>())
-                setup_gnu(C, ".gch");
+                setup_gnu(C);
             else
                 SW_UNIMPLEMENTED;
         }
-        else if (pch_basename)
+        else if (!nt->pch.name.empty() || provided_pch)
         {
-            auto setup_vs = [&pch_basename](auto C)
+            auto setup_vs = [nt, &provided_pch, &provided_pchh](auto C)
             {
-                C->UsePrecompiledHeader = path(*pch_basename) += ".h";
-                C->PrecompiledHeaderFilename = path(*pch_basename) += ".pch";
+                if (provided_pch)
+                {
+                    if (!provided_pchh)
+                        throw SW_RUNTIME_ERROR("hpch was not provided");
+                    auto fn = provided_pchh->parent_path() / provided_pchh->stem();
+                    C->UsePrecompiledHeader = fn;
+                    C->PrecompiledHeaderFilename = *provided_pch;
+                    C->ForcedIncludeFiles().insert(C->ForcedIncludeFiles().begin(), fn);
+                    // must add manually
+                    for (auto &fi : nt->getMergeObject().ForceIncludes)
+                        C->ForcedIncludeFiles().push_back(fi);
+                }
+                else
+                {
+                    C->UsePrecompiledHeader = nt->pch.header;
+                    C->PrecompiledHeaderFilename = nt->pch.pch;
+                }
                 C->PrecompiledHeaderFilename.input_dependency = true;
             };
-            auto setup_gnu = [&pch_basename, &t](auto C, auto ext)
+            auto setup_gnu = [](auto C, auto ext)
             {
                 // we must add this explicitly
                 SW_UNIMPLEMENTED;
