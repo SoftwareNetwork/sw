@@ -315,7 +315,7 @@ void NativeCompilerRule::addInputs(const Target &t, RuleFiles &rfs)
     }
 
     // more setup
-    auto vs_setup = [this, nt, &provided_pdb, &provided_pch](auto *c)
+    auto vs_setup = [this, nt, &provided_pdb, &provided_pch, &rfs](auto *c)
     {
         // set pdb explicitly
         // this is needed when using pch files sometimes
@@ -332,6 +332,9 @@ void NativeCompilerRule::addInputs(const Target &t, RuleFiles &rfs)
             throw SW_RUNTIME_ERROR(nt->getPackage().toString() + "You have two pchs: provided (" +
                 to_printable_string(*provided_pch) + ") and from current target");
         }
+
+        // pass pdb as input file to linker
+        rfs.addFile(c->PDBFilename());
     };
     if (auto c = cl.as<VisualStudioCompiler*>())
     {
@@ -665,11 +668,19 @@ void NativeLinkerRule::addInputs(const Target &t, RuleFiles &rfs)
     auto nt = t.as<NativeCompiledTarget *>();
 
     std::optional<path> def;
+    std::optional<path> provided_pdb;
     FilesOrdered files;
     for (auto &[_,rf] : rfs)
     {
         //if (used_files.contains(rf))
             //continue;
+
+        if (rf.getFile().extension() != ".pdb")
+        {
+            if (provided_pdb)
+                throw SW_RUNTIME_ERROR("More than one .pdb provided");
+            provided_pdb = rf.getFile();
+        }
 
         if (1
             && rf.getFile().extension() != ".obj"
@@ -782,6 +793,8 @@ void NativeLinkerRule::addInputs(const Target &t, RuleFiles &rfs)
     //if (!rfs.emplace(nc.getOutputFile(), nc.getOutputFile()).second)
         //return;
     //used_files.insert(nc.getOutputFile());
+    if (is_linker && provided_pdb)
+        c->getCommand()->addInput(*provided_pdb);
     c->getCommand()->prepare(); // why?
     c->getCommand()->name = //(is_linker ? "[LINK]"s : "[LIB]"s) + " " +
         "[" + t.getPackage().toString() + "]" + nt->getOutputFile().extension().string();
