@@ -32,7 +32,8 @@ DECLARE_STATIC_LOGGER(logger, "build");
     CHECK_STATE(from);                                            \
     scope_exit                                                    \
     {                                                             \
-        swctx.registerOperation(*swctx_old_op);                   \
+        if (swctx_old_op)                                         \
+            swctx.registerOperation(*swctx_old_op);               \
         if (std::uncaught_exceptions() == 0)                      \
             state = to;                                           \
     };                                                            \
