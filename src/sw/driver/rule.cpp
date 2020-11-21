@@ -161,6 +161,7 @@ void NativeCompilerRule::setup(const Target &t)
         // set pdb explicitly
         // this is needed when using pch files sometimes
         c->PDBFilename = nt->BinaryDir.parent_path() / "obj" / "sw.pdb";
+        c->getCommand()->simultaneous_outputs.insert(c->PDBFilename());
     };
 
     auto gnu_setup = [this, nt, &prog](auto *c)
