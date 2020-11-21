@@ -286,6 +286,21 @@ static std::pair<FilesOrdered, UnresolvedPackages> getFileDependencies(SwBuild &
     return getFileDependencies(b, in_config_file, gns);
 }
 
+struct ConfigBuiltinLibraryTarget : StaticLibraryTarget
+{
+    ConfigBuiltinLibraryTarget(TargetBase &parent, const PackageId &id)
+        : StaticLibraryTarget(parent, id)
+    {
+        IsSwConfig = true;
+    }
+
+private:
+    path getBinaryParentDir() const override
+    {
+        return StaticLibraryTarget::getTargetDirShort(getContext().getLocalStorage().storage_dir_tmp / "cfg");
+    }
+};
+
 void addImportLibrary(Build &b)
 {
 #ifdef _WIN32
@@ -300,7 +315,7 @@ void addImportLibrary(Build &b)
         defs += "    "s + s + "\n";
     write_file_if_different(getImportDefinitionsFile(b), defs);
 
-    auto &i = b.addStaticLibrary("implib");
+    auto &i = b.add<ConfigBuiltinLibraryTarget>("implib");
     i.AutoDetectOptions = false;
     i += getImportDefinitionsFile(b);
 #endif
@@ -309,7 +324,7 @@ void addImportLibrary(Build &b)
 void addDelayLoadLibrary(Build &b)
 {
 #ifdef _WIN32
-    auto &lib = b.addStaticLibrary("delay_loader");
+    auto &lib = b.add<ConfigBuiltinLibraryTarget>("delay_loader");
     lib += Definition("IMPORT_LIBRARY=\""s + IMPORT_LIBRARY + "\"");
     auto driver_idir = getDriverIncludeDir(b, lib);
     auto fn = driver_idir / getSwDir() / "misc" / "delay_load_helper.cpp";
