@@ -78,7 +78,7 @@ void RuleSystem::addRuleDependency(const RuleData &d, bool overwrite)
     if (inserted)
         return;
     if (!overwrite)
-        LOG_DEBUG(logger, "Overridding rule '" + d.rule_name);
+        LOG_TRACE(logger, "Overridding rule '" + d.rule_name);
         //throw SW_RUNTIME_ERROR("Trying to set rule '" + d.rule_name + "' for the second time");
     i->second = d;
 }
