@@ -113,6 +113,11 @@ public:
     // C I1 O1 I2 O2
     // then split that command!
     Files outputs;
+    // programs may use (and write to) same file during execution, e.g. pdb files
+    // then these files are inputs to other programs, so those programs must wait for all
+    // commands that write to such files
+    Files simultaneous_outputs;
+    //
     Files implicit_inputs;
 
     // additional create dirs

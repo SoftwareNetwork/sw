@@ -432,6 +432,7 @@ void ExecutionPlan::prepare(USet &cmds)
     // so we explicitly call this once more
     // do not remove!
     std::unordered_map<path, CommandNode *> generators;
+    std::unordered_map<path, std::unordered_set<CommandNode *>> simultaneous_generators;
     generators.reserve(cmds.size());
     for (auto &c : cmds)
     {
@@ -443,6 +444,8 @@ void ExecutionPlan::prepare(USet &cmds)
             if (!generators.emplace(o, c1).second)
                 throw SW_RUNTIME_ERROR("Output file is generated with more than one command: " + to_printable_string(o));
         }
+        for (auto &o : c1->simultaneous_outputs)
+            simultaneous_generators[o].insert(c1);
     }
     for (auto &c : cmds)
     {
@@ -451,9 +454,13 @@ void ExecutionPlan::prepare(USet &cmds)
             continue;
         for (auto &i : c1->inputs)
         {
-            auto it = generators.find(i);
-            if (it != generators.end())
+            if (auto it = generators.find(i); it != generators.end())
                 c1->addDependency(*it->second);
+            if (auto it = simultaneous_generators.find(i); it != simultaneous_generators.end())
+            {
+                for (auto &&c : it->second)
+                    c1->addDependency(*c);
+            }
         }
     }
 }
