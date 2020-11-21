@@ -354,22 +354,44 @@ void StartupData::setup()
     }
 }
 
+static bool shouldAddSignalHandlers()
+{
+#ifdef _WIN32
+    HWND consoleWnd = GetConsoleWindow();
+    if (!consoleWnd)
+        return true; // no console? stop gracefully
+    DWORD dwConsoleProcessId;
+    GetWindowThreadProcessId(consoleWnd, &dwConsoleProcessId);
+    // depends if we own console or not
+    return GetCurrentProcessId() == dwConsoleProcessId;
+#else
+    // for other platforms check 'isatty(STDOUT_FILENO)'?
+    return true; // for now
+#endif
+}
+
 void StartupData::sw_main()
 {
     SwClientContext swctx(getOptions());
 
     // graceful exit handler
     boost::asio::io_context io_context;
-    boost::asio::signal_set signals(io_context, SIGINT, SIGTERM);
-    signals.async_wait([&swctx](
-        const std::error_code &error,
-        int signal_number)
+    std::unique_ptr<boost::asio::signal_set> signals;
+    if (shouldAddSignalHandlers())
     {
-        if (error)
-            return;
-        if (swctx.hasContext())
-            swctx.getContext().stop();
-    });
+        LOG_INFO(logger, "Registering signal handler...");
+        signals = std::make_unique<boost::asio::signal_set>(io_context, SIGINT, SIGTERM);
+        signals->async_wait([&swctx](
+            const std::error_code &error,
+            int signal_number)
+        {
+            if (error)
+                return;
+            LOG_INFO(logger, "Stopping...");
+            if (swctx.hasContext())
+                swctx.getContext().stop();
+        });
+    }
     std::thread t([&io_context] { try { io_context.run(); } catch (...) {} });
     SCOPE_EXIT
     {
