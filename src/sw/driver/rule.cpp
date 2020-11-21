@@ -290,10 +290,13 @@ void NativeCompilerRule::addInputs(const Target &t, RuleFiles &rfs)
     std::optional<path> provided_pchh;
     RuleFiles rfs_unity;
     TargetFilenames tfns(t);
+    bool has_files = false;
 
     // find pch/pdb
     for (auto &[_,rf] : rfs)
     {
+        has_files |= exts.contains(rf.getFile().extension().string());
+
         if (rf.getFile().extension() == ".pdb")
         {
             if (provided_pdb)
@@ -315,7 +318,7 @@ void NativeCompilerRule::addInputs(const Target &t, RuleFiles &rfs)
     }
 
     // more setup
-    auto vs_setup = [this, nt, &provided_pdb, &provided_pch, &rfs](auto *c)
+    auto vs_setup = [this, nt, &provided_pdb, &provided_pch, &rfs, &has_files](auto *c)
     {
         // set pdb explicitly
         // this is needed when using pch files sometimes
@@ -334,7 +337,8 @@ void NativeCompilerRule::addInputs(const Target &t, RuleFiles &rfs)
         }
 
         // pass pdb as input file to linker
-        rfs.addFile(c->PDBFilename());
+        if (has_files)
+            rfs.addFile(c->PDBFilename());
     };
     if (auto c = cl.as<VisualStudioCompiler*>())
     {
@@ -675,10 +679,10 @@ void NativeLinkerRule::addInputs(const Target &t, RuleFiles &rfs)
         //if (used_files.contains(rf))
             //continue;
 
-        if (rf.getFile().extension() != ".pdb")
+        if (rf.getFile().extension() == ".pdb")
         {
             if (provided_pdb)
-                throw SW_RUNTIME_ERROR("More than one .pdb provided");
+                throw SW_RUNTIME_ERROR("More than one .pdb provided: " + to_printable_string(*provided_pdb) + ", " + to_printable_string(rf.getFile()));
             provided_pdb = rf.getFile();
         }
 
