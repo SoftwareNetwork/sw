@@ -80,7 +80,7 @@ String UnresolvedPackage::toString(const String &delim) const
 
 bool UnresolvedPackage::canBe(const PackageId &id) const
 {
-    return ppath == id.getPath() && range.hasVersion(id.getVersion());
+    return ppath == id.getPath() && range.contains(id.getVersion());
 }
 
 PackageId::PackageId(const String &target)

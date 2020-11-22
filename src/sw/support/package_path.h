@@ -176,8 +176,8 @@ protected:
     void insert(const_iterator w, const_iterator b, const_iterator e) { data.insert(w, b, e); }
     void assign(const_iterator b, const_iterator e) { data.assign(b, e); }
     void push_back(const value_type &t) { data.push_back(t); }
-    value_type &operator[](int i) { return data[i]; }
-    const value_type &operator[](int i) const { return data[i]; }
+    value_type &operator[](size_t i) { return data[i]; }
+    const value_type &operator[](size_t i) const { return data[i]; }
 
 private:
     std::vector<PathElement> data;
@@ -256,8 +256,8 @@ struct SW_SUPPORT_API PackagePath : SecureSplitablePath<PackagePath>
 #undef PACKAGE_PATH
 
 private:
-    value_type &operator[](int i) { return Base::operator[](i); }
-    const value_type &operator[](int i) const { return Base::operator[](i); }
+    value_type &operator[](size_t i) { return Base::operator[](i); }
+    const value_type &operator[](size_t i) const { return Base::operator[](i); }
 };
 
 #if defined(_WIN32)// || defined(__APPLE__)

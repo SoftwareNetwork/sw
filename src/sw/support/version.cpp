@@ -18,7 +18,7 @@ std::optional<Version> VersionRange::getMinSatisfyingVersion(const VersionSet &s
     {
         for (auto &v : s.releases())
         {
-            if (hasVersion(v))
+            if (contains(v))
                 return v;
         }
     }
@@ -34,7 +34,7 @@ std::optional<Version> VersionRange::getMaxSatisfyingVersion(const VersionSet &s
     {
         for (auto i = s.rbegin_releases(); i != s.rend_releases(); ++i)
         {
-            if (hasVersion(*i))
+            if (contains(*i))
                 return *i;
         }
     }
