@@ -23,6 +23,8 @@ struct BuildInput;
 struct IRule;
 struct ITarget;
 struct SwBuild;
+struct ResolveRequest;
+struct CachingResolver;
 
 struct SW_CORE_API AllowedPackages
 {
@@ -153,6 +155,13 @@ struct SW_CORE_API ITarget : ICastable
     // getExecutableRule()?
     // by default returns nullptr
     //virtual std::unique_ptr<IRule> getRule() const;
+
+    CachingResolver &getResolver() const; // to pass to children
+    void setResolver(CachingResolver &);
+    bool resolve(ResolveRequest &) const;
+
+private:
+    CachingResolver *resolver = nullptr;
 };
 
 // shared_ptr for vector storage

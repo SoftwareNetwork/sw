@@ -4,7 +4,8 @@
 #include "target.h"
 
 #include "input.h"
-//#include "rule.h"
+
+#include <sw/manager/storage.h>
 
 namespace sw
 {
@@ -13,6 +14,22 @@ IDependency::~IDependency() = default;
 ITarget::~ITarget() {}
 TargetEntryPoint::~TargetEntryPoint() = default;
 TargetData::~TargetData() = default;
+
+CachingResolver &ITarget::getResolver() const
+{
+    if (!resolver)
+        throw SW_RUNTIME_ERROR("No resolver set");
+    return *resolver;
+}
+
+void ITarget::setResolver(CachingResolver &r)
+{
+    resolver = &r;
+}
+bool ITarget::resolve(ResolveRequest &rr) const
+{
+    return getResolver().resolve(rr);
+}
 
 AllowedPackages::AllowedPackages(const UnresolvedPackages &in)
 {
