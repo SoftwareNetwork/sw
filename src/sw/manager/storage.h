@@ -200,6 +200,9 @@ struct SW_MANAGER_API CachedStorage : IStorage
 {
     using StoredPackages = ResolveResult;
 
+    CachedStorage() = default;
+    CachedStorage(const CachedStorage &) = delete;
+    CachedStorage &operator=(const CachedStorage &) = delete;
     virtual ~CachedStorage() = default;
 
     void storePackages(const StoredPackages &);
