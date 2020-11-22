@@ -26,7 +26,7 @@ std::map<sw::PackagePath, sw::VersionSet> getMatchingPackages(const sw::StorageW
         auto v1 = db.getVersionsForPackage(ppath);
         for (auto &v : v1)
         {
-            if (!has_version || u.getRange().hasVersion(v))
+            if (!has_version || u.getRange().contains(v))
                 r[ppath].insert(v);
         }
     }

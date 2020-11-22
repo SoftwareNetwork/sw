@@ -134,7 +134,7 @@ static void cleanup(CleanMask level_mask, const sw::SwContext &swctx)
             fn.c_str(),
             nullptr,
         };
-        execve(cmd, args, 0);
+        _execve(cmd, args, 0);
 #else
         const char *cmd = "rm";
         const char *args[] =
