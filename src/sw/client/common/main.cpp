@@ -379,7 +379,7 @@ void StartupData::sw_main()
     std::unique_ptr<boost::asio::signal_set> signals;
     if (shouldAddSignalHandlers())
     {
-        LOG_INFO(logger, "Registering signal handler...");
+        LOG_TRACE(logger, "Registering signal handler...");
         signals = std::make_unique<boost::asio::signal_set>(io_context, SIGINT, SIGTERM);
         signals->async_wait([&swctx](
             const std::error_code &error,
