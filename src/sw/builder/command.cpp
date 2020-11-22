@@ -160,7 +160,7 @@ static Files process_deps_gnu(builder::Command &c, const path &deps_file)
                 boost::replace_all(s, "\\ ", " ");
                 if (pystring::endswith(s, "\\\n")) // protobuf does not put space after filename
                     s.resize(s.size() - 2);
-                files.push_back(fs::u8path(s));
+                files.push_back((const char8_t *)s.c_str());
             }
             state = EMPTY;
             break;

@@ -29,7 +29,7 @@ PackageData::PackageData(nlohmann::json j)
     if (!source)
         throw SW_RUNTIME_ERROR("bad source");
     for (auto &[f,t] : j["files"].items())
-        files_map[fs::u8path(f)] = fs::u8path(t.get<std::string>());
+        files_map[(const char8_t *)f.c_str()] = (const char8_t *)t.get<std::string>().c_str();
     for (auto &v : j["dependencies"])
         dependencies.emplace(v.get<std::string>());
     for (auto &v : j["signatures"])

@@ -150,7 +150,7 @@ void PackageSetting::setPathValue(const path &root, const path &value)
 
 path PackageSetting::getAbsolutePathValue() const
 {
-    return fs::u8path(getValue());
+    return (const char8_t *)getValue().c_str();
 }
 
 void PackageSetting::setAbsolutePathValue(const path &value)

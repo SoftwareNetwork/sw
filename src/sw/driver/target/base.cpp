@@ -360,7 +360,7 @@ path Target::getLocalOutputBinariesDirectory() const
 {
     path d;
     if (ts["output_dir"])
-        d = fs::u8path(ts["output_dir"].getValue());
+        d = (const char8_t *)ts["output_dir"].getValue().c_str();
     else
         d = getMainBuild().getBuildDirectory() / "out" / getConfig();
     try
