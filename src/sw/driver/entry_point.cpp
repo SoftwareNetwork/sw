@@ -327,6 +327,7 @@ void addDelayLoadLibrary(Build &b)
 #ifdef _WIN32
     auto &lib = b.add<ConfigBuiltinLibraryTarget>("delay_loader");
     lib.command_storage = &getDriverCommandStorage(b);
+    lib.AutoDetectOptions = false;
     lib += Definition("IMPORT_LIBRARY=\""s + IMPORT_LIBRARY + "\"");
     auto driver_idir = getDriverIncludeDir(b, lib);
     auto fn = driver_idir / getSwDir() / "misc" / "delay_load_helper.cpp";
