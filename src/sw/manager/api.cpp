@@ -62,7 +62,7 @@ std::unique_ptr<grpc::ClientContext> ProtobufApi::getContextWithAuth() const
     return ctx;
 }
 
-ResolveResult ProtobufApi::resolvePackages(
+/*ResolveResult ProtobufApi::resolvePackages(
     const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs,
     std::unordered_map<PackageId, PackageData> &data, const IStorage &s) const
 {
@@ -101,7 +101,7 @@ ResolveResult ProtobufApi::resolvePackages(
         m[{pair.unresolved_package().path(), pair.unresolved_package().range()}] = std::make_unique<Package>(s, p);
     }
     return m;
-}
+}*/
 
 void ProtobufApi::addVersion(const PackagePath &prefix, const PackageDescriptionMap &pkgs, const SpecificationFiles &spec_files) const
 {

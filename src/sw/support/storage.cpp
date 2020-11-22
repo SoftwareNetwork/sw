@@ -52,39 +52,39 @@ void ResolveRequest::setPackage(PackagePtr in)
         r = std::move(in);
 }
 
-size_t ResolveResultWithDependencies::getHash(const UnresolvedPackage &u)
+bool Resolver::resolve(ResolveRequest &rr) const
 {
-    auto hi = h.find(u);
-    if (hi != h.end())
-        return hi->second;
-    auto mi = m.find(u);
-    if (mi == m.end())
-        return h[u] = 0;
-    size_t hash = 0;
-    for (auto &d : mi->second->getData().dependencies)
+    // select the best candidate from all storages
+    for (auto &&s : storages)
     {
-        if (u != d)
-            hash_combine(hash, getHash(d));
+        if (!s->resolve(rr))
+            continue;
+
+        if (0
+            // when we found a branch, we stop, because following storages cannot give us more preferable branch
+            || rr.u.getRange().isBranch()
+            )
+        {
+            break;
+        }
     }
-    return hash;
+    return rr.isResolved();
 }
 
-ResolveResultWithDependencies IStorage::resolveWithDependencies(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
+void Resolver::addStorage(IStorage &s)
 {
-    SW_UNIMPLEMENTED;
-    /*auto r = resolve(pkgs, unresolved_pkgs);
-    while (1)
-    {
-        std::unordered_map<UnresolvedPackage, Package*> r2;
-        for (auto &[u, p] : r)
-            r2.emplace(u, p.get());
-        auto sz = r.size();
-        for (auto &[u, p] : r2)
-            r.merge(resolve(p->getData().dependencies, unresolved_pkgs));
-        if (r.size() == sz)
-            break;
-    }
-    return ResolveResultWithDependencies{ std::move(r) };*/
+    storages.push_back(&s);
+}
+
+CachingResolver::CachingResolver(IResolvableStorage &cache)
+    : cache(cache)
+{
+}
+
+bool CachingResolver::resolve(ResolveRequest &rr) const
+{
+    //SW_UNIMPLEMENTED; // store in cache
+    return cache.resolve(rr) || Resolver::resolve(rr);
 }
 
 int getPackagesDatabaseSchemaVersion()

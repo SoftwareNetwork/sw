@@ -19,6 +19,7 @@ struct CachedStorage;
 struct LocalStorage;
 struct ResolveResultWithDependencies;
 struct ResolveRequest;
+struct CachingResolver;
 
 // sw_context_t?
 /*struct SW_MANAGER_API ISwContext
@@ -39,28 +40,22 @@ struct SW_MANAGER_API SwManagerContext// : ISwContext
 
     //
     void install(ResolveRequest &) const;
-    //std::unordered_map<UnresolvedPackage, LocalPackage> install(const UnresolvedPackages &, bool use_cache = true) const;
     // what about ", bool use_cache = true"?
     LocalPackage install(const Package &) const;
-
-    //ResolveResultWithDependencies resolve(const UnresolvedPackages &, bool use_cache = true) const;
-    //LocalPackage resolve(const UnresolvedPackage &) const;
-    //ResolveResultWithDependencies resolve(const UnresolvedPackages &, const std::vector<IStorage*> &) const;
     bool resolve(ResolveRequest &, bool use_cache) const;
 
     // lock file related
     void setCachedPackages(const std::unordered_map<UnresolvedPackage, PackageId> &) const;
 
-    void addStorage(std::unique_ptr<IStorage>);
-
 private:
-    CachedStorage *cache_storage = nullptr;
-    LocalStorage *local_storage = nullptr;
-    int first_remote_storage_id;
-    std::vector<std::unique_ptr<IStorage>> storages;
+    std::unique_ptr<CachedStorage> cache_storage;
+    std::unique_ptr<LocalStorage> local_storage;
+    std::vector<std::unique_ptr<IStorage>> remote_storages;
+    std::unique_ptr<CachingResolver> cr;
     mutable std::mutex resolve_mutex;
 
     CachedStorage &getCachedStorage() const;
+    void addStorage(std::unique_ptr<IStorage>);
 };
 
 template <typename F>

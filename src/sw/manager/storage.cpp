@@ -180,14 +180,6 @@ PackagesDatabase &StorageWithPackagesDatabase::getPackagesDatabase() const
     return *pkgdb;
 }
 
-/*ResolveResult StorageWithPackagesDatabase::resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
-{
-    ResolveResult r;
-    for (auto &[ud, pkg] : pkgdb->resolve(pkgs, unresolved_pkgs))
-        r.emplace(ud, std::make_unique<Package>(*this, pkg));
-    return r;
-}*/
-
 bool StorageWithPackagesDatabase::resolve(ResolveRequest &rr) const
 {
     auto pkg = pkgdb->resolve(rr);
@@ -408,11 +400,6 @@ const OverriddenPackagesStorage &LocalStorage::getOverriddenPackagesStorage() co
     return ovs;
 }
 
-/*ResolveResult LocalStorage::resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
-{
-    return ovs.resolve(pkgs, unresolved_pkgs);
-}*/
-
 bool LocalStorage::resolve(ResolveRequest &rr) const
 {
     return ovs.resolve(rr);
@@ -471,37 +458,16 @@ bool OverriddenPackagesStorage::isPackageInstalled(const Package &p) const
     return getPackagesDatabase().getInstalledPackageId(p) != 0;
 }
 
-/*ResolveResult CachedStorage::resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
-{
-    ResolveResult r;
-    for (auto &u : pkgs)
-    {
-        auto i = resolved_packages.find(u);
-        if (i == resolved_packages.end())
-        {
-            unresolved_pkgs.insert(u);
-            continue;
-        }
-        r.emplace(u, i->second->clone());
-    }
-    return r;
-}*/
-
-void CachedStorage::storePackages(const StoredPackages &pkgs)
-{
-    for (auto &[u,p] : pkgs)
-        resolved_packages.emplace(u, p->clone());
-}
-
 void CachedStorage::storePackages(const ResolveRequest &rr)
 {
+    //SW_UNIMPLEMENTED; // must be a mutex here?
     SW_CHECK(rr.isResolved());
-    resolved_packages.emplace(rr.u, rr.getPackage().clone());
+    resolved_packages.emplace(Key{ rr.u, rr.settings }, rr.getPackage().clone());
 }
 
 bool CachedStorage::resolve(ResolveRequest &rr) const
 {
-    auto i = resolved_packages.find(rr.u);
+    auto i = resolved_packages.find({ rr.u, rr.settings });
     if (i == resolved_packages.end())
         return false;
     rr.setPackage(i->second->clone());

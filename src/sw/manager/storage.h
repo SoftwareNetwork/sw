@@ -5,6 +5,7 @@
 
 #include "package.h"
 
+#include <sw/support/settings.h>
 #include <sw/support/storage.h>
 
 namespace sw
@@ -196,23 +197,21 @@ private:
 // Now SwBuild is able to disable SwContext caching for its purposes, and others can enable it.
 //
 // We also can reset() our cache when needed.
-struct SW_MANAGER_API CachedStorage : IStorage
+struct SW_MANAGER_API CachedStorage : IResolvableStorage
 {
-    using StoredPackages = ResolveResult;
+    //using StoredPackages = ResolveResult;
+    using Key = std::pair<UnresolvedPackage, PackageSettings>;
+    using Value = PackagePtr;
+    using StoredPackages = std::map<Key, PackagePtr>;
 
     CachedStorage() = default;
     CachedStorage(const CachedStorage &) = delete;
     CachedStorage &operator=(const CachedStorage &) = delete;
     virtual ~CachedStorage() = default;
 
-    void storePackages(const StoredPackages &);
     // accepts only resolved packages
     void storePackages(const ResolveRequest &);
-    //ResolveResult resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const override;
     bool resolve(ResolveRequest &) const override;
-
-    const StorageSchema &getSchema() const override { SW_UNREACHABLE; }
-    PackageDataPtr loadData(const PackageId &) const override { SW_UNREACHABLE; }
 
     void clear();
     void reset() { clear(); }

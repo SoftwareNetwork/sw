@@ -71,57 +71,13 @@ struct SW_SUPPORT_API ResolveRequest
     bool operator==(const ResolveRequest &rhs) const { return std::tie(u, settings) == std::tie(rhs.u, rhs.settings); }
 };
 
-struct SW_SUPPORT_API ResolveResultWithDependencies
+struct SW_SUPPORT_API IResolvableStorage
 {
-    ResolveResult m;
-    std::unordered_map<UnresolvedPackage, size_t> h;
-
-    ResolveResultWithDependencies() = default;
-    ResolveResultWithDependencies(ResolveResult &&in_m) { m = std::move(in_m); }
-    ResolveResultWithDependencies(const ResolveResultWithDependencies &) = delete;
-    ResolveResultWithDependencies &operator=(const ResolveResultWithDependencies &) = delete;
-    ResolveResultWithDependencies(ResolveResultWithDependencies &&) = default;
-    ResolveResultWithDependencies &operator=(ResolveResultWithDependencies &&) = default;
-
-    bool empty() const { return m.empty(); }
-
-    auto begin() { return m.begin(); }
-    auto end() { return m.end(); }
-
-    auto begin() const { return m.begin(); }
-    auto end() const { return m.end(); }
-
-    auto find(const UnresolvedPackage &u) { return m.find(u); }
-    auto find(const UnresolvedPackage &u) const { return m.find(u); }
-
-    auto &operator[](const UnresolvedPackage &u) { return m[u]; }
-
-    void merge(ResolveResultWithDependencies &m2)
-    {
-        m.merge(m2.m);
-        h.merge(m2.h);
-    }
-
-    Package &get(const UnresolvedPackage &u)
-    {
-        auto i = find(u);
-        if (i == end())
-            throw SW_RUNTIME_ERROR("No such unresolved package: " + u.toString());
-        return *i->second;
-    }
-
-    const Package &get(const UnresolvedPackage &u) const
-    {
-        auto i = find(u);
-        if (i == end())
-            throw SW_RUNTIME_ERROR("No such unresolved package: " + u.toString());
-        return *i->second;
-    }
-
-    size_t getHash(const UnresolvedPackage &u);
+    /// modern resolve call
+    virtual bool resolve(ResolveRequest &) const = 0;
 };
 
-struct SW_SUPPORT_API IStorage
+struct SW_SUPPORT_API IStorage : IResolvableStorage
 {
     virtual ~IStorage() = default;
 
@@ -131,16 +87,34 @@ struct SW_SUPPORT_API IStorage
     /// resolve packages from this storage
     //virtual ResolveResult resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const = 0;
 
-    /// modern resolve call
-    virtual bool resolve(ResolveRequest &) const = 0;
-
     /// load package data from this storage
     virtual PackageDataPtr loadData(const PackageId &) const = 0;
 
     // non virtual methods
 
     /// resolve packages from this storage with their dependencies
-    ResolveResultWithDependencies resolveWithDependencies(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const;
+    //ResolveResultWithDependencies resolveWithDependencies(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const;
+};
+
+struct SW_SUPPORT_API Resolver
+{
+    virtual ~Resolver() = default;
+
+    virtual bool resolve(ResolveRequest &) const;
+    void addStorage(IStorage &);
+
+private:
+    std::vector<IStorage *> storages;
+};
+
+struct SW_SUPPORT_API CachingResolver : Resolver
+{
+    CachingResolver(IResolvableStorage &cache);
+
+    bool resolve(ResolveRequest &) const override;
+
+private:
+    IResolvableStorage &cache;
 };
 
 SW_SUPPORT_API

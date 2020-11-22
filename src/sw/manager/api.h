@@ -17,10 +17,10 @@ struct Api
 {
     virtual ~Api() = 0;
 
-    virtual ResolveResult resolvePackages(
+    /*virtual ResolveResult resolvePackages(
         const UnresolvedPackages &pkgs,
         UnresolvedPackages &unresolved_pkgs,
-        std::unordered_map<PackageId, PackageData> &data, const IStorage &) const = 0;
+        std::unordered_map<PackageId, PackageData> &data, const IStorage &) const = 0;*/
     virtual void addVersion(const PackagePath &prefix, const PackageDescriptionMap &pkgs, const SpecificationFiles &) const = 0;
 };
 
