@@ -21,8 +21,6 @@
 #include "command_storage.h"
 #include "file_storage.h"
 
-#include <sw/manager/storage.h>
-
 #include <boost/thread/lock_types.hpp>
 #include <boost/thread/shared_mutex.hpp>
 #include <primitives/executor.h>

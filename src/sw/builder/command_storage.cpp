@@ -21,8 +21,6 @@
 #include "file_storage.h"
 #include "sw_context.h"
 
-#include <sw/manager/storage.h>
-
 #include <boost/thread/lock_types.hpp>
 #include <primitives/emitter.h>
 #include <primitives/executor.h>
