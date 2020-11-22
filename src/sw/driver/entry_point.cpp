@@ -260,7 +260,7 @@ getFileDependencies(SwBuild &b, const path &p, std::set<size_t> &gns)
             if (!gns.insert(gn).second)
                 throw SW_RUNTIME_ERROR("#pragma sw header: trying to add same header twice, last one: " + upkg.toString());
             auto h = getPackageHeader(pkg, upkg);
-            auto [headers2,udeps2] = getFileDependencies(b, h, gns);
+            auto [headers2, udeps2] = getFileDependencies(b, h, gns);
             headers.insert(headers.end(), headers2.begin(), headers2.end());
             udeps.insert(udeps2.begin(), udeps2.end());
             headers.push_back(h);
@@ -273,7 +273,11 @@ getFileDependencies(SwBuild &b, const path &p, std::set<size_t> &gns)
             udeps.insert(udeps2.begin(), udeps2.end());
         }
         else
+        {
+            // to be reconsidered
+            SW_UNIMPLEMENTED;
             udeps.insert(extractFromString(m1));
+        }
         f = m.suffix().str();
     }
 
