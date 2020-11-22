@@ -293,6 +293,9 @@ void build(Solution &s)
 
         generate_cl("pub.egorpugin.primitives.tools.cl_generator"_dep, client_common,
             "src/sw/client/common/cl.yml", "llvm");
+
+        if (client_common.getCompilerType() == CompilerType::MSVC)
+            client_common.Protected += "_CRT_NONSTDC_NO_WARNINGS"_def;
     }
 
     // client

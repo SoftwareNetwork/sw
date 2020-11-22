@@ -20,10 +20,12 @@ DEFINE_SERVICE_METHOD(DistributedBuildService, ExecuteCommand, ::sw::api::build:
 {
     // fan mode: send to workers in round robin mode
 
+    SW_UNIMPLEMENTED;
+
     Command c;
-    c.in.file = fs::u8path(request->in().file());
-    c.in.file = fs::u8path(request->in().file());
-    c.in.file = fs::u8path(request->in().file());
+    //c.in.file = fs::u8path(request->in().file());
+    //c.in.file = fs::u8path(request->in().file());
+    //c.in.file = fs::u8path(request->in().file());
 
     c.execute();
 

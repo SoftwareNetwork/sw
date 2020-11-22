@@ -49,7 +49,7 @@ AllowedPackages::AllowedPackages(const PackageIdSet &in)
 bool AllowedPackages::contains(const PackageId &p) const
 {
     auto i = pkgs.find(p.getPath());
-    return (i != pkgs.end() && i->second.hasVersion(p.getVersion()))
+    return (i != pkgs.end() && i->second.contains(p.getVersion()))
         || branches.contains(p);
         ;
 }
