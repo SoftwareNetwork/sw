@@ -196,7 +196,7 @@ private:
 // Now SwBuild is able to disable SwContext caching for its purposes, and others can enable it.
 //
 // We also can reset() our cache when needed.
-struct CachedStorage : IStorage
+struct SW_MANAGER_API CachedStorage : IStorage
 {
     using StoredPackages = ResolveResult;
 
