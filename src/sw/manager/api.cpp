@@ -10,6 +10,7 @@
 #include <sw/protocol/grpc_helpers.h>
 #include <sw/support/exceptions.h>
 #include <sw/support/package_path.h>
+#include <sw/support/storage.h>
 
 #include <nlohmann/json.hpp>
 #include <primitives/templates.h>
@@ -62,7 +63,45 @@ std::unique_ptr<grpc::ClientContext> ProtobufApi::getContextWithAuth() const
     return ctx;
 }
 
-/*ResolveResult ProtobufApi::resolvePackages(
+bool ProtobufApi::resolve(ResolveRequest &rr,
+    std::unordered_map<PackageId, PackageData> &data, const IStorage &s) const
+{
+    api::UnresolvedPackages request;
+    auto pb_pkg = request.mutable_unresolved_packages()->Add();
+    pb_pkg->set_path(rr.u.getPath());
+    pb_pkg->set_range(rr.u.getRange().toString());
+
+    auto context = getContext();
+    GRPC_CALL_THROWS(api_, ResolvePackages, api::ResolvedPackages);
+
+    // process result
+
+    // read resolved
+    for (auto &pair : response.resolved_packages())
+    {
+        auto &pkg = pair.resolved_package();
+
+        PackageId p(pkg.package().path(), pkg.package().version());
+
+        PackageData d;
+        d.flags = pkg.flags();
+        d.hash = pkg.hash();
+        d.prefix = pkg.prefix();
+        for (auto &tree_dep : pkg.dependencies().unresolved_packages())
+            d.dependencies.emplace(tree_dep.path(), tree_dep.range());
+        data[p] = d;
+
+        UnresolvedPackage u{pair.unresolved_package().path(), pair.unresolved_package().range()};
+        if (rr.u == u)
+        {
+            rr.setPackage(std::make_unique<Package>(s, p));
+            return true;
+        }
+    }
+    return false;
+}
+
+/*Api::ResolveResult ProtobufApi::resolvePackages(
     const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs,
     std::unordered_map<PackageId, PackageData> &data, const IStorage &s) const
 {

@@ -12,11 +12,17 @@ namespace sw
 {
 
 struct IStorage;
+struct ResolveRequest;
 
 struct Api
 {
+    //using ResolveResult = std::unordered_map<UnresolvedPackage, PackagePtr>;
+
     virtual ~Api() = 0;
 
+    virtual bool resolve(
+        ResolveRequest &rr,
+        std::unordered_map<PackageId, PackageData> &data, const IStorage &) const = 0;
     /*virtual ResolveResult resolvePackages(
         const UnresolvedPackages &pkgs,
         UnresolvedPackages &unresolved_pkgs,

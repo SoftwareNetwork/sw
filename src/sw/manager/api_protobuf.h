@@ -18,6 +18,9 @@ struct ProtobufApi : Api
 {
     ProtobufApi(const Remote &);
 
+    bool resolve(
+        ResolveRequest &rr,
+        std::unordered_map<PackageId, PackageData> &data, const IStorage &) const override;
     /*ResolveResult resolvePackages(
         const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs,
         std::unordered_map<PackageId, PackageData> &data, const IStorage &) const override;*/

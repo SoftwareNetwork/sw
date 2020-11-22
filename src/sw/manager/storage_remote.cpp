@@ -392,17 +392,15 @@ struct RemoteFileWithHashVerification : vfs::FileWithHashVerification
 
         if (auto remote_storage = dynamic_cast<const RemoteStorageWithFallbackToRemoteResolving *>(&p.getStorage()))
         {
-            SW_UNIMPLEMENTED;
-            /*UnresolvedPackage u = p;
-            UnresolvedPackages upkgs;
-            auto m = remote_storage->resolveFromRemote({ u }, upkgs);
-            if (upkgs.empty())
+            ResolveRequest rr;
+            rr.u = p;
+            if (remote_storage->resolveFromRemote(rr))
             {
-                if (copy(fn, m.find(u)->second->getData().getHash(StorageFileType::SourceArchive)))
+                if (copy(fn, rr.getPackage().getData().getHash(StorageFileType::SourceArchive)))
                 {
                     return true;
                 }
-            }*/
+            }
         }
 
         return false;
@@ -511,10 +509,10 @@ bool RemoteStorageWithFallbackToRemoteResolving::resolve(ResolveRequest &rr) con
     // remote resolving is disabled for now
 }
 
-/*ResolveResult RemoteStorageWithFallbackToRemoteResolving::resolveFromRemote(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const
+bool RemoteStorageWithFallbackToRemoteResolving::resolveFromRemote(ResolveRequest &rr) const
 {
-    return getRemote().getApi()->resolvePackages(pkgs, unresolved_pkgs, data, *this);
-}*/
+    return getRemote().getApi()->resolve(rr, data, *this);
+}
 
 PackageDataPtr RemoteStorageWithFallbackToRemoteResolving::loadData(const PackageId &pkg) const
 {
