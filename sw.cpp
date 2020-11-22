@@ -28,6 +28,7 @@ void build(Solution &s)
             "pub.egorpugin.primitives.executor"_dep,
             "pub.egorpugin.primitives.symbol"_dep,
             "org.sw.demo.boost.property_tree"_dep,
+            "org.sw.demo.boost.serialization"_dep,
             "org.sw.demo.boost.stacktrace"_dep;
         //cmddep->getSettings()["export-if-static"] = "true";
         //cmddep->getSettings()["export-if-static"].setRequired();
@@ -119,7 +120,6 @@ void build(Solution &s)
         builder.Public += manager,
             "org.sw.demo.preshing.junction-master"_dep,
             "org.sw.demo.boost.graph"_dep,
-            "org.sw.demo.boost.serialization"_dep,
             "org.sw.demo.microsoft.gsl"_dep,
             "pub.egorpugin.primitives.emitter"_dep;
         //if (!s.Variables["SW_SELF_BUILD"])
