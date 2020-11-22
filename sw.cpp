@@ -54,6 +54,8 @@ void build(Solution &s)
             support.Protected.CompileOptions.push_back("-Wno-deprecated-declarations"); // maybe use STL define instead?
             support.Protected.CompileOptions.push_back("-Wno-assume");
         }
+        if (support.getCompilerType() == CompilerType::MSVC)
+            support.Protected.CompileOptions.push_back("-wd4275");
     }
 
     auto &protos = p.addTarget<StaticLibraryTarget>("protos");
@@ -66,6 +68,8 @@ void build(Solution &s)
         d.addIncludeDirectory(protos.SourceDir / "src");
         for (auto &[p, _] : protos["src/sw/protocol/.*\\.proto"_rr])
             gen_grpc_cpp("org.sw.demo.google.protobuf"_dep, "org.sw.demo.google.grpc.cpp.plugin"_dep, protos, p, d);
+        if (protos.getCompilerType() == CompilerType::MSVC)
+            protos.Protected += "_SILENCE_CXX20_IS_POD_DEPRECATION_WARNING"_def;
     }
 
     auto &manager = p.addTarget<LibraryTarget>("manager");
@@ -315,9 +319,6 @@ void build(Solution &s)
             //client.LinkOptions.push_back("-Wl,-export-dynamic");
             client.LinkOptions.push_back("-rdynamic");
         }
-
-        if (client.getCompilerType() == CompilerType::MSVC)
-            client.CompileOptions.push_back("-wd4275");
 
         create_git_revision("pub.egorpugin.primitives.tools.create_git_rev"_dep, client);
     }
