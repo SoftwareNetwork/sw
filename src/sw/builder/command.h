@@ -106,6 +106,9 @@ public:
     String name;
 
     Files inputs;
+    // some files (like input .pdb for linker) must be waited,
+    // but not used in mtime calculation and checking their mtime before execution
+    Files inputs_without_timestamps;
     // byproducts
     // used only to clean files and pre-create dirs
     //Files intermediate;

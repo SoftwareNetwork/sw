@@ -798,7 +798,7 @@ void NativeLinkerRule::addInputs(const Target &t, RuleFiles &rfs)
         //return;
     //used_files.insert(nc.getOutputFile());
     if (is_linker && provided_pdb)
-        c->getCommand()->addInput(*provided_pdb);
+        c->getCommand()->inputs_without_timestamps.insert(*provided_pdb);
     c->getCommand()->prepare(); // why?
     c->getCommand()->name = //(is_linker ? "[LINK]"s : "[LIB]"s) + " " +
         "[" + t.getPackage().toString() + "]" + nt->getOutputFile().extension().string();

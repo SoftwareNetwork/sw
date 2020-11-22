@@ -452,16 +452,21 @@ void ExecutionPlan::prepare(USet &cmds)
         auto c1 = dynamic_cast<builder::Command *>(c);
         if (!c1)
             continue;
-        for (auto &i : c1->inputs)
+        auto f = [&generators, &simultaneous_generators, &c1](auto &inputs)
         {
-            if (auto it = generators.find(i); it != generators.end())
-                c1->addDependency(*it->second);
-            if (auto it = simultaneous_generators.find(i); it != simultaneous_generators.end())
+            for (auto &i : inputs)
             {
-                for (auto &&c : it->second)
-                    c1->addDependency(*c);
+                if (auto it = generators.find(i); it != generators.end())
+                    c1->addDependency(*it->second);
+                if (auto it = simultaneous_generators.find(i); it != simultaneous_generators.end())
+                {
+                    for (auto &&c : it->second)
+                        c1->addDependency(*c);
+                }
             }
-        }
+        };
+        f(c1->inputs);
+        f(c1->inputs_without_timestamps);
     }
 }
 
