@@ -479,4 +479,21 @@ void CachedStorage::clear()
     resolved_packages.clear();
 }
 
+CachingResolver::CachingResolver(CachedStorage &cache)
+    : cache(cache)
+{
+}
+
+bool CachingResolver::resolve(ResolveRequest &rr) const
+{
+    if (cache.resolve(rr))
+        return true;
+    if (Resolver::resolve(rr))
+    {
+        cache.storePackages(rr);
+        return true;
+    }
+    return false;
+}
+
 }

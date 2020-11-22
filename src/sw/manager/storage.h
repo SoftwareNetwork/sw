@@ -220,4 +220,14 @@ private:
     mutable StoredPackages resolved_packages;
 };
 
+struct SW_MANAGER_API CachingResolver : Resolver
+{
+    CachingResolver(CachedStorage &cache);
+
+    bool resolve(ResolveRequest &) const override;
+
+private:
+    CachedStorage &cache;
+};
+
 } // namespace sw

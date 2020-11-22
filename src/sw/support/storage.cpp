@@ -76,17 +76,6 @@ void Resolver::addStorage(IStorage &s)
     storages.push_back(&s);
 }
 
-CachingResolver::CachingResolver(IResolvableStorage &cache)
-    : cache(cache)
-{
-}
-
-bool CachingResolver::resolve(ResolveRequest &rr) const
-{
-    //SW_UNIMPLEMENTED; // store in cache
-    return cache.resolve(rr) || Resolver::resolve(rr);
-}
-
 int getPackagesDatabaseSchemaVersion()
 {
     return 4;

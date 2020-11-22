@@ -107,16 +107,6 @@ private:
     std::vector<IStorage *> storages;
 };
 
-struct SW_SUPPORT_API CachingResolver : Resolver
-{
-    CachingResolver(IResolvableStorage &cache);
-
-    bool resolve(ResolveRequest &) const override;
-
-private:
-    IResolvableStorage &cache;
-};
-
 SW_SUPPORT_API
 int readPackagesDatabaseVersion(const path &dir);
 
