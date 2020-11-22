@@ -5,6 +5,7 @@
 
 #include "enums.h"
 #include "package_id.h"
+#include "settings.h"
 
 namespace sw
 {
@@ -32,6 +33,10 @@ struct SW_SUPPORT_API PackageData
 
     // for overridden pkgs
     path sdir;
+
+    // settings
+    // move to other place?
+    PackageSettings settings;
 
     //
     // PackageId driver
