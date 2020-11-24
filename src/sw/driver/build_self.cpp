@@ -33,27 +33,15 @@ PackageIdSet load_builtin_packages(SwContext &swctx)
     };
 
     PackageIdSet builtin_packages;
+    std::vector<ResolveRequest> rrs;
     for (auto &p : required_packages)
     {
-        ResolveRequest rr{p};
+        auto &rr = rrs.emplace_back(p);
         if (!swctx.resolve(rr, true))
             throw SW_RUNTIME_ERROR("Cannot resolve: " + p.toString());
         builtin_packages.insert(rr.getPackage());
     }
-
-    // mass (threaded) install!
-    auto &e = getExecutor();
-    Futures<void> fs;
-    for (auto &p : builtin_packages)
-    {
-        fs.push_back(e.push([&swctx, &p]
-        {
-            ResolveRequest rr{p};
-            swctx.install(rr);
-        }));
-    }
-    waitAndGet(fs);
-
+    swctx.install(rrs);
     return builtin_packages;
 }
 

@@ -1855,6 +1855,7 @@ void NativeCompiledTarget::prepare_pass2()
     {
         if (d.dep->isResolved())
             continue;
+        SW_UNIMPLEMENTED;
         auto t = getMainBuild().getTargets().find(d.dep->getPackage(), d.dep->settings);
         if (!t)
         {

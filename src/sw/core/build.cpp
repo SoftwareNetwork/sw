@@ -354,11 +354,11 @@ void SwBuild::loadInputs()
     // and load packages
     for (auto &i : inputs)
     {
-        auto tgts = i.loadTargets(*this);
-        for (auto &tgt : tgts)
+        auto tgts = registerTargets(i.loadTargets(*this));
+        for (auto &&tgt : tgts)
         {
             tgt->setResolver(getResolver());
-            getTargets()[tgt->getPackage()].push_back(tgt);
+            getTargets()[tgt->getPackage()].push_back(*tgt);
             targets[tgt->getPackage()].setInput(i.getInput());
         }
     }
@@ -402,7 +402,7 @@ void SwBuild::resolvePackages()
     {
         for (const auto &tgt : tgts)
         {
-            auto deps = tgt->getDependencies();
+            auto deps = tgt.getDependencies();
             for (auto &d : deps)
             {
                 if (d->isResolved())
@@ -1370,6 +1370,17 @@ bool SwBuild::isPredefinedTarget(const PackagePath &pp) const
 void SwBuild::resolveWithDependencies(std::vector<ResolveRequest> &rrs) const
 {
     return ::sw::resolveWithDependencies(rrs, [this](auto &rr) { return resolve(rr); });
+}
+
+SwBuild::RegisterTargetsResult SwBuild::registerTargets(const std::vector<ITargetPtr> &v)
+{
+    RegisterTargetsResult tgts;
+    for (auto &&t : v)
+    {
+        auto &p = target_storage.emplace_back(std::move(t));
+        tgts.push_back(&*p);
+    }
+    return tgts;
 }
 
 }

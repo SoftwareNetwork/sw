@@ -92,7 +92,7 @@ std::vector<ITargetPtr> Input::loadPackages(SwBuild &b, const PackageSettings &s
     {
         if (tgt->getSettings()["dry-run"] == "true")
             continue;
-        tgts.push_back(tgt);
+        tgts.push_back(std::move(tgt));
     }
     // it is possible to get all targets dry run for some reason
     // why?
@@ -180,8 +180,8 @@ std::vector<ITargetPtr> InputWithSettings::loadTargets(SwBuild &b) const
     {
         LOG_TRACE(logger, "Loading input " << i.getInput().getName() << ", settings = " << s.toString());
 
-        auto t = i.loadPackages(b, s);
-        tgts.insert(tgts.end(), t.begin(), t.end());
+        for (auto &&t : i.loadPackages(b, s))
+            tgts.emplace_back(std::move(t));
     }
     return tgts;
 }

@@ -24,17 +24,17 @@ struct IRule;
 struct ITarget;
 struct SwBuild;
 struct ResolveRequest;
-struct CachingResolver;
+struct Resolver;
 
-struct SW_CORE_API CachingResolverHolder
+struct SW_CORE_API ResolverHolder
 {
     /// resolve deps using this target resolver
-    CachingResolver &getResolver() const; // to pass to children
-    void setResolver(CachingResolver &);
+    Resolver &getResolver() const; // to pass to children
+    void setResolver(Resolver &);
     bool resolve(ResolveRequest &) const;
 
 private:
-    CachingResolver *resolver = nullptr;
+    Resolver *resolver = nullptr;
 };
 
 struct SW_CORE_API AllowedPackages
@@ -86,7 +86,7 @@ using IDependencyPtr = std::shared_ptr<IDependency>;
 /// Very basic interface for targets and must be very stable.
 /// You won't be operating much using it.
 /// Instead, text interface for querying data will be available.
-struct SW_CORE_API ITarget : ICastable, CachingResolverHolder
+struct SW_CORE_API ITarget : ICastable, ResolverHolder
 {
     virtual ~ITarget();
 
@@ -168,8 +168,7 @@ struct SW_CORE_API ITarget : ICastable, CachingResolverHolder
     //virtual std::unique_ptr<IRule> getRule() const;
 };
 
-// shared_ptr for vector storage
-using ITargetPtr = std::shared_ptr<ITarget>;
+using ITargetPtr = std::unique_ptr<ITarget>;
 
 /*struct INativeTarget : ITarget
 {
@@ -232,7 +231,8 @@ private:
 
 struct SW_CORE_API TargetContainer : InputLoader
 {
-    using Base = std::vector<ITargetPtr>;
+    using Storage = std::vector<std::reference_wrapper<ITarget>>;
+    using Base = Storage;
 
     TargetContainer();
     TargetContainer(const TargetContainer &);
@@ -248,7 +248,7 @@ struct SW_CORE_API TargetContainer : InputLoader
     Base::iterator findSuitable(const PackageSettings &);
     Base::const_iterator findSuitable(const PackageSettings &) const;
 
-    void push_back(const ITargetPtr &);
+    void push_back(ITarget &);
 
     void clear();
     bool empty() const;
@@ -263,7 +263,7 @@ struct SW_CORE_API TargetContainer : InputLoader
     Base::iterator erase(Base::iterator begin, Base::iterator end);
 
 private:
-    std::vector<ITargetPtr> targets;
+    Storage targets;
 };
 
 namespace detail

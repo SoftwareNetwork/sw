@@ -16,6 +16,7 @@ struct InputWithSettings;
 struct SwContext;
 struct ResolveRequest;
 struct CachedStorage;
+struct CachingResolver;
 
 enum class BuildState
 {
@@ -31,7 +32,7 @@ enum class BuildState
 };
 
 // single build
-struct SW_CORE_API SwBuild : SwBuilderContext, CachingResolverHolder
+struct SW_CORE_API SwBuild : SwBuilderContext, ResolverHolder
 {
     SwBuild(SwContext &swctx, const path &build_dir);
     SwBuild(const SwBuild &) = delete;
@@ -111,6 +112,9 @@ struct SW_CORE_API SwBuild : SwBuilderContext, CachingResolverHolder
     // stable resolve during whole build
     //bool resolve(ResolveRequest &) const;
 
+    using RegisterTargetsResult = std::vector<ITarget*>;
+    RegisterTargetsResult registerTargets(const std::vector<ITargetPtr> &);
+
 private:
     SwContext &swctx;
     path build_dir;
@@ -126,6 +130,7 @@ private:
     mutable ExecutionPlan *current_explan = nullptr;
     std::unique_ptr<CachedStorage> cached_storage;
     std::unique_ptr<CachingResolver> cr;
+    std::vector<ITargetPtr> target_storage;
 
     // other data
     String name;

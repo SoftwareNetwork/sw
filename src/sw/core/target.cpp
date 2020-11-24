@@ -15,19 +15,19 @@ ITarget::~ITarget() {}
 TargetEntryPoint::~TargetEntryPoint() = default;
 TargetData::~TargetData() = default;
 
-CachingResolver &CachingResolverHolder::getResolver() const
+Resolver &ResolverHolder::getResolver() const
 {
     if (!resolver)
         throw SW_RUNTIME_ERROR("No resolver set");
     return *resolver;
 }
 
-void CachingResolverHolder::setResolver(CachingResolver &r)
+void ResolverHolder::setResolver(Resolver &r)
 {
     resolver = &r;
 }
 
-bool CachingResolverHolder::resolve(ResolveRequest &rr) const
+bool ResolverHolder::resolve(ResolveRequest &rr) const
 {
     return getResolver().resolve(rr);
 }
@@ -160,11 +160,11 @@ TargetContainer::~TargetContainer()
 {
 }
 
-void TargetContainer::push_back(const ITargetPtr &t)
+void TargetContainer::push_back(ITarget &t)
 {
     // on the same settings, we take input target and overwrite old one
 
-    auto i = findEqual(t->getSettings());
+    auto i = findEqual(t.getSettings());
     if (i == end())
     {
         targets.push_back(t);
@@ -182,7 +182,7 @@ TargetContainer::Base::iterator TargetContainer::findEqual(const PackageSettings
 {
     return std::find_if(begin(), end(), [&s](const auto &t)
     {
-        return t->getSettings() == s;
+        return t.get().getSettings() == s;
     });
 }
 
@@ -190,7 +190,7 @@ TargetContainer::Base::const_iterator TargetContainer::findEqual(const PackageSe
 {
     return std::find_if(begin(), end(), [&s](const auto &t)
     {
-        return t->getSettings() == s;
+        return t.get().getSettings() == s;
     });
 }
 
@@ -198,7 +198,7 @@ TargetContainer::Base::iterator TargetContainer::findSuitable(const PackageSetti
 {
     return std::find_if(begin(), end(), [&s](const auto &t)
     {
-        return t->getSettings().isSubsetOf(s);
+        return t.get().getSettings().isSubsetOf(s);
     });
 }
 
@@ -206,7 +206,7 @@ TargetContainer::Base::const_iterator TargetContainer::findSuitable(const Packag
 {
     return std::find_if(begin(), end(), [&s](const auto &t)
     {
-        return t->getSettings().isSubsetOf(s);
+        return t.get().getSettings().isSubsetOf(s);
     });
 }
 
@@ -228,7 +228,7 @@ ITarget *TargetMap::find(const PackageId &pkg, const PackageSettings &ts) const
     auto k = i->second.findSuitable(ts);
     if (k == i->second.end())
         return {};
-    return k->get();
+    return &k->get();
 }
 
 ITarget *TargetMap::find(const UnresolvedPackage &pkg, const PackageSettings &ts) const
@@ -239,7 +239,7 @@ ITarget *TargetMap::find(const UnresolvedPackage &pkg, const PackageSettings &ts
     auto k = i->second.findSuitable(ts);
     if (k == i->second.end())
         return {};
-    return k->get();
+    return &k->get();
 }
 
 PredefinedTarget::PredefinedTarget(const LocalPackage &id, const PackageSettings &ts)

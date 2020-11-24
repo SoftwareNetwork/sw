@@ -142,6 +142,8 @@ struct BuiltinStorage : IResolvableStorage
     PackageMap m;
     std::unique_ptr<SwBuild> sb;
     mutable std::unordered_map<UnresolvedPackage, std::vector<ITargetPtr>> targets;
+    std::unordered_map<PackagePath, Input *> targets2;
+    std::unordered_map<PackagePath, PackageId> targets22;
 
     BuiltinStorage(SwContext &swctx)
         : swctx(swctx)
@@ -153,8 +155,40 @@ struct BuiltinStorage : IResolvableStorage
     //const StorageSchema &getSchema() const override { SW_UNREACHABLE; }
     //PackageDataPtr loadData(const PackageId &) const override { SW_UNREACHABLE; }
 
+    void addTarget2(const PackageId &pkg, Input &i)
+    {
+        if (!targets2.emplace(pkg.getPath(), &i).second)
+            throw SW_RUNTIME_ERROR("Duplicate package paths, rewrite this code");
+        targets22.emplace(pkg.getPath(), pkg);
+    }
+
     bool resolve(ResolveRequest &rr) const override
     {
+        if (auto i = targets2.find(rr.u.getPath()); i != targets2.end())
+        {
+            if (i->first.isAbsolute())
+            {
+                // only presence on the system requested (getFile() or something like this)
+                if (rr.settings.empty())
+                {
+                    SW_UNIMPLEMENTED;
+                    return true;
+                }
+                ResolveRequest rr2{ targets22.find(i->first)->second };
+                if (!swctx.resolve(rr2, true))
+                    throw SW_RUNTIME_ERROR("Cannot resolve: " + rr2.u.toString());
+                auto itgts = i->second->loadPackages(*sb, rr.settings, { {rr.u} }, i->first.slice(0, rr2.getPackage().getData().prefix));
+                for (auto &t : itgts)
+                    rr.setPackage(t->getPackage().clone(), t.get());
+            }
+            else
+            {
+                auto itgts = i->second->loadPackages(*sb, rr.settings, { {rr.u} }, {});
+                for (auto &t : itgts)
+                    rr.setPackage(t->getPackage().clone(), t.get());
+            }
+            return true;
+        }
         if (auto i = targets.find(rr.u); i != targets.end())
         {
             for (auto &t : i->second)
@@ -185,6 +219,13 @@ Driver::Driver(SwContext &swctx)
     getBuiltinInputs(swctx);
 
     bs = std::make_unique<BuiltinStorage>(swctx);
+
+    // register inputs
+    for (auto &&[i, pkgs] : builtin_inputs)
+    {
+        for (auto &pkg : pkgs)
+            bs->addTarget2(pkg, *i);
+    }
 }
 
 Driver::~Driver()
@@ -627,11 +668,11 @@ std::unique_ptr<SwBuild> Driver::create_build(SwContext &swctx) const
     auto b = swctx.createBuild();
 
     // installs packages, do not remove
-    // it works on empty storage (test it in doubt)
+    // it works on empty storage (test if in doubt)
     getBuiltinPackages(swctx);
 
     // register targets and set inputs
-    for (auto &[i, pkgs] : builtin_inputs)
+    /*for (auto &[i, pkgs] : builtin_inputs)
     {
         BuildInput bi(*i);
         for (auto &p : pkgs)
@@ -646,7 +687,7 @@ std::unique_ptr<SwBuild> Driver::create_build(SwContext &swctx) const
         }
         for (auto &p : pkgs)
             b->getTargets()[p].setInput(bi);
-    }
+    }*/
 
     return std::move(b);
 }
@@ -724,22 +765,29 @@ std::unordered_map<path, PrepareConfigOutputData> Driver::build_configs1(SwConte
     if (swctx.getSettings()["ignore_outdated_configs"] == "true" || !pc.isOutdated())
         return save_and_return(pc.r);
 
+    Resolver resolver;
+    resolver.addStorage(*bs);
+
     auto &tgts = b2.module_data.getTargets();
     for (auto &tgt : tgts)
+    {
         b->getTargets()[tgt->getPackage()].push_back(tgt);
+        tgt->setResolver(resolver); // here we must give our resolver
+    }
 
     // execute
-    SW_UNIMPLEMENTED;
+    //SW_UNIMPLEMENTED;
     //for (auto &tgt : tgts)
         //b->getTargetsToBuild()[tgt->getPackage()] = b->getTargets()[tgt->getPackage()]; // set our targets
-    b->overrideBuildState(BuildState::PackagesResolved);
+    b->overrideBuildState(BuildState::InputsLoaded);
     /*if (!ep->udeps.empty())
         LOG_WARN(logger, "WARNING: '#pragma sw require' is not well tested yet. Expect instability.");
     b->resolvePackages(ep->udeps);*/
     {
         // prevent simultaneous cfg builds
         ScopedFileLock lk(swctx.getLocalStorage().storage_dir_tmp / "cfg" / "build");
-        b->loadPackages();
+        b->resolvePackages();
+        //b->loadPackages();
         b->prepare();
         b->execute();
     }
