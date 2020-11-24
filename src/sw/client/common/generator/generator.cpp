@@ -843,7 +843,9 @@ void CMakeGenerator::generate(const sw::SwBuild &b)
     auto &ctx_deps = ctx.createInlineEmitter();
 
     StringSet deps;
-    for (auto &[pkg, tgts] : b.getTargetsToBuild())
+    SW_UNIMPLEMENTED;
+    //for (auto &[pkg, tgts] : b.getTargetsToBuild())
+    for (auto &[pkg, tgts] : b.getTargets())
     {
         if (tgts.empty())
         {
@@ -1177,7 +1179,8 @@ void CompilationDatabaseGenerator::generate(const SwBuild &b)
     auto p = b.getExecutionPlan();
 
     nlohmann::json j;
-    for (auto &[p, tgts] : b.getTargetsToBuild())
+    SW_UNIMPLEMENTED;
+    /*for (auto &[p, tgts] : b.getTargetsToBuild())
     {
         for (auto &tgt : tgts)
         {
@@ -1215,7 +1218,7 @@ void CompilationDatabaseGenerator::generate(const SwBuild &b)
                 j.push_back(j2);
             }
         }
-    }
+    }*/
     write_file(d / "compile_commands.json", j.dump(2));
 }
 

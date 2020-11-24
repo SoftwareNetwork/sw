@@ -250,6 +250,10 @@ SwBuild::SwBuild(SwContext &swctx, const path &build_dir)
     , build_dir(build_dir)
 {
     cached_storage = std::make_unique<CachedStorage>();
+    cr = std::make_unique<CachingResolver>(*cached_storage);
+    setResolver(*cr);
+    for (auto s : getContext().getRemoteStorages())
+        cr->addStorage(*s);
 }
 
 SwBuild::~SwBuild()
@@ -306,14 +310,11 @@ bool SwBuild::step()
         loadInputs();
         break;
     case BuildState::InputsLoaded:
-        setTargetsToBuild();
-        break;
-    case BuildState::TargetsToBuildSet:
         resolvePackages();
         break;
-    case BuildState::PackagesResolved:
-        loadPackages();
-        break;
+    //case BuildState::PackagesResolved:
+        //loadPackages();
+        //break;
     case BuildState::PackagesLoaded:
         // prepare targets
         prepare();
@@ -353,34 +354,50 @@ void SwBuild::loadInputs()
     // and load packages
     for (auto &i : inputs)
     {
-        //if (i.getInput().getInput().isPredefinedInput())
-            //continue;
         auto tgts = i.loadTargets(*this);
         for (auto &tgt : tgts)
         {
+            tgt->setResolver(getResolver());
             getTargets()[tgt->getPackage()].push_back(tgt);
             targets[tgt->getPackage()].setInput(i.getInput());
         }
     }
-}
 
-void SwBuild::setTargetsToBuild()
-{
-    CHECK_STATE_AND_CHANGE(BuildState::InputsLoaded, BuildState::TargetsToBuildSet);
+    // filter selected targets if any
+    UnresolvedPackages in_ttb;
+    UnresolvedPackages in_ttb_exclude;
+    for (auto &t : build_settings["target-to-build"].getArray())
+        in_ttb.insert(t.getValue());
+    for (auto &t : build_settings["target-to-exclude"].getArray())
+        in_ttb_exclude.insert(t.getValue());
+    bool in_ttb_used = !in_ttb.empty();
 
-    // mark existing targets as targets to build
-    // only in case if not present?
-    if (!targets_to_build.empty())
-        return;
-    targets_to_build = getTargets();
+    auto should_build_target = [&in_ttb_used, &in_ttb, &in_ttb_exclude](const auto &p)
+    {
+        if (in_ttb_used)
+        {
+            if (!contains(in_ttb, p))
+                return false;
+        }
+        if (contains(in_ttb_exclude, p))
+            return false;
+        return true;
+    };
+    for (auto it = getTargets().begin(); it != getTargets().end();)
+    {
+        if (!should_build_target(it->first))
+            it = getTargets().erase(it);
+        else
+            ++it;
+    }
 }
 
 void SwBuild::resolvePackages()
 {
-    CHECK_STATE_AND_CHANGE_RAW(BuildState::TargetsToBuildSet, BuildState::PackagesResolved, auto se = SCOPE_EXIT_NAMED);
+    CHECK_STATE_AND_CHANGE(BuildState::InputsLoaded, BuildState::PackagesLoaded);
 
     // gather
-    std::vector<IDependency*> upkgs;
+    std::vector<ResolveRequest> rrs;
     for (const auto &[pkg, tgts] : getTargets())
     {
         for (const auto &tgt : tgts)
@@ -388,28 +405,50 @@ void SwBuild::resolvePackages()
             auto deps = tgt->getDependencies();
             for (auto &d : deps)
             {
-                auto u = d->getUnresolvedPackage();
-
-                // filter out existing targets as they come from same module
-                // reconsider?
-                if (auto id = u.toPackageId();
-                    id && getTargets().find(*id) != getTargets().end())
+                if (d->isResolved())
                     continue;
-                // filter out predefined packages
-                if (isPredefinedTarget(u))
-                    continue;
-                // filter out local targets
-                if (u.getPath().isRelative() || u.getPath().is_loc())
-                    continue;
-
-                upkgs.push_back(d);
+                ResolveRequest rr;
+                rr.u = d->getUnresolvedPackage();
+                rr.settings = d->getSettings();
+                if (!tgt->resolve(rr))
+                    throw SW_RUNTIME_ERROR("Cannot resolve package: " + rr.u.toString());
+                if (rr.hasTarget())
+                    d->setTarget(rr.getTarget());
+                else
+                    rrs.emplace_back(std::move(rr));
             }
-            break; // take first as all deps are equal
         }
     }
+    if (rrs.empty())
+        return;
+    getContext().install(rrs);
 
-    se.~ScopeGuard();
-    resolvePackages(upkgs);
+    // now we know all drivers
+    std::set<Input *> iv;
+    for (auto &rr : rrs)
+    {
+        if (rr.hasTarget())
+            continue;
+        // use addInput to prevent doubling already existing and loaded inputs
+        // like when we loading dependency that is already loaded from the input
+        // test: sw build org.sw.demo.gnome.pango.pangocairo-1.44
+        auto i = addInput(static_cast<LocalPackage&>(rr.getPackage()));
+        iv.insert(&i.getInput());
+        // this also marks package as known
+        targets[rr.getPackage()].setInput(i);
+    }
+
+    {
+        ScopedTime t;
+        swctx.loadEntryPointsBatch(iv);
+        if (build_settings["measure"] == "true")
+            LOG_DEBUG(logger, "load entry points time: " << t.getTimeFloat() << " s.");
+    }
+
+    resolvePackages();
+
+    //se.~ScopeGuard();
+    //resolvePackages(upkgs);
 }
 
 void SwBuild::resolvePackages(const std::vector<IDependency*> &udeps)
@@ -530,19 +569,7 @@ void SwBuild::resolvePackages(const std::vector<IDependency*> &udeps)
     }
 
     // install goes here - after saved configs, lock files etc.
-    {
-        // mass (threaded) install!
-        auto &e = getExecutor();
-        Futures<void> fs;
-        for (auto &rr : rrs)
-        {
-            fs.push_back(e.push([this, &rr]
-            {
-                getContext().install(rr);
-            }));
-        }
-        waitAndGet(fs);
-    }
+    getContext().install(rrs);
 
     // now we know all drivers
     std::set<Input *> iv;
@@ -567,6 +594,7 @@ void SwBuild::resolvePackages(const std::vector<IDependency*> &udeps)
 
 void SwBuild::loadPackages()
 {
+    SW_UNIMPLEMENTED;
     CHECK_STATE_AND_CHANGE(BuildState::PackagesResolved, BuildState::PackagesLoaded);
 
     // load
@@ -828,8 +856,9 @@ Commands SwBuild::getCommands() const
             tgt->getCommands();
     }
 
-    if (targets_to_build.empty())
-        throw SW_RUNTIME_ERROR("no targets were selected for building");
+    //SW_UNIMPLEMENTED;
+    /*if (targets_to_build.empty())
+        //throw SW_RUNTIME_ERROR("no targets were selected for building");
 
     auto upkgs_contains_pkg = [](const UnresolvedPackages &upkgs, const PackageId &p)
     {
@@ -918,28 +947,18 @@ Commands SwBuild::getCommands() const
 
             gather_ttb(s);
         }
-    }
-
-    /*
-    // error about unused filters
-    if (in_ttb_used && !targets_selected)
-    {
-        String s;
-        for (auto &t : in_ttb)
-            s += t.toString() + ", ";
-        s.resize(s.size() - 2);
-        throw SW_RUNTIME_ERROR("Cannot make targets: " + s + ": no such targets");
     }*/
 
     // update public ttb
     // reconsider? remove?
-    targets_to_build = ttb;
+    //targets_to_build = ttb;
 
     //
     auto cl_show_output = build_settings["show_output"] == "true";
     auto cl_write_output_to_file = build_settings["write_output_to_file"] == "true";
 
     // gather commands
+    auto &ttb = getTargets();
     Commands cmds;
     for (auto &[p, tgts] : ttb)
     {
@@ -955,7 +974,7 @@ Commands SwBuild::getCommands() const
     }
 
     // copy output files
-    path copy_dir = build_settings["build_ide_copy_to_dir"].isValue() ? build_settings["build_ide_copy_to_dir"].getValue() : "";
+    /*path copy_dir = build_settings["build_ide_copy_to_dir"].isValue() ? build_settings["build_ide_copy_to_dir"].getValue() : "";
     {
         std::unordered_map<path, path> copy_files;
         for (auto &[p, tgts] : ttb)
@@ -1071,7 +1090,7 @@ Commands SwBuild::getCommands() const
             cmds.insert(copy_cmd);
             commands_storage.insert(copy_cmd); // prevents early destruction
         }
-    }
+    }*/
 
     return cmds;
 }
@@ -1283,7 +1302,8 @@ void SwBuild::test()
 
     // remove only test dirs for active configs
     Files tdirs;
-    for (const auto &[pkg, tgts] : getTargetsToBuild())
+    SW_UNIMPLEMENTED;
+    /*for (const auto &[pkg, tgts] : getTargetsToBuild())
     {
         for (auto &tgt : tgts)
         {
@@ -1331,7 +1351,7 @@ void SwBuild::test()
     }
 
     auto ep = getExecutionPlan(cmds);
-    ep->execute(::getExecutor());
+    ep->execute(::getExecutor());*/
 }
 
 bool SwBuild::isPredefinedTarget(const PackagePath &pp) const
@@ -1341,15 +1361,15 @@ bool SwBuild::isPredefinedTarget(const PackagePath &pp) const
     return i != getTargets().end(pp) && i->second.hasInput();
 }
 
-bool SwBuild::resolve(ResolveRequest &rr) const
+/*bool SwBuild::resolve(ResolveRequest &rr) const
 {
     // cache hit, we stop immediately
     return cached_storage->resolve(rr) || getContext().resolve(rr, false);
-}
+}*/
 
-void SwBuild::resolveWithDependencies(std::vector<ResolveRequest> &v) const
+void SwBuild::resolveWithDependencies(std::vector<ResolveRequest> &rrs) const
 {
-    return ::sw::resolveWithDependencies(v, [this](auto &rr) { return resolve(rr); });
+    return ::sw::resolveWithDependencies(rrs, [this](auto &rr) { return resolve(rr); });
 }
 
 }

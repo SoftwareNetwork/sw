@@ -34,7 +34,8 @@ void run1(const sw::LocalPackage &pkg, primitives::Command &c, bool gRunAppInCon
 
 static void run(sw::SwBuild &b, const sw::PackageId &pkg, primitives::Command &c, bool print, bool gRunAppInContainer)
 {
-    if (b.getTargetsToBuild()[pkg].empty())
+    SW_UNIMPLEMENTED;
+    /*if (b.getTargetsToBuild()[pkg].empty())
         throw SW_RUNTIME_ERROR("No such target: " + pkg.toString());
 
     // take the last target
@@ -65,7 +66,7 @@ static void run(sw::SwBuild &b, const sw::PackageId &pkg, primitives::Command &c
     };
 
     sw::LocalPackage p(b.getContext().getLocalStorage(), pkg);
-    run1(p, c, gRunAppInContainer);
+    run1(p, c, gRunAppInContainer);*/
 }
 
 void SwClientContext::run(const sw::PackageId &pkg, primitives::Command &c)

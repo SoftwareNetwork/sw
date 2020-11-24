@@ -242,7 +242,8 @@ void VSGenerator::generate(const SwBuild &b)
 
     // gather ttb and settings
     TargetMap ttb;
-    for (auto &[pkg, tgts] : b.getTargetsToBuild())
+    SW_UNIMPLEMENTED;
+    /*for (auto &[pkg, tgts] : b.getTargetsToBuild())
     {
         auto add = [&ttb, &pkg = pkg, &tgts = tgts, &s]()
         {
@@ -273,7 +274,7 @@ void VSGenerator::generate(const SwBuild &b)
         if (tgts.empty())
             throw SW_RUNTIME_ERROR("empty target");
         add();
-    }
+    }*/
 
     if (s.settings.empty())
         throw SW_RUNTIME_ERROR("Empty settings");

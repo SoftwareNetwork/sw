@@ -814,7 +814,8 @@ static std::shared_ptr<builder::Command> getLinkerCommand(const NativeCompiledTa
 bool Check::execute(SwBuild &b) const
 {
     b.overrideBuildState(BuildState::InputsLoaded);
-    b.setTargetsToBuild();
+    //b.setTargetsToBuild();
+    SW_UNIMPLEMENTED;
     b.resolvePackages();
     b.loadPackages();
     b.prepare();

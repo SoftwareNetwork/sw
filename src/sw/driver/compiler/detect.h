@@ -57,6 +57,8 @@ struct SW_DRIVER_CPP_API ProgramDetector
     static PredefinedProgramTarget &addProgram(DETECT_ARGS, const PackageId &, const PackageSettings &, const Program &);
 
     // actually should be PackagePath?
+    // we do not want to use PackagePath here, because some entry points may detect specially versioned packages
+    // e.g., org.llvm.clang-10 will look for clang-10/clang++-10 only
     using DetectablePackageEntryPointKey = UnresolvedPackage;
     using DetectablePackageEntryPoint = std::function<void(Build &)>;
     using DetectablePackageEntryPoints = std::unordered_map<DetectablePackageEntryPointKey, DetectablePackageEntryPoint>;

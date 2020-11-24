@@ -32,14 +32,16 @@ static void isolated_build(SwClientContext &swctx)
         b.addInput(i);
     }
     b.loadInputs();
-    b.setTargetsToBuild();
+    SW_UNIMPLEMENTED;
+    //b.setTargetsToBuild();
     b.resolvePackages();
     b.loadPackages();
     b.prepare();
 
     // get sources to pass them into getPackages()
     sw::support::SourceDirMap srcs;
-    for (const auto &[pkg, tgts] : b.getTargetsToBuild())
+    SW_UNIMPLEMENTED;
+    /*for (const auto &[pkg, tgts] : b.getTargetsToBuild())
     {
         if (tgts.empty())
             throw SW_RUNTIME_ERROR("Empty targets");
@@ -70,7 +72,7 @@ static void isolated_build(SwClientContext &swctx)
         }
 
         ts["driver"]["source-dir-for-package"][pkg.toString()] = to_string(normalize_path(dir));
-    }
+    }*/
 
     LOG_INFO(logger, "Building in isolated environment");
 

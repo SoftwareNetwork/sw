@@ -45,11 +45,27 @@ Directories::Directories(const path &p)
 #undef SET
 }
 
-void ResolveRequest::setPackage(PackagePtr in)
+bool ResolveRequestResult::setPackage(PackagePtr in, ITarget *in_t)
 {
     SW_CHECK(in);
-    if (!r || r->getVersion() < in->getVersion())
+    if (!r)
+    {
         r = std::move(in);
+        t = in_t;
+        return true;
+    }
+    else if (r->getVersion() < in->getVersion())
+    {
+        if (r->getVersion().isRelease() && in->getVersion().isPreRelease())
+            ;
+        else
+        {
+            r = std::move(in);
+            t = in_t;
+            return true;
+        }
+    }
+    return false;
 }
 
 bool Resolver::resolve(ResolveRequest &rr) const
@@ -71,7 +87,7 @@ bool Resolver::resolve(ResolveRequest &rr) const
     return rr.isResolved();
 }
 
-void Resolver::addStorage(IStorage &s)
+void Resolver::addStorage(IResolvableStorage &s)
 {
     storages.push_back(&s);
 }

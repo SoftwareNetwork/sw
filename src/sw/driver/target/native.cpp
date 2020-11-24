@@ -1853,6 +1853,8 @@ void NativeCompiledTarget::prepare_pass2()
     // resolve deps
     for (auto &d : getActiveDependencies())
     {
+        if (d.dep->isResolved())
+            continue;
         auto t = getMainBuild().getTargets().find(d.dep->getPackage(), d.dep->settings);
         if (!t)
         {

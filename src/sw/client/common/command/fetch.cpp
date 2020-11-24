@@ -130,13 +130,15 @@ static sw::support::SourceDirMap getSources(SwClientContext &swctx)
         b.addInput(i);
     }
     b.loadInputs();
-    b.setTargetsToBuild();
+    SW_UNIMPLEMENTED;
+    //b.setTargetsToBuild();
 
     auto d = get_source_dir(b.getBuildDirectory());
 
     sw::support::SourceDirMap srcs;
     std::unordered_set<sw::support::SourcePtr> sources;
-    for (const auto &[pkg, tgts] : b.getTargetsToBuild())
+    SW_UNIMPLEMENTED;
+    /*for (const auto &[pkg, tgts] : b.getTargetsToBuild())
     {
         if (tgts.empty())
             throw SW_RUNTIME_ERROR("Empty targets");
@@ -148,7 +150,7 @@ static sw::support::SourceDirMap getSources(SwClientContext &swctx)
             continue;
         srcs[s->getHash()].root_dir = d / s->getHash();
         sources.emplace(std::move(s));
-    }
+    }*/
 
     return getSources(b.getBuildDirectory(), sources, srcs);
 }

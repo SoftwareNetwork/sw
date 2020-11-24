@@ -26,6 +26,17 @@ struct SwBuild;
 struct ResolveRequest;
 struct CachingResolver;
 
+struct SW_CORE_API CachingResolverHolder
+{
+    /// resolve deps using this target resolver
+    CachingResolver &getResolver() const; // to pass to children
+    void setResolver(CachingResolver &);
+    bool resolve(ResolveRequest &) const;
+
+private:
+    CachingResolver *resolver = nullptr;
+};
+
 struct SW_CORE_API AllowedPackages
 {
     AllowedPackages() = default;
@@ -75,7 +86,7 @@ using IDependencyPtr = std::shared_ptr<IDependency>;
 /// Very basic interface for targets and must be very stable.
 /// You won't be operating much using it.
 /// Instead, text interface for querying data will be available.
-struct SW_CORE_API ITarget : ICastable
+struct SW_CORE_API ITarget : ICastable, CachingResolverHolder
 {
     virtual ~ITarget();
 
@@ -155,13 +166,6 @@ struct SW_CORE_API ITarget : ICastable
     // getExecutableRule()?
     // by default returns nullptr
     //virtual std::unique_ptr<IRule> getRule() const;
-
-    CachingResolver &getResolver() const; // to pass to children
-    void setResolver(CachingResolver &);
-    bool resolve(ResolveRequest &) const;
-
-private:
-    CachingResolver *resolver = nullptr;
 };
 
 // shared_ptr for vector storage
@@ -311,17 +315,6 @@ struct TargetMap : PackageVersionMapBase<TargetContainer, std::unordered_map, Ex
 {
     using Base = PackageVersionMapBase<TargetContainer, std::unordered_map, ExtendedVersionMap>;
 
-    enum
-    {
-        Ok,
-        PackagePathNotFound,
-        PackageNotFound,
-        TargetNotCreated, // by settings
-    };
-
-    SW_CORE_API
-    ~TargetMap();
-
     using Base::find;
 
     SW_CORE_API
@@ -330,22 +323,6 @@ struct TargetMap : PackageVersionMapBase<TargetContainer, std::unordered_map, Ex
     ITarget *find(const PackageId &pkg, const PackageSettings &ts) const;
     SW_CORE_API
     ITarget *find(const UnresolvedPackage &pkg, const PackageSettings &ts) const;
-
-    //
-
-    template <class T>
-    static std::optional<Version> select_version(T &v)
-    {
-        if (v.empty())
-            return {};
-        if (!v.empty_releases())
-            return v.rbegin_releases()->first;
-        return v.rbegin()->first;
-    }
-
-private:
-    detail::SimpleExpected<Base::version_map_type::iterator> find_and_select_version(const PackagePath &pp);
-    detail::SimpleExpected<Base::version_map_type::const_iterator> find_and_select_version(const PackagePath &pp) const;
 };
 
 //

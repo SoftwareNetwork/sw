@@ -145,17 +145,17 @@ ProgramDetector::DetectablePackageEntryPoints ProgramDetector::getDetectablePack
     DetectablePackageEntryPoints s;
     auto add_eps = [&s](const auto &eps)
     {
-        using Map = std::unordered_map<UnresolvedPackage, std::vector<DetectablePackageEntryPoint>>;
+        using Map = std::unordered_map<DetectablePackageEntryPointKey, std::vector<DetectablePackageEntryPoint>>;
         Map m;
         for (auto &[u, f] : eps)
             m[u].push_back(std::move(f));
         for (auto &[u, v] : m)
         {
-            s[u] = [v = std::move(v)](DETECT_ARGS)
+            s.emplace(u, [v = std::move(v)](DETECT_ARGS)
             {
                 for (auto &f : v)
                     f(DETECT_ARGS_PASS);
-            };
+            });
         }
     };
     add_eps(getProgramDetector().detectWindowsCompilers());

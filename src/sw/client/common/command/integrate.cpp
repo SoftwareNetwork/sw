@@ -140,14 +140,16 @@ SUBCOMMAND_DECL(integrate)
             s.merge(s2);
         }*/
         b.loadInputs();
-        b.setTargetsToBuild();
+        SW_UNIMPLEMENTED;
+        //b.setTargetsToBuild();
         b.resolvePackages();
         b.loadPackages();
         b.prepare();
 
         // find better algo
         size_t minsz = SIZE_MAX;
-        for (auto &[pkg,tgts] : b.getTargetsToBuild())
+        SW_UNIMPLEMENTED;
+        /*for (auto &[pkg,tgts] : b.getTargetsToBuild())
         {
             minsz = std::min(minsz, tgts.size());
         }
@@ -157,7 +159,7 @@ SUBCOMMAND_DECL(integrate)
                 continue;
             for (auto &tgt : tgts)
                 our_settings.insert(tgt->getSettings());
-        }
+        }*/
 
         return build;
     };

@@ -67,6 +67,7 @@ private:
     void getBuiltinInputs(SwContext &) const;
 
     mutable std::unique_ptr<SwBuild> b;
+    std::unique_ptr<struct BuiltinStorage> bs;
     std::unique_ptr<SwBuild> create_build(SwContext &swctx) const;
 };
 

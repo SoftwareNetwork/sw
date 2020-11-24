@@ -22,7 +22,6 @@ enum class BuildState
     NotStarted,
 
     InputsLoaded,
-    TargetsToBuildSet,
     PackagesResolved,
     PackagesLoaded,
     Prepared,
@@ -32,7 +31,7 @@ enum class BuildState
 };
 
 // single build
-struct SW_CORE_API SwBuild : SwBuilderContext
+struct SW_CORE_API SwBuild : SwBuilderContext, CachingResolverHolder
 {
     SwBuild(SwContext &swctx, const path &build_dir);
     SwBuild(const SwBuild &) = delete;
@@ -56,7 +55,7 @@ struct SW_CORE_API SwBuild : SwBuilderContext
 
     // precise
     void loadInputs();
-    void setTargetsToBuild();
+    //void setTargetsToBuild();
     void resolvePackages(); // [1/2] step
     void loadPackages();
     void prepare();
@@ -88,8 +87,8 @@ struct SW_CORE_API SwBuild : SwBuilderContext
     TargetMap &getTargets() { return targets; }
     const TargetMap &getTargets() const { return targets; }
 
-    TargetMap &getTargetsToBuild() { return targets_to_build; }
-    const TargetMap &getTargetsToBuild() const { return targets_to_build; }
+    //TargetMap &getTargetsToBuild() { return targets_to_build; }
+    //const TargetMap &getTargetsToBuild() const { return targets_to_build; }
 
     path getBuildDirectory() const;
 
@@ -110,13 +109,13 @@ struct SW_CORE_API SwBuild : SwBuilderContext
     }
 
     // stable resolve during whole build
-    bool resolve(ResolveRequest &) const;
+    //bool resolve(ResolveRequest &) const;
 
 private:
     SwContext &swctx;
     path build_dir;
     TargetMap targets;
-    mutable TargetMap targets_to_build;
+    //mutable TargetMap targets_to_build;
     std::vector<InputWithSettings> inputs;
     PackageSettings build_settings;
     mutable BuildState state = BuildState::NotStarted;
@@ -126,6 +125,7 @@ private:
     bool stopped = false;
     mutable ExecutionPlan *current_explan = nullptr;
     std::unique_ptr<CachedStorage> cached_storage;
+    std::unique_ptr<CachingResolver> cr;
 
     // other data
     String name;

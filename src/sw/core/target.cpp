@@ -15,18 +15,19 @@ ITarget::~ITarget() {}
 TargetEntryPoint::~TargetEntryPoint() = default;
 TargetData::~TargetData() = default;
 
-CachingResolver &ITarget::getResolver() const
+CachingResolver &CachingResolverHolder::getResolver() const
 {
     if (!resolver)
         throw SW_RUNTIME_ERROR("No resolver set");
     return *resolver;
 }
 
-void ITarget::setResolver(CachingResolver &r)
+void CachingResolverHolder::setResolver(CachingResolver &r)
 {
     resolver = &r;
 }
-bool ITarget::resolve(ResolveRequest &rr) const
+
+bool CachingResolverHolder::resolve(ResolveRequest &rr) const
 {
     return getResolver().resolve(rr);
 }
@@ -217,43 +218,6 @@ bool TargetContainer::empty() const
 TargetContainer::Base::iterator TargetContainer::erase(Base::iterator begin, Base::iterator end)
 {
     return targets.erase(begin, end);
-}
-
-TargetMap::~TargetMap()
-{
-}
-
-detail::SimpleExpected<TargetMap::Base::version_map_type::iterator> TargetMap::find_and_select_version(const PackagePath &pp)
-{
-    auto i = find(pp);
-    if (i == end(pp))
-        return PackagePathNotFound;
-    auto vo = select_version(i->second);
-    if (!vo)
-        return PackageNotFound;
-    return i->second.find(*vo);
-}
-
-detail::SimpleExpected<TargetMap::Base::version_map_type::const_iterator> TargetMap::find_and_select_version(const PackagePath &pp) const
-{
-    auto i = find(pp);
-    if (i == end(pp))
-        return PackagePathNotFound;
-    auto vo = select_version(i->second);
-    if (!vo)
-        return PackageNotFound;
-    return i->second.find(*vo);
-}
-
-detail::SimpleExpected<std::pair<Version, ITarget*>> TargetMap::find(const PackagePath &pp, const PackageSettings &ts) const
-{
-    auto i = find_and_select_version(pp);
-    if (!i)
-        return i.ec();
-    auto j = i->second.findSuitable(ts);
-    if (j == i->second.end())
-        return std::pair<Version, ITarget*>{ i->first, nullptr };
-    return std::pair<Version, ITarget*>{ i->first, j->get() };
 }
 
 ITarget *TargetMap::find(const PackageId &pkg, const PackageSettings &ts) const

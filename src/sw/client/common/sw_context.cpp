@@ -267,11 +267,12 @@ static std::vector<sw::PackageSettings> applySettingsFromCppFile(SwClientContext
 
     // load module
     sw::TargetContainer *tc = nullptr;
-    for (auto &[pkg, tgts] : b->getTargetsToBuild())
+    SW_UNIMPLEMENTED;
+    /*for (auto &[pkg, tgts] : b->getTargetsToBuild())
     {
         if (pkg.getPath().isRelative())
             tc = &tgts;
-    }
+    }*/
     if (!tc)
         throw SW_RUNTIME_ERROR("No relative targets found");
     if (tc->empty())
@@ -469,7 +470,8 @@ std::unique_ptr<sw::SwBuild> SwClientContext::createBuildAndPrepare(const Inputs
 {
     auto b = createBuild(i);
     b->loadInputs();
-    b->setTargetsToBuild();
+    SW_UNIMPLEMENTED;
+    //b->setTargetsToBuild();
     b->resolvePackages();
     b->loadPackages();
     b->prepare();

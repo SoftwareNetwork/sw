@@ -40,6 +40,8 @@ struct SW_MANAGER_API SwManagerContext// : ISwContext
 
     //
     void install(ResolveRequest &) const;
+    // mass (threaded) install
+    void install(std::vector<ResolveRequest> &) const;
     // what about ", bool use_cache = true"?
     LocalPackage install(const Package &) const;
     bool resolve(ResolveRequest &, bool use_cache) const;

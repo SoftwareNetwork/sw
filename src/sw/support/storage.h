@@ -45,7 +45,26 @@ struct SoftwareNetworkStorageSchema : StorageSchema
     SoftwareNetworkStorageSchema() : StorageSchema(1, 1) {}
 };
 
-struct SW_SUPPORT_API ResolveRequest
+struct ITarget;
+
+struct SW_SUPPORT_API ResolveRequestResult
+{
+    PackagePtr r;
+    ITarget *t = nullptr;
+
+    bool isResolved() const { return !!r; }
+    Package &getPackage() const { return *r; }
+    bool hasTarget() const { return t; }
+    ITarget &getTarget() const { return *t; }
+
+    // if package version higher than current, overwrite
+    // if both are branches, do not accept new
+    // assuming passed package has same package path and branch/version matches
+    // input is not null
+    bool setPackage(PackagePtr, ITarget * = {});
+};
+
+struct SW_SUPPORT_API ResolveRequest : ResolveRequestResult
 {
     UnresolvedPackage u;
     // value or ref?
@@ -55,17 +74,9 @@ struct SW_SUPPORT_API ResolveRequest
     // or from sw build - one security ctx for build
     //SecurityContext sctx;
 
-    PackagePtr r;
-
-    bool isResolved() const { return !!r; }
-
-    Package &getPackage() const { return *r; }
-
-    // if package version higher than current, overwrite
-    // if both are branches, do not accept new
-    // assuming passed package has same package path and branch/version matches
-    // input is not null
-    void setPackage(PackagePtr);
+    ResolveRequest() {}
+    ResolveRequest(const UnresolvedPackage &u) : u(u) {}
+    ResolveRequest(const UnresolvedPackage &u, const PackageSettings &s) : u(u), settings(s) {}
 
     bool operator<(const ResolveRequest &rhs) const { return std::tie(u, settings) < std::tie(rhs.u, rhs.settings); }
     bool operator==(const ResolveRequest &rhs) const { return std::tie(u, settings) == std::tie(rhs.u, rhs.settings); }
@@ -101,10 +112,10 @@ struct SW_SUPPORT_API Resolver
     virtual ~Resolver() = default;
 
     virtual bool resolve(ResolveRequest &) const;
-    void addStorage(IStorage &);
+    void addStorage(IResolvableStorage &);
 
 private:
-    std::vector<IStorage *> storages;
+    std::vector<IResolvableStorage *> storages;
 };
 
 SW_SUPPORT_API

@@ -22,8 +22,9 @@ SUBCOMMAND_DECL(abi)
 #endif
 
     auto b = createBuildAndPrepare(getInputs());
-    auto tgts1 = b->getTargetsToBuild();
-    b->build();
+    SW_UNIMPLEMENTED;
+    //auto tgts1 = b->getTargetsToBuild();
+    //b->build();
 
     /*auto i = getContext().getPredefinedTargets().find(sw::UnresolvedPackage("com.Microsoft.VisualStudio.VC.dumpbin-*"));
     if (i == getContext().getPredefinedTargets().end() || i->second.empty())

@@ -54,7 +54,8 @@ SUBCOMMAND_DECL(pack)
     auto b = createBuildAndPrepare({getInputs(), getOptions().input_settings_pairs});
     b->build();
 
-    for (auto &[pkg,tgts] : b->getTargetsToBuild())
+    SW_UNIMPLEMENTED;
+    /*for (auto &[pkg,tgts] : b->getTargetsToBuild())
     {
         for (auto &t : tgts)
         {
@@ -96,5 +97,5 @@ SUBCOMMAND_DECL(pack)
                 pack_files(std::to_string((int)ty) + "-" + sw::support::make_archive_name(pkg.toString()), files2);
             }
         }
-    }
+    }*/
 }

@@ -201,8 +201,8 @@ struct SW_MANAGER_API CachedStorage : IResolvableStorage
 {
     //using StoredPackages = ResolveResult;
     using Key = std::pair<UnresolvedPackage, PackageSettings>;
-    using Value = PackagePtr;
-    using StoredPackages = std::map<Key, PackagePtr>;
+    using Value = ResolveRequestResult;
+    using StoredPackages = std::map<Key, Value>;
 
     CachedStorage() = default;
     CachedStorage(const CachedStorage &) = delete;

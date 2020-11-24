@@ -164,7 +164,8 @@ SUBCOMMAND_DECL(upload)
     //
     // 2)
     // We MUST perform all steps until prepare() too!
-    b->setTargetsToBuild();
+    SW_UNIMPLEMENTED;
+    //b->setTargetsToBuild();
     b->resolvePackages();
     b->loadPackages();
     b->prepare();

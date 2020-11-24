@@ -134,47 +134,44 @@ static Strings get_inline_comments(const path &p)
 
 // actually this is system storage
 // or storage for programs found in the system
-struct BuiltinStorage : IStorage
+struct BuiltinStorage : IResolvableStorage
 {
     SwContext &swctx;
     ProgramDetector::DetectablePackageEntryPoints eps;
     using PackageMap = PackageVersionMapBase<ProgramDetector::DetectablePackageEntryPoint, std::unordered_map, ::primitives::version::VersionMap>;
     PackageMap m;
+    std::unique_ptr<SwBuild> sb;
+    mutable std::unordered_map<UnresolvedPackage, std::vector<ITargetPtr>> targets;
 
     BuiltinStorage(SwContext &swctx)
         : swctx(swctx)
     {
+        sb = swctx.createBuild(); // fake build
         eps = getProgramDetector().getDetectablePackages();
     }
 
-    const StorageSchema &getSchema() const override { SW_UNREACHABLE; }
-    PackageDataPtr loadData(const PackageId &) const override { SW_UNREACHABLE; }
+    //const StorageSchema &getSchema() const override { SW_UNREACHABLE; }
+    //PackageDataPtr loadData(const PackageId &) const override { SW_UNREACHABLE; }
 
-    /*ResolveResult resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const override
+    bool resolve(ResolveRequest &rr) const override
     {
-        for (auto &u : pkgs)
+        if (auto i = targets.find(rr.u); i != targets.end())
         {
-            auto i = eps.find(u);
-            if (i == eps.end())
-            {
-                unresolved_pkgs.insert(u);
-                continue;
-            }
-            auto sb = swctx.createBuild();
-            Build b(*sb);
-            i->second(b);
-            auto tgts = b.module_data.getTargets();
-            for (auto &t : tgts)
-            {
-                t->getPackage();
-            }
+            for (auto &t : i->second)
+                rr.setPackage(t->getPackage().clone(), t.get());
+            return true;
         }
-        return {};
-    }*/
-
-    bool resolve(ResolveRequest &) const override
-    {
-        SW_UNIMPLEMENTED;
+        auto i = eps.find(rr.u);
+        if (i == eps.end())
+            return false;
+        Build b(*sb);
+        b.module_data.current_settings = rr.settings;
+        i->second(b);
+        auto [itgts,_] = targets.emplace(rr.u, b.module_data.getTargets());
+        // the best candidate is selected inside setPackage()
+        for (auto &t : itgts->second)
+            rr.setPackage(t->getPackage().clone(), t.get());
+        return true;
     }
 };
 
@@ -187,7 +184,7 @@ Driver::Driver(SwContext &swctx)
     // without this line it will be loaded first and won't get its entry point
     getBuiltinInputs(swctx);
 
-    //swctx.addStorage(std::make_unique<BuiltinStorage>(swctx));
+    bs = std::make_unique<BuiltinStorage>(swctx);
 }
 
 Driver::~Driver()
@@ -253,8 +250,9 @@ struct SpecFileInput : Input, DriverInput
                 b->getTargets()[tgt->getPackage()].push_back(tgt);
 
             // execute
-            for (auto &tgt : tgts)
-                b->getTargetsToBuild()[tgt->getPackage()] = b->getTargets()[tgt->getPackage()]; // set our targets
+            SW_UNIMPLEMENTED;
+            //for (auto &tgt : tgts)
+                //b->getTargetsToBuild()[tgt->getPackage()] = b->getTargets()[tgt->getPackage()]; // set our targets
 
             b->build();
             auto &out = pc.r[fn];
@@ -394,8 +392,11 @@ struct DirInput : Input
 
 void Driver::setupBuild(SwBuild &b) const
 {
+    // add builtin resolver
+    b.getResolver().addStorage(*bs);
+
     // add predefined entry points
-    for (auto &[p, epl] : getProgramDetector().getDetectablePackages())
+    /*for (auto &[p, epl] : getProgramDetector().getDetectablePackages())
     {
         auto name = p.toString();
         auto h = std::hash<String>()(name);
@@ -405,7 +406,7 @@ void Driver::setupBuild(SwBuild &b) const
         auto [ptr,_] = b.getContext().registerInput(std::move(i));
         // TODO: check if there's package in storages, so we do not set input in that case?
         b.getTargets()[p.getPath()].setInput(BuildInput(*ptr));
-    }
+    }*/
 }
 
 std::vector<std::unique_ptr<Input>> Driver::detectInputs(const path &p, InputType type) const
@@ -728,8 +729,9 @@ std::unordered_map<path, PrepareConfigOutputData> Driver::build_configs1(SwConte
         b->getTargets()[tgt->getPackage()].push_back(tgt);
 
     // execute
-    for (auto &tgt : tgts)
-        b->getTargetsToBuild()[tgt->getPackage()] = b->getTargets()[tgt->getPackage()]; // set our targets
+    SW_UNIMPLEMENTED;
+    //for (auto &tgt : tgts)
+        //b->getTargetsToBuild()[tgt->getPackage()] = b->getTargets()[tgt->getPackage()]; // set our targets
     b->overrideBuildState(BuildState::PackagesResolved);
     /*if (!ep->udeps.empty())
         LOG_WARN(logger, "WARNING: '#pragma sw require' is not well tested yet. Expect instability.");
@@ -744,7 +746,8 @@ std::unordered_map<path, PrepareConfigOutputData> Driver::build_configs1(SwConte
 
     for (auto &tgt : tgts)
     {
-        b->getTargetsToBuild().erase(tgt->getPackage());
+        SW_UNIMPLEMENTED;
+        //b->getTargetsToBuild().erase(tgt->getPackage());
         b->getTargets().erase(tgt->getPackage());
     }
 

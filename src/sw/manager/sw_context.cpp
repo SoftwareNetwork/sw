@@ -31,7 +31,7 @@ SwManagerContext::SwManagerContext(const path &local_storage_root_dir, bool allo
                 getLocalStorage(), *r, allow_network));
     }
 
-    cr->addStorage(*local_storage);
+    cr->addStorage(*local_storage); // provides faster resolving (smaller set of packages)?
     for (auto &&s : remote_storages)
         cr->addStorage(*s);
 }
@@ -77,10 +77,25 @@ bool SwManagerContext::resolve(ResolveRequest &rr, bool use_cache) const
 void SwManagerContext::install(ResolveRequest &rr) const
 {
     // true for now
-    if (!resolve(rr, true))
+    if (!rr.isResolved() && !resolve(rr, true))
         throw SW_RUNTIME_ERROR("Not resolved: " + rr.u.toString());
     auto lp = install(rr.getPackage());
     rr.r = lp.clone(); // force overwrite with local package
+}
+
+void SwManagerContext::install(std::vector<ResolveRequest> &rrs) const
+{
+    auto &e = getExecutor();
+    Futures<void> fs;
+    for (auto &rr : rrs)
+    {
+        fs.push_back(e.push([this, &rr]
+        {
+            //if (!rr.hasTarget())
+            install(rr);
+        }));
+    }
+    waitAndGet(fs);
 }
 
 LocalPackage SwManagerContext::install(const Package &p) const
