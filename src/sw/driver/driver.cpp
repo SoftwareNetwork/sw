@@ -286,9 +286,10 @@ struct SpecFileInput : Input, DriverInput
             PrepareConfig pc;
             pc.addInput(b2, *this);
 
-            auto &tgts = b2.module_data.getTargets();
-            for (auto &tgt : tgts)
-                b->getTargets()[tgt->getPackage()].push_back(tgt);
+            SW_UNIMPLEMENTED;
+            //auto &tgts = b2.module_data.getTargets();
+            //for (auto &tgt : tgts)
+                //b->getTargets()[tgt->getPackage()].push_back(tgt);
 
             // execute
             SW_UNIMPLEMENTED;
@@ -689,7 +690,7 @@ std::unique_ptr<SwBuild> Driver::create_build(SwContext &swctx) const
             b->getTargets()[p].setInput(bi);
     }*/
 
-    return std::move(b);
+    return b;
 }
 
 PackageSettings Driver::getDllConfigSettings(SwBuild &b) const
@@ -768,10 +769,11 @@ std::unordered_map<path, PrepareConfigOutputData> Driver::build_configs1(SwConte
     Resolver resolver;
     resolver.addStorage(*bs);
 
-    auto &tgts = b2.module_data.getTargets();
+    auto &tgts2 = b2.module_data.getTargets();
+    auto tgts = b->registerTargets(tgts2);
     for (auto &tgt : tgts)
     {
-        b->getTargets()[tgt->getPackage()].push_back(tgt);
+        b->getTargets()[tgt->getPackage()].push_back(*tgt);
         tgt->setResolver(resolver); // here we must give our resolver
     }
 
