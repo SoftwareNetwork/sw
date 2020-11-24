@@ -69,6 +69,20 @@ struct PackageVersionMapBase : PackagePathMap<PackagePath, VersionMap<T>>
                 move_to_next(true);
         }
 
+        Iterator(const Iterator &i)
+        {
+            operator=(i);
+        }
+        Iterator &operator=(const Iterator &i)
+        {
+            t = i.t;
+            p = i.p;
+            v = i.v;
+            if (i.ptr)
+                ptr = std::make_unique<value_type>(i.ptr->first, i.ptr->second);
+            return *this;
+        }
+
         value_type &operator*() { return *ptr; }
         const value_type &operator*() const { return *ptr; }
 
@@ -190,25 +204,22 @@ struct PackageVersionMapBase : PackagePathMap<PackagePath, VersionMap<T>>
         return v.erase(pkg.getVersion());
     }
 
-    auto end(const PackageId &pkg)
+    iterator erase(const_iterator i)
     {
-        return end();
+        i.v = i.p->second.erase(i.v);
+        return i;
+    }
+    iterator erase(iterator i)
+    {
+        i.v = i.p->second.erase(i.v);
+        return i;
     }
 
-    auto end(const PackageId &pkg) const
-    {
-        return end();
-    }
+    auto end(const PackageId &) { return end(); }
+    auto end(const PackageId &) const { return end(); }
 
-    auto end(const PackagePath &)
-    {
-        return Base::end();
-    }
-
-    auto end(const PackagePath &) const
-    {
-        return Base::end();
-    }
+    auto end(const PackagePath &) { return Base::end(); }
+    auto end(const PackagePath &) const { return Base::end(); }
 
     auto emplace(const PackageId &pkg, const T &val)
     {
