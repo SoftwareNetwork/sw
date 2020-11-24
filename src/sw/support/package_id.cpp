@@ -78,9 +78,14 @@ String UnresolvedPackage::toString(const String &delim) const
     return s;
 }
 
-bool UnresolvedPackage::canBe(const PackageId &id) const
+bool UnresolvedPackage::contains(const PackageId &id) const
 {
     return ppath == id.getPath() && range.contains(id.getVersion());
+}
+
+bool contains(const UnresolvedPackages &upkgs, const PackageId &p)
+{
+    return std::any_of(upkgs.begin(), upkgs.end(), [&p](auto &u) { return u.contains(p); });
 }
 
 PackageId::PackageId(const String &target)

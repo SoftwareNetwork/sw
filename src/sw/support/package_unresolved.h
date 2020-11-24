@@ -30,7 +30,9 @@ struct SW_SUPPORT_API UnresolvedPackage
 
     std::optional<PackageId> toPackageId() const;
     String toString(const String &delim = "-") const;
-    bool canBe(const PackageId &id) const;
+    [[deprecated("use contains()")]]
+    bool canBe(const PackageId &id) const { return contains(id); }
+    bool contains(const PackageId &) const;
 
     bool operator<(const UnresolvedPackage &rhs) const { return std::tie(ppath, range) < std::tie(rhs.ppath, rhs.range); }
     bool operator==(const UnresolvedPackage &rhs) const { return std::tie(ppath, range) == std::tie(rhs.ppath, rhs.range); }
@@ -38,6 +40,9 @@ struct SW_SUPPORT_API UnresolvedPackage
 };
 
 using UnresolvedPackages = std::unordered_set<UnresolvedPackage>;
+
+SW_SUPPORT_API
+bool contains(const UnresolvedPackages &, const PackageId &);
 
 SW_SUPPORT_API
 UnresolvedPackage extractFromString(const String &target);
