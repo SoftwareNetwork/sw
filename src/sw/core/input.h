@@ -76,15 +76,15 @@ private:
     virtual EntryPointPtr load1(SwContext &) = 0;
 };
 
-struct SW_CORE_API BuildInput
+struct SW_CORE_API LogicalInput
 {
-    BuildInput(Input &);
+    LogicalInput(Input &, const PackagePath &prefix);
 
     // same input may be used to load multiple packages
     // they all share same prefix
     const PackageIdSet &getPackages() const { return pkgs; }
-    PackagePath getPrefix() const { return prefix ? *prefix : PackagePath{}; }
-    void addPackage(const PackageId &, const PackagePath &);
+    const PackagePath &getPrefix() const { return prefix; }
+    void addPackage(const PackageId &);
 
     // no dry-run targets
     [[nodiscard]]
@@ -95,31 +95,31 @@ struct SW_CORE_API BuildInput
     Input &getInput() { return i; }
     const Input &getInput() const { return i; }
 
-    bool operator==(const BuildInput &rhs) const;
-    bool operator!=(const BuildInput &rhs) const { return !operator==(rhs); }
+    bool operator==(const LogicalInput &rhs) const;
+    bool operator!=(const LogicalInput &rhs) const { return !operator==(rhs); }
 
 private:
     PackageIdSet pkgs;
-    std::optional<PackagePath> prefix;
+    PackagePath prefix;
     Input &i;
 };
 
 struct SW_CORE_API InputWithSettings
 {
-    InputWithSettings(const BuildInput &);
+    InputWithSettings(const LogicalInput &);
 
     const std::set<PackageSettings> &getSettings() const;
     void addSettings(const PackageSettings &s);
     void clearSettings() { settings.clear(); }
     String getHash() const;
-    BuildInput &getInput() { return i; }
-    const BuildInput &getInput() const { return i; }
+    LogicalInput &getInput() { return i; }
+    const LogicalInput &getInput() const { return i; }
 
     [[nodiscard]]
     std::vector<ITargetPtr> loadTargets(SwBuild &) const;
 
 protected:
-    BuildInput i;
+    LogicalInput i;
     std::set<PackageSettings> settings;
 };
 

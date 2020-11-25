@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2020 Egor Pugin <egor.pugin@gmail.com>
 
+#pragma once
+
 #include <sw/core/input.h>
 #include <sw/core/specification.h>
 
@@ -20,6 +22,8 @@ struct BuiltinInput : Input
     EntryPointPtr load1(SwContext &) override { SW_UNREACHABLE; }
 };
 
-using BuiltinInputs = std::unordered_map<Input*, PackageIdSet>;
+using BuiltinInputs = std::vector<LogicalInput>;
+
+BuiltinInputs load_builtin_inputs(SwContext &, const IDriver &);
 
 } // namespace sw

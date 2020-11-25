@@ -19,7 +19,7 @@
 namespace sw
 {
 
-struct BuildInput;
+struct LogicalInput;
 struct IRule;
 struct ITarget;
 struct SwBuild;
@@ -218,15 +218,15 @@ struct SW_CORE_API InputLoader
     InputLoader &operator=(const InputLoader &);
     ~InputLoader();
 
-    void setInput(const BuildInput &);
-    const BuildInput &getInput() const;
+    void setInput(const LogicalInput &);
+    const LogicalInput &getInput() const;
     bool hasInput() const { return !!input; }
 
     [[nodiscard]]
     std::vector<ITargetPtr> loadPackages(SwBuild &, const PackageSettings &, const AllowedPackages &allowed_packages) const;
 
 private:
-    std::unique_ptr<BuildInput> input;
+    std::unique_ptr<LogicalInput> input;
 };
 
 struct SW_CORE_API TargetContainer : InputLoader

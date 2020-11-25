@@ -99,25 +99,25 @@ std::vector<ITargetPtr> Input::loadPackages(SwBuild &b, const PackageSettings &s
     return tgts;
 }
 
-BuildInput::BuildInput(Input &i)
+LogicalInput::LogicalInput(Input &i, const PackagePath &in_prefix)
     : i(i)
+    , prefix(in_prefix)
 {
 }
 
-void BuildInput::addPackage(const PackageId &in, const PackagePath &in_prefix)
+void LogicalInput::addPackage(const PackageId &in)
 {
-    if (prefix && in_prefix != getPrefix())
+    if (!prefix.empty() && in.getPath().slice(0, prefix.size()) != prefix)
         throw SW_RUNTIME_ERROR("Trying to add different prefix");
-    prefix = in_prefix;
     pkgs.insert(in);
 }
 
-std::vector<ITargetPtr> BuildInput::loadPackages(SwBuild &b, const PackageSettings &s, const AllowedPackages &allowed_packages) const
+std::vector<ITargetPtr> LogicalInput::loadPackages(SwBuild &b, const PackageSettings &s, const AllowedPackages &allowed_packages) const
 {
     return i.loadPackages(b, s, allowed_packages.empty() ? pkgs : allowed_packages, getPrefix());
 }
 
-PackageIdSet BuildInput::listPackages(SwContext &swctx) const
+PackageIdSet LogicalInput::listPackages(SwContext &swctx) const
 {
     auto b = swctx.createBuild();
     auto tgts = loadPackages(*b, swctx.getHostSettings());
@@ -127,22 +127,14 @@ PackageIdSet BuildInput::listPackages(SwContext &swctx) const
     return s;
 }
 
-bool BuildInput::operator==(const BuildInput &rhs) const
+bool LogicalInput::operator==(const LogicalInput &rhs) const
 {
     auto h = i.getHash();
     auto rh = rhs.i.getHash();
-    // macos compilation issue
-    //return std::tie(pkgs, prefix, h) == std::tie(rhs.pkgs, rhs.prefix, rh);
-    if (std::tie(pkgs, h) != std::tie(rhs.pkgs, rh))
-        return false;
-    if (!prefix && !rhs.prefix)
-        return true;
-    if (prefix && rhs.prefix && *prefix == *rhs.prefix)
-        return true;
-    return false;
+    return std::tie(pkgs, h, prefix) == std::tie(rhs.pkgs, rh, rhs.prefix);
 }
 
-InputWithSettings::InputWithSettings(const BuildInput &i)
+InputWithSettings::InputWithSettings(const LogicalInput &i)
     : i(i)
 {
 }

@@ -1180,7 +1180,7 @@ void SwBuild::addInput(const InputWithSettings &i)
     inputs.push_back(i);
 }
 
-std::vector<BuildInput> SwBuild::addInput(const String &i)
+std::vector<LogicalInput> SwBuild::addInput(const String &i)
 {
     path p(i);
     if (fs::exists(p))
@@ -1194,7 +1194,7 @@ std::vector<BuildInput> SwBuild::addInput(const String &i)
             if (!resolve(rr))
                 throw SW_RUNTIME_ERROR("Cannot resolve: " + rr.u.toString());
             auto bi = addInput(getContext().install(rr.getPackage()));
-            std::vector<BuildInput> v;
+            std::vector<LogicalInput> v;
             v.push_back(bi);
             return v;
         }
@@ -1205,22 +1205,22 @@ std::vector<BuildInput> SwBuild::addInput(const String &i)
     }
 }
 
-BuildInput SwBuild::addInput(const LocalPackage &p)
+LogicalInput SwBuild::addInput(const LocalPackage &p)
 {
     LOG_TRACE(logger, "Loading input: " + p.toString());
 
-    auto v = addInput(p.getDirSrc2());
+    auto v = addInput(p.getDirSrc2(), p.getPath().slice(0, p.getData().prefix));
     //SW_CHECK(v.size() == 1); // allow multiple inputs for now, take only first
-    v[0].addPackage(p, p.getPath().slice(0, p.getData().prefix));
+    v[0].addPackage(p);
     return v[0];
 }
 
-std::vector<BuildInput> SwBuild::addInput(const path &p)
+std::vector<LogicalInput> SwBuild::addInput(const path &p, const PackagePath &prefix)
 {
     auto v = getContext().addInputInternal(p);
-    std::vector<BuildInput> inputs;
+    std::vector<LogicalInput> inputs;
     for (auto i : v)
-        inputs.emplace_back(*i);
+        inputs.emplace_back(*i, prefix);
     return inputs;
 }
 

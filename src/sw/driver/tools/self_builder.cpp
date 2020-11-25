@@ -37,18 +37,6 @@ void setup_log(const std::string &log_level)
     LOG_TRACE(logger, "Starting sw...");
 }
 
-String write_required_packages(const std::vector<ResolveRequest> &rrs)
-{
-    StringSet upkgs_sorted;
-    for (auto &rr : rrs)
-        upkgs_sorted.insert(rr.u.toString());
-
-    primitives::CppEmitter ctx_packages;
-    for (auto &s : upkgs_sorted)
-        ctx_packages.addLine("\"" + s + "\"s,");
-    return ctx_packages.getText();
-}
-
 auto get_base_rr_vector()
 {
     std::vector<ResolveRequest> rrs;
@@ -178,10 +166,12 @@ String write_build_script(SwCoreContext &swctx, const std::vector<ResolveRequest
             ctx.addLine("ep->cf = check_" + var + ";");
         ctx.addLine("i->setEntryPoint(std::move(ep));");
         ctx.addLine("auto [ii, _] = swctx.registerInput(std::move(i));");
+        ctx.addLine("LogicalInput bi(*ii, \"" + lp.getPath().slice(0, lp.getData().prefix).toString() + "\"s);");
 
         // enumerate all other packages in group
         for (auto &p : hash_pkgs[h])
-            ctx.addLine("epm[ii].insert(\"" + p.toString() + "\"s);");
+            ctx.addLine("bi.addPackage(\"" + p.toString() + "\"s);");
+        ctx.addLine("epm.push_back(bi);");
         hash_pkgs.erase(h);
         ctx.endBlock();
         ctx.emptyLines();
@@ -197,7 +187,7 @@ int main(int argc, char **argv)
 {
     static cl::opt<String> loglevel("log-level", cl::init("INFO"));
     static cl::opt<path> p(cl::Positional, cl::Required);
-    static cl::opt<path> packages(cl::Positional, cl::Required);
+    static cl::opt<path> _(cl::Positional, cl::ConsumeAfter); // to be removed
 
     cl::ParseCommandLineOptions(argc, argv);
 
@@ -225,8 +215,6 @@ int main(int argc, char **argv)
         }
         waitAndGet(fs);
     }
-    auto t1 = write_required_packages(m_rrs);
-    write_file(packages, t1);
 
     // we do second resolve, because we need this packages to be included before driver's sw.cpp,
     // but we do not need to install them on user system

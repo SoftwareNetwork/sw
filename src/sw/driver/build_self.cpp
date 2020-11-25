@@ -21,28 +21,3 @@ DECLARE_STATIC_LOGGER(logger, "build.self");
 #endif
 
 #include <build_self.generated.h>
-
-namespace sw
-{
-
-PackageIdSet load_builtin_packages(SwContext &swctx)
-{
-    static const UnresolvedPackages required_packages
-    {
-#include <build_self.packages.generated.h>
-    };
-
-    PackageIdSet builtin_packages;
-    std::vector<ResolveRequest> rrs;
-    for (auto &p : required_packages)
-    {
-        auto &rr = rrs.emplace_back(p);
-        if (!swctx.resolve(rr, true))
-            throw SW_RUNTIME_ERROR("Cannot resolve: " + p.toString());
-        builtin_packages.insert(rr.getPackage());
-    }
-    swctx.install(rrs);
-    return builtin_packages;
-}
-
-} // namespace sw

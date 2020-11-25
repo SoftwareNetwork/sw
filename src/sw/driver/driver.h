@@ -3,8 +3,9 @@
 
 #pragma once
 
+#include "builtin_input.h"
+
 #include <sw/core/driver.h>
-#include <sw/core/input.h>
 #include <sw/support/package_id.h>
 
 #include <boost/bimap.hpp>
@@ -61,7 +62,6 @@ private:
     SwContext &swctx;
     mutable std::mutex m_bp;
     mutable std::optional<PackageIdSet> builtin_packages;
-    using BuiltinInputs = std::unordered_map<Input*, PackageIdSet>;
     mutable BuiltinInputs builtin_inputs;
     PackageIdSet getBuiltinPackages(SwContext &) const;
     void getBuiltinInputs(SwContext &) const;

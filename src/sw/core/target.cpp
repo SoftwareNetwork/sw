@@ -117,22 +117,22 @@ InputLoader &InputLoader::operator=(const InputLoader &rhs)
     if (this == &rhs)
         return *this;
     if (rhs.input)
-        input = std::make_unique<BuildInput>(rhs.getInput());
+        input = std::make_unique<LogicalInput>(rhs.getInput());
     return *this;
 }
 
-const BuildInput &InputLoader::getInput() const
+const LogicalInput &InputLoader::getInput() const
 {
     if (!input)
         throw SW_RUNTIME_ERROR("No input was set");
     return *input;
 }
 
-void InputLoader::setInput(const BuildInput &i)
+void InputLoader::setInput(const LogicalInput &i)
 {
     if (input && i != *input)
         throw SW_RUNTIME_ERROR("Setting input twice: " + i.getInput().getName());
-    input = std::make_unique<BuildInput>(i);
+    input = std::make_unique<LogicalInput>(i);
 }
 
 std::vector<ITargetPtr> InputLoader::loadPackages(SwBuild &b, const PackageSettings &s, const AllowedPackages &allowed_packages) const

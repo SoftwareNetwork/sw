@@ -166,7 +166,7 @@ static sw::support::SourceDirMap getSources(const path &bdir, const Options &opt
     return getSources(bdir, sources, srcs);
 }
 
-std::pair<sw::support::SourceDirMap, std::vector<sw::BuildInput>> SwClientContext::fetch(sw::SwBuild &b)
+std::pair<sw::support::SourceDirMap, std::vector<sw::LogicalInput>> SwClientContext::fetch(sw::SwBuild &b)
 {
     auto srcs = getOptions().options_upload.source.empty()
         ? getSources(*this) // from config
@@ -204,7 +204,7 @@ std::pair<sw::support::SourceDirMap, std::vector<sw::BuildInput>> SwClientContex
     return { srcs, inputs };
 }
 
-std::pair<sw::support::SourceDirMap, std::vector<sw::BuildInput>> SwClientContext::fetch()
+std::pair<sw::support::SourceDirMap, std::vector<sw::LogicalInput>> SwClientContext::fetch()
 {
     return fetch(*createBuild());
 }

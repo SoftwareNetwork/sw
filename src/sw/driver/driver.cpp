@@ -43,8 +43,6 @@ void process_configure_ac2(const path &p);
 namespace sw
 {
 
-PackageIdSet load_builtin_packages(SwContext &);
-std::unordered_map<Input*, PackageIdSet> load_builtin_inputs(SwContext &, const IDriver &);
 void addImportLibrary(Build &b);
 void addDelayLoadLibrary(Build &b);
 void addConfigPchLibrary(Build &b);
@@ -142,7 +140,7 @@ struct BuiltinStorage : IStorage
     PackageMap m;
     std::unique_ptr<SwBuild> sb;
     mutable std::unordered_map<UnresolvedPackage, std::vector<ITargetPtr>> targets;
-    std::unordered_map<PackagePath, Input *> targets2;
+    std::unordered_map<PackagePath, LogicalInput> targets2;
     std::unordered_map<PackagePath, PackageId> targets22;
     mutable std::unordered_map<PackagePath, ITargetPtr> targets23;
     mutable std::vector<ITargetPtr> dummy_targets;
@@ -157,9 +155,9 @@ struct BuiltinStorage : IStorage
     const StorageSchema &getSchema() const override { SW_UNREACHABLE; }
     PackageDataPtr loadData(const PackageId &) const override { SW_UNREACHABLE; }
 
-    void addTarget2(const PackageId &pkg, Input &i)
+    void addTarget2(const PackageId &pkg, const LogicalInput &bi)
     {
-        if (!targets2.emplace(pkg.getPath(), &i).second)
+        if (!targets2.emplace(pkg.getPath(), bi).second)
             throw SW_RUNTIME_ERROR("Duplicate package paths, rewrite this code");
         targets22.emplace(pkg.getPath(), pkg);
     }
@@ -185,7 +183,7 @@ struct BuiltinStorage : IStorage
                     rr.setPackage(rr2.getPackage().clone(), i->second.get());
                     return true;
                 }
-                auto itgts = i->second->loadPackages(*sb, rr.settings, {}, i->first.slice(0, rr2.getPackage().getData().prefix));
+                auto itgts = i->second.loadPackages(*sb, rr.settings);
                 for (auto &&t : itgts)
                 {
                     if (t->getPackage().getPath() == rr.u.getPath())
@@ -197,7 +195,7 @@ struct BuiltinStorage : IStorage
             }
             else
             {
-                auto itgts = i->second->loadPackages(*sb, rr.settings, {}, {});
+                auto itgts = i->second.loadPackages(*sb, rr.settings);
                 for (auto &t : itgts)
                 {
                     rr.setPackage(std::make_unique<Package>(*this, t->getPackage()), t.get());
@@ -238,10 +236,10 @@ Driver::Driver(SwContext &swctx)
     bs = std::make_unique<BuiltinStorage>(swctx);
 
     // register inputs
-    for (auto &&[i, pkgs] : builtin_inputs)
+    for (auto &&bi : builtin_inputs)
     {
-        for (auto &pkg : pkgs)
-            bs->addTarget2(pkg, *i);
+        for (auto &pkg : bi.getPackages())
+            bs->addTarget2(pkg, bi);
     }
 }
 
@@ -464,7 +462,7 @@ void Driver::setupBuild(SwBuild &b) const
         i->setEntryPoint(std::move(ep));
         auto [ptr,_] = b.getContext().registerInput(std::move(i));
         // TODO: check if there's package in storages, so we do not set input in that case?
-        b.getTargets()[p.getPath()].setInput(BuildInput(*ptr));
+        b.getTargets()[p.getPath()].setInput(LogicalInput(*ptr));
     }*/
 }
 
@@ -632,11 +630,22 @@ PackageIdSet Driver::getBuiltinPackages(SwContext &swctx) const
     if (!builtin_packages)
     {
         std::unique_lock lk(m_bp);
-        builtin_packages = load_builtin_packages(swctx);
 
-        // add more builtin packages
-        // detected - programs, compilers, tools
-        //getProgramDetector()
+        auto &builtin_packages = this->builtin_packages.emplace();
+        std::vector<ResolveRequest> rrs;
+        for (auto &bi : builtin_inputs)
+        {
+            for (auto &p : bi.getPackages())
+            {
+                if (p.getPath().isRelative())
+                    continue;
+                auto &rr = rrs.emplace_back(p);
+                if (!swctx.resolve(rr, true))
+                    throw SW_RUNTIME_ERROR("Cannot resolve: " + p.toString());
+                builtin_packages.insert(rr.getPackage());
+            }
+        }
+        swctx.install(rrs);
     }
     return *builtin_packages;
 }
@@ -657,7 +666,8 @@ void Driver::getBuiltinInputs(SwContext &) const
         auto ep = std::make_unique<sw::NativeBuiltinTargetEntryPoint>(addImportLibrary);
         i->setEntryPoint(std::move(ep));
         auto [ii, _] = swctx.registerInput(std::move(i));
-        builtin_inputs[ii].insert(name + "-0.0.1"s);
+        LogicalInput bi(*ii, {});
+        bi.addPackage(name + "-0.0.1"s);
     }
 
     {
@@ -667,7 +677,8 @@ void Driver::getBuiltinInputs(SwContext &) const
         auto ep = std::make_unique<sw::NativeBuiltinTargetEntryPoint>(addDelayLoadLibrary);
         i->setEntryPoint(std::move(ep));
         auto [ii, _] = swctx.registerInput(std::move(i));
-        builtin_inputs[ii].insert(name + "-0.0.1"s);
+        LogicalInput bi(*ii, {});
+        bi.addPackage(name + "-0.0.1"s);
     }
 
     {
@@ -677,7 +688,8 @@ void Driver::getBuiltinInputs(SwContext &) const
         auto ep = std::make_unique<sw::NativeBuiltinTargetEntryPoint>(addConfigPchLibrary);
         i->setEntryPoint(std::move(ep));
         auto [ii, _] = swctx.registerInput(std::move(i));
-        builtin_inputs[ii].insert(name + "-0.0.1"s);
+        LogicalInput bi(*ii, {});
+        bi.addPackage(name + "-0.0.1"s);
     }
 }
 
@@ -692,7 +704,7 @@ std::unique_ptr<SwBuild> Driver::create_build(SwContext &swctx) const
     // register targets and set inputs
     /*for (auto &[i, pkgs] : builtin_inputs)
     {
-        BuildInput bi(*i);
+        LogicalInput bi(*i);
         for (auto &p : pkgs)
         {
             if (p.getPath().isAbsolute())
