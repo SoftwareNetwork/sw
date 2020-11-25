@@ -133,6 +133,7 @@ private:
     std::unique_ptr<CachedStorage> cached_storage;
     std::unique_ptr<CachingResolver> cr;
     std::vector<ITargetPtr> target_storage;
+    //std::set<ITarget*> build_targets;
 
     // other data
     String name;

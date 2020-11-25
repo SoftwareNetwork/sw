@@ -231,7 +231,7 @@ private:
 
 struct SW_CORE_API TargetContainer : InputLoader
 {
-    using Storage = std::vector<ITarget*>;
+    using Storage = std::set<ITarget*>;
     using Base = Storage;
 
     TargetContainer();

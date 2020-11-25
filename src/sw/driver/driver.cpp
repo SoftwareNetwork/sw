@@ -134,7 +134,7 @@ static Strings get_inline_comments(const path &p)
 
 // actually this is system storage
 // or storage for programs found in the system
-struct BuiltinStorage : IResolvableStorage
+struct BuiltinStorage : IStorage
 {
     SwContext &swctx;
     ProgramDetector::DetectablePackageEntryPoints eps;
@@ -144,6 +144,7 @@ struct BuiltinStorage : IResolvableStorage
     mutable std::unordered_map<UnresolvedPackage, std::vector<ITargetPtr>> targets;
     std::unordered_map<PackagePath, Input *> targets2;
     std::unordered_map<PackagePath, PackageId> targets22;
+    mutable std::unordered_map<PackagePath, ITargetPtr> targets23;
     mutable std::vector<ITargetPtr> dummy_targets;
 
     BuiltinStorage(SwContext &swctx)
@@ -153,8 +154,8 @@ struct BuiltinStorage : IResolvableStorage
         eps = getProgramDetector().getDetectablePackages();
     }
 
-    //const StorageSchema &getSchema() const override { SW_UNREACHABLE; }
-    //PackageDataPtr loadData(const PackageId &) const override { SW_UNREACHABLE; }
+    const StorageSchema &getSchema() const override { SW_UNREACHABLE; }
+    PackageDataPtr loadData(const PackageId &) const override { SW_UNREACHABLE; }
 
     void addTarget2(const PackageId &pkg, Input &i)
     {
@@ -179,22 +180,36 @@ struct BuiltinStorage : IResolvableStorage
                     rr.setPackage(rr2.getPackage().clone(), dummy_targets.back().get());
                     return true;
                 }
-                auto itgts = i->second->loadPackages(*sb, rr.settings, { {rr.u} }, i->first.slice(0, rr2.getPackage().getData().prefix));
-                for (auto &t : itgts)
-                    rr.setPackage(rr2.getPackage().clone(), t.get());
+                if (auto i = targets23.find(rr.u.getPath()); i != targets23.end())
+                {
+                    rr.setPackage(rr2.getPackage().clone(), i->second.get());
+                    return true;
+                }
+                auto itgts = i->second->loadPackages(*sb, rr.settings, {}, i->first.slice(0, rr2.getPackage().getData().prefix));
+                for (auto &&t : itgts)
+                {
+                    if (t->getPackage().getPath() == rr.u.getPath())
+                        rr.setPackage(rr2.getPackage().clone(), t.get());
+                    targets23.emplace(t->getPackage().getPath(), std::move(t));
+                }
+                if (!rr.isResolved())
+                    throw SW_LOGIC_ERROR("not resolved");
             }
             else
             {
-                auto itgts = i->second->loadPackages(*sb, rr.settings, { {rr.u} }, {});
+                auto itgts = i->second->loadPackages(*sb, rr.settings, {}, {});
                 for (auto &t : itgts)
-                    rr.setPackage(t->getPackage().clone(), t.get());
+                {
+                    rr.setPackage(std::make_unique<Package>(*this, t->getPackage()), t.get());
+                    dummy_targets.emplace_back(std::move(t));
+                }
             }
             return true;
         }
         if (auto i = targets.find(rr.u); i != targets.end())
         {
             for (auto &t : i->second)
-                rr.setPackage(t->getPackage().clone(), t.get());
+                rr.setPackage(std::make_unique<Package>(*this, t->getPackage()), t.get());
             return true;
         }
         auto i = eps.find(rr.u);
@@ -206,7 +221,7 @@ struct BuiltinStorage : IResolvableStorage
         auto [itgts,_] = targets.emplace(rr.u, std::move(b.module_data.getTargets()));
         // the best candidate is selected inside setPackage()
         for (auto &t : itgts->second)
-            rr.setPackage(t->getPackage().clone(), t.get());
+            rr.setPackage(std::make_unique<Package>(*this, t->getPackage()), t.get());
         return true;
     }
 };

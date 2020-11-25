@@ -162,15 +162,17 @@ TargetContainer::~TargetContainer()
 
 void TargetContainer::push_back(ITarget &t)
 {
+    targets.insert(&t);
+
     // on the same settings, we take input target and overwrite old one
 
-    auto i = findEqual(t.getSettings());
+    /*auto i = findEqual(t.getSettings());
     if (i == end())
     {
-        targets.push_back(&t);
+        targets.insert(&t);
         return;
     }
-    *i = &t;
+    *i = &t;*/
 }
 
 void TargetContainer::clear()

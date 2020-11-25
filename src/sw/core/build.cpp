@@ -393,6 +393,7 @@ void SwBuild::resolvePackages()
 
     // gather
     std::vector<ResolveRequest> rrs;
+    std::set<ITarget *> new_targets;
     for (const auto &[pkg, tgts] : getTargets())
     {
         for (const auto &tgt : tgts)
@@ -408,14 +409,24 @@ void SwBuild::resolvePackages()
                 if (!tgt->resolve(rr))
                     throw SW_RUNTIME_ERROR("Cannot resolve package: " + rr.u.toString());
                 if (rr.hasTarget())
+                {
                     d->setTarget(rr.getTarget());
+                    new_targets.insert(&rr.getTarget());
+                    rr.getTarget().setResolver(tgt->getResolver());
+                }
                 else
                     rrs.emplace_back(std::move(rr));
             }
         }
     }
+    for (auto &&t : new_targets)
+        getTargets()[t->getPackage()].push_back(*t);
     if (rrs.empty())
+    {
+        if (!new_targets.empty())
+            resolvePackages();
         return;
+    }
     getContext().install(rrs);
 
     // now we know all drivers
@@ -762,6 +773,9 @@ void SwBuild::prepare()
 
     if (build_settings["master_build"] != "true")
         return;
+
+    // for now
+    return;
 
     // save after prepare
     for (const auto &[pkg, tgts] : targets)
