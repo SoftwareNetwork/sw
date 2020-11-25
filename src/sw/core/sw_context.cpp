@@ -132,7 +132,7 @@ void SwContext::stop(std::thread::id id)
         active_operations[id]->stop();
 }
 
-void SwContext::registerDriver(const PackageId &pkg, std::unique_ptr<IDriver> &&driver)
+void SwContext::registerDriver(const PackageId &pkg, std::unique_ptr<IDriver> driver)
 {
     auto [_, inserted] = drivers.insert_or_assign(pkg, std::move(driver));
     if (inserted)
@@ -147,6 +147,14 @@ void SwContext::executeBuild(const path &in)
 }
 
 std::vector<std::unique_ptr<Input>> SwContext::detectInputs(const path &in) const
+{
+    std::vector<const IDriver *> d2;
+    for (auto &[k, v] : drivers)
+        d2.push_back(v.get());
+    return detectInputs(d2, in);
+}
+
+std::vector<std::unique_ptr<Input>> SwContext::detectInputs(const std::vector<const IDriver*> &drivers, const path &in)
 {
     path p = in;
     if (!p.is_absolute())
@@ -164,9 +172,9 @@ std::vector<std::unique_ptr<Input>> SwContext::detectInputs(const path &in) cons
     //
     std::vector<std::unique_ptr<Input>> inputs;
 
-    auto findDriver = [this, &p, &inputs](auto type) -> bool
+    auto findDriver = [&drivers, &p, &inputs](auto type) -> bool
     {
-        for (auto &[dp, d] : drivers)
+        for (auto &&d : drivers)
         {
             auto inpts = d->detectInputs(p, type);
             if (inpts.empty())

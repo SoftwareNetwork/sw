@@ -78,7 +78,8 @@ sw::PackageDescriptionMap getPackages(const sw::SwBuild &b, const sw::support::S
 
         m.emplace(pkg, std::move(d));
         if (iv)
-            (*iv)[&tgts.getInput().getInput()].push_back(pkg);
+            SW_UNIMPLEMENTED;
+            //(*iv)[&tgts.getInput().getInput()].push_back(pkg);
     }
     return m;
 }

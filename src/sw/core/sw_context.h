@@ -55,7 +55,7 @@ struct SW_CORE_API SwContext : SwCoreContext
     SwContext(const path &local_storage_root_dir, bool allow_network);
     virtual ~SwContext();
 
-    void registerDriver(const PackageId &pkg, std::unique_ptr<IDriver> &&driver);
+    void registerDriver(const PackageId &pkg, std::unique_ptr<IDriver> driver);
     //const Drivers &getDrivers() const { return drivers; }
 
     std::unique_ptr<SwBuild> createBuild();
@@ -68,6 +68,7 @@ struct SW_CORE_API SwContext : SwCoreContext
 
     //
     std::vector<std::unique_ptr<Input>> detectInputs(const path &) const;
+    static std::vector<std::unique_ptr<Input>> detectInputs(const std::vector<const IDriver*> &, const path &);
     Input *getInput(size_t hash) const;
     std::vector<Input *> addInputInternal(const path &);
     //                inserted

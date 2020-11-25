@@ -211,33 +211,10 @@ private:
     mutable std::vector<IDependencyPtr> deps;
 };
 
-struct SW_CORE_API InputLoader
-{
-    InputLoader();
-    InputLoader(const InputLoader &);
-    InputLoader &operator=(const InputLoader &);
-    ~InputLoader();
-
-    void setInput(const LogicalInput &);
-    const LogicalInput &getInput() const;
-    bool hasInput() const { return !!input; }
-
-    [[nodiscard]]
-    std::vector<ITargetPtr> loadPackages(SwBuild &, const PackageSettings &, const AllowedPackages &allowed_packages) const;
-
-private:
-    std::unique_ptr<LogicalInput> input;
-};
-
-struct SW_CORE_API TargetContainer : InputLoader
+struct SW_CORE_API TargetContainer
 {
     using Storage = std::set<ITarget*>;
     using Base = Storage;
-
-    TargetContainer();
-    TargetContainer(const TargetContainer &);
-    TargetContainer &operator=(const TargetContainer &);
-    ~TargetContainer();
 
     // find target with equal settings
     Base::iterator findEqual(const PackageSettings &);
@@ -307,7 +284,7 @@ struct SimpleExpected : std::variant<SimpleExpectedErrorCode, T, Args...>
 } // namespace detail
 
 template <class ... Args>
-struct ExtendedVersionMap : ::primitives::version::VersionMap<Args...>, InputLoader
+struct ExtendedVersionMap : ::primitives::version::VersionMap<Args...>
 {
 };
 

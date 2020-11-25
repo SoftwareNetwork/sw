@@ -104,62 +104,6 @@ TargetFile::TargetFile(const path &p, bool is_generated, bool is_from_other_targ
 
 //std::unique_ptr<IRule> ITarget::getRule() const { return nullptr; }
 
-InputLoader::InputLoader() = default;
-InputLoader::~InputLoader() = default;
-
-InputLoader::InputLoader(const InputLoader &rhs)
-{
-    operator=(rhs);
-}
-
-InputLoader &InputLoader::operator=(const InputLoader &rhs)
-{
-    if (this == &rhs)
-        return *this;
-    if (rhs.input)
-        input = std::make_unique<LogicalInput>(rhs.getInput());
-    return *this;
-}
-
-const LogicalInput &InputLoader::getInput() const
-{
-    if (!input)
-        throw SW_RUNTIME_ERROR("No input was set");
-    return *input;
-}
-
-void InputLoader::setInput(const LogicalInput &i)
-{
-    if (input && i != *input)
-        throw SW_RUNTIME_ERROR("Setting input twice: " + i.getInput().getName());
-    input = std::make_unique<LogicalInput>(i);
-}
-
-std::vector<ITargetPtr> InputLoader::loadPackages(SwBuild &b, const PackageSettings &s, const AllowedPackages &allowed_packages) const
-{
-    return getInput().loadPackages(b, s, allowed_packages);
-}
-
-TargetContainer::TargetContainer() = default;
-
-TargetContainer::TargetContainer(const TargetContainer &rhs)
-    : InputLoader(rhs)
-{
-    operator=(rhs);
-}
-
-TargetContainer &TargetContainer::operator=(const TargetContainer &rhs)
-{
-    if (this == &rhs)
-        return *this;
-    targets = rhs.targets;
-    return *this;
-}
-
-TargetContainer::~TargetContainer()
-{
-}
-
 void TargetContainer::push_back(ITarget &t)
 {
     targets.insert(&t);

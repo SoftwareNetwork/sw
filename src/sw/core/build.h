@@ -134,6 +134,7 @@ private:
     std::unique_ptr<CachingResolver> cr;
     std::vector<ITargetPtr> target_storage;
     //std::set<ITarget*> build_targets;
+    std::unordered_map<PackageId, LogicalInput> logical_inputs;
 
     // other data
     String name;

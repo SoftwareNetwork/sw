@@ -8,6 +8,7 @@
 namespace sw
 {
 
+struct Package;
 struct Input;
 //struct SwContext;
 struct SwBuild;
@@ -21,7 +22,11 @@ struct SW_CORE_API IDriver
     //virtual std::vector<std::unique_ptr<Input>> detectInputs(const path &abspath) const = 0;
 
     /// Detect available inputs of specified type on path.
+    /// Only for local inputs
     virtual std::vector<std::unique_ptr<Input>> detectInputs(const path &abspath, InputType) const = 0;
+
+    /// only for package inputs
+    virtual std::unique_ptr<Input> getInput(const Package &) const = 0;
 
     /// Optimized input loading in a batch.
     /// Inputs are unique and non null.

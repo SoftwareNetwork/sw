@@ -382,7 +382,7 @@ void SwBuild::loadInputs()
                 continue;
             tgt->setResolver(getResolver());
             getTargets()[tgt->getPackage()].push_back(*tgt);
-            targets[tgt->getPackage()].setInput(i.getInput());
+            logical_inputs.emplace(tgt->getPackage(), i.getInput());
         }
     }
 }
@@ -393,7 +393,7 @@ void SwBuild::resolvePackages()
 
     // gather
     std::vector<ResolveRequest> rrs;
-    std::set<ITarget *> new_targets;
+    //std::set<ITarget *> new_targets;
     for (const auto &[pkg, tgts] : getTargets())
     {
         for (const auto &tgt : tgts)
@@ -408,23 +408,23 @@ void SwBuild::resolvePackages()
                 rr.settings = d->getSettings();
                 if (!tgt->resolve(rr))
                     throw SW_RUNTIME_ERROR("Cannot resolve package: " + rr.u.toString());
-                if (rr.hasTarget())
+                /*if (rr.hasTarget())
                 {
                     d->setTarget(rr.getTarget());
                     new_targets.insert(&rr.getTarget());
                     rr.getTarget().setResolver(tgt->getResolver());
                 }
-                else
+                else*/
                     rrs.emplace_back(std::move(rr));
             }
         }
     }
-    for (auto &&t : new_targets)
-        getTargets()[t->getPackage()].push_back(*t);
+    //for (auto &&t : new_targets)
+        //getTargets()[t->getPackage()].push_back(*t);
     if (rrs.empty())
     {
-        if (!new_targets.empty())
-            resolvePackages();
+        //if (!new_targets.empty())
+            //resolvePackages();
         return;
     }
     getContext().install(rrs);
@@ -441,7 +441,7 @@ void SwBuild::resolvePackages()
         auto i = addInput(static_cast<LocalPackage&>(rr.getPackage()));
         iv.insert(&i.getInput());
         // this also marks package as known
-        targets[rr.getPackage()].setInput(i);
+        logical_inputs.emplace(rr.getPackage(), i);
     }
 
     {
@@ -588,7 +588,8 @@ void SwBuild::resolvePackages(const std::vector<IDependency*> &udeps)
         auto i = addInput(static_cast<LocalPackage&>(rr.getPackage()));
         iv.insert(&i.getInput());
         // this also marks package as known
-        targets[rr.getPackage()].setInput(i);
+        SW_UNIMPLEMENTED;
+        //targets[rr.getPackage()].setInput(i);
     }
 
     {
@@ -609,7 +610,8 @@ void SwBuild::loadPackages()
     //               input hash
     std::unordered_map<size_t, TargetMap> cache;
     int r = 1;
-    while (!stopped)
+    SW_UNIMPLEMENTED;
+    /*while (!stopped)
     {
         LOG_TRACE(logger, "build id " << this << " " << BOOST_CURRENT_FUNCTION << " round " << r++);
 
@@ -737,7 +739,7 @@ void SwBuild::loadPackages()
         }
         if (!loaded)
             break;
-    }
+    }*/
 }
 
 bool SwBuild::prepareStep()
@@ -1367,9 +1369,10 @@ void SwBuild::test()
 
 bool SwBuild::isPredefinedTarget(const PackagePath &pp) const
 {
+    SW_UNIMPLEMENTED;
     //return false;
     auto i = getTargets().find(pp);
-    return i != getTargets().end(pp) && i->second.hasInput();
+    //return i != getTargets().end(pp) && i->second.hasInput();
 }
 
 /*bool SwBuild::resolve(ResolveRequest &rr) const

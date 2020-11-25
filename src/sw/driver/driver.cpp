@@ -466,6 +466,23 @@ void Driver::setupBuild(SwBuild &b) const
     }*/
 }
 
+std::unique_ptr<Input> Driver::getInput(const Package &p) const
+{
+    // we are trying to load predefined package
+    if (p.getPath().isRelative())
+        SW_UNIMPLEMENTED;
+    else if (auto lp = dynamic_cast<const LocalPackage *>(&p))
+    {
+        std::vector<const IDriver *> d2;
+        d2.push_back(this);
+        auto inputs = swctx.detectInputs(d2, lp->getDirSrc2());
+        SW_CHECK(inputs.size() == 1);
+        return std::move(inputs[0]);
+    }
+    else
+        throw SW_RUNTIME_ERROR("Unknown package");
+}
+
 std::vector<std::unique_ptr<Input>> Driver::detectInputs(const path &p, InputType type) const
 {
     std::vector<std::unique_ptr<Input>> inputs;
@@ -699,7 +716,7 @@ std::unique_ptr<SwBuild> Driver::create_build(SwContext &swctx) const
 
     // installs packages, do not remove
     // it works on empty storage (test if in doubt)
-    getBuiltinPackages(swctx);
+    //getBuiltinPackages(swctx);
 
     // register targets and set inputs
     /*for (auto &[i, pkgs] : builtin_inputs)
