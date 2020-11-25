@@ -13,6 +13,7 @@
 
 #include <sw/builder/node.h>
 #include <sw/builder/os.h>
+#include <sw/core/target.h>
 #include <sw/manager/package.h>
 #include <sw/support/package_version_map.h>
 #include <sw/support/source.h>
@@ -38,8 +39,6 @@ struct SwBuild;
 struct Target;
 struct ProjectTarget;
 struct DirectoryTarget;
-using TargetBaseType = Target;
-using TargetBaseTypePtr = std::shared_ptr<TargetBaseType>;
 
 struct ExecutableTarget;
 struct LibraryTarget;
@@ -63,6 +62,18 @@ private:
     std::vector<TargetEvent> events;
 };
 
+template <class T>
+struct noncopyable_copyable
+{
+    T t;
+
+    noncopyable_copyable() {}
+    noncopyable_copyable(const noncopyable_copyable &) {}
+    noncopyable_copyable &operator=(const noncopyable_copyable &) { return *this; }
+    noncopyable_copyable(noncopyable_copyable &&) = default;
+    noncopyable_copyable &operator=(noncopyable_copyable &&) = default;
+};
+
 struct SW_DRIVER_CPP_API TargetBaseData : ProjectDirectories, TargetEvents
 {
     bool DryRun = false;
@@ -74,14 +85,18 @@ struct SW_DRIVER_CPP_API TargetBaseData : ProjectDirectories, TargetEvents
      */
     TargetScope Scope = TargetScope::Build;
 
+    TargetBaseData() = default;
+    //TargetBaseData(const TargetBaseData &);
+    //TargetBaseData &operator=(const TargetBaseData &) = delete;
+    //TargetBaseData(TargetBaseData &&) = default;
+    //TargetBaseData &operator=(TargetBaseData &&) = default;
+    //~TargetBaseData();
+
     SwBuild &getMainBuild() const;
 
 protected:
     const Build *build = nullptr;
     SwBuild *main_build_ = nullptr;
-
-    // projects and dirs go here
-    std::vector<TargetBaseTypePtr> dummy_children;
     std::optional<PackageId> current_project;
 };
 
@@ -99,32 +114,6 @@ struct SW_DRIVER_CPP_API TargetBase : TargetBaseData
         if constexpr (sizeof...(Args) > 0)
         {
             if constexpr (std::is_convertible_v<std::tuple_element_t<0, std::tuple<Args...>>, Version>)
-                return *addTarget1<T>(Name, std::forward<Args>(args)...);
-            else
-                return *addTarget1<T>(Name, pkg ? getPackage().getVersion() : Version(), std::forward<Args>(args)...);
-        }
-        else
-            return *addTarget1<T>(Name, pkg ? getPackage().getVersion() : Version(), std::forward<Args>(args)...);
-    }
-
-    /**
-    * \brief Add child target.
-    */
-    template <typename T, typename ... Args>
-    T &addTarget(Args && ... args)
-    {
-        return add<T>(std::forward<Args>(args)...);
-    }
-
-    /**
-    * \brief Make target.
-    */
-    template <typename T, typename ... Args>
-    std::shared_ptr<T> make(const PackagePath &Name, Args && ... args)
-    {
-        if constexpr (sizeof...(Args) > 0)
-        {
-            if constexpr (std::is_convertible_v<std::tuple_element_t<0, std::tuple<Args...>>, Version>)
                 return addTarget1<T>(Name, std::forward<Args>(args)...);
             else
                 return addTarget1<T>(Name, pkg ? getPackage().getVersion() : Version(), std::forward<Args>(args)...);
@@ -134,12 +123,12 @@ struct SW_DRIVER_CPP_API TargetBase : TargetBaseData
     }
 
     /**
-    * \brief Make target.
+    * \brief Add child target.
     */
     template <typename T, typename ... Args>
-    std::shared_ptr<T> makeTarget(Args && ... args)
+    T &addTarget(Args && ... args)
     {
-        return make<T>(std::forward<Args>(args)...);
+        return add<T>(std::forward<Args>(args)...);
     }
 
 #define ADD_TARGET(t)                                       \
@@ -180,15 +169,18 @@ private:
     bool Local = true; // local projects
 
     template <typename T, typename ... Args>
-    std::shared_ptr<T> addTarget1(const PackagePath &Name, const Version &v, Args && ... args)
+    T &addTarget1(const PackagePath &Name, const Version &v, Args && ... args)
     {
         PackageId pkg(constructTargetName(Name), v);
-        auto t = std::make_shared<T>(*this, pkg, std::forward<Args>(args)...);
-        addTarget2(*t);
-        return t;
+        auto t = std::make_unique<T>(*this, pkg, std::forward<Args>(args)...);
+        auto p = t.get();
+        addTarget3(std::move(t));
+        addTarget2(*p);
+        return *p;
     }
 
     void addTarget2(Target &t);
+    void addTarget3(ITargetPtr);
 
     PackagePath constructTargetName(const PackagePath &Name) const;
 
@@ -224,7 +216,6 @@ struct SW_DRIVER_CPP_API Target
     : ITarget
     , TargetBase
     , RuleSystem
-    , std::enable_shared_from_this<Target>
 {
     /*struct PackageSettings
     {

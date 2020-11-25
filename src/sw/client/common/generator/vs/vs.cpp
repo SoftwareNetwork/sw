@@ -498,7 +498,8 @@ void VSGenerator::generate(const SwBuild &b)
             if (itgt == tgts.end())
                 throw SW_RUNTIME_ERROR("missing target: " + pkg.toString());
             auto &d = s.projects.find(pkg.toString())->second.getData(st);
-            d.target = itgt->get();
+            SW_UNIMPLEMENTED;
+            //d.target = itgt->get();
             path_tree.add(d.target->getPackage());
 
             d.binary_dir = d.target->getInterfaceSettings()["binary_dir"].getValue();

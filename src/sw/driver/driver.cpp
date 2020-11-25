@@ -144,6 +144,7 @@ struct BuiltinStorage : IResolvableStorage
     mutable std::unordered_map<UnresolvedPackage, std::vector<ITargetPtr>> targets;
     std::unordered_map<PackagePath, Input *> targets2;
     std::unordered_map<PackagePath, PackageId> targets22;
+    mutable std::vector<ITargetPtr> dummy_targets;
 
     BuiltinStorage(SwContext &swctx)
         : swctx(swctx)
@@ -168,18 +169,19 @@ struct BuiltinStorage : IResolvableStorage
         {
             if (i->first.isAbsolute())
             {
-                // only presence on the system requested (getFile() or something like this)
-                if (rr.settings.empty())
-                {
-                    SW_UNIMPLEMENTED;
-                    return true;
-                }
                 ResolveRequest rr2{ targets22.find(i->first)->second };
                 if (!swctx.resolve(rr2, true))
                     throw SW_RUNTIME_ERROR("Cannot resolve: " + rr2.u.toString());
+                // only presence on the system requested (getFile() or something like this)
+                if (rr.settings.empty())
+                {
+                    dummy_targets.emplace_back(std::make_unique<PredefinedTarget>(rr2.getPackage(), rr.settings));
+                    rr.setPackage(rr2.getPackage().clone(), dummy_targets.back().get());
+                    return true;
+                }
                 auto itgts = i->second->loadPackages(*sb, rr.settings, { {rr.u} }, i->first.slice(0, rr2.getPackage().getData().prefix));
                 for (auto &t : itgts)
-                    rr.setPackage(t->getPackage().clone(), t.get());
+                    rr.setPackage(rr2.getPackage().clone(), t.get());
             }
             else
             {
@@ -201,7 +203,7 @@ struct BuiltinStorage : IResolvableStorage
         Build b(*sb);
         b.module_data.current_settings = rr.settings;
         i->second(b);
-        auto [itgts,_] = targets.emplace(rr.u, b.module_data.getTargets());
+        auto [itgts,_] = targets.emplace(rr.u, std::move(b.module_data.getTargets()));
         // the best candidate is selected inside setPackage()
         for (auto &t : itgts->second)
             rr.setPackage(t->getPackage().clone(), t.get());

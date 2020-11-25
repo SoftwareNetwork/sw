@@ -56,6 +56,11 @@ void TargetEvents::call(CallbackType t) const
     }
 }
 
+/*TargetBaseData::TargetBaseData(const TargetBaseData &rhs)
+    : ProjectDirectories(rhs), TargetEvents(rhs)
+{
+}*/
+
 SwBuild &TargetBaseData::getMainBuild() const
 {
     if (!main_build_)
@@ -118,6 +123,11 @@ PackagePath TargetBase::constructTargetName(const PackagePath &Name) const
     return NamePrefix / (pkg ? getPackage().getPath() / Name : Name);
 }
 
+void TargetBase::addTarget3(ITargetPtr t)
+{
+    static_cast<ExtendedBuild&>(getSolution()).addTarget(std::move(t));
+}
+
 void TargetBase::addTarget2(Target &t)
 {
     while (t.init())
@@ -129,7 +139,7 @@ void TargetBase::addTarget2(Target &t)
     // add child
     if (t.getType() == TargetType::Directory || t.getType() == TargetType::Project)
     {
-        dummy_children.push_back(t.shared_from_this());
+        getSolution().module_data.markAsDummy(t);
         return;
     }
 
@@ -148,8 +158,6 @@ void TargetBase::addTarget2(Target &t)
         t.DryRun = true;
         t.ts["dry-run"] = "true";
     }
-
-    static_cast<ExtendedBuild&>(getSolution()).addTarget(t.shared_from_this());
 }
 
 const SwContext &TargetBase::getContext() const
@@ -190,7 +198,7 @@ Target::Target(TargetBase &parent, const PackageId &pkg)
 
     // sdir
     if (!isLocal())
-        setSourceDirectory(getSolution().getSourceDir(getPackage()));
+        setSourceDirectory(getPackage().getDirSrc2());
     if (auto d = getPackage().getOverriddenDir())
         setSourceDirectory(*d);
     // set source dir

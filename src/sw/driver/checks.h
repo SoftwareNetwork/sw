@@ -131,7 +131,7 @@ protected:
 
     virtual void run() const {}
     path getOutputFilename() const;
-    Build setupSolution(SwBuild &b, const path &f) const;
+    //Build setupSolution(SwBuild &b, const path &f) const;
     PackageSettings getSettings() const;
     virtual void setupTarget(NativeCompiledTarget &t) const;
 

@@ -27,11 +27,19 @@ struct ModuleSwappableData
     AllowedPackages known_targets;
     PackageSettings current_settings;
 
-    void addTarget(ITargetPtr p);
+    ModuleSwappableData();
+    ModuleSwappableData(const ModuleSwappableData &) = delete;
+    ModuleSwappableData &operator=(const ModuleSwappableData &) = delete;
+    ModuleSwappableData(ModuleSwappableData &&) = default;
+    ~ModuleSwappableData();
+
+    void addTarget(ITargetPtr);
+    void markAsDummy(const ITarget &);
     AddedTargets &getTargets();
 
 private:
     AddedTargets added_targets;
+    AddedTargets dummy_children;
     bool post_actions_performed = false;
 };
 
@@ -62,14 +70,16 @@ struct SW_DRIVER_CPP_API Build : TargetBase
 {
     ModuleSwappableData module_data;
     DriverData *dd = nullptr;
-    std::shared_ptr<Checker> checker;
+    std::unique_ptr<Checker> checker;
     //const ProgramDetector &pd;
 
     //
-    Build(SwBuild &/*, const ProgramDetector &*/);
+    Build(SwBuild &);
+    Build(const Build &) = delete;
+    Build(Build &&) = default;
+    //~Build();
 
-    bool isKnownTarget(const LocalPackage &p) const;
-    path getSourceDir(const LocalPackage &p) const;
+    bool isKnownTarget(const PackageId &p) const;
     std::optional<path> getSourceDir(const Source &s, const Version &v) const;
 
     const PackageSettings &getExternalVariables() const;
@@ -84,7 +94,7 @@ struct SW_DRIVER_CPP_API ExtendedBuild : Build
     using Base::Base;
 
     const PackageSettings &getSettings() const { return module_data.current_settings; }
-    void addTarget(const ITargetPtr &t) { module_data.addTarget(t); }
+    void addTarget(ITargetPtr t) { module_data.addTarget(std::move(t)); }
 };
 
 }

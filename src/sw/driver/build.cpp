@@ -37,9 +37,24 @@ DECLARE_STATIC_LOGGER(logger, "build");
 namespace sw
 {
 
+ModuleSwappableData::ModuleSwappableData() {}
+ModuleSwappableData::~ModuleSwappableData() {}
+
 void ModuleSwappableData::addTarget(ITargetPtr p)
 {
-    added_targets.push_back(p);
+    added_targets.push_back(std::move(p));
+}
+
+void ModuleSwappableData::markAsDummy(const ITarget &in_t)
+{
+    for (auto i = added_targets.begin(); i != added_targets.end(); i++)
+    {
+        if (i->get() != &in_t)
+            continue;
+        dummy_children.emplace_back(std::move(*i));
+        added_targets.erase(i);
+        break;
+    }
 }
 
 ModuleSwappableData::AddedTargets &ModuleSwappableData::getTargets()
@@ -59,10 +74,12 @@ ModuleSwappableData::AddedTargets &ModuleSwappableData::getTargets()
 }
 
 Build::Build(SwBuild &mb)
-    : checker(std::make_shared<Checker>(mb))
+    : checker(std::make_unique<Checker>(mb))
 {
     main_build_ = &mb;
 }
+
+//Build::~Build() {}
 
 // can be used in configs to load subdir configs
 // s.build->loadModule("client/sw.cpp").call<void(Solution &)>("build", s);
@@ -75,16 +92,11 @@ Build::Build(SwBuild &mb)
     //return getContext().getModuleStorage().get(dll);
 }*/
 
-bool Build::isKnownTarget(const LocalPackage &p) const
+bool Build::isKnownTarget(const PackageId &p) const
 {
     return module_data.known_targets.empty() ||
         p.getPath().is_loc() || // used by cfg targets and checks
         module_data.known_targets.contains(p);
-}
-
-path Build::getSourceDir(const LocalPackage &p) const
-{
-    return p.getDirSrc2();
 }
 
 std::optional<path> Build::getSourceDir(const Source &s, const Version &v) const

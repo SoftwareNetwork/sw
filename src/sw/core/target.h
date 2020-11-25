@@ -94,7 +94,7 @@ struct SW_CORE_API ITarget : ICastable, ResolverHolder
     // basic info/description section
     //
 
-    virtual const LocalPackage &getPackage() const = 0;
+    virtual const PackageId &getPackage() const = 0;
 
     // merge getSource(), getFiles() and getDependencies() into single call returning json/target settings?
     // into getDescription() or getInformation() or something similar
@@ -186,14 +186,14 @@ struct SW_CORE_API PredefinedTarget : ITarget
 {
     PackageSettings public_ts;
 
-    PredefinedTarget(const LocalPackage &, const PackageSettings &);
+    PredefinedTarget(const PackageId &, const PackageSettings &);
     PredefinedTarget(const PredefinedTarget &) = delete;
     virtual ~PredefinedTarget();
 
     std::vector<IDependency *> getDependencies() const override;
 
     // return what we know
-    const LocalPackage &getPackage() const override { return pkg; }
+    const PackageId &getPackage() const override { return pkg; }
     const PackageSettings &getSettings() const override { return ts; }
     const PackageSettings &getInterfaceSettings() const override { return public_ts; }
 
@@ -205,7 +205,7 @@ struct SW_CORE_API PredefinedTarget : ITarget
     Commands getTests() const override { return {}; }                               // no tests
 
 private:
-    LocalPackage pkg;
+    PackageId pkg;
     PackageSettings ts;
     mutable bool deps_set = false;
     mutable std::vector<IDependencyPtr> deps;
@@ -231,7 +231,7 @@ private:
 
 struct SW_CORE_API TargetContainer : InputLoader
 {
-    using Storage = std::vector<std::reference_wrapper<ITarget>>;
+    using Storage = std::vector<ITarget*>;
     using Base = Storage;
 
     TargetContainer();

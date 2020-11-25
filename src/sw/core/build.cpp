@@ -67,11 +67,11 @@ static auto get_settings_fn()
     return get_base_settings_name() + (use_json() ? ".json" : ".bin");
 }
 
-static auto create_target(const path &sfn, const LocalPackage &pkg, const PackageSettings &s)
+static ITargetPtr create_target(const path &sfn, const LocalPackage &pkg, const PackageSettings &s)
 {
     LOG_TRACE(logger, "loading " << pkg.toString() << ": " << s.getHash() << " from settings file");
 
-    auto tgt = std::make_shared<PredefinedTarget>(pkg, s);
+    auto tgt = std::make_unique<PredefinedTarget>(pkg, s);
     if (!use_json())
         tgt->public_ts = loadSettings(sfn);
     else
@@ -84,7 +84,7 @@ static auto create_target(const path &sfn, const LocalPackage &pkg, const Packag
     return tgt;
 }
 
-static std::shared_ptr<PredefinedTarget> create_target(const LocalPackage &p, const PackageSettings &s)
+static ITargetPtr create_target(const LocalPackage &p, const PackageSettings &s)
 {
     auto cfg = s.getHash();
     auto base = p.getDirObj(cfg);
@@ -346,23 +346,6 @@ void SwBuild::loadInputs()
 {
     CHECK_STATE_AND_CHANGE(BuildState::NotStarted, BuildState::InputsLoaded);
 
-    std::set<Input *> iv;
-    for (auto &i : inputs)
-        iv.insert(&i.getInput().getInput());
-    swctx.loadEntryPointsBatch(iv);
-
-    // and load packages
-    for (auto &i : inputs)
-    {
-        auto tgts = registerTargets(i.loadTargets(*this));
-        for (auto &&tgt : tgts)
-        {
-            tgt->setResolver(getResolver());
-            getTargets()[tgt->getPackage()].push_back(*tgt);
-            targets[tgt->getPackage()].setInput(i.getInput());
-        }
-    }
-
     // filter selected targets if any
     UnresolvedPackages in_ttb;
     UnresolvedPackages in_ttb_exclude;
@@ -370,11 +353,9 @@ void SwBuild::loadInputs()
         in_ttb.insert(t.getValue());
     for (auto &t : build_settings["target-to-exclude"].getArray())
         in_ttb_exclude.insert(t.getValue());
-    bool in_ttb_used = !in_ttb.empty();
-
-    auto should_build_target = [&in_ttb_used, &in_ttb, &in_ttb_exclude](const auto &p)
+    auto should_build_target = [&in_ttb, &in_ttb_exclude](const auto &p)
     {
-        if (in_ttb_used)
+        if (!in_ttb.empty())
         {
             if (!contains(in_ttb, p))
                 return false;
@@ -383,12 +364,26 @@ void SwBuild::loadInputs()
             return false;
         return true;
     };
-    for (auto it = getTargets().begin(); it != getTargets().end();)
+
+    // load
+    std::set<Input *> iv;
+    for (auto &i : inputs)
+        iv.insert(&i.getInput().getInput());
+    swctx.loadEntryPointsBatch(iv);
+
+    // and load packages
+    for (auto &i : inputs)
     {
-        if (!should_build_target(it->first))
-            it = getTargets().erase(it);
-        else
-            ++it;
+        auto tgts2 = i.loadTargets(*this);
+        auto tgts = registerTargets(tgts2);
+        for (auto &&tgt : tgts)
+        {
+            if (!should_build_target(tgt->getPackage()))
+                continue;
+            tgt->setResolver(getResolver());
+            getTargets()[tgt->getPackage()].push_back(*tgt);
+            targets[tgt->getPackage()].setInput(i.getInput());
+        }
     }
 }
 
@@ -402,7 +397,7 @@ void SwBuild::resolvePackages()
     {
         for (const auto &tgt : tgts)
         {
-            auto deps = tgt.getDependencies();
+            auto deps = tgt->getDependencies();
             for (auto &d : deps)
             {
                 if (d->isResolved())
@@ -522,8 +517,9 @@ void SwBuild::resolvePackages(const std::vector<IDependency*> &udeps)
                 auto tgt = create_target(p, d->getSettings());
                 if (tgt)
                 {
-                    getTargets()[tgt->getPackage()].push_back(tgt);
-                    everything_resolved &= load_targets(tgt->getDependencies());
+                    auto tgt2 = registerTarget(std::move(tgt));
+                    getTargets()[tgt2->getPackage()].push_back(*tgt2);
+                    everything_resolved &= load_targets(tgt2->getDependencies());
                     continue;
                 }
                 everything_resolved = false;
@@ -660,7 +656,8 @@ void SwBuild::loadPackages()
                 auto tgt = create_target(p, s);
                 if (tgt)
                 {
-                    getTargets()[tgt->getPackage()].push_back(tgt);
+                    auto tgt2 = registerTarget(std::move(tgt));
+                    getTargets()[tgt2->getPackage()].push_back(*tgt2);
                     loaded = true;
                     continue;
                 }
@@ -682,7 +679,7 @@ void SwBuild::loadPackages()
                     if (k != i->second.end())
                     {
                         auto &t = *k;
-                        getTargets()[t->getPackage()].push_back(t);
+                        getTargets()[t->getPackage()].push_back(*t);
                         continue;
                     }
                 }
@@ -692,11 +689,11 @@ void SwBuild::loadPackages()
             for (auto &tgt : tgts)
             {
                 if (tgt->getPackage() == d.first)
-                    getTargets()[tgt->getPackage()].push_back(tgt);
+                    getTargets()[tgt->getPackage()].push_back(*tgt);
                 else
                 {
                     auto h = getTargets()[d.first].getInput().getInput().getHash();
-                    cache[h][tgt->getPackage()].push_back(tgt);
+                    cache[h][tgt->getPackage()].push_back(*tgt);
                 }
             }
 
@@ -720,7 +717,7 @@ void SwBuild::loadPackages()
             for (auto &tgt : tgts)
             {
                 getTargets()[tgt->getPackage()].setInput(d.second->getInput());
-                getTargets()[tgt->getPackage()].push_back(tgt);
+                getTargets()[tgt->getPackage()].push_back(*tgt);
             }
             auto i = getTargets().find(d.first);
             if (i == getTargets().end())
@@ -1372,7 +1369,13 @@ void SwBuild::resolveWithDependencies(std::vector<ResolveRequest> &rrs) const
     return ::sw::resolveWithDependencies(rrs, [this](auto &rr) { return resolve(rr); });
 }
 
-SwBuild::RegisterTargetsResult SwBuild::registerTargets(const std::vector<ITargetPtr> &v)
+ITarget *SwBuild::registerTarget(ITargetPtr t)
+{
+    auto &p = target_storage.emplace_back(std::move(t));
+    return &*p;
+}
+
+SwBuild::RegisterTargetsResult SwBuild::registerTargets(std::vector<ITargetPtr> &v)
 {
     RegisterTargetsResult tgts;
     for (auto &&t : v)

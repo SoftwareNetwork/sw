@@ -37,6 +37,7 @@ struct SW_CORE_API SwBuild : SwBuilderContext, ResolverHolder
     SwBuild(SwContext &swctx, const path &build_dir);
     SwBuild(const SwBuild &) = delete;
     SwBuild &operator=(const SwBuild &) = delete;
+    //SwBuild(SwBuild &&) = default;
     ~SwBuild();
 
     SwContext &getContext() { return swctx; }
@@ -112,8 +113,9 @@ struct SW_CORE_API SwBuild : SwBuilderContext, ResolverHolder
     // stable resolve during whole build
     //bool resolve(ResolveRequest &) const;
 
-    using RegisterTargetsResult = std::vector<ITarget*>;
-    RegisterTargetsResult registerTargets(const std::vector<ITargetPtr> &);
+    using RegisterTargetsResult = std::vector<ITarget *>;
+    ITarget *registerTarget(ITargetPtr);
+    RegisterTargetsResult registerTargets(std::vector<ITargetPtr> &);
 
 private:
     SwContext &swctx;

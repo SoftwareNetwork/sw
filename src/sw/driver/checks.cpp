@@ -758,7 +758,7 @@ static String getTargetName(const path &p)
     return "loc." + getUniquePath(p).string();
 }
 
-Build Check::setupSolution(SwBuild &b, const path &f) const
+static Build setupSolution(SwBuild &b, const path &f)
 {
     Build s(b);
     s.BinaryDir = f.parent_path();
@@ -845,9 +845,10 @@ bool Check::execute(SwBuild &b) const
     auto s = setupSolution(*b, f);                                \
     s.module_data.current_settings = getSettings()
 
-#define ADD_TARGETS                             \
+/*#define ADD_TARGETS                             \
     for (auto &t : s.module_data.getTargets()) \
-    b->getTargets()[t->getPackage()].push_back(t)
+    b->getTargets()[t->getPackage()].push_back(t)*/
+#define ADD_TARGETS SW_UNIMPLEMENTED;
 
 #define EXECUTE_SOLUTION() \
     ADD_TARGETS;           \

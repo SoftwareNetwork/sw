@@ -440,7 +440,7 @@ std::vector<ITargetPtr> NativeTargetEntryPoint::loadPackages(SwBuild &swb, const
 {
     auto b = createBuild(swb, s, pkgs, prefix);
     loadPackages1(b);
-    return b.module_data.getTargets();
+    return std::move(b.module_data.getTargets());
 }
 
 NativeBuiltinTargetEntryPoint::NativeBuiltinTargetEntryPoint(BuildFunction bf)

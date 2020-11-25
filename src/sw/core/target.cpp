@@ -167,10 +167,10 @@ void TargetContainer::push_back(ITarget &t)
     auto i = findEqual(t.getSettings());
     if (i == end())
     {
-        targets.push_back(t);
+        targets.push_back(&t);
         return;
     }
-    *i = t;
+    *i = &t;
 }
 
 void TargetContainer::clear()
@@ -182,7 +182,7 @@ TargetContainer::Base::iterator TargetContainer::findEqual(const PackageSettings
 {
     return std::find_if(begin(), end(), [&s](const auto &t)
     {
-        return t.get().getSettings() == s;
+        return t->getSettings() == s;
     });
 }
 
@@ -190,7 +190,7 @@ TargetContainer::Base::const_iterator TargetContainer::findEqual(const PackageSe
 {
     return std::find_if(begin(), end(), [&s](const auto &t)
     {
-        return t.get().getSettings() == s;
+        return t->getSettings() == s;
     });
 }
 
@@ -198,7 +198,7 @@ TargetContainer::Base::iterator TargetContainer::findSuitable(const PackageSetti
 {
     return std::find_if(begin(), end(), [&s](const auto &t)
     {
-        return t.get().getSettings().isSubsetOf(s);
+        return t->getSettings().isSubsetOf(s);
     });
 }
 
@@ -206,7 +206,7 @@ TargetContainer::Base::const_iterator TargetContainer::findSuitable(const Packag
 {
     return std::find_if(begin(), end(), [&s](const auto &t)
     {
-        return t.get().getSettings().isSubsetOf(s);
+        return t->getSettings().isSubsetOf(s);
     });
 }
 
@@ -228,7 +228,7 @@ ITarget *TargetMap::find(const PackageId &pkg, const PackageSettings &ts) const
     auto k = i->second.findSuitable(ts);
     if (k == i->second.end())
         return {};
-    return &k->get();
+    return *k;
 }
 
 ITarget *TargetMap::find(const UnresolvedPackage &pkg, const PackageSettings &ts) const
@@ -239,10 +239,10 @@ ITarget *TargetMap::find(const UnresolvedPackage &pkg, const PackageSettings &ts
     auto k = i->second.findSuitable(ts);
     if (k == i->second.end())
         return {};
-    return &k->get();
+    return *k;
 }
 
-PredefinedTarget::PredefinedTarget(const LocalPackage &id, const PackageSettings &ts)
+PredefinedTarget::PredefinedTarget(const PackageId &id, const PackageSettings &ts)
     : pkg(id), ts(ts)
 {
 }

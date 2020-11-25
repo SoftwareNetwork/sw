@@ -115,7 +115,8 @@ void Command::prepare()
                     auto &of = nt->getInterfaceSettings()["output_file"];
                     if (!of)
                         throw SW_RUNTIME_ERROR("Empty output file in target: " + nt->getPackage().toString());
-                    p = of.getPathValue(nt->getPackage().getStorage());
+                    SW_UNIMPLEMENTED;
+                    //p = of.getPathValue(getContext().getLocalStorage());
                 }
                 else
                     throw SW_RUNTIME_ERROR("Package: " + t.getPackage().toString() + " has unknown type");
