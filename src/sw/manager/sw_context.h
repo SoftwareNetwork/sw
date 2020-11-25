@@ -44,6 +44,8 @@ struct SW_MANAGER_API SwManagerContext// : ISwContext
     void install(std::vector<ResolveRequest> &) const;
     // what about ", bool use_cache = true"?
     LocalPackage install(const Package &) const;
+    // manually call cache reset if we don't want it?
+    // use time in resolve request to request the newest packages?
     bool resolve(ResolveRequest &, bool use_cache) const;
 
     // lock file related

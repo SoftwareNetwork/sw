@@ -73,6 +73,8 @@ struct SW_SUPPORT_API ResolveRequest : ResolveRequestResult
     // or take it from swctx?
     // or from sw build - one security ctx for build
     //SecurityContext sctx;
+    // timestamp - resolve packages only before this timestamp
+    // like, e.g., on build start
 
     ResolveRequest() {}
     ResolveRequest(const UnresolvedPackage &u) : u(u) {}

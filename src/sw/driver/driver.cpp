@@ -181,8 +181,13 @@ struct BuiltinStorage : IStorage
         i->second(b);
         auto [itgts,_] = targets.emplace(rr.u, std::move(b.module_data.getTargets()));
         // the best candidate is selected inside setPackage()
+        struct BuiltinPackage : Package
+        {
+            using Package::Package;
+            bool isInstallable() const override { return false; }
+        };
         for (auto &t : itgts->second)
-            rr.setPackage(std::make_unique<Package>(*this, t->getPackage()), t.get());
+            rr.setPackage(std::make_unique<BuiltinPackage>(*this, t->getPackage()), t.get());
         return true;
     }
 };

@@ -407,7 +407,18 @@ void SwBuild::resolvePackages()
                 rr.u = d->getUnresolvedPackage();
                 rr.settings = d->getSettings();
                 if (!tgt->resolve(rr))
-                    throw SW_RUNTIME_ERROR("Cannot resolve package: " + rr.u.toString());
+                {
+                    auto t = getTargets().find(rr.u, d->getSettings());
+                    if (t)
+                    {
+                        d->setTarget(*t);
+                        continue;
+                    }
+                    auto i = getTargets().find(d->getUnresolvedPackage());
+                    if (i == getTargets().end())
+                        throw SW_RUNTIME_ERROR("Cannot resolve package: " + rr.u.toString());
+                    continue;
+                }
                 /*if (rr.hasTarget())
                 {
                     d->setTarget(rr.getTarget());

@@ -71,7 +71,7 @@ struct SW_SUPPORT_API Package : PackageId
 
     virtual std::unique_ptr<Package> clone() const { return std::make_unique<Package>(*this); }
 
-    virtual bool isInstallable() const { return false; }
+    virtual bool isInstallable() const { return true; }
 
 private:
     const IStorage &storage;
