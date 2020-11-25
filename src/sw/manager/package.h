@@ -50,6 +50,8 @@ struct SW_MANAGER_API LocalPackage : Package
 
     const LocalStorage &getStorage() const;
 
+    virtual bool isInstallable() const { return true; }
+
 private:
     path getDir(const path &root) const;
 };

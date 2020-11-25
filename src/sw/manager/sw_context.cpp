@@ -31,7 +31,8 @@ SwManagerContext::SwManagerContext(const path &local_storage_root_dir, bool allo
                 getLocalStorage(), *r, allow_network));
     }
 
-    cr->addStorage(*local_storage); // provides faster resolving (smaller set of packages)?
+    // local storage redirects all resolves to overridden storage
+    cr->addStorage(*local_storage);
     for (auto &&s : remote_storages)
         cr->addStorage(*s);
 }
@@ -79,6 +80,8 @@ void SwManagerContext::install(ResolveRequest &rr) const
     // true for now
     if (!rr.isResolved() && !resolve(rr, true))
         throw SW_RUNTIME_ERROR("Not resolved: " + rr.u.toString());
+    if (!rr.getPackage().isInstallable())
+        return;
     auto lp = install(rr.getPackage());
     rr.r = lp.clone(); // force overwrite with local package
 }

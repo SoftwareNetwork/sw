@@ -140,10 +140,7 @@ struct BuiltinStorage : IStorage
     PackageMap m;
     std::unique_ptr<SwBuild> sb;
     mutable std::unordered_map<UnresolvedPackage, std::vector<ITargetPtr>> targets;
-    std::unordered_map<PackagePath, LogicalInput> targets2;
-    std::unordered_map<PackagePath, PackageId> targets22;
-    mutable std::unordered_map<PackagePath, ITargetPtr> targets23;
-    mutable std::vector<ITargetPtr> dummy_targets;
+    mutable std::unordered_map<PackagePath, PackageId> targets2;
 
     BuiltinStorage(SwContext &swctx)
         : swctx(swctx)
@@ -155,64 +152,30 @@ struct BuiltinStorage : IStorage
     const StorageSchema &getSchema() const override { SW_UNREACHABLE; }
     PackageDataPtr loadData(const PackageId &) const override { SW_UNREACHABLE; }
 
-    void addTarget2(const PackageId &pkg, const LogicalInput &bi)
+    void addTarget(const PackageId &pkg)
     {
-        if (!targets2.emplace(pkg.getPath(), bi).second)
+        if (!targets2.emplace(pkg.getPath(), pkg).second)
             throw SW_RUNTIME_ERROR("Duplicate package paths, rewrite this code");
-        targets22.emplace(pkg.getPath(), pkg);
     }
 
     bool resolve(ResolveRequest &rr) const override
     {
-        if (auto i = targets2.find(rr.u.getPath()); i != targets2.end())
-        {
-            if (i->first.isAbsolute())
-            {
-                ResolveRequest rr2{ targets22.find(i->first)->second };
-                if (!swctx.resolve(rr2, true))
-                    throw SW_RUNTIME_ERROR("Cannot resolve: " + rr2.u.toString());
-                // only presence on the system requested (getFile() or something like this)
-                if (rr.settings.empty())
-                {
-                    dummy_targets.emplace_back(std::make_unique<PredefinedTarget>(rr2.getPackage(), rr.settings));
-                    rr.setPackage(rr2.getPackage().clone(), dummy_targets.back().get());
-                    return true;
-                }
-                if (auto i = targets23.find(rr.u.getPath()); i != targets23.end())
-                {
-                    rr.setPackage(rr2.getPackage().clone(), i->second.get());
-                    return true;
-                }
-                auto itgts = i->second.loadPackages(*sb, rr.settings);
-                for (auto &&t : itgts)
-                {
-                    if (t->getPackage().getPath() == rr.u.getPath())
-                        rr.setPackage(rr2.getPackage().clone(), t.get());
-                    targets23.emplace(t->getPackage().getPath(), std::move(t));
-                }
-                if (!rr.isResolved())
-                    throw SW_LOGIC_ERROR("not resolved");
-            }
-            else
-            {
-                auto itgts = i->second.loadPackages(*sb, rr.settings);
-                for (auto &t : itgts)
-                {
-                    rr.setPackage(std::make_unique<Package>(*this, t->getPackage()), t.get());
-                    dummy_targets.emplace_back(std::move(t));
-                }
-            }
-            return true;
-        }
-        if (auto i = targets.find(rr.u); i != targets.end())
-        {
-            for (auto &t : i->second)
-                rr.setPackage(std::make_unique<Package>(*this, t->getPackage()), t.get());
-            return true;
-        }
         auto i = eps.find(rr.u);
         if (i == eps.end())
+        {
+            if (auto i = targets2.find(rr.u.getPath()); i != targets2.end())
+            {
+                ResolveRequest rr2;
+                rr2.u = i->second;
+                rr2.settings = rr.settings;
+                if (swctx.resolve(rr2, true))
+                {
+                    rr.setPackage(rr2.getPackage().clone());
+                    return true;
+                }
+            }
             return false;
+        }
         Build b(*sb);
         b.module_data.current_settings = rr.settings;
         i->second(b);
@@ -227,19 +190,20 @@ struct BuiltinStorage : IStorage
 Driver::Driver(SwContext &swctx)
     : swctx(swctx)
 {
+    bs = std::make_unique<BuiltinStorage>(swctx);
+
     // register builtins early!!!
     // do not remove
     // When we are building the same config as built-in,
     // without this line it will be loaded first and won't get its entry point
-    getBuiltinInputs(swctx);
-
-    bs = std::make_unique<BuiltinStorage>(swctx);
+    //getBuiltinInputs(swctx);
+    builtin_inputs = load_builtin_inputs(swctx, *this);
 
     // register inputs
     for (auto &&bi : builtin_inputs)
     {
         for (auto &pkg : bi.getPackages())
-            bs->addTarget2(pkg, bi);
+            bs->addTarget(pkg);
     }
 }
 
@@ -644,6 +608,7 @@ void Driver::loadInputsBatch(const std::set<Input *> &inputs) const
 
 PackageIdSet Driver::getBuiltinPackages(SwContext &swctx) const
 {
+    SW_UNIMPLEMENTED;
     if (!builtin_packages)
     {
         std::unique_lock lk(m_bp);
@@ -669,6 +634,7 @@ PackageIdSet Driver::getBuiltinPackages(SwContext &swctx) const
 
 void Driver::getBuiltinInputs(SwContext &) const
 {
+    SW_UNIMPLEMENTED;
     if (!builtin_inputs.empty())
         return;
     builtin_inputs = load_builtin_inputs(swctx, *this);
@@ -685,6 +651,7 @@ void Driver::getBuiltinInputs(SwContext &) const
         auto [ii, _] = swctx.registerInput(std::move(i));
         LogicalInput bi(*ii, {});
         bi.addPackage(name + "-0.0.1"s);
+        builtin_inputs.push_back(bi);
     }
 
     {
@@ -696,6 +663,7 @@ void Driver::getBuiltinInputs(SwContext &) const
         auto [ii, _] = swctx.registerInput(std::move(i));
         LogicalInput bi(*ii, {});
         bi.addPackage(name + "-0.0.1"s);
+        builtin_inputs.push_back(bi);
     }
 
     {
@@ -707,6 +675,7 @@ void Driver::getBuiltinInputs(SwContext &) const
         auto [ii, _] = swctx.registerInput(std::move(i));
         LogicalInput bi(*ii, {});
         bi.addPackage(name + "-0.0.1"s);
+        builtin_inputs.push_back(bi);
     }
 }
 
@@ -799,14 +768,53 @@ std::unordered_map<path, PrepareConfigOutputData> Driver::build_configs1(SwConte
 
     auto &ctx = swctx;
     //if (!b)
-        auto b = create_build(ctx);
+    auto b = create_build(ctx);
 
-    NativeTargetEntryPoint ep;
+    Resolver resolver;
+    resolver.addStorage(*bs);
+    b->setResolver(resolver);
+
+    PrepareConfig pc;
+    auto inputs_ep = [&inputs, &pc](Build &b)
+    {
+        for (auto &i : inputs)
+            pc.addInput(b, *i);
+    };
+
+    std::pair<String, NativeBuiltinTargetEntryPoint::BuildFunction> builtin_local_pkgs[] =
+    {
+        {"implib"s, addImportLibrary},
+        {"delay_loader"s, addDelayLoadLibrary},
+        {"config_pch"s, addConfigPchLibrary},
+        {"provided_inputs"s, inputs_ep},
+    };
+    auto ts = getDllConfigSettings(*b);
+    for (auto &[name, f] : builtin_local_pkgs)
+    {
+        auto h = std::hash<String>()(name);
+        auto i = std::make_unique<BuiltinInput>(swctx, *this, h);
+        auto ep = std::make_unique<sw::NativeBuiltinTargetEntryPoint>(f);
+        i->setEntryPoint(std::move(ep));
+        auto [ii, _] = swctx.registerInput(std::move(i));
+        LogicalInput bi(*ii, {});
+        //bi.addPackage(name + "-0.0.1"s);
+        sw::InputWithSettings is(bi);
+        is.addSettings(ts);
+        b->addInput(is);
+    }
+
+
+    /*NativeTargetEntryPoint ep;
     //                                                        load all our known targets
     auto b2 = ep.createBuild(*b, getDllConfigSettings(*b), getBuiltinPackages(ctx), {});
     PrepareConfig pc;
     for (auto &i : inputs)
         pc.addInput(b2, *i);
+
+    // add more predefined inputs
+    addConfigPchLibrary(b2);
+    addImportLibrary(b2);
+    addDelayLoadLibrary(b2);
 
     // fast path
     if (swctx.getSettings()["ignore_outdated_configs"] == "true" || !pc.isOutdated())
@@ -821,31 +829,32 @@ std::unordered_map<path, PrepareConfigOutputData> Driver::build_configs1(SwConte
     {
         b->getTargets()[tgt->getPackage()].push_back(*tgt);
         tgt->setResolver(resolver); // here we must give our resolver
-    }
+    }*/
 
     // execute
     //SW_UNIMPLEMENTED;
     //for (auto &tgt : tgts)
         //b->getTargetsToBuild()[tgt->getPackage()] = b->getTargets()[tgt->getPackage()]; // set our targets
-    b->overrideBuildState(BuildState::InputsLoaded);
+    //b->overrideBuildState(BuildState::InputsLoaded);
     /*if (!ep->udeps.empty())
         LOG_WARN(logger, "WARNING: '#pragma sw require' is not well tested yet. Expect instability.");
     b->resolvePackages(ep->udeps);*/
     {
         // prevent simultaneous cfg builds
         ScopedFileLock lk(swctx.getLocalStorage().storage_dir_tmp / "cfg" / "build");
-        b->resolvePackages();
+        b->build();
+        /*b->resolvePackages();
         //b->loadPackages();
         b->prepare();
-        b->execute();
+        b->execute();*/
     }
 
-    for (auto &tgt : tgts)
+    /*for (auto &tgt : tgts)
     {
         SW_UNIMPLEMENTED;
         //b->getTargetsToBuild().erase(tgt->getPackage());
         b->getTargets().erase(tgt->getPackage());
-    }
+    }*/
 
     return save_and_return(pc.r);
 }

@@ -22,9 +22,11 @@ Resolver &ResolverHolder::getResolver() const
     return *resolver;
 }
 
-void ResolverHolder::setResolver(Resolver &r)
+Resolver *ResolverHolder::setResolver(Resolver &r)
 {
+    auto old = resolver;
     resolver = &r;
+    return old;
 }
 
 bool ResolverHolder::resolve(ResolveRequest &rr) const

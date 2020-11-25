@@ -30,7 +30,7 @@ struct SW_CORE_API ResolverHolder
 {
     /// resolve deps using this target resolver
     Resolver &getResolver() const; // to pass to children
-    void setResolver(Resolver &);
+    Resolver *setResolver(Resolver &); // returns old resolver
     bool resolve(ResolveRequest &) const;
 
 private:

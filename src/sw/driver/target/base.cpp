@@ -803,7 +803,8 @@ path Target::getFile(const DependencyPtr &dep, const path &fn)
     ResolveRequest rr{dep->getUnresolvedPackage()};
     rr.settings = dep->getSettings();
     getMainBuild().getContext().install(rr);
-    auto p = static_cast<LocalPackage&>(rr.getPackage()).getDirSrc2();
+    auto &lp = static_cast<LocalPackage &>(rr.getPackage());
+    auto p = lp.getDirSrc2();
     // allow to get dirs
     if (!fn.empty())
         p /= fn;

@@ -402,7 +402,13 @@ const OverriddenPackagesStorage &LocalStorage::getOverriddenPackagesStorage() co
 
 bool LocalStorage::resolve(ResolveRequest &rr) const
 {
-    return ovs.resolve(rr);
+    ResolveRequest rr2;
+    rr2.u = rr.u;
+    rr2.settings = rr.settings;
+    auto r = ovs.resolve(rr2);
+    if (r)
+        rr.setPackage(std::make_unique<LocalPackage>(*this, rr2.getPackage()));
+    return r;
 }
 
 void LocalStorage::remove(const LocalPackage &p) const
