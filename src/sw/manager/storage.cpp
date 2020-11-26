@@ -468,7 +468,7 @@ void CachedStorage::storePackages(const ResolveRequest &rr)
 {
     //SW_UNIMPLEMENTED; // must be a mutex here?
     SW_CHECK(rr.isResolved());
-    resolved_packages.emplace(Key{ rr.u, rr.settings }, Value{ rr.getPackage().clone(), rr.t });
+    resolved_packages.emplace(Key{ rr.u, rr.settings }, Value{ rr.getPackage().clone() });
 }
 
 bool CachedStorage::resolve(ResolveRequest &rr) const
@@ -476,7 +476,7 @@ bool CachedStorage::resolve(ResolveRequest &rr) const
     auto i = resolved_packages.find({ rr.u, rr.settings });
     if (i == resolved_packages.end())
         return false;
-    rr.setPackage(i->second.r->clone(), i->second.t);
+    rr.setPackage(i->second.r->clone());
     return true;
 }
 

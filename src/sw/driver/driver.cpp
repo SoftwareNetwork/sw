@@ -192,7 +192,7 @@ struct BuiltinStorage : IStorage
         for (auto &t : itgts->second)
         {
             if (!v || *v == t->getPackage().getVersion())
-                rr.setPackage(std::make_unique<BuiltinPackage>(*this, t->getPackage()), t.get());
+                rr.setPackage(std::make_unique<BuiltinPackage>(*this, t->getPackage()));
         }
         SW_CHECK(rr.isResolved());
         return true;

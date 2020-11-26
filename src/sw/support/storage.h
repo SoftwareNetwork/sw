@@ -50,18 +50,15 @@ struct ITarget;
 struct SW_SUPPORT_API ResolveRequestResult
 {
     PackagePtr r;
-    ITarget *t = nullptr;
 
     bool isResolved() const { return !!r; }
     Package &getPackage() const { return *r; }
-    bool hasTarget() const { return t; }
-    ITarget &getTarget() const { return *t; }
 
     // if package version higher than current, overwrite
     // if both are branches, do not accept new
     // assuming passed package has same package path and branch/version matches
     // input is not null
-    bool setPackage(PackagePtr, ITarget * = {});
+    bool setPackage(PackagePtr);
 };
 
 struct SW_SUPPORT_API ResolveRequest : ResolveRequestResult

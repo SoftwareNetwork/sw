@@ -45,13 +45,12 @@ Directories::Directories(const path &p)
 #undef SET
 }
 
-bool ResolveRequestResult::setPackage(PackagePtr in, ITarget *in_t)
+bool ResolveRequestResult::setPackage(PackagePtr in)
 {
     SW_CHECK(in);
     if (!r || r->getVersion() < in->getVersion())
     {
         r = std::move(in);
-        t = in_t;
         return true;
     }
     return false;

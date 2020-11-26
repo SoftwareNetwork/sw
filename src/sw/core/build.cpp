@@ -394,6 +394,7 @@ void SwBuild::resolvePackages()
     struct CustomResolveRequest : ResolveRequest
     {
         IDependency *dep = nullptr;
+        Resolver *resolver = nullptr;
     };
 
     // gather
@@ -411,6 +412,7 @@ void SwBuild::resolvePackages()
                 rr.u = d->getUnresolvedPackage();
                 rr.settings = d->getSettings();
                 rr.dep = d;
+                rr.resolver = &tgt->getResolver();
                 if (!tgt->resolve(rr))
                 {
                     auto t = getTargets().find(rr.u, d->getSettings());
@@ -447,8 +449,6 @@ void SwBuild::resolvePackages()
     std::vector<InputWithSettings> newinputs;
     for (auto &rr : rrs)
     {
-        //if (rr.hasTarget())
-            //continue;
         // use addInput to prevent doubling already existing and loaded inputs
         // like when we loading dependency that is already loaded from the input
         // test: sw build org.sw.demo.gnome.pango.pangocairo-1.44
