@@ -240,14 +240,15 @@ Driver::Driver(SwContext &swctx)
     bs = std::make_unique<BuiltinStorage>(swctx);
 
     // register inputs
-    for (auto &&[h, ep, pkgs] : load_builtin_inputs())
+    for (auto &&[h, ep] : load_builtin_entry_points())
     {
         auto i = std::make_unique<BuiltinInput>(swctx, *this, h);
         i->setEntryPoint(std::move(ep));
         swctx.registerInput(std::move(i));
-        for (auto &pkg : pkgs)
-            bs->addTarget(pkg);
     }
+
+    for (auto &&p : load_builtin_packages())
+        bs->addTarget(p);
 }
 
 Driver::~Driver()
