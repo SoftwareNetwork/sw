@@ -136,6 +136,7 @@ struct BuiltinPackage : Package
 
     using Package::Package;
     bool isInstallable() const override { return false; }
+    std::unique_ptr<Package> clone() const override { return std::make_unique<BuiltinPackage>(*this); }
 };
 
 // actually this is system storage
