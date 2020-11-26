@@ -98,10 +98,12 @@ static void cleanup(CleanMask level_mask, const sw::SwContext &swctx)
 #ifdef _WIN32
         // protocol handler
         winreg::RegKey url(HKEY_CLASSES_ROOT);
-        url.TryDeleteTree(get_sw_registry_key());
+        if (!url.TryDeleteTree(get_sw_registry_key()))
+            ; // ignore
         // cmake
         winreg::RegKey icon(HKEY_CURRENT_USER);
-        icon.TryDeleteTree(get_sw_cmake_registry_key()); // remove all empty cmake keys and trees?
+        if (!icon.TryDeleteTree(get_sw_cmake_registry_key())) // remove all empty cmake keys and trees?
+            ; // ignore
 
         // cygwin case
         if (auto d = getenv("HOME"))
