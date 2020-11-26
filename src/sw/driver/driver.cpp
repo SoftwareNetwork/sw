@@ -130,6 +130,14 @@ static Strings get_inline_comments(const path &p)
     return comments;
 }
 
+struct BuiltinPackage : Package
+{
+    NativeBuiltinTargetEntryPoint::BuildFunction f;
+
+    using Package::Package;
+    bool isInstallable() const override { return false; }
+};
+
 // actually this is system storage
 // or storage for programs found in the system
 struct BuiltinStorage : IStorage
@@ -137,7 +145,6 @@ struct BuiltinStorage : IStorage
     SwContext &swctx;
     ProgramDetector::DetectablePackageEntryPoints eps;
     std::unique_ptr<SwBuild> sb;
-    mutable std::unordered_map<UnresolvedPackage, std::vector<ITargetPtr>> targets;
     mutable std::unordered_map<PackagePath, PackageId> targets2;
 
     BuiltinStorage(SwContext &swctx)
@@ -148,7 +155,12 @@ struct BuiltinStorage : IStorage
     }
 
     const StorageSchema &getSchema() const override { SW_UNREACHABLE; }
-    PackageDataPtr loadData(const PackageId &) const override { SW_UNREACHABLE; }
+    PackageDataPtr loadData(const PackageId &) const override
+    {
+        auto d = std::make_unique<PackageData>();
+        d->prefix = 0;
+        return std::move(d);
+    }
 
     void addTarget(const PackageId &pkg)
     {
@@ -172,27 +184,36 @@ struct BuiltinStorage : IStorage
         }
 
         // now check local packages
-        auto i = eps.find(rr.u);
-        if (i == eps.end())
+        auto i = eps.equal_range(rr.u);
+        if (i.first == eps.end())
             return false;
-        Build b(*sb);
-        b.module_data.current_settings = rr.settings;
-        i->second(b);
-        auto [itgts,_] = targets.emplace(rr.u, std::move(b.module_data.getTargets()));
+
         // the best candidate is selected inside setPackage()
-        struct BuiltinPackage : Package
-        {
-            using Package::Package;
-            bool isInstallable() const override { return false; }
-        };
+        std::vector<std::pair<ITargetPtr, NativeBuiltinTargetEntryPoint::BuildFunction>> targets;
         VersionSet s;
-        for (auto &t : itgts->second)
+        for (auto it = i.first; it != i.second; it++)
+        {
+            Build b(*sb);
+            b.module_data.current_settings = rr.settings;
+            it->second(b);
+            SW_CHECK(b.module_data.getTargets().size() <= 1); // only 1 target per build call
+            if (b.module_data.getTargets().empty())
+                continue;
+            targets.emplace_back(std::move(b.module_data.getTargets()[0]), it->second);
+        }
+        if (targets.empty())
+            return false;
+        for (auto &[t,_] : targets)
             s.insert(t->getPackage().getVersion());
         auto v = rr.u.getRange().getMaxSatisfyingVersion(s);
-        for (auto &t : itgts->second)
+        for (auto &[t,f] : targets)
         {
             if (!v || *v == t->getPackage().getVersion())
-                rr.setPackage(std::make_unique<BuiltinPackage>(*this, t->getPackage()));
+            {
+                auto p = std::make_unique<BuiltinPackage>(*this, t->getPackage());
+                p->f = f;
+                rr.setPackage(std::move(p));
+            }
         }
         SW_CHECK(rr.isResolved());
         return true;
@@ -455,8 +476,16 @@ std::unique_ptr<Input> Driver::getInput(const Package &p) const
         SW_CHECK(inputs.size() == 1);
         return std::move(inputs[0]);
     }
+    else if (auto lp = dynamic_cast<const BuiltinPackage *>(&p))
+    {
+        auto h = std::hash<Package>()(p);
+        auto i = std::make_unique<BuiltinInput>(swctx, *this, h);
+        auto ep = std::make_unique<sw::NativeBuiltinTargetEntryPoint>(lp->f);
+        i->setEntryPoint(std::move(ep));
+        return i;
+    }
     else
-        throw SW_RUNTIME_ERROR("Unknown package");
+        throw SW_RUNTIME_ERROR("Unknown package: " + p.toString());
 }
 
 std::vector<std::unique_ptr<Input>> Driver::detectInputs(const path &p, InputType type) const

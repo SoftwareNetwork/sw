@@ -61,8 +61,8 @@ struct SW_DRIVER_CPP_API ProgramDetector
     // e.g., org.llvm.clang-10 will look for clang-10/clang++-10 only
     using DetectablePackageEntryPointKey = UnresolvedPackage;
     using DetectablePackageEntryPoint = std::function<void(Build &)>;
-    using DetectablePackageEntryPoints = std::unordered_map<DetectablePackageEntryPointKey, DetectablePackageEntryPoint>;
     using DetectablePackageMultiEntryPoints = std::unordered_multimap<DetectablePackageEntryPointKey, DetectablePackageEntryPoint>;
+    using DetectablePackageEntryPoints = DetectablePackageMultiEntryPoints;
     static DetectablePackageEntryPoints getDetectablePackages();
 
     template <class T>

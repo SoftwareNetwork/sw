@@ -73,6 +73,7 @@ struct SW_CORE_API SwContext : SwCoreContext
     std::vector<Input *> addInputInternal(const path &);
     //                inserted
     std::pair<Input *, bool> registerInput(std::unique_ptr<Input>);
+    Input *addInput(const Package &);
 
     void loadEntryPointsBatch(const std::set<Input*> &inputs);
 

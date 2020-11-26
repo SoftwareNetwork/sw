@@ -143,22 +143,7 @@ String ProgramDetector::getMsvcLibraryName(const String &base, const BuildSettin
 ProgramDetector::DetectablePackageEntryPoints ProgramDetector::getDetectablePackages()
 {
     DetectablePackageEntryPoints s;
-    auto add_eps = [&s](const auto &eps)
-    {
-        using Map = std::unordered_map<DetectablePackageEntryPointKey, std::vector<DetectablePackageEntryPoint>>;
-        Map m;
-        for (auto &[u, f] : eps)
-            m[u].push_back(std::move(f));
-        for (auto &[u, v] : m)
-        {
-            s.emplace(u, [v = std::move(v)](DETECT_ARGS)
-            {
-                for (auto &f : v)
-                    f(DETECT_ARGS_PASS);
-            });
-        }
-    };
-    add_eps(getProgramDetector().detectWindowsCompilers());
+    s.merge(getProgramDetector().detectWindowsCompilers());
     return s;
 }
 

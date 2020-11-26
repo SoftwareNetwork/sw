@@ -429,6 +429,13 @@ void SwBuild::resolvePackages()
                         throw SW_RUNTIME_ERROR("Cannot resolve package input: " + rr.u.toString());
                     continue;
                 }
+                // also check if we already loaded this package
+                auto t = getTargets().find(rr.getPackage(), d->getSettings());
+                if (t)
+                {
+                    d->setTarget(*t);
+                    continue;
+                }
                 /*if (rr.hasTarget())
                 {
                     d->setTarget(rr.getTarget());
@@ -452,10 +459,7 @@ void SwBuild::resolvePackages()
         // use addInput to prevent doubling already existing and loaded inputs
         // like when we loading dependency that is already loaded from the input
         // test: sw build org.sw.demo.gnome.pango.pangocairo-1.44
-        auto lp = dynamic_cast<LocalPackage *>(&rr.getPackage());
-        if (!lp)
-            SW_UNIMPLEMENTED;
-        auto i = addInput(*lp);
+        auto i = addInput(rr.getPackage());
         iv.insert(&i.getInput());
         auto [i2,_] = logical_inputs.emplace(rr.getPackage(), i);
         i2->second.addPackage(rr.getPackage());
@@ -1237,18 +1241,21 @@ std::vector<LogicalInput> SwBuild::addInput(const String &i)
     }
 }
 
-LogicalInput SwBuild::addInput(const LocalPackage &p)
+LogicalInput SwBuild::addInput(const Package &p)
 {
     LOG_TRACE(logger, "Loading input: " + p.toString());
+    return { *getContext().addInput(p), p.getPath().slice(0, p.getData().prefix) };
 
+    /*
     auto v = addInput(p.getDirSrc2(), p.getPath().slice(0, p.getData().prefix));
     //SW_CHECK(v.size() == 1); // allow multiple inputs for now, take only first
     v[0].addPackage(p);
-    return v[0];
+    return v[0];*/
 }
 
 std::vector<LogicalInput> SwBuild::addInput(const path &p, const PackagePath &prefix)
 {
+    //SW_UNIMPLEMENTED;
     auto v = getContext().addInputInternal(p);
     std::vector<LogicalInput> inputs;
     for (auto i : v)

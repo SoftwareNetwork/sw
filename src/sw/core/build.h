@@ -50,7 +50,7 @@ struct SW_CORE_API SwBuild : SwBuilderContext, ResolverHolder
     // (one path containing multiple inputs)
     std::vector<LogicalInput> addInput(const path &, const PackagePath &prefix = {});
     // single input
-    LogicalInput addInput(const LocalPackage &);
+    LogicalInput addInput(const Package &);
 
     // complete
     void build();

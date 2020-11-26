@@ -170,6 +170,9 @@ std::vector<ITargetPtr> InputWithSettings::loadTargets(SwBuild &b) const
 
     for (auto &s : settings)
     {
+        if (s.empty())
+            continue;
+
         LOG_TRACE(logger, "Loading input " << i.getInput().getName() << ", settings = " << s.toString());
 
         for (auto &&t : i.loadPackages(b, s))

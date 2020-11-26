@@ -255,6 +255,14 @@ Input *SwContext::getInput(size_t hash) const
     return it->second.get();
 }
 
+Input *SwContext::addInput(const Package &p)
+{
+    //p.getData().driver;
+    auto i = drivers.begin()->second->getInput(p);
+    auto [i2,_] = registerInput(std::move(i));
+    return i2;
+}
+
 void SwContext::loadEntryPointsBatch(const std::set<Input *> &inputs)
 {
     std::map<const IDriver *, std::set<Input*>> batch_inputs;
