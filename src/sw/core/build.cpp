@@ -493,6 +493,7 @@ void SwBuild::resolvePackages()
 
 void SwBuild::resolvePackages(const std::vector<IDependency*> &udeps)
 {
+    SW_UNIMPLEMENTED;
     CHECK_STATE_AND_CHANGE(BuildState::PackagesResolved, BuildState::PackagesResolved);
 
     // this is simple lock file: u->p
