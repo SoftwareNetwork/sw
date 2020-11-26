@@ -90,7 +90,7 @@ struct SW_CORE_API LogicalInput
     [[nodiscard]]
     std::vector<ITargetPtr> loadPackages(SwBuild &, const PackageSettings &, const AllowedPackages &allowed_packages = {}) const;
 
-    PackageIdSet listPackages(SwContext &) const;
+    //PackageIdSet listPackages(SwContext &) const;
 
     Input &getInput() { return i; }
     const Input &getInput() const { return i; }

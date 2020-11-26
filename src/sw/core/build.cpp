@@ -617,7 +617,8 @@ void SwBuild::resolvePackages(const std::vector<IDependency*> &udeps)
 
     // now we know all drivers
     std::set<Input *> iv;
-    for (auto &rr : rrs)
+    SW_UNIMPLEMENTED;
+    /*for (auto &rr : rrs)
     {
         // use addInput to prevent doubling already existing and loaded inputs
         // like when we loading dependency that is already loaded from the input
@@ -634,7 +635,7 @@ void SwBuild::resolvePackages(const std::vector<IDependency*> &udeps)
         swctx.loadEntryPointsBatch(iv);
         if (build_settings["measure"] == "true")
             LOG_DEBUG(logger, "load entry points time: " << t.getTimeFloat() << " s.");
-    }
+    }*/
 }
 
 void SwBuild::loadPackages()

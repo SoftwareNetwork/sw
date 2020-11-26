@@ -117,7 +117,7 @@ std::vector<ITargetPtr> LogicalInput::loadPackages(SwBuild &b, const PackageSett
     return i.loadPackages(b, s, allowed_packages.empty() ? pkgs : allowed_packages, getPrefix());
 }
 
-PackageIdSet LogicalInput::listPackages(SwContext &swctx) const
+/*PackageIdSet LogicalInput::listPackages(SwContext &swctx) const
 {
     auto b = swctx.createBuild();
     auto tgts = loadPackages(*b, swctx.getHostSettings());
@@ -125,7 +125,7 @@ PackageIdSet LogicalInput::listPackages(SwContext &swctx) const
     for (auto &t : tgts)
         s.insert(t->getPackage());
     return s;
-}
+}*/
 
 bool LogicalInput::operator==(const LogicalInput &rhs) const
 {
