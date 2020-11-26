@@ -391,9 +391,13 @@ void SwBuild::resolvePackages()
 {
     CHECK_STATE_AND_CHANGE(BuildState::InputsLoaded, BuildState::PackagesLoaded);
 
+    struct CustomResolveRequest : ResolveRequest
+    {
+        IDependency *dep = nullptr;
+    };
+
     // gather
-    std::vector<ResolveRequest> rrs;
-    //std::set<ITarget *> new_targets;
+    std::vector<CustomResolveRequest> rrs;
     for (const auto &[pkg, tgts] : getTargets())
     {
         for (const auto &tgt : tgts)
@@ -403,9 +407,10 @@ void SwBuild::resolvePackages()
             {
                 if (d->isResolved())
                     continue;
-                ResolveRequest rr;
+                CustomResolveRequest rr;
                 rr.u = d->getUnresolvedPackage();
                 rr.settings = d->getSettings();
+                rr.dep = d;
                 if (!tgt->resolve(rr))
                 {
                     auto t = getTargets().find(rr.u, d->getSettings());
@@ -417,6 +422,9 @@ void SwBuild::resolvePackages()
                     auto i = getTargets().find(d->getUnresolvedPackage());
                     if (i == getTargets().end())
                         throw SW_RUNTIME_ERROR("Cannot resolve package: " + rr.u.toString());
+                    auto li = logical_inputs.find(i->first);
+                    if (li == logical_inputs.end())
+                        throw SW_RUNTIME_ERROR("Cannot resolve package input: " + rr.u.toString());
                     continue;
                 }
                 /*if (rr.hasTarget())
@@ -430,29 +438,29 @@ void SwBuild::resolvePackages()
             }
         }
     }
-    //for (auto &&t : new_targets)
-        //getTargets()[t->getPackage()].push_back(*t);
     if (rrs.empty())
-    {
-        //if (!new_targets.empty())
-            //resolvePackages();
         return;
-    }
     getContext().install(rrs);
 
     // now we know all drivers
     std::set<Input *> iv;
+    std::vector<InputWithSettings> newinputs;
     for (auto &rr : rrs)
     {
-        if (rr.hasTarget())
-            continue;
+        //if (rr.hasTarget())
+            //continue;
         // use addInput to prevent doubling already existing and loaded inputs
         // like when we loading dependency that is already loaded from the input
         // test: sw build org.sw.demo.gnome.pango.pangocairo-1.44
-        auto i = addInput(static_cast<LocalPackage&>(rr.getPackage()));
+        auto lp = dynamic_cast<LocalPackage *>(&rr.getPackage());
+        if (!lp)
+            SW_UNIMPLEMENTED;
+        auto i = addInput(*lp);
         iv.insert(&i.getInput());
-        // this also marks package as known
-        logical_inputs.emplace(rr.getPackage(), i);
+        auto [i2,_] = logical_inputs.emplace(rr.getPackage(), i);
+        i2->second.addPackage(rr.getPackage());
+        auto &is = newinputs.emplace_back(i2->second);
+        is.addSettings(rr.settings);
     }
 
     {
@@ -460,6 +468,17 @@ void SwBuild::resolvePackages()
         swctx.loadEntryPointsBatch(iv);
         if (build_settings["measure"] == "true")
             LOG_DEBUG(logger, "load entry points time: " << t.getTimeFloat() << " s.");
+    }
+
+    for (auto &&i : newinputs)
+    {
+        auto tgts2 = i.loadTargets(*this);
+        auto tgts = registerTargets(tgts2);
+        for (auto &&tgt : tgts)
+        {
+            tgt->setResolver(getResolver());
+            getTargets()[tgt->getPackage()].push_back(*tgt);
+        }
     }
 
     resolvePackages();

@@ -41,7 +41,16 @@ struct SW_MANAGER_API SwManagerContext// : ISwContext
     //
     void install(ResolveRequest &) const;
     // mass (threaded) install
-    void install(std::vector<ResolveRequest> &) const;
+    void install(const std::vector<ResolveRequest *> &) const;
+    template <typename T, typename = std::enable_if_t<!std::is_pointer_v<T>>>
+    void install(std::vector<T> &in) const
+    {
+        std::vector<ResolveRequest *> v;
+        v.reserve(in.size());
+        for (auto &e : in)
+            v.push_back(&e);
+        install(v);
+    }
     // what about ", bool use_cache = true"?
     LocalPackage install(const Package &) const;
     // manually call cache reset if we don't want it?

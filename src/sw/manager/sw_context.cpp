@@ -86,13 +86,13 @@ void SwManagerContext::install(ResolveRequest &rr) const
     rr.r = lp.clone(); // force overwrite with local package
 }
 
-void SwManagerContext::install(std::vector<ResolveRequest> &rrs) const
+void SwManagerContext::install(const std::vector<ResolveRequest *> &rrs) const
 {
     auto &e = getExecutor();
     Futures<void> fs;
     for (auto &rr : rrs)
     {
-        fs.push_back(e.push([this, &rr]
+        fs.push_back(e.push([this, &rr = *rr]
         {
             //if (!rr.hasTarget())
             install(rr);

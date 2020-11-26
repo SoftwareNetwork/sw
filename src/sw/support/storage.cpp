@@ -48,22 +48,11 @@ Directories::Directories(const path &p)
 bool ResolveRequestResult::setPackage(PackagePtr in, ITarget *in_t)
 {
     SW_CHECK(in);
-    if (!r)
+    if (!r || r->getVersion() < in->getVersion())
     {
         r = std::move(in);
         t = in_t;
         return true;
-    }
-    else if (r->getVersion() < in->getVersion())
-    {
-        if (r->getVersion().isRelease() && in->getVersion().isPreRelease())
-            ;
-        else
-        {
-            r = std::move(in);
-            t = in_t;
-            return true;
-        }
     }
     return false;
 }

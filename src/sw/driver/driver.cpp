@@ -136,8 +136,6 @@ struct BuiltinStorage : IStorage
 {
     SwContext &swctx;
     ProgramDetector::DetectablePackageEntryPoints eps;
-    using PackageMap = PackageVersionMapBase<ProgramDetector::DetectablePackageEntryPoint, std::unordered_map, ::primitives::version::VersionMap>;
-    PackageMap m;
     std::unique_ptr<SwBuild> sb;
     mutable std::unordered_map<UnresolvedPackage, std::vector<ITargetPtr>> targets;
     mutable std::unordered_map<PackagePath, PackageId> targets2;
@@ -160,22 +158,23 @@ struct BuiltinStorage : IStorage
 
     bool resolve(ResolveRequest &rr) const override
     {
+        // test default storage first
+        if (auto i = targets2.find(rr.u.getPath()); i != targets2.end())
+        {
+            ResolveRequest rr2;
+            rr2.u = i->second;
+            rr2.settings = rr.settings;
+            if (swctx.resolve(rr2, true))
+            {
+                rr.setPackage(rr2.getPackage().clone());
+                return true;
+            }
+        }
+
+        // now check local packages
         auto i = eps.find(rr.u);
         if (i == eps.end())
-        {
-            if (auto i = targets2.find(rr.u.getPath()); i != targets2.end())
-            {
-                ResolveRequest rr2;
-                rr2.u = i->second;
-                rr2.settings = rr.settings;
-                if (swctx.resolve(rr2, true))
-                {
-                    rr.setPackage(rr2.getPackage().clone());
-                    return true;
-                }
-            }
             return false;
-        }
         Build b(*sb);
         b.module_data.current_settings = rr.settings;
         i->second(b);
@@ -186,8 +185,16 @@ struct BuiltinStorage : IStorage
             using Package::Package;
             bool isInstallable() const override { return false; }
         };
+        VersionSet s;
         for (auto &t : itgts->second)
-            rr.setPackage(std::make_unique<BuiltinPackage>(*this, t->getPackage()), t.get());
+            s.insert(t->getPackage().getVersion());
+        auto v = rr.u.getRange().getMaxSatisfyingVersion(s);
+        for (auto &t : itgts->second)
+        {
+            if (!v || *v == t->getPackage().getVersion())
+                rr.setPackage(std::make_unique<BuiltinPackage>(*this, t->getPackage()), t.get());
+        }
+        SW_CHECK(rr.isResolved());
         return true;
     }
 };
