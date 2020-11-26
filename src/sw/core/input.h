@@ -104,16 +104,16 @@ private:
     Input &i;
 };
 
-struct SW_CORE_API InputWithSettings
+struct SW_CORE_API UserInput
 {
-    InputWithSettings(const LogicalInput &);
+    UserInput(Input &);
 
     const std::set<PackageSettings> &getSettings() const;
     void addSettings(const PackageSettings &s);
     void clearSettings() { settings.clear(); }
     String getHash() const;
-    LogicalInput &getInput() { return i; }
-    const LogicalInput &getInput() const { return i; }
+    Input &getInput() { return i.getInput(); }
+    const Input &getInput() const { return i.getInput(); }
 
     [[nodiscard]]
     std::vector<ITargetPtr> loadTargets(SwBuild &) const;

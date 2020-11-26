@@ -263,7 +263,7 @@ Input *SwContext::addInput(const Package &p)
     return i2;
 }
 
-std::vector<InputWithSettings> SwContext::makeInput(const String &i)
+std::vector<UserInput> SwContext::makeInput(const String &i)
 {
     path p(i);
     if (fs::exists(p))
@@ -277,7 +277,7 @@ std::vector<InputWithSettings> SwContext::makeInput(const String &i)
             if (!resolve(rr, true))
                 throw SW_RUNTIME_ERROR("Cannot resolve: " + rr.u.toString());
             auto bi = makeInput(install(rr.getPackage()));
-            std::vector<InputWithSettings> v;
+            std::vector<UserInput> v;
             v.push_back(bi);
             return v;
         }
@@ -288,21 +288,23 @@ std::vector<InputWithSettings> SwContext::makeInput(const String &i)
     }
 }
 
-InputWithSettings SwContext::makeInput(const LocalPackage &p)
+UserInput SwContext::makeInput(const LocalPackage &p)
 {
     auto v = makeInput(p.getDirSrc2(), p.getPath().slice(0, p.getData().prefix));
     //SW_CHECK(v.size() == 1); // allow multiple inputs for now, take only first
     SW_UNIMPLEMENTED; // vvv this user filter here is wrong
-    v[0].getInput().addPackage(p);
+    //v[0].getInput().addPackage(p);
     return v[0];
 }
 
-std::vector<InputWithSettings> SwContext::makeInput(const path &p, const PackagePath &prefix)
+std::vector<UserInput> SwContext::makeInput(const path &p, const PackagePath &prefix)
 {
+    if (!prefix.empty())
+        SW_UNIMPLEMENTED;
     auto v = addInputInternal(p);
-    std::vector<InputWithSettings> inputs;
+    std::vector<UserInput> inputs;
     for (auto i : v)
-        inputs.emplace_back(LogicalInput{ *i, prefix });
+        inputs.emplace_back(*i);
     return inputs;
 }
 

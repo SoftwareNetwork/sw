@@ -368,7 +368,7 @@ void SwBuild::loadInputs()
     // load
     std::set<Input *> iv;
     for (auto &i : user_inputs)
-        iv.insert(&i.getInput().getInput());
+        iv.insert(&i.getInput());
     swctx.loadEntryPointsBatch(iv);
 
     // and load packages
@@ -382,7 +382,7 @@ void SwBuild::loadInputs()
                 continue;
             tgt->setResolver(getResolver());
             getTargets()[tgt->getPackage()].push_back(*tgt);
-            logical_inputs.emplace(tgt->getPackage(), i.getInput());
+            logical_inputs.emplace(tgt->getPackage(), LogicalInput{ i.getInput(), {} });
         }
     }
 }
@@ -455,7 +455,7 @@ void SwBuild::resolvePackages()
 
     // now we know all drivers
     std::set<Input *> iv;
-    std::vector<InputWithSettings> newinputs;
+    std::vector<UserInput> newinputs;
     for (auto &rr : rrs)
     {
         // use addInput to prevent doubling already existing and loaded inputs
@@ -465,8 +465,9 @@ void SwBuild::resolvePackages()
         iv.insert(&i.getInput());
         auto [i2,_] = logical_inputs.emplace(rr.getPackage(), i);
         i2->second.addPackage(rr.getPackage());
-        auto &is = newinputs.emplace_back(i2->second);
-        is.addSettings(rr.settings);
+        SW_UNIMPLEMENTED;
+        //auto &is = newinputs.emplace_back(i2->second);
+        //is.addSettings(rr.settings);
     }
 
     {
@@ -1215,12 +1216,12 @@ String SwBuild::getName() const
     return getHash();
 }
 
-void SwBuild::addInput(const InputWithSettings &i)
+void SwBuild::addInput(const UserInput &i)
 {
     user_inputs.push_back(i);
 }
 
-const std::vector<InputWithSettings> &SwBuild::getInputs() const
+const std::vector<UserInput> &SwBuild::getInputs() const
 {
     return user_inputs;
 }

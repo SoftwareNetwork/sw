@@ -396,7 +396,7 @@ void VSGenerator::generate(const SwBuild &b)
         p.directory = &s.directories.find(predefined_targets_dir)->second;
         for (auto &i : inputs)
         {
-            for (auto &[_, f] : i.getInput().getInput().getSpecification().files.getData())
+            for (auto &[_, f] : i.getInput().getSpecification().files.getData())
                 p.files.insert({f.absolute_path, SourceFilesFilter});
         }
         p.settings = s.settings;
@@ -420,7 +420,7 @@ void VSGenerator::generate(const SwBuild &b)
                 cmd = "-d " + to_string(normalize_path(fs::current_path())) + " build -input-settings-pairs ";
                 for (auto &i : inputs)
                 {
-                    for (auto &[_, f] : i.getInput().getInput().getSpecification().files.getData())
+                    for (auto &[_, f] : i.getInput().getSpecification().files.getData())
                     {
                         cmd += "\"" + to_string(normalize_path(f.absolute_path)) + "\" ";
                         cmd += fix_json(st.toString()) + " ";
@@ -453,7 +453,7 @@ void VSGenerator::generate(const SwBuild &b)
     std::map<sw::PackageSettings, Files> configure_files;
     for (auto &i : inputs)
     {
-        for (auto &[_, f] : i.getInput().getInput().getSpecification().files.getData())
+        for (auto &[_, f] : i.getInput().getSpecification().files.getData())
         {
             for (auto &st : s.settings)
                 configure_files[st].insert(f.absolute_path);
@@ -674,7 +674,7 @@ void VSGenerator::generate(const SwBuild &b)
             {
                 for (auto &s : i.getSettings())
                 {
-                    for (auto &[_, f] : i.getInput().getInput().getSpecification().files.getData())
+                    for (auto &[_, f] : i.getInput().getSpecification().files.getData())
                     {
                         r.command += "\"" + to_string(normalize_path(f.absolute_path)) + "\" ";
                         r.command += fix_json(s.toString()) + " ";

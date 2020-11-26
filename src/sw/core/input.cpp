@@ -141,24 +141,24 @@ bool LogicalInput::operator==(const LogicalInput &rhs) const
     return std::tie(pkgs, h, prefix) == std::tie(rhs.pkgs, rh, rhs.prefix);
 }
 
-InputWithSettings::InputWithSettings(const LogicalInput &i)
-    : i(i)
+UserInput::UserInput(Input &i)
+    : i(i, {})
 {
 }
 
-const std::set<PackageSettings> &InputWithSettings::getSettings() const
+const std::set<PackageSettings> &UserInput::getSettings() const
 {
     if (settings.empty())
         throw SW_RUNTIME_ERROR("No input settings provided");
     return settings;
 }
 
-void InputWithSettings::addSettings(const PackageSettings &s)
+void UserInput::addSettings(const PackageSettings &s)
 {
     settings.insert(s);
 }
 
-String InputWithSettings::getHash() const
+String UserInput::getHash() const
 {
     String s;
     s = std::to_string(i.getInput().getHash());
@@ -167,7 +167,7 @@ String InputWithSettings::getHash() const
     return s;
 }
 
-std::vector<ITargetPtr> InputWithSettings::loadTargets(SwBuild &b) const
+std::vector<ITargetPtr> UserInput::loadTargets(SwBuild &b) const
 {
     std::vector<ITargetPtr> tgts;
 

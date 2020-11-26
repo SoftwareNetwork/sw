@@ -739,9 +739,10 @@ std::unordered_map<path, PrepareConfigOutputData> Driver::build_configs1(SwConte
         auto ep = std::make_unique<sw::NativeBuiltinTargetEntryPoint>(f);
         i->setEntryPoint(std::move(ep));
         auto [ii, _] = swctx.registerInput(std::move(i));
-        LogicalInput bi(*ii, {});
+        //LogicalInput bi(*ii, {});
         //bi.addPackage(name + "-0.0.1"s);
-        sw::InputWithSettings is(bi);
+        //sw::InputWithSettings is(bi);
+        sw::UserInput is(*ii);
         is.addSettings(ts);
         b->addInput(is);
     }

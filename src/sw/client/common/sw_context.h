@@ -13,7 +13,7 @@ namespace sw
 {
 struct SwContext;
 struct SwBuild;
-struct InputWithSettings;
+struct UserInput;
 }
 
 struct Executor;
@@ -81,7 +81,7 @@ struct SW_CLIENT_COMMON_API SwClientContext
     void addInputs(sw::SwBuild &b, const Inputs &i);
     Strings &getInputs();
     const Strings &getInputs() const;
-    std::vector<sw::InputWithSettings> makeCurrentPathInputs();
+    std::vector<sw::UserInput> makeCurrentPathInputs();
 
     //
     String listPredefinedTargets();

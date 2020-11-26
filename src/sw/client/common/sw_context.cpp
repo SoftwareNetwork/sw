@@ -511,7 +511,7 @@ void SwClientContext::addInputs(sw::SwBuild &b, const Inputs &i)
     }
 }
 
-std::vector<sw::InputWithSettings> SwClientContext::makeCurrentPathInputs()
+std::vector<sw::UserInput> SwClientContext::makeCurrentPathInputs()
 {
     return getContext().makeInput(fs::current_path());
 }
