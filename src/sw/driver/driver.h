@@ -61,11 +61,7 @@ struct SW_DRIVER_CPP_API Driver : IDriver
 
 private:
     SwContext &swctx;
-    mutable std::mutex m_bp;
-    mutable std::optional<PackageIdSet> builtin_packages;
     mutable BuiltinInputs builtin_inputs;
-    PackageIdSet getBuiltinPackages(SwContext &) const;
-    void getBuiltinInputs(SwContext &) const;
 
     //mutable std::unique_ptr<SwBuild> b;
     std::unique_ptr<struct BuiltinStorage> bs;
