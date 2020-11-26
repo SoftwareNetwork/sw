@@ -226,17 +226,11 @@ Driver::Driver(SwContext &swctx)
 {
     bs = std::make_unique<BuiltinStorage>(swctx);
 
-    // register builtins early!!!
-    // do not remove
-    // When we are building the same config as built-in,
-    // without this line it will be loaded first and won't get its entry point
-    //getBuiltinInputs(swctx);
-    builtin_inputs = load_builtin_inputs(swctx, *this);
-
     // register inputs
-    for (auto &&bi : builtin_inputs)
+    for (auto &&[i, pkgs] : load_builtin_inputs(swctx, *this))
     {
-        for (auto &pkg : bi.getPackages())
+        swctx.registerInput(std::move(i));
+        for (auto &pkg : pkgs)
             bs->addTarget(pkg);
     }
 }

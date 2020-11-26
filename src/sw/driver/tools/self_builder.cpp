@@ -165,13 +165,11 @@ String write_build_script(SwCoreContext &swctx, const std::vector<ResolveRequest
         if (has_checks)
             ctx.addLine("ep->cf = check_" + var + ";");
         ctx.addLine("i->setEntryPoint(std::move(ep));");
-        ctx.addLine("auto [ii, _] = swctx.registerInput(std::move(i));");
-        ctx.addLine("LogicalInput bi(*ii, \"" + lp.getPath().slice(0, lp.getData().prefix).toString() + "\"s);");
-
+        ctx.addLine("PackageIdSet pkgs;");
         // enumerate all other packages in group
         for (auto &p : hash_pkgs[h])
-            ctx.addLine("bi.addPackage(\"" + p.toString() + "\"s);");
-        ctx.addLine("epm.push_back(bi);");
+            ctx.addLine("pkgs.insert(\"" + p.toString() + "\"s);");
+        ctx.addLine("epm.emplace_back(std::move(i), pkgs);");
         hash_pkgs.erase(h);
         ctx.endBlock();
         ctx.emptyLines();

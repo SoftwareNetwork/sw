@@ -22,7 +22,7 @@ struct BuiltinInput : Input
     EntryPointPtr load1(SwContext &) override { SW_UNREACHABLE; }
 };
 
-using BuiltinInputs = std::vector<LogicalInput>;
+using BuiltinInputs = std::vector<std::pair<std::unique_ptr<BuiltinInput>, PackageIdSet>>;
 
 BuiltinInputs load_builtin_inputs(SwContext &, const IDriver &);
 

@@ -3,8 +3,6 @@
 
 #pragma once
 
-#include "builtin_input.h"
-
 #include <sw/core/driver.h>
 #include <sw/support/package_id.h>
 
@@ -61,10 +59,8 @@ struct SW_DRIVER_CPP_API Driver : IDriver
 
 private:
     SwContext &swctx;
-    mutable BuiltinInputs builtin_inputs;
-
-    //mutable std::unique_ptr<SwBuild> b;
     std::unique_ptr<struct BuiltinStorage> bs;
+
     std::unique_ptr<SwBuild> create_build(SwContext &swctx) const;
 };
 
