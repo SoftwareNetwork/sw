@@ -4,14 +4,6 @@
 #include "builtin_input.h"
 #include "entry_point.h"
 
-#include <sw/core/sw_context.h>
-#include <sw/core/target.h>
-
-#include <primitives/executor.h>
-
-#include <primitives/log.h>
-DECLARE_STATIC_LOGGER(logger, "build.self");
-
 #define SW_PACKAGE_API
 #include "sw.h"
 

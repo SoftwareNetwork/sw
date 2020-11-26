@@ -221,14 +221,29 @@ struct BuiltinStorage : IStorage
     }
 };
 
+struct BuiltinInput : Input
+{
+    size_t h;
+
+    BuiltinInput(SwContext &swctx, const IDriver &d, size_t hash)
+        : Input(swctx, d, std::make_unique<Specification>(SpecificationFiles{})), h(hash)
+    {}
+
+    bool isParallelLoadable() const { return true; }
+    size_t getHash() const override { return h; }
+    EntryPointPtr load1(SwContext &) override { SW_UNREACHABLE; }
+};
+
 Driver::Driver(SwContext &swctx)
     : swctx(swctx)
 {
     bs = std::make_unique<BuiltinStorage>(swctx);
 
     // register inputs
-    for (auto &&[i, pkgs] : load_builtin_inputs(swctx, *this))
+    for (auto &&[h, ep, pkgs] : load_builtin_inputs())
     {
+        auto i = std::make_unique<BuiltinInput>(swctx, *this, h);
+        i->setEntryPoint(std::move(ep));
         swctx.registerInput(std::move(i));
         for (auto &pkg : pkgs)
             bs->addTarget(pkg);

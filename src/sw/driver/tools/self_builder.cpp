@@ -141,7 +141,7 @@ String write_build_script(SwCoreContext &swctx, const std::vector<ResolveRequest
     primitives::CppEmitter ctx;
     // function
     ctx.beginNamespace("sw");
-    ctx.beginFunction("BuiltinInputs load_builtin_inputs(SwContext &swctx, const IDriver &d)");
+    ctx.beginFunction("BuiltinInputs load_builtin_inputs()");
     ctx.addLine("BuiltinInputs epm;");
     ctx.addLine();
     for (auto &rr : m_in)
@@ -160,16 +160,16 @@ String write_build_script(SwCoreContext &swctx, const std::vector<ResolveRequest
 
         auto var = hdr_vars[h];
         ctx.beginBlock();
-        ctx.addLine("auto i = std::make_unique<BuiltinInput>(swctx, d, " + std::to_string(h) + ");");
         ctx.addLine("auto ep = std::make_unique<sw::NativeBuiltinTargetEntryPoint>("s/* + var +  "::"*/ + "build_" + var + ");");
         if (has_checks)
             ctx.addLine("ep->cf = check_" + var + ";");
-        ctx.addLine("i->setEntryPoint(std::move(ep));");
-        ctx.addLine("PackageIdSet pkgs;");
+        ctx.addLine("PackageIdSet pkgs");
+        ctx.beginBlock();
         // enumerate all other packages in group
         for (auto &p : hash_pkgs[h])
-            ctx.addLine("pkgs.insert(\"" + p.toString() + "\"s);");
-        ctx.addLine("epm.emplace_back(std::move(i), pkgs);");
+            ctx.addLine("\"" + p.toString() + "\"s,");
+        ctx.endBlock(true);
+        ctx.addLine("epm.emplace_back(" + std::to_string(h) + ", std::move(ep), pkgs);");
         hash_pkgs.erase(h);
         ctx.endBlock();
         ctx.emptyLines();

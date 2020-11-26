@@ -3,27 +3,16 @@
 
 #pragma once
 
-#include <sw/core/input.h>
-#include <sw/core/specification.h>
+#include <sw/support/package.h>
 
 namespace sw
 {
 
-struct BuiltinInput : Input
-{
-    size_t h;
+struct NativeBuiltinTargetEntryPoint;
 
-    BuiltinInput(SwContext &swctx, const IDriver &d, size_t hash)
-        : Input(swctx, d, std::make_unique<Specification>(SpecificationFiles{})), h(hash)
-    {}
+// input hash, EP, pkgs
+using BuiltinInputs = std::vector<std::tuple<size_t, std::unique_ptr<NativeBuiltinTargetEntryPoint>, PackageIdSet>>;
 
-    bool isParallelLoadable() const { return true; }
-    size_t getHash() const override { return h; }
-    EntryPointPtr load1(SwContext &) override { SW_UNREACHABLE; }
-};
-
-using BuiltinInputs = std::vector<std::pair<std::unique_ptr<BuiltinInput>, PackageIdSet>>;
-
-BuiltinInputs load_builtin_inputs(SwContext &, const IDriver &);
+BuiltinInputs load_builtin_inputs();
 
 } // namespace sw
