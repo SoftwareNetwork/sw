@@ -415,6 +415,8 @@ void SwBuild::resolvePackages()
                 rr.resolver = &tgt->getResolver();
                 if (!tgt->resolve(rr))
                 {
+                    if (rr.u.getPath().isAbsolute())
+                        throw SW_RUNTIME_ERROR("Cannot resolve package: " + rr.u.toString());
                     auto t = getTargets().find(rr.u, d->getSettings());
                     if (t)
                     {
