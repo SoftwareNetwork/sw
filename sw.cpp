@@ -208,7 +208,6 @@ void build(Solution &s)
             auto c = cpp_driver.addCommand();
             c << cmd::prog(self_builder)
                 << cmd::out("build_self.generated.h")
-                << cmd::out("build_self.packages.generated.h")
                 ;
         }
         {
