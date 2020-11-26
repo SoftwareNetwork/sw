@@ -12,11 +12,6 @@
 // but just
 //  sw fetch
 
-static decltype(auto) getInput(sw::SwBuild &b)
-{
-    return b.addInput(fs::current_path());
-}
-
 static sw::support::SourcePtr createSource(const Options &options)
 {
     sw::support::SourcePtr s;
@@ -122,10 +117,8 @@ static sw::support::SourceDirMap getSources(SwClientContext &swctx)
     auto ts = swctx.createInitialSettings();
     ts["driver"]["dry-run"] = "true"; // only used to get sources
 
-    auto inputs = getInput(b);
-    for (auto &ii : inputs)
+    for (auto &i : swctx.makeCurrentPathInputs())
     {
-        sw::InputWithSettings i(ii);
         i.addSettings(ts);
         b.addInput(i);
     }
@@ -166,7 +159,7 @@ static sw::support::SourceDirMap getSources(const path &bdir, const Options &opt
     return getSources(bdir, sources, srcs);
 }
 
-std::pair<sw::support::SourceDirMap, std::vector<sw::LogicalInput>> SwClientContext::fetch(sw::SwBuild &b)
+sw::support::SourceDirMap SwClientContext::fetch(sw::SwBuild &b)
 {
     auto srcs = getOptions().options_upload.source.empty()
         ? getSources(*this) // from config
@@ -188,10 +181,8 @@ std::pair<sw::support::SourceDirMap, std::vector<sw::LogicalInput>> SwClientCont
         }
     }
 
-    auto inputs = getInput(b);
-    for (auto &ii : inputs)
+    for (auto &i : makeCurrentPathInputs())
     {
-        sw::InputWithSettings i(ii);
         for (auto &ts : tss)
             i.addSettings(ts);
         b.addInput(i);
@@ -201,10 +192,10 @@ std::pair<sw::support::SourceDirMap, std::vector<sw::LogicalInput>> SwClientCont
     if (getOptions().options_fetch.build_after_fetch)
         b.build();
 
-    return { srcs, inputs };
+    return srcs;
 }
 
-std::pair<sw::support::SourceDirMap, std::vector<sw::LogicalInput>> SwClientContext::fetch()
+sw::support::SourceDirMap SwClientContext::fetch()
 {
     return fetch(*createBuild());
 }

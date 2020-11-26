@@ -43,14 +43,8 @@ struct SW_CORE_API SwBuild : SwBuilderContext, ResolverHolder
     SwContext &getContext() { return swctx; }
     const SwContext &getContext() const { return swctx; }
 
+    // add user inputs
     void addInput(const InputWithSettings &);
-    // select between package and path
-    std::vector<LogicalInput> addInput(const String &);
-    // one subject may bring several inputs
-    // (one path containing multiple inputs)
-    std::vector<LogicalInput> addInput(const path &, const PackagePath &prefix = {});
-    // single input
-    LogicalInput addInput(const Package &);
 
     // complete
     void build();
@@ -124,7 +118,7 @@ private:
     path build_dir;
     TargetMap targets;
     //mutable TargetMap targets_to_build;
-    std::vector<InputWithSettings> inputs;
+    std::vector<InputWithSettings> user_inputs;
     PackageSettings build_settings;
     mutable BuildState state = BuildState::NotStarted;
     mutable Commands commands_storage; // we need some place to keep copy cmds
@@ -146,6 +140,7 @@ private:
     void resolvePackages(const std::vector<IDependency*> &upkgs); // [2/2] step
     Executor &getBuildExecutor() const;
     Executor &getPrepareExecutor() const;
+    LogicalInput addInput(const Package &);
 
     void resolveWithDependencies(std::vector<ResolveRequest> &) const;
 };

@@ -367,12 +367,12 @@ void SwBuild::loadInputs()
 
     // load
     std::set<Input *> iv;
-    for (auto &i : inputs)
+    for (auto &i : user_inputs)
         iv.insert(&i.getInput().getInput());
     swctx.loadEntryPointsBatch(iv);
 
     // and load packages
-    for (auto &i : inputs)
+    for (auto &i : user_inputs)
     {
         auto tgts2 = i.loadTargets(*this);
         auto tgts = registerTargets(tgts2);
@@ -1196,7 +1196,7 @@ std::unique_ptr<ExecutionPlan> SwBuild::getExecutionPlan(const Commands &cmds) c
 String SwBuild::getHash() const
 {
     String s;
-    for (auto &i : inputs)
+    for (auto &i : user_inputs)
         s += i.getHash();
     return shorten_hash(blake2b_512(s), 8);
 }
@@ -1217,54 +1217,18 @@ String SwBuild::getName() const
 
 void SwBuild::addInput(const InputWithSettings &i)
 {
-    inputs.push_back(i);
+    user_inputs.push_back(i);
 }
 
-std::vector<LogicalInput> SwBuild::addInput(const String &i)
+const std::vector<InputWithSettings> &SwBuild::getInputs() const
 {
-    path p(i);
-    if (fs::exists(p))
-        return addInput(p);
-    else
-    {
-        try
-        {
-            auto p = extractFromString(i);
-            ResolveRequest rr{ p };
-            if (!resolve(rr))
-                throw SW_RUNTIME_ERROR("Cannot resolve: " + rr.u.toString());
-            auto bi = addInput(getContext().install(rr.getPackage()));
-            std::vector<LogicalInput> v;
-            v.push_back(bi);
-            return v;
-        }
-        catch (std::exception &e)
-        {
-            throw SW_RUNTIME_ERROR("No such file, directory or suitable package: " + i + ": " + e.what());
-        }
-    }
+    return user_inputs;
 }
 
 LogicalInput SwBuild::addInput(const Package &p)
 {
     LOG_TRACE(logger, "Loading input: " + p.toString());
     return { *getContext().addInput(p), p.getPath().slice(0, p.getData().prefix) };
-
-    /*
-    auto v = addInput(p.getDirSrc2(), p.getPath().slice(0, p.getData().prefix));
-    //SW_CHECK(v.size() == 1); // allow multiple inputs for now, take only first
-    v[0].addPackage(p);
-    return v[0];*/
-}
-
-std::vector<LogicalInput> SwBuild::addInput(const path &p, const PackagePath &prefix)
-{
-    //SW_UNIMPLEMENTED;
-    auto v = getContext().addInputInternal(p);
-    std::vector<LogicalInput> inputs;
-    for (auto i : v)
-        inputs.emplace_back(*i, prefix);
-    return inputs;
 }
 
 path SwBuild::getExecutionPlanPath() const
@@ -1307,11 +1271,6 @@ void SwBuild::runSavedExecutionPlan(const path &in) const
     };
 
     execute(*p);
-}
-
-const std::vector<InputWithSettings> &SwBuild::getInputs() const
-{
-    return inputs;
 }
 
 void SwBuild::setSettings(const PackageSettings &bs)

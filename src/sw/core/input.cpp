@@ -79,6 +79,13 @@ std::vector<ITargetPtr> Input::loadPackages(SwBuild &b, const PackageSettings &s
 {
     // maybe save all targets on load?
 
+    // 1. If we load all installed packages, we might spend a lot of time here,
+    //    in case if all of the packages are installed and config is huge (aws, qt).
+    //    Also this might take a lot of memory.
+    //
+    // 2. If we load package by package we might spend a lot of time in subsequent loads.
+    //
+
     if (!isLoaded())
         throw SW_RUNTIME_ERROR("Input is not loaded");
 

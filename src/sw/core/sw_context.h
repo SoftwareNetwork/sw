@@ -15,6 +15,7 @@ struct IDriver;
 struct Input;
 struct InputDatabase;
 struct SwBuild;
+struct InputWithSettings;
 
 // core context for drivers
 struct SW_CORE_API SwCoreContext : SwManagerContext
@@ -74,6 +75,14 @@ struct SW_CORE_API SwContext : SwCoreContext
     //                inserted
     std::pair<Input *, bool> registerInput(std::unique_ptr<Input>);
     Input *addInput(const Package &);
+    // user inputs
+    // select between package and path
+    std::vector<InputWithSettings> makeInput(const String &);
+    // one subject may bring several inputs
+    // (one path containing multiple inputs)
+    std::vector<InputWithSettings> makeInput(const path &, const PackagePath &prefix = {});
+    // single input
+    InputWithSettings makeInput(const LocalPackage &);
 
     void loadEntryPointsBatch(const std::set<Input*> &inputs);
 

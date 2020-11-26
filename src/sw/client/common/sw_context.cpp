@@ -254,9 +254,9 @@ static void applySettings(sw::PackageSettings &s, const String &in_settings)
 static std::vector<sw::PackageSettings> applySettingsFromCppFile(SwClientContext &swctx, const Options &options, const path &fn)
 {
     auto b = swctx.createBuild();
-    auto inputs = b->addInput(fn);
+    auto inputs = swctx.getContext().makeInput(fn);
     SW_CHECK(inputs.size() == 1);
-    sw::InputWithSettings i(inputs[0]);
+    auto &i = inputs[0];
     auto ts = swctx.createInitialSettings();
 #ifdef NDEBUG
     ts["native"]["configuration"] = "releasewithdebuginformation";
@@ -492,24 +492,28 @@ void SwClientContext::addInputs(sw::SwBuild &b, const Inputs &i)
 {
     for (auto &[ts,in] : i.getInputPairs())
     {
-        for (auto i : b.addInput(in))
+        for (auto &i : getContext().makeInput(in))
         {
-            sw::InputWithSettings p(i);
-            p.addSettings(ts);
-            b.addInput(p);
+            i.addSettings(ts);
+            b.addInput(i);
         }
     }
 
+    auto settings = createSettings();
     for (auto &a : i.getInputs())
     {
-        for (auto i : b.addInput(a))
+        for (auto &i : getContext().makeInput(a))
         {
-            sw::InputWithSettings ii(i);
-            for (auto &s : createSettings())
-                ii.addSettings(s);
-            b.addInput(ii);
+            for (auto &s : settings)
+                i.addSettings(s);
+            b.addInput(i);
         }
     }
+}
+
+std::vector<sw::InputWithSettings> SwClientContext::makeCurrentPathInputs()
+{
+    return getContext().makeInput(fs::current_path());
 }
 
 std::unique_ptr<sw::SwBuild> SwClientContext::createBuildWithDefaultInputs()

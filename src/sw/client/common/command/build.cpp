@@ -9,11 +9,6 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "build");
 
-static decltype(auto) getInput(sw::SwBuild &b)
-{
-    return b.addInput(fs::current_path());
-}
-
 static void isolated_build(SwClientContext &swctx)
 {
     // get targets
@@ -25,9 +20,8 @@ static void isolated_build(SwClientContext &swctx)
     auto &b = *b1;
 
     auto ts = swctx.createInitialSettings();
-    for (auto &ii : getInput(b))
+    for (auto &i : swctx.makeCurrentPathInputs())
     {
-        sw::InputWithSettings i(ii);
         i.addSettings(ts);
         b.addInput(i);
     }
@@ -81,9 +75,8 @@ static void isolated_build(SwClientContext &swctx)
         auto b1 = swctx.createBuild();
         auto &b = *b1;
 
-        for (auto &ii : getInput(b))
+        for (auto &i : swctx.makeCurrentPathInputs())
         {
-            sw::InputWithSettings i(ii);
             i.addSettings(ts);
             b.addInput(i);
         }

@@ -4,8 +4,8 @@
 #pragma once
 
 #include <primitives/filesystem.h>
-#include <sw/core/input.h>
 #include <sw/core/settings.h>
+#include <sw/core/target.h>
 #include <sw/support/package_path.h>
 #include <sw/support/source.h>
 
@@ -13,6 +13,7 @@ namespace sw
 {
 struct SwContext;
 struct SwBuild;
+struct InputWithSettings;
 }
 
 struct Executor;
@@ -80,6 +81,7 @@ struct SW_CLIENT_COMMON_API SwClientContext
     void addInputs(sw::SwBuild &b, const Inputs &i);
     Strings &getInputs();
     const Strings &getInputs() const;
+    std::vector<sw::InputWithSettings> makeCurrentPathInputs();
 
     //
     String listPredefinedTargets();
@@ -92,8 +94,8 @@ struct SW_CLIENT_COMMON_API SwClientContext
 #undef SUBCOMMAND
 
     // extensions
-    std::pair<sw::support::SourceDirMap, std::vector<sw::LogicalInput>> fetch();
-    std::pair<sw::support::SourceDirMap, std::vector<sw::LogicalInput>> fetch(sw::SwBuild &);
+    sw::support::SourceDirMap fetch();
+    sw::support::SourceDirMap fetch(sw::SwBuild &);
     void run(const sw::PackageId &pkg, primitives::Command &c);
     static Strings getAliasArguments(const String &aliasname);
 

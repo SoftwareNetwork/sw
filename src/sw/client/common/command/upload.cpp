@@ -151,7 +151,7 @@ SUBCOMMAND_DECL(upload)
         }
     }
 
-    auto [sources, _] = fetch(*b);
+    auto sources = fetch(*b);
     if (sources.empty())
         throw SW_RUNTIME_ERROR("Empty target sources");
 
