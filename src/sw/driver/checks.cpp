@@ -817,7 +817,7 @@ bool Check::execute(SwBuild &b) const
     //b.setTargetsToBuild();
     SW_UNIMPLEMENTED;
     b.resolvePackages();
-    b.loadPackages();
+    //b.loadPackages();
     b.prepare();
 
     try

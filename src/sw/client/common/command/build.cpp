@@ -35,7 +35,7 @@ static void isolated_build(SwClientContext &swctx)
     SW_UNIMPLEMENTED;
     //b.setTargetsToBuild();
     b.resolvePackages();
-    b.loadPackages();
+    //b.loadPackages();
     b.prepare();
 
     // get sources to pass them into getPackages()

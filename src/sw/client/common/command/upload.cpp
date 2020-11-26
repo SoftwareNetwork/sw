@@ -168,7 +168,7 @@ SUBCOMMAND_DECL(upload)
     SW_UNIMPLEMENTED;
     //b->setTargetsToBuild();
     b->resolvePackages();
-    b->loadPackages();
+    //b->loadPackages();
     b->prepare();
 
     std::map<const sw::Input *, std::vector<sw::PackageId>> iv;

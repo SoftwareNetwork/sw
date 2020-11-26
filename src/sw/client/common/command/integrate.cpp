@@ -143,7 +143,7 @@ SUBCOMMAND_DECL(integrate)
         SW_UNIMPLEMENTED;
         //b.setTargetsToBuild();
         b.resolvePackages();
-        b.loadPackages();
+        //b.loadPackages();
         b.prepare();
 
         // find better algo

@@ -473,7 +473,7 @@ std::unique_ptr<sw::SwBuild> SwClientContext::createBuildAndPrepare(const Inputs
     SW_UNIMPLEMENTED;
     //b->setTargetsToBuild();
     b->resolvePackages();
-    b->loadPackages();
+    //b->loadPackages();
     b->prepare();
     return std::move(b);
 }
