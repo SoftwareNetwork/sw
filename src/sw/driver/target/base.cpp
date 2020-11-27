@@ -143,17 +143,17 @@ void TargetBase::addTarget2(Target &t)
         return;
     }
 
-    bool dummy = false;
+    /*bool dummy = false;
     auto it = getMainBuild().getTargets().find(t.getPackage());
     if (it != getMainBuild().getTargets().end())
     {
         auto i = it->second.findEqual(t.ts);
         dummy = i != it->second.end();
-    }
+    }*/
 
     // we do not activate targets that are not selected for current builds
     if (/*!isLocal() && */
-        dummy || !getSolution().isKnownTarget(t.getPackage()))
+        /*dummy || */!getSolution().isKnownTarget(t.getPackage()))
     {
         t.DryRun = true;
         t.ts["dry-run"] = "true";
@@ -777,6 +777,7 @@ void Target::setDummyDependencySettings(DependencyPtr &t2) const
 
 void Target::addSourceDependency(const DependencyPtr &t)
 {
+    return; // ignore for now
     SourceDependencies.push_back(t);
 
     auto &ds = SourceDependencies.back()->settings;
