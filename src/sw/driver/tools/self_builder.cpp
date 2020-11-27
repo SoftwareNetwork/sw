@@ -190,7 +190,6 @@ int main(int argc, char **argv)
 {
     static cl::opt<String> loglevel("log-level", cl::init("INFO"));
     static cl::opt<path> p(cl::Positional, cl::Required);
-    static cl::opt<path> _(cl::Positional, cl::ConsumeAfter); // to be removed
 
     cl::ParseCommandLineOptions(argc, argv);
 
