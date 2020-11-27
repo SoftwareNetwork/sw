@@ -68,13 +68,14 @@ sw::PackageDescriptionMap getPackages(const sw::SwBuild &b, const sw::support::S
             d->addFile(rd, f1, f2);
 
         // unique deps
-        for (auto &dep : t.getDependencies())
+        SW_UNIMPLEMENTED;
+        /*for (auto &dep : t.getDependencies())
         {
             // filter out predefined targets
             if (b.isPredefinedTarget(dep->getUnresolvedPackage()))
                 continue;
             d->dependencies.insert(dep->getUnresolvedPackage());
-        }
+        }*/
 
         m.emplace(pkg, std::move(d));
         if (iv)

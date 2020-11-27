@@ -196,9 +196,9 @@ String UserInput::getHash() const
     return s;
 }
 
-std::vector<ITarget*> UserInput::loadTargets(SwBuild &b) const
+std::vector<ITargetPtr> UserInput::loadPackages(SwBuild &b) const
 {
-    std::vector<ITarget*> tgts;
+    std::vector<ITargetPtr> tgts;
     for (auto &s : settings)
     {
         if (s.empty())
@@ -210,8 +210,8 @@ std::vector<ITarget*> UserInput::loadTargets(SwBuild &b) const
 
         LOG_TRACE(logger, "Loading input " << i.getName() << ", settings = " << s.toString());
 
-        for (auto &&t : b.getInput(i).loadPackages(b, s))
-            tgts.emplace_back(t);
+        for (auto &&t : i.loadPackages(b, s, {}, {}))
+            tgts.emplace_back(std::move(t));
     }
     return tgts;
 }

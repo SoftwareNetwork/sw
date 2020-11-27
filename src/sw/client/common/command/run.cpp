@@ -126,7 +126,7 @@ SUBCOMMAND_DECL(run)
         auto inputs = b->getInputs();
         if (inputs.size() != 1)
             throw SW_RUNTIME_ERROR("More than one input provided");
-        auto tgts = inputs[0].loadTargets(*b);
+        auto tgts = inputs[0].loadPackages(*b);
         // TODO: add better target detection
         // check only for executable targets
         if (tgts.size() != 1)

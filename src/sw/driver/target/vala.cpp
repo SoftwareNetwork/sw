@@ -127,7 +127,7 @@ void ValaBase::getCommands1(Commands &cmds) const
 }
 
 #define VALA_INIT(t, ...)     \
-    bool t::init()            \
+    void t::init()            \
     {                         \
         switch (init_pass)    \
         {                     \
@@ -141,7 +141,7 @@ void ValaBase::getCommands1(Commands &cmds) const
     }
 
 #define VALA_PREPARE(t)          \
-    bool t::prepare()            \
+    void t::prepare()            \
     {                            \
         switch (prepare_pass)    \
         {                        \

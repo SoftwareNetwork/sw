@@ -117,8 +117,8 @@ public:
 
     TargetType getType() const override { return target_type; }
 
-    bool init() override;
-    bool prepare() override;
+    void init() override;
+    void prepare() override;
     Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
     DependenciesType gatherDependencies() const override;
     TargetFiles getFiles(StorageFileType t) const override;
@@ -278,8 +278,8 @@ struct SW_DRIVER_CPP_API LibraryTarget : NativeCompiledTarget
     using NativeCompiledTarget::NativeCompiledTarget;
     using NativeCompiledTarget::operator=;
 
-    bool init() override;
-    bool prepare() override;
+    void init() override;
+    void prepare() override;
 };
 
 /**
@@ -291,7 +291,7 @@ struct SW_DRIVER_CPP_API ExecutableTarget : NativeCompiledTarget, PredefinedProg
     using PredefinedProgram::getProgram;
 
     TargetType getType() const override { return TargetType::NativeExecutable; }
-    bool prepare() override;
+    void prepare() override;
 
 private:
     bool isExecutable() const override { return true; }
@@ -305,9 +305,10 @@ struct SW_DRIVER_CPP_API StaticLibraryTarget : NativeCompiledTarget
     using NativeCompiledTarget::NativeCompiledTarget;
 
     TargetType getType() const override { return TargetType::NativeStaticLibrary; }
-    bool prepare() override
+    void prepare() override
     {
-        return prepareLibrary(LibraryType::Static);
+        prepareLibrary(LibraryType::Static);
+        return;
     }
 };
 
@@ -319,9 +320,10 @@ struct SW_DRIVER_CPP_API SharedLibraryTarget : NativeCompiledTarget
     using NativeCompiledTarget::NativeCompiledTarget;
 
     TargetType getType() const override { return TargetType::NativeSharedLibrary; }
-    bool prepare() override
+    void prepare() override
     {
-        return prepareLibrary(LibraryType::Shared);
+        prepareLibrary(LibraryType::Shared);
+        return;
     }
 };
 

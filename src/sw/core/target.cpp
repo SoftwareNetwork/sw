@@ -221,7 +221,7 @@ private:
     const ITarget *t = nullptr;
 };
 
-std::vector<IDependency *> PredefinedTarget::getDependencies() const
+/*std::vector<IDependency *> PredefinedTarget::getDependencies() const
 {
     if (!deps_set)
     {
@@ -240,6 +240,6 @@ std::vector<IDependency *> PredefinedTarget::getDependencies() const
     for (auto &d : this->deps)
         deps.push_back(d.get());
     return deps;
-}
+}*/
 
 }

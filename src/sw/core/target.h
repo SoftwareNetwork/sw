@@ -108,10 +108,10 @@ struct SW_CORE_API ITarget : ICastable, ResolverHolder
     /// 1. to create archives
     /// 2. for ide support
     /// ...?
-    virtual TargetFiles getFiles(StorageFileType) const = 0;
+    virtual TargetFiles getFiles(StorageFileType) const { return {}; }
 
     /// get all direct dependencies
-    virtual std::vector<IDependency *> getDependencies() const = 0;
+    //virtual std::vector<IDependency *> getDependencies() const = 0;
 
     //
     // build section
@@ -119,16 +119,16 @@ struct SW_CORE_API ITarget : ICastable, ResolverHolder
 
     /// prepare target for building
     /// returns true if target is not fully prepared yet
-    virtual bool prepare() = 0;
+    virtual void prepare() {}
 
     // get commands for building
     ///
-    virtual Commands getCommands() const = 0;
+    virtual Commands getCommands() const { return {}; }
 
     // get tests
     // reconsider?
     // get using settings?
-    virtual Commands getTests() const = 0;
+    virtual Commands getTests() const { return {}; }
 
     //
     // extended info section
@@ -190,7 +190,7 @@ struct SW_CORE_API PredefinedTarget : ITarget
     PredefinedTarget(const PredefinedTarget &) = delete;
     virtual ~PredefinedTarget();
 
-    std::vector<IDependency *> getDependencies() const override;
+    //std::vector<IDependency *> getDependencies() const override;
 
     // return what we know
     const PackageId &getPackage() const override { return pkg; }
@@ -199,10 +199,10 @@ struct SW_CORE_API PredefinedTarget : ITarget
 
     // lightweight target
     const Source &getSource() const override { static EmptySource es; return es; }  // empty source
-    TargetFiles getFiles(StorageFileType) const override { return {}; }             // no files
-    bool prepare() override { return false; }                                       // no prepare
-    Commands getCommands() const override { return {}; }                            // no commands
-    Commands getTests() const override { return {}; }                               // no tests
+    //TargetFiles getFiles(StorageFileType) const override { return {}; }             // no files
+    //void prepare() override { return false; }                                       // no prepare
+    //Commands getCommands() const override { return {}; }                            // no commands
+    //Commands getTests() const override { return {}; }                               // no tests
 
 private:
     PackageId pkg;

@@ -19,7 +19,7 @@ struct SW_DRIVER_CPP_API AdaTarget : Target
 
     SW_TARGET_USING_ASSIGN_OPS(NativeTargetOptionsGroup);
 
-    bool init() override;
+    void init() override;
     DependenciesType gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
     Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
 
@@ -46,7 +46,7 @@ struct SW_DRIVER_CPP_API CSharpTarget : Target
 
     TargetType getType() const override { return TargetType::CSharpLibrary; }
 
-    bool init() override;
+    void init() override;
     DependenciesType gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
     Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
 
@@ -75,7 +75,7 @@ struct SW_DRIVER_CPP_API RustTarget : Target
 
     TargetType getType() const override { return TargetType::RustLibrary; }
 
-    bool init() override;
+    void init() override;
     DependenciesType gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
     Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
 
@@ -103,7 +103,7 @@ struct SW_DRIVER_CPP_API GoTarget : Target
 
     TargetType getType() const override { return TargetType::GoLibrary; }
 
-    bool init() override;
+    void init() override;
     DependenciesType gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
     Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
 
@@ -131,7 +131,7 @@ struct SW_DRIVER_CPP_API JavaTarget : Target
 
     TargetType getType() const override { return TargetType::JavaLibrary; }
 
-    bool init() override;
+    void init() override;
     DependenciesType gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
     Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
 
@@ -159,7 +159,7 @@ struct SW_DRIVER_CPP_API KotlinTarget : Target
 
     TargetType getType() const override { return TargetType::KotlinLibrary; }
 
-    bool init() override;
+    void init() override;
     DependenciesType gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
     Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
 
@@ -187,7 +187,7 @@ struct SW_DRIVER_CPP_API DTarget : NativeTarget
 
     TargetType getType() const override { return TargetType::DLibrary; }
 
-    bool init() override;
+    void init() override;
     DependenciesType gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
     Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
 
@@ -209,7 +209,7 @@ struct SW_DRIVER_CPP_API DStaticLibrary : DLibrary
 {
     using Base = DLibrary;
     using Base::Base;
-    bool init() override;
+    void init() override;
     TargetType getType() const override { return TargetType::DStaticLibrary; }
 
     bool isStaticLibrary() const override { return true; }
@@ -219,7 +219,7 @@ struct SW_DRIVER_CPP_API DSharedLibrary : DLibrary
 {
     using Base = DLibrary;
     using Base::Base;
-    bool init() override;
+    void init() override;
     TargetType getType() const override { return TargetType::DSharedLibrary; }
 };
 
@@ -227,7 +227,7 @@ struct SW_DRIVER_CPP_API DExecutable : DTarget
 {
     using Base = DTarget;
     using Base::Base;
-    bool init() override;
+    void init() override;
     TargetType getType() const override { return TargetType::DExecutable; }
 };
 
@@ -242,7 +242,7 @@ struct SW_DRIVER_CPP_API PascalTarget : Target
 
     SW_TARGET_USING_ASSIGN_OPS(NativeTargetOptionsGroup);
 
-    bool init() override;
+    void init() override;
     DependenciesType gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
     Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
 
@@ -263,7 +263,7 @@ struct SW_DRIVER_CPP_API PythonLibrary : Target
 {
     PythonLibrary(TargetBase &parent, const PackageId &);
 
-    bool init() override;
+    void init() override;
     Files gatherAllFiles() const override;
 };
 

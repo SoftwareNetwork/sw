@@ -151,6 +151,7 @@ void build(Solution &s)
         core.Public += builder;
         core += "src/sw/core/.*"_rr;
         core += "org.sw.demo.Neargye.magic_enum"_dep;
+        core += "org.sw.demo.boost.fiber"_dep;
         embed2("pub.egorpugin.primitives.tools.embedder2"_dep, core, "src/sw/core/inserts/input_db_schema.sql");
         gen_sqlite2cpp("pub.egorpugin.primitives.tools.sqlpp11.sqlite2cpp"_dep,
             core, core.SourceDir / "src/sw/core/inserts/input_db_schema.sql", "db_inputs.h", "db::inputs");

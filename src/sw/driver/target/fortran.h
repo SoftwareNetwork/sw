@@ -21,7 +21,7 @@ struct SW_DRIVER_CPP_API FortranTarget : Target
 
     TargetType getType() const override { return TargetType::FortranLibrary; }
 
-    bool init() override;
+    void init() override;
     DependenciesType gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
     Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
 

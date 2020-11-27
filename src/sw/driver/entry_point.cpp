@@ -90,8 +90,9 @@ static path getImportLibraryFile(const Build &b)
 static String getDepsSuffix(PrepareConfig &pc, NativeCompiledTarget &t, const UnresolvedPackages &deps)
 {
     std::set<String> sdeps;
-    for (auto &d : t.getDependencies())
-        sdeps.insert(d->getUnresolvedPackage().toString());
+    SW_UNIMPLEMENTED;
+    //for (auto &d : t.getDependencies())
+        //sdeps.insert(d->getUnresolvedPackage().toString());
     for (auto &d : deps)
         sdeps.insert(d.toString());
     String h;
@@ -440,6 +441,8 @@ std::vector<ITargetPtr> NativeTargetEntryPoint::loadPackages(SwBuild &swb, const
 {
     auto b = createBuild(swb, s, pkgs, prefix);
     loadPackages1(b);
+    for (auto &&t : b.module_data.getTargets())
+        t->prepare();
     return std::move(b.module_data.getTargets());
 }
 

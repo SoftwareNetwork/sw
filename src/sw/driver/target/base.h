@@ -249,6 +249,8 @@ struct SW_DRIVER_CPP_API Target
     void addSourceDependency(const Target &);
     void addSourceDependency(const DependencyPtr &);
 
+    void resolveDependency(const DependencyPtr &);
+
 public:
     Target(TargetBase &parent, const PackageId &);
     virtual ~Target();
@@ -257,7 +259,7 @@ public:
     const LocalPackage &getPackage() const override { return TargetBase::getPackage(); }
     const Source &getSource() const override;
     TargetFiles getFiles(StorageFileType) const override;
-    std::vector<IDependency *> getDependencies() const override;
+    //std::vector<IDependency *> getDependencies() const override;
     const PackageSettings &getSettings() const override;
     const PackageSettings &getInterfaceSettings() const override;
 
@@ -290,8 +292,8 @@ public:
     void setRootDirectory(const path &);
 
     // main apis
-    virtual bool init(); // multipass init
-    virtual bool prepare() override { return false; } // multipass prepare
+    virtual void init(); // multipass init
+    //virtual bool prepare() override { return false; } // multipass prepare
     virtual Files gatherAllFiles() const { return {}; }
     virtual DependenciesType gatherDependencies() const { return DependenciesType{}; }
 
@@ -396,7 +398,7 @@ struct SW_DRIVER_CPP_API ProjectTarget : ProjDirBase
     using ProjDirBase::ProjDirBase;
     virtual ~ProjectTarget() = default;
 
-    bool init() override;
+    void init() override;
     TargetType getType() const override { return TargetType::Project; }
 };
 

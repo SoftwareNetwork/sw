@@ -32,7 +32,7 @@ AdaTarget::AdaTarget(TargetBase &parent, const PackageId &id)
 {
 }
 
-bool AdaTarget::init()
+void AdaTarget::init()
 {
     //static std::once_flag f;
     //std::call_once(f, [this] {detectAdaCompilers(DETECT_ARGS_PASS_FIRST_CALL_SIMPLE); });
@@ -47,7 +47,8 @@ bool AdaTarget::init()
     compiler->Extension = getBuildSettings().TargetOS.getExecutableExtension();
     compiler->setOutputFile(getBaseOutputFileName(*this, {}, "bin"));*/
 
-    SW_RETURN_MULTIPASS_END(init_pass);
+    //SW_RETURN_MULTIPASS_END(init_pass);
+    return;
 }
 
 Commands AdaTarget::getCommands1() const
@@ -102,7 +103,7 @@ CSharpTarget::CSharpTarget(TargetBase &parent, const PackageId &id)
 {
 }
 
-bool CSharpTarget::init()
+void CSharpTarget::init()
 {
     //static std::once_flag f;
     //std::call_once(f, [this] {detectCSharpCompilers(DETECT_ARGS_PASS_FIRST_CALL_SIMPLE); });
@@ -117,7 +118,8 @@ bool CSharpTarget::init()
     compiler->Extension = getBuildSettings().TargetOS.getExecutableExtension();
     compiler->setOutputFile(getBaseOutputFileName(*this, {}, "bin"));*/
 
-    SW_RETURN_MULTIPASS_END(init_pass);
+    //SW_RETURN_MULTIPASS_END(init_pass);
+    return;
 }
 
 Commands CSharpTarget::getCommands1() const
@@ -154,7 +156,7 @@ RustTarget::RustTarget(TargetBase &parent, const PackageId &id)
 {
 }
 
-bool RustTarget::init()
+void RustTarget::init()
 {
     //static std::once_flag f;
     //std::call_once(f, [this] {detectRustCompilers(DETECT_ARGS_PASS_FIRST_CALL_SIMPLE); });
@@ -169,7 +171,8 @@ bool RustTarget::init()
     compiler->Extension = getBuildSettings().TargetOS.getExecutableExtension();
     compiler->setOutputFile(getBaseOutputFileName(*this, {}, "bin"));*/
 
-    SW_RETURN_MULTIPASS_END(init_pass);
+    //SW_RETURN_MULTIPASS_END(init_pass);
+    return;
 }
 
 Commands RustTarget::getCommands1() const
@@ -202,7 +205,7 @@ GoTarget::GoTarget(TargetBase &parent, const PackageId &id)
 {
 }
 
-bool GoTarget::init()
+void GoTarget::init()
 {
     //static std::once_flag f;
     //std::call_once(f, [this] {detectGoCompilers(DETECT_ARGS_PASS_FIRST_CALL_SIMPLE); });
@@ -217,7 +220,8 @@ bool GoTarget::init()
     compiler->Extension = getBuildSettings().TargetOS.getExecutableExtension();
     compiler->setOutputFile(getBaseOutputFileName(*this, {}, "bin"));*/
 
-    SW_RETURN_MULTIPASS_END(init_pass);
+    //SW_RETURN_MULTIPASS_END(init_pass);
+    return;
 }
 
 Commands GoTarget::getCommands1() const
@@ -252,7 +256,7 @@ JavaTarget::JavaTarget(TargetBase &parent, const PackageId &id)
 {
 }
 
-bool JavaTarget::init()
+void JavaTarget::init()
 {
     //static std::once_flag f;
     //std::call_once(f, [this] {detectJavaCompilers(DETECT_ARGS_PASS_FIRST_CALL_SIMPLE); });
@@ -266,7 +270,8 @@ bool JavaTarget::init()
 
     compiler->setOutputDir(getBaseOutputDirName(*this, {}, "bin"));*/
 
-    SW_RETURN_MULTIPASS_END(init_pass);
+    //SW_RETURN_MULTIPASS_END(init_pass);
+    return;
 }
 
 Commands JavaTarget::getCommands1() const
@@ -299,7 +304,7 @@ KotlinTarget::KotlinTarget(TargetBase &parent, const PackageId &id)
 {
 }
 
-bool KotlinTarget::init()
+void KotlinTarget::init()
 {
     //static std::once_flag f;
     //std::call_once(f, [this] {detectKotlinCompilers(DETECT_ARGS_PASS_FIRST_CALL_SIMPLE); });
@@ -313,7 +318,8 @@ bool KotlinTarget::init()
 
     compiler->setOutputFile(getBaseOutputFileName(*this, {}, "bin"));*/
 
-    SW_RETURN_MULTIPASS_END(init_pass);
+    //SW_RETURN_MULTIPASS_END(init_pass);
+    return;
 }
 
 Commands KotlinTarget::getCommands1() const
@@ -353,7 +359,7 @@ DTarget::DTarget(TargetBase &parent, const PackageId &id)
 {
 }
 
-bool DTarget::init()
+void DTarget::init()
 {
     //static std::once_flag f;
     //std::call_once(f, [this] {detectDCompilers(DETECT_ARGS_PASS_FIRST_CALL_SIMPLE); });
@@ -373,14 +379,15 @@ bool DTarget::init()
 
         //compiler->setObjectDir(BinaryDir.parent_path() / "obj");
     }
-    SW_RETURN_MULTIPASS_NEXT_PASS(init_pass);
+    //SW_RETURN_MULTIPASS_NEXT_PASS(init_pass);
     case 2:
     {
         setOutputFile();
     }
-    SW_RETURN_MULTIPASS_END(init_pass);
+    //SW_RETURN_MULTIPASS_END(init_pass);
     }
-    SW_RETURN_MULTIPASS_END(init_pass);
+    //SW_RETURN_MULTIPASS_END(init_pass);
+    return;
 }
 
 Commands DTarget::getCommands1() const
@@ -400,30 +407,30 @@ Commands DTarget::getCommands1() const
     return cmds;*/
 }
 
-bool DStaticLibrary::init()
+void DStaticLibrary::init()
 {
-    auto r = DTarget::init();
+    DTarget::init();
     SW_UNIMPLEMENTED;
     //compiler->Extension = getBuildSettings().TargetOS.getStaticLibraryExtension();
     //compiler->BuildLibrary = true;
-    return r;
+    return;
 }
 
-bool DSharedLibrary::init()
+void DSharedLibrary::init()
 {
-    auto r = DTarget::init();
+    DTarget::init();
     SW_UNIMPLEMENTED;
     //compiler->Extension = getBuildSettings().TargetOS.getSharedLibraryExtension();
     //compiler->BuildDll = true;
-    return r;
+    return;
 }
 
-bool DExecutable::init()
+void DExecutable::init()
 {
-    auto r = DTarget::init();
+    DTarget::init();
     SW_UNIMPLEMENTED;
     //compiler->Extension = getBuildSettings().TargetOS.getExecutableExtension();
-    return r;
+    return;
 }
 
 void ProgramDetector::detectPascalCompilers(DETECT_ARGS)
@@ -446,7 +453,7 @@ PascalTarget::PascalTarget(TargetBase &parent, const PackageId &id)
 {
 }
 
-bool PascalTarget::init()
+void PascalTarget::init()
 {
     //static std::once_flag f;
     //std::call_once(f, [this] {detectPascalCompilers(DETECT_ARGS_PASS_FIRST_CALL_SIMPLE); });
@@ -461,7 +468,8 @@ bool PascalTarget::init()
     compiler->Extension = getBuildSettings().TargetOS.getExecutableExtension();
     compiler->setOutputFile(getBaseOutputFileName(*this, {}, "bin"));*/
 
-    SW_RETURN_MULTIPASS_END(init_pass);
+    //SW_RETURN_MULTIPASS_END(init_pass);
+    return;
 }
 
 Commands PascalTarget::getCommands1() const
@@ -488,10 +496,10 @@ PythonLibrary::PythonLibrary(TargetBase &parent, const PackageId &id)
 {
 }
 
-bool PythonLibrary::init()
+void PythonLibrary::init()
 {
-    auto r = Target::init();
-    return r;
+    Target::init();
+    return;
 }
 
 Files PythonLibrary::gatherAllFiles() const

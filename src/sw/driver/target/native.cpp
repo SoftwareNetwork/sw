@@ -542,7 +542,7 @@ void NativeCompiledTarget::findCompiler()
         throw SW_RUNTIME_ERROR("Cannot determine compiler type " + get_settings_package_id(getSettings()["rule"]["link"]["package"]).toString() + " for settings: " + getSettings().toString());
 }
 
-bool NativeCompiledTarget::init()
+void NativeCompiledTarget::init()
 {
     // before target init
     addSettingsAndSetPrograms(getMainBuild(), ts);
@@ -568,7 +568,9 @@ bool NativeCompiledTarget::init()
     addPackageDefinitions();
     setOutputFile();
 
-    SW_RETURN_MULTIPASS_END(init_pass);
+    //SW_UNIMPLEMENTED;
+    //SW_RETURN_MULTIPASS_END(init_pass);
+    return;
 }
 
 void NativeCompiledTarget::setupCommand(builder::Command &c) const
@@ -1503,6 +1505,7 @@ void NativeCompiledTarget::postConfigureActions()
     {
         auto d = std::make_shared<Dependency>(getSettings()["rule"][name]["package"].getValue());
         setDummyDependencySettings(d);
+        resolveDependency(d);
         addRuleDependency({ name, d });
     };
     auto add_dep2 = [this, &add_dep](const String &r, bool overwrite)
@@ -1522,6 +1525,7 @@ void NativeCompiledTarget::postConfigureActions()
             auto u = getSettings()["rule"][r]["package"].getValue();
             auto d = std::make_shared<Dependency>(u);
             d->getSettings() = getSettings();
+            resolveDependency(d);
             addRuleDependency({ r, d, r });
         }
         else
@@ -1613,7 +1617,7 @@ void NativeCompiledTarget::postConfigureActions()
     }*/
 }
 
-bool NativeCompiledTarget::prepare()
+void NativeCompiledTarget::prepare()
 {
     if (!isPostConfigureActionsCalled())
         throw SW_RUNTIME_ERROR("post configure action was not called");
@@ -1621,49 +1625,37 @@ bool NativeCompiledTarget::prepare()
     if (DryRun)
     {
         getActiveDependencies();
-        return false;
+        return;
     }
 
-    switch (prepare_pass)
-    {
-    case 1:
-        prepare_pass1();
-    RETURN_PREPARE_MULTIPASS_NEXT_PASS;
-    case 2:
-        // resolve dependencies
-        prepare_pass2();
-    RETURN_PREPARE_MULTIPASS_NEXT_PASS;
-    case 3:
-        // calculate all (link) dependencies for target
-        prepare_pass3();
-    RETURN_PREPARE_MULTIPASS_NEXT_PASS;
-    case 4:
-        // merge
-        prepare_pass4();
-    RETURN_PREPARE_MULTIPASS_NEXT_PASS;
-    case 5:
-        // source files
-        prepare_pass5();
-    RETURN_PREPARE_MULTIPASS_NEXT_PASS;
-    case 6:
-        // link libraries
-        prepare_pass6();
-    RETURN_PREPARE_MULTIPASS_NEXT_PASS;
-    case 7:
-        // linker 1
-        prepare_pass7();
-    RETURN_PREPARE_MULTIPASS_NEXT_PASS;
-    case 8:
-        // linker 2
-        prepare_pass8();
-    RETURN_PREPARE_MULTIPASS_NEXT_PASS;
-    case 9:
-        prepare_pass9();
-        // TODO: create prepare endgames method that always will be the last one
-        getGeneratedCommands(); // create g.commands
-        call(CallbackType::EndPrepare);
-    SW_RETURN_MULTIPASS_END(prepare_pass);
-    }
+    call(CallbackType::BeginPrepare);
+    prepare_pass1();
+
+    // resolve dependencies
+    prepare_pass2();
+
+    // calculate all (link) dependencies for target
+    prepare_pass3();
+
+    // merge
+    prepare_pass4();
+
+    // source files
+    prepare_pass5();
+
+    // link libraries
+    prepare_pass6();
+
+    // linker 1
+    prepare_pass7();
+
+    // linker 2
+    prepare_pass8();
+
+    prepare_pass9();
+    // TODO: create prepare endgames method that always will be the last one
+    getGeneratedCommands(); // create g.commands
+    call(CallbackType::EndPrepare);
 
     SW_RETURN_MULTIPASS_END(prepare_pass);
 }
@@ -1672,8 +1664,6 @@ void NativeCompiledTarget::prepare_pass1()
 {
     // make additional log level for this
     //LOG_TRACE(logger, "Preparing target: " + getPackage().getPath().toString());
-
-    call(CallbackType::BeginPrepare);
 
     if (UseModules)
     {
@@ -1855,16 +1845,18 @@ void NativeCompiledTarget::prepare_pass2()
     {
         if (d.dep->isResolved())
             continue;
-        SW_UNIMPLEMENTED;
-        auto t = getMainBuild().getTargets().find(d.dep->getPackage(), d.dep->settings);
-        if (!t)
+        resolveDependency(d.dep);
+
+        //SW_UNIMPLEMENTED;
+        //auto t = getMainBuild().getTargets().find(d.dep->getPackage(), d.dep->settings);
+        //if (!t)
         {
-            SW_UNIMPLEMENTED;
+            //SW_UNIMPLEMENTED;
             //t = getContext().getPredefinedTargets().find(d.dep->getPackage(), d.dep->settings);
             //if (!t)
                 //throw SW_RUNTIME_ERROR("No such target: " + d.dep->getPackage().toString());
         }
-        d.dep->setTarget(*t);
+        //d.dep->setTarget(*t);
     }
 
     // force cpp standard
@@ -2019,7 +2011,8 @@ void NativeCompiledTarget::prepare_pass3_1()
                         {
                             // find our resolved dependency and run
                             bool found = false;
-                            for (auto &d3 : t->getDependencies())
+                            SW_UNIMPLEMENTED;
+                            /*for (auto &d3 : t->getDependencies())
                             {
                                 if (d3->getTarget().getPackage() == package_id && d3->getSettings() == settings.getMap())
                                 {
@@ -2049,7 +2042,7 @@ void NativeCompiledTarget::prepare_pass3_1()
                                     found = true;
                                     break;
                                 }
-                            }
+                            }*/
                             if (!found)
                                 throw SW_RUNTIME_ERROR("Cannot find predefined target: " + package_id);
                         }
@@ -2169,7 +2162,8 @@ void NativeCompiledTarget::prepare_pass3_2()
                         {
                             // find our resolved dependency and run
                             bool found = false;
-                            for (auto &d3 : t->getDependencies())
+                            SW_UNIMPLEMENTED;
+                            /*for (auto &d3 : t->getDependencies())
                             {
                                 if (d3->getTarget().getPackage() == package_id && d3->getSettings() == settings.getMap())
                                 {
@@ -2198,7 +2192,7 @@ void NativeCompiledTarget::prepare_pass3_2()
                                     found = true;
                                     break;
                                 }
-                            }
+                            }*/
                             if (!found)
                                 throw SW_RUNTIME_ERROR("Cannot find predefined target: " + package_id);
                         }
@@ -2326,7 +2320,8 @@ void NativeCompiledTarget::prepare_pass3_3()
                         {
                             // find our resolved dependency and run
                             bool found = false;
-                            for (auto &d3 : t->getDependencies())
+                            SW_UNIMPLEMENTED;
+                            /*for (auto &d3 : t->getDependencies())
                             {
                                 if (d3->getTarget().getPackage() == package_id && d3->getSettings() == settings.getMap())
                                 {
@@ -2348,7 +2343,7 @@ void NativeCompiledTarget::prepare_pass3_3()
                                     found = true;
                                     break;
                                 }
-                            }
+                            }*/
                             if (!found)
                                 throw SW_RUNTIME_ERROR("Cannot find predefined target: " + package_id);
                         }
@@ -3098,7 +3093,8 @@ bool NativeCompiledTarget::prepareLibrary(LibraryType Type)
     break;
     }
 
-    return NativeCompiledTarget::prepare();
+    NativeCompiledTarget::prepare();
+    return true;
 }
 
 void NativeCompiledTarget::removeFile(const path &fn, bool binary_dir)
@@ -3507,7 +3503,7 @@ TargetType NativeCompiledTarget::getRealType() const
 #include "cppstd.inl"
 #undef STD
 
-bool ExecutableTarget::prepare()
+void ExecutableTarget::prepare()
 {
     switch (prepare_pass)
     {
@@ -3542,23 +3538,24 @@ bool ExecutableTarget::prepare()
     break;
     }
 
-    return NativeCompiledTarget::prepare();
+    NativeCompiledTarget::prepare();
+    return;
 }
 
-bool LibraryTarget::prepare()
+void LibraryTarget::prepare()
 {
-    return prepareLibrary(getBuildSettings().Native.LibrariesType);
+    prepareLibrary(getBuildSettings().Native.LibrariesType);
 }
 
-bool LibraryTarget::init()
+void LibraryTarget::init()
 {
     if (getBuildSettings().Native.LibrariesType == LibraryType::Shared)
         target_type = TargetType::NativeSharedLibrary;
     else
         target_type = TargetType::NativeStaticLibrary;
 
-    auto r = NativeCompiledTarget::init();
-    return r;
+    NativeCompiledTarget::init();
+    return;
 }
 
 }

@@ -12,6 +12,7 @@
 #include <sw/manager/storage.h>
 
 #include <boost/current_function.hpp>
+#include <boost/fiber/all.hpp>
 #include <magic_enum.hpp>
 #include <nlohmann/json.hpp>
 #include <primitives/date_time.h>
@@ -291,9 +292,12 @@ void SwBuild::build()
 
     ScopedTime t;
 
+    loadInputs();
+    execute();
+
     // this is all in one call
-    while (step())
-        ;
+    //while (step())
+        //;
 
     if (build_settings["measure"] == "true")
         LOG_DEBUG(logger, BOOST_CURRENT_FUNCTION << " time: " << t.getTimeFloat() << " s.");
@@ -301,6 +305,8 @@ void SwBuild::build()
 
 bool SwBuild::step()
 {
+    SW_UNIMPLEMENTED;
+
     ScopedTime t;
 
     switch (state)
@@ -310,14 +316,14 @@ bool SwBuild::step()
         loadInputs();
         break;
     case BuildState::InputsLoaded:
-        resolvePackages();
+        //resolvePackages();
         break;
     //case BuildState::PackagesResolved:
         //loadPackages();
         //break;
     case BuildState::PackagesLoaded:
         // prepare targets
-        prepare();
+        //prepare();
         break;
     case BuildState::Prepared:
         // create ex. plan and execute it
@@ -378,21 +384,63 @@ void SwBuild::loadInputs()
     // and load packages
     for (auto &i : user_inputs)
     {
-        auto tgts = i.loadTargets(*this);
-        //auto tgts = registerTargets(tgts2);
+        auto tgts2 = i.loadPackages(*this);
+        auto tgts = registerTargets(tgts2);
         for (auto &&tgt : tgts)
         {
             if (!should_build_target(tgt->getPackage()))
                 continue;
             tgt->setResolver(getResolver());
             getTargets()[tgt->getPackage()].push_back(*tgt);
-            logical_inputs.emplace(tgt->getPackage(), &i.getInput());
+            //logical_inputs.emplace(tgt->getPackage(), &i.getInput());
         }
     }
 }
 
+ITarget &SwBuild::resolveAndLoad(ResolveRequest &rr, Resolver &r)
+{
+    ITarget *t = nullptr;
+    std::exception_ptr eptr;
+    auto x = [this, &eptr, &rr, &r, &t]()
+    {
+        try
+        {
+            t = &resolveAndLoad2(rr, r);
+        }
+        catch (...)
+        {
+            eptr = std::current_exception();
+        }
+    };
+    // boost::fibers::launch::dispatch,
+    // std::allocator_arg_t
+    // add stack 2 MB
+    boost::fibers::fiber f(x);
+    f.join();
+    if (eptr)
+        std::rethrow_exception(eptr);
+    return *t;
+}
+
+ITarget &SwBuild::resolveAndLoad2(ResolveRequest &rr, Resolver &r)
+{
+    if (!/*r.*/resolve(rr))
+        throw SW_RUNTIME_ERROR("Cannot resolve package: " + rr.u.toString());
+    auto &p = rr.getPackage();
+    auto i = getContext().addInput(p);
+    auto tgts = i->loadPackages(*this, rr.settings, PackageIdSet{ p }, p.getPath().slice(0, p.getData().prefix));
+    if (tgts.empty())
+        throw SW_RUNTIME_ERROR("No targets loaded: " + p.toString());
+    if (tgts.size() != 1)
+        throw SW_RUNTIME_ERROR("Wrong number of targets: " + p.toString());
+    auto tgts2 = registerTargets(tgts);
+    return *tgts2[0];
+}
+
 void SwBuild::resolvePackages()
 {
+    SW_UNIMPLEMENTED;
+
     CHECK_STATE_AND_CHANGE(BuildState::InputsLoaded, BuildState::PackagesLoaded);
 
     struct CustomResolveRequest : ResolveRequest
@@ -406,7 +454,8 @@ void SwBuild::resolvePackages()
     std::vector<CustomResolveRequest> rrs;
     for (const auto &[pkg, tgts] : getTargets())
     {
-        for (const auto &tgt : tgts)
+        SW_UNIMPLEMENTED;
+        /*for (const auto &tgt : tgts)
         {
             auto deps = tgt->getDependencies();
             for (auto &d : deps)
@@ -444,16 +493,16 @@ void SwBuild::resolvePackages()
                     d->setTarget(*t);
                     continue;
                 }
-                /*if (rr.hasTarget())
-                {
-                    d->setTarget(rr.getTarget());
-                    new_targets.insert(&rr.getTarget());
-                    rr.getTarget().setResolver(tgt->getResolver());
-                }
-                else*/
+                //if (rr.hasTarget())
+                //{
+                    //d->setTarget(rr.getTarget());
+                    //new_targets.insert(&rr.getTarget());
+                    //rr.getTarget().setResolver(tgt->getResolver());
+                //}
+                //else
                     rrs.emplace_back(std::move(rr));
             }
-        }
+        }*/
     }
     if (rrs.empty())
         return;
@@ -589,7 +638,8 @@ void SwBuild::resolvePackages(const std::vector<IDependency*> &udeps)
                 {
                     auto tgt2 = registerTarget(std::move(tgt));
                     getTargets()[tgt2->getPackage()].push_back(*tgt2);
-                    everything_resolved &= load_targets(tgt2->getDependencies());
+                    SW_UNIMPLEMENTED;
+                    //everything_resolved &= load_targets(tgt2->getDependencies());
                     continue;
                 }
                 everything_resolved = false;
@@ -806,7 +856,8 @@ bool SwBuild::prepareStep()
 {
     std::atomic_bool next_pass = false;
 
-    auto &e = getPrepareExecutor();
+    SW_UNIMPLEMENTED;
+    /*auto &e = getPrepareExecutor();
     Futures<void> fs;
     for (const auto &[pkg, tgts] : getTargets())
     {
@@ -819,7 +870,7 @@ bool SwBuild::prepareStep()
             }));
         }
     }
-    waitAndGet(fs);
+    waitAndGet(fs);*/
 
     return next_pass;
 }
@@ -881,7 +932,7 @@ void SwBuild::execute() const
 
 void SwBuild::execute(ExecutionPlan &p) const
 {
-    CHECK_STATE_AND_CHANGE(BuildState::Prepared, BuildState::Executed);
+    CHECK_STATE_AND_CHANGE(BuildState::InputsLoaded, BuildState::Executed);
 
     SwapAndRestore sr(current_explan, &p);
 
@@ -1416,7 +1467,6 @@ ITarget *SwBuild::registerTarget(ITargetPtr t)
 
 SwBuild::RegisterTargetsResult SwBuild::registerTargets(std::vector<ITargetPtr> &v)
 {
-    SW_UNIMPLEMENTED;
     RegisterTargetsResult tgts;
     for (auto &&t : v)
     {

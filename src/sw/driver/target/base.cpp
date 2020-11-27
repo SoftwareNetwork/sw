@@ -130,8 +130,7 @@ void TargetBase::addTarget3(ITargetPtr t)
 
 void TargetBase::addTarget2(Target &t)
 {
-    while (t.init())
-        ;
+    t.init();
 
     // after setup
     t.call(CallbackType::CreateTarget);
@@ -329,7 +328,7 @@ TargetFiles Target::getFiles(StorageFileType t) const
     SW_UNIMPLEMENTED;
 }
 
-std::vector<IDependency *> Target::getDependencies() const
+/*std::vector<IDependency *> Target::getDependencies() const
 {
     std::vector<IDependency *> deps;
     for (auto &d : gatherDependencies())
@@ -346,7 +345,7 @@ std::vector<IDependency *> Target::getDependencies() const
         deps.push_back(d.get());
     }
     return deps;
-}
+}*/
 
 PackageSettings Target::getHostSettings() const
 {
@@ -482,7 +481,7 @@ FileStorage &Target::getFs() const
     return getMainBuild().getFileStorage();
 }
 
-bool Target::init()
+void Target::init()
 {
     if (ts["name"])
         provided_cfg = ts["name"].getValue();
@@ -532,7 +531,8 @@ bool Target::init()
     if (!BinaryPrivateDir.is_absolute())
         throw SW_LOGIC_ERROR("not absolute");
 
-    SW_RETURN_MULTIPASS_END(init_pass);
+    //SW_RETURN_MULTIPASS_END(init_pass);
+    return;
 }
 
 path Target::getBinaryParentDir() const
@@ -789,6 +789,17 @@ void Target::addSourceDependency(const Target &t)
     addSourceDependency(std::make_shared<Dependency>(t));
 }
 
+void Target::resolveDependency(const DependencyPtr &d)
+{
+    ResolveRequest rr;
+    rr.u = d->getUnresolvedPackage();
+    rr.settings = d->getSettings();
+    CachingResolver *cr = nullptr;
+    auto &t = getMainBuild().resolveAndLoad(rr, *cr);
+    //auto &t = getMainBuild().resolveAndLoad(rr, getResolver());
+    d->setTarget(t);
+}
+
 path Target::getFile(const Target &dep, const path &fn)
 {
     addSourceDependency(dep); // main trick is to add a dependency
@@ -923,7 +934,7 @@ void Target::postConfigureActions()
     post_configure_called = true;
 }
 
-bool ProjectTarget::init()
+void ProjectTarget::init()
 {
     current_project = getPackage();
     return Target::init();

@@ -120,7 +120,7 @@ struct SW_CORE_API UserInput
     const Input &getInput() const { return i; }
 
     [[nodiscard]]
-    std::vector<ITarget*> loadTargets(SwBuild &) const;
+    std::vector<ITargetPtr> loadPackages(SwBuild &) const;
 
 protected:
     Input &i;

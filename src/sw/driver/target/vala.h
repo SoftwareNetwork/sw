@@ -38,8 +38,8 @@ protected:
     {                                                              \
         using Base = t##Target;                                    \
         using Base::Base;                                          \
-        bool init() override;                                      \
-        bool prepare() override;                                   \
+        void init() override;                                      \
+        void prepare() override;                                   \
                                                                    \
     private:                                                       \
         Commands getCommands1() const override;                    \

@@ -5,9 +5,9 @@
 
 #define SW_MULTIPASS_VARIABLE(n) int n = 1; bool n##_done = false
 #define SW_RETURN_MULTIPASS_NEXT_PASS(var) \
-    do {var++; return true;} while (0)
+    do {var++; return;} while (0)
 #define SW_RETURN_MULTIPASS_END(n) \
-    do {n##_done = true; return false;} while (0)
+    do {n##_done = true; return;} while (0)
 
 // move things below into separate header without pragma once
 

@@ -45,7 +45,7 @@ FortranTarget::FortranTarget(TargetBase &parent, const PackageId &id)
 {
 }
 
-bool FortranTarget::init()
+void FortranTarget::init()
 {
     //static std::once_flag f;
     //std::call_once(f, [this] {detectFortranCompilers(DETECT_ARGS_PASS_FIRST_CALL_SIMPLE); });
@@ -73,7 +73,8 @@ bool FortranTarget::init()
     compiler->Extension = getBuildSettings().TargetOS.getExecutableExtension();
     compiler->setOutputFile(getBaseOutputFileName(*this, {}, "bin"));*/
 
-    SW_RETURN_MULTIPASS_END(init_pass);
+    //SW_RETURN_MULTIPASS_END(init_pass);
+    return;
 }
 
 Commands FortranTarget::getCommands1() const
