@@ -9,6 +9,8 @@
 namespace sw
 {
 
+IResolver::~IResolver() = default;
+
 static void checkPath(const path &p)
 {
     const auto s = p.string();
@@ -75,7 +77,7 @@ bool Resolver::resolve(ResolveRequest &rr) const
     return rr.isResolved();
 }
 
-void Resolver::addStorage(IResolvableStorage &s)
+void Resolver::addStorage(IResolver &s)
 {
     storages.push_back(&s);
 }

@@ -81,11 +81,15 @@ struct SW_SUPPORT_API ResolveRequest : ResolveRequestResult
     bool operator==(const ResolveRequest &rhs) const { return std::tie(u, settings) == std::tie(rhs.u, rhs.settings); }
 };
 
-struct SW_SUPPORT_API IResolvableStorage
+struct SW_SUPPORT_API IResolver
 {
+    virtual ~IResolver() = 0;
+
     /// modern resolve call
     virtual bool resolve(ResolveRequest &) const = 0;
 };
+
+struct IResolvableStorage : IResolver {};
 
 struct SW_SUPPORT_API IStorage : IResolvableStorage
 {
@@ -106,15 +110,16 @@ struct SW_SUPPORT_API IStorage : IResolvableStorage
     //ResolveResultWithDependencies resolveWithDependencies(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const;
 };
 
-struct SW_SUPPORT_API Resolver
+struct SW_SUPPORT_API Resolver : IResolver
 {
     virtual ~Resolver() = default;
 
-    virtual bool resolve(ResolveRequest &) const;
-    void addStorage(IResolvableStorage &);
+    bool resolve(ResolveRequest &) const override;
+    void addStorage(IResolver &);
+    virtual std::unique_ptr<Resolver> clone() const { return std::make_unique<Resolver>(*this); }
 
 private:
-    std::vector<IResolvableStorage *> storages;
+    std::vector<IResolver *> storages;
 };
 
 SW_SUPPORT_API

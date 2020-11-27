@@ -19,6 +19,7 @@ using PackageSettingKey = String;
 using PackageSettingValue = String;
 struct PackageSetting;
 struct PackageSettings;
+struct Resolver;
 
 struct SW_SUPPORT_API PackageSettings
 {
@@ -31,6 +32,8 @@ struct SW_SUPPORT_API PackageSettings
 
         Simple      = KeyValue,
     };
+
+    ~PackageSettings();
 
     PackageSetting &operator[](const PackageSettingKey &);
     const PackageSetting &operator[](const PackageSettingKey &) const;
@@ -88,22 +91,27 @@ struct SW_SUPPORT_API PackageSetting
     using Map = PackageSettings;
     using ArrayValue = PackageSetting;
     using Array = std::vector<ArrayValue>;
+    //using ResolverType = Resolver*;
+    //using ResolverPtr = ResolverType;
     using NullType = nulltag_t;
+    // append only
+    using Variant = std::variant<std::monostate, Value, Array, Map, NullType/*, ResolverPtr*/>;
 
-    PackageSetting() = default;
+    PackageSetting();
+    /*PackageSetting(const Value &);
+    PackageSetting(const Array &);
+    PackageSetting(const Map &);*/
+    PackageSetting(const path &);
     PackageSetting(const PackageSetting &);
     PackageSetting &operator=(const PackageSetting &);
-
-    PackageSetting &operator[](const PackageSettingKey &k);
-    const PackageSetting &operator[](const PackageSettingKey &k) const;
+    PackageSetting(PackageSetting &&);
+    PackageSetting &operator=(PackageSetting &&);
+    ~PackageSetting();
 
     template <class U>
     PackageSetting(const U &u)
     {
-        if constexpr (std::is_same_v<U, path>)
-            setAbsolutePathValue(u);
-        else
-            operator=(u);
+        operator=(u);
     }
 
     template <class U>
@@ -118,6 +126,9 @@ struct SW_SUPPORT_API PackageSetting
         value = u;
         return *this;
     }
+
+    PackageSetting &operator[](const PackageSettingKey &k);
+    const PackageSetting &operator[](const PackageSettingKey &k) const;
 
     bool operator==(const PackageSetting &) const;
     //bool operator!=(const PackageSetting &) const;
@@ -182,6 +193,7 @@ struct SW_SUPPORT_API PackageSetting
     bool isValue() const;
     bool isArray() const;
     bool isObject() const;
+    bool isResolver() const;
 
 private:
     int use_count = 1;
@@ -190,7 +202,8 @@ private:
     bool ignore_in_comparison = false;
     bool serializable_ = true;
     // when adding new member, add it to copy_fields()!
-    std::variant<std::monostate, Value, Array, Map, NullType> value;
+    Variant value;
+    //ResolverType resolver;
 
     nlohmann::json toJson() const;
     size_t getHash1() const;

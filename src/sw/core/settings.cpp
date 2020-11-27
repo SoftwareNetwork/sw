@@ -4,6 +4,7 @@
 #include "settings.h"
 
 #include <sw/builder/os.h>
+#include <sw/support/settings.h>
 
 namespace sw
 {

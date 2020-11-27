@@ -3,8 +3,6 @@
 
 #pragma once
 
-#include <sw/support/settings.h>
-
 namespace sw
 {
 

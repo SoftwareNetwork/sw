@@ -443,25 +443,25 @@ ProgramDetector::DetectablePackageMultiEntryPoints ProgramDetector::detectMsvcCo
             // oldnames.lib - for backward compat - https://docs.microsoft.com/en-us/cpp/c-runtime-library/backward-compatibility?view=vs-2019
 
             // under cond?
-            libcpp.public_ts["properties"]["6"]["system_link_libraries"].push_back(boost::to_upper_copy("oldnames.lib"s));
+            libcpp.public_ts["properties"]["6"]["system_link_libraries"].push_back(path(boost::to_upper_copy("oldnames.lib"s)));
 
             // 100% under cond
-            libcpp.public_ts["properties"]["6"]["system_link_libraries"].push_back(boost::to_upper_copy("legacy_stdio_definitions.lib"s));
-            libcpp.public_ts["properties"]["6"]["system_link_libraries"].push_back(boost::to_upper_copy("legacy_stdio_wide_specifiers.lib"s));
+            libcpp.public_ts["properties"]["6"]["system_link_libraries"].push_back(path(boost::to_upper_copy("legacy_stdio_definitions.lib"s)));
+            libcpp.public_ts["properties"]["6"]["system_link_libraries"].push_back(path(boost::to_upper_copy("legacy_stdio_wide_specifiers.lib"s)));
         }
         switch (sw::getProgramDetector().getMsvcLibraryType(new_settings))
         {
         case vs::RuntimeLibraryType::MultiThreadedDLL:
-            libcpp.public_ts["properties"]["6"]["system_link_libraries"].push_back(boost::to_upper_copy("msvcprt.lib"s));
+            libcpp.public_ts["properties"]["6"]["system_link_libraries"].push_back(path(boost::to_upper_copy("msvcprt.lib"s)));
             break;
         case vs::RuntimeLibraryType::MultiThreadedDLLDebug:
-            libcpp.public_ts["properties"]["6"]["system_link_libraries"].push_back(boost::to_upper_copy("msvcprtd.lib"s));
+            libcpp.public_ts["properties"]["6"]["system_link_libraries"].push_back(path(boost::to_upper_copy("msvcprtd.lib"s)));
             break;
         case vs::RuntimeLibraryType::MultiThreaded:
-            libcpp.public_ts["properties"]["6"]["system_link_libraries"].push_back(boost::to_upper_copy("libcpmt.lib"s));
+            libcpp.public_ts["properties"]["6"]["system_link_libraries"].push_back(path(boost::to_upper_copy("libcpmt.lib"s)));
             break;
         case vs::RuntimeLibraryType::MultiThreadedDebug:
-            libcpp.public_ts["properties"]["6"]["system_link_libraries"].push_back(boost::to_upper_copy("libcpmtd.lib"s));
+            libcpp.public_ts["properties"]["6"]["system_link_libraries"].push_back(path(boost::to_upper_copy("libcpmtd.lib"s)));
             break;
         default:
             SW_UNIMPLEMENTED;
@@ -470,16 +470,16 @@ ProgramDetector::DetectablePackageMultiEntryPoints ProgramDetector::detectMsvcCo
         switch (sw::getProgramDetector().getMsvcLibraryType(new_settings))
         {
         case vs::RuntimeLibraryType::MultiThreadedDLL:
-            libcpp.public_ts["properties"]["6"]["system_link_libraries"].push_back(boost::to_upper_copy("msvcrt.lib"s));
+            libcpp.public_ts["properties"]["6"]["system_link_libraries"].push_back(path(boost::to_upper_copy("msvcrt.lib"s)));
             break;
         case vs::RuntimeLibraryType::MultiThreadedDLLDebug:
-            libcpp.public_ts["properties"]["6"]["system_link_libraries"].push_back(boost::to_upper_copy("msvcrtd.lib"s));
+            libcpp.public_ts["properties"]["6"]["system_link_libraries"].push_back(path(boost::to_upper_copy("msvcrtd.lib"s)));
             break;
         case vs::RuntimeLibraryType::MultiThreaded:
-            libcpp.public_ts["properties"]["6"]["system_link_libraries"].push_back(boost::to_upper_copy("libcmt.lib"s));
+            libcpp.public_ts["properties"]["6"]["system_link_libraries"].push_back(path(boost::to_upper_copy("libcmt.lib"s)));
             break;
         case vs::RuntimeLibraryType::MultiThreadedDebug:
-            libcpp.public_ts["properties"]["6"]["system_link_libraries"].push_back(boost::to_upper_copy("libcmtd.lib"s));
+            libcpp.public_ts["properties"]["6"]["system_link_libraries"].push_back(path(boost::to_upper_copy("libcmtd.lib"s)));
             break;
         default:
             SW_UNIMPLEMENTED;
@@ -520,7 +520,7 @@ ProgramDetector::DetectablePackageMultiEntryPoints ProgramDetector::detectMsvcCo
         // protected?
         concrt.public_ts["properties"]["6"]["system_include_directories"].push_back(m.root / "crt" / "src" / "concrt");
         concrt.public_ts["properties"]["6"]["system_link_libraries"].push_back(
-            boost::to_upper_copy(sw::getProgramDetector().getMsvcLibraryName("concrt", new_settings)));
+            path(boost::to_upper_copy(sw::getProgramDetector().getMsvcLibraryName("concrt", new_settings))));
     });
 
     // vcruntime
@@ -541,7 +541,7 @@ ProgramDetector::DetectablePackageMultiEntryPoints ProgramDetector::detectMsvcCo
         // protected?
         //vcruntime.public_ts["properties"]["6"]["system_include_directories"].push_back(root / "crt" / "src" / "vcruntime");
         vcruntime.public_ts["properties"]["6"]["system_link_libraries"].push_back(
-            boost::to_upper_copy(sw::getProgramDetector().getMsvcLibraryName("vcruntime", new_settings)));
+            path(boost::to_upper_copy(sw::getProgramDetector().getMsvcLibraryName("vcruntime", new_settings))));
     });
 
     return eps;

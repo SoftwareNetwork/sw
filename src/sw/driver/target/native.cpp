@@ -1400,7 +1400,7 @@ const PackageSettings &NativeCompiledTarget::getInterfaceSettings() const
         if (!c.working_directory.empty())
             s["run_command"]["working_directory"].setPathValue(getContext().getLocalStorage(), c.working_directory);
         for (auto &a : c.getArguments())
-            s["run_command"]["arguments"].push_back(a->toString());
+            s["run_command"]["arguments"].push_back(path(a->toString()));
         for (auto &[k, v] : c.environment)
             s["run_command"]["environment"][k] = v;
         if (c.create_new_console)
@@ -1455,7 +1455,7 @@ const PackageSettings &NativeCompiledTarget::getInterfaceSettings() const
                 for (auto &[k, v] : g.Definitions)
                     s["definitions"][k] = v;
                 for (auto &d : g.CompileOptions)
-                    s["compile_options"].push_back(d);
+                    s["compile_options"].push_back(path(d));
                 for (auto &d : g.IncludeDirectories)
                 {
                     PackageSetting ts;

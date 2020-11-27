@@ -12,9 +12,32 @@
 namespace sw
 {
 
+PackageSetting::PackageSetting()
+{
+}
+
+PackageSetting::PackageSetting(const path &p)
+{
+    setAbsolutePathValue(p);
+}
+
 PackageSetting::PackageSetting(const PackageSetting &rhs)
 {
     operator=(rhs);
+}
+
+PackageSetting::PackageSetting(PackageSetting &&) = default;
+/*{
+    SW_UNIMPLEMENTED;
+}*/
+
+PackageSetting &PackageSetting::operator=(PackageSetting &&) = default;
+/*{
+    SW_UNIMPLEMENTED;
+}*/
+
+PackageSetting::~PackageSetting()
+{
 }
 
 void PackageSetting::copy_fields(const PackageSetting &rhs)
@@ -24,6 +47,8 @@ void PackageSetting::copy_fields(const PackageSetting &rhs)
     used_in_hash = rhs.used_in_hash;
     ignore_in_comparison = rhs.ignore_in_comparison;
     serializable_ = rhs.serializable_;
+    //if (rhs.resolver)
+        //resolver = rhs.resolver->clone();
 }
 
 bool PackageSetting::isEmpty() const
@@ -38,7 +63,8 @@ bool PackageSetting::isNull() const
 
 void PackageSetting::setNull()
 {
-    *this = NullType{};
+    //reset();
+    value = NullType{};
 }
 
 PackageSetting &PackageSetting::operator=(const PackageSetting &rhs)
@@ -289,6 +315,12 @@ bool PackageSetting::isObject() const
     return std::get_if<Map>(&value);
 }
 
+bool PackageSetting::isResolver() const
+{
+    SW_UNIMPLEMENTED;
+    //return value.index() == 5;
+}
+
 void PackageSetting::push_back(const ArrayValue &v)
 {
     if (value.index() == 0)
@@ -333,6 +365,8 @@ PackageSetting::operator bool() const
 {
     return !isEmpty();
 }
+
+PackageSettings::~PackageSettings() {}
 
 String PackageSettings::getHash() const
 {

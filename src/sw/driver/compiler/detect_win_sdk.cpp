@@ -96,10 +96,10 @@ struct WinKit
                 return;
             }
             if (name == "um")
-                target->public_ts["properties"]["6"]["system_link_libraries"].push_back(boost::to_upper_copy("kernel32.lib"s));
+                target->public_ts["properties"]["6"]["system_link_libraries"].push_back(path(boost::to_upper_copy("kernel32.lib"s)));
             if (name == "ucrt")
                 target->public_ts["properties"]["6"]["system_link_libraries"].push_back(
-                    boost::to_upper_copy(sw::getProgramDetector().getMsvcLibraryName("ucrt", new_settings)));
+                    path(boost::to_upper_copy(sw::getProgramDetector().getMsvcLibraryName("ucrt", new_settings))));
         });
 
         return eps;

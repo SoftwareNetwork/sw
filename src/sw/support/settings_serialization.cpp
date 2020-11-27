@@ -8,6 +8,8 @@
 
 #include "settings.h"
 
+#include "storage.h"
+
 #include <boost/serialization/map.hpp>
 #include <boost/serialization/vector.hpp>
 #include <primitives/exceptions.h>
