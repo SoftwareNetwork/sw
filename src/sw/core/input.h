@@ -79,6 +79,8 @@ private:
 struct SW_CORE_API LogicalInput
 {
     LogicalInput(Input &, const PackagePath &prefix);
+    LogicalInput(const LogicalInput &) = delete;
+    LogicalInput(LogicalInput &&) = default;
 
     // same input may be used to load multiple packages
     // they all share same prefix
@@ -88,7 +90,8 @@ struct SW_CORE_API LogicalInput
 
     // no dry-run targets
     [[nodiscard]]
-    std::vector<ITargetPtr> loadPackages(SwBuild &, const PackageSettings &, const AllowedPackages &allowed_packages = {}) const;
+    std::vector<ITarget*> loadPackages(SwBuild &, const PackageSettings &, const AllowedPackages &allowed_packages = {});
+    std::vector<ITarget*> loadPackages(SwBuild &, const PackageId &, const PackageSettings &);
 
     //PackageIdSet listPackages(SwContext &) const;
 
@@ -102,6 +105,7 @@ private:
     PackageIdSet pkgs;
     PackagePath prefix;
     Input &i;
+    std::map<PackageId, std::map<PackageSettings, ITargetPtr>> targets;
 };
 
 struct SW_CORE_API UserInput
@@ -112,14 +116,14 @@ struct SW_CORE_API UserInput
     void addSettings(const PackageSettings &s);
     void clearSettings() { settings.clear(); }
     String getHash() const;
-    Input &getInput() { return i.getInput(); }
-    const Input &getInput() const { return i.getInput(); }
+    Input &getInput() { return i; }
+    const Input &getInput() const { return i; }
 
     [[nodiscard]]
-    std::vector<ITargetPtr> loadTargets(SwBuild &) const;
+    std::vector<ITarget*> loadTargets(SwBuild &) const;
 
 protected:
-    LogicalInput i;
+    Input &i;
     std::set<PackageSettings> settings;
 };
 

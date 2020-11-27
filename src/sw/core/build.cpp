@@ -368,21 +368,25 @@ void SwBuild::loadInputs()
     // load
     std::set<Input *> iv;
     for (auto &i : user_inputs)
+    {
         iv.insert(&i.getInput());
+        // on new inputs
+        addInput(LogicalInput{ i.getInput(), {} });
+    }
     swctx.loadEntryPointsBatch(iv);
 
     // and load packages
     for (auto &i : user_inputs)
     {
-        auto tgts2 = i.loadTargets(*this);
-        auto tgts = registerTargets(tgts2);
+        auto tgts = i.loadTargets(*this);
+        //auto tgts = registerTargets(tgts2);
         for (auto &&tgt : tgts)
         {
             if (!should_build_target(tgt->getPackage()))
                 continue;
             tgt->setResolver(getResolver());
             getTargets()[tgt->getPackage()].push_back(*tgt);
-            logical_inputs.emplace(tgt->getPackage(), LogicalInput{ i.getInput(), {} });
+            logical_inputs.emplace(tgt->getPackage(), &i.getInput());
         }
     }
 }
@@ -395,6 +399,7 @@ void SwBuild::resolvePackages()
     {
         IDependency *dep = nullptr;
         Resolver *resolver = nullptr;
+        LogicalInput *li = nullptr;
     };
 
     // gather
@@ -426,9 +431,10 @@ void SwBuild::resolvePackages()
                     auto i = getTargets().find(d->getUnresolvedPackage());
                     if (i == getTargets().end())
                         throw SW_RUNTIME_ERROR("Cannot resolve package: " + rr.u.toString());
-                    auto li = logical_inputs.find(i->first);
-                    if (li == logical_inputs.end())
-                        throw SW_RUNTIME_ERROR("Cannot resolve package input: " + rr.u.toString());
+                    SW_UNIMPLEMENTED;
+                    //auto li = logical_inputs.find(i->first);
+                    //if (li == logical_inputs.end())
+                        //throw SW_RUNTIME_ERROR("Cannot resolve package input: " + rr.u.toString());
                     continue;
                 }
                 // also check if we already loaded this package
@@ -451,11 +457,14 @@ void SwBuild::resolvePackages()
     }
     if (rrs.empty())
         return;
+
+    // install
     getContext().install(rrs);
 
     // now we know all drivers
+    // gather inputs
     std::set<Input *> iv;
-    std::vector<UserInput> newinputs;
+    //std::vector<UserInput> newinputs;
     for (auto &rr : rrs)
     {
         // use addInput to prevent doubling already existing and loaded inputs
@@ -463,13 +472,16 @@ void SwBuild::resolvePackages()
         // test: sw build org.sw.demo.gnome.pango.pangocairo-1.44
         auto i = addInput(rr.getPackage());
         iv.insert(&i.getInput());
-        auto [i2,_] = logical_inputs.emplace(rr.getPackage(), i);
-        i2->second.addPackage(rr.getPackage());
-        SW_UNIMPLEMENTED;
-        //auto &is = newinputs.emplace_back(i2->second);
+        auto &li = addInput(std::move(i));
+        li.addPackage(rr.getPackage());
+        rr.li = &li;
+        //logical_inputs.emplace(rr.getPackage(), &li.getInput());
+
+        //auto &is = newinputs.emplace_back(li.getInput());
         //is.addSettings(rr.settings);
     }
 
+    // load inputs
     {
         ScopedTime t;
         swctx.loadEntryPointsBatch(iv);
@@ -477,10 +489,19 @@ void SwBuild::resolvePackages()
             LOG_DEBUG(logger, "load entry points time: " << t.getTimeFloat() << " s.");
     }
 
-    for (auto &&i : newinputs)
+    for (auto &&rr : rrs)
     {
-        auto tgts2 = i.loadTargets(*this);
-        auto tgts = registerTargets(tgts2);
+        if (rr.settings.empty())
+        {
+            throw SW_RUNTIME_ERROR("Empty settings requested");
+            // we should return empty target on this?
+            //continue;
+        }
+        auto tgts = rr.li->loadPackages(*this, rr.getPackage(), rr.settings);
+        if (tgts.size() != 1)
+            SW_UNIMPLEMENTED;
+        rr.dep->setTarget(*tgts[0]);
+        //auto tgts = registerTargets(tgts2);
         for (auto &&tgt : tgts)
         {
             tgt->setResolver(getResolver());
@@ -1395,6 +1416,7 @@ ITarget *SwBuild::registerTarget(ITargetPtr t)
 
 SwBuild::RegisterTargetsResult SwBuild::registerTargets(std::vector<ITargetPtr> &v)
 {
+    SW_UNIMPLEMENTED;
     RegisterTargetsResult tgts;
     for (auto &&t : v)
     {
@@ -1402,6 +1424,17 @@ SwBuild::RegisterTargetsResult SwBuild::registerTargets(std::vector<ITargetPtr> 
         tgts.push_back(&*p);
     }
     return tgts;
+}
+
+LogicalInput &SwBuild::getInput(Input &i)
+{
+    return addInput(LogicalInput{ i, {} });
+}
+
+LogicalInput &SwBuild::addInput(LogicalInput &&i)
+{
+    auto [it,_] = input_storage.emplace(&i.getInput(), std::move(i));
+    return it->second;
 }
 
 }

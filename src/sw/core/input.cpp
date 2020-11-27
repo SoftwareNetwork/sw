@@ -119,9 +119,38 @@ void LogicalInput::addPackage(const PackageId &in)
     pkgs.insert(in);
 }
 
-std::vector<ITargetPtr> LogicalInput::loadPackages(SwBuild &b, const PackageSettings &s, const AllowedPackages &allowed_packages) const
+std::vector<ITarget*> LogicalInput::loadPackages(SwBuild &b, const PackageSettings &s, const AllowedPackages &allowed_packages)
 {
-    return i.loadPackages(b, s, allowed_packages.empty() ? pkgs : allowed_packages, getPrefix());
+    auto &inpkgs = allowed_packages.empty() ? pkgs : allowed_packages;
+    auto tgts = i.loadPackages(b, s, inpkgs, getPrefix());
+    if (tgts.empty())
+        throw SW_RUNTIME_ERROR("No packages loaded");
+    std::vector<ITarget *> r;
+    for (auto &tgt : tgts)
+    {
+        r.push_back(tgt.get());
+        targets[tgt->getPackage()][tgt->getSettings()] = std::move(tgt);
+    }
+    return r;
+}
+
+std::vector<ITarget *> LogicalInput::loadPackages(SwBuild &b, const PackageId &p, const PackageSettings &s)
+{
+    auto find_suitable = [&s](auto &container)
+    {
+        return std::find_if(container.begin(), container.end(), [&s](const auto &t)
+        {
+            return t.first.isSubsetOf(s);
+        });
+    };
+
+    if (auto i = find_suitable(targets[p]); i != targets[p].end())
+    {
+        std::vector<ITarget *> r;
+        r.push_back(i->second.get());
+        return r;
+    }
+    return loadPackages(b, s, UnresolvedPackages{p});
 }
 
 /*PackageIdSet LogicalInput::listPackages(SwContext &swctx) const
@@ -142,7 +171,7 @@ bool LogicalInput::operator==(const LogicalInput &rhs) const
 }
 
 UserInput::UserInput(Input &i)
-    : i(i, {})
+    : i(i)
 {
 }
 
@@ -161,29 +190,28 @@ void UserInput::addSettings(const PackageSettings &s)
 String UserInput::getHash() const
 {
     String s;
-    s = std::to_string(i.getInput().getHash());
+    s = std::to_string(i.getHash());
     for (auto &ss : settings)
         s += ss.getHash();
     return s;
 }
 
-std::vector<ITargetPtr> UserInput::loadTargets(SwBuild &b) const
+std::vector<ITarget*> UserInput::loadTargets(SwBuild &b) const
 {
-    std::vector<ITargetPtr> tgts;
-
-    // for non installed packages we do special handling
-    // we register their entry points in swctx
-    // because up to this point it is not done
-
+    std::vector<ITarget*> tgts;
     for (auto &s : settings)
     {
         if (s.empty())
-            continue;
+        {
+            throw SW_RUNTIME_ERROR("Empty settings requested");
+            //SW_UNIMPLEMENTED;
+            //continue;
+        }
 
-        LOG_TRACE(logger, "Loading input " << i.getInput().getName() << ", settings = " << s.toString());
+        LOG_TRACE(logger, "Loading input " << i.getName() << ", settings = " << s.toString());
 
-        for (auto &&t : i.loadPackages(b, s))
-            tgts.emplace_back(std::move(t));
+        for (auto &&t : b.getInput(i).loadPackages(b, s))
+            tgts.emplace_back(t);
     }
     return tgts;
 }
