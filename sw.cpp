@@ -5,7 +5,7 @@
 
 void build(Solution &s)
 {
-    auto &sw = s.addProject("sw", "0.4.3");
+    auto &sw = s.addProject("sw", "0.5.0");
     sw += Git("https://github.com/SoftwareNetwork/sw", "", "master");
 
     auto &p = sw.addProject("client");
@@ -276,7 +276,7 @@ void build(Solution &s)
         }*/
     }
 
-    auto &client = p.addTarget<ExecutableTarget>("sw", "1.0.0");
+    auto &client = p.addTarget<ExecutableTarget>("sw", "1.0.1");
     auto &client_common = client.addTarget<LibraryTarget>("common");
     {
         client_common.ApiName = "SW_CLIENT_COMMON_API";
