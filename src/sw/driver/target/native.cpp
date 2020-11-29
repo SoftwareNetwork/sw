@@ -598,7 +598,11 @@ void NativeCompiledTarget::setupCommand(builder::Command &c) const
             if (auto nt = d->getTarget().as<NativeCompiledTarget *>())
             {
                 if (!isStaticOrHeaderOnlyLibrary())
+                {
                     f(nt->getOutputFile());
+                    // get private deps' paths (like to private dll deps)
+                    nt->setupCommand(c);
+                }
             }
             else if (auto nt = d->getTarget().as<PredefinedTarget *>())
             {
