@@ -59,17 +59,6 @@ void ModuleSwappableData::markAsDummy(const ITarget &in_t)
 
 ModuleSwappableData::AddedTargets &ModuleSwappableData::getTargets()
 {
-    if (post_actions_performed)
-        return added_targets;
-
-    for (auto &t : added_targets)
-    {
-        auto usual_target = t->as<Target *>();
-        if (!usual_target)
-            continue;
-        usual_target->postConfigureActions();
-    }
-    post_actions_performed = true;
     return added_targets;
 }
 

@@ -61,7 +61,7 @@ String Specification::getName() const
         return to_string(normalize_path(dir));
     for (auto &[_, f] : this->files.getData())
         return to_string(normalize_path(f.absolute_path));
-    return "Empty specification";
+    return "<empty specification>";
 }
 
 void Specification::read()

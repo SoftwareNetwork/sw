@@ -465,7 +465,7 @@ std::unique_ptr<Input> Driver::getInput(const Package &p) const
 {
     // we are trying to load predefined package
     if (p.getPath().isRelative())
-        SW_UNIMPLEMENTED;
+        SW_UNREACHABLE;
     else if (auto lp = dynamic_cast<const LocalPackage *>(&p))
     {
         std::vector<const IDriver *> d2;
@@ -483,7 +483,7 @@ std::unique_ptr<Input> Driver::getInput(const Package &p) const
         return i;
     }
     else
-        throw SW_RUNTIME_ERROR("Unknown package: " + p.toString());
+        throw SW_RUNTIME_ERROR("Package was not installed: " + p.toString());
 }
 
 std::vector<std::unique_ptr<Input>> Driver::detectInputs(const path &p, InputType type) const

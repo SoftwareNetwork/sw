@@ -76,7 +76,7 @@ bool AllowedPackages::contains(const PackageId &p) const
 
 bool AllowedPackages::empty() const
 {
-    return pkgs.empty();
+    return pkgs.empty() && branches.empty();
 }
 
 TargetFile::TargetFile(const path &p, bool is_generated, bool is_from_other_target)
@@ -106,8 +106,16 @@ TargetFile::TargetFile(const path &p, bool is_generated, bool is_from_other_targ
 
 //std::unique_ptr<IRule> ITarget::getRule() const { return nullptr; }
 
+void TargetContainer::push_back(ITarget &t, Input &i)
+{
+    setInput(i);
+    push_back(t);
+}
+
 void TargetContainer::push_back(ITarget &t)
 {
+    //if (!input)
+        //throw SW_LOGIC_ERROR("Provide input first");
     targets.insert(&t);
 
     // on the same settings, we take input target and overwrite old one
@@ -119,6 +127,20 @@ void TargetContainer::push_back(ITarget &t)
         return;
     }
     *i = &t;*/
+}
+
+void TargetContainer::setInput(Input &i)
+{
+    if (input && input != &i)
+        throw SW_RUNTIME_ERROR("Different input provided");
+    input = &i;
+}
+
+Input &TargetContainer::getInput() const
+{
+    if (!input)
+        throw SW_RUNTIME_ERROR("No input");
+    return *input;
 }
 
 void TargetContainer::clear()

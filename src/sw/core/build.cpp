@@ -377,7 +377,7 @@ void SwBuild::loadInputs()
     {
         iv.insert(&i.getInput());
         // on new inputs
-        addInput(LogicalInput{ i.getInput(), {} });
+        addInput(i.getInput());
     }
     swctx.loadEntryPointsBatch(iv);
 
@@ -391,7 +391,7 @@ void SwBuild::loadInputs()
             if (!should_build_target(tgt->getPackage()))
                 continue;
             tgt->setResolver(getResolver());
-            getTargets()[tgt->getPackage()].push_back(*tgt);
+            getTargets()[tgt->getPackage()].push_back(*tgt, i.getInput());
             //logical_inputs.emplace(tgt->getPackage(), &i.getInput());
         }
     }
@@ -399,10 +399,44 @@ void SwBuild::loadInputs()
 
 ITarget &SwBuild::resolveAndLoad(ResolveRequest &rr, Resolver &r)
 {
+    // fast check
+    if (!/*r.*/resolve(rr))
+    {
+        if (rr.u.getPath().isAbsolute())
+            throw SW_RUNTIME_ERROR("Cannot resolve package: " + rr.u.toString());
+
+        // load local target
+
+        // get loaded
+        if (auto t = getTargets().find(rr.u, rr.settings))
+            return *t;
+
+        // load from input
+        if (auto it = getTargets().find(rr.u); it != getTargets().end())
+        {
+            auto i = &it->second.getInput();
+            auto tgts = i->loadPackages(*this, rr.settings, PackageIdSet{ it->first }, {});
+            if (tgts.empty())
+                throw SW_RUNTIME_ERROR("No targets loaded: " + it->first.toString());
+            if (tgts.size() != 1)
+                throw SW_RUNTIME_ERROR("Wrong number of targets: " + it->first.toString());
+            auto tgts2 = registerTargets(tgts);
+            for (auto &&tgt : tgts2)
+                getTargets()[tgt->getPackage()].push_back(*tgt, *i);
+            return *tgts2[0];
+        }
+        SW_UNIMPLEMENTED; // resolve local package
+    }
+
+    // check existing target+settings in build
+    if (auto t = getTargets().find(rr.getPackage(), rr.settings))
+        return *t;
+
     ITarget *t = nullptr;
     std::exception_ptr eptr;
     auto x = [this, &eptr, &rr, &r, &t]()
     {
+        LOG_TRACE(logger, "Entering the new fiber to load: " + rr.u.toString());
         try
         {
             t = &resolveAndLoad2(rr, r);
@@ -411,6 +445,14 @@ ITarget &SwBuild::resolveAndLoad(ResolveRequest &rr, Resolver &r)
         {
             eptr = std::current_exception();
         }
+        String s;
+        s += "Leaving fiber to load: " + rr.u.toString() + ", ";
+        if (!rr.isResolved())
+            s += "not ";
+        s += "resolved";
+        if (rr.isResolved())
+            s += " (" + rr.getPackage().toString() + ")";
+        LOG_TRACE(logger, s);
     };
     // boost::fibers::launch::dispatch,
     // std::allocator_arg_t
@@ -424,17 +466,42 @@ ITarget &SwBuild::resolveAndLoad(ResolveRequest &rr, Resolver &r)
 
 ITarget &SwBuild::resolveAndLoad2(ResolveRequest &rr, Resolver &r)
 {
-    if (!/*r.*/resolve(rr))
-        throw SW_RUNTIME_ERROR("Cannot resolve package: " + rr.u.toString());
+    if (!rr.isResolved() && !/*r.*/resolve(rr))
+    {
+        if (rr.u.getPath().isAbsolute())
+            throw SW_RUNTIME_ERROR("Cannot resolve package: " + rr.u.toString());
+        SW_UNIMPLEMENTED; // resolve local package
+    }
+
+    // check existing target+settings in build
+    if (auto t = getTargets().find(rr.getPackage(), rr.settings))
+        return *t;
+
+    // check existing target in build
+    if (getTargets().find(rr.getPackage()) != getTargets().end())
+    {
+        //SW_UNIMPLEMENTED;
+    }
+
+    // no, install now (resolve to local)
+    getContext().install(rr);
     auto &p = rr.getPackage();
     auto i = getContext().addInput(p);
+    getTargets()[rr.getPackage()].setInput(*i);
     auto tgts = i->loadPackages(*this, rr.settings, PackageIdSet{ p }, p.getPath().slice(0, p.getData().prefix));
     if (tgts.empty())
         throw SW_RUNTIME_ERROR("No targets loaded: " + p.toString());
     if (tgts.size() != 1)
         throw SW_RUNTIME_ERROR("Wrong number of targets: " + p.toString());
     auto tgts2 = registerTargets(tgts);
+    for (auto &&tgt : tgts2)
+        getTargets()[tgt->getPackage()].push_back(*tgt, *i);
     return *tgts2[0];
+}
+
+void SwBuild::registerTarget(ITarget &t)
+{
+    getTargets()[t.getPackage()].push_back(t);
 }
 
 void SwBuild::resolvePackages()
@@ -447,7 +514,7 @@ void SwBuild::resolvePackages()
     {
         IDependency *dep = nullptr;
         Resolver *resolver = nullptr;
-        LogicalInput *li = nullptr;
+        //LogicalInput *li = nullptr;
     };
 
     // gather
@@ -519,11 +586,11 @@ void SwBuild::resolvePackages()
         // use addInput to prevent doubling already existing and loaded inputs
         // like when we loading dependency that is already loaded from the input
         // test: sw build org.sw.demo.gnome.pango.pangocairo-1.44
-        auto i = addInput(rr.getPackage());
+        /*auto i = addInput(rr.getPackage());
         iv.insert(&i.getInput());
         auto &li = addInput(std::move(i));
         li.addPackage(rr.getPackage());
-        rr.li = &li;
+        rr.li = &li;*/
         //logical_inputs.emplace(rr.getPackage(), &li.getInput());
 
         //auto &is = newinputs.emplace_back(li.getInput());
@@ -546,7 +613,7 @@ void SwBuild::resolvePackages()
             // we should return empty target on this?
             //continue;
         }
-        auto tgts = rr.li->loadPackages(*this, rr.getPackage(), rr.settings);
+        /*auto tgts = rr.li->loadPackages(*this, rr.getPackage(), rr.settings);
         if (tgts.size() != 1)
             SW_UNIMPLEMENTED;
         rr.dep->setTarget(*tgts[0]);
@@ -555,7 +622,7 @@ void SwBuild::resolvePackages()
         {
             tgt->setResolver(getResolver());
             getTargets()[tgt->getPackage()].push_back(*tgt);
-        }
+        }*/
     }
 
     resolvePackages();
@@ -1298,11 +1365,11 @@ const std::vector<UserInput> &SwBuild::getInputs() const
     return user_inputs;
 }
 
-LogicalInput SwBuild::addInput(const Package &p)
+/*LogicalInput SwBuild::addInput(const Package &p)
 {
     LOG_TRACE(logger, "Loading input: " + p.toString());
     return { *getContext().addInput(p), p.getPath().slice(0, p.getData().prefix) };
-}
+}*/
 
 path SwBuild::getExecutionPlanPath() const
 {
@@ -1476,7 +1543,7 @@ SwBuild::RegisterTargetsResult SwBuild::registerTargets(std::vector<ITargetPtr> 
     return tgts;
 }
 
-LogicalInput &SwBuild::getInput(Input &i)
+/*LogicalInput &SwBuild::getInput(Input &i)
 {
     return addInput(LogicalInput{ i, {} });
 }
@@ -1485,6 +1552,6 @@ LogicalInput &SwBuild::addInput(LogicalInput &&i)
 {
     auto [it,_] = input_storage.emplace(&i.getInput(), std::move(i));
     return it->second;
-}
+}*/
 
 }

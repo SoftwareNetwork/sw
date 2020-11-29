@@ -249,6 +249,7 @@ struct SW_DRIVER_CPP_API Target
     void addSourceDependency(const Target &);
     void addSourceDependency(const DependencyPtr &);
 
+    void resolveDependency(IDependency &);
     void resolveDependency(const DependencyPtr &);
 
 public:
@@ -259,7 +260,7 @@ public:
     const LocalPackage &getPackage() const override { return TargetBase::getPackage(); }
     const Source &getSource() const override;
     TargetFiles getFiles(StorageFileType) const override;
-    //std::vector<IDependency *> getDependencies() const override;
+    std::vector<IDependency *> getDependencies() const;// override;
     const PackageSettings &getSettings() const override;
     const PackageSettings &getInterfaceSettings() const override;
 
@@ -294,6 +295,7 @@ public:
     // main apis
     virtual void init(); // multipass init
     //virtual bool prepare() override { return false; } // multipass prepare
+    virtual void prepare2() {}
     virtual Files gatherAllFiles() const { return {}; }
     virtual DependenciesType gatherDependencies() const { return DependenciesType{}; }
 
@@ -331,9 +333,6 @@ public:
     Test addTest(const String &name);
     Test addTest(const Target &runnable_test, const String &name = {});
 
-    bool isPostConfigureActionsCalled() const { return post_configure_called; }
-    virtual void postConfigureActions();
-
 private:
     void addTest(Test &cb, const String &name);
     Test addTest1(const String &name, const Target &t);
@@ -366,7 +365,6 @@ private:
     String provided_cfg;
     mutable Commands commands;
     Commands tests;
-    bool post_configure_called = false;
 
     PackageSettings getHostSettings() const;
 

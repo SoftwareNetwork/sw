@@ -40,7 +40,6 @@ struct ModuleSwappableData
 private:
     AddedTargets added_targets;
     AddedTargets dummy_children;
-    bool post_actions_performed = false;
 };
 
 struct DriverData

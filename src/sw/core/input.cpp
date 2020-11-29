@@ -87,7 +87,7 @@ std::vector<ITargetPtr> Input::loadPackages(SwBuild &b, const PackageSettings &s
     //
 
     if (!isLoaded())
-        throw SW_RUNTIME_ERROR("Input is not loaded");
+        throw SW_RUNTIME_ERROR("Input is not loaded: " + std::to_string(getHash()));
 
     LOG_TRACE(logger, "Loading input " << getName() << ", settings = " << s.toString());
 
@@ -106,7 +106,7 @@ std::vector<ITargetPtr> Input::loadPackages(SwBuild &b, const PackageSettings &s
     return tgts;
 }
 
-LogicalInput::LogicalInput(Input &i, const PackagePath &in_prefix)
+/*LogicalInput::LogicalInput(Input &i, const PackagePath &in_prefix)
     : i(i)
     , prefix(in_prefix)
 {
@@ -153,7 +153,7 @@ std::vector<ITarget *> LogicalInput::loadPackages(SwBuild &b, const PackageId &p
     return loadPackages(b, s, UnresolvedPackages{p});
 }
 
-/*PackageIdSet LogicalInput::listPackages(SwContext &swctx) const
+PackageIdSet LogicalInput::listPackages(SwContext &swctx) const
 {
     auto b = swctx.createBuild();
     auto tgts = loadPackages(*b, swctx.getHostSettings());
@@ -161,14 +161,14 @@ std::vector<ITarget *> LogicalInput::loadPackages(SwBuild &b, const PackageId &p
     for (auto &t : tgts)
         s.insert(t->getPackage());
     return s;
-}*/
+}
 
 bool LogicalInput::operator==(const LogicalInput &rhs) const
 {
     auto h = i.getHash();
     auto rh = rhs.i.getHash();
     return std::tie(pkgs, h, prefix) == std::tie(rhs.pkgs, rh, rhs.prefix);
-}
+}*/
 
 UserInput::UserInput(Input &i)
     : i(i)

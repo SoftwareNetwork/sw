@@ -76,7 +76,7 @@ private:
     virtual EntryPointPtr load1(SwContext &) = 0;
 };
 
-struct SW_CORE_API LogicalInput
+/*struct SW_CORE_API LogicalInput
 {
     LogicalInput(Input &, const PackagePath &prefix);
     LogicalInput(const LogicalInput &) = delete;
@@ -106,7 +106,7 @@ private:
     PackagePath prefix;
     Input &i;
     std::map<PackageId, std::map<PackageSettings, ITargetPtr>> targets;
-};
+};*/
 
 struct SW_CORE_API UserInput
 {

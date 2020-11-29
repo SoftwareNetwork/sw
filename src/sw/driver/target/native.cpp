@@ -1273,23 +1273,19 @@ DependenciesType NativeCompiledTarget::gatherDependencies() const
 
 NativeCompiledTarget::ActiveDeps &NativeCompiledTarget::getActiveDependencies()
 {
-    if (!active_deps)
+    if (active_deps)
+        return *active_deps;
+
+    auto &deps = active_deps.emplace();
+    TargetOptionsGroup::iterate([this, &deps](auto &v, auto i)
     {
-        ActiveDeps deps;
-        if (!DryRun)
+        for (auto &d : v.getRawDependencies())
         {
-            TargetOptionsGroup::iterate([this, &deps](auto &v, auto i)
-            {
-                for (auto &d : v.getRawDependencies())
-                {
-                    if (d->isDisabled())
-                        continue;
-                    deps.push_back(createDependency(d, i, *this));
-                }
-            });
+            if (d->isDisabled())
+                continue;
+            deps.push_back(createDependency(d, i, *this));
         }
-        active_deps = deps;
-    }
+    });
     return *active_deps;
 }
 
@@ -1493,139 +1489,128 @@ const PackageSettings &NativeCompiledTarget::getInterfaceSettings() const
     return s;
 }
 
-void NativeCompiledTarget::postConfigureActions()
-{
-    Target::postConfigureActions();
-
-    // no our rules
-    if (isHeaderOnly())
-        return;
-
-    auto add_dep = [this](auto &&name)
-    {
-        auto d = std::make_shared<Dependency>(getSettings()["rule"][name]["package"].getValue());
-        setDummyDependencySettings(d);
-        resolveDependency(d);
-        addRuleDependency({ name, d });
-    };
-    auto add_dep2 = [this, &add_dep](const String &r, bool overwrite)
-    {
-        // actually must check proper rule type
-        if (ct == CompilerType::MSVC
-            // we take raw settings to get ml instead of ml64 on x86 config
-            // and other listed rules (programs) from x86 toolchain
-            && (r == "c" || r == "cpp" || r == "asm")
-            )
-        {
-            if (r == "asm" &&
-                getBuildSettings().TargetOS.Arch != ArchType::x86 &&
-                getBuildSettings().TargetOS.Arch != ArchType::x86_64
-                )
-                return;
-            auto u = getSettings()["rule"][r]["package"].getValue();
-            auto d = std::make_shared<Dependency>(u);
-            d->getSettings() = getSettings();
-            resolveDependency(d);
-            addRuleDependency({ r, d, r });
-        }
-        else
-            add_dep(r);
-    };
-
-    // force c, cpp compiler
-    add_dep2("c", true);
-    add_dep2("cpp", true);
-    if (!(ct == CompilerType::MSVC &&
-        getBuildSettings().TargetOS.Arch != ArchType::x86 &&
-        getBuildSettings().TargetOS.Arch != ArchType::x86_64
-        ))
-    {
-        // relax asm
-        add_dep2("asm", false);
-    }
-    // force lib, link
-    if (isStaticLibrary())
-        add_dep2("lib", true);
-    else
-    {
-        add_dep2("link", true);
-        // relax rc
-        if (getBuildSettings().TargetOS.is(OSType::Windows) && getSettings()["rule"]["rc"])
-            add_dep("rc");
-    }
-    // for circular, we must also activate "lib" rule
-    // maybe activate always on windows?
-    //if (circular_dependency)
-    //add_rule2("link_circular", std::make_unique<NativeLinkerRule>(*prog_lib));
-
-    // c++ goes first for correct include order
-    /*UnresolvedPackage cppcl = getSettings()["rule"]["cpp"]["package"].getValue();
-    if (cppcl.getPath() == "com.Microsoft.VisualStudio.VC.cl")
-    {
-        libstdcppset = true;
-
-        // take same ver as cl
-        {
-            UnresolvedPackage up("com.Microsoft.VisualStudio.VC.libcpp");
-            up.range = cppcl.range;
-            *this += up;
-        }
-        {
-            UnresolvedPackage up("com.Microsoft.VisualStudio.VC.runtime");
-            up.range = cppcl.range;
-            *this += up;
-        }
-    }*/
-    if (!libstdcppset && getSettings()["native"]["stdlib"]["cpp"].isValue())
-    {
-        if (IsSwConfig && getBuildSettings().TargetOS.is(OSType::Linux))
-        {
-            // to prevent ODR violation
-            // we have stdlib builtin into sw binary
-            auto d = *this + UnresolvedPackage(getSettings()["native"]["stdlib"]["cpp"].getValue());
-            d->IncludeDirectoriesOnly = true;
-        }
-        else
-        {
-            *this += UnresolvedPackage(getSettings()["native"]["stdlib"]["cpp"].getValue());
-        }
-    }
-
-    // goes last
-    if (getSettings()["native"]["stdlib"]["c"].isValue())
-        *this += UnresolvedPackage(getSettings()["native"]["stdlib"]["c"].getValue());
-
-    // compiler runtime
-    if (getSettings()["native"]["stdlib"]["compiler"])
-    {
-        if (getSettings()["native"]["stdlib"]["compiler"].isValue())
-            *this += UnresolvedPackage(getSettings()["native"]["stdlib"]["compiler"].getValue());
-        else if (getSettings()["native"]["stdlib"]["compiler"].isArray())
-        {
-            for (auto &s : getSettings()["native"]["stdlib"]["compiler"].getArray())
-                *this += UnresolvedPackage(s.getValue());
-        }
-    }
-
-    // kernel headers
-    if (getSettings()["native"]["stdlib"]["kernel"].isValue())
-        *this += UnresolvedPackage(getSettings()["native"]["stdlib"]["kernel"].getValue());
-    /*if (getBuildSettings().TargetOS.is(OSType::Windows))
-    {
-        *this += UnresolvedPackage("com.Microsoft.Windows.SDK.ucrt"s); // c
-        *this += UnresolvedPackage("com.Microsoft.Windows.SDK.um"s); // kernel
-    }*/
-}
-
 void NativeCompiledTarget::prepare()
 {
-    if (!isPostConfigureActionsCalled())
-        throw SW_RUNTIME_ERROR("post configure action was not called");
-
     if (DryRun)
-    {
-        getActiveDependencies();
         return;
+
+    // no our rules
+    if (!isHeaderOnly())
+    {
+        auto add_dep = [this](auto &&name)
+        {
+            auto d = std::make_shared<Dependency>(getSettings()["rule"][name]["package"].getValue());
+            setDummyDependencySettings(d);
+            resolveDependency(d);
+            addRuleDependency({ name, d });
+        };
+        auto add_dep2 = [this, &add_dep](const String &r, bool overwrite)
+        {
+            // actually must check proper rule type
+            if (ct == CompilerType::MSVC
+                // we take raw settings to get ml instead of ml64 on x86 config
+                // and other listed rules (programs) from x86 toolchain
+                && (r == "c" || r == "cpp" || r == "asm")
+                )
+            {
+                if (r == "asm" &&
+                    getBuildSettings().TargetOS.Arch != ArchType::x86 &&
+                    getBuildSettings().TargetOS.Arch != ArchType::x86_64
+                    )
+                    return;
+                auto u = getSettings()["rule"][r]["package"].getValue();
+                auto d = std::make_shared<Dependency>(u);
+                d->getSettings() = getSettings();
+                resolveDependency(d);
+                addRuleDependency({ r, d, r });
+            }
+            else
+                add_dep(r);
+        };
+
+        // force c, cpp compiler
+        add_dep2("c", true);
+        add_dep2("cpp", true);
+        if (!(ct == CompilerType::MSVC &&
+            getBuildSettings().TargetOS.Arch != ArchType::x86 &&
+            getBuildSettings().TargetOS.Arch != ArchType::x86_64
+            ))
+        {
+            // relax asm
+            add_dep2("asm", false);
+        }
+        // force lib, link
+        if (isStaticLibrary())
+            add_dep2("lib", true);
+        else
+        {
+            add_dep2("link", true);
+            // relax rc
+            if (getBuildSettings().TargetOS.is(OSType::Windows) && getSettings()["rule"]["rc"])
+                add_dep("rc");
+        }
+        // for circular, we must also activate "lib" rule
+        // maybe activate always on windows?
+        //if (circular_dependency)
+        //add_rule2("link_circular", std::make_unique<NativeLinkerRule>(*prog_lib));
+
+        // c++ goes first for correct include order
+        /*UnresolvedPackage cppcl = getSettings()["rule"]["cpp"]["package"].getValue();
+        if (cppcl.getPath() == "com.Microsoft.VisualStudio.VC.cl")
+        {
+            libstdcppset = true;
+
+            // take same ver as cl
+            {
+                UnresolvedPackage up("com.Microsoft.VisualStudio.VC.libcpp");
+                up.range = cppcl.range;
+                *this += up;
+            }
+            {
+                UnresolvedPackage up("com.Microsoft.VisualStudio.VC.runtime");
+                up.range = cppcl.range;
+                *this += up;
+            }
+        }*/
+        if (!libstdcppset && getSettings()["native"]["stdlib"]["cpp"].isValue())
+        {
+            if (IsSwConfig && getBuildSettings().TargetOS.is(OSType::Linux))
+            {
+                // to prevent ODR violation
+                // we have stdlib builtin into sw binary
+                auto d = *this + UnresolvedPackage(getSettings()["native"]["stdlib"]["cpp"].getValue());
+                d->IncludeDirectoriesOnly = true;
+            }
+            else
+            {
+                *this += UnresolvedPackage(getSettings()["native"]["stdlib"]["cpp"].getValue());
+            }
+        }
+
+        // goes last
+        if (getSettings()["native"]["stdlib"]["c"].isValue())
+            *this += UnresolvedPackage(getSettings()["native"]["stdlib"]["c"].getValue());
+
+        // compiler runtime
+        if (getSettings()["native"]["stdlib"]["compiler"])
+        {
+            if (getSettings()["native"]["stdlib"]["compiler"].isValue())
+                *this += UnresolvedPackage(getSettings()["native"]["stdlib"]["compiler"].getValue());
+            else if (getSettings()["native"]["stdlib"]["compiler"].isArray())
+            {
+                for (auto &s : getSettings()["native"]["stdlib"]["compiler"].getArray())
+                    *this += UnresolvedPackage(s.getValue());
+            }
+        }
+
+        // kernel headers
+        if (getSettings()["native"]["stdlib"]["kernel"].isValue())
+            *this += UnresolvedPackage(getSettings()["native"]["stdlib"]["kernel"].getValue());
+        /*if (getBuildSettings().TargetOS.is(OSType::Windows))
+        {
+            *this += UnresolvedPackage("com.Microsoft.Windows.SDK.ucrt"s); // c
+            *this += UnresolvedPackage("com.Microsoft.Windows.SDK.um"s); // kernel
+        }*/
     }
 
     call(CallbackType::BeginPrepare);
@@ -1633,6 +1618,12 @@ void NativeCompiledTarget::prepare()
 
     // resolve dependencies
     prepare_pass2();
+}
+
+void NativeCompiledTarget::prepare2()
+{
+    if (DryRun)
+        return;
 
     // calculate all (link) dependencies for target
     prepare_pass3();
@@ -1857,6 +1848,12 @@ void NativeCompiledTarget::prepare_pass2()
                 //throw SW_RUNTIME_ERROR("No such target: " + d.dep->getPackage().toString());
         }
         //d.dep->setTarget(*t);
+    }
+    for (auto &d : Target::getDependencies())
+    {
+        if (d->isResolved())
+            continue;
+        resolveDependency(*d);
     }
 
     // force cpp standard
@@ -2669,56 +2666,56 @@ void NativeCompiledTarget::prepare_pass7()
     // linker 1
 
     // gatherStaticLinkLibraries
-    if (!isStaticOrHeaderOnlyLibrary())
+    if (isStaticOrHeaderOnlyLibrary())
+        return;
+
+    bool setup_rpath =
+        1
+        && !getBuildSettings().TargetOS.is(OSType::Windows)
+        && !getBuildSettings().TargetOS.is(OSType::Cygwin)
+        && !getBuildSettings().TargetOS.is(OSType::Mingw)
+        ;
+
+    if (setup_rpath)
     {
-        bool setup_rpath =
-            1
-            && !getBuildSettings().TargetOS.is(OSType::Windows)
-            && !getBuildSettings().TargetOS.is(OSType::Cygwin)
-            && !getBuildSettings().TargetOS.is(OSType::Mingw)
-            ;
+        auto dirs = gatherRpathLinkDirectories();
 
-        if (setup_rpath)
+        //
+        // linux:
+        //
+        // -rpath-link
+        //
+        // When linking libA.so to libB.so and then libB.so to exeC,
+        // ld requires to provide -rpath or -rpath-link to libA.so.
+        //
+        // Currently we do not set rpath, so ld cannot read automatically from libB.so
+        // where libA.so is located.
+        //
+        // Hence, we must provide such paths ourselves.
+        //
+        if (getBuildSettings().TargetOS.is(OSType::Linux) && getType() == TargetType::NativeExecutable)
         {
-            auto dirs = gatherRpathLinkDirectories();
+            //for (auto &d : dirs)
+                //getMergeObject().LinkOptions.push_back("-Wl,-rpath-link," + normalize_path(d));
+        }
 
-            //
-            // linux:
-            //
-            // -rpath-link
-            //
-            // When linking libA.so to libB.so and then libB.so to exeC,
-            // ld requires to provide -rpath or -rpath-link to libA.so.
-            //
-            // Currently we do not set rpath, so ld cannot read automatically from libB.so
-            // where libA.so is located.
-            //
-            // Hence, we must provide such paths ourselves.
-            //
-            if (getBuildSettings().TargetOS.is(OSType::Linux) && getType() == TargetType::NativeExecutable)
-            {
-                //for (auto &d : dirs)
-                    //getMergeObject().LinkOptions.push_back("-Wl,-rpath-link," + normalize_path(d));
-            }
+        String rpath_var = "-Wl,";
+        if (getBuildSettings().TargetOS.is(OSType::Linux))
+            rpath_var += "--enable-new-dtags,";
+        rpath_var += "-rpath,";
 
-            String rpath_var = "-Wl,";
-            if (getBuildSettings().TargetOS.is(OSType::Linux))
-                rpath_var += "--enable-new-dtags,";
-            rpath_var += "-rpath,";
+        for (auto &d : dirs)
+            getMergeObject().LinkOptions.push_back(rpath_var + to_string(normalize_path(d)));
 
-            for (auto &d : dirs)
-                getMergeObject().LinkOptions.push_back(rpath_var + to_string(normalize_path(d)));
-
-            // rpaths
-            if (getType() == TargetType::NativeExecutable)
-            {
-                // rpath: currently we set non macos runpath to $ORIGIN
-                String exe_path = "$ORIGIN";
-                // rpath: currently we set macos rpath to @executable_path
-                if (getBuildSettings().TargetOS.is(OSType::Macos))
-                    exe_path = "@executable_path";
-                getMergeObject().LinkOptions.push_back(rpath_var + exe_path);
-            }
+        // rpaths
+        if (getType() == TargetType::NativeExecutable)
+        {
+            // rpath: currently we set non macos runpath to $ORIGIN
+            String exe_path = "$ORIGIN";
+            // rpath: currently we set macos rpath to @executable_path
+            if (getBuildSettings().TargetOS.is(OSType::Macos))
+                exe_path = "@executable_path";
+            getMergeObject().LinkOptions.push_back(rpath_var + exe_path);
         }
     }
 }

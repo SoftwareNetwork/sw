@@ -157,6 +157,9 @@ void TargetBase::addTarget2(Target &t)
         t.DryRun = true;
         t.ts["dry-run"] = "true";
     }
+
+    if (!t.DryRun)
+        getMainBuild().registerTarget(t);
 }
 
 const SwContext &TargetBase::getContext() const
@@ -328,15 +331,15 @@ TargetFiles Target::getFiles(StorageFileType t) const
     SW_UNIMPLEMENTED;
 }
 
-/*std::vector<IDependency *> Target::getDependencies() const
+std::vector<IDependency *> Target::getDependencies() const
 {
     std::vector<IDependency *> deps;
     for (auto &d : gatherDependencies())
         deps.push_back(d.get());
     for (auto &d : DummyDependencies)
         deps.push_back(d.get());
-    for (auto &d : SourceDependencies)
-        deps.push_back(d.get());
+    //for (auto &d : SourceDependencies)
+        //deps.push_back(d.get());
     auto rd = getRuleDependencies();
     for (auto &d : rd)
     {
@@ -345,7 +348,7 @@ TargetFiles Target::getFiles(StorageFileType t) const
         deps.push_back(d.get());
     }
     return deps;
-}*/
+}
 
 PackageSettings Target::getHostSettings() const
 {
@@ -429,6 +432,7 @@ Commands Target::getCommands() const
 {
     if (!commands.empty())
         return commands;
+    ((Target&)*this).prepare2();
     commands = getCommands1();
     for (auto &c : commands)
     {
@@ -791,13 +795,18 @@ void Target::addSourceDependency(const Target &t)
 
 void Target::resolveDependency(const DependencyPtr &d)
 {
+    resolveDependency(*d);
+}
+
+void Target::resolveDependency(IDependency &d)
+{
     ResolveRequest rr;
-    rr.u = d->getUnresolvedPackage();
-    rr.settings = d->getSettings();
+    rr.u = d.getUnresolvedPackage();
+    rr.settings = d.getSettings();
     CachingResolver *cr = nullptr;
     auto &t = getMainBuild().resolveAndLoad(rr, *cr);
     //auto &t = getMainBuild().resolveAndLoad(rr, getResolver());
-    d->setTarget(t);
+    d.setTarget(t);
 }
 
 path Target::getFile(const Target &dep, const path &fn)
@@ -927,11 +936,6 @@ DependencyPtr Target::constructThisPackageDependency(const String &name)
 {
     PackageId id(NamePrefix / name, getPackage().getVersion());
     return std::make_shared<Dependency>(id);
-}
-
-void Target::postConfigureActions()
-{
-    post_configure_called = true;
 }
 
 void ProjectTarget::init()

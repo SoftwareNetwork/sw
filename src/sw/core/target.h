@@ -25,6 +25,7 @@ struct ITarget;
 struct SwBuild;
 struct ResolveRequest;
 struct Resolver;
+struct Input;
 
 struct SW_CORE_API ResolverHolder
 {
@@ -225,7 +226,10 @@ struct SW_CORE_API TargetContainer
     Base::iterator findSuitable(const PackageSettings &);
     Base::const_iterator findSuitable(const PackageSettings &) const;
 
+    void push_back(ITarget &, Input &);
     void push_back(ITarget &);
+    void setInput(Input &);
+    Input &getInput() const;
 
     void clear();
     bool empty() const;
@@ -240,6 +244,7 @@ struct SW_CORE_API TargetContainer
     Base::iterator erase(Base::iterator begin, Base::iterator end);
 
 private:
+    Input *input = nullptr;
     Storage targets;
 };
 

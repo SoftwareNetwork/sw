@@ -119,6 +119,7 @@ public:
 
     void init() override;
     void prepare() override;
+    void prepare2() override;
     Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
     DependenciesType gatherDependencies() const override;
     TargetFiles getFiles(StorageFileType t) const override;
@@ -227,7 +228,6 @@ private:
     void processCircular(Files &objs);
     path getPatchDir(bool binary_dir) const;
     void addFileSilently(const path &);
-    void postConfigureActions() override;
 
     mutable bool interface_settings_set = false;
     const PackageSettings &getInterfaceSettings() const override;
