@@ -45,7 +45,6 @@ struct SW_CORE_API SwBuild : SwBuilderContext, ResolverHolder
 
     // add user inputs
     void addInput(const UserInput &);
-    //LogicalInput &getInput(Input &);
 
     // complete
     void build();
@@ -133,10 +132,6 @@ private:
     std::unique_ptr<CachedStorage> cached_storage;
     std::unique_ptr<CachingResolver> cr;
     std::vector<ITargetPtr> target_storage;
-    //std::set<ITarget*> build_targets;
-    using MapKey = Input *;
-    std::unordered_map<PackageId, MapKey> logical_inputs;
-    //std::unordered_map<MapKey, LogicalInput> input_storage;
 
     // other data
     String name;
@@ -146,8 +141,6 @@ private:
     void resolvePackages(const std::vector<IDependency*> &upkgs); // [2/2] step
     Executor &getBuildExecutor() const;
     Executor &getPrepareExecutor() const;
-    //LogicalInput addInput(const Package &);
-    //LogicalInput &addInput(LogicalInput &&);
 
     void resolveWithDependencies(std::vector<ResolveRequest> &) const;
 };
