@@ -76,38 +76,6 @@ private:
     virtual EntryPointPtr load1(SwContext &) = 0;
 };
 
-/*struct SW_CORE_API LogicalInput
-{
-    LogicalInput(Input &, const PackagePath &prefix);
-    LogicalInput(const LogicalInput &) = delete;
-    LogicalInput(LogicalInput &&) = default;
-
-    // same input may be used to load multiple packages
-    // they all share same prefix
-    const PackageIdSet &getPackages() const { return pkgs; }
-    const PackagePath &getPrefix() const { return prefix; }
-    void addPackage(const PackageId &);
-
-    // no dry-run targets
-    [[nodiscard]]
-    std::vector<ITarget*> loadPackages(SwBuild &, const PackageSettings &, const AllowedPackages &allowed_packages = {});
-    std::vector<ITarget*> loadPackages(SwBuild &, const PackageId &, const PackageSettings &);
-
-    //PackageIdSet listPackages(SwContext &) const;
-
-    Input &getInput() { return i; }
-    const Input &getInput() const { return i; }
-
-    bool operator==(const LogicalInput &rhs) const;
-    bool operator!=(const LogicalInput &rhs) const { return !operator==(rhs); }
-
-private:
-    PackageIdSet pkgs;
-    PackagePath prefix;
-    Input &i;
-    std::map<PackageId, std::map<PackageSettings, ITargetPtr>> targets;
-};*/
-
 struct SW_CORE_API UserInput
 {
     UserInput(Input &);

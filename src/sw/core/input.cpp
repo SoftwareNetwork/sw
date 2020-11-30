@@ -106,70 +106,6 @@ std::vector<ITargetPtr> Input::loadPackages(SwBuild &b, const PackageSettings &s
     return tgts;
 }
 
-/*LogicalInput::LogicalInput(Input &i, const PackagePath &in_prefix)
-    : i(i)
-    , prefix(in_prefix)
-{
-}
-
-void LogicalInput::addPackage(const PackageId &in)
-{
-    if (!prefix.empty() && in.getPath().slice(0, prefix.size()) != prefix)
-        throw SW_RUNTIME_ERROR("Trying to add different prefix");
-    pkgs.insert(in);
-}
-
-std::vector<ITarget*> LogicalInput::loadPackages(SwBuild &b, const PackageSettings &s, const AllowedPackages &allowed_packages)
-{
-    auto &inpkgs = allowed_packages.empty() ? pkgs : allowed_packages;
-    auto tgts = i.loadPackages(b, s, inpkgs, getPrefix());
-    if (tgts.empty())
-        throw SW_RUNTIME_ERROR("No packages loaded");
-    std::vector<ITarget *> r;
-    for (auto &tgt : tgts)
-    {
-        r.push_back(tgt.get());
-        targets[tgt->getPackage()][tgt->getSettings()] = std::move(tgt);
-    }
-    return r;
-}
-
-std::vector<ITarget *> LogicalInput::loadPackages(SwBuild &b, const PackageId &p, const PackageSettings &s)
-{
-    auto find_suitable = [&s](auto &container)
-    {
-        return std::find_if(container.begin(), container.end(), [&s](const auto &t)
-        {
-            return t.first.isSubsetOf(s);
-        });
-    };
-
-    if (auto i = find_suitable(targets[p]); i != targets[p].end())
-    {
-        std::vector<ITarget *> r;
-        r.push_back(i->second.get());
-        return r;
-    }
-    return loadPackages(b, s, UnresolvedPackages{p});
-}
-
-PackageIdSet LogicalInput::listPackages(SwContext &swctx) const
-{
-    auto b = swctx.createBuild();
-    auto tgts = loadPackages(*b, swctx.getHostSettings());
-    PackageIdSet s;
-    for (auto &t : tgts)
-        s.insert(t->getPackage());
-    return s;
-}
-
-bool LogicalInput::operator==(const LogicalInput &rhs) const
-{
-    auto h = i.getHash();
-    auto rh = rhs.i.getHash();
-    return std::tie(pkgs, h, prefix) == std::tie(rhs.pkgs, rh, rhs.prefix);
-}*/
-
 UserInput::UserInput(Input &i)
     : i(i)
 {
@@ -203,8 +139,8 @@ std::vector<ITargetPtr> UserInput::loadPackages(SwBuild &b) const
     {
         if (s.empty())
         {
-            throw SW_RUNTIME_ERROR("Empty settings requested");
-            //SW_UNIMPLEMENTED;
+            //throw SW_RUNTIME_ERROR("Empty settings requested");
+            SW_UNIMPLEMENTED;
             //continue;
         }
 
