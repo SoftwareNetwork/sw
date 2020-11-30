@@ -460,13 +460,14 @@ void Command::prepare()
 
     // user entered commands may be in form 'git'
     // so, it is not empty, not generated and does not exist
-    if (!getProgram().empty() && !File(getProgram(), getContext().getFileStorage()).isGenerated() &&
+    if (!getProgram().empty() && (!swctx || !File(getProgram(), getContext().getFileStorage()).isGenerated()) &&
         !path(getProgram()).is_absolute() && !fs::exists(getProgram()))
     {
         auto new_prog = resolveExecutable(getProgram());
         if (new_prog.empty())
             throw SW_RUNTIME_ERROR("passed program '" + to_printable_string(getProgram()) + "' is not resolved (missing): " + getCommandId(*this));
-        setProgram(new_prog);
+        // set directly to zero arg
+        arguments[0] = std::make_unique<primitives::command::SimpleArgument>(new_prog);
     }
 
     // extra check
@@ -553,8 +554,6 @@ void Command::execute0(std::error_code *ec)
 
 bool Command::beforeCommand()
 {
-    prepare();
-
     // check
     // if you want to run command always and 'command_storage == nullptr'
     // also set 'always = true'!
@@ -563,6 +562,8 @@ bool Command::beforeCommand()
         throw SW_RUNTIME_ERROR(makeErrorString("command storage is not selected, call t.registerCommand(cmd), "
             "or set always = true"));
     }
+
+    prepare();
 
     if (!isOutdated())
     {
@@ -592,6 +593,9 @@ void Command::afterCommand()
 
     //if (always)
         //return;
+
+    if (!swctx)
+        return;
 
     // update things
 
