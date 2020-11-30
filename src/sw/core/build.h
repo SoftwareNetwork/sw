@@ -132,6 +132,7 @@ private:
     std::unique_ptr<CachedStorage> cached_storage;
     std::unique_ptr<CachingResolver> cr;
     std::vector<ITargetPtr> target_storage;
+    std::unique_ptr<nlohmann::json> html_report_data;
 
     // other data
     String name;
@@ -143,6 +144,9 @@ private:
     Executor &getPrepareExecutor() const;
 
     void resolveWithDependencies(std::vector<ResolveRequest> &) const;
+    String renderHtmlReport() const;
+    nlohmann::json &getHtmlReportData();
+    void writeHtmlReport();
 };
 
 } // namespace sw

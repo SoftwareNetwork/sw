@@ -10,5 +10,13 @@ DECLARE_TEXT_VAR_BEGIN(inputs_db_schema)
 #include <src/sw/core/inserts/input_db_schema.sql.emb>
 DECLARE_TEXT_VAR_END(inputs_db_schema);
 
+DECLARE_TEXT_VAR_BEGIN(html_template_build)
+#include <src/sw/core/inserts/build.html.emb>
+DECLARE_TEXT_VAR_END(html_template_build);
+
+DECLARE_TEXT_VAR_BEGIN(render_py)
+#include <src/sw/core/inserts/render.py.emb>
+DECLARE_TEXT_VAR_END(render_py);
+
 #undef DECLARE_TEXT_VAR_BEGIN
 #undef DECLARE_TEXT_VAR_END

@@ -5,6 +5,7 @@
 
 #include "driver.h"
 #include "input.h"
+#include "inserts.h"
 #include "sw_context.h"
 
 #include <sw/builder/execution_plan.h>
@@ -13,6 +14,7 @@
 
 #include <boost/current_function.hpp>
 #include <boost/fiber/all.hpp>
+#include <inja/inja.hpp>
 #include <magic_enum.hpp>
 #include <nlohmann/json.hpp>
 #include <primitives/date_time.h>
@@ -255,6 +257,8 @@ SwBuild::SwBuild(SwContext &swctx, const path &build_dir)
     setResolver(*cr);
     for (auto s : getContext().getRemoteStorages())
         cr->addStorage(*s);
+
+    html_report_data = std::make_unique<nlohmann::json>();
 }
 
 SwBuild::~SwBuild()
@@ -264,6 +268,52 @@ SwBuild::~SwBuild()
 path SwBuild::getBuildDirectory() const
 {
     return build_dir;
+}
+
+void SwBuild::writeHtmlReport()
+{
+    auto render = getBuildDirectory() / "render.py";
+    write_file_if_different(render, render_py);
+
+    path tpl_dir = __FILE__;
+    tpl_dir = tpl_dir.parent_path() / "inserts";
+    path tpl = "build.html";
+    //auto tpl = getBuildDirectory() / "build.html.tpl";
+    //write_file_if_different(tpl, html_template_build);
+    //auto tpl_dir = ".";
+
+    auto vars = getBuildDirectory() / "vars.json";
+    write_file_if_different(vars, html_report_data->dump());
+
+    primitives::Command c;
+    c.working_directory = getBuildDirectory();
+    c.push_back("python");
+    c.push_back(render);
+    c.push_back(tpl_dir);
+    c.push_back(tpl);
+    c.push_back(vars);
+    c.push_back("build.html");
+    std::error_code ec;
+    c.execute(ec);
+    if (ec)
+        throw SW_RUNTIME_ERROR(c.print() + "\nHtml render error: " + c.err.text);
+
+    //write_file_if_different(getBuildDirectory() / "build.html", renderHtmlReport());
+}
+
+String SwBuild::renderHtmlReport() const
+{
+    inja::Environment env;
+    //auto tpl = env.parse(html_template_build);
+    path tpl_dir = __FILE__;
+    tpl_dir = tpl_dir.parent_path() / "inserts" / "build.html";
+    auto tpl = env.parse_file(tpl_dir.string());
+    return env.render(tpl, *html_report_data);
+}
+
+nlohmann::json &SwBuild::getHtmlReportData()
+{
+    return (*html_report_data)["sw"]["build"];
 }
 
 void SwBuild::stop()
@@ -278,7 +328,6 @@ void SwBuild::build()
     /*
         General build process:
         1) Load provided inputs.
-        2) Set all targets to build from input.
         3) Resolve dependencies.
         4) Load dependencies (inputs).
         5) Prepare build.
@@ -289,6 +338,12 @@ void SwBuild::build()
         Each package has exactly one entry point.
         Entry point may include several packages.
     */
+
+    getHtmlReportData()["name"] = getName();
+    SCOPE_EXIT
+    {
+        writeHtmlReport();
+    };
 
     ScopedTime t;
 
@@ -376,10 +431,18 @@ void SwBuild::loadInputs()
     for (auto &i : user_inputs)
     {
         iv.insert(&i.getInput());
-        // on new inputs
-        addInput(i.getInput());
+
+        nlohmann::json j;
+        for (auto &s : i.getSettings())
+            j["settings"].push_back(nlohmann::json::parse(s.toString()));
+        j["name"] = i.getInput().getName();
+        j["hash"] = i.getInput().getHash();
+        //j["name"] = i.getInput().getSpecification().getFiles();
+        getHtmlReportData()["inputs"].push_back(j);
     }
     swctx.loadEntryPointsBatch(iv);
+
+    writeHtmlReport();
 
     // and load packages
     for (auto &i : user_inputs)
@@ -1365,12 +1428,6 @@ const std::vector<UserInput> &SwBuild::getInputs() const
     return user_inputs;
 }
 
-/*LogicalInput SwBuild::addInput(const Package &p)
-{
-    LOG_TRACE(logger, "Loading input: " + p.toString());
-    return { *getContext().addInput(p), p.getPath().slice(0, p.getData().prefix) };
-}*/
-
 path SwBuild::getExecutionPlanPath() const
 {
     const auto ext = ".swb"; // sw build
@@ -1542,16 +1599,5 @@ SwBuild::RegisterTargetsResult SwBuild::registerTargets(std::vector<ITargetPtr> 
     }
     return tgts;
 }
-
-/*LogicalInput &SwBuild::getInput(Input &i)
-{
-    return addInput(LogicalInput{ i, {} });
-}
-
-LogicalInput &SwBuild::addInput(LogicalInput &&i)
-{
-    auto [it,_] = input_storage.emplace(&i.getInput(), std::move(i));
-    return it->second;
-}*/
 
 }

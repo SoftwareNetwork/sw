@@ -4,3 +4,5 @@
 #include <string>
 
 extern const std::string inputs_db_schema;
+extern const std::string html_template_build;
+extern const std::string render_py;
