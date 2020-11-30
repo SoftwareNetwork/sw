@@ -368,7 +368,12 @@ PackageSetting::operator bool() const
 
 PackageSettings::~PackageSettings() {}
 
-String PackageSettings::getHash() const
+size_t PackageSettings::getHash() const
+{
+    return getHash1();
+}
+
+String PackageSettings::getHashString() const
 {
     return shorten_hash(std::to_string(getHash1()), 6);
 }

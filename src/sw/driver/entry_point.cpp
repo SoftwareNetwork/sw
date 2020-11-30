@@ -135,7 +135,7 @@ static CommandStorage &getDriverCommandStorage(const Build &b)
 
 static PackagePath getSelfTargetName(Build &b, const FilesSorted &files)
 {
-    String h = b.module_data.current_settings.getHash();
+    auto h = b.module_data.current_settings.getHashString();
     for (auto &fn : files)
         h += to_string(normalize_path(fn));
     h = shorten_hash(blake2b_512(h), 6);

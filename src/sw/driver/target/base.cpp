@@ -339,8 +339,8 @@ std::vector<IDependency *> Target::getDependencies() const
         deps.push_back(d.get());
     for (auto &d : DummyDependencies)
         deps.push_back(d.get());
-    //for (auto &d : SourceDependencies)
-        //deps.push_back(d.get());
+    for (auto &d : SourceDependencies)
+        deps.push_back(d.get());
     auto rd = getRuleDependencies();
     for (auto &d : rd)
     {
@@ -364,7 +364,7 @@ String Target::getConfig() const
 {
     if (isLocal() && !provided_cfg.empty())
         return provided_cfg;
-    return ts.getHash();
+    return ts.getHashString();
 }
 
 path Target::getLocalOutputBinariesDirectory() const

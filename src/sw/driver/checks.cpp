@@ -272,7 +272,7 @@ void CheckSet::performChecks(const SwBuild &mb, const PackageSettings &ts)
     if (!t)
         throw SW_RUNTIME_ERROR("Target was not set");
 
-    auto config = ts.getHash();
+    auto config = ts.getHashString();
     auto fn = checks_dir / config / "checks.3.txt";
     auto &cs = getChecksStorage(config, fn);
 

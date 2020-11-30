@@ -89,7 +89,7 @@ static ITargetPtr create_target(const path &sfn, const LocalPackage &pkg, const 
 
 static ITargetPtr create_target(const LocalPackage &p, const PackageSettings &s)
 {
-    auto cfg = s.getHash();
+    auto cfg = s.getHashString();
     auto base = p.getDirObj(cfg);
     auto sfn = base / get_settings_fn();
     if (fs::exists(sfn))
@@ -354,6 +354,7 @@ void SwBuild::build()
     ScopedTime t;
 
     loadInputs();
+    prepare();
     execute();
 
     for (auto &[pkg, tgts] : getTargets())
@@ -367,7 +368,7 @@ void SwBuild::build()
             jt["settings_hash"] = tgt->getSettings().getHash();
             jt["interface_settings"] = nlohmann::json::parse(tgt->getInterfaceSettings().toString());
             jt["interface_settings_hash"] = tgt->getInterfaceSettings().getHash();
-            getHtmlReportData()["targets"][tgt->getPackage().toString() + tgt->getSettings().getHash()] = jt;
+            getHtmlReportData()["targets"][tgt->getPackage().toString() + tgt->getSettings().getHashString()] = jt;
         }
     }
 
@@ -1005,8 +1006,7 @@ bool SwBuild::prepareStep()
 {
     std::atomic_bool next_pass = false;
 
-    SW_UNIMPLEMENTED;
-    /*auto &e = getPrepareExecutor();
+    auto &e = getPrepareExecutor();
     Futures<void> fs;
     for (const auto &[pkg, tgts] : getTargets())
     {
@@ -1014,19 +1014,20 @@ bool SwBuild::prepareStep()
         {
             fs.push_back(e.push([tgt, &next_pass]
             {
-                if (tgt->prepare())
-                    next_pass = true;
+                tgt->prepare();
+                //if (tgt->prepare())
+                    //next_pass = true;
             }));
         }
     }
-    waitAndGet(fs);*/
+    waitAndGet(fs);
 
     return next_pass;
 }
 
 void SwBuild::prepare()
 {
-    CHECK_STATE_AND_CHANGE(BuildState::PackagesLoaded, BuildState::Prepared);
+    //CHECK_STATE_AND_CHANGE(BuildState::PackagesLoaded, BuildState::Prepared);
 
     while (prepareStep() && !stopped)
         ;
@@ -1052,13 +1053,13 @@ void SwBuild::prepare()
             // skip predefs - they are already readed from disk or created in sw
             if (tgt->as<const PredefinedTarget *>())
                 continue;
-            auto cfg = tgt->getSettings().getHash();
+            auto cfg = tgt->getSettings().getHashString();
             auto base = p.getDirObj(cfg);
             auto sfn = base / get_settings_fn();
             auto sfncfg = base / get_base_settings_name() += ".cfg";
             auto sptrfn = base / "settings.hash";
 
-            if (!fs::exists(sfn) || !fs::exists(sptrfn) || read_file(sptrfn) != tgt->getInterfaceSettings().getHash())
+            if (!fs::exists(sfn) || !fs::exists(sptrfn) || read_file(sptrfn) != tgt->getInterfaceSettings().getHashString())
             {
                 if (!use_json())
                     saveSettings(sfn, tgt->getInterfaceSettings());
@@ -1067,7 +1068,7 @@ void SwBuild::prepare()
                     write_file(sfn, nlohmann::json::parse(tgt->getInterfaceSettings().toString()).dump(2));
                     write_file(sfncfg, nlohmann::json::parse(tgt->getSettings().toString()).dump(2));
                 }
-                write_file(sptrfn, tgt->getInterfaceSettings().getHash());
+                write_file(sptrfn, tgt->getInterfaceSettings().getHashString());
             }
         }
     }

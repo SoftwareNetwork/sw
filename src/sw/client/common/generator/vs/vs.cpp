@@ -772,7 +772,7 @@ void VSGenerator::generate(const SwBuild &b)
             if (st["name"])
                 args.push_back(to_string(normalize_path(b.getBuildDirectory() / "out" / st["name"].getValue())));
             else
-                args.push_back(to_string(normalize_path(b.getBuildDirectory() / "out" / st.getHash())));
+                args.push_back(to_string(normalize_path(b.getBuildDirectory() / "out" / st.getHashString())));
 
             String s;
             for (auto &a : args)

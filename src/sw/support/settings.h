@@ -46,7 +46,8 @@ struct SW_SUPPORT_API PackageSettings
     void mergeFromString(const String &s, int type = Json);
     void mergeFromJson(const nlohmann::json &);
 
-    String getHash() const;
+    size_t getHash() const;
+    String getHashString() const;
     String toString(int type = Json) const;
 
     bool operator==(const PackageSettings &) const;
