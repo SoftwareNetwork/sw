@@ -272,33 +272,39 @@ path SwBuild::getBuildDirectory() const
 
 void SwBuild::writeHtmlReport()
 {
-    auto render = getBuildDirectory() / "render.py";
-    write_file_if_different(render, render_py);
+    auto suffix = getName();
+    auto root = getBuildDirectory() / "report";
 
     path tpl_dir = __FILE__;
     tpl_dir = tpl_dir.parent_path() / "inserts";
     path tpl = "build.html";
-    //auto tpl = getBuildDirectory() / "build.html.tpl";
+    //auto tpl = root / "build.html.tpl";
     //write_file_if_different(tpl, html_template_build);
     //auto tpl_dir = ".";
 
-    auto vars = getBuildDirectory() / "vars.json";
+    auto render = tpl_dir / "render.py";
+    //auto render = root / "render.py";
+    //write_file_if_different(render, render_py);
+
+    auto vars = root / ("vars_" + suffix + ".json");
     write_file_if_different(vars, html_report_data->dump());
 
-    primitives::Command c;
-    c.working_directory = getBuildDirectory();
+    builder::Command c;
+    c.always = true;
+    c.working_directory = root;
     c.push_back("python");
     c.push_back(render);
     c.push_back(tpl_dir);
     c.push_back(tpl);
     c.push_back(vars);
-    c.push_back("build.html");
+    c.push_back("build_" + suffix + ".html");
+    c.writeCommand(root / ("report_" + suffix));
     std::error_code ec;
     c.execute(ec);
     if (ec)
-        throw SW_RUNTIME_ERROR(c.print() + "\nHtml render error: " + c.err.text);
+        LOG_WARN(logger, c.print() + "\nHtml render error: " + c.err.text);
 
-    //write_file_if_different(getBuildDirectory() / "build.html", renderHtmlReport());
+    //write_file_if_different(root / "build.html", renderHtmlReport());
 }
 
 String SwBuild::renderHtmlReport() const
@@ -349,6 +355,21 @@ void SwBuild::build()
 
     loadInputs();
     execute();
+
+    for (auto &[pkg, tgts] : getTargets())
+    {
+        for (auto &tgt : tgts)
+        {
+            nlohmann::json jt;
+            jt["package_id"] = tgt->getPackage().toString();
+            jt["package_id_hash"] = (size_t)tgt;
+            jt["settings"] = nlohmann::json::parse(tgt->getSettings().toString());
+            jt["settings_hash"] = tgt->getSettings().getHash();
+            jt["interface_settings"] = nlohmann::json::parse(tgt->getInterfaceSettings().toString());
+            jt["interface_settings_hash"] = tgt->getInterfaceSettings().getHash();
+            getHtmlReportData()["targets"][tgt->getPackage().toString() + tgt->getSettings().getHash()] = jt;
+        }
+    }
 
     // this is all in one call
     //while (step())
@@ -442,8 +463,6 @@ void SwBuild::loadInputs()
     }
     swctx.loadEntryPointsBatch(iv);
 
-    writeHtmlReport();
-
     // and load packages
     for (auto &i : user_inputs)
     {
@@ -453,9 +472,9 @@ void SwBuild::loadInputs()
         {
             if (!should_build_target(tgt->getPackage()))
                 continue;
+
             tgt->setResolver(getResolver());
             getTargets()[tgt->getPackage()].push_back(*tgt, i.getInput());
-            //logical_inputs.emplace(tgt->getPackage(), &i.getInput());
         }
     }
 }

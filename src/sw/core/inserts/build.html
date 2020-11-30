@@ -74,24 +74,79 @@
     <div class="container">
         <h1>SW Build {{ sw.build.name }}</h1>
 
-        <h2>Inputs</h2>
-        {% for i in sw.build.inputs %}
-        <p>
-            <button class="btn btn-primary" type="button" data-toggle="collapse" data-target="#collapse{{ i.hash }}" aria-expanded="false" aria-controls="collapse{{ i.hash }}">
-                {{ i.name|e }} (hash: {{ i.hash }})
-            </button>
-        </p>
-        <div class="collapse" id="collapse{{ i.hash }}">
+        <button class="btn btn-primary" type="button" data-toggle="collapse" data-target="#collapseInputs" aria-expanded="false" aria-controls="collapseInputs">
+            <h4>Inputs</h4>
+        </button>
+        <div class="collapse" id="collapseInputs" style="border: solid; border-width: 1px;">
+            {% for i in sw.build.inputs %}
+            <p>
+                <button class="btn btn-primary" type="button" data-toggle="collapse" data-target="#collapse{{ i.hash }}" aria-expanded="false" aria-controls="collapse{{ i.hash }}">
+                    {{ i.name|e }} (hash: {{ i.hash }})
+                </button>
+            </p>
+            <div class="collapse" id="collapse{{ i.hash }}">
+                <p>
+                    <script>
+                        j = {{ i }};
+                        j = JSON.stringify(j, null, 2);
+                        var e = document.getElementById('collapse{{ i.hash }}');
+                        e.appendChild(document.createElement('pre')).innerHTML = syntaxHighlight(j);
+                    </script>
+                </p>
+            </div>
+            {% endfor %}
+        </div>
+        <br />
+        <br />
+
+        <button class="btn btn-primary" type="button" data-toggle="collapse" data-target="#collapseAllTargets" aria-expanded="false" aria-controls="collapseAllTargets">
+            <h4>All Targets</h4>
+        </button>
+        <div class="collapse" id="collapseAllTargets" style="border: solid; border-width: 1px;">
+            {% for _,t in sw.build.targets.items() %}
+            {% set pkghash = t.package_id_hash %}
+            {% set input_hash = pkghash|string + '_inh' %}
+            {% set interface_hash = pkghash|string + '_int' %}
+            <p>
+                <button class="btn btn-primary" type="button" data-toggle="collapse" data-target="#collapse{{ pkghash }}" aria-expanded="false" aria-controls="collapse{{ pkghash }}">
+                    {{ t.package_id }} (hash: {{ t.settings_hash }})
+                </button>
+                <div class="collapse" id="collapse{{ pkghash }}" style="border: solid; border-width: 1px;">
+            <p>
+                <button class="btn btn-primary" type="button" data-toggle="collapse" data-target="#collapse{{ input_hash }}" aria-expanded="false" aria-controls="collapse{{ input_hash }}">
+                    Input Settings (hash: {{ t.settings_hash }})
+                </button>
+                <div class="collapse" id="collapse{{ input_hash }}">
             <p>
                 <script>
-                    j = {{ i }};
-                    j = JSON.stringify(j, null, 2);
-                    var e = document.getElementById('collapse{{ i.hash }}');
-                    e.appendChild(document.createElement('pre')).innerHTML = syntaxHighlight(j);
+                                    j = {{ t.settings }};
+                                    j = JSON.stringify(j, null, 2);
+                                    var e = document.getElementById('collapse{{ input_hash }}');
+                                    e.appendChild(document.createElement('pre')).innerHTML = syntaxHighlight(j);
                 </script>
             </p>
         </div>
-        {% endfor %}
+        </p>
+
+        <p>
+            <button class="btn btn-primary" type="button" data-toggle="collapse" data-target="#collapse{{ interface_hash }}" aria-expanded="false" aria-controls="collapse{{ interface_hash }}">
+                Interface Settings (hash: {{ t.interface_settings_hash }})
+            </button>
+            <div class="collapse" id="collapse{{ interface_hash }}">
+        <p>
+            <script>
+                                    j = {{ t.interface_settings }};
+                                    j = JSON.stringify(j, null, 2);
+                                    var e = document.getElementById('collapse{{ interface_hash }}');
+                                    e.appendChild(document.createElement('pre')).innerHTML = syntaxHighlight(j);
+            </script>
+        </p>
+    </div>
+                    </p>
+                </div>
+            </p>
+            {% endfor %}
+        </div>
     </div>
 </body>
 </html>
