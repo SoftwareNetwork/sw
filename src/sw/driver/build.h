@@ -7,12 +7,12 @@
 #include "command.h"
 #include "target/base.h"
 
-#include <sw/core/build.h>
 #include <sw/core/target.h>
 
 namespace sw
 {
 
+struct SwBuild;
 struct Build;
 namespace driver::cpp { struct Driver; }
 struct Module;

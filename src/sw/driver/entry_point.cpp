@@ -11,6 +11,7 @@
 #include "target/all.h"
 #include "sw_check_abi_version.h"
 
+#include <sw/core/build.h>
 #include <sw/core/sw_context.h>
 #include <sw/core/input_database.h>
 #include <sw/core/input.h>

@@ -7,6 +7,8 @@
 #include "build.h"
 #include "target/native.h"
 
+#include <sw/core/build.h>
+
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "source_file");
 

@@ -14,6 +14,7 @@
 #include "../compiler/set_settings.h"
 
 #include <sw/builder/jumppad.h>
+#include <sw/core/build.h>
 #include <sw/core/sw_context.h>
 #include <sw/manager/storage.h>
 #include <sw/manager/yaml.h>
@@ -610,6 +611,7 @@ void NativeCompiledTarget::setupCommand(builder::Command &c) const
                 if (ts["header_only"] != "true" && ts["type"] == "native_shared_library")
                 {
                     f(ts["output_file"].getPathValue(getContext().getLocalStorage()));
+                    SW_UNIMPLEMENTED; // todo: nt->setupCommand(c);
                 }
             }
             else

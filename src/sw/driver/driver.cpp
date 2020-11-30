@@ -19,6 +19,7 @@
 #include "compiler/detect.h"
 #include "compiler/set_settings.h"
 
+#include <sw/core/build.h>
 #include <sw/core/input.h>
 #include <sw/core/specification.h>
 #include <sw/core/sw_context.h>

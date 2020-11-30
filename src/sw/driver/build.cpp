@@ -11,6 +11,7 @@
 #include "target/native.h"
 
 #include <sw/builder/file_storage.h>
+#include <sw/core/build.h>
 #include <sw/core/input.h>
 #include <sw/core/sw_context.h>
 #include <sw/manager/database.h>

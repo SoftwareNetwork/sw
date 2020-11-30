@@ -12,6 +12,7 @@
 #include "compiler/base.h"
 
 #include <sw/builder/jumppad.h>
+#include <sw/core/build.h> // 
 #include <sw/core/sw_context.h> // needed for execute commands
 #include <sw/manager/storage.h>
 

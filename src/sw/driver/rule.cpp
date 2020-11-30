@@ -11,6 +11,7 @@
 #include "target/native.h"
 
 #include <sw/builder/jumppad.h>
+#include <sw/core/build.h>
 
 #include <primitives/exceptions.h>
 

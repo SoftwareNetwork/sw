@@ -10,6 +10,7 @@
 #include "../extensions.h"
 #include "../target/native.h"
 
+#include <sw/core/build.h>
 #include <sw/core/sw_context.h>
 #include <sw/manager/storage.h>
 
