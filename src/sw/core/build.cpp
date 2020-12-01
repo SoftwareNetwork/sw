@@ -346,10 +346,6 @@ void SwBuild::build()
     */
 
     getHtmlReportData()["name"] = getName();
-    SCOPE_EXIT
-    {
-        writeHtmlReport();
-    };
 
     ScopedTime t;
 
@@ -378,6 +374,8 @@ void SwBuild::build()
 
     if (build_settings["measure"] == "true")
         LOG_DEBUG(logger, BOOST_CURRENT_FUNCTION << " time: " << t.getTimeFloat() << " s.");
+
+    writeHtmlReport();
 }
 
 bool SwBuild::step()
