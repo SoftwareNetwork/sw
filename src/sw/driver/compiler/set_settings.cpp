@@ -5,8 +5,10 @@
 
 #include "detect.h"
 #include "../build_settings.h"
+#include "../target/native.h"
 
 #include <sw/core/build.h>
+#include <sw/support/storage.h>
 
 namespace sw
 {
@@ -50,6 +52,30 @@ static void setRuleCompareRules(PackageSettings &ts)
             ts["rule"].ignoreInComparison(true);
             ts["rule"].useInHash(false);
         }
+    }
+}
+
+static void basicResolve(PackageSettings &ts)
+{
+    auto ts2 = ts;
+    ts2.erase("rule");
+    for (auto &&[_, m] : ts["rule"].getMap())
+    {
+        ResolveRequest rr;
+        rr.u = m["package"].getValue();
+        rr.settings = ts2;
+        if (ts["resolver"].resolve(rr))
+            m["package"] = rr.getPackage().toString();
+        // otherwise we silently ignore until rule is used
+    }
+    for (auto &&[_, m] : ts["native"]["stdlib"].getMap())
+    {
+        ResolveRequest rr;
+        rr.u = m.getValue();
+        rr.settings = ts; // with rules!
+        if (ts["resolver"].resolve(rr))
+            m = rr.getPackage().toString();
+        // otherwise we silently ignore until rule is used
     }
 }
 
@@ -117,6 +143,7 @@ static void addSettingsCommon(const SwBuild &b, PackageSettings &ts, bool force)
         SW_UNIMPLEMENTED;
 
     setRuleCompareRules(ts);
+    basicResolve(ts);
 }
 
 // remember! only host tools
