@@ -3362,9 +3362,6 @@ void NativeCompiledTarget::writeFileOnce(const path &fn, const String &content)
     ::sw::writeFileOnce(p, content, getPatchDir(!source_dir));
 
     addFileSilently(p);
-
-    //File f(p, getFs());
-    //f.getFileRecord().load();
 }
 
 void NativeCompiledTarget::writeFileSafe(const path &fn, const String &content)
@@ -3379,9 +3376,6 @@ void NativeCompiledTarget::writeFileSafe(const path &fn, const String &content)
     ::sw::writeFileSafe(p, content, getPatchDir(!source_dir));
 
     addFileSilently(p);
-
-    //File f(fn, getFs());
-    //f.getFileRecord().load();
 }
 
 void NativeCompiledTarget::replaceInFileOnce(const path &fn, const String &from, const String &to)
@@ -3400,9 +3394,6 @@ void NativeCompiledTarget::patch(const path &fn, const String &from, const Strin
     path p = fn;
     check_absolute(p, false, &source_dir);
     ::sw::replaceInFileOnce(p, from, to, getPatchDir(!source_dir));
-
-    //File f(p, getFs());
-    //f.getFileRecord().load();
 }
 
 void NativeCompiledTarget::patch(const path &fn, const String &patch_str)
@@ -3432,9 +3423,6 @@ void NativeCompiledTarget::pushFrontToFileOnce(const path &fn, const String &tex
     path p = fn;
     check_absolute(p, false, &source_dir);
     ::sw::pushFrontToFileOnce(p, text, getPatchDir(!source_dir));
-
-    //File f(p, getFs());
-    //f.getFileRecord().load();
 }
 
 void NativeCompiledTarget::pushBackToFileOnce(const path &fn, const String &text)
@@ -3448,9 +3436,6 @@ void NativeCompiledTarget::pushBackToFileOnce(const path &fn, const String &text
     path p = fn;
     check_absolute(p, false, &source_dir);
     ::sw::pushBackToFileOnce(p, text, getPatchDir(!source_dir));
-
-    //File f(p, getFs());
-    //f.getFileRecord().load();
 }
 
 CompilerType NativeCompiledTarget::getCompilerType() const
@@ -3544,7 +3529,6 @@ void ExecutableTarget::prepare()
     }
 
     NativeCompiledTarget::prepare();
-    return;
 }
 
 void LibraryTarget::prepare()
@@ -3560,7 +3544,6 @@ void LibraryTarget::init()
         target_type = TargetType::NativeStaticLibrary;
 
     NativeCompiledTarget::init();
-    return;
 }
 
 }
