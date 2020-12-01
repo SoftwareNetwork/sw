@@ -31,6 +31,17 @@ enum class BuildState
     // Tested?
 };
 
+struct SW_CORE_API ResolverHolder
+{
+    /// resolve deps using this target resolver
+    Resolver &getResolver() const; // to pass to children
+    Resolver *setResolver(Resolver &); // returns old resolver
+    bool resolve(ResolveRequest &) const;
+
+private:
+    Resolver *resolver = nullptr;
+};
+
 // single build
 struct SW_CORE_API SwBuild : SwBuilderContext, ResolverHolder
 {

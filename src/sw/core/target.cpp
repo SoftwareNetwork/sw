@@ -15,25 +15,6 @@ ITarget::~ITarget() {}
 TargetEntryPoint::~TargetEntryPoint() = default;
 TargetData::~TargetData() = default;
 
-Resolver &ResolverHolder::getResolver() const
-{
-    if (!resolver)
-        throw SW_RUNTIME_ERROR("No resolver set");
-    return *resolver;
-}
-
-Resolver *ResolverHolder::setResolver(Resolver &r)
-{
-    auto old = resolver;
-    resolver = &r;
-    return old;
-}
-
-bool ResolverHolder::resolve(ResolveRequest &rr) const
-{
-    return getResolver().resolve(rr);
-}
-
 AllowedPackages::AllowedPackages(const UnresolvedPackages &in)
 {
     for (auto &u : in)
