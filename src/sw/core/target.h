@@ -109,7 +109,7 @@ struct SW_CORE_API ITarget : ICastable, ResolverHolder
     /// 1. to create archives
     /// 2. for ide support
     /// ...?
-    virtual TargetFiles getFiles(StorageFileType) const { return {}; }
+    virtual TargetFiles getFiles() const { return {}; }
 
     /// get all direct dependencies
     //virtual std::vector<IDependency *> getDependencies() const = 0;

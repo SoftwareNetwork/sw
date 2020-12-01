@@ -317,18 +317,20 @@ void Target::fetch()
     }
 }
 
-TargetFiles Target::getFiles(StorageFileType t) const
+TargetFiles Target::getFiles() const
 {
-    switch (t)
+    /*switch (t)
     {
     case StorageFileType::SourceArchive:
     {
         TargetFiles files;
         for (auto &f : gatherAllFiles())
-            files.emplace(f, TargetFile(f/*, SourceDirBase*/, File(f, getFs()).isGenerated()));
+            files.emplace(f, TargetFile(f
+                //, SourceDirBase
+                , File(f, getFs()).isGenerated()));
         return files;
     }
-    }
+    }*/
     SW_UNIMPLEMENTED;
 }
 

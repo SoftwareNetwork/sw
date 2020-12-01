@@ -467,7 +467,9 @@ void VSGenerator::generate(const SwBuild &b)
         {
             Project p(pkg.toString());
             p.g = this;
-            for (auto &[f,tf] : tgt->getFiles(StorageFileType::SourceArchive))
+            for (auto &[f,tf] : tgt->getFiles(
+                //StorageFileType::SourceArchive
+            ))
             {
                 if (tf.isGenerated() && f.extension() != ".natvis")
                     continue;

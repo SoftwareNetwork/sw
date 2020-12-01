@@ -739,9 +739,9 @@ void NativeCompiledTarget::remove(const ApiNameType &i)
         ApiName.clear();
 }
 
-TargetFiles NativeCompiledTarget::getFiles(StorageFileType t) const
+TargetFiles NativeCompiledTarget::getFiles() const
 {
-    switch (t)
+    /*switch (t)
     {
     case StorageFileType::SourceArchive:
     {
@@ -752,13 +752,15 @@ TargetFiles NativeCompiledTarget::getFiles(StorageFileType t) const
         TargetFiles files;
         auto add_file = [this, &files](const path &f)
         {
-            files.emplace(f, TargetFile(f/*, getPackage().getDirObj()*/, File(f, getFs()).isGenerated()));
+            files.emplace(f, TargetFile(f
+            //, getPackage().getDirObj()
+            , File(f, getFs()).isGenerated()));
         };
         add_file(getOutputFile());
         add_file(getImportLibrary());
         return files;
     }
-    }
+    }*/
     SW_UNIMPLEMENTED;
 }
 

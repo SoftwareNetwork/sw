@@ -259,7 +259,7 @@ public:
     // api
     const LocalPackage &getPackage() const override { return TargetBase::getPackage(); }
     const Source &getSource() const override;
-    TargetFiles getFiles(StorageFileType) const override;
+    TargetFiles getFiles() const override;
     std::vector<IDependency *> getDependencies() const;// override;
     const PackageSettings &getSettings() const override;
     const PackageSettings &getInterfaceSettings() const override;

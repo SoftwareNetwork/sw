@@ -53,7 +53,9 @@ sw::PackageDescriptionMap getPackages(const sw::SwBuild &b, const sw::support::S
 
         // double check files (normalize them)
         FilesSorted files;
-        for (auto &[f, tf] : t.getFiles(StorageFileType::SourceArchive))
+        for (auto &[f, tf] : t.getFiles(
+            //StorageFileType::SourceArchive
+        ))
         {
             if (tf.isGenerated())
                 continue;
