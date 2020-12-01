@@ -132,7 +132,7 @@ String UserInput::getHash() const
     return s;
 }
 
-std::vector<ITargetPtr> UserInput::loadPackages(SwBuild &b) const
+/*std::vector<ITargetPtr> UserInput::loadPackages(SwBuild &b) const
 {
     std::vector<ITargetPtr> tgts;
     for (auto &s : settings)
@@ -150,6 +150,6 @@ std::vector<ITargetPtr> UserInput::loadPackages(SwBuild &b) const
             tgts.emplace_back(std::move(t));
     }
     return tgts;
-}
+}*/
 
 }

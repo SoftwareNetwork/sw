@@ -484,15 +484,19 @@ void SwBuild::loadInputs()
     // and load packages
     for (auto &i : user_inputs)
     {
-        auto tgts2 = i.loadPackages(*this);
-        auto tgts = registerTargets(tgts2);
-        for (auto &&tgt : tgts)
+        for (auto s : i.getSettings())
         {
-            if (!should_build_target(tgt->getPackage()))
-                continue;
+            s["resolver"] = PackageSetting(getResolver().clone());
+            auto tgts2 = i.getInput().loadPackages(*this, s, {}, {});
+            auto tgts = registerTargets(tgts2);
+            for (auto &&tgt : tgts)
+            {
+                if (!should_build_target(tgt->getPackage()))
+                    continue;
 
-            tgt->setResolver(getResolver());
-            getTargets()[tgt->getPackage()].push_back(*tgt, i.getInput());
+                //tgt->setResolver(getResolver());
+                getTargets()[tgt->getPackage()].push_back(*tgt, i.getInput());
+            }
         }
     }
 }

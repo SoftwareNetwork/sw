@@ -82,13 +82,13 @@ struct SW_CORE_API UserInput
 
     const std::set<PackageSettings> &getSettings() const;
     void addSettings(const PackageSettings &s);
-    void clearSettings() { settings.clear(); }
+    //void clearSettings() { settings.clear(); }
     String getHash() const;
     Input &getInput() { return i; }
-    const Input &getInput() const { return i; }
+    //const Input &getInput() const { return i; }
 
-    [[nodiscard]]
-    std::vector<ITargetPtr> loadPackages(SwBuild &) const;
+    //[[nodiscard]]
+    //std::vector<ITargetPtr> loadPackages(SwBuild &) const;
 
 protected:
     Input &i;
