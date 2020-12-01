@@ -45,7 +45,7 @@ struct SW_SUPPORT_API PackageData
 
     virtual std::unique_ptr<PackageData> clone() const { return std::make_unique<PackageData>(*this); }
 
-    virtual String getHash(StorageFileType type, size_t config_hash = 0) const;
+    virtual String getHash(/*StorageFileType type, */size_t config_hash = 0) const;
 };
 
 using PackageDataPtr = std::unique_ptr<PackageData>;

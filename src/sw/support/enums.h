@@ -58,7 +58,7 @@ using SomeFlags = std::bitset<sizeof(uint64_t) * 8>;
 namespace sw
 {
 
-enum class StorageFileType
+/*enum class StorageFileType
 {
     /// all input (for creating an input package) non-generated files under base source dir
     SourceArchive = 1,
@@ -87,6 +87,6 @@ enum class StorageFileType
 };
 
 SW_SUPPORT_API
-String toString(StorageFileType);
+String toString(StorageFileType);*/
 
 }

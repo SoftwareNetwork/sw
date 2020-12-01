@@ -6,7 +6,7 @@
 namespace sw
 {
 
-String toString(StorageFileType t)
+/*String toString(StorageFileType t)
 {
     switch (t)
     {
@@ -17,6 +17,6 @@ String toString(StorageFileType t)
     default:
         return "Unknown source type";
     }
-}
+}*/
 
 }

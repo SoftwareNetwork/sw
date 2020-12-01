@@ -58,8 +58,8 @@ struct SW_MANAGER_API FileWithHashVerification : vfs::File
 
 } // namespace vfs
 
-SW_MANAGER_API
-String toUserString(StorageFileType);
+//SW_MANAGER_API
+//String toUserString(StorageFileType);
 
 struct PackagesDatabase;
 struct ServiceDatabase;
@@ -78,7 +78,7 @@ struct SW_MANAGER_API IStorage2 : IResolvableStorageWithName
     //
 
     /// get file from this storage
-    virtual std::unique_ptr<vfs::File> getFile(const PackageId &id, StorageFileType) const = 0;
+    virtual std::unique_ptr<vfs::File> getFile(const PackageId &id/*, StorageFileType*/) const = 0;
 
     // ?
 
@@ -132,7 +132,7 @@ struct SW_MANAGER_API LocalStorageBase : StorageWithPackagesDatabase
     const StorageSchema &getSchema() const override { return schema; }
 
     virtual LocalPackage install(const Package &) const = 0;
-    std::unique_ptr<vfs::File> getFile(const PackageId &id, StorageFileType) const override;
+    std::unique_ptr<vfs::File> getFile(const PackageId &id/*, StorageFileType*/) const override;
 
     void deletePackage(const PackageId &id) const;
 
@@ -164,7 +164,7 @@ struct SW_MANAGER_API LocalStorage : Directories, LocalStorageBase
     void remove(const LocalPackage &) const;
     LocalPackage install(const Package &) const override;
     LocalPackage installLocalPackage(const PackageId &, const PackageData &);
-    void get(const IStorage2 &source, const PackageId &id, StorageFileType) const /* override*/;
+    void get(const IStorage2 &source, const PackageId &id/*, StorageFileType*/) const /* override*/;
     bool isPackageInstalled(const Package &id) const;
     bool isPackageOverridden(const PackageId &id) const;
     bool isPackageLocal(const PackageId &id) const;

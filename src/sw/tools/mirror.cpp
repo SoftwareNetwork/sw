@@ -87,7 +87,7 @@ int main(int argc, char **argv)
                 // maybe we should create target storage?
                 // SwManagerContext or just Directories to get pkg dir and to keep standard layout
                 // and the operation will download from storage to storage
-                auto f = s2->getFile(pkgid, sw::StorageFileType::SourceArchive);
+                auto f = s2->getFile(pkgid/*, sw::StorageFileType::SourceArchive*/);
                 if (f->copy(bak))
                 {
                     fs::rename(bak, dst);

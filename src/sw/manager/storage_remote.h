@@ -21,7 +21,7 @@ struct SW_MANAGER_API RemoteStorage : StorageWithPackagesDatabase
     const StorageSchema &getSchema() const override { return schema; }
     //LocalPackage download(const PackageId &) const override;
     //LocalPackage install(const Package &) const;
-    std::unique_ptr<vfs::File> getFile(const PackageId &id, StorageFileType) const override;
+    std::unique_ptr<vfs::File> getFile(const PackageId &id/*, StorageFileType*/) const override;
     //ResolveResult resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const override;
     bool resolve(ResolveRequest &) const override;
 

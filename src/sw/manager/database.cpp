@@ -322,7 +322,7 @@ String PackagesDatabase::getInstalledPackageHash(db::PackageVersionId vid) const
 
 bool PackagesDatabase::isPackageInstalled(const Package &p) const
 {
-    return getInstalledPackageId(p) != 0 && getInstalledPackageHash(p) == p.getData().getHash(StorageFileType::SourceArchive);
+    return getInstalledPackageId(p) != 0 && getInstalledPackageHash(p) == p.getData().getHash(/*StorageFileType::SourceArchive*/);
 }
 
 void PackagesDatabase::installPackage(const PackageId &p, const PackageData &d)
@@ -385,7 +385,7 @@ void PackagesDatabase::installPackage(const PackageId &p, const PackageData &d)
 
     // insert file
     (*db)(insert_into(t_files).set(
-        t_files.hash = d.getHash(StorageFileType::SourceArchive)
+        t_files.hash = d.getHash(/*StorageFileType::SourceArchive*/)
     ));
     auto fid = db->last_insert_id();
 

@@ -110,7 +110,7 @@ struct Storage : IStorage
 
 }*/
 
-String toUserString(StorageFileType t)
+/*String toUserString(StorageFileType t)
 {
     switch (t)
     {
@@ -119,7 +119,7 @@ String toUserString(StorageFileType t)
     default:
         SW_UNREACHABLE;
     }
-}
+}*/
 
 static path getDatabaseRootDir1(const path &root)
 {
@@ -196,19 +196,19 @@ LocalStorageBase::LocalStorageBase(const String &name, const path &db_dir)
 
 LocalStorageBase::~LocalStorageBase() = default;
 
-std::unique_ptr<vfs::File> LocalStorageBase::getFile(const PackageId &id, StorageFileType t) const
+std::unique_ptr<vfs::File> LocalStorageBase::getFile(const PackageId &id/*, StorageFileType t*/) const
 {
     SW_UNIMPLEMENTED;
 
-    switch (t)
+    //switch (t)
     {
-    case StorageFileType::SourceArchive:
+    //case StorageFileType::SourceArchive:
     {
         //LocalPackage p(*this, id);
         //auto d = p.getDirSrc() / make_archive_name();
         //return d.u8string();
     }
-    default:
+    //default:
         SW_UNREACHABLE;
     }
 }
@@ -324,7 +324,7 @@ LocalPackage LocalStorage::install(const Package &id) const
             ;
     }*/
 
-    get(static_cast<const IStorage2 &>(id.getStorage()), id, StorageFileType::SourceArchive);
+    get(static_cast<const IStorage2 &>(id.getStorage()), id/*, StorageFileType::SourceArchive*/);
 
     // we mix gn with storage name to get unique gn
     /*auto h = std::hash<String>()(static_cast<const IStorage2 &>(id.getStorage()).getName());
@@ -335,23 +335,23 @@ LocalPackage LocalStorage::install(const Package &id) const
     return p;
 }
 
-void LocalStorage::get(const IStorage2 &source, const PackageId &id, StorageFileType t) const
+void LocalStorage::get(const IStorage2 &source, const PackageId &id/*, StorageFileType t*/) const
 {
     LocalPackage lp(*this, id);
 
     path dst;
-    switch (t)
+    //switch (t)
     {
-    case StorageFileType::SourceArchive:
+    //case StorageFileType::SourceArchive:
         dst = lp.getDir() / support::make_archive_name();
         //dst += ".new"; // without this storage can be left in inconsistent state
-        break;
+        //break;
     }
 
-    LOG_INFO(logger, "Downloading: [" + id.toString() + "]/[" + toUserString(t) + "]");
-    auto f = source.getFile(id, t);
+    LOG_INFO(logger, "Downloading: [" + id.toString() + "]/[" + /*toUserString(t) + */"]");
+    auto f = source.getFile(id/*, t*/);
     if (!f->copy(dst))
-        throw SW_RUNTIME_ERROR("Error downloading file for package: " + id.toString() + ", file: " + toUserString(t));
+        throw SW_RUNTIME_ERROR("Error downloading file for package: " + id.toString() + ", file: "/* + toUserString(t)*/);
 
     SCOPE_EXIT
     {
@@ -360,7 +360,7 @@ void LocalStorage::get(const IStorage2 &source, const PackageId &id, StorageFile
         fs::remove(dst);
     };
 
-    auto unpack = [&id, &dst, &lp, &t]()
+    auto unpack = [&id, &dst, &lp/*, &t*/]()
     {
         for (auto &d : fs::directory_iterator(lp.getDir()))
         {
@@ -368,7 +368,7 @@ void LocalStorage::get(const IStorage2 &source, const PackageId &id, StorageFile
                 fs::remove_all(d);
         }
 
-        LOG_INFO(logger, "Unpacking  : [" + id.toString() + "]/[" + toUserString(t) + "]");
+        LOG_INFO(logger, "Unpacking  : [" + id.toString() + "]/[" + /*toUserString(t) + */"]");
         unpack_file(dst, lp.getDirSrc());
     };
 

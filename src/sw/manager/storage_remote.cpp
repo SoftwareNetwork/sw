@@ -385,7 +385,7 @@ struct RemoteFileWithHashVerification : vfs::FileWithHashVerification
             });
         };*/
 
-        if (copy(fn, p.getData().getHash(StorageFileType::SourceArchive)))
+        if (copy(fn, p.getData().getHash(/*StorageFileType::SourceArchive*/)))
         {
             return true;
         }
@@ -396,7 +396,7 @@ struct RemoteFileWithHashVerification : vfs::FileWithHashVerification
             rr.u = p;
             if (remote_storage->resolveFromRemote(rr))
             {
-                if (copy(fn, rr.getPackage().getData().getHash(StorageFileType::SourceArchive)))
+                if (copy(fn, rr.getPackage().getData().getHash(/*StorageFileType::SourceArchive*/)))
                 {
                     return true;
                 }
@@ -447,11 +447,11 @@ struct RemoteFileWithHashVerification : vfs::FileWithHashVerification
     }
 };
 
-std::unique_ptr<vfs::File> RemoteStorage::getFile(const PackageId &id, StorageFileType t) const
+std::unique_ptr<vfs::File> RemoteStorage::getFile(const PackageId &id/*, StorageFileType t*/) const
 {
-    switch (t)
+    //switch (t)
     {
-    case StorageFileType::SourceArchive:
+    //case StorageFileType::SourceArchive:
     {
         auto provs = r.dss;
         Package pkg(*this, id);
@@ -460,7 +460,7 @@ std::unique_ptr<vfs::File> RemoteStorage::getFile(const PackageId &id, StorageFi
             rf->urls.push_back(p.getUrl(pkg));
         return rf;
     }
-    default:
+    //default:
         SW_UNREACHABLE;
     }
 }

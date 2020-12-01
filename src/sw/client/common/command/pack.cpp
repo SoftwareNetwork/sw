@@ -36,7 +36,7 @@ struct ChildPathExtractor
 
 SUBCOMMAND_DECL(pack)
 {
-    std::vector<sw::StorageFileType> types;
+    /*std::vector<sw::StorageFileType> types;
     for (auto i : getOptions().options_pack.typei)
         types.push_back((sw::StorageFileType)i);
     for (auto &i : getOptions().options_pack.type)
@@ -49,7 +49,7 @@ SUBCOMMAND_DECL(pack)
             SW_UNIMPLEMENTED;
     }
     if (types.empty())
-        types.push_back(sw::StorageFileType::SourceArchive);
+        types.push_back(sw::StorageFileType::SourceArchive);*/
 
     auto b = createBuildAndPrepare({getInputs(), getOptions().input_settings_pairs});
     b->build();
