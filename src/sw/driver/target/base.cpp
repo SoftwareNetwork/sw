@@ -358,6 +358,9 @@ PackageSettings Target::getHostSettings() const
     if (ts_export["use_same_config_for_host_dependencies"] == "true")
         return ts_export;
     auto hs = getMainBuild().getContext().getHostSettings();
+    // reconsider this?
+    // Whole host settings can be taken from user config in ~/.sw/sw.yml
+    hs["resolver"] = ts_export["resolver"];
     addSettingsAndSetHostPrograms(getMainBuild(), hs);
     return hs;
 }
