@@ -144,16 +144,88 @@ struct BuiltinPackage : Package
 // or storage for programs found in the system
 struct BuiltinStorage : IStorage
 {
+    struct BuiltinLoader
+    {
+        std::optional<VersionRange> all;
+        std::unordered_multimap<VersionRange, ProgramDetector::DetectablePackageEntryPoint> eps;
+        std::unordered_map<VersionRange, ProgramDetector::DetectablePackageEntryPoint> exact_eps;
+
+        void addPair(const VersionRange &r, const ProgramDetector::DetectablePackageEntryPoint &ep)
+        {
+            if (!all)
+                all = r;
+            else
+                *all |= r;
+            eps.emplace(r, ep);
+        }
+
+        bool resolve(const BuiltinStorage &bs, ResolveRequest &rr)
+        {
+            if (!all || !all->contains(rr.u.getRange()))
+                return false;
+
+            auto eit = exact_eps.find(rr.u.getRange());
+            if (eit != exact_eps.end() && eit->first.toVersion())
+            {
+                // exact match
+                auto p = std::make_unique<BuiltinPackage>(bs, PackageId{ rr.u.getPath(), *eit->first.toVersion() });
+                p->f = eit->second;
+                rr.setPackage(std::move(p));
+                return true;
+            }
+
+            std::vector<std::pair<ITargetPtr, NativeBuiltinTargetEntryPoint::BuildFunction>> targets;
+            for (auto &[r, ep] : eps)
+            {
+                if (!r.contains(rr.u.getRange()))
+                    return false;
+
+                Build b(*bs.sb);
+                b.module_data.current_settings = rr.settings;
+                ep(b);
+                SW_CHECK(b.module_data.getTargets().size() <= 1); // only 1 target per build call
+                if (b.module_data.getTargets().empty())
+                    continue;
+                targets.emplace_back(std::move(b.module_data.getTargets()[0]), ep);
+            }
+            if (targets.empty())
+                return false;
+
+            VersionSet s;
+            for (auto &[t, ep] : targets)
+            {
+                s.insert(t->getPackage().getVersion());
+                // also register
+                exact_eps.emplace(t->getPackage().getVersion(), ep);
+            }
+
+            auto v = rr.u.getRange().getMaxSatisfyingVersion(s);
+            for (auto &[t,f] : targets)
+            {
+                if (!v || *v == t->getPackage().getVersion())
+                {
+                    auto p = std::make_unique<BuiltinPackage>(bs, t->getPackage());
+                    p->f = f;
+                    rr.setPackage(std::move(p));
+                }
+            }
+            SW_CHECK(rr.isResolved());
+            return true;
+        }
+    };
+
     SwContext &swctx;
-    ProgramDetector::DetectablePackageEntryPoints eps;
     std::unique_ptr<SwBuild> sb;
     mutable std::unordered_map<PackagePath, PackageId> targets;
+    mutable std::unordered_map<PackagePath, BuiltinLoader> available_loaders;
 
     BuiltinStorage(SwContext &swctx)
         : swctx(swctx)
     {
         sb = swctx.createBuild(); // fake build
-        eps = getProgramDetector().getDetectablePackages();
+        auto eps = getProgramDetector().getDetectablePackages();
+        for (auto &[k, v] : eps)
+            available_loaders[k.getPath()].addPair(k.getRange(), v);
     }
 
     const StorageSchema &getSchema() const override { SW_UNREACHABLE; }
@@ -186,7 +258,13 @@ struct BuiltinStorage : IStorage
         }
 
         // now check local packages
-        auto i = eps.equal_range(rr.u);
+        auto alit = available_loaders.find(rr.u.getPath());
+        if (alit == available_loaders.end())
+            return false;
+        return alit->second.resolve(*this, rr);
+
+        // now check local packages
+        /*auto i = eps.equal_range(rr.u);
         if (i.first == eps.end())
             return false;
 
@@ -205,8 +283,12 @@ struct BuiltinStorage : IStorage
         }
         if (targets.empty())
             return false;
-        for (auto &[t,_] : targets)
+        for (auto &[t, ep] : targets)
+        {
             s.insert(t->getPackage().getVersion());
+            // also register
+            eps.emplace(t->getPackage(), ep);
+        }
         auto v = rr.u.getRange().getMaxSatisfyingVersion(s);
         for (auto &[t,f] : targets)
         {
@@ -218,7 +300,7 @@ struct BuiltinStorage : IStorage
             }
         }
         SW_CHECK(rr.isResolved());
-        return true;
+        return true;*/
     }
 };
 
