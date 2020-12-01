@@ -16,9 +16,19 @@ PackageSetting::PackageSetting()
 {
 }
 
+PackageSetting::PackageSetting(const Value &v)
+{
+    value = v;
+}
+
 PackageSetting::PackageSetting(const path &p)
 {
     setAbsolutePathValue(p);
+}
+
+PackageSetting::PackageSetting(ResolverType r)
+{
+    resolver = std::move(r);
 }
 
 PackageSetting::PackageSetting(const PackageSetting &rhs)
@@ -47,8 +57,9 @@ void PackageSetting::copy_fields(const PackageSetting &rhs)
     used_in_hash = rhs.used_in_hash;
     ignore_in_comparison = rhs.ignore_in_comparison;
     serializable_ = rhs.serializable_;
-    //if (rhs.resolver)
-        //resolver = rhs.resolver->clone();
+    resolver.reset();
+    if (rhs.resolver)
+        resolver = rhs.resolver->clone();
 }
 
 bool PackageSetting::isEmpty() const
@@ -184,6 +195,13 @@ void PackageSetting::setAbsolutePathValue(const path &value)
     *this = to_string(normalize_path(value));
 }
 
+bool PackageSetting::resolve(ResolveRequest &rr)
+{
+    if (!isResolver())
+        throw SW_RUNTIME_ERROR("Not a resolver");
+    return resolver->resolve(rr);
+}
+
 bool PackageSetting::operator==(const PackageSetting &rhs) const
 {
     if (ignore_in_comparison)
@@ -317,8 +335,7 @@ bool PackageSetting::isObject() const
 
 bool PackageSetting::isResolver() const
 {
-    SW_UNIMPLEMENTED;
-    //return value.index() == 5;
+    return !!resolver;
 }
 
 void PackageSetting::push_back(const ArrayValue &v)

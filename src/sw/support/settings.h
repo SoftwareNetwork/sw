@@ -20,6 +20,7 @@ using PackageSettingValue = String;
 struct PackageSetting;
 struct PackageSettings;
 struct Resolver;
+struct ResolveRequest;
 
 struct SW_SUPPORT_API PackageSettings
 {
@@ -93,16 +94,18 @@ struct SW_SUPPORT_API PackageSetting
     using ArrayValue = PackageSetting;
     using Array = std::vector<ArrayValue>;
     //using ResolverType = Resolver*;
-    //using ResolverPtr = ResolverType;
+    using ResolverType = std::unique_ptr<Resolver>;
+    using ResolverPtr = ResolverType;
     using NullType = nulltag_t;
     // append only
     using Variant = std::variant<std::monostate, Value, Array, Map, NullType/*, ResolverPtr*/>;
 
     PackageSetting();
-    /*PackageSetting(const Value &);
-    PackageSetting(const Array &);
+    PackageSetting(const Value &);
+    /*PackageSetting(const Array &);
     PackageSetting(const Map &);*/
     PackageSetting(const path &);
+    PackageSetting(ResolverType);
     PackageSetting(const PackageSetting &);
     PackageSetting &operator=(const PackageSetting &);
     PackageSetting(PackageSetting &&);
@@ -168,6 +171,7 @@ struct SW_SUPPORT_API PackageSetting
     void setPathValue(const path &root, const path &value);
     path getAbsolutePathValue() const;
     void setAbsolutePathValue(const path &value);
+    bool resolve(ResolveRequest &); // const or no?
 
     void push_back(const ArrayValue &);
     void reset();
@@ -204,7 +208,7 @@ private:
     bool serializable_ = true;
     // when adding new member, add it to copy_fields()!
     Variant value;
-    //ResolverType resolver;
+    ResolverType resolver;
 
     nlohmann::json toJson() const;
     size_t getHash1() const;
