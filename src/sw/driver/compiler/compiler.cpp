@@ -1023,11 +1023,14 @@ void RcTool::prepareCommand1(const Target &t)
             {
                 String s = "-D" + k + "=";
                 auto v2 = v.toString();
-                //if (v2[0] != '\"')
-                    //s += "\"";
+                // some targets gives def values with spaces
+                // like pcre 'SW_PCRE_EXP_VAR=extern __declspec(dllimport)'
+                // in this case we protect the value with quotes
+                if (v2[0] != '\"')
+                    s += "\"";
                 s += v2;
-                //if (v2[0] != '\"')
-                    //s += "\"";
+                if (v2[0] != '\"')
+                    s += "\"";
                 c.arguments.push_back(s);
             }
         }
