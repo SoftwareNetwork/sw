@@ -1,7 +1,8 @@
 #pragma sw require header pub.egorpugin.primitives.tools.embedder-master
 #pragma sw require header org.sw.demo.google.grpc.cpp.plugin
 #pragma sw require header org.sw.demo.lexxmark.winflexbison.bison
-#pragma sw require header org.sw.demo.qtproject.qt.base.tools.moc
+#pragma sw require header org.sw.demo.qtproject.qt.base.tools.moc-5.15.0
+#define QT_VER "-5.15.0"
 
 void build(Solution &s)
 {
@@ -385,21 +386,21 @@ void build(Solution &s)
         gui += cpp20;
         gui += client_common;
 
-        gui += "org.sw.demo.qtproject.qt.base.widgets"_dep;
-        gui += "org.sw.demo.qtproject.qt.base.winmain"_dep;
-        gui += "org.sw.demo.qtproject.qt.base.plugins.platforms.windows"_dep;
-        gui += "org.sw.demo.qtproject.qt.base.plugins.styles.windowsvista"_dep;
+        gui += "org.sw.demo.qtproject.qt.base.widgets" QT_VER ""_dep;
+        gui += "org.sw.demo.qtproject.qt.base.winmain" QT_VER ""_dep;
+        gui += "org.sw.demo.qtproject.qt.base.plugins.platforms.windows" QT_VER ""_dep;
+        gui += "org.sw.demo.qtproject.qt.base.plugins.styles.windowsvista" QT_VER ""_dep;
         gui += "org.sw.demo.qtproject.qt.labs.vstools.natvis-dev"_dep;
 
-        gui -= "org.sw.demo.qtproject.qt.winextras"_dep;
+        gui -= "org.sw.demo.qtproject.qt.winextras" QT_VER ""_dep;
         if (client.getBuildSettings().TargetOS.Type == OSType::Windows)
-            gui += "org.sw.demo.qtproject.qt.winextras"_dep;
+            gui += "org.sw.demo.qtproject.qt.winextras" QT_VER ""_dep;
 
         if (auto L = gui.getSelectedTool()->as<VisualStudioLinker*>(); L)
             L->Subsystem = vs::Subsystem::Windows;
 
-        qt_moc_rcc_uic("org.sw.demo.qtproject.qt"_dep, gui);
-        qt_tr("org.sw.demo.qtproject.qt"_dep, gui);
+        qt_moc_rcc_uic("org.sw.demo.qtproject.qt" QT_VER ""_dep, gui);
+        qt_tr("org.sw.demo.qtproject.qt" QT_VER ""_dep, gui);
 
         create_git_revision("pub.egorpugin.primitives.tools.create_git_rev-master"_dep, gui);
     }

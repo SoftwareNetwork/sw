@@ -19,6 +19,7 @@
 DECLARE_STATIC_LOGGER(logger, "self_builder");
 
 #define SW_DRIVER_NAME "org.sw.sw.client.driver.cpp-" PACKAGE_VERSION
+#define QT_VER "-5.15.0"
 
 using namespace sw;
 
@@ -108,7 +109,7 @@ String write_build_script(SwCoreContext &swctx,
         if (headers)
         {
             // for gui
-            prepkgs.push_back("org.sw.demo.qtproject.qt.base.tools.moc"s);
+            prepkgs.push_back("org.sw.demo.qtproject.qt.base.tools.moc" QT_VER ""s);
         }
 
         {
@@ -257,7 +258,7 @@ int main(int argc, char **argv)
         {"org.sw.demo.llvm_project.libcxx"},
 
         // for gui
-        {"org.sw.demo.qtproject.qt.base.tools.moc"},
+        {"org.sw.demo.qtproject.qt.base.tools.moc" QT_VER},
     });
     auto t2 = write_build_script(swctx, m_headers, true);
     auto t3 = write_build_script(swctx, m, false);
