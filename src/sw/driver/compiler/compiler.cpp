@@ -122,6 +122,14 @@ static Strings getCppStdOption(CPPLanguageStandard std, bool gnuext, bool clang,
         else
             s += "2a";
         break;
+    case CPPLanguageStandard::CPP23:
+        if (
+            clang && clver >= Version(11) && !appleclang
+            )
+            s += "2b";
+        else
+            throw SW_RUNTIME_ERROR("C++2b is not available on this compiler");
+        break;
     default:
         return {};
     }
