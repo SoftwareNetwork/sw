@@ -500,6 +500,7 @@ ProgramDetector::DetectablePackageMultiEntryPoints ProgramDetector::detectMsvcCo
             atlmfc.public_ts["properties"]["6"]["system_link_directories"].push_back(m.root / "ATLMFC" / "lib");
         else
             atlmfc.public_ts["properties"]["6"]["system_link_directories"].push_back(m.root / "ATLMFC" / "lib" / m.target);
+        atlmfc.public_ts["properties"]["6"]["system_link_libraries"].push_back(boost::to_upper_copy("atls.lib"s));
     });
 
     // concrt
