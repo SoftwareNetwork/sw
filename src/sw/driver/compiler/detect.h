@@ -106,7 +106,7 @@ private:
         MsvcInstance(const VSInstance &);
 
         void process(DETECT_ARGS);
-        bool is_no_target_libdir() const;
+        bool has_no_target_libdir() const;
         bool is_vs15plus() const;
     };
 

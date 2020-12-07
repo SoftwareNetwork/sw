@@ -285,7 +285,7 @@ bool ProgramDetector::MsvcInstance::is_vs15plus() const
     return i.version.getMajor() >= 15;
 }
 
-bool ProgramDetector::MsvcInstance::is_no_target_libdir() const
+bool ProgramDetector::MsvcInstance::has_no_target_libdir() const
 {
     return !is_vs15plus() && target == "x86";
 }
@@ -433,7 +433,7 @@ ProgramDetector::DetectablePackageMultiEntryPoints ProgramDetector::detectMsvcCo
 
         auto &libcpp = addTarget<PredefinedTarget>(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.libcpp", m.cl_exe_version), eb.getSettings());
         libcpp.public_ts["properties"]["6"]["system_include_directories"].push_back(m.idir);
-        if (m.is_no_target_libdir())
+        if (m.has_no_target_libdir())
             libcpp.public_ts["properties"]["6"]["system_link_directories"].push_back(m.root / "lib");
         else
             libcpp.public_ts["properties"]["6"]["system_link_directories"].push_back(m.root / "lib" / m.target);
@@ -496,7 +496,7 @@ ProgramDetector::DetectablePackageMultiEntryPoints ProgramDetector::detectMsvcCo
         m.process(DETECT_ARGS_PASS);
         auto &atlmfc = addTarget<PredefinedTarget>(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.ATLMFC", m.cl_exe_version), eb.getSettings());
         atlmfc.public_ts["properties"]["6"]["system_include_directories"].push_back(m.root / "ATLMFC" / "include");
-        if (m.is_no_target_libdir())
+        if (m.has_no_target_libdir())
             atlmfc.public_ts["properties"]["6"]["system_link_directories"].push_back(m.root / "ATLMFC" / "lib");
         else
             atlmfc.public_ts["properties"]["6"]["system_link_directories"].push_back(m.root / "ATLMFC" / "lib" / m.target);
