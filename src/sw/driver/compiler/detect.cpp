@@ -282,6 +282,7 @@ static void detectMsvcCommon(const path &compiler, const Version &vs_version,
                 atlmfc.public_ts["properties"]["6"]["system_link_directories"].push_back(root / "ATLMFC" / "lib");
             else
                 atlmfc.public_ts["properties"]["6"]["system_link_directories"].push_back(root / "ATLMFC" / "lib" / target);
+            atlmfc.public_ts["properties"]["6"]["system_link_libraries"].push_back(boost::to_upper_copy("atls.lib"s));
         }
     }
 
