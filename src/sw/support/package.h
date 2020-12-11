@@ -39,8 +39,9 @@ struct SW_SUPPORT_API PackageData
     PackageSettings settings;
 
     //
-    // PackageId driver
+    PackageId driver;
 
+    PackageData(const PackageId &driver_id);
     virtual ~PackageData() = default;
 
     virtual std::unique_ptr<PackageData> clone() const { return std::make_unique<PackageData>(*this); }

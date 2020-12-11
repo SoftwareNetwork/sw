@@ -104,9 +104,7 @@ void resolveWithDependencies(std::vector<ResolveRequest> &v, F &&resolve)
             {
                 if (s.contains(d))
                     continue;
-                ResolveRequest rr2;
-                rr2.u = d;
-                rr2.settings = rr->settings;
+                ResolveRequest rr2{ d, rr->settings };
                 v3.emplace_back(std::move(rr2));
             }
         }

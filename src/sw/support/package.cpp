@@ -30,6 +30,11 @@ static path getHashPathFromHash(const String &h, int nsubdirs, int chars_per_sub
     return p;
 }
 
+PackageData::PackageData(const PackageId &driver_id)
+    : driver(driver_id)
+{
+}
+
 String PackageData::getHash(/*StorageFileType type, */size_t config_hash) const
 {
     //if (type == StorageFileType::SourceArchive)

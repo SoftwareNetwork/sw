@@ -5,6 +5,7 @@
 
 #include "package.h"
 
+#include <sw/support/package_unresolved.h>
 #include <sw/support/settings.h>
 #include <sw/support/storage.h>
 
@@ -202,7 +203,16 @@ struct SW_MANAGER_API CachedStorage : IResolvableStorage
     //using StoredPackages = ResolveResult;
     using Key = std::pair<UnresolvedPackage, PackageSettings>;
     using Value = ResolveRequestResult;
-    using StoredPackages = std::map<Key, Value>;
+
+    template<class T> struct hasher
+    {
+        size_t operator()(const Key &p) const
+        {
+            auto h = std::hash<decltype(p.first)>()(p.first);
+            return hash_combine(h, std::hash<decltype(p.second)>()(p.second));
+        }
+    };
+    using StoredPackages = std::unordered_map<Key, Value, hasher<Key>>;
 
     CachedStorage() = default;
     CachedStorage(const CachedStorage &) = delete;
@@ -231,3 +241,13 @@ private:
 };
 
 } // namespace sw
+
+/*
+        template<> struct hash<::sw::CachedStorage::Key>
+        {
+            size_t operator()(const ::sw::CachedStorage::Key &p) const
+            {
+                auto h = std::hash<decltype(p.first)>()(p.first);
+                return hash_combine(h, std::hash<decltype(p.second)>()(p.second));
+            }
+        };*/

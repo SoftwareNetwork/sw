@@ -73,11 +73,11 @@ struct SW_SUPPORT_API ResolveRequest : ResolveRequestResult
     // timestamp - resolve packages only before this timestamp
     // like, e.g., on build start
 
-    ResolveRequest() {}
-    ResolveRequest(const UnresolvedPackage &u) : u(u) {}
-    ResolveRequest(const UnresolvedPackage &u, const PackageSettings &s) : u(u), settings(s) {}
+    //ResolveRequest() {}
+    //ResolveRequest(const UnresolvedPackage &u) : u(u) {}
+    ResolveRequest(const UnresolvedPackage &u, const PackageSettings &s = {}) : u(u), settings(s) {}
 
-    bool operator<(const ResolveRequest &rhs) const { return std::tie(u, settings) < std::tie(rhs.u, rhs.settings); }
+    //bool operator<(const ResolveRequest &rhs) const { return std::tie(u, settings) < std::tie(rhs.u, rhs.settings); }
     bool operator==(const ResolveRequest &rhs) const { return std::tie(u, settings) == std::tie(rhs.u, rhs.settings); }
 };
 

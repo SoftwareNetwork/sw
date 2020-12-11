@@ -83,7 +83,8 @@ bool ProtobufApi::resolve(ResolveRequest &rr,
 
         PackageId p(pkg.package().path(), pkg.package().version());
 
-        PackageData d;
+        SW_UNIMPLEMENTED;
+        /*PackageData d;
         d.flags = pkg.flags();
         d.hash = pkg.hash();
         d.prefix = pkg.prefix();
@@ -96,7 +97,7 @@ bool ProtobufApi::resolve(ResolveRequest &rr,
         {
             rr.setPackage(std::make_unique<Package>(s, p));
             return true;
-        }
+        }*/
     }
     return false;
 }
@@ -172,7 +173,7 @@ void ProtobufApi::addVersion(const PackagePath &prefix, const String &script)
     GRPC_CALL_THROWS(user_, AddPackage, google::protobuf::Empty);*/
 }
 
-void ProtobufApi::addVersion(PackagePath p, const Version &vnew, const std::optional<Version> &vold)
+void ProtobufApi::addVersion(PackagePath p, const PackageVersion &vnew, const std::optional<PackageVersion> &vold)
 {
     SW_UNIMPLEMENTED;
     /*check_relative(r, p);
@@ -188,7 +189,7 @@ void ProtobufApi::addVersion(PackagePath p, const Version &vnew, const std::opti
     GRPC_CALL_THROWS(user_, AddPackage, google::protobuf::Empty);*/
 }
 
-void ProtobufApi::updateVersion(PackagePath p, const Version &v)
+void ProtobufApi::updateVersion(PackagePath p, const PackageVersion &v)
 {
     if (!v.isBranch())
         throw SW_RUNTIME_ERROR("Only branches can be updated");
@@ -204,7 +205,7 @@ void ProtobufApi::updateVersion(PackagePath p, const Version &v)
     GRPC_CALL_THROWS(user_, UpdatePackage, google::protobuf::Empty);
 }
 
-void ProtobufApi::removeVersion(PackagePath p, const Version &v)
+void ProtobufApi::removeVersion(PackagePath p, const PackageVersion &v)
 {
     check_relative(r, p);
 

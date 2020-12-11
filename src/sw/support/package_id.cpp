@@ -9,7 +9,7 @@
 namespace sw
 {
 
-static std::pair<String, String> split_package_string(const String &s)
+std::pair<String, String> split_package_string(const String &s)
 {
     /*
     different variants:
@@ -41,53 +41,6 @@ static std::pair<String, String> split_package_string(const String &s)
     return { s.substr(0, pos), s.substr(pos + 1) };
 }
 
-UnresolvedPackage::UnresolvedPackage(const String &s)
-{
-    *this = extractFromString(s);
-}
-
-UnresolvedPackage::UnresolvedPackage(const PackagePath &p, const VersionRange &r)
-{
-    ppath = p;
-    range = r;
-}
-
-UnresolvedPackage::UnresolvedPackage(const PackageId &pkg)
-    : UnresolvedPackage(pkg.getPath(), pkg.getVersion())
-{
-}
-
-UnresolvedPackage &UnresolvedPackage::operator=(const String &s)
-{
-    return *this = extractFromString(s);
-}
-
-std::optional<PackageId> UnresolvedPackage::toPackageId() const
-{
-    auto v = range.toVersion();
-    if (!v)
-        return {};
-    return PackageId{ ppath, *v };
-}
-
-String UnresolvedPackage::toString(const String &delim) const
-{
-    auto s = ppath.toString() + delim + range.toString();
-    //if (s == delim + "*")
-        //s.resize(s.size() - (delim.size() + 1));
-    return s;
-}
-
-bool UnresolvedPackage::contains(const PackageId &id) const
-{
-    return ppath == id.getPath() && range.contains(id.getVersion());
-}
-
-bool contains(const UnresolvedPackages &upkgs, const PackageId &p)
-{
-    return std::any_of(upkgs.begin(), upkgs.end(), [&p](auto &u) { return u.contains(p); });
-}
-
 PackageId::PackageId(const String &target)
 {
     auto [p, v] = split_package_string(target);
@@ -97,7 +50,7 @@ PackageId::PackageId(const String &target)
     version = v;
 }
 
-PackageId::PackageId(const PackagePath &p, const Version &v)
+PackageId::PackageId(const PackagePath &p, const PackageVersion &v)
     : ppath(p), version(v)
 {
 }
@@ -110,19 +63,9 @@ String PackageId::getVariableName() const
     return vname;
 }
 
-String PackageId::toString() const
-{
-    return toString("-");
-}
-
 String PackageId::toString(const String &delim) const
 {
     return ppath.toString() + delim + version.toString();
-}
-
-String PackageId::toString(Version::Level level, const String &delim) const
-{
-    return ppath.toString() + delim + version.toString(level);
 }
 
 PackageId extractPackageIdFromString(const String &target)
@@ -131,16 +74,6 @@ PackageId extractPackageIdFromString(const String &target)
     if (v.empty())
         throw SW_RUNTIME_ERROR("Bad target: " + target);
     return {pp, v};
-}
-
-UnresolvedPackage extractFromString(const String &target)
-{
-    UnresolvedPackage u;
-    auto [p, v] = split_package_string(target);
-    u.ppath = p;
-    if (!v.empty())
-        u.range = v;
-    return u;
 }
 
 }

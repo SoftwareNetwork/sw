@@ -37,7 +37,7 @@ struct SW_CORE_API AllowedPackages
     bool empty() const;
 
 private:
-    std::unordered_map<PackagePath, VersionRange> pkgs;
+    std::unordered_map<PackagePath, PackageVersionRange> pkgs;
     UnresolvedPackages branches;
 };
 
@@ -84,7 +84,10 @@ struct SW_CORE_API ITarget : ICastable
     // basic info/description section
     //
 
+    // deprecate later
     virtual const PackageId &getPackage() const = 0;
+    // modern call
+    virtual const PackageId &getPackageId() const { return getPackage(); }
 
     // merge getSource(), getFiles() and getDependencies() into single call returning json/target settings?
     // into getDescription() or getInformation() or something similar
@@ -278,7 +281,7 @@ struct SimpleExpected : std::variant<SimpleExpectedErrorCode, T, Args...>
 } // namespace detail
 
 template <class ... Args>
-struct ExtendedVersionMap : ::primitives::version::VersionMap<Args...>
+struct ExtendedVersionMap : VersionMap<Args...>
 {
 };
 
@@ -289,7 +292,7 @@ struct TargetMap : PackageVersionMapBase<TargetContainer, std::unordered_map, Ex
     using Base::find;
 
     SW_CORE_API
-    detail::SimpleExpected<std::pair<Version, ITarget *>> find(const PackagePath &pp, const PackageSettings &ts) const;
+    detail::SimpleExpected<std::pair<PackageVersion, ITarget *>> find(const PackagePath &pp, const PackageSettings &ts) const;
     SW_CORE_API
     ITarget *find(const PackageId &pkg, const PackageSettings &ts) const;
     SW_CORE_API

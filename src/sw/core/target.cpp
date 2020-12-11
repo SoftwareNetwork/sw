@@ -17,7 +17,8 @@ TargetData::~TargetData() = default;
 
 AllowedPackages::AllowedPackages(const UnresolvedPackages &in)
 {
-    for (auto &u : in)
+    SW_UNIMPLEMENTED;
+    /*for (auto &u : in)
     {
         if (u.getRange().isBranch())
             branches.insert(u);
@@ -28,7 +29,7 @@ AllowedPackages::AllowedPackages(const UnresolvedPackages &in)
             else
                 pkgs.emplace(u.getPath(), u.getRange());
         }
-    }
+    }*/
 }
 
 AllowedPackages::AllowedPackages(const PackageIdSet &in)

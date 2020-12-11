@@ -392,15 +392,18 @@ struct RemoteFileWithHashVerification : vfs::FileWithHashVerification
 
         if (auto remote_storage = dynamic_cast<const RemoteStorageWithFallbackToRemoteResolving *>(&p.getStorage()))
         {
-            ResolveRequest rr;
-            rr.u = p;
+            // can't init unresolved from package id
+            SW_UNIMPLEMENTED;
+            /*ResolveRequest rr{p, p.getData().settings};
             if (remote_storage->resolveFromRemote(rr))
             {
-                if (copy(fn, rr.getPackage().getData().getHash(/*StorageFileType::SourceArchive*/)))
+                if (copy(fn, rr.getPackage().getData().getHash(
+                //StorageFileType::SourceArchive
+                )))
                 {
                     return true;
                 }
-            }
+            }*/
         }
 
         return false;

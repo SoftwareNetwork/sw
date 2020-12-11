@@ -186,7 +186,8 @@ static void saveLockFile(const path &fn, const std::unordered_map<UnresolvedPack
 
     auto &jp = j["resolved_packages"];
     // sort
-    for (auto &[u, r] : std::map<UnresolvedPackage, LocalPackage>(pkgs.begin(), pkgs.end()))
+    auto sort = [](auto &&v1, auto &&v2) { return v1.getPath() < v2.getPath(); };
+    for (auto &[u, r] : std::map<UnresolvedPackage, LocalPackage, decltype(sort)>(pkgs.begin(), pkgs.end(), sort))
     {
         jp[u.toString()]["package"] = r.toString();
         //if (r.installed)

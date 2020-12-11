@@ -211,9 +211,11 @@ void PackagesDatabase::open(bool read_only, bool in_memory)
     pps = std::make_unique<PreparedStatements>(*db);
 }
 
-std::optional<PackageId> PackagesDatabase::resolve(const UnresolvedPackage &pkg) const
+std::optional<PackageId> PackagesDatabase::resolve(ResolveRequest &rr) const
 {
-    auto pid = getPackageId(pkg.ppath);
+    auto &upkg = rr.u;
+
+    auto pid = getPackageId(upkg.getPath());
     if (!pid)
         return {};
 
@@ -229,34 +231,17 @@ std::optional<PackageId> PackagesDatabase::resolve(const UnresolvedPackage &pkg)
         version_ids[row.version.value()] = row.packageVersionId.value();
     }
 
-    auto v = pkg.range.getMaxSatisfyingVersion(versions);
+    auto v = getMaxSatisfyingVersion(upkg.getRange(), versions);
     if (!v)
         return {};
 
-    return PackageId{ pkg.ppath, *v };
-}
-
-std::optional<PackageId> PackagesDatabase::resolve(ResolveRequest &rr) const
-{
-    return resolve(rr.u);
-}
-
-std::unordered_map<UnresolvedPackage, PackageId> PackagesDatabase::resolve(const UnresolvedPackages &in_pkgs, UnresolvedPackages &unresolved_pkgs) const
-{
-    std::unordered_map<UnresolvedPackage, PackageId> r;
-    for (auto &pkg : in_pkgs)
-    {
-        if (auto r2 = resolve(pkg))
-            r.emplace(pkg, *r2);
-        else
-            unresolved_pkgs.insert(pkg);
-    }
-    return r;
+    return PackageId{ upkg.getPath(), *v };
 }
 
 PackageData PackagesDatabase::getPackageData(const PackageId &p) const
 {
-    PackageData d;
+    SW_UNIMPLEMENTED;
+    /*PackageData d;
 
     auto &pp = pps->packageVersionData;
     pp.params.packageId = getPackageId(p.getPath());
@@ -290,7 +275,7 @@ PackageData PackagesDatabase::getPackageData(const PackageId &p) const
         d.dependencies.emplace(row.path.value(), row.versionRange.value());
     }
 
-    return d;
+    return d;*/
 }
 
 db::PackageVersionId PackagesDatabase::getInstalledPackageId(const PackageId &p) const
@@ -403,18 +388,18 @@ void PackagesDatabase::installPackage(const PackageId &p, const PackageData &d)
     {
         // get package id
         auto q = (*db)(select(pkgs.packageId).from(pkgs).where(
-            pkgs.path == d.ppath.toString()
+            pkgs.path == d.getPath().toString()
             ));
         if (q.empty())
         {
             // add package
             (*db)(insert_into(pkgs).set(
-                pkgs.path = d.ppath.toString()
+                pkgs.path = d.getPath().toString()
             ));
 
             // get package id
             q = (*db)(select(pkgs.packageId).from(pkgs).where(
-                pkgs.path == d.ppath.toString()
+                pkgs.path == d.getPath().toString()
                 ));
         }
 
@@ -422,7 +407,7 @@ void PackagesDatabase::installPackage(const PackageId &p, const PackageData &d)
         (*db)(insert_into(pkg_deps).set(
             pkg_deps.packageVersionId = vid,
             pkg_deps.packageId = q.front().packageId.value(),
-            pkg_deps.versionRange = d.range.toString()
+            pkg_deps.versionRange = d.getRange().toString()
         ));
     }
 }
@@ -497,9 +482,9 @@ std::vector<PackagePath> PackagesDatabase::getMatchingPackages(const String &nam
     return pkgs2;
 }
 
-std::vector<Version> PackagesDatabase::getVersionsForPackage(const PackagePath &ppath) const
+std::vector<PackageVersion> PackagesDatabase::getVersionsForPackage(const PackagePath &ppath) const
 {
-    std::vector<Version> versions;
+    std::vector<PackageVersion> versions;
     for (const auto &row : (*db)(select(pkg_ver.version).from(pkg_ver).where(pkg_ver.packageId == getPackageId(ppath))))
         versions.push_back(row.version.value());
     return versions;

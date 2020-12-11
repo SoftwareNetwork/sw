@@ -291,3 +291,16 @@ SW_SUPPORT_API
 void saveSettings(const path &archive_fn, const PackageSettings &, int type = 0);
 
 } // namespace sw
+
+namespace std
+{
+
+template<> struct hash<::sw::PackageSettings>
+{
+    size_t operator()(const ::sw::PackageSettings &p) const
+    {
+        return p.getHash();
+    }
+};
+
+}

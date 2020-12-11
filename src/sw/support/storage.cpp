@@ -68,7 +68,7 @@ bool Resolver::resolve(ResolveRequest &rr) const
 
         if (0
             // when we found a branch, we stop, because following storages cannot give us more preferable branch
-            || rr.u.getRange().isBranch()
+            || rr.getPackage().getVersion().isBranch()
             )
         {
             break;

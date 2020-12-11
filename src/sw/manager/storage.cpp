@@ -298,7 +298,7 @@ LocalPackage LocalStorage::installLocalPackage(const PackageId &id, const Packag
 {
     if (!isPackageLocal(id))
         throw SW_RUNTIME_ERROR("Not a local package: " + id.toString());
-    local_packages[id] = d;
+    local_packages.emplace(id, d);
     LocalPackage p(*this, id);
     return p;
 }
@@ -402,9 +402,7 @@ const OverriddenPackagesStorage &LocalStorage::getOverriddenPackagesStorage() co
 
 bool LocalStorage::resolve(ResolveRequest &rr) const
 {
-    ResolveRequest rr2;
-    rr2.u = rr.u;
-    rr2.settings = rr.settings;
+    ResolveRequest rr2{ rr.u, rr.settings };
     auto r = ovs.resolve(rr2);
     if (r)
         rr.setPackage(std::make_unique<LocalPackage>(*this, rr2.getPackage()));

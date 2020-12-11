@@ -178,7 +178,7 @@ struct PackageVersionMapBase : PackagePathMap<PackagePath, VersionMap<T>>
         VersionSet versions;
         for (const auto &[v, t] : ip->second)
             versions.insert(v);
-        auto v = u.range.getMaxSatisfyingVersion(versions);
+        auto v = getMaxSatisfyingVersion(u.getRange(), versions);
         if (!v)
             return end();
         return { *this, ip, ip->second.find(v.value()) };
@@ -192,7 +192,7 @@ struct PackageVersionMapBase : PackagePathMap<PackagePath, VersionMap<T>>
         VersionSet versions;
         for (const auto &[v, t] : ip->second)
             versions.insert(v);
-        auto v = u.range.getMaxSatisfyingVersion(versions);
+        auto v = getMaxSatisfyingVersion(u.getRange(), versions);
         if (!v)
             return end();
         return { *this, ip, ip->second.find(v.value()) };

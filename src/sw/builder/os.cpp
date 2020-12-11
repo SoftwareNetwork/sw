@@ -35,7 +35,7 @@ namespace sw
 {
 
 #ifdef _WIN32
-static Version GetWindowsVersion(void)
+static primitives::version::Version GetWindowsVersion(void)
 {
     typedef void (WINAPI * RtlGetVersion_FUNC) (OSVERSIONINFOEXW *);
 

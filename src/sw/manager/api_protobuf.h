@@ -27,9 +27,9 @@ struct ProtobufApi : Api
     void addVersion(const PackagePath &prefix, const PackageDescriptionMap &pkgs, const SpecificationFiles &) const override;
 
     void addVersion(const PackagePath &prefix, const String &script);
-    void addVersion(PackagePath p, const Version &vnew, const std::optional<Version> &vold = {});
-    void updateVersion(PackagePath p, const Version &v);
-    void removeVersion(PackagePath p, const Version &v);
+    void addVersion(PackagePath p, const PackageVersion &vnew, const std::optional<PackageVersion> &vold = {});
+    void updateVersion(PackagePath p, const PackageVersion &v);
+    void removeVersion(PackagePath p, const PackageVersion &v);
 
     void getNotifications(int n = 10);
     void clearNotifications();

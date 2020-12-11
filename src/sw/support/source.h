@@ -8,6 +8,8 @@
 namespace sw
 {
 
+struct PackageVersion;
+
 inline namespace source
 {
 
@@ -24,7 +26,24 @@ using primitives::source::Svn;
 using primitives::source::RemoteFile;
 using primitives::source::RemoteFiles;
 
-struct SW_SUPPORT_API Git : primitives::source::Git
+/*#define MY_SOURCE(x)                                        \
+    struct SW_SUPPORT_API x : primitives::source::x, Source \
+    {                                                       \
+        void applyVersion(const PackageVersion &) override; \
+    }
+
+MY_SOURCE(EmptySource);
+MY_SOURCE(Hg);
+MY_SOURCE(Mercurial);
+MY_SOURCE(Bzr);
+MY_SOURCE(Bazaar);
+MY_SOURCE(Fossil);
+MY_SOURCE(Cvs);
+MY_SOURCE(Svn);
+MY_SOURCE(RemoteFile);
+MY_SOURCE(RemoteFiles);*/
+
+struct SW_SUPPORT_API Git : primitives::source::Git//, Source
 {
     using primitives::source::Git::Git;
 
@@ -34,7 +53,7 @@ struct SW_SUPPORT_API Git : primitives::source::Git
     bool isValid();
 
 private:
-    std::unique_ptr<Source> clone() const override { return std::make_unique<Git>(*this); }
+    std::unique_ptr<::sw::Source> clone() const override { return std::make_unique<Git>(*this); }
 };
 
 /// load from current (passed) object, detects 'getString()' subobject

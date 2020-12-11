@@ -74,19 +74,19 @@ void PackageData::applyPrefix(const PackagePath &prefix)
 
     // also fix deps
     decltype(dependencies) deps2;
-    for (auto &[p, r] : dependencies)
+    for (auto &d : dependencies)
     {
-        if (p.isAbsolute())
-            deps2.insert(UnresolvedPackage{ p, r });
+        if (d.getPath().isAbsolute())
+            deps2.insert(UnresolvedPackage{ d.getPath(), d.getRange() });
         else
-            deps2.insert(UnresolvedPackage{ prefix / p, r });
+            deps2.insert(UnresolvedPackage{ prefix / d.getPath(), d.getRange() });
     }
     dependencies = deps2;
 }
 
 void PackageData::applyVersion()
 {
-    source->applyVersion(id.getVersion());
+    source->apply([this](auto &&s) { return id.getVersion().format(s); });
 }
 
 void PackageData::addFile(const path &root, const path &from, const path &to)

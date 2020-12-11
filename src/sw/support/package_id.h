@@ -13,30 +13,29 @@ struct SW_SUPPORT_API PackageId
 {
     // try to extract from string
     PackageId(const String &);
-    PackageId(const PackagePath &, const Version &);
+    PackageId(const PackagePath &, const PackageVersion &);
 
     const PackagePath &getPath() const { return ppath; }
-    const Version &getVersion() const { return version; }
+    const PackageVersion &getVersion() const { return version; }
 
     bool operator<(const PackageId &rhs) const { return std::tie(ppath, version) < std::tie(rhs.ppath, rhs.version); }
     bool operator==(const PackageId &rhs) const { return std::tie(ppath, version) == std::tie(rhs.ppath, rhs.version); }
-    bool operator!=(const PackageId &rhs) const { return !operator==(rhs); }
 
     String getVariableName() const;
 
-    String toString() const;
-    String toString(const String &delim) const;
-    String toString(Version::Level, const String &delim = "-") const;
+    String toString(const String &delim = "-") const;
 
 private:
     PackagePath ppath;
-    Version version;
+    PackageVersion version;
 };
 
 using PackageIdSet = std::unordered_set<PackageId>;
 
 SW_SUPPORT_API
 PackageId extractPackageIdFromString(const String &target);
+
+std::pair<String, String> split_package_string(const String &s);
 
 }
 
@@ -48,7 +47,7 @@ template<> struct hash<::sw::PackageId>
     size_t operator()(const ::sw::PackageId &p) const
     {
         auto h = std::hash<::sw::PackagePath>()(p.getPath());
-        return hash_combine(h, std::hash<::sw::Version>()(p.getVersion()));
+        return hash_combine(h, std::hash<::sw::PackageVersion>()(p.getVersion()));
     }
 };
 
