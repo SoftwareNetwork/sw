@@ -412,13 +412,13 @@ static String getOutput(builder::detail::ResolvableCommand &c)
     return c.err.text.empty() ? c.out.text : c.err.text;
 }
 
-static std::pair<String, Version> gatherVersion1(builder::detail::ResolvableCommand &c, const String &in_regex)
+static std::pair<String, PackageVersion> gatherVersion1(builder::detail::ResolvableCommand &c, const String &in_regex)
 {
     static std::regex r_default("(\\d+)(\\.(\\d+)){2,}(-[[:alnum:]]+([.-][[:alnum:]]+)*)?");
 
     auto o = getOutput(c);
 
-    Version v;
+    PackageVersion v;
     auto get_default_version = [&o, &v](const String &in_string)
     {
         std::smatch m;
@@ -447,7 +447,7 @@ static std::pair<String, Version> gatherVersion1(builder::detail::ResolvableComm
                 {
                     return std::stoi(m[i].str());
                 };
-                v = Version(make_int(1), make_int(2), make_int(3));
+                v = PackageVersion(PackageVersion::Version(make_int(1), make_int(2), make_int(3)));
             }
             else
             {
@@ -478,7 +478,7 @@ static auto gatherVersion(const path &program, const String &arg, const String &
     return gatherVersion1(c, in_regex);
 }
 
-Version getVersion(const SwManagerContext &swctx, builder::detail::ResolvableCommand &c, const String &in_regex)
+PackageVersion getVersion(const SwManagerContext &swctx, builder::detail::ResolvableCommand &c, const String &in_regex)
 {
     auto &vs = getVersionStorage(swctx);
     static boost::upgrade_mutex m;
@@ -497,7 +497,7 @@ Version getVersion(const SwManagerContext &swctx, builder::detail::ResolvableCom
     return vs.versions[program];
 }
 
-std::pair<String, Version> getVersionAndOutput(const SwManagerContext &swctx, const path &program, const String &arg, const String &in_regex)
+std::pair<String, PackageVersion> getVersionAndOutput(const SwManagerContext &swctx, const path &program, const String &arg, const String &in_regex)
 {
     auto &vs = getVersionStorage(swctx);
     static boost::upgrade_mutex m;
@@ -514,7 +514,7 @@ std::pair<String, Version> getVersionAndOutput(const SwManagerContext &swctx, co
     return { o, v };
 }
 
-Version getVersion(const SwManagerContext &swctx, const path &program, const String &arg, const String &in_regex)
+PackageVersion getVersion(const SwManagerContext &swctx, const path &program, const String &arg, const String &in_regex)
 {
     return getVersionAndOutput(swctx, program, arg, in_regex).second;
 }

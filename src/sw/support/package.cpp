@@ -30,6 +30,11 @@ static path getHashPathFromHash(const String &h, int nsubdirs, int chars_per_sub
     return p;
 }
 
+PackageData::PackageData()
+    : PackageData("org.sw.sw.client.driver.cpp-0.5.0"s)
+{
+}
+
 PackageData::PackageData(const PackageId &driver_id)
     : driver(driver_id)
 {

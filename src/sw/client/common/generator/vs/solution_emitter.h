@@ -14,7 +14,7 @@ struct Solution;
 // https://docs.microsoft.com/en-us/visualstudio/extensibility/internals/solution-dot-sln-file?view=vs-2019
 struct SolutionEmitter : primitives::Emitter
 {
-    sw::Version version;
+    sw::PackageVersion version;
 
     SolutionEmitter();
 

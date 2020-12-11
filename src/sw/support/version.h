@@ -23,6 +23,7 @@ struct SW_SUPPORT_API PackageVersion
 {
     using Branch = String;
     using Version = primitives::version::Version;
+    using Number = Version::Number;
 
     PackageVersion();
     PackageVersion(const char *);
@@ -41,10 +42,16 @@ struct SW_SUPPORT_API PackageVersion
     bool isRelease() const;
     bool isPreRelease() const;
 
+    // if branch, returns 0.0.1.0
+    Number getMajor() const;
+    Number getMinor() const;
+    Number getPatch() const;
+    Number getTweak() const;
+
     [[nodiscard]]
     std::string format(const std::string &s) const;
     [[nodiscard]]
-    std::string toString() const;
+    std::string toString(const String &delim = ".") const;
 
     // operators
     bool operator<(const PackageVersion &) const;
@@ -60,7 +67,7 @@ private:
 
     void checkAndSetFirstVersion();
     void check() const;
-    Version &getVersion();
+    Version &getVersionInternal();
 };
 
 struct SW_SUPPORT_API PackageVersionRange

@@ -79,7 +79,7 @@ struct SW_DRIVER_CPP_API Build : TargetBase
     //~Build();
 
     bool isKnownTarget(const PackageId &p) const;
-    std::optional<path> getSourceDir(const Source &s, const Version &v) const;
+    std::optional<path> getSourceDir(const Source &s, const PackageVersion &v) const;
 
     const PackageSettings &getExternalVariables() const;
 

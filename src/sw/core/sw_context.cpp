@@ -257,9 +257,11 @@ Input *SwContext::getInput(size_t hash) const
 
 Input *SwContext::addInput(const Package &p)
 {
-    //p.getData().driver;
-    auto i = drivers.begin()->second->getInput(p);
-    auto [i2,_] = registerInput(std::move(i));
+    auto i = drivers.find(p.getData().driver);
+    if (i == drivers.end())
+        throw SW_RUNTIME_ERROR("Driver is not registered: " + p.getData().driver.toString());
+    auto input = i->second->getInput(p);
+    auto [i2,_] = registerInput(std::move(input));
     return i2;
 }
 

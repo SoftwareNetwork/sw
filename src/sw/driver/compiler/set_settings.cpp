@@ -61,18 +61,14 @@ static void basicResolve(PackageSettings &ts)
     ts2.erase("rule");
     for (auto &&[_, m] : ts["rule"].getMap())
     {
-        ResolveRequest rr;
-        rr.u = m["package"].getValue();
-        rr.settings = ts2;
+        ResolveRequest rr{ m["package"].getValue(), ts2 };
         if (ts["resolver"].resolve(rr))
             m["package"] = rr.getPackage().toString();
         // otherwise we silently ignore until rule is used
     }
     for (auto &&[_, m] : ts["native"]["stdlib"].getMap())
     {
-        ResolveRequest rr;
-        rr.u = m.getValue();
-        rr.settings = ts; // with rules!
+        ResolveRequest rr{ m.getValue(), ts }; // with rules!
         if (ts["resolver"].resolve(rr))
             m = rr.getPackage().toString();
         // otherwise we silently ignore until rule is used
@@ -128,13 +124,11 @@ static void addSettingsCommon(const SwBuild &b, PackageSettings &ts, bool force)
         {
             // take same ver as cl
             {
-                UnresolvedPackage up("com.Microsoft.VisualStudio.VC.libcpp");
-                up.range = cppcl.range;
+                UnresolvedPackage up("com.Microsoft.VisualStudio.VC.libcpp", cppcl.getRange());
                 check_and_assign(ts["native"]["stdlib"]["cpp"], to_upkg("com.Microsoft.VisualStudio.VC.libcpp"), force || cppset);
             }
             {
-                UnresolvedPackage up("com.Microsoft.VisualStudio.VC.runtime");
-                up.range = cppcl.range;
+                UnresolvedPackage up("com.Microsoft.VisualStudio.VC.runtime", cppcl.getRange());
                 check_and_assign(ts["native"]["stdlib"]["compiler"], to_upkg("com.Microsoft.VisualStudio.VC.runtime"), force || cppset);
             }
         }
@@ -173,7 +167,7 @@ void addSettingsAndSetConfigPrograms(const SwBuild &b, PackageSettings &ts)
     }
 
 #ifdef _MSC_VER
-    Version clver(_MSC_VER / 100, _MSC_VER % 100);
+    //PackageVersion clver(_MSC_VER / 100, _MSC_VER % 100);
 #endif
 }
 

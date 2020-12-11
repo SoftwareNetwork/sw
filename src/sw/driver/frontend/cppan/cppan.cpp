@@ -147,7 +147,8 @@ static void cppan_load_project(NativeCompiledTarget &t, const yaml &root)
             //auto nppath = dependency.getPath() / v;
             //dependency.getPath() = nppath;
 
-            dependency.range = v;
+            SW_UNIMPLEMENTED;
+            //dependency.range = v;
         };
 
         auto relative_name_to_absolute = [](const String &in)
@@ -159,10 +160,11 @@ static void cppan_load_project(NativeCompiledTarget &t, const yaml &root)
             //return in;
         };
 
-        auto read_single_dep = [&t, &read_version, &relative_name_to_absolute](const auto &d, UnresolvedPackage dependency = {})
+        auto read_single_dep = [&t, &read_version, &relative_name_to_absolute](const auto &d, UnresolvedPackage dependency = UnresolvedPackage{"TODO: UNIMPLEMENTED 123s"})
         {
             bool local_ok = false;
-            if (d.IsScalar())
+            SW_UNIMPLEMENTED;
+            /*if (d.IsScalar())
             {
                 auto p = extractFromString(d.template as<String>());
                 dependency.ppath = relative_name_to_absolute(p.getPath().toString());
@@ -182,7 +184,9 @@ static void cppan_load_project(NativeCompiledTarget &t, const yaml &root)
                         //dependency.flags.set(pfLocalProject);
                     read_version(dependency, d.begin()->second.template as<String>());
                 }
-                if (d["local"].IsDefined()/* && allow_local_dependencies*/)
+                if (d["local"].IsDefined()
+                // && allow_local_dependencies
+                )
                 {
                     auto p = d["local"].template as<String>();
                     UnresolvedPackage pkg;
@@ -204,7 +208,7 @@ static void cppan_load_project(NativeCompiledTarget &t, const yaml &root)
                 if (d.IsMap() && d["version"].IsDefined())
                     v = d["version"].template as<String>();
                 read_version(dependency, v);
-            }
+            }*/
 
             if (d.IsMap())
             {
@@ -212,8 +216,9 @@ static void cppan_load_project(NativeCompiledTarget &t, const yaml &root)
                 if (d["version"].IsDefined())
                 {
                     read_version(dependency, d["version"].template as<String>());
-                    if (local_ok)
-                        dependency.range = "*";
+                    SW_UNIMPLEMENTED;
+                    //if (local_ok)
+                        //dependency.range = "*";
                 }
                 //if (d["ref"].IsDefined())
                     //dependency.reference = d["ref"].template as<String>();
@@ -256,11 +261,13 @@ static void cppan_load_project(NativeCompiledTarget &t, const yaml &root)
             },
                 [&t, &read_single_dep, &read_version, &relative_name_to_absolute](const auto &dall)
             {
-                auto get_dep = [&t, &read_version, &read_single_dep, &relative_name_to_absolute](const auto &d)
+                auto get_dep = [&t, &read_version, &read_single_dep, &relative_name_to_absolute](const auto &d) -> UnresolvedPackage
                 {
+                    SW_UNIMPLEMENTED;
+                    /*
                     UnresolvedPackage dependency;
 
-                    dependency.ppath = relative_name_to_absolute(d.first.template as<String>());
+                    //dependency.ppath = relative_name_to_absolute(d.first.template as<String>());
                     //if (dependency.ppath.is_loc())
                         //dependency.flags.set(pfLocalProject);
 
@@ -275,6 +282,7 @@ static void cppan_load_project(NativeCompiledTarget &t, const yaml &root)
                         //dependency.createNames();
 
                     return dependency;
+                    */
                 };
 
                 auto extract_deps = [&get_dep, &read_single_dep](const auto &dall, const auto &str)
@@ -563,14 +571,14 @@ static std::vector<NativeCompiledTarget *> cppan_load1(Build &b, const yaml &roo
     PackagePath root_project;
     YAML_EXTRACT(root_project, String);
 
-    Version version;
+    PackageVersion version;
     YAML_EXTRACT(version, String);
 
     auto prjs = root["projects"];
     if (prjs.IsDefined() && !prjs.IsMap())
         throw std::runtime_error("'projects' should be a map");
 
-    auto add_project = [&b, &root_project](auto &root, String name, Version version, bool name_unnamed = false) -> NativeCompiledTarget&
+    auto add_project = [&b, &root_project](auto &root, String name, PackageVersion version, bool name_unnamed = false) -> NativeCompiledTarget&
     {
         /*Project project(root_project);
         project.defaults_allowed = defaults_allowed;

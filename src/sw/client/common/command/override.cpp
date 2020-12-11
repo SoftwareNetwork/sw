@@ -29,10 +29,10 @@ static void override_package_perform(SwClientContext &swctx, sw::PackagePath pre
             sw::UnresolvedPackages deps;
             for (auto &d : desc->dependencies)
             {
-                if (d.ppath.isAbsolute())
+                if (d.getPath().isAbsolute())
                     deps.insert(d);
                 else
-                    deps.insert({ prefix / d.ppath, d.range });
+                    deps.insert({ prefix / d.getPath(), d.getRange() });
             }
             sw::LocalPackage lp(swctx.getContext().getLocalStorage(), pkg2);
             sw::PackageData d;

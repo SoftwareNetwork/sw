@@ -351,17 +351,12 @@ static void targetSettings2Command(primitives::Command &c, const PackageSetting 
     }
 }
 
-static auto get_settings_package_id(const PackageSetting &s)
+static UnresolvedPackage get_settings_package_id(const PackageSetting &s)
 {
     if (!s)
         throw SW_RUNTIME_ERROR("Empty setting");
     bool extended_desc = s.isObject();
-    UnresolvedPackage id;
-    if (extended_desc)
-        id = s["package"].getValue();
-    else
-        id = s.getValue();
-    return id;
+    return extended_desc ? s["package"].getValue() : s.getValue();
 }
 
 static auto get_compiler_type(const String &p)
@@ -701,7 +696,7 @@ void NativeCompiledTarget::addPackageDefinitions(bool defs)
         //"@PACKAGE_CHANGE_DATE@"
             //"@PACKAGE_RELEASE_DATE@"
 
-        a["PACKAGE_VERSION_MAJOR"] = std::to_string(getPackage().getVersion().getMajor());
+        a["PACKAGE_VERSION_MAJOR"] = std::to_string(getPackage().getVersion().getVersion().getMajor());
         a["PACKAGE_VERSION_MINOR"] = std::to_string(getPackage().getVersion().getMinor());
         a["PACKAGE_VERSION_PATCH"] = std::to_string(getPackage().getVersion().getPatch());
         a["PACKAGE_VERSION_TWEAK"] = std::to_string(getPackage().getVersion().getTweak());
@@ -1874,7 +1869,7 @@ void NativeCompiledTarget::prepare_pass2()
             auto pkg = d.dep->getResolvedPackage();
             if (pkg.getPath() == "com.Microsoft.VisualStudio.VC.libcpp")
             {
-                if (pkg.getVersion() > Version(19) && CPPVersion < CPPLanguageStandard::CPP14)
+                if (pkg.getVersion() > PackageVersion(19) && CPPVersion < CPPLanguageStandard::CPP14)
                     CPPVersion = CPPLanguageStandard::CPP14;
                 break;
             }
@@ -2802,15 +2797,16 @@ path NativeCompiledTarget::generate_rc()
     {
         using Base = primitives::Emitter;
 
-        RcEmitter(Version file_ver, Version product_ver)
+        RcEmitter(PackageVersion file_ver, PackageVersion product_ver)
         {
             if (file_ver.isBranch())
-                file_ver = Version();
+                file_ver = PackageVersion{};
             if (product_ver.isBranch())
-                product_ver = Version();
+                product_ver = PackageVersion{};
 
-            file_ver = Version(file_ver.getMajor(), file_ver.getMinor(), file_ver.getPatch(), file_ver.getTweak());
-            product_ver = Version(product_ver.getMajor(), product_ver.getMinor(), product_ver.getPatch(), product_ver.getTweak());
+            // strip more than 4 numbers
+            file_ver = file_ver.getVersion().toString(4);
+            product_ver = product_ver.getVersion().toString(4);
 
             addLine("1 VERSIONINFO");
             addLine("  FILEVERSION " + file_ver.toString(","s));

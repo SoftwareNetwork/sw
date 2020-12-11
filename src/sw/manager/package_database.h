@@ -15,7 +15,7 @@
 namespace sw
 {
 
-struct LocalStorage;
+struct IStorage;
 struct PackageId;
 struct ResolveRequest;
 
@@ -26,7 +26,7 @@ struct SW_MANAGER_API PackagesDatabase : Database
 
     void open(bool read_only = false, bool in_memory = false);
 
-    std::optional<PackageId> resolve(ResolveRequest &rr) const;
+    bool resolve(ResolveRequest &, const IStorage &) const;
 
     PackageData getPackageData(const PackageId &) const;
 

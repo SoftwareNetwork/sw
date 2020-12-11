@@ -302,7 +302,7 @@ void Target::fetch()
         d = BinaryDir / d;
         if (!fs::exists(d))
         {
-            s2->applyVersion(getPackage().getVersion());
+            s2->apply([this](auto &&s) { return getPackage().getVersion().format(s); });
             s2->download(d);
         }
         fetched_dirs[s2->getHash()].root_dir = d;
@@ -806,9 +806,7 @@ void Target::resolveDependency(const DependencyPtr &d)
 
 void Target::resolveDependency(IDependency &d)
 {
-    ResolveRequest rr;
-    rr.u = d.getUnresolvedPackage();
-    rr.settings = d.getSettings();
+    ResolveRequest rr{ d.getUnresolvedPackage(), d.getSettings() };
     CachingResolver *cr = nullptr;
     auto &t = getMainBuild().resolveAndLoad(rr, *cr);
     //auto &t = getMainBuild().resolveAndLoad(rr, getResolver());

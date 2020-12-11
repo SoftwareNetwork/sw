@@ -211,37 +211,27 @@ void PackagesDatabase::open(bool read_only, bool in_memory)
     pps = std::make_unique<PreparedStatements>(*db);
 }
 
-std::optional<PackageId> PackagesDatabase::resolve(ResolveRequest &rr) const
+bool PackagesDatabase::resolve(ResolveRequest &rr, const IStorage &s) const
 {
     auto &upkg = rr.u;
 
     auto pid = getPackageId(upkg.getPath());
     if (!pid)
-        return {};
-
-    VersionSet versions;
-    UnorderedVersionMap<db::PackageVersionId> version_ids;
+        return false;
 
     for (const auto &row : (*db)(
         select(pkg_ver.packageVersionId, pkg_ver.version)
         .from(pkg_ver)
         .where(pkg_ver.packageId == pid)))
     {
-        versions.insert(row.version.value());
-        version_ids[row.version.value()] = row.packageVersionId.value();
+        rr.setPackage(std::make_unique<Package>(s, PackageId{ upkg.getPath(), row.version.value() }));
     }
 
-    auto v = getMaxSatisfyingVersion(upkg.getRange(), versions);
-    if (!v)
-        return {};
-
-    return PackageId{ upkg.getPath(), *v };
+    return rr.isResolved();
 }
 
 PackageData PackagesDatabase::getPackageData(const PackageId &p) const
 {
-    SW_UNIMPLEMENTED;
-    /*PackageData d;
 
     auto &pp = pps->packageVersionData;
     pp.params.packageId = getPackageId(p.getPath());
@@ -249,10 +239,10 @@ PackageData PackagesDatabase::getPackageData(const PackageId &p) const
 
     auto q = (*db)(pp);
     if (q.empty())
-    {
         throw SW_RUNTIME_ERROR("No such package in db: " + p.toString());
-    }
+
     auto &row = q.front();
+    PackageData d;
     d.hash = getInstalledPackageHash(row.packageVersionId);
     d.flags = row.flags.value();
     d.prefix = (int)row.prefix.value();
@@ -275,7 +265,7 @@ PackageData PackagesDatabase::getPackageData(const PackageId &p) const
         d.dependencies.emplace(row.path.value(), row.versionRange.value());
     }
 
-    return d;*/
+    return d;
 }
 
 db::PackageVersionId PackagesDatabase::getInstalledPackageId(const PackageId &p) const

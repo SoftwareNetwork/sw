@@ -51,7 +51,7 @@ struct FiltersEmitter : XmlEmitter
 
 struct ProjectEmitter : XmlEmitter
 {
-    void beginProject(const sw::Version &);
+    void beginProject(const sw::PackageVersion &);
     void endProject();
 
     void addProjectConfigurations(const Project &);
@@ -64,7 +64,7 @@ struct ProjectEmitter : XmlEmitter
 };
 
 String get_configuration(const sw::BuildSettings &s);
-std::string getVsToolset(const sw::Version &v);
+std::string getVsToolset(const sw::PackageVersion &v);
 
 VSFileType get_vs_file_type_by_ext(const path &p);
 String toString(VSFileType t);

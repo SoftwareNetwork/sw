@@ -39,7 +39,7 @@ namespace
 
 struct WinKit
 {
-    sw::Version v;
+    sw::PackageVersion v;
     path kit_root;
 
     String name;
@@ -291,7 +291,7 @@ private:
             for (auto &d : fs::directory_iterator(kr10 / "Include"))
             {
                 auto k = d.path().filename().string();
-                if (fs::exists(kr10 / "Lib" / k) && sw::Version(k).isVersion())
+                if (fs::exists(kr10 / "Lib" / k) && sw::PackageVersion(k).isVersion())
                     kits.insert(k);
             }
         }
@@ -328,7 +328,7 @@ private:
     // shared - some of these and some of these
     //
 
-    void add10Kit(const path &kr, const sw::Version &v) const
+    void add10Kit(const path &kr, const sw::PackageVersion &v) const
     {
         LOG_TRACE(logger, "Found Windows Kit " + v.toString() + " at " + to_string(normalize_path(kr)));
 

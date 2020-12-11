@@ -118,13 +118,13 @@ String toString(VSFileType t)
     }
 }
 
-std::string getVsToolset(const Version &clver)
+std::string getVsToolset(const PackageVersion &clver)
 {
-    if (clver >= Version(19, 20))
+    if (clver >= PackageVersion::Version(19, 20))
         return "v142";
-    if (clver >= Version(19, 10))
+    if (clver >= PackageVersion::Version(19, 10))
         return "v141";
-    if (clver >= Version(19, 00))
+    if (clver >= PackageVersion::Version(19, 00))
         return "v140";
 
     throw SW_RUNTIME_ERROR("Unknown vs version (cl = " + clver.toString() + ")");
@@ -233,7 +233,7 @@ void FiltersEmitter::endProject()
     endBlock();
 }
 
-void ProjectEmitter::beginProject(const sw::Version &version)
+void ProjectEmitter::beginProject(const sw::PackageVersion &version)
 {
     beginBlock("Project", {{"DefaultTargets", "Build"},
         {"ToolsVersion", std::to_string(version.getMajor()) + ".0"},

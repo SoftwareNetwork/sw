@@ -182,11 +182,7 @@ PackagesDatabase &StorageWithPackagesDatabase::getPackagesDatabase() const
 
 bool StorageWithPackagesDatabase::resolve(ResolveRequest &rr) const
 {
-    auto pkg = pkgdb->resolve(rr);
-    if (!pkg)
-        return false;
-    rr.setPackage(std::make_unique<Package>(*this, *pkg));
-    return true;
+    return pkgdb->resolve(rr, *this);
 }
 
 LocalStorageBase::LocalStorageBase(const String &name, const path &db_dir)

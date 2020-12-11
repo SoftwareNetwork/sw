@@ -29,7 +29,7 @@ struct Program
         sw::TargetContainer *c = nullptr;
     };
 
-    using Container = sw::PackageVersionMapBase<data, std::unordered_map, primitives::version::VersionMap>;
+    using Container = sw::PackageVersionMapBase<data, std::unordered_map, sw::VersionMap>;
 
     Container releases;
     Container prereleases;

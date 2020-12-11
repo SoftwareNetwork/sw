@@ -563,7 +563,7 @@ private:
 SharedLibraryTarget &PrepareConfig::createTarget(Build &b, const InputData &d)
 {
     auto name = getSelfTargetName(b, { d.fn });
-    Version v(0, 0, ::sw_get_module_abi_version());
+    PackageVersion v(primitives::version::Version(0, 0, ::sw_get_module_abi_version()));
     auto &lib =
         lang == LANG_VALA
         ? (SharedLibraryTarget&)b.addTarget<ConfigSharedLibraryTarget<ValaSharedLibrary>>(name, v, *this, d, b.getContext().getLocalStorage().storage_dir)
@@ -663,8 +663,9 @@ path PrepareConfig::one2one(Build &b, const InputData &d)
         for (auto &h : headers)
             lib += ForceInclude(h);
         // sort deps first!
-        for (auto &d : std::set<UnresolvedPackage>(udeps.begin(), udeps.end()))
-            lib += std::make_shared<Dependency>(d);
+        SW_UNIMPLEMENTED;
+        //for (auto &d : std::set<UnresolvedPackage>(udeps.begin(), udeps.end()))
+            //lib += std::make_shared<Dependency>(d);
     }
 
     FilesOrdered fi_files;

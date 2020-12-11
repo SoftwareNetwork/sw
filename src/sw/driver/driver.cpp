@@ -146,11 +146,11 @@ struct BuiltinStorage : IStorage
 {
     struct BuiltinLoader
     {
-        std::optional<VersionRange> all;
-        std::unordered_multimap<VersionRange, ProgramDetector::DetectablePackageEntryPoint> eps;
-        std::unordered_map<VersionRange, ProgramDetector::DetectablePackageEntryPoint> exact_eps;
+        std::optional<PackageVersionRange> all;
+        std::unordered_multimap<PackageVersionRange, ProgramDetector::DetectablePackageEntryPoint> eps;
+        std::unordered_map<PackageVersionRange, ProgramDetector::DetectablePackageEntryPoint> exact_eps;
 
-        void addPair(const VersionRange &r, const ProgramDetector::DetectablePackageEntryPoint &ep)
+        void addPair(const PackageVersionRange &r, const ProgramDetector::DetectablePackageEntryPoint &ep)
         {
             if (!all)
                 all = r;
@@ -199,7 +199,8 @@ struct BuiltinStorage : IStorage
                 exact_eps.emplace(t->getPackage().getVersion(), ep);
             }
 
-            auto v = rr.u.getRange().getMaxSatisfyingVersion(s);
+            SW_UNIMPLEMENTED;
+            /*auto v = rr.u.getRange().getMaxSatisfyingVersion(s);
             for (auto &[t,f] : targets)
             {
                 if (!v || *v == t->getPackage().getVersion())
@@ -208,7 +209,7 @@ struct BuiltinStorage : IStorage
                     p->f = f;
                     rr.setPackage(std::move(p));
                 }
-            }
+            }*/
             SW_CHECK(rr.isResolved());
             return true;
         }
@@ -247,9 +248,7 @@ struct BuiltinStorage : IStorage
         // test default storage first
         if (auto i = targets.find(rr.u.getPath()); i != targets.end())
         {
-            ResolveRequest rr2;
-            rr2.u = i->second;
-            rr2.settings = rr.settings;
+            ResolveRequest rr2{ i->second, rr.settings };
             if (swctx.resolve(rr2, true))
             {
                 rr.setPackage(rr2.getPackage().clone());

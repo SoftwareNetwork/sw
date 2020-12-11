@@ -44,7 +44,7 @@ sw::PackageDescriptionMap getPackages(const sw::SwBuild &b, const sw::support::S
         if (!sources.empty())
         {
             auto src = t.getSource().clone(); // copy
-            src->applyVersion(pkg.getVersion());
+            src->apply([&pkg](auto &&s) { return pkg.getVersion().format(s); });
             auto si = sources.find(src->getHash());
             if (si == sources.end())
                 throw SW_RUNTIME_ERROR("no such source");

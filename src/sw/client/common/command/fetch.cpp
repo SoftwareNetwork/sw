@@ -85,7 +85,7 @@ static sw::support::SourcePtr createSource(const Options &options)
     }
 
     if (!options.options_upload.version.empty())
-        s->applyVersion(options.options_upload.version);
+        s->apply([&v = options.options_upload.version](auto &&s) { return sw::PackageVersion(v).format(s); });
     return s;
 }
 

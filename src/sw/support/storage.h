@@ -59,6 +59,7 @@ struct SW_SUPPORT_API ResolveRequestResult
     // assuming passed package has same package path and branch/version matches
     // input is not null
     bool setPackage(PackagePtr);
+    void setPackageForce(PackagePtr);
 };
 
 struct SW_SUPPORT_API ResolveRequest : ResolveRequestResult
@@ -79,6 +80,8 @@ struct SW_SUPPORT_API ResolveRequest : ResolveRequestResult
 
     //bool operator<(const ResolveRequest &rhs) const { return std::tie(u, settings) < std::tie(rhs.u, rhs.settings); }
     bool operator==(const ResolveRequest &rhs) const { return std::tie(u, settings) == std::tie(rhs.u, rhs.settings); }
+
+    bool setPackage(PackagePtr);
 };
 
 struct SW_SUPPORT_API IResolver

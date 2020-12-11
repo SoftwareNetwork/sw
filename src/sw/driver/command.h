@@ -422,15 +422,15 @@ private:
 
 } // namespace driver
 
-Version getVersion(
+PackageVersion getVersion(
     const SwManagerContext &swctx, builder::detail::ResolvableCommand &c,
     const String &in_regex = {});
 
-Version getVersion(
+PackageVersion getVersion(
     const SwManagerContext &swctx, const path &program,
     const String &arg = "--version", const String &in_regex = {});
 
-std::pair<String, Version> getVersionAndOutput(
+std::pair<String, PackageVersion> getVersionAndOutput(
     const SwManagerContext &swctx, const path &program,
     const String &arg = "--version", const String &in_regex = {});
 

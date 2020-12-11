@@ -85,7 +85,7 @@ private:
     struct VSInstance
     {
         path root;
-        Version version;
+        PackageVersion version;
     };
     using VSInstances = VersionMap<VSInstance>;
 
@@ -100,7 +100,7 @@ private:
         ArchType target_arch;
 
         //
-        Version cl_exe_version;
+        PackageVersion cl_exe_version;
         String msvc_prefix;
 
         MsvcInstance(const VSInstance &);

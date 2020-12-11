@@ -73,11 +73,11 @@ struct VSGenerator : Generator
 
     const sw::SwBuild *b = nullptr;
     CompilerType compiler_type = MSVC;
-    sw::Version vs_version;
-    sw::Version toolset_version;
+    sw::PackageVersion vs_version;
+    sw::PackageVersion toolset_version;
     path sln_root;
     VsGeneratorType vstype;
-    sw::Version winsdk;
+    sw::PackageVersion winsdk;
     bool add_overridden_packages = false;
     bool add_all_packages = false;
 

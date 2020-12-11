@@ -12,7 +12,7 @@
 #include "compiler/base.h"
 
 #include <sw/builder/jumppad.h>
-#include <sw/core/build.h> // 
+#include <sw/core/build.h> //
 #include <sw/core/sw_context.h> // needed for execute commands
 #include <sw/manager/storage.h>
 
@@ -58,7 +58,8 @@ using sw::NativeCompilerOptions;
 // pkgs
 using sw::PackageId;
 using sw::PackagePath;
-using sw::Version;
+using sw::PackageVersion;
+//using sw::UnresolvedPackage;
 //using sw::UnresolvedPackages;
 
 // targets

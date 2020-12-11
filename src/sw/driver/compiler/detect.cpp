@@ -172,7 +172,7 @@ ProgramDetector::VSInstances ProgramDetector::gatherVSInstances()
     for (auto &i : h.instances)
     {
         path root = i.VSInstallLocation;
-        Version v = to_string(i.Version);
+        PackageVersion v = to_string(i.Version);
 
         // actually, it does not affect cl.exe or other tool versions
         if (i.VSInstallLocation.find(L"Preview") != std::wstring::npos)
@@ -276,8 +276,12 @@ void ProgramDetector::MsvcInstance::process(DETECT_ARGS)
     // run getVersion via prepared command
     builder::detail::ResolvableCommand c2 = *c;
     cl_exe_version = getVersion(b.getContext(), c2);
-    if (i.version.isPreRelease())
-        cl_exe_version.getExtra() = i.version.getExtra();
+    if (i.version.isPreRelease() && i.version.isVersion())
+    {
+        auto v = cl_exe_version.getVersion();
+        v.getExtra() = i.version.getVersion().getExtra();
+        cl_exe_version = v;
+    }
 }
 
 bool ProgramDetector::MsvcInstance::is_vs15plus() const
@@ -560,7 +564,7 @@ ProgramDetector::DetectablePackageMultiEntryPoints ProgramDetector::detectMsvc15
 
 ProgramDetector::DetectablePackageMultiEntryPoints ProgramDetector::detectMsvc14AndOlder()
 {
-    auto find_comn_tools = [](const Version &v) -> path
+    auto find_comn_tools = [](const auto &v) -> path
     {
         auto n = std::to_string(v.getMajor()) + std::to_string(v.getMinor());
         auto ver = "VS"s + n + "COMNTOOLS";
@@ -585,7 +589,7 @@ ProgramDetector::DetectablePackageMultiEntryPoints ProgramDetector::detectMsvc14
     DetectablePackageMultiEntryPoints eps;
     for (auto n : {14,12,11,10,9,8})
     {
-        Version v(n);
+        PackageVersion v(n);
         auto root = find_comn_tools(v);
         if (root.empty())
             continue;

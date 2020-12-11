@@ -170,13 +170,13 @@ void unique_merge_containers(C &to, const C &from)
 }
 
 DependencyData::DependencyData(const ITarget &t)
+    : DependencyData(t.getPackage())
 {
-    package = t.getPackage();
 }
 
 DependencyData::DependencyData(const UnresolvedPackage &p)
+    : package(p)
 {
-    package = p;
 }
 
 UnresolvedPackage DependencyData::getPackage() const

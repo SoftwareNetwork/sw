@@ -41,6 +41,7 @@ struct SW_SUPPORT_API PackageData
     //
     PackageId driver;
 
+    PackageData(); // remove later when driver field will be available
     PackageData(const PackageId &driver_id);
     virtual ~PackageData() = default;
 

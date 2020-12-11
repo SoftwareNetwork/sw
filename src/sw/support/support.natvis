@@ -10,4 +10,22 @@
         </DisplayString>
     </Type>
 
+    <Type Name="sw::PackageVersion">
+        <DisplayString Condition="value._Which == 0">
+            {value._Head}
+        </DisplayString>
+        <DisplayString Condition="value._Which == 1">
+            {value._Tail._Head,sb}
+        </DisplayString>
+    </Type>
+
+    <Type Name="sw::PackageVersionRange">
+        <DisplayString Condition="value._Which == 0">
+            {value._Head}
+        </DisplayString>
+        <DisplayString Condition="value._Which == 1">
+            {value._Tail._Head,sb}
+        </DisplayString>
+    </Type>
+
 </AutoVisualizer>

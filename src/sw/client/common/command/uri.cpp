@@ -142,7 +142,7 @@ F(upload)
         throw SW_RUNTIME_ERROR("No remote storages found");
 
     sw::Package pkg(*rs.front(), swctx.getOptions().options_uri.uri_args[1]);
-    sw::Version new_version(swctx.getOptions().options_uri.uri_args[2]);
+    sw::PackageVersion new_version(swctx.getOptions().options_uri.uri_args[2]);
 
     String url = "https://raw.githubusercontent.com/SoftwareNetwork/specifications/master/";
     url += to_string(normalize_path(pkg.getHashPath() / "sw.cpp"));

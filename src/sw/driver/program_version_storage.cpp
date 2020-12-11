@@ -84,7 +84,7 @@ ProgramVersionStorage::~ProgramVersionStorage()
     }
 }
 
-void ProgramVersionStorage::addVersion(const path &p, const Version &v, const String &output)
+void ProgramVersionStorage::addVersion(const path &p, const PackageVersion &v, const String &output)
 {
     versions[normalize_path(p)] = {output, v, fs::last_write_time(p)};
 }

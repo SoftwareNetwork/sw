@@ -53,7 +53,7 @@ static sw::PackageSettings compilerTypeFromStringCaseI(const sw::UnresolvedPacka
 
     auto with_version = [&compiler](const sw::PackagePath &ppath)
     {
-        return sw::UnresolvedPackage(ppath, compiler.range);
+        return sw::UnresolvedPackage(ppath, compiler.getRange());
     };
 
     auto set_with_version = [&with_version](const sw::PackagePath &ppath)
@@ -64,10 +64,10 @@ static sw::PackageSettings compilerTypeFromStringCaseI(const sw::UnresolvedPacka
     if (0);
     // g++ is not possible for package path
     else if (0
-        || compiler.ppath == "gcc"
-        || compiler.ppath == "gnu"
-        || compiler.ppath == "org.gnu.gcc"
-        || compiler.ppath == "org.gnu.gpp"
+        || compiler.getPath() == "gcc"
+        || compiler.getPath() == "gnu"
+        || compiler.getPath() == "org.gnu.gcc"
+        || compiler.getPath() == "org.gnu.gpp"
         )
     {
         ts["rule"]["c"]["package"] = set_with_version("org.gnu.gcc");
@@ -77,9 +77,9 @@ static sw::PackageSettings compilerTypeFromStringCaseI(const sw::UnresolvedPacka
             v["type"] = "gnu";
     }
     else if (0
-        || compiler.ppath == "clang"
-        || compiler.ppath == "org.LLVM.clang"
-        || compiler.ppath == "org.LLVM.clangpp"
+        || compiler.getPath() == "clang"
+        || compiler.getPath() == "org.LLVM.clang"
+        || compiler.getPath() == "org.LLVM.clangpp"
         )
     {
         ts["rule"]["c"]["package"] = set_with_version("org.LLVM.clang");
@@ -89,9 +89,9 @@ static sw::PackageSettings compilerTypeFromStringCaseI(const sw::UnresolvedPacka
             v["type"] = "clang";
     }
     else if (0
-        || compiler.ppath == "appleclang"
-        || compiler.ppath == "com.Apple.clang"
-        || compiler.ppath == "com.Apple.clangpp"
+        || compiler.getPath() == "appleclang"
+        || compiler.getPath() == "com.Apple.clang"
+        || compiler.getPath() == "com.Apple.clangpp"
         )
     {
         ts["rule"]["c"]["package"] = set_with_version("com.Apple.clang");
@@ -102,9 +102,9 @@ static sw::PackageSettings compilerTypeFromStringCaseI(const sw::UnresolvedPacka
     }
     // clang-cl is not possible for package path
     else if (0
-        || compiler.ppath == "clangcl"
+        || compiler.getPath() == "clangcl"
         /* || compiler.ppath == "clang-cl"*/
-        || compiler.ppath == "org.LLVM.clangcl"
+        || compiler.getPath() == "org.LLVM.clangcl"
         )
     {
         ts["rule"]["c"]["package"] = set_with_version("org.LLVM.clangcl");
@@ -114,9 +114,9 @@ static sw::PackageSettings compilerTypeFromStringCaseI(const sw::UnresolvedPacka
             v["type"] = "clangcl";
     }
     else if (0
-        || compiler.ppath == "msvc"
-        || compiler.ppath == "vs"
-        || compiler.ppath == "com.Microsoft.VisualStudio.VC.cl"
+        || compiler.getPath() == "msvc"
+        || compiler.getPath() == "vs"
+        || compiler.getPath() == "com.Microsoft.VisualStudio.VC.cl"
         )
     {
         ts["rule"]["c"]["package"] = set_with_version("com.Microsoft.VisualStudio.VC.cl");
@@ -129,9 +129,9 @@ static sw::PackageSettings compilerTypeFromStringCaseI(const sw::UnresolvedPacka
         ts["native"]["stdlib"]["cpp"] = set_with_version("com.Microsoft.VisualStudio.VC.libcpp");
     }
     else if (0
-        || compiler.ppath == "intel"
-        || compiler.ppath == "com.intel.compiler.c"
-        || compiler.ppath == "com.intel.compiler.cpp"
+        || compiler.getPath() == "intel"
+        || compiler.getPath() == "com.intel.compiler.c"
+        || compiler.getPath() == "com.intel.compiler.cpp"
         )
     {
         ts["rule"]["c"]["package"] = set_with_version("com.intel.compiler.c");
@@ -198,14 +198,14 @@ static String archTypeFromStringCaseI(const String &in)
     return platform;
 }
 
-static std::tuple<String, std::optional<sw::Version>> osTypeFromStringCaseI(const String &in)
+static std::tuple<String, std::optional<sw::PackageVersion>> osTypeFromStringCaseI(const String &in)
 {
     auto os = boost::to_lower_copy(in);
-    std::optional<sw::Version> v;
+    std::optional<sw::PackageVersion> v;
     auto p = os.find("-");
     if (p != os.npos)
     {
-        v = sw::Version(os.substr(p + 1));
+        v = sw::PackageVersion(os.substr(p + 1));
         os = os.substr(0, p);
     }
     if (os == "win" || os == "windows")
@@ -847,7 +847,7 @@ const sw::TargetMap &SwClientContext::getPredefinedTargets(sw::SwContext &swctx)
 
 String SwClientContext::listPredefinedTargets()
 {
-    using OrderedTargetMap = sw::PackageVersionMapBase<sw::TargetContainer, std::map, primitives::version::VersionMap>;
+    using OrderedTargetMap = sw::PackageVersionMapBase<sw::TargetContainer, std::map, sw::VersionMap>;
 
     OrderedTargetMap m;
     for (auto &[pkg, tgts] : getPredefinedTargets(getContext()))

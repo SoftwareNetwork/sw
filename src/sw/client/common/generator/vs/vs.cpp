@@ -110,28 +110,28 @@ static auto fix_json(String s)
     return "\"" + s + "\"";
 };
 
-static Version clver2vsver(const Version &clver, const Version &clmaxver)
+static sw::PackageVersion clver2vsver(const sw::PackageVersion &clver, const sw::PackageVersion &clmaxver)
 {
-    if (clver >= Version(19, 20))
+    if (clver >= sw::PackageVersion::Version(19, 20))
     {
-        return Version(16);
+        return sw::PackageVersion::Version(16);
     }
 
-    if (clver >= Version(19, 10) && clver < Version(19, 20))
+    if (clver >= sw::PackageVersion::Version(19, 10) && clver < sw::PackageVersion::Version(19, 20))
     {
         // vs 16 (v142) can also handle v141 toolset.
-        if (clmaxver >= Version(19, 20))
-            return Version(16);
-        return Version(15);
+        if (clmaxver >= sw::PackageVersion::Version(19, 20))
+            return sw::PackageVersion::Version(16);
+        return sw::PackageVersion::Version(15);
     }
 
-    if (clver >= Version(19, 00) && clver < Version(19, 10))
+    if (clver >= sw::PackageVersion::Version(19, 00) && clver < sw::PackageVersion::Version(19, 10))
     {
-        return Version(14);
+        return sw::PackageVersion::Version(14);
     }
 
     LOG_WARN(logger, "Untested branch");
-    return Version(13); // ?
+    return sw::PackageVersion::Version(13); // ?
 }
 
 static String uuid2string(const boost::uuids::uuid &u)
@@ -309,7 +309,7 @@ void VSGenerator::generate(const SwBuild &b)
         toolset_version = compiler_id_max_version.getVersion();
     }
     // this removes hash part      vvvvvvvvvvvvv
-    sln_root = getRootDirectory(b).parent_path() / vs_version.toString(1);
+    sln_root = getRootDirectory(b).parent_path() / vs_version.getVersion().toString(1);
 
     // dl flag tables from cmake
     static const String ft_base_url = "https://gitlab.kitware.com/cmake/cmake/raw/master/Templates/MSBuild/FlagTables/";
@@ -884,13 +884,13 @@ void Solution::emit(const VSGenerator &g) const
     //const auto compiler_name = boost::to_lower_copy(toString(b.solutions[0].Settings.Native.CompilerType));
     const String compiler_name = "msvc";
     String fn = to_string(fs::current_path().filename().u8string()) + "_";
-    fn += compiler_name + "_" + g.getPathString().string() + "_" + g.vs_version.toString(1);
+    fn += compiler_name + "_" + g.getPathString().string() + "_" + g.vs_version.getVersion().toString(1);
     fn += ".sln";
     auto visible_lnk_name = fn;
     write_file_if_different(g.sln_root / fn, ctx.getText());
 
     // write bat for multiprocess compilation
-    if (g.vs_version >= Version(16))
+    if (g.vs_version >= sw::PackageVersion::Version(16))
     {
         String bat;
         bat += "@echo off\n";
@@ -1337,7 +1337,7 @@ void Project::emitProject(const VSGenerator &g) const
                 ctx.addText(c->getName());
                 ctx.endBlock();
 
-                if (c->always && g.vs_version >= Version(16))
+                if (c->always && g.vs_version >= sw::PackageVersion::Version(16))
                 {
                     ctx.beginBlockWithConfiguration("VerifyInputsAndOutputsExist", s);
                     ctx.addText("false");
@@ -1386,7 +1386,7 @@ void Project::emitProject(const VSGenerator &g) const
                 ctx.addText(c.message);
             ctx.endBlock();
 
-            if (g.vs_version >= Version(16))
+            if (g.vs_version >= sw::PackageVersion::Version(16))
             {
                 if (!c.verify_inputs_and_outputs_exist)
                 {

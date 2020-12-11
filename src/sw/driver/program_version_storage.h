@@ -15,10 +15,10 @@ struct ProgramVersionStorage
     struct ProgramInfo
     {
         String output;
-        Version v;
+        PackageVersion v;
         fs::file_time_type t;
 
-        operator Version&() { return v; }
+        operator PackageVersion&() { return v; }
     };
 
     path fn;
@@ -27,7 +27,7 @@ struct ProgramVersionStorage
     ProgramVersionStorage(const path &fn);
     ~ProgramVersionStorage();
 
-    void addVersion(const path &p, const Version &v, const String &output);
+    void addVersion(const path &p, const PackageVersion &v, const String &output);
 };
 
 ProgramVersionStorage &getVersionStorage(const SwManagerContext &);

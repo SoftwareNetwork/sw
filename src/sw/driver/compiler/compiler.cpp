@@ -87,7 +87,7 @@ static Strings getCStdOption(CLanguageStandard std, bool gnuext)
     return { s };
 }
 
-static Strings getCppStdOption(CPPLanguageStandard std, bool gnuext, bool clang, bool appleclang, const Version &clver)
+static Strings getCppStdOption(CPPLanguageStandard std, bool gnuext, bool clang, bool appleclang, const PackageVersion &clver)
 {
     // for apple clang versions
     // see https://en.wikipedia.org/wiki/Xcode#Toolchain_versions
@@ -103,9 +103,9 @@ static Strings getCppStdOption(CPPLanguageStandard std, bool gnuext, bool clang,
         break;
     case CPPLanguageStandard::CPP17:
         if (
-            appleclang && clver > Version(9) ||
-            clang && clver > Version(5) ||
-            !appleclang && !clang && clver > Version(6)
+            appleclang && clver > PackageVersion(9) ||
+            clang && clver > PackageVersion(5) ||
+            !appleclang && !clang && clver > PackageVersion(6)
             )
             s += "17";
         else
@@ -114,9 +114,9 @@ static Strings getCppStdOption(CPPLanguageStandard std, bool gnuext, bool clang,
     case CPPLanguageStandard::CPP20:
         if (
             // appleclang 12.0.0 = llvm (clang) 10.0.0 which does not have c++20 flag (only >= 11)
-            //appleclang && clver >= Version(12) ||
-            clang && clver > Version(10) ||
-            !appleclang && !clang && clver > Version(9)
+            //appleclang && clver >= PackageVersion(12) ||
+            clang && clver > PackageVersion(10) ||
+            !appleclang && !clang && clver > PackageVersion(9)
             )
             s += "20";
         else
@@ -124,7 +124,7 @@ static Strings getCppStdOption(CPPLanguageStandard std, bool gnuext, bool clang,
         break;
     case CPPLanguageStandard::CPP23:
         if (
-            clang && clver >= Version(11) && !appleclang
+            clang && clver >= PackageVersion(11) && !appleclang
             )
             s += "2b";
         else

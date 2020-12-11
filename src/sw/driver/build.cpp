@@ -89,10 +89,10 @@ bool Build::isKnownTarget(const PackageId &p) const
         module_data.known_targets.contains(p);
 }
 
-std::optional<path> Build::getSourceDir(const Source &s, const Version &v) const
+std::optional<path> Build::getSourceDir(const Source &s, const PackageVersion &v) const
 {
     auto s2 = s.clone();
-    s2->applyVersion(v);
+    s2->apply([&v](auto &&s) { return v.format(s); });
     if (dd)
     {
         auto i = dd->source_dirs_by_source.find(s2->getHash());

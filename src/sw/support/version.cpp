@@ -58,7 +58,7 @@ bool PackageVersion::isVersion() const
     return std::holds_alternative<Version>(value);
 }
 
-PackageVersion::Version &PackageVersion::getVersion()
+PackageVersion::Version &PackageVersion::getVersionInternal()
 {
     return std::get<Version>(value);
 }
@@ -98,17 +98,17 @@ std::string PackageVersion::format(const std::string &s) const
         return getVersion().format(s);
 }
 
-std::string PackageVersion::toString() const
+std::string PackageVersion::toString(const String &delim) const
 {
     if (isBranch())
         return getBranch();
-    return getVersion().toString();
+    return getVersion().toString(delim);
 }
 
 void PackageVersion::checkAndSetFirstVersion()
 {
     if (!isBranch())
-        getVersion().setFirstVersion();
+        getVersionInternal().setFirstVersion();
     check();
 }
 
@@ -157,6 +157,34 @@ bool PackageVersion::operator>=(const PackageVersion &rhs) const
 bool PackageVersion::operator==(const PackageVersion &rhs) const
 {
     return value == rhs.value;
+}
+
+PackageVersion::Number PackageVersion::getMajor() const
+{
+    if (isBranch())
+        return 0;
+    return getVersion().getMajor();
+}
+
+PackageVersion::Number PackageVersion::getMinor() const
+{
+    if (isBranch())
+        return 0;
+    return getVersion().getMinor();
+}
+
+PackageVersion::Number PackageVersion::getPatch() const
+{
+    if (isBranch())
+        return 1;
+    return getVersion().getPatch();
+}
+
+PackageVersion::Number PackageVersion::getTweak() const
+{
+    if (isBranch())
+        return 0;
+    return getVersion().getTweak();
 }
 
 PackageVersionRange::PackageVersionRange()

@@ -113,13 +113,13 @@ struct SW_DRIVER_CPP_API TargetBase : TargetBaseData
     {
         if constexpr (sizeof...(Args) > 0)
         {
-            if constexpr (std::is_convertible_v<std::tuple_element_t<0, std::tuple<Args...>>, Version>)
+            if constexpr (std::is_convertible_v<std::tuple_element_t<0, std::tuple<Args...>>, PackageVersion>)
                 return addTarget1<T>(Name, std::forward<Args>(args)...);
             else
-                return addTarget1<T>(Name, pkg ? getPackage().getVersion() : Version(), std::forward<Args>(args)...);
+                return addTarget1<T>(Name, pkg ? getPackage().getVersion() : PackageVersion{}, std::forward<Args>(args)...);
         }
         else
-            return addTarget1<T>(Name, pkg ? getPackage().getVersion() : Version(), std::forward<Args>(args)...);
+            return addTarget1<T>(Name, pkg ? getPackage().getVersion() : PackageVersion{}, std::forward<Args>(args)...);
     }
 
     /**
@@ -169,7 +169,7 @@ private:
     bool Local = true; // local projects
 
     template <typename T, typename ... Args>
-    T &addTarget1(const PackagePath &Name, const Version &v, Args && ... args)
+    T &addTarget1(const PackagePath &Name, const PackageVersion &v, Args && ... args)
     {
         PackageId pkg(constructTargetName(Name), v);
         auto t = std::make_unique<T>(*this, pkg, std::forward<Args>(args)...);
