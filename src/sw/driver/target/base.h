@@ -16,6 +16,7 @@
 #include <sw/core/target.h>
 #include <sw/manager/package.h>
 #include <sw/support/package_version_map.h>
+//#include <sw/support/resolver.h>
 #include <sw/support/source.h>
 
 #include <any>
@@ -216,6 +217,9 @@ struct SW_DRIVER_CPP_API Target
     : ITarget
     , TargetBase
     , RuleSystem
+    // actually move to ITarget?
+    // resolve() is the basic method of target
+    //, IResolver
 {
     /*struct PackageSettings
     {
@@ -332,6 +336,8 @@ public:
     Test addTest();
     Test addTest(const String &name);
     Test addTest(const Target &runnable_test, const String &name = {});
+
+    //bool resolve(ResolveRequest &) const override;
 
 private:
     void addTest(Test &cb, const String &name);

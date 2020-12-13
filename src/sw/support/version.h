@@ -52,6 +52,8 @@ struct SW_SUPPORT_API PackageVersion
     std::string format(const std::string &s) const;
     [[nodiscard]]
     std::string toString(const String &delim = ".") const;
+    [[nodiscard]]
+    std::string toRangeString() const;
 
     // operators
     bool operator<(const PackageVersion &) const;

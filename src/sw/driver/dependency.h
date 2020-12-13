@@ -25,8 +25,8 @@ struct SW_DRIVER_CPP_API DependencyData : IDependency
     DependencyData(const ITarget &t);
     DependencyData(const UnresolvedPackage &p);
 
-    UnresolvedPackage getPackage() const;
-    UnresolvedPackage getUnresolvedPackage() const override { return getPackage(); }
+    const UnresolvedPackage &getPackage() const;
+    const UnresolvedPackage &getUnresolvedPackage() const override { return getPackage(); }
     void setTarget(const ITarget &t) override;
     const ITarget &getTarget() const override;
 

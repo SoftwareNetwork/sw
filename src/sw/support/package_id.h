@@ -23,7 +23,11 @@ struct SW_SUPPORT_API PackageId
 
     String getVariableName() const;
 
+    [[nodiscard]]
     String toString(const String &delim = "-") const;
+    // toPackageRangeString()?
+    [[nodiscard]]
+    std::string toRangeString(const String &delim = "-") const;
 
 private:
     PackagePath ppath;

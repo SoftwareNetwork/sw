@@ -18,6 +18,12 @@ static bool is_branch(const std::string &s)
     });
 }
 
+static auto make_range_string(String &&s)
+{
+    // use =ver or [ver, ver]
+    return "=" + s;
+}
+
 PackageVersion::PackageVersion()
 {
     checkAndSetFirstVersion();
@@ -105,6 +111,11 @@ std::string PackageVersion::toString(const String &delim) const
     return getVersion().toString(delim);
 }
 
+std::string PackageVersion::toRangeString() const
+{
+    return make_range_string(toString());
+}
+
 void PackageVersion::checkAndSetFirstVersion()
 {
     if (!isBranch())
@@ -188,8 +199,8 @@ PackageVersion::Number PackageVersion::getTweak() const
 }
 
 PackageVersionRange::PackageVersionRange()
+    : value{ VersionRange{ "*" } }
 {
-    value = VersionRange(Version::min(), Version::max());
 }
 
 PackageVersionRange::PackageVersionRange(const char *s)
@@ -215,7 +226,7 @@ PackageVersionRange::PackageVersionRange(const PackageVersion &v)
     if (v.isBranch())
         value = v.getBranch();
     else
-        value = VersionRange{v.getVersion(), v.getVersion()};
+        value = VersionRange{make_range_string(v.getVersion().toString())};
 }
 
 bool PackageVersionRange::isBranch() const

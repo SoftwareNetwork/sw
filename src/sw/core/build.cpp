@@ -502,10 +502,10 @@ void SwBuild::loadInputs()
     }
 }
 
-ITarget &SwBuild::resolveAndLoad(ResolveRequest &rr, Resolver &r)
+ITarget &SwBuild::resolveAndLoad(ResolveRequest &rr)
 {
     // fast check
-    if (!/*r.*/resolve(rr))
+    if (!rr.isResolved())
     {
         if (rr.u.getPath().isAbsolute())
             throw SW_RUNTIME_ERROR("Cannot resolve package: " + rr.u.toString());
@@ -539,12 +539,12 @@ ITarget &SwBuild::resolveAndLoad(ResolveRequest &rr, Resolver &r)
 
     ITarget *t = nullptr;
     std::exception_ptr eptr;
-    auto x = [this, &eptr, &rr, &r, &t]()
+    auto x = [this, &eptr, &rr, &t]()
     {
         LOG_TRACE(logger, "Entering the new fiber to load: " + rr.u.toString());
         try
         {
-            t = &resolveAndLoad2(rr, r);
+            t = &resolveAndLoad2(rr);
         }
         catch (...)
         {
@@ -569,24 +569,14 @@ ITarget &SwBuild::resolveAndLoad(ResolveRequest &rr, Resolver &r)
     return *t;
 }
 
-ITarget &SwBuild::resolveAndLoad2(ResolveRequest &rr, Resolver &r)
+ITarget &SwBuild::resolveAndLoad2(ResolveRequest &rr)
 {
-    if (!rr.isResolved() && !/*r.*/resolve(rr))
+    /*if (!rr.isResolved())
     {
         if (rr.u.getPath().isAbsolute())
             throw SW_RUNTIME_ERROR("Cannot resolve package: " + rr.u.toString());
         SW_UNIMPLEMENTED; // resolve local package
-    }
-
-    // check existing target+settings in build
-    if (auto t = getTargets().find(rr.getPackage(), rr.settings))
-        return *t;
-
-    // check existing target in build
-    if (getTargets().find(rr.getPackage()) != getTargets().end())
-    {
-        //SW_UNIMPLEMENTED;
-    }
+    }*/
 
     // no, install now (resolve to local)
     getContext().install(rr);
@@ -774,10 +764,7 @@ void SwBuild::resolvePackages(const std::vector<IDependency*> &udeps)
     // install
     std::vector<ResolveRequest> rrs;
     for (auto &d : udeps)
-    {
-        auto &rr = rrs.emplace_back(d->getUnresolvedPackage());
-        rr.settings = d->getSettings();
-    }
+        rrs.emplace_back(d->getUnresolvedPackage(), d->getSettings());
     resolveWithDependencies(rrs);
     for (auto &rr : rrs)
     {

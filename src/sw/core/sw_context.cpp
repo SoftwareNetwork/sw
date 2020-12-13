@@ -275,7 +275,7 @@ std::vector<UserInput> SwContext::makeInput(const String &i)
         try
         {
             auto p = extractFromString(i);
-            ResolveRequest rr{ p };
+            ResolveRequest rr{ p, {} };
             if (!resolve(rr, true))
                 throw SW_RUNTIME_ERROR("Cannot resolve: " + rr.u.toString());
             auto bi = makeInput(install(rr.getPackage()));

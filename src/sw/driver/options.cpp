@@ -179,7 +179,7 @@ DependencyData::DependencyData(const UnresolvedPackage &p)
 {
 }
 
-UnresolvedPackage DependencyData::getPackage() const
+const UnresolvedPackage &DependencyData::getPackage() const
 {
     /*auto t = target;
     if (t)

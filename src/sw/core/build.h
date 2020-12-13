@@ -64,10 +64,10 @@ struct SW_CORE_API SwBuild : SwBuilderContext, ResolverHolder
     void loadInputs();
     //void setTargetsToBuild();
     void resolvePackages(); // [1/2] step
-    ITarget &resolveAndLoad(ResolveRequest &, Resolver &);
+    ITarget &resolveAndLoad(ResolveRequest &);
     void registerTarget(ITarget &);
 private:
-    ITarget &resolveAndLoad2(ResolveRequest &, Resolver &);
+    ITarget &resolveAndLoad2(ResolveRequest &);
     void loadPackages();
 public:
     void prepare();

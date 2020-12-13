@@ -68,6 +68,11 @@ String PackageId::toString(const String &delim) const
     return ppath.toString() + delim + version.toString();
 }
 
+std::string PackageId::toRangeString(const String &delim) const
+{
+    return ppath.toString() + delim + version.toRangeString();
+}
+
 PackageId extractPackageIdFromString(const String &target)
 {
     auto [pp, v] = split_package_string(target);

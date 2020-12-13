@@ -209,7 +209,7 @@ struct PredefinedDependency : IDependency
     virtual ~PredefinedDependency() {}
 
     const PackageSettings &getSettings() const override { return ts; }
-    UnresolvedPackage getUnresolvedPackage() const override { return unresolved_pkg; }
+    const UnresolvedPackage &getUnresolvedPackage() const override { return unresolved_pkg; }
     bool isResolved() const override { return t; }
     void setTarget(const ITarget &t) override { this->t = &t; }
     const ITarget &getTarget() const override

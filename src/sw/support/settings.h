@@ -171,7 +171,7 @@ struct SW_SUPPORT_API PackageSetting
     void setPathValue(const path &root, const path &value);
     path getAbsolutePathValue() const;
     void setAbsolutePathValue(const path &value);
-    bool resolve(ResolveRequest &); // const or no?
+    bool resolve(ResolveRequest &) const;
 
     void push_back(const ArrayValue &);
     void reset();

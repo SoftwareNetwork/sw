@@ -195,7 +195,7 @@ void PackageSetting::setAbsolutePathValue(const path &value)
     *this = to_string(normalize_path(value));
 }
 
-bool PackageSetting::resolve(ResolveRequest &rr)
+bool PackageSetting::resolve(ResolveRequest &rr) const
 {
     if (!isResolver())
         throw SW_RUNTIME_ERROR("Not a resolver");

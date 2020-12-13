@@ -26,7 +26,7 @@ UnresolvedPackage::UnresolvedPackage(const PackagePath &p, const PackageVersionR
 }
 
 UnresolvedPackage::UnresolvedPackage(const PackageId &pkg)
-    : UnresolvedPackage(pkg.getPath(), pkg.getVersion())
+    : UnresolvedPackage(pkg.getPath(), pkg.getVersion().toRangeString())
 {
 }
 

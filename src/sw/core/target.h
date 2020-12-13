@@ -65,7 +65,7 @@ struct SW_CORE_API IDependency
     virtual ~IDependency() = 0;
 
     virtual const PackageSettings &getSettings() const = 0;
-    virtual UnresolvedPackage getUnresolvedPackage() const = 0;
+    virtual const UnresolvedPackage &getUnresolvedPackage() const = 0;
     virtual bool isResolved() const = 0;
     virtual void setTarget(const ITarget &) = 0;
     virtual const ITarget &getTarget() const = 0;

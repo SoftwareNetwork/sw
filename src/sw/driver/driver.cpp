@@ -199,17 +199,12 @@ struct BuiltinStorage : IStorage
                 exact_eps.emplace(t->getPackage().getVersion(), ep);
             }
 
-            SW_UNIMPLEMENTED;
-            /*auto v = rr.u.getRange().getMaxSatisfyingVersion(s);
             for (auto &[t,f] : targets)
             {
-                if (!v || *v == t->getPackage().getVersion())
-                {
-                    auto p = std::make_unique<BuiltinPackage>(bs, t->getPackage());
-                    p->f = f;
-                    rr.setPackage(std::move(p));
-                }
-            }*/
+                auto p = std::make_unique<BuiltinPackage>(bs, t->getPackage());
+                p->f = f;
+                rr.setPackage(std::move(p));
+            }
             SW_CHECK(rr.isResolved());
             return true;
         }
@@ -340,6 +335,11 @@ Driver::~Driver()
 void Driver::processConfigureAc(const path &p)
 {
     process_configure_ac2(p);
+}
+
+PackageId Driver::getPackageId()
+{
+    return "org.sw."s + PACKAGE "-" PACKAGE_VERSION;
 }
 
 struct DriverInput

@@ -822,7 +822,7 @@ sw::SwContext &SwClientContext::getContext(bool in_allow_network)
         // before default?
         //for (auto &d : drivers)
         //swctx->registerDriver(std::make_unique<sw::driver::cpp::Driver>());
-        swctx_->registerDriver("org.sw.sw.driver.cpp-0.4.1"s, std::make_unique<sw::driver::cpp::Driver>(*swctx_));
+        swctx_->registerDriver(sw::driver::cpp::Driver::getPackageId(), std::make_unique<sw::driver::cpp::Driver>(*swctx_));
         //swctx->registerDriver(std::make_unique<sw::CDriver>(sw_create_driver));
     }
     return *swctx_;

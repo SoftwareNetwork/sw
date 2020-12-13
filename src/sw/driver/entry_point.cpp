@@ -254,7 +254,7 @@ getFileDependencies(SwBuild &b, const path &p, std::set<size_t> &gns)
         if (m1 == "header")
         {
             auto upkg = extractFromString(m[3].str());
-            ResolveRequest rr{ upkg };
+            ResolveRequest rr{ upkg, {} };
             if (!b.resolve(rr))
                 throw SW_RUNTIME_ERROR("Not resolved: " + rr.u.toString());
             auto pkg = b.getContext().install(rr.getPackage());

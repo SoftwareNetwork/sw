@@ -63,6 +63,31 @@ void ProjectDirectories::setSourceDirectory(const path &d)
     }
 }
 
+void ProjectDirectories::setBinaryDirectory(const path &bdir_root)
+{
+    // make sure we always use absolute paths
+    if (!bdir_root.is_absolute())
+        throw SW_LOGIC_ERROR("not absolute");
+
+    binary_dir_set = true;
+    BinaryDir = bdir_root / "bd"; // build (binary) dir
+    BinaryPrivateDir = bdir_root / "bdp"; // build (binary) private dir
+}
+
+path ProjectDirectories::getBinaryDirectory() const
+{
+    if (!binary_dir_set)
+        throw SW_RUNTIME_ERROR("Binary Directory is not set yet");
+    return BinaryDir;
+}
+
+path ProjectDirectories::getBinaryPrivateDirectory() const
+{
+    if (!binary_dir_set)
+        throw SW_RUNTIME_ERROR("Binary Private Directory is not set yet");
+    return BinaryPrivateDir;
+}
+
 String toString(ConfigurationType Type)
 {
     switch (Type)

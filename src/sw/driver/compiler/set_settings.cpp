@@ -63,14 +63,14 @@ static void basicResolve(PackageSettings &ts)
     {
         ResolveRequest rr{ m["package"].getValue(), ts2 };
         if (ts["resolver"].resolve(rr))
-            m["package"] = rr.getPackage().toString();
+            m["package"] = rr.getPackage().toRangeString();
         // otherwise we silently ignore until rule is used
     }
     for (auto &&[_, m] : ts["native"]["stdlib"].getMap())
     {
         ResolveRequest rr{ m.getValue(), ts }; // with rules!
         if (ts["resolver"].resolve(rr))
-            m = rr.getPackage().toString();
+            m = rr.getPackage().toRangeString();
         // otherwise we silently ignore until rule is used
     }
 }

@@ -22,9 +22,6 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "target");
 
-#define SW_BDIR_NAME "bd" // build (binary) dir
-#define SW_BDIR_PRIVATE_NAME "bdp" // build (binary) private dir
-
 /*
 
 sys.compiler.c
@@ -431,7 +428,7 @@ CommandStorage *Target::getCommandStorage() const
         return nullptr;
     if (command_storage)
         return *command_storage;
-    return &getMainBuild().getCommandStorage(BinaryDir.parent_path());
+    return &getMainBuild().getCommandStorage(getBinaryDirectory().parent_path());
 }
 
 Commands Target::getCommands() const
@@ -526,20 +523,13 @@ void Target::init()
         //fs::create_directories(BinaryDir);
     }*/
 
-    BinaryPrivateDir = BinaryDir / SW_BDIR_PRIVATE_NAME;
-    BinaryDir /= SW_BDIR_NAME;
+    //BinaryPrivateDir = BinaryDir / SW_BDIR_PRIVATE_NAME;
+    //BinaryDir /= SW_BDIR_NAME;
+    setBinaryDirectory(BinaryDir);
 
     // we must create it because users probably want to write to it immediately
     //fs::create_directories(BinaryDir);
     //fs::create_directories(BinaryPrivateDir);
-
-    // make sure we always use absolute paths
-    //BinaryDir = fs::absolute(BinaryDir);
-    //BinaryPrivateDir = fs::absolute(BinaryPrivateDir);
-    if (!BinaryDir.is_absolute())
-        throw SW_LOGIC_ERROR("not absolute");
-    if (!BinaryPrivateDir.is_absolute())
-        throw SW_LOGIC_ERROR("not absolute");
 
     //SW_RETURN_MULTIPASS_END(init_pass);
     return;
@@ -807,9 +797,16 @@ void Target::resolveDependency(const DependencyPtr &d)
 void Target::resolveDependency(IDependency &d)
 {
     ResolveRequest rr{ d.getUnresolvedPackage(), d.getSettings() };
-    CachingResolver *cr = nullptr;
-    auto &t = getMainBuild().resolveAndLoad(rr, *cr);
-    //auto &t = getMainBuild().resolveAndLoad(rr, getResolver());
+    if (!getSettings()["resolver"].resolve(rr))
+    {
+        if (rr.u.getPath().isAbsolute())
+            throw SW_RUNTIME_ERROR("Cannot resolve package: " + rr.u.toString());
+        // how to resolve build packages properly?
+        auto &t = getMainBuild().resolveAndLoad(rr);
+        d.setTarget(t);
+        return;
+    }
+    auto &t = getMainBuild().resolveAndLoad(rr);
     d.setTarget(t);
 }
 
@@ -825,8 +822,7 @@ path Target::getFile(const Target &dep, const path &fn)
 path Target::getFile(const DependencyPtr &dep, const path &fn)
 {
     addSourceDependency(dep); // main trick is to add a dependency
-    ResolveRequest rr{dep->getUnresolvedPackage()};
-    rr.settings = dep->getSettings();
+    ResolveRequest rr{ dep->getUnresolvedPackage(), dep->getSettings() };
     getMainBuild().getContext().install(rr);
     auto &lp = static_cast<LocalPackage &>(rr.getPackage());
     auto p = lp.getDirSrc2();

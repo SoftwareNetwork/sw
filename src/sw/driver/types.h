@@ -228,6 +228,13 @@ struct ProjectDirectories
     // hide this later removing api spec (qt uses it atm)
     SW_DRIVER_CPP_API
     void setSourceDirectory(const path &d);
+
+    void setBinaryDirectory(const path &bdir_root);
+    path getBinaryDirectory() const;
+    path getBinaryPrivateDirectory() const;
+
+private:
+    bool binary_dir_set = false;
 };
 
 String toString(CompilerType Type);
