@@ -146,9 +146,10 @@ struct BuiltinStorage : IStorage
 {
     struct BuiltinLoader
     {
+        bool loaded = false;
         std::optional<PackageVersionRange> all;
         std::unordered_multimap<PackageVersionRange, ProgramDetector::DetectablePackageEntryPoint> eps;
-        std::unordered_map<PackageVersionRange, ProgramDetector::DetectablePackageEntryPoint> exact_eps;
+        std::unordered_map<PackageVersion, ProgramDetector::DetectablePackageEntryPoint> version_eps;
 
         void addPair(const PackageVersionRange &r, const ProgramDetector::DetectablePackageEntryPoint &ep)
         {
@@ -159,50 +160,39 @@ struct BuiltinStorage : IStorage
             eps.emplace(r, ep);
         }
 
-        bool resolve(const BuiltinStorage &bs, ResolveRequest &rr)
+        void load(const BuiltinStorage &bs, ResolveRequest &rr)
         {
-            if (!all || !all->contains(rr.u.getRange()))
-                return false;
-
-            auto eit = exact_eps.find(rr.u.getRange());
-            if (eit != exact_eps.end() && eit->first.toVersion())
-            {
-                // exact match
-                auto p = std::make_unique<BuiltinPackage>(bs, PackageId{ rr.u.getPath(), *eit->first.toVersion() });
-                p->f = eit->second;
-                rr.setPackage(std::move(p));
-                return true;
-            }
+            if (loaded)
+                return;
 
             std::vector<std::pair<ITargetPtr, NativeBuiltinTargetEntryPoint::BuildFunction>> targets;
             for (auto &[r, ep] : eps)
             {
-                if (!r.contains(rr.u.getRange()))
-                    return false;
-
                 Build b(*bs.sb);
                 b.module_data.current_settings = rr.settings;
                 ep(b);
                 SW_CHECK(b.module_data.getTargets().size() <= 1); // only 1 target per build call
                 if (b.module_data.getTargets().empty())
                     continue;
-                targets.emplace_back(std::move(b.module_data.getTargets()[0]), ep);
+                version_eps.emplace(b.module_data.getTargets()[0]->getPackage().getVersion(), ep);
             }
-            if (targets.empty())
+
+            loaded = true;
+        }
+
+        bool resolve(const BuiltinStorage &bs, ResolveRequest &rr)
+        {
+            if (!all || !all->contains(rr.u.getRange()))
                 return false;
 
-            VersionSet s;
-            for (auto &[t, ep] : targets)
-            {
-                s.insert(t->getPackage().getVersion());
-                // also register
-                exact_eps.emplace(t->getPackage().getVersion(), ep);
-            }
+            load(bs, rr);
 
-            for (auto &[t,f] : targets)
+            for (auto &&[v, ep] : version_eps)
             {
-                auto p = std::make_unique<BuiltinPackage>(bs, t->getPackage());
-                p->f = f;
+                if (!rr.u.getRange().contains(v))
+                    continue;
+                auto p = std::make_unique<BuiltinPackage>(bs, PackageId{ rr.u.getPath(), v });
+                p->f = ep;
                 rr.setPackage(std::move(p));
             }
             SW_CHECK(rr.isResolved());
