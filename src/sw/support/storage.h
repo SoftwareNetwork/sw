@@ -4,6 +4,7 @@
 #pragma once
 
 #include "filesystem.h"
+#include "package.h"
 #include "resolver.h"
 
 namespace sw

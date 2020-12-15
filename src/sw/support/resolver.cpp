@@ -3,6 +3,8 @@
 
 #include "resolver.h"
 
+#include "package.h"
+
 namespace sw
 {
 

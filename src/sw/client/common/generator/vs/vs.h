@@ -25,7 +25,7 @@ struct ProjectEmitter;
 struct SolutionEmitter;
 struct VSGenerator;
 
-using Settings = std::set<sw::PackageSettings>;
+using Settings = std::unordered_set<sw::PackageSettings>;
 
 enum class VSProjectType
 {
@@ -151,7 +151,7 @@ struct Project : CommonProjectData
     // settings
     std::set<const Project *> dependencies; // solution deps
     Settings settings;
-    std::map<sw::PackageSettings, ProjectData> data;
+    std::unordered_map<sw::PackageSettings, ProjectData> data;
     bool build = false;
     path source_dir;
 

@@ -33,14 +33,14 @@ static OS fromPackageSettings(const PackageSettings &ts)
 
     IF_KEY("os"]["kernel")
         if (0);
-        IF_SETTING("com.Microsoft.Windows.NT", os.Type, OSType::Windows);
-        IF_SETTING("org.torvalds.linux", os.Type, OSType::Linux);
-        IF_SETTING("com.Apple.Macos", os.Type, OSType::Macos);
-        IF_SETTING("com.Apple.Darwin", os.Type, OSType::Darwin);
-        IF_SETTING("org.cygwin", os.Type, OSType::Cygwin);
-        IF_SETTING("org.mingw", os.Type, OSType::Mingw);
+        IF_SETTING(PackagePath{"com.Microsoft.Windows.NT"s}, os.Type, OSType::Windows);
+        IF_SETTING(PackagePath{"org.torvalds.linux"s}, os.Type, OSType::Linux);
+        IF_SETTING(PackagePath{"com.Apple.Macos"s}, os.Type, OSType::Macos);
+        IF_SETTING(PackagePath{"com.Apple.Darwin"s}, os.Type, OSType::Darwin);
+        IF_SETTING(PackagePath{"org.cygwin"s}, os.Type, OSType::Cygwin);
+        IF_SETTING(PackagePath{"org.mingw"s}, os.Type, OSType::Mingw);
         else
-            throw SW_RUNTIME_ERROR("Unknown os: " + v.getValue());
+            throw SW_RUNTIME_ERROR("Unknown os: " + v.get<PackagePath>().toString());
     IF_END
 
     IF_KEY("os"]["version")
@@ -49,18 +49,18 @@ static OS fromPackageSettings(const PackageSettings &ts)
 
     IF_KEY("os"]["arch")
         if (0);
-        IF_SETTING("x86", os.Arch, ArchType::x86);
-        IF_SETTING("x86_64", os.Arch, ArchType::x86_64);
-        IF_SETTING("arm", os.Arch, ArchType::arm);
-        IF_SETTING("aarch64", os.Arch, ArchType::aarch64);
+        IF_SETTING("x86"s, os.Arch, ArchType::x86);
+        IF_SETTING("x86_64"s, os.Arch, ArchType::x86_64);
+        IF_SETTING("arm"s, os.Arch, ArchType::arm);
+        IF_SETTING("aarch64"s, os.Arch, ArchType::aarch64);
         else
             throw SW_RUNTIME_ERROR("Unknown arch: " + v.getValue());
     IF_END
 
     IF_KEY("os"]["environment")
         if (0);
-        IF_SETTING("gnueabi", os.EnvType, EnvironmentType::GNUEABI);
-        IF_SETTING("gnueabihf", os.EnvType, EnvironmentType::GNUEABIHF);
+        IF_SETTING("gnueabi"s, os.EnvType, EnvironmentType::GNUEABI);
+        IF_SETTING("gnueabihf"s, os.EnvType, EnvironmentType::GNUEABIHF);
         else
             throw SW_RUNTIME_ERROR("Unknown arch: " + v.getValue());
     IF_END
@@ -74,8 +74,8 @@ BuildSettings::BuildSettings(const PackageSettings &ts)
 
     IF_KEY("native"]["library")
         if (0);
-        IF_SETTING("static", Native.LibrariesType, LibraryType::Static);
-        IF_SETTING("shared", Native.LibrariesType, LibraryType::Shared);
+        IF_SETTING("static"s, Native.LibrariesType, LibraryType::Static);
+        IF_SETTING("shared"s, Native.LibrariesType, LibraryType::Shared);
         else
             throw SW_RUNTIME_ERROR("Bad library type: " + v.getValue());
     IF_END
@@ -91,7 +91,7 @@ BuildSettings::BuildSettings(const PackageSettings &ts)
     IF_END
 
     IF_KEY("native"]["mt")
-        Native.MT = v == "true";
+        Native.MT = v.get<bool>();
     IF_END
 
 #undef IF_SETTING
@@ -170,10 +170,10 @@ PackageSettings BuildSettings::getPackageSettings() const
     switch (Native.LibrariesType)
     {
     case LibraryType::Static:
-        s["native"]["library"] = "static";
+        s["native"]["library"] = "static"s;
         break;
     case LibraryType::Shared:
-        s["native"]["library"] = "shared";
+        s["native"]["library"] = "shared"s;
         break;
     default:
         SW_UNIMPLEMENTED;
@@ -182,23 +182,23 @@ PackageSettings BuildSettings::getPackageSettings() const
     switch (Native.ConfigurationType)
     {
     case ConfigurationType::Debug:
-        s["native"]["configuration"] = "Debug";
+        s["native"]["configuration"] = "Debug"s;
         break;
     case ConfigurationType::MinimalSizeRelease:
-        s["native"]["configuration"] = "MinimalSizeRelease";
+        s["native"]["configuration"] = "MinimalSizeRelease"s;
         break;
     case ConfigurationType::Release:
-        s["native"]["configuration"] = "Release";
+        s["native"]["configuration"] = "Release"s;
         break;
     case ConfigurationType::ReleaseWithDebugInformation:
-        s["native"]["configuration"] = "ReleaseWithDebugInformation";
+        s["native"]["configuration"] = "ReleaseWithDebugInformation"s;
         break;
     default:
         SW_UNIMPLEMENTED;
     }
 
     if (TargetOS.is(OSType::Windows))
-        s["native"]["mt"] = Native.MT ? "true" : "false";
+        s["native"]["mt"] = Native.MT;
 
     // debug, release, ...
 

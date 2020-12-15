@@ -420,7 +420,7 @@ ExtendedBuild NativeTargetEntryPoint::createBuild(SwBuild &swb, const PackageSet
     ExtendedBuild b(swb);
     b.dd = dd.get();
     // leave as b. setting
-    b.DryRun = settings["driver"]["dry-run"] == "true";
+    b.DryRun = settings["driver"]["dry-run"] && settings["driver"]["dry-run"].get<bool>();
 
     //settings.erase("driver");
     settings["driver"].serializable(false);

@@ -335,7 +335,7 @@ void CheckSet::performChecks(const SwBuild &mb, const PackageSettings &ts)
     SCOPE_EXIT
     {
         //prepareChecksForUse();
-        if (mb.getSettings()["print_checks"] == "true")
+        if (mb.getSettings()["print_checks"])
         {
             std::ofstream o(fn.parent_path() / (t->getPackage().toString() + "." + name + ".txt"));
             if (!o)
@@ -353,7 +353,7 @@ void CheckSet::performChecks(const SwBuild &mb, const PackageSettings &ts)
             c1->clean();
     };
 
-    if (mb.getSettings()["print_checks"] == "true")
+    if (mb.getSettings()["print_checks"])
     {
         write_file(checks_dir / config / "cfg.json", nlohmann::json::parse(ts.toString(PackageSettings::Json)).dump(4));
     }
@@ -379,7 +379,7 @@ void CheckSet::performChecks(const SwBuild &mb, const PackageSettings &ts)
         };
 
         //auto &e = getExecutor();
-        static Executor e(mb.getSettings()["checks_single_thread"] == "true" ? 1 : getExecutor().numberOfThreads()); // separate executor!
+        static Executor e(mb.getSettings()["checks_single_thread"] ? 1 : getExecutor().numberOfThreads()); // separate executor!
 
         try
         {
@@ -448,7 +448,7 @@ void CheckSet::performChecks(const SwBuild &mb, const PackageSettings &ts)
             }
 
             ctx.addLine("OUTF=\"" + mfn + "\"");
-            ctx.addLine("OUT=\""s + (mb.getSettings()["wait_for_cc_checks"] == "true" ? "../" : "") + "$OUTF\"");
+            ctx.addLine("OUT=\""s + (mb.getSettings()["wait_for_cc_checks"] ? "../" : "") + "$OUTF\"");
             ctx.addLine();
 
             mfn = "$OUT";
@@ -519,7 +519,7 @@ void CheckSet::performChecks(const SwBuild &mb, const PackageSettings &ts)
             path out = (cc_dir / "run") += os.getShellExtension();
             write_file(out, ctx.getText());
 
-            if (mb.getSettings()["wait_for_cc_checks"] == "true")
+            if (mb.getSettings()["wait_for_cc_checks"])
             {
                 if (!mb.getSettings()["cc_checks_command"].getValue().empty())
                 {
@@ -775,7 +775,7 @@ PackageSettings Check::getSettings() const
     // some checks may fail in msvc release (functions become intrinsics (mem*) etc.)
     if (check_set->t->getCompilerType() == CompilerType::MSVC ||
         check_set->t->getCompilerType() == CompilerType::ClangCl)
-        ss["native"]["configuration"] = "debug";
+        ss["native"]["configuration"] = "debug"s;
 
     // set output dir for check binaries
     auto d = getChecksDir(check_set->getChecker().swbld.getBuildDirectory());

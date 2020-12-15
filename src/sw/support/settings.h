@@ -3,6 +3,9 @@
 
 #pragma once
 
+#include "package_id.h"
+#include "package_unresolved.h"
+
 #include <nlohmann/json_fwd.hpp>
 #include <primitives/filesystem.h>
 
@@ -52,7 +55,6 @@ struct SW_SUPPORT_API PackageSettings
     String toString(int type = Json) const;
 
     bool operator==(const PackageSettings &) const;
-    bool operator<(const PackageSettings &) const;
     bool isSubsetOf(const PackageSettings &) const;
 
     auto begin() { return settings.begin(); }
@@ -86,31 +88,33 @@ struct SW_SUPPORT_API PackageSetting
     struct nulltag_t
     {
         bool operator==(const nulltag_t &) const { return true; }
-        bool operator<(const nulltag_t &) const { return false; }
+    };
+
+    struct abs_path : path
+    {
+        abs_path(const path &);
     };
 
     using Value = PackageSettingValue;
     using Map = PackageSettings;
     using ArrayValue = PackageSetting;
     using Array = std::vector<ArrayValue>;
-    //using ResolverType = Resolver*;
-    using ResolverType = std::unique_ptr<Resolver>;
-    using ResolverPtr = ResolverType;
-    using NullType = nulltag_t;
-    // append only
-    using Variant = std::variant<std::monostate, Value, Array, Map, NullType/*, ResolverPtr*/>;
+    //using ResolverType = std::shared_ptr<Resolver>;
+    //using ResolverType = Resolver*; // memory leak for now
+    using Resolver = typename ::sw::Resolver*; // memory leak for now
+    using Empty = std::monostate;
+    using Null = nulltag_t;
+    using Path = path;
 
-    PackageSetting();
-    PackageSetting(const Value &);
-    /*PackageSetting(const Array &);
-    PackageSetting(const Map &);*/
-    PackageSetting(const path &);
-    PackageSetting(ResolverType);
-    PackageSetting(const PackageSetting &);
-    PackageSetting &operator=(const PackageSetting &);
-    PackageSetting(PackageSetting &&);
-    PackageSetting &operator=(PackageSetting &&);
-    ~PackageSetting();
+    using Variant = std::variant<
+        Empty, Null,
+        bool, int64_t, double, String,
+        Path,
+        Array, Map, Resolver,
+        PackagePath, PackageVersion, PackageId, PackageVersionRange, UnresolvedPackage
+    >;
+
+    PackageSetting() = default;
 
     template <class U>
     PackageSetting(const U &u)
@@ -135,26 +139,35 @@ struct SW_SUPPORT_API PackageSetting
     const PackageSetting &operator[](const PackageSettingKey &k) const;
 
     bool operator==(const PackageSetting &) const;
-    //bool operator!=(const PackageSetting &) const;
-    bool operator<(const PackageSetting &) const;
 
     template <class U>
-    bool operator==(const U &u) const
+    bool operator==(U &&u) const
     {
-        auto v = std::get_if<Value>(&value);
-        if (!v)
-            return false;
-        return *v == u;
+        auto v = std::get_if<U>(&value);
+        return v && *v == u;
     }
 
-    template <class U>
-    bool operator!=(const U &u) const
+    template <class T>
+    bool is() const
     {
-        return !operator==(u);
+        return std::get_if<T>(&value);
+    }
+
+    template <class T>
+    T &get()
+    {
+        return std::get<T>(value);
+    }
+
+    template <class T>
+    const T &get() const
+    {
+        return std::get<T>(value);
     }
 
     explicit operator bool() const;
-    //bool hasValue() const;
+    bool hasValue() const;
+
     bool isEmpty() const;
     bool isNull() const;
     void setNull();
@@ -175,9 +188,6 @@ struct SW_SUPPORT_API PackageSetting
 
     void push_back(const ArrayValue &);
     void reset();
-
-    void use();
-    void setUseCount(int);
 
     void setRequired(bool = true);
     bool isRequired() const;
@@ -201,18 +211,14 @@ struct SW_SUPPORT_API PackageSetting
     bool isResolver() const;
 
 private:
-    int use_count = 1;
     bool required = false;
     bool used_in_hash = true;
     bool ignore_in_comparison = false;
     bool serializable_ = true;
-    // when adding new member, add it to copy_fields()!
     Variant value;
-    ResolverType resolver;
 
     nlohmann::json toJson() const;
     size_t getHash1() const;
-    void copy_fields(const PackageSetting &);
 
     friend struct PackageSettings;
 

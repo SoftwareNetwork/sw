@@ -3,11 +3,13 @@
 
 #pragma once
 
-#include "package.h"
 #include "settings.h"
 
 namespace sw
 {
+
+struct Package;
+using PackagePtr = std::unique_ptr<Package>;
 
 struct SW_SUPPORT_API ResolveRequestResult
 {
@@ -28,7 +30,7 @@ struct SW_SUPPORT_API ResolveRequest : ResolveRequestResult
 {
     UnresolvedPackage u;
     // value or ref?
-    PackageSettings settings;
+    const PackageSettings &settings;
     // value or ref?
     // or take it from swctx?
     // or from sw build - one security ctx for build
@@ -38,7 +40,6 @@ struct SW_SUPPORT_API ResolveRequest : ResolveRequestResult
 
     ResolveRequest(const UnresolvedPackage &u, const PackageSettings &s) : u(u), settings(s) {}
 
-    //bool operator<(const ResolveRequest &rhs) const { return std::tie(u, settings) < std::tie(rhs.u, rhs.settings); }
     bool operator==(const ResolveRequest &rhs) const { return std::tie(u, settings) == std::tie(rhs.u, rhs.settings); }
 
     bool setPackage(PackagePtr);

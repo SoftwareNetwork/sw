@@ -312,7 +312,7 @@ bool NativeCompiledTarget::isStaticOrHeaderOnlyLibrary() const
 
 static bool isStaticOrHeaderOnlyLibrary(const PackageSettings &s)
 {
-    return s["header_only"] == "true" || s["type"] == "native_static_library";
+    return s["header_only"].get<bool>() || s["type"] == "native_static_library"s;
 }
 
 void NativeCompiledTarget::setOutputDir(const path &dir)
@@ -549,16 +549,16 @@ void NativeCompiledTarget::init()
     // after compilers
     Target::init();
 
-    if (getSettings()["export-if-static"] == "true")
+    if (getSettings()["export-if-static"])
     {
         ExportIfStatic = true;
-        getExportOptions()["export-if-static"].use();
+        //getExportOptions()["export-if-static"].use();
     }
 
-    if (getSettings()["static-deps"] == "true")
+    if (getSettings()["static-deps"])
     {
         getExportOptions()["native"]["library"] = "static";
-        getExportOptions()["static-deps"].use();
+        //getExportOptions()["static-deps"].use();
     }
 
     addPackageDefinitions();
@@ -603,7 +603,7 @@ void NativeCompiledTarget::setupCommand(builder::Command &c) const
             else if (auto nt = d->getTarget().as<PredefinedTarget *>())
             {
                 auto &ts = nt->getInterfaceSettings();
-                if (ts["header_only"] != "true" && ts["type"] == "native_shared_library")
+                if (!ts["header_only"] && ts["type"] == "native_shared_library"s)
                 {
                     f(ts["output_file"].getPathValue(getContext().getLocalStorage()));
                     SW_UNIMPLEMENTED; // todo: nt->setupCommand(c);
@@ -614,7 +614,7 @@ void NativeCompiledTarget::setupCommand(builder::Command &c) const
         }
     };
 
-    if (1/*getMainBuild().getSettings()["standalone"] == "true"*/)
+    if (1/*getMainBuild().getSettings()["standalone"]*/)
     {
         for_deps([this, &c](const path &output_file)
         {
@@ -995,7 +995,7 @@ bool NativeCompiledTarget::createWindowsRpath() const
         && !IsSwConfig
         && getBuildSettings().TargetOS.is(OSType::Windows)
         //&& getSelectedTool() == Linker.get()
-        && 0//!(getMainBuild().getSettings()["standalone"] == "true")
+        && 0//!(getMainBuild().getSettings()["standalone"])
         ;
 }
 
@@ -1405,7 +1405,7 @@ const PackageSettings &NativeCompiledTarget::getInterfaceSettings() const
         for (auto &[k, v] : c.environment)
             s["run_command"]["environment"][k] = v;
         if (c.create_new_console)
-            s["run_command"]["create_new_console"] = "true";
+            s["run_command"]["create_new_console"] = true;
     }
 
     // newer settings
@@ -1416,31 +1416,6 @@ const PackageSettings &NativeCompiledTarget::getInterfaceSettings() const
         {
             auto is = std::to_string((int)i);
             auto &s = ts[is];
-
-            auto print_deps = [&s](auto &g)
-            {
-                for (auto &d : g.getRawDependencies())
-                {
-                    if (d->isDisabled())
-                        continue;
-                    PackageSettings j;
-                    auto &ds = j[boost::to_lower_copy(d->getTarget().getPackage().toString())];
-                    ds = d->getTarget().getSettings();
-                    if (d->IncludeDirectoriesOnly)
-                    {
-                        ds["include_directories_only"] = "true";
-                        //ds["include_directories_only"].ignoreInComparison(true);
-                        ds["include_directories_only"].useInHash(false);
-                    }
-                    if (d->LinkLibrariesOnly)
-                    {
-                        ds["link_libraries_only"] = "true";
-                        //ds["link_libraries_only"].ignoreInComparison(true);
-                        ds["link_libraries_only"].useInHash(false);
-                    }
-                    s["dependencies"].push_back(j);
-                }
-            };
 
             // for private, we skip some variables
             // we do not need them completely
@@ -1454,7 +1429,7 @@ const PackageSettings &NativeCompiledTarget::getInterfaceSettings() const
                 }
 
                 for (auto &[k, v] : g.Definitions)
-                    s["definitions"][k] = v;
+                    s["definitions"][k] = v.toString();
                 for (auto &d : g.CompileOptions)
                     s["compile_options"].push_back(path(d));
                 for (auto &d : g.IncludeDirectories)
@@ -1481,6 +1456,31 @@ const PackageSettings &NativeCompiledTarget::getInterfaceSettings() const
                     s["frameworks"].push_back(d);
             }
 
+            auto print_deps = [&s](auto &g)
+            {
+                for (auto &d : g.getRawDependencies())
+                {
+                    if (d->isDisabled())
+                        continue;
+                    PackageSettings j;
+                    auto &ds = j[boost::to_lower_copy(d->getTarget().getPackage().toString())];
+                    ds = d->getTarget().getSettings();
+                    if (d->IncludeDirectoriesOnly)
+                    {
+                        ds["include_directories_only"] = true;
+                        //ds["include_directories_only"].ignoreInComparison(true);
+                        ds["include_directories_only"].useInHash(false);
+                    }
+                    if (d->LinkLibrariesOnly)
+                    {
+                        ds["link_libraries_only"] = true;
+                        //ds["link_libraries_only"].ignoreInComparison(true);
+                        ds["link_libraries_only"].useInHash(false);
+                    }
+                    s["dependencies"].push_back(j);
+                }
+            };
+
             if (i != InheritanceType::Private)
                 print_deps(g);
         });
@@ -1502,7 +1502,12 @@ void NativeCompiledTarget::prepare()
     {
         auto add_dep = [this](auto &&name)
         {
-            auto d = std::make_shared<Dependency>(getSettings()["rule"][name]["package"].getValue());
+            auto &p = getSettings()["rule"][name]["package"];
+            UnresolvedPackage u = p.is<UnresolvedPackage>()
+                ? p.get<UnresolvedPackage>()
+                : p.get<PackageId>()
+                ;
+            auto d = std::make_shared<Dependency>(u);
             setDummyDependencySettings(d);
             resolveDependency(d);
             addRuleDependency({ name, d });
@@ -1521,7 +1526,11 @@ void NativeCompiledTarget::prepare()
                     getBuildSettings().TargetOS.Arch != ArchType::x86_64
                     )
                     return;
-                auto u = getSettings()["rule"][r]["package"].getValue();
+                auto &p = getSettings()["rule"][r]["package"];
+                UnresolvedPackage u = p.is<UnresolvedPackage>()
+                    ? p.get<UnresolvedPackage>()
+                    : p.get<PackageId>()
+                    ;
                 auto d = std::make_shared<Dependency>(u);
                 d->getSettings() = getSettings();
                 resolveDependency(d);
@@ -2024,10 +2033,10 @@ void NativeCompiledTarget::prepare_pass3_1()
                                     Dependency d2(d3->getUnresolvedPackage());
                                     d2.settings = d3->getSettings();
                                     d2.setTarget(d3->getTarget());
-                                    //d2.IncludeDirectoriesOnly = d3->getSettings()["include_directories_only"] == "true";
-                                    d2.IncludeDirectoriesOnly = settings["include_directories_only"] == "true";
+                                    //d2.IncludeDirectoriesOnly = d3->getSettings()["include_directories_only"];
+                                    d2.IncludeDirectoriesOnly = settings["include_directories_only"];
                                     //SW_ASSERT(d3->getSettings()["include_directories_only"] == settings["include_directories_only"], err);
-                                    d2.LinkLibrariesOnly = settings["link_libraries_only"] == "true";
+                                    d2.LinkLibrariesOnly = settings["link_libraries_only"];
                                     //SW_ASSERT(d3->getSettings()["link_libraries_only"] == settings["link_libraries_only"], err);
 
                                     // skip both of idir only libs and llibs only
@@ -2171,8 +2180,8 @@ void NativeCompiledTarget::prepare_pass3_2()
                                     Dependency d2(d3->getUnresolvedPackage());
                                     d2.settings = d3->getSettings();
                                     d2.setTarget(d3->getTarget());
-                                    d2.IncludeDirectoriesOnly = settings["include_directories_only"] == "true";
-                                    d2.LinkLibrariesOnly = settings["link_libraries_only"] == "true";
+                                    d2.IncludeDirectoriesOnly = settings["include_directories_only"];
+                                    d2.LinkLibrariesOnly = settings["link_libraries_only"];
 
                                     //// exit early before llibs only
                                     if (!d->IncludeDirectoriesOnly && !d2.IncludeDirectoriesOnly)
@@ -2329,8 +2338,8 @@ void NativeCompiledTarget::prepare_pass3_3()
                                     Dependency d2(d3->getUnresolvedPackage());
                                     d2.settings = d3->getSettings();
                                     d2.setTarget(d3->getTarget());
-                                    d2.IncludeDirectoriesOnly = settings["include_directories_only"] == "true";
-                                    d2.LinkLibrariesOnly = settings["link_libraries_only"] == "true";
+                                    d2.IncludeDirectoriesOnly = settings["include_directories_only"];
+                                    d2.LinkLibrariesOnly = settings["link_libraries_only"];
 
                                     if (!d2.LinkLibrariesOnly)
                                     {

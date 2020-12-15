@@ -112,14 +112,14 @@ SUBCOMMAND_DECL(integrate)
         return "/"s + s2 + p.substr(2);
     };
 
-    std::set<sw::PackageSettings> our_settings;
+    std::unordered_set<sw::PackageSettings> our_settings;
     auto create_build = [this, &cygwin, &our_settings](const path &deps_file)
     {
         auto build = getContext().createBuild();
         auto &b = *build;
 
         auto settings = createSettings();
-        cygwin = settings[0]["os"]["kernel"] == "org.cygwin";
+        cygwin = settings[0]["os"]["kernel"] == sw::PackagePath{ "org.cygwin"s };
 
         auto lines = read_lines(deps_file);
         for (auto &l : lines)
@@ -196,18 +196,18 @@ SUBCOMMAND_DECL(integrate)
             auto &t = **tgts.begin();
             const auto &s = t.getInterfaceSettings();
 
-            if (s["type"] == "native_executable")
+            if (s["type"] == "native_executable"s)
                 continue;
 
             ctx.if_("NOT TARGET " + pkg2string(pkg));
 
             // tgt
             auto st = "STATIC";
-            if (s["type"] == "native_static_library")
+            if (s["type"] == "native_static_library"s)
                 ;
-            else if (s["type"] == "native_shared_library")
+            else if (s["type"] == "native_shared_library"s)
                 st = "SHARED";
-            if (s["header_only"] == "true")
+            if (s["header_only"])
                 st = "INTERFACE";
             ctx.addLine("add_library(" + pkg2string(pkg) + " " + st + " IMPORTED GLOBAL)");
             ctx.emptyLines();
@@ -326,7 +326,7 @@ SUBCOMMAND_DECL(integrate)
                     else_ctx.emptyLines();
                 }
 
-                if (s["header_only"] == "true")
+                if (s["header_only"])
                     continue;
 
                 // if_ctx
@@ -424,7 +424,7 @@ SUBCOMMAND_DECL(integrate)
             auto &t = **tgts.begin();
             const auto &s = t.getInterfaceSettings();
 
-            if (s["type"] == "native_executable")
+            if (s["type"] == "native_executable"s)
                 continue;
 
             for (auto &[k, p] : s["properties"].getMap())
@@ -474,7 +474,7 @@ SUBCOMMAND_DECL(integrate)
             auto &t = **tgts.begin();
             const auto &s = t.getInterfaceSettings();
 
-            if (s["type"] == "native_executable")
+            if (s["type"] == "native_executable"s)
                 continue;
 
             ctx.addLine("# " + pkg2string(pkg));
@@ -489,10 +489,11 @@ SUBCOMMAND_DECL(integrate)
             ctx.decreaseIndent("]:");
             ctx.increaseIndent();
 
-            using tgt_type = std::pair<sw::PackageId, sw::PackageSettings>;
+            SW_UNIMPLEMENTED; // make custom hash for tgt_type
+            /*using tgt_type = std::pair<sw::PackageId, sw::PackageSettings>;
             using f_param = const tgt_type &;
             std::function<void(f_param)> process;
-            std::set<tgt_type> visited;
+            std::unordered_set<tgt_type> visited;
             process = [this, &process, &s, &b, &ctx, &visited](f_param nt)
             {
                 if (visited.find(nt) != visited.end())
@@ -547,7 +548,7 @@ SUBCOMMAND_DECL(integrate)
                     }
                 }
             };
-            process({t.getPackage(), t.getSettings()});
+            process({t.getPackage(), t.getSettings()});*/
 
             ctx.decreaseIndent();
             ctx.emptyLines();

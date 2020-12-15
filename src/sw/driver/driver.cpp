@@ -364,7 +364,7 @@ struct SpecFileInput : Input, DriverInput
         case FrontendType::SwC:
         {
             auto out = static_cast<const Driver&>(getDriver()).build_configs1(swctx, { this }).begin()->second;
-            module = loadSharedLibrary(out.dll, out.PATH, swctx.getSettings()["do_not_remove_bad_module"] == "true");
+            module = loadSharedLibrary(out.dll, out.PATH, swctx.getSettings()["do_not_remove_bad_module"].get<bool>());
             auto ep = std::make_unique<NativeModuleTargetEntryPoint>(*module);
             ep->source_dir = fn.parent_path();
             return ep;
@@ -393,7 +393,7 @@ struct SpecFileInput : Input, DriverInput
 
             b->build();
             auto &out = pc.r[fn];
-            module = loadSharedLibrary(out.dll, out.PATH, swctx.getSettings()["do_not_remove_bad_module"] == "true");
+            module = loadSharedLibrary(out.dll, out.PATH, swctx.getSettings()["do_not_remove_bad_module"].get<bool>());
             auto ep = std::make_unique<NativeModuleTargetEntryPoint>(*module);
             ep->source_dir = fn.parent_path();
             return ep;
@@ -710,7 +710,7 @@ void Driver::loadInputsBatch(const std::set<Input *> &inputs) const
             LOG_WARN(logger, "Bad input");
             continue;
         }
-        i->module = loadSharedLibrary(out.dll, out.PATH, swctx.getSettings()["do_not_remove_bad_module"] == "true");
+        i->module = loadSharedLibrary(out.dll, out.PATH, swctx.getSettings()["do_not_remove_bad_module"].get<bool>());
         auto ep = std::make_unique<NativeModuleTargetEntryPoint>(*i->module);
         ep->source_dir = p.parent_path();
         i->setEntryPoint(std::move(ep));
@@ -785,9 +785,7 @@ std::unordered_map<path, PrepareConfigOutputData> Driver::build_configs1(SwConte
     //if (!b)
     auto b = create_build(ctx);
 
-    Resolver resolver;
-    resolver.addStorage(*bs);
-    b->setResolver(resolver);
+    b->getResolver().addStorage(*bs);
 
     PrepareConfig pc;
     auto inputs_ep = [&inputs, &pc](Build &b)

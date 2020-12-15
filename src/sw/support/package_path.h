@@ -40,6 +40,8 @@ struct PathBase
 
     PathBase(PathElement s, CheckSymbol check_symbol = nullptr)
     {
+        data.reserve(s.size());
+
         auto prev = s.begin();
         for (auto i = s.begin(); i != s.end(); ++i)
         {

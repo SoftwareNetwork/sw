@@ -14,9 +14,9 @@ namespace sw
 {
 
 template <class T>
-static auto to_upkg(const T &s)
+static UnresolvedPackage to_upkg(const T &s)
 {
-    return UnresolvedPackage(s).toString();
+    return UnresolvedPackage{ s };
 }
 
 template <class K, class V>
@@ -35,9 +35,9 @@ static bool check_and_assign(K &k, const V &v, bool force = false)
 // scripting languages do not have os, arch, kernel, configuration etc.
 static void addNativeSettings(PackageSettings &ts, bool force)
 {
-    check_and_assign(ts["native"]["configuration"], "release", force);
-    check_and_assign(ts["native"]["library"], "shared", force);
-    check_and_assign(ts["native"]["mt"], "false", force);
+    check_and_assign(ts["native"]["configuration"], "release"s, force);
+    check_and_assign(ts["native"]["library"], "shared"s, force);
+    check_and_assign(ts["native"]["mt"], false, force);
 }
 
 static void setRuleCompareRules(PackageSettings &ts)
@@ -61,16 +61,16 @@ static void basicResolve(PackageSettings &ts)
     ts2.erase("rule");
     for (auto &&[_, m] : ts["rule"].getMap())
     {
-        ResolveRequest rr{ m["package"].getValue(), ts2 };
+        ResolveRequest rr{ m["package"].get<UnresolvedPackage>(), ts2 };
         if (ts["resolver"].resolve(rr))
-            m["package"] = rr.getPackage().toRangeString();
+            m["package"] = UnresolvedPackage{ rr.getPackage() };
         // otherwise we silently ignore until rule is used
     }
     for (auto &&[_, m] : ts["native"]["stdlib"].getMap())
     {
-        ResolveRequest rr{ m.getValue(), ts }; // with rules!
+        ResolveRequest rr{ m.get<UnresolvedPackage>(), ts }; // with rules!
         if (ts["resolver"].resolve(rr))
-            m = rr.getPackage().toRangeString();
+            m = UnresolvedPackage{ rr.getPackage() };
         // otherwise we silently ignore until rule is used
     }
 }
@@ -89,28 +89,28 @@ static void addSettingsCommon(const SwBuild &b, PackageSettings &ts, bool force)
     if (bs.TargetOS.is(OSType::Windows))
     {
         PackageSettings msvc;
-        msvc["type"] = "msvc";
+        msvc["type"] = "msvc"s;
 
         if (0);
         // msvc
         else if (getProgramDetector().hasVsInstances())
         {
-            msvc["package"] = "com.Microsoft.VisualStudio.VC.cl";
+            msvc["package"] = UnresolvedPackage{ "com.Microsoft.VisualStudio.VC.cl" };
             set_rule("c", msvc);
             set_rule("cpp", msvc);
 
-            msvc["package"] = "com.Microsoft.VisualStudio.VC.ml";
+            msvc["package"] = UnresolvedPackage{ "com.Microsoft.VisualStudio.VC.ml" };
             set_rule("asm", msvc);
         }
 
         // use msvc's lib and link until llvm tools are not working
-        msvc["package"] = "com.Microsoft.VisualStudio.VC.lib";
+        msvc["package"] = UnresolvedPackage{ "com.Microsoft.VisualStudio.VC.lib" };
         set_rule("lib", msvc);
-        msvc["package"] = "com.Microsoft.VisualStudio.VC.link";
+        msvc["package"] = UnresolvedPackage{ "com.Microsoft.VisualStudio.VC.link" };
         set_rule("link", msvc);
 
         // always use this rc
-        ts["rule"]["rc"]["package"] = "com.Microsoft.Windows.rc";
+        ts["rule"]["rc"]["package"] = UnresolvedPackage{ "com.Microsoft.Windows.rc" };
 
         // libs
         check_and_assign(ts["native"]["stdlib"]["c"], to_upkg("com.Microsoft.Windows.SDK.ucrt"), force);
@@ -119,7 +119,7 @@ static void addSettingsCommon(const SwBuild &b, PackageSettings &ts, bool force)
             check_and_assign(ts["native"]["stdlib"]["compiler"], to_upkg("com.Microsoft.VisualStudio.VC.runtime"), force);
         check_and_assign(ts["native"]["stdlib"]["kernel"], to_upkg("com.Microsoft.Windows.SDK.um"), force);
 
-        UnresolvedPackage cppcl = ts["rule"]["cpp"]["package"].getValue();
+        auto &cppcl = ts["rule"]["cpp"]["package"].get<UnresolvedPackage>();
         if (cppcl.getPath() == "com.Microsoft.VisualStudio.VC.cl")
         {
             // take same ver as cl
@@ -155,14 +155,14 @@ void addSettingsAndSetPrograms(const SwBuild &b, PackageSettings &ts)
 // they must be the same as used when building sw
 void addSettingsAndSetConfigPrograms(const SwBuild &b, PackageSettings &ts)
 {
-    ts["native"]["library"] = "static"; // why not shared?
+    ts["native"]["library"] = "static"s; // why not shared?
                                         //ts["native"]["mt"] = "true";
-    if (b.getContext().getSettings()["debug_configs"] == "true")
+    if (b.getContext().getSettings()["debug_configs"])
     {
 #ifndef NDEBUG
-        ts["native"]["configuration"] = "debug";
+        ts["native"]["configuration"] = "debug"s;
 #else
-        ts["native"]["configuration"] = "releasewithdebuginformation";
+        ts["native"]["configuration"] = "releasewithdebuginformation"s;
 #endif
     }
 

@@ -378,7 +378,7 @@ void build(Solution &s)
         mirror += "pub.egorpugin.primitives.sw.main"_dep;
     }
 
-    if (s.getExternalVariables()["with-gui"] != "true")
+    if (!s.getExternalVariables()["with-gui"])
         return;
 
     /*auto &gui = client.addTarget<ExecutableTarget>("gui", "0.4.0");

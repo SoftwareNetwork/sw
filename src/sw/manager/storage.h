@@ -200,19 +200,8 @@ private:
 // We also can reset() our cache when needed.
 struct SW_MANAGER_API CachedStorage : IResolvableStorage
 {
-    //using StoredPackages = ResolveResult;
-    using Key = std::pair<UnresolvedPackage, PackageSettings>;
     using Value = ResolveRequestResult;
-
-    template<class T> struct hasher
-    {
-        size_t operator()(const Key &p) const
-        {
-            auto h = std::hash<decltype(p.first)>()(p.first);
-            return hash_combine(h, std::hash<decltype(p.second)>()(p.second));
-        }
-    };
-    using StoredPackages = std::unordered_map<Key, Value, hasher<Key>>;
+    using StoredPackages = std::unordered_map<UnresolvedPackage, std::unordered_map<size_t, Value>>;
 
     CachedStorage() = default;
     CachedStorage(const CachedStorage &) = delete;

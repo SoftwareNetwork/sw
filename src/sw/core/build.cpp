@@ -104,9 +104,9 @@ static auto can_use_saved_configs(const SwBuild &b)
 {
     auto &s = b.getSettings();
     return true
-        && s["use_saved_configs"] == "true"
+        && s["use_saved_configs"]
         // allow only in the main build for now
-        && s["master_build"] == "true"
+        && s["master_build"]
         ;
 }
 
@@ -392,7 +392,7 @@ void SwBuild::build()
     //while (step())
         //;
 
-    if (build_settings["measure"] == "true")
+    if (build_settings["measure"])
         LOG_DEBUG(logger, BOOST_CURRENT_FUNCTION << " time: " << t.getTimeFloat() << " s.");
 
     writeHtmlReport();
@@ -428,7 +428,7 @@ bool SwBuild::step()
         return false;
     }
 
-    if (build_settings["measure"] == "true")
+    if (build_settings["measure"])
         // not working atm: magic_enum bug
         //LOG_DEBUG(logger, "build step " << magic_enum::enum_name(state) << " time: " << t.getTimeFloat() << " s.");
         LOG_DEBUG(logger, "build step " << toIndex(state) << " time: " << t.getTimeFloat() << " s.");
@@ -487,7 +487,8 @@ void SwBuild::loadInputs()
     {
         for (auto s : i.getSettings())
         {
-            s["resolver"] = PackageSetting(getResolver().clone());
+            //s["resolver"] = PackageSetting(getResolver().clone());
+            s["resolver"] = &getResolver();
             auto tgts2 = i.getInput().loadPackages(*this, s, {}, {});
             auto tgts = registerTargets(tgts2);
             for (auto &&tgt : tgts)
@@ -696,7 +697,7 @@ void SwBuild::resolvePackages()
     {
         ScopedTime t;
         swctx.loadEntryPointsBatch(iv);
-        if (build_settings["measure"] == "true")
+        if (build_settings["measure"])
             LOG_DEBUG(logger, "load entry points time: " << t.getTimeFloat() << " s.");
     }
 
@@ -737,8 +738,8 @@ void SwBuild::resolvePackages(const std::vector<IDependency*> &udeps)
     // when we able to set dependency per each target with its settings
     bool must_update_lock_file = true;
     if (1
-        && build_settings["update_lock_file"] != "true" // update flag
-        && build_settings["lock_file"].isValue()
+        && !build_settings["update_lock_file"] // update flag
+        && build_settings["lock_file"]
         && fs::exists(build_settings["lock_file"].getValue())
         )
     {
@@ -816,7 +817,7 @@ void SwBuild::resolvePackages(const std::vector<IDependency*> &udeps)
         SW_UNIMPLEMENTED;
 
         // show fancy diffs during update lock file
-        /*if (build_settings["update_lock_file"] == "true")
+        /*if (build_settings["update_lock_file"])
         try
         {
             // may throw
@@ -864,7 +865,7 @@ void SwBuild::resolvePackages(const std::vector<IDependency*> &udeps)
     {
         ScopedTime t;
         swctx.loadEntryPointsBatch(iv);
-        if (build_settings["measure"] == "true")
+        if (build_settings["measure"])
             LOG_DEBUG(logger, "load entry points time: " << t.getTimeFloat() << " s.");
     }*/
 }
@@ -1043,7 +1044,7 @@ void SwBuild::prepare()
     if (stopped)
         return;
 
-    if (build_settings["master_build"] != "true")
+    if (!build_settings["master_build"])
         return;
 
     // for now
@@ -1095,8 +1096,8 @@ void SwBuild::execute(ExecutionPlan &p) const
 
     SwapAndRestore sr(current_explan, &p);
 
-    p.build_always |= build_settings["build_always"] == "true";
-    p.write_output_to_file |= build_settings["write_output_to_file"] == "true";
+    p.build_always |= build_settings["build_always"].get<bool>();
+    p.write_output_to_file |= build_settings["write_output_to_file"].get<bool>();
     if (build_settings["skip_errors"].isValue())
         p.skip_errors = std::stoll(build_settings["skip_errors"].getValue());
     if (build_settings["time_limit"].isValue())
@@ -1104,10 +1105,10 @@ void SwBuild::execute(ExecutionPlan &p) const
 
     ScopedTime t;
     p.execute(getBuildExecutor());
-    if (build_settings["measure"] == "true")
+    if (build_settings["measure"])
         LOG_DEBUG(logger, BOOST_CURRENT_FUNCTION << " time: " << t.getTimeFloat() << " s.");
 
-    if (build_settings["time_trace"] == "true")
+    if (build_settings["time_trace"])
         p.saveChromeTrace(getBuildDirectory() / "misc" / "time_trace.json");
 
     path ide_fast_path = build_settings["build_ide_fast_path"].isValue() ? build_settings["build_ide_fast_path"].getValue() : "";
@@ -1186,7 +1187,7 @@ Commands SwBuild::getCommands() const
             std::function<void(const PackageSettings &)> gather_ttb;
             gather_ttb = [this, &gather_ttb, &ttb](const auto &s) mutable
             {
-                if (s["header_only"] == "true")
+                if (s["header_only"])
                     return;
 
                 if (!(s["type"] == "native_shared_library" || s["type"] == "native_static_library" || s["type"] == "native_executable"))
@@ -1237,8 +1238,8 @@ Commands SwBuild::getCommands() const
     //targets_to_build = ttb;
 
     //
-    auto cl_show_output = build_settings["show_output"] == "true";
-    auto cl_write_output_to_file = build_settings["write_output_to_file"] == "true";
+    auto cl_show_output = build_settings["show_output"];
+    auto cl_write_output_to_file = build_settings["write_output_to_file"];
 
     // gather commands
     auto &ttb = getTargets();
@@ -1288,7 +1289,7 @@ Commands SwBuild::getCommands() const
                 {
                     if (p.getPath().isAbsolute())
                         continue;
-                    if (s["header_only"] == "true")
+                    if (s["header_only"])
                         continue;
                     if (!(s["type"] == "native_shared_library" || s["type"] == "native_static_library" || s["type"] == "native_executable"))
                         continue;
@@ -1299,7 +1300,7 @@ Commands SwBuild::getCommands() const
                 std::function<void(const PackageSettings &)> copy_file;
                 copy_file = [this, &copy_dir_current, &copy_files, &copy_file, &visited_pkgs](const auto &s)
                 {
-                    if (s["header_only"] == "true")
+                    if (s["header_only"])
                         return;
 
                     if (!(s["type"] == "native_shared_library" || s["type"] == "native_static_library" || s["type"] == "native_executable"))

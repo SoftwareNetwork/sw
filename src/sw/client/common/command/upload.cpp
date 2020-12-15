@@ -33,7 +33,7 @@ sw::PackageDescriptionMap getPackages(const sw::SwBuild &b, const sw::support::S
 
         auto &t = **tgts.begin();
 
-        if (t.getInterfaceSettings()["skip_upload"] == "true")
+        if (t.getInterfaceSettings()["skip_upload"])
             continue;
 
         auto d = std::make_unique<PackageDescription>(pkg, "todo-driver"s);

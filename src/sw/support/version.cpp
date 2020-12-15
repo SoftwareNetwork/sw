@@ -199,8 +199,9 @@ PackageVersion::Number PackageVersion::getTweak() const
 }
 
 PackageVersionRange::PackageVersionRange()
-    : value{ VersionRange{ "*" } }
+    : value{ VersionRange{} }
 {
+    getRange() |= primitives::version::detail::RangePair{ Version::min(), true, Version::max(), true };
 }
 
 PackageVersionRange::PackageVersionRange(const char *s)
@@ -226,7 +227,10 @@ PackageVersionRange::PackageVersionRange(const PackageVersion &v)
     if (v.isBranch())
         value = v.getBranch();
     else
-        value = VersionRange{make_range_string(v.getVersion().toString())};
+    {
+        value = VersionRange{};
+        getRange() |= primitives::version::detail::RangePair{ v.getVersion(), false, v.getVersion(), false };
+    }
 }
 
 bool PackageVersionRange::isBranch() const

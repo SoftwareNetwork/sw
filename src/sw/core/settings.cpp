@@ -15,22 +15,22 @@ PackageSettings toPackageSettings(const OS &o)
     switch (o.Type)
     {
     case OSType::Windows:
-        s["os"]["kernel"] = "com.Microsoft.Windows.NT";
+        s["os"]["kernel"] = PackagePath{ "com.Microsoft.Windows.NT"s };
         break;
     case OSType::Linux:
-        s["os"]["kernel"] = "org.torvalds.linux";
+        s["os"]["kernel"] = PackagePath{ "org.torvalds.linux"s };
         break;
     case OSType::Macos:
-        s["os"]["kernel"] = "com.Apple.Macos";
+        s["os"]["kernel"] = PackagePath{ "com.Apple.Macos"s };
         break;
     case OSType::Darwin:
-        s["os"]["kernel"] = "com.Apple.Darwin";
+        s["os"]["kernel"] = PackagePath{ "com.Apple.Darwin"s };
         break;
     case OSType::Cygwin:
-        s["os"]["kernel"] = "org.cygwin";
+        s["os"]["kernel"] = PackagePath{ "org.cygwin"s };
         break;
     case OSType::Mingw:
-        s["os"]["kernel"] = "org.mingw";
+        s["os"]["kernel"] = PackagePath{ "org.mingw"s };
         break;
     default:
         SW_UNIMPLEMENTED;
@@ -41,16 +41,16 @@ PackageSettings toPackageSettings(const OS &o)
     switch (o.Arch)
     {
     case ArchType::x86:
-        s["os"]["arch"] = "x86";
+        s["os"]["arch"] = "x86"s;
         break;
     case ArchType::x86_64:
-        s["os"]["arch"] = "x86_64";
+        s["os"]["arch"] = "x86_64"s;
         break;
     case ArchType::arm:
-        s["os"]["arch"] = "arm";
+        s["os"]["arch"] = "arm"s;
         break;
     case ArchType::aarch64:
-        s["os"]["arch"] = "aarch64";
+        s["os"]["arch"] = "aarch64"s;
         break;
     default:
         SW_UNIMPLEMENTED;
@@ -68,10 +68,10 @@ PackageSettings toPackageSettings(const OS &o)
     switch (o.EnvType)
     {
     case EnvironmentType::GNUEABI:
-        s["os"]["environment"] = "gnueabi";
+        s["os"]["environment"] = "gnueabi"s;
         break;
     case EnvironmentType::GNUEABIHF:
-        s["os"]["environment"] = "gnueabihf";
+        s["os"]["environment"] = "gnueabihf"s;
         break;
     }
 

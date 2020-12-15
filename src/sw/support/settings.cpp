@@ -4,7 +4,10 @@
 #include "settings.h"
 
 #include "hash.h"
+#include "resolver.h"
 #include "storage.h"
+
+#include <primitives/overload.h>
 
 #include <nlohmann/json.hpp>
 #include <pystring.h>
@@ -12,104 +15,38 @@
 namespace sw
 {
 
-PackageSetting::PackageSetting()
-{
-}
-
-PackageSetting::PackageSetting(const Value &v)
-{
-    value = v;
-}
-
-PackageSetting::PackageSetting(const path &p)
-{
-    setAbsolutePathValue(p);
-}
-
-PackageSetting::PackageSetting(ResolverType r)
-{
-    resolver = std::move(r);
-}
-
-PackageSetting::PackageSetting(const PackageSetting &rhs)
-{
-    operator=(rhs);
-}
-
-PackageSetting::PackageSetting(PackageSetting &&) = default;
-/*{
-    SW_UNIMPLEMENTED;
-}*/
-
-PackageSetting &PackageSetting::operator=(PackageSetting &&) = default;
-/*{
-    SW_UNIMPLEMENTED;
-}*/
-
-PackageSetting::~PackageSetting()
-{
-}
-
-void PackageSetting::copy_fields(const PackageSetting &rhs)
-{
-    required = rhs.required;
-    use_count = rhs.use_count;
-    used_in_hash = rhs.used_in_hash;
-    ignore_in_comparison = rhs.ignore_in_comparison;
-    serializable_ = rhs.serializable_;
-    resolver.reset();
-    if (rhs.resolver)
-        resolver = rhs.resolver->clone();
-}
-
 bool PackageSetting::isEmpty() const
 {
-    return value.index() == 0;
+    return std::get_if<Empty>(&value);
 }
 
 bool PackageSetting::isNull() const
 {
-    return value.index() == 4;
+    return std::get_if<Null>(&value);
 }
 
 void PackageSetting::setNull()
 {
     //reset();
-    value = NullType{};
-}
-
-PackageSetting &PackageSetting::operator=(const PackageSetting &rhs)
-{
-    // if we see an option which was consumed, we do not copy, just reset this
-    if (rhs.use_count == 0)
-    {
-        reset();
-        return *this;
-    }
-    value = rhs.value;
-    copy_fields(rhs);
-    return *this;
+    value = Null{};
 }
 
 PackageSetting &PackageSetting::operator[](const PackageSettingKey &k)
 {
-    if (value.index() == 0)
-    {
-        if (!isEmpty())
-            throw SW_RUNTIME_ERROR("key is not a map (null)");
+    if (isEmpty())
         *this = Map();
-    }
     return std::get<Map>(value)[k];
 }
 
 const PackageSetting &PackageSetting::operator[](const PackageSettingKey &k) const
 {
-    if (value.index() != 3)
+    auto v = std::get_if<Map>(&value);
+    if (!v)
     {
         thread_local PackageSetting s;
         return s;
     }
-    return std::get<Map>(value)[k];
+    return (*v)[k];
 }
 
 const String &PackageSetting::getValue() const
@@ -122,7 +59,7 @@ const String &PackageSetting::getValue() const
 
 const PackageSetting::Array &PackageSetting::getArray() const
 {
-    if (value.index() == 0)
+    if (isEmpty())
     {
         thread_local Array s;
         return s;
@@ -135,15 +72,15 @@ const PackageSetting::Array &PackageSetting::getArray() const
 
 PackageSetting::Map &PackageSetting::getMap()
 {
-    auto s = std::get_if<Map>(&value);
-    if (!s)
+    auto v = std::get_if<Map>(&value);
+    if (!v)
     {
-        if (value.index() != 0)
+        if (!isEmpty())
             throw SW_RUNTIME_ERROR("Not settings");
         *this = Map();
-        s = std::get_if<Map>(&value);
+        v = std::get_if<Map>(&value);
     }
-    return *s;
+    return *v;
 }
 
 const PackageSetting::Map &PackageSetting::getMap() const
@@ -197,9 +134,7 @@ void PackageSetting::setAbsolutePathValue(const path &value)
 
 bool PackageSetting::resolve(ResolveRequest &rr) const
 {
-    if (!isResolver())
-        throw SW_RUNTIME_ERROR("Not a resolver");
-    return resolver->resolve(rr);
+    return get<Resolver>()->resolve(rr);
 }
 
 bool PackageSetting::operator==(const PackageSetting &rhs) const
@@ -208,20 +143,6 @@ bool PackageSetting::operator==(const PackageSetting &rhs) const
         return true;
     return value == rhs.value;
 }
-
-/*bool PackageSetting::operator!=(const PackageSetting &rhs) const
-{
-    return !operator==(rhs);
-}*/
-
-bool PackageSetting::operator<(const PackageSetting &rhs) const
-{
-    return value < rhs.value;
-}
-
-/*String PackageSetting::getHash() const
-{
-}*/
 
 void PackageSetting::useInHash(bool b)
 {
@@ -335,17 +256,14 @@ bool PackageSetting::isObject() const
 
 bool PackageSetting::isResolver() const
 {
-    return !!resolver;
+    SW_UNIMPLEMENTED;
+    //return !!resolver;
 }
 
 void PackageSetting::push_back(const ArrayValue &v)
 {
-    if (value.index() == 0)
-    {
-        if (!isEmpty())
-            throw SW_RUNTIME_ERROR("key is not an array (null)");
+    if (isEmpty())
         *this = Array();
-    }
     return std::get<Array>(value).push_back(v);
 }
 
@@ -353,19 +271,6 @@ void PackageSetting::reset()
 {
     PackageSetting s;
     *this = s;
-}
-
-void PackageSetting::use()
-{
-    if (use_count > 0)
-        use_count--;
-    if (use_count == 0)
-        reset();
-}
-
-void PackageSetting::setUseCount(int c)
-{
-    use_count = c;
 }
 
 void PackageSetting::setRequired(bool b)
@@ -379,6 +284,11 @@ bool PackageSetting::isRequired() const
 }
 
 PackageSetting::operator bool() const
+{
+    return !isEmpty() || *this == true;
+}
+
+bool PackageSetting::hasValue() const
 {
     return !isEmpty();
 }
@@ -423,25 +333,31 @@ String PackageSettings::toString(int type) const
 
 nlohmann::json PackageSetting::toJson() const
 {
-    nlohmann::json j;
-    switch (value.index())
-    {
-    case 0:
-        return j;
-    case 1:
-        return getValue();
-    case 2:
-        for (auto &v2 : std::get<Array>(value))
-            j.push_back(v2.toJson());
-        break;
-    case 3:
-        return std::get<Map>(value).toJson();
-    case 4:
-        return nullptr;
-    default:
-        SW_UNREACHABLE;
-    }
-    return j;
+    auto o = overload(
+        [](const Empty &) { return nlohmann::json{}; },
+        [](const Null &) -> nlohmann::json { return nullptr; },
+        [](const Array &a) {
+            nlohmann::json j;
+            for (auto &v2 : a)
+                j.push_back(v2.toJson());
+            return j;
+        },
+        [](const Map &m) { return m.toJson(); },
+        [](const path &p) -> nlohmann::json { SW_UNIMPLEMENTED; },
+        [](const Resolver &r) -> nlohmann::json { return {}; },
+        [](auto &&v) -> nlohmann::json {
+            if constexpr (0
+                || std::is_same_v<std::decay_t<decltype(v)>, PackagePath>
+                || std::is_same_v<std::decay_t<decltype(v)>, PackageVersion>
+                || std::is_same_v<std::decay_t<decltype(v)>, PackageId>
+                || std::is_same_v<std::decay_t<decltype(v)>, PackageVersionRange>
+                || std::is_same_v<std::decay_t<decltype(v)>, UnresolvedPackage>
+                )
+                return v.toString();
+            else
+                return v;
+        });
+    return std::visit(o, value);
 }
 
 nlohmann::json PackageSettings::toJson() const
@@ -465,25 +381,29 @@ nlohmann::json PackageSettings::toJson() const
 
 size_t PackageSetting::getHash1() const
 {
-    size_t h = 0;
-    switch (value.index())
-    {
-    case 0:
-        return h;
-    case 1:
-        return hash_combine(h, getValue());
-    case 2:
-        for (auto &v2 : std::get<Array>(value))
-            hash_combine(h, v2.getHash1());
-        break;
-    case 3:
-        return hash_combine(h, std::get<Map>(value).getHash1());
-    case 4:
-        return hash_combine(h, h); // combine 0 and 0
-    default:
-        SW_UNREACHABLE;
-    }
-    return h;
+    auto o = overload(
+        [](const Empty &) -> size_t { return 0; },
+        [](const Null &) {
+            size_t h = 0;
+            return hash_combine(h, h); // combine 0 and 0
+        },
+        [](const Array &a) {
+            size_t h = 0;
+            for (auto &v2 : a)
+                hash_combine(h, v2.getHash1());
+            return h;
+        },
+        [](const Map &m) {
+            size_t h = 0;
+            return hash_combine(h, m.getHash1());
+        },
+        [](const path &p) -> size_t { SW_UNIMPLEMENTED; },
+        [](const Resolver &r) -> size_t { return {}; },
+        [](auto &&v) -> size_t {
+            size_t h = 0;
+            return hash_combine(h, std::hash<std::decay_t<decltype(v)>>()(v));
+        });
+    return std::visit(o, value);
 }
 
 size_t PackageSettings::getHash1() const
@@ -549,11 +469,6 @@ bool PackageSettings::operator==(const PackageSettings &rhs) const
         }
     }
     return true;
-}
-
-bool PackageSettings::operator<(const PackageSettings &rhs) const
-{
-    return settings < rhs.settings;
 }
 
 bool PackageSettings::isSubsetOf(const PackageSettings &s) const

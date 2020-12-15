@@ -80,7 +80,7 @@ struct SW_CORE_API UserInput
 {
     UserInput(Input &);
 
-    const std::set<PackageSettings> &getSettings() const;
+    const std::unordered_set<PackageSettings> &getSettings() const;
     void addSettings(const PackageSettings &s);
     //void clearSettings() { settings.clear(); }
     String getHash() const;
@@ -92,7 +92,7 @@ struct SW_CORE_API UserInput
 
 protected:
     Input &i;
-    std::set<PackageSettings> settings;
+    std::unordered_set<PackageSettings> settings;
 };
 
 } // namespace sw

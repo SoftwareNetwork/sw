@@ -863,7 +863,7 @@ void CMakeGenerator::generate(const sw::SwBuild &b)
 
         add_title("Target: " + pkg.toString());
 
-        if (s["type"] == "native_executable")
+        if (s["type"] == "native_executable"s)
             ctx.addLine("add_executable(" + pkg.toString() + ")");
         else
         {
@@ -871,11 +871,11 @@ void CMakeGenerator::generate(const sw::SwBuild &b)
 
             // tgt
             auto st = "STATIC";
-            if (s["type"] == "native_static_library")
+            if (s["type"] == "native_static_library"s)
                 ;
-            else if (s["type"] == "native_shared_library")
+            else if (s["type"] == "native_shared_library"s)
                 st = "SHARED";
-            if (s["header_only"] == "true")
+            if (s["header_only"])
                 st = "INTERFACE";
             ctx.addText(st + ")"s);
         }

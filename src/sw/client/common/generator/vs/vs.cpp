@@ -450,7 +450,7 @@ void VSGenerator::generate(const SwBuild &b)
     int n_executables = 0;
 
     // write basic config files
-    std::map<sw::PackageSettings, Files> configure_files;
+    std::unordered_map<sw::PackageSettings, Files> configure_files;
     for (auto &i : inputs)
     {
         for (auto &[_, f] : i.getInput().getSpecification().files.getData())
@@ -486,8 +486,8 @@ void VSGenerator::generate(const SwBuild &b)
             s.projects.find(all_build_name)->second.dependencies.insert(&s.projects.find(p.name)->second);
 
             // some other stuff
-            n_executables += tgt->getInterfaceSettings()["type"] == "native_executable";
-            if (!s.first_project && tgt->getInterfaceSettings()["ide"]["startup_project"] == "true")
+            n_executables += tgt->getInterfaceSettings()["type"] == "native_executable"s;
+            if (!s.first_project && tgt->getInterfaceSettings()["ide"]["startup_project"])
                 s.first_project = &s.projects.find(p.name)->second;
             break;
         }
@@ -628,7 +628,7 @@ void VSGenerator::generate(const SwBuild &b)
             add_deps(is["dependencies"]["dummy"].getMap());
 
             //
-            if (!s.first_project && n_executables == 1 && tgt->getInterfaceSettings()["type"] == "native_executable")
+            if (!s.first_project && n_executables == 1 && tgt->getInterfaceSettings()["type"] == "native_executable"s)
                 s.first_project = &p;
         }
     }
@@ -1060,7 +1060,7 @@ void Project::emitProject(const VSGenerator &g) const
 
     // build files
     std::map<path, std::map<const sw::PackageSettings *, Command>> bfiles;
-    std::map<sw::PackageSettings, std::map<String /*ft*/, std::map<String /*opt*/, String /*val*/>>> common_cl_options;
+    std::unordered_map<sw::PackageSettings, std::map<String /*ft*/, std::map<String /*opt*/, String /*val*/>>> common_cl_options;
     for (auto &[s, d] : data)
     {
         std::map<String /*opt*/, std::map<std::pair<String, String> /*command line argument*/, int /*count*/>> cl_opts;

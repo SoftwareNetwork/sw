@@ -15,18 +15,17 @@ bool contains(const UnresolvedPackages &upkgs, const PackageId &p)
 }
 
 UnresolvedPackage::UnresolvedPackage(const String &s)
+    : UnresolvedPackage{ extractFromString(s) }
 {
-    *this = extractFromString(s);
 }
 
 UnresolvedPackage::UnresolvedPackage(const PackagePath &p, const PackageVersionRange &r)
+    : ppath(p), range(r)
 {
-    ppath = p;
-    range = r;
 }
 
 UnresolvedPackage::UnresolvedPackage(const PackageId &pkg)
-    : UnresolvedPackage(pkg.getPath(), pkg.getVersion().toRangeString())
+    : UnresolvedPackage(pkg.getPath(), pkg.getVersion())
 {
 }
 

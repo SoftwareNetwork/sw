@@ -97,7 +97,7 @@ std::vector<ITargetPtr> Input::loadPackages(SwBuild &b, const PackageSettings &s
     auto t = ep->loadPackages(b, s, allowed_packages, prefix);
     for (auto &tgt : t)
     {
-        if (tgt->getSettings()["dry-run"] == "true")
+        if (tgt->getSettings()["dry-run"])
             continue;
         tgts.push_back(std::move(tgt));
     }
@@ -111,7 +111,7 @@ UserInput::UserInput(Input &i)
 {
 }
 
-const std::set<PackageSettings> &UserInput::getSettings() const
+const std::unordered_set<PackageSettings> &UserInput::getSettings() const
 {
     if (settings.empty())
         throw SW_RUNTIME_ERROR("No input settings provided");

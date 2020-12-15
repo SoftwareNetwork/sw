@@ -153,7 +153,7 @@ void TargetBase::addTarget2(Target &t)
         /*dummy || */!getSolution().isKnownTarget(t.getPackage()))
     {
         t.DryRun = true;
-        t.ts["dry-run"] = "true";
+        t.ts["dry-run"] = true;
     }
 
     if (!t.DryRun)
@@ -352,7 +352,7 @@ std::vector<IDependency *> Target::getDependencies() const
 
 PackageSettings Target::getHostSettings() const
 {
-    if (ts_export["use_same_config_for_host_dependencies"] == "true")
+    if (ts_export["use_same_config_for_host_dependencies"])
         return ts_export;
     auto hs = getMainBuild().getContext().getHostSettings();
     // reconsider this?
@@ -493,7 +493,7 @@ void Target::init()
     if (ts["name"])
         provided_cfg = ts["name"].getValue();
     if (ts["reproducible-build"])
-        ReproducibleBuild = ts["reproducible-build"] == "true";
+        ReproducibleBuild = ts["reproducible-build"].get<bool>();
 
     ts_export = ts;
 
