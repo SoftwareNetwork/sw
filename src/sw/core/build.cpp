@@ -1096,8 +1096,8 @@ void SwBuild::execute(ExecutionPlan &p) const
 
     SwapAndRestore sr(current_explan, &p);
 
-    p.build_always |= build_settings["build_always"].get<bool>();
-    p.write_output_to_file |= build_settings["write_output_to_file"].get<bool>();
+    p.build_always |= build_settings["build_always"] && build_settings["build_always"].get<bool>();
+    p.write_output_to_file |= build_settings["write_output_to_file"] && build_settings["write_output_to_file"].get<bool>();
     if (build_settings["skip_errors"].isValue())
         p.skip_errors = std::stoll(build_settings["skip_errors"].getValue());
     if (build_settings["time_limit"].isValue())

@@ -128,7 +128,11 @@ void TargetBase::addTarget3(ITargetPtr t)
 
 void TargetBase::addTarget2(Target &t)
 {
-    t.init();
+    // we do not activate targets that are not selected for current builds
+    t.DryRun = !getSolution().isKnownTarget(t.getPackage());
+
+    if (!t.DryRun)
+        t.init();
 
     // after setup
     t.call(CallbackType::CreateTarget);
@@ -149,12 +153,8 @@ void TargetBase::addTarget2(Target &t)
     }*/
 
     // we do not activate targets that are not selected for current builds
-    if (/*!isLocal() && */
-        /*dummy || */!getSolution().isKnownTarget(t.getPackage()))
-    {
-        t.DryRun = true;
+    if (t.DryRun)
         t.ts["dry-run"] = true;
-    }
 
     if (!t.DryRun)
         getMainBuild().registerTarget(t);
@@ -226,6 +226,10 @@ Target::Target(TargetBase &parent, const PackageId &pkg)
             setSourceDirectory(/*getSolution().*/parent.SourceDirBase); // take from parent
         }
     }
+
+    // this RootDirectory must come from parent!
+    // but we take it in copy ctor
+    setRootDirectory(RootDirectory); // keep root dir growing
 }
 
 Target::~Target()
@@ -335,7 +339,7 @@ std::vector<IDependency *> Target::getDependencies() const
 {
     std::vector<IDependency *> deps;
     for (auto &d : gatherDependencies())
-        deps.push_back(d.get());
+        deps.push_back(d);
     for (auto &d : DummyDependencies)
         deps.push_back(d.get());
     for (auto &d : SourceDependencies)
@@ -496,19 +500,6 @@ void Target::init()
         ReproducibleBuild = ts["reproducible-build"].get<bool>();
 
     ts_export = ts;
-
-    // add deps into config
-    /*if (!isLocal() && getPackage().toString().find("org.sw.demo.glennrp.png-1.6.36") == 0)
-    {
-        auto m = getContext().resolve(UnresolvedPackages{ getPackage() });
-        m.erase(getPackage()); // erase self
-        for (auto &[u, p] : m)
-            ts["dependencies"].push_back(p->toString());
-    }*/
-
-    // this rd must come from parent!
-    // but we take it in copy ctor
-    setRootDirectory(RootDirectory); // keep root dir growing
 
     BinaryDir = getBinaryParentDir();
 
@@ -738,16 +729,16 @@ Files NativeTargetOptionsGroup::gatherAllFiles() const
     return files;
 }
 
-DependenciesType NativeTargetOptionsGroup::gatherDependencies() const
+std::set<Dependency*> NativeTargetOptionsGroup::gatherDependencies() const
 {
-    DependenciesType deps;
+    std::set<Dependency*> deps;
     for (int i = toIndex(InheritanceType::Min); i < toIndex(InheritanceType::Max); i++)
     {
         auto s = getInheritanceStorage().raw()[i];
         if (!s)
             continue;
         for (auto &d : s->getRawDependencies())
-            deps.insert(d);
+            deps.insert(d.get());
     }
     return deps;
 }
@@ -760,6 +751,9 @@ DependencyPtr Target::addDummyDependencyRaw(const DependencyPtr &t)
 
 DependencyPtr Target::addDummyDependency(const DependencyPtr &t)
 {
+    if (DryRun)
+        return t;
+
     auto t2 = addDummyDependencyRaw(t);
     setDummyDependencySettings(t2);
     return t2;
@@ -789,13 +783,11 @@ void Target::addSourceDependency(const Target &t)
     addSourceDependency(std::make_shared<Dependency>(t));
 }
 
-void Target::resolveDependency(const DependencyPtr &d)
-{
-    resolveDependency(*d);
-}
-
 void Target::resolveDependency(IDependency &d)
 {
+    if (DryRun)
+        return;
+
     ResolveRequest rr{ d.getUnresolvedPackage(), d.getSettings() };
     if (!getSettings()["resolver"].resolve(rr))
     {
@@ -812,6 +804,9 @@ void Target::resolveDependency(IDependency &d)
 
 path Target::getFile(const Target &dep, const path &fn)
 {
+    if (DryRun)
+        return {};
+
     addSourceDependency(dep); // main trick is to add a dependency
     auto p = dep.SourceDir;
     if (!fn.empty())
@@ -821,6 +816,9 @@ path Target::getFile(const Target &dep, const path &fn)
 
 path Target::getFile(const DependencyPtr &dep, const path &fn)
 {
+    if (DryRun)
+        return {};
+
     addSourceDependency(dep); // main trick is to add a dependency
     ResolveRequest rr{ dep->getUnresolvedPackage(), dep->getSettings() };
     getMainBuild().getContext().install(rr);

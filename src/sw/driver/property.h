@@ -4,6 +4,7 @@
 #pragma once
 
 #include <primitives/filesystem.h>
+
 #include <variant>
 
 namespace sw
@@ -27,13 +28,6 @@ struct PropertyVariant : std::variant<std::monostate, Types...>
     using base::operator=;
 
     PropertyVariant() = default;
-
-    /*template <class T>
-    operator T() const
-    {
-        static_assert(has_type<T, std::tuple<Types...>>::value, "no such type in variant");
-        return std::get<T>(*this);
-    }*/
 
     String toString() const
     {
@@ -60,6 +54,13 @@ struct PropertyVariant : std::variant<std::monostate, Types...>
 else if (auto v = std::get_if<std::monostate>(this))
 return "";
         throw std::bad_variant_access();
+    }
+
+    size_t getHash() const
+    {
+        return std::visit(
+            [](auto &&v) { size_t h = 0; return hash_combine(h, std::hash<std::decay_t<decltype(v)>>()(v)); },
+            *this);
     }
 
     operator std::string() const
@@ -149,11 +150,6 @@ return "";
         return toString() == rhs.toString();
     }
 
-    bool operator!=(const PropertyVariant &rhs) const
-    {
-        return !operator==(rhs);
-    }
-
     template <class U>
     bool operator==(const U &rhs) const
     {
@@ -161,12 +157,6 @@ return "";
         if (v)
             return *v == rhs;
         return U() == rhs;
-    }
-
-    template <class U>
-    bool operator!=(const U &rhs) const
-    {
-        return !operator==(rhs);
     }
 };
 

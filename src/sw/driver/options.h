@@ -33,15 +33,7 @@ using DefinitionsType = std::map<DefinitionKey, VariableValue>;
 
 std::pair<String, String> string2definition(const String &);
 
-struct VariablesType : std::unordered_map<DefinitionKey, VariableValue>
-{
-    using base = std::map<DefinitionKey, VariableValue>;
-
-    bool has(const typename base::key_type &k) const
-    {
-        return find(k) != end();
-    }
-};
+using VariablesType = std::unordered_map<DefinitionKey, VariableValue>;
 
 template <class T>
 class UniqueVector

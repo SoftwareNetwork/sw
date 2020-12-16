@@ -650,7 +650,7 @@ decltype(auto) PrepareConfig::commonActions(Build &b, const InputData &d, const 
 path PrepareConfig::one2one(Build &b, const InputData &d)
 {
     auto &fn = d.cfn;
-    auto [headers, udeps] = getFileDependencies(b.getMainBuild(), fn);
+    const auto [headers, udeps] = getFileDependencies(b.getMainBuild(), fn);
 
     auto &lib = commonActions(b, d, udeps);
 
@@ -663,9 +663,11 @@ path PrepareConfig::one2one(Build &b, const InputData &d)
         for (auto &h : headers)
             lib += ForceInclude(h);
         // sort deps first!
-        SW_UNIMPLEMENTED;
-        //for (auto &d : std::set<UnresolvedPackage>(udeps.begin(), udeps.end()))
-            //lib += std::make_shared<Dependency>(d);
+        std::map<size_t, const UnresolvedPackage*> deps_sorted;
+        for (auto &d : udeps)
+            deps_sorted[std::hash<UnresolvedPackage>()(d)] = &d;
+        for (auto &[_,d] : deps_sorted)
+            lib += std::make_shared<Dependency>(*d);
     }
 
     FilesOrdered fi_files;

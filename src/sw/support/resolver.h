@@ -16,7 +16,7 @@ struct SW_SUPPORT_API ResolveRequestResult
     PackagePtr r;
 
     bool isResolved() const { return !!r; }
-    Package &getPackage() const { return *r; }
+    Package &getPackage() const { if (!isResolved()) throw SW_RUNTIME_ERROR("not resolved"); return *r; }
 
     // if package version higher than current, overwrite
     // if both are branches, do not accept new

@@ -254,7 +254,6 @@ struct SW_DRIVER_CPP_API Target
     void addSourceDependency(const DependencyPtr &);
 
     void resolveDependency(IDependency &);
-    void resolveDependency(const DependencyPtr &);
 
 public:
     Target(TargetBase &parent, const PackageId &);
@@ -301,7 +300,7 @@ public:
     //virtual bool prepare() override { return false; } // multipass prepare
     virtual void prepare2() {}
     virtual Files gatherAllFiles() const { return {}; }
-    virtual DependenciesType gatherDependencies() const { return DependenciesType{}; }
+    virtual std::set<Dependency*> gatherDependencies() const { return std::set<Dependency*>{}; }
 
     // other
     virtual void removeFile(const path &fn, bool binary_dir = false);
@@ -536,7 +535,7 @@ public:
     void remove(const Variable &v);
 
     Files gatherAllFiles() const;
-    DependenciesType gatherDependencies() const;
+    std::set<Dependency*> gatherDependencies() const;
 };
 
 template <class SF>

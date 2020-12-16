@@ -816,8 +816,7 @@ bool Check::execute(SwBuild &b) const
 {
     b.overrideBuildState(BuildState::InputsLoaded);
     //b.setTargetsToBuild();
-    SW_UNIMPLEMENTED;
-    b.resolvePackages();
+    //b.resolvePackages();
     //b.loadPackages();
     b.prepare();
 
@@ -841,15 +840,14 @@ bool Check::execute(SwBuild &b) const
     return true;
 }
 
-#define SETUP_SOLUTION()                                          \
-    auto b = check_set->getChecker().swbld.getContext().createBuild(); \
-    auto s = setupSolution(*b, f);                                \
+#define SETUP_SOLUTION()                                                \
+    auto b = check_set->getChecker().swbld.getContext().createBuild();  \
+    auto s = setupSolution(*b, f);                                      \
     s.module_data.current_settings = getSettings()
 
-/*#define ADD_TARGETS                             \
-    for (auto &t : s.module_data.getTargets()) \
-    b->getTargets()[t->getPackage()].push_back(t)*/
-#define ADD_TARGETS SW_UNIMPLEMENTED;
+#define ADD_TARGETS                             \
+    for (auto &t : s.module_data.getTargets())  \
+    b->getTargets()[t->getPackage()].push_back(*t)
 
 #define EXECUTE_SOLUTION() \
     ADD_TARGETS;           \

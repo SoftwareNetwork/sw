@@ -121,7 +121,7 @@ public:
     void prepare() override;
     void prepare2() override;
     Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
-    DependenciesType gatherDependencies() const override;
+    std::set<Dependency*> gatherDependencies() const override;
     TargetFiles getFiles() const override;
 
     void addPackageDefinitions(bool defs = false);
@@ -226,7 +226,7 @@ private:
     Commands getGeneratedCommands() const;
     FilesOrdered gatherRpathLinkDirectories() const;
     void processCircular(Files &objs);
-    path getPatchDir(bool binary_dir) const;
+    path getPatchDir() const;
     void addFileSilently(const path &);
 
     mutable bool interface_settings_set = false;

@@ -37,6 +37,9 @@ struct SW_SUPPORT_API PackageSettings
         Simple      = KeyValue,
     };
 
+    PackageSettings() = default;
+    PackageSettings(const PackageSettings &) = default;
+    PackageSettings &operator=(const PackageSettings &) = default;
     ~PackageSettings();
 
     PackageSetting &operator[](const PackageSettingKey &);
@@ -115,6 +118,8 @@ struct SW_SUPPORT_API PackageSetting
     >;
 
     PackageSetting() = default;
+    PackageSetting(const PackageSetting &) = default;
+    PackageSetting &operator=(const PackageSetting &) = default;
 
     template <class U>
     PackageSetting(const U &u)

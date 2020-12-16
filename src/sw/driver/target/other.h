@@ -20,7 +20,7 @@ struct SW_DRIVER_CPP_API AdaTarget : Target
     SW_TARGET_USING_ASSIGN_OPS(NativeTargetOptionsGroup);
 
     void init() override;
-    DependenciesType gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
+    std::set<Dependency*> gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
     Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
 
 private:
@@ -47,7 +47,7 @@ struct SW_DRIVER_CPP_API CSharpTarget : Target
     TargetType getType() const override { return TargetType::CSharpLibrary; }
 
     void init() override;
-    DependenciesType gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
+    std::set<Dependency*> gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
     Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
 
 private:
@@ -76,7 +76,7 @@ struct SW_DRIVER_CPP_API RustTarget : Target
     TargetType getType() const override { return TargetType::RustLibrary; }
 
     void init() override;
-    DependenciesType gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
+    std::set<Dependency*> gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
     Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
 
 private:
@@ -104,7 +104,7 @@ struct SW_DRIVER_CPP_API GoTarget : Target
     TargetType getType() const override { return TargetType::GoLibrary; }
 
     void init() override;
-    DependenciesType gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
+    std::set<Dependency*> gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
     Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
 
 private:
@@ -132,7 +132,7 @@ struct SW_DRIVER_CPP_API JavaTarget : Target
     TargetType getType() const override { return TargetType::JavaLibrary; }
 
     void init() override;
-    DependenciesType gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
+    std::set<Dependency*> gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
     Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
 
 private:
@@ -160,7 +160,7 @@ struct SW_DRIVER_CPP_API KotlinTarget : Target
     TargetType getType() const override { return TargetType::KotlinLibrary; }
 
     void init() override;
-    DependenciesType gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
+    std::set<Dependency*> gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
     Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
 
 private:
@@ -188,7 +188,7 @@ struct SW_DRIVER_CPP_API DTarget : NativeTarget
     TargetType getType() const override { return TargetType::DLibrary; }
 
     void init() override;
-    DependenciesType gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
+    std::set<Dependency*> gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
     Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
 
 private:
@@ -243,7 +243,7 @@ struct SW_DRIVER_CPP_API PascalTarget : Target
     SW_TARGET_USING_ASSIGN_OPS(NativeTargetOptionsGroup);
 
     void init() override;
-    DependenciesType gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
+    std::set<Dependency*> gatherDependencies() const override { return NativeTargetOptionsGroup::gatherDependencies(); }
     Files gatherAllFiles() const override { return NativeTargetOptionsGroup::gatherAllFiles(); }
 
 private:

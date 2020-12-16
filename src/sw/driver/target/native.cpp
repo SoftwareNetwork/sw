@@ -645,6 +645,9 @@ void NativeCompiledTarget::setupCommand(builder::Command &c) const
 
 void NativeCompiledTarget::addPackageDefinitions(bool defs)
 {
+    if (DryRun)
+        return;
+
     tm t;
     auto tim = time(0);
 #ifdef _WIN32
@@ -701,7 +704,7 @@ void NativeCompiledTarget::addPackageDefinitions(bool defs)
         //"@PACKAGE_CHANGE_DATE@"
             //"@PACKAGE_RELEASE_DATE@"
 
-        a["PACKAGE_VERSION_MAJOR"] = std::to_string(getPackage().getVersion().getVersion().getMajor());
+        a["PACKAGE_VERSION_MAJOR"] = std::to_string(getPackage().getVersion().getMajor());
         a["PACKAGE_VERSION_MINOR"] = std::to_string(getPackage().getVersion().getMinor());
         a["PACKAGE_VERSION_PATCH"] = std::to_string(getPackage().getVersion().getPatch());
         a["PACKAGE_VERSION_TWEAK"] = std::to_string(getPackage().getVersion().getTweak());
@@ -1251,10 +1254,10 @@ void NativeCompiledTarget::detectLicenseFile()
     }
 }
 
-static auto createDependency(const DependencyPtr &d, InheritanceType i, const Target &t)
+static auto createDependency(Dependency &d, InheritanceType i, const Target &t)
 {
     TargetDependency td;
-    td.dep = d;
+    td.dep = &d;
     td.inhtype = i;
     td.dep->settings.mergeMissing(t.getExportOptions());
     /*auto s = td.dep->settings;
@@ -1263,7 +1266,7 @@ static auto createDependency(const DependencyPtr &d, InheritanceType i, const Ta
     return td;
 }
 
-DependenciesType NativeCompiledTarget::gatherDependencies() const
+std::set<Dependency*> NativeCompiledTarget::gatherDependencies() const
 {
     // take all
     // while getActiveDependencies() takes only active
@@ -1271,9 +1274,9 @@ DependenciesType NativeCompiledTarget::gatherDependencies() const
     TargetOptionsGroup::iterate([this, &deps](auto &v, auto i)
     {
         for (auto &d : v.getRawDependencies())
-            deps.push_back(createDependency(d, i, *this));
+            deps.push_back(createDependency(*d, i, *this));
     });
-    DependenciesType deps2;
+    std::set<Dependency*> deps2;
     for (auto &d : deps)
         deps2.insert(d.dep);
     return deps2;
@@ -1291,7 +1294,7 @@ NativeCompiledTarget::ActiveDeps &NativeCompiledTarget::getActiveDependencies()
         {
             if (d->isDisabled())
                 continue;
-            deps.push_back(createDependency(d, i, *this));
+            deps.push_back(createDependency(*d, i, *this));
         }
     });
     return *active_deps;
@@ -1514,7 +1517,7 @@ void NativeCompiledTarget::prepare()
                 ;
             auto d = std::make_shared<Dependency>(u);
             setDummyDependencySettings(d);
-            resolveDependency(d);
+            resolveDependency(*d);
             addRuleDependency({ name, d });
         };
         auto add_dep2 = [this, &add_dep](const String &r, bool overwrite)
@@ -1538,7 +1541,7 @@ void NativeCompiledTarget::prepare()
                     ;
                 auto d = std::make_shared<Dependency>(u);
                 d->getSettings() = getSettings();
-                resolveDependency(d);
+                resolveDependency(*d);
                 addRuleDependency({ r, d, r });
             }
             else
@@ -1853,7 +1856,7 @@ void NativeCompiledTarget::prepare_pass2()
     {
         if (d.dep->isResolved())
             continue;
-        resolveDependency(d.dep);
+        resolveDependency(*d.dep);
 
         //SW_UNIMPLEMENTED;
         //auto t = getMainBuild().getTargets().find(d.dep->getPackage(), d.dep->settings);
@@ -1890,22 +1893,21 @@ void NativeCompiledTarget::prepare_pass2()
         }
     }
 
+    if (!isStaticOrHeaderOnlyLibrary())
+        return;
+
     // propagate deps
-    if (isStaticOrHeaderOnlyLibrary())
+    auto ad = getActiveDependencies();
+    for (auto &d : ad)
     {
-        auto ad = getActiveDependencies();
-        for (auto &d : ad)
-        {
-            Dependency d2(d.dep->getUnresolvedPackage());
-            d2.settings = d.dep->getSettings();
-            d2.setTarget(d.dep->getTarget());
-            if (d.dep->IncludeDirectoriesOnly)
-                continue;
-            d2.LinkLibrariesOnly = true;
-            auto d3 = std::make_shared<Dependency>(d2);
-            Interface += d3;
-            active_deps->push_back(createDependency(d3, InheritanceType::Interface, *this));
-        }
+        if (d.dep->IncludeDirectoriesOnly)
+            continue;
+        auto d3 = std::make_shared<Dependency>(d.dep->getUnresolvedPackage());
+        d3->settings = d.dep->getSettings();
+        d3->setTarget(d.dep->getTarget());
+        d3->LinkLibrariesOnly = true;
+        Interface += d3;
+        active_deps->push_back(createDependency(*d3, InheritanceType::Interface, *this));
     }
 }
 
@@ -3183,6 +3185,22 @@ void NativeCompiledTarget::configureFile1(const path &from, const path &to, Conf
 
     auto s = read_file(from);
 
+    path update_fn;
+    {
+        //File(from, getFs()).isChanged();
+        auto h = std::hash<decltype(s)>()(s);
+        hash_combine(h, std::hash<path>()(from));
+        std::map<VariablesType::key_type, VariablesType::mapped_type> vars2(Variables.begin(), Variables.end());
+        for (auto &&[k, v] : vars2)
+        {
+            hash_combine(h, std::hash<VariablesType::key_type>()(k));
+            hash_combine(h, v.getHash());
+        }
+        update_fn = getPatchDir() / std::to_string(h);
+        if (fs::exists(update_fn))
+            return;
+    }
+
     if ((int)flags & (int)ConfigureFlags::CopyOnly)
     {
         writeFileOnce(to, s);
@@ -3296,6 +3314,7 @@ void NativeCompiledTarget::configureFile1(const path &from, const path &to, Conf
     }
 
     writeFileOnce(to, s);
+    write_file(update_fn, ""s);
 }
 
 CheckSet &NativeCompiledTarget::getChecks(const String &name)
@@ -3332,7 +3351,7 @@ void NativeCompiledTarget::setChecks(const String &name, bool check_definitions)
     }
 }
 
-path NativeCompiledTarget::getPatchDir(bool binary_dir) const
+path NativeCompiledTarget::getPatchDir() const
 {
     path base;
     if (auto d = getPackage().getOverriddenDir(); d)
@@ -3369,7 +3388,7 @@ void NativeCompiledTarget::writeFileOnce(const path &fn, const String &content)
     if (DryRun)
         return;
 
-    ::sw::writeFileOnce(p, content, getPatchDir(!source_dir));
+    ::sw::writeFileOnce(p, content, getPatchDir());
 
     addFileSilently(p);
 }
@@ -3383,7 +3402,7 @@ void NativeCompiledTarget::writeFileSafe(const path &fn, const String &content)
     path p = fn;
     if (!check_absolute(p, true, &source_dir))
         p = BinaryDir / p;
-    ::sw::writeFileSafe(p, content, getPatchDir(!source_dir));
+    ::sw::writeFileSafe(p, content, getPatchDir());
 
     addFileSilently(p);
 }
@@ -3403,7 +3422,7 @@ void NativeCompiledTarget::patch(const path &fn, const String &from, const Strin
     bool source_dir = false;
     path p = fn;
     check_absolute(p, false, &source_dir);
-    ::sw::replaceInFileOnce(p, from, to, getPatchDir(!source_dir));
+    ::sw::replaceInFileOnce(p, from, to, getPatchDir());
 }
 
 void NativeCompiledTarget::patch(const path &fn, const String &patch_str)
@@ -3414,7 +3433,7 @@ void NativeCompiledTarget::patch(const path &fn, const String &patch_str)
     bool source_dir = false;
     path p = fn;
     check_absolute(p, false, &source_dir);
-    ::sw::patch(p, patch_str, getPatchDir(!source_dir));
+    ::sw::patch(p, patch_str, getPatchDir());
 }
 
 void NativeCompiledTarget::deleteInFileOnce(const path &fn, const String &from)
@@ -3432,7 +3451,7 @@ void NativeCompiledTarget::pushFrontToFileOnce(const path &fn, const String &tex
     bool source_dir = false;
     path p = fn;
     check_absolute(p, false, &source_dir);
-    ::sw::pushFrontToFileOnce(p, text, getPatchDir(!source_dir));
+    ::sw::pushFrontToFileOnce(p, text, getPatchDir());
 }
 
 void NativeCompiledTarget::pushBackToFileOnce(const path &fn, const String &text)
@@ -3445,7 +3464,7 @@ void NativeCompiledTarget::pushBackToFileOnce(const path &fn, const String &text
     bool source_dir = false;
     path p = fn;
     check_absolute(p, false, &source_dir);
-    ::sw::pushBackToFileOnce(p, text, getPatchDir(!source_dir));
+    ::sw::pushBackToFileOnce(p, text, getPatchDir());
 }
 
 CompilerType NativeCompiledTarget::getCompilerType() const

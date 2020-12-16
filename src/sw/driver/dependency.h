@@ -65,9 +65,9 @@ struct SW_DRIVER_CPP_API Dependency : DependencyData
 
 using DependencyPtr = std::shared_ptr<Dependency>;
 
-struct SW_DRIVER_CPP_API TargetDependency
+struct TargetDependency
 {
-    DependencyPtr dep;
+    Dependency *dep = nullptr;
     InheritanceType inhtype;
 };
 
