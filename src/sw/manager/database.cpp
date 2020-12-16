@@ -232,7 +232,6 @@ bool PackagesDatabase::resolve(ResolveRequest &rr, const IStorage &s) const
 
 PackageData PackagesDatabase::getPackageData(const PackageId &p) const
 {
-
     auto &pp = pps->packageVersionData;
     pp.params.packageId = getPackageId(p.getPath());
     pp.params.version = p.getVersion().toString();
