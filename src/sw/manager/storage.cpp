@@ -460,13 +460,14 @@ bool OverriddenPackagesStorage::isPackageInstalled(const Package &p) const
 
 void CachedStorage::storePackages(const ResolveRequest &rr)
 {
-    //SW_UNIMPLEMENTED; // must be a mutex here?
+    std::unique_lock lk(m);
     SW_CHECK(rr.isResolved());
     resolved_packages[rr.u][rr.settings.getHash()] = Value{ rr.getPackage().clone() };
 }
 
 bool CachedStorage::resolve(ResolveRequest &rr) const
 {
+    std::shared_lock lk(m);
     auto i = resolved_packages.find(rr.u);
     if (i == resolved_packages.end())
         return false;

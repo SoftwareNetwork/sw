@@ -9,6 +9,8 @@
 #include <sw/support/settings.h>
 #include <sw/support/storage.h>
 
+#include <shared_mutex>
+
 namespace sw
 {
 
@@ -216,6 +218,7 @@ struct SW_MANAGER_API CachedStorage : IResolvableStorage
     void reset() { clear(); }
 
 private:
+    mutable std::shared_mutex m;
     mutable StoredPackages resolved_packages;
 };
 
