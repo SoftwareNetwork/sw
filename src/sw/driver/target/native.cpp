@@ -653,19 +653,24 @@ void NativeCompiledTarget::addPackageDefinitions(bool defs)
     gmtime_r(&tim, &t);
 #endif
 
-    auto n2hex = [this](int n, int w)
+    auto n2hex1 = [](auto &ss, int n, int w)
+    {
+        ss << std::hex << std::setfill('0') << std::setw(w) << n;
+    };
+
+    auto n2hex = [&n2hex1](int n, int w)
     {
         std::ostringstream ss;
-        ss << std::hex << std::setfill('0') << std::setw(w) << n;
+        n2hex1(ss, n, w);
         return ss.str();
     };
 
-    auto ver2hex = [&n2hex](const auto &v, int n)
+    auto ver2hex = [&n2hex1](const auto &v, int n)
     {
         std::ostringstream ss;
-        ss << n2hex(v.getMajor(), n);
-        ss << n2hex(v.getMinor(), n);
-        ss << n2hex(v.getPatch(), n);
+        n2hex1(ss, v.getMajor(), n);
+        n2hex1(ss, v.getMinor(), n);
+        n2hex1(ss, v.getPatch(), n);
         return ss.str();
     };
 

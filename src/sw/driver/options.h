@@ -33,7 +33,7 @@ using DefinitionsType = std::map<DefinitionKey, VariableValue>;
 
 std::pair<String, String> string2definition(const String &);
 
-struct VariablesType : std::map<DefinitionKey, VariableValue>
+struct VariablesType : std::unordered_map<DefinitionKey, VariableValue>
 {
     using base = std::map<DefinitionKey, VariableValue>;
 
