@@ -9,7 +9,7 @@
 namespace sw
 {
 
-bool isValidPackagePathSymbol(int c)
+static bool isValidPackagePathSymbol(int c)
 {
     return
         c > 0 && c <= 127 // this prevents isalnum() errors
@@ -23,15 +23,63 @@ PackagePath::PackagePath(const char *s)
 }
 
 PackagePath::PackagePath(String s)
-    : Base(s, isValidPackagePathSymbol)
+    : PackagePath(s, isValidPackagePathSymbol)
 {
     if (s.size() > 4096)
         throw SW_RUNTIME_ERROR("Too long project path (must be <= 4096)");
 }
 
-PackagePath::PackagePath(const PackagePath &p)
-    : Base(p, isValidPackagePathSymbol)
+PackagePath::PackagePath(PathElement s, CheckSymbol check_symbol)
 {
+    data.reserve(s.size());
+
+    auto prev = s.begin();
+    for (auto i = s.begin(); i != s.end(); ++i)
+    {
+        auto &c = *i;
+        if (check_symbol && !check_symbol(c))
+            throw SW_RUNTIME_ERROR("Bad symbol '"s + c + "' in path: '" + s + "'");
+        if (c == '.')
+        {
+            data.emplace_back(prev, i);
+            prev = std::next(i);
+        }
+    }
+    if (!s.empty())
+        data.emplace_back(prev, s.end());
+}
+
+PackagePath::PathElement PackagePath::toString(const PackagePath::PathElement &delim) const
+{
+    PathElement p;
+    if (empty())
+        return p;
+    for (auto &e : *this)
+        p += e + delim;
+    p.resize(p.size() - delim.size());
+    return p;
+}
+
+PackagePath::PathElement PackagePath::toStringLower(const PathElement &delim) const
+{
+    auto s = toString(delim);
+    std::transform(s.begin(), s.end(), s.begin(), ::tolower);
+    return s;
+}
+
+PackagePath PackagePath::parent() const
+{
+    if (empty())
+        return {};
+    return { begin(), end() - 1 };
+}
+
+PackagePath PackagePath::slice(int start, int end) const
+{
+    if (end == -1)
+        return PackagePath(begin() + start, this->end());
+    else
+        return PackagePath(begin() + start, begin() + end);
 }
 
 PackagePath::Base::value_type PackagePath::getName() const
@@ -74,7 +122,13 @@ bool PackagePath::operator<(const PackagePath &p) const
     auto &p0 = (*this)[0];
     auto &pp0 = p[0];
     if (boost::iequals(p0, pp0))
-        return Base::operator<(p);
+    {
+        return std::lexicographical_compare(begin(), end(), p.begin(), p.end(), [](const auto &s1, const auto &s2) {
+            return std::lexicographical_compare(s1.begin(), s1.end(), s2.begin(), s2.end(), [](const auto &c1, const auto &c2) {
+                return tolower(c1) < tolower(c2);
+            });
+        });
+    }
 
     // namespace order
 #define PACKAGE_PATH(n)          \
@@ -201,13 +255,15 @@ PackagePath PackagePath::back(const PackagePath &root) const
     return p;
 }
 
-String PackagePath::getHash() const
+size_t PackagePath::getHash() const
 {
-    return blake2b_512(toStringLower());
+    size_t h = 0;
+    for (const auto &e : *this)
+    {
+        for (auto c : e)
+            hash_combine(h, std::hash<decltype(c)>()(tolower(c)));
+    }
+    return h;
 }
-
-#if defined(_WIN32) || defined(__APPLE__)
-template struct PathBase<PackagePath>;
-#endif
 
 }

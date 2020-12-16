@@ -803,8 +803,8 @@ void VSGenerator::generate(const SwBuild &b)
             while (!pp.empty() && parents.find(pp) == parents.end())
                 pp = pp.parent();
 
-            Directory d(p);
-            d.visible_name = p.slice(pp.size());
+            Directory d(p.toString());
+            d.visible_name = p.slice(pp.size()).toString();
             d.g = this;
             if (!pp.empty())
                 d.directory = &s.directories.find(pp.toString())->second;

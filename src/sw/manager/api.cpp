@@ -68,7 +68,7 @@ bool ProtobufApi::resolve(ResolveRequest &rr,
 {
     api::UnresolvedPackages request;
     auto pb_pkg = request.mutable_unresolved_packages()->Add();
-    pb_pkg->set_path(rr.u.getPath());
+    pb_pkg->set_path(rr.u.getPath().toString());
     pb_pkg->set_range(rr.u.getRange().toString());
 
     auto context = getContext();

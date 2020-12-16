@@ -159,7 +159,7 @@ F(upload)
 
     // run secure as below?
     ScopedCurrentPath scp(fn.parent_path());
-    swctx.getOptions().options_upload.upload_prefix = pkg.getPath().slice(0, std::stoi(swctx.getOptions().options_uri.uri_args[3]));
+    swctx.getOptions().options_upload.upload_prefix = pkg.getPath().slice(0, std::stoi(swctx.getOptions().options_uri.uri_args[3])).toString();
     swctx.command_upload();
 
     /*primitives::Command c;
