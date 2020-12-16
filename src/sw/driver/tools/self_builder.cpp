@@ -18,11 +18,12 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "self_builder");
 
-#define SW_DRIVER_NAME "org.sw.sw.client.driver.cpp-" PACKAGE_VERSION
+#define SW_DRIVER_NAME "org.sw.sw.client.driver.cpp-" PACKAGE_VERSION ""s
 
 using namespace sw;
 
 std::unordered_map<size_t, String> hdr_vars;
+PackageSettings empty_settings;
 
 void setup_log(const std::string &log_level)
 {
@@ -41,7 +42,7 @@ auto get_base_rr_vector()
 {
     std::vector<ResolveRequest> rrs;
     // our main cpp driver target
-    rrs.emplace_back(String(SW_DRIVER_NAME));
+    rrs.emplace_back(ResolveRequest{ SW_DRIVER_NAME, empty_settings });
     return rrs;
 }
 
@@ -56,19 +57,19 @@ String write_build_script_headers(SwCoreContext &swctx)
 
         {
             // goes before primitives
-            prepkgs.emplace_back("org.sw.demo.ragel-6"s); // keep upkg same as in deps!!!
+            prepkgs.emplace_back(ResolveRequest{ "org.sw.demo.ragel-6"s, empty_settings }); // keep upkg same as in deps!!!
 
                                                           // goes before primitives
-            prepkgs.emplace_back("org.sw.demo.lexxmark.winflexbison.bison"s);
+            prepkgs.emplace_back(ResolveRequest{ "org.sw.demo.lexxmark.winflexbison.bison"s, empty_settings });
 
             // goes before grpc
-            prepkgs.emplace_back("org.sw.demo.google.protobuf.protobuf"s);
+            prepkgs.emplace_back(ResolveRequest{ "org.sw.demo.google.protobuf.protobuf"s, empty_settings });
 
             // goes before sw cpp driver (client)
-            prepkgs.emplace_back("org.sw.demo.google.grpc.cpp.plugin"s);
+            prepkgs.emplace_back(ResolveRequest{ "org.sw.demo.google.grpc.cpp.plugin"s, empty_settings });
 
             // goes before sw cpp driver (client)
-            prepkgs.emplace_back("pub.egorpugin.primitives.filesystem"s);
+            prepkgs.emplace_back(ResolveRequest{ "pub.egorpugin.primitives.filesystem"s, empty_settings });
         }
 
         // for gui
@@ -76,7 +77,7 @@ String write_build_script_headers(SwCoreContext &swctx)
 
         {
             // cpp driver
-            prepkgs.emplace_back(String(SW_DRIVER_NAME));
+            prepkgs.emplace_back(ResolveRequest{ SW_DRIVER_NAME, empty_settings });
         }
 
         resolveWithDependencies(prepkgs, [&swctx](auto &rr) { return swctx.resolve(rr, true); });
