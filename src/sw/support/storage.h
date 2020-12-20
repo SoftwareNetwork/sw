@@ -63,6 +63,9 @@ struct SW_SUPPORT_API IStorage : IResolvableStorage
 
     /// resolve packages from this storage with their dependencies
     //ResolveResultWithDependencies resolveWithDependencies(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const;
+
+    /// imports foreign package
+    void import(const Package &);
 };
 
 SW_SUPPORT_API

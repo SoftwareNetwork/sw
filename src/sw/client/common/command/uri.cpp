@@ -176,7 +176,8 @@ static void dispatcher(SwClientContext &swctx)
 {
     auto id = sw::extractPackageIdFromString(swctx.getOptions().options_uri.uri_args[1]);
     auto &sdb = swctx.getContext().getLocalStorage();
-    sw::LocalPackage p(sdb, id);
+    SW_UNIMPLEMENTED;
+    /*sw::LocalPackage p(sdb, id);
 
 #ifdef _MSC_VER
 #define URI_CMD2(x, f, ...)                                     \
@@ -205,7 +206,7 @@ static void dispatcher(SwClientContext &swctx)
     URI_CMD(remove);
     URI_CMD(build);
     URI_CMD(run);
-    URI_CMD(upload);
+    URI_CMD(upload);*/
 
     throw SW_RUNTIME_ERROR("Unknown command: " + swctx.getOptions().options_uri.uri_args[0]);
 }

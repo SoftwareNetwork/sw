@@ -145,9 +145,9 @@ private:
 
 struct SW_MANAGER_API OverriddenPackagesStorage : LocalStorageBase
 {
-    const LocalStorage &ls;
+    //const LocalStorage &ls;
 
-    OverriddenPackagesStorage(const LocalStorage &ls, const path &db_dir);
+    OverriddenPackagesStorage(/*const LocalStorage &ls, */const path &db_dir);
     virtual ~OverriddenPackagesStorage();
 
     LocalPackage install(const Package &) const override;
@@ -156,6 +156,8 @@ struct SW_MANAGER_API OverriddenPackagesStorage : LocalStorageBase
 
     std::unordered_set<LocalPackage> getPackages() const;
     void deletePackageDir(const path &sdir) const;
+
+    bool resolve(ResolveRequest &) const override;
 };
 
 struct SW_MANAGER_API LocalStorage : Directories, LocalStorageBase
@@ -169,18 +171,18 @@ struct SW_MANAGER_API LocalStorage : Directories, LocalStorageBase
     LocalPackage installLocalPackage(const PackageId &, const PackageData &);
     void get(const IStorage2 &source, const PackageId &id/*, StorageFileType*/) const /* override*/;
     bool isPackageInstalled(const Package &id) const;
-    bool isPackageOverridden(const PackageId &id) const;
+    //bool isPackageOverridden(const PackageId &id) const;
     bool isPackageLocal(const PackageId &id) const;
     PackageDataPtr loadData(const PackageId &) const override;
     //ResolveResult resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const override;
     bool resolve(ResolveRequest &) const override;
 
-    OverriddenPackagesStorage &getOverriddenPackagesStorage();
-    const OverriddenPackagesStorage &getOverriddenPackagesStorage() const;
+    //OverriddenPackagesStorage &getOverriddenPackagesStorage();
+    //const OverriddenPackagesStorage &getOverriddenPackagesStorage() const;
 
 private:
     std::unordered_map<PackageId, PackageData> local_packages;
-    OverriddenPackagesStorage ovs;
+    //OverriddenPackagesStorage ovs;
 
     void migrateStorage(int from, int to);
 };

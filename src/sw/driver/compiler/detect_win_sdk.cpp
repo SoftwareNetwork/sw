@@ -74,7 +74,7 @@ struct WinKit
             if (fs::exists(libdir))
             {
                 auto &t = sw::ProgramDetector::addTarget<sw::PredefinedTarget>(DETECT_ARGS_PASS,
-                    sw::LocalPackage(b.getContext().getLocalStorage(), sw::PackageId(tname, v)), eb.getSettings());
+                    sw::PackageId(tname, v), eb.getSettings());
                 t.public_ts["properties"]["6"]["system_include_directories"].push_back(idir / name);
                 for (auto &i : idirs)
                     t.public_ts["properties"]["6"]["system_include_directories"].push_back(idir / i);
@@ -84,7 +84,7 @@ struct WinKit
             else if (without_ldir)
             {
                 auto &t = sw::ProgramDetector::addTarget<sw::PredefinedTarget>(DETECT_ARGS_PASS,
-                    sw::LocalPackage(b.getContext().getLocalStorage(), sw::PackageId(tname, v)), eb.getSettings());
+                    sw::PackageId(tname, v), eb.getSettings());
                 t.public_ts["properties"]["6"]["system_include_directories"].push_back(idir / name);
                 for (auto &i : idirs)
                     t.public_ts["properties"]["6"]["system_include_directories"].push_back(idir / i);

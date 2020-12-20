@@ -163,10 +163,12 @@ protected:
     TargetBase(const TargetBase &);
     TargetBase(const TargetBase &, const PackageId &);
 
-    const LocalPackage &getPackage() const;
+    const PackageId &getPackage() const;
+    const LocalPackage &getLocalPackage() const;
 
 private:
-    std::unique_ptr<LocalPackage> pkg;
+    std::unique_ptr<PackageId> pkg;
+    std::unique_ptr<LocalPackage> lpkg;
     bool Local = true; // local projects
 
     template <typename T, typename ... Args>
@@ -260,7 +262,7 @@ public:
     virtual ~Target();
 
     // api
-    const LocalPackage &getPackage() const override { return TargetBase::getPackage(); }
+    const PackageId &getPackage() const override { return TargetBase::getPackage(); }
     const Source &getSource() const override;
     TargetFiles getFiles() const override;
     std::vector<IDependency *> getDependencies() const;// override;

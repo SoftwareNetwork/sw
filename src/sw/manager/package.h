@@ -25,8 +25,7 @@ struct SW_MANAGER_API LocalPackage : Package
 
     virtual std::unique_ptr<Package> clone() const { return std::make_unique<LocalPackage>(*this); }
 
-    bool isOverridden() const;
-    std::optional<path> getOverriddenDir() const;
+    virtual bool isOverridden() const { return false; }
 
     /// main package dir
     path getDir() const;
@@ -34,7 +33,7 @@ struct SW_MANAGER_API LocalPackage : Package
     /// source archive root
     path getDirSrc() const;
     /// actual sources root
-    path getDirSrc2() const;
+    virtual path getDirSrc2() const;
 
     //
     path getDirObj() const;
@@ -54,7 +53,16 @@ private:
     path getDir(const path &root) const;
 };
 
-using LocalPackagePtr = std::unique_ptr<LocalPackage>;
+struct SW_MANAGER_API OverriddenPackage : LocalPackage
+{
+    using LocalPackage::LocalPackage;
+
+    path getDirSrc2() const override;
+    bool isOverridden() const override { return true; }
+    std::unique_ptr<Package> clone() const override { return std::make_unique<OverriddenPackage>(*this); }
+};
+
+//using LocalPackagePtr = std::unique_ptr<LocalPackage>;
 
 }
 

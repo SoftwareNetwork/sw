@@ -26,7 +26,8 @@ SUBCOMMAND_DECL(remove)
         for (auto &p : getMatchingPackagesSet(getContext().getLocalStorage(), a))
         {
             LOG_INFO(logger, "Removing " << p.toString());
-            getContext().getLocalStorage().remove(sw::LocalPackage(getContext().getLocalStorage(), p));
+            SW_UNIMPLEMENTED;
+            //getContext().getLocalStorage().remove(sw::LocalPackage(getContext().getLocalStorage(), p));
         }
     }
 }

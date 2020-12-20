@@ -25,18 +25,6 @@ const LocalStorage &LocalPackage::getStorage() const
     return static_cast<const LocalStorage &>(Package::getStorage());
 }
 
-bool LocalPackage::isOverridden() const
-{
-    return getStorage().isPackageOverridden(*this);
-}
-
-std::optional<path> LocalPackage::getOverriddenDir() const
-{
-    if (isOverridden() && !getData().sdir.empty())
-        return getData().sdir;
-    return {};
-}
-
 path LocalPackage::getDir() const
 {
     return getDir(getStorage().storage_dir_pkg);
@@ -54,8 +42,6 @@ path LocalPackage::getDirSrc() const
 
 path LocalPackage::getDirSrc2() const
 {
-    if (auto d = getOverriddenDir(); d)
-        return d.value();
     return getDirSrc() / getSourceDirectoryName();
 }
 
@@ -100,7 +86,13 @@ String LocalPackage::getStampHash() const
 
 void LocalPackage::remove() const
 {
-    getStorage().remove(*this);
+    SW_UNIMPLEMENTED;
+    //getStorage().remove(*this);
+}
+
+path OverriddenPackage::getDirSrc2() const
+{
+    return getData().sdir;
 }
 
 }

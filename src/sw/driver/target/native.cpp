@@ -697,9 +697,11 @@ void NativeCompiledTarget::addPackageDefinitions(bool defs)
         a["PACKAGE_YEAR"] = std::to_string(1900 + t.tm_year); // custom
         a["PACKAGE_COPYRIGHT_YEAR"] = std::to_string(1900 + t.tm_year);
 
-        a["PACKAGE_ROOT_DIR"] = q + to_string(normalize_path(getPackage().getPath().is_loc() ? RootDirectory : getPackage().getDirSrc())) + q;
+        a["PACKAGE_ROOT_DIR"] = q + to_string(normalize_path(isLocal() ? RootDirectory : getLocalPackage().getDirSrc())) + q;
         a["PACKAGE_NAME_WITHOUT_OWNER"] = q/* + getPackage().getPath().slice(2).toString()*/ + q;
-        a["PACKAGE_NAME_CLEAN"] = q + (getPackage().getPath().is_loc() ? getPackage().getPath().slice(2).toString() : getPackage().getPath().toString()) + q;
+        a["PACKAGE_NAME_CLEAN"] = q + (isLocal()
+            ? getPackage().getPath().toString()
+            : getLocalPackage().getPath().slice(getLocalPackage().getData().prefix).toString()) + q;
 
         //"@PACKAGE_CHANGE_DATE@"
             //"@PACKAGE_RELEASE_DATE@"
@@ -3354,12 +3356,13 @@ void NativeCompiledTarget::setChecks(const String &name, bool check_definitions)
 path NativeCompiledTarget::getPatchDir() const
 {
     path base;
-    if (auto d = getPackage().getOverriddenDir(); d)
+    SW_UNIMPLEMENTED;
+    /*if (auto d = getPackage().getOverriddenDir(); d)
         base = d.value() / SW_BINARY_DIR;
     else if (!isLocal())
         base = getPackage().getDirSrc();
     else
-        base = getMainBuild().getBuildDirectory();
+        base = getMainBuild().getBuildDirectory();*/
     return base / "patch";
 }
 

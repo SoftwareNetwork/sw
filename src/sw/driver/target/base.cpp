@@ -92,8 +92,23 @@ TargetBase::TargetBase(const TargetBase &rhs, const PackageId &inpkg)
 
     // other computations
 
+    // we do not activate targets that are not selected for current builds
+    DryRun = !getSolution().isKnownTarget(inpkg);
+
+    pkg = std::make_unique<PackageId>(inpkg);
+
     // pkg
-    pkg = std::make_unique<LocalPackage>(getMainBuild().getContext().getLocalStorage(), inpkg);
+    if (!DryRun)
+    {
+        if (!isLocal())
+        {
+            PackageSettings s;
+            ResolveRequest rr{ inpkg, s };
+            if (!getMainBuild().getResolver().resolve(rr))
+                throw SW_RUNTIME_ERROR("Not resolved: " + inpkg.toString());
+            //lpkg = dynamic_cast<LocalPackage&>(rr.getPackage()).clone();
+        }
+    }
 
     // after pkg
     if (!current_project)
@@ -102,18 +117,6 @@ TargetBase::TargetBase(const TargetBase &rhs, const PackageId &inpkg)
 
 TargetBase::~TargetBase()
 {
-}
-
-bool Target::hasSameProject(const ITarget &t) const
-{
-    if (this == &t)
-        return true;
-    auto t2 = t.as<const Target*>();
-    if (!t2)
-        return false;
-    return
-        current_project && t2->current_project &&
-        current_project == t2->current_project;
 }
 
 PackagePath TargetBase::constructTargetName(const PackagePath &Name) const
@@ -128,9 +131,6 @@ void TargetBase::addTarget3(ITargetPtr t)
 
 void TargetBase::addTarget2(Target &t)
 {
-    // we do not activate targets that are not selected for current builds
-    t.DryRun = !getSolution().isKnownTarget(t.getPackage());
-
     if (!t.DryRun)
         t.init();
 
@@ -180,15 +180,22 @@ bool TargetBase::isLocal() const
     return Local;
 }
 
-const LocalPackage &TargetBase::getPackage() const
+const PackageId &TargetBase::getPackage() const
 {
     if (!pkg)
         throw SW_LOGIC_ERROR("pkg not created");
     return *pkg;
 }
 
-Target::Target(TargetBase &parent, const PackageId &pkg)
-    : TargetBase(parent, pkg)
+const LocalPackage &TargetBase::getLocalPackage() const
+{
+    if (!lpkg)
+        throw SW_LOGIC_ERROR("lpkg not created");
+    return *lpkg;
+}
+
+Target::Target(TargetBase &parent, const PackageId &inpkg)
+    : TargetBase(parent, inpkg)
 {
     ts = static_cast<ExtendedBuild &>(getSolution()).getSettings();
     bs = ts;
@@ -198,9 +205,12 @@ Target::Target(TargetBase &parent, const PackageId &pkg)
 
     // sdir
     if (!isLocal())
-        setSourceDirectory(getPackage().getDirSrc2());
-    if (auto d = getPackage().getOverriddenDir())
-        setSourceDirectory(*d);
+    {
+        setSourceDirectory(getLocalPackage().getDirSrc2());
+        SW_UNIMPLEMENTED;
+        //if (auto d = getLocalPackage().getOverriddenDir())
+            //setSourceDirectory(*d);
+    }
     // set source dir
     if (SourceDir.empty() || (getSolution().dd && getSolution().dd->force_source))
     {
@@ -234,6 +244,18 @@ Target::Target(TargetBase &parent, const PackageId &pkg)
 
 Target::~Target()
 {
+}
+
+bool Target::hasSameProject(const ITarget &t) const
+{
+    if (this == &t)
+        return true;
+    auto t2 = t.as<const Target*>();
+    if (!t2)
+        return false;
+    return
+        current_project && t2->current_project &&
+        current_project == t2->current_project;
 }
 
 const Source &Target::getSource() const
@@ -400,7 +422,7 @@ path Target::getTargetDirShort(const path &root) const
 
 path Target::getObjectDir() const
 {
-    return getObjectDir(getPackage());
+    return getObjectDir(getLocalPackage());
 }
 
 path Target::getObjectDir(const LocalPackage &in) const
@@ -528,12 +550,13 @@ void Target::init()
 
 path Target::getBinaryParentDir() const
 {
-    if (auto d = getPackage().getOverriddenDir(); d)
+    SW_UNIMPLEMENTED;
+    /*if (auto d = getPackage().getOverriddenDir(); d)
         return getTargetDirShort(d.value() / SW_BINARY_DIR);
     else if (isLocal())
         return getTargetDirShort(getMainBuild().getBuildDirectory());
     else
-        return getObjectDir(getPackage(), getConfig());
+        return getObjectDir(getPackage(), getConfig());*/
 }
 
 DependencyPtr Target::getDependency() const
@@ -909,8 +932,9 @@ Test Target::addTest1(const String &name, const Target &tgt)
     Storage.push_back(c.getCommand());
 
     // test only local targets
-    if (!isLocal() || getPackage().getOverriddenDir())
-        return c;
+    SW_UNIMPLEMENTED;
+    //if (!isLocal() || getPackage().getOverriddenDir())
+        //return c;
 
     auto d = std::make_shared<Dependency>(tgt);
     d->getSettings() = getSettings(); // same settings!
@@ -950,7 +974,8 @@ path getOutputFileName(const Target &t)
 path getBaseOutputDirNameForLocalOnly(const Target &t, const path &root, const path &OutputDir)
 {
     path p;
-    if (auto d = t.getPackage().getOverriddenDir(); d)
+    SW_UNIMPLEMENTED;
+    /*if (auto d = t.getPackage().getOverriddenDir(); d)
     {
         p = *d / SW_BINARY_DIR / "out" / t.getConfig() / OutputDir;
     }
@@ -962,7 +987,7 @@ path getBaseOutputDirNameForLocalOnly(const Target &t, const path &root, const p
     {
         SW_UNIMPLEMENTED;
         p = root / t.getConfig() / OutputDir;
-    }
+    }*/
     return p;
 }
 

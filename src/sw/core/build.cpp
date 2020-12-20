@@ -790,7 +790,8 @@ void SwBuild::resolvePackages(const std::vector<IDependency*> &udeps)
                     everything_resolved = false;
                     continue;
                 }
-                auto p = LocalPackage(getContext().getLocalStorage(), pi->first);
+                SW_UNIMPLEMENTED;
+                /*auto p = LocalPackage(getContext().getLocalStorage(), pi->first);
                 if (getTargets().find(p, d->getSettings()))
                     continue;
                 auto tgt = create_target(p, d->getSettings());
@@ -801,7 +802,7 @@ void SwBuild::resolvePackages(const std::vector<IDependency*> &udeps)
                     SW_UNIMPLEMENTED;
                     //everything_resolved &= load_targets(tgt2->getDependencies());
                     continue;
-                }
+                }*/
                 everything_resolved = false;
             }
             return everything_resolved;
@@ -1057,7 +1058,8 @@ void SwBuild::prepare()
             continue;
         for (auto &tgt : tgts)
         {
-            LocalPackage p(getContext().getLocalStorage(), tgt->getPackage());
+            SW_UNIMPLEMENTED;
+            /*LocalPackage p(getContext().getLocalStorage(), tgt->getPackage());
             if (p.isOverridden())
                 continue;
             // skip predefs - they are already readed from disk or created in sw
@@ -1079,7 +1081,7 @@ void SwBuild::prepare()
                     write_file(sfncfg, nlohmann::json::parse(tgt->getSettings().toString()).dump(2));
                 }
                 write_file(sptrfn, tgt->getInterfaceSettings().getHashString());
-            }
+            }*/
         }
     }
 }
