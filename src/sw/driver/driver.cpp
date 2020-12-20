@@ -288,17 +288,66 @@ struct BuiltinStorage : IStorage
     }
 };
 
-struct BuiltinInput : Input
+struct DriverInput : Input
+{
+    std::unique_ptr<NativeTargetEntryPoint> ep;
+    FrontendType fe_type = FrontendType::Unspecified;
+
+    using Input::Input;
+
+    bool isLoaded() const override { return !!ep; }
+
+    void setEntryPoint(std::unique_ptr<NativeTargetEntryPoint> in)
+    {
+        if (isLoaded())
+            throw SW_RUNTIME_ERROR("Input already loaded");
+        SW_ASSERT(in, "No entry points provided");
+        ep = std::move(in);
+    }
+
+    std::vector<ITargetPtr> loadPackages(SwBuild &b, const PackageSettings &s, const AllowedPackages &allowed_packages, const PackagePath &prefix) const override
+    {
+        // maybe save all targets on load?
+
+        // 1. If we load all installed packages, we might spend a lot of time here,
+        //    in case if all of the packages are installed and config is huge (aws, qt).
+        //    Also this might take a lot of memory.
+        //
+        // 2. If we load package by package we might spend a lot of time in subsequent loads.
+        //
+
+        if (!isLoaded())
+            throw SW_RUNTIME_ERROR("Input is not loaded: " + std::to_string(getHash()));
+
+        LOG_TRACE(logger, "Loading input " << getName() << ", settings = " << s.toString());
+
+        // are we sure that load package can return dry-run?
+        // if it cannot return dry run packages, we cannot remove this wrapper
+        std::vector<ITargetPtr> tgts;
+        auto t = ep->loadPackages(b, s, allowed_packages, prefix);
+        for (auto &tgt : t)
+        {
+            if (tgt->getSettings()["dry-run"])
+                SW_UNIMPLEMENTED;
+            tgts.push_back(std::move(tgt));
+        }
+        // it is possible to get all targets dry run for some reason
+        // why?
+        return tgts;
+    }
+};
+
+struct BuiltinInput : DriverInput
 {
     size_t h;
 
     BuiltinInput(SwContext &swctx, const IDriver &d, size_t hash)
-        : Input(swctx, d, std::make_unique<Specification>(SpecificationFiles{})), h(hash)
+        : DriverInput(swctx, d, std::make_unique<Specification>(SpecificationFiles{})), h(hash)
     {}
 
     bool isParallelLoadable() const { return true; }
     size_t getHash() const override { return h; }
-    EntryPointPtr load1(SwContext &) override { SW_UNREACHABLE; }
+    //EntryPointPtr load1(SwContext &) override { SW_UNREACHABLE; }
 };
 
 Driver::Driver(SwContext &swctx)
@@ -332,16 +381,11 @@ PackageId Driver::getPackageId()
     return "org.sw."s + PACKAGE "-" PACKAGE_VERSION;
 }
 
-struct DriverInput
-{
-    FrontendType fe_type = FrontendType::Unspecified;
-};
-
-struct SpecFileInput : Input, DriverInput
+struct SpecFileInput : DriverInput
 {
     std::unique_ptr<Module> module;
 
-    using Input::Input;
+    using DriverInput::DriverInput;
 
     bool isBatchLoadable() const override
     {
@@ -355,7 +399,7 @@ struct SpecFileInput : Input, DriverInput
     // everything else is parallel loadable
     bool isParallelLoadable() const override { return !isBatchLoadable(); }
 
-    EntryPointPtr load1(SwContext &swctx) override
+    /*EntryPointPtr load1(SwContext &swctx) override
     {
         auto fn = getSpecification().files.getData().begin()->second.absolute_path;
         switch (fe_type)
@@ -467,18 +511,18 @@ struct SpecFileInput : Input, DriverInput
         default:
             SW_UNIMPLEMENTED;
         }
-    }
+    }*/
 };
 
-struct InlineSpecInput : Input, DriverInput
+struct InlineSpecInput : DriverInput
 {
     yaml root;
 
-    using Input::Input;
+    using DriverInput::DriverInput;
 
     bool isParallelLoadable() const override { return true; }
 
-    EntryPointPtr load1(SwContext &swctx) override
+    /*EntryPointPtr load1(SwContext &swctx) override
     {
         SW_ASSERT(fe_type == FrontendType::Cppan, "not implemented");
 
@@ -505,16 +549,16 @@ struct InlineSpecInput : Input, DriverInput
         auto ep = std::make_unique<NativeBuiltinTargetEntryPoint>(bf);
         ep->source_dir = p.parent_path();
         return ep;
-    }
+    }*/
 };
 
-struct DirInput : Input
+struct DirInput : DriverInput
 {
-    using Input::Input;
+    using DriverInput::DriverInput;
 
     bool isParallelLoadable() const override { return true; }
 
-    EntryPointPtr load1(SwContext &swctx) override
+    /*EntryPointPtr load1(SwContext &swctx) override
     {
         auto dir = getSpecification().dir;
         auto bf = [this, dir](Build &b)
@@ -524,7 +568,7 @@ struct DirInput : Input
         auto ep = std::make_unique<NativeBuiltinTargetEntryPoint>(bf);
         ep->source_dir = dir;
         return ep;
-    }
+    }*/
 };
 
 void Driver::setupBuild(SwBuild &b) const

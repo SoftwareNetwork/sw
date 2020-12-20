@@ -29,16 +29,12 @@ Input::~Input()
 
 void Input::load()
 {
-    if (isLoaded())
+    SW_UNIMPLEMENTED;
+    /*if (isLoaded())
         return;
     ep = load1(swctx);
     if (!ep)
-        throw SW_RUNTIME_ERROR("Empty entry point");
-}
-
-bool Input::isLoaded() const
-{
-    return !!ep;
+        throw SW_RUNTIME_ERROR("Empty entry point");*/
 }
 
 bool Input::isOutdated(const fs::file_time_type &t) const
@@ -65,45 +61,6 @@ Specification &Input::getSpecification()
 const Specification &Input::getSpecification() const
 {
     return *specification;
-}
-
-void Input::setEntryPoint(EntryPointPtr in)
-{
-    if (isLoaded())
-        throw SW_RUNTIME_ERROR("Input already loaded");
-    SW_ASSERT(in, "No entry points provided");
-    ep = std::move(in);
-}
-
-std::vector<ITargetPtr> Input::loadPackages(SwBuild &b, const PackageSettings &s, const AllowedPackages &allowed_packages, const PackagePath &prefix) const
-{
-    // maybe save all targets on load?
-
-    // 1. If we load all installed packages, we might spend a lot of time here,
-    //    in case if all of the packages are installed and config is huge (aws, qt).
-    //    Also this might take a lot of memory.
-    //
-    // 2. If we load package by package we might spend a lot of time in subsequent loads.
-    //
-
-    if (!isLoaded())
-        throw SW_RUNTIME_ERROR("Input is not loaded: " + std::to_string(getHash()));
-
-    LOG_TRACE(logger, "Loading input " << getName() << ", settings = " << s.toString());
-
-    // are we sure that load package can return dry-run?
-    // if it cannot return dry run packages, we cannot remove this wrapper
-    std::vector<ITargetPtr> tgts;
-    auto t = ep->loadPackages(b, s, allowed_packages, prefix);
-    for (auto &tgt : t)
-    {
-        if (tgt->getSettings()["dry-run"])
-            continue;
-        tgts.push_back(std::move(tgt));
-    }
-    // it is possible to get all targets dry run for some reason
-    // why?
-    return tgts;
 }
 
 UserInput::UserInput(Input &i)

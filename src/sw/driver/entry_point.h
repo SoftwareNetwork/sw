@@ -20,13 +20,13 @@ struct DriverData;
 struct Input;
 
 // this driver ep
-struct NativeTargetEntryPoint : TargetEntryPoint
+struct NativeTargetEntryPoint// : TargetEntryPoint
 {
     path source_dir;
     mutable std::unique_ptr<DriverData> dd;
 
     [[nodiscard]]
-    std::vector<ITargetPtr> loadPackages(SwBuild &, const PackageSettings &, const AllowedPackages &pkgs, const PackagePath &prefix) const override;
+    virtual std::vector<ITargetPtr> loadPackages(SwBuild &, const PackageSettings &, const AllowedPackages &pkgs, const PackagePath &prefix) const;
 
     ExtendedBuild createBuild(SwBuild &, const PackageSettings &, const AllowedPackages &pkgs, const PackagePath &prefix) const;
 

@@ -33,8 +33,6 @@ enum class InputType : uint8_t
 // one input - one ep
 struct SW_CORE_API Input
 {
-    using EntryPointPtr = std::unique_ptr<TargetEntryPoint>;
-
     Input(SwContext &, const IDriver &, std::unique_ptr<Specification>);
     Input(const Input &) = delete;
     virtual ~Input();
@@ -53,27 +51,20 @@ struct SW_CORE_API Input
     /// allow to throw input->load() into thread pool
     virtual bool isParallelLoadable() const { return false; }
 
-    //virtual bool isPredefinedInput() const { return false; }
-
     bool isOutdated(const fs::file_time_type &) const;
-    bool isLoaded() const;
+    virtual bool isLoaded() const = 0;
 
     String getName() const;
     virtual size_t getHash() const;
 
-    void setEntryPoint(EntryPointPtr);
-
     // no dry-run targets
     [[nodiscard]]
-    std::vector<ITargetPtr> loadPackages(SwBuild &, const PackageSettings &, const AllowedPackages &allowed_packages, const PackagePath &prefix) const;
+    virtual std::vector<ITargetPtr> loadPackages(SwBuild &, const PackageSettings &, const AllowedPackages &allowed_packages, const PackagePath &prefix) const = 0;
 
 private:
     SwContext &swctx;
     const IDriver &driver;
     std::unique_ptr<Specification> specification;
-    EntryPointPtr ep;
-
-    virtual EntryPointPtr load1(SwContext &) = 0;
 };
 
 struct SW_CORE_API UserInput

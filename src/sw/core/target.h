@@ -300,13 +300,13 @@ struct TargetMap : PackageVersionMapBase<TargetContainer, std::unordered_map, Ex
 };
 
 //
-struct SW_CORE_API TargetEntryPoint
+/*struct SW_CORE_API TargetEntryPoint
 {
     virtual ~TargetEntryPoint();
 
     [[nodiscard]]
     virtual std::vector<ITargetPtr> loadPackages(SwBuild &, const PackageSettings &, const AllowedPackages &allowed_packages, const PackagePath &prefix) const = 0;
-};
+};*/
 
 struct TargetData
 {

@@ -12,7 +12,7 @@ namespace sw
 
 IDependency::~IDependency() = default;
 ITarget::~ITarget() {}
-TargetEntryPoint::~TargetEntryPoint() = default;
+//TargetEntryPoint::~TargetEntryPoint() = default;
 TargetData::~TargetData() = default;
 
 AllowedPackages::AllowedPackages(const UnresolvedPackages &in)
