@@ -103,7 +103,8 @@ String Package::formatPath(const String &s) const
 const PackageData &Package::getData() const
 {
     if (!data)
-        data = storage.loadData(*this);
+        SW_UNIMPLEMENTED;
+        //data = storage.loadData(*this);
     return *data;
 }
 

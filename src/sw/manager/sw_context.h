@@ -39,7 +39,7 @@ struct SW_MANAGER_API SwManagerContext// : ISwContext
     std::vector<IStorage *> getRemoteStorages() const;
 
     //
-    void install(ResolveRequest &) const;
+    /*void install(ResolveRequest &) const;
     // mass (threaded) install
     void install(const std::vector<ResolveRequest *> &) const;
     template <typename T, typename = std::enable_if_t<!std::is_pointer_v<T>>>
@@ -52,7 +52,7 @@ struct SW_MANAGER_API SwManagerContext// : ISwContext
         install(v);
     }
     // what about ", bool use_cache = true"?
-    LocalPackage install(const Package &) const;
+    LocalPackage install(const Package &) const;*/
     // manually call cache reset if we don't want it?
     // use time in resolve request to request the newest packages?
     bool resolve(ResolveRequest &, bool use_cache) const;
@@ -63,6 +63,7 @@ struct SW_MANAGER_API SwManagerContext// : ISwContext
 private:
     std::unique_ptr<CachedStorage> cache_storage;
     std::unique_ptr<LocalStorage> local_storage;
+    std::unique_ptr<OverriddenPackagesStorage> overridden_storage;
     std::vector<std::unique_ptr<IStorage>> remote_storages;
     std::unique_ptr<CachingResolver> cr;
     mutable std::mutex resolve_mutex;
@@ -71,7 +72,7 @@ private:
     void addStorage(std::unique_ptr<IStorage>);
 };
 
-template <typename F>
+/*template <typename F>
 void resolveWithDependencies(std::vector<ResolveRequest> &v, F &&resolve)
 {
     // simple unresolved package for now
@@ -113,6 +114,6 @@ void resolveWithDependencies(std::vector<ResolveRequest> &v, F &&resolve)
         if (!new_resolve)
             break;
     }
-}
+}*/
 
 } // namespace sw

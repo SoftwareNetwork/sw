@@ -166,14 +166,14 @@ StorageWithPackagesDatabase::StorageWithPackagesDatabase(const String &name, con
 
 StorageWithPackagesDatabase::~StorageWithPackagesDatabase() = default;
 
-PackageDataPtr StorageWithPackagesDatabase::loadData(const PackageId &id) const
+/*PackageDataPtr StorageWithPackagesDatabase::loadData(const PackageId &id) const
 {
     std::lock_guard lk(m);
     auto i = data.find(id);
     if (i == data.end())
         return data.emplace(id, pkgdb->getPackageData(id)).first->second.clone();
     return i->second.clone();
-}
+}*/
 
 PackagesDatabase &StorageWithPackagesDatabase::getPackagesDatabase() const
 {
@@ -261,9 +261,8 @@ void LocalStorage::migrateStorage(int from, int to)
 
 bool LocalStorage::isPackageInstalled(const Package &pkg) const
 {
-    SW_UNIMPLEMENTED;
-    //LocalPackage p(*this, pkg);
-    //return getPackagesDatabase().isPackageInstalled(pkg) && fs::exists(p.getDirSrc2());
+    LocalPackage p(*this, pkg);
+    return getPackagesDatabase().isPackageInstalled(pkg) && fs::exists(p.getDirSrc2());
 }
 
 bool LocalStorage::isPackageLocal(const PackageId &id) const
@@ -278,7 +277,7 @@ bool LocalStorage::isPackageLocal(const PackageId &id) const
     //return ovs.isPackageInstalled(p);
 }*/
 
-PackageDataPtr LocalStorage::loadData(const PackageId &id) const
+/*PackageDataPtr LocalStorage::loadData(const PackageId &id) const
 {
     if (isPackageLocal(id))
     {
@@ -290,7 +289,7 @@ PackageDataPtr LocalStorage::loadData(const PackageId &id) const
     //if (isPackageOverridden(id))
         //return ovs.loadData(id);
     return StorageWithPackagesDatabase::loadData(id);
-}
+}*/
 
 LocalPackage LocalStorage::installLocalPackage(const PackageId &id, const PackageData &d)
 {
@@ -302,20 +301,23 @@ LocalPackage LocalStorage::installLocalPackage(const PackageId &id, const Packag
     return p;*/
 }
 
-LocalPackage LocalStorage::install(const Package &id) const
+void LocalStorage::install(const Package &p) const
 {
+    if (!p.isInstallable())
+        return;
+
     /*//if (&id.storage == this)
         //throw SW_RUNTIME_ERROR("Can't install from self to self");
     if (!isPackageInstalled(id))
         throw SW_RUNTIME_ERROR("package not installed: " + id.toString());
     return LocalPackage(*this, id);*/
 
-    SW_UNIMPLEMENTED;
-    //if (isPackageInstalled(id) || isPackageOverridden(id))
+    if (isPackageInstalled(p)
+        //|| isPackageOverridden(id)
+        )
     {
-        SW_UNIMPLEMENTED;
-        //LocalPackage p(*this, id);
-        //return p;
+        //LocalPackage p(*this, p);
+        return;
     }
 
     // check if we already have this package and do not dl it again
@@ -327,14 +329,14 @@ LocalPackage LocalStorage::install(const Package &id) const
             ;
     }*/
 
-    get(static_cast<const IStorage2 &>(id.getStorage()), id/*, StorageFileType::SourceArchive*/);
+    get(static_cast<const IStorage2 &>(p.getStorage()), p/*, StorageFileType::SourceArchive*/);
 
     // we mix gn with storage name to get unique gn
     /*auto h = std::hash<String>()(static_cast<const IStorage2 &>(id.getStorage()).getName());
     auto d = id.getData();
     d.group_number = hash_combine(h, d.group_number);*/
 
-    getPackagesDatabase().installPackage(id, id.getData());
+    getPackagesDatabase().installPackage(p, p.getData());
 
     SW_UNIMPLEMENTED;
     //LocalPackage p(*this, id);
@@ -415,6 +417,8 @@ const OverriddenPackagesStorage &LocalStorage::getOverriddenPackagesStorage() co
 
 bool LocalStorage::resolve(ResolveRequest &rr) const
 {
+    return LocalStorageBase::resolve(rr);
+
     ResolveRequest rr2{ rr.u, rr.settings };
     //auto r = ovs.resolve(rr2);
     SW_UNIMPLEMENTED;
@@ -441,12 +445,22 @@ OverriddenPackagesStorage::~OverriddenPackagesStorage() = default;
 
 bool OverriddenPackagesStorage::resolve(ResolveRequest &rr) const
 {
-    ResolveRequest rr2{ rr.u, rr.settings };
-    auto r = LocalStorageBase::resolve(rr2);
-    SW_UNIMPLEMENTED;
-    //if (r)
-        //rr.setPackage(std::make_unique<OverriddenPackage>(*this, rr2.getPackage()));
-    return r;
+    struct OverriddenPackage2 : Package
+    {
+        using Package::Package;
+
+        bool isInstallable() const override { return false; }
+        std::unique_ptr<Package> clone() const override { return std::make_unique<OverriddenPackage2>(*this); }
+    };
+
+    if (LocalStorageBase::resolve(rr))
+    {
+        auto p = std::make_unique<OverriddenPackage2>(*this, rr.getPackage());
+        p->setData(std::make_unique<PackageData>(getPackagesDatabase().getPackageData(rr.getPackage())));
+        rr.setPackageForce(std::move(p));
+        return true;
+    }
+    return false;
 }
 
 std::unordered_set<LocalPackage> OverriddenPackagesStorage::getPackages() const
@@ -463,7 +477,7 @@ void OverriddenPackagesStorage::deletePackageDir(const path &sdir) const
     getPackagesDatabase().deleteOverriddenPackageDir(sdir);
 }
 
-LocalPackage OverriddenPackagesStorage::install(const Package &p) const
+void OverriddenPackagesStorage::install(const Package &p) const
 {
     // we can't install from ourselves
     SW_UNIMPLEMENTED;
@@ -475,7 +489,7 @@ LocalPackage OverriddenPackagesStorage::install(const Package &p) const
     auto d = p.getData();
     d.group_number = hash_combine(h, d.group_number);*/
 
-    return install(p, p.getData());
+    install(p, p.getData());
 }
 
 LocalPackage OverriddenPackagesStorage::install(const PackageId &id, const PackageData &d) const

@@ -13,19 +13,18 @@ struct IStorage;
 struct LocalStorage;
 struct OverriddenPackagesStorage;
 
-struct SW_MANAGER_API LocalPackage : Package
+struct SW_MANAGER_API LocalPackageBase : Package
+{
+    using Package::Package;
+
+    virtual bool isOverridden() const { return false; }
+};
+
+struct SW_MANAGER_API LocalPackage : LocalPackageBase
 {
     LocalPackage(const LocalStorage &, const PackageId &);
 
-    LocalPackage(const LocalPackage &) = default;
-    LocalPackage &operator=(const LocalPackage &) = delete;
-    LocalPackage(LocalPackage &&) = default;
-    LocalPackage &operator=(LocalPackage &&) = delete;
-    virtual ~LocalPackage() = default;
-
     virtual std::unique_ptr<Package> clone() const { return std::make_unique<LocalPackage>(*this); }
-
-    virtual bool isOverridden() const { return false; }
 
     /// main package dir
     path getDir() const;
@@ -53,9 +52,9 @@ private:
     path getDir(const path &root) const;
 };
 
-struct SW_MANAGER_API OverriddenPackage : LocalPackage
+struct SW_MANAGER_API OverriddenPackage : LocalPackageBase
 {
-    using LocalPackage::LocalPackage;
+    using LocalPackageBase::LocalPackageBase;
 
     path getDirSrc2() const override;
     bool isOverridden() const override { return true; }

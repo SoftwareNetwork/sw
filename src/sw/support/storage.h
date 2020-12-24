@@ -57,7 +57,7 @@ struct SW_SUPPORT_API IStorage : IResolvableStorage
     //virtual ResolveResult resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const = 0;
 
     /// load package data from this storage
-    virtual PackageDataPtr loadData(const PackageId &) const = 0;
+    //virtual PackageDataPtr loadData(const PackageId &) const = 0;
 
     // non virtual methods
 

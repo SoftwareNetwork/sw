@@ -806,13 +806,18 @@ void Target::addSourceDependency(const Target &t)
     addSourceDependency(std::make_shared<Dependency>(t));
 }
 
+Resolver &Target::getResolver() const
+{
+    return getSettings()["resolver"].getResolver();
+}
+
 void Target::resolveDependency(IDependency &d)
 {
     if (DryRun)
         return;
 
     ResolveRequest rr{ d.getUnresolvedPackage(), d.getSettings() };
-    if (!getSettings()["resolver"].resolve(rr))
+    if (!getResolver().resolve(rr))
     {
         if (rr.u.getPath().isAbsolute())
             throw SW_RUNTIME_ERROR("Cannot resolve package: " + rr.u.toString());
@@ -844,13 +849,15 @@ path Target::getFile(const DependencyPtr &dep, const path &fn)
 
     addSourceDependency(dep); // main trick is to add a dependency
     ResolveRequest rr{ dep->getUnresolvedPackage(), dep->getSettings() };
-    getMainBuild().getContext().install(rr);
-    auto &lp = static_cast<LocalPackage &>(rr.getPackage());
+    getResolver().resolve(rr);
+    SW_UNIMPLEMENTED;
+    /*auto p2 = getMainBuild().getContext().getLocalStorage().install(rr.getPackage());
+    auto &lp = static_cast<LocalPackageBase &>(p2);
     auto p = lp.getDirSrc2();
     // allow to get dirs
     if (!fn.empty())
         p /= fn;
-    return p;
+    return p;*/
 }
 
 PackageSettings &Target::getOptions()

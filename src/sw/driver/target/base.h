@@ -33,10 +33,12 @@ namespace driver
 struct CommandBuilder;
 }
 
+struct Resolver;
 struct FileStorage;
 struct Build;
 struct SwContext;
 struct SwBuild;
+
 struct Target;
 struct ProjectTarget;
 struct DirectoryTarget;
@@ -256,6 +258,7 @@ struct SW_DRIVER_CPP_API Target
     void addSourceDependency(const DependencyPtr &);
 
     void resolveDependency(IDependency &);
+    Resolver &getResolver() const;
 
 public:
     Target(TargetBase &parent, const PackageId &);

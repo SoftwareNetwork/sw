@@ -132,9 +132,14 @@ void PackageSetting::setAbsolutePathValue(const path &value)
     *this = to_string(normalize_path(value));
 }
 
+::sw::Resolver &PackageSetting::getResolver() const
+{
+    return *get<Resolver>();
+}
+
 bool PackageSetting::resolve(ResolveRequest &rr) const
 {
-    return get<Resolver>()->resolve(rr);
+    return getResolver().resolve(rr);
 }
 
 bool PackageSetting::operator==(const PackageSetting &rhs) const

@@ -16,7 +16,7 @@ namespace sw
 {
 
 LocalPackage::LocalPackage(const LocalStorage &storage, const PackageId &id)
-    : Package(storage, id)
+    : LocalPackageBase(storage, id)
 {
 }
 

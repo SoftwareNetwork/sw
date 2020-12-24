@@ -542,23 +542,16 @@ ITarget &SwBuild::resolveAndLoad(ResolveRequest &rr)
     std::exception_ptr eptr;
     auto x = [this, &eptr, &rr, &t]()
     {
-        LOG_TRACE(logger, "Entering the new fiber to load: " + rr.u.toString());
+        LOG_TRACE(logger, "Entering the new fiber to load: " + rr.getPackage().toString());
         try
         {
-            t = &resolveAndLoad2(rr);
+            t = &load(rr.getPackage());
         }
         catch (...)
         {
             eptr = std::current_exception();
         }
-        String s;
-        s += "Leaving fiber to load: " + rr.u.toString() + ", ";
-        if (!rr.isResolved())
-            s += "not ";
-        s += "resolved";
-        if (rr.isResolved())
-            s += " (" + rr.getPackage().toString() + ")";
-        LOG_TRACE(logger, s);
+        LOG_TRACE(logger, "Leaving fiber to load: " + rr.getPackage().toString());
     };
     // boost::fibers::launch::dispatch,
     // std::allocator_arg_t
@@ -570,21 +563,14 @@ ITarget &SwBuild::resolveAndLoad(ResolveRequest &rr)
     return *t;
 }
 
-ITarget &SwBuild::resolveAndLoad2(ResolveRequest &rr)
+ITarget &SwBuild::load(const Package &p)
 {
-    /*if (!rr.isResolved())
-    {
-        if (rr.u.getPath().isAbsolute())
-            throw SW_RUNTIME_ERROR("Cannot resolve package: " + rr.u.toString());
-        SW_UNIMPLEMENTED; // resolve local package
-    }*/
-
     // no, install now (resolve to local)
-    getContext().install(rr);
-    auto &p = rr.getPackage();
+    getContext().getLocalStorage().install(p);
+    //getContext().getLocalStorage().import(p);
     auto i = getContext().addInput(p);
-    getTargets()[rr.getPackage()].setInput(*i);
-    auto tgts = i->loadPackages(*this, rr.settings, PackageIdSet{ p }, p.getPath().slice(0, p.getData().prefix));
+    getTargets()[p].setInput(*i);
+    auto tgts = i->loadPackages(*this, p.getData().settings, PackageIdSet{ p }, p.getPath().slice(0, p.getData().prefix));
     if (tgts.empty())
         throw SW_RUNTIME_ERROR("No targets loaded: " + p.toString());
     if (tgts.size() != 1)
@@ -671,7 +657,8 @@ void SwBuild::resolvePackages()
         return;
 
     // install
-    getContext().install(rrs);
+    SW_UNIMPLEMENTED;
+    //getContext().install(rrs);
 
     // now we know all drivers
     // gather inputs
@@ -846,7 +833,8 @@ void SwBuild::resolvePackages(const std::vector<IDependency*> &udeps)
     }
 
     // install goes here - after saved configs, lock files etc.
-    getContext().install(rrs);
+    SW_UNIMPLEMENTED;
+    //getContext().install(rrs);
 
     // now we know all drivers
     std::set<Input *> iv;
@@ -1612,7 +1600,8 @@ bool SwBuild::isPredefinedTarget(const PackagePath &pp) const
 
 void SwBuild::resolveWithDependencies(std::vector<ResolveRequest> &rrs) const
 {
-    return ::sw::resolveWithDependencies(rrs, [this](auto &rr) { return resolve(rr); });
+    SW_UNIMPLEMENTED;
+    //return ::sw::resolveWithDependencies(rrs, [this](auto &rr) { return resolve(rr); });
 }
 
 ITarget *SwBuild::registerTarget(ITargetPtr t)

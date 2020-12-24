@@ -113,7 +113,7 @@ struct SW_MANAGER_API StorageWithPackagesDatabase : Storage
     StorageWithPackagesDatabase(const String &name, const path &db_dir);
     virtual ~StorageWithPackagesDatabase();
 
-    PackageDataPtr loadData(const PackageId &) const override;
+    //PackageDataPtr loadData(const PackageId &) const override;
     //void get(const IStorage &source, const PackageId &id, StorageFileType) override;
     //ResolveResult resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const override;
     bool resolve(ResolveRequest &) const override;
@@ -134,7 +134,7 @@ struct SW_MANAGER_API LocalStorageBase : StorageWithPackagesDatabase
 
     const StorageSchema &getSchema() const override { return schema; }
 
-    virtual LocalPackage install(const Package &) const = 0;
+    virtual void install(const Package &) const = 0;
     std::unique_ptr<vfs::File> getFile(const PackageId &id/*, StorageFileType*/) const override;
 
     void deletePackage(const PackageId &id) const;
@@ -150,7 +150,7 @@ struct SW_MANAGER_API OverriddenPackagesStorage : LocalStorageBase
     OverriddenPackagesStorage(/*const LocalStorage &ls, */const path &db_dir);
     virtual ~OverriddenPackagesStorage();
 
-    LocalPackage install(const Package &) const override;
+    void install(const Package &) const override;
     LocalPackage install(const PackageId &, const PackageData &) const;
     bool isPackageInstalled(const Package &p) const;
 
@@ -167,13 +167,13 @@ struct SW_MANAGER_API LocalStorage : Directories, LocalStorageBase
 
     //LocalPackage download(const PackageId &) const override;
     void remove(const LocalPackage &) const;
-    LocalPackage install(const Package &) const override;
+    /*LocalPackage*/ void install(const Package &) const override;
     LocalPackage installLocalPackage(const PackageId &, const PackageData &);
     void get(const IStorage2 &source, const PackageId &id/*, StorageFileType*/) const /* override*/;
     bool isPackageInstalled(const Package &id) const;
     //bool isPackageOverridden(const PackageId &id) const;
     bool isPackageLocal(const PackageId &id) const;
-    PackageDataPtr loadData(const PackageId &) const override;
+    //PackageDataPtr loadData(const PackageId &) const override;
     //ResolveResult resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const override;
     bool resolve(ResolveRequest &) const override;
 

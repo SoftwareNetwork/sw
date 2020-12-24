@@ -49,7 +49,7 @@ struct SW_MANAGER_API RemoteStorageWithFallbackToRemoteResolving : RemoteStorage
 {
     RemoteStorageWithFallbackToRemoteResolving(LocalStorage &, const Remote &, bool allow_network);
 
-    PackageDataPtr loadData(const PackageId &) const override;
+    //PackageDataPtr loadData(const PackageId &) const override;
     bool resolveFromRemote(ResolveRequest &) const;
     //ResolveResult resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const override;
     bool resolve(ResolveRequest &) const override;

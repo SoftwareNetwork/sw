@@ -193,6 +193,11 @@ struct BuiltinStorage : IStorage
                     continue;
                 auto p = std::make_unique<BuiltinPackage>(bs, PackageId{ rr.u.getPath(), v });
                 p->f = ep;
+                auto d = std::make_unique<PackageData>();
+                d->prefix = 0;
+                d->settings = rr.getSettings();
+                p->setData(std::move(d));
+
                 rr.setPackage(std::move(p));
             }
             SW_CHECK(rr.isResolved());
@@ -215,12 +220,12 @@ struct BuiltinStorage : IStorage
     }
 
     const StorageSchema &getSchema() const override { SW_UNREACHABLE; }
-    PackageDataPtr loadData(const PackageId &) const override
+    /*PackageDataPtr loadData(const PackageId &) const override
     {
         auto d = std::make_unique<PackageData>();
         d->prefix = 0;
         return std::move(d);
-    }
+    }*/
 
     void addTarget(const PackageId &pkg)
     {

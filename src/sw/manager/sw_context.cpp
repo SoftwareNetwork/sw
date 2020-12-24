@@ -21,6 +21,7 @@ SwManagerContext::SwManagerContext(const path &local_storage_root_dir, bool allo
     , cr(std::make_unique<CachingResolver>(*cache_storage))
 {
     local_storage = std::make_unique<LocalStorage>(local_storage_root_dir);
+    overridden_storage = std::make_unique<OverriddenPackagesStorage>(getLocalStorage().getDatabaseRootDir());
 
     for (auto &r : Settings::get_user_settings().getRemotes(allow_network))
     {
@@ -31,8 +32,7 @@ SwManagerContext::SwManagerContext(const path &local_storage_root_dir, bool allo
                 getLocalStorage(), *r, allow_network));
     }
 
-    // local storage redirects all resolves to overridden storage
-    cr->addStorage(*local_storage);
+    cr->addStorage(*overridden_storage);
     for (auto &&s : remote_storages)
         cr->addStorage(*s);
 }
@@ -75,7 +75,7 @@ bool SwManagerContext::resolve(ResolveRequest &rr, bool use_cache) const
         ;
 }
 
-void SwManagerContext::install(ResolveRequest &rr) const
+/*void SwManagerContext::install(ResolveRequest &rr) const
 {
     // true for now
     if (!rr.isResolved() && !resolve(rr, true))
@@ -104,7 +104,7 @@ void SwManagerContext::install(const std::vector<ResolveRequest *> &rrs) const
 LocalPackage SwManagerContext::install(const Package &p) const
 {
     return getLocalStorage().install(p);
-}
+}*/
 
 void SwManagerContext::setCachedPackages(const std::unordered_map<UnresolvedPackage, PackageId> &pkgs) const
 {

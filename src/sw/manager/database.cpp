@@ -224,7 +224,10 @@ bool PackagesDatabase::resolve(ResolveRequest &rr, const IStorage &s) const
         .from(pkg_ver)
         .where(pkg_ver.packageId == pid)))
     {
-        rr.setPackage(std::make_unique<Package>(s, PackageId{ upkg.getPath(), row.version.value() }));
+        auto p = std::make_unique<Package>(s, PackageId{ upkg.getPath(), row.version.value() });
+        auto d = std::make_unique<PackageData>(getPackageData(*p));
+        p->setData(std::move(d));
+        rr.setPackage(std::move(p));
     }
 
     return rr.isResolved();
@@ -256,13 +259,13 @@ PackageData PackagesDatabase::getPackageData(const PackageId &p) const
     if (!q2.front().source.is_null())
         d.source = q2.front().source.value();
 
-    for (const auto &row : (*db)(
+    /*for (const auto &row : (*db)(
         select(pkgs.packageId, pkgs.path, pkg_deps.versionRange)
         .from(pkg_deps.join(pkgs).on(pkg_deps.packageId == pkgs.packageId))
         .where(pkg_deps.packageVersionId == row.packageVersionId)))
     {
         d.dependencies.emplace(row.path.value(), row.versionRange.value());
-    }
+    }*/
 
     return d;
 }
@@ -373,7 +376,7 @@ void PackagesDatabase::installPackage(const PackageId &p, const PackageData &d)
     ));
 
     //
-    for (auto &d : d.dependencies)
+    /*for (auto &d : d.dependencies)
     {
         // get package id
         auto q = (*db)(select(pkgs.packageId).from(pkgs).where(
@@ -398,7 +401,7 @@ void PackagesDatabase::installPackage(const PackageId &p, const PackageData &d)
             pkg_deps.packageId = q.front().packageId.value(),
             pkg_deps.versionRange = d.getRange().toString()
         ));
-    }
+    }*/
 }
 
 void PackagesDatabase::installPackage(const Package &p)

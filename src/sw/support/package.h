@@ -29,7 +29,7 @@ struct SW_SUPPORT_API PackageData
     int prefix = 2;
 
     //
-    UnresolvedPackages dependencies;
+    //UnresolvedPackages dependencies;
 
     // for overridden pkgs
     path sdir;
@@ -69,15 +69,17 @@ struct SW_SUPPORT_API Package : PackageId
     String formatPath(const String &) const;
 
     const PackageData &getData() const;
+    void setData(PackageDataPtr d) { data = std::move(d); }
     const IStorage &getStorage() const;
 
     virtual std::unique_ptr<Package> clone() const { return std::make_unique<Package>(*this); }
 
     virtual bool isInstallable() const { return true; }
+    virtual path getDirSrc2() const { throw SW_LOGIC_ERROR("Method is not implemented for this type."); }
 
 private:
     const IStorage &storage;
-    mutable PackageDataPtr data;
+    PackageDataPtr data;
 };
 
 using PackagePtr = std::unique_ptr<Package>;

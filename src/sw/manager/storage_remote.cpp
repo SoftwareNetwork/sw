@@ -517,12 +517,12 @@ bool RemoteStorageWithFallbackToRemoteResolving::resolveFromRemote(ResolveReques
     return getRemote().getApi()->resolve(rr, data, *this);
 }
 
-PackageDataPtr RemoteStorageWithFallbackToRemoteResolving::loadData(const PackageId &pkg) const
+/*PackageDataPtr RemoteStorageWithFallbackToRemoteResolving::loadData(const PackageId &pkg) const
 {
     auto i = data.find(pkg);
     if (i == data.end())
         return RemoteStorage::loadData(pkg);
     return i->second.clone();
-}
+}*/
 
 }

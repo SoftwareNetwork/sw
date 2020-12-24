@@ -257,7 +257,8 @@ getFileDependencies(SwBuild &b, const path &p, std::set<size_t> &gns)
             ResolveRequest rr{ upkg, {} };
             if (!b.resolve(rr))
                 throw SW_RUNTIME_ERROR("Not resolved: " + rr.u.toString());
-            auto pkg = b.getContext().install(rr.getPackage());
+            SW_UNIMPLEMENTED;
+            /*auto pkg = b.getContext().install(rr.getPackage());
             auto gn = b.getContext().getInputDatabase().getFileHash(pkg.getDirSrc2() / "sw.cpp");
             if (!gns.insert(gn).second)
                 throw SW_RUNTIME_ERROR("#pragma sw header: trying to add same header twice, last one: " + upkg.toString());
@@ -265,7 +266,7 @@ getFileDependencies(SwBuild &b, const path &p, std::set<size_t> &gns)
             auto [headers2, udeps2] = getFileDependencies(b, h, gns);
             headers.insert(headers.end(), headers2.begin(), headers2.end());
             udeps.insert(udeps2.begin(), udeps2.end());
-            headers.push_back(h);
+            headers.push_back(h);*/
         }
         else if (m1 == "local")
         {

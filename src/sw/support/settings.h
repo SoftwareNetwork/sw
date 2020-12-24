@@ -190,6 +190,7 @@ struct SW_SUPPORT_API PackageSetting
     path getAbsolutePathValue() const;
     void setAbsolutePathValue(const path &value);
     bool resolve(ResolveRequest &) const;
+    ::sw::Resolver &getResolver() const;
 
     void push_back(const ArrayValue &);
     void reset();
