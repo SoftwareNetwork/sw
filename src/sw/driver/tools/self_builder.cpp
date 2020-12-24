@@ -18,7 +18,7 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "self_builder");
 
-#define SW_DRIVER_NAME "org.sw.sw.client.driver.cpp-" PACKAGE_VERSION ""s
+#define SW_DRIVER_NAME "org.sw.sw.client.driver.cpp-" PACKAGE_VERSION ""
 
 using namespace sw;
 
@@ -41,60 +41,31 @@ void setup_log(const std::string &log_level)
 auto get_base_rr_vector()
 {
     std::vector<ResolveRequest> rrs;
-    // our main cpp driver target
-    rrs.emplace_back(ResolveRequest{ SW_DRIVER_NAME, empty_settings });
+#define DEP1(x) x
+#define DEP(x) rrs.emplace_back(ResolveRequest{ DEP1(x) ## s, empty_settings });
+#include "self_builder.inl"
+#undef DEP
+#undef DEP1
+
     return rrs;
 }
 
-String write_build_script_headers(SwCoreContext &swctx)
+String write_build_script_headers(SwCoreContext &swctx, const std::vector<ResolveRequest> &rrs)
 {
     auto &idb = swctx.getInputDatabase();
 
-    // some packages must be before others
-    std::vector<ResolveRequest> prepkgs;
-    {
-        // keep block order
-
-        {
-            // goes before primitives
-            prepkgs.emplace_back(ResolveRequest{ "org.sw.demo.ragel-6"s, empty_settings }); // keep upkg same as in deps!!!
-
-                                                          // goes before primitives
-            prepkgs.emplace_back(ResolveRequest{ "org.sw.demo.lexxmark.winflexbison.bison"s, empty_settings });
-
-            // goes before grpc
-            prepkgs.emplace_back(ResolveRequest{ "org.sw.demo.google.protobuf.protobuf"s, empty_settings });
-
-            // goes before sw cpp driver (client)
-            prepkgs.emplace_back(ResolveRequest{ "org.sw.demo.google.grpc.cpp.plugin"s, empty_settings });
-
-            // goes before sw cpp driver (client)
-            prepkgs.emplace_back(ResolveRequest{ "pub.egorpugin.primitives.filesystem"s, empty_settings });
-        }
-
-        // for gui
-        //prepkgs.emplace_back("org.sw.demo.qtproject.qt.base.tools.moc"s);
-
-        {
-            // cpp driver
-            prepkgs.emplace_back(ResolveRequest{ SW_DRIVER_NAME, empty_settings });
-        }
-
-        resolveWithDependencies(prepkgs, [&swctx](auto &rr) { return swctx.resolve(rr, true); });
-    }
-
     primitives::CppEmitter ctx;
     std::unordered_set<size_t> hashes;
-    for (auto &rr : prepkgs)
+    for (auto &rr : rrs)
     {
-        if (!swctx.getLocalStorage().isPackageInstalled(rr.getPackage()) &&
+        // this check was intended for qt deps (moc etc.)
+        // they should be skipped from adding as includes
+        /*if (!swctx.getLocalStorage().isPackageInstalled(rr.getPackage()) &&
             !swctx.getLocalStorage().isPackageOverridden(rr.getPackage()))
-            continue;
-
-        LocalPackage localpkg(swctx.getLocalStorage(), rr.getPackage());
+            continue;*/
 
         SpecificationFiles sf;
-        sf.addFile("sw.cpp", localpkg.getDirSrc2() / "sw.cpp");
+        sf.addFile("sw.cpp", rr.getPackage().getDirSrc2() / "sw.cpp");
         Specification s(sf);
         auto h = s.getHash(idb);
         if (!hashes.insert(h).second)
@@ -104,7 +75,7 @@ String write_build_script_headers(SwCoreContext &swctx)
         auto f = read_file(fn);
         bool has_checks = f.find("Checker") != f.npos; // more presize than setChecks
 
-        auto var = localpkg.getVariableName();
+        auto var = rr.getPackage().getVariableName();
         hdr_vars[h] = var;
 
         ctx.addLine("#define configure configure_" + var);
@@ -203,32 +174,28 @@ int main(int argc, char **argv)
 
     //
     SwCoreContext swctx(Settings::get_user_settings().storage_dir, true);
-    auto m_rrs = get_base_rr_vector();
-    resolveWithDependencies(m_rrs, [&swctx](auto &rr) { return swctx.resolve(rr, true); });
+    auto rrs = get_base_rr_vector();
+    for (auto &&rr : rrs)
+    {
+        if (!swctx.resolve(rr, true))
+            throw SW_RUNTIME_ERROR("Not resolved: " + rr.getUnresolvedPackage().toString());
+    }
     {
         // mass (threaded) install!
         auto &e = getExecutor();
         Futures<void> fs;
-        for (auto &rr : m_rrs)
+        for (auto &rr : rrs)
         {
             fs.push_back(e.push([&swctx, &rr]
             {
-                swctx.install(rr);
+                swctx.getLocalStorage().install(rr.getPackage());
             }));
         }
         waitAndGet(fs);
     }
 
-    // we do second resolve, because we need this packages to be included before driver's sw.cpp,
-    // but we do not need to install them on user system
-    //
-    //auto m_headers_rrs = get_base_rr_vector();
-    //m_headers_rrs.emplace_back("org.sw.demo.llvm_project.libcxx"s); // other needed stuff (libcxx)
-    //m_headers_rrs.emplace_back("org.sw.demo.qtproject.qt.base.tools.moc"s); // for gui
-    //resolveWithDependencies(m_headers_rrs, [&swctx](auto &rr) { return swctx.resolve(rr, true); });
-
-    auto t2 = write_build_script_headers(swctx);
-    auto t3 = write_build_script(swctx, m_rrs);
+    auto t2 = write_build_script_headers(swctx, rrs);
+    auto t3 = write_build_script(swctx, rrs);
     write_file(p, t2 + t3);
 
     return 0;
