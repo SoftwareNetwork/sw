@@ -1305,8 +1305,29 @@ void SwBuild::test()
     }
 
     auto ep = getExecutionPlan(cmds);
-    ep->execute(::getExecutor());
+    ep->throw_on_errors = false;
+    ep->skip_errors = cmds.size();
+    ep->execute(getBuildExecutor());
+    int errors = 0;
+    for (auto &c : cmds)
+    {
+        if (c->exit_code && c->exit_code == 0)
+            continue;
+        errors++;
+    }
+    LOG_INFO(logger, "");
+    LOG_INFO(logger, "Test results:");
+    LOG_INFO(logger, "TOTAL:  " << cmds.size());
+    LOG_INFO(logger, "PASSED: " << cmds.size() - errors);
+    LOG_INFO(logger, "FAILED: " << errors);
+    LOG_INFO(logger, "");
+    LOG_INFO(logger, "List of failed tests:");
+    for (auto &c : cmds)
+    {
+        if (c->exit_code && c->exit_code == 0)
+            continue;
+        LOG_INFO(logger, c->name);
+    }
 }
 
 }
-
