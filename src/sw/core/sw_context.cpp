@@ -69,15 +69,18 @@ void SwCoreContext::setHostSettings(const PackageSettings &s)
 
 TargetData &SwCoreContext::getTargetData(const PackageId &pkg)
 {
-    return target_data[pkg];
+    SW_UNIMPLEMENTED;
+    //return target_data[pkg];
 }
 
 const TargetData &SwCoreContext::getTargetData(const PackageId &pkg) const
 {
-    auto i = target_data.find(pkg);
-    if (i == target_data.end())
-        throw SW_RUNTIME_ERROR("No target data for package: " + pkg.toString());
-    return i->second;
+    SW_UNIMPLEMENTED;
+    //auto i = target_data.find(pkg);
+    SW_UNIMPLEMENTED;
+    //if (i == target_data.end())
+        //throw SW_RUNTIME_ERROR("No target data for package: " + pkg.toString());
+    //return i->second;
 }
 
 SwContext::SwContext(const path &local_storage_root_dir, bool allow_network)
@@ -132,7 +135,7 @@ void SwContext::stop(std::thread::id id)
         active_operations[id]->stop();
 }
 
-void SwContext::registerDriver(const PackageId &pkg, std::unique_ptr<IDriver> driver)
+void SwContext::registerDriver(const PackageName &pkg, std::unique_ptr<IDriver> driver)
 {
     auto [_, inserted] = drivers.insert_or_assign(pkg, std::move(driver));
     if (inserted)
@@ -257,12 +260,13 @@ Input *SwContext::getInput(size_t hash) const
 
 Input *SwContext::addInput(const Package &p)
 {
-    auto i = drivers.find(p.getData().driver);
+    SW_UNIMPLEMENTED;
+    /*auto i = drivers.find(p.getData().driver);
     if (i == drivers.end())
         throw SW_RUNTIME_ERROR("Driver is not registered: " + p.getData().driver.toString());
     auto input = i->second->getInput(p);
     auto [i2,_] = registerInput(std::move(input));
-    return i2;
+    return i2;*/
 }
 
 std::vector<UserInput> SwContext::makeInput(const String &i)
@@ -293,11 +297,12 @@ std::vector<UserInput> SwContext::makeInput(const String &i)
 
 UserInput SwContext::makeInput(const LocalPackage &p)
 {
-    auto v = makeInput(p.getDirSrc2(), p.getPath().slice(0, p.getData().prefix));
+    SW_UNIMPLEMENTED;
+    //auto v = makeInput(p.getDirSrc2(), p.getPath().slice(0, p.getData().prefix));
     //SW_CHECK(v.size() == 1); // allow multiple inputs for now, take only first
     SW_UNIMPLEMENTED; // vvv this user filter here is wrong
     //v[0].getInput().addPackage(p);
-    return v[0];
+    //return v[0];
 }
 
 std::vector<UserInput> SwContext::makeInput(const path &p, const PackagePath &prefix)

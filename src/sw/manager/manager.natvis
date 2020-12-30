@@ -5,12 +5,16 @@
         <DisplayString>{ppath}-{range}</DisplayString>
     </Type>
 
-    <Type Name="sw::PackageId">
+    <Type Name="sw::PackageName">
         <DisplayString>{ppath}-{version}</DisplayString>
     </Type>
 
+    <Type Name="sw::PackageId">
+        <DisplayString>{n}</DisplayString>
+    </Type>
+
     <Type Name="sw::Package">
-        <DisplayString>{ppath}-{version}</DisplayString>
+        <DisplayString>{id}</DisplayString>
     </Type>
 
     <Type Name="sw::PackagePath">

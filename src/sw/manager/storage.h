@@ -124,7 +124,7 @@ struct SW_MANAGER_API StorageWithPackagesDatabase : Storage
 private:
     std::unique_ptr<PackagesDatabase> pkgdb;
     mutable std::mutex m;
-    mutable std::unordered_map<PackageId, PackageData> data;
+    //mutable std::unordered_map<PackageId, PackageData> data;
 };
 
 struct SW_MANAGER_API LocalStorageBase : StorageWithPackagesDatabase
@@ -181,7 +181,7 @@ struct SW_MANAGER_API LocalStorage : Directories, LocalStorageBase
     //const OverriddenPackagesStorage &getOverriddenPackagesStorage() const;
 
 private:
-    std::unordered_map<PackageId, PackageData> local_packages;
+    //std::unordered_map<PackageId, PackageData> local_packages;
     //OverriddenPackagesStorage ovs;
 
     void migrateStorage(int from, int to);

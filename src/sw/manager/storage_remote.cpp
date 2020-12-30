@@ -366,9 +366,10 @@ struct RemoteFileWithHashVerification : vfs::FileWithHashVerification
 
     String getHash() const override
     {
-        if (hash.empty())
+        SW_UNIMPLEMENTED;
+        /*if (hash.empty())
             throw SW_RUNTIME_ERROR("empty hash, pkg = " + p.toString());
-        return hash;
+        return hash;*/
     }
 
     bool copy(const path &fn) const override

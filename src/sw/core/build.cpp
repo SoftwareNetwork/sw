@@ -72,7 +72,8 @@ static auto get_settings_fn()
 
 static ITargetPtr create_target(const path &sfn, const LocalPackage &pkg, const PackageSettings &s)
 {
-    LOG_TRACE(logger, "loading " << pkg.toString() << ": " << s.getHash() << " from settings file");
+    SW_UNIMPLEMENTED;
+    /*LOG_TRACE(logger, "loading " << pkg.toString() << ": " << s.getHash() << " from settings file");
 
     auto tgt = std::make_unique<PredefinedTarget>(pkg, s);
     if (!use_json())
@@ -84,7 +85,7 @@ static ITargetPtr create_target(const path &sfn, const LocalPackage &pkg, const 
         tgt->public_ts = its;
     }
 
-    return tgt;
+    return tgt;*/
 }
 
 static ITargetPtr create_target(const LocalPackage &p, const PackageSettings &s)
@@ -189,7 +190,9 @@ static void saveLockFile(const path &fn, const std::unordered_map<UnresolvedPack
     auto sort = [](auto &&v1, auto &&v2) { return v1.getPath() < v2.getPath(); };
     for (auto &[u, r] : std::map<UnresolvedPackage, LocalPackage, decltype(sort)>(pkgs.begin(), pkgs.end(), sort))
     {
-        jp[u.toString()]["package"] = r.toString();
+        SW_UNIMPLEMENTED;
+        //jp[u.toString()]["package"] = r.toString();
+
         //if (r.installed)
             //jp[u.toString()]["installed"] = true;
     }
@@ -377,14 +380,15 @@ void SwBuild::build()
     {
         for (auto &tgt : tgts)
         {
-            nlohmann::json jt;
+            SW_UNIMPLEMENTED;
+            /*nlohmann::json jt;
             jt["package_id"] = tgt->getPackage().toString();
             jt["package_id_hash"] = (size_t)tgt;
             jt["settings"] = nlohmann::json::parse(tgt->getSettings().toString());
             jt["settings_hash"] = tgt->getSettings().getHash();
             jt["interface_settings"] = nlohmann::json::parse(tgt->getInterfaceSettings().toString());
             jt["interface_settings_hash"] = tgt->getInterfaceSettings().getHash();
-            getHtmlReportData()["targets"][tgt->getPackage().toString() + tgt->getSettings().getHashString()] = jt;
+            getHtmlReportData()["targets"][tgt->getPackage().toString() + tgt->getSettings().getHashString()] = jt;*/
         }
     }
 
@@ -456,13 +460,14 @@ void SwBuild::loadInputs()
         in_ttb_exclude.insert(t.getValue());
     auto should_build_target = [&in_ttb, &in_ttb_exclude](const auto &p)
     {
-        if (!in_ttb.empty())
+        SW_UNIMPLEMENTED;
+        /*if (!in_ttb.empty())
         {
             if (!contains(in_ttb, p))
                 return false;
         }
         if (contains(in_ttb_exclude, p))
-            return false;
+            return false;*/
         return true;
     };
 
@@ -497,7 +502,8 @@ void SwBuild::loadInputs()
                     continue;
 
                 //tgt->setResolver(getResolver());
-                getTargets()[tgt->getPackage()].push_back(*tgt, i.getInput());
+                SW_UNIMPLEMENTED;
+                //getTargets()[tgt->getPackage()].push_back(*tgt, i.getInput());
             }
         }
     }
@@ -521,7 +527,8 @@ ITarget &SwBuild::resolveAndLoad(ResolveRequest &rr)
         if (auto it = getTargets().find(rr.u); it != getTargets().end())
         {
             auto i = &it->second.getInput();
-            auto tgts = i->loadPackages(*this, rr.settings, PackageIdSet{ it->first }, {});
+            SW_UNIMPLEMENTED;
+            /*auto tgts = i->loadPackages(*this, rr.settings, PackageIdSet{ it->first }, {});
             if (tgts.empty())
                 throw SW_RUNTIME_ERROR("No targets loaded: " + it->first.toString());
             if (tgts.size() != 1)
@@ -529,20 +536,22 @@ ITarget &SwBuild::resolveAndLoad(ResolveRequest &rr)
             auto tgts2 = registerTargets(tgts);
             for (auto &&tgt : tgts2)
                 getTargets()[tgt->getPackage()].push_back(*tgt, *i);
-            return *tgts2[0];
+            return *tgts2[0];*/
         }
         SW_UNIMPLEMENTED; // resolve local package
     }
 
     // check existing target+settings in build
-    if (auto t = getTargets().find(rr.getPackage(), rr.settings))
-        return *t;
+    SW_UNIMPLEMENTED;
+    //if (auto t = getTargets().find(rr.getPackage(), rr.settings))
+        //return *t;
 
     ITarget *t = nullptr;
     std::exception_ptr eptr;
     auto x = [this, &eptr, &rr, &t]()
     {
-        LOG_TRACE(logger, "Entering the new fiber to load: " + rr.getPackage().toString());
+        SW_UNIMPLEMENTED;
+        /*LOG_TRACE(logger, "Entering the new fiber to load: " + rr.getPackage().toString());
         try
         {
             t = &load(rr.getPackage());
@@ -551,7 +560,7 @@ ITarget &SwBuild::resolveAndLoad(ResolveRequest &rr)
         {
             eptr = std::current_exception();
         }
-        LOG_TRACE(logger, "Leaving fiber to load: " + rr.getPackage().toString());
+        LOG_TRACE(logger, "Leaving fiber to load: " + rr.getPackage().toString());*/
     };
     // boost::fibers::launch::dispatch,
     // std::allocator_arg_t
@@ -568,7 +577,8 @@ ITarget &SwBuild::load(const Package &p)
     // no, install now (resolve to local)
     getContext().getLocalStorage().install(p);
     //getContext().getLocalStorage().import(p);
-    auto i = getContext().addInput(p);
+    SW_UNIMPLEMENTED;
+    /*auto i = getContext().addInput(p);
     getTargets()[p].setInput(*i);
     auto tgts = i->loadPackages(*this, p.getData().settings, PackageIdSet{ p }, p.getPath().slice(0, p.getData().prefix));
     if (tgts.empty())
@@ -578,12 +588,13 @@ ITarget &SwBuild::load(const Package &p)
     auto tgts2 = registerTargets(tgts);
     for (auto &&tgt : tgts2)
         getTargets()[tgt->getPackage()].push_back(*tgt, *i);
-    return *tgts2[0];
+    return *tgts2[0];*/
 }
 
 void SwBuild::registerTarget(ITarget &t)
 {
-    getTargets()[t.getPackage()].push_back(t);
+    SW_UNIMPLEMENTED;
+    //getTargets()[t.getPackage()].push_back(t);
 }
 
 void SwBuild::resolvePackages()
@@ -743,8 +754,9 @@ void SwBuild::resolvePackages(const std::vector<IDependency*> &udeps)
         }
         getContext().setCachedPackages(m);
         UnresolvedPackages upkgs;
-        for (auto &[u, p] : m)
-            upkgs.insert(p); // add exactly p, not u!
+        SW_UNIMPLEMENTED;
+        //for (auto &[u, p] : m)
+            //upkgs.insert(p); // add exactly p, not u!
         SW_UNIMPLEMENTED;
         //swctx.install(upkgs, false);
     }
@@ -757,7 +769,8 @@ void SwBuild::resolvePackages(const std::vector<IDependency*> &udeps)
     for (auto &rr : rrs)
     {
         // mark packages as known right after resolve
-        targets[rr.getPackage()];
+        SW_UNIMPLEMENTED;
+        //targets[rr.getPackage()];
     }
 
     if (can_use_saved_configs(*this))

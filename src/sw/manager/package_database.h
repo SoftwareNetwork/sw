@@ -30,7 +30,6 @@ struct SW_MANAGER_API PackagesDatabase : Database
 
     PackageData getPackageData(const PackageId &) const;
 
-    db::PackageVersionId getInstalledPackageId(const PackageId &) const;
     String getInstalledPackageHash(const PackageId &) const;
     bool isPackageInstalled(const Package &) const;
     void installPackage(const Package &);
@@ -43,7 +42,7 @@ struct SW_MANAGER_API PackagesDatabase : Database
     void deleteOverriddenPackageDir(const path &sdir) const;
 
     db::PackageId getPackageId(const PackagePath &) const;
-    db::PackageVersionId getPackageVersionId(const PackageId &) const;
+    db::PackageVersionId getPackageVersionId(const PackageName &) const;
     String getPackagePath(db::PackageId) const;
 
     std::vector<PackagePath> getMatchingPackages(const String &name = {}, int limit = 0, int offset = 0) const;

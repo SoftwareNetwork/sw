@@ -36,7 +36,8 @@ std::vector<std::shared_ptr<Remote>> get_default_remotes(bool allow_network)
 
 String DataSource::getUrl(const Package &pkg) const
 {
-    return pkg.formatPath(raw_url);
+    SW_UNIMPLEMENTED;
+    //return pkg.formatPath(raw_url);
 }
 
 bool DataSource::downloadPackage(const Package &d, const path &fn, String &dl_hash) const

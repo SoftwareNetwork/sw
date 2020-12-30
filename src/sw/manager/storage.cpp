@@ -261,9 +261,7 @@ void LocalStorage::migrateStorage(int from, int to)
 
 bool LocalStorage::isPackageInstalled(const Package &pkg) const
 {
-    SW_UNIMPLEMENTED;
-    //LocalPackage p(*this, pkg);
-    //return getPackagesDatabase().isPackageInstalled(pkg) && fs::exists(p.getDirSrc2());
+    return getPackagesDatabase().isPackageInstalled(pkg) && fs::exists(pkg.getDirSrc2());
 }
 
 bool LocalStorage::isPackageLocal(const PackageId &id) const
@@ -432,11 +430,10 @@ bool LocalStorage::resolve(ResolveRequest &rr) const
 
     if (LocalStorageBase::resolve(rr))
     {
-        SW_UNIMPLEMENTED;
-        /*auto p = std::make_unique<LocalPackage2>(*this, rr.getPackage());
-        p->setData(std::make_unique<PackageData>(getPackagesDatabase().getPackageData(rr.getPackage())));
+        auto p = std::make_unique<LocalPackage2>(*this, rr.getPackage().getId());
+        p->setData(std::make_unique<PackageData>(getPackagesDatabase().getPackageData(rr.getPackage().getId())));
         rr.setPackageForce(std::move(p));
-        return true;*/
+        return true;
     }
     return false;
 
@@ -477,11 +474,10 @@ bool OverriddenPackagesStorage::resolve(ResolveRequest &rr) const
 
     if (LocalStorageBase::resolve(rr))
     {
-        SW_UNIMPLEMENTED;
-        /*auto p = std::make_unique<OverriddenPackage2>(*this, rr.getPackage());
-        p->setData(std::make_unique<PackageData>(getPackagesDatabase().getPackageData(rr.getPackage())));
+        auto p = std::make_unique<OverriddenPackage2>(*this, rr.getPackage().getId());
+        p->setData(std::make_unique<PackageData>(getPackagesDatabase().getPackageData(rr.getPackage().getId())));
         rr.setPackageForce(std::move(p));
-        return true;*/
+        return true;
     }
     return false;
 }

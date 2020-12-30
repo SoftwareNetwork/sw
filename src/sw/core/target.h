@@ -31,9 +31,9 @@ struct SW_CORE_API AllowedPackages
 {
     AllowedPackages() = default;
     AllowedPackages(const UnresolvedPackages &);
-    AllowedPackages(const PackageIdSet &);
+    //AllowedPackages(const PackageIdSet &);
 
-    bool contains(const PackageId &) const;
+    bool contains(const PackageName &) const;
     bool empty() const;
 
 private:
@@ -294,7 +294,7 @@ struct TargetMap : PackageVersionMapBase<TargetContainer, std::unordered_map, Ex
     SW_CORE_API
     detail::SimpleExpected<std::pair<PackageVersion, ITarget *>> find(const PackagePath &pp, const PackageSettings &ts) const;
     SW_CORE_API
-    ITarget *find(const PackageId &pkg, const PackageSettings &ts) const;
+    ITarget *find(const PackageName &pkg, const PackageSettings &ts) const;
     SW_CORE_API
     ITarget *find(const UnresolvedPackage &pkg, const PackageSettings &ts) const;
 };

@@ -26,7 +26,7 @@ struct SW_CORE_API SwCoreContext : SwManagerContext
     // from old builder ctx
     const OS &getHostOs() const { return HostOS; }
 
-    const std::unordered_map<PackageId, TargetData> &getTargetData() const { return target_data; }
+    //const std::unordered_map<PackageId, TargetData> &getTargetData() const { return target_data; }
     TargetData &getTargetData(const PackageId &);
     const TargetData &getTargetData(const PackageId &) const;
 
@@ -43,7 +43,7 @@ private:
     // rename to detected?
     // not only detected, but also predefined? do not rename?
     OS HostOS;
-    std::unordered_map<PackageId, TargetData> target_data;
+    //std::unordered_map<PackageId, TargetData> target_data;
     PackageSettings host_settings;
     std::unique_ptr<InputDatabase> idb;
 };
@@ -51,12 +51,12 @@ private:
 // public context
 struct SW_CORE_API SwContext : SwCoreContext
 {
-    using Drivers = std::map<PackageId, std::unique_ptr<IDriver>>;
+    using Drivers = std::map<PackageName, std::unique_ptr<IDriver>>;
 
     SwContext(const path &local_storage_root_dir, bool allow_network);
     virtual ~SwContext();
 
-    void registerDriver(const PackageId &pkg, std::unique_ptr<IDriver> driver);
+    void registerDriver(const PackageName &pkg, std::unique_ptr<IDriver> driver);
     //const Drivers &getDrivers() const { return drivers; }
 
     std::unique_ptr<SwBuild> createBuild();

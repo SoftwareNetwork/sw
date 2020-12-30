@@ -32,8 +32,9 @@ AllowedPackages::AllowedPackages(const UnresolvedPackages &in)
     }*/
 }
 
-AllowedPackages::AllowedPackages(const PackageIdSet &in)
+/*AllowedPackages::AllowedPackages(const PackageIdSet &in)
 {
+    SW_UNIMPLEMENTED;
     for (auto &u : in)
     {
         if (u.getVersion().isBranch())
@@ -46,9 +47,9 @@ AllowedPackages::AllowedPackages(const PackageIdSet &in)
                 pkgs.emplace(u.getPath(), u.getVersion());
         }
     }
-}
+}*/
 
-bool AllowedPackages::contains(const PackageId &p) const
+bool AllowedPackages::contains(const PackageName &p) const
 {
     auto i = pkgs.find(p.getPath());
     return (i != pkgs.end() && i->second.contains(p.getVersion()))
@@ -172,7 +173,7 @@ TargetContainer::Base::iterator TargetContainer::erase(Base::iterator begin, Bas
     return targets.erase(begin, end);
 }
 
-ITarget *TargetMap::find(const PackageId &pkg, const PackageSettings &ts) const
+ITarget *TargetMap::find(const PackageName &pkg, const PackageSettings &ts) const
 {
     auto i = find(pkg);
     if (i == end())
@@ -205,11 +206,11 @@ PredefinedTarget::~PredefinedTarget()
 
 struct PredefinedDependency : IDependency
 {
-    PredefinedDependency(const PackageId &unresolved_pkg, const PackageSettings &ts) : unresolved_pkg(unresolved_pkg), ts(ts) {}
+    PredefinedDependency(const PackageId &p) : pkg(p) {}
     virtual ~PredefinedDependency() {}
 
-    const PackageSettings &getSettings() const override { return ts; }
-    const UnresolvedPackage &getUnresolvedPackage() const override { return unresolved_pkg; }
+    const PackageSettings &getSettings() const override { return pkg.getSettings(); }
+    const UnresolvedPackage &getUnresolvedPackage() const override { return pkg.getName(); }
     bool isResolved() const override { return t; }
     void setTarget(const ITarget &t) override { this->t = &t; }
     const ITarget &getTarget() const override
@@ -220,8 +221,7 @@ struct PredefinedDependency : IDependency
     }
 
 private:
-    PackageId unresolved_pkg;
-    PackageSettings ts;
+    PackageId pkg;
     const ITarget *t = nullptr;
 };
 

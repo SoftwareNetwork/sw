@@ -75,7 +75,8 @@ String write_build_script_headers(SwCoreContext &swctx, const std::vector<Resolv
         auto f = read_file(fn);
         bool has_checks = f.find("Checker") != f.npos; // more presize than setChecks
 
-        auto var = rr.getPackage().getVariableName();
+        SW_UNIMPLEMENTED;
+        /*auto var = rr.getPackage().getVariableName();
         hdr_vars[h] = var;
 
         ctx.addLine("#define configure configure_" + var);
@@ -90,7 +91,7 @@ String write_build_script_headers(SwCoreContext &swctx, const std::vector<Resolv
         ctx.addLine("#undef build");
         if (has_checks)
             ctx.addLine("#undef check");
-        ctx.addLine();
+        ctx.addLine();*/
     }
     return ctx.getText();
 }
@@ -108,8 +109,9 @@ String write_build_script(SwCoreContext &swctx, const std::vector<ResolveRequest
         sf.addFile("sw.cpp", lp.getDirSrc2() / "sw.cpp");
         Specification s(sf);
         auto h = s.getHash(idb);
-        hash_pkgs[h].insert(lp);
-        pkgs.insert(lp);
+        SW_UNIMPLEMENTED;
+        /*hash_pkgs[h].insert(lp);
+        pkgs.insert(lp);*/
     }
 
     primitives::CppEmitter ctx;
@@ -149,8 +151,9 @@ String write_build_script(SwCoreContext &swctx, const std::vector<ResolveRequest
     ctx.beginFunction("PackageIdSet load_builtin_packages()");
     ctx.addLine("return");
     ctx.beginBlock();
-    for (auto &p : pkgs)
-        ctx.addLine("\"" + p.toString() + "\"s,");
+    SW_UNIMPLEMENTED;
+    //for (auto &p : pkgs)
+        //ctx.addLine("\"" + p.toString() + "\"s,");
     ctx.endBlock(true);
     ctx.endFunction();
     ctx.endNamespace();

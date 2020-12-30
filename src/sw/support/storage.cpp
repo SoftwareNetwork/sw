@@ -31,6 +31,7 @@ Directories::Directories(const path &p)
 
     auto ap = make_canonical(p);
     checkPath(ap);
+    ap += "2"; // new storage
 
 #ifdef _WIN32
     storage_dir = normalize_path_windows(ap);

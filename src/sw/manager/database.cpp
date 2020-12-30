@@ -219,30 +219,30 @@ bool PackagesDatabase::resolve(ResolveRequest &rr, const IStorage &s) const
     if (!pid)
         return false;
 
+    bool resolved = false;
     for (const auto &row : (*db)(
         select(pkg_ver.packageVersionId, pkg_ver.version)
         .from(pkg_ver)
         .where(pkg_ver.packageId == pid)))
     {
-        SW_UNIMPLEMENTED;
-        /*auto p = std::make_unique<Package>(s, PackageId{ upkg.getPath(), row.version.value() });
-        auto d = std::make_unique<PackageData>(getPackageData(*p));
+        auto p = std::make_unique<Package>(s, PackageId{ {upkg.getPath(), row.version.value()}, rr.getSettings() });
+        auto d = std::make_unique<PackageData>(getPackageData(p->getId()));
         p->setData(std::move(d));
-        rr.setPackage(std::move(p));*/
+        resolved |= rr.setPackage(std::move(p));
     }
 
-    return rr.isResolved();
+    return resolved;
 }
 
 PackageData PackagesDatabase::getPackageData(const PackageId &p) const
 {
     auto &pp = pps->packageVersionData;
-    pp.params.packageId = getPackageId(p.getPath());
-    pp.params.version = p.getVersion().toString();
+    pp.params.packageId = getPackageId(p.getName().getPath());
+    pp.params.version = p.getName().getVersion().toString();
 
     auto q = (*db)(pp);
     if (q.empty())
-        throw SW_RUNTIME_ERROR("No such package in db: " + p.toString());
+        throw SW_RUNTIME_ERROR("No such package in db: " + p.getName().toString());
 
     auto &row = q.front();
     PackageData d;
@@ -260,25 +260,12 @@ PackageData PackagesDatabase::getPackageData(const PackageId &p) const
     if (!q2.front().source.is_null())
         d.source = q2.front().source.value();
 
-    /*for (const auto &row : (*db)(
-        select(pkgs.packageId, pkgs.path, pkg_deps.versionRange)
-        .from(pkg_deps.join(pkgs).on(pkg_deps.packageId == pkgs.packageId))
-        .where(pkg_deps.packageVersionId == row.packageVersionId)))
-    {
-        d.dependencies.emplace(row.path.value(), row.versionRange.value());
-    }*/
-
     return d;
-}
-
-db::PackageVersionId PackagesDatabase::getInstalledPackageId(const PackageId &p) const
-{
-    return getPackageVersionId(p);
 }
 
 String PackagesDatabase::getInstalledPackageHash(const PackageId &p) const
 {
-    return getInstalledPackageHash(getInstalledPackageId(p));
+    return getInstalledPackageHash(getPackageVersionId(p.getName()));
 }
 
 String PackagesDatabase::getInstalledPackageHash(db::PackageVersionId vid) const
@@ -300,7 +287,7 @@ String PackagesDatabase::getInstalledPackageHash(db::PackageVersionId vid) const
 
 bool PackagesDatabase::isPackageInstalled(const Package &p) const
 {
-    return getInstalledPackageId(p) != 0 && getInstalledPackageHash(p) == p.getData().getHash(/*StorageFileType::SourceArchive*/);
+    return getPackageVersionId(p.getId().getName()) != 0 && getInstalledPackageHash(p.getId()) == p.getData().getHash();
 }
 
 void PackagesDatabase::installPackage(const PackageId &p, const PackageData &d)
@@ -310,8 +297,10 @@ void PackagesDatabase::installPackage(const PackageId &p, const PackageData &d)
 
     int64_t package_id = 0;
 
+    SW_UNIMPLEMENTED;
+
     // get package id
-    auto q = (*db)(select(pkgs.packageId).from(pkgs).where(
+    /*auto q = (*db)(select(pkgs.packageId).from(pkgs).where(
         pkgs.path == p.getPath().toString()
         ));
     if (q.empty())
@@ -363,7 +352,7 @@ void PackagesDatabase::installPackage(const PackageId &p, const PackageData &d)
 
     // insert file
     (*db)(insert_into(t_files).set(
-        t_files.hash = d.getHash(/*StorageFileType::SourceArchive*/)
+        t_files.hash = d.getHash()
     ));
     auto fid = db->last_insert_id();
 
@@ -374,56 +363,31 @@ void PackagesDatabase::installPackage(const PackageId &p, const PackageData &d)
         t_pkg_ver_files.type = 1,
         t_pkg_ver_files.configId = 1,
         t_pkg_ver_files.archiveVersion = 1
-    ));
-
-    //
-    /*for (auto &d : d.dependencies)
-    {
-        // get package id
-        auto q = (*db)(select(pkgs.packageId).from(pkgs).where(
-            pkgs.path == d.getPath().toString()
-            ));
-        if (q.empty())
-        {
-            // add package
-            (*db)(insert_into(pkgs).set(
-                pkgs.path = d.getPath().toString()
-            ));
-
-            // get package id
-            q = (*db)(select(pkgs.packageId).from(pkgs).where(
-                pkgs.path == d.getPath().toString()
-                ));
-        }
-
-        // insert deps
-        (*db)(insert_into(pkg_deps).set(
-            pkg_deps.packageVersionId = vid,
-            pkg_deps.packageId = q.front().packageId.value(),
-            pkg_deps.versionRange = d.getRange().toString()
-        ));
-    }*/
+    ));*/
 }
 
 void PackagesDatabase::installPackage(const Package &p)
 {
-    installPackage(p, p.getData());
+    SW_UNIMPLEMENTED;
+    //installPackage(p, p.getData());
 }
 
 std::optional<path> PackagesDatabase::getOverriddenDir(const Package &p) const
 {
-    auto q = (*db)(
+    SW_UNIMPLEMENTED;
+    /*auto q = (*db)(
         select(pkg_ver.sdir)
         .from(pkg_ver)
         .where(pkg_ver.packageId == getPackageId(p.getPath()) && pkg_ver.version == p.getVersion().toString()));
     if (q.empty() || q.front().sdir.is_null())
         return {};
-    return q.front().sdir.value();
+    return q.front().sdir.value();*/
 }
 
 std::unordered_set<PackageId> PackagesDatabase::getOverriddenPackages() const
 {
-    std::unordered_set<PackageId> r;
+    SW_UNIMPLEMENTED;
+    /*std::unordered_set<PackageId> r;
     for (const auto &row : (*db)(
         select(pkg_ver.packageVersionId, pkg_ver.packageId, pkg_ver.version)
         .from(pkg_ver)
@@ -431,15 +395,16 @@ std::unordered_set<PackageId> PackagesDatabase::getOverriddenPackages() const
     {
         r.emplace(getPackagePath(row.packageId.value()), row.version.value());
     }
-    return r;
+    return r;*/
 }
 
 void PackagesDatabase::deletePackage(const PackageId &p) const
 {
-    (*db)(
+    SW_UNIMPLEMENTED;
+    /*(*db)(
         remove_from(pkg_ver)
         .where(pkg_ver.packageId == getPackageId(p.getPath()) && pkg_ver.version == p.getVersion().toString())
-        );
+        );*/
 }
 
 void PackagesDatabase::deleteOverriddenPackageDir(const path &sdir) const
@@ -494,7 +459,7 @@ db::PackageId PackagesDatabase::getPackageId(const PackagePath &ppath) const
     return q.front().packageId.value();
 }
 
-db::PackageVersionId PackagesDatabase::getPackageVersionId(const PackageId &p) const
+db::PackageVersionId PackagesDatabase::getPackageVersionId(const PackageName &p) const
 {
     auto q = (*db)(
         select(pkg_ver.packageVersionId)
