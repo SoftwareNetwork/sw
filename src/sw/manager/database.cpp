@@ -224,10 +224,11 @@ bool PackagesDatabase::resolve(ResolveRequest &rr, const IStorage &s) const
         .from(pkg_ver)
         .where(pkg_ver.packageId == pid)))
     {
-        auto p = std::make_unique<Package>(s, PackageId{ upkg.getPath(), row.version.value() });
+        SW_UNIMPLEMENTED;
+        /*auto p = std::make_unique<Package>(s, PackageId{ upkg.getPath(), row.version.value() });
         auto d = std::make_unique<PackageData>(getPackageData(*p));
         p->setData(std::move(d));
-        rr.setPackage(std::move(p));
+        rr.setPackage(std::move(p));*/
     }
 
     return rr.isResolved();

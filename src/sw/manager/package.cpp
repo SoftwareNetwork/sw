@@ -32,7 +32,8 @@ path LocalPackage::getDir() const
 
 path LocalPackage::getDir(const path &p) const
 {
-    return p / getHashPath();
+    SW_UNIMPLEMENTED;
+    //return p / getHashPath();
 }
 
 path LocalPackage::getDirSrc() const

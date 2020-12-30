@@ -43,7 +43,8 @@ PackageData::PackageData(nlohmann::json j)
 
 nlohmann::json detail::PackageData::toJson() const
 {
-    nlohmann::json j;
+    SW_UNIMPLEMENTED;
+    /*nlohmann::json j;
     j["package"] = id.toString();
     j["driver"] = driver_id.toString();
     source->save(j["source"]);
@@ -58,14 +59,15 @@ nlohmann::json detail::PackageData::toJson() const
         js["signature"] = s.signature;
         j["signatures"].push_back(js);
     }
-    return j;
+    return j;*/
 }
 
 PackageId PackageData::getPackageId(const PackagePath &prefix) const
 {
-    if (prefix.empty())
+    SW_UNIMPLEMENTED;
+    /*if (prefix.empty())
         return id;
-    return { prefix / id.getPath(), id.getVersion() };
+    return { prefix / id.getPath(), id.getVersion() };*/
 }
 
 void PackageData::applyPrefix(const PackagePath &prefix)
@@ -86,7 +88,8 @@ void PackageData::applyPrefix(const PackagePath &prefix)
 
 void PackageData::applyVersion()
 {
-    source->apply([this](auto &&s) { return id.getVersion().format(s); });
+    SW_UNIMPLEMENTED;
+    //source->apply([this](auto &&s) { return id.getVersion().format(s); });
 }
 
 void PackageData::addFile(const path &root, const path &from, const path &to)

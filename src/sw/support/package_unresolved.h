@@ -11,25 +11,25 @@
 namespace sw
 {
 
-struct PackageId;
+struct PackageName;
 
 struct SW_SUPPORT_API UnresolvedPackage
 {
     //UnresolvedPackage() = default;
     UnresolvedPackage(const String &s);
     UnresolvedPackage(const PackagePath &p, const PackageVersionRange &r);
-    UnresolvedPackage(const PackageId &);
+    UnresolvedPackage(const PackageName &);
 
     UnresolvedPackage &operator=(const String &s);
 
     const PackagePath &getPath() const { return ppath; }
     const PackageVersionRange &getRange() const { return range; }
 
-    std::optional<PackageId> toPackageId() const;
+    std::optional<PackageName> toPackageName() const;
     String toString(const String &delim = "-") const;
     [[deprecated("use contains()")]]
-    bool canBe(const PackageId &id) const { return contains(id); }
-    bool contains(const PackageId &) const;
+    bool canBe(const PackageName &id) const { return contains(id); }
+    bool contains(const PackageName &) const;
 
     //bool operator<(const UnresolvedPackage &rhs) const { return std::tie(ppath, range) < std::tie(rhs.ppath, rhs.range); }
     bool operator==(const UnresolvedPackage &rhs) const { return std::tie(ppath, range) == std::tie(rhs.ppath, rhs.range); }
@@ -43,7 +43,7 @@ private:
 using UnresolvedPackages = std::unordered_set<UnresolvedPackage>;
 
 SW_SUPPORT_API
-bool contains(const UnresolvedPackages &, const PackageId &);
+bool contains(const UnresolvedPackages &, const PackageName &);
 
 SW_SUPPORT_API
 UnresolvedPackage extractFromString(const String &target);

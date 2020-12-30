@@ -37,22 +37,22 @@ bool ResolveRequestResult::setPackage(PackagePtr in)
     // (we can't resolve for more suitable branch)
     // 2. we already have a version, nothing to do
     // (version is more preferred than branch)
-    if (in->getVersion().isBranch())
+    if (in->getId().getName().getVersion().isBranch())
         return false;
 
     // always prefer releases over pre-releases
-    if (r->getVersion().isPreRelease() && in->getVersion().isRelease())
+    if (r->getId().getName().getVersion().isPreRelease() && in->getId().getName().getVersion().isRelease())
     {
         setPackageForce(std::move(in));
         return true;
     }
 
     // do not accept any pre-release over release
-    if (r->getVersion().isRelease() && in->getVersion().isPreRelease())
+    if (r->getId().getName().getVersion().isRelease() && in->getId().getName().getVersion().isPreRelease())
         return false;
 
     // now simple less than check
-    if (r->getVersion() < in->getVersion())
+    if (r->getId().getName().getVersion() < in->getId().getName().getVersion())
     {
         setPackageForce(std::move(in));
         return true;
@@ -64,7 +64,7 @@ bool ResolveRequest::setPackage(PackagePtr in)
 {
     SW_CHECK(in);
 
-    if (!u.getRange().contains(in->getVersion()))
+    if (!u.getRange().contains(in->getId().getName().getVersion()))
         return false;
     return ResolveRequestResult::setPackage(std::move(in));
 }
@@ -79,7 +79,7 @@ bool Resolver::resolve(ResolveRequest &rr) const
 
         if (0
             // when we found a branch, we stop, because following storages cannot give us more preferable branch
-            || rr.getPackage().getVersion().isBranch()
+            || rr.getPackage().getId().getName().getVersion().isBranch()
             )
         {
             break;

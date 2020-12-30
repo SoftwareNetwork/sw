@@ -3,43 +3,20 @@
 
 #pragma once
 
-#include "enums.h"
-#include "package_unresolved.h"
+#include "package_name.h"
+#include "settings.h"
 
 namespace sw
 {
 
 struct SW_SUPPORT_API PackageId
 {
-    // try to extract from string
-    PackageId(const String &);
-    PackageId(const PackagePath &, const PackageVersion &);
+    PackageName n;
+    PackageSettings s;
 
-    const PackagePath &getPath() const { return ppath; }
-    const PackageVersion &getVersion() const { return version; }
-
-    bool operator<(const PackageId &rhs) const { return std::tie(ppath, version) < std::tie(rhs.ppath, rhs.version); }
-    bool operator==(const PackageId &rhs) const { return std::tie(ppath, version) == std::tie(rhs.ppath, rhs.version); }
-
-    String getVariableName() const;
-
-    [[nodiscard]]
-    String toString(const String &delim = "-") const;
-    // toPackageRangeString()?
-    [[nodiscard]]
-    std::string toRangeString(const String &delim = "-") const;
-
-private:
-    PackagePath ppath;
-    PackageVersion version;
+    const auto &getName() const { return n; }
+    const auto &getSettings() const { return s; }
 };
-
-using PackageIdSet = std::unordered_set<PackageId>;
-
-SW_SUPPORT_API
-PackageId extractPackageIdFromString(const String &target);
-
-std::pair<String, String> split_package_string(const String &s);
 
 }
 
@@ -50,8 +27,8 @@ template<> struct hash<::sw::PackageId>
 {
     size_t operator()(const ::sw::PackageId &p) const
     {
-        auto h = std::hash<::sw::PackagePath>()(p.getPath());
-        return hash_combine(h, std::hash<::sw::PackageVersion>()(p.getVersion()));
+        auto h = std::hash<::sw::PackageName>()(p.getName());
+        return hash_combine(h, p.getSettings().getHash());
     }
 };
 

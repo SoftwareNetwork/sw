@@ -5,7 +5,6 @@
 
 #include "enums.h"
 #include "package_id.h"
-#include "settings.h"
 
 namespace sw
 {
@@ -39,10 +38,10 @@ struct SW_SUPPORT_API PackageData
     PackageSettings settings;
 
     //
-    PackageId driver;
+    PackageName driver;
 
     PackageData(); // remove later when driver field will be available
-    PackageData(const PackageId &driver_id);
+    PackageData(const PackageName &driver_id);
     virtual ~PackageData() = default;
 
     virtual std::unique_ptr<PackageData> clone() const { return std::make_unique<PackageData>(*this); }
@@ -52,7 +51,7 @@ struct SW_SUPPORT_API PackageData
 
 using PackageDataPtr = std::unique_ptr<PackageData>;
 
-struct SW_SUPPORT_API Package : PackageId
+struct SW_SUPPORT_API Package
 {
     Package(const IStorage &, const PackageId &);
 
@@ -62,11 +61,13 @@ struct SW_SUPPORT_API Package : PackageId
     Package &operator=(Package &&) = delete;
     virtual ~Package() = default;
 
-    String getHash() const;
-    String getHashShort() const;
-    path getHashPath() const;
+    //String getHash() const;
+    //String getHashShort() const;
+    //path getHashPath() const;
 
-    String formatPath(const String &) const;
+    //String formatPath(const String &) const;
+
+    const auto &getId() const { return id; }
 
     const PackageData &getData() const;
     void setData(PackageDataPtr d) { data = std::move(d); }
@@ -79,6 +80,7 @@ struct SW_SUPPORT_API Package : PackageId
 
 private:
     const IStorage &storage;
+    PackageId id;
     PackageDataPtr data;
 };
 
@@ -98,7 +100,7 @@ template<> struct hash<::sw::Package>
 {
     size_t operator()(const ::sw::Package &p) const
     {
-        return std::hash<::sw::PackageId>()(p);
+        return std::hash<::sw::PackageId>()(p.getId());
     }
 };
 

@@ -261,13 +261,15 @@ void LocalStorage::migrateStorage(int from, int to)
 
 bool LocalStorage::isPackageInstalled(const Package &pkg) const
 {
-    LocalPackage p(*this, pkg);
-    return getPackagesDatabase().isPackageInstalled(pkg) && fs::exists(p.getDirSrc2());
+    SW_UNIMPLEMENTED;
+    //LocalPackage p(*this, pkg);
+    //return getPackagesDatabase().isPackageInstalled(pkg) && fs::exists(p.getDirSrc2());
 }
 
 bool LocalStorage::isPackageLocal(const PackageId &id) const
 {
-    return id.getPath().isRelative();
+    SW_UNIMPLEMENTED;
+    //return id.getPath().isRelative();
 }
 
 /*bool LocalStorage::isPackageOverridden(const PackageId &pkg) const
@@ -329,14 +331,16 @@ void LocalStorage::install(const Package &p) const
             ;
     }*/
 
-    get(static_cast<const IStorage2 &>(p.getStorage()), p/*, StorageFileType::SourceArchive*/);
+    SW_UNIMPLEMENTED;
+    //get(static_cast<const IStorage2 &>(p.getStorage()), p);
 
     // we mix gn with storage name to get unique gn
     /*auto h = std::hash<String>()(static_cast<const IStorage2 &>(id.getStorage()).getName());
     auto d = id.getData();
     d.group_number = hash_combine(h, d.group_number);*/
 
-    getPackagesDatabase().installPackage(p, p.getData());
+    SW_UNIMPLEMENTED;
+    //getPackagesDatabase().installPackage(p, p.getData());
 
     SW_UNIMPLEMENTED;
     //LocalPackage p(*this, id);
@@ -417,7 +421,24 @@ const OverriddenPackagesStorage &LocalStorage::getOverriddenPackagesStorage() co
 
 bool LocalStorage::resolve(ResolveRequest &rr) const
 {
-    return LocalStorageBase::resolve(rr);
+    struct LocalPackage2 : Package
+    {
+        using Package::Package;
+
+        bool isInstallable() const override { return false; }
+        std::unique_ptr<Package> clone() const override { return std::make_unique<LocalPackage2>(*this); }
+        path getDirSrc2() const override { throw SW_LOGIC_ERROR("Method is not implemented for this type."); }
+    };
+
+    if (LocalStorageBase::resolve(rr))
+    {
+        SW_UNIMPLEMENTED;
+        /*auto p = std::make_unique<LocalPackage2>(*this, rr.getPackage());
+        p->setData(std::make_unique<PackageData>(getPackagesDatabase().getPackageData(rr.getPackage())));
+        rr.setPackageForce(std::move(p));
+        return true;*/
+    }
+    return false;
 
     ResolveRequest rr2{ rr.u, rr.settings };
     //auto r = ovs.resolve(rr2);
@@ -429,9 +450,10 @@ bool LocalStorage::resolve(ResolveRequest &rr) const
 
 void LocalStorage::remove(const LocalPackage &p) const
 {
-    getPackagesDatabase().deletePackage(p);
+    SW_UNIMPLEMENTED;
+    /*getPackagesDatabase().deletePackage(p);
     error_code ec;
-    fs::remove_all(p.getDir(), ec);
+    fs::remove_all(p.getDir(), ec);*/
 }
 
 OverriddenPackagesStorage::OverriddenPackagesStorage(/*const LocalStorage &ls, */const path &db_dir)
@@ -455,10 +477,11 @@ bool OverriddenPackagesStorage::resolve(ResolveRequest &rr) const
 
     if (LocalStorageBase::resolve(rr))
     {
-        auto p = std::make_unique<OverriddenPackage2>(*this, rr.getPackage());
+        SW_UNIMPLEMENTED;
+        /*auto p = std::make_unique<OverriddenPackage2>(*this, rr.getPackage());
         p->setData(std::make_unique<PackageData>(getPackagesDatabase().getPackageData(rr.getPackage())));
         rr.setPackageForce(std::move(p));
-        return true;
+        return true;*/
     }
     return false;
 }
@@ -489,7 +512,8 @@ void OverriddenPackagesStorage::install(const Package &p) const
     auto d = p.getData();
     d.group_number = hash_combine(h, d.group_number);*/
 
-    install(p, p.getData());
+    SW_UNIMPLEMENTED;
+    //install(p, p.getData());
 }
 
 LocalPackage OverriddenPackagesStorage::install(const PackageId &id, const PackageData &d) const
@@ -501,7 +525,8 @@ LocalPackage OverriddenPackagesStorage::install(const PackageId &id, const Packa
 
 bool OverriddenPackagesStorage::isPackageInstalled(const Package &p) const
 {
-    return getPackagesDatabase().getInstalledPackageId(p) != 0;
+    SW_UNIMPLEMENTED;
+    //return getPackagesDatabase().getInstalledPackageId(p) != 0;
 }
 
 void CachedStorage::storePackages(const ResolveRequest &rr)

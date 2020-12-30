@@ -35,7 +35,7 @@ PackageData::PackageData()
 {
 }
 
-PackageData::PackageData(const PackageId &driver_id)
+PackageData::PackageData(const PackageName &driver_id)
     : driver(driver_id)
 {
 }
@@ -48,16 +48,16 @@ String PackageData::getHash(/*StorageFileType type, */size_t config_hash) const
 }
 
 Package::Package(const IStorage &storage, const PackageId &id)
-    : PackageId(id), storage(storage)
+    : id(id), storage(storage)
 {
 }
 
 Package::Package(const Package &rhs)
-    : PackageId(rhs), storage(rhs.storage), data(rhs.data ? rhs.data->clone() : nullptr)
+    : id(rhs.id), storage(rhs.storage), data(rhs.data ? rhs.data->clone() : nullptr)
 {
 }
 
-String Package::getHash() const
+/*String Package::getHash() const
 {
     // move these calculations to storage?
     switch (storage.getSchema().getHashVersion())
@@ -67,9 +67,9 @@ String Package::getHash() const
     }
 
     throw SW_RUNTIME_ERROR("Unknown hash schema version: " + std::to_string(storage.getSchema().getHashVersion()));
-}
+}*/
 
-path Package::getHashPath() const
+/*path Package::getHashPath() const
 {
     // move these calculations to storage?
     switch (storage.getSchema().getHashPathFromHashVersion())
@@ -81,14 +81,14 @@ path Package::getHashPath() const
     }
 
     throw SW_RUNTIME_ERROR("Unknown hash path schema version: " + std::to_string(storage.getSchema().getHashPathFromHashVersion()));
-}
+}*/
 
-String Package::getHashShort() const
+/*String Package::getHashShort() const
 {
     return shorten_hash(getHash(), 8);
-}
+}*/
 
-String Package::formatPath(const String &s) const
+/*String Package::formatPath(const String &s) const
 {
     // {PHPF} = package hash path full
     // {PH64} = package hash, length = 64
@@ -98,7 +98,7 @@ String Package::formatPath(const String &s) const
         fmt::arg("PH64", getHash().substr(0, 64)),
         fmt::arg("FN", support::make_archive_name())
     );
-}
+}*/
 
 const PackageData &Package::getData() const
 {

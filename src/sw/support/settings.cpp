@@ -354,7 +354,7 @@ nlohmann::json PackageSetting::toJson() const
             if constexpr (0
                 || std::is_same_v<std::decay_t<decltype(v)>, PackagePath>
                 || std::is_same_v<std::decay_t<decltype(v)>, PackageVersion>
-                || std::is_same_v<std::decay_t<decltype(v)>, PackageId>
+                || std::is_same_v<std::decay_t<decltype(v)>, PackageName>
                 || std::is_same_v<std::decay_t<decltype(v)>, PackageVersionRange>
                 || std::is_same_v<std::decay_t<decltype(v)>, UnresolvedPackage>
                 )

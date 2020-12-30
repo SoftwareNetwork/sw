@@ -33,6 +33,7 @@ SwManagerContext::SwManagerContext(const path &local_storage_root_dir, bool allo
     }
 
     cr->addStorage(*overridden_storage);
+    cr->addStorage(*local_storage); // after overridden
     for (auto &&s : remote_storages)
         cr->addStorage(*s);
 }

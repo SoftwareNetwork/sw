@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include "package_id.h"
+#include "package_name.h"
 #include "package_unresolved.h"
 
 #include <nlohmann/json_fwd.hpp>
@@ -114,7 +114,7 @@ struct SW_SUPPORT_API PackageSetting
         bool, int64_t, double, String,
         Path,
         Array, Map, Resolver,
-        PackagePath, PackageVersion, PackageId, PackageVersionRange, UnresolvedPackage
+        PackagePath, PackageVersion, PackageName, PackageVersionRange, UnresolvedPackage
     >;
 
     PackageSetting() = default;

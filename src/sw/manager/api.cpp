@@ -81,10 +81,9 @@ bool ProtobufApi::resolve(ResolveRequest &rr,
     {
         auto &pkg = pair.resolved_package();
 
-        PackageId p(pkg.package().path(), pkg.package().version());
-
         SW_UNIMPLEMENTED;
-        /*PackageData d;
+        /*PackageId p(pkg.package().path(), pkg.package().version());
+        PackageData d;
         d.flags = pkg.flags();
         d.hash = pkg.hash();
         d.prefix = pkg.prefix();
