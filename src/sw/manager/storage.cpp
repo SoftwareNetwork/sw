@@ -192,23 +192,6 @@ LocalStorageBase::LocalStorageBase(const String &name, const path &db_dir)
 
 LocalStorageBase::~LocalStorageBase() = default;
 
-std::unique_ptr<vfs::File> LocalStorageBase::getFile(const PackageId &id/*, StorageFileType t*/) const
-{
-    SW_UNIMPLEMENTED;
-
-    //switch (t)
-    {
-    //case StorageFileType::SourceArchive:
-    {
-        //LocalPackage p(*this, id);
-        //auto d = p.getDirSrc() / make_archive_name();
-        //return d.u8string();
-    }
-    //default:
-        SW_UNREACHABLE;
-    }
-}
-
 void LocalStorageBase::deletePackage(const PackageId &id) const
 {
     getPackagesDatabase().deletePackage(id);
@@ -252,13 +235,6 @@ void LocalStorage::migrateStorage(int from, int to)
     }
 }
 
-/*LocalPackage LocalStorage::download(const PackageId &id) const
-{
-    if (!getPackagesDatabase().isPackageInstalled(id))
-        throw SW_RUNTIME_ERROR("package not installed: " + id.toString());
-    return LocalPackage(*this, id);
-}*/
-
 bool LocalStorage::isPackageInstalled(const Package &pkg) const
 {
     return getPackagesDatabase().isPackageInstalled(pkg) && fs::exists(pkg.getDirSrc2());
@@ -269,27 +245,6 @@ bool LocalStorage::isPackageLocal(const PackageId &id) const
     SW_UNIMPLEMENTED;
     //return id.getPath().isRelative();
 }
-
-/*bool LocalStorage::isPackageOverridden(const PackageId &pkg) const
-{
-    SW_UNIMPLEMENTED;
-    //LocalPackage p(*this, pkg);
-    //return ovs.isPackageInstalled(p);
-}*/
-
-/*PackageDataPtr LocalStorage::loadData(const PackageId &id) const
-{
-    if (isPackageLocal(id))
-    {
-        auto i = local_packages.find(id);
-        if (i == local_packages.end())
-            throw SW_RUNTIME_ERROR("Missing local package data: " + id.toString());
-        return std::make_unique<PackageData>(i->second);
-    }
-    //if (isPackageOverridden(id))
-        //return ovs.loadData(id);
-    return StorageWithPackagesDatabase::loadData(id);
-}*/
 
 LocalPackage LocalStorage::installLocalPackage(const PackageId &id, const PackageData &d)
 {
@@ -424,97 +379,7 @@ std::unique_ptr<Package> LocalStorage::makePackage(const PackageId &id) const
         path getDirSrc2() const override { throw SW_LOGIC_ERROR("Method is not implemented for this type."); }
     };
 
-    auto p = std::make_unique<LocalPackage2>(id);
-    //p->setData(std::make_unique<PackageData>(getPackagesDatabase().getPackageData(id)));
-    return p;
-}
-
-void LocalStorage::get(const IStorage2 &source, const PackageId &id/*, StorageFileType t*/) const
-{
-    SW_UNIMPLEMENTED;
-    /*LocalPackage lp(*this, id);
-
-    path dst;
-    //switch (t)
-    {
-    //case StorageFileType::SourceArchive:
-        dst = lp.getDir() / support::make_archive_name();
-        //dst += ".new"; // without this storage can be left in inconsistent state
-        //break;
-    }
-
-    LOG_INFO(logger, "Downloading: [" + id.toString() + "]/[" + //toUserString(t) +
-    "]");
-    auto f = source.getFile(id//, t
-    );
-    if (!f->copy(dst))
-        throw SW_RUNTIME_ERROR("Error downloading file for package: " + id.toString() + ", file: "// + toUserString(t)
-        );
-
-    SCOPE_EXIT
-    {
-        // now move .new to usual archive (or remove archive)
-        // we're removing for now
-        fs::remove(dst);
-    };
-
-    auto unpack = [&id, &dst, &lp
-        // *, &t
-    ]()
-    {
-        for (auto &d : fs::directory_iterator(lp.getDir()))
-        {
-            if (d.path() != dst)
-                fs::remove_all(d);
-        }
-
-        LOG_INFO(logger, "Unpacking  : [" + id.toString() + "]/[" + //toUserString(t) +
-            "]");
-        unpack_file(dst, lp.getDirSrc());
-    };
-
-    // at the moment we perform check after download
-    // but maybe we can move it before real download?
-    if (auto fh = dynamic_cast<const vfs::FileWithHashVerification *>(f.get()))
-    {
-        if (fh->getHash() == lp.getStampHash())
-        {
-            // skip unpack
-            return;
-        }
-
-        unpack();
-        write_file(lp.getStampFilename(), fh->getHash());
-        return;
-    }
-
-    unpack();*/
-}
-
-/*OverriddenPackagesStorage &LocalStorage::getOverriddenPackagesStorage()
-{
-    return ovs;
-}
-
-const OverriddenPackagesStorage &LocalStorage::getOverriddenPackagesStorage() const
-{
-    return ovs;
-}*/
-
-bool LocalStorage::resolve(ResolveRequest &rr) const
-{
-    if (LocalStorageBase::resolve(rr))
-    {
-        return true;
-    }
-    return false;
-
-    ResolveRequest rr2{ rr.u, rr.settings };
-    //auto r = ovs.resolve(rr2);
-    SW_UNIMPLEMENTED;
-    //if (r)
-        //rr.setPackage(std::make_unique<LocalPackage>(*this, rr2.getPackage()));
-    //return r;
+    return std::make_unique<LocalPackage2>(id);
 }
 
 void LocalStorage::remove(const LocalPackage &p) const
@@ -546,15 +411,6 @@ std::unique_ptr<Package> OverriddenPackagesStorage::makePackage(const PackageId 
 
     auto p = std::make_unique<OverriddenPackage2>(id);
     return p;
-}
-
-bool OverriddenPackagesStorage::resolve(ResolveRequest &rr) const
-{
-    if (LocalStorageBase::resolve(rr))
-    {
-        return true;
-    }
-    return false;
 }
 
 std::unordered_set<LocalPackage> OverriddenPackagesStorage::getPackages() const

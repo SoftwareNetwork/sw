@@ -78,24 +78,15 @@ struct SW_MANAGER_API IStorage2 : IResolvableStorageWithName
 {
     virtual ~IStorage2() = default;
 
-    //
-
     /// get file from this storage
-    virtual std::unique_ptr<vfs::File> getFile(const PackageId &id/*, StorageFileType*/) const = 0;
-
-    // ?
-
-    //virtual LocalPackage download(const PackageId &) const = 0;
-    //virtual LocalPackage install(const Package &) const = 0;
+    // maybe for blobs?
+    //virtual std::unique_ptr<vfs::File> getFile(const PackageId &id) const = 0;
 
     // data exchange
-
     // get predefined file
     //virtual void get(const IStorage &source, const PackageId &id, StorageFileType) = 0;
-
     /// get specific file from storage from package directory
     //virtual void get(const IStorage &source, const PackageId &id, const path &from_rel_path, const path &to_file) = 0;
-
 };
 
 struct SW_MANAGER_API Storage : IStorage2
@@ -113,9 +104,6 @@ struct SW_MANAGER_API StorageWithPackagesDatabase : Storage
     StorageWithPackagesDatabase(const String &name, const path &db_dir);
     virtual ~StorageWithPackagesDatabase();
 
-    //PackageDataPtr loadData(const PackageId &) const override;
-    //void get(const IStorage &source, const PackageId &id, StorageFileType) override;
-    //ResolveResult resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const override;
     bool resolve(ResolveRequest &) const override;
 
 //protected:?
@@ -124,7 +112,6 @@ struct SW_MANAGER_API StorageWithPackagesDatabase : Storage
 private:
     std::unique_ptr<PackagesDatabase> pkgdb;
     mutable std::mutex m;
-    //mutable std::unordered_map<PackageId, PackageData> data;
 };
 
 struct SW_MANAGER_API LocalStorageBase : StorageWithPackagesDatabase
@@ -132,10 +119,7 @@ struct SW_MANAGER_API LocalStorageBase : StorageWithPackagesDatabase
     LocalStorageBase(const String &name, const path &db_dir);
     virtual ~LocalStorageBase();
 
-    //const StorageSchema &getSchema() const override { return schema; }
-
     virtual void install(const Package &) const = 0;
-    std::unique_ptr<vfs::File> getFile(const PackageId &id/*, StorageFileType*/) const override;
 
     void deletePackage(const PackageId &id) const;
 
@@ -157,8 +141,6 @@ struct SW_MANAGER_API OverriddenPackagesStorage : LocalStorageBase
     std::unordered_set<LocalPackage> getPackages() const;
     void deletePackageDir(const path &sdir) const;
 
-    bool resolve(ResolveRequest &) const override;
-
     std::unique_ptr<Package> makePackage(const PackageId &) const override;
 };
 
@@ -171,23 +153,12 @@ struct SW_MANAGER_API LocalStorage : Directories, LocalStorageBase
     void remove(const LocalPackage &) const;
     /*LocalPackage*/ void install(const Package &) const override;
     LocalPackage installLocalPackage(const PackageId &, const PackageData &);
-    void get(const IStorage2 &source, const PackageId &id/*, StorageFileType*/) const /* override*/;
     bool isPackageInstalled(const Package &id) const;
-    //bool isPackageOverridden(const PackageId &id) const;
     bool isPackageLocal(const PackageId &id) const;
-    //PackageDataPtr loadData(const PackageId &) const override;
-    //ResolveResult resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const override;
-    bool resolve(ResolveRequest &) const override;
-
-    //OverriddenPackagesStorage &getOverriddenPackagesStorage();
-    //const OverriddenPackagesStorage &getOverriddenPackagesStorage() const;
 
     std::unique_ptr<Package> makePackage(const PackageId &) const override;
 
 private:
-    //std::unordered_map<PackageId, PackageData> local_packages;
-    //OverriddenPackagesStorage ovs;
-
     void migrateStorage(int from, int to);
 };
 
