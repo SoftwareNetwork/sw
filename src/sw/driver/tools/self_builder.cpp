@@ -184,6 +184,9 @@ int main(int argc, char **argv)
             throw SW_RUNTIME_ERROR("Not resolved: " + rr.getUnresolvedPackage().toString());
     }
     {
+        //for (auto &&rr : rrs)
+            //swctx.getLocalStorage().install(rr.getPackage());
+
         // mass (threaded) install!
         auto &e = getExecutor();
         Futures<void> fs;

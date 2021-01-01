@@ -305,9 +305,14 @@ size_t PackageSettings::getHash() const
     return getHash1();
 }
 
+String PackageSettings::getHashString(const String &s)
+{
+    return shorten_hash(s, 6);
+}
+
 String PackageSettings::getHashString() const
 {
-    return shorten_hash(std::to_string(getHash1()), 6);
+    return getHashString(std::to_string(getHash()));
 }
 
 void PackageSettings::mergeFromString(const String &s, int type)

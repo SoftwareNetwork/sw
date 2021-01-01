@@ -16,13 +16,14 @@ namespace sw
 {
 
 LocalPackage::LocalPackage(const LocalStorage &storage, const PackageId &id)
-    : LocalPackageBase(storage, id)
+    : LocalPackageBase(id)
 {
 }
 
 const LocalStorage &LocalPackage::getStorage() const
 {
-    return static_cast<const LocalStorage &>(Package::getStorage());
+    SW_UNIMPLEMENTED;
+    //return static_cast<const LocalStorage &>(Package::getStorage());
 }
 
 path LocalPackage::getDir() const

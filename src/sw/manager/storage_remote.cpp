@@ -8,6 +8,7 @@
 #include "remote.h"
 #include "settings.h"
 
+#include <fmt/format.h>
 #include <primitives/command.h>
 #include <primitives/csv.h>
 #include <primitives/exceptions.h>
@@ -67,6 +68,66 @@ RemoteStorage::~RemoteStorage() = default;
     }
     return StorageWithPackagesDatabase::resolve(pkgs, unresolved_pkgs);
 }*/
+
+path getHashPathFromHash(const String &h, int nsubdirs, int chars_per_subdir);
+String getHash(const PackageName &n);
+
+std::unique_ptr<Package> RemoteStorage::makePackage(const PackageId &id) const
+{
+    struct remote_package : Package {
+        const RemoteStorage &s;
+        remote_package(const PackageId &id, const RemoteStorage &s)
+            : Package(id), s(s) {
+        }
+        std::unique_ptr<Package> clone() const override { return std::make_unique<remote_package>(*this); }
+
+        void copyArchive(const path &dest) const override {
+            auto provs = s.r.dss;
+            if (!std::any_of(provs.begin(), provs.end(), [this, &dest](auto &p) {
+                path hash_path = getHashPathFromHash(getHash(getId().getName()), 4, 2);
+
+                // {PHPF} = package hash path full
+                // {PH64} = package hash, length = 64
+                // {FN} = archive name
+                auto u = fmt::format(p.raw_url,
+                    fmt::arg("PHPF", to_printable_string(normalize_path(hash_path))),
+                    fmt::arg("PH64", getHash(getId().getName()).substr(0, 64)),
+                    fmt::arg("FN", support::make_archive_name())
+                );
+                return copy(dest, u);
+            })) {
+                throw SW_RUNTIME_ERROR("Cannot download package: " + getId().toString());
+            }
+        }
+
+        bool copy(const path &fn, const String &url) const {
+            auto download_from_source = [&](const auto &url) {
+                try {
+                    LOG_TRACE(logger, "Downloading file: " << url);
+                    download_file(url, fn);
+                }
+                catch (std::exception &e) {
+                    LOG_TRACE(logger, "Downloading file: " << url << ", error: " << e.what());
+                    return false;
+                }
+                return true;
+            };
+
+            if (!download_from_source(url))
+                return false;
+            auto h = get_strong_file_hash(fn, getData().getHash());
+            if (h == getData().getHash()) {
+                LOG_TRACE(logger, "Downloaded file: " << url << " hash = " << h);
+                return true;
+            }
+            LOG_TRACE(logger, "Downloaded file: " << url << " hash = " << h << ". Hash mismatch with " << getData().getHash());
+            return false;
+        }
+    };
+
+    auto p = std::make_unique<remote_package>(id, *this);
+    return p;
+}
 
 bool RemoteStorage::resolve(ResolveRequest &rr) const
 {
@@ -391,7 +452,8 @@ struct RemoteFileWithHashVerification : vfs::FileWithHashVerification
             return true;
         }
 
-        if (auto remote_storage = dynamic_cast<const RemoteStorageWithFallbackToRemoteResolving *>(&p.getStorage()))
+        SW_UNIMPLEMENTED;
+        //if (auto remote_storage = dynamic_cast<const RemoteStorageWithFallbackToRemoteResolving *>(&p.getStorage()))
         {
             // can't init unresolved from package id
             SW_UNIMPLEMENTED;
@@ -457,12 +519,13 @@ std::unique_ptr<vfs::File> RemoteStorage::getFile(const PackageId &id/*, Storage
     {
     //case StorageFileType::SourceArchive:
     {
-        auto provs = r.dss;
+            SW_UNIMPLEMENTED;
+        /*auto provs = r.dss;
         Package pkg(*this, id);
         auto rf = std::make_unique<RemoteFileWithHashVerification>(pkg);
         for (auto &p : provs)
             rf->urls.push_back(p.getUrl(pkg));
-        return rf;
+        return rf;*/
     }
     //default:
         SW_UNREACHABLE;

@@ -55,6 +55,7 @@ struct SW_SUPPORT_API PackageSettings
 
     size_t getHash() const;
     String getHashString() const;
+    static String getHashString(const String &);
     String toString(int type = Json) const;
 
     bool operator==(const PackageSettings &) const;

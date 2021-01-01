@@ -301,6 +301,26 @@ LocalPackage LocalStorage::installLocalPackage(const PackageId &id, const Packag
     return p;*/
 }
 
+path getHashPathFromHash(const String &h, int nsubdirs, int chars_per_subdir)
+{
+    path p;
+    int i = 0;
+    for (; i < nsubdirs; i++)
+        p /= h.substr(i * chars_per_subdir, chars_per_subdir);
+    p /= h.substr(i * chars_per_subdir);
+    return p;
+}
+
+String getHash(const PackageName &n)
+{
+    // move these calculations to storage?
+    //switch (1)
+    {
+    //case 1:
+        return blake2b_512(n.getPath().toStringLower() + "-" + n.getVersion().toString());
+    }
+}
+
 void LocalStorage::install(const Package &p) const
 {
     if (!p.isInstallable())
@@ -312,7 +332,13 @@ void LocalStorage::install(const Package &p) const
         throw SW_RUNTIME_ERROR("package not installed: " + id.toString());
     return LocalPackage(*this, id);*/
 
-    if (isPackageInstalled(p)
+    auto fn = storage_dir_pkg;
+    fn /= getHashPathFromHash(shorten_hash(getHash(p.getId().getName()), 8), 2, 2);
+    fn /= p.getId().getSettings().getHashString() + ".tar.gz";
+
+    auto dst = fn.parent_path() / "p" / p.getId().getSettings().getHashString();
+
+    if (isPackageInstalled(p) && fs::exists(dst)
         //|| isPackageOverridden(id)
         )
     {
@@ -328,21 +354,79 @@ void LocalStorage::install(const Package &p) const
         if (get_strong_file_hash(stamp) == read_file(stamp))
             ;
     }*/
+    fs::create_directories(dst);
 
-    SW_UNIMPLEMENTED;
+    auto h = p.getId().getSettings().getHash();
+    auto settings_name = std::to_string(h);
+    if (h == 0)
+        settings_name = "Source Archive";
+
+    LOG_INFO(logger, "Downloading: [" + p.getId().toString() + "]/["
+        //+ toUserString(t)
+        + settings_name
+        + "]");
+    p.copyArchive(fn);
     //get(static_cast<const IStorage2 &>(p.getStorage()), p);
 
-    // we mix gn with storage name to get unique gn
-    /*auto h = std::hash<String>()(static_cast<const IStorage2 &>(id.getStorage()).getName());
-    auto d = id.getData();
-    d.group_number = hash_combine(h, d.group_number);*/
+    SCOPE_EXIT
+    {
+        // now move .new to usual archive (or remove archive)
+        // we're removing for now
+        fs::remove(fn);
+    };
 
-    SW_UNIMPLEMENTED;
-    //getPackagesDatabase().installPackage(p, p.getData());
+    auto unpack = [&p, &dst, &fn, &settings_name]()
+    {
+        for (auto &d : fs::directory_iterator(dst))
+        {
+            if (d.path() != fn)
+                fs::remove_all(d);
+        }
 
-    SW_UNIMPLEMENTED;
+        LOG_INFO(logger, "Unpacking  : [" + p.getId().toString() + "]/["
+            //+ toUserString(t)
+            + settings_name
+            + "]");
+        unpack_file(fn, dst);
+    };
+
+    // at the moment we perform check after download
+    // but maybe we can move it before real download?
+    //if (auto fh = dynamic_cast<const vfs::FileWithHashVerification *>(f.get()))
+    {
+        /*if (fh->getHash() == lp.getStampHash())
+        {
+            // skip unpack
+            return;
+        }*/
+
+        unpack();
+        //write_file(dst / "info" / "source.stamp", p.getData().getHash());
+    }
+
+    getPackagesDatabase().installPackage(p);
+
+    //unpack();
+
+    //SW_UNIMPLEMENTED;
     //LocalPackage p(*this, id);
     //return p;
+}
+
+std::unique_ptr<Package> LocalStorage::makePackage(const PackageId &id) const
+{
+    struct LocalPackage2 : Package
+    {
+        using Package::Package;
+
+        bool isInstallable() const override { return false; }
+        std::unique_ptr<Package> clone() const override { return std::make_unique<LocalPackage2>(*this); }
+        path getDirSrc2() const override { throw SW_LOGIC_ERROR("Method is not implemented for this type."); }
+    };
+
+    auto p = std::make_unique<LocalPackage2>(id);
+    //p->setData(std::make_unique<PackageData>(getPackagesDatabase().getPackageData(id)));
+    return p;
 }
 
 void LocalStorage::get(const IStorage2 &source, const PackageId &id/*, StorageFileType t*/) const
@@ -419,20 +503,8 @@ const OverriddenPackagesStorage &LocalStorage::getOverriddenPackagesStorage() co
 
 bool LocalStorage::resolve(ResolveRequest &rr) const
 {
-    struct LocalPackage2 : Package
-    {
-        using Package::Package;
-
-        bool isInstallable() const override { return false; }
-        std::unique_ptr<Package> clone() const override { return std::make_unique<LocalPackage2>(*this); }
-        path getDirSrc2() const override { throw SW_LOGIC_ERROR("Method is not implemented for this type."); }
-    };
-
     if (LocalStorageBase::resolve(rr))
     {
-        auto p = std::make_unique<LocalPackage2>(*this, rr.getPackage().getId());
-        p->setData(std::make_unique<PackageData>(getPackagesDatabase().getPackageData(rr.getPackage().getId())));
-        rr.setPackageForce(std::move(p));
         return true;
     }
     return false;
@@ -462,7 +534,7 @@ OverriddenPackagesStorage::OverriddenPackagesStorage(/*const LocalStorage &ls, *
 
 OverriddenPackagesStorage::~OverriddenPackagesStorage() = default;
 
-bool OverriddenPackagesStorage::resolve(ResolveRequest &rr) const
+std::unique_ptr<Package> OverriddenPackagesStorage::makePackage(const PackageId &id) const
 {
     struct OverriddenPackage2 : Package
     {
@@ -472,11 +544,14 @@ bool OverriddenPackagesStorage::resolve(ResolveRequest &rr) const
         std::unique_ptr<Package> clone() const override { return std::make_unique<OverriddenPackage2>(*this); }
     };
 
+    auto p = std::make_unique<OverriddenPackage2>(id);
+    return p;
+}
+
+bool OverriddenPackagesStorage::resolve(ResolveRequest &rr) const
+{
     if (LocalStorageBase::resolve(rr))
     {
-        auto p = std::make_unique<OverriddenPackage2>(*this, rr.getPackage().getId());
-        p->setData(std::make_unique<PackageData>(getPackagesDatabase().getPackageData(rr.getPackage().getId())));
-        rr.setPackageForce(std::move(p));
         return true;
     }
     return false;

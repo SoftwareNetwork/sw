@@ -47,13 +47,15 @@ String PackageData::getHash(/*StorageFileType type, */size_t config_hash) const
     //throw SW_RUNTIME_ERROR("Cannot return other hashes");
 }
 
-Package::Package(const IStorage &storage, const PackageId &id)
-    : id(id), storage(storage)
+Package::Package(/*const IStorage &storage, */const PackageId &id)
+    : id(id)//, storage(storage)
 {
 }
 
 Package::Package(const Package &rhs)
-    : id(rhs.id), storage(rhs.storage), data(rhs.data ? rhs.data->clone() : nullptr)
+    : id(rhs.id)
+    //, storage(rhs.storage)
+    , data(rhs.data ? rhs.data->clone() : nullptr)
 {
 }
 
@@ -108,9 +110,9 @@ const PackageData &Package::getData() const
     return *data;
 }
 
-const IStorage &Package::getStorage() const
+/*const IStorage &Package::getStorage() const
 {
     return storage;
-}
+}*/
 
 }

@@ -225,7 +225,7 @@ bool PackagesDatabase::resolve(ResolveRequest &rr, const IStorage &s) const
         .from(pkg_ver)
         .where(pkg_ver.packageId == pid)))
     {
-        auto p = std::make_unique<Package>(s, PackageId{ {upkg.getPath(), row.version.value()}, rr.getSettings() });
+        auto p = s.makePackage({ {upkg.getPath(), row.version.value()}, rr.getSettings() });
         auto d = std::make_unique<PackageData>(getPackageData(p->getId()));
         p->setData(std::move(d));
         resolved |= rr.setPackage(std::move(p));
@@ -292,27 +292,30 @@ bool PackagesDatabase::isPackageInstalled(const Package &p) const
 
 void PackagesDatabase::installPackage(const PackageId &p, const PackageData &d)
 {
+    SW_UNIMPLEMENTED;
+}
+
+void PackagesDatabase::installPackage(const Package &p)
+{
     std::lock_guard lk(m);
     auto tr = sqlpp11_transaction_manual(*db);
 
     int64_t package_id = 0;
 
-    SW_UNIMPLEMENTED;
-
     // get package id
-    /*auto q = (*db)(select(pkgs.packageId).from(pkgs).where(
-        pkgs.path == p.getPath().toString()
+    auto q = (*db)(select(pkgs.packageId).from(pkgs).where(
+        pkgs.path == p.getId().getName().getPath().toString()
         ));
     if (q.empty())
     {
         // add package
         (*db)(insert_into(pkgs).set(
-            pkgs.path = p.getPath().toString()
+            pkgs.path = p.getId().getName().getPath().toString()
         ));
 
         // get package id
         auto q = (*db)(select(pkgs.packageId).from(pkgs).where(
-            pkgs.path == p.getPath().toString()
+            pkgs.path == p.getId().getName().getPath().toString()
             ));
         package_id = q.front().packageId.value();
     }
@@ -323,7 +326,7 @@ void PackagesDatabase::installPackage(const PackageId &p, const PackageData &d)
         // remove existing version
         (*db)(remove_from(pkg_ver).where(
             pkg_ver.packageId == package_id &&
-            pkg_ver.version == p.getVersion().toString()
+            pkg_ver.version == p.getId().getName().getVersion().toString()
             ));
     }
 
@@ -331,28 +334,28 @@ void PackagesDatabase::installPackage(const PackageId &p, const PackageData &d)
     (*db)(insert_into(pkg_ver).set(
         // basic data
         pkg_ver.packageId = package_id,
-        pkg_ver.version = p.getVersion().toString(),
+        pkg_ver.version = p.getId().getName().getVersion().toString(),
 
         // extended
-        pkg_ver.prefix = d.prefix,
+        pkg_ver.prefix = p.getData().prefix,
 
         // misc
         pkg_ver.updated = "",
 
-        pkg_ver.sdir = sqlpp::tvin(to_string(d.sdir.u8string()))
+        pkg_ver.sdir = sqlpp::tvin(to_string(p.getData().sdir.u8string()))
     ));
 
     // get version id
     auto q2 =
         (*db)(select(pkg_ver.packageVersionId).from(pkg_ver).where(
         pkg_ver.packageId == package_id &&
-        pkg_ver.version == p.getVersion().toString()
+        pkg_ver.version == p.getId().getName().getVersion().toString()
         ));
     auto vid = q2.front().packageVersionId.value();
 
     // insert file
     (*db)(insert_into(t_files).set(
-        t_files.hash = d.getHash()
+        t_files.hash = p.getData().getHash()
     ));
     auto fid = db->last_insert_id();
 
@@ -363,13 +366,7 @@ void PackagesDatabase::installPackage(const PackageId &p, const PackageData &d)
         t_pkg_ver_files.type = 1,
         t_pkg_ver_files.configId = 1,
         t_pkg_ver_files.archiveVersion = 1
-    ));*/
-}
-
-void PackagesDatabase::installPackage(const Package &p)
-{
-    SW_UNIMPLEMENTED;
-    //installPackage(p, p.getData());
+    ));
 }
 
 std::optional<path> PackagesDatabase::getOverriddenDir(const Package &p) const

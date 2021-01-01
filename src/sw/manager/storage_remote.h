@@ -18,7 +18,7 @@ struct SW_MANAGER_API RemoteStorage : StorageWithPackagesDatabase
     RemoteStorage(LocalStorage &, const Remote &, bool allow_network);
     virtual ~RemoteStorage();
 
-    const StorageSchema &getSchema() const override { return schema; }
+    //const StorageSchema &getSchema() const override { return schema; }
     //LocalPackage download(const PackageId &) const override;
     //LocalPackage install(const Package &) const;
     std::unique_ptr<vfs::File> getFile(const PackageId &id/*, StorageFileType*/) const override;
@@ -28,6 +28,8 @@ struct SW_MANAGER_API RemoteStorage : StorageWithPackagesDatabase
     const Remote &getRemote() const { return r; }
 
     bool isNetworkAllowed() const { return allow_network; }
+
+    std::unique_ptr<Package> makePackage(const PackageId &) const override;
 
 private:
     const Remote &r;

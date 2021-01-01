@@ -16,6 +16,9 @@ struct SW_SUPPORT_API PackageId
 
     const auto &getName() const { return n; }
     const auto &getSettings() const { return s; }
+
+    // maybe also print settings hash
+    String toString() const { return n.toString(); }
 };
 
 }

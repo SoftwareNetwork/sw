@@ -53,7 +53,7 @@ using PackageDataPtr = std::unique_ptr<PackageData>;
 
 struct SW_SUPPORT_API Package
 {
-    Package(const IStorage &, const PackageId &);
+    Package(const PackageId &);
 
     Package(const Package &);
     Package &operator=(const Package &) = delete;
@@ -71,15 +71,20 @@ struct SW_SUPPORT_API Package
 
     const PackageData &getData() const;
     void setData(PackageDataPtr d) { data = std::move(d); }
-    const IStorage &getStorage() const;
+    //const IStorage &getStorage() const;
 
     virtual std::unique_ptr<Package> clone() const { return std::make_unique<Package>(*this); }
 
     virtual bool isInstallable() const { return true; }
     virtual path getDirSrc2() const { throw SW_LOGIC_ERROR("Method is not implemented for this type."); }
 
+    /// stores package archive on the path
+    /// this may involve any possible way of getting package file (network download, local copy etc.)
+    // store()? save()? copy()? clone()? add Archive word?
+    virtual void copyArchive(const path &dest) const { throw SW_LOGIC_ERROR("Method is not implemented for this type."); }
+
 private:
-    const IStorage &storage;
+    //const IStorage &storage;
     PackageId id;
     PackageDataPtr data;
 };

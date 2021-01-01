@@ -132,7 +132,7 @@ struct SW_MANAGER_API LocalStorageBase : StorageWithPackagesDatabase
     LocalStorageBase(const String &name, const path &db_dir);
     virtual ~LocalStorageBase();
 
-    const StorageSchema &getSchema() const override { return schema; }
+    //const StorageSchema &getSchema() const override { return schema; }
 
     virtual void install(const Package &) const = 0;
     std::unique_ptr<vfs::File> getFile(const PackageId &id/*, StorageFileType*/) const override;
@@ -158,6 +158,8 @@ struct SW_MANAGER_API OverriddenPackagesStorage : LocalStorageBase
     void deletePackageDir(const path &sdir) const;
 
     bool resolve(ResolveRequest &) const override;
+
+    std::unique_ptr<Package> makePackage(const PackageId &) const override;
 };
 
 struct SW_MANAGER_API LocalStorage : Directories, LocalStorageBase
@@ -179,6 +181,8 @@ struct SW_MANAGER_API LocalStorage : Directories, LocalStorageBase
 
     //OverriddenPackagesStorage &getOverriddenPackagesStorage();
     //const OverriddenPackagesStorage &getOverriddenPackagesStorage() const;
+
+    std::unique_ptr<Package> makePackage(const PackageId &) const override;
 
 private:
     //std::unordered_map<PackageId, PackageData> local_packages;

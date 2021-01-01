@@ -51,7 +51,7 @@ struct SW_SUPPORT_API IStorage : IResolvableStorage
     virtual ~IStorage() = default;
 
     /// storage schema/settings/capabilities/versions
-    virtual const StorageSchema &getSchema() const = 0;
+    //virtual const StorageSchema &getSchema() const = 0;
 
     /// resolve packages from this storage
     //virtual ResolveResult resolve(const UnresolvedPackages &pkgs, UnresolvedPackages &unresolved_pkgs) const = 0;
@@ -66,6 +66,8 @@ struct SW_SUPPORT_API IStorage : IResolvableStorage
 
     /// imports foreign package
     void import(const Package &);
+
+    virtual std::unique_ptr<Package> makePackage(const PackageId &) const = 0;
 };
 
 SW_SUPPORT_API
