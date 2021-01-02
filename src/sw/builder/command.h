@@ -156,6 +156,7 @@ public:
     bool remove_outputs_before_execution = false; // was true
     bool protect_args_with_quotes = true;
     bool always = false;
+    bool skip = false; // for tests
     bool do_not_save_command = false;
     bool silent = false; // no log record
     bool show_output = false; // no command output

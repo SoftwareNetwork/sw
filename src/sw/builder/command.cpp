@@ -579,6 +579,9 @@ bool Command::beforeCommand()
 
     executed_ = true;
 
+    if (skip)
+        return false;
+
     // check our resources (before log)
     if (pool)
         pool->lock();

@@ -47,6 +47,8 @@ struct SW_DRIVER_CPP_API Test : driver::CommandBuilder
     {
         // todo?
     }
+
+    void skip(bool b) { getCommand()->skip = true; }
 };
 
 struct SW_DRIVER_CPP_API SimpleBuild : TargetBase

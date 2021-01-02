@@ -1325,25 +1325,40 @@ void SwBuild::test()
             write_file(test_dir / "exit_code.txt", std::to_string(*c->exit_code));
     }
 
+    // count
+    int skipped = 0;
     int errors = 0;
     for (auto &c : cmds)
     {
-        if (c->exit_code && c->exit_code == 0)
-            continue;
-        errors++;
+        if (c->skip)
+            skipped++;
+        else if (!c->exit_code || c->exit_code != 0)
+            errors++;
     }
+
+    // print
     LOG_INFO(logger, "");
     LOG_INFO(logger, "Test results:");
-    LOG_INFO(logger, "TOTAL:  " << cmds.size());
-    LOG_INFO(logger, "PASSED: " << cmds.size() - errors);
-    LOG_INFO(logger, "FAILED: " << errors);
+    LOG_INFO(logger, "TOTAL:   " << cmds.size());
+    LOG_INFO(logger, "PASSED:  " << cmds.size() - errors - skipped);
+    LOG_INFO(logger, "FAILED:  " << errors);
+    LOG_INFO(logger, "SKIPPED: " << skipped);
     LOG_INFO(logger, "");
     LOG_INFO(logger, "List of failed tests:");
     for (auto &c : cmds)
     {
+        if (c->skip)
+            continue;
         if (c->exit_code && c->exit_code == 0)
             continue;
         LOG_INFO(logger, c->name);
+    }
+    LOG_INFO(logger, "");
+    LOG_INFO(logger, "List of skipped tests:");
+    for (auto &c : cmds)
+    {
+        if (c->skip)
+            LOG_INFO(logger, c->name);
     }
 }
 
