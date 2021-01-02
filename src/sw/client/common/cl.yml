@@ -82,6 +82,9 @@ command_line:
                 type: String
                 description: Explicitly set saved command format (bat or sh)
                 cat: build
+            save_command_output:
+                description: Save command stdout and stderr
+                cat: build
 
             debug_configs:
                 description: Build configs in debug mode

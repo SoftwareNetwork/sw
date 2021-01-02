@@ -836,8 +836,14 @@ String Command::saveCommand() const
         return String{};
 
     // use "fancy" rsp name = command hash
-    auto p = fs::current_path() / SW_BINARY_DIR / "rsp" / (std::to_string(getHash()));
-    p = writeCommand(p);
+    auto base = fs::current_path() / SW_BINARY_DIR / "rsp" / (std::to_string(getHash()));
+    auto p = writeCommand(base);
+
+    if (sw::Settings::get_user_settings().save_command_output)
+    {
+        write_file(path(base) += "_stdout.txt", out.text);
+        write_file(path(base) += "_stderr.txt", err.text);
+    }
 
     String s;
     s += "\n";

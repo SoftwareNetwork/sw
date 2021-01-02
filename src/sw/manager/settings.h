@@ -42,6 +42,7 @@ struct SW_MANAGER_API Settings
     bool save_failed_commands = false;
     bool save_all_commands = false;
     bool save_executed_commands = false;
+    bool save_command_output = false;
 
     bool explain_outdated = false;
     bool explain_outdated_full = false;

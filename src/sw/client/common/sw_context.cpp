@@ -779,6 +779,7 @@ sw::SwContext &SwClientContext::getContext(bool in_allow_network)
         u.save_failed_commands = getOptions().save_failed_commands;
         u.save_all_commands = getOptions().save_all_commands;
         u.save_executed_commands = getOptions().save_executed_commands;
+        u.save_command_output = getOptions().save_command_output;
 
         u.explain_outdated = getOptions().explain_outdated;
         u.explain_outdated_full = getOptions().explain_outdated_full;
