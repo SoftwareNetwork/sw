@@ -1269,6 +1269,7 @@ void SwBuild::test()
         fs::remove_all(d);
 
     // prepare
+    std::unordered_map<builder::Command *, path> test_dirs;
     for (const auto &[pkg, tgts] : getTargetsToBuild())
     {
         for (auto &tgt : tgts)
@@ -1280,12 +1281,14 @@ void SwBuild::test()
                 boost::replace_all(test_dir_name, "/", ".");
                 boost::replace_all(test_dir_name, "\\", ".");
                 auto test_dir = dir / tgt->getSettings().getHash() / tgt->getPackage().toString() / test_dir_name;
-                fs::create_directories(test_dir);
+                test_dirs[c.get()] = test_dir;
+                auto wdir = test_dir / "wdir";
+                fs::create_directories(wdir);
 
                 //
-                c->name = "test: [" + tgt->getPackage().toString() + "]/" + c->name;
+                c->name = "test: [" + tgt->getPackage().toString() + "]/[" + tgt->getSettings().getHash() + "]/[" + c->name + "]";
                 c->always = true;
-                c->working_directory = test_dir;
+                c->working_directory = wdir;
                 //c.addPathDirectory(BinaryDir / getSettings().getConfig());
                 c->out.file = test_dir / "stdout.txt";
                 c->err.file = test_dir / "stderr.txt";
@@ -1308,6 +1311,20 @@ void SwBuild::test()
     ep->throw_on_errors = false;
     ep->skip_errors = cmds.size();
     ep->execute(getBuildExecutor());
+
+    // record time
+    for (const auto &[c, test_dir] : test_dirs)
+    {
+        if (!fs::exists(test_dir))
+            continue;
+        std::ofstream ofile(test_dir / "time.txt");
+        ofile.precision(10);
+        ofile << std::chrono::duration_cast<std::chrono::duration<double>>(c->t_end - c->t_begin).count();
+
+        if (c->exit_code)
+            write_file(test_dir / "exit_code.txt", std::to_string(*c->exit_code));
+    }
+
     int errors = 0;
     for (auto &c : cmds)
     {
