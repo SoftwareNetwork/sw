@@ -608,8 +608,12 @@ std::shared_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetS
         {
             create_command();
             auto cmd = c->createCommand(getMainBuild());
-            cmd->push_back("-target");
-            cmd->push_back(getBuildSettings().getTargetTriplet());
+            if (!s["command"]["do_not_add_target_argument"] ||
+                s["command"]["do_not_add_target_argument"].getValue() != "1")
+            {
+                cmd->push_back("-target");
+                cmd->push_back(getBuildSettings().getTargetTriplet());
+            }
         }
         // TODO: find -fuse-ld option and set c->Type accordingly
     }
