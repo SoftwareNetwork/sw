@@ -16,6 +16,7 @@
 #include <nlohmann/json.hpp>
 #include <primitives/date_time.h>
 #include <primitives/executor.h>
+#include <pugixml.hpp>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "build");
@@ -1269,7 +1270,14 @@ void SwBuild::test()
         fs::remove_all(d);
 
     // prepare
-    std::unordered_map<builder::Command *, path> test_dirs;
+    struct data
+    {
+        path dir;
+        String suite;
+        String config;
+        String name;
+    };
+    std::unordered_map<builder::Command *, data> test_data;
     for (const auto &[pkg, tgts] : getTargetsToBuild())
     {
         for (auto &tgt : tgts)
@@ -1281,7 +1289,10 @@ void SwBuild::test()
                 boost::replace_all(test_dir_name, "/", ".");
                 boost::replace_all(test_dir_name, "\\", ".");
                 auto test_dir = dir / tgt->getSettings().getHash() / tgt->getPackage().toString() / test_dir_name;
-                test_dirs[c.get()] = test_dir;
+                test_data[c.get()].dir = test_dir;
+                test_data[c.get()].config = tgt->getSettings().getHash();
+                test_data[c.get()].suite = tgt->getPackage().toString();
+                test_data[c.get()].name = c->name;
                 auto wdir = test_dir / "wdir";
                 fs::create_directories(wdir);
 
@@ -1313,16 +1324,16 @@ void SwBuild::test()
     ep->execute(getBuildExecutor());
 
     // record time
-    for (const auto &[c, test_dir] : test_dirs)
+    for (const auto &[c, d] : test_data)
     {
-        if (!fs::exists(test_dir))
+        if (!fs::exists(d.dir))
             continue;
-        std::ofstream ofile(test_dir / "time.txt");
+        std::ofstream ofile(d.dir / "time.txt");
         ofile.precision(10);
         ofile << std::chrono::duration_cast<std::chrono::duration<double>>(c->t_end - c->t_begin).count();
 
         if (c->exit_code)
-            write_file(test_dir / "exit_code.txt", std::to_string(*c->exit_code));
+            write_file(d.dir / "exit_code.txt", std::to_string(*c->exit_code));
     }
 
     // count
@@ -1360,6 +1371,90 @@ void SwBuild::test()
         if (c->skip)
             LOG_INFO(logger, c->name);
     }
+
+    //
+    enum TestReportFormat
+    {
+        Sw,
+        JUnit, // currently default
+    };
+    auto format = TestReportFormat::JUnit;
+
+    pugi::xml_document doc;
+    auto suites = doc.append_child("testsuites");
+    struct suite_data
+    {
+        pugi::xml_node node;
+        int nall = 0;
+        int nok = 0;
+        int nskipped = 0;
+        int nfailed = 0;
+        int nerrors = 0;
+        double time = 0;
+    };
+    std::unordered_map<String, suite_data> suitesmap;
+    for (auto &c : cmds)
+    {
+        auto &d = test_data[c.get()];
+        if (!suitesmap.contains(d.suite.c_str()))
+        {
+            auto suite = suitesmap[d.suite.c_str()].node = suites.append_child("testsuite");
+            suite.append_attribute("name").set_value(d.suite.c_str());
+            suite.append_attribute("package").set_value(d.suite.c_str());
+            suite.append_attribute("config").set_value(d.config.c_str());
+        }
+        auto &suite = suitesmap[d.suite.c_str()];
+        auto testcase = suite.node.append_child("testcase");
+        testcase.append_attribute("name").set_value(d.name.c_str());
+        testcase.append_attribute("config").set_value(d.config.c_str());
+        suite.nall++;
+        if (c->skip)
+        {
+            suite.nskipped++;
+            testcase.append_child("skipped");
+            continue;
+        }
+        auto t = std::chrono::duration_cast<std::chrono::duration<double>>(c->t_end - c->t_begin).count();
+        suite.time += t;
+        testcase.append_attribute("time").set_value(read_file(d.dir / "time.txt").c_str()); // read from file to keep precision
+        testcase.append_child("system-out").text().set(read_file(d.dir / "stdout.txt").c_str());
+        testcase.append_child("system-err").text().set(read_file(d.dir / "stderr.txt").c_str());
+        if (c->exit_code && c->exit_code == 0)
+        {
+            suite.nok++;
+            continue;
+        }
+        auto e = testcase.append_child("failure");
+        e.append_attribute("message").set_value(("error code = "s + std::to_string(*c->exit_code)).c_str());
+        suite.nfailed++;
+    }
+    for (auto &[_, s] : suitesmap)
+    {
+        s.node.append_attribute("time").set_value(std::to_string(s.time).c_str());
+        s.node.append_attribute("tests").set_value(std::to_string(s.nall).c_str());
+        s.node.append_attribute("skipped").set_value(std::to_string(s.nskipped).c_str());
+        s.node.append_attribute("errors").set_value(std::to_string(s.nerrors).c_str());
+        s.node.append_attribute("failures").set_value(std::to_string(s.nfailed).c_str());
+    }
+    suites.append_attribute("time").set_value(std::to_string(
+        std::accumulate(suitesmap.begin(), suitesmap.end(), 0.0, [](auto current_sum, auto &value) { return current_sum + value.second.time; })).c_str());
+    suites.append_attribute("tests").set_value(std::to_string(
+        std::accumulate(suitesmap.begin(), suitesmap.end(), 0, [](auto current_sum, auto &value) { return current_sum + value.second.nall; })).c_str());
+    suites.append_attribute("skipped").set_value(std::to_string(
+        std::accumulate(suitesmap.begin(), suitesmap.end(), 0, [](auto current_sum, auto &value) { return current_sum + value.second.nskipped; })).c_str());
+    suites.append_attribute("errors").set_value(std::to_string(
+        std::accumulate(suitesmap.begin(), suitesmap.end(), 0, [](auto current_sum, auto &value) { return current_sum + value.second.nerrors; })).c_str());
+    suites.append_attribute("failures").set_value(std::to_string(
+        std::accumulate(suitesmap.begin(), suitesmap.end(), 0, [](auto current_sum, auto &value) { return current_sum + value.second.nfailed; })).c_str());
+
+    auto fn = getBuildDirectory() / "test" / "results.xml";
+    std::ofstream ofile(fn);
+    if (!ofile)
+        throw SW_RUNTIME_ERROR("Cannot save test results to " + to_printable_string(fn));
+    doc.save(ofile);
+
+    if (errors)
+        throw SW_RUNTIME_ERROR("Some tests failed");
 }
 
 }
