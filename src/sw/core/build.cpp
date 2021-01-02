@@ -1376,7 +1376,9 @@ void SwBuild::test()
     enum TestReportFormat
     {
         Sw,
-        JUnit, // currently default
+        // currently default
+        // for format see https://llg.cubic.org/docs/junit/
+        JUnit,
     };
     auto format = TestReportFormat::JUnit;
 
