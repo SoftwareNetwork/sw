@@ -269,7 +269,7 @@ void NativeCompiledTarget::setOutputDir(const path &dir)
     setOutputFile();
 }
 
-static void targetSettings2Command(primitives::Command &c, const TargetSetting &s)
+static void targetSettings2Command(builder::Command &c, const TargetSetting &s)
 {
     if (s["program"])
         c.setProgram(s["program"].getValue());
@@ -296,6 +296,9 @@ static void targetSettings2Command(primitives::Command &c, const TargetSetting &
             }
         }
     }
+
+    if (s["first_response_file_argument"])
+        c.first_response_file_argument = std::stoi(s["first_response_file_argument"].getValue());
 }
 
 static auto get_settings_package_id(const TargetSetting &s)
