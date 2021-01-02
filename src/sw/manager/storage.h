@@ -119,7 +119,7 @@ struct SW_MANAGER_API LocalStorageBase : StorageWithPackagesDatabase
     LocalStorageBase(const String &name, const path &db_dir);
     virtual ~LocalStorageBase();
 
-    virtual void install(const Package &) const = 0;
+    //virtual void install(const Package &) const = 0;
 
     void deletePackage(const PackageId &id) const;
 
@@ -134,7 +134,7 @@ struct SW_MANAGER_API OverriddenPackagesStorage : LocalStorageBase
     OverriddenPackagesStorage(/*const LocalStorage &ls, */const path &db_dir);
     virtual ~OverriddenPackagesStorage();
 
-    void install(const Package &) const override;
+    //void install(const Package &) const override;
     LocalPackage install(const PackageId &, const PackageData &) const;
     bool isPackageInstalled(const Package &p) const;
 
@@ -151,7 +151,7 @@ struct SW_MANAGER_API LocalStorage : Directories, LocalStorageBase
 
     //LocalPackage download(const PackageId &) const override;
     void remove(const LocalPackage &) const;
-    /*LocalPackage*/ void install(const Package &) const override;
+    std::unique_ptr<Package> install(const Package &) const;
     LocalPackage installLocalPackage(const PackageId &, const PackageData &);
     bool isPackageInstalled(const Package &id) const;
     bool isPackageLocal(const PackageId &id) const;

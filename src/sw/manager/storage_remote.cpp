@@ -120,6 +120,11 @@ std::unique_ptr<Package> RemoteStorage::makePackage(const PackageId &id) const
                 LOG_TRACE(logger, "Downloaded file: " << url << " hash = " << h);
                 return true;
             }
+            /*h = support::get_file_hash(fn);
+            if (h == getData().getHash()) {
+                LOG_TRACE(logger, "Downloaded file: " << url << " hash = " << h);
+                return true;
+            }*/
             LOG_TRACE(logger, "Downloaded file: " << url << " hash = " << h << ". Hash mismatch with " << getData().getHash());
             return false;
         }

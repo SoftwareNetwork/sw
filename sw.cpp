@@ -203,7 +203,7 @@ void build(Solution &s)
             auto &self_builder = cpp_driver.addTarget<ExecutableTarget>("self_builder");
             self_builder.PackageDefinitions = true;
             self_builder += cpp20;
-            self_builder += "src/sw/driver/tools/self_builder.cpp";
+            self_builder += "src/sw/driver/tools/self_builder.*"_rr;
             self_builder +=
                 core,
                 "pub.egorpugin.primitives.emitter"_dep,

@@ -50,6 +50,13 @@ auto get_base_rr_vector()
     return rrs;
 }
 
+String getVariableName(const PackageName &n)
+{
+    auto vname = n.getPath().toString() + "_" + n.getVersion().toString();
+    std::replace(vname.begin(), vname.end(), '.', '_');
+    return vname;
+}
+
 String write_build_script_headers(SwCoreContext &swctx, const std::vector<ResolveRequest> &rrs)
 {
     auto &idb = swctx.getInputDatabase();
@@ -75,8 +82,7 @@ String write_build_script_headers(SwCoreContext &swctx, const std::vector<Resolv
         auto f = read_file(fn);
         bool has_checks = f.find("Checker") != f.npos; // more presize than setChecks
 
-        SW_UNIMPLEMENTED;
-        /*auto var = rr.getPackage().getVariableName();
+        auto var = getVariableName(rr.getPackage().getId().getName());
         hdr_vars[h] = var;
 
         ctx.addLine("#define configure configure_" + var);
@@ -91,7 +97,7 @@ String write_build_script_headers(SwCoreContext &swctx, const std::vector<Resolv
         ctx.addLine("#undef build");
         if (has_checks)
             ctx.addLine("#undef check");
-        ctx.addLine();*/
+        ctx.addLine();
     }
     return ctx.getText();
 }
@@ -100,18 +106,16 @@ String write_build_script(SwCoreContext &swctx, const std::vector<ResolveRequest
 {
     auto &idb = swctx.getInputDatabase();
 
-    std::set<PackageId> pkgs;
-    std::unordered_map<size_t, std::set<PackageId>> hash_pkgs;
+    std::set<PackageName> pkgs;
+    std::unordered_set<size_t> hash_pkgs;
     for (auto &rr : m_in)
     {
-        auto &lp = dynamic_cast<LocalPackage &>(rr.getPackage());
         SpecificationFiles sf;
-        sf.addFile("sw.cpp", lp.getDirSrc2() / "sw.cpp");
+        sf.addFile("sw.cpp", rr.getPackage().getDirSrc2() / "sw.cpp");
         Specification s(sf);
         auto h = s.getHash(idb);
-        SW_UNIMPLEMENTED;
-        /*hash_pkgs[h].insert(lp);
-        pkgs.insert(lp);*/
+        hash_pkgs.insert(h);
+        pkgs.emplace(rr.getPackage().getId().getName());
     }
 
     primitives::CppEmitter ctx;
@@ -122,9 +126,8 @@ String write_build_script(SwCoreContext &swctx, const std::vector<ResolveRequest
     ctx.addLine();
     for (auto &rr : m_in)
     {
-        auto &lp = dynamic_cast<LocalPackage&>(rr.getPackage());
         SpecificationFiles sf;
-        sf.addFile("sw.cpp", lp.getDirSrc2() / "sw.cpp");
+        sf.addFile("sw.cpp", rr.getPackage().getDirSrc2() / "sw.cpp");
         Specification s(sf);
         auto h = s.getHash(idb);
         if (!hash_pkgs.contains(h))
@@ -151,9 +154,8 @@ String write_build_script(SwCoreContext &swctx, const std::vector<ResolveRequest
     ctx.beginFunction("PackageIdSet load_builtin_packages()");
     ctx.addLine("return");
     ctx.beginBlock();
-    SW_UNIMPLEMENTED;
-    //for (auto &p : pkgs)
-        //ctx.addLine("\"" + p.toString() + "\"s,");
+    for (auto &p : pkgs)
+        ctx.addLine("\"" + p.toString() + "\"s,");
     ctx.endBlock(true);
     ctx.endFunction();
     ctx.endNamespace();
@@ -194,7 +196,9 @@ int main(int argc, char **argv)
         {
             fs.push_back(e.push([&swctx, &rr]
             {
-                swctx.getLocalStorage().install(rr.getPackage());
+                auto lp = swctx.getLocalStorage().install(rr.getPackage());
+                if (lp)
+                    rr.setPackageForce(std::move(lp));
             }));
         }
         waitAndGet(fs);

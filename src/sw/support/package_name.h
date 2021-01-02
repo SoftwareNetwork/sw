@@ -21,8 +21,9 @@ struct SW_SUPPORT_API PackageName
     bool operator<(const PackageName &rhs) const { return std::tie(ppath, version) < std::tie(rhs.ppath, rhs.version); }
     bool operator==(const PackageName &rhs) const { return std::tie(ppath, version) == std::tie(rhs.ppath, rhs.version); }
 
-    String getVariableName() const;
+    //String getVariableName() const;
 
+    // remove delim? users can invoke getpath().tostring() + "whatever they want" + getversion().tostring()
     [[nodiscard]]
     String toString(const String &delim = "-") const;
     // toPackageRangeString()?

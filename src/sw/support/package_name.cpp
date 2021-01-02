@@ -55,13 +55,13 @@ PackageName::PackageName(const PackagePath &p, const PackageVersion &v)
 {
 }
 
-String PackageName::getVariableName() const
+/*String PackageName::getVariableName() const
 {
     auto v = version.toString();
     auto vname = ppath.toString() + "_" + (v == "*" ? "" : ("_" + v));
     std::replace(vname.begin(), vname.end(), '.', '_');
     return vname;
-}
+}*/
 
 String PackageName::toString(const String &delim) const
 {
