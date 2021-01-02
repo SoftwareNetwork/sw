@@ -771,6 +771,11 @@ void Check::setupTarget(NativeCompiledTarget &t) const
     if (auto L = t.getSelectedTool()->as<VisualStudioLinker*>())
         L->DisableIncrementalLink = true;
     t.command_storage = nullptr;
+
+    for (auto &co : Parameters.CompileOptions)
+        t.CompileOptions.push_back(co);
+    for (auto &lo : Parameters.LinkOptions)
+        t.LinkOptions.push_back(lo);
 }
 
 bool Check::execute(SwBuild &b) const
