@@ -1396,7 +1396,7 @@ void SwBuild::test()
     for (auto &c : cmds)
     {
         auto &d = test_data[c.get()];
-        if (!suitesmap.contains(d.suite.c_str()))
+        if (suitesmap.find(d.suite) == suitesmap.end())
         {
             auto suite = suitesmap[d.suite.c_str()].node = suites.append_child("testsuite");
             suite.append_attribute("name").set_value(d.suite.c_str());
