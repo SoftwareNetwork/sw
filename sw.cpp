@@ -7,7 +7,7 @@
 void build(Solution &s)
 {
     auto &sw = s.addProject("sw", "0.4.2");
-    sw += Git("https://github.com/SoftwareNetwork/sw", "", "b{v}");
+    sw += Git("https://github.com/SoftwareNetwork/sw", "", "b0.4.2");
 
     auto &p = sw.addProject("client");
 
