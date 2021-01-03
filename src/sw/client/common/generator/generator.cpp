@@ -958,7 +958,7 @@ void CMakeGenerator::generate(const sw::SwBuild &b)
         ctx.increaseIndent();
         for (auto &[k, _] : s["dependencies"]["link"].getMap())
         {
-            if (sw::PackageId(k).getPath().isAbsolute())
+            if (sw::PackageName(k).getPath().isAbsolute())
                 deps.insert(k);
             ctx.addLine(k);
         }

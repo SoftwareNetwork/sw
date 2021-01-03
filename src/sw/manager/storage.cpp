@@ -297,6 +297,21 @@ static path get_lp_dir2_dir(const path &root, const Package &p)
     return fn / getSourceDirectoryName();
 }
 
+bool LocalStorage::resolve(ResolveRequest &rr) const
+{
+    auto r = StorageWithPackagesDatabase::resolve(rr);
+    if (r)
+    {
+        auto d = get_lp_pkg_dir(storage_dir_pkg, rr.getPackage().getId());
+        if (!fs::exists(d))
+        {
+            rr.r.reset();
+            return false;
+        }
+    }
+    return r;
+}
+
 std::unique_ptr<Package> LocalStorage::install(const Package &p) const
 {
     if (!p.isInstallable())
@@ -313,7 +328,9 @@ std::unique_ptr<Package> LocalStorage::install(const Package &p) const
 
     auto dst = get_lp_pkg_dir(storage_dir_pkg, p.getId());
 
-    if (isPackageInstalled(p) && fs::exists(dst))
+    if (isPackageInstalled(p)
+        && fs::exists(dst) // unnecessary check?
+        )
     {
         auto pkg = makePackage(p.getId());
         auto d = std::make_unique<PackageData>(p.getData());

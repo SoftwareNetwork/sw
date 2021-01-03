@@ -21,7 +21,7 @@ sw::PackageDescriptionMap getPackages(const sw::SwBuild &b, const sw::support::S
 {
     using namespace sw;
 
-    PackageDescriptionMap m;
+    //PackageDescriptionMap m;
     for (auto &[pkg, tgts] : b.getTargets())
     {
         // deps
@@ -36,7 +36,8 @@ sw::PackageDescriptionMap getPackages(const sw::SwBuild &b, const sw::support::S
         if (t.getInterfaceSettings()["skip_upload"])
             continue;
 
-        auto d = std::make_unique<PackageDescription>(pkg, "todo-driver"s);
+        SW_UNIMPLEMENTED;
+        /*auto d = std::make_unique<PackageDescription>(pkg, "todo-driver"s);
         d->source = t.getSource().clone();
 
         // find root dir
@@ -67,7 +68,7 @@ sw::PackageDescriptionMap getPackages(const sw::SwBuild &b, const sw::support::S
         // we might unpack to other dir, but server could push service files in neighbor dirs like gpg keys etc
         auto files_map1 = primitives::pack::prepare_files(files, rd.lexically_normal());
         for (const auto &[f1, f2] : files_map1)
-            d->addFile(rd, f1, f2);
+            d->addFile(rd, f1, f2);*/
 
         // unique deps
         SW_UNIMPLEMENTED;
@@ -79,12 +80,14 @@ sw::PackageDescriptionMap getPackages(const sw::SwBuild &b, const sw::support::S
             d->dependencies.insert(dep->getUnresolvedPackage());
         }*/
 
-        m.emplace(pkg, std::move(d));
-        if (iv)
+        SW_UNIMPLEMENTED;
+        //m.emplace(pkg, std::move(d));
+        //if (iv)
             SW_UNIMPLEMENTED;
             //(*iv)[&tgts.getInput().getInput()].push_back(pkg);
     }
-    return m;
+    SW_UNIMPLEMENTED;
+    //return m;
 }
 
 static void input_check(const sw::Specification &spec)
@@ -175,13 +178,14 @@ SUBCOMMAND_DECL(upload)
     b->prepare();
 
     std::map<const sw::Input *, std::vector<sw::PackageId>> iv;
-    auto m = getPackages(*b, sources, &iv);
+    SW_UNIMPLEMENTED;
+    /*auto m = getPackages(*b, sources, &iv);
 
     // dbg purposes
     for (auto &[id, d] : m)
     {
         write_file(b->getBuildDirectory() / "upload" / id.toString() += ".json", d->toJson().dump());
-        auto id2 = sw::PackageId(sw::PackagePath(getOptions().options_upload.upload_prefix) / id.getPath(), id.getVersion());
+        sw::PackageName id2{ sw::PackagePath(getOptions().options_upload.upload_prefix) / id.getName().getPath(), id.getName().getVersion() };
         LOG_INFO(logger, "Uploading " + id2.toString());
     }
 
@@ -216,5 +220,5 @@ SUBCOMMAND_DECL(upload)
         // -k KEY1 -k KEY2
         auto api = current_remote->getApi();
         api->addVersion(getOptions().options_upload.upload_prefix, m2, spec.files);
-    }
+    }*/
 }

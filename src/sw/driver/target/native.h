@@ -58,7 +58,7 @@ public:
     using TargetsSet = std::unordered_set<const ITarget*>;
 
 public:
-    NativeCompiledTarget(TargetBase &parent, const PackageId &);
+    NativeCompiledTarget(TargetBase &parent, const PackageName &);
 
     using TargetEvents::add;
 

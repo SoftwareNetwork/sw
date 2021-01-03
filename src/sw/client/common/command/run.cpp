@@ -74,7 +74,7 @@ void SwClientContext::run(const sw::PackageId &pkg, primitives::Command &c)
     getOptions().targets_to_build.push_back(pkg.toString());
 
     Strings inputs;
-    if (pkg.getPath().isRelative())
+    if (pkg.getName().getPath().isRelative())
     {
         if (getOptions().options_run.input.empty())
             inputs.push_back(".");
@@ -95,7 +95,7 @@ SUBCOMMAND_DECL(run)
     bool valid_target = true;
     try
     {
-        sw::PackageId pkg(getOptions().options_run.target);
+        sw::PackageName pkg(getOptions().options_run.target);
     }
     catch (std::exception &)
     {
@@ -150,5 +150,6 @@ SUBCOMMAND_DECL(run)
     }
 
     //
-    run(getOptions().options_run.target, c);
+    SW_UNIMPLEMENTED; // todo: make native settings
+    //run(sw::PackageId{ getOptions().options_run.target,{} }, c);
 }

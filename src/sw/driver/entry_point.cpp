@@ -193,7 +193,8 @@ static path getPackageHeader(const LocalPackage &p, const UnresolvedPackage &up)
 
     // depends on upkg, not on pkg!
     // because p is constant, but up might differ
-    auto h = p.getDirSrc() / "gen" / ("pkg_header_" + shorten_hash(sha1(up.toString()), 6) + ".h");
+    SW_UNIMPLEMENTED;
+    /*auto h = p.getDirSrc() / "gen" / ("pkg_header_" + shorten_hash(sha1(up.toString()), 6) + ".h");
     //if (fs::exists(h))
     //return h;
     auto cfg = p.getDirSrc2() / "sw.cpp";
@@ -231,7 +232,7 @@ static path getPackageHeader(const LocalPackage &p, const UnresolvedPackage &up)
 
         write_file_if_different(h, ctx.getText());
     }
-    return h;
+    return h;*/
 }
 
 static
@@ -295,7 +296,7 @@ static std::pair<FilesOrdered, UnresolvedPackages> getFileDependencies(SwBuild &
 
 struct ConfigBuiltinLibraryTarget : StaticLibraryTarget
 {
-    ConfigBuiltinLibraryTarget(TargetBase &parent, const PackageId &id)
+    ConfigBuiltinLibraryTarget(TargetBase &parent, const PackageName &id)
         : StaticLibraryTarget(parent, id)
     {
         IsSwConfig = true;
@@ -508,7 +509,7 @@ struct ConfigSharedLibraryTarget : T
 {
     using Base = T;
 
-    ConfigSharedLibraryTarget(TargetBase &parent, const PackageId &id, const PrepareConfig &ep, const PrepareConfig::InputData &d, const path &storage_dir)
+    ConfigSharedLibraryTarget(TargetBase &parent, const PackageName &id, const PrepareConfig &ep, const PrepareConfig::InputData &d, const path &storage_dir)
         : T(parent, id), ep(ep), d(d)
     {
         Base::IsSwConfig = true;
@@ -569,9 +570,11 @@ SharedLibraryTarget &PrepareConfig::createTarget(Build &b, const InputData &d)
         lang == LANG_VALA
         ? (SharedLibraryTarget&)b.addTarget<ConfigSharedLibraryTarget<ValaSharedLibrary>>(name, v, *this, d, b.getContext().getLocalStorage().storage_dir)
         : b.addTarget<ConfigSharedLibraryTarget<SharedLibraryTarget>>(name, v, *this, d, b.getContext().getLocalStorage().storage_dir);
-    tgt = lib.getPackage();
+
+    SW_UNIMPLEMENTED;
+    /*tgt = lib.getPackage();
     targets.insert(&lib);
-    return lib;
+    return lib;*/
 }
 
 decltype(auto) PrepareConfig::commonActions(Build &b, const InputData &d, const UnresolvedPackages &deps)

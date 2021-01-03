@@ -78,7 +78,7 @@ static String pkg2string(const sw::PackagePath &p)
     return pkg2string(p.toString());
 }
 
-static String pkg2string(const sw::PackageId &p)
+static String pkg2string(const sw::PackageName &p)
 {
     return pkg2string(p.toString());
 }

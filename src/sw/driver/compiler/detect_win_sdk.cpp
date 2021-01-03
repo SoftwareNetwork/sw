@@ -74,7 +74,7 @@ struct WinKit
             if (fs::exists(libdir))
             {
                 auto &t = sw::ProgramDetector::addTarget<sw::PredefinedTarget>(DETECT_ARGS_PASS,
-                    sw::PackageId(tname, v), eb.getSettings());
+                    sw::PackageName(tname, v), eb.getSettings());
                 t.public_ts["properties"]["6"]["system_include_directories"].push_back(idir / name);
                 for (auto &i : idirs)
                     t.public_ts["properties"]["6"]["system_include_directories"].push_back(idir / i);
@@ -84,7 +84,7 @@ struct WinKit
             else if (without_ldir)
             {
                 auto &t = sw::ProgramDetector::addTarget<sw::PredefinedTarget>(DETECT_ARGS_PASS,
-                    sw::PackageId(tname, v), eb.getSettings());
+                    sw::PackageName(tname, v), eb.getSettings());
                 t.public_ts["properties"]["6"]["system_include_directories"].push_back(idir / name);
                 for (auto &i : idirs)
                     t.public_ts["properties"]["6"]["system_include_directories"].push_back(idir / i);
@@ -118,7 +118,7 @@ struct WinKit
             if (fs::exists(p->file))
             {
                 auto v = getVersion(b.getContext(), p->file, "/?");
-                auto &rc = sw::ProgramDetector::addProgram(DETECT_ARGS_PASS, sw::PackageId("com.Microsoft.Windows.rc", v), eb.getSettings(), *p);
+                auto &rc = sw::ProgramDetector::addProgram(DETECT_ARGS_PASS, sw::PackageName("com.Microsoft.Windows.rc", v), eb.getSettings(), *p);
                 rc.setRule("rc", std::make_unique<sw::RcRule>(std::move(p)));
             }
         });
@@ -133,7 +133,7 @@ struct WinKit
             if (fs::exists(p->file))
             {
                 auto v = getVersion(b.getContext(), p->file, "/?");
-                auto &rc = sw::ProgramDetector::addProgram(DETECT_ARGS_PASS, sw::PackageId("com.Microsoft.Windows.mc", v), eb.getSettings(), *p);
+                auto &rc = sw::ProgramDetector::addProgram(DETECT_ARGS_PASS, sw::PackageName("com.Microsoft.Windows.mc", v), eb.getSettings(), *p);
                 rc.setRule("mc", std::make_unique<sw::RcRule>(std::move(p)));
             }
         });

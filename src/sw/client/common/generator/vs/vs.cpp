@@ -604,7 +604,7 @@ void VSGenerator::generate(const SwBuild &b)
             {
                 for (auto &[id, v] : is)
                 {
-                    PackageId d(id);
+                    PackageName d(id);
                     // filter out predefined targets
                     if (b.isPredefinedTarget(d))
                         continue;
@@ -614,11 +614,12 @@ void VSGenerator::generate(const SwBuild &b)
                     auto &pd = ttb;
                     if (pd.find(d) == pd.end())
                     {
-                        auto i = b.getTargets().find(d, v.getMap());
+                        SW_UNIMPLEMENTED;
+                        /*auto i = b.getTargets().find(d, v.getMap());
                         if (!i)
                             throw SW_LOGIC_ERROR("Cannot find dependency: " + d.toString());
                         data.dependencies.insert(i);
-                        continue;
+                        continue;*/
                     }
                     p.dependencies.insert(&s.projects.find(d.toString())->second);
                 }
@@ -738,7 +739,7 @@ void VSGenerator::generate(const SwBuild &b)
 
             // actually we must build deps + their specific settings
             // not one setting for all deps
-            std::map<PackageId, String> deps;
+            std::map<PackageName, String> deps;
             for (auto &[_, p1] : s.projects)
             {
                 auto &d = p1.getData(st);
@@ -831,7 +832,7 @@ void VSGenerator::generate(const SwBuild &b)
                 if (!pp.empty())
                 {
                     p.directory = &s.directories.find(pp.toString())->second;
-                    p.visible_name = sw::PackageId(tgt->getPackage().getPath().slice(pp.size()), tgt->getPackage().getVersion()).toString();
+                    p.visible_name = sw::PackageName(tgt->getPackage().getPath().slice(pp.size()), tgt->getPackage().getVersion()).toString();
                 }
                 break;
             }
@@ -1806,12 +1807,12 @@ std::map<String, String> Project::printProperties(const sw::builder::Command &c,
     return args;
 }
 
-void PackagePathTree::add(const sw::PackageId &p)
+void PackagePathTree::add(const sw::PackageName &p)
 {
     add(p.getPath(), p);
 }
 
-void PackagePathTree::add(const sw::PackagePath &p, const sw::PackageId &project)
+void PackagePathTree::add(const sw::PackagePath &p, const sw::PackageName &project)
 {
     if (p.empty())
     {

@@ -173,30 +173,30 @@ TargetContainer::Base::iterator TargetContainer::erase(Base::iterator begin, Bas
     return targets.erase(begin, end);
 }
 
-ITarget *TargetMap::find(const PackageName &pkg, const PackageSettings &ts) const
+ITarget *TargetMap::find(const PackageId &pkg) const
 {
-    auto i = find(pkg);
+    auto i = find(pkg.getName());
     if (i == end())
         return {};
-    auto k = i->second.findSuitable(ts);
+    auto k = i->second.findSuitable(pkg.getSettings());
     if (k == i->second.end())
         return {};
     return *k;
 }
 
-ITarget *TargetMap::find(const UnresolvedPackage &pkg, const PackageSettings &ts) const
+ITarget *TargetMap::find(const ResolveRequest &rr) const
 {
-    auto i = find(pkg);
+    auto i = find(rr.getUnresolvedPackage());
     if (i == end())
         return {};
-    auto k = i->second.findSuitable(ts);
+    auto k = i->second.findSuitable(rr.getSettings());
     if (k == i->second.end())
         return {};
     return *k;
 }
 
-PredefinedTarget::PredefinedTarget(const PackageId &id, const PackageSettings &ts)
-    : pkg(id), ts(ts)
+PredefinedTarget::PredefinedTarget(const PackageId &id)
+    : pkg(id)
 {
 }
 

@@ -520,7 +520,7 @@ ITarget &SwBuild::resolveAndLoad(ResolveRequest &rr)
         // load local target
 
         // get loaded
-        if (auto t = getTargets().find(rr.u, rr.settings))
+        if (auto t = getTargets().find(rr))
             return *t;
 
         // load from input
@@ -542,16 +542,14 @@ ITarget &SwBuild::resolveAndLoad(ResolveRequest &rr)
     }
 
     // check existing target+settings in build
-    SW_UNIMPLEMENTED;
-    //if (auto t = getTargets().find(rr.getPackage(), rr.settings))
-        //return *t;
+    if (auto t = getTargets().find(rr.getPackage().getId()))
+        return *t;
 
     ITarget *t = nullptr;
     std::exception_ptr eptr;
     auto x = [this, &eptr, &rr, &t]()
     {
-        SW_UNIMPLEMENTED;
-        /*LOG_TRACE(logger, "Entering the new fiber to load: " + rr.getPackage().toString());
+        LOG_TRACE(logger, "Entering the new fiber to load: " + rr.getPackage().getId().toString());
         try
         {
             t = &load(rr.getPackage());
@@ -560,7 +558,7 @@ ITarget &SwBuild::resolveAndLoad(ResolveRequest &rr)
         {
             eptr = std::current_exception();
         }
-        LOG_TRACE(logger, "Leaving fiber to load: " + rr.getPackage().toString());*/
+        LOG_TRACE(logger, "Leaving fiber to load: " + rr.getPackage().getId().toString());
     };
     // boost::fibers::launch::dispatch,
     // std::allocator_arg_t
@@ -579,12 +577,12 @@ ITarget &SwBuild::load(const Package &p)
     //getContext().getLocalStorage().import(p);
     SW_UNIMPLEMENTED;
     /*auto i = getContext().addInput(p);
-    getTargets()[p].setInput(*i);
-    auto tgts = i->loadPackages(*this, p.getData().settings, PackageIdSet{ p }, p.getPath().slice(0, p.getData().prefix));
+    getTargets()[p.getId().getName()].setInput(*i);
+    auto tgts = i->loadPackages(*this, p.getId().getSettings(), { p }, p.getId().getName().getPath().slice(0, p.getData().prefix));
     if (tgts.empty())
-        throw SW_RUNTIME_ERROR("No targets loaded: " + p.toString());
+        throw SW_RUNTIME_ERROR("No targets loaded: " + p.getId().toString());
     if (tgts.size() != 1)
-        throw SW_RUNTIME_ERROR("Wrong number of targets: " + p.toString());
+        throw SW_RUNTIME_ERROR("Wrong number of targets: " + p.getId().toString());
     auto tgts2 = registerTargets(tgts);
     for (auto &&tgt : tgts2)
         getTargets()[tgt->getPackage()].push_back(*tgt, *i);
@@ -593,8 +591,7 @@ ITarget &SwBuild::load(const Package &p)
 
 void SwBuild::registerTarget(ITarget &t)
 {
-    SW_UNIMPLEMENTED;
-    //getTargets()[t.getPackage()].push_back(t);
+    getTargets()[t.getPackage()].push_back(t);
 }
 
 void SwBuild::resolvePackages()

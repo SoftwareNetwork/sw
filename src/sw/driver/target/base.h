@@ -100,7 +100,7 @@ struct SW_DRIVER_CPP_API TargetBaseData : ProjectDirectories, TargetEvents
 protected:
     const Build *build = nullptr;
     SwBuild *main_build_ = nullptr;
-    std::optional<PackageId> current_project;
+    std::optional<PackageName> current_project;
 };
 
 struct SW_DRIVER_CPP_API TargetBase : TargetBaseData
@@ -163,20 +163,20 @@ protected:
     mutable std::mutex m; // some internal mutex
 
     TargetBase(const TargetBase &);
-    TargetBase(const TargetBase &, const PackageId &);
+    TargetBase(const TargetBase &, const PackageName &);
 
-    const PackageId &getPackage() const;
+    const PackageName &getPackage() const;
     const LocalPackage &getLocalPackage() const;
 
 private:
-    std::unique_ptr<PackageId> pkg;
+    std::unique_ptr<PackageName> pkg;
     std::unique_ptr<LocalPackage> lpkg;
     bool Local = true; // local projects
 
     template <typename T, typename ... Args>
     T &addTarget1(const PackagePath &Name, const PackageVersion &v, Args && ... args)
     {
-        PackageId pkg(constructTargetName(Name), v);
+        PackageName pkg(constructTargetName(Name), v);
         auto t = std::make_unique<T>(*this, pkg, std::forward<Args>(args)...);
         auto p = t.get();
         addTarget3(std::move(t));
@@ -261,11 +261,11 @@ struct SW_DRIVER_CPP_API Target
     Resolver &getResolver() const;
 
 public:
-    Target(TargetBase &parent, const PackageId &);
+    Target(TargetBase &parent, const PackageName &);
     virtual ~Target();
 
     // api
-    const PackageId &getPackage() const override { return TargetBase::getPackage(); }
+    const PackageName &getPackage() const override { return TargetBase::getPackage(); }
     const Source &getSource() const override;
     TargetFiles getFiles() const override;
     std::vector<IDependency *> getDependencies() const;// override;
@@ -494,7 +494,7 @@ public:
 
     //
     ASSIGN_TYPES(Target)
-    ASSIGN_TYPES(PackageId)
+    ASSIGN_TYPES(PackageName)
     ASSIGN_TYPES(DependencyPtr)
     ASSIGN_TYPES(UnresolvedPackage)
     ASSIGN_TYPES(UnresolvedPackages)

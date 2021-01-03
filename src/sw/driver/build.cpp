@@ -82,7 +82,7 @@ Build::Build(SwBuild &mb)
     //return getContext().getModuleStorage().get(dll);
 }*/
 
-bool Build::isKnownTarget(const PackageId &p) const
+bool Build::isKnownTarget(const PackageName &p) const
 {
     return module_data.known_targets.empty() ||
         p.getPath().is_loc() || // used by cfg targets and checks

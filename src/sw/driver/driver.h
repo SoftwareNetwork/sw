@@ -38,7 +38,7 @@ struct SW_DRIVER_CPP_API Driver : IDriver
     static void processConfigureAc(const path &p);
 
     // make IDriver api?
-    static PackageId getPackageId();
+    static PackageName getPackageId();
 
     // IDriver api
     void loadInputsBatch(const std::set<Input *> &) const override;

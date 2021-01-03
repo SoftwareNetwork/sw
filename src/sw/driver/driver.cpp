@@ -191,14 +191,15 @@ struct BuiltinStorage : IStorage
             {
                 if (!rr.u.getRange().contains(v))
                     continue;
-                auto p = std::make_unique<BuiltinPackage>(bs, PackageId{ rr.u.getPath(), v });
-                p->f = ep;
+                auto pp = bs.makePackage({ PackageName{ rr.u.getPath(), v }, rr.getSettings() });
+                auto &p = (BuiltinPackage &)*pp;
+                p.f = ep;
                 auto d = std::make_unique<PackageData>();
                 d->prefix = 0;
-                d->settings = rr.getSettings();
-                p->setData(std::move(d));
+                //d->settings = rr.getSettings();
+                p.setData(std::move(d));
 
-                rr.setPackage(std::move(p));
+                rr.setPackage(std::move(pp));
             }
             SW_CHECK(rr.isResolved());
             return true;
@@ -207,7 +208,7 @@ struct BuiltinStorage : IStorage
 
     SwContext &swctx;
     std::unique_ptr<SwBuild> sb;
-    mutable std::unordered_map<PackagePath, PackageId> targets;
+    mutable std::unordered_map<PackagePath, PackageName> targets;
     mutable std::unordered_map<PackagePath, BuiltinLoader> available_loaders;
 
     BuiltinStorage(SwContext &swctx)
@@ -219,7 +220,7 @@ struct BuiltinStorage : IStorage
             available_loaders[k.getPath()].addPair(k.getRange(), v);
     }
 
-    const StorageSchema &getSchema() const override { SW_UNREACHABLE; }
+    //const StorageSchema &getSchema() const override { SW_UNREACHABLE; }
     /*PackageDataPtr loadData(const PackageId &) const override
     {
         auto d = std::make_unique<PackageData>();
@@ -227,10 +228,15 @@ struct BuiltinStorage : IStorage
         return std::move(d);
     }*/
 
-    void addTarget(const PackageId &pkg)
+    void addTarget(const PackageName &pkg)
     {
         if (!targets.emplace(pkg.getPath(), pkg).second)
             throw SW_RUNTIME_ERROR("Duplicate package paths, rewrite this code");
+    }
+
+    std::unique_ptr<Package> makePackage(const PackageId &id) const override
+    {
+        return std::make_unique<BuiltinPackage>(id);
     }
 
     bool resolve(ResolveRequest &rr) const override
@@ -381,7 +387,7 @@ void Driver::processConfigureAc(const path &p)
     process_configure_ac2(p);
 }
 
-PackageId Driver::getPackageId()
+PackageName Driver::getPackageId()
 {
     return "org.sw."s + PACKAGE "-" PACKAGE_VERSION;
 }
@@ -585,7 +591,7 @@ void Driver::setupBuild(SwBuild &b) const
 std::unique_ptr<Input> Driver::getInput(const Package &p) const
 {
     // we are trying to load predefined package
-    if (p.getPath().isRelative())
+    if (p.getId().getName().getPath().isRelative())
         SW_UNREACHABLE;
     else if (auto lp = dynamic_cast<const LocalPackage *>(&p))
     {
@@ -604,7 +610,7 @@ std::unique_ptr<Input> Driver::getInput(const Package &p) const
         return i;
     }
     else
-        throw SW_RUNTIME_ERROR("Package was not installed: " + p.toString());
+        throw SW_RUNTIME_ERROR("Package was not installed: " + p.getId().toString());
 }
 
 std::vector<std::unique_ptr<Input>> Driver::detectInputs(const path &p, InputType type) const

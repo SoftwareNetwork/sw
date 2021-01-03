@@ -85,9 +85,9 @@ struct SW_CORE_API ITarget : ICastable
     //
 
     // deprecate later
-    virtual const PackageId &getPackage() const = 0;
+    virtual const PackageName &getPackage() const = 0;
     // modern call
-    virtual const PackageId &getPackageId() const { return getPackage(); }
+    virtual const PackageName &getPackageId() const { return getPackage(); }
 
     // merge getSource(), getFiles() and getDependencies() into single call returning json/target settings?
     // into getDescription() or getInformation() or something similar
@@ -179,15 +179,15 @@ struct SW_CORE_API PredefinedTarget : ITarget
 {
     PackageSettings public_ts;
 
-    PredefinedTarget(const PackageId &, const PackageSettings &);
+    PredefinedTarget(const PackageId &);
     PredefinedTarget(const PredefinedTarget &) = delete;
     virtual ~PredefinedTarget();
 
     //std::vector<IDependency *> getDependencies() const override;
 
     // return what we know
-    const PackageId &getPackage() const override { return pkg; }
-    const PackageSettings &getSettings() const override { return ts; }
+    const PackageName &getPackage() const override { return pkg.getName(); }
+    const PackageSettings &getSettings() const override { return pkg.getSettings(); }
     const PackageSettings &getInterfaceSettings() const override { return public_ts; }
 
     // lightweight target
@@ -199,7 +199,6 @@ struct SW_CORE_API PredefinedTarget : ITarget
 
 private:
     PackageId pkg;
-    PackageSettings ts;
     mutable bool deps_set = false;
     mutable std::vector<IDependencyPtr> deps;
 };
@@ -294,9 +293,9 @@ struct TargetMap : PackageVersionMapBase<TargetContainer, std::unordered_map, Ex
     SW_CORE_API
     detail::SimpleExpected<std::pair<PackageVersion, ITarget *>> find(const PackagePath &pp, const PackageSettings &ts) const;
     SW_CORE_API
-    ITarget *find(const PackageName &pkg, const PackageSettings &ts) const;
+    ITarget *find(const PackageId &) const;
     SW_CORE_API
-    ITarget *find(const UnresolvedPackage &pkg, const PackageSettings &ts) const;
+    ITarget *find(const ResolveRequest &) const;
 };
 
 //

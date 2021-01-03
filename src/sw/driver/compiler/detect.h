@@ -54,7 +54,7 @@ struct SW_DRIVER_CPP_API ProgramDetector
 
     String getMsvcPrefix(const path &program) const;
 
-    static PredefinedProgramTarget &addProgram(DETECT_ARGS, const PackageId &, const PackageSettings &, const Program &);
+    static PredefinedProgramTarget &addProgram(DETECT_ARGS, const PackageName &, const PackageSettings &, const Program &);
 
     // actually should be PackagePath?
     // we do not want to use PackagePath here, because some entry points may detect specially versioned packages
@@ -66,11 +66,11 @@ struct SW_DRIVER_CPP_API ProgramDetector
     static DetectablePackageEntryPoints getDetectablePackages();
 
     template <class T>
-    static T &addTarget(DETECT_ARGS, const PackageId &id, const PackageSettings &ts)
+    static T &addTarget(DETECT_ARGS, const PackageName &id, const PackageSettings &ts)
     {
         log_msg_detect_target("Detected target: " + id.toString() + ": " + ts.toString());
 
-        auto t = std::make_unique<T>(id, ts);
+        auto t = std::make_unique<T>(PackageId{ id, ts });
         auto p = t.get();
         static_cast<ExtendedBuild &>(b).addTarget(std::move(t));
         return *p;

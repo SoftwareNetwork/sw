@@ -37,10 +37,10 @@ void ProgramDetector::detectFortranCompilers(DETECT_ARGS)
     p->file = f;
 
     auto v = getVersion(s, p->file);
-    addProgram(DETECT_ARGS_PASS, PackageId("org.gnu.gcc.fortran", v), {}, p);*/
+    addProgram(DETECT_ARGS_PASS, PackageName("org.gnu.gcc.fortran", v), {}, p);*/
 }
 
-FortranTarget::FortranTarget(TargetBase &parent, const PackageId &id)
+FortranTarget::FortranTarget(TargetBase &parent, const PackageName &id)
     : Target(parent, id), NativeTargetOptionsGroup((Target &)*this)
 {
 }

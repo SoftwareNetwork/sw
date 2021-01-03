@@ -50,15 +50,15 @@ void open_file(const path &);
 
 F(open_dir, const path &d)
 {
-    if (!sdb.isPackageInstalled(p))
-        throw SW_RUNTIME_ERROR("Package '" + p.toString() + "' is not installed");
+    if (!sdb.isPackageInstalled(p.getId()))
+        throw SW_RUNTIME_ERROR("Package '" + p.getId().toString() + "' is not installed");
     open_directory(d);
 }
 
 F(open_file, const path &f)
 {
-    if (!sdb.isPackageInstalled(p))
-        throw SW_RUNTIME_ERROR("Package '" + p.toString() + "' is not installed");
+    if (!sdb.isPackageInstalled(p.getId()))
+        throw SW_RUNTIME_ERROR("Package '" + p.getId().toString() + "' is not installed");
     open_file(f);
 #ifdef __linux__
     // sometimes we need more time to process file open
@@ -69,8 +69,8 @@ F(open_file, const path &f)
 
 F(install)
 {
-    if (sdb.isPackageInstalled(p))
-        throw SW_RUNTIME_ERROR("Package '" + p.toString() + "' is already installed");
+    if (sdb.isPackageInstalled(p.getId()))
+        throw SW_RUNTIME_ERROR("Package '" + p.getId().toString() + "' is already installed");
     setup_console();
     SW_UNIMPLEMENTED;
     //swctx.getContext().install(sw::UnresolvedPackages{ p });
@@ -86,7 +86,7 @@ F(build)
     setup_console();
 
     // simple protection for now
-    if (p.getPath().isRelative() || p.getPath().getOwner() != "sw")
+    if (p.getId().getName().getPath().isRelative() || p.getId().getName().getPath().getOwner() != "sw")
         throw SW_RUNTIME_ERROR("Insecure operation. Aborting...");
 
     SW_UNIMPLEMENTED;
@@ -98,7 +98,7 @@ F(build)
         free_ctx_and_delete_files(swctx, d);
     };
     ScopedCurrentPath scp(d, CurrentPathScope::All);
-    auto b = swctx.createBuildAndPrepare({ p.toString() });
+    auto b = swctx.createBuildAndPrepare({ p.getId().toString() });
     auto i = swctx.getContext().makeInput(p);
     b->addInput(i);
     b->build();
@@ -109,7 +109,7 @@ F(run)
     setup_console();
 
     // simple protection for now
-    if (p.getPath().isRelative() || p.getPath().getOwner() != "sw")
+    if (p.getId().getName().getPath().isRelative() || p.getId().getName().getPath().getOwner() != "sw")
         throw SW_RUNTIME_ERROR("Insecure operation. Aborting...");
 
     SW_UNIMPLEMENTED;
@@ -129,7 +129,8 @@ F(run)
     // detach is needed because only it helps spawned program to outlive sw app
     c.detached = true;
 
-    swctx.run(p, c);
+    SW_UNIMPLEMENTED;
+    //swctx.run(p, c);
 }
 
 F(upload)
@@ -141,14 +142,15 @@ F(upload)
     if (rs.empty())
         throw SW_RUNTIME_ERROR("No remote storages found");
 
-    sw::Package pkg(*rs.front(), swctx.getOptions().options_uri.uri_args[1]);
+    SW_UNIMPLEMENTED;
+    /*sw::Package pkg(*rs.front(), swctx.getOptions().options_uri.uri_args[1]);
     sw::PackageVersion new_version(swctx.getOptions().options_uri.uri_args[2]);
 
     String url = "https://raw.githubusercontent.com/SoftwareNetwork/specifications/master/";
     url += to_string(normalize_path(pkg.getHashPath() / "sw.cpp"));
     auto fn = sw::support::get_temp_filename("uploads") / "sw.cpp";
     auto spec_data = download_file(url);
-    boost::replace_all(spec_data, pkg.getVersion().toString(), new_version.toString());
+    boost::replace_all(spec_data, pkg.getId().getName().getVersion().toString(), new_version.toString());
     write_file(fn, spec_data);
 
     // before scp
@@ -160,7 +162,7 @@ F(upload)
     // run secure as below?
     ScopedCurrentPath scp(fn.parent_path());
     swctx.getOptions().options_upload.upload_prefix = pkg.getPath().slice(0, std::stoi(swctx.getOptions().options_uri.uri_args[3])).toString();
-    swctx.command_upload();
+    swctx.command_upload();*/
 
     /*primitives::Command c;
     c.program = "sw";

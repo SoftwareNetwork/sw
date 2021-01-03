@@ -18,13 +18,15 @@ DECLARE_STATIC_LOGGER(logger, "override");
 static void override_package_perform(SwClientContext &swctx, sw::PackagePath prefix)
 {
     auto dir = fs::canonical(".");
-    sw::PackageDescriptionMap pm;
+    SW_UNIMPLEMENTED;
+    //sw::PackageDescriptionMap pm;
 
     auto override_packages = [&]()
     {
-        for (auto &[pkg, desc] : pm)
+        //for (auto &[pkg, desc] : pm)
         {
-            sw::PackageId pkg2{ prefix / pkg.getPath(), pkg.getVersion() };
+            SW_UNIMPLEMENTED;
+            /*sw::PackageName pkg2{ prefix / pkg.getPath(), pkg.getVersion() };
             // fix deps' prefix
             sw::UnresolvedPackages deps;
             for (auto &d : desc->dependencies)
@@ -33,7 +35,7 @@ static void override_package_perform(SwClientContext &swctx, sw::PackagePath pre
                     deps.insert(d);
                 else
                     deps.insert({ prefix / d.getPath(), d.getRange() });
-            }
+            }*/
             SW_UNIMPLEMENTED;
             /*sw::LocalPackage lp(swctx.getContext().getLocalStorage(), pkg2);
             sw::PackageData d;
@@ -45,7 +47,7 @@ static void override_package_perform(SwClientContext &swctx, sw::PackagePath pre
         }
     };
 
-    if (!swctx.getOptions().options_override.load_overridden_packages_from_file.empty())
+    /*if (!swctx.getOptions().options_override.load_overridden_packages_from_file.empty())
     {
         auto j = nlohmann::json::parse(read_file(swctx.getOptions().options_override.load_overridden_packages_from_file));
         dir = j["sdir"].get<String>();
@@ -83,7 +85,7 @@ static void override_package_perform(SwClientContext &swctx, sw::PackagePath pre
         return;
     }
 
-    override_packages();
+    override_packages();*/
 }
 
 SUBCOMMAND_DECL(override)

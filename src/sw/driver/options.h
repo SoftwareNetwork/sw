@@ -318,12 +318,12 @@ struct SW_DRIVER_CPP_API NativeLinkerOptions : NativeLinkerOptionsData
     void add(const UnresolvedPackages &t);
     void remove(const UnresolvedPackages &t);
 
-    void add(const PackageId &t);
-    void remove(const PackageId &t);
+    void add(const PackageName &t);
+    void remove(const PackageName &t);
 
     DependencyPtr operator+(const ITarget &);
     DependencyPtr operator+(const DependencyPtr &);
-    DependencyPtr operator+(const PackageId &);
+    DependencyPtr operator+(const PackageName &);
     DependencyPtr operator+(const UnresolvedPackage &);
 
     std::vector<DependencyPtr> &getRawDependencies() { return deps; }

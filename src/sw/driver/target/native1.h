@@ -37,7 +37,7 @@ struct SW_DRIVER_CPP_API NativeTarget
     : Target
     //,protected NativeOptions
 {
-    NativeTarget(TargetBase &parent, const PackageId &);
+    NativeTarget(TargetBase &parent, const PackageName &);
     ~NativeTarget();
 
     virtual path getOutputFile() const;

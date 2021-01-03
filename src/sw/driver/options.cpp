@@ -191,7 +191,8 @@ PackageId DependencyData::getResolvedPackage() const
 {
     if (!target)
         throw SW_RUNTIME_ERROR("Package is unresolved: " + getPackage().toString());
-    return target->getPackage();
+    SW_UNIMPLEMENTED;
+    //return target->getPackage();
 }
 
 void DependencyData::setTarget(const ITarget &t)
@@ -514,7 +515,7 @@ DependencyPtr NativeLinkerOptions::operator+(const DependencyPtr &d)
     return d;
 }
 
-DependencyPtr NativeLinkerOptions::operator+(const PackageId &pkg)
+DependencyPtr NativeLinkerOptions::operator+(const PackageName &pkg)
 {
     auto d = std::make_shared<Dependency>(pkg);
     add(d);
@@ -590,12 +591,12 @@ void NativeLinkerOptions::remove(const UnresolvedPackages &t)
         remove(d);
 }
 
-void NativeLinkerOptions::add(const PackageId &p)
+void NativeLinkerOptions::add(const PackageName &p)
 {
     add(std::make_shared<Dependency>(p));
 }
 
-void NativeLinkerOptions::remove(const PackageId &p)
+void NativeLinkerOptions::remove(const PackageName &p)
 {
     remove(std::make_shared<Dependency>(p));
 }

@@ -35,7 +35,7 @@ struct SW_SUPPORT_API PackageData
 
     // settings
     // move to other place?
-    PackageSettings settings;
+    //PackageSettings settings;
 
     //
     PackageName driver;

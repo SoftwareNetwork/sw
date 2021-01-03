@@ -15,7 +15,7 @@ struct SW_DRIVER_CPP_API AdaTarget : Target
 {
     //std::shared_ptr<AdaCompiler> compiler;
 
-    AdaTarget(TargetBase &parent, const PackageId &);
+    AdaTarget(TargetBase &parent, const PackageName &);
 
     SW_TARGET_USING_ASSIGN_OPS(NativeTargetOptionsGroup);
 
@@ -40,7 +40,7 @@ struct SW_DRIVER_CPP_API CSharpTarget : Target
 {
     //std::shared_ptr<CSharpCompiler> compiler;
 
-    CSharpTarget(TargetBase &parent, const PackageId &);
+    CSharpTarget(TargetBase &parent, const PackageName &);
 
     SW_TARGET_USING_ASSIGN_OPS(NativeTargetOptionsGroup);
 
@@ -69,7 +69,7 @@ struct SW_DRIVER_CPP_API RustTarget : Target
 {
     //std::shared_ptr<RustCompiler> compiler;
 
-    RustTarget(TargetBase &parent, const PackageId &);
+    RustTarget(TargetBase &parent, const PackageName &);
 
     SW_TARGET_USING_ASSIGN_OPS(NativeTargetOptionsGroup);
 
@@ -97,7 +97,7 @@ struct SW_DRIVER_CPP_API GoTarget : Target
 {
     //std::shared_ptr<GoCompiler> compiler;
 
-    GoTarget(TargetBase &parent, const PackageId &);
+    GoTarget(TargetBase &parent, const PackageName &);
 
     SW_TARGET_USING_ASSIGN_OPS(NativeTargetOptionsGroup);
 
@@ -125,7 +125,7 @@ struct SW_DRIVER_CPP_API JavaTarget : Target
 {
     //std::shared_ptr<JavaCompiler> compiler;
 
-    JavaTarget(TargetBase &parent, const PackageId &);
+    JavaTarget(TargetBase &parent, const PackageName &);
 
     SW_TARGET_USING_ASSIGN_OPS(NativeTargetOptionsGroup);
 
@@ -153,7 +153,7 @@ struct SW_DRIVER_CPP_API KotlinTarget : Target
 {
     //std::shared_ptr<KotlinCompiler> compiler;
 
-    KotlinTarget(TargetBase &parent, const PackageId &);
+    KotlinTarget(TargetBase &parent, const PackageName &);
 
     SW_TARGET_USING_ASSIGN_OPS(NativeTargetOptionsGroup);
 
@@ -181,7 +181,7 @@ struct SW_DRIVER_CPP_API DTarget : NativeTarget
 {
     //std::shared_ptr<DCompiler> compiler;
 
-    DTarget(TargetBase &parent, const PackageId &);
+    DTarget(TargetBase &parent, const PackageName &);
 
     SW_TARGET_USING_ASSIGN_OPS(NativeTargetOptionsGroup);
 
@@ -238,7 +238,7 @@ struct SW_DRIVER_CPP_API PascalTarget : Target
 {
     //std::shared_ptr<PascalCompiler> compiler;
 
-    PascalTarget(TargetBase &parent, const PackageId &);
+    PascalTarget(TargetBase &parent, const PackageName &);
 
     SW_TARGET_USING_ASSIGN_OPS(NativeTargetOptionsGroup);
 
@@ -261,7 +261,7 @@ struct SW_DRIVER_CPP_API PascalExecutable : PascalTarget
 struct SW_DRIVER_CPP_API PythonLibrary : Target
     , SourceFileTargetOptions
 {
-    PythonLibrary(TargetBase &parent, const PackageId &);
+    PythonLibrary(TargetBase &parent, const PackageName &);
 
     void init() override;
     Files gatherAllFiles() const override;

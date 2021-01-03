@@ -13,6 +13,8 @@ struct NativeBuiltinTargetEntryPoint;
 // input_hash, EP
 using BuiltinEntryPoints = std::vector<std::tuple<size_t, std::unique_ptr<NativeBuiltinTargetEntryPoint>>>;
 
+using PackageIdSet = std::unordered_set<PackageName>;
+
 BuiltinEntryPoints load_builtin_entry_points();
 PackageIdSet load_builtin_packages();
 

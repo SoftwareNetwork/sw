@@ -24,10 +24,10 @@ void ProgramDetector::detectAdaCompilers(DETECT_ARGS)
     p->file = f;
 
     auto v = getVersion(s, p->file, "--version", "(\\d{4})(\\d{2})(\\d{2})");
-    addProgram(DETECT_ARGS_PASS, PackageId("org.gnu.gcc.ada", v), {}, p);*/
+    addProgram(DETECT_ARGS_PASS, PackageName("org.gnu.gcc.ada", v), {}, p);*/
 }
 
-AdaTarget::AdaTarget(TargetBase &parent, const PackageId &id)
+AdaTarget::AdaTarget(TargetBase &parent, const PackageName &id)
     : Target(parent, id), NativeTargetOptionsGroup((Target &)*this)
 {
 }
@@ -94,11 +94,11 @@ void ProgramDetector::detectCSharpCompilers(DETECT_ARGS)
         p->file = root / "csc.exe";
 
         auto v1 = getVersion(s, p->file);
-        addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.Roslyn.csc", v1), {}, p);
+        addProgram(DETECT_ARGS_PASS, PackageName("com.Microsoft.VisualStudio.Roslyn.csc", v1), {}, p);
     }*/
 }
 
-CSharpTarget::CSharpTarget(TargetBase &parent, const PackageId &id)
+CSharpTarget::CSharpTarget(TargetBase &parent, const PackageName &id)
     : Target(parent, id), NativeTargetOptionsGroup((Target &)*this)
 {
 }
@@ -148,10 +148,10 @@ void ProgramDetector::detectRustCompilers(DETECT_ARGS)
     p->file = f;
 
     auto v = getVersion(s, p->file);
-    addProgram(DETECT_ARGS_PASS, PackageId("org.rust.rustc", v), {}, p);*/
+    addProgram(DETECT_ARGS_PASS, PackageName("org.rust.rustc", v), {}, p);*/
 }
 
-RustTarget::RustTarget(TargetBase &parent, const PackageId &id)
+RustTarget::RustTarget(TargetBase &parent, const PackageName &id)
     : Target(parent, id), NativeTargetOptionsGroup((Target &)*this)
 {
 }
@@ -197,10 +197,10 @@ void ProgramDetector::detectGoCompilers(DETECT_ARGS)
     p->file = f;
 
     auto v = getVersion(s, p->file, "version");
-    addProgram(DETECT_ARGS_PASS, PackageId("org.google.golang.go", v), {}, p);*/
+    addProgram(DETECT_ARGS_PASS, PackageName("org.google.golang.go", v), {}, p);*/
 }
 
-GoTarget::GoTarget(TargetBase &parent, const PackageId &id)
+GoTarget::GoTarget(TargetBase &parent, const PackageName &id)
     : Target(parent, id), NativeTargetOptionsGroup((Target &)*this)
 {
 }
@@ -248,10 +248,10 @@ void ProgramDetector::detectJavaCompilers(DETECT_ARGS)
     p->file = f;
 
     auto v = getVersion(s, p->file);
-    addProgram(DETECT_ARGS_PASS, PackageId("com.oracle.java.javac", v), {}, p);*/
+    addProgram(DETECT_ARGS_PASS, PackageName("com.oracle.java.javac", v), {}, p);*/
 }
 
-JavaTarget::JavaTarget(TargetBase &parent, const PackageId &id)
+JavaTarget::JavaTarget(TargetBase &parent, const PackageName &id)
     : Target(parent, id), NativeTargetOptionsGroup((Target &)*this)
 {
 }
@@ -296,10 +296,10 @@ void ProgramDetector::detectKotlinCompilers(DETECT_ARGS)
     p->file = f;
 
     auto v = getVersion(s, p->file, "-version");
-    addProgram(DETECT_ARGS_PASS, PackageId("com.JetBrains.kotlin.kotlinc", v), {}, p);*/
+    addProgram(DETECT_ARGS_PASS, PackageName("com.JetBrains.kotlin.kotlinc", v), {}, p);*/
 }
 
-KotlinTarget::KotlinTarget(TargetBase &parent, const PackageId &id)
+KotlinTarget::KotlinTarget(TargetBase &parent, const PackageName &id)
     : Target(parent, id), NativeTargetOptionsGroup((Target &)*this)
 {
 }
@@ -351,10 +351,10 @@ void ProgramDetector::detectDCompilers(DETECT_ARGS)
     p->file = f;
 
     auto v = getVersion(s, p->file);
-    addProgram(DETECT_ARGS_PASS, PackageId("org.dlang.dmd.dmd", v), {}, p);*/
+    addProgram(DETECT_ARGS_PASS, PackageName("org.dlang.dmd.dmd", v), {}, p);*/
 }
 
-DTarget::DTarget(TargetBase &parent, const PackageId &id)
+DTarget::DTarget(TargetBase &parent, const PackageName &id)
     : NativeTarget(parent, id), NativeTargetOptionsGroup((Target &)*this)
 {
 }
@@ -445,10 +445,10 @@ void ProgramDetector::detectPascalCompilers(DETECT_ARGS)
     p->file = f;
 
     auto v = getVersion(s, p->file, "-version");
-    addProgram(DETECT_ARGS_PASS, PackageId("org.pascal.fpc", v), {}, p);*/
+    addProgram(DETECT_ARGS_PASS, PackageName("org.pascal.fpc", v), {}, p);*/
 }
 
-PascalTarget::PascalTarget(TargetBase &parent, const PackageId &id)
+PascalTarget::PascalTarget(TargetBase &parent, const PackageName &id)
     : Target(parent, id), NativeTargetOptionsGroup((Target &)*this)
 {
 }
@@ -491,7 +491,7 @@ Commands PascalTarget::getCommands1() const
     return cmds;*/
 }
 
-PythonLibrary::PythonLibrary(TargetBase &parent, const PackageId &id)
+PythonLibrary::PythonLibrary(TargetBase &parent, const PackageName &id)
     : Target(parent, id), SourceFileTargetOptions(*this)
 {
 }

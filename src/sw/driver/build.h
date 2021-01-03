@@ -45,7 +45,7 @@ private:
 struct DriverData
 {
     support::SourceDirMap source_dirs_by_source;
-    std::unordered_map<PackageId, path> source_dirs_by_package;
+    std::unordered_map<PackageName, path> source_dirs_by_package;
     support::SourcePtr force_source;
 };
 
@@ -78,7 +78,7 @@ struct SW_DRIVER_CPP_API Build : TargetBase
     Build(Build &&) = default;
     //~Build();
 
-    bool isKnownTarget(const PackageId &p) const;
+    bool isKnownTarget(const PackageName &p) const;
     std::optional<path> getSourceDir(const Source &s, const PackageVersion &v) const;
 
     const PackageSettings &getExternalVariables() const;

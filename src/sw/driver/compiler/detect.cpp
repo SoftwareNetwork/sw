@@ -152,7 +152,7 @@ void ProgramDetector::log_msg_detect_target(const String &m)
     //LOG_TRACE(logger, m);
 }
 
-PredefinedProgramTarget &ProgramDetector::addProgram(DETECT_ARGS, const PackageId &id, const PackageSettings &ts, const Program &p)
+PredefinedProgramTarget &ProgramDetector::addProgram(DETECT_ARGS, const PackageName &id, const PackageSettings &ts, const Program &p)
 {
     auto &t = addTarget<PredefinedProgramTarget>(DETECT_ARGS_PASS, id, ts);
     t.public_ts["output_file"] = to_string(normalize_path(p.file));
@@ -323,7 +323,7 @@ ProgramDetector::DetectablePackageMultiEntryPoints ProgramDetector::detectMsvcCo
             auto c = p->getCommand();
             c->addPathDirectory(m.host_root);
         }
-        auto &cl = addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.cl", m.cl_exe_version), eb.getSettings(), *p);
+        auto &cl = addProgram(DETECT_ARGS_PASS, PackageName("com.Microsoft.VisualStudio.VC.cl", m.cl_exe_version), eb.getSettings(), *p);
         auto r = std::make_unique<NativeCompilerRule>(p->clone());
         r->lang = NativeCompilerRule::LANG_C;
         cl.setRule("c", std::move(r));
@@ -352,7 +352,7 @@ ProgramDetector::DetectablePackageMultiEntryPoints ProgramDetector::detectMsvcCo
             auto c = p->getCommand();
             c->addPathDirectory(m.host_root);
         }
-        auto &t = addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.link", m.cl_exe_version), eb.getSettings(), *p);
+        auto &t = addProgram(DETECT_ARGS_PASS, PackageName("com.Microsoft.VisualStudio.VC.link", m.cl_exe_version), eb.getSettings(), *p);
         t.setRule("link", std::make_unique<NativeLinkerRule>(std::move(p)));
     });
 
@@ -372,7 +372,7 @@ ProgramDetector::DetectablePackageMultiEntryPoints ProgramDetector::detectMsvcCo
             auto c = p->getCommand();
             c->addPathDirectory(m.host_root);
         }
-        auto &t = addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.lib", m.cl_exe_version), eb.getSettings(), *p);
+        auto &t = addProgram(DETECT_ARGS_PASS, PackageName("com.Microsoft.VisualStudio.VC.lib", m.cl_exe_version), eb.getSettings(), *p);
         auto r = std::make_unique<NativeLinkerRule>(std::move(p));
         r->is_linker = false;
         t.setRule("lib", std::move(r));
@@ -392,7 +392,7 @@ ProgramDetector::DetectablePackageMultiEntryPoints ProgramDetector::detectMsvcCo
             if (!fs::exists(p->file))
                 return;
             getMsvcIncludePrefixes()[p->file] = m.msvc_prefix;
-            auto &t = addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.ml", m.cl_exe_version), eb.getSettings(), *p);
+            auto &t = addProgram(DETECT_ARGS_PASS, PackageName("com.Microsoft.VisualStudio.VC.ml", m.cl_exe_version), eb.getSettings(), *p);
             auto r = std::make_unique<NativeCompilerRule>(p->clone());
             r->lang = NativeCompilerRule::LANG_ASM;
             t.setRule("asm", std::move(r));
@@ -405,7 +405,7 @@ ProgramDetector::DetectablePackageMultiEntryPoints ProgramDetector::detectMsvcCo
         auto p = std::make_unique<SimpleProgram>();
         p->file = compiler / "dumpbin.exe";
         if (fs::exists(p->file))
-            addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.dumpbin", cl_exe_version), ts, p);
+            addProgram(DETECT_ARGS_PASS, PackageName("com.Microsoft.VisualStudio.VC.dumpbin", cl_exe_version), ts, p);
         // should we add path dir here?
     }*/
 
@@ -435,7 +435,7 @@ ProgramDetector::DetectablePackageMultiEntryPoints ProgramDetector::detectMsvcCo
         auto m = inm;
         m.process(DETECT_ARGS_PASS);
 
-        auto &libcpp = addTarget<PredefinedTarget>(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.libcpp", m.cl_exe_version), eb.getSettings());
+        auto &libcpp = addTarget<PredefinedTarget>(DETECT_ARGS_PASS, PackageName("com.Microsoft.VisualStudio.VC.libcpp", m.cl_exe_version), eb.getSettings());
         libcpp.public_ts["properties"]["6"]["system_include_directories"].push_back(m.idir);
         if (m.has_no_target_libdir())
             libcpp.public_ts["properties"]["6"]["system_link_directories"].push_back(m.root / "lib");
@@ -498,7 +498,7 @@ ProgramDetector::DetectablePackageMultiEntryPoints ProgramDetector::detectMsvcCo
         auto &eb = static_cast<ExtendedBuild &>(b);
         auto m = inm;
         m.process(DETECT_ARGS_PASS);
-        auto &atlmfc = addTarget<PredefinedTarget>(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.ATLMFC", m.cl_exe_version), eb.getSettings());
+        auto &atlmfc = addTarget<PredefinedTarget>(DETECT_ARGS_PASS, PackageName("com.Microsoft.VisualStudio.VC.ATLMFC", m.cl_exe_version), eb.getSettings());
         atlmfc.public_ts["properties"]["6"]["system_include_directories"].push_back(m.root / "ATLMFC" / "include");
         if (m.has_no_target_libdir())
             atlmfc.public_ts["properties"]["6"]["system_link_directories"].push_back(m.root / "ATLMFC" / "lib");
@@ -521,7 +521,7 @@ ProgramDetector::DetectablePackageMultiEntryPoints ProgramDetector::detectMsvcCo
         if (m.cl_exe_version.getMajor() < 19)
             return;
 
-        auto &concrt = addTarget<PredefinedTarget>(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.concrt", m.cl_exe_version), eb.getSettings());
+        auto &concrt = addTarget<PredefinedTarget>(DETECT_ARGS_PASS, PackageName("com.Microsoft.VisualStudio.VC.concrt", m.cl_exe_version), eb.getSettings());
         // protected?
         concrt.public_ts["properties"]["6"]["system_include_directories"].push_back(m.root / "crt" / "src" / "concrt");
         concrt.public_ts["properties"]["6"]["system_link_libraries"].push_back(
@@ -542,7 +542,7 @@ ProgramDetector::DetectablePackageMultiEntryPoints ProgramDetector::detectMsvcCo
         if (m.cl_exe_version.getMajor() < 19)
             return;
 
-        auto &vcruntime = addTarget<PredefinedTarget>(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.runtime", m.cl_exe_version), eb.getSettings());
+        auto &vcruntime = addTarget<PredefinedTarget>(DETECT_ARGS_PASS, PackageName("com.Microsoft.VisualStudio.VC.runtime", m.cl_exe_version), eb.getSettings());
         // protected?
         //vcruntime.public_ts["properties"]["6"]["system_include_directories"].push_back(root / "crt" / "src" / "vcruntime");
         vcruntime.public_ts["properties"]["6"]["system_link_libraries"].push_back(
@@ -650,7 +650,7 @@ ProgramDetector::DetectablePackageMultiEntryPoints ProgramDetector::detectWindow
             return;
         }
 
-        auto &c = addProgram(DETECT_ARGS_PASS, PackageId("org.LLVM.clangcl", v), {}, *p);
+        auto &c = addProgram(DETECT_ARGS_PASS, PackageName("org.LLVM.clangcl", v), {}, *p);
         auto c2 = p->getCommand();
         //c2->push_back("-X"); // prevents include dirs autodetection
         // we use --nostdinc, so -X is not needed
@@ -694,7 +694,7 @@ ProgramDetector::DetectablePackageMultiEntryPoints ProgramDetector::detectWindow
             p->file = f;
         }
         auto v = getVersion(b.getContext(), p->file);
-        addProgram(DETECT_ARGS_PASS, PackageId("org.LLVM.lld", v), {}, *p);
+        addProgram(DETECT_ARGS_PASS, PackageName("org.LLVM.lld", v), {}, *p);
     });
 
     // lld-link
@@ -711,7 +711,7 @@ ProgramDetector::DetectablePackageMultiEntryPoints ProgramDetector::detectWindow
         }
 
         auto v = getVersion(b.getContext(), p->file);
-        addProgram(DETECT_ARGS_PASS, PackageId("org.LLVM.lld.link", v), {}, *p);
+        addProgram(DETECT_ARGS_PASS, PackageName("org.LLVM.lld.link", v), {}, *p);
 
         auto c2 = p->getCommand();
         c2->push_back("-lldignoreenv"); // prevents libs dirs autodetection (from msvc)
@@ -730,7 +730,7 @@ ProgramDetector::DetectablePackageMultiEntryPoints ProgramDetector::detectWindow
             p->file = f;
         }
         auto v = getVersion(b.getContext(), p->file);
-        addProgram(DETECT_ARGS_PASS, PackageId("org.LLVM.ar", v), {}, *p);
+        addProgram(DETECT_ARGS_PASS, PackageName("org.LLVM.ar", v), {}, *p);
     });
 
     // C
@@ -747,7 +747,7 @@ ProgramDetector::DetectablePackageMultiEntryPoints ProgramDetector::detectWindow
         }
 
         auto v = getVersion(b.getContext(), p->file);
-        auto &c = addProgram(DETECT_ARGS_PASS, PackageId("org.LLVM.clang", v), {}, *p);
+        auto &c = addProgram(DETECT_ARGS_PASS, PackageName("org.LLVM.clang", v), {}, *p);
 
         if (colored_output)
         {
@@ -781,7 +781,7 @@ ProgramDetector::DetectablePackageMultiEntryPoints ProgramDetector::detectWindow
         }
 
         auto v = getVersion(b.getContext(), p->file);
-        auto &c = addProgram(DETECT_ARGS_PASS, PackageId("org.LLVM.clangpp", v), {}, *p);
+        auto &c = addProgram(DETECT_ARGS_PASS, PackageName("org.LLVM.clangpp", v), {}, *p);
 
         if (colored_output)
         {
@@ -818,7 +818,7 @@ void ProgramDetector::detectIntelCompilers(DETECT_ARGS)
             if (fs::exists(p->file))
             {
                 auto v = getVersion(s, p->file);
-                addProgram(DETECT_ARGS_PASS, PackageId(ppath, v), {}, p);
+                addProgram(DETECT_ARGS_PASS, PackageName(ppath, v), {}, p);
 
                 // icl/xilib/xilink on win wants VC in PATH
                 auto &cld = s.getPredefinedTargets();
@@ -885,7 +885,7 @@ void ProgramDetector::detectIntelCompilers(DETECT_ARGS)
             if (fs::exists(p->file))
             {
                 auto v = getVersion(s, p->file);
-                addProgram(DETECT_ARGS_PASS, PackageId("com.intel.compiler.c", v), {}, p);
+                addProgram(DETECT_ARGS_PASS, PackageName("com.intel.compiler.c", v), {}, p);
             }
         }
 
@@ -895,7 +895,7 @@ void ProgramDetector::detectIntelCompilers(DETECT_ARGS)
             if (fs::exists(p->file))
             {
                 auto v = getVersion(s, p->file);
-                addProgram(DETECT_ARGS_PASS, PackageId("com.intel.compiler.cpp", v), {}, p);
+                addProgram(DETECT_ARGS_PASS, PackageName("com.intel.compiler.cpp", v), {}, p);
             }
         }
     }*/
@@ -925,7 +925,7 @@ void ProgramDetector::detectNonWindowsCompilers(DETECT_ARGS)
         // the following version 7.4.0-1ubuntu1~18.04.1
         // which will be parsed as pre-release
         auto v = getVersion(s, p->file, "--version", regex_prefix + "\\d+(\\.\\d+){2,}");
-        auto &c = addProgram(DETECT_ARGS_PASS, PackageId(ppath, v), {}, p);
+        auto &c = addProgram(DETECT_ARGS_PASS, PackageName(ppath, v), {}, p);
         //-fdiagnostics-color=always // gcc
         if (colored_output)
         {

@@ -161,7 +161,8 @@ void run1(const sw::LocalPackage &pkg, primitives::Command &c, bool gRunAppInCon
     LPPROC_THREAD_ATTRIBUTE_LIST lpAttributeList = 0;
 
     String rel_name;
-    if (pkg.getPath().isRelative())
+    SW_UNIMPLEMENTED;
+    /*if (pkg.getPath().isRelative())
         rel_name = "." + std::to_string(abs((long long)std::hash<path>()(c.getProgram())));
 
     auto container_name_s = to_wstring("sw.app." + pkg.getHash().substr(0, 32) + rel_name);
@@ -318,7 +319,7 @@ void run1(const sw::LocalPackage &pkg, primitives::Command &c, bool gRunAppInCon
         if (std::any_of(err.begin(), err.end(), [](auto e) {return e != 0;}))
             throw SW_RUNTIME_ERROR(err.c_str()); // to strip nulls
         throw SW_RUNTIME_ERROR(c.getError());
-    }
+    }*/
 }
 
 #endif

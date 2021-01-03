@@ -220,7 +220,7 @@ void detail::PrecompiledHeader::setup(const NativeCompiledTarget &t, const PathO
     File(pdb, t.getFs()).setGenerated();
 }
 
-NativeTarget::NativeTarget(TargetBase &parent, const PackageId &id)
+NativeTarget::NativeTarget(TargetBase &parent, const PackageName &id)
     : Target(parent, id)
 {
 }
@@ -255,7 +255,7 @@ path NativeTarget::getOutputFile() const
     SW_UNIMPLEMENTED;
 }
 
-NativeCompiledTarget::NativeCompiledTarget(TargetBase &parent, const PackageId &id)
+NativeCompiledTarget::NativeCompiledTarget(TargetBase &parent, const PackageName &id)
     : NativeTarget(parent, id), NativeTargetOptionsGroup((Target &)*this)
 {
 }
@@ -701,7 +701,7 @@ void NativeCompiledTarget::addPackageDefinitions(bool defs)
         a["PACKAGE_NAME_WITHOUT_OWNER"] = q/* + getPackage().getPath().slice(2).toString()*/ + q;
         a["PACKAGE_NAME_CLEAN"] = q + (isLocal()
             ? getPackage().getPath().toString()
-            : getLocalPackage().getPath().slice(getLocalPackage().getData().prefix).toString()) + q;
+            : getLocalPackage().getId().getName().getPath().slice(getLocalPackage().getData().prefix).toString()) + q;
 
         //"@PACKAGE_CHANGE_DATE@"
             //"@PACKAGE_RELEASE_DATE@"
@@ -1515,7 +1515,7 @@ void NativeCompiledTarget::prepare()
             auto &p = getSettings()["rule"][name]["package"];
             UnresolvedPackage u = p.is<UnresolvedPackage>()
                 ? p.get<UnresolvedPackage>()
-                : p.get<PackageId>()
+                : p.get<PackageName>()
                 ;
             auto d = std::make_shared<Dependency>(u);
             setDummyDependencySettings(d);
@@ -1539,7 +1539,7 @@ void NativeCompiledTarget::prepare()
                 auto &p = getSettings()["rule"][r]["package"];
                 UnresolvedPackage u = p.is<UnresolvedPackage>()
                     ? p.get<UnresolvedPackage>()
-                    : p.get<PackageId>()
+                    : p.get<PackageName>()
                     ;
                 auto d = std::make_shared<Dependency>(u);
                 d->getSettings() = getSettings();
@@ -1886,9 +1886,9 @@ void NativeCompiledTarget::prepare_pass2()
         for (auto &d : getActiveDependencies())
         {
             auto pkg = d.dep->getResolvedPackage();
-            if (pkg.getPath() == "com.Microsoft.VisualStudio.VC.libcpp")
+            if (pkg.getName().getPath() == "com.Microsoft.VisualStudio.VC.libcpp")
             {
-                if (pkg.getVersion() > PackageVersion(19) && CPPVersion < CPPLanguageStandard::CPP14)
+                if (pkg.getName().getVersion() > PackageVersion(19) && CPPVersion < CPPLanguageStandard::CPP14)
                     CPPVersion = CPPLanguageStandard::CPP14;
                 break;
             }
@@ -1917,7 +1917,7 @@ struct H
 {
     size_t operator()(const DependencyPtr &p) const
     {
-        return std::hash<PackageId>()(p->getTarget().getPackage());
+        return std::hash<PackageName>()(p->getTarget().getPackage());
     }
 };
 

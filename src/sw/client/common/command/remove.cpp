@@ -8,9 +8,9 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "remove");
 
-static sw::PackageIdSet getMatchingPackagesSet(const sw::StorageWithPackagesDatabase &s, const String &unresolved_pkg)
+static auto getMatchingPackagesSet(const sw::StorageWithPackagesDatabase &s, const String &unresolved_pkg)
 {
-    sw::PackageIdSet p;
+    std::unordered_set<sw::PackageName> p;
     for (auto &[ppath, versions] : getMatchingPackages(s, unresolved_pkg))
     {
         for (auto &v : versions)

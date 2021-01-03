@@ -63,14 +63,14 @@ static void basicResolve(PackageSettings &ts)
     {
         ResolveRequest rr{ m["package"].get<UnresolvedPackage>(), ts2 };
         if (ts["resolver"].resolve(rr))
-            m["package"] = UnresolvedPackage{ rr.getPackage() };
+            m["package"] = UnresolvedPackage{ rr.getPackage().getId().getName() };
         // otherwise we silently ignore until rule is used
     }
     for (auto &&[_, m] : ts["native"]["stdlib"].getMap())
     {
         ResolveRequest rr{ m.get<UnresolvedPackage>(), ts }; // with rules!
         if (ts["resolver"].resolve(rr))
-            m = UnresolvedPackage{ rr.getPackage() };
+            m = UnresolvedPackage{ rr.getPackage().getId().getName() };
         // otherwise we silently ignore until rule is used
     }
 }

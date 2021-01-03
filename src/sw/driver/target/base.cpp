@@ -75,7 +75,7 @@ TargetBase::TargetBase(const TargetBase &rhs)
 {
 }
 
-TargetBase::TargetBase(const TargetBase &rhs, const PackageId &inpkg)
+TargetBase::TargetBase(const TargetBase &rhs, const PackageName &inpkg)
 {
     auto &parent = rhs;
 
@@ -95,7 +95,7 @@ TargetBase::TargetBase(const TargetBase &rhs, const PackageId &inpkg)
     // we do not activate targets that are not selected for current builds
     DryRun = !getSolution().isKnownTarget(inpkg);
 
-    pkg = std::make_unique<PackageId>(inpkg);
+    pkg = std::make_unique<PackageName>(inpkg);
 
     // pkg
     if (!DryRun)
@@ -180,7 +180,7 @@ bool TargetBase::isLocal() const
     return Local;
 }
 
-const PackageId &TargetBase::getPackage() const
+const PackageName &TargetBase::getPackage() const
 {
     if (!pkg)
         throw SW_LOGIC_ERROR("pkg not created");
@@ -194,7 +194,7 @@ const LocalPackage &TargetBase::getLocalPackage() const
     return *lpkg;
 }
 
-Target::Target(TargetBase &parent, const PackageId &inpkg)
+Target::Target(TargetBase &parent, const PackageName &inpkg)
     : TargetBase(parent, inpkg)
 {
     ts = static_cast<ExtendedBuild &>(getSolution()).getSettings();
@@ -963,7 +963,7 @@ void Target::addTest(Test &cb, const String &name)
 
 DependencyPtr Target::constructThisPackageDependency(const String &name)
 {
-    PackageId id(NamePrefix / name, getPackage().getVersion());
+    PackageName id(NamePrefix / name, getPackage().getVersion());
     return std::make_shared<Dependency>(id);
 }
 

@@ -15,7 +15,7 @@ struct SW_DRIVER_CPP_API FortranTarget : Target
 {
     //std::shared_ptr<FortranCompiler> compiler;
 
-    FortranTarget(TargetBase &parent, const PackageId &);
+    FortranTarget(TargetBase &parent, const PackageName &);
 
     SW_TARGET_USING_ASSIGN_OPS(NativeTargetOptionsGroup);
 

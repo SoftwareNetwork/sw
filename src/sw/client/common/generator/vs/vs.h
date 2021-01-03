@@ -199,13 +199,13 @@ struct PackagePathTree
     using Directories = std::set<sw::PackagePath>;
 
     std::map<String, PackagePathTree> tree;
-    sw::PackageIdSet projects;
+    std::unordered_set<sw::PackageName> projects;
 
-    void add(const sw::PackageId &);
+    void add(const sw::PackageName &);
     Directories getDirectories(const sw::PackagePath &p = {});
 
 private:
-    void add(const sw::PackagePath &, const sw::PackageId &project);
+    void add(const sw::PackagePath &, const sw::PackageName &project);
 };
 
 enum class FlagTableFlags
