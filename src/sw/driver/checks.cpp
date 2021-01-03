@@ -841,7 +841,14 @@ FunctionExists::FunctionExists(const String &f, const String &def)
 
 String FunctionExists::getSourceFileContents() const
 {
-    static const String src{ R"(
+    String src;
+    for (auto &d : Parameters.Includes)
+    {
+        auto c = check_set->get<IncludeExists>(d);
+        if (c->Value && c->Value.value())
+            src += "#include <" + d + ">\n";
+    }
+    src += R"(
 #ifdef __cplusplus
 extern "C"
 #endif
@@ -862,8 +869,7 @@ int main(int ac, char* av[])
   }
   return 0;
 }
-)"
-    };
+)";
 
     return src;
 }
@@ -912,7 +918,14 @@ IncludeExists::IncludeExists(const String &i, const String &def)
 
 String IncludeExists::getSourceFileContents() const
 {
-    String src = "#include <" + data + ">";
+    String src;
+    for (auto &d : Parameters.Includes)
+    {
+        auto c = check_set->get<IncludeExists>(d);
+        if (c->Value && c->Value.value())
+            src += "#include <" + d + ">\n";
+    }
+    src += "#include <" + data + ">";
     if (filename.extension() == ".c")
         src += R"(
 #ifdef __CLASSIC_C__
