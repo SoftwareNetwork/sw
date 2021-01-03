@@ -842,12 +842,8 @@ FunctionExists::FunctionExists(const String &f, const String &def)
 String FunctionExists::getSourceFileContents() const
 {
     String src;
-    for (auto &d : Parameters.Includes)
-    {
-        auto c = check_set->get<IncludeExists>(d);
-        if (c->Value && c->Value.value())
-            src += "#include <" + d + ">\n";
-    }
+    // we cannot add includes here as we using C prototype
+    // and with header it will be invalid on redeclaration
     src += R"(
 #ifdef __cplusplus
 extern "C"
