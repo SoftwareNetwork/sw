@@ -216,13 +216,6 @@ struct BuiltinStorage : IStorage
             available_loaders[k.getPath()].addPair(k.getRange(), v);
     }
 
-    /*PackageDataPtr loadData(const PackageId &) const override
-    {
-        auto d = std::make_unique<PackageData>();
-        d->prefix = 0;
-        return std::move(d);
-    }*/
-
     std::unique_ptr<Package> makePackage(const PackageId &id) const override
     {
         return std::make_unique<BuiltinPackage>(id);
@@ -230,50 +223,10 @@ struct BuiltinStorage : IStorage
 
     bool resolve(ResolveRequest &rr) const override
     {
-        // now check local packages
         auto alit = available_loaders.find(rr.u.getPath());
         if (alit == available_loaders.end())
             return false;
         return alit->second.resolve(*this, rr);
-
-        // now check local packages
-        /*auto i = eps.equal_range(rr.u);
-        if (i.first == eps.end())
-            return false;
-
-        // the best candidate is selected inside setPackage()
-        std::vector<std::pair<ITargetPtr, NativeBuiltinTargetEntryPoint::BuildFunction>> targets;
-        VersionSet s;
-        for (auto it = i.first; it != i.second; it++)
-        {
-            Build b(*sb);
-            b.module_data.current_settings = rr.settings;
-            it->second(b);
-            SW_CHECK(b.module_data.getTargets().size() <= 1); // only 1 target per build call
-            if (b.module_data.getTargets().empty())
-                continue;
-            targets.emplace_back(std::move(b.module_data.getTargets()[0]), it->second);
-        }
-        if (targets.empty())
-            return false;
-        for (auto &[t, ep] : targets)
-        {
-            s.insert(t->getPackage().getVersion());
-            // also register
-            eps.emplace(t->getPackage(), ep);
-        }
-        auto v = rr.u.getRange().getMaxSatisfyingVersion(s);
-        for (auto &[t,f] : targets)
-        {
-            if (!v || *v == t->getPackage().getVersion())
-            {
-                auto p = std::make_unique<BuiltinPackage>(*this, t->getPackage());
-                p->f = f;
-                rr.setPackage(std::move(p));
-            }
-        }
-        SW_CHECK(rr.isResolved());
-        return true;*/
     }
 };
 
