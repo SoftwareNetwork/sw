@@ -16,7 +16,6 @@ struct SW_SUPPORT_API ResolveRequestResult
     PackagePtr r;
 
     bool isResolved() const { return !!r; }
-    Package &getPackage() const { if (!isResolved()) throw SW_RUNTIME_ERROR("not resolved"); return *r; }
 
     // if package version higher than current, overwrite
     // if both are branches, do not accept new
@@ -46,6 +45,7 @@ struct SW_SUPPORT_API ResolveRequest : ResolveRequestResult
 
     const PackageSettings &getSettings() const { return settings; }
     const UnresolvedPackage &getUnresolvedPackage() const { return u; }
+    Package &getPackage() const { if (!isResolved()) throw SW_RUNTIME_ERROR("Package was not resolved: " + u.toString()); return *r; }
 };
 
 struct SW_SUPPORT_API IResolver

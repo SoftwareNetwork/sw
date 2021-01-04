@@ -63,6 +63,7 @@ struct SW_DRIVER_CPP_API Driver : IDriver
 private:
     SwContext &swctx;
     std::unique_ptr<struct BuiltinStorage> bs;
+    std::unique_ptr<struct ConfigStorage> cs;
 
     std::unique_ptr<SwBuild> create_build(SwContext &swctx) const;
 };

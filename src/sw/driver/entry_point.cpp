@@ -450,8 +450,8 @@ std::vector<ITargetPtr> NativeTargetEntryPoint::loadPackages(SwBuild &swb, const
 }
 
 NativeBuiltinTargetEntryPoint::NativeBuiltinTargetEntryPoint(BuildFunction bf)
-    : bf(bf)
 {
+    this->bf = bf;
 }
 
 void NativeBuiltinTargetEntryPoint::loadPackages1(Build &b) const

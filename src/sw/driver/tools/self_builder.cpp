@@ -102,20 +102,18 @@ String write_build_script_headers(SwCoreContext &swctx, const std::vector<Resolv
     return ctx.getText();
 }
 
-String write_build_script(SwCoreContext &swctx, const std::vector<ResolveRequest> &m_in)
+String write_build_script(SwCoreContext &swctx, const std::vector<ResolveRequest> &rrs)
 {
     auto &idb = swctx.getInputDatabase();
 
-    std::set<PackageName> pkgs;
-    std::unordered_set<size_t> hash_pkgs;
-    for (auto &rr : m_in)
+    std::unordered_map<size_t, std::unordered_map<UnresolvedPackage, PackageName>> hash_pkgs;
+    for (auto &rr : rrs)
     {
         SpecificationFiles sf;
         sf.addFile("sw.cpp", rr.getPackage().getDirSrc2() / "sw.cpp");
         Specification s(sf);
         auto h = s.getHash(idb);
-        hash_pkgs.insert(h);
-        pkgs.emplace(rr.getPackage().getId().getName());
+        hash_pkgs[h].emplace(rr.getUnresolvedPackage(), rr.getPackage().getId().getName());
     }
 
     primitives::CppEmitter ctx;
@@ -124,7 +122,7 @@ String write_build_script(SwCoreContext &swctx, const std::vector<ResolveRequest
     ctx.beginFunction("BuiltinEntryPoints load_builtin_entry_points()");
     ctx.addLine("BuiltinEntryPoints epm;");
     ctx.addLine();
-    for (auto &rr : m_in)
+    for (auto &rr : rrs)
     {
         SpecificationFiles sf;
         sf.addFile("sw.cpp", rr.getPackage().getDirSrc2() / "sw.cpp");
@@ -132,7 +130,6 @@ String write_build_script(SwCoreContext &swctx, const std::vector<ResolveRequest
         auto h = s.getHash(idb);
         if (!hash_pkgs.contains(h))
             continue;
-        hash_pkgs.erase(h);
 
         auto fn = s.files.getData().begin()->second.absolute_path;
         auto f = read_file(fn);
@@ -140,24 +137,21 @@ String write_build_script(SwCoreContext &swctx, const std::vector<ResolveRequest
 
         auto var = hdr_vars[h];
         ctx.beginBlock();
-        ctx.addLine("auto ep = std::make_unique<NativeBuiltinTargetEntryPoint>(build_" + var + ");");
+        ctx.addLine("auto &e = epm.emplace_back();");
+        ctx.addLine("e.bfs.bf = build_" + var + ";");
         if (has_checks)
-            ctx.addLine("ep->cf = check_" + var + ";");
-        ctx.addLine("epm.emplace_back(" + std::to_string(h) + ", std::move(ep));");
+            ctx.addLine("e.bfs.cf = check_" + var + ";");
+        ctx.addLine("e.hash = " + std::to_string(h) + ";");
+        for (auto &&[u, n] : hash_pkgs[h])
+            ctx.addLine("e.add_pair(\"" + u.toString() + "\"s, \"" + n.toString() + "\"s);");
         ctx.endBlock();
         ctx.emptyLines();
+
+        hash_pkgs.erase(h);
     }
     ctx.addLine("return epm;");
     ctx.endFunction();
-
-    // pkgs
-    ctx.beginFunction("PackageIdSet load_builtin_packages()");
-    ctx.addLine("return");
-    ctx.beginBlock();
-    for (auto &p : pkgs)
-        ctx.addLine("\"" + p.toString() + "\"s,");
-    ctx.endBlock(true);
-    ctx.endFunction();
+    //
     ctx.endNamespace();
 
     return ctx.getText();

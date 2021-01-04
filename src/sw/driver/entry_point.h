@@ -9,7 +9,6 @@
 namespace sw
 {
 
-struct NativeTargetEntryPoint;
 struct Target;
 struct SharedLibraryTarget;
 struct Build;
@@ -20,7 +19,7 @@ struct DriverData;
 struct Input;
 
 // this driver ep
-struct NativeTargetEntryPoint// : TargetEntryPoint
+struct NativeTargetEntryPoint
 {
     path source_dir;
     mutable std::unique_ptr<DriverData> dd;
@@ -31,17 +30,20 @@ struct NativeTargetEntryPoint// : TargetEntryPoint
     ExtendedBuild createBuild(SwBuild &, const PackageSettings &, const PackageName *allowed_package, const PackagePath &prefix) const;
 
 private:
-    virtual void loadPackages1(Build &) const {}
+    virtual void loadPackages1(Build &) const { SW_UNIMPLEMENTED; }
 };
 
-struct NativeBuiltinTargetEntryPoint : NativeTargetEntryPoint
+struct EntryPointFunctions
 {
     using BuildFunction = std::function<void(Build &)>;
     using CheckFunction = std::function<void(Checker &)>;
 
     BuildFunction bf;
     CheckFunction cf;
+};
 
+struct NativeBuiltinTargetEntryPoint : NativeTargetEntryPoint, EntryPointFunctions
+{
     NativeBuiltinTargetEntryPoint(BuildFunction bf);
 
 private:

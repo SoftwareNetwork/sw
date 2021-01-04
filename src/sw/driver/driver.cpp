@@ -32,10 +32,6 @@
 #include <primitives/yaml.h>
 #include <toml.hpp>
 
-#ifdef _WIN32
-#include <combaseapi.h>
-#endif
-
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "driver.cpp");
 
@@ -138,6 +134,7 @@ struct BuiltinPackage : Package
     using Package::Package;
     bool isInstallable() const override { return false; }
     std::unique_ptr<Package> clone() const override { return std::make_unique<BuiltinPackage>(*this); }
+    path getDirSrc2() const override { return getData().sdir; }
 };
 
 // actually this is system storage
@@ -208,7 +205,6 @@ struct BuiltinStorage : IStorage
 
     SwContext &swctx;
     std::unique_ptr<SwBuild> sb;
-    mutable std::unordered_map<PackagePath, PackageName> targets;
     mutable std::unordered_map<PackagePath, BuiltinLoader> available_loaders;
 
     BuiltinStorage(SwContext &swctx)
@@ -220,19 +216,12 @@ struct BuiltinStorage : IStorage
             available_loaders[k.getPath()].addPair(k.getRange(), v);
     }
 
-    //const StorageSchema &getSchema() const override { SW_UNREACHABLE; }
     /*PackageDataPtr loadData(const PackageId &) const override
     {
         auto d = std::make_unique<PackageData>();
         d->prefix = 0;
         return std::move(d);
     }*/
-
-    void addTarget(const PackageName &pkg)
-    {
-        if (!targets.emplace(pkg.getPath(), pkg).second)
-            throw SW_RUNTIME_ERROR("Duplicate package paths, rewrite this code");
-    }
 
     std::unique_ptr<Package> makePackage(const PackageId &id) const override
     {
@@ -241,17 +230,6 @@ struct BuiltinStorage : IStorage
 
     bool resolve(ResolveRequest &rr) const override
     {
-        // test default storage first
-        if (auto i = targets.find(rr.u.getPath()); i != targets.end())
-        {
-            ResolveRequest rr2{ i->second, rr.settings };
-            if (swctx.resolve(rr2, true))
-            {
-                rr.setPackage(rr2.getPackage().clone());
-                return true;
-            }
-        }
-
         // now check local packages
         auto alit = available_loaders.find(rr.u.getPath());
         if (alit == available_loaders.end())
@@ -296,6 +274,56 @@ struct BuiltinStorage : IStorage
         }
         SW_CHECK(rr.isResolved());
         return true;*/
+    }
+};
+
+struct ConfigPackage : Package
+{
+    EntryPointFunctions epfs;
+
+    using Package::Package;
+    std::unique_ptr<Package> clone() const override { return std::make_unique<ConfigPackage>(*this); }
+    bool isInstallable() const override { return false; }
+    path getDirSrc2() const override { return getData().sdir; }
+};
+
+struct ConfigStorage : IStorage
+{
+    SwContext &swctx;
+    std::unordered_map<size_t, EntryPointFunctions> eps;
+    std::unordered_map<UnresolvedPackage, std::pair<PackageName,size_t>> targets;
+
+    ConfigStorage(SwContext &swctx)
+        : swctx(swctx)
+    {
+    }
+
+    bool resolve(ResolveRequest &rr) const override
+    {
+        // we try to resolve ourselves using default storage
+
+        if (auto i = targets.find(rr.u); i != targets.end())
+        {
+            ResolveRequest rr2{ i->second.first, rr.settings };
+            if (swctx.resolve(rr2, true))
+            {
+                auto &p = rr2.getPackage();
+                auto pkg = makePackage(p.getId());
+                auto &p2 = (ConfigPackage &)*pkg;
+                p2.epfs = eps.find(i->second.second)->second;
+                auto d = std::make_unique<PackageData>(p.getData());
+                pkg->setData(std::move(d));
+                rr.setPackageForce(std::move(pkg));
+                return true;
+            }
+        }
+        return false;
+    }
+
+    std::unique_ptr<Package> makePackage(const PackageId &id) const override
+    {
+        auto p = std::make_unique<ConfigPackage>(id);
+        return p;
     }
 };
 
@@ -365,17 +393,15 @@ Driver::Driver(SwContext &swctx)
     : swctx(swctx)
 {
     bs = std::make_unique<BuiltinStorage>(swctx);
+    cs = std::make_unique<ConfigStorage>(swctx);
 
     // register inputs
-    for (auto &&[h, ep] : load_builtin_entry_points())
+    for (auto &&e : load_builtin_entry_points())
     {
-        auto i = std::make_unique<BuiltinInput>(swctx, *this, h);
-        i->setEntryPoint(std::move(ep));
-        swctx.registerInput(std::move(i));
+        cs->eps[e.hash] = e.bfs;
+        for (auto &&[u,n] : e.resolver_cache)
+            cs->targets.emplace(u, decltype(cs->targets)::mapped_type{ n, e.hash });
     }
-
-    for (auto &&p : load_builtin_packages())
-        bs->addTarget(p);
 }
 
 Driver::~Driver()
@@ -598,6 +624,15 @@ std::unique_ptr<Input> Driver::getInput(const Package &p) const
         auto h = std::hash<Package>()(p);
         auto i = std::make_unique<BuiltinInput>(swctx, *this, h);
         auto ep = std::make_unique<sw::NativeBuiltinTargetEntryPoint>(lp->f);
+        i->setEntryPoint(std::move(ep));
+        return i;
+    }
+    else if (auto lp = dynamic_cast<const ConfigPackage *>(&p))
+    {
+        auto h = std::hash<Package>()(p);
+        auto i = std::make_unique<BuiltinInput>(swctx, *this, h);
+        auto ep = std::make_unique<sw::NativeBuiltinTargetEntryPoint>(lp->epfs.bf);
+        ep->cf = lp->epfs.cf; // copy check ep
         i->setEntryPoint(std::move(ep));
         return i;
     }
@@ -838,7 +873,12 @@ std::unordered_map<path, PrepareConfigOutputData> Driver::build_configs1(SwConte
     //if (!b)
     auto b = create_build(ctx);
 
-    b->getResolver().addStorage(*bs);
+    CachedStorage cs;
+    CachingResolver r(cs);
+    r.addStorage(*this->cs); // pkg storage
+    r.addStorage(*bs); // builtin tools storage
+    b->setResolver(r);
+    //b->getResolver().addStorage(*bs);
 
     PrepareConfig pc;
     auto inputs_ep = [&inputs, &pc](Build &b)

@@ -3,19 +3,24 @@
 
 #pragma once
 
-#include <sw/support/package.h>
+#include "entry_point.h"
 
 namespace sw
 {
 
 struct NativeBuiltinTargetEntryPoint;
 
-// input_hash, EP
-using BuiltinEntryPoints = std::vector<std::tuple<size_t, std::unique_ptr<NativeBuiltinTargetEntryPoint>>>;
+struct ConfigDependency
+{
+    EntryPointFunctions bfs;
+    std::unordered_map<UnresolvedPackage, PackageName> resolver_cache;
+    size_t hash;
 
-using PackageIdSet = std::unordered_set<PackageName>;
+    void add_pair(const String &u, const String &n) { resolver_cache.emplace(u, n); }
+};
+
+using BuiltinEntryPoints = std::vector<ConfigDependency>;
 
 BuiltinEntryPoints load_builtin_entry_points();
-PackageIdSet load_builtin_packages();
 
 } // namespace sw
