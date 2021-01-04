@@ -460,14 +460,13 @@ void SwBuild::loadInputs()
         in_ttb_exclude.insert(t.getValue());
     auto should_build_target = [&in_ttb, &in_ttb_exclude](const auto &p)
     {
-        SW_UNIMPLEMENTED;
-        /*if (!in_ttb.empty())
+        if (!in_ttb.empty())
         {
             if (!contains(in_ttb, p))
                 return false;
         }
         if (contains(in_ttb_exclude, p))
-            return false;*/
+            return false;
         return true;
     };
 
@@ -502,8 +501,7 @@ void SwBuild::loadInputs()
                     continue;
 
                 //tgt->setResolver(getResolver());
-                SW_UNIMPLEMENTED;
-                //getTargets()[tgt->getPackage()].push_back(*tgt, i.getInput());
+                getTargets()[tgt->getPackage()].push_back(*tgt, i.getInput());
             }
         }
     }
@@ -570,15 +568,15 @@ ITarget &SwBuild::resolveAndLoad(ResolveRequest &rr)
     return *t;
 }
 
-ITarget &SwBuild::load(const Package &p)
+ITarget &SwBuild::load(const Package &in)
 {
     // no, install now (resolve to local)
-    getContext().getLocalStorage().install(p);
+    auto installed = getContext().getLocalStorage().install(in);
+    auto &p = installed ? *installed : in;
     //getContext().getLocalStorage().import(p);
-    SW_UNIMPLEMENTED;
-    /*auto i = getContext().addInput(p);
+    auto i = getContext().addInput(p);
     getTargets()[p.getId().getName()].setInput(*i);
-    auto tgts = i->loadPackages(*this, p.getId().getSettings(), { p }, p.getId().getName().getPath().slice(0, p.getData().prefix));
+    auto tgts = i->loadPackages(*this, p.getId().getSettings(), &p.getId().getName(), p.getId().getName().getPath().slice(0, p.getData().prefix));
     if (tgts.empty())
         throw SW_RUNTIME_ERROR("No targets loaded: " + p.getId().toString());
     if (tgts.size() != 1)
@@ -586,7 +584,7 @@ ITarget &SwBuild::load(const Package &p)
     auto tgts2 = registerTargets(tgts);
     for (auto &&tgt : tgts2)
         getTargets()[tgt->getPackage()].push_back(*tgt, *i);
-    return *tgts2[0];*/
+    return *tgts2[0];
 }
 
 void SwBuild::registerTarget(ITarget &t)

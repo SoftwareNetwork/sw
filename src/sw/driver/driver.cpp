@@ -316,7 +316,7 @@ struct DriverInput : Input
         ep = std::move(in);
     }
 
-    std::vector<ITargetPtr> loadPackages(SwBuild &b, const PackageSettings &s, const AllowedPackages &allowed_packages, const PackagePath &prefix) const override
+    std::vector<ITargetPtr> loadPackages(SwBuild &b, const PackageSettings &s, const PackageName *known_package, const PackagePath &prefix) const override
     {
         // maybe save all targets on load?
 
@@ -335,7 +335,7 @@ struct DriverInput : Input
         // are we sure that load package can return dry-run?
         // if it cannot return dry run packages, we cannot remove this wrapper
         std::vector<ITargetPtr> tgts;
-        auto t = ep->loadPackages(b, s, allowed_packages, prefix);
+        auto t = ep->loadPackages(b, s, known_package, prefix);
         for (auto &tgt : t)
         {
             if (tgt->getSettings()["dry-run"])
@@ -593,14 +593,6 @@ std::unique_ptr<Input> Driver::getInput(const Package &p) const
     // we are trying to load predefined package
     if (p.getId().getName().getPath().isRelative())
         SW_UNREACHABLE;
-    else if (auto lp = dynamic_cast<const LocalPackage *>(&p))
-    {
-        std::vector<const IDriver *> d2;
-        d2.push_back(this);
-        auto inputs = swctx.detectInputs(d2, lp->getDirSrc2());
-        SW_CHECK(inputs.size() == 1);
-        return std::move(inputs[0]);
-    }
     else if (auto lp = dynamic_cast<const BuiltinPackage *>(&p))
     {
         auto h = std::hash<Package>()(p);
@@ -610,7 +602,13 @@ std::unique_ptr<Input> Driver::getInput(const Package &p) const
         return i;
     }
     else
-        throw SW_RUNTIME_ERROR("Package was not installed: " + p.getId().toString());
+    {
+        std::vector<const IDriver *> d2;
+        d2.push_back(this);
+        auto inputs = swctx.detectInputs(d2, p.getDirSrc2());
+        SW_CHECK(inputs.size() == 1);
+        return std::move(inputs[0]);
+    }
 }
 
 std::vector<std::unique_ptr<Input>> Driver::detectInputs(const path &p, InputType type) const

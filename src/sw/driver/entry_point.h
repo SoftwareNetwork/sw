@@ -26,9 +26,9 @@ struct NativeTargetEntryPoint// : TargetEntryPoint
     mutable std::unique_ptr<DriverData> dd;
 
     [[nodiscard]]
-    virtual std::vector<ITargetPtr> loadPackages(SwBuild &, const PackageSettings &, const AllowedPackages &pkgs, const PackagePath &prefix) const;
+    virtual std::vector<ITargetPtr> loadPackages(SwBuild &, const PackageSettings &, const PackageName *allowed_package, const PackagePath &prefix) const;
 
-    ExtendedBuild createBuild(SwBuild &, const PackageSettings &, const AllowedPackages &pkgs, const PackagePath &prefix) const;
+    ExtendedBuild createBuild(SwBuild &, const PackageSettings &, const PackageName *allowed_package, const PackagePath &prefix) const;
 
 private:
     virtual void loadPackages1(Build &) const {}

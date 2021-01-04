@@ -24,7 +24,7 @@ struct ModuleSwappableData
 {
     using AddedTargets = std::vector<ITargetPtr>;
 
-    AllowedPackages known_targets;
+    const PackageName *known_target = nullptr;
     PackageSettings current_settings;
 
     ModuleSwappableData();

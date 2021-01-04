@@ -850,14 +850,13 @@ path Target::getFile(const DependencyPtr &dep, const path &fn)
     addSourceDependency(dep); // main trick is to add a dependency
     ResolveRequest rr{ dep->getUnresolvedPackage(), dep->getSettings() };
     getResolver().resolve(rr);
-    SW_UNIMPLEMENTED;
-    /*auto p2 = getMainBuild().getContext().getLocalStorage().install(rr.getPackage());
-    auto &lp = static_cast<LocalPackageBase &>(p2);
+    auto p2 = getMainBuild().getContext().getLocalStorage().install(rr.getPackage());
+    auto &lp = p2 ? *p2 : rr.getPackage();
     auto p = lp.getDirSrc2();
     // allow to get dirs
     if (!fn.empty())
         p /= fn;
-    return p;*/
+    return p;
 }
 
 PackageSettings &Target::getOptions()

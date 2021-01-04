@@ -84,9 +84,7 @@ Build::Build(SwBuild &mb)
 
 bool Build::isKnownTarget(const PackageName &p) const
 {
-    return module_data.known_targets.empty() ||
-        p.getPath().is_loc() || // used by cfg targets and checks
-        module_data.known_targets.contains(p);
+    return !module_data.known_target || *module_data.known_target == p;
 }
 
 std::optional<path> Build::getSourceDir(const Source &s, const PackageVersion &v) const

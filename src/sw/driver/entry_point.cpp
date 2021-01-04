@@ -404,7 +404,7 @@ void addConfigPchLibrary(Build &b)
 #endif
 }
 
-ExtendedBuild NativeTargetEntryPoint::createBuild(SwBuild &swb, const PackageSettings &s, const AllowedPackages &pkgs, const PackagePath &prefix) const
+ExtendedBuild NativeTargetEntryPoint::createBuild(SwBuild &swb, const PackageSettings &s, const PackageName *allowed_package, const PackagePath &prefix) const
 {
     // we need to fix some settings before they go to targets
     auto settings = s;
@@ -427,7 +427,7 @@ ExtendedBuild NativeTargetEntryPoint::createBuild(SwBuild &swb, const PackageSet
     //settings.erase("driver");
     settings["driver"].serializable(false);
 
-    b.module_data.known_targets = pkgs;
+    b.module_data.known_target = allowed_package;
     b.module_data.current_settings = settings;
     b.NamePrefix = prefix;
 
@@ -440,9 +440,9 @@ ExtendedBuild NativeTargetEntryPoint::createBuild(SwBuild &swb, const PackageSet
     return b;
 }
 
-std::vector<ITargetPtr> NativeTargetEntryPoint::loadPackages(SwBuild &swb, const PackageSettings &s, const AllowedPackages &pkgs, const PackagePath &prefix) const
+std::vector<ITargetPtr> NativeTargetEntryPoint::loadPackages(SwBuild &swb, const PackageSettings &s, const PackageName *allowed_package, const PackagePath &prefix) const
 {
-    auto b = createBuild(swb, s, pkgs, prefix);
+    auto b = createBuild(swb, s, allowed_package, prefix);
     loadPackages1(b);
     for (auto &&t : b.module_data.getTargets())
         t->prepare();

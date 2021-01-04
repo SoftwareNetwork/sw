@@ -273,7 +273,7 @@ void CmakeTargetEntryPoint::init() const
         throw SW_RUNTIME_ERROR("Cannot parse " + to_string(normalize_path(rootfn)));
 }
 
-std::vector<ITargetPtr> CmakeTargetEntryPoint::loadPackages(SwBuild &mb, const PackageSettings &ts, const AllowedPackages &pkgs, const PackagePath &prefix) const
+std::vector<ITargetPtr> CmakeTargetEntryPoint::loadPackages(SwBuild &mb, const PackageSettings &ts, const PackageName *known_package, const PackagePath &prefix) const
 {
     // before init
     this->b = &mb;
@@ -295,7 +295,7 @@ std::vector<ITargetPtr> CmakeTargetEntryPoint::loadPackages(SwBuild &mb, const P
     // by default BUILD_SHARED_LIBS is off in cmake, we follow that
     //cm->AddCacheEntry("BUILD_SHARED_LIBS", t->getBuildSettings().Native.LibrariesType == LibraryType::Shared ? "1" : "0", "", cmStateEnums::BOOL);
 
-    return Base::loadPackages(mb, ts, pkgs, prefix);
+    return Base::loadPackages(mb, ts, known_package, prefix);
 }
 
 void CmakeTargetEntryPoint::loadPackages1(Build &b) const

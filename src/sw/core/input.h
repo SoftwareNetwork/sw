@@ -59,7 +59,7 @@ struct SW_CORE_API Input
 
     // no dry-run targets
     [[nodiscard]]
-    virtual std::vector<ITargetPtr> loadPackages(SwBuild &, const PackageSettings &, const AllowedPackages &allowed_packages, const PackagePath &prefix) const = 0;
+    virtual std::vector<ITargetPtr> loadPackages(SwBuild &, const PackageSettings &, const PackageName *package_to_load, const PackagePath &prefix) const = 0;
 
 private:
     SwContext &swctx;

@@ -27,20 +27,6 @@ struct ResolveRequest;
 struct Resolver;
 struct Input;
 
-struct SW_CORE_API AllowedPackages
-{
-    AllowedPackages() = default;
-    AllowedPackages(const UnresolvedPackages &);
-    //AllowedPackages(const PackageIdSet &);
-
-    bool contains(const PackageName &) const;
-    bool empty() const;
-
-private:
-    std::unordered_map<PackagePath, PackageVersionRange> pkgs;
-    UnresolvedPackages branches;
-};
-
 struct SW_CORE_API TargetFile
 {
     TargetFile(const path &abspath, bool is_generated = false, bool is_from_other_target = false);
