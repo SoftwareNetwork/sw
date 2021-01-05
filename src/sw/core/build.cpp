@@ -1354,22 +1354,28 @@ void SwBuild::test()
     LOG_INFO(logger, "PASSED:  " << cmds.size() - errors - skipped);
     LOG_INFO(logger, "FAILED:  " << errors);
     LOG_INFO(logger, "SKIPPED: " << skipped);
-    LOG_INFO(logger, "");
-    LOG_INFO(logger, "List of failed tests:");
-    for (auto &c : cmds)
+    if (errors)
     {
-        if (c->skip)
-            continue;
-        if (c->exit_code && c->exit_code == 0)
-            continue;
-        LOG_INFO(logger, c->name);
-    }
-    LOG_INFO(logger, "");
-    LOG_INFO(logger, "List of skipped tests:");
-    for (auto &c : cmds)
-    {
-        if (c->skip)
+        LOG_INFO(logger, "");
+        LOG_INFO(logger, "List of failed tests:");
+        for (auto &c : cmds)
+        {
+            if (c->skip)
+                continue;
+            if (c->exit_code && c->exit_code == 0)
+                continue;
             LOG_INFO(logger, c->name);
+        }
+    }
+    if (skipped)
+    {
+        LOG_INFO(logger, "");
+        LOG_INFO(logger, "List of skipped tests:");
+        for (auto &c : cmds)
+        {
+            if (c->skip)
+                LOG_INFO(logger, c->name);
+        }
     }
 
     //
