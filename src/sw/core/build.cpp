@@ -1425,13 +1425,17 @@ void SwBuild::test()
         auto t = std::chrono::duration_cast<std::chrono::duration<double>>(c->t_end - c->t_begin).count();
         suite.time += t;
         testcase.append_attribute("time").set_value(read_file(d.dir / "time.txt").c_str()); // read from file to keep precision
-        testcase.append_child("system-out").text().set(read_file(d.dir / "stdout.txt").c_str());
-        testcase.append_child("system-err").text().set(read_file(d.dir / "stderr.txt").c_str());
         if (c->exit_code && c->exit_code == 0)
         {
             suite.nok++;
             continue;
         }
+        testcase.append_child("system-out")
+            //.append_child(pugi::node_cdata)
+            .text().set(read_file(d.dir / "stdout.txt").c_str());
+        testcase.append_child("system-err")
+            //.append_child(pugi::node_cdata)
+            .text().set(read_file(d.dir / "stderr.txt").c_str());
         auto e = testcase.append_child("failure");
         e.append_attribute("message").set_value(("error code = "s + std::to_string(*c->exit_code)).c_str());
         suite.nfailed++;
