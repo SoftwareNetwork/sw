@@ -154,7 +154,7 @@ DEFINE_STATIC_CMAKE_COMMAND(sw_cm_check)
 
     auto get_prop = [&status](const String &s) -> Strings
     {
-        if (auto prop = status.GetMakefile().GetDef(s))
+        if (auto prop = status.GetMakefile().GetDefinition(s))
             return cmExpandedList(*prop);
         return {};
     };
