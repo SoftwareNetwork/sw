@@ -27,15 +27,14 @@ Input::~Input()
 {
 }
 
-void Input::load()
+/*void Input::load()
 {
-    SW_UNIMPLEMENTED;
-    /*if (isLoaded())
+    if (isLoaded())
         return;
     ep = load1(swctx);
     if (!ep)
-        throw SW_RUNTIME_ERROR("Empty entry point");*/
-}
+        throw SW_RUNTIME_ERROR("Empty entry point");
+}*/
 
 bool Input::isOutdated(const fs::file_time_type &t) const
 {

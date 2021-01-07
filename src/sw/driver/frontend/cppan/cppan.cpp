@@ -151,71 +151,33 @@ static void cppan_load_project(NativeCompiledTarget &t, const yaml &root)
             //dependency.range = v;
         };
 
-        auto relative_name_to_absolute = [](const String &in)
+        auto read_single_dep = [&t, &read_version](const auto &d)
         {
-            // TODO
-            PackagePath p(in);
-            return p;
-            //throw SW_RUNTIME_ERROR("not implemented");
-            //return in;
-        };
-
-        auto read_single_dep = [&t, &read_version, &relative_name_to_absolute](const auto &d, UnresolvedPackage dependency = UnresolvedPackage{"TODO: UNIMPLEMENTED 123s"})
-        {
-            bool local_ok = false;
-            SW_UNIMPLEMENTED;
-            /*if (d.IsScalar())
-            {
-                auto p = extractFromString(d.template as<String>());
-                dependency.ppath = relative_name_to_absolute(p.getPath().toString());
-                dependency.range = p.range;
-            }
+            if (d.IsScalar())
+                return extractFromString(d.template as<String>());
             else if (d.IsMap())
             {
                 // read only field related to ppath - name, local
-                if (d["name"].IsDefined())
-                    dependency.ppath = relative_name_to_absolute(d["name"].template as<String>());
+                SW_UNIMPLEMENTED;
+                /*if (d["name"].IsDefined())
+                    dependency.ppath = d["name"].template as<String>();
                 if (d["package"].IsDefined())
-                    dependency.ppath = relative_name_to_absolute(d["package"].template as<String>());
+                    dependency.ppath = d["package"].template as<String>();
                 if (dependency.ppath.empty() && d.size() == 1)
                 {
-                    dependency.ppath = relative_name_to_absolute(d.begin()->first.template as<String>());
+                    dependency.ppath = d.begin()->first.template as<String>();
                     //if (dependency.ppath.is_loc())
                         //dependency.flags.set(pfLocalProject);
                     read_version(dependency, d.begin()->second.template as<String>());
-                }
-                if (d["local"].IsDefined()
-                // && allow_local_dependencies
-                )
-                {
-                    auto p = d["local"].template as<String>();
-                    UnresolvedPackage pkg;
-                    pkg.ppath = p;
-                    //if (rd.known_local_packages.find(pkg) != rd.known_local_packages.end())
-                        //local_ok = true;
-                    if (local_ok)
-                        dependency.ppath = p;
-                }
+                }*/
             }
-
-            if (dependency.ppath.is_loc())
-            {
-                //dependency.flags.set(pfLocalProject);
-
-                // version will be read for local project
-                // even 2nd arg is not valid
-                String v;
-                if (d.IsMap() && d["version"].IsDefined())
-                    v = d["version"].template as<String>();
-                read_version(dependency, v);
-            }*/
 
             if (d.IsMap())
             {
                 // read other map fields
-                if (d["version"].IsDefined())
+                //if (d["version"].IsDefined())
                 {
-                    read_version(dependency, d["version"].template as<String>());
+                    //read_version(dependency, d["version"].template as<String>());
                     SW_UNIMPLEMENTED;
                     //if (local_ok)
                         //dependency.range = "*";
@@ -233,10 +195,8 @@ static void cppan_load_project(NativeCompiledTarget &t, const yaml &root)
                 //dependency.conditions.insert(conds.begin(), conds.end());
             }
 
-            //if (dependency.flags[pfLocalProject])
-                //dependency.createNames();
-
-            return dependency;
+            SW_UNIMPLEMENTED;
+            //return dependency;
         };
 
         auto get_deps = [&](const auto &node)
@@ -246,8 +206,6 @@ static void cppan_load_project(NativeCompiledTarget &t, const yaml &root)
             {
                 auto dep = read_single_dep(d);
                 t.Public += dep;
-                //throw SW_RUNTIME_ERROR("not implemented");
-                //dependencies[dep.ppath.toString()] = dep;
             },
                 [&t, &read_single_dep](const auto &dall)
             {
@@ -255,13 +213,11 @@ static void cppan_load_project(NativeCompiledTarget &t, const yaml &root)
                 {
                     auto dep = read_single_dep(d);
                     t.Public += dep;
-                    //throw SW_RUNTIME_ERROR("not implemented");
-                    //dependencies[dep.ppath.toString()] = dep;
                 }
             },
-                [&t, &read_single_dep, &read_version, &relative_name_to_absolute](const auto &dall)
+                [&t, &read_single_dep, &read_version](const auto &dall)
             {
-                auto get_dep = [&t, &read_version, &read_single_dep, &relative_name_to_absolute](const auto &d) -> UnresolvedPackage
+                auto get_dep = [&t, &read_version, &read_single_dep](const auto &d) -> UnresolvedPackage
                 {
                     SW_UNIMPLEMENTED;
                     /*

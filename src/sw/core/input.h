@@ -37,7 +37,7 @@ struct SW_CORE_API Input
     Input(const Input &) = delete;
     virtual ~Input();
 
-    void load();
+    virtual void load() = 0;
 
     //
     Specification &getSpecification();
@@ -61,8 +61,9 @@ struct SW_CORE_API Input
     [[nodiscard]]
     virtual std::vector<ITargetPtr> loadPackages(SwBuild &, const PackageSettings &, const PackageName *package_to_load, const PackagePath &prefix) const = 0;
 
-private:
+protected:
     SwContext &swctx;
+private:
     const IDriver &driver;
     std::unique_ptr<Specification> specification;
 };

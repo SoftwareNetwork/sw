@@ -523,7 +523,7 @@ void Target::init()
 
     ts_export = ts;
 
-    BinaryDir = getBinaryParentDir();
+    //BinaryDir = getBinaryParentDir();
 
     // remove whole condition block?
     /*if (DryRun)
@@ -538,7 +538,7 @@ void Target::init()
 
     //BinaryPrivateDir = BinaryDir / SW_BDIR_PRIVATE_NAME;
     //BinaryDir /= SW_BDIR_NAME;
-    setBinaryDirectory(BinaryDir);
+    //setBinaryDirectory(BinaryDir);
 
     // we must create it because users probably want to write to it immediately
     //fs::create_directories(BinaryDir);
@@ -980,12 +980,11 @@ path getOutputFileName(const Target &t)
 path getBaseOutputDirNameForLocalOnly(const Target &t, const path &root, const path &OutputDir)
 {
     path p;
-    SW_UNIMPLEMENTED;
     /*if (auto d = t.getPackage().getOverriddenDir(); d)
     {
         p = *d / SW_BINARY_DIR / "out" / t.getConfig() / OutputDir;
     }
-    else if (t.isLocal())
+    else */if (t.isLocal())
     {
         p = t.getLocalOutputBinariesDirectory() / OutputDir;
     }
@@ -993,7 +992,7 @@ path getBaseOutputDirNameForLocalOnly(const Target &t, const path &root, const p
     {
         SW_UNIMPLEMENTED;
         p = root / t.getConfig() / OutputDir;
-    }*/
+    }
     return p;
 }
 

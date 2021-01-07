@@ -265,6 +265,7 @@ Input *SwContext::addInput(const Package &p)
         throw SW_RUNTIME_ERROR("Driver is not registered: " + p.getData().driver.toString());
     auto input = i->second->getInput(p);
     auto [i2,_] = registerInput(std::move(input));
+    i2->load();
     return i2;
 }
 
