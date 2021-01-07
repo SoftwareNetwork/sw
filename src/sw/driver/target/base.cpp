@@ -881,7 +881,15 @@ void Target::addTest(Test &cb, const String &name)
 
 DependencyPtr Target::constructThisPackageDependency(const String &name)
 {
-    PackageId id(NamePrefix / name, getPackage().getVersion());
+    if (getType() == TargetType::Project || getType() == TargetType::Directory)
+        throw SW_RUNTIME_ERROR("Cannot construct from project or directory. Use target instead");
+
+    // cannot get data from project or directory
+    PackagePath pp;
+    if (getPackage().getPath().isAbsolute())
+        pp = getPackage().getPath().slice(0, getPackage().getData().prefix);
+    pp /= NamePrefix / name;
+    PackageId id(pp, getPackage().getVersion());
     return std::make_shared<Dependency>(id);
 }
 
