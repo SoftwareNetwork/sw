@@ -57,9 +57,16 @@ struct SW_CORE_API Input
     String getName() const;
     virtual size_t getHash() const;
 
-    // no dry-run targets
+    /// load every target from input
+    /// "local" mode
+    /// no dry-run targets
     [[nodiscard]]
-    virtual std::vector<ITargetPtr> loadPackages(SwBuild &, const PackageSettings &, const PackageName *package_to_load, const PackagePath &prefix) const = 0;
+    virtual std::vector<ITargetPtr> loadPackages(SwBuild &, const PackageSettings &) const = 0;
+
+    /// load specific package from input
+    /// no dry-run targets
+    [[nodiscard]]
+    virtual ITargetPtr loadPackage(SwBuild &, const Package &) const = 0;
 
 protected:
     SwContext &swctx;

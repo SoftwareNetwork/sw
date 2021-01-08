@@ -84,7 +84,7 @@ Build::Build(SwBuild &mb)
 
 bool Build::isKnownTarget(const PackageName &p) const
 {
-    return !module_data.known_target || *module_data.known_target == p;
+    return !module_data.known_target || module_data.known_target->getId().getName() == p;
 }
 
 std::optional<path> Build::getSourceDir(const Source &s, const PackageVersion &v) const

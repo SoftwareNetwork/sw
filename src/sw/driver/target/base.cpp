@@ -104,8 +104,8 @@ TargetBase::TargetBase(const TargetBase &rhs, const PackageName &inpkg)
         {
             PackageSettings s;
             ResolveRequest rr{ inpkg, s };
-            if (!getMainBuild().getResolver().resolve(rr))
-                throw SW_RUNTIME_ERROR("Not resolved: " + inpkg.toString());
+            //if (!getMainBuild().getResolver().resolve(rr))
+                //throw SW_RUNTIME_ERROR("Not resolved: " + inpkg.toString());
             //lpkg = dynamic_cast<LocalPackage&>(rr.getPackage()).clone();
         }
     }
@@ -206,10 +206,9 @@ Target::Target(TargetBase &parent, const PackageName &inpkg)
     // sdir
     if (!isLocal())
     {
-        setSourceDirectory(getLocalPackage().getDirSrc2());
-        SW_UNIMPLEMENTED;
-        //if (auto d = getLocalPackage().getOverriddenDir())
-            //setSourceDirectory(*d);
+        if (!getSolution().module_data.known_target)
+            SW_UNREACHABLE;
+        setSourceDirectory(getSolution().module_data.known_target->getDirSrc2());
     }
     // set source dir
     if (SourceDir.empty() || (getSolution().dd && getSolution().dd->force_source))

@@ -166,7 +166,7 @@ struct BuiltinStorage : IStorage
             for (auto &[r, ep] : eps)
             {
                 Build b(*bs.sb);
-                b.module_data.current_settings = rr.settings;
+                b.module_data.current_settings = &rr.settings;
                 ep(b);
                 SW_CHECK(b.module_data.getTargets().size() <= 1); // only 1 target per build call
                 if (b.module_data.getTargets().empty())
@@ -297,7 +297,29 @@ struct DriverInput : Input
         ep = std::move(in);
     }
 
-    std::vector<ITargetPtr> loadPackages(SwBuild &b, const PackageSettings &s, const PackageName *known_package, const PackagePath &prefix) const override
+    std::vector<ITargetPtr> loadPackages(SwBuild &b, const PackageSettings &s) const override
+    {
+        if (!isLoaded())
+            throw SW_RUNTIME_ERROR("Input is not loaded: " + std::to_string(getHash()));
+
+        LOG_TRACE(logger, "Loading input " << getName() << ", settings = " << s.toString());
+
+        // are we sure that load package can return dry-run?
+        // if it cannot return dry run packages, we cannot remove this wrapper
+        std::vector<ITargetPtr> tgts;
+        auto t = ep->loadPackages(b, s);
+        for (auto &tgt : t)
+        {
+            if (tgt->getSettings()["dry-run"])
+                SW_UNIMPLEMENTED;
+            tgts.push_back(std::move(tgt));
+        }
+        // it is possible to get all targets dry run for some reason
+        // why?
+        return tgts;
+    }
+
+    ITargetPtr loadPackage(SwBuild &b, const Package &p) const override
     {
         // maybe save all targets on load?
 
@@ -311,21 +333,7 @@ struct DriverInput : Input
         if (!isLoaded())
             throw SW_RUNTIME_ERROR("Input is not loaded: " + std::to_string(getHash()));
 
-        LOG_TRACE(logger, "Loading input " << getName() << ", settings = " << s.toString());
-
-        // are we sure that load package can return dry-run?
-        // if it cannot return dry run packages, we cannot remove this wrapper
-        std::vector<ITargetPtr> tgts;
-        auto t = ep->loadPackages(b, s, known_package, prefix);
-        for (auto &tgt : t)
-        {
-            if (tgt->getSettings()["dry-run"])
-                SW_UNIMPLEMENTED;
-            tgts.push_back(std::move(tgt));
-        }
-        // it is possible to get all targets dry run for some reason
-        // why?
-        return tgts;
+        return ep->loadPackage(b, p);
     }
 };
 
@@ -410,7 +418,7 @@ struct SpecFileInput : DriverInput
             auto ts = static_cast<const Driver&>(getDriver()).getDllConfigSettings(*b);
             //ts["native"]["library"] = "shared"; // why?
             NativeTargetEntryPoint ep1;
-            auto b2 = ep1.createBuild(*b, ts, {}, {});
+            auto b2 = ep1.createBuild(*b, ts);
 
             PrepareConfig pc;
             pc.addInput(b2, *this);

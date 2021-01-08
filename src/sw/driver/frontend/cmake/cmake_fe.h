@@ -31,8 +31,10 @@ struct CmakeTargetEntryPoint : NativeTargetEntryPoint
     CmakeTargetEntryPoint(const path &fn);
     ~CmakeTargetEntryPoint();
 
+    /*[[nodiscard]]
+    std::vector<ITargetPtr> loadPackages(SwBuild &, const PackageSettings &) const override;
     [[nodiscard]]
-    std::vector<ITargetPtr> loadPackages(SwBuild &, const PackageSettings &, const PackageName *known_package, const PackagePath &prefix) const override;
+    ITargetPtr loadPackage(SwBuild &, const Package &) const override;*/
 
 private:
     path rootfn;

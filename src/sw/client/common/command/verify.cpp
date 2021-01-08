@@ -44,6 +44,7 @@ SUBCOMMAND_DECL(verify)
     auto ts = createInitialSettings();
     ts["driver"]["source-dir-for-source"][s->getHash()] = to_string(normalize_path(dir));
     ts["driver"]["force-source"] = src;
+    ts["driver"].serializable(false);
     sw::UserInput i(inputs[0]);
     i.addSettings(ts);
     b->addInput(i);

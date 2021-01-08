@@ -24,8 +24,8 @@ struct ModuleSwappableData
 {
     using AddedTargets = std::vector<ITargetPtr>;
 
-    const PackageName *known_target = nullptr;
-    PackageSettings current_settings;
+    const Package *known_target = nullptr;
+    const PackageSettings *current_settings = nullptr;
 
     ModuleSwappableData();
     ModuleSwappableData(const ModuleSwappableData &) = delete;
@@ -36,6 +36,13 @@ struct ModuleSwappableData
     void addTarget(ITargetPtr);
     void markAsDummy(const ITarget &);
     AddedTargets &getTargets();
+
+    const PackageSettings &getSettings() const
+    {
+        if (known_target)
+            return known_target->getId().getSettings();
+        return *current_settings;
+    }
 
 private:
     AddedTargets added_targets;
@@ -92,7 +99,7 @@ struct SW_DRIVER_CPP_API ExtendedBuild : Build
 
     using Base::Base;
 
-    const PackageSettings &getSettings() const { return module_data.current_settings; }
+    const PackageSettings &getSettings() const { return module_data.getSettings(); }
     void addTarget(ITargetPtr t) { module_data.addTarget(std::move(t)); }
 };
 

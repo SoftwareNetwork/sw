@@ -843,7 +843,8 @@ bool Check::execute(SwBuild &b) const
 #define SETUP_SOLUTION()                                                \
     auto b = check_set->getChecker().swbld.getContext().createBuild();  \
     auto s = setupSolution(*b, f);                                      \
-    s.module_data.current_settings = getSettings()
+    auto cs = getSettings();                                            \
+    s.module_data.current_settings = &cs
 
 #define ADD_TARGETS                             \
     for (auto &t : s.module_data.getTargets())  \

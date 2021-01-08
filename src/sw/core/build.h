@@ -125,7 +125,7 @@ public:
 
     using RegisterTargetsResult = std::vector<ITarget *>;
     ITarget *registerTarget(ITargetPtr);
-    RegisterTargetsResult registerTargets(std::vector<ITargetPtr> &);
+    RegisterTargetsResult registerTargets(std::vector<ITargetPtr> &&);
 
 private:
     SwContext &swctx;

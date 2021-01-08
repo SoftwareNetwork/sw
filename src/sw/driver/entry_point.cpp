@@ -135,7 +135,7 @@ static CommandStorage &getDriverCommandStorage(const Build &b)
 
 static PackagePath getSelfTargetName(Build &b, const FilesSorted &files)
 {
-    auto h = b.module_data.current_settings.getHashString();
+    auto h = b.module_data.getSettings().getHashString();
     for (auto &fn : files)
         h += to_string(normalize_path(fn));
     h = shorten_hash(blake2b_512(h), 6);
@@ -404,32 +404,21 @@ void addConfigPchLibrary(Build &b)
 #endif
 }
 
-ExtendedBuild NativeTargetEntryPoint::createBuild(SwBuild &swb, const PackageSettings &s, const PackageName *allowed_package, const PackagePath &prefix) const
+ExtendedBuild NativeTargetEntryPoint::createBuild(SwBuild &swb, const PackageSettings &s) const
 {
-    // we need to fix some settings before they go to targets
-    auto settings = s;
-
     if (!dd)
         dd = std::make_unique<DriverData>();
 
-    for (auto &[h, d] : settings["driver"]["source-dir-for-source"].getMap())
+    for (auto &[h, d] : s["driver"]["source-dir-for-source"].getMap())
         dd->source_dirs_by_source[h].requested_dir = d.getValue();
-    for (auto &[pkg, p] : settings["driver"]["source-dir-for-package"].getMap())
+    for (auto &[pkg, p] : s["driver"]["source-dir-for-package"].getMap())
         dd->source_dirs_by_package[pkg] = p.getValue();
-    if (settings["driver"]["force-source"].isValue())
-        dd->force_source = load(nlohmann::json::parse(settings["driver"]["force-source"].getValue()));
+    if (s["driver"]["force-source"].isValue())
+        dd->force_source = load(nlohmann::json::parse(s["driver"]["force-source"].getValue()));
 
     ExtendedBuild b(swb);
     b.dd = dd.get();
-    // leave as b. setting
-    b.DryRun = settings["driver"]["dry-run"] && settings["driver"]["dry-run"].get<bool>();
-
-    //settings.erase("driver");
-    settings["driver"].serializable(false);
-
-    b.module_data.known_target = allowed_package;
-    b.module_data.current_settings = settings;
-    b.NamePrefix = prefix;
+    b.DryRun = s["driver"]["dry-run"] && s["driver"]["dry-run"].get<bool>();
 
     if (!source_dir.empty())
         b.setSourceDirectory(source_dir);
@@ -440,13 +429,27 @@ ExtendedBuild NativeTargetEntryPoint::createBuild(SwBuild &swb, const PackageSet
     return b;
 }
 
-std::vector<ITargetPtr> NativeTargetEntryPoint::loadPackages(SwBuild &swb, const PackageSettings &s, const PackageName *allowed_package, const PackagePath &prefix) const
+std::vector<ITargetPtr> NativeTargetEntryPoint::loadPackages(SwBuild &swb, const PackageSettings &s) const
 {
-    auto b = createBuild(swb, s, allowed_package, prefix);
+    auto b = createBuild(swb, s);
+    b.module_data.current_settings = &s;
     loadPackages1(b);
     for (auto &&t : b.module_data.getTargets())
         t->prepare();
     return std::move(b.module_data.getTargets());
+}
+
+ITargetPtr NativeTargetEntryPoint::loadPackage(SwBuild &swb, const Package &p) const
+{
+    auto b = createBuild(swb, p.getId().getSettings());
+    b.module_data.known_target = &p;
+    b.NamePrefix = p.getId().getName().getPath().slice(0, p.getData().prefix);
+    loadPackages1(b);
+    for (auto &&t : b.module_data.getTargets())
+        t->prepare();
+    if (b.module_data.getTargets().size() != 1)
+        throw SW_RUNTIME_ERROR("Bad number of targets: " + p.getId().toString());
+    return std::move(b.module_data.getTargets()[0]);
 }
 
 NativeBuiltinTargetEntryPoint::NativeBuiltinTargetEntryPoint(BuildFunction bf)
@@ -699,7 +702,7 @@ path PrepareConfig::one2one(Build &b, const InputData &d)
     //commonActions2
     addConfigDefs(lib);
 
-    BuildSettings bs(b.module_data.current_settings);
+    BuildSettings bs(b.module_data.getSettings());
     if (bs.TargetOS.is(OSType::Windows))
         lib.NativeLinkerOptions::System.LinkLibraries.insert(LinkLibrary{ "DELAYIMP.LIB"s });
 

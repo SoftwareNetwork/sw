@@ -493,8 +493,8 @@ void SwBuild::loadInputs()
         {
             //s["resolver"] = PackageSetting(getResolver().clone());
             s["resolver"] = &getResolver();
-            auto tgts2 = i.getInput().loadPackages(*this, s, {}, {});
-            auto tgts = registerTargets(tgts2);
+            auto tgts2 = i.getInput().loadPackages(*this, s);
+            auto tgts = registerTargets(std::move(tgts2));
             for (auto &&tgt : tgts)
             {
                 if (!should_build_target(tgt->getPackage()))
@@ -576,12 +576,10 @@ ITarget &SwBuild::load(const Package &in)
     //getContext().getLocalStorage().import(p);
     auto i = getContext().addInput(p);
     getTargets()[p.getId().getName()].setInput(*i);
-    auto tgts = i->loadPackages(*this, p.getId().getSettings(), &p.getId().getName(), p.getId().getName().getPath().slice(0, p.getData().prefix));
-    if (tgts.empty())
-        throw SW_RUNTIME_ERROR("No targets loaded: " + p.getId().toString());
-    if (tgts.size() != 1)
-        throw SW_RUNTIME_ERROR("Wrong number of targets: " + p.getId().toString());
-    auto tgts2 = registerTargets(tgts);
+    auto tgt = i->loadPackage(*this, p);
+    std::vector<sw::ITargetPtr> tgts;
+    tgts.emplace_back(std::move(tgt));
+    auto tgts2 = registerTargets(std::move(tgts));
     for (auto &&tgt : tgts2)
         getTargets()[tgt->getPackage()].push_back(*tgt, *i);
     return *tgts2[0];
@@ -1618,7 +1616,7 @@ ITarget *SwBuild::registerTarget(ITargetPtr t)
     return &*p;
 }
 
-SwBuild::RegisterTargetsResult SwBuild::registerTargets(std::vector<ITargetPtr> &v)
+SwBuild::RegisterTargetsResult SwBuild::registerTargets(std::vector<ITargetPtr> &&v)
 {
     RegisterTargetsResult tgts;
     for (auto &&t : v)

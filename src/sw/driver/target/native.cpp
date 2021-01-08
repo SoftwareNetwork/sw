@@ -697,11 +697,17 @@ void NativeCompiledTarget::addPackageDefinitions(bool defs)
         a["PACKAGE_YEAR"] = std::to_string(1900 + t.tm_year); // custom
         a["PACKAGE_COPYRIGHT_YEAR"] = std::to_string(1900 + t.tm_year);
 
-        a["PACKAGE_ROOT_DIR"] = q + to_string(normalize_path(isLocal() ? RootDirectory : getLocalPackage().getDirSrc())) + q;
+        a["PACKAGE_ROOT_DIR"] = q + to_string(normalize_path(isLocal() ? RootDirectory :
+            //getLocalPackage().getDirSrc()
+            getSolution().module_data.known_target->getDirSrc2()
+        )) + q;
         a["PACKAGE_NAME_WITHOUT_OWNER"] = q/* + getPackage().getPath().slice(2).toString()*/ + q;
         a["PACKAGE_NAME_CLEAN"] = q + (isLocal()
             ? getPackage().getPath().toString()
-            : getLocalPackage().getId().getName().getPath().slice(getLocalPackage().getData().prefix).toString()) + q;
+            :
+            //getLocalPackage().getId().getName().getPath().slice(getLocalPackage().getData().prefix)
+            getSolution().module_data.known_target->getId().getName().getPath().slice(getSolution().module_data.known_target->getData().prefix)
+            .toString()) + q;
 
         //"@PACKAGE_CHANGE_DATE@"
             //"@PACKAGE_RELEASE_DATE@"

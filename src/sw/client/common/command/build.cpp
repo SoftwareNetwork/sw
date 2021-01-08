@@ -66,6 +66,7 @@ static void isolated_build(SwClientContext &swctx)
         }
 
         ts["driver"]["source-dir-for-package"][pkg.toString()] = to_string(normalize_path(dir));
+        ts["driver"].serializable(false);
     }*/
 
     LOG_INFO(logger, "Building in isolated environment");

@@ -116,6 +116,7 @@ static sw::support::SourceDirMap getSources(SwClientContext &swctx)
 
     auto ts = swctx.createInitialSettings();
     ts["driver"]["dry-run"] = "true"; // only used to get sources
+    ts["driver"].serializable(false);
 
     for (auto &i : swctx.makeCurrentPathInputs())
     {
@@ -179,6 +180,7 @@ sw::support::SourceDirMap SwClientContext::fetch(sw::SwBuild &b)
                 ts["driver"]["force-source"] = j.dump();
             }
         }
+        ts["driver"].serializable(false);
     }
 
     for (auto &i : makeCurrentPathInputs())
