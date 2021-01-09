@@ -213,6 +213,10 @@ void PackagesDatabase::open(bool read_only, bool in_memory)
 
 bool PackagesDatabase::resolve(ResolveRequest &rr, const IStorage &s) const
 {
+    // at the moment we do not resolve any non sources packages
+    if (rr.getSettings().getHash() != 0)
+        return false;
+
     auto &upkg = rr.u;
 
     auto pid = getPackageId(upkg.getPath());

@@ -113,6 +113,9 @@ TargetBase::TargetBase(const TargetBase &rhs, const PackageName &inpkg)
     // after pkg
     if (!current_project)
         current_project = getPackage();
+
+    if (!isLocal())
+        thispkg = getSolution().module_data.known_target->clone();
 }
 
 TargetBase::~TargetBase()
@@ -187,11 +190,11 @@ const PackageName &TargetBase::getPackage() const
     return *pkg;
 }
 
-const LocalPackage &TargetBase::getLocalPackage() const
+const Package &TargetBase::getLocalPackage() const
 {
-    if (!lpkg)
-        throw SW_LOGIC_ERROR("lpkg not created");
-    return *lpkg;
+    if (!thispkg)
+        throw SW_LOGIC_ERROR("pkg not created");
+    return *thispkg;
 }
 
 Target::Target(TargetBase &parent, const PackageName &inpkg)
@@ -205,11 +208,7 @@ Target::Target(TargetBase &parent, const PackageName &inpkg)
 
     // sdir
     if (!isLocal())
-    {
-        if (!getSolution().module_data.known_target)
-            SW_UNREACHABLE;
-        setSourceDirectory(getSolution().module_data.known_target->getDirSrc2());
-    }
+        setSourceDirectory(getLocalPackage().getDirSrc2());
     // set source dir
     if (SourceDir.empty() || (getSolution().dd && getSolution().dd->force_source))
     {
@@ -321,6 +320,7 @@ void Target::fetch()
     if (i == fetched_dirs.end())
     {
         path d = s2->getHash();
+        SW_UNIMPLEMENTED;
         d = BinaryDir / d;
         if (!fs::exists(d))
         {
@@ -421,17 +421,20 @@ path Target::getTargetDirShort(const path &root) const
 
 path Target::getObjectDir() const
 {
-    return getObjectDir(getLocalPackage());
+    SW_UNIMPLEMENTED;
+    //return getObjectDir(getLocalPackage());
 }
 
-path Target::getObjectDir(const LocalPackage &in) const
+path Target::getObjectDir(const Package &in) const
 {
-    return getObjectDir(in, getConfig());
+    SW_UNIMPLEMENTED;
+    //return getObjectDir(in, getConfig());
 }
 
-path Target::getObjectDir(const LocalPackage &pkg, const String &cfg)
+path Target::getObjectDir(const Package &pkg, const String &cfg)
 {
-    return pkg.getDirObj(cfg);
+    SW_UNIMPLEMENTED;
+    //return pkg.getDirObj(cfg);
 }
 
 void Target::setRootDirectory(const path &p)
@@ -495,8 +498,8 @@ void Target::removeFile(const path &fn, bool binary_dir)
     {
         if (!binary_dir && fs::exists(SourceDir / p))
             p = SourceDir / p;
-        else if (fs::exists(BinaryDir / p))
-            p = BinaryDir / p;
+        else if (fs::exists(getBinaryDirectory() / p))
+            p = getBinaryDirectory() / p;
     }
 
     error_code ec;
@@ -542,20 +545,24 @@ void Target::init()
     // we must create it because users probably want to write to it immediately
     //fs::create_directories(BinaryDir);
     //fs::create_directories(BinaryPrivateDir);
-
-    //SW_RETURN_MULTIPASS_END(init_pass);
-    return;
 }
 
 path Target::getBinaryParentDir() const
 {
-    SW_UNIMPLEMENTED;
-    /*if (auto d = getPackage().getOverriddenDir(); d)
-        return getTargetDirShort(d.value() / SW_BINARY_DIR);
-    else if (isLocal())
+    if (isLocal())
         return getTargetDirShort(getMainBuild().getBuildDirectory());
     else
-        return getObjectDir(getPackage(), getConfig());*/
+    {
+        if (!is_under_root(getLocalPackage().getDirSrc2(), getContext().getLocalStorage().storage_dir))
+            return getTargetDirShort(getLocalPackage().getDirSrc2() / SW_BINARY_DIR);
+
+        auto cfg = getConfig();
+        auto basecfgdir = getLocalPackage().getDirSrc2().parent_path();
+        auto basedir = basecfgdir.parent_path();
+        auto d = basedir / cfg;
+
+        return d;
+    }
 }
 
 DependencyPtr Target::getDependency() const
@@ -815,18 +822,53 @@ void Target::resolveDependency(IDependency &d)
     if (DryRun)
         return;
 
-    ResolveRequest rr{ d.getUnresolvedPackage(), d.getSettings() };
-    if (!getResolver().resolve(rr))
+    if (d.getUnresolvedPackage().getPath().isAbsolute())
     {
-        if (rr.u.getPath().isAbsolute())
-            throw SW_RUNTIME_ERROR("Cannot resolve package: " + rr.u.toString());
-        // how to resolve build packages properly?
-        auto &t = getMainBuild().resolveAndLoad(rr);
-        d.setTarget(t);
+        ResolveRequest rr{ d.getUnresolvedPackage(), d.getSettings() };
+        if (!getResolver().resolve(rr))
+        {
+            // try to resolve sources
+            PackageSettings s;
+            ResolveRequest rr2{ d.getUnresolvedPackage(), s };
+            if (!getResolver().resolve(rr2))
+                throw SW_RUNTIME_ERROR("Cannot resolve package " + rr.toString() + " and " + rr2.toString());
+            auto p2 = getContext().getLocalStorage().install(rr2.getPackage());
+            if (!p2)
+                throw SW_RUNTIME_ERROR("Cannot install pkg: " + rr2.getPackage().getId().toString());
+
+            struct LocalPackage2 : Package
+            {
+                path sdir;
+
+                LocalPackage2(const Package &id, const path &s)
+                    : Package(id), sdir(s)
+                {
+                }
+
+                bool isInstallable() const override { return false; }
+                std::unique_ptr<Package> clone() const override { return std::make_unique<LocalPackage2>(*this); }
+                path getDirSrc2() const override { return sdir; }
+            };
+
+            PackageId id{p2->getId().getName(), d.getSettings()};
+            LocalPackage2 p{id, p2->getDirSrc2()};
+            p.setData(rr2.getPackage().getData().clone());
+            auto &t = getMainBuild().load(p);
+            d.setTarget(t);
+        }
+        else
+        {
+            auto &t = getMainBuild().load(rr.getPackage());
+            d.setTarget(t);
+        }
         return;
     }
+
+    // local package
+    ResolveRequest rr{ d.getUnresolvedPackage(), d.getSettings() };
     auto &t = getMainBuild().resolveAndLoad(rr);
     d.setTarget(t);
+    return;
 }
 
 path Target::getFile(const Target &dep, const path &fn)

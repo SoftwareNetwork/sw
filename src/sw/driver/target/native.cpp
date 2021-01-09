@@ -179,7 +179,7 @@ void detail::PrecompiledHeader::setup(const NativeCompiledTarget &t, const PathO
     if (name.empty())
         name = "sw.pch";
     if (dir.empty())
-        dir = t.BinaryDir.parent_path() / "pch";
+        dir = t.getBinaryDirectory().parent_path() / "pch";
 
     String h;
     for (auto &f : pch_headers)
@@ -234,8 +234,8 @@ void NativeTarget::setOutputFile()
     if (!isLocal())
     try
     {
-        if (!fs::exists(BinaryDir.parent_path() / "cfg.json"))
-            write_file(BinaryDir.parent_path() / "cfg.json", nlohmann::json::parse(ts.toString(PackageSettings::Json)).dump(4));
+        if (!fs::exists(getBinaryDirectory().parent_path() / "cfg.json"))
+            write_file(getBinaryDirectory().parent_path() / "cfg.json", nlohmann::json::parse(ts.toString(PackageSettings::Json)).dump(4));
     }
     catch (...) {} // write once
 }
@@ -562,7 +562,6 @@ void NativeCompiledTarget::init()
     }
 
     addPackageDefinitions();
-    setOutputFile();
 
     //SW_UNIMPLEMENTED;
     //SW_RETURN_MULTIPASS_END(init_pass);
@@ -698,15 +697,14 @@ void NativeCompiledTarget::addPackageDefinitions(bool defs)
         a["PACKAGE_COPYRIGHT_YEAR"] = std::to_string(1900 + t.tm_year);
 
         a["PACKAGE_ROOT_DIR"] = q + to_string(normalize_path(isLocal() ? RootDirectory :
-            //getLocalPackage().getDirSrc()
-            getSolution().module_data.known_target->getDirSrc2()
+            getLocalPackage().getDirSrc2()
         )) + q;
         a["PACKAGE_NAME_WITHOUT_OWNER"] = q/* + getPackage().getPath().slice(2).toString()*/ + q;
         a["PACKAGE_NAME_CLEAN"] = q + (isLocal()
             ? getPackage().getPath().toString()
             :
             //getLocalPackage().getId().getName().getPath().slice(getLocalPackage().getData().prefix)
-            getSolution().module_data.known_target->getId().getName().getPath().slice(getSolution().module_data.known_target->getData().prefix)
+            getLocalPackage().getId().getName().getPath().slice(getLocalPackage().getData().prefix)
             .toString()) + q;
 
         //"@PACKAGE_CHANGE_DATE@"
@@ -1174,8 +1172,8 @@ void NativeCompiledTarget::autoDetectIncludeDirectories()
         {
             // tools may add their idirs to bdirs
             return
-                i.u8string().find(BinaryDir.u8string()) == 0 ||
-                i.u8string().find(BinaryPrivateDir.u8string()) == 0;
+                i.u8string().find(getBinaryDirectory().u8string()) == 0 ||
+                i.u8string().find(getBinaryPrivateDirectory().u8string()) == 0;
         });
     }))
     {
@@ -1330,8 +1328,8 @@ const PackageSettings &NativeCompiledTarget::getInterfaceSettings() const
     s = {};
 
     s["source_dir"].setPathValue(getContext().getLocalStorage(), SourceDirBase);
-    s["binary_dir"].setPathValue(getContext().getLocalStorage(), BinaryDir);
-    s["binary_private_dir"].setPathValue(getContext().getLocalStorage(), BinaryPrivateDir);
+    s["binary_dir"].setPathValue(getContext().getLocalStorage(), getBinaryDirectory());
+    s["binary_private_dir"].setPathValue(getContext().getLocalStorage(), getBinaryPrivateDirectory());
 
     if (Publish && !*Publish)
         s["skip_upload"] = "true";
@@ -1641,6 +1639,25 @@ void NativeCompiledTarget::prepare()
         }*/
     }
 
+    BinaryDir = getBinaryParentDir();
+
+    // remove whole condition block?
+    /*if (DryRun)
+    {
+        // we doing some download on server or whatever
+        // so, we do not want to touch real existing bdirs
+        BinaryDir = getMainBuild().getBuildDirectory() / "dry" / shorten_hash(blake2b_512(BinaryDir.u8string()), 6);
+        std::error_code ec;
+        fs::remove_all(BinaryDir, ec);
+        //fs::create_directories(BinaryDir);
+    }*/
+
+    //BinaryPrivateDir = BinaryDir / SW_BDIR_PRIVATE_NAME;
+    //BinaryDir /= SW_BDIR_NAME;
+    setBinaryDirectory(BinaryDir);
+
+    setOutputFile();
+
     call(CallbackType::BeginPrepare);
     prepare_pass1();
 
@@ -1758,14 +1775,14 @@ void NativeCompiledTarget::prepare_pass1()
         // add pvt binary dir
         // do not check for existence, because generated files may go there
         // and we do not know about it right now
-        IncludeDirectories.insert(BinaryPrivateDir);
-        fs::create_directories(BinaryPrivateDir);
+        IncludeDirectories.insert(getBinaryPrivateDirectory());
+        fs::create_directories(getBinaryPrivateDirectory());
 
         // always add bdir to include dirs
         // do not check for existence, because generated files may go there
         // and we do not know about it right now
-        Public.IncludeDirectories.insert(BinaryDir);
-        fs::create_directories(BinaryDir);
+        Public.IncludeDirectories.insert(getBinaryDirectory());
+        fs::create_directories(getBinaryDirectory());
     }
 
     if (!HeaderOnly || !*HeaderOnly)
@@ -2875,7 +2892,7 @@ path NativeCompiledTarget::generate_rc()
         }
     };
 
-    const path p = BinaryPrivateDir / "sw.rc";
+    const path p = getBinaryPrivateDirectory() / "sw.rc";
     // fast path
     // maybe use only write_file_if_different as before?
     if (fs::exists(p))
@@ -3148,7 +3165,7 @@ void NativeCompiledTarget::configureFile(path from, path to, ConfigureFlags flag
 
     // before resolving
     if (!to.is_absolute())
-        to = BinaryDir / to;
+        to = getBinaryDirectory() / to;
     File(to, getFs()).setGenerated();
 
     if (DryRun)
@@ -3158,8 +3175,8 @@ void NativeCompiledTarget::configureFile(path from, path to, ConfigureFlags flag
     {
         if (fs::exists(SourceDir / from))
             from = SourceDir / from;
-        else if (fs::exists(BinaryDir / from))
-            from = BinaryDir / from;
+        else if (fs::exists(getBinaryDirectory() / from))
+            from = getBinaryDirectory() / from;
         else
             throw SW_RUNTIME_ERROR("Package: " + getPackage().toString() + ", file not found: " + from.string());
     }
@@ -3381,7 +3398,7 @@ void NativeCompiledTarget::writeFileOnce(const path &fn, const String &content)
         // file does not exists
         if (!p.is_absolute())
         {
-            p = BinaryDir / p;
+            p = getBinaryDirectory() / p;
             source_dir = false;
         }
     }
@@ -3410,7 +3427,7 @@ void NativeCompiledTarget::writeFileSafe(const path &fn, const String &content)
     bool source_dir = false;
     path p = fn;
     if (!check_absolute(p, true, &source_dir))
-        p = BinaryDir / p;
+        p = getBinaryDirectory() / p;
     ::sw::writeFileSafe(p, content, getPatchDir());
 
     addFileSilently(p);

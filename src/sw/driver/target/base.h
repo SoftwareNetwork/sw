@@ -166,11 +166,11 @@ protected:
     TargetBase(const TargetBase &, const PackageName &);
 
     const PackageName &getPackage() const;
-    const LocalPackage &getLocalPackage() const;
+    const Package &getLocalPackage() const;
 
 private:
     std::unique_ptr<PackageName> pkg;
-    std::unique_ptr<LocalPackage> lpkg;
+    std::unique_ptr<Package> thispkg;
     bool Local = true; // local projects
 
     template <typename T, typename ... Args>
@@ -315,8 +315,8 @@ public:
 
     // using in build, move to protected when not used
     path getObjectDir() const;
-    path getObjectDir(const LocalPackage &pkg) const;
-    static path getObjectDir(const LocalPackage &pkg, const String &cfg);
+    path getObjectDir(const Package &pkg) const;
+    static path getObjectDir(const Package &pkg, const String &cfg);
 
     // from other target
     path getFile(const DependencyPtr &dep, const path &fn = {});

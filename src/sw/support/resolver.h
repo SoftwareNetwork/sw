@@ -45,7 +45,8 @@ struct SW_SUPPORT_API ResolveRequest : ResolveRequestResult
 
     const PackageSettings &getSettings() const { return settings; }
     const UnresolvedPackage &getUnresolvedPackage() const { return u; }
-    Package &getPackage() const { if (!isResolved()) throw SW_RUNTIME_ERROR("Package was not resolved: " + u.toString()); return *r; }
+    Package &getPackage() const { if (!isResolved()) throw SW_RUNTIME_ERROR("Package was not resolved: " + toString()); return *r; }
+    String toString() const { return u.toString() + " (" + settings.getHashString() + ")"; }
 };
 
 struct SW_SUPPORT_API IResolver

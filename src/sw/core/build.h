@@ -65,9 +65,9 @@ struct SW_CORE_API SwBuild : SwBuilderContext, ResolverHolder
     //void setTargetsToBuild();
     void resolvePackages(); // [1/2] step
     ITarget &resolveAndLoad(ResolveRequest &);
+    ITarget &load(const Package &);
     void registerTarget(ITarget &);
 private:
-    ITarget &load(const Package &);
     void loadPackages();
 public:
     void prepare();

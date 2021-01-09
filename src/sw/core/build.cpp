@@ -507,13 +507,16 @@ void SwBuild::loadInputs()
     }
 }
 
+// this resolves only local packages
 ITarget &SwBuild::resolveAndLoad(ResolveRequest &rr)
 {
+    // this resolves only local packages
+    if (rr.u.getPath().isAbsolute())
+        throw SW_RUNTIME_ERROR("Cannot resolve package: " + rr.u.toString());
+
     // fast check
     if (!rr.isResolved())
     {
-        if (rr.u.getPath().isAbsolute())
-            throw SW_RUNTIME_ERROR("Cannot resolve package: " + rr.u.toString());
 
         // load local target
 

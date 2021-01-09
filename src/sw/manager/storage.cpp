@@ -334,7 +334,7 @@ std::unique_ptr<Package> LocalStorage::install(const Package &p) const
     {
         auto pkg = makePackage(p.getId());
         auto d = std::make_unique<PackageData>(p.getData());
-        d->sdir = get_lp_dir2_dir(storage_dir_pkg, p.getId());
+        d->sdir = get_lp_pkg_dir(storage_dir_pkg, p.getId());
         pkg->setData(std::move(d));
         return pkg;
     }
@@ -377,7 +377,7 @@ std::unique_ptr<Package> LocalStorage::install(const Package &p) const
 
     auto pkg = makePackage(p.getId());
     auto d = std::make_unique<PackageData>(p.getData());
-    d->sdir = get_lp_dir2_dir(storage_dir_pkg, p.getId());
+    d->sdir = get_lp_pkg_dir(storage_dir_pkg, p.getId());
     pkg->setData(std::move(d));
     return pkg;
 }
@@ -391,7 +391,7 @@ std::unique_ptr<Package> LocalStorage::makePackage(const PackageId &id) const
         LocalPackage2(const Package &id, const LocalStorage &s)
             : Package(id)
         {
-            sdir = get_lp_dir2_dir(s.storage_dir_pkg, getId());
+            sdir = get_lp_pkg_dir(s.storage_dir_pkg, getId());
         }
 
         bool isInstallable() const override { return false; }
