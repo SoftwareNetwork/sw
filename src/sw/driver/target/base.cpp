@@ -208,7 +208,7 @@ Target::Target(TargetBase &parent, const PackageName &inpkg)
 
     // sdir
     if (!isLocal())
-        setSourceDirectory(getLocalPackage().getDirSrc2());
+        setSourceDirectory(getLocalPackage().getDirSrc2() / getSourceDirectoryName());
     // set source dir
     if (SourceDir.empty() || (getSolution().dd && getSolution().dd->force_source))
     {
@@ -412,11 +412,10 @@ path Target::getLocalOutputBinariesDirectory() const
 
 path Target::getTargetDirShort(const path &root) const
 {
-    // make t subdir or tgt? or tgts?
-
-    // now config goes first, then target
-    // maybe target goes first, then config like in storage/pkg?
-    return root / "t" / getConfig() / shorten_hash(blake2b_512(getPackage().toString()), 6);
+    auto tgtdir = shorten_hash(blake2b_512(getPackage().toString()), 6);
+    // p to keep the same like in storage
+    // p - packages
+    return root / "p" / tgtdir / getConfig();
 }
 
 path Target::getObjectDir() const
@@ -558,10 +557,7 @@ path Target::getBinaryParentDir() const
 
         auto cfg = getConfig();
         auto basecfgdir = getLocalPackage().getDirSrc2().parent_path();
-        auto basedir = basecfgdir.parent_path();
-        auto d = basedir / cfg;
-
-        return d;
+        return basecfgdir / getConfig();
     }
 }
 

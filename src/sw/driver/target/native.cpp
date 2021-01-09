@@ -312,7 +312,7 @@ bool NativeCompiledTarget::isStaticOrHeaderOnlyLibrary() const
 
 static bool isStaticOrHeaderOnlyLibrary(const PackageSettings &s)
 {
-    return s["header_only"].get<bool>() || s["type"] == "native_static_library"s;
+    return (s["header_only"] && s["header_only"].get<bool>()) || s["type"] == "native_static_library"s;
 }
 
 void NativeCompiledTarget::setOutputDir(const path &dir)
@@ -1598,7 +1598,7 @@ void NativeCompiledTarget::prepare()
                 *this += up;
             }
         }*/
-        if (!libstdcppset && getSettings()["native"]["stdlib"]["cpp"].isValue())
+        if (!libstdcppset && getSettings()["native"]["stdlib"]["cpp"])
         {
             if (IsSwConfig && getBuildSettings().TargetOS.is(OSType::Linux))
             {
@@ -1609,19 +1609,38 @@ void NativeCompiledTarget::prepare()
             }
             else
             {
-                *this += UnresolvedPackage(getSettings()["native"]["stdlib"]["cpp"].getValue());
+                auto &p = getSettings()["native"]["stdlib"]["cpp"];
+                UnresolvedPackage u = p.is<UnresolvedPackage>()
+                    ? p.get<UnresolvedPackage>()
+                    : p.get<PackageName>()
+                    ;
+                *this += u;
             }
         }
 
         // goes last
-        if (getSettings()["native"]["stdlib"]["c"].isValue())
-            *this += UnresolvedPackage(getSettings()["native"]["stdlib"]["c"].getValue());
+        if (getSettings()["native"]["stdlib"]["c"])
+        {
+            auto &p = getSettings()["native"]["stdlib"]["c"];
+            UnresolvedPackage u = p.is<UnresolvedPackage>()
+                ? p.get<UnresolvedPackage>()
+                : p.get<PackageName>()
+                ;
+            *this += u;
+        }
 
         // compiler runtime
         if (getSettings()["native"]["stdlib"]["compiler"])
         {
-            if (getSettings()["native"]["stdlib"]["compiler"].isValue())
-                *this += UnresolvedPackage(getSettings()["native"]["stdlib"]["compiler"].getValue());
+            if (getSettings()["native"]["stdlib"]["compiler"])
+            {
+                auto &p = getSettings()["native"]["stdlib"]["compiler"];
+                UnresolvedPackage u = p.is<UnresolvedPackage>()
+                    ? p.get<UnresolvedPackage>()
+                    : p.get<PackageName>()
+                    ;
+                *this += u;
+            }
             else if (getSettings()["native"]["stdlib"]["compiler"].isArray())
             {
                 for (auto &s : getSettings()["native"]["stdlib"]["compiler"].getArray())
@@ -1630,8 +1649,15 @@ void NativeCompiledTarget::prepare()
         }
 
         // kernel headers
-        if (getSettings()["native"]["stdlib"]["kernel"].isValue())
-            *this += UnresolvedPackage(getSettings()["native"]["stdlib"]["kernel"].getValue());
+        if (getSettings()["native"]["stdlib"]["kernel"])
+        {
+            auto &p = getSettings()["native"]["stdlib"]["kernel"];
+            UnresolvedPackage u = p.is<UnresolvedPackage>()
+                ? p.get<UnresolvedPackage>()
+                : p.get<PackageName>()
+                ;
+            *this += u;
+        }
         /*if (getBuildSettings().TargetOS.is(OSType::Windows))
         {
             *this += UnresolvedPackage("com.Microsoft.Windows.SDK.ucrt"s); // c
@@ -1903,17 +1929,24 @@ void NativeCompiledTarget::prepare_pass2()
 
     // force cpp standard
     // some stdlibs require *minimal* cpp std to be set
-    if (getSettings()["native"]["stdlib"]["cpp"].isValue() &&
-        UnresolvedPackage(getSettings()["native"]["stdlib"]["cpp"].getValue()).getPath() == "com.Microsoft.VisualStudio.VC.libcpp")
+    if (getSettings()["native"]["stdlib"]["cpp"])
     {
-        for (auto &d : getActiveDependencies())
+        auto &p = getSettings()["native"]["stdlib"]["cpp"];
+        UnresolvedPackage u = p.is<UnresolvedPackage>()
+            ? p.get<UnresolvedPackage>()
+            : p.get<PackageName>()
+            ;
+        if (u.getPath() == "com.Microsoft.VisualStudio.VC.libcpp")
         {
-            auto pkg = d.dep->getResolvedPackage();
-            if (pkg.getName().getPath() == "com.Microsoft.VisualStudio.VC.libcpp")
+            for (auto &d : getActiveDependencies())
             {
-                if (pkg.getName().getVersion() > PackageVersion(19) && CPPVersion < CPPLanguageStandard::CPP14)
-                    CPPVersion = CPPLanguageStandard::CPP14;
-                break;
+                auto pkg = d.dep->getResolvedPackage();
+                if (pkg.getPath() == "com.Microsoft.VisualStudio.VC.libcpp")
+                {
+                    if (pkg.getVersion() > PackageVersion(19) && CPPVersion < CPPLanguageStandard::CPP14)
+                        CPPVersion = CPPLanguageStandard::CPP14;
+                    break;
+                }
             }
         }
     }

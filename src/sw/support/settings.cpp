@@ -117,19 +117,19 @@ void PackageSetting::setPathValue(const Directories &d, const path &value)
 void PackageSetting::setPathValue(const path &root, const path &value)
 {
     if (is_under_root_by_prefix_path(value, root))
-        *this = to_string(normalize_path(value.lexically_relative(root)));
+        *this = normalize_path(value.lexically_relative(root));
     else
         setAbsolutePathValue(value);
 }
 
 path PackageSetting::getAbsolutePathValue() const
 {
-    return (const char8_t *)getValue().c_str();
+    return get<path>();
 }
 
 void PackageSetting::setAbsolutePathValue(const path &value)
 {
-    *this = to_string(normalize_path(value));
+    *this = normalize_path(value);
 }
 
 ::sw::Resolver &PackageSetting::getResolver() const

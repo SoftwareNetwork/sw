@@ -187,12 +187,11 @@ const UnresolvedPackage &DependencyData::getPackage() const
     return package;
 }
 
-PackageId DependencyData::getResolvedPackage() const
+const PackageName &DependencyData::getResolvedPackage() const
 {
     if (!target)
         throw SW_RUNTIME_ERROR("Package is unresolved: " + getPackage().toString());
-    SW_UNIMPLEMENTED;
-    //return target->getPackage();
+    return target->getPackage();
 }
 
 void DependencyData::setTarget(const ITarget &t)

@@ -376,21 +376,20 @@ void SwBuild::build()
     prepare();
     execute();
 
-    for (auto &[pkg, tgts] : getTargets())
+    /*for (auto &[pkg, tgts] : getTargets())
     {
         for (auto &tgt : tgts)
         {
-            SW_UNIMPLEMENTED;
-            /*nlohmann::json jt;
+            nlohmann::json jt;
             jt["package_id"] = tgt->getPackage().toString();
             jt["package_id_hash"] = (size_t)tgt;
             jt["settings"] = nlohmann::json::parse(tgt->getSettings().toString());
             jt["settings_hash"] = tgt->getSettings().getHash();
             jt["interface_settings"] = nlohmann::json::parse(tgt->getInterfaceSettings().toString());
             jt["interface_settings_hash"] = tgt->getInterfaceSettings().getHash();
-            getHtmlReportData()["targets"][tgt->getPackage().toString() + tgt->getSettings().getHashString()] = jt;*/
+            getHtmlReportData()["targets"][tgt->getPackage().toString() + tgt->getSettings().getHashString()] = jt;
         }
-    }
+    }*/
 
     // this is all in one call
     //while (step())
@@ -399,7 +398,7 @@ void SwBuild::build()
     if (build_settings["measure"])
         LOG_DEBUG(logger, BOOST_CURRENT_FUNCTION << " time: " << t.getTimeFloat() << " s.");
 
-    writeHtmlReport();
+    //writeHtmlReport();
 }
 
 bool SwBuild::step()

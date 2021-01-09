@@ -28,4 +28,20 @@
         </DisplayString>
     </Type>
 
+    <Type Name="sw::PackageSetting">
+        <DisplayString Condition="value._Which == 8">
+            {value._Tail._Tail._Tail._Tail._Tail._Tail._Tail._Tail._Head}
+        </DisplayString>
+        <DisplayString Condition="value._Which == 0">
+            empty
+        </DisplayString>
+        <DisplayString>
+            {value}
+        </DisplayString>
+
+        <Expand>
+            <ExpandedItem Condition="value._Which == 8">value._Tail._Tail._Tail._Tail._Tail._Tail._Tail._Tail._Head.settings</ExpandedItem>
+        </Expand>
+    </Type>
+
 </AutoVisualizer>

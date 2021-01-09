@@ -414,7 +414,7 @@ std::unique_ptr<sw::SwBuild> SwClientContext::createBuildInternal()
             bs["lock_file"] = to_string(normalize_path(options.lock_file));
     }
 
-#define SET_BOOL_OPTION(x) bs[#x] = options.x ? "true" : ""
+#define SET_BOOL_OPTION(x) if (options.x) bs[#x] = true;
 
     //
     SET_BOOL_OPTION(build_always);
