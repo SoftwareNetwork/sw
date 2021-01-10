@@ -387,7 +387,7 @@ CommandBuilder &CommandBuilder::operator<<(const ::sw::cmd::tag_prog_rule &t)
 
 CommandBuilder &CommandBuilder::operator<<(const ::sw::cmd::tag_prog_tgt &t)
 {
-    auto d = std::make_shared<Dependency>(*t.t);
+    auto d = std::make_shared<Dependency>(t.t->getPackage());
     *this << cmd::prog(d);
     return *this;
 }

@@ -26,6 +26,7 @@ struct SwBuild;
 struct ResolveRequest;
 struct Resolver;
 struct Input;
+struct UnresolvedPackageId;
 
 struct SW_CORE_API TargetFile
 {
@@ -50,11 +51,15 @@ struct SW_CORE_API IDependency
 {
     virtual ~IDependency() = 0;
 
-    virtual const PackageSettings &getSettings() const = 0;
-    virtual const UnresolvedPackage &getUnresolvedPackage() const = 0;
+    virtual UnresolvedPackageId &getUnresolvedPackageId() = 0;
+    virtual const UnresolvedPackageId &getUnresolvedPackageId() const = 0;
+
     virtual bool isResolved() const = 0;
     virtual void setTarget(const ITarget &) = 0;
     virtual const ITarget &getTarget() const = 0;
+
+    PackageSettings &getSettings();
+    const PackageSettings &getSettings() const;
 };
 
 using IDependencyPtr = std::shared_ptr<IDependency>;

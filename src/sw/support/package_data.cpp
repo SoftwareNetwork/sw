@@ -30,8 +30,8 @@ PackageData::PackageData(nlohmann::json j)
         throw SW_RUNTIME_ERROR("bad source");
     for (auto &[f,t] : j["files"].items())
         files_map[(const char8_t *)f.c_str()] = (const char8_t *)t.get<std::string>().c_str();
-    for (auto &v : j["dependencies"])
-        dependencies.emplace(v.get<std::string>());
+    //for (auto &v : j["dependencies"])
+        //dependencies.emplace(v.get<std::string>());
     for (auto &v : j["signatures"])
     {
         Signature s;
@@ -75,7 +75,7 @@ void PackageData::applyPrefix(const PackagePath &prefix)
     id = getPackageId(prefix);
 
     // also fix deps
-    decltype(dependencies) deps2;
+    /*decltype(dependencies) deps2;
     for (auto &d : dependencies)
     {
         if (d.getPath().isAbsolute())
@@ -83,7 +83,7 @@ void PackageData::applyPrefix(const PackagePath &prefix)
         else
             deps2.insert(UnresolvedPackage{ prefix / d.getPath(), d.getRange() });
     }
-    dependencies = deps2;
+    dependencies = deps2;*/
 }
 
 void PackageData::applyVersion()

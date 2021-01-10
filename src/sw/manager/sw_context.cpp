@@ -107,14 +107,14 @@ LocalPackage SwManagerContext::install(const Package &p) const
     return getLocalStorage().install(p);
 }*/
 
-void SwManagerContext::setCachedPackages(const std::unordered_map<UnresolvedPackage, PackageId> &pkgs) const
+/*void SwManagerContext::setCachedPackages(const std::unordered_map<UnresolvedPackage, PackageId> &pkgs) const
 {
     SW_UNIMPLEMENTED;
-    /*ResolveResult pkgs2;
+    ResolveResult pkgs2;
     for (auto &[u, p] : pkgs)
         pkgs2.emplace(u, std::make_unique<LocalPackage>(getLocalStorage(), p));
-    getCachedStorage().storePackages(pkgs2);*/
-}
+    getCachedStorage().storePackages(pkgs2);
+}*/
 
 }
 

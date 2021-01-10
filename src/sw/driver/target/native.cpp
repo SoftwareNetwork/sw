@@ -351,7 +351,7 @@ static void targetSettings2Command(primitives::Command &c, const PackageSetting 
     }
 }
 
-static UnresolvedPackage get_settings_package_id(const PackageSetting &s)
+static UnresolvedPackageName get_settings_package_id(const PackageSetting &s)
 {
     if (!s)
         throw SW_RUNTIME_ERROR("Empty setting");
@@ -385,7 +385,7 @@ static auto get_linker_type(const String &p)
     return t;
 }
 
-std::unique_ptr<NativeCompiler> NativeCompiledTarget::activateCompiler(const PackageSetting &s, const UnresolvedPackage &id, const StringSet &exts, bool extended_desc)
+std::unique_ptr<NativeCompiler> NativeCompiledTarget::activateCompiler(const PackageSetting &s, const UnresolvedPackageName &id, const StringSet &exts, bool extended_desc)
 {
     SW_UNIMPLEMENTED;
 
@@ -426,7 +426,7 @@ std::unique_ptr<NativeCompiler> NativeCompiledTarget::activateCompiler(const Pac
         if (getSettings()["native"]["stdlib"]["cpp"].getValue() == "com.Microsoft.VisualStudio.VC.libcpp")
         {
             // take same ver as cl
-            UnresolvedPackage up(getSettings()["native"]["stdlib"]["cpp"].getValue());
+            UnresolvedPackageName up(getSettings()["native"]["stdlib"]["cpp"].getValue());
             up.range = id.range;
             *this += up;
             libstdcppset = true;
@@ -434,7 +434,7 @@ std::unique_ptr<NativeCompiler> NativeCompiledTarget::activateCompiler(const Pac
     }*/
 }
 
-std::unique_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const PackageSetting &s, const UnresolvedPackage &id, bool extended_desc)
+std::unique_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const PackageSetting &s, const UnresolvedPackageName &id, bool extended_desc)
 {
     SW_UNIMPLEMENTED;
     /*
@@ -1265,7 +1265,7 @@ static auto createDependency(Dependency &d, InheritanceType i, const Target &t)
     TargetDependency td;
     td.dep = &d;
     td.inhtype = i;
-    td.dep->settings.mergeMissing(t.getExportOptions());
+    td.dep->getUnresolvedPackageId().getSettings().mergeMissing(t.getExportOptions());
     /*auto s = td.dep->settings;
     td.dep->settings.mergeAndAssign(t.getExportOptions());
     td.dep->settings.mergeAndAssign(s);*/
@@ -1517,8 +1517,8 @@ void NativeCompiledTarget::prepare()
         auto add_dep = [this](auto &&name)
         {
             auto &p = getSettings()["rule"][name]["package"];
-            UnresolvedPackage u = p.is<UnresolvedPackage>()
-                ? p.get<UnresolvedPackage>()
+            UnresolvedPackageName u = p.is<UnresolvedPackageName>()
+                ? p.get<UnresolvedPackageName>()
                 : p.get<PackageName>()
                 ;
             auto d = std::make_shared<Dependency>(u);
@@ -1541,12 +1541,12 @@ void NativeCompiledTarget::prepare()
                     )
                     return;
                 auto &p = getSettings()["rule"][r]["package"];
-                UnresolvedPackage u = p.is<UnresolvedPackage>()
-                    ? p.get<UnresolvedPackage>()
+                UnresolvedPackageName u = p.is<UnresolvedPackageName>()
+                    ? p.get<UnresolvedPackageName>()
                     : p.get<PackageName>()
                     ;
                 auto d = std::make_shared<Dependency>(u);
-                d->getSettings() = getSettings();
+                d->getUnresolvedPackageId().getSettings() = getSettings();
                 resolveDependency(*d);
                 addRuleDependency({ r, d, r });
             }
@@ -1581,19 +1581,19 @@ void NativeCompiledTarget::prepare()
         //add_rule2("link_circular", std::make_unique<NativeLinkerRule>(*prog_lib));
 
         // c++ goes first for correct include order
-        /*UnresolvedPackage cppcl = getSettings()["rule"]["cpp"]["package"].getValue();
+        /*UnresolvedPackageName cppcl = getSettings()["rule"]["cpp"]["package"].getValue();
         if (cppcl.getPath() == "com.Microsoft.VisualStudio.VC.cl")
         {
             libstdcppset = true;
 
             // take same ver as cl
             {
-                UnresolvedPackage up("com.Microsoft.VisualStudio.VC.libcpp");
+                UnresolvedPackageName up("com.Microsoft.VisualStudio.VC.libcpp");
                 up.range = cppcl.range;
                 *this += up;
             }
             {
-                UnresolvedPackage up("com.Microsoft.VisualStudio.VC.runtime");
+                UnresolvedPackageName up("com.Microsoft.VisualStudio.VC.runtime");
                 up.range = cppcl.range;
                 *this += up;
             }
@@ -1604,14 +1604,14 @@ void NativeCompiledTarget::prepare()
             {
                 // to prevent ODR violation
                 // we have stdlib builtin into sw binary
-                auto d = *this + UnresolvedPackage(getSettings()["native"]["stdlib"]["cpp"].getValue());
+                auto d = *this + UnresolvedPackageName(getSettings()["native"]["stdlib"]["cpp"].getValue());
                 d->IncludeDirectoriesOnly = true;
             }
             else
             {
                 auto &p = getSettings()["native"]["stdlib"]["cpp"];
-                UnresolvedPackage u = p.is<UnresolvedPackage>()
-                    ? p.get<UnresolvedPackage>()
+                UnresolvedPackageName u = p.is<UnresolvedPackageName>()
+                    ? p.get<UnresolvedPackageName>()
                     : p.get<PackageName>()
                     ;
                 *this += u;
@@ -1622,8 +1622,8 @@ void NativeCompiledTarget::prepare()
         if (getSettings()["native"]["stdlib"]["c"])
         {
             auto &p = getSettings()["native"]["stdlib"]["c"];
-            UnresolvedPackage u = p.is<UnresolvedPackage>()
-                ? p.get<UnresolvedPackage>()
+            UnresolvedPackageName u = p.is<UnresolvedPackageName>()
+                ? p.get<UnresolvedPackageName>()
                 : p.get<PackageName>()
                 ;
             *this += u;
@@ -1635,8 +1635,8 @@ void NativeCompiledTarget::prepare()
             if (getSettings()["native"]["stdlib"]["compiler"])
             {
                 auto &p = getSettings()["native"]["stdlib"]["compiler"];
-                UnresolvedPackage u = p.is<UnresolvedPackage>()
-                    ? p.get<UnresolvedPackage>()
+                UnresolvedPackageName u = p.is<UnresolvedPackageName>()
+                    ? p.get<UnresolvedPackageName>()
                     : p.get<PackageName>()
                     ;
                 *this += u;
@@ -1644,7 +1644,7 @@ void NativeCompiledTarget::prepare()
             else if (getSettings()["native"]["stdlib"]["compiler"].isArray())
             {
                 for (auto &s : getSettings()["native"]["stdlib"]["compiler"].getArray())
-                    *this += UnresolvedPackage(s.getValue());
+                    *this += UnresolvedPackageName(s.getValue());
             }
         }
 
@@ -1652,16 +1652,16 @@ void NativeCompiledTarget::prepare()
         if (getSettings()["native"]["stdlib"]["kernel"])
         {
             auto &p = getSettings()["native"]["stdlib"]["kernel"];
-            UnresolvedPackage u = p.is<UnresolvedPackage>()
-                ? p.get<UnresolvedPackage>()
+            UnresolvedPackageName u = p.is<UnresolvedPackageName>()
+                ? p.get<UnresolvedPackageName>()
                 : p.get<PackageName>()
                 ;
             *this += u;
         }
         /*if (getBuildSettings().TargetOS.is(OSType::Windows))
         {
-            *this += UnresolvedPackage("com.Microsoft.Windows.SDK.ucrt"s); // c
-            *this += UnresolvedPackage("com.Microsoft.Windows.SDK.um"s); // kernel
+            *this += UnresolvedPackageName("com.Microsoft.Windows.SDK.ucrt"s); // c
+            *this += UnresolvedPackageName("com.Microsoft.Windows.SDK.um"s); // kernel
         }*/
     }
 
@@ -1932,8 +1932,8 @@ void NativeCompiledTarget::prepare_pass2()
     if (getSettings()["native"]["stdlib"]["cpp"])
     {
         auto &p = getSettings()["native"]["stdlib"]["cpp"];
-        UnresolvedPackage u = p.is<UnresolvedPackage>()
-            ? p.get<UnresolvedPackage>()
+        UnresolvedPackageName u = p.is<UnresolvedPackageName>()
+            ? p.get<UnresolvedPackageName>()
             : p.get<PackageName>()
             ;
         if (u.getPath() == "com.Microsoft.VisualStudio.VC.libcpp")
@@ -1960,8 +1960,7 @@ void NativeCompiledTarget::prepare_pass2()
     {
         if (d.dep->IncludeDirectoriesOnly)
             continue;
-        auto d3 = std::make_shared<Dependency>(d.dep->getUnresolvedPackage());
-        d3->settings = d.dep->getSettings();
+        auto d3 = std::make_shared<Dependency>(d.dep->getUnresolvedPackageId());
         d3->setTarget(d.dep->getTarget());
         d3->LinkLibrariesOnly = true;
         Interface += d3;

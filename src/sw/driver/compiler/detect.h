@@ -59,7 +59,7 @@ struct SW_DRIVER_CPP_API ProgramDetector
     // actually should be PackagePath?
     // we do not want to use PackagePath here, because some entry points may detect specially versioned packages
     // e.g., org.llvm.clang-10 will look for clang-10/clang++-10 only
-    using DetectablePackageEntryPointKey = UnresolvedPackage;
+    using DetectablePackageEntryPointKey = UnresolvedPackageName;
     using DetectablePackageEntryPoint = std::function<void(Build &)>;
     using DetectablePackageMultiEntryPoints = std::unordered_multimap<DetectablePackageEntryPointKey, DetectablePackageEntryPoint>;
     using DetectablePackageEntryPoints = DetectablePackageMultiEntryPoints;

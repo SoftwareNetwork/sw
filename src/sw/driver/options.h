@@ -306,25 +306,21 @@ struct SW_DRIVER_CPP_API NativeLinkerOptions : NativeLinkerOptionsData
     FilesOrdered gatherLinkDirectories() const;
 
     //
-    void add(const Target &t);
-    void remove(const Target &t);
+    void add(const ITarget &t);
+    void remove(const ITarget &t);
 
     void add(const DependencyPtr &t);
     void remove(const DependencyPtr &t);
 
-    void add(const UnresolvedPackage &t);
-    void remove(const UnresolvedPackage &t);
+    void add(const UnresolvedPackageName &t);
+    void remove(const UnresolvedPackageName &t);
 
-    void add(const UnresolvedPackages &t);
-    void remove(const UnresolvedPackages &t);
-
-    void add(const PackageName &t);
-    void remove(const PackageName &t);
+    void add(const std::unordered_set<UnresolvedPackageName> &t);
+    void remove(const std::unordered_set<UnresolvedPackageName> &t);
 
     DependencyPtr operator+(const ITarget &);
     DependencyPtr operator+(const DependencyPtr &);
-    DependencyPtr operator+(const PackageName &);
-    DependencyPtr operator+(const UnresolvedPackage &);
+    DependencyPtr operator+(const UnresolvedPackageName &);
 
     std::vector<DependencyPtr> &getRawDependencies() { return deps; }
     const std::vector<DependencyPtr> &getRawDependencies() const { return deps; }
@@ -333,7 +329,7 @@ private:
     std::vector<DependencyPtr> deps;
 };
 
-using UnresolvedDependenciesType = std::unordered_map<UnresolvedPackage, DependencyPtr>;
+using UnresolvedDependenciesType = std::unordered_map<UnresolvedPackageName, DependencyPtr>;
 
 struct SW_DRIVER_CPP_API NativeOptions : NativeCompilerOptions,
     NativeLinkerOptions

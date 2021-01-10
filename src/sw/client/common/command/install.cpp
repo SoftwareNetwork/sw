@@ -7,7 +7,7 @@
 
 SUBCOMMAND_DECL(install)
 {
-    sw::UnresolvedPackages pkgs;
+    std::unordered_set<sw::UnresolvedPackageName> pkgs;
     getOptions().options_install.install_args.push_back(getOptions().options_install.install_arg);
     for (auto &p : getOptions().options_install.install_args)
         pkgs.insert(sw::extractFromString(p));

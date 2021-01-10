@@ -169,43 +169,6 @@ void unique_merge_containers(C &to, const C &from)
     }*/
 }
 
-DependencyData::DependencyData(const ITarget &t)
-    : DependencyData(t.getPackage())
-{
-}
-
-DependencyData::DependencyData(const UnresolvedPackage &p)
-    : package(p)
-{
-}
-
-const UnresolvedPackage &DependencyData::getPackage() const
-{
-    /*auto t = target;
-    if (t)
-        return {t->getPackage().ppath, t->getPackage().version};*/
-    return package;
-}
-
-const PackageName &DependencyData::getResolvedPackage() const
-{
-    if (!target)
-        throw SW_RUNTIME_ERROR("Package is unresolved: " + getPackage().toString());
-    return target->getPackage();
-}
-
-void DependencyData::setTarget(const ITarget &t)
-{
-    target = &t;
-}
-
-const ITarget &DependencyData::getTarget() const
-{
-    if (!target)
-        throw SW_RUNTIME_ERROR("Package is unresolved: " + getPackage().toString());
-    return *target;
-}
-
 std::pair<String, String> string2definition(const String &d)
 {
     auto p = d.find('=');
@@ -503,7 +466,7 @@ FilesOrdered NativeLinkerOptions::gatherLinkDirectories() const
 
 DependencyPtr NativeLinkerOptions::operator+(const ITarget &t)
 {
-    auto d = std::make_shared<Dependency>(t);
+    auto d = std::make_shared<Dependency>(UnresolvedPackageId{ t.getPackage() });
     add(d);
     return d;
 }
@@ -514,34 +477,27 @@ DependencyPtr NativeLinkerOptions::operator+(const DependencyPtr &d)
     return d;
 }
 
-DependencyPtr NativeLinkerOptions::operator+(const PackageName &pkg)
+DependencyPtr NativeLinkerOptions::operator+(const UnresolvedPackageName &pkg)
 {
     auto d = std::make_shared<Dependency>(pkg);
     add(d);
     return d;
 }
 
-DependencyPtr NativeLinkerOptions::operator+(const UnresolvedPackage &pkg)
+void NativeLinkerOptions::add(const ITarget &t)
 {
-    auto d = std::make_shared<Dependency>(pkg);
-    add(d);
-    return d;
+    add(std::make_shared<Dependency>(UnresolvedPackageId{ t.getPackage() }));
 }
 
-void NativeLinkerOptions::add(const Target &t)
+void NativeLinkerOptions::remove(const ITarget &t)
 {
-    add(std::make_shared<Dependency>(t));
-}
-
-void NativeLinkerOptions::remove(const Target &t)
-{
-    remove(std::make_shared<Dependency>(t));
+    remove(std::make_shared<Dependency>(UnresolvedPackageId{ t.getPackage() }));
 }
 
 void NativeLinkerOptions::add(const DependencyPtr &t)
 {
     auto i = std::find_if(deps.begin(), deps.end(), [t](const auto &d) {
-        return d->getPackage() == t->getPackage();
+        return d->getUnresolvedPackageId() == t->getUnresolvedPackageId();
     });
     if (i == deps.end())
         t->Disabled = false;
@@ -550,7 +506,7 @@ void NativeLinkerOptions::add(const DependencyPtr &t)
     deps.push_back(t);
 
     if (auto t2 = dynamic_cast<TargetOptions *>(this))
-        t->settings.mergeMissing(t2->getTarget().getExportOptions()); // add only missing fields!
+        t->getUnresolvedPackageId().getSettings().mergeMissing(t2->getTarget().getExportOptions()); // add only missing fields!
 }
 
 void NativeLinkerOptions::remove(const DependencyPtr &t)
@@ -558,46 +514,36 @@ void NativeLinkerOptions::remove(const DependencyPtr &t)
     t->Disabled = true;
     for (auto &d : deps)
     {
-        if (d->getPackage() != t->getPackage())
+        if (d->getUnresolvedPackageId() != t->getUnresolvedPackageId())
             continue;
         d->Disabled = true;
     }
     deps.push_back(t);
 
     if (auto t2 = dynamic_cast<TargetOptions *>(this))
-        t->settings.mergeMissing(t2->getTarget().getExportOptions()); // add only missing fields!f
+        t->getUnresolvedPackageId().getSettings().mergeMissing(t2->getTarget().getExportOptions()); // add only missing fields!f
 }
 
-void NativeLinkerOptions::add(const UnresolvedPackage &t)
+void NativeLinkerOptions::add(const UnresolvedPackageName &t)
 {
     add(std::make_shared<Dependency>(t));
 }
 
-void NativeLinkerOptions::remove(const UnresolvedPackage &t)
+void NativeLinkerOptions::remove(const UnresolvedPackageName &t)
 {
     remove(std::make_shared<Dependency>(t));
 }
 
-void NativeLinkerOptions::add(const UnresolvedPackages &t)
+void NativeLinkerOptions::add(const std::unordered_set<UnresolvedPackageName> &t)
 {
     for (auto &d : t)
         add(d);
 }
 
-void NativeLinkerOptions::remove(const UnresolvedPackages &t)
+void NativeLinkerOptions::remove(const std::unordered_set<UnresolvedPackageName> &t)
 {
     for (auto &d : t)
         remove(d);
-}
-
-void NativeLinkerOptions::add(const PackageName &p)
-{
-    add(std::make_shared<Dependency>(p));
-}
-
-void NativeLinkerOptions::remove(const PackageName &p)
-{
-    remove(std::make_shared<Dependency>(p));
 }
 
 void NativeOptions::merge(const NativeOptions &o, const GroupSettings &s)

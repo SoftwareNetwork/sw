@@ -107,7 +107,7 @@ private:
     path driver_idir;
 
     SharedLibraryTarget &createTarget(Build &, const InputData &);
-    decltype(auto) commonActions(Build &, const InputData &, const UnresolvedPackages &deps);
+    decltype(auto) commonActions(Build &, const InputData &, const std::unordered_set<UnresolvedPackageName> &deps);
 
     // one input file to one dll
     path one2one(Build &, const InputData &);

@@ -5,7 +5,7 @@
 
 #include "package.h"
 
-#include <sw/support/package_unresolved.h>
+#include <sw/support/unresolved_package_name.h>
 #include <sw/support/settings.h>
 #include <sw/support/storage.h>
 
@@ -181,7 +181,7 @@ private:
 struct SW_MANAGER_API CachedStorage : IResolvableStorage
 {
     using Value = ResolveRequestResult;
-    using StoredPackages = std::unordered_map<UnresolvedPackage, std::unordered_map<size_t, Value>>;
+    using StoredPackages = std::unordered_map<UnresolvedPackageName, std::unordered_map<size_t, Value>>;
 
     CachedStorage() = default;
     CachedStorage(const CachedStorage &) = delete;

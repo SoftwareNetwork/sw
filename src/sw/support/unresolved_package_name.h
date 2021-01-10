@@ -13,14 +13,13 @@ namespace sw
 
 struct PackageName;
 
-struct SW_SUPPORT_API UnresolvedPackage
+struct SW_SUPPORT_API UnresolvedPackageName
 {
-    //UnresolvedPackage() = default;
-    UnresolvedPackage(const String &s);
-    UnresolvedPackage(const PackagePath &p, const PackageVersionRange &r);
-    UnresolvedPackage(const PackageName &);
+    UnresolvedPackageName(const String &s);
+    UnresolvedPackageName(const PackagePath &p, const PackageVersionRange &r);
+    UnresolvedPackageName(const PackageName &);
 
-    UnresolvedPackage &operator=(const String &s);
+    UnresolvedPackageName &operator=(const String &s);
 
     const PackagePath &getPath() const { return ppath; }
     const PackageVersionRange &getRange() const { return range; }
@@ -32,7 +31,7 @@ struct SW_SUPPORT_API UnresolvedPackage
     bool contains(const PackageName &) const;
 
     //bool operator<(const UnresolvedPackage &rhs) const { return std::tie(ppath, range) < std::tie(rhs.ppath, rhs.range); }
-    bool operator==(const UnresolvedPackage &rhs) const { return std::tie(ppath, range) == std::tie(rhs.ppath, rhs.range); }
+    bool operator==(const UnresolvedPackageName &rhs) const { return std::tie(ppath, range) == std::tie(rhs.ppath, rhs.range); }
     //bool operator!=(const UnresolvedPackage &rhs) const { return !operator==(rhs); }
 
 private:
@@ -40,22 +39,22 @@ private:
     PackageVersionRange range;
 };
 
-using UnresolvedPackages = std::unordered_set<UnresolvedPackage>;
+//using UnresolvedPackages = std::unordered_set<UnresolvedPackageName>;
 
 SW_SUPPORT_API
-bool contains(const UnresolvedPackages &, const PackageName &);
+bool contains(const std::unordered_set<UnresolvedPackageName> &, const PackageName &);
 
 SW_SUPPORT_API
-UnresolvedPackage extractFromString(const String &target);
+UnresolvedPackageName extractFromString(const String &target);
 
 }
 
 namespace std
 {
 
-template<> struct hash<::sw::UnresolvedPackage>
+template<> struct hash<::sw::UnresolvedPackageName>
 {
-    size_t operator()(const ::sw::UnresolvedPackage &p) const
+    size_t operator()(const ::sw::UnresolvedPackageName &p) const
     {
         auto h = std::hash<::sw::PackagePath>()(p.getPath());
         return hash_combine(h, std::hash<::sw::PackageVersionRange>()(p.getRange()));

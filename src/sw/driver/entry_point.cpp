@@ -88,7 +88,7 @@ static path getImportLibraryFile(const Build &b)
     return getImportFilePrefix(b) += ".lib";
 }
 
-static String getDepsSuffix(PrepareConfig &pc, NativeCompiledTarget &t, const UnresolvedPackages &deps)
+static String getDepsSuffix(PrepareConfig &pc, NativeCompiledTarget &t, const std::unordered_set<UnresolvedPackageName> &deps)
 {
     std::set<String> sdeps;
     SW_UNIMPLEMENTED;
@@ -105,7 +105,7 @@ static String getDepsSuffix(PrepareConfig &pc, NativeCompiledTarget &t, const Un
     return h;
 }
 
-static path getImportPchFile(PrepareConfig &pc, NativeCompiledTarget &t, const UnresolvedPackages &deps)
+static path getImportPchFile(PrepareConfig &pc, NativeCompiledTarget &t, const std::unordered_set<UnresolvedPackageName> &deps)
 {
     // we create separate pch for different target deps
     auto h = getDepsSuffix(pc, t, deps);
@@ -144,7 +144,7 @@ static PackagePath getSelfTargetName(Build &b, const FilesSorted &files)
 
 static auto getDriverDep()
 {
-    return std::make_shared<Dependency>(UnresolvedPackage(SW_DRIVER_NAME));
+    return std::make_shared<Dependency>(UnresolvedPackageName(SW_DRIVER_NAME));
 }
 
 static void addDeps(Build &solution, NativeCompiledTarget &lib)
@@ -157,7 +157,7 @@ static void addDeps(Build &solution, NativeCompiledTarget &lib)
     lib += "pub.egorpugin.primitives.command"_dep;
     lib += "pub.egorpugin.primitives.filesystem"_dep;
 
-    auto d = lib + UnresolvedPackage(SW_DRIVER_NAME);
+    auto d = lib + UnresolvedPackageName(SW_DRIVER_NAME);
     d->IncludeDirectoriesOnly = true;
 }
 
@@ -187,7 +187,7 @@ static path getSwCheckAbiVersionHeader()
     return getSwDir() / "sw_check_abi_version.h";
 }
 
-static path getPackageHeader(const LocalPackage &p, const UnresolvedPackage &up)
+static path getPackageHeader(const LocalPackage &p, const UnresolvedPackageName &up)
 {
     // TODO: add '#pragma sw driver ...' ?
 
@@ -236,10 +236,10 @@ static path getPackageHeader(const LocalPackage &p, const UnresolvedPackage &up)
 }
 
 static
-std::pair<FilesOrdered, UnresolvedPackages>
+std::pair<FilesOrdered, std::unordered_set<UnresolvedPackageName>>
 getFileDependencies(SwBuild &b, const path &p, std::set<size_t> &gns)
 {
-    UnresolvedPackages udeps;
+    std::unordered_set<UnresolvedPackageName> udeps;
     FilesOrdered headers;
 
     auto f = read_file(p);
@@ -288,7 +288,7 @@ getFileDependencies(SwBuild &b, const path &p, std::set<size_t> &gns)
     return { headers, udeps };
 }
 
-static std::pair<FilesOrdered, UnresolvedPackages> getFileDependencies(SwBuild &b, const path &in_config_file)
+static std::pair<FilesOrdered, std::unordered_set<UnresolvedPackageName>> getFileDependencies(SwBuild &b, const path &in_config_file)
 {
     std::set<size_t> gns;
     return getFileDependencies(b, in_config_file, gns);
@@ -580,7 +580,7 @@ SharedLibraryTarget &PrepareConfig::createTarget(Build &b, const InputData &d)
     return lib;*/
 }
 
-decltype(auto) PrepareConfig::commonActions(Build &b, const InputData &d, const UnresolvedPackages &deps)
+decltype(auto) PrepareConfig::commonActions(Build &b, const InputData &d, const std::unordered_set<UnresolvedPackageName> &deps)
 {
     // save udeps
     //udeps = deps;
@@ -670,9 +670,9 @@ path PrepareConfig::one2one(Build &b, const InputData &d)
         for (auto &h : headers)
             lib += ForceInclude(h);
         // sort deps first!
-        std::map<size_t, const UnresolvedPackage*> deps_sorted;
+        std::map<size_t, const UnresolvedPackageName*> deps_sorted;
         for (auto &d : udeps)
-            deps_sorted[std::hash<UnresolvedPackage>()(d)] = &d;
+            deps_sorted[std::hash<UnresolvedPackageName>()(d)] = &d;
         for (auto &[_,d] : deps_sorted)
             lib += std::make_shared<Dependency>(*d);
     }

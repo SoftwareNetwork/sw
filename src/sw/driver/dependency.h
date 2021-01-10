@@ -8,6 +8,7 @@
 #include <sw/core/settings.h>
 #include <sw/core/target.h>
 #include <sw/manager/package.h>
+#include <sw/support/unresolved_package_id.h>
 
 #include <memory>
 
@@ -18,22 +19,20 @@ struct ITarget;
 
 struct SW_DRIVER_CPP_API DependencyData : IDependency
 {
-    UnresolvedPackage package;
-    PackageSettings settings;
     bool Disabled = false;
 
-    DependencyData(const ITarget &t);
-    DependencyData(const UnresolvedPackage &p);
+    DependencyData(const ITarget &);
+    DependencyData(const UnresolvedPackageId &);
 
-    const UnresolvedPackage &getPackage() const;
-    const UnresolvedPackage &getUnresolvedPackage() const override { return getPackage(); }
+    UnresolvedPackageId &getUnresolvedPackageId() override { return upkg; }
+    const UnresolvedPackageId &getUnresolvedPackageId() const override { return upkg; }
     void setTarget(const ITarget &t) override;
     const ITarget &getTarget() const override;
 
     bool isDisabled() const { return Disabled; }
 
-    operator bool() const { return target; }
-    bool isResolved() const override { return operator bool(); }
+    //operator bool() const { return target; }
+    bool isResolved() const override { return target; }
 
     const PackageName &getResolvedPackage() const;
 
@@ -44,10 +43,8 @@ struct SW_DRIVER_CPP_API DependencyData : IDependency
     PackageSettings &getOptions() { return getSettings()["options"].getMap(); }
     const PackageSettings &getOptions() const { return getSettings()["options"].getMap(); }
 
-    PackageSettings &getSettings() { return settings; }
-    const PackageSettings &getSettings() const override { return settings; }
-
 private:
+    UnresolvedPackageId upkg;
     const ITarget *target = nullptr;
 };
 
@@ -80,7 +77,7 @@ template<> struct hash<sw::DependencyData>
 {
     size_t operator()(const sw::DependencyData &p) const
     {
-        return std::hash<decltype(p.package)>()(p.package);
+        return std::hash<::sw::UnresolvedPackageId>()(p.getUnresolvedPackageId());
     }
 };
 
@@ -88,7 +85,7 @@ template<> struct hash<sw::Dependency>
 {
     size_t operator()(const sw::Dependency& p) const
     {
-        return std::hash<decltype(p.package)>()(p.package);
+        return std::hash<::sw::UnresolvedPackageId>()(p.getUnresolvedPackageId());
     }
 };
 

@@ -368,7 +368,7 @@ std::vector<IDependency *> Target::getDependencies() const
     auto rd = getRuleDependencies();
     for (auto &d : rd)
     {
-        if (d->getSettings().empty())
+        if (d->getUnresolvedPackageId().getSettings().empty())
             setDummyDependencySettings(d);
         deps.push_back(d.get());
     }
@@ -563,7 +563,7 @@ path Target::getBinaryParentDir() const
 
 DependencyPtr Target::getDependency() const
 {
-    auto d = std::make_shared<Dependency>(*this);
+    auto d = std::make_shared<Dependency>(UnresolvedPackageId{ getPackage() });
     return d;
 }
 
@@ -786,12 +786,12 @@ DependencyPtr Target::addDummyDependency(const DependencyPtr &t)
 
 DependencyPtr Target::addDummyDependency(const Target &t)
 {
-    return addDummyDependency(std::make_shared<Dependency>(t));
+    return addDummyDependency(std::make_shared<Dependency>(UnresolvedPackageId{ t.getPackage() }));
 }
 
 void Target::setDummyDependencySettings(DependencyPtr &t2) const
 {
-    t2->getSettings().mergeMissing(getHostSettings());
+    t2->getUnresolvedPackageId().getSettings().mergeMissing(getHostSettings());
 }
 
 void Target::addSourceDependency(const DependencyPtr &t)
@@ -799,13 +799,13 @@ void Target::addSourceDependency(const DependencyPtr &t)
     return; // ignore for now
     SourceDependencies.push_back(t);
 
-    auto &ds = SourceDependencies.back()->settings;
+    auto &ds = SourceDependencies.back()->getUnresolvedPackageId().getSettings();
     ds = {}; // accept everything
 }
 
 void Target::addSourceDependency(const Target &t)
 {
-    addSourceDependency(std::make_shared<Dependency>(t));
+    addSourceDependency(std::make_shared<Dependency>(UnresolvedPackageId{ t.getPackage() }));
 }
 
 Resolver &Target::getResolver() const
@@ -818,14 +818,14 @@ void Target::resolveDependency(IDependency &d)
     if (DryRun)
         return;
 
-    if (d.getUnresolvedPackage().getPath().isAbsolute())
+    if (d.getUnresolvedPackageId().getName().getPath().isAbsolute())
     {
-        ResolveRequest rr{ d.getUnresolvedPackage(), d.getSettings() };
+        ResolveRequest rr{ d.getUnresolvedPackageId() };
         if (!getResolver().resolve(rr))
         {
             // try to resolve sources
             PackageSettings s;
-            ResolveRequest rr2{ d.getUnresolvedPackage(), s };
+            ResolveRequest rr2{ d.getUnresolvedPackageId().getName(), s };
             if (!getResolver().resolve(rr2))
                 throw SW_RUNTIME_ERROR("Cannot resolve package " + rr.toString() + " and " + rr2.toString());
             auto p2 = getContext().getLocalStorage().install(rr2.getPackage());
@@ -846,7 +846,7 @@ void Target::resolveDependency(IDependency &d)
                 path getDirSrc2() const override { return sdir; }
             };
 
-            PackageId id{p2->getId().getName(), d.getSettings()};
+            PackageId id{p2->getId().getName(), d.getUnresolvedPackageId().getSettings()};
             LocalPackage2 p{id, p2->getDirSrc2()};
             p.setData(rr2.getPackage().getData().clone());
             auto &t = getMainBuild().load(p);
@@ -861,7 +861,7 @@ void Target::resolveDependency(IDependency &d)
     }
 
     // local package
-    ResolveRequest rr{ d.getUnresolvedPackage(), d.getSettings() };
+    ResolveRequest rr{ d.getUnresolvedPackageId() };
     auto &t = getMainBuild().resolveAndLoad(rr);
     d.setTarget(t);
     return;
@@ -885,7 +885,7 @@ path Target::getFile(const DependencyPtr &dep, const path &fn)
         return {};
 
     addSourceDependency(dep); // main trick is to add a dependency
-    ResolveRequest rr{ dep->getUnresolvedPackage(), dep->getSettings() };
+    ResolveRequest rr{ dep->getUnresolvedPackageId() };
     getResolver().resolve(rr);
     auto p2 = getMainBuild().getContext().getLocalStorage().install(rr.getPackage());
     auto &lp = p2 ? *p2 : rr.getPackage();
@@ -979,8 +979,8 @@ Test Target::addTest1(const String &name, const Target &tgt)
     //if (!isLocal() || getPackage().getOverriddenDir())
         //return c;
 
-    auto d = std::make_shared<Dependency>(tgt);
-    d->getSettings() = getSettings(); // same settings!
+    auto d = std::make_shared<Dependency>(UnresolvedPackageId{ tgt.getPackage() });
+    d->getUnresolvedPackageId().getSettings() = getSettings(); // same settings!
     d->setTarget(tgt); // "resolve" right here
     // manual setup
     std::dynamic_pointer_cast<::sw::driver::Command>(c.getCommand())->setProgram(d);
@@ -1000,7 +1000,7 @@ void Target::addTest(Test &cb, const String &name)
 DependencyPtr Target::constructThisPackageDependency(const String &name)
 {
     PackageName id(NamePrefix / name, getPackage().getVersion());
-    return std::make_shared<Dependency>(id);
+    return std::make_shared<Dependency>(UnresolvedPackageId{ id });
 }
 
 void ProjectTarget::init()

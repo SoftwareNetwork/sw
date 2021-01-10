@@ -22,7 +22,7 @@ struct SW_DRIVER_CPP_API RuleData
 
     RuleData(const String &name);
     RuleData(const String &name, const PackageSettings &);
-    RuleData(const String &name, const UnresolvedPackage &from_dep);
+    RuleData(const String &name, const UnresolvedPackageName &from_dep);
     RuleData(const String &name, const DependencyPtr &from_dep);
     RuleData(const String &name, const DependencyPtr &from_dep, const String &from_name);
     RuleData(const String &name, std::unique_ptr<IRule> r);

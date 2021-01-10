@@ -217,7 +217,7 @@ static void cppan_load_project(NativeCompiledTarget &t, const yaml &root)
             },
                 [&t, &read_single_dep, &read_version](const auto &dall)
             {
-                auto get_dep = [&t, &read_version, &read_single_dep](const auto &d) -> UnresolvedPackage
+                auto get_dep = [&t, &read_version, &read_single_dep](const auto &d) -> UnresolvedPackageName
                 {
                     SW_UNIMPLEMENTED;
                     /*
@@ -243,7 +243,7 @@ static void cppan_load_project(NativeCompiledTarget &t, const yaml &root)
 
                 auto extract_deps = [&get_dep, &read_single_dep](const auto &dall, const auto &str)
                 {
-                    UnresolvedPackages deps;
+                    std::unordered_set<UnresolvedPackageName> deps;
                     auto priv = dall[str];
                     if (!priv.IsDefined())
                         return deps;

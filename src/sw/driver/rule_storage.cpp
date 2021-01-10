@@ -25,7 +25,7 @@ RuleData::RuleData(const String &name, const DependencyPtr &from_dep)
 {
 }
 
-RuleData::RuleData(const String &name, const UnresolvedPackage &from_dep)
+RuleData::RuleData(const String &name, const UnresolvedPackageName &from_dep)
     : RuleData(name, std::make_shared<Dependency>(from_dep))
 {
 }

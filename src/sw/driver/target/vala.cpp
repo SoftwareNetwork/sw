@@ -51,8 +51,8 @@ void ValaBase::init()
         d = "org.sw.demo.gnome.vala.compiler"_dep;
         //d->getSettings() = t.getSettings();
         // glib+gobject currently do not work in other configs
-        d->getSettings()["native"]["library"] = "shared"s;
-        d->getSettings()["native"]["configuration"] = "debug"s;
+        d->getUnresolvedPackageId().getSettings()["native"]["library"] = "shared"s;
+        d->getUnresolvedPackageId().getSettings()["native"]["configuration"] = "debug"s;
         SW_UNIMPLEMENTED;
         //t.setExtensionProgram(".vala", d);
         //t += "org.sw.demo.gnome.glib.glib"_dep;

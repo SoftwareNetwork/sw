@@ -91,7 +91,7 @@ SUBCOMMAND_DECL(open)
 {
     auto &sdb = getContext().getLocalStorage();
 
-    sw::UnresolvedPackages upkgs;
+    std::unordered_set<sw::UnresolvedPackageName> upkgs;
     for (auto &a : getInputs())
         upkgs.insert(a);
 

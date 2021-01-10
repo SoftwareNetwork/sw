@@ -14,9 +14,9 @@ namespace sw
 {
 
 template <class T>
-static UnresolvedPackage to_upkg(const T &s)
+static UnresolvedPackageName to_upkg(const T &s)
 {
-    return UnresolvedPackage{ s };
+    return UnresolvedPackageName{ s };
 }
 
 template <class K, class V>
@@ -61,16 +61,16 @@ static void basicResolve(PackageSettings &ts)
     ts2.erase("rule");
     for (auto &&[_, m] : ts["rule"].getMap())
     {
-        ResolveRequest rr{ m["package"].get<UnresolvedPackage>(), ts2 };
+        ResolveRequest rr{ m["package"].get<UnresolvedPackageName>(), ts2 };
         if (ts["resolver"].resolve(rr))
-            m["package"] = UnresolvedPackage{ rr.getPackage().getId().getName() };
+            m["package"] = UnresolvedPackageName{ rr.getPackage().getId().getName() };
         // otherwise we silently ignore until rule is used
     }
     for (auto &&[_, m] : ts["native"]["stdlib"].getMap())
     {
-        ResolveRequest rr{ m.get<UnresolvedPackage>(), ts }; // with rules!
+        ResolveRequest rr{ m.get<UnresolvedPackageName>(), ts }; // with rules!
         if (ts["resolver"].resolve(rr))
-            m = UnresolvedPackage{ rr.getPackage().getId().getName() };
+            m = UnresolvedPackageName{ rr.getPackage().getId().getName() };
         // otherwise we silently ignore until rule is used
     }
 }
@@ -95,22 +95,22 @@ static void addSettingsCommon(const SwBuild &b, PackageSettings &ts, bool force)
         // msvc
         else if (getProgramDetector().hasVsInstances())
         {
-            msvc["package"] = UnresolvedPackage{ "com.Microsoft.VisualStudio.VC.cl" };
+            msvc["package"] = UnresolvedPackageName{ "com.Microsoft.VisualStudio.VC.cl" };
             set_rule("c", msvc);
             set_rule("cpp", msvc);
 
-            msvc["package"] = UnresolvedPackage{ "com.Microsoft.VisualStudio.VC.ml" };
+            msvc["package"] = UnresolvedPackageName{ "com.Microsoft.VisualStudio.VC.ml" };
             set_rule("asm", msvc);
         }
 
         // use msvc's lib and link until llvm tools are not working
-        msvc["package"] = UnresolvedPackage{ "com.Microsoft.VisualStudio.VC.lib" };
+        msvc["package"] = UnresolvedPackageName{ "com.Microsoft.VisualStudio.VC.lib" };
         set_rule("lib", msvc);
-        msvc["package"] = UnresolvedPackage{ "com.Microsoft.VisualStudio.VC.link" };
+        msvc["package"] = UnresolvedPackageName{ "com.Microsoft.VisualStudio.VC.link" };
         set_rule("link", msvc);
 
         // always use this rc
-        ts["rule"]["rc"]["package"] = UnresolvedPackage{ "com.Microsoft.Windows.rc" };
+        ts["rule"]["rc"]["package"] = UnresolvedPackageName{ "com.Microsoft.Windows.rc" };
 
         // libs
         check_and_assign(ts["native"]["stdlib"]["c"], to_upkg("com.Microsoft.Windows.SDK.ucrt"), force);
@@ -119,16 +119,16 @@ static void addSettingsCommon(const SwBuild &b, PackageSettings &ts, bool force)
             check_and_assign(ts["native"]["stdlib"]["compiler"], to_upkg("com.Microsoft.VisualStudio.VC.runtime"), force);
         check_and_assign(ts["native"]["stdlib"]["kernel"], to_upkg("com.Microsoft.Windows.SDK.um"), force);
 
-        auto &cppcl = ts["rule"]["cpp"]["package"].get<UnresolvedPackage>();
+        auto &cppcl = ts["rule"]["cpp"]["package"].get<UnresolvedPackageName>();
         if (cppcl.getPath() == "com.Microsoft.VisualStudio.VC.cl")
         {
             // take same ver as cl
             {
-                UnresolvedPackage up("com.Microsoft.VisualStudio.VC.libcpp", cppcl.getRange());
+                UnresolvedPackageName up("com.Microsoft.VisualStudio.VC.libcpp", cppcl.getRange());
                 check_and_assign(ts["native"]["stdlib"]["cpp"], to_upkg("com.Microsoft.VisualStudio.VC.libcpp"), force || cppset);
             }
             {
-                UnresolvedPackage up("com.Microsoft.VisualStudio.VC.runtime", cppcl.getRange());
+                UnresolvedPackageName up("com.Microsoft.VisualStudio.VC.runtime", cppcl.getRange());
                 check_and_assign(ts["native"]["stdlib"]["compiler"], to_upkg("com.Microsoft.VisualStudio.VC.runtime"), force || cppset);
             }
         }
@@ -185,7 +185,7 @@ void addSettingsAndSetConfigPrograms(const SwBuild &b, PackageSettings &ts)
         // now find the latest available sdk (ucrt) and select it
         //PackageSettings oss;
         //oss["os"] = ts["os"];
-        //auto sdk = swctx.getPredefinedTargets().find(UnresolvedPackage(ts["native"]["stdlib"]["c"].getValue()), oss);
+        //auto sdk = swctx.getPredefinedTargets().find(UnresolvedPackageName(ts["native"]["stdlib"]["c"].getValue()), oss);
         //if (!sdk)
         //throw SW_RUNTIME_ERROR("No suitable installed WinSDK found for this host");
         //ts["native"]["stdlib"]["c"] = sdk->getPackage().toString(); // assign always
@@ -238,7 +238,7 @@ void addSettingsAndSetConfigPrograms(const SwBuild &b, PackageSettings &ts)
         //ts["native"]["stdlib"]["cpp"] = to_upkg("com.Microsoft.VisualStudio.VC.libcpp");
         //ts["native"]["stdlib"]["kernel"] = to_upkg("com.Microsoft.Windows.SDK.um");
 
-        auto if_add = [&swctx](auto &s, const UnresolvedPackage &name)
+        auto if_add = [&swctx](auto &s, const UnresolvedPackageName &name)
         {
             check_and_assign(s, name.toString());
             return true;
@@ -318,7 +318,7 @@ void addSettingsAndSetPrograms1(const SwCoreContext &swctx, PackageSettings &ts)
         // now find the latest available sdk (ucrt) and select it
         //PackageSettings oss;
         //oss["os"] = ts["os"];
-        //auto sdk = swctx.getPredefinedTargets().find(UnresolvedPackage(ts["native"]["stdlib"]["c"].getValue()), oss);
+        //auto sdk = swctx.getPredefinedTargets().find(UnresolvedPackageName(ts["native"]["stdlib"]["c"].getValue()), oss);
         //if (!sdk)
         //throw SW_RUNTIME_ERROR("No suitable installed WinSDK found for this host");
         //ts["native"]["stdlib"]["c"] = sdk->getPackage().toString(); // assign always
@@ -393,7 +393,7 @@ void addSettingsAndSetPrograms1(const SwCoreContext &swctx, PackageSettings &ts)
         //ts["native"]["stdlib"]["cpp"] = to_upkg("com.Microsoft.VisualStudio.VC.libcpp");
         //ts["native"]["stdlib"]["kernel"] = to_upkg("com.Microsoft.Windows.SDK.um");
 
-        auto if_add = [&swctx](auto &s, const UnresolvedPackage &name)
+        auto if_add = [&swctx](auto &s, const UnresolvedPackageName &name)
         {
             //auto &pd = swctx.getPredefinedTargets();
             //auto i = pd.find(name);

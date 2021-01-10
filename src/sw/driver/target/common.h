@@ -13,7 +13,7 @@ namespace sw
 {
 
 template <class CompilerType>
-static std::shared_ptr<CompilerType> activateCompiler(Target &t, const UnresolvedPackage &id, const StringSet &exts)
+static std::shared_ptr<CompilerType> activateCompiler(Target &t, const UnresolvedPackageName &id, const StringSet &exts)
 {
     SW_UNIMPLEMENTED;
     /*auto &cld = t.getMainBuild().getTargets();

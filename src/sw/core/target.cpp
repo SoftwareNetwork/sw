@@ -15,6 +15,10 @@ ITarget::~ITarget() {}
 //TargetEntryPoint::~TargetEntryPoint() = default;
 TargetData::~TargetData() = default;
 
+PackageSettings &IDependency::getSettings() { return getUnresolvedPackageId().getSettings(); }
+
+const PackageSettings &IDependency::getSettings() const { return getUnresolvedPackageId().getSettings(); }
+
 TargetFile::TargetFile(const path &p, bool is_generated, bool is_from_other_target)
     : fn(p), is_generated(is_generated), is_from_other_target(is_from_other_target)
 {
@@ -139,7 +143,7 @@ ITarget *TargetMap::find(const PackageId &pkg) const
 
 ITarget *TargetMap::find(const ResolveRequest &rr) const
 {
-    auto i = find(rr.getUnresolvedPackage());
+    auto i = find(rr.getUnresolvedPackageName());
     if (i == end())
         return {};
     auto k = i->second.findSuitable(rr.getSettings());
@@ -157,7 +161,7 @@ PredefinedTarget::~PredefinedTarget()
 {
 }
 
-struct PredefinedDependency : IDependency
+/*struct PredefinedDependency : IDependency
 {
     PredefinedDependency(const PackageId &p) : pkg(p) {}
     virtual ~PredefinedDependency() {}
@@ -176,7 +180,7 @@ struct PredefinedDependency : IDependency
 private:
     PackageId pkg;
     const ITarget *t = nullptr;
-};
+};*/
 
 /*std::vector<IDependency *> PredefinedTarget::getDependencies() const
 {

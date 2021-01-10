@@ -13,7 +13,7 @@ struct NativeBuiltinTargetEntryPoint;
 struct ConfigDependency
 {
     EntryPointFunctions bfs;
-    std::unordered_map<UnresolvedPackage, PackageName> resolver_cache;
+    std::unordered_map<UnresolvedPackageName, PackageName> resolver_cache;
     size_t hash;
 
     void add_pair(const String &u, const String &n) { resolver_cache.emplace(u, n); }

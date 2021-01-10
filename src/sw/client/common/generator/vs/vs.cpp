@@ -292,9 +292,9 @@ void VSGenerator::generate(const SwBuild &b)
     else
         throw SW_RUNTIME_ERROR("Compiler is not supported (yet?): " + compiler_type_s);
 
-    UnresolvedPackage compiler = (*s.settings.begin())["rule"]["cpp"]["package"].getValue();
+    UnresolvedPackageName compiler = (*s.settings.begin())["rule"]["cpp"]["package"].getValue();
     auto compiler_id = b.getTargets().find(compiler)->first;
-    auto compiler_id_max_version = b.getTargets().find(UnresolvedPackage(compiler.getPath().toString()))->first;
+    auto compiler_id_max_version = b.getTargets().find(UnresolvedPackageName(compiler.getPath().toString()))->first;
 
     if (compiler_type == MSVC)
     {
@@ -304,7 +304,7 @@ void VSGenerator::generate(const SwBuild &b)
     else
     {
         // otherwise just generate maximum found version for msvc compiler
-        auto compiler_id_max_version = b.getTargets().find(UnresolvedPackage("com.Microsoft.VisualStudio.VC.cl"))->first;
+        auto compiler_id_max_version = b.getTargets().find(UnresolvedPackageName("com.Microsoft.VisualStudio.VC.cl"))->first;
         vs_version = clver2vsver(compiler_id_max_version.getVersion(), compiler_id_max_version.getVersion());
         toolset_version = compiler_id_max_version.getVersion();
     }
@@ -1026,7 +1026,7 @@ void Project::emitProject(const VSGenerator &g) const
     ctx.addBlock("Keyword", "Win32Proj");
     if (g.vstype == VsGeneratorType::VisualStudio)
     {
-        UnresolvedPackage ucrt = (*settings.begin())["native"]["stdlib"]["c"].getValue();
+        UnresolvedPackageName ucrt = (*settings.begin())["native"]["stdlib"]["c"].getValue();
         auto ucrt_id = g.b->getTargets().find(ucrt)->first;
 
         ctx.addBlock("RootNamespace", getVisibleName());
@@ -1415,7 +1415,7 @@ void Project::emitProject(const VSGenerator &g) const
 
     if (g.compiler_type == VSGenerator::ClangCl || g.compiler_type == VSGenerator::Clang)
     {
-        auto get_prog = [&g](const sw::UnresolvedPackage &u) -> String
+        auto get_prog = [&g](const sw::UnresolvedPackageName &u) -> String
         {
             SW_UNIMPLEMENTED;
             /*auto &target = **g.b->getContext().getPredefinedTargets().find(u)->second.begin();

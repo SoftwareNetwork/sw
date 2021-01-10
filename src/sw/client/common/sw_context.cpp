@@ -47,13 +47,13 @@ static void applySettingsFromJson(sw::PackageSettings &s, const String &jsonstr)
     s.mergeFromString(jsonstr);
 }
 
-static sw::PackageSettings compilerTypeFromStringCaseI(const sw::UnresolvedPackage &compiler)
+static sw::PackageSettings compilerTypeFromStringCaseI(const sw::UnresolvedPackageName &compiler)
 {
     sw::PackageSettings ts;
 
     auto with_version = [&compiler](const sw::PackagePath &ppath)
     {
-        return sw::UnresolvedPackage(ppath, compiler.getRange());
+        return sw::UnresolvedPackageName(ppath, compiler.getRange());
     };
 
     auto set_with_version = [&with_version](const sw::PackagePath &ppath)
@@ -137,8 +137,8 @@ static sw::PackageSettings compilerTypeFromStringCaseI(const sw::UnresolvedPacka
         ts["rule"]["c"]["package"] = set_with_version("com.intel.compiler.c");
         ts["rule"]["cpp"]["package"] = set_with_version("com.intel.compiler.cpp");
         ts["rule"]["asm"]["package"] = set_with_version("com.Microsoft.VisualStudio.VC.ml");
-        ts["rule"]["lib"]["package"] = sw::UnresolvedPackage("com.intel.compiler.lib").toString();
-        ts["rule"]["link"]["package"] = sw::UnresolvedPackage("com.intel.compiler.link").toString();
+        ts["rule"]["lib"]["package"] = sw::UnresolvedPackageName("com.intel.compiler.lib").toString();
+        ts["rule"]["link"]["package"] = sw::UnresolvedPackageName("com.intel.compiler.link").toString();
         for (auto &[k, v] : ts["rule"].getMap())
             v["type"] = "intel";
         ts["rule"]["asm"]["type"] = "msvc";
@@ -152,7 +152,7 @@ static sw::PackageSettings compilerTypeFromStringCaseI(const sw::UnresolvedPacka
     return ts;
 }
 
-static sw::PackageSettings linkerTypeFromStringCaseI(const sw::UnresolvedPackage &linker)
+static sw::PackageSettings linkerTypeFromStringCaseI(const sw::UnresolvedPackageName &linker)
 {
     sw::PackageSettings ts;
 

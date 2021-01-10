@@ -440,7 +440,7 @@ void CmakeTargetEntryPoint::setupTarget(cmMakefile &mf, cmTarget &cmt, NativeCom
     {
         if (list_of_targets.find(n) != list_of_targets.end())
         {
-            t += std::make_shared<Dependency>(n);
+            t += std::make_shared<Dependency>(UnresolvedPackageName{ n });
             return;
         }
 
@@ -457,7 +457,7 @@ void CmakeTargetEntryPoint::setupTarget(cmMakefile &mf, cmTarget &cmt, NativeCom
 
         try
         {
-            UnresolvedPackage u(n);
+            UnresolvedPackageName u(n);
             if (u.getPath().size() == 1)
             {
                 // probably system link library

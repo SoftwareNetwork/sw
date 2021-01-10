@@ -496,8 +496,8 @@ public:
     ASSIGN_TYPES(Target)
     ASSIGN_TYPES(PackageName)
     ASSIGN_TYPES(DependencyPtr)
-    ASSIGN_TYPES(UnresolvedPackage)
-    ASSIGN_TYPES(UnresolvedPackages)
+    ASSIGN_TYPES(UnresolvedPackageName)
+    ASSIGN_TYPES(std::unordered_set<UnresolvedPackageName>)
 
     //
     ASSIGN_TYPES(sw::tag_static_t)

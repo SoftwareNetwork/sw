@@ -14,7 +14,7 @@ std::map<sw::PackagePath, sw::VersionSet> getMatchingPackages(const sw::StorageW
     auto &db = s.getPackagesDatabase();
 
     bool has_version = arg.find('-') != arg.npos;
-    sw::UnresolvedPackage u(arg);
+    sw::UnresolvedPackageName u(arg);
 
     auto ppaths = db.getMatchingPackages(u.getPath().toString());
     if (ppaths.empty())

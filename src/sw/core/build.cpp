@@ -111,7 +111,9 @@ static auto can_use_saved_configs(const SwBuild &b)
         ;
 }
 
-static std::unordered_map<UnresolvedPackage, PackageId> loadLockFile(const path &fn/*, SwContext &swctx*/)
+/*static std::unordered_map<UnresolvedPackage, PackageId> loadLockFile(const path &fn
+    //, SwContext &swctx
+    )
 {
     auto j = nlohmann::json::parse(read_file(fn));
     if (j["schema"]["version"].is_null())
@@ -126,64 +128,64 @@ static std::unordered_map<UnresolvedPackage, PackageId> loadLockFile(const path 
 
     std::unordered_map<UnresolvedPackage, PackageId> m;
 
-    /*for (auto &v : j["packages"])
-    {
-        DownloadDependency d;
-        (PackageId&)d = extractFromStringPackageId(v["package"].get<std::string>());
-        d.createNames();
-        d.prefix = v["prefix"];
-        d.hash = v["hash"];
-        d.group_number_from_lock_file = d.group_number = v["group_number"];
-        auto i = overridden.find(d);
-        d.local_override = i != overridden.end(d);
-        if (d.local_override)
-            d.group_number = i->second.getGroupNumber();
-        d.from_lock_file = true;
-        for (auto &v2 : v["dependencies"])
-        {
-            auto p = extractFromStringPackageId(v2.get<std::string>());
-            DownloadDependency1 d2{ p };
-            d.db_dependencies[p.ppath.toString()] = d2;
-        }
-        download_dependencies_.insert(d);
-    }*/
+    //for (auto &v : j["packages"])
+    //{
+    //    DownloadDependency d;
+    //    (PackageId&)d = extractFromStringPackageId(v["package"].get<std::string>());
+    //    d.createNames();
+    //    d.prefix = v["prefix"];
+    //    d.hash = v["hash"];
+    //    d.group_number_from_lock_file = d.group_number = v["group_number"];
+    //    auto i = overridden.find(d);
+    //    d.local_override = i != overridden.end(d);
+    //    if (d.local_override)
+    //        d.group_number = i->second.getGroupNumber();
+    //    d.from_lock_file = true;
+    //    for (auto &v2 : v["dependencies"])
+    //    {
+    //        auto p = extractFromStringPackageId(v2.get<std::string>());
+    //        DownloadDependency1 d2{ p };
+    //        d.db_dependencies[p.ppath.toString()] = d2;
+    //    }
+    //    download_dependencies_.insert(d);
+    //}
 
     for (auto &v : j["resolved_packages"].items())
     {
         auto u = extractFromString(v.key());
         auto id = extractPackageIdFromString(v.value()["package"].get<std::string>());
         //LocalPackage d(swctx.getLocalStorage(), id);
-        /*auto i = download_dependencies_.find(d);
-        if (i == download_dependencies_.end())
-            throw SW_RUNTIME_EXCEPTION("bad lock file");
-        d = *i;
-        if (v.value().find("installed") != v.value().end())
-            d.installed = v.value()["installed"];*/
+        //auto i = download_dependencies_.find(d);
+        //if (i == download_dependencies_.end())
+        //    throw SW_RUNTIME_EXCEPTION("bad lock file");
+        //d = *i;
+        //if (v.value().find("installed") != v.value().end())
+        //    d.installed = v.value()["installed"];
         m.emplace(u, id);
     }
     return m;
-}
+}*/
 
-static void saveLockFile(const path &fn, const std::unordered_map<UnresolvedPackage, LocalPackage> &pkgs)
+/*static void saveLockFile(const path &fn, const std::unordered_map<UnresolvedPackage, LocalPackage> &pkgs)
 {
     nlohmann::json j;
     j["schema"]["version"] = SW_CURRENT_LOCK_FILE_VERSION;
 
-    /*auto &jpkgs = j["packages"];
-    for (auto &r : std::set<DownloadDependency>(download_dependencies_.begin(), download_dependencies_.end()))
-    {
-        nlohmann::json jp;
-        jp["package"] = r.toString();
-        jp["prefix"] = r.prefix;
-        jp["hash"] = r.hash;
-        if (r.group_number > 0)
-            jp["group_number"] = r.group_number;
-        else
-            jp["group_number"] = r.group_number_from_lock_file;
-        for (auto &[_, d] : std::map<String, DownloadDependency1>(r.db_dependencies.begin(), r.db_dependencies.end()))
-            jp["dependencies"].push_back(d.toString());
-        jpkgs.push_back(jp);
-    }*/
+    //auto &jpkgs = j["packages"];
+    //for (auto &r : std::set<DownloadDependency>(download_dependencies_.begin(), download_dependencies_.end()))
+    //{
+    //    nlohmann::json jp;
+    //    jp["package"] = r.toString();
+    //    jp["prefix"] = r.prefix;
+    //    jp["hash"] = r.hash;
+    //    if (r.group_number > 0)
+    //        jp["group_number"] = r.group_number;
+    //    else
+    //        jp["group_number"] = r.group_number_from_lock_file;
+    //    for (auto &[_, d] : std::map<String, DownloadDependency1>(r.db_dependencies.begin(), r.db_dependencies.end()))
+    //        jp["dependencies"].push_back(d.toString());
+    //    jpkgs.push_back(jp);
+    //}
 
     auto &jp = j["resolved_packages"];
     // sort
@@ -198,7 +200,7 @@ static void saveLockFile(const path &fn, const std::unordered_map<UnresolvedPack
     }
 
     write_file_if_different(fn, j.dump(2));
-}
+}*/
 
 static ExecutionPlan::Clock::duration parseTimeLimit(String tl)
 {
@@ -451,21 +453,21 @@ void SwBuild::loadInputs()
     CHECK_STATE_AND_CHANGE(BuildState::NotStarted, BuildState::InputsLoaded);
 
     // filter selected targets if any
-    UnresolvedPackages in_ttb;
+    /*UnresolvedPackages in_ttb;
     UnresolvedPackages in_ttb_exclude;
     for (auto &t : build_settings["target-to-build"].getArray())
         in_ttb.insert(t.getValue());
     for (auto &t : build_settings["target-to-exclude"].getArray())
-        in_ttb_exclude.insert(t.getValue());
-    auto should_build_target = [&in_ttb, &in_ttb_exclude](const auto &p)
+        in_ttb_exclude.insert(t.getValue());*/
+    auto should_build_target = [/*&in_ttb, &in_ttb_exclude*/](const auto &p)
     {
-        if (!in_ttb.empty())
+        /*if (!in_ttb.empty())
         {
             if (!contains(in_ttb, p))
                 return false;
         }
         if (contains(in_ttb_exclude, p))
-            return false;
+            return false;*/
         return true;
     };
 
@@ -729,7 +731,7 @@ void SwBuild::resolvePackages(const std::vector<IDependency*> &udeps)
     //
     // more complex lock file will be
     // when we able to set dependency per each target with its settings
-    bool must_update_lock_file = true;
+    /*bool must_update_lock_file = true;
     if (1
         && !build_settings["update_lock_file"] // update flag
         && build_settings["lock_file"]
@@ -754,12 +756,12 @@ void SwBuild::resolvePackages(const std::vector<IDependency*> &udeps)
             //upkgs.insert(p); // add exactly p, not u!
         SW_UNIMPLEMENTED;
         //swctx.install(upkgs, false);
-    }
+    }*/
 
     // install
     std::vector<ResolveRequest> rrs;
     for (auto &d : udeps)
-        rrs.emplace_back(d->getUnresolvedPackage(), d->getSettings());
+        rrs.emplace_back(d->getUnresolvedPackageId());
     resolveWithDependencies(rrs);
     for (auto &rr : rrs)
     {
@@ -779,7 +781,7 @@ void SwBuild::resolvePackages(const std::vector<IDependency*> &udeps)
                 /*auto i = swctx.getPredefinedTargets().find(d->getUnresolvedPackage());
                 if (i != swctx.getPredefinedTargets().end())
                     continue;*/
-                const auto &pi = targets.find(d->getUnresolvedPackage());
+                const auto &pi = targets.find(d->getUnresolvedPackageId().getName());
                 if (pi == targets.end())
                 {
                     everything_resolved = false;
@@ -807,13 +809,13 @@ void SwBuild::resolvePackages(const std::vector<IDependency*> &udeps)
             return;
     }
 
-    if (build_settings["lock_file"].isValue() && must_update_lock_file)
+    /*if (build_settings["lock_file"].isValue() && must_update_lock_file)
     {
         // TODO: update for deps changes
         SW_UNIMPLEMENTED;
 
         // show fancy diffs during update lock file
-        /*if (build_settings["update_lock_file"])
+        if (build_settings["update_lock_file"])
         try
         {
             // may throw
@@ -837,8 +839,8 @@ void SwBuild::resolvePackages(const std::vector<IDependency*> &udeps)
         {
         }
 
-        saveLockFile(build_settings["lock_file"].getValue(), m);*/
-    }
+        saveLockFile(build_settings["lock_file"].getValue(), m);
+    }*/
 
     // install goes here - after saved configs, lock files etc.
     SW_UNIMPLEMENTED;

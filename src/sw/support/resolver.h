@@ -4,6 +4,7 @@
 #pragma once
 
 #include "settings.h"
+#include "unresolved_package_id.h"
 
 namespace sw
 {
@@ -27,7 +28,7 @@ struct SW_SUPPORT_API ResolveRequestResult
 
 struct SW_SUPPORT_API ResolveRequest : ResolveRequestResult
 {
-    UnresolvedPackage u;
+    UnresolvedPackageName u;
     // value or ref?
     const PackageSettings &settings;
     // value or ref?
@@ -37,14 +38,15 @@ struct SW_SUPPORT_API ResolveRequest : ResolveRequestResult
     // timestamp - resolve packages only before this timestamp
     // like, e.g., on build start
 
-    ResolveRequest(const UnresolvedPackage &u, const PackageSettings &s) : u(u), settings(s) {}
+    ResolveRequest(const UnresolvedPackageName &u, const PackageSettings &s) : u(u), settings(s) {}
+    ResolveRequest(const UnresolvedPackageId &up) : u(up.getName()), settings(up.getSettings()) {}
 
     bool operator==(const ResolveRequest &rhs) const { return std::tie(u, settings) == std::tie(rhs.u, rhs.settings); }
 
     bool setPackage(PackagePtr);
 
     const PackageSettings &getSettings() const { return settings; }
-    const UnresolvedPackage &getUnresolvedPackage() const { return u; }
+    const UnresolvedPackageName &getUnresolvedPackageName() const { return u; }
     Package &getPackage() const { if (!isResolved()) throw SW_RUNTIME_ERROR("Package was not resolved: " + toString()); return *r; }
     String toString() const { return u.toString() + " (" + settings.getHashString() + ")"; }
 };

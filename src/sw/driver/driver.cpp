@@ -244,7 +244,7 @@ struct ConfigStorage : IStorage
 {
     SwContext &swctx;
     std::unordered_map<size_t, EntryPointFunctions> eps;
-    std::unordered_map<UnresolvedPackage, std::pair<PackageName,size_t>> targets;
+    std::unordered_map<UnresolvedPackageName, std::pair<PackageName,size_t>> targets;
 
     ConfigStorage(SwContext &swctx)
         : swctx(swctx)

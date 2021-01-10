@@ -16,7 +16,7 @@ DECLARE_STATIC_LOGGER(logger, "verify");
 SUBCOMMAND_DECL(verify)
 {
     // get package infos
-    sw::UnresolvedPackage u = getOptions().options_verify.verify_arg[0];
+    sw::UnresolvedPackageName u = getOptions().options_verify.verify_arg[0];
     SW_UNIMPLEMENTED;
     /*auto ml = getContext().install(sw::UnresolvedPackages{ u });
     auto &lp = ml.find(u)->second;

@@ -244,11 +244,11 @@ private:
     //std::unique_ptr<NativeLinker> prog_lib;
     bool libstdcppset = false;
     void findCompiler();
-    std::unique_ptr<NativeCompiler> activateCompiler(const PackageSetting &s, const UnresolvedPackage &id, const StringSet &exts, bool extended_desc);
+    std::unique_ptr<NativeCompiler> activateCompiler(const PackageSetting &s, const UnresolvedPackageName &id, const StringSet &exts, bool extended_desc);
     std::unique_ptr<NativeLinker> activateLibrarian(LinkerType);
     std::unique_ptr<NativeLinker> activateLinker(LinkerType);
     std::unique_ptr<NativeLinker> activateLinker(const PackageSetting &s);
-    std::unique_ptr<NativeLinker> activateLinker(const PackageSetting &s, const UnresolvedPackage &id, bool extended_desc);
+    std::unique_ptr<NativeLinker> activateLinker(const PackageSetting &s, const UnresolvedPackageName &id, bool extended_desc);
 
     void prepare_pass1();
     void prepare_pass2();

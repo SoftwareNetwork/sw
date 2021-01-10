@@ -170,7 +170,7 @@ struct PackageVersionMapBase : PackagePathMap<PackagePath, VersionMap<T>>
         return { *this, ip, iv };
     }
 
-    iterator find(const UnresolvedPackage &u)
+    iterator find(const UnresolvedPackageName &u)
     {
         auto ip = find(u.getPath());
         if (ip == end(u.getPath()))
@@ -184,7 +184,7 @@ struct PackageVersionMapBase : PackagePathMap<PackagePath, VersionMap<T>>
         return { *this, ip, ip->second.find(v.value()) };
     }
 
-    const_iterator find(const UnresolvedPackage &u) const
+    const_iterator find(const UnresolvedPackageName &u) const
     {
         auto ip = find(u.getPath());
         if (ip == end(u.getPath()))
