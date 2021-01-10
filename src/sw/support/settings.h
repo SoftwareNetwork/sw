@@ -196,9 +196,6 @@ struct SW_SUPPORT_API PackageSetting
     void push_back(const ArrayValue &);
     void reset();
 
-    void setRequired(bool = true);
-    bool isRequired() const;
-
     void ignoreInComparison(bool);
     bool ignoreInComparison() const { return ignore_in_comparison; }
 
@@ -212,7 +209,6 @@ struct SW_SUPPORT_API PackageSetting
     bool isResolver() const;
 
 private:
-    bool required = false;
     bool ignore_in_comparison = false;
     Variant value;
 

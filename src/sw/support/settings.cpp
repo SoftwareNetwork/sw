@@ -258,16 +258,6 @@ void PackageSetting::reset()
     *this = s;
 }
 
-void PackageSetting::setRequired(bool b)
-{
-    required = b;
-}
-
-bool PackageSetting::isRequired() const
-{
-    return required;
-}
-
 PackageSetting::operator bool() const
 {
     return !isEmpty() || *this == true;

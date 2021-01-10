@@ -33,9 +33,13 @@ void build(Solution &s)
         //cmddep->getSettings()["export-if-static"] = "true";
         //cmddep->getSettings()["export-if-static"].setRequired();
         verdep->getSettings()["export-if-static"] = "true";
+#if SW_CPP_DRIVER_API_VERSION == 1
         verdep->getSettings()["export-if-static"].setRequired();
+#endif
         srcdep->getSettings()["export-if-static"] = "true";
+#if SW_CPP_DRIVER_API_VERSION == 1
         srcdep->getSettings()["export-if-static"].setRequired();
+#endif
         if (support.getBuildSettings().TargetOS.Type == OSType::Windows)
         {
             support.Protected += "_CRT_SECURE_NO_WARNINGS"_d;
