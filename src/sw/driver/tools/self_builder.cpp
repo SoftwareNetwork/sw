@@ -106,14 +106,14 @@ String write_build_script(SwCoreContext &swctx, const std::vector<ResolveRequest
 {
     auto &idb = swctx.getInputDatabase();
 
-    std::unordered_map<size_t, std::unordered_map<UnresolvedPackage, PackageName>> hash_pkgs;
+    std::unordered_map<size_t, std::unordered_map<UnresolvedPackageName, PackageName>> hash_pkgs;
     for (auto &rr : rrs)
     {
         SpecificationFiles sf;
         sf.addFile("sw.cpp", rr.getPackage().getDirSrc2() / "sw.cpp");
         Specification s(sf);
         auto h = s.getHash(idb);
-        hash_pkgs[h].emplace(rr.getUnresolvedPackage(), rr.getPackage().getId().getName());
+        hash_pkgs[h].emplace(rr.getUnresolvedPackageName(), rr.getPackage().getId().getName());
     }
 
     primitives::CppEmitter ctx;
@@ -177,7 +177,7 @@ int main(int argc, char **argv)
     for (auto &&rr : rrs)
     {
         if (!swctx.resolve(rr, true))
-            throw SW_RUNTIME_ERROR("Not resolved: " + rr.getUnresolvedPackage().toString());
+            throw SW_RUNTIME_ERROR("Not resolved: " + rr.getUnresolvedPackageName().toString());
     }
     {
         //for (auto &&rr : rrs)
