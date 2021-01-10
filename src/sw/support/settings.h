@@ -199,14 +199,8 @@ struct SW_SUPPORT_API PackageSetting
     void setRequired(bool = true);
     bool isRequired() const;
 
-    void useInHash(bool);
-    bool useInHash() const { return used_in_hash; }
-
     void ignoreInComparison(bool);
     bool ignoreInComparison() const { return ignore_in_comparison; }
-
-    void serializable(bool);
-    bool serializable() const { return serializable_; }
 
     void mergeAndAssign(const PackageSetting &);
     void mergeMissing(const PackageSetting &);
@@ -219,9 +213,7 @@ struct SW_SUPPORT_API PackageSetting
 
 private:
     bool required = false;
-    bool used_in_hash = true;
     bool ignore_in_comparison = false;
-    bool serializable_ = true;
     Variant value;
 
     nlohmann::json toJson() const;
@@ -235,9 +227,6 @@ private:
     template <class Ar>
     void load(Ar &ar, unsigned)
     {
-        ar & used_in_hash;
-        ar & ignore_in_comparison;
-        //
         size_t idx;
         ar & idx;
         switch (idx)
@@ -270,11 +259,8 @@ private:
     template <class Ar>
     void save(Ar &ar, unsigned) const
     {
-        if (!serializable_)
+        if (ignore_in_comparison)
             return;
-        ar & used_in_hash;
-        ar & ignore_in_comparison;
-        //
         ar & value.index();
         switch (value.index())
         {

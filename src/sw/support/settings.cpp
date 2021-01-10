@@ -149,29 +149,9 @@ bool PackageSetting::operator==(const PackageSetting &rhs) const
     return value == rhs.value;
 }
 
-void PackageSetting::useInHash(bool b)
-{
-    used_in_hash = b;
-}
-
 void PackageSetting::ignoreInComparison(bool b)
 {
     ignore_in_comparison = b;
-}
-
-// rename to serializable?
-void PackageSetting::serializable(bool b)
-{
-    serializable_ = b;
-
-    // not serializing means no round trip,
-    // so it cannot be used in hash and
-    // must be ignored in comparisons
-    if (!serializable())
-    {
-        useInHash(false);
-        ignoreInComparison(true);
-    }
 }
 
 void PackageSetting::mergeMissing(const PackageSetting &rhs)
@@ -375,14 +355,12 @@ nlohmann::json PackageSettings::toJson() const
     nlohmann::json j;
     for (auto &[k, v] : *this)
     {
-        if (!v.serializable())
+        if (v.ignoreInComparison())
             continue;
         auto j2 = v.toJson();
         if (j2.is_null() && !v.isNull())
             continue;
         j[k] = j2;
-        if (!v.used_in_hash)
-            j[k + "_used_in_hash"] = "false";
         if (v.ignore_in_comparison)
             j[k + "_ignore_in_comparison"] = "true";
     }
@@ -421,7 +399,7 @@ size_t PackageSettings::getHash1() const
     size_t h = 0;
     for (auto &[k, v] : *this)
     {
-        if (!v.used_in_hash)
+        if (v.ignoreInComparison())
             continue;
         auto h2 = v.getHash1();
         if (h2 == 0)
@@ -529,12 +507,6 @@ void PackageSettings::mergeFromJson(const nlohmann::json &j)
         throw SW_RUNTIME_ERROR("Not an object");
     for (auto it = j.begin(); it != j.end(); ++it)
     {
-        if (pystring::endswith(it.key(), "_used_in_hash"))
-        {
-            if (it.value().get<String>() == "false")
-                (*this)[it.key().substr(0, it.key().size() - strlen("_used_in_hash"))].used_in_hash = false;
-            continue;
-        }
         if (pystring::endswith(it.key(), "_ignore_in_comparison"))
         {
             if (it.value().get<String>() == "true")

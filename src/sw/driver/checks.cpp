@@ -782,7 +782,7 @@ PackageSettings Check::getSettings() const
     auto up = getUniqueName();
     d /= up;
     ss["output_dir"] = to_string(normalize_path(d));
-    ss["output_dir"].serializable(false);
+    ss["output_dir"].ignoreInComparison(true);
 
     return ss;
 }

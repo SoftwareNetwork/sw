@@ -1483,13 +1483,11 @@ const PackageSettings &NativeCompiledTarget::getInterfaceSettings() const
                     {
                         ds["include_directories_only"] = true;
                         //ds["include_directories_only"].ignoreInComparison(true);
-                        ds["include_directories_only"].useInHash(false);
                     }
                     if (d->LinkLibrariesOnly)
                     {
                         ds["link_libraries_only"] = true;
                         //ds["link_libraries_only"].ignoreInComparison(true);
-                        ds["link_libraries_only"].useInHash(false);
                     }
                     s["dependencies"].push_back(j);
                 }

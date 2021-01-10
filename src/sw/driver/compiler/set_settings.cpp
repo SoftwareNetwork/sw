@@ -48,10 +48,7 @@ static void setRuleCompareRules(PackageSettings &ts)
     for (auto &v : {"c","cpp","link"})
     {
         if (ts["rule"][v])
-        {
             ts["rule"].ignoreInComparison(true);
-            ts["rule"].useInHash(false);
-        }
     }
 }
 

@@ -543,7 +543,7 @@ std::vector<sw::PackageSettings> SwClientContext::createSettings()
     if (options.use_same_config_for_host_dependencies)
     {
         initial_settings["use_same_config_for_host_dependencies"] = "true";
-        initial_settings["use_same_config_for_host_dependencies"].useInHash(false);
+        initial_settings["use_same_config_for_host_dependencies"].ignoreInComparison(true);
         getContext().setHostSettings(initial_settings);
     }
 
@@ -747,7 +747,7 @@ std::vector<sw::PackageSettings> SwClientContext::createSettings()
         for (auto &s : settings)
         {
             s["output_dir"] = to_string(normalize_path(d));
-            s["output_dir"].serializable(false);
+            s["output_dir"].ignoreInComparison(true);
         }
     }
 
@@ -763,7 +763,7 @@ std::vector<sw::PackageSettings> SwClientContext::createSettings()
             if (s["name"])
                 throw SW_RUNTIME_ERROR("Some config already has its name");
             s["name"] = options.config_name[i];
-            s["name"].serializable(false);
+            s["name"].ignoreInComparison(true);
         }
         LOG_DEBUG(logger, "WARNING: Setting config names may result in wrong config-name pair assignment, "
             "because of unspecified config creation order.");
