@@ -599,7 +599,7 @@ std::unique_ptr<Input> Driver::getInput(const Package &p) const
     {
         std::vector<const IDriver *> d2;
         d2.push_back(this);
-        auto inputs = swctx.detectInputs(d2, p.getDirSrc2() / getSourceDirectoryName());
+        auto inputs = swctx.detectInputs(d2, p.getDirSrc2());
         SW_CHECK(inputs.size() == 1);
         return std::move(inputs[0]);
     }
