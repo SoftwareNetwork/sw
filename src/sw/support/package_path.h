@@ -11,7 +11,7 @@ namespace sw
 {
 
 // case insensitive
-struct PackagePath
+struct SW_SUPPORT_API PackagePath
 {
     using PathElement = String;
     using Base = std::vector<PathElement>;
