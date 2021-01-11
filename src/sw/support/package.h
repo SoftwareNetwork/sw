@@ -76,8 +76,8 @@ struct SW_SUPPORT_API Package
     virtual std::unique_ptr<Package> clone() const { return std::make_unique<Package>(*this); }
 
     virtual bool isInstallable() const { return true; }
-    virtual path getDirSrc() const { throw SW_LOGIC_ERROR("Method is not implemented for this type."); }
-    virtual path getDirSrc2() const { throw SW_LOGIC_ERROR("Method is not implemented for this type."); }
+    virtual path getRootDirectory() const { throw SW_LOGIC_ERROR("Method is not implemented for this type."); }
+    virtual path getSourceDirectory() const { throw SW_LOGIC_ERROR("Method is not implemented for this type."); }
 
     /// stores package archive on the path
     /// this may involve any possible way of getting package file (network download, local copy etc.)

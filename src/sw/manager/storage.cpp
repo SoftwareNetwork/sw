@@ -389,8 +389,8 @@ std::unique_ptr<Package> LocalStorage::makePackage(const PackageId &id) const
 
         bool isInstallable() const override { return false; }
         std::unique_ptr<Package> clone() const override { return std::make_unique<LocalPackage2>(*this); }
-        path getDirSrc() const override { return sdir; }
-        path getDirSrc2() const override { return sdir / getSourceDirectoryName(); }
+        path getRootDirectory() const override { return sdir; }
+        path getSourceDirectory() const override { return getRootDirectory() / getSourceDirectoryName(); }
     };
 
     return std::make_unique<LocalPackage2>(id, *this);
@@ -421,8 +421,8 @@ std::unique_ptr<Package> OverriddenPackagesStorage::makePackage(const PackageId 
 
         bool isInstallable() const override { return false; }
         std::unique_ptr<Package> clone() const override { return std::make_unique<OverriddenPackage2>(*this); }
-        path getDirSrc() const override { return getData().sdir; }
-        path getDirSrc2() const override { return getData().sdir; }
+        path getRootDirectory() const override { return getData().sdir; }
+        path getSourceDirectory() const override { return getData().sdir; }
     };
 
     auto p = std::make_unique<OverriddenPackage2>(id);

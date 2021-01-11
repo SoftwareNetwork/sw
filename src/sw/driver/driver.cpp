@@ -134,7 +134,7 @@ struct BuiltinPackage : Package
     using Package::Package;
     bool isInstallable() const override { return false; }
     std::unique_ptr<Package> clone() const override { return std::make_unique<BuiltinPackage>(*this); }
-    path getDirSrc2() const override { return getData().sdir; }
+    path getSourceDirectory() const override { return getData().sdir; }
 };
 
 // actually this is system storage
@@ -237,7 +237,7 @@ struct ConfigPackage : Package
     using Package::Package;
     std::unique_ptr<Package> clone() const override { return std::make_unique<ConfigPackage>(*this); }
     bool isInstallable() const override { return false; }
-    path getDirSrc2() const override { return getData().sdir; }
+    path getSourceDirectory() const override { return getData().sdir; }
 };
 
 struct ConfigStorage : IStorage
@@ -599,7 +599,7 @@ std::unique_ptr<Input> Driver::getInput(const Package &p) const
     {
         std::vector<const IDriver *> d2;
         d2.push_back(this);
-        auto inputs = swctx.detectInputs(d2, p.getDirSrc2());
+        auto inputs = swctx.detectInputs(d2, p.getSourceDirectory());
         SW_CHECK(inputs.size() == 1);
         return std::move(inputs[0]);
     }

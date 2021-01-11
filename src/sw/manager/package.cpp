@@ -42,7 +42,7 @@ path LocalPackage::getDirSrc() const
     return getDir() / "src";
 }
 
-path LocalPackage::getDirSrc2() const
+path LocalPackage::getSourceDirectory() const
 {
     return getDirSrc() / getSourceDirectoryName();
 }
@@ -92,7 +92,7 @@ void LocalPackage::remove() const
     //getStorage().remove(*this);
 }
 
-path OverriddenPackage::getDirSrc2() const
+path OverriddenPackage::getSourceDirectory() const
 {
     return getData().sdir;
 }

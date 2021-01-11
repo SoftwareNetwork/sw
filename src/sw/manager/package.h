@@ -32,7 +32,7 @@ struct SW_MANAGER_API LocalPackage : LocalPackageBase
     /// source archive root
     path getDirSrc() const;
     /// actual sources root
-    virtual path getDirSrc2() const;
+    virtual path getSourceDirectory() const;
 
     //
     path getDirObj() const;
@@ -56,7 +56,7 @@ struct SW_MANAGER_API OverriddenPackage : LocalPackageBase
 {
     using LocalPackageBase::LocalPackageBase;
 
-    path getDirSrc2() const override;
+    path getSourceDirectory() const override;
     bool isOverridden() const override { return true; }
     std::unique_ptr<Package> clone() const override { return std::make_unique<OverriddenPackage>(*this); }
 };

@@ -208,7 +208,7 @@ Target::Target(TargetBase &parent, const PackageName &inpkg)
 
     // sdir
     if (!isLocal())
-        setSourceDirectory(getLocalPackage().getDirSrc2() / getSourceDirectoryName());
+        setSourceDirectory(getLocalPackage().getSourceDirectory());
     // set source dir
     if (SourceDir.empty() || (getSolution().dd && getSolution().dd->force_source))
     {
@@ -552,11 +552,11 @@ path Target::getBinaryParentDir() const
         return getTargetDirShort(getMainBuild().getBuildDirectory());
     else
     {
-        if (!is_under_root(getLocalPackage().getDirSrc2(), getContext().getLocalStorage().storage_dir))
-            return getTargetDirShort(getLocalPackage().getDirSrc2() / SW_BINARY_DIR);
+        if (!is_under_root(getLocalPackage().getRootDirectory(), getContext().getLocalStorage().storage_dir))
+            return getTargetDirShort(getLocalPackage().getRootDirectory() / SW_BINARY_DIR);
 
         auto cfg = getConfig();
-        auto basecfgdir = getLocalPackage().getDirSrc2().parent_path();
+        auto basecfgdir = getLocalPackage().getRootDirectory().parent_path();
         return basecfgdir / getConfig();
     }
 }
@@ -843,11 +843,12 @@ void Target::resolveDependency(IDependency &d)
 
                 bool isInstallable() const override { return false; }
                 std::unique_ptr<Package> clone() const override { return std::make_unique<LocalPackage2>(*this); }
-                path getDirSrc2() const override { return sdir; }
+                path getRootDirectory() const override { return sdir; }
+                path getSourceDirectory() const override { return getRootDirectory() / getSourceDirectoryName(); }
             };
 
             PackageId id{p2->getId().getName(), d.getUnresolvedPackageId().getSettings()};
-            LocalPackage2 p{id, p2->getDirSrc2()};
+            LocalPackage2 p{id, p2->getRootDirectory()};
             p.setData(rr2.getPackage().getData().clone());
             auto &t = getMainBuild().load(p);
             d.setTarget(t);
@@ -889,7 +890,7 @@ path Target::getFile(const DependencyPtr &dep, const path &fn)
     getResolver().resolve(rr);
     auto p2 = getMainBuild().getContext().getLocalStorage().install(rr.getPackage());
     auto &lp = p2 ? *p2 : rr.getPackage();
-    auto p = lp.getDirSrc2();
+    auto p = lp.getSourceDirectory();
     // allow to get dirs
     if (!fn.empty())
         p /= fn;

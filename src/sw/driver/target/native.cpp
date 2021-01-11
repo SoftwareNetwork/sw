@@ -697,7 +697,7 @@ void NativeCompiledTarget::addPackageDefinitions(bool defs)
         a["PACKAGE_COPYRIGHT_YEAR"] = std::to_string(1900 + t.tm_year);
 
         a["PACKAGE_ROOT_DIR"] = q + to_string(normalize_path(isLocal() ? RootDirectory :
-            getLocalPackage().getDirSrc2()
+            getLocalPackage().getSourceDirectory()
         )) + q;
         a["PACKAGE_NAME_WITHOUT_OWNER"] = q/* + getPackage().getPath().slice(2).toString()*/ + q;
         a["PACKAGE_NAME_CLEAN"] = q + (isLocal()

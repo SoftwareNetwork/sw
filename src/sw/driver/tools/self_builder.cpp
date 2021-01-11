@@ -72,7 +72,7 @@ String write_build_script_headers(SwCoreContext &swctx, const std::vector<Resolv
             continue;*/
 
         SpecificationFiles sf;
-        sf.addFile("sw.cpp", rr.getPackage().getDirSrc2() / "sw.cpp");
+        sf.addFile("sw.cpp", rr.getPackage().getSourceDirectory() / "sw.cpp");
         Specification s(sf);
         auto h = s.getHash(idb);
         if (!hashes.insert(h).second)
@@ -110,7 +110,7 @@ String write_build_script(SwCoreContext &swctx, const std::vector<ResolveRequest
     for (auto &rr : rrs)
     {
         SpecificationFiles sf;
-        sf.addFile("sw.cpp", rr.getPackage().getDirSrc2() / "sw.cpp");
+        sf.addFile("sw.cpp", rr.getPackage().getSourceDirectory() / "sw.cpp");
         Specification s(sf);
         auto h = s.getHash(idb);
         hash_pkgs[h].emplace(rr.getUnresolvedPackageName(), rr.getPackage().getId().getName());
@@ -125,7 +125,7 @@ String write_build_script(SwCoreContext &swctx, const std::vector<ResolveRequest
     for (auto &rr : rrs)
     {
         SpecificationFiles sf;
-        sf.addFile("sw.cpp", rr.getPackage().getDirSrc2() / "sw.cpp");
+        sf.addFile("sw.cpp", rr.getPackage().getSourceDirectory() / "sw.cpp");
         Specification s(sf);
         auto h = s.getHash(idb);
         if (!hash_pkgs.contains(h))
