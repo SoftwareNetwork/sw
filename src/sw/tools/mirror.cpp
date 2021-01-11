@@ -60,7 +60,8 @@ int main(int argc, char **argv)
         if (!s2)
             continue;
 
-        sw::PackageIdSet pkgs;
+        SW_UNIMPLEMENTED;
+        /*sw::PackageIdSet pkgs;
         auto &db = s2->getPackagesDatabase();
         auto ppaths = db.getMatchingPackages();
         for (auto &p : ppaths)
@@ -87,7 +88,9 @@ int main(int argc, char **argv)
                 // maybe we should create target storage?
                 // SwManagerContext or just Directories to get pkg dir and to keep standard layout
                 // and the operation will download from storage to storage
-                auto f = s2->getFile(pkgid/*, sw::StorageFileType::SourceArchive*/);
+                auto f = s2->getFile(pkgid
+                    //, sw::StorageFileType::SourceArchive
+                );
                 if (f->copy(bak))
                 {
                     fs::rename(bak, dst);
@@ -100,7 +103,7 @@ int main(int argc, char **argv)
             }));
         }
         LOG_DEBUG(logger, "Total files to download: " << jobs.size());
-        waitAndGet(jobs);
+        waitAndGet(jobs);*/
     }
 
     return 0;
