@@ -1,7 +1,6 @@
 Different parts of SW project (this repository) are subject to different licences.
 
-core libraries:             GPLv3+  (src/sw/[manager,core])
-client library and tools:   AGPLv3+ (src/sw/[client,builder])
+core and client libraries:  AGPLv3+ (src/sw/[client,builder,manager,core])
 server code:                AGPLv3+ (src/sw/server)
 small libs:                 MPLv2   (src/sw/[protocol,support])
 utilities, helpers:         APLv2
