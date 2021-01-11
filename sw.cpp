@@ -1,8 +1,9 @@
 #pragma sw require header pub.egorpugin.primitives.tools.embedder-master
 #pragma sw require header org.sw.demo.google.grpc.cpp.plugin
 #pragma sw require header org.sw.demo.lexxmark.winflexbison.bison
-#pragma sw require header org.sw.demo.qtproject.qt.base.tools.moc-5.15.0
-#define QT_VER "-5.15.0"
+#pragma sw require header org.sw.demo.qtproject.qt.base.tools.moc-5.15.0.0
+
+#define QT_VER "-5.15.0.0"
 
 void build(Solution &s)
 {
