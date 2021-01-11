@@ -1,10 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
 
-    <Type Name="sw::UnresolvedPackage">
-        <DisplayString>{ppath}-{range}</DisplayString>
-    </Type>
-
     <Type Name="sw::PackageName">
         <DisplayString>{ppath}-{version}</DisplayString>
     </Type>

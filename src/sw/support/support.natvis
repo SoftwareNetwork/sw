@@ -3,7 +3,7 @@
 
     <Type Name="sw::ResolveRequest">
         <DisplayString Condition="r._Mypair._Myval2 == 0">
-            {u}
+            {u} -> ?
         </DisplayString>
         <DisplayString Condition="r._Mypair._Myval2 != 0">
             {u} -> {*r}
@@ -42,6 +42,14 @@
         <Expand>
             <ExpandedItem Condition="value._Which == 8">value._Tail._Tail._Tail._Tail._Tail._Tail._Tail._Tail._Head.settings</ExpandedItem>
         </Expand>
+    </Type>
+
+    <Type Name="sw::UnresolvedPackageName">
+        <DisplayString>{ppath}-{range}</DisplayString>
+    </Type>
+
+    <Type Name="sw::UnresolvedPackageId">
+        <DisplayString>id: {name}</DisplayString>
     </Type>
 
 </AutoVisualizer>
