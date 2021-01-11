@@ -291,12 +291,6 @@ static path get_lp_pkg_dir(const path &root, const Package &p)
     return fn;
 }
 
-static path get_lp_dir2_dir(const path &root, const Package &p)
-{
-    auto fn = get_lp_pkg_dir(root, p.getId());
-    return fn / getSourceDirectoryName();
-}
-
 bool LocalStorage::resolve(ResolveRequest &rr) const
 {
     auto r = StorageWithPackagesDatabase::resolve(rr);
@@ -323,9 +317,6 @@ std::unique_ptr<Package> LocalStorage::install(const Package &p) const
         throw SW_RUNTIME_ERROR("package not installed: " + id.toString());
     return LocalPackage(*this, id);*/
 
-    auto fn = get_lp_root_dir(storage_dir_pkg, p.getId());
-    fn /= p.getId().getSettings().getHashString() + ".tar.gz";
-
     auto dst = get_lp_pkg_dir(storage_dir_pkg, p.getId());
 
     if (isPackageInstalled(p)
@@ -349,6 +340,8 @@ std::unique_ptr<Package> LocalStorage::install(const Package &p) const
         //+ toUserString(t)
         + settings_name
         + "]");
+    auto fn = get_lp_root_dir(storage_dir_pkg, p.getId());
+    fn /= p.getId().getSettings().getHashString() + ".tar.gz";
     p.copyArchive(fn);
     //get(static_cast<const IStorage2 &>(p.getStorage()), p);
 
