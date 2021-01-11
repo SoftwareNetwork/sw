@@ -109,8 +109,9 @@ struct SW_MANAGER_API StorageWithPackagesDatabase : Storage
 //protected:?
     PackagesDatabase &getPackagesDatabase() const;
 
-private:
+protected:
     std::unique_ptr<PackagesDatabase> pkgdb;
+private:
     mutable std::mutex m;
 };
 

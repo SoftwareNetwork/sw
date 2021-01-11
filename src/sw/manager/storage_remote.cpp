@@ -139,7 +139,7 @@ bool RemoteStorage::resolve(ResolveRequest &rr) const
     preInitFindDependencies();
     if (Settings::get_user_settings().gForceServerQuery)
         return false;
-    return StorageWithPackagesDatabase::resolve(rr);
+    return pkgdb->resolve(rr, *this, true);
 }
 
 void RemoteStorage::download() const

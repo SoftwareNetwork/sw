@@ -211,7 +211,7 @@ void PackagesDatabase::open(bool read_only, bool in_memory)
     pps = std::make_unique<PreparedStatements>(*db);
 }
 
-bool PackagesDatabase::resolve(ResolveRequest &rr, const IStorage &s) const
+bool PackagesDatabase::resolve(ResolveRequest &rr, const IStorage &s, bool allow_override) const
 {
     // at the moment we do not resolve any non sources packages
     if (rr.getSettings().getHash() != 0)
@@ -232,7 +232,21 @@ bool PackagesDatabase::resolve(ResolveRequest &rr, const IStorage &s) const
         auto p = s.makePackage({ {upkg.getPath(), row.version.value()}, rr.getSettings() });
         auto d = std::make_unique<PackageData>(getPackageData(p->getId()));
         p->setData(std::move(d));
-        resolved |= rr.setPackage(std::move(p));
+
+        bool override = 1
+            && allow_override
+            && rr.isResolved()
+            && p->getId().getName() == rr.getPackage().getId().getName() // same pkg
+            && !rr.getPackage().getData().hash.empty() // do not override overridden pkgs
+            && p->getData().hash != rr.getPackage().getData().hash // on hash change
+            ;
+        if (override)
+        {
+            rr.setPackageForce(std::move(p));
+            resolved = true;
+        }
+        else
+            resolved |= rr.setPackage(std::move(p));
     }
 
     return resolved;

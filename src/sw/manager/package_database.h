@@ -26,7 +26,7 @@ struct SW_MANAGER_API PackagesDatabase : Database
 
     void open(bool read_only = false, bool in_memory = false);
 
-    bool resolve(ResolveRequest &, const IStorage &) const;
+    bool resolve(ResolveRequest &, const IStorage &, bool allow_override) const;
 
     PackageData getPackageData(const PackageId &) const;
 

@@ -182,7 +182,7 @@ PackagesDatabase &StorageWithPackagesDatabase::getPackagesDatabase() const
 
 bool StorageWithPackagesDatabase::resolve(ResolveRequest &rr) const
 {
-    return pkgdb->resolve(rr, *this);
+    return pkgdb->resolve(rr, *this, false);
 }
 
 LocalStorageBase::LocalStorageBase(const String &name, const path &db_dir)
