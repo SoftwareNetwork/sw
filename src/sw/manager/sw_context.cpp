@@ -20,7 +20,12 @@ SwManagerContext::SwManagerContext(const path &local_storage_root_dir, bool allo
     : cache_storage(std::make_unique<CachedStorage>())
     , cr(std::make_unique<CachingResolver>(*cache_storage))
 {
-    local_storage = std::make_unique<LocalStorage>(local_storage_root_dir);
+    auto p = local_storage_root_dir;
+    if (p.filename().empty())
+        p = p.parent_path();
+    p += "2"; // for some time
+
+    local_storage = std::make_unique<LocalStorage>(p);
     overridden_storage = std::make_unique<OverriddenPackagesStorage>(getLocalStorage().getDatabaseRootDir());
 
     for (auto &r : Settings::get_user_settings().getRemotes(allow_network))
