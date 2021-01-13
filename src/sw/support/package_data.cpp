@@ -30,8 +30,8 @@ PackageData::PackageData(nlohmann::json j)
         throw SW_RUNTIME_ERROR("bad source");
     for (auto &[f,t] : j["files"].items())
         files_map[(const char8_t *)f.c_str()] = (const char8_t *)t.get<std::string>().c_str();
-    //for (auto &v : j["dependencies"])
-        //dependencies.emplace(v.get<std::string>());
+    for (auto &v : j["dependencies"])
+        dependencies.emplace(UnresolvedPackageName{ v.get<std::string>() });
     for (auto &v : j["signatures"])
     {
         Signature s;
@@ -43,8 +43,7 @@ PackageData::PackageData(nlohmann::json j)
 
 nlohmann::json detail::PackageData::toJson() const
 {
-    SW_UNIMPLEMENTED;
-    /*nlohmann::json j;
+    nlohmann::json j;
     j["package"] = id.toString();
     j["driver"] = driver_id.toString();
     source->save(j["source"]);
@@ -59,15 +58,14 @@ nlohmann::json detail::PackageData::toJson() const
         js["signature"] = s.signature;
         j["signatures"].push_back(js);
     }
-    return j;*/
+    return j;
 }
 
 PackageId PackageData::getPackageId(const PackagePath &prefix) const
 {
-    SW_UNIMPLEMENTED;
-    /*if (prefix.empty())
+    if (prefix.empty())
         return id;
-    return { prefix / id.getPath(), id.getVersion() };*/
+    return PackageId{ {prefix / id.getName().getPath(), id.getName().getVersion()},{} };
 }
 
 void PackageData::applyPrefix(const PackagePath &prefix)
@@ -75,21 +73,20 @@ void PackageData::applyPrefix(const PackagePath &prefix)
     id = getPackageId(prefix);
 
     // also fix deps
-    /*decltype(dependencies) deps2;
+    decltype(dependencies) deps2;
     for (auto &d : dependencies)
     {
         if (d.getPath().isAbsolute())
-            deps2.insert(UnresolvedPackage{ d.getPath(), d.getRange() });
+            deps2.insert(UnresolvedPackageName{ d.getPath(), d.getRange() });
         else
-            deps2.insert(UnresolvedPackage{ prefix / d.getPath(), d.getRange() });
+            deps2.insert(UnresolvedPackageName{ prefix / d.getPath(), d.getRange() });
     }
-    dependencies = deps2;*/
+    dependencies = deps2;
 }
 
 void PackageData::applyVersion()
 {
-    SW_UNIMPLEMENTED;
-    //source->apply([this](auto &&s) { return id.getVersion().format(s); });
+    source->apply([this](auto &&s) { return id.getName().getVersion().format(s); });
 }
 
 void PackageData::addFile(const path &root, const path &from, const path &to)

@@ -33,7 +33,7 @@ struct SW_SUPPORT_API PackageData
     std::unordered_map<path, path> files_map;
 
     /// all deps
-    //UnresolvedPackages dependencies;
+    std::unordered_set<UnresolvedPackageName> dependencies;
 
     PackageId driver_id;
     std::vector<Signature> signatures;

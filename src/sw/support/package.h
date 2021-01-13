@@ -28,7 +28,7 @@ struct SW_SUPPORT_API PackageData
     int prefix = 2;
 
     //
-    //UnresolvedPackages dependencies;
+    std::unordered_set<UnresolvedPackageName> dependencies;
 
     // for overridden pkgs
     path sdir;
