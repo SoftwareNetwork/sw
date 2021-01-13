@@ -102,12 +102,12 @@ struct SW_SUPPORT_API PackageVersionRange
 
     size_t getHash() const;
 
-private:
-    std::variant<VersionRange, Branch> value;
-
     // checkers
     bool isBranch() const;
     bool isRange() const;
+
+private:
+    std::variant<VersionRange, Branch> value;
 
     VersionRange &getRange();
     const VersionRange &getRange() const;
