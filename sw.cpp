@@ -16,6 +16,7 @@ void build(Solution &s)
         support.ExportIfStatic = true;
         support += cpp20;
         support += "src/sw/support/.*"_rr;
+        support.Public += "src/sw/support/support.natvis";
         auto cmddep = "pub.egorpugin.primitives.command"_dep;
         auto verdep = "pub.egorpugin.primitives.version"_dep;
         auto srcdep = "pub.egorpugin.primitives.source"_dep;
