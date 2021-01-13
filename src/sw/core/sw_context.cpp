@@ -282,8 +282,9 @@ std::vector<UserInput> SwContext::makeInput(const String &i)
             ResolveRequest rr{ p, {} };
             if (!resolve(rr, true))
                 throw SW_RUNTIME_ERROR("Cannot resolve: " + rr.u.toString());
+            auto r = getLocalStorage().install(rr.getPackage());
             SW_UNIMPLEMENTED;
-            /*auto bi = makeInput(install(rr.getPackage()));
+            /*auto bi = makeInput(r);
             std::vector<UserInput> v;
             v.push_back(bi);
             return v;*/
