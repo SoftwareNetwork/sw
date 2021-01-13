@@ -52,7 +52,7 @@ nlohmann::json detail::PackageData::toJson() const
     for (auto &d : dependencies)
     {
         auto v = d.range.toVersion();
-        if (v)
+        if (v && v->isVersion())
             j["dependencies"].push_back(d.ppath.toString() + "-=" + v->toString());
         else
             j["dependencies"].push_back(d.toString());
