@@ -21,6 +21,9 @@ static void checkPath(const path &p)
 
 Directories::Directories(const path &p)
 {
+    if (p.empty())
+        throw SW_RUNTIME_ERROR("empty path");
+
     auto make_canonical = [](const path &p)
     {
         auto a = fs::absolute(p);
