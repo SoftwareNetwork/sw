@@ -38,7 +38,7 @@ private:
 //using PackageNameUSet = std::unordered_set<PackageName>;
 
 SW_SUPPORT_API
-[[nodiscard]]
+//[[nodiscard]]
 PackageName extractPackageIdFromString(const String &target);
 
 [[nodiscard]]
