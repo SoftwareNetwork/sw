@@ -19,6 +19,11 @@ struct SW_SUPPORT_API PackageId
 
     // maybe also print settings hash
     String toString() const { return n.toString(); }
+
+    // does not work with SW_SUPPORT_API
+    //auto operator<=>(const PackageId &) const = default;
+
+    bool operator==(const PackageId &rhs) const { return std::tie(n, s) == std::tie(rhs.n, rhs.s); }
 };
 
 }
