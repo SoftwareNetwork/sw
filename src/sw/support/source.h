@@ -49,7 +49,7 @@ namespace support
 namespace detail
 {
 
-struct DownloadData
+struct SW_SUPPORT_API DownloadData
 {
     path root_dir;
     path requested_dir;
