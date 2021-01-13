@@ -50,7 +50,13 @@ nlohmann::json detail::PackageData::toJson() const
     for (auto &[f, t] : files_map)
         j["files"][to_string(normalize_path(f))] = to_string(normalize_path(t));
     for (auto &d : dependencies)
-        j["dependencies"].push_back(d.toString());
+    {
+        auto v = d.range.toVersion();
+        if (v)
+            j["dependencies"].push_back(d.ppath.toString() + "-=" + v->toString());
+        else
+            j["dependencies"].push_back(d.toString());
+    }
     for (auto &s : signatures)
     {
         nlohmann::json js;
