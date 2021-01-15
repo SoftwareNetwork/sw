@@ -323,7 +323,7 @@ nlohmann::json PackageSetting::toJson() const
             return j;
         },
         [](const Map &m) { return m.toJson(); },
-        [](const path &p) -> nlohmann::json { SW_UNIMPLEMENTED; },
+        [](const path &p) -> nlohmann::json { return to_printable_string(p); },
         [](const Resolver &r) -> nlohmann::json { return {}; },
         [](auto &&v) -> nlohmann::json {
             if constexpr (0
