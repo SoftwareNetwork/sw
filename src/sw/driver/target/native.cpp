@@ -231,13 +231,6 @@ NativeTarget::~NativeTarget()
 
 void NativeTarget::setOutputFile()
 {
-    if (!isLocal())
-    try
-    {
-        if (!fs::exists(getBinaryDirectory().parent_path() / "cfg.json"))
-            write_file(getBinaryDirectory().parent_path() / "cfg.json", nlohmann::json::parse(ts.toString(PackageSettings::Json)).dump(4));
-    }
-    catch (...) {} // write once
 }
 
 path NativeTarget::getOutputFileName(const path &root) const
@@ -1325,38 +1318,40 @@ const PackageSettings &NativeCompiledTarget::getInterfaceSettings() const
         return s;
 
     bool prepared = prepare_pass_done;
+    if (!prepared)
+        throw SW_RUNTIME_ERROR("Not prepared yet");
     s = {};
 
-    s["source_dir"].setPathValue(getContext().getLocalStorage(), SourceDirBase);
-    s["binary_dir"].setPathValue(getContext().getLocalStorage(), getBinaryDirectory());
-    s["binary_private_dir"].setPathValue(getContext().getLocalStorage(), getBinaryPrivateDirectory());
+    s["source_directory"].setPathValue(getContext().getLocalStorage(), SourceDirBase);
+    s["binary_directory"].setPathValue(getContext().getLocalStorage(), getBinaryDirectory());
+    s["binary_private_directory"].setPathValue(getContext().getLocalStorage(), getBinaryPrivateDirectory());
 
     if (Publish && !*Publish)
-        s["skip_upload"] = "true";
+        s["skip_upload"] = true;
 
     switch (getType())
     {
     case TargetType::NativeExecutable:
-        s["type"] = "native_executable";
+        s["type"] = "native_executable"s;
         break;
     case TargetType::NativeLibrary:
         if (getBuildSettings().Native.LibrariesType == LibraryType::Shared)
-            s["type"] = "native_shared_library";
+            s["type"] = "native_shared_library"s;
         else
-            s["type"] = "native_static_library";
+            s["type"] = "native_static_library"s;
         break;
     case TargetType::NativeStaticLibrary:
-        s["type"] = "native_static_library";
+        s["type"] = "native_static_library"s;
         break;
     case TargetType::NativeSharedLibrary:
-        s["type"] = "native_shared_library";
+        s["type"] = "native_shared_library"s;
         break;
     default:
         SW_UNIMPLEMENTED;
     }
 
     if (isHeaderOnly())
-        s["header_only"] = "true";
+        s["header_only"] = true;
     else
     {
         if (getType() != TargetType::NativeExecutable) // skip for exe atm
@@ -1396,7 +1391,7 @@ const PackageSettings &NativeCompiledTarget::getInterfaceSettings() const
 
     // add ide settings to s["ide"]
     if (StartupProject)
-        s["ide"]["startup_project"] = "true";
+        s["ide"]["startup_project"] = true;
     for (auto &f : configure_files)
     {
         PackageSetting ts;
@@ -1687,6 +1682,8 @@ void NativeCompiledTarget::prepare()
 
     // resolve dependencies
     prepare_pass2();
+
+    prepare_pass_done = true;
 }
 
 void NativeCompiledTarget::prepare2()
