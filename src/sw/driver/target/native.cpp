@@ -1663,7 +1663,7 @@ void NativeCompiledTarget::prepare()
         }*/
     }
 
-    BinaryDir = getBinaryParentDir();
+    auto bdir = getBinaryParentDir();
 
     // remove whole condition block?
     /*if (DryRun)
@@ -1678,7 +1678,7 @@ void NativeCompiledTarget::prepare()
 
     //BinaryPrivateDir = BinaryDir / SW_BDIR_PRIVATE_NAME;
     //BinaryDir /= SW_BDIR_NAME;
-    setBinaryDirectory(BinaryDir);
+    setBinaryDirectory(bdir);
 
     setOutputFile();
 
