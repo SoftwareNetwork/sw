@@ -29,7 +29,11 @@ PackageData::PackageData(nlohmann::json j)
     if (!source)
         throw SW_RUNTIME_ERROR("bad source");
     for (auto &[f,t] : j["files"].items())
+#if PRIMITIVES_FS_USE_UTF8_PATH_STRINGS
         files_map[(const char8_t *)f.c_str()] = (const char8_t *)t.get<std::string>().c_str();
+#else
+        files_map[f.c_str()] = t.get<std::string>().c_str();
+#endif
     for (auto &v : j["dependencies"])
         dependencies.emplace(UnresolvedPackageName{ v.get<std::string>() });
     for (auto &v : j["signatures"])
