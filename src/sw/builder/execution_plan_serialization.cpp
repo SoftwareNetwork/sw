@@ -170,4 +170,32 @@ void ExecutionPlan::save(const path &p, int type) const
     }
 }
 
+void saveCommands(const path &p, const Commands &commands, int type)
+{
+    fs::create_directories(p.parent_path());
+
+    auto save = [&commands](auto &ar)
+    {
+        ar << commands;
+    };
+
+    type = 1;
+    if (type == 0)
+    {
+        std::ofstream ofs(p, std::ios_base::out | std::ios_base::binary);
+        if (!ofs)
+            throw SW_RUNTIME_ERROR("Cannot write file: " + to_string(p));
+        boost::archive::binary_oarchive ar(ofs);
+        save(ar);
+    }
+    else if (type == 1)
+    {
+        std::ofstream ofs(p);
+        if (!ofs)
+            throw SW_RUNTIME_ERROR("Cannot write file: " + to_string(p));
+        boost::archive::text_oarchive ar(ofs);
+        save(ar);
+    }
+}
+
 }

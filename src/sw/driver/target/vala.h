@@ -11,7 +11,7 @@
 namespace sw
 {
 
-namespace detail
+/*namespace detail
 {
 
 struct SW_DRIVER_CPP_API ValaBase
@@ -50,6 +50,6 @@ VALA_TYPE(StaticLibrary);
 VALA_TYPE(SharedLibrary);
 VALA_TYPE(Executable);
 
-#undef VALA_TYPE
+#undef VALA_TYPE*/
 
 }

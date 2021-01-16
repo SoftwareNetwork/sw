@@ -12,7 +12,7 @@
 namespace sw
 {
 
-namespace detail
+/*namespace detail
 {
 
 ValaBase::~ValaBase()
@@ -71,7 +71,7 @@ void ValaBase::prepare()
     SW_UNIMPLEMENTED;
     //compiler = std::make_shared<ValaCompiler>();
     //auto &dt = d->getTarget();
-    /*if (auto t2 = dt.as<ExecutableTarget *>())
+    if (auto t2 = dt.as<ExecutableTarget *>())
     {
         compiler->file = t2->getOutputFile();
         auto c = compiler->createCommand(t.getMainBuild());
@@ -113,20 +113,20 @@ void ValaBase::prepare()
     {
         for (auto &o : i->second)
             c->push_back(o);
-    }*/
-}
+    }
+}*/
 
-void ValaBase::getCommands1(Commands &cmds) const
+/*void ValaBase::getCommands1(Commands &cmds) const
 {
     SW_UNIMPLEMENTED;
-    /*auto c = compiler->getCommand(dynamic_cast<const Target &>(*this));
-    c->use_response_files = false;
-    cmds.insert(c);*/
+    //auto c = compiler->getCommand(dynamic_cast<const Target &>(*this));
+    //c->use_response_files = false;
+    //cmds.insert(c);
 }
 
-}
+}*/
 
-#define VALA_INIT(t, ...)     \
+/*#define VALA_INIT(t, ...)     \
     void t::init()            \
     {                         \
         switch (init_pass)    \
@@ -177,6 +177,6 @@ VALA_GET_COMMANDS(ValaSharedLibrary)
 
 VALA_INIT(ValaExecutable)
 VALA_PREPARE(ValaExecutable)
-VALA_GET_COMMANDS(ValaExecutable)
+VALA_GET_COMMANDS(ValaExecutable)*/
 
 }

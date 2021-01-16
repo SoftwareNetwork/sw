@@ -1306,21 +1306,12 @@ const NativeCompiledTarget::ActiveDeps &NativeCompiledTarget::getActiveDependenc
     return *active_deps;
 }
 
-const PackageSettings &NativeCompiledTarget::getInterfaceSettings() const
+void NativeCompiledTarget::setInterfaceSettings()
 {
     // Do not export any private information.
     // It MUST be extracted from getCommands() call.
 
     auto &s = interface_settings;
-    // info may change during prepare, so we create it every time for now
-    // TODO: deny calls during prepare()
-    if (interface_settings_set)
-        return s;
-
-    bool prepared = prepare_pass_done;
-    if (!prepared)
-        throw SW_RUNTIME_ERROR("Not prepared yet");
-    s = {};
 
     s["source_directory"].setPathValue(getContext().getLocalStorage(), SourceDirBase);
     s["binary_directory"].setPathValue(getContext().getLocalStorage(), getBinaryDirectory());
@@ -1492,11 +1483,6 @@ const PackageSettings &NativeCompiledTarget::getInterfaceSettings() const
                 print_deps(g);
         });
     }
-
-    if (prepared)
-        interface_settings_set = true;
-
-    return s;
 }
 
 void NativeCompiledTarget::prepare()
@@ -1683,7 +1669,8 @@ void NativeCompiledTarget::prepare()
     // resolve dependencies
     prepare_pass2();
 
-    prepare_pass_done = true;
+    //
+    setInterfaceSettings();
 }
 
 void NativeCompiledTarget::prepare2()
@@ -1714,7 +1701,12 @@ void NativeCompiledTarget::prepare2()
     getGeneratedCommands(); // create g.commands
     call(CallbackType::EndPrepare);
 
-    SW_RETURN_MULTIPASS_END(prepare_pass);
+    if (isLocal())
+        return;
+
+    // write commands
+    //auto cmds = getCommands();
+    //saveCommands(getBinaryDirectory().parent_path() / "commands.bin", cmds);
 }
 
 void NativeCompiledTarget::prepare_pass1()
@@ -3104,63 +3096,56 @@ FilesOrdered NativeCompiledTarget::gatherRpathLinkDirectories() const
 
 bool NativeCompiledTarget::prepareLibrary(LibraryType Type)
 {
-    switch (prepare_pass)
+    auto set_api = [this, &Type](const String &api)
     {
-    case 1:
-    {
-        auto set_api = [this, &Type](const String &api)
-        {
-            if (api.empty())
-                return;
+        if (api.empty())
+            return;
 
-            if (0
-                || getBuildSettings().TargetOS.Type == OSType::Windows
-                || getBuildSettings().TargetOS.Type == OSType::Cygwin
-                || getBuildSettings().TargetOS.Type == OSType::Mingw
-                )
-            {
-                if (Type == LibraryType::Shared)
-                {
-                    Private.Definitions[api] = "SW_EXPORT";
-                    Interface.Definitions[api] = "SW_IMPORT";
-                }
-                else if (ExportIfStatic)
-                {
-                    Public.Definitions[api] = "SW_EXPORT";
-                }
-                else
-                {
-                    Public.Definitions[api + "="];
-                }
-            }
-            else
-            {
-                Public.Definitions[api] = "SW_EXPORT";
-            }
-
-            // old
-            //Definitions[api + "_EXTERN="];
-            //Interface.Definitions[api + "_EXTERN"] = "extern";
-        };
-
-        if (SwDefinitions)
+        if (0
+            || getBuildSettings().TargetOS.Type == OSType::Windows
+            || getBuildSettings().TargetOS.Type == OSType::Cygwin
+            || getBuildSettings().TargetOS.Type == OSType::Mingw
+            )
         {
             if (Type == LibraryType::Shared)
             {
-                Definitions["SW_SHARED_BUILD"];
+                Private.Definitions[api] = "SW_EXPORT";
+                Interface.Definitions[api] = "SW_IMPORT";
             }
-            else if (Type == LibraryType::Static)
+            else if (ExportIfStatic)
             {
-                Definitions["SW_STATIC_BUILD"];
+                Public.Definitions[api] = "SW_EXPORT";
+            }
+            else
+            {
+                Public.Definitions[api + "="];
             }
         }
+        else
+        {
+            Public.Definitions[api] = "SW_EXPORT";
+        }
 
-        set_api(ApiName);
-        for (auto &a : ApiNames)
-            set_api(a);
+        // old
+        //Definitions[api + "_EXTERN="];
+        //Interface.Definitions[api + "_EXTERN"] = "extern";
+    };
+
+    if (SwDefinitions)
+    {
+        if (Type == LibraryType::Shared)
+        {
+            Definitions["SW_SHARED_BUILD"];
+        }
+        else if (Type == LibraryType::Static)
+        {
+            Definitions["SW_STATIC_BUILD"];
+        }
     }
-    break;
-    }
+
+    set_api(ApiName);
+    for (auto &a : ApiNames)
+        set_api(a);
 
     NativeCompiledTarget::prepare();
     return true;
@@ -3577,38 +3562,31 @@ TargetType NativeCompiledTarget::getRealType() const
 
 void ExecutableTarget::prepare()
 {
-    switch (prepare_pass)
+    auto set_api = [this](const String &api)
     {
-    case 1:
-    {
-        auto set_api = [this](const String &api)
+        if (api.empty())
+            return;
+        if (0
+            || getBuildSettings().TargetOS.Type == OSType::Windows
+            || getBuildSettings().TargetOS.Type == OSType::Cygwin
+            || getBuildSettings().TargetOS.Type == OSType::Mingw
+            )
         {
-            if (api.empty())
-                return;
-            if (0
-                || getBuildSettings().TargetOS.Type == OSType::Windows
-                || getBuildSettings().TargetOS.Type == OSType::Cygwin
-                || getBuildSettings().TargetOS.Type == OSType::Mingw
-                )
-            {
-                Private.Definitions[api] = "SW_EXPORT";
-                Interface.Definitions[api] = "SW_IMPORT";
-            }
-            else
-            {
-                Public.Definitions[api] = "SW_EXPORT";
-            }
-        };
+            Private.Definitions[api] = "SW_EXPORT";
+            Interface.Definitions[api] = "SW_IMPORT";
+        }
+        else
+        {
+            Public.Definitions[api] = "SW_EXPORT";
+        }
+    };
 
-        if (SwDefinitions)
-            Definitions["SW_EXECUTABLE"];
+    if (SwDefinitions)
+        Definitions["SW_EXECUTABLE"];
 
-        set_api(ApiName);
-        for (auto &a : ApiNames)
-            set_api(a);
-    }
-    break;
-    }
+    set_api(ApiName);
+    for (auto &a : ApiNames)
+        set_api(a);
 
     NativeCompiledTarget::prepare();
 }

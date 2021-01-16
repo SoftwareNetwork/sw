@@ -588,9 +588,9 @@ SharedLibraryTarget &PrepareConfig::createTarget(Build &b, const InputData &d)
     auto name = getSelfTargetName(b, { d.fn });
     PackageVersion v(primitives::version::Version(0, 0, ::sw_get_module_abi_version()));
     auto &lib =
-        lang == LANG_VALA
+        /*lang == LANG_VALA
         ? (SharedLibraryTarget&)b.addTarget<ConfigSharedLibraryTarget<ValaSharedLibrary>>(name, v, *this, d, b.getContext().getLocalStorage().storage_dir)
-        : b.addTarget<ConfigSharedLibraryTarget<SharedLibraryTarget>>(name, v, *this, d, b.getContext().getLocalStorage().storage_dir);
+        : */b.addTarget<ConfigSharedLibraryTarget<SharedLibraryTarget>>(name, v, *this, d, b.getContext().getLocalStorage().storage_dir);
 
     SW_UNIMPLEMENTED;
     /*tgt = lib.getPackage();
@@ -622,10 +622,11 @@ decltype(auto) PrepareConfig::commonActions(Build &b, const InputData &d, const 
     lib += fn;
     if (lang == LANG_VALA)
     {
-        auto cfn = ((ValaSharedLibrary &)lib).getOutputCCodeFileName(fn);
-        File(cfn, lib.getFs()).setGenerated(true);
-        lib += cfn;
-        (path&)d.cfn = cfn; // set c name
+        SW_UNIMPLEMENTED;
+        //auto cfn = ((ValaSharedLibrary &)lib).getOutputCCodeFileName(fn);
+        //File(cfn, lib.getFs()).setGenerated(true);
+        //lib += cfn;
+        //(path&)d.cfn = cfn; // set c name
     }
     if (!d.cl_name.empty())
         lib[fn].fancy_name = d.cl_name;

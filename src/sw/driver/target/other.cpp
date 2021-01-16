@@ -366,9 +366,9 @@ void DTarget::init()
 
     // https://dlang.org/dmd-windows.html
     // https://wiki.dlang.org/Win32_DLLs_in_D
-    switch (init_pass)
+    //switch (init_pass)
     {
-    case 1:
+    //case 1:
     {
         Target::init();
 
@@ -380,7 +380,7 @@ void DTarget::init()
         //compiler->setObjectDir(BinaryDir.parent_path() / "obj");
     }
     //SW_RETURN_MULTIPASS_NEXT_PASS(init_pass);
-    case 2:
+    //case 2:
     {
         setOutputFile();
     }

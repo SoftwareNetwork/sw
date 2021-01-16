@@ -310,9 +310,6 @@ public:
     // other
     virtual void removeFile(const path &fn, bool binary_dir = false);
 
-    //auto getPreparePass() const { return prepare_pass; }
-    virtual bool mustResolveDeps() const { return deps_resolved ? false : (deps_resolved = true); }
-
     // using in build, move to protected when not used
     path getObjectDir() const;
     path getObjectDir(const Package &pkg) const;
@@ -350,10 +347,7 @@ private:
 
 protected:
     path RootDirectory;
-    SW_MULTIPASS_VARIABLE(prepare_pass);
-    SW_MULTIPASS_VARIABLE(init_pass);
-    mutable bool deps_resolved = false;
-    mutable PackageSettings interface_settings;
+    PackageSettings interface_settings;
     // http://blog.llvm.org/2019/11/deterministic-builds-with-clang-and-lld.html
     bool ReproducibleBuild = false;
 

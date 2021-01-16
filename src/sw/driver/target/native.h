@@ -142,7 +142,6 @@ public:
     path getOutputDir1() const;
     void removeFile(const path &fn, bool binary_dir = false) override;
     //std::unordered_set<NativeSourceFile*> gatherSourceFiles() const;
-    bool mustResolveDeps() const override { return prepare_pass == 2; }
     void setOutputDir(const path &dir);
     bool createWindowsRpath() const;
 
@@ -229,8 +228,7 @@ private:
     path getPatchDir() const;
     void addFileSilently(const path &);
 
-    mutable bool interface_settings_set = false;
-    const PackageSettings &getInterfaceSettings() const override;
+    void setInterfaceSettings();
 
     void createPrecompiledHeader();
 public:
