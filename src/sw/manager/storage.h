@@ -153,9 +153,9 @@ struct SW_MANAGER_API LocalStorage : Directories, LocalStorageBase
     //LocalPackage download(const PackageId &) const override;
     void remove(const LocalPackage &) const;
     std::unique_ptr<Package> install(const Package &) const;
-    LocalPackage installLocalPackage(const PackageId &, const PackageData &);
-    bool isPackageInstalled(const Package &id) const;
-    bool isPackageLocal(const PackageId &id) const;
+    void installLocalPackage(const Package &) const;
+    bool isPackageInstalled(const Package &) const;
+    bool isPackageLocal(const PackageId &) const;
     bool resolve(ResolveRequest &) const override;
 
     std::unique_ptr<Package> makePackage(const PackageId &) const override;

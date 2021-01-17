@@ -9,13 +9,13 @@
 
     <Type Name="sw::DependencyData">
         <DisplayString>
-            {package}
+            {upkg}
         </DisplayString>
     </Type>
 
     <Type Name="sw::Dependency">
         <DisplayString>
-            {target->pkg}
+            {*target}
         </DisplayString>
     </Type>
 

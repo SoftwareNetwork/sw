@@ -215,6 +215,12 @@ void PackageSetting::mergeFromJson(const nlohmann::json &j)
         return;
     }
 
+    if (j.is_boolean())
+    {
+        *this = j.get<bool>();
+        return;
+    }
+
     if (j.is_null())
     {
         setNull();

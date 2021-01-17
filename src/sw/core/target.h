@@ -101,10 +101,6 @@ struct SW_CORE_API ITarget : ICastable
     // build section
     //
 
-    /// prepare target for building
-    /// returns true if target is not fully prepared yet
-    virtual void prepare() {}
-
     // get commands for building
     ///
     virtual Commands getCommands() const { return {}; }

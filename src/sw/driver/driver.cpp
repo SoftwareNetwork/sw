@@ -575,6 +575,15 @@ void Driver::setupBuild(SwBuild &b) const
 
 std::unique_ptr<Input> Driver::getInput(const Package &p) const
 {
+    auto make_default_input = [this](const auto &p)
+    {
+        std::vector<const IDriver *> d2;
+        d2.push_back(this);
+        auto inputs = swctx.detectInputs(d2, p.getSourceDirectory());
+        SW_CHECK(inputs.size() == 1);
+        return std::move(inputs[0]);
+    };
+
     // we are trying to load predefined package
     if (p.getId().getName().getPath().isRelative())
         SW_UNREACHABLE;
@@ -595,14 +604,65 @@ std::unique_ptr<Input> Driver::getInput(const Package &p) const
         i->setEntryPoint(std::move(ep));
         return i;
     }
-    else
+    else if (!p.getId().getSettings().empty())
     {
-        std::vector<const IDriver *> d2;
-        d2.push_back(this);
-        auto inputs = swctx.detectInputs(d2, p.getSourceDirectory());
-        SW_CHECK(inputs.size() == 1);
-        return std::move(inputs[0]);
+        struct PreparedInput : Input
+        {
+            std::unique_ptr<Package> p;
+
+            PreparedInput(SwContext &swctx, const IDriver &d, const Package &p)
+                : Input(swctx, d, std::make_unique<Specification>(SpecificationFiles{})), p(p.clone())
+            {
+            }
+
+            ITargetPtr loadPackage(SwBuild &b, const Package &p) const override
+            {
+                struct BinaryTarget : ITarget
+                {
+                    std::unique_ptr<Package> p;
+                    PackageSettings interface_settings;
+
+                    BinaryTarget(const Package &p)
+                        : p(p.clone())
+                    {
+                        auto d = p.getRootDirectory();
+                        interface_settings.mergeFromString(read_file(d / "settings.json"));
+                    }
+
+                    const PackageName &getPackage() const { return p->getId().getName(); }
+                    const Source &getSource() const { SW_UNIMPLEMENTED; }
+                    const PackageSettings &getSettings() const { return p->getId().getSettings(); }
+                    const PackageSettings &getInterfaceSettings() const { return interface_settings; }
+                };
+
+                return std::make_unique<BinaryTarget>(p);
+            }
+
+            std::vector<ITargetPtr> loadPackages(SwBuild &b, const PackageSettings &s) const override
+            {
+                SW_UNIMPLEMENTED;
+            }
+
+            bool isLoaded() const override { return true; }
+            void load() override {}
+        };
+
+        auto d = p.getRootDirectory();
+        // also check output files in settings
+        // also check commands?
+        if (fs::exists(d / "settings.json"))
+            return std::make_unique<PreparedInput>(swctx, *this, p);
+
+        // fallback to sources
+
+        PackageSettings es;
+        ResolveRequest rr{ p.getId().getName(),es };
+        p.getId().getSettings()["resolver"].getResolver().resolve(rr);
+        auto installed = swctx.getLocalStorage().install(rr.getPackage());
+        return make_default_input(installed ? *installed : rr.getPackage());
     }
+
+    return make_default_input(p);
 }
 
 std::vector<std::unique_ptr<Input>> Driver::detectInputs(const path &p, InputType type) const

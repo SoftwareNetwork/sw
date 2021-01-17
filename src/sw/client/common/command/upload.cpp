@@ -173,9 +173,9 @@ SUBCOMMAND_DECL(upload)
     // We MUST perform all steps until prepare() too!
     SW_UNIMPLEMENTED;
     //b->setTargetsToBuild();
-    b->resolvePackages();
+    //b->resolvePackages();
     //b->loadPackages();
-    b->prepare();
+    //b->prepare();
 
     std::map<const sw::Input *, std::vector<sw::PackageId>> iv;
     SW_UNIMPLEMENTED;

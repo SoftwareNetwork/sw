@@ -11,7 +11,6 @@
 #include "file_storage.h"
 #include "jumppad.h"
 #include "os.h"
-//#include "program.h"
 #include "sw_context.h"
 
 #include <sw/manager/settings.h>

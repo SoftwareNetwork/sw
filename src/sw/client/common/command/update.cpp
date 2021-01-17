@@ -19,5 +19,5 @@ SUBCOMMAND_DECL(update)
     b->loadInputs();
     SW_UNIMPLEMENTED;
     //b->setTargetsToBuild();
-    b->resolvePackages();
+    //b->resolvePackages();
 }

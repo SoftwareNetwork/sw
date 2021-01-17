@@ -301,8 +301,8 @@ public:
     void setRootDirectory(const path &);
 
     // main apis
-    virtual void init(); // multipass init
-    //virtual bool prepare() override { return false; } // multipass prepare
+    virtual void init();
+    virtual void prepare1() {}
     virtual void prepare2() {}
     virtual Files gatherAllFiles() const { return {}; }
     virtual std::set<Dependency*> gatherDependencies() const { return std::set<Dependency*>{}; }

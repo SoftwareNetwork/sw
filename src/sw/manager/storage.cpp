@@ -246,14 +246,9 @@ bool LocalStorage::isPackageLocal(const PackageId &id) const
     //return id.getPath().isRelative();
 }
 
-LocalPackage LocalStorage::installLocalPackage(const PackageId &id, const PackageData &d)
+void LocalStorage::installLocalPackage(const Package &p) const
 {
-    SW_UNIMPLEMENTED;
-    /*if (!isPackageLocal(id))
-        throw SW_RUNTIME_ERROR("Not a local package: " + id.toString());
-    local_packages.emplace(id, d);
-    LocalPackage p(*this, id);
-    return p;*/
+    getPackagesDatabase().installPackage(p);
 }
 
 path getHashPathFromHash(const String &h, int nsubdirs, int chars_per_subdir)

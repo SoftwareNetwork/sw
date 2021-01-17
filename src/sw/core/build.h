@@ -23,9 +23,6 @@ enum class BuildState
     NotStarted,
 
     InputsLoaded,
-    PackagesResolved,
-    PackagesLoaded,
-    Prepared,
     Executed,
 
     // Tested?
@@ -63,21 +60,15 @@ struct SW_CORE_API SwBuild : SwBuilderContext, ResolverHolder
     // precise
     void loadInputs();
     //void setTargetsToBuild();
-    void resolvePackages(); // [1/2] step
     ITarget &resolveAndLoad(ResolveRequest &);
     ITarget &load(const Package &);
     void registerTarget(ITarget &);
-private:
-    void loadPackages();
-public:
-    void prepare();
     void execute() const;
 
     // stop execution
     void stop();
 
     // tune
-    bool prepareStep();
     void execute(ExecutionPlan &p) const;
     std::unique_ptr<ExecutionPlan> getExecutionPlan(const Commands &cmds) const;
     bool step();
@@ -150,7 +141,6 @@ private:
     mutable FilesSorted fast_path_files;
 
     Commands getCommands() const;
-    void resolvePackages(const std::vector<IDependency*> &upkgs); // [2/2] step
     Executor &getBuildExecutor() const;
     Executor &getPrepareExecutor() const;
 

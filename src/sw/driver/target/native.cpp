@@ -1485,7 +1485,7 @@ void NativeCompiledTarget::setInterfaceSettings()
     }
 }
 
-void NativeCompiledTarget::prepare()
+void NativeCompiledTarget::prepare1()
 {
     if (DryRun)
         return;
@@ -1677,6 +1677,9 @@ void NativeCompiledTarget::prepare2()
 {
     if (DryRun)
         return;
+    if (prepared)
+        return;
+    prepared = true;
 
     // calculate all (link) dependencies for target
     prepare_pass3();
@@ -1705,8 +1708,14 @@ void NativeCompiledTarget::prepare2()
         return;
 
     // write commands
-    //auto cmds = getCommands();
-    //saveCommands(getBinaryDirectory().parent_path() / "commands.bin", cmds);
+    auto cmds = getCommands();
+    saveCommands(getBinaryDirectory().parent_path() / "commands.bin", cmds);
+
+    PackageId id{ getPackage(),getSettings() };
+    Package p{ id };
+    auto d = std::make_unique<PackageData>();
+    p.setData(std::move(d));
+    getContext().getLocalStorage().installLocalPackage(p);
 }
 
 void NativeCompiledTarget::prepare_pass1()
@@ -2057,9 +2066,9 @@ void NativeCompiledTarget::prepare_pass3_1()
                     calc_deps(*d, *dep.dep, dep.inhtype);
                 }
             }
-            else if (auto t = d->getTarget().as<const PredefinedTarget *>())
+            else
             {
-                auto &ts = t->getInterfaceSettings();
+                auto &ts = d->getTarget().getInterfaceSettings();
 
                 for (auto &[k, v] : ts["properties"].getMap())
                 {
@@ -2109,16 +2118,16 @@ void NativeCompiledTarget::prepare_pass3_1()
                     }
                 }
             }
-            else
-                throw SW_RUNTIME_ERROR("missing target code");
         }
 
         if (!new_dependency)
         {
             for (auto &d : deps_ordered)
             {
-                if (&d->getTarget() != this)
-                    all_deps_normal.insert(deps.find(d)->first);
+                auto i = deps.find(d);
+                if (i == deps.end())
+                    SW_UNREACHABLE;
+                all_deps_normal.insert(i->first);
             }
             break;
         }
@@ -2208,9 +2217,9 @@ void NativeCompiledTarget::prepare_pass3_2()
                     calc_deps(*d, *dep.dep, dep.inhtype);
                 }
             }
-            else if (auto t = d->getTarget().as<const PredefinedTarget *>())
+            else
             {
-                auto &ts = t->getInterfaceSettings();
+                auto &ts = d->getTarget().getInterfaceSettings();
 
                 for (auto &[k, v] : ts["properties"].getMap())
                 {
@@ -2259,8 +2268,6 @@ void NativeCompiledTarget::prepare_pass3_2()
                     }
                 }
             }
-            else
-                throw SW_RUNTIME_ERROR("missing target code");
         }
 
         if (!new_dependency)
@@ -2305,14 +2312,12 @@ void NativeCompiledTarget::prepare_pass3_3()
             if (!t->isStaticOrHeaderOnlyLibrary())
                 continue;
         }
-        else if (auto t = d->getTarget().as<const PredefinedTarget *>())
+        else
         {
-            auto &ts = t->getInterfaceSettings();
+            auto &ts = d->getTarget().getInterfaceSettings();
             if (!::sw::isStaticOrHeaderOnlyLibrary(ts))
                 continue;
         }
-        else
-            throw SW_RUNTIME_ERROR("missing target code");
         auto copy = std::make_shared<Dependency>(*d);
         copy->LinkLibrariesOnly = true; // force
         auto [i, inserted] = deps.emplace(copy, InheritanceType::Public); // use public inh
@@ -2363,9 +2368,9 @@ void NativeCompiledTarget::prepare_pass3_3()
                     calc_deps(*d, *dep.dep, dep.inhtype);
                 }
             }
-            else if (auto t = d->getTarget().as<const PredefinedTarget *>())
+            else
             {
-                auto &ts = t->getInterfaceSettings();
+                auto &ts = d->getTarget().getInterfaceSettings();
 
                 if (!::sw::isStaticOrHeaderOnlyLibrary(ts))
                     continue;
@@ -2410,8 +2415,6 @@ void NativeCompiledTarget::prepare_pass3_3()
                     }
                 }
             }
-            else
-                throw SW_RUNTIME_ERROR("missing target code");
         }
 
         if (!new_dependency)
@@ -2446,7 +2449,7 @@ void NativeCompiledTarget::prepare_pass4()
             // always with interface
             mergeFiles(g.Interface, s);
         }
-        else if (auto t = d->getTarget().as<const PredefinedTarget *>())
+        else
         {
             const auto &is = d->getTarget().getInterfaceSettings();
 
@@ -2462,8 +2465,6 @@ void NativeCompiledTarget::prepare_pass4()
                     *this += v2.getPathValue(getContext().getLocalStorage());
             }
         }
-        else
-            throw SW_RUNTIME_ERROR("missing target code");
     }
 
     // merge self
@@ -2491,7 +2492,7 @@ void NativeCompiledTarget::prepare_pass4()
             // always with interface
             getMergeObject().merge(g.Interface, s);
         }
-        else if (auto t = d->getTarget().as<const PredefinedTarget *>())
+        else
         {
             const auto &is = d->getTarget().getInterfaceSettings();
 
@@ -2536,8 +2537,6 @@ void NativeCompiledTarget::prepare_pass4()
                     getMergeObject().Frameworks.insert(v2.getValue());
             }
         }
-        else
-            throw SW_RUNTIME_ERROR("missing target code");
     }
 
     // idirs
@@ -2563,7 +2562,7 @@ void NativeCompiledTarget::prepare_pass4()
             getMergeObject().NativeCompilerOptions::merge(g.Public, s);
             getMergeObject().NativeCompilerOptions::merge(g.Interface, s);
         }
-        else if (auto t = d->getTarget().as<const PredefinedTarget *>())
+        else
         {
             const auto &is = d->getTarget().getInterfaceSettings();
 
@@ -2593,8 +2592,6 @@ void NativeCompiledTarget::prepare_pass4()
                     getMergeObject().NativeCompilerOptions::System.IncludeDirectories.push_back(v2.getAbsolutePathValue());
             }
         }
-        else
-            throw SW_RUNTIME_ERROR("missing target code");
     }
 
     if (isStaticOrHeaderOnlyLibrary())
@@ -2612,7 +2609,7 @@ void NativeCompiledTarget::prepare_pass4()
                 getMergeObject().NativeLinkerOptions::merge(v);
             });
         }
-        else if (auto t = d->getTarget().as<const PredefinedTarget *>())
+        else
         {
             const auto &is = d->getTarget().getInterfaceSettings();
 
@@ -2630,8 +2627,6 @@ void NativeCompiledTarget::prepare_pass4()
                     getMergeObject().Frameworks.insert(v2.getValue());
             }
         }
-        else
-            throw SW_RUNTIME_ERROR("missing target code");
     }
 }
 
@@ -3082,14 +3077,12 @@ FilesOrdered NativeCompiledTarget::gatherRpathLinkDirectories() const
             if (!dt->isStaticOrHeaderOnlyLibrary())
                 rpath.push_back(dt->getOutputFile().parent_path());
         }
-        else if (auto t = d->getTarget().as<const PredefinedTarget *>())
+        else
         {
-            auto &ts = t->getInterfaceSettings();
+            auto &ts = d->getTarget().getInterfaceSettings();
             if (!::sw::isStaticOrHeaderOnlyLibrary(ts))
                 rpath.push_back(ts["output_file"].getPathValue(getContext().getLocalStorage()).parent_path());
         }
-        else
-            throw SW_RUNTIME_ERROR("missing target code");
     }
     return rpath;
 }
@@ -3147,7 +3140,7 @@ bool NativeCompiledTarget::prepareLibrary(LibraryType Type)
     for (auto &a : ApiNames)
         set_api(a);
 
-    NativeCompiledTarget::prepare();
+    NativeCompiledTarget::prepare1();
     return true;
 }
 
@@ -3560,7 +3553,7 @@ TargetType NativeCompiledTarget::getRealType() const
 #include "cppstd.inl"
 #undef STD
 
-void ExecutableTarget::prepare()
+void ExecutableTarget::prepare1()
 {
     auto set_api = [this](const String &api)
     {
@@ -3588,10 +3581,10 @@ void ExecutableTarget::prepare()
     for (auto &a : ApiNames)
         set_api(a);
 
-    NativeCompiledTarget::prepare();
+    NativeCompiledTarget::prepare1();
 }
 
-void LibraryTarget::prepare()
+void LibraryTarget::prepare1()
 {
     prepareLibrary(getBuildSettings().Native.LibrariesType);
 }

@@ -142,9 +142,9 @@ SUBCOMMAND_DECL(integrate)
         b.loadInputs();
         SW_UNIMPLEMENTED;
         //b.setTargetsToBuild();
-        b.resolvePackages();
+        //b.resolvePackages();
         //b.loadPackages();
-        b.prepare();
+        //b.prepare();
 
         // find better algo
         size_t minsz = SIZE_MAX;

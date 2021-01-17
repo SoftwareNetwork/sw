@@ -213,15 +213,19 @@ void PackagesDatabase::open(bool read_only, bool in_memory)
 
 bool PackagesDatabase::resolve(ResolveRequest &rr, const IStorage &s, bool allow_override) const
 {
-    // at the moment we do not resolve any non sources packages
-    if (rr.getSettings().getHash() != 0)
-        return false;
-
     auto &upkg = rr.u;
 
     auto pid = getPackageId(upkg.getPath());
     if (!pid)
         return false;
+
+    auto settings_hash = rr.getSettings().getHash();
+    auto q = (*db)(select(configs.configId).from(configs).where(
+        configs.hash == settings_hash
+    ));
+    if (q.empty())
+        return false;
+    auto config_id = q.front().configId.value();
 
     bool resolved = false;
     for (const auto &row : (*db)(
@@ -229,6 +233,15 @@ bool PackagesDatabase::resolve(ResolveRequest &rr, const IStorage &s, bool allow
         .from(pkg_ver)
         .where(pkg_ver.packageId == pid)))
     {
+        // inser pkg ver file
+        auto q = (*db)(select(t_pkg_ver_files.fileId).from(t_pkg_ver_files).where(
+            t_pkg_ver_files.packageVersionId == row.packageVersionId.value() &&
+            t_pkg_ver_files.configId == config_id
+        ));
+        if (q.empty())
+            continue;
+        auto file_id = q.front().fileId.value();
+
         auto p = s.makePackage({ {upkg.getPath(), row.version.value()}, rr.getSettings() });
         auto d = std::make_unique<PackageData>(getPackageData(p->getId()));
         p->setData(std::move(d));
@@ -318,71 +331,119 @@ void PackagesDatabase::installPackage(const Package &p)
     std::lock_guard lk(m);
     auto tr = sqlpp11_transaction_manual(*db);
 
+    auto settings_hash = p.getId().getSettings().getHash();
     int64_t package_id = 0;
 
     // get package id
-    auto q = (*db)(select(pkgs.packageId).from(pkgs).where(
-        pkgs.path == p.getId().getName().getPath().toString()
+    if (auto q =
+        (*db)(select(pkgs.packageId).from(pkgs).where(
+            pkgs.path == p.getId().getName().getPath().toString()
         ));
-    if (q.empty())
+        q.empty()
+        )
     {
         // add package
         (*db)(insert_into(pkgs).set(
             pkgs.path = p.getId().getName().getPath().toString()
         ));
-
-        // get package id
-        auto q = (*db)(select(pkgs.packageId).from(pkgs).where(
-            pkgs.path == p.getId().getName().getPath().toString()
-            ));
-        package_id = q.front().packageId.value();
+        package_id = db->last_insert_id();
     }
     else
     {
         package_id = q.front().packageId.value();
 
-        // remove existing version
-        (*db)(remove_from(pkg_ver).where(
-            pkg_ver.packageId == package_id &&
-            pkg_ver.version == p.getId().getName().getVersion().toString()
-            ));
+        // remove existing version and all packages
+        if (settings_hash == 0)
+        {
+            (*db)(remove_from(pkg_ver).where(
+                pkg_ver.packageId == package_id &&
+                pkg_ver.version == p.getId().getName().getVersion().toString()
+                ));
+        }
     }
 
-    // insert version
-    (*db)(insert_into(pkg_ver).set(
-        // basic data
-        pkg_ver.packageId = package_id,
-        pkg_ver.version = p.getId().getName().getVersion().toString(),
-
-        // extended
-        pkg_ver.prefix = p.getData().prefix,
-
-        // misc
-        pkg_ver.updated = "",
-
-        pkg_ver.sdir = sqlpp::tvin(to_string(p.getData().sdir.u8string()))
-    ));
+    int64_t version_id = 0;
 
     // get version id
-    auto q2 =
+    if (auto q =
         (*db)(select(pkg_ver.packageVersionId).from(pkg_ver).where(
-        pkg_ver.packageId == package_id &&
-        pkg_ver.version == p.getId().getName().getVersion().toString()
+            pkg_ver.packageId == package_id &&
+            pkg_ver.version == p.getId().getName().getVersion().toString()
         ));
-    auto vid = q2.front().packageVersionId.value();
+        q.empty()
+        )
+    {
+        // insert version
+        (*db)(insert_into(pkg_ver).set(
+            // basic data
+            pkg_ver.packageId = package_id,
+            pkg_ver.version = p.getId().getName().getVersion().toString(),
+
+            // extended
+            pkg_ver.prefix = p.getData().prefix,
+
+            // misc
+            pkg_ver.updated = "",
+
+            pkg_ver.sdir = sqlpp::tvin(to_string(p.getData().sdir.u8string()))
+        ));
+        version_id = db->last_insert_id();
+    }
+    else
+    {
+        version_id = q.front().packageVersionId.value();
+    }
+
+    int64_t file_id = 1;
 
     // insert file
-    (*db)(insert_into(t_files).set(
-        t_files.hash = p.getData().getHash()
-    ));
-    auto fid = db->last_insert_id();
+    if (auto h = p.getData().getHash(); !h.empty())
+    {
+        if (auto q = (*db)(
+            select(t_files.fileId)
+            .from(t_files)
+            .where(t_files.hash == h));
+            q.empty()
+            )
+        {
+            (*db)(insert_into(t_files).set(
+                t_files.hash = p.getData().getHash()
+            ));
+            file_id = db->last_insert_id();
+        }
+        else
+        {
+            file_id = q.front().fileId.value();
+        }
+    }
+
+    int type_id = 1;
+    int64_t config_id = 1;
+    if (settings_hash)
+    {
+        auto q = (*db)(select(configs.configId).from(configs).where(
+            configs.hash == settings_hash
+            ));
+        if (q.empty())
+        {
+            (*db)(insert_into(configs).set(
+                configs.hash = settings_hash
+            ));
+            config_id = db->last_insert_id();
+        }
+        else
+        {
+            config_id = q.front().configId.value();
+        }
+        type_id = 2; // we have unique index on type_id == 1
+    }
 
     // inser pkg ver file
     (*db)(insert_into(t_pkg_ver_files).set(
-        t_pkg_ver_files.packageVersionId = vid,
-        t_pkg_ver_files.fileId = fid,
-        t_pkg_ver_files.type = 1,
-        t_pkg_ver_files.configId = 1,
+        t_pkg_ver_files.packageVersionId = version_id,
+        t_pkg_ver_files.fileId = file_id,
+        t_pkg_ver_files.type = type_id,
+        t_pkg_ver_files.configId = config_id,
         t_pkg_ver_files.archiveVersion = 1
     ));
 }

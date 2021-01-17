@@ -818,7 +818,7 @@ bool Check::execute(SwBuild &b) const
     //b.setTargetsToBuild();
     //b.resolvePackages();
     //b.loadPackages();
-    b.prepare();
+    //b.prepare();
 
     try
     {

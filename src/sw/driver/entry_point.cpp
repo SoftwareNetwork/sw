@@ -435,7 +435,7 @@ std::vector<ITargetPtr> NativeTargetEntryPoint::loadPackages(SwBuild &swb, const
     b.module_data.current_settings = &s;
     loadPackages1(b);
     for (auto &&t : b.module_data.getTargets())
-        t->prepare();
+        ((Target*)t.get())->prepare1();
     return std::move(b.module_data.getTargets());
 }
 
@@ -447,22 +447,22 @@ ITargetPtr NativeTargetEntryPoint::loadPackage(SwBuild &swb, const Package &p) c
     loadPackages1(b);
     for (auto &&t : b.module_data.getTargets())
     {
-        t->prepare();
+        if (b.NamePrefix.empty())
+            continue;
 
-        if (!b.NamePrefix.empty())
+        ((Target*)t.get())->prepare1();
+
+        auto &is = t->getInterfaceSettings();
+        auto d = is["binary_directory"].getPathValue(swb.getContext().getLocalStorage().storage_dir);
+        if (!fs::exists(d.parent_path() / "cfg.json"))
         {
-            auto &is = t->getInterfaceSettings();
-            auto d = is["binary_directory"].getPathValue(swb.getContext().getLocalStorage().storage_dir);
-            if (!fs::exists(d.parent_path() / "cfg.json"))
-            {
-                write_file(d.parent_path() / "cfg.json",
-                    nlohmann::json::parse(t->getSettings().toString(PackageSettings::Json)).dump(4));
-            }
-            if (!fs::exists(d.parent_path() / "settings.json"))
-            {
-                write_file(d.parent_path() / "settings.json",
-                    nlohmann::json::parse(t->getInterfaceSettings().toString(PackageSettings::Json)).dump(4));
-            }
+            write_file(d.parent_path() / "cfg.json",
+                nlohmann::json::parse(t->getSettings().toString(PackageSettings::Json)).dump(4));
+        }
+        if (!fs::exists(d.parent_path() / "settings.json"))
+        {
+            write_file(d.parent_path() / "settings.json",
+                nlohmann::json::parse(t->getInterfaceSettings().toString(PackageSettings::Json)).dump(4));
         }
     }
     if (b.module_data.getTargets().size() != 1)

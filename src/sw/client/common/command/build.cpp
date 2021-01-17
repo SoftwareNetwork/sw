@@ -28,9 +28,9 @@ static void isolated_build(SwClientContext &swctx)
     b.loadInputs();
     SW_UNIMPLEMENTED;
     //b.setTargetsToBuild();
-    b.resolvePackages();
+    //b.resolvePackages();
     //b.loadPackages();
-    b.prepare();
+    //b.prepare();
 
     // get sources to pass them into getPackages()
     sw::support::SourceDirMap srcs;
@@ -90,7 +90,7 @@ SUBCOMMAND_DECL(build)
     if (!getOptions().options_build.build_explan.empty())
     {
         auto b = createBuild();
-        b->overrideBuildState(sw::BuildState::Prepared);
+        b->overrideBuildState(sw::BuildState::InputsLoaded);
         auto cmds = sw::ExecutionPlan::load(getOptions().options_build.build_explan, *b);
         auto p = sw::ExecutionPlan::create(cmds);
         b->execute(*p);
