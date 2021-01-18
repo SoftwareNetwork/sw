@@ -552,7 +552,7 @@ path Target::getBinaryParentDir() const
         return getTargetDirShort(getMainBuild().getBuildDirectory());
     else
     {
-        if (!is_under_root(getLocalPackage().getRootDirectory(), getContext().getLocalStorage().storage_dir))
+        if (!is_under_root_by_prefix_path(getLocalPackage().getRootDirectory(), getContext().getLocalStorage().storage_dir))
             return getTargetDirShort(getLocalPackage().getRootDirectory() / SW_BINARY_DIR);
 
         auto cfg = getConfig();
