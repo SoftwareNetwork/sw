@@ -828,29 +828,12 @@ void Target::resolveDependency(IDependency &d)
             ResolveRequest rr2{ d.getUnresolvedPackageId().getName(), s };
             if (!getResolver().resolve(rr2))
                 throw SW_RUNTIME_ERROR("Cannot resolve package " + rr.toString() + " and " + rr2.toString());
-            auto p2 = getContext().getLocalStorage().install(rr2.getPackage());
-            if (!p2)
-                throw SW_RUNTIME_ERROR("Cannot install pkg: " + rr2.getPackage().getId().toString());
-
-            struct LocalPackage2 : Package
-            {
-                path sdir;
-
-                LocalPackage2(const Package &id, const path &s)
-                    : Package(id), sdir(s)
-                {
-                }
-
-                bool isInstallable() const override { return false; }
-                std::unique_ptr<Package> clone() const override { return std::make_unique<LocalPackage2>(*this); }
-                path getRootDirectory() const override { return sdir; }
-                path getSourceDirectory() const override { return getRootDirectory() / getSourceDirectoryName(); }
-            };
-
-            PackageId id{p2->getId().getName(), d.getUnresolvedPackageId().getSettings()};
-            LocalPackage2 p{id, p2->getRootDirectory()};
-            p.setData(rr2.getPackage().getData().clone());
-            auto &t = getMainBuild().load(p);
+            auto installed = getContext().getLocalStorage().install(rr2.getPackage());
+            auto &p2 = installed ? *installed : rr2.getPackage();
+            PackageId id{p2.getId().getName(), d.getUnresolvedPackageId().getSettings()};
+            auto p = getContext().getLocalStorage().makePackage(id);
+            p->setData(rr2.getPackage().getData().clone());
+            auto &t = getMainBuild().load(*p);
             d.setTarget(t);
         }
         else

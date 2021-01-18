@@ -575,15 +575,6 @@ void Driver::setupBuild(SwBuild &b) const
 
 std::unique_ptr<Input> Driver::getInput(const Package &p) const
 {
-    auto make_default_input = [this](const auto &p)
-    {
-        std::vector<const IDriver *> d2;
-        d2.push_back(this);
-        auto inputs = swctx.detectInputs(d2, p.getSourceDirectory());
-        SW_CHECK(inputs.size() == 1);
-        return std::move(inputs[0]);
-    };
-
     // we are trying to load predefined package
     if (p.getId().getName().getPath().isRelative())
         SW_UNREACHABLE;
@@ -650,19 +641,21 @@ std::unique_ptr<Input> Driver::getInput(const Package &p) const
         auto d = p.getRootDirectory();
         // also check output files in settings
         // also check commands?
+        // it is too late to check anything here
         if (fs::exists(d / "settings.json"))
             return std::make_unique<PreparedInput>(swctx, *this, p);
 
-        // fallback to sources
-
-        PackageSettings es;
-        ResolveRequest rr{ p.getId().getName(),es };
-        p.getId().getSettings()["resolver"].getResolver().resolve(rr);
-        auto installed = swctx.getLocalStorage().install(rr.getPackage());
-        return make_default_input(installed ? *installed : rr.getPackage());
+        // install source pkg if missing
+        PackageSettings s;
+        ResolveRequest rr{ p.getId().getName(), s };
+        swctx.resolve(rr, true);
+        swctx.getLocalStorage().install(rr.getPackage());
     }
-
-    return make_default_input(p);
+    std::vector<const IDriver *> d2;
+    d2.push_back(this);
+    auto inputs = swctx.detectInputs(d2, p.getSourceDirectory());
+    SW_CHECK(inputs.size() == 1);
+    return std::move(inputs[0]);
 }
 
 std::vector<std::unique_ptr<Input>> Driver::detectInputs(const path &p, InputType type) const
