@@ -1353,31 +1353,28 @@ void NativeCompiledTarget::setInterfaceSettings()
     }
 
     // remove deps section?
-    if (prepared)
+    for (auto &d : getActiveDependencies())
     {
-        for (auto &d : getActiveDependencies())
+        if (d.dep->IncludeDirectoriesOnly || d.dep->LinkLibrariesOnly)
+            continue;
+        if (auto t = d.dep->getTarget().as<const NativeCompiledTarget *>())
         {
-            if (d.dep->IncludeDirectoriesOnly || d.dep->LinkLibrariesOnly)
-                continue;
-            if (auto t = d.dep->getTarget().as<const NativeCompiledTarget *>())
-            {
-                if (!t->DryRun/* && t->getType() != TargetType::NativeExecutable*/)
-                    s["dependencies"]["link"][boost::to_lower_copy(d.dep->getTarget().getPackage().toString())] = d.dep->getTarget().getSettings();
-            }
-            else
-                continue;
-                //throw SW_RUNTIME_ERROR("missing predefined target code");
+            if (!t->DryRun/* && t->getType() != TargetType::NativeExecutable*/)
+                s["dependencies"]["link"][boost::to_lower_copy(d.dep->getTarget().getPackage().toString())] = d.dep->getTarget().getSettings();
         }
-        for (auto &d : DummyDependencies)
-        {
-            // rename dummy?
-            s["dependencies"]["dummy"][boost::to_lower_copy(d->getTarget().getPackage().toString())] = d->getTarget().getSettings();
-        }
-        for (auto &d : SourceDependencies)
-        {
-            // commented for now
-            //s["dependencies"]["source"].push_back(d->getTarget().getPackage().toString());
-        }
+        else
+            continue;
+            //throw SW_RUNTIME_ERROR("missing predefined target code");
+    }
+    for (auto &d : DummyDependencies)
+    {
+        // rename dummy?
+        s["dependencies"]["dummy"][boost::to_lower_copy(d->getTarget().getPackage().toString())] = d->getTarget().getSettings();
+    }
+    for (auto &d : SourceDependencies)
+    {
+        // commented for now
+        //s["dependencies"]["source"].push_back(d->getTarget().getPackage().toString());
     }
 
     // add ide settings to s["ide"]
@@ -1409,80 +1406,77 @@ void NativeCompiledTarget::setInterfaceSettings()
     }
 
     // newer settings
-    if (prepared)
+    auto &ts = s["properties"];
+    TargetOptionsGroup::iterate([this, &ts](auto &g, auto i)
     {
-        auto &ts = s["properties"];
-        TargetOptionsGroup::iterate([this, &ts](auto &g, auto i)
+        auto is = std::to_string((int)i);
+        auto &s = ts[is];
+
+        // for private, we skip some variables
+        // we do not need them completely
+        if (i != InheritanceType::Private)
         {
-            auto is = std::to_string((int)i);
-            auto &s = ts[is];
-
-            // for private, we skip some variables
-            // we do not need them completely
-            if (i != InheritanceType::Private)
+            for (auto &[p, f] : g)
             {
-                for (auto &[p, f] : g)
-                {
-                    PackageSetting ts;
-                    ts.setPathValue(getContext().getLocalStorage(), p);
-                    s["source_files"].push_back(ts);
-                }
-
-                for (auto &[k, v] : g.Definitions)
-                    s["definitions"][k] = v.toString();
-                for (auto &d : g.CompileOptions)
-                    s["compile_options"].push_back(path(d));
-                for (auto &d : g.IncludeDirectories)
-                {
-                    PackageSetting ts;
-                    ts.setPathValue(getContext().getLocalStorage(), d);
-                    s["include_directories"].push_back(ts);
-                }
+                PackageSetting ts;
+                ts.setPathValue(getContext().getLocalStorage(), p);
+                s["source_files"].push_back(ts);
             }
 
-            // for static libs we print their linker settings,
-            // so users will take these settings
-            if (i != InheritanceType::Private || isStaticOrHeaderOnlyLibrary())
+            for (auto &[k, v] : g.Definitions)
+                s["definitions"][k] = v.toString();
+            for (auto &d : g.CompileOptions)
+                s["compile_options"].push_back(path(d));
+            for (auto &d : g.IncludeDirectories)
             {
-                for (auto &d : g.LinkLibraries)
-                {
-                    PackageSetting ts;
-                    ts.setPathValue(getContext().getLocalStorage(), d.l);
-                    s["link_libraries"].push_back(ts);
-                }
-                for (auto &d : g.NativeLinkerOptions::System.LinkLibraries)
-                    s["system_link_libraries"].push_back(d.l);
-                for (auto &d : g.Frameworks)
-                    s["frameworks"].push_back(d);
+                PackageSetting ts;
+                ts.setPathValue(getContext().getLocalStorage(), d);
+                s["include_directories"].push_back(ts);
             }
+        }
 
-            auto print_deps = [&s](auto &g)
+        // for static libs we print their linker settings,
+        // so users will take these settings
+        if (i != InheritanceType::Private || isStaticOrHeaderOnlyLibrary())
+        {
+            for (auto &d : g.LinkLibraries)
             {
-                for (auto &d : g.getRawDependencies())
-                {
-                    if (d->isDisabled())
-                        continue;
-                    PackageSettings j;
-                    auto &ds = j[boost::to_lower_copy(d->getTarget().getPackage().toString())];
-                    ds = d->getTarget().getSettings();
-                    if (d->IncludeDirectoriesOnly)
-                    {
-                        ds["include_directories_only"] = true;
-                        //ds["include_directories_only"].ignoreInComparison(true);
-                    }
-                    if (d->LinkLibrariesOnly)
-                    {
-                        ds["link_libraries_only"] = true;
-                        //ds["link_libraries_only"].ignoreInComparison(true);
-                    }
-                    s["dependencies"].push_back(j);
-                }
-            };
+                PackageSetting ts;
+                ts.setPathValue(getContext().getLocalStorage(), d.l);
+                s["link_libraries"].push_back(ts);
+            }
+            for (auto &d : g.NativeLinkerOptions::System.LinkLibraries)
+                s["system_link_libraries"].push_back(d.l);
+            for (auto &d : g.Frameworks)
+                s["frameworks"].push_back(d);
+        }
 
-            if (i != InheritanceType::Private)
-                print_deps(g);
-        });
-    }
+        auto print_deps = [&s](auto &g)
+        {
+            for (auto &d : g.getRawDependencies())
+            {
+                if (d->isDisabled())
+                    continue;
+                PackageSettings j;
+                auto &ds = j[boost::to_lower_copy(d->getTarget().getPackage().toString())];
+                ds = d->getTarget().getSettings();
+                if (d->IncludeDirectoriesOnly)
+                {
+                    ds["include_directories_only"] = true;
+                    //ds["include_directories_only"].ignoreInComparison(true);
+                }
+                if (d->LinkLibrariesOnly)
+                {
+                    ds["link_libraries_only"] = true;
+                    //ds["link_libraries_only"].ignoreInComparison(true);
+                }
+                s["dependencies"].push_back(j);
+            }
+        };
+
+        if (i != InheritanceType::Private)
+            print_deps(g);
+    });
 }
 
 void NativeCompiledTarget::prepare1()
