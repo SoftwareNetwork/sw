@@ -179,16 +179,45 @@ void PackageSetting::mergeAndAssign(const PackageSetting &rhs)
 
 void PackageSetting::mergeFromJson(const nlohmann::json &j)
 {
-    if (j.is_object())
+    if (!j.is_object())
+        throw SW_RUNTIME_ERROR("Not an object");
+
+    if (j.contains("properties"))
+        SW_UNIMPLEMENTED;
+
+    int i = j["index"];
+    switch (i)
     {
-        auto v = std::get_if<Map>(&value);
-        if (!v)
-        {
-            *this = Map();
-            v = std::get_if<Map>(&value);
-        }
-        v->mergeFromJson(j);
+    case 1:
         return;
+#define GET_RAW(n)                                                        \
+    case n:                                                               \
+        *this = j["value"].get<std::variant_alternative_t<n, Variant>>(); \
+        return
+        GET_RAW(2);
+        GET_RAW(3);
+        GET_RAW(4);
+        GET_RAW(5);
+    case 6:
+        *this = path((const char8_t *)j["value"].get<String>().c_str());
+        return;
+    case 7:
+    {
+        Array a;
+        for (auto &e : j["value"])
+        {
+            PackageSetting s;
+            s.mergeFromJson(e);
+            a.push_back(s);
+        }
+        *this = a;
+    }
+        return;
+    case 8:
+        getMap().mergeFromJson(j["value"]);
+        return;
+    default:
+        SW_UNIMPLEMENTED;
     }
 
     if (j.is_array())
@@ -200,32 +229,15 @@ void PackageSetting::mergeFromJson(const nlohmann::json &j)
             v = std::get_if<Array>(&value);
         }
         v->clear();
-        for (auto &e : j)
-        {
-            PackageSetting s;
-            s.mergeFromJson(e);
-            v->push_back(s);
-        }
         return;
     }
 
-    if (j.is_string())
+    /*if (pystring::endswith(it.key(), "_ignore_in_comparison"))
     {
-        *this = j.get<String>();
-        return;
-    }
-
-    if (j.is_boolean())
-    {
-        *this = j.get<bool>();
-        return;
-    }
-
-    if (j.is_null())
-    {
-        setNull();
-        return;
-    }
+        if (it.value().get<String>() == "true")
+            (*this)[it.key().substr(0, it.key().size() - strlen("_ignore_in_comparison"))].ignore_in_comparison = true;
+        continue;
+    }*/
 
     throw SW_RUNTIME_ERROR("Bad json value. Only objects, arrays and strings are currently accepted.");
 }
@@ -319,6 +331,8 @@ String PackageSettings::toString(int type) const
 
 nlohmann::json PackageSetting::toJson() const
 {
+    nlohmann::json j;
+    j["index"] = value.index();
     auto o = overload(
         [](const Empty &) { return nlohmann::json{}; },
         [](const Null &) -> nlohmann::json { return nullptr; },
@@ -343,7 +357,10 @@ nlohmann::json PackageSetting::toJson() const
             else
                 return v;
         });
-    return std::visit(o, value);
+    j["value"] = std::visit(o, value);
+    if (ignore_in_comparison)
+        j["protperties"]["ignore_in_comparison"] = true;
+    return j;
 }
 
 nlohmann::json PackageSettings::toJson() const
@@ -351,14 +368,9 @@ nlohmann::json PackageSettings::toJson() const
     nlohmann::json j;
     for (auto &[k, v] : *this)
     {
-        if (v.ignoreInComparison())
+        if (v.ignoreInComparison() || v.isEmpty())
             continue;
-        auto j2 = v.toJson();
-        if (j2.is_null() && !v.isNull())
-            continue;
-        j[k] = j2;
-        if (v.ignore_in_comparison)
-            j[k + "_ignore_in_comparison"] = "true";
+        j[k] = v.toJson();
     }
     return j;
 }
@@ -502,15 +514,7 @@ void PackageSettings::mergeFromJson(const nlohmann::json &j)
     if (!j.is_object())
         throw SW_RUNTIME_ERROR("Not an object");
     for (auto it = j.begin(); it != j.end(); ++it)
-    {
-        if (pystring::endswith(it.key(), "_ignore_in_comparison"))
-        {
-            if (it.value().get<String>() == "true")
-                (*this)[it.key().substr(0, it.key().size() - strlen("_ignore_in_comparison"))].ignore_in_comparison = true;
-            continue;
-        }
         (*this)[it.key()].mergeFromJson(it.value());
-    }
 }
 
 void PackageSettings::erase(const PackageSettingKey &k)
