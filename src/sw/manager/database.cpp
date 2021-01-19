@@ -395,54 +395,44 @@ void PackagesDatabase::installPackage(const Package &p)
     }
 
     int64_t file_id = 1;
-
-    // insert file
-    if (auto h = p.getData().getHash(); !h.empty())
+    // insert file, we have empty hash for local pkgs
+    if (auto q = (*db)(
+        select(t_files.fileId)
+        .from(t_files)
+        .where(t_files.hash == p.getData().getHash()));
+        q.empty()
+        )
     {
-        if (auto q = (*db)(
-            select(t_files.fileId)
-            .from(t_files)
-            .where(t_files.hash == h));
-            q.empty()
-            )
-        {
-            (*db)(insert_into(t_files).set(
-                t_files.hash = p.getData().getHash()
-            ));
-            file_id = db->last_insert_id();
-        }
-        else
-        {
-            file_id = q.front().fileId.value();
-        }
+        (*db)(insert_into(t_files).set(
+            t_files.hash = p.getData().getHash()
+        ));
+        file_id = db->last_insert_id();
+    }
+    else
+    {
+        file_id = q.front().fileId.value();
     }
 
-    int type_id = 1;
     int64_t config_id = 1;
-    if (settings_hash)
+    if (auto q = (*db)(select(configs.configId).from(configs).where(
+        configs.hash == settings_hash
+        ));
+        q.empty())
     {
-        auto q = (*db)(select(configs.configId).from(configs).where(
-            configs.hash == settings_hash
-            ));
-        if (q.empty())
-        {
-            (*db)(insert_into(configs).set(
-                configs.hash = settings_hash
-            ));
-            config_id = db->last_insert_id();
-        }
-        else
-        {
-            config_id = q.front().configId.value();
-        }
-        type_id = 2; // we have unique index on type_id == 1
+        (*db)(insert_into(configs).set(
+            configs.hash = settings_hash
+        ));
+        config_id = db->last_insert_id();
+    }
+    else
+    {
+        config_id = q.front().configId.value();
     }
 
     // inser pkg ver file
     (*db)(insert_into(t_pkg_ver_files).set(
         t_pkg_ver_files.packageVersionId = version_id,
         t_pkg_ver_files.fileId = file_id,
-        t_pkg_ver_files.type = type_id,
         t_pkg_ver_files.configId = config_id,
         t_pkg_ver_files.archiveVersion = 1
     ));

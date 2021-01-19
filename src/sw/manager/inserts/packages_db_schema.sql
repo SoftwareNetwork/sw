@@ -1,5 +1,5 @@
 --------------------------------------------------------------------------------
--- SPDX-License-Identifier: GPL-3.0-or-later
+-- SPDX-License-Identifier: AGPL-3.0-or-later
 -- Copyright (C) 2018-2020 Egor Pugin <egor.pugin@gmail.com>
 --------------------------------------------------------------------------------
 
@@ -82,7 +82,6 @@ CREATE TABLE package_version_file (
     package_version_file_id INTEGER PRIMARY KEY,
     package_version_id INTEGER NOT NULL REFERENCES package_version (package_version_id) ON UPDATE CASCADE ON DELETE CASCADE,
     file_id INTEGER NOT NULL REFERENCES file (file_id) ON UPDATE CASCADE ON DELETE CASCADE,
-    type INTEGER NOT NULL,
     config_id INTEGER NOT NULL REFERENCES config (config_id) ON UPDATE CASCADE ON DELETE CASCADE,
     flags INTEGER NOT NULL DEFAULT 0,
     archive_version INTEGER NOT NULL,
@@ -91,8 +90,22 @@ CREATE TABLE package_version_file (
 -- allow only one source archive for package version
 -- ssa = single_source_archive
 CREATE UNIQUE INDEX package_version_file_package_version_id_ssa_idx
-ON package_version_file (package_version_id)
-WHERE (type = 1);
+ON package_version_file (package_version_id, config_id);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 --------------------------------------------------------------------------------
 --
@@ -225,6 +238,65 @@ BEGIN;
 
 ALTER TABLE package_version_file
 ADD COLUMN source TEXT;
+
+--------------------------------------------------------------------------------
+-- %split
+--------------------------------------------------------------------------------
+
+DROP INDEX package_version_file_package_version_id_ssa_idx;
+
+CREATE UNIQUE INDEX package_version_file_package_version_id_ssa_idx
+ON package_version_file (package_version_id, config_id);
+
+--------------------------------------------------------------------------------
+-- %split
+--------------------------------------------------------------------------------
+
+-- remove type from package_version_file
+
+-- sqlite wants this out of transaction
+COMMIT;
+-- always protect such operation with disabled FKs
+PRAGMA foreign_keys = OFF;
+
+CREATE TEMPORARY TABLE t1_backup(a,b,c,d,e,f,g);
+INSERT INTO t1_backup SELECT
+    package_version_file_id,
+    package_version_id,
+    file_id,
+    config_id,
+    flags,
+    archive_version,
+    source
+FROM package_version_file;
+DROP INDEX package_version_file_package_version_id_ssa_idx;
+DROP TABLE package_version_file;
+
+-- create
+CREATE TABLE package_version_file (
+    package_version_file_id INTEGER PRIMARY KEY,
+    package_version_id INTEGER NOT NULL REFERENCES package_version (package_version_id) ON UPDATE CASCADE ON DELETE CASCADE,
+    file_id INTEGER NOT NULL REFERENCES file (file_id) ON UPDATE CASCADE ON DELETE CASCADE,
+    config_id INTEGER NOT NULL REFERENCES config (config_id) ON UPDATE CASCADE ON DELETE CASCADE,
+    flags INTEGER NOT NULL DEFAULT 0,
+    archive_version INTEGER NOT NULL,
+    source TEXT
+);
+-- allow only one source archive for package version
+-- ssa = single_source_archive
+CREATE UNIQUE INDEX package_version_file_package_version_id_ssa_idx
+ON package_version_file (package_version_id, config_id);
+
+INSERT INTO package_version_file SELECT a,b,c,d,e,f,g FROM t1_backup;
+DROP TABLE t1_backup;
+
+-- restore FKs
+PRAGMA foreign_keys = ON;
+
+-- run new transaction
+-- this is bad, but as is
+BEGIN;
+--
 
 --------------------------------------------------------------------------------
 -- % split - merge '%' and 'split' together when patches are available
