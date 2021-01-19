@@ -583,7 +583,7 @@ void NativeCompiledTarget::setupCommand(builder::Command &c) const
         {
             if (&d->getTarget() == this)
                 continue;
-            if (auto nt = d->getTarget().as<NativeCompiledTarget *>())
+            if (auto nt = d->getTarget().as<const NativeCompiledTarget *>())
             {
                 if (!isStaticOrHeaderOnlyLibrary())
                 {
@@ -960,7 +960,7 @@ Commands NativeCompiledTarget::getCommands1() const
     // add dependencies on generated commands from dependent targets
     for (auto &l : get_tgts())
     {
-        if (auto nt = l->as<NativeCompiledTarget*>())
+        if (auto nt = l->as<const NativeCompiledTarget*>())
         {
             // for idir deps generated commands won't be used!
             auto cmds2 = nt->getGeneratedCommands();
@@ -2697,7 +2697,7 @@ void NativeCompiledTarget::prepare_pass6()
             if (&d->getTarget() == this)
                 continue;
 
-            auto nt = d->getTarget().template as<NativeCompiledTarget *>();
+            auto nt = d->getTarget().template as<const NativeCompiledTarget *>();
             if (!nt)
                 continue;
 
@@ -2969,7 +2969,7 @@ void NativeCompiledTarget::processCircular(Files &obj)
         //    )
         //        continue;
 
-        //    auto nt = d->target->as<NativeCompiledTarget*>();
+        //    auto nt = d->target->as<const NativeCompiledTarget*>();
 
         //    if (!*nt->HeaderOnly)
         //    {
