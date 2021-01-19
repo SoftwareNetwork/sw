@@ -622,14 +622,21 @@ std::unique_ptr<Input> Driver::getInput(const Package &p) const
                     {
                         auto d = p.getRootDirectory();
                         interface_settings.mergeFromString(read_file(d / "settings.json"));
-                        cmds = loadCommands(d / "commands.bin");
+
+                        // we do not want to load old commands for now
+                        // if you remove one of the generated files, re-run the build for this package
+                        // OR
+                        // we must find a way to check all files, if any is missing, then run commands.
+                        // but this is performed exactly by commands
+
+                        /*cmds = loadCommands(d / "commands.bin");
                         if (!cmds.empty())
                             cs = std::make_unique<CommandStorage>((*cmds.begin())->command_storage_root);
                         for (auto &c : cmds)
                         {
                             c->setFileStorage(fs);
                             c->command_storage = cs.get();
-                        }
+                        }*/
                     }
 
                     const PackageName &getPackage() const { return p->getId().getName(); }
