@@ -195,15 +195,6 @@ CommandNode::~CommandNode()
 namespace builder
 {
 
-Command::Command(const SwBuilderContext &swctx)
-    : swctx(&swctx)
-{
-}
-
-Command::~Command()
-{
-}
-
 static bool isExplainNeeded()
 {
     return sw::Settings::get_user_settings().explain_outdated
@@ -228,9 +219,11 @@ static String getCommandId(const Command &c)
     return s;
 }
 
+Command::~Command() {}
+
 bool Command::check_if_file_newer(const path &p, const String &what, bool throw_on_missing) const
 {
-    auto s = File(p, getContext().getFileStorage()).isChanged(mtime, throw_on_missing);
+    auto s = File(p, getFileStorage()).isChanged(mtime, throw_on_missing);
     if (s && isExplainNeeded())
     {
         EXPLAIN_OUTDATED("command", true, what + " changed " + to_string(p) + " (command_storage = " +
@@ -362,7 +355,7 @@ void Command::clean() const
 void Command::addInput(const path &p)
 {
     if (p.empty())
-        return;
+        throw SW_LOGIC_ERROR("empty input");
     inputs.insert(p);
 }
 
@@ -385,19 +378,18 @@ void Command::addImplicitInput(const Files &files)
         addImplicitInput(f);
 }
 
-void Command::addOutput(const path &p)
+void Command::addOutput(const path &p, FileStorage &fs)
 {
     if (p.empty())
-        return;
+        throw SW_LOGIC_ERROR("empty output");
     outputs.insert(p);
-    File(p, getContext().getFileStorage()).setGenerated();
-    //File(p, getContext().getFileStorage()).setGenerator(std::static_pointer_cast<Command>(shared_from_this()), true);
+    File(p, fs).setGenerated();
 }
 
-void Command::addOutput(const Files &files)
+void Command::addOutput(const Files &files, FileStorage &fs)
 {
     for (auto &f : files)
-        addOutput(f);
+        addOutput(f, fs);
 }
 
 path Command::redirectStdin(const path &p)
@@ -407,19 +399,19 @@ path Command::redirectStdin(const path &p)
     return p;
 }
 
-path Command::redirectStdout(const path &p, bool append)
+path Command::redirectStdout(const path &p, FileStorage &fs, bool append)
 {
     out.file = p;
     out.append = append;
-    addOutput(p);
+    addOutput(p, fs);
     return p;
 }
 
-path Command::redirectStderr(const path &p, bool append)
+path Command::redirectStderr(const path &p, FileStorage &fs, bool append)
 {
     err.file = p;
     err.append = append;
-    addOutput(p);
+    addOutput(p, fs);
     return p;
 }
 
@@ -444,7 +436,7 @@ void Command::prepare()
 
     // user entered commands may be in form 'git'
     // so, it is not empty, not generated and does not exist
-    if (!getProgram().empty() && (!swctx || !File(getProgram(), getContext().getFileStorage()).isGenerated()) &&
+    if (!getProgram().empty() && (!fs || !File(getProgram(), getFileStorage()).isGenerated()) &&
         !path(getProgram()).is_absolute() && !fs::exists(getProgram()))
     {
         auto new_prog = resolveExecutable(getProgram());
@@ -578,21 +570,21 @@ void Command::afterCommand()
     //if (always)
         //return;
 
-    if (!swctx)
+    if (!fs)
         return;
 
     // update things
 
     for (auto &i : inputs)
     {
-        File f(i, getContext().getFileStorage());
+        File f(i, getFileStorage());
         auto &fr = f.getFileData();
         mtime = std::max(mtime, fr.last_write_time);
     }
 
     for (auto &i : outputs)
     {
-        File f(i, getContext().getFileStorage());
+        File f(i, getFileStorage());
         auto &fr = f.getFileData();
         fr.refreshed = FileData::RefreshType::Unrefreshed;
         f.isChanged();
@@ -612,7 +604,7 @@ void Command::afterCommand()
     // so, we must register this file again
     for (auto &i : implicit_inputs)
     {
-        File f(i, getContext().getFileStorage());
+        File f(i, getFileStorage());
         auto &fr = f.getFileData();
         if (fr.last_write_time == fs::file_time_type::min())
         {
@@ -1214,18 +1206,11 @@ Command &Command::operator|=(Command &c2)
     return *this;
 }
 
-const SwBuilderContext &Command::getContext() const
+FileStorage &Command::getFileStorage() const
 {
-    if (!swctx)
-        throw SW_RUNTIME_ERROR("Empty sw context: " + getName());
-    return *swctx;
-}
-
-void Command::setContext(const SwBuilderContext &in)
-{
-    if (swctx && swctx != &in)
-        throw SW_RUNTIME_ERROR("Settings swctx twice: " + getName());
-    swctx = &in;
+    if (!fs)
+        throw SW_RUNTIME_ERROR("Empty fs context: " + getName());
+    return *fs;
 }
 
 void CommandSequence::addCommand(const std::shared_ptr<Command> &c)
@@ -1261,14 +1246,7 @@ BuiltinCommand::BuiltinCommand()
     setProgram(boost::dll::program_location().wstring());
 }
 
-BuiltinCommand::BuiltinCommand(const SwBuilderContext &swctx)
-    : Command(swctx)
-{
-    setProgram(boost::dll::program_location().wstring());
-}
-
-BuiltinCommand::BuiltinCommand(const SwBuilderContext &swctx, const String &cmd_name, void *f, int version)
-    : BuiltinCommand(swctx)
+BuiltinCommand::BuiltinCommand(const String &cmd_name, void *f, int version)
 {
     first_response_file_argument = 1;
     arguments.push_back(getInternalCallBuiltinFunctionName());

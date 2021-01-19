@@ -20,7 +20,6 @@ namespace sw
 
 SwBuilderContext::SwBuilderContext()
 {
-    file_storage_executor = std::make_unique<Executor>("async log writer", 1);
 }
 
 SwBuilderContext::~SwBuilderContext()
@@ -44,7 +43,7 @@ CommandStorage &SwBuilderContext::getCommandStorage(const path &root) const
     std::unique_lock lk(csm);
     auto &cs = command_storages[root];
     if (!cs)
-        cs = std::make_unique<CommandStorage>(*this, root);
+        cs = std::make_unique<CommandStorage>(root);
     return *cs;
 }
 

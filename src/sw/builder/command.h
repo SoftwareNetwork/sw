@@ -18,6 +18,7 @@ namespace sw
 struct Program;
 struct SwBuilderContext;
 struct CommandStorage;
+struct FileStorage;
 
 struct SW_BUILDER_API ResourcePool
 {
@@ -124,6 +125,7 @@ public:
     bool write_output_to_file = false;
     int strict_order = 0; // used to execute this before other commands
     std::shared_ptr<ResourcePool> pool;
+    FileStorage *fs = nullptr;
 
     std::thread::id tid;
     Clock::time_point t_begin;
@@ -143,7 +145,6 @@ public:
 
 public:
     Command() = default;
-    Command(const SwBuilderContext &swctx);
     virtual ~Command();
 
     void prepare() override;
@@ -167,11 +168,11 @@ public:
     void addInput(const Files &p);
     void addImplicitInput(const path &p);
     void addImplicitInput(const Files &p);
-    void addOutput(const path &p);
-    void addOutput(const Files &p);
+    void addOutput(const path &p, FileStorage &);
+    void addOutput(const Files &p, FileStorage &);
     path redirectStdin(const path &p);
-    path redirectStdout(const path &p, bool append = false);
-    path redirectStderr(const path &p, bool append = false);
+    path redirectStdout(const path &p, FileStorage &, bool append = false);
+    path redirectStderr(const path &p, FileStorage &, bool append = false);
     Files getGeneratedDirs() const; // used by generators
     path writeCommand(const path &basename, bool print_name = true) const;
 
@@ -190,8 +191,8 @@ public:
     Command &operator|(Command &);
     Command &operator|=(Command &);
 
-    const SwBuilderContext &getContext() const;
-    void setContext(const SwBuilderContext &);
+    FileStorage &getFileStorage() const;
+    void setFileStorage(FileStorage &s) { fs = &s; }
 
 protected:
     bool prepared = false;
@@ -211,7 +212,6 @@ protected:
     virtual bool check_if_file_newer(const path &, const String &what, bool throw_on_missing) const;
 
 private:
-    const SwBuilderContext *swctx = nullptr;
     mutable size_t hash = 0;
     Arguments rsp_args;
     mutable String log_string;
@@ -241,7 +241,7 @@ struct SW_BUILDER_API CommandSequence : Command
     template <class C = Command, class ... Args>
     std::shared_ptr<C> addCommand(Args && ... args)
     {
-        auto c = std::make_shared<C>(getContext(), std::forward<Args>(args)...);
+        auto c = std::make_shared<C>(std::forward<Args>(args)...);
         commands.push_back(c);
         return c;
     }
@@ -261,10 +261,8 @@ private:
 struct SW_BUILDER_API BuiltinCommand : Command
 {
     BuiltinCommand();
-    BuiltinCommand(const SwBuilderContext &swctx);
     // 3rd parameter is a symbol in module in which our function resides
-    BuiltinCommand(const SwBuilderContext &swctx, const String &cmd_name, void *symbol, int version = 0);
-    virtual ~BuiltinCommand() = default;
+    BuiltinCommand(const String &cmd_name, void *symbol, int version = 0);
 
     using Command::push_back;
     void push_back(const Strings &strings);

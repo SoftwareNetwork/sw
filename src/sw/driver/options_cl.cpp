@@ -39,7 +39,7 @@ DECLARE_OPTION_SPECIALIZATION(path)
     //if (intermediate_file)
         //c->addIntermediate(value());
     if (output_dependency)
-        c->addOutput(value());
+        c->addOutput(value(), c->getFileStorage());
     if (create_directory)
         c->output_dirs.insert(value().parent_path());
     if (separate_prefix)
@@ -57,7 +57,7 @@ DECLARE_OPTION_SPECIALIZATION(FilesOrdered)
         //if (intermediate_file)
             //c->addIntermediate(v);
         if (output_dependency)
-            c->addOutput(v);
+            c->addOutput(v, c->getFileStorage());
         if (cmd_flag_before_each_value)
         {
             if (separate_prefix)
@@ -84,7 +84,7 @@ DECLARE_OPTION_SPECIALIZATION(Files)
         //if (intermediate_file)
             //c->addIntermediate(v);
         if (output_dependency)
-            c->addOutput(v);
+            c->addOutput(v, c->getFileStorage());
         if (cmd_flag_before_each_value)
         {
             if (separate_prefix)
@@ -111,7 +111,7 @@ DECLARE_OPTION_SPECIALIZATION(LinkLibrariesType)
         //if (intermediate_file)
             //c->addIntermediate(v);
         if (output_dependency)
-            c->addOutput(v.l);
+            c->addOutput(v.l, c->getFileStorage());
         if (cmd_flag_before_each_value)
         {
             auto static_cond = v.static_ && v.style != v.MSVC;

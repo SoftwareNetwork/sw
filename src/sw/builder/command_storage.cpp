@@ -103,11 +103,6 @@ void CommandRecord::setImplicitInputs(const Files &files, detail::Storage &s)
     }
 }
 
-FileDb::FileDb(const SwBuilderContext &swctx)
-    : swctx(swctx)
-{
-}
-
 static auto file_hash(const path &p) { return std::hash<path>()(p); }
 
 void FileDb::write(std::vector<uint8_t> &v, const CommandRecord &f, const detail::Storage &s)
@@ -294,17 +289,17 @@ detail::FileHolder::~FileHolder()
     fs::remove(fn, ec);
 }
 
-CommandStorage::CommandStorage(const SwBuilderContext &swctx, const path &root)
-    : swctx(swctx)
-    , root(root)
-    , fdb(swctx)
+CommandStorage::CommandStorage(const path &root)
+    : root(root)
 {
     //lock = getLock();
+    file_storage_executor = std::make_unique<Executor>("async log writer", 1);
     load(); // load early
 }
 
 CommandStorage::~CommandStorage()
 {
+    file_storage_executor->wait();
     save();
 }
 
@@ -314,7 +309,7 @@ void CommandStorage::async_command_log(const CommandRecord &r)
 
     changed = true;
     add_user();
-    swctx.getFileStorageExecutor().push([this, &r]
+    file_storage_executor->push([this, &r]
     {
         auto &s = getInternalStorage();
 
@@ -322,7 +317,7 @@ void CommandStorage::async_command_log(const CommandRecord &r)
             // write record to vector v
             fdb.write(v, r, s);
 
-            auto &l = s.getCommandLog(swctx, root);
+            auto &l = s.getCommandLog(root);
             auto sz = v.size();
             fwrite(&sz, sizeof(sz), 1, l.f.getHandle());
             fwrite(&v[0], sz, 1, l.f.getHandle());
@@ -330,7 +325,7 @@ void CommandStorage::async_command_log(const CommandRecord &r)
         }
 
         {
-            auto &l = s.getFileLog(swctx, root);
+            auto &l = s.getFileLog(root);
             for (auto &f : r.getImplicitInputs(s))
             {
                 auto r = s.file_storage.insert(f);
@@ -391,14 +386,14 @@ void CommandStorage::save()
     lock.reset();
 }
 
-detail::FileHolder &detail::Storage::getCommandLog(const SwBuilderContext &swctx, const path &root)
+detail::FileHolder &detail::Storage::getCommandLog(const path &root)
 {
     if (!commands)
         commands = std::make_unique<FileHolder>(getCommandsLogFileName(root));
     return *commands;
 }
 
-detail::FileHolder &detail::Storage::getFileLog(const SwBuilderContext &swctx, const path &root)
+detail::FileHolder &detail::Storage::getFileLog(const path &root)
 {
     if (!files)
         files = std::make_unique<FileHolder>(getCommandsLogFileName(root) += getFilesSuffix());

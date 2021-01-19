@@ -57,7 +57,7 @@ std::shared_ptr<builder::Command> CompilerBaseProgram::prepareCommand(const Targ
 {
     if (prepared)
         return cmd;
-    cmd->setContext(t.getMainBuild()); // used in prepareCommand1()
+    cmd->setFileStorage(t.getFs());
     cmd->setProgram(file);
     prepareCommand1(t);
     prepared = true;
@@ -997,7 +997,7 @@ void JavaCompiler::prepareCommand1(const Target &t)
     for (auto &f : InputFiles())
     {
         auto o = OutputDir() / (f.filename().stem() += ".class");
-        cmd->addOutput(o);
+        cmd->addOutput(o, t.getFs());
     }
 }
 

@@ -107,7 +107,8 @@ SUBCOMMAND_DECL(run)
     //primitives::Command c;
     auto b = createBuild();
     sw::builder::Command c;
-    c.setContext(*b);
+    SW_UNIMPLEMENTED;
+    //c.setContext(*b);
     c.always = true;
 
     c.inherit = true;

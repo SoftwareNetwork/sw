@@ -472,6 +472,7 @@ Commands Target::getCommands() const
             if (!c->command_storage)
                 c->always = true;
         }
+        c->setFileStorage(getFs());
     }
     for (auto &c : commands)
         ((Target*)this)->registerCommand(*c);
@@ -480,13 +481,7 @@ Commands Target::getCommands() const
 
 void Target::registerCommand(builder::Command &c)
 {
-    c.setContext(getMainBuild());
-    if (!c.command_storage)
-    {
-        c.command_storage = getCommandStorage();
-        if (!c.command_storage)
-            c.always = true;
-    }
+    c.setFileStorage(getFs());
     Storage.push_back(c.shared_from_this());
 }
 
@@ -909,17 +904,12 @@ driver::CommandBuilder Target::addCommand(const std::shared_ptr<builder::Command
     // sdir or bdir?
     cb->working_directory = SourceDir;
     //setupCommand(*cb.c);
-    if (!DryRun)
-    {
-        cb->command_storage = getCommandStorage();
-        cb->setContext(getMainBuild());
-    }
     return cb;
 }
 
 driver::CommandBuilder Target::addCommand(const String &func_name, void *f, int version)
 {
-    auto c = std::make_shared<BuiltinCommand>(getMainBuild(), func_name, f, version);
+    auto c = std::make_shared<BuiltinCommand>(func_name, f, version);
     return addCommand(c);
 }
 

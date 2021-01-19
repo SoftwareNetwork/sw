@@ -15,6 +15,7 @@ message IOStream {
 
 message Command {
     uint64 id = 1; // to track deps
+    string command_storage_root = 2;
 
     repeated string arguments = 5;
     string working_directory = 6;
@@ -23,6 +24,12 @@ message Command {
     IOStream in = 11;
     IOStream out = 12;
     IOStream err = 13;
+
+    repeated string inputs = 15;
+    repeated string outputs = 16;
+    repeated string implicit_inputs = 17;
+    repeated string simultaneous_outputs = 18;
+    repeated string inputs_without_timestamps = 19;
 
     repeated uint64 dependencies = 21;
 }

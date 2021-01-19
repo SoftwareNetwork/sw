@@ -134,7 +134,7 @@ path Directories::getDatabaseRootDir() const
         // "1"
     };
 
-    auto p = getDatabaseRootDir1(storage_dir_etc) / "1";
+    auto p = getDatabaseRootDir1(storage_dir_etc) / "2";
 
     [[maybe_unused]]
     static bool once = [this, &new_root = p]()

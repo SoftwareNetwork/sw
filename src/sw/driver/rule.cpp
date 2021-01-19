@@ -745,9 +745,9 @@ void NativeLinkerRule::addInputs(const Target &t, RuleFiles &rfs)
                 if (f.extension() == ".obj")
                     objs.insert(f);
             }
-            auto c = std::make_shared<builder::BuiltinCommand>(t.getMainBuild(), SW_VISIBLE_BUILTIN_FUNCTION(create_def_file));
+            auto c = std::make_shared<builder::BuiltinCommand>(SW_VISIBLE_BUILTIN_FUNCTION(create_def_file));
             c->push_back(deffn);
-            c->addOutput(deffn);
+            c->addOutput(deffn, t.getFs());
             c->push_back(objs);
             c->addInput(objs);
             def = deffn;
@@ -791,7 +791,7 @@ void NativeLinkerRule::addInputs(const Target &t, RuleFiles &rfs)
         {
             auto exp = nt->getImportLibrary();
             exp = exp.parent_path() / (exp.stem() += ".exp");
-            c->getCommand()->addOutput(exp);
+            c->getCommand()->addOutput(exp, t.getFs());
             //outputs.insert(exp); // we can live without it
         }
     }

@@ -1270,7 +1270,7 @@ void Project::emitProject(const VSGenerator &g) const
             }
 
             // one .rc file
-            if (t == VSFileType::ResourceCompile || sw::File(f, c->getContext().getFileStorage()).isGenerated())
+            if (t == VSFileType::ResourceCompile || sw::File(f, c->getFileStorage()).isGenerated())
             {
                 for (auto &[s, d] : data)
                 {

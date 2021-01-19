@@ -11,6 +11,8 @@
 
 #include <atomic>
 
+struct Executor;
+
 namespace sw
 {
 
@@ -60,18 +62,14 @@ struct Storage
     std::unique_ptr<FileHolder> files;
 
     void closeLogs();
-    FileHolder &getCommandLog(const SwBuilderContext &swctx, const path &root);
-    FileHolder &getFileLog(const SwBuilderContext &swctx, const path &root);
+    FileHolder &getCommandLog(const path &root);
+    FileHolder &getFileLog(const path &root);
 };
 
 }
 
 struct FileDb
 {
-    const SwBuilderContext &swctx;
-
-    FileDb(const SwBuilderContext &swctx);
-
     void load(Files &files, std::unordered_map<size_t, path> &files2, ConcurrentCommandStorage &commands, const path &root) const;
     void save(const Files &files, const detail::Storage &, ConcurrentCommandStorage &commands, const path &root) const;
 
@@ -80,10 +78,10 @@ struct FileDb
 
 struct SW_BUILDER_API CommandStorage
 {
-    const SwBuilderContext &swctx;
     path root;
+    std::unique_ptr<Executor> file_storage_executor;
 
-    CommandStorage(const SwBuilderContext &swctx, const path &root);
+    CommandStorage(const path &root);
     CommandStorage(const CommandStorage &) = delete;
     CommandStorage &operator=(const CommandStorage &) = delete;
     ~CommandStorage();

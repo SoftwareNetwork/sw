@@ -4,6 +4,7 @@
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
 #include <sw/builder/command_storage.h>
+#include <sw/builder/file_storage.h>
 
 #include "driver.h"
 
@@ -612,21 +613,33 @@ std::unique_ptr<Input> Driver::getInput(const Package &p) const
                 {
                     std::unique_ptr<Package> p;
                     PackageSettings interface_settings;
+                    Commands cmds;
+                    std::unique_ptr<CommandStorage> cs;
+                    FileStorage fs;
 
-                    BinaryTarget(const Package &p)
+                    BinaryTarget(SwContext &swctx, const Package &p)
                         : p(p.clone())
                     {
                         auto d = p.getRootDirectory();
                         interface_settings.mergeFromString(read_file(d / "settings.json"));
+                        cmds = loadCommands(d / "commands.bin");
+                        if (!cmds.empty())
+                            cs = std::make_unique<CommandStorage>((*cmds.begin())->command_storage_root);
+                        for (auto &c : cmds)
+                        {
+                            c->setFileStorage(fs);
+                            c->command_storage = cs.get();
+                        }
                     }
 
                     const PackageName &getPackage() const { return p->getId().getName(); }
                     const Source &getSource() const { SW_UNIMPLEMENTED; }
                     const PackageSettings &getSettings() const { return p->getId().getSettings(); }
                     const PackageSettings &getInterfaceSettings() const { return interface_settings; }
+                    Commands getCommands() const override { return cmds; }
                 };
 
-                return std::make_unique<BinaryTarget>(p);
+                return std::make_unique<BinaryTarget>(swctx, p);
             }
 
             std::vector<ITargetPtr> loadPackages(SwBuild &b, const PackageSettings &s) const override

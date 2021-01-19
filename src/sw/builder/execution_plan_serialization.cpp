@@ -134,10 +134,7 @@ Commands ExecutionPlan::load(const path &p, const SwBuilderContext &swctx, int t
 
     // some setup
     for (auto &c : commands)
-    {
-        c->setContext(swctx);
         c->command_storage = &swctx.getCommandStorage(c->command_storage_root);
-    }
     return commands;
 }
 
