@@ -1358,8 +1358,8 @@ void NativeCompiledTarget::setInterfaceSettings()
         if (d.dep->IncludeDirectoriesOnly || d.dep->LinkLibrariesOnly)
             continue;
         if (1/* && t->getType() != TargetType::NativeExecutable*/)
-                s["dependencies"]["link"][boost::to_lower_copy(d.dep->getTarget().getPackage().toString())] = d.dep->getTarget().getSettings();
-        }
+            s["dependencies"]["link"][boost::to_lower_copy(d.dep->getTarget().getPackage().toString())] = d.dep->getTarget().getSettings();
+    }
     for (auto &d : DummyDependencies)
     {
         // rename dummy?
@@ -1703,7 +1703,15 @@ void NativeCompiledTarget::prepare2()
     Package p{ id };
     auto d = std::make_unique<PackageData>();
     p.setData(std::move(d));
-    getContext().getLocalStorage().installLocalPackage(p);
+    try
+    {
+        getContext().getLocalStorage().installLocalPackage(p);
+    }
+    catch (std::exception &e)
+    {
+        // we may catch duplicate installation here
+        LOG_DEBUG(logger, e.what());
+    }
 }
 
 void NativeCompiledTarget::prepare_pass1()
