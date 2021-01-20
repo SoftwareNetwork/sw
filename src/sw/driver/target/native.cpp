@@ -1357,15 +1357,9 @@ void NativeCompiledTarget::setInterfaceSettings()
     {
         if (d.dep->IncludeDirectoriesOnly || d.dep->LinkLibrariesOnly)
             continue;
-        if (auto t = d.dep->getTarget().as<const NativeCompiledTarget *>())
-        {
-            if (!t->DryRun/* && t->getType() != TargetType::NativeExecutable*/)
+        if (1/* && t->getType() != TargetType::NativeExecutable*/)
                 s["dependencies"]["link"][boost::to_lower_copy(d.dep->getTarget().getPackage().toString())] = d.dep->getTarget().getSettings();
         }
-        else
-            continue;
-            //throw SW_RUNTIME_ERROR("missing predefined target code");
-    }
     for (auto &d : DummyDependencies)
     {
         // rename dummy?
