@@ -238,6 +238,7 @@ void RemoteStorage::load() const
         {"package_version", "group_number"},
         {"package_version", "archive_version"},
         {"package_version", "hash"},
+        {"package_version_file", "type"},
     };
     auto is_skipped_column = [](const String &tablename, const String &name)
     {
