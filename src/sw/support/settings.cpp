@@ -194,10 +194,11 @@ void PackageSetting::mergeFromJson(const nlohmann::json &j)
     case n:                                                               \
         *this = j["value"].get<std::variant_alternative_t<n, Variant>>(); \
         return
-        GET_RAW(2);
-        GET_RAW(3);
-        GET_RAW(4);
-        GET_RAW(5);
+    GET_RAW(2);
+    GET_RAW(3);
+    GET_RAW(4);
+    GET_RAW(5);
+#undef GET_RAW
     case 6:
         *this = path((const char8_t *)j["value"].get<String>().c_str());
         return;
@@ -216,6 +217,19 @@ void PackageSetting::mergeFromJson(const nlohmann::json &j)
     case 8:
         getMap().mergeFromJson(j["value"]);
         return;
+    case 9:
+        //SW_UNIMPLEMENTED;
+        return;
+#define GET_RAW(n)                                                                \
+    case n:                                                                       \
+        *this = std::variant_alternative_t<n, Variant>(j["value"].get<String>()); \
+        return
+    GET_RAW(10);
+    GET_RAW(11);
+    GET_RAW(12);
+    GET_RAW(13);
+    GET_RAW(14);
+#undef GET_RAW
     default:
         SW_UNIMPLEMENTED;
     }
