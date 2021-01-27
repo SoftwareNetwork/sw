@@ -4,8 +4,9 @@
 #include "settings.h"
 
 #include "hash.h"
-#include "resolver.h"
 #include "storage.h"
+#include "package_id.h"
+#include "unresolved_package_id.h"
 
 #include <primitives/overload.h>
 
@@ -132,14 +133,27 @@ void PackageSetting::setAbsolutePathValue(const path &value)
     *this = normalize_path(value);
 }
 
-::sw::Resolver &PackageSetting::getResolver() const
+void PackageSetting::addResolvedPackage(const UnresolvedPackageName &u, const PackageSettings &s, const PackageId &id)
 {
-    return *get<Resolver>();
+    auto &sr = std::get<ResolverType>(value);
+    sr[u].emplace(s, id);
 }
 
-bool PackageSetting::resolve(ResolveRequest &rr) const
+std::optional<PackageId> PackageSetting::resolve(const ResolveRequest &rr) const
 {
-    return getResolver().resolve(rr);
+    auto &sr = std::get<ResolverType>(value);
+    auto i = sr.find(rr.getUnresolvedPackageName());
+    if (i == sr.end())
+        return {};
+    auto j = i->second.find(rr.getSettings());
+    if (j == i->second.end())
+        return {};
+    return j->second;
+}
+
+void PackageSetting::setResolver()
+{
+    *this = ResolverType{};
 }
 
 bool PackageSetting::operator==(const PackageSetting &rhs) const
@@ -358,7 +372,21 @@ nlohmann::json PackageSetting::toJson() const
         },
         [](const Map &m) { return m.toJson(); },
         [](const path &p) -> nlohmann::json { return to_printable_string(p); },
-        [](const Resolver &r) -> nlohmann::json { return {}; },
+        [](const ResolverType &r) -> nlohmann::json {
+            nlohmann::json j;
+            for (auto &[k, m] : r) {
+                nlohmann::json j2;
+                for (auto &[s, id] : m) {
+                    nlohmann::json j3;
+                    j3["key"] = s.toJson();
+                    j3["value"]["name"] = id.getName().toString();
+                    j3["value"]["settings"] = id.getSettings().toJson();
+                    j2.push_back(j3);
+                }
+                j[k.toString()] = j2;
+            }
+            return j;
+        },
         [](auto &&v) -> nlohmann::json {
             if constexpr (0
                 || std::is_same_v<std::decay_t<decltype(v)>, PackagePath>
@@ -407,8 +435,18 @@ size_t PackageSetting::getHash1() const
             size_t h = 0;
             return hash_combine(h, m.getHash1());
         },
-        [](const path &p) -> size_t { SW_UNIMPLEMENTED; },
-        [](const Resolver &r) -> size_t { return {}; },
+        [](const path &p) -> size_t { return std::hash<path>()(p); },
+        [](const ResolverType &r) -> size_t {
+            size_t h = 0;
+            for (auto &[k, m] : r) {
+                hash_combine(h, std::hash<UnresolvedPackageName>()(k));
+                for (auto &[s, id] : m) {
+                    hash_combine(h, std::hash<PackageSettings>()(s));
+                    hash_combine(h, std::hash<PackageId>()(id));
+                }
+            }
+            return h;
+        },
         [](auto &&v) -> size_t {
             size_t h = 0;
             return hash_combine(h, std::hash<std::decay_t<decltype(v)>>()(v));

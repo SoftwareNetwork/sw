@@ -200,7 +200,8 @@ const Package &TargetBase::getLocalPackage() const
 Target::Target(TargetBase &parent, const PackageName &inpkg)
     : TargetBase(parent, inpkg)
 {
-    ts = static_cast<ExtendedBuild &>(getSolution()).getSettings();
+    input_ts = static_cast<ExtendedBuild &>(getSolution()).getSettings();
+    ts = input_ts;
     bs = ts;
 
     if (auto t0 = dynamic_cast<const Target*>(&parent))
@@ -382,8 +383,10 @@ PackageSettings Target::getHostSettings() const
     auto hs = getMainBuild().getContext().getHostSettings();
     // reconsider this?
     // Whole host settings can be taken from user config in ~/.sw/sw.yml
-    hs["resolver"] = ts_export["resolver"];
-    addSettingsAndSetHostPrograms(getMainBuild(), hs);
+    //hs["resolver"] = ts_export["resolver"];
+    //hs["resolver"].setResolver(); // clear resolving, should we?
+    //hs.erase("resolver"); // clear resolving, should we?
+    addSettingsAndSetHostPrograms((Target&)*this, hs);
     return hs;
 }
 
@@ -462,7 +465,7 @@ Commands Target::getCommands() const
 {
     if (!commands.empty())
         return commands;
-    ((Target&)*this).prepare2();
+    //((Target&)*this).prepare2();
     commands = getCommands1();
     for (auto &c : commands)
     {
@@ -518,6 +521,7 @@ void Target::init()
         ReproducibleBuild = ts["reproducible-build"].get<bool>();
 
     ts_export = ts;
+    //ts_export.erase("resolver");
 
     //BinaryDir = getBinaryParentDir();
 
@@ -560,6 +564,13 @@ DependencyPtr Target::getDependency() const
 {
     auto d = std::make_shared<Dependency>(UnresolvedPackageId{ getPackage() });
     return d;
+}
+
+PackageSettings &Target::getSettings()
+{
+    if (!can_update_settings)
+        throw SW_RUNTIME_ERROR("Cannot update settings anymore");
+    return ts;
 }
 
 const PackageSettings &Target::getSettings() const
@@ -803,9 +814,28 @@ void Target::addSourceDependency(const Target &t)
     addSourceDependency(std::make_shared<Dependency>(UnresolvedPackageId{ t.getPackage() }));
 }
 
-Resolver &Target::getResolver() const
+bool Target::resolve(ResolveRequest &rr, bool add_to_resolver)
 {
-    return getSettings()["resolver"].getResolver();
+    auto &r = getMainBuild().getResolver();
+    auto &ssr = getSettings()["resolver"];
+
+    if (ssr.isEmpty())
+        ssr.setResolver();
+
+    auto id = ssr.resolve(rr);
+    if (!id)
+    {
+        auto ret = r.resolve(rr);
+        if (ret && add_to_resolver)
+            ssr.addResolvedPackage(rr.getUnresolvedPackageName(), rr.getSettings(), rr.getPackage().getId());
+        return ret;
+    }
+
+    ResolveRequest rrnew{id->getName(), id->getSettings()};
+    auto ret = r.resolve(rrnew);
+    if (ret)
+        rr.setPackageForce(std::move(rrnew.r));
+    return ret;
 }
 
 void Target::resolveDependency(IDependency &d)
@@ -813,15 +843,18 @@ void Target::resolveDependency(IDependency &d)
     if (DryRun)
         return;
 
+    LOG_TRACE(logger, "Resolving " << d.getUnresolvedPackageId().getName().toString()
+        << ": " << d.getUnresolvedPackageId().getSettings().toString());
+
     if (d.getUnresolvedPackageId().getName().getPath().isAbsolute())
     {
         ResolveRequest rr{ d.getUnresolvedPackageId() };
-        if (!getResolver().resolve(rr))
+        if (!resolve(rr, true))
         {
             // try to resolve sources
             PackageSettings s;
             ResolveRequest rr2{ d.getUnresolvedPackageId().getName(), s };
-            if (!getResolver().resolve(rr2))
+            if (!resolve(rr2, false))
                 throw SW_RUNTIME_ERROR("Cannot resolve package " + rr.toString() + " and " + rr2.toString());
             auto installed = getContext().getLocalStorage().install(rr2.getPackage());
             auto &p2 = installed ? *installed : rr2.getPackage();
@@ -830,6 +863,9 @@ void Target::resolveDependency(IDependency &d)
             p->setData(rr2.getPackage().getData().clone());
             auto &t = getMainBuild().load(*p);
             d.setTarget(t);
+
+            // we save original request to resolver
+            getSettings()["resolver"].addResolvedPackage(rr.getUnresolvedPackageName(), rr.getSettings(), PackageId{ t.getPackage(), t.getSettings() });
         }
         else
         {
@@ -865,7 +901,7 @@ path Target::getFile(const DependencyPtr &dep, const path &fn)
 
     addSourceDependency(dep); // main trick is to add a dependency
     ResolveRequest rr{ dep->getUnresolvedPackageId() };
-    getResolver().resolve(rr);
+    resolve(rr, true);
     auto p2 = getMainBuild().getContext().getLocalStorage().install(rr.getPackage());
     auto &lp = p2 ? *p2 : rr.getPackage();
     auto p = lp.getSourceDirectory();

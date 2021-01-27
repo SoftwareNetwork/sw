@@ -258,7 +258,7 @@ struct SW_DRIVER_CPP_API Target
     void addSourceDependency(const DependencyPtr &);
 
     void resolveDependency(IDependency &);
-    Resolver &getResolver() const;
+    bool resolve(ResolveRequest &, bool add_to_resolver);
 
 public:
     Target(TargetBase &parent, const PackageName &);
@@ -270,6 +270,7 @@ public:
     TargetFiles getFiles() const override;
     std::vector<IDependency *> getDependencies() const;// override;
     const PackageSettings &getSettings() const override;
+    PackageSettings &getSettings();
     const PackageSettings &getInterfaceSettings() const override;
 
     const PackageSettings &getPackageSettings() const { return getSettings(); }
@@ -357,7 +358,11 @@ protected:
     virtual path getBinaryParentDir() const;
 
 protected:
-    PackageSettings ts; // this settings
+    bool can_update_settings = true;
+    // this settings
+    PackageSettings input_ts; // 1
+    PackageSettings processed_ts; // 2
+    PackageSettings ts; // 3, resolver will modify this one
     // export settings may be different
     // example: we set 'static-deps' setting which changes
     // ["native"]["library"] to "static";

@@ -4,6 +4,7 @@
 #include "resolver.h"
 
 #include "package.h"
+#include "unresolved_package_id.h"
 
 namespace sw
 {
@@ -58,6 +59,16 @@ bool ResolveRequestResult::setPackage(PackagePtr in)
         return true;
     }
     return false;
+}
+
+ResolveRequest::ResolveRequest(const UnresolvedPackageId &up)
+    : u(up.getName()), settings(up.getSettings())
+{
+}
+
+String ResolveRequest::toString() const
+{
+    return u.toString() + " (" + settings.getHashString() + ")";
 }
 
 bool ResolveRequest::setPackage(PackagePtr in)

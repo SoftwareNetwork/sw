@@ -52,27 +52,27 @@ static void setRuleCompareRules(PackageSettings &ts)
     }
 }
 
-static void basicResolve(PackageSettings &ts)
+static void basicResolve(Target &t, PackageSettings &ts)
 {
     auto ts2 = ts;
     ts2.erase("rule");
     for (auto &&[_, m] : ts["rule"].getMap())
     {
         ResolveRequest rr{ m["package"].get<UnresolvedPackageName>(), ts2 };
-        if (ts["resolver"].resolve(rr))
+        if (t.getMainBuild().getResolver().resolve(rr))
             m["package"] = UnresolvedPackageName{ rr.getPackage().getId().getName() };
         // otherwise we silently ignore until rule is used
     }
     for (auto &&[_, m] : ts["native"]["stdlib"].getMap())
     {
         ResolveRequest rr{ m.get<UnresolvedPackageName>(), ts }; // with rules!
-        if (ts["resolver"].resolve(rr))
+        if (t.getMainBuild().getResolver().resolve(rr))
             m = UnresolvedPackageName{ rr.getPackage().getId().getName() };
         // otherwise we silently ignore until rule is used
     }
 }
 
-static void addSettingsCommon(const SwBuild &b, PackageSettings &ts, bool force)
+static void addSettingsCommon(Target &t, PackageSettings &ts, bool force)
 {
     addNativeSettings(ts, force);
 
@@ -134,19 +134,19 @@ static void addSettingsCommon(const SwBuild &b, PackageSettings &ts, bool force)
         SW_UNIMPLEMENTED;
 
     setRuleCompareRules(ts);
-    basicResolve(ts);
+    basicResolve(t, ts);
 }
 
 // remember! only host tools
 // TODO: load host settings from file
-void addSettingsAndSetHostPrograms(const SwBuild &b, PackageSettings &ts)
+void addSettingsAndSetHostPrograms(Target &t, PackageSettings &ts)
 {
-    addSettingsCommon(b, ts, true);
+    addSettingsCommon(t, ts, true);
 }
 
-void addSettingsAndSetPrograms(const SwBuild &b, PackageSettings &ts)
+void addSettingsAndSetPrograms(Target &t, PackageSettings &ts)
 {
-    addSettingsCommon(b, ts, false);
+    addSettingsCommon(t, ts, false);
 }
 
 // they must be the same as used when building sw

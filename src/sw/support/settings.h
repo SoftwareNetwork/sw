@@ -22,19 +22,21 @@ using PackageSettingKey = String;
 using PackageSettingValue = String;
 struct PackageSetting;
 struct PackageSettings;
-struct Resolver;
+struct PackageId;
+struct UnresolvedPackageId;
 struct ResolveRequest;
+struct Resolver;
 
 struct SW_SUPPORT_API PackageSettings
 {
     enum StringType : int
     {
-        KeyValue    = 0,
+        KeyValue = 0,
 
         Json,
         // yml
 
-        Simple      = KeyValue,
+        Simple = KeyValue,
     };
 
     PackageSettings() = default;
@@ -82,10 +84,54 @@ private:
     template <class Ar>
     void serialize(Ar &ar, unsigned)
     {
-        ar & settings;
+        ar &settings;
     }
 #endif
 };
+
+struct SW_SUPPORT_API PackageId
+{
+    PackageName n;
+    PackageSettings s;
+
+    const auto &getName() const { return n; }
+    const auto &getSettings() const { return s; }
+
+    // maybe also print settings hash
+    String toString() const { return n.toString(); }
+
+    // does not work with SW_SUPPORT_API
+    //auto operator<=>(const PackageId &) const = default;
+
+    bool operator==(const PackageId &rhs) const { return std::tie(n, s) == std::tie(rhs.n, rhs.s); }
+};
+
+} // namespace sw
+
+namespace std
+{
+
+template<> struct hash<::sw::PackageId>
+{
+    size_t operator()(const ::sw::PackageId &p) const
+    {
+        auto h = std::hash<::sw::PackageName>()(p.getName());
+        return hash_combine(h, p.getSettings().getHash());
+    }
+};
+
+template<> struct hash<::sw::PackageSettings>
+{
+    size_t operator()(const ::sw::PackageSettings &p) const
+    {
+        return p.getHash();
+    }
+};
+
+}
+
+namespace sw
+{
 
 struct SW_SUPPORT_API PackageSetting
 {
@@ -103,9 +149,7 @@ struct SW_SUPPORT_API PackageSetting
     using Map = PackageSettings;
     using ArrayValue = PackageSetting;
     using Array = std::vector<ArrayValue>;
-    //using ResolverType = std::shared_ptr<Resolver>;
-    //using ResolverType = Resolver*; // memory leak for now
-    using Resolver = typename ::sw::Resolver*; // memory leak for now
+    using ResolverType = std::unordered_map<UnresolvedPackageName, std::unordered_map<PackageSettings, PackageId>>;
     using Empty = std::monostate;
     using Null = nulltag_t;
     using Path = path;
@@ -114,7 +158,7 @@ struct SW_SUPPORT_API PackageSetting
         Empty, Null,
         bool, int64_t, double, String,
         Path,
-        Array, Map, Resolver,
+        Array, Map, ResolverType,
         PackagePath, PackageVersion, PackageName, PackageVersionRange, UnresolvedPackageName
     >;
 
@@ -190,8 +234,11 @@ struct SW_SUPPORT_API PackageSetting
     void setPathValue(const path &root, const path &value);
     path getAbsolutePathValue() const;
     void setAbsolutePathValue(const path &value);
-    bool resolve(ResolveRequest &) const;
-    ::sw::Resolver &getResolver() const;
+    std::optional<PackageId> resolve(const ResolveRequest &) const;
+    void addResolvedPackage(const UnresolvedPackageName &, const PackageSettings &, const PackageId &);
+    void setResolver();
+    //auto &getResolver() { return std::get<ResolverType>(value); }
+    //const auto &getResolver() const { return std::get<ResolverType>(value); }
 
     void push_back(const ArrayValue &);
     void reset();
@@ -286,16 +333,3 @@ SW_SUPPORT_API
 void saveSettings(const path &archive_fn, const PackageSettings &, int type = 0);
 
 } // namespace sw
-
-namespace std
-{
-
-template<> struct hash<::sw::PackageSettings>
-{
-    size_t operator()(const ::sw::PackageSettings &p) const
-    {
-        return p.getHash();
-    }
-};
-
-}

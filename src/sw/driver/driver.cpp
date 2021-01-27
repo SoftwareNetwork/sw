@@ -261,7 +261,9 @@ struct ConfigStorage : IStorage
             ResolveRequest rr2{ i->second.first, rr.settings };
             if (swctx.resolve(rr2, true))
             {
-                auto &p = rr2.getPackage();
+                auto installed = swctx.getLocalStorage().install(rr2.getPackage());
+                auto &p = installed ? *installed : rr2.getPackage();
+
                 auto pkg = makePackage(p.getId());
                 auto &p2 = (ConfigPackage &)*pkg;
                 p2.epfs = eps.find(i->second.second)->second;

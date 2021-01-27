@@ -484,7 +484,8 @@ void SwBuild::loadInputs()
         for (auto s : i.getSettings())
         {
             //s["resolver"] = PackageSetting(getResolver().clone());
-            s["resolver"] = &getResolver();
+            //s["resolver"] = &getResolver();
+            //s["resolver"].setResolver();
             auto tgts2 = i.getInput().loadPackages(*this, s);
             auto tgts = registerTargets(std::move(tgts2));
             for (auto &&tgt : tgts)

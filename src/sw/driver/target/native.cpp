@@ -534,7 +534,7 @@ void NativeCompiledTarget::findCompiler()
 void NativeCompiledTarget::init()
 {
     // before target init
-    addSettingsAndSetPrograms(getMainBuild(), ts);
+    addSettingsAndSetPrograms(*this, ts);
 
     if (!isHeaderOnly())
         findCompiler();
@@ -1477,6 +1477,9 @@ void NativeCompiledTarget::prepare1()
 {
     if (DryRun)
         return;
+    if (prepared)
+        return;
+    prepared = true;
 
     // no our rules
     if (!isHeaderOnly())
@@ -1513,7 +1516,12 @@ void NativeCompiledTarget::prepare1()
                     : p.get<PackageName>()
                     ;
                 auto d = std::make_shared<Dependency>(u);
-                d->getUnresolvedPackageId().getSettings() = getSettings();
+                d->getUnresolvedPackageId().getSettings() = getExportOptions();
+                d->getUnresolvedPackageId().getSettings().erase("resolver");
+                d->getUnresolvedPackageId().getSettings().erase("rule");
+                d->getUnresolvedPackageId().getSettings()["native"].getMap().erase("library");
+                d->getUnresolvedPackageId().getSettings()["native"].getMap().erase("mt");
+                d->getUnresolvedPackageId().getSettings()["native"].getMap().erase("stdlib");
                 resolveDependency(*d);
                 addRuleDependency({ r, d, r });
             }
@@ -1581,7 +1589,8 @@ void NativeCompiledTarget::prepare1()
                     ? p.get<UnresolvedPackageName>()
                     : p.get<PackageName>()
                     ;
-                *this += u;
+                auto d = *this + u;
+                d->getUnresolvedPackageId().getSettings()["native"]["stdlib"].getMap().erase("cpp");
             }
         }
 
@@ -1593,7 +1602,9 @@ void NativeCompiledTarget::prepare1()
                 ? p.get<UnresolvedPackageName>()
                 : p.get<PackageName>()
                 ;
-            *this += u;
+            auto d = *this + u;
+            d->getUnresolvedPackageId().getSettings()["native"]["stdlib"].getMap().erase("cpp");
+            d->getUnresolvedPackageId().getSettings()["native"]["stdlib"].getMap().erase("c");
         }
 
         // compiler runtime
@@ -1623,7 +1634,7 @@ void NativeCompiledTarget::prepare1()
                 ? p.get<UnresolvedPackageName>()
                 : p.get<PackageName>()
                 ;
-            *this += u;
+            auto d = *this + u;
         }
         /*if (getBuildSettings().TargetOS.is(OSType::Windows))
         {
@@ -1659,15 +1670,29 @@ void NativeCompiledTarget::prepare1()
 
     //
     setInterfaceSettings();
+
+    //
+    auto &is = getInterfaceSettings();
+    auto d = is["binary_directory"].getPathValue(getContext().getLocalStorage().storage_dir);
+    if (!fs::exists(d.parent_path() / "cfg.json"))
+    {
+        write_file(d.parent_path() / "cfg.json",
+            nlohmann::json::parse(getSettings().toString(PackageSettings::Json)).dump(4));
+    }
+    if (!fs::exists(d.parent_path() / "settings.json"))
+    {
+        write_file(d.parent_path() / "settings.json",
+            nlohmann::json::parse(getInterfaceSettings().toString(PackageSettings::Json)).dump(4));
+    }
+
+    //
+    prepare2();
 }
 
 void NativeCompiledTarget::prepare2()
 {
     if (DryRun)
         return;
-    if (prepared)
-        return;
-    prepared = true;
 
     // calculate all (link) dependencies for target
     prepare_pass3();

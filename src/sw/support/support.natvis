@@ -35,6 +35,9 @@
         <DisplayString Condition="value._Which == 8">
             {value._Tail._Tail._Tail._Tail._Tail._Tail._Tail._Tail._Head}
         </DisplayString>
+        <DisplayString Condition="value._Which == 9">
+            {value._Tail._Tail._Tail._Tail._Tail._Tail._Tail._Tail._Tail._Head}
+        </DisplayString>
         <DisplayString Condition="value._Which == 0">
             empty
         </DisplayString>
@@ -45,6 +48,7 @@
         <Expand>
             <ExpandedItem Condition="value._Which == 7">value._Tail._Tail._Tail._Tail._Tail._Tail._Tail._Head</ExpandedItem>
             <ExpandedItem Condition="value._Which == 8">value._Tail._Tail._Tail._Tail._Tail._Tail._Tail._Tail._Head.settings</ExpandedItem>
+            <ExpandedItem Condition="value._Which == 9">value._Tail._Tail._Tail._Tail._Tail._Tail._Tail._Tail._Tail._Head</ExpandedItem>
         </Expand>
     </Type>
 

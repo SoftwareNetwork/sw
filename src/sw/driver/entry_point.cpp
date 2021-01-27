@@ -449,21 +449,7 @@ ITargetPtr NativeTargetEntryPoint::loadPackage(SwBuild &swb, const Package &p) c
     {
         if (b.NamePrefix.empty())
             continue;
-
         ((Target*)t.get())->prepare1();
-
-        auto &is = t->getInterfaceSettings();
-        auto d = is["binary_directory"].getPathValue(swb.getContext().getLocalStorage().storage_dir);
-        if (!fs::exists(d.parent_path() / "cfg.json"))
-        {
-            write_file(d.parent_path() / "cfg.json",
-                nlohmann::json::parse(t->getSettings().toString(PackageSettings::Json)).dump(4));
-        }
-        if (!fs::exists(d.parent_path() / "settings.json"))
-        {
-            write_file(d.parent_path() / "settings.json",
-                nlohmann::json::parse(t->getInterfaceSettings().toString(PackageSettings::Json)).dump(4));
-        }
     }
     if (b.module_data.getTargets().size() != 1)
         throw SW_RUNTIME_ERROR("Bad number of targets: " + p.getId().toString());

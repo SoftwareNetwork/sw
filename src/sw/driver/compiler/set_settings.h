@@ -8,9 +8,10 @@ namespace sw
 
 struct PackageSettings;
 struct SwBuild;
+struct Target;
 
-void addSettingsAndSetPrograms(const SwBuild &, PackageSettings &);
-void addSettingsAndSetHostPrograms(const SwBuild &, PackageSettings &);
+void addSettingsAndSetPrograms(Target &t, PackageSettings &);
+void addSettingsAndSetHostPrograms(Target &t, PackageSettings &);
 void addSettingsAndSetConfigPrograms(const SwBuild &, PackageSettings &);
 
 }
