@@ -3,8 +3,9 @@
 
 #include "package.h"
 
+#include "input.h"
+
 #include <sw/core/build.h>
-#include <sw/core/input.h>
 #include <sw/core/target.h>
 
 namespace sw
@@ -16,13 +17,10 @@ const PackageSettings &my_package_transform::get_properties() const { return t->
 
 std::unique_ptr<package_transform> my_package_loader::load(const PackageSettings &s) const
 {
-    for (auto &&t : i->loadPackages(*b, s))
-    {
-        auto pt = std::make_unique<my_package_transform>();
-        pt->t = std::move(t);
-        return pt;
-    }
-    SW_UNIMPLEMENTED;
+    auto t = i->loadPackage(*b, s, *p);
+    auto pt = std::make_unique<my_package_transform>();
+    pt->t = std::move(t);
+    return pt;
 }
 
 my_physical_package::my_physical_package(ITargetPtr in) : t(std::move(in)), p{ t->getPackage(), t->getSettings() } {}

@@ -12,7 +12,7 @@ namespace sw
 
 struct ExecutionPlan;
 struct Input;
-struct UserInput;
+//struct UserInput;
 struct SwContext;
 struct ResolveRequest;
 struct CachedStorage;
@@ -52,7 +52,7 @@ struct SW_CORE_API SwBuild : SwBuilderContext, ResolverHolder
     const SwContext &getContext() const { return swctx; }
 
     // add user inputs
-    void addInput(const UserInput &);
+    //void addInput(const UserInput &);
 
     // complete
     void build();
@@ -95,7 +95,7 @@ struct SW_CORE_API SwBuild : SwBuilderContext, ResolverHolder
 
     path getBuildDirectory() const;
 
-    const std::vector<UserInput> &getInputs() const;
+    //const std::vector<UserInput> &getInputs() const;
 
     const PackageSettings &getExternalVariables() const;
     const PackageSettings &getSettings() const { return build_settings; }
@@ -123,7 +123,7 @@ private:
     path build_dir;
     TargetMap targets;
     //mutable TargetMap targets_to_build;
-    std::vector<UserInput> user_inputs;
+    //std::vector<UserInput> user_inputs;
     PackageSettings build_settings;
     mutable BuildState state = BuildState::NotStarted;
     mutable Commands commands_storage; // we need some place to keep copy cmds

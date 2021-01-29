@@ -6,7 +6,7 @@
 
 #include <boost/algorithm/string.hpp>
 #include <primitives/emitter.h>
-#include <sw/core/input.h>
+//#include <sw/core/input.h>
 #include <sw/core/sw_context.h>
 #include <sw/driver/build_settings.h>
 #include <sw/driver/types.h>

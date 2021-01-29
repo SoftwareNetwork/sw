@@ -3,7 +3,7 @@
 
 #include "../commands.h"
 
-#include <sw/core/input.h>
+//#include <sw/core/input.h>
 #include <sw/core/specification.h>
 #include <sw/manager/api.h>
 #include <sw/manager/settings.h>

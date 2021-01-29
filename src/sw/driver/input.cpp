@@ -5,8 +5,9 @@
 
 #include "build.h"
 #include "driver.h"
-#include "specification.h"
-#include "sw_context.h"
+
+#include <sw/core/specification.h>
+#include <sw/core/sw_context.h>
 
 #include <regex>
 

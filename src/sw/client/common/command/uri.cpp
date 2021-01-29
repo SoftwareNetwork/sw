@@ -3,7 +3,7 @@
 
 #include "../commands.h"
 
-#include <sw/core/input.h>
+//#include <sw/core/input.h>
 #include <sw/manager/storage.h>
 #include <sw/support/filesystem.h>
 

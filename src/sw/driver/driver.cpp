@@ -12,6 +12,7 @@
 #include "builtin_input.h"
 #include "extensions.h"
 #include "suffix.h"
+#include "input.h"
 #include "target/all.h"
 #include "entry_point.h"
 #include "module.h"
@@ -22,7 +23,6 @@
 #include "package.h"
 
 #include <sw/core/build.h>
-#include <sw/core/input.h>
 #include <sw/core/package.h>
 #include <sw/core/specification.h>
 #include <sw/core/sw_context.h>
@@ -324,7 +324,7 @@ struct DriverInput : Input
         return tgts;
     }
 
-    ITargetPtr loadPackage(SwBuild &b, const Package &p) const override
+    ITargetPtr loadPackage(SwBuild &b, const PackageSettings &s, const Package &p) const override
     {
         // maybe save all targets on load?
 
@@ -338,7 +338,7 @@ struct DriverInput : Input
         if (!isLoaded())
             throw SW_RUNTIME_ERROR("Input is not loaded: " + std::to_string(getHash()));
 
-        return ep->loadPackage(b, p);
+        return ep->loadPackage(b, s, p);
     }
 };
 
@@ -613,18 +613,19 @@ std::unique_ptr<Input> Driver::getInput(const Package &p) const
             {
             }
 
-            ITargetPtr loadPackage(SwBuild &b, const Package &p) const override
+            ITargetPtr loadPackage(SwBuild &b, const PackageSettings &s, const Package &p) const override
             {
                 struct BinaryTarget : ITarget
                 {
-                    std::unique_ptr<Package> p;
+                    PackagePtr p;
+                    PackageSettings input_settings;
                     PackageSettings interface_settings;
                     Commands cmds;
                     std::unique_ptr<CommandStorage> cs;
                     FileStorage fs;
 
-                    BinaryTarget(SwContext &swctx, const Package &p)
-                        : p(p.clone())
+                    BinaryTarget(SwContext &swctx, const PackageSettings &s, const Package &p)
+                        : p(p.clone()), input_settings(s)
                     {
                         auto d = p.getRootDirectory();
                         interface_settings.mergeFromString(read_file(d / "settings.json"));
@@ -647,12 +648,12 @@ std::unique_ptr<Input> Driver::getInput(const Package &p) const
 
                     const PackageName &getPackage() const { return p->getId().getName(); }
                     const Source &getSource() const { SW_UNIMPLEMENTED; }
-                    const PackageSettings &getSettings() const { return p->getId().getSettings(); }
+                    const PackageSettings &getSettings() const { return input_settings; }
                     const PackageSettings &getInterfaceSettings() const { return interface_settings; }
                     Commands getCommands() const override { return cmds; }
                 };
 
-                return std::make_unique<BinaryTarget>(swctx, p);
+                return std::make_unique<BinaryTarget>(swctx, s, p);
             }
 
             std::vector<ITargetPtr> loadPackages(SwBuild &b, const PackageSettings &s) const override
@@ -1136,7 +1137,21 @@ std::vector<std::unique_ptr<package_loader>> Driver::load_packages(const path &i
         std::shared_ptr<Input> is = std::move(i);
         for (auto &&t : is->loadPackages(*b, {}))
         {
-            auto pp = std::make_unique<my_package_loader>(t->getPackage());
+            struct some_pkg : Package
+            {
+                using Package::Package;
+
+                virtual std::unique_ptr<Package> clone() const { return std::make_unique<some_pkg>(*this); }
+            };
+
+            // we do not need any settings here
+            PackageId id{ t->getPackage(), {} };
+            auto p = std::make_unique<some_pkg>(id);
+            auto d = std::make_unique<PackageData>();
+            d->prefix = 0;
+            p->setData(std::move(d));
+
+            auto pp = std::make_unique<my_package_loader>(*p);
             pp->i = is;
             pp->b = std::move(b);
             loaders.emplace_back(std::move(pp));
@@ -1145,19 +1160,18 @@ std::vector<std::unique_ptr<package_loader>> Driver::load_packages(const path &i
     return loaders;
 }
 
-std::unique_ptr<package_transform> Driver::load_package(const Package &p)
+std::unique_ptr<package_loader> Driver::load_package(const Package &p)
 {
     auto i = getInput(p);
     i->load();
 
     auto b = swctx.createBuild();
     b->getResolver().addStorage(*bs);
-    std::shared_ptr<Input> is = std::move(i);
-    auto t = is->loadPackage(*b, p);
 
-    auto pt = std::make_unique<my_package_transform>();
-    pt->t = std::move(t);
-    return pt;
+    auto pp = std::make_unique<my_package_loader>(p);
+    pp->i = std::move(i);
+    pp->b = std::move(b);
+    return pp;
 }
 
 } // namespace driver::cpp

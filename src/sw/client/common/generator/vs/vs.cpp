@@ -10,7 +10,7 @@
 #include <sw/builder/file.h>
 #include <sw/builder/execution_plan.h>
 #include <sw/core/build.h>
-#include <sw/core/input.h>
+//#include <sw/core/input.h>
 #include <sw/core/specification.h>
 #include <sw/core/sw_context.h>
 #include <sw/driver/build_settings.h>
@@ -236,611 +236,612 @@ void VSGenerator::generate(const SwBuild &b)
     const String zero_check_name = "ZERO_CHECK"s;
     this->b = &b;
 
-    auto inputs = b.getInputs();
-    PackagePathTree path_tree;
-    Solution s;
-
-    // gather ttb and settings
-    TargetMap ttb;
     SW_UNIMPLEMENTED;
-    /*for (auto &[pkg, tgts] : b.getTargetsToBuild())
-    {
-        auto add = [&ttb, &pkg = pkg, &tgts = tgts, &s]()
-        {
-            ttb[pkg] = tgts;
-            for (auto &tgt : tgts)
-                s.settings.insert(tgt->getSettings());
-        };
-
-        if (add_all_packages)
-        {
-            add();
-            continue;
-        }
-
-        if (add_overridden_packages)
-        {
-            sw::LocalPackage p(b.getContext().getLocalStorage(), pkg);
-            if (p.isOverridden())
-            {
-                add();
-                continue;
-            }
-        }
-
-        if (pkg.getPath().isAbsolute())
-            continue;
-
-        if (tgts.empty())
-            throw SW_RUNTIME_ERROR("empty target");
-        add();
-    }*/
-
-    if (s.settings.empty())
-        throw SW_RUNTIME_ERROR("Empty settings");
-
-    auto compiler_type_s = (*s.settings.begin())["rule"]["cpp"]["type"].getValue();
-    if (compiler_type_s == "msvc")
-        ;
-    else if (compiler_type_s == "clangcl")
-        compiler_type = ClangCl;
-    else if (compiler_type_s == "clang")
-    {
-        compiler_type = Clang;
-        LOG_INFO(logger, "Not yet fully supported");
-    }
-    else
-        throw SW_RUNTIME_ERROR("Compiler is not supported (yet?): " + compiler_type_s);
-
-    UnresolvedPackageName compiler = (*s.settings.begin())["rule"]["cpp"]["package"].getValue();
-    auto compiler_id = b.getTargets().find(compiler)->first;
-    auto compiler_id_max_version = b.getTargets().find(UnresolvedPackageName(compiler.getPath().toString()))->first;
-
-    if (compiler_type == MSVC)
-    {
-        vs_version = clver2vsver(compiler_id.getVersion(), compiler_id_max_version.getVersion());
-        toolset_version = compiler_id.getVersion();
-    }
-    else
-    {
-        // otherwise just generate maximum found version for msvc compiler
-        auto compiler_id_max_version = b.getTargets().find(UnresolvedPackageName("com.Microsoft.VisualStudio.VC.cl"))->first;
-        vs_version = clver2vsver(compiler_id_max_version.getVersion(), compiler_id_max_version.getVersion());
-        toolset_version = compiler_id_max_version.getVersion();
-    }
-    // this removes hash part      vvvvvvvvvvvvv
-    sln_root = getRootDirectory(b).parent_path() / vs_version.getVersion().toString(1);
-
-    // dl flag tables from cmake
-    static const String ft_base_url = "https://gitlab.kitware.com/cmake/cmake/raw/master/Templates/MSBuild/FlagTables/";
-    static const String ft_ext = ".json";
-    const Strings tables1 = { "CL", "Link" };
-    const Strings tables2 = { "LIB", "MASM", "RC" };
-    auto ts = getVsToolset(toolset_version);
-    auto dl = [](const auto &ts, const auto &tbl)
-    {
-        for (auto &t : tbl)
-        {
-            auto fn = ts + "_" + t + ".json";
-            auto url = ft_base_url + fn;
-            auto out = support::get_root_directory() / "FlagTables" / fn;
-            if (!fs::exists(out))
-                download_file(url, out);
-            auto ft = read_flag_table(out);
-            auto prog = boost::to_lower_copy(t);
-            if (prog == "masm")
-            {
-                flag_tables["ml"] = ft;
-                //flag_tables["ml64"] = ft;
-            }
-            else
-            {
-                flag_tables[prog] = ft;
-            }
-        }
-    };
-    dl(ts, tables1);
-    dl(ts.substr(0, ts.size() - 1), tables2);
-
-    // get settings from targets to use settings equality later
-    for (auto &[pkg, tgts] : ttb)
-    {
-        decltype(s.settings) s2;
-        for (auto &st : s.settings)
-        {
-            auto itgt = tgts.findSuitable(st);
-            if (itgt == tgts.end())
-                throw SW_RUNTIME_ERROR("missing target: " + pkg.toString() + ", settings: " + st.toString());
-            s2.insert((*itgt)->getSettings());
-        }
-        if (s2.size() != s.settings.size())
-            throw SW_RUNTIME_ERROR("settings size do not match");
-        s.settings = s2;
-        break;
-    }
-
-    // add predefined dirs
-    {
-        Directory d(predefined_targets_dir);
-        d.g = this;
-        s.directories.emplace(d.name, d);
-    }
-
-    // add ZERO_CHECK project
-    {
-        Project p(zero_check_name);
-        p.g = this;
-        p.directory = &s.directories.find(predefined_targets_dir)->second;
-        p.settings = s.settings;
-        // create datas
-        for (auto &st : s.settings)
-            p.getData(st).type = p.type;
-
-        for (auto &[s, d] : p.data)
-        {
-            Rule r;
-            r.name = "generate.stamp";
-            r.message = "Checking Build System";
-            r.command += "setlocal\r\n";
-            r.command += "cd \"" + to_string(normalize_path_windows(fs::current_path())) + "\"\r\n";
-            d.custom_rules_manual.push_back(r);
-        }
-
-        s.projects.emplace(p.name, p);
-    }
-
-    // add ALL_BUILD project
-    {
-        Project p(all_build_name);
-        p.g = this;
-        p.directory = &s.directories.find(predefined_targets_dir)->second;
-        for (auto &i : inputs)
-        {
-            for (auto &[_, f] : i.getInput().getSpecification().files.getData())
-                p.files.insert({f.absolute_path, SourceFilesFilter});
-        }
-        p.settings = s.settings;
-        if (vstype != VsGeneratorType::VisualStudio)
-            p.type = VSProjectType::Makefile;
-        // create datas
-        for (auto &st : s.settings)
-            p.getData(st).type = p.type;
-        p.dependencies.insert(&s.projects.find(zero_check_name)->second);
-        if (vstype != VsGeneratorType::VisualStudio)
-        {
-            // save explan
-            //b.saveExecutionPlan();
-            // we must split configs or something like that
-
-            for (auto &st : s.settings)
-            {
-                auto &d = p.getData(st);
-
-                String cmd;
-                cmd = "-d " + to_string(normalize_path(fs::current_path())) + " build -input-settings-pairs ";
-                for (auto &i : inputs)
-                {
-                    for (auto &[_, f] : i.getInput().getSpecification().files.getData())
-                    {
-                        cmd += "\"" + to_string(normalize_path(f.absolute_path)) + "\" ";
-                        cmd += fix_json(st.toString()) + " ";
-                    }
-                }
-
-                // TODO: switch to swexplans
-                // sw -config d build -e
-                // sw -config d build -ef .sw\g\swexplan\....explan
-
-                d.nmake_build = get_current_program() + " " + cmd;
-                d.nmake_rebuild = get_current_program() + " -B " + cmd;
-                //d.nmake_clean = "sw "; // not yet implemented
-            }
-        }
-
-        // register
-        s.projects.emplace(p.name, p);
-    }
-
-    auto can_add_file = [](const auto &f)
-    {
-        auto t = get_vs_file_type_by_ext(f);
-        return t == VSFileType::ClInclude || t == VSFileType::None;
-    };
-
-    int n_executables = 0;
-
-    // write basic config files
-    std::unordered_map<sw::PackageSettings, Files> configure_files;
-    for (auto &i : inputs)
-    {
-        for (auto &[_, f] : i.getInput().getSpecification().files.getData())
-        {
-            for (auto &st : s.settings)
-                configure_files[st].insert(f.absolute_path);
-        }
-    }
-
-    for (auto &[pkg, tgts] : ttb)
-    {
-        // add project with settings
-        for (auto &tgt : tgts)
-        {
-            Project p(pkg.toString());
-            p.g = this;
-            for (auto &[f,tf] : tgt->getFiles(
-                //StorageFileType::SourceArchive
-            ))
-            {
-                if (tf.isGenerated() && f.extension() != ".natvis")
-                    continue;
-                if (can_add_file(f))
-                    p.files.insert(f);
-            }
-            p.settings = s.settings;
-            p.build = true;
-            p.source_dir = tgt->getInterfaceSettings()["source_dir"].getValue();
-
-            p.dependencies.insert(&s.projects.find(zero_check_name)->second);
-
-            s.projects.emplace(p.name, p);
-            s.projects.find(all_build_name)->second.dependencies.insert(&s.projects.find(p.name)->second);
-
-            // some other stuff
-            n_executables += tgt->getInterfaceSettings()["type"] == "native_executable"s;
-            if (!s.first_project && tgt->getInterfaceSettings()["ide"]["startup_project"])
-                s.first_project = &s.projects.find(p.name)->second;
-            break;
-        }
-
-        // process project
-        auto &p = s.projects.find(pkg.toString())->second;
-        for (auto &st : s.settings)
-        {
-            auto itgt = tgts.findEqual(st);
-            if (itgt == tgts.end())
-                throw SW_RUNTIME_ERROR("missing target: " + pkg.toString());
-            auto &d = s.projects.find(pkg.toString())->second.getData(st);
-            SW_UNIMPLEMENTED;
-            //d.target = itgt->get();
-            path_tree.add(d.target->getPackage());
-
-            d.binary_dir = d.target->getInterfaceSettings()["binary_dir"].getValue();
-            d.binary_private_dir = d.target->getInterfaceSettings()["binary_private_dir"].getValue();
-
-            auto cfs = d.target->getInterfaceSettings()["ide"]["configure_files"].getArray();
-            for (auto &cf : cfs)
-                configure_files[d.target->getSettings()].insert(cf.getPathValue(b.getContext().getLocalStorage()));
-
-            auto cmds = d.target->getCommands();
-
-            bool has_dll = false;
-            bool has_exe = false;
-            for (auto &c : cmds)
-            {
-                for (auto &o : c->inputs)
-                {
-                    if (is_generated_ext(o))
-                        continue;
-
-                    if (can_add_file(o))
-                        p.files.insert(o);
-                    else
-                        d.build_rules[c.get()] = o;
-                }
-
-                for (auto &o : c->outputs)
-                {
-                    if (is_generated_ext(o))
-                        continue;
-
-                    if (can_add_file(o))
-                        p.files.insert(o);
-
-                    if (1
-                        && c->arguments.size() > 1
-                        && c->arguments[1]->toString() == sw::builder::getInternalCallBuiltinFunctionName()
-                        && c->arguments.size() > 3
-                        && c->arguments[3]->toString() == "sw_create_def_file"
-                        )
-                    {
-                        d.pre_link_command = c.get();
-                        continue;
-                    }
-
-                    d.custom_rules.insert(c.get());
-                }
-
-                // determine project type and main command
-                has_dll |= std::any_of(c->outputs.begin(), c->outputs.end(), [&d, &c](const auto &f)
-                {
-                    bool r = f.extension() == ".dll";
-                    if (r)
-                        d.main_command = c.get();
-                    return r;
-                });
-                has_exe |= std::any_of(c->outputs.begin(), c->outputs.end(), [&d, &c](const auto &f)
-                {
-                    bool r = f.extension() == ".exe";
-                    if (r)
-                        d.main_command = c.get();
-                    return r;
-                });
-            }
-
-            if (has_exe)
-                d.type = VSProjectType::Application;
-            else if (has_dll)
-                d.type = VSProjectType::DynamicLibrary;
-            else
-            {
-                d.type = VSProjectType::StaticLibrary;
-                for (auto &c : cmds)
-                {
-                    for (auto &f : c->outputs)
-                    {
-                        if (f.extension() == ".lib")
-                        {
-                            d.main_command = c.get();
-                            break;
-                        }
-                    }
-                }
-            }
-            if (vstype != VsGeneratorType::VisualStudio)
-                d.type = VSProjectType::Utility;
-
-            d.build_rules.erase(d.main_command);
-        }
-    }
-    for (auto &[pkg, tgts] : ttb)
-    {
-        for (auto &tgt : tgts)
-        {
-            auto &p = s.projects.find(tgt->getPackage().toString())->second;
-            auto &data = p.getData(tgt->getSettings());
-            auto &is = tgt->getInterfaceSettings();
-
-            auto add_deps = [&ttb, &data, &s, &b, &p](auto &is)
-            {
-                for (auto &[id, v] : is)
-                {
-                    PackageName d(id);
-                    // filter out predefined targets
-                    if (b.isPredefinedTarget(d))
-                        continue;
-
-                    // filter out NON TARGET TO BUILD deps
-                    // add them to just deps list
-                    auto &pd = ttb;
-                    if (pd.find(d) == pd.end())
-                    {
-                        SW_UNIMPLEMENTED;
-                        /*auto i = b.getTargets().find(d, v.getMap());
-                        if (!i)
-                            throw SW_LOGIC_ERROR("Cannot find dependency: " + d.toString());
-                        data.dependencies.insert(i);
-                        continue;*/
-                    }
-                    p.dependencies.insert(&s.projects.find(d.toString())->second);
-                }
-            };
-
-            add_deps(is["dependencies"]["link"].getMap());
-            add_deps(is["dependencies"]["dummy"].getMap());
-
-            //
-            if (!s.first_project && n_executables == 1 && tgt->getInterfaceSettings()["type"] == "native_executable"s)
-                s.first_project = &p;
-        }
-    }
-
-    // natvis
-    {
-        // gather .natvis
-        FilesWithFilter natvis;
-        for (auto &[n, p] : s.projects)
-        {
-            for (auto &f : p.files)
-            {
-                if (f.p.extension() == ".natvis")
-                    natvis.insert(f);
-            }
-        }
-
-        if (!natvis.empty())
-        {
-            Directory d(visualizers_dir);
-            d.g = this;
-            d.files = natvis;
-            d.directory = &s.directories.find(predefined_targets_dir)->second;
-            s.directories.emplace(d.name, d);
-        }
-    }
-
-    // ZERO_BUILD rule
-    {
-        auto &p = s.projects.find(zero_check_name)->second;
-        for (auto &[st, cfs] : configure_files)
-        {
-            auto &d = p.getData(st);
-            auto int_dir = get_int_dir(sln_root, vs_project_dir, p.name, st);
-            path fn = int_dir / "check_list.txt";
-            auto stampfn = path(fn) += vs_zero_check_stamp_ext;
-
-            auto &r = d.custom_rules_manual.back();
-
-            //
-            r.command += get_current_program() + " ";
-            r.command += "generate -check-stamp-list \"" + to_string(normalize_path(fn)) + "\" ";
-            r.command += "-input-settings-pairs ";
-            for (auto &i : inputs)
-            {
-                for (auto &s : i.getSettings())
-                {
-                    for (auto &[_, f] : i.getInput().getSpecification().files.getData())
-                    {
-                        r.command += "\"" + to_string(normalize_path(f.absolute_path)) + "\" ";
-                        r.command += fix_json(s.toString()) + " ";
-                    }
-                }
-            }
-            r.outputs.insert(stampfn);
-            r.inputs = cfs;
-
-            String s;
-            uint64_t mtime = 0;
-            for (auto &f : cfs)
-            {
-                s += to_string(normalize_path(f)) + "\n";
-
-                if (!fs::exists(f))
-                    throw SW_RUNTIME_ERROR("Input file does not exist: " + to_string(normalize_path(s)));
-                auto lwt = fs::last_write_time(f);
-                mtime ^= file_time_type2time_t(lwt);
-            }
-            write_file(fn, s);
-            write_file(stampfn, std::to_string(mtime));
-        }
-    }
-
-    // add BUILD_DEPENDENCIES project
-    if (vstype == VsGeneratorType::VisualStudio)
-    {
-        {
-            Project p(build_dependencies_name);
-            p.g = this;
-            p.directory = &s.directories.find(predefined_targets_dir)->second;
-            p.settings = s.settings;
-            p.dependencies.insert(&s.projects.find(zero_check_name)->second);
-            s.projects.emplace(p.name, p);
-        }
-
-        auto &p = s.projects.find(build_dependencies_name)->second;
-
-        // create datas
-        for (auto &st : s.settings)
-            p.getData(st).type = p.type;
-
-        bool has_deps = false;
-        for (auto &st : s.settings)
-        {
-            auto &d = p.getData(st);
-
-            auto int_dir = get_int_dir(sln_root, vs_project_dir, p.name, st);
-
-            // fake command
-            Rule r;
-            r.name = p.name;
-            r.command = "setlocal";
-            r.outputs.insert(int_dir / "rules" / "intentionally_missing.file");
-            r.verify_inputs_and_outputs_exist = false;
-
-            d.custom_rules_manual.push_back(r);
-
-            // actually we must build deps + their specific settings
-            // not one setting for all deps
-            std::map<PackageName, String> deps;
-            for (auto &[_, p1] : s.projects)
-            {
-                auto &d = p1.getData(st);
-                for (auto &t : d.dependencies)
-                {
-                    deps[t->getPackage()] = t->getSettings().toString();
-                    p1.dependencies.insert(&p); // add dependency for project
-                }
-            }
-            if (deps.empty())
-                continue;
-            has_deps = true;
-
-            String deps_str;
-            for (auto &[d,s] : deps)
-                deps_str += d.toString() + " " + s + " ";
-            auto fn = shorten_hash(blake2b_512(deps_str), 6);
-            auto basefn = int_dir / fn;
-
-            Strings args;
-            args.push_back("-d");
-            args.push_back(to_string(normalize_path(fs::current_path())));
-            args.push_back("build");
-            args.push_back("-input-settings-pairs");
-            for (auto &[d, s] : deps)
-            {
-                args.push_back(d.toString());
-                args.push_back(fix_json(s));
-            }
-            args.push_back("-ide-fast-path");
-            args.push_back(to_string(normalize_path(path(basefn) += ".deps")));
-            args.push_back("-ide-copy-to-dir");
-            if (st["name"])
-                args.push_back(to_string(normalize_path(b.getBuildDirectory() / "out" / st["name"].getValue())));
-            else
-                args.push_back(to_string(normalize_path(b.getBuildDirectory() / "out" / st.getHashString())));
-
-            String s;
-            for (auto &a : args)
-                s += a + "\n";
-            auto rsp = path(basefn) += ".rsp";
-            write_file(rsp, s);
-
-            error_code ec;
-            fs::remove(path(basefn) += ".deps", ec); // trigger updates
-
-            BuildEvent be;
-            be.command = get_current_program() + " @" + to_string(normalize_path(rsp));
-            d.pre_build_event = be;
-        }
-
-        if (!has_deps)
-            s.projects.erase(build_dependencies_name);
-    }
-
-    // add path dirs
-    {
-        auto parents = path_tree.getDirectories();
-        for (auto &p : parents)
-        {
-            auto pp = p.parent();
-            while (!pp.empty() && parents.find(pp) == parents.end())
-                pp = pp.parent();
-
-            Directory d(p.toString());
-            d.visible_name = p.slice(pp.size()).toString();
-            d.g = this;
-            if (!pp.empty())
-                d.directory = &s.directories.find(pp.toString())->second;
-            s.directories.emplace(d.name, d);
-        }
-
-        // set project dirs
-        for (auto &[pkg, tgts] : ttb)
-        {
-            for (auto &tgt : tgts)
-            {
-                auto &p = s.projects.find(tgt->getPackage().toString())->second;
-                auto pp = tgt->getPackage().getPath();
-                while (!pp.empty() && parents.find(pp) == parents.end())
-                    pp = pp.parent();
-                // sometimes there a project and a dir with same name
-                // in this case select parent dir
-                if (pp == tgt->getPackage().getPath())
-                {
-                    pp = pp.parent();
-                    while (!pp.empty() && parents.find(pp) == parents.end())
-                        pp = pp.parent();
-                }
-                if (!pp.empty())
-                {
-                    p.directory = &s.directories.find(pp.toString())->second;
-                    p.visible_name = sw::PackageName(tgt->getPackage().getPath().slice(pp.size()), tgt->getPackage().getVersion()).toString();
-                }
-                break;
-            }
-        }
-    }
-
-    // main emit
-    s.emit(*this);
+    //auto inputs = b.getInputs();
+    //PackagePathTree path_tree;
+    //Solution s;
+
+    //// gather ttb and settings
+    //TargetMap ttb;
+    //SW_UNIMPLEMENTED;
+    ///*for (auto &[pkg, tgts] : b.getTargetsToBuild())
+    //{
+    //    auto add = [&ttb, &pkg = pkg, &tgts = tgts, &s]()
+    //    {
+    //        ttb[pkg] = tgts;
+    //        for (auto &tgt : tgts)
+    //            s.settings.insert(tgt->getSettings());
+    //    };
+
+    //    if (add_all_packages)
+    //    {
+    //        add();
+    //        continue;
+    //    }
+
+    //    if (add_overridden_packages)
+    //    {
+    //        sw::LocalPackage p(b.getContext().getLocalStorage(), pkg);
+    //        if (p.isOverridden())
+    //        {
+    //            add();
+    //            continue;
+    //        }
+    //    }
+
+    //    if (pkg.getPath().isAbsolute())
+    //        continue;
+
+    //    if (tgts.empty())
+    //        throw SW_RUNTIME_ERROR("empty target");
+    //    add();
+    //}*/
+
+    //if (s.settings.empty())
+    //    throw SW_RUNTIME_ERROR("Empty settings");
+
+    //auto compiler_type_s = (*s.settings.begin())["rule"]["cpp"]["type"].getValue();
+    //if (compiler_type_s == "msvc")
+    //    ;
+    //else if (compiler_type_s == "clangcl")
+    //    compiler_type = ClangCl;
+    //else if (compiler_type_s == "clang")
+    //{
+    //    compiler_type = Clang;
+    //    LOG_INFO(logger, "Not yet fully supported");
+    //}
+    //else
+    //    throw SW_RUNTIME_ERROR("Compiler is not supported (yet?): " + compiler_type_s);
+
+    //UnresolvedPackageName compiler = (*s.settings.begin())["rule"]["cpp"]["package"].getValue();
+    //auto compiler_id = b.getTargets().find(compiler)->first;
+    //auto compiler_id_max_version = b.getTargets().find(UnresolvedPackageName(compiler.getPath().toString()))->first;
+
+    //if (compiler_type == MSVC)
+    //{
+    //    vs_version = clver2vsver(compiler_id.getVersion(), compiler_id_max_version.getVersion());
+    //    toolset_version = compiler_id.getVersion();
+    //}
+    //else
+    //{
+    //    // otherwise just generate maximum found version for msvc compiler
+    //    auto compiler_id_max_version = b.getTargets().find(UnresolvedPackageName("com.Microsoft.VisualStudio.VC.cl"))->first;
+    //    vs_version = clver2vsver(compiler_id_max_version.getVersion(), compiler_id_max_version.getVersion());
+    //    toolset_version = compiler_id_max_version.getVersion();
+    //}
+    //// this removes hash part      vvvvvvvvvvvvv
+    //sln_root = getRootDirectory(b).parent_path() / vs_version.getVersion().toString(1);
+
+    //// dl flag tables from cmake
+    //static const String ft_base_url = "https://gitlab.kitware.com/cmake/cmake/raw/master/Templates/MSBuild/FlagTables/";
+    //static const String ft_ext = ".json";
+    //const Strings tables1 = { "CL", "Link" };
+    //const Strings tables2 = { "LIB", "MASM", "RC" };
+    //auto ts = getVsToolset(toolset_version);
+    //auto dl = [](const auto &ts, const auto &tbl)
+    //{
+    //    for (auto &t : tbl)
+    //    {
+    //        auto fn = ts + "_" + t + ".json";
+    //        auto url = ft_base_url + fn;
+    //        auto out = support::get_root_directory() / "FlagTables" / fn;
+    //        if (!fs::exists(out))
+    //            download_file(url, out);
+    //        auto ft = read_flag_table(out);
+    //        auto prog = boost::to_lower_copy(t);
+    //        if (prog == "masm")
+    //        {
+    //            flag_tables["ml"] = ft;
+    //            //flag_tables["ml64"] = ft;
+    //        }
+    //        else
+    //        {
+    //            flag_tables[prog] = ft;
+    //        }
+    //    }
+    //};
+    //dl(ts, tables1);
+    //dl(ts.substr(0, ts.size() - 1), tables2);
+
+    //// get settings from targets to use settings equality later
+    //for (auto &[pkg, tgts] : ttb)
+    //{
+    //    decltype(s.settings) s2;
+    //    for (auto &st : s.settings)
+    //    {
+    //        auto itgt = tgts.findSuitable(st);
+    //        if (itgt == tgts.end())
+    //            throw SW_RUNTIME_ERROR("missing target: " + pkg.toString() + ", settings: " + st.toString());
+    //        s2.insert((*itgt)->getSettings());
+    //    }
+    //    if (s2.size() != s.settings.size())
+    //        throw SW_RUNTIME_ERROR("settings size do not match");
+    //    s.settings = s2;
+    //    break;
+    //}
+
+    //// add predefined dirs
+    //{
+    //    Directory d(predefined_targets_dir);
+    //    d.g = this;
+    //    s.directories.emplace(d.name, d);
+    //}
+
+    //// add ZERO_CHECK project
+    //{
+    //    Project p(zero_check_name);
+    //    p.g = this;
+    //    p.directory = &s.directories.find(predefined_targets_dir)->second;
+    //    p.settings = s.settings;
+    //    // create datas
+    //    for (auto &st : s.settings)
+    //        p.getData(st).type = p.type;
+
+    //    for (auto &[s, d] : p.data)
+    //    {
+    //        Rule r;
+    //        r.name = "generate.stamp";
+    //        r.message = "Checking Build System";
+    //        r.command += "setlocal\r\n";
+    //        r.command += "cd \"" + to_string(normalize_path_windows(fs::current_path())) + "\"\r\n";
+    //        d.custom_rules_manual.push_back(r);
+    //    }
+
+    //    s.projects.emplace(p.name, p);
+    //}
+
+    //// add ALL_BUILD project
+    //{
+    //    Project p(all_build_name);
+    //    p.g = this;
+    //    p.directory = &s.directories.find(predefined_targets_dir)->second;
+    //    for (auto &i : inputs)
+    //    {
+    //        for (auto &[_, f] : i.getInput().getSpecification().files.getData())
+    //            p.files.insert({f.absolute_path, SourceFilesFilter});
+    //    }
+    //    p.settings = s.settings;
+    //    if (vstype != VsGeneratorType::VisualStudio)
+    //        p.type = VSProjectType::Makefile;
+    //    // create datas
+    //    for (auto &st : s.settings)
+    //        p.getData(st).type = p.type;
+    //    p.dependencies.insert(&s.projects.find(zero_check_name)->second);
+    //    if (vstype != VsGeneratorType::VisualStudio)
+    //    {
+    //        // save explan
+    //        //b.saveExecutionPlan();
+    //        // we must split configs or something like that
+
+    //        for (auto &st : s.settings)
+    //        {
+    //            auto &d = p.getData(st);
+
+    //            String cmd;
+    //            cmd = "-d " + to_string(normalize_path(fs::current_path())) + " build -input-settings-pairs ";
+    //            for (auto &i : inputs)
+    //            {
+    //                for (auto &[_, f] : i.getInput().getSpecification().files.getData())
+    //                {
+    //                    cmd += "\"" + to_string(normalize_path(f.absolute_path)) + "\" ";
+    //                    cmd += fix_json(st.toString()) + " ";
+    //                }
+    //            }
+
+    //            // TODO: switch to swexplans
+    //            // sw -config d build -e
+    //            // sw -config d build -ef .sw\g\swexplan\....explan
+
+    //            d.nmake_build = get_current_program() + " " + cmd;
+    //            d.nmake_rebuild = get_current_program() + " -B " + cmd;
+    //            //d.nmake_clean = "sw "; // not yet implemented
+    //        }
+    //    }
+
+    //    // register
+    //    s.projects.emplace(p.name, p);
+    //}
+
+    //auto can_add_file = [](const auto &f)
+    //{
+    //    auto t = get_vs_file_type_by_ext(f);
+    //    return t == VSFileType::ClInclude || t == VSFileType::None;
+    //};
+
+    //int n_executables = 0;
+
+    //// write basic config files
+    //std::unordered_map<sw::PackageSettings, Files> configure_files;
+    //for (auto &i : inputs)
+    //{
+    //    for (auto &[_, f] : i.getInput().getSpecification().files.getData())
+    //    {
+    //        for (auto &st : s.settings)
+    //            configure_files[st].insert(f.absolute_path);
+    //    }
+    //}
+
+    //for (auto &[pkg, tgts] : ttb)
+    //{
+    //    // add project with settings
+    //    for (auto &tgt : tgts)
+    //    {
+    //        Project p(pkg.toString());
+    //        p.g = this;
+    //        for (auto &[f,tf] : tgt->getFiles(
+    //            //StorageFileType::SourceArchive
+    //        ))
+    //        {
+    //            if (tf.isGenerated() && f.extension() != ".natvis")
+    //                continue;
+    //            if (can_add_file(f))
+    //                p.files.insert(f);
+    //        }
+    //        p.settings = s.settings;
+    //        p.build = true;
+    //        p.source_dir = tgt->getInterfaceSettings()["source_dir"].getValue();
+
+    //        p.dependencies.insert(&s.projects.find(zero_check_name)->second);
+
+    //        s.projects.emplace(p.name, p);
+    //        s.projects.find(all_build_name)->second.dependencies.insert(&s.projects.find(p.name)->second);
+
+    //        // some other stuff
+    //        n_executables += tgt->getInterfaceSettings()["type"] == "native_executable"s;
+    //        if (!s.first_project && tgt->getInterfaceSettings()["ide"]["startup_project"])
+    //            s.first_project = &s.projects.find(p.name)->second;
+    //        break;
+    //    }
+
+    //    // process project
+    //    auto &p = s.projects.find(pkg.toString())->second;
+    //    for (auto &st : s.settings)
+    //    {
+    //        auto itgt = tgts.findEqual(st);
+    //        if (itgt == tgts.end())
+    //            throw SW_RUNTIME_ERROR("missing target: " + pkg.toString());
+    //        auto &d = s.projects.find(pkg.toString())->second.getData(st);
+    //        SW_UNIMPLEMENTED;
+    //        //d.target = itgt->get();
+    //        path_tree.add(d.target->getPackage());
+
+    //        d.binary_dir = d.target->getInterfaceSettings()["binary_dir"].getValue();
+    //        d.binary_private_dir = d.target->getInterfaceSettings()["binary_private_dir"].getValue();
+
+    //        auto cfs = d.target->getInterfaceSettings()["ide"]["configure_files"].getArray();
+    //        for (auto &cf : cfs)
+    //            configure_files[d.target->getSettings()].insert(cf.getPathValue(b.getContext().getLocalStorage()));
+
+    //        auto cmds = d.target->getCommands();
+
+    //        bool has_dll = false;
+    //        bool has_exe = false;
+    //        for (auto &c : cmds)
+    //        {
+    //            for (auto &o : c->inputs)
+    //            {
+    //                if (is_generated_ext(o))
+    //                    continue;
+
+    //                if (can_add_file(o))
+    //                    p.files.insert(o);
+    //                else
+    //                    d.build_rules[c.get()] = o;
+    //            }
+
+    //            for (auto &o : c->outputs)
+    //            {
+    //                if (is_generated_ext(o))
+    //                    continue;
+
+    //                if (can_add_file(o))
+    //                    p.files.insert(o);
+
+    //                if (1
+    //                    && c->arguments.size() > 1
+    //                    && c->arguments[1]->toString() == sw::builder::getInternalCallBuiltinFunctionName()
+    //                    && c->arguments.size() > 3
+    //                    && c->arguments[3]->toString() == "sw_create_def_file"
+    //                    )
+    //                {
+    //                    d.pre_link_command = c.get();
+    //                    continue;
+    //                }
+
+    //                d.custom_rules.insert(c.get());
+    //            }
+
+    //            // determine project type and main command
+    //            has_dll |= std::any_of(c->outputs.begin(), c->outputs.end(), [&d, &c](const auto &f)
+    //            {
+    //                bool r = f.extension() == ".dll";
+    //                if (r)
+    //                    d.main_command = c.get();
+    //                return r;
+    //            });
+    //            has_exe |= std::any_of(c->outputs.begin(), c->outputs.end(), [&d, &c](const auto &f)
+    //            {
+    //                bool r = f.extension() == ".exe";
+    //                if (r)
+    //                    d.main_command = c.get();
+    //                return r;
+    //            });
+    //        }
+
+    //        if (has_exe)
+    //            d.type = VSProjectType::Application;
+    //        else if (has_dll)
+    //            d.type = VSProjectType::DynamicLibrary;
+    //        else
+    //        {
+    //            d.type = VSProjectType::StaticLibrary;
+    //            for (auto &c : cmds)
+    //            {
+    //                for (auto &f : c->outputs)
+    //                {
+    //                    if (f.extension() == ".lib")
+    //                    {
+    //                        d.main_command = c.get();
+    //                        break;
+    //                    }
+    //                }
+    //            }
+    //        }
+    //        if (vstype != VsGeneratorType::VisualStudio)
+    //            d.type = VSProjectType::Utility;
+
+    //        d.build_rules.erase(d.main_command);
+    //    }
+    //}
+    //for (auto &[pkg, tgts] : ttb)
+    //{
+    //    for (auto &tgt : tgts)
+    //    {
+    //        auto &p = s.projects.find(tgt->getPackage().toString())->second;
+    //        auto &data = p.getData(tgt->getSettings());
+    //        auto &is = tgt->getInterfaceSettings();
+
+    //        auto add_deps = [&ttb, &data, &s, &b, &p](auto &is)
+    //        {
+    //            for (auto &[id, v] : is)
+    //            {
+    //                PackageName d(id);
+    //                // filter out predefined targets
+    //                if (b.isPredefinedTarget(d))
+    //                    continue;
+
+    //                // filter out NON TARGET TO BUILD deps
+    //                // add them to just deps list
+    //                auto &pd = ttb;
+    //                if (pd.find(d) == pd.end())
+    //                {
+    //                    SW_UNIMPLEMENTED;
+    //                    /*auto i = b.getTargets().find(d, v.getMap());
+    //                    if (!i)
+    //                        throw SW_LOGIC_ERROR("Cannot find dependency: " + d.toString());
+    //                    data.dependencies.insert(i);
+    //                    continue;*/
+    //                }
+    //                p.dependencies.insert(&s.projects.find(d.toString())->second);
+    //            }
+    //        };
+
+    //        add_deps(is["dependencies"]["link"].getMap());
+    //        add_deps(is["dependencies"]["dummy"].getMap());
+
+    //        //
+    //        if (!s.first_project && n_executables == 1 && tgt->getInterfaceSettings()["type"] == "native_executable"s)
+    //            s.first_project = &p;
+    //    }
+    //}
+
+    //// natvis
+    //{
+    //    // gather .natvis
+    //    FilesWithFilter natvis;
+    //    for (auto &[n, p] : s.projects)
+    //    {
+    //        for (auto &f : p.files)
+    //        {
+    //            if (f.p.extension() == ".natvis")
+    //                natvis.insert(f);
+    //        }
+    //    }
+
+    //    if (!natvis.empty())
+    //    {
+    //        Directory d(visualizers_dir);
+    //        d.g = this;
+    //        d.files = natvis;
+    //        d.directory = &s.directories.find(predefined_targets_dir)->second;
+    //        s.directories.emplace(d.name, d);
+    //    }
+    //}
+
+    //// ZERO_BUILD rule
+    //{
+    //    auto &p = s.projects.find(zero_check_name)->second;
+    //    for (auto &[st, cfs] : configure_files)
+    //    {
+    //        auto &d = p.getData(st);
+    //        auto int_dir = get_int_dir(sln_root, vs_project_dir, p.name, st);
+    //        path fn = int_dir / "check_list.txt";
+    //        auto stampfn = path(fn) += vs_zero_check_stamp_ext;
+
+    //        auto &r = d.custom_rules_manual.back();
+
+    //        //
+    //        r.command += get_current_program() + " ";
+    //        r.command += "generate -check-stamp-list \"" + to_string(normalize_path(fn)) + "\" ";
+    //        r.command += "-input-settings-pairs ";
+    //        for (auto &i : inputs)
+    //        {
+    //            for (auto &s : i.getSettings())
+    //            {
+    //                for (auto &[_, f] : i.getInput().getSpecification().files.getData())
+    //                {
+    //                    r.command += "\"" + to_string(normalize_path(f.absolute_path)) + "\" ";
+    //                    r.command += fix_json(s.toString()) + " ";
+    //                }
+    //            }
+    //        }
+    //        r.outputs.insert(stampfn);
+    //        r.inputs = cfs;
+
+    //        String s;
+    //        uint64_t mtime = 0;
+    //        for (auto &f : cfs)
+    //        {
+    //            s += to_string(normalize_path(f)) + "\n";
+
+    //            if (!fs::exists(f))
+    //                throw SW_RUNTIME_ERROR("Input file does not exist: " + to_string(normalize_path(s)));
+    //            auto lwt = fs::last_write_time(f);
+    //            mtime ^= file_time_type2time_t(lwt);
+    //        }
+    //        write_file(fn, s);
+    //        write_file(stampfn, std::to_string(mtime));
+    //    }
+    //}
+
+    //// add BUILD_DEPENDENCIES project
+    //if (vstype == VsGeneratorType::VisualStudio)
+    //{
+    //    {
+    //        Project p(build_dependencies_name);
+    //        p.g = this;
+    //        p.directory = &s.directories.find(predefined_targets_dir)->second;
+    //        p.settings = s.settings;
+    //        p.dependencies.insert(&s.projects.find(zero_check_name)->second);
+    //        s.projects.emplace(p.name, p);
+    //    }
+
+    //    auto &p = s.projects.find(build_dependencies_name)->second;
+
+    //    // create datas
+    //    for (auto &st : s.settings)
+    //        p.getData(st).type = p.type;
+
+    //    bool has_deps = false;
+    //    for (auto &st : s.settings)
+    //    {
+    //        auto &d = p.getData(st);
+
+    //        auto int_dir = get_int_dir(sln_root, vs_project_dir, p.name, st);
+
+    //        // fake command
+    //        Rule r;
+    //        r.name = p.name;
+    //        r.command = "setlocal";
+    //        r.outputs.insert(int_dir / "rules" / "intentionally_missing.file");
+    //        r.verify_inputs_and_outputs_exist = false;
+
+    //        d.custom_rules_manual.push_back(r);
+
+    //        // actually we must build deps + their specific settings
+    //        // not one setting for all deps
+    //        std::map<PackageName, String> deps;
+    //        for (auto &[_, p1] : s.projects)
+    //        {
+    //            auto &d = p1.getData(st);
+    //            for (auto &t : d.dependencies)
+    //            {
+    //                deps[t->getPackage()] = t->getSettings().toString();
+    //                p1.dependencies.insert(&p); // add dependency for project
+    //            }
+    //        }
+    //        if (deps.empty())
+    //            continue;
+    //        has_deps = true;
+
+    //        String deps_str;
+    //        for (auto &[d,s] : deps)
+    //            deps_str += d.toString() + " " + s + " ";
+    //        auto fn = shorten_hash(blake2b_512(deps_str), 6);
+    //        auto basefn = int_dir / fn;
+
+    //        Strings args;
+    //        args.push_back("-d");
+    //        args.push_back(to_string(normalize_path(fs::current_path())));
+    //        args.push_back("build");
+    //        args.push_back("-input-settings-pairs");
+    //        for (auto &[d, s] : deps)
+    //        {
+    //            args.push_back(d.toString());
+    //            args.push_back(fix_json(s));
+    //        }
+    //        args.push_back("-ide-fast-path");
+    //        args.push_back(to_string(normalize_path(path(basefn) += ".deps")));
+    //        args.push_back("-ide-copy-to-dir");
+    //        if (st["name"])
+    //            args.push_back(to_string(normalize_path(b.getBuildDirectory() / "out" / st["name"].getValue())));
+    //        else
+    //            args.push_back(to_string(normalize_path(b.getBuildDirectory() / "out" / st.getHashString())));
+
+    //        String s;
+    //        for (auto &a : args)
+    //            s += a + "\n";
+    //        auto rsp = path(basefn) += ".rsp";
+    //        write_file(rsp, s);
+
+    //        error_code ec;
+    //        fs::remove(path(basefn) += ".deps", ec); // trigger updates
+
+    //        BuildEvent be;
+    //        be.command = get_current_program() + " @" + to_string(normalize_path(rsp));
+    //        d.pre_build_event = be;
+    //    }
+
+    //    if (!has_deps)
+    //        s.projects.erase(build_dependencies_name);
+    //}
+
+    //// add path dirs
+    //{
+    //    auto parents = path_tree.getDirectories();
+    //    for (auto &p : parents)
+    //    {
+    //        auto pp = p.parent();
+    //        while (!pp.empty() && parents.find(pp) == parents.end())
+    //            pp = pp.parent();
+
+    //        Directory d(p.toString());
+    //        d.visible_name = p.slice(pp.size()).toString();
+    //        d.g = this;
+    //        if (!pp.empty())
+    //            d.directory = &s.directories.find(pp.toString())->second;
+    //        s.directories.emplace(d.name, d);
+    //    }
+
+    //    // set project dirs
+    //    for (auto &[pkg, tgts] : ttb)
+    //    {
+    //        for (auto &tgt : tgts)
+    //        {
+    //            auto &p = s.projects.find(tgt->getPackage().toString())->second;
+    //            auto pp = tgt->getPackage().getPath();
+    //            while (!pp.empty() && parents.find(pp) == parents.end())
+    //                pp = pp.parent();
+    //            // sometimes there a project and a dir with same name
+    //            // in this case select parent dir
+    //            if (pp == tgt->getPackage().getPath())
+    //            {
+    //                pp = pp.parent();
+    //                while (!pp.empty() && parents.find(pp) == parents.end())
+    //                    pp = pp.parent();
+    //            }
+    //            if (!pp.empty())
+    //            {
+    //                p.directory = &s.directories.find(pp.toString())->second;
+    //                p.visible_name = sw::PackageName(tgt->getPackage().getPath().slice(pp.size()), tgt->getPackage().getVersion()).toString();
+    //            }
+    //            break;
+    //        }
+    //    }
+    //}
+
+    //// main emit
+    //s.emit(*this);
 }
 
 void Solution::emit(const VSGenerator &g) const

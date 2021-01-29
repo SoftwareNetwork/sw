@@ -9,7 +9,7 @@ TODO:
 
 #include "../commands.h"
 
-#include <sw/core/input.h>
+//#include <sw/core/input.h>
 #include <sw/manager/storage.h>
 
 #include <primitives/command.h>
@@ -124,9 +124,10 @@ SUBCOMMAND_DECL(run)
     {
         auto b = createBuildAndPrepare({ getOptions().options_run.target });
         b->build();
-        auto inputs = b->getInputs();
+        SW_UNIMPLEMENTED;
+        /*auto inputs = b->getInputs();
         if (inputs.size() != 1)
-            throw SW_RUNTIME_ERROR("More than one input provided");
+            throw SW_RUNTIME_ERROR("More than one input provided");*/
         SW_UNIMPLEMENTED;
         /*auto tgts = inputs[0].loadPackages(*b);
         // TODO: add better target detection

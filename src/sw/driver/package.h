@@ -26,12 +26,12 @@ struct my_package_transform : package_transform
 
 struct my_package_loader : package_loader
 {
-    PackageName p;
+    PackagePtr p;
     std::unique_ptr<SwBuild> b;
     std::shared_ptr<Input> i;
 
-    my_package_loader(const PackageName &in) : p(in) {}
-    const PackageName &get_package_name() const override { return p; }
+    my_package_loader(const Package &in) : p(in.clone()) {}
+    const PackageName &get_package_name() const override { return p->getId().getName(); }
     std::unique_ptr<package_transform> load(const PackageSettings &s) const override;
 };
 

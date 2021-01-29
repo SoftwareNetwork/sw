@@ -4,7 +4,7 @@
 #include "../commands.h"
 
 #include <sw/core/driver.h>
-#include <sw/core/input.h>
+//#include <sw/core/input.h>
 #include <sw/manager/database.h>
 #include <sw/manager/storage.h>
 

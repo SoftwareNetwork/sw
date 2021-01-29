@@ -6,7 +6,7 @@
 #include <sw/builder/file.h>
 #include <sw/builder/execution_plan.h>
 #include <sw/core/build.h>
-#include <sw/core/input.h>
+//#include <sw/core/input.h>
 #include <sw/core/sw_context.h>
 #include <sw/manager/storage.h>
 #include <sw/support/filesystem.h>
@@ -108,11 +108,12 @@ const std::vector<GeneratorDescription> &getGenerators()
 
 void checkForSingleSettingsInputs(const SwBuild &b)
 {
-    for (auto &i : b.getInputs())
+    SW_UNIMPLEMENTED;
+    /*for (auto &i : b.getInputs())
     {
         if (i.getSettings().size() != 1)
             throw SW_RUNTIME_ERROR("This generator supports single config inputs only.");
-    }
+    }*/
 }
 
 static String toString(VsGeneratorType t)
@@ -810,11 +811,12 @@ void CMakeGenerator::generate(const sw::SwBuild &b)
 {
     bool is_generated_ext(const path &);
 
-    auto inputs = b.getInputs();
+    SW_UNIMPLEMENTED;
+    /*auto inputs = b.getInputs();
     if (inputs.size() != 1)
         throw SW_RUNTIME_ERROR("Only single input is supported at the moment");
     if (inputs[0].getSettings().size() != 1)
-        throw SW_RUNTIME_ERROR("Only single settings is supported at the moment");
+        throw SW_RUNTIME_ERROR("Only single settings is supported at the moment");*/
     SW_UNIMPLEMENTED;
     bool abs_pkg = false;// inputs[0].getInput().getType() == sw::InputType::InstalledPackage;
 

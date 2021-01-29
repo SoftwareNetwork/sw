@@ -3,8 +3,6 @@
 
 #include "target.h"
 
-#include "input.h"
-
 #include <sw/manager/storage.h>
 #include <sw/support/unresolved_package_id.h>
 

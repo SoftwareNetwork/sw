@@ -4,7 +4,6 @@
 #include "sw_context.h"
 
 #include "build.h"
-#include "input.h"
 #include "input_database.h"
 #include "driver.h"
 #include "package.h"
@@ -365,7 +364,7 @@ std::vector<std::unique_ptr<package_loader>> SwContext::load_packages(const path
     return pkgs;
 }
 
-std::unique_ptr<package_transform> SwContext::load_package(const Package &in) const
+std::unique_ptr<package_loader> SwContext::load_package(const Package &in) const
 {
     // no, install now (resolve to local)
     auto installed = getLocalStorage().install(in);

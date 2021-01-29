@@ -37,12 +37,7 @@ struct ModuleSwappableData
     void markAsDummy(const ITarget &);
     AddedTargets &getTargets();
 
-    const PackageSettings &getSettings() const
-    {
-        if (known_target)
-            return known_target->getId().getSettings();
-        return *current_settings;
-    }
+    const PackageSettings &getSettings() const;
 
 private:
     AddedTargets added_targets;

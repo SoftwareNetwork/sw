@@ -860,12 +860,10 @@ void Target::resolveDependency(IDependency &d)
                 throw SW_RUNTIME_ERROR("Cannot resolve package " + rr.toString() + " and " + rr2.toString());
             auto installed = getContext().getLocalStorage().install(rr2.getPackage());
             auto &p2 = installed ? *installed : rr2.getPackage();
-            //PackageId id{p2.getId().getName(), d.getUnresolvedPackageId().getSettings()};
-            //auto p = getContext().getLocalStorage().makePackage(id);
-            //p->setData(rr2.getPackage().getData().clone());
 
-            auto tranform = getContext().load_package(p2);
-            ((Dependency&)d).setTarget(std::move(tranform));
+            auto loader = getContext().load_package(p2);
+            auto transform = loader->load(d.getUnresolvedPackageId().getSettings());
+            ((Dependency&)d).setTarget(std::move(transform));
             //auto &t = getMainBuild().load(*p);
             //d.setTarget(t);
 
@@ -874,8 +872,9 @@ void Target::resolveDependency(IDependency &d)
         }
         else
         {
-            auto tranform = getContext().load_package(rr.getPackage());
-            ((Dependency&)d).setTarget(std::move(tranform));
+            auto loader = getContext().load_package(rr.getPackage());
+            auto transform = loader->load(d.getUnresolvedPackageId().getSettings());
+            ((Dependency&)d).setTarget(std::move(transform));
         }
         return;
     }

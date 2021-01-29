@@ -13,7 +13,7 @@
 #include <primitives/executor.h>
 #include <primitives/http.h>
 #include <sw/core/build.h>
-#include <sw/core/input.h>
+//#include <sw/core/input.h>
 #include <sw/core/sw_context.h>
 #include <sw/driver/driver.h> // register driver
 #include <sw/driver/compiler/detect.h>

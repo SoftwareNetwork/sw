@@ -6,13 +6,13 @@
 #include "entry_point.h"
 #include "frontend/cppan/yaml.h"
 #include "functions.h"
+#include "input.h"
 #include "module.h"
 #include "suffix.h"
 #include "target/native.h"
 
 #include <sw/builder/file_storage.h>
 #include <sw/core/build.h>
-#include <sw/core/input.h>
 #include <sw/core/sw_context.h>
 #include <sw/manager/database.h>
 #include <sw/manager/settings.h>
@@ -81,6 +81,15 @@ Build::Build(SwBuild &mb)
     // driver->build_cpp_spec(swctx, p);
     //return getContext().getModuleStorage().get(dll);
 }*/
+
+const PackageSettings &ModuleSwappableData::getSettings() const
+{
+    if (current_settings)
+        return *current_settings;
+    if (known_target)
+        return known_target->getId().getSettings();
+    return *current_settings;
+}
 
 bool Build::isKnownTarget(const PackageName &p) const
 {

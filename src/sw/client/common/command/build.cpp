@@ -4,7 +4,7 @@
 #include "../commands.h"
 
 #include <sw/builder/execution_plan.h>
-#include <sw/core/input.h>
+//#include <sw/core/input.h>
 #include <sw/core/package.h>
 
 #include <primitives/log.h>
@@ -21,11 +21,12 @@ static void isolated_build(SwClientContext &swctx)
     auto &b = *b1;
 
     auto ts = swctx.createInitialSettings();
-    for (auto &i : swctx.makeCurrentPathInputs())
+    SW_UNIMPLEMENTED;
+    /*for (auto &i : swctx.makeCurrentPathInputs())
     {
         i.addSettings(ts);
         b.addInput(i);
-    }
+    }*/
     b.loadInputs();
     SW_UNIMPLEMENTED;
     //b.setTargetsToBuild();
@@ -77,11 +78,12 @@ static void isolated_build(SwClientContext &swctx)
         auto b1 = swctx.createBuild();
         auto &b = *b1;
 
-        for (auto &i : swctx.makeCurrentPathInputs())
+        SW_UNIMPLEMENTED;
+        /*for (auto &i : swctx.makeCurrentPathInputs())
         {
             i.addSettings(ts);
             b.addInput(i);
-        }
+        }*/
         b.build();
     }
 }
@@ -192,7 +194,7 @@ SUBCOMMAND_DECL(build)
     sw::transform_executor e;
     e.execute(pkg_ptr);
 
-    SW_UNIMPLEMENTED;
+    //SW_UNIMPLEMENTED;
     //addInputs(*b, i);
 
     /*auto b = createBuildWithDefaultInputs();

@@ -6,6 +6,7 @@
 #include "build.h"
 #include "command.h"
 #include "driver.h"
+#include "input.h"
 #include "rule.h"
 #include "suffix.h"
 #include "target/all.h"
@@ -14,7 +15,6 @@
 #include <sw/core/build.h>
 #include <sw/core/sw_context.h>
 #include <sw/core/input_database.h>
-#include <sw/core/input.h>
 #include <sw/core/specification.h>
 #include <sw/manager/storage.h>
 
@@ -435,20 +435,22 @@ std::vector<ITargetPtr> NativeTargetEntryPoint::loadPackages(SwBuild &swb, const
     b.module_data.current_settings = &s;
     loadPackages1(b);
     for (auto &&t : b.module_data.getTargets())
-        ((Target*)t.get())->prepare1();
+    {
+        if (auto t1 = dynamic_cast<Target *>(t.get()))
+            t1->prepare1();
+    }
     return std::move(b.module_data.getTargets());
 }
 
-ITargetPtr NativeTargetEntryPoint::loadPackage(SwBuild &swb, const Package &p) const
+ITargetPtr NativeTargetEntryPoint::loadPackage(SwBuild &swb, const PackageSettings &s, const Package &p) const
 {
-    auto b = createBuild(swb, p.getId().getSettings());
+    auto b = createBuild(swb, s);
+    b.module_data.current_settings = &s; // in any case
     b.module_data.known_target = &p;
     b.NamePrefix = p.getId().getName().getPath().slice(0, p.getData().prefix);
     loadPackages1(b);
     for (auto &&t : b.module_data.getTargets())
     {
-        //if (b.NamePrefix.empty())
-            //continue;
         if (auto t1 = dynamic_cast<Target *>(t.get()))
             t1->prepare1();
     }

@@ -48,7 +48,7 @@ struct SW_DRIVER_CPP_API Driver : IDriver
     //std::vector<std::unique_ptr<Input>> getPredefinedInputs() const override;
     void setupBuild(SwBuild &) const override;
 
-    std::unique_ptr<package_transform> load_package(const Package &) override;
+    std::unique_ptr<package_loader> load_package(const Package &) override;
     std::vector<std::unique_ptr<package_loader>> load_packages(const path &) override;
 
     // frontends

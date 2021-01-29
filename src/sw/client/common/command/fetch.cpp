@@ -5,7 +5,7 @@
 
 #include <nlohmann/json.hpp>
 #include <sw/core/build.h>
-#include <sw/core/input.h>
+//#include <sw/core/input.h>
 
 // sometimes we do not want
 //  sw build --fetch
@@ -118,12 +118,13 @@ static sw::support::SourceDirMap getSources(SwClientContext &swctx)
     ts["driver"]["dry-run"] = "true"; // only used to get sources
     ts["driver"].ignoreInComparison(true);
 
-    for (auto &i : swctx.makeCurrentPathInputs())
+    SW_UNIMPLEMENTED;
+    /*for (auto &i : swctx.makeCurrentPathInputs())
     {
         i.addSettings(ts);
         b.addInput(i);
     }
-    b.loadInputs();
+    b.loadInputs();*/
     SW_UNIMPLEMENTED;
     //b.setTargetsToBuild();
 
@@ -183,12 +184,13 @@ sw::support::SourceDirMap SwClientContext::fetch(sw::SwBuild &b)
         ts["driver"].ignoreInComparison(true);
     }
 
-    for (auto &i : makeCurrentPathInputs())
+    SW_UNIMPLEMENTED;
+    /*for (auto &i : makeCurrentPathInputs())
     {
         for (auto &ts : tss)
             i.addSettings(ts);
         b.addInput(i);
-    }
+    }*/
     b.loadInputs();
 
     if (getOptions().options_fetch.build_after_fetch)

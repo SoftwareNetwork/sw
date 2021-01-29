@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include "target.h"
+#include <sw/core/target.h>
 
 #include <memory>
 #include <vector>
@@ -66,7 +66,7 @@ struct SW_CORE_API Input
     /// load specific package from input
     /// no dry-run targets
     [[nodiscard]]
-    virtual ITargetPtr loadPackage(SwBuild &, const Package &) const = 0;
+    virtual ITargetPtr loadPackage(SwBuild &, const PackageSettings &, const Package &) const = 0;
 
 protected:
     SwContext &swctx;

@@ -6,7 +6,7 @@
 
 #include <sw/builder/execution_plan.h>
 #include <sw/core/build.h>
-#include <sw/core/input.h>
+//#include <sw/core/input.h>
 
 String vs_zero_check_stamp_ext = ".stamp";
 

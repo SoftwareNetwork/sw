@@ -4,7 +4,6 @@
 #include "build.h"
 
 #include "driver.h"
-#include "input.h"
 #include "inserts.h"
 #include "sw_context.h"
 
@@ -463,7 +462,7 @@ void SwBuild::loadInputs()
     };
 
     // load
-    std::set<Input *> iv;
+    /*std::set<Input *> iv;
     for (auto &i : user_inputs)
     {
         iv.insert(&i.getInput());
@@ -475,12 +474,12 @@ void SwBuild::loadInputs()
         j["hash"] = i.getInput().getHash();
         //j["name"] = i.getInput().getSpecification().getFiles();
         getHtmlReportData()["inputs"].push_back(j);
-    }
+    }*/
     SW_UNIMPLEMENTED;
     //swctx.loadEntryPointsBatch(iv);
 
     // and load packages
-    for (auto &i : user_inputs)
+    /*for (auto &i : user_inputs)
     {
         for (auto s : i.getSettings())
         {
@@ -498,7 +497,7 @@ void SwBuild::loadInputs()
                 getTargets()[tgt->getPackage()].push_back(*tgt, i.getInput());
             }
         }
-    }
+    }*/
 }
 
 // this resolves only local packages
@@ -933,9 +932,10 @@ std::unique_ptr<ExecutionPlan> SwBuild::getExecutionPlan(const Commands &cmds) c
 String SwBuild::getHash() const
 {
     String s;
-    for (auto &i : user_inputs)
+    SW_UNIMPLEMENTED;
+    /*for (auto &i : user_inputs)
         s += i.getHash();
-    return shorten_hash(blake2b_512(s), 8);
+    return shorten_hash(blake2b_512(s), 8);*/
 }
 
 void SwBuild::setName(const String &n)
@@ -952,15 +952,17 @@ String SwBuild::getName() const
     return getHash();
 }
 
-void SwBuild::addInput(const UserInput &i)
+/*void SwBuild::addInput(const UserInput &i)
 {
-    user_inputs.push_back(i);
+    SW_UNIMPLEMENTED;
+    //user_inputs.push_back(i);
 }
 
 const std::vector<UserInput> &SwBuild::getInputs() const
 {
-    return user_inputs;
-}
+    SW_UNIMPLEMENTED;
+    //return user_inputs;
+}*/
 
 path SwBuild::getExecutionPlanPath() const
 {
