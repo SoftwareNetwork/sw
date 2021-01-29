@@ -4,8 +4,11 @@
 #include "rule_storage.h"
 
 #include "dependency.h"
+#include "package.h"
 #include "program.h"
 #include "target/base.h"
+
+#include <sw/core/build.h>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "rule_storage");
@@ -65,12 +68,14 @@ IRule *RuleData::getRule() const
         return ptr.get();
     if (!dep)
         return {};
-    SW_UNIMPLEMENTED;
-    /*auto t = dep->getTarget().as<PredefinedProgram *>();
+    auto tr = dynamic_cast<my_package_transform*>(dep->transform.get());
+    if (!tr)
+        SW_UNIMPLEMENTED;
+    auto t = tr->t->as<PredefinedProgram *>();
     if (!t)
         SW_UNIMPLEMENTED;
     ptr = t->getRule1(target_rule_name);
-    return ptr.get();*/
+    return ptr.get();
 }
 
 void RuleSystem::addRuleDependency(const RuleData &d, bool overwrite)

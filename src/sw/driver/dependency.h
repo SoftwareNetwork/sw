@@ -53,6 +53,7 @@ struct SW_DRIVER_CPP_API DependencyData : IDependency
 
 private:
     UnresolvedPackageId upkg;
+public:
     std::shared_ptr<package_transform> transform;
     //const ITarget *target = nullptr;
 };

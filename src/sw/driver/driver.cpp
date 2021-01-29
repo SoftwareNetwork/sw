@@ -19,6 +19,7 @@
 #include "frontend/cppan/cppan.h"
 #include "compiler/detect.h"
 #include "compiler/set_settings.h"
+#include "package.h"
 
 #include <sw/core/build.h>
 #include <sw/core/input.h>
@@ -1049,45 +1050,6 @@ std::optional<FrontendType> Driver::selectFrontendByFilename(const path &fn)
         return i->get_left();*/
     return {};
 }
-
-struct my_package_transform : package_transform
-{
-    ITargetPtr t;
-
-    Commands get_commands() const override { return t->getCommands(); }
-    const PackageSettings &get_properties() const override { return t->getInterfaceSettings(); }
-};
-
-struct my_package_loader : package_loader
-{
-    PackageName p;
-    std::unique_ptr<SwBuild> b;
-    std::shared_ptr<Input> i;
-
-    my_package_loader(const PackageName &in) : p(in) {}
-    const PackageName &get_package_name() const override { return p; }
-    std::unique_ptr<package_transform> load(const PackageSettings &s) const override
-    {
-        for (auto &&t : i->loadPackages(*b, s))
-        {
-            auto pt = std::make_unique<my_package_transform>();
-            pt->t = std::move(t);
-            return pt;
-        }
-        SW_UNIMPLEMENTED;
-    }
-};
-
-struct my_physical_package : physical_package
-{
-    ITargetPtr t;
-    PackageId p;
-
-    my_physical_package(ITargetPtr in) : t(std::move(in)), p{ t->getPackage(), t->getSettings() } {}
-
-    const PackageId &get_package() const override { return p; }
-    const PackageSettings &get_properties() const override { return t->getInterfaceSettings(); }
-};
 
 std::vector<std::unique_ptr<Input>> Driver::detectInputs(const path &in) const
 {

@@ -949,7 +949,7 @@ Commands NativeCompiledTarget::getCommands1() const
     auto get_tgts = [this]()
     {
         TargetsSet deps;
-        SW_UNIMPLEMENTED;
+        //SW_UNIMPLEMENTED;
         /*for (auto &d : all_deps_normal)
             deps.insert(&d->getTarget());
         for (auto &d : all_deps_idir_only)
