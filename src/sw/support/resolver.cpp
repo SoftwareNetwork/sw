@@ -66,6 +66,11 @@ ResolveRequest::ResolveRequest(const UnresolvedPackageId &up)
 {
 }
 
+bool ResolveRequest::operator==(const ResolveRequest &rhs) const
+{
+    return std::tie(u, settings) == std::tie(rhs.u, rhs.settings);
+}
+
 String ResolveRequest::toString() const
 {
     return u.toString() + " (" + settings.getHashString() + ")";

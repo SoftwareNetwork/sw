@@ -253,52 +253,53 @@ static void applySettings(sw::PackageSettings &s, const String &in_settings)
 
 static std::vector<sw::PackageSettings> applySettingsFromCppFile(SwClientContext &swctx, const Options &options, const path &fn)
 {
-    auto b = swctx.createBuild();
-    auto inputs = swctx.getContext().makeInput(fn);
-    SW_CHECK(inputs.size() == 1);
-    auto &i = inputs[0];
-    auto ts = swctx.createInitialSettings();
-#ifdef NDEBUG
-    ts["native"]["configuration"] = "releasewithdebuginformation";
-#endif
-    i.addSettings(ts);
-    b->addInput(i);
-    b->build();
-
-    // load module
-    sw::TargetContainer *tc = nullptr;
     SW_UNIMPLEMENTED;
-    /*for (auto &[pkg, tgts] : b->getTargetsToBuild())
-    {
-        if (pkg.getPath().isRelative())
-            tc = &tgts;
-    }*/
-    if (!tc)
-        throw SW_RUNTIME_ERROR("No relative targets found");
-    if (tc->empty())
-        throw SW_RUNTIME_ERROR("Empty cfg target");
-    auto &t = **tc->begin();
-    auto is = t.getInterfaceSettings();
-    auto m = std::make_unique<boost::dll::experimental::smart_library>(is["output_file"].getValue(),
-        boost::dll::load_mode::rtld_now | boost::dll::load_mode::rtld_global);
-    if (m->symbol_storage().get_function<std::map<std::string, std::string>()>("createJsonSettings").empty())
-        throw SW_RUNTIME_ERROR("Cannot find 'std::map<std::string, std::string> createJsonSettings()'");
-
-    auto selected_cfgs = std::set<String>(options.settings_file_config.begin(), options.settings_file_config.end());
-    auto result = m->get_function<std::map<std::string, std::string>()>("createJsonSettings")();
-    std::vector<sw::PackageSettings> r;
-    for (auto &[k, v] : result)
-    {
-        if (v.empty())
-            throw SW_RUNTIME_ERROR("Empty settings");
-        if (selected_cfgs.empty() || selected_cfgs.find(k) != selected_cfgs.end())
-        {
-            sw::PackageSettings ts;
-            ts.mergeFromString(v);
-            r.push_back(ts);
-        }
-    }
-    return r;
+//    auto b = swctx.createBuild();
+//    auto inputs = swctx.getContext().makeInput(fn);
+//    SW_CHECK(inputs.size() == 1);
+//    auto &i = inputs[0];
+//    auto ts = swctx.createInitialSettings();
+//#ifdef NDEBUG
+//    ts["native"]["configuration"] = "releasewithdebuginformation";
+//#endif
+//    i.addSettings(ts);
+//    b->addInput(i);
+//    b->build();
+//
+//    // load module
+//    sw::TargetContainer *tc = nullptr;
+//    SW_UNIMPLEMENTED;
+//    /*for (auto &[pkg, tgts] : b->getTargetsToBuild())
+//    {
+//        if (pkg.getPath().isRelative())
+//            tc = &tgts;
+//    }*/
+//    if (!tc)
+//        throw SW_RUNTIME_ERROR("No relative targets found");
+//    if (tc->empty())
+//        throw SW_RUNTIME_ERROR("Empty cfg target");
+//    auto &t = **tc->begin();
+//    auto is = t.getInterfaceSettings();
+//    auto m = std::make_unique<boost::dll::experimental::smart_library>(is["output_file"].getValue(),
+//        boost::dll::load_mode::rtld_now | boost::dll::load_mode::rtld_global);
+//    if (m->symbol_storage().get_function<std::map<std::string, std::string>()>("createJsonSettings").empty())
+//        throw SW_RUNTIME_ERROR("Cannot find 'std::map<std::string, std::string> createJsonSettings()'");
+//
+//    auto selected_cfgs = std::set<String>(options.settings_file_config.begin(), options.settings_file_config.end());
+//    auto result = m->get_function<std::map<std::string, std::string>()>("createJsonSettings")();
+//    std::vector<sw::PackageSettings> r;
+//    for (auto &[k, v] : result)
+//    {
+//        if (v.empty())
+//            throw SW_RUNTIME_ERROR("Empty settings");
+//        if (selected_cfgs.empty() || selected_cfgs.find(k) != selected_cfgs.end())
+//        {
+//            sw::PackageSettings ts;
+//            ts.mergeFromString(v);
+//            r.push_back(ts);
+//        }
+//    }
+//    return r;
 }
 
 static std::vector<sw::PackageSettings> getSettingsFromFile(SwClientContext &swctx, const Options &options)
@@ -385,85 +386,86 @@ std::unique_ptr<sw::SwBuild> SwClientContext::createBuild()
 
 std::unique_ptr<sw::SwBuild> SwClientContext::createBuildInternal()
 {
-    auto b = getContext().createBuild();
-    auto &options = getOptions();
-
-    b->setName(options.build_name);
-
-    sw::PackageSettings bs;
-
-    // this is coming from the outside to distinguish from
-    // internal builds (checks, scripts builds)
-    bs["master_build"] = "true";
-
-    std::optional<bool> use_lock;
-    if (getOptions().getClOptions().use_lock_file.getNumOccurrences()) // always respect when specified
-        use_lock = options.use_lock_file;
-    if (!use_lock) // try heuristics
-    {
-        use_lock = fs::exists(fs::current_path() / "sw.lock");
-        if (*use_lock)
-            LOG_INFO(logger, "Lock file is found, using it: " << fs::current_path() / "sw.lock");
-    }
-    if (*use_lock)
-    {
-        // save lock file near input? what if we have multiple inputs?
-        if (options.lock_file.empty())
-            bs["lock_file"] = to_string(normalize_path(fs::current_path() / "sw.lock"));
-        else
-            bs["lock_file"] = to_string(normalize_path(options.lock_file));
-    }
-
-#define SET_BOOL_OPTION(x) if (options.x) bs[#x] = true;
-
-    //
-    SET_BOOL_OPTION(build_always);
-    SET_BOOL_OPTION(use_saved_configs);
-    if (!options.options_build.ide_copy_to_dir.empty())
-        bs["build_ide_copy_to_dir"] = to_string(normalize_path(options.options_build.ide_copy_to_dir));
-    if (!options.options_build.ide_fast_path.empty())
-        bs["build_ide_fast_path"] = to_string(normalize_path(options.options_build.ide_fast_path));
-    if (options.skip_errors)
-        bs["skip_errors"] = std::to_string(options.skip_errors);
-
-    SET_BOOL_OPTION(time_trace);
-    SET_BOOL_OPTION(show_output);
-    SET_BOOL_OPTION(write_output_to_file);
-
-    if (!options.options_build.time_limit.empty())
-        bs["time_limit"] = options.options_build.time_limit;
-    if (options.verbose || options.trace)
-        bs["measure"] = "true";
-    bs["verbose"] = (options.verbose || options.trace) ? "true" : "";
-
-    SET_BOOL_OPTION(standalone);
-    SET_BOOL_OPTION(do_not_mangle_object_names);
-    SET_BOOL_OPTION(ignore_source_files_errors);
-
-    // checks
-    SET_BOOL_OPTION(checks_single_thread);
-    SET_BOOL_OPTION(print_checks);
-    SET_BOOL_OPTION(wait_for_cc_checks);
-    bs["cc_checks_command"] = options.cc_checks_command;
-
-#undef SET_BOOL_OPTION
-
-    for (auto &t : options.targets_to_build)
-        bs["target-to-build"].push_back(t);
-    for (auto &t : options.targets_to_ignore)
-        bs["target-to-exclude"].push_back(t);
-    if (options.build_jobs)
-        bs["build-jobs"] = std::to_string(select_number_of_threads(options.build_jobs));
-    if (options.prepare_jobs)
-        bs["prepare-jobs"] = std::to_string(select_number_of_threads(options.prepare_jobs));
-    for (auto &t : options.Dvariables)
-    {
-        auto p = t.find('=');
-        bs["D"][t.substr(0, p)] = t.substr(p + 1);
-    }
-    b->setSettings(bs);
-
-    return b;
+    SW_UNIMPLEMENTED;
+//    auto b = getContext().createBuild();
+//    auto &options = getOptions();
+//
+//    b->setName(options.build_name);
+//
+//    sw::PackageSettings bs;
+//
+//    // this is coming from the outside to distinguish from
+//    // internal builds (checks, scripts builds)
+//    bs["master_build"] = "true";
+//
+//    std::optional<bool> use_lock;
+//    if (getOptions().getClOptions().use_lock_file.getNumOccurrences()) // always respect when specified
+//        use_lock = options.use_lock_file;
+//    if (!use_lock) // try heuristics
+//    {
+//        use_lock = fs::exists(fs::current_path() / "sw.lock");
+//        if (*use_lock)
+//            LOG_INFO(logger, "Lock file is found, using it: " << fs::current_path() / "sw.lock");
+//    }
+//    if (*use_lock)
+//    {
+//        // save lock file near input? what if we have multiple inputs?
+//        if (options.lock_file.empty())
+//            bs["lock_file"] = to_string(normalize_path(fs::current_path() / "sw.lock"));
+//        else
+//            bs["lock_file"] = to_string(normalize_path(options.lock_file));
+//    }
+//
+//#define SET_BOOL_OPTION(x) if (options.x) bs[#x] = true;
+//
+//    //
+//    SET_BOOL_OPTION(build_always);
+//    SET_BOOL_OPTION(use_saved_configs);
+//    if (!options.options_build.ide_copy_to_dir.empty())
+//        bs["build_ide_copy_to_dir"] = to_string(normalize_path(options.options_build.ide_copy_to_dir));
+//    if (!options.options_build.ide_fast_path.empty())
+//        bs["build_ide_fast_path"] = to_string(normalize_path(options.options_build.ide_fast_path));
+//    if (options.skip_errors)
+//        bs["skip_errors"] = std::to_string(options.skip_errors);
+//
+//    SET_BOOL_OPTION(time_trace);
+//    SET_BOOL_OPTION(show_output);
+//    SET_BOOL_OPTION(write_output_to_file);
+//
+//    if (!options.options_build.time_limit.empty())
+//        bs["time_limit"] = options.options_build.time_limit;
+//    if (options.verbose || options.trace)
+//        bs["measure"] = "true";
+//    bs["verbose"] = (options.verbose || options.trace) ? "true" : "";
+//
+//    SET_BOOL_OPTION(standalone);
+//    SET_BOOL_OPTION(do_not_mangle_object_names);
+//    SET_BOOL_OPTION(ignore_source_files_errors);
+//
+//    // checks
+//    SET_BOOL_OPTION(checks_single_thread);
+//    SET_BOOL_OPTION(print_checks);
+//    SET_BOOL_OPTION(wait_for_cc_checks);
+//    bs["cc_checks_command"] = options.cc_checks_command;
+//
+//#undef SET_BOOL_OPTION
+//
+//    for (auto &t : options.targets_to_build)
+//        bs["target-to-build"].push_back(t);
+//    for (auto &t : options.targets_to_ignore)
+//        bs["target-to-exclude"].push_back(t);
+//    if (options.build_jobs)
+//        bs["build-jobs"] = std::to_string(select_number_of_threads(options.build_jobs));
+//    if (options.prepare_jobs)
+//        bs["prepare-jobs"] = std::to_string(select_number_of_threads(options.prepare_jobs));
+//    for (auto &t : options.Dvariables)
+//    {
+//        auto p = t.find('=');
+//        bs["D"][t.substr(0, p)] = t.substr(p + 1);
+//    }
+//    b->setSettings(bs);
+//
+//    return b;
 }
 
 std::unique_ptr<sw::SwBuild> SwClientContext::createBuildAndPrepare(const Inputs &i)
@@ -490,7 +492,8 @@ const Strings &SwClientContext::getInputs() const
 
 void SwClientContext::addInputs(sw::SwBuild &b, const Inputs &i)
 {
-    for (auto &[ts,in] : i.getInputPairs())
+    SW_UNIMPLEMENTED;
+    /*for (auto &[ts,in] : i.getInputPairs())
     {
         for (auto &i : getContext().makeInput(in))
         {
@@ -508,12 +511,13 @@ void SwClientContext::addInputs(sw::SwBuild &b, const Inputs &i)
                 i.addSettings(s);
             b.addInput(i);
         }
-    }
+    }*/
 }
 
 std::vector<sw::UserInput> SwClientContext::makeCurrentPathInputs()
 {
-    return getContext().makeInput(fs::current_path());
+    SW_UNIMPLEMENTED;
+    //return getContext().makeInput(fs::current_path());
 }
 
 std::unique_ptr<sw::SwBuild> SwClientContext::createBuildWithDefaultInputs()
@@ -779,52 +783,52 @@ void SwClientContext::initNetwork()
 
 sw::SwContext &SwClientContext::getContext(bool in_allow_network)
 {
-    if (!swctx_)
-    {
-        bool allow_network = in_allow_network && !getOptions().no_network;
+    if (swctx_)
+        return *swctx_;
 
-        // load proxy settings before SwContext
-        if (allow_network)
-            initNetwork();
+    bool allow_network = in_allow_network && !getOptions().no_network;
 
-        auto &u = sw::Settings::get_user_settings();
+    // load proxy settings before SwContext
+    if (allow_network)
+        initNetwork();
 
-        // remotes
-        u.setDefaultRemote(getOptions().default_remote);
+    auto &u = sw::Settings::get_user_settings();
 
-        // db
-        u.gForceServerQuery = getOptions().force_server_query;
-        u.gForceServerDatabaseUpdate = getOptions().force_server_db_check;
+    // remotes
+    u.setDefaultRemote(getOptions().default_remote);
 
-        // commands
-        u.save_failed_commands = getOptions().save_failed_commands;
-        u.save_all_commands = getOptions().save_all_commands;
-        u.save_executed_commands = getOptions().save_executed_commands;
+    // db
+    u.gForceServerQuery = getOptions().force_server_query;
+    u.gForceServerDatabaseUpdate = getOptions().force_server_db_check;
 
-        u.explain_outdated = getOptions().explain_outdated;
-        u.explain_outdated_full = getOptions().explain_outdated_full;
-        u.gExplainOutdatedToTrace = getOptions().explain_outdated_to_trace;
+    // commands
+    u.save_failed_commands = getOptions().save_failed_commands;
+    u.save_all_commands = getOptions().save_all_commands;
+    u.save_executed_commands = getOptions().save_executed_commands;
 
-        u.save_command_format = getOptions().save_command_format;
+    u.explain_outdated = getOptions().explain_outdated;
+    u.explain_outdated_full = getOptions().explain_outdated_full;
+    u.gExplainOutdatedToTrace = getOptions().explain_outdated_to_trace;
 
-        //
-        sw::PackageSettings cs;
+    u.save_command_format = getOptions().save_command_format;
+
+    //
+    sw::PackageSettings cs;
 #define SET_BOOL_OPTION(x) cs[#x] = getOptions().x ? "true" : ""
-        SET_BOOL_OPTION(debug_configs);
-        SET_BOOL_OPTION(ignore_outdated_configs);
-        SET_BOOL_OPTION(do_not_remove_bad_module);
+    SET_BOOL_OPTION(debug_configs);
+    SET_BOOL_OPTION(ignore_outdated_configs);
+    SET_BOOL_OPTION(do_not_remove_bad_module);
 #undef SET_BOOL_OPTION
 
-        // create ctx
-        swctx_ = std::make_unique<sw::SwContext>(local_storage_root_dir, allow_network);
-        swctx_->setSettings(cs);
-        // TODO:
-        // before default?
-        //for (auto &d : drivers)
-        //swctx->registerDriver(std::make_unique<sw::driver::cpp::Driver>());
-        swctx_->registerDriver(sw::driver::cpp::Driver::getPackageId(), std::make_unique<sw::driver::cpp::Driver>(*swctx_));
-        //swctx->registerDriver(std::make_unique<sw::CDriver>(sw_create_driver));
-    }
+    // create ctx
+    swctx_ = std::make_unique<sw::SwContext>(local_storage_root_dir, allow_network);
+    //swctx_->setSettings(cs);
+    // TODO:
+    // before default?
+    //for (auto &d : drivers)
+    //swctx->registerDriver(std::make_unique<sw::driver::cpp::Driver>());
+    swctx_->registerDriver(sw::driver::cpp::Driver::getPackageId(), std::make_unique<sw::driver::cpp::Driver>(*swctx_));
+    //swctx->registerDriver(std::make_unique<sw::CDriver>(sw_create_driver));
     return *swctx_;
 }
 

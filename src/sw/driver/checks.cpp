@@ -908,7 +908,8 @@ void FunctionExists::run() const
     auto f = getOutputFilename();
     write_file(f, getSourceFileContents());
 
-    SETUP_SOLUTION();
+    SW_UNIMPLEMENTED;
+    /*SETUP_SOLUTION();
 
     auto &e = s.addTarget<ExecutableTarget>(getTargetName(f));
     e.Definitions["CHECK_FUNCTION_EXISTS"] = data; // before setup, because it is changed later for LibraryFunctionExists
@@ -918,7 +919,7 @@ void FunctionExists::run() const
     EXECUTE_SOLUTION();
 
     auto cmd = getLinkerCommand(e, f);
-    Value = (cmd && cmd->exit_code && cmd->exit_code.value() == 0) ? 1 : 0;
+    Value = (cmd && cmd->exit_code && cmd->exit_code.value() == 0) ? 1 : 0;*/
 }
 
 IncludeExists::IncludeExists(const String &i, const String &def)
@@ -978,7 +979,8 @@ void IncludeExists::run() const
     auto f = getOutputFilename();
     write_file(f, getSourceFileContents());
 
-    SETUP_SOLUTION();
+    SW_UNIMPLEMENTED;
+    /*SETUP_SOLUTION();
 
     auto &e = s.addTarget<ExecutableTarget>(getTargetName(f));
     setupTarget(e);
@@ -987,7 +989,7 @@ void IncludeExists::run() const
     EXECUTE_SOLUTION();
 
     auto cmd = getLinkerCommand(e, f);
-    Value = (cmd && cmd->exit_code && cmd->exit_code.value() == 0) ? 1 : 0;
+    Value = (cmd && cmd->exit_code && cmd->exit_code.value() == 0) ? 1 : 0;*/
 }
 
 TypeSize::TypeSize(const String &t, const String &def)
@@ -1038,7 +1040,8 @@ void TypeSize::run() const
     auto f = getOutputFilename();
     write_file(f, getSourceFileContents());
 
-    SETUP_SOLUTION();
+    SW_UNIMPLEMENTED;
+    /*SETUP_SOLUTION();
 
     auto &e = s.addTarget<ExecutableTarget>(getTargetName(f));
     setupTarget(e);
@@ -1068,7 +1071,7 @@ void TypeSize::run() const
     if (!ec)
         Value = std::stoi(c.out.text);
     else
-        Value = 0;
+        Value = 0;*/
 }
 
 TypeAlignment::TypeAlignment(const String &t, const String &def)
@@ -1116,7 +1119,8 @@ void TypeAlignment::run() const
     auto f = getOutputFilename();
     write_file(f, getSourceFileContents());
 
-    SETUP_SOLUTION();
+    SW_UNIMPLEMENTED;
+    /*SETUP_SOLUTION();
 
     auto &e = s.addTarget<ExecutableTarget>(getTargetName(f));
     setupTarget(e);
@@ -1142,7 +1146,7 @@ void TypeAlignment::run() const
     c.setProgram(e.getOutputFile());
     error_code ec;
     c.execute(ec);
-    Value = c.exit_code;
+    Value = c.exit_code;*/
 }
 
 SymbolExists::SymbolExists(const String &s, const String &def)
@@ -1189,7 +1193,8 @@ void SymbolExists::run() const
     auto f = getOutputFilename();
     write_file(f, getSourceFileContents());
 
-    SETUP_SOLUTION();
+    SW_UNIMPLEMENTED;
+    /*SETUP_SOLUTION();
 
     auto &e = s.addTarget<ExecutableTarget>(getTargetName(f));
     setupTarget(e);
@@ -1197,7 +1202,7 @@ void SymbolExists::run() const
 
     EXECUTE_SOLUTION();
 
-    Value = 1;
+    Value = 1;*/
 }
 
 DeclarationExists::DeclarationExists(const String &d, const String &def)
@@ -1246,7 +1251,8 @@ void DeclarationExists::run() const
     auto f = getOutputFilename();
     write_file(f, getSourceFileContents());
 
-    SETUP_SOLUTION();
+    SW_UNIMPLEMENTED;
+    /*SETUP_SOLUTION();
 
     auto &e = s.addTarget<ExecutableTarget>(getTargetName(f));
     setupTarget(e);
@@ -1255,7 +1261,7 @@ void DeclarationExists::run() const
     EXECUTE_SOLUTION();
 
     auto cmd = getLinkerCommand(e, f);
-    Value = (cmd && cmd->exit_code && cmd->exit_code.value() == 0) ? 1 : 0;
+    Value = (cmd && cmd->exit_code && cmd->exit_code.value() == 0) ? 1 : 0;*/
 }
 
 StructMemberExists::StructMemberExists(const String &struct_, const String &member, const String &def)
@@ -1300,7 +1306,8 @@ void StructMemberExists::run() const
     auto f = getOutputFilename();
     write_file(f, getSourceFileContents());
 
-    SETUP_SOLUTION();
+    SW_UNIMPLEMENTED;
+    /*SETUP_SOLUTION();
 
     auto &e = s.addTarget<ExecutableTarget>(getTargetName(f));
     setupTarget(e);
@@ -1309,7 +1316,7 @@ void StructMemberExists::run() const
     EXECUTE_SOLUTION();
 
     auto cmd = getLinkerCommand(e, f);
-    Value = (cmd && cmd->exit_code && cmd->exit_code.value() == 0) ? 1 : 0;
+    Value = (cmd && cmd->exit_code && cmd->exit_code.value() == 0) ? 1 : 0;*/
 }
 
 LibraryFunctionExists::LibraryFunctionExists(const String &library, const String &function, const String &def)
@@ -1361,7 +1368,8 @@ void SourceCompiles::run() const
     auto f = getOutputFilename();
     write_file(f, getSourceFileContents());
 
-    SETUP_SOLUTION();
+    SW_UNIMPLEMENTED;
+    /*SETUP_SOLUTION();
 
     auto &e = s.addTarget<ExecutableTarget>(getTargetName(f));
     setupTarget(e);
@@ -1404,7 +1412,7 @@ void SourceCompiles::run() const
             Value = 0;
             return;
         }
-    }
+    }*/
     // leave value as is
 }
 
@@ -1427,7 +1435,8 @@ void SourceLinks::run() const
     auto f = getOutputFilename();
     write_file(f, getSourceFileContents());
 
-    SETUP_SOLUTION();
+    SW_UNIMPLEMENTED;
+    /*SETUP_SOLUTION();
 
     auto &e = s.addTarget<ExecutableTarget>(getTargetName(f));
     setupTarget(e);
@@ -1435,7 +1444,7 @@ void SourceLinks::run() const
 
     EXECUTE_SOLUTION();
 
-    Value = 1;
+    Value = 1;*/
 }
 
 SourceRuns::SourceRuns(const String &def, const String &source)
@@ -1457,7 +1466,8 @@ void SourceRuns::run() const
     auto f = getOutputFilename();
     write_file(f, getSourceFileContents());
 
-    SETUP_SOLUTION();
+    SW_UNIMPLEMENTED;
+    /*SETUP_SOLUTION();
 
     auto &e = s.addTarget<ExecutableTarget>(getTargetName(f));
     setupTarget(e);
@@ -1483,7 +1493,7 @@ void SourceRuns::run() const
     c.setProgram(e.getOutputFile());
     error_code ec;
     c.execute(ec);
-    Value = c.exit_code;
+    Value = c.exit_code;*/
 }
 
 CompilerFlag::CompilerFlag(const String &def, const String &compiler_flag)

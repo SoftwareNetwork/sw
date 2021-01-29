@@ -98,10 +98,11 @@ F(build)
         free_ctx_and_delete_files(swctx, d);
     };
     ScopedCurrentPath scp(d, CurrentPathScope::All);
-    auto b = swctx.createBuildAndPrepare({ p.getId().toString() });
+    SW_UNIMPLEMENTED;
+    /*auto b = swctx.createBuildAndPrepare({ p.getId().toString() });
     auto i = swctx.getContext().makeInput(p);
     b->addInput(i);
-    b->build();
+    b->build();*/
 }
 
 F(run)

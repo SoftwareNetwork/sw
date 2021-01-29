@@ -73,7 +73,8 @@ void Command::prepare()
         auto d = dependency.lock();
         if (d)
         {
-            auto &t = d->getTarget();
+            SW_UNIMPLEMENTED;
+            /*auto &t = d->getTarget();
             if (auto nt = t.as<NativeTarget *>())
                 nt->setupCommand(*this);
             else if (auto nt = t.as<PredefinedTarget *>())
@@ -95,14 +96,14 @@ void Command::prepare()
                 if (auto nt = t.as<NativeCompiledTarget *>())
                 {
                     p = nt->getOutputFile();
-                    /*if (!p.empty() && !File(p, getContext().getFileStorage()).isGenerated())
-                    {
-                        if (*nt->HeaderOnly)
-                            throw SW_RUNTIME_ERROR("Program is used from package: " + t.getPackage().toString() + " which is header only");
-                        if (!File(p, getContext().getFileStorage()).isGenerated())
-                            throw SW_RUNTIME_ERROR("Program from package: " + t.getPackage().toString() + " is not generated at all: " + to_string(normalize_path(p)));
-                        throw SW_RUNTIME_ERROR("Program from package: " + t.getPackage().toString() + " is not generated: " + to_string(normalize_path(p)));
-                    }*/
+                    //if (!p.empty() && !File(p, getContext().getFileStorage()).isGenerated())
+                    //{
+                    //    if (*nt->HeaderOnly)
+                    //        throw SW_RUNTIME_ERROR("Program is used from package: " + t.getPackage().toString() + " which is header only");
+                    //    if (!File(p, getContext().getFileStorage()).isGenerated())
+                    //        throw SW_RUNTIME_ERROR("Program from package: " + t.getPackage().toString() + " is not generated at all: " + to_string(normalize_path(p)));
+                    //    throw SW_RUNTIME_ERROR("Program from package: " + t.getPackage().toString() + " is not generated: " + to_string(normalize_path(p)));
+                    //}
                 }
                 else if (auto nt = t.as<NativeTarget *>())
                     p = nt->getOutputFile();
@@ -125,7 +126,7 @@ void Command::prepare()
                     throw SW_RUNTIME_ERROR("Empty program from package: " + t.getPackage().toString());
                 setProgram(p);
                 addInput(p);
-            }
+            }*/
         }
         else if (dependency_set)
         {
@@ -140,7 +141,8 @@ void Command::prepare()
         if (!d)
             throw SW_RUNTIME_ERROR("Command dependency was not resolved: ???UNKNOWN_PROGRAM??? " + print());
 
-        auto &t = d->getTarget();
+        SW_UNIMPLEMENTED;
+        /*auto &t = d->getTarget();
         if (auto nt = t.as<NativeTarget *>())
             nt->setupCommand(*this);
         else if (auto nt = t.as<PredefinedTarget *>())
@@ -158,7 +160,7 @@ void Command::prepare()
             }
         }
         else
-            throw SW_RUNTIME_ERROR("missing predefined target code");
+            throw SW_RUNTIME_ERROR("missing predefined target code");*/
     }
 
     Base::prepare();

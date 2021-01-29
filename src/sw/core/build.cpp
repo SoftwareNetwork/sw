@@ -23,7 +23,7 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "build");
 
-#define CHECK_STATE(from)                                                                 \
+/*#define CHECK_STATE(from)                                                                 \
     if (state != from)                                                                    \
     throw SW_RUNTIME_ERROR("Unexpected build state = " + std::to_string(toIndex(state)) + \
                            ", expected = " + std::to_string(toIndex(from)))
@@ -42,7 +42,7 @@ DECLARE_STATIC_LOGGER(logger, "build");
     };                                                            \
     LOG_TRACE(logger, "build id " << this << " performing " << BOOST_CURRENT_FUNCTION)
 
-#define CHECK_STATE_AND_CHANGE(from, to) CHECK_STATE_AND_CHANGE_RAW(from, to, SCOPE_EXIT)
+#define CHECK_STATE_AND_CHANGE(from, to) CHECK_STATE_AND_CHANGE_RAW(from, to, SCOPE_EXIT)*/
 
 #define SW_CURRENT_LOCK_FILE_VERSION 1
 
@@ -441,7 +441,7 @@ void SwBuild::overrideBuildState(BuildState s) const
 
 void SwBuild::loadInputs()
 {
-    CHECK_STATE_AND_CHANGE(BuildState::NotStarted, BuildState::InputsLoaded);
+    //CHECK_STATE_AND_CHANGE(BuildState::NotStarted, BuildState::InputsLoaded);
 
     // filter selected targets if any
     /*UnresolvedPackages in_ttb;
@@ -476,7 +476,8 @@ void SwBuild::loadInputs()
         //j["name"] = i.getInput().getSpecification().getFiles();
         getHtmlReportData()["inputs"].push_back(j);
     }
-    swctx.loadEntryPointsBatch(iv);
+    SW_UNIMPLEMENTED;
+    //swctx.loadEntryPointsBatch(iv);
 
     // and load packages
     for (auto &i : user_inputs)
@@ -570,7 +571,8 @@ ITarget &SwBuild::load(const Package &in)
     auto installed = getContext().getLocalStorage().install(in);
     auto &p = installed ? *installed : in;
     //getContext().getLocalStorage().import(p);
-    auto i = getContext().addInput(p);
+    SW_UNIMPLEMENTED;
+    /*auto i = getContext().addInput(p);
     getTargets()[p.getId().getName()].setInput(*i);
     auto tgt = i->loadPackage(*this, p);
     std::vector<sw::ITargetPtr> tgts;
@@ -578,7 +580,7 @@ ITarget &SwBuild::load(const Package &in)
     auto tgts2 = registerTargets(std::move(tgts));
     for (auto &&tgt : tgts2)
         getTargets()[tgt->getPackage()].push_back(*tgt, *i);
-    return *tgts2[0];
+    return *tgts2[0];*/
 }
 
 void SwBuild::registerTarget(ITarget &t)
@@ -594,7 +596,7 @@ void SwBuild::execute() const
 
 void SwBuild::execute(ExecutionPlan &p) const
 {
-    CHECK_STATE_AND_CHANGE(BuildState::InputsLoaded, BuildState::Executed);
+    //CHECK_STATE_AND_CHANGE(BuildState::InputsLoaded, BuildState::Executed);
 
     SwapAndRestore sr(current_explan, &p);
 
@@ -973,14 +975,14 @@ void SwBuild::saveExecutionPlan() const
 
 void SwBuild::runSavedExecutionPlan() const
 {
-    CHECK_STATE(BuildState::InputsLoaded);
+    //CHECK_STATE(BuildState::InputsLoaded);
 
     runSavedExecutionPlan(getExecutionPlanPath());
 }
 
 void SwBuild::saveExecutionPlan(const path &in) const
 {
-    CHECK_STATE(BuildState::InputsLoaded);
+    //CHECK_STATE(BuildState::InputsLoaded);
 
     auto p = getExecutionPlan();
     p->save(in);

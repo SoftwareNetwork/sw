@@ -55,11 +55,11 @@ struct SW_CORE_API IDependency
     virtual const UnresolvedPackageId &getUnresolvedPackageId() const = 0;
 
     virtual bool isResolved() const = 0;
-    virtual void setTarget(const ITarget &) = 0;
-    virtual const ITarget &getTarget() const = 0;
+    //virtual void setTarget(const ITarget &) = 0;
+    //virtual const ITarget &getTarget() const = 0;
 
-    PackageSettings &getSettings();
-    const PackageSettings &getSettings() const;
+    //PackageSettings &getSettings();
+    //const PackageSettings &getSettings() const;
 };
 
 using IDependencyPtr = std::shared_ptr<IDependency>;

@@ -5,6 +5,7 @@
 
 #include <sw/builder/execution_plan.h>
 #include <sw/core/input.h>
+#include <sw/core/package.h>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "build");
@@ -85,6 +86,34 @@ static void isolated_build(SwClientContext &swctx)
     }
 }
 
+static std::variant<path, sw::PackageName> make_input(const String &i)
+{
+    path p(i);
+    if (fs::exists(p))
+        return p;
+    else
+    {
+        SW_UNIMPLEMENTED;
+        /*try
+        {
+            auto p = sw::extractFromString(i);
+            sw::ResolveRequest rr{ p, {} };
+            if (!resolve(rr, true))
+                throw SW_RUNTIME_ERROR("Cannot resolve: " + rr.u.toString());
+            auto r = getLocalStorage().install(rr.getPackage());
+            SW_UNIMPLEMENTED;
+            //auto bi = makeInput(r);
+            //std::vector<UserInput> v;
+            //v.push_back(bi);
+            //return v;
+        }
+        catch (std::exception &e)
+        {
+            throw SW_RUNTIME_ERROR("No such file, directory or suitable package: " + i + ": " + e.what());
+        }*/
+    }
+}
+
 SUBCOMMAND_DECL(build)
 {
     if (!getOptions().options_build.build_explan.empty())
@@ -118,7 +147,55 @@ SUBCOMMAND_DECL(build)
 
     // if -B specified, it is used as is
 
-    auto b = createBuildWithDefaultInputs();
+    Inputs i{getInputs(), getOptions().input_settings_pairs};
+    for (auto &[ts,in] : i.getInputPairs())
+    {
+        SW_UNIMPLEMENTED;
+        /*for (auto &i : getContext().makeInput(in))
+        {
+            i.addSettings(ts);
+            b.addInput(i);
+        }*/
+    }
+
+    std::vector<std::unique_ptr<sw::package_loader>> loaders;
+
+    auto settings = createSettings();
+    for (auto &a : i.getInputs())
+    {
+        path p(a);
+        if (fs::exists(p))
+        {
+            for (auto &&p : getContext().load_packages(p))
+                loaders.emplace_back(std::move(p));
+            continue;
+        }
+        SW_UNIMPLEMENTED;
+        /*for (auto &i : getContext().makeInput(a))
+        {
+            for (auto &s : settings)
+                i.addSettings(s);
+            b.addInput(i);
+        }*/
+    }
+
+    std::vector<std::unique_ptr<sw::package_transform>> transforms;
+    for (auto &p : loaders)
+    {
+        for (auto &s : settings)
+            transforms.push_back(p->load(s));
+    }
+
+    std::vector<const sw::package_transform*> pkg_ptr;
+    for (auto &p : transforms)
+        pkg_ptr.push_back(p.get());
+    sw::transform_executor e;
+    e.execute(pkg_ptr);
+
+    SW_UNIMPLEMENTED;
+    //addInputs(*b, i);
+
+    /*auto b = createBuildWithDefaultInputs();
     if (getOptions().options_build.build_default_explan)
     {
         b->loadInputs();
@@ -126,5 +203,5 @@ SUBCOMMAND_DECL(build)
         b->runSavedExecutionPlan();
         return;
     }
-    b->build();
+    b->build();*/
 }

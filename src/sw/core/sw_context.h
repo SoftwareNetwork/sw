@@ -16,6 +16,8 @@ struct Input;
 struct InputDatabase;
 struct SwBuild;
 struct UserInput;
+struct package_loader;
+struct package_transform;
 
 // core context for drivers
 struct SW_CORE_API SwCoreContext : SwManagerContext
@@ -60,15 +62,15 @@ struct SW_CORE_API SwContext : SwCoreContext
     //const Drivers &getDrivers() const { return drivers; }
 
     std::unique_ptr<SwBuild> createBuild();
-    void executeBuild(const path &);
+    //void executeBuild(const path &);
 
     // stops current operation
-    SwBuild *registerOperation(SwBuild &);
-    void stop(std::thread::id);
-    void stop();
+    //SwBuild *registerOperation(SwBuild &);
+    //void stop(std::thread::id);
+    //void stop();
 
     //
-    std::vector<std::unique_ptr<Input>> detectInputs(const path &) const;
+    /*std::vector<std::unique_ptr<Input>> detectInputs(const path &) const;
     static std::vector<std::unique_ptr<Input>> detectInputs(const std::vector<const IDriver*> &, const path &);
     Input *getInput(size_t hash) const;
     std::vector<Input *> addInputInternal(const path &);
@@ -82,19 +84,22 @@ struct SW_CORE_API SwContext : SwCoreContext
     // (one path containing multiple inputs)
     std::vector<UserInput> makeInput(const path &, const PackagePath &prefix = {});
     // single input
-    UserInput makeInput(const LocalPackage &);
+    UserInput makeInput(const LocalPackage &);*/
 
-    void loadEntryPointsBatch(const std::set<Input*> &inputs);
+    //void loadEntryPointsBatch(const std::set<Input*> &inputs);
 
-    const PackageSettings &getSettings() const { return settings; }
-    void setSettings(const PackageSettings &s) { settings = s; }
+    //const PackageSettings &getSettings() const { return settings; }
+    //void setSettings(const PackageSettings &s) { settings = s; }
+
+    std::unique_ptr<package_transform> load_package(const Package &) const;
+    std::vector<std::unique_ptr<package_loader>> load_packages(const path &) const;
 
 private:
     using InputPtr = std::unique_ptr<Input>;
     using Inputs = std::map<size_t, InputPtr>;
 
     Drivers drivers;
-    Inputs inputs;
+    //Inputs inputs;
     PackageSettings settings;
     std::mutex m;
     std::map<std::thread::id, SwBuild *> active_operations;

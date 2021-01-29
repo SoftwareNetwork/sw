@@ -7,6 +7,7 @@
 #include "input.h"
 #include "input_database.h"
 #include "driver.h"
+#include "package.h"
 
 #include <sw/manager/storage.h>
 
@@ -106,7 +107,7 @@ std::unique_ptr<SwBuild> SwContext::createBuild()
     return std::move(b);
 }
 
-SwBuild *SwContext::registerOperation(SwBuild &b)
+/*SwBuild *SwContext::registerOperation(SwBuild &b)
 {
     std::unique_lock lk(m);
     if (stopped)
@@ -133,7 +134,7 @@ void SwContext::stop(std::thread::id id)
     std::unique_lock lk(m);
     if (active_operations[id])
         active_operations[id]->stop();
-}
+}*/
 
 void SwContext::registerDriver(const PackageName &pkg, std::unique_ptr<IDriver> driver)
 {
@@ -142,7 +143,7 @@ void SwContext::registerDriver(const PackageName &pkg, std::unique_ptr<IDriver> 
         LOG_TRACE(logger, "Registering driver: " + pkg.toString());
 }
 
-void SwContext::executeBuild(const path &in)
+/*void SwContext::executeBuild(const path &in)
 {
     //clearFileStorages();
     auto b = createBuild1();
@@ -197,21 +198,21 @@ std::vector<std::unique_ptr<Input>> SwContext::detectInputs(const std::vector<co
             SW_UNIMPLEMENTED;
 
             // find in file first: 'sw driver package-id', call that driver on whole file
-            /*auto f = read_file(p);
+            //auto f = read_file(p);
 
-            static const std::regex r("sw\\s+driver\\s+(\\S+)");
-            std::smatch m;
-            if (std::regex_search(f, m, r))
-            {
-            SW_UNIMPLEMENTED;
+            //static const std::regex r("sw\\s+driver\\s+(\\S+)");
+            //std::smatch m;
+            //if (std::regex_search(f, m, r))
+            //{
+            //SW_UNIMPLEMENTED;
 
-            //- install driver
-            //- load & register it
-            //- re-run this ctor
+            ////- install driver
+            ////- load & register it
+            ////- re-run this ctor
 
-            auto driver_pkg = swctx.install({ m[1].str() }).find(m[1].str());
-            return;
-            }*/
+            //auto driver_pkg = swctx.install({ m[1].str() }).find(m[1].str());
+            //return;
+            //}
         }
     }
     else
@@ -284,10 +285,10 @@ std::vector<UserInput> SwContext::makeInput(const String &i)
                 throw SW_RUNTIME_ERROR("Cannot resolve: " + rr.u.toString());
             auto r = getLocalStorage().install(rr.getPackage());
             SW_UNIMPLEMENTED;
-            /*auto bi = makeInput(r);
-            std::vector<UserInput> v;
-            v.push_back(bi);
-            return v;*/
+            //auto bi = makeInput(r);
+            //std::vector<UserInput> v;
+            //v.push_back(bi);
+            //return v;
         }
         catch (std::exception &e)
         {
@@ -351,6 +352,45 @@ void SwContext::loadEntryPointsBatch(const std::set<Input *> &inputs)
         }));
     }
     waitAndGet(fs);
+}*/
+
+std::vector<std::unique_ptr<package_loader>> SwContext::load_packages(const path &p) const
+{
+    std::vector<std::unique_ptr<package_loader>> pkgs;
+    for (auto &[_, d] : drivers)
+    {
+        for (auto &&p : d->load_packages(p))
+            pkgs.emplace_back(std::move(p));
+    }
+    return pkgs;
+}
+
+std::unique_ptr<package_transform> SwContext::load_package(const Package &in) const
+{
+    // no, install now (resolve to local)
+    auto installed = getLocalStorage().install(in);
+    auto &p = installed ? *installed : in;
+    //getContext().getLocalStorage().import(p);
+
+    auto i = drivers.find(p.getData().driver);
+    if (i == drivers.end())
+        throw SW_RUNTIME_ERROR("Driver is not registered: " + p.getData().driver.toString());
+    return i->second->load_package(p);
+
+    /*auto input = i->second->getInput(p);
+    auto [i2,_] = registerInput(std::move(input));
+    i2->load();
+    return i2;
+
+    auto i = addInput(p);
+    getTargets()[p.getId().getName()].setInput(*i);
+    auto tgt = i->loadPackage(*this, p);
+    std::vector<sw::ITargetPtr> tgts;
+    tgts.emplace_back(std::move(tgt));
+    auto tgts2 = registerTargets(std::move(tgts));
+    for (auto &&tgt : tgts2)
+    getTargets()[tgt->getPackage()].push_back(*tgt, *i);
+    return *tgts2[0];*/
 }
 
 }

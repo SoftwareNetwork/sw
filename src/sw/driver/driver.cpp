@@ -22,6 +22,7 @@
 
 #include <sw/core/build.h>
 #include <sw/core/input.h>
+#include <sw/core/package.h>
 #include <sw/core/specification.h>
 #include <sw/core/sw_context.h>
 #include <sw/manager/storage.h>
@@ -313,8 +314,8 @@ struct DriverInput : Input
         auto t = ep->loadPackages(b, s);
         for (auto &tgt : t)
         {
-            if (tgt->getSettings()["dry-run"])
-                SW_UNIMPLEMENTED;
+            //if (tgt->getSettings()["dry-run"])
+                //SW_UNIMPLEMENTED;
             tgts.push_back(std::move(tgt));
         }
         // it is possible to get all targets dry run for some reason
@@ -409,14 +410,16 @@ struct SpecFileInput : DriverInput
         case FrontendType::SwC:
         {
             auto out = static_cast<const Driver&>(getDriver()).build_configs1(swctx, { this }).begin()->second;
-            module = loadSharedLibrary(out.dll, out.PATH, swctx.getSettings()["do_not_remove_bad_module"].get<bool>());
-            ep = std::make_unique<NativeModuleTargetEntryPoint>(*module);
-            ep->source_dir = fn.parent_path();
+            SW_UNIMPLEMENTED;
+            //module = loadSharedLibrary(out.dll, out.PATH, swctx.getSettings()["do_not_remove_bad_module"].get<bool>());
+            //ep = std::make_unique<NativeModuleTargetEntryPoint>(*module);
+            //ep->source_dir = fn.parent_path();
             break;
         }
         case FrontendType::SwVala:
         {
-            auto b = swctx.createBuild();
+            SW_UNIMPLEMENTED;
+            /*auto b = swctx.createBuild();
 
             auto ts = static_cast<const Driver&>(getDriver()).getDllConfigSettings(*b);
             //ts["native"]["library"] = "shared"; // why?
@@ -440,7 +443,7 @@ struct SpecFileInput : DriverInput
             auto &out = pc.r[fn];
             module = loadSharedLibrary(out.dll, out.PATH, swctx.getSettings()["do_not_remove_bad_module"].get<bool>());
             ep = std::make_unique<NativeModuleTargetEntryPoint>(*module);
-            ep->source_dir = fn.parent_path();
+            ep->source_dir = fn.parent_path();*/
             break;
         }
         case FrontendType::Cppan:
@@ -667,15 +670,17 @@ std::unique_ptr<Input> Driver::getInput(const Package &p) const
         if (fs::exists(d / "settings.json"))
             return std::make_unique<PreparedInput>(swctx, *this, p);
 
+        // not our deal
+        throw SW_RUNTIME_ERROR("Cannot load package: " + p.getId().toString());
+
         // install source pkg if missing
         PackageSettings s;
         ResolveRequest rr{ p.getId().getName(), s };
         swctx.resolve(rr, true);
         swctx.getLocalStorage().install(rr.getPackage());
     }
-    std::vector<const IDriver *> d2;
-    d2.push_back(this);
-    auto inputs = swctx.detectInputs(d2, p.getSourceDirectory());
+
+    auto inputs = detectInputs(p.getSourceDirectory());
     SW_CHECK(inputs.size() == 1);
     return std::move(inputs[0]);
 }
@@ -832,17 +837,19 @@ void Driver::loadInputsBatch(const std::set<Input *> &inputs) const
             LOG_WARN(logger, "Bad input");
             continue;
         }
-        i->module = loadSharedLibrary(out.dll, out.PATH, swctx.getSettings()["do_not_remove_bad_module"].get<bool>());
+        SW_UNIMPLEMENTED;
+        /*i->module = loadSharedLibrary(out.dll, out.PATH, swctx.getSettings()["do_not_remove_bad_module"].get<bool>());
         auto ep = std::make_unique<NativeModuleTargetEntryPoint>(*i->module);
         ep->source_dir = p.parent_path();
-        i->setEntryPoint(std::move(ep));
+        i->setEntryPoint(std::move(ep));*/
     }
 }
 
 std::unique_ptr<SwBuild> Driver::create_build(SwContext &swctx) const
 {
-    auto b = swctx.createBuild();
-    return b;
+    SW_UNIMPLEMENTED;
+    //auto b = swctx.createBuild();
+    //return b;
 }
 
 PackageSettings Driver::getDllConfigSettings(SwBuild &b) const
@@ -935,13 +942,14 @@ std::unordered_map<path, PrepareConfigOutputData> Driver::build_configs1(SwConte
         auto i = std::make_unique<BuiltinInput>(swctx, *this, h);
         auto ep = std::make_unique<sw::NativeBuiltinTargetEntryPoint>(f);
         i->setEntryPoint(std::move(ep));
-        auto [ii, _] = swctx.registerInput(std::move(i));
+        SW_UNIMPLEMENTED;
+        /*auto [ii, _] = swctx.registerInput(std::move(i));
         //LogicalInput bi(*ii, {});
         //bi.addPackage(name + "-0.0.1"s);
         //sw::InputWithSettings is(bi);
         sw::UserInput is(*ii);
         is.addSettings(ts);
-        b->addInput(is);
+        b->addInput(is);*/
     }
 
     // prevent simultaneous cfg builds
@@ -1040,6 +1048,154 @@ std::optional<FrontendType> Driver::selectFrontendByFilename(const path &fn)
     if (i != getAvailableFrontends().right.end())
         return i->get_left();*/
     return {};
+}
+
+struct my_package_transform : package_transform
+{
+    ITargetPtr t;
+
+    Commands get_commands() const override { return t->getCommands(); }
+    const PackageSettings &get_properties() const override { return t->getInterfaceSettings(); }
+};
+
+struct my_package_loader : package_loader
+{
+    PackageName p;
+    std::unique_ptr<SwBuild> b;
+    std::shared_ptr<Input> i;
+
+    my_package_loader(const PackageName &in) : p(in) {}
+    const PackageName &get_package_name() const override { return p; }
+    std::unique_ptr<package_transform> load(const PackageSettings &s) const override
+    {
+        for (auto &&t : i->loadPackages(*b, s))
+        {
+            auto pt = std::make_unique<my_package_transform>();
+            pt->t = std::move(t);
+            return pt;
+        }
+        SW_UNIMPLEMENTED;
+    }
+};
+
+struct my_physical_package : physical_package
+{
+    ITargetPtr t;
+    PackageId p;
+
+    my_physical_package(ITargetPtr in) : t(std::move(in)), p{ t->getPackage(), t->getSettings() } {}
+
+    const PackageId &get_package() const override { return p; }
+    const PackageSettings &get_properties() const override { return t->getInterfaceSettings(); }
+};
+
+std::vector<std::unique_ptr<Input>> Driver::detectInputs(const path &in) const
+{
+    path p = in;
+    if (!p.is_absolute())
+        p = fs::absolute(p);
+
+    auto status = fs::status(p);
+    if (status.type() != fs::file_type::regular &&
+        status.type() != fs::file_type::directory)
+    {
+        throw SW_RUNTIME_ERROR("Bad file type: " + to_string(normalize_path(p)));
+    }
+
+    p = normalize_path(primitives::filesystem::canonical(p));
+
+    //
+    std::vector<std::unique_ptr<Input>> inputs;
+
+    auto findDriver = [this, &p, &inputs](auto type) -> bool
+    {
+        auto inpts = detectInputs(p, type);
+        if (inpts.empty())
+            return false;
+        inputs = std::move(inpts);
+        return true;
+    };
+
+    // spec or regular file
+    if (status.type() == fs::file_type::regular)
+    {
+        if (!findDriver(InputType::SpecificationFile) &&
+            !findDriver(InputType::InlineSpecification))
+        {
+            // nothing found, ok
+            return {};
+
+            SW_UNIMPLEMENTED;
+
+            // find in file first: 'sw driver package-id', call that driver on whole file
+            //auto f = read_file(p);
+
+            //static const std::regex r("sw\\s+driver\\s+(\\S+)");
+            //std::smatch m;
+            //if (std::regex_search(f, m, r))
+            //{
+            //SW_UNIMPLEMENTED;
+
+            ////- install driver
+            ////- load & register it
+            ////- re-run this ctor
+
+            //auto driver_pkg = swctx.install({ m[1].str() }).find(m[1].str());
+            //return;
+            //}
+        }
+    }
+    else
+    {
+        if (!findDriver(InputType::DirectorySpecificationFile) &&
+            !findDriver(InputType::Directory))
+        {
+            // nothing found, ok
+            return {};
+
+            SW_UNIMPLEMENTED;
+        }
+    }
+
+    return inputs;
+}
+
+std::vector<std::unique_ptr<package_loader>> Driver::load_packages(const path &in)
+{
+    auto inputs = detectInputs(in);
+
+    auto b = swctx.createBuild();
+    b->getResolver().addStorage(*bs);
+    std::vector<std::unique_ptr<package_loader>> loaders;
+    for (auto &&i : inputs)
+    {
+        i->load();
+
+        std::shared_ptr<Input> is = std::move(i);
+        for (auto &&t : is->loadPackages(*b, {}))
+        {
+            auto pp = std::make_unique<my_package_loader>(t->getPackage());
+            pp->i = is;
+            pp->b = std::move(b);
+            loaders.emplace_back(std::move(pp));
+        }
+    }
+    return loaders;
+}
+
+std::unique_ptr<package_transform> Driver::load_package(const Package &p)
+{
+    auto i = getInput(p);
+    i->load();
+
+    auto b = swctx.createBuild();
+    b->getResolver().addStorage(*bs);
+    std::shared_ptr<Input> is = std::move(i);
+    auto t = is->loadPackage(*b, p);
+
+    auto pt = std::make_unique<my_package_transform>();
+    pt->t = std::move(t);
+    return pt;
 }
 
 } // namespace driver::cpp

@@ -388,8 +388,9 @@ void StartupData::sw_main()
             if (error)
                 return;
             LOG_INFO(logger, "Stopping...");
-            if (swctx.hasContext())
-                swctx.getContext().stop();
+            SW_UNIMPLEMENTED;
+            //if (swctx.hasContext())
+                //swctx.getContext().stop();
         });
     }
     std::thread t([&io_context] { try { io_context.run(); } catch (...) {} });

@@ -16,6 +16,7 @@ namespace sw
 {
 
 struct ITarget;
+struct package_transform;
 
 struct SW_DRIVER_CPP_API DependencyData : IDependency
 {
@@ -23,18 +24,22 @@ struct SW_DRIVER_CPP_API DependencyData : IDependency
 
     DependencyData(const ITarget &);
     DependencyData(const UnresolvedPackageId &);
+    ~DependencyData();
 
     UnresolvedPackageId &getUnresolvedPackageId() override { return upkg; }
     const UnresolvedPackageId &getUnresolvedPackageId() const override { return upkg; }
-    void setTarget(const ITarget &t) override;
-    const ITarget &getTarget() const override;
+    //void setTarget(const ITarget &t) override;
+    void setTarget(std::unique_ptr<package_transform>);
+    //const ITarget &getTarget() const override;
+    // get properties
+    const PackageSettings &getInterfaceSettings() const;
 
     bool isDisabled() const { return Disabled; }
 
     //operator bool() const { return target; }
-    bool isResolved() const override { return target; }
+    bool isResolved() const override { return /*target || */!!transform; }
 
-    const PackageName &getResolvedPackage() const;
+    //const PackageName &getResolvedPackage() const;
 
     PackageSetting &getOption(const String &name) { return getOptions()[name]; }
     const PackageSetting &getOption(const String &name) const { return getOptions()[name]; }
@@ -43,9 +48,13 @@ struct SW_DRIVER_CPP_API DependencyData : IDependency
     PackageSettings &getOptions() { return getSettings()["options"].getMap(); }
     const PackageSettings &getOptions() const { return getSettings()["options"].getMap(); }
 
+    PackageSettings &getSettings() { return getUnresolvedPackageId().getSettings(); }
+    const PackageSettings &getSettings() const { return getUnresolvedPackageId().getSettings(); }
+
 private:
     UnresolvedPackageId upkg;
-    const ITarget *target = nullptr;
+    std::shared_ptr<package_transform> transform;
+    //const ITarget *target = nullptr;
 };
 
 struct SW_DRIVER_CPP_API Dependency : DependencyData

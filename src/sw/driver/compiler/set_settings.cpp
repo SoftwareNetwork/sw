@@ -154,14 +154,15 @@ void addSettingsAndSetConfigPrograms(const SwBuild &b, PackageSettings &ts)
 {
     ts["native"]["library"] = "static"s; // why not shared?
                                         //ts["native"]["mt"] = "true";
-    if (b.getContext().getSettings()["debug_configs"])
+    SW_UNIMPLEMENTED;
+    /*if (b.getContext().getSettings()["debug_configs"])
     {
 #ifndef NDEBUG
         ts["native"]["configuration"] = "debug"s;
 #else
         ts["native"]["configuration"] = "releasewithdebuginformation"s;
 #endif
-    }
+    }*/
 
 #ifdef _MSC_VER
     //PackageVersion clver(_MSC_VER / 100, _MSC_VER % 100);

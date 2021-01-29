@@ -42,10 +42,14 @@ struct SW_DRIVER_CPP_API Driver : IDriver
 
     // IDriver api
     void loadInputsBatch(const std::set<Input *> &) const override;
+    std::vector<std::unique_ptr<Input>> detectInputs(const path &) const;
     std::vector<std::unique_ptr<Input>> detectInputs(const path &, InputType) const override;
     std::unique_ptr<Input> getInput(const Package &) const override;
     //std::vector<std::unique_ptr<Input>> getPredefinedInputs() const override;
     void setupBuild(SwBuild &) const override;
+
+    std::unique_ptr<package_transform> load_package(const Package &) override;
+    std::vector<std::unique_ptr<package_loader>> load_packages(const path &) override;
 
     // frontends
     using AvailableFrontends = boost::bimap<boost::bimaps::multiset_of<FrontendType>, path>;

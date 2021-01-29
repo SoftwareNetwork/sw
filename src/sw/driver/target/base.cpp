@@ -11,6 +11,7 @@
 
 #include <sw/builder/jumppad.h>
 #include <sw/core/build.h>
+#include <sw/core/package.h>
 #include <sw/core/sw_context.h>
 #include <sw/manager/database.h>
 #include <sw/manager/storage.h>
@@ -203,6 +204,7 @@ Target::Target(TargetBase &parent, const PackageName &inpkg)
     input_ts = static_cast<ExtendedBuild &>(getSolution()).getSettings();
     ts = input_ts;
     bs = ts;
+    DryRun |= ts.empty();
 
     if (auto t0 = dynamic_cast<const Target*>(&parent))
         source = t0->source ? t0->source->clone() : nullptr;
@@ -858,27 +860,31 @@ void Target::resolveDependency(IDependency &d)
                 throw SW_RUNTIME_ERROR("Cannot resolve package " + rr.toString() + " and " + rr2.toString());
             auto installed = getContext().getLocalStorage().install(rr2.getPackage());
             auto &p2 = installed ? *installed : rr2.getPackage();
-            PackageId id{p2.getId().getName(), d.getUnresolvedPackageId().getSettings()};
-            auto p = getContext().getLocalStorage().makePackage(id);
-            p->setData(rr2.getPackage().getData().clone());
-            auto &t = getMainBuild().load(*p);
-            d.setTarget(t);
+            //PackageId id{p2.getId().getName(), d.getUnresolvedPackageId().getSettings()};
+            //auto p = getContext().getLocalStorage().makePackage(id);
+            //p->setData(rr2.getPackage().getData().clone());
+
+            auto tranform = getContext().load_package(p2);
+            ((Dependency&)d).setTarget(std::move(tranform));
+            //auto &t = getMainBuild().load(*p);
+            //d.setTarget(t);
 
             // we save original request to resolver
-            getSettings()["resolver"].addResolvedPackage(rr.getUnresolvedPackageName(), rr.getSettings(), PackageId{ t.getPackage(), t.getSettings() });
+            getSettings()["resolver"].addResolvedPackage(rr.getUnresolvedPackageName(), rr.getSettings(), PackageId{ p2.getId().getName(), rr.getSettings() });
         }
         else
         {
-            auto &t = getMainBuild().load(rr.getPackage());
-            d.setTarget(t);
+            auto tranform = getContext().load_package(rr.getPackage());
+            ((Dependency&)d).setTarget(std::move(tranform));
         }
         return;
     }
 
     // local package
     ResolveRequest rr{ d.getUnresolvedPackageId() };
-    auto &t = getMainBuild().resolveAndLoad(rr);
-    d.setTarget(t);
+    SW_UNIMPLEMENTED;
+    //auto &t = getMainBuild().resolveAndLoad(rr);
+    //d.setTarget(t);
     return;
 }
 
@@ -991,7 +997,8 @@ Test Target::addTest1(const String &name, const Target &tgt)
 
     auto d = std::make_shared<Dependency>(UnresolvedPackageId{ tgt.getPackage() });
     d->getUnresolvedPackageId().getSettings() = getSettings(); // same settings!
-    d->setTarget(tgt); // "resolve" right here
+    SW_UNIMPLEMENTED;
+    //d->setTarget(tgt); // "resolve" right here
     // manual setup
     std::dynamic_pointer_cast<::sw::driver::Command>(c.getCommand())->setProgram(d);
     Storage.push_back(d); // keep dependency safe, because there's weak ptr in command

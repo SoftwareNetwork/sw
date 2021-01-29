@@ -42,7 +42,7 @@ struct SW_SUPPORT_API ResolveRequest : ResolveRequestResult
     ResolveRequest(const UnresolvedPackageName &u, const PackageSettings &s) : u(u), settings(s) {}
     ResolveRequest(const UnresolvedPackageId &up);
 
-    bool operator==(const ResolveRequest &rhs) const { return std::tie(u, settings) == std::tie(rhs.u, rhs.settings); }
+    bool operator==(const ResolveRequest &rhs) const;
 
     bool setPackage(PackagePtr);
 

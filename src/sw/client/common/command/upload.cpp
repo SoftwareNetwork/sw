@@ -104,121 +104,121 @@ static void input_check(const sw::Specification &spec)
 
 SUBCOMMAND_DECL(upload)
 {
-    auto b = createBuild();
-
-    // get spec early, so changes won't be noticed
-    // do not move to the bottom
-    auto inputs = b->getContext().detectInputs(fs::current_path());
-    if (inputs.size() > 1)
-        LOG_INFO(logger, "Multiple inputs detected:");
-    std::unordered_map<size_t, sw::Input *> input_map;
-    for (const auto &[idx, i] : enumerate(inputs))
-    {
-        auto &spec = i->getSpecification();
-        input_check(spec);
-
-        if (inputs.size() > 1)
-            LOG_INFO(logger, "Input #" << idx << ": " << spec.files.getData().begin()->first);
-
-        for (auto &[_, f] : spec.files.getData())
-            f.read();
-        input_map[i->getHash()] = i.get();
-    }
-
-    // detect from options
-    bool cmdline_source_present = 0
-        || !getOptions().options_upload.source.empty()
-        || !getOptions().options_upload.git.empty()
-        || !getOptions().options_upload.hg.empty()
-        || !getOptions().options_upload.bzr.empty()
-        || !getOptions().options_upload.fossil.empty()
-        || !getOptions().options_upload.svn.empty()
-        || !getOptions().options_upload.cvs.empty()
-        || !getOptions().options_upload.remote.empty()
-    ;
-    if (cmdline_source_present)
-    {
-        if (getOptions().options_upload.version.empty())
-            throw SW_RUNTIME_ERROR("version must be present on cmd as well");
-        if (getOptions().options_upload.source.empty())
-        {
-#define CHECK_AND_ASSIGN(x)                     \
-    else if (!getOptions().options_upload.x.empty()) \
-        getOptions().options_upload.source = #x
-            if (0);
-            CHECK_AND_ASSIGN(git);
-            CHECK_AND_ASSIGN(hg);
-            CHECK_AND_ASSIGN(bzr);
-            CHECK_AND_ASSIGN(fossil);
-            CHECK_AND_ASSIGN(svn);
-            CHECK_AND_ASSIGN(cvs);
-            CHECK_AND_ASSIGN(remote);
-#undef CHECK_AND_ASSIGN
-        }
-    }
-
-    auto sources = fetch(*b);
-    if (sources.empty())
-        throw SW_RUNTIME_ERROR("Empty target sources");
-
-    // 1)
-    // to get sources, we MUST prepare loaded targets
-    // otherwise not all source get uploaded
-    // example:
-    // t = add target()
-    // t -= "1.cpp";
-    // in this case no .* regexes are applied and we'll get only single file
-    //
-    // 2)
-    // We MUST perform all steps until prepare() too!
-    SW_UNIMPLEMENTED;
-    //b->setTargetsToBuild();
-    //b->resolvePackages();
-    //b->loadPackages();
-    //b->prepare();
-
-    std::map<const sw::Input *, std::vector<sw::PackageId>> iv;
-    SW_UNIMPLEMENTED;
-    /*auto m = getPackages(*b, sources, &iv);
-
-    // dbg purposes
-    for (auto &[id, d] : m)
-    {
-        write_file(b->getBuildDirectory() / "upload" / id.toString() += ".json", d->toJson().dump());
-        sw::PackageName id2{ sw::PackagePath(getOptions().options_upload.upload_prefix) / id.getName().getPath(), id.getName().getVersion() };
-        LOG_INFO(logger, "Uploading " + id2.toString());
-    }
-
-    if (getOptions().options_upload.upload_dry)
-    {
-        LOG_INFO(logger, "Dry run. Upload was cancelled.");
-        return;
-    }
-
-    // select remote
-    auto &us = sw::Settings::get_user_settings();
-    auto current_remote = us.getRemotes(true).begin()->get();
-    if (!getOptions().options_upload.upload_remote.empty())
-        current_remote = &find_remote(us, getOptions().options_upload.upload_remote);
-
-    for (auto &[i, pkgs] : iv)
-    {
-        auto i2 = input_map[i->getHash()];
-        SW_CHECK(i2);
-        auto &spec = i2->getSpecification();
-
-        // select this input packages
-        decltype(m) m2;
-        for (auto &p : pkgs)
-        {
-            // move only existing packages, do not create new
-            if (m.find(p) != m.end())
-                m2[p] = std::move(m[p]);
-        }
-
-        // send signatures (gpg etc.)?
-        // -k KEY1 -k KEY2
-        auto api = current_remote->getApi();
-        api->addVersion(getOptions().options_upload.upload_prefix, m2, spec.files);
-    }*/
+//    auto b = createBuild();
+//
+//    // get spec early, so changes won't be noticed
+//    // do not move to the bottom
+//    auto inputs = b->getContext().detectInputs(fs::current_path());
+//    if (inputs.size() > 1)
+//        LOG_INFO(logger, "Multiple inputs detected:");
+//    std::unordered_map<size_t, sw::Input *> input_map;
+//    for (const auto &[idx, i] : enumerate(inputs))
+//    {
+//        auto &spec = i->getSpecification();
+//        input_check(spec);
+//
+//        if (inputs.size() > 1)
+//            LOG_INFO(logger, "Input #" << idx << ": " << spec.files.getData().begin()->first);
+//
+//        for (auto &[_, f] : spec.files.getData())
+//            f.read();
+//        input_map[i->getHash()] = i.get();
+//    }
+//
+//    // detect from options
+//    bool cmdline_source_present = 0
+//        || !getOptions().options_upload.source.empty()
+//        || !getOptions().options_upload.git.empty()
+//        || !getOptions().options_upload.hg.empty()
+//        || !getOptions().options_upload.bzr.empty()
+//        || !getOptions().options_upload.fossil.empty()
+//        || !getOptions().options_upload.svn.empty()
+//        || !getOptions().options_upload.cvs.empty()
+//        || !getOptions().options_upload.remote.empty()
+//    ;
+//    if (cmdline_source_present)
+//    {
+//        if (getOptions().options_upload.version.empty())
+//            throw SW_RUNTIME_ERROR("version must be present on cmd as well");
+//        if (getOptions().options_upload.source.empty())
+//        {
+//#define CHECK_AND_ASSIGN(x)                     \
+//    else if (!getOptions().options_upload.x.empty()) \
+//        getOptions().options_upload.source = #x
+//            if (0);
+//            CHECK_AND_ASSIGN(git);
+//            CHECK_AND_ASSIGN(hg);
+//            CHECK_AND_ASSIGN(bzr);
+//            CHECK_AND_ASSIGN(fossil);
+//            CHECK_AND_ASSIGN(svn);
+//            CHECK_AND_ASSIGN(cvs);
+//            CHECK_AND_ASSIGN(remote);
+//#undef CHECK_AND_ASSIGN
+//        }
+//    }
+//
+//    auto sources = fetch(*b);
+//    if (sources.empty())
+//        throw SW_RUNTIME_ERROR("Empty target sources");
+//
+//    // 1)
+//    // to get sources, we MUST prepare loaded targets
+//    // otherwise not all source get uploaded
+//    // example:
+//    // t = add target()
+//    // t -= "1.cpp";
+//    // in this case no .* regexes are applied and we'll get only single file
+//    //
+//    // 2)
+//    // We MUST perform all steps until prepare() too!
+//    SW_UNIMPLEMENTED;
+//    //b->setTargetsToBuild();
+//    //b->resolvePackages();
+//    //b->loadPackages();
+//    //b->prepare();
+//
+//    std::map<const sw::Input *, std::vector<sw::PackageId>> iv;
+//    SW_UNIMPLEMENTED;
+//    /*auto m = getPackages(*b, sources, &iv);
+//
+//    // dbg purposes
+//    for (auto &[id, d] : m)
+//    {
+//        write_file(b->getBuildDirectory() / "upload" / id.toString() += ".json", d->toJson().dump());
+//        sw::PackageName id2{ sw::PackagePath(getOptions().options_upload.upload_prefix) / id.getName().getPath(), id.getName().getVersion() };
+//        LOG_INFO(logger, "Uploading " + id2.toString());
+//    }
+//
+//    if (getOptions().options_upload.upload_dry)
+//    {
+//        LOG_INFO(logger, "Dry run. Upload was cancelled.");
+//        return;
+//    }
+//
+//    // select remote
+//    auto &us = sw::Settings::get_user_settings();
+//    auto current_remote = us.getRemotes(true).begin()->get();
+//    if (!getOptions().options_upload.upload_remote.empty())
+//        current_remote = &find_remote(us, getOptions().options_upload.upload_remote);
+//
+//    for (auto &[i, pkgs] : iv)
+//    {
+//        auto i2 = input_map[i->getHash()];
+//        SW_CHECK(i2);
+//        auto &spec = i2->getSpecification();
+//
+//        // select this input packages
+//        decltype(m) m2;
+//        for (auto &p : pkgs)
+//        {
+//            // move only existing packages, do not create new
+//            if (m.find(p) != m.end())
+//                m2[p] = std::move(m[p]);
+//        }
+//
+//        // send signatures (gpg etc.)?
+//        // -k KEY1 -k KEY2
+//        auto api = current_remote->getApi();
+//        api->addVersion(getOptions().options_upload.upload_prefix, m2, spec.files);
+//    }*/
 }

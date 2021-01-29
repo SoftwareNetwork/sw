@@ -97,468 +97,468 @@ int getSwCmakeConfigVersion()
 
 SUBCOMMAND_DECL(integrate)
 {
-    bool cygwin = false;
-    auto fix_path = [&cygwin](const String &p)
-    {
-        if (!cygwin)
-            return p;
-        if (p.size() < 3 || p[1] != ':')
-            return p;
-        String s2 = "x";
-        s2[0] = tolower(p[0]);
-        if (p[2] != '/')
-            s2 += "/";
-        s2 = "cygdrive/" + s2;
-        return "/"s + s2 + p.substr(2);
-    };
+    //bool cygwin = false;
+    //auto fix_path = [&cygwin](const String &p)
+    //{
+    //    if (!cygwin)
+    //        return p;
+    //    if (p.size() < 3 || p[1] != ':')
+    //        return p;
+    //    String s2 = "x";
+    //    s2[0] = tolower(p[0]);
+    //    if (p[2] != '/')
+    //        s2 += "/";
+    //    s2 = "cygdrive/" + s2;
+    //    return "/"s + s2 + p.substr(2);
+    //};
 
-    std::unordered_set<sw::PackageSettings> our_settings;
-    auto create_build = [this, &cygwin, &our_settings](const path &deps_file)
-    {
-        auto build = getContext().createBuild();
-        auto &b = *build;
+    //std::unordered_set<sw::PackageSettings> our_settings;
+    //auto create_build = [this, &cygwin, &our_settings](const path &deps_file)
+    //{
+    //    auto build = getContext().createBuild();
+    //    auto &b = *build;
 
-        auto settings = createSettings();
-        cygwin = settings[0]["os"]["kernel"] == sw::PackagePath{ "org.cygwin"s };
+    //    auto settings = createSettings();
+    //    cygwin = settings[0]["os"]["kernel"] == sw::PackagePath{ "org.cygwin"s };
 
-        auto lines = read_lines(deps_file);
-        for (auto &l : lines)
-        {
-            for (auto c : l)
-            {
-                if (isalpha(c) && isupper(c))
-                    throw SW_RUNTIME_ERROR("Package name must be in lower case for now. Sorry for inconvenience.");
-            }
-        }
-        addInputs(b, lines);
-        // cache
-        /*auto cachefn = path(deps_file) += ".cache.txt";
-        sw::PackageIdSet s;
-        for (auto &i : b.getInputs())
-        {
-            auto s2 = i.getInput().getPackages();
-            s.merge(s2);
-        }*/
-        b.loadInputs();
-        SW_UNIMPLEMENTED;
-        //b.setTargetsToBuild();
-        //b.resolvePackages();
-        //b.loadPackages();
-        //b.prepare();
+    //    auto lines = read_lines(deps_file);
+    //    for (auto &l : lines)
+    //    {
+    //        for (auto c : l)
+    //        {
+    //            if (isalpha(c) && isupper(c))
+    //                throw SW_RUNTIME_ERROR("Package name must be in lower case for now. Sorry for inconvenience.");
+    //        }
+    //    }
+    //    addInputs(b, lines);
+    //    // cache
+    //    /*auto cachefn = path(deps_file) += ".cache.txt";
+    //    sw::PackageIdSet s;
+    //    for (auto &i : b.getInputs())
+    //    {
+    //        auto s2 = i.getInput().getPackages();
+    //        s.merge(s2);
+    //    }*/
+    //    b.loadInputs();
+    //    SW_UNIMPLEMENTED;
+    //    //b.setTargetsToBuild();
+    //    //b.resolvePackages();
+    //    //b.loadPackages();
+    //    //b.prepare();
 
-        // find better algo
-        size_t minsz = SIZE_MAX;
-        SW_UNIMPLEMENTED;
-        /*for (auto &[pkg,tgts] : b.getTargetsToBuild())
-        {
-            minsz = std::min(minsz, tgts.size());
-        }
-        for (auto &[pkg,tgts] : b.getTargetsToBuild())
-        {
-            if (tgts.size() != minsz)
-                continue;
-            for (auto &tgt : tgts)
-                our_settings.insert(tgt->getSettings());
-        }*/
+    //    // find better algo
+    //    size_t minsz = SIZE_MAX;
+    //    SW_UNIMPLEMENTED;
+    //    /*for (auto &[pkg,tgts] : b.getTargetsToBuild())
+    //    {
+    //        minsz = std::min(minsz, tgts.size());
+    //    }
+    //    for (auto &[pkg,tgts] : b.getTargetsToBuild())
+    //    {
+    //        if (tgts.size() != minsz)
+    //            continue;
+    //        for (auto &tgt : tgts)
+    //            our_settings.insert(tgt->getSettings());
+    //    }*/
 
-        return build;
-    };
+    //    return build;
+    //};
 
-    if (!getOptions().options_integrate.integrate_cmake_deps.empty())
-    {
-        if (getOptions().options_integrate.cmake_file_version < getSwCmakeConfigVersion())
-            throw SW_RUNTIME_ERROR("Old cmake integration file detected. Run 'sw setup' to upgrade it.");
+    //if (!getOptions().options_integrate.integrate_cmake_deps.empty())
+    //{
+    //    if (getOptions().options_integrate.cmake_file_version < getSwCmakeConfigVersion())
+    //        throw SW_RUNTIME_ERROR("Old cmake integration file detected. Run 'sw setup' to upgrade it.");
 
-        auto build = create_build(getOptions().options_integrate.integrate_cmake_deps);
-        auto &b = *build;
+    //    auto build = create_build(getOptions().options_integrate.integrate_cmake_deps);
+    //    auto &b = *build;
 
-        const String multiconf_gen_var = "SW_MULTI_CONFIG_GENERATOR";
+    //    const String multiconf_gen_var = "SW_MULTI_CONFIG_GENERATOR";
 
-        CMakeEmitter ctx;
-        ctx.addLine("#");
-        ctx.addLine("# sw autogenerated file");
-        ctx.addLine("#");
-        ctx.emptyLines();
+    //    CMakeEmitter ctx;
+    //    ctx.addLine("#");
+    //    ctx.addLine("# sw autogenerated file");
+    //    ctx.addLine("#");
+    //    ctx.emptyLines();
 
-        // targets
-        ctx.addLine("# targets");
-        for (auto &[pkg, tgts] : b.getTargets())
-        {
-            if (tgts.empty())
-            {
-                continue;
-                //throw SW_RUNTIME_ERROR("No targets in " + pkg2string(pkg));
-            }
-            // filter out predefined targets
-            if (b.isPredefinedTarget(pkg))
-                continue;
+    //    // targets
+    //    ctx.addLine("# targets");
+    //    for (auto &[pkg, tgts] : b.getTargets())
+    //    {
+    //        if (tgts.empty())
+    //        {
+    //            continue;
+    //            //throw SW_RUNTIME_ERROR("No targets in " + pkg2string(pkg));
+    //        }
+    //        // filter out predefined targets
+    //        if (b.isPredefinedTarget(pkg))
+    //            continue;
 
-            auto &t = **tgts.begin();
-            const auto &s = t.getInterfaceSettings();
+    //        auto &t = **tgts.begin();
+    //        const auto &s = t.getInterfaceSettings();
 
-            if (s["type"] == "native_executable"s)
-                continue;
+    //        if (s["type"] == "native_executable"s)
+    //            continue;
 
-            ctx.if_("NOT TARGET " + pkg2string(pkg));
+    //        ctx.if_("NOT TARGET " + pkg2string(pkg));
 
-            // tgt
-            auto st = "STATIC";
-            if (s["type"] == "native_static_library"s)
-                ;
-            else if (s["type"] == "native_shared_library"s)
-                st = "SHARED";
-            if (s["header_only"])
-                st = "INTERFACE";
-            ctx.addLine("add_library(" + pkg2string(pkg) + " " + st + " IMPORTED GLOBAL)");
-            ctx.emptyLines();
+    //        // tgt
+    //        auto st = "STATIC";
+    //        if (s["type"] == "native_static_library"s)
+    //            ;
+    //        else if (s["type"] == "native_shared_library"s)
+    //            st = "SHARED";
+    //        if (s["header_only"])
+    //            st = "INTERFACE";
+    //        ctx.addLine("add_library(" + pkg2string(pkg) + " " + st + " IMPORTED GLOBAL)");
+    //        ctx.emptyLines();
 
-            // imported configs
-            for (auto &tgt : tgts)
-            {
-                const auto &s = tgt->getInterfaceSettings();
-                if (our_settings.find(tgt->getSettings()) == our_settings.end())
-                    continue;
+    //        // imported configs
+    //        for (auto &tgt : tgts)
+    //        {
+    //            const auto &s = tgt->getInterfaceSettings();
+    //            if (our_settings.find(tgt->getSettings()) == our_settings.end())
+    //                continue;
 
-                // not needed?
-                sw::BuildSettings bs(tgt->getSettings());
-                ctx.addLine("set_property(TARGET " + pkg2string(pkg) + " APPEND PROPERTY IMPORTED_CONFIGURATIONS " +
-                    toCmakeString(bs.Native.ConfigurationType) + ")");
-            }
-            ctx.emptyLines();
+    //            // not needed?
+    //            sw::BuildSettings bs(tgt->getSettings());
+    //            ctx.addLine("set_property(TARGET " + pkg2string(pkg) + " APPEND PROPERTY IMPORTED_CONFIGURATIONS " +
+    //                toCmakeString(bs.Native.ConfigurationType) + ")");
+    //        }
+    //        ctx.emptyLines();
 
-            for (auto &tgt : tgts)
-            {
-                const auto &s = tgt->getInterfaceSettings();
-                if (our_settings.find(tgt->getSettings()) == our_settings.end())
-                    continue;
+    //        for (auto &tgt : tgts)
+    //        {
+    //            const auto &s = tgt->getInterfaceSettings();
+    //            if (our_settings.find(tgt->getSettings()) == our_settings.end())
+    //                continue;
 
-                ctx.increaseIndent("if (" + multiconf_gen_var + ")");
-                auto &if_ctx = ctx.createInlineEmitter<CMakeEmitter>();
-                ctx.decreaseIndent();
-                ctx.addLine("else()");
-                ctx.increaseIndent();
-                auto &else_ctx = ctx.createInlineEmitter<CMakeEmitter>();
-                ctx.decreaseIndent("endif()");
-                ctx.emptyLines();
+    //            ctx.increaseIndent("if (" + multiconf_gen_var + ")");
+    //            auto &if_ctx = ctx.createInlineEmitter<CMakeEmitter>();
+    //            ctx.decreaseIndent();
+    //            ctx.addLine("else()");
+    //            ctx.increaseIndent();
+    //            auto &else_ctx = ctx.createInlineEmitter<CMakeEmitter>();
+    //            ctx.decreaseIndent("endif()");
+    //            ctx.emptyLines();
 
-                // gen.exprs (CONFIG) are available only for multi-config generators
-                // they are vs and xcode at the moment
+    //            // gen.exprs (CONFIG) are available only for multi-config generators
+    //            // they are vs and xcode at the moment
 
-                sw::BuildSettings bs(tgt->getSettings());
-                auto cmake_cfg = "$<$<CONFIG:" + toCmakeStringCapital(bs.Native.ConfigurationType) + ">: \"";
-                auto cmake_cfg_end = "\" >";
+    //            sw::BuildSettings bs(tgt->getSettings());
+    //            auto cmake_cfg = "$<$<CONFIG:" + toCmakeStringCapital(bs.Native.ConfigurationType) + ">: \"";
+    //            auto cmake_cfg_end = "\" >";
 
-                // if_ctx
-                {
-                    // defs
-                    if_ctx.increaseIndent("target_compile_definitions(" + pkg2string(pkg) + " INTERFACE");
-                    for (auto &[k, p] : s["properties"].getMap())
-                    {
-                        auto inh = std::stoi(k);
-                        if ((inh & 4) == 0)
-                            continue;
-                        for (auto &[k, v] : p["definitions"].getMap())
-                        {
-                            if_ctx.addLine(cmake_cfg);
-                            if (v.getValue().empty())
-                                if_ctx.addText(k);
-                            else
-                                if_ctx.addText(k + "=" + primitives::command::Argument::quote(v.getValue(), primitives::command::QuoteType::Escape));
-                            if_ctx.addText(cmake_cfg_end);
-                        }
-                    }
-                    if_ctx.decreaseIndent(")");
-                    if_ctx.emptyLines();
+    //            // if_ctx
+    //            {
+    //                // defs
+    //                if_ctx.increaseIndent("target_compile_definitions(" + pkg2string(pkg) + " INTERFACE");
+    //                for (auto &[k, p] : s["properties"].getMap())
+    //                {
+    //                    auto inh = std::stoi(k);
+    //                    if ((inh & 4) == 0)
+    //                        continue;
+    //                    for (auto &[k, v] : p["definitions"].getMap())
+    //                    {
+    //                        if_ctx.addLine(cmake_cfg);
+    //                        if (v.getValue().empty())
+    //                            if_ctx.addText(k);
+    //                        else
+    //                            if_ctx.addText(k + "=" + primitives::command::Argument::quote(v.getValue(), primitives::command::QuoteType::Escape));
+    //                        if_ctx.addText(cmake_cfg_end);
+    //                    }
+    //                }
+    //                if_ctx.decreaseIndent(")");
+    //                if_ctx.emptyLines();
 
-                    // idirs
-                    if_ctx.increaseIndent("target_include_directories(" + pkg2string(pkg) + " INTERFACE");
-                    for (auto &[k, p] : s["properties"].getMap())
-                    {
-                        auto inh = std::stoi(k);
-                        if ((inh & 4) == 0)
-                            continue;
-                        for (auto &d : p["include_directories"].getArray())
-                            if_ctx.addLine(cmake_cfg + fix_path(to_string(normalize_path(d.getPathValue(getContext().getLocalStorage())))) + cmake_cfg_end);
-                    }
-                    if_ctx.decreaseIndent(")");
-                    if_ctx.emptyLines();
-                }
+    //                // idirs
+    //                if_ctx.increaseIndent("target_include_directories(" + pkg2string(pkg) + " INTERFACE");
+    //                for (auto &[k, p] : s["properties"].getMap())
+    //                {
+    //                    auto inh = std::stoi(k);
+    //                    if ((inh & 4) == 0)
+    //                        continue;
+    //                    for (auto &d : p["include_directories"].getArray())
+    //                        if_ctx.addLine(cmake_cfg + fix_path(to_string(normalize_path(d.getPathValue(getContext().getLocalStorage())))) + cmake_cfg_end);
+    //                }
+    //                if_ctx.decreaseIndent(")");
+    //                if_ctx.emptyLines();
+    //            }
 
-                // else_ctx
-                {
-                    // defs
-                    String defs;
-                    defs += "\"";
-                    for (auto &[k, p] : s["properties"].getMap())
-                    {
-                        auto inh = std::stoi(k);
-                        if ((inh & 4) == 0)
-                            continue;
-                        for (auto &[k, v] : p["definitions"].getMap())
-                        {
-                            if (v.getValue().empty())
-                                defs += k + ";";
-                            else
-                                defs += k + "=" + primitives::command::Argument::quote(v.getValue(), primitives::command::QuoteType::Escape) + ";";
-                        }
-                    }
-                    defs += "\"";
-                    else_ctx.increaseIndent("set_target_properties(" + pkg2string(pkg) + " PROPERTIES");
-                    else_ctx.addLine("INTERFACE_COMPILE_DEFINITIONS " + defs);
-                    else_ctx.decreaseIndent(")");
-                    else_ctx.emptyLines();
+    //            // else_ctx
+    //            {
+    //                // defs
+    //                String defs;
+    //                defs += "\"";
+    //                for (auto &[k, p] : s["properties"].getMap())
+    //                {
+    //                    auto inh = std::stoi(k);
+    //                    if ((inh & 4) == 0)
+    //                        continue;
+    //                    for (auto &[k, v] : p["definitions"].getMap())
+    //                    {
+    //                        if (v.getValue().empty())
+    //                            defs += k + ";";
+    //                        else
+    //                            defs += k + "=" + primitives::command::Argument::quote(v.getValue(), primitives::command::QuoteType::Escape) + ";";
+    //                    }
+    //                }
+    //                defs += "\"";
+    //                else_ctx.increaseIndent("set_target_properties(" + pkg2string(pkg) + " PROPERTIES");
+    //                else_ctx.addLine("INTERFACE_COMPILE_DEFINITIONS " + defs);
+    //                else_ctx.decreaseIndent(")");
+    //                else_ctx.emptyLines();
 
-                    // idirs
-                    String idirs;
-                    idirs += "\"";
-                    for (auto &[k, p] : s["properties"].getMap())
-                    {
-                        auto inh = std::stoi(k);
-                        if ((inh & 4) == 0)
-                            continue;
-                        for (auto &d : p["include_directories"].getArray())
-                            idirs += fix_path(to_string(normalize_path(d.getPathValue(getContext().getLocalStorage())))) + ";";
-                    }
-                    idirs += "\"";
-                    else_ctx.increaseIndent("set_target_properties(" + pkg2string(pkg) + " PROPERTIES");
-                    else_ctx.addLine("INTERFACE_INCLUDE_DIRECTORIES " + idirs);
-                    else_ctx.decreaseIndent(")");
-                    else_ctx.emptyLines();
-                }
+    //                // idirs
+    //                String idirs;
+    //                idirs += "\"";
+    //                for (auto &[k, p] : s["properties"].getMap())
+    //                {
+    //                    auto inh = std::stoi(k);
+    //                    if ((inh & 4) == 0)
+    //                        continue;
+    //                    for (auto &d : p["include_directories"].getArray())
+    //                        idirs += fix_path(to_string(normalize_path(d.getPathValue(getContext().getLocalStorage())))) + ";";
+    //                }
+    //                idirs += "\"";
+    //                else_ctx.increaseIndent("set_target_properties(" + pkg2string(pkg) + " PROPERTIES");
+    //                else_ctx.addLine("INTERFACE_INCLUDE_DIRECTORIES " + idirs);
+    //                else_ctx.decreaseIndent(")");
+    //                else_ctx.emptyLines();
+    //            }
 
-                if (s["header_only"])
-                    continue;
+    //            if (s["header_only"])
+    //                continue;
 
-                // if_ctx
-                {
-                    // libs
-                    if_ctx.increaseIndent("target_link_libraries(" + pkg2string(pkg) + " INTERFACE");
-                    for (auto &[k, p] : s["properties"].getMap())
-                    {
-                        auto inh = std::stoi(k);
-                        if ((inh & 4) == 0)
-                            continue;
-                        for (auto &d : p["link_libraries"].getArray())
-                            if_ctx.addLine(cmake_cfg + fix_path(to_string(normalize_path(d.getPathValue(getContext().getLocalStorage())))) + cmake_cfg_end);
-                        for (auto &d : p["system_link_libraries"].getArray())
-                            if_ctx.addLine(cmake_cfg + fix_path(d.getValue()) + cmake_cfg_end);
-                    }
-                    if_ctx.decreaseIndent(")");
-                    if_ctx.emptyLines();
-                }
+    //            // if_ctx
+    //            {
+    //                // libs
+    //                if_ctx.increaseIndent("target_link_libraries(" + pkg2string(pkg) + " INTERFACE");
+    //                for (auto &[k, p] : s["properties"].getMap())
+    //                {
+    //                    auto inh = std::stoi(k);
+    //                    if ((inh & 4) == 0)
+    //                        continue;
+    //                    for (auto &d : p["link_libraries"].getArray())
+    //                        if_ctx.addLine(cmake_cfg + fix_path(to_string(normalize_path(d.getPathValue(getContext().getLocalStorage())))) + cmake_cfg_end);
+    //                    for (auto &d : p["system_link_libraries"].getArray())
+    //                        if_ctx.addLine(cmake_cfg + fix_path(d.getValue()) + cmake_cfg_end);
+    //                }
+    //                if_ctx.decreaseIndent(")");
+    //                if_ctx.emptyLines();
+    //            }
 
-                // else_ctx
-                {
-                    // libs
-                    String libs;
-                    libs += "\"";
-                    for (auto &[k, p] : s["properties"].getMap())
-                    {
-                        auto inh = std::stoi(k);
-                        if ((inh & 4) == 0)
-                            continue;
-                        for (auto &d : p["link_libraries"].getArray())
-                            libs += fix_path(to_string(normalize_path(d.getPathValue(getContext().getLocalStorage())))) + ";";
-                        for (auto &d : p["system_link_libraries"].getArray())
-                            libs += d.getValue() + ";";
-                    }
-                    libs += "\"";
-                    else_ctx.increaseIndent("set_target_properties(" + pkg2string(pkg) + " PROPERTIES");
-                    else_ctx.addLine("INTERFACE_LINK_LIBRARIES " + libs);
-                    else_ctx.decreaseIndent(")");
-                }
+    //            // else_ctx
+    //            {
+    //                // libs
+    //                String libs;
+    //                libs += "\"";
+    //                for (auto &[k, p] : s["properties"].getMap())
+    //                {
+    //                    auto inh = std::stoi(k);
+    //                    if ((inh & 4) == 0)
+    //                        continue;
+    //                    for (auto &d : p["link_libraries"].getArray())
+    //                        libs += fix_path(to_string(normalize_path(d.getPathValue(getContext().getLocalStorage())))) + ";";
+    //                    for (auto &d : p["system_link_libraries"].getArray())
+    //                        libs += d.getValue() + ";";
+    //                }
+    //                libs += "\"";
+    //                else_ctx.increaseIndent("set_target_properties(" + pkg2string(pkg) + " PROPERTIES");
+    //                else_ctx.addLine("INTERFACE_LINK_LIBRARIES " + libs);
+    //                else_ctx.decreaseIndent(")");
+    //            }
 
-                // props
-                ctx.increaseIndent("set_target_properties(" + pkg2string(pkg) + " PROPERTIES");
+    //            // props
+    //            ctx.increaseIndent("set_target_properties(" + pkg2string(pkg) + " PROPERTIES");
 
-                // TODO: detect C/CXX language from target files
-                // not needed?
-                ctx.addLine("IMPORTED_LINK_INTERFACE_LANGUAGES_" + toCmakeString(bs.Native.ConfigurationType) + " \"C CXX\"");
+    //            // TODO: detect C/CXX language from target files
+    //            // not needed?
+    //            ctx.addLine("IMPORTED_LINK_INTERFACE_LANGUAGES_" + toCmakeString(bs.Native.ConfigurationType) + " \"C CXX\"");
 
-                // IMPORTED_LOCATION = path to .dll/.so or static .lib/.a
-                ctx.addLine("IMPORTED_LOCATION_" + toCmakeString(bs.Native.ConfigurationType) + " \"" +
-                    fix_path(to_string(normalize_path(s[st == "SHARED" ? "output_file" : "import_library"].getPathValue(getContext().getLocalStorage())))) + "\"");
-                // IMPORTED_IMPLIB = path to .lib (import)
-                ctx.addLine("IMPORTED_IMPLIB_" + toCmakeString(bs.Native.ConfigurationType) + " \"" +
-                    fix_path(to_string(normalize_path(s["import_library"].getPathValue(getContext().getLocalStorage())))) + "\"");
+    //            // IMPORTED_LOCATION = path to .dll/.so or static .lib/.a
+    //            ctx.addLine("IMPORTED_LOCATION_" + toCmakeString(bs.Native.ConfigurationType) + " \"" +
+    //                fix_path(to_string(normalize_path(s[st == "SHARED" ? "output_file" : "import_library"].getPathValue(getContext().getLocalStorage())))) + "\"");
+    //            // IMPORTED_IMPLIB = path to .lib (import)
+    //            ctx.addLine("IMPORTED_IMPLIB_" + toCmakeString(bs.Native.ConfigurationType) + " \"" +
+    //                fix_path(to_string(normalize_path(s["import_library"].getPathValue(getContext().getLocalStorage())))) + "\"");
 
-                ctx.decreaseIndent(")");
-                ctx.emptyLines();
-            }
-            //
+    //            ctx.decreaseIndent(")");
+    //            ctx.emptyLines();
+    //        }
+    //        //
 
-            ctx.emptyLines();
+    //        ctx.emptyLines();
 
-            // build dep
-            ctx.addLine("add_dependencies(" + pkg2string(pkg) + " sw_build_dependencies)");
-            ctx.emptyLines();
+    //        // build dep
+    //        ctx.addLine("add_dependencies(" + pkg2string(pkg) + " sw_build_dependencies)");
+    //        ctx.emptyLines();
 
-            if (pkg.getVersion().isVersion())
-            {
-                auto &v = pkg.getVersion().getVersion();
-                for (auto i = v.getLevel() - 1; i >= 0; i--)
-                {
-                    if (i)
-                        ctx.addLine("add_library(" + pkg2string(pkg.getPath()) + "-" + v.toString(i) + " ALIAS " + pkg2string(pkg) + ")");
-                    else
-                        ctx.addLine("add_library(" + pkg2string(pkg.getPath()) + " ALIAS " + pkg2string(pkg) + ")");
-                }
-            }
+    //        if (pkg.getVersion().isVersion())
+    //        {
+    //            auto &v = pkg.getVersion().getVersion();
+    //            for (auto i = v.getLevel() - 1; i >= 0; i--)
+    //            {
+    //                if (i)
+    //                    ctx.addLine("add_library(" + pkg2string(pkg.getPath()) + "-" + v.toString(i) + " ALIAS " + pkg2string(pkg) + ")");
+    //                else
+    //                    ctx.addLine("add_library(" + pkg2string(pkg.getPath()) + " ALIAS " + pkg2string(pkg) + ")");
+    //            }
+    //        }
 
-            ctx.endif();
-        }
+    //        ctx.endif();
+    //    }
 
-        // deps
-        ctx.addLine("# dependencies");
-        for (auto &[pkg, tgts] : b.getTargets())
-        {
-            if (tgts.empty())
-            {
-                continue;
-                //throw SW_RUNTIME_ERROR("No targets in " + pkg2string(pkg));
-            }
-            // filter out predefined targets
-            if (b.isPredefinedTarget(pkg))
-                continue;
+    //    // deps
+    //    ctx.addLine("# dependencies");
+    //    for (auto &[pkg, tgts] : b.getTargets())
+    //    {
+    //        if (tgts.empty())
+    //        {
+    //            continue;
+    //            //throw SW_RUNTIME_ERROR("No targets in " + pkg2string(pkg));
+    //        }
+    //        // filter out predefined targets
+    //        if (b.isPredefinedTarget(pkg))
+    //            continue;
 
-            auto &t = **tgts.begin();
-            const auto &s = t.getInterfaceSettings();
+    //        auto &t = **tgts.begin();
+    //        const auto &s = t.getInterfaceSettings();
 
-            if (s["type"] == "native_executable"s)
-                continue;
+    //        if (s["type"] == "native_executable"s)
+    //            continue;
 
-            for (auto &[k, p] : s["properties"].getMap())
-            {
-                auto inh = std::stoi(k);
-                if ((inh & 4) == 0)
-                    continue;
+    //        for (auto &[k, p] : s["properties"].getMap())
+    //        {
+    //            auto inh = std::stoi(k);
+    //            if ((inh & 4) == 0)
+    //                continue;
 
-                for (auto &p1 : p["dependencies"].getArray())
-                {
-                    for (auto &[k, v] : p1.getMap())
-                    {
-                        sw::PackageId dep(k);
-                        //if (b.getContext().getPredefinedTargets().find(dep) != b.getContext().getPredefinedTargets().end())
-                            //continue;
-                        ctx.addLine("target_link_libraries(" + pkg2string(pkg) + " INTERFACE " + dep.toString() + ")");
-                    }
-                }
-            }
-        }
-        write_file_if_different(getOptions().options_integrate.integrate_cmake_deps.parent_path() / "CMakeLists.txt", ctx.getText());
+    //            for (auto &p1 : p["dependencies"].getArray())
+    //            {
+    //                for (auto &[k, v] : p1.getMap())
+    //                {
+    //                    sw::PackageId dep(k);
+    //                    //if (b.getContext().getPredefinedTargets().find(dep) != b.getContext().getPredefinedTargets().end())
+    //                        //continue;
+    //                    ctx.addLine("target_link_libraries(" + pkg2string(pkg) + " INTERFACE " + dep.toString() + ")");
+    //                }
+    //            }
+    //        }
+    //    }
+    //    write_file_if_different(getOptions().options_integrate.integrate_cmake_deps.parent_path() / "CMakeLists.txt", ctx.getText());
 
-        return;
-    }
+    //    return;
+    //}
 
-    if (!getOptions().options_integrate.integrate_waf_deps.empty())
-    {
-        auto build = create_build(getOptions().options_integrate.integrate_waf_deps);
-        auto &b = *build;
+    //if (!getOptions().options_integrate.integrate_waf_deps.empty())
+    //{
+    //    auto build = create_build(getOptions().options_integrate.integrate_waf_deps);
+    //    auto &b = *build;
 
-        // https://waf.io/apidocs/_modules/waflib/Tools/c_config.html#parse_flags
-        primitives::Emitter ctx;
+    //    // https://waf.io/apidocs/_modules/waflib/Tools/c_config.html#parse_flags
+    //    primitives::Emitter ctx;
 
-        ctx.increaseIndent("def configure(ctx):");
+    //    ctx.increaseIndent("def configure(ctx):");
 
-        for (auto &[pkg, tgts] : b.getTargets())
-        {
-            if (tgts.empty())
-            {
-                continue;
-                //throw SW_RUNTIME_ERROR("No targets in " + pkg2string(pkg));
-            }
-            // filter out predefined targets
-            if (b.isPredefinedTarget(pkg))
-                continue;
+    //    for (auto &[pkg, tgts] : b.getTargets())
+    //    {
+    //        if (tgts.empty())
+    //        {
+    //            continue;
+    //            //throw SW_RUNTIME_ERROR("No targets in " + pkg2string(pkg));
+    //        }
+    //        // filter out predefined targets
+    //        if (b.isPredefinedTarget(pkg))
+    //            continue;
 
-            auto &t = **tgts.begin();
-            const auto &s = t.getInterfaceSettings();
+    //        auto &t = **tgts.begin();
+    //        const auto &s = t.getInterfaceSettings();
 
-            if (s["type"] == "native_executable"s)
-                continue;
+    //        if (s["type"] == "native_executable"s)
+    //            continue;
 
-            ctx.addLine("# " + pkg2string(pkg));
-            ctx.increaseIndent("for lib in [");
-            for (auto i = pkg.getVersion().getVersion().getLevel(); i >= 0; i--)
-            {
-                if (i)
-                    ctx.addLine("'" + pkg2string(pkg.getPath()) + "-" + pkg.getVersion().getVersion().toString(i) + "',");
-                else
-                    ctx.addLine("'" + pkg2string(pkg.getPath()) + "',");
-            }
-            ctx.decreaseIndent("]:");
-            ctx.increaseIndent();
+    //        ctx.addLine("# " + pkg2string(pkg));
+    //        ctx.increaseIndent("for lib in [");
+    //        for (auto i = pkg.getVersion().getVersion().getLevel(); i >= 0; i--)
+    //        {
+    //            if (i)
+    //                ctx.addLine("'" + pkg2string(pkg.getPath()) + "-" + pkg.getVersion().getVersion().toString(i) + "',");
+    //            else
+    //                ctx.addLine("'" + pkg2string(pkg.getPath()) + "',");
+    //        }
+    //        ctx.decreaseIndent("]:");
+    //        ctx.increaseIndent();
 
-            SW_UNIMPLEMENTED; // make custom hash for tgt_type
-            /*using tgt_type = std::pair<sw::PackageId, sw::PackageSettings>;
-            using f_param = const tgt_type &;
-            std::function<void(f_param)> process;
-            std::unordered_set<tgt_type> visited;
-            process = [this, &process, &s, &b, &ctx, &visited](f_param nt)
-            {
-                if (visited.find(nt) != visited.end())
-                    return;
-                visited.insert(nt);
+    //        SW_UNIMPLEMENTED; // make custom hash for tgt_type
+    //        /*using tgt_type = std::pair<sw::PackageId, sw::PackageSettings>;
+    //        using f_param = const tgt_type &;
+    //        std::function<void(f_param)> process;
+    //        std::unordered_set<tgt_type> visited;
+    //        process = [this, &process, &s, &b, &ctx, &visited](f_param nt)
+    //        {
+    //            if (visited.find(nt) != visited.end())
+    //                return;
+    //            visited.insert(nt);
 
-                auto t = b.getTargets().find(nt.first, nt.second);
-                if (!t)
-                    throw SW_RUNTIME_ERROR("no such target: " + pkg2string(nt.first));
+    //            auto t = b.getTargets().find(nt.first, nt.second);
+    //            if (!t)
+    //                throw SW_RUNTIME_ERROR("no such target: " + pkg2string(nt.first));
 
-                const auto &s = t->getInterfaceSettings();
+    //            const auto &s = t->getInterfaceSettings();
 
-                auto remove_ext = [](const path &p)
-                {
-                    return p.parent_path() / p.stem();
-                };
+    //            auto remove_ext = [](const path &p)
+    //            {
+    //                return p.parent_path() / p.stem();
+    //            };
 
-                ctx.addLine("ctx.parse_flags('-l" + to_string(normalize_path(remove_ext(s["import_library"].getPathValue(getContext().getLocalStorage())))) + "', lib)");
+    //            ctx.addLine("ctx.parse_flags('-l" + to_string(normalize_path(remove_ext(s["import_library"].getPathValue(getContext().getLocalStorage())))) + "', lib)");
 
-                // defs
-                for (auto &[k, p] : s["properties"].getMap())
-                {
-                    auto inh = std::stoi(k);
-                    if ((inh & 4) == 0)
-                        continue;
+    //            // defs
+    //            for (auto &[k, p] : s["properties"].getMap())
+    //            {
+    //                auto inh = std::stoi(k);
+    //                if ((inh & 4) == 0)
+    //                    continue;
 
-                    for (auto &[k, v] : p["definitions"].getMap())
-                    {
-                        if (v.getValue().empty())
-                            ctx.addLine("ctx.parse_flags('-D" + k + "', lib)");
-                        else
-                            ctx.addLine("ctx.parse_flags('-D" + k + "=" + primitives::command::Argument::quote(v.getValue(), primitives::command::QuoteType::Escape) + "', lib)");
-                    }
+    //                for (auto &[k, v] : p["definitions"].getMap())
+    //                {
+    //                    if (v.getValue().empty())
+    //                        ctx.addLine("ctx.parse_flags('-D" + k + "', lib)");
+    //                    else
+    //                        ctx.addLine("ctx.parse_flags('-D" + k + "=" + primitives::command::Argument::quote(v.getValue(), primitives::command::QuoteType::Escape) + "', lib)");
+    //                }
 
-                    // idirs
-                    for (auto &d : p["include_directories"].getArray())
-                        ctx.addLine("ctx.parse_flags('-I" + to_string(normalize_path(d.getPathValue(getContext().getLocalStorage()))) + "', lib)");
+    //                // idirs
+    //                for (auto &d : p["include_directories"].getArray())
+    //                    ctx.addLine("ctx.parse_flags('-I" + to_string(normalize_path(d.getPathValue(getContext().getLocalStorage()))) + "', lib)");
 
-                    // libs
-                    for (auto &d : p["link_libraries"].getArray())
-                        ctx.addLine("ctx.parse_flags('-l" + to_string(normalize_path(remove_ext(d.getPathValue(getContext().getLocalStorage())))) + "', lib)");
-                    for (auto &d : p["system_link_libraries"].getArray())
-                        ctx.addLine("ctx.parse_flags('-l" + to_string(normalize_path(remove_ext(d.getPathValue(getContext().getLocalStorage())))) + "', lib)");
+    //                // libs
+    //                for (auto &d : p["link_libraries"].getArray())
+    //                    ctx.addLine("ctx.parse_flags('-l" + to_string(normalize_path(remove_ext(d.getPathValue(getContext().getLocalStorage())))) + "', lib)");
+    //                for (auto &d : p["system_link_libraries"].getArray())
+    //                    ctx.addLine("ctx.parse_flags('-l" + to_string(normalize_path(remove_ext(d.getPathValue(getContext().getLocalStorage())))) + "', lib)");
 
-                    // deps
-                    for (auto &p1 : p["dependencies"].getArray())
-                    {
-                        for (auto &[k, v] : p1.getMap())
-                        {
-                            process({ k, v.getMap() });
-                        }
-                    }
-                }
-            };
-            process({t.getPackage(), t.getSettings()});*/
+    //                // deps
+    //                for (auto &p1 : p["dependencies"].getArray())
+    //                {
+    //                    for (auto &[k, v] : p1.getMap())
+    //                    {
+    //                        process({ k, v.getMap() });
+    //                    }
+    //                }
+    //            }
+    //        };
+    //        process({t.getPackage(), t.getSettings()});*/
 
-            ctx.decreaseIndent();
-            ctx.emptyLines();
-            //
-        }
+    //        ctx.decreaseIndent();
+    //        ctx.emptyLines();
+    //        //
+    //    }
 
-        write_file_if_different("wscript", ctx.getText());
+    //    write_file_if_different("wscript", ctx.getText());
 
-        return;
-    }
+    //    return;
+    //}
 
     SW_UNIMPLEMENTED;
 }

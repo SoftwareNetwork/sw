@@ -534,6 +534,9 @@ void NativeCompiledTarget::findCompiler()
 void NativeCompiledTarget::init()
 {
     // before target init
+    if (ts.empty())
+        return;
+
     addSettingsAndSetPrograms(*this, ts);
 
     if (!isHeaderOnly())
@@ -581,7 +584,8 @@ void NativeCompiledTarget::setupCommand(builder::Command &c) const
     {
         for (auto &d : all_deps_normal)
         {
-            if (&d->getTarget() == this)
+            SW_UNIMPLEMENTED;
+            /*if (&d->getTarget() == this)
                 continue;
             if (auto nt = d->getTarget().as<const NativeCompiledTarget *>())
             {
@@ -602,7 +606,7 @@ void NativeCompiledTarget::setupCommand(builder::Command &c) const
                 }
             }
             else
-                throw SW_RUNTIME_ERROR("missing predefined target code");
+                throw SW_RUNTIME_ERROR("missing predefined target code");*/
         }
     };
 
@@ -945,7 +949,8 @@ Commands NativeCompiledTarget::getCommands1() const
     auto get_tgts = [this]()
     {
         TargetsSet deps;
-        for (auto &d : all_deps_normal)
+        SW_UNIMPLEMENTED;
+        /*for (auto &d : all_deps_normal)
             deps.insert(&d->getTarget());
         for (auto &d : all_deps_idir_only)
         {
@@ -953,7 +958,7 @@ Commands NativeCompiledTarget::getCommands1() const
             if (!d->GenerateCommandsBefore)
                 continue;
             deps.insert(&d->getTarget());
-        }
+        }*/
         return deps;
     };
 
@@ -1308,6 +1313,9 @@ const NativeCompiledTarget::ActiveDeps &NativeCompiledTarget::getActiveDependenc
 
 void NativeCompiledTarget::setInterfaceSettings()
 {
+    if (ts.empty())
+        return;
+
     // Do not export any private information.
     // It MUST be extracted from getCommands() call.
 
@@ -1357,13 +1365,15 @@ void NativeCompiledTarget::setInterfaceSettings()
     {
         if (d.dep->IncludeDirectoriesOnly || d.dep->LinkLibrariesOnly)
             continue;
-        if (1/* && t->getType() != TargetType::NativeExecutable*/)
-            s["dependencies"]["link"][boost::to_lower_copy(d.dep->getTarget().getPackage().toString())] = d.dep->getTarget().getSettings();
+        if (1
+        // && t->getType() != TargetType::NativeExecutable
+        )
+            s["dependencies"]["link"][boost::to_lower_copy(d.dep->getUnresolvedPackageId().getName().toString())] = d.dep->getUnresolvedPackageId().getSettings();
     }
     for (auto &d : DummyDependencies)
     {
         // rename dummy?
-        s["dependencies"]["dummy"][boost::to_lower_copy(d->getTarget().getPackage().toString())] = d->getTarget().getSettings();
+        s["dependencies"]["dummy"][boost::to_lower_copy(d->getUnresolvedPackageId().getName().toString())] = d->getUnresolvedPackageId().getSettings();
     }
     for (auto &d : SourceDependencies)
     {
@@ -1445,15 +1455,15 @@ void NativeCompiledTarget::setInterfaceSettings()
                 s["frameworks"].push_back(d);
         }
 
-        auto print_deps = [&s](auto &g)
+        if (i != InheritanceType::Private)
         {
             for (auto &d : g.getRawDependencies())
             {
                 if (d->isDisabled())
                     continue;
                 PackageSettings j;
-                auto &ds = j[boost::to_lower_copy(d->getTarget().getPackage().toString())];
-                ds = d->getTarget().getSettings();
+                auto &ds = j[boost::to_lower_copy(d->getUnresolvedPackageId().getName().toString())];
+                ds = d->getUnresolvedPackageId().getSettings();
                 if (d->IncludeDirectoriesOnly)
                 {
                     ds["include_directories_only"] = true;
@@ -1466,10 +1476,7 @@ void NativeCompiledTarget::setInterfaceSettings()
                 }
                 s["dependencies"].push_back(j);
             }
-        };
-
-        if (i != InheritanceType::Private)
-            print_deps(g);
+        }
     });
 }
 
@@ -1482,7 +1489,7 @@ void NativeCompiledTarget::prepare1()
     prepared = true;
 
     // no our rules
-    if (!isHeaderOnly())
+    if (!isHeaderOnly() && !ts.empty())
     {
         auto add_dep = [this](auto &&name)
         {
@@ -1670,6 +1677,9 @@ void NativeCompiledTarget::prepare1()
 
     //
     setInterfaceSettings();
+
+    if (DryRun)
+        return;
 
     //
     auto &is = getInterfaceSettings();
@@ -1919,6 +1929,9 @@ void NativeCompiledTarget::prepare_pass1()
 
 void NativeCompiledTarget::prepare_pass2()
 {
+    if (ts.empty())
+        return;
+
     // resolve deps
     for (auto &d : getActiveDependencies())
     {
@@ -1946,7 +1959,7 @@ void NativeCompiledTarget::prepare_pass2()
 
     // force cpp standard
     // some stdlibs require *minimal* cpp std to be set
-    if (getSettings()["native"]["stdlib"]["cpp"])
+    /*if (getSettings()["native"]["stdlib"]["cpp"])
     {
         auto &p = getSettings()["native"]["stdlib"]["cpp"];
         UnresolvedPackageName u = p.is<UnresolvedPackageName>()
@@ -1966,7 +1979,7 @@ void NativeCompiledTarget::prepare_pass2()
                 }
             }
         }
-    }
+    }*/
 
     if (!isStaticOrHeaderOnlyLibrary())
         return;
@@ -1978,18 +1991,25 @@ void NativeCompiledTarget::prepare_pass2()
         if (d.dep->IncludeDirectoriesOnly)
             continue;
         auto d3 = std::make_shared<Dependency>(d.dep->getUnresolvedPackageId());
-        d3->setTarget(d.dep->getTarget());
+        SW_UNIMPLEMENTED;
+        //d3->setTarget(d.dep->getTarget());
         d3->LinkLibrariesOnly = true;
         Interface += d3;
         active_deps->push_back(createDependency(*d3, InheritanceType::Interface, *this));
     }
 }
 
+template <typename T, typename U>
+static bool hasSameProject(const T &t, const U &u)
+{
+    return t.getInterfaceSettings()["project"] == u.getInterfaceSettings()["project"];
+}
+
 struct H
 {
     size_t operator()(const DependencyPtr &p) const
     {
-        return std::hash<PackageName>()(p->getTarget().getPackage());
+        return std::hash<UnresolvedPackageId>()(p->getUnresolvedPackageId());
     }
 };
 
@@ -1997,7 +2017,7 @@ struct EQ
 {
     size_t operator()(const DependencyPtr &p1, const DependencyPtr &p2) const
     {
-        return &p1->getTarget() == &p2->getTarget();
+        return p1->getUnresolvedPackageId() == p2->getUnresolvedPackageId();
     }
 };
 
@@ -2055,10 +2075,10 @@ void NativeCompiledTarget::prepare_pass3_1()
                 // before d2->getTarget()!
                 if (Inheritance == InheritanceType::Private)
                     return;
-                if (&d2.getTarget() == this)
-                    return;
+                //if (&d2.getTarget() == this)
+                    //return;
                 // check same with d, not d2!
-                if (Inheritance == InheritanceType::Protected && !hasSameProject(d.getTarget()))
+                if (Inheritance == InheritanceType::Protected && !::sw::hasSameProject(*this, d))
                     return;
 
                 auto copy = std::make_shared<Dependency>(d2);
@@ -2074,7 +2094,7 @@ void NativeCompiledTarget::prepare_pass3_1()
                     i->second |= newinh;
             };
 
-            if (auto t = d->getTarget().as<const NativeCompiledTarget *>())
+            /*if (auto t = d->getTarget().as<const NativeCompiledTarget *>())
             {
                 // iterate over child deps
                 for (auto &dep : t->getActiveDependencies())
@@ -2087,9 +2107,9 @@ void NativeCompiledTarget::prepare_pass3_1()
                     calc_deps(*d, *dep.dep, dep.inhtype);
                 }
             }
-            else
+            else*/
             {
-                auto &ts = d->getTarget().getInterfaceSettings();
+                auto &ts = d->getInterfaceSettings();
 
                 for (auto &[k, v] : ts["properties"].getMap())
                 {
@@ -2102,37 +2122,37 @@ void NativeCompiledTarget::prepare_pass3_1()
                             // find our resolved dependency and run
                             bool found = false;
                             SW_UNIMPLEMENTED;
-                            /*for (auto &d3 : t->getDependencies())
-                            {
-                                if (d3->getTarget().getPackage() == package_id && d3->getSettings() == settings.getMap())
-                                {
-                                    String err = getPackage().toString() + ": ";
-                                    err += "dependency: " + t->getPackage().toString() + ": ";
-                                    err += "dependency: " + d3->getUnresolvedPackage().toString();
+                            //for (auto &d3 : t->getDependencies())
+                            //{
+                            //    if (d3->getTarget().getPackage() == package_id && d3->getSettings() == settings.getMap())
+                            //    {
+                            //        String err = getPackage().toString() + ": ";
+                            //        err += "dependency: " + t->getPackage().toString() + ": ";
+                            //        err += "dependency: " + d3->getUnresolvedPackage().toString();
 
-                                    // construct
-                                    Dependency d2(d3->getUnresolvedPackage());
-                                    d2.settings = d3->getSettings();
-                                    d2.setTarget(d3->getTarget());
-                                    //d2.IncludeDirectoriesOnly = d3->getSettings()["include_directories_only"];
-                                    d2.IncludeDirectoriesOnly = settings["include_directories_only"];
-                                    //SW_ASSERT(d3->getSettings()["include_directories_only"] == settings["include_directories_only"], err);
-                                    d2.LinkLibrariesOnly = settings["link_libraries_only"];
-                                    //SW_ASSERT(d3->getSettings()["link_libraries_only"] == settings["link_libraries_only"], err);
+                            //        // construct
+                            //        Dependency d2(d3->getUnresolvedPackage());
+                            //        d2.settings = d3->getSettings();
+                            //        d2.setTarget(d3->getTarget());
+                            //        //d2.IncludeDirectoriesOnly = d3->getSettings()["include_directories_only"];
+                            //        d2.IncludeDirectoriesOnly = settings["include_directories_only"];
+                            //        //SW_ASSERT(d3->getSettings()["include_directories_only"] == settings["include_directories_only"], err);
+                            //        d2.LinkLibrariesOnly = settings["link_libraries_only"];
+                            //        //SW_ASSERT(d3->getSettings()["link_libraries_only"] == settings["link_libraries_only"], err);
 
-                                    // skip both of idir only libs and llibs only
-                                    if (d2.IncludeDirectoriesOnly || d2.LinkLibrariesOnly)
-                                    {
-                                        // do not process here
-                                        found = true;
-                                        break;
-                                    }
+                            //        // skip both of idir only libs and llibs only
+                            //        if (d2.IncludeDirectoriesOnly || d2.LinkLibrariesOnly)
+                            //        {
+                            //            // do not process here
+                            //            found = true;
+                            //            break;
+                            //        }
 
-                                    calc_deps(*d, d2, inh);
-                                    found = true;
-                                    break;
-                                }
-                            }*/
+                            //        calc_deps(*d, d2, inh);
+                            //        found = true;
+                            //        break;
+                            //    }
+                            //}
                             if (!found)
                                 throw SW_RUNTIME_ERROR("Cannot find predefined target: " + package_id);
                         }
@@ -2203,10 +2223,10 @@ void NativeCompiledTarget::prepare_pass3_2()
                 // before d2->getTarget()!
                 if (Inheritance == InheritanceType::Private)
                     return;
-                if (&d2.getTarget() == this)
-                    return;
+                //if (&d2.getTarget() == this)
+                    //return;
                 // check same with d, not d2!
-                if (Inheritance == InheritanceType::Protected && !hasSameProject(d.getTarget()))
+                if (Inheritance == InheritanceType::Protected && !::sw::hasSameProject(*this, d))
                     return;
 
                 auto copy = std::make_shared<Dependency>(d2);
@@ -2226,7 +2246,7 @@ void NativeCompiledTarget::prepare_pass3_2()
                     i->second |= newinh;
             };
 
-            if (auto t = d->getTarget().as<const NativeCompiledTarget *>())
+            /*if (auto t = d->getTarget().as<const NativeCompiledTarget *>())
             {
                 // iterate over child deps
                 for (auto &dep : t->getActiveDependencies())
@@ -2238,9 +2258,9 @@ void NativeCompiledTarget::prepare_pass3_2()
                     calc_deps(*d, *dep.dep, dep.inhtype);
                 }
             }
-            else
+            else*/
             {
-                auto &ts = d->getTarget().getInterfaceSettings();
+                auto &ts = d->getInterfaceSettings();
 
                 for (auto &[k, v] : ts["properties"].getMap())
                 {
@@ -2253,36 +2273,36 @@ void NativeCompiledTarget::prepare_pass3_2()
                             // find our resolved dependency and run
                             bool found = false;
                             SW_UNIMPLEMENTED;
-                            /*for (auto &d3 : t->getDependencies())
-                            {
-                                if (d3->getTarget().getPackage() == package_id && d3->getSettings() == settings.getMap())
-                                {
-                                    // construct
-                                    Dependency d2(d3->getUnresolvedPackage());
-                                    d2.settings = d3->getSettings();
-                                    d2.setTarget(d3->getTarget());
-                                    d2.IncludeDirectoriesOnly = settings["include_directories_only"];
-                                    d2.LinkLibrariesOnly = settings["link_libraries_only"];
+                            //for (auto &d3 : t->getDependencies())
+                            //{
+                            //    if (d3->getTarget().getPackage() == package_id && d3->getSettings() == settings.getMap())
+                            //    {
+                            //        // construct
+                            //        Dependency d2(d3->getUnresolvedPackage());
+                            //        d2.settings = d3->getSettings();
+                            //        d2.setTarget(d3->getTarget());
+                            //        d2.IncludeDirectoriesOnly = settings["include_directories_only"];
+                            //        d2.LinkLibrariesOnly = settings["link_libraries_only"];
 
-                                    //// exit early before llibs only
-                                    if (!d->IncludeDirectoriesOnly && !d2.IncludeDirectoriesOnly)
-                                    {
-                                        // do not process here
-                                        found = true;
-                                        continue;
-                                    }
-                                    if (d2.LinkLibrariesOnly)
-                                    {
-                                        // do not process here
-                                        found = true;
-                                        continue;
-                                    }
+                            //        //// exit early before llibs only
+                            //        if (!d->IncludeDirectoriesOnly && !d2.IncludeDirectoriesOnly)
+                            //        {
+                            //            // do not process here
+                            //            found = true;
+                            //            continue;
+                            //        }
+                            //        if (d2.LinkLibrariesOnly)
+                            //        {
+                            //            // do not process here
+                            //            found = true;
+                            //            continue;
+                            //        }
 
-                                    calc_deps(*d, d2, inh);
-                                    found = true;
-                                    break;
-                                }
-                            }*/
+                            //        calc_deps(*d, d2, inh);
+                            //        found = true;
+                            //        break;
+                            //    }
+                            //}
                             if (!found)
                                 throw SW_RUNTIME_ERROR("Cannot find predefined target: " + package_id);
                         }
@@ -2295,7 +2315,9 @@ void NativeCompiledTarget::prepare_pass3_2()
         {
             for (auto &d : deps_ordered)
             {
-                if (&d->getTarget() != this && d->IncludeDirectoriesOnly)
+                if (
+                    //&d->getTarget() != this &&
+                    d->IncludeDirectoriesOnly)
                     all_deps_idir_only.insert(deps.find(d)->first);
             }
             break;
@@ -2328,14 +2350,14 @@ void NativeCompiledTarget::prepare_pass3_3()
     }
     for (auto &d : all_deps_normal)
     {
-        if (auto t = d->getTarget().as<const NativeCompiledTarget *>())
+        /*if (auto t = d->getTarget().as<const NativeCompiledTarget *>())
         {
             if (!t->isStaticOrHeaderOnlyLibrary())
                 continue;
         }
-        else
+        else*/
         {
-            auto &ts = d->getTarget().getInterfaceSettings();
+            auto &ts = d->getInterfaceSettings();
             if (!::sw::isStaticOrHeaderOnlyLibrary(ts))
                 continue;
         }
@@ -2357,8 +2379,9 @@ void NativeCompiledTarget::prepare_pass3_3()
             // accepts this driver's Dependency class
             auto calc_deps = [this, &deps, &deps_ordered, &new_dependency](Dependency &d, Dependency &d2, InheritanceType Inheritance)
             {
-                if (&d2.getTarget() == this)
-                    return;
+                SW_UNIMPLEMENTED;
+                //if (&d2.getTarget() == this)
+                    //return;
 
                 auto copy = std::make_shared<Dependency>(d2);
                 auto newinh = Inheritance == InheritanceType::Interface ? InheritanceType::Public : Inheritance;
@@ -2377,7 +2400,7 @@ void NativeCompiledTarget::prepare_pass3_3()
                     i->second |= newinh;
             };
 
-            if (auto t = d->getTarget().as<const NativeCompiledTarget *>())
+            /*if (auto t = d->getTarget().as<const NativeCompiledTarget *>())
             {
                 if (!t->isStaticOrHeaderOnlyLibrary())
                     continue;
@@ -2389,9 +2412,9 @@ void NativeCompiledTarget::prepare_pass3_3()
                     calc_deps(*d, *dep.dep, dep.inhtype);
                 }
             }
-            else
+            else*/
             {
-                auto &ts = d->getTarget().getInterfaceSettings();
+                auto &ts = d->getInterfaceSettings();
 
                 if (!::sw::isStaticOrHeaderOnlyLibrary(ts))
                     continue;
@@ -2407,29 +2430,29 @@ void NativeCompiledTarget::prepare_pass3_3()
                             // find our resolved dependency and run
                             bool found = false;
                             SW_UNIMPLEMENTED;
-                            /*for (auto &d3 : t->getDependencies())
-                            {
-                                if (d3->getTarget().getPackage() == package_id && d3->getSettings() == settings.getMap())
-                                {
-                                    // construct
-                                    Dependency d2(d3->getUnresolvedPackage());
-                                    d2.settings = d3->getSettings();
-                                    d2.setTarget(d3->getTarget());
-                                    d2.IncludeDirectoriesOnly = settings["include_directories_only"];
-                                    d2.LinkLibrariesOnly = settings["link_libraries_only"];
+                            //for (auto &d3 : t->getDependencies())
+                            //{
+                            //    if (d3->getTarget().getPackage() == package_id && d3->getSettings() == settings.getMap())
+                            //    {
+                            //        // construct
+                            //        Dependency d2(d3->getUnresolvedPackage());
+                            //        d2.settings = d3->getSettings();
+                            //        d2.setTarget(d3->getTarget());
+                            //        d2.IncludeDirectoriesOnly = settings["include_directories_only"];
+                            //        d2.LinkLibrariesOnly = settings["link_libraries_only"];
 
-                                    if (!d2.LinkLibrariesOnly)
-                                    {
-                                        // do not process here
-                                        found = true;
-                                        break;
-                                    }
+                            //        if (!d2.LinkLibrariesOnly)
+                            //        {
+                            //            // do not process here
+                            //            found = true;
+                            //            break;
+                            //        }
 
-                                    calc_deps(*d, d2, inh);
-                                    found = true;
-                                    break;
-                                }
-                            }*/
+                            //        calc_deps(*d, d2, inh);
+                            //        found = true;
+                            //        break;
+                            //    }
+                            //}
                             if (!found)
                                 throw SW_RUNTIME_ERROR("Cannot find predefined target: " + package_id);
                         }
@@ -2442,8 +2465,9 @@ void NativeCompiledTarget::prepare_pass3_3()
         {
             for (auto &d : deps_ordered)
             {
-                if (&d->getTarget() != this && d->LinkLibrariesOnly)
-                    all_deps_llibs_only.insert(deps.find(d)->first);
+                SW_UNIMPLEMENTED;
+                //if (&d->getTarget() != this && d->LinkLibrariesOnly)
+                    //all_deps_llibs_only.insert(deps.find(d)->first);
             }
             break;
         }
@@ -2457,7 +2481,7 @@ void NativeCompiledTarget::prepare_pass4()
     // merge files early
     for (auto &d : all_deps_normal)
     {
-        if (auto t = d->getTarget().as<const NativeCompiledTarget *>())
+        /*if (auto t = d->getTarget().as<const NativeCompiledTarget *>())
         {
             GroupSettings s;
             s.has_same_parent = hasSameProject(*t);
@@ -2470,16 +2494,16 @@ void NativeCompiledTarget::prepare_pass4()
             // always with interface
             mergeFiles(g.Interface, s);
         }
-        else
+        else*/
         {
-            const auto &is = d->getTarget().getInterfaceSettings();
+            const auto &is = d->getInterfaceSettings();
 
             for (auto &[k,v] : is["properties"].getMap())
             {
                 auto inh = (InheritanceType)std::stoi(k);
                 if (inh == InheritanceType::Private)
                     continue;
-                if (inh == InheritanceType::Protected && !hasSameProject(d->getTarget()))
+                if (inh == InheritanceType::Protected && !::sw::hasSameProject(*this, *d))
                     continue;
 
                 for (auto &v2 : v["source_files"].getArray())
@@ -2500,7 +2524,7 @@ void NativeCompiledTarget::prepare_pass4()
     // take everything
     for (auto &d : all_deps_normal)
     {
-        if (auto t = d->getTarget().as<const NativeCompiledTarget *>())
+        /*if (auto t = d->getTarget().as<const NativeCompiledTarget *>())
         {
             GroupSettings s;
             s.has_same_parent = hasSameProject(*t);
@@ -2513,16 +2537,16 @@ void NativeCompiledTarget::prepare_pass4()
             // always with interface
             getMergeObject().merge(g.Interface, s);
         }
-        else
+        else*/
         {
-            const auto &is = d->getTarget().getInterfaceSettings();
+            const auto &is = d->getInterfaceSettings();
 
             for (auto &[k,v] : is["properties"].getMap())
             {
                 auto inh = (InheritanceType)std::stoi(k);
                 if (inh == InheritanceType::Private)
                     continue;
-                if (inh == InheritanceType::Protected && !hasSameProject(d->getTarget()))
+                if (inh == InheritanceType::Protected && !::sw::hasSameProject(*this, *d))
                     continue;
 
                 for (auto &v2 : v["source_files"].getArray())
@@ -2564,7 +2588,7 @@ void NativeCompiledTarget::prepare_pass4()
     // take defs and idirs
     for (auto &d : all_deps_idir_only)
     {
-        if (auto t = d->getTarget().as<const NativeCompiledTarget *>())
+        /*if (auto t = d->getTarget().as<const NativeCompiledTarget *>())
         {
             GroupSettings s;
             s.include_directories_only = true;
@@ -2583,16 +2607,16 @@ void NativeCompiledTarget::prepare_pass4()
             getMergeObject().NativeCompilerOptions::merge(g.Public, s);
             getMergeObject().NativeCompilerOptions::merge(g.Interface, s);
         }
-        else
+        else*/
         {
-            const auto &is = d->getTarget().getInterfaceSettings();
+            const auto &is = d->getInterfaceSettings();
 
             for (auto &[k,v] : is["properties"].getMap())
             {
                 auto inh = (InheritanceType)std::stoi(k);
                 if (inh == InheritanceType::Private)
                     continue;
-                if (inh == InheritanceType::Protected && !hasSameProject(d->getTarget()))
+                if (inh == InheritanceType::Protected && !::sw::hasSameProject(*this, *d))
                     continue;
 
                 // allow only header only files?
@@ -2622,7 +2646,7 @@ void NativeCompiledTarget::prepare_pass4()
     // merge from everything (every visibility class)
     for (auto &d : all_deps_llibs_only)
     {
-        if (auto t = d->getTarget().as<const NativeCompiledTarget *>())
+        /*if (auto t = d->getTarget().as<const NativeCompiledTarget *>())
         {
             SwapAndRestore sr(getMergeObject().LinkOptions); // keep unchanged
             t->TargetOptionsGroup::iterate([this](auto &v, auto i)
@@ -2630,9 +2654,9 @@ void NativeCompiledTarget::prepare_pass4()
                 getMergeObject().NativeLinkerOptions::merge(v);
             });
         }
-        else
+        else*/
         {
-            const auto &is = d->getTarget().getInterfaceSettings();
+            const auto &is = d->getInterfaceSettings();
 
             for (auto &[k,v] : is["properties"].getMap())
             {
@@ -3093,7 +3117,8 @@ FilesOrdered NativeCompiledTarget::gatherRpathLinkDirectories() const
     FilesOrdered rpath;
     for (auto &d : all_deps_normal)
     {
-        if (auto dt = d->getTarget().template as<const NativeCompiledTarget *>())
+        SW_UNIMPLEMENTED;
+        /*if (auto dt = d->getTarget().template as<const NativeCompiledTarget *>())
         {
             if (!dt->isStaticOrHeaderOnlyLibrary())
                 rpath.push_back(dt->getOutputFile().parent_path());
@@ -3103,7 +3128,7 @@ FilesOrdered NativeCompiledTarget::gatherRpathLinkDirectories() const
             auto &ts = d->getTarget().getInterfaceSettings();
             if (!::sw::isStaticOrHeaderOnlyLibrary(ts))
                 rpath.push_back(ts["output_file"].getPathValue(getContext().getLocalStorage()).parent_path());
-        }
+        }*/
     }
     return rpath;
 }

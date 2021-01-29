@@ -65,11 +65,12 @@ IRule *RuleData::getRule() const
         return ptr.get();
     if (!dep)
         return {};
-    auto t = dep->getTarget().as<PredefinedProgram *>();
+    SW_UNIMPLEMENTED;
+    /*auto t = dep->getTarget().as<PredefinedProgram *>();
     if (!t)
         SW_UNIMPLEMENTED;
     ptr = t->getRule1(target_rule_name);
-    return ptr.get();
+    return ptr.get();*/
 }
 
 void RuleSystem::addRuleDependency(const RuleData &d, bool overwrite)
@@ -111,10 +112,11 @@ IRulePtr RuleSystem::getRuleFromDependency(const String &ruledepname, const Stri
     auto dep = getRuleDependency(ruledepname);
     if (!dep)
         throw SW_RUNTIME_ERROR("No rule dependency for rule: " + ruledepname);
-    if (auto t = dep->getTarget().as<PredefinedProgram *>())
+    SW_UNIMPLEMENTED;
+    /*if (auto t = dep->getTarget().as<PredefinedProgram *>())
         return t->getRule1(rulename);
     else
-        SW_UNIMPLEMENTED;
+        SW_UNIMPLEMENTED;*/
 }
 
 IRulePtr RuleSystem::getRuleFromDependency(const String &rulename) const

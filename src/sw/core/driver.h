@@ -11,6 +11,8 @@ namespace sw
 struct Package;
 struct Input;
 //struct SwContext;
+struct package_loader;
+struct package_transform;
 struct SwBuild;
 enum class InputType : uint8_t;
 
@@ -39,6 +41,9 @@ struct SW_CORE_API IDriver
     //virtual std::vector<std::unique_ptr<Input>> getPredefinedInputs() const { return {}; }
     // add predefined targets etc.
     virtual void setupBuild(SwBuild &) const {}
+
+    virtual std::unique_ptr<package_transform> load_package(const Package &) = 0;
+    virtual std::vector<std::unique_ptr<package_loader>> load_packages(const path &) = 0;
 };
 
 } // namespace sw

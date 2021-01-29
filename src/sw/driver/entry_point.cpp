@@ -447,9 +447,10 @@ ITargetPtr NativeTargetEntryPoint::loadPackage(SwBuild &swb, const Package &p) c
     loadPackages1(b);
     for (auto &&t : b.module_data.getTargets())
     {
-        if (b.NamePrefix.empty())
-            continue;
-        ((Target*)t.get())->prepare1();
+        //if (b.NamePrefix.empty())
+            //continue;
+        if (auto t1 = dynamic_cast<Target *>(t.get()))
+            t1->prepare1();
     }
     if (b.module_data.getTargets().size() != 1)
         throw SW_RUNTIME_ERROR("Bad number of targets: " + p.getId().toString());
