@@ -1731,7 +1731,7 @@ void NativeCompiledTarget::prepare2()
         return;
 
     // write commands
-    auto cmds = getCommands();
+    auto cmds = getCommands1();
     saveCommands(getBinaryDirectory().parent_path() / "commands.bin", cmds);
 
     PackageId id{ getPackage(),getSettings() };

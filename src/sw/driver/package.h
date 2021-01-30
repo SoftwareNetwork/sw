@@ -18,6 +18,7 @@ using ITargetPtr = std::unique_ptr<ITarget>;
 
 struct my_package_transform : package_transform
 {
+    std::shared_ptr<SwBuild> b;
     ITargetPtr t;
 
     Commands get_commands() const override;
@@ -27,7 +28,7 @@ struct my_package_transform : package_transform
 struct my_package_loader : package_loader
 {
     PackagePtr p;
-    std::unique_ptr<SwBuild> b;
+    std::shared_ptr<SwBuild> b;
     std::shared_ptr<Input> i;
 
     my_package_loader(const Package &in) : p(in.clone()) {}
