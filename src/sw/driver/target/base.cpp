@@ -160,8 +160,8 @@ void TargetBase::addTarget2(Target &t)
     if (t.DryRun)
         t.ts["dry-run"] = true;
 
-    if (!t.DryRun)
-        getMainBuild().registerTarget(t);
+    //if (!t.DryRun)
+        //getMainBuild().registerTarget(t);
 }
 
 const SwContext &TargetBase::getContext() const
@@ -481,7 +481,15 @@ Commands Target::getCommands() const
     }
     for (auto &c : commands)
         ((Target*)this)->registerCommand(*c);
-    return commands;
+
+    auto cmds = commands;
+    for (auto &d : getDependencies())
+    {
+        if (auto d2 = dynamic_cast<Dependency *>(d))
+            cmds.merge(d2->transform->get_commands());
+    }
+
+    return cmds;
 }
 
 void Target::registerCommand(builder::Command &c)
