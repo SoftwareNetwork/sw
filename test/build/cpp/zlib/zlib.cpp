@@ -1,5 +1,5 @@
 /*
-deps: org.sw.demo.madler.zlib-1.2.7
+deps: org.sw.demo.madler.zlib
 */
 
 #include <zlib.h>
