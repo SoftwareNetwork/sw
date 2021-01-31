@@ -12,6 +12,6 @@ struct Target;
 
 void addSettingsAndSetPrograms(Target &t, PackageSettings &);
 void addSettingsAndSetHostPrograms(Target &t, PackageSettings &);
-void addSettingsAndSetConfigPrograms(const SwBuild &, PackageSettings &);
+void addSettingsAndSetConfigPrograms(/*const SwBuild &, */PackageSettings &);
 
 }

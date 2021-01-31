@@ -1991,8 +1991,9 @@ void NativeCompiledTarget::prepare_pass2()
         if (d.dep->IncludeDirectoriesOnly)
             continue;
         auto d3 = std::make_shared<Dependency>(d.dep->getUnresolvedPackageId());
-        SW_UNIMPLEMENTED;
+        //SW_UNIMPLEMENTED;
         //d3->setTarget(d.dep->getTarget());
+        d3->transform = d.dep->transform;
         d3->LinkLibrariesOnly = true;
         Interface += d3;
         active_deps->push_back(createDependency(*d3, InheritanceType::Interface, *this));

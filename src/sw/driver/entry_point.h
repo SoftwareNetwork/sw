@@ -87,7 +87,7 @@ struct PrepareConfig
     using FilesMap = std::unordered_map<path, PrepareConfigOutputData>;
 
     FilesMap r;
-    std::optional<PackageId> tgt;
+    //std::optional<PackageId> tgt;
     enum
     {
         LANG_CPP,

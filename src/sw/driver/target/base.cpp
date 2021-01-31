@@ -135,6 +135,8 @@ void TargetBase::addTarget3(ITargetPtr t)
 
 void TargetBase::addTarget2(Target &t)
 {
+    t.DryRun |= t.ts["dry-run"] && t.ts["dry-run"].get<bool>();
+
     if (!t.DryRun)
         t.init();
 
@@ -998,6 +1000,7 @@ Test Target::addTest1(const String &name, const Target &tgt)
     Storage.push_back(c.getCommand());
 
     // test only local targets
+    return c; // for now
     SW_UNIMPLEMENTED;
     //if (!isLocal() || getPackage().getOverriddenDir())
         //return c;

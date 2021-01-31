@@ -385,22 +385,28 @@ void addConfigPchLibrary(Build &b)
     lib.CPPVersion = CPPLanguageStandard::CPP20;
     lib.command_storage = &getDriverCommandStorage(b);
 
+    addDeps(b, lib);
+    addConfigDefs(lib);
+    lib.WholeArchive = true;
+
     auto driver_idir = getDriverIncludeDir(b, lib);
     auto swh = driver_idir / getSwHeader();
     //lib.Interface += ForceInclude(swh);
     lib += PrecompiledHeader(swh);
     PathOptionsType files;
     files.insert(swh);
-    lib.pch.setup(lib, files);
-    lib.Interface += lib.pch.pch;
-    lib.Interface += lib.pch.pdb;
-    auto swhpch = swh += ".hpch";
-    File(swhpch, lib.getFs()).setGenerated();
-    lib.Interface += swhpch;
+    if (!lib.DryRun)
+    {
+        lib.prepare1();
+
+        lib.pch.setup(lib, files);
+        lib.Interface += lib.pch.pch;
+        lib.Interface += lib.pch.pdb;
+        auto swhpch = swh += ".hpch";
+        File(swhpch, lib.getFs()).setGenerated();
+        lib.Interface += swhpch;
+    }
     //lib.pch.use_only = true;
-    addDeps(b, lib);
-    addConfigDefs(lib);
-    lib.WholeArchive = true;
 #endif
 }
 
@@ -581,10 +587,9 @@ SharedLibraryTarget &PrepareConfig::createTarget(Build &b, const InputData &d)
         ? (SharedLibraryTarget&)b.addTarget<ConfigSharedLibraryTarget<ValaSharedLibrary>>(name, v, *this, d, b.getContext().getLocalStorage().storage_dir)
         : */b.addTarget<ConfigSharedLibraryTarget<SharedLibraryTarget>>(name, v, *this, d, b.getContext().getLocalStorage().storage_dir);
 
-    SW_UNIMPLEMENTED;
-    /*tgt = lib.getPackage();
+    //tgt = lib.getPackage();
     targets.insert(&lib);
-    return lib;*/
+    return lib;
 }
 
 decltype(auto) PrepareConfig::commonActions(Build &b, const InputData &d, const std::unordered_set<UnresolvedPackageName> &deps)
@@ -742,6 +747,7 @@ path PrepareConfig::one2one(Build &b, const InputData &d)
         */
     }
 
+    return {};
     return lib.getOutputFile();
 }
 

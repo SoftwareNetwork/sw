@@ -150,11 +150,10 @@ void addSettingsAndSetPrograms(Target &t, PackageSettings &ts)
 }
 
 // they must be the same as used when building sw
-void addSettingsAndSetConfigPrograms(const SwBuild &b, PackageSettings &ts)
+void addSettingsAndSetConfigPrograms(/*const SwBuild &b, */PackageSettings &ts)
 {
     ts["native"]["library"] = "static"s; // why not shared?
                                         //ts["native"]["mt"] = "true";
-    SW_UNIMPLEMENTED;
     /*if (b.getContext().getSettings()["debug_configs"])
     {
 #ifndef NDEBUG

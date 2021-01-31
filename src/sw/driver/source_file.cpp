@@ -341,6 +341,9 @@ SourceFileMap<SourceFile> SourceFileStorage::operator[](const FileRegex &r) cons
 
 bool SourceFileStorage::check_absolute(path &F, bool ignore_errors, bool *source_dir) const
 {
+    if (target.DryRun)
+        return true;
+
     auto i = files_cache.find(F);
     bool found = i != files_cache.end();
     if (found)

@@ -241,6 +241,7 @@ struct ConfigPackage : Package
     std::unique_ptr<Package> clone() const override { return std::make_unique<ConfigPackage>(*this); }
     bool isInstallable() const override { return false; }
     path getSourceDirectory() const override { return getData().sdir; }
+    path getRootDirectory() const override { return getData().sdir; }
 };
 
 struct ConfigStorage : IStorage
@@ -258,24 +259,24 @@ struct ConfigStorage : IStorage
     {
         // we try to resolve ourselves using default storage
 
-        if (auto i = targets.find(rr.u); i != targets.end())
-        {
-            ResolveRequest rr2{ i->second.first, rr.settings };
-            if (swctx.resolve(rr2, true))
-            {
-                auto installed = swctx.getLocalStorage().install(rr2.getPackage());
-                auto &p = installed ? *installed : rr2.getPackage();
+        auto i = targets.find(rr.u);
+        if (i == targets.end())
+            return false;
 
-                auto pkg = makePackage(p.getId());
-                auto &p2 = (ConfigPackage &)*pkg;
-                p2.epfs = eps.find(i->second.second)->second;
-                auto d = std::make_unique<PackageData>(p.getData());
-                pkg->setData(std::move(d));
-                rr.setPackageForce(std::move(pkg));
-                return true;
-            }
-        }
-        return false;
+        ResolveRequest rr2{ i->second.first, rr.settings };
+        if (!swctx.resolve(rr2, true))
+            return false;
+
+        auto installed = swctx.getLocalStorage().install(rr2.getPackage());
+        auto &p = installed ? *installed : rr2.getPackage();
+
+        auto pkg = makePackage(p.getId());
+        auto &p2 = (ConfigPackage &)*pkg;
+        p2.epfs = eps.find(i->second.second)->second;
+        auto d = std::make_unique<PackageData>(p.getData());
+        pkg->setData(std::move(d));
+        rr.setPackageForce(std::move(pkg));
+        return true;
     }
 
     std::unique_ptr<Package> makePackage(const PackageId &id) const override
@@ -849,15 +850,14 @@ void Driver::loadInputsBatch(const std::set<Input *> &inputs) const
 
 std::unique_ptr<SwBuild> Driver::create_build(SwContext &swctx) const
 {
-    SW_UNIMPLEMENTED;
-    //auto b = swctx.createBuild();
-    //return b;
+    auto b = swctx.createBuild();
+    return b;
 }
 
-PackageSettings Driver::getDllConfigSettings(SwBuild &b) const
+PackageSettings Driver::getDllConfigSettings(/*SwBuild &b*/) const
 {
-    auto ts = b.getContext().createHostSettings();
-    addSettingsAndSetConfigPrograms(b, ts);
+    auto ts = swctx.createHostSettings();
+    addSettingsAndSetConfigPrograms(/*b, */ts);
     return ts;
 }
 
@@ -914,13 +914,11 @@ std::unordered_map<path, PrepareConfigOutputData> Driver::build_configs1(SwConte
 
     auto &ctx = swctx;
     //if (!b)
-    auto b = create_build(ctx);
 
     CachedStorage cs;
     CachingResolver r(cs);
     r.addStorage(*this->cs); // pkg storage
     r.addStorage(*bs); // builtin tools storage
-    b->setResolver(r);
     //b->getResolver().addStorage(*bs);
 
     PrepareConfig pc;
@@ -930,21 +928,56 @@ std::unordered_map<path, PrepareConfigOutputData> Driver::build_configs1(SwConte
             pc.addInput(b, *i);
     };
 
-    std::pair<String, NativeBuiltinTargetEntryPoint::BuildFunction> builtin_local_pkgs[] =
+    const std::pair<String, NativeBuiltinTargetEntryPoint::BuildFunction> builtin_local_pkgs[] =
     {
         {"implib"s, addImportLibrary},
         {"delay_loader"s, addDelayLoadLibrary},
         {"config_pch"s, addConfigPchLibrary},
         {"provided_inputs"s, inputs_ep},
     };
-    auto ts = getDllConfigSettings(*b);
+    auto ts = getDllConfigSettings();
+    std::vector<std::unique_ptr<package_loader>> loaders;
     for (auto &[name, f] : builtin_local_pkgs)
     {
         auto h = std::hash<String>()(name);
         auto i = std::make_unique<BuiltinInput>(swctx, *this, h);
         auto ep = std::make_unique<sw::NativeBuiltinTargetEntryPoint>(f);
         i->setEntryPoint(std::move(ep));
-        SW_UNIMPLEMENTED;
+
+        PackageId id{ name + "-0.0.1"s,{} };
+        Package p{ id };
+
+        auto b = create_build(ctx);
+        b->setResolver(r);
+
+        i->load();
+
+        PackageSettings s;
+        s["dry-run"] = true;
+        auto tgts = i->loadPackages(*b, s);
+        SW_CHECK(tgts.size() == 1);
+        for (auto &&t : tgts)
+        {
+            struct some_pkg : Package
+            {
+                using Package::Package;
+
+                virtual std::unique_ptr<Package> clone() const { return std::make_unique<some_pkg>(*this); }
+            };
+
+            // we do not need any settings here
+            PackageId id{ t->getPackage(), {} };
+            auto p = std::make_unique<some_pkg>(id);
+            auto d = std::make_unique<PackageData>();
+            d->prefix = 0;
+            p->setData(std::move(d));
+
+            auto pp = std::make_unique<my_package_loader>(*p);
+            pp->i = std::move(i);
+            pp->b = std::move(b);
+            loaders.emplace_back(std::move(pp));
+        }
+
         /*auto [ii, _] = swctx.registerInput(std::move(i));
         //LogicalInput bi(*ii, {});
         //bi.addPackage(name + "-0.0.1"s);
@@ -956,7 +989,17 @@ std::unordered_map<path, PrepareConfigOutputData> Driver::build_configs1(SwConte
 
     // prevent simultaneous cfg builds
     ScopedFileLock lk(swctx.getLocalStorage().storage_dir_tmp / "cfg" / "build");
-    b->build();
+    //b->build();
+
+    std::vector<std::unique_ptr<sw::package_transform>> transforms;
+    for (auto &p : loaders)
+        transforms.push_back(p->load(ts));
+
+    std::vector<const sw::package_transform*> pkg_ptr;
+    for (auto &p : transforms)
+        pkg_ptr.push_back(p.get());
+    sw::transform_executor e;
+    e.execute(pkg_ptr);
 
     return save_and_return(pc.r);
 }
@@ -1123,10 +1166,8 @@ std::vector<std::unique_ptr<Input>> Driver::detectInputs(const path &in) const
     return inputs;
 }
 
-std::vector<std::unique_ptr<package_loader>> Driver::load_packages(const path &in)
+std::vector<std::unique_ptr<package_loader>> Driver::load_packages(std::vector<std::unique_ptr<Input>> &&inputs)
 {
-    auto inputs = detectInputs(in);
-
     auto b = swctx.createBuild();
     b->getResolver().addStorage(*bs);
     std::vector<std::unique_ptr<package_loader>> loaders;
@@ -1135,7 +1176,9 @@ std::vector<std::unique_ptr<package_loader>> Driver::load_packages(const path &i
         i->load();
 
         std::shared_ptr<Input> is = std::move(i);
-        for (auto &&t : is->loadPackages(*b, {}))
+        PackageSettings s;
+        s["dry-run"] = true;
+        for (auto &&t : is->loadPackages(*b, s))
         {
             struct some_pkg : Package
             {
@@ -1158,6 +1201,12 @@ std::vector<std::unique_ptr<package_loader>> Driver::load_packages(const path &i
         }
     }
     return loaders;
+}
+
+std::vector<std::unique_ptr<package_loader>> Driver::load_packages(const path &in)
+{
+    auto inputs = detectInputs(in);
+    return load_packages(std::move(inputs));
 }
 
 std::unique_ptr<package_loader> Driver::load_package(const Package &p)

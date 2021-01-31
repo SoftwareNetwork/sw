@@ -62,7 +62,7 @@ struct SW_DRIVER_CPP_API Driver : IDriver
 
     // service methods
     std::unordered_map<path, PrepareConfigOutputData> build_configs1(SwContext &, const std::set<Input *> &inputs) const;
-    PackageSettings getDllConfigSettings(SwBuild &swctx) const;
+    PackageSettings getDllConfigSettings(/*SwBuild &swctx*/) const;
 
 private:
     SwContext &swctx;
@@ -70,6 +70,7 @@ private:
     std::unique_ptr<struct ConfigStorage> cs;
 
     std::unique_ptr<SwBuild> create_build(SwContext &swctx) const;
+    std::vector<std::unique_ptr<package_loader>> load_packages(std::vector<std::unique_ptr<Input>> &&);
 };
 
 } // namespace driver::cpp
