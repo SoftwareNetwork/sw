@@ -13,6 +13,7 @@ namespace sw
 struct SwBuild;
 struct Input;
 struct ITarget;
+struct Resolver;
 
 using ITargetPtr = std::unique_ptr<ITarget>;
 
@@ -30,6 +31,7 @@ struct my_package_loader : package_loader
     PackagePtr p;
     std::shared_ptr<SwBuild> b;
     std::shared_ptr<Input> i;
+    std::shared_ptr<Resolver> r;
 
     my_package_loader(const Package &in) : p(in.clone()) {}
     const PackageName &get_package_name() const override { return p->getId().getName(); }

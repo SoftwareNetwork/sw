@@ -40,7 +40,8 @@ private:
 };
 
 // single build
-struct SW_CORE_API SwBuild : SwBuilderContext, ResolverHolder
+struct SW_CORE_API SwBuild : SwBuilderContext
+    //, ResolverHolder
 {
     SwBuild(SwContext &swctx, const path &build_dir);
     SwBuild(const SwBuild &) = delete;

@@ -152,6 +152,7 @@ struct SW_DRIVER_CPP_API TargetBase : TargetBaseData
     DirectoryTarget &addDirectory(const PackagePath &Name) { return addTarget<DirectoryTarget>(Name); }
 
     bool isLocal() const;
+    bool isOverridden() const;
 
     Build &getSolution();
     const Build &getSolution() const;
@@ -259,6 +260,7 @@ struct SW_DRIVER_CPP_API Target
 
     void resolveDependency(IDependency &);
     bool resolve(ResolveRequest &, bool add_to_resolver);
+    Resolver &getResolver() const;
 
 public:
     Target(TargetBase &parent, const PackageName &);

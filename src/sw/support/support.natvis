@@ -28,6 +28,10 @@
         </DisplayString>
     </Type>
 
+    <Type Name="sw::PackageId">
+        <DisplayString>{n} (settings size = {s.settings._Mypair._Myval2._Myval2._Mysize})</DisplayString>
+    </Type>
+
     <Type Name="sw::PackageSetting">
         <DisplayString Condition="value._Which == 6">
             {value._Tail._Tail._Tail._Tail._Tail._Tail._Head}

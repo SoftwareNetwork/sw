@@ -278,7 +278,7 @@ SwBuild::SwBuild(SwContext &swctx, const path &build_dir)
 {
     cached_storage = std::make_unique<CachedStorage>();
     cr = std::make_unique<CachingResolver>(*cached_storage);
-    setResolver(*cr);
+    //setResolver(*cr);
     //cr->addStorage(getContext().getoverridden());
     cr->addStorage(getContext().getLocalStorage()); // after overridden
     for (auto s : getContext().getRemoteStorages())

@@ -143,7 +143,11 @@ String write_build_script(SwCoreContext &swctx, const std::vector<ResolveRequest
             ctx.addLine("e.bfs.cf = check_" + var + ";");
         ctx.addLine("e.hash = " + std::to_string(h) + ";");
         for (auto &&[u, n] : hash_pkgs[h])
+        {
             ctx.addLine("e.add_pair(\"" + u.toString() + "\"s, \"" + n.toString() + "\"s);");
+            // also add direct resolve
+            ctx.addLine("e.add_pair(\"" + UnresolvedPackageName{ n }.toString() + "\"s, \"" + n.toString() + "\"s);");
+        }
         ctx.endBlock();
         ctx.emptyLines();
 

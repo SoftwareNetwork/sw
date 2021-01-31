@@ -5,10 +5,6 @@
         <DisplayString>{ppath}-{version}</DisplayString>
     </Type>
 
-    <Type Name="sw::PackageId">
-        <DisplayString>{n}</DisplayString>
-    </Type>
-
     <Type Name="sw::Package">
         <DisplayString>{id}</DisplayString>
     </Type>

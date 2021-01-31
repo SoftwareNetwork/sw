@@ -256,8 +256,9 @@ getFileDependencies(SwBuild &b, const path &p, std::set<size_t> &gns)
         {
             auto upkg = extractFromString(m[3].str());
             ResolveRequest rr{ upkg, {} };
-            if (!b.resolve(rr))
-                throw SW_RUNTIME_ERROR("Not resolved: " + rr.u.toString());
+            SW_UNIMPLEMENTED;
+            //if (!b.resolve(rr))
+                //throw SW_RUNTIME_ERROR("Not resolved: " + rr.u.toString());
             SW_UNIMPLEMENTED;
             /*auto pkg = b.getContext().install(rr.getPackage());
             auto gn = b.getContext().getInputDatabase().getFileHash(pkg.getDirSrc2() / "sw.cpp");
@@ -435,10 +436,11 @@ ExtendedBuild NativeTargetEntryPoint::createBuild(SwBuild &swb, const PackageSet
     return b;
 }
 
-std::vector<ITargetPtr> NativeTargetEntryPoint::loadPackages(SwBuild &swb, const PackageSettings &s) const
+std::vector<ITargetPtr> NativeTargetEntryPoint::loadPackages(SwBuild &swb, Resolver &r, const PackageSettings &s) const
 {
     auto b = createBuild(swb, s);
     b.module_data.current_settings = &s;
+    b.module_data.resolver = &r;
     loadPackages1(b);
     for (auto &&t : b.module_data.getTargets())
     {
@@ -448,11 +450,12 @@ std::vector<ITargetPtr> NativeTargetEntryPoint::loadPackages(SwBuild &swb, const
     return std::move(b.module_data.getTargets());
 }
 
-ITargetPtr NativeTargetEntryPoint::loadPackage(SwBuild &swb, const PackageSettings &s, const Package &p) const
+ITargetPtr NativeTargetEntryPoint::loadPackage(SwBuild &swb, Resolver &r, const PackageSettings &s, const Package &p) const
 {
     auto b = createBuild(swb, s);
     b.module_data.current_settings = &s; // in any case
     b.module_data.known_target = &p;
+    b.module_data.resolver = &r;
     b.NamePrefix = p.getId().getName().getPath().slice(0, p.getData().prefix);
     loadPackages1(b);
     for (auto &&t : b.module_data.getTargets())

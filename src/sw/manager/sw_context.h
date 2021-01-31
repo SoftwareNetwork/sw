@@ -63,7 +63,9 @@ struct SW_MANAGER_API SwManagerContext// : ISwContext
 private:
     std::unique_ptr<CachedStorage> cache_storage;
     std::unique_ptr<LocalStorage> local_storage;
+public:
     std::unique_ptr<OverriddenPackagesStorage> overridden_storage;
+private:
     std::vector<std::unique_ptr<IStorage>> remote_storages;
     std::unique_ptr<CachingResolver> cr;
     mutable std::mutex resolve_mutex;

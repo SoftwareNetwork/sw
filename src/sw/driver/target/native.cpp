@@ -3431,13 +3431,12 @@ void NativeCompiledTarget::setChecks(const String &name, bool check_definitions)
 path NativeCompiledTarget::getPatchDir() const
 {
     path base;
-    SW_UNIMPLEMENTED;
-    /*if (auto d = getPackage().getOverriddenDir(); d)
-        base = d.value() / SW_BINARY_DIR;
+    if (isOverridden())
+        return getLocalPackage().getRootDirectory() / SW_BINARY_DIR;
     else if (!isLocal())
-        base = getPackage().getDirSrc();
+        base = getLocalPackage().getRootDirectory();
     else
-        base = getMainBuild().getBuildDirectory();*/
+        base = getMainBuild().getBuildDirectory();
     return base / "patch";
 }
 

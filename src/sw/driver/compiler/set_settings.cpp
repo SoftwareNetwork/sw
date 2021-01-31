@@ -59,14 +59,14 @@ static void basicResolve(Target &t, PackageSettings &ts)
     for (auto &&[_, m] : ts["rule"].getMap())
     {
         ResolveRequest rr{ m["package"].get<UnresolvedPackageName>(), ts2 };
-        if (t.getMainBuild().getResolver().resolve(rr))
+        if (t.getResolver().resolve(rr))
             m["package"] = UnresolvedPackageName{ rr.getPackage().getId().getName() };
         // otherwise we silently ignore until rule is used
     }
     for (auto &&[_, m] : ts["native"]["stdlib"].getMap())
     {
         ResolveRequest rr{ m.get<UnresolvedPackageName>(), ts }; // with rules!
-        if (t.getMainBuild().getResolver().resolve(rr))
+        if (t.getResolver().resolve(rr))
             m = UnresolvedPackageName{ rr.getPackage().getId().getName() };
         // otherwise we silently ignore until rule is used
     }

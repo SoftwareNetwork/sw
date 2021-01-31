@@ -17,7 +17,7 @@ const PackageSettings &my_package_transform::get_properties() const { return t->
 
 std::unique_ptr<package_transform> my_package_loader::load(const PackageSettings &s) const
 {
-    auto t = i->loadPackage(*b, s, *p);
+    auto t = i->loadPackage(*b, *r, s, *p);
     auto pt = std::make_unique<my_package_transform>();
     pt->t = std::move(t);
     pt->b = b;

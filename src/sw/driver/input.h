@@ -61,12 +61,12 @@ struct SW_CORE_API Input
     /// "local" mode
     /// no dry-run targets
     [[nodiscard]]
-    virtual std::vector<ITargetPtr> loadPackages(SwBuild &, const PackageSettings &) const = 0;
+    virtual std::vector<ITargetPtr> loadPackages(SwBuild &, Resolver &, const PackageSettings &) const = 0;
 
     /// load specific package from input
     /// no dry-run targets
     [[nodiscard]]
-    virtual ITargetPtr loadPackage(SwBuild &, const PackageSettings &, const Package &) const = 0;
+    virtual ITargetPtr loadPackage(SwBuild &, Resolver &, const PackageSettings &, const Package &) const = 0;
 
 protected:
     SwContext &swctx;

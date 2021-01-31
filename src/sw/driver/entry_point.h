@@ -17,6 +17,7 @@ struct Checker;
 struct Module;
 struct DriverData;
 struct Input;
+struct Resolver;
 
 // this driver ep
 struct NativeTargetEntryPoint
@@ -25,9 +26,9 @@ struct NativeTargetEntryPoint
     mutable std::unique_ptr<DriverData> dd;
 
     [[nodiscard]]
-    std::vector<ITargetPtr> loadPackages(SwBuild &, const PackageSettings &) const;
+    std::vector<ITargetPtr> loadPackages(SwBuild &, Resolver &, const PackageSettings &) const;
     [[nodiscard]]
-    ITargetPtr loadPackage(SwBuild &, const PackageSettings &, const Package &) const;
+    ITargetPtr loadPackage(SwBuild &, Resolver &, const PackageSettings &, const Package &) const;
 
     ExtendedBuild createBuild(SwBuild &, const PackageSettings &) const;
 

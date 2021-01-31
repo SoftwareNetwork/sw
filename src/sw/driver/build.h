@@ -26,6 +26,7 @@ struct ModuleSwappableData
 
     const Package *known_target = nullptr;
     const PackageSettings *current_settings = nullptr;
+    Resolver *resolver = nullptr;
 
     ModuleSwappableData();
     ModuleSwappableData(const ModuleSwappableData &) = delete;
@@ -82,6 +83,7 @@ struct SW_DRIVER_CPP_API Build : TargetBase
 
     bool isKnownTarget(const PackageName &p) const;
     std::optional<path> getSourceDir(const Source &s, const PackageVersion &v) const;
+    Resolver &getResolver() const;
 
     const PackageSettings &getExternalVariables() const;
 

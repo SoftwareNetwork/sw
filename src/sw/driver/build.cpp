@@ -109,6 +109,13 @@ std::optional<path> Build::getSourceDir(const Source &s, const PackageVersion &v
     return {};
 }
 
+Resolver &Build::getResolver() const
+{
+    if (!module_data.resolver)
+        throw SW_RUNTIME_ERROR("no resolver set");
+    return *module_data.resolver;
+}
+
 const PackageSettings &Build::getExternalVariables() const
 {
     return getMainBuild().getExternalVariables();

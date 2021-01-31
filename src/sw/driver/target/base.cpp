@@ -94,7 +94,7 @@ TargetBase::TargetBase(const TargetBase &rhs, const PackageName &inpkg)
     // other computations
 
     // we do not activate targets that are not selected for current builds
-    DryRun = !getSolution().isKnownTarget(inpkg);
+    DryRun |= !getSolution().isKnownTarget(inpkg);
 
     pkg = std::make_unique<PackageName>(inpkg);
 
@@ -130,7 +130,10 @@ PackagePath TargetBase::constructTargetName(const PackagePath &Name) const
 
 void TargetBase::addTarget3(ITargetPtr t)
 {
-    static_cast<ExtendedBuild&>(getSolution()).addTarget(std::move(t));
+    auto &ref = *t;
+    static_cast<ExtendedBuild &>(getSolution()).addTarget(std::move(t));
+    if (!getSolution().isKnownTarget(ref.getPackage()))
+        getSolution().module_data.markAsDummy(ref);
 }
 
 void TargetBase::addTarget2(Target &t)
@@ -184,6 +187,14 @@ const Build &TargetBase::getSolution() const
 bool TargetBase::isLocal() const
 {
     return Local;
+}
+
+bool TargetBase::isOverridden() const
+{
+    return 1
+        && !isLocal()
+        && !is_under_root_by_prefix_path(getLocalPackage().getRootDirectory(), getContext().getLocalStorage().storage_dir)
+        ;
 }
 
 const PackageName &TargetBase::getPackage() const
@@ -563,7 +574,7 @@ path Target::getBinaryParentDir() const
         return getTargetDirShort(getMainBuild().getBuildDirectory());
     else
     {
-        if (!is_under_root_by_prefix_path(getLocalPackage().getRootDirectory(), getContext().getLocalStorage().storage_dir))
+        if (isOverridden())
             return getTargetDirShort(getLocalPackage().getRootDirectory() / SW_BINARY_DIR);
 
         auto cfg = getConfig();
@@ -826,9 +837,14 @@ void Target::addSourceDependency(const Target &t)
     addSourceDependency(std::make_shared<Dependency>(UnresolvedPackageId{ t.getPackage() }));
 }
 
+Resolver &Target::getResolver() const
+{
+    return getSolution().getResolver();
+}
+
 bool Target::resolve(ResolveRequest &rr, bool add_to_resolver)
 {
-    auto &r = getMainBuild().getResolver();
+    auto &r = getResolver();
     auto &ssr = getSettings()["resolver"];
 
     if (ssr.isEmpty())
