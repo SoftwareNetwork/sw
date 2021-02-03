@@ -353,9 +353,9 @@ void SwContext::loadEntryPointsBatch(const std::set<Input *> &inputs)
     waitAndGet(fs);
 }*/
 
-std::vector<std::unique_ptr<package_loader>> SwContext::load_packages(const path &p) const
+std::vector<SwContext::package_loader_ptr> SwContext::load_packages(const path &p) const
 {
-    std::vector<std::unique_ptr<package_loader>> pkgs;
+    std::vector<package_loader_ptr> pkgs;
     for (auto &[_, d] : drivers)
     {
         for (auto &&p : d->load_packages(p))
@@ -364,7 +364,7 @@ std::vector<std::unique_ptr<package_loader>> SwContext::load_packages(const path
     return pkgs;
 }
 
-std::unique_ptr<package_loader> SwContext::load_package(const Package &in) const
+SwContext::package_loader_ptr SwContext::load_package(const Package &in) const
 {
     // no, install now (resolve to local)
     auto installed = getLocalStorage().install(in);

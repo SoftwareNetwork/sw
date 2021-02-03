@@ -372,11 +372,11 @@ TargetFiles Target::getFiles() const
     SW_UNIMPLEMENTED;
 }
 
-std::vector<IDependency *> Target::getDependencies() const
+std::vector<Dependency *> Target::getDependencies() const
 {
-    std::vector<IDependency *> deps;
-    for (auto &d : gatherDependencies())
-        deps.push_back(d);
+    std::vector<Dependency *> deps;
+    //for (auto &d : gatherDependencies())
+        //deps.push_back(d);
     for (auto &d : DummyDependencies)
         deps.push_back(d.get());
     for (auto &d : SourceDependencies)
@@ -480,7 +480,7 @@ Commands Target::getCommands() const
 {
     if (!commands.empty())
         return commands;
-    //((Target&)*this).prepare2();
+    ((Target&)*this).prepare2();
     commands = getCommands1();
     for (auto &c : commands)
     {
@@ -866,7 +866,7 @@ bool Target::resolve(ResolveRequest &rr, bool add_to_resolver)
     return ret;
 }
 
-void Target::resolveDependency(IDependency &d)
+void Target::resolveDependency(Dependency &d)
 {
     if (DryRun)
         return;
@@ -877,7 +877,12 @@ void Target::resolveDependency(IDependency &d)
     if (d.getUnresolvedPackageId().getName().getPath().isAbsolute())
     {
         ResolveRequest rr{ d.getUnresolvedPackageId() };
-        if (!resolve(rr, true))
+        if (resolve(rr, true))
+        {
+            d.resolved_pkg = rr.getPackage().clone();
+            return;
+        }
+
         {
             // try to resolve sources
             PackageSettings s;
@@ -887,21 +892,24 @@ void Target::resolveDependency(IDependency &d)
             auto installed = getContext().getLocalStorage().install(rr2.getPackage());
             auto &p2 = installed ? *installed : rr2.getPackage();
 
+            d.resolved_pkg = p2.clone();
+            return;
+
             auto loader = getContext().load_package(p2);
             auto transform = loader->load(d.getUnresolvedPackageId().getSettings());
-            ((Dependency&)d).setTarget(std::move(transform));
+            ((Dependency&)d).setTarget(transform);
             //auto &t = getMainBuild().load(*p);
             //d.setTarget(t);
 
             // we save original request to resolver
             getSettings()["resolver"].addResolvedPackage(rr.getUnresolvedPackageName(), rr.getSettings(), PackageId{ p2.getId().getName(), rr.getSettings() });
         }
-        else
+        /*else
         {
             auto loader = getContext().load_package(rr.getPackage());
             auto transform = loader->load(d.getUnresolvedPackageId().getSettings());
-            ((Dependency&)d).setTarget(std::move(transform));
-        }
+            ((Dependency&)d).setTarget(transform);
+        }*/
         return;
     }
 
@@ -933,6 +941,7 @@ path Target::getFile(const DependencyPtr &dep, const path &fn)
     addSourceDependency(dep); // main trick is to add a dependency
     ResolveRequest rr{ dep->getUnresolvedPackageId() };
     resolve(rr, true);
+
     auto p2 = getMainBuild().getContext().getLocalStorage().install(rr.getPackage());
     auto &lp = p2 ? *p2 : rr.getPackage();
     auto p = lp.getSourceDirectory();

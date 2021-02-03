@@ -258,7 +258,7 @@ struct SW_DRIVER_CPP_API Target
     void addSourceDependency(const Target &);
     void addSourceDependency(const DependencyPtr &);
 
-    void resolveDependency(IDependency &);
+    void resolveDependency(Dependency &);
     bool resolve(ResolveRequest &, bool add_to_resolver);
     Resolver &getResolver() const;
 
@@ -270,7 +270,7 @@ public:
     const PackageName &getPackage() const override { return TargetBase::getPackage(); }
     const Source &getSource() const override;
     TargetFiles getFiles() const override;
-    std::vector<IDependency *> getDependencies() const;// override;
+    std::vector<Dependency *> getDependencies() const;// override;
     const PackageSettings &getSettings() const override;
     PackageSettings &getSettings();
     const PackageSettings &getInterfaceSettings() const override;

@@ -997,7 +997,7 @@ std::unordered_map<path, PrepareConfigOutputData> Driver::build_configs1(SwConte
     ScopedFileLock lk(swctx.getLocalStorage().storage_dir_tmp / "cfg" / "build");
     //b->build();
 
-    std::vector<std::unique_ptr<sw::package_transform>> transforms;
+    std::vector<std::shared_ptr<sw::package_transform>> transforms;
     for (auto &p : loaders)
         transforms.push_back(p->load(ts));
 
@@ -1172,7 +1172,7 @@ std::vector<std::unique_ptr<Input>> Driver::detectInputs(const path &in) const
     return inputs;
 }
 
-std::vector<std::unique_ptr<package_loader>> Driver::load_packages(std::vector<std::unique_ptr<Input>> &&inputs)
+std::vector<Driver::package_loader_ptr> Driver::load_packages(std::vector<std::unique_ptr<Input>> &&inputs)
 {
     Resolver r;
     r.addStorage(*swctx.overridden_storage);
@@ -1183,7 +1183,7 @@ std::vector<std::unique_ptr<package_loader>> Driver::load_packages(std::vector<s
 
     auto b = swctx.createBuild();
     //b->getResolver().addStorage(*bs);
-    std::vector<std::unique_ptr<package_loader>> loaders;
+    std::vector<package_loader_ptr> loaders;
     for (auto &&i : inputs)
     {
         i->load();
@@ -1217,16 +1217,34 @@ std::vector<std::unique_ptr<package_loader>> Driver::load_packages(std::vector<s
     return loaders;
 }
 
-std::vector<std::unique_ptr<package_loader>> Driver::load_packages(const path &in)
+std::vector<Driver::package_loader_ptr> Driver::load_packages(const path &in)
 {
     auto inputs = detectInputs(in);
     return load_packages(std::move(inputs));
 }
 
-std::unique_ptr<package_loader> Driver::load_package(const Package &p)
+static std::unordered_map<PackageId, Driver::package_loader_ptr> loaders1;
+static std::unordered_map<PackageId, Driver::package_loader_ptr> loaders2;
+
+Driver::package_loader_ptr Driver::load_package(const Package &p)
 {
+    auto lp = dynamic_cast<const ConfigPackage *>(&p);
+
+    if (lp)
+    {
+        auto i = loaders1.find(p.getId());
+        if (i != loaders1.end())
+            return i->second;
+    }
+    else
+    {
+        auto i = loaders2.find(p.getId());
+        if (i != loaders2.end())
+            return i->second;
+    }
+
     Resolver r;
-    if (auto lp = dynamic_cast<const ConfigPackage *>(&p))
+    if (lp)
     {
         r.addStorage(*this->cs); // pkg storage
         r.addStorage(*bs); // builtin tools storage
@@ -1246,11 +1264,15 @@ std::unique_ptr<package_loader> Driver::load_package(const Package &p)
     auto b = swctx.createBuild();
     //b->getResolver().addStorage(*bs);
 
-    auto pp = std::make_unique<my_package_loader>(p);
+    auto pp = std::make_shared<my_package_loader>(p);
     pp->i = std::move(i);
     pp->b = std::move(b);
     pp->r = std::make_unique<Resolver>(r);
-    return pp;
+
+    if (lp)
+        return loaders1.emplace(p.getId(), pp).first->second;
+    else
+        return loaders2.emplace(p.getId(), pp).first->second;
 }
 
 } // namespace driver::cpp

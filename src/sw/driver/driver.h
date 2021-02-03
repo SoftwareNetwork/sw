@@ -47,9 +47,9 @@ struct SW_DRIVER_CPP_API Driver : IDriver
     std::unique_ptr<Input> getInput(const Package &) const override;
     //std::vector<std::unique_ptr<Input>> getPredefinedInputs() const override;
     void setupBuild(SwBuild &) const override;
-
-    std::unique_ptr<package_loader> load_package(const Package &) override;
-    std::vector<std::unique_ptr<package_loader>> load_packages(const path &) override;
+    
+    package_loader_ptr load_package(const Package &) override;
+    std::vector<package_loader_ptr> load_packages(const path &) override;
 
     // frontends
     using AvailableFrontends = boost::bimap<boost::bimaps::multiset_of<FrontendType>, path>;
@@ -70,7 +70,7 @@ private:
     std::unique_ptr<struct ConfigStorage> cs;
 
     std::unique_ptr<SwBuild> create_build(SwContext &swctx) const;
-    std::vector<std::unique_ptr<package_loader>> load_packages(std::vector<std::unique_ptr<Input>> &&);
+    std::vector<package_loader_ptr> load_packages(std::vector<std::unique_ptr<Input>> &&);
 };
 
 } // namespace driver::cpp

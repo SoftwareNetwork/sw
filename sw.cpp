@@ -179,6 +179,7 @@ void build(Solution &s)
             "org.sw.demo.ToruNiina.toml11"_dep,
             "org.sw.demo.boost.assign"_dep,
             "org.sw.demo.boost.bimap"_dep,
+            "org.sw.demo.boost.fiber"_dep,
             "org.sw.demo.boost.uuid"_dep;
         cpp_driver.Public -= "org.sw.demo.giovannidicanio.winreg-2"_dep;
         cpp_driver += "src/sw/driver/.*"_rr;

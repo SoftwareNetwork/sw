@@ -9,7 +9,7 @@
 namespace sw
 {
 
-IDependency::~IDependency() = default;
+//IDependency::~IDependency() = default;
 ITarget::~ITarget() {}
 //TargetEntryPoint::~TargetEntryPoint() = default;
 TargetData::~TargetData() = default;

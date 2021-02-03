@@ -160,7 +160,7 @@ SUBCOMMAND_DECL(build)
         }*/
     }
 
-    std::vector<std::unique_ptr<sw::package_loader>> loaders;
+    std::invoke_result_t<decltype(&sw::SwContext::load_packages), const sw::SwContext &, const path &> loaders;
 
     auto settings = createSettings();
     for (auto &a : i.getInputs())
@@ -181,7 +181,7 @@ SUBCOMMAND_DECL(build)
         }*/
     }
 
-    std::vector<std::unique_ptr<sw::package_transform>> transforms;
+    std::vector<std::shared_ptr<sw::package_transform>> transforms;
     for (auto &p : loaders)
     {
         for (auto &s : settings)

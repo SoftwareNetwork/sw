@@ -47,23 +47,6 @@ private:
 
 using TargetFiles = std::unordered_map<path, TargetFile>;
 
-struct SW_CORE_API IDependency
-{
-    virtual ~IDependency() = 0;
-
-    virtual UnresolvedPackageId &getUnresolvedPackageId() = 0;
-    virtual const UnresolvedPackageId &getUnresolvedPackageId() const = 0;
-
-    virtual bool isResolved() const = 0;
-    //virtual void setTarget(const ITarget &) = 0;
-    //virtual const ITarget &getTarget() const = 0;
-
-    //PackageSettings &getSettings();
-    //const PackageSettings &getSettings() const;
-};
-
-using IDependencyPtr = std::shared_ptr<IDependency>;
-
 /// Very basic interface for targets and must be very stable.
 /// You won't be operating much using it.
 /// Instead, text interface for querying data will be available.
@@ -187,7 +170,7 @@ struct SW_CORE_API PredefinedTarget : ITarget
 private:
     PackageId pkg;
     mutable bool deps_set = false;
-    mutable std::vector<IDependencyPtr> deps;
+    //mutable std::vector<IDependencyPtr> deps;
 };
 
 struct SW_CORE_API TargetContainer

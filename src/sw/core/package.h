@@ -16,7 +16,7 @@ struct package_loader
     virtual ~package_loader() = 0;
 
     virtual const PackageName &get_package_name() const = 0;
-    virtual std::unique_ptr<package_transform> load(const PackageSettings &) const = 0;
+    virtual std::shared_ptr<package_transform> load(const PackageSettings &) const = 0;
 };
 
 // local pkg?

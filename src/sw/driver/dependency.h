@@ -18,6 +18,23 @@ namespace sw
 struct ITarget;
 struct package_transform;
 
+struct SW_CORE_API IDependency
+{
+    virtual ~IDependency() = 0;
+
+    virtual UnresolvedPackageId &getUnresolvedPackageId() = 0;
+    virtual const UnresolvedPackageId &getUnresolvedPackageId() const = 0;
+
+    virtual bool isResolved() const = 0;
+    //virtual void setTarget(const ITarget &) = 0;
+    //virtual const ITarget &getTarget() const = 0;
+
+    //PackageSettings &getSettings();
+    //const PackageSettings &getSettings() const;
+};
+
+using IDependencyPtr = std::shared_ptr<IDependency>;
+
 struct SW_DRIVER_CPP_API DependencyData : IDependency
 {
     bool Disabled = false;
@@ -29,7 +46,7 @@ struct SW_DRIVER_CPP_API DependencyData : IDependency
     UnresolvedPackageId &getUnresolvedPackageId() override { return upkg; }
     const UnresolvedPackageId &getUnresolvedPackageId() const override { return upkg; }
     //void setTarget(const ITarget &t) override;
-    void setTarget(std::unique_ptr<package_transform>);
+    void setTarget(std::shared_ptr<package_transform>);
     //const ITarget &getTarget() const override;
     // get properties
     const PackageSettings &getInterfaceSettings() const;
@@ -63,6 +80,7 @@ struct SW_DRIVER_CPP_API Dependency : DependencyData
     bool GenerateCommandsBefore = false; // do not make true by default
     bool IncludeDirectoriesOnly = false;
     bool LinkLibrariesOnly = false;
+    std::shared_ptr<Package> resolved_pkg;
 
     using DependencyData::DependencyData;
 
