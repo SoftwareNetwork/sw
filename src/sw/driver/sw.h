@@ -7,6 +7,7 @@
 #include "build.h"
 #include "command.h"
 #include "functions.h"
+#include "package.h"
 #include "suffix.h"
 #include "target/all.h"
 #include "compiler/base.h"
