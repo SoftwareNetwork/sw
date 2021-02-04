@@ -606,7 +606,7 @@ decltype(auto) PrepareConfig::commonActions(Build &b, const InputData &d, const 
     lib.command_storage = &getDriverCommandStorage(b);
 
     // cache idir
-    if (driver_idir.empty())
+    if (driver_idir.empty() || !driver_idir.is_absolute())
         driver_idir = getDriverIncludeDir(b, lib);
 
     addDeps(b, lib);
