@@ -141,7 +141,6 @@ String write_build_script(SwCoreContext &swctx, const std::vector<ResolveRequest
         ctx.addLine("e.bfs.bf = build_" + var + ";");
         if (has_checks)
             ctx.addLine("e.bfs.cf = check_" + var + ";");
-        ctx.addLine("e.hash = " + std::to_string(h) + ";");
         for (auto &&[u, n] : hash_pkgs[h])
         {
             ctx.addLine("e.add_pair(\"" + u.toString() + "\"s, \"" + n.toString() + "\"s);");

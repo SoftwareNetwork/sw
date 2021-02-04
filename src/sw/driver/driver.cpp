@@ -249,8 +249,7 @@ struct ConfigPackage : Package
 struct ConfigStorage : IStorage
 {
     SwContext &swctx;
-    std::unordered_map<size_t, EntryPointFunctions> eps;
-    std::unordered_map<UnresolvedPackageName, std::pair<PackageName,size_t>> targets;
+    std::unordered_map<UnresolvedPackageName, std::pair<PackageName,EntryPointFunctions>> targets;
 
     ConfigStorage(SwContext &swctx)
         : swctx(swctx)
@@ -274,7 +273,7 @@ struct ConfigStorage : IStorage
 
         auto pkg = makePackage(p.getId());
         auto &p2 = (ConfigPackage &)*pkg;
-        p2.epfs = eps.find(i->second.second)->second;
+        p2.epfs = i->second.second;
         p2.sdir = p.getSourceDirectory();
         p2.rdir = p.getRootDirectory();
         auto d = std::make_unique<PackageData>(p.getData());
@@ -369,9 +368,8 @@ Driver::Driver(SwContext &swctx)
     // register inputs
     for (auto &&e : load_builtin_entry_points())
     {
-        cs->eps[e.hash] = e.bfs;
         for (auto &&[u,n] : e.resolver_cache)
-            cs->targets.emplace(u, decltype(cs->targets)::mapped_type{ n, e.hash });
+            cs->targets.emplace(u, decltype(cs->targets)::mapped_type{ n, e.bfs });
     }
 }
 
