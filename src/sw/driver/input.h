@@ -31,7 +31,7 @@ enum class InputType : uint8_t
 };
 
 // one input - one ep
-struct SW_CORE_API Input
+struct SW_DRIVER_CPP_API Input
 {
     Input(SwContext &, const IDriver &, std::unique_ptr<Specification>);
     Input(const Input &) = delete;
@@ -75,7 +75,7 @@ private:
     std::unique_ptr<Specification> specification;
 };
 
-struct SW_CORE_API UserInput
+struct SW_DRIVER_CPP_API UserInput
 {
     UserInput(Input &);
 

@@ -17,7 +17,7 @@ struct Resolver;
 
 using ITargetPtr = std::unique_ptr<ITarget>;
 
-struct my_package_transform : package_transform
+struct SW_DRIVER_CPP_API my_package_transform : package_transform
 {
     std::shared_ptr<SwBuild> b;
     ITargetPtr t;
@@ -27,7 +27,7 @@ struct my_package_transform : package_transform
     const PackageSettings &get_properties() const override;
 };
 
-struct my_package_loader : package_loader
+struct SW_DRIVER_CPP_API my_package_loader : package_loader
 {
     PackagePtr p;
     std::shared_ptr<SwBuild> b;
@@ -40,7 +40,7 @@ struct my_package_loader : package_loader
     std::shared_ptr<package_transform> load(const PackageSettings &) const override;
 };
 
-struct my_physical_package : physical_package
+struct SW_DRIVER_CPP_API my_physical_package : physical_package
 {
     ITargetPtr t;
     PackageId p;

@@ -11,7 +11,7 @@ namespace sw
 
 struct package_transform;
 
-struct package_loader
+struct SW_CORE_API package_loader
 {
     virtual ~package_loader() = 0;
 
@@ -20,7 +20,7 @@ struct package_loader
 };
 
 // local pkg?
-struct physical_package
+struct SW_CORE_API physical_package
 {
     //physical_package(const PackageId &p) : p(p) {}
     virtual ~physical_package() = 0;
@@ -45,7 +45,7 @@ private:
 };
 
 // promise?
-struct package_transform
+struct SW_CORE_API package_transform
 {
     virtual ~package_transform() = 0;
     //
@@ -59,7 +59,7 @@ struct package_transform
     virtual const PackageSettings &get_properties() const = 0;
 };
 
-struct transform_executor
+struct SW_CORE_API transform_executor
 {
     // nthreads
     // ...

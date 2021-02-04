@@ -18,7 +18,7 @@ namespace sw
 struct ITarget;
 struct package_transform;
 
-struct SW_CORE_API IDependency
+struct SW_DRIVER_CPP_API IDependency
 {
     virtual ~IDependency() = 0;
 
