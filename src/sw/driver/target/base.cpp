@@ -874,51 +874,40 @@ void Target::resolveDependency(Dependency &d)
     LOG_TRACE(logger, "Resolving " << d.getUnresolvedPackageId().getName().toString()
         << ": " << d.getUnresolvedPackageId().getSettings().toString());
 
-    if (d.getUnresolvedPackageId().getName().getPath().isAbsolute())
+    ResolveRequest rr{ d.getUnresolvedPackageId() };
+    if (resolve(rr, true))
     {
-        ResolveRequest rr{ d.getUnresolvedPackageId() };
-        if (resolve(rr, true))
-        {
-            d.resolved_pkg = rr.getPackage().clone();
-            return;
-        }
-
-        {
-            // try to resolve sources
-            PackageSettings s;
-            ResolveRequest rr2{ d.getUnresolvedPackageId().getName(), s };
-            if (!resolve(rr2, false))
-                throw SW_RUNTIME_ERROR("Cannot resolve package " + rr.toString() + " and " + rr2.toString());
-            auto installed = getContext().getLocalStorage().install(rr2.getPackage());
-            auto &p2 = installed ? *installed : rr2.getPackage();
-
-            d.resolved_pkg = p2.clone();
-            return;
-
-            auto loader = getContext().load_package(p2);
-            auto transform = loader->load(d.getUnresolvedPackageId().getSettings());
-            ((Dependency&)d).setTarget(transform);
-            //auto &t = getMainBuild().load(*p);
-            //d.setTarget(t);
-
-            // we save original request to resolver
-            getSettings()["resolver"].addResolvedPackage(rr.getUnresolvedPackageName(), rr.getSettings(), PackageId{ p2.getId().getName(), rr.getSettings() });
-        }
-        /*else
-        {
-            auto loader = getContext().load_package(rr.getPackage());
-            auto transform = loader->load(d.getUnresolvedPackageId().getSettings());
-            ((Dependency&)d).setTarget(transform);
-        }*/
+        d.resolved_pkg = rr.getPackage().clone();
         return;
     }
 
-    // local package
-    ResolveRequest rr{ d.getUnresolvedPackageId() };
-    SW_UNIMPLEMENTED;
-    //auto &t = getMainBuild().resolveAndLoad(rr);
-    //d.setTarget(t);
-    return;
+    {
+        // try to resolve sources
+        PackageSettings s;
+        ResolveRequest rr2{ d.getUnresolvedPackageId().getName(), s };
+        if (!resolve(rr2, false))
+            throw SW_RUNTIME_ERROR("Cannot resolve package " + rr.toString() + " and " + rr2.toString());
+        auto installed = getContext().getLocalStorage().install(rr2.getPackage());
+        auto &p2 = installed ? *installed : rr2.getPackage();
+
+        d.resolved_pkg = p2.clone();
+        return;
+
+        auto loader = getContext().load_package(p2);
+        auto transform = loader->load(d.getUnresolvedPackageId().getSettings());
+        ((Dependency&)d).setTarget(transform);
+        //auto &t = getMainBuild().load(*p);
+        //d.setTarget(t);
+
+        // we save original request to resolver
+        getSettings()["resolver"].addResolvedPackage(rr.getUnresolvedPackageName(), rr.getSettings(), PackageId{ p2.getId().getName(), rr.getSettings() });
+    }
+    /*else
+    {
+        auto loader = getContext().load_package(rr.getPackage());
+        auto transform = loader->load(d.getUnresolvedPackageId().getSettings());
+        ((Dependency&)d).setTarget(transform);
+    }*/
 }
 
 path Target::getFile(const Target &dep, const path &fn)
