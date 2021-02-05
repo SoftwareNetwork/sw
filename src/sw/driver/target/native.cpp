@@ -554,7 +554,7 @@ void NativeCompiledTarget::init()
 
     if (getSettings()["static-deps"])
     {
-        getExportOptions()["native"]["library"] = "static";
+        getExportOptions()["native"]["library"] = "static"s;
         //getExportOptions()["static-deps"].use();
     }
 
@@ -1495,9 +1495,9 @@ void NativeCompiledTarget::prepare1()
         auto add_dep = [this](auto &&name)
         {
             auto &p = getSettings()["rule"][name]["package"];
-            UnresolvedPackageName u = p.is<UnresolvedPackageName>()
-                ? p.get<UnresolvedPackageName>()
-                : p.get<PackageName>()
+            UnresolvedPackageName u = p.template is<UnresolvedPackageName>()
+                ? p.template get<UnresolvedPackageName>()
+                : p.template get<PackageName>()
                 ;
             auto d = std::make_shared<Dependency>(u);
             setDummyDependencySettings(d);

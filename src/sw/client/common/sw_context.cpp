@@ -74,7 +74,7 @@ static sw::PackageSettings compilerTypeFromStringCaseI(const sw::UnresolvedPacka
         ts["rule"]["cpp"]["package"] = set_with_version("org.gnu.gpp");
         ts["rule"]["asm"]["package"] = ts["rule"]["c"]["package"].getValue();
         for (auto &[k, v] : ts["rule"].getMap())
-            v["type"] = "gnu";
+            v["type"] = "gnu"s;
     }
     else if (0
         || compiler.getPath() == "clang"
@@ -86,7 +86,7 @@ static sw::PackageSettings compilerTypeFromStringCaseI(const sw::UnresolvedPacka
         ts["rule"]["cpp"]["package"] = set_with_version("org.LLVM.clangpp");
         ts["rule"]["asm"]["package"] = ts["rule"]["c"]["package"].getValue();
         for (auto &[k, v] : ts["rule"].getMap())
-            v["type"] = "clang";
+            v["type"] = "clang"s;
     }
     else if (0
         || compiler.getPath() == "appleclang"
@@ -98,7 +98,7 @@ static sw::PackageSettings compilerTypeFromStringCaseI(const sw::UnresolvedPacka
         ts["rule"]["cpp"]["package"] = set_with_version("com.Apple.clangpp");
         ts["rule"]["asm"]["package"] = ts["rule"]["c"]["package"].getValue();
         for (auto &[k, v] : ts["rule"].getMap())
-            v["type"] = "appleclang";
+            v["type"] = "appleclang"s;
     }
     // clang-cl is not possible for package path
     else if (0
@@ -111,7 +111,7 @@ static sw::PackageSettings compilerTypeFromStringCaseI(const sw::UnresolvedPacka
         ts["rule"]["cpp"]["package"] = set_with_version("org.LLVM.clangcl");
         //ts["rule"]["link"]["package"] = set_with_version("org.LLVM.lld.link");
         for (auto &[k, v] : ts["rule"].getMap())
-            v["type"] = "clangcl";
+            v["type"] = "clangcl"s;
     }
     else if (0
         || compiler.getPath() == "msvc"
@@ -125,7 +125,7 @@ static sw::PackageSettings compilerTypeFromStringCaseI(const sw::UnresolvedPacka
         ts["rule"]["lib"]["package"] = set_with_version("com.Microsoft.VisualStudio.VC.lib");
         ts["rule"]["link"]["package"] = set_with_version("com.Microsoft.VisualStudio.VC.link");
         for (auto &[k, v] : ts["rule"].getMap())
-            v["type"] = "msvc";
+            v["type"] = "msvc"s;
         ts["native"]["stdlib"]["cpp"] = set_with_version("com.Microsoft.VisualStudio.VC.libcpp");
     }
     else if (0
@@ -140,8 +140,8 @@ static sw::PackageSettings compilerTypeFromStringCaseI(const sw::UnresolvedPacka
         ts["rule"]["lib"]["package"] = sw::UnresolvedPackageName("com.intel.compiler.lib").toString();
         ts["rule"]["link"]["package"] = sw::UnresolvedPackageName("com.intel.compiler.link").toString();
         for (auto &[k, v] : ts["rule"].getMap())
-            v["type"] = "intel";
-        ts["rule"]["asm"]["type"] = "msvc";
+            v["type"] = "intel"s;
+        ts["rule"]["asm"]["type"] = "msvc"s;
     }
     else
     {
@@ -546,7 +546,7 @@ std::vector<sw::PackageSettings> SwClientContext::createSettings()
 
     if (options.use_same_config_for_host_dependencies)
     {
-        initial_settings["use_same_config_for_host_dependencies"] = "true";
+        initial_settings["use_same_config_for_host_dependencies"] = true;
         initial_settings["use_same_config_for_host_dependencies"].ignoreInComparison(true);
         getContext().setHostSettings(initial_settings);
     }
@@ -561,9 +561,9 @@ std::vector<sw::PackageSettings> SwClientContext::createSettings()
     }
 
     if (options.static_dependencies)
-        initial_settings["static-deps"] = "true";
+        initial_settings["static-deps"] = true;
     if (options.reproducible_build)
-        initial_settings["reproducible-build"] = "true";
+        initial_settings["reproducible-build"] = true;
 
     std::vector<sw::PackageSettings> settings;
     settings.push_back(initial_settings);
@@ -618,9 +618,9 @@ std::vector<sw::PackageSettings> SwClientContext::createSettings()
         mult_and_action(2, [st,sh](auto &s, int i)
         {
             if (i == st)
-                s["native"]["library"] = "static";
+                s["native"]["library"] = "static"s;
             if (i == sh)
-                s["native"]["library"] = "shared";
+                s["native"]["library"] = "shared"s;
         });
     }
     else
@@ -628,9 +628,9 @@ std::vector<sw::PackageSettings> SwClientContext::createSettings()
         for (auto &s : settings)
         {
             if (options.static_build)
-                s["native"]["library"] = "static";
+                s["native"]["library"] = "static"s;
             if (options.shared_build)
-                s["native"]["library"] = "shared";
+                s["native"]["library"] = "shared"s;
         }
     }
 
@@ -644,9 +644,9 @@ std::vector<sw::PackageSettings> SwClientContext::createSettings()
         mult_and_action(2, [mt, md](auto &s, int i)
         {
             if (i == mt)
-                s["native"]["mt"] = "true";
+                s["native"]["mt"] = true;
             if (i == md)
-                s["native"]["mt"] = "false";
+                s["native"]["mt"] = false;
         });
     }
     else
@@ -654,9 +654,9 @@ std::vector<sw::PackageSettings> SwClientContext::createSettings()
         for (auto &s : settings)
         {
             if (options.win_mt)
-                s["native"]["mt"] = "true";
+                s["native"]["mt"] = true;
             if (options.win_md)
-                s["native"]["mt"] = "false";
+                s["native"]["mt"] = false;
         }
     }
 
@@ -814,7 +814,7 @@ sw::SwContext &SwClientContext::getContext(bool in_allow_network)
 
     //
     sw::PackageSettings cs;
-#define SET_BOOL_OPTION(x) cs[#x] = getOptions().x ? "true" : ""
+#define SET_BOOL_OPTION(x) if (getOptions().x) cs[#x] = true
     SET_BOOL_OPTION(debug_configs);
     SET_BOOL_OPTION(ignore_outdated_configs);
     SET_BOOL_OPTION(do_not_remove_bad_module);
