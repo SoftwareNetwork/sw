@@ -513,7 +513,7 @@ void NativeCompilerRule::addInputs(const Target &t, RuleFiles &rfs)
         {
             // pp   command: .c  -> .pp
             // base command: .pp -> .obj
-            auto vs_setup = [&rf](NativeCompiler &base_command, auto &pp_command)
+            auto vs_setup = [](NativeCompiler &base_command, auto &pp_command)
             {
                 SW_UNIMPLEMENTED;
                 /*auto c = rf.getFile().extension() == ".c";
@@ -575,9 +575,11 @@ void NativeCompilerRule::addInputs(const Target &t, RuleFiles &rfs)
         if (!rulename.empty())
             nc.getCommand()->name += " ";*/
         nc.getCommand()->name += "[" + t.getPackage().toString() + "]" + tfns.getName(rf.getFile());
-        auto &rf = rfs.addFile(output);
-        rf.setCommand(c->getCommand());
-        rf.addDependency(fn);
+        {
+            auto &rf = rfs.addFile(output);
+            rf.setCommand(c->getCommand());
+            rf.addDependency(fn);
+        }
     }
 }
 

@@ -14,7 +14,7 @@ SUBCOMMAND_DECL(update)
             bs["update_lock_file_packages"][p];
     }
     else
-        bs["update_lock_file"] = "true"; // update all
+        bs["update_lock_file"] = true; // update all
     b->setSettings(bs);
     b->loadInputs();
     SW_UNIMPLEMENTED;

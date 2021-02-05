@@ -58,9 +58,11 @@ return "";
 
     size_t getHash() const
     {
-        return std::visit(
-            [](auto &&v) { size_t h = 0; return hash_combine(h, std::hash<std::decay_t<decltype(v)>>()(v)); },
-            *this);
+        auto hf = [](auto &&v) {
+            size_t h = 0;
+            return hash_combine(h, std::hash<std::decay_t<decltype(v)>>()(v));
+        };
+        return std::visit(hf, (const base &)*this);
     }
 
     operator std::string() const

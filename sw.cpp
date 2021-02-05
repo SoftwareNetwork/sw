@@ -31,14 +31,18 @@ void build(Solution &s)
             "org.sw.demo.boost.property_tree"_dep,
             "org.sw.demo.boost.serialization"_dep,
             "org.sw.demo.boost.stacktrace"_dep;
-        //cmddep->getSettings()["export-if-static"] = "true";
+        //cmddep->getSettings()["export-if-static"] = true;
         //cmddep->getSettings()["export-if-static"].setRequired();
+#if SW_CPP_DRIVER_API_VERSION > 1
+        verdep->getSettings()["export-if-static"] = true;
+#else
         verdep->getSettings()["export-if-static"] = "true";
-#if SW_CPP_DRIVER_API_VERSION == 1
         verdep->getSettings()["export-if-static"].setRequired();
 #endif
+#if SW_CPP_DRIVER_API_VERSION > 1
+        srcdep->getSettings()["export-if-static"] = true;
+#else
         srcdep->getSettings()["export-if-static"] = "true";
-#if SW_CPP_DRIVER_API_VERSION == 1
         srcdep->getSettings()["export-if-static"].setRequired();
 #endif
         if (support.getBuildSettings().TargetOS.Type == OSType::Windows)

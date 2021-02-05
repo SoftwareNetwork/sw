@@ -115,7 +115,7 @@ static sw::support::SourceDirMap getSources(SwClientContext &swctx)
     auto &b = *b1;
 
     auto ts = swctx.createInitialSettings();
-    ts["driver"]["dry-run"] = "true"; // only used to get sources
+    ts["driver"]["dry-run"] = true; // only used to get sources
     ts["driver"].ignoreInComparison(true);
 
     SW_UNIMPLEMENTED;
