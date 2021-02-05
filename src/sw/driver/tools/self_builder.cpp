@@ -42,7 +42,7 @@ auto get_base_rr_vector()
 {
     std::vector<ResolveRequest> rrs;
 #define DEP1(x) x
-#define DEP(x) rrs.emplace_back(ResolveRequest{ DEP1(x) ## s, empty_settings });
+#define DEP(x) rrs.emplace_back(ResolveRequest{ DEP1(String{x}), empty_settings });
 #include "self_builder.inl"
 #undef DEP
 #undef DEP1

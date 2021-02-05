@@ -319,14 +319,7 @@ public:
     }
 
     template <class T, class ... Args>
-    T &get(Args && ... args)
-    {
-        auto t = std::make_unique<T>(std::forward<Args>(args)...);
-        auto i = getChecker().all_checks.find(t->getHash());
-        if (i == getChecker().all_checks.end())
-            throw SW_RUNTIME_ERROR("Missing check: " + *t->Definitions.begin());
-        return static_cast<T&>(*i->second);
-    }
+    T &get(Args && ... args);
 
     FunctionExists &checkFunctionExists(const String &function, const String &def = {});
     IncludeExists &checkIncludeExists(const String &include, const String &def = {});
@@ -375,5 +368,15 @@ struct SW_DRIVER_CPP_API Checker
 //private:
     CheckSet::CheckStorage all_checks;
 };
+
+template <class T, class ... Args>
+T &CheckSet::get(Args && ... args)
+{
+    auto t = std::make_unique<T>(std::forward<Args>(args)...);
+    auto i = getChecker().all_checks.find(t->getHash());
+    if (i == getChecker().all_checks.end())
+        throw SW_RUNTIME_ERROR("Missing check: " + *t->Definitions.begin());
+    return static_cast<T&>(*i->second);
+}
 
 }
