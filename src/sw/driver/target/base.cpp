@@ -416,7 +416,7 @@ path Target::getLocalOutputBinariesDirectory() const
 {
     path d;
     if (ts["output_directory"])
-        d = (const char8_t *)ts["output_directory"].getValue().c_str();
+        d = (const path_char_t *)ts["output_directory"].getValue().c_str();
     else
         d = getMainBuild().getBuildDirectory() / "out" / getConfig();
     try

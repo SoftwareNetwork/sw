@@ -214,7 +214,7 @@ void PackageSetting::mergeFromJson(const nlohmann::json &j)
     GET_RAW(5);
 #undef GET_RAW
     case 6:
-        *this = path((const char8_t *)j["value"].get<String>().c_str());
+        *this = path((const path_char_t *)j["value"].get<String>().c_str());
         return;
     case 7:
     {

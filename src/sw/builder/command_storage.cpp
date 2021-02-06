@@ -161,7 +161,7 @@ static void load(const path &fn, Files &files, std::unordered_map<size_t, path> 
             // file
             String s;
             b.read(s);
-            path p = (const char8_t *)s.c_str();
+            path p = (const path_char_t *)s.c_str();
             files.insert(p);
 
             files2[file_hash(p)] = p;
