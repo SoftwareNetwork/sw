@@ -266,8 +266,9 @@ Check &CheckSet::registerCheck(Check &c) const
     return registerCheck(getChecker().all_checks, c);
 }
 
-void CheckSet::performChecks(const SwBuild &mb, const PackageSettings &ts)
+void CheckSet::performChecks(const PackageSettings &ts)
 {
+    auto &mb = getChecker().swbld;
     static const auto checks_dir = getChecker().swbld.getContext().getLocalStorage().storage_dir_etc / "sw" / "checks";
 
     if (!t)
@@ -543,7 +544,7 @@ void CheckSet::performChecks(const SwBuild &mb, const PackageSettings &ts)
                     c->requires_manual_setup = false;
                 }
                 cs.manual_checks.clear();
-                return performChecks(mb, ts);
+                return performChecks(ts);
             }
 
             throw SW_RUNTIME_ERROR("Some manual checks are missing, please set them in order to continue. "

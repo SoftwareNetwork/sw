@@ -46,9 +46,14 @@ Commands my_package_transform::get_commands() const { return t->getCommands(); }
 
 const PackageSettings &my_package_transform::get_properties() const { return t->getInterfaceSettings(); }
 
-std::shared_ptr<package_transform> my_package_loader::load(const PackageSettings &s) const
+const package_transform &my_package_loader::load(const PackageSettings &s)
 {
-    return t ? t : t = std::make_shared<my_package_transform>(b, s, *p, *i, *r);
+    auto h = s.getHash();
+    auto i = transforms.find(h);
+    if (i != transforms.end())
+        return *i->second;
+    auto [j,_] = transforms.emplace(h, std::make_unique<my_package_transform>(build, s, *p, *input, *resolver));
+    return *j->second;
 }
 
 my_physical_package::my_physical_package(ITargetPtr in) : t(std::move(in)), p{ t->getPackage(), t->getSettings() } {}

@@ -91,9 +91,9 @@ struct SW_CORE_API SwContext : SwCoreContext
     //const PackageSettings &getSettings() const { return settings; }
     //void setSettings(const PackageSettings &s) { settings = s; }
 
-    using package_loader_ptr = std::shared_ptr<package_loader>;
-    package_loader_ptr load_package(const Package &) const;
-    std::vector<package_loader_ptr> load_packages(const path &) const;
+    //using package_loader_ptr = std::shared_ptr<package_loader>;
+    //package_loader_ptr load_package(const Package &) const;
+    //std::vector<package_loader_ptr> load_packages(const path &) const;
 
 private:
     using InputPtr = std::unique_ptr<Input>;

@@ -976,9 +976,9 @@ std::unordered_map<path, PrepareConfigOutputData> Driver::build_configs1(SwConte
             p->setData(std::move(d));
 
             auto pp = std::make_unique<my_package_loader>(*p);
-            pp->i = std::move(i);
-            pp->b = std::move(b);
-            pp->r = std::make_unique<Resolver>(r);
+            pp->input = std::move(i);
+            pp->build = std::move(b);
+            pp->resolver = std::make_unique<Resolver>(r);
             loaders.emplace_back(std::move(pp));
         }
 
@@ -995,15 +995,12 @@ std::unordered_map<path, PrepareConfigOutputData> Driver::build_configs1(SwConte
     ScopedFileLock lk(swctx.getLocalStorage().storage_dir_tmp / "cfg" / "build");
     //b->build();
 
-    std::vector<std::shared_ptr<sw::package_transform>> transforms;
+    std::vector<const sw::package_transform *> transforms;
     for (auto &p : loaders)
-        transforms.push_back(p->load(ts));
+        transforms.push_back(&p->load(ts));
 
-    std::vector<const sw::package_transform*> pkg_ptr;
-    for (auto &p : transforms)
-        pkg_ptr.push_back(p.get());
     sw::transform_executor e;
-    e.execute(pkg_ptr);
+    e.execute(transforms);
 
     return save_and_return(pc.r);
 }
@@ -1206,9 +1203,9 @@ std::vector<Driver::package_loader_ptr> Driver::load_packages(std::vector<std::u
             p->setData(std::move(d));
 
             auto pp = std::make_unique<my_package_loader>(*p);
-            pp->i = is;
-            pp->b = std::move(b);
-            pp->r = std::make_unique<Resolver>(r);
+            pp->input = is;
+            pp->build = std::move(b);
+            pp->resolver = std::make_unique<Resolver>(r);
             loaders.emplace_back(std::move(pp));
         }
     }
@@ -1226,7 +1223,9 @@ static std::unordered_map<PackageId, Driver::package_loader_ptr> loaders2;
 
 Driver::package_loader_ptr Driver::load_package(const Package &p)
 {
-    auto lp = dynamic_cast<const ConfigPackage *>(&p);
+    SW_UNIMPLEMENTED;
+
+    /*auto lp = dynamic_cast<const ConfigPackage *>(&p);
 
     if (lp)
     {
@@ -1270,7 +1269,7 @@ Driver::package_loader_ptr Driver::load_package(const Package &p)
     if (lp)
         return loaders1.emplace(p.getId(), pp).first->second;
     else
-        return loaders2.emplace(p.getId(), pp).first->second;
+        return loaders2.emplace(p.getId(), pp).first->second;*/
 }
 
 } // namespace driver::cpp

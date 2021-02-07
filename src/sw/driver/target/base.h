@@ -95,11 +95,8 @@ struct SW_DRIVER_CPP_API TargetBaseData : ProjectDirectories, TargetEvents
     //TargetBaseData &operator=(TargetBaseData &&) = default;
     //~TargetBaseData();
 
-    SwBuild &getMainBuild() const;
-
 protected:
     const Build *build = nullptr;
-    SwBuild *main_build_ = nullptr;
     std::optional<PackageName> current_project;
 };
 
@@ -156,7 +153,7 @@ struct SW_DRIVER_CPP_API TargetBase : TargetBaseData
 
     Build &getSolution();
     const Build &getSolution() const;
-    const SwContext &getContext() const;
+    //const SwContext &getContext() const;
 
 protected:
     // impl

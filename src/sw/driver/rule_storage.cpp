@@ -68,7 +68,7 @@ IRule *RuleData::getRule() const
         return ptr.get();
     if (!dep)
         return {};
-    auto tr = dynamic_cast<my_package_transform*>(dep->transform.get());
+    auto tr = dynamic_cast<const my_package_transform*>(dep->transform);
     if (!tr)
         SW_UNIMPLEMENTED;
     auto t = tr->t->as<PredefinedProgram *>();

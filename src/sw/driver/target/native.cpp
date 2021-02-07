@@ -263,7 +263,7 @@ NativeCompiledTarget::~NativeCompiledTarget()
 path NativeCompiledTarget::getBinaryParentDir() const
 {
     if (IsSwConfigLocal)
-        return getTargetDirShort(getMainBuild().getBuildDirectory() / "cfg");
+        return getTargetDirShort(getSolution().getMainBuild().getBuildDirectory() / "cfg");
     return Target::getBinaryParentDir();
 }
 
@@ -274,7 +274,7 @@ path NativeCompiledTarget::getOutputFileName(const path &root) const
     {
         path root;
         if (IsSwConfigLocal)
-            root = getMainBuild().getBuildDirectory();
+            root = getSolution().getMainBuild().getBuildDirectory();
         else
             root = getContext().getLocalStorage().storage_dir_tmp;
         p = root / "cfg" / getConfig() / ::sw::getOutputFileName(*this);
@@ -2033,8 +2033,8 @@ void NativeCompiledTarget::prepare_pass3()
     auto rd = [this](Dependency &d)
     {
         SW_CHECK(d.resolved_pkg);
-        auto loader = getContext().load_package(*d.resolved_pkg);
-        auto transform = loader->load(d.getUnresolvedPackageId().getSettings());
+        auto loader = getSolution().getMainBuild().load_package(*d.resolved_pkg);
+        auto &transform = loader->load(d.getUnresolvedPackageId().getSettings());
         d.setTarget(transform);
     };
     for (auto &d : getActiveDependencies())
@@ -3437,7 +3437,7 @@ void NativeCompiledTarget::setChecks(const String &name, bool check_definitions)
 
     auto &checks_set = getChecks(name);
     checks_set.t = this;
-    checks_set.performChecks(getMainBuild(), getSettings());
+    checks_set.performChecks(getSettings());
 
     // set results
     for (auto &&[k, c] : checks_set.getResults())
@@ -3464,7 +3464,7 @@ path NativeCompiledTarget::getPatchDir() const
     else if (!isLocal())
         base = getLocalPackage().getRootDirectory();
     else
-        base = getMainBuild().getBuildDirectory();
+        base = getSolution().getMainBuild().getBuildDirectory();
     return base / "patch";
 }
 

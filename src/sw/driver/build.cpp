@@ -65,8 +65,8 @@ ModuleSwappableData::AddedTargets &ModuleSwappableData::getTargets()
 
 Build::Build(SwBuild &mb)
     : checker(std::make_unique<Checker>(mb))
+    , main_build(mb)
 {
-    main_build_ = &mb;
 }
 
 //Build::~Build() {}
@@ -81,6 +81,11 @@ Build::Build(SwBuild &mb)
     // driver->build_cpp_spec(swctx, p);
     //return getContext().getModuleStorage().get(dll);
 }*/
+
+const SwContext &Build::getContext() const
+{
+    return getMainBuild().getContext();
+}
 
 const PackageSettings &ModuleSwappableData::getSettings() const
 {

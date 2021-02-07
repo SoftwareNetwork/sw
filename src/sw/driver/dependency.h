@@ -46,7 +46,7 @@ struct SW_DRIVER_CPP_API DependencyData : IDependency
     UnresolvedPackageId &getUnresolvedPackageId() override { return upkg; }
     const UnresolvedPackageId &getUnresolvedPackageId() const override { return upkg; }
     //void setTarget(const ITarget &t) override;
-    void setTarget(std::shared_ptr<package_transform>);
+    void setTarget(const package_transform &);
     //const ITarget &getTarget() const override;
     // get properties
     const PackageSettings &getInterfaceSettings() const;
@@ -71,8 +71,7 @@ struct SW_DRIVER_CPP_API DependencyData : IDependency
 private:
     UnresolvedPackageId upkg;
 public:
-    std::shared_ptr<package_transform> transform;
-    //const ITarget *target = nullptr;
+    const package_transform *transform = nullptr;
 };
 
 struct SW_DRIVER_CPP_API Dependency : DependencyData

@@ -73,6 +73,7 @@ struct SW_DRIVER_CPP_API Build : TargetBase
     ModuleSwappableData module_data;
     DriverData *dd = nullptr;
     std::unique_ptr<Checker> checker;
+    SwBuild &main_build;
     //const ProgramDetector &pd;
 
     //
@@ -87,7 +88,12 @@ struct SW_DRIVER_CPP_API Build : TargetBase
 
     const PackageSettings &getExternalVariables() const;
 
+    const SwContext &getContext() const;
+
     //const ProgramDetector &getProgramDetector() const { return pd; }
+
+private:
+    SwBuild &getMainBuild() const { return main_build; }
 };
 
 struct SW_DRIVER_CPP_API ExtendedBuild : Build

@@ -36,9 +36,9 @@ void DependencyData::setTarget(const ITarget &t)
     target = &t;
 }*/
 
-void DependencyData::setTarget(std::shared_ptr<package_transform> t)
+void DependencyData::setTarget(const package_transform &t)
 {
-    transform = t;
+    transform = &t;
 }
 
 /*const ITarget &DependencyData::getTarget() const

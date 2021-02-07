@@ -60,13 +60,6 @@ void TargetEvents::call(CallbackType t) const
 {
 }*/
 
-SwBuild &TargetBaseData::getMainBuild() const
-{
-    if (!main_build_)
-        throw SW_LOGIC_ERROR("main_build is not set");
-    return *main_build_;
-}
-
 TargetBase::TargetBase()
 {
 }
@@ -82,7 +75,6 @@ TargetBase::TargetBase(const TargetBase &rhs, const PackageName &inpkg)
 
     // take from parent
     build = &parent.getSolution();
-    main_build_ = parent.main_build_;
     Scope = parent.Scope;
     current_project = parent.current_project;
 
@@ -169,10 +161,10 @@ void TargetBase::addTarget2(Target &t)
         //getMainBuild().registerTarget(t);
 }
 
-const SwContext &TargetBase::getContext() const
+/*const SwContext &TargetBase::getContext() const
 {
-    return getMainBuild().getContext();
-}
+    return getSolution().getMainBuild().getContext();
+}*/
 
 Build &TargetBase::getSolution()
 {
@@ -395,7 +387,7 @@ PackageSettings Target::getHostSettings() const
 {
     if (ts_export["use_same_config_for_host_dependencies"])
         return ts_export;
-    auto hs = getMainBuild().getContext().getHostSettings();
+    auto hs = getSolution().getMainBuild().getContext().getHostSettings();
     // reconsider this?
     // Whole host settings can be taken from user config in ~/.sw/sw.yml
     //hs["resolver"] = ts_export["resolver"];
@@ -418,7 +410,7 @@ path Target::getLocalOutputBinariesDirectory() const
     if (ts["output_directory"])
         d = (const path_char_t *)ts["output_directory"].getValue().c_str();
     else
-        d = getMainBuild().getBuildDirectory() / "out" / getConfig();
+        d = getSolution().getMainBuild().getBuildDirectory() / "out" / getConfig();
     try
     {
         if (!fs::exists(d / "cfg.json"))
@@ -473,7 +465,7 @@ CommandStorage *Target::getCommandStorage() const
         return nullptr;
     if (command_storage)
         return *command_storage;
-    return &getMainBuild().getCommandStorage(getBinaryDirectory().parent_path());
+    return &getSolution().getMainBuild().getCommandStorage(getBinaryDirectory().parent_path());
 }
 
 Commands Target::getCommands() const
@@ -533,7 +525,7 @@ const BuildSettings &Target::getBuildSettings() const
 
 FileStorage &Target::getFs() const
 {
-    return getMainBuild().getFileStorage();
+    return getSolution().getMainBuild().getFileStorage();
 }
 
 void Target::init()
@@ -571,7 +563,7 @@ void Target::init()
 path Target::getBinaryParentDir() const
 {
     if (isLocal())
-        return getTargetDirShort(getMainBuild().getBuildDirectory());
+        return getTargetDirShort(getSolution().getMainBuild().getBuildDirectory());
     else
     {
         if (isOverridden())
@@ -893,9 +885,10 @@ void Target::resolveDependency(Dependency &d)
         d.resolved_pkg = p2.clone();
         return;
 
-        auto loader = getContext().load_package(p2);
-        auto transform = loader->load(d.getUnresolvedPackageId().getSettings());
-        ((Dependency&)d).setTarget(transform);
+        //auto loader = getContext().load_package(p2);
+        //auto &transform = loader->load(d.getUnresolvedPackageId().getSettings());
+        //d.setTarget(transform);
+
         //auto &t = getMainBuild().load(*p);
         //d.setTarget(t);
 
@@ -931,7 +924,7 @@ path Target::getFile(const DependencyPtr &dep, const path &fn)
     ResolveRequest rr{ dep->getUnresolvedPackageId() };
     resolve(rr, true);
 
-    auto p2 = getMainBuild().getContext().getLocalStorage().install(rr.getPackage());
+    auto p2 = getSolution().getMainBuild().getContext().getLocalStorage().install(rr.getPackage());
     auto &lp = p2 ? *p2 : rr.getPackage();
     auto p = lp.getSourceDirectory();
     // allow to get dirs

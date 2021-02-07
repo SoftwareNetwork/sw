@@ -42,7 +42,7 @@ struct SW_CORE_API IDriver
     // add predefined targets etc.
     virtual void setupBuild(SwBuild &) const {}
 
-    using package_loader_ptr = std::shared_ptr<package_loader>;
+    using package_loader_ptr = std::unique_ptr<package_loader>;
     virtual package_loader_ptr load_package(const Package &) = 0;
     virtual std::vector<package_loader_ptr> load_packages(const path &) = 0;
 };

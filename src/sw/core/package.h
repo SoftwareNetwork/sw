@@ -16,7 +16,8 @@ struct SW_CORE_API package_loader
     virtual ~package_loader() = 0;
 
     virtual const PackageName &get_package_name() const = 0;
-    virtual std::shared_ptr<package_transform> load(const PackageSettings &) const = 0;
+    virtual const package_transform &load(const PackageSettings &) = 0;
+    //virtual std::vector<const package_transform *> get_package_transforms() const = 0;
 };
 
 // local pkg?

@@ -6,6 +6,8 @@
 #include <sw/builder/execution_plan.h>
 //#include <sw/core/input.h>
 #include <sw/core/package.h>
+#include <sw/core/transform.h>
+#include <sw/driver/driver.h> // register driver
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "build");
@@ -160,7 +162,10 @@ SUBCOMMAND_DECL(build)
         }*/
     }
 
-    std::invoke_result_t<decltype(&sw::SwContext::load_packages), const sw::SwContext &, const path &> loaders;
+    sw::transform t;
+    t.add_driver(sw::driver::cpp::Driver::getPackageId(), std::make_unique<sw::driver::cpp::Driver>(getContext()));
+
+    std::vector<sw::package_loader *> loaders;
 
     auto settings = createSettings();
     for (auto &a : i.getInputs())
@@ -168,8 +173,8 @@ SUBCOMMAND_DECL(build)
         path p(a);
         if (fs::exists(p))
         {
-            for (auto &&p : getContext().load_packages(p))
-                loaders.emplace_back(std::move(p));
+            for (auto &&p : t.load_packages(p))
+                loaders.emplace_back(p);
             continue;
         }
         SW_UNIMPLEMENTED;
@@ -181,18 +186,15 @@ SUBCOMMAND_DECL(build)
         }*/
     }
 
-    std::vector<std::shared_ptr<sw::package_transform>> transforms;
+    std::vector<const sw::package_transform *> transforms;
     for (auto &p : loaders)
     {
         for (auto &s : settings)
-            transforms.push_back(p->load(s));
+            transforms.push_back(&p->load(s));
     }
 
-    std::vector<const sw::package_transform*> pkg_ptr;
-    for (auto &p : transforms)
-        pkg_ptr.push_back(p.get());
     sw::transform_executor e;
-    e.execute(pkg_ptr);
+    e.execute(transforms);
 
     //SW_UNIMPLEMENTED;
     //addInputs(*b, i);

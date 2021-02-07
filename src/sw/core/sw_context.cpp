@@ -353,7 +353,7 @@ void SwContext::loadEntryPointsBatch(const std::set<Input *> &inputs)
     waitAndGet(fs);
 }*/
 
-std::vector<SwContext::package_loader_ptr> SwContext::load_packages(const path &p) const
+/*std::vector<SwContext::package_loader_ptr> SwContext::load_packages(const path &p) const
 {
     std::vector<package_loader_ptr> pkgs;
     for (auto &[_, d] : drivers)
@@ -362,9 +362,9 @@ std::vector<SwContext::package_loader_ptr> SwContext::load_packages(const path &
             pkgs.emplace_back(std::move(p));
     }
     return pkgs;
-}
+}*/
 
-SwContext::package_loader_ptr SwContext::load_package(const Package &in) const
+/*SwContext::package_loader_ptr SwContext::load_package(const Package &in) const
 {
     // no, install now (resolve to local)
     auto installed = getLocalStorage().install(in);
@@ -376,20 +376,20 @@ SwContext::package_loader_ptr SwContext::load_package(const Package &in) const
         throw SW_RUNTIME_ERROR("Driver is not registered: " + p.getData().driver.toString());
     return i->second->load_package(p);
 
-    /*auto input = i->second->getInput(p);
-    auto [i2,_] = registerInput(std::move(input));
-    i2->load();
-    return i2;
+    //auto input = i->second->getInput(p);
+    //auto [i2,_] = registerInput(std::move(input));
+    //i2->load();
+    //return i2;
 
-    auto i = addInput(p);
-    getTargets()[p.getId().getName()].setInput(*i);
-    auto tgt = i->loadPackage(*this, p);
-    std::vector<sw::ITargetPtr> tgts;
-    tgts.emplace_back(std::move(tgt));
-    auto tgts2 = registerTargets(std::move(tgts));
-    for (auto &&tgt : tgts2)
-    getTargets()[tgt->getPackage()].push_back(*tgt, *i);
-    return *tgts2[0];*/
-}
+    //auto i = addInput(p);
+    //getTargets()[p.getId().getName()].setInput(*i);
+    //auto tgt = i->loadPackage(*this, p);
+    //std::vector<sw::ITargetPtr> tgts;
+    //tgts.emplace_back(std::move(tgt));
+    //auto tgts2 = registerTargets(std::move(tgts));
+    //for (auto &&tgt : tgts2)
+    //getTargets()[tgt->getPackage()].push_back(*tgt, *i);
+    //return *tgts2[0];
+}*/
 
 }

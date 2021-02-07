@@ -345,7 +345,7 @@ public:
     auto begin() const { return all.begin(); }
     auto end() const { return all.end(); }
 
-    void performChecks(const SwBuild &, const PackageSettings &);
+    void performChecks(const PackageSettings &);
 
 private:
     void prepareChecksForUse();
