@@ -74,6 +74,11 @@ struct DownloadData
     path requested_dir;
     path stamp_file;
 
+    DownloadData() = default;
+    DownloadData(const DownloadData &) = delete;
+    DownloadData &operator=(const DownloadData &) = delete;
+    ~DownloadData();
+
     path getRequestedDirectory() const { return requested_dir; }
     void remove() const;
 };

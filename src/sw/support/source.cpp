@@ -46,6 +46,11 @@ std::unique_ptr<Source> load(const nlohmann::json &j)
 namespace support
 {
 
+detail::DownloadData::~DownloadData()
+{
+    remove();
+}
+
 void detail::DownloadData::remove() const
 {
     fs::remove_all(root_dir);
@@ -57,57 +62,48 @@ bool download(const std::unordered_set<SourcePtr> &sset, SourceDirMap &source_di
     std::atomic_bool downloaded = false;
     auto &e = getExecutor();
     Futures<void> fs;
-    for (auto &src : sset)
-    {
-        fs.push_back(e.push([src = src.get(), &d = source_dirs[src->getHash()], &opts, &downloaded]
-            {
-                auto & t = d.stamp_file;
-                t = d.root_dir;
-                t += ".stamp";
+    for (auto &src : sset) {
+        fs.push_back(e.push([src = src.get(), &d = source_dirs[src->getHash()], &opts, &downloaded] {
+            auto &t = d.stamp_file;
+            t = d.root_dir;
+            t += ".stamp";
 
-                auto dl = [&src, d, &t, &downloaded]()
-                {
-                    downloaded = true;
-                    LOG_INFO(logger, "Downloading source:\n" << src->print());
-                    src->download(d.root_dir);
-                    write_file(t, timepoint2string(getUtc()));
-                };
+            auto dl = [&src, &d, &t, &downloaded]() {
+                downloaded = true;
+                LOG_INFO(logger, "Downloading source:\n" << src->print());
+                src->download(d.root_dir);
+                write_file(t, timepoint2string(getUtc()));
+            };
 
-                if (!fs::exists(d.root_dir))
-                {
+            if (!fs::exists(d.root_dir)) {
+                dl();
+            }
+            else if (!opts.ignore_existing_dirs) {
+                throw SW_RUNTIME_ERROR("Directory exists " + to_string(d.root_dir) + " for source " + src->print());
+            }
+            else {
+                bool e = fs::exists(t);
+                if (!e) {
+                    fs::remove_all(d.root_dir);
                     dl();
                 }
-                else if (!opts.ignore_existing_dirs)
-                {
-                    throw SW_RUNTIME_ERROR("Directory exists " + to_string(d.root_dir) + " for source " + src->print());
-                }
-                else
-                {
-                    bool e = fs::exists(t);
-                    if (!e)
-                    {
+                else if (getUtc() - string2timepoint(read_file(t)) > opts.existing_dirs_age) {
+                    // add src->needsRedownloading()?
+                    auto g = dynamic_cast<primitives::source::Git *>(src);
+                    if (g && (!g->tag.empty() || !g->commit.empty()))
+                        ;
+                    else {
+                        if (e)
+                            LOG_INFO(logger, "Download data is stale, re-downloading");
                         fs::remove_all(d.root_dir);
                         dl();
                     }
-                    else if (getUtc() - string2timepoint(read_file(t)) > opts.existing_dirs_age)
-                    {
-                        // add src->needsRedownloading()?
-                        auto g = dynamic_cast<primitives::source::Git *>(src);
-                        if (g && (!g->tag.empty() || !g->commit.empty()))
-                            ;
-                        else
-                        {
-                            if (e)
-                                LOG_INFO(logger, "Download data is stale, re-downloading");
-                            fs::remove_all(d.root_dir);
-                            dl();
-                        }
-                    }
                 }
-                d.requested_dir = d.root_dir;
-                if (opts.adjust_root_dir)
-                    d.requested_dir /= findRootDirectory(d.requested_dir); // pass found regex or files for better root dir lookup
-            }));
+            }
+            d.requested_dir = d.root_dir;
+            if (opts.adjust_root_dir)
+                d.requested_dir /= findRootDirectory(d.requested_dir); // pass found regex or files for better root dir lookup
+        }));
     }
     waitAndGet(fs);
     return downloaded;
