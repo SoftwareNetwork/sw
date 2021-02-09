@@ -9,6 +9,7 @@
 #include "../compiler/detect.h"
 #include "../compiler/set_settings.h"
 
+#include <sw/builder/command_storage.h>
 #include <sw/builder/jumppad.h>
 #include <sw/core/build.h>
 #include <sw/core/package.h>
@@ -80,7 +81,7 @@ TargetBase::TargetBase(const TargetBase &rhs, const PackageName &inpkg)
 
     // take from solution
     DryRun = getSolution().DryRun;
-    command_storage = getSolution().command_storage;
+    //command_storage = getSolution().command_storage;
     Local = getSolution().NamePrefix.empty();
 
     // other computations
@@ -97,7 +98,7 @@ TargetBase::TargetBase(const TargetBase &rhs, const PackageName &inpkg)
         {
             PackageSettings s;
             ResolveRequest rr{ inpkg, s };
-            //if (!getMainBuild().getResolver().resolve(rr))
+            //if (!getMainBuildx().getResolver().resolve(rr))
                 //throw SW_RUNTIME_ERROR("Not resolved: " + inpkg.toString());
             //lpkg = dynamic_cast<LocalPackage&>(rr.getPackage()).clone();
         }
@@ -146,8 +147,8 @@ void TargetBase::addTarget2(Target &t)
     }
 
     /*bool dummy = false;
-    auto it = getMainBuild().getTargets().find(t.getPackage());
-    if (it != getMainBuild().getTargets().end())
+    auto it = getMainBuildx().getTargets().find(t.getPackage());
+    if (it != getMainBuildx().getTargets().end())
     {
         auto i = it->second.findEqual(t.ts);
         dummy = i != it->second.end();
@@ -158,12 +159,12 @@ void TargetBase::addTarget2(Target &t)
         t.ts["dry-run"] = true;
 
     //if (!t.DryRun)
-        //getMainBuild().registerTarget(t);
+        //getMainBuildx().registerTarget(t);
 }
 
 /*const SwContext &TargetBase::getContext() const
 {
-    return getSolution().getMainBuild().getContext();
+    return getSolution().getMainBuildx().getContext();
 }*/
 
 Build &TargetBase::getSolution()
@@ -185,7 +186,7 @@ bool TargetBase::isOverridden() const
 {
     return 1
         && !isLocal()
-        && !is_under_root_by_prefix_path(getLocalPackage().getRootDirectory(), getContext().getLocalStorage().storage_dir)
+        && !is_under_root_by_prefix_path(getLocalPackage().getRootDirectory(), getSolution().getLocalStorage().storage_dir)
         ;
 }
 
@@ -387,7 +388,7 @@ PackageSettings Target::getHostSettings() const
 {
     if (ts_export["use_same_config_for_host_dependencies"])
         return ts_export;
-    auto hs = getSolution().getMainBuild().getContext().getHostSettings();
+    auto hs = getSolution().getContext().getHostSettings();
     // reconsider this?
     // Whole host settings can be taken from user config in ~/.sw/sw.yml
     //hs["resolver"] = ts_export["resolver"];
@@ -410,7 +411,7 @@ path Target::getLocalOutputBinariesDirectory() const
     if (ts["output_directory"])
         d = (const path_char_t *)ts["output_directory"].getValue().c_str();
     else
-        d = getSolution().getMainBuild().getBuildDirectory() / "out" / getConfig();
+        d = getSolution().getBuildDirectory() / "out" / getConfig();
     try
     {
         if (!fs::exists(d / "cfg.json"))
@@ -463,9 +464,9 @@ CommandStorage *Target::getCommandStorage() const
 {
     if (DryRun)
         return nullptr;
-    if (command_storage)
-        return *command_storage;
-    return &getSolution().getMainBuild().getCommandStorage(getBinaryDirectory().parent_path());
+    if (!command_storage)
+        command_storage = std::make_unique<CommandStorage>(getBinaryDirectory().parent_path());
+    return command_storage->get();
 }
 
 Commands Target::getCommands() const
@@ -525,7 +526,7 @@ const BuildSettings &Target::getBuildSettings() const
 
 FileStorage &Target::getFs() const
 {
-    return getSolution().getMainBuild().getFileStorage();
+    return getSolution().getFileStorage();
 }
 
 void Target::init()
@@ -545,7 +546,7 @@ void Target::init()
     {
         // we doing some download on server or whatever
         // so, we do not want to touch real existing bdirs
-        BinaryDir = getMainBuild().getBuildDirectory() / "dry" / shorten_hash(blake2b_512(BinaryDir.u8string()), 6);
+        BinaryDir = getMainBuildx().getBuildDirectory() / "dry" / shorten_hash(blake2b_512(BinaryDir.u8string()), 6);
         std::error_code ec;
         fs::remove_all(BinaryDir, ec);
         //fs::create_directories(BinaryDir);
@@ -563,7 +564,7 @@ void Target::init()
 path Target::getBinaryParentDir() const
 {
     if (isLocal())
-        return getTargetDirShort(getSolution().getMainBuild().getBuildDirectory());
+        return getTargetDirShort(getSolution().getBuildDirectory());
     else
     {
         if (isOverridden())
@@ -879,7 +880,7 @@ void Target::resolveDependency(Dependency &d)
         ResolveRequest rr2{ d.getUnresolvedPackageId().getName(), s };
         if (!resolve(rr2, false))
             throw SW_RUNTIME_ERROR("Cannot resolve package " + rr.toString() + " and " + rr2.toString());
-        auto installed = getContext().getLocalStorage().install(rr2.getPackage());
+        auto installed = getSolution().getLocalStorage().install(rr2.getPackage());
         auto &p2 = installed ? *installed : rr2.getPackage();
 
         d.resolved_pkg = p2.clone();
@@ -889,7 +890,7 @@ void Target::resolveDependency(Dependency &d)
         //auto &transform = loader->load(d.getUnresolvedPackageId().getSettings());
         //d.setTarget(transform);
 
-        //auto &t = getMainBuild().load(*p);
+        //auto &t = getMainBuildx().load(*p);
         //d.setTarget(t);
 
         // we save original request to resolver
@@ -924,7 +925,7 @@ path Target::getFile(const DependencyPtr &dep, const path &fn)
     ResolveRequest rr{ dep->getUnresolvedPackageId() };
     resolve(rr, true);
 
-    auto p2 = getSolution().getMainBuild().getContext().getLocalStorage().install(rr.getPackage());
+    auto p2 = getSolution().getLocalStorage().install(rr.getPackage());
     auto &lp = p2 ? *p2 : rr.getPackage();
     auto p = lp.getSourceDirectory();
     // allow to get dirs

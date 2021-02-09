@@ -48,7 +48,8 @@ namespace support
 
 detail::DownloadData::~DownloadData()
 {
-    remove();
+    if (delete_in_dtor)
+        remove();
 }
 
 void detail::DownloadData::remove() const

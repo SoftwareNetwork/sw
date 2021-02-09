@@ -128,10 +128,10 @@ static Strings getExports(HMODULE lib)
 }
 #endif
 
-static CommandStorage &getDriverCommandStorage(const Build &b)
+/*static CommandStorage &getDriverCommandStorage(const Build &b)
 {
     return b.getMainBuild().getCommandStorage(b.getContext().getLocalStorage().storage_dir_tmp / "db" / "service");
-}
+}*/
 
 static PackagePath getSelfTargetName(Build &b, const FilesSorted &files)
 {
@@ -237,7 +237,7 @@ static path getPackageHeader(const LocalPackage &p, const UnresolvedPackageName 
 
 static
 std::pair<FilesOrdered, std::unordered_set<UnresolvedPackageName>>
-getFileDependencies(SwBuild &b, const path &p, std::set<size_t> &gns)
+getFileDependencies(/*SwBuild &b, */const path &p, std::set<size_t> &gns)
 {
     std::unordered_set<UnresolvedPackageName> udeps;
     FilesOrdered headers;
@@ -273,7 +273,7 @@ getFileDependencies(SwBuild &b, const path &p, std::set<size_t> &gns)
         else if (m1 == "local")
         {
             SW_UNIMPLEMENTED;
-            auto [headers2, udeps2] = getFileDependencies(b, m[3].str(), gns);
+            auto [headers2, udeps2] = getFileDependencies(/*b, */m[3].str(), gns);
             headers.insert(headers.end(), headers2.begin(), headers2.end());
             udeps.insert(udeps2.begin(), udeps2.end());
         }
@@ -289,10 +289,10 @@ getFileDependencies(SwBuild &b, const path &p, std::set<size_t> &gns)
     return { headers, udeps };
 }
 
-static std::pair<FilesOrdered, std::unordered_set<UnresolvedPackageName>> getFileDependencies(SwBuild &b, const path &in_config_file)
+static std::pair<FilesOrdered, std::unordered_set<UnresolvedPackageName>> getFileDependencies(/*SwBuild &b, */const path &in_config_file)
 {
     std::set<size_t> gns;
-    return getFileDependencies(b, in_config_file, gns);
+    return getFileDependencies(/*b, */in_config_file, gns);
 }
 
 struct ConfigBuiltinLibraryTarget : StaticLibraryTarget
@@ -306,7 +306,7 @@ struct ConfigBuiltinLibraryTarget : StaticLibraryTarget
 private:
     path getBinaryParentDir() const override
     {
-        return StaticLibraryTarget::getTargetDirShort(getContext().getLocalStorage().storage_dir_tmp / "cfg");
+        return StaticLibraryTarget::getTargetDirShort(getSolution().getContext().getLocalStorage().storage_dir_tmp / "cfg");
     }
 };
 
@@ -325,7 +325,8 @@ void addImportLibrary(Build &b)
     write_file_if_different(getImportDefinitionsFile(b), defs);
 
     auto &lib = b.add<ConfigBuiltinLibraryTarget>("implib");
-    lib.command_storage = &getDriverCommandStorage(b);
+    SW_UNIMPLEMENTED;
+    //lib.command_storage = &getDriverCommandStorage(b);
     lib.AutoDetectOptions = false;
     lib += getImportDefinitionsFile(b);
 #endif
@@ -335,7 +336,8 @@ void addDelayLoadLibrary(Build &b)
 {
 #ifdef _WIN32
     auto &lib = b.add<ConfigBuiltinLibraryTarget>("delay_loader");
-    lib.command_storage = &getDriverCommandStorage(b);
+    SW_UNIMPLEMENTED;
+    //lib.command_storage = &getDriverCommandStorage(b);
     lib.AutoDetectOptions = false;
     lib += Definition("IMPORT_LIBRARY=\""s + IMPORT_LIBRARY + "\"");
     auto driver_idir = getDriverIncludeDir(b, lib);
@@ -384,7 +386,8 @@ void addConfigPchLibrary(Build &b)
     auto &lib = b.add<ConfigBuiltinLibraryTarget>("config_pch");
     lib.AutoDetectOptions = false;
     lib.CPPVersion = CPPLanguageStandard::CPP20;
-    lib.command_storage = &getDriverCommandStorage(b);
+    SW_UNIMPLEMENTED;
+    //lib.command_storage = &getDriverCommandStorage(b);
 
     addDeps(b, lib);
     addConfigDefs(lib);
@@ -411,7 +414,7 @@ void addConfigPchLibrary(Build &b)
 #endif
 }
 
-ExtendedBuild NativeTargetEntryPoint::createBuild(SwBuild &swb, const PackageSettings &s) const
+ExtendedBuild NativeTargetEntryPoint::createBuild(transform &t, SwBuild &swb, const PackageSettings &s) const
 {
     if (!dd)
         dd = std::make_unique<DriverData>();
@@ -423,7 +426,7 @@ ExtendedBuild NativeTargetEntryPoint::createBuild(SwBuild &swb, const PackageSet
     if (s["driver"]["force-source"].isValue())
         dd->force_source = load(nlohmann::json::parse(s["driver"]["force-source"].getValue()));
 
-    ExtendedBuild b(swb);
+    ExtendedBuild b(t, swb);
     b.dd = dd.get();
     b.DryRun = s["driver"]["dry-run"] && s["driver"]["dry-run"].get<bool>();
 
@@ -436,9 +439,9 @@ ExtendedBuild NativeTargetEntryPoint::createBuild(SwBuild &swb, const PackageSet
     return b;
 }
 
-std::vector<ITargetPtr> NativeTargetEntryPoint::loadPackages(SwBuild &swb, Resolver &r, const PackageSettings &s) const
+std::vector<ITargetPtr> NativeTargetEntryPoint::loadPackages(transform &t, SwBuild &swb, Resolver &r, const PackageSettings &s) const
 {
-    auto b = createBuild(swb, s);
+    auto b = createBuild(t, swb, s);
     b.module_data.current_settings = &s;
     b.module_data.resolver = &r;
     loadPackages1(b);
@@ -450,9 +453,9 @@ std::vector<ITargetPtr> NativeTargetEntryPoint::loadPackages(SwBuild &swb, Resol
     return std::move(b.module_data.getTargets());
 }
 
-ITargetPtr NativeTargetEntryPoint::loadPackage(SwBuild &swb, Resolver &r, const PackageSettings &s, const Package &p) const
+ITargetPtr NativeTargetEntryPoint::loadPackage(transform &t, SwBuild &swb, Resolver &r, const PackageSettings &s, const Package &p) const
 {
-    auto b = createBuild(swb, s);
+    auto b = createBuild(t, swb, s);
     b.module_data.current_settings = &s; // in any case
     b.module_data.known_target = &p;
     b.module_data.resolver = &r;
@@ -577,7 +580,7 @@ private:
     {
         if (Base::IsSwConfigLocal)
             return Base::getBinaryParentDir();
-        return Base::getTargetDirShort(Base::getContext().getLocalStorage().storage_dir_tmp / "cfg");
+        return Base::getTargetDirShort(Base::getSolution().getContext().getLocalStorage().storage_dir_tmp / "cfg");
     }
 };
 
@@ -603,7 +606,8 @@ decltype(auto) PrepareConfig::commonActions(Build &b, const InputData &d, const 
     auto &fn = d.fn;
     auto &lib = createTarget(b, d);
     lib.GenerateWindowsResource = false;
-    lib.command_storage = &getDriverCommandStorage(b);
+    SW_UNIMPLEMENTED;
+    //lib.command_storage = &getDriverCommandStorage(b);
 
     // cache idir
     if (driver_idir.empty() || !driver_idir.is_absolute())
@@ -673,7 +677,7 @@ decltype(auto) PrepareConfig::commonActions(Build &b, const InputData &d, const 
 path PrepareConfig::one2one(Build &b, const InputData &d)
 {
     auto &fn = d.cfn;
-    const auto [headers, udeps] = getFileDependencies(b.getMainBuild(), fn);
+    const auto [headers, udeps] = getFileDependencies(/*b.getMainBuild(), */fn);
 
     auto &lib = commonActions(b, d, udeps);
 

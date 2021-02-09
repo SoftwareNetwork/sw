@@ -181,7 +181,7 @@ DEFINE_STATIC_CMAKE_COMMAND(sw_cm_check)
 
     try
     {
-        cmep->cs->performChecks(*cmep->b, cmep->ts);
+        cmep->cs->performChecks(cmep->ts);
     }
     catch (std::exception &)
     {
@@ -200,7 +200,7 @@ DEFINE_STATIC_CMAKE_COMMAND(sw_cm_check_test_big_endian)
 
     try
     {
-        cmep->cs->performChecks(*cmep->b, cmep->ts);
+        cmep->cs->performChecks(cmep->ts);
     }
     catch (std::exception &)
     {

@@ -19,6 +19,8 @@ struct Module;
 struct ModuleStorage;
 struct SwContext;
 struct ProgramDetector;
+struct package_loader;
+struct transform;
 
 struct ModuleSwappableData
 {
@@ -74,10 +76,11 @@ struct SW_DRIVER_CPP_API Build : TargetBase
     DriverData *dd = nullptr;
     std::unique_ptr<Checker> checker;
     SwBuild &main_build;
+    transform &t;
     //const ProgramDetector &pd;
 
     //
-    Build(SwBuild &);
+    Build(transform &, SwBuild &);
     Build(const Build &) = delete;
     Build(Build &&) = default;
     //~Build();
@@ -89,11 +92,16 @@ struct SW_DRIVER_CPP_API Build : TargetBase
     const PackageSettings &getExternalVariables() const;
 
     const SwContext &getContext() const;
+    const LocalStorage &getLocalStorage() const;
+    path getBuildDirectory() const;
+    FileStorage &getFileStorage() const;
+
+    package_loader *load_package(const Package &);
 
     //const ProgramDetector &getProgramDetector() const { return pd; }
 
-private:
-    SwBuild &getMainBuild() const { return main_build; }
+//private:
+    //SwBuild &getMainBuild() const { return main_build; }
 };
 
 struct SW_DRIVER_CPP_API ExtendedBuild : Build

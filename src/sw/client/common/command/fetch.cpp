@@ -100,7 +100,8 @@ static sw::support::SourceDirMap getSources(const path &bdir, const std::unorder
         // clear patch dir to make changes to files again
         fs::remove_all(bdir / "patch");
     }
-    return srcs;
+    SW_UNIMPLEMENTED;
+    //return srcs;
 }
 
 static auto get_source_dir(const path &bdir)
@@ -147,7 +148,8 @@ static sw::support::SourceDirMap getSources(SwClientContext &swctx)
         sources.emplace(std::move(s));
     }*/
 
-    return getSources(b.getBuildDirectory(), sources, srcs);
+    SW_UNIMPLEMENTED;
+    //return getSources(b.getBuildDirectory(), sources, srcs);
 }
 
 // get sources extracted from options
@@ -158,7 +160,8 @@ static sw::support::SourceDirMap getSources(const path &bdir, const Options &opt
     std::unordered_set<sw::support::SourcePtr> sources;
     srcs[s->getHash()].root_dir = get_source_dir(bdir) / s->getHash();
     sources.emplace(std::move(s));
-    return getSources(bdir, sources, srcs);
+    SW_UNIMPLEMENTED;
+    //return getSources(bdir, sources, srcs);
 }
 
 sw::support::SourceDirMap SwClientContext::fetch(sw::SwBuild &b)

@@ -146,6 +146,7 @@ struct BuiltinStorage : IStorage
 {
     struct BuiltinLoader
     {
+        Driver *d = nullptr;
         bool loaded = false;
         std::optional<PackageVersionRange> all;
         std::unordered_multimap<PackageVersionRange, ProgramDetector::DetectablePackageEntryPoint> eps;
@@ -168,7 +169,7 @@ struct BuiltinStorage : IStorage
             std::vector<std::pair<ITargetPtr, NativeBuiltinTargetEntryPoint::BuildFunction>> targets;
             for (auto &[r, ep] : eps)
             {
-                Build b(*bs.sb);
+                Build b(d->get_transform(), *bs.sb);
                 b.module_data.current_settings = &rr.settings;
                 ep(b);
                 SW_CHECK(b.module_data.getTargets().size() <= 1); // only 1 target per build call
@@ -206,17 +207,20 @@ struct BuiltinStorage : IStorage
         }
     };
 
-    SwContext &swctx;
+    Driver &d;
     std::unique_ptr<SwBuild> sb;
     mutable std::unordered_map<PackagePath, BuiltinLoader> available_loaders;
 
-    BuiltinStorage(SwContext &swctx)
-        : swctx(swctx)
+    BuiltinStorage(Driver &d)
+        : d(d)
     {
-        sb = swctx.createBuild(); // fake build
+        sb = d.getContext().createBuild(); // fake build
         auto eps = getProgramDetector().getDetectablePackages();
         for (auto &[k, v] : eps)
+        {
+            available_loaders[k.getPath()].d = &d;
             available_loaders[k.getPath()].addPair(k.getRange(), v);
+        }
     }
 
     std::unique_ptr<Package> makePackage(const PackageId &id) const override
@@ -316,7 +320,7 @@ struct DriverInput : Input
         // are we sure that load package can return dry-run?
         // if it cannot return dry run packages, we cannot remove this wrapper
         std::vector<ITargetPtr> tgts;
-        auto t = ep->loadPackages(b, r, s);
+        auto t = ep->loadPackages(((Driver&)getDriver()).get_transform(), b, r, s);
         for (auto &tgt : t)
         {
             //if (tgt->getSettings()["dry-run"])
@@ -342,7 +346,7 @@ struct DriverInput : Input
         if (!isLoaded())
             throw SW_RUNTIME_ERROR("Input is not loaded: " + std::to_string(getHash()));
 
-        return ep->loadPackage(b, r, s, p);
+        return ep->loadPackage(((Driver&)getDriver()).get_transform(), b, r, s, p);
     }
 };
 
@@ -359,10 +363,11 @@ struct BuiltinInput : DriverInput
     void load() override {}
 };
 
-Driver::Driver(SwContext &swctx)
-    : swctx(swctx)
+Driver::Driver(transform &t, SwContext &swctx)
+    : transform_(t)
+    , swctx(swctx)
 {
-    bs = std::make_unique<BuiltinStorage>(swctx);
+    bs = std::make_unique<BuiltinStorage>(*this);
     cs = std::make_unique<ConfigStorage>(swctx);
 
     // register inputs

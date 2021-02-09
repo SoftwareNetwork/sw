@@ -25,7 +25,7 @@ struct SW_BUILDER_API SwBuilderContext
 
     FileStorage &getFileStorage() const;
     Executor &getFileStorageExecutor() const;
-    CommandStorage &getCommandStorage(const path &root) const;
+    CommandStorage &getCommandStorage1(const path &root) const;
 
     void clearFileStorages();
     void clearCommandStorages();

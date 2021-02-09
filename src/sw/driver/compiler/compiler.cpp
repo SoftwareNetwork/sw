@@ -294,7 +294,7 @@ void ClangCompiler::prepareCommand1(const ::sw::Target &t)
     add_args(*cmd, getCStdOption(CStandard(), dynamic_cast<const NativeCompiledTarget&>(t).CExtensions));
     CStandard.skip = true;
     add_args(*cmd, getCppStdOption(CPPStandard(), dynamic_cast<const NativeCompiledTarget&>(t).CPPExtensions,
-        !appleclang, appleclang, getVersion(t.getContext(), file)));
+        !appleclang, appleclang, getVersion(t.getSolution().getContext(), file)));
     CPPStandard.skip = true;
 
     getCommandLineOptions<ClangOptions>(cmd.get(), *this);
@@ -434,7 +434,7 @@ void GNUASMCompiler::prepareCommand1(const Target &t)
 
     if (t.isReproducibleBuild())
     {
-        cmd->push_back("-frandom-seed=" + getRandomSeed(InputFile ? InputFile() : path{}, t.getContext().getLocalStorage().storage_dir));
+        cmd->push_back("-frandom-seed=" + getRandomSeed(InputFile ? InputFile() : path{}, t.getSolution().getContext().getLocalStorage().storage_dir));
         cmd->environment["SOURCE_DATE_EPOCH"] = "0";
     }
 }
@@ -480,7 +480,7 @@ void GNUCompiler::prepareCommand1(const Target &t)
     add_args(*cmd, getCStdOption(CStandard(), dynamic_cast<const NativeCompiledTarget&>(t).CExtensions));
     CStandard.skip = true;
     add_args(*cmd, getCppStdOption(CPPStandard(), dynamic_cast<const NativeCompiledTarget&>(t).CPPExtensions,
-        false, false, getVersion(t.getContext(), file)));
+        false, false, getVersion(t.getSolution().getContext(), file)));
     CPPStandard.skip = true;
 
     // do not overwrite
@@ -495,7 +495,7 @@ void GNUCompiler::prepareCommand1(const Target &t)
 
     if (t.isReproducibleBuild())
     {
-        cmd->push_back("-frandom-seed=" + getRandomSeed(InputFile ? InputFile() : path{}, t.getContext().getLocalStorage().storage_dir));
+        cmd->push_back("-frandom-seed=" + getRandomSeed(InputFile ? InputFile() : path{}, t.getSolution().getContext().getLocalStorage().storage_dir));
         cmd->environment["SOURCE_DATE_EPOCH"] = "0";
     }
 }

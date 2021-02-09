@@ -263,7 +263,7 @@ NativeCompiledTarget::~NativeCompiledTarget()
 path NativeCompiledTarget::getBinaryParentDir() const
 {
     if (IsSwConfigLocal)
-        return getTargetDirShort(getSolution().getMainBuild().getBuildDirectory() / "cfg");
+        return getTargetDirShort(getSolution().getBuildDirectory() / "cfg");
     return Target::getBinaryParentDir();
 }
 
@@ -274,9 +274,9 @@ path NativeCompiledTarget::getOutputFileName(const path &root) const
     {
         path root;
         if (IsSwConfigLocal)
-            root = getSolution().getMainBuild().getBuildDirectory();
+            root = getSolution().getBuildDirectory();
         else
-            root = getContext().getLocalStorage().storage_dir_tmp;
+            root = getSolution().getLocalStorage().storage_dir_tmp;
         p = root / "cfg" / getConfig() / ::sw::getOutputFileName(*this);
     }
     else
@@ -388,7 +388,7 @@ std::unique_ptr<NativeCompiler> NativeCompiledTarget::activateCompiler(const Pac
         if (created)
             return;
         c->file = t->getProgram().file;
-        auto C = c->createCommand(getMainBuild());
+        auto C = c->createCommand(getMainBuildx());
         static_cast<primitives::Command&>(*C) = *t->getProgram().getCommand();
         created = true;
 
@@ -404,7 +404,7 @@ std::unique_ptr<NativeCompiler> NativeCompiledTarget::activateCompiler(const Pac
         {
             if (getBuildSettings().TargetOS.Version)
             {
-                auto c = nc.createCommand(getMainBuild());
+                auto c = nc.createCommand(getMainBuildx());
                 c->push_back("-mmacosx-version-min=" + getBuildSettings().TargetOS.Version->toString());
             }
             //C->VisibilityHidden = false;
@@ -446,7 +446,7 @@ std::unique_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const Package
             // for linker also!
             if (getBuildSettings().TargetOS.Version)
             {
-                auto c = C->createCommand(getMainBuild());
+                auto c = C->createCommand(getMainBuildx());
                 c->push_back("-mmacosx-version-min=" + getBuildSettings().TargetOS.Version->toString());
             }
         }
@@ -457,7 +457,7 @@ std::unique_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const Package
         if (lt == LinkerType::LLD)
         {
             create_command();
-            auto cmd = c->createCommand(getMainBuild());
+            auto cmd = c->createCommand(getMainBuildx());
             cmd->push_back("-target");
             cmd->push_back(getBuildSettings().getTargetTriplet());
         }
@@ -499,7 +499,7 @@ std::unique_ptr<NativeLinker> NativeCompiledTarget::activateLinker(LinkerType t)
             // for linker also!
             if (getBuildSettings().TargetOS.Version)
             {
-                auto c = C->createCommand(getMainBuild());
+                auto c = C->createCommand(getMainBuildx());
                 c->push_back("-mmacosx-version-min=" + getBuildSettings().TargetOS.Version->toString());
             }
         }
@@ -510,7 +510,7 @@ std::unique_ptr<NativeLinker> NativeCompiledTarget::activateLinker(LinkerType t)
         if (t == LinkerType::LLD)
         {
             create_command();
-            auto cmd = c->createCommand(getMainBuild());
+            auto cmd = c->createCommand(getMainBuildx());
             cmd->push_back("-target");
             cmd->push_back(getBuildSettings().getTargetTriplet());
         }
@@ -602,7 +602,7 @@ void NativeCompiledTarget::setupCommand(builder::Command &c) const
                 auto &ts = nt->getInterfaceSettings();
                 if (!ts["header_only"] && ts["type"] == "native_shared_library"s)
                 {
-                    f(ts["output_file"].getPathValue(getContext().getLocalStorage()));
+                    f(ts["output_file"].getPathValue(getLocalStorage()));
                     SW_UNIMPLEMENTED; // todo: nt->setupCommand(c);
                 }
             }
@@ -611,11 +611,11 @@ void NativeCompiledTarget::setupCommand(builder::Command &c) const
         }
     };
 
-    if (1/*getMainBuild().getSettings()["standalone"]*/)
+    if (1/*getMainBuildx().getSettings()["standalone"]*/)
     {
         for_deps([this, &c](const path &output_file)
         {
-            if (getContext().getHostOs().is(OSType::Windows))
+            if (getSolution().getContext().getHostOs().is(OSType::Windows))
                 c.addPathDirectory(output_file.parent_path());
             // disable for now, because we set rpath
             //else if (getContext().getHostOs().isApple())
@@ -627,7 +627,7 @@ void NativeCompiledTarget::setupCommand(builder::Command &c) const
     }
 
     // more under if (createWindowsRpath())?
-    c.addPathDirectory(getContext().getLocalStorage().storage_dir);
+    c.addPathDirectory(getSolution().getLocalStorage().storage_dir);
 
     if (createWindowsRpath())
     {
@@ -1008,7 +1008,7 @@ bool NativeCompiledTarget::createWindowsRpath() const
         && !IsSwConfig
         && getBuildSettings().TargetOS.is(OSType::Windows)
         //&& getSelectedTool() == Linker.get()
-        && 0//!(getMainBuild().getSettings()["standalone"])
+        && 0//!(getMainBuildx().getSettings()["standalone"])
         ;
 }
 
@@ -1322,9 +1322,9 @@ void NativeCompiledTarget::setInterfaceSettings()
 
     auto &s = interface_settings;
 
-    s["source_directory"].setPathValue(getContext().getLocalStorage(), SourceDirBase);
-    s["binary_directory"].setPathValue(getContext().getLocalStorage(), getBinaryDirectory());
-    s["binary_private_directory"].setPathValue(getContext().getLocalStorage(), getBinaryPrivateDirectory());
+    s["source_directory"].setPathValue(getSolution().getLocalStorage(), SourceDirBase);
+    s["binary_directory"].setPathValue(getSolution().getLocalStorage(), getBinaryDirectory());
+    s["binary_private_directory"].setPathValue(getSolution().getLocalStorage(), getBinaryPrivateDirectory());
 
     if (Publish && !*Publish)
         s["skip_upload"] = true;
@@ -1355,8 +1355,8 @@ void NativeCompiledTarget::setInterfaceSettings()
     else
     {
         if (getType() != TargetType::NativeExecutable) // skip for exe atm
-            s["import_library"].setPathValue(getContext().getLocalStorage(), getImportLibrary());
-        s["output_file"].setPathValue(getContext().getLocalStorage(), getOutputFile());
+            s["import_library"].setPathValue(getSolution().getLocalStorage(), getImportLibrary());
+        s["output_file"].setPathValue(getSolution().getLocalStorage(), getOutputFile());
         if (!OutputDir.empty())
             s["output_dir"] = to_string(normalize_path(OutputDir));
     }
@@ -1388,7 +1388,7 @@ void NativeCompiledTarget::setInterfaceSettings()
     for (auto &f : configure_files)
     {
         PackageSetting ts;
-        ts.setPathValue(getContext().getLocalStorage(), f);
+        ts.setPathValue(getSolution().getLocalStorage(), f);
         s["ide"]["configure_files"].push_back(ts);
     }
 
@@ -1397,11 +1397,11 @@ void NativeCompiledTarget::setInterfaceSettings()
         builder::Command c;
         setupCommandForRun(c);
         if (c.isProgramSet())
-            s["run_command"]["program"].setPathValue(getContext().getLocalStorage(), c.getProgram());
+            s["run_command"]["program"].setPathValue(getSolution().getLocalStorage(), c.getProgram());
         else
-            s["run_command"]["program"].setPathValue(getContext().getLocalStorage(), getOutputFile());
+            s["run_command"]["program"].setPathValue(getSolution().getLocalStorage(), getOutputFile());
         if (!c.working_directory.empty())
-            s["run_command"]["working_directory"].setPathValue(getContext().getLocalStorage(), c.working_directory);
+            s["run_command"]["working_directory"].setPathValue(getSolution().getLocalStorage(), c.working_directory);
         for (auto &a : c.getArguments())
             s["run_command"]["arguments"].push_back(path(a->toString()));
         for (auto &[k, v] : c.environment)
@@ -1424,7 +1424,7 @@ void NativeCompiledTarget::setInterfaceSettings()
             for (auto &[p, f] : g)
             {
                 PackageSetting ts;
-                ts.setPathValue(getContext().getLocalStorage(), p);
+                ts.setPathValue(getSolution().getLocalStorage(), p);
                 s["source_files"].push_back(ts);
             }
 
@@ -1435,7 +1435,7 @@ void NativeCompiledTarget::setInterfaceSettings()
             for (auto &d : g.IncludeDirectories)
             {
                 PackageSetting ts;
-                ts.setPathValue(getContext().getLocalStorage(), d);
+                ts.setPathValue(getSolution().getLocalStorage(), d);
                 s["include_directories"].push_back(ts);
             }
         }
@@ -1447,7 +1447,7 @@ void NativeCompiledTarget::setInterfaceSettings()
             for (auto &d : g.LinkLibraries)
             {
                 PackageSetting ts;
-                ts.setPathValue(getContext().getLocalStorage(), d.l);
+                ts.setPathValue(getSolution().getLocalStorage(), d.l);
                 s["link_libraries"].push_back(ts);
             }
             for (auto &d : g.NativeLinkerOptions::System.LinkLibraries)
@@ -1658,7 +1658,7 @@ void NativeCompiledTarget::prepare1()
     {
         // we doing some download on server or whatever
         // so, we do not want to touch real existing bdirs
-        BinaryDir = getMainBuild().getBuildDirectory() / "dry" / shorten_hash(blake2b_512(BinaryDir.u8string()), 6);
+        BinaryDir = getMainBuildx().getBuildDirectory() / "dry" / shorten_hash(blake2b_512(BinaryDir.u8string()), 6);
         std::error_code ec;
         fs::remove_all(BinaryDir, ec);
         //fs::create_directories(BinaryDir);
@@ -1684,7 +1684,7 @@ void NativeCompiledTarget::prepare1()
 
     //
     auto &is = getInterfaceSettings();
-    auto d = is["binary_directory"].getPathValue(getContext().getLocalStorage().storage_dir);
+    auto d = is["binary_directory"].getPathValue(getSolution().getLocalStorage().storage_dir);
     if (!fs::exists(d.parent_path() / "cfg.json"))
     {
         write_file(d.parent_path() / "cfg.json",
@@ -1741,7 +1741,7 @@ void NativeCompiledTarget::prepare2()
     p.setData(std::move(d));
     try
     {
-        getContext().getLocalStorage().installLocalPackage(p);
+        getSolution().getLocalStorage().installLocalPackage(p);
     }
     catch (std::exception &e)
     {
@@ -1778,7 +1778,7 @@ void NativeCompiledTarget::prepare_pass1()
         if (getCompilerType() == CompilerType::GNU)
         {
             CompileOptions.push_back("-ffile-prefix-map="
-                + to_string(normalize_path(getContext().getLocalStorage().storage_dir))
+                + to_string(normalize_path(getSolution().getLocalStorage().storage_dir))
                 + "="
                 // on windows we use the same path, but the root disk is also must be provided
                 // not here, but in general
@@ -1941,7 +1941,7 @@ void NativeCompiledTarget::prepare_pass2()
         resolveDependency(*d.dep);
 
         //SW_UNIMPLEMENTED;
-        //auto t = getMainBuild().getTargets().find(d.dep->getPackage(), d.dep->settings);
+        //auto t = getMainBuildx().getTargets().find(d.dep->getPackage(), d.dep->settings);
         //if (!t)
         {
             //SW_UNIMPLEMENTED;
@@ -2033,7 +2033,7 @@ void NativeCompiledTarget::prepare_pass3()
     auto rd = [this](Dependency &d)
     {
         SW_CHECK(d.resolved_pkg);
-        auto loader = getSolution().getMainBuild().load_package(*d.resolved_pkg);
+        auto loader = getSolution().load_package(*d.resolved_pkg);
         auto &transform = loader->load(d.getUnresolvedPackageId().getSettings());
         d.setTarget(transform);
     };
@@ -2536,7 +2536,7 @@ void NativeCompiledTarget::prepare_pass4()
                     continue;
 
                 for (auto &v2 : v["source_files"].getArray())
-                    *this += v2.getPathValue(getContext().getLocalStorage());
+                    *this += v2.getPathValue(getSolution().getLocalStorage());
             }
         }
     }
@@ -2579,7 +2579,7 @@ void NativeCompiledTarget::prepare_pass4()
                     continue;
 
                 for (auto &v2 : v["source_files"].getArray())
-                    getMergeObject() += v2.getPathValue(getContext().getLocalStorage());
+                    getMergeObject() += v2.getPathValue(getSolution().getLocalStorage());
 
                 for (auto &[k, v2] : v["definitions"].getMap())
                 {
@@ -2595,10 +2595,10 @@ void NativeCompiledTarget::prepare_pass4()
                 // TODO: add custom options
 
                 for (auto &v2 : v["include_directories"].getArray())
-                    getMergeObject().IncludeDirectories.insert(v2.getPathValue(getContext().getLocalStorage()));
+                    getMergeObject().IncludeDirectories.insert(v2.getPathValue(getSolution().getLocalStorage()));
 
                 for (auto &v2 : v["link_libraries"].getArray())
-                    getMergeObject().LinkLibraries.insert(LinkLibrary{ v2.getPathValue(getContext().getLocalStorage()) });
+                    getMergeObject().LinkLibraries.insert(LinkLibrary{ v2.getPathValue(getSolution().getLocalStorage()) });
 
                 for (auto &v2 : v["system_include_directories"].getArray())
                     getMergeObject().NativeCompilerOptions::System.IncludeDirectories.push_back(v2.getAbsolutePathValue());
@@ -2650,7 +2650,7 @@ void NativeCompiledTarget::prepare_pass4()
 
                 // allow only header only files?
                 for (auto &v2 : v["source_files"].getArray())
-                    getMergeObject() += v2.getPathValue(getContext().getLocalStorage());
+                    getMergeObject() += v2.getPathValue(getSolution().getLocalStorage());
 
                 for (auto &[k, v2] : v["definitions"].getMap())
                 {
@@ -2661,7 +2661,7 @@ void NativeCompiledTarget::prepare_pass4()
                 }
 
                 for (auto &v2 : v["include_directories"].getArray())
-                    getMergeObject().IncludeDirectories.insert(v2.getPathValue(getContext().getLocalStorage()));
+                    getMergeObject().IncludeDirectories.insert(v2.getPathValue(getSolution().getLocalStorage()));
                 for (auto &v2 : v["system_include_directories"].getArray())
                     getMergeObject().NativeCompilerOptions::System.IncludeDirectories.push_back(v2.getAbsolutePathValue());
             }
@@ -2690,7 +2690,7 @@ void NativeCompiledTarget::prepare_pass4()
             for (auto &[k,v] : is["properties"].getMap())
             {
                 for (auto &v2 : v["link_libraries"].getArray())
-                    getMergeObject().LinkLibraries.insert(LinkLibrary{ v2.getPathValue(getContext().getLocalStorage()) });
+                    getMergeObject().LinkLibraries.insert(LinkLibrary{ v2.getPathValue(getSolution().getLocalStorage()) });
 
                 for (auto &v2 : v["system_link_directories"].getArray())
                     getMergeObject().NativeLinkerOptions::System.LinkDirectories.push_back(v2.getAbsolutePathValue());
@@ -3072,7 +3072,7 @@ void NativeCompiledTarget::processCircular(Files &obj)
         //                ext = nt->getOutputFile().extension().u8string();
         //                out = nt->getOutputFile().parent_path();
         //            }
-        //            out = out.lexically_relative(getSolution().getContext().getLocalStorage().storage_dir);
+        //            out = out.lexically_relative(getSolution().getLocalStorage().storage_dir);
         //            out /= nt->getPackage().toString() + ext + ".rp" + ext;
         //            dlls.push_back(out.u8string()); // out
         //        }
@@ -3104,7 +3104,7 @@ void NativeCompiledTarget::processCircular(Files &obj)
         c << cmd::in(Linker->getOutputFile());
         c << cmd::out(out);
 
-        auto cmd = Linker->createCommand(getMainBuild());
+        auto cmd = Linker->createCommand(getMainBuildx());
         cmd->dependent_commands.insert(c.getCommand());
         std::dynamic_pointer_cast<builder::BuiltinCommand>(c.getCommand())->push_back(dlls);
         c->addInput(dlls);
@@ -3156,7 +3156,7 @@ FilesOrdered NativeCompiledTarget::gatherRpathLinkDirectories() const
         {
             auto &ts = d->getTarget().getInterfaceSettings();
             if (!::sw::isStaticOrHeaderOnlyLibrary(ts))
-                rpath.push_back(ts["output_file"].getPathValue(getContext().getLocalStorage()).parent_path());
+                rpath.push_back(ts["output_file"].getPathValue(getLocalStorage()).parent_path());
         }*/
     }
     return rpath;
@@ -3464,7 +3464,7 @@ path NativeCompiledTarget::getPatchDir() const
     else if (!isLocal())
         base = getLocalPackage().getRootDirectory();
     else
-        base = getSolution().getMainBuild().getBuildDirectory();
+        base = getSolution().getBuildDirectory();
     return base / "patch";
 }
 

@@ -68,8 +68,9 @@ namespace support
 namespace detail
 {
 
-struct DownloadData
+struct SW_SUPPORT_API DownloadData
 {
+    bool delete_in_dtor = true;
     path root_dir;
     path requested_dir;
     path stamp_file;

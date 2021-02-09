@@ -12,6 +12,9 @@ DECLARE_STATIC_LOGGER(logger, "transform");
 namespace sw
 {
 
+transform::transform() {}
+transform::~transform() {}
+
 void transform::add_driver(const PackageName &pkg, std::unique_ptr<IDriver> driver)
 {
     auto [_, inserted] = drivers_.insert_or_assign(pkg, std::move(driver));

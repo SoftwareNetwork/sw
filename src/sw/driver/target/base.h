@@ -81,7 +81,6 @@ struct SW_DRIVER_CPP_API TargetBaseData : ProjectDirectories, TargetEvents
 {
     bool DryRun = false;
     PackagePath NamePrefix;
-    std::optional<CommandStorage *> command_storage;
 
     /**
      * \brief Target scope.
@@ -97,6 +96,7 @@ struct SW_DRIVER_CPP_API TargetBaseData : ProjectDirectories, TargetEvents
 
 protected:
     const Build *build = nullptr;
+    bool build_available = true;
     std::optional<PackageName> current_project;
 };
 
@@ -350,6 +350,9 @@ protected:
     PackageSettings interface_settings;
     // http://blog.llvm.org/2019/11/deterministic-builds-with-clang-and-lld.html
     bool ReproducibleBuild = false;
+public:
+    mutable std::optional<std::unique_ptr<CommandStorage>> command_storage;
+protected:
 
     //Target(const Target &);
     CommandStorage *getCommandStorage() const;

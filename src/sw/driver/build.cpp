@@ -14,6 +14,7 @@
 #include <sw/builder/file_storage.h>
 #include <sw/core/build.h>
 #include <sw/core/sw_context.h>
+#include <sw/core/transform.h>
 #include <sw/manager/database.h>
 #include <sw/manager/settings.h>
 #include <sw/manager/storage.h>
@@ -63,9 +64,10 @@ ModuleSwappableData::AddedTargets &ModuleSwappableData::getTargets()
     return added_targets;
 }
 
-Build::Build(SwBuild &mb)
+Build::Build(transform &t, SwBuild &mb)
     : checker(std::make_unique<Checker>(mb))
     , main_build(mb)
+    , t(t)
 {
 }
 
@@ -82,10 +84,21 @@ Build::Build(SwBuild &mb)
     //return getContext().getModuleStorage().get(dll);
 }*/
 
+package_loader *Build::load_package(const Package &p)
+{
+    return t.load_package(p);
+}
+
 const SwContext &Build::getContext() const
 {
-    return getMainBuild().getContext();
+    return main_build.getContext();
 }
+
+const LocalStorage &Build::getLocalStorage() const { return getContext().getLocalStorage(); }
+
+path Build::getBuildDirectory() const { return main_build.getBuildDirectory(); }
+
+FileStorage &Build::getFileStorage() const { return main_build.getFileStorage(); }
 
 const PackageSettings &ModuleSwappableData::getSettings() const
 {
@@ -123,7 +136,7 @@ Resolver &Build::getResolver() const
 
 const PackageSettings &Build::getExternalVariables() const
 {
-    return getMainBuild().getExternalVariables();
+    return main_build.getExternalVariables();
 }
 
 }

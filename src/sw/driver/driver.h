@@ -21,6 +21,7 @@ struct PrepareConfigEntryPoint;
 struct PackageSettings;
 struct PrepareConfigOutputData;
 struct NativeBuiltinTargetEntryPoint;
+struct transform;
 
 namespace driver::cpp
 {
@@ -29,7 +30,7 @@ enum class FrontendType;
 
 struct SW_DRIVER_CPP_API Driver : IDriver
 {
-    Driver(SwContext &);
+    Driver(transform &, SwContext &);
     Driver(const Driver &) = delete;
     Driver &operator=(const Driver &) = delete;
     virtual ~Driver();
@@ -47,7 +48,7 @@ struct SW_DRIVER_CPP_API Driver : IDriver
     std::unique_ptr<Input> getInput(const Package &) const override;
     //std::vector<std::unique_ptr<Input>> getPredefinedInputs() const override;
     void setupBuild(SwBuild &) const override;
-    
+
     package_loader_ptr load_package(const Package &) override;
     std::vector<package_loader_ptr> load_packages(const path &) override;
 
@@ -64,7 +65,11 @@ struct SW_DRIVER_CPP_API Driver : IDriver
     std::unordered_map<path, PrepareConfigOutputData> build_configs1(SwContext &, const std::set<Input *> &inputs) const;
     PackageSettings getDllConfigSettings(/*SwBuild &swctx*/) const;
 
+    SwContext &getContext() const { return swctx; }
+    transform &get_transform() const { return transform_; }
+
 private:
+    transform &transform_;
     SwContext &swctx;
     std::unique_ptr<struct BuiltinStorage> bs;
     std::unique_ptr<struct ConfigStorage> cs;

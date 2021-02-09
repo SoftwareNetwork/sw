@@ -9,6 +9,7 @@
 #include "package.h"
 #include "target/native.h"
 
+#include <sw/builder/command_storage.h>
 #include <sw/builder/execution_plan.h>
 #include <sw/core/build.h>
 #include <sw/core/sw_context.h>
@@ -761,9 +762,9 @@ static String getTargetName(const path &p)
     return "loc." + getUniquePath(p).string();
 }
 
-static Build setupSolution(SwBuild &b, const path &f)
+static Build setupSolution(transform &t, SwBuild &b, const path &f)
 {
-    Build s(b);
+    Build s(t, b);
     s.BinaryDir = f.parent_path();
     s.NamePrefix.clear();
     s.DryRun = false;
@@ -844,7 +845,7 @@ bool Check::execute(SwBuild &b) const
 
 #define SETUP_SOLUTION()                                                \
     auto b = check_set->getChecker().swbld.getContext().createBuild();  \
-    auto s = setupSolution(*b, f);                                      \
+    auto s = setupSolution(check_set->t->getSolution().t, *b, f);       \
     auto cs = getSettings();                                            \
     s.module_data.current_settings = &cs;                               \
     s.module_data.resolver = &check_set->t->getResolver();
@@ -1065,7 +1066,7 @@ void TypeSize::run() const
         return;
     }
 
-    if (!check_set->t->getContext().getHostOs().canRunTargetExecutables(check_set->t->getBuildSettings().TargetOS))
+    if (!check_set->t->getSolution().getContext().getHostOs().canRunTargetExecutables(check_set->t->getBuildSettings().TargetOS))
     {
         requires_manual_setup = true;
         manual_setup_use_stdout = true;
@@ -1143,7 +1144,7 @@ void TypeAlignment::run() const
         return;
     }
 
-    if (!check_set->t->getContext().getHostOs().canRunTargetExecutables(check_set->t->getBuildSettings().TargetOS))
+    if (!check_set->t->getSolution().getContext().getHostOs().canRunTargetExecutables(check_set->t->getBuildSettings().TargetOS))
     {
         requires_manual_setup = true;
         executable = e.getOutputFile();
@@ -1484,7 +1485,7 @@ void SourceRuns::run() const
         return;
     }
 
-    if (!check_set->t->getContext().getHostOs().canRunTargetExecutables(check_set->t->getBuildSettings().TargetOS))
+    if (!check_set->t->getSolution().getContext().getHostOs().canRunTargetExecutables(check_set->t->getBuildSettings().TargetOS))
     {
         requires_manual_setup = true;
         executable = e.getOutputFile();

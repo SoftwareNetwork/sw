@@ -5,6 +5,8 @@
 
 #include <sw/manager/package.h>
 
+#include <memory>
+
 namespace sw
 {
 
@@ -18,9 +20,10 @@ struct SW_CORE_API transform
     using package_transform_ptr = std::unique_ptr<package_transform>;
     using drivers = std::map<PackageName, std::unique_ptr<IDriver>>;
 
-    transform() = default;
+    transform();
     transform(const transform &) = delete;
     transform &operator=(const transform &) = delete;
+    ~transform();
 
     void add_driver(const PackageName &pkg, std::unique_ptr<IDriver> driver);
 

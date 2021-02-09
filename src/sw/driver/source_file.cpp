@@ -269,6 +269,13 @@ void SourceFileStorage::remove_full1(const FileRegex &r)
     op(r, &SourceFileStorage::remove_full);
 }
 
+static auto ignore_source_files_errors(const Target &target)
+{
+    return false;
+    /*return target.getSolution().getMainBuild().getSettings()["ignore_source_files_errors"]
+        && target.getSolution().getMainBuild().getSettings()["ignore_source_files_errors"].get<bool>();*/
+}
+
 void SourceFileStorage::op(const FileRegex &r, Op func)
 {
     auto dir = r.dir;
@@ -299,7 +306,7 @@ void SourceFileStorage::op(const FileRegex &r, Op func)
     if (!matches && target.isLocal() && !target.AllowEmptyRegexes)
     {
         String err = target.getPackage().toString() + ": No files matching regex: " + r.getRegexString();
-        if (target.getSolution().getMainBuild().getSettings()["ignore_source_files_errors"])
+        if (ignore_source_files_errors(target))
         {
             LOG_INFO(logger, err);
             return;
@@ -367,7 +374,7 @@ bool SourceFileStorage::check_absolute(path &F, bool ignore_errors, bool *source
                     if (ignore_errors)
                         return false;
                     String err = target.getPackage().toString() + ": Cannot find source file: " + to_string((target.SourceDir / F).u8string());
-                    if (target.getSolution().getMainBuild().getSettings()["ignore_source_files_errors"])
+                    if (ignore_source_files_errors(target))
                     {
                         LOG_INFO(logger, err);
                         return true;
@@ -388,7 +395,7 @@ bool SourceFileStorage::check_absolute(path &F, bool ignore_errors, bool *source
                 if (ignore_errors)
                     return false;
                 String err = target.getPackage().toString() + ": Cannot find source file: " + to_string(F.u8string());
-                if (target.getSolution().getMainBuild().getSettings()["ignore_source_files_errors"])
+                if (ignore_source_files_errors(target))
                 {
                     LOG_INFO(logger, err);
                     return true;
@@ -460,7 +467,7 @@ SourceFileStorage::enumerate_files(const FileRegex &r, bool allow_empty) const
     if (files.empty() && target.isLocal() && !target.AllowEmptyRegexes && !allow_empty)
     {
         String err = target.getPackage().toString() + ": No files matching regex: " + r.getRegexString();
-        if (target.getSolution().getMainBuild().getSettings()["ignore_source_files_errors"])
+        if (ignore_source_files_errors(target))
         {
             LOG_INFO(logger, err);
             return files;
