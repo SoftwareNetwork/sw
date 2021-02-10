@@ -23,18 +23,18 @@ struct SW_BUILDER_API SwBuilderContext
     SwBuilderContext();
     ~SwBuilderContext();
 
-    FileStorage &getFileStorage() const;
-    Executor &getFileStorageExecutor() const;
+    //FileStorage &getFileStorage() const;
+    //Executor &getFileStorageExecutor() const;
     CommandStorage &getCommandStorage1(const path &root) const;
 
-    void clearFileStorages();
+    //void clearFileStorages();
     void clearCommandStorages();
 
 private:
     // keep order
     mutable std::unordered_map<path, std::unique_ptr<CommandStorage>> command_storages;
-    mutable std::unique_ptr<FileStorage> file_storage;
-    std::unique_ptr<Executor> file_storage_executor; // after everything!
+    //mutable std::unique_ptr<FileStorage> file_storage;
+    //std::unique_ptr<Executor> file_storage_executor; // after everything!
 
     mutable std::mutex csm;
 };

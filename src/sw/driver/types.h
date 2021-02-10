@@ -221,6 +221,9 @@ struct ProjectDirectories
     path BinaryDir;
     path BinaryPrivateDir;
 
+    // checks if this file is under source dir
+    bool is_source_file(const path &) const;
+
 //protected:
     // ?
     // this is really not for everyone

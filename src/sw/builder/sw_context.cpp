@@ -26,7 +26,7 @@ SwBuilderContext::~SwBuilderContext()
 {
 }
 
-Executor &SwBuilderContext::getFileStorageExecutor() const
+/*Executor &SwBuilderContext::getFileStorageExecutor() const
 {
     return *file_storage_executor;
 }
@@ -36,7 +36,7 @@ FileStorage &SwBuilderContext::getFileStorage() const
     if (!file_storage)
         file_storage = std::make_unique<FileStorage>();
     return *file_storage;
-}
+}*/
 
 CommandStorage &SwBuilderContext::getCommandStorage1(const path &root) const
 {
@@ -47,10 +47,10 @@ CommandStorage &SwBuilderContext::getCommandStorage1(const path &root) const
     return *cs;
 }
 
-void SwBuilderContext::clearFileStorages()
+/*void SwBuilderContext::clearFileStorages()
 {
     file_storage.reset();
-}
+}*/
 
 void SwBuilderContext::clearCommandStorages()
 {

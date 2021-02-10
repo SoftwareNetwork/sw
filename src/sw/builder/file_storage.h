@@ -11,18 +11,14 @@ namespace sw
 {
 
 struct FileData;
-struct SwBuilderContext;
 
 struct SW_BUILDER_API FileStorage
 {
-    using FileDataHashMap = ConcurrentHashMap<path, FileData>;
-
-    FileDataHashMap files;
-
-    void clear(); // remove?
-    void reset(); // remove?
-
     FileData &registerFile(const path &f);
+
+private:
+    using FileDataHashMap = ConcurrentHashMap<path, FileData>;
+    FileDataHashMap files;
 };
 
 }

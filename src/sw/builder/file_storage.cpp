@@ -4,24 +4,12 @@
 #include "file_storage.h"
 
 #include "file.h"
-#include "sw_context.h"
 
-#include <primitives/log.h>
-DECLARE_STATIC_LOGGER(logger, "file_storage");
+//#include <primitives/log.h>
+//DECLARE_STATIC_LOGGER(logger, "file_storage");
 
 namespace sw
 {
-
-void FileStorage::clear()
-{
-    files.clear();
-}
-
-void FileStorage::reset()
-{
-    for (const auto &[k, f] : files)
-        f.reset();
-}
 
 FileData &FileStorage::registerFile(const path &in_f)
 {

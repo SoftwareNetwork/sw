@@ -1271,7 +1271,8 @@ void Project::emitProject(const VSGenerator &g) const
             }
 
             // one .rc file
-            if (t == VSFileType::ResourceCompile || sw::File(f, c->getFileStorage()).isGenerated())
+            SW_UNIMPLEMENTED;
+            /*if (t == VSFileType::ResourceCompile || sw::File(f, c->getFileStorage()).isGenerated())
             {
                 for (auto &[s, d] : data)
                 {
@@ -1281,7 +1282,7 @@ void Project::emitProject(const VSGenerator &g) const
                     ctx.addText("true");
                     ctx.endBlock(true);
                 }
-            }
+            }*/
         }
         ctx.endFileBlock();
     }

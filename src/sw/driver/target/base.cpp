@@ -358,7 +358,7 @@ TargetFiles Target::getFiles() const
         for (auto &f : gatherAllFiles())
             files.emplace(f, TargetFile(f
                 //, SourceDirBase
-                , File(f, getFs()).isGenerated()));
+                , File(f, getFs()).isGenerated1()));
         return files;
     }
     }*/
@@ -483,7 +483,7 @@ Commands Target::getCommands() const
             if (!c->command_storage)
                 c->always = true;
         }
-        c->setFileStorage(getFs());
+        //c->setFileStorage(getFs());
     }
     for (auto &c : commands)
         ((Target*)this)->registerCommand(*c);
@@ -500,7 +500,7 @@ Commands Target::getCommands() const
 
 void Target::registerCommand(builder::Command &c)
 {
-    c.setFileStorage(getFs());
+    //c.setFileStorage(getFs());
     Storage.push_back(c.shared_from_this());
 }
 
@@ -524,10 +524,10 @@ const BuildSettings &Target::getBuildSettings() const
     return bs;
 }
 
-FileStorage &Target::getFs() const
+/*FileStorage &Target::getFs() const
 {
     return getSolution().getFileStorage();
-}
+}*/
 
 void Target::init()
 {

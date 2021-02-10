@@ -151,14 +151,4 @@ std::optional<String> File::isChanged(const fs::file_time_type &in, bool throw_o
     return {};
 }
 
-bool File::isGenerated() const
-{
-    return data->generated;
-}
-
-void File::setGenerated(bool g)
-{
-    data->generated = g;
-}
-
 }

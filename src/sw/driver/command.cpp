@@ -272,7 +272,7 @@ CommandBuilder &CommandBuilder::operator<<(const ::sw::cmd::tag_out &t)
 
         if (!stopped)
             c->arguments.push_back(t.prefix + to_printable_string(t.normalize ? normalize_path(p) : p));
-        c->addOutput(p, tt.getFs());
+        c->addOutput(p);
         if (t.add_to_targets)
         {
             cast_as_nct(tt).getMergeObject() += p;
@@ -315,7 +315,7 @@ CommandBuilder &CommandBuilder::operator<<(const ::sw::cmd::tag_stdout &t)
     if (p.is_relative() && !cast_as_nct(tt).check_absolute(p, true))
         p = tt.BinaryDir / p;
 
-    c->redirectStdout(p, tt.getFs(), t.append);
+    c->redirectStdout(p, t.append);
     if (t.add_to_targets)
     {
         cast_as_nct(tt).getMergeObject() += p;
@@ -336,7 +336,7 @@ CommandBuilder &CommandBuilder::operator<<(const ::sw::cmd::tag_stderr &t)
     if (p.is_relative() && !cast_as_nct(tt).check_absolute(p, true))
         p = tt.BinaryDir / p;
 
-    c->redirectStderr(p, tt.getFs(), t.append);
+    c->redirectStderr(p, t.append);
     if (t.add_to_targets)
     {
         cast_as_nct(tt).getMergeObject() += p;

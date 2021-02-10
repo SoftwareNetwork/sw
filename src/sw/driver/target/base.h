@@ -293,7 +293,7 @@ public:
     void setSource(const Source &);
     void fetch();
 
-    FileStorage &getFs() const;
+    //FileStorage &getFs() const;
 
     path getLocalOutputBinariesDirectory() const;
     path getTargetDirShort(const path &root) const;

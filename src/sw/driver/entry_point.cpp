@@ -407,7 +407,7 @@ void addConfigPchLibrary(Build &b)
         lib.Interface += lib.pch.pch;
         lib.Interface += lib.pch.pdb;
         auto swhpch = swh += ".hpch";
-        File(swhpch, lib.getFs()).setGenerated();
+        //File(swhpch, lib.getFs()).setGenerated();
         lib.Interface += swhpch;
     }
     //lib.pch.use_only = true;

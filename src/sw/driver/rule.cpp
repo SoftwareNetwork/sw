@@ -749,7 +749,7 @@ void NativeLinkerRule::addInputs(const Target &t, RuleFiles &rfs)
             }
             auto c = std::make_shared<builder::BuiltinCommand>(SW_VISIBLE_BUILTIN_FUNCTION(create_def_file));
             c->push_back(deffn);
-            c->addOutput(deffn, t.getFs());
+            c->addOutput(deffn);
             c->push_back(objs);
             c->addInput(objs);
             def = deffn;
@@ -793,7 +793,7 @@ void NativeLinkerRule::addInputs(const Target &t, RuleFiles &rfs)
         {
             auto exp = nt->getImportLibrary();
             exp = exp.parent_path() / (exp.stem() += ".exp");
-            c->getCommand()->addOutput(exp, t.getFs());
+            c->getCommand()->addOutput(exp);
             //outputs.insert(exp); // we can live without it
         }
     }

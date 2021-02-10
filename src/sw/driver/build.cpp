@@ -98,7 +98,7 @@ const LocalStorage &Build::getLocalStorage() const { return getContext().getLoca
 
 path Build::getBuildDirectory() const { return main_build.getBuildDirectory(); }
 
-FileStorage &Build::getFileStorage() const { return main_build.getFileStorage(); }
+//FileStorage &Build::getFileStorage() const { return main_build.getFileStorage(); }
 
 const PackageSettings &ModuleSwappableData::getSettings() const
 {

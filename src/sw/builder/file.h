@@ -37,7 +37,7 @@ struct FileData
     //int64_t size = -1;
     //String hash;
     //SomeFlags flags;
-    bool generated = false;
+    //bool generated = false;
 
     // downloaded etc.
     // we cut DAG below commands with all such outputs
@@ -72,9 +72,6 @@ struct SW_BUILDER_API File : virtual ICastable
 
     bool isChanged() const;
     std::optional<String> isChanged(const fs::file_time_type &t, bool throw_on_missing);
-
-    bool isGenerated() const;
-    void setGenerated(bool g = true);
 
 private:
     mutable FileData *data = nullptr;

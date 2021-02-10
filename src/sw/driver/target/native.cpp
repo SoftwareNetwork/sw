@@ -211,14 +211,14 @@ void detail::PrecompiledHeader::setup(const NativeCompiledTarget &t, const PathO
         else // gcc
             pch = path(header) += ".gch";
     }
-    File(pch, t.getFs()).setGenerated();
+    //File(pch, t.getFs()).setGenerated();
 
     if (obj.empty())
         obj = get_base_pch_path() += ".obj";
 
     if (pdb.empty())
         pdb = get_base_pch_path() += ".pdb";
-    File(pdb, t.getFs()).setGenerated();
+    //File(pdb, t.getFs()).setGenerated();
 }
 
 NativeTarget::NativeTarget(TargetBase &parent, const PackageName &id)
@@ -761,7 +761,7 @@ TargetFiles NativeCompiledTarget::getFiles() const
         {
             files.emplace(f, TargetFile(f
             //, getPackage().getDirObj()
-            , File(f, getFs()).isGenerated()));
+            , File(f, getFs()).isGenerated1()));
         };
         add_file(getOutputFile());
         add_file(getImportLibrary());
@@ -893,10 +893,10 @@ Commands NativeCompiledTarget::getGeneratedCommands() const
     // add generated commands
     for (auto &[f, _] : getMergeObject())
     {
-        File p(f, getFs());
-        if (!p.isGenerated())
+        /*File p(f, getFs());
+        if (!p.isGenerated1())
             continue;
-        /*auto c = p.getGenerator();
+        auto c = p.getGenerator();
         if (c->strict_order > 0)
             order[c->strict_order].push_back(c);
         else
@@ -3246,7 +3246,7 @@ void NativeCompiledTarget::configureFile(path from, path to, ConfigureFlags flag
     // before resolving
     if (!to.is_absolute())
         to = getBinaryDirectory() / to;
-    File(to, getFs()).setGenerated();
+    //File(to, getFs()).setGenerated();
 
     if (DryRun)
         return;
@@ -3486,8 +3486,8 @@ void NativeCompiledTarget::writeFileOnce(const path &fn, const String &content)
     // only in bdir case
     if (!source_dir)
     {
-        File f(p, getFs());
-        f.setGenerated();
+        //File f(p, getFs());
+        //f.setGenerated();
     }
 
     if (DryRun)

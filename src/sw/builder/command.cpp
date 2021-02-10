@@ -378,18 +378,17 @@ void Command::addImplicitInput(const Files &files)
         addImplicitInput(f);
 }
 
-void Command::addOutput(const path &p, FileStorage &fs)
+void Command::addOutput(const path &p)
 {
     if (p.empty())
         throw SW_LOGIC_ERROR("empty output");
     outputs.insert(p);
-    File(p, fs).setGenerated();
 }
 
-void Command::addOutput(const Files &files, FileStorage &fs)
+void Command::addOutput(const Files &files)
 {
     for (auto &f : files)
-        addOutput(f, fs);
+        addOutput(f);
 }
 
 path Command::redirectStdin(const path &p)
@@ -399,19 +398,19 @@ path Command::redirectStdin(const path &p)
     return p;
 }
 
-path Command::redirectStdout(const path &p, FileStorage &fs, bool append)
+path Command::redirectStdout(const path &p, bool append)
 {
     out.file = p;
     out.append = append;
-    addOutput(p, fs);
+    addOutput(p);
     return p;
 }
 
-path Command::redirectStderr(const path &p, FileStorage &fs, bool append)
+path Command::redirectStderr(const path &p, bool append)
 {
     err.file = p;
     err.append = append;
-    addOutput(p, fs);
+    addOutput(p);
     return p;
 }
 
@@ -436,7 +435,7 @@ void Command::prepare()
 
     // user entered commands may be in form 'git'
     // so, it is not empty, not generated and does not exist
-    if (!getProgram().empty() && (!fs || !File(getProgram(), getFileStorage()).isGenerated()) &&
+    if (!getProgram().empty() && !fs &&
         !path(getProgram()).is_absolute() && !fs::exists(getProgram()))
     {
         auto new_prog = resolveExecutable(getProgram());

@@ -336,7 +336,8 @@ struct ProgramShortCutter
 
     String getProgramName(const path &in, const builder::Command &c, bool *untouched = nullptr)
     {
-        bool gen = File(c.getProgram(), c.getFileStorage()).isGenerated();
+        SW_UNIMPLEMENTED;
+        /*bool gen = File(c.getProgram(), c.getFileStorage()).isGenerated();
         if (gen && !print_sc_generated)
         {
             if (untouched)
@@ -346,7 +347,7 @@ struct ProgramShortCutter
         if (untouched)
             *untouched = false;
         auto &progs = gen ? sc_generated : sc;
-        return to_printable_string(progs.getProgramName(in));
+        return to_printable_string(progs.getProgramName(in));*/
     }
 
     void printPrograms(primitives::Emitter &ctx, F f) const
@@ -644,11 +645,12 @@ struct MakeEmitter : primitives::Emitter
         //addText(printFiles(c.inputs));
         for (auto &i : c.inputs)
         {
-            if (File(i, c.getFileStorage()).isGenerated())
+            SW_UNIMPLEMENTED;
+            /*if (File(i, c.getFileStorage()).isGenerated())
             {
                 addText(printFile(i));
                 addText(" ");
-            }
+            }*/
         }
 //         if (c.needsResponseFile())
 //         {
@@ -1309,8 +1311,9 @@ void RawBootstrapBuildGenerator::generate(const sw::SwBuild &b)
     FilesSorted files_ordered;
     for (auto &f : files)
     {
-        if (File(f, b.getFileStorage()).isGenerated())
-            continue;
+        SW_UNIMPLEMENTED;
+        //if (File(f, b.getFileStorage()).isGenerated())
+            //continue;
         if (is_under_root(f, sd))
         {
             files2[f] = f;

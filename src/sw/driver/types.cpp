@@ -88,6 +88,11 @@ path ProjectDirectories::getBinaryPrivateDirectory() const
     return BinaryPrivateDir;
 }
 
+bool ProjectDirectories::is_source_file(const path &p) const
+{
+    return is_under_root_by_prefix_path(p, SourceDirBase);
+}
+
 String toString(ConfigurationType Type)
 {
     switch (Type)

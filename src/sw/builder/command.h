@@ -168,11 +168,11 @@ public:
     void addInput(const Files &p);
     void addImplicitInput(const path &p);
     void addImplicitInput(const Files &p);
-    void addOutput(const path &p, FileStorage &);
-    void addOutput(const Files &p, FileStorage &);
+    void addOutput(const path &);
+    void addOutput(const Files &);
     path redirectStdin(const path &p);
-    path redirectStdout(const path &p, FileStorage &, bool append = false);
-    path redirectStderr(const path &p, FileStorage &, bool append = false);
+    path redirectStdout(const path &p, bool append = false);
+    path redirectStderr(const path &p, bool append = false);
     Files getGeneratedDirs() const; // used by generators
     path writeCommand(const path &basename, bool print_name = true) const;
 

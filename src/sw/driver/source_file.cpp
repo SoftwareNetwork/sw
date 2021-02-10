@@ -369,7 +369,7 @@ bool SourceFileStorage::check_absolute(path &F, bool ignore_errors, bool *source
                 *source_dir = false;
             if (!fs::exists(p))
             {
-                if (!File(p, target.getFs()).isGenerated())
+                if (target.is_source_file(p))
                 {
                     if (ignore_errors)
                         return false;
@@ -390,7 +390,7 @@ bool SourceFileStorage::check_absolute(path &F, bool ignore_errors, bool *source
     {
         if (!found && !fs::exists(F))
         {
-            if (!File(F, target.getFs()).isGenerated())
+            if (target.is_source_file(F))
             {
                 if (ignore_errors)
                     return false;

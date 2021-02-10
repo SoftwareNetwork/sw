@@ -94,7 +94,7 @@ struct SW_DRIVER_CPP_API Build : TargetBase
     const SwContext &getContext() const;
     const LocalStorage &getLocalStorage() const;
     path getBuildDirectory() const;
-    FileStorage &getFileStorage() const;
+    //FileStorage &getFileStorage() const;
 
     package_loader *load_package(const Package &);
 
