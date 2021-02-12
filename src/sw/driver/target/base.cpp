@@ -81,7 +81,6 @@ TargetBase::TargetBase(const TargetBase &rhs, const PackageName &inpkg)
 
     // take from solution
     DryRun = getSolution().DryRun;
-    //command_storage = getSolution().command_storage;
     Local = getSolution().NamePrefix.empty();
 
     // other computations
@@ -460,14 +459,14 @@ void Target::setRootDirectory(const path &p)
         SourceDir /= RootDirectory;
 }
 
-CommandStorage *Target::getCommandStorage() const
+/*CommandStorage *Target::getCommandStorage() const
 {
     if (DryRun)
         return nullptr;
     if (!command_storage)
         command_storage = std::make_unique<CommandStorage>(getBinaryDirectory().parent_path());
     return command_storage->get();
-}
+}*/
 
 Commands Target::getCommands() const
 {
@@ -475,7 +474,7 @@ Commands Target::getCommands() const
         return commands;
     ((Target&)*this).prepare2();
     commands = getCommands1();
-    for (auto &c : commands)
+    /*for (auto &c : commands)
     {
         if (!c->command_storage)
         {
@@ -484,7 +483,7 @@ Commands Target::getCommands() const
                 c->always = true;
         }
         //c->setFileStorage(getFs());
-    }
+    }*/
     for (auto &c : commands)
         ((Target*)this)->registerCommand(*c);
 

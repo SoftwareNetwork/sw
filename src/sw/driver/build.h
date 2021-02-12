@@ -21,6 +21,10 @@ struct SwContext;
 struct ProgramDetector;
 struct package_loader;
 struct transform;
+namespace driver::cpp
+{
+struct Driver;
+}
 
 struct ModuleSwappableData
 {
@@ -75,12 +79,13 @@ struct SW_DRIVER_CPP_API Build : TargetBase
     ModuleSwappableData module_data;
     DriverData *dd = nullptr;
     std::unique_ptr<Checker> checker;
-    SwBuild &main_build;
+    //SwBuild &main_build;
     transform &t;
+    driver::cpp::Driver &d;
     //const ProgramDetector &pd;
 
     //
-    Build(transform &, SwBuild &);
+    Build(transform &, driver::cpp::Driver &/*, SwBuild &*/);
     Build(const Build &) = delete;
     Build(Build &&) = default;
     //~Build();

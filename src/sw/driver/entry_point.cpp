@@ -414,7 +414,7 @@ void addConfigPchLibrary(Build &b)
 #endif
 }
 
-ExtendedBuild NativeTargetEntryPoint::createBuild(transform &t, SwBuild &swb, const PackageSettings &s) const
+ExtendedBuild NativeTargetEntryPoint::createBuild(transform &t, driver::cpp::Driver &swb, const PackageSettings &s) const
 {
     if (!dd)
         dd = std::make_unique<DriverData>();
@@ -433,13 +433,13 @@ ExtendedBuild NativeTargetEntryPoint::createBuild(transform &t, SwBuild &swb, co
     if (!source_dir.empty())
         b.setSourceDirectory(source_dir);
     else
-        b.setSourceDirectory(swb.getBuildDirectory().parent_path());
-    b.BinaryDir = swb.getBuildDirectory();
+        b.setSourceDirectory(b.getBuildDirectory().parent_path());
+    b.BinaryDir = b.getBuildDirectory();
 
     return b;
 }
 
-std::vector<ITargetPtr> NativeTargetEntryPoint::loadPackages(transform &t, SwBuild &swb, Resolver &r, const PackageSettings &s) const
+std::vector<ITargetPtr> NativeTargetEntryPoint::loadPackages(transform &t, driver::cpp::Driver &swb, Resolver &r, const PackageSettings &s) const
 {
     auto b = createBuild(t, swb, s);
     b.module_data.current_settings = &s;
@@ -453,7 +453,7 @@ std::vector<ITargetPtr> NativeTargetEntryPoint::loadPackages(transform &t, SwBui
     return std::move(b.module_data.getTargets());
 }
 
-ITargetPtr NativeTargetEntryPoint::loadPackage(transform &t, SwBuild &swb, Resolver &r, const PackageSettings &s, const Package &p) const
+ITargetPtr NativeTargetEntryPoint::loadPackage(transform &t, driver::cpp::Driver &swb, Resolver &r, const PackageSettings &s, const Package &p) const
 {
     auto b = createBuild(t, swb, s);
     b.module_data.current_settings = &s; // in any case

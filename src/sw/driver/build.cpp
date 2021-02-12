@@ -3,6 +3,7 @@
 
 #include "build.h"
 
+#include "driver.h"
 #include "entry_point.h"
 #include "frontend/cppan/yaml.h"
 #include "functions.h"
@@ -64,10 +65,11 @@ ModuleSwappableData::AddedTargets &ModuleSwappableData::getTargets()
     return added_targets;
 }
 
-Build::Build(transform &t, SwBuild &mb)
-    : checker(std::make_unique<Checker>(mb))
-    , main_build(mb)
+Build::Build(transform &t, driver::cpp::Driver &d/*, SwBuild &mb*/)
+    : checker(std::make_unique<Checker>(/*mb*/))
+    //, main_build(mb)
     , t(t)
+    , d(d)
 {
 }
 
@@ -91,12 +93,19 @@ package_loader *Build::load_package(const Package &p)
 
 const SwContext &Build::getContext() const
 {
-    return main_build.getContext();
+    return d.getContext();
 }
 
-const LocalStorage &Build::getLocalStorage() const { return getContext().getLocalStorage(); }
+const LocalStorage &Build::getLocalStorage() const
+{
+    return getContext().getLocalStorage();
+}
 
-path Build::getBuildDirectory() const { return main_build.getBuildDirectory(); }
+path Build::getBuildDirectory() const
+{
+    SW_UNIMPLEMENTED;
+    //return main_build.getBuildDirectory();
+}
 
 //FileStorage &Build::getFileStorage() const { return main_build.getFileStorage(); }
 
@@ -136,7 +145,8 @@ Resolver &Build::getResolver() const
 
 const PackageSettings &Build::getExternalVariables() const
 {
-    return main_build.getExternalVariables();
+    SW_UNIMPLEMENTED;
+    //return main_build.getExternalVariables();
 }
 
 }

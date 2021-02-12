@@ -269,7 +269,8 @@ Check &CheckSet::registerCheck(Check &c) const
 
 void CheckSet::performChecks(const PackageSettings &ts)
 {
-    auto &mb = getChecker().swbld;
+    SW_UNIMPLEMENTED;
+    /*auto &mb = getChecker().swbld;
     static const auto checks_dir = getChecker().swbld.getContext().getLocalStorage().storage_dir_etc / "sw" / "checks";
 
     if (!t)
@@ -579,7 +580,7 @@ void CheckSet::performChecks(const PackageSettings &ts)
     auto cyclic_path = d / "cyclic";
     write_file(cyclic_path / "deps_checks.dot", s);
 
-    throw SW_RUNTIME_ERROR("Cannot create execution plan because of cyclic dependencies");
+    throw SW_RUNTIME_ERROR("Cannot create execution plan because of cyclic dependencies");*/
 }
 
 std::unordered_map<String, Check*> CheckSet::getResults(bool allow_partial) const
@@ -744,12 +745,13 @@ const path &Check::getUniqueName() const
 
 path Check::getOutputFilename() const
 {
-    auto d = getChecksDir(check_set->getChecker().swbld.getBuildDirectory());
+    SW_UNIMPLEMENTED;
+    /*auto d = getChecksDir(check_set->getChecker().swbld.getBuildDirectory());
     auto up = getUniqueName();
     d /= up;
     auto f = d;
     f /= filename;
-    return f;
+    return f;*/
 }
 
 static path getUniquePath(const path &p)
@@ -762,9 +764,9 @@ static String getTargetName(const path &p)
     return "loc." + getUniquePath(p).string();
 }
 
-static Build setupSolution(transform &t, SwBuild &b, const path &f)
+static Build setupSolution(transform &t,/* SwBuild &b, */const path &f)
 {
-    Build s(t, b);
+    Build s(t);
     s.BinaryDir = f.parent_path();
     s.NamePrefix.clear();
     s.DryRun = false;
@@ -781,13 +783,14 @@ PackageSettings Check::getSettings() const
         ss["native"]["configuration"] = "debug"s;
 
     // set output dir for check binaries
-    auto d = getChecksDir(check_set->getChecker().swbld.getBuildDirectory());
+    SW_UNIMPLEMENTED;
+    /*auto d = getChecksDir(check_set->getChecker().swbld.getBuildDirectory());
     auto up = getUniqueName();
     d /= up;
     ss["output_dir"] = to_string(normalize_path(d));
     ss["output_dir"].ignoreInComparison(true);
 
-    return ss;
+    return ss;*/
 }
 
 void Check::setupTarget(NativeCompiledTarget &t) const
@@ -796,7 +799,7 @@ void Check::setupTarget(NativeCompiledTarget &t) const
     // TODO: restore!
     //if (auto L = t.getSelectedTool()->as<VisualStudioLinker*>())
         //L->DisableIncrementalLink = true; // do not create .ilk?
-    t.command_storage = nullptr;
+    //t.command_storage = nullptr;
 }
 
 static std::shared_ptr<builder::Command> getLinkerCommand(const NativeCompiledTarget &t, const path &srcfn)
@@ -815,9 +818,10 @@ static std::shared_ptr<builder::Command> getLinkerCommand(const NativeCompiledTa
     return *i;
 }
 
-bool Check::execute(SwBuild &b) const
+bool Check::execute(/*SwBuild &b*/) const
 {
-    b.overrideBuildState(BuildState::InputsLoaded);
+    SW_UNIMPLEMENTED;
+    /*b.overrideBuildState(BuildState::InputsLoaded);
     //b.setTargetsToBuild();
     //b.resolvePackages();
     //b.loadPackages();
@@ -840,29 +844,29 @@ bool Check::execute(SwBuild &b) const
         LOG_TRACE(logger, "Check " + data + ": check issue: " << e.what());
         return false;
     }
-    return true;
+    return true;*/
 }
 
 #define SETUP_SOLUTION()                                                \
-    auto b = check_set->getChecker().swbld.getContext().createBuild();  \
-    auto s = setupSolution(check_set->t->getSolution().t, *b, f);       \
+    auto s = setupSolution(check_set->t->getSolution().t, f);           \
     auto cs = getSettings();                                            \
     s.module_data.current_settings = &cs;                               \
     s.module_data.resolver = &check_set->t->getResolver();
 
 #define ADD_TARGETS                             \
-    for (auto &t : s.module_data.getTargets())  \
-    b->getTargets()[t->getPackage()].push_back(*t)
+    SW_UNIMPLEMENTED
+//for (auto &t : s.module_data.getTargets())  \
+//b->getTargets()[t->getPackage()].push_back(*t)
 
 #define EXECUTE_SOLUTION() \
     ADD_TARGETS;           \
-    if (!execute(*b))      \
+    if (!execute())        \
     return
 
 // without exception
 #define EXECUTE_SOLUTION_RET() \
     ADD_TARGETS;               \
-    auto r = execute(*b)
+    auto r = execute()
 
 FunctionExists::FunctionExists(const String &f, const String &def)
 {
@@ -1608,8 +1612,8 @@ void CheckSet::prepareChecksForUse()
     }*/
 }
 
-Checker::Checker(SwBuild &swbld)
-    : swbld(swbld)
+Checker::Checker(/*SwBuild &swbld*/)
+    //: swbld(swbld)
 {
 }
 

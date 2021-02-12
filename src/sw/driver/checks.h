@@ -136,7 +136,7 @@ protected:
     virtual void setupTarget(NativeCompiledTarget &t) const;
 
     [[nodiscard]]
-    bool execute(SwBuild &) const;
+    bool execute(/*SwBuild &*/) const;
 
 private:
     mutable std::vector<std::shared_ptr<builder::Command>> commands; // for cleanup
@@ -355,13 +355,15 @@ private:
 
 struct SW_DRIVER_CPP_API Checker
 {
-    SwBuild &swbld;
+    //SwBuild &swbld;
 
     /// child sets
     std::unordered_map<String, std::unique_ptr<CheckSet>> sets;
 
-    Checker(SwBuild &swbld);
+    Checker(/*SwBuild &swbld*/);
     Checker(const Checker &) = delete;
+    Checker &operator=(const Checker &) = delete;
+    //~Checker();
 
     CheckSet &addSet(const String &name);
 

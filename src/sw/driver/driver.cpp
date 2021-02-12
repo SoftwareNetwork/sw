@@ -169,7 +169,7 @@ struct BuiltinStorage : IStorage
             std::vector<std::pair<ITargetPtr, NativeBuiltinTargetEntryPoint::BuildFunction>> targets;
             for (auto &[r, ep] : eps)
             {
-                Build b(d->get_transform(), *bs.sb);
+                Build b(d->get_transform(), *d/*, *bs.sb*/);
                 b.module_data.current_settings = &rr.settings;
                 ep(b);
                 SW_CHECK(b.module_data.getTargets().size() <= 1); // only 1 target per build call

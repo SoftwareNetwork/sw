@@ -350,13 +350,8 @@ protected:
     PackageSettings interface_settings;
     // http://blog.llvm.org/2019/11/deterministic-builds-with-clang-and-lld.html
     bool ReproducibleBuild = false;
-public:
-    mutable std::optional<std::unique_ptr<CommandStorage>> command_storage;
-protected:
 
     //Target(const Target &);
-    CommandStorage *getCommandStorage() const;
-
     virtual path getBinaryParentDir() const;
 
 protected:
