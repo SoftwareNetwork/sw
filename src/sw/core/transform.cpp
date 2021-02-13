@@ -6,6 +6,10 @@
 #include "driver.h"
 #include "package.h"
 
+#include <sw/builder/execution_plan.h>
+
+#include <primitives/executor.h>
+
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "transform");
 
@@ -46,6 +50,19 @@ package_loader *transform::load_package(const Package &p)
         throw SW_RUNTIME_ERROR("Driver is not registered: " + p.getData().driver.toString());
     package_loaders.emplace_back(i->second->load_package(std::move(p)));
     return package_loaders.back().get();
+}
+
+void transform_executor::execute(const std::vector<const package_transform *> &v)
+{
+    Commands cmds;
+    for (auto &t : v)
+        cmds.merge(t->get_commands());
+
+    auto ep = ExecutionPlan::create(cmds);
+    if (!ep->isValid())
+        SW_UNIMPLEMENTED;
+
+    ep->execute(getExecutor());
 }
 
 }

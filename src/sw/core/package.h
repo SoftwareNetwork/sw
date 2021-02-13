@@ -60,12 +60,4 @@ struct SW_CORE_API package_transform
     virtual const PackageSettings &get_properties() const = 0;
 };
 
-struct SW_CORE_API transform_executor
-{
-    // nthreads
-    // ...
-
-    void execute(const std::vector<const package_transform *> &);
-};
-
 } // namespace sw

@@ -38,4 +38,12 @@ private:
     //std::vector<package_transform_ptr> package_transforms;
 };
 
+struct SW_CORE_API transform_executor
+{
+    // nthreads
+    // ...
+
+    void execute(const std::vector<const package_transform *> &);
+};
+
 } // namespace sw
