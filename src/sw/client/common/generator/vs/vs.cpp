@@ -717,8 +717,6 @@ void VSGenerator::generate(const SwBuild &b)
             r.outputs.insert(int_dir / "rules" / "intentionally_missing.file");
             r.verify_inputs_and_outputs_exist = false;
 
-            d.custom_rules_manual.push_back(r);
-
             // actually we must build deps + their specific settings
             // not one setting for all deps
             std::map<PackageId, String> deps;
@@ -765,8 +763,12 @@ void VSGenerator::generate(const SwBuild &b)
             auto rsp = path(basefn) += ".rsp";
             write_file(rsp, s);
 
+            auto deps_file = path(basefn) += ".deps";
             error_code ec;
-            fs::remove(path(basefn) += ".deps", ec); // trigger updates
+            fs::remove(deps_file, ec); // trigger updates
+
+            r.outputs.insert(deps_file); // allow vs to clean file and rebuild deps
+            d.custom_rules_manual.push_back(r);
 
             BuildEvent be;
             be.command = get_current_program() + " @" + to_string(normalize_path(rsp));
