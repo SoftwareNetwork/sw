@@ -56,6 +56,9 @@ static String detectMsvcPrefix(builder::detail::ResolvableCommand c)
     fs::remove(fn);
     fs::remove(hfn);
 
+    if (!c.exit_code)
+        throw SW_RUNTIME_ERROR("Cannot run: " + to_printable_string(c.getProgram()));
+
     auto error = [&c](const String &reason)
     {
         return "Cannot match VS include prefix (" + reason + "):\n" + c.out.text + "\nstderr:\n" + c.err.text;
@@ -63,7 +66,12 @@ static String detectMsvcPrefix(builder::detail::ResolvableCommand c)
 
     auto lines = split_lines(c.out.text);
     if (lines.empty())
-        throw SW_RUNTIME_ERROR(error("bad output"));
+    {
+        LOG_TRACE(logger, "Empty stdout from '" + to_printable_string(c.getProgram()) + "', trying stderr. Cmd: " + c.print());
+        lines = split_lines(c.err.text);
+        if (lines.empty())
+            throw SW_RUNTIME_ERROR(error("Bad output: " + c.print()));
+    }
 
     String s = R"((.*?\s)[a-zA-Z]:[\\\/].*)" + hfn.stem().string() + "\\" + hfn.extension().string();
     std::regex r(s);
@@ -168,7 +176,7 @@ VSInstances &gatherVSInstances()
     return instances;
 }
 
-static void detectMsvcCommon(const path &compiler, const Version &vs_version,
+static bool detectMsvcCommon(const path &compiler, const Version &vs_version,
     ArchType target_arch, const path &host_root, const TargetSettings &ts, const path &idir,
     const path &root, const path &target,
     DETECT_ARGS)
@@ -185,28 +193,29 @@ static void detectMsvcCommon(const path &compiler, const Version &vs_version,
     {
         auto p = std::make_shared<SimpleProgram>();
         p->file = compiler / "cl.exe";
-        if (fs::exists(p->file))
+        if (!fs::exists(p->file))
         {
-            auto c = p->getCommand();
-            if (s.getHostOs().Arch != target_arch)
-                c->addPathDirectory(host_root);
-            msvc_prefix = detectMsvcPrefix(*c);
-            // run getVersion via prepared command
-            builder::detail::ResolvableCommand c2 = *c;
-            cl_exe_version = getVersion(s, c2);
-            if (vs_version.isPreRelease())
-                cl_exe_version.getExtra() = vs_version.getExtra();
-            auto &cl = addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.cl", cl_exe_version), ts, p);
-
-            // rule based msvc
-            if (s.getHostOs().Arch == target_arch)
-            {
-                auto &t = addTarget<PredefinedTargetWithRule>(DETECT_ARGS_PASS, PackageId{"msvc", cl_exe_version}, ts);
-                t.public_ts["output_file"] = to_string(normalize_path(p->file));
-            }
+            LOG_TRACE(logger, "detectMsvcCommon: " << p->file << " does not exists");
+            return false;
         }
-        else
-            return;
+
+        auto c = p->getCommand();
+        if (s.getHostOs().Arch != target_arch)
+            c->addPathDirectory(host_root);
+        msvc_prefix = detectMsvcPrefix(*c);
+        // run getVersion via prepared command
+        builder::detail::ResolvableCommand c2 = *c;
+        cl_exe_version = getVersion(s, c2);
+        if (vs_version.isPreRelease())
+            cl_exe_version.getExtra() = vs_version.getExtra();
+        auto &cl = addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.cl", cl_exe_version), ts, p);
+
+        // rule based msvc
+        if (s.getHostOs().Arch == target_arch)
+        {
+            auto &t = addTarget<PredefinedTargetWithRule>(DETECT_ARGS_PASS, PackageId{"msvc", cl_exe_version}, ts);
+            t.public_ts["output_file"] = to_string(normalize_path(p->file));
+        }
     }
 
     // lib, link
@@ -302,6 +311,8 @@ static void detectMsvcCommon(const path &compiler, const Version &vs_version,
             libcpp.public_ts["properties"]["6"]["system_include_directories"].push_back(root / "crt" / "src" / "vcruntime");
         }
     }
+
+    return true;
 }
 
 void detectMsvc15Plus(DETECT_ARGS)
@@ -350,21 +361,27 @@ void detectMsvc15Plus(DETECT_ARGS)
 
 void detectMsvc14AndOlder(DETECT_ARGS)
 {
+    LOG_TRACE(logger, "Detecting msvc 14 and older");
+
     auto find_comn_tools = [](const Version &v) -> path
     {
         auto n = std::to_string(v.getMajor()) + std::to_string(v.getMinor());
         auto ver = "VS"s + n + "COMNTOOLS";
         auto e = getenv(ver.c_str());
-        if (e)
-        {
-            String r = e;
-            while (!r.empty() && (r.back() == '/' || r.back() == '\\'))
-                r.pop_back();
-            path root = r;
-            root = root.parent_path().parent_path();
-            return root;
-        }
-        return {};
+        if (!e)
+            return {};
+
+        LOG_TRACE(logger, "Found " << ver << "=" << e);
+
+        String r = e;
+        while (!r.empty() && (r.back() == '/' || r.back() == '\\'))
+            r.pop_back();
+        path root = r;
+        root = root.parent_path().parent_path();
+
+        LOG_TRACE(logger, "Use " << ver << " as " << root);
+
+        return root;
     };
 
     auto toStringWindows14AndOlder = [](ArchType e)
@@ -384,33 +401,36 @@ void detectMsvc14AndOlder(DETECT_ARGS)
 
     auto new_settings = s.getHostOs();
 
-    // no ArchType::aarch64?
-    for (auto target_arch : { ArchType::x86_64,ArchType::x86,ArchType::arm, })
+    for (auto n : {14,12,11,10,9,8})
     {
-        // following code is written using VS2015
-        // older versions might need special handling
+        const Version v(n);
+        const auto vsroot = find_comn_tools(v);
+        if (vsroot.empty())
+            continue;
 
-        new_settings.Arch = target_arch;
+        //
+        auto root = vsroot / "VC";
+        auto bindir = root / "bin";
+        auto idir = root / "include";
 
-        auto ts1 = toTargetSettings(new_settings);
-        TargetSettings ts;
-        ts["os"]["kernel"] = ts1["os"]["kernel"];
-        ts["os"]["arch"] = ts1["os"]["arch"];
-
-        for (auto n : {14,12,11,10,9,8})
+        bool found = false;
+        // no ArchType::aarch64?
+        for (auto target_arch : { ArchType::x86_64,ArchType::x86,ArchType::arm, })
         {
-            Version v(n);
-            auto root = find_comn_tools(v);
-            if (root.empty())
-                continue;
+            // following code is written using VS2015
+            // older versions might need special handling
 
-            root /= "VC";
-            auto idir = root / "include";
+            new_settings.Arch = target_arch;
+
+            auto ts1 = toTargetSettings(new_settings);
+            TargetSettings ts;
+            ts["os"]["kernel"] = ts1["os"]["kernel"];
+            ts["os"]["arch"] = ts1["os"]["arch"];
 
             // get suffix
             auto target = toStringWindows14AndOlder(target_arch);
 
-            auto compiler = root / "bin";
+            auto compiler = bindir;
             auto host_root = compiler;
 
             path libdir = toStringWindows14AndOlder(target_arch);
@@ -441,6 +461,33 @@ void detectMsvc14AndOlder(DETECT_ARGS)
             // same for VS libs
             // because ml,ml64,lib,link version (O) has O.Major = V.Major - 5
             // e.g., V = 19.21..., O = 14.21.... (19 - 5 = 14)
+
+            found |= detectMsvcCommon(compiler, v, target_arch, host_root, ts, idir, root, libdir, DETECT_ARGS_PASS);
+        }
+
+        if (found)
+            continue;
+
+        LOG_TRACE(logger, "Default VS2015 paths were not found. Trying older versions layout.");
+
+        // some VS14 (VS2015 release or early updates) (probably older VS too) does not have amd64_ dirs
+        // so we check bin/cl.exe, x86_amd64/cl.exe, x86_arm/cl.exe
+
+        for (auto target_arch : { ArchType::x86_64,ArchType::x86 })
+        {
+            new_settings.Arch = target_arch;
+
+            auto ts1 = toTargetSettings(new_settings);
+            TargetSettings ts;
+            ts["os"]["kernel"] = ts1["os"]["kernel"];
+            ts["os"]["arch"] = ts1["os"]["arch"];
+
+            auto compiler = bindir;
+            auto host_root = compiler;
+            path libdir = toStringWindows14AndOlder(target_arch);
+            // for x64 we check only x86_amd64 dir
+            if (target_arch == ArchType::x86_64)
+                compiler /= "x86_"s + toStringWindows14AndOlder(target_arch);
 
             detectMsvcCommon(compiler, v, target_arch, host_root, ts, idir, root, libdir, DETECT_ARGS_PASS);
         }
