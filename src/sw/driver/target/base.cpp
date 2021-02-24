@@ -459,31 +459,39 @@ void Target::setRootDirectory(const path &p)
         SourceDir /= RootDirectory;
 }
 
-/*CommandStorage *Target::getCommandStorage() const
+CommandStorage *Target::getCommandStorage() const
 {
     if (DryRun)
         return nullptr;
     if (!command_storage)
         command_storage = std::make_unique<CommandStorage>(getBinaryDirectory().parent_path());
-    return command_storage->get();
-}*/
+    return command_storage.get();
+}
 
 Commands Target::getCommands() const
 {
+    if (DryRun)
+        return {};
     if (!commands.empty())
         return commands;
+
+    if (in_get_commands)
+        return {};
+    in_get_commands = true;
+
     ((Target&)*this).prepare2();
     commands = getCommands1();
-    /*for (auto &c : commands)
+    for (auto &c : commands)
     {
         if (!c->command_storage)
         {
+            //c->command_storage = getSolution().getCommandStorage(*this);
             c->command_storage = getCommandStorage();
             if (!c->command_storage)
                 c->always = true;
         }
         //c->setFileStorage(getFs());
-    }*/
+    }
     for (auto &c : commands)
         ((Target*)this)->registerCommand(*c);
 

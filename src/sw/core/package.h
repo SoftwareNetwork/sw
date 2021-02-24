@@ -26,6 +26,7 @@ struct SW_CORE_API physical_package
     //physical_package(const PackageId &p) : p(p) {}
     virtual ~physical_package() = 0;
 
+    // get_id?
     virtual const PackageId &get_package() const = 0;// { return p; }
 
     // get_files

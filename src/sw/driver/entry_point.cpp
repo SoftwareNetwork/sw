@@ -414,11 +414,12 @@ void addConfigPchLibrary(Build &b)
 #endif
 }
 
-ExtendedBuild NativeTargetEntryPoint::createBuild(transform &t, driver::cpp::Driver &swb, const PackageSettings &s) const
+void/*ExtendedBuild*/ NativeTargetEntryPoint::createBuild(Build &b) const
 {
     if (!dd)
         dd = std::make_unique<DriverData>();
 
+    auto &s = *b.module_data.current_settings;
     for (auto &[h, d] : s["driver"]["source-dir-for-source"].getMap())
         dd->source_dirs_by_source[h].requested_dir = d.getValue();
     for (auto &[pkg, p] : s["driver"]["source-dir-for-package"].getMap())
@@ -426,7 +427,7 @@ ExtendedBuild NativeTargetEntryPoint::createBuild(transform &t, driver::cpp::Dri
     if (s["driver"]["force-source"].isValue())
         dd->force_source = load(nlohmann::json::parse(s["driver"]["force-source"].getValue()));
 
-    ExtendedBuild b(t, swb);
+    //ExtendedBuild b(d);
     b.dd = dd.get();
     b.DryRun = s["driver"]["dry-run"] && s["driver"]["dry-run"].get<bool>();
 
@@ -434,16 +435,17 @@ ExtendedBuild NativeTargetEntryPoint::createBuild(transform &t, driver::cpp::Dri
         b.setSourceDirectory(source_dir);
     else
         b.setSourceDirectory(b.getBuildDirectory().parent_path());
+    // pass bdir via package settings!
     b.BinaryDir = b.getBuildDirectory();
 
-    return b;
+    //return b;
 }
 
-std::vector<ITargetPtr> NativeTargetEntryPoint::loadPackages(transform &t, driver::cpp::Driver &swb, Resolver &r, const PackageSettings &s) const
+std::vector<ITargetPtr> NativeTargetEntryPoint::loadPackages(Build &b) const
 {
-    auto b = createBuild(t, swb, s);
-    b.module_data.current_settings = &s;
-    b.module_data.resolver = &r;
+    /*auto b = */createBuild(b);
+    //b.module_data.current_settings = &s;
+    //b.module_data.resolver = &r;
     loadPackages1(b);
     for (auto &&t : b.module_data.getTargets())
     {
@@ -453,12 +455,12 @@ std::vector<ITargetPtr> NativeTargetEntryPoint::loadPackages(transform &t, drive
     return std::move(b.module_data.getTargets());
 }
 
-ITargetPtr NativeTargetEntryPoint::loadPackage(transform &t, driver::cpp::Driver &swb, Resolver &r, const PackageSettings &s, const Package &p) const
+ITargetPtr NativeTargetEntryPoint::loadPackage(Build &b, const Package &p) const
 {
-    auto b = createBuild(t, swb, s);
-    b.module_data.current_settings = &s; // in any case
-    b.module_data.known_target = &p;
-    b.module_data.resolver = &r;
+    /*auto b = */createBuild(b);
+    //b.module_data.current_settings = &s; // in any case
+    //b.module_data.known_target = &p;
+    //b.module_data.resolver = &r;
     b.NamePrefix = p.getId().getName().getPath().slice(0, p.getData().prefix);
     loadPackages1(b);
     for (auto &&t : b.module_data.getTargets())

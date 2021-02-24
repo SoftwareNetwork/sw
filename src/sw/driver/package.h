@@ -10,19 +10,20 @@
 namespace sw
 {
 
+struct ExtendedBuild;
 struct SwBuild;
 struct Input;
 struct ITarget;
 struct Resolver;
+struct Build;
 
 using ITargetPtr = std::unique_ptr<ITarget>;
 
 struct SW_DRIVER_CPP_API my_package_transform : package_transform
 {
-    std::shared_ptr<SwBuild> b;
     ITargetPtr t;
 
-    my_package_transform(const std::shared_ptr<SwBuild> &, const PackageSettings &, const Package &, Input &, Resolver &);
+    my_package_transform(Build &, const Package &, Input &);
     Commands get_commands() const override;
     const PackageSettings &get_properties() const override;
 };
@@ -31,6 +32,7 @@ struct SW_DRIVER_CPP_API my_package_loader : package_loader
 {
     PackagePtr p;
     std::shared_ptr<SwBuild> build;
+    std::shared_ptr<ExtendedBuild> build2;
     std::shared_ptr<Input> input;
     std::shared_ptr<Resolver> resolver;
     std::unordered_map<size_t, std::unique_ptr<package_transform>> transforms;

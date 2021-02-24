@@ -764,9 +764,9 @@ static String getTargetName(const path &p)
     return "loc." + getUniquePath(p).string();
 }
 
-static Build setupSolution(transform &t,/* SwBuild &b, */const path &f)
+static Build setupSolution(driver::cpp::Driver &d, const path &f)
 {
-    Build s(t);
+    Build s(d);
     s.BinaryDir = f.parent_path();
     s.NamePrefix.clear();
     s.DryRun = false;
@@ -848,7 +848,7 @@ bool Check::execute(/*SwBuild &b*/) const
 }
 
 #define SETUP_SOLUTION()                                                \
-    auto s = setupSolution(check_set->t->getSolution().t, f);           \
+    auto s = setupSolution(check_set->t->getSolution().d, f);           \
     auto cs = getSettings();                                            \
     s.module_data.current_settings = &cs;                               \
     s.module_data.resolver = &check_set->t->getResolver();

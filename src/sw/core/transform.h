@@ -10,22 +10,24 @@
 namespace sw
 {
 
-struct IDriver;
 struct package_loader;
 struct package_transform;
+struct IDriver;
 
 struct SW_CORE_API transform
 {
     using package_loader_ptr = std::unique_ptr<package_loader>;
-    using package_transform_ptr = std::unique_ptr<package_transform>;
-    using drivers = std::map<PackageName, std::unique_ptr<IDriver>>;
+    //using package_transform_ptr = std::unique_ptr<package_transform>;
+    // driver is a physical_package that is able to load other packages
+    //using drivers = std::map<PackageName, IDriver *>;
 
+    // we need to accept basic driver here
     transform();
     transform(const transform &) = delete;
     transform &operator=(const transform &) = delete;
     ~transform();
 
-    void add_driver(const PackageName &pkg, std::unique_ptr<IDriver> driver);
+    void add_driver(IDriver &driver);
 
     package_loader *load_package(const Package &); // load installed package
     std::vector<package_loader *> load_packages(const path &); // load from path
@@ -33,8 +35,8 @@ struct SW_CORE_API transform
     //package_transform *add_transform(package_loader &, const PackageSettings &);
 
 private:
-    drivers drivers_;
-    std::vector<package_loader_ptr> package_loaders;
+    std::map<PackageName, IDriver *> drivers;
+    std::map<PackageName, package_loader *> package_loaders;
     //std::vector<package_transform_ptr> package_transforms;
 };
 

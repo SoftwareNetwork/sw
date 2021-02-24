@@ -169,7 +169,7 @@ struct BuiltinStorage : IStorage
             std::vector<std::pair<ITargetPtr, NativeBuiltinTargetEntryPoint::BuildFunction>> targets;
             for (auto &[r, ep] : eps)
             {
-                Build b(d->get_transform(), *d/*, *bs.sb*/);
+                Build b(*d/*, *bs.sb*/);
                 b.module_data.current_settings = &rr.settings;
                 ep(b);
                 SW_CHECK(b.module_data.getTargets().size() <= 1); // only 1 target per build call
@@ -310,17 +310,17 @@ struct DriverInput : Input
         ep = std::move(in);
     }
 
-    std::vector<ITargetPtr> loadPackages(SwBuild &b, Resolver &r, const PackageSettings &s) const override
+    std::vector<ITargetPtr> loadPackages(Build &b) const override
     {
         if (!isLoaded())
             throw SW_RUNTIME_ERROR("Input is not loaded: " + std::to_string(getHash()));
 
-        LOG_TRACE(logger, "Loading input " << getName() << ", settings = " << s.toString());
+        LOG_TRACE(logger, "Loading input " << getName() << ", settings = " << b.module_data.current_settings->toString());
 
         // are we sure that load package can return dry-run?
         // if it cannot return dry run packages, we cannot remove this wrapper
         std::vector<ITargetPtr> tgts;
-        auto t = ep->loadPackages(((Driver&)getDriver()).get_transform(), b, r, s);
+        auto t = ep->loadPackages(b);
         for (auto &tgt : t)
         {
             //if (tgt->getSettings()["dry-run"])
@@ -332,7 +332,7 @@ struct DriverInput : Input
         return tgts;
     }
 
-    ITargetPtr loadPackage(SwBuild &b, Resolver &r, const PackageSettings &s, const Package &p) const override
+    ITargetPtr loadPackage(Build &b, const Package &p) const override
     {
         // maybe save all targets on load?
 
@@ -346,7 +346,7 @@ struct DriverInput : Input
         if (!isLoaded())
             throw SW_RUNTIME_ERROR("Input is not loaded: " + std::to_string(getHash()));
 
-        return ep->loadPackage(((Driver&)getDriver()).get_transform(), b, r, s, p);
+        return ep->loadPackage(b, p);
     }
 };
 
@@ -366,6 +366,7 @@ struct BuiltinInput : DriverInput
 Driver::Driver(transform &t, SwContext &swctx)
     : transform_(t)
     , swctx(swctx)
+    , id{ "org.sw."s + PACKAGE "-" PACKAGE_VERSION, {} }
 {
     bs = std::make_unique<BuiltinStorage>(*this);
     cs = std::make_unique<ConfigStorage>(swctx);
@@ -382,14 +383,19 @@ Driver::~Driver()
 {
 }
 
+const PackageId &Driver::get_package() const { return id; }
+
+const PackageSettings &Driver::get_properties() const { SW_UNIMPLEMENTED; }
+
+CommandStorage *Driver::getCommandStorage(const Target &t) const
+{
+    SW_UNIMPLEMENTED;
+    //return t.getBinaryDirectory().parent_path();
+}
+
 void Driver::processConfigureAc(const path &p)
 {
     process_configure_ac2(p);
-}
-
-PackageName Driver::getPackageId()
-{
-    return "org.sw."s + PACKAGE "-" PACKAGE_VERSION;
 }
 
 struct SpecFileInput : DriverInput
@@ -582,11 +588,11 @@ struct DirInput : DriverInput
     }
 };
 
-void Driver::setupBuild(SwBuild &b) const
+/*void Driver::setupBuild(SwBuild &b) const
 {
     // add builtin resolver
     //b.getResolver().addStorage(*bs);
-}
+}*/
 
 std::unique_ptr<Input> Driver::getInput(const Package &p) const
 {
@@ -621,7 +627,7 @@ std::unique_ptr<Input> Driver::getInput(const Package &p) const
             {
             }
 
-            ITargetPtr loadPackage(SwBuild &b, Resolver &r, const PackageSettings &s, const Package &p) const override
+            ITargetPtr loadPackage(Build &b, const Package &p) const override
             {
                 struct BinaryTarget : ITarget
                 {
@@ -661,10 +667,11 @@ std::unique_ptr<Input> Driver::getInput(const Package &p) const
                     Commands getCommands() const override { return cmds; }
                 };
 
-                return std::make_unique<BinaryTarget>(swctx, s, p);
+                SW_UNIMPLEMENTED;
+                //return std::make_unique<BinaryTarget>(swctx, s, p);
             }
 
-            std::vector<ITargetPtr> loadPackages(SwBuild &b, Resolver &r, const PackageSettings &s) const override
+            std::vector<ITargetPtr> loadPackages(Build &b) const override
             {
                 SW_UNIMPLEMENTED;
             }
@@ -829,31 +836,31 @@ std::vector<std::unique_ptr<Input>> Driver::detectInputs(const path &p, InputTyp
     return inputs;
 }
 
-void Driver::loadInputsBatch(const std::set<Input *> &inputs) const
-{
-    std::map<path, Input *> m;
-    for (auto &i : inputs)
-    {
-        auto i2 = dynamic_cast<SpecFileInput *>(i);
-        SW_ASSERT(i2, "Bad input type");
-        m[i2->getSpecification().files.getData().begin()->second.absolute_path] = i;
-    }
-
-    for (auto &[p, out] : build_configs1(swctx, inputs))
-    {
-        auto i = dynamic_cast<SpecFileInput *>(m[p]);
-        if (!i)
-        {
-            LOG_WARN(logger, "Bad input");
-            continue;
-        }
-        SW_UNIMPLEMENTED;
-        /*i->module = loadSharedLibrary(out.dll, out.PATH, swctx.getSettings()["do_not_remove_bad_module"].get<bool>());
-        auto ep = std::make_unique<NativeModuleTargetEntryPoint>(*i->module);
-        ep->source_dir = p.parent_path();
-        i->setEntryPoint(std::move(ep));*/
-    }
-}
+//void Driver::loadInputsBatch(const std::set<Input *> &inputs) const
+//{
+//    std::map<path, Input *> m;
+//    for (auto &i : inputs)
+//    {
+//        auto i2 = dynamic_cast<SpecFileInput *>(i);
+//        SW_ASSERT(i2, "Bad input type");
+//        m[i2->getSpecification().files.getData().begin()->second.absolute_path] = i;
+//    }
+//
+//    for (auto &[p, out] : build_configs1(swctx, inputs))
+//    {
+//        auto i = dynamic_cast<SpecFileInput *>(m[p]);
+//        if (!i)
+//        {
+//            LOG_WARN(logger, "Bad input");
+//            continue;
+//        }
+//        SW_UNIMPLEMENTED;
+//        /*i->module = loadSharedLibrary(out.dll, out.PATH, swctx.getSettings()["do_not_remove_bad_module"].get<bool>());
+//        auto ep = std::make_unique<NativeModuleTargetEntryPoint>(*i->module);
+//        ep->source_dir = p.parent_path();
+//        i->setEntryPoint(std::move(ep));*/
+//    }
+//}
 
 std::unique_ptr<SwBuild> Driver::create_build(SwContext &swctx) const
 {
@@ -962,7 +969,8 @@ std::unordered_map<path, PrepareConfigOutputData> Driver::build_configs1(SwConte
 
         PackageSettings s;
         s["dry-run"] = true;
-        auto tgts = i->loadPackages(*b, r, s);
+        SW_UNIMPLEMENTED;
+        /*auto tgts = i->loadPackages(*b, r, s);
         SW_CHECK(tgts.size() == 1);
         for (auto &&t : tgts)
         {
@@ -985,7 +993,7 @@ std::unordered_map<path, PrepareConfigOutputData> Driver::build_configs1(SwConte
             pp->build = std::move(b);
             pp->resolver = std::make_unique<Resolver>(r);
             loaders.emplace_back(std::move(pp));
-        }
+        }*/
 
         /*auto [ii, _] = swctx.registerInput(std::move(i));
         //LogicalInput bi(*ii, {});
@@ -1004,10 +1012,11 @@ std::unordered_map<path, PrepareConfigOutputData> Driver::build_configs1(SwConte
     for (auto &p : loaders)
         transforms.push_back(&p->load(ts));
 
-    sw::transform_executor e;
+    SW_UNIMPLEMENTED;
+    /*sw::transform_executor e;
     e.execute(transforms);
 
-    return save_and_return(pc.r);
+    return save_and_return(pc.r);*/
 }
 
 const StringSet &Driver::getAvailableFrontendNames()
@@ -1172,26 +1181,34 @@ std::vector<std::unique_ptr<Input>> Driver::detectInputs(const path &in) const
     return inputs;
 }
 
-std::vector<Driver::package_loader_ptr> Driver::load_packages(std::vector<std::unique_ptr<Input>> &&inputs)
+std::vector<package_loader *> Driver::load_packages(std::vector<std::unique_ptr<Input>> &&inputs)
 {
-    Resolver r;
+    auto rp = std::make_shared<Resolver>();
+    auto &r = *rp;
     r.addStorage(*swctx.overridden_storage);
     r.addStorage(swctx.getLocalStorage()); // after overridden
     for (auto s : swctx.getRemoteStorages())
         r.addStorage(*s);
     r.addStorage(*bs); // builtin tools storage
 
-    auto b = swctx.createBuild();
+    //auto b = swctx.createBuild();
     //b->getResolver().addStorage(*bs);
-    std::vector<package_loader_ptr> loaders;
+    std::vector<package_loader *> loaders;
     for (auto &&i : inputs)
     {
         i->load();
 
-        std::shared_ptr<Input> is = std::move(i);
         PackageSettings s;
         s["dry-run"] = true;
-        for (auto &&t : is->loadPackages(*b, r, s))
+
+        auto eb = std::make_shared<ExtendedBuild>(*this);
+        auto &b = *eb;
+        b.module_data.current_settings = &s; // in any case
+        //b.module_data.known_target = &p;
+        b.module_data.resolver = &r;
+
+        std::shared_ptr<Input> is = std::move(i);
+        for (auto &&t : is->loadPackages(b))
         {
             struct some_pkg : Package
             {
@@ -1208,44 +1225,48 @@ std::vector<Driver::package_loader_ptr> Driver::load_packages(std::vector<std::u
             p->setData(std::move(d));
 
             auto pp = std::make_unique<my_package_loader>(*p);
+            pp->build2 = eb;
             pp->input = is;
-            pp->build = std::move(b);
-            pp->resolver = std::make_unique<Resolver>(r);
-            loaders.emplace_back(std::move(pp));
+            //pp->build = std::move(b);
+            pp->resolver = rp;
+            this->loaders.emplace_back(std::move(pp));
+            loaders.push_back(this->loaders.back().get());
         }
     }
     return loaders;
 }
 
-std::vector<Driver::package_loader_ptr> Driver::load_packages(const path &in)
+std::vector<package_loader *> Driver::load_packages(const path &in)
 {
     auto inputs = detectInputs(in);
     return load_packages(std::move(inputs));
 }
 
-static std::unordered_map<PackageId, Driver::package_loader_ptr> loaders1;
-static std::unordered_map<PackageId, Driver::package_loader_ptr> loaders2;
-
-Driver::package_loader_ptr Driver::load_package(const Package &p)
+package_loader *Driver::load_package(const Package &p)
 {
-    SW_UNIMPLEMENTED;
-
-    /*auto lp = dynamic_cast<const ConfigPackage *>(&p);
+    auto lp = dynamic_cast<const ConfigPackage *>(&p);
 
     if (lp)
     {
         auto i = loaders1.find(p.getId());
         if (i != loaders1.end())
-            return i->second;
+            return i->second.get();
     }
     else
     {
         auto i = loaders2.find(p.getId());
         if (i != loaders2.end())
-            return i->second;
+            return i->second.get();
     }
 
-    Resolver r;
+    auto i = getInput(p);
+    i->load();
+
+    //auto b = swctx.createBuild();
+    //b->getResolver().addStorage(*bs);
+
+    auto rp = std::make_shared<Resolver>();
+    auto &r = *rp;
     if (lp)
     {
         r.addStorage(*this->cs); // pkg storage
@@ -1260,21 +1281,22 @@ Driver::package_loader_ptr Driver::load_package(const Package &p)
         r.addStorage(*bs); // builtin tools storage
     }
 
-    auto i = getInput(p);
-    i->load();
+    auto eb = std::make_shared<ExtendedBuild>(*this);
+    auto &b = *eb;
+    //b.module_data.current_settings = &s; // in any case
+    //b.module_data.known_target = &p;
+    b.module_data.resolver = &r;
 
-    auto b = swctx.createBuild();
-    //b->getResolver().addStorage(*bs);
-
-    auto pp = std::make_shared<my_package_loader>(p);
-    pp->i = std::move(i);
-    pp->b = std::move(b);
-    pp->r = std::make_unique<Resolver>(r);
+    auto pp = std::make_unique<my_package_loader>(p);
+    pp->input = std::move(i);
+    //pp->build = std::move(b);
+    pp->build2 = eb;
+    pp->resolver = rp;
 
     if (lp)
-        return loaders1.emplace(p.getId(), pp).first->second;
+        return loaders1.emplace(p.getId(), std::move(pp)).first->second.get();
     else
-        return loaders2.emplace(p.getId(), pp).first->second;*/
+        return loaders2.emplace(p.getId(), std::move(pp)).first->second.get();
 }
 
 } // namespace driver::cpp

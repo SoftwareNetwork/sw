@@ -80,12 +80,11 @@ struct SW_DRIVER_CPP_API Build : TargetBase
     DriverData *dd = nullptr;
     std::unique_ptr<Checker> checker;
     //SwBuild &main_build;
-    transform &t;
     driver::cpp::Driver &d;
     //const ProgramDetector &pd;
 
     //
-    Build(transform &, driver::cpp::Driver &/*, SwBuild &*/);
+    Build(driver::cpp::Driver &);
     Build(const Build &) = delete;
     Build(Build &&) = default;
     //~Build();
@@ -100,6 +99,7 @@ struct SW_DRIVER_CPP_API Build : TargetBase
     const LocalStorage &getLocalStorage() const;
     path getBuildDirectory() const;
     //FileStorage &getFileStorage() const;
+    CommandStorage *getCommandStorage(const Target &) const;
 
     package_loader *load_package(const Package &);
 

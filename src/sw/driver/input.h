@@ -14,6 +14,7 @@ namespace sw
 struct Specification;
 struct IDriver;
 struct SwContext;
+struct Build;
 
 enum class InputType : uint8_t
 {
@@ -61,12 +62,12 @@ struct SW_DRIVER_CPP_API Input
     /// "local" mode
     /// no dry-run targets
     [[nodiscard]]
-    virtual std::vector<ITargetPtr> loadPackages(SwBuild &, Resolver &, const PackageSettings &) const = 0;
+    virtual std::vector<ITargetPtr> loadPackages(Build &) const = 0;
 
     /// load specific package from input
     /// no dry-run targets
     [[nodiscard]]
-    virtual ITargetPtr loadPackage(SwBuild &, Resolver &, const PackageSettings &, const Package &) const = 0;
+    virtual ITargetPtr loadPackage(Build &, const Package &) const = 0;
 
 protected:
     SwContext &swctx;

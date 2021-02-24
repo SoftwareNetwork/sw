@@ -22,6 +22,7 @@ struct PackageSettings;
 struct PrepareConfigOutputData;
 struct NativeBuiltinTargetEntryPoint;
 struct transform;
+struct my_package_loader;
 
 namespace driver::cpp
 {
@@ -38,19 +39,20 @@ struct SW_DRIVER_CPP_API Driver : IDriver
     // this driver own api
     static void processConfigureAc(const path &p);
 
-    // make IDriver api?
-    static PackageName getPackageId();
+    //PackageName get_package_name();
+    const PackageId &get_package() const override;
+    const PackageSettings &get_properties() const override;
 
     // IDriver api
-    void loadInputsBatch(const std::set<Input *> &) const override;
+    //void loadInputsBatch(const std::set<Input *> &) const override;
     std::vector<std::unique_ptr<Input>> detectInputs(const path &) const;
-    std::vector<std::unique_ptr<Input>> detectInputs(const path &, InputType) const override;
-    std::unique_ptr<Input> getInput(const Package &) const override;
+    std::vector<std::unique_ptr<Input>> detectInputs(const path &, InputType) const;
+    std::unique_ptr<Input> getInput(const Package &) const;
     //std::vector<std::unique_ptr<Input>> getPredefinedInputs() const override;
-    void setupBuild(SwBuild &) const override;
+    //void setupBuild(SwBuild &) const override;
 
-    package_loader_ptr load_package(const Package &) override;
-    std::vector<package_loader_ptr> load_packages(const path &) override;
+    package_loader *load_package(const Package &) override;
+    std::vector<package_loader *> load_packages(const path &) override;
 
     // frontends
     using AvailableFrontends = boost::bimap<boost::bimaps::multiset_of<FrontendType>, path>;
@@ -68,14 +70,20 @@ struct SW_DRIVER_CPP_API Driver : IDriver
     SwContext &getContext() const { return swctx; }
     transform &get_transform() const { return transform_; }
 
+    CommandStorage *getCommandStorage(const Target &t) const;
+
 private:
+    PackageId id;
     transform &transform_;
     SwContext &swctx;
     std::unique_ptr<struct BuiltinStorage> bs;
     std::unique_ptr<struct ConfigStorage> cs;
+    std::vector<std::unique_ptr<my_package_loader>> loaders;
+    std::unordered_map<PackageId, std::unique_ptr<my_package_loader>> loaders1;
+    std::unordered_map<PackageId, std::unique_ptr<my_package_loader>> loaders2;
 
     std::unique_ptr<SwBuild> create_build(SwContext &swctx) const;
-    std::vector<package_loader_ptr> load_packages(std::vector<std::unique_ptr<Input>> &&);
+    std::vector<package_loader *> load_packages(std::vector<std::unique_ptr<Input>> &&);
 };
 
 } // namespace driver::cpp

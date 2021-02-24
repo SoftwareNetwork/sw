@@ -163,7 +163,8 @@ SUBCOMMAND_DECL(build)
     }
 
     sw::transform t;
-    t.add_driver(sw::driver::cpp::Driver::getPackageId(), std::make_unique<sw::driver::cpp::Driver>(t, getContext()));
+    auto d = std::make_unique<sw::driver::cpp::Driver>(t, getContext());
+    t.add_driver(*d);
 
     std::vector<sw::package_loader *> loaders;
 

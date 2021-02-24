@@ -65,10 +65,9 @@ ModuleSwappableData::AddedTargets &ModuleSwappableData::getTargets()
     return added_targets;
 }
 
-Build::Build(transform &t, driver::cpp::Driver &d/*, SwBuild &mb*/)
+Build::Build(driver::cpp::Driver &d/*, SwBuild &mb*/)
     : checker(std::make_unique<Checker>(/*mb*/))
     //, main_build(mb)
-    , t(t)
     , d(d)
 {
 }
@@ -88,7 +87,7 @@ Build::Build(transform &t, driver::cpp::Driver &d/*, SwBuild &mb*/)
 
 package_loader *Build::load_package(const Package &p)
 {
-    return t.load_package(p);
+    return d.get_transform().load_package(p);
 }
 
 const SwContext &Build::getContext() const
@@ -103,8 +102,14 @@ const LocalStorage &Build::getLocalStorage() const
 
 path Build::getBuildDirectory() const
 {
-    SW_UNIMPLEMENTED;
+    return SourceDir / ".sw";
     //return main_build.getBuildDirectory();
+}
+
+CommandStorage *Build::getCommandStorage(const Target &t) const
+{
+    SW_UNIMPLEMENTED;
+    //return d.getCommandStorage(t);
 }
 
 //FileStorage &Build::getFileStorage() const { return main_build.getFileStorage(); }

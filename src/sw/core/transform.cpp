@@ -19,11 +19,11 @@ namespace sw
 transform::transform() {}
 transform::~transform() {}
 
-void transform::add_driver(const PackageName &pkg, std::unique_ptr<IDriver> driver)
+void transform::add_driver(IDriver &driver)
 {
-    auto [_, inserted] = drivers_.insert_or_assign(pkg, std::move(driver));
+    auto [_, inserted] = drivers.insert_or_assign(driver.get_package().getName(), &driver);
     if (inserted)
-        LOG_TRACE(logger, "Registering driver: " + pkg.toString());
+        LOG_TRACE(logger, "Registering driver: " + driver.get_package().getName().toString());
 }
 
 /*package_transform *transform::add_transform(package_loader &l, const PackageSettings &s)
@@ -34,10 +34,10 @@ void transform::add_driver(const PackageName &pkg, std::unique_ptr<IDriver> driv
 std::vector<package_loader *> transform::load_packages(const path &p)
 {
     std::vector<package_loader *> loaders;
-    for (auto &[_, d] : drivers_) {
-        for (auto &&p : d->load_packages(p)) {
-            package_loaders.emplace_back(std::move(p));
-            loaders.push_back(package_loaders.back().get());
+    for (auto &[_, d] : drivers) {
+        for (auto p : d->load_packages(p)) {
+            package_loaders.emplace(p->get_package_name(), p);
+            loaders.push_back(p);
         }
     }
     return loaders;
@@ -45,11 +45,15 @@ std::vector<package_loader *> transform::load_packages(const path &p)
 
 package_loader *transform::load_package(const Package &p)
 {
-    auto i = drivers_.find(p.getData().driver);
-    if (i == drivers_.end())
+    auto it = package_loaders.find(p.getId().getName());
+    if (it != package_loaders.end())
+        return it->second;
+    auto i = drivers.find(p.getData().driver);
+    if (i == drivers.end())
         throw SW_RUNTIME_ERROR("Driver is not registered: " + p.getData().driver.toString());
-    package_loaders.emplace_back(i->second->load_package(std::move(p)));
-    return package_loaders.back().get();
+    auto pl = i->second->load_package(p);
+    package_loaders.emplace(pl->get_package_name(), pl);
+    return pl;
 }
 
 void transform_executor::execute(const std::vector<const package_transform *> &v)

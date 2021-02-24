@@ -371,8 +371,11 @@ private:
     String provided_cfg;
     mutable Commands commands;
     Commands tests;
+    mutable bool in_get_commands = false;
+    mutable std::unique_ptr<CommandStorage> command_storage;
 
     PackageSettings getHostSettings() const;
+    CommandStorage *getCommandStorage() const;
 
     virtual Commands getCommands1() const { return Commands{}; }
     Commands getTests() const override { return tests; }
