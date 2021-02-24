@@ -367,8 +367,8 @@ TargetFiles Target::getFiles() const
 std::vector<Dependency *> Target::getDependencies() const
 {
     std::vector<Dependency *> deps;
-    //for (auto &d : gatherDependencies())
-        //deps.push_back(d);
+    for (auto &d : gatherDependencies())
+        deps.push_back(d);
     for (auto &d : DummyDependencies)
         deps.push_back(d.get());
     for (auto &d : SourceDependencies)

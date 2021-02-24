@@ -1934,7 +1934,7 @@ void NativeCompiledTarget::prepare_pass2()
         return;
 
     // resolve deps
-    for (auto &d : getActiveDependencies())
+    /*for (auto &d : getActiveDependencies())
     {
         if (d.dep->isResolved())
             continue;
@@ -1950,7 +1950,7 @@ void NativeCompiledTarget::prepare_pass2()
                 //throw SW_RUNTIME_ERROR("No such target: " + d.dep->getPackage().toString());
         }
         //d.dep->setTarget(*t);
-    }
+    }*/
     for (auto &d : Target::getDependencies())
     {
         if (d->isResolved())
@@ -2037,12 +2037,12 @@ void NativeCompiledTarget::prepare_pass3()
         auto &transform = loader->load(d.getUnresolvedPackageId().getSettings());
         d.setTarget(transform);
     };
-    for (auto &d : getActiveDependencies())
+    /*for (auto &d : getActiveDependencies())
     {
         if (d.dep->isResolved())
             continue;
         rd(*d.dep);
-    }
+    }*/
     for (auto &d : Target::getDependencies())
     {
         if (d->isResolved())
