@@ -1741,6 +1741,14 @@ void NativeCompiledTarget::prepare2()
     p.setData(std::move(d));
     try
     {
+        auto &is = getInterfaceSettings();
+        auto d = is["binary_directory"].getPathValue(getSolution().getLocalStorage().storage_dir);
+        if (!fs::exists(d.parent_path() / "cfg2.json"))
+        {
+            write_file(d.parent_path() / "cfg2.json",
+                nlohmann::json::parse(getSettings().toString(PackageSettings::Json)).dump(4));
+        }
+
         getSolution().getLocalStorage().installLocalPackage(p);
     }
     catch (std::exception &e)

@@ -882,6 +882,11 @@ void Target::resolveDependency(Dependency &d)
     }
 
     {
+        write_file("cfg2.json",
+            nlohmann::json::parse(d.getUnresolvedPackageId().getSettings().toString(PackageSettings::Json)).dump(4));
+    }
+
+    {
         // try to resolve sources
         PackageSettings s;
         ResolveRequest rr2{ d.getUnresolvedPackageId().getName(), s };
