@@ -4,7 +4,7 @@
 #include <sw/client/common/commands.h>
 #include <sw/client/common/main.h>
 
-#include <primitives/sw/settings_program_name.h>
+#define SW_CUSTOM_PROGRAM_NAME
 #include <primitives/sw/main.h>
 #include <primitives/git_rev.h>
 

@@ -13,7 +13,6 @@
 #include <primitives/http.h>
 #include <primitives/sw/main.h>
 #include <primitives/sw/cl.h>
-#include <primitives/sw/settings_program_name.h>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "self_builder");
@@ -206,10 +205,4 @@ int main(int argc, char **argv)
     write_file(p, t2 + t3);
 
     return 0;
-}
-
-EXPORT_FROM_EXECUTABLE
-std::string getProgramName()
-{
-    return PACKAGE_NAME_CLEAN;
 }
