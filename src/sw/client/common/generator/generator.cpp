@@ -1180,7 +1180,7 @@ void CompilationDatabaseGenerator::generate(const SwBuild &b)
             {
                 nlohmann::json j2;
                 if (!c->working_directory.empty())
-                    j2["directory"] = normalize_path(c->working_directory);
+                    j2["directory"] = to_printable_string(normalize_path(c->working_directory));
                 if (!c->inputs.empty())
                 {
                     bool cppset = false;
@@ -1189,7 +1189,7 @@ void CompilationDatabaseGenerator::generate(const SwBuild &b)
                         auto i = exts.find(input.extension().string());
                         if (i == exts.end())
                             continue;
-                        j2["file"] = normalize_path(input);
+                        j2["file"] = to_printable_string(normalize_path(input));
                         cppset = true;
                         break;
                     }
@@ -1199,7 +1199,7 @@ void CompilationDatabaseGenerator::generate(const SwBuild &b)
                         {
                             if (normalize_path(input) != normalize_path(c->getProgram()))
                             {
-                                j2["file"] = normalize_path(input);
+                                j2["file"] = to_printable_string(normalize_path(input));
                                 break;
                             }
                         }
