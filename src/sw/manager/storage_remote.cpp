@@ -277,7 +277,9 @@ void RemoteStorage::load() const
 
 void RemoteStorage::updateDb() const
 {
-    if (!Settings::get_user_settings().gForceServerDatabaseUpdate)
+    if (!Settings::get_user_settings().gForceServerDatabaseUpdate
+        && !Settings::get_user_settings().gForceServerQuery // for now
+        )
     {
         if (!Settings::get_system_settings().can_update_packages_db || !isCurrentDbOld())
             return;
