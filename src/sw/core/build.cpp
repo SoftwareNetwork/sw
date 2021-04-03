@@ -865,8 +865,11 @@ Commands SwBuild::getCommands() const
                 {
                     auto get_deps = [this, &gather_ttb, &process_deps, &ttb](const auto &in)
                     {
-                        for (auto &[k, v] : in)
+                        for (auto &p : in)
                         {
+                            // msvc bug
+                            auto &k = p.first;
+                            auto &v = p.second;
                             if (swctx.getPredefinedTargets().find(PackageId(k)) != swctx.getPredefinedTargets().end())
                                 continue;
                             auto i = getTargets().find(PackageId(k));
@@ -973,7 +976,7 @@ Commands SwBuild::getCommands() const
 
                 PackageIdSet visited_pkgs;
                 std::function<void(const TargetSettings &)> copy_file;
-                copy_file = [this, &copy_dir_current, &copy_files, &copy_file, &visited_pkgs](const auto &s)
+                copy_file = [this, &copy_dir_current, &copy_files, &copy_file, &visited_pkgs](const TargetSettings &s)
                 {
                     if (s["header_only"] == "true")
                         return;
@@ -1010,13 +1013,16 @@ Commands SwBuild::getCommands() const
                     std::function<void(const TargetSettings &)> process_deps;
                     process_deps = [this, &copy_file, &process_deps, &visited_pkgs](const auto &s)
                     {
-                        for (auto &[k, v] : s["dependencies"]["link"].getMap())
+                        for (auto &p : s["dependencies"]["link"].getMap())
                         {
-                            PackageId p(k);
-                            if (visited_pkgs.find(p) != visited_pkgs.end())
+                            // msvc bug
+                            auto &k = p.first;
+                            auto &v = p.second;
+                            PackageId pkg(k);
+                            if (visited_pkgs.find(pkg) != visited_pkgs.end())
                                 continue;
-                            visited_pkgs.insert(p);
-                            auto i = getTargets().find(p);
+                            visited_pkgs.insert(pkg);
+                            auto i = getTargets().find(pkg);
                             if (i == getTargets().end())
                                 throw SW_RUNTIME_ERROR("dep not found");
                             auto j = i->second.findSuitable(v.getMap());

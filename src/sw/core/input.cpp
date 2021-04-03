@@ -108,7 +108,7 @@ void BuildInput::addPackage(const LocalPackage &in)
 {
     auto in_prefix = in.getPath().slice(0, in.getData().prefix);
 
-    if (prefix && in_prefix != getPrefix())
+    if (prefix && !(in_prefix == getPrefix()))
         throw SW_RUNTIME_ERROR("Trying to add different prefix");
     prefix = in_prefix;
     pkgs.insert(in);
