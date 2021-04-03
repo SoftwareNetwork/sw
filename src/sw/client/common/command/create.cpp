@@ -40,6 +40,12 @@ static ProjectTemplates createProjectTemplates()
             auto fn2 = f.second.template as<String>();
             p.files[fn] = fn2;
         }
+        for (auto &f : tpl["other_files"])
+        {
+            auto fn = f.first.template as<String>();
+            auto fn2 = f.second.template as<String>();
+            p.other_files[fn] = fn2;
+        }
         for (auto &f : tpl["config"])
         {
             auto fn = f.first.template as<String>();
@@ -129,14 +135,19 @@ SUBCOMMAND_DECL(create)
             boost::replace_all(s, "{deps}", deps);
             write_file(dir / fn, s);
         }
-        for (auto &[fn,fn2] : tpl.files)
+        auto write_files = [&](auto &&arr)
         {
-            const auto &ci = tpls.files.find(fn2);
-            if (ci == tpls.files.end())
-                throw SW_RUNTIME_ERROR("No such file: " + to_string(normalize_path(fn)) + " (" + to_string(normalize_path(fn2)) + ")");
-            auto s = ci->second;
-            write_file(dir / fn, s);
-        }
+            for (auto &[fn,fn2] : arr)
+            {
+                const auto &ci = tpls.files.find(fn2);
+                if (ci == tpls.files.end())
+                    throw SW_RUNTIME_ERROR("No such file: " + to_string(normalize_path(fn)) + " (" + to_string(normalize_path(fn2)) + ")");
+                auto s = ci->second;
+                write_file(dir / fn, s);
+            }
+        };
+        write_files(tpl.files);
+        write_files(tpl.other_files);
 
         // set our inputs
         Strings inputs;

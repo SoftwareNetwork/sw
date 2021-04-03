@@ -8,6 +8,8 @@ templates:
             sw.cpp: sw.cpp
         files:
             src/main.c: main.c
+        other_files:
+            .gitignore: .gitignore
 
     cpp.exe:
         name: C++ Executable
@@ -16,6 +18,8 @@ templates:
             sw.cpp: sw.cpp
         files:
             src/main.cpp: main.cpp
+        other_files:
+            .gitignore: .gitignore
 
     sw.cpp.exe:
         name: SW C++ Executable
@@ -26,6 +30,8 @@ templates:
             - pub.egorpugin.primitives.sw.main-master
         files:
             src/main.cpp: sw.main.cpp
+        other_files:
+            .gitignore: .gitignore
 
     cpp.lib:
         name: C++ Library
@@ -35,8 +41,14 @@ templates:
         files:
             src/lib.cpp: lib.cpp
             src/lib.h: lib.h
+        other_files:
+            .gitignore: .gitignore
 
 files:
+    .gitignore: |
+        .sw
+        *.lnk
+
     main.c: |
         #include <stdio.h>
 

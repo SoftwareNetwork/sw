@@ -33,6 +33,7 @@ struct ProjectTemplate
     String target;
     FilesMap config;
     FilesMap files;
+    FilesMap other_files;
     StringSet dependencies;
 };
 
