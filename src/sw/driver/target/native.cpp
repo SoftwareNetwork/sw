@@ -3888,6 +3888,16 @@ void NativeCompiledTarget::prepare_pass7()
                     exe_path = "@executable_path";
                 getMergeObject().LinkOptions.push_back(rpath_var + exe_path);
             }
+            if (getBuildSettings().TargetOS.is(OSType::Linux))
+            {
+                // https://docs.oracle.com/cd/E19683-01/816-0210/6m6nb7mcs/index.html
+                // same as --no-undefined?
+                //if (NoUndefined)
+                    //getMergeObject().LinkOptions.push_back("-Wl,-z,defs");
+                // https://fedoraproject.org/wiki/Changes/Harden_All_Packages
+                // hardening
+                getMergeObject().LinkOptions.push_back("-Wl,-z,now");
+            }
         }
     }
 
