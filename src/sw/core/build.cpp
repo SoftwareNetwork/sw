@@ -1354,6 +1354,16 @@ void SwBuild::test()
     LOG_INFO(logger, "PASSED:  " << cmds.size() - errors - skipped);
     LOG_INFO(logger, "FAILED:  " << errors);
     LOG_INFO(logger, "SKIPPED: " << skipped);
+/*
+    // from gnu testsuite?
+    # TOTAL: 611
+    # PASS: 144
+    # SKIP: 86
+    # XFAIL: 0
+    # FAIL: 342
+    # XPASS: 0
+    # ERROR: 39
+*/
     if (errors)
     {
         LOG_INFO(logger, "");
