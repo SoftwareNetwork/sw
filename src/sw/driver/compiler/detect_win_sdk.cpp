@@ -11,6 +11,8 @@
 #include <regex>
 #include <string>
 
+#include <windows.h>
+
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "compiler.detect.win.sdk");
 
@@ -18,7 +20,7 @@ DECLARE_STATIC_LOGGER(logger, "compiler.detect.win.sdk");
 #include <WinReg.hpp>
 
 // https://en.wikipedia.org/wiki/Microsoft_Windows_SDK
-static const Strings known_kits{ "8.1A", "8.1", "8.0", "7.1A", "7.1", "7.0A", "7.0A","6.0A" };
+static const Strings known_kits{ "8.1A", "8.1", "8.0", "7.1A", "7.1", "7.0A", "7.0", "6.0A" };
 static const auto reg_root = L"SOFTWARE\\Microsoft\\Windows Kits\\Installed Roots";
 // list all registry views
 static const int reg_access_list[] =
@@ -84,6 +86,45 @@ struct WinKit
                 t.public_ts["properties"]["6"]["system_include_directories"].push_back(idir / name);
                 for (auto &i : idirs)
                     t.public_ts["properties"]["6"]["system_include_directories"].push_back(idir / i);
+                targets.push_back(&t);
+            }
+            else
+                LOG_TRACE(logger, "Libdir " << libdir << " not found for library: " << name);
+        }
+        return targets;
+    }
+
+    std::vector<sw::PredefinedTarget*> addOld(DETECT_ARGS, sw::OS settings, const sw::Version &v)
+    {
+        auto idir = kit_root / "Include";
+        if (!fs::exists(idir))
+        {
+            LOG_TRACE(logger, "Include dir " << idir << " not found for kit: " << kit_root);
+            return {};
+        }
+
+        std::vector<sw::PredefinedTarget *> targets;
+        // only two archs
+        // (but we have IA64 also)
+        for (auto target_arch : { sw::ArchType::x86_64,sw::ArchType::x86 })
+        {
+            settings.Arch = target_arch;
+
+            auto ts1 = toTargetSettings(settings);
+            sw::TargetSettings ts;
+            ts["os"]["kernel"] = ts1["os"]["kernel"];
+            ts["os"]["arch"] = ts1["os"]["arch"];
+
+            auto libdir = kit_root / "Lib";
+            if (target_arch == sw::ArchType::x86_64)
+                libdir /= toStringWindows(target_arch);
+            if (fs::exists(libdir))
+            {
+                auto &t = sw::addTarget<sw::PredefinedTarget>(DETECT_ARGS_PASS, sw::LocalPackage(s.getLocalStorage(), sw::PackageId("com.Microsoft.Windows.SDK." + name, v)), ts);
+                //t.ts["os"]["version"] = v.toString();
+
+                t.public_ts["properties"]["6"]["system_include_directories"].push_back(idir);
+                t.public_ts["properties"]["6"]["system_link_directories"].push_back(libdir);
                 targets.push_back(&t);
             }
             else
@@ -180,6 +221,13 @@ private:
         for (auto &d : getProgramFilesDirs())
         {
             auto p = d / "Windows Kits";
+            if (fs::exists(p))
+                dirs.insert(p);
+            // old sdks
+            p = d / "Microsoft SDKs";
+            if (fs::exists(p))
+                dirs.insert(p);
+            p = d / "Microsoft SDKs" / "Windows"; // this is more correct probably
             if (fs::exists(p))
                 dirs.insert(p);
         }
@@ -293,6 +341,9 @@ private:
                 auto p = kr / k;
                 if (fs::exists(p))
                     addKit(DETECT_ARGS_PASS, p, k);
+                p = kr / ("v" + k); // some installations has v prefix
+                if (fs::exists(p))
+                    addKit(DETECT_ARGS_PASS, p, k);
             }
         }
     }
@@ -364,6 +415,32 @@ private:
     {
         LOG_TRACE(logger, "Found Windows Kit " + k + " at " + to_string(normalize_path(kr)));
 
+        // tools
+        {
+            WinKit wk;
+            wk.kit_root = kr;
+            wk.addTools(DETECT_ARGS_PASS);
+        }
+
+        auto ver = k;
+        if (!k.empty() && k.back() == 'A')
+            ver = k.substr(0, k.size() - 1) + ".1";
+
+        // old kits has special handling
+        // if (sw::Version(k) < sw::Version(8)) k may have letter 'A', so we can't use such cmp at the moment
+        // use simple cmp for now
+        // but we pass k as version, so when we need to handle X.XA, we must set a new way
+        if (k == "7.1" || k == "7.1A")
+        {
+            WinKit wk;
+            wk.kit_root = kr;
+            wk.name = "um";
+            wk.addOld(DETECT_ARGS_PASS, settings, ver);
+            wk.name = "km"; // ? maybe km files installed separately?
+            wk.addOld(DETECT_ARGS_PASS, settings, ver);
+            return;
+        }
+
         // um + shared
         {
             WinKit wk;
@@ -376,7 +453,7 @@ private:
             else
                 LOG_DEBUG(logger, "TODO: Windows Kit " + k + " is not implemented yet. Report this issue.");
             wk.idirs.push_back("shared");
-            wk.add(DETECT_ARGS_PASS, settings, k);
+            wk.add(DETECT_ARGS_PASS, settings, ver);
         }
 
         // km
@@ -390,14 +467,7 @@ private:
                 wk.ldir_subversion = "Win8";
             else
                 LOG_DEBUG(logger, "TODO: Windows Kit " + k + " is not implemented yet. Report this issue.");
-            wk.add(DETECT_ARGS_PASS, settings, k);
-        }
-
-        // tools
-        {
-            WinKit wk;
-            wk.kit_root = kr;
-            wk.addTools(DETECT_ARGS_PASS);
+            wk.add(DETECT_ARGS_PASS, settings, ver);
         }
     }
 };
