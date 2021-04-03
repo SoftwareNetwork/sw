@@ -152,7 +152,9 @@ bool OS::canRunTargetExecutables(const OS &TargetOS) const
     if (Arch != TargetOS.Arch)
     {
         // win64 can run win32, but not vice versa
-        if (Type == OSType::Windows &&
+        // linux64 can run linux32
+        if ((Type == OSType::Windows || Type == OSType::Linux)
+            &&
             Arch == ArchType::x86_64 && TargetOS.Arch == ArchType::x86
             )
         {
