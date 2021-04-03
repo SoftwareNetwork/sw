@@ -70,7 +70,10 @@ static String detectMsvcPrefix(builder::detail::ResolvableCommand c)
         LOG_TRACE(logger, "Empty stdout from '" + to_printable_string(c.getProgram()) + "', trying stderr. Cmd: " + c.print());
         lines = split_lines(c.err.text);
         if (lines.empty())
+        {
+            LOG_TRACE(logger, "error code = " << *c.exit_code);
             throw SW_RUNTIME_ERROR(error("Bad output: " + c.print()));
+        }
     }
 
     String s = R"((.*?\s)[a-zA-Z]:[\\\/].*)" + hfn.stem().string() + "\\" + hfn.extension().string();
@@ -78,7 +81,13 @@ static String detectMsvcPrefix(builder::detail::ResolvableCommand c)
     std::smatch m;
     // clang-cl does not output filename -> lines.size() == 1
     if (!std::regex_search(lines.size() > 1 ? lines[1] : lines[0], m, r))
+    {
+        LOG_TRACE(logger, "stdout = " << c.out.text);
+        LOG_TRACE(logger, "stderr = " << c.err.text);
+        LOG_TRACE(logger, "error code = " << *c.exit_code);
+        LOG_TRACE(logger, "Cmd: " + c.print());
         throw SW_RUNTIME_ERROR(error("regex_search failed"));
+    }
     return p[c.getProgram()] = m[1].str();
 }
 
