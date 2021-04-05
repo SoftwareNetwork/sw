@@ -64,15 +64,23 @@ static String detectMsvcPrefix(builder::detail::ResolvableCommand c)
         return "Cannot match VS include prefix (" + reason + "):\n" + c.out.text + "\nstderr:\n" + c.err.text;
     };
 
+    auto get_env = [&c]()
+    {
+        String s;
+        for (auto &[k, v] : c.environment)
+            s += k + ": " + v + "\n";
+        return s;
+    };
+
     auto lines = split_lines(c.out.text);
     if (lines.empty())
     {
-        LOG_TRACE(logger, "Empty stdout from '" + to_printable_string(c.getProgram()) + "', trying stderr. Cmd: " + c.print());
+        LOG_TRACE(logger, "Empty stdout from '" + to_printable_string(c.getProgram()) + "', trying stderr. Cmd: " + c.print() + "\nEnv: " + get_env());
         lines = split_lines(c.err.text);
         if (lines.empty())
         {
             LOG_TRACE(logger, "error code = " << *c.exit_code);
-            throw SW_RUNTIME_ERROR(error("Bad output: " + c.print()));
+            throw SW_RUNTIME_ERROR(error("Bad output: " + c.print() + "\nEnv: " + get_env()));
         }
     }
 
@@ -85,7 +93,7 @@ static String detectMsvcPrefix(builder::detail::ResolvableCommand c)
         LOG_TRACE(logger, "stdout = " << c.out.text);
         LOG_TRACE(logger, "stderr = " << c.err.text);
         LOG_TRACE(logger, "error code = " << *c.exit_code);
-        LOG_TRACE(logger, "Cmd: " + c.print());
+        LOG_TRACE(logger, "Cmd: " + c.print() + "\nEnv: " + get_env());
         throw SW_RUNTIME_ERROR(error("regex_search failed"));
     }
     return p[c.getProgram()] = m[1].str();
@@ -197,6 +205,7 @@ static bool detectMsvcCommon(const path &compiler, const Version &vs_version,
 
     String msvc_prefix;
     Version cl_exe_version;
+    const auto add_path_dir = s.getHostOs().Arch != target_arch || vs_version < Version(12);
 
     // C, C++
     {
@@ -209,7 +218,7 @@ static bool detectMsvcCommon(const path &compiler, const Version &vs_version,
         }
 
         auto c = p->getCommand();
-        if (s.getHostOs().Arch != target_arch)
+        if (add_path_dir)
             c->addPathDirectory(host_root);
         msvc_prefix = detectMsvcPrefix(*c);
         // run getVersion via prepared command
@@ -234,7 +243,7 @@ static bool detectMsvcCommon(const path &compiler, const Version &vs_version,
         if (fs::exists(p->file))
             addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.link", cl_exe_version), ts, p);
 
-        if (s.getHostOs().Arch != target_arch)
+        if (add_path_dir)
         {
             auto c = p->getCommand();
             c->addPathDirectory(host_root);
@@ -245,7 +254,7 @@ static bool detectMsvcCommon(const path &compiler, const Version &vs_version,
         if (fs::exists(p->file))
             addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.lib", cl_exe_version), ts, p);
 
-        if (s.getHostOs().Arch != target_arch)
+        if (add_path_dir)
         {
             auto c = p->getCommand();
             c->addPathDirectory(host_root);
@@ -412,8 +421,8 @@ void detectMsvc14AndOlder(DETECT_ARGS)
 
     for (auto n : {14,12,11,10,9,8})
     {
-        const Version v(n);
-        const auto vsroot = find_comn_tools(v);
+        const Version vs_version(n);
+        const auto vsroot = find_comn_tools(vs_version);
         if (vsroot.empty())
             continue;
 
@@ -466,12 +475,20 @@ void detectMsvc14AndOlder(DETECT_ARGS)
                 compiler += "_"s + toStringWindows14AndOlder(target_arch);
             }
 
+            // VS 11.0 has cl.exe 17.x
+            // it stores required dlls in other dir than host root
+            // VS11.0: 'C:\Program Files (x86)\Microsoft Visual Studio 11.0\Common7\IDE'
+            //LOG_TRACE(logger, "vs version = " << vs_version.toString());
+            if (vs_version < Version(12))
+                host_root = vsroot / "Common7" / "IDE";
+            //LOG_TRACE(logger, "host_root = " << host_root);
+
             // VS programs inherit cl.exe version (V)
             // same for VS libs
             // because ml,ml64,lib,link version (O) has O.Major = V.Major - 5
             // e.g., V = 19.21..., O = 14.21.... (19 - 5 = 14)
 
-            found |= detectMsvcCommon(compiler, v, target_arch, host_root, ts, idir, root, libdir, DETECT_ARGS_PASS);
+            found |= detectMsvcCommon(compiler, vs_version, target_arch, host_root, ts, idir, root, libdir, DETECT_ARGS_PASS);
         }
 
         if (found)
@@ -498,7 +515,15 @@ void detectMsvc14AndOlder(DETECT_ARGS)
             if (target_arch == ArchType::x86_64)
                 compiler /= "x86_"s + toStringWindows14AndOlder(target_arch);
 
-            detectMsvcCommon(compiler, v, target_arch, host_root, ts, idir, root, libdir, DETECT_ARGS_PASS);
+            // VS 11.0 has cl.exe 17.x
+            // it stores required dlls in other dir than host root
+            // VS11.0: 'C:\Program Files (x86)\Microsoft Visual Studio 11.0\Common7\IDE'
+            //LOG_TRACE(logger, "vs version = " << vs_version.toString());
+            if (vs_version < Version(12))
+                host_root = vsroot / "Common7" / "IDE";
+            //LOG_TRACE(logger, "host_root = " << host_root);
+
+            detectMsvcCommon(compiler, vs_version, target_arch, host_root, ts, idir, root, libdir, DETECT_ARGS_PASS);
         }
     }
 }
