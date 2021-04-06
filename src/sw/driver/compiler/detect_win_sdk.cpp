@@ -11,12 +11,12 @@
 #include <regex>
 #include <string>
 
+#ifdef _WIN32
 #include <windows.h>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "compiler.detect.win.sdk");
 
-#ifdef _WIN32
 #include <WinReg.hpp>
 
 // https://en.wikipedia.org/wiki/Microsoft_Windows_SDK
