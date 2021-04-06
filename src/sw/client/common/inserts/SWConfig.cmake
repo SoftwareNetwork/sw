@@ -9,7 +9,7 @@
 
 # increase this variable when file is changed
 # and you need user to call 'sw setup' again to update this file
-set(SW_CMAKE_VERSION 4)
+set(SW_CMAKE_VERSION 5)
 
 ########################################
 # general settings
