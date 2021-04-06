@@ -1,9 +1,9 @@
 #pragma sw require header pub.egorpugin.primitives.tools.embedder-master
 #pragma sw require header org.sw.demo.google.grpc.cpp.plugin
 #pragma sw require header org.sw.demo.lexxmark.winflexbison.bison
-#pragma sw require header org.sw.demo.qtproject.qt.base.tools.moc-5.15.0.0
+#pragma sw require header org.sw.demo.qtproject.qt.base.tools.moc-=5.15.0.0
 
-#define QT_VER "-5.15.0.0"
+#define QT_VER "-=5.15.0.0"
 
 void build(Solution &s)
 {
@@ -392,7 +392,6 @@ void build(Solution &s)
         gui += "org.sw.demo.qtproject.qt.base.winmain" QT_VER ""_dep;
         gui += "org.sw.demo.qtproject.qt.base.plugins.platforms.windows" QT_VER ""_dep;
         gui += "org.sw.demo.qtproject.qt.base.plugins.styles.windowsvista" QT_VER ""_dep;
-        gui += "org.sw.demo.qtproject.qt.labs.vstools.natvis-dev"_dep;
 
         gui -= "org.sw.demo.qtproject.qt.winextras" QT_VER ""_dep;
         if (client.getBuildSettings().TargetOS.Type == OSType::Windows)
