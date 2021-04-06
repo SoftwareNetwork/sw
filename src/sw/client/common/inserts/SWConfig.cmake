@@ -9,7 +9,7 @@
 
 # increase this variable when file is changed
 # and you need user to call 'sw setup' again to update this file
-set(SW_CMAKE_VERSION 5)
+set(SW_CMAKE_VERSION 6)
 
 ########################################
 # general settings
@@ -138,10 +138,11 @@ function(sw_execute)
         set(compiler -compiler msvc)
     elseif ("${compiler}" STREQUAL "GNU")
         set(compiler -compiler gcc)
-    elseif ("${compiler}" STREQUAL "Clang")
+    elseif ("${compiler}" STREQUAL "CLANG")
         set(compiler -compiler clang)
-    elseif ("${compiler}" STREQUAL "AppleClang")
+    elseif ("${compiler}" STREQUAL "APPLECLANG")
         set(compiler -compiler appleclang)
+    # make all compilers UPPERCASE!
     else()
         # https://cmake.org/cmake/help/latest/variable/CMAKE_LANG_COMPILER_ID.html
         message(FATAL_ERROR "Compiler is not implemented: '${CMAKE_C_COMPILER_ID}' or '${CMAKE_CXX_COMPILER_ID}'")
