@@ -31,7 +31,7 @@
 EXPORT_FROM_EXECUTABLE
 std::string getVersionString();
 
-int main(int argc, char **argv)
+int main(int argc, char *argv[])
 {
     //mi_version();
     //sw_enable_crash_server();

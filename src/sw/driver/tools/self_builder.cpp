@@ -159,7 +159,7 @@ String write_build_script(SwCoreContext &swctx, const std::vector<ResolveRequest
     return ctx.getText();
 }
 
-int main(int argc, char **argv)
+int main(int argc, char *argv[])
 {
     static cl::opt<String> loglevel("log-level", cl::init("INFO"));
     static cl::opt<path> p(cl::Positional, cl::Required);
