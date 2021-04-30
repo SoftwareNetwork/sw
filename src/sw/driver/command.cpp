@@ -153,6 +153,9 @@ void Command::prepare()
             throw SW_RUNTIME_ERROR("missing predefined target code");
     }
 
+    for (auto &a : actions)
+        a();
+
     Base::prepare();
 }
 

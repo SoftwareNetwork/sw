@@ -338,10 +338,13 @@ struct SW_DRIVER_CPP_API Command : ::sw::builder::Command
     using Base::operator|;
     Command &operator|(struct CommandBuilder &);
 
+    void addCallback(LazyAction f) { actions.push_back(f); }
+
 private:
     bool dependency_set = false;
     std::weak_ptr<Dependency> dependency; // main
     std::vector<std::weak_ptr<Dependency>> dependencies; // others
+    std::vector<LazyAction> actions;
 };
 
 struct SW_DRIVER_CPP_API CommandBuilder
