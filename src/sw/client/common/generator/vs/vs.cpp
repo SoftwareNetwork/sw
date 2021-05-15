@@ -1070,6 +1070,9 @@ void Project::emitProject(const VSGenerator &g) const
         {
             for (auto &[k, v] : v1)
             {
+                // skip some of properties that must not go on the project level
+                if (k.first == "ObjectFileName")
+                    continue;
                 if (v == ft_count[ft])
                     cl_opts2[ft][k.first] = k.second;
             }
