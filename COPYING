@@ -1,7 +1,4 @@
-SW project (this repository) is released under AGPLv3+ mostly.
+SW project (this repository) is released under AGPLv3 (SPDX: AGPL-3.0-only) mostly.
 
-Some parts are subject to different licences:
+Exceptions:
 small libs:                 MPLv2   (src/sw/[protocol,support])
-utilities, helpers:         APLv2
-
-See specific files for detailed information about their license.

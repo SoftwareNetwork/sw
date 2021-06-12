@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2016-2019 Egor Pugin <egor.pugin@gmail.com>
 
 #include "sw_context.h"
