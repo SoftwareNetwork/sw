@@ -1,10 +1,17 @@
 UseTab: Never
 IndentWidth: 4
+#BreakBeforeBraces: Attach
 BreakBeforeBraces: Allman
 AllowShortIfStatementsOnASingleLine: false
 IndentCaseLabels: false
 ColumnLimit: 0
 AccessModifierOffset: -4
 AllowShortFunctionsOnASingleLine: false
+AllowShortLambdasOnASingleLine: false
 
 AlignTrailingComments: true
+
+DerivePointerAlignment: false
+PointerAlignment: Right
+
+AlwaysBreakTemplateDeclarations: Yes
