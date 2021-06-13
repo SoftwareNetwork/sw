@@ -326,12 +326,12 @@ void PackagesDatabase::installPackage(const PackageId &p, const PackageData &d)
     SW_UNIMPLEMENTED;
 }
 
-void PackagesDatabase::installPackage(const Package &p)
+void PackagesDatabase::installPackage(const Package &p, size_t input_settings_hash, size_t final_settings_hash)
 {
     std::lock_guard lk(m);
     auto tr = sqlpp11_transaction_manual(*db);
 
-    auto settings_hash = p.getId().getSettings().getHash();
+    //auto settings_hash = p.getId().getSettings().getHash();
     int64_t package_id = 0;
 
     // get package id
@@ -353,7 +353,7 @@ void PackagesDatabase::installPackage(const Package &p)
         package_id = q.front().packageId.value();
 
         // remove existing version and all packages
-        if (settings_hash == 0)
+        if (final_settings_hash == 0)
         {
             (*db)(remove_from(pkg_ver).where(
                 pkg_ver.packageId == package_id &&
@@ -413,27 +413,34 @@ void PackagesDatabase::installPackage(const Package &p)
         file_id = q.front().fileId.value();
     }
 
-    int64_t config_id = 1;
-    if (auto q = (*db)(select(configs.configId).from(configs).where(
-        configs.hash == settings_hash
-        ));
-        q.empty())
-    {
-        (*db)(insert_into(configs).set(
-            configs.hash = settings_hash
-        ));
-        config_id = db->last_insert_id();
-    }
-    else
-    {
-        config_id = q.front().configId.value();
-    }
+    auto get_config_id = [this](auto hash) {
+        int64_t config_id = 1;
+        if (auto q = (*db)(select(configs.configId).from(configs).where(
+            configs.hash == hash
+            ));
+            q.empty())
+        {
+            (*db)(insert_into(configs).set(
+                configs.hash = hash
+            ));
+            config_id = db->last_insert_id();
+        }
+        else
+        {
+            config_id = q.front().configId.value();
+        }
+        return config_id;
+    };
+
+    auto icid = get_config_id(input_settings_hash);
+    auto fcid = get_config_id(final_settings_hash);
 
     // inser pkg ver file
     (*db)(insert_into(t_pkg_ver_files).set(
         t_pkg_ver_files.packageVersionId = version_id,
         t_pkg_ver_files.fileId = file_id,
-        t_pkg_ver_files.configId = config_id,
+        t_pkg_ver_files.configId = icid,
+        t_pkg_ver_files.finalConfigId = fcid,
         t_pkg_ver_files.archiveVersion = 1
     ));
 }

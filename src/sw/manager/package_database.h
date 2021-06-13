@@ -32,7 +32,8 @@ struct SW_MANAGER_API PackagesDatabase : Database
 
     String getInstalledPackageHash(const PackageId &) const;
     bool isPackageInstalled(const Package &) const;
-    void installPackage(const Package &);
+    // also provide custom time?
+    void installPackage(const Package &, size_t input_settings_hash, size_t final_settings_hash);
     void installPackage(const PackageId &, const PackageData &);
     void deletePackage(const PackageId &) const;
 

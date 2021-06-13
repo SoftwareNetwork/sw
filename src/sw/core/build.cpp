@@ -11,7 +11,6 @@
 #include <sw/builder/jumppad.h>
 #include <sw/manager/storage.h>
 
-#include <boost/current_function.hpp>
 #include <boost/fiber/all.hpp>
 #include <inja/inja.hpp>
 #include <magic_enum.hpp>

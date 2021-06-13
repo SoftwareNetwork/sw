@@ -1749,7 +1749,7 @@ void NativeCompiledTarget::prepare2()
                 nlohmann::json::parse(getSettings().toString(PackageSettings::Json)).dump(4));
         }
 
-        getSolution().getLocalStorage().installLocalPackage(p);
+        getSolution().getLocalStorage().installLocalPackage(p, input_ts.getHash(), ts.getHash());
     }
     catch (std::exception &e)
     {

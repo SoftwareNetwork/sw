@@ -1,5 +1,5 @@
 --------------------------------------------------------------------------------
--- SPDX-License-Identifier: AGPL-3.0-or-later
+-- SPDX-License-Identifier: AGPL-3.0-only
 -- Copyright (C) 2018-2020 Egor Pugin <egor.pugin@gmail.com>
 --------------------------------------------------------------------------------
 
@@ -82,7 +82,10 @@ CREATE TABLE package_version_file (
     package_version_file_id INTEGER PRIMARY KEY,
     package_version_id INTEGER NOT NULL REFERENCES package_version (package_version_id) ON UPDATE CASCADE ON DELETE CASCADE,
     file_id INTEGER NOT NULL REFERENCES file (file_id) ON UPDATE CASCADE ON DELETE CASCADE,
+    -- input config
     config_id INTEGER NOT NULL REFERENCES config (config_id) ON UPDATE CASCADE ON DELETE CASCADE,
+    final_config_id INTEGER NOT NULL DEFAULT 1 REFERENCES config (config_id) ON UPDATE CASCADE ON DELETE CASCADE,
+    created INTEGER NOT NULL DEFAULT (strftime('%s','now')),
     flags INTEGER NOT NULL DEFAULT 0,
     archive_version INTEGER NOT NULL,
     source TEXT
@@ -297,6 +300,20 @@ PRAGMA foreign_keys = ON;
 -- this is bad, but as is
 BEGIN;
 --
+
+--------------------------------------------------------------------------------
+-- %split
+--------------------------------------------------------------------------------
+
+INSERT OR REPLACE INTO config (config_id, hash) VALUES (1, 0);
+
+PRAGMA foreign_keys = 0;
+ALTER TABLE package_version_file
+ADD COLUMN final_config_id INTEGER NOT NULL DEFAULT 1 REFERENCES config (config_id) ON UPDATE CASCADE ON DELETE CASCADE;
+PRAGMA foreign_keys = 1;
+
+ALTER TABLE package_version_file
+ADD COLUMN created INTEGER NOT NULL DEFAULT (strftime('%s','now'));
 
 --------------------------------------------------------------------------------
 -- % split - merge '%' and 'split' together when patches are available

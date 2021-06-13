@@ -246,9 +246,9 @@ bool LocalStorage::isPackageLocal(const PackageId &id) const
     //return id.getPath().isRelative();
 }
 
-void LocalStorage::installLocalPackage(const Package &p) const
+void LocalStorage::installLocalPackage(const Package &p, size_t input_settings_hash, size_t final_settings_hash) const
 {
-    getPackagesDatabase().installPackage(p);
+    getPackagesDatabase().installPackage(p, input_settings_hash, final_settings_hash);
 }
 
 path getHashPathFromHash(const String &h, int nsubdirs, int chars_per_subdir)
@@ -291,11 +291,14 @@ bool LocalStorage::resolve(ResolveRequest &rr) const
     auto r = StorageWithPackagesDatabase::resolve(rr);
     if (r)
     {
-        auto d = get_lp_pkg_dir(storage_dir_pkg, rr.getPackage().getId());
-        if (!fs::exists(d))
+        if (!rr.getPackage().getId().getSettings().getHash())
         {
-            rr.r.reset();
-            return false;
+            auto d = get_lp_pkg_dir(storage_dir_pkg, rr.getPackage().getId());
+            if (!fs::exists(d))
+            {
+                rr.r.reset();
+                return false;
+            }
         }
     }
     return r;
@@ -361,7 +364,7 @@ std::unique_ptr<Package> LocalStorage::install(const Package &p) const
     unpack_file(fn, dst);
 
     //
-    getPackagesDatabase().installPackage(p);
+    getPackagesDatabase().installPackage(p, p.getId().getSettings().getHash(), 0); // FIXME: pass actual value instead of zero
 
     auto pkg = makePackage(p.getId());
     auto d = std::make_unique<PackageData>(p.getData());

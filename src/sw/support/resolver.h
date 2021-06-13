@@ -27,6 +27,14 @@ struct SW_SUPPORT_API ResolveRequestResult
     void setPackageForce(PackagePtr);
 };
 
+/*
+* components:
+* 1. package path
+* 2. package version
+* 3. package settings
+* 4. security context
+* 5. timestamp (slice). Used for <= search.
+*/
 struct SW_SUPPORT_API ResolveRequest : ResolveRequestResult
 {
     UnresolvedPackageName u;
