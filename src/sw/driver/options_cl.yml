@@ -147,6 +147,9 @@ types:
                     case CPPLanguageStandard::CPP17:
                         s += "17";
                         break;
+                    case CPPLanguageStandard::CPP20:
+                        s += "20"; fix me
+                        break;
                     case CPPLanguageStandard::CPPLatest:
                         s += "latest";
                         break;

@@ -154,6 +154,42 @@ static Strings getCppStdOption(CPPLanguageStandard std, bool gnuext, bool clang,
         else
             s += "2a";
         break;
+    case CPPLanguageStandard::CPP23:
+        if (
+            clang && clver > Version(12) ||
+            !appleclang && !clang && clver > Version(11)
+            )
+            //s += "23";
+            s += "2b";
+        else
+            s += "2b";
+        break;
+    default:
+        return {};
+    }
+    return { s };
+}
+
+static Strings getCppStdOptionMsvc(CPPLanguageStandard std, const Version &clver)
+{
+    String s = "-std:c++";
+    switch (std)
+    {
+    case CPPLanguageStandard::CPP14:
+        s += "14";
+        break;
+    case CPPLanguageStandard::CPP17:
+        s += "17";
+        break;
+    case CPPLanguageStandard::CPP20:
+        if (clver < Version(19, 30, 30401)) // probably less than vs16.11, not vs17
+            s += "latest";
+        else
+            s += "20";
+        break;
+    case CPPLanguageStandard::CPPLatest:
+        s += "latest";
+        break;
     default:
         return {};
     }
@@ -245,6 +281,9 @@ void VisualStudioCompiler::prepareCommand1(const Target &t)
     }
 
     ReproducibleBuild = t.isReproducibleBuild();
+
+    add_args(*cmd, getCppStdOptionMsvc(CPPStandard(), getVersion(t.getContext(), file)));
+    CPPStandard.skip = true;
 
     getCommandLineOptions<VisualStudioCompilerOptions>(cmd.get(), *this);
     if (preprocessed_file)
@@ -1023,13 +1062,17 @@ void RcTool::prepareCommand1(const Target &t)
             {
                 String s = "-D" + k + "=";
                 auto v2 = v.toString();
+                auto has_spaces = true;
+                // new win sdk contains rc.exe that can work without quotes around def values
+                // we should check rc version here, if it > winsdk 10.19041, then run the following line
+                has_spaces = std::find(v2.begin(), v2.end(), ' ') != v2.end();
                 // some targets gives def values with spaces
                 // like pcre 'SW_PCRE_EXP_VAR=extern __declspec(dllimport)'
                 // in this case we protect the value with quotes
-                if (v2[0] != '\"')
+                if (has_spaces && v2[0] != '\"')
                     s += "\"";
                 s += v2;
-                if (v2[0] != '\"')
+                if (has_spaces && v2[0] != '\"')
                     s += "\"";
                 c.arguments.push_back(s);
             }

@@ -243,6 +243,7 @@ DECLARE_OPTION_SPECIALIZATION(vs::Optimizations)
 
 Strings getCommandLineImplCPPLanguageStandardVS(const CommandLineOption<CPPLanguageStandard> &co, builder::Command *c)
 {
+    SW_UNREACHABLE;
     String s = "-std:c++";
     switch (co.value())
     {
@@ -251,6 +252,9 @@ Strings getCommandLineImplCPPLanguageStandardVS(const CommandLineOption<CPPLangu
         break;
     case CPPLanguageStandard::CPP17:
         s += "17";
+        break;
+    case CPPLanguageStandard::CPP20:
+        s += "20";
         break;
     case CPPLanguageStandard::CPPLatest:
         s += "latest";

@@ -236,6 +236,8 @@ public:
 
     virtual Strings getCommandLine(builder::Command *c = nullptr) const
     {
+        if (skip)
+            return {};
         if (value_)
         {
             if (function)
