@@ -402,6 +402,16 @@ private:
             wk.add(DETECT_ARGS_PASS, settings, v);
         }
 
+        // cppwinrt
+        {
+            WinKit wk;
+            wk.name = "cppwinrt";
+            wk.kit_root = kr;
+            wk.idir_subversion = v.toString();
+            wk.without_ldir = true;
+            wk.add(DETECT_ARGS_PASS, settings, v);
+        }
+
         // tools
         {
             WinKit wk;
