@@ -119,6 +119,8 @@ String toString(VSFileType t)
 
 std::string getVsToolset(const Version &clver)
 {
+    if (clver >= Version(19, 30, 30401))
+        return "v143";
     if (clver >= Version(19, 20))
         return "v142";
     if (clver >= Version(19, 10))

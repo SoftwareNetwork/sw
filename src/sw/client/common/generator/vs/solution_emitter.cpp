@@ -60,6 +60,11 @@ void SolutionEmitter::printVersion()
         addLine("# Visual Studio Version " + std::to_string(version.getMajor()));
         addLine("VisualStudioVersion = 16.0.28606.126");
     }
+    else if (version.getMajor() == 17)
+    {
+        addLine("# Visual Studio Version " + std::to_string(version.getMajor()));
+        addLine("VisualStudioVersion = 17.0.31512.422");
+    }
     else
         LOG_WARN(logger, "Unknown vs version " << version.toString());
     addLine("MinimumVisualStudioVersion = 10.0.40219.1");

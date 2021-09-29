@@ -82,6 +82,8 @@ int vsVersionFromString(const String &s)
             return 15;
         case 2019:
             return 16;
+        case 2022:
+            return 17;
         }
     }
     else if (t.size() == 2)
@@ -95,15 +97,18 @@ static auto fix_json(String s)
 {
     boost::replace_all(s, "\\", "\\\\");
     boost::replace_all(s, "\"", "\\\"");
+    boost::replace_all(s, ">", "&gt;");
+    boost::replace_all(s, "<", "&lt;");
     return "\"" + s + "\"";
 };
 
 static Version clver2vsver(const Version &clver, const Version &clmaxver)
 {
+    if (clver >= Version(19, 30, 30401))
+        return Version(17);
+
     if (clver >= Version(19, 20))
-    {
         return Version(16);
-    }
 
     if (clver >= Version(19, 10) && clver < Version(19, 20))
     {
