@@ -89,7 +89,7 @@ std::unique_ptr<Package> RemoteStorage::makePackage(const PackageId &id) const
                 // {PHPF} = package hash path full
                 // {PH64} = package hash, length = 64
                 // {FN} = archive name
-                auto u = fmt::format(p.raw_url,
+                auto u = fmt::format(fmt::runtime(p.raw_url),
                     fmt::arg("PHPF", to_printable_string(normalize_path(hash_path))),
                     fmt::arg("PH64", getHash(getId().getName()).substr(0, 64)),
                     fmt::arg("FN", support::make_archive_name())
