@@ -17,6 +17,9 @@ bin*
 .sw
 .s
 
+.idea
+.vscode
+
 *.bat
 *.sh
 

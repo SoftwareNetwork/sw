@@ -212,13 +212,6 @@ SUBCOMMAND_DECL(uri)
 {
     fs::current_path(sw::support::temp_directory_path());
 
-#if defined(__linux__)
-    if (getOptions().options_uri.uri_args.size() != 1)
-        return;
-    decltype(getOptions().options_uri.uri_args) v;
-    boost::split(v, getOptions().options_uri.uri_args[0], boost::is_any_of(" "));
-    getOptions().options_uri.uri_args = v;
-#endif
     if (getOptions().options_uri.uri_args.size() <= 1)
         return;
 
