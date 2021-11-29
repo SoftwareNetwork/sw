@@ -590,6 +590,12 @@ std::shared_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetS
         // is it true?
         c->Type = LinkerType::GNU;
         C->Prefix = getBuildSettings().TargetOS.getLibraryPrefix();
+        // use lld linker unconditionally for now
+        {
+            create_command();
+            auto cmd = c->createCommand(getMainBuild());
+            cmd->push_back("-fuse-ld=lld");
+        }
         if (getBuildSettings().TargetOS.isApple())
         {
             C->use_start_end_groups = false;
