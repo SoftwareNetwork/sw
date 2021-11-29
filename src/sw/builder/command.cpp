@@ -284,7 +284,11 @@ bool Command::isOutdated() const
     else
     {
         ((Command*)(this))->mtime = r.first->mtime;
-        ((Command*)(this))->implicit_inputs = r.first->getImplicitInputs(command_storage->getInternalStorage());
+        ((Command*)(this))->implicit_inputs.clear();
+        auto ii = r.first->getImplicitInputs(command_storage->getInternalStorage());
+        ((Command*)(this))->implicit_inputs.reserve(ii.size());
+        for (auto &&f : ii)
+            ((Command*)(this))->implicit_inputs.insert(*f);
         return isTimeChanged();
     }
 }

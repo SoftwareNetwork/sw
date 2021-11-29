@@ -83,19 +83,19 @@ static void write_str(std::vector<uint8_t> &vec, const String &val)
     memcpy(&vec[vsz], &val[0], sz);
 }
 
-Files CommandRecord::getImplicitInputs(detail::Storage &s) const
+CommandRecord::implicit_inputs_t CommandRecord::getImplicitInputs(detail::Storage &s) const
 {
-    Files files;
+    implicit_inputs_t files;
     for (auto &h : implicit_inputs)
     {
         boost::upgrade_lock lk(s.m_file_storage_by_hash);
         auto i = s.file_storage_by_hash.find(h);
         if (i == s.file_storage_by_hash.end())
             throw SW_RUNTIME_ERROR("no such file");
-        auto p = i->second;
-        lk.unlock();
-        if (!p.empty())
-            files.insert(p);
+        // some extra check, remove later
+        if (i->second.empty())
+            throw SW_RUNTIME_ERROR("empty implicit input");
+        files.insert(&i->second);
     }
     return files;
 }
@@ -348,12 +348,12 @@ void CommandStorage::async_command_log(const CommandRecord &r)
 
         {
             auto &l = s.getFileLog(swctx, root);
-            for (auto &f : r.getImplicitInputs(s))
+            for (auto &&f : r.getImplicitInputs(s))
             {
-                auto r = s.file_storage.insert(f);
+                auto r = s.file_storage.insert(*f);
                 if (!r.second)
                     continue;
-                auto s = to_string(normalize_path(f));
+                auto s = to_string(normalize_path(*f));
                 auto sz = s.size() + 1;
                 fwrite(&sz, sizeof(sz), 1, l.f.getHandle());
                 fwrite(&s[0], sz, 1, l.f.getHandle());

@@ -49,12 +49,14 @@ struct FileHolder
 
 struct CommandRecord
 {
+    using implicit_inputs_t = std::unordered_set<path*>;
+
     size_t hash = 0;
     fs::file_time_type mtime = fs::file_time_type::min();
     //Files implicit_inputs;
     std::unordered_set<size_t> implicit_inputs;
 
-    Files getImplicitInputs(detail::Storage &) const;
+    implicit_inputs_t getImplicitInputs(detail::Storage &) const;
     void setImplicitInputs(const Files &, detail::Storage &);
 };
 
