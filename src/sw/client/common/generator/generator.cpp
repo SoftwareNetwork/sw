@@ -23,6 +23,10 @@ DECLARE_STATIC_LOGGER(logger, "generator");
 
 using namespace sw;
 
+static const std::set<String> exts{
+    ".c", ".cpp", ".cxx", ".c++", ".cc", ".CPP", ".C++", ".CXX", ".C", ".CC"
+};
+
 int vsVersionFromString(const String &s);
 
 String toPathString(VsGeneratorType t)
@@ -234,8 +238,14 @@ std::unique_ptr<Generator> Generator::create(const Options &options)
         g = CREATE_GENERATOR(ShellGenerator);
         break;
     case GeneratorType::CompilationDatabase:
-        g = CREATE_GENERATOR(CompilationDatabaseGenerator);
+    {
+        auto g1 = CREATE_GENERATOR(CompilationDatabaseGenerator);
+        g1->allow_empty_file_directive = options.options_generate.allow_empty_file_directive;
+        g1->local_targets_only = options.options_generate.local_targets_only;
+        g1->compdb_symlink = options.options_generate.compdb_symlink;
+        g = std::move(g1);
         break;
+    }
     case GeneratorType::SwExecutionPlan:
         g = CREATE_GENERATOR(SwExecutionPlanGenerator);
         break;
@@ -427,6 +437,7 @@ private:
         auto s2 = s;
         boost::replace_all(s2, ":", "$:");
         boost::replace_all(s2, "\"", "\\\"");
+        boost::replace_all(s2, "\\\n", "\\n");
         if (quotes)
             return "\"" + s2 + "\"";
         return s2;
@@ -442,7 +453,6 @@ private:
         if (rsp)
             fs::create_directories(rsp_dir);
 
-        auto has_mmd = false;
         auto prog = c.getProgram();
 
         addLine("rule c" + std::to_string(c.getHash()));
@@ -484,6 +494,10 @@ private:
         addText((untouched ? "" : "$") + progn + " ");
 
         // args
+        auto has_mmd = false;
+        auto has_md = false;
+        auto has_mf = false;
+        String mf;
         if (!rsp)
         {
             int i = 0;
@@ -494,6 +508,13 @@ private:
                     continue;
                 addText(prepareString(b, a->toString(), true) + " ");
                 has_mmd |= "-MMD" == a->toString();
+                has_md |= "-MD" == a->toString();
+                if (has_mf)
+                {
+                    mf = a->toString();
+                    has_mf = false;
+                }
+                has_mf |= "-MF" == a->toString();
             }
         }
         else
@@ -514,8 +535,18 @@ private:
             addText("\"");
         if (prog.find("cl.exe") != prog.npos)
             addLine("deps = msvc");
-        else if (has_mmd)
-            addLine("depfile = " + to_string((c.outputs.begin()->parent_path() / (c.outputs.begin()->stem().string() + ".d")).u8string()));
+        else if (has_mmd || has_md)
+        {
+            addLine("deps = gcc");
+            if (mf.empty())
+            {
+                addLine("depfile = " + to_string((c.outputs.begin()->parent_path() / (c.outputs.begin()->stem().string() + ".d")).u8string()));
+            }
+            else
+            {
+                addLine("depfile = " + mf);
+            }
+        }
         if (rsp)
         {
             addLine("rspfile = " + to_string(rsp_file.u8string()));
@@ -810,7 +841,7 @@ void CMakeGenerator::generate(const sw::SwBuild &b)
         throw SW_RUNTIME_ERROR("Only single input is supported at the moment");
     if (inputs[0].getSettings().size() != 1)
         throw SW_RUNTIME_ERROR("Only single settings is supported at the moment");
-    SW_UNIMPLEMENTED;
+    //SW_UNIMPLEMENTED;
     bool abs_pkg = false;// inputs[0].getInput().getType() == sw::InputType::InstalledPackage;
 
     auto ep = b.getExecutionPlan();
@@ -874,11 +905,10 @@ void CMakeGenerator::generate(const sw::SwBuild &b)
         }
         ctx.addLine();
 
-        /*auto can_add_file = [](const auto &f)
+        auto can_add_file = [](auto &&f)
         {
-            auto t = get_vs_file_type_by_ext(f);
-            return t == VSFileType::ClInclude || t == VSFileType::None;
-        };*/
+            return exts.contains(f.extension().string());
+        };
 
         Files files;
         auto cmds = t.getCommands();
@@ -889,7 +919,7 @@ void CMakeGenerator::generate(const sw::SwBuild &b)
                 if (is_generated_ext(o))
                     continue;
 
-                //if (can_add_file(o))
+                if (can_add_file(o))
                     files.insert(o);
                 /*else
                     d.build_rules[c.get()] = o;*/
@@ -901,7 +931,7 @@ void CMakeGenerator::generate(const sw::SwBuild &b)
                     continue;
 
                 //if (can_add_file(o))
-                    files.insert(o);
+                    //files.insert(o);
 
                 /*if (1
                     && c->arguments.size() > 1
@@ -1161,10 +1191,6 @@ void ShellGenerator::generate(const SwBuild &b)
 
 void CompilationDatabaseGenerator::generate(const SwBuild &b)
 {
-    static const std::set<String> exts{
-        ".c", ".cpp", ".cxx", ".c++", ".cc", ".CPP", ".C++", ".CXX", ".C", ".CC"
-    };
-
     checkForSingleSettingsInputs(b);
 
     const auto d = getRootDirectory(b);
@@ -1174,6 +1200,8 @@ void CompilationDatabaseGenerator::generate(const SwBuild &b)
     nlohmann::json j;
     for (auto &[p, tgts] : b.getTargetsToBuild())
     {
+        if (local_targets_only && p.getPath().isAbsolute())
+            continue;
         for (auto &tgt : tgts)
         {
             for (auto &c : tgt->getCommands())
@@ -1205,13 +1233,32 @@ void CompilationDatabaseGenerator::generate(const SwBuild &b)
                         }
                     }
                 }
+                if (allow_empty_file_directive && !j2.contains("file"))
+                    j2["file"] = "";
                 for (auto &a : c->arguments)
                     j2["arguments"].push_back(a->toString());
                 j.push_back(j2);
             }
         }
     }
-    write_file(d / "compile_commands.json", j.dump(2));
+    const auto fn = "compile_commands.json";
+    write_file(d / fn, j.dump(2));
+    if (compdb_symlink) {
+        if (fs::exists(fn))
+            fs::remove(fn);
+        fs::create_symlink(d / fn, fn);
+    }
+}
+
+path CompilationDatabaseGenerator::getPathString() const
+{
+    path p;
+    if (local_targets_only)
+        p += "p";
+    if (allow_empty_file_directive)
+        p += "ef";
+    p += "compdb";
+    return p;
 }
 
 void SwExecutionPlanGenerator::generate(const sw::SwBuild &b)

@@ -121,8 +121,14 @@ struct ShellGenerator : Generator
 
 struct CompilationDatabaseGenerator : Generator
 {
+    bool allow_empty_file_directive = false;
+    bool local_targets_only = false;
+    bool compdb_symlink = false;
+
     using Generator::Generator;
     void generate(const sw::SwBuild &b) override;
+
+    path getPathString() const override;
 };
 
 struct SwExecutionPlanGenerator : Generator
