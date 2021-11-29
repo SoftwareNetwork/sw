@@ -273,8 +273,11 @@ SUBCOMMAND_DECL(integrate)
                         auto inh = std::stoi(k);
                         if ((inh & 4) == 0)
                             continue;
-                        for (auto &d : p["include_directories"].getArray())
-                            if_ctx.addLine(cmake_cfg + fix_path(to_string(normalize_path(d.getPathValue(getContext().getLocalStorage())))) + cmake_cfg_end);
+                        for (auto &d : p["include_directories"].getArray()) {
+                            auto p = normalize_path(d.getPathValue(getContext().getLocalStorage()));
+                            fs::create_directories(p); // cmake requires this
+                            if_ctx.addLine(cmake_cfg + fix_path(to_string(p)) + cmake_cfg_end);
+                        }
                     }
                     if_ctx.decreaseIndent(")");
                     if_ctx.emptyLines();
