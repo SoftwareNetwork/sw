@@ -4,6 +4,7 @@
 #include "../commands.h"
 
 #include <nlohmann/json.hpp>
+#include <primitives/yaml.h>
 #include <sw/core/build.h>
 #include <sw/core/input.h>
 
