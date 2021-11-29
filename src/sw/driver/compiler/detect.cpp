@@ -1219,8 +1219,14 @@ void addSettingsAndSetPrograms(const SwCoreContext &swctx, TargetSettings &ts)
         if (bs.TargetOS.is(OSType::Mingw))
             try_gcc();
 
+#if defined(__clang__)
         try_clang();
         try_gcc();
+//#elif defined(__GNUC__) || defined(__CYGWIN__)
+#else
+        try_gcc();
+        try_clang();
+#endif
 
         // using c prog
         if (ts["native"]["program"]["c"].isValue())
