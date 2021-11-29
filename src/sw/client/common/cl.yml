@@ -457,6 +457,15 @@ command_line:
                 option: e
                 desc: Build execution plan
 
+            build_explan_last:
+                option: el
+                desc: Build execution plan from the last file
+
+            file:
+                type: path
+                list: true
+                desc: Build selected files
+
             isolated_build:
                 option: isolated
                 desc: Copy source files to isolated folders to check build like just after uploading
@@ -572,6 +581,13 @@ command_line:
             check_stamp_list:
                 type: path
                 hidden: true
+            local_targets_only:
+                type: bool
+            allow_empty_file_directive:
+                type: bool
+                default_value: true
+            compdb_symlink:
+                type: bool
 
     # get
     subcommand:

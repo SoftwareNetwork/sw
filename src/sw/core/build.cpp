@@ -1193,18 +1193,37 @@ void SwBuild::runSavedExecutionPlan() const
     runSavedExecutionPlan(getExecutionPlanPath());
 }
 
+static auto save_last_ep = [](auto &&in) {
+    write_file(".sw/last_ep.txt", in.string());
+};
+
 void SwBuild::saveExecutionPlan(const path &in) const
 {
     CHECK_STATE(BuildState::Prepared);
 
     auto p = getExecutionPlan();
     p->save(in);
+
+    save_last_ep(in);
 }
 
 void SwBuild::runSavedExecutionPlan(const path &in) const
 {
+    save_last_ep(in);
+
     auto cmds = ExecutionPlan::load(in, *this);
-    auto p = ExecutionPlan::create(cmds);
+    decltype(cmds) cmds_filtered;
+    if (!explan_files.empty()) {
+        for (auto &&c : cmds) {
+            if (std::ranges::any_of(explan_files, [&c](auto &&f) { return c->inputs.contains(f); })) {
+                c->always = true;
+                cmds_filtered.insert(c);
+            }
+        }
+        if (cmds_filtered.empty())
+            throw SW_RUNTIME_ERROR("No specified input files found");
+    }
+    auto p = ExecutionPlan::create(cmds_filtered.empty() ? cmds : cmds_filtered);
 
     // change state
     overrideBuildState(BuildState::Prepared);

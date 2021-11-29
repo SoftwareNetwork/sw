@@ -77,6 +77,7 @@ struct SW_CORE_API SwBuild : SwBuilderContext
     std::unique_ptr<ExecutionPlan> getExecutionPlan() const;
     String getHash() const;
     path getExecutionPlanPath() const;
+    void setExecutionPlanFiles(auto &&files) { explan_files = Files{std::begin(files), std::end(files)}; }
 
     // tests
     void test();
@@ -113,6 +114,7 @@ private:
     std::unique_ptr<Executor> prepare_executor;
     bool stopped = false;
     mutable ExecutionPlan *current_explan = nullptr;
+    Files explan_files;
 
     // other data
     String name;

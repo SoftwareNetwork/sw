@@ -91,13 +91,18 @@ static void isolated_build(SwClientContext &swctx)
 
 SUBCOMMAND_DECL(build)
 {
+    if (getOptions().options_build.build_explan_last)
+    {
+        auto b = createBuild();
+        b->setExecutionPlanFiles(getOptions().options_build.file);
+        b->runSavedExecutionPlan(read_file(".sw/last_ep.txt"));
+        return;
+    }
     if (!getOptions().options_build.build_explan.empty())
     {
         auto b = createBuild();
-        b->overrideBuildState(sw::BuildState::Prepared);
-        auto cmds = sw::ExecutionPlan::load(getOptions().options_build.build_explan, *b);
-        auto p = sw::ExecutionPlan::create(cmds);
-        b->execute(*p);
+        b->setExecutionPlanFiles(getOptions().options_build.file);
+        b->runSavedExecutionPlan(getOptions().options_build.build_explan);
         return;
     }
 
@@ -125,8 +130,10 @@ SUBCOMMAND_DECL(build)
     auto b = createBuildWithDefaultInputs();
     if (getOptions().options_build.build_default_explan)
     {
-        b->loadInputs();
+        //b->loadInputs();
+        b->overrideBuildState(sw::BuildState::InputsLoaded);
         //getContext().clearFileStorages();
+        b->setExecutionPlanFiles(getOptions().options_build.file);
         b->runSavedExecutionPlan();
         return;
     }
