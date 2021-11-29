@@ -17,6 +17,7 @@ bin*
 .sw
 .s
 
+.cache
 .idea
 .vscode
 
@@ -44,5 +45,7 @@ sw.config
 sw.creator
 sw.files
 sw.includes
+
+compile_commands.json
 
 *.lock*
