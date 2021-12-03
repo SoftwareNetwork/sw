@@ -1222,6 +1222,12 @@ void SwBuild::runSavedExecutionPlan(const path &in) const
         }
         if (cmds_filtered.empty())
             throw SW_RUNTIME_ERROR("No specified input files found");
+        if (cmds_filtered.size() == 1) {
+            for (auto &&c : cmds_filtered) {
+                c->out.inherit = true;
+                c->err.inherit = true;
+            }
+        }
     }
     auto p = ExecutionPlan::create(cmds_filtered.empty() ? cmds : cmds_filtered);
 
