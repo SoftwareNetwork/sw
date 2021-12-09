@@ -247,6 +247,7 @@ std::unique_ptr<Generator> Generator::create(const Options &options)
         g1->allow_empty_file_directive = options.options_generate.allow_empty_file_directive;
         g1->local_targets_only = options.options_generate.local_targets_only;
         g1->compdb_symlink = options.options_generate.compdb_symlink;
+        g1->compdb_clion = options.options_generate.compdb_clion;
         g = std::move(g1);
         break;
     }
@@ -1298,6 +1299,10 @@ void CompilationDatabaseGenerator::generate(const SwBuild &b)
                 nlohmann::json j2;
                 if (!c->working_directory.empty())
                     j2["directory"] = to_printable_string(normalize_path(c->working_directory));
+                // since we are not using compdb to build whole project
+                // we are fine to skip empty input commands (clion is not ok with them)
+                if (compdb_clion && c->inputs.size() == 1 && *c->inputs.begin() == c->arguments[0]->toString())
+                    continue;
                 if (!c->inputs.empty())
                 {
                     bool cppset = false;

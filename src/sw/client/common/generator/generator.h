@@ -126,6 +126,7 @@ struct CompilationDatabaseGenerator : Generator
     bool allow_empty_file_directive = false;
     bool local_targets_only = false;
     bool compdb_symlink = false;
+    bool compdb_clion = false;
 
     using Generator::Generator;
     void generate(const sw::SwBuild &b) override;
