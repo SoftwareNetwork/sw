@@ -588,6 +588,8 @@ command_line:
                 default_value: true
             compdb_symlink:
                 type: bool
+            cmake_symlink:
+                type: bool
 
     # get
     subcommand:

@@ -12,6 +12,9 @@
 #include <sw/driver/types.h>
 #include <sw/manager/storage.h>
 
+#include <primitives/log.h>
+DECLARE_STATIC_LOGGER(logger, "integrate");
+
 struct CMakeEmitter : primitives::Emitter
 {
     void if_(const String &s)
@@ -421,6 +424,7 @@ SUBCOMMAND_DECL(integrate)
 
             auto &t = **tgts.begin();
             const auto &s = t.getInterfaceSettings();
+            //LOG_INFO(logger, s.toString());
 
             if (s["type"] == "native_executable")
                 continue;
@@ -437,6 +441,8 @@ SUBCOMMAND_DECL(integrate)
                     {
                         sw::PackageId dep(k);
                         if (b.getContext().getPredefinedTargets().find(dep) != b.getContext().getPredefinedTargets().end())
+                            continue;
+                        if (v["include_directories_only"] == "true")
                             continue;
                         ctx.addLine("target_link_libraries(" + pkg2string(pkg) + " INTERFACE " + dep.toString() + ")");
                     }

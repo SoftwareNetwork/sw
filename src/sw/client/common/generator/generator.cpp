@@ -218,8 +218,12 @@ std::unique_ptr<Generator> Generator::create(const Options &options)
         g = CREATE_GENERATOR(NinjaGenerator);
         break;
     case GeneratorType::CMake:
-        g = CREATE_GENERATOR(CMakeGenerator);
+    {
+        auto g1 = CREATE_GENERATOR(CMakeGenerator);
+        g1->cmake_symlink = options.options_generate.cmake_symlink;
+        g = std::move(g1);
         break;
+    }
     case GeneratorType::FastBuild:
         g = CREATE_GENERATOR(FastBuildGenerator);
         break;
@@ -912,6 +916,7 @@ void CMakeGenerator::generate(const sw::SwBuild &b)
 
         Files files;
         auto cmds = t.getCommands();
+        sw::builder::Command *main_command = nullptr;
         for (auto &c : cmds)
         {
             for (auto &o : c->inputs)
@@ -919,8 +924,45 @@ void CMakeGenerator::generate(const sw::SwBuild &b)
                 if (is_generated_ext(o))
                     continue;
 
-                if (can_add_file(o))
-                    files.insert(o);
+                if (can_add_file(o)) {
+                    //files.insert(o);
+                    auto fn = to_string(normalize_path(o));
+
+                    ctx.addLine("target_sources(" + pkg.toString() + " PRIVATE");
+                    ctx.increaseIndent();
+                    ctx.addLine(fn);
+                    ctx.decreaseIndent();
+                    ctx.addLine(")");
+                    ctx.addLine();
+
+                    auto escape = [](auto s) {
+                        boost::replace_all(s, "\"", "\\\"");
+                        return s;
+                    };
+
+                    String defs;
+                    String idirs;
+                    String copts;
+                    for (int n = 0; auto &&a : c->arguments) {
+                        auto s = a->toString();
+                        if (s.starts_with("-D")) {
+                            defs += escape(s.substr(2)) + ";";
+                        }
+                        else if (s.starts_with("-I")) {
+                            idirs += escape(s.substr(2)) + ";";
+                        } else if (!
+                            (s == "-c" || s == fn || n++ == 0 || s.starts_with("-o"))
+                        ) {
+                            copts += s + ";";
+                        }
+                    }
+                    ctx.increaseIndent("set_source_files_properties(" + fn + " PROPERTIES");
+                    ctx.addLine("COMPILE_DEFINITIONS \"" + defs + "\"");
+                    ctx.addLine("COMPILE_OPTIONS \"" + copts + "\"");
+                    ctx.addLine("INCLUDE_DIRECTORIES \"" + idirs + "\"");
+                    ctx.decreaseIndent(")");
+                    ctx.addLine();
+                }
                 /*else
                     d.build_rules[c.get()] = o;*/
             }
@@ -929,6 +971,9 @@ void CMakeGenerator::generate(const sw::SwBuild &b)
             {
                 if (is_generated_ext(o))
                     continue;
+
+                if (o.filename().string() == pkg.toString())
+                    main_command = c.get();
 
                 //if (can_add_file(o))
                     //files.insert(o);
@@ -977,7 +1022,11 @@ void CMakeGenerator::generate(const sw::SwBuild &b)
         ctx.addLine(")");
         ctx.addLine();
 
-        ctx.addLine("target_link_libraries(" + pkg.toString() + " PRIVATE");
+        ctx.addLine("target_link_libraries(" + pkg.toString());
+        if (s["header_only"] == "true")
+            ctx.addLine("INTERFACE");
+        else
+            ctx.addLine("PRIVATE");
         ctx.increaseIndent();
         for (auto &[k, _] : s["dependencies"]["link"].getMap())
         {
@@ -1001,14 +1050,48 @@ void CMakeGenerator::generate(const sw::SwBuild &b)
         ctx.addLine(")");
         ctx.addLine();
 
-        ctx.addLine("target_link_options(" + pkg.toString() + " PRIVATE /NODEFAULTLIB)");
-        ctx.addLine("target_link_options(" + pkg.toString() + " PRIVATE");
-        ctx.increaseIndent();
-        for (auto &f : s["this"]["link_options"].getArray())
-            ctx.addLine("\"" + f.getValue() + "\"");
-        ctx.decreaseIndent();
-        ctx.addLine(")");
-        ctx.addLine();
+        if (main_command) {
+            ctx.increaseIndent("target_link_options(" + pkg.toString());
+            if (s["header_only"] == "true")
+                ctx.addLine("INTERFACE");
+            else
+                ctx.addLine("PRIVATE");
+            bool skip_o = false;
+            for (int n = 0; auto &&a : main_command->arguments) {
+                if (n++ == 0 || skip_o) {
+                    skip_o = false;
+                    continue;
+                }
+                auto s = a->toString();
+                path p{s};
+                if (s == "-o") {
+                    skip_o = true;
+                    continue;
+                }
+                if (p.filename() == pkg.toString() || p.extension() == ".o" || p.extension() == ".obj") {
+                    continue;
+                }
+                ctx.addLine(s);
+            }
+            ctx.decreaseIndent(")");
+            ctx.addLine();
+        } else {
+            ctx.addLine("#target_link_options(" + pkg.toString() + " PRIVATE /NODEFAULTLIB)");
+            ctx.addLine("#target_link_libraries(" + pkg.toString() + " PRIVATE -Wl,--start-group)");
+            ctx.addLine("#target_link_libraries(" + pkg.toString() + " PRIVATE -Wl,--end-group)");
+            ctx.addLine("target_link_options(" + pkg.toString() + "");
+            if (s["header_only"] == "true")
+                ctx.addLine("INTERFACE");
+            else
+                ctx.addLine("PRIVATE");
+            ctx.increaseIndent();
+            for (auto &f : s["this"]["link_options"].getArray())
+                ctx.addLine("\"" + f.getValue() + "\"");
+            ctx.decreaseIndent();
+            ctx.addLine(")");
+            ctx.addLine("#target_link_libraries(" + pkg.toString() + " PRIVATE -Wl,--end-group) # not appended after all deps' deps");
+            ctx.addLine();
+        }
 
         ctx.emptyLines();
     }
@@ -1029,7 +1112,13 @@ void CMakeGenerator::generate(const sw::SwBuild &b)
     ctx.addLine(long_line);
     ctx.addLine();
 
-    write_file(getRootDirectory(b) / "CMakeLists.txt", ctx.getText());
+    auto fn = "CMakeLists.txt";
+    write_file(getRootDirectory(b) / fn, ctx.getText());
+    if (cmake_symlink) {
+        if (fs::exists(fn))
+            fs::remove(fn);
+        fs::create_symlink(getRootDirectory(b) / fn, fn);
+    }
 }
 
 void FastBuildGenerator::generate(const sw::SwBuild &b)

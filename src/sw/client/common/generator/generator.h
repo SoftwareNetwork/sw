@@ -95,6 +95,8 @@ struct NinjaGenerator : Generator
 
 struct CMakeGenerator : Generator
 {
+    bool cmake_symlink = false;
+
     using Generator::Generator;
     void generate(const sw::SwBuild &b) override;
 };
