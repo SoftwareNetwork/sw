@@ -33,6 +33,9 @@ public:
     ASSIGN_TYPES(ApiNameType)
     void add(const ApiNameType &i);
     void remove(const ApiNameType &i);
+    ASSIGN_TYPES(HeaderUnit)
+    void add(const HeaderUnit &i);
+    void remove(const HeaderUnit &i);
     SW_TARGET_USING_ASSIGN_OPS(NativeTargetOptionsGroup);
 
     std::optional<bool> HeaderOnly;
@@ -42,6 +45,7 @@ public:
 
     String ApiName;
     StringSet ApiNames;
+    std::map<path, HeaderUnit> HeaderUnits;
     bool Empty = false;
     bool ExportAllSymbols = false;
     bool ExportIfStatic = false;

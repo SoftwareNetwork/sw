@@ -118,6 +118,11 @@ bool SourceFileStorage::hasFile(const path &p) const
 
 void SourceFileStorage::add_unchecked(const path &file_in, bool skip)
 {
+    add_unchecked1(file_in, skip, file_in.extension().string());
+}
+
+void SourceFileStorage::add_unchecked1(const path &file_in, bool skip, const String &ext_in)
+{
     auto file = file_in;
 
     // ignore missing file when file is skipped and non local
@@ -126,7 +131,7 @@ void SourceFileStorage::add_unchecked(const path &file_in, bool skip)
 
     auto f = getFileInternal(file);
 
-    auto ext = file.extension().string();
+    auto ext = ext_in.empty() ? file.extension().string() : ext_in;
     auto nt = target.as<NativeCompiledTarget*>();
     auto ho = nt && nt->HeaderOnly && nt->HeaderOnly.value();
     if (!target.hasExtension(ext) || ho)
@@ -187,6 +192,14 @@ void SourceFileStorage::add(const path &file)
         return;
 
     add_unchecked(file);
+}
+
+void SourceFileStorage::add(const path &file, const String &ext)
+{
+    if (target.DryRun)
+        return;
+
+    add_unchecked1(file, false, ext);
 }
 
 void SourceFileStorage::add(const Files &Files)

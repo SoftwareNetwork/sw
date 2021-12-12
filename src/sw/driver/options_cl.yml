@@ -105,6 +105,30 @@ types:
                 name: UseModules
                 flag: experimental:module
                 type: bool
+            headerunitquote:
+                name: HeaderUnitQuote
+                flag: headerUnit:quote
+                type: bool
+            headerunitangle:
+                name: HeaderUnitAngle
+                flag: headerUnit:angle
+                type: bool
+            headerunit:
+                name: HeaderUnit
+                flag: headerUnit
+                type: String
+            exportheader:
+                name: ExportHeader
+                flag: exportHeader
+                type: bool
+            headernamequote:
+                name: HeaderNameQuote
+                flag: headerName:quote
+                type: bool
+            headernameangle:
+                name: HeaderNameAngle
+                flag: headerName:angle
+                type: bool
             ifcdir:
                 name: stdIfcDir
                 flag: stdIfcDir
@@ -129,6 +153,7 @@ types:
                 type: path
                 properties:
                     - output_dependency
+            #showResolvedHeader
 
             #
 

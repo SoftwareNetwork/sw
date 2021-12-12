@@ -52,6 +52,7 @@ public:
     //void add(const String &file) { add(path(file)); }
     void add(const std::shared_ptr<SourceFile> &);
     void add(const path &file);
+    void add(const path &file, const String &ext);
     void add(const Files &files);
     void add(const FileRegex &r);
     void add(const path &root, const FileRegex &r);
@@ -112,6 +113,7 @@ private:
     int index = 0;
 
     void add_unchecked(const path &f, bool skip = false);
+    void add_unchecked1(const path &f, bool skip = false, const String &ext = {});
     void add1(const FileRegex &r);
     void remove1(const FileRegex &r);
     void remove_full1(const FileRegex &r);

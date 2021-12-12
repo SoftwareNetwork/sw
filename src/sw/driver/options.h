@@ -342,6 +342,12 @@ struct SW_DRIVER_CPP_API NativeOptions : NativeCompilerOptions,
     void merge(const NativeOptions &o, const GroupSettings &s = GroupSettings());
 };
 
+struct HeaderUnit
+{
+    path fn;
+    bool angle;
+};
+
 }
 
 namespace std

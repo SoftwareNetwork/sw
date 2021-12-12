@@ -203,13 +203,17 @@ static Files process_deps_msvc_modules(builder::Command &c, const path &deps_fil
     }
 
     auto j = nlohmann::json::parse(read_file(deps_file));
-    auto ims = j["Data"]["ImportedModules"];
     Files deps;
-    for (auto &&m : ims)
+    auto add = [&deps](auto &&w)
     {
-        if (m.contains("BMI"))
-            deps.insert(m["BMI"].get<String>());
-    }
+        for (auto &&m : w)
+        {
+            if (m.contains("BMI"))
+                deps.insert(m["BMI"].get<String>());
+        }
+    };
+    add(j["Data"]["ImportedModules"]);
+    add(j["Data"]["ImportedHeaderUnits"]);
     return deps;
 }
 

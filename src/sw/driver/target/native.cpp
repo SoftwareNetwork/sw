@@ -152,6 +152,13 @@ SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD(sw_replace_dll_import, replace_dll_import)
 namespace sw
 {
 
+static auto lowercase_filename = [](auto &&fn)
+{
+    auto s = fn.string();
+    std::transform(s.begin(), s.end(), s.begin(), ::tolower);
+    return s;
+};
+
 void NativeTarget::setOutputFile()
 {
     /* || add a condition so user could change non build output dir*/
@@ -985,6 +992,20 @@ void NativeCompiledTarget::remove(const ApiNameType &i)
         ApiName.clear();
 }
 
+void NativeCompiledTarget::add(const HeaderUnit &i)
+{
+    auto p = i.fn;
+    check_absolute(p);
+    HeaderUnits[p] = {p,i.angle};
+    // we add header unit to create a full compile command that we'll tweak later
+    add(p, ".cpp");
+}
+
+void NativeCompiledTarget::remove(const HeaderUnit &i)
+{
+    throw SW_LOGIC_ERROR("Do not remove header units");
+}
+
 TargetFiles NativeCompiledTarget::getFiles(StorageFileType t) const
 {
     switch (t)
@@ -1066,7 +1087,13 @@ Files NativeCompiledTarget::gatherObjectFilesWithoutLibraries() const
         if (f->output.extension() != ".gch" &&
             f->output.extension() != ".pch"
             )
+        {
+            auto huit = HeaderUnits.find(f->file);
+            bool hu = huit != HeaderUnits.end();
+            if (hu)
+                continue;
             obj.insert(f->output);
+        }
     }
     for (auto &[f, sf] : getMergeObject())
     {
@@ -3408,7 +3435,9 @@ void NativeCompiledTarget::prepare_pass5()
 
         if (auto c = f->compiler->as<VisualStudioCompiler*>())
         {
-            if (UseModules)
+            auto huit = HeaderUnits.find(f->file);
+            bool hu = huit != HeaderUnits.end();
+            if (UseModules && !hu)
             {
                 c->UseModules = UseModules;
                 c->stdIfcDir = c->System.IncludeDirectories.begin()->parent_path() / "ifc" / (getBuildSettings().TargetOS.Arch == ArchType::x86_64 ? "x64" : "x86");
@@ -3422,7 +3451,7 @@ void NativeCompiledTarget::prepare_pass5()
 
             vs_setup(f, c);
 
-            if (UseModules)
+            if (UseModules && !hu)
             {
                 auto pp_command = f->compiler->clone();
                 auto pp_command2 = (VisualStudioCompiler&)*pp_command;
@@ -3445,6 +3474,19 @@ void NativeCompiledTarget::prepare_pass5()
                     c->getCommand(*this)->msvc_modules_file = p;
                 }
             }
+            if (UseModules && hu)
+            {
+                c->CompileAsCPP = true; // always c++
+                c->Output.clear();
+                c->ExportHeader = true;
+                if (huit->second.angle)
+                    c->HeaderNameAngle = true;
+                if (!huit->second.angle)
+                    c->HeaderNameQuote = true;
+                c->getCommand(*this)->working_directory = getBinaryParentDir() / "obj";
+                c->getCommand(*this)->addOutput( getBinaryParentDir() / "obj" / huit->second.fn.filename() += ".ifc");
+                f->fancy_name = c->getCommand(*this)->name = "[" + getPackage().toString() + "]/[header_unit]/" + f->file.filename().string();
+            }
         }
         else if (auto c = f->compiler->as<ClangClCompiler*>())
         {
@@ -3464,12 +3506,17 @@ void NativeCompiledTarget::prepare_pass5()
     {
         // raw pointers?
         std::unordered_map<path, std::shared_ptr<builder::Command>> cmds;
+        std::unordered_map<path, std::shared_ptr<builder::Command>> hu_cmds;
         for (auto &f : files)
         {
             if (auto c = f->compiler->as<VisualStudioCompiler *>())
             {
-                //c->getCommand(*this)->addInput(ifcdeps);
-                cmds[normalize_path(f->file)] = c->getCommand(*this);
+                auto huit = HeaderUnits.find(f->file);
+                bool hu = huit != HeaderUnits.end();
+                if (hu)
+                    continue;//hu_cmds[normalize_path(f->file)] = c->getCommand(*this);
+                else
+                    cmds[lowercase_filename(normalize_path(f->file))] = c->getCommand(*this);
             }
         }
 
@@ -3477,11 +3524,19 @@ void NativeCompiledTarget::prepare_pass5()
         {
             using BuiltinCommand::BuiltinCommand;
             decltype(cmds) module_cmds;
+            decltype(hu_cmds) hu_cmds;
             auto get_cmd(const path &fn) const
             {
-                auto it = module_cmds.find(fn);
+                auto it = module_cmds.find(lowercase_filename(fn));
                 if (it == module_cmds.end())
                     throw SW_RUNTIME_ERROR("Cannot find source file: " + fn.string());
+                return it->second;
+            }
+            auto get_hu_cmd(const path &fn) const
+            {
+                auto it = hu_cmds.find(lowercase_filename(fn));
+                if (it == hu_cmds.end())
+                    throw SW_RUNTIME_ERROR("Cannot find header unit: " + fn.string());
                 return it->second;
             }
             void execute1(std::error_code *ec = nullptr) override
@@ -3514,8 +3569,7 @@ void NativeCompiledTarget::prepare_pass5()
                     auto &j = file_map[f];
                     path fn = normalize_path(j["Data"]["Source"].get<String>());
                     auto ims = j["Data"]["ImportedModules"].get<Strings>();
-                    if (ims.empty())
-                        continue; // no deps
+                    auto ihus = j["Data"]["ImportedHeaderUnits"].get<Strings>();
                     auto cmd = get_cmd(fn);
                     for (auto &&im : ims)
                     {
@@ -3534,9 +3588,38 @@ void NativeCompiledTarget::prepare_pass5()
                         ++cmd->dependencies_left;
                         cmd2->dependent_commands.insert(cmd);
                     }
+                    /*for (auto &&im : ihus)
+                    {
+                        auto cmd2 = get_hu_cmd(im);
+                        cmd->dependencies.insert(cmd2);
+                        ++cmd->dependencies_left;
+                        cmd2->dependent_commands.insert(cmd);
+                    }*/
                 }
             }
         };
+
+
+        for (auto &&hu : HeaderUnits)
+        {
+            /*cl
+             nologo
+             /std:c++latest
+             /exportHeader
+             /headerName:quote old_header.h
+             /headerName:angle algorithm ranges
+             /headerName:quote old_header2.h
+             /MP
+             /showResolvedHeader
+             /ifcOutput dir
+             */
+            /*auto c = std::make_shared<ModulesCommand>(getMainBuild(), SW_VISIBLE_BUILTIN_FUNCTION(analyze_modules));
+            addCommand(c);
+            c->name = "[" + getPackage().toString() + "]/[header_unit]";
+            c->push_back(ifcdeps);
+            c->addInput(ifcdeps);
+            c->module_cmds = cmds;*/
+        }
 
         auto c = std::make_shared<ModulesCommand>(getMainBuild(), SW_VISIBLE_BUILTIN_FUNCTION(analyze_modules));
         addCommand(c);
@@ -3544,12 +3627,40 @@ void NativeCompiledTarget::prepare_pass5()
         c->push_back(ifcdeps);
         c->addInput(ifcdeps);
         c->module_cmds = cmds;
+        c->hu_cmds = hu_cmds;
 
         for (auto &f : files)
         {
             if (auto c2 = f->compiler->as<VisualStudioCompiler *>())
             {
-                c2->getCommand(*this)->dependencies.insert(c);
+                auto huit = HeaderUnits.find(f->file);
+                bool hu = huit != HeaderUnits.end();
+                if (hu)
+                    c->dependencies.insert(c2->getCommand(*this));
+                else
+                    c2->getCommand(*this)->dependencies.insert(c);
+            }
+        }
+        for (auto &&[_,hu] : HeaderUnits)
+        {
+            for (auto &f : files)
+            {
+                if (auto c2 = f->compiler->as<VisualStudioCompiler *>())
+                {
+                    auto huit = HeaderUnits.find(f->file);
+                    bool hu2 = huit != HeaderUnits.end();
+                    if (hu2)
+                        continue;
+                    String s = "/headerUnit:";
+                    if (hu.angle)
+                        s += "angle";
+                    else
+                        s += "quote";
+                    c2->getCommand(*this)->arguments.push_back(s);
+                    c2->getCommand(*this)->arguments.push_back(
+                        normalize_path(hu.fn).string() + "="
+                        + normalize_path(getBinaryParentDir() / "obj" / hu.fn.filename() += ".ifc").string());
+                }
             }
         }
     }
