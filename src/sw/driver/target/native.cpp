@@ -3506,7 +3506,6 @@ void NativeCompiledTarget::prepare_pass5()
     {
         // raw pointers?
         std::unordered_map<path, std::shared_ptr<builder::Command>> cmds;
-        std::unordered_map<path, std::shared_ptr<builder::Command>> hu_cmds;
         for (auto &f : files)
         {
             if (auto c = f->compiler->as<VisualStudioCompiler *>())
@@ -3514,9 +3513,8 @@ void NativeCompiledTarget::prepare_pass5()
                 auto huit = HeaderUnits.find(f->file);
                 bool hu = huit != HeaderUnits.end();
                 if (hu)
-                    continue;//hu_cmds[normalize_path(f->file)] = c->getCommand(*this);
-                else
-                    cmds[lowercase_filename(normalize_path(f->file))] = c->getCommand(*this);
+                    continue;
+                cmds[lowercase_filename(normalize_path(f->file))] = c->getCommand(*this);
             }
         }
 
@@ -3524,19 +3522,11 @@ void NativeCompiledTarget::prepare_pass5()
         {
             using BuiltinCommand::BuiltinCommand;
             decltype(cmds) module_cmds;
-            decltype(hu_cmds) hu_cmds;
             auto get_cmd(const path &fn) const
             {
                 auto it = module_cmds.find(lowercase_filename(fn));
                 if (it == module_cmds.end())
                     throw SW_RUNTIME_ERROR("Cannot find source file: " + fn.string());
-                return it->second;
-            }
-            auto get_hu_cmd(const path &fn) const
-            {
-                auto it = hu_cmds.find(lowercase_filename(fn));
-                if (it == hu_cmds.end())
-                    throw SW_RUNTIME_ERROR("Cannot find header unit: " + fn.string());
                 return it->second;
             }
             void execute1(std::error_code *ec = nullptr) override
@@ -3588,38 +3578,9 @@ void NativeCompiledTarget::prepare_pass5()
                         ++cmd->dependencies_left;
                         cmd2->dependent_commands.insert(cmd);
                     }
-                    /*for (auto &&im : ihus)
-                    {
-                        auto cmd2 = get_hu_cmd(im);
-                        cmd->dependencies.insert(cmd2);
-                        ++cmd->dependencies_left;
-                        cmd2->dependent_commands.insert(cmd);
-                    }*/
                 }
             }
         };
-
-
-        for (auto &&hu : HeaderUnits)
-        {
-            /*cl
-             nologo
-             /std:c++latest
-             /exportHeader
-             /headerName:quote old_header.h
-             /headerName:angle algorithm ranges
-             /headerName:quote old_header2.h
-             /MP
-             /showResolvedHeader
-             /ifcOutput dir
-             */
-            /*auto c = std::make_shared<ModulesCommand>(getMainBuild(), SW_VISIBLE_BUILTIN_FUNCTION(analyze_modules));
-            addCommand(c);
-            c->name = "[" + getPackage().toString() + "]/[header_unit]";
-            c->push_back(ifcdeps);
-            c->addInput(ifcdeps);
-            c->module_cmds = cmds;*/
-        }
 
         auto c = std::make_shared<ModulesCommand>(getMainBuild(), SW_VISIBLE_BUILTIN_FUNCTION(analyze_modules));
         addCommand(c);
@@ -3627,7 +3588,6 @@ void NativeCompiledTarget::prepare_pass5()
         c->push_back(ifcdeps);
         c->addInput(ifcdeps);
         c->module_cmds = cmds;
-        c->hu_cmds = hu_cmds;
 
         for (auto &f : files)
         {
