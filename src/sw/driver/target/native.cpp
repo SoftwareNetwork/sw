@@ -65,6 +65,12 @@ static int remove_file(path f)
 }
 SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD(sw_remove_file, remove_file)
 
+static int analyze_modules(Files files)
+{
+    return 0;
+}
+SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD(sw_analyze_modules, analyze_modules)
+
 const int symbol_len_max = 240; // 256 causes errors
 const int symbol_len_len = 2; // 256 causes errors
 
@@ -2258,7 +2264,12 @@ void NativeCompiledTarget::prepare_pass1()
     {
         if (getCompilerType() != CompilerType::MSVC)
             throw SW_RUNTIME_ERROR("Currently modules are implemented for MSVC only");
-        CPPVersion = CPPLanguageStandard::CPP2a;
+        //CPPVersion = CPPLanguageStandard::CPPLatest;
+
+        /*UnresolvedPackage up(getSettings()["native"]["stdlib"]["cpp"].getValue());
+        UnresolvedPackage upm(getSettings()["native"]["stdlib"]["cpp_modules"].getValue());
+        upm.range = up.range;
+        *this += upm;*/
     }
 
     if (ReproducibleBuild)
@@ -3317,6 +3328,7 @@ void NativeCompiledTarget::prepare_pass5()
     }
 
     // merge file compiler options with target compiler options
+    Files ifcdeps;
     for (auto &f : files)
     {
         // set everything before merge!
@@ -3399,20 +3411,33 @@ void NativeCompiledTarget::prepare_pass5()
             if (UseModules)
             {
                 c->UseModules = UseModules;
-                //c->stdIfcDir = c->System.IncludeDirectories.begin()->parent_path() / "ifc" / (getBuildSettings().TargetOS.Arch == ArchType::x86_64 ? "x64" : "x86");
-                c->stdIfcDir = c->System.IncludeDirectories.begin()->parent_path() / "ifc" / c->file.parent_path().filename();
-                c->UTF8 = false; // utf8 is not used in std modules and produce a warning
+                c->stdIfcDir = c->System.IncludeDirectories.begin()->parent_path() / "ifc" / (getBuildSettings().TargetOS.Arch == ArchType::x86_64 ? "x64" : "x86");
+                //c->stdIfcDir = c->System.IncludeDirectories.begin()->parent_path() / "ifc" / c->file.parent_path().filename();
+                //c->UTF8 = false; // utf8 is not used in std modules and produce a warning
 
-                auto s = read_file(f->file);
-                std::smatch m;
-                static std::regex r("export module (\\w+)");
-                if (std::regex_search(s, m, r))
-                {
-                    c->ExportModule = true;
-                }
+                // last part is empty!
+                c->ifcOutput = getBinaryParentDir() / "obj" / "";
+                c->ifcSearchDir = getBinaryParentDir() / "obj" / "";
             }
 
             vs_setup(f, c);
+
+            if (UseModules)
+            {
+                auto pp_command = f->compiler->clone();
+                auto pp_command2 = (VisualStudioCompiler&)*pp_command;
+
+                // setup
+                auto p = path{pp_command2.Output()} += ".json";
+                pp_command2.sourceDependenciesDirectives = p;
+                ifcdeps.insert(p);
+                pp_command2.Output.output_dependency = false;
+                pp_command2.PDBFilename.output_dependency = false;
+
+                auto cmd = pp_command2.getCommand(*this);
+                cmd->name = "[" + getPackage().toString() + "]/[analyze_modules]/" + f->file.filename().string();
+                registerCommand(*cmd);
+            }
         }
         else if (auto c = f->compiler->as<ClangClCompiler*>())
         {
@@ -3426,6 +3451,99 @@ void NativeCompiledTarget::prepare_pass5()
         else if (auto c = f->compiler->as<GNUCompiler*>())
         {
             gnu_setup(f, c);
+        }
+    }
+    if (UseModules)
+    {
+        // raw pointers?
+        std::unordered_map<path, std::shared_ptr<builder::Command>> cmds;
+        for (auto &f : files)
+        {
+            if (auto c = f->compiler->as<VisualStudioCompiler *>())
+            {
+                //c->getCommand(*this)->addInput(ifcdeps);
+                cmds[normalize_path(f->file)] = c->getCommand(*this);
+            }
+        }
+
+        struct ModulesCommand : BuiltinCommand
+        {
+            using BuiltinCommand::BuiltinCommand;
+            decltype(cmds) module_cmds;
+            auto get_cmd(const path &fn) const
+            {
+                auto it = module_cmds.find(fn);
+                if (it == module_cmds.end())
+                    throw SW_RUNTIME_ERROR("Cannot find source file: " + fn.string());
+                return it->second;
+            }
+            void execute1(std::error_code *ec = nullptr) override
+            {
+                Strings sa;
+                for (auto &a : arguments)
+                    sa.push_back(a->toString());
+
+                auto start = getFirstResponseFileArgument();
+                jumppad_call(
+                    sa[start + 0],
+                    sa[start + 1],
+                    std::stoi(sa[start + 2]),
+                    Strings{ sa.begin() + start + 3, sa.end() });
+
+                std::unordered_map<path, nlohmann::json> file_map;
+                std::unordered_map<String, path> module_map;
+                Files files(sa.begin() + start + 3 + 1, sa.end());
+                for (auto &&f : files)
+                {
+                    auto j = nlohmann::json::parse(read_file(f));
+                    path fn = normalize_path(j["Data"]["Source"].get<String>());
+                    auto pm = j["Data"]["ProvidedModule"].get<String>();
+                    if (!pm.empty())
+                        module_map.emplace(pm, fn);
+                    file_map.emplace(f, std::move(j));
+                }
+                for (auto &&f : files)
+                {
+                    auto &j = file_map[f];
+                    path fn = normalize_path(j["Data"]["Source"].get<String>());
+                    auto ims = j["Data"]["ImportedModules"].get<Strings>();
+                    if (ims.empty())
+                        continue; // no deps
+                    auto cmd = get_cmd(fn);
+                    for (auto &&im : ims)
+                    {
+                        static const std::set<String> std_modules
+                        {
+                            "std.regex",
+                            "std.filesystem",
+                            "std.memory",
+                            "std.threading",
+                            "std.core",
+                        };
+                        if (std_modules.contains(im))
+                            continue;
+                        auto cmd2 = get_cmd(module_map[im]);
+                        cmd->dependencies.insert(cmd2);
+                        ++cmd->dependencies_left;
+                        cmd2->dependent_commands.insert(cmd);
+                    }
+                }
+            }
+        };
+
+        auto c = std::make_shared<ModulesCommand>(getMainBuild(), SW_VISIBLE_BUILTIN_FUNCTION(analyze_modules));
+        addCommand(c);
+        c->name = "[" + getPackage().toString() + "]/[analyze_modules]";
+        c->push_back(ifcdeps);
+        c->addInput(ifcdeps);
+        c->module_cmds = cmds;
+
+        for (auto &f : files)
+        {
+            if (auto c2 = f->compiler->as<VisualStudioCompiler *>())
+            {
+                c2->getCommand(*this)->dependencies.insert(c);
+            }
         }
     }
 
@@ -3772,6 +3890,14 @@ void NativeCompiledTarget::prepare_pass6()
 
     auto &t = getMergeObject();
 
+    if (auto L = getSelectedTool()->as<VisualStudioLinker *>())
+    {
+        if (UseModules)
+        {
+            t += "std.lib"_slib;
+        }
+    }
+
     switch (rt)
     {
     case vs::RuntimeLibraryType::MultiThreadedDLL:
@@ -3807,6 +3933,14 @@ void NativeCompiledTarget::prepare_pass6()
     {
         auto cmd = L->createCommand(getMainBuild());
         cmd->push_back("-NODEFAULTLIB");
+
+        if (UseModules)
+        {
+            // dangerous!
+            auto p = getMergeObject().NativeLinkerOptions::System.LinkDirectories.begin()->parent_path().parent_path() / "ifc" / (getBuildSettings().TargetOS.Arch == ArchType::x86_64 ? "x64" : "x86");
+            p /=  getBuildSettings().Native.ConfigurationType == ConfigurationType::Debug ? "Debug" : "Release";
+            getMergeObject().NativeLinkerOptions::System.LinkDirectories.insert(p);
+        }
     }
 }
 

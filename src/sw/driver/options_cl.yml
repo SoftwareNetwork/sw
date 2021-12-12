@@ -105,16 +105,30 @@ types:
                 name: UseModules
                 flag: experimental:module
                 type: bool
-
             ifcdir:
                 name: stdIfcDir
-                flag: module:stdIfcDir
+                flag: stdIfcDir
                 type: path
-
-            module_export:
-                name: ExportModule
-                flag: module:export
-                type: bool
+            ifc_output_dir:
+                name: ifcOutput
+                flag: ifcOutput
+                type: path
+            ifc_search_dir:
+                name: ifcSearchDir
+                flag: ifcSearchDir
+                type: path
+            source_dependencies:
+                name: sourceDependencies
+                flag: sourceDependencies
+                type: path
+                properties:
+                    - output_dependency
+            source_dependencies_directives:
+                name: sourceDependenciesDirectives
+                flag: sourceDependencies:directives
+                type: path
+                properties:
+                    - output_dependency
 
             #
 

@@ -131,10 +131,13 @@ const StringSet &getCppSourceFileExtensions()
         ".C++",
         ".CPP",
         ".CXX",
-        ".C", // old ext (Wt)
+        ".C", // old ext (Wt, some gnu)
         // Objective-C
         ".m",
         ".mm",
+
+        // msvc modules
+        ".ixx",
     };
     return cpp_source_file_extensions;
 }
@@ -310,6 +313,26 @@ static bool detectMsvcCommon(const path &compiler, const Version &vs_version,
             else
                 atlmfc.public_ts["properties"]["6"]["system_link_directories"].push_back(root / "ATLMFC" / "lib" / target);
             atlmfc.public_ts["properties"]["6"]["system_link_libraries"].push_back(boost::to_upper_copy("atls.lib"s));
+        }
+
+        if (fs::exists(root / "ifc"))
+        {
+            auto ts2 = ts;
+
+            // release configs
+            /*{
+                auto &modules = addTarget<PredefinedTarget>(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.libcpp.modules", cl_exe_version), ts2);
+                modules.public_ts["properties"]["6"]["system_link_directories"].push_back(root / "ifc" / target / "Release");
+                modules.public_ts["properties"]["6"]["system_link_libraries"].push_back(boost::to_upper_copy("std.lib"s));
+            }
+
+            // debug
+            {
+                ts2["native"]["configuration"] = "debug";
+                auto &modules = addTarget<PredefinedTarget>(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.libcpp.modules", cl_exe_version), ts2);
+                modules.public_ts["properties"]["6"]["system_link_directories"].push_back(root / "ifc" / target / "Debug");
+                modules.public_ts["properties"]["6"]["system_link_libraries"].push_back(boost::to_upper_copy("std.lib"s));
+            }*/
         }
     }
 
@@ -974,6 +997,7 @@ void addSettingsAndSetHostPrograms(const SwCoreContext &swctx, TargetSettings &t
     {
         check_and_assign_dependency(ts["native"]["stdlib"]["c"], to_upkg("com.Microsoft.Windows.SDK.ucrt"));
         check_and_assign_dependency(ts["native"]["stdlib"]["cpp"], to_upkg("com.Microsoft.VisualStudio.VC.libcpp"));
+        //check_and_assign_dependency(ts["native"]["stdlib"]["cpp_modules"], to_upkg("com.Microsoft.VisualStudio.VC.libcpp.modules"));
         check_and_assign_dependency(ts["native"]["stdlib"]["kernel"], to_upkg("com.Microsoft.Windows.SDK.um"));
 
         // now find the latest available sdk (ucrt) and select it
@@ -1129,6 +1153,7 @@ void addSettingsAndSetPrograms(const SwCoreContext &swctx, TargetSettings &ts)
             sver = "-" + bs.TargetOS.Version->toString();
         check_and_assign_dependency(ts["native"]["stdlib"]["c"], to_upkg("com.Microsoft.Windows.SDK.ucrt" + sver));
         check_and_assign_dependency(ts["native"]["stdlib"]["cpp"], to_upkg("com.Microsoft.VisualStudio.VC.libcpp"));
+        //check_and_assign_dependency(ts["native"]["stdlib"]["cpp_modules"], to_upkg("com.Microsoft.VisualStudio.VC.libcpp.modules"));
         check_and_assign_dependency(ts["native"]["stdlib"]["kernel"], to_upkg("com.Microsoft.Windows.SDK.um" + sver));
 
         // now find the latest available sdk (ucrt) and select it
