@@ -3830,6 +3830,7 @@ void NativeCompiledTarget::prepare_pass5()
         File(p, getFs()).setGenerated(true);
 
         operator+=(p);
+        (*this)[p].fancy_name = "[" + getPackage().toString() + "]/[sw.rc]"; // fancy .rc
     }
 
     addPrecompiledHeader();
