@@ -3428,7 +3428,7 @@ void NativeCompiledTarget::prepare_pass5()
                 auto pp_command2 = (VisualStudioCompiler&)*pp_command;
 
                 // setup
-                auto p = path{pp_command2.Output()} += ".json";
+                auto p = path{pp_command2.Output()} += ".ifc.scan.json";
                 pp_command2.sourceDependenciesDirectives = p;
                 ifcdeps.insert(p);
                 pp_command2.Output.output_dependency = false;
@@ -3437,6 +3437,13 @@ void NativeCompiledTarget::prepare_pass5()
                 auto cmd = pp_command2.getCommand(*this);
                 cmd->name = "[" + getPackage().toString() + "]/[analyze_modules]/" + f->file.filename().string();
                 registerCommand(*cmd);
+
+                // after 2nd command setup
+                {
+                    auto p = path{c->Output()} += ".ifc.json";
+                    c->sourceDependencies = p;
+                    c->getCommand(*this)->msvc_modules_file = p;
+                }
             }
         }
         else if (auto c = f->compiler->as<ClangClCompiler*>())

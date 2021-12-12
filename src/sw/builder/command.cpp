@@ -36,6 +36,7 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/dll.hpp>
 #include <boost/thread/thread_pool.hpp>
+#include <nlohmann/json.hpp>
 #include <primitives/debug.h>
 #include <primitives/executor.h>
 #include <primitives/symbol.h>
@@ -188,6 +189,27 @@ static Files process_deps_gnu(builder::Command &c, const path &deps_file)
         deps.insert(f3);
     }
 #endif
+    return deps;
+}
+
+static Files process_deps_msvc_modules(builder::Command &c, const path &deps_file)
+{
+    if (deps_file.empty())
+        return {};
+    if (!fs::exists(deps_file))
+    {
+        LOG_DEBUG(logger, "Missing msvc modules deps file: " + to_string(deps_file));
+        return {};
+    }
+
+    auto j = nlohmann::json::parse(read_file(deps_file));
+    auto ims = j["Data"]["ImportedModules"];
+    Files deps;
+    for (auto &&m : ims)
+    {
+        if (m.contains("BMI"))
+            deps.insert(m["BMI"].get<String>());
+    }
     return deps;
 }
 
@@ -1080,6 +1102,12 @@ void Command::postProcess(bool ok)
         break;
     default:
         break;
+    }
+
+    if (!msvc_modules_file.empty())
+    {
+        if (ok)
+            addImplicitInput(process_deps_msvc_modules(*this, msvc_modules_file));
     }
 }
 
