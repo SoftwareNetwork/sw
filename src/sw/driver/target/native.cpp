@@ -3474,6 +3474,10 @@ void NativeCompiledTarget::prepare_pass5()
                     c->getCommand(*this)->msvc_modules_file = p;
                 }
             }
+            if (UseModules && !hu && TranslateInclude)
+            {
+                c->TranslateInclude = true;
+            }
             if (UseModules && hu)
             {
                 c->CompileAsCPP = true; // always c++

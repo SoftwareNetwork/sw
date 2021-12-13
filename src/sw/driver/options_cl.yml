@@ -105,6 +105,10 @@ types:
                 name: UseModules
                 flag: experimental:module
                 type: bool
+            translateinclude:
+                name: TranslateInclude
+                flag: translateInclude
+                type: bool
             headerunitquote:
                 name: HeaderUnitQuote
                 flag: headerUnit:quote
