@@ -1244,18 +1244,14 @@ void addSettingsAndSetPrograms(const SwCoreContext &swctx, TargetSettings &ts)
         if (bs.TargetOS.is(OSType::Mingw))
             try_gcc();
 
-        // at the moment we prefer gcc
-        // clang has some issues with source location in primitives.exceptions
-        try_gcc();
-        try_clang();
-/*#if defined(__clang__)
+#if defined(__clang__)
         try_clang();
         try_gcc();
 //#elif defined(__GNUC__) || defined(__CYGWIN__)
 #else
         try_gcc();
         try_clang();
-#endif*/
+#endif
 
         // using c prog
         if (ts["native"]["program"]["c"].isValue())
