@@ -159,11 +159,11 @@ inline RemoteFile operator "" _remote(const char *s, size_t)
 // modules
 inline HeaderUnit operator "" _qhu(const char *s, size_t)
 {
-    return HeaderUnit(s, false);
+    return HeaderUnit{s, false};
 }
 inline HeaderUnit operator "" _ahu(const char *s, size_t)
 {
-    return HeaderUnit(s, true);
+    return HeaderUnit{s, true};
 }
 
 // more?

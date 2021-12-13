@@ -209,7 +209,7 @@ static Files process_deps_msvc_modules(builder::Command &c, const path &deps_fil
         for (auto &&m : w)
         {
             if (m.contains("BMI"))
-                deps.insert(m["BMI"].get<String>());
+                deps.insert(m["BMI"].template get<String>());
         }
     };
     add(j["Data"]["ImportedModules"]);
