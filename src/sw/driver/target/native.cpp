@@ -3506,7 +3506,9 @@ void NativeCompiledTarget::prepare_pass5()
             if (UseModules)
             {
                 c->getCommand(*this)->arguments.push_back("-fmodules-ts");
-                c->getCommand(*this)->arguments.push_back("-fmodule-mapper=:::55555");
+                //c->getCommand(*this)->arguments.push_back("-fmodule-mapper=:::55555?" + f->file.string());
+                //c->getCommand(*this)->arguments.push_back("-fmodule-mapper=:::55555?" + std::to_string((int64_t)c->getCommand(*this).get()));
+                c->getCommand(*this)->arguments.push_back("-fmodule-mapper=:::55555?" + c->OutputFile().string());
             }
             gnu_setup(f, c);
         }

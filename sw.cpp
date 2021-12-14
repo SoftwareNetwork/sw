@@ -124,9 +124,6 @@ void build(Solution &s)
             "org.sw.demo.boost.serialization"_dep,
             "org.sw.demo.microsoft.gsl"_dep,
             "pub.egorpugin.primitives.emitter-master"_dep;
-        builder -= "org.sw.demo.urnathan.libcody-master"_dep;
-        if (builder.getBuildSettings().TargetOS.Type != OSType::Windows)
-            builder += "org.sw.demo.urnathan.libcody-master"_dep;
         //if (!s.Variables["SW_SELF_BUILD"])
         {
             /*PrecompiledHeader pch;

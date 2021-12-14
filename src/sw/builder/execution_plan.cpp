@@ -21,111 +21,88 @@
 #include <sw/support/exceptions.h>
 
 #include <boost/asio.hpp>
-#include <cody.hh>
 #include <nlohmann/json.hpp>
 #include <primitives/exceptions.h>
 
-#include <arpa/inet.h>
+#include <primitives/log.h>
+DECLARE_STATIC_LOGGER(logger, "explan");
 
 namespace sw
 {
 
-struct MyResolver : Cody::Resolver {
-    int ModuleRepoRequest(Cody::Server *s) override {
-        return 0;
-    }
-    int ModuleExportRequest(Cody::Server *s, Cody::Flags flags, std::string &module) override {
-        int a = 5;
-        a++;
-        return {};
-    }
-    int ModuleImportRequest(Cody::Server *s, Cody::Flags flags, std::string &module) override {
-        int a = 5;
-        a++;
-        return {};
-    }
-    int ModuleCompiledRequest(Cody::Server *s, Cody::Flags flags, std::string &module) override {
-        int a = 5;
-        a++;
-        return {};
-    }
-};
-
-void MakeServer() {
-    struct sockaddr_in6 sa{0};
-    sa.sin6_family = AF_INET6;
-    inet_pton(AF_INET6, "::1", &sa.sin6_addr);
-    sa.sin6_port = htons(55555);
-    auto len = sizeof(sa);
-    auto addr = (struct sockaddr *)&sa;
-    int fd = socket(addr->sa_family, SOCK_STREAM, 0);
-    if (fd < 0) {
-        SW_UNREACHABLE;
-    }
-    if (bind(fd, addr, len) < 0) {
-        SW_UNREACHABLE;
-    }
-    if (listen(fd, 5) < 0) {
-        SW_UNREACHABLE;
-    }
-    struct sockaddr *sa2{nullptr};
-    socklen_t sz;
-    auto *r = new MyResolver();
-    while (1) {
-        auto clientfd = accept(fd, sa2, &sz);
-        if (clientfd < 0) {
-            SW_UNREACHABLE;
-        }
-        std::thread t{[clientfd,r](){
-            auto *s = new Cody::Server(r, clientfd);
-            while (1) {
-                auto r = s->Read();
-                if (r == -1)
-                    break; // eof
-                if (r == 0) {
-                    s->ProcessRequests();
-                    while (!s->Write())
-                        ;
-                }
-            }
-            close(clientfd);
-        }};
-        t.detach();
-    }
-}
-
 struct gcc_modules_server {
-    boost::asio::io_context ctx;
-    boost::asio::io_context::work dummy{ctx};
+    const ExecutionPlan::VecT &cmds;
     std::jthread t;
+    boost::asio::io_context ctx;
+    //boost::asio::io_context::work dummy{ctx};
+    std::unordered_map<std::string, path> cmi_map;
+    std::unordered_map<std::string, std::set<boost::asio::ip::tcp::socket*>> cmi_requests;
 
-    gcc_modules_server() {
-    }
     ~gcc_modules_server() {
         ctx.stop();
     }
     void run() {
+        boost::asio::co_spawn(ctx, accept(), boost::asio::detached);
         t = std::jthread{[this](){
             try {
                 ctx.run();
             } catch (...) {}
         }};
-        boost::asio::co_spawn(ctx, accept(), boost::asio::detached);
     }
-
     boost::asio::awaitable<void> accept() {
         using tcp = boost::asio::ip::tcp;
         tcp::acceptor acceptor(ctx, tcp::endpoint(tcp::v6(), 55555));
         while (1) {
             auto sock = co_await acceptor.async_accept(boost::asio::use_awaitable);
-            boost::asio::co_spawn(ctx, listen(std::move(sock)), boost::asio::detached);
+            boost::asio::co_spawn(ctx, process(std::move(sock)), boost::asio::detached);
         }
     }
-    boost::asio::awaitable<void> listen(auto socket) {
-        std::string buf;
-        co_await boost::asio::async_read_until(socket, boost::asio::dynamic_buffer(buf, 1024), '\n', boost::asio::use_awaitable);
-        int a = 5;
-        a++;
+    boost::asio::awaitable<void> process(auto socket) {
+        using namespace boost::asio;
+        auto reply = [&socket](std::string s) {
+            s += "\n";
+            return async_write(socket, buffer(s), use_awaitable);
+        };
+        ExecutionPlan::PtrT this_command;
+        path cmi;
+        std::string module;
+        while (1) {
+            std::string buf;
+            co_await async_read_until(socket, dynamic_buffer(buf, 1024), "\n", use_awaitable);
+            auto lines = split_lines(buf);
+            for (auto &&line : lines) {
+                if (line.starts_with("HELLO")) {
+                    auto parts = split_string(line, " "); // hello,ver,prog,ident,;
+                    cmi = parts[3];
+                    cmi += ".cmi";
+                    co_await reply("HELLO 1 gcc ;");
+                } else if (line.starts_with("MODULE-REPO")) {
+                    co_await reply("MODULE-REPO");
+                } else if (line.starts_with("MODULE-EXPORT")) {
+                    module = split_string(line, " ")[1]; // module,name
+                    co_await reply("PATHNAME " + cmi.string());
+                } else if (line.starts_with("MODULE-IMPORT")) {
+                    auto module = split_string(line, " ")[1]; // module,name
+                    if (auto it = cmi_map.find(module); it != cmi_map.end()) {
+                        co_await reply("PATHNAME " + it->second.string());
+                    } else {
+                        cmi_requests[module].insert(&socket);
+                    }
+                } else if (line.starts_with("MODULE-COMPILED")) {
+                    cmi_map[module] = cmi;
+                    co_await reply("OK");
+                    for (auto &&r : cmi_requests[module]) {
+                        std::string s = "PATHNAME " + cmi.string() + "\n";
+                        async_write(*r, buffer(s), detached);
+                    }
+                }
+
+    /*
+    "INCLUDE-TRANSLATE"
+    "INVOKE"
+    */
+            }
+        }
     }
 };
 
@@ -166,7 +143,7 @@ void ExecutionPlan::execute(Executor &e) const
     if (commands.empty())
         return;
 
-    gcc_modules_server s;
+    gcc_modules_server s{commands};
     s.run();
 
     std::mutex m;
