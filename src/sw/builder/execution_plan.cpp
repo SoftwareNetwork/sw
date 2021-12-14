@@ -20,11 +20,114 @@
 
 #include <sw/support/exceptions.h>
 
+#include <boost/asio.hpp>
+#include <cody.hh>
 #include <nlohmann/json.hpp>
 #include <primitives/exceptions.h>
 
+#include <arpa/inet.h>
+
 namespace sw
 {
+
+struct MyResolver : Cody::Resolver {
+    int ModuleRepoRequest(Cody::Server *s) override {
+        return 0;
+    }
+    int ModuleExportRequest(Cody::Server *s, Cody::Flags flags, std::string &module) override {
+        int a = 5;
+        a++;
+        return {};
+    }
+    int ModuleImportRequest(Cody::Server *s, Cody::Flags flags, std::string &module) override {
+        int a = 5;
+        a++;
+        return {};
+    }
+    int ModuleCompiledRequest(Cody::Server *s, Cody::Flags flags, std::string &module) override {
+        int a = 5;
+        a++;
+        return {};
+    }
+};
+
+void MakeServer() {
+    struct sockaddr_in6 sa{0};
+    sa.sin6_family = AF_INET6;
+    inet_pton(AF_INET6, "::1", &sa.sin6_addr);
+    sa.sin6_port = htons(55555);
+    auto len = sizeof(sa);
+    auto addr = (struct sockaddr *)&sa;
+    int fd = socket(addr->sa_family, SOCK_STREAM, 0);
+    if (fd < 0) {
+        SW_UNREACHABLE;
+    }
+    if (bind(fd, addr, len) < 0) {
+        SW_UNREACHABLE;
+    }
+    if (listen(fd, 5) < 0) {
+        SW_UNREACHABLE;
+    }
+    struct sockaddr *sa2{nullptr};
+    socklen_t sz;
+    auto *r = new MyResolver();
+    while (1) {
+        auto clientfd = accept(fd, sa2, &sz);
+        if (clientfd < 0) {
+            SW_UNREACHABLE;
+        }
+        std::thread t{[clientfd,r](){
+            auto *s = new Cody::Server(r, clientfd);
+            while (1) {
+                auto r = s->Read();
+                if (r == -1)
+                    break; // eof
+                if (r == 0) {
+                    s->ProcessRequests();
+                    while (!s->Write())
+                        ;
+                }
+            }
+            close(clientfd);
+        }};
+        t.detach();
+    }
+}
+
+struct gcc_modules_server {
+    boost::asio::io_context ctx;
+    boost::asio::io_context::work dummy{ctx};
+    std::jthread t;
+
+    gcc_modules_server() {
+    }
+    ~gcc_modules_server() {
+        ctx.stop();
+    }
+    void run() {
+        t = std::jthread{[this](){
+            try {
+                ctx.run();
+            } catch (...) {}
+        }};
+        boost::asio::co_spawn(ctx, accept(), boost::asio::detached);
+    }
+
+    boost::asio::awaitable<void> accept() {
+        using tcp = boost::asio::ip::tcp;
+        tcp::acceptor acceptor(ctx, tcp::endpoint(tcp::v6(), 55555));
+        while (1) {
+            auto sock = co_await acceptor.async_accept(boost::asio::use_awaitable);
+            boost::asio::co_spawn(ctx, listen(std::move(sock)), boost::asio::detached);
+        }
+    }
+    boost::asio::awaitable<void> listen(auto socket) {
+        std::string buf;
+        co_await boost::asio::async_read_until(socket, boost::asio::dynamic_buffer(buf, 1024), '\n', boost::asio::use_awaitable);
+        int a = 5;
+        a++;
+    }
+};
 
 ExecutionPlan::ExecutionPlan(USet &cmds)
 {
@@ -62,6 +165,9 @@ void ExecutionPlan::execute(Executor &e) const
         throw SW_RUNTIME_ERROR("Invalid execution plan");
     if (commands.empty())
         return;
+
+    gcc_modules_server s;
+    s.run();
 
     std::mutex m;
     std::vector<Future<void>> fs;

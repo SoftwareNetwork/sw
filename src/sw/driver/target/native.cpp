@@ -2289,8 +2289,8 @@ void NativeCompiledTarget::prepare_pass1()
 
     if (UseModules)
     {
-        if (getCompilerType() != CompilerType::MSVC)
-            throw SW_RUNTIME_ERROR("Currently modules are implemented for MSVC only");
+        if (getCompilerType() != CompilerType::MSVC && getCompilerType() != CompilerType::GNU)
+            throw SW_RUNTIME_ERROR("Currently modules are implemented for MSVC and gcc only");
         //CPPVersion = CPPLanguageStandard::CPPLatest;
 
         /*UnresolvedPackage up(getSettings()["native"]["stdlib"]["cpp"].getValue());
@@ -3503,6 +3503,11 @@ void NativeCompiledTarget::prepare_pass5()
         }
         else if (auto c = f->compiler->as<GNUCompiler*>())
         {
+            if (UseModules)
+            {
+                c->getCommand(*this)->arguments.push_back("-fmodules-ts");
+                c->getCommand(*this)->arguments.push_back("-fmodule-mapper=:::55555");
+            }
             gnu_setup(f, c);
         }
     }
