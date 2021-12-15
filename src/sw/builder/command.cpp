@@ -128,7 +128,7 @@ static Files process_deps_gnu(builder::Command &c, const path &deps_file)
     // take only first output
     // other outputs may contain same .o but for c++ modules
     {
-        static const std::regex r{"\n\\w"};
+        static const std::regex r{"\n\\S"};
         std::smatch m;
         if (std::regex_search(f, m, r)) {
             f = m.prefix().str();
