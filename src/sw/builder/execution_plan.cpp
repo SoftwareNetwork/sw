@@ -40,15 +40,17 @@ struct gcc_modules_server {
     struct dir_data {
         // object file -> data
         std::unordered_map<path, command_data> cmds;
+        // module -> .cmi
+        std::unordered_map<std::string, path> cmi_map;
     };
 
     const ExecutionPlan::VecT &cmds;
     std::jthread t;
     boost::asio::io_context ctx;
-    std::unordered_map<std::string, path> cmi_map;
     std::unordered_map<std::string, std::set<boost::asio::ip::tcp::socket*>> cmi_requests;
     // [catalog][ident] = cmd
     std::unordered_map<path, std::unordered_map<std::string, builder::Command *>> commands;
+    std::unordered_map<path, dir_data> per_dir_data;
 
     ~gcc_modules_server() {
         ctx.stop();
@@ -84,10 +86,10 @@ struct gcc_modules_server {
         tcp::acceptor acceptor(ctx, tcp::endpoint(tcp::v6(), port));
         while (1) {
             auto sock = co_await acceptor.async_accept(boost::asio::use_awaitable);
-            boost::asio::co_spawn(ctx, process(std::move(sock)), boost::asio::detached);
+            boost::asio::co_spawn(ctx, scan ? process_scan(std::move(sock)) : process2(std::move(sock)), boost::asio::detached);
         }
     }
-    boost::asio::awaitable<void> process(auto socket, bool scan) {
+    boost::asio::awaitable<void> process(auto socket) {
         using namespace boost::asio;
         auto reply = [&socket](std::string s) {
             s += "\n";
@@ -116,13 +118,13 @@ struct gcc_modules_server {
                 } else if (line.starts_with("MODULE-IMPORT")) {
                     auto module = split_string(line, " ")[1]; // module,name
                     this_command->addImplicitInput(dir / (module + ".cmi"));
-                    if (auto it = cmi_map.find(module); it != cmi_map.end()) {
+                    /*if (auto it = cmi_map.find(module); it != cmi_map.end()) {
                         co_await reply("PATHNAME " + it->second.string());
                     } else {
                         cmi_requests[module].insert(&socket);
-                    }
+                    }*/
                 } else if (line.starts_with("MODULE-COMPILED")) {
-                    cmi_map[module] = module + ".cmi";
+                    //cmi_map[module] = module + ".cmi";
                     co_await reply("OK"); // could be any string actually
                     for (auto &&r : cmi_requests[module]) {
                         std::string s = "PATHNAME " + module + ".cmi" + "\n";
@@ -131,10 +133,144 @@ struct gcc_modules_server {
                     cmi_requests[module].clear();
                 }
 
-    /*
-    "INCLUDE-TRANSLATE"
-    "INVOKE"
-    */
+                /*
+                "INCLUDE-TRANSLATE"
+                "INVOKE"
+                */
+            }
+        }
+    }
+    boost::asio::awaitable<void> process2(auto socket) {
+        using namespace boost::asio;
+        auto reply = [&socket](std::string s) {
+            s += "\n";
+            return async_write(socket, buffer(s), use_awaitable);
+        };
+        struct data {
+            path out;
+            String source;
+            String export_module;
+            std::unordered_map<String, path> import_modules;
+
+            ~data() {
+                write();
+            }
+            void write() {
+                // follow msvc here
+                nlohmann::json j;
+                j["Version"] = "1.1";
+                auto &jd = j["Data"];
+                jd["Source"] = source;
+                jd["ProvidedModule"] = export_module;
+                for (auto &&[n,p] : import_modules) {
+                    nlohmann::json m;
+                    m["Name"] = n;
+                    m["BMI"] = p;
+                    jd["ImportedModules"].push_back(m);
+                }
+                jd["ImportedHeaderUnits"] = Strings{};
+                write_file(out, j.dump());
+            }
+        } d;
+        path dir;
+        while (1) {
+            std::string buf;
+            co_await async_read_until(socket, dynamic_buffer(buf, 1024), "\n", use_awaitable);
+            auto lines = split_lines(buf);
+            for (auto &&line : lines) {
+                if (line.starts_with("HELLO")) {
+                    auto parts = split_string(line, " '"); // hello,ver,prog,ident,;
+                    auto parts2 = split_string(parts[3], ":");
+                    d.source = parts2[0];
+                    d.out = parts2[1];
+                    co_await reply("HELLO 1 sw ;");
+                } else if (line.starts_with("MODULE-REPO")) {
+                    co_await reply("PATHNAME .");
+                } else if (line.starts_with("MODULE-EXPORT")) {
+                    auto module = split_string(line, " ")[1]; // module,name
+                    d.export_module = module;
+                    co_await reply("PATHNAME " + module + ".cmi");
+                } else if (line.starts_with("MODULE-IMPORT")) {
+                    auto module = split_string(line, " ")[1]; // module,name
+                    d.import_modules[module] = d.out.parent_path() / (module + ".cmi");
+                    d.write();
+                    co_await reply("PATHNAME " + module + ".cmi");
+                    /*if (auto it = cmi_map.find(module); it != cmi_map.end()) {
+                        co_await reply("PATHNAME " + it->second.string());
+                    } else {
+                        co_await reply("ERROR 'no such module: " + module + "'");
+                    }*/
+                } else if (line.starts_with("MODULE-COMPILED")) {
+                    d.write();
+                    co_await reply("OK"); // could be any string actually
+                }
+                /*
+                "INCLUDE-TRANSLATE"
+                "INVOKE"
+                */
+            }
+        }
+    }
+    boost::asio::awaitable<void> process_scan(auto socket) {
+        using namespace boost::asio;
+        auto reply = [&socket](std::string s) {
+            s += "\n";
+            return async_write(socket, buffer(s), use_awaitable);
+        };
+        struct data {
+            path out;
+            String source;
+            String export_module;
+            Strings import_modules;
+
+            ~data() {
+                write();
+            }
+            void write() {
+                // follow msvc here
+                nlohmann::json j;
+                j["Version"] = "1.1";
+                auto &jd = j["Data"];
+                jd["Source"] = source;
+                jd["ProvidedModule"] = export_module;
+                jd["ImportedModules"] = import_modules;
+                jd["ImportedHeaderUnits"] = Strings{};
+                write_file(out, j.dump());
+            }
+        } d;
+        std::string module;
+        while (1) {
+            std::string buf;
+            co_await async_read_until(socket, dynamic_buffer(buf, 1024), "\n", use_awaitable);
+            auto lines = split_lines(buf);
+            for (auto &&line : lines) {
+                if (line.starts_with("HELLO")) {
+                    auto parts = split_string(line, " '"); // hello,ver,prog,ident,;
+                    auto parts2 = split_string(parts[3], ":");
+                    d.source = parts2[0];
+                    d.out = parts2[1];
+                    co_await reply("HELLO 1 sw ;");
+                } else if (line.starts_with("MODULE-REPO")) {
+                    co_await reply("PATHNAME .");
+                } else if (line.starts_with("MODULE-EXPORT")) {
+                    module = split_string(line, " ")[1]; // module,name
+                    //cmi_map[module] = module + ".cmi";
+                    d.export_module = module;
+                    d.write();
+                    co_await reply("PATHNAME " + module + ".cmi");
+                } else if (line.starts_with("MODULE-IMPORT")) {
+                    auto module = split_string(line, " ")[1]; // module,name
+                    d.import_modules.push_back(module);
+                    d.write();
+                    co_await reply("PATHNAME " + module + ".cmi");
+                } else {
+                    throw SW_RUNTIME_ERROR("Unknown command:" + line);
+                }
+
+                /*
+                "INCLUDE-TRANSLATE"
+                "INVOKE"
+                */
             }
         }
     }

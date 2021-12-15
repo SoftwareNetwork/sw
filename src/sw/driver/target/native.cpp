@@ -3528,7 +3528,7 @@ void NativeCompiledTarget::prepare_pass5()
                     cmd2->addOutput(p);
                     cmd2->module_mapper_identity = p;
                     cmd2->arguments.push_back("-fmodules-ts");
-                    cmd2->arguments.push_back("-fmodule-mapper=:::55556?" + cmd2->module_mapper_identity);
+                    cmd2->arguments.push_back("-fmodule-mapper=:::55556?" + f->file.string() + ":" + cmd2->module_mapper_identity);
                     cmd2->name = "[" + getPackage().toString() + "]/[analyze_modules]/" + f->file.filename().string();
                     registerCommand(*cmd2);
 
@@ -3537,7 +3537,7 @@ void NativeCompiledTarget::prepare_pass5()
                         auto p = path{out} += ".ifc.json";
                         c->getCommand(*this)->msvc_modules_file = p;
                         c->getCommand(*this)->arguments.push_back("-fmodules-ts");
-                        cmd2->arguments.push_back("-fmodule-mapper=:::55555");
+                        c->getCommand(*this)->arguments.push_back("-fmodule-mapper=:::55555?" + f->file.string() + ":" + p.string());
                     }
                 }
             }
