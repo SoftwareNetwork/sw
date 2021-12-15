@@ -125,6 +125,16 @@ static Files process_deps_gnu(builder::Command &c, const path &deps_file)
 
     auto f = read_file(deps_file);
 
+    // take only first output
+    // other outputs may contain same .o but for c++ modules
+    {
+        static const std::regex r{"\n\\w"};
+        std::smatch m;
+        if (std::regex_search(f, m, r)) {
+            f = m.prefix().str();
+        }
+    }
+
     // skip target
     //  use exactly ": " because on windows target is 'C:/path/to/file: '
     //                                           skip up to this space ^
@@ -604,6 +614,7 @@ bool Command::beforeCommand()
         return false;
     }
 
+    //if (isExecuted() || executed_.exchange(true))
     if (isExecuted())
         throw std::logic_error("Trying to execute command twice: " + getName());
 

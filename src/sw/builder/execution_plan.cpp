@@ -31,40 +31,71 @@ namespace sw
 {
 
 struct gcc_modules_server {
+    struct command_data {
+        builder::Command *cmd;
+        bool active{false};
+        String export_module;
+        Strings import_modules;
+    };
+    struct dir_data {
+        // object file -> data
+        std::unordered_map<path, command_data> cmds;
+    };
+
     const ExecutionPlan::VecT &cmds;
     std::jthread t;
     boost::asio::io_context ctx;
-    //boost::asio::io_context::work dummy{ctx};
     std::unordered_map<std::string, path> cmi_map;
     std::unordered_map<std::string, std::set<boost::asio::ip::tcp::socket*>> cmi_requests;
+    // [catalog][ident] = cmd
+    std::unordered_map<path, std::unordered_map<std::string, builder::Command *>> commands;
 
     ~gcc_modules_server() {
         ctx.stop();
     }
     void run() {
-        boost::asio::co_spawn(ctx, accept(), boost::asio::detached);
+        boost::asio::co_spawn(ctx, accept(55555), boost::asio::detached);
+        boost::asio::co_spawn(ctx, accept(55556, true), boost::asio::detached);
         t = std::jthread{[this](){
             try {
                 ctx.run();
             } catch (...) {}
         }};
     }
-    boost::asio::awaitable<void> accept() {
+    builder::Command *get_command(auto &&id) {
+        if (cmds.empty())
+            return nullptr;
+        if (commands.empty()) {
+            for (auto &&p : cmds) {
+                auto c = dynamic_cast<builder::Command *>(p);
+                if (!c->module_mapper_identity.empty())
+                    commands[path{c->module_mapper_identity}.parent_path()][c->module_mapper_identity] = c;
+            }
+        }
+        auto cat = path{id}.parent_path();
+        auto it = commands[cat].find(id);
+        if (it == commands[cat].end()) {
+            throw SW_RUNTIME_ERROR("cannot find command by ident: "s + id);
+        }
+        return it->second;
+    }
+    boost::asio::awaitable<void> accept(auto port, bool scan = false) {
         using tcp = boost::asio::ip::tcp;
-        tcp::acceptor acceptor(ctx, tcp::endpoint(tcp::v6(), 55555));
+        tcp::acceptor acceptor(ctx, tcp::endpoint(tcp::v6(), port));
         while (1) {
             auto sock = co_await acceptor.async_accept(boost::asio::use_awaitable);
             boost::asio::co_spawn(ctx, process(std::move(sock)), boost::asio::detached);
         }
     }
-    boost::asio::awaitable<void> process(auto socket) {
+    boost::asio::awaitable<void> process(auto socket, bool scan) {
         using namespace boost::asio;
         auto reply = [&socket](std::string s) {
             s += "\n";
             return async_write(socket, buffer(s), use_awaitable);
         };
-        ExecutionPlan::PtrT this_command;
-        path cmi;
+        builder::Command *this_command;
+        path dir;
+        path obj;
         std::string module;
         while (1) {
             std::string buf;
@@ -73,28 +104,31 @@ struct gcc_modules_server {
             for (auto &&line : lines) {
                 if (line.starts_with("HELLO")) {
                     auto parts = split_string(line, " "); // hello,ver,prog,ident,;
-                    cmi = parts[3];
-                    cmi += ".cmi";
-                    co_await reply("HELLO 1 gcc ;");
+                    obj = parts[3];
+                    dir = obj.parent_path();
+                    this_command = get_command(parts[3]);
+                    co_await reply("HELLO 1 sw ;");
                 } else if (line.starts_with("MODULE-REPO")) {
-                    co_await reply("MODULE-REPO");
+                    co_await reply("PATHNAME .");
                 } else if (line.starts_with("MODULE-EXPORT")) {
                     module = split_string(line, " ")[1]; // module,name
-                    co_await reply("PATHNAME " + cmi.string());
+                    co_await reply("PATHNAME " + module + ".cmi");
                 } else if (line.starts_with("MODULE-IMPORT")) {
                     auto module = split_string(line, " ")[1]; // module,name
+                    this_command->addImplicitInput(dir / (module + ".cmi"));
                     if (auto it = cmi_map.find(module); it != cmi_map.end()) {
                         co_await reply("PATHNAME " + it->second.string());
                     } else {
                         cmi_requests[module].insert(&socket);
                     }
                 } else if (line.starts_with("MODULE-COMPILED")) {
-                    cmi_map[module] = cmi;
-                    co_await reply("OK");
+                    cmi_map[module] = module + ".cmi";
+                    co_await reply("OK"); // could be any string actually
                     for (auto &&r : cmi_requests[module]) {
-                        std::string s = "PATHNAME " + cmi.string() + "\n";
+                        std::string s = "PATHNAME " + module + ".cmi" + "\n";
                         async_write(*r, buffer(s), detached);
                     }
+                    cmi_requests[module].clear();
                 }
 
     /*
@@ -143,9 +177,6 @@ void ExecutionPlan::execute(Executor &e) const
     if (commands.empty())
         return;
 
-    gcc_modules_server s{commands};
-    s.run();
-
     std::mutex m;
     std::vector<Future<void>> fs;
     std::vector<Future<void>> all;
@@ -153,6 +184,8 @@ void ExecutionPlan::execute(Executor &e) const
     interrupted = false;
     std::atomic_int running = 0;
     std::atomic_int64_t askip_errors = skip_errors;
+    gcc_modules_server s{commands};
+    bool has_modules = false;
 
     bool build_commands = dynamic_cast<builder::Command *>(*commands.begin());
 
@@ -169,9 +202,12 @@ void ExecutionPlan::execute(Executor &e) const
             static_cast<builder::Command*>(c)->show_output |= show_output;
             static_cast<builder::Command*>(c)->write_output_to_file |= write_output_to_file;
             static_cast<builder::Command*>(c)->always |= build_always;
+            has_modules |= !static_cast<builder::Command*>(c)->module_mapper_identity.empty();
         }
         //c->markForExecution();
     }
+    if (has_modules)
+        s.run();
 
     std::function<void(PtrT)> run;
     run = [this, &askip_errors, &e, &run, &fs, &all, &m, &running, &stopped](T *c)

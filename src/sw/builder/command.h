@@ -178,6 +178,7 @@ public:
     path deps_module; // custom processor
     String deps_function; // custom processor
     path deps_file; // gnu
+    String module_mapper_identity;
     path msvc_modules_file;
     String msvc_prefix; // msvc
     //ImplicitDependenciesProcessor implicit_dependencies_processor;
@@ -238,6 +239,7 @@ public:
 protected:
     bool prepared = false;
     bool executed_ = false;
+    //std::atomic_bool executed_ = false;
 
     virtual bool check_if_file_newer(const path &, const String &what, bool throw_on_missing) const;
 

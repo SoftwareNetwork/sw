@@ -3433,10 +3433,11 @@ void NativeCompiledTarget::prepare_pass5()
                 c->VisibilityHidden = false;
         };
 
+        auto huit = HeaderUnits.find(f->file);
+        bool hu = huit != HeaderUnits.end();
+
         if (auto c = f->compiler->as<VisualStudioCompiler*>())
         {
-            auto huit = HeaderUnits.find(f->file);
-            bool hu = huit != HeaderUnits.end();
             if (UseModules && !hu)
             {
                 c->UseModules = UseModules;
@@ -3451,6 +3452,7 @@ void NativeCompiledTarget::prepare_pass5()
 
             vs_setup(f, c);
 
+            // add scan command
             if (UseModules && !hu)
             {
                 auto pp_command = f->compiler->clone();
@@ -3487,8 +3489,8 @@ void NativeCompiledTarget::prepare_pass5()
                     c->HeaderNameAngle = true;
                 if (!huit->second.angle)
                     c->HeaderNameQuote = true;
-                c->getCommand(*this)->working_directory = getBinaryParentDir() / "obj";
-                c->getCommand(*this)->addOutput( getBinaryParentDir() / "obj" / huit->second.fn.filename() += ".ifc");
+                c->getCommand(*this)->working_directory = getBinaryParentDir() / "obj"; // set already?
+                c->getCommand(*this)->addOutput(getBinaryParentDir() / "obj" / huit->second.fn.filename() += ".ifc");
                 f->fancy_name = c->getCommand(*this)->name = "[" + getPackage().toString() + "]/[header_unit]/" + f->file.filename().string();
             }
         }
@@ -3503,14 +3505,42 @@ void NativeCompiledTarget::prepare_pass5()
         }
         else if (auto c = f->compiler->as<GNUCompiler*>())
         {
+            gnu_setup(f, c);
+
             if (UseModules)
             {
-                c->getCommand(*this)->arguments.push_back("-fmodules-ts");
-                //c->getCommand(*this)->arguments.push_back("-fmodule-mapper=:::55555?" + f->file.string());
-                //c->getCommand(*this)->arguments.push_back("-fmodule-mapper=:::55555?" + std::to_string((int64_t)c->getCommand(*this).get()));
-                c->getCommand(*this)->arguments.push_back("-fmodule-mapper=:::55555?" + c->OutputFile().string());
+                // add scan command
+                if (!hu)
+                {
+                    auto pp_command = f->compiler->clone();
+                    auto pp_command2 = (GNUCompiler&)*pp_command;
+
+                    pp_command2.CompileWithoutLinking = false;
+                    pp_command2.Preprocess = true;
+
+                    // setup
+                    auto out = pp_command2.OutputFile();
+                    auto p = path{out} += ".ifc.scan.json";
+                    pp_command2.OutputFile = path{out} += ".pp";
+                    ifcdeps.insert(p);
+
+                    auto cmd2 = pp_command2.getCommand(*this);
+                    cmd2->addOutput(p);
+                    cmd2->module_mapper_identity = p;
+                    cmd2->arguments.push_back("-fmodules-ts");
+                    cmd2->arguments.push_back("-fmodule-mapper=:::55556?" + cmd2->module_mapper_identity);
+                    cmd2->name = "[" + getPackage().toString() + "]/[analyze_modules]/" + f->file.filename().string();
+                    registerCommand(*cmd2);
+
+                    // after 2nd command setup
+                    {
+                        auto p = path{out} += ".ifc.json";
+                        c->getCommand(*this)->msvc_modules_file = p;
+                        c->getCommand(*this)->arguments.push_back("-fmodules-ts");
+                        cmd2->arguments.push_back("-fmodule-mapper=:::55555");
+                    }
+                }
             }
-            gnu_setup(f, c);
         }
     }
     if (UseModules)
@@ -3519,12 +3549,16 @@ void NativeCompiledTarget::prepare_pass5()
         std::unordered_map<path, std::shared_ptr<builder::Command>> cmds;
         for (auto &f : files)
         {
+            auto huit = HeaderUnits.find(f->file);
+            bool hu = huit != HeaderUnits.end();
+            if (hu)
+                continue;
             if (auto c = f->compiler->as<VisualStudioCompiler *>())
             {
-                auto huit = HeaderUnits.find(f->file);
-                bool hu = huit != HeaderUnits.end();
-                if (hu)
-                    continue;
+                cmds[lowercase_filename(normalize_path(f->file))] = c->getCommand(*this);
+            }
+            else if (auto c = f->compiler->as<GNUCompiler *>())
+            {
                 cmds[lowercase_filename(normalize_path(f->file))] = c->getCommand(*this);
             }
         }
@@ -3602,10 +3636,17 @@ void NativeCompiledTarget::prepare_pass5()
 
         for (auto &f : files)
         {
+            auto huit = HeaderUnits.find(f->file);
+            bool hu = huit != HeaderUnits.end();
             if (auto c2 = f->compiler->as<VisualStudioCompiler *>())
             {
-                auto huit = HeaderUnits.find(f->file);
-                bool hu = huit != HeaderUnits.end();
+                if (hu)
+                    c->dependencies.insert(c2->getCommand(*this));
+                else
+                    c2->getCommand(*this)->dependencies.insert(c);
+            }
+            else if (auto c2 = f->compiler->as<GNUCompiler *>())
+            {
                 if (hu)
                     c->dependencies.insert(c2->getCommand(*this));
                 else

@@ -196,7 +196,8 @@ void File::setGenerator(const std::shared_ptr<builder::Command> &g, bool ignore_
         err += "Setting generator twice on file: " + to_string(file) + "\n";
         if (gold)
         {
-            err += "first generator:\n " + gold->print() + "\n";
+            err += "first generator:\n " + gold->name + "\n";
+            err += " " + gold->print() + "\n";
             err += "first generator hash:\n " + std::to_string(gold->getHash());
         }
         else
@@ -204,7 +205,8 @@ void File::setGenerator(const std::shared_ptr<builder::Command> &g, bool ignore_
         err += "\n";
         if (g)
         {
-            err += "second generator:\n " + g->print() + "\n";
+            err += "second generator:\n " + g->name + "\n";
+            err += " " + g->print() + "\n";
             err += "second generator hash:\n " + std::to_string(g->getHash());
         }
         else
