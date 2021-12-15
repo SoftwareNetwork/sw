@@ -3356,6 +3356,7 @@ void NativeCompiledTarget::prepare_pass5()
 
     // merge file compiler options with target compiler options
     Files ifcdeps;
+    Commands gnu_analyze_commands;
     for (auto &f : files)
     {
         // set everything before merge!
@@ -3517,7 +3518,6 @@ void NativeCompiledTarget::prepare_pass5()
 
                     pp_command2.CompileWithoutLinking = false;
                     pp_command2.Preprocess = true;
-                    pp_command2.WriteDependenciesNearOutput = false;
 
                     // setup
                     auto out = pp_command2.OutputFile();
@@ -3531,14 +3531,26 @@ void NativeCompiledTarget::prepare_pass5()
                     cmd2->arguments.push_back("-fmodule-mapper=:::55556?" + f->file.string() + ":" + p.string());
                     cmd2->name = "[" + getPackage().toString() + "]/[analyze_modules]/" + f->file.filename().string();
                     registerCommand(*cmd2);
+                    gnu_analyze_commands.insert(cmd2);
 
                     // after 2nd command setup
                     {
+                        c->Language = "c++";
                         auto p = path{out} += ".ifc.json";
                         c->getCommand(*this)->msvc_modules_file = p;
                         c->getCommand(*this)->arguments.push_back("-fmodules-ts");
                         c->getCommand(*this)->arguments.push_back("-fmodule-mapper=:::55555?" + f->file.string() + ":" + p.string());
                     }
+                }
+                else
+                {
+                    c->OutputFile.output_dependency = false;
+                    c->Language = "c++-header";
+                    auto cmd2 = c->getCommand(*this);
+                    cmd2->addOutput(c->OutputFile().parent_path() / "gcm.cache" / ("." + c->InputFile().string() + ".gcm"));
+                    cmd2->arguments.push_back("-fmodules-ts");
+                    //cmd2->arguments.push_back("-fmodule-mapper=:::55556?" + f->file.string() + ":" + p.string());
+                    cmd2->name = f->fancy_name = c->getCommand(*this)->name = "[" + getPackage().toString() + "]/[header_unit]/" + f->file.filename().string();
                 }
             }
         }
@@ -3657,10 +3669,10 @@ void NativeCompiledTarget::prepare_pass5()
         {
             for (auto &f : files)
             {
+                auto huit = HeaderUnits.find(f->file);
+                bool hu2 = huit != HeaderUnits.end();
                 if (auto c2 = f->compiler->as<VisualStudioCompiler *>())
                 {
-                    auto huit = HeaderUnits.find(f->file);
-                    bool hu2 = huit != HeaderUnits.end();
                     if (hu2)
                         continue;
                     String s = "/headerUnit:";
@@ -3672,6 +3684,14 @@ void NativeCompiledTarget::prepare_pass5()
                     c2->getCommand(*this)->arguments.push_back(
                         normalize_path(hu.fn).string() + "="
                         + normalize_path(getBinaryParentDir() / "obj" / hu.fn.filename() += ".ifc").string());
+                }
+                else if (auto c2 = f->compiler->as<GNUCompiler *>())
+                {
+                    if (hu2)
+                    {
+                        for (auto &&c : gnu_analyze_commands)
+                            c->dependencies.insert(c2->getCommand(*this));
+                    }
                 }
             }
         }

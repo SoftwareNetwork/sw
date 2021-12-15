@@ -31,8 +31,8 @@ namespace sw
 {
 
 struct gcc_modules_server {
-    std::jthread t;
     boost::asio::io_context ctx;
+    std::jthread t;
 
     ~gcc_modules_server() {
         ctx.stop();
@@ -56,7 +56,9 @@ struct gcc_modules_server {
     }
     boost::asio::awaitable<void> process2(auto socket) {
         using namespace boost::asio;
-        auto reply = [&socket](std::string s) {
+        auto reply = [&socket](auto &&line, std::string s) {
+            if (line.ends_with(';'))
+                s += " ;";
             s += "\n";
             return async_write(socket, buffer(s), use_awaitable);
         };
@@ -65,10 +67,8 @@ struct gcc_modules_server {
             String source;
             String export_module;
             std::unordered_map<String, path> import_modules;
+            std::unordered_map<String, path> header_units;
 
-            ~data() {
-                write();
-            }
             void write() {
                 // follow msvc here
                 nlohmann::json j;
@@ -82,11 +82,15 @@ struct gcc_modules_server {
                     m["BMI"] = p;
                     jd["ImportedModules"].push_back(m);
                 }
-                jd["ImportedHeaderUnits"] = Strings{};
+                for (auto &&[n,p] : header_units) {
+                    nlohmann::json m;
+                    m["Name"] = n;
+                    m["BMI"] = p;
+                    jd["ImportedHeaderUnits"].push_back(m);
+                }
                 write_file(out, j.dump());
             }
         } d;
-        path dir;
         while (1) {
             std::string buf;
             co_await async_read_until(socket, dynamic_buffer(buf, 1024), "\n", use_awaitable);
@@ -97,21 +101,30 @@ struct gcc_modules_server {
                     auto parts2 = split_string(parts[3], ":");
                     d.source = parts2[0];
                     d.out = parts2[1];
-                    co_await reply("HELLO 1 sw ;");
+                    co_await reply(line, "HELLO 1 sw");
                 } else if (line.starts_with("MODULE-REPO")) {
-                    co_await reply("PATHNAME .");
+                    co_await reply(line, "PATHNAME .");
                 } else if (line.starts_with("MODULE-EXPORT")) {
                     auto module = split_string(line, " ")[1]; // module,name
                     d.export_module = module;
-                    co_await reply("PATHNAME " + module + ".cmi");
+                    co_await reply(line, "PATHNAME " + module + ".cmi");
                 } else if (line.starts_with("MODULE-IMPORT")) {
                     auto module = split_string(line, " ")[1]; // module,name
-                    d.import_modules[module] = d.out.parent_path() / (module + ".cmi");
+                    bool header = path{module}.is_absolute();
+                    if (header)
+                        d.header_units[module] = d.out.parent_path() / "gcm.cache" / ("." + module + ".gcm");
+                    else
+                        d.import_modules[module] = d.out.parent_path() / (module + ".cmi");
                     d.write();
-                    co_await reply("PATHNAME " + module + ".cmi");
+                    if (header)
+                        co_await reply(line, "PATHNAME gcm.cache/." + module + ".gcm");
+                    else
+                        co_await reply(line, "PATHNAME " + module + ".cmi");
                 } else if (line.starts_with("MODULE-COMPILED")) {
                     d.write();
-                    co_await reply("OK"); // could be any string actually
+                    co_await reply(line, "OK"); // could be any string actually
+                } else {
+                    co_await reply(line, "ERROR 'Unknown command: " + line + "'");
                 }
                 /*
                 "INCLUDE-TRANSLATE"
@@ -122,7 +135,9 @@ struct gcc_modules_server {
     }
     boost::asio::awaitable<void> process_scan(auto socket) {
         using namespace boost::asio;
-        auto reply = [&socket](std::string s) {
+        auto reply = [&socket](auto &&line, std::string s) {
+            if (line.ends_with(';'))
+                s += " ;";
             s += "\n";
             return async_write(socket, buffer(s), use_awaitable);
         };
@@ -131,10 +146,8 @@ struct gcc_modules_server {
             String source;
             String export_module;
             Strings import_modules;
+            Strings header_units;
 
-            ~data() {
-                write();
-            }
             void write() {
                 // follow msvc here
                 nlohmann::json j;
@@ -143,7 +156,7 @@ struct gcc_modules_server {
                 jd["Source"] = source;
                 jd["ProvidedModule"] = export_module;
                 jd["ImportedModules"] = import_modules;
-                jd["ImportedHeaderUnits"] = Strings{};
+                jd["ImportedHeaderUnits"] = header_units;
                 write_file(out, j.dump());
             }
         } d;
@@ -158,21 +171,28 @@ struct gcc_modules_server {
                     auto parts2 = split_string(parts[3], ":");
                     d.source = parts2[0];
                     d.out = parts2[1];
-                    co_await reply("HELLO 1 sw ;");
+                    co_await reply(line, "HELLO 1 sw");
                 } else if (line.starts_with("MODULE-REPO")) {
-                    co_await reply("PATHNAME .");
+                    co_await reply(line, "PATHNAME .");
                 } else if (line.starts_with("MODULE-EXPORT")) {
                     module = split_string(line, " ")[1]; // module,name
                     d.export_module = module;
                     d.write();
-                    co_await reply("PATHNAME " + module + ".cmi");
+                    co_await reply(line, "PATHNAME " + module + ".cmi");
                 } else if (line.starts_with("MODULE-IMPORT")) {
                     auto module = split_string(line, " ")[1]; // module,name
-                    d.import_modules.push_back(module);
+                    bool header = path{module}.is_absolute();
+                    if (header)
+                        d.header_units.push_back(module);
+                    else
+                        d.import_modules.push_back(module);
                     d.write();
-                    co_await reply("PATHNAME " + module + ".cmi");
+                    if (header)
+                        co_await reply(line, "PATHNAME gcm.cache/." + module + ".gcm");
+                    else
+                        co_await reply(line, "PATHNAME " + module + ".cmi");
                 } else {
-                    throw SW_RUNTIME_ERROR("Unknown command:" + line);
+                    co_await reply(line, "ERROR 'Unknown command: " + line + "'");
                 }
                 /*
                 "INCLUDE-TRANSLATE"

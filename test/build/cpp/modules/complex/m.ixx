@@ -10,8 +10,8 @@ void f() {
     MyFunc();
 }
 
-__declspec(dllexport) void exp1(){}
-export __declspec(dllexport) void exp2(){}
+MY_API void exp1(){}
+export MY_API void exp2(){}
 
 
 export void ggg2(){}
