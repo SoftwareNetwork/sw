@@ -52,6 +52,22 @@ DECLARE_STATIC_LOGGER(logger, "command");
 namespace sw
 {
 
+nlohmann::json builder::Command::msvc_modulus_scan_data::get() const {
+    // follow msvc here
+    nlohmann::json j;
+    j["Version"] = "1.1";
+    auto &jd = j["Data"];
+    jd["Source"] = source;
+    jd["ProvidedModule"] = export_module;
+    jd["ImportedModules"] = import_modules;
+    jd["ImportedHeaderUnits"] = header_units;
+    return j;
+}
+
+void builder::Command::msvc_modulus_scan_data::write() const {
+    write_file(out, get().dump());
+}
+
 static Files process_deps_msvc(builder::Command &c)
 {
     // deps are placed into command output,

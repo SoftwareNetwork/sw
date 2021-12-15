@@ -111,9 +111,9 @@ struct gcc_modules_server {
                 } else if (line.starts_with("MODULE-IMPORT")) {
                     auto module = split_string(line, " ")[1]; // module,name
                     bool header = path{module}.is_absolute();
-                    if (header)
+                    if (header) {
                         d.header_units[module] = d.out.parent_path() / "gcm.cache" / ("." + module + ".gcm");
-                    else
+                    } else
                         d.import_modules[module] = d.out.parent_path() / (module + ".cmi");
                     d.write();
                     if (header)
@@ -141,25 +141,7 @@ struct gcc_modules_server {
             s += "\n";
             return async_write(socket, buffer(s), use_awaitable);
         };
-        struct data {
-            path out;
-            String source;
-            String export_module;
-            Strings import_modules;
-            Strings header_units;
-
-            void write() {
-                // follow msvc here
-                nlohmann::json j;
-                j["Version"] = "1.1";
-                auto &jd = j["Data"];
-                jd["Source"] = source;
-                jd["ProvidedModule"] = export_module;
-                jd["ImportedModules"] = import_modules;
-                jd["ImportedHeaderUnits"] = header_units;
-                write_file(out, j.dump());
-            }
-        } d;
+        builder::Command::msvc_modulus_scan_data d;
         std::string module;
         while (1) {
             std::string buf;

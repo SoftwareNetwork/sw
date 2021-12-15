@@ -20,6 +20,7 @@
 
 #include "node.h"
 
+#include <nlohmann/json_fwd.hpp>
 #include <primitives/command.h>
 #include <primitives/executor.h>
 
@@ -132,6 +133,16 @@ struct SW_BUILDER_API Command : ICastable, CommandNode, detail::ResolvableComman
         Gnu,
         Msvc,
         Custom,
+    };
+    struct msvc_modulus_scan_data {
+        String source;
+        String export_module;
+        Strings import_modules;
+        Strings header_units;
+        path out;
+
+        nlohmann::json get() const;
+        void write() const;
     };
 
 public:

@@ -3524,6 +3524,10 @@ void NativeCompiledTarget::prepare_pass5()
                     auto p = path{out} += ".ifc.scan.json";
                     pp_command2.OutputFile = path{out} += ".pp";
                     ifcdeps.insert(p);
+                    builder::Command::msvc_modulus_scan_data sd{c->InputFile().string()};
+                    // write in advance. No import/export files will call no module mapper
+                    if (!fs::exists(p))
+                        write_file(p, sd.get().dump());
 
                     auto cmd2 = pp_command2.getCommand(*this);
                     cmd2->addOutput(p);
