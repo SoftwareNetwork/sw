@@ -178,7 +178,7 @@ public:
     path deps_module; // custom processor
     String deps_function; // custom processor
     path deps_file; // gnu
-    String module_mapper_identity;
+    //String module_mapper_identity;
     path msvc_modules_file;
     String msvc_prefix; // msvc
     //ImplicitDependenciesProcessor implicit_dependencies_processor;

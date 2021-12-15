@@ -3517,6 +3517,7 @@ void NativeCompiledTarget::prepare_pass5()
 
                     pp_command2.CompileWithoutLinking = false;
                     pp_command2.Preprocess = true;
+                    pp_command2.WriteDependenciesNearOutput = false;
 
                     // setup
                     auto out = pp_command2.OutputFile();
@@ -3526,9 +3527,8 @@ void NativeCompiledTarget::prepare_pass5()
 
                     auto cmd2 = pp_command2.getCommand(*this);
                     cmd2->addOutput(p);
-                    cmd2->module_mapper_identity = p;
                     cmd2->arguments.push_back("-fmodules-ts");
-                    cmd2->arguments.push_back("-fmodule-mapper=:::55556?" + f->file.string() + ":" + cmd2->module_mapper_identity);
+                    cmd2->arguments.push_back("-fmodule-mapper=:::55556?" + f->file.string() + ":" + p.string());
                     cmd2->name = "[" + getPackage().toString() + "]/[analyze_modules]/" + f->file.filename().string();
                     registerCommand(*cmd2);
 

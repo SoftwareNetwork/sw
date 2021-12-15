@@ -31,26 +31,8 @@ namespace sw
 {
 
 struct gcc_modules_server {
-    struct command_data {
-        builder::Command *cmd;
-        bool active{false};
-        String export_module;
-        Strings import_modules;
-    };
-    struct dir_data {
-        // object file -> data
-        std::unordered_map<path, command_data> cmds;
-        // module -> .cmi
-        std::unordered_map<std::string, path> cmi_map;
-    };
-
-    const ExecutionPlan::VecT &cmds;
     std::jthread t;
     boost::asio::io_context ctx;
-    std::unordered_map<std::string, std::set<boost::asio::ip::tcp::socket*>> cmi_requests;
-    // [catalog][ident] = cmd
-    std::unordered_map<path, std::unordered_map<std::string, builder::Command *>> commands;
-    std::unordered_map<path, dir_data> per_dir_data;
 
     ~gcc_modules_server() {
         ctx.stop();
@@ -64,80 +46,12 @@ struct gcc_modules_server {
             } catch (...) {}
         }};
     }
-    builder::Command *get_command(auto &&id) {
-        if (cmds.empty())
-            return nullptr;
-        if (commands.empty()) {
-            for (auto &&p : cmds) {
-                auto c = dynamic_cast<builder::Command *>(p);
-                if (!c->module_mapper_identity.empty())
-                    commands[path{c->module_mapper_identity}.parent_path()][c->module_mapper_identity] = c;
-            }
-        }
-        auto cat = path{id}.parent_path();
-        auto it = commands[cat].find(id);
-        if (it == commands[cat].end()) {
-            throw SW_RUNTIME_ERROR("cannot find command by ident: "s + id);
-        }
-        return it->second;
-    }
     boost::asio::awaitable<void> accept(auto port, bool scan = false) {
         using tcp = boost::asio::ip::tcp;
         tcp::acceptor acceptor(ctx, tcp::endpoint(tcp::v6(), port));
         while (1) {
             auto sock = co_await acceptor.async_accept(boost::asio::use_awaitable);
             boost::asio::co_spawn(ctx, scan ? process_scan(std::move(sock)) : process2(std::move(sock)), boost::asio::detached);
-        }
-    }
-    boost::asio::awaitable<void> process(auto socket) {
-        using namespace boost::asio;
-        auto reply = [&socket](std::string s) {
-            s += "\n";
-            return async_write(socket, buffer(s), use_awaitable);
-        };
-        builder::Command *this_command;
-        path dir;
-        path obj;
-        std::string module;
-        while (1) {
-            std::string buf;
-            co_await async_read_until(socket, dynamic_buffer(buf, 1024), "\n", use_awaitable);
-            auto lines = split_lines(buf);
-            for (auto &&line : lines) {
-                if (line.starts_with("HELLO")) {
-                    auto parts = split_string(line, " "); // hello,ver,prog,ident,;
-                    obj = parts[3];
-                    dir = obj.parent_path();
-                    this_command = get_command(parts[3]);
-                    co_await reply("HELLO 1 sw ;");
-                } else if (line.starts_with("MODULE-REPO")) {
-                    co_await reply("PATHNAME .");
-                } else if (line.starts_with("MODULE-EXPORT")) {
-                    module = split_string(line, " ")[1]; // module,name
-                    co_await reply("PATHNAME " + module + ".cmi");
-                } else if (line.starts_with("MODULE-IMPORT")) {
-                    auto module = split_string(line, " ")[1]; // module,name
-                    this_command->addImplicitInput(dir / (module + ".cmi"));
-                    /*if (auto it = cmi_map.find(module); it != cmi_map.end()) {
-                        co_await reply("PATHNAME " + it->second.string());
-                    } else {
-                        cmi_requests[module].insert(&socket);
-                    }*/
-                } else if (line.starts_with("MODULE-COMPILED")) {
-                    //cmi_map[module] = module + ".cmi";
-                    co_await reply("OK"); // could be any string actually
-                    for (auto &&r : cmi_requests[module]) {
-                        std::string s = "PATHNAME " + module + ".cmi" + "\n";
-                        async_write(*r, buffer(s), detached);
-                    }
-                    cmi_requests[module].clear();
-                }
-
-                /*
-                "INCLUDE-TRANSLATE"
-                "INVOKE"
-                */
-            }
         }
     }
     boost::asio::awaitable<void> process2(auto socket) {
@@ -195,11 +109,6 @@ struct gcc_modules_server {
                     d.import_modules[module] = d.out.parent_path() / (module + ".cmi");
                     d.write();
                     co_await reply("PATHNAME " + module + ".cmi");
-                    /*if (auto it = cmi_map.find(module); it != cmi_map.end()) {
-                        co_await reply("PATHNAME " + it->second.string());
-                    } else {
-                        co_await reply("ERROR 'no such module: " + module + "'");
-                    }*/
                 } else if (line.starts_with("MODULE-COMPILED")) {
                     d.write();
                     co_await reply("OK"); // could be any string actually
@@ -254,7 +163,6 @@ struct gcc_modules_server {
                     co_await reply("PATHNAME .");
                 } else if (line.starts_with("MODULE-EXPORT")) {
                     module = split_string(line, " ")[1]; // module,name
-                    //cmi_map[module] = module + ".cmi";
                     d.export_module = module;
                     d.write();
                     co_await reply("PATHNAME " + module + ".cmi");
@@ -266,7 +174,6 @@ struct gcc_modules_server {
                 } else {
                     throw SW_RUNTIME_ERROR("Unknown command:" + line);
                 }
-
                 /*
                 "INCLUDE-TRANSLATE"
                 "INVOKE"
@@ -320,8 +227,8 @@ void ExecutionPlan::execute(Executor &e) const
     interrupted = false;
     std::atomic_int running = 0;
     std::atomic_int64_t askip_errors = skip_errors;
-    gcc_modules_server s{commands};
-    bool has_modules = false;
+    gcc_modules_server s;
+    s.run();
 
     bool build_commands = dynamic_cast<builder::Command *>(*commands.begin());
 
@@ -338,12 +245,9 @@ void ExecutionPlan::execute(Executor &e) const
             static_cast<builder::Command*>(c)->show_output |= show_output;
             static_cast<builder::Command*>(c)->write_output_to_file |= write_output_to_file;
             static_cast<builder::Command*>(c)->always |= build_always;
-            has_modules |= !static_cast<builder::Command*>(c)->module_mapper_identity.empty();
         }
         //c->markForExecution();
     }
-    if (has_modules)
-        s.run();
 
     std::function<void(PtrT)> run;
     run = [this, &askip_errors, &e, &run, &fs, &all, &m, &running, &stopped](T *c)
