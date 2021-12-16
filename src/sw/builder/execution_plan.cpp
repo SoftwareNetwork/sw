@@ -33,15 +33,25 @@ namespace sw
 struct gcc_modules_server {
     const ExecutionPlan &ep;
     boost::asio::io_context ctx;
-    std::jthread t;
+    std::jthread t_main;
+    std::jthread t_headers;
 
     ~gcc_modules_server() {
         ctx.stop();
     }
     void run() {
+        // compile handling
         boost::asio::co_spawn(ctx, accept(55555), boost::asio::detached);
+        // scan handling
         boost::asio::co_spawn(ctx, accept(55556, true), boost::asio::detached);
-        t = std::jthread{[this](){
+        // import header handling
+        boost::asio::co_spawn(ctx, accept(55557, true), boost::asio::detached);
+        t_main = std::jthread{[this](){
+            try {
+                ctx.run();
+            } catch (...) {}
+        }};
+        t_headers = std::jthread{[this](){
             try {
                 ctx.run();
             } catch (...) {}
@@ -125,7 +135,7 @@ struct gcc_modules_server {
                     d.write();
                     co_await reply(line, "OK"); // could be any string actually
                 } else {
-                    co_await reply(line, "ERROR 'Unknown command: " + line + "'");
+                    co_await reply(line, "ERROR 'Unknown command: " + line.substr(0, line.find(' ')) + "'");
                 }
                 /*
                 "INCLUDE-TRANSLATE"
@@ -139,9 +149,11 @@ struct gcc_modules_server {
         auto reply = [&socket](auto &&line, std::string s) {
             if (line.ends_with(';'))
                 s += " ;";
+            LOG_INFO(logger, "socket " << socket.native_handle() << "< " << s);
             s += "\n";
             return async_write(socket, buffer(s), use_awaitable);
         };
+        builder::Command *this_command{nullptr};
         builder::Command::msvc_modulus_scan_data d;
         std::string module;
         while (1) {
@@ -150,6 +162,7 @@ struct gcc_modules_server {
             auto lines = split_lines(buf);
             try {
                 for (auto &&line : lines) {
+                    LOG_INFO(logger, "socket " << socket.native_handle() << "> " << line);
                     if (line.starts_with("HELLO")) {
                         auto parts = split_string(line, " '"); // hello,ver,prog,ident,;
                         auto parts2 = split_string(parts[3], ":");
@@ -160,9 +173,17 @@ struct gcc_modules_server {
                         co_await reply(line, "PATHNAME .");
                     } else if (line.starts_with("MODULE-EXPORT")) {
                         module = split_string(line, " ")[1]; // module,name
-                        d.export_module = module;
-                        d.write();
-                        co_await reply(line, "PATHNAME " + module + ".cmi");
+                        bool header = path{module}.is_absolute();
+                        if (header) {
+                            d.export_module = module;
+                            d.write();
+                            co_await reply(line, "PATHNAME " + (d.out.parent_path() / d.out.stem().stem()).string() + ".gcm");
+                        }
+                        else {
+                            d.export_module = module;
+                            d.write();
+                            co_await reply(line, "PATHNAME " + module + ".cmi");
+                        }
                     } else if (line.starts_with("MODULE-IMPORT")) {
                         auto module = split_string(line, " ")[1]; // module,name
                         bool header = path{module}.is_absolute();
@@ -171,15 +192,16 @@ struct gcc_modules_server {
                             // we create import header immediately
                             auto fn = d.out.parent_path() / ("gcm.cache/." + module + ".gcm");
                             if (!fs::exists(fn)) {
-                                auto &cmds = ep.getCommands();
-                                auto it = std::ranges::find_if(cmds, [&d](auto &&v){ return static_cast<builder::Command*>(v)->outputs.contains(d.out); });
-                                if (it == cmds.end()) {
-                                    co_await reply(line, "ERROR 'Cannot find according command for import header'");
-                                    co_return;
+                                if (!this_command) {
+                                    auto &cmds = ep.getCommands();
+                                    auto it = std::ranges::find_if(cmds, [&d](auto &&v){ return static_cast<builder::Command*>(v)->outputs.contains(d.out); });
+                                    if (it == cmds.end()) {
+                                        co_await reply(line, "ERROR 'Cannot find according command for import header: " + module + "'");
+                                        co_return;
+                                    }
+                                    this_command = static_cast<builder::Command*>(*it);
                                 }
-
-                                auto &from = *static_cast<builder::Command*>(*it);
-
+                                auto &from = *this_command;
                                 auto cmd = std::make_shared<builder::Command>(from.getContext());
                                 auto &c = *cmd;
                                 c.working_directory = from.working_directory;
@@ -190,13 +212,19 @@ struct gcc_modules_server {
                                 for (int i = 0; auto &&a : from.arguments) {
                                     if (i++) {
                                         if (0
-                                            || a->toString().starts_with("-fmodule-ma")
                                             || a->toString().starts_with("-o")
                                             )
                                             continue;
+                                        if (a->toString().starts_with("-fmodule-mapper")) {
+                                            c.arguments.push_back(std::make_unique<primitives::command::SimpleArgument>(
+                                                "-fmodule-mapper=:::55557?"s + module + ":"
+                                                + d.out.parent_path().string() + "/gcm.cache" + module + ".ifc.json"));
+                                            continue;
+                                        }
                                         if (a->toString().starts_with("-E")) {
                                             c.arguments.push_back(std::make_unique<primitives::command::SimpleArgument>("-c"s));
                                             c.arguments.push_back(std::make_unique<primitives::command::SimpleArgument>("-xc++-header"s));
+                                            continue;
                                         }
                                         if (a->toString().starts_with("/"))
                                             c.arguments.push_back(std::make_unique<primitives::command::SimpleArgument>(module));
@@ -205,7 +233,8 @@ struct gcc_modules_server {
                                         continue;
                                     }
                                 }
-                                LOG_INFO(logger, "building import header " << fn << "\n" << c.print());
+                                LOG_INFO(logger, "building import header: " << fn);
+                                LOG_TRACE(logger, "import header command: " << fn << "\n" << c.print());
                                 c.execute();
                             }
                         }
@@ -216,15 +245,20 @@ struct gcc_modules_server {
                             co_await reply(line, "PATHNAME gcm.cache/." + module + ".gcm");
                         else
                             co_await reply(line, "PATHNAME " + module + ".cmi");
+                    } else if (line.starts_with("MODULE-COMPILED")) {
+                        co_await reply(line, "OK"); // could be any string actually
+                    } else if (line.starts_with("INCLUDE-TRANSLATE")) {
+                        co_await reply(line, "BOOL TRUE");
                     } else {
-                        co_await reply(line, "ERROR 'Unknown command: " + line + "'");
+                        co_await reply(line, "ERROR 'Unknown command: " + line.substr(0, line.find(' ')) + "'");
                     }
                     /*
-                    "INCLUDE-TRANSLATE"
+                    ""
                     "INVOKE"
                     */
                 }
             } catch (std::exception &e) {
+                LOG_ERROR(logger, "ERROR: " << e.what());
                 co_await reply(""s, "ERROR '"s + e.what() + "'");
             }
         }
