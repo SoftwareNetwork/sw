@@ -31,6 +31,7 @@ namespace sw
 {
 
 struct gcc_modules_server {
+    const ExecutionPlan &ep;
     boost::asio::io_context ctx;
     std::jthread t;
 
@@ -147,39 +148,84 @@ struct gcc_modules_server {
             std::string buf;
             co_await async_read_until(socket, dynamic_buffer(buf, 1024), "\n", use_awaitable);
             auto lines = split_lines(buf);
-            for (auto &&line : lines) {
-                if (line.starts_with("HELLO")) {
-                    auto parts = split_string(line, " '"); // hello,ver,prog,ident,;
-                    auto parts2 = split_string(parts[3], ":");
-                    d.source = parts2[0];
-                    d.out = parts2[1];
-                    co_await reply(line, "HELLO 1 sw");
-                } else if (line.starts_with("MODULE-REPO")) {
-                    co_await reply(line, "PATHNAME .");
-                } else if (line.starts_with("MODULE-EXPORT")) {
-                    module = split_string(line, " ")[1]; // module,name
-                    d.export_module = module;
-                    d.write();
-                    co_await reply(line, "PATHNAME " + module + ".cmi");
-                } else if (line.starts_with("MODULE-IMPORT")) {
-                    auto module = split_string(line, " ")[1]; // module,name
-                    bool header = path{module}.is_absolute();
-                    if (header)
-                        d.header_units.push_back(module);
-                    else
-                        d.import_modules.push_back(module);
-                    d.write();
-                    if (header)
-                        co_await reply(line, "PATHNAME gcm.cache/." + module + ".gcm");
-                    else
+            try {
+                for (auto &&line : lines) {
+                    if (line.starts_with("HELLO")) {
+                        auto parts = split_string(line, " '"); // hello,ver,prog,ident,;
+                        auto parts2 = split_string(parts[3], ":");
+                        d.source = parts2[0];
+                        d.out = parts2[1];
+                        co_await reply(line, "HELLO 1 sw");
+                    } else if (line.starts_with("MODULE-REPO")) {
+                        co_await reply(line, "PATHNAME .");
+                    } else if (line.starts_with("MODULE-EXPORT")) {
+                        module = split_string(line, " ")[1]; // module,name
+                        d.export_module = module;
+                        d.write();
                         co_await reply(line, "PATHNAME " + module + ".cmi");
-                } else {
-                    co_await reply(line, "ERROR 'Unknown command: " + line + "'");
+                    } else if (line.starts_with("MODULE-IMPORT")) {
+                        auto module = split_string(line, " ")[1]; // module,name
+                        bool header = path{module}.is_absolute();
+                        if (header) {
+                            d.header_units.push_back(module);
+                            // we create import header immediately
+                            auto fn = d.out.parent_path() / ("gcm.cache/." + module + ".gcm");
+                            if (!fs::exists(fn)) {
+                                auto &cmds = ep.getCommands();
+                                auto it = std::ranges::find_if(cmds, [&d](auto &&v){ return static_cast<builder::Command*>(v)->outputs.contains(d.out); });
+                                if (it == cmds.end()) {
+                                    co_await reply(line, "ERROR 'Cannot find according command for import header'");
+                                    co_return;
+                                }
+
+                                auto &from = *static_cast<builder::Command*>(*it);
+
+                                auto cmd = std::make_shared<builder::Command>(from.getContext());
+                                auto &c = *cmd;
+                                c.working_directory = from.working_directory;
+                                c.command_storage = from.command_storage;
+                                c.environment = from.environment;
+                                c.addOutput(fn);
+                                c.setProgram(from.arguments[0]->toString());
+                                for (int i = 0; auto &&a : from.arguments) {
+                                    if (i++) {
+                                        if (0
+                                            || a->toString().starts_with("-fmodule-ma")
+                                            || a->toString().starts_with("-o")
+                                            )
+                                            continue;
+                                        if (a->toString().starts_with("-E")) {
+                                            c.arguments.push_back(std::make_unique<primitives::command::SimpleArgument>("-c"s));
+                                            c.arguments.push_back(std::make_unique<primitives::command::SimpleArgument>("-xc++-header"s));
+                                        }
+                                        if (a->toString().starts_with("/"))
+                                            c.arguments.push_back(std::make_unique<primitives::command::SimpleArgument>(module));
+                                        else
+                                            c.arguments.push_back(std::make_unique<primitives::command::SimpleArgument>(a->toString()));
+                                        continue;
+                                    }
+                                }
+                                LOG_INFO(logger, "building import header " << fn << "\n" << c.print());
+                                c.execute();
+                            }
+                        }
+                        else
+                            d.import_modules.push_back(module);
+                        d.write();
+                        if (header)
+                            co_await reply(line, "PATHNAME gcm.cache/." + module + ".gcm");
+                        else
+                            co_await reply(line, "PATHNAME " + module + ".cmi");
+                    } else {
+                        co_await reply(line, "ERROR 'Unknown command: " + line + "'");
+                    }
+                    /*
+                    "INCLUDE-TRANSLATE"
+                    "INVOKE"
+                    */
                 }
-                /*
-                "INCLUDE-TRANSLATE"
-                "INVOKE"
-                */
+            } catch (std::exception &e) {
+                co_await reply(""s, "ERROR '"s + e.what() + "'");
             }
         }
     }
@@ -229,7 +275,7 @@ void ExecutionPlan::execute(Executor &e) const
     interrupted = false;
     std::atomic_int running = 0;
     std::atomic_int64_t askip_errors = skip_errors;
-    gcc_modules_server s;
+    gcc_modules_server s{*this};
     s.run();
 
     bool build_commands = dynamic_cast<builder::Command *>(*commands.begin());
