@@ -32,32 +32,34 @@ namespace sw
 
 struct gcc_modules_server {
     const ExecutionPlan &ep;
-    boost::asio::io_context ctx;
+    boost::asio::io_context ctx_main;
+    boost::asio::io_context ctx_headers;
     std::jthread t_main;
     std::jthread t_headers;
 
     ~gcc_modules_server() {
-        ctx.stop();
+        ctx_main.stop();
+        ctx_headers.stop();
     }
     void run() {
         // compile handling
-        boost::asio::co_spawn(ctx, accept(55555), boost::asio::detached);
+        boost::asio::co_spawn(ctx_main, accept(ctx_main, 55555), boost::asio::detached);
         // scan handling
-        boost::asio::co_spawn(ctx, accept(55556, true), boost::asio::detached);
+        boost::asio::co_spawn(ctx_main, accept(ctx_main, 55556, true), boost::asio::detached);
         // import header handling
-        boost::asio::co_spawn(ctx, accept(55557, true), boost::asio::detached);
+        boost::asio::co_spawn(ctx_headers, accept(ctx_headers, 55557, true), boost::asio::detached);
         t_main = std::jthread{[this](){
             try {
-                ctx.run();
+                ctx_main.run();
             } catch (...) {}
         }};
         t_headers = std::jthread{[this](){
             try {
-                ctx.run();
+                ctx_headers.run();
             } catch (...) {}
         }};
     }
-    boost::asio::awaitable<void> accept(auto port, bool scan = false) {
+    boost::asio::awaitable<void> accept(auto &&ctx, auto port, bool scan = false) {
         using tcp = boost::asio::ip::tcp;
         tcp::acceptor acceptor(ctx, tcp::endpoint(tcp::v6(), port));
         while (1) {
@@ -80,6 +82,22 @@ struct gcc_modules_server {
             std::unordered_map<String, path> import_modules;
             std::unordered_map<String, path> header_units;
 
+            ~data() {
+                write_file_module_mapper();
+            }
+            void write_file_module_mapper() {
+                std::ostringstream ss;
+                ss << "$root ." << "\n";
+                if (!export_module.empty())
+                    ss << export_module << " " << export_module << "\n";
+                auto print = [&ss](auto &&what) {
+                    for (auto &&[k,v] : what)
+                        ss << k << " " << v.string() << "\n";
+                };
+                print(import_modules);
+                print(header_units);
+                write_file(out.parent_path() / (out.stem().stem() += ".map"), ss.str());
+            }
             void write() {
                 // follow msvc here
                 nlohmann::json j;
@@ -149,7 +167,7 @@ struct gcc_modules_server {
         auto reply = [&socket](auto &&line, std::string s) {
             if (line.ends_with(';'))
                 s += " ;";
-            LOG_INFO(logger, "socket " << socket.native_handle() << "< " << s);
+            LOG_TRACE(logger, "socket " << socket.native_handle() << "< " << s);
             s += "\n";
             return async_write(socket, buffer(s), use_awaitable);
         };
@@ -162,7 +180,7 @@ struct gcc_modules_server {
             auto lines = split_lines(buf);
             try {
                 for (auto &&line : lines) {
-                    LOG_INFO(logger, "socket " << socket.native_handle() << "> " << line);
+                    LOG_TRACE(logger, "socket " << socket.native_handle() << "> " << line);
                     if (line.starts_with("HELLO")) {
                         auto parts = split_string(line, " '"); // hello,ver,prog,ident,;
                         auto parts2 = split_string(parts[3], ":");

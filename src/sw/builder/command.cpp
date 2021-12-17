@@ -799,7 +799,11 @@ void Command::execute1(std::error_code *ec)
     for (auto &d : getGeneratedDirs())
         fs::create_directories(d);
 
-    LOG_TRACE(logger, print());
+    {
+        std::ostringstream ss;
+        ss << "time: " << std::chrono::duration_cast<std::chrono::duration<float>>(t_end - t_begin).count() << " s.";
+        LOG_TRACE(logger, print() + "\n" + ss.str());
+    }
 
     if (ec)
     {
@@ -1031,16 +1035,23 @@ path Command::writeCommand(const path &p, bool print_name) const
 
         auto print_args = [&bat, &t](const auto &args)
         {
+            path output;
             for (auto &a : args)
             {
                 if (a->toString() == "-showIncludes")
                     continue;
+                if (a->toString().starts_with("-o/")) {
+                    output = a->toString().substr(2);
+                }
                 auto a2 = a->quote(QuoteType::Escape);
                 if (bat)
                 {
                     // move to quote with escape?
                     // see https://www.robvanderwoude.com/escapechars.php
                     boost::replace_all(a2, "%", "%%"); // remove? because we always have double quotes
+                }
+                if (a->toString().starts_with("-fmodule-mapper=")) {
+                    a2 = a->quote("-fmodule-mapper=" + (output.parent_path() / (path{output} += ".map")).string(), QuoteType::Escape);
                 }
                 t += "\"" + a2 + "\" ";
                 if (bat)
