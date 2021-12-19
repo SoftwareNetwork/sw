@@ -52,7 +52,7 @@ DECLARE_STATIC_LOGGER(logger, "command");
 namespace sw
 {
 
-nlohmann::json builder::Command::msvc_modulus_scan_data::get() const {
+nlohmann::json builder::Command::msvc_modules_scan_data::get() const {
     // follow msvc here
     nlohmann::json j;
     j["Version"] = "1.1";
@@ -64,7 +64,7 @@ nlohmann::json builder::Command::msvc_modulus_scan_data::get() const {
     return j;
 }
 
-void builder::Command::msvc_modulus_scan_data::write() const {
+void builder::Command::msvc_modules_scan_data::write() const {
     write_file(out, get().dump());
 }
 

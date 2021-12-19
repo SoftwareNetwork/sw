@@ -83,7 +83,8 @@ struct gcc_modules_server {
             std::unordered_map<String, path> header_units;
 
             ~data() {
-                write_file_module_mapper();
+                if (!source.empty())
+                    write_file_module_mapper();
             }
             void write_file_module_mapper() {
                 std::ostringstream ss;
@@ -172,7 +173,7 @@ struct gcc_modules_server {
             return async_write(socket, buffer(s), use_awaitable);
         };
         builder::Command *this_command{nullptr};
-        builder::Command::msvc_modulus_scan_data d;
+        builder::Command::msvc_modules_scan_data d;
         std::string module;
         while (1) {
             std::string buf;
