@@ -179,6 +179,7 @@ struct gcc_modules_server {
             std::string buf;
             co_await async_read_until(socket, dynamic_buffer(buf, 1024), "\n", use_awaitable);
             auto lines = split_lines(buf);
+            std::string error;
             try {
                 for (auto &&line : lines) {
                     LOG_TRACE(logger, "socket " << socket.native_handle() << "> " << line);
@@ -276,10 +277,12 @@ struct gcc_modules_server {
                     "INVOKE"
                     */
                 }
+                co_return;
             } catch (std::exception &e) {
                 LOG_ERROR(logger, "ERROR: " << e.what());
-                co_await reply(""s, "ERROR '"s + e.what() + "'");
+                error = e.what();
             }
+            co_await reply(""s, "ERROR '"s + error + "'");
         }
     }
 };
