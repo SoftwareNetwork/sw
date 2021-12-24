@@ -35,6 +35,9 @@ struct Program;
 struct SwBuilderContext;
 struct CommandStorage;
 
+SW_BUILDER_API
+uint16_t get_module_mapper_port();
+
 struct SW_BUILDER_API CommandNode : std::enable_shared_from_this<CommandNode>
 {
     using SPtr = std::shared_ptr<CommandNode>;

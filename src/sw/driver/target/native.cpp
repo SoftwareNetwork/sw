@@ -3532,7 +3532,7 @@ void NativeCompiledTarget::prepare_pass5()
                     auto cmd2 = pp_command2.getCommand(*this);
                     cmd2->addOutput(p);
                     cmd2->arguments.push_back("-fmodules-ts");
-                    cmd2->arguments.push_back("-fmodule-mapper=:::55556?" + f->file.string() + ":" + p.string());
+                    cmd2->arguments.push_back("-fmodule-mapper=:::" + std::to_string(get_module_mapper_port() + 1) + "?" + f->file.string() + ":" + p.string());
                     cmd2->name = "[" + getPackage().toString() + "]/[analyze_modules]/" + f->file.filename().string();
                     registerCommand(*cmd2);
                     gnu_analyze_commands.insert(cmd2);
@@ -3543,7 +3543,7 @@ void NativeCompiledTarget::prepare_pass5()
                         auto p = path{out} += ".ifc.json";
                         c->getCommand(*this)->msvc_modules_file = p;
                         c->getCommand(*this)->arguments.push_back("-fmodules-ts");
-                        c->getCommand(*this)->arguments.push_back("-fmodule-mapper=:::55555?" + f->file.string() + ":" + p.string());
+                        c->getCommand(*this)->arguments.push_back("-fmodule-mapper=:::" + std::to_string(get_module_mapper_port() + 0) + "?" + f->file.string() + ":" + p.string());
                     }
                 }
                 else
@@ -3553,7 +3553,7 @@ void NativeCompiledTarget::prepare_pass5()
                     auto cmd2 = c->getCommand(*this);
                     cmd2->addOutput(c->OutputFile().parent_path() / "gcm.cache" / ("." + c->InputFile().string() + ".gcm"));
                     cmd2->arguments.push_back("-fmodules-ts");
-                    //cmd2->arguments.push_back("-fmodule-mapper=:::55556?" + f->file.string() + ":" + p.string());
+                    //cmd2->arguments.push_back("-fmodule-mapper=:::" + std::to_string(get_module_mapper_port() + 1) + "?" + f->file.string() + ":" + p.string());
                     cmd2->name = f->fancy_name = c->getCommand(*this)->name = "[" + getPackage().toString() + "]/[header_unit]/" + f->file.filename().string();
                 }
             }

@@ -30,6 +30,16 @@ DECLARE_STATIC_LOGGER(logger, "explan");
 namespace sw
 {
 
+uint16_t get_module_mapper_port() {
+    static const auto port = []() {
+        using tcp = boost::asio::ip::tcp;
+        boost::asio::io_context ctx;
+        tcp::acceptor acceptor(ctx, tcp::endpoint(tcp::v6(), 0));
+        return acceptor.local_endpoint().port();
+    }();
+    return port;
+}
+
 struct gcc_modules_server {
     const ExecutionPlan &ep;
     boost::asio::io_context ctx_main;
@@ -43,11 +53,11 @@ struct gcc_modules_server {
     }
     void run() {
         // compile handling
-        boost::asio::co_spawn(ctx_main, accept(ctx_main, 55555), boost::asio::detached);
+        boost::asio::co_spawn(ctx_main, accept(ctx_main, get_module_mapper_port()), boost::asio::detached);
         // scan handling
-        boost::asio::co_spawn(ctx_main, accept(ctx_main, 55556, true), boost::asio::detached);
+        boost::asio::co_spawn(ctx_main, accept(ctx_main, get_module_mapper_port() + 1, true), boost::asio::detached);
         // import header handling
-        boost::asio::co_spawn(ctx_headers, accept(ctx_headers, 55557, true), boost::asio::detached);
+        boost::asio::co_spawn(ctx_headers, accept(ctx_headers, get_module_mapper_port() + 2, true), boost::asio::detached);
         t_main = std::jthread{[this](){
             try {
                 ctx_main.run();
@@ -237,7 +247,7 @@ struct gcc_modules_server {
                                             continue;
                                         if (a->toString().starts_with("-fmodule-mapper")) {
                                             c.arguments.push_back(std::make_unique<primitives::command::SimpleArgument>(
-                                                "-fmodule-mapper=:::55557?"s + module + ":"
+                                                "-fmodule-mapper=:::" + std::to_string(get_module_mapper_port() + 2) + "?"s + module + ":"
                                                 + d.out.parent_path().string() + "/gcm.cache" + module + ".ifc.json"));
                                             continue;
                                         }
