@@ -225,6 +225,8 @@ SUBCOMMAND_DECL(uri)
         message_box(sw::getProgramName(), e.what());
 #else
         std::cerr << e.what();
+        std::cerr << "\nPress any key to continue...";
+        getchar();
 #endif
     }
     catch (...)
@@ -233,6 +235,8 @@ SUBCOMMAND_DECL(uri)
         message_box(sw::getProgramName(), "Unknown exception");
 #else
         std::cerr << "unknown exception";
+        std::cerr << "\nPress any key to continue...";
+        getchar();
 #endif
     }
 }
