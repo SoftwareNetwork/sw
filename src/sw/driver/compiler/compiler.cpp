@@ -480,6 +480,9 @@ void ClangClCompiler::prepareCommand1(const Target &t)
 
     ReproducibleBuild = t.isReproducibleBuild();
 
+    add_args(*cmd, getCppStdOptionMsvc(CPPStandard(), getVersion(t.getContext(), file)));
+    CPPStandard.skip = true;
+
     getCommandLineOptions<VisualStudioCompilerOptions>(cmd.get(), *this);
     getCommandLineOptions<ClangClOptions>(cmd.get(), *this/*, "-Xclang"*/);
     if (preprocessed_file)
