@@ -1023,6 +1023,8 @@ void CMakeGenerator::generate(const sw::SwBuild &b)
         ctx.addLine(")");
         ctx.addLine();
 
+        // when we add deps, we get link errors at the moment, so disable
+        ctx.addLine("if (SW_CMAKE_USE_TARGET_LINK_LIBRARIES)");
         ctx.addLine("target_link_libraries(" + pkg.toString());
         if (s["header_only"] == "true")
             ctx.addLine("INTERFACE");
@@ -1041,6 +1043,7 @@ void CMakeGenerator::generate(const sw::SwBuild &b)
             ctx.addLine("\"" + to_string(normalize_path(f.getValue())) + "\"");
         ctx.decreaseIndent();
         ctx.addLine(")");
+        ctx.addLine("endif()");
         ctx.addLine();
 
         ctx.addLine("target_compile_options(" + pkg.toString() + " PRIVATE");
