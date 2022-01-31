@@ -139,8 +139,9 @@ static String get_current_program()
     return "\"" + to_string(normalize_path(path(boost::dll::program_location().wstring()))) + "\"";
 }
 
-static String make_backslashes(String s)
+static String make_backslashes(const path &p)
 {
+    auto s = normalize_path_windows(p).lexically_normal().string();
     std::replace(s.begin(), s.end(), '/', '\\');
     return s;
 }
@@ -388,7 +389,7 @@ void VSGenerator::generate(const SwBuild &b)
         for (auto &i : inputs)
         {
             for (auto &[_, f] : i.getInput().getInput().getSpecification().files.getData())
-                p.files.insert({f.absolute_path, SourceFilesFilter});
+                p.files.insert({make_backslashes(f.absolute_path), SourceFilesFilter});
         }
         p.settings = s.settings;
         if (vstype != VsGeneratorType::VisualStudio)
@@ -463,7 +464,7 @@ void VSGenerator::generate(const SwBuild &b)
                 if (tf.isGenerated() && f.extension() != ".natvis")
                     continue;
                 if (can_add_file(f))
-                    p.files.insert(f);
+                    p.files.insert({make_backslashes(f)});
             }
             p.settings = s.settings;
             p.build = true;
@@ -511,7 +512,7 @@ void VSGenerator::generate(const SwBuild &b)
                         continue;
 
                     if (can_add_file(o))
-                        p.files.insert(o);
+                        p.files.insert({make_backslashes(o)});
                     else
                         d.build_rules[c.get()] = o;
                 }
@@ -522,7 +523,7 @@ void VSGenerator::generate(const SwBuild &b)
                         continue;
 
                     if (can_add_file(o))
-                        p.files.insert(o);
+                        p.files.insert({make_backslashes(o)});
 
                     if (1
                         && c->arguments.size() > 1
@@ -1237,7 +1238,7 @@ void Project::emitProject(const VSGenerator &g) const
     // build rules
     for (auto &[f, cfgs] : bfiles)
     {
-        ((Project&)*this).files.insert(f);
+        ((Project &)*this).files.insert({make_backslashes(f)});
         auto t = ctx.beginFileBlock(f);
         for (auto &[sp, c] : cfgs)
         {
@@ -1497,9 +1498,9 @@ void Project::emitFilters(const VSGenerator &g) const
 
         if (!f.filter.empty())
         {
-            filters.insert(make_backslashes(f.filter.string()));
-            ctx.beginBlock(toString(get_vs_file_type_by_ext(f.p)), { {"Include", f.p.string()} });
-            ctx.addBlock("Filter", make_backslashes(f.filter.string()));
+            filters.insert(make_backslashes(f.filter));
+            ctx.beginBlock(toString(get_vs_file_type_by_ext(f.p)), { {"Include", make_backslashes(f.p)} });
+            ctx.addBlock("Filter", make_backslashes(f.filter));
             ctx.endBlock();
             continue;
         }
@@ -1603,13 +1604,13 @@ void Project::emitFilters(const VSGenerator &g) const
                 r = r.parent_path();
                 if (filter.empty())
                     filter = r;
-                filters.insert(r.string());
+                filters.insert(make_backslashes(r.string()));
             } while (!r.empty() && r != r.root_path());
         }
 
-        ctx.beginBlock(toString(get_vs_file_type_by_ext(f.p)), { {"Include", f.p.string()} });
+        ctx.beginBlock(toString(get_vs_file_type_by_ext(f.p)), { {"Include", make_backslashes(f.p)} });
         if (!filter.empty() && !filter.is_absolute())
-            ctx.addBlock("Filter", make_backslashes(filter.string()));
+            ctx.addBlock("Filter", make_backslashes(filter));
         ctx.endBlock();
     }
     filters.erase("");
