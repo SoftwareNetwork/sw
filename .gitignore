@@ -10,6 +10,8 @@
 # build files and directories
 /build*
 /temp*
+/cmake-*
+CMakeL*
 bin*
 
 .build
