@@ -165,6 +165,7 @@ struct gcc_modules_server {
                     co_await reply(line, "OK"); // could be any string actually
                 } else {
                     co_await reply(line, "ERROR 'Unknown command: " + line.substr(0, line.find(' ')) + "'");
+                    co_return;
                 }
                 /*
                 "INCLUDE-TRANSLATE"
@@ -281,18 +282,21 @@ struct gcc_modules_server {
                         co_await reply(line, "BOOL TRUE");
                     } else {
                         co_await reply(line, "ERROR 'Unknown command: " + line.substr(0, line.find(' ')) + "'");
+                        co_return;
                     }
                     /*
                     ""
                     "INVOKE"
                     */
                 }
-                co_return;
             } catch (std::exception &e) {
                 LOG_ERROR(logger, "ERROR: " << e.what());
                 error = e.what();
             }
-            co_await reply(""s, "ERROR '"s + error + "'");
+            if (!error.empty()) {
+                co_await reply(""s, "ERROR '"s + error + "'");
+                co_return;
+            }
         }
     }
 };
