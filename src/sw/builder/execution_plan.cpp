@@ -119,13 +119,13 @@ struct gcc_modules_server {
                 for (auto &&[n,p] : import_modules) {
                     nlohmann::json m;
                     m["Name"] = n;
-                    m["BMI"] = p;
+                    m["BMI"] = p.u8string();
                     jd["ImportedModules"].push_back(m);
                 }
                 for (auto &&[n,p] : header_units) {
                     nlohmann::json m;
                     m["Name"] = n;
-                    m["BMI"] = p;
+                    m["BMI"] = p.u8string();
                     jd["ImportedHeaderUnits"].push_back(m);
                 }
                 write_file(out, j.dump());
