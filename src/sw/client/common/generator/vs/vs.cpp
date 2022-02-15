@@ -329,6 +329,19 @@ void VSGenerator::generate(const SwBuild &b)
             {
                 flag_tables[prog] = ft;
             }
+
+            if (prog == "cl")
+            {
+                // add some flags manually
+                // modules
+                flag_tables[prog].ftable["interface"] = FlagTableData
+                {
+                    "CompileAs",
+                    "interface",
+                    "",
+                    "CompileAsCppModule",
+                };
+            }
         }
     };
     dl(ts, tables1);

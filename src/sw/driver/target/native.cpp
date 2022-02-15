@@ -3612,7 +3612,23 @@ void NativeCompiledTarget::prepare_pass5()
                     path fn = normalize_path(j["Data"]["Source"].get<String>());
                     auto pm = j["Data"]["ProvidedModule"].get<String>();
                     if (!pm.empty())
+                    {
                         module_map.emplace(pm, fn);
+                        auto cmd2 = get_cmd(fn);
+                        // https://devblogs.microsoft.com/cppblog/standard-c20-modules-support-with-msvc-in-visual-studio-2019-version-16-8/
+                        // https://devblogs.microsoft.com/cppblog/wp-content/uploads/sites/9/2020/09/property1.jpg
+                        // no cmake flag table support yet
+                        // CompileAsCppModule
+                        // CompileAsCppModuleInternalPartition
+                        // CompileAsHeaderUnit
+                        cmd2->arguments.push_back("/interface");
+                    }
+                    else
+                    {
+                        // distinguish from usual cpp
+                        //if (auto cmd2 = get_cmd(fn))
+                            //cmd2->arguments.push_back("/internalPartition");
+                    }
                     file_map.emplace(f, std::move(j));
                 }
                 for (auto &&f : files)
