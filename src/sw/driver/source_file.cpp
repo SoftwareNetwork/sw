@@ -134,6 +134,13 @@ void SourceFileStorage::add_unchecked1(const path &file_in, bool skip, const Str
     auto ext = ext_in.empty() ? file.extension().string() : ext_in;
     auto nt = target.as<NativeCompiledTarget*>();
     auto ho = nt && nt->HeaderOnly && nt->HeaderOnly.value();
+
+    if (nt->UseModules && nt->ImplicitHeaderUnits && isCppHeaderFileExtension(ext) && !skip)
+    {
+        nt->add(HeaderUnit{file});
+        return;
+    }
+
     if (!target.hasExtension(ext) || ho)
     {
         f = std::make_shared<SourceFile>(file);
@@ -315,6 +322,11 @@ void SourceFileStorage::remove_full1(const FileRegex &r)
 
 void SourceFileStorage::op(const FileRegex &r, Op func)
 {
+    regex_op(r, [&](const path &p) {(this->*func)(p);});
+}
+
+void SourceFileStorage::regex_op(const FileRegex &r, Op2 func)
+{
     auto dir = r.dir;
     if (!dir.is_absolute())
         dir = target.SourceDir / dir;
@@ -336,7 +348,7 @@ void SourceFileStorage::op(const FileRegex &r, Op func)
         s = s.substr(root_s.size() + 1); // + 1 to skip first slash
         if (std::regex_match(s, r.r))
         {
-            (this->*func)(f);
+            func(f);
             matches = true;
         }
     }

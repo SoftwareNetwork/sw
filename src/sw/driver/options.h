@@ -345,7 +345,7 @@ struct SW_DRIVER_CPP_API NativeOptions : NativeCompilerOptions,
 struct HeaderUnit
 {
     path fn;
-    bool angle;
+    bool angle = false;
 };
 
 }

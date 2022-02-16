@@ -108,6 +108,7 @@ protected:
 
 private:
     using Op = void (SourceFileStorage::*)(const path &);
+    using Op2 = std::function<void(const path &)>;
 
     SourceFileMap<SourceFile> source_files;
     int index = 0;
@@ -118,6 +119,9 @@ private:
     void remove1(const FileRegex &r);
     void remove_full1(const FileRegex &r);
     void op(const FileRegex &r, Op f);
+public:
+    void regex_op(const FileRegex &r, Op2 f);
+private:
 
     SourceFileMap<SourceFile> enumerate_files(const FileRegex &r, bool allow_empty = false) const;
 };

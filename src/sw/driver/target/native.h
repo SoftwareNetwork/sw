@@ -83,6 +83,7 @@ public:
     bool CPPExtensions = false;
 
     bool UseModules = false;
+    bool ImplicitHeaderUnits = true;
     bool TranslateInclude = false;
     // bool Framework = false; // TODO: macos framework
 
