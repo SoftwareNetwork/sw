@@ -23,18 +23,23 @@ jobs:
     - name: Install (macOS)
       if: runner.os == 'macOS'
       run: |
-        brew install flex bison
+        brew install flex bison gcc
 
-    - name: build (non macOS)
-      if: runner.os != 'macOS'
+    - name: build (Windows)
+      if: runner.os == 'Windows'
       run: ./sw -static build
+
+    - name: build (Linux)
+      if: runner.os == 'Linux'
+      run: ./sw -static build -compiler gcc
 
     - name: build (macOS)
       if: runner.os == 'macOS'
       run: |
         export PATH="/usr/local/opt/flex/bin:$PATH"
         export PATH="/usr/local/opt/bison/bin:$PATH"
-        ./sw -static build
+        export PATH="/usr/local/opt/gcc/bin:$PATH"
+        ./sw -static build -compiler gcc
 
     - uses: actions/upload-artifact@v1
       with:
