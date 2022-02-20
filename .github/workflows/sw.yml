@@ -5,8 +5,9 @@ on: [push, pull_request]
 jobs:
   build:
     runs-on: ${{ matrix.os }}
+    container: fedora:35
     strategy:
-      fail-fast: false
+      fail-fast: false      
       matrix:
         os: [windows-2022, ubuntu-20.04, macos-latest] # , macos-11.0 not working atm
 
