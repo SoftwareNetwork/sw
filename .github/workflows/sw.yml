@@ -22,7 +22,7 @@ jobs:
     - name: prepare
       run: |
         sudo dnf -y update
-        sudo dnf -y install flex bison cmake xdg-mime which
+        sudo dnf -y install flex bison cmake which gcc
     - uses: egorpugin/sw-action@master
     - run: ./sw -static build -compiler gcc
     - uses: actions/upload-artifact@v1
