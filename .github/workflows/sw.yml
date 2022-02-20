@@ -4,12 +4,14 @@ on: [push, pull_request]
 
 jobs:
   build:
-    runs-on: ${{ matrix.os }}
-    container: fedora:35
+    runs-on: ${{ matrix.os }}    
     strategy:
       fail-fast: false      
       matrix:
         os: [windows-2022, ubuntu-20.04, macos-latest] # , macos-11.0 not working atm
+        container: ['fedora:35', '']
+    container:
+      image: ${{ matrix.container }}
 
     steps:
     - uses: actions/checkout@v1
