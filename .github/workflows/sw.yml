@@ -34,7 +34,7 @@ jobs:
         path: .sw/out
 
   macos:
-    runs-on: ${{ matrix.os }}
+    runs-on: macos-latest
     steps:
     - uses: actions/checkout@v1
     - uses: egorpugin/sw-action@master
