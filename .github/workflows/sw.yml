@@ -5,8 +5,6 @@ on: [push, pull_request]
 jobs:
   windows:
     runs-on: windows-2022    
-    #strategy:
-      #fail-fast: false
     steps:
     - uses: actions/checkout@v1
     - uses: egorpugin/sw-action@master
@@ -22,10 +20,10 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - uses: egorpugin/sw-action@master
-    - name: install
+    - name: prepare
       run: |
-        sudo dnf update
-        sudo dnf install flex bison
+        sudo dnf -y update
+        sudo dnf -y install flex bison
     - name: build
       run: ./sw -static build -compiler gcc
     - uses: actions/upload-artifact@v1
@@ -38,10 +36,9 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - uses: egorpugin/sw-action@master
-    - name: Install (macOS)
-      run: |
-        brew install flex bison gcc
-    - name: build (macOS)
+    - name: install
+      run: brew install flex bison gcc
+    - name: build
       run: |
         export PATH="/usr/local/opt/flex/bin:$PATH"
         export PATH="/usr/local/opt/bison/bin:$PATH"
