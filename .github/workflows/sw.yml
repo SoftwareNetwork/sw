@@ -24,8 +24,9 @@ jobs:
       run: |
         sudo dnf -y update
         sudo dnf -y install flex bison
-    - name: build
-      run: ./sw -static build -compiler gcc
+    - run: pwd
+    - run: ls
+    - run: ./sw -static build -compiler gcc
     - uses: actions/upload-artifact@v1
       with:
         name: sw
