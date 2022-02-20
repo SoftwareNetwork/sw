@@ -23,7 +23,7 @@ jobs:
     - name: prepare
       run: |
         sudo dnf -y update
-        sudo dnf -y install flex bison
+        sudo dnf -y install flex bison cmake
     - run: pwd
     - run: ls
     - run: ./sw -static build -compiler gcc
