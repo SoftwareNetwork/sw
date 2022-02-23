@@ -854,6 +854,29 @@ static void detectWindowsCompilers(DETECT_ARGS)
     detectWindowsClang(DETECT_ARGS_PASS);
 }
 
+auto add_dummy_windows_targets(auto &&s, auto &&tm) {
+    auto add_dummy_target = [&](auto &&name) {
+        auto cl = s.getPredefinedTargets().find(name);
+        if (cl == s.getPredefinedTargets().end(name)) {
+            //LOG_INFO(logger, "adding dummy winrt targets");
+
+            TargetSettings ts{};
+            sw::addTarget<sw::PredefinedTarget>(DETECT_ARGS_PASS, sw::LocalPackage(s.getLocalStorage(), sw::PackageId(name, "0.0.1")), ts);
+
+            auto ts1 = toTargetSettings(s.getHostOs());
+            ts["os"]["kernel"] = ts1["os"]["kernel"];
+            ts["os"]["arch"] = ts1["os"]["arch"];
+            sw::addTarget<sw::PredefinedTarget>(DETECT_ARGS_PASS, sw::LocalPackage(s.getLocalStorage(), sw::PackageId(name, "0.0.1")), ts);
+        }
+        auto cl2 = s.getPredefinedTargets().find(name);
+        if (cl2 != s.getPredefinedTargets().end(name)) {
+            //LOG_INFO(logger, "added dummy winrt targets");
+        }
+    };
+    add_dummy_target("com.Microsoft.Windows.SDK.winrt");
+    add_dummy_target("com.Microsoft.Windows.SDK.cppwinrt");
+}
+
 static void detectNonWindowsCompilers(DETECT_ARGS)
 {
     bool colored_output = hasConsoleColorProcessing();
@@ -926,6 +949,10 @@ static void detectNonWindowsCompilers(DETECT_ARGS)
         resolve_and_add("clang-" + std::to_string(i), "org.LLVM.clang", 2, clang_regex_prefix);
         resolve_and_add("clang++-" + std::to_string(i), "org.LLVM.clangpp", 2, clang_regex_prefix);
     }
+
+#ifndef _WIN32
+    //add_dummy_windows_targets(DETECT_ARGS_PASS);
+#endif
 }
 
 void detectNativeCompilers(DETECT_ARGS)
