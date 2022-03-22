@@ -1735,7 +1735,7 @@ void NativeCompiledTarget::prepare2()
     auto cmds = getCommands1();
     saveCommands(getBinaryDirectory().parent_path() / "commands.bin", cmds);
 
-    PackageId id{ getPackage(),getSettings() };
+    PackageId id{ getPackage(),getSettings().getHash() };
     Package p{ id };
     auto d = std::make_unique<PackageData>();
     p.setData(std::move(d));
@@ -2019,7 +2019,7 @@ struct H
 {
     size_t operator()(const DependencyPtr &p) const
     {
-        return std::hash<UnresolvedPackageId>()(p->getUnresolvedPackageId());
+        return std::hash<UnresolvedPackageIdFull>()(p->getUnresolvedPackageId());
     }
 };
 

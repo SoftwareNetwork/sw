@@ -61,19 +61,27 @@ bool ResolveRequestResult::setPackage(PackagePtr in)
     return false;
 }
 
-ResolveRequest::ResolveRequest(const UnresolvedPackageId &up)
-    : u(up.getName()), settings(up.getSettings())
+ResolveRequest::ResolveRequest(const UnresolvedPackageName &u, const PackageSettings &s)
+    : u(u), h(s.getHash())
 {
+}
+
+ResolveRequest::ResolveRequest(const UnresolvedPackageId &up)
+    : u(up.getName())//, settings(up.getSettings())
+{
+    SW_UNIMPLEMENTED;
 }
 
 bool ResolveRequest::operator==(const ResolveRequest &rhs) const
 {
-    return std::tie(u, settings) == std::tie(rhs.u, rhs.settings);
+    //return std::tie(u, settings) == std::tie(rhs.u, rhs.settings);
+    return std::tie(u, h) == std::tie(rhs.u, rhs.h);
 }
 
 String ResolveRequest::toString() const
 {
-    return u.toString() + " (" + settings.getHashString() + ")";
+    //return u.toString() + " (" + settings.getHashString() + ")";
+    return u.toString() + " (" + h.to_string() + ")";
 }
 
 bool ResolveRequest::setPackage(PackagePtr in)

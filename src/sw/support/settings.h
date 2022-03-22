@@ -4,6 +4,7 @@
 #pragma once
 
 #include "package_name.h"
+#include "package_id.h"
 #include "unresolved_package_name.h"
 
 #include <nlohmann/json_fwd.hpp>
@@ -26,6 +27,7 @@ struct PackageId;
 struct UnresolvedPackageId;
 struct ResolveRequest;
 struct Resolver;
+struct settings_hash;
 
 struct SW_SUPPORT_API PackageSettings
 {
@@ -55,7 +57,7 @@ struct SW_SUPPORT_API PackageSettings
     void mergeFromString(const String &s, int type = Json);
     void mergeFromJson(const nlohmann::json &);
 
-    size_t getHash() const;
+    settings_hash getHash() const;
     String getHashString() const;
     static String getHashString(const String &);
     String toString(int type = Json) const;
@@ -75,7 +77,7 @@ private:
 
     //String toStringKeyValue() const;
     nlohmann::json toJson() const;
-    size_t getHash1() const;
+    settings_hash getHash1() const;
 
     friend struct PackageSetting;
 
@@ -92,6 +94,24 @@ private:
 struct SW_SUPPORT_API PackageId
 {
     PackageName n;
+    settings_hash h;
+
+    const auto &getName() const { return n; }
+    const auto &getHash() const { return h; }
+
+    // maybe also print settings hash
+    String toString() const { return n.toString(); }
+
+    // does not work with SW_SUPPORT_API
+    //auto operator<=>(const PackageId &) const = default;
+
+    //bool operator==(const PackageId &rhs) const { return std::tie(n, s) == std::tie(rhs.n, rhs.s); }
+    bool operator==(const PackageId &rhs) const { return std::tie(n, h) == std::tie(rhs.n, rhs.h); }
+};
+
+struct SW_SUPPORT_API PackageIdFull
+{
+    PackageName n;
     PackageSettings s;
 
     const auto &getName() const { return n; }
@@ -103,7 +123,8 @@ struct SW_SUPPORT_API PackageId
     // does not work with SW_SUPPORT_API
     //auto operator<=>(const PackageId &) const = default;
 
-    bool operator==(const PackageId &rhs) const { return std::tie(n, s) == std::tie(rhs.n, rhs.s); }
+    bool operator==(const PackageIdFull &rhs) const { return std::tie(n, s) == std::tie(rhs.n, rhs.s); }
+    //bool operator==(const PackageId &rhs) const { return std::tie(n, h) == std::tie(rhs.n, rhs.h); }
 };
 
 } // namespace sw
@@ -116,7 +137,16 @@ template<> struct hash<::sw::PackageId>
     size_t operator()(const ::sw::PackageId &p) const
     {
         auto h = std::hash<::sw::PackageName>()(p.getName());
-        return hash_combine(h, p.getSettings().getHash());
+        return hash_combine(h, (uint64_t)p.getHash());
+    }
+};
+
+template<> struct hash<::sw::PackageIdFull>
+{
+    size_t operator()(const ::sw::PackageIdFull &p) const
+    {
+        auto h = std::hash<::sw::PackageName>()(p.getName());
+        return hash_combine(h, (uint64_t)p.getSettings().getHash());
     }
 };
 
@@ -149,7 +179,7 @@ struct SW_SUPPORT_API PackageSetting
     using Map = PackageSettings;
     using ArrayValue = PackageSetting;
     using Array = std::vector<ArrayValue>;
-    using ResolverType = std::unordered_map<UnresolvedPackageName, std::unordered_map<PackageSettings, PackageId>>;
+    using ResolverType = std::unordered_map<UnresolvedPackageName, std::unordered_map<PackageSettings, PackageIdFull>>;
     using Empty = std::monostate;
     using Null = nulltag_t;
     using Path = path;
@@ -234,8 +264,8 @@ struct SW_SUPPORT_API PackageSetting
     void setPathValue(const path &root, const path &value);
     path getAbsolutePathValue() const;
     void setAbsolutePathValue(const path &value);
-    std::optional<PackageId> resolve(const ResolveRequest &) const;
-    void addResolvedPackage(const UnresolvedPackageName &, const PackageSettings &, const PackageId &);
+    std::optional<PackageIdFull> resolve(const ResolveRequest &) const;
+    void addResolvedPackage(const UnresolvedPackageName &, const PackageSettings &, const PackageIdFull &);
     void setResolver();
     //auto &getResolver() { return std::get<ResolverType>(value); }
     //const auto &getResolver() const { return std::get<ResolverType>(value); }
@@ -260,7 +290,7 @@ private:
     Variant value;
 
     nlohmann::json toJson() const;
-    size_t getHash1() const;
+    settings_hash getHash1() const;
 
     friend struct PackageSettings;
 

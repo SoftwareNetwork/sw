@@ -170,12 +170,13 @@ struct BuiltinStorage : IStorage
             for (auto &[r, ep] : eps)
             {
                 Build b(*d/*, *bs.sb*/);
-                b.module_data.current_settings = &rr.settings;
+                SW_UNIMPLEMENTED;
+                /*b.module_data.current_settings = &rr.settings;
                 ep(b);
                 SW_CHECK(b.module_data.getTargets().size() <= 1); // only 1 target per build call
                 if (b.module_data.getTargets().empty())
                     continue;
-                version_eps.emplace(b.module_data.getTargets()[0]->getPackage().getVersion(), ep);
+                version_eps.emplace(b.module_data.getTargets()[0]->getPackage().getVersion(), ep);*/
             }
 
             loaded = true;
@@ -192,7 +193,8 @@ struct BuiltinStorage : IStorage
             {
                 if (!rr.u.getRange().contains(v))
                     continue;
-                auto pp = bs.makePackage({ PackageName{ rr.u.getPath(), v }, rr.getSettings() });
+                SW_UNIMPLEMENTED;
+                /*auto pp = bs.makePackage({PackageName{rr.u.getPath(), v}, rr.getSettings()});
                 auto &p = (BuiltinPackage &)*pp;
                 p.f = ep;
                 auto d = std::make_unique<PackageData>();
@@ -200,7 +202,7 @@ struct BuiltinStorage : IStorage
                 //d->settings = rr.getSettings();
                 p.setData(std::move(d));
 
-                rr.setPackage(std::move(pp));
+                rr.setPackage(std::move(pp));*/
             }
             SW_CHECK(rr.isResolved());
             return true;
@@ -268,7 +270,8 @@ struct ConfigStorage : IStorage
         if (i == targets.end())
             return false;
 
-        ResolveRequest rr2{ i->second.first, rr.settings };
+        SW_UNIMPLEMENTED;
+        /*ResolveRequest rr2{i->second.first, rr.settings};
         if (!swctx.resolve(rr2, true))
             return false;
 
@@ -283,7 +286,7 @@ struct ConfigStorage : IStorage
         auto d = std::make_unique<PackageData>(p.getData());
         pkg->setData(std::move(d));
         rr.setPackageForce(std::move(pkg));
-        return true;
+        return true;*/
     }
 
     std::unique_ptr<Package> makePackage(const PackageId &id) const override
@@ -383,7 +386,7 @@ Driver::~Driver()
 {
 }
 
-const PackageId &Driver::get_package() const { return id; }
+const PackageIdFull &Driver::get_package() const { return id; }
 
 const PackageSettings &Driver::get_properties() const { SW_UNIMPLEMENTED; }
 
@@ -616,7 +619,7 @@ std::unique_ptr<Input> Driver::getInput(const Package &p) const
         i->setEntryPoint(std::move(ep));
         return i;
     }
-    else if (!p.getId().getSettings().empty())
+    else if (p.getId().getHash())
     {
         struct PreparedInput : Input
         {

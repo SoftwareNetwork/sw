@@ -40,7 +40,7 @@ struct SW_DRIVER_CPP_API Driver : IDriver
     static void processConfigureAc(const path &p);
 
     //PackageName get_package_name();
-    const PackageId &get_package() const override;
+    const PackageIdFull &get_package() const override;
     const PackageSettings &get_properties() const override;
 
     // IDriver api
@@ -73,7 +73,7 @@ struct SW_DRIVER_CPP_API Driver : IDriver
     CommandStorage *getCommandStorage(const Target &t) const;
 
 private:
-    PackageId id;
+    PackageIdFull id;
     transform &transform_;
     SwContext &swctx;
     std::unique_ptr<struct BuiltinStorage> bs;

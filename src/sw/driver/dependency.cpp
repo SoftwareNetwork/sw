@@ -15,7 +15,7 @@ DependencyData::DependencyData(const ITarget &t)
 {
 }
 
-DependencyData::DependencyData(const UnresolvedPackageId &p)
+DependencyData::DependencyData(const UnresolvedPackageIdFull &p)
     : upkg(p)
 {
 }

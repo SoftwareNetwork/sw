@@ -585,7 +585,7 @@ path Target::getBinaryParentDir() const
 
 DependencyPtr Target::getDependency() const
 {
-    auto d = std::make_shared<Dependency>(UnresolvedPackageId{ getPackage() });
+    auto d = std::make_shared<Dependency>(UnresolvedPackageIdFull{ getPackage() /*,getSettings() */ });
     return d;
 }
 
@@ -815,7 +815,7 @@ DependencyPtr Target::addDummyDependency(const DependencyPtr &t)
 
 DependencyPtr Target::addDummyDependency(const Target &t)
 {
-    return addDummyDependency(std::make_shared<Dependency>(UnresolvedPackageId{ t.getPackage() }));
+    return addDummyDependency(std::make_shared<Dependency>(UnresolvedPackageIdFull{ t.getPackage() }));
 }
 
 void Target::setDummyDependencySettings(DependencyPtr &t2) const
@@ -834,7 +834,7 @@ void Target::addSourceDependency(const DependencyPtr &t)
 
 void Target::addSourceDependency(const Target &t)
 {
-    addSourceDependency(std::make_shared<Dependency>(UnresolvedPackageId{ t.getPackage() }));
+    addSourceDependency(std::make_shared<Dependency>(UnresolvedPackageIdFull{ t.getPackage() }));
 }
 
 Resolver &Target::getResolver() const
@@ -854,8 +854,10 @@ bool Target::resolve(ResolveRequest &rr, bool add_to_resolver)
     if (!id)
     {
         auto ret = r.resolve(rr);
-        if (ret && add_to_resolver)
-            ssr.addResolvedPackage(rr.getUnresolvedPackageName(), rr.getSettings(), rr.getPackage().getId());
+        if (ret && add_to_resolver) {
+            SW_UNIMPLEMENTED;
+            //ssr.addResolvedPackage(rr.getUnresolvedPackageName(), rr.getSettings(), rr.getPackage().getId());
+        }
         return ret;
     }
 
@@ -874,7 +876,7 @@ void Target::resolveDependency(Dependency &d)
     LOG_TRACE(logger, "Resolving " << d.getUnresolvedPackageId().getName().toString()
         << ": " << d.getUnresolvedPackageId().getSettings().toString());
 
-    ResolveRequest rr{ d.getUnresolvedPackageId() };
+    ResolveRequest rr{ d.getUnresolvedPackageId().getName(), d.getUnresolvedPackageId().getSettings() };
     if (resolve(rr, true))
     {
         d.resolved_pkg = rr.getPackage().clone();
@@ -906,7 +908,8 @@ void Target::resolveDependency(Dependency &d)
         //d.setTarget(t);
 
         // we save original request to resolver
-        getSettings()["resolver"].addResolvedPackage(rr.getUnresolvedPackageName(), rr.getSettings(), PackageId{ p2.getId().getName(), rr.getSettings() });
+        SW_UNIMPLEMENTED;
+        //getSettings()["resolver"].addResolvedPackage(rr.getUnresolvedPackageName(), rr.getSettings(), PackageId{ p2.getId().getName(), rr.getSettings() });
     }
     /*else
     {
@@ -934,7 +937,7 @@ path Target::getFile(const DependencyPtr &dep, const path &fn)
         return {};
 
     addSourceDependency(dep); // main trick is to add a dependency
-    ResolveRequest rr{ dep->getUnresolvedPackageId() };
+    ResolveRequest rr{ dep->getUnresolvedPackageId().getName(), dep->getUnresolvedPackageId().getSettings() };
     resolve(rr, true);
 
     auto p2 = getSolution().getLocalStorage().install(rr.getPackage());
@@ -1025,7 +1028,7 @@ Test Target::addTest1(const String &name, const Target &tgt)
     //if (!isLocal() || getPackage().getOverriddenDir())
         //return c;
 
-    auto d = std::make_shared<Dependency>(UnresolvedPackageId{ tgt.getPackage() });
+    auto d = std::make_shared<Dependency>(UnresolvedPackageIdFull{ tgt.getPackage() });
     d->getUnresolvedPackageId().getSettings() = getSettings(); // same settings!
     SW_UNIMPLEMENTED;
     //d->setTarget(tgt); // "resolve" right here
@@ -1047,7 +1050,7 @@ void Target::addTest(Test &cb, const String &name)
 DependencyPtr Target::constructThisPackageDependency(const String &name)
 {
     PackageName id(NamePrefix / name, getPackage().getVersion());
-    return std::make_shared<Dependency>(UnresolvedPackageId{ id });
+    return std::make_shared<Dependency>(UnresolvedPackageIdFull{ id });
 }
 
 void ProjectTarget::init()

@@ -130,27 +130,29 @@ TargetContainer::Base::iterator TargetContainer::erase(Base::iterator begin, Bas
 
 ITarget *TargetMap::find(const PackageId &pkg) const
 {
-    auto i = find(pkg.getName());
+    SW_UNIMPLEMENTED;
+    /*auto i = find(pkg.getName());
     if (i == end())
         return {};
     auto k = i->second.findSuitable(pkg.getSettings());
     if (k == i->second.end())
         return {};
-    return *k;
+    return *k;*/
 }
 
 ITarget *TargetMap::find(const ResolveRequest &rr) const
 {
-    auto i = find(rr.getUnresolvedPackageName());
+    SW_UNIMPLEMENTED;
+    /*auto i = find(rr.getUnresolvedPackageName());
     if (i == end())
         return {};
     auto k = i->second.findSuitable(rr.getSettings());
     if (k == i->second.end())
         return {};
-    return *k;
+    return *k;*/
 }
 
-PredefinedTarget::PredefinedTarget(const PackageId &id)
+PredefinedTarget::PredefinedTarget(const PackageIdFull &id)
     : pkg(id)
 {
 }

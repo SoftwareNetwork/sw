@@ -95,7 +95,7 @@ std::string PackageVersion::format(const std::string &s) const
 {
     if (isBranch())
     {
-        return fmt::format(s,
+        return fmt::format(fmt::runtime(s),
             fmt::arg("b", getBranch()),
             fmt::arg("v", toString())
         );

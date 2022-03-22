@@ -133,22 +133,23 @@ void PackageSetting::setAbsolutePathValue(const path &value)
     *this = normalize_path(value);
 }
 
-void PackageSetting::addResolvedPackage(const UnresolvedPackageName &u, const PackageSettings &s, const PackageId &id)
+void PackageSetting::addResolvedPackage(const UnresolvedPackageName &u, const PackageSettings &s, const PackageIdFull &id)
 {
     auto &sr = std::get<ResolverType>(value);
     sr[u].emplace(s, id);
 }
 
-std::optional<PackageId> PackageSetting::resolve(const ResolveRequest &rr) const
+std::optional<PackageIdFull> PackageSetting::resolve(const ResolveRequest &rr) const
 {
     auto &sr = std::get<ResolverType>(value);
     auto i = sr.find(rr.getUnresolvedPackageName());
     if (i == sr.end())
         return {};
-    auto j = i->second.find(rr.getSettings());
+    SW_UNIMPLEMENTED;
+    /*auto j = i->second.find(rr.getSettings());
     if (j == i->second.end())
         return {};
-    return j->second;
+    return j->second;*/
 }
 
 void PackageSetting::setResolver()
@@ -316,7 +317,7 @@ bool PackageSetting::hasValue() const
 
 PackageSettings::~PackageSettings() {}
 
-size_t PackageSettings::getHash() const
+settings_hash PackageSettings::getHash() const
 {
     return getHash1();
 }
@@ -417,7 +418,7 @@ nlohmann::json PackageSettings::toJson() const
     return j;
 }
 
-size_t PackageSetting::getHash1() const
+settings_hash PackageSetting::getHash1() const
 {
     auto o = overload(
         [](const Empty &) -> size_t { return 0; },
@@ -428,12 +429,12 @@ size_t PackageSetting::getHash1() const
         [](const Array &a) {
             size_t h = 0;
             for (auto &v2 : a)
-                hash_combine(h, v2.getHash1());
+                hash_combine(h, (uint64_t)v2.getHash1());
             return h;
         },
         [](const Map &m) {
             size_t h = 0;
-            return hash_combine(h, m.getHash1());
+            return hash_combine(h, (uint64_t)m.getHash1());
         },
         [](const path &p) -> size_t { return std::hash<path>()(p); },
         [](const ResolverType &r) -> size_t {
@@ -442,7 +443,7 @@ size_t PackageSetting::getHash1() const
                 hash_combine(h, std::hash<UnresolvedPackageName>()(k));
                 for (auto &[s, id] : m) {
                     hash_combine(h, std::hash<PackageSettings>()(s));
-                    hash_combine(h, std::hash<PackageId>()(id));
+                    hash_combine(h, std::hash<PackageIdFull>()(id));
                 }
             }
             return h;
@@ -454,14 +455,14 @@ size_t PackageSetting::getHash1() const
     return std::visit(o, value);
 }
 
-size_t PackageSettings::getHash1() const
+settings_hash PackageSettings::getHash1() const
 {
     size_t h = 0;
     for (auto &[k, v] : *this)
     {
         if (v.ignoreInComparison())
             continue;
-        auto h2 = v.getHash1();
+        auto h2 = (uint64_t)v.getHash1();
         if (h2 == 0)
             continue;
         hash_combine(h, k);

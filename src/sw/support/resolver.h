@@ -4,6 +4,7 @@
 #pragma once
 
 #include "unresolved_package_name.h"
+#include "package_id.h"
 
 namespace sw
 {
@@ -39,7 +40,7 @@ struct SW_SUPPORT_API ResolveRequest : ResolveRequestResult
 {
     UnresolvedPackageName u;
     // value or ref?
-    const PackageSettings &settings;
+    settings_hash h;
     // value or ref?
     // or take it from swctx?
     // or from sw build - one security ctx for build
@@ -47,14 +48,14 @@ struct SW_SUPPORT_API ResolveRequest : ResolveRequestResult
     // timestamp - resolve packages only before this timestamp
     // like, e.g., on build start
 
-    ResolveRequest(const UnresolvedPackageName &u, const PackageSettings &s) : u(u), settings(s) {}
+    ResolveRequest(const UnresolvedPackageName &u, const PackageSettings &s);
     ResolveRequest(const UnresolvedPackageId &up);
 
     bool operator==(const ResolveRequest &rhs) const;
 
     bool setPackage(PackagePtr);
 
-    const PackageSettings &getSettings() const { return settings; }
+    //const PackageSettings &getSettings() const { return settings; }
     const UnresolvedPackageName &getUnresolvedPackageName() const { return u; }
     Package &getPackage() const { if (!isResolved()) throw SW_RUNTIME_ERROR("Package was not resolved: " + toString()); return *r; }
     String toString() const;

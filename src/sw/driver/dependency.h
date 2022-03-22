@@ -22,8 +22,8 @@ struct SW_DRIVER_CPP_API IDependency
 {
     virtual ~IDependency() = 0;
 
-    virtual UnresolvedPackageId &getUnresolvedPackageId() = 0;
-    virtual const UnresolvedPackageId &getUnresolvedPackageId() const = 0;
+    virtual UnresolvedPackageIdFull &getUnresolvedPackageId() = 0;
+    virtual const UnresolvedPackageIdFull &getUnresolvedPackageId() const = 0;
 
     virtual bool isResolved() const = 0;
     //virtual void setTarget(const ITarget &) = 0;
@@ -40,11 +40,11 @@ struct SW_DRIVER_CPP_API DependencyData : IDependency
     bool Disabled = false;
 
     DependencyData(const ITarget &);
-    DependencyData(const UnresolvedPackageId &);
+    DependencyData(const UnresolvedPackageIdFull &);
     ~DependencyData();
 
-    UnresolvedPackageId &getUnresolvedPackageId() override { return upkg; }
-    const UnresolvedPackageId &getUnresolvedPackageId() const override { return upkg; }
+    UnresolvedPackageIdFull &getUnresolvedPackageId() override { return upkg; }
+    const UnresolvedPackageIdFull &getUnresolvedPackageId() const override { return upkg; }
     //void setTarget(const ITarget &t) override;
     void setTarget(const package_transform &);
     //const ITarget &getTarget() const override;
@@ -69,7 +69,7 @@ struct SW_DRIVER_CPP_API DependencyData : IDependency
     const PackageSettings &getSettings() const { return getUnresolvedPackageId().getSettings(); }
 
 private:
-    UnresolvedPackageId upkg;
+    UnresolvedPackageIdFull upkg;
 public:
     const package_transform *transform = nullptr;
 };
@@ -104,7 +104,7 @@ template<> struct hash<sw::DependencyData>
 {
     size_t operator()(const sw::DependencyData &p) const
     {
-        return std::hash<::sw::UnresolvedPackageId>()(p.getUnresolvedPackageId());
+        return std::hash<::sw::UnresolvedPackageIdFull>()(p.getUnresolvedPackageId());
     }
 };
 
@@ -112,7 +112,7 @@ template<> struct hash<sw::Dependency>
 {
     size_t operator()(const sw::Dependency& p) const
     {
-        return std::hash<::sw::UnresolvedPackageId>()(p.getUnresolvedPackageId());
+        return std::hash<::sw::UnresolvedPackageIdFull>()(p.getUnresolvedPackageId());
     }
 };
 

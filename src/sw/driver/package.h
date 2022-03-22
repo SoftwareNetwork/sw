@@ -45,11 +45,11 @@ struct SW_DRIVER_CPP_API my_package_loader : package_loader
 struct SW_DRIVER_CPP_API my_physical_package : physical_package
 {
     ITargetPtr t;
-    PackageId p;
+    PackageIdFull p;
 
     my_physical_package(ITargetPtr in);
 
-    const PackageId &get_package() const override { return p; }
+    const PackageIdFull &get_package() const override { return p; }
     const PackageSettings &get_properties() const override;
 };
 

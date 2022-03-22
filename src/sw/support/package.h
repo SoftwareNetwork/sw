@@ -4,7 +4,8 @@
 #pragma once
 
 #include "enums.h"
-#include "package_id.h"
+#include "package_name.h"
+#include "settings.h"
 
 namespace sw
 {
@@ -16,7 +17,7 @@ struct SW_SUPPORT_API PackageData
     // internal id?
     //db::PackageVersionId id = 0;
 
-    SomeFlags flags;
+    //SomeFlags flags;
 
     // source package hash (sw.tar.gz)
     String hash;
@@ -28,7 +29,7 @@ struct SW_SUPPORT_API PackageData
     int prefix = 2;
 
     //
-    std::unordered_set<UnresolvedPackageName> dependencies;
+    //std::unordered_set<UnresolvedPackageName> dependencies;
 
     // for overridden pkgs
     path sdir;

@@ -18,4 +18,14 @@ UnresolvedPackageId::UnresolvedPackageId(const UnresolvedPackageName &n, const P
 {
 }
 
+UnresolvedPackageIdFull::UnresolvedPackageIdFull(const PackageName &n, const PackageSettings &s)
+    : name(n), settings(s)
+{
+}
+
+UnresolvedPackageIdFull::UnresolvedPackageIdFull(const UnresolvedPackageName &n, const PackageSettings &s)
+    : name(n), settings(s)
+{
+}
+
 }

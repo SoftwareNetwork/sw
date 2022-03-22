@@ -70,7 +70,7 @@ struct SW_DRIVER_CPP_API ProgramDetector
     {
         log_msg_detect_target("Detected target: " + id.toString() + ": " + ts.toString());
 
-        auto t = std::make_unique<T>(PackageId{ id, ts });
+        auto t = std::make_unique<T>(PackageIdFull{ id, ts });
         auto p = t.get();
         static_cast<ExtendedBuild &>(b).addTarget(std::move(t));
         return *p;

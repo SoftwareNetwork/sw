@@ -85,7 +85,7 @@ String UserInput::getHash() const
     String s;
     s = std::to_string(i.getHash());
     for (auto &ss : settings)
-        s += ss.getHash();
+        s += ss.getHash().to_string();
     return s;
 }
 

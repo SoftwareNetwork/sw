@@ -219,7 +219,7 @@ bool PackagesDatabase::resolve(ResolveRequest &rr, const IStorage &s, bool allow
     if (!pid)
         return false;
 
-    auto settings_hash = rr.getSettings().getHash();
+    size_t settings_hash = rr.h;
     auto q = (*db)(select(configs.configId).from(configs).where(
         configs.hash == settings_hash
     ));
@@ -242,7 +242,7 @@ bool PackagesDatabase::resolve(ResolveRequest &rr, const IStorage &s, bool allow
             continue;
         auto file_id = q.front().fileId.value();
 
-        auto p = s.makePackage({ {upkg.getPath(), row.version.value()}, rr.getSettings() });
+        auto p = s.makePackage({ {upkg.getPath(), row.version.value()}, rr.h });
         auto d = std::make_unique<PackageData>(getPackageData(p->getId()));
         p->setData(std::move(d));
 
@@ -278,7 +278,7 @@ PackageData PackagesDatabase::getPackageData(const PackageId &p) const
     auto &row = q.front();
     PackageData d;
     d.hash = getInstalledPackageHash(row.packageVersionId);
-    d.flags = row.flags.value();
+    //d.flags = row.flags.value();
     d.prefix = (int)row.prefix.value();
     d.sdir = row.sdir.value();
 

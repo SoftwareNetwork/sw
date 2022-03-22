@@ -28,17 +28,34 @@ private:
     PackageSettings settings;
 };
 
+struct SW_SUPPORT_API UnresolvedPackageIdFull
+{
+    UnresolvedPackageIdFull(const PackageName &, const PackageSettings & = {});
+    UnresolvedPackageIdFull(const UnresolvedPackageName &, const PackageSettings & = {});
+
+    const UnresolvedPackageName &getName() const { return name; }
+
+    PackageSettings &getSettings() { return settings; }
+    const PackageSettings &getSettings() const { return settings; }
+
+    bool operator==(const UnresolvedPackageIdFull &rhs) const { return std::tie(name, settings) == std::tie(rhs.name, rhs.settings); }
+
+private:
+    UnresolvedPackageName name;
+    PackageSettings settings;
+};
+
 }
 
 namespace std
 {
 
-template<> struct hash<::sw::UnresolvedPackageId>
+template<> struct hash<::sw::UnresolvedPackageIdFull>
 {
-    size_t operator()(const ::sw::UnresolvedPackageId &p) const
+    size_t operator()(const ::sw::UnresolvedPackageIdFull &p) const
     {
         auto h = std::hash<::sw::UnresolvedPackageName>()(p.getName());
-        return hash_combine(h, p.getSettings().getHash());
+        return hash_combine(h, (uint64_t)p.getSettings().getHash());
     }
 };
 

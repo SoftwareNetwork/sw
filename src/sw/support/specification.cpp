@@ -92,7 +92,7 @@ nlohmann::json SpecificationFiles::toJsonWithoutContents() const
     for (auto &[rel, f] : data)
     {
         nlohmann::json jf;
-        jf["path"] = normalize_path(rel);
+        jf["path"] = normalize_path(rel).u8string();
         j.push_back(jf);
     }
     return j;
@@ -104,7 +104,7 @@ nlohmann::json SpecificationFiles::toJson() const
     for (auto &[rel, f] : data)
     {
         nlohmann::json jf;
-        jf["path"] = normalize_path(rel);
+        jf["path"] = normalize_path(rel).u8string();
         jf["contents"] = f.getContents();
         j.push_back(jf);
     }

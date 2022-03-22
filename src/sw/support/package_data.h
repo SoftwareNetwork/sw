@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include "package_id.h"
+#include "settings.h"
 #include "source.h"
 
 #include <nlohmann/json_fwd.hpp>

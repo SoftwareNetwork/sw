@@ -282,7 +282,7 @@ static path get_lp_pkg_dir(const path &root, const Package &p)
 {
     auto fn = get_lp_root_dir(root, p.getId());
     fn /= "p";
-    fn /= p.getId().getSettings().getHashString();
+    fn /= p.getId().getHash().to_string();
     return fn;
 }
 
@@ -291,7 +291,7 @@ bool LocalStorage::resolve(ResolveRequest &rr) const
     auto r = StorageWithPackagesDatabase::resolve(rr);
     if (r)
     {
-        if (!rr.getPackage().getId().getSettings().getHash())
+        if (!rr.getPackage().getId().getHash())
         {
             auto d = get_lp_pkg_dir(storage_dir_pkg, rr.getPackage().getId());
             if (!fs::exists(d))
@@ -329,7 +329,7 @@ std::unique_ptr<Package> LocalStorage::install(const Package &p) const
     }
     fs::create_directories(dst);
 
-    auto h = p.getId().getSettings().getHash();
+    size_t h = p.getId().getHash();
     auto settings_name = std::to_string(h);
     if (h == 0)
         settings_name = "Source Archive";
@@ -339,7 +339,7 @@ std::unique_ptr<Package> LocalStorage::install(const Package &p) const
         + settings_name
         + "]");
     auto fn = get_lp_root_dir(storage_dir_pkg, p.getId());
-    fn /= p.getId().getSettings().getHashString() + ".tar.gz";
+    fn /= p.getId().getHash() + ".tar.gz";
     p.copyArchive(fn);
     //get(static_cast<const IStorage2 &>(p.getStorage()), p);
 
@@ -364,7 +364,7 @@ std::unique_ptr<Package> LocalStorage::install(const Package &p) const
     unpack_file(fn, dst);
 
     //
-    getPackagesDatabase().installPackage(p, p.getId().getSettings().getHash(), 0); // FIXME: pass actual value instead of zero
+    getPackagesDatabase().installPackage(p, p.getId().getHash(), 0); // FIXME: pass actual value instead of zero
 
     auto pkg = makePackage(p.getId());
     auto d = std::make_unique<PackageData>(p.getData());
@@ -459,7 +459,7 @@ void CachedStorage::storePackages(const ResolveRequest &rr)
 {
     std::unique_lock lk(m);
     SW_CHECK(rr.isResolved());
-    resolved_packages[rr.u][rr.settings.getHash()] = Value{ rr.getPackage().clone() };
+    resolved_packages[rr.u][rr.h] = Value{ rr.getPackage().clone() };
 }
 
 bool CachedStorage::resolve(ResolveRequest &rr) const
@@ -468,7 +468,7 @@ bool CachedStorage::resolve(ResolveRequest &rr) const
     auto i = resolved_packages.find(rr.u);
     if (i == resolved_packages.end())
         return false;
-    auto j = i->second.find(rr.settings.getHash());
+    auto j = i->second.find(rr.h);
     if (j == i->second.end())
         return false;
     rr.setPackage(j->second.r->clone());

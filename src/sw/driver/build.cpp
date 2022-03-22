@@ -118,8 +118,10 @@ const PackageSettings &ModuleSwappableData::getSettings() const
 {
     if (current_settings)
         return *current_settings;
-    if (known_target)
-        return known_target->getId().getSettings();
+    if (known_target) {
+        SW_UNIMPLEMENTED;
+        //return known_target->getId().getSettings();
+    }
     return *current_settings;
 }
 

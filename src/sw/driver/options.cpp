@@ -466,7 +466,7 @@ FilesOrdered NativeLinkerOptions::gatherLinkDirectories() const
 
 DependencyPtr NativeLinkerOptions::operator+(const ITarget &t)
 {
-    auto d = std::make_shared<Dependency>(UnresolvedPackageId{ t.getPackage() });
+    auto d = std::make_shared<Dependency>(UnresolvedPackageIdFull{ t.getPackage() });
     add(d);
     return d;
 }
@@ -486,12 +486,12 @@ DependencyPtr NativeLinkerOptions::operator+(const UnresolvedPackageName &pkg)
 
 void NativeLinkerOptions::add(const ITarget &t)
 {
-    add(std::make_shared<Dependency>(UnresolvedPackageId{ t.getPackage() }));
+    add(std::make_shared<Dependency>(UnresolvedPackageIdFull{ t.getPackage() }));
 }
 
 void NativeLinkerOptions::remove(const ITarget &t)
 {
-    remove(std::make_shared<Dependency>(UnresolvedPackageId{ t.getPackage() }));
+    remove(std::make_shared<Dependency>(UnresolvedPackageIdFull{ t.getPackage() }));
 }
 
 void NativeLinkerOptions::add(const DependencyPtr &t)

@@ -149,7 +149,7 @@ struct SW_CORE_API PredefinedTarget : ITarget
 {
     PackageSettings public_ts;
 
-    PredefinedTarget(const PackageId &);
+    PredefinedTarget(const PackageIdFull &);
     PredefinedTarget(const PredefinedTarget &) = delete;
     virtual ~PredefinedTarget();
 
@@ -168,7 +168,7 @@ struct SW_CORE_API PredefinedTarget : ITarget
     //Commands getTests() const override { return {}; }                               // no tests
 
 private:
-    PackageId pkg;
+    PackageIdFull pkg;
     mutable bool deps_set = false;
     //mutable std::vector<IDependencyPtr> deps;
 };
