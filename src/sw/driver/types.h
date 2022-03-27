@@ -133,12 +133,14 @@ enum class CPPLanguageStandard
     CPP17,
     CPP20,
     CPP23,
+    CPP26,
 
     CPP0x = CPP11,
     CPP1y = CPP14,
     CPP1z = CPP17,
     CPP2a = CPP20,
     CPP2b = CPP23,
+    CPP2c = CPP26,
 
     CPPLatest = CPP2b,
 
@@ -150,12 +152,14 @@ enum class CPPLanguageStandard
     cpp17 = CPP17,
     cpp20 = CPP20,
     cpp23 = CPP23,
+    cpp26 = CPP26,
 
     cpp0x = CPP0x,
     cpp1y = CPP1y,
     cpp1z = CPP1z,
     cpp2a = CPP2a,
     cpp2b = CPP2b,
+    cpp2c = CPP2c,
 
     cpplatest = CPPLatest,
 };
