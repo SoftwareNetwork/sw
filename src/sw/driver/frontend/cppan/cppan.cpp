@@ -416,8 +416,12 @@ static void cppan_load_project(NativeCompiledTarget &t, const yaml &root)
             {
                 if (cxx == "1z")
                     cxx_standard = 17;
-                else if (cxx == "2x")
+                else if (cxx == "2a")
                     cxx_standard = 20;
+                else if (cxx == "2b")
+                    cxx_standard = 23;
+                else if (cxx == "2c")
+                    cxx_standard = 26;
             }
         }
 
@@ -438,9 +442,21 @@ static void cppan_load_project(NativeCompiledTarget &t, const yaml &root)
         case 20:
             t.CPPVersion = CPPLanguageStandard::CPP20;
             break;
+        case 23:
+            t.CPPVersion = CPPLanguageStandard::CPP23;
+            break;
+        case 26:
+            t.CPPVersion = CPPLanguageStandard::CPP26;
+            break;
+        default:
+            throw SW_RUNTIME_ERROR("yet unknown c++ standard: " + cxx);
         }
     }
 
+    bool package_definitions = false;
+    YAML_EXTRACT_AUTO(package_definitions);
+    if (package_definitions)
+        t.PackageDefinitions = true;
     /*YAML_EXTRACT_AUTO(output_name);
     YAML_EXTRACT_AUTO(condition);
     YAML_EXTRACT_AUTO(include_script);
