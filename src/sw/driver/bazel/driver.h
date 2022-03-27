@@ -31,6 +31,8 @@ public:
     void error(const yy_bazel::location &l, const std::string &m);
     void error(const std::string &m);
 
+    void debug_printline(const char *) const;
+
     // lex & parse
 private:
     void *scanner;

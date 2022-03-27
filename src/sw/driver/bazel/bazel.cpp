@@ -138,6 +138,7 @@ Values File::getFiles(const Name &name, const std::string &bazel_target_function
 File parse(const std::string &s)
 {
     BazelParserDriver pd;
+    //pd.debug = true;
     pd.parse(s);
     pd.bazel_file.trimQuotes();
     return pd.bazel_file;

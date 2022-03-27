@@ -63,3 +63,8 @@ void BazelParserDriver::error(const std::string& m)
     else
         throw SW_RUNTIME_ERROR("Error during bazel parse: " + ss.str());
 }
+
+void BazelParserDriver::debug_printline(const char *line) const
+{
+
+}

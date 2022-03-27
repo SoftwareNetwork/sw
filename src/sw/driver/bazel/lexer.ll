@@ -13,6 +13,8 @@
 
 #define MAKE(x) yy_bazel::parser::make_ ## x(loc)
 #define MAKE_VALUE(x, v) yy_bazel::parser::make_ ## x((v), loc)
+
+static int xxxline = 1;
 %}
 
 %option nounistd
@@ -51,6 +53,7 @@ quote2          "\""[^"\\]*"\""
 [ \t]+                  loc.step();
 \r                      loc.step();
 \n                      {
+                            //printf("line %d\n", xxxline++);
                             loc.lines(yyleng);
                             loc.step();
                         }
@@ -80,6 +83,6 @@ class					return MAKE(CLASS);
 {quote2}				return MAKE_VALUE(STRING, yytext);
 
 .                       { /*driver.error(loc, "invalid character");*/ return MAKE(ERROR_SYMBOL); }
-<<EOF>>                 return MAKE(EOQ);
+<<EOF>>                 { xxxline = 1; return MAKE(EOQ); }
 
 %%
