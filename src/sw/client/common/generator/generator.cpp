@@ -932,7 +932,7 @@ void CMakeGenerator::generate(const sw::SwBuild &b)
 
                     ctx.addLine("target_sources(" + pkg.toString() + " PRIVATE");
                     ctx.increaseIndent();
-                    ctx.addLine(fn);
+                    ctx.addLine("\"" + fn + "\"");
                     ctx.decreaseIndent();
                     ctx.addLine(")");
                     ctx.addLine();
@@ -958,7 +958,7 @@ void CMakeGenerator::generate(const sw::SwBuild &b)
                             copts += s + ";";
                         }
                     }
-                    ctx.increaseIndent("set_source_files_properties(" + fn + " PROPERTIES");
+                    ctx.increaseIndent("set_source_files_properties(\"" + fn + "\" PROPERTIES");
                     ctx.addLine("COMPILE_DEFINITIONS \"" + defs + "\"");
                     ctx.addLine("COMPILE_OPTIONS \"" + copts + "\"");
                     ctx.addLine("INCLUDE_DIRECTORIES \"" + idirs + "\"");
@@ -998,7 +998,7 @@ void CMakeGenerator::generate(const sw::SwBuild &b)
         ctx.addLine("target_sources(" + pkg.toString() + " PRIVATE");
         ctx.increaseIndent();
         for (auto &f : files)
-            ctx.addLine(to_string(normalize_path(f)));
+            ctx.addLine("\"" + to_string(normalize_path(f)) + "\"");
         ctx.decreaseIndent();
         ctx.addLine(")");
         ctx.addLine();
