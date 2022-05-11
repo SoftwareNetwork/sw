@@ -12,11 +12,13 @@ void build(Solution &s)
 
     auto &p = sw.addProject("client");
 
+    auto cppstd = cpp23;
+
     auto &support = p.addTarget<LibraryTarget>("support");
     {
         support.ApiName = "SW_SUPPORT_API";
         support.ExportIfStatic = true;
-        support += cpp20;
+        support += cppstd;
         support += "src/sw/support/.*"_rr;
         auto cmddep = "pub.egorpugin.primitives.command-master"_dep;
         auto verdep = "pub.egorpugin.primitives.version-master"_dep;
@@ -73,7 +75,7 @@ void build(Solution &s)
     {
         manager.ApiName = "SW_MANAGER_API";
         manager.ExportIfStatic = true;
-        manager += cpp20;
+        manager += cppstd;
         manager.Public += "BOOST_DLL_USE_STD_FS"_def;
 
         manager +=
@@ -116,7 +118,7 @@ void build(Solution &s)
     {
         builder.ApiName = "SW_BUILDER_API";
         builder.ExportIfStatic = true;
-        builder += cpp20;
+        builder += cppstd;
         builder += "src/sw/builder/.*"_rr;
         builder.Public += manager,
             "org.sw.demo.preshing.junction-master"_dep,
@@ -136,7 +138,7 @@ void build(Solution &s)
     auto &builder_distributed = builder.addTarget<LibraryTarget>("distributed");
     {
         builder_distributed.ApiName = "SW_BUILDER_DISTRIBUTED_API";
-        builder_distributed += cpp20;
+        builder_distributed += cppstd;
         builder_distributed += "src/sw/builder_distributed/.*"_rr;
         builder_distributed.Public += builder;
     }
@@ -145,7 +147,7 @@ void build(Solution &s)
     {
         core.ApiName = "SW_CORE_API";
         core.ExportIfStatic = true;
-        core += cpp20;
+        core += cppstd;
         core.Public += builder;
         core += "src/sw/core/.*"_rr;
         core += "org.sw.demo.Neargye.magic_enum"_dep;
@@ -161,7 +163,7 @@ void build(Solution &s)
         cpp_driver.ExportIfStatic = true;
         cpp_driver.PackageDefinitions = true;
         cpp_driver.WholeArchive = true;
-        cpp_driver += cpp20;
+        cpp_driver += cppstd;
         cpp_driver += "org.sw.demo.Kitware.CMake.lib"_dep; // cmake fe
         cpp_driver += "org.sw.demo.ReneNyffenegger.cpp_base64-master"_dep;
         cpp_driver.Public += core,
@@ -197,7 +199,7 @@ void build(Solution &s)
         {
             auto &self_builder = cpp_driver.addTarget<ExecutableTarget>("self_builder");
             self_builder.PackageDefinitions = true;
-            self_builder += cpp20;
+            self_builder += cppstd;
             self_builder += "src/sw/driver/tools/self_builder.cpp";
             self_builder +=
                 core,
@@ -213,7 +215,7 @@ void build(Solution &s)
         {
             auto &cl_generator = cpp_driver.addTarget<ExecutableTarget>("cl_generator");
             cl_generator.PackageDefinitions = true;
-            cl_generator += cpp20;
+            cl_generator += cppstd;
             cl_generator += "src/sw/driver/tools/cl_generator.*"_rr;
             cl_generator +=
                 "pub.egorpugin.primitives.emitter-master"_dep,
@@ -287,7 +289,7 @@ void build(Solution &s)
         client_common.SwDefinitions = true;
         client_common.StartupProject = true;
         client_common += "src/sw/client/common/.*"_rr;
-        client_common += cpp20;
+        client_common += cppstd;
         client_common.Public += builder_distributed, core, cpp_driver;
 
         embed2("pub.egorpugin.primitives.tools.embedder2-master"_dep, client_common, "src/sw/client/common/inserts/SWConfig.cmake");
@@ -303,7 +305,7 @@ void build(Solution &s)
         client.SwDefinitions = true;
         client.StartupProject = true;
         client += "src/sw/client/cli/.*"_rr;
-        client += cpp20;
+        client += cppstd;
         client += client_common,
             //"org.sw.demo.microsoft.mimalloc"_dep,
             "pub.egorpugin.primitives.sw.main-master"_dep
@@ -371,7 +373,7 @@ void build(Solution &s)
     {
         // move to src/sw/server/tools?
         mirror.PackageDefinitions = true;
-        mirror += cpp20;
+        mirror += cppstd;
         mirror += "src/sw/tools/mirror.cpp";
         mirror += manager;
         mirror += "pub.egorpugin.primitives.sw.main-master"_dep;
@@ -385,7 +387,7 @@ void build(Solution &s)
         gui.PackageDefinitions = true;
         gui.SwDefinitions = true;
         gui += "src/sw/client/gui/.*"_rr;
-        gui += cpp20;
+        gui += cppstd;
         gui += client_common;
 
         gui += "org.sw.demo.qtproject.qt.base.widgets" QT_VER ""_dep;
