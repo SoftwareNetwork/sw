@@ -286,7 +286,7 @@ static void cppan_load_project(NativeCompiledTarget &t, const yaml &root)
                     if (priv.IsMap())
                     {
                         get_map_and_iterate(dall, str,
-                            [&get_dep, &deps](const auto &d)
+                            [&](const auto &d)
                         {
                             auto dep = get_dep(d);
                             deps.insert(dep);
