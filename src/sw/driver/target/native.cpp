@@ -603,7 +603,8 @@ std::shared_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetS
         // is it true?
         c->Type = LinkerType::GNU;
         C->Prefix = getBuildSettings().TargetOS.getLibraryPrefix();
-        // use lld linker unconditionally for now
+        // use lld linker for speed unconditionally for now
+        if (getBuildSettings().TargetOS.Type == OSType::Linux)
         {
             create_command();
             auto cmd = c->createCommand(getMainBuild());
