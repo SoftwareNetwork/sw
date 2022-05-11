@@ -1215,7 +1215,7 @@ void SwBuild::runSavedExecutionPlan(const path &in) const
     decltype(cmds) cmds_filtered;
     if (!explan_files.empty()) {
         for (auto &&c : cmds) {
-            if (std::ranges::any_of(explan_files, [&c](auto &&f) { return c->inputs.contains(f); })) {
+            if (std::any_of(explan_files.begin(), explan_files.end(), [&c](auto &&f) { return c->inputs.contains(f); })) {
                 c->always = true;
                 cmds_filtered.insert(c);
             }

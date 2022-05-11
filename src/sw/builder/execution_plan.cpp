@@ -44,12 +44,16 @@ struct gcc_modules_server {
     const ExecutionPlan &ep;
     boost::asio::io_context ctx_main;
     boost::asio::io_context ctx_headers;
-    std::jthread t_main;
-    std::jthread t_headers;
+    std::thread t_main;
+    std::thread t_headers;
 
     ~gcc_modules_server() {
         ctx_main.stop();
         ctx_headers.stop();
+        if (t_headers.joinable())
+            t_headers.join();
+        if (t_main.joinable())
+            t_main.join();
     }
     void run() {
         // compile handling
@@ -58,12 +62,12 @@ struct gcc_modules_server {
         boost::asio::co_spawn(ctx_main, accept(ctx_main, get_module_mapper_port() + 1, true), boost::asio::detached);
         // import header handling
         boost::asio::co_spawn(ctx_headers, accept(ctx_headers, get_module_mapper_port() + 2, true), boost::asio::detached);
-        t_main = std::jthread{[this](){
+        t_main = std::thread{[this](){
             try {
                 ctx_main.run();
             } catch (...) {}
         }};
-        t_headers = std::jthread{[this](){
+        t_headers = std::thread{[this](){
             try {
                 ctx_headers.run();
             } catch (...) {}
@@ -225,7 +229,7 @@ struct gcc_modules_server {
                             if (!fs::exists(fn)) {
                                 if (!this_command) {
                                     auto &cmds = ep.getCommands();
-                                    auto it = std::ranges::find_if(cmds, [&d](auto &&v){ return static_cast<builder::Command*>(v)->outputs.contains(d.out); });
+                                    auto it = std::find_if(cmds.begin(), cmds.end(), [&d](auto &&v){ return static_cast<builder::Command*>(v)->outputs.contains(d.out); });
                                     if (it == cmds.end()) {
                                         co_await reply(line, "ERROR 'Cannot find according command for import header: " + module + "'");
                                         co_return;
