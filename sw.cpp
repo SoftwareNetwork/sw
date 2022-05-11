@@ -61,7 +61,7 @@ void build(Solution &s)
 
     auto &protos = p.addTarget<StaticLibraryTarget>("protos");
     {
-        protos += cpp20;
+        protos += cpp17; // some bug with protobuf/vs
         protos += "src/sw/protocol/.*"_rr;
         protos.Public += "pub.egorpugin.primitives.grpc_helpers-master"_dep;
         ProtobufData d;
