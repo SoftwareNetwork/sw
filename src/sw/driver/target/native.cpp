@@ -349,6 +349,7 @@ auto set_apple_arch = [](auto &&obj, auto &&c) {
             break;
         default:
             //throw SW_RUNTIME_ERROR("Unknown arch");
+            break;
         }
     }
 };
