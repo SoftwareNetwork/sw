@@ -332,6 +332,27 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const String
     activateCompiler(s, id, exts, extended_desc);
 }
 
+auto set_apple_arch = [](auto &&obj, auto &&c) {
+    if (obj.getContext().getHostOS().isApple() && obj.getBuildSettings().TargetOS.isApple())
+    {
+        switch (obj.getBuildSettings().TargetOS.Arch)
+        {
+        case ArchType::x86_64:
+        #if defined(__aarch64__)
+            c->push_back("-arch");
+            c->push_back("x86_64");
+        #endif
+            break;
+        case ArchType::aarch64:
+            c->push_back("-arch");
+            c->push_back("arm64"); // arm64e?
+            break;
+        default:
+            //throw SW_RUNTIME_ERROR("Unknown arch");
+        }
+    }
+};
+
 void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const UnresolvedPackage &id, const StringSet &exts, bool extended_desc)
 {
     auto &cld = getMainBuild().getTargets();
@@ -526,6 +547,8 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
 
     create_command(c);
     set_compiler_type(c);
+
+    set_apple_arch(*this, c);
 }
 
 std::shared_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetSetting &s)
@@ -706,6 +729,8 @@ std::shared_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetS
             SW_UNIMPLEMENTED;
         }
     }
+
+    set_apple_arch(*this, c);
 
     return c;
 }
