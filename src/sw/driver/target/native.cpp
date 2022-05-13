@@ -344,8 +344,8 @@ auto set_apple_arch = [](auto &&obj, auto &&c) {
         #endif
             break;
         case ArchType::aarch64:
-            c->getCommand()->push_back("-arch");
-            c->getCommand()->push_back("arm64"); // arm64e?
+            c->push_back("-arch");
+            c->push_back("arm64"); // arm64e?
             break;
         default:
             //throw SW_RUNTIME_ERROR("Unknown arch");
@@ -443,9 +443,10 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
         auto &nc = (GNUCompiler&)*c;
         if (getBuildSettings().TargetOS.isApple())
         {
+            auto c = nc.createCommand(getMainBuild());
+            set_apple_arch(*this, c);
             if (getBuildSettings().TargetOS.Version)
             {
-                auto c = nc.createCommand(getMainBuild());
                 c->push_back("-mmacosx-version-min=" + getBuildSettings().TargetOS.Version->toString());
             }
             //C->VisibilityHidden = false;
@@ -476,9 +477,10 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
             nc.appleclang = true;
         if (getBuildSettings().TargetOS.isApple())
         {
+            auto c = nc.createCommand(getMainBuild());
+            set_apple_arch(*this, c);
             if (getBuildSettings().TargetOS.Version)
             {
-                auto c = nc.createCommand(getMainBuild());
                 c->push_back("-mmacosx-version-min=" + getBuildSettings().TargetOS.Version->toString());
             }
             //C->VisibilityHidden = false;
@@ -548,8 +550,6 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
 
     create_command(c);
     set_compiler_type(c);
-
-    set_apple_arch(*this, c);
 }
 
 std::shared_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetSetting &s)
@@ -638,10 +638,11 @@ std::shared_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetS
         {
             C->use_start_end_groups = false;
 
+            auto c = C->createCommand(getMainBuild());
+            set_apple_arch(*this, c);
             // for linker also!
             if (getBuildSettings().TargetOS.Version)
             {
-                auto c = C->createCommand(getMainBuild());
                 c->push_back("-mmacosx-version-min=" + getBuildSettings().TargetOS.Version->toString());
             }
         }
@@ -730,8 +731,6 @@ std::shared_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetS
             SW_UNIMPLEMENTED;
         }
     }
-
-    set_apple_arch(*this, c);
 
     return c;
 }
