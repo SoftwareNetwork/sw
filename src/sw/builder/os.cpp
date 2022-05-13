@@ -105,21 +105,11 @@ OS detectOS()
 
 #if defined(CPPAN_OS_APPLE)
     os.Type = OSType::Macos;
+#if defined(__aarch64__)
+    os.Arch = ArchType::aarch64;
+#else
     os.Arch = ArchType::x86_64;
-
-    size_t size;
-    sysctlbyname("hw.machine", NULL, &size, NULL, 0); // Get size of data to be returned.
-    char *name = malloc(size);
-    sysctlbyname("hw.machine", name, &size, NULL, 0);
-
-    if (strcmp(name, "x86_64"))
-        os.Arch = ArchType::x86_64;
-    else if (strcmp(name, "arm64"))
-        os.Arch = ArchType::aarch64;
-    else
-        LOG_WARN(logger, "cannot find " + sdktype + " sdk path using xcrun");
-
-    free(name);
+#endif
 #endif
 
     // TODO: uname -a on *nix
