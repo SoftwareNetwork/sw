@@ -344,8 +344,8 @@ auto set_apple_arch = [](auto &&obj, auto &&c) {
         #endif
             break;
         case ArchType::aarch64:
-            c->push_back("-arch");
-            c->push_back("arm64"); // arm64e?
+            c->getCommand()->push_back("-arch");
+            c->getCommand()->push_back("arm64"); // arm64e?
             break;
         default:
             //throw SW_RUNTIME_ERROR("Unknown arch");
