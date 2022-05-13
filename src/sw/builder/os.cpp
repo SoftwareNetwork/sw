@@ -169,6 +169,16 @@ bool OS::canRunTargetExecutables(const OS &TargetOS) const
         {
             return true;
         }
+        if (isApple() &&
+            (
+                Arch == ArchType::x86_64 && TargetOS.Arch == ArchType::aarch64
+                ||
+                Arch == ArchType::aarch64 && TargetOS.Arch == ArchType::x86_64
+            )
+        )
+        {
+            return true;
+        }
 
         return false;
     }
