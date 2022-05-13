@@ -95,15 +95,15 @@ Remote::Remote(const String &name, const String &u, bool allow_network)
         download_file(spec_url, fn);
     auto j = nlohmann::json::parse(read_file(fn));
     auto &spec = j["specification"];
-    api_url = spec["api_url"];
+    api_url = spec["api_url"].get<String>();
     auto &jdb = spec["database"];
     if (jdb.contains("url"))
-        db.url = jdb["url"];
+        db.url = jdb["url"].get<String>();
     if (jdb.contains("git_url"))
-        db.git_repo_url = jdb["git_url"];
+        db.git_repo_url = jdb["git_url"].get<String>();
     if (jdb.contains("local_dir"))
-        db.local_dir = jdb["local_dir"];
-    db.version_root_url = jdb["version_root_url"];
+        db.local_dir = jdb["local_dir"].get<String>();
+    db.version_root_url = jdb["version_root_url"].get<String>();
     if (!db.version_root_url.empty() && db.version_root_url.back() != '/')
         db.version_root_url += "/";
 
@@ -113,7 +113,7 @@ Remote::Remote(const String &name, const String &u, bool allow_network)
         for (auto &[k, v] : row.items())
         {
             DataSource s;
-            s.raw_url = v["url"];
+            s.raw_url = v["url"].get<String>();
             if (v.contains("flags"))
                 s.flags = v["flags"].get<int64_t>();
             if (s.flags[DataSource::fDisabled])
