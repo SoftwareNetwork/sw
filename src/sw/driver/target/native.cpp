@@ -333,7 +333,7 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const String
 }
 
 auto set_apple_arch = [](auto &&obj, auto &&c) {
-    if (obj.getContext().getHostOS().isApple() && obj.getBuildSettings().TargetOS.isApple())
+    if (getHostOS().isApple() && obj.getBuildSettings().TargetOS.isApple())
     {
         switch (obj.getBuildSettings().TargetOS.Arch)
         {
