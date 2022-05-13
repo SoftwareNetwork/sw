@@ -617,7 +617,7 @@ void TargetOptions::add(const SystemLinkLibrary &l)
 {
     auto l2 = l;
     if (l2.l.extension() == ".lib" && getTarget().getBuildSettings().TargetOS.getStaticLibraryExtension() == l2.l.extension())
-        l2.l = boost::to_upper_copy(l.l.u8string());
+        l2.l = boost::to_upper_copy(l.l.string());
     NativeOptions::add(l2);
 }
 
@@ -625,7 +625,7 @@ void TargetOptions::remove(const SystemLinkLibrary &l)
 {
     auto l2 = l;
     if (l2.l.extension() == ".lib" && getTarget().getBuildSettings().TargetOS.getStaticLibraryExtension() == l2.l.extension())
-        l2.l = boost::to_upper_copy(l.l.u8string());
+        l2.l = boost::to_upper_copy(l.l.string());
     NativeOptions::remove(l2);
 }
 
