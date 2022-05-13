@@ -176,9 +176,9 @@ static String archTypeFromStringCaseI(const String &in)
         platform == "x64" ||
         platform == "x64_86")
         return "x86_64";
-    else if (platform == "arm32")
+    else if (platform == "arm32" || platform == "arm")
         return "arm";
-    else if (platform == "arm64")
+    else if (platform == "arm64" || platform == "aarch64")
         return "aarch64";
     return platform;
 }
