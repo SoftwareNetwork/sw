@@ -441,6 +441,7 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
     {
         c = std::make_unique<GNUCompiler>();
         auto &nc = (GNUCompiler&)*c;
+        create_command(c);
         if (getBuildSettings().TargetOS.isApple())
         {
             auto c = nc.createCommand(getMainBuild());
@@ -638,6 +639,7 @@ std::shared_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetS
         {
             C->use_start_end_groups = false;
 
+            create_command();
             auto c = C->createCommand(getMainBuild());
             set_apple_arch(*this, c);
             // for linker also!
