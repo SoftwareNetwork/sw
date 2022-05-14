@@ -376,8 +376,7 @@ void CmakeTargetEntryPoint::setupTarget(cmMakefile &mf, cmTarget &cmt, NativeCom
         t.ExportAllSymbols = true;
 
     // sources
-    cmListFileBacktrace bt;
-    if (auto prop = cmTargetPropertyComputer::GetProperty(&cmt, "SOURCES", cm->GetMessenger(), bt))
+    if (auto prop = cmTargetPropertyComputer::GetProperty(&cmt, "SOURCES", mf))
     {
         for (auto &sf : cmExpandedList(*prop))
         {
@@ -406,12 +405,12 @@ void CmakeTargetEntryPoint::setupTarget(cmMakefile &mf, cmTarget &cmt, NativeCom
     // defs
     for (auto &d : mf.GetCompileDefinitionsEntries())
     {
-        for (auto &def : cmExpandedList(d))
+        for (auto &def : cmExpandedList(d.Value))
             t += Definition(def);
     }
     for (auto &d : cmt.GetCompileDefinitionsEntries())
     {
-        for (auto &def : cmExpandedList(d))
+        for (auto &def : cmExpandedList(d.Value))
             t += Definition(def);
     }
 
@@ -424,14 +423,14 @@ void CmakeTargetEntryPoint::setupTarget(cmMakefile &mf, cmTarget &cmt, NativeCom
     // idirs
     for (auto &i : cmt.GetIncludeDirectoriesEntries())
     {
-        for (auto &idir : cmExpandedList(i))
+        for (auto &idir : cmExpandedList(i.Value))
             t += IncludeDirectory(idir);
     }
 
     // ldirs
     for (auto &ld : cmt.GetLinkDirectoriesEntries())
     {
-        for (auto &d : cmExpandedList(ld))
+        for (auto &d : cmExpandedList(ld.Value))
             t += LinkDirectory(d);
     }
 
@@ -488,7 +487,7 @@ void CmakeTargetEntryPoint::setupTarget(cmMakefile &mf, cmTarget &cmt, NativeCom
     // more libs
     for (auto &li : cmt.GetLinkImplementationEntries())
     {
-        for (auto &n : cmExpandedList(li))
+        for (auto &n : cmExpandedList(li.Value))
         {
             add_link_library_to(t, n);
         }
