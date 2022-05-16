@@ -22,7 +22,11 @@ void self_upgrade(const String &progname)
 #ifdef _WIN32
     path client = "/client/"s + progname + "-master-windows-client.zip";
 #elif __APPLE__
+    #ifdef __aarch64__
+    path client = "/client/"s + progname + "-master-macos_arm64-client.tar.gz";
+    #else
     path client = "/client/"s + progname + "-master-macos-client.tar.gz";
+    #endif
 #else
     path client = "/client/"s + progname + "-master-linux-client.tar.gz";
 #endif
