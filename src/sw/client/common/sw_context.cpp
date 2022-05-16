@@ -740,9 +740,11 @@ std::vector<sw::TargetSettings> SwClientContext::createSettings()
         for (const auto &[i,s] : enumerate(settings))
         {
             if (s["name"])
-                throw SW_RUNTIME_ERROR("Some config already has its name");
+                LOG_WARN(logger, "Some config already has its name. Overriding");
             s["name"] = options.config_name[i];
             s["name"].serializable(false);
+            s["name"].useInHash(false);
+            s["name"].ignoreInComparison(false);
         }
         LOG_DEBUG(logger, "WARNING: Setting config names may result in wrong config-name pair assignment, "
             "because of unspecified config creation order.");
