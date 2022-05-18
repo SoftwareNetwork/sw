@@ -162,6 +162,10 @@ static void cleanup(SwClientContext &swctx)
 SUBCOMMAND_DECL(setup)
 {
 #ifdef _WIN32
+    // also register for current user
+    if (!is_elevated())
+        registerCmakePackage(*this);
+
     elevate();
 #endif
 
