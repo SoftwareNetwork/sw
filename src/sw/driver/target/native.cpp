@@ -741,6 +741,10 @@ void NativeCompiledTarget::findCompiler()
 {
     activateCompiler(getSettings()["native"]["program"]["cpp"], getCppSourceFileExtensions());
     activateCompiler(getSettings()["native"]["program"]["c"], { ".c" });
+#ifdef __APPLE__
+    activateCompiler(getSettings()["native"]["program"]["mm"], { ".mm" });
+    activateCompiler(getSettings()["native"]["program"]["m"], { ".m" });
+#endif
 
     if (ct == CompilerType::UnspecifiedCompiler)
         throw SW_RUNTIME_ERROR("Cannot find compiler " + get_settings_package_id(getSettings()["native"]["program"]["c"]).toString() + " for settings: " + getSettings().toString());

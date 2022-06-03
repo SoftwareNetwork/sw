@@ -1141,6 +1141,11 @@ void addSettingsAndSetHostPrograms(const SwCoreContext &swctx, TargetSettings &t
         if (ts["native"]["program"]["cpp"].isValue())
             if_add(ts["native"]["program"]["link"], ts["native"]["program"]["cpp"].getValue());
     }
+
+#ifdef __APPLE__
+    check_and_assign_dependency(ts["native"]["program"]["m"], to_upkg("com.Apple.clang"));
+    check_and_assign_dependency(ts["native"]["program"]["mm"], to_upkg("com.Apple.clangpp"));
+#endif
 }
 
 //
@@ -1292,6 +1297,11 @@ void addSettingsAndSetPrograms(const SwCoreContext &swctx, TargetSettings &ts)
         if (ts["native"]["program"]["cpp"].isValue())
             if_add(ts["native"]["program"]["link"], ts["native"]["program"]["cpp"].getValue());
     }
+
+#ifdef __APPLE__
+    check_and_assign_dependency(ts["native"]["program"]["m"], to_upkg("com.Apple.clang"));
+    check_and_assign_dependency(ts["native"]["program"]["mm"], to_upkg("com.Apple.clangpp"));
+#endif
 }
 
 }
