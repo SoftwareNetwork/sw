@@ -538,7 +538,7 @@ private:
         //
         if (b.getContext().getHostOs().Type == OSType::Windows)
             addText("\"");
-        if (prog.find("cl.exe") != prog.npos)
+        if (prog.string().find("cl.exe") != -1)
             addLine("deps = msvc");
         else if (has_mmd || has_md)
         {
@@ -706,7 +706,7 @@ struct MakeEmitter : primitives::Emitter
         }
 
         auto prog = c.getProgram();
-        s += "$(" + sc.getProgramName("\"" + prog + "\"", c) + ") ";
+        s += "$(" + sc.getProgramName("\"" + prog.string() + "\"", c) + ") ";
 
         if (!c.needsResponseFile())
         {
@@ -1235,7 +1235,7 @@ void ShellGenerator::generate(const SwBuild &b)
         if (!c->needsResponseFile())
         {
             ctx.addText(batch ? "%" : "$");
-            ctx.addText(sc.getProgramName(c->getProgram(), *c));
+            ctx.addText(sc.getProgramName(c->getProgram().string(), *c));
             if (batch)
                 ctx.addText("%");
             ctx.addText(" ");
@@ -1265,7 +1265,7 @@ void ShellGenerator::generate(const SwBuild &b)
                     ctx.addLine("echo " + a->quote() + " >> response.rsp");
             }
             ctx.addText(batch ? "%" : "$");
-            ctx.addLine(sc.getProgramName(c->getProgram(), *c));
+            ctx.addLine(sc.getProgramName(c->getProgram().string(), *c));
             if (batch)
                 ctx.addText("%");
             ctx.addLine(" @response.rsp");

@@ -137,7 +137,7 @@ struct SW_BUILDER_API Command : ICastable, CommandNode, detail::ResolvableComman
         Msvc,
         Custom,
     };
-    struct msvc_modules_scan_data {
+    struct SW_BUILDER_API msvc_modules_scan_data {
         String source;
         String export_module;
         Strings import_modules;

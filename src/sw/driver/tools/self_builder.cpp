@@ -19,7 +19,7 @@
 DECLARE_STATIC_LOGGER(logger, "self_builder");
 
 #define SW_DRIVER_NAME "org.sw.sw.client.driver.cpp-" PACKAGE_VERSION
-#define QT_VER "-5.15.0"
+#define QT_VER ""
 
 using namespace sw;
 
@@ -103,7 +103,8 @@ String write_build_script(SwCoreContext &swctx,
             prepkgs.push_back("org.sw.demo.google.grpc.cpp.plugin"s);
 
             // goes before sw cpp driver (client)
-            prepkgs.push_back("pub.egorpugin.primitives.filesystem-master"s);
+            // why resolving does not work (removing -0.3.0)? overridden?
+            prepkgs.push_back("pub.egorpugin.primitives.filesystem-0.3.0"s);
         }
 
         if (headers)
@@ -222,7 +223,7 @@ String write_build_script(SwCoreContext &swctx,
     return ctx.getText();
 }
 
-int main(int argc, char **argv)
+int main(int argc, char *argv[])
 {
     static cl::opt<String> loglevel("log-level", cl::init("INFO"));
     static cl::opt<path> p(cl::Positional, cl::Required);
@@ -265,10 +266,4 @@ int main(int argc, char **argv)
     write_file(p, t2 + t3);
 
     return 0;
-}
-
-EXPORT_FROM_EXECUTABLE
-std::string getProgramName()
-{
-    return PACKAGE_NAME_CLEAN;
 }

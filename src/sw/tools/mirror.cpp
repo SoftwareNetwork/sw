@@ -30,7 +30,7 @@ void setup_log(const std::string &log_level)
     LOG_TRACE(logger, "Starting sw...");
 }
 
-int main(int argc, char **argv)
+int main(int argc, char *argv[])
 {
     static cl::opt<String> loglevel("log-level", cl::init("INFO"));
     static cl::opt<path> dir("dir", cl::Required, cl::desc("Dir to store files"));
@@ -104,10 +104,4 @@ int main(int argc, char **argv)
     }
 
     return 0;
-}
-
-EXPORT_FROM_EXECUTABLE
-std::string getProgramName()
-{
-    return PACKAGE_NAME_CLEAN;
 }

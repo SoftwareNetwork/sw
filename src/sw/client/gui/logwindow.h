@@ -6,6 +6,8 @@
 #include <boost/log/sinks.hpp>
 #include <qmainwindow.h>
 
+#include <thread>
+
 namespace sinks = boost::log::sinks;
 class qt_text_ostream_backend :
     public QObject,
