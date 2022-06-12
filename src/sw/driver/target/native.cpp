@@ -1439,6 +1439,8 @@ Commands NativeCompiledTarget::getGeneratedCommands() const
     // so we introduce this order
     std::map<int, std::vector<std::shared_ptr<builder::Command>>> order;
 
+    //DEBUG_BREAK_IF(getPackage().toString() == "org.sw.demo.perl.lib-5.36.0");
+
     // add generated commands
     for (auto &[f, _] : getMergeObject())
     {
@@ -1541,6 +1543,18 @@ Commands NativeCompiledTarget::getCommands1() const
             auto c = f->getCommand(*this);
             prepare_command(f, c);
         }
+    }
+    for (auto &c : generated)
+    {
+        String s = "[" + getPackage().toString() + "]" + " generate: ";
+        if (!c->outputs.empty()) {
+            for (auto &o : c->outputs)
+                s += "\"" + to_string(normalize_path(o)) + "\", ";
+            s.resize(s.size() - 2);
+        } else {
+            s += std::to_string((uint64_t)this);
+        }
+        c->name = s;
     }
 
     // add generated files

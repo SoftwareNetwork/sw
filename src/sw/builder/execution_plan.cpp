@@ -747,6 +747,7 @@ void ExecutionPlan::prepare(USet &cmds)
         for (auto &c : cmds)
         {
             //if (cmds3[c->getHash()])
+                //LOG_INFO(logger, "Duplicate commands!\n " << ((builder::Command*)cmds3[c->getHash()])->print());
                 //throw SW_RUNTIME_ERROR("Duplicate commands!");
             cmds3[c->getHash()] = c;
         }
