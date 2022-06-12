@@ -166,13 +166,13 @@ SUBCOMMAND_DECL(create)
         primitives::CppEmitter ctx;
         ctx.beginFunction("void build(Solution &s)");
         ctx.addLine("// Uncomment to make a project. Also replace s.addTarget(). with p.addTarget() below.");
-        ctx.addLine("// auto &p = s.addProject(\"myproject\", \"master\");");
+        ctx.addLine("// auto &p = s.addProject(\"myproject\");");
         ctx.addLine("// p += Git(\"https://github.com/account/project\");");
         ctx.addLine();
         ctx.addLine("auto &t = s.addTarget<Executable>(\"project\");");
         ctx.addLine("t += cpp17;");
         ctx.addLine("//t += \"src/main.cpp\";");
-        ctx.addLine("//t += \"pub.egorpugin.primitives.sw.main-master\"_dep;");
+        ctx.addLine("//t += \"pub.egorpugin.primitives.sw.main\"_dep;");
         ctx.endFunction();
         write_file(dir / "sw.cpp", ctx.getText());
         return;

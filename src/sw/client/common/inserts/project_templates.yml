@@ -27,7 +27,7 @@ templates:
         config:
             sw.cpp: sw.cpp
         dependencies:
-            - pub.egorpugin.primitives.sw.main-master
+            - pub.egorpugin.primitives.sw.main
         files:
             src/main.cpp: sw.main.cpp
         other_files:
