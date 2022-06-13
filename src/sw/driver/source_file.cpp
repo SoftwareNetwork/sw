@@ -149,7 +149,7 @@ void SourceFileStorage::add_unchecked1(const path &file_in, bool skip, const Str
     }
     else
     {
-        if (!f || f->postponed)
+        if (!f || f->postponed || file.extension().string() != ext_in)
         {
             if (!target.getProgram(ext))
             {
