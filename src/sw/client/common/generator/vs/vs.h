@@ -154,6 +154,7 @@ struct Project : CommonProjectData
     std::map<sw::TargetSettings, ProjectData> data;
     bool build = false;
     path source_dir;
+    mutable StringSet filters; // dirs
 
     Project(const String &name);
 

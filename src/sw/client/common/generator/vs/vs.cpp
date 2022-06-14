@@ -1311,7 +1311,10 @@ void Project::emitProject(const VSGenerator &g) const
                 rule += ".rule";
                 if (!fs::exists(rule)) // prevent rebuilds
                     write_file(rule, "");
-                ((Project &)*this).files.insert({ rule, ". SW Rules" });
+                ((Project &)*this).files.insert({ rule,
+                    ". SW Rules\\"s + s["os"]["arch"].getValue() + "\\" + get_configuration(s) });
+                filters.insert(". SW Rules"s);
+                filters.insert(". SW Rules\\"s + s["os"]["arch"].getValue());
 
                 auto cmd = c->writeCommand(commands_dir / std::to_string(c->getHash()), false);
 
@@ -1496,8 +1499,6 @@ void Project::emitProject(const VSGenerator &g) const
 
 void Project::emitFilters(const VSGenerator &g) const
 {
-    StringSet filters; // dirs
-
     String sd = to_string(normalize_path(source_dir));
 
     FiltersEmitter ctx;
