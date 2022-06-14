@@ -240,6 +240,7 @@ getFileDependencies(const SwCoreContext &swctx, const path &p, std::set<size_t> 
         if (m1 == "header")
         {
             auto upkg = extractFromString(m[3].str());
+            LOG_TRACE(logger, "from file " << p << " requested " << upkg.toString());
             auto pkg = swctx.resolve(upkg);
             auto gn = swctx.getInputDatabase().getFileHash(pkg.getDirSrc2() / "sw.cpp");
             if (!gns.insert(gn).second)
