@@ -596,7 +596,7 @@ void MainWindow::createMenus()
     connect(aboutAction, &QAction::triggered, [this]
     {
         QMessageBox::information(this, windowTitle(),
-            tr("Author: Egor Pugin") + ", 2020\n" +
+            tr("Author: Egor Pugin") + ", 2020-2022\n" +
             ::sw::getProgramName().c_str() + " version " + PACKAGE_VERSION + "\n" +
             primitives::git_rev::getGitRevision().c_str() + "\n" +
             primitives::git_rev::getBuildTime().c_str()
