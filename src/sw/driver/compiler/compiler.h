@@ -59,10 +59,16 @@ SW_DRIVER_CPP_API
 const StringSet &getCppHeaderFileExtensions();
 
 SW_DRIVER_CPP_API
+const StringSet &getCSourceFileExtensions();
+
+SW_DRIVER_CPP_API
 const StringSet &getCppSourceFileExtensions();
 
 SW_DRIVER_CPP_API
 bool isCppHeaderFileExtension(const String &);
+
+SW_DRIVER_CPP_API
+bool isCSourceFileExtensions(const String &);
 
 SW_DRIVER_CPP_API
 bool isCppSourceFileExtensions(const String &);

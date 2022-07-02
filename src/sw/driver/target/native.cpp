@@ -740,7 +740,7 @@ std::shared_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetS
 void NativeCompiledTarget::findCompiler()
 {
     activateCompiler(getSettings()["native"]["program"]["cpp"], getCppSourceFileExtensions());
-    activateCompiler(getSettings()["native"]["program"]["c"], { ".c" });
+    activateCompiler(getSettings()["native"]["program"]["c"], getCSourceFileExtensions());
 #ifdef __APPLE__
     activateCompiler(getSettings()["native"]["program"]["mm"], { ".mm" });
     activateCompiler(getSettings()["native"]["program"]["m"], { ".m" });
@@ -1902,7 +1902,8 @@ void NativeCompiledTarget::autoDetectSources()
         static auto source_file_extensions = []()
         {
             auto source_file_extensions = getCppSourceFileExtensions();
-            source_file_extensions.insert(".c");
+            auto cexts = getCSourceFileExtensions();
+            source_file_extensions.merge(cexts);
             return source_file_extensions;
         }();
 
@@ -3383,7 +3384,7 @@ void NativeCompiledTarget::prepare_pass5()
                 continue;
 
             auto ext = f->file.extension().string();
-            auto cext = ext == ".c";
+            auto cext = getCSourceFileExtensions().find(ext) != getCSourceFileExtensions().end();
             auto cppext = getCppSourceFileExtensions().find(ext) != getCppSourceFileExtensions().end();
             // skip asm etc.
             if (!cext && !cppext)

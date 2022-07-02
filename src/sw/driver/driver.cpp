@@ -382,8 +382,9 @@ std::vector<std::unique_ptr<Input>> Driver::detectInputs(const path &p, InputTyp
 
         if (comments.empty())
         {
+            const auto &cexts = getCSourceFileExtensions();
             const auto &exts = getCppSourceFileExtensions();
-            if (exts.find(p.extension().string()) != exts.end() || p.extension() == ".c")
+            if (exts.find(p.extension().string()) != exts.end() || cexts.find(p.extension().string()) != cexts.end())
             {
                 SpecificationFiles f;
                 f.addFile("cppan.yml", p, String{});

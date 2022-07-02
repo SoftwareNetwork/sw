@@ -116,6 +116,16 @@ const StringSet &getCppHeaderFileExtensions()
     return header_file_extensions;
 }
 
+const StringSet &getCSourceFileExtensions()
+{
+    static const StringSet c_source_file_extensions{
+        ".c",
+        // Objective-C
+        ".m",
+    };
+    return c_source_file_extensions;
+}
+
 const StringSet &getCppSourceFileExtensions()
 {
     static const StringSet cpp_source_file_extensions{
@@ -133,7 +143,6 @@ const StringSet &getCppSourceFileExtensions()
         ".CXX",
         ".C", // old ext (Wt, some gnu)
         // Objective-C
-        ".m",
         ".mm",
 
         // msvc modules
@@ -159,6 +168,12 @@ PredefinedProgramTarget &addProgram(DETECT_ARGS, const PackageId &id, const Targ
 bool isCppHeaderFileExtension(const String &e)
 {
     auto &exts = getCppHeaderFileExtensions();
+    return exts.find(e) != exts.end();
+}
+
+bool isCSourceFileExtensions(const String &e)
+{
+    auto &exts = getCSourceFileExtensions();
     return exts.find(e) != exts.end();
 }
 
