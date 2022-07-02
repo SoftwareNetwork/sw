@@ -12,15 +12,8 @@
 #include <qglobal.h>
 #include <qmessagebox.h>
 #include <qthread.h>
-#include <QtWin>
 
 #include <primitives/sw/settings_program_name.h>
-
-#ifdef QT_STATIC
-#include <QtPlugin>
-Q_IMPORT_PLUGIN(QWindowsIntegrationPlugin)
-Q_IMPORT_PLUGIN(QWindowsVistaStylePlugin)
-#endif
 
 #include <time.h>
 
@@ -41,14 +34,17 @@ int main(int argc, char *argv[])
     }
 
     win32_hacks();
-    qsrand(time(0));
+    srand(time(0));
 
     QThread t(0);
     QApplication a(argc, argv);
 
     auto hIcon = (HICON)LoadImage(GetModuleHandle(nullptr), MAKEINTRESOURCE(100), IMAGE_ICON, 0, 0, LR_DEFAULTSIZE | LR_LOADTRANSPARENT);
-    if (hIcon)
-        QApplication::setWindowIcon(QIcon(QtWin::fromHICON(hIcon)));
+    if (hIcon) {
+        auto i = QImage::fromHICON(hIcon);
+        auto pix = QPixmap::fromImage(i);
+        QApplication::setWindowIcon(pix);
+    }
     ::DestroyIcon(hIcon);
 
     try

@@ -395,10 +395,6 @@ void build(Solution &s)
         gui += "org.sw.demo.qtproject.qt.base.plugins.platforms.windows" QT_VER ""_dep;
         gui += "org.sw.demo.qtproject.qt.base.plugins.styles.windowsvista" QT_VER ""_dep;
 
-        gui -= "org.sw.demo.qtproject.qt.winextras" QT_VER ""_dep;
-        if (client.getBuildSettings().TargetOS.Type == OSType::Windows)
-            gui += "org.sw.demo.qtproject.qt.winextras" QT_VER ""_dep;
-
         if (auto L = gui.getSelectedTool()->as<VisualStudioLinker*>(); L)
             L->Subsystem = vs::Subsystem::Windows;
 
