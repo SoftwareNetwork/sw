@@ -39,6 +39,7 @@ int main(int argc, char *argv[])
     QThread t(0);
     QApplication a(argc, argv);
 
+#ifdef _WIN32
     auto hIcon = (HICON)LoadImage(GetModuleHandle(nullptr), MAKEINTRESOURCE(100), IMAGE_ICON, 0, 0, LR_DEFAULTSIZE | LR_LOADTRANSPARENT);
     if (hIcon) {
         auto i = QImage::fromHICON(hIcon);
@@ -46,6 +47,7 @@ int main(int argc, char *argv[])
         QApplication::setWindowIcon(pix);
     }
     ::DestroyIcon(hIcon);
+#endif
 
     try
     {

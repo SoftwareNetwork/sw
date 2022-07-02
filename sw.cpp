@@ -3,7 +3,7 @@
 #pragma sw require header org.sw.demo.lexxmark.winflexbison.bison
 #pragma sw require header org.sw.demo.qtproject.qt.base.tools.moc
 
-#define QT_VER ""
+#define QT_VERSION ""
 
 void build(Solution &s)
 {
@@ -384,23 +384,36 @@ void build(Solution &s)
 
     auto &gui = client.addTarget<ExecutableTarget>("gui", "0.4.0");
     {
-        gui.PackageDefinitions = true;
-        gui.SwDefinitions = true;
-        gui += "src/sw/client/gui/.*"_rr;
-        gui += cppstd;
-        gui += client_common;
+        auto &t = gui;
+        t.PackageDefinitions = true;
+        t.SwDefinitions = true;
+        t += "src/sw/client/gui/.*"_rr;
+        t += cppstd;
+        t += client_common;
 
-        gui += "org.sw.demo.qtproject.qt.base.widgets" QT_VER ""_dep;
-        gui += "org.sw.demo.qtproject.qt.base.winmain" QT_VER ""_dep;
-        gui += "org.sw.demo.qtproject.qt.base.plugins.platforms.windows" QT_VER ""_dep;
-        gui += "org.sw.demo.qtproject.qt.base.plugins.styles.windowsvista" QT_VER ""_dep;
+        t += "org.sw.demo.qtproject.qt.base.widgets" QT_VERSION ""_dep;
 
-        if (auto L = gui.getSelectedTool()->as<VisualStudioLinker*>(); L)
-            L->Subsystem = vs::Subsystem::Windows;
+        if (t.getBuildSettings().TargetOS.Type == OSType::Windows) {
+            if (auto L = t.getSelectedTool()->as<VisualStudioLinker*>(); L)
+                L->Subsystem = vs::Subsystem::Windows;
+            t += "org.sw.demo.qtproject.qt.base.winmain" QT_VERSION ""_dep;
+            t += "org.sw.demo.qtproject.qt.base.plugins.platforms.windows" QT_VERSION ""_dep;
+            t += "org.sw.demo.qtproject.qt.base.plugins.styles.windowsvista" QT_VERSION ""_dep;
+        }
+        if (t.getBuildSettings().TargetOS.Type == OSType::Linux) {
+            t += "org.sw.demo.qtproject.qt.wayland.plugins.platforms.qwayland.generic" QT_VERSION ""_dep;
+            t += "org.sw.demo.qtproject.qt.wayland.plugins.platforms.qwayland.egl" QT_VERSION ""_dep;
+            t += "org.sw.demo.qtproject.qt.wayland.plugins.hardwareintegration.client.wayland_egl" QT_VERSION ""_dep;
+            t += "org.sw.demo.qtproject.qt.wayland.plugins.shellintegration.xdg" QT_VERSION ""_dep;
+            t += "org.sw.demo.qtproject.qt.wayland.plugins.decorations.bradient" QT_VERSION ""_dep;
+        }
+        if (t.getBuildSettings().TargetOS.Type == OSType::Macos) {
+            t += "org.sw.demo.qtproject.qt.base.plugins.platforms.cocoa" QT_VERSION ""_dep;
+        }
 
-        qt_moc_rcc_uic("org.sw.demo.qtproject.qt" QT_VER ""_dep, gui);
-        qt_tr("org.sw.demo.qtproject.qt" QT_VER ""_dep, gui);
+        qt_moc_rcc_uic("org.sw.demo.qtproject.qt" QT_VERSION ""_dep, t);
+        qt_tr("org.sw.demo.qtproject.qt" QT_VERSION ""_dep, t);
 
-        create_git_revision("pub.egorpugin.primitives.tools.create_git_rev"_dep, gui);
+        create_git_revision("pub.egorpugin.primitives.tools.create_git_rev"_dep, t);
     }
 }
