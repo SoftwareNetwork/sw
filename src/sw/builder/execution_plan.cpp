@@ -21,8 +21,10 @@
 #include <sw/support/exceptions.h>
 
 // clang(win)+linux workaround
+#if defined(__linux__) && defined(__clang__)
 #define BOOST_ASIO_HAS_CO_AWAIT
 #define BOOST_ASIO_HAS_STD_COROUTINE
+#endif
 #include <boost/asio.hpp>
 #include <nlohmann/json.hpp>
 #include <primitives/exceptions.h>
