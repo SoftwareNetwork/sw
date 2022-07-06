@@ -362,13 +362,13 @@ path getDriverIncludeDir(Build &solution, Target &lib)
 
 static void addDeps(Build &solution, NativeCompiledTarget &lib)
 {
-    lib += "pub.egorpugin.primitives.templates"_dep; // for SW_RUNTIME_ERROR
+    lib += "pub.egorpugin.primitives.templates" PRIMITIVES_VERSION ""_dep; // for SW_RUNTIME_ERROR
 
     // uncomment when you need help
-    //lib += "pub.egorpugin.primitives.source1"_dep;
-    //lib += "pub.egorpugin.primitives.version1"_dep;
-    lib += "pub.egorpugin.primitives.command"_dep;
-    lib += "pub.egorpugin.primitives.filesystem"_dep;
+    //lib += "pub.egorpugin.primitives.source1" PRIMITIVES_VERSION ""_dep;
+    //lib += "pub.egorpugin.primitives.version1" PRIMITIVES_VERSION ""_dep;
+    lib += "pub.egorpugin.primitives.command" PRIMITIVES_VERSION ""_dep;
+    lib += "pub.egorpugin.primitives.filesystem" PRIMITIVES_VERSION ""_dep;
 
     auto d = lib + UnresolvedPackage(SW_DRIVER_NAME);
     d->IncludeDirectoriesOnly = true;

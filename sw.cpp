@@ -1,9 +1,10 @@
-#pragma sw require header pub.egorpugin.primitives.tools.embedder
+#pragma sw require header pub.egorpugin.primitives.tools.embedder-0.3.0
 #pragma sw require header org.sw.demo.google.grpc.cpp.plugin
 #pragma sw require header org.sw.demo.lexxmark.winflexbison.bison
 #pragma sw require header org.sw.demo.qtproject.qt.base.tools.moc
 
 #define QT_VERSION ""
+#define PRIMITIVES_VERSION "-0.3.0"
 
 void build(Solution &s)
 {
@@ -20,17 +21,17 @@ void build(Solution &s)
         support.ExportIfStatic = true;
         support += cppstd;
         support += "src/sw/support/.*"_rr;
-        auto cmddep = "pub.egorpugin.primitives.command"_dep;
-        auto verdep = "pub.egorpugin.primitives.version1"_dep;
-        auto srcdep = "pub.egorpugin.primitives.source1"_dep;
+        auto cmddep = "pub.egorpugin.primitives.command" PRIMITIVES_VERSION ""_dep;
+        auto verdep = "pub.egorpugin.primitives.version1" PRIMITIVES_VERSION ""_dep;
+        auto srcdep = "pub.egorpugin.primitives.source1" PRIMITIVES_VERSION ""_dep;
         support.Public +=
             cmddep, verdep, srcdep,
-            "pub.egorpugin.primitives.date_time"_dep,
-            "pub.egorpugin.primitives.http"_dep,
-            "pub.egorpugin.primitives.hash"_dep,
-            "pub.egorpugin.primitives.log"_dep,
-            "pub.egorpugin.primitives.executor"_dep,
-            "pub.egorpugin.primitives.symbol"_dep,
+            "pub.egorpugin.primitives.date_time" PRIMITIVES_VERSION ""_dep,
+            "pub.egorpugin.primitives.http" PRIMITIVES_VERSION ""_dep,
+            "pub.egorpugin.primitives.hash" PRIMITIVES_VERSION ""_dep,
+            "pub.egorpugin.primitives.log" PRIMITIVES_VERSION ""_dep,
+            "pub.egorpugin.primitives.executor" PRIMITIVES_VERSION ""_dep,
+            "pub.egorpugin.primitives.symbol" PRIMITIVES_VERSION ""_dep,
             "org.sw.demo.boost.property_tree"_dep,
             "org.sw.demo.boost.stacktrace"_dep;
         //cmddep->getSettings()["export-if-static"] = "true";
@@ -63,7 +64,7 @@ void build(Solution &s)
     {
         protos += cpp17; // some bug with protobuf/vs
         protos += "src/sw/protocol/.*"_rr;
-        protos.Public += "pub.egorpugin.primitives.grpc_helpers"_dep;
+        protos.Public += "pub.egorpugin.primitives.grpc_helpers" PRIMITIVES_VERSION ""_dep;
         ProtobufData d;
         d.public_protobuf = true;
         d.addIncludeDirectory(protos.SourceDir / "src");
@@ -79,30 +80,30 @@ void build(Solution &s)
         manager.Public += "BOOST_DLL_USE_STD_FS"_def;
 
         manager +=
-            "pub.egorpugin.primitives.csv"_dep;
+            "pub.egorpugin.primitives.csv" PRIMITIVES_VERSION ""_dep;
         manager.Public += support, protos,
-            "pub.egorpugin.primitives.db.sqlite3"_dep,
-            "pub.egorpugin.primitives.lock"_dep,
-            "pub.egorpugin.primitives.pack"_dep,
-            "pub.egorpugin.primitives.sw.settings"_dep,
-            "pub.egorpugin.primitives.yaml"_dep,
+            "pub.egorpugin.primitives.db.sqlite3" PRIMITIVES_VERSION ""_dep,
+            "pub.egorpugin.primitives.lock" PRIMITIVES_VERSION ""_dep,
+            "pub.egorpugin.primitives.pack" PRIMITIVES_VERSION ""_dep,
+            "pub.egorpugin.primitives.sw.settings" PRIMITIVES_VERSION ""_dep,
+            "pub.egorpugin.primitives.yaml" PRIMITIVES_VERSION ""_dep,
             "org.sw.demo.nlohmann.json"_dep,
             "org.sw.demo.boost.variant"_dep,
             "org.sw.demo.boost.dll"_dep,
             "org.sw.demo.rbock.sqlpp11_connector_sqlite3"_dep
             ;
 
-        manager.Public -= "pub.egorpugin.primitives.win32helpers"_dep;
+        manager.Public -= "pub.egorpugin.primitives.win32helpers" PRIMITIVES_VERSION ""_dep;
         if (manager.getBuildSettings().TargetOS.Type == OSType::Windows)
-            manager.Public += "pub.egorpugin.primitives.win32helpers"_dep;
+            manager.Public += "pub.egorpugin.primitives.win32helpers" PRIMITIVES_VERSION ""_dep;
 
         manager += "src/sw/manager/.*"_rr;
         manager.Public += "src/sw/manager/manager.natvis";
         manager.Public.Definitions["VERSION_MAJOR"] += std::to_string(manager.getPackage().getVersion().getMajor());
         manager.Public.Definitions["VERSION_MINOR"] += std::to_string(manager.getPackage().getVersion().getMinor());
         manager.Public.Definitions["VERSION_PATCH"] += std::to_string(manager.getPackage().getVersion().getPatch());
-        embed2("pub.egorpugin.primitives.tools.embedder2"_dep, manager, "src/sw/manager/inserts/packages_db_schema.sql");
-        gen_sqlite2cpp("pub.egorpugin.primitives.tools.sqlpp11.sqlite2cpp"_dep,
+        embed2("pub.egorpugin.primitives.tools.embedder2" PRIMITIVES_VERSION ""_dep, manager, "src/sw/manager/inserts/packages_db_schema.sql");
+        gen_sqlite2cpp("pub.egorpugin.primitives.tools.sqlpp11.sqlite2cpp" PRIMITIVES_VERSION ""_dep,
             manager, manager.SourceDir / "src/sw/manager/inserts/packages_db_schema.sql", "db_packages.h", "db::packages");
 
         /*PrecompiledHeader pch;
@@ -125,7 +126,7 @@ void build(Solution &s)
             "org.sw.demo.boost.graph"_dep,
             "org.sw.demo.boost.serialization"_dep,
             "org.sw.demo.microsoft.gsl"_dep,
-            "pub.egorpugin.primitives.emitter"_dep;
+            "pub.egorpugin.primitives.emitter" PRIMITIVES_VERSION ""_dep;
         //if (!s.Variables["SW_SELF_BUILD"])
         {
             /*PrecompiledHeader pch;
@@ -152,8 +153,8 @@ void build(Solution &s)
         core += "src/sw/core/.*"_rr;
         core += "org.sw.demo.Neargye.magic_enum"_dep;
         core += "org.sw.demo.zeux.pugixml"_dep;
-        embed2("pub.egorpugin.primitives.tools.embedder2"_dep, core, "src/sw/core/inserts/input_db_schema.sql");
-        gen_sqlite2cpp("pub.egorpugin.primitives.tools.sqlpp11.sqlite2cpp"_dep,
+        embed2("pub.egorpugin.primitives.tools.embedder2" PRIMITIVES_VERSION ""_dep, core, "src/sw/core/inserts/input_db_schema.sql");
+        gen_sqlite2cpp("pub.egorpugin.primitives.tools.sqlpp11.sqlite2cpp" PRIMITIVES_VERSION ""_dep,
             core, core.SourceDir / "src/sw/core/inserts/input_db_schema.sql", "db_inputs.h", "db::inputs");
     }
 
@@ -167,7 +168,7 @@ void build(Solution &s)
         cpp_driver += "org.sw.demo.Kitware.CMake.lib"_dep; // cmake fe
         cpp_driver += "org.sw.demo.ReneNyffenegger.cpp_base64-master"_dep;
         cpp_driver.Public += core,
-            "pub.egorpugin.primitives.patch"_dep,
+            "pub.egorpugin.primitives.patch" PRIMITIVES_VERSION ""_dep,
             "org.sw.demo.ToruNiina.toml11"_dep,
             "org.sw.demo.boost.assign"_dep,
             "org.sw.demo.boost.bimap"_dep,
@@ -196,15 +197,17 @@ void build(Solution &s)
         if (cpp_driver.getBuildSettings().Native.LibrariesType == LibraryType::Shared)
             cpp_driver += "SW_DRIVER_SHARED_BUILD"_def;
 
+        cpp_driver += "PRIMITIVES_VERSION=\"" PRIMITIVES_VERSION "\""_def;
         {
             auto &self_builder = cpp_driver.addTarget<ExecutableTarget>("self_builder");
+            self_builder += "PRIMITIVES_VERSION=\"" PRIMITIVES_VERSION "\""_def;
             self_builder.PackageDefinitions = true;
             self_builder += cppstd;
             self_builder += "src/sw/driver/tools/self_builder.cpp";
             self_builder +=
                 core,
-                "pub.egorpugin.primitives.emitter"_dep,
-                "pub.egorpugin.primitives.sw.main"_dep;
+                "pub.egorpugin.primitives.emitter" PRIMITIVES_VERSION ""_dep,
+                "pub.egorpugin.primitives.sw.main" PRIMITIVES_VERSION ""_dep;
 
             auto c = cpp_driver.addCommand();
             c << cmd::prog(self_builder)
@@ -218,9 +221,9 @@ void build(Solution &s)
             cl_generator += cppstd;
             cl_generator += "src/sw/driver/tools/cl_generator.*"_rr;
             cl_generator +=
-                "pub.egorpugin.primitives.emitter"_dep,
-                "pub.egorpugin.primitives.yaml"_dep,
-                "pub.egorpugin.primitives.main"_dep;
+                "pub.egorpugin.primitives.emitter" PRIMITIVES_VERSION ""_dep,
+                "pub.egorpugin.primitives.yaml" PRIMITIVES_VERSION ""_dep,
+                "pub.egorpugin.primitives.main" PRIMITIVES_VERSION ""_dep;
 
             auto c = cpp_driver.addCommand();
             c << cmd::prog(cl_generator)
@@ -240,9 +243,9 @@ void build(Solution &s)
             //cpp_driver.addPrecompiledHeader(pch);
         }
 
-        embed2("pub.egorpugin.primitives.tools.embedder2"_dep, cpp_driver, "src/sw/driver/sw1.h");
-        embed2("pub.egorpugin.primitives.tools.embedder2"_dep, cpp_driver, "src/sw/driver/sw_check_abi_version.h");
-        embed2("pub.egorpugin.primitives.tools.embedder2"_dep, cpp_driver, "src/sw/driver/misc/delay_load_helper.cpp");
+        embed2("pub.egorpugin.primitives.tools.embedder2" PRIMITIVES_VERSION ""_dep, cpp_driver, "src/sw/driver/sw1.h");
+        embed2("pub.egorpugin.primitives.tools.embedder2" PRIMITIVES_VERSION ""_dep, cpp_driver, "src/sw/driver/sw_check_abi_version.h");
+        embed2("pub.egorpugin.primitives.tools.embedder2" PRIMITIVES_VERSION ""_dep, cpp_driver, "src/sw/driver/misc/delay_load_helper.cpp");
 
         // preprocess sw.h
         /*if (!cpp_driver.DryRun)
@@ -268,7 +271,7 @@ void build(Solution &s)
                 SW_UNIMPLEMENTED;
 
             cpp_driver += pp; // mark as generated (to add into vs solution)
-            embed2("pub.egorpugin.primitives.tools.embedder2"_dep, cpp_driver, pp, cpp_driver.BinaryPrivateDir / "sw.pp.emb", 1);
+            embed2("pub.egorpugin.primitives.tools.embedder2" PRIMITIVES_VERSION ""_dep, cpp_driver, pp, cpp_driver.BinaryPrivateDir / "sw.pp.emb", 1);
 
             // exclude
             cpp_driver.add(sw::CallbackType::EndPrepare, [&cpp_driver, f]()
@@ -292,10 +295,10 @@ void build(Solution &s)
         client_common += cppstd;
         client_common.Public += builder_distributed, core, cpp_driver;
 
-        embed2("pub.egorpugin.primitives.tools.embedder2"_dep, client_common, "src/sw/client/common/inserts/SWConfig.cmake");
-        embed2("pub.egorpugin.primitives.tools.embedder2"_dep, client_common, "src/sw/client/common/inserts/project_templates.yml");
+        embed2("pub.egorpugin.primitives.tools.embedder2" PRIMITIVES_VERSION ""_dep, client_common, "src/sw/client/common/inserts/SWConfig.cmake");
+        embed2("pub.egorpugin.primitives.tools.embedder2" PRIMITIVES_VERSION ""_dep, client_common, "src/sw/client/common/inserts/project_templates.yml");
 
-        generate_cl("pub.egorpugin.primitives.tools.cl_generator"_dep, client_common,
+        generate_cl("pub.egorpugin.primitives.tools.cl_generator" PRIMITIVES_VERSION ""_dep, client_common,
             "src/sw/client/common/cl.yml", "llvm");
     }
 
@@ -308,7 +311,7 @@ void build(Solution &s)
         client += cppstd;
         client += client_common,
             //"org.sw.demo.microsoft.mimalloc"_dep,
-            "pub.egorpugin.primitives.sw.main"_dep
+            "pub.egorpugin.primitives.sw.main" PRIMITIVES_VERSION ""_dep
             ;
         if (client.getCompilerType() == CompilerType::MSVC)
             client.CompileOptions.push_back("-bigobj");
@@ -327,7 +330,7 @@ void build(Solution &s)
         if (client.getCompilerType() == CompilerType::MSVC)
             client.CompileOptions.push_back("-wd4275");
 
-        create_git_revision("pub.egorpugin.primitives.tools.create_git_rev"_dep, client);
+        create_git_revision("pub.egorpugin.primitives.tools.create_git_rev" PRIMITIVES_VERSION ""_dep, client);
     }
 
     // tests
@@ -376,7 +379,7 @@ void build(Solution &s)
         mirror += cppstd;
         mirror += "src/sw/tools/mirror.cpp";
         mirror += manager;
-        mirror += "pub.egorpugin.primitives.sw.main"_dep;
+        mirror += "pub.egorpugin.primitives.sw.main" PRIMITIVES_VERSION ""_dep;
     }
 
     if (s.getExternalVariables()["with-gui"] != "true")
@@ -414,6 +417,6 @@ void build(Solution &s)
         qt_moc_rcc_uic("org.sw.demo.qtproject.qt" QT_VERSION ""_dep, t);
         qt_tr("org.sw.demo.qtproject.qt" QT_VERSION ""_dep, t);
 
-        create_git_revision("pub.egorpugin.primitives.tools.create_git_rev"_dep, t);
+        create_git_revision("pub.egorpugin.primitives.tools.create_git_rev" PRIMITIVES_VERSION ""_dep, t);
     }
 }

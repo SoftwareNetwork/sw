@@ -19,7 +19,7 @@
 DECLARE_STATIC_LOGGER(logger, "self_builder");
 
 #define SW_DRIVER_NAME "org.sw.sw.client.driver.cpp-" PACKAGE_VERSION
-#define QT_VER ""
+#define QT_VERSION ""
 
 using namespace sw;
 
@@ -104,13 +104,13 @@ String write_build_script(SwCoreContext &swctx,
 
             // goes before sw cpp driver (client)
             // why resolving does not work (removing -0.3.0)? overridden?
-            prepkgs.push_back("pub.egorpugin.primitives.filesystem-0.3.0"s);
+            prepkgs.push_back("pub.egorpugin.primitives.filesystem" PRIMITIVES_VERSION ""s);
         }
 
         if (headers)
         {
             // for gui
-            prepkgs.push_back("org.sw.demo.qtproject.qt.base.tools.moc" QT_VER ""s);
+            prepkgs.push_back("org.sw.demo.qtproject.qt.base.tools.moc" QT_VERSION ""s);
         }
 
         {
@@ -259,7 +259,7 @@ int main(int argc, char *argv[])
         {"org.sw.demo.llvm_project.libcxx"},
 
         // for gui
-        {"org.sw.demo.qtproject.qt.base.tools.moc" QT_VER},
+        {"org.sw.demo.qtproject.qt.base.tools.moc" QT_VERSION},
     });
     auto t2 = write_build_script(swctx, m_headers, true);
     auto t3 = write_build_script(swctx, m, false);
