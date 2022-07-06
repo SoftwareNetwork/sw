@@ -1,10 +1,10 @@
-#pragma sw require header pub.egorpugin.primitives.tools.embedder-0.3.0
 #pragma sw require header org.sw.demo.google.grpc.cpp.plugin
 #pragma sw require header org.sw.demo.lexxmark.winflexbison.bison
 #pragma sw require header org.sw.demo.qtproject.qt.base.tools.moc
+#pragma sw require header pub.egorpugin.primitives.tools.embedder-0.3.1
 
 #define QT_VERSION ""
-#define PRIMITIVES_VERSION "-0.3.0"
+#define PRIMITIVES_VERSION "-0.3.1"
 
 void build(Solution &s)
 {
