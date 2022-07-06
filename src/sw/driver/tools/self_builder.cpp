@@ -71,7 +71,7 @@ String write_build_script(SwCoreContext &swctx,
     auto get_gn = [&gns](auto &u)
     {
         auto i = gns.find(u);
-        SW_ASSERT(i != gns.end(), "not found: " + u.toString());
+        SW_ASSERT(i != gns.end(), "not found: " + u.toString() + ": do 'sw override org.sw' in sw client dir and check that this package is added to some storage");
         return i->second;
     };
     auto get_gn2 = [&gns2](auto &u)
@@ -103,7 +103,6 @@ String write_build_script(SwCoreContext &swctx,
             prepkgs.push_back("org.sw.demo.google.grpc.cpp.plugin"s);
 
             // goes before sw cpp driver (client)
-            // why resolving does not work (removing -0.3.0)? overridden?
             prepkgs.push_back("pub.egorpugin.primitives.filesystem" PRIMITIVES_VERSION ""s);
         }
 
