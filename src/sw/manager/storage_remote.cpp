@@ -81,9 +81,11 @@ void RemoteStorage::download() const
             if (p.is_directory())
                 continue;
             auto tgt = db_repo_dir / p.path().filename();
-            fs::permissions(tgt, fs::perms::all);
-            fs::remove(tgt);
-            fs::copy_file(p, tgt);
+            if (fs::exists(tgt)) {
+                fs::permissions(tgt, fs::perms::all);
+                fs::remove(tgt);
+            }
+            fs::copy_file(p, tgt, fs::copy_options::overwrite_existing);
         }
         writeDownloadTime();
         return;
