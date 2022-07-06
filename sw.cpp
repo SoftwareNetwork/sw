@@ -8,8 +8,8 @@
 
 void build(Solution &s)
 {
-    auto &sw = s.addProject("sw", "0.4.4");
-    sw += Git("https://github.com/SoftwareNetwork/sw", "", "b0.4.4");
+    auto &sw = s.addProject("sw", "0.4.5");
+    sw += Git("https://github.com/SoftwareNetwork/sw", "", "b0.4.5");
 
     auto &p = sw.addProject("client");
 
