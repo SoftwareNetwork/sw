@@ -49,11 +49,9 @@ int main(int argc, char *argv[])
     setup_log(loglevel);
     primitives::http::setupSafeTls();
 
-    Executor e(select_number_of_threads());
-    getExecutor(&e);
-
     //
     sw::SwManagerContext swctx(sw::Settings::get_user_settings().storage_dir, true);
+    swctx.executor = std::make_unique<Executor>(select_number_of_threads());
     for (auto &s : swctx.getRemoteStorages())
     {
         auto s2 = dynamic_cast<sw::StorageWithPackagesDatabase *>(s);
@@ -72,7 +70,7 @@ int main(int argc, char *argv[])
 
         LOG_DEBUG(logger, "Total packages: " << pkgs.size());
 
-        auto &e = getExecutor();
+        auto &e = *swctx.executor;
         std::atomic_size_t i = 0;
         Futures<void> jobs;
         for (auto &pkg : pkgs)
