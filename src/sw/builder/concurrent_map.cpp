@@ -21,7 +21,7 @@
 namespace sw
 {
 
-SW_DEFINE_GLOBAL_STATIC_FUNCTION(ConcurrentContext, getConcurrentContext)
+//SW_DEFINE_GLOBAL_STATIC_FUNCTION(ConcurrentContext, getConcurrentContext)
 
 ConcurrentContext createConcurrentContext()
 {
@@ -33,13 +33,13 @@ void destroyConcurrentContext(ConcurrentContext ctx)
     junction::DefaultQSBR.destroyContext(ctx);
 }
 
-void updateConcurrentContext()
+void updateConcurrentContext(ConcurrentContext ctx)
 {
     // Update the QSBR context for this thread.
     // In a larger application, this should be called periodically, for each thread, at a moment
     // when the thread is quiescent – that is, not in the middle of any operation that uses a
     // Junction data structure.
-    junction::DefaultQSBR.update(getConcurrentContext());
+    junction::DefaultQSBR.update(ctx);
 }
 
 }

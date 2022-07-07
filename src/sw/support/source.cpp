@@ -8,7 +8,6 @@
 #include <nlohmann/json.hpp>
 #include <primitives/date_time.h>
 #include <primitives/exceptions.h>
-#include <primitives/executor.h>
 #include <primitives/yaml.h>
 
 #include <primitives/log.h>
@@ -52,10 +51,9 @@ void detail::DownloadData::remove() const
     fs::remove(stamp_file);
 }
 
-bool download(const std::unordered_set<SourcePtr> &sset, SourceDirMap &source_dirs, const SourceDownloadOptions &opts)
+bool download(Executor &e, const std::unordered_set<SourcePtr> &sset, SourceDirMap &source_dirs, const SourceDownloadOptions &opts)
 {
     std::atomic_bool downloaded = false;
-    auto &e = getExecutor();
     Futures<void> fs;
     for (auto &src : sset)
     {
@@ -113,12 +111,12 @@ bool download(const std::unordered_set<SourcePtr> &sset, SourceDirMap &source_di
     return downloaded;
 }
 
-SourceDirMap download(const std::unordered_set<SourcePtr> &sset, const SourceDownloadOptions &opts)
+SourceDirMap download(Executor &e, const std::unordered_set<SourcePtr> &sset, const SourceDownloadOptions &opts)
 {
     SourceDirMap sources;
     for (auto &s : sset)
         sources[s->getHash()].root_dir = opts.root_dir.empty() ? get_temp_filename("dl") : (opts.root_dir / s->getHash());
-    download(sset, sources, opts);
+    download(e, sset, sources, opts);
     return sources;
 }
 

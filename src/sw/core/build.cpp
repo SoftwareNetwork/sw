@@ -1261,14 +1261,14 @@ Executor &SwBuild::getBuildExecutor() const
 {
     if (build_executor)
         return *build_executor;
-    return ::getExecutor();
+    return *getContext().executor;
 }
 
 Executor &SwBuild::getPrepareExecutor() const
 {
     if (prepare_executor)
         return *prepare_executor;
-    return ::getExecutor();
+    return *getContext().executor;
 }
 
 const TargetSettings &SwBuild::getExternalVariables() const

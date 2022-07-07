@@ -255,7 +255,7 @@ void SwContext::loadEntryPointsBatch(const std::set<Input *> &inputs)
         d->loadInputsBatch(g);
 
     // perform parallel loads
-    auto &e = getExecutor();
+    auto &e = *executor;
     Futures<void> fs;
     for (auto &i : parallel_inputs)
     {

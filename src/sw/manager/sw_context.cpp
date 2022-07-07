@@ -151,7 +151,7 @@ std::unordered_map<UnresolvedPackage, LocalPackage> SwManagerContext::install(co
     for (auto &[u, p] : m)
         pkgs2.emplace(*p, p.get());
 
-    auto &e = getExecutor();
+    auto &e = *executor;
     Futures<void> fs;
     for (auto &p : pkgs2)
     {

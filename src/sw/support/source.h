@@ -5,6 +5,8 @@
 
 #include <primitives/source.h>
 
+#include <primitives/executor.h>
+
 namespace sw
 {
 
@@ -74,10 +76,10 @@ struct SourceDownloadOptions
 
 // returns true if downloaded
 SW_SUPPORT_API
-bool download(const std::unordered_set<SourcePtr> &sources, SourceDirMap &source_dirs, const SourceDownloadOptions &opts = {});
+bool download(Executor &, const std::unordered_set<SourcePtr> &sources, SourceDirMap &source_dirs, const SourceDownloadOptions &opts = {});
 
 SW_SUPPORT_API
-SourceDirMap download(const std::unordered_set<SourcePtr> &sources, const SourceDownloadOptions &opts = {});
+SourceDirMap download(Executor &, const std::unordered_set<SourcePtr> &sources, const SourceDownloadOptions &opts = {});
 
 } // namespace support
 

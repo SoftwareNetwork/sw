@@ -234,11 +234,9 @@ int main(int argc, char *argv[])
     setup_log(loglevel);
     primitives::http::setupSafeTls();
 
-    Executor e(select_number_of_threads());
-    getExecutor(&e);
-
     //
     SwCoreContext swctx(Settings::get_user_settings().storage_dir, true);
+    swctx.executor = std::make_unique<Executor>(select_number_of_threads());
     auto m = swctx.install(
     {
         // our main cpp driver target

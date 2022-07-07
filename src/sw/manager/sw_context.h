@@ -7,6 +7,8 @@
 
 #include <sw/support/filesystem.h>
 
+#include <primitives/executor.h>
+
 #include <memory>
 #include <mutex>
 #include <vector>
@@ -29,6 +31,8 @@ struct ResolveResultWithDependencies;
 
 struct SW_MANAGER_API SwManagerContext// : ISwContext
 {
+    std::unique_ptr<Executor> executor;
+
     SwManagerContext(const path &local_storage_root_dir, bool allow_network);
     virtual ~SwManagerContext();
 

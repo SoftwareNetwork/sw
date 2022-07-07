@@ -15,7 +15,7 @@ void build(Solution &s)
 
     auto cppstd = cpp23;
 
-    auto &support = p.addTarget<LibraryTarget>("support");
+    auto &support = p.addTarget<StaticLibraryTarget>("support");
     {
         support.ApiName = "SW_SUPPORT_API";
         support.ExportIfStatic = true;
@@ -72,7 +72,7 @@ void build(Solution &s)
             gen_grpc_cpp("org.sw.demo.google.protobuf"_dep, "org.sw.demo.google.grpc.cpp.plugin"_dep, protos, p, d);
     }
 
-    auto &manager = p.addTarget<LibraryTarget>("manager");
+    auto &manager = p.addTarget<StaticLibraryTarget>("manager");
     {
         manager.ApiName = "SW_MANAGER_API";
         manager.ExportIfStatic = true;
@@ -115,7 +115,7 @@ void build(Solution &s)
         }*/
     }
 
-    auto &builder = p.addTarget<LibraryTarget>("builder");
+    auto &builder = p.addTarget<StaticLibraryTarget>("builder");
     {
         builder.ApiName = "SW_BUILDER_API";
         builder.ExportIfStatic = true;
@@ -136,7 +136,7 @@ void build(Solution &s)
         }
     }
 
-    auto &builder_distributed = builder.addTarget<LibraryTarget>("distributed");
+    auto &builder_distributed = builder.addTarget<StaticLibraryTarget>("distributed");
     {
         builder_distributed.ApiName = "SW_BUILDER_DISTRIBUTED_API";
         builder_distributed += cppstd;
@@ -144,7 +144,7 @@ void build(Solution &s)
         builder_distributed.Public += builder;
     }
 
-    auto &core = p.addTarget<LibraryTarget>("core");
+    auto &core = p.addTarget<StaticLibraryTarget>("core");
     {
         core.ApiName = "SW_CORE_API";
         core.ExportIfStatic = true;
@@ -158,7 +158,7 @@ void build(Solution &s)
             core, core.SourceDir / "src/sw/core/inserts/input_db_schema.sql", "db_inputs.h", "db::inputs");
     }
 
-    auto &cpp_driver = p.addTarget<LibraryTarget>("driver.cpp");
+    auto &cpp_driver = p.addTarget<StaticLibraryTarget>("driver.cpp");
     {
         cpp_driver.ApiName = "SW_DRIVER_CPP_API";
         cpp_driver.ExportIfStatic = true;
@@ -285,7 +285,7 @@ void build(Solution &s)
     }
 
     auto &client = p.addTarget<ExecutableTarget>("sw", "1.0.0");
-    auto &client_common = client.addTarget<LibraryTarget>("common");
+    auto &client_common = client.addTarget<StaticLibraryTarget>("common");
     {
         client_common.ApiName = "SW_CLIENT_COMMON_API";
         client_common.PackageDefinitions = true;

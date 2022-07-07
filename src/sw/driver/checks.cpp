@@ -384,7 +384,7 @@ void CheckSet::performChecks(const SwBuild &mb, const TargetSettings &ts)
         };
 
         //auto &e = getExecutor();
-        static Executor e(mb.getSettings()["checks_single_thread"] == "true" ? 1 : getExecutor().numberOfThreads()); // separate executor!
+        static Executor e(mb.getSettings()["checks_single_thread"] == "true" ? 1 : mb.getContext().executor->numberOfThreads()); // separate executor!
 
         try
         {

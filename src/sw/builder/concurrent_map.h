@@ -206,8 +206,8 @@ struct ConcurrentHashMap : ConcurrentMapSimple<V>
     }
 };
 
-SW_BUILDER_API
-SW_DECLARE_GLOBAL_STATIC_FUNCTION(ConcurrentContext, getConcurrentContext);
+//SW_BUILDER_API
+//SW_DECLARE_GLOBAL_STATIC_FUNCTION(ConcurrentContext, getConcurrentContext);
 
 SW_BUILDER_API
 ConcurrentContext createConcurrentContext();
@@ -216,6 +216,6 @@ SW_BUILDER_API
 void destroyConcurrentContext(ConcurrentContext ctx);
 
 SW_BUILDER_API
-void updateConcurrentContext();
+void updateConcurrentContext(ConcurrentContext ctx);
 
 }

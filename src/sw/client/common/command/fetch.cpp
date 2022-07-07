@@ -95,13 +95,13 @@ static sw::support::SourcePtr createSource(const Options &options)
     return s;
 }
 
-static sw::support::SourceDirMap getSources(const path &bdir, const std::unordered_set<sw::support::SourcePtr> &sources, sw::support::SourceDirMap &srcs)
+static sw::support::SourceDirMap getSources(auto &&ex, const path &bdir, const std::unordered_set<sw::support::SourcePtr> &sources, sw::support::SourceDirMap &srcs)
 {
     sw::support::SourceDownloadOptions opts;
     opts.ignore_existing_dirs = true;
     opts.existing_dirs_age = std::chrono::hours(1);
 
-    if (download(sources, srcs, opts))
+    if (download(ex, sources, srcs, opts))
     {
         // clear patch dir to make changes to files again
         fs::remove_all(bdir / "patch");
@@ -151,25 +151,25 @@ static sw::support::SourceDirMap getSources(SwClientContext &swctx)
         sources.emplace(std::move(s));
     }
 
-    return getSources(b.getBuildDirectory(), sources, srcs);
+    return getSources(*swctx.getContext().executor, b.getBuildDirectory(), sources, srcs);
 }
 
 // get sources extracted from options
-static sw::support::SourceDirMap getSources(const path &bdir, const Options &options)
+static sw::support::SourceDirMap getSources(auto &&ex, const path &bdir, const Options &options)
 {
     auto s = createSource(options);
     sw::support::SourceDirMap srcs;
     std::unordered_set<sw::support::SourcePtr> sources;
     srcs[s->getHash()].root_dir = get_source_dir(bdir) / s->getHash();
     sources.emplace(std::move(s));
-    return getSources(bdir, sources, srcs);
+    return getSources(ex, bdir, sources, srcs);
 }
 
 std::pair<sw::support::SourceDirMap, std::vector<sw::BuildInput>> SwClientContext::fetch(sw::SwBuild &b)
 {
     auto srcs = getOptions().options_upload.source.empty()
         ? getSources(*this) // from config
-        : getSources(b.getBuildDirectory(), getOptions()); // from cmd
+        : getSources(*getContext().executor, b.getBuildDirectory(), getOptions()); // from cmd
 
     auto tss = createSettings();
     for (auto &ts : tss)

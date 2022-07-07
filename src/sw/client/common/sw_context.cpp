@@ -354,8 +354,8 @@ SwClientContext::SwClientContext(const Options &options)
 {
     // maybe put outside ctx, because it will be recreated every time
     // but since this is a rare operation, maybe it's fine
-    executor = std::make_unique<Executor>(select_number_of_threads(options.global_jobs));
-    getExecutor(executor.get());
+    getContext().executor = std::make_unique<Executor>(select_number_of_threads(options.global_jobs));
+    //getExecutor(executor.get());
 }
 
 SwClientContext::~SwClientContext()
