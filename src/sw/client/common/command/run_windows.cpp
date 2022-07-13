@@ -2,8 +2,13 @@
 // Copyright (C) 2017-2020 Egor Pugin <egor.pugin@gmail.com>
 
 #ifdef _WIN32
+
 #undef _WIN32_WINNT
+#ifdef __MINGW32__
+#define _WIN32_WINNT 0x0601
+#else
 #define _WIN32_WINNT 0x0602
+#endif
 
 #include <sw/manager/storage.h>
 
@@ -270,12 +275,14 @@ void run1(const sw::LocalPackage &pkg, primitives::Command &c, bool gRunAppInCon
                 break;
             }
 
+#ifndef __MINGW32__
             if (!UpdateProcThreadAttribute(lpAttributeList, 0, PROC_THREAD_ATTRIBUTE_SECURITY_CAPABILITIES,
                 &SecurityCapabilities, sizeof(SecurityCapabilities), NULL, NULL))
             {
                 snprintf(err.data(), err.size(), "UpdateProcThreadAttribute() failed, last error: %d", GetLastError());
                 break;
             }
+#endif
 
             c.attribute_list = lpAttributeList;
             // this allows us to see error message
