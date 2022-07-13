@@ -52,8 +52,7 @@ files:
     main.c: |
         #include <stdio.h>
 
-        int main()
-        {
+        int main() {
             printf("Hello, World!\n");
             return 0;
         }
@@ -61,8 +60,7 @@ files:
     main.cpp: |
         #include <iostream>
 
-        int main()
-        {
+        int main() {
             std::cout << "Hello, World!\n";
             return 0;
         }
@@ -74,8 +72,7 @@ files:
 
         #include <iostream>
 
-        int main(int argc, char *argv[])
-        {
+        int main(int argc, char *argv[]) {
             ::cl::ParseCommandLineOptions(argc, argv);
 
             std::cout << "Hello, World!\n";
@@ -88,14 +85,12 @@ files:
     lib.cpp: |
         #include "lib.h"
 
-        int f()
-        {
+        int f() {
             return 5;
         }
 
     sw.cpp: |
-        void build(Solution &s)
-        {
+        void build(Solution &s) {
             // Uncomment to make a project. Also replace s.addTarget(). with p.addTarget() below.
             // auto &p = s.addProject("myproject");
             // p += Git("enter your url here", "enter tag here", "or branch here");

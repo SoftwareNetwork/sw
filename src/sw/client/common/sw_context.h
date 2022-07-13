@@ -46,6 +46,8 @@ struct Inputs
     const auto &getInputs() const { return inputs; }
     const auto &getInputPairs() const { return input_pairs; }
 
+    auto size() const { return inputs.size() + input_pairs.size(); }
+
 private:
     mutable Strings inputs;
     std::vector<std::pair<sw::TargetSettings, String>> input_pairs;

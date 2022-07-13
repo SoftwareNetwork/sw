@@ -5,6 +5,8 @@
 
 #include "logwindow.h"
 
+#include <cl.llvm.h>
+
 #include <qcoreapplication.h>
 #include <qmessagebox.h>
 #include <qstatusbar.h>
@@ -53,8 +55,26 @@ SwGuiContext::SwGuiContext(const Options &options)
 
 ADD_COMMAND(build, "Build")
 ADD_COMMAND(create, "Create")
-ADD_COMMAND(generate, "Generate")
 ADD_COMMAND(test, "Test")
+
+void SwGuiContext::command_generate()
+{
+    if (check_running())
+        return;
+    String n = "Generate Log";
+    n[0] = toupper(n[0]);
+    run_with_log(n.c_str(), [this]() {
+        SwapAndRestore sr(running, true);
+        auto inputs = getInputs();
+        if (inputs.size() == 1) {
+            path p = inputs[0];
+            if (fs::is_directory(p)) {
+                //getOptions().working_directory = p;
+            }
+        }
+        Base::command_generate();
+    });
+}
 
 void SwGuiContext::command_open()
 {
