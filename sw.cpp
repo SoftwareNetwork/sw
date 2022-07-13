@@ -404,6 +404,7 @@ void build(Solution &s)
             t += "org.sw.demo.qtproject.qt.base.plugins.styles.windowsvista" QT_VERSION ""_dep;
         }
         if (t.getBuildSettings().TargetOS.Type == OSType::Linux) {
+            t += "org.sw.demo.qtproject.qt.base.plugins.platforms.xcb" QT_VERSION ""_dep;
             t += "org.sw.demo.qtproject.qt.wayland.plugins.platforms.qwayland.generic" QT_VERSION ""_dep;
             t += "org.sw.demo.qtproject.qt.wayland.plugins.platforms.qwayland.egl" QT_VERSION ""_dep;
             t += "org.sw.demo.qtproject.qt.wayland.plugins.hardwareintegration.client.wayland_egl" QT_VERSION ""_dep;
