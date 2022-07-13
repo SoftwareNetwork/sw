@@ -121,38 +121,6 @@ String toUserString(StorageFileType t)
     }
 }
 
-static path getDatabaseRootDir1(const path &root)
-{
-    return root / "sw" / "database";
-}
-
-path Directories::getDatabaseRootDir() const
-{
-    static const Strings upgrade_from
-    {
-        // push new values to front
-        // "1"
-    };
-
-    auto p = getDatabaseRootDir1(storage_dir_etc) / "1";
-
-    [[maybe_unused]]
-    static bool once = [this, &new_root = p]()
-    {
-        for (auto &u : upgrade_from)
-        {
-            auto old = getDatabaseRootDir1(storage_dir_etc) / u;
-            if (!fs::exists(old))
-                continue;
-            fs::copy(old, new_root, fs::copy_options::recursive);
-            break;
-        }
-        return true;
-    }();
-
-    return p;
-}
-
 Storage::Storage(const String &name)
     : name(name)
 {
