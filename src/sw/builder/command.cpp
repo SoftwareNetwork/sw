@@ -52,6 +52,21 @@ DECLARE_STATIC_LOGGER(logger, "command");
 namespace sw
 {
 
+path cygpath_resolve(path p) {
+    static const auto p_cygpath = primitives::resolve_executable("cygpath");
+    if (p_cygpath.empty())
+        return {};
+    primitives::Command c2;
+    c2.setProgram(p_cygpath);
+    c2.arguments.push_back("-w");
+    c2.arguments.push_back(p);
+    std::error_code ec;
+    c2.execute(ec);
+    if (ec)
+        return {};
+    return boost::trim_copy(c2.out.text);
+}
+
 nlohmann::json builder::Command::msvc_modules_scan_data::get() const {
     // follow msvc here
     nlohmann::json j;
@@ -975,8 +990,30 @@ path Command::writeCommand(const path &p, bool print_name) const
         t += "echo " + getName() + "\n\n";
 
     // env
-    auto print_env = [&t, &bat](const auto &env)
+    auto print_env = [&t, &bat](auto env)
     {
+        // fix mingw env
+        if (OS::isMingwShell()) {
+            static auto mingw_root = [&]() -> path {
+                auto root = cygpath_resolve("/");
+                if (root.empty())
+                    return root;
+                auto p = []() -> std::string {
+                    auto p = getenv("MINGW_PREFIX");
+                    if (p)
+                        return p;
+                    return {};
+                }();
+                if (p.empty())
+                    return {};
+                if (p[0] == '/')
+                    p = p.substr(1);
+                return root / p;
+            }();
+            if (!mingw_root.empty()) {
+                env["Path"] = (mingw_root / "bin").string() + ";" + env["Path"];
+            }
+        }
         for (auto &[k, v] : env)
         {
             if (bat)
@@ -1510,22 +1547,12 @@ path resolveExecutable(const path &in)
         if (!ec)
         {
             boost::trim(c.out.text);
-
-            static const auto p_cygpath = primitives::resolve_executable("cygpath");
-
-            // now run cygpath
-            if (which && !p_cygpath.empty())
-            {
-                primitives::Command c2;
-                c2.setProgram(p_cygpath);
-                c2.arguments.push_back("-w");
-                c2.arguments.push_back(c.out.text);
-                c2.execute(ec);
-                if (!ec)
-                    result = boost::trim_copy(c2.out.text);
+            if (which) {
+                result = cygpath_resolve(c.out.text).string();
             }
-            else
+            if (result.empty()) {
                 result = c.out.text;
+            }
         }
     }
 
