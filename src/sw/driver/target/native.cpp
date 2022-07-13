@@ -4289,17 +4289,6 @@ void NativeCompiledTarget::prepare_pass8()
         std::sort(files.begin(), files.end());
         getSelectedTool()->setObjectFiles(files);
         getSelectedTool()->setInputLibraryDependencies(gatherLinkLibraries());
-
-        if (getBuildSettings().TargetOS.Type == OSType::Mingw)
-        {
-            for (auto &l : getSelectedTool()->NativeLinkerOptions::System.LinkLibraries)
-            {
-                if (!l.l.parent_path().empty())
-                    l.l = l.l.parent_path() / l.l.stem();
-                else
-                    l.l = l.l.stem();
-            }
-        }
     }
 }
 
