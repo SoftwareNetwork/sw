@@ -242,10 +242,8 @@ private:
             auto r = kits.TryOpen(HKEY_LOCAL_MACHINE, root, access);
             if (r.IsOk())
             {
-                std::wstring result;
-                auto r = kits.TryGetStringValue(L"KitsRoot" + key, result);
-                if (r.IsOk())
-                    return result;
+                if (auto r = kits.TryGetStringValue(L"KitsRoot" + key))
+                    return r.GetValue();
                 LOG_TRACE(logger, "getWindowsKitRootFromReg::TryGetStringValue error: "s + to_string(r.ErrorMessage()));
             }
             else
@@ -275,11 +273,9 @@ private:
             auto r = kits10.TryOpen(HKEY_LOCAL_MACHINE, reg_root, access);
             if (r.IsOk())
             {
-                std::vector<std::wstring> keys;
-                auto r = kits10.TryEnumSubKeys(keys);
-                if (r.IsOk())
+                if (auto r = kits10.TryEnumSubKeys())
                 {
-                    for (auto &k : keys)
+                    for (auto &k : r.GetValue())
                         kits.insert(to_string(k));
                     return;
                 }
