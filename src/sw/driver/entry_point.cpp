@@ -133,7 +133,7 @@ static CommandStorage &getDriverCommandStorage(const Build &b)
 void addImportLibrary(const Build &b, NativeCompiledTarget &t)
 {
 #ifdef _WIN32
-    auto lib = (HMODULE)primitives::getModuleForSymbol(&isDriverDllBuild);
+    auto lib = (HMODULE)primitives::getModuleForSymbol((void*)&isDriverDllBuild);
     auto syms = getExports(lib);
     if (syms.empty())
         throw SW_RUNTIME_ERROR("No exports found");

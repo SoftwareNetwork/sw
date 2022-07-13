@@ -83,7 +83,7 @@ void *sw_calloc(size_t num, size_t size)
 #ifndef __APPLE__
 void *sw_aligned_alloc(size_t alignment, size_t size)
 {
-#ifdef _MSC_VER
+#ifdef _WIN32
     // must be freed with _aligned_free
     return _aligned_malloc(alignment, size);
 #else

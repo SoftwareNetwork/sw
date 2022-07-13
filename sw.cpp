@@ -40,10 +40,14 @@ void build(Solution &s)
         verdep->getSettings()["export-if-static"].setRequired();
         srcdep->getSettings()["export-if-static"] = "true";
         srcdep->getSettings()["export-if-static"].setRequired();
-        if (support.getBuildSettings().TargetOS.Type == OSType::Windows)
+        if (support.getBuildSettings().TargetOS.Type == OSType::Windows || support.getBuildSettings().TargetOS.Type == OSType::Mingw)
         {
             support.Protected += "_CRT_SECURE_NO_WARNINGS"_d;
             support.Public += "UNICODE"_d;
+        }
+        if (support.getBuildSettings().TargetOS.Type == OSType::Mingw)
+        {
+            support += "ucrt"_slib;
         }
         if (support.getCompilerType() != CompilerType::MSVC &&
             support.getCompilerType() != CompilerType::ClangCl)
@@ -94,7 +98,7 @@ void build(Solution &s)
             ;
 
         manager.Public -= "pub.egorpugin.primitives.win32helpers" PRIMITIVES_VERSION ""_dep;
-        if (manager.getBuildSettings().TargetOS.Type == OSType::Windows)
+        if (manager.getBuildSettings().TargetOS.Type == OSType::Windows || manager.getBuildSettings().TargetOS.Type == OSType::Mingw)
             manager.Public += "pub.egorpugin.primitives.win32helpers" PRIMITIVES_VERSION ""_dep;
 
         manager += "src/sw/manager/.*"_rr;
@@ -315,7 +319,7 @@ void build(Solution &s)
             ;
         if (client.getCompilerType() == CompilerType::MSVC)
             client.CompileOptions.push_back("-bigobj");
-        if (client.getBuildSettings().TargetOS.Type != OSType::Windows)
+        if (client.getBuildSettings().TargetOS.Type != OSType::Windows && client.getBuildSettings().TargetOS.Type != OSType::Mingw)
         {
             //client.getSelectedTool()->LinkOptions.push_back("-static-libstdc++");
             //client.getSelectedTool()->LinkOptions.push_back("-static-libgcc");

@@ -206,7 +206,7 @@ String PackagePath::getHash() const
     return blake2b_512(toStringLower());
 }
 
-#if defined(_WIN32) || defined(__APPLE__)
+#if (defined(_WIN32) && !defined(__MINGW32__)) || defined(__APPLE__)
 template struct PathBase<PackagePath>;
 #endif
 
