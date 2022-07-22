@@ -4,7 +4,7 @@ Currently SW server exists on my own funds almost for three years already and de
 
 Feel free to support the project and its development if you like it.
 
-## Credit card transfers
+<!--## Credit card transfers
 
 ### Paypal
 
@@ -12,7 +12,7 @@ Feel free to support the project and its development if you like it.
 
 ### Yandex
 
-https://money.yandex.ru/to/410015962212665
+https://money.yandex.ru/to/410015962212665-->
 
 <!--## Patreon
 
