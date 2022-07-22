@@ -29,6 +29,6 @@ sw build -static
 
 (optional) Run `sw override org.sw` for smooth development.
 
-### Support SW
+<!--### Support SW
 
-More info about supporting Software Network can be found [here](https://github.com/SoftwareNetwork/sw/blob/master/doc/support.md).
+More info about supporting Software Network can be found [here](https://github.com/SoftwareNetwork/sw/blob/master/doc/support.md).-->
