@@ -8,7 +8,7 @@
 
 - Homepage: https://software-network.org/
 - Documentation: https://software-network.org/client/sw.pdf
-- Download: https://github.com/SoftwareNetwork/binaries
+- Download: https://software-network.org/client/
 - Issue tracking: https://github.com/SoftwareNetwork/sw/issues
 - Forum: https://groups.google.com/forum/#!forum/software-network
 
