@@ -36,6 +36,9 @@ TargetSettings toTargetSettings(const OS &o)
     case OSType::Mingw:
         s["os"]["kernel"] = "org.mingw";
         break;
+    case OSType::Wasm:
+        s["os"]["kernel"] = "org.emscripten";
+        break;
     default:
         SW_UNIMPLEMENTED;
     }
@@ -55,6 +58,9 @@ TargetSettings toTargetSettings(const OS &o)
         break;
     case ArchType::aarch64:
         s["os"]["arch"] = "aarch64";
+        break;
+    case ArchType::wasm64:
+        s["os"]["arch"] = "wasm64";
         break;
     default:
         SW_UNIMPLEMENTED;

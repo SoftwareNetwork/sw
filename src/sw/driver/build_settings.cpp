@@ -39,6 +39,7 @@ static OS fromTargetSettings(const TargetSettings &ts)
         IF_SETTING("com.Apple.Darwin", os.Type, OSType::Darwin);
         IF_SETTING("org.cygwin", os.Type, OSType::Cygwin);
         IF_SETTING("org.mingw", os.Type, OSType::Mingw);
+        IF_SETTING("org.emscripten", os.Type, OSType::Wasm);
         else
             throw SW_RUNTIME_ERROR("Unknown os: " + v.getValue());
     IF_END
@@ -53,6 +54,7 @@ static OS fromTargetSettings(const TargetSettings &ts)
         IF_SETTING("x86_64", os.Arch, ArchType::x86_64);
         IF_SETTING("arm", os.Arch, ArchType::arm);
         IF_SETTING("aarch64", os.Arch, ArchType::aarch64);
+        IF_SETTING("wasm64", os.Arch, ArchType::wasm64);
         else
             throw SW_RUNTIME_ERROR("Unknown arch: " + v.getValue());
     IF_END

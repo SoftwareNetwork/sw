@@ -67,6 +67,7 @@ enum class OSType
     IOS,
 
     Mingw, // mingw32, mingw64, msys, msys2, msys64?
+    Wasm,
 };
 
 // from llvm/ADT/Triple.h

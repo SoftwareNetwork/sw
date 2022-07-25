@@ -216,6 +216,8 @@ String OS::getExecutableExtension() const
     case OSType::Cygwin:
     case OSType::Mingw:
         return ".exe";
+    case OSType::Wasm:
+        return ".html";
     default:
         return "";
     }
@@ -421,6 +423,7 @@ String toString(OSType e)
         CASE(Cygwin);
         CASE(Mingw);
         CASE(Android);
+        CASE(Wasm);
     default:
         throw std::logic_error("TODO: implement target os");
     }
@@ -441,6 +444,7 @@ String toString(ArchType e)
         CASE(x86_64);
         CASE(arm);
         CASE(aarch64);
+        CASE(wasm64);
     default:
         throw std::logic_error("TODO: implement target arch");
     }
