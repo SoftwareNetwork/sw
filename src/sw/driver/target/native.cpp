@@ -463,7 +463,14 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
         c = std::make_unique<ClangCompiler>();
         auto &nc = (ClangCompiler&)*c;
         create_command(c);
-        nc.Target = getBuildSettings().getTargetTriplet();
+        if (0
+            || !s["command"]
+            || !s["command"]["do_not_add_target_argument"]
+            || s["command"]["do_not_add_target_argument"].getValue() != "1"
+            )
+        {
+            nc.Target = getBuildSettings().getTargetTriplet();
+        }
         if (getBuildSettings().TargetOS.is(OSType::Windows))
         {
             auto c = nc.createCommand(getMainBuild());
