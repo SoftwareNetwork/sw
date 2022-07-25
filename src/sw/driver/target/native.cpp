@@ -655,6 +655,10 @@ std::shared_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetS
                 c->push_back("-mmacosx-version-min=" + getBuildSettings().TargetOS.Version->toString());
             }
         }
+        if (getBuildSettings().TargetOS.Type == OSType::Wasm)
+        {
+            C->use_start_end_groups = false;
+        }
         if (id.ppath == "org.LLVM.clang" ||
             id.ppath == "org.LLVM.clangpp" ||
             id.ppath == "com.Apple.clang" ||
