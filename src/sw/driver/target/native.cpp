@@ -4213,6 +4213,7 @@ void NativeCompiledTarget::prepare_pass7()
             && !getBuildSettings().TargetOS.is(OSType::Windows)
             && !getBuildSettings().TargetOS.is(OSType::Cygwin)
             && !getBuildSettings().TargetOS.is(OSType::Mingw)
+            && !getBuildSettings().TargetOS.is(OSType::Wasm)
             ;
 
         if (setup_rpath)
