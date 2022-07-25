@@ -284,8 +284,18 @@ void NativeCompiledTarget::setOutputDir(const path &dir)
 
 static void targetSettings2Command(builder::Command &c, const TargetSetting &s)
 {
-    if (s["program"])
-        c.setProgram(s["program"].getValue());
+    if (s["program"]) {
+        auto prog = s["program"].getValue();
+        c.setProgram(prog);
+        path pprog = prog;
+        if (0
+            || pprog.extension() == ".bat"
+            || pprog.extension() == ".cmd"
+            || pprog.extension() == ".com"
+            ) {
+            c.use_response_files = true;
+        }
+    }
 
     if (s["arguments"])
     {
