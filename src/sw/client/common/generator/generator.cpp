@@ -88,13 +88,16 @@ static std::vector<GeneratorDescription> createGenerators()
     ADD_ALLOWED_NAME(GeneratorType::VisualStudio, "VS_NMake");
     ADD_ALLOWED_NAME(GeneratorType::VisualStudio, "VSNMake");
     ADD_ALLOWED_NAME(GeneratorType::CodeBlocks, "cb");
+    ADD_ALLOWED_NAME(GeneratorType::CMake, "CMake");
     ADD_ALLOWED_NAME(GeneratorType::Make, "Makefile");
+    ADD_ALLOWED_NAME(GeneratorType::NMake, "NMake");
     ADD_ALLOWED_NAME(GeneratorType::FastBuild, "FBuild");
     ADD_ALLOWED_NAME(GeneratorType::CompilationDatabase, "CompDb");
     ADD_ALLOWED_NAME(GeneratorType::SwExecutionPlan, "SwExPlan");
     ADD_ALLOWED_NAME(GeneratorType::SwBuildDescription, "SwBDesc");
     ADD_ALLOWED_NAME(GeneratorType::RawBootstrapBuild, "rawbootstrap");
     ADD_ALLOWED_NAME(GeneratorType::RawBootstrapBuild, "raw-bootstrap");
+    ADD_ALLOWED_NAME(GeneratorType::Xcode, "Xcode");
 
     //else if (boost::iequals(s, "qtc"))
     //return GeneratorType::qtc;
