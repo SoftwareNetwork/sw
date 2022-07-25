@@ -534,7 +534,7 @@ void CheckSet::performChecks(const SwBuild &mb, const TargetSettings &ts)
                 else
                 {
                     std::cout << "Waiting for completing cc checks.\n";
-                    std::cout << "Run '" << to_string(normalize_path(out)) << "' and press and key to continue...\n";
+                    std::cout << "Run '" << to_string(normalize_path(out)) << "' and press Enter to continue...\n";
                     getchar();
                 }
                 cs.load_manual(fn);
