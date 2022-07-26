@@ -34,7 +34,7 @@ namespace sw
 #undef sparc
 
 // from Modules/CMakeDetermineSystem.cmake
-enum class OSType
+enum class OSType : uint8_t
 {
     UnknownOS,
 
@@ -232,7 +232,11 @@ String toTripletString(SubArchType e);
 
 struct SW_BUILDER_API OS
 {
-    OSType Type = OSType::UnknownOS;
+    OSType Type : 8 = OSType::UnknownOS;
+    unsigned Mingw : 1 = false;
+    unsigned Android : 1 = false;
+    unsigned : 22;
+
     ArchType Arch = ArchType::UnknownArch;
     SubArchType SubArch = SubArchType::NoSubArch;
     EnvironmentType EnvType = EnvironmentType::UnknownEnvironment;

@@ -45,6 +45,13 @@ TargetSettings toTargetSettings(const OS &o)
     // do not specify, just takes max available
     //s["os"]["version"] = o.Version.toString();
 
+    if (o.Android) {
+        s["os"]["kernel"] = "com.google.android";
+    }
+    if (o.Mingw) {
+        s["os"]["kernel"] = "org.mingw";
+    }
+
     switch (o.Arch)
     {
     case ArchType::x86:

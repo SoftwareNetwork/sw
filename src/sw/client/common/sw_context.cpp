@@ -203,6 +203,8 @@ static std::tuple<String, std::optional<sw::Version>> osTypeFromStringCaseI(cons
         return {"org.cygwin", v};
     else if (os == "mingw" || os == "mingw32" || os == "mingw64" || os == "msys")
         return {"org.mingw", v};
+    else if (os == "android")
+        return {"com.google.android", v};
     return {os, v};
 }
 

@@ -35,6 +35,7 @@ static OS fromTargetSettings(const TargetSettings &ts)
         if (0);
         IF_SETTING("com.Microsoft.Windows.NT", os.Type, OSType::Windows);
         IF_SETTING("org.torvalds.linux", os.Type, OSType::Linux);
+        IF_SETTING("com.google.android", os.Type, OSType::Android);
         IF_SETTING("com.Apple.Macos", os.Type, OSType::Macos);
         IF_SETTING("com.Apple.Darwin", os.Type, OSType::Darwin);
         IF_SETTING("org.cygwin", os.Type, OSType::Cygwin);
@@ -43,6 +44,10 @@ static OS fromTargetSettings(const TargetSettings &ts)
         else
             throw SW_RUNTIME_ERROR("Unknown os: " + v.getValue());
     IF_END
+    if (os.Type == OSType::Android) {
+        os.Type = OSType::Linux;
+        os.Android = true;
+    }
 
     IF_KEY("os"]["version")
         os.Version = v.getValue();
