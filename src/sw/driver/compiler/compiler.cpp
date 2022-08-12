@@ -38,7 +38,7 @@ static String get_msvc_prefix(const path &prog)
     auto &p = getMsvcIncludePrefixes();
     auto i = p.find(prog);
     if (i == p.end())
-        throw SW_RUNTIME_ERROR("Cannot find msvc prefix");
+        throw SW_RUNTIME_ERROR("Cannot find msvc prefix for: " + prog.string());
     return i->second;
 }
 
