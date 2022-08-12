@@ -96,7 +96,7 @@ files:
             // p += Git("enter your url here", "enter tag here", "or branch here");
 
             auto &t = s.addTarget<{target}>("{name}");
-            t += cpp20;
+            t += cpp23;
             {files}
 
             // add deps here
