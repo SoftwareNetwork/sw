@@ -930,7 +930,7 @@ static void detectNonWindowsCompilers(DETECT_ARGS)
     resolve_and_add("gcc", "org.gnu.gcc", 1);
     resolve_and_add("g++", "org.gnu.gpp", 1);
 
-    for (int i = 3; i < 12; i++)
+    for (int i = 3; i < 20; i++)
     {
         resolve_and_add("gcc-" + std::to_string(i), "org.gnu.gcc", 1);
         resolve_and_add("g++-" + std::to_string(i), "org.gnu.gpp", 1);
@@ -959,7 +959,7 @@ static void detectNonWindowsCompilers(DETECT_ARGS)
         resolve_and_add("clang++", "org.LLVM.clangpp", 2, clang_regex_prefix);
     }
 
-    for (int i = 3; i < 16; i++)
+    for (int i = 3; i < 35; i++)
     {
         resolve_and_add("clang-" + std::to_string(i), "org.LLVM.clang", 2, clang_regex_prefix);
         resolve_and_add("clang++-" + std::to_string(i), "org.LLVM.clangpp", 2, clang_regex_prefix);
