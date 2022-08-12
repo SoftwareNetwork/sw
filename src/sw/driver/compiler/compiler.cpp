@@ -317,8 +317,8 @@ void VisualStudioASMCompiler::prepareCommand1(const Target &t)
     if (file.filename() == "ml64.exe")
         ((VisualStudioASMCompiler*)this)->SafeSEH = false;
 
-    cmd->deps_processor = builder::Command::DepsProcessor::Msvc;
-    cmd->msvc_prefix = get_msvc_prefix(cmd->getProgram());
+    //cmd->deps_processor = builder::Command::DepsProcessor::Msvc;
+    //cmd->msvc_prefix = get_msvc_prefix(cmd->getProgram());
 
     if (InputFile)
     {
