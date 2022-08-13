@@ -280,10 +280,10 @@ static bool detectMsvcCommon(const path &compiler, const Version &vs_version,
     }
 
     // ASM
-    if (target_arch == ArchType::x86_64 || target_arch == ArchType::x86)
+    if (target_arch == ArchType::x86_64 || target_arch == ArchType::x86 || target_arch == ArchType::aarch64 || target_arch == ArchType::arm)
     {
         auto p = std::make_shared<SimpleProgram>();
-        p->file = compiler / (target_arch == ArchType::x86_64 ? "ml64.exe" : "ml.exe");
+        p->file = compiler / ((target_arch == ArchType::x86_64 || target_arch == ArchType::aarch64) ? "ml64.exe" : "ml.exe");
         if (fs::exists(p->file))
         {
             addProgram(DETECT_ARGS_PASS, PackageId("com.Microsoft.VisualStudio.VC.ml", cl_exe_version), ts, p);
