@@ -70,9 +70,33 @@
 #include <iostream>
 #include <windows.h>
 
-#ifndef IMAGE_FILE_MACHINE_ARMNT
-#define IMAGE_FILE_MACHINE_ARMNT 0x01c4
-#endif
+#include <cstdio>
+#include <set>
+#include <string>
+#include <cstddef>
+#include <sstream>
+#include <vector>
+
+#ifdef _WIN32
+#  ifndef IMAGE_FILE_MACHINE_ARM
+#    define IMAGE_FILE_MACHINE_ARM 0x01c0 // ARM Little-Endian
+#  endif
+
+#  ifndef IMAGE_FILE_MACHINE_THUMB
+#    define IMAGE_FILE_MACHINE_THUMB 0x01c2 // ARM Thumb/Thumb-2 Little-Endian
+#  endif
+
+#  ifndef IMAGE_FILE_MACHINE_ARMNT
+#    define IMAGE_FILE_MACHINE_ARMNT 0x01c4 // ARM Thumb-2 Little-Endian
+#  endif
+
+#  ifndef IMAGE_FILE_MACHINE_ARM64
+#    define IMAGE_FILE_MACHINE_ARM64 0xaa64 // ARM64 Little-Endian
+#  endif
+
+#  ifndef IMAGE_FILE_MACHINE_ARM64EC
+#    define IMAGE_FILE_MACHINE_ARM64EC 0xa641 // ARM64EC Little-Endian
+#  endif
 
 typedef struct cmANON_OBJECT_HEADER_BIGOBJ
 {
@@ -113,6 +137,13 @@ typedef struct _cmIMAGE_SYMBOL_EX
   BYTE NumberOfAuxSymbols;
 } cmIMAGE_SYMBOL_EX;
 typedef cmIMAGE_SYMBOL_EX UNALIGNED* cmPIMAGE_SYMBOL_EX;
+
+enum class Arch
+{
+  Generic,
+  I386,
+  ARM64EC,
+};
 
 PIMAGE_SECTION_HEADER GetSectionHeaderOffset(
   PIMAGE_FILE_HEADER pImageFileHeader)
@@ -172,17 +203,18 @@ public:
    */
 
   DumpSymbols(ObjectHeaderType* ih, std::set<std::string>& symbols,
-              std::set<std::string>& dataSymbols, bool isI386)
+              std::set<std::string>& dataSymbols,
+              Arch symbolArch = Arch::Generic)
     : Symbols(symbols)
     , DataSymbols(dataSymbols)
   {
     this->ObjectImageHeader = ih;
     this->SymbolTable =
-      (SymbolTableType*)((DWORD_PTR) this->ObjectImageHeader +
+      (SymbolTableType*)((DWORD_PTR)this->ObjectImageHeader +
                          this->ObjectImageHeader->PointerToSymbolTable);
     this->SectionHeaders = GetSectionHeaderOffset(this->ObjectImageHeader);
     this->SymbolCount = this->ObjectImageHeader->NumberOfSymbols;
-    this->IsI386 = isI386;
+    this->SymbolArch = symbolArch;
   }
 
   /*
@@ -217,10 +249,10 @@ public:
           (pSymbolTable->Type == 0x20 || pSymbolTable->Type == 0x0)) {
         if (pSymbolTable->StorageClass == IMAGE_SYM_CLASS_EXTERNAL) {
           /*
-          *    The name of the Function entry points
-          */
+           *    The name of the Function entry points
+           */
           if (pSymbolTable->N.Name.Short != 0) {
-            symbol = "";
+            symbol.clear();
             symbol.insert(0, (const char*)pSymbolTable->N.ShortName, 8);
           } else {
             symbol = stringTable + pSymbolTable->N.Name.Long;
@@ -238,7 +270,7 @@ public:
             }
           }
           // For i386 builds we need to remove _
-          if (this->IsI386 && symbol[0] == '_') {
+          if (this->SymbolArch == Arch::I386 && symbol[0] == '_') {
             symbol.erase(0, 1);
           }
 
@@ -255,15 +287,23 @@ public:
               symbol.compare(0, 4, vectorPrefix)) {
             SectChar = this->SectionHeaders[pSymbolTable->SectionNumber - 1]
                          .Characteristics;
-            // skip symbols containing a dot
-            if (symbol.find('.') == std::string::npos) {
-              if (!pSymbolTable->Type && (SectChar & IMAGE_SCN_MEM_WRITE)) {
-                // Read only (i.e. constants) must be excluded
-                this->DataSymbols.insert(symbol);
-              } else {
-                if (pSymbolTable->Type || !(SectChar & IMAGE_SCN_MEM_READ) ||
-                    (SectChar & IMAGE_SCN_MEM_EXECUTE)) {
-                  this->Symbols.insert(symbol);
+            // skip symbols containing a dot or are from managed code
+            if (symbol.find('.') == std::string::npos &&
+                !SymbolIsFromManagedCode(symbol)) {
+              // skip arm64ec thunk symbols
+              if (this->SymbolArch != Arch::ARM64EC ||
+                  (symbol.find("$ientry_thunk") == std::string::npos &&
+                   symbol.find("$entry_thunk") == std::string::npos &&
+                   symbol.find("$iexit_thunk") == std::string::npos &&
+                   symbol.find("$exit_thunk") == std::string::npos)) {
+                if (!pSymbolTable->Type && (SectChar & IMAGE_SCN_MEM_WRITE)) {
+                  // Read only (i.e. constants) must be excluded
+                  this->DataSymbols.insert(symbol);
+                } else {
+                  if (pSymbolTable->Type || !(SectChar & IMAGE_SCN_MEM_READ) ||
+                      (SectChar & IMAGE_SCN_MEM_EXECUTE)) {
+                    this->Symbols.insert(symbol);
+                  }
                 }
               }
             }
@@ -272,8 +312,8 @@ public:
       }
 
       /*
-      * Take into account any aux symbols
-      */
+       * Take into account any aux symbols
+       */
       i += pSymbolTable->NumberOfAuxSymbols;
       pSymbolTable += pSymbolTable->NumberOfAuxSymbols;
       pSymbolTable++;
@@ -281,29 +321,37 @@ public:
   }
 
 private:
+  bool SymbolIsFromManagedCode(std::string const& symbol)
+  {
+    return symbol == "__t2m" || symbol == "__m2mep" || symbol == "__mep" ||
+      symbol.find("$$F") != std::string::npos ||
+      symbol.find("$$J") != std::string::npos;
+  }
+
   std::set<std::string>& Symbols;
   std::set<std::string>& DataSymbols;
   DWORD_PTR SymbolCount;
   PIMAGE_SECTION_HEADER SectionHeaders;
   ObjectHeaderType* ObjectImageHeader;
   SymbolTableType* SymbolTable;
-  bool IsI386;
+  Arch SymbolArch;
 };
+#endif
 
-bool DumpFile(const path &filename, std::set<std::string>& symbols,
-              std::set<std::string>& dataSymbols)
+static bool DumpFile(const path &filename,
+                     std::set<std::string>& symbols,
+                     std::set<std::string>& dataSymbols)
 {
   HANDLE hFile;
   HANDLE hFileMapping;
   LPVOID lpFileBase;
-  PIMAGE_DOS_HEADER dosHeader;
 
   hFile = CreateFileW(filename.wstring().c_str(), GENERIC_READ,
                       FILE_SHARE_READ, NULL, OPEN_EXISTING,
                       FILE_ATTRIBUTE_NORMAL, 0);
 
   if (hFile == INVALID_HANDLE_VALUE) {
-    fprintf(stderr, "Couldn't open file '%s' with CreateFile()\n", filename.string().c_str());
+      std::cerr << "Couldn't open file '" << filename << "' with CreateFile()\n";
     return false;
   }
 
@@ -322,40 +370,63 @@ bool DumpFile(const path &filename, std::set<std::string>& symbols,
     return false;
   }
 
-  dosHeader = (PIMAGE_DOS_HEADER)lpFileBase;
+  const PIMAGE_DOS_HEADER dosHeader = (PIMAGE_DOS_HEADER)lpFileBase;
   if (dosHeader->e_magic == IMAGE_DOS_SIGNATURE) {
-    CloseHandle(hFileMapping);
-    CloseHandle(hFile);
     fprintf(stderr, "File is an executable.  I don't dump those.\n");
     return false;
-  }
-  /* Does it look like a COFF OBJ file??? */
-  else if (((dosHeader->e_magic == IMAGE_FILE_MACHINE_I386) ||
-            (dosHeader->e_magic == IMAGE_FILE_MACHINE_AMD64) ||
-            (dosHeader->e_magic == IMAGE_FILE_MACHINE_ARMNT)) &&
-           (dosHeader->e_sp == 0)) {
-    /*
-    * The two tests above aren't what they look like.  They're
-    * really checking for IMAGE_FILE_HEADER.Machine == i386 (0x14C)
-    * and IMAGE_FILE_HEADER.SizeOfOptionalHeader == 0;
-    */
-    DumpSymbols<IMAGE_FILE_HEADER, IMAGE_SYMBOL> symbolDumper(
-      (PIMAGE_FILE_HEADER)lpFileBase, symbols, dataSymbols,
-      (dosHeader->e_magic == IMAGE_FILE_MACHINE_I386));
-    symbolDumper.DumpObjFile();
   } else {
-    // check for /bigobj format
-    cmANON_OBJECT_HEADER_BIGOBJ* h = (cmANON_OBJECT_HEADER_BIGOBJ*)lpFileBase;
-    if (h->Sig1 == 0x0 && h->Sig2 == 0xffff) {
-      DumpSymbols<cmANON_OBJECT_HEADER_BIGOBJ, cmIMAGE_SYMBOL_EX> symbolDumper(
-        (cmANON_OBJECT_HEADER_BIGOBJ*)lpFileBase, symbols, dataSymbols,
-        (h->Machine == IMAGE_FILE_MACHINE_I386));
+    const PIMAGE_FILE_HEADER imageHeader = (PIMAGE_FILE_HEADER)lpFileBase;
+    /* Does it look like a COFF OBJ file??? */
+    if (((imageHeader->Machine == IMAGE_FILE_MACHINE_I386) ||
+         (imageHeader->Machine == IMAGE_FILE_MACHINE_AMD64) ||
+         (imageHeader->Machine == IMAGE_FILE_MACHINE_ARM) ||
+         (imageHeader->Machine == IMAGE_FILE_MACHINE_ARMNT) ||
+         (imageHeader->Machine == IMAGE_FILE_MACHINE_ARM64) ||
+         (imageHeader->Machine == IMAGE_FILE_MACHINE_ARM64EC)) &&
+        (imageHeader->Characteristics == 0)) {
+      /*
+       * The tests above are checking for IMAGE_FILE_HEADER.Machine
+       * if it contains supported machine formats (currently ARM and x86)
+       * and IMAGE_FILE_HEADER.Characteristics == 0 indicating that
+       * this is not linked COFF OBJ file;
+       */
+      DumpSymbols<IMAGE_FILE_HEADER, IMAGE_SYMBOL> symbolDumper(
+        (PIMAGE_FILE_HEADER)lpFileBase, symbols, dataSymbols,
+        (imageHeader->Machine == IMAGE_FILE_MACHINE_I386
+           ? Arch::I386
+           : (imageHeader->Machine == IMAGE_FILE_MACHINE_ARM64EC
+                ? Arch::ARM64EC
+                : Arch::Generic)));
       symbolDumper.DumpObjFile();
     } else {
-      CloseHandle(hFileMapping);
-      CloseHandle(hFile);
-      printf("unrecognized file format in '%s'\n", filename.string().c_str());
-      return false;
+      // check for /bigobj and llvm LTO format
+      cmANON_OBJECT_HEADER_BIGOBJ* h =
+        (cmANON_OBJECT_HEADER_BIGOBJ*)lpFileBase;
+      if (h->Sig1 == 0x0 && h->Sig2 == 0xffff) {
+        // bigobj
+        DumpSymbols<cmANON_OBJECT_HEADER_BIGOBJ, cmIMAGE_SYMBOL_EX>
+          symbolDumper(
+            (cmANON_OBJECT_HEADER_BIGOBJ*)lpFileBase, symbols, dataSymbols,
+            (h->Machine == IMAGE_FILE_MACHINE_I386
+               ? Arch::I386
+               : (h->Machine == IMAGE_FILE_MACHINE_ARM64EC ? Arch::ARM64EC
+                                                           : Arch::Generic)));
+        symbolDumper.DumpObjFile();
+      } else if (
+        // BCexCODE - llvm bitcode
+        (h->Sig1 == 0x4342 && h->Sig2 == 0xDEC0) ||
+        // 0x0B17C0DE - llvm bitcode BC wrapper
+        (h->Sig1 == 0x0B17 && h->Sig2 == 0xC0DE)) {
+
+        SW_UNIMPLEMENTED;
+        //return DumpFileWithLlvmNm(nmPath, filename, symbols, dataSymbols);
+
+      }
+      else
+      {
+          std::cerr << "unrecognized file format in '" << filename << ", " << imageHeader->Machine << "'\n";
+        return false;
+      }
     }
   }
   UnmapViewOfFile(lpFileBase);
@@ -366,6 +437,11 @@ bool DumpFile(const path &filename, std::set<std::string>& symbols,
 
 void createDefFile(const path &def, const Files &obj_files)
 {
+    // cmake bindexplib can:
+    // 1. merge .def files, we could use it too!
+    // 2. create def files on *nix, we could use it too?
+    // bool AddDefinitionFile(const char *filename);
+
     StringSet symbols, data_symbols;
     for (auto &o : obj_files)
     {
