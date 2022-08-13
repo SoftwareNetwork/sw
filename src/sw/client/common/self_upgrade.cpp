@@ -19,27 +19,29 @@
 
 void self_upgrade(const String &progname)
 {
-#ifdef _WIN32
-    path client = "/client/"s + progname + "-master-windows-client.zip";
-#elif __APPLE__
-    #ifdef __aarch64__
-    path client = "/client/"s + progname + "-master-macos_arm64-client.tar.gz";
-    #else
-    path client = "/client/"s + progname + "-master-macos-client.tar.gz";
-    #endif
-#else
-    path client = "/client/"s + progname + "-master-linux-client.tar.gz";
+    String ext = ".tar.gz";
+    String os = "linux";
+    String arch;
+#ifdef __aarch64__
+    arch = "_arm64";
 #endif
+#ifdef _WIN32
+    os = "windows";
+    ext = ".zip";
+#elif __APPLE__
+    os = "macos";
+#endif
+    path client = "/client/"s + progname + "-master-" + os + arch + "-client" + ext;
 
     auto &s = sw::Settings::get_user_settings();
 
-    std::cout << "Downloading signature file" << "\n";
     static const auto algo = "sha512"s;
     auto &r = s.getRemotes(true)[0];
+    std::cout << "Downloading signature file: " << (r->url + to_string(client.u8string()) + "." + algo + ".sig") << "\n";
     auto sig = download_file(r->url + to_string(client.u8string()) + "." + algo + ".sig");
 
     auto fn = fs::temp_directory_path() / (unique_path() += client.extension());
-    std::cout << "Downloading the latest client" << "\n";
+    std::cout << "Downloading the latest client: " << (r->url + to_string(client.u8string())) << "\n";
     download_file(r->url + to_string(client.u8string()), fn, 100_MB);
     try
     {
