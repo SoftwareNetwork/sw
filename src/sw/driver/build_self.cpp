@@ -11,6 +11,7 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "build.self");
 
+#include "sw_abi_version.h"
 #define SW_PACKAGE_API
 #include "sw.h"
 
