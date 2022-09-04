@@ -1682,9 +1682,11 @@ std::map<String, String> Project::printProperties(const sw::builder::Command &c,
             {
                 if (arg == "-c" || arg == "-FS")
                     return;
-                auto i = c.inputs.find(normalize_path(arg));
-                if (i != c.inputs.end())
-                    return;
+                for (auto &&i : c.inputs)
+                {
+                    if (normalize_path(i) == normalize_path(arg))
+                        return;
+                }
                 args["AdditionalOptions"] += o->quote();
                 args["AdditionalOptions"] += " ";
                 return;
