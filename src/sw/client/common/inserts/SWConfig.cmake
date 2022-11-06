@@ -9,7 +9,7 @@
 
 # increase this variable when file is changed
 # and you need user to call 'sw setup' again to update this file
-set(SW_CMAKE_VERSION 6)
+set(SW_CMAKE_VERSION 7)
 
 ########################################
 # general settings
@@ -109,6 +109,9 @@ function(sw_execute)
 
     set(mt_flag)
     if (MSVC)
+        if (POLICY CMP0091)
+            cmake_policy(GET CMP0091 cmp0091_policy)
+        endif()
         sw_internal_find_flag("${CMAKE_C_FLAGS_RELEASE}"              /MT       C_MTR        )
         sw_internal_find_flag("${CMAKE_C_FLAGS_RELWITHDEBINFO}"       /MT       C_MTRWDI     )
         sw_internal_find_flag("${CMAKE_C_FLAGS_MINSIZEREL}"           /MT       C_MTMSR      )
@@ -121,6 +124,21 @@ function(sw_execute)
         if (  C_MTR OR   C_MTRWDI OR   C_MTMSR OR   C_MTD OR
             CXX_MTR OR CXX_MTRWDI OR CXX_MTMSR OR CXX_MTD)
             set(mt_flag -mt)
+
+        # Also check CMAKE_MSVC_RUNTIME_LIBRARY variable if policy CMP0091 is set to NEW
+        elseif ((cmp0091_policy STREQUAL NEW) AND (DEFINED CMAKE_MSVC_RUNTIME_LIBRARY))
+            string(TOUPPER "${CMAKE_MSVC_RUNTIME_LIBRARY}" msvc_runtime)
+            string(FIND "${msvc_runtime}" "DLL" dll_rt_found)
+            if (SW_DEBUG)
+                message(STATUS "sw: CMAKE_MSVC_RUNTIME_LIBRARY: ${CMAKE_MSVC_RUNTIME_LIBRARY}")
+            endif()
+            if (${dll_rt_found} EQUAL -1)
+               set(mt_flag -mt)
+            endif()
+        endif()
+        if (SW_DEBUG)
+            message (STATUS "sw: CMP0091 status: ${cmp0091_policy}")
+            message (STATUS "sw: mt flag: ${mt_flag}")
         endif()
     endif()
 
