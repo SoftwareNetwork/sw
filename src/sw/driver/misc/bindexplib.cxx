@@ -445,8 +445,11 @@ void createDefFile(const path &def, const Files &obj_files)
     StringSet symbols, data_symbols;
     for (auto &o : obj_files)
     {
-        if (!DumpFile(o, symbols, data_symbols))
-            throw SW_RUNTIME_ERROR("Cannot dump obj file: " + o.string());
+        if (!DumpFile(o, symbols, data_symbols)) {
+            // ignore errors for now
+            // yasm/nasm has unknown obj format
+            //throw SW_RUNTIME_ERROR("Cannot dump obj file: " + o.string());
+        }
     }
 
     String str;
