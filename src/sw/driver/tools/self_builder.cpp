@@ -48,7 +48,7 @@ String write_required_packages(const std::unordered_map<UnresolvedPackage, Local
     return ctx_packages.getText();
 }
 
-std::map<size_t, std::set<LocalPackage>> used_gns;
+std::map<size_t, std::map<LocalPackage, bool>> used_gns;
 std::vector<std::pair<LocalPackage, Specification>> lpkgs;
 std::unordered_map<UnresolvedPackage, Specification> gns;
 std::unordered_map<LocalPackage, Specification> gns2;
@@ -119,6 +119,29 @@ String write_build_script(SwCoreContext &swctx,
         }
     }
 
+    auto add_used_gn = [&](auto &&r, auto &&u)
+    {
+        const auto &s = get_gn(u);
+        auto h = s.getHash(idb);
+        auto set_gn = [&]()
+        {
+            auto &gn = used_gns[h];
+            auto it = gn.find(r);
+            if (it == gn.end()) {
+                gn.emplace(r, !headers);
+            } else {
+                it->second |= !headers;
+            }
+        };
+        if (used_gns.find(h) != used_gns.end())
+        {
+            set_gn();
+            return;
+        }
+        set_gn();
+        lpkgs.emplace_back(r, s);
+    };
+
     for (auto &u : prepkgs)
     {
         const LocalPackage *lp = nullptr;
@@ -129,30 +152,13 @@ String write_build_script(SwCoreContext &swctx,
         }
         if (!lp)
             throw SW_RUNTIME_ERROR("Cannot find dependency: " + u.toString());
-
-        const auto &s = get_gn(u);
-        auto h = s.getHash(idb);
-        auto &r = *lp;
-        if (used_gns.find(h) != used_gns.end())
-        {
-            used_gns[h].insert(*lp);
-            continue;
-        }
-        used_gns[h].insert(*lp);
-        lpkgs.emplace_back(r, s);
+        add_used_gn(*lp, u);
     }
 
     for (auto &[u, r] : m)
     {
         const auto &s = get_gn(u);
-        auto h = s.getHash(idb);
-        if (used_gns.find(h) != used_gns.end())
-        {
-            used_gns[h].insert(r);
-            continue;
-        }
-        used_gns[h].insert(r);
-        lpkgs.emplace_back(r, s);
+        add_used_gn(r, u);
     }
 
     // includes
@@ -183,9 +189,11 @@ String write_build_script(SwCoreContext &swctx,
 
     if (headers)
     {
+        // at last undefine everything
         ctx.addLine("#undef build");
         ctx.addLine("#undef check");
         ctx.addLine("#undef configure");
+        ctx.emptyLines(1);
     }
 
     if (headers)
@@ -198,6 +206,11 @@ String write_build_script(SwCoreContext &swctx,
     build.addLine();
     for (auto &[r,s] : lpkgs)
     {
+        auto all_headers = std::ranges::any_of(used_gns[get_gn2(r).getHash(idb)], [](auto &&p){return p.second;});
+        if (!all_headers) {
+            continue;
+        }
+
         auto fn = s.files.getData().begin()->second.absolute_path;
         auto f = read_file(fn);
         bool has_checks = f.find("Checker") != f.npos; // more presize than setChecks
@@ -211,8 +224,11 @@ String write_build_script(SwCoreContext &swctx,
         build.addLine("auto [ii, _] = swctx.registerInput(std::move(i));");
 
         // enumerate all other packages in group
-        for (auto &p : used_gns[get_gn2(r).getHash(idb)])
-            build.addLine("epm[ii].insert(\"" + p.toString() + "\"s);");
+        for (auto &[p,not_headers] : used_gns[get_gn2(r).getHash(idb)]) {
+            if (not_headers) {
+                build.addLine("epm[ii].insert(\"" + p.toString() + "\"s);");
+            }
+        }
         build.endBlock();
         build.emptyLines();
     }
