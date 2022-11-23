@@ -12,7 +12,8 @@
 DECLARE_STATIC_LOGGER(logger, "build.self");
 
 #include "sw_abi_version.h"
-#define SW_PACKAGE_API
+// this allows to export builtin functions from deps (like mime_preprocess_file from qt)
+#define SW_PACKAGE_API SW_EXPORT
 #include "sw.h"
 
 #ifdef _MSC_VER
