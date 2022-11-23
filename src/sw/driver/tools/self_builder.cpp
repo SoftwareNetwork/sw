@@ -226,8 +226,8 @@ String write_build_script(SwCoreContext &swctx,
         build.addLine("auto [ii, _] = swctx.registerInput(std::move(i));");
 
         // enumerate all other packages in group
-        for (auto &[p,not_headers] : used_gns[get_gn2(r).getHash(idb)]) {
-            if (not_headers) {
+        for (auto &[p,headers] : used_gns[get_gn2(r).getHash(idb)]) {
+            if (!headers) {
                 build.addLine("epm[ii].insert(\"" + p.toString() + "\"s);");
             }
         }
