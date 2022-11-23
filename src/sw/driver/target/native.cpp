@@ -3281,7 +3281,7 @@ void NativeCompiledTarget::prepare_pass5()
 
             auto p2 = dynamic_cast<FileToFileTransformProgram *>(prog);
             if (!p2)
-                throw SW_RUNTIME_ERROR("Bad program type for " + ext);
+                throw SW_RUNTIME_ERROR("Bad program type for " + ext + " (file " + p.string() + ")");
             f = p2->createSourceFile(*this, p);
             addFile(p, f);
             if (auto f2 = std::dynamic_pointer_cast<NativeSourceFile>(f))
