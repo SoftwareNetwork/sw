@@ -15,8 +15,6 @@
 #include <primitives/sw/cl.h>
 #include <primitives/sw/settings_program_name.h>
 
-#include <ranges>
-
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "self_builder");
 
@@ -130,9 +128,9 @@ String write_build_script(SwCoreContext &swctx,
             auto &gn = used_gns[h];
             auto it = gn.find(r);
             if (it == gn.end()) {
-                gn.emplace(r, !headers);
+                gn.emplace(r, headers);
             } else {
-                it->second |= !headers;
+                it->second &= headers;
             }
         };
         if (used_gns.find(h) != used_gns.end())
@@ -208,8 +206,10 @@ String write_build_script(SwCoreContext &swctx,
     build.addLine();
     for (auto &[r,s] : lpkgs)
     {
-        auto all_headers = std::ranges::any_of(used_gns[get_gn2(r).getHash(idb)], [](auto &&p){return p.second;});
-        if (!all_headers) {
+        bool all_headers = true;
+        for (auto &&[_,header] : used_gns[get_gn2(r).getHash(idb)])
+            all_headers &= header;
+        if (all_headers) {
             continue;
         }
 
