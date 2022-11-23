@@ -48,6 +48,11 @@ String write_required_packages(const std::unordered_map<UnresolvedPackage, Local
     return ctx_packages.getText();
 }
 
+std::map<size_t, std::set<LocalPackage>> used_gns;
+std::vector<std::pair<LocalPackage, Specification>> lpkgs;
+std::unordered_map<UnresolvedPackage, Specification> gns;
+std::unordered_map<LocalPackage, Specification> gns2;
+
 String write_build_script(SwCoreContext &swctx,
     const std::unordered_map<UnresolvedPackage, LocalPackage> &m_in,
     bool headers
@@ -57,8 +62,6 @@ String write_build_script(SwCoreContext &swctx,
     auto &idb = swctx.getInputDatabase();
 
     // create specs
-    std::unordered_map<UnresolvedPackage, Specification> gns;
-    std::unordered_map<LocalPackage, Specification> gns2;
     for (auto &[u, r] : m)
     {
         SpecificationFiles f;
@@ -68,21 +71,19 @@ String write_build_script(SwCoreContext &swctx,
         gns.emplace(u, s);
     }
 
-    auto get_gn = [&gns](auto &u)
+    auto get_gn = [](auto &u)
     {
         auto i = gns.find(u);
         SW_ASSERT(i != gns.end(), "not found: " + u.toString() + ": do 'sw override org.sw' in sw client dir and check that this package is added to some storage");
         return i->second;
     };
-    auto get_gn2 = [&gns2](auto &u)
+    auto get_gn2 = [](auto &u)
     {
         auto i = gns2.find(u);
         SW_ASSERT(i != gns2.end(), "not found 2: " + u.toString());
         return i->second;
     };
 
-    std::map<size_t, std::set<LocalPackage>> used_gns;
-    std::vector<std::pair<LocalPackage, Specification>> lpkgs;
 
     // some packages must be before others
     std::vector<UnresolvedPackage> prepkgs;
