@@ -15,6 +15,8 @@
 #include <primitives/sw/cl.h>
 #include <primitives/sw/settings_program_name.h>
 
+#include <ranges>
+
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "self_builder");
 
