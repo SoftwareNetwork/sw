@@ -3,7 +3,7 @@
 #include <primitives/exceptions.h>
 #include <primitives/sw/main.h>
 
-int main(int argc, char **argv)
+int main(int argc, char *argv[])
 {
     try { throw SW_RUNTIME_ERROR("1"); }
     catch (sw::RuntimeError) { std::cout << "RuntimeError 1\n"; }
