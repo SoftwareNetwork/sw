@@ -9,14 +9,14 @@ jobs:
     - uses: actions/checkout@v1
     - uses: egorpugin/sw-action@master
     - run: ./sw -static build
-    - uses: actions/upload-artifact@v1
+    - uses: actions/upload-artifact@v3
       with:
         name: sw
         path: .sw/out
 
   linux:
-    runs-on: ubuntu-20.04
-    container: fedora:36
+    runs-on: ubuntu-22.04
+    container: fedora:37
     steps:
     - uses: actions/checkout@v1
     - name: prepare
@@ -25,7 +25,7 @@ jobs:
         sudo dnf -y install flex bison cmake which gcc clang clang-tools-extra lld git
     - uses: egorpugin/sw-action@master
     - run: ./sw -static build -compiler gcc
-    - uses: actions/upload-artifact@v1
+    - uses: actions/upload-artifact@v3
       with:
         name: sw
         path: .sw/out
@@ -43,7 +43,7 @@ jobs:
         export PATH="/usr/local/opt/bison/bin:$PATH"
         export PATH="/usr/local/opt/gcc/bin:$PATH"
         ./sw -static build -compiler gcc
-    - uses: actions/upload-artifact@v1
+    - uses: actions/upload-artifact@v3
       with:
         name: sw
         path: .sw/out
