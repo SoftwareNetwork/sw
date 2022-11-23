@@ -97,6 +97,7 @@ void RemoteStorage::download() const
         download_file(r.db.url, fn, 1_GB);
         auto unpack_dir = support::get_temp_filename();
         auto files = unpack_file(fn, unpack_dir);
+        fs::create_directories(db_repo_dir);
         for (auto &f : files)
             fs::copy_file(f, db_repo_dir / f.filename(), fs::copy_options::overwrite_existing);
         fs::remove_all(unpack_dir);
@@ -106,7 +107,9 @@ void RemoteStorage::download() const
     const String git = "git";
     if (!primitives::resolve_executable(git).empty() && !r.db.git_repo_url.empty())
     {
-        auto git_init = [this, &git]() {
+        auto git_init = [this, &git]()
+        {
+            fs::create_directories(db_repo_dir);
             primitives::Command::execute({git, "-C", db_repo_dir.string(), "init", "."});
             primitives::Command::execute({git, "-C", db_repo_dir.string(), "remote", "add", "github", r.db.git_repo_url});
             primitives::Command::execute({git, "-C", db_repo_dir.string(), "pull", "github", "master"});
