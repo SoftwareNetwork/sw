@@ -170,7 +170,7 @@ static Strings getCppStdOption(CPPLanguageStandard std, bool gnuext, bool clang,
     return { s };
 }
 
-static Strings getCppStdOptionMsvc(CPPLanguageStandard std, const Version &clver)
+static Strings getCppStdOptionMsvc(CPPLanguageStandard std, const Version &clver, bool clangcl = false)
 {
     String s = "-std:c++";
     switch (std)
@@ -182,7 +182,7 @@ static Strings getCppStdOptionMsvc(CPPLanguageStandard std, const Version &clver
         s += "17";
         break;
     case CPPLanguageStandard::CPP20:
-        if (clver < Version(19, 30, 30401)) // probably less than vs16.11, not vs17
+        if (clver < Version(19, 30, 30401) && !clangcl) // probably less than vs16.11, not vs17
             s += "latest";
         else
             s += "20";
@@ -480,7 +480,7 @@ void ClangClCompiler::prepareCommand1(const Target &t)
 
     ReproducibleBuild = t.isReproducibleBuild();
 
-    add_args(*cmd, getCppStdOptionMsvc(CPPStandard(), getVersion(t.getContext(), file)));
+    add_args(*cmd, getCppStdOptionMsvc(CPPStandard(), getVersion(t.getContext(), file), true));
     CPPStandard.skip = true;
 
     getCommandLineOptions<VisualStudioCompilerOptions>(cmd.get(), *this);
