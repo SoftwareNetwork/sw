@@ -24,6 +24,8 @@ void self_upgrade(const String &progname)
     String arch;
 #ifdef __aarch64__
     arch = "_arm64";
+#else
+    arch = "_x86_64"; // default
 #endif
 #ifdef _WIN32
     os = "windows";
