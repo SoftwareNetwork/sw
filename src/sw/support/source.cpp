@@ -61,7 +61,7 @@ void detail::DownloadData::remove() const
 bool download(const std::unordered_set<SourcePtr> &sset, SourceDirMap &source_dirs, const SourceDownloadOptions &opts)
 {
     std::atomic_bool downloaded = false;
-    auto &e = getExecutor();
+    Executor e;
     Futures<void> fs;
     for (auto &src : sset) {
         fs.push_back(e.push([src = src.get(), &d = source_dirs[src->getHash()], &opts, &downloaded] {
