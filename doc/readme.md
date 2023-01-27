@@ -12,10 +12,9 @@ Report if anything goes wrong with this workflow!
 
 ### Windows
 
-Make sure you are running the latest Visual Studio (2017/2019).
+Make sure you are running the latest Visual Studio (2022).
 
-1. VS2017.
-2. Clang-cl (6.0+).
+1. VS2022.
 
 ### *nix
 
