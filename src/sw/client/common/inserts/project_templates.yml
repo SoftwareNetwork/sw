@@ -96,6 +96,7 @@ files:
             // p += Git("enter your url here", "enter tag here", "or branch here");
 
             auto &t = s.addTarget<{target}>("{name}");
+            t.PackageDefinitions = true;
             t += cpp23;
             {files}
 
