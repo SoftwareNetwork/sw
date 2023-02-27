@@ -255,6 +255,7 @@ struct SW_BUILDER_API OS
 
     // rename?
     bool canRunTargetExecutables(const OS &target_os) const;
+    bool useHostSettingsForChecks(const OS &target_os) const;
 
     String getExecutableExtension() const;
     String getStaticLibraryExtension() const;

@@ -366,8 +366,10 @@ private:
     mutable Commands commands;
     Commands tests;
 
+protected:
     TargetSettings getHostSettings() const;
 
+private:
     virtual Commands getCommands1() const { return Commands{}; }
     Commands getTests() const override { return tests; }
 

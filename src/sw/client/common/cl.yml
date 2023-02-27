@@ -154,6 +154,9 @@ command_line:
             reproducible_build:
                 desc: Perform reproducible build.
                 cat: build
+            use_host_settings_for_checks:
+                desc: Use host settings for checks.
+                cat: build
 
             Dvariables:
                 option: D

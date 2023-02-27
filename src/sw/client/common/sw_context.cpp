@@ -199,6 +199,8 @@ static std::tuple<String, std::optional<sw::Version>> osTypeFromStringCaseI(cons
         return {"org.torvalds.linux", v};
     else if (os == "mac" || os == "macos")
         return {"com.Apple.Macos", v}; // XNU? Darwin?
+    else if (os == "ios")
+        return {"com.Apple.Ios", v};
     else if (os == "cyg" || os == "cygwin")
         return {"org.cygwin", v};
     else if (os == "mingw" || os == "mingw32" || os == "mingw64" || os == "msys")
@@ -541,6 +543,11 @@ std::vector<sw::TargetSettings> SwClientContext::createSettings()
         initial_settings["static-deps"] = "true";
     if (options.reproducible_build)
         initial_settings["reproducible-build"] = "true";
+    if (options.use_host_settings_for_checks)
+    {
+        initial_settings["use-host-settings-for-checks"] = "true";
+        initial_settings["use-host-settings-for-checks"].useInHash(false);
+    }
 
     std::vector<sw::TargetSettings> settings;
     settings.push_back(initial_settings);

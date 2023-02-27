@@ -38,6 +38,7 @@ static OS fromTargetSettings(const TargetSettings &ts)
         IF_SETTING("com.google.android", os.Type, OSType::Android);
         IF_SETTING("com.Apple.Macos", os.Type, OSType::Macos);
         IF_SETTING("com.Apple.Darwin", os.Type, OSType::Darwin);
+        IF_SETTING("com.Apple.Ios", os.Type, OSType::IOS);
         IF_SETTING("org.cygwin", os.Type, OSType::Cygwin);
         IF_SETTING("org.mingw", os.Type, OSType::Mingw);
         IF_SETTING("org.emscripten", os.Type, OSType::Wasm);
@@ -118,7 +119,8 @@ String BuildSettings::getTargetTriplet() const
         target += toTripletString(TargetOS.SubArch);
 
     // vendor
-    if (TargetOS.isApple())
+    if (0);
+    else if (TargetOS.isApple())
         target += "-apple";
     else if (TargetOS.Type == OSType::Linux)
         target += "-linux";

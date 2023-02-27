@@ -364,6 +364,16 @@ auto set_apple_arch = [](auto &&obj, auto &&c) {
     }
 };
 
+auto get_ios_sdk_path = []() {
+    primitives::Command c;
+    c.push_back("xcrun");
+    c.push_back("--sdk");
+    c.push_back("iphoneos");
+    c.push_back("--show-sdk-path");
+    c.execute();
+    return boost::trim_copy(c.out.text);
+};
+
 void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const UnresolvedPackage &id, const StringSet &exts, bool extended_desc)
 {
     auto &cld = getMainBuild().getTargets();
@@ -460,6 +470,12 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
             {
                 c->push_back("-mmacosx-version-min=" + getBuildSettings().TargetOS.Version->toString());
             }
+            if (getBuildSettings().TargetOS.is(OSType::IOS))
+            {
+                static const auto sdk = get_ios_sdk_path();
+                c->push_back("-isysroot");
+                c->push_back(sdk);
+            }
             //C->VisibilityHidden = false;
             //C->VisibilityInlinesHidden = false;
             //C->PositionIndependentCode = false;
@@ -500,6 +516,12 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
             if (getBuildSettings().TargetOS.Version)
             {
                 c->push_back("-mmacosx-version-min=" + getBuildSettings().TargetOS.Version->toString());
+            }
+            if (getBuildSettings().TargetOS.is(OSType::IOS))
+            {
+                static const auto sdk = get_ios_sdk_path();
+                c->push_back("-isysroot");
+                c->push_back(sdk);
             }
             //C->VisibilityHidden = false;
             //C->VisibilityInlinesHidden = false;
@@ -663,6 +685,12 @@ std::shared_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetS
             if (getBuildSettings().TargetOS.Version)
             {
                 c->push_back("-mmacosx-version-min=" + getBuildSettings().TargetOS.Version->toString());
+            }
+            if (getBuildSettings().TargetOS.is(OSType::IOS))
+            {
+                static const auto sdk = get_ios_sdk_path();
+                c->push_back("-isysroot");
+                c->push_back(sdk);
             }
         }
         if (getBuildSettings().TargetOS.Type == OSType::Wasm)
@@ -4758,7 +4786,13 @@ void NativeCompiledTarget::setChecks(const String &name, bool check_definitions)
 
     auto &checks_set = getChecks(name);
     checks_set.t = this;
-    checks_set.performChecks(getMainBuild(), getSettings());
+    checks_set.performChecks(getMainBuild(),
+        //getMainBuild().getContext().getHostOs().useHostSettingsForChecks(getBuildSettings().TargetOS)
+        //? getHostSettings()
+        //:
+        //getSettings()["use-host-settings-for-checks"] == "true" ? getHostSettings() :
+        getSettings()
+    );
 
     // set results
     for (auto &[k, c] : checks_set.check_values)

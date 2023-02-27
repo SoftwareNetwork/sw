@@ -153,6 +153,7 @@ bool OS::canRunTargetExecutables(const OS &TargetOS) const
             || Type == OSType::Windows && TargetOS.Type == OSType::Cygwin
             || Type == OSType::Mingw && TargetOS.Type == OSType::Windows
             || Type == OSType::Windows && TargetOS.Type == OSType::Mingw
+            || isApple() && TargetOS.isApple()
             ;
         if (!ok)
             return false;
@@ -184,6 +185,11 @@ bool OS::canRunTargetExecutables(const OS &TargetOS) const
     }
 
     return true;
+}
+
+bool OS::useHostSettingsForChecks(const OS &TargetOS) const
+{
+    return isApple() && TargetOS.isApple();
 }
 
 ShellType OS::getShellType() const
