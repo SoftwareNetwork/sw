@@ -339,7 +339,11 @@ SUBCOMMAND_DECL(integrate)
                     {
                         auto inh = std::stoi(k);
                         if ((inh & 4) == 0)
+                        {
+                            for (auto &d : p["system_link_libraries"].getArray())
+                                if_ctx.addLine(cmake_cfg + fix_path(d.getValue()) + cmake_cfg_end);
                             continue;
+                        }
                         for (auto &d : p["link_libraries"].getArray())
                             if_ctx.addLine(cmake_cfg + fix_path(to_string(normalize_path(d.getPathValue(getContext().getLocalStorage())))) + cmake_cfg_end);
                         for (auto &d : p["system_link_libraries"].getArray())
