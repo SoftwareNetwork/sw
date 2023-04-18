@@ -3,6 +3,8 @@
 
 #include <sw/core/inserts.h>
 
+#include <stdint.h>
+
 #define DECLARE_TEXT_VAR_BEGIN(x) const uint8_t _##x[] = {
 #define DECLARE_TEXT_VAR_END(x) }; const std::string x = (const char *)&_##x[0];
 
