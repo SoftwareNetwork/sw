@@ -11,4 +11,5 @@
 // 28: Program::clone() result shared -> unique ptr
 // 29: Add modules data to native target
 // 30: Add mingw/wasm/android
-#define SW_MODULE_ABI_VERSION 30
+// 31: PathBase::operator == and < api changes
+#define SW_MODULE_ABI_VERSION 31

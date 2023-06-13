@@ -100,7 +100,7 @@ struct PathBase
     auto front() const { return data.front(); }
     auto clear() { return data.clear(); }
 
-    bool operator==(const ThisType &rhs) const
+    bool operator==(const PathBase &rhs) const
     {
         if constexpr (!CaseSensitive)
         {
@@ -114,7 +114,7 @@ struct PathBase
             return std::operator==(*this, rhs);
     }
 
-    bool operator<(const ThisType &rhs) const
+    bool operator<(const PathBase &rhs) const
     {
         if constexpr (!CaseSensitive)
         {
