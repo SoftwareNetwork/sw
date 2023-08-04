@@ -2,10 +2,10 @@ cmake_minimum_required(VERSION 3.13)
 
 project(tess_example CXX)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 20)
 set(SW_BUILD_SHARED_LIBS 1)
 set(DEPENDENCIES
-    org.sw.demo.google.tesseract.libtesseract-master
+    org.sw.demo.google.tesseract.libtesseract
     org.sw.demo.intel.opencv.imgproc
     org.sw.demo.intel.opencv.highgui
 )
