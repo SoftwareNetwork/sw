@@ -9,7 +9,7 @@
 
 # increase this variable when file is changed
 # and you need user to call 'sw setup' again to update this file
-set(SW_CMAKE_VERSION 7)
+set(SW_CMAKE_VERSION 8)
 
 ########################################
 # general settings
@@ -327,6 +327,20 @@ function(sw_execute)
             FOLDER ". SW Predefined Targets"
             PROJECT_LABEL "BUILD_DEPENDENCIES"
     )
+
+    # if we use Ninja generator build immediately
+    if ("${CMAKE_GENERATOR}" STREQUAL "Ninja")
+        message("${comment}")
+        execute_process(
+            COMMAND ${swcmd}
+            RESULT_VARIABLE ret
+        )
+        if (NOT ${ret} EQUAL 0)
+            string(REPLACE ";" " " swcmd "${swcmd}")
+            message("sw command: ${swcmd}")
+            message(FATAL_ERROR "sw: non-zero exit code: ${ret}")
+        endif()
+    endif()
 
     # load our deps
     add_subdirectory(${SW_DEPS_DIR} ${SW_DEPS_DIR}/cmake_bdir)
