@@ -365,7 +365,7 @@ void PackagesDatabase::installPackage(const PackageId &p, const PackageData &d)
         // misc
         pkg_ver.updated = "",
 
-        pkg_ver.sdir = sqlpp::tvin(to_string(d.sdir.u8string()))
+        pkg_ver.sdir = to_string(d.sdir.u8string())
     ));
 
     // get version id
