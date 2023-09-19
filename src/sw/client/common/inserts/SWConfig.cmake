@@ -9,7 +9,7 @@
 
 # increase this variable when file is changed
 # and you need user to call 'sw setup' again to update this file
-set(SW_CMAKE_VERSION 8)
+set(SW_CMAKE_VERSION 9)
 
 ########################################
 # general settings
@@ -151,6 +151,7 @@ function(sw_execute)
     endif()
 
     set(compiler)
+    set(compiler_version "${CMAKE_CXX_COMPILER_VERSION}")
     string(TOUPPER "${CMAKE_CXX_COMPILER_ID}" compiler)
     if ("${compiler}" STREQUAL "MSVC")
         set(compiler -compiler msvc)
@@ -162,25 +163,38 @@ function(sw_execute)
         set(compiler -compiler appleclang)
     # make all compilers UPPERCASE!
     else()
-        # https://cmake.org/cmake/help/latest/variable/CMAKE_LANG_COMPILER_ID.html
-        message(FATAL_ERROR "Compiler is not implemented: '${CMAKE_C_COMPILER_ID}' or '${CMAKE_CXX_COMPILER_ID}'")
+        set(compiler_version "${CMAKE_C_COMPILER_ID}")
+        string(TOUPPER "${CMAKE_C_COMPILER_ID}" compiler)
+        if ("${compiler}" STREQUAL "MSVC")
+            set(compiler -compiler msvc)
+        elseif ("${compiler}" STREQUAL "GNU")
+            set(compiler -compiler gcc)
+        elseif ("${compiler}" STREQUAL "CLANG")
+            set(compiler -compiler clang)
+        elseif ("${compiler}" STREQUAL "APPLECLANG")
+            set(compiler -compiler appleclang)
+        # make all compilers UPPERCASE!
+        else()
+            # https://cmake.org/cmake/help/latest/variable/CMAKE_LANG_COMPILER_ID.html
+            message(FATAL_ERROR "Compiler is not implemented or empty: '${CMAKE_C_COMPILER_ID}' or '${CMAKE_CXX_COMPILER_ID}'")
+        endif()
     endif()
-    if (CMAKE_CXX_COMPILER_VERSION)
+    if (compiler_version)
         # 3 numbers do not always match sw version
         # this because of preview versions of compiler
         # cl.exe:
         #     19.26       < 19.26.99999-preview
         # but 19.26.99999 > 19.26.99999-preview
-        #string(REGEX MATCH "[0-9]+\\.[0-9]+\\.[0-9]+" v "${CMAKE_CXX_COMPILER_VERSION}")
-        string(REGEX MATCH "[0-9]+\\.[0-9]+" v "${CMAKE_CXX_COMPILER_VERSION}")
+        #string(REGEX MATCH "[0-9]+\\.[0-9]+\\.[0-9]+" v "${compiler_version}")
+        string(REGEX MATCH "[0-9]+\\.[0-9]+" v "${compiler_version}")
         if (v)
             set(compiler ${compiler}-${v})
         else()
-            string(REGEX MATCH "[0-9]+\\.[0-9]+" v "${CMAKE_CXX_COMPILER_VERSION}")
+            string(REGEX MATCH "[0-9]+\\.[0-9]+" v "${compiler_version}")
             if (v)
                 set(compiler ${compiler}-${v})
             else()
-                string(REGEX MATCH "[0-9]+" v "${CMAKE_CXX_COMPILER_VERSION}")
+                string(REGEX MATCH "[0-9]+" v "${compiler_version}")
                 if (v)
                     set(compiler ${compiler}-${v})
                 endif()
