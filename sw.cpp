@@ -131,6 +131,9 @@ void build(Solution &s)
             "org.sw.demo.boost.serialization"_dep,
             "org.sw.demo.microsoft.gsl"_dep,
             "pub.egorpugin.primitives.emitter" PRIMITIVES_VERSION ""_dep;
+        if (builder.getBuildSettings().TargetOS.Type == OSType::Windows) {
+            builder += "_ALLOW_COROUTINE_ABI_MISMATCH"_def; //msvc
+        }
         //if (!s.Variables["SW_SELF_BUILD"])
         {
             /*PrecompiledHeader pch;
