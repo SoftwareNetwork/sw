@@ -364,7 +364,7 @@ CommandBuilder &CommandBuilder::operator<<(const ::sw::cmd::tag_env &t)
 CommandBuilder &CommandBuilder::operator<<(const ::sw::cmd::tag_prog_dep &t)
 {
     std::dynamic_pointer_cast<::sw::driver::Command>(c)->setProgram(t.d);
-    getTarget().addDummyDependency(t.d);
+    getTarget().addProgDependency(t.d);
     return *this;
 }
 

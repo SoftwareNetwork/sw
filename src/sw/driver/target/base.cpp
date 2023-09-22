@@ -753,6 +753,18 @@ DependencyPtr Target::addDummyDependency(const DependencyPtr &t)
     return t;
 }
 
+DependencyPtr Target::addProgDependency(const DependencyPtr &t)
+{
+    DummyDependencies.push_back(t);
+
+    auto hs = getHostSettings();
+    auto &ds = DummyDependencies.back()->settings;
+    ds.mergeMissing(hs);
+    ds["os"] = hs["os"];
+    ds["native"] = hs["native"];
+    return t;
+}
+
 DependencyPtr Target::addDummyDependency(const Target &t)
 {
     return addDummyDependency(std::make_shared<Dependency>(t));
