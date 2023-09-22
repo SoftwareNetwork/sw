@@ -2189,8 +2189,16 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
                 continue;
             if (auto t = d.dep->getTarget().as<const NativeCompiledTarget *>())
             {
-                if (!t->DryRun/* && t->getType() != TargetType::NativeExecutable*/)
-                    s["dependencies"]["link"][boost::to_lower_copy(d.dep->getTarget().getPackage().toString())] = d.dep->getTarget().getSettings();
+                if (!t->DryRun/* && t->getType() != TargetType::NativeExecutable*/) {
+                    if (*t->HeaderOnly) {
+                        auto &&is = t->getInterfaceSettings();
+                        for (auto &&[t,s2] : is["dependencies"]["link"].getMap()) {
+                            s["dependencies"]["link"][t] = s2;
+                        }
+                    } else {
+                        s["dependencies"]["link"][boost::to_lower_copy(d.dep->getTarget().getPackage().toString())] = d.dep->getTarget().getSettings();
+                    }
+                }
             }
             else
                 continue;
