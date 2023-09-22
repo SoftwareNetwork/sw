@@ -531,7 +531,7 @@ void NativeLinkerOptions::remove(const DependencyPtr &t)
     deps.push_back(t);
 
     if (auto t2 = dynamic_cast<TargetOptions *>(this))
-        t->settings.mergeMissing(t2->getTarget().getExportOptions()); // add only missing fields!f
+        t->settings.mergeMissing(t2->getTarget().getExportOptions()); // add only missing fields!
 }
 
 void NativeLinkerOptions::add(const UnresolvedPackage &t)
