@@ -125,13 +125,13 @@ SUBCOMMAND_DECL(run)
         auto inputs = b->getInputs();
         if (inputs.size() != 1)
             throw SW_RUNTIME_ERROR("More than one input provided");
-        auto tgts = inputs[0].loadTargets(*b);
+        auto tgts = inputs[0].getInput().listPackages(getContext());
         // TODO: add better target detection
         // check only for executable targets
         if (tgts.size() != 1)
             throw SW_RUNTIME_ERROR("More than one target provided in input");
 
-        ::run(*b, (*tgts.begin())->getPackage(), c, getOptions().options_run.print_command, getOptions().options_run.run_app_in_container);
+        ::run(*b, (*tgts.begin()), c, getOptions().options_run.print_command, getOptions().options_run.run_app_in_container);
         return;
     }
 
