@@ -53,9 +53,19 @@ struct SW_DRIVER_CPP_API NativeSourceFile : SourceFile
     enum BuildAsType
     {
         BasedOnExtension,
+
         ASM,
         C,
         CPP,
+
+        ObjectiveC,
+        ObjC = ObjectiveC,
+        OBJC = ObjectiveC,
+
+        ObjectiveCpp,
+        ObjCPP = ObjectiveCpp,
+        ObjCpp = ObjectiveCpp,
+        OBJCPP = ObjectiveCpp,
     };
 
     path output; // object file

@@ -3365,6 +3365,24 @@ void NativeCompiledTarget::prepare_pass5()
                 else
                     throw std::logic_error("no CPP language found");
                 break;
+            case NativeSourceFile::ObjectiveC:
+                if (auto p = findProgramByExtension(".m"))
+                {
+                    if (auto c = f2->compiler->as<ClangCompiler *>())
+                        c->Language = "objective-c";
+                }
+                else
+                    throw std::logic_error("no ObjectiveC language found");
+                break;
+            case NativeSourceFile::ObjectiveCpp:
+                if (auto p = findProgramByExtension(".mm"))
+                {
+                    if (auto c = f2->compiler->as<ClangCompiler *>())
+                        c->Language = "objective-cpp";
+                }
+                else
+                    throw std::logic_error("no ObjectiveCpp language found");
+                break;
             case NativeSourceFile::ASM:
                 SW_UNIMPLEMENTED; // actually remove this to make noop?
                                   /*if (auto L = SourceFileStorage::findLanguageByExtension(".asm"); L)
