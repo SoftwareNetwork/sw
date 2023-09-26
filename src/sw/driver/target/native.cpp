@@ -3378,7 +3378,7 @@ void NativeCompiledTarget::prepare_pass5()
                 if (auto p = findProgramByExtension(".mm"))
                 {
                     if (auto c = f2->compiler->as<ClangCompiler *>())
-                        c->Language = "objective-cpp";
+                        c->Language = "objective-c++";
                 }
                 else
                     throw std::logic_error("no ObjectiveCpp language found");
