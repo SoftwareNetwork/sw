@@ -2127,7 +2127,7 @@ const NativeCompiledTarget::ActiveDeps &NativeCompiledTarget::getActiveDependenc
     return *active_deps;
 }
 
-const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
+const TargetSettings &NativeCompiledTarget::getInterfaceSettings(std::unordered_set<void*> *visited_targets) const
 {
     // Do not export any private information.
     // It MUST be extracted from getCommands() call.
@@ -2191,9 +2191,13 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings() const
             {
                 if (!t->DryRun/* && t->getType() != TargetType::NativeExecutable*/) {
                     if (*t->HeaderOnly) {
-                        auto &&is = t->getInterfaceSettings();
-                        for (auto &&[t,s2] : is["dependencies"]["link"].getMap()) {
-                            s["dependencies"]["link"][t] = s2;
+                        if (!visited_targets || !visited_targets->contains((void *)this)) {
+                            std::unordered_set<void*> vt;
+                            (visited_targets ? *visited_targets : vt).insert((void *)this);
+                            auto &&is = t->getInterfaceSettings(visited_targets ? visited_targets : &vt);
+                            for (auto &&[t,s2] : is["dependencies"]["link"].getMap()) {
+                                s["dependencies"]["link"][t] = s2;
+                            }
                         }
                     } else {
                         s["dependencies"]["link"][boost::to_lower_copy(d.dep->getTarget().getPackage().toString())] = d.dep->getTarget().getSettings();

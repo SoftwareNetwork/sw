@@ -119,7 +119,7 @@ struct SW_CORE_API ITarget : ICastable
     // settings for consumers (targets) and users?
     // output command or module name
     ///
-    virtual const TargetSettings &getInterfaceSettings() const = 0;
+    virtual const TargetSettings &getInterfaceSettings(std::unordered_set<void*> *visited_targets = nullptr) const = 0;
 
     // get binary settings, get doc settings?
     // String get package settings(); // json coded or whatever via interface?
@@ -166,7 +166,7 @@ struct SW_CORE_API PredefinedTarget : ITarget
     // return what we know
     const LocalPackage &getPackage() const override { return pkg; }
     const TargetSettings &getSettings() const override { return ts; }
-    const TargetSettings &getInterfaceSettings() const override { return public_ts; }
+    const TargetSettings &getInterfaceSettings(std::unordered_set<void*> *visited_targets = nullptr) const override { return public_ts; }
 
     // lightweight target
     const Source &getSource() const override { static EmptySource es; return es; }  // empty source

@@ -203,7 +203,7 @@ private:
     void addFileSilently(const path &);
 
     mutable bool interface_settings_set = false;
-    const TargetSettings &getInterfaceSettings() const override;
+    const TargetSettings &getInterfaceSettings(std::unordered_set<void*> *visited_targets = nullptr) const override;
 
     FilesOrdered gatherPrecompiledHeaders() const;
     void createPrecompiledHeader();

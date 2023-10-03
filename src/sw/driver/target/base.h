@@ -264,7 +264,7 @@ public:
     TargetFiles getFiles(StorageFileType) const override;
     std::vector<IDependency *> getDependencies() const override;
     const TargetSettings &getSettings() const override;
-    const TargetSettings &getInterfaceSettings() const override;
+    const TargetSettings &getInterfaceSettings(std::unordered_set<void*> *visited_targets = nullptr) const override;
 
     const TargetSettings &getTargetSettings() const { return getSettings(); }
     const BuildSettings &getBuildSettings() const;

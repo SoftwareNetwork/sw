@@ -13,4 +13,5 @@
 // 30: Add mingw/wasm/android
 // 31: PathBase::operator == and < api changes
 // 32: Some new APIs. ABI increase just for safety and clients update.
-#define SW_MODULE_ABI_VERSION 32
+// 33: Recurse prevention in Target::getInterfaceSettings()
+#define SW_MODULE_ABI_VERSION 33

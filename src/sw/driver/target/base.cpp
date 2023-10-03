@@ -562,7 +562,7 @@ const TargetSettings &Target::getSettings() const
     return ts;
 }
 
-const TargetSettings &Target::getInterfaceSettings() const
+const TargetSettings &Target::getInterfaceSettings(std::unordered_set<void*> *visited_targets) const
 {
     return interface_settings;
 }
