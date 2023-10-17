@@ -65,8 +65,12 @@ sw::PackageDescriptionMap getPackages(const sw::SwBuild &b, const sw::support::S
         // e.g. for patch dir or other dirs (server provided files)
         // we might unpack to other dir, but server could push service files in neighbor dirs like gpg keys etc
         auto files_map1 = primitives::pack::prepare_files(files, rd.lexically_normal());
-        for (const auto &[f1, f2] : files_map1)
+        for (const auto &[f1, f2] : files_map1) {
+            if (f2.empty()) {
+                continue; // probably Public/Interface sources from other projects
+            }
             d->addFile(rd, f1, f2);
+        }
 
         // unique deps
         for (auto &dep : t.getDependencies())
