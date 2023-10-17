@@ -9,6 +9,7 @@
 #include <cmake.h>
 #include <cmExecutionStatus.h>
 #include <cmGlobalGenerator.h>
+#include <cmList.h>
 #include <cmMakefile.h>
 #include <cmSourceFile.h>
 #include <cmState.h>
@@ -155,7 +156,7 @@ DEFINE_STATIC_CMAKE_COMMAND(sw_cm_check)
     auto get_prop = [&status](const String &s) -> Strings
     {
         if (auto prop = status.GetMakefile().GetDefinition(s))
-            return cmExpandedList(*prop);
+            return cmList{*prop};
         return {};
     };
 
@@ -378,7 +379,7 @@ void CmakeTargetEntryPoint::setupTarget(cmMakefile &mf, cmTarget &cmt, NativeCom
     // sources
     if (auto prop = cmTargetPropertyComputer::GetProperty(&cmt, "SOURCES", mf))
     {
-        for (auto &sf : cmExpandedList(*prop))
+        for (auto &sf : cmList{*prop})
         {
             path p = sf;
             if (p.is_absolute())
@@ -405,32 +406,32 @@ void CmakeTargetEntryPoint::setupTarget(cmMakefile &mf, cmTarget &cmt, NativeCom
     // defs
     for (auto &d : mf.GetCompileDefinitionsEntries())
     {
-        for (auto &def : cmExpandedList(d.Value))
+        for (auto &def : cmList{d.Value})
             t += Definition(def);
     }
     for (auto &d : cmt.GetCompileDefinitionsEntries())
     {
-        for (auto &def : cmExpandedList(d.Value))
+        for (auto &def : cmList{d.Value})
             t += Definition(def);
     }
 
     if (auto prop = cmt.GetProperty("INTERFACE_COMPILE_DEFINITIONS"))
     {
-        for (auto &def : cmExpandedList(*prop))
+        for (auto &def : cmList{*prop})
             t.Public += Definition(def);
     }
 
     // idirs
     for (auto &i : cmt.GetIncludeDirectoriesEntries())
     {
-        for (auto &idir : cmExpandedList(i.Value))
+        for (auto &idir : cmList{i.Value})
             t += IncludeDirectory(idir);
     }
 
     // ldirs
     for (auto &ld : cmt.GetLinkDirectoriesEntries())
     {
-        for (auto &d : cmExpandedList(ld.Value))
+        for (auto &d : cmList{ld.Value})
             t += LinkDirectory(d);
     }
 
@@ -487,7 +488,7 @@ void CmakeTargetEntryPoint::setupTarget(cmMakefile &mf, cmTarget &cmt, NativeCom
     // more libs
     for (auto &li : cmt.GetLinkImplementationEntries())
     {
-        for (auto &n : cmExpandedList(li.Value))
+        for (auto &n : cmList{li.Value})
         {
             add_link_library_to(t, n);
         }
@@ -496,7 +497,7 @@ void CmakeTargetEntryPoint::setupTarget(cmMakefile &mf, cmTarget &cmt, NativeCom
     // public libs
     if (auto prop = cmt.GetProperty("INTERFACE_LINK_LIBRARIES"))
     {
-        for (auto &n : cmExpandedList(*prop))
+        for (auto &n : cmList{*prop})
         {
             add_link_library_to(t.Public, n);
         }
