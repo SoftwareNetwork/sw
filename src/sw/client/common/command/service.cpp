@@ -9,8 +9,6 @@
 #include <nlohmann/json.hpp>
 #include <primitives/http.h>
 
-#include <format>
-
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "service");
 
@@ -34,7 +32,7 @@ void update_packages(SwClientContext &swctx) {
     auto &pdb = rs.getPackagesDatabase();
     auto all_pkgs = pdb.getMatchingPackages("org.sw.demo.");
     for (int pkgid = 0; auto &&ppath : all_pkgs) {
-        std::cerr << std::format("\r[{}/{}] {}\n", ++pkgid, all_pkgs.size(), ppath.toString());
+        LOG_INFO(logger, "[" << ++pkgid << "/" << all_pkgs.size() << "] " << ppath.toString());
         auto versions = pdb.getVersionsForPackage(ppath);
         if (versions.empty() || versions.rbegin()->isBranch()) {
             continue;
@@ -170,7 +168,7 @@ void update_packages(SwClientContext &swctx) {
     for (auto &&[p, vp] : new_pkgs) {
         auto &&v = vp.first;
         auto &&prefix = vp.second;
-        LOG_INFO(logger, std::format("sw uri --silent sw:upload {} {} {}", p.toString(), v.toString(), prefix));
+        LOG_INFO(logger, "sw uri --silent sw:upload " << p.toString() << " " << v.toString() << " " << prefix);
     }
 }
 
