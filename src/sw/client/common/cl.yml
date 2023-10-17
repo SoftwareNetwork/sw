@@ -954,3 +954,13 @@ command_line:
                 desc: sw uri arguments
             silent:
                 type: bool
+
+    subcommand:
+        name: service
+        desc: Some service commands. Not for everyone's use.
+
+        command_line:
+            command:
+                type: String
+                positional: true
+                desc: service subcommand

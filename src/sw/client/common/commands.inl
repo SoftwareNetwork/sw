@@ -44,6 +44,7 @@ SUBCOMMAND(remote) COMMA
 SUBCOMMAND(remove) COMMA
 SUBCOMMAND(run) COMMA
 SUBCOMMAND(server) COMMA
+SUBCOMMAND(service) COMMA // some service commands
 SUBCOMMAND(setup) COMMA
 SUBCOMMAND(test) COMMA
 SUBCOMMAND(update) COMMA // update lock file?
