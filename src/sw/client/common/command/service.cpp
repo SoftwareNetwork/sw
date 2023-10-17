@@ -32,7 +32,9 @@ void update_packages(SwClientContext &swctx) {
     auto &s = *swctx.getContext().getRemoteStorages().at(0);
     auto &rs = dynamic_cast<sw::RemoteStorage&>(s);
     auto &pdb = rs.getPackagesDatabase();
-    for (auto &&ppath : pdb.getMatchingPackages("org.sw.demo.")) {
+    auto all_pkgs = pdb.getMatchingPackages("org.sw.demo.");
+    for (int pkgid = 0; auto &&ppath : all_pkgs) {
+        std::cerr << std::format("\r[{}/{}] {}\n", ++pkgid, all_pkgs.size(), ppath.toString());
         auto versions = pdb.getVersionsForPackage(ppath);
         if (versions.empty() || versions.rbegin()->isBranch()) {
             continue;
@@ -44,7 +46,7 @@ void update_packages(SwClientContext &swctx) {
         auto &&resolved = pdb.resolve(pkgs, upkgs);
         auto &&d = pdb.getPackageData(resolved.begin()->second);
         if (d.source.empty()) {
-            LOG_INFO(logger, "empty source: " << resolved.begin()->second.toString());
+            LOG_DEBUG(logger, "empty source: " << resolved.begin()->second.toString());
             continue;
         }
         auto s = sw::source::load(nlohmann::json::parse(d.source));
@@ -55,26 +57,27 @@ void update_packages(SwClientContext &swctx) {
         if (git->tag.empty()) {
             continue;
         }
-        if (new_versions[d.source].http_code == 0) {
+        auto &source_id = git->url; // d.source has real tag so it is now useful
+        if (new_versions[source_id].http_code == 0) {
             HttpRequest request{httpSettings};
             request.url = git->url + "/info/refs?service=git-upload-pack";
             auto resp = url_request(request);
-            new_versions[d.source].http_code = resp.http_code;
-            new_versions[d.source].response = resp.response;
+            new_versions[source_id].http_code = resp.http_code;
+            new_versions[source_id].response = resp.response;
         }
-        if (new_versions[d.source].http_code != 200) {
-            LOG_INFO(logger, "http " << new_versions[d.source].http_code << ": " << resolved.begin()->second.toString());
+        if (new_versions[source_id].http_code != 200) {
+            LOG_WARN(logger, "http " << new_versions[source_id].http_code << ": " << resolved.begin()->second.toString());
             continue;
         }
-        for (auto &&line : split_lines(new_versions[d.source].response)) {
+        for (auto &&line : split_lines(new_versions[source_id].response)) {
             if (!line.contains("refs/tags/") || line.contains("^")) {
                 continue;
             }
             auto ver = line.substr(line.rfind('/') + 1);
             constexpr auto digits = "0123456789";
             std::vector<std::string> numbers;
-            size_t p = 0;
             while (1) {
+                size_t p = 0;
                 p = ver.find_first_of(digits, p);
                 if (p == -1) {
                     break;
@@ -91,8 +94,16 @@ void update_packages(SwClientContext &swctx) {
                 continue;
             }
             ver.clear();
-            for (auto &&n : numbers) {
-                ver += n + ".";
+            for (int i = 0; auto &&n : numbers) {
+                if (i == 0 && n.size() == 8) {
+                    // YYYYMMDD
+                    ver += n.substr(0, 4) + ".";
+                    ver += n.substr(4, 2) + ".";
+                    ver += n.substr(6, 2) + ".";
+                } else {
+                    ver += n + ".";
+                }
+                ++i;
             }
             ver.pop_back();
             try {
@@ -105,7 +116,7 @@ void update_packages(SwClientContext &swctx) {
                     auto apply = [&](auto g) {
                         g->applyVersion(v);
                         if (line.ends_with("refs/tags/" + g->tag)) {
-                            new_versions[d.source].packages[v].insert({maxver, resolved.begin()->second});
+                            new_versions[source_id].packages[v].insert({maxver, resolved.begin()->second});
                             LOG_INFO(logger, "new version: " << resolved.begin()->second.toString() << ": " << v.toString());
                             return true;
                         }
@@ -121,12 +132,26 @@ void update_packages(SwClientContext &swctx) {
                         if (apply(git)) {
                             LOG_INFO(logger, "tag fixed: " << resolved.begin()->second.toString() << ": " << v.toString());
                         } else {
-                            LOG_INFO(logger, "tag check error: " << resolved.begin()->second.toString() << ": " << v.toString());
+                            if (maxver.getPatch() == 0) {
+                                auto verstring = maxver.toString();
+                                verstring.resize(verstring.size() - 2); // remove .0
+                                auto source = d.source;
+                                boost::replace_all(source, verstring, "{M}.{m}{po}");
+                                auto s = sw::source::load(nlohmann::json::parse(source));
+                                auto git = dynamic_cast<primitives::source::Git *>(s.get());
+                                if (apply(git)) {
+                                    LOG_INFO(logger, "tag fixed: " << resolved.begin()->second.toString() << ": " << v.toString());
+                                } else {
+                                    LOG_DEBUG(logger, "tag check error: " << resolved.begin()->second.toString() << ": " << v.toString());
+                                }
+                            } else {
+                                LOG_DEBUG(logger, "tag check error: " << resolved.begin()->second.toString() << ": " << v.toString());
+                            }
                         }
                     }
                 }
             } catch (std::runtime_error &e) {
-                LOG_INFO(logger, "bad version: " << ver << "(line: '" << line << "'): " << e.what());
+                LOG_WARN(logger, "bad version: " << ver << "(line: '" << line << "'): " << e.what());
             }
         }
     }
