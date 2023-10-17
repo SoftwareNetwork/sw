@@ -490,11 +490,11 @@ std::vector<PackagePath> PackagesDatabase::getMatchingPackages(const String &nam
     return pkgs2;
 }
 
-std::vector<Version> PackagesDatabase::getVersionsForPackage(const PackagePath &ppath) const
+VersionSet PackagesDatabase::getVersionsForPackage(const PackagePath &ppath) const
 {
-    std::vector<Version> versions;
+    VersionSet versions;
     for (const auto &row : (*db)(select(pkg_ver.version).from(pkg_ver).where(pkg_ver.packageId == getPackageId(ppath))))
-        versions.push_back(row.version.value());
+        versions.insert(row.version.value());
     return versions;
 }
 
