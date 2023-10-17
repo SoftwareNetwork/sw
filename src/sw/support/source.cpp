@@ -59,7 +59,7 @@ bool download(Executor &e, const std::unordered_set<SourcePtr> &sset, SourceDirM
     {
         fs.push_back(e.push([src = src.get(), &d = source_dirs[src->getHash()], &opts, &downloaded]
             {
-                auto & t = d.stamp_file;
+                auto &t = d.stamp_file;
                 t = d.root_dir;
                 t += ".stamp";
 
@@ -67,8 +67,16 @@ bool download(Executor &e, const std::unordered_set<SourcePtr> &sset, SourceDirM
                 {
                     downloaded = true;
                     LOG_INFO(logger, "Downloading source:\n" << src->print());
+                    auto g = dynamic_cast<primitives::source::Git *>(src);
+                    if (g && !g->tag.empty()) {
+                        g->tryVTagPrefixDuringDownload();
+                    }
                     src->download(d.root_dir);
                     write_file(t, timepoint2string(getUtc()));
+                    // save real source
+                    nlohmann::json j;
+                    src->save(j);
+                    write_file(d.getRealSourceJsonFile(), j.dump());
                 };
 
                 if (!fs::exists(d.root_dir))

@@ -49,6 +49,7 @@ sw::PackageDescriptionMap getPackages(const sw::SwBuild &b, const sw::support::S
             if (si == sources.end())
                 throw SW_RUNTIME_ERROR("no such source");
             rd = si->second.getRequestedDirectory();
+            d->source = Source::load(nlohmann::json::parse(read_file(si->second.getRealSourceJsonFile())));
         }
 
         // double check files (normalize them)

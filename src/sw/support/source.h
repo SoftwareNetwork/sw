@@ -58,6 +58,7 @@ struct SW_SUPPORT_API DownloadData
     path stamp_file;
 
     path getRequestedDirectory() const { return requested_dir; }
+    path getRealSourceJsonFile() const { return path{root_dir} += ".source.json"s; }
     void remove() const;
 };
 
