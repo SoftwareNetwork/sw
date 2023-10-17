@@ -31,7 +31,7 @@ jobs:
         path: .sw/out
                 
   macos:
-    runs-on: macos-14
+    runs-on: macos-13
     steps:
     - uses: actions/checkout@v1
     - uses: egorpugin/sw-action@master
