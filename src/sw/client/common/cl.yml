@@ -952,3 +952,5 @@ command_line:
                 type: String
                 positional: true
                 desc: sw uri arguments
+            silent:
+                type: bool

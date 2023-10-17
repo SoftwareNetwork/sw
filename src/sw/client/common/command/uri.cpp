@@ -222,21 +222,33 @@ SUBCOMMAND_DECL(uri)
     catch (std::exception &e)
     {
 #ifdef _WIN32
-        message_box(sw::getProgramName(), e.what());
+        if (!getOptions().options_uri.silent) {
+            message_box(sw::getProgramName(), e.what());
+        } else {
+            std::cerr << e.what() << "\n";
+        }
 #else
-        std::cerr << e.what();
-        std::cerr << "\nPress any key to continue...";
-        getchar();
+        std::cerr << e.what() << "\n";
+        if (!getOptions().options_uri.silent) {
+            std::cerr << "Press any key to continue...";
+            getchar();
+        }
 #endif
     }
     catch (...)
     {
 #ifdef _WIN32
-        message_box(sw::getProgramName(), "Unknown exception");
+        if (!getOptions().options_uri.silent) {
+            message_box(sw::getProgramName(), "Unknown exception");
+        } else {
+            std::cerr << "unknown exception" << "\n";
+        }
 #else
-        std::cerr << "unknown exception";
-        std::cerr << "\nPress any key to continue...";
-        getchar();
+        std::cerr << "unknown exception" << "\n";
+        if (!getOptions().options_uri.silent) {
+            std::cerr << "Press any key to continue...";
+            getchar();
+        }
 #endif
     }
 }
