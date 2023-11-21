@@ -12,7 +12,7 @@
 #include <sw/manager/storage.h>
 
 #include <boost/current_function.hpp>
-#include <magic_enum.hpp>
+#include <magic_enum/magic_enum.hpp>
 #include <nlohmann/json.hpp>
 #include <primitives/date_time.h>
 #include <primitives/executor.h>
