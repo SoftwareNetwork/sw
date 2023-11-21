@@ -59,9 +59,12 @@ void update_packages(SwClientContext &swctx) {
         if (new_versions[source_id].http_code == 0) {
             HttpRequest request{httpSettings};
             request.url = git->url + "/info/refs?service=git-upload-pack";
-            auto resp = url_request(request);
-            new_versions[source_id].http_code = resp.http_code;
-            new_versions[source_id].response = resp.response;
+            try {
+                auto resp = url_request(request);
+                new_versions[source_id].http_code = resp.http_code;
+                new_versions[source_id].response = resp.response;
+            } catch (std::exception &) {
+            }
         }
         if (new_versions[source_id].http_code != 200) {
             LOG_WARN(logger, "http " << new_versions[source_id].http_code << ": " << resolved.begin()->second.toString());
@@ -87,6 +90,11 @@ void update_packages(SwClientContext &swctx) {
                 }
                 numbers.push_back(ver.substr(p, end - p));
                 ver = ver.substr(end);
+                // skip pre releases
+                if (std::ranges::find_if(ver, isalpha) != ver.end()) {
+                    numbers.clear();
+                    break;
+                }
             }
             if (numbers.empty()) {
                 continue;
@@ -107,43 +115,60 @@ void update_packages(SwClientContext &swctx) {
             try {
                 sw::Version v{ver};
                 if (v > maxver && v.isRelease()) {
-                    auto source = d.source;
-                    boost::replace_all(source, maxver.toString(), "{v}");
-                    auto s = sw::source::load(nlohmann::json::parse(source));
-                    auto git = dynamic_cast<primitives::source::Git *>(s.get());
-                    auto apply = [&](auto g) {
-                        g->applyVersion(v);
-                        if (line.ends_with("refs/tags/" + g->tag)) {
+                    bool ok = false;
+                    {
+                        auto source = d.source;
+                        auto s = sw::source::load(nlohmann::json::parse(source));
+                        auto git = dynamic_cast<primitives::source::Git *>(s.get());
+                        for (int i = 0; i < v.getLevel(); ++i) {
+                            boost::replace_first(git->tag, std::to_string(maxver[i]), std::to_string(v[i]));
+                        }
+                        if (line.ends_with("refs/tags/" + git->tag)) {
                             new_versions[source_id].packages[v].insert({maxver, resolved.begin()->second});
                             LOG_INFO(logger, "new version: " << resolved.begin()->second.toString() << ": " << v.toString());
-                            return true;
+                            ok = true;
                         }
-                        return false;
-                    };
-                    if (!apply(git)) {
-                        // try other tag check {v} -> {M}.{m}{po}
+                    }
+
+                    if (0 && !ok) {
                         auto source = d.source;
                         boost::replace_all(source, maxver.toString(), "{v}");
                         auto s = sw::source::load(nlohmann::json::parse(source));
                         auto git = dynamic_cast<primitives::source::Git *>(s.get());
-                        boost::replace_all(git->tag, "{v}", "{M}.{m}{po}");
-                        if (apply(git)) {
-                            LOG_INFO(logger, "tag fixed: " << resolved.begin()->second.toString() << ": " << v.toString());
-                        } else {
-                            if (maxver.getPatch() == 0) {
-                                auto verstring = maxver.toString();
-                                verstring.resize(verstring.size() - 2); // remove .0
-                                auto source = d.source;
-                                boost::replace_all(source, verstring, "{M}.{m}{po}");
-                                auto s = sw::source::load(nlohmann::json::parse(source));
-                                auto git = dynamic_cast<primitives::source::Git *>(s.get());
-                                if (apply(git)) {
-                                    LOG_INFO(logger, "tag fixed: " << resolved.begin()->second.toString() << ": " << v.toString());
+                        auto apply = [&](auto g) {
+                            g->applyVersion(v);
+                            if (line.ends_with("refs/tags/" + g->tag)) {
+                                new_versions[source_id].packages[v].insert({maxver, resolved.begin()->second});
+                                LOG_INFO(logger, "new version: " << resolved.begin()->second.toString() << ": " << v.toString());
+                                return true;
+                            }
+                            return false;
+                        };
+                        if (!apply(git)) {
+                            // try other tag check {v} -> {M}.{m}{po}
+                            auto source = d.source;
+                            boost::replace_all(source, maxver.toString(), "{v}");
+                            auto s = sw::source::load(nlohmann::json::parse(source));
+                            auto git = dynamic_cast<primitives::source::Git *>(s.get());
+                            boost::replace_all(git->tag, "{v}", "{M}.{m}{po}");
+                            if (apply(git)) {
+                                LOG_INFO(logger, "tag fixed: " << resolved.begin()->second.toString() << ": " << v.toString());
+                            } else {
+                                if (maxver.getPatch() == 0) {
+                                    auto verstring = maxver.toString();
+                                    verstring.resize(verstring.size() - 2); // remove .0
+                                    auto source = d.source;
+                                    boost::replace_all(source, verstring, "{M}.{m}{po}");
+                                    auto s = sw::source::load(nlohmann::json::parse(source));
+                                    auto git = dynamic_cast<primitives::source::Git *>(s.get());
+                                    if (apply(git)) {
+                                        LOG_INFO(logger, "tag fixed: " << resolved.begin()->second.toString() << ": " << v.toString());
+                                    } else {
+                                        LOG_DEBUG(logger, "tag check error: " << resolved.begin()->second.toString() << ": " << v.toString());
+                                    }
                                 } else {
                                     LOG_DEBUG(logger, "tag check error: " << resolved.begin()->second.toString() << ": " << v.toString());
                                 }
-                            } else {
-                                LOG_DEBUG(logger, "tag check error: " << resolved.begin()->second.toString() << ": " << v.toString());
                             }
                         }
                     }
@@ -180,5 +205,8 @@ SUBCOMMAND_DECL(service)
         f(*this);                                   \
         return;                                     \
     }
-    CMD(update_packages);
+    CMD(update_packages)
+    else {
+        throw SW_RUNTIME_ERROR("unknown command");
+    }
 }
