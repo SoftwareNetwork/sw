@@ -5,12 +5,12 @@
 
 #include <sw/support/filesystem.h>
 
+#include <sqlpp11/sqlite3/connection.h>
+
 #include <chrono>
 #include <memory>
 #include <optional>
 #include <vector>
-
-namespace sqlpp::sqlite3 { class connection; }
 
 namespace sw
 {

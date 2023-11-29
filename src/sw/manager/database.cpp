@@ -385,7 +385,7 @@ void PackagesDatabase::installPackage(const Package &p, size_t input_settings_ha
             // misc
             pkg_ver.updated = "",
 
-            pkg_ver.sdir = sqlpp::tvin(to_string(p.getData().sdir.u8string()))
+            pkg_ver.sdir = to_string(p.getData().sdir.u8string())
         ));
         version_id = db->last_insert_id();
     }
