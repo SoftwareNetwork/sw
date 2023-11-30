@@ -120,8 +120,17 @@ void update_packages(SwClientContext &swctx) {
                         auto source = d.source;
                         auto s = sw::source::load(nlohmann::json::parse(source));
                         auto git = dynamic_cast<primitives::source::Git *>(s.get());
+                        int pos = 0;
                         for (int i = 0; i < v.getLevel(); ++i) {
-                            boost::replace_first(git->tag, std::to_string(maxver[i]), std::to_string(v[i]));
+                            auto tofind = std::to_string(maxver[i]);
+                            pos = git->tag.find(tofind, pos);
+                            if (pos == -1) {
+                                LOG_WARN(logger, std::format("cant find {} in {}", tofind, git->tag));
+                                break;
+                            }
+                            git->tag = git->tag.substr(0, pos) + std::to_string(v[i]) + git->tag.substr(pos + tofind.size());
+                            pos += tofind.size();
+                            //LOG_INFO(logger, git->tag);
                         }
                         if (line.ends_with("refs/tags/" + git->tag)) {
                             new_versions[source_id].packages[v].insert({maxver, resolved.begin()->second});
@@ -190,15 +199,39 @@ void update_packages(SwClientContext &swctx) {
         auto &&d = pdb.getPackageData(pkg);
         new_pkgs.emplace(pkg, std::pair<sw::Version, int>{v, d.prefix});
     }
+    // old packages
+    const std::set<String> skipped_packages{
+        "org.sw.demo.google.grpc.third_party.upb.utf8_range-1.54.2",
+        "org.sw.demo.google.Orbit.third_party.multicore-1.52.0",
+        "org.sw.demo.google.tesseract.wordlist2dawg-4.1.2",
+        "org.sw.demo.kcat.tools.bsincgen-1.20.1",
+        "org.sw.demo.malaterre.GDCM.uuid-3.0.22",
+        "org.sw.demo.ocornut.imgui.backend.marmalade-1.85.0",
+        "org.sw.demo.openexr.IlmImf-2.5.8",
+        "org.sw.demo.qtproject.qt.base.entrypoint-6.3.0",
+        "org.sw.demo.qtproject.qt.declarative.tools.shared-5.15.0.1",
+        "org.sw.demo.qtproject.qt.labs.vstools.natvis-3.0.1",
+    };
     for (auto &&[p, vp] : new_pkgs) {
+        auto pkg = p.toString();
+        if (skipped_packages.contains(pkg)) {
+            continue;
+        }
+#ifdef _WIN32
+        // systemd repo contains NTFS-invalid files
+        if (pkg.starts_with("org.sw.demo.systemd")) {
+            continue;
+        }
+#endif
         auto &&v = vp.first;
         auto &&prefix = vp.second;
-        LOG_INFO(logger, "sw uri --silent sw:upload " << p.toString() << " " << v.toString() << " " << prefix);
+        LOG_INFO(logger, "sw uri --silent sw:upload " << pkg << " " << v.toString() << " " << prefix);
     }
 }
 
 SUBCOMMAND_DECL(service)
 {
+    boost::replace_all(getOptions().options_service.command, "-", "_");
 #define CMD(f, ...)                                 \
     if (getOptions().options_service.command == #f) \
     {                                               \
