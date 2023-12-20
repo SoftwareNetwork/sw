@@ -30,7 +30,11 @@ void update_packages(SwClientContext &swctx) {
     auto &s = *swctx.getContext().getRemoteStorages().at(0);
     auto &rs = dynamic_cast<sw::RemoteStorage&>(s);
     auto &pdb = rs.getPackagesDatabase();
-    auto all_pkgs = pdb.getMatchingPackages("org.sw.demo.");
+    String prefix = "org.sw.demo.";
+    if (!swctx.getOptions().options_service.args.empty()) {
+        prefix = swctx.getOptions().options_service.args[0];
+    }
+    auto all_pkgs = pdb.getMatchingPackages(prefix);
     for (int pkgid = 0; auto &&ppath : all_pkgs) {
         LOG_INFO(logger, "[" << ++pkgid << "/" << all_pkgs.size() << "] " << ppath.toString());
         auto versions = pdb.getVersionsForPackage(ppath);
@@ -207,7 +211,7 @@ void update_packages(SwClientContext &swctx) {
         "org.sw.demo.kcat.tools.bsincgen-1.20.1",
         "org.sw.demo.malaterre.GDCM.uuid-3.0.22",
         "org.sw.demo.ocornut.imgui.backend.marmalade-1.85.0",
-        "org.sw.demo.openexr.IlmImf-2.5.8",
+        "org.sw.demo.openexr.IlmImf-2.5.",
         "org.sw.demo.qtproject.qt.base.entrypoint-6.3.0",
         "org.sw.demo.qtproject.qt.declarative.tools.shared-5.15.0.1",
         "org.sw.demo.qtproject.qt.labs.vstools.natvis-3.0.1",
@@ -226,6 +230,16 @@ void update_packages(SwClientContext &swctx) {
         auto &&v = vp.first;
         auto &&prefix = vp.second;
         LOG_INFO(logger, "sw uri --silent sw:upload " << pkg << " " << v.toString() << " " << prefix);
+
+        if (swctx.getOptions().options_service.run) {
+            primitives::Command c;
+            c.arguments = {"sw", "uri", "--silent", "sw:upload", pkg, v.toString(), std::to_string(prefix)};
+            c.out.inherit = true;
+            c.err.inherit = true;
+            std::error_code ec;
+            c.execute(ec);
+            LOG_INFO(logger, "");
+        }
     }
 }
 

@@ -964,3 +964,11 @@ command_line:
                 type: String
                 positional: true
                 desc: service subcommand
+            run:
+                type: bool
+                desc: run upgrade commands immediately
+            args:
+                list: true
+                type: String
+                positional: true
+                desc: sw service arguments
