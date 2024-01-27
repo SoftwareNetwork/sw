@@ -967,6 +967,9 @@ command_line:
             run:
                 type: bool
                 desc: run upgrade commands immediately
+            git_sources:
+                type: path
+                desc: "Specify sources file to read from. Each file specifies as follow: \"source url\" \"tag\"."
             args:
                 list: true
                 type: String
