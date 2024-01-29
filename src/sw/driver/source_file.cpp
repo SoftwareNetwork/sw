@@ -135,7 +135,7 @@ void SourceFileStorage::add_unchecked1(const path &file_in, bool skip, const Str
     auto nt = target.as<NativeCompiledTarget*>();
     auto ho = nt && nt->HeaderOnly && nt->HeaderOnly.value();
 
-    if (nt->UseModules && nt->ImplicitHeaderUnits && isCppHeaderFileExtension(ext) && !skip)
+    if (nt && nt->UseModules && nt->ImplicitHeaderUnits && isCppHeaderFileExtension(ext) && !skip)
     {
         nt->add(HeaderUnit{file});
         return;
