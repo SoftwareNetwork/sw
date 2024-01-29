@@ -460,7 +460,7 @@ Commands PascalTarget::getCommands1() const
 }
 
 PythonLibrary::PythonLibrary(TargetBase &parent, const PackageId &id)
-    : Target(parent, id), SourceFileTargetOptions(*this)
+    : Target(parent, id), SourceFileTargetOptions(static_cast<Target&>(*this))
 {
 }
 

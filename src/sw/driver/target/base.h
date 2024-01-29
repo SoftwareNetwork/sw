@@ -405,6 +405,8 @@ struct SW_DRIVER_CPP_API ProjectTarget : ProjDirBase
 
 struct SW_DRIVER_CPP_API SourceFileTargetOptions : SourceFileStorage
 {
+    using SourceFileStorage::SourceFileStorage;
+
     using SourceFileStorage::add;
     using SourceFileStorage::remove;
     using SourceFileStorage::operator=;
