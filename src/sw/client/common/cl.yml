@@ -969,7 +969,14 @@ command_line:
                 desc: run upgrade commands immediately
             git_sources:
                 type: path
-                desc: "Specify sources file to read from. Each file specifies as follow: \"source url\" \"tag\"."
+                desc: "Specify git sources file to read from. Each file specifies as follow: \"source url\" \"tag\"."
+            remotefile_sources:
+                type: path
+                desc: "Specify remote file sources file to read from. Each file specifies as follow: \"source url\"."
+            start_id:
+                type: int
+                desc: start from this package number
+                default: 0
             args:
                 list: true
                 type: String

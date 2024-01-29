@@ -9,6 +9,8 @@
 #include <nlohmann/json.hpp>
 #include <primitives/http.h>
 
+#include <fstream>
+
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "service");
 
@@ -29,10 +31,11 @@ struct http_request_cache {
         String response;
         //       new version                old version
         std::map<sw::Version, std::multimap<sw::Version, sw::PackageId>> packages;
+        std::map<sw::Version, std::string> tags;
     };
     std::map<std::string, data> new_versions;
 
-    data &test_url1(auto &&key_url, std::string additional_url, HttpRequest &request) {
+    data &test_url1(auto &&key_url, std::string additional_url, HttpRequest &request, bool exception = false) {
         auto &source_id = key_url; // d.source has real tag so it is now useful
         if (new_versions[source_id].http_code == 0) {
             request.connect_timeout = 1;
@@ -43,8 +46,14 @@ struct http_request_cache {
                 new_versions[source_id].http_code = resp.http_code;
                 new_versions[source_id].response = resp.response;
             }
-            catch (std::exception &)
+            catch (std::exception &e)
             {
+                std::string err = e.what();
+                boost::to_lower(err);
+                new_versions[source_id].http_code = err.contains("timeout") ? 1 : 2;
+                if (exception) {
+                    throw;
+                }
             }
         }
         return new_versions[source_id];
@@ -65,6 +74,9 @@ struct http_request_cache {
             auto &&pkg = n.packages.rbegin()->second.rbegin()->second;
             auto &&d = pdb.getPackageData(pkg);
             new_pkgs.emplace(pkg, std::pair<sw::Version, int>{v, d.prefix});
+            if (new_pkgs[pkg].first < v) {
+                new_pkgs[pkg] = std::pair<sw::Version, int>{v, d.prefix};
+            }
         }
         // old packages
         const std::set<String> skipped_packages{
@@ -317,7 +329,31 @@ void update_packages(SwClientContext &swctx) {
 struct package_updater {
     http_request_cache cache;
     sw::Version maxver;
+    std::multimap<std::string, std::string> git_tags;
+    std::set<std::string> remotefile;
 
+    package_updater(SwClientContext &swctx) {
+        if (std::ifstream ifile(swctx.getOptions().options_service.git_sources); ifile) {
+            std::string url, tag;
+            while (1) {
+                ifile >> std::quoted(url) >> std::quoted(tag);
+                if (!ifile) {
+                    break;
+                }
+                git_tags.emplace(url, tag);
+            }
+        }
+        if (std::ifstream ifile(swctx.getOptions().options_service.remotefile_sources); ifile) {
+            std::string url, tag;
+            while (1) {
+                ifile >> std::quoted(url);
+                if (!ifile) {
+                    break;
+                }
+                remotefile.emplace(url);
+            }
+        }
+    }
     void update(SwClientContext &swctx) {
         auto &s = *swctx.getContext().getRemoteStorages().at(0);
         auto &rs = dynamic_cast<sw::RemoteStorage &>(s);
@@ -332,6 +368,10 @@ struct package_updater {
         }
         auto all_pkgs = pdb.getMatchingPackages(prefix);
         for (int pkgid = 0; auto &&ppath : all_pkgs) {
+            if (swctx.getOptions().options_service.start_id > pkgid) {
+                ++pkgid;
+                continue;
+            }
             LOG_INFO(logger, "[" << ++pkgid << "/" << all_pkgs.size() << "] " << ppath.toString());
             auto versions = pdb.getVersionsForPackage(ppath);
             if (versions.empty() || versions.rbegin()->isBranch()) {
@@ -346,7 +386,7 @@ struct package_updater {
             auto &&d = pdb.getPackageData(pkgid);
             if (d.source.empty())
             {
-                LOG_DEBUG(logger, "empty source: " << pkgid.toString());
+                LOG_WARN(logger, "empty source: " << pkgid.toString());
                 continue;
             }
             update(d, pkgid);
@@ -360,15 +400,15 @@ struct package_updater {
             update(*git, d, pkgid);
         } else if (s->getType() == primitives::source::SourceType::RemoteFile) {
             auto rf = dynamic_cast<primitives::source::RemoteFile *>(s.get());
-            update(*rf, d, pkgid);
+            std::set<sw::Version> vers;
+            update(*rf, d, pkgid, vers);
         } else if (s->getType() == primitives::source::SourceType::RemoteFiles) {
             LOG_WARN(logger, "unsupported source");
         } else {
             LOG_WARN(logger, "unsupported source");
         }
     }
-    static auto get_next_versions(const sw::Version &base) {
-        std::set<sw::Version> v;
+    static void get_next_versions(const sw::Version &base, std::set<sw::Version> &v) {
         auto ins = [&](auto &&ver) {return *v.insert(ver).first;};
         auto nextver = ins(base);
         auto level = base.getLevel();
@@ -391,6 +431,10 @@ struct package_updater {
             nextver = ins(nextver.getNextVersion(level));
             nextver = v2;
         }
+    }
+    static auto get_next_versions(const sw::Version &base) {
+        std::set<sw::Version> v;
+        get_next_versions(base, v);
         v.erase(base);
         return v;
     }
@@ -404,8 +448,54 @@ struct package_updater {
             LOG_WARN(logger, "http " << cache_record.http_code);
             return;
         }
-        auto lines = split_lines(cache_record.response)
-            | std::views::filter([](auto &&line){return line.contains("refs/tags/") && !line.contains("^");});
+        auto lines = split_lines(cache_record.response) | std::views::filter([](auto &&line)
+                                                                             { return line.contains("refs/tags/") && !line.contains("^"); });
+        auto newversions = get_next_versions(maxver);
+        if (git_tags.contains(git.url)) {
+            auto [b,e] = git_tags.equal_range(git.url);
+            for (auto &&[_,t] : std::ranges::subrange(b,e)) {
+                if (!t.contains('{')) {
+                    // skip some specific tags
+                    continue;
+                }
+                primitives::source::Git git_test{git.url, t};
+                git_test.applyVersion(maxver);
+                if (git.tag != git_test.tag) {
+                    // different tags
+                    continue;
+                }
+                primitives::source::Git git2{git.url, t};
+                for (auto &&v : newversions) {
+                    git2.tag = t;
+                    git2.applyVersion(v);
+                    if (git.tag == git2.tag) {
+                        continue;
+                    }
+                    auto it = std::ranges::find_if(lines, [&](auto &&line)
+                                                   {
+                            auto r = line.ends_with("refs/tags/"s + git2.tag);
+                            if (r) {
+                                //LOG_WARN(logger, "line: " << line);
+                            }
+                            return r; });
+                    if (it != std::ranges::end(lines) && v > maxver)
+                    {
+                        cache_record.packages[v].insert({maxver, pkgid});
+                        cache_record.tags[v] = git2.tag;
+                    }
+                }
+            }
+            if (!cache_record.packages.empty() && maxver != cache_record.packages.rbegin()->first) {
+                SwapAndRestore sr(maxver, cache_record.packages.rbegin()->first);
+                primitives::source::Git git2{git.url, cache_record.tags.rbegin()->second};
+                update(git2, d, pkgid);
+            }
+            return;
+        } else if (!git_tags.empty()) {
+            LOG_WARN(logger, "no predefined tag");
+        }
+        try_extract_new_ver_from_git_tags(lines, git.tag, maxver, d, cache_record, pkgid);
+        return;
         std::vector common_git_tags{
             "{v}"s,
             "{M}.{m}"s,
@@ -418,7 +508,6 @@ struct package_updater {
         }
         primitives::source::Git git2{"https//nonempty.url.com/"s, "nonempty"s};
         bool added{};
-        auto newversions = get_next_versions(maxver);
         for (auto &&v : newversions) {
             for (auto &&t : common_git_tags) {
                 git2.tag = t;
@@ -435,14 +524,83 @@ struct package_updater {
             try_extract_new_ver_from_git_tags(lines, git.tag, maxver, d, cache_record, pkgid);
         }
     }
-    void update(primitives::source::RemoteFile rf, auto &&d, auto &&pkgid) {
-        //
+    static auto edit_distance(const std::string& s1, const std::string& s2)
+    {
+	    const std::size_t len1 = s1.size(), len2 = s2.size();
+	    std::vector<std::vector<unsigned int>> d(len1 + 1, std::vector<unsigned int>(len2 + 1));
+
+	    d[0][0] = 0;
+	    for(unsigned int i = 1; i <= len1; ++i) d[i][0] = i;
+	    for(unsigned int i = 1; i <= len2; ++i) d[0][i] = i;
+
+	    for(unsigned int i = 1; i <= len1; ++i)
+		    for(unsigned int j = 1; j <= len2; ++j)
+                          // note that std::min({arg1, arg2, arg3}) works only in C++11,
+                          // for C++98 use std::min(std::min(arg1, arg2), arg3)
+                          d[i][j] = std::min({ d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (s1[i - 1] == s2[j - 1] ? 0 : 1) });
+	    return d[len1][len2];
+    }
+    void update(primitives::source::RemoteFile rf, auto &&d, auto &&pkgid, std::set<sw::Version> &processed_versions) {
+        if (pkgid.getPath() == "org.sw.demo.mng"s) {
+            return;
+        }
+        if (pkgid.getPath().toString().starts_with("org.sw.demo.tcl"s)) {
+            return;
+        }
+        if (processed_versions.contains(maxver)) {
+            return;
+        }
+        processed_versions.insert(maxver);
+        if (remotefile.empty()) {
+            return;
+        }
+        std::multimap<unsigned, std::string> dist;
+        for (auto &&url : remotefile) {
+            dist.emplace(edit_distance(rf.url, url), url);
+        }
+        auto [b,e] = dist.equal_range(dist.begin()->first);
+        if (e != std::next(b)) {
+            LOG_WARN(logger, "several urls");
+            return;
+        }
+        LOG_WARN(logger, "checking " << maxver.toString());
+        std::set<sw::Version> newmaxver;
+        auto newversions = get_next_versions(maxver);
+        for (auto &&v : newversions) {
+            if (v <= maxver) {
+                continue;
+            }
+            primitives::source::RemoteFile rf2{b->second};
+            rf2.applyVersion(v);
+            if (rf2.url == rf.url) {
+                continue;
+            }
+            HttpRequest request{httpSettings};
+            request.timeout = 1;
+            try {
+                auto &cache_record = cache.test_url1(rf2.url, {}, request);
+                if (cache_record.http_code != 200 && cache_record.http_code != 1) {
+                    //LOG_WARN(logger, "http " << cache_record.http_code);
+                    continue;
+                }
+            } catch (primitives::http::curl_exception &e) {
+                // timed out
+            }
+            cache.new_versions[rf2.url].packages[v].insert({maxver, pkgid});
+            newmaxver.insert(v);
+        }
+        for (auto &&v : newmaxver) {
+            primitives::source::RemoteFile rf2{b->second};
+            rf2.applyVersion(v);
+            SwapAndRestore sr(maxver, v);
+            update(rf2, d, pkgid, processed_versions);
+        }
     }
 };
 
 void update_packages2(SwClientContext &swctx)
 {
-    package_updater u;
+    package_updater u(swctx);
     u.update(swctx);
 
     /*struct data
