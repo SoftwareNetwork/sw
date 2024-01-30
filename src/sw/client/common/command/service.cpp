@@ -268,8 +268,8 @@ void update_packages(SwClientContext &swctx) {
         prefix = swctx.getOptions().options_service.args[0];
     }
     auto all_pkgs = pdb.getMatchingPackages(prefix);
-    for (int pkgid = 0; auto &&ppath : all_pkgs) {
-        LOG_INFO(logger, "[" << ++pkgid << "/" << all_pkgs.size() << "] " << ppath.toString());
+    for (int pkgidn = 0; auto &&ppath : all_pkgs) {
+        LOG_INFO(logger, "[" << ++pkgidn << "/" << all_pkgs.size() << "] " << ppath.toString());
         auto versions = pdb.getVersionsForPackage(ppath);
         if (versions.empty() || versions.rbegin()->isBranch()) {
             continue;
@@ -367,12 +367,12 @@ struct package_updater {
             prefix = swctx.getOptions().options_service.args[0];
         }
         auto all_pkgs = pdb.getMatchingPackages(prefix);
-        for (int pkgid = 0; auto &&ppath : all_pkgs) {
-            if (swctx.getOptions().options_service.start_id > pkgid) {
-                ++pkgid;
+        for (int pkgidn = 0; auto &&ppath : all_pkgs) {
+            if (swctx.getOptions().options_service.start_id > pkgidn) {
+                ++pkgidn;
                 continue;
             }
-            LOG_INFO(logger, "[" << ++pkgid << "/" << all_pkgs.size() << "] " << ppath.toString());
+            LOG_INFO(logger, "[" << ++pkgidn << "/" << all_pkgs.size() << "] " << ppath.toString());
             auto versions = pdb.getVersionsForPackage(ppath);
             if (versions.empty() || versions.rbegin()->isBranch()) {
                 continue;
