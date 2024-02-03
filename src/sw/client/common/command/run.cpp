@@ -13,6 +13,7 @@ TODO:
 #include <sw/manager/storage.h>
 
 #include <primitives/command.h>
+#include <primitives/http.h>
 
 #include <vector>
 
@@ -118,8 +119,17 @@ SUBCOMMAND_DECL(run)
     if (!getOptions().options_run.wdir.empty())
         c.working_directory = getOptions().options_run.wdir;
 
-    if (!valid_target && fs::exists((String &)getOptions().options_run.target))
+    if (!valid_target)
     {
+        auto &t = (String &)getOptions().options_run.target;
+        auto remote = t.starts_with("http://") || t.starts_with("https://");
+        if (fs::exists(t) || remote) {
+            if (remote) {
+                path p = path{".sw"} / "dl" / path{t}.filename() / path{t}.filename();
+                auto f = download_file(t);
+                write_file_if_different(p, f);
+                t = p.parent_path().string();
+            }
         auto b = createBuildAndPrepare({ getOptions().options_run.target });
         b->build();
         auto inputs = b->getInputs();
@@ -133,6 +143,7 @@ SUBCOMMAND_DECL(run)
 
         ::run(*b, (*tgts.begin()), c, getOptions().options_run.print_command, getOptions().options_run.run_app_in_container);
         return;
+    }
     }
 
     // resolve

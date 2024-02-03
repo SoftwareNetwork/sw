@@ -489,6 +489,13 @@ void SwClientContext::addInputs(sw::SwBuild &b, const Inputs &i)
 
     for (auto &a : i.getInputs())
     {
+        if (a.starts_with("http://") || a.starts_with("https://"))
+        {
+            path p = path{".sw"} / "dl" / path{a}.filename() / path{a}.filename();
+            auto f = download_file(a);
+            write_file_if_different(p, f);
+            (String &)a = p.parent_path().string();
+        }
         for (auto i : b.addInput(a))
         {
             sw::InputWithSettings ii(i);
