@@ -90,6 +90,14 @@ struct http_request_cache {
             "org.sw.demo.qtproject.qt.base.entrypoint-6.3.0",
             "org.sw.demo.qtproject.qt.declarative.tools.shared-5.15.0.1",
             "org.sw.demo.qtproject.qt.labs.vstools.natvis-3.0.1",
+            "org.sw.demo.llvm_project.llvm.HelloNew",
+            "org.sw.demo.google.grpc.third_party.upb.json",
+            "org.sw.demo.gnome.glib.subprojects.gvdb",
+            "org.sw.demo.google.Orbit.Base",
+            "org.sw.demo.openexr.b44ExpLogTable-2.4",
+            "org.sw.demo.openldap.ldap_r-2.4",
+            "org.sw.demo.khronos.vulkan", // for now
+            "org.sw.demo.gnu.m4.m4", // a lot of work
         };
         for (auto &&[p, vp] : new_pkgs) {
             auto pkg = p.toString();
@@ -331,6 +339,7 @@ struct package_updater {
     sw::Version maxver;
     std::multimap<std::string, std::string> git_tags;
     std::set<std::string> remotefile;
+    int maxdepth{INT_MAX};
 
     package_updater(SwClientContext &swctx) {
         if (std::ifstream ifile(swctx.getOptions().options_service.git_sources); ifile) {
@@ -359,6 +368,7 @@ struct package_updater {
         auto &rs = dynamic_cast<sw::RemoteStorage &>(s);
         auto &pdb = rs.getPackagesDatabase();
 
+        maxdepth = swctx.getOptions().options_service.maxdepth;
         String prefix;
         //prefix = "org.sw.demo.amazon.awslabs.crt_cpp";
         prefix = "org.sw.demo.";
@@ -438,7 +448,10 @@ struct package_updater {
         v.erase(base);
         return v;
     }
-    void update(primitives::source::Git git, auto &&d, auto &&pkgid) {
+    void update(primitives::source::Git git, auto &&d, auto &&pkgid, int depth = 0) {
+        if (depth > maxdepth) {
+            return;
+        }
         if (git.tag.empty()) {
             return;
         }
@@ -488,7 +501,7 @@ struct package_updater {
             if (!cache_record.packages.empty() && maxver != cache_record.packages.rbegin()->first) {
                 SwapAndRestore sr(maxver, cache_record.packages.rbegin()->first);
                 primitives::source::Git git2{git.url, cache_record.tags.rbegin()->second};
-                update(git2, d, pkgid);
+                update(git2, d, pkgid, depth + 1);
             }
             return;
         } else if (!git_tags.empty()) {
@@ -540,7 +553,10 @@ struct package_updater {
                           d[i][j] = std::min({ d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (s1[i - 1] == s2[j - 1] ? 0 : 1) });
 	    return d[len1][len2];
     }
-    void update(primitives::source::RemoteFile rf, auto &&d, auto &&pkgid, std::set<sw::Version> &processed_versions) {
+    void update(primitives::source::RemoteFile rf, auto &&d, auto &&pkgid, std::set<sw::Version> &processed_versions, int depth = 0) {
+        if (depth > maxdepth) {
+            return;
+        }
         if (pkgid.getPath() == "org.sw.demo.mng"s) {
             return;
         }
@@ -593,7 +609,7 @@ struct package_updater {
             primitives::source::RemoteFile rf2{b->second};
             rf2.applyVersion(v);
             SwapAndRestore sr(maxver, v);
-            update(rf2, d, pkgid, processed_versions);
+            update(rf2, d, pkgid, processed_versions, depth + 1);
         }
     }
 };

@@ -977,6 +977,9 @@ command_line:
                 type: int
                 desc: start from this package number
                 default: 0
+            maxdepth:
+                type: int
+                default: 50
             args:
                 list: true
                 type: String
