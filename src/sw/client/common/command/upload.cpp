@@ -15,6 +15,10 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "upload");
 
+namespace {
+bool upload_command;
+}
+
 sw::Remote &find_remote(sw::Settings &s, const String &name);
 
 sw::PackageDescriptionMap getPackages(const sw::SwBuild &b, const sw::support::SourceDirMap &sources, std::map<const sw::Input*, std::vector<sw::PackageId>> *iv)
@@ -49,7 +53,9 @@ sw::PackageDescriptionMap getPackages(const sw::SwBuild &b, const sw::support::S
             if (si == sources.end())
                 throw SW_RUNTIME_ERROR("no such source");
             rd = si->second.getRequestedDirectory();
-            d->source = Source::load(nlohmann::json::parse(read_file(si->second.getRealSourceJsonFile())));
+            if (upload_command) {
+                d->source = Source::load(nlohmann::json::parse(read_file(si->second.getRealSourceJsonFile())));
+            }
         }
 
         // double check files (normalize them)
@@ -105,6 +111,7 @@ static void input_check(const sw::Specification &spec)
 
 SUBCOMMAND_DECL(upload)
 {
+    upload_command = true;
     auto b = createBuild();
 
     // get spec early, so changes won't be noticed
