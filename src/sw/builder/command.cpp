@@ -820,6 +820,11 @@ void Command::execute1(std::error_code *ec)
         LOG_TRACE(logger, print() + "\n" + ss.str());
     }
 
+    if (sw::Settings::get_user_settings().save_all_commands)
+    {
+        saveCommand();
+    }
+
     if (ec)
     {
         Base::execute(*ec);
@@ -841,7 +846,7 @@ void Command::execute1(std::error_code *ec)
         }
     }
 
-    if (sw::Settings::get_user_settings().save_executed_commands || sw::Settings::get_user_settings().save_all_commands)
+    if (sw::Settings::get_user_settings().save_executed_commands)
     {
         saveCommand();
     }
