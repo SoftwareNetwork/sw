@@ -53,8 +53,21 @@ static void run(sw::SwBuild &b, const sw::PackageId &pkg, primitives::Command &c
     }
     if (sc["environment"])
     {
-        for (auto &[k, v] : sc["environment"].getMap())
+        for (auto &[k, v] : sc["environment"].getMap()) {
             c.environment[k] = v.getValue();
+
+            // only out of container? !gRunAppInContainer
+            if (k == "PATH" || k == "Path") {
+                if (auto v = getenv("PATH")) {
+#ifdef _WIN32
+                    c.environment[k] += ";";
+#else
+                    c.environment[k] += ":";
+#endif
+                    c.environment[k] += v;
+                }
+            }
+        }
     }
     //if (sc["create_new_console"] && sc["create_new_console"] == "true")
     //c.create_new_console = true;
@@ -130,20 +143,20 @@ SUBCOMMAND_DECL(run)
                 write_file_if_different(p, f);
                 t = p.parent_path().string();
             }
-        auto b = createBuildAndPrepare({ getOptions().options_run.target });
-        b->build();
-        auto inputs = b->getInputs();
-        if (inputs.size() != 1)
-            throw SW_RUNTIME_ERROR("More than one input provided");
-        auto tgts = inputs[0].getInput().listPackages(getContext());
-        // TODO: add better target detection
-        // check only for executable targets
-        if (tgts.size() != 1)
-            throw SW_RUNTIME_ERROR("More than one target provided in input");
+            auto b = createBuildAndPrepare({ getOptions().options_run.target });
+            b->build();
+            auto inputs = b->getInputs();
+            if (inputs.size() != 1)
+                throw SW_RUNTIME_ERROR("More than one input provided");
+            auto tgts = inputs[0].getInput().listPackages(getContext());
+            // TODO: add better target detection
+            // check only for executable targets
+            if (tgts.size() != 1)
+                throw SW_RUNTIME_ERROR("More than one target provided in input");
 
-        ::run(*b, (*tgts.begin()), c, getOptions().options_run.print_command, getOptions().options_run.run_app_in_container);
-        return;
-    }
+            ::run(*b, (*tgts.begin()), c, getOptions().options_run.print_command, getOptions().options_run.run_app_in_container);
+            return;
+        }
     }
 
     // resolve
