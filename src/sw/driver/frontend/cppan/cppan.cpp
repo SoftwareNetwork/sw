@@ -675,7 +675,9 @@ static std::vector<NativeCompiledTarget *> cppan_load1(Build &b, const yaml &roo
     }
     else
     {
-        auto &t = add_project(root, root_name, version);
+        String name;
+        YAML_EXTRACT(name, String);
+        auto &t = add_project(root, name.empty() ? root_name : name, version);
         targets.push_back(&t);
     }
 
