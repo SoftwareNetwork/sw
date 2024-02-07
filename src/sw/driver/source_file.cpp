@@ -59,28 +59,45 @@ static Files enumerate_files1(const path &dir, bool recursive = true)
             continue;
         if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
         {
-            if (recursive)
+            if (recursive && ffd.cFileName[0] != '.')
             {
                 auto f2 = enumerate_files1(dir / ffd.cFileName, recursive);
                 files.insert(f2.begin(), f2.end());
             }
         }
         else
-            files.insert(dir / ffd.cFileName);
+        {
+            if (ffd.cFileName[0] != '.')
+            {
+                files.insert(dir / ffd.cFileName);
+            }
+        }
     } while (FindNextFile(find_handle, &ffd));
     FindClose(find_handle);
+    return files;
+}
+#else
+static Files enumerate_files1(const path &dir, bool recursive = true)
+{
+    Files files;
+    if (!fs::exists(dir))
+        return files;
+    for (auto &f : fs::directory_iterator(dir)) {
+        if (fs::is_regular_file(f)) {
+            if (f.path().native()[0] != '.') {
+                files.insert(f);
+            }
+        } else if (recursive && fs::is_directory(f) && f.path().native()[0] != '.') {
+            files.merge(enumerate_files1(f, recursive));
+        }
+    }
     return files;
 }
 #endif
 
 static Files enumerate_files_fast(const path &dir, bool recursive = true)
 {
-    return
-#ifdef _WIN32
-        enumerate_files1(dir, recursive);
-#else
-        enumerate_files(dir, recursive);
-#endif
+    return enumerate_files1(dir, recursive);
 }
 
 SourceFileStorage::SourceFileStorage(Target &t)
