@@ -34,6 +34,16 @@ Framework::Framework(const path &p)
     f = to_string(p.u8string());
 }
 
+ForceIncludeFile::ForceIncludeFile(const String &s)
+{
+    i = s;
+}
+
+ForceIncludeFile::ForceIncludeFile(const path &p)
+{
+    i = to_string(p.u8string());
+}
+
 IncludeDirectory::IncludeDirectory(const String &s)
 {
     i = s;
@@ -268,6 +278,8 @@ void NativeCompilerOptionsData::merge(const NativeCompilerOptionsData &o, const 
         for (auto &[k, v] : o.CustomTargetOptions)
             CustomTargetOptions[k].insert(v.begin(), v.end());
     }
+
+    unique_merge_containers(ForceIncludeFiles, o.ForceIncludeFiles);
 
     if (s.merge_to_self)
     {

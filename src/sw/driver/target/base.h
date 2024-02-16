@@ -438,6 +438,9 @@ struct SW_DRIVER_CPP_API TargetOptions : SourceFileStorage, NativeOptions
 
     TargetOptions(Target &t) : SourceFileStorage(t) {}
 
+    void add(const ForceIncludeFile &);
+    void remove(const ForceIncludeFile &);
+
     void add(const IncludeDirectory &);
     void remove(const IncludeDirectory &);
 
@@ -474,6 +477,7 @@ public:
     // compiler options
     ASSIGN_TYPES(Definition)
     ASSIGN_TYPES(DefinitionsType)
+    ASSIGN_TYPES(ForceIncludeFile)
     ASSIGN_TYPES(IncludeDirectory)
     ASSIGN_TYPES(PrecompiledHeader)
     ASSIGN_TYPES(Framework)

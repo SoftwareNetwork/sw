@@ -3518,6 +3518,9 @@ void NativeCompiledTarget::prepare_pass5()
             if (f->file.extension() != ".c")
                 c->CPPStandard = CPPVersion;
 
+            for (auto &&f : getMergeObject().ForceIncludeFiles)
+                c->ForcedIncludeFiles().push_back(f);
+
             // for static libs, we gather and put pdb near output file
             // btw, VS is clever enough to take this info from .lib
             /*if (getSelectedTool() == Librarian.get())
@@ -3561,6 +3564,9 @@ void NativeCompiledTarget::prepare_pass5()
 
             if (ExportAllSymbols && getSelectedTool() == Linker.get())
                 c->VisibilityHidden = false;
+
+            for (auto &&f : getMergeObject().ForceIncludeFiles)
+                c->ForcedIncludeFiles().push_back(f);
         };
 
         auto huit = HeaderUnits.find(f->file);

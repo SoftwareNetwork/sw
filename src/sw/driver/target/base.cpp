@@ -567,6 +567,20 @@ const TargetSettings &Target::getInterfaceSettings(std::unordered_set<void*> *vi
     return interface_settings;
 }
 
+void TargetOptions::add(const ForceIncludeFile &i)
+{
+    path p = i.i;
+    check_absolute(p);
+    ForceIncludeFiles.insert(p);
+}
+
+void TargetOptions::remove(const ForceIncludeFile &i)
+{
+    path p = i.i;
+    check_absolute(p);
+    ForceIncludeFiles.erase(p);
+}
+
 void TargetOptions::add(const IncludeDirectory &i)
 {
     path dir = i.i;
