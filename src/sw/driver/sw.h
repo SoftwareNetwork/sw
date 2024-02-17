@@ -46,6 +46,7 @@ using sw::BuiltinCommand;
 // options
 using sw::File;
 using sw::FileRegex;
+using sw::ForceIncludeFile;
 using sw::IncludeDirectory;
 using sw::Definition;
 using sw::DefinitionsType;
