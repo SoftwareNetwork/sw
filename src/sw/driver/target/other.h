@@ -258,6 +258,62 @@ struct SW_DRIVER_CPP_API PascalExecutable : PascalTarget
 
 // Python
 
+#define SW_TARGET_ADD_DEPENDENCIES(target, add_dep_function) \
+private:                                                     \
+    ASSIGN_WRAPPER_SIMPLE(add, PythonLibrary);               \
+                                                             \
+public:                                                      \
+    ASSIGN_TYPES_NO_REMOVE(Target)                           \
+    ASSIGN_TYPES_NO_REMOVE(PackageId)                        \
+    ASSIGN_TYPES_NO_REMOVE(DependencyPtr)                    \
+    ASSIGN_TYPES_NO_REMOVE(UnresolvedPackage)                \
+    ASSIGN_TYPES_NO_REMOVE(UnresolvedPackages)               \
+                                                             \
+    DependencyPtr operator+(const ITarget &t)                \
+    {                                                        \
+        auto d = std::make_shared<Dependency>(t);            \
+        add(d);                                              \
+        return d;                                            \
+    }                                                        \
+    DependencyPtr operator+(const DependencyPtr &d)          \
+    {                                                        \
+        add(d);                                              \
+        return d;                                            \
+    }                                                        \
+    DependencyPtr operator+(const PackageId &pkg)            \
+    {                                                        \
+        auto d = std::make_shared<Dependency>(pkg);          \
+        add(d);                                              \
+        return d;                                            \
+    }                                                        \
+    DependencyPtr operator+(const UnresolvedPackage &pkg)    \
+    {                                                        \
+        auto d = std::make_shared<Dependency>(pkg);          \
+        add(d);                                              \
+        return d;                                            \
+    }                                                        \
+    void add(const Target &t)                                \
+    {                                                        \
+        add(std::make_shared<Dependency>(t));                \
+    }                                                        \
+    void add(const DependencyPtr &t)                         \
+    {                                                        \
+        addSourceDependency(t);                              \
+    }                                                        \
+    void add(const UnresolvedPackage &t)                     \
+    {                                                        \
+        add(std::make_shared<Dependency>(t));                \
+    }                                                        \
+    void add(const UnresolvedPackages &t)                    \
+    {                                                        \
+        for (auto &d : t)                                    \
+            add(d);                                          \
+    }                                                        \
+    void add(const PackageId &p)                             \
+    {                                                        \
+        add(std::make_shared<Dependency>(p));                \
+    }
+
 struct SW_DRIVER_CPP_API PythonLibrary : Target
     , SourceFileTargetOptions
 {
@@ -270,6 +326,8 @@ struct SW_DRIVER_CPP_API PythonLibrary : Target
 
     bool init() override;
     Files gatherAllFiles() const override;
+
+    SW_TARGET_ADD_DEPENDENCIES(PythonLibrary, addSourceDependency)
 };
 
 }
