@@ -263,6 +263,11 @@ struct SW_DRIVER_CPP_API PythonLibrary : Target
 {
     PythonLibrary(TargetBase &parent, const PackageId &);
 
+    using Target::operator+=;
+    using Target::operator=;
+    using Target::add;
+    SW_TARGET_USING_ASSIGN_OPS(SourceFileTargetOptions);
+
     bool init() override;
     Files gatherAllFiles() const override;
 };
