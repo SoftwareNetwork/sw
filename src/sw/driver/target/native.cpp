@@ -2198,6 +2198,9 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings(std::unordered_
                             for (auto &&[t,s2] : is["dependencies"]["link"].getMap()) {
                                 s["dependencies"]["link"][t] = s2;
                             }
+                            for (auto &&[t,s2] : is["dependencies"]["dummy"].getMap()) {
+                                s["dependencies"]["dummy"][t] = s2;
+                            }
                         }
                     } else {
                         s["dependencies"]["link"][boost::to_lower_copy(d.dep->getTarget().getPackage().toString())] = d.dep->getTarget().getSettings();
