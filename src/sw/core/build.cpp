@@ -854,8 +854,9 @@ Commands SwBuild::getCommands() const
             std::function<void(const TargetSettings &)> gather_ttb;
             gather_ttb = [this, &gather_ttb, &ttb](const auto &s) mutable
             {
-                if (s["header_only"] == "true")
-                    return;
+                // ho targets want to build their deps
+                //if (s["header_only"] == "true")
+                    //return;
 
                 if (!(s["type"] == "native_shared_library" || s["type"] == "native_static_library" || s["type"] == "native_executable"))
                     return;
