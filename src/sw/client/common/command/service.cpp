@@ -23,6 +23,7 @@ DECLARE_STATIC_LOGGER(logger, "service");
 
 namespace {
 bool has_prefix;
+bool short_timeouts;
 }
 
 struct http_request_cache {
@@ -38,7 +39,10 @@ struct http_request_cache {
     data &test_url1(auto &&key_url, std::string additional_url, HttpRequest &request, bool exception = false) {
         auto &source_id = key_url; // d.source has real tag so it is now useful
         if (new_versions[source_id].http_code == 0) {
-            request.connect_timeout = 1;
+            if (short_timeouts)
+            {
+                request.connect_timeout = 1;
+            }
             request.url = key_url + additional_url;
             try
             {
@@ -50,7 +54,10 @@ struct http_request_cache {
             {
                 std::string err = e.what();
                 boost::to_lower(err);
-                new_versions[source_id].http_code = err.contains("timeout") ? 1 : 2;
+                if (short_timeouts)
+                {
+                    new_versions[source_id].http_code = err.contains("timeout") ? 1 : 2;
+                }
                 if (exception) {
                     throw;
                 }
@@ -301,7 +308,10 @@ void update_packages(SwClientContext &swctx) {
                 LOG_INFO(logger, "remote: " << remote->url);
                 auto &source_id = remote->url; // d.source has real tag so it is now useful
                 HttpRequest request{httpSettings};
-                request.timeout = 1;
+                if (short_timeouts)
+                {
+                    request.timeout = 1;
+                }
                 if (auto &ret = cache.test_url1(source_id, {}, request); ret.http_code != 200)
                 {
                     LOG_WARN(logger, "http " << ret.http_code << ": " << resolved.begin()->second.toString());
@@ -592,7 +602,10 @@ struct package_updater {
                 continue;
             }
             HttpRequest request{httpSettings};
-            request.timeout = 1;
+            if (short_timeouts)
+            {
+                request.timeout = 1;
+            }
             try {
                 auto &cache_record = cache.test_url1(rf2.url, {}, request);
                 if (cache_record.http_code != 200 && cache_record.http_code != 1) {

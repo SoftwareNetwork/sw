@@ -967,6 +967,9 @@ command_line:
             run:
                 type: bool
                 desc: run upgrade commands immediately
+            short_timeouts:
+                type: bool
+                desc: do not wait for http responses for a default amount of time
             git_sources:
                 type: path
                 desc: "Specify git sources file to read from. Each file specifies as follow: \"source url\" \"tag\"."
