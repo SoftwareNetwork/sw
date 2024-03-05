@@ -761,6 +761,11 @@ std::vector<sw::TargetSettings> SwClientContext::createSettings()
             s["name"].serializable(false);
             s["name"].useInHash(false);
             s["name"].ignoreInComparison(false);
+
+            s["name_without_config"] = "true";
+            s["name_without_config"].serializable(false);
+            s["name_without_config"].useInHash(false);
+            s["name_without_config"].ignoreInComparison(false);
         }
         LOG_DEBUG(logger, "WARNING: Setting config names may result in wrong config-name pair assignment, "
             "because of unspecified config creation order.");

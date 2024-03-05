@@ -368,8 +368,13 @@ Program *Target::findProgramByExtension(const String &ext) const
 
 String Target::getConfig() const
 {
-    if (isLocal() && !provided_cfg.empty())
-        return provided_cfg;
+    if (isLocal() && !provided_cfg.empty()) {
+        if (ts["name_without_config"] == "true") {
+            return provided_cfg;
+        } else {
+            return provided_cfg + "_" + ts.getHash();
+        }
+    }
     return ts.getHash();
 }
 
