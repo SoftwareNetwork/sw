@@ -618,132 +618,13 @@ void update_packages2(SwClientContext &swctx)
 {
     package_updater u(swctx);
     u.update(swctx);
-
-    /*struct data
-    {
-        long http_code = 0;
-        String response;
-        //       new version                old version
-        std::map<sw::Version, std::multimap<sw::Version, sw::PackageId>> packages;
-    };
-    std::map<std::string, data> new_versions;
-    for (int pkgid = 0; auto &&ppath : all_pkgs)
-    {
-        auto s = sw::source::load(nlohmann::json::parse(d.source));
-        if (s->getType() == primitives::source::SourceType::Git)
-        {
-            auto git = dynamic_cast<primitives::source::Git *>(s.get());
-            if (git->tag.empty())
-            {
-                continue;
-            }
-            auto &source_id = git->url; // d.source has real tag so it is now useful
-            if (new_versions[source_id].http_code == 0)
-            {
-                HttpRequest request{httpSettings};
-                request.url = git->url + "/info/refs?service=git-upload-pack";
-                try
-                {
-                    auto resp = url_request(request);
-                    new_versions[source_id].http_code = resp.http_code;
-                    new_versions[source_id].response = resp.response;
-                }
-                catch (std::exception &)
-                {
-                }
-            }
-            if (new_versions[source_id].http_code != 200)
-            {
-                LOG_WARN(logger, "http " << new_versions[source_id].http_code << ": " << resolved.begin()->second.toString());
-                continue;
-            }
-
-            auto v = maxver;
-            std::set<sw::Version> versions2;
-            auto level = v.getLevel();
-            for (int i = 1; i <= level; ++i)
-            {
-                versions2.insert(v.getNextVersion(i));
-            }
-
-            for (auto &&v : versions2)
-            {
-                LOG_INFO(logger, "123: " << v.toString());
-            }
-            //std::ranges::contains();
-        }
-        else
-        {
-            LOG_DEBUG(logger, "unknown source: " << resolved.begin()->second.toString() << ": " << d.source);
-            continue;
-        }
-    }
-    LOG_INFO(logger, "\ncommand list\n");
-    std::map<sw::PackageId, std::pair<sw::Version, int>> new_pkgs;
-    for (auto &&[_, n] : new_versions)
-    {
-        if (n.packages.empty())
-        {
-            continue;
-        }
-        auto &&p = n.packages.rbegin();
-        auto &&v = p->first;
-        auto &&pkg = n.packages.rbegin()->second.rbegin()->second;
-        auto &&d = pdb.getPackageData(pkg);
-        new_pkgs.emplace(pkg, std::pair<sw::Version, int>{v, d.prefix});
-    }
-    // old packages
-    const std::set<String> skipped_packages{
-        "org.sw.demo.google.grpc.third_party.upb.utf8_range-1.54.2",
-        "org.sw.demo.google.Orbit.third_party.multicore-1.52.0",
-        "org.sw.demo.google.tesseract.wordlist2dawg-4.1.2",
-        "org.sw.demo.kcat.tools.bsincgen-1.20.1",
-        "org.sw.demo.malaterre.GDCM.uuid-3.0.22",
-        "org.sw.demo.ocornut.imgui.backend.marmalade-1.85.0",
-        "org.sw.demo.openexr.IlmImf-2.5.",
-        "org.sw.demo.qtproject.qt.base.entrypoint-6.3.0",
-        "org.sw.demo.qtproject.qt.declarative.tools.shared-5.15.0.1",
-        "org.sw.demo.qtproject.qt.labs.vstools.natvis-3.0.1",
-    };
-    for (auto &&[p, vp] : new_pkgs)
-    {
-        auto pkg = p.toString();
-        if (std::ranges::any_of(skipped_packages, [&](auto &&v)
-                                { return pkg.starts_with(v); }))
-        {
-            continue;
-        }
-#ifdef _WIN32
-        // systemd repo contains NTFS-invalid files
-        if (pkg.starts_with("org.sw.demo.systemd"))
-        {
-            continue;
-        }
-#endif
-        auto &&v = vp.first;
-        auto &&prefix = vp.second;
-        LOG_INFO(logger, "sw uri --silent sw:upload " << pkg << " " << v.toString() << " " << prefix);
-
-        if (swctx.getOptions().options_service.run)
-        {
-            primitives::Command c;
-            c.arguments = {"sw", "uri", "--silent", "sw:upload", pkg, v.toString(), std::to_string(prefix)};
-            c.out.inherit = true;
-            c.err.inherit = true;
-            std::error_code ec;
-            c.execute(ec);
-            LOG_INFO(logger, "");
-        }
-    }*/
-}
-
-void update_packages3(SwClientContext &swctx)
-{
 }
 
 SUBCOMMAND_DECL(service)
 {
     boost::replace_all(getOptions().options_service.command, "-", "_");
+    short_timeouts = getOptions().options_service.short_timeouts;
+
 #define CMD(f, ...)                                 \
     if (getOptions().options_service.command == #f) \
     {                                               \
@@ -752,7 +633,6 @@ SUBCOMMAND_DECL(service)
     }
     CMD(update_packages)
     CMD(update_packages2)
-    CMD(update_packages3)
     else {
         throw SW_RUNTIME_ERROR("unknown command");
     }
