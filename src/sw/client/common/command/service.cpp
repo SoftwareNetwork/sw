@@ -446,7 +446,13 @@ struct package_updater {
             }
             nextver = ins(v2);
             nextver = ins(nextver.getNextVersion(level));
+            if (base.getLevel() >= level + 1) {
+                ins(nextver.getNextVersion(level + 1)); // for llvm
+            }
             nextver = ins(nextver.getNextVersion(level));
+            if (base.getLevel() >= level + 1) {
+                ins(nextver.getNextVersion(level + 1)); // just extra
+            }
             nextver = ins(nextver.getNextVersion(level));
             nextver = ins(nextver.getNextVersion(level));
             nextver = v2;
