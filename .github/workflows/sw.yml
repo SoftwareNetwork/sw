@@ -1,6 +1,11 @@
 name: sw
 
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
+  schedule:
+    # every day
+    - cron: 0 0 * * *
 
 jobs:
   windows:
