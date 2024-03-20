@@ -631,7 +631,7 @@ void SwBuild::loadPackages(const TargetMap &predefined)
                 }
             }
 
-            LOG_TRACE(logger, "build id " << this << " " << BOOST_CURRENT_FUNCTION << " loading " << d.first.toString());
+            LOG_TRACE(logger, "build id " << this << " " << BOOST_CURRENT_FUNCTION << " loading " << d.first.toString() << ", settings = " << s.toString());
 
             loaded = true;
 
