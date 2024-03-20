@@ -885,13 +885,13 @@ bool NativeCompiledTarget::init()
         if (getSettings()["export-if-static"] == "true")
         {
             ExportIfStatic = true;
-            //getExportOptions()["export-if-static"].use(); // does not work well in ide
+            getExportOptions()["export-if-static"].use();
         }
 
         if (getSettings()["static-deps"] == "true")
         {
             getExportOptions()["native"]["library"] = "static";
-            //getExportOptions()["static-deps"].use(); // see comment above
+            getExportOptions()["static-deps"].use();
         }
 
         addPackageDefinitions();
