@@ -840,10 +840,10 @@ Commands SwBuild::getCommands() const
             continue;
         }
 
-        ttb.emplace(p, tgts);
-
         for (auto &tgt : tgts)
         {
+            ttb[p].push_back(tgt);
+
             // gather targets to build
             const auto &s = tgt->getInterfaceSettings();
 
