@@ -118,6 +118,45 @@ SUBCOMMAND_DECL(build)
         return;
     }
 
+    // for ide use slightly different building
+    // one input per call
+    if (1
+        && !getOptions().options_build.ide_fast_path.empty()
+        && !getOptions().options_build.ide_copy_to_dir.empty()
+        && !getOptions().input_settings_pairs.empty()) {
+        FilesSorted fast_path_files;
+        Strings s;
+        for (auto &&p : getOptions().input_settings_pairs)
+        {
+            s.push_back(p);
+            if (s.size() == 2)
+            {
+                LOG_INFO(logger, "Building " << s[0]);
+                auto b = createBuild({getInputs(), s});
+                b->build();
+                fast_path_files.merge(b->fast_path_files);
+                s.clear();
+            }
+        }
+        {
+            String s;
+            for (auto &f : fast_path_files)
+                s += to_string(normalize_path(f)) + "\n";
+            write_file(getOptions().options_build.ide_fast_path, s);
+
+            uint64_t mtime = 0;
+            for (auto &f : fast_path_files)
+            {
+                auto lwt = fs::last_write_time(f);
+                mtime ^= file_time_type2time_t(lwt);
+            }
+            path fmtime = getOptions().options_build.ide_fast_path;
+            fmtime += ".t";
+            write_file(fmtime, std::to_string(mtime));
+        }
+        return;
+    }
+
     // defaults or only one of build_arg and -S specified
     //  -S == build_arg
     //  -B == fs::current_path()

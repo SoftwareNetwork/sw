@@ -776,25 +776,6 @@ void SwBuild::execute(ExecutionPlan &p) const
 
     if (build_settings["time_trace"] == "true")
         p.saveChromeTrace(getBuildDirectory() / "misc" / "time_trace.json");
-
-    path ide_fast_path = build_settings["build_ide_fast_path"].isValue() ? build_settings["build_ide_fast_path"].getValue() : "";
-    if (!ide_fast_path.empty())
-    {
-        String s;
-        for (auto &f : fast_path_files)
-            s += to_string(normalize_path(f)) + "\n";
-        write_file(ide_fast_path, s);
-
-        uint64_t mtime = 0;
-        for (auto &f : fast_path_files)
-        {
-            auto lwt = fs::last_write_time(f);
-            mtime ^= file_time_type2time_t(lwt);
-        }
-        path fmtime = ide_fast_path;
-        fmtime += ".t";
-        write_file(fmtime, std::to_string(mtime));
-    }
 }
 
 Commands SwBuild::getCommands() const

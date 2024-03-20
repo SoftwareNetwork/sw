@@ -118,7 +118,9 @@ private:
 
     // other data
     String name;
+public:
     mutable FilesSorted fast_path_files;
+private:
 
     Commands getCommands() const;
     void loadPackages(const TargetMap &predefined);
