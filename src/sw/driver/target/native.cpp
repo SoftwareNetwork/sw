@@ -2201,6 +2201,8 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings(std::unordered_
                             for (auto &&[t,s2] : is["dependencies"]["dummy"].getMap()) {
                                 s["dependencies"]["dummy"][t] = s2;
                             }
+                            // also add ho target itself, needed for ide builds etc.
+                            s["dependencies"]["dummy"][t->getPackage().toString()] = t->getSettings();
                         }
                     } else {
                         s["dependencies"]["link"][boost::to_lower_copy(d.dep->getTarget().getPackage().toString())] = d.dep->getTarget().getSettings();
