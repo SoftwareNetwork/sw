@@ -253,7 +253,11 @@ PackageDataPtr LocalStorage::loadData(const PackageId &id) const
     {
         auto i = local_packages.find(id);
         if (i == local_packages.end())
+        {
+            if (isPackageOverridden(id))
+                return ovs.loadData(id);
             throw SW_RUNTIME_ERROR("Missing local package data: " + id.toString());
+        }
         return std::make_unique<PackageData>(i->second);
     }
     if (isPackageOverridden(id))
