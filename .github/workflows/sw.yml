@@ -48,7 +48,7 @@ jobs:
         export PATH="/usr/local/opt/bison/bin:$PATH"
         export PATH="/usr/local/opt/gcc/bin:$PATH"
         ./sw -static build -compiler gcc
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       with:
         name: sw
         path: .sw/out
