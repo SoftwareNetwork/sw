@@ -65,6 +65,7 @@ SUBCOMMAND_DECL(generate)
             getOptions().configuration.push_back("rwdi");
             getOptions().configuration.push_back("r");
         }
+        // vs gen works only with this atm
         getOptions().use_same_config_for_host_dependencies = true;
 
         auto g = (VSGenerator*)generator.get();

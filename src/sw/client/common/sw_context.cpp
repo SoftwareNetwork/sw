@@ -533,7 +533,10 @@ std::vector<sw::TargetSettings> SwClientContext::createSettings()
     if (options.use_same_config_for_host_dependencies)
     {
         initial_settings["use_same_config_for_host_dependencies"] = "true";
-        initial_settings["use_same_config_for_host_dependencies"].useInHash(false);
+        // We need to use it in hash because it makes problems during ide and console builds.
+        // Build generates same files (yy outputs) with different exe (like bison static and bison shared).
+        // Which causes full rebuilds or projects when switching console <-> ide.
+        //initial_settings["use_same_config_for_host_dependencies"].useInHash(false);
         getContext().setHostSettings(initial_settings);
     }
 
