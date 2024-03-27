@@ -501,7 +501,7 @@ void VSGenerator::generate(const SwBuild &b)
         {
             auto itgt = tgts.findEqual(st);
             if (itgt == tgts.end())
-                throw SW_RUNTIME_ERROR("missing target: " + pkg.toString());
+                throw SW_RUNTIME_ERROR("missing target: " + pkg.toString() + ", settings = " + st.toString());
             auto &d = s.projects.find(pkg.toString())->second.getData(st);
             d.target = itgt->get();
             path_tree.add(d.target->getPackage());
