@@ -608,6 +608,7 @@ struct package_updater {
                 continue;
             }
             HttpRequest request{httpSettings};
+            request.timeout = 30;
             if (short_timeouts)
             {
                 request.timeout = 1;
@@ -620,6 +621,14 @@ struct package_updater {
                 }
             } catch (primitives::http::curl_exception &e) {
                 // timed out
+                if (!short_timeouts) {
+                    continue;
+                }
+            } catch (std::exception &e) {
+                // timed out
+                if (!short_timeouts) {
+                    continue;
+                }
             }
             cache.new_versions[rf2.url].packages[v].insert({maxver, pkgid});
             newmaxver.insert(v);
