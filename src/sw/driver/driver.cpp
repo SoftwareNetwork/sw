@@ -558,6 +558,15 @@ std::unordered_map<path, PrepareConfigOutputData> Driver::build_configs1(SwConte
 
     //
 
+    // we swap off some extra settings
+    auto hsold = swctx.getHostSettings();
+    auto hs = swctx.getHostSettings();
+    hs.erase("use_same_config_for_host_dependencies");
+    swctx.setHostSettings(hs);
+    SCOPE_EXIT {
+        swctx.setHostSettings(hsold);
+    };
+
     auto &ctx = swctx;
     //if (!b)
         auto b = create_build(ctx);
