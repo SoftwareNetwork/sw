@@ -16,8 +16,8 @@ jobs:
     - run: ./sw -static build
     - uses: actions/upload-artifact@v4
       with:
-        name: sw
-        path: .sw/out
+        name: sw-${{ matrix.os }}
+        path: .sw/out/**/*.exe
 
   linux:
     runs-on: ubuntu-22.04
@@ -32,7 +32,7 @@ jobs:
     - run: ./sw -static build -compiler gcc
     - uses: actions/upload-artifact@v4
       with:
-        name: sw
+        name: sw-${{ matrix.os }}
         path: .sw/out
                 
   macos:
@@ -50,5 +50,5 @@ jobs:
         ./sw -static build -compiler gcc
     - uses: actions/upload-artifact@v4
       with:
-        name: sw
+        name: sw-${{ matrix.os }}
         path: .sw/out
