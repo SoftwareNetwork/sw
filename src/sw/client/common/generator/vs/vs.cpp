@@ -301,7 +301,27 @@ void VSGenerator::generate(const SwBuild &b)
         toolset_version = compiler_id_max_version.getVersion();
     }
     // this removes hash part      vvvvvvvvvvvvv
-    sln_root = getRootDirectory(b).parent_path() / vs_version.toString(1);
+    sln_root = getRootDirectory(b).parent_path();
+    // we dont use build hash in solution dir, but we want to use inputs name (e.g. for freestanding files)
+    // default name
+    // const auto compiler_name = boost::to_lower_copy(toString(b.solutions[0].Settings.Native.CompilerType));
+    const String compiler_name = "msvc";
+    String visible_lnk_name;
+    if (inputs.size() == 1) {
+        auto &&input = inputs[0].getInput().getInput();
+        auto n = typeid(input).name();
+        if (n == "struct sw::driver::cpp::InlineSpecInput"s) {
+            auto &&spec = input.getSpecification();
+            auto &&f = spec.getFiles();
+        if (f.size() == 1) {
+            visible_lnk_name = f.begin()->stem().string();
+        }
+    }
+    }
+    if (!visible_lnk_name.empty()) {
+        sln_root /= visible_lnk_name;
+    }
+    sln_root /= vs_version.toString(1);
 
     // dl flag tables from cmake
     static const String ft_base_url = "https://gitlab.kitware.com/cmake/cmake/raw/master/Templates/MSBuild/FlagTables/";
@@ -843,10 +863,40 @@ void VSGenerator::generate(const SwBuild &b)
     }
 
     // main emit
-    s.emit(*this);
+    if (visible_lnk_name.empty()) {
+        visible_lnk_name += to_string(fs::current_path().filename().u8string()) + "_";
+        visible_lnk_name += compiler_name + "_" + getPathString().string() + "_" + vs_version.toString(1);
+    }
+    visible_lnk_name += ".sln";
+    s.emit(*this, visible_lnk_name);
+
+    // create links etc.
+    // write bat for multiprocess compilation
+    auto fn = visible_lnk_name;
+    if (vs_version >= Version(16))
+    {
+        String bat;
+        bat += "@echo off\n";
+        bat += "setlocal\n";
+        bat += ":: turn on multiprocess compilation\n";
+        bat += "set UseMultiToolTask=true\n";
+        // bat += "set EnforceProcessCountAcrossBuilds=true\n";
+        bat += "start " + to_string(normalize_path_windows(sln_root / visible_lnk_name)) + "\n";
+        // for preview cl versions run preview VS later
+        // start "c:\Program Files (x86)\Microsoft Visual Studio\2019\Preview\Common7\IDE\devenv.exe" fn
+        fn += ".bat"; // we now make a link to bat file
+        write_file_if_different(sln_root / fn, bat);
+    }
+
+    // link
+    auto lnk = fs::current_path() / visible_lnk_name;
+    lnk += ".lnk";
+#ifdef _WIN32
+    ::create_link(sln_root / fn, lnk, "SW link");
+#endif
 }
 
-void Solution::emit(const VSGenerator &g) const
+void Solution::emit(const VSGenerator &g, const String &slnfn) const
 {
     SolutionEmitter ctx;
     ctx.version = g.vs_version;
@@ -884,37 +934,7 @@ void Solution::emit(const VSGenerator &g) const
     }
     ctx.endGlobalSection();
     ctx.endGlobal();
-
-    //const auto compiler_name = boost::to_lower_copy(toString(b.solutions[0].Settings.Native.CompilerType));
-    const String compiler_name = "msvc";
-    String fn = to_string(fs::current_path().filename().u8string()) + "_";
-    fn += compiler_name + "_" + g.getPathString().string() + "_" + g.vs_version.toString(1);
-    fn += ".sln";
-    auto visible_lnk_name = fn;
-    write_file_if_different(g.sln_root / fn, ctx.getText());
-
-    // write bat for multiprocess compilation
-    if (g.vs_version >= Version(16))
-    {
-        String bat;
-        bat += "@echo off\n";
-        bat += "setlocal\n";
-        bat += ":: turn on multiprocess compilation\n";
-        bat += "set UseMultiToolTask=true\n";
-        //bat += "set EnforceProcessCountAcrossBuilds=true\n";
-        bat += "start " + to_string(normalize_path_windows(g.sln_root / fn)) + "\n";
-        // for preview cl versions run preview VS later
-        // start "c:\Program Files (x86)\Microsoft Visual Studio\2019\Preview\Common7\IDE\devenv.exe" fn
-        fn += ".bat"; // we now make a link to bat file
-        write_file_if_different(g.sln_root / fn, bat);
-    }
-
-    // link
-    auto lnk = fs::current_path() / visible_lnk_name;
-    lnk += ".lnk";
-#ifdef _WIN32
-    ::create_link(g.sln_root / fn, lnk, "SW link");
-#endif
+    write_file_if_different(g.sln_root / slnfn, ctx.getText());
 
     for (auto &[n, p] : projects)
         p.emit(g);

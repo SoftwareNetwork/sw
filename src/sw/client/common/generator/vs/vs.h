@@ -186,7 +186,7 @@ struct Solution
     const Project *first_project = nullptr;
     Settings settings;
 
-    void emit(const VSGenerator &) const;
+    void emit(const VSGenerator &, const String &slnfn) const;
 
     const Settings &getSettings() const { return settings; }
 
