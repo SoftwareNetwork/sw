@@ -313,10 +313,10 @@ void VSGenerator::generate(const SwBuild &b)
         if (n == "struct sw::driver::cpp::InlineSpecInput"s) {
             auto &&spec = input.getSpecification();
             auto &&f = spec.getFiles();
-        if (f.size() == 1) {
-            visible_lnk_name = f.begin()->stem().string();
+            if (f.size() == 1) {
+                visible_lnk_name = f.begin()->stem().string();
+            }
         }
-    }
     }
     if (!visible_lnk_name.empty()) {
         sln_root /= visible_lnk_name;
@@ -485,6 +485,7 @@ void VSGenerator::generate(const SwBuild &b)
         }
     }
 
+    auto curdirr = fs::current_path();
     for (auto &[pkg, tgts] : ttb)
     {
         // add project with settings
@@ -534,6 +535,12 @@ void VSGenerator::generate(const SwBuild &b)
                 configure_files[d.target->getSettings()].insert(cf.getPathValue(b.getContext().getLocalStorage()));
 
             auto cmds = d.target->getCommands();
+
+            // remove from commands generation of other project files
+            std::erase_if(cmds, [&](auto &&c) {
+                return std::ranges::any_of(c->outputs,
+                    [&](auto &&o){return !is_under_root_by_prefix_path(o, curdirr);});
+            });
 
             bool has_dll = false;
             bool has_exe = false;
@@ -665,7 +672,7 @@ void VSGenerator::generate(const SwBuild &b)
             {
                 if (f.p.extension() == ".natvis")
                     natvis.insert(f);
-            }
+                }
         }
 
         if (!natvis.empty())
@@ -1261,6 +1268,7 @@ void Project::emitProject(const VSGenerator &g) const
     // usual files
     for (auto &p : files)
     {
+        // skip natvis
         if (p.p.extension() == ".natvis")
             continue;
 
@@ -1527,6 +1535,7 @@ void Project::emitFilters(const VSGenerator &g) const
     ctx.beginBlock("ItemGroup");
     for (auto &f : files)
     {
+        // skip natvis
         if (f.p.extension() == ".natvis")
             continue;
 
