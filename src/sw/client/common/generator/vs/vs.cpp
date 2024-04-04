@@ -233,6 +233,7 @@ void VSGenerator::generate(const SwBuild &b)
     auto inputs = b.getInputs();
     PackagePathTree path_tree;
     Solution s;
+    auto curr_dirr = fs::current_path();
 
     // gather ttb and settings
     TargetMap ttb;
@@ -407,7 +408,7 @@ void VSGenerator::generate(const SwBuild &b)
             r.name = "generate.stamp";
             r.message = "Checking Build System";
             r.command += "setlocal\r\n";
-            r.command += "cd \"" + to_string(normalize_path_windows(fs::current_path())) + "\"\r\n";
+            r.command += "cd \"" + to_string(normalize_path_windows(curr_dirr)) + "\"\r\n";
             d.custom_rules_manual.push_back(r);
         }
 
@@ -442,7 +443,7 @@ void VSGenerator::generate(const SwBuild &b)
                 auto &d = p.getData(st);
 
                 String cmd;
-                cmd = "-d " + to_string(normalize_path(fs::current_path())) + " build -input-settings-pairs ";
+                cmd = "-d " + to_string(normalize_path(curr_dirr)) + " build -input-settings-pairs ";
                 for (auto &i : inputs)
                 {
                     for (auto &[_, f] : i.getInput().getInput().getSpecification().files.getData())
@@ -485,7 +486,6 @@ void VSGenerator::generate(const SwBuild &b)
         }
     }
 
-    auto curdirr = fs::current_path();
     for (auto &[pkg, tgts] : ttb)
     {
         // add project with settings
@@ -539,7 +539,7 @@ void VSGenerator::generate(const SwBuild &b)
             // remove from commands generation of other project files
             std::erase_if(cmds, [&](auto &&c) {
                 return std::ranges::any_of(c->outputs,
-                    [&](auto &&o){return !is_under_root_by_prefix_path(o, curdirr);});
+                    [&](auto &&o){return !is_under_root_by_prefix_path(o, curr_dirr);});
             });
 
             bool has_dll = false;
@@ -787,7 +787,7 @@ void VSGenerator::generate(const SwBuild &b)
 
             Strings args;
             args.push_back("-d");
-            args.push_back(to_string(normalize_path(fs::current_path())));
+            args.push_back(to_string(normalize_path(curr_dirr)));
             args.push_back("build");
             args.push_back("-input-settings-pairs");
             for (auto &[d, s] : deps)
@@ -871,7 +871,7 @@ void VSGenerator::generate(const SwBuild &b)
 
     // main emit
     if (visible_lnk_name.empty()) {
-        visible_lnk_name += to_string(fs::current_path().filename().u8string()) + "_";
+        visible_lnk_name += to_string(curr_dirr.filename().u8string()) + "_";
         visible_lnk_name += compiler_name + "_" + getPathString().string() + "_" + vs_version.toString(1);
     }
     visible_lnk_name += ".sln";
@@ -896,7 +896,7 @@ void VSGenerator::generate(const SwBuild &b)
     }
 
     // link
-    auto lnk = fs::current_path() / visible_lnk_name;
+    auto lnk = curr_dirr / visible_lnk_name;
     lnk += ".lnk";
 #ifdef _WIN32
     ::create_link(sln_root / fn, lnk, "SW link");
