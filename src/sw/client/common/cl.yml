@@ -396,6 +396,9 @@ command_line:
                 value_desc: <input settings>
                 space_separated: true
 
+            # shell command
+            shell:
+
     # abi
     subcommand:
         name: abi

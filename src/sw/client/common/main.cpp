@@ -270,6 +270,12 @@ void StartupData::initLogger()
 
 void StartupData::setWorkingDir()
 {
+    if (getOptions().shell)
+    {
+        getOptions().working_directory = getStorageDir(getOptions()) / "tmp" / "shell";
+        fs::create_directories(getOptions().working_directory);
+    }
+
     if (getOptions().working_directory.empty())
         return;
 

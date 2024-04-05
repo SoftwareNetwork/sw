@@ -353,7 +353,7 @@ Inputs::Inputs(const Strings &s, const Strings &pairs)
 }
 
 SwClientContext::SwClientContext(const Options &options)
-    : local_storage_root_dir(options.storage_dir.empty() ? sw::Settings::get_user_settings().storage_dir : options.storage_dir)
+    : local_storage_root_dir(getStorageDir(options))
     , options(std::make_unique<Options>(options))
 {
     // maybe put outside ctx, because it will be recreated every time
@@ -997,4 +997,9 @@ void setupLogger(const std::string &log_level, const Options &options, bool simp
     // first trace message
     LOG_TRACE(logger, "----------------------------------------");
     LOG_TRACE(logger, "Starting sw...");
+}
+
+path getStorageDir(const Options &options)
+{
+    return options.storage_dir.empty() ? sw::Settings::get_user_settings().storage_dir : options.storage_dir;
 }

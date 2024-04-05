@@ -112,3 +112,4 @@ private:
 
 void setHttpSettings(const Options &);
 void setupLogger(const std::string &log_level, const Options &options, bool simple = true);
+path getStorageDir(const Options &);
