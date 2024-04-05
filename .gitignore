@@ -25,6 +25,7 @@ bin*
 
 *.bat
 *.sh
+*.sw
 
 *~
 *.user

@@ -145,6 +145,8 @@ const StringSet &getCppSourceFileExtensions()
         // Objective-C
         ".mm",
 
+        ".sw", // our special, to run .sw apps
+
         // msvc modules
         ".ixx",
     };

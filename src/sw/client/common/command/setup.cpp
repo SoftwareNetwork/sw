@@ -197,8 +197,9 @@ SUBCOMMAND_DECL(setup)
     }
 
     // register .sw extension
-    // remove? improve?
-    /*{
+    // insecure? ok?
+    // to add .sw ext in VS - Tools | Options | Text Editor | File Extension | Microsoft Visual C++
+    {
         const std::wstring id = L"sw.1";
 
         winreg::RegKey ext(HKEY_CLASSES_ROOT, L".sw");
@@ -207,9 +208,10 @@ SUBCOMMAND_DECL(setup)
         winreg::RegKey icon(HKEY_CLASSES_ROOT, id + L"\\DefaultIcon");
         icon.SetStringValue(L"", prog);
 
+        // we run these files & pause on error, so user could check what went wrong
         winreg::RegKey p(HKEY_CLASSES_ROOT, id + L"\\shell\\open\\command");
-        p.SetStringValue(L"", prog + L" build %1");
-    }*/
+        p.SetStringValue(L"", prog + L" -pause-on-error run %1 %*");
+    }
 
 #elif defined(__linux__)
     // https://specifications.freedesktop.org/desktop-entry-spec/desktop-entry-spec-latest.html
