@@ -96,12 +96,41 @@ static void cleanup(CleanMask level_mask, const sw::SwContext &swctx)
     if (level_mask & CLEAN_SYSTEM_SETTINGS)
     {
 #ifdef _WIN32
+        auto prog = boost::dll::program_location().wstring();
+        // i_am_not_ignoring_return_value
+        winreg::RegResult r;
+
         // protocol handler
         winreg::RegKey url(HKEY_CLASSES_ROOT);
-        url.TryDeleteTree(get_sw_registry_key());
+        r = url.TryDeleteTree(get_sw_registry_key());
+
         // cmake
         winreg::RegKey icon(HKEY_CURRENT_USER);
-        icon.TryDeleteTree(get_sw_cmake_registry_key()); // remove all empty cmake keys and trees?
+        r = icon.TryDeleteTree(get_sw_cmake_registry_key()); // remove all empty cmake keys and trees?
+
+        // delete .sw
+        winreg::RegKey _id(HKEY_CLASSES_ROOT);
+        r = _id.TryDeleteTree(L"."s + get_sw_registry_key());
+
+        // delete sw.1
+        winreg::RegKey id1(HKEY_CLASSES_ROOT);
+        r = id1.TryDeleteTree(get_sw_registry_key() + L".1"s);
+
+        // delete SystemFileAssociations/.sw
+        winreg::RegKey k(HKEY_CLASSES_ROOT, L"SystemFileAssociations");
+        r = k.TryDeleteTree(L"."s + get_sw_registry_key());
+
+        // delete from Path
+        {
+            winreg::RegKey url(HKEY_LOCAL_MACHINE, L"SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment");
+            auto v = url.GetExpandStringValue(L"Path");
+            boost::replace_all(v, prog, L"");
+            boost::replace_all(v, L";;", L";");
+            if (v.ends_with(';')) {
+                v.resize(v.size() - 1);
+            }
+            url.SetExpandStringValue(L"Path", v);
+        }
 
         // cygwin case
         if (auto d = getenv("HOME"))
@@ -161,6 +190,8 @@ static void cleanup(SwClientContext &swctx)
 
 SUBCOMMAND_DECL(setup)
 {
+    // TODO: generate .com file for single-sw-file-gui?
+
 #ifdef _WIN32
     // also register for current user
     if (!is_elevated())
@@ -200,17 +231,89 @@ SUBCOMMAND_DECL(setup)
     // insecure? ok?
     // to add .sw ext in VS - Tools | Options | Text Editor | File Extension | Microsoft Visual C++
     {
-        const std::wstring id = L"sw.1";
+        auto id = get_sw_registry_key();
+        auto id1 = id + L".1";
+        auto _id = L"." + id;
+        auto base_command = prog + L" -pause-on-error";
+        auto end = L" %1 %*"s;
+        auto make_command = [&](auto && ... args) {
+            auto c = base_command;
+            ((c += L" "s + args),...);
+            c += end;
+            return c;
+        };
+        auto run_command = [&](auto && ... args) {
+            auto c = base_command;
+            ((c += L" "s + args),...);
+            c += L" run";
+            c += end;
+            return c;
+        };
 
-        winreg::RegKey ext(HKEY_CLASSES_ROOT, L".sw");
-        ext.SetStringValue(L"", id);
+        winreg::RegKey ext(HKEY_CLASSES_ROOT, L"."s + id);
+        ext.SetStringValue(L"", id1);
 
-        winreg::RegKey icon(HKEY_CLASSES_ROOT, id + L"\\DefaultIcon");
+        winreg::RegKey icon(HKEY_CLASSES_ROOT, id1 + L"\\DefaultIcon");
         icon.SetStringValue(L"", prog);
 
         // we run these files & pause on error, so user could check what went wrong
-        winreg::RegKey p(HKEY_CLASSES_ROOT, id + L"\\shell\\open\\command");
-        p.SetStringValue(L"", prog + L" -pause-on-error run %1 %*");
+        winreg::RegKey p(HKEY_CLASSES_ROOT, id1 + L"\\shell\\open\\command");
+        p.SetStringValue(L"", run_command(L"-shell"));
+
+        path shell_key = L"SystemFileAssociations";
+        shell_key /= _id;
+
+        {
+            winreg::RegKey k(HKEY_CLASSES_ROOT);
+            auto r = k.TryDeleteTree(shell_key);
+        }
+
+        // create context menu on .sw files
+        auto add_submenu = [](const path &parent, auto &&name, auto &&text) {
+            auto key = parent / "shell" / name;
+            winreg::RegKey p(HKEY_CLASSES_ROOT, key.wstring());
+            p.SetStringValue(L"MUIVerb", text);
+            p.SetStringValue(L"subcommands", L"");
+            return key;
+        };
+        auto add_item = [](const path &parent, auto &&name, auto &&text, auto &&cmd) {
+            auto key = parent / "shell" / name;
+            winreg::RegKey p(HKEY_CLASSES_ROOT, key.wstring());
+            p.SetStringValue(L"MUIVerb", text);
+            winreg::RegKey p2(HKEY_CLASSES_ROOT, (key / "command").wstring());
+            p2.SetStringValue(L"", cmd);
+            return key;
+        };
+        {
+            auto sw = add_submenu(shell_key, id, id);
+            auto f = [&](auto &&parent, std::wstring cmd) {
+                auto f2 = [&](auto &&parent, std::wstring cmd) {
+                    add_item(parent, L"1_debug", L"Debug", make_command(cmd + L" -config d"));
+                    add_item(parent, L"2_rwdi", L"RelWithDebInfo", make_command(cmd + L" -config rwdi"));
+                    add_item(parent, L"3_r", L"Release", make_command(cmd + L" -config r"));
+                };
+                auto shared = add_submenu(parent, L"shared", L"Shared");
+                f2(shared, cmd + L" -shared");
+                auto static_ = add_submenu(parent, L"static", L"Static");
+                f2(static_, cmd + L" -static");
+            };
+            auto generate = add_submenu(sw, L"generate", L"Generate");
+            f(generate, L"generate");
+            auto run = add_submenu(sw, L"run", L"Run");
+            f(run, L" -shell run"); // we use shell arg here to change working dir to storage dir
+        }
+    }
+
+    if (getOptions().options_setup.add_to_path)
+    {
+        winreg::RegKey url(HKEY_LOCAL_MACHINE, L"SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment");
+        auto v = url.GetExpandStringValue(L"Path");
+        auto p = path{prog}.parent_path().wstring();
+        if (!v.ends_with(';')) {
+            v += L";";
+        }
+        v += p;
+        url.SetExpandStringValue(L"Path", v);
     }
 
 #elif defined(__linux__)

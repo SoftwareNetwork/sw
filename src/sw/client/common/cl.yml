@@ -829,6 +829,9 @@ command_line:
         desc: Used to do some system setup which may require administrator access.
 
         command_line:
+            path:
+                varname: add_to_path
+                desc: Add to PATH
             uninstall:
                 desc: Cleanup SW from the system. Removes storage and system integration settings.
             level:
