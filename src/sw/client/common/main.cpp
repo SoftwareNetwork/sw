@@ -273,12 +273,12 @@ void StartupData::setWorkingDir()
     if (getOptions().shell)
     {
         getOptions().working_directory = getStorageDir(getOptions()) / "tmp" / "shell";
+        if (getOptions().options_run.wdir.empty())
+            getOptions().options_run.wdir = fs::current_path();
         fs::create_directories(getOptions().working_directory);
     }
-
     if (getOptions().working_directory.empty())
         return;
-
     getOptions().working_directory = primitives::filesystem::canonical(getOptions().working_directory);
     if (fs::is_regular_file(getOptions().working_directory))
         fs::current_path(getOptions().working_directory.parent_path());
