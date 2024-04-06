@@ -12,6 +12,7 @@
 #ifdef _WIN32
 #include <primitives/win32helpers.h>
 #include <WinReg.hpp>
+#include <ShObjIdl.h>
 #endif
 
 #include <primitives/log.h>
@@ -256,7 +257,7 @@ SUBCOMMAND_DECL(setup)
         winreg::RegKey icon(HKEY_CLASSES_ROOT, id1 + L"\\DefaultIcon");
         icon.SetStringValue(L"", prog);
 
-        // we run these files & pause on error, so user could check what went wrong
+        // we run these files & pause on exit, so user could check what went wrong
         winreg::RegKey p(HKEY_CLASSES_ROOT, id1 + L"\\shell\\open\\command");
         p.SetStringValue(L"", run_command(L"-shell"));
 
@@ -276,25 +277,45 @@ SUBCOMMAND_DECL(setup)
             p.SetStringValue(L"subcommands", L"");
             return key;
         };
-        auto add_item = [](const path &parent, auto &&name, auto &&text, auto &&cmd) {
+        auto add_item = [](const path &parent, auto &&name, auto &&text, auto &&cmd, int flags = 0) {
             auto key = parent / "shell" / name;
             winreg::RegKey p(HKEY_CLASSES_ROOT, key.wstring());
             p.SetStringValue(L"MUIVerb", text);
+            if (flags) {
+                winreg::RegKey p(HKEY_CLASSES_ROOT, key.wstring());
+                p.SetDwordValue(L"CommandFlags", flags);
+            }
             winreg::RegKey p2(HKEY_CLASSES_ROOT, (key / "command").wstring());
             p2.SetStringValue(L"", cmd);
             return key;
         };
         {
             auto sw = add_submenu(shell_key, id, id);
+            // add icon
+            {
+                winreg::RegKey k(HKEY_CLASSES_ROOT, sw);
+                k.SetStringValue(L"icon", prog);
+            }
+
             auto f = [&](auto &&parent, std::wstring cmd) {
                 auto f2 = [&](auto &&parent, std::wstring cmd) {
-                    add_item(parent, L"1_debug", L"Debug", make_command(cmd + L" -config d"));
-                    add_item(parent, L"2_rwdi", L"RelWithDebInfo", make_command(cmd + L" -config rwdi"));
-                    add_item(parent, L"3_r", L"Release", make_command(cmd + L" -config r"));
+                    add_item(parent, L"1_debug", L"Debug", make_command(cmd + L" -config d -config-name d"));
+                    // currently we are out of limit on the shell items,
+                    // so we need to remove some of them or create shell extension
+                    //add_item(parent, L"2_rwdi", L"RelWithDebInfo", make_command(cmd + L" -config rwdi -config-name rwdi"));
+                    add_item(parent, L"3_r", L"Release", make_command(cmd + L" -config r -config-name r"));
                 };
                 auto shared = add_submenu(parent, L"shared", L"Shared");
+                //auto default_str = L"Debug,RelWithDebInfo,Release";
+                auto default_str = L"Default";
+                if (cmd == L"generate") {
+                    add_item(shared, L"0_d_rwdi_r", default_str, make_command(cmd + L" -config d,rwdi,r -config-name d,rwdi,r"), ECF_SEPARATORAFTER);
+                }
                 f2(shared, cmd + L" -shared");
                 auto static_ = add_submenu(parent, L"static", L"Static");
+                if (cmd == L"generate") {
+                    add_item(static_, L"0_d_rwdi_r", default_str, make_command(cmd + L" -static -config d,rwdi,r -config-name static_d,static_rwdi,static_r"), ECF_SEPARATORAFTER);
+                }
                 f2(static_, cmd + L" -static");
             };
             auto generate = add_submenu(sw, L"generate", L"Generate");
