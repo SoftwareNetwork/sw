@@ -234,7 +234,7 @@ SUBCOMMAND_DECL(setup)
         auto id = get_sw_registry_key();
         auto id1 = id + L".1";
         auto _id = L"." + id;
-        auto base_command = prog + L" -pause-on-error";
+        auto base_command = prog + L" -pause-on-exit";
         auto end = L" %1 %*"s;
         auto make_command = [&](auto && ... args) {
             auto c = base_command;
