@@ -186,6 +186,9 @@ Target::Target(TargetBase &parent, const PackageId &pkg)
 
     if (auto t0 = dynamic_cast<const Target*>(&parent))
         source = t0->source ? t0->source->clone() : nullptr;
+    // set as default source to prevent missing source errors
+    if (!source)
+        source = std::make_unique<EmptySource>();
 
     // sdir
     if (!isLocal())
