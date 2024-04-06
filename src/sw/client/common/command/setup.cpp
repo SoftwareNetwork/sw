@@ -259,7 +259,7 @@ SUBCOMMAND_DECL(setup)
 
         // we run these files & pause on exit, so user could check what went wrong
         winreg::RegKey p(HKEY_CLASSES_ROOT, id1 + L"\\shell\\open\\command");
-        p.SetStringValue(L"", run_command(L"-shell"));
+        p.SetStringValue(L"", run_command(L"-shell -config r -config-name r"));
 
         path shell_key = L"SystemFileAssociations";
         shell_key /= _id;
