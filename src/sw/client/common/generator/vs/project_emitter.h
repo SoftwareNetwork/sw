@@ -43,6 +43,12 @@ protected:
     void endBlock1(bool text = false);
 };
 
+struct UserSettingsEmitter : XmlEmitter
+{
+    void beginProject();
+    void endProject();
+};
+
 struct FiltersEmitter : XmlEmitter
 {
     void beginProject();

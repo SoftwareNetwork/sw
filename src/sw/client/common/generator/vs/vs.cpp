@@ -1015,6 +1015,7 @@ void Project::emit(const VSGenerator &g) const
 {
     emitProject(g);
     emitFilters(g);
+    emitUserSettings(g);
 }
 
 void Project::emitProject(const VSGenerator &g) const
@@ -1670,6 +1671,31 @@ void Project::emitFilters(const VSGenerator &g) const
 
     ctx.endProject();
     write_file(g.sln_root / vs_project_dir / (name + vs_project_ext + ".filters"), ctx.getText());
+}
+
+void Project::emitUserSettings(const VSGenerator &g) const
+{
+    auto outfn = g.sln_root / vs_project_dir / (name + vs_project_ext + ".user");
+    // we do not touch user settings
+    if (fs::exists(outfn))
+        return;
+
+    UserSettingsEmitter ctx;
+    ctx.beginProject();
+
+    for (auto &s : settings)
+    {
+        auto &d = getData(s);
+        ctx.beginBlockWithConfiguration("PropertyGroup", s);
+        {
+            ctx.addBlock("DebuggerFlavor", "WindowsLocalDebugger");
+            ctx.addBlock("LocalDebuggerWorkingDirectory", fs::current_path().string());
+        }
+        ctx.endBlock();
+    }
+
+    ctx.endProject();
+    write_file(outfn, ctx.getText());
 }
 
 String Project::get_flag_table(const primitives::Command &c, bool throw_on_error)

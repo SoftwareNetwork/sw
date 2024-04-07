@@ -223,6 +223,17 @@ void XmlEmitter::endBlock1(bool text)
     blocks.pop();
 }
 
+void UserSettingsEmitter::beginProject()
+{
+    beginBlock("Project", {{"ToolsVersion", "Current"},
+        {"xmlns", "http://schemas.microsoft.com/developer/msbuild/2003"}});
+}
+
+void UserSettingsEmitter::endProject()
+{
+    endBlock();
+}
+
 void FiltersEmitter::beginProject()
 {
     beginBlock("Project", {{"ToolsVersion", "4.0"},

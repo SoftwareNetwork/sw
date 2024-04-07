@@ -174,6 +174,7 @@ private:
 
     void emitProject(const VSGenerator &) const;
     void emitFilters(const VSGenerator &) const;
+    void emitUserSettings(const VSGenerator &) const;
     std::map<String, String> printProperties(const sw::builder::Command &, const Properties &exclude_props) const;
 
     static String get_flag_table(const primitives::Command &, bool throw_on_error = true);
