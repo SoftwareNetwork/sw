@@ -580,9 +580,6 @@ static void detectMsvc(DETECT_ARGS)
 static bool hasConsoleColorProcessing()
 {
 #ifdef _WIN32
-    // different result of this function causes issues when we invoke sw from sw or scripts
-    // so we set it always on our own risk
-    return true;
     bool r = false;
     DWORD mode;
     // Try enabling ANSI escape sequence support on Windows 10 terminals.
@@ -638,10 +635,10 @@ static void detectWindowsClang(DETECT_ARGS)
                 // we use --nostdinc, so -X is not needed
                 if (colored_output)
                 {
-                    c2->push_back("-Xclang");
-                    c2->push_back("-fcolor-diagnostics");
-                    c2->push_back("-Xclang");
-                    c2->push_back("-fansi-escape-codes");
+                    c2->push_back("-Xclang").affects_output = false;
+                    c2->push_back("-fcolor-diagnostics").affects_output = false;
+                    c2->push_back("-Xclang").affects_output = false;
+                    c2->push_back("-fansi-escape-codes").affects_output = false;
                 }
 
                 // returns path to /bin dir
@@ -733,8 +730,8 @@ static void detectWindowsClang(DETECT_ARGS)
             if (colored_output)
             {
                 auto c2 = p->getCommand();
-                c2->push_back("-fcolor-diagnostics");
-                c2->push_back("-fansi-escape-codes");
+                c2->push_back("-fcolor-diagnostics").affects_output = false;
+                c2->push_back("-fansi-escape-codes").affects_output = false;
             }
             //c->push_back("-Wno-everything");
             // is it able to find VC STL itself?
@@ -760,8 +757,8 @@ static void detectWindowsClang(DETECT_ARGS)
             if (colored_output)
             {
                 auto c2 = p->getCommand();
-                c2->push_back("-fcolor-diagnostics");
-                c2->push_back("-fansi-escape-codes");
+                c2->push_back("-fcolor-diagnostics").affects_output = false;
+                c2->push_back("-fansi-escape-codes").affects_output = false;
             }
             //c->push_back("-Wno-everything");
             // is it able to find VC STL itself?
@@ -918,11 +915,11 @@ static void detectNonWindowsCompilers(DETECT_ARGS)
         {
             auto c2 = p->getCommand();
             if (color_diag == 1)
-                c2->push_back("-fdiagnostics-color=always");
+                c2->push_back("-fdiagnostics-color=always").affects_output = false;
             else if (color_diag == 2)
             {
-                c2->push_back("-fcolor-diagnostics");
-                c2->push_back("-fansi-escape-codes");
+                c2->push_back("-fcolor-diagnostics").affects_output = false;
+                c2->push_back("-fansi-escape-codes").affects_output = false;
             }
         }
         return true;
