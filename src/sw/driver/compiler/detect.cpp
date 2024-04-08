@@ -580,6 +580,9 @@ static void detectMsvc(DETECT_ARGS)
 static bool hasConsoleColorProcessing()
 {
 #ifdef _WIN32
+    // different result of this function causes issues when we invoke sw from sw or scripts
+    // so we set it always on our own risk
+    return true;
     bool r = false;
     DWORD mode;
     // Try enabling ANSI escape sequence support on Windows 10 terminals.
