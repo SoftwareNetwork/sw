@@ -1547,7 +1547,7 @@ Commands NativeCompiledTarget::getCommands1() const
 
         auto prepare_command = [this, &cmds, &sd, &bd, &bdp](auto f, auto c)
         {
-            c->arguments.push_back(f->args);
+            c->push_back(f->args);
 
             // set fancy name
             if (!IsSwConfig && !(getMainBuild().getSettings()["do_not_mangle_object_names"] == "true"))
