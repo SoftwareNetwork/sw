@@ -759,7 +759,7 @@ std::vector<sw::TargetSettings> SwClientContext::createSettings()
         for (const auto &[i,s] : enumerate(settings))
         {
             if (s["name"])
-                LOG_WARN(logger, "Some config already has its name. Overriding");
+                LOG_WARN(logger, "One of the configs already has its name, overriding");
             s["name"] = options.config_name[i];
             s["name"].serializable(false);
             s["name"].useInHash(false);
