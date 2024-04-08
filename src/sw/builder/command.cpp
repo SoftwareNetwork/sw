@@ -401,8 +401,12 @@ size_t Command::getHash1() const
     // FIXME: ^
     std::set<String> args_sorted;
     Strings sa;
-    for (auto &a : arguments)
+    for (auto &a : arguments) {
+        if (auto arg = dynamic_cast<primitives::command::SimpleArgument*>(a.get()); !arg->affects_output) {
+            continue;
+        }
         args_sorted.insert(a->toString());
+    }
     for (auto &a : args_sorted)
         hash_combine(h, std::hash<String>()(a));
     //for (auto &a : arguments)
