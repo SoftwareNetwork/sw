@@ -105,7 +105,8 @@ void RemoteStorage::download() const
     };
 
     const String git = "git";
-    if (!primitives::resolve_executable(git).empty() && !r.db.git_repo_url.empty())
+    // we dont use git now, since git repo is very large
+    if (0 && !primitives::resolve_executable(git).empty() && !r.db.git_repo_url.empty())
     {
         auto git_init = [this, &git]()
         {
