@@ -408,7 +408,7 @@ void build(Solution &s)
                 L->Subsystem = vs::Subsystem::Windows;
             t += "org.sw.demo.qtproject.qt.base.winmain" QT_VERSION ""_dep;
             t += "org.sw.demo.qtproject.qt.base.plugins.platforms.windows" QT_VERSION ""_dep;
-            t += "org.sw.demo.qtproject.qt.base.plugins.styles.windowsvista" QT_VERSION ""_dep;
+            t += "org.sw.demo.qtproject.qt.base.plugins.styles.modernwindows" QT_VERSION ""_dep;
         }
         if (t.getBuildSettings().TargetOS.Type == OSType::Linux) {
             t += "org.sw.demo.qtproject.qt.base.plugins.platforms.xcb" QT_VERSION ""_dep;
