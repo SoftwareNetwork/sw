@@ -243,6 +243,10 @@ static void applySettings(sw::TargetSettings &s, const String &in_settings)
 static std::vector<sw::TargetSettings> applySettingsFromCppFile(SwClientContext &swctx, const Options &options, const path &fn)
 {
     auto b = swctx.createBuild();
+    // remove targets to build
+    auto bs = b->getSettings();
+    bs.erase("target-to-build");
+    b->setSettings(bs);
     auto inputs = b->addInput(fn);
     SW_CHECK(inputs.size() == 1);
     sw::InputWithSettings i(inputs[0]);
