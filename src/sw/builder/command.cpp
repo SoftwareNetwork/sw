@@ -402,7 +402,7 @@ size_t Command::getHash1() const
     std::set<String> args_sorted;
     Strings sa;
     for (auto &a : arguments) {
-        if (auto arg = dynamic_cast<primitives::command::SimpleArgument*>(a.get()); !arg->affects_output) {
+        if (auto arg = dynamic_cast<primitives::command::SimpleArgument*>(a.get()); arg && !arg->affects_output) {
             continue;
         }
         args_sorted.insert(a->toString());
