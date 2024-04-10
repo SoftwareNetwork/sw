@@ -530,6 +530,7 @@ void CheckSet::performChecks(const SwBuild &mb, const TargetSettings &ts)
                     c.working_directory = cc_dir;
                     c.push_back(mb.getSettings()["cc_checks_command"].getValue().c_str());
                     std::error_code ec;
+                    c.in.inherit = true;
                     c.out.inherit = true;
                     c.err.inherit = true;
                     c.execute(ec);
