@@ -59,6 +59,7 @@ static OS fromTargetSettings(const TargetSettings &ts)
         IF_SETTING("x86", os.Arch, ArchType::x86);
         IF_SETTING("x86_64", os.Arch, ArchType::x86_64);
         IF_SETTING("arm", os.Arch, ArchType::arm);
+        IF_SETTING("arm64", os.Arch, ArchType::aarch64);
         IF_SETTING("aarch64", os.Arch, ArchType::aarch64);
         IF_SETTING("wasm64", os.Arch, ArchType::wasm64);
         else
