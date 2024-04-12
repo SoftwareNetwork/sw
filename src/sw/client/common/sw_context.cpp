@@ -436,6 +436,7 @@ std::unique_ptr<sw::SwBuild> SwClientContext::createBuildInternal()
     SET_BOOL_OPTION(checks_single_thread);
     SET_BOOL_OPTION(print_checks);
     SET_BOOL_OPTION(wait_for_cc_checks);
+    SET_BOOL_OPTION(cc_checks_sh_shell);
     bs["cc_checks_command"] = options.cc_checks_command;
 
 #undef SET_BOOL_OPTION

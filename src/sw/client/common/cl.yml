@@ -112,6 +112,8 @@ command_line:
                 description: Save extended checks info to file
             wait_for_cc_checks:
                 description: Do not exit on missing cc checks, wait for user input
+            cc_checks_sh_shell:
+                description: Use .sh script for cc checks
             cc_checks_command:
                 type: String
                 description: Automatically execute cc checks command

@@ -440,23 +440,41 @@ void CheckSet::performChecks(const SwBuild &mb, const TargetSettings &ts)
             // save executables
             auto os = BuildSettings(ts).TargetOS;
             auto mfn = to_string((path(fn) += MANUAL_CHECKS).filename().u8string());
+            std::string quote = "\"";
 
             auto bat = os.getShellType() == ShellType::Batch;
+            if (mb.getSettings()["cc_checks_sh_shell"] == "true") {
+                bat = false;
+            }
 
             primitives::Emitter ctx;
             if (!bat)
             {
                 ctx.addLine("#!/bin/sh");
                 ctx.addLine();
+                ctx.addLine("OUTF=\"" + mfn + "\"");
+                ctx.addLine("OUT=\""s + (mb.getSettings()["wait_for_cc_checks"] == "true" ? "../" : "") + "$OUTF\"");
+                mfn = "$OUT";
             }
-
-            ctx.addLine("OUTF=\"" + mfn + "\"");
-            ctx.addLine("OUT=\""s + (mb.getSettings()["wait_for_cc_checks"] == "true" ? "../" : "") + "$OUTF\"");
+            else
+            {
+                ctx.addLine("set OUTF=" + mfn + "");
+                ctx.addLine("set OUT="s + (mb.getSettings()["wait_for_cc_checks"] == "true" ? "..\\" : "") + "%OUTF%");
+                mfn = "%OUT%";
+                quote = "";
+            }
             ctx.addLine();
 
-            mfn = "$OUT";
-            ctx.addLine("echo \"\" > " + mfn);
-            ctx.addLine();
+            if (!bat)
+            {
+                ctx.addLine("echo \"\" > " + mfn);
+                ctx.addLine();
+            }
+            else
+            {
+                ctx.addLine("echo.> " + mfn);
+                ctx.addLine();
+            }
 
             for (auto &[h, c] : cs.manual_checks)
             {
@@ -469,15 +487,25 @@ void CheckSet::performChecks(const SwBuild &mb, const TargetSettings &ts)
                 //if (!bat)
                 //s += "-n ";
 
-                auto fn = std::to_string(c->getHash());
+                auto fn = std::to_string(c->getHash()) + BuildSettings(ts).TargetOS.getExecutableExtension();
 
-                ctx.increaseIndent("if [ ! -f " + fn + " ]; then");
-                ctx.addLine("echo missing file: " + fn);
-                ctx.addLine("exit 1");
-                ctx.decreaseIndent("fi");
+                if (!bat)
+                {
+                    ctx.increaseIndent("if [ ! -f " + fn + " ]; then");
+                    ctx.addLine("echo missing file: " + fn);
+                    ctx.addLine("exit 1");
+                    ctx.decreaseIndent("fi");
+                }
+                else
+                {
+                    ctx.increaseIndent("if not exist " + fn + " (");
+                    ctx.addLine("echo missing file: " + fn);
+                    ctx.addLine("exit /b 1");
+                    ctx.decreaseIndent(")");
+                }
 
-                ctx.addLine("echo \"Checking: " + defs + "... \"");
-                ctx.addLine("echo \"# " + defs + "\" >> " + mfn);
+                ctx.addLine("echo Checking: " + defs + "...");
+                ctx.addLine("echo " + quote + "# " + defs + "" + quote + " >> " + mfn);
 
                 if (!bat)
                 {
@@ -486,8 +514,12 @@ void CheckSet::performChecks(const SwBuild &mb, const TargetSettings &ts)
                     if (c->manual_setup_use_stdout)
                         ctx.addText("V=`");
                     ctx.addText("./");
+                    ctx.addText(fn);
                 }
-                ctx.addText(fn + BuildSettings(ts).TargetOS.getExecutableExtension());
+                else
+                {
+                    ctx.addLine(fn);
+                }
                 if (!bat)
                 {
                     if (c->manual_setup_use_stdout)
@@ -510,16 +542,27 @@ void CheckSet::performChecks(const SwBuild &mb, const TargetSettings &ts)
                     ctx.addText("%errorlevel% ");
                 ctx.addText(">> " + mfn);
                 if (!bat)
-                    ctx.addLine("echo \"ok (result = $V)\"");
-                ctx.addLine("echo \"\" >> " + mfn);
-                if (!bat)
                 {
+                    ctx.addLine("echo \"ok (result = $V)\"");
+                    ctx.addLine("echo \"\" >> " + mfn);
                     ctx.decreaseIndent();
                     ctx.addLine("fi");
                 }
+                else
+                {
+                    ctx.addLine("echo.>> " + mfn);
+                }
                 ctx.addLine();
             }
-            path out = (cc_dir / "run") += os.getShellExtension();
+            path out;
+            if (!bat)
+            {
+                out = (cc_dir / "run") += ".sh";
+            }
+            else
+            {
+                out = (cc_dir / "run") += os.getShellExtension();
+            }
             write_file(out, ctx.getText());
 
             if (mb.getSettings()["wait_for_cc_checks"] == "true")
