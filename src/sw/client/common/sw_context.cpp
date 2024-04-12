@@ -659,7 +659,14 @@ std::vector<sw::TargetSettings> SwClientContext::createSettings()
         }
     }
 
+    auto sort_and_unique = [](auto &v) {
+        std::ranges::sort(v);
+        auto last = std::unique(v.begin(), v.end());
+        v.erase(last, v.end());
+    };
+
     // platform
+    sort_and_unique(options.platform);
     mult_and_action(options.platform.size(), [&options](auto &s, int i)
     {
         s["os"]["arch"] = archTypeFromStringCaseI(options.platform[i]);
