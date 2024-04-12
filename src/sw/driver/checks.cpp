@@ -524,6 +524,11 @@ void CheckSet::performChecks(const SwBuild &mb, const TargetSettings &ts)
 
             if (mb.getSettings()["wait_for_cc_checks"] == "true")
             {
+                SCOPE_EXIT
+                {
+                    std::error_code ec;
+                    fs::remove_all(cc_dir, ec);
+                };
                 if (!mb.getSettings()["cc_checks_command"].getValue().empty())
                 {
                     primitives::Command c;
