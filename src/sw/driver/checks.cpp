@@ -531,7 +531,14 @@ void CheckSet::performChecks(const SwBuild &mb, const TargetSettings &ts)
                 };
                 if (!mb.getSettings()["cc_checks_command"].getValue().empty())
                 {
-                    primitives::Command c;
+                    // system is more flexible atm
+                    ScopedCurrentPath scp(cc_dir);
+                    int r = system(mb.getSettings()["cc_checks_command"].getValue().c_str());
+                    if (r)
+                        throw SW_RUNTIME_ERROR("cc_checks_command exited abnormally: " + std::to_string(r));
+
+                    // split string by ',' ?
+                    /*primitives::Command c;
                     c.working_directory = cc_dir;
                     c.push_back(mb.getSettings()["cc_checks_command"].getValue().c_str());
                     std::error_code ec;
@@ -540,7 +547,7 @@ void CheckSet::performChecks(const SwBuild &mb, const TargetSettings &ts)
                     c.err.inherit = true;
                     c.execute(ec);
                     if (ec)
-                        throw SW_RUNTIME_ERROR("cc_checks_command exited abnormally: " + std::to_string(ec.value()));
+                        throw SW_RUNTIME_ERROR("cc_checks_command exited abnormally: " + std::to_string(ec.value()));*/
                 }
                 else
                 {
