@@ -757,9 +757,13 @@ TargetSettings Check::getSettings() const
     auto ss = check_set->t->getSettings();
 
     // some checks may fail in msvc release (functions become intrinsics (mem*) etc.)
-    if (check_set->t->getCompilerType() == CompilerType::MSVC ||
+    if ((check_set->t->getCompilerType() == CompilerType::MSVC ||
         check_set->t->getCompilerType() == CompilerType::ClangCl)
+        &&
+        check_set->t->getContext().getHostOs().canRunTargetExecutables(check_set->t->getBuildSettings().TargetOS)
+        ) {
         ss["native"]["configuration"] = "debug";
+    }
 
     // set output dir for check binaries
     auto d = getChecksDir(check_set->checker.swbld.getBuildDirectory());
