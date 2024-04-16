@@ -349,6 +349,8 @@ command_line:
                 desc: List available programs on the system
             list_predefined_targets:
                 desc: List predefined targets
+            list_targets:
+                desc: List targets
 
             self_upgrade:
                 desc: Upgrade client

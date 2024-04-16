@@ -118,6 +118,17 @@ SUBCOMMAND_DECL(build)
         return;
     }
 
+    if (getOptions().list_targets)
+    {
+        auto b = createBuildWithDefaultInputs();
+        b->loadInputs();
+        b->setTargetsToBuild(); // or take normal tgts without this step?
+        for (auto &&[tgt,_] : b->getTargetsToBuild()) {
+            LOG_INFO(logger, tgt.toString());
+        }
+        return;
+    }
+
     // defaults or only one of build_arg and -S specified
     //  -S == build_arg
     //  -B == fs::current_path()
