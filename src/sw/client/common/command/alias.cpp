@@ -56,7 +56,7 @@ SUBCOMMAND_DECL(alias)
             throw SW_RUNTIME_ERROR("No such alias");
         String s;
         for (auto &a : j[name])
-            s += a.get<String>() + " ";
+            s += "\"" + a.get<String>() + "\" ";
         LOG_INFO(logger, s);
         return;
     }
