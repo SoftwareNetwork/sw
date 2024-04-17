@@ -708,7 +708,7 @@ void VSGenerator::generate(const SwBuild &b)
 
             //
             r.command += get_current_program() + " ";
-            r.command += "generate -check-stamp-list \"" + to_string(normalize_path(fn)) + "\" ";
+            r.command += "generate -sfc -check-stamp-list \"" + to_string(normalize_path(fn)) + "\" ";
             r.command += "-input-settings-pairs ";
             for (auto &i : inputs)
             {
