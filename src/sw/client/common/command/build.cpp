@@ -124,7 +124,8 @@ SUBCOMMAND_DECL(build)
         b->loadInputs();
         b->setTargetsToBuild(); // or take normal tgts without this step?
         for (auto &&[tgt,_] : b->getTargetsToBuild()) {
-            LOG_INFO(logger, tgt.toString());
+            // logger outputs into stderr, but we want stdout here
+            std::cout << tgt.toString() << "\n";
         }
         return;
     }
