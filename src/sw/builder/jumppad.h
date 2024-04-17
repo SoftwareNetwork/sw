@@ -39,17 +39,6 @@
 // M(visible name, function name in code, ...)
 // M2(function name in code, ...) // visible name will be the same as function name
 // M3(function name in code, ...) // macro to use in different calls that accept builtin functions
-#ifdef _MSC_VER
-#define SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD(n, f, ...)                                 \
-    extern "C" SW_JUMPPAD_API int CONCATENATE(SW_JUMPPAD_PREFIX, n)(const Strings &s) \
-    {                                                                                 \
-        ::sw::VisibleFunctionJumppad j(&f, #n, __VA_ARGS__);                          \
-        return j.call(s);                                                             \
-    }
-#define SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD2(n, ...) SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD(n, n, __VA_ARGS__)
-#define SW_VISIBLE_BUILTIN_FUNCTION(f, ...) "sw_" #f, nullptr, __VA_ARGS__
-#define SW_VISIBLE_FUNCTION(f, ...) #f, (void*)&f, __VA_ARGS__
-#else
 #define SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD(n, f, ...)                                 \
     extern "C" SW_JUMPPAD_API int CONCATENATE(SW_JUMPPAD_PREFIX, n)(const Strings &s) \
     {                                                                                 \
@@ -59,7 +48,6 @@
 #define SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD2(n, ...) SW_DEFINE_VISIBLE_FUNCTION_JUMPPAD(n, n, ##__VA_ARGS__)
 #define SW_VISIBLE_BUILTIN_FUNCTION(f, ...) "sw_" #f, nullptr, ##__VA_ARGS__
 #define SW_VISIBLE_FUNCTION(f, ...) #f, (void*)&f, ##__VA_ARGS__
-#endif
 
 namespace sw
 {
