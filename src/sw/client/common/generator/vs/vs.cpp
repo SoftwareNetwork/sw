@@ -422,8 +422,17 @@ void VSGenerator::generate(const SwBuild &b)
         p.directory = &s.directories.find(predefined_targets_dir)->second;
         for (auto &i : inputs)
         {
-            for (auto &[_, f] : i.getInput().getInput().getSpecification().files.getData())
-                p.files.insert({make_backslashes(f.absolute_path), SourceFilesFilter});
+            for (auto &[_, f] : i.getInput().getInput().getSpecification().files.getData()) {
+                path filter = SourceFilesFilter;
+                auto dir = fs::relative(f.absolute_path).parent_path();
+                if (!dir.empty()) {
+                    filter /= dir;
+                }
+                p.files.insert({make_backslashes(f.absolute_path), filter.lexically_normal()});
+            }
+        }
+        if (!p.files.empty()) {
+            p.filters.insert(SourceFilesFilter);
         }
         p.settings = s.settings;
         if (vstype != VsGeneratorType::VisualStudio)
