@@ -24,11 +24,7 @@
 extern bool bUseSystemPause;
 
 #define F_ARGS SwClientContext &swctx, sw::LocalStorage &sdb, const sw::LocalPackage &p
-#ifdef _MSC_VER
-#define F(n, ...) static void n(F_ARGS, __VA_ARGS__)
-#else
 #define F(n, ...) static void n(F_ARGS, ##__VA_ARGS__)
-#endif
 
 static void setup_console()
 {
@@ -176,16 +172,6 @@ static void dispatcher(SwClientContext &swctx)
     auto &sdb = swctx.getContext().getLocalStorage();
     sw::LocalPackage p(sdb, id);
 
-#ifdef _MSC_VER
-#define URI_CMD2(x, f, ...)                                     \
-    if (swctx.getOptions().options_uri.uri_args[0] == "sw:" #x) \
-    {                                                           \
-        f(swctx, sdb, p, __VA_ARGS__);                          \
-        return;                                                 \
-    }
-#define URI_CMD(x, ...) \
-    URI_CMD2(x, x, __VA_ARGS__)
-#else
 #define URI_CMD2(x, f, ...)                                     \
     if (swctx.getOptions().options_uri.uri_args[0] == "sw:" #x) \
     {                                                           \
@@ -194,7 +180,6 @@ static void dispatcher(SwClientContext &swctx)
     }
 #define URI_CMD(x, ...) \
     URI_CMD2(x, x, ##__VA_ARGS__)
-#endif
 
     URI_CMD2(sdir, open_dir, p.getDirSrc2());
     URI_CMD2(bdir, open_dir, p.getDirObj());
