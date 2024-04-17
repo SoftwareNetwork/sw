@@ -446,9 +446,11 @@ SUBCOMMAND_DECL(integrate)
                         sw::PackageId dep(k);
                         if (b.getContext().getPredefinedTargets().find(dep) != b.getContext().getPredefinedTargets().end())
                             continue;
-                        if (v["include_directories_only"] == "true")
-                            continue;
-                        ctx.addLine("target_link_libraries(" + pkg2string(pkg) + " INTERFACE " + dep.toString() + ")");
+                        if (v["include_directories_only"] == "true") {
+                            ctx.addLine("target_include_directories(" + pkg2string(pkg) + " INTERFACE $<TARGET_PROPERTY:" + dep.toString() + ",INTERFACE_INCLUDE_DIRECTORIES>)");
+                        } else {
+                            ctx.addLine("target_link_libraries(" + pkg2string(pkg) + " INTERFACE " + dep.toString() + ")");
+                        }
                     }
                 }
             }
