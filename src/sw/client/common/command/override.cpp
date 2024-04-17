@@ -103,7 +103,10 @@ SUBCOMMAND_DECL(override)
     {
         LOG_INFO(logger, "Delete override for sdir " + to_string(getOptions().options_override.delete_overridden_package_dir.u8string()));
 
-        auto d = primitives::filesystem::canonical(getOptions().options_override.delete_overridden_package_dir);
+        auto d = getOptions().options_override.delete_overridden_package_dir;
+        if (fs::exists(d)) {
+            d = primitives::filesystem::canonical(getOptions().options_override.delete_overridden_package_dir);
+        }
 
         std::set<sw::LocalPackage> pkgs;
         for (auto &p : getContext().getLocalStorage().getOverriddenPackagesStorage().getPackages())
