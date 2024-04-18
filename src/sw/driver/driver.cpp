@@ -457,6 +457,8 @@ void Driver::loadInputsBatch(const std::set<Input *> &inputs) const
         i->module = loadSharedLibrary(out.dll, out.PATH, swctx.getSettings()["do_not_remove_bad_module"] == "true");
         auto ep = std::make_unique<NativeModuleTargetEntryPoint>(*i->module);
         ep->source_dir = p.parent_path();
+        if (!i->source_dir.empty())
+            ep->source_dir = i->source_dir;
         i->setEntryPoint(std::move(ep));
     }
 }
