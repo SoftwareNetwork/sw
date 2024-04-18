@@ -411,6 +411,23 @@ std::vector<std::unique_ptr<Input>> Driver::detectInputs(const path &p, InputTyp
 
         for (auto &c : comments)
         {
+            if (c.starts_with("//cpp") || c.starts_with("// cpp"))
+            {
+                auto fn = path{SW_BINARY_DIR} / "spec" / p.stem() += std::format("_{}.cpp", std::hash<path>()(p));
+                write_file_if_different(fn, c);
+
+                SpecificationFiles f;
+                f.addFile("sw.cpp", fn, c);
+                auto spec = std::make_unique<Specification>(f);
+                auto i = std::make_unique<SpecFileInput>(swctx, *this, std::move(spec));
+                i->fe_type = FrontendType::Sw;
+                i->source_dir = p.parent_path();
+                LOG_TRACE(logger, "using inline " << toString(i->fe_type) << " frontend for input " << p);
+                inputs.push_back(std::move(i));
+
+                return inputs;
+            }
+
             try
             {
                 SpecificationFiles f;
