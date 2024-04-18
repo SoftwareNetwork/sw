@@ -155,6 +155,7 @@ struct DriverInput
 struct SpecFileInput : Input, DriverInput
 {
     std::unique_ptr<Module> module;
+    path source_dir;
 
     using Input::Input;
 
@@ -170,6 +171,14 @@ struct SpecFileInput : Input, DriverInput
     // everything else is parallel loadable
     bool isParallelLoadable() const override { return !isBatchLoadable(); }
 
+    void set_source_dir(auto &ep, auto &fn)
+    {
+        if (source_dir.empty()) {
+            ep->source_dir = fn.parent_path();
+        } else {
+            ep->source_dir = source_dir;
+        }
+    }
     EntryPointPtr load1(SwContext &swctx) override
     {
         auto fn = getSpecification().files.getData().begin()->second.absolute_path;
@@ -181,7 +190,7 @@ struct SpecFileInput : Input, DriverInput
             auto out = static_cast<const Driver&>(getDriver()).build_configs1(swctx, { this }).begin()->second;
             module = loadSharedLibrary(out.dll, out.PATH, swctx.getSettings()["do_not_remove_bad_module"] == "true");
             auto ep = std::make_unique<NativeModuleTargetEntryPoint>(*module);
-            ep->source_dir = fn.parent_path();
+            set_source_dir(ep, fn);
             return ep;
         }
         case FrontendType::SwVala:
@@ -208,7 +217,7 @@ struct SpecFileInput : Input, DriverInput
             auto &out = pc.r[fn];
             module = loadSharedLibrary(out.dll, out.PATH, swctx.getSettings()["do_not_remove_bad_module"] == "true");
             auto ep = std::make_unique<NativeModuleTargetEntryPoint>(*module);
-            ep->source_dir = fn.parent_path();
+            set_source_dir(ep, fn);
             return ep;
         }
         case FrontendType::Cppan:
@@ -219,7 +228,7 @@ struct SpecFileInput : Input, DriverInput
                 frontend::cppan::cppan_load(b, root);
             };
             auto ep = std::make_unique<NativeBuiltinTargetEntryPoint>(bf);
-            ep->source_dir = fn.parent_path();
+            set_source_dir(ep, fn);
             return ep;
         }
         case FrontendType::Cmake:
@@ -238,7 +247,7 @@ struct SpecFileInput : Input, DriverInput
                 t += "src/.*"_rr;
             };
             auto ep = std::make_unique<NativeBuiltinTargetEntryPoint>(bf);
-            ep->source_dir = fn.parent_path();
+            set_source_dir(ep, fn);
             return ep;
         }
         case FrontendType::Dub:
@@ -262,7 +271,7 @@ struct SpecFileInput : Input, DriverInput
                     throw SW_RUNTIME_ERROR("No source paths found");
             };
             auto ep = std::make_unique<NativeBuiltinTargetEntryPoint>(bf);
-            ep->source_dir = fn.parent_path();
+            set_source_dir(ep, fn);
             return ep;
         }
         case FrontendType::Composer:
@@ -274,7 +283,7 @@ struct SpecFileInput : Input, DriverInput
                 SW_UNIMPLEMENTED;
             };
             auto ep = std::make_unique<NativeBuiltinTargetEntryPoint>(bf);
-            ep->source_dir = fn.parent_path();
+            set_source_dir(ep, fn);
             return ep;
         }
         default:
