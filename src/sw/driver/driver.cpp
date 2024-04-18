@@ -283,7 +283,7 @@ struct SpecFileInput : Input, DriverInput
     }
 };
 
-struct InlineSpecInput : Input, DriverInput
+struct InlineSpecInputCppan : Input, DriverInput
 {
     yaml root;
 
@@ -293,7 +293,7 @@ struct InlineSpecInput : Input, DriverInput
 
     EntryPointPtr load1(SwContext &swctx) override
     {
-        SW_ASSERT(fe_type == FrontendType::Cppan, "not implemented");
+        SW_ASSERT(fe_type == FrontendType::Cppan, "bad frontend");
 
         auto fn = getSpecification().files.getData().begin()->second.absolute_path;
         auto p = fn;
@@ -391,7 +391,7 @@ std::vector<std::unique_ptr<Input>> Driver::detectInputs(const path &p, InputTyp
                 auto spec = std::make_unique<Specification>(f);
 
                 // file has cpp extension
-                auto i = std::make_unique<InlineSpecInput>(swctx, *this, std::move(spec));
+                auto i = std::make_unique<InlineSpecInputCppan>(swctx, *this, std::move(spec));
                 i->fe_type = FrontendType::Cppan;
                 LOG_TRACE(logger, "using inline " << toString(i->fe_type) << " frontend for input " << p);
                 inputs.push_back(std::move(i));
@@ -408,7 +408,7 @@ std::vector<std::unique_ptr<Input>> Driver::detectInputs(const path &p, InputTyp
                 f.addFile("cppan.yml", p, c);
                 auto spec = std::make_unique<Specification>(f);
 
-                auto i = std::make_unique<InlineSpecInput>(swctx, *this, std::move(spec));
+                auto i = std::make_unique<InlineSpecInputCppan>(swctx, *this, std::move(spec));
                 i->fe_type = FrontendType::Cppan;
                 i->root = YAML::Load(c);
                 LOG_TRACE(logger, "using inline " << toString(i->fe_type) << " frontend for input " << p);
