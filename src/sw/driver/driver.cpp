@@ -590,6 +590,11 @@ std::unordered_map<path, PrepareConfigOutputData> Driver::build_configs1(SwConte
     auto hsold = swctx.getHostSettings();
     auto hs = swctx.getHostSettings();
     hs.erase("use_same_config_for_host_dependencies");
+    // we add special setting to make sure our config builds differ from normal builds
+    // and adding this in getDllConfigSettings() does not work
+    // because our targets ignore everything added except for native/os for progs (this is a FIXME)
+    hs["sw_config"] = "true";
+    //
     swctx.setHostSettings(hs);
     SCOPE_EXIT {
         swctx.setHostSettings(hsold);
