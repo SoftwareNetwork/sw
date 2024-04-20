@@ -413,7 +413,7 @@ std::vector<std::unique_ptr<Input>> Driver::detectInputs(const path &p, InputTyp
         {
             if (c.starts_with("//cpp") || c.starts_with("// cpp"))
             {
-                auto fn = path{SW_BINARY_DIR} / "spec" / p.stem() += std::format("_{}.cpp", std::hash<path>()(p));
+                auto fn = path{SW_BINARY_DIR} / "spec" / p.stem() += ("_"s + std::to_string(std::hash<path>()(p)) + ".cpp");
                 write_file_if_different(fn, c);
 
                 SpecificationFiles f;
