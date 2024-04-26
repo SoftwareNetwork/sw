@@ -330,4 +330,27 @@ struct SW_DRIVER_CPP_API PythonLibrary : Target
     SW_TARGET_ADD_DEPENDENCIES(PythonLibrary, addSourceDependency)
 };
 
+struct FilesTarget : Target, SourceFileTargetOptions
+{
+    FilesTarget(TargetBase &parent, const PackageId &id)
+        : Target(parent, id), SourceFileTargetOptions(static_cast<Target &>(*this))
+    {
+    }
+
+    using Target::operator+=;
+    using Target::operator=;
+    using Target::add;
+    SW_TARGET_USING_ASSIGN_OPS(SourceFileTargetOptions);
+
+    Files gatherAllFiles() const override
+    {
+        Files files;
+        for (auto &f : *this)
+            files.insert(f.first);
+        return files;
+    }
+
+    SW_TARGET_ADD_DEPENDENCIES(FilesTarget, addSourceDependency)
+};
+
 }
