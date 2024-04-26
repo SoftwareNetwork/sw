@@ -260,7 +260,7 @@ struct SW_DRIVER_CPP_API PascalExecutable : PascalTarget
 
 #define SW_TARGET_ADD_DEPENDENCIES(target, add_dep_function) \
 private:                                                     \
-    ASSIGN_WRAPPER_SIMPLE(add, PythonLibrary);               \
+    ASSIGN_WRAPPER_SIMPLE(add, target);                      \
                                                              \
 public:                                                      \
     ASSIGN_TYPES_NO_REMOVE(Target)                           \
