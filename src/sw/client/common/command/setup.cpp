@@ -259,7 +259,7 @@ SUBCOMMAND_DECL(setup)
 
         // we run these files & pause on exit, so user could check what went wrong
         winreg::RegKey p(HKEY_CLASSES_ROOT, id1 + L"\\shell\\open\\command");
-        p.SetStringValue(L"", run_command(L"-pause-on-exit -shell -config r -config-name r"));
+        p.SetStringValue(L"", run_command(L"-pause-on-exit -sd -shell -config r -config-name r"));
 
         path shell_key = L"SystemFileAssociations";
         shell_key /= _id;
@@ -319,9 +319,9 @@ SUBCOMMAND_DECL(setup)
                 f2(static_, cmd + L" -static");
             };
             auto generate = add_submenu(sw, L"generate", L"Generate");
-            f(generate, L" -pause-on-error generate");
+            f(generate, L" -pause-on-error -sd generate");
             auto run = add_submenu(sw, L"run", L"Run");
-            f(run, L" -pause-on-exit -shell run"); // we use shell arg here to change working dir to storage dir
+            f(run, L" -pause-on-exit -sd -shell run"); // we use shell arg here to change working dir to storage dir
         }
     }
 
