@@ -58,7 +58,9 @@ SUBCOMMAND_DECL(generate)
                 throw SW_RUNTIME_ERROR("Only one compiler may be specified");
         }
         else
+        {
             getOptions().compiler.push_back("msvc");
+        }
         if (getOptions().configuration.empty())
         {
             getOptions().configuration.push_back("d");
@@ -66,7 +68,13 @@ SUBCOMMAND_DECL(generate)
             getOptions().configuration.push_back("r");
         }
         // vs gen works only with this atm
-        getOptions().use_same_config_for_host_dependencies = true;
+        if (false
+            || getOptions().compiler[0].contains("msvc")
+            || !getOptions().compiler[0].contains("clang")
+            ) {
+            // not for clang, currently some packages can't be built with it (python, bison)
+            getOptions().use_same_config_for_host_dependencies = true;
+        }
 
         auto g = (VSGenerator*)generator.get();
         if (getOptions().options_generate.print_overridden_dependencies)
