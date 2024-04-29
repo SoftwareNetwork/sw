@@ -18,12 +18,19 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "main");
 
-static void print_command_line(const Strings &args)
+static void print_command_line(const Strings &args, const Strings &args_expanded)
 {
     String cmdline;
     for (auto &a : args)
         cmdline += a + " ";
     LOG_TRACE(logger, "command line:\n" + cmdline);
+
+    if (!args_expanded.empty()) {
+        String cmdline;
+        for (auto &a : args_expanded)
+            cmdline += a + " ";
+        LOG_TRACE(logger, "expanded command line:\n" + cmdline);
+    }
 
     auto append_file_unique = [](const auto &fn, String cmd)
     {
@@ -138,7 +145,7 @@ int StartupData::run()
     {
         if (!version.empty())
             LOG_TRACE(logger, "version:\n" + version);
-        print_command_line(args); // after logger; also for builtin call?
+        print_command_line(args, args_expanded); // after logger; also for builtin call?
         if (after_create_options && after_create_options(*this))
             return exit(0);
 
@@ -227,6 +234,7 @@ void StartupData::parseArgs()
                 args2.push_back(args[0]);
                 args2.insert(args2.end(), alias_args.begin(), alias_args.end());
                 args2.insert(args2.end(), args.begin() + 2, args.end()); // add rest of args
+                args_expanded = args2;
 
                 // reset cl options
                 cloptions.reset(); // reset first!!!
