@@ -114,7 +114,7 @@ struct SW_CORE_API InputWithSettings
     const BuildInput &getInput() const { return i; }
 
     [[nodiscard]]
-    std::vector<ITargetPtr> loadTargets(SwBuild &) const;
+    std::vector<ITargetPtr> loadTargets(SwBuild &, const PackageIdSet &allowed_packages = {}) const;
 
 protected:
     BuildInput i;

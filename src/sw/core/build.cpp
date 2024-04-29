@@ -349,10 +349,14 @@ void SwBuild::loadInputs()
         iv.insert(&i.getInput().getInput());
     swctx.loadEntryPointsBatch(iv);
 
+    PackageIdSet allowed_packages;
+    for (auto &t : build_settings["target-to-build"].getArray())
+        allowed_packages.insert(t.getValue());
+
     // and load packages
     for (auto &i : inputs)
     {
-        auto tgts = i.loadTargets(*this);
+        auto tgts = i.loadTargets(*this, allowed_packages);
         for (auto &tgt : tgts)
         {
             getTargets()[tgt->getPackage()].push_back(tgt);

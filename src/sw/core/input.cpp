@@ -170,7 +170,7 @@ String InputWithSettings::getHash() const
     return s;
 }
 
-std::vector<ITargetPtr> InputWithSettings::loadTargets(SwBuild &b) const
+std::vector<ITargetPtr> InputWithSettings::loadTargets(SwBuild &b, const PackageIdSet &allowed_packages) const
 {
     std::vector<ITargetPtr> tgts;
 
@@ -182,7 +182,7 @@ std::vector<ITargetPtr> InputWithSettings::loadTargets(SwBuild &b) const
     {
         LOG_TRACE(logger, "Loading input " << i.getInput().getName() << ", settings = " << s.toString());
 
-        auto t = i.loadPackages(b, s);
+        auto t = i.loadPackages(b, s, allowed_packages);
         tgts.insert(tgts.end(), t.begin(), t.end());
     }
     return tgts;
