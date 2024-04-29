@@ -71,6 +71,7 @@ SERIALIZATION_BEGIN_SPLIT
 SERIALIZATION_SPLIT_CONTINUE
     ar << ::to_string(::to_string(v));
 SERIALIZATION_SPLIT_END
+#undef SERIALIZATION_TYPE
 
 ////////////////////////////////////////
 
