@@ -28,6 +28,22 @@ Strings SwClientContext::getAliasArguments(const String &name)
 
 SUBCOMMAND_DECL(alias)
 {
+    if (getOptions().options_alias.list)
+    {
+        auto aliases_db = get_aliases_fn();
+        if (!fs::exists(aliases_db))
+            return;
+        auto j = nlohmann::json::parse(read_file(aliases_db));
+        for (auto &[n, v] : j.items())
+        {
+            auto s = n + "\n";
+            for (auto &a : v)
+                s += "\"" + a.get<String>() + "\" ";
+            LOG_INFO(logger, s);
+        }
+        return;
+    }
+
     auto &name = getOptions().options_alias.name;
     if (name.empty())
         throw SW_RUNTIME_ERROR("Empty name");

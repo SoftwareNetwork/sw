@@ -424,7 +424,6 @@ command_line:
         command_line:
             name:
                 positional: true
-                required: true
                 type: String
                 desc: Alias name.
             arguments:
@@ -437,6 +436,9 @@ command_line:
             print_alias:
                 aliases: p
                 desc: Print alias.
+            list:
+                aliases: l
+                desc: List aliases.
 
     # build
     subcommand:
