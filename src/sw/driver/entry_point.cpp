@@ -493,7 +493,7 @@ decltype(auto) PrepareConfig::commonActions(Build &b, const InputData &d, const 
     if (isDriverStaticBuild())
         addImportLibrary(b, lib);
     lib.AutoDetectOptions = false;
-    lib.CPPVersion = CPPLanguageStandard::CPP20;
+    lib.CPPVersion = CPPLanguageStandard::CPPLatest;
     lib.NoUndefined = false;
 
     lib += fn;
