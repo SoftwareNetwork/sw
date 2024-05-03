@@ -142,7 +142,9 @@ void TargetBase::addTarget2(Target &t)
 
     // we do not activate targets that are not selected for current builds
     if (/*!isLocal() && */
-        dummy || !getSolution().isKnownTarget(t.getPackage()))
+        //dummy || // we cannot search for equal packages above because we do not finish our settings setup
+        // specifically "dry-run" setting insive this if
+        !getSolution().isKnownTarget(t.getPackage()))
     {
         t.DryRun = true;
         t.ts["dry-run"] = "true";
