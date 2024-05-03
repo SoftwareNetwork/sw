@@ -362,6 +362,38 @@ void SwBuild::loadInputs()
             getTargets()[tgt->getPackage()].push_back(tgt);
             targets[tgt->getPackage()].setInput(i.getInput());
         }
+
+        // resolve and register other packages from this input
+        while (!allowed_packages.empty())
+        {
+            PackageIdSet to_load;
+            for (const auto &tgt : tgts)
+            {
+                // targets[pkg].setInput(i.getInput());
+                auto deps = tgt->getDependencies();
+                for (auto &d : deps)
+                {
+                    auto u = d->getUnresolvedPackage();
+                    if (u.getPath().isRelative())
+                    {
+                        if (auto id = u.toPackageId())
+                        {
+                            to_load.insert(*id);
+                        }
+                    }
+                }
+            }
+            if (to_load.empty())
+            {
+                break;
+            }
+            tgts = i.loadTargets(*this, to_load);
+            for (auto &tgt : tgts)
+            {
+                getTargets()[tgt->getPackage()].push_back(tgt);
+                targets[tgt->getPackage()].setInput(i.getInput());
+            }
+        }
     }
 }
 
