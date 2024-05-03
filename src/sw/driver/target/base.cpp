@@ -132,17 +132,17 @@ void TargetBase::addTarget2(Target &t)
         return;
     }
 
-    bool dummy = false;
+    bool already_present = false;
     auto it = getMainBuild().getTargets().find(t.getPackage());
     if (it != getMainBuild().getTargets().end())
     {
         auto i = it->second.findEqual(t.ts);
-        dummy = i != it->second.end();
+        already_present = i != it->second.end();
     }
 
     // we do not activate targets that are not selected for current builds
     if (/*!isLocal() && */
-        //dummy || // we cannot search for equal packages above because we do not finish our settings setup
+        already_present || // we cannot search for equal packages above because we do not finish our settings setup
         // specifically "dry-run" setting insive this if
         !getSolution().isKnownTarget(t.getPackage()))
     {
