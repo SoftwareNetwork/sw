@@ -188,9 +188,10 @@ void File::setGenerator(const std::shared_ptr<builder::Command> &g, bool ignore_
         return;
 
     auto gold = data->generator.lock();
-    if (!ignore_errors && gold && (gold != g &&
-        !gold->isExecuted() &&
-        gold->getHash() != g->getHash()))
+    auto same_command = gold && (gold != g &&
+                                 !gold->isExecuted() &&
+                                 gold->getHash() != g->getHash());
+    if (!ignore_errors && same_command)
     {
         String err;
         err += "Setting generator twice on file: " + to_string(file) + "\n";
@@ -213,8 +214,12 @@ void File::setGenerator(const std::shared_ptr<builder::Command> &g, bool ignore_
             err += "second generator is empty";
         throw SW_RUNTIME_ERROR(err);
     }
-    data->generator = g;
-    data->generated = true;
+    // use first command
+    if (!same_command)
+    {
+        data->generator = g;
+        data->generated = true;
+    }
 }
 
 std::shared_ptr<builder::Command> File::getGenerator() const
