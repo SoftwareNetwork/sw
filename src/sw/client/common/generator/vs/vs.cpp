@@ -452,7 +452,7 @@ void VSGenerator::generate(const SwBuild &b)
                 auto &d = p.getData(st);
 
                 String cmd;
-                cmd = "-d " + to_string(normalize_path(curr_dirr)) + " build -input-settings-pairs ";
+                cmd = "-d " + to_string(normalize_path(curr_dirr)) + " -sfc build -input-settings-pairs ";
                 for (auto &i : inputs)
                 {
                     for (auto &[_, f] : i.getInput().getInput().getSpecification().files.getData())
@@ -797,6 +797,7 @@ void VSGenerator::generate(const SwBuild &b)
             Strings args;
             args.push_back("-d");
             args.push_back(to_string(normalize_path(curr_dirr)));
+            args.push_back("-sfc");
             args.push_back("build");
             args.push_back("-input-settings-pairs");
             for (auto &[d, s] : deps)
