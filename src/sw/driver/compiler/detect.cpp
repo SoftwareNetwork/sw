@@ -963,6 +963,7 @@ static void detectNonWindowsCompilers(DETECT_ARGS)
     resolve_gcc("gcc", "org.gnu.gcc", 1);
     resolve_gcc("g++", "org.gnu.gpp", 1);
 
+    // 14=2024, 20=2030
     for (int i = 3; i < 20; i++)
     {
         resolve_gcc("gcc-" + std::to_string(i), "org.gnu.gcc", 1);
@@ -1064,6 +1065,7 @@ static void detectNonWindowsCompilers(DETECT_ARGS)
     resolve_clang("clang", "org.LLVM.clang", 2);
     resolve_clang("clang++", "org.LLVM.clangpp", 2);
 
+    // 18,19=2024 34,35=2030+
     for (int i = 3; i < 35; i++)
     {
         resolve_clang("clang-" + std::to_string(i), "org.LLVM.clang", 2);
