@@ -979,7 +979,7 @@ static void detectNonWindowsCompilers(DETECT_ARGS)
     auto homebrew_clang_regex_prefix = "Homebrew clang version ";
     auto apple_clang_regex_prefix = "Apple clang version ";
 
-    auto resolve_clang = [&](path prog, auto &&ppath, auto &&color_diag) {
+    auto resolve_clang = [&](path prog, auto &&ppath, auto &&color_diag, bool apple = false) {
         try {
             prog = resolveExecutable(prog);
             if (!fs::exists(prog)) {
@@ -1003,6 +1003,9 @@ static void detectNonWindowsCompilers(DETECT_ARGS)
                         c2->push_back("-fansi-escape-codes").affects_output = false;
                     }
                 }
+                return;
+            }
+            if (apple) {
                 return;
             }
             //LOG_TRACE(logger, "clang resolver 2: " << v.toString());
@@ -1050,8 +1053,12 @@ static void detectNonWindowsCompilers(DETECT_ARGS)
     };
 
     // detect apple clang, the single version in the system
-    resolve_clang("clang", "com.Apple.clang", 2);
-    resolve_clang("clang++", "com.Apple.clangpp", 2);
+    resolve_clang("clang", "com.Apple.clang", 2, true);
+    resolve_clang("clang++", "com.Apple.clangpp", 2, true);
+    // we may totally fail above and without apple clang we can't even build sw.cpp
+    // so check direct paths
+    resolve_clang("/usr/bin/clang", "com.Apple.clang", 2, true);
+    resolve_clang("/usr/bin/clang++", "com.Apple.clangpp", 2, true);
 
     // usual clang
     resolve_clang("clang", "org.LLVM.clang", 2);
