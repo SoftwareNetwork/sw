@@ -899,7 +899,7 @@ static void detectNonWindowsCompilers(DETECT_ARGS)
     bool colored_output = hasConsoleColorProcessing();
 
     auto resolve_and_add = [DETECT_ARGS_PASS_TO_LAMBDA, &colored_output]
-    (const path &prog, const String &ppath, int color_diag = 0, const String &regex_prefix = {})
+        (const path &prog, const String &ppath, int color_diag = 0, const String &regex_prefix = {})
     {
         auto p = std::make_shared<SimpleProgram>();
         p->file = resolveExecutable(prog);
@@ -908,7 +908,7 @@ static void detectNonWindowsCompilers(DETECT_ARGS)
         // use simple regex for now, because ubuntu may have
         // the following version 7.4.0-1ubuntu1~18.04.1
         // which will be parsed as pre-release
-        auto v = getVersion(s, p->file, "--version", regex_prefix + "\\d+(\\.\\d+){2,}");
+        auto [o,v] = getVersionAndOutput(s, p->file, "--version", regex_prefix + "\\d+(\\.\\d+){2,}");
         auto &c = addProgram(DETECT_ARGS_PASS, PackageId(ppath, v), {}, p);
         //-fdiagnostics-color=always // gcc
         if (colored_output)
@@ -929,13 +929,44 @@ static void detectNonWindowsCompilers(DETECT_ARGS)
     //resolve_and_add("as", "org.gnu.gcc.as"); // not needed
     //resolve_and_add("ld", "org.gnu.gcc.ld"); // not needed
 
-    resolve_and_add("gcc", "org.gnu.gcc", 1);
-    resolve_and_add("g++", "org.gnu.gpp", 1);
+    auto resolve_gcc = [&](path prog, auto &&ppath, auto &&color_diag) {
+        try {
+            prog = resolveExecutable(prog);
+            if (!fs::exists(prog)) {
+                return;
+            }
+            auto [o,v] = gatherVersion(prog, "--version", "\\d+(\\.\\d+){2,}");
+            //LOG_TRACE(logger, "gcc resolver 1: " << v.toString());
+            if (o.contains("Apple clang version")) {
+                return;
+            }
+            //LOG_TRACE(logger, "gcc resolver: " << v.toString());
+            auto p = std::make_shared<SimpleProgram>();
+            p->file = prog;
+            auto &c = addProgram(DETECT_ARGS_PASS, PackageId(ppath, v), {}, p);
+            //-fdiagnostics-color=always // gcc
+            if (colored_output)
+            {
+                auto c2 = p->getCommand();
+                if (color_diag == 1)
+                    c2->push_back("-fdiagnostics-color=always").affects_output = false;
+                else if (color_diag == 2)
+                {
+                    c2->push_back("-fcolor-diagnostics").affects_output = false;
+                    c2->push_back("-fansi-escape-codes").affects_output = false;
+                }
+            }
+        } catch (std::exception &) {
+        }
+    };
+
+    resolve_gcc("gcc", "org.gnu.gcc", 1);
+    resolve_gcc("g++", "org.gnu.gpp", 1);
 
     for (int i = 3; i < 20; i++)
     {
-        resolve_and_add("gcc-" + std::to_string(i), "org.gnu.gcc", 1);
-        resolve_and_add("g++-" + std::to_string(i), "org.gnu.gpp", 1);
+        resolve_gcc("gcc-" + std::to_string(i), "org.gnu.gcc", 1);
+        resolve_gcc("g++-" + std::to_string(i), "org.gnu.gpp", 1);
     }
 
     // llvm/clang
@@ -945,26 +976,91 @@ static void detectNonWindowsCompilers(DETECT_ARGS)
     // start of the line (^) does not work currently,
     // so we can't differentiate clang and appleclang
     auto clang_regex_prefix = "^clang version ";
+    auto homebrew_clang_regex_prefix = "Homebrew clang version ";
     auto apple_clang_regex_prefix = "Apple clang version ";
 
-    // detect apple clang
-    bool apple_clang_found =
-        resolve_and_add("clang", "com.Apple.clang", 2, apple_clang_regex_prefix);
-    resolve_and_add("clang++", "com.Apple.clangpp", 2, apple_clang_regex_prefix);
+    auto resolve_clang = [&](path prog, auto &&ppath, auto &&color_diag) {
+        try {
+            prog = resolveExecutable(prog);
+            if (!fs::exists(prog)) {
+                return;
+            }
+            auto [o,v] = gatherVersion(prog, "--version", "\\d+(\\.\\d+){2,}");
+            //LOG_TRACE(logger, "clang resolver 1: " << v.toString());
+            if (o.contains("Apple clang version")) {
+                auto p = std::make_shared<SimpleProgram>();
+                p->file = prog;
+                auto &c = addProgram(DETECT_ARGS_PASS, PackageId(ppath, v), {}, p);
+                //-fdiagnostics-color=always // gcc
+                if (colored_output)
+                {
+                    auto c2 = p->getCommand();
+                    if (color_diag == 1)
+                        c2->push_back("-fdiagnostics-color=always").affects_output = false;
+                    else if (color_diag == 2)
+                    {
+                        c2->push_back("-fcolor-diagnostics").affects_output = false;
+                        c2->push_back("-fansi-escape-codes").affects_output = false;
+                    }
+                }
+                return;
+            }
+            //LOG_TRACE(logger, "clang resolver 2: " << v.toString());
+            // check homebrew first
+            if (o.starts_with(homebrew_clang_regex_prefix)) {
+                //LOG_TRACE(logger, "clang resolver: " << v.toString());
+                auto p = std::make_shared<SimpleProgram>();
+                p->file = prog;
+                auto &c = addProgram(DETECT_ARGS_PASS, PackageId(ppath, v), {}, p);
+                //-fdiagnostics-color=always // gcc
+                if (colored_output)
+                {
+                    auto c2 = p->getCommand();
+                    if (color_diag == 1)
+                        c2->push_back("-fdiagnostics-color=always").affects_output = false;
+                    else if (color_diag == 2)
+                    {
+                        c2->push_back("-fcolor-diagnostics").affects_output = false;
+                        c2->push_back("-fansi-escape-codes").affects_output = false;
+                    }
+                }
+                return;
+            }
+            if (o.contains("clang version")) {
+                //LOG_TRACE(logger, "clang resolver: " << v.toString());
+                auto p = std::make_shared<SimpleProgram>();
+                p->file = prog;
+                auto &c = addProgram(DETECT_ARGS_PASS, PackageId(ppath, v), {}, p);
+                //-fdiagnostics-color=always // gcc
+                if (colored_output)
+                {
+                    auto c2 = p->getCommand();
+                    if (color_diag == 1)
+                        c2->push_back("-fdiagnostics-color=always").affects_output = false;
+                    else if (color_diag == 2)
+                    {
+                        c2->push_back("-fcolor-diagnostics").affects_output = false;
+                        c2->push_back("-fansi-escape-codes").affects_output = false;
+                    }
+                }
+                return;
+            }
+        } catch (std::exception &) {
+        }
+    };
+
+    // detect apple clang, the single version in the system
+    resolve_clang("clang", "com.Apple.clang", 2);
+    resolve_clang("clang++", "com.Apple.clangpp", 2);
 
     // usual clang
-    // if apple clang is found first, we do not check same binaries again
-    // because at the moment we gen false positives
-    if (!apple_clang_found)
-    {
-        resolve_and_add("clang", "org.LLVM.clang", 2, clang_regex_prefix);
-        resolve_and_add("clang++", "org.LLVM.clangpp", 2, clang_regex_prefix);
-    }
+    resolve_clang("clang", "org.LLVM.clang", 2);
+    resolve_clang("clang++", "org.LLVM.clangpp", 2);
 
     for (int i = 3; i < 35; i++)
     {
-        resolve_and_add("clang-" + std::to_string(i), "org.LLVM.clang", 2, clang_regex_prefix);
-        resolve_and_add("clang++-" + std::to_string(i), "org.LLVM.clangpp", 2, clang_regex_prefix);
+        resolve_clang("clang-" + std::to_string(i), "org.LLVM.clang", 2);
+        resolve_clang("clang++-" + std::to_string(i), "org.LLVM.clangpp", 2);
     }
 
 #ifndef _WIN32

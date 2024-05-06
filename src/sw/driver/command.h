@@ -417,6 +417,15 @@ private:
 
 } // namespace driver
 
+std::pair<String, Version> gatherVersion1(builder::detail::ResolvableCommand &c, const String &in_regex);
+std::pair<String, Version> gatherVersion(const path &program, const String &arg, const String &in_regex);
+
+Version addVersion(
+    const SwManagerContext &swctx, const path &program,
+    const Version &version,
+    const String &output
+);
+
 Version getVersion(
     const SwManagerContext &swctx, builder::detail::ResolvableCommand &c,
     const String &in_regex = {});

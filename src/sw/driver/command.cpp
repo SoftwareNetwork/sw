@@ -401,7 +401,7 @@ static String getOutput(builder::detail::ResolvableCommand &c)
     return c.err.text.empty() ? c.out.text : c.err.text;
 }
 
-static std::pair<String, Version> gatherVersion1(builder::detail::ResolvableCommand &c, const String &in_regex)
+std::pair<String, Version> gatherVersion1(builder::detail::ResolvableCommand &c, const String &in_regex)
 {
     static std::regex r_default("(\\d+)(\\.(\\d+)){2,}(-[[:alnum:]]+([.-][[:alnum:]]+)*)?");
 
@@ -458,13 +458,32 @@ static std::pair<String, Version> gatherVersion1(builder::detail::ResolvableComm
     return { o,v };
 }
 
-static auto gatherVersion(const path &program, const String &arg, const String &in_regex)
+std::pair<String, Version> gatherVersion(const path &program, const String &arg, const String &in_regex)
 {
     builder::detail::ResolvableCommand c; // for nice program resolving
     c.setProgram(program);
     if (!arg.empty())
         c.push_back(arg);
     return gatherVersion1(c, in_regex);
+}
+
+Version addVersion(const SwManagerContext &swctx,
+    const path &program,
+    const Version &version,
+    const String &output)
+{
+    auto &vs = getVersionStorage(swctx);
+    static boost::upgrade_mutex m;
+
+    boost::upgrade_lock lk(m);
+    auto i = vs.versions.find(program);
+    if (i != vs.versions.end())
+        return i->second;
+
+    boost::upgrade_to_unique_lock lk2(lk);
+
+    vs.addVersion(program, version, output);
+    return vs.versions[program];
 }
 
 Version getVersion(const SwManagerContext &swctx, builder::detail::ResolvableCommand &c, const String &in_regex)
