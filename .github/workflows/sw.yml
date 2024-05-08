@@ -50,7 +50,7 @@ jobs:
         export PATH="/opt/homebrew/opt/flex/bin:$PATH"
         export PATH="/opt/homebrew/opt/llvm/bin:$PATH"
         export PATH="/opt/homebrew/opt/gcc/bin:$PATH"
-        ./sw -static build
+        ./sw -static build -compiler clang
     - uses: actions/upload-artifact@v3
       with:
         name: sw
