@@ -989,6 +989,9 @@ static void detectNonWindowsCompilers(DETECT_ARGS)
             auto [o,v] = gatherVersion(prog, "--version", "\\d+(\\.\\d+){2,}");
             //LOG_TRACE(logger, "clang resolver 1: " << v.toString());
             if (o.contains("Apple clang version")) {
+                if (!apple) {
+                    return;
+                }
                 auto p = std::make_shared<SimpleProgram>();
                 p->file = prog;
                 auto &c = addProgram(DETECT_ARGS_PASS, PackageId(ppath, v), {}, p);
