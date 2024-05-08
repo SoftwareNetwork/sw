@@ -310,8 +310,10 @@ void VSGenerator::generate(const SwBuild &b)
     String visible_lnk_name;
     if (inputs.size() == 1) {
         auto &&input = inputs[0].getInput().getInput();
-        auto n = typeid(input).name();
-        if (n == "struct sw::driver::cpp::InlineSpecInput"s) {
+        std::string n = typeid(input).name();
+        //if (n == "struct sw::driver::cpp::InlineSpecInput"s) {
+        // currently InlineSpecInputCppan
+        if (n.contains("InlineSpecInput"s)) {
             auto &&spec = input.getSpecification();
             auto &&f = spec.getFiles();
             if (f.size() == 1) {
