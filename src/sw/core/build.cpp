@@ -359,6 +359,9 @@ void SwBuild::loadInputs()
         auto tgts = i.loadTargets(*this, allowed_packages);
         for (auto &tgt : tgts)
         {
+            if (tgt->has_loader()) {
+                tgt->load();
+            }
             getTargets()[tgt->getPackage()].push_back(tgt);
             targets[tgt->getPackage()].setInput(i.getInput());
         }

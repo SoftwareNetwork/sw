@@ -137,6 +137,9 @@ struct SW_CORE_API ITarget : ICastable
     // getExecutableRule()?
     // by default returns nullptr
     virtual std::unique_ptr<IRule> getRule() const;
+
+    virtual bool has_loader() const {return false;}
+    virtual void load() {}
 };
 
 // shared_ptr for vector storage

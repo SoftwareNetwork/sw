@@ -15,4 +15,5 @@
 // 32: Some new APIs. ABI increase just for safety and clients update.
 // 33: Recurse prevention in Target::getInterfaceSettings()
 // 34: Add ForceIncludes
-#define SW_MODULE_ABI_VERSION 34
+// 35: Add loader
+#define SW_MODULE_ABI_VERSION 35

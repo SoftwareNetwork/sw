@@ -165,10 +165,23 @@ struct SW_DRIVER_CPP_API TargetBase : TargetBaseData
     const Build &getSolution() const;
     const SwContext &getContext() const;
 
+    template <typename T>
+    auto &set_loader(this T &obj, auto &&loader) {
+        obj.loader = [f = loader](TargetBase &t) {
+            auto &p = dynamic_cast<T&>(t);
+            /*if (!p) {
+                throw std::runtime_error{"bad target"};
+            }*/
+            f(p);
+        };
+        return obj;
+    }
+
 protected:
     // impl
     bool prepared = false;
     mutable std::mutex m; // some internal mutex
+    std::function<void(TargetBase&)> loader;
 
     TargetBase(const TargetBase &);
     TargetBase(const TargetBase &, const PackageId &);
@@ -334,6 +347,14 @@ public:
     Test addTest();
     Test addTest(const String &name);
     Test addTest(const Target &runnable_test, const String &name = {});
+
+    bool has_loader() const { return !!loader; }
+    void load() override {
+        if (!has_loader()) {
+            throw std::logic_error{"no loader"};
+        }
+        loader(*this);
+    }
 
 private:
     void addTest(Test &cb, const String &name);
