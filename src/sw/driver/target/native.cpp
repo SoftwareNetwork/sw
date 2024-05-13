@@ -442,7 +442,8 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
     if (id.ppath == "com.Microsoft.VisualStudio.VC.cl")
     {
         c = std::make_unique<VisualStudioCompiler>();
-        if (getSettings()["native"]["stdlib"]["cpp"].getValue() == "com.Microsoft.VisualStudio.VC.libcpp")
+        if (getSettings()["native"]["stdlib"]["cpp"].isValue() &&
+            getSettings()["native"]["stdlib"]["cpp"].getValue() == "com.Microsoft.VisualStudio.VC.libcpp")
         {
             // take same ver as cl
             UnresolvedPackage up(getSettings()["native"]["stdlib"]["cpp"].getValue());
