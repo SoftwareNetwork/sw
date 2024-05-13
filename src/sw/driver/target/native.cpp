@@ -590,6 +590,16 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
 
     create_command(c);
     set_compiler_type(c);
+
+    if (getBuildSettings().TargetOS.is(OSType::Windows))
+    {
+        // also gcc?
+        if (id.ppath == "org.LLVM.clang" || id.ppath == "org.LLVM.clangpp")
+        {
+            setExtensionProgram(".s", c->clone());
+            setExtensionProgram(".S", c->clone());
+        }
+    }
 }
 
 std::shared_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetSetting &s)
