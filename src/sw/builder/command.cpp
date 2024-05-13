@@ -1064,6 +1064,9 @@ path Command::writeCommand(const path &p, bool print_name) const
     if (getHostOS().is(OSType::Windows))
         need_rsp = needsResponseFile(6'000);
 
+    static const String next_line_space = "    ";
+    static const String next_line = "\n" + next_line_space;
+    static const String bat_next_line = "^" + next_line;
     if (need_rsp)
     {
         auto rsp_name = path(p) += ".rsp";
@@ -1075,10 +1078,6 @@ path Command::writeCommand(const path &p, bool print_name) const
     }
     else
     {
-        static const String next_line_space = "    ";
-        static const String next_line = "\n" + next_line_space;
-        static const String bat_next_line = "^" + next_line;
-
         auto print_args = [&bat, &t](const auto &args)
         {
             path output;
@@ -1133,6 +1132,11 @@ path Command::writeCommand(const path &p, bool print_name) const
         else
             print_args(arguments);
     }
+    if (bat)
+        t += "^";
+    else
+        t += "\\";
+    t += next_line;
     if (bat)
         t += "%";
     else
