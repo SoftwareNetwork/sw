@@ -708,6 +708,10 @@ std::shared_ptr<NativeLinker> NativeCompiledTarget::activateLinker(const TargetS
         {
             C->use_start_end_groups = false;
         }
+        if (getBuildSettings().TargetOS.Type == OSType::Windows)
+        {
+            C->use_start_end_groups = false;
+        }
         if (id.ppath == "org.LLVM.clang" ||
             id.ppath == "org.LLVM.clangpp" ||
             id.ppath == "com.Apple.clang" ||
