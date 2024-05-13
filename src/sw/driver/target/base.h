@@ -165,7 +165,7 @@ struct SW_DRIVER_CPP_API TargetBase : TargetBaseData
     const Build &getSolution() const;
     const SwContext &getContext() const;
 
-#if __has_cpp_attribute(__cpp_explicit_this_parameter) && __cpp_explicit_this_parameter >= 202110L
+#ifdef __cpp_explicit_this_parameter
     template <typename T>
     auto &set_loader(this T &obj, auto &&loader) {
         obj.loader = [f = loader](TargetBase &t) {
