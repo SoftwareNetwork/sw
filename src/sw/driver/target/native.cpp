@@ -4209,6 +4209,7 @@ void NativeCompiledTarget::prepare_pass6()
         }
     }
 
+    if (getSettings()["native"]["stdlib"]["kernel"].isValue())
     switch (rt)
     {
     case vs::RuntimeLibraryType::MultiThreadedDLL:
