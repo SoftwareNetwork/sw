@@ -1034,6 +1034,7 @@ void NativeCompiledTarget::addPackageDefinitions(bool defs)
         a["PACKAGE_VERSION"] = q + getPackage().getVersion().toString() + q;
         a["PACKAGE_STRING"] = q + getPackage().toString() + q;
         a["PACKAGE_BUILD_CONFIG"] = q + getConfig() + q;
+        a["PACKAGE_VENDOR"] = q + "sw" + q;
         a["PACKAGE_BUGREPORT"] = q + q;
         a["PACKAGE_URL"] = q + q;
         a["PACKAGE_SUFFIX"] = q + q;
@@ -1073,7 +1074,12 @@ void NativeCompiledTarget::addPackageDefinitions(bool defs)
         PackageDefinitions = false;
     }
     else
+    {
+        // was: false
+        // true is needed for some config.h under replacements (mingw)
+        // ^ just replace in mingw manually
         set_pkg_info(Variables, false); // false?
+    }
 }
 
 void NativeCompiledTarget::add(const ApiNameType &i)
