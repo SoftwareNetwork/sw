@@ -649,6 +649,12 @@ void TargetSettings::mergeFromJson(const nlohmann::json &j)
                 (*this)[it.key().substr(0, it.key().size() - strlen("_ignore_in_comparison"))].ignore_in_comparison = true;
             continue;
         }
+        if (pystring::endswith(it.key(), "_serializable"))
+        {
+            if (it.value().get<String>() == "false")
+                (*this)[it.key().substr(0, it.key().size() - strlen("_serializable"))].serializable(false);
+            continue;
+        }
         (*this)[it.key()].mergeFromJson(it.value());
     }
 }
