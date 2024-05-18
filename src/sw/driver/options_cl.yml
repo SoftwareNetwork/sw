@@ -176,6 +176,9 @@ types:
                     - input
                     - cppsf
 
+            cstd:
+                name: CStandard
+                type: CLanguageStandard
             cppstd:
                 name: CPPStandard
                 type: CPPLanguageStandard

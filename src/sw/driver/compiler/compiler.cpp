@@ -96,7 +96,7 @@ std::shared_ptr<SourceFile> CompilerBaseProgram::createSourceFile(const Target &
     return std::make_shared<SourceFile>(input);
 }
 
-static Strings getCStdOption(CLanguageStandard std, bool gnuext)
+static Strings getCStdOption(CLanguageStandard std, bool gnuext, bool clang, bool appleclang, const Version &clver)
 {
     String s = "-std="s + (gnuext ? "gnu" : "c");
     switch (std)
@@ -110,8 +110,16 @@ static Strings getCStdOption(CLanguageStandard std, bool gnuext)
     case CLanguageStandard::C11:
         s += "11";
         break;
-    case CLanguageStandard::C18:
-        s += "18";
+    case CLanguageStandard::C17:
+        s += "17";
+        break;
+    case CLanguageStandard::C23:
+        if (
+            clang && clver >= Version(18) ||
+            !appleclang && !clang && clver >= Version(14))
+            s += "23";
+        else
+            s += "2x";
         break;
     default:
         return {};
@@ -156,18 +164,45 @@ static Strings getCppStdOption(CPPLanguageStandard std, bool gnuext, bool clang,
         break;
     case CPPLanguageStandard::CPP23:
         if (
-            clang && clver > Version(12) ||
-            !appleclang && !clang && clver > Version(11)
+            clang && clver >= Version(17) ||
+            !appleclang && !clang && clver >= Version(11)
             )
-            //s += "23";
-            s += "2b";
+            s += "23";
         else
             s += "2b";
+        break;
+    case CPPLanguageStandard::CPP26:
+        if (
+            clang && clver >= Version(18) ||
+            !appleclang && !clang && clver >= Version(14))
+            s += "26";
+        else
+            s += "2c";
         break;
     default:
         return {};
     }
     return { s };
+}
+
+static Strings getCStdOptionMsvc(CLanguageStandard std, const Version &clver, bool clangcl = false)
+{
+    String s = "-std:c";
+    switch (std)
+    {
+    case CLanguageStandard::C11:
+        s += "11";
+        break;
+    case CLanguageStandard::C17:
+        s += "17";
+        break;
+    case CLanguageStandard::C23:
+        s += "latest";
+        break;
+    default:
+        return {};
+    }
+    return {s};
 }
 
 static Strings getCppStdOptionMsvc(CPPLanguageStandard std, const Version &clver, bool clangcl = false)
@@ -187,7 +222,9 @@ static Strings getCppStdOptionMsvc(CPPLanguageStandard std, const Version &clver
         else
             s += "20";
         break;
-    case CPPLanguageStandard::CPPLatest:
+    case CPPLanguageStandard::CPP23:
+    case CPPLanguageStandard::CPP26:
+    //case CPPLanguageStandard::CPPLatest:
         s += "latest";
         break;
     default:
@@ -281,6 +318,12 @@ void VisualStudioCompiler::prepareCommand1(const Target &t)
     }
 
     ReproducibleBuild = t.isReproducibleBuild();
+
+    if (CStandard)
+    {
+        add_args(*cmd, getCStdOptionMsvc(CStandard(), getVersion(t.getContext(), file)));
+        CStandard.skip = true;
+    }
 
     add_args(*cmd, getCppStdOptionMsvc(CPPStandard(), getVersion(t.getContext(), file)));
     CPPStandard.skip = true;
@@ -393,7 +436,8 @@ void ClangCompiler::prepareCommand1(const ::sw::Target &t)
         //cmd->push_back("-stdlib=libstdc++");
     }
 
-    add_args(*cmd, getCStdOption(CStandard(), dynamic_cast<const NativeCompiledTarget&>(t).CExtensions));
+    add_args(*cmd, getCStdOption(CStandard(), dynamic_cast<const NativeCompiledTarget&>(t).CExtensions,
+        !appleclang, appleclang, getVersion(t.getContext(), file)));
     CStandard.skip = true;
     add_args(*cmd, getCppStdOption(CPPStandard(), dynamic_cast<const NativeCompiledTarget&>(t).CPPExtensions,
         !appleclang, appleclang, getVersion(t.getContext(), file)));
@@ -479,6 +523,12 @@ void ClangClCompiler::prepareCommand1(const Target &t)
     }
 
     ReproducibleBuild = t.isReproducibleBuild();
+
+    if (CStandard)
+    {
+        add_args(*cmd, getCStdOptionMsvc(CStandard(), getVersion(t.getContext(), file), true));
+        CStandard.skip = true;
+    }
 
     add_args(*cmd, getCppStdOptionMsvc(CPPStandard(), getVersion(t.getContext(), file), true));
     CPPStandard.skip = true;
@@ -604,7 +654,8 @@ void GNUCompiler::prepareCommand1(const Target &t)
 
     //cmd->out.capture = true;
 
-    add_args(*cmd, getCStdOption(CStandard(), dynamic_cast<const NativeCompiledTarget&>(t).CExtensions));
+    add_args(*cmd, getCStdOption(CStandard(), dynamic_cast<const NativeCompiledTarget &>(t).CExtensions,
+                                 false, false, getVersion(t.getContext(), file)));
     CStandard.skip = true;
     add_args(*cmd, getCppStdOption(CPPStandard(), dynamic_cast<const NativeCompiledTarget&>(t).CPPExtensions,
         false, false, getVersion(t.getContext(), file)));
