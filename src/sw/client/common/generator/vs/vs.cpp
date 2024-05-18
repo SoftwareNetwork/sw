@@ -917,6 +917,7 @@ void VSGenerator::generate(const SwBuild &b)
 
 void Solution::emit(const VSGenerator &g, const String &slnfn) const
 {
+    LOG_INFO(logger, "emitting solution " << slnfn);
     SolutionEmitter ctx;
     ctx.version = g.vs_version;
     ctx.printVersion();
@@ -956,7 +957,10 @@ void Solution::emit(const VSGenerator &g, const String &slnfn) const
     write_file_if_different(g.sln_root / slnfn, ctx.getText());
 
     for (auto &[n, p] : projects)
+    {
+        LOG_INFO(logger, "emitting project " << n);
         p.emit(g);
+    }
 }
 
 void Solution::emitDirectories(SolutionEmitter &ctx) const
