@@ -437,6 +437,18 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
         if (extended_desc && s["command"])
             targetSettings2Command(*C, s["command"]);
     };
+    auto add_clang_idir = [&](auto &&c) {
+        auto [o,ver] = getVersionAndOutput(getContext(), t->getProgram().file, {}, {});
+        auto sf = "InstalledDir:"sv;
+        auto p = o.find(sf);
+        if (p != -1) {
+            path dir = boost::trim_copy(o.substr(p + sf.size()));
+            dir = dir.parent_path() / "lib" / "clang" / (ver.getMajor() < 17 ? ver.toString() : std::to_string(ver.getMajor())) / "include";
+            if (fs::exists(dir)) {
+                c->push_back("-I" + normalize_path(dir).string());
+            }
+        }
+    };
 
     std::unique_ptr<CompilerBaseProgram> c;
     if (id.ppath == "com.Microsoft.VisualStudio.VC.cl")
@@ -502,9 +514,11 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
         {
             auto c = nc.createCommand(getMainBuild());
             // this one leaves default clang runtime library include path (from installed dir)
-            c->push_back("-nostdlibinc");
+            //c->push_back("-nostdlibinc");
             // this one cleans all default include dirs
-            //c->push_back("-nostdinc");
+            // because clang did not include self dir first (breaks intrinsics)
+            c->push_back("-nostdinc");
+            add_clang_idir(c);
             // clang gives error on reinterpret cast in offsetof macro in win ucrt
             *this += "_CRT_USE_BUILTIN_OFFSETOF"_def;
         }
@@ -540,6 +554,7 @@ void NativeCompiledTarget::activateCompiler(const TargetSetting &s, const Unreso
             // otherwise we get wrong order on clang includes and msvc includes (intrinsics and such)
             auto c = nc.createCommand(getMainBuild());
             c->push_back("-nostdinc");
+            add_clang_idir(c);
         }
 
         switch (getBuildSettings().TargetOS.Arch)
