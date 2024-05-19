@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include "build.h"
 #include "build_settings.h"
 #include "module.h"
 
