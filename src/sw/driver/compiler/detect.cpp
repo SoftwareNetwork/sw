@@ -1167,11 +1167,14 @@ void addSettingsAndSetHostPrograms(const SwCoreContext &swctx, TargetSettings &t
         auto clangpppkg = "org.LLVM.clangpp";
         auto clangpp = swctx.getPredefinedTargets().find(clpkg);
 
-        if (0);
+        auto clangclpkg = "org.LLVM.clangcl";
+        auto clangcl = swctx.getPredefinedTargets().find(clangclpkg);
+
+        if (0)
+        {
+        }
 #ifdef _MSC_VER
-        // msvc + clangcl
-        // clangcl must be compatible with msvc
-        // and also clang actually
+        // msvc
         else if (cl != swctx.getPredefinedTargets().end(clpkg) && !cl->second.empty())
         {
             check_and_assign_dependency(ts["native"]["program"]["c"], to_upkg("com.Microsoft.VisualStudio.VC.cl"));
@@ -1180,8 +1183,22 @@ void addSettingsAndSetHostPrograms(const SwCoreContext &swctx, TargetSettings &t
             check_and_assign_dependency(ts["native"]["program"]["lib"], to_upkg("com.Microsoft.VisualStudio.VC.lib"));
             check_and_assign_dependency(ts["native"]["program"]["link"], to_upkg("com.Microsoft.VisualStudio.VC.link"));
         }
-        // separate?
-#else __clang__
+#endif
+        // we can't activate host clangcl because we need to distribute these new binaries
+        // and not every system has clang
+#if defined(__clang__) && defined(_MSC_VER)
+        // clangcl is in charge now!
+        else if (clangcl != swctx.getPredefinedTargets().end(clangclpkg) && !clangcl->second.empty())
+        {
+            check_and_assign_dependency(ts["native"]["program"]["c"], to_upkg("org.LLVM.clangcl"));
+            check_and_assign_dependency(ts["native"]["program"]["cpp"], to_upkg("org.LLVM.clangcl"));
+            check_and_assign_dependency(ts["native"]["program"]["asm"], to_upkg("org.LLVM.clangcl"));
+            // ?
+            check_and_assign_dependency(ts["native"]["program"]["lib"], to_upkg("com.Microsoft.VisualStudio.VC.lib"));
+            check_and_assign_dependency(ts["native"]["program"]["link"], to_upkg("com.Microsoft.VisualStudio.VC.link"));
+        }
+#endif
+#ifdef __clang__
         else if (clangpp != swctx.getPredefinedTargets().end(clangpppkg) && !clangpp->second.empty())
         {
             check_and_assign_dependency(ts["native"]["program"]["c"], to_upkg("org.LLVM.clang"));
@@ -1192,9 +1209,10 @@ void addSettingsAndSetHostPrograms(const SwCoreContext &swctx, TargetSettings &t
             check_and_assign_dependency(ts["native"]["program"]["link"], to_upkg("com.Microsoft.VisualStudio.VC.link"));
         }
 #endif
-        // add more defaults (clangcl, clang)
         else
+        {
             throw SW_RUNTIME_ERROR("Seems like you do not have Visual Studio installed.\nPlease, install the latest Visual Studio first.");
+        }
     }
     // add more defaults
     else
@@ -1331,23 +1349,15 @@ void addSettingsAndSetPrograms(const SwCoreContext &swctx, TargetSettings &ts)
         auto clangclpkg = "org.LLVM.clangcl";
         auto clangcl = swctx.getPredefinedTargets().find(clangclpkg);
 
-        if (0);
+        if (0)
+        {
+        }
         // msvc
         else if (cl != swctx.getPredefinedTargets().end(clpkg) && !cl->second.empty())
         {
             check_and_assign_dependency(ts["native"]["program"]["c"], to_upkg("com.Microsoft.VisualStudio.VC.cl"));
             check_and_assign_dependency(ts["native"]["program"]["cpp"], to_upkg("com.Microsoft.VisualStudio.VC.cl"));
             check_and_assign_dependency(ts["native"]["program"]["asm"], to_upkg("com.Microsoft.VisualStudio.VC.ml"));
-            check_and_assign_dependency(ts["native"]["program"]["lib"], to_upkg("com.Microsoft.VisualStudio.VC.lib"));
-            check_and_assign_dependency(ts["native"]["program"]["link"], to_upkg("com.Microsoft.VisualStudio.VC.link"));
-        }
-        // clang
-        else if (clangpp != swctx.getPredefinedTargets().end(clangpppkg) && !clangpp->second.empty())
-        {
-            check_and_assign_dependency(ts["native"]["program"]["c"], to_upkg("org.LLVM.clang"));
-            check_and_assign_dependency(ts["native"]["program"]["cpp"], to_upkg("org.LLVM.clangpp"));
-            check_and_assign_dependency(ts["native"]["program"]["asm"], to_upkg("org.LLVM.clang"));
-            // ?
             check_and_assign_dependency(ts["native"]["program"]["lib"], to_upkg("com.Microsoft.VisualStudio.VC.lib"));
             check_and_assign_dependency(ts["native"]["program"]["link"], to_upkg("com.Microsoft.VisualStudio.VC.link"));
         }
@@ -1361,8 +1371,20 @@ void addSettingsAndSetPrograms(const SwCoreContext &swctx, TargetSettings &ts)
             check_and_assign_dependency(ts["native"]["program"]["lib"], to_upkg("com.Microsoft.VisualStudio.VC.lib"));
             check_and_assign_dependency(ts["native"]["program"]["link"], to_upkg("com.Microsoft.VisualStudio.VC.link"));
         }
+        // clang
+        else if (clangpp != swctx.getPredefinedTargets().end(clangpppkg) && !clangpp->second.empty())
+        {
+            check_and_assign_dependency(ts["native"]["program"]["c"], to_upkg("org.LLVM.clang"));
+            check_and_assign_dependency(ts["native"]["program"]["cpp"], to_upkg("org.LLVM.clangpp"));
+            check_and_assign_dependency(ts["native"]["program"]["asm"], to_upkg("org.LLVM.clang"));
+            // ?
+            check_and_assign_dependency(ts["native"]["program"]["lib"], to_upkg("com.Microsoft.VisualStudio.VC.lib"));
+            check_and_assign_dependency(ts["native"]["program"]["link"], to_upkg("com.Microsoft.VisualStudio.VC.link"));
+        }
         else
+        {
             throw SW_RUNTIME_ERROR("No suitable compilers found.\nPlease, install one first.");
+        }
     }
     // add more defaults
     else
