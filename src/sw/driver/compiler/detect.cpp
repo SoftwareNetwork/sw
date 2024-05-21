@@ -594,10 +594,9 @@ static bool hasConsoleColorProcessing()
     return true;
 }
 
-static void detectWindowsClang(DETECT_ARGS)
+static void detectWindowsClang(DETECT_ARGS, const path &base_llvm_path)
 {
     // create programs
-    const path base_llvm_path = path("c:") / "Program Files" / "LLVM";
     const path bin_llvm_path = base_llvm_path / "bin";
 
     bool colored_output = hasConsoleColorProcessing();
@@ -764,6 +763,31 @@ static void detectWindowsClang(DETECT_ARGS)
             // is it able to find VC STL itself?
             //COpts2.System.IncludeDirectories.insert(base_llvm_path / "lib" / "clang" / C->getVersion().toString() / "include");
         }
+    }
+}
+
+static void detectWindowsClang(DETECT_ARGS)
+{
+    detectWindowsClang(DETECT_ARGS_PASS, path("c:") / "Program Files" / "LLVM");
+
+    auto &instances = gatherVSInstances();
+    auto host = toStringWindows(s.getHostOs().Arch);
+    if (s.getHostOs().Arch == ArchType::x86)
+    {
+        host = ".";
+    }
+    for (auto &[_, instance] : instances)
+    {
+        auto root = instance.root / "VC";
+        auto v = instance.version;
+
+        if (v.getMajor() < 15)
+        {
+            continue;
+        }
+
+        root = root / "Tools" / "Llvm" / host;
+        detectWindowsClang(DETECT_ARGS_PASS, root);
     }
 }
 
