@@ -260,6 +260,13 @@ int main(int argc, char *argv[])
     {
         // our main cpp driver target
         {SW_DRIVER_NAME},
+
+        // mingw
+        //{"org.sw.demo.mingw.w64.crtexe"},
+        //{"org.sw.demo.mingw.w64.crtdll"},
+
+        // useful stuff
+        {"pub.egorpugin.primitives.templates2" PRIMITIVES_VERSION ""s},
     });
     auto t1 = write_required_packages(m);
     write_file(packages, t1);
@@ -276,6 +283,13 @@ int main(int argc, char *argv[])
 
         // for gui
         {"org.sw.demo.qtproject.qt.base.tools.moc" QT_VERSION},
+
+        // mingw
+        //{"org.sw.demo.mingw.w64.crtexe"},
+        //{"org.sw.demo.mingw.w64.crtdll"},
+
+        // useful stuff
+        {"pub.egorpugin.primitives.templates2" PRIMITIVES_VERSION ""s},
     });
     auto t2 = write_build_script(swctx, m_headers, true);
     auto t3 = write_build_script(swctx, m, false);
