@@ -918,7 +918,7 @@ auto add_dummy_windows_targets(auto &&s, auto &&tm) {
     add_dummy_target("com.Microsoft.Windows.SDK.cppwinrt");
 }
 
-static void detectNonWindowsCompilers(DETECT_ARGS)
+static void detectNonWindowsCompilers(DETECT_ARGS, bool quick_gcc)
 {
     bool colored_output = hasConsoleColorProcessing();
 
@@ -950,6 +950,7 @@ static void detectNonWindowsCompilers(DETECT_ARGS)
     };
 
     resolve_and_add("ar", "org.gnu.binutils.ar");
+    resolve_and_add("llvm-ar", "org.gnu.binutils.ar");
     //resolve_and_add("as", "org.gnu.gcc.as"); // not needed
     //resolve_and_add("ld", "org.gnu.gcc.ld"); // not needed
 
@@ -986,6 +987,10 @@ static void detectNonWindowsCompilers(DETECT_ARGS)
 
     resolve_gcc("gcc", "org.gnu.gcc", 1);
     resolve_gcc("g++", "org.gnu.gpp", 1);
+
+    if (quick_gcc) {
+        return;
+    }
 
     // 14=2024, 20=2030
     for (int i = 3; i < 20; i++)
@@ -1111,11 +1116,13 @@ void detectNativeCompilers(DETECT_ARGS)
     {
         // we should pass target settings here and check according target os (cygwin)
         if (os.is(OSType::Cygwin) || os.is(OSType::Mingw) || os.isMingwShell())
-            detectNonWindowsCompilers(DETECT_ARGS_PASS);
+            detectNonWindowsCompilers(DETECT_ARGS_PASS, false);
+        else
+            detectNonWindowsCompilers(DETECT_ARGS_PASS, true);
         detectWindowsCompilers(DETECT_ARGS_PASS);
     }
     else
-        detectNonWindowsCompilers(DETECT_ARGS_PASS);
+        detectNonWindowsCompilers(DETECT_ARGS_PASS, false);
     detectIntelCompilers(DETECT_ARGS_PASS);
 }
 
