@@ -50,13 +50,20 @@ SUBCOMMAND_DECL(list)
             throw SW_RUNTIME_ERROR("No remote storages found");
 
         // merge from
-        // add overridden storage too?
         for (auto &s : rs)
         {
             auto m = getMatchingPackages(static_cast<sw::StorageWithPackagesDatabase &>(*s), getOptions().options_list.list_arg);
             for (auto &[p, v] : m)
                 r[p].merge(v);
         }
+
+        // overridden storage
+        {
+            auto m = getMatchingPackages(getContext().getLocalStorage().getOverriddenPackagesStorage(), getOptions().options_list.list_arg);
+            for (auto &[p, v] : m)
+                r[p].merge(v);
+        }
+        ;
     }
 
     if (r.empty())
