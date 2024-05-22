@@ -4656,6 +4656,11 @@ void NativeCompiledTarget::initLibrary(LibraryType Type)
         }
         if (getBuildSettings().TargetOS.Type == OSType::Windows)
             Definitions["_WINDLL"];
+
+        if (getBuildSettings().TargetOS.Type == OSType::Mingw)
+        {
+            *this += "org.sw.demo.mingw.w64.crtdll"_dep;
+        }
     }
     else
     {
@@ -5092,6 +5097,10 @@ bool ExecutableTarget::init()
                 L->PositionIndependentCode = false;
                 L->SharedObject = false;
             }
+        }
+
+        if (getBuildSettings().TargetOS.Type == OSType::Mingw) {
+            *this += "org.sw.demo.mingw.w64.crtexe"_dep;
         }
     }
     break;
