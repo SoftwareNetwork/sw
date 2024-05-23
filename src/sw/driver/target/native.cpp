@@ -2521,7 +2521,10 @@ void NativeCompiledTarget::prepare_pass1()
         // always add bdir to include dirs
         // do not check for existence, because generated files may go there
         // and we do not know about it right now
+        if (PublicBinaryDir)
         Public.IncludeDirectories.insert(BinaryDir);
+        else
+            IncludeDirectories.insert(BinaryDir);
         fs::create_directories(BinaryDir);
     }
 

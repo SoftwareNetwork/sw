@@ -16,4 +16,5 @@
 // 33: Recurse prevention in Target::getInterfaceSettings()
 // 34: Add ForceIncludes
 // 35: Add loader
-#define SW_MODULE_ABI_VERSION 35
+// 36: Add PublicBinaryDir flag
+#define SW_MODULE_ABI_VERSION 36

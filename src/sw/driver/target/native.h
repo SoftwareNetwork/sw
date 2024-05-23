@@ -55,6 +55,7 @@ public:
     bool GenerateWindowsResource = true; // internal?
     bool NoUndefined = true;
     bool WholeArchive = false;
+    bool PublicBinaryDir = true;
 
     // unity
     // https://cmake.org/cmake/help/latest/prop_tgt/UNITY_BUILD.html
