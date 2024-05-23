@@ -1159,7 +1159,30 @@ path Command::writeCommand(const path &p, bool print_name) const
         t += "E=$?\n";
         t += "if [ $E -ne 0 ]; then echo \"Error code: $E\"; fi";
     }
-    t += "\n";
+    t += "\n\n";
+
+    std::string comment;
+    if (bat)
+        comment = "::";
+    else
+        comment = "#";
+
+    if (!inputs.empty()) {
+        t += comment + " inputs\n";
+        for (auto &&i : inputs) {
+            t += comment + " " + i.string() + "\n";
+        }
+        t += "\n";
+    }
+
+    if (!outputs.empty()) {
+        t += comment + " outputs\n";
+        for (auto &&i : outputs)
+        {
+            t += comment + " " + i.string() + "\n";
+        }
+        t += "\n";
+    }
 
     write_file_if_different(pbat, t);
     fs::permissions(pbat,
