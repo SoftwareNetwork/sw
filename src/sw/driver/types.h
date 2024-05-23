@@ -61,6 +61,7 @@ enum class LibraryType
 
     Static,
     Shared,
+    Object,
 
     Default = Shared,
 };

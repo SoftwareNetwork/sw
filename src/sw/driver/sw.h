@@ -76,6 +76,7 @@ using sw::LibraryTarget;
 using sw::StaticLibraryTarget;
 using sw::SharedLibraryTarget;
 using sw::ExecutableTarget;
+using sw::ObjectLibraryTarget;
 
 // new aliases
 using Project = ProjectTarget; // deprecate?
@@ -83,6 +84,7 @@ using Library = LibraryTarget;
 using StaticLibrary = StaticLibraryTarget;
 using SharedLibrary = SharedLibraryTarget;
 using Executable = ExecutableTarget;
+using ObjectLibrary = ObjectLibraryTarget;
 
 // other langs
 using sw::CSharpTarget;

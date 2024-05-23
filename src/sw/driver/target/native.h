@@ -224,6 +224,7 @@ private:
     void prepare_pass3_2();
     void prepare_pass3_3();
     void prepare_pass4();
+    void prepare_pass4_1();
     void prepare_pass5();
     void prepare_pass6();
     void prepare_pass6_1();
@@ -295,6 +296,23 @@ struct SW_DRIVER_CPP_API SharedLibraryTarget : NativeCompiledTarget
     bool prepare() override
     {
         return prepareLibrary(LibraryType::Shared);
+    }
+};
+
+/**
+ * \brief Object only target.
+ */
+struct SW_DRIVER_CPP_API ObjectLibraryTarget : NativeCompiledTarget
+{
+    using NativeCompiledTarget::NativeCompiledTarget;
+
+    bool init() override;
+
+    TargetType getType() const override { return TargetType::NativeObjectLibrary; }
+
+    bool prepare() override
+    {
+        return prepareLibrary(LibraryType::Object);
     }
 };
 

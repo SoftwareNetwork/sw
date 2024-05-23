@@ -50,6 +50,7 @@ enum class TargetType : int
     NativeHeaderOnlyLibrary,
     NativeStaticLibrary,
     NativeSharedLibrary,
+    NativeObjectLibrary,
     NativeExecutable,
 
     // remove below?

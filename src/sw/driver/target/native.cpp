@@ -929,12 +929,16 @@ bool NativeCompiledTarget::init()
         // we set output file, but sometimes overridden call must set it later
         // (libraries etc.)
         // this one is used for executables
-        setOutputFile();
+        if (getType() != TargetType::NativeObjectLibrary) {
+            setOutputFile();
+        }
     }
     RETURN_INIT_MULTIPASS_NEXT_PASS;
     case 2:
     {
-        setOutputFile();
+        if (getType() != TargetType::NativeObjectLibrary) {
+            setOutputFile();
+        }
     }
     SW_RETURN_MULTIPASS_END(init_pass);
     }
@@ -965,7 +969,7 @@ void NativeCompiledTarget::setupCommand(builder::Command &c) const
                 continue;
             if (auto nt = d->getTarget().as<NativeCompiledTarget *>())
             {
-                if (!*nt->HeaderOnly && nt->getSelectedTool() == nt->Linker.get())
+                if (!*nt->HeaderOnly && nt->getSelectedTool() && nt->getSelectedTool() == nt->Linker.get())
                 {
                     f(nt->getOutputFile());
                 }
@@ -1332,6 +1336,8 @@ LinkLibrariesType NativeCompiledTarget::gatherLinkLibraries() const
 
 NativeLinker *NativeCompiledTarget::getSelectedTool() const
 {
+    if (getType() == TargetType::NativeObjectLibrary)
+        return {};
     if (SelectedTool)
         return SelectedTool;
     if (Linker)
@@ -1504,7 +1510,7 @@ void NativeCompiledTarget::addPrecompiledHeader()
 
 std::shared_ptr<builder::Command> NativeCompiledTarget::getCommand() const
 {
-    if (HeaderOnly && *HeaderOnly)
+    if (HeaderOnly && *HeaderOnly || getType() == TargetType::NativeObjectLibrary)
         return nullptr;
     return getSelectedTool()->getCommand(*this);
 }
@@ -2201,14 +2207,16 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings(std::unordered_
     case TargetType::NativeSharedLibrary:
         s["type"] = "native_shared_library";
         break;
+    case TargetType::NativeObjectLibrary:
+        s["type"] = "native_object_library";
+        break;
     default:
         SW_UNIMPLEMENTED;
     }
 
-    if (*HeaderOnly)
+    if (*HeaderOnly) {
         s["header_only"] = "true";
-    else
-    {
+    } else if (getType() != TargetType::NativeObjectLibrary) {
         if (getType() != TargetType::NativeExecutable) // skip for exe atm
             s["import_library"].setPathValue(getContext().getLocalStorage(), getImportLibrary());
         s["output_file"].setPathValue(getContext().getLocalStorage(), getOutputFile());
@@ -2399,26 +2407,30 @@ bool NativeCompiledTarget::prepare()
         prepare_pass4();
     RETURN_PREPARE_MULTIPASS_NEXT_PASS;
     case 5:
+        // merge
+        prepare_pass4_1();
+    RETURN_PREPARE_MULTIPASS_NEXT_PASS;
+    case 6:
         // source files
         prepare_pass5();
     RETURN_PREPARE_MULTIPASS_NEXT_PASS;
-    case 6:
+    case 7:
         // link libraries
         prepare_pass6();
     RETURN_PREPARE_MULTIPASS_NEXT_PASS;
-    case 7:
+    case 8:
         // link libraries
         prepare_pass6_1();
         RETURN_PREPARE_MULTIPASS_NEXT_PASS;
-    case 8:
+    case 9:
         // linker 1
         prepare_pass7();
     RETURN_PREPARE_MULTIPASS_NEXT_PASS;
-    case 9:
+    case 10:
         // linker 2
         prepare_pass8();
     RETURN_PREPARE_MULTIPASS_NEXT_PASS;
-    case 10:
+    case 11:
         prepare_pass9();
         // TODO: create prepare endgames method that always will be the last one
         getGeneratedCommands(); // create g.commands
@@ -2522,7 +2534,7 @@ void NativeCompiledTarget::prepare_pass1()
         // do not check for existence, because generated files may go there
         // and we do not know about it right now
         if (PublicBinaryDir)
-        Public.IncludeDirectories.insert(BinaryDir);
+            Public.IncludeDirectories.insert(BinaryDir);
         else
             IncludeDirectories.insert(BinaryDir);
         fs::create_directories(BinaryDir);
@@ -2532,6 +2544,12 @@ void NativeCompiledTarget::prepare_pass1()
     if (!HeaderOnly || !*HeaderOnly)
         HeaderOnly = !hasSourceFiles();
     if (*HeaderOnly)
+    {
+        Linker.reset();
+        Librarian.reset();
+        SelectedTool = nullptr;
+    }
+    else if (getType() == TargetType::NativeObjectLibrary)
     {
         Linker.reset();
         Librarian.reset();
@@ -3182,6 +3200,20 @@ void NativeCompiledTarget::prepare_pass4()
         getMergeObject().merge(v);
     });
 
+    if (getType() != TargetType::NativeObjectLibrary) {
+        return;
+    }
+
+    auto obj = gatherObjectFilesWithoutLibraries();
+    FilesOrdered files(obj.begin(), obj.end());
+    std::sort(files.begin(), files.end());
+    for (auto &&f : files) {
+        Public.LinkOptions.push_back(f.string());
+    }
+}
+
+void NativeCompiledTarget::prepare_pass4_1()
+{
     // merge deps' stuff
 
     // normal deps
@@ -4005,9 +4037,9 @@ void NativeCompiledTarget::prepare_pass5()
         // add casual idirs?
         f->getCompiler().idirs = NativeCompilerOptions::System.IncludeDirectories;
     }
-
     // generate rc, this one does not need idirs above
     if (GenerateWindowsResource
+        && getType() != TargetType::NativeObjectLibrary
         && !*HeaderOnly
         && ::sw::gatherSourceFiles<RcToolSourceFile>(*this).empty()
         && getSelectedTool() == Linker.get()
@@ -4402,6 +4434,10 @@ void NativeCompiledTarget::prepare_pass8()
 {
     // linker 2
 
+    if (getType() == TargetType::NativeObjectLibrary) {
+        return;
+    }
+
     // linker setup
     auto obj = gatherObjectFilesWithoutLibraries();
 
@@ -4660,14 +4696,25 @@ void NativeCompiledTarget::initLibrary(LibraryType Type)
         if (getBuildSettings().TargetOS.Type == OSType::Windows)
             Definitions["_WINDLL"];
 
-        if (getBuildSettings().TargetOS.Type == OSType::Mingw)
+        if (getBuildSettings().TargetOS.Type == OSType::Mingw
+            // protect from self build of mingw
+            && !getPackage().getPath().toString().contains("mingw.w64")
+            )
         {
             *this += "org.sw.demo.mingw.w64.crtdll"_dep;
+            *this += "org.sw.demo.mingw.w64.ucrtapp"_dep;
         }
     }
     else
     {
         SelectedTool = Librarian.get();
+
+        if (getBuildSettings().TargetOS.Type == OSType::Mingw
+            // protect from self build of mingw
+            && !getPackage().getPath().toString().contains("mingw.w64"))
+        {
+            *this += "org.sw.demo.mingw.w64.ucrtapp"_dep;
+        }
     }
 }
 
@@ -5032,6 +5079,7 @@ CompilerType NativeCompiledTarget::getCompilerType() const
     return ct;
 }
 
+// this function is not used
 TargetType NativeCompiledTarget::getRealType() const
 {
     if (isHeaderOnly())
@@ -5040,6 +5088,8 @@ TargetType NativeCompiledTarget::getRealType() const
         return TargetType::NativeStaticLibrary;
     if (getType() == TargetType::NativeExecutable)
         return TargetType::NativeExecutable;
+    if (getType() == TargetType::NativeObjectLibrary)
+        return TargetType::NativeObjectLibrary;
     return TargetType::NativeSharedLibrary;
 }
 
@@ -5102,8 +5152,13 @@ bool ExecutableTarget::init()
             }
         }
 
-        if (getBuildSettings().TargetOS.Type == OSType::Mingw) {
+        if (getBuildSettings().TargetOS.Type == OSType::Mingw
+            // protect from self build of mingw
+            // do not protect exes!
+            //&& !getPackage().getPath().toString().contains("mingw.w64")
+            ) {
             *this += "org.sw.demo.mingw.w64.crtexe"_dep;
+            *this += "org.sw.demo.mingw.w64.ucrtapp"_dep;
         }
     }
     break;
@@ -5180,6 +5235,12 @@ bool SharedLibraryTarget::init()
 {
     auto r = NativeCompiledTarget::init();
     initLibrary(LibraryType::Shared);
+    return r;
+}
+
+bool ObjectLibraryTarget::init() {
+    auto r = NativeCompiledTarget::init();
+    initLibrary(LibraryType::Object);
     return r;
 }
 

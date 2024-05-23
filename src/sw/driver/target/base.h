@@ -45,6 +45,7 @@ struct ExecutableTarget;
 struct LibraryTarget;
 struct StaticLibraryTarget;
 struct SharedLibraryTarget;
+struct ObjectLibraryTarget;
 
 struct Test;
 
@@ -153,6 +154,7 @@ struct SW_DRIVER_CPP_API TargetBase : TargetBaseData
     ADD_TARGET(Library)
     ADD_TARGET(StaticLibrary)
     ADD_TARGET(SharedLibrary)
+    ADD_TARGET(ObjectLibrary)
 #undef ADD_TARGET
 
     template <typename ... Args>
