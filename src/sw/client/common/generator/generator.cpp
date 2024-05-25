@@ -1304,8 +1304,11 @@ void CompilationDatabaseGenerator::generate(const SwBuild &b)
             for (auto &c : tgt->getCommands())
             {
                 nlohmann::json j2;
-                if (!c->working_directory.empty())
+                if (!c->working_directory.empty()) {
                     j2["directory"] = to_printable_string(normalize_path(c->working_directory));
+                    // required by consumers (e.g. clion)
+                    fs::create_directories(c->working_directory);
+                }
                 // since we are not using compdb to build whole project
                 // we are fine to skip empty input commands (clion is not ok with them)
                 if (compdb_clion && c->inputs.size() == 1 && *c->inputs.begin() == c->arguments[0]->toString())
