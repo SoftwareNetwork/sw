@@ -1155,6 +1155,8 @@ void Project::emitProject(const VSGenerator &g) const
             ctx.addBlock("IntDir", to_string(normalize_path_windows(get_int_dir(s))) + "\\int\\");
             // full name of target, keep as is (it might have subdirs)
             ctx.addBlock("TargetName", name);
+            // consumes tons of cpu
+            ctx.addBlock("EnableMicrosoftCodeAnalysis", "false");
             //addBlock("TargetExt", ext);
 
             if (!d.nmake_build.empty())
