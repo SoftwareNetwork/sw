@@ -328,7 +328,7 @@ function(sw_execute)
 
     # add deps targets
     string(REPLACE ";" " " swcmd1 "${swcmd}")
-    set(comment "sw: building dependencies")
+    set(comment "-- sw: building dependencies")
     if (SW_DEBUG)
         set(comment "${comment}: ${swcmd1}")
     endif()
