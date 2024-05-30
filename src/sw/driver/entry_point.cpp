@@ -493,7 +493,8 @@ decltype(auto) PrepareConfig::commonActions(Build &b, const InputData &d, const 
     if (isDriverStaticBuild())
         addImportLibrary(b, lib);
     lib.AutoDetectOptions = false;
-    lib.CPPVersion = CPPLanguageStandard::CPPLatest;
+    // use atleast c++23 for apple clang
+    lib.CPPVersion = CPPLanguageStandard::CPP23;
     lib.NoUndefined = false;
 
     lib += fn;
