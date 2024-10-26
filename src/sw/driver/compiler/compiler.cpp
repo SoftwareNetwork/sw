@@ -381,7 +381,8 @@ void VisualStudioASMCompiler::prepareCommand1(const Target &t)
     //cmd->base = clone();
 
     // defs and idirs for asm must go before file
-    addEverything(*cmd);
+    addDefinitionsAndIncludeDirectories(*cmd); // only this?
+    //addEverything(*cmd); // this will add unknown compiler options for masm
     getCommandLineOptions<VisualStudioAssemblerOptions>(cmd.get(), *this);
 }
 
