@@ -385,6 +385,8 @@ private:
             wk.kit_root = kr;
             wk.idir_subversion = v.toString();
             wk.ldir_subversion = v.toString();
+            //wk.idirs.push_back("shared"); // also shared?
+            wk.idirs.push_back("km/crt");
             wk.add(DETECT_ARGS_PASS, settings, v);
         }
 
@@ -415,6 +417,86 @@ private:
             wk.bdir_subversion = v.toString();
             wk.addTools(DETECT_ARGS_PASS);
         }
+
+        // wdf
+        auto add_wdf = [&](auto &&type) {
+            auto incroot = kr / "Include" / "wdf" / type;
+            auto libroot = kr / "Lib" / "wdf" / type;
+            if (!fs::exists(incroot)) {
+                return;
+            }
+            for (auto &&p : fs::directory_iterator{incroot})
+            {
+                if (!p.is_directory()) {
+                    continue;
+                }
+                sw::Version v{p.path().filename().string()};
+
+                for (auto target_arch : { sw::ArchType::x86_64,sw::ArchType::x86,sw::ArchType::arm,sw::ArchType::aarch64 })
+                {
+                    auto settings2 = settings;
+                    settings2.Arch = target_arch;
+
+                    auto ts1 = toTargetSettings(settings2);
+                    sw::TargetSettings ts;
+                    ts["os"]["kernel"] = ts1["os"]["kernel"];
+                    ts["os"]["arch"] = ts1["os"]["arch"];
+
+                    auto libdir = libroot / toStringWindows(target_arch) / (std::to_string(v.getMajor()) + "."s + std::to_string(v.getMinor()));
+                    if (fs::exists(libdir))
+                    {
+                        auto &t = sw::addTarget<sw::PredefinedTarget>(DETECT_ARGS_PASS, sw::LocalPackage(s.getLocalStorage(), sw::PackageId("com.Microsoft.Windows.WDF."s + type, v)), ts);
+                        //t.ts["os"]["version"] = v.toString();
+
+                        t.public_ts["properties"]["6"]["system_include_directories"].push_back(p.path());
+                        t.public_ts["properties"]["6"]["system_link_directories"].push_back(libdir);
+                    }
+                }
+            }
+        };
+        add_wdf("kmdf");
+        add_wdf("umdf");
+
+        auto add_versioned_um_system = [&](auto &&type) {
+            auto incroot = kr / "Include" / v.toString() / "um" / type;
+            auto libroot = kr / "Lib" / v.toString() / "um";
+            if (!fs::exists(incroot)) {
+                return;
+            }
+            for (auto &&p : fs::directory_iterator{incroot})
+            {
+                if (!p.is_directory()) {
+                    continue;
+                }
+                sw::Version v{p.path().filename().string()};
+
+                for (auto target_arch : { sw::ArchType::x86_64,sw::ArchType::x86,sw::ArchType::arm,sw::ArchType::aarch64 })
+                {
+                    auto settings2 = settings;
+                    settings2.Arch = target_arch;
+
+                    auto ts1 = toTargetSettings(settings2);
+                    sw::TargetSettings ts;
+                    ts["os"]["kernel"] = ts1["os"]["kernel"];
+                    ts["os"]["arch"] = ts1["os"]["arch"];
+
+                    auto libdir = libroot / toStringWindows(target_arch) / type / (std::to_string(v.getMajor()) + "."s + std::to_string(v.getMinor()));
+                    if (fs::exists(libdir))
+                    {
+                        auto &t = sw::addTarget<sw::PredefinedTarget>(DETECT_ARGS_PASS, sw::LocalPackage(s.getLocalStorage(), sw::PackageId("com.Microsoft.Windows.SDK.um."s + type, v)), ts);
+                        //t.ts["os"]["version"] = v.toString();
+
+                        t.public_ts["properties"]["6"]["system_include_directories"].push_back(p.path());
+                        t.public_ts["properties"]["6"]["system_link_directories"].push_back(libdir);
+                    }
+                }
+            }
+        };
+        add_versioned_um_system("iddcx");
+        add_versioned_um_system("nfc");
+        add_versioned_um_system("pos");
+        add_versioned_um_system("sensors");
+        add_versioned_um_system("ucm");
     }
 
     void addKit(DETECT_ARGS, const path &kr, const String &k) const
