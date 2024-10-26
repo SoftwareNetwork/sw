@@ -2460,6 +2460,10 @@ void NativeCompiledTarget::prepare_pass1()
         *this += upm;*/
     }
 
+    if (getCompilerType() == CompilerType::MSVC)
+    {
+        CompileOptions.push_back("-bigobj");
+    }
     if (ReproducibleBuild)
     {
         if (isClangFamily(getCompilerType()) || getCompilerType() == CompilerType::GNU)
