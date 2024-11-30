@@ -1333,6 +1333,8 @@ void addSettingsAndSetPrograms(const SwCoreContext &swctx, TargetSettings &ts)
     };
 
     // deps: programs, stdlib etc.
+    // returns true if provided dependency (variable v) is set
+    // if k is set and choosen over v, returns false
     auto check_and_assign_dependency = [&swctx, &ts](auto &k, const auto &v, int version_level = 0)
     {
         auto check_and_assign = [](auto &k, const auto &v, bool force2 = false)
@@ -1343,10 +1345,17 @@ void addSettingsAndSetPrograms(const SwCoreContext &swctx, TargetSettings &ts)
 
         bool use_k = k && k.isValue();
         auto i = swctx.getPredefinedTargets().find(UnresolvedPackage(use_k ? k.getValue() : v), ts);
-        if (i)
+        if (i) {
             check_and_assign(k, version_level ? i->getPackage().toString(version_level) : i->getPackage().toString(), use_k);
-        else
+            if (use_k) {
+                auto i2 = swctx.getPredefinedTargets().find(UnresolvedPackage(v), ts);
+                return i == i2;
+            }
+            return true;
+        } else {
             check_and_assign(k, v);
+            return true;
+        }
     };
 
     BuildSettings bs(ts);
@@ -1357,10 +1366,13 @@ void addSettingsAndSetPrograms(const SwCoreContext &swctx, TargetSettings &ts)
         String sver;
         if (bs.TargetOS.Version)
             sver = "-" + bs.TargetOS.Version->toString();
-        check_and_assign_dependency(ts["native"]["stdlib"]["c"], to_upkg("com.Microsoft.Windows.SDK.ucrt" + sver));
-        check_and_assign_dependency(ts["native"]["stdlib"]["cpp"], to_upkg("com.Microsoft.VisualStudio.VC.libcpp"));
-        //check_and_assign_dependency(ts["native"]["stdlib"]["cpp_modules"], to_upkg("com.Microsoft.VisualStudio.VC.libcpp.modules"));
-        check_and_assign_dependency(ts["native"]["stdlib"]["kernel"], to_upkg("com.Microsoft.Windows.SDK.um" + sver));
+
+        auto add_stdlib = [&]() {
+            check_and_assign_dependency(ts["native"]["stdlib"]["c"], to_upkg("com.Microsoft.Windows.SDK.ucrt" + sver));
+            check_and_assign_dependency(ts["native"]["stdlib"]["cpp"], to_upkg("com.Microsoft.VisualStudio.VC.libcpp"));
+            //check_and_assign_dependency(ts["native"]["stdlib"]["cpp_modules"], to_upkg("com.Microsoft.VisualStudio.VC.libcpp.modules"));
+            check_and_assign_dependency(ts["native"]["stdlib"]["kernel"], to_upkg("com.Microsoft.Windows.SDK.um" + sver));
+        };
 
         // now find the latest available sdk (ucrt) and select it
         //TargetSettings oss;
@@ -1380,42 +1392,73 @@ void addSettingsAndSetPrograms(const SwCoreContext &swctx, TargetSettings &ts)
         auto clangclpkg = "org.LLVM.clangcl";
         auto clangcl = swctx.getPredefinedTargets().find(clangclpkg);
 
+        auto gpppkg = "org.gnu.gpp";
+        auto gpp = swctx.getPredefinedTargets().find(gpppkg);
+
+        int counter{};
         if (0)
         {
         }
         // msvc
-        else if (cl != swctx.getPredefinedTargets().end(clpkg) && !cl->second.empty())
+        if (cl != swctx.getPredefinedTargets().end(clpkg) && !cl->second.empty())
         {
-            check_and_assign_dependency(ts["native"]["program"]["c"], to_upkg("com.Microsoft.VisualStudio.VC.cl"));
-            check_and_assign_dependency(ts["native"]["program"]["cpp"], to_upkg("com.Microsoft.VisualStudio.VC.cl"));
-            check_and_assign_dependency(ts["native"]["program"]["asm"], to_upkg("com.Microsoft.VisualStudio.VC.ml"));
-            check_and_assign_dependency(ts["native"]["program"]["lib"], to_upkg("com.Microsoft.VisualStudio.VC.lib"));
-            check_and_assign_dependency(ts["native"]["program"]["link"], to_upkg("com.Microsoft.VisualStudio.VC.link"));
+            counter += check_and_assign_dependency(ts["native"]["program"]["c"], to_upkg("com.Microsoft.VisualStudio.VC.cl"));
+            counter += check_and_assign_dependency(ts["native"]["program"]["cpp"], to_upkg("com.Microsoft.VisualStudio.VC.cl"));
+            counter += check_and_assign_dependency(ts["native"]["program"]["asm"], to_upkg("com.Microsoft.VisualStudio.VC.ml"));
+            counter += check_and_assign_dependency(ts["native"]["program"]["lib"], to_upkg("com.Microsoft.VisualStudio.VC.lib"));
+            counter += check_and_assign_dependency(ts["native"]["program"]["link"], to_upkg("com.Microsoft.VisualStudio.VC.link"));
+
+            if (counter) {
+                add_stdlib();
+                return;
+            }
         }
         // clangcl
-        else if (clangcl != swctx.getPredefinedTargets().end(clangclpkg) && !clangcl->second.empty())
+        if (clangcl != swctx.getPredefinedTargets().end(clangclpkg) && !clangcl->second.empty())
         {
-            check_and_assign_dependency(ts["native"]["program"]["c"], to_upkg("org.LLVM.clangcl"));
-            check_and_assign_dependency(ts["native"]["program"]["cpp"], to_upkg("org.LLVM.clangcl"));
-            check_and_assign_dependency(ts["native"]["program"]["asm"], to_upkg("org.LLVM.clangcl"));
+            counter += check_and_assign_dependency(ts["native"]["program"]["c"], to_upkg("org.LLVM.clangcl"));
+            counter += check_and_assign_dependency(ts["native"]["program"]["cpp"], to_upkg("org.LLVM.clangcl"));
+            counter += check_and_assign_dependency(ts["native"]["program"]["asm"], to_upkg("org.LLVM.clangcl"));
             // ?
-            check_and_assign_dependency(ts["native"]["program"]["lib"], to_upkg("com.Microsoft.VisualStudio.VC.lib"));
-            check_and_assign_dependency(ts["native"]["program"]["link"], to_upkg("com.Microsoft.VisualStudio.VC.link"));
+            counter += check_and_assign_dependency(ts["native"]["program"]["lib"], to_upkg("com.Microsoft.VisualStudio.VC.lib"));
+            counter += check_and_assign_dependency(ts["native"]["program"]["link"], to_upkg("com.Microsoft.VisualStudio.VC.link"));
+
+            if (counter) {
+                add_stdlib();
+                return;
+            }
         }
         // clang
-        else if (clangpp != swctx.getPredefinedTargets().end(clangpppkg) && !clangpp->second.empty())
+        if (clangpp != swctx.getPredefinedTargets().end(clangpppkg) && !clangpp->second.empty())
         {
-            check_and_assign_dependency(ts["native"]["program"]["c"], to_upkg("org.LLVM.clang"));
-            check_and_assign_dependency(ts["native"]["program"]["cpp"], to_upkg("org.LLVM.clangpp"));
-            check_and_assign_dependency(ts["native"]["program"]["asm"], to_upkg("org.LLVM.clang"));
+            counter += check_and_assign_dependency(ts["native"]["program"]["c"], to_upkg("org.LLVM.clang"));
+            counter += check_and_assign_dependency(ts["native"]["program"]["cpp"], to_upkg("org.LLVM.clangpp"));
+            counter += check_and_assign_dependency(ts["native"]["program"]["asm"], to_upkg("org.LLVM.clang"));
             // ?
-            check_and_assign_dependency(ts["native"]["program"]["lib"], to_upkg("com.Microsoft.VisualStudio.VC.lib"));
-            check_and_assign_dependency(ts["native"]["program"]["link"], to_upkg("com.Microsoft.VisualStudio.VC.link"));
+            counter += check_and_assign_dependency(ts["native"]["program"]["lib"], to_upkg("com.Microsoft.VisualStudio.VC.lib"));
+            counter += check_and_assign_dependency(ts["native"]["program"]["link"], to_upkg("com.Microsoft.VisualStudio.VC.link"));
+
+            if (counter) {
+                add_stdlib();
+                return;
+            }
         }
-        else
+        // gcc (mingw or other)
+        if (gpp != swctx.getPredefinedTargets().end(gpppkg) && !gpp->second.empty())
         {
-            throw SW_RUNTIME_ERROR("No suitable compilers found.\nPlease, install one first.");
+            counter += check_and_assign_dependency(ts["native"]["program"]["c"], to_upkg("org.gnu.gcc"));
+            counter += check_and_assign_dependency(ts["native"]["program"]["cpp"], to_upkg("org.gnu.gpp"));
+            counter += check_and_assign_dependency(ts["native"]["program"]["asm"], to_upkg("org.gnu.gcc"));
+            // ?
+            counter += check_and_assign_dependency(ts["native"]["program"]["lib"], to_upkg("org.gnu.binutils.ar"));
+            counter += check_and_assign_dependency(ts["native"]["program"]["link"], to_upkg("org.gnu.gpp"));
+
+            if (counter) {
+                return;
+            }
         }
+
+        throw SW_RUNTIME_ERROR("No suitable compilers found.\nPlease, install one first.");
     }
     // add more defaults
     else
