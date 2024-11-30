@@ -4185,7 +4185,10 @@ void NativeCompiledTarget::prepare_pass5()
     }
 
     // export all symbols
-    if (ExportAllSymbols && getBuildSettings().TargetOS.Type == OSType::Windows && getSelectedTool() == Linker.get())
+    if (ExportAllSymbols
+        && getBuildSettings().TargetOS.Type == OSType::Windows
+        && getCompilerType() != CompilerType::GNU
+        && getSelectedTool() == Linker.get())
     {
         const path def = NATIVE_TARGET_DEF_SYMBOLS_FILE;
         Files objs;
