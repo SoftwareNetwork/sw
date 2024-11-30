@@ -71,6 +71,8 @@ static sw::TargetSettings compilerTypeFromStringCaseI(const sw::UnresolvedPackag
         ts["native"]["program"]["c"] = set_with_version("org.gnu.gcc");
         ts["native"]["program"]["cpp"] = set_with_version("org.gnu.gpp");
         ts["native"]["program"]["asm"] = ts["native"]["program"]["c"].getValue();
+        ts["native"]["program"]["lib"] = set_with_version("org.gnu.binutils.ar");
+        ts["native"]["program"]["link"] = ts["native"]["program"]["cpp"].getValue();
     }
     else if (0
         || compiler.ppath == "clang"
