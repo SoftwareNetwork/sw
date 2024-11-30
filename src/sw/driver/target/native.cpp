@@ -4288,6 +4288,7 @@ void NativeCompiledTarget::prepare_pass6()
         }
     }
 
+    if (getCompilerType() != CompilerType::GNU)
     if (getSettings()["native"]["stdlib"]["kernel"].isValue())
     switch (rt)
     {
