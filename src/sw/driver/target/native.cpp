@@ -2462,7 +2462,9 @@ void NativeCompiledTarget::prepare_pass1()
 
     if (getCompilerType() == CompilerType::MSVC)
     {
-        CompileOptions.push_back("-bigobj");
+        // dav1d does not work with this
+        // it passes -bigobj to nasm which is wrong
+        //CompileOptions.push_back("-bigobj");
     }
     if (ReproducibleBuild)
     {
