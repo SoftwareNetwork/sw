@@ -943,8 +943,14 @@ void GNULinker::prepareCommand1(const Target &t)
         {
             for (auto &ll : a)
             {
-                if (ll.l.is_relative())
+                if (ll.l.is_relative()) {
+                    if (ll.l.extension() == ".LIB"sv || ll.l.extension() == ".lib"sv)
+                    {
+                        ll.l = ll.l.stem();
+                        continue;
+                    }
                     continue;
+                }
                 if (add_inputs)
                     cmd->addInput(ll.l);
                 if (ll.whole_archive && ll.style == ll.AppleLD)
