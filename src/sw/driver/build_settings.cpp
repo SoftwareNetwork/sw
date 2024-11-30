@@ -145,6 +145,10 @@ String BuildSettings::getTargetTriplet() const
     else
     {
         target += "-" + toTripletString(TargetOS.Type);
+        if (TargetOS.Type == OSType::Macos) {
+            target += "x"; // macos is actually macosx in the triplet
+            // or use darwin with version
+        }
         if (TargetOS.isApple() && TargetOS.Version)
             target += TargetOS.Version->toString(TargetOS.Version->getRealLevel());
         if (TargetOS.Type == OSType::Android)
