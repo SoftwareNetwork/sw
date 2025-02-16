@@ -16,7 +16,7 @@ jobs:
     - run: ./sw -static build
     - uses: actions/upload-artifact@v4
       with:
-        name: sw
+        name: sw-windows
         path: .sw/out/**/*.exe
 
   linux:
@@ -32,7 +32,7 @@ jobs:
     - run: ./sw -static build -compiler gcc
     - uses: actions/upload-artifact@v4
       with:
-        name: sw
+        name: sw-linux
         path: .sw/out
                 
   macos:
@@ -53,5 +53,5 @@ jobs:
         ./sw -static build -compiler appleclang
     - uses: actions/upload-artifact@v4
       with:
-        name: sw
+        name: sw-macos
         path: .sw/out
