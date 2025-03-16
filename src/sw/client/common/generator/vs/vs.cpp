@@ -798,7 +798,7 @@ void VSGenerator::generate(const SwBuild &b)
 
             Strings args;
             args.push_back("-d");
-            args.push_back(to_string(normalize_path(curr_dirr)));
+            args.push_back("\""s + to_string(normalize_path(curr_dirr)) + "\""s);
             args.push_back("-sfc");
             args.push_back("build");
             args.push_back("-input-settings-pairs");
@@ -808,12 +808,12 @@ void VSGenerator::generate(const SwBuild &b)
                 args.push_back(fix_json(s));
             }
             args.push_back("-ide-fast-path");
-            args.push_back(to_string(normalize_path(path(basefn) += ".deps")));
+            args.push_back("\""s + to_string(normalize_path(path(basefn) += ".deps")) + "\""s);
             args.push_back("-ide-copy-to-dir");
             if (st["name"])
-                args.push_back(to_string(normalize_path(b.getBuildDirectory() / "out" / st["name"].getValue())));
+                args.push_back("\""s + to_string(normalize_path(b.getBuildDirectory() / "out" / st["name"].getValue())) + "\""s);
             else
-                args.push_back(to_string(normalize_path(b.getBuildDirectory() / "out" / st.getHash())));
+                args.push_back("\""s + to_string(normalize_path(b.getBuildDirectory() / "out" / st.getHash())) + "\""s);
 
             String s;
             for (auto &a : args)
@@ -829,7 +829,7 @@ void VSGenerator::generate(const SwBuild &b)
             d.custom_rules_manual.push_back(r);
 
             BuildEvent be;
-            be.command = get_current_program() + " @" + to_string(normalize_path(rsp));
+            be.command = get_current_program() + " \"@"s + to_string(normalize_path(rsp)) + "\""s;
             d.pre_build_event = be;
         }
 
@@ -900,7 +900,7 @@ void VSGenerator::generate(const SwBuild &b)
         bat += ":: turn on multiprocess compilation\n";
         bat += "set UseMultiToolTask=true\n";
         // bat += "set EnforceProcessCountAcrossBuilds=true\n";
-        bat += "start " + to_string(normalize_path_windows(sln_root / visible_lnk_name)) + "\n";
+        bat += "start \"\" \"" + to_string(normalize_path_windows(sln_root / visible_lnk_name)) + "\"\n";
         // for preview cl versions run preview VS later
         // start "c:\Program Files (x86)\Microsoft Visual Studio\2019\Preview\Common7\IDE\devenv.exe" fn
         fn += ".bat"; // we now make a link to bat file
