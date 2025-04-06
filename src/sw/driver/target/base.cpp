@@ -579,6 +579,9 @@ const TargetSettings &Target::getInterfaceSettings(std::unordered_set<void*> *vi
 
 void TargetOptions::add(const ForceIncludeFile &i)
 {
+    if (getTarget().DryRun)
+        return;
+
     path p = i.i;
     check_absolute(p);
     ForceIncludeFiles.insert(p);
@@ -586,6 +589,9 @@ void TargetOptions::add(const ForceIncludeFile &i)
 
 void TargetOptions::remove(const ForceIncludeFile &i)
 {
+    if (getTarget().DryRun)
+        return;
+
     path p = i.i;
     check_absolute(p);
     ForceIncludeFiles.erase(p);
