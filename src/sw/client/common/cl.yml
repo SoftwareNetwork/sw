@@ -439,6 +439,9 @@ command_line:
             list:
                 aliases: l
                 desc: List aliases.
+            agree_with_override:
+                aliases: y
+                desc: Agree with override.
 
     # build
     subcommand:

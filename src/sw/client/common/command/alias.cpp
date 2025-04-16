@@ -85,7 +85,7 @@ SUBCOMMAND_DECL(alias)
     nlohmann::json j;
     if (fs::exists(aliases_db))
         j = nlohmann::json::parse(read_file(aliases_db));
-    if (j.contains(name))
+    if (j.contains(name) && !getOptions().options_alias.agree_with_override)
     {
         std::cout << "You are about to overwrite alias '" << name << "'. Are you sure? [y/N]\n";
         String a;
