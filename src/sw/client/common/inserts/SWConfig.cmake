@@ -28,6 +28,10 @@ set(SW_DEPS_FILE "${SW_DEPS_DIR}/sw.txt" CACHE STRING "SW local deps file.")
 # clear deps before each run
 file(WRITE ${SW_DEPS_FILE} "")
 
+if (SW_TRACE)
+    set(SW_DEBUG 1)
+endif()
+
 ########################################
 # MACRO sw_internal_fix_path
 ########################################
@@ -251,6 +255,9 @@ function(sw_execute)
             -cmake-deps "${depsfile}"
             -cmake-file-version ${SW_CMAKE_VERSION}
     )
+    if (SW_TRACE)
+        set(swcmd ${swcmd} --trace)
+    endif()
 
     if (SW_DEBUG)
         string(REPLACE ";" " " swcmd1 "${swcmd}")
