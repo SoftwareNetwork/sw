@@ -76,7 +76,10 @@ void self_upgrade(const String &progname)
     }
 #else
     auto cppan = tmp_dir / progname;
-    fs::permissions(cppan, fs::perms::owner_all | fs::perms::group_exec | fs::perms::others_exec);
+    fs::permissions(cppan, fs::perms::owner_all
+        | fs::perms::group_read | fs::perms::group_exec
+        | fs::perms::others_read | fs::perms::others_exec
+    );
     fs::remove(program);
     fs::copy_file(cppan, program);
     fs::remove(cppan);
