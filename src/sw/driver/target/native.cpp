@@ -2554,6 +2554,12 @@ void NativeCompiledTarget::prepare_pass1()
         Linker.reset();
         Librarian.reset();
         SelectedTool = nullptr;
+
+        if (getBuildSettings().TargetOS.Type == OSType::Mingw
+            // protect from self build of mingw
+            && !getPackage().getPath().toString().contains("mingw.w64")) {
+            *this -= "org.sw.demo.mingw.w64.crtdll"_dep;
+        }
     }
     else if (getType() == TargetType::NativeObjectLibrary)
     {
@@ -5169,6 +5175,7 @@ bool ExecutableTarget::init()
             //&& !getPackage().getPath().toString().contains("mingw.w64")
             ) {
             *this += "org.sw.demo.mingw.w64.crtexe"_dep;
+            *this -= "org.sw.demo.mingw.w64.crtdll"_dep; // only resolve it
             *this += "org.sw.demo.mingw.w64.ucrtapp"_dep;
         }
     }

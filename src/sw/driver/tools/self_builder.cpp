@@ -116,6 +116,10 @@ String write_build_script(SwCoreContext &swctx,
         {
             // cpp driver
             prepkgs.push_back({ SW_DRIVER_NAME });
+
+            // mingw
+            //prepkgs.push_back({ "org.sw.demo.mingw.w64.crtexe" });
+            //prepkgs.push_back({ "org.sw.demo.mingw.w64.crtdll" });
         }
     }
 
