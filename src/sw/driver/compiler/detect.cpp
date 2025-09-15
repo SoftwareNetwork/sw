@@ -634,10 +634,10 @@ static void detectWindowsClang(DETECT_ARGS, const path &base_llvm_path)
                 // we use --nostdinc, so -X is not needed
                 if (colored_output)
                 {
-                    c2->push_back("-Xclang").affects_output = false;
-                    c2->push_back("-fcolor-diagnostics").affects_output = false;
-                    c2->push_back("-Xclang").affects_output = false;
-                    c2->push_back("-fansi-escape-codes").affects_output = false;
+                    //c2->push_back("-Xclang").affects_output = false;
+                    //c2->push_back("-fcolor-diagnostics").affects_output = false;
+                    //c2->push_back("-Xclang").affects_output = false;
+                    //c2->push_back("-fansi-escape-codes").affects_output = false;
                 }
 
                 // returns path to /bin dir
@@ -729,8 +729,8 @@ static void detectWindowsClang(DETECT_ARGS, const path &base_llvm_path)
             if (colored_output)
             {
                 auto c2 = p->getCommand();
-                c2->push_back("-fcolor-diagnostics").affects_output = false;
-                c2->push_back("-fansi-escape-codes").affects_output = false;
+                //c2->push_back("-fcolor-diagnostics").affects_output = false;
+                //c2->push_back("-fansi-escape-codes").affects_output = false;
             }
             //c->push_back("-Wno-everything");
             // is it able to find VC STL itself?
@@ -756,8 +756,8 @@ static void detectWindowsClang(DETECT_ARGS, const path &base_llvm_path)
             if (colored_output)
             {
                 auto c2 = p->getCommand();
-                c2->push_back("-fcolor-diagnostics").affects_output = false;
-                c2->push_back("-fansi-escape-codes").affects_output = false;
+                //c2->push_back("-fcolor-diagnostics").affects_output = false;
+                //c2->push_back("-fansi-escape-codes").affects_output = false;
             }
             //c->push_back("-Wno-everything");
             // is it able to find VC STL itself?
@@ -942,8 +942,8 @@ static void detectNonWindowsCompilers(DETECT_ARGS, bool quick_gcc)
                 c2->push_back("-fdiagnostics-color=always").affects_output = false;
             else if (color_diag == 2)
             {
-                c2->push_back("-fcolor-diagnostics").affects_output = false;
-                c2->push_back("-fansi-escape-codes").affects_output = false;
+                //c2->push_back("-fcolor-diagnostics").affects_output = false;
+                //c2->push_back("-fansi-escape-codes").affects_output = false;
             }
         }
         return true;
@@ -977,8 +977,8 @@ static void detectNonWindowsCompilers(DETECT_ARGS, bool quick_gcc)
                     c2->push_back("-fdiagnostics-color=always").affects_output = false;
                 else if (color_diag == 2)
                 {
-                    c2->push_back("-fcolor-diagnostics").affects_output = false;
-                    c2->push_back("-fansi-escape-codes").affects_output = false;
+                    //c2->push_back("-fcolor-diagnostics").affects_output = false;
+                    //c2->push_back("-fansi-escape-codes").affects_output = false;
                 }
             }
         } catch (std::exception &) {
@@ -1032,8 +1032,8 @@ static void detectNonWindowsCompilers(DETECT_ARGS, bool quick_gcc)
                         c2->push_back("-fdiagnostics-color=always").affects_output = false;
                     else if (color_diag == 2)
                     {
-                        c2->push_back("-fcolor-diagnostics").affects_output = false;
-                        c2->push_back("-fansi-escape-codes").affects_output = false;
+                        //c2->push_back("-fcolor-diagnostics").affects_output = false;
+                        //c2->push_back("-fansi-escape-codes").affects_output = false;
                     }
                 }
                 return;
@@ -1056,8 +1056,8 @@ static void detectNonWindowsCompilers(DETECT_ARGS, bool quick_gcc)
                         c2->push_back("-fdiagnostics-color=always").affects_output = false;
                     else if (color_diag == 2)
                     {
-                        c2->push_back("-fcolor-diagnostics").affects_output = false;
-                        c2->push_back("-fansi-escape-codes").affects_output = false;
+                        //c2->push_back("-fcolor-diagnostics").affects_output = false;
+                        //c2->push_back("-fansi-escape-codes").affects_output = false;
                     }
                 }
                 return;
@@ -1075,8 +1075,8 @@ static void detectNonWindowsCompilers(DETECT_ARGS, bool quick_gcc)
                         c2->push_back("-fdiagnostics-color=always").affects_output = false;
                     else if (color_diag == 2)
                     {
-                        c2->push_back("-fcolor-diagnostics").affects_output = false;
-                        c2->push_back("-fansi-escape-codes").affects_output = false;
+                        //c2->push_back("-fcolor-diagnostics").affects_output = false;
+                        //c2->push_back("-fansi-escape-codes").affects_output = false;
                     }
                 }
                 return;
