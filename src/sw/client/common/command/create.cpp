@@ -170,7 +170,7 @@ SUBCOMMAND_DECL(create)
         ctx.addLine("// p += Git(\"https://github.com/account/project\");");
         ctx.addLine();
         ctx.addLine("auto &t = s.addTarget<Executable>(\"project\");");
-        ctx.addLine("t += cpp17;");
+        ctx.addLine("t += cpp20;");
         ctx.addLine("//t += \"src/main.cpp\";");
         ctx.addLine("//t += \"pub.egorpugin.primitives.sw.main\"_dep;");
         ctx.endFunction();
