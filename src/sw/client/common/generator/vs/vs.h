@@ -4,8 +4,10 @@
 #pragma once
 
 #include <sw/builder/command.h>
+#include <sw/builder/os.h>
 #include <sw/core/target.h>
 #include <sw/manager/package.h>
+#include <sw/driver/types.h>
 
 #include <functional>
 #include <optional>
@@ -188,6 +190,7 @@ struct Solution
     Settings settings;
 
     void emit(const VSGenerator &, const String &slnfn) const;
+    void emit18(const VSGenerator &, const String &slnfn) const;
 
     const Settings &getSettings() const { return settings; }
 
@@ -242,3 +245,12 @@ struct FlagTable
 using FlagTables = std::map<String /* command name */, FlagTable>;
 
 String get_project_configuration(const sw::BuildSettings &s);
+String get_configuration(const sw::BuildSettings &s);
+
+namespace generator {
+
+String toString(sw::ConfigurationType t);
+String toString(sw::ArchType t);
+String toString(sw::LibraryType t);
+
+} // namespace generator

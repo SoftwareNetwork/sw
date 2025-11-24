@@ -84,6 +84,10 @@ int vsVersionFromString(const String &s)
             return 16;
         case 2022:
             return 17;
+        case 2026:
+            return 18;
+        default:
+            throw SW_RUNTIME_ERROR("New (unknown) vs version: " + t);
         }
     }
     else if (t.size() == 2)
@@ -104,6 +108,9 @@ static auto fix_json(String s)
 
 static Version clver2vsver(const Version &clver, const Version &clmaxver)
 {
+    if (clver >= Version(19, 50))
+        return Version(18);
+
     if (clver >= Version(19, 30, 30401))
         return Version(17);
 
@@ -327,7 +334,7 @@ void VSGenerator::generate(const SwBuild &b)
     sln_root /= vs_version.toString(1);
 
     // dl flag tables from cmake
-    static const String ft_base_url = "https://gitlab.kitware.com/cmake/cmake/raw/master/Templates/MSBuild/FlagTables/";
+    static const String ft_base_url = "https://raw.githubusercontent.com/Kitware/CMake/refs/heads/master/Templates/MSBuild/FlagTables/";
     static const String ft_ext = ".json";
     const Strings tables1 = { "CL", "Link" };
     const Strings tables2 = { "LIB", "MASM", "RC" };
@@ -886,8 +893,13 @@ void VSGenerator::generate(const SwBuild &b)
         visible_lnk_name += to_string(curr_dirr.filename().u8string()) + "_";
         visible_lnk_name += compiler_name + "_" + getPathString().string() + "_" + vs_version.toString(1);
     }
-    visible_lnk_name += ".sln";
-    s.emit(*this, visible_lnk_name);
+    if (vs_version >= Version(18)) {
+        visible_lnk_name += ".slnx";
+        s.emit18(*this, visible_lnk_name);
+    } else {
+        visible_lnk_name += ".sln";
+        s.emit(*this, visible_lnk_name);
+    }
 
     // create links etc.
     // write bat for multiprocess compilation
@@ -958,6 +970,123 @@ void Solution::emit(const VSGenerator &g, const String &slnfn) const
 
     for (auto &[n, p] : projects)
     {
+        LOG_INFO(logger, "emitting project " << n);
+        p.emit(g);
+    }
+}
+
+struct xml_emitter : primitives::Emitter {
+    using string_map = StringMap<String>;
+
+    template <bool Closed>
+    struct tag_emitter {
+        xml_emitter &e;
+        String name;
+        bool closed{};
+
+        tag_emitter(xml_emitter &e, const String &name, const string_map &kv_props = string_map{}) : e{ e }, name{ name } {
+            String props;
+            for (auto &&[k, v] : kv_props) {
+                props += std::format(" {}=\"{}\"", k, v);
+            }
+            String clo;
+            if (Closed) {
+                clo += std::format(" /");
+            }
+            e.addLine(std::format("<{}{}{}>", name, props, clo));
+            if (!Closed) {
+                e.increaseIndent();
+            }
+        }
+        ~tag_emitter() {
+            if (!Closed) {
+                e.decreaseIndent();
+                e.addLine(std::format("</{}>", name));
+            }
+        }
+    };
+
+    xml_emitter() : primitives::Emitter{"  "} {
+    }
+
+    template <bool Closed = false>
+    auto add_tag(auto &&...args) {
+        return tag_emitter<Closed>(*this, args...);
+    }
+};
+
+void Solution::emit18(const VSGenerator &g, const String &slnfn) const
+{
+    LOG_INFO(logger, "emitting solution " << slnfn);
+
+    auto make_uuid = [](auto u) {
+        if (u.front() == '{') u = u.substr(1);
+        if (u.back() == '}') u.pop_back();
+        return u;
+    };
+
+    xml_emitter e;
+    {
+        auto stag = e.add_tag<>("Solution");
+        {
+            auto ctag = e.add_tag<>("Configurations");
+            StringSet archs, confs;
+            for (auto &[n, p] : projects) {
+                for (auto &s : p.getSettings()) {
+                    confs.insert(get_configuration(s));
+                    archs.insert(generator::toString(BuildSettings(s).TargetOS.Arch));
+                }
+            }
+            auto add = [&](auto &&n, auto &&s) {
+                for (auto &&el : s) {
+                    e.add_tag<true>(n, xml_emitter::string_map{ {"Name"s,el} });
+                }
+            };
+            add("BuildType", confs);
+            add("Platform", archs);
+        }
+        std::map<const Directory *, std::vector<const Project *>> dps;
+        for (auto &[n, p] : projects) {
+            dps[p.directory].push_back(&p);
+        }
+        auto ppath = [&](auto &&p) {
+            return normalize_path(to_string((vs_project_dir / (p.name + vs_project_ext)).u8string())).string();
+            };
+        auto emit_project = [&](auto &&p) {
+            auto pp = ppath(p);
+            auto ptag = e.add_tag<>("Project", xml_emitter::string_map{
+                {"Path"s,pp},
+                {"Id"s,make_uuid(p.uuid)}
+                });
+            for (auto &&d : p.dependencies) {
+                e.add_tag<true>("BuildDependency", xml_emitter::string_map{ {"Project"s,ppath(*d)} });
+            }
+            };
+        for (auto &[d, projs] : dps) {
+            if (!d) {
+                for (auto &p : projs) {
+                    emit_project(*p);
+                }
+                continue;
+            }
+            auto n = std::format("/{}/", d->getVisibleName());
+            auto parent = d->directory;
+            while (parent) {
+                n = std::format("/{}", parent->getVisibleName()) + n;
+                parent = parent->directory;
+            }
+            auto ftag = e.add_tag<>("Folder", xml_emitter::string_map{ {"Name"s,n} });
+            for (auto &p : projs) {
+                emit_project(*p);
+            }
+            for (auto &f : d->files) {
+                e.add_tag<true>("File", xml_emitter::string_map{ {"Path"s,normalize_path(f.p).string()} });
+            }
+        }
+    }
+    write_file_if_different(g.sln_root / slnfn, e.getText());
+
+    for (auto &[n, p] : projects) {
         LOG_INFO(logger, "emitting project " << n);
         p.emit(g);
     }

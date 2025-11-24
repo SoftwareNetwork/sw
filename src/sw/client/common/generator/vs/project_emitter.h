@@ -69,7 +69,6 @@ struct ProjectEmitter : XmlEmitter
     void endFileBlock();
 };
 
-String get_configuration(const sw::BuildSettings &s);
 std::string getVsToolset(const sw::Version &v);
 
 VSFileType get_vs_file_type_by_ext(const path &p);

@@ -8,7 +8,6 @@
 
 #include <sw/builder/os.h>
 #include <sw/driver/build_settings.h>
-#include <sw/driver/types.h>
 
 #include <primitives/sw/cl.h>
 
@@ -38,7 +37,7 @@ static const std::map<ArchType, String> platforms
 namespace generator
 {
 
-static String toString(ConfigurationType t)
+String toString(ConfigurationType t)
 {
     switch (t)
     {
@@ -55,7 +54,7 @@ static String toString(ConfigurationType t)
     }
 }
 
-static String toString(ArchType t)
+String toString(ArchType t)
 {
     auto i = platforms.find(t);
     if (i == platforms.end())
@@ -64,7 +63,7 @@ static String toString(ArchType t)
     return i->second;
 }
 
-static String toString(LibraryType t)
+String toString(LibraryType t)
 {
     switch (t)
     {
@@ -119,6 +118,8 @@ String toString(VSFileType t)
 
 std::string getVsToolset(const Version &clver)
 {
+    if (clver >= Version(19, 50))
+        return "v145";
     if (clver >= Version(19, 30, 30401))
         return "v143";
     if (clver >= Version(19, 20))
