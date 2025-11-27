@@ -228,7 +228,7 @@ getFileDependencies(const SwCoreContext &swctx, const path &p, std::set<size_t> 
     FilesOrdered headers;
 
     auto f = read_file(p);
-#ifdef _WIN32
+#if defined(_WIN32) && defined(_MSC_VER) && _MSC_VER < 1950
     static const std::regex r_pragma("^#pragma +sw +require +(\\S+)( +(\\S+))?");
 #else
     static const std::regex r_pragma("#pragma +sw +require +(\\S+)( +(\\S+))?");
