@@ -42,6 +42,7 @@ struct http_request_cache {
             if (short_timeouts)
             {
                 request.connect_timeout = 1;
+                //request.timeout = 30; // but we may have archive to dl?
             }
             request.url = key_url + additional_url;
             try
@@ -105,7 +106,7 @@ struct http_request_cache {
             "org.sw.demo.openldap.ldap_r-2.4",
             "org.sw.demo.khronos.vulkan", // for now
             "org.sw.demo.gnu.m4.m4", // a lot of work
-            "org.sw.demo.gnu.gawk", // hangs
+            //"org.sw.demo.gnu.gawk", // hangs
         };
         for (auto &&[p, vp] : new_pkgs) {
             auto pkg = p.toString();
