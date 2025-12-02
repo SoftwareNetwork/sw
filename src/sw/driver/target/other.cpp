@@ -81,6 +81,7 @@ void detectCSharpCompilers(DETECT_ARGS)
             break;
         case 16:
         case 17:
+        case 18:
             root = root / "MSBuild" / "Current" / "Bin" / "Roslyn";
             break;
         default:
