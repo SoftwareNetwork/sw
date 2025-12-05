@@ -107,6 +107,7 @@ struct http_request_cache {
             "org.sw.demo.khronos.vulkan", // for now
             "org.sw.demo.gnu.m4.m4", // a lot of work
             //"org.sw.demo.gnu.gawk", // hangs
+            "org.sw.demo.google.grpc", // takes old build script and messes up builds
         };
         for (auto &&[p, vp] : new_pkgs) {
             auto pkg = p.toString();
