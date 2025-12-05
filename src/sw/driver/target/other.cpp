@@ -74,17 +74,11 @@ void detectCSharpCompilers(DETECT_ARGS)
     for (auto &[v, i] : instances)
     {
         auto root = i.root;
-        switch (v.getMajor())
-        {
-        case 15:
+        if (v.getMajor() == 15) {
             root = root / "MSBuild" / "15.0" / "Bin" / "Roslyn";
-            break;
-        case 16:
-        case 17:
-        case 18:
+        } else if (v.getMajor() > 15) {
             root = root / "MSBuild" / "Current" / "Bin" / "Roslyn";
-            break;
-        default:
+        } else {
             SW_UNIMPLEMENTED;
         }
 
