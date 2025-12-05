@@ -181,6 +181,7 @@ SUBCOMMAND_DECL(integrate)
 
         // targets
         ctx.addLine("# targets");
+        StringSet cmake_aliases;
         for (auto &[pkg, tgts] : b.getTargets())
         {
             if (tgts.empty())
@@ -403,10 +404,17 @@ SUBCOMMAND_DECL(integrate)
             {
                 for (auto i = pkg.getVersion().getLevel() - 1; i >= 0; i--)
                 {
-                    if (i)
-                        ctx.addLine("add_library(" + pkg2string(pkg.getPath()) + "-" + pkg.getVersion().toString(i) + " ALIAS " + pkg2string(pkg) + ")");
-                    else
-                        ctx.addLine("add_library(" + pkg2string(pkg.getPath()) + " ALIAS " + pkg2string(pkg) + ")");
+                    if (i) {
+                        auto n = pkg2string(pkg.getPath()) + "-" + pkg.getVersion().toString(i);
+                        if (cmake_aliases.insert(n).second) {
+                            ctx.addLine("add_library(" + n + " ALIAS " + pkg2string(pkg) + ")");
+                        }
+                    } else {
+                        auto n = pkg2string(pkg.getPath());
+                        if (cmake_aliases.insert(n).second) {
+                            ctx.addLine("add_library(" + n + " ALIAS " + pkg2string(pkg) + ")");
+                        }
+                    }
                 }
             }
 
