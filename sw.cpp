@@ -413,10 +413,10 @@ void build(Solution &s)
         if (t.getBuildSettings().TargetOS.Type == OSType::Linux) {
             t += "org.sw.demo.qtproject.qt.base.plugins.platforms.xcb" QT_VERSION ""_dep;
             //t += "org.sw.demo.qtproject.qt.wayland.plugins.platforms.qwayland.generic" QT_VERSION ""_dep;
-            //t += "org.sw.demo.qtproject.qt.wayland.plugins.platforms.qwayland.egl" QT_VERSION ""_dep;
-            t += "org.sw.demo.qtproject.qt.wayland.plugins.hardwareintegration.client.wayland_egl" QT_VERSION ""_dep;
-            //t += "org.sw.demo.qtproject.qt.wayland.plugins.shellintegration.xdg" QT_VERSION ""_dep;
-            t += "org.sw.demo.qtproject.qt.wayland.plugins.decorations.adwaita" QT_VERSION ""_dep;
+            t += "org.sw.demo.qtproject.qt.wayland.hardwareintegration.client.wayland.egl" QT_VERSION ""_dep;
+            t += "org.sw.demo.qtproject.qt.base.plugins.platforms.wayland.plugins.hardwareintegration.wayland_egl" QT_VERSION ""_dep;
+            t += "org.sw.demo.qtproject.qt.base.plugins.platforms.wayland.plugins.shellintegration.xdg" QT_VERSION ""_dep;
+            t += "org.sw.demo.qtproject.qt.base.plugins.platforms.wayland.plugins.decorations.bradient" QT_VERSION ""_dep;
         }
         if (t.getBuildSettings().TargetOS.Type == OSType::Macos) {
             t += "org.sw.demo.qtproject.qt.base.plugins.platforms.cocoa" QT_VERSION ""_dep;
