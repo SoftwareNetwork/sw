@@ -417,6 +417,11 @@ void ClangCompiler::prepareCommand1(const ::sw::Target &t)
         cmd->name = to_string(normalize_path(InputFile()));
         cmd->name_short = to_string(InputFile().filename().u8string());
         //cmd->file = InputFile;
+
+        if (InputFile().filename().extension() == ".sw"sv)
+        {
+            Language = "c++";
+        }
     }
     if (OutputFile)
     {
@@ -642,6 +647,11 @@ void GNUCompiler::prepareCommand1(const Target &t)
         cmd->name = to_string(normalize_path(InputFile()));
         cmd->name_short = to_string(InputFile().filename().u8string());
         //cmd->file = InputFile;
+
+        if (InputFile().filename().extension() == ".sw"sv)
+        {
+            Language = "c++";
+        }
     }
     if (OutputFile)
     {
