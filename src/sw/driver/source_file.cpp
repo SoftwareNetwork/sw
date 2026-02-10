@@ -469,10 +469,11 @@ bool SourceFileStorage::check_absolute(path &F, bool ignore_errors, bool *source
         if (source_dir)
         {
             // source file is checked
-            if (is_under_root_by_prefix_path(F, target.SourceDir))
-                *source_dir = true;
-            else if (is_under_root_by_prefix_path(F, target.BinaryDir) || is_under_root_by_prefix_path(F, target.BinaryPrivateDir))
+            // binary dir first because it is more tight
+            if (is_under_root_by_prefix_path(F, target.BinaryDir) || is_under_root_by_prefix_path(F, target.BinaryPrivateDir))
                 *source_dir = false;
+            else if (is_under_root_by_prefix_path(F, target.SourceDir))
+                *source_dir = true;
             else
             {
                 // this is an error!
