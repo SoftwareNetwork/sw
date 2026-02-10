@@ -4963,7 +4963,9 @@ void NativeCompiledTarget::setChecks(const String &name, bool check_definitions)
 path NativeCompiledTarget::getPatchDir(bool binary_dir) const
 {
     path base;
-    if (auto d = getPackage().getOverriddenDir(); d)
+    if (binary_dir)
+        base = BinaryDir.parent_path();
+    else if (auto d = getPackage().getOverriddenDir(); d)
         base = d.value() / SW_BINARY_DIR;
     else if (!isLocal())
         base = getPackage().getDirSrc();
