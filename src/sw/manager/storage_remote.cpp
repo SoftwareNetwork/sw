@@ -38,6 +38,9 @@ RemoteStorage::RemoteStorage(LocalStorage &ls, const Remote &r, bool allow_netwo
 
     static const auto db_loaded_var = "db_loaded";
 
+    // manual compile time switch
+    //allow_network = false;
+
     if (isNetworkAllowed())
     {
         if (!getPackagesDatabase().getIntValue(db_loaded_var))
