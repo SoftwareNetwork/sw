@@ -114,6 +114,7 @@ Database::Database(const path &db_name, const String &schema)
 {
     if (!fs::exists(fn))
     {
+        fs::create_directories(db_name.parent_path());
         ScopedFileLock lock(fn);
         if (!fs::exists(fn))
         {
@@ -125,7 +126,6 @@ Database::Database(const path &db_name, const String &schema)
         open();
 
     // create or update schema
-    fs::create_directories(db_name.parent_path());
     primitives::db::sqlite3::SqliteDatabase db2(db->native_handle());
     createOrUpdateSchema(db2, schema, true);
 }
