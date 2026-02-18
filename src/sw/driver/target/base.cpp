@@ -813,6 +813,10 @@ void Target::addSourceDependency(const Target &t)
     addSourceDependency(std::make_shared<Dependency>(t));
 }
 
+//DependencyPtr Target::addHostDependency(const DependencyPtr &)
+//{
+//}
+
 path Target::getFile(const Target &dep, const path &fn)
 {
     addSourceDependency(dep); // main trick is to add a dependency
