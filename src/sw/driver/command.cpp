@@ -77,6 +77,9 @@ void Command::prepare()
                 {
                     for (auto &[k, v] : is["run_command"]["environment"].getMap())
                         environment[k] = v.getValue();
+                    if (is["run_command"]["use_response_files"]) {
+                        use_response_files = is["run_command"]["use_response_files"].getValue() == "true"s ? true : false;
+                    }
                 }
             }
             else

@@ -2295,6 +2295,8 @@ const TargetSettings &NativeCompiledTarget::getInterfaceSettings(std::unordered_
             s["run_command"]["environment"][k] = v;
         if (c.create_new_console)
             s["run_command"]["create_new_console"] = "true";
+        if (c.use_response_files)
+            s["run_command"]["use_response_files"] = *c.use_response_files ? "true" : "false";
     }
 
     // newer settings
