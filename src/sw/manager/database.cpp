@@ -166,7 +166,8 @@ void Database::open(bool read_only, bool in_memory)
         // allows to use db from separate processes
         db->execute("PRAGMA journal_mode = WAL");
         // better WAL sync to disk
-        db->execute("PRAGMA synchronous = NORMAL");
+        //db->execute("PRAGMA synchronous = NORMAL");
+        db->execute("PRAGMA synchronous = EXTRA");
     }
 }
 
