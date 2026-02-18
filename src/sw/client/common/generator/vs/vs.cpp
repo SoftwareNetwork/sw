@@ -1049,6 +1049,10 @@ void Solution::emit18(const VSGenerator &g, const String &slnfn) const
         for (auto &[n, p] : projects) {
             dps[p.directory].push_back(&p);
         }
+        for (auto &[n, p] : directories) {
+            dps[&p];
+            dps[p.directory];
+        }
         auto ppath = [&](auto &&p) {
             return normalize_path(to_string((vs_project_dir / (p.name + vs_project_ext)).u8string())).string();
             };
