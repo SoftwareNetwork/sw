@@ -1193,7 +1193,9 @@ path Command::writeCommand(const path &p, bool print_name) const
         t += "\n";
     }
 
-    write_file_if_different(pbat, t);
+    if (!write_file_if_different(pbat, t)) {
+        fs::last_write_time(pbat, std::chrono::file_clock::now()); // update time
+    }
     fs::permissions(pbat,
         fs::perms::owner_exec | fs::perms::group_exec | fs::perms::others_exec,
         fs::perm_options::add);
