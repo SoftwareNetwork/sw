@@ -1347,6 +1347,8 @@ Files Command::getGeneratedDirs() const
     Files dirs;
     //for (auto &d : intermediate)
         //dirs.insert(get_parent(d));
+    //if (!working_directory.empty())
+    //  dirs.insert(working_directory); // can be non existent; too slow for every command?
     for (auto &d : outputs)
         dirs.insert(get_parent(d));
     for (auto &d : output_dirs)
