@@ -405,7 +405,7 @@ path Target::getTargetDirShort(const path &root) const
 
     // now config goes first, then target
     // maybe target goes first, then config like in storage/pkg?
-    return root / "t" / getConfig() / shorten_hash(blake2b_512(getPackage().toString()), 6);
+    return root / "t" / getConfig() / getPackage().getShortHash();
 }
 
 path Target::getObjectDir() const
