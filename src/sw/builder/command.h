@@ -348,6 +348,9 @@ path resolveExecutable(const path &p);
 SW_BUILDER_API
 path resolveExecutable(const FilesOrdered &paths);
 
+SW_BUILDER_API
+path getSwExecutableName();
+
 // serialization
 
 // remember to set context and command storage after loading

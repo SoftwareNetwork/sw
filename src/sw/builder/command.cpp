@@ -1618,4 +1618,9 @@ path resolveExecutable(const FilesOrdered &paths)
     return path();
 }
 
+path getSwExecutableName()
+{
+    return primitives::getModuleNameForSymbol(primitives::getCurrentModuleSymbol());
+}
+
 } // namespace sw
