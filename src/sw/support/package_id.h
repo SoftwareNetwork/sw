@@ -28,6 +28,8 @@ struct SW_SUPPORT_API PackageId
     String toString(const String &delim) const;
     String toString(Version::Level, const String &delim = "-") const;
 
+    String getShortHash() const;
+
 private:
     PackagePath ppath;
     Version version;

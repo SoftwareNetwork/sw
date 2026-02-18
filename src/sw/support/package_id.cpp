@@ -120,6 +120,11 @@ String PackageId::toString(Version::Level level, const String &delim) const
     return ppath.toString() + delim + version.toString(level);
 }
 
+String PackageId::getShortHash() const
+{
+    return shorten_hash(blake2b_512(toString()), 6);
+}
+
 PackageId extractPackageIdFromString(const String &target)
 {
     auto [pp, v] = split_package_string(target);
