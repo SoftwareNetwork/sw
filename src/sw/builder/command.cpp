@@ -1150,8 +1150,8 @@ path Command::writeCommand(const path &p, bool print_name) const
     if (!err.file.empty())
         t += " 2> " + to_string(norm(err.file));
 
-    t += "\n";
-    t += "\n";
+    t += "\n\n";
+
     if (bat)
         t += "if %ERRORLEVEL% NEQ 0 echo Error code: %ERRORLEVEL% && exit /b %ERRORLEVEL%";
     else
@@ -1159,6 +1159,15 @@ path Command::writeCommand(const path &p, bool print_name) const
         t += "E=$?\n";
         t += "if [ $E -ne 0 ]; then echo \"Error code: $E\"; fi";
     }
+    t += "\n\n";
+
+    // also propagate error for caller in this case
+    if (bat)
+    for (auto &&i : outputs)
+    {
+        t += std::format("if not exist \"{}\" (echo Output file was not created: {})\n", i.string(), i.string());
+    }
+
     t += "\n\n";
 
     std::string comment;
