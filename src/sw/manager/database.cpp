@@ -467,6 +467,7 @@ void PackagesDatabase::deleteOverriddenPackageDir(const path &sdir) const
 
 std::vector<PackagePath> PackagesDatabase::getMatchingPackages(const String &name, int limit, int offset) const
 {
+    // TODO: use sqlite3 printf functions for proper quoting: sqlite3_str_new(), sqlite3_str_appendf() etc.
     String slimit;
     if (limit > 0)
         slimit = " LIMIT " + std::to_string(limit);
@@ -500,6 +501,7 @@ VersionSet PackagesDatabase::getVersionsForPackage(const PackagePath &ppath) con
 
 db::PackageId PackagesDatabase::getPackageId(const PackagePath &ppath) const
 {
+    // TODO: use sqlite3 printf functions for proper quoting: sqlite3_str_new(), sqlite3_str_appendf() etc.
     auto q = (*db)(
         custom_query(sqlpp::verbatim("SELECT package_id FROM package WHERE path = '" + ppath.toString() + "' COLLATE NOCASE"))
         .with_result_type_of(select(pkgs.packageId).from(pkgs))
