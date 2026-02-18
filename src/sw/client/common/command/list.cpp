@@ -13,10 +13,17 @@ std::map<sw::PackagePath, sw::VersionSet> getMatchingPackages(const sw::StorageW
 {
     auto &db = s.getPackagesDatabase();
 
-    bool has_version = arg.find('-') != arg.npos;
-    sw::UnresolvedPackage u(arg);
+    auto vpos = arg.find('-');
+    bool has_version = vpos != arg.npos;
+    auto ppath = arg.substr(0, vpos);
+    auto ver = arg.substr(vpos + 1);
+    sw::VersionRange vr;
+    if (has_version) {
+        vr = ver;
+    }
+    boost::replace_all(ppath, "*", "%"); // for sql query
 
-    auto ppaths = db.getMatchingPackages(u.getPath().toString());
+    auto ppaths = db.getMatchingPackages(ppath);
     if (ppaths.empty())
         return {};
 
@@ -26,7 +33,7 @@ std::map<sw::PackagePath, sw::VersionSet> getMatchingPackages(const sw::StorageW
         auto v1 = db.getVersionsForPackage(ppath);
         for (auto &v : v1)
         {
-            if (!has_version || u.getRange().hasVersion(v))
+            if (!has_version || vr.hasVersion(v))
                 r[ppath].insert(v);
         }
     }
