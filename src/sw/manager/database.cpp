@@ -38,6 +38,14 @@ namespace sql = sqlpp::sqlite3;
 
 #include "database_pps.h"
 
+static auto db_opts() {
+    int flags{};
+    flags = 0;
+    //flags |= SQLITE_OPEN_NOMUTEX; // sets multithreaded db access, must protect all connection uses with mutex
+    flags |= SQLITE_OPEN_FULLMUTEX; // sets serialized db access
+    return flags;
+}
+
 /*
 ** This function is used to load the contents of a database file on disk
 ** into the "main" database of open database connection pInMemory, or
@@ -66,9 +74,9 @@ static int loadOrSaveDb(sqlite3 *pInMemory, const char *zFilename, int isSave)
     /* Open the database file identified by zFilename. Exit early if this fails
                               ** for any reason. */
     if (!isSave)
-        rc = sqlite3_open_v2(zFilename, &pFile, SQLITE_OPEN_READONLY, nullptr);
+        rc = sqlite3_open_v2(zFilename, &pFile, SQLITE_OPEN_READONLY | db_opts(), nullptr);
     else
-        rc = sqlite3_open(zFilename, &pFile);
+        rc = sqlite3_open_v2(zFilename, &pFile, db_opts(), nullptr);
     if (rc == SQLITE_OK)
     {
         /* If this is a 'load' operation (isSave==0), then data is copied
@@ -135,9 +143,7 @@ Database::~Database() = default;
 void Database::open(bool read_only, bool in_memory)
 {
     sql::connection_config config;
-    config.flags = 0;
-    //config.flags |= SQLITE_OPEN_NOMUTEX; // sets multithreaded db access, must protect all connection uses with mutex
-    config.flags |= SQLITE_OPEN_FULLMUTEX; // sets serialized db access
+    config.flags = db_opts();
     if (read_only && !in_memory)
         config.flags |= SQLITE_OPEN_READONLY;
     else
