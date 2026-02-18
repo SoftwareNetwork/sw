@@ -75,11 +75,14 @@ SUBCOMMAND_DECL(list)
     for (auto &[ppath, versions] : r)
     {
         String out = ppath.toString();
-        out += " (";
+        out += " ";
+        // try to out spaces only
+        //out += " (";
         for (auto vi = versions.rbegin(); vi != versions.rend(); vi++)
-            out += vi->toString() + ", ";
-        out.resize(out.size() - 2);
-        out += ")";
+            //out += vi->toString() + ", ";
+            out += vi->toString() + " ";
+        //out.resize(out.size() - 2);
+        //out += ")";
         LOG_INFO(logger, out);
     }
 }
