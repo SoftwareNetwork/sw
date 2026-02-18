@@ -264,10 +264,12 @@ struct SW_DRIVER_CPP_API Target : ITarget, TargetBase, ProgramStorage,
     std::vector<DependencyPtr> SourceDependencies; // no config, dependency on source files
     // build dir deps?
     std::vector<DependencyPtr> RuntimeDependencies; // this target config
+    //std::vector<DependencyPtr> RuntimeHostDependencies; // host config
 
     DependencyPtr addDummyDependency(const Target &);
     DependencyPtr addDummyDependency(const DependencyPtr &);
     DependencyPtr addProgDependency(const DependencyPtr &);
+    //DependencyPtr addHostDependency(const DependencyPtr &);
     void addSourceDependency(const Target &);
     void addSourceDependency(const DependencyPtr &);
 
