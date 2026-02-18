@@ -57,17 +57,18 @@ static void print_command_line(const Strings &args, const Strings &args_expanded
 
     if (sw::Settings::get_user_settings().record_commands)
     {
-        auto hfn = ".sw_history";
-        append_file_unique(get_home_directory() / hfn, cmdline);
-        if (sw::Settings::get_user_settings().record_commands_in_current_dir)
+        try
         {
-            try
+            auto hfn = ".sw_history";
+            append_file_unique(get_home_directory() / hfn, cmdline);
+            if (sw::Settings::get_user_settings().record_commands_in_current_dir)
             {
                 // do not work on some commands (uri)
                 append_file_unique(path(".sw") / hfn, cmdline);
             }
-            catch (std::exception &) {}
         }
+        // can fail: when multiple simultaneous commands in the same dir (e.g. in the home dir - sw list command)
+        catch (std::exception &) {}
     }
 }
 
