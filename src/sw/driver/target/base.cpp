@@ -835,6 +835,16 @@ path Target::getFile(const DependencyPtr &dep, const path &fn)
     return p;
 }
 
+path Target::getObjFile(const DependencyPtr &dep, const path &fn)
+{
+    // When calling this don't forget to add prog (host) (or other kind of dependency?) right before this call!
+    //addSourceDependency(dep); // main trick is to add a dependency
+    auto p = getMainBuild().getContext().resolve(dep->getPackage()).getDirObj(dep->getSettings().getHash());
+    if (!fn.empty())
+        p /= fn;
+    return p;
+}
+
 TargetSettings &Target::getOptions()
 {
     // only export options are changeable

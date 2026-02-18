@@ -335,6 +335,8 @@ public:
     // from other target
     path getFile(const DependencyPtr &dep, const path &fn = {});
     path getFile(const Target &dep, const path &fn = {});
+    // from obj dir
+    path getObjFile(const DependencyPtr &dep, const path &fn = {});
 
     //
     DependencyPtr constructThisPackageDependency(const String &name);
