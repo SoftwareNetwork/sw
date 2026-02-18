@@ -14,7 +14,7 @@ const auto t_files = ::db::packages::File{};
 const auto t_pkg_ver_files = ::db::packages::PackageVersionFile{};
 
 template <typename SelectType>
-using PreparedStatement = decltype(((sql::connection*)nullptr)->prepare(*((SelectType*)nullptr)));
+using PreparedStatement = decltype(std::declval<sql::connection>().prepare(std::declval<SelectType>()));
 
 auto selectPackageVersionData = []()
 {
