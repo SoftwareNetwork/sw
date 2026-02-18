@@ -61,11 +61,15 @@ path LocalPackage::getDirSrc2() const
 
 path LocalPackage::getDirObj() const
 {
+    if (auto d = getOverriddenDir(); d)
+        return d.value() / SW_BINARY_DIR;
     return getDir() / "obj";
 }
 
 path LocalPackage::getDirObj(const String &cfg) const
 {
+    if (auto d = getOverriddenDir(); d)
+        return d.value() / SW_BINARY_DIR / "t" / cfg / getShortHash();
     // bld was build
     return getDirObj() / "bld" / cfg;
 }
