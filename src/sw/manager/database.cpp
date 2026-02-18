@@ -154,8 +154,18 @@ void Database::open(bool read_only, bool in_memory)
         config.path_to_database = to_string(to_path_string(fn));
     //config.debug = true;
     db = std::make_unique<sql::connection>(config);
-    if (in_memory)
-        loadOrSaveDb(db->native_handle(), (const char *)to_path_string(fn).c_str(), 0);
+    if (in_memory) {
+        while (1) {
+            auto rc = loadOrSaveDb(db->native_handle(), (const char *)to_path_string(fn).c_str(), 0);
+            if (rc == SQLITE_OK) {
+                break;
+            }
+            if (rc == SQLITE_BUSY) {
+                continue;
+            }
+            throw SW_RUNTIME_ERROR(std::format("copy db to memory failed: rc = {}, file = {}", rc, fn.string()));
+        }
+    }
 
     // prevent SQLITE_BUSY rc
     // hope 1 min is enough to wait for write operation
