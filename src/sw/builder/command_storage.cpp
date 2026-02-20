@@ -333,6 +333,14 @@ void CommandStorage::async_command_log(const CommandRecord &r)
     add_user();
     swctx.getFileStorageExecutor().push([this, &r]
     {
+        auto fsync_ = [](FILE *f) {
+#ifdef _WIN32
+            FlushFileBuffers((HANDLE)_get_osfhandle(_fileno(f)));
+#else
+            fsync(fileno(f));
+#endif
+        };
+
         auto &s = getInternalStorage();
 
         {
@@ -344,6 +352,7 @@ void CommandStorage::async_command_log(const CommandRecord &r)
             fwrite(&sz, sizeof(sz), 1, l.f.getHandle());
             fwrite(&v[0], sz, 1, l.f.getHandle());
             fflush(l.f.getHandle());
+            fsync_(l.f.getHandle());
         }
 
         {
@@ -358,6 +367,7 @@ void CommandStorage::async_command_log(const CommandRecord &r)
                 fwrite(&sz, sizeof(sz), 1, l.f.getHandle());
                 fwrite(&s[0], sz, 1, l.f.getHandle());
                 fflush(l.f.getHandle());
+                fsync_(l.f.getHandle());
             }
         }
 
