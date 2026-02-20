@@ -44,6 +44,29 @@ void writeFileSafe(const path &fn, const String &content, const path &lock_dir)
     write_file_if_different(fn, content);
 }
 
+static bool should_patch(const path &fn, const path &hf, const path &hfn)
+{
+    static std::map<path, bool> to_patch;
+
+    auto tsf = path{ hf } += ".ts"s;
+    ScopedFileLock fl(tsf);
+
+    if (!fs::exists(tsf) || !fs::exists(hfn)) {
+        return to_patch[fn] = true;
+    }
+    if (to_patch.contains(fn)) {
+        return to_patch[fn];
+    }
+    auto f = read_file(tsf);
+    fs::file_time_type::clock::duration d;
+    *(uint64_t*)&d = std::stoll(f);
+    fs::file_time_type::clock::time_point tp{d};
+    if (fs::last_write_time(fn) > tp) {
+        return to_patch[fn] = true;
+    }
+    return false;
+}
+
 void replaceInFileOnce(const path &fn, const String &from, const String &to, const path &lock_dir)
 {
     auto hf = sha1(to_string(normalize_path(fn)));
@@ -52,20 +75,22 @@ void replaceInFileOnce(const path &fn, const String &from, const String &to, con
     auto h = sha1(uniq).substr(0, 5);
     auto hfn = lock_dir / (hf + "." + h);
 
-    if (fs::exists(hfn))
+    const auto lock = lock_dir / hf;
+    auto tsf = path{ lock_dir / hf } += ".ts"s;
+    if (!should_patch(fn, lock, hfn))
         return;
 
-    const auto lock = lock_dir / hf;
     ScopedFileLock fl(lock);
 
     // double check
-    if (fs::exists(hfn))
+    if (!should_patch(fn, lock, hfn))
         return;
 
     auto s = read_file(fn);
     boost::replace_all(s, from, to);
-    write_file_if_different(fn, s); // if different?
+    write_file(fn, s); //// if different?
     write_file_if_different(hfn, "");
+    write_file(tsf, std::to_string(fs::last_write_time(fn).time_since_epoch().count()));
 }
 
 void pushFrontToFileOnce(const path &fn, const String &text, const path &lock_dir)
@@ -76,20 +101,22 @@ void pushFrontToFileOnce(const path &fn, const String &text, const path &lock_di
     auto h = sha1(uniq).substr(0, 5);
     auto hfn = lock_dir / (hf + "." + h);
 
-    if (fs::exists(hfn))
+    const auto lock = lock_dir / hf;
+    auto tsf = path{ lock_dir / hf } += ".ts"s;
+    if (!should_patch(fn, lock, hfn))
         return;
 
-    const auto lock = lock_dir / hf;
     ScopedFileLock fl(lock);
 
     // double check
-    if (fs::exists(hfn))
+    if (!should_patch(fn, lock, hfn))
         return;
 
     auto s = read_file(fn);
     s = text + "\n" + s;
-    write_file_if_different(fn, s);
+    write_file(fn, s);
     write_file_if_different(hfn, "");
+    write_file(tsf, std::to_string(fs::last_write_time(fn).time_since_epoch().count()));
 }
 
 void pushBackToFileOnce(const path &fn, const String &text, const path &lock_dir)
@@ -100,20 +127,22 @@ void pushBackToFileOnce(const path &fn, const String &text, const path &lock_dir
     auto h = sha1(uniq).substr(0, 5);
     auto hfn = lock_dir / (hf + "." + h);
 
-    if (fs::exists(hfn))
+    const auto lock = lock_dir / hf;
+    auto tsf = path{ lock_dir / hf } += ".ts"s;
+    if (!should_patch(fn, lock, hfn))
         return;
 
-    const auto lock = lock_dir / hf;
     ScopedFileLock fl(lock);
 
     // double check
-    if (fs::exists(hfn))
+    if (!should_patch(fn, lock, hfn))
         return;
 
     auto s = read_file(fn);
     s = s + "\n" + text;
-    write_file_if_different(fn, s);
+    write_file(fn, s);
     write_file_if_different(hfn, "");
+    write_file(tsf, std::to_string(fs::last_write_time(fn).time_since_epoch().count()));
 }
 
 bool patch(const path &fn, const String &patch, const path &lock_dir)
