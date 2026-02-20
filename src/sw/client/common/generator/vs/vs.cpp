@@ -836,6 +836,7 @@ void VSGenerator::generate(const SwBuild &b)
             d.custom_rules_manual.push_back(r);
 
             BuildEvent be;
+            // FIXME: program may not support response files!!!
             be.command = get_current_program() + " \"@"s + to_string(normalize_path(rsp)) + "\""s;
             d.pre_build_event = be;
         }
