@@ -86,7 +86,7 @@ void replaceInFileOnce(const path &fn, const String &from, const String &to, con
     if (!should_patch(fn, lock, hfn))
         return;
 
-    LOG_TRACE(logger, std::format("patching {} with patch file {}:\nfrom:\n{}\nto:\n{}", fn.string(), hfn.string(), from, to));
+    LOG_DEBUG(logger, std::format("patching {} with patch file {}:\nfrom:\n{}\nto:\n{}", fn.string(), hfn.string(), from, to));
 
     auto s = read_file(fn);
     boost::replace_all(s, from, to);
@@ -114,7 +114,7 @@ void pushFrontToFileOnce(const path &fn, const String &text, const path &lock_di
     if (!should_patch(fn, lock, hfn))
         return;
 
-    LOG_TRACE(logger, std::format("pushFrontToFileOnce {} with patch file {}:\n{}", fn.string(), hfn.string(), text));
+    LOG_DEBUG(logger, std::format("pushFrontToFileOnce {} with patch file {}:\n{}", fn.string(), hfn.string(), text));
 
     auto s = read_file(fn);
     s = text + "\n" + s;
@@ -142,7 +142,7 @@ void pushBackToFileOnce(const path &fn, const String &text, const path &lock_dir
     if (!should_patch(fn, lock, hfn))
         return;
 
-    LOG_TRACE(logger, std::format("pushBackToFileOnce {} with patch file {}:\n{}", fn.string(), hfn.string(), text));
+    LOG_DEBUG(logger, std::format("pushBackToFileOnce {} with patch file {}:\n{}", fn.string(), hfn.string(), text));
 
     auto s = read_file(fn);
     s = s + "\n" + text;
