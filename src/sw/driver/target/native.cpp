@@ -5229,6 +5229,14 @@ bool ExecutableTarget::prepare()
     return NativeCompiledTarget::prepare();
 }
 
+void ExecutableTarget::setupCommand(builder::Command &c) const
+{
+    NativeCompiledTarget::setupCommand(c);
+
+    // also add current bin path to command PATH? like in LibraryTarget?
+    return;
+}
+
 bool LibraryTarget::prepare()
 {
     return prepareLibrary(getBuildSettings().Native.LibrariesType);
@@ -5246,6 +5254,19 @@ path LibraryTarget::getImportLibrary() const
     if (isStaticLibrary())
         return getOutputFile();
     return getSelectedTool()->getImportLibrary();
+}
+
+void LibraryTarget::setupCommand(builder::Command &c) const
+{
+    NativeCompiledTarget::setupCommand(c);
+
+    if (isStaticOrHeaderOnlyLibrary())
+        return;
+
+    c.addInput(getOutputFile());
+    if (getContext().getHostOs().is(OSType::Windows)) {
+        c.addPathDirectory(getOutputFile().parent_path());
+    }
 }
 
 bool StaticLibraryTarget::init()

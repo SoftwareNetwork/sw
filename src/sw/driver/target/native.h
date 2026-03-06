@@ -248,6 +248,8 @@ struct SW_DRIVER_CPP_API LibraryTarget : NativeCompiledTarget
     path getImportLibrary() const override;
 
     bool prepare() override;
+
+    void setupCommand(builder::Command &c) const override;
 };
 
 /**
@@ -262,6 +264,8 @@ struct SW_DRIVER_CPP_API ExecutableTarget : NativeCompiledTarget, PredefinedProg
 
     bool init() override;
     bool prepare() override;
+
+    void setupCommand(builder::Command &c) const override;
 };
 
 /**
