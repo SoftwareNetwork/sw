@@ -45,8 +45,16 @@ void writeFileSafe(const path &fn, const String &content, const path &lock_dir)
 }
 
 static auto lwt_time_t(const path &fn) {
+#ifdef __APPLE__
+    struct stat file_info;
+    if (stat(file.c_str(), &file_info) != 0) {
+        throw std::runtime_error("Cannot get file stats");
+    }
+    return file_info.st_mtime;
+#else
     auto lwt = std::chrono::clock_cast<std::chrono::system_clock>(fs::last_write_time(fn));
     return std::chrono::system_clock::to_time_t(lwt);
+#endif
 }
 
 static bool should_patch(const path &fn, const path &hf, const path &hfn)
