@@ -365,6 +365,14 @@ struct SW_DRIVER_CPP_API CommandBuilder
     ::sw::builder::Command *operator->() { return c.get(); }
     const ::sw::builder::Command *operator->() const { return c.get(); }
 
+    // helper
+    void addRuntimeDependency(auto &&dep) {
+        auto c = std::dynamic_pointer_cast<::sw::driver::Command>(getCommand());
+        if (!c)
+            throw SW_RUNTIME_ERROR("not a driver::Command");
+        c->addProgramDependency(dep);
+    }
+
     //
 #define DECLARE_STREAM_OP(t) \
     CommandBuilder &operator<<(const t &)
