@@ -8,6 +8,7 @@ STD(99)
 STD(11)
 STD(17)
 STD(18)
+STD(23)
 
 STD(2x)
 
