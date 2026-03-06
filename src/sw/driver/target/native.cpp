@@ -5233,8 +5233,10 @@ void ExecutableTarget::setupCommand(builder::Command &c) const
 {
     NativeCompiledTarget::setupCommand(c);
 
-    // also add current bin path to command PATH? like in LibraryTarget?
-    return;
+    c.addInput(getOutputFile());
+    if (getContext().getHostOs().is(OSType::Windows)) {
+        c.addPathDirectory(getOutputFile().parent_path());
+    }
 }
 
 bool LibraryTarget::prepare()
