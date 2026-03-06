@@ -991,8 +991,10 @@ void NativeCompiledTarget::setupCommand(builder::Command &c) const
     {
         for_deps([this, &c](const path &output_file)
         {
-            if (getContext().getHostOs().is(OSType::Windows))
+            c.addInput(output_file);
+            if (getContext().getHostOs().is(OSType::Windows)) {
                 c.addPathDirectory(output_file.parent_path());
+            }
             // disable for now, because we set rpath
             //else if (getContext().getHostOs().isApple())
                 //c.environment["DYLD_LIBRARY_PATH"] += normalize_path(output_file.parent_path()) + ":";
@@ -1011,7 +1013,7 @@ void NativeCompiledTarget::setupCommand(builder::Command &c) const
         {
             // dlls, when emulating rpath, are created after executables and commands running them
             // so we put explicit dependency on them
-            c.addInput(output_file);
+            c.addInput(output_file); // remove as we do unconditionally now above?
         });
     }
 }
