@@ -70,7 +70,7 @@ ProgramVersionStorage::~ProgramVersionStorage()
     bool e = fs::exists(fn);
     try
     {
-        write_file(fn, j.dump());
+        write_file(fn, j.dump(1));
     }
     catch (std::exception &ex)
     {
@@ -92,7 +92,7 @@ void ProgramVersionStorage::addVersion(const path &p, const Version &v, const St
 ProgramVersionStorage &getVersionStorage(const SwManagerContext &swctx)
 {
     // maybe store program db in .sw?
-    static ProgramVersionStorage pvs(swctx.getLocalStorage().storage_dir_tmp / "db" / "program_versions.txt");
+    static ProgramVersionStorage pvs(swctx.getLocalStorage().storage_dir_tmp / "db" / "program_versions.json");
     return pvs;
 }
 
