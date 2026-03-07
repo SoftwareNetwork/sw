@@ -44,17 +44,8 @@ void writeFileSafe(const path &fn, const String &content, const path &lock_dir)
     write_file_if_different(fn, content);
 }
 
-static auto lwt_time_t(const path &fn) {
-#ifdef __APPLE__
-    struct stat s;
-    if (stat(fn.c_str(), &s) != 0) {
-        throw std::runtime_error("Cannot get file stats");
-    }
-    return s.st_mtime;
-#else
-    auto lwt = std::chrono::clock_cast<std::chrono::system_clock>(fs::last_write_time(fn));
-    return std::chrono::system_clock::to_time_t(lwt);
-#endif
+static auto set_lwt(const path &from_fn, const path &tsf) {
+    fs::last_write_time(tsf, fs::last_write_time(from_fn));
 }
 
 static bool should_patch(const path &fn, const path &hf, const path &hfn)
@@ -70,9 +61,7 @@ static bool should_patch(const path &fn, const path &hf, const path &hfn)
     if (to_patch.contains(fn)) {
         return to_patch[fn];
     }
-    auto f = read_file(tsf);
-    time_t tp = std::stoll(f);
-    if (lwt_time_t(fn) > tp) {
+    if (fs::last_write_time(fn) > fs::last_write_time(tsf)) {
         return to_patch[fn] = true;
     }
     return false;
@@ -103,7 +92,7 @@ void replaceInFileOnce(const path &fn, const String &from, const String &to, con
     boost::replace_all(s, from, to);
     write_file(fn, s); //// if different?
     write_file_if_different(hfn, "");
-    write_file(tsf, std::to_string(lwt_time_t(fn)));
+    set_lwt(fn, tsf);
 }
 
 void pushFrontToFileOnce(const path &fn, const String &text, const path &lock_dir)
@@ -131,7 +120,7 @@ void pushFrontToFileOnce(const path &fn, const String &text, const path &lock_di
     s = text + "\n" + s;
     write_file(fn, s);
     write_file_if_different(hfn, "");
-    write_file(tsf, std::to_string(lwt_time_t(fn)));
+    set_lwt(fn, tsf);
 }
 
 void pushBackToFileOnce(const path &fn, const String &text, const path &lock_dir)
@@ -159,7 +148,7 @@ void pushBackToFileOnce(const path &fn, const String &text, const path &lock_dir
     s = s + "\n" + text;
     write_file(fn, s);
     write_file_if_different(hfn, "");
-    write_file(tsf, std::to_string(lwt_time_t(fn)));
+    set_lwt(fn, tsf);
 }
 
 bool patch(const path &fn, const String &patch, const path &lock_dir)
