@@ -322,7 +322,7 @@ bool Command::check_if_file_newer(const path &p, const String &what, bool throw_
     return !!s;
 }
 
-bool Command::isOutdated() const
+bool Command::isOutdated()
 {
     if (always)
     {
@@ -350,12 +350,12 @@ bool Command::isOutdated() const
     }
     else
     {
-        ((Command*)(this))->mtime = r.first->mtime;
-        ((Command*)(this))->implicit_inputs.clear();
+        mtime = r.first->mtime;
+        implicit_inputs.clear();
         auto ii = r.first->getImplicitInputs(command_storage->getInternalStorage());
-        ((Command*)(this))->implicit_inputs.reserve(ii.size());
+        implicit_inputs.reserve(ii.size());
         for (auto &&f : ii)
-            ((Command*)(this))->implicit_inputs.insert(*f);
+            implicit_inputs.insert(*f);
         return isTimeChanged();
     }
 }

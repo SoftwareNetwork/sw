@@ -212,7 +212,7 @@ public:
     String getName(bool short_name = false) const override;
     size_t getHash() const override;
 
-    virtual bool isOutdated() const;
+    virtual bool isOutdated();
     bool needsResponseFile() const;
     bool needsResponseFile(size_t sz) const;
 
