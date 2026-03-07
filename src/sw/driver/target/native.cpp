@@ -5285,6 +5285,18 @@ bool SharedLibraryTarget::init()
     return r;
 }
 
+void SharedLibraryTarget::setupCommand(builder::Command &c) const {
+    NativeCompiledTarget::setupCommand(c);
+
+    if (isStaticOrHeaderOnlyLibrary()) // still keep header only check
+        return;
+
+    c.addInput(getOutputFile());
+    if (getContext().getHostOs().is(OSType::Windows)) {
+        c.addPathDirectory(getOutputFile().parent_path());
+    }
+}
+
 bool ObjectLibraryTarget::init() {
     auto r = NativeCompiledTarget::init();
     initLibrary(LibraryType::Object);

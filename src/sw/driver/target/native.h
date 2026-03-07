@@ -301,6 +301,8 @@ struct SW_DRIVER_CPP_API SharedLibraryTarget : NativeCompiledTarget
     {
         return prepareLibrary(LibraryType::Shared);
     }
+
+    void setupCommand(builder::Command &c) const override;
 };
 
 /**
