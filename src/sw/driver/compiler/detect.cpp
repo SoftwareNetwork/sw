@@ -768,7 +768,7 @@ static void detectWindowsClang(DETECT_ARGS, const path &base_llvm_path)
 
 static void detectWindowsClang(DETECT_ARGS)
 {
-    detectWindowsClang(DETECT_ARGS_PASS, path("c:") / "Program Files" / "LLVM");
+    detectWindowsClang(DETECT_ARGS_PASS, path{"C:/Program Files/LLVM"});
 
     auto &instances = gatherVSInstances();
     auto host = toStringWindows(s.getHostOs().Arch);
