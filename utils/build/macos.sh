@@ -29,4 +29,4 @@ function run {
 }
 
 BASE_PLATFORM=arm64
-run arm64 macos -os macos-13.0 $*
+run arm64 macos $*
