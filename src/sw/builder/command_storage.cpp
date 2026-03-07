@@ -307,8 +307,8 @@ detail::FileHolder::~FileHolder()
 {
     f.close();
 
-    error_code ec; // remove ec? but multiple processes may be writing into this log? or not?
-    fs::remove(fn, ec);
+    //error_code ec; // remove ec? but multiple processes may be writing into this log? or not?
+    //fs::remove(fn, ec);
 }
 
 CommandStorage::CommandStorage(const SwBuilderContext &swctx, const path &root)
