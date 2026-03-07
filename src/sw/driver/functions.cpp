@@ -45,6 +45,7 @@ void writeFileSafe(const path &fn, const String &content, const path &lock_dir)
 }
 
 static auto set_lwt(const path &from_fn, const path &tsf) {
+    write_file(tsf, ""s);
     fs::last_write_time(tsf, fs::last_write_time(from_fn));
 }
 
