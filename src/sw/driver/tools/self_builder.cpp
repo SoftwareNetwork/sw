@@ -105,6 +105,9 @@ String write_build_script(SwCoreContext &swctx,
 
             // goes before sw cpp driver (client)
             prepkgs.push_back("pub.egorpugin.primitives.filesystem" PRIMITIVES_VERSION ""s);
+
+            // for openssl and nasm
+            prepkgs.push_back("org.sw.demo.perl.perl"s);
         }
 
         if (headers)
