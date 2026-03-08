@@ -61,10 +61,10 @@ struct PathBase
     {
     }
 
-    PathBase &operator=(const PathBase &rhs) {
+    /*PathBase &operator=(const PathBase &rhs) {
         data = rhs.data;
         return *this;
-    }
+    }*/
 
     PathElement toString(const PathElement &delim = ".") const
     {
@@ -179,7 +179,8 @@ protected:
     value_type &operator[](int i) { return data[i]; }
     const value_type &operator[](int i) const { return data[i]; }
 
-private:
+//private:
+protected:
     std::vector<PathElement> data;
 };
 
@@ -189,7 +190,7 @@ struct SecureSplitablePath : PathBase<ThisType>
 {
     using Base = PathBase<ThisType>;
     using Base::Base;
-    using Base::operator=;
+    //using Base::operator=;
 
     ThisType operator/(const String &e) const
     {
@@ -214,15 +215,19 @@ struct SW_SUPPORT_API PackagePath : SecureSplitablePath<PackagePath>
     };
 
     using Base::Base;
-    using Base::operator=;
+    //using Base::Base::operator=;
     PackagePath() = default;
     PackagePath(const char *s);
     PackagePath(String s);
     PackagePath(const PackagePath &p);
     ~PackagePath() = default;
 
-    PackagePath &operator=(const PackagePath &rhs) {
+    /*PackagePath &operator=(const PackagePath &rhs) {
         ((Base&)*this).operator=(rhs);
+        return *this;
+    }*/
+    PackagePath &operator=(const PackagePath &rhs) {
+        data = rhs.data;
         return *this;
     }
 
