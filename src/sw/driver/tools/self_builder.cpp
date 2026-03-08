@@ -225,7 +225,7 @@ String write_build_script(SwCoreContext &swctx,
         bool has_checks = f.find("Checker") != f.npos; // more presize than setChecks
 
         build.beginBlock();
-        build.addLine("auto i = std::make_unique<BuiltinInput>(swctx, d, " + std::to_string(s.getHash(idb)) + ");");
+        build.addLine("auto i = std::make_unique<BuiltinInput>(swctx, d, " + std::to_string(s.getHash(idb)) + "ULL);");
         build.addLine("auto ep = std::make_unique<sw::NativeBuiltinTargetEntryPoint>(build_" + r.getVariableName() + ");");
         if (has_checks)
             build.addLine("ep->cf = check_" + r.getVariableName() + ";");

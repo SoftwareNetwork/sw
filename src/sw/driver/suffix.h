@@ -41,134 +41,134 @@ sources:
 
 // api definition
 // _api
-inline ApiNameType operator "" _api(const char *s, size_t)
+inline ApiNameType operator ""_api(const char *s, size_t)
 {
     return ApiNameType(String(s));
 }
 
 // definition
 // _d or _def
-inline Definition operator "" _d(const char *s, size_t)
+inline Definition operator ""_d(const char *s, size_t)
 {
     return Definition(String(s));
 }
-inline Definition operator "" _def(const char *s, size_t)
+inline Definition operator ""_def(const char *s, size_t)
 {
     return Definition(String(s));
 }
 
 // dependency
 // _dep
-inline DependencyPtr operator "" _dep(const char *s, size_t)
+inline DependencyPtr operator ""_dep(const char *s, size_t)
 {
     return std::make_shared<Dependency>(extractFromString(s));
 }
 
 // _fi - force include file
-inline ForceIncludeFile operator "" _fi(const char *s, size_t)
+inline ForceIncludeFile operator ""_fi(const char *s, size_t)
 {
     return ForceIncludeFile{std::string{s}};
 }
 
 // framework (macos)
 // _framework (_fr? fw?)
-inline Framework operator "" _framework(const char *s, size_t)
+inline Framework operator ""_framework(const char *s, size_t)
 {
     return Framework(String(s));
 }
 
 // include directory
 // _id or _idir
-inline IncludeDirectory operator "" _id(const char *s, size_t)
+inline IncludeDirectory operator ""_id(const char *s, size_t)
 {
     return IncludeDirectory(String(s));
 }
-inline IncludeDirectory operator "" _idir(const char *s, size_t)
+inline IncludeDirectory operator ""_idir(const char *s, size_t)
 {
     return IncludeDirectory(String(s));
 }
 
 // link directory
 // _ld or _ldir
-inline LinkDirectory operator "" _ld(const char *s, size_t)
+inline LinkDirectory operator ""_ld(const char *s, size_t)
 {
     return LinkDirectory(String(s));
 }
-inline LinkDirectory operator "" _ldir(const char *s, size_t)
+inline LinkDirectory operator ""_ldir(const char *s, size_t)
 {
     return LinkDirectory(String(s));
 }
 
 // link library
 // _l or _lib
-/*inline LinkLibrary operator "" _l(const char *s, size_t)
+/*inline LinkLibrary operator ""_l(const char *s, size_t)
 {
     return LinkLibrary(String(s));
 }*/
-inline LinkLibrary operator "" _lib(const char *s, size_t)
+inline LinkLibrary operator ""_lib(const char *s, size_t)
 {
     return LinkLibrary(String(s));
 }
 
 // precompiled header
 // _pch
-inline PrecompiledHeader operator "" _pch(const char *s, size_t)
+inline PrecompiledHeader operator ""_pch(const char *s, size_t)
 {
     return PrecompiledHeader(String(s));
 }
 
 // regex
-inline FileRegex operator "" _r(const char *s, size_t)
+inline FileRegex operator ""_r(const char *s, size_t)
 {
     return FileRegex(s, false);
 }
 
 // recursive regex
-inline FileRegex operator "" _rr(const char *s, size_t)
+inline FileRegex operator ""_rr(const char *s, size_t)
 {
     return FileRegex(s, true);
 }
 
 // system link library
 // _slib
-inline SystemLinkLibrary operator "" _slib(const char *s, size_t)
+inline SystemLinkLibrary operator ""_slib(const char *s, size_t)
 {
     return SystemLinkLibrary(String(s));
 }
 
 // variable
 // _v or _var
-inline Variable operator "" _v(const char *s, size_t)
+inline Variable operator ""_v(const char *s, size_t)
 {
     return Variable{ s };
 }
-inline Variable operator "" _var(const char *s, size_t)
+inline Variable operator ""_var(const char *s, size_t)
 {
     return Variable{ s };
 }
 
 // sources
 
-inline Git operator "" _git(const char *s, size_t)
+inline Git operator ""_git(const char *s, size_t)
 {
     return Git(s);
 }
-inline Git operator "" _git_v(const char *s, size_t)
+inline Git operator ""_git_v(const char *s, size_t)
 {
     return Git(s, "v{v}");
 }
 
-inline RemoteFile operator "" _remote(const char *s, size_t)
+inline RemoteFile operator ""_remote(const char *s, size_t)
 {
     return RemoteFile(s);
 }
 
 // modules
-inline HeaderUnit operator "" _qhu(const char *s, size_t)
+inline HeaderUnit operator ""_qhu(const char *s, size_t)
 {
     return HeaderUnit{s, false};
 }
-inline HeaderUnit operator "" _ahu(const char *s, size_t)
+inline HeaderUnit operator ""_ahu(const char *s, size_t)
 {
     return HeaderUnit{s, true};
 }
