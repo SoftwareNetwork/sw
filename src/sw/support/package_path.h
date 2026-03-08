@@ -61,6 +61,11 @@ struct PathBase
     {
     }
 
+    PathBase &operator=(const PathBase &rhs) {
+        data = rhs.data;
+        return *this;
+    }
+
     PathElement toString(const PathElement &delim = ".") const
     {
         PathElement p;
@@ -184,6 +189,7 @@ struct SecureSplitablePath : PathBase<ThisType>
 {
     using Base = PathBase<ThisType>;
     using Base::Base;
+    using Base::operator=;
 
     ThisType operator/(const String &e) const
     {
@@ -208,11 +214,17 @@ struct SW_SUPPORT_API PackagePath : SecureSplitablePath<PackagePath>
     };
 
     using Base::Base;
+    using Base::operator=;
     PackagePath() = default;
     PackagePath(const char *s);
     PackagePath(String s);
     PackagePath(const PackagePath &p);
     ~PackagePath() = default;
+
+    PackagePath &operator=(const PackagePath &rhs) {
+        ((Base&)*this).operator=(rhs);
+        return *this;
+    }
 
     String toPath() const;
     path toFileSystemPath() const;
