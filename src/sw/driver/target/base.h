@@ -248,6 +248,13 @@ struct SW_DRIVER_CPP_API Target : ITarget, TargetBase, ProgramStorage,
     };
     const TargetSettings *ts = nullptr;*/
 
+    struct predefined_storage_ids {
+        enum {
+            // append only
+            patch_data,
+        };
+    };
+
     // Data storage for objects that must be alive with the target.
     // For example, program clones etc.
     std::vector<std::any> Storage;
@@ -362,6 +369,21 @@ public:
             throw std::logic_error{"no loader"};
         }
         loader(*this);
+    }
+
+    template <typename T>
+    T &add_storage_data_to_slot(T &&d, auto id) {
+        if (Storage.size() != id) {
+            throw SW_LOGIC_ERROR("bad storage slot");
+        }
+        return std::any_cast<T&>(Storage.emplace_back(std::move(d)));
+    }
+    template <typename T>
+    T &get_storage_data_from_slot(auto id) {
+        if (Storage.size() <= id) {
+            throw SW_LOGIC_ERROR("bad storage slot");
+        }
+        return std::any_cast<T&>(Storage[id]);
     }
 
 private:

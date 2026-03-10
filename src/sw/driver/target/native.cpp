@@ -218,6 +218,7 @@ path NativeTarget::getOutputFile() const
 NativeCompiledTarget::NativeCompiledTarget(TargetBase &parent, const PackageId &id)
     : NativeTarget(parent, id), NativeTargetOptionsGroup((Target &)*this)
 {
+    add_storage_data_to_slot(patch_data_type{}, predefined_storage_ids::patch_data);
 }
 
 NativeCompiledTarget::~NativeCompiledTarget()
@@ -5043,7 +5044,7 @@ void NativeCompiledTarget::patch(const path &fn, const String &from, const Strin
     bool source_dir = false;
     path p = fn;
     check_absolute(p, false, &source_dir);
-    ::sw::replaceInFileOnce(p, from, to, getPatchDir(!source_dir));
+    ::sw::replaceInFileOnce(get_storage_data_from_slot<patch_data_type>(predefined_storage_ids::patch_data), p, from, to, getPatchDir(!source_dir));
 
     //File f(p, getFs());
     //f.getFileRecord().load();
@@ -5075,7 +5076,7 @@ void NativeCompiledTarget::pushFrontToFileOnce(const path &fn, const String &tex
     bool source_dir = false;
     path p = fn;
     check_absolute(p, false, &source_dir);
-    ::sw::pushFrontToFileOnce(p, text, getPatchDir(!source_dir));
+    ::sw::pushFrontToFileOnce(get_storage_data_from_slot<patch_data_type>(predefined_storage_ids::patch_data), p, text, getPatchDir(!source_dir));
 
     //File f(p, getFs());
     //f.getFileRecord().load();
@@ -5091,7 +5092,7 @@ void NativeCompiledTarget::pushBackToFileOnce(const path &fn, const String &text
     bool source_dir = false;
     path p = fn;
     check_absolute(p, false, &source_dir);
-    ::sw::pushBackToFileOnce(p, text, getPatchDir(!source_dir));
+    ::sw::pushBackToFileOnce(get_storage_data_from_slot<patch_data_type>(predefined_storage_ids::patch_data), p, text, getPatchDir(!source_dir));
 
     //File f(p, getFs());
     //f.getFileRecord().load();

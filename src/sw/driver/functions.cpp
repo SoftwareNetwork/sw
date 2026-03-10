@@ -49,10 +49,8 @@ static auto set_lwt(const path &from_fn, const path &tsf) {
     fs::last_write_time(tsf, fs::last_write_time(from_fn));
 }
 
-static bool should_patch(const path &fn, const path &hf, const path &hfn)
+static bool should_patch(patch_data_type &to_patch, const path &fn, const path &hf, const path &hfn)
 {
-    static std::map<path, bool> to_patch;
-
     auto tsf = path{ hf } += ".ts"s;
     ScopedFileLock fl(tsf);
 
@@ -68,7 +66,7 @@ static bool should_patch(const path &fn, const path &hf, const path &hfn)
     return false;
 }
 
-void replaceInFileOnce(const path &fn, const String &from, const String &to, const path &lock_dir)
+void replaceInFileOnce(patch_data_type &to_patch, const path &fn, const String &from, const String &to, const path &lock_dir)
 {
     auto hf = sha1(to_string(normalize_path(fn)));
 
@@ -78,16 +76,16 @@ void replaceInFileOnce(const path &fn, const String &from, const String &to, con
 
     const auto lock = lock_dir / hf;
     auto tsf = path{ lock_dir / hf } += ".ts"s;
-    if (!should_patch(fn, lock, hfn))
+    if (!should_patch(to_patch, fn, lock, hfn))
         return;
 
     ScopedFileLock fl(lock);
 
     // double check
-    if (!should_patch(fn, lock, hfn))
+    if (!should_patch(to_patch, fn, lock, hfn))
         return;
 
-    LOG_DEBUG(logger, std::format("patching {} with patch file {}:\nfrom:\n{}\nto:\n{}", fn.string(), hfn.string(), from, to));
+    LOG_DEBUG(logger, std::format("patching\n{}\nwith patch file\n{}\n:\nfrom:\n{}\nto:\n{}\n", fn.string(), hfn.string(), from, to));
 
     auto s = read_file(fn);
     boost::replace_all(s, from, to);
@@ -96,7 +94,7 @@ void replaceInFileOnce(const path &fn, const String &from, const String &to, con
     set_lwt(fn, tsf);
 }
 
-void pushFrontToFileOnce(const path &fn, const String &text, const path &lock_dir)
+void pushFrontToFileOnce(patch_data_type &to_patch, const path &fn, const String &text, const path &lock_dir)
 {
     auto hf = sha1(to_string(normalize_path(fn)));
 
@@ -106,13 +104,13 @@ void pushFrontToFileOnce(const path &fn, const String &text, const path &lock_di
 
     const auto lock = lock_dir / hf;
     auto tsf = path{ lock_dir / hf } += ".ts"s;
-    if (!should_patch(fn, lock, hfn))
+    if (!should_patch(to_patch, fn, lock, hfn))
         return;
 
     ScopedFileLock fl(lock);
 
     // double check
-    if (!should_patch(fn, lock, hfn))
+    if (!should_patch(to_patch, fn, lock, hfn))
         return;
 
     LOG_DEBUG(logger, std::format("pushFrontToFileOnce {} with patch file {}:\n{}", fn.string(), hfn.string(), text));
@@ -124,7 +122,7 @@ void pushFrontToFileOnce(const path &fn, const String &text, const path &lock_di
     set_lwt(fn, tsf);
 }
 
-void pushBackToFileOnce(const path &fn, const String &text, const path &lock_dir)
+void pushBackToFileOnce(patch_data_type &to_patch, const path &fn, const String &text, const path &lock_dir)
 {
     auto hf = sha1(to_string(normalize_path(fn)));
 
@@ -134,13 +132,13 @@ void pushBackToFileOnce(const path &fn, const String &text, const path &lock_dir
 
     const auto lock = lock_dir / hf;
     auto tsf = path{ lock_dir / hf } += ".ts"s;
-    if (!should_patch(fn, lock, hfn))
+    if (!should_patch(to_patch, fn, lock, hfn))
         return;
 
     ScopedFileLock fl(lock);
 
     // double check
-    if (!should_patch(fn, lock, hfn))
+    if (!should_patch(to_patch, fn, lock, hfn))
         return;
 
     LOG_DEBUG(logger, std::format("pushBackToFileOnce {} with patch file {}:\n{}", fn.string(), hfn.string(), text));
