@@ -43,13 +43,14 @@ void explainMessage(const String &subject, bool outdated, const String &reason, 
     {
         fs::create_directories(path(SW_EXPLAIN_FILE).parent_path());
         return SW_EXPLAIN_FILE;
-    }()); // goes first
+    }(), std::ios::app); // goes first
     explain_executor.push([=]
     {
         if (!outdated)
             return;
         auto print = [&subject, &name, &reason](auto &o)
         {
+            o << std::chrono::system_clock::now() << "\n";
             o << subject << ": " << name << "\n";
             o << "outdated\n";
             o << "reason = " << reason << "\n" << std::endl;

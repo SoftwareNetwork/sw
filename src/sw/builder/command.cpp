@@ -301,9 +301,12 @@ static String getCommandId(const Command &c)
     {
         s += "\n";
         s += "bdir: " + to_string(c.working_directory) + "\n";
-        s += "env:\n";
-        for (auto &[k, v] : c.environment)
-            s += k + "\n" + v + "\n";
+        if (!c.environment.empty()) {
+            s += "env:\n";
+            for (auto &[k, v] : c.environment)
+                s += k + "\n" + v + "\n";
+        }
+        s += "args:\n";
         for (auto &a : c.arguments)
             s += a->toString() + "\n";
         s.resize(s.size() - 1);
