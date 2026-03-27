@@ -506,6 +506,7 @@ bool Target::init()
         ReproducibleBuild = ts["reproducible-build"] == "true";
 
     ts_export = ts;
+    ts_export.erase("options"); // don't go deeper for now
 
     // add deps into config
     /*if (!isLocal() && getPackage().toString().find("org.sw.demo.glennrp.png-1.6.36") == 0)

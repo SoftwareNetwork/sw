@@ -18,9 +18,15 @@ struct ITarget;
 
 struct SW_DRIVER_CPP_API DependencyData : IDependency
 {
+    struct wrapper {
+        DependencyData &dd;
+        auto &operator[](auto &&v) {return dd.getOption(v);}
+    };
+
     UnresolvedPackage package;
     TargetSettings settings;
     bool Disabled = false;
+    wrapper Variables{*this};
 
     DependencyData(const ITarget &t);
     DependencyData(const UnresolvedPackage &p);
@@ -41,7 +47,12 @@ struct SW_DRIVER_CPP_API DependencyData : IDependency
     const TargetSetting &getOption(const String &name) const { return getOptions()[name]; }
     void setOption(const String &name, const TargetSetting &value) { getOption(name) = value; }
 
-    TargetSettings &getOptions() { return getSettings()["options"].getMap(); }
+    TargetSettings &getOptions() {
+        auto &opts = getSettings()["options"];
+        auto &m = opts.getMap();
+        opts.setRequired(); // after get map, otherwise required flag is emptied
+        return m;
+    }
     const TargetSettings &getOptions() const { return getSettings()["options"].getMap(); }
 
     TargetSettings &getSettings() { return settings; }
