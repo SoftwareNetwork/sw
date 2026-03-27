@@ -121,6 +121,9 @@ static Strings getCStdOption(CLanguageStandard std, bool gnuext, bool clang, boo
         else
             s += "2x";
         break;
+    case CLanguageStandard::C2y:
+        s += "2y";
+        break;
     default:
         return {};
     }
@@ -197,6 +200,7 @@ static Strings getCStdOptionMsvc(CLanguageStandard std, const Version &clver, bo
         s += "17";
         break;
     case CLanguageStandard::C23:
+    case CLanguageStandard::CLatest:
         s += "latest";
         break;
     default:

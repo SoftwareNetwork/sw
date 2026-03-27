@@ -11,5 +11,6 @@ STD(18)
 STD(23)
 
 STD(2x)
+STD(2y)
 
 STD(latest)

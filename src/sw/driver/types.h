@@ -108,8 +108,9 @@ enum class CLanguageStandard
     C18 = C17,
     C23,
     C2x = C23,
+    C2y, // next std
 
-    CLatest = C2x,
+    CLatest = C2y,
 
     // for quick standards
     cansi = ANSI,
@@ -122,6 +123,7 @@ enum class CLanguageStandard
     c18 = C18,
     c23 = C23,
     c2x = C2x,
+    c2y = C2y,
     clatest = CLatest,
 };
 
@@ -147,7 +149,7 @@ enum class CPPLanguageStandard
     CPP2c = CPP26,
     CPP2d = CPP29,
 
-    CPPLatest = CPP2c,
+    CPPLatest = CPP2d,
 
     // for quick standards
     cpp98 = CPP98,
