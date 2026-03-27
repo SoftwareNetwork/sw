@@ -50,6 +50,7 @@ using sw::ForceIncludeFile;
 using sw::IncludeDirectory;
 using sw::Definition;
 using sw::DefinitionsType;
+using sw::LinkDirectory;
 using sw::LinkLibrary;
 using sw::Dependency;
 using sw::DependencyPtr;
