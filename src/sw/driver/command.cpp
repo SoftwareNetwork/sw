@@ -230,6 +230,19 @@ static NativeTargetOptionsGroup *cast_as_nct(Target *t)
     return &cast_as_nct(*t);
 }
 
+void add_file_to_merge_object(auto &&tt, auto &&p, auto &t) {
+    auto &nct = cast_as_nct(tt);
+    if (!t.skip) {
+        nct.getMergeObject() += p;
+    } else {
+        nct.getMergeObject() -= p;
+    }
+    // not needed anymore? comment out?
+    nct.getMergeObject()[p].skip = t.skip;
+    // also add into private
+    nct.add(nct.getMergeObject().getFileInternal(p));
+}
+
 CommandBuilder &CommandBuilder::operator<<(const ::sw::cmd::tag_in &t)
 {
     auto &tt = getTarget();
@@ -246,10 +259,7 @@ CommandBuilder &CommandBuilder::operator<<(const ::sw::cmd::tag_in &t)
         c->addInput(p);
         if (t.add_to_targets)
         {
-            cast_as_nct(tt).getMergeObject() += p;
-            cast_as_nct(tt).getMergeObject()[p].skip = t.skip;
-            // also add into private
-            cast_as_nct(tt).add(cast_as_nct(tt).getMergeObject().getFileInternal(p));
+            add_file_to_merge_object(tt, p, t);
         }
     }
     return *this;
@@ -271,10 +281,7 @@ CommandBuilder &CommandBuilder::operator<<(const ::sw::cmd::tag_out &t)
         c->addOutput(p);
         if (t.add_to_targets)
         {
-            cast_as_nct(tt).getMergeObject() += p;
-            cast_as_nct(tt).getMergeObject()[p].skip = t.skip;
-            // also add into private
-            cast_as_nct(tt).add(cast_as_nct(tt).getMergeObject().getFileInternal(p));
+            add_file_to_merge_object(tt, p, t);
         }
     }
     return *this;
@@ -293,10 +300,7 @@ CommandBuilder &CommandBuilder::operator<<(const ::sw::cmd::tag_stdin &t)
     c->redirectStdin(p);
     if (t.add_to_targets)
     {
-        cast_as_nct(tt).getMergeObject() += p;
-        cast_as_nct(tt).getMergeObject()[p].skip = t.skip;
-        // also add into private
-        cast_as_nct(tt).add(cast_as_nct(tt).getMergeObject().getFileInternal(p));
+        add_file_to_merge_object(tt, p, t);
     }
     return *this;
 }
@@ -314,10 +318,7 @@ CommandBuilder &CommandBuilder::operator<<(const ::sw::cmd::tag_stdout &t)
     c->redirectStdout(p, t.append);
     if (t.add_to_targets)
     {
-        cast_as_nct(tt).getMergeObject() += p;
-        cast_as_nct(tt).getMergeObject()[p].skip = t.skip;
-        // also add into private
-        cast_as_nct(tt).add(cast_as_nct(tt).getMergeObject().getFileInternal(p));
+        add_file_to_merge_object(tt, p, t);
     }
     return *this;
 }
@@ -335,10 +336,7 @@ CommandBuilder &CommandBuilder::operator<<(const ::sw::cmd::tag_stderr &t)
     c->redirectStderr(p, t.append);
     if (t.add_to_targets)
     {
-        cast_as_nct(tt).getMergeObject() += p;
-        cast_as_nct(tt).getMergeObject()[p].skip = t.skip;
-        // also add into private
-        cast_as_nct(tt).add(cast_as_nct(tt).getMergeObject().getFileInternal(p));
+        add_file_to_merge_object(tt, p, t);
     }
     return *this;
 }
