@@ -288,28 +288,31 @@ void FileDb::save(const Files &files, const detail::Storage &s, ConcurrentComman
     fs::remove(getCommandsLogFileName(root) += getFilesSuffix(), ec);
 }
 
-detail::FileHolder::FileHolder(const path &fn)
-    : /*lk(fn)
-    , */f(fn, "ab")
-    , fn(fn)
-{
-    // goes first
-    // but maybe remove?
-    //if (setvbuf(f.getHandle(), NULL, _IONBF, 0) != 0)
-    //throw RUNTIME_EXCEPTION("Cannot disable log buffering");
+struct detail::FileHolder {
+    ScopedFile f;
+    //path fn;
 
-    // Opening a file in append mode doesn't set the file pointer to the file's
-    // end on Windows. Do that explicitly.
-    fseek(f.getHandle(), 0, SEEK_END);
-}
+    FileHolder(const path &fn)
+        : /*lk(fn)
+        , */f(fn, "ab")
+        //, fn(fn)
+    {
+        // goes first
+        // but maybe remove?
+        //if (setvbuf(f, NULL, _IONBF, 0) != 0)
+        //throw RUNTIME_EXCEPTION("Cannot disable log buffering");
 
-detail::FileHolder::~FileHolder()
-{
-    f.close();
+        // Opening a file in append mode doesn't set the file pointer to the file's
+        // end on Windows. Do that explicitly.
+        //fseek(f, 0, SEEK_END);
+    }
+    ~FileHolder() {
+        //f.close();
 
-    //error_code ec; // remove ec? but multiple processes may be writing into this log? or not?
-    //fs::remove(fn, ec);
-}
+        //error_code ec; // remove ec? but multiple processes may be writing into this log? or not?
+        //fs::remove(fn, ec);
+    }
+};
 
 CommandStorage::CommandStorage(const SwBuilderContext &swctx, const path &root)
     : swctx(swctx)
@@ -322,6 +325,7 @@ CommandStorage::CommandStorage(const SwBuilderContext &swctx, const path &root)
 
 CommandStorage::~CommandStorage()
 {
+    closeLogs();
     save();
 }
 
@@ -333,7 +337,8 @@ void CommandStorage::async_command_log(const CommandRecord &r)
     add_user();
     swctx.getFileStorageExecutor().push([this, &r]
     {
-        auto fsync_ = [](FILE *f) {
+        auto fsync_ = [](auto &&f) {
+            fflush(f);
 #ifdef _WIN32
             FlushFileBuffers((HANDLE)_get_osfhandle(_fileno(f)));
 #else
@@ -349,10 +354,9 @@ void CommandStorage::async_command_log(const CommandRecord &r)
 
             auto &l = s.getCommandLog(swctx, root);
             auto sz = v.size();
-            fwrite(&sz, sizeof(sz), 1, l.f.getHandle());
-            fwrite(&v[0], sz, 1, l.f.getHandle());
-            fflush(l.f.getHandle());
-            fsync_(l.f.getHandle());
+            fwrite(&sz, sizeof(sz), 1, l.f);
+            fwrite(&v[0], sz, 1, l.f);
+            fsync_(l.f);
         }
 
         {
@@ -364,14 +368,15 @@ void CommandStorage::async_command_log(const CommandRecord &r)
                     continue;
                 auto s = to_string(normalize_path(*f));
                 auto sz = s.size() + 1;
-                fwrite(&sz, sizeof(sz), 1, l.f.getHandle());
-                fwrite(&s[0], sz, 1, l.f.getHandle());
-                fflush(l.f.getHandle());
-                fsync_(l.f.getHandle());
+                fwrite(&sz, sizeof(sz), 1, l.f);
+                fwrite(&s[0], sz, 1, l.f);
             }
+            fsync_(l.f);
         }
 
-        free_user();
+        // use after each call to lower number of fds (during long builds prob)
+        // or use it occasionally
+        //free_user();
     });
 }
 

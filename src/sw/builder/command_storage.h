@@ -35,15 +35,7 @@ namespace detail
 {
 
 struct Storage;
-
-struct FileHolder
-{
-    ScopedFile f;
-    path fn;
-
-    FileHolder(const path &fn);
-    ~FileHolder();
-};
+struct FileHolder;
 
 }
 
