@@ -430,7 +430,9 @@ void SwBuild::resolvePackages()
 
                 // filter out existing targets as they come from same module
                 // reconsider?
-                if (auto id = u.toPackageId(); id && getTargets().find(*id) != getTargets().end())
+                //if (auto id = u.toPackageId(); id && getTargets().find(*id) != getTargets().end())
+                    //continue;
+                if (getTargets().find(u, d->getSettings()))
                     continue;
                 // filter out predefined targets
                 if (swctx.getPredefinedTargets().find(u.getPath()) != swctx.getPredefinedTargets().end(u.getPath()))
