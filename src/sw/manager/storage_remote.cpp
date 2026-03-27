@@ -293,11 +293,17 @@ void RemoteStorage::updateDb() const
         && !Settings::get_user_settings().gForceServerQuery // for now
         )
     {
-        if (!Settings::get_system_settings().can_update_packages_db || !isCurrentDbOld())
+        if (
+            //!Settings::get_system_settings().can_update_packages_db ||
+            !isCurrentDbOld())
             return;
     }
 
-    if (r.db.getVersion() > readPackagesDatabaseVersion(db_repo_dir))
+    if (
+        // github version link may contain old data for 15 min, so we force our update
+        // we updated the link (added 'refs/heads'), hope this will get actual file version
+        //Settings::get_user_settings().gForceServerDatabaseUpdate ||
+        r.db.getVersion() > readPackagesDatabaseVersion(db_repo_dir))
     {
         // multiprocess aware
         single_process_job(getPackagesDatabase().fn.parent_path() / "db_update", [this] {
