@@ -27,7 +27,7 @@ struct SW_MANAGER_API Settings
 
     // do not check for new cppan version
     bool disable_update_checks = false;
-    bool can_update_packages_db = true;
+    //bool can_update_packages_db = true;
     //bool verify_all = false;
     bool record_commands = false;
     bool record_commands_in_current_dir = false;
