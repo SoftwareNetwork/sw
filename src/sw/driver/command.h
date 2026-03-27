@@ -93,20 +93,17 @@ struct tag_out_err
     void populate(tag_append) { append = true; }
 };
 
-template <class T, class First, class... Args>
-void populate(T &t, const First &arg, Args &&... args)
+template <class T, class... Args>
+void populate(T &t, Args &&... args)
 {
-    t.populate(arg);
-    if constexpr (sizeof...(Args) > 0)
-        populate(t, std::forward<Args>(args)...);
+    (t.populate(std::forward<Args>(args)),...);
 }
 
 template <class T, class... Args>
 T in_out(const String &name, Args &&... args)
 {
     T t;
-    if constexpr (sizeof...(Args) > 0)
-        populate(t, std::forward<Args>(args)...);
+    populate(t, std::forward<Args>(args)...);
     if (t.files.empty())
         throw std::logic_error("At least one file must be specified for cmd::" + name);
     return t;
