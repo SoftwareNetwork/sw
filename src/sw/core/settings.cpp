@@ -616,6 +616,13 @@ bool TargetSettings::isSubsetOf(const TargetSettings &s) const
         if (i->second != v)
             return false;
     }
+    for (auto &[k, v] : s) {
+        if (v.isRequired()) {
+            auto i = settings.find(k);
+            if (i == settings.end() || v != i->second)
+                return false;
+        }
+    }
     return true;
 }
 
