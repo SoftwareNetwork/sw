@@ -80,53 +80,6 @@ void TargetContainer::push_back(const ITargetPtr &t)
     *i = t;
 }
 
-void TargetContainer::clear()
-{
-    targets.clear();
-}
-
-TargetContainer::Base::iterator TargetContainer::findEqual(const TargetSettings &s)
-{
-    return std::find_if(begin(), end(), [&s](const auto &t)
-    {
-        return t->getSettings() == s;
-    });
-}
-
-TargetContainer::Base::const_iterator TargetContainer::findEqual(const TargetSettings &s) const
-{
-    return std::find_if(begin(), end(), [&s](const auto &t)
-    {
-        return t->getSettings() == s;
-    });
-}
-
-TargetContainer::Base::iterator TargetContainer::findSuitable(const TargetSettings &s)
-{
-    return std::find_if(begin(), end(), [&s](const auto &t)
-    {
-        return t->getSettings().isSubsetOf(s);
-    });
-}
-
-TargetContainer::Base::const_iterator TargetContainer::findSuitable(const TargetSettings &s) const
-{
-    return std::find_if(begin(), end(), [&s](const auto &t)
-    {
-        return t->getSettings().isSubsetOf(s);
-    });
-}
-
-bool TargetContainer::empty() const
-{
-    return targets.empty();
-}
-
-TargetContainer::Base::iterator TargetContainer::erase(Base::iterator begin, Base::iterator end)
-{
-    return targets.erase(begin, end);
-}
-
 const BuildInput &TargetContainer::getInput() const
 {
     if (!input)
@@ -144,65 +97,6 @@ void TargetContainer::setInput(const BuildInput &i)
 std::vector<ITargetPtr> TargetContainer::loadPackages(SwBuild &b, const TargetSettings &s, const PackageIdSet &allowed_packages) const
 {
     return getInput().loadPackages(b, s, allowed_packages);
-}
-
-TargetMap::~TargetMap()
-{
-}
-
-detail::SimpleExpected<TargetMap::Base::version_map_type::iterator> TargetMap::find_and_select_version(const PackagePath &pp)
-{
-    auto i = find(pp);
-    if (i == end(pp))
-        return PackagePathNotFound;
-    auto vo = select_version(i->second);
-    if (!vo)
-        return PackageNotFound;
-    return i->second.find(*vo);
-}
-
-detail::SimpleExpected<TargetMap::Base::version_map_type::const_iterator> TargetMap::find_and_select_version(const PackagePath &pp) const
-{
-    auto i = find(pp);
-    if (i == end(pp))
-        return PackagePathNotFound;
-    auto vo = select_version(i->second);
-    if (!vo)
-        return PackageNotFound;
-    return i->second.find(*vo);
-}
-
-detail::SimpleExpected<std::pair<Version, ITarget*>> TargetMap::find(const PackagePath &pp, const TargetSettings &ts) const
-{
-    auto i = find_and_select_version(pp);
-    if (!i)
-        return i.ec();
-    auto j = i->second.findSuitable(ts);
-    if (j == i->second.end())
-        return std::pair<Version, ITarget*>{ i->first, nullptr };
-    return std::pair<Version, ITarget*>{ i->first, j->get() };
-}
-
-ITarget *TargetMap::find(const PackageId &pkg, const TargetSettings &ts) const
-{
-    auto i = find(pkg);
-    if (i == end())
-        return {};
-    auto k = i->second.findSuitable(ts);
-    if (k == i->second.end())
-        return {};
-    return k->get();
-}
-
-ITarget *TargetMap::find(const UnresolvedPackage &pkg, const TargetSettings &ts) const
-{
-    auto i = find(pkg);
-    if (i == end())
-        return {};
-    auto k = i->second.findSuitable(ts);
-    if (k == i->second.end())
-        return {};
-    return k->get();
 }
 
 PredefinedTarget::PredefinedTarget(const LocalPackage &id, const TargetSettings &ts)

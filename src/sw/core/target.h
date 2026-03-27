@@ -195,18 +195,24 @@ struct SW_CORE_API TargetContainer
     ~TargetContainer();
 
     // find target with equal settings
-    Base::iterator findEqual(const TargetSettings &);
-    Base::const_iterator findEqual(const TargetSettings &) const;
+    auto findEqual(this auto &&obj, const TargetSettings &s) {
+        return std::find_if(obj.begin(), obj.end(), [&](const auto &t) {
+            return t->getSettings() == s;
+        });
+    }
 
     // find target with equal subset of provided settings
     // findEqualSubset()
-    Base::iterator findSuitable(const TargetSettings &);
-    Base::const_iterator findSuitable(const TargetSettings &) const;
+    auto findSuitable(this auto &&obj, const TargetSettings &s) {
+        return std::find_if(obj.begin(), obj.end(), [&](const auto &t) {
+            return t->getSettings().isSubsetOf(s);
+        });
+    }
 
     void push_back(const ITargetPtr &);
 
-    void clear();
-    bool empty() const;
+    void clear() { targets.clear(); }
+    bool empty() const { return targets.empty(); }
     size_t size() const { return targets.size(); }
 
     auto begin() { return targets.begin(); }
@@ -215,7 +221,9 @@ struct SW_CORE_API TargetContainer
     auto begin() const { return targets.begin(); }
     auto end() const { return targets.end(); }
 
-    Base::iterator erase(Base::iterator begin, Base::iterator end);
+    auto erase(auto begin, auto end) {
+        return targets.erase(begin, end);
+    }
 
     void setInput(const BuildInput &);
     const BuildInput &getInput() const;
@@ -281,17 +289,26 @@ struct TargetMap : PackageVersionMapBase<TargetContainer, std::unordered_map, pr
         TargetNotCreated, // by settings
     };
 
-    SW_CORE_API
-    ~TargetMap();
-
     using Base::find;
 
-    SW_CORE_API
-    detail::SimpleExpected<std::pair<Version, ITarget *>> find(const PackagePath &pp, const TargetSettings &ts) const;
-    SW_CORE_API
-    ITarget *find(const PackageId &pkg, const TargetSettings &ts) const;
-    SW_CORE_API
-    ITarget *find(const UnresolvedPackage &pkg, const TargetSettings &ts) const;
+    detail::SimpleExpected<std::pair<Version, ITarget *>> find(const PackagePath &pp, const TargetSettings &ts) const {
+        auto i = find_and_select_version(pp);
+        if (!i)
+            return i.ec();
+        auto j = i->second.findSuitable(ts);
+        if (j == i->second.end())
+            return std::pair<Version, ITarget *>{ i->first, nullptr };
+        return std::pair<Version, ITarget *>{ i->first, j->get() };
+    }
+    ITarget *find(const auto &pkg, const TargetSettings &ts) const {
+        auto i = find(pkg);
+        if (i == end())
+            return {};
+        auto k = i->second.findSuitable(ts);
+        if (k == i->second.end())
+            return {};
+        return k->get();
+    }
 
     //
 
@@ -306,8 +323,15 @@ struct TargetMap : PackageVersionMapBase<TargetContainer, std::unordered_map, pr
     }
 
 private:
-    detail::SimpleExpected<Base::version_map_type::iterator> find_and_select_version(const PackagePath &pp);
-    detail::SimpleExpected<Base::version_map_type::const_iterator> find_and_select_version(const PackagePath &pp) const;
+    detail::SimpleExpected<Base::version_map_type::const_iterator> find_and_select_version(const PackagePath &pp) const {
+        auto i = find(pp);
+        if (i == end(pp))
+            return PackagePathNotFound;
+        auto vo = select_version(i->second);
+        if (!vo)
+            return PackageNotFound;
+        return i->second.find(*vo);
+    }
 };
 
 //
