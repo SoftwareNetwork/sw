@@ -354,7 +354,10 @@ void LocalStorage::get(const IStorage2 &source, const PackageId &id, StorageFile
         }
 
         unpack();
-        write_file(lp.getStampFilename(), fh->getHash());
+        auto stfn = lp.getStampFilename();
+        write_file(stfn, fh->getHash());
+        // also write package name for debugging purposes
+        write_file(stfn.parent_path() / "package_name.txt", id.toString());
         return;
     }
 
