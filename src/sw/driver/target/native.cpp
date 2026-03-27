@@ -1104,7 +1104,7 @@ void NativeCompiledTarget::addPackageDefinitions(bool defs)
     else
     {
         // was: false
-        // true is needed for some config.h under replacements (mingw)
+        // true is needed for some config.h under replacements (mingw, pqxx-8)
         // ^ just replace in mingw manually
         set_pkg_info(Variables, false); // false?
     }
