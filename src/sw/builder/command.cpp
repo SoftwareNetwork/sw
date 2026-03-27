@@ -773,6 +773,68 @@ const Command::Arguments &Command::getArguments() const
     return rsp_args;
 }
 
+auto get_shell_type() {
+    auto t = getHostOS().getShellType();
+    if (!sw::Settings::get_user_settings().save_command_format.empty()) {
+        if (sw::Settings::get_user_settings().save_command_format == "bat")
+            t = ShellType::Batch;
+        else if (sw::Settings::get_user_settings().save_command_format == "sh")
+            t = ShellType::Shell;
+        else
+            LOG_ERROR(logger, "Unknown save_command_format");
+    }
+    return t;
+}
+auto get_shell_ext() {
+    return get_shell_type() == ShellType::Batch ? ".bat" : ".sh";
+}
+
+auto get_command_rsp_dir() {
+    return fs::current_path() / SW_BINARY_DIR / "rsp";
+}
+auto get_command_rsp_fn(const Command &c) {
+    return get_command_rsp_dir() / (std::to_string(c.getHash()));
+}
+
+static struct command_saver {
+    struct saver {
+        std::string name;
+        std::string contents;
+        ~saver() {
+            if (!contents.empty()) {
+                auto fn = get_command_rsp_dir() / name;
+                write_file(fn += get_shell_ext(), contents);
+            }
+        }
+        void add(const Command &c) {
+            if (get_shell_type() == ShellType::Batch) {
+                contents += std::format(
+                    ":: {}\n"
+                    "call {}{}\n"
+                    "if %ERRORLEVEL% NEQ 0 echo Error code: %ERRORLEVEL% && exit /b %ERRORLEVEL%\n"
+                    "\n"
+                    , c.getName(), std::to_string(c.getHash()), get_shell_ext());
+            } else {
+                contents += std::format(
+                    ":: {}\n"
+                    "{}{}\n"
+                    "E=$?\n"
+                    "if [ $E -ne 0 ]; then echo \"Error code: $E\"; fi\n"
+                    "\n"
+                    , c.getName(), std::to_string(c.getHash()), get_shell_ext());
+            }
+        }
+    };
+    std::map<bool *, saver> m;
+
+    ~command_saver() {
+    }
+    void add(bool &b, auto &&name, const Command &c) {
+        m[&b].name = name;
+        m[&b].add(c);
+    }
+} saver;
+
 void Command::execute1(std::error_code *ec)
 {
     primitives::ScopedThreadName tn(": " + getName(), true);
@@ -830,6 +892,7 @@ void Command::execute1(std::error_code *ec)
     if (sw::Settings::get_user_settings().save_all_commands)
     {
         saveCommand();
+        saver.add(sw::Settings::get_user_settings().save_all_commands, "all_commands", *this);
     }
 
     if (ec)
@@ -856,6 +919,7 @@ void Command::execute1(std::error_code *ec)
     if (sw::Settings::get_user_settings().save_executed_commands)
     {
         saveCommand();
+        saver.add(sw::Settings::get_user_settings().save_executed_commands, "executed_commands", *this);
     }
 
     postProcess(); // process deps
@@ -917,6 +981,13 @@ String Command::makeErrorString(const String &e)
     if (sw::Settings::get_user_settings().save_failed_commands || sw::Settings::get_user_settings().save_executed_commands || sw::Settings::get_user_settings().save_all_commands)
     {
         s += saveCommand();
+
+        if (sw::Settings::get_user_settings().save_failed_commands)
+            saver.add(sw::Settings::get_user_settings().save_failed_commands, "failed_commands", *this);
+        if (sw::Settings::get_user_settings().save_executed_commands)
+            saver.add(sw::Settings::get_user_settings().save_executed_commands, "executed_commands", *this);
+        if (sw::Settings::get_user_settings().save_all_commands)
+            saver.add(sw::Settings::get_user_settings().save_all_commands, "all_commands", *this);
     }
     return s;
 }
@@ -927,7 +998,7 @@ String Command::saveCommand() const
         return String{};
 
     // use "fancy" rsp name = command hash
-    auto base = fs::current_path() / SW_BINARY_DIR / "rsp" / (std::to_string(getHash()));
+    auto base = get_command_rsp_fn(*this);
     auto p = writeCommand(base);
 
     if (sw::Settings::get_user_settings().save_command_output)
@@ -949,16 +1020,7 @@ path Command::writeCommand(const path &p, bool print_name) const
     auto pbat = p;
     String t;
 
-    bool bat = getHostOS().getShellType() == ShellType::Batch;
-    if (!sw::Settings::get_user_settings().save_command_format.empty())
-    {
-        if (sw::Settings::get_user_settings().save_command_format == "bat")
-            bat = true;
-        else if (sw::Settings::get_user_settings().save_command_format == "sh")
-            bat = false;
-        else
-            LOG_ERROR(logger, "Unknown save_command_format");
-    }
+    bool bat = get_shell_type() == ShellType::Batch;
 
     auto norm = [bat](const auto &s)
     {
@@ -968,10 +1030,7 @@ path Command::writeCommand(const path &p, bool print_name) const
     };
 
     // start
-    if (bat)
-        pbat += ".bat";
-    else
-        pbat += ".sh";
+    pbat += get_shell_ext();
 
     if (bat)
     {
