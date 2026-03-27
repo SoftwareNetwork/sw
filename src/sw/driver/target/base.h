@@ -532,11 +532,13 @@ public:
     ASSIGN_TYPES(IncludeDirectory)
     ASSIGN_TYPES(PrecompiledHeader)
     ASSIGN_TYPES(Framework)
+    ASSIGN_TYPES(CompileOption)
 
     // linker options
     ASSIGN_TYPES(LinkDirectory)
     ASSIGN_TYPES(LinkLibrary)
     ASSIGN_TYPES(SystemLinkLibrary)
+    ASSIGN_TYPES(LinkOption)
 
     //
     ASSIGN_TYPES(Target)

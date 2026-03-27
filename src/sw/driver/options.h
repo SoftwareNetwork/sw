@@ -201,6 +201,13 @@ struct SW_DRIVER_CPP_API SystemLinkLibrary
     explicit SystemLinkLibrary(const path &p);
 };
 
+struct CompileOption {
+    String o;
+};
+struct LinkOption {
+    String o;
+};
+
 struct SW_DRIVER_CPP_API PrecompiledHeader
 {
     String h;
@@ -249,6 +256,8 @@ struct SW_DRIVER_CPP_API NativeCompilerOptionsData
     void remove(const Definition &d);
     void add(const DefinitionsType &defs);
     void remove(const DefinitionsType &defs);
+    void add(const CompileOption &d);
+    void remove(const CompileOption &d);
 };
 
 using LinkLibrariesType = UniqueVector<LinkLibrary>;
@@ -271,9 +280,10 @@ struct SW_DRIVER_CPP_API NativeLinkerOptionsData
 
     void add(const LinkDirectory &l);
     void remove(const LinkDirectory &l);
-
     void add(const LinkLibrary &l);
     void remove(const LinkLibrary &l);
+    void add(const LinkOption &d);
+    void remove(const LinkOption &d);
 };
 
 struct SW_DRIVER_CPP_API NativeCompilerOptions : NativeCompilerOptionsData

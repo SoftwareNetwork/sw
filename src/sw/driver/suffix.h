@@ -31,6 +31,9 @@ _r - regex
 _rr - recursive regex
 _s?, _sf? - source file
 
+_co?, _copt?, _clopt? - compile option
+_lo?, _lopt? - link option
+
 sources:
     _git
     _git_v - means that version is a tag 'v{v}'
@@ -46,8 +49,22 @@ inline ApiNameType operator ""_api(const char *s, size_t)
     return ApiNameType(String(s));
 }
 
+// compile, link opts
+inline auto operator ""_co(const char *s, size_t) {
+    return CompileOption(String(s));
+}
+inline auto operator ""_copt(const char *s, size_t) {
+    return CompileOption(String(s));
+}
+inline auto operator ""_lo(const char *s, size_t) {
+    return LinkOption(String(s));
+}
+inline auto operator ""_lopt(const char *s, size_t) {
+    return LinkOption(String(s));
+}
+
 // definition
-// _d or _def
+// _d or _def - _def is better?
 inline Definition operator ""_d(const char *s, size_t)
 {
     return Definition(String(s));

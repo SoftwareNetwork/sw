@@ -249,6 +249,16 @@ void NativeCompilerOptionsData::remove(const DefinitionsType &defs)
         Definitions.erase(k);
 }
 
+void NativeCompilerOptionsData::add(const CompileOption &d)
+{
+    CompileOptions.push_back(d.o);
+}
+
+void NativeCompilerOptionsData::remove(const CompileOption &d)
+{
+    CompileOptions.erase(d.o);
+}
+
 PathOptionsType NativeCompilerOptionsData::gatherIncludeDirectories() const
 {
     PathOptionsType d;
@@ -404,6 +414,16 @@ void NativeLinkerOptionsData::add(const LinkLibrary &l)
 void NativeLinkerOptionsData::remove(const LinkLibrary &l)
 {
     LinkLibraries.erase(l);
+}
+
+void NativeLinkerOptionsData::add(const LinkOption &l)
+{
+    LinkOptions.push_back(l.o);
+}
+
+void NativeLinkerOptionsData::remove(const LinkOption &l)
+{
+    LinkOptions.erase(std::remove(LinkOptions.begin(), LinkOptions.end(), l.o), LinkOptions.end());
 }
 
 PathOptionsType NativeLinkerOptionsData::gatherLinkDirectories() const
