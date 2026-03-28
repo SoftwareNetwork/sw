@@ -237,7 +237,9 @@ void CmakeTargetEntryPoint::init() const
         override_command(name, [](std::vector<std::string> const &, cmExecutionStatus &){return true;});
     };
 
-    cm = std::make_unique<cmake>(cmake::RoleProject, cmState::Mode::Project);
+    cm = std::make_unique<cmake>(cmState::Role::Project
+        //, cmState::Mode::Project
+    );
     cm->SetHomeDirectory(to_string(normalize_path(rootfn.parent_path())));
     auto bdir = rootfn.parent_path() / ".sw" / "cmake";
     cm->SetHomeOutputDirectory(to_string(normalize_path(bdir)));
