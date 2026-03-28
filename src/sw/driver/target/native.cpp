@@ -3507,7 +3507,7 @@ void NativeCompiledTarget::prepare_pass5()
         getMergeObject() += Definition("NDEBUG");
 
     // emulate msvc defs for clang
-    // https://docs.microsoft.com/en-us/cpp/build/reference/md-mt-ld-use-run-time-library?view=vs-2019
+    // https://docs.microsoft.com/en-us/cpp/build/reference/md-mt-ld-use-run-time-library
     if (getBuildSettings().TargetOS.is(OSType::Windows) && getCompilerType() == CompilerType::Clang)
     {
         // always (except /LD but we do not support it yet)
@@ -4297,6 +4297,8 @@ void NativeCompiledTarget::prepare_pass6()
     // libconcrtd0.lib
     // libconcrtd1.lib
 
+    // FYI: MS STL has autolinking, this define prevents it _USE_ANSI_CPP
+
     auto &t = getMergeObject();
 
     if (auto L = getSelectedTool()->as<VisualStudioLinker *>())
@@ -4349,7 +4351,7 @@ void NativeCompiledTarget::prepare_pass6()
         {
             // dangerous!
             auto p = getMergeObject().NativeLinkerOptions::System.LinkDirectories.begin()->parent_path().parent_path() / "ifc" / (getBuildSettings().TargetOS.Arch == ArchType::x86_64 ? "x64" : "x86");
-            p /=  getBuildSettings().Native.ConfigurationType == ConfigurationType::Debug ? "Debug" : "Release";
+            p /= getBuildSettings().Native.ConfigurationType == ConfigurationType::Debug ? "Debug" : "Release";
             getMergeObject().NativeLinkerOptions::System.LinkDirectories.insert(p);
         }
     }
