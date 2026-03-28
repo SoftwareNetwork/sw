@@ -781,15 +781,13 @@ void VSGenerator::generate(const SwBuild &b)
             r.outputs.insert(int_dir / "rules" / "intentionally_missing.file");
             r.verify_inputs_and_outputs_exist = false;
 
-            // actually we must build deps + their specific settings
-            // not one setting for all deps
-            std::map<PackageId, String> deps;
+            std::set<std::pair<PackageId, String>> deps;
             for (auto &[_, p1] : s.projects)
             {
                 auto &d = p1.getData(st);
                 for (auto &t : d.dependencies)
                 {
-                    deps[t->getPackage()] = t->getSettings().toString();
+                    deps.emplace(t->getPackage(), t->getSettings().toString());
                     p1.dependencies.insert(&p); // add dependency for project
                 }
             }
