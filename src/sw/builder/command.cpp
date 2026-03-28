@@ -1563,11 +1563,22 @@ void BuiltinCommand::execute1(std::error_code *ec)
         sa.push_back(a->toString());
 
     auto start = getFirstResponseFileArgument();
-    jumppad_call(
+    exit_code = jumppad_call(
         sa[start + 0],
         sa[start + 1],
         std::stoi(sa[start + 2]),
         Strings{ sa.begin() + start + 3, sa.end() });
+
+    if (exit_code != 0) {
+        errors.insert(errors.begin(), "exit code = " + std::to_string(*exit_code));
+        auto err = makeErrorString();
+        throw SW_RUNTIME_ERROR(err);
+    }
+
+    if (sw::Settings::get_user_settings().save_executed_commands) {
+        saveCommand();
+        saver.add(sw::Settings::get_user_settings().save_executed_commands, "executed_commands", *this);
+    }
 }
 
 size_t BuiltinCommand::getHash1() const

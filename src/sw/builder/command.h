@@ -273,9 +273,11 @@ private:
     bool isTimeChanged() const;
     void printLog() const;
     size_t getHashAndSave() const;
+protected:
     String makeErrorString();
     String makeErrorString(const String &e);
     String saveCommand() const;
+private:
     void printOutputs();
 };
 
