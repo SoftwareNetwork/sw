@@ -142,6 +142,12 @@ int StartupData::run()
     setWorkingDir();
     initLogger();
 
+#ifdef _WIN32
+    if (_setmaxstdio(8192) == -1) {
+        std::cerr << "Cannot increase fds limit.\n";
+    }
+#endif
+
     try
     {
         if (!version.empty())
