@@ -396,7 +396,7 @@ size_t Command::getHash1() const
 {
     size_t h = 0;
     if (isProgramSet()) {
-    hash_combine(h, std::hash<path>()(getProgram()));
+        hash_combine(h, std::hash<path>()(getProgram()));
     }
 
     // must sort arguments first
@@ -801,7 +801,9 @@ auto get_command_rsp_fn(const Command &c) {
 static struct command_saver {
     struct saver {
         std::string name;
+        std::mutex m;
         std::string contents;
+
         ~saver() {
             if (!contents.empty()) {
                 auto fn = get_command_rsp_dir() / name;
@@ -809,6 +811,7 @@ static struct command_saver {
             }
         }
         void add(const Command &c) {
+            std::unique_lock lk{ m };
             if (get_shell_type() == ShellType::Batch) {
                 contents += std::format(
                     ":: {}\n"
@@ -827,13 +830,19 @@ static struct command_saver {
             }
         }
     };
+    std::mutex x;
     std::map<bool *, saver> m;
 
     ~command_saver() {
     }
     void add(bool &b, auto &&name, const Command &c) {
-        m[&b].name = name;
-        m[&b].add(c);
+        std::unique_lock lk{x};
+        auto &v = m[&b];
+        lk.unlock();
+        if (v.name.empty()) {
+            v.name = name;
+        }
+        v.add(c);
     }
 } saver;
 
