@@ -434,10 +434,11 @@ void ClangCompiler::prepareCommand1(const ::sw::Target &t)
         cmd->working_directory = OutputFile().parent_path();
     }
 
+    auto msvc_or_mingw = t.getBuildSettings().TargetOS.is(OSType::Windows) || t.getBuildSettings().TargetOS.is(OSType::Mingw);
+
     // not available for msvc triple
     // must be enabled on per target basis (when shared lib is built)?
-    if (t.getBuildSettings().TargetOS.is(OSType::Windows) ||
-        t.getBuildSettings().TargetOS.is(OSType::Mingw))
+    if (msvc_or_mingw)
     {
         PositionIndependentCode = false;
     }
@@ -454,7 +455,7 @@ void ClangCompiler::prepareCommand1(const ::sw::Target &t)
     CPPStandard.skip = true;
 
     getCommandLineOptions<ClangOptions>(cmd.get(), *this);
-    addEverything(*this->cmd/*, "-isystem"*/);
+    addEverything(*this->cmd, msvc_or_mingw ? "-isystem" : "");
     getCommandLineOptions<ClangOptions>(cmd.get(), *this, "", true);
 }
 
