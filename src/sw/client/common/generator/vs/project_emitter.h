@@ -11,6 +11,7 @@ namespace sw
 {
 
 struct BuildSettings;
+struct TargetSettings;
 
 }
 
@@ -34,7 +35,7 @@ struct XmlEmitter : primitives::Emitter
     XmlEmitter(bool print_version = true);
 
     void beginBlock(const String &n, const std::map<String, String> &params = {}, bool empty = false);
-    void beginBlockWithConfiguration(const String &n, const sw::BuildSettings &s, std::map<String, String> params = {}, bool empty = false);
+    void beginBlockWithConfiguration(const String &n, const sw::TargetSettings &s, std::map<String, String> params = {}, bool empty = false);
     void endBlock(bool text = false);
     void addBlock(const String &n, const String &v, const std::map<String, String> &params = {});
 

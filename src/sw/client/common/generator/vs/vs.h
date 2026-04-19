@@ -244,8 +244,9 @@ struct FlagTable
 
 using FlagTables = std::map<String /* command name */, FlagTable>;
 
-String get_project_configuration(const sw::BuildSettings &s);
-String get_configuration(const sw::BuildSettings &s);
+String get_configuration(const sw::TargetSettings &s);
+String get_project_configuration(const sw::TargetSettings &s);
+std::pair<String, String> get_project_configuration_pair(const sw::TargetSettings &s);
 
 namespace generator {
 

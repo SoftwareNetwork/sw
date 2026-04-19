@@ -52,12 +52,7 @@ SUBCOMMAND_DECL(generate)
     if (generator->getType() == GeneratorType::VisualStudio)
     {
         auto &compilers = (Strings&)getOptions().compiler;
-        if (!compilers.empty())
-        {
-            if (compilers.size() > 1)
-                throw SW_RUNTIME_ERROR("Only one compiler may be specified");
-        }
-        else
+        if (compilers.empty())
         {
             getOptions().compiler.push_back("msvc");
         }
@@ -68,9 +63,12 @@ SUBCOMMAND_DECL(generate)
             getOptions().configuration.push_back("r");
         }
         // vs gen works only with this atm
+        auto has_msvc = std::ranges::any_of(getOptions().compiler, [](auto &v){return v.contains("msvc");});
+        auto has_clang_or_clang_cl = std::ranges::any_of(getOptions().compiler, [](auto &v){return v.contains("clang");});
         if (false
-            || getOptions().compiler[0].contains("msvc")
-            || !getOptions().compiler[0].contains("clang")
+            || has_msvc
+            || !has_clang_or_clang_cl
+            // what about gnu?
             ) {
             // not for clang, currently some packages can't be built with it (python, bison)
             getOptions().use_same_config_for_host_dependencies = true;

@@ -159,12 +159,12 @@ static path get_int_dir(const path &dir, const path &projects_dir, const String 
     return tdir / "i" / shorten_hash(blake2b_512(name), 6);
 }
 
-static path get_int_dir(const path &dir, const path &projects_dir, const String &name, const BuildSettings &s)
+static path get_int_dir(const path &dir, const path &projects_dir, const String &name, const auto &s)
 {
     return get_int_dir(dir, projects_dir, name) / shorten_hash(blake2b_512(get_project_configuration(s)), 6);
 }
 
-static path get_out_dir(const path &dir, const path &projects_dir, const BuildSettings &s, const Options &options)
+static path get_out_dir(const path &dir, const path &projects_dir, const auto &s, const Options &options)
 {
     auto p = fs::current_path();
     p /= "bin";
@@ -212,6 +212,19 @@ static FlagTable read_flag_table(const path &fn)
         ft.ftable[d.argument] = d;
     }
     return ft;
+}
+
+sw::CompilerType get_compiler_type(const TargetSettings &s) {
+    UnresolvedPackage compiler = s["native"]["program"]["cpp"].getValue();
+    if (compiler.getPath() == "com.Microsoft.VisualStudio.VC.cl")
+        return CompilerType::MSVC;
+    else if (compiler.getPath() == "org.LLVM.clangcl")
+        return CompilerType::ClangCl;
+    else if (compiler.getPath() == "org.LLVM.clangpp" || compiler.getPath() == "org.LLVM.clang") {
+        return CompilerType::Clang;
+        LOG_INFO(logger, "Not yet fully supported");
+    } else
+        throw SW_RUNTIME_ERROR("Compiler is not supported (yet?): " + compiler.toString());
 }
 
 bool is_generated_ext(const path &f)
@@ -281,39 +294,34 @@ void VSGenerator::generate(const SwBuild &b)
         throw SW_RUNTIME_ERROR("Empty settings");
 
     UnresolvedPackage compiler = (*s.settings.begin())["native"]["program"]["cpp"].getValue();
-    if (compiler.getPath() == "com.Microsoft.VisualStudio.VC.cl")
-        ;
-    else if (compiler.getPath() == "org.LLVM.clangcl")
-        compiler_type = ClangCl;
-    else if (compiler.getPath() == "org.LLVM.clangpp" || compiler.getPath() == "org.LLVM.clang")
-    {
-        compiler_type = Clang;
-        LOG_INFO(logger, "Not yet fully supported");
-    }
-    else
-        throw SW_RUNTIME_ERROR("Compiler is not supported (yet?): " + compiler.toString());
 
     auto compiler_id = b.getContext().getPredefinedTargets().find(compiler)->first;
     auto compiler_id_max_version = b.getContext().getPredefinedTargets().find(UnresolvedPackage(compiler.getPath().toString()))->first;
 
-    if (compiler_type == MSVC)
-    {
-        vs_version = clver2vsver(compiler_id.getVersion(), compiler_id_max_version.getVersion());
-        toolset_version = compiler_id.getVersion();
+    bool msvc_found{};
+    for (auto &&s : s.settings) {
+        if (get_compiler_type(s) == CompilerType::MSVC) {
+            vs_version = clver2vsver(compiler_id.getVersion(), compiler_id_max_version.getVersion());
+            toolset_version = compiler_id.getVersion();
+            msvc_found = true;
+            break;
+        }
     }
-    else
+    if (!msvc_found)
     {
         // otherwise just generate maximum found version for msvc compiler
         auto compiler_id_max_version = b.getContext().getPredefinedTargets().find(UnresolvedPackage("com.Microsoft.VisualStudio.VC.cl"))->first;
         vs_version = clver2vsver(compiler_id_max_version.getVersion(), compiler_id_max_version.getVersion());
         toolset_version = compiler_id_max_version.getVersion();
     }
+
     // this removes hash part      vvvvvvvvvvvvv
     sln_root = getRootDirectory(b).parent_path();
     // we dont use build hash in solution dir, but we want to use inputs name (e.g. for freestanding files)
     // default name
     // const auto compiler_name = boost::to_lower_copy(toString(b.solutions[0].Settings.Native.CompilerType));
-    const String compiler_name = "msvc";
+    //const String compiler_name = "msvc";
+    const String compiler_name = "";
     String visible_lnk_name;
     if (inputs.size() == 1) {
         auto &&input = inputs[0].getInput().getInput();
@@ -889,8 +897,10 @@ void VSGenerator::generate(const SwBuild &b)
 
     // main emit
     if (visible_lnk_name.empty()) {
-        visible_lnk_name += to_string(curr_dirr.filename().u8string()) + "_";
-        visible_lnk_name += compiler_name + "_" + getPathString().string() + "_" + vs_version.toString(1);
+        visible_lnk_name += to_string(curr_dirr.filename().u8string());
+        visible_lnk_name +=
+            //"_"s + compiler_name +
+            "_" + getPathString().string() + "_" + vs_version.toString(1);
     }
     if (vs_version >= Version(18)) {
         visible_lnk_name += ".slnx";
@@ -1214,7 +1224,18 @@ void Project::emitProject(const VSGenerator &g) const
 
     ctx.addBlock("Import", "", {{"Project", "$(VCTargetsPath)\\Microsoft.Cpp.Default.props"}});
     ctx.addPropertyGroupConfigurationTypes(*this);
-    ctx.addBlock("Import", "", {{"Project", "$(VCTargetsPath)\\Microsoft.Cpp.props"}});
+    for (auto &s : settings) {
+        if (get_compiler_type(s) == CompilerType::MSVC || get_compiler_type(s) == CompilerType::ClangCl || get_compiler_type(s) == CompilerType::Clang) {
+            ctx.addBlock("Import", "", {get_project_configuration_pair(s), {"Project", "$(VCTargetsPath)\\Microsoft.Cpp.props"}});
+        }
+        // not really needed?
+        //if (get_compiler_type(s) == CompilerType::ClangCl) {
+        //    ctx.addBlock("Import", "", { get_project_configuration_pair(s), {"Project", "$(VCTargetsPath)\\Microsoft.Cpp.ClangCl.Common.props"} });
+        //}
+        if (get_compiler_type(s) == CompilerType::Clang) {
+            ctx.addBlock("Import", "", { get_project_configuration_pair(s),  {"Project", "$(VCTargetsPath)\\Microsoft.Cpp.Clang.props"} });
+        }
+    }
     ctx.addPropertySheets(*this);
 
     // make conditional if .asm files are present
@@ -1356,7 +1377,7 @@ void Project::emitProject(const VSGenerator &g) const
                 {
                     ctx.beginBlockWithConfiguration(k, s);
                     ctx.addText(v);
-                    if (g.compiler_type == VSGenerator::ClangCl && k == "AdditionalOptions")
+                    if (get_compiler_type(s) == CompilerType::ClangCl && k == "AdditionalOptions")
                         ctx.addText("-showFilenames ");
                     ctx.endBlock(true);
                 }
@@ -1596,26 +1617,42 @@ void Project::emitProject(const VSGenerator &g) const
     }
     ctx.endBlock();
 
-    ctx.addBlock("Import", "", {{"Project", "$(VCTargetsPath)\\Microsoft.Cpp.targets"}});
+    for (auto &s : settings) {
+        if (get_compiler_type(s) == CompilerType::MSVC || get_compiler_type(s) == CompilerType::ClangCl || get_compiler_type(s) == CompilerType::Clang) {
+            ctx.addBlock("Import", "", {get_project_configuration_pair(s),  {"Project", "$(VCTargetsPath)\\Microsoft.Cpp.targets"} });
+        }
+        // not really needed?
+        //if (get_compiler_type(s) == CompilerType::ClangCl) {
+        //    ctx.addBlock("Import", "", { get_project_configuration_pair(s), {"Project", "$(VCTargetsPath)\\Microsoft.Cpp.ClangCl.Common.targets"} });
+        //}
+        if (get_compiler_type(s) == CompilerType::Clang) {
+            ctx.addBlock("Import", "", { get_project_configuration_pair(s),  {"Project", "$(VCTargetsPath)\\Microsoft.Cpp.Clang.targets"} });
+        }
+    }
+    //if (has_clang_cl) {
+    //    // not really needed?
+    //    //ctx.addBlock("Import", "", {{"Project", "$(VCTargetsPath)\\Microsoft.Cpp.ClangCl.Common.targets"}});
+    //}
 
-    if (g.compiler_type == VSGenerator::ClangCl || g.compiler_type == VSGenerator::Clang)
-    {
-        auto get_prog = [&g](const sw::UnresolvedPackage &u)
+    for (auto &s : settings) {
+        if (get_compiler_type(s) == CompilerType::ClangCl || get_compiler_type(s) == CompilerType::Clang)
+        {
+            auto get_prog = [&g](const sw::UnresolvedPackage &u)
         {
             auto &target = **g.b->getContext().getPredefinedTargets().find(u)->second.begin();
             auto fn = to_string(normalize_path_windows(target.as<sw::PredefinedProgram &>().getProgram().file));
             return fn;
         };
 
-        ctx.beginBlock("PropertyGroup");
-        ctx.addBlock("CLToolExe", get_prog((*settings.begin())["native"]["program"]["cpp"].getValue()));
-        ctx.addBlock("LIBToolExe", get_prog((*settings.begin())["native"]["program"]["lib"].getValue()));
-        ctx.addBlock("LinkToolExe", get_prog((*settings.begin())["native"]["program"]["link"].getValue()));
-        ctx.endBlock();
+            ctx.beginBlockWithConfiguration("PropertyGroup", s);
+            ctx.addBlock("CLToolExe", get_prog(s["native"]["program"]["cpp"].getValue()));
+            ctx.addBlock("LIBToolExe", get_prog(s["native"]["program"]["lib"].getValue()));
+            ctx.addBlock("LinkToolExe", get_prog(s["native"]["program"]["link"].getValue()));
+            ctx.endBlock();
 
-        // taken from llvm/tools/msbuild/LLVM.Cpp.Common.targets
-        String clangprops = R"xxx(
-    <ItemDefinitionGroup>
+            ctx.beginBlockWithConfiguration("ItemDefinitionGroup", s);
+            // taken from llvm/tools/msbuild/LLVM.Cpp.Common.targets
+            String clangprops = R"xxx(
       <ClCompile>
         <!-- Map /ZI and /Zi to /Z7.  Clang internally does this, so if we were
              to just pass the option through, clang would work.  The problem is
@@ -1666,10 +1703,15 @@ void Project::emitProject(const VSGenerator &g) const
         <!-- We can't just unset BasicRuntimeChecks, as that will pass /RTCu to the compiler.
              We have to explicitly set it to 'Default' to avoid passing anything. -->
         <BasicRuntimeChecks>Default</BasicRuntimeChecks>
-      </ClCompile>
-    </ItemDefinitionGroup>
 )xxx";
-        ctx.addLine(clangprops);
+            if (get_compiler_type(s) == CompilerType::Clang) {
+                // should be for win only
+                clangprops += "<PositionIndependentCode>false</PositionIndependentCode>";
+            }
+            clangprops += "</ClCompile>";
+            ctx.addLine(clangprops);
+            ctx.endBlock();
+        }
     }
 
     ctx.endProject();
@@ -1892,7 +1934,7 @@ std::map<String, String> Project::printProperties(const sw::builder::Command &c,
                     if (normalize_path(i) == normalize_path(arg))
                         return;
                 }
-                args["AdditionalOptions"] += o->quote();
+                args["AdditionalOptions"] += o->quote(primitives::command::QuoteType::SimpleAndEscape);
                 args["AdditionalOptions"] += " ";
                 return;
             }

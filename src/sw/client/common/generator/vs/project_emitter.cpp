@@ -145,26 +145,44 @@ std::string getVsToolset(const Version &clver)
     throw SW_RUNTIME_ERROR("Unknown VS version");*/
 }
 
-String get_configuration(const BuildSettings &s)
+std::pair<String, String> get_project_configuration_pair(const TargetSettings &s) {
+    return { "Condition", "'$(Configuration)|$(Platform)'=='" + get_project_configuration(s) + "'" };
+}
+
+static String get_compiler_name(const TargetSettings &s) {
+    auto cl = s["native"]["program"]["cpp"].getValue();
+    if (cl.contains("com.Microsoft.VisualStudio.VC.cl")) {
+        return "Msvc";
+    }
+    if (cl.contains("org.LLVM.clangcl")) {
+        return "ClangCl";
+    }
+    if (cl.contains("org.LLVM.clang")) {
+        return "Clang";
+    }
+    return "UnknownCompiler";
+}
+
+String get_configuration(const TargetSettings &s)
 {
-    String c = generator::toString(s.Native.ConfigurationType) + generator::toString(s.Native.LibrariesType);
-    if (s.Native.MT)
+    BuildSettings bs = s;
+    String c;
+    c += get_compiler_name(s);
+    c += generator::toString(bs.Native.ConfigurationType);
+    c += generator::toString(bs.Native.LibrariesType);
+    if (bs.Native.MT)
         c += "Mt";
     return c;
 }
 
-static std::pair<String, String> get_project_configuration_pair(const BuildSettings &s)
+String get_project_configuration(const TargetSettings &s)
 {
-    return {"Condition", "'$(Configuration)|$(Platform)'=='" + get_project_configuration(s) + "'"};
-}
-
-String get_project_configuration(const BuildSettings &s)
-{
+    BuildSettings bs = s;
     String c;
     c += get_configuration(s);
-    if (platforms.find(s.TargetOS.Arch) == platforms.end())
-        c += " - " + toString(s.TargetOS.Arch);
-    c += "|" + generator::toString(s.TargetOS.Arch);
+    if (platforms.find(bs.TargetOS.Arch) == platforms.end())
+        c += " - " + toString(bs.TargetOS.Arch);
+    c += "|" + generator::toString(bs.TargetOS.Arch);
     return c;
 }
 
@@ -181,7 +199,7 @@ void XmlEmitter::beginBlock(const String &n, const std::map<String, String> &par
     increaseIndent();
 }
 
-void XmlEmitter::beginBlockWithConfiguration(const String &n, const BuildSettings &s, std::map<String, String> params, bool empty)
+void XmlEmitter::beginBlockWithConfiguration(const String &n, const TargetSettings &s, std::map<String, String> params, bool empty)
 {
     params.insert(get_project_configuration_pair(s));
     beginBlock(n, params, empty);
