@@ -395,7 +395,9 @@ size_t Command::getHash() const
 size_t Command::getHash1() const
 {
     size_t h = 0;
+    if (isProgramSet()) {
     hash_combine(h, std::hash<path>()(getProgram()));
+    }
 
     // must sort arguments first
     // because some command may generate args in unspecified order
