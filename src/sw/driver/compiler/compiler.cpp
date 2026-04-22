@@ -549,7 +549,7 @@ void ClangClCompiler::prepareCommand1(const Target &t)
     if (preprocessed_file)
         addCompileOptions(*cmd);
     else
-        addEverything(*cmd/*, "-imsvc"*/);
+        addEverything(*cmd/*, "-imsvc"*/); // -imsvc does not work, -isystem too
 }
 
 void ClangClCompiler::setOutputFile(const path &output_file)
