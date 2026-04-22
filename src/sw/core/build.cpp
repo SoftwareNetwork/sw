@@ -10,6 +10,7 @@
 #include <sw/builder/execution_plan.h>
 #include <sw/builder/jumppad.h>
 #include <sw/manager/storage.h>
+#include <sw/support/time.h>
 
 #include <boost/current_function.hpp>
 #include <magic_enum/magic_enum.hpp>
@@ -343,6 +344,7 @@ void SwBuild::overrideBuildState(BuildState s) const
 void SwBuild::loadInputs()
 {
     CHECK_STATE_AND_CHANGE(BuildState::NotStarted, BuildState::InputsLoaded);
+    TIME_MEASURER();
 
     std::set<Input *> iv;
     for (auto &i : inputs)
@@ -416,6 +418,7 @@ void SwBuild::setTargetsToBuild()
 void SwBuild::resolvePackages()
 {
     CHECK_STATE_AND_CHANGE_RAW(BuildState::TargetsToBuildSet, BuildState::PackagesResolved, auto se = SCOPE_EXIT_NAMED);
+    TIME_MEASURER();
 
     // gather
     std::vector<IDependency*> upkgs;
@@ -454,6 +457,7 @@ void SwBuild::resolvePackages()
 void SwBuild::resolvePackages(const std::vector<IDependency*> &udeps)
 {
     CHECK_STATE_AND_CHANGE(BuildState::PackagesResolved, BuildState::PackagesResolved);
+    TIME_MEASURER();
 
     // this is simple lock file: u->p
     //
@@ -594,6 +598,8 @@ void SwBuild::loadPackages()
 
 void SwBuild::loadPackages(const TargetMap &predefined)
 {
+    TIME_MEASURER();
+
     // load
     auto usc = can_use_saved_configs(*this);
     //               input hash
@@ -601,7 +607,9 @@ void SwBuild::loadPackages(const TargetMap &predefined)
     int r = 1;
     while (!stopped)
     {
-        LOG_TRACE(logger, "build id " << this << " " << BOOST_CURRENT_FUNCTION << " round " << r++);
+        LOG_TRACE(logger, "build id " << this << " " << BOOST_CURRENT_FUNCTION << " round " << r);
+        TIME_MEASURER(std::format("round {}", r));
+        ++r;
 
         std::map<TargetSettings, std::pair<PackageId, TargetContainer *>> load;
         for (const auto &[pkg, tgts] : getTargets())
@@ -673,6 +681,7 @@ void SwBuild::loadPackages(const TargetMap &predefined)
             }
 
             LOG_TRACE(logger, "build id " << this << " " << BOOST_CURRENT_FUNCTION << " loading " << d.first.toString() << ", settings = " << s.toString());
+            TIME_MEASURER(d.first.toString());
 
             loaded = true;
 
@@ -748,6 +757,7 @@ bool SwBuild::prepareStep()
 void SwBuild::prepare()
 {
     CHECK_STATE_AND_CHANGE(BuildState::PackagesLoaded, BuildState::Prepared);
+    TIME_MEASURER();
 
     while (prepareStep() && !stopped)
         ;
@@ -800,6 +810,7 @@ void SwBuild::execute() const
 void SwBuild::execute(ExecutionPlan &p) const
 {
     CHECK_STATE_AND_CHANGE(BuildState::Prepared, BuildState::Executed);
+    TIME_MEASURER();
 
     SwapAndRestore sr(current_explan, &p);
 
@@ -1090,6 +1101,8 @@ std::unique_ptr<ExecutionPlan> SwBuild::getExecutionPlan() const
 
 std::unique_ptr<ExecutionPlan> SwBuild::getExecutionPlan(const Commands &cmds) const
 {
+    TIME_MEASURER();
+
     auto ep = ExecutionPlan::create(cmds);
     if (ep->isValid())
         return std::move(ep);

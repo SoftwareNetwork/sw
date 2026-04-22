@@ -10,6 +10,7 @@
 
 #include <boost/algorithm/string.hpp>
 #include <primitives/command.h>
+#include <sw/support/time.h>
 
 #include <regex>
 #include <string>
@@ -1111,6 +1112,7 @@ static void detectNonWindowsCompilers(DETECT_ARGS, bool quick_gcc)
 
 void detectNativeCompilers(DETECT_ARGS)
 {
+    TIME_MEASURER();
     auto &os = s.getHostOs();
     if (os.is(OSType::Windows) || os.is(OSType::Cygwin) || os.is(OSType::Mingw))
     {
@@ -1128,6 +1130,7 @@ void detectNativeCompilers(DETECT_ARGS)
 
 void detectProgramsAndLibraries(DETECT_ARGS)
 {
+    TIME_MEASURER();
 #define DETECT(x) detect##x##Compilers(DETECT_ARGS_PASS);
 #include "detect.inl"
 #undef DETECT

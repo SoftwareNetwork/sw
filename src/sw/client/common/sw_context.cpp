@@ -18,6 +18,7 @@
 #include <sw/driver/compiler/detect.h>
 #include <sw/manager/settings.h>
 #include <sw/support/filesystem.h>
+#include <sw/support/time.h>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "client.context");
@@ -465,6 +466,8 @@ std::unique_ptr<sw::SwBuild> SwClientContext::createBuildInternal()
 
 std::unique_ptr<sw::SwBuild> SwClientContext::createBuildAndPrepare(const Inputs &i)
 {
+    TIME_MEASURER();
+
     auto b = createBuild(i);
     b->loadInputs();
     b->setTargetsToBuild();

@@ -9,6 +9,7 @@
 #include <sw/builder/jumppad.h>
 #include <sw/driver/driver.h>
 #include <sw/manager/settings.h>
+#include <sw/support/time.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string_regex.hpp>
@@ -275,12 +276,18 @@ void StartupData::setHttpSettings()
 
 void StartupData::initLogger()
 {
-    if (getOptions().trace)
+    if (getOptions().measure_time) {
+        sw::measure_time = true;
+    }
+    if (getOptions().trace) {
         setupLogger("TRACE", getOptions());// , false); // add modules for trace logger
-    else if (getOptions().verbose)
+        sw::measure_time = true;
+    } else if (getOptions().verbose) {
         setupLogger("DEBUG", getOptions());
-    else
+        sw::measure_time = true;
+    } else {
         setupLogger("INFO", getOptions());
+    }
 }
 
 void StartupData::setWorkingDir()
@@ -396,7 +403,7 @@ void StartupData::sw_main()
     }
 
     if (0);
-#define SUBCOMMAND(n) else if (getClOptions().subcommand_##n) { swctx.command_##n(); return; }
+#define SUBCOMMAND(n) else if (getClOptions().subcommand_##n) { TIME_MEASURER("command " #n); swctx.command_##n(); return; }
 #include <sw/client/common/commands.inl>
 #undef SUBCOMMAND
 

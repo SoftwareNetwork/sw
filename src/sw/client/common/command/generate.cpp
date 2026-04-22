@@ -7,6 +7,7 @@
 #include <sw/builder/execution_plan.h>
 #include <sw/core/build.h>
 #include <sw/core/input.h>
+#include <sw/support/time.h>
 
 String vs_zero_check_stamp_ext = ".stamp";
 
@@ -83,5 +84,6 @@ SUBCOMMAND_DECL(generate)
 
     auto b = createBuildAndPrepare({getInputs(), getOptions().input_settings_pairs});
     b->getExecutionPlan(); // prepare commands
+    TIME_MEASURER("generate");
     generator->generate(*b);
 }

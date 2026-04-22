@@ -9,6 +9,7 @@
 #include "driver.h"
 
 #include <sw/manager/storage.h>
+#include <sw/support/time.h>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "context");
@@ -233,6 +234,8 @@ Input *SwContext::getInput(size_t hash) const
 
 void SwContext::loadEntryPointsBatch(const std::set<Input *> &inputs)
 {
+    TIME_MEASURER();
+
     std::map<const IDriver *, std::set<Input*>> batch_inputs;
     std::set<Input*> parallel_inputs;
 

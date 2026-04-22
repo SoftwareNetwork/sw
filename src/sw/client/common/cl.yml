@@ -330,6 +330,8 @@ command_line:
                 aliases: v
             trace:
                 desc: Trace output
+            measure_time:
+                desc: show time usage
             build_jobs:
                 option: j
                 desc: Number of main build jobs
