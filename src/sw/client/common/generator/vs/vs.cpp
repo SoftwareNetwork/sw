@@ -241,6 +241,14 @@ bool is_generated_ext(const path &f)
         ;
 };
 
+// see https://github.com/zufuliu/llvm-utils
+// for implementing clang support or own props and targets
+// put new <PlatformToolset> here
+// c:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Microsoft\VC\v180\Platforms\x64\PlatformToolsets\
+// maybe we can use own dir for that?
+// also see
+// c:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Microsoft\VC\v180\Microsoft.Cpp.Clang.props
+// c:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Microsoft\VC\v180\Microsoft.Cpp.Clang.targets
 void VSGenerator::generate(const SwBuild &b)
 {
     const String predefined_targets_dir = ". SW Predefined Targets"s;
@@ -298,6 +306,11 @@ void VSGenerator::generate(const SwBuild &b)
     auto compiler_id = b.getContext().getPredefinedTargets().find(compiler)->first;
     auto compiler_id_max_version = b.getContext().getPredefinedTargets().find(UnresolvedPackage(compiler.getPath().toString()))->first;
 
+    std::set<int> cls;
+    for (auto &&s : s.settings) {
+        cls.insert((int)get_compiler_type(s));
+    }
+    n_compilers = cls.size();
     bool msvc_found{};
     for (auto &&s : s.settings) {
         if (get_compiler_type(s) == CompilerType::MSVC) {

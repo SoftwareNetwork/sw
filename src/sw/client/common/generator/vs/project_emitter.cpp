@@ -152,13 +152,13 @@ std::pair<String, String> get_project_configuration_pair(const TargetSettings &s
 static String get_compiler_name(const TargetSettings &s) {
     auto cl = s["native"]["program"]["cpp"].getValue();
     if (cl.contains("com.Microsoft.VisualStudio.VC.cl")) {
-        return "Msvc";
+        return n_compilers == 1 ? "" : "Msvc"; // also add msvc version if multiple msvc compilers (versions)?
     }
     if (cl.contains("org.LLVM.clangcl")) {
         return "ClangCl";
     }
     if (cl.contains("org.LLVM.clang")) {
-        return "Clang";
+        return "Clang"; // also add msvc version if multiple clang compilers (versions)?
     }
     return "UnknownCompiler";
 }
