@@ -19,4 +19,5 @@
 // 36: Add PublicBinaryDir flag
 // 37: Add setupCommand() for lib and exe targets flag
 // 38: Add .Variables to DependencyData
-#define SW_MODULE_ABI_VERSION 38
+// 39: Change loader to vector of functions
+#define SW_MODULE_ABI_VERSION 39

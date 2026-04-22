@@ -92,6 +92,7 @@ std::vector<ITargetPtr> Input::loadPackages(SwBuild &b, const TargetSettings &s,
     {
         if (tgt->getSettings()["dry-run"] == "true")
             continue;
+        tgt->load();
         tgts.push_back(tgt);
     }
     // it is possible to get all targets dry run for some reason

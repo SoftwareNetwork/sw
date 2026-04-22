@@ -157,6 +157,13 @@ struct SW_DRIVER_CPP_API TargetBase : TargetBaseData
     ADD_TARGET(ObjectLibrary)
 #undef ADD_TARGET
 
+        // lambda wrappers
+#define addExecutableM(...) addExecutable(__VA_ARGS__).set_loader([&](auto &t) mutable {
+#define target_end });
+#define begin_target(x) (x).set_loader([&](auto &t) mutable {
+#define end_target() });
+
+    //
     template <typename ... Args>
     ProjectTarget &addProject(Args && ... args) { return addTarget<ProjectTarget>(std::forward<Args>(args)...); }
     DirectoryTarget &addDirectory(const PackagePath &Name) { return addTarget<DirectoryTarget>(Name); }
@@ -169,15 +176,14 @@ struct SW_DRIVER_CPP_API TargetBase : TargetBaseData
 
 #if defined(_MSC_VER) && _MSC_VER >= 1932 || defined(__cpp_explicit_this_parameter)
     template <typename T>
-    auto &set_loader(this T &obj, auto &&loader) {
-        obj.loader = [f = loader](TargetBase &t) {
-            auto &p = dynamic_cast<T&>(t);
-            /*if (!p) {
-                throw std::runtime_error{"bad target"};
-            }*/
-            f(p);
-        };
+    auto &add_loader(this T &obj, auto &&loader) {
+        obj.loader.emplace_back([f = loader, &obj]() mutable {
+            f(obj);
+        });
         return obj;
+    }
+    auto &set_loader(this auto &obj, auto &&loader) {
+        return obj.add_loader(FWD(loader));
     }
 #endif
 
@@ -185,7 +191,7 @@ protected:
     // impl
     bool prepared = false;
     mutable std::mutex m; // some internal mutex
-    std::function<void(TargetBase&)> loader;
+    std::vector<std::function<void()>> loader;
 
     TargetBase(const TargetBase &);
     TargetBase(const TargetBase &, const PackageId &);
@@ -363,12 +369,12 @@ public:
     Test addTest(const String &name);
     Test addTest(const Target &runnable_test, const String &name = {});
 
-    bool has_loader() const { return !!loader; }
+    bool has_loader() const { return !loader.empty(); }
     void load() override {
-        if (!has_loader()) {
-            throw std::logic_error{"no loader"};
+        for (auto &&f : loader) {
+            f();
         }
-        loader(*this);
+        // empty loader to prevent double loading?
     }
 
     template <typename T>

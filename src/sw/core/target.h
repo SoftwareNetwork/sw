@@ -138,6 +138,7 @@ struct SW_CORE_API ITarget : ICastable
     // by default returns nullptr
     virtual std::unique_ptr<IRule> getRule() const;
 
+    /// lazy loading
     virtual bool has_loader() const {return false;}
     virtual void load() {}
 };
