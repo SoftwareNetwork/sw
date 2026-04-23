@@ -2457,6 +2457,9 @@ void NativeCompiledTarget::prepare_pass1()
     // make additional log level for this
     //LOG_TRACE(logger, "Preparing target: " + getPackage().getPath().toString());
 
+    // load if we have something to
+    load();
+
     call(CallbackType::BeginPrepare);
 
     if (UseModules)
