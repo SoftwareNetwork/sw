@@ -375,6 +375,7 @@ public:
             f();
         }
         // empty loader to prevent double loading?
+        loader.clear();
     }
 
     template <typename T>
