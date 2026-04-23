@@ -942,10 +942,13 @@ DependencyPtr Target::constructThisPackageDependency(const String &name)
         throw SW_RUNTIME_ERROR("Cannot construct from project or directory. Use target instead");
 
     // cannot get data from project or directory
-    PackagePath pp;
-    if (getPackage().getPath().isAbsolute())
-        pp = getPackage().getPath().slice(0, getPackage().getData().prefix);
-    pp /= NamePrefix / name;
+    PackagePath pp = getPackage().getPath();
+    if (pp.isAbsolute()) {
+        pp = pp.slice(0, getPackage().getData().prefix);
+        pp /= NamePrefix / name;
+    } else {
+        pp = pp.parent() / name;
+    }
     PackageId id(pp, getPackage().getVersion());
     return std::make_shared<Dependency>(id);
 }
