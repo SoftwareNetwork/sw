@@ -189,7 +189,7 @@ int Remote::DatabaseInformation::getVersion() const
         }
         catch (std::exception &e)
         {
-            LOG_DEBUG(logger, "Couldn't download db version file: " << e.what());
+            LOG_WARN(logger, "Couldn't download db version file: " << e.what());
         }
         return 0;
     }();

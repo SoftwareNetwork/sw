@@ -299,11 +299,11 @@ void RemoteStorage::updateDb() const
             return;
     }
 
-    if (
+    if (auto remote_ver = r.db.getVersion();
         // github version link may contain old data for 15 min, so we force our update
         // we updated the link (added 'refs/heads'), hope this will get actual file version
         //Settings::get_user_settings().gForceServerDatabaseUpdate ||
-        r.db.getVersion() > readPackagesDatabaseVersion(db_repo_dir))
+        remote_ver > readPackagesDatabaseVersion(db_repo_dir) || (Settings::get_user_settings().gForceServerDatabaseUpdate && remote_ver == 0))
     {
         // multiprocess aware
         single_process_job(getPackagesDatabase().fn.parent_path() / "db_update", [this] {
