@@ -3619,6 +3619,8 @@ void NativeCompiledTarget::prepare_pass5()
             }
             if (f->file.extension() != ".c")
                 c->CPPStandard = CPPVersion;
+            else
+                c->CStandard = CVersion;
 
             for (auto &&f : getMergeObject().ForceIncludeFiles)
                 c->ForcedIncludeFiles().push_back(f);
