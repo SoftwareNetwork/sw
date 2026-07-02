@@ -182,6 +182,14 @@ static Strings getCppStdOption(CPPLanguageStandard std, bool gnuext, bool clang,
         else
             s += "2c";
         break;
+    case CPPLanguageStandard::CPP29:
+        if (
+            clang && clver >= Version(23)
+            )
+            s += "29";
+        else
+            s += "2d";
+        break;
     default:
         return {};
     }
