@@ -20,14 +20,14 @@ jobs:
         path: .sw/out/**/*.exe
 
   linux:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-26.04
     container: fedora:latest
     steps:
     - uses: actions/checkout@v1
     - name: prepare
       run: |
         sudo dnf -y update
-        sudo dnf -y install flex bison cmake which gcc clang clang-tools-extra lld git
+        sudo dnf -y install flex bison cmake which gcc clang clang-tools-extra lld git perl-File-Find
     - uses: egorpugin/sw-action@master
     - run: ./sw -static build -compiler gcc
     - uses: actions/upload-artifact@v4
