@@ -27,7 +27,7 @@ jobs:
     - name: prepare
       run: |
         sudo dnf -y update
-        sudo dnf -y install flex bison cmake which gcc clang clang-tools-extra lld git perl-File-Find
+        sudo dnf -y install flex bison cmake which gcc clang clang-tools-extra lld git perl-File-Find perl-IO-Zlib perl-Compress-Raw-Zlib perl-FindBin perl-IPC-Cmd perl-File-Compare perl-File-Copy
     - uses: egorpugin/sw-action@master
     - run: ./sw -static build -compiler gcc
     - uses: actions/upload-artifact@v4
