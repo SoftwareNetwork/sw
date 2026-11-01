@@ -416,7 +416,9 @@ struct SW_DRIVER_CPP_API CommandBuilder
 
 private:
     std::shared_ptr<::sw::builder::Command> c;
+//public:
     bool stopped = false;
+//private:
     Target *target;
 };
 
