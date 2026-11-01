@@ -826,6 +826,7 @@ void VSGenerator::generate(const SwBuild &b)
             args.push_back("-d");
             args.push_back("\""s + to_string(normalize_path(curr_dirr)) + "\""s);
             args.push_back("-sfc");
+            args.push_back("-sd");
             args.push_back("build");
             args.push_back("-input-settings-pairs");
             for (auto &[d, s] : deps)
