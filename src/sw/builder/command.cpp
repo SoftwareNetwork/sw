@@ -887,7 +887,24 @@ void Command::execute1(std::error_code *ec)
         postProcess(false);
         printOutputs();
 
-        return makeErrorString();
+        std::string err;
+        if (!prev || exit_code && *exit_code) {
+            err += makeErrorString();
+        }
+        auto p = prev;
+        while (p) {
+            if (auto p2 = dynamic_cast<Command*>(p)) {
+                p2->postProcess(false);
+                p2->printOutputs();
+
+                if (p2->exit_code && *p2->exit_code) {
+                    err = p2->makeErrorString() + err;
+                }
+            }
+            p = p->prev;
+        }
+
+        return err;
     };
 
     // create generated dirs
@@ -960,7 +977,9 @@ void Command::printOutputs()
 
 String Command::makeErrorString()
 {
-    auto err = "command failed"s;
+    std::string err;
+    err += prev || next ? "chained "s : ""s;
+    err += "command failed"s;
     auto errors = getErrors();
     if (errors.empty())
         return makeErrorString(err);
