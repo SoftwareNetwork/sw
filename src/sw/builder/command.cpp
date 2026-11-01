@@ -1072,7 +1072,8 @@ path Command::writeCommand(const path &p, bool print_name) const
         t += "echo " + getName() + "\n\n";
 
     // env
-    auto print_env = [&t, &bat](auto env)
+    std::map<std::string, int> n_envs; // to merge multiple commands
+    auto print_env = [&](auto env)
     {
         // fix mingw env
         if (OS::isMingwShell()) {
@@ -1103,6 +1104,12 @@ path Command::writeCommand(const path &p, bool print_name) const
             else
                 t += "export ";
             t += k + "=";
+            if (++n_envs[k] > 1) {
+                if (bat)
+                    t += "%" + k + "%;";
+                else
+                    t += "$" + k + ":";
+            }
             if (!bat)
                 t += "\"";
             t += v;
