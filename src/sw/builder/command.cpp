@@ -1168,6 +1168,7 @@ path Command::writeCommand(const path &p, bool print_name) const
                 if (a->toString().starts_with("-o/")) {
                     output = a->toString().substr(2);
                 }
+                // better description: https://holyblackcat.github.io/blog/2026/09/05/escaping-createprocess-arguments.html
                 auto a2 = a->quote(QuoteType::Escape);
                 if (bat)
                 {
