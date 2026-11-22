@@ -335,21 +335,21 @@ NativeCompiledTarget *CmakeTargetEntryPoint::addTarget(Build &b, cmTarget &cmt)
 {
     switch (cmt.GetType())
     {
-    case cmStateEnums::TargetType::EXECUTABLE:
+    case cm::TargetType::EXECUTABLE:
         return &b.addExecutable(cmt.GetName());
-    case cmStateEnums::TargetType::OBJECT_LIBRARY: // consider as static?
-    case cmStateEnums::TargetType::STATIC_LIBRARY:
+    case cm::TargetType::OBJECT_LIBRARY: // consider as static?
+    case cm::TargetType::STATIC_LIBRARY:
         return &b.addStaticLibrary(cmt.GetName());
-    case cmStateEnums::TargetType::MODULE_LIBRARY: // consider as shared
-    case cmStateEnums::TargetType::SHARED_LIBRARY:
+    case cm::TargetType::MODULE_LIBRARY: // consider as shared
+    case cm::TargetType::SHARED_LIBRARY:
         return &b.addSharedLibrary(cmt.GetName());
-    case cmStateEnums::TargetType::INTERFACE_LIBRARY: // like header only
+    case cm::TargetType::INTERFACE_LIBRARY: // like header only
     {
         auto nt = &b.addLibrary(cmt.GetName());
         nt->HeaderOnly = true;
         return nt;
     }
-    case cmStateEnums::TargetType::UTILITY:
+    case cm::TargetType::UTILITY:
         return nullptr; // skip
                         //GLOBAL_TARGET,
                         //UNKNOWN_LIBRARY
