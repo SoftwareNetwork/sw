@@ -4812,7 +4812,7 @@ void NativeCompiledTarget::configureFile1(const path &from, const path &to, Conf
     static const std::regex cmDefineRegex(R"xxx(#\s*cmakedefine[ \t]+([A-Za-z_0-9]*)([^\r\n]*?)[\r\n])xxx");
     static const std::regex cmDefine01Regex(R"xxx(#\s*cmakedefine01[ \t]+([A-Za-z_0-9]*)[^\r\n]*?[\r\n])xxx");
     static const std::regex mesonDefine(R"xxx(#\s*mesondefine[ \t]+([A-Za-z_0-9]*)[^\r\n]*?[\r\n])xxx");
-    static const std::regex undefDefine(R"xxx(#undef[ \t]+([A-Za-z_0-9]*)[^\r\n]*?[\r\n])xxx");
+    static const std::regex undefDefine(R"xxx(#\s*undef[ \t]+([A-Za-z_0-9]*)[^\r\n]*?[\r\n])xxx");
     static const std::regex cmAtVarRegex("@([A-Za-z_0-9/.+-]+)@");
     static const std::regex cmNamedCurly("\\$\\{([A-Za-z0-9/_.+-]+)\\}");
 
@@ -4888,17 +4888,37 @@ void NativeCompiledTarget::configureFile1(const path &from, const path &to, Conf
         while (std::regex_search(s, m, undefDefine))
         {
             auto repl = find_repl(m[1].str());
+            auto default_or_set_undef = [&]() {
+                // works, but not very reliable
+                /*auto sz = m.prefix().length();
+                auto p = s.rfind('\n', sz);
+                if (p != -1) {
+                    p = s.rfind('\n', p-1);
+                    if (p != -1) {
+                        auto b = s.find('`', p);
+                        if (b != -1) {
+                            ++b;
+                            auto e = s.find('\'', b);
+                            if (e != -1) {
+                                auto repl = s.substr(b, e-b);
+                                s = m.prefix().str() + "#define " + m[1].str() + " " + repl + "\n" + m.suffix().str();
+                                return;
+                            }
+                        }
+                    }
+                }*/
+                // prevent loops with 'sw'
+                s = m.prefix().str() + "/* # sw undef " + m[1].str() + " */\n" + m.suffix().str();
+            };
             if (!repl)
             {
-                // space to prevent loops
-                s = m.prefix().str() + "/* # undef " + m[1].str() + " */\n" + m.suffix().str();
+                default_or_set_undef();
                 // make additional log level for this
                 //LOG_TRACE(logger, "configure #undef " << m[1].str() << ": replacement not found");
                 continue;
             }
             if (offValues.find(boost::to_upper_copy(*repl)) != offValues.end())
-                // space to prevent loops
-                s = m.prefix().str() + "/* # undef " + m[1].str() + " */\n" + m.suffix().str();
+                default_or_set_undef();
             else
                 s = m.prefix().str() + "#define " + m[1].str() + " " + *repl + "\n" + m.suffix().str();
         }
