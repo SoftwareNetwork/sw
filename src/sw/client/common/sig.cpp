@@ -60,8 +60,9 @@ err:
     }
 
     /* Clean up */
-    if(sig && !ret) OPENSSL_free(sig);
+    if(sig) OPENSSL_free(sig);
     if(mdctx) EVP_MD_CTX_destroy(mdctx);
+    EVP_PKEY_free(pkey);
 }
 
 static auto algoFromString(const path &ext)
@@ -115,11 +116,13 @@ static void ds_verify_file(const path &fn, const EVP_MD *algo, const String &sig
     {
         /* Success */
         EVP_MD_CTX_destroy(mdctx);
+        EVP_PKEY_free(key);
     }
     else
     {
         /* Failure */
         EVP_MD_CTX_destroy(mdctx);
+        EVP_PKEY_free(key);
         throw SW_RUNTIME_ERROR("Bad digital signature");
     }
 }
