@@ -19,7 +19,7 @@ static void ds_sign_file(const path &fn, const path &pkey_fn)
     auto msg = read_file(fn);
     auto key = read_file(pkey_fn);
     uint8_t *sig = nullptr;
-    size_t *slen = 0;
+    size_t slen = 0;
 
     BIO* bo = BIO_new( BIO_s_mem() );
     BIO_write( bo, key.c_str(), key.size());
@@ -44,11 +44,11 @@ static void ds_sign_file(const path &fn, const path &pkey_fn)
     /* Finalise the DigestSign operation */
     /* First call EVP_DigestSignFinal with a NULL sig parameter to obtain the length of the
     * signature. Length is returned in slen */
-    if(1 != EVP_DigestSignFinal(mdctx, NULL, slen)) goto err;
+    if(1 != EVP_DigestSignFinal(mdctx, NULL, &slen)) goto err;
     /* Allocate memory for the signature based on size in slen */
-    if(!(sig = (uint8_t *)OPENSSL_malloc(sizeof(unsigned char) * (*slen)))) goto err;
+    if(!(sig = (uint8_t *)OPENSSL_malloc(sizeof(unsigned char) * slen))) goto err;
     /* Obtain the signature */
-    if(1 != EVP_DigestSignFinal(mdctx, sig, slen)) goto err;
+    if(1 != EVP_DigestSignFinal(mdctx, sig, &slen)) goto err;
 
     /* Success */
     ret = 1;
